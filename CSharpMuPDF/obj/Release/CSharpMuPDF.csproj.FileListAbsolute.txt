@@ -1,0 +1,8 @@
+C:\Users\palma\source\repos\CSharpMuPDF\CSharpMuPDF\bin\Release\mupdfcpp64.dll
+C:\Users\palma\source\repos\CSharpMuPDF\CSharpMuPDF\bin\Release\mupdfcsharp.dll
+C:\Users\palma\source\repos\CSharpMuPDF\CSharpMuPDF\bin\Release\CSharpMuPDF.dll
+C:\Users\palma\source\repos\CSharpMuPDF\CSharpMuPDF\bin\Release\CSharpMuPDF.pdb
+C:\Users\palma\source\repos\CSharpMuPDF\CSharpMuPDF\obj\Release\CSharpMuPDF.csproj.CoreCompileInputs.cache
+C:\Users\palma\source\repos\CSharpMuPDF\CSharpMuPDF\obj\Release\CSharpMuPDF.dll
+C:\Users\palma\source\repos\CSharpMuPDF\CSharpMuPDF\obj\Release\CSharpMuPDF.pdb
+C:\Users\palma\source\repos\CSharpMuPDF\CSharpMuPDF\obj\Release\CSharpMuPDF.csproj.AssemblyReference.cache

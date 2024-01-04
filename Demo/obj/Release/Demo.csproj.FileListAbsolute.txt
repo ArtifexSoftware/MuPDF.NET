@@ -1,0 +1,10 @@
+C:\Users\palma\source\repos\CSharpMuPDF\Demo\bin\Release\Demo.exe.config
+C:\Users\palma\source\repos\CSharpMuPDF\Demo\bin\Release\Demo.exe
+C:\Users\palma\source\repos\CSharpMuPDF\Demo\bin\Release\Demo.pdb
+C:\Users\palma\source\repos\CSharpMuPDF\Demo\bin\Release\CSharpMuPDF.dll
+C:\Users\palma\source\repos\CSharpMuPDF\Demo\bin\Release\CSharpMuPDF.pdb
+C:\Users\palma\source\repos\CSharpMuPDF\Demo\obj\Release\Demo.csproj.CoreCompileInputs.cache
+C:\Users\palma\source\repos\CSharpMuPDF\Demo\obj\Release\Demo.csproj.CopyComplete
+C:\Users\palma\source\repos\CSharpMuPDF\Demo\obj\Release\Demo.exe
+C:\Users\palma\source\repos\CSharpMuPDF\Demo\obj\Release\Demo.pdb
+C:\Users\palma\source\repos\CSharpMuPDF\Demo\obj\Release\Demo.csproj.AssemblyReference.cache
