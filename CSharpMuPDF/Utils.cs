@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using mupdf;
 
 namespace CSharpMuPDF
 {
@@ -30,6 +31,62 @@ namespace CSharpMuPDF
             if (type == (int)ImageType.FZ_IMAGE_PNM) return "pnm";
             if (type == (int)ImageType.FZ_IMAGE_TIFF) return "tiff";
             return "n/a";
+        }
+
+        public static Matrix HorMatrix(Point c, Point p)
+        {
+            FzPoint s = mupdf.mupdf.fz_normalize_vector(mupdf.mupdf.fz_make_point(p.X - c.X, p.Y - c.Y));
+
+            FzMatrix m1 = mupdf.mupdf.fz_make_matrix(1, 0, 0, 1, -c.X, -c.Y);
+            FzMatrix m2 = mupdf.mupdf.fz_make_matrix(s.x, -s.y, s.y, s.x, 0, 0);
+            return new Matrix(mupdf.mupdf.fz_concat(m1, m2));
+        }
+
+        public static (int, Matrix) InvertMatrix(Matrix m)
+        {
+            /*if (false)
+            {
+                FzMatrix ret = m.ToFzMatrix().fz_invert_matrix();
+                if (false || Math.Abs(m.A - 1) >= float.Epsilon
+                    || Math.Abs(m.B - 0) >= float.Epsilon
+                    || Math.Abs(m.C - 0) >= float.Epsilon
+                    || Math.Abs(m.D - 1) >= float.Epsilon
+                    )
+                    return (1, null);
+                return (0, new Matrix(ret));
+            }*/
+            FzMatrix src = m.ToFzMatrix();
+            float a = src.a;
+            float det = a * src.d - src.b * src.c;
+            if (det < -float.Epsilon || det > float.Epsilon)
+            {
+                FzMatrix dst = new FzMatrix();
+                float rdet = 1 / det;
+                dst.a = src.d * rdet;
+                dst.b = -src.d * rdet;
+                dst.c = -src.c * rdet;
+                dst.d = a * rdet;
+                a = -src.e * dst.a - src.f * dst.c;
+                dst.f = -src.e * dst.b - src.f * dst.d;
+                dst.e = a;
+                return (0, new Matrix(dst));
+            }
+            return (1, null);
+            
+        }
+
+        public static Matrix PlanishLine(Point a, Point b)
+        {
+            return Utils.HorMatrix(a, b);
+        }
+
+        public static float SineBetween(Point c, Point p, Point q)
+        {
+            FzPoint s = mupdf.mupdf.fz_normalize_vector(mupdf.mupdf.fz_make_point(q.X - p.X, q.Y - p.Y));
+            FzMatrix m1 = mupdf.mupdf.fz_make_matrix(1, 0, 0, 1, -p.X, -p.Y);
+            FzMatrix m2 = mupdf.mupdf.fz_make_matrix(s.x, -s.y, s.y, s.x, 0, 0);
+            m1 = mupdf.mupdf.fz_concat(m1, m2);
+            return mupdf.mupdf.fz_transform_point(c.ToFzPoint(), m1).fz_normalize_vector().y;
         }
     }
 }

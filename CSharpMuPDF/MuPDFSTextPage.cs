@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
+using Newtonsoft.Json;
 using mupdf;
 
 namespace CSharpMuPDF
@@ -260,7 +261,7 @@ namespace CSharpMuPDF
         /// </summary>
         /// <param name="cropbox">Rectangle area to extract</param>
         /// <param name="sort"></param>
-        public void ExtractJSON(FzRect cropbox, bool sort = false)
+        public string ExtractJSON(FzRect cropbox, bool sort = false)
         {
             PageDictionary pageDict = TextPage2Dict(false);
             if (cropbox != null)
@@ -285,9 +286,8 @@ namespace CSharpMuPDF
 
                 pageDict.BLOCKS = blocks;
             }
-
-            //issue
-
+            string ret = JsonConvert.SerializeObject(pageDict, Formatting.Indented);
+            return ret;
         }
 
         /// <summary>

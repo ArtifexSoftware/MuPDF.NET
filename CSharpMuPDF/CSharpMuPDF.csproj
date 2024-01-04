@@ -32,6 +32,9 @@
     <PlatformTarget>x64</PlatformTarget>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.13.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -47,6 +50,10 @@
     <Compile Include="enums\ImageType.cs" />
     <Compile Include="MuPDFDocument.cs" />
     <Compile Include="structures\Hits.cs" />
+    <Compile Include="structures\Matrix.cs" />
+    <Compile Include="structures\Point.cs" />
+    <Compile Include="structures\Quad.cs" />
+    <Compile Include="structures\Rect.cs" />
     <Compile Include="structures\SpanDictionary.cs" />
     <Compile Include="enums\STextBlockType.cs" />
     <Compile Include="MuPDFSTextPage.cs" />
@@ -68,6 +75,9 @@
     <Content Include="mupdfcsharp.dll">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
