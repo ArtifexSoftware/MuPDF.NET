@@ -7,9 +7,9 @@ using mupdf;
 
 namespace CSharpMuPDF
 {
-    public struct SpanDictionary
+    public struct SpanStruct
     {
-        public List<CharDictionary> CHARS;
+        public List<CharStruct> CHARS;
 
         public FzPoint ORIGIN;
 

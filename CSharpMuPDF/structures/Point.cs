@@ -79,7 +79,7 @@ namespace CSharpMuPDF
             }
         }
 
-        public static Point operator *(Point p, int m)
+        public static Point operator *(Point p, float m)
         {
             return new Point(p.X * m, p.Y * m);
         }
@@ -87,6 +87,11 @@ namespace CSharpMuPDF
         public static Point operator *(Point op1, Matrix m)
         {
             return op1.Transform(m);
+        }
+
+        public static Point operator /(Point p, float m)
+        {
+            return new Point(p.X / m, p.Y / m);
         }
 
         public static Point operator -(Point p)

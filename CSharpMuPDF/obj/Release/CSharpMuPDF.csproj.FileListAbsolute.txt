@@ -6,3 +6,7 @@ C:\Users\palma\source\repos\CSharpMuPDF\CSharpMuPDF\obj\Release\CSharpMuPDF.cspr
 C:\Users\palma\source\repos\CSharpMuPDF\CSharpMuPDF\obj\Release\CSharpMuPDF.dll
 C:\Users\palma\source\repos\CSharpMuPDF\CSharpMuPDF\obj\Release\CSharpMuPDF.pdb
 C:\Users\palma\source\repos\CSharpMuPDF\CSharpMuPDF\obj\Release\CSharpMuPDF.csproj.AssemblyReference.cache
+E:\c#\CSharpMuPDF\CSharpMuPDF\obj\Release\CSharpMuPDF.csproj.AssemblyReference.cache
+E:\c#\CSharpMuPDF\CSharpMuPDF\obj\Release\CSharpMuPDF.csproj.CoreCompileInputs.cache
+E:\c#\CSharpMuPDF\CSharpMuPDF\obj\Release\CSharpMuPDF.dll
+E:\c#\CSharpMuPDF\CSharpMuPDF\obj\Release\CSharpMuPDF.pdb

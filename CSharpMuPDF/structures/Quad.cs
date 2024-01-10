@@ -8,7 +8,7 @@ using mupdf;
 
 namespace CSharpMuPDF
 {
-    internal class Quad
+    public class Quad
     {
         public Point UpperLeft { get; set; }
         public Point UpperRight { get; set; }
@@ -153,6 +153,14 @@ namespace CSharpMuPDF
 
         }
 
+        public FzQuad ToFzQuad()
+        {
+            return mupdf.mupdf.fz_make_quad(
+                UpperLeft.X, UpperLeft.Y,
+                UpperRight.X, UpperRight.Y,
+                LowerLeft.X, LowerLeft.Y,
+                LowerRight.X, LowerRight.Y);
+        }
         public float Abs()
         {
             if (IsEmpty)
@@ -190,9 +198,9 @@ namespace CSharpMuPDF
         override
         public string ToString() => $"Quad ({UpperLeft}, {UpperRight}, {LowerLeft}, {LowerRight})";
 
-        /*public bool Contains(Point p)
+        public bool Contains(Point p)
         {
-            return Utils.UtilPointInQuad(p, this);
+            return mupdf.mupdf.fz_is_point_inside_quad(p.ToFzPoint(), ToFzQuad()) == 0 ? false : true;
         }
 
         public bool Contains(Rect r)
@@ -201,22 +209,22 @@ namespace CSharpMuPDF
             {
                 return true;
             }
-            return Utils.UtilPointInQuad(r.TopLeft, this) && Utils.UtilPointInQuad(r.BottomRight, this);
+            return Contains(r.TopLeft) && Contains(r.BottomRight);
         }
 
         public bool Contains(Quad q)
         {
-            for(int i = 0; i < 4 ; i++)
+            for (int i = 0; i < 4; i++)
             {
-                if (Utils.UtilPointInQuad(q[i], this) == false)
+                if (Contains(q[i]) == false)
                 {
                     return false;
                 }
             }
             return true;
-        }*/
+        }
 
-        /*public Quad Transform(Matrix m)
+        public Quad Transform(Matrix m)
         {
             UpperLeft *= m;
             UpperRight *= m;
@@ -224,19 +232,23 @@ namespace CSharpMuPDF
             UpperLeft *= m;
 
             return this;
-        }*/
+        }
 
-        /*public Quad Morph(Point p, Matrix m)
+        public static Quad operator *(Quad op1, Matrix op2)
+        {
+            return op1.Transform(op2);
+        }
+
+        public Quad Morph(Point p, Matrix m)
         {
             if (IsInfinite)
             {
-                return Utils.INFINITE_RECT().Quad;
+                return Utils.INFINITE_RECT().QUAD;
             }
 
-            // more code
-        }*/
-
-
+            Matrix delta = (new Matrix(1f, 1f)).Pretranslate(p.X, p.Y);
+            return (this * ~delta * m) * delta;
+        }
 
     }
 }

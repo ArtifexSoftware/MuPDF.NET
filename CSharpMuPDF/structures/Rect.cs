@@ -1,16 +1,17 @@
 ﻿using System;
 using System.Collections;
-using System.Reflection.Metadata;
+using System.Collections.Generic;
+using FzRect = mupdf.FzRect;
 
 namespace CSharpMuPDF
 {
-    internal class Rect
+    public class Rect
     {
         public float X0 { get; set; }
         public float Y0 { get; set; }
         public float X1 { get; set; }
         public float Y1 { get; set; }
-        public int Length { get; set; } = 4;
+        public int LENGTH { get; set; } = 4;
 
         public Point BottomLeft
         {
@@ -55,12 +56,21 @@ namespace CSharpMuPDF
             X0 = r[0]; Y0 = r[1];
             X1 = r[2]; Y1 = r[3];
         }
+
+        public Rect(Point p1, Point p2)
+        {
+            X0 = p1.X;
+            Y0 = p1.Y;
+            X1 = p1.X;
+            Y1 = p1.Y;
+        }
+
         public bool IsInfinite
         {
             get
             {
                 // Assuming that FZ_MIN_INF_RECT and FZ_MAX_INF_RECT are constants
-                return this.X0 == this.Y0 && this.X0 == Globals.FZ_MIN_INF_RECT && this.X1 == this.Y1 && this.X1 == Globals.FZ_MAX_INF_RECT;
+                return this.X0 == this.Y0 && this.X0 == Utils.FZ_MIN_INF_RECT && this.X1 == this.Y1 && this.X1 == Utils.FZ_MAX_INF_RECT;
             }
         }
 
@@ -71,13 +81,14 @@ namespace CSharpMuPDF
                 return X0 >= X1 || Y0 >= Y1;
             }
         }
-        public Quad Quad
+        public Quad QUAD
         {
             get
             {
                 return new Quad(TopLeft, TopRight, BottomLeft, BottomRight);
             }
         }
+
         public float Height
         {
             get
@@ -98,6 +109,18 @@ namespace CSharpMuPDF
             if (IsEmpty || IsInfinite)
                 return 0.0f;
             return (X1 - X0) * (Y1 - Y0);
+        }
+        public Rect(FzRect rect)
+        {
+            X0 = rect.x0;
+            Y0 = rect.y0;
+            X1 = rect.x1;
+            Y1 = rect.y1;
+        }
+
+        public Rect(IRect rect): this(rect.X0, rect.Y0, rect.X1, rect.Y1)
+        {
+
         }
 
         public static Rect operator +(Rect p, float op)
@@ -136,12 +159,17 @@ namespace CSharpMuPDF
             return new Rect(op1.X0 + op2.X0, op1.Y0 + op2.Y0, op1.X1 + op2.X1, op1.Y1 + op2.Y1);
         }
 
+        public FzRect ToFzRect()
+        {
+            return new FzRect(X0, Y0, X1, Y1);
+        }
+
         public Rect()
         {
             X0 = X1 = Y0 = Y1 = 0.0f;
         }
 
-        /*public Rect Intersect(Rect op)
+        public Rect Intersect(Rect op)
         {
             if (this.IsInfinite)
             {
@@ -167,20 +195,20 @@ namespace CSharpMuPDF
             }
             else
             {
-                var result = Utils.UtilIntersectRect(this, op); // Replace this with actual method call
+                FzRect result = FzRect.fz_intersect_rect(ToFzRect(), op.ToFzRect()); // Replace this with actual method call
 
-                this.X0 = result.X0;
-                this.Y0 = result.Y0;
-                this.X1 = result.X1;
-                this.Y1 = result.Y1;
+                this.X0 = result.x0;
+                this.Y0 = result.y0;
+                this.X1 = result.x1;
+                this.Y1 = result.y1;
             }
             return this;
-        }*/
+        }
 
-        /*public static Rect operator &(Rect op1, Rect op2)
+        public static Rect operator &(Rect op1, Rect op2)
         {
             return op1.Intersect(op2);  // Assuming you have implemented the Intersect method
-        }*/
+        }
 
         public bool Contains(float op)
         {
@@ -212,10 +240,10 @@ namespace CSharpMuPDF
             return new Rect(-op.X0, -op.Y0, -op.X1, -op.Y1);
         }
 
-       /*public static bool operator |(Rect op1, Rect op2) // or
+        public static Rect operator |(Rect op1, Rect op2) // or
         {
             return op1.IncludeRect(op2);
-        }*/
+        }
 
         public static Rect operator +(Rect op) // positive
         {
@@ -235,54 +263,63 @@ namespace CSharpMuPDF
             return new Rect(op1.X0 - op2.X0, op1.Y0 - op2.Y0, op1.X1 - op2.Y1, op1.Y1 - op2.Y1);
         }
 
-        /*public Rect IncludeRect(Rect r)
+        public Rect IncludeRect(Rect r)
         {
             if (r.IsInfinite || this.IsEmpty)
             {
-                this.X0 = Globals.FZ_MIN_INF_RECT;
-                this.Y0 = Globals.FZ_MIN_INF_RECT;
-                this.X1 = Globals.FZ_MAX_INF_RECT;
-                this.Y1 = Globals.FZ_MAX_INF_RECT;
+                this.X0 = Utils.FZ_MIN_INF_RECT;
+                this.Y0 = Utils.FZ_MIN_INF_RECT;
+                this.X1 = Utils.FZ_MAX_INF_RECT;
+                this.Y1 = Utils.FZ_MAX_INF_RECT;
             }
             else if (r.IsEmpty)
             {
                 return this;
-            } else if (this.IsEmpty)
+            }
+            else if (this.IsEmpty)
             {
-                this.X0 = r.X0;
-                this.Y0 = r.Y0;
-                this.X1 = r.X1;
-                this.Y1 = r.Y1;
-            } else
-            {
-                Rect r = Utils.UtilUnionRect(this, r);
                 this.X0 = r.X0;
                 this.Y0 = r.Y0;
                 this.X1 = r.X1;
                 this.Y1 = r.Y1;
             }
-        }*/
+            else
+            {
+                FzRect ret = FzRect.fz_union_rect(ToFzRect(), r.ToFzRect());
+                this.X0 = ret.x0;
+                this.Y0 = ret.y0;
+                this.X1 = ret.x1;
+                this.Y1 = ret.y1;
+            }
+            return this;
+        }
 
         public bool IsValid()
         {
             return X0 <= X1 && Y0 <= Y1;
         }
 
-        /*public Quad Morph(Point p, Matrix m)
+        public Quad Morph(Point p, Matrix m)
         {
             if (this.IsInfinite)
             {
-                return INFINITE_QUAD();
+                return Utils.INFINITE_RECT().QUAD;
             }
-            return this.quad.morph(p, m);
+            return this.QUAD.Morph(p, m);
         }
 
         public float Norm()
         {
-            return Math.Sqrt(sum([c * c for c in self]))
+            float ret = 0.0f;
+            for (int i = 0; i < this.LENGTH; i ++)
+            {
+                ret += this[i] * this[i];
+            }
+
+            return (float)Math.Sqrt(ret);
         }
 
-        public Normalize()
+        public void Normalize()
         {
             if (X1 < X0)
             {
@@ -290,7 +327,7 @@ namespace CSharpMuPDF
                 X0 = X1;
                 X1 = tmp;
             }
-            if(Y1 < Y0)
+            if (Y1 < Y0)
             {
                 float tmp = Y0;
                 Y0 = Y1;
@@ -298,16 +335,34 @@ namespace CSharpMuPDF
             }
         }
 
+        public Rect IncludePoint(Point p)
+        {
+            return new Rect(ToFzRect().fz_include_point_in_rect(p.ToFzPoint()));
+        }
+
+        public bool Intersects(Rect r)
+        {
+            if (IsEmpty || IsInfinite || r.IsEmpty || r.IsInfinite)
+                return false;
+            if (Intersect(r).IsEmpty)
+                return false;
+            return true;
+        }
+
         public IRect Round()
         {
-            return new IRect(Utils.UtilRoundRect())
+            return new IRect(ToFzRect().fz_round_rect());
         }
 
         public Rect Transform(Matrix matrix)
         {
-            (X0, Y0, X1, Y1) = UtilTransformRect(this, matrix);
+            FzRect r = mupdf.mupdf.fz_transform_rect(ToFzRect(), matrix.ToFzMatrix());
+            X0 = r.x0;
+            Y0 = r.y0;
+            X1 = r.x1;
+            Y1 = r.y1;
             return this;
-        }*/
+        }
     }
     
 }

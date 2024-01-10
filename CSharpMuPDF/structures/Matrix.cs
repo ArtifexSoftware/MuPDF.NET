@@ -35,6 +35,14 @@ namespace CSharpMuPDF
             F = f;
         }
 
+        public float Abs()
+        {
+            float sum = 0;
+            for (int i = 0; i < Length; i++)
+                sum += this[i] * this[i];
+            return (float)Math.Sqrt((double)sum);
+        }
+
         public Matrix(FzMatrix m)
         {
             A = m.a;
@@ -128,6 +136,16 @@ namespace CSharpMuPDF
             return Matrix.Concat(op1, op2);
         }
 
+        public static Matrix operator -(Matrix op1, Matrix op2)
+        {
+            return new Matrix(op1.A - op2.A, op1.B - op2.B, op1.C - op2.C, op1.D - op2.D, op1.E - op2.E, op1.F - op2.F);
+        }
+
+        public static Matrix operator -(Matrix op1, float m)
+        {
+            return new Matrix(op1.A - m, op1.B - m, op1.C - m, op1.D - m, op1.E - m, op1.F - m);
+        }
+
         public int Invert(Matrix src)
         {
             (int, Matrix) dst;
@@ -139,7 +157,7 @@ namespace CSharpMuPDF
             {
                 dst = Utils.InvertMatrix(src);
             }
-
+            
             if (dst.Item1 == 1)
                 return 1;
 
@@ -231,6 +249,12 @@ namespace CSharpMuPDF
             E += tx * A + ty * C;
             F += tx * B + ty * D;
             return this;
+        }
+
+        public static Matrix operator ~(Matrix m)
+        {
+            int _ = m.Invert(null);
+            return m;
         }
 
     }

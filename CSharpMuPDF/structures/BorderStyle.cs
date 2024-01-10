@@ -6,12 +6,15 @@ using System.Threading.Tasks;
 
 namespace CSharpMuPDF
 {
-    public struct PageDictionary
+    public struct BorderStyle
     {
         public float WIDTH;
 
-        public float HEIGHT;
+        public string STYLE;
 
-        public List<BlockDictionary> BLOCKS;
+        public int[] DASHES;
+
+        public int CLOUDS;
+
     }
 }

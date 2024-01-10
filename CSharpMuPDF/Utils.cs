@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using mupdf;
@@ -31,6 +33,11 @@ namespace CSharpMuPDF
             if (type == (int)ImageType.FZ_IMAGE_PNM) return "pnm";
             if (type == (int)ImageType.FZ_IMAGE_TIFF) return "tiff";
             return "n/a";
+        }
+
+        public static Rect INFINITE_RECT()
+        {
+            return new Rect(Utils.FZ_MIN_INF_RECT, Utils.FZ_MIN_INF_RECT, Utils.FZ_MAX_INF_RECT, Utils.FZ_MAX_INF_RECT);
         }
 
         public static Matrix HorMatrix(Point c, Point p)
@@ -72,7 +79,7 @@ namespace CSharpMuPDF
                 return (0, new Matrix(dst));
             }
             return (1, null);
-            
+
         }
 
         public static Matrix PlanishLine(Point a, Point b)
@@ -87,6 +94,211 @@ namespace CSharpMuPDF
             FzMatrix m2 = mupdf.mupdf.fz_make_matrix(s.x, -s.y, s.y, s.x, 0, 0);
             m1 = mupdf.mupdf.fz_concat(m1, m2);
             return mupdf.mupdf.fz_transform_point(c.ToFzPoint(), m1).fz_normalize_vector().y;
+        }
+
+        public static PdfObj pdf_dict_getl(PdfObj obj, string[] keys)
+        {
+            PdfObj ret = new PdfObj();
+            foreach (string key in keys)
+            {
+                ret = obj.pdf_dict_get(new PdfObj(key));
+            }
+
+            return ret;
+        }
+
+        public static void pdf_dict_putl(PdfObj obj, PdfObj val, string[] keys)
+        {
+            if (obj.pdf_is_indirect() != 0)
+                obj = obj.pdf_resolve_indirect_chain();
+            if (obj.pdf_is_dict() == 0)
+                throw new Exception(string.Format("Not a dict: {0}", obj));
+            if (keys == null)
+                return;
+
+            PdfDocument doc = obj.pdf_get_bound_document();
+            for (int i = 0; i < keys.Length; i++)
+            {
+                PdfObj nextObj = obj.pdf_dict_get(new PdfObj(keys[i]));
+                if (nextObj == null)
+                {
+                    nextObj = doc.pdf_new_dict(1);
+                    obj.pdf_dict_put(new PdfObj(keys[i]), nextObj);
+                }
+                obj = nextObj;
+            }
+            string key = keys[keys.Length - 1];
+            obj.pdf_dict_put(new PdfObj(key), val);
+        }
+
+        public static (int, int, int) MUPDF_VERSION = (mupdf.mupdf.FZ_VERSION_MAJOR, mupdf.mupdf.FZ_VERSION_MINOR, mupdf.mupdf.FZ_VERSION_PATCH);
+
+        public static Dictionary<string, string> ErrorMessages = new Dictionary<string, string>()
+        {
+            { "MSG_BAD_ANNOT_TYPE", "bad annot type" },
+            { "MSG_BAD_APN", "bad or missing annot AP/N" },
+            { "MSG_BAD_ARG_INK_ANNOT", "arg must be seq of seq of float pairs" },
+            { "MSG_BAD_ARG_POINTS", "bad seq of points" },
+            { "MSG_BAD_BUFFER", "bad type: 'buffer'" },
+            { "MSG_BAD_COLOR_SEQ", "bad color sequence" },
+            { "MSG_BAD_DOCUMENT", "cannot open broken document" },
+            { "MSG_BAD_FILETYPE", "bad filetype" },
+            { "MSG_BAD_LOCATION", "bad location" },
+            { "MSG_BAD_OC_CONFIG", "bad config number" },
+            { "MSG_BAD_OC_LAYER", "bad layer number" },
+            { "MSG_BAD_OC_REF", "bad 'oc' reference" },
+            { "MSG_BAD_PAGEID", "bad page id" },
+            { "MSG_BAD_PAGENO", "bad page number(s)" },
+            { "MSG_BAD_PDFROOT", "PDF has no root" },
+            { "MSG_BAD_RECT", "rect is infinite or empty" },
+            { "MSG_BAD_TEXT", "bad type: 'text'" },
+            { "MSG_BAD_XREF", "bad xref" },
+            { "MSG_COLOR_COUNT_FAILED", "color count failed" },
+            { "MSG_FILE_OR_BUFFER", "need font file or buffer" },
+            { "MSG_FONT_FAILED", "cannot create font" },
+            { "MSG_IS_NO_ANNOT", "is no annotation" },
+            { "MSG_IS_NO_IMAGE", "is no image" },
+            { "MSG_IS_NO_PDF", "is no PDF" },
+            { "MSG_IS_NO_DICT", "object is no PDF dict" },
+            { "MSG_PIX_NOALPHA", "source pixmap has no alpha" },
+            { "MSG_PIXEL_OUTSIDE", "pixel(s) outside image" }
+        };
+
+        public static byte[] BinFromBuffer(FzBuffer buffer)
+        {
+            return buffer.fz_buffer_extract();
+        }
+
+        public static FzBuffer BufferFromBytes(byte[] bytes)
+        {
+            IntPtr unmanagedPointer = Marshal.AllocHGlobal(bytes.Length);
+            Marshal.Copy(bytes, 0, unmanagedPointer, bytes.Length);
+            return mupdf.mupdf.fz_new_buffer_from_copied_data(new SWIGTYPE_p_unsigned_char(unmanagedPointer, false), (uint)bytes.Length);
+        }
+
+        public static FzBuffer CompressBuffer(FzBuffer buffer)
+        {
+            IntPtr unmanagedPointer = Marshal.AllocHGlobal(8);
+            SWIGTYPE_p_size_t swigSizeT = new SWIGTYPE_p_size_t(unmanagedPointer, false);
+            mupdf.mupdf.fz_new_deflated_data_from_buffer(swigSizeT, buffer, fz_deflate_level.FZ_DEFLATE_DEFAULT);
+        }
+
+        public static void UpdateStream(PdfDocument doc, PdfObj obj, FzBuffer buffer, int compress)
+        {
+            uint len = buffer.fz_buffer_storage(new SWIGTYPE_p_p_unsigned_char(IntPtr.Zero, false));
+            if (len > 30)
+            {
+
+            }
+        }
+
+        public static bool INRANGE(int v, int low, int high)
+        {
+            return low <= v && high <= v;
+        }
+
+        public static bool INRANGE(float v, float low, float high)
+        {
+            return low <= v && high <= v;
+        }
+
+        public static Matrix RotatePageMatrix(PdfPage page)
+        {
+            if (page == null)
+                return new Matrix();
+            int rotation = Utils.PageRotation(page);
+            if (rotation == 0)
+                return new Matrix();
+
+            Point cbSize = GetCropBoxSize(page.obj());
+            float w = cbSize.X;
+            float h = cbSize.Y;
+
+            FzMatrix m = new FzMatrix();
+            if (rotation == 90)
+                m = mupdf.mupdf.fz_make_matrix(0, 1, -1, 0, h, 0);
+            else if (rotation == 180)
+                m = mupdf.mupdf.fz_make_matrix(-1, 0, 0, -1, w, h);
+            else
+                m = mupdf.mupdf.fz_make_matrix(0, -1, 1, 0, 0, w);
+
+            return new Matrix(m);
+        }
+
+        public static Point GetCropBoxSize(PdfObj pageObj)
+        {
+            FzRect rect = GetCropBox(pageObj).ToFzRect();
+            float width = Math.Abs(rect.x1 - rect.x0);
+            float height = Math.Abs(rect.y1 - rect.y0);
+
+            FzPoint size = mupdf.mupdf.fz_make_point(width, height);
+            return new Point(size);
+        }
+
+        public static Rect GetCropBox(PdfObj pageObj)
+        {
+            FzRect mediabox = Utils.GetMediaBox(pageObj).ToFzRect();
+            FzRect cropBox = pageObj.pdf_dict_get_inheritable(new PdfObj("CropBox")).pdf_to_rect();
+            if (cropBox.fz_is_infinite_rect() != 0 && cropBox.fz_is_empty_rect() != 0)
+                cropBox = mediabox;
+            float y0 = mediabox.y1 - cropBox.y1;
+            float y1 = mediabox.y1 = cropBox.y0;
+            cropBox.y0 = y0;
+            cropBox.y1 = y1;
+
+            return new Rect(cropBox);
+        }
+
+        public static Rect GetMediaBox(PdfObj pageObj)
+        {
+            FzRect pageMediaBox = new FzRect(FzRect.Fixed.Fixed_UNIT);
+            FzRect mediaBox = pageObj.pdf_dict_getp_inheritable("MediaBox").pdf_to_rect();
+            if (mediaBox.fz_is_empty_rect() != 0 || mediaBox.fz_is_infinite_rect() != 0)
+            {
+                mediaBox.x0 = 0;
+                mediaBox.y0 = 0;
+                mediaBox.x1 = 612;
+                mediaBox.y1 = 792;
+            }
+            pageMediaBox = new FzRect(
+                Math.Min(mediaBox.x0, mediaBox.x1),
+                Math.Min(mediaBox.y0, mediaBox.y1),
+                Math.Max(mediaBox.x0, mediaBox.x1),
+                Math.Max(mediaBox.y0, mediaBox.y1)
+                );
+
+            if (pageMediaBox.x1 - pageMediaBox.x0 < 1
+                || pageMediaBox.y1 - pageMediaBox.y0 < 0)
+            {
+                pageMediaBox = new FzRect(FzRect.Fixed.Fixed_UNIT);
+            }
+            return new Rect(pageMediaBox);
+        }
+
+        public static int PageRotation(PdfPage page)
+        {
+            int rotate = 0;
+            PdfObj obj = page.obj().pdf_dict_get_inheritable(new PdfObj("Rotate"));
+            rotate = obj.pdf_to_int();
+            rotate = NormalizeRotation(rotate);
+            return rotate;
+        }
+
+        public static int NormalizeRotation(int rotate)
+        {
+            while (rotate < 0)
+            {
+                rotate += 360;
+            }
+            while (rotate >= 360)
+            {
+                rotate -= 360;
+            }
+            while (rotate % 90 != 0)
+            {
+                return 0;
+            }
+            return rotate;
         }
     }
 }
