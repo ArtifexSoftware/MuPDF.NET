@@ -1041,10 +1041,28 @@ namespace CSharpMuPDF
         public Pixmap GetPixmap(
             Matrix matrix = null,
             int dpi = 0,
-            Colorspace colorSpace = null,
-            int alpha = 0)
+            ColorSpace colorSpace = null,
+            int alpha = 0
+        )
         {
+            List<ColorSpace> colorSpaces = new List<ColorSpace>()
+            {
+                new ColorSpace(Utils.CS_GRAY),
+                new ColorSpace(Utils.CS_RGB),
+                new ColorSpace(Utils.CS_CMYK),
+            };
+            if (dpi != 0)
+                matrix = new Matrix(dpi / 72, dpi / 72);
 
+            FzMatrix ctm = matrix.ToFzMatrix();
+            FzColorspace cs = null;
+            if (colorSpace == null)
+                cs = mupdf.mupdf.fz_device_rgb();
+            cs = colorSpace.ToFzColorspace();
+            FzPixmap pix = mupdf.mupdf.pdf_new_pixmap_from_annot(_nativeAnnotion, ctm, cs, new FzSeparations(0), alpha);
+            if (dpi != 0)
+                pix.fz_set_pixmap_resolution(dpi, dpi);
+            return Pixmap(pix);
         }
 
         public SoundStruct GetSound()
@@ -1389,7 +1407,7 @@ namespace CSharpMuPDF
 
             if (fill != null && !fillAnnots.Contains(this.TYPE.Item1))
             {
-                Console.WriteLine(string.Format("Warning: fill color ignored for annot type '{0}'", this.TYPE[1]));
+                Console.WriteLine(string.Format("Warning: fill color ignored for annot type '{0}'", this.TYPE.Item1));
                 return;
             }
 

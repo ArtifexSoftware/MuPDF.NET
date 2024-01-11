@@ -164,6 +164,13 @@ namespace CSharpMuPDF
             { "MSG_PIXEL_OUTSIDE", "pixel(s) outside image" }
         };
 
+        /// <summary>
+        /// ColorSpace types
+        /// </summary>
+        public static int CS_RGB = 1;
+        public static int CS_GRAY = 2;
+        public static int CS_CMYK = 3;
+
         public static byte[] BinFromBuffer(FzBuffer buffer)
         {
             return buffer.fz_buffer_extract();
