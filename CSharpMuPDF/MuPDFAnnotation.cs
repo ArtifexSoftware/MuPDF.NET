@@ -269,6 +269,15 @@ namespace CSharpMuPDF
             }
         }
 
+        public int XREF
+        {
+            get
+            {
+                PdfAnnot annot = _nativeAnnotion;
+                return annot.pdf_annot_obj().pdf_to_num();
+            }
+        }
+
         public (PdfLineEnding, PdfLineEnding) LINE_ENDS
         {
             get
@@ -450,6 +459,59 @@ namespace CSharpMuPDF
             }
         }
 
+        public dynamic VERTICES
+        {
+            get
+            {
+                PdfAnnot annot = _nativeAnnotion;
+                FzMatrix pageCtm = new FzMatrix();
+                FzRect dummy = new FzRect(0);
+                annot.pdf_annot_page().pdf_page_transform(dummy, pageCtm);
+                FzMatrix derot = Utils.DerotatePageMatrix(annot.pdf_annot_page());
+                pageCtm = mupdf.mupdf.fz_concat(pageCtm, derot);
+
+                PdfObj obj = annot.pdf_annot_obj().pdf_dict_get(new PdfObj("Vertices"));
+                if (obj == null) obj = annot.pdf_annot_obj().pdf_dict_get(new PdfObj("L"));
+                if (obj == null) obj = annot.pdf_annot_obj().pdf_dict_get(new PdfObj("QuadPoints"));
+                if (obj == null) obj = annot.pdf_annot_obj().pdf_dict_get(new PdfObj("CL"));
+
+                if (obj.m_internal != null)
+                {
+                    List<Point> ret = new List<Point>();
+                    for (int i = 0; i < obj.pdf_array_len(); i += 2)
+                    {
+                        float x = obj.pdf_array_get(i).pdf_to_real();
+                        float y = obj.pdf_array_get(i + 1).pdf_to_real();
+                        FzPoint p = new FzPoint(x, y);
+                        p = mupdf.mupdf.fz_transform_point(p, pageCtm);
+                        ret.Add(new Point(p));
+                    }
+
+                    return ret;
+                }
+                else
+                {
+                    List<List<Point>> ret = new List<List<Point>>();
+                    for (int j = 0; j < obj.pdf_array_len(); j++)
+                    {
+                        List<Point> t = new List<Point> ();
+                        PdfObj o = obj.pdf_array_get(j);
+                        for (int i = 0; i < o.pdf_array_len(); i += 2)
+                        {
+                            float x = o.pdf_array_get(i).pdf_to_real();
+                            float y = o.pdf_array_get(i + 1).pdf_to_real();
+                            FzPoint p = new FzPoint(x, y);
+                            p = mupdf.mupdf.fz_transform_point(p, pageCtm);
+                            t.Add(new Point(p));
+                        }
+                        ret.Add(t);
+                    }
+
+                    return ret;
+                }
+            }
+        }
+
         public static string EscapeStrFromStr(string c)
         {
             if (c == null || c == "")
@@ -467,7 +529,7 @@ namespace CSharpMuPDF
         {
             if (s == null || s == "")
                 return "";
-
+            //issue
         }
 
         public (PdfAnnotType, string, string) TYPE
@@ -688,7 +750,7 @@ namespace CSharpMuPDF
                 {
                     throw new Exception("bad type: 'buffer'");
                 }
-
+                Utils.UpdateStream(page.doc(), apObj, buf, 1);
                 if (!rect.IsEmpty)
                 {
                     FzRect bbox = annotObj.pdf_dict_get_rect(new PdfObj("Rect"));
@@ -2154,7 +2216,58 @@ namespace CSharpMuPDF
             if (code == "c")
                 return s + "K";
             return s + "k";
-        }   
+        }
+        
+        public void UpdateFile(byte[] buffer = null, string filename = null, string uFilename = null, string desc = null)
+        {
+            PdfAnnot annot = _nativeAnnotion;
+            PdfObj annotObj = annot.pdf_annot_obj();
+            PdfDocument pdf = annotObj.pdf_get_bound_document();
+            pdf_annot_type type = annot.pdf_annot_type();
+
+            if (type != pdf_annot_type.PDF_ANNOT_FILE_ATTACHMENT)
+            {
+                throw new Exception(Utils.ErrorMessages["MSG_BAD_ANNOT_TYPE"]);
+            }
+            PdfObj stream = Utils.pdf_dict_getl(annotObj, new string[]
+            {
+                "FS", "EF", "F"
+            });
+
+            if (stream.m_internal == null)
+                Console.WriteLine("bad PDF: no /EF object");
+            PdfObj fs = annotObj.pdf_dict_get(new PdfObj("FS"));
+            FzBuffer res = Utils.BufferFromBytes(buffer);
+
+            if (buffer != null && res.m_internal == null)
+                throw new Exception(Utils.ErrorMessages["MSG_BAD_BUFFER"]);
+            if (res.m_internal != null)
+            {
+                Utils.UpdateStream(pdf, stream, res, 1);
+                uint len = res.fz_buffer_storage(new SWIGTYPE_p_p_unsigned_char(IntPtr.Zero, false));
+                PdfObj l = mupdf.mupdf.pdf_new_int((long)len);
+                stream.pdf_dict_put(new PdfObj("DL"), l);
+                Utils.pdf_dict_putl(stream, l, new string[] { "Params", "Size" });
+            }
+            if (filename != null)
+            {
+                stream.pdf_dict_put_text_string(new PdfObj("F"), filename);
+                fs.pdf_dict_put_text_string(new PdfObj("F"), filename);
+                stream.pdf_dict_put_text_string(new PdfObj("UF"), filename);
+                fs.pdf_dict_put_text_string(new PdfObj("UF"), filename);
+                annotObj.pdf_dict_put_text_string(new PdfObj("Contents"), filename);
+            }
+            if (uFilename != null)
+            {
+                stream.pdf_dict_put_text_string(new PdfObj("UF"), uFilename);
+                fs.pdf_dict_put_text_string(new PdfObj("UF"), uFilename);
+            }
+            if (desc != null)
+            {
+                stream.pdf_dict_put_text_string(new PdfObj("Desc"), desc);
+                fs.pdf_dict_put_text_string(new PdfObj("Desc"), desc);
+            }
+        }
     }
 
     internal class Factory : mupdf.PdfFilterFactory2

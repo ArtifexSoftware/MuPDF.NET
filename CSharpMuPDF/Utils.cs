@@ -180,16 +180,31 @@ namespace CSharpMuPDF
         {
             IntPtr unmanagedPointer = Marshal.AllocHGlobal(8);
             SWIGTYPE_p_size_t swigSizeT = new SWIGTYPE_p_size_t(unmanagedPointer, false);
-            mupdf.mupdf.fz_new_deflated_data_from_buffer(swigSizeT, buffer, fz_deflate_level.FZ_DEFLATE_DEFAULT);
+            SWIGTYPE_p_unsigned_char ret = mupdf.mupdf.fz_new_deflated_data_from_buffer(swigSizeT, buffer, fz_deflate_level.FZ_DEFLATE_BEST);
+            if (ret == null || unmanagedPointer.ToInt64() == 0)
+                return null;
+            FzBuffer buf = new FzBuffer(mupdf.mupdf.fz_new_buffer_from_data(ret, (uint)unmanagedPointer.ToInt64()));
+            buf.fz_resize_buffer((uint)unmanagedPointer.ToInt64());
+            return buf;
         }
 
         public static void UpdateStream(PdfDocument doc, PdfObj obj, FzBuffer buffer, int compress)
         {
             uint len = buffer.fz_buffer_storage(new SWIGTYPE_p_p_unsigned_char(IntPtr.Zero, false));
+            uint nlen = len;
+            FzBuffer res = null;
             if (len > 30)
             {
-
+                res = Utils.CompressBuffer(buffer);
+                nlen = res.fz_buffer_storage(new SWIGTYPE_p_p_unsigned_char(IntPtr.Zero, false));
             }
+            if ((nlen < len && res != null) && compress == 1)
+            {
+                obj.pdf_dict_put(new PdfObj("Filter"), new PdfObj("FlateDecode"));
+                doc.pdf_update_stream(obj, res, 1);
+            }
+            else
+                doc.pdf_update_stream(obj, buffer, 0);
         }
 
         public static bool INRANGE(int v, int low, int high)
@@ -273,6 +288,12 @@ namespace CSharpMuPDF
                 pageMediaBox = new FzRect(FzRect.Fixed.Fixed_UNIT);
             }
             return new Rect(pageMediaBox);
+        }
+
+        public static FzMatrix DerotatePageMatrix(PdfPage page)
+        {
+            Matrix mp = RotatePageMatrix(page);
+            return mp.ToFzMatrix().fz_invert_matrix();
         }
 
         public static int PageRotation(PdfPage page)
