@@ -328,5 +328,80 @@ namespace CSharpMuPDF
             }
             return rotate;
         }
+
+        public static FzRect RectFromObj(dynamic r)
+        {
+            if (r is FzRect)
+                return r;
+            if (r is Rect)
+                return r.ToFzRect();
+            if (r.Length != 4)
+                return new FzRect(FzRect.Fixed.Fixed_INFINITE);
+            return new FzRect(
+                (float)Convert.ToDouble(r[0]),
+                (float)Convert.ToDouble(r[1]),
+                (float)Convert.ToDouble(r[2]),
+                (float)Convert.ToDouble(r[3])
+                );
+        }
+
+        public static List<byte> ReadSamples(FzPixmap pixmap, int offset, int n)
+        {
+            List<byte> ret = new List<byte>();
+            for (int i = 0; i < n; i++)
+                ret.Add((byte)pixmap.fz_samples_get(offset + i));
+            return ret;
+        }
+
+        public static Dictionary<List<byte>, int> ColorCount(FzPixmap pm, dynamic clip)
+        {
+            Dictionary<List<byte>, int> ret = new Dictionary<List<byte>, int>();
+            int count = 0;
+            FzIrect irect = pm.fz_pixmap_bbox();
+            irect = irect.fz_intersect_irect(RectFromObj(clip));
+            int stride = pm.fz_pixmap_stride();
+            int width = irect.x1 - irect.x0;
+            int height = irect.y1 - irect.y0;
+            int n = pm.n();
+
+            int substride = width * n;
+            int s = stride * (irect.y0 - pm.y()) + (irect.x0 - pm.x()) * n;
+            List<byte> oldPix = Utils.ReadSamples(pm, s, n);
+            count = 0;
+            if (irect.fz_is_empty_irect() != 0)
+                return ret;
+            List<byte> pixel = null;
+            int c = 0;
+            for (int i = 0; i < height; i++)
+            {
+                for (int j = 0; j < n; i += substride)
+                {
+                    List<byte> newPix = Utils.ReadSamples(pm, s + j, n);
+                    if (newPix != oldPix)
+                    {
+                        c = ret[pixel];
+                        if (c != 0)
+                        {
+                            count += c;
+                        }
+                        ret[pixel] = count;
+                        count = 1;
+                        oldPix = newPix;
+                    }
+                    else
+                        count += 1;
+                }
+                s += stride;
+            }
+            pixel = oldPix;
+            c = ret[pixel];
+            if (c != 0)
+            {
+                count += c;
+            }
+            ret[pixel] = count;
+
+            return ret;
+        }
     }
 }

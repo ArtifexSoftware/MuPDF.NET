@@ -58,10 +58,12 @@
     <Compile Include="structures\AnnotStruct.cs" />
     <Compile Include="structures\AnnotInfoStruct.cs" />
     <Compile Include="structures\BorderStyle.cs" />
+    <Compile Include="structures\ColorSpace.cs" />
     <Compile Include="structures\FileInfoStruct.cs" />
     <Compile Include="structures\Hits.cs" />
     <Compile Include="structures\IRect.cs" />
     <Compile Include="structures\Matrix.cs" />
+    <Compile Include="structures\Pixmap.cs" />
     <Compile Include="structures\Point.cs" />
     <Compile Include="structures\Quad.cs" />
     <Compile Include="structures\Rect.cs" />

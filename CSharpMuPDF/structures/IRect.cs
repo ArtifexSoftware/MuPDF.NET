@@ -133,6 +133,11 @@ namespace CSharpMuPDF
             }
         }
 
+        public FzIrect ToFzIrect()
+        {
+            return new FzIrect(RECT.ToFzRect());
+        }
+
         public IRect(Point ul, Point br)
         {
             X0 = ul.X;
