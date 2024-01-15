@@ -939,7 +939,9 @@ namespace CSharpMuPDF
 
                 }
                 else
-                    filter.sanitize = sanitize; //issue
+                {
+                    //filter.sanitize = sanitize; //issue
+                }
             }
             return filter;
         }

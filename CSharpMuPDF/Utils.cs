@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -16,6 +17,9 @@ namespace CSharpMuPDF
         public static int FZ_MAX_INF_RECT = (int)0x7fffff80;
 
         public static double FLT_EPSILON = 1e-5;
+
+        public static string ANNOT_ID_STEM = "fitz";
+
         public static string GetImageExtention(int type)
         {
             if (type == (int)ImageType.FZ_IMAGE_FAX) return "fax";
@@ -402,6 +406,126 @@ namespace CSharpMuPDF
             ret[pixel] = count;
 
             return ret;
+        }
+
+        public static void GetWidgetProperties(PdfAnnot annot, Widget widget)
+        {
+            PdfObj annotObj = mupdf.mupdf.pdf_annot_obj(annot);
+            PdfPage page = mupdf.mupdf.pdf_annot_page(annot);
+            PdfDocument pdf = page.doc();
+            PdfAnnot tw = annot;
+
+
+        }
+
+        public static void AddAnnotId(PdfAnnot annot, string stem)
+        {
+            PdfPage page = annot.pdf_annot_page();
+            PdfObj annotObj = annot.pdf_annot_obj();
+            List<string> names = GetAnnotIDList(page);
+            int i = 0;
+            string stemId = "";
+            while (true)
+            {
+                stemId = $"{ANNOT_ID_STEM}-{stem}{i}";
+                if (!names.Contains(stemId))
+                    break;
+                i += 1;
+            }
+            PdfObj name = mupdf.mupdf.pdf_new_string(stemId, (uint)stemId.Length);
+            annotObj.pdf_dict_puts("NM", name);
+            page.doc().m_internal.resynth_required = 0;
+        }
+
+        public static List<string> GetAnnotIDList(PdfPage page)
+        {
+            List<string> ids = new List<string>();
+            PdfObj annots = page.obj().pdf_dict_get(new PdfObj("Annots"));
+            if (annots == null)
+                return ids;
+            for (int i = 0; i < annots.pdf_array_len(); i++)
+            {
+                PdfObj annotObj = annots.pdf_array_get(i);
+                PdfObj name = annotObj.pdf_dict_gets("NM");
+                if (name != null)
+                    ids.Add(name.pdf_to_text_string());
+            }
+            return ids;
+        }
+
+        public static byte[] ToByte(string s)
+        {
+            UTF8Encoding utf8 = new UTF8Encoding();
+            return utf8.GetBytes(s);
+        }
+
+        public static PdfObj EmbedFile(
+            PdfDocument pdf,
+            FzBuffer buf,
+            string filename,
+            string ufilename,
+            string desc,
+            int compress)
+        {
+            int len = 0;
+            PdfObj val = pdf.pdf_new_dict(6);
+            val.pdf_dict_put_dict(new PdfObj("CI"), 4);
+            PdfObj ef = val.pdf_dict_put_dict(new PdfObj("EF"), 4);
+            val.pdf_dict_put_text_string(new PdfObj("F"), filename);
+            val.pdf_dict_put_text_string(new PdfObj("UF"), ufilename);
+            val.pdf_dict_put_text_string(new PdfObj("Desc"), desc);
+            val.pdf_dict_put(new PdfObj("Type"), new PdfObj("Filespec"));
+            byte[] bs = Utils.ToByte("  ");
+
+            IntPtr bufPtr = new IntPtr(bs.Length);
+            Marshal.Copy(bufPtr, bs, 0, bs.Length);
+            SWIGTYPE_p_unsigned_char swigBuf = new SWIGTYPE_p_unsigned_char(bufPtr, false);
+
+            PdfObj f = pdf.pdf_add_stream(
+                mupdf.mupdf.fz_new_buffer_from_copied_data(swigBuf, (uint)bs.Length),
+                new PdfObj(),
+                0
+                );
+            ef.pdf_dict_put(new PdfObj("F"), f);
+            Utils.UpdateStream(pdf, f, buf, compress);
+            len = (int)buf.fz_buffer_storage(new SWIGTYPE_p_p_unsigned_char(IntPtr.Zero, false));
+            f.pdf_dict_put_int(new PdfObj("DL"), len);
+            f.pdf_dict_put_int(new PdfObj("Length"), len);
+            PdfObj param = f.pdf_dict_put_dict(new PdfObj("Params"), 4);
+            param.pdf_dict_put_int(new PdfObj("Size"), len);
+
+            return val;
+        }
+
+        public static void MakeAnnotDA(PdfAnnot annot, int nCol, float[] col, string fontName, float fontSize)
+        {
+            string buf = "";
+            if (nCol > 0)
+                buf += "0 g ";
+            else if (nCol == 1)
+                buf += $"{col[0]:g} g ";
+            else if (nCol == 2)
+                Debug.Assert(false);
+            else if (nCol == 3)
+                buf += $"{col[0]:g} {col[1]:g} {col[2]:g} rg ";
+            else
+                buf += $"{col[0]:g} {col[1]:g} {col[2]:g} {col[3]:g} k ";
+            buf += $"/{ExpandFileName(fontName)} {fontSize} Tf";
+            annot.pdf_annot_obj().pdf_dict_put_text_string(new PdfObj("DA"), buf);
+        }
+
+        public static string ExpandFileName(string filename)
+        {
+            if (filename == null) return "Helv";
+            if (filename.StartsWith("Co")) return "Cour";
+            if (filename.StartsWith("co")) return "Cour";
+            if (filename.StartsWith("Ti")) return "TiRo";
+            if (filename.StartsWith("ti")) return "TiRo";
+            if (filename.StartsWith("Sy")) return "Symb";
+            if (filename.StartsWith("sy")) return "Symb";
+            if (filename.StartsWith("Za")) return "ZaDb";
+            if (filename.StartsWith("za")) return "ZaDb";
+            return "Helv";
         }
     }
 }

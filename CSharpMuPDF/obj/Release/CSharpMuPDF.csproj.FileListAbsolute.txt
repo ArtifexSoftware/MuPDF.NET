@@ -10,3 +10,10 @@ E:\c#\CSharpMuPDF\CSharpMuPDF\obj\Release\CSharpMuPDF.csproj.AssemblyReference.c
 E:\c#\CSharpMuPDF\CSharpMuPDF\obj\Release\CSharpMuPDF.csproj.CoreCompileInputs.cache
 E:\c#\CSharpMuPDF\CSharpMuPDF\obj\Release\CSharpMuPDF.dll
 E:\c#\CSharpMuPDF\CSharpMuPDF\obj\Release\CSharpMuPDF.pdb
+E:\c#\CSharpMuPDF\CSharpMuPDF\bin\Release\mupdfcpp64.dll
+E:\c#\CSharpMuPDF\CSharpMuPDF\bin\Release\mupdfcsharp.dll
+E:\c#\CSharpMuPDF\CSharpMuPDF\bin\Release\CSharpMuPDF.dll
+E:\c#\CSharpMuPDF\CSharpMuPDF\bin\Release\CSharpMuPDF.pdb
+E:\c#\CSharpMuPDF\CSharpMuPDF\bin\Release\Newtonsoft.Json.dll
+E:\c#\CSharpMuPDF\CSharpMuPDF\bin\Release\Newtonsoft.Json.xml
+E:\c#\CSharpMuPDF\CSharpMuPDF\obj\Release\CSharpMuPDF.csproj.CopyComplete

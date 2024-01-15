@@ -19,3 +19,5 @@ E:\c#\CSharpMuPDF\Demo\obj\Release\Demo.csproj.CoreCompileInputs.cache
 E:\c#\CSharpMuPDF\Demo\obj\Release\Demo.csproj.CopyComplete
 E:\c#\CSharpMuPDF\Demo\obj\Release\Demo.exe
 E:\c#\CSharpMuPDF\Demo\obj\Release\Demo.pdb
+E:\c#\CSharpMuPDF\Demo\bin\Release\Newtonsoft.Json.dll
+E:\c#\CSharpMuPDF\Demo\bin\Release\Newtonsoft.Json.xml

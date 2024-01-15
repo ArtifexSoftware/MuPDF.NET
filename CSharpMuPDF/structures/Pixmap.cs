@@ -219,10 +219,10 @@ namespace CSharpMuPDF
             FzIrect bBox = new FzIrect(clip);
             FzPixmap pm = null;
 
-            if (bBox.fz_is_infinite_irect() == 0)
+            /*if (bBox.fz_is_infinite_irect() == 0)
                 _nativePixmap = srcPix.fz_scale_pixmap_cached(src_pix.x, src_pix.y, w, h, bbox);
             else
-                _nativePixmap = srcPix.fz_scale_pixmap(src_pix.x, src_pix.y, w, h, None);
+                _nativePixmap = srcPix.fz_scale_pixmap(src_pix.x, src_pix.y, w, h, None);*///issue
         }
         
         public Pixmap(FzPixmap fzPix)
@@ -320,7 +320,7 @@ namespace CSharpMuPDF
             else if (format == 3) mupdf.mupdf.fz_write_pixmap_as_pam(output, pixmap);
             else if (format == 5) mupdf.mupdf.fz_write_pixmap_as_psd(output, pixmap);
             else if (format == 6) mupdf.mupdf.fz_write_pixmap_as_ps(output, pixmap);
-            else if (format == 7) mupdf.mupdf.fz_write_pixmap_as_jpeg(output, pixmap, jpgQuality); 
+            //else if (format == 7) mupdf.mupdf.fz_write_pixmap_as_jpeg(output, pixmap, jpgQuality); //issue
             else mupdf.mupdf.fz_write_pixmap_as_png(output, pixmap);
 
             byte[] barray = Utils.BinFromBuffer(res);
@@ -472,7 +472,7 @@ namespace CSharpMuPDF
             if (pm.alpha() != srcPm.alpha())
                 throw new Exception("source and target alpha must be equal");
 
-            pm.fz_copy
+            //pm.fz_copy
         }
 
         public void GammaWith(float gamma)
@@ -590,7 +590,7 @@ namespace CSharpMuPDF
 
         }
 
-        public Tuple GetPixel(int x, int y)
+        public void GetPixel(int x, int y)
         {
             if (false || x < 0 || x >= _nativePixmap.m_internal.w
                 || y < 0 || y >= _nativePixmap.m_internal.h
@@ -603,7 +603,7 @@ namespace CSharpMuPDF
             int stride = _nativePixmap.fz_pixmap_stride();
             int i = stride * y + n * x;
             
-            int ret = new Tuple()
+            //int ret = new Tuple()
         }
 
         public void Save(dynamic filename, string output, int jpgQuality = 95)
@@ -912,7 +912,8 @@ namespace CSharpMuPDF
                 quad.LowerRight.ToFzPoint(),
                 quad.UpperLeft.ToFzPoint()
             };
-            FzPixmap dst = mupdf.mupdf.fz_warp_pixmap(_nativePixmap, points, width, height);
+            //FzPixmap dst = mupdf.mupdf.fz_warp_pixmap(_nativePixmap, points, width, height);//issue
+            return null;//issue
         }
     }
 

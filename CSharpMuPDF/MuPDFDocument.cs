@@ -30,7 +30,7 @@ namespace CSharpMuPDF
         {
             get
             {
-                
+                return true;
             }
         }
 

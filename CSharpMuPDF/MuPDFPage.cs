@@ -153,7 +153,7 @@ namespace CSharpMuPDF
                 MuPDFAnnotation val = new MuPDFAnnotation(annot);
 
                 Widget widget = new Widget();
-
+                return widget;//issue
             }
         }
 
