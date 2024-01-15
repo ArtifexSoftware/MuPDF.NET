@@ -7,7 +7,7 @@ using mupdf;
 
 namespace CSharpMuPDF
 {
-    public struct BlockDictionary
+    public struct BlockStruct
     {
         public int NUMBER;
 
@@ -39,6 +39,6 @@ namespace CSharpMuPDF
 
         public vectoruc DIGEST;
 
-        public List<LineDictionary> lines;
+        public List<LineStruct> lines;
     }
 }

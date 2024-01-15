@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using CSharpMuPDF;
+using mupdf;
 
 namespace Demo
 {
@@ -12,8 +13,10 @@ namespace Demo
             Console.WriteLine(doc.GetPageCount());
 
             MuPDFSTextPage page = doc.GetStextPage(0);
-            page.
-
+            
+            FzQuad quad = new FzQuad(new FzRect(3f, 4f, 5f, 6f));
+            Console.WriteLine(quad.ul.x);
+            Console.WriteLine(quad.ul.y);
         }
     }
 }

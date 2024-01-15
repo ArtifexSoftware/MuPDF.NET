@@ -47,6 +47,11 @@ namespace CSharpMuPDF
             _nativeSTextPage = new FzStextPage(rect);
         }
 
+        public MuPDFSTextPage(FzStextPage stPage)
+        {
+            _nativeSTextPage = stPage;
+        }
+
         /// <summary>
         /// MuPDFStextPage Contructor
         /// </summary>
@@ -170,9 +175,9 @@ namespace CSharpMuPDF
         /// <param name="cropbox">Rectangle to extract in StextPage</param>
         /// <param name="sort"></param>
         /// <returns>Page information of CropBox</returns>
-        public PageDictionary ExtractDict(FzRect cropbox, bool sort = false)
+        public PageStruct ExtractDict(FzRect cropbox, bool sort = false)
         {
-            PageDictionary pageDict = TextPage2Dict(false);
+            PageStruct pageDict = TextPage2Dict(false);
             if (cropbox != null)
             {
                 pageDict.WIDTH = cropbox.x1 - cropbox.x0;
@@ -180,7 +185,7 @@ namespace CSharpMuPDF
             }
             if (sort is true)
             {
-                List<BlockDictionary> blocks = pageDict.BLOCKS;
+                List<BlockStruct> blocks = pageDict.BLOCKS;
                 blocks.Sort((b1, b2) => { 
                     if (b1.BBOX.y1 == b2.BBOX.y1)
                     {
@@ -216,7 +221,7 @@ namespace CSharpMuPDF
             foreach (FzStextBlock block in BLOCKS)
             {
                 blockNum += 1;
-                List<BlockDictionary> rc = new List<BlockDictionary>();
+                List<BlockStruct> rc = new List<BlockStruct>();
 
                 if (block.m_internal.type == (int)STextBlockType.FZ_STEXT_BLOCK_TEXT)
                     continue;
@@ -236,7 +241,7 @@ namespace CSharpMuPDF
                     digest = pixmap.fz_md5_pixmap2();
                 }
                 FzColorspace cs = new FzColorspace(mupdf.mupdf.ll_fz_keep_colorspace(img.m_internal.colorspace));
-                BlockDictionary blockDict = new BlockDictionary();
+                BlockStruct blockDict = new BlockStruct();
                 blockDict.NUMBER = blockNum;
                 blockDict.BBOX = new FzRect(block.m_internal.bbox);
                 blockDict.MATRIX = block.i_transform();
@@ -263,7 +268,7 @@ namespace CSharpMuPDF
         /// <param name="sort"></param>
         public string ExtractJSON(FzRect cropbox, bool sort = false)
         {
-            PageDictionary pageDict = TextPage2Dict(false);
+            PageStruct pageDict = TextPage2Dict(false);
             if (cropbox != null)
             {
                 pageDict.WIDTH = cropbox.x1 - cropbox.x0;
@@ -272,7 +277,7 @@ namespace CSharpMuPDF
 
             if (sort)
             {
-                List<BlockDictionary> blocks = pageDict.BLOCKS;
+                List<BlockStruct> blocks = pageDict.BLOCKS;
                 blocks.Sort((b1, b2) => {
                     if (b1.BBOX.y1 == b2.BBOX.y1)
                     {
@@ -291,14 +296,14 @@ namespace CSharpMuPDF
         }
 
         /// <summary>
-        /// Extract Stext Page in format of PageDictionary
+        /// Extract Stext Page in format of PageStruct
         /// </summary>
         /// <param name="cropbox">Rectangle Area to Extract</param>
         /// <param name="sort"></param>
         /// <returns></returns>
-        public PageDictionary ExtractRAWDict(FzRect cropbox, bool sort = false)
+        public PageStruct ExtractRAWDict(FzRect cropbox, bool sort = false)
         {
-            PageDictionary pageDict = TextPage2Dict(false);
+            PageStruct pageDict = TextPage2Dict(false);
             if (cropbox != null)
             {
                 pageDict.WIDTH = cropbox.x1 - cropbox.x0;
@@ -306,7 +311,7 @@ namespace CSharpMuPDF
             }
             if (sort is true)
             {
-                List<BlockDictionary> blocks = pageDict.BLOCKS;
+                List<BlockStruct> blocks = pageDict.BLOCKS;
                 blocks.Sort((b1, b2) => {
                     if (b1.BBOX.y1 == b2.BBOX.y1)
                     {
@@ -807,26 +812,26 @@ namespace CSharpMuPDF
         /// <summary>
         /// Make Block List of Stext Page
         /// </summary>
-        /// <param name="pageDict">PageDictionary including BlockList</param>
+        /// <param name="pageDict">PageStruct including BlockList</param>
         /// <param name="raw"></param>
-        internal void GetNewBlockList(PageDictionary pageDict, bool raw)
+        internal void GetNewBlockList(PageStruct pageDict, bool raw)
         {
             MakeTextPage2Dict(pageDict, raw);
         }
 
-        internal PageDictionary TextPage2Dict(bool raw = false)
+        internal PageStruct TextPage2Dict(bool raw = false)
         {
-            PageDictionary pageDict = new PageDictionary {
+            PageStruct pageDict = new PageStruct {
                 WIDTH = MEDIABOX.x1 - MEDIABOX.x0,
                 HEIGHT = MEDIABOX.y1 - MEDIABOX.y0,
-                BLOCKS = new List<BlockDictionary>()
+                BLOCKS = new List<BlockStruct>()
             };
 
             GetNewBlockList(pageDict, raw);
             return pageDict;
         }
 
-        internal void MakeTextPage2Dict(PageDictionary pageDict, bool raw)
+        internal void MakeTextPage2Dict(PageStruct pageDict, bool raw)
         {
             FzBuffer textBuffer = new FzBuffer(128);
             FzRect stPageRect = MEDIABOX;
@@ -844,7 +849,7 @@ namespace CSharpMuPDF
                     && (FzRect.fz_intersect_rect(MEDIABOX, new FzRect(block.m_internal.bbox))).fz_is_empty_rect() != 0)
                     continue;
 
-                BlockDictionary blockDict = new BlockDictionary();
+                BlockStruct blockDict = new BlockStruct();
 
                 blockDict.NUMBER = blockNum;
                 blockDict.TYPE = block.m_internal.type;
@@ -897,7 +902,7 @@ namespace CSharpMuPDF
                 }
                 else
                 {
-                    List<LineDictionary> lineList = new List<LineDictionary>();
+                    List<LineStruct> lineList = new List<LineStruct>();
 
                     FzRect blockRect = new FzRect(FzRect.Fixed.Fixed_EMPTY);
 
@@ -907,11 +912,11 @@ namespace CSharpMuPDF
                             && stPageRect.fz_is_infinite_rect() == 0)
                             continue;
 
-                        LineDictionary lineDict = new LineDictionary();
+                        LineStruct lineDict = new LineStruct();
 
                         ///JM_make_spanlist
-                        List<CharDictionary> charList = new List<CharDictionary>();
-                        List<SpanDictionary> spanList = new List<SpanDictionary>();
+                        List<CharStruct> charList = new List<CharStruct>();
+                        List<SpanStruct> spanList = new List<SpanStruct>();
                         mupdf.mupdf.fz_clear_buffer(textBuffer);
                         FzRect spanRect = new FzRect(FzRect.Fixed.Fixed_EMPTY);
                         FzRect lineRect = new FzRect(FzRect.Fixed.Fixed_EMPTY);
@@ -919,7 +924,7 @@ namespace CSharpMuPDF
                         MuPDFCharStyle style = new MuPDFCharStyle();
                         MuPDFCharStyle oldStyle = new MuPDFCharStyle();
 
-                        SpanDictionary span = new SpanDictionary();
+                        SpanStruct span = new SpanStruct();
                         FzPoint spanOrigin = new FzPoint();
 
                         for (fz_stext_char ch = line.first_char; ch != null; ch = ch.next)
@@ -957,7 +962,7 @@ namespace CSharpMuPDF
                                     lineRect = FzRect.fz_union_rect(lineRect, spanRect);
                                     spanList.Add(span);
                                 }
-                                span = new SpanDictionary();
+                                span = new SpanStruct();
                                 float asc = style.ASC;
                                 float desc = style.DESC;
                                 if (style.ASC < 1e-3)
@@ -977,13 +982,13 @@ namespace CSharpMuPDF
 
                             if (raw)
                             {
-                                CharDictionary charDict = new CharDictionary();
+                                CharStruct charDict = new CharStruct();
                                 charDict.ORIGIN = new FzPoint(ch.origin);
                                 charDict.BBOX = r;
                                 charDict.C = (char)ch.c;
 
                                 if (charList != null)
-                                    charList = new List<CharDictionary>();
+                                    charList = new List<CharStruct>();
                                 charList.Add(charDict);
                             }
                             else
@@ -1030,7 +1035,7 @@ namespace CSharpMuPDF
             }
         }
 
-        internal string EscapeStrFromBuffer(FzBuffer buf)
+        public static string EscapeStrFromBuffer(FzBuffer buf)
         {
             if (buf.m_internal == null)
                 return "";
@@ -1043,7 +1048,7 @@ namespace CSharpMuPDF
         /// </summary>
         /// <param name="s"></param>
         /// <returns></returns>
-        internal string DecodeRawUnicodeEscape(string s)
+        public static string DecodeRawUnicodeEscape(string s)
         {
             return System.Text.RegularExpressions.Regex.Unescape(s);
         }
@@ -1053,7 +1058,7 @@ namespace CSharpMuPDF
         /// </summary>
         /// <param name="s"></param>
         /// <returns></returns>
-        internal string DecodeRawUnicodeEscape(FzBuffer s)
+        public static string DecodeRawUnicodeEscape(FzBuffer s)
         {
             string ret = s.fz_string_from_buffer();
             return DecodeRawUnicodeEscape(ret);
@@ -1205,14 +1210,14 @@ namespace CSharpMuPDF
 
         public float DESC;
 
-        public MuPDFCharStyle(CharStyle rhs)
+        public MuPDFCharStyle(Dictionary<string, dynamic> rhs)
         {
-            SIZE = rhs.SIZE;
-            FLAGS = rhs.FLAGS;
-            FONT = rhs.FONT;
-            COLOR = rhs.COLOR;
-            ASC = rhs.ASC;
-            DESC = rhs.DESC;
+            SIZE = rhs["Size"];
+            FLAGS = rhs["Flags"];
+            FONT = rhs["Font"];
+            COLOR = rhs["Color"];
+            ASC = rhs["Asc"];
+            DESC = rhs["Desc"];
         }
 
         public MuPDFCharStyle()

@@ -7,14 +7,12 @@ using mupdf;
 
 namespace CSharpMuPDF
 {
-    public struct LineDictionary
+    public struct CharStruct
     {
-        public List<SpanDictionary> SPANS;
-
-        public int WMODE;
-
-        public FzPoint DIR;
+        public FzPoint ORIGIN;
 
         public FzRect BBOX;
+
+        public char C;
     }
 }

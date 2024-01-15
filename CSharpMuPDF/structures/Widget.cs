@@ -6,12 +6,8 @@ using System.Threading.Tasks;
 
 namespace CSharpMuPDF
 {
-    public struct PageDictionary
+    public class Widget
     {
-        public float WIDTH;
-
-        public float HEIGHT;
-
-        public List<BlockDictionary> BLOCKS;
+        public Widget() { }
     }
 }

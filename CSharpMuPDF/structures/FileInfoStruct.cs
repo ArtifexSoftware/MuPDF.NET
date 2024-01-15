@@ -3,16 +3,17 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using mupdf;
 
 namespace CSharpMuPDF
 {
-    public struct CharDictionary
+    public struct FileInfoStruct
     {
-        public FzPoint ORIGIN;
+        public string FILENAME;
 
-        public FzRect BBOX;
+        public string DESC;
 
-        public char C;
+        public int LENGTH;
+
+        public int SIZE;
     }
 }
