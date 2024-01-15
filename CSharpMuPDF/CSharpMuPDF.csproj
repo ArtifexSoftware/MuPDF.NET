@@ -49,6 +49,7 @@
     <Compile Include="enums\ExtractFormat.cs" />
     <Compile Include="enums\FontStyle.cs" />
     <Compile Include="enums\ImageType.cs" />
+    <Compile Include="enums\PdfAnnotStatus.cs" />
     <Compile Include="enums\PdfAnnotType.cs" />
     <Compile Include="enums\PdfLineEnding.cs" />
     <Compile Include="enums\TextLanguage.cs" />
@@ -75,10 +76,10 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="structures\BlockStruct.cs" />
     <Compile Include="structures\CharStruct.cs" />
-    <Compile Include="structures\CharStyle.cs" />
     <Compile Include="structures\LineStruct.cs" />
     <Compile Include="structures\PageStruct.cs" />
     <Compile Include="structures\TextBlock.cs" />
+    <Compile Include="structures\Widget.cs" />
     <Compile Include="structures\WordBlock.cs" />
     <Compile Include="Utils.cs" />
   </ItemGroup>

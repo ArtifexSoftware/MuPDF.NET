@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using mupdf;
 using System.Net;
 using static System.Net.Mime.MediaTypeNames;
+using System.Security.Policy;
 
 namespace CSharpMuPDF
 {
@@ -103,21 +104,21 @@ namespace CSharpMuPDF
             }
         }
 
-        public void SAMPLES_MV
+        /*public void SAMPLES_MV
         {
             get
             {
                 return _nativePixmap.fz_pixmap_samples_memoryview
             }
-        }
+        }*/
 
-        public byte[] SAMPLES
+        /*public byte[] SAMPLES
         {
             get
             {
 
             }
-        }
+        }*/
 
         public long SAMPLES_PTR
         {
@@ -212,10 +213,21 @@ namespace CSharpMuPDF
             }
         }
 
-        public Pixmap(Pixmap src, float width, float height)
+        public Pixmap(Pixmap src, float width, float height, dynamic clip)
         {
             FzPixmap srcPix = src.ToFzPixmap();
-            Rect bBox = //issue
+            FzIrect bBox = new FzIrect(clip);
+            FzPixmap pm = null;
+
+            if (bBox.fz_is_infinite_irect() == 0)
+                _nativePixmap = srcPix.fz_scale_pixmap_cached(src_pix.x, src_pix.y, w, h, bbox);
+            else
+                _nativePixmap = srcPix.fz_scale_pixmap(src_pix.x, src_pix.y, w, h, None);
+        }
+        
+        public Pixmap(FzPixmap fzPix)
+        {
+            _nativePixmap = fzPix;
         }
 
         public Pixmap(string filename)
@@ -249,14 +261,25 @@ namespace CSharpMuPDF
             _nativePixmap = pix;
         }
 
-        public Pixmap(ColorSpace cs, int w, int h, byte[] samples, int alpha)
+        public Pixmap(ColorSpace cs, int w, int h, dynamic samples, int alpha)
         {
             int n = cs.N;
             int stride = (n + alpha) * w;
             FzSeparations seps = new FzSeparations();
             FzPixmap pixmap = mupdf.mupdf.fz_new_pixmap(cs.ToFzColorspace(), w, h, seps, alpha);
+            int size = 0;
 
-            mupdf.mupdf.ll_fz_pixmap_ra
+            if (samples is List<byte> || samples is byte[])
+            {
+                FzBuffer samples2 = Utils.BufferFromBytes(samples is List<byte> ? samples.ToArray() : samples);
+                size = samples is List<byte> ? samples.Count : samples.Length;
+            }
+            else
+            {
+
+            }
+
+            //issue
         }
 
         public Pixmap(PdfDocument doc, int xref)
@@ -679,17 +702,24 @@ namespace CSharpMuPDF
 
             if (true)
             {
+                IntPtr dataPtr = Marshal.AllocHGlobal(dataLen * sizeof(byte));
+                Marshal.Copy(data.ToArray(), 0, dataPtr, dataLen);
+                SWIGTYPE_p_unsigned_char swigData = new SWIGTYPE_p_unsigned_char(dataPtr, false);
+
+                IEnumerable<int> iColors = colors;
+                IEnumerable<int> iBgColor = bgColor;
+
                 mupdf.mupdf.Pixmap_set_alpha_helper(
                     balen,
                     n,
                     dataLen,
                     zeroOut,
-                    ,
+                    swigData,
                     pixmap.m_internal,
                     premultiply,
                     bground,
-                    colors,
-                    bgColor
+                    new vectori(iColors),
+                    new vectori(iBgColor)
                     );
             }
             else
@@ -871,10 +901,11 @@ namespace CSharpMuPDF
             _nativePixmap.fz_tint_pixmap(black, white);
         }
 
-        public Pixmap Wrap(Quad quad, int width, int height)
+        public Pixmap Warp(Quad quad, int width, int height)
         {
             if (!quad.IsConvex)
                 throw new Exception("quad must be convex");
+
             FzPoint[] points = new FzPoint[4] { 
                 quad.UpperLeft.ToFzPoint(),
                 quad.UpperRight.ToFzPoint(),

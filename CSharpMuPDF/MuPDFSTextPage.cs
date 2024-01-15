@@ -1210,14 +1210,14 @@ namespace CSharpMuPDF
 
         public float DESC;
 
-        public MuPDFCharStyle(CharStyle rhs)
+        public MuPDFCharStyle(Dictionary<string, dynamic> rhs)
         {
-            SIZE = rhs.SIZE;
-            FLAGS = rhs.FLAGS;
-            FONT = rhs.FONT;
-            COLOR = rhs.COLOR;
-            ASC = rhs.ASC;
-            DESC = rhs.DESC;
+            SIZE = rhs["Size"];
+            FLAGS = rhs["Flags"];
+            FONT = rhs["Font"];
+            COLOR = rhs["Color"];
+            ASC = rhs["Asc"];
+            DESC = rhs["Desc"];
         }
 
         public MuPDFCharStyle()

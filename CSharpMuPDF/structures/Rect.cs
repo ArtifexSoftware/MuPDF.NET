@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Security.Cryptography;
 using FzRect = mupdf.FzRect;
 
 namespace CSharpMuPDF
@@ -233,6 +234,11 @@ namespace CSharpMuPDF
         public static Rect operator *(Rect op1, float op2)
         {
             return new Rect(op1.X0 * op2, op1.Y0 * op2, op1.X1 * op2, op1.Y1 * op2);
+        }
+
+        public static Rect operator *(Rect op, Matrix m)
+        {
+            return op.Transform(m);
         }
 
         public static Rect operator -(Rect op) // negative

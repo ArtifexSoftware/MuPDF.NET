@@ -26,6 +26,14 @@ namespace CSharpMuPDF
 
         private FzDocument _nativeDocument;
 
+        public bool IsPDF
+        {
+            get
+            {
+                
+            }
+        }
+
         public MuPDFDocument(string filename)
         {
             _nativeDocument = new FzDocument(filename);
