@@ -52,6 +52,7 @@
     <Compile Include="enums\PdfAnnotStatus.cs" />
     <Compile Include="enums\PdfAnnotType.cs" />
     <Compile Include="enums\PdfLineEnding.cs" />
+    <Compile Include="enums\TextFlags.cs" />
     <Compile Include="enums\TextLanguage.cs" />
     <Compile Include="MuPDFAnnotation.cs" />
     <Compile Include="MuPDFDocument.cs" />

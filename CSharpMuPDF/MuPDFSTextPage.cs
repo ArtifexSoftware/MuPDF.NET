@@ -7,10 +7,11 @@ using mupdf;
 
 namespace CSharpMuPDF
 {
-    public class MuPDFSTextPage
+    public class MuPDFSTextPage : IDisposable
     {
         internal FzStextPage _nativeSTextPage;
 
+        internal MuPDFPage _parent;
         /// <summary>
         /// Rect of Stext Page
         /// </summary>
@@ -175,13 +176,13 @@ namespace CSharpMuPDF
         /// <param name="cropbox">Rectangle to extract in StextPage</param>
         /// <param name="sort"></param>
         /// <returns>Page information of CropBox</returns>
-        public PageStruct ExtractDict(FzRect cropbox, bool sort = false)
+        public PageStruct ExtractDict(Rect cropbox, bool sort = false)
         {
             PageStruct pageDict = TextPage2Dict(false);
             if (cropbox != null)
             {
-                pageDict.WIDTH = cropbox.x1 - cropbox.x0;
-                pageDict.HEIGHT = cropbox.y1 - cropbox.y0;
+                pageDict.WIDTH = cropbox.Width;
+                pageDict.HEIGHT = cropbox.Height;
             }
             if (sort is true)
             {
@@ -266,13 +267,13 @@ namespace CSharpMuPDF
         /// </summary>
         /// <param name="cropbox">Rectangle area to extract</param>
         /// <param name="sort"></param>
-        public string ExtractJSON(FzRect cropbox, bool sort = false)
+        public string ExtractJSON(Rect cb, bool sort = false)
         {
             PageStruct pageDict = TextPage2Dict(false);
-            if (cropbox != null)
+            if (cb != null)
             {
-                pageDict.WIDTH = cropbox.x1 - cropbox.x0;
-                pageDict.HEIGHT = cropbox.y1 - cropbox.y0;
+                pageDict.WIDTH = cb.Width;
+                pageDict.HEIGHT = cb.Height;
             }
 
             if (sort)
@@ -295,19 +296,24 @@ namespace CSharpMuPDF
             return ret;
         }
 
+        public string ExtractXML()
+        {
+            return ExtractText(ExtractFormat.XML);
+        }
+
         /// <summary>
         /// Extract Stext Page in format of PageStruct
         /// </summary>
         /// <param name="cropbox">Rectangle Area to Extract</param>
         /// <param name="sort"></param>
         /// <returns></returns>
-        public PageStruct ExtractRAWDict(FzRect cropbox, bool sort = false)
+        public PageStruct ExtractRAWDict(Rect cropbox, bool sort = false)
         {
             PageStruct pageDict = TextPage2Dict(false);
             if (cropbox != null)
             {
-                pageDict.WIDTH = cropbox.x1 - cropbox.x0;
-                pageDict.HEIGHT = cropbox.y1 - cropbox.y0;
+                pageDict.WIDTH = cropbox.Width;
+                pageDict.HEIGHT = cropbox.Height;
             }
             if (sort is true)
             {
@@ -499,7 +505,7 @@ namespace CSharpMuPDF
         /// <param name="stPage">Stext Page</param>
         /// <param name="needle">Text to search</param>
         /// <returns></returns>
-        public static List<FzQuad> Search(MuPDFSTextPage stPage, string needle)
+        public static List<Quad> Search(MuPDFSTextPage stPage, string needle)
         {
             FzRect rect = stPage.MEDIABOX;
             if (needle == null || needle == "")
@@ -507,7 +513,7 @@ namespace CSharpMuPDF
             Hits hits = new Hits();
 
             hits.LEN = 0;
-            hits.QUADS = new List<FzQuad>();
+            hits.QUADS = new List<Quad>();
             hits.HFUZZ = 0.2f;
             hits.VFUZZ = 0.1f;
 
@@ -589,7 +595,7 @@ namespace CSharpMuPDF
 
             if (hits.LEN > 0)
             {
-                FzQuad end = hits.QUADS[hits.LEN - 1];
+                FzQuad end = hits.QUADS[hits.LEN - 1].ToFzQuad();
                 if (true && HDist(new FzPoint(line.m_internal.dir), new FzPoint(end.lr), new FzPoint(chQuad.ll)) < hFuzz
                     && VDist(new FzPoint(line.m_internal.dir), new FzPoint(end.lr), new FzPoint(chQuad.ll)) < vFuzz
                     && HDist(new FzPoint(line.m_internal.dir), new FzPoint(end.ur), new FzPoint(chQuad.ul)) < hFuzz
@@ -597,11 +603,11 @@ namespace CSharpMuPDF
                 {
                     end.ur = chQuad.ur;
                     end.lr = chQuad.lr;
-                    Debug.Assert(hits.QUADS[-1] == end);
+                    Debug.Assert(hits.QUADS[-1].ToFzQuad() == end);
                     return;
                 }
             }
-            hits.QUADS.Add(chQuad);
+            hits.QUADS.Add(new Quad(chQuad));
             hits.LEN += 1;
         }
 
@@ -831,6 +837,34 @@ namespace CSharpMuPDF
             return pageDict;
         }
 
+        public string ExtractRawJSON(Rect cb = null, bool sort = false)
+        {
+            PageStruct val = TextPage2Dict(true);
+            if (cb != null)
+            {
+                val.WIDTH = cb.Width;
+                val.HEIGHT = cb.Height;
+            }
+            if (sort == true)
+            {
+                List<BlockStruct> blocks = val.BLOCKS;
+                blocks.Sort((b1, b2) => {
+                    if (b1.BBOX.y1 == b2.BBOX.y1)
+                    {
+                        return b1.BBOX.x0.CompareTo(b2.BBOX.x0);
+                    }
+                    else
+                    {
+                        return b1.BBOX.y1.CompareTo(b2.BBOX.y1);
+                    }
+                });
+                val.BLOCKS = blocks;
+            }
+
+            string ret = JsonConvert.SerializeObject(val, Formatting.Indented);
+            return ret;
+        }
+
         internal void MakeTextPage2Dict(PageStruct pageDict, bool raw)
         {
             FzBuffer textBuffer = new FzBuffer(128);
@@ -1029,7 +1063,7 @@ namespace CSharpMuPDF
                         lineList.Add(lineDict);
                     }
                     blockDict.BBOX = blockRect;
-                    blockDict.lines = lineList;
+                    blockDict.LINES = lineList;
                 }
                 pageDict.BLOCKS.Add(blockDict);
             }
@@ -1192,6 +1226,11 @@ namespace CSharpMuPDF
             )
                 return false;
             return true;
+        }
+
+        public void Dispose()
+        {
+            _nativeSTextPage.Dispose();
         }
     }
 

@@ -54,6 +54,11 @@ namespace CSharpMuPDF
             return new MuPDFSTextPage(_nativeDocument.fz_load_page(i));
         }
 
+        public MuPDFPage GetPdfPage(int i)
+        {
+            return new MuPDFPage(_nativeDocument.fz_load_page(i), this);
+        }
+
         public FzDocument ToFzDocument()
         {
             return _nativeDocument;

@@ -126,6 +126,14 @@ namespace CSharpMuPDF
             LowerRight = quad.LowerRight;
         }
 
+        public Quad(FzQuad quad)
+        {
+            UpperLeft = new Point(new FzPoint(quad.ul));
+            UpperRight = new Point(new FzPoint(quad.ur));
+            LowerLeft = new Point(new FzPoint(quad.ll));
+            LowerRight = new Point(new FzPoint(quad.lr));
+        }
+
         public Point this[int i]
         {
             get

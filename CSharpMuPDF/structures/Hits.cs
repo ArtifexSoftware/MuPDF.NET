@@ -8,7 +8,7 @@ namespace CSharpMuPDF
     {
         public int LEN;
 
-        public List<FzQuad> QUADS;
+        public List<Quad> QUADS;
 
         public float HFUZZ;
 

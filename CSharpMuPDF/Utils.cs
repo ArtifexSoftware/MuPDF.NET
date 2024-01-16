@@ -527,5 +527,119 @@ namespace CSharpMuPDF
             if (filename.StartsWith("za")) return "ZaDb";
             return "Helv";
         }
+
+        public static List<WordBlock> GetTextWords(
+            MuPDFPage page,
+            Rect clip = null,
+            int flags = 0,
+            MuPDFSTextPage stPage = null,
+            bool sort = false,
+            char[] delimiters = null
+            )
+        {
+            if (flags == 0)
+                flags = flags = (int)(TextFlags.TEXT_PRESERVE_WHITESPACE | TextFlags.TEXT_PRESERVE_LIGATURES | TextFlags.TEXT_MEDIABOX_CLIP);
+            MuPDFSTextPage tp = stPage;
+            if (tp == null)
+                tp = page.GetSTextPage(clip, flags);
+            else if (tp._parent != page)
+                throw new Exception("not a textpage of this page");
+
+            List<WordBlock> words = tp.ExtractWords(delimiters);
+            if (stPage is null)
+                tp.Dispose();
+            if (sort)
+                words.Sort((WordBlock w1, WordBlock w2) =>
+                {
+                    var result = w1.Y1.CompareTo(w2.Y1);
+                    if (result == 0)
+                    {
+                        result = w1.X0.CompareTo(w2.X0);
+                    }
+                    return result;
+                });
+            return words;
+        }
+
+        public static dynamic GetText(
+            MuPDFPage page,
+            string option = "text",
+            Rect clip = null,
+            int flags = 0,
+            MuPDFSTextPage stPage = null,
+            bool sort = false,
+            char[] delimiters = null
+            )
+        {
+            Dictionary<string, int> formats = new Dictionary<string, int>()
+            {
+                { "text", 0 },
+                { "html", 1 },
+                { "json", 1 },
+                { "rawjson", 1 },
+                { "xml", 0 },
+                { "xhtml", 1 },
+                { "dict", 1 },
+                { "rawdict", 1 },
+                { "words", 0 },
+                { "blocks", 1 },
+            };
+
+            option = option.ToLower();
+            if (!formats.Keys.Contains(option))
+                option = "text";
+            if (flags == 0)
+            {
+                flags = (int)(TextFlags.TEXT_PRESERVE_WHITESPACE | TextFlags.TEXT_PRESERVE_LIGATURES | TextFlags.TEXT_MEDIABOX_CLIP);
+                if (formats[option] == 1)
+                    flags = flags | (int)TextFlags.TEXT_PRESERVE_IMAGES;
+            }
+
+            if (option == "words")
+            {
+                return Utils.GetTextWords(
+                    page,
+                    clip,
+                    flags,
+                    stPage,
+                    sort,
+                    delimiters
+                    );
+            }
+
+            Rect cb = null;
+            if ((new List<string>() { "html", "xml", "xhtml" }).Contains(option))
+                clip = page.CROPBOX;
+            if (clip != null)
+                cb = null;
+            else if (page is MuPDFPage)
+                cb = page.CROPBOX;
+
+            MuPDFSTextPage tp = stPage;
+            if (tp is null)
+                tp = page.GetSTextPage(clip, flags);
+            else if (tp._parent != page)
+                throw new Exception("not a textpage of this page");
+
+            dynamic t = null;
+            if (option == "json")
+                t = stPage.ExtractJSON(cb, sort);
+            else if (option == "rawjson")
+                t = stPage.ExtractRawJSON(cb, sort);
+            else if (option == "dict")
+                t = stPage.ExtractDict(cb, sort);
+            else if (option == "rawdict")
+                t = stPage.ExtractRAWDict(cb, sort);
+            else if (option == "html")
+                t = stPage.ExtractHtml();
+            else if (option == "xml")
+                t = stPage.ExtractXML();
+            else if (option == "xhtml")
+                t = stPage.ExtractText();
+
+            if (stPage is null)
+                stPage.Dispose();
+            return t;
+        }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -565,11 +566,137 @@ namespace CSharpMuPDF
             }
             if (ret == null)
                 return null;
-            ANNOT_REFS.Add(Convert.ToInt32(ret), ret);
+            ANNOT_REFS.Add(ret.GetHashCode(), ret);
             
             return ret;
         }
 
+        private List<Rect> GetHighlightSelection(List<Quad> quads, Point start, Point stop, Rect clip)
+        {
+            if (clip is null)
+                clip = this.MEDIABOX;
+            if (start is null)
+                start = clip.TopLeft;
+            if (stop is null)
+                stop = clip.BottomRight;
+            clip.Y0 = start.Y;
+            clip.Y1 = stop.Y;
 
+            if (clip.IsEmpty || clip.IsInfinite)
+                return null;
+
+            List<BlockStruct> blocks = Utils.GetText(this, "dict", clip, 0).BLOCKS;
+
+            List<Rect> lines = new List<Rect>();
+            foreach (BlockStruct b in  blocks)
+            {
+                Rect bbox = new Rect(b.BBOX);
+                if (bbox.IsInfinite || bbox.IsEmpty)
+                    continue;
+
+                foreach (LineStruct line in b.LINES)
+                {
+                    bbox = new Rect(line.BBOX);
+                    if (bbox.IsInfinite || bbox.IsEmpty)
+                        continue;
+                    lines.Add(bbox);
+                }
+            }
+
+            if (lines.Count == 0)
+                return lines;
+
+            lines.Sort((Rect bbox1, Rect bbox2) => bbox1.Y1.CompareTo(bbox2.Y1));
+            Rect bboxf = new Rect(lines[0]);
+            lines.RemoveAt(0);
+            if (bboxf.Y0 - start.Y <= 0.1 * bboxf.Height)
+            {
+                Rect r = new Rect(start.X, bboxf.Y0, bboxf.BottomRight.X, bboxf.BottomRight.Y);
+                if (!(r.IsEmpty || r.IsInfinite))
+                    lines.Insert(0, r);
+            }
+            else
+                lines.Insert(0, bboxf);
+
+            if (lines.Count == 0)
+                return lines;
+
+            Rect bboxl = lines[lines.Count - 1];
+            lines.RemoveAt(lines.Count - 1);
+            if (stop.Y - bboxl.Y1 <= 0.1 * bboxl.Height)
+            {
+                Rect r = new Rect(bboxl.TopLeft.X, bboxl.TopLeft.Y, stop.X, bboxl.Y1);
+                if (!(r.IsEmpty || r.IsInfinite))
+                    lines.Add(r);
+            }
+            else
+                lines.Add(bboxl);
+
+            return lines;
+        }
+
+        public MuPDFAnnotation AddHighlightAnnot(List<Quad> quads, Point start, Point stop, Rect clip)
+        {
+            List<Quad> q = new List<Quad>();
+            if (quads is null)
+            {
+                List<Rect> rs = GetHighlightSelection(q, start, stop, clip);
+                foreach (Rect r in rs)
+                    q.Add(r.QUAD);
+            }
+            else
+                q = quads;
+            MuPDFAnnotation ret = AddTextMarker(q, PdfAnnotType.PDF_ANNOT_HIGHLIGHT);
+            return ret;
+        }
+
+        private MuPDFSTextPage _GetSTextPage(Rect clip = null, int flags = 0, Matrix matrix = null)
+        {
+            PdfPage page = _nativePage;
+            FzStextOptions options = new FzStextOptions(flags);
+            FzRect rect = clip == null ? mupdf.mupdf.fz_bound_page(new FzPage(page)) : clip.ToFzRect();
+            FzMatrix ctm = matrix.ToFzMatrix();
+            FzStextPage stPage = new FzStextPage(rect);
+            FzDevice dev = stPage.fz_new_stext_device(options);
+
+            FzPage _page = null;
+            if (page is PdfPage)
+                _page = page.super();
+            else
+                Debug.Assert(false, "Unrecognised type");
+            _page.fz_run_page(dev, ctm, new FzCookie());
+            dev.fz_close_device();
+
+            return new MuPDFSTextPage(stPage);
+        }
+
+
+
+        public MuPDFSTextPage GetSTextPage(Rect clip, int flags = 0, Matrix matrix = null)
+        {
+            if (matrix == null)
+                matrix = new Matrix(1, 1);
+            int oldRotation = ROTATION;
+            if (oldRotation != 0) SetRotation(0);
+            MuPDFSTextPage stPage = null;
+            try
+            {
+                stPage = _GetSTextPage(clip, flags, matrix);
+            }
+            finally
+            {
+                if (oldRotation != 0)
+                    SetRotation(oldRotation);
+            }
+
+            return stPage;
+        }
+
+        public void SetRotation(int rotation)
+        {
+            PdfPage page = _nativePage;
+            page.obj().pdf_dict_put_int(new PdfObj("Rotate"), rotation);
+
+        }
     }
 }

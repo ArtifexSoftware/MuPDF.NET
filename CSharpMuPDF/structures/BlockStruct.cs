@@ -39,6 +39,6 @@ namespace CSharpMuPDF
 
         public vectoruc DIGEST;
 
-        public List<LineStruct> lines;
+        public List<LineStruct> LINES;
     }
 }
