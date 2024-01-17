@@ -698,5 +698,11 @@ namespace CSharpMuPDF
             page.obj().pdf_dict_put_int(new PdfObj("Rotate"), rotation);
 
         }
+
+        public void AddUnderlineAnnot(List<Quad> quads = null, Point start = null, Point stop = null, Rect clip)
+        {
+            if (quads == null)
+                quads = 
+        }
     }
 }

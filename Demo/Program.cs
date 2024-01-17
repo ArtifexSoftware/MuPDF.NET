@@ -11,9 +11,9 @@ namespace Demo
         {
             MuPDFDocument doc = new MuPDFDocument("1.pdf");
             
-            MuPDFSTextPage stpage = doc.GetStextPage(0);
+            MuPDFSTextPage stpage = new MuPDFSTextPage(doc.GetPage(0));
 
-            MuPDFPage page = doc.GetPdfPage(0);
+            MuPDFPage page = new MuPDFPage(doc.GetPage(0), doc);
 
             Console.WriteLine(stpage.ExtractText());
 

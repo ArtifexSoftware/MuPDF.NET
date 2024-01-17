@@ -49,14 +49,9 @@ namespace CSharpMuPDF
             return _nativeDocument.fz_count_pages();
         }
 
-        public MuPDFSTextPage GetStextPage(int i)
+        public FzPage GetPage(int index)
         {
-            return new MuPDFSTextPage(_nativeDocument.fz_load_page(i));
-        }
-
-        public MuPDFPage GetPdfPage(int i)
-        {
-            return new MuPDFPage(_nativeDocument.fz_load_page(i), this);
+            return _nativeDocument.fz_load_page(index);
         }
 
         public FzDocument ToFzDocument()
