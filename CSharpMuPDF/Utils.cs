@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Resources;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
@@ -20,6 +21,8 @@ namespace CSharpMuPDF
 
         public static string ANNOT_ID_STEM = "fitz";
 
+        public static int SigFlag_SignaturesExist = 1;
+        public static int SigFlag_AppendOnly = 2;
         public static string GetImageExtention(int type)
         {
             if (type == (int)ImageType.FZ_IMAGE_FAX) return "fax";
@@ -640,6 +643,163 @@ namespace CSharpMuPDF
             if (stPage is null)
                 stPage.Dispose();
             return t;
+        }
+
+        public static void SetFieldType(PdfDocument doc, PdfObj annotObj, PdfWidgetType type)
+        {
+            PdfFieldType setBits = 0;
+            PdfFieldType clearBits = 0;
+            PdfObj typeName = null;
+
+            if (type == PdfWidgetType.PDF_WIDGET_TYPE_BUTTON)
+            {
+                typeName = new PdfObj("Btn");
+                setBits = PdfFieldType.PDF_BTN_FIELD_IS_PUSHBUTTON;
+            }
+            else if (type == PdfWidgetType.PDF_WIDGET_TYPE_RADIOBUTTON)
+            {
+                typeName = new PdfObj("Btn");
+                clearBits = PdfFieldType.PDF_BTN_FIELD_IS_PUSHBUTTON;
+                setBits = PdfFieldType.PDF_BTN_FIELD_IS_RADIO;
+            }
+            else if (type == PdfWidgetType.PDF_WIDGET_TYPE_CHECKBOX)
+            {
+                typeName = new PdfObj("Btn");
+                clearBits = (PdfFieldType.PDF_BTN_FIELD_IS_PUSHBUTTON | PdfFieldType.PDF_BTN_FIELD_IS_RADIO);
+            }
+            else if (type == PdfWidgetType.PDF_WIDGET_TYPE_TEXT)
+            {
+                typeName = new PdfObj("Tx");
+            }
+            else if (type == PdfWidgetType.PDF_WIDGET_TYPE_LISTBOX)
+            {
+                typeName = new PdfObj("Ch");
+                clearBits = PdfFieldType.PDF_CH_FIELD_IS_COMBO;
+            }
+            else if (type == PdfWidgetType.PDF_WIDGET_TYPE_COMBOBOX)
+            {
+                typeName = new PdfObj("Ch");
+                setBits = PdfFieldType.PDF_CH_FIELD_IS_COMBO;
+            }
+            else if (type == PdfWidgetType.PDF_WIDGET_TYPE_SIGNATURE)
+            {
+                typeName = new PdfObj("Sig");
+            }
+
+            if (typeName != null)
+                annotObj.pdf_dict_put(new PdfObj("FT"), typeName);
+
+            int bits = 0;
+            if ((int)setBits != 0 || (int)setBits != 0)
+            {
+                bits = annotObj.pdf_dict_get_int(new PdfObj("Ff"));
+                bits &= ~(int)clearBits;
+                bits |= (int)setBits;
+                annotObj.pdf_dict_put_int(new PdfObj("Ff"), bits);
+            }
+
+        }
+
+        public static PdfAnnot CreateWidget(PdfDocument doc, PdfPage page, PdfWidgetType type, string fieldName)
+        {
+            int oldSigFlags = doc.pdf_trailer().pdf_dict_getp("Root/AcroForm/SigFlags").pdf_to_int();
+            PdfAnnot annot = page.pdf_create_annot_raw(pdf_annot_type.PDF_ANNOT_WIDGET);
+            PdfObj annotObj = annot.pdf_annot_obj();
+            try
+            {
+                Utils.SetFieldType(doc, annotObj, type);
+                annotObj.pdf_dict_put_text_string(new PdfObj("T"), fieldName);
+
+                if (type == PdfWidgetType.PDF_WIDGET_TYPE_SIGNATURE)
+                {
+                    int sigFlags = oldSigFlags | (Utils.SigFlag_SignaturesExist | Utils.SigFlag_AppendOnly);
+                    Utils.pdf_dict_putl(
+                        doc.pdf_trailer(),
+                        mupdf.mupdf.pdf_new_nt(sigFlags),
+                        new string[]
+                        {
+                            "Root", "AcroForm", "SigFlags"
+                        }
+                    );
+                }
+
+                PdfObj form = doc.pdf_trailer().pdf_dict_getp("Root/AcroForm/Fields");
+                if (form == null)
+                {
+                    form = doc.pdf_new_array(1);
+                    Utils.pdf_dict_putl(
+                        doc.pdf_trailer(),
+                        form,
+                        new string[]
+                        {
+                            "Root", "AcroForm", "Fields"
+                        }
+                        );
+                }
+
+                form.pdf_array_push(annotObj);
+            }
+            catch (Exception e)
+            {
+                page.pdf_delete_annot(annot);
+
+                if (type == PdfWidgetType.PDF_WIDGET_TYPE_SIGNATURE)
+                {
+                    Utils.pdf_dict_putl(
+                        doc.pdf_trailer(),
+                        mupdf.mupdf.pdf_new_int(oldSigFlags),
+                        new string[]
+                        {
+                            "Root", "AcroForm", "SigFlags"
+                        }
+                        );
+                }
+                throw e;
+            }
+            return annot;
+        }
+
+        public static List<(string, int)> GetResourceProperties(PdfObj refer)
+        {
+            PdfObj properties = Utils.pdf_dict_getl(refer, new string[] { "Resource", "Properties" });
+            List<(string, int)> rc = new List<(string, int)>();
+            if (properties == null)
+                return null;
+            else
+            {
+                int n = properties.pdf_dict_len();
+                if (n < 1)
+                    return null;
+                
+                for (int i =0; i < n; i++)
+                {
+                    PdfObj key = properties.pdf_dict_get_key(i);
+                    PdfObj val = properties.pdf_dict_get_val(i);
+                    string c = key.pdf_to_name();
+                    int xref = val.pdf_to_num();
+                    rc.Add((c, xref));
+                }
+            }
+            return rc;
+        }
+
+        public static void SetResourceProperty(PdfObj refer, string name, int xref)
+        {
+            PdfDocument pdf = refer.pdf_get_bound_document();
+            PdfObj ind = pdf.pdf_new_indirect(xref, 0);
+
+            if (ind == null)
+                Console.WriteLine(Utils.ErrorMessages["MSG_BAD_XREF"]);
+
+            PdfObj resource = refer.pdf_dict_get(new PdfObj("Resource"));
+            if (resource == null)
+                resource = refer.pdf_dict_put_dict(new PdfObj("Resources"), 1);
+            
+            PdfObj properties = resource.pdf_dict_get(new PdfObj("Properties"));
+            if (properties == null)
+                properties = resource.pdf_dict_put_dict(new PdfObj("Properties"), 1);
+
+            properties.pdf_dict_put(mupdf.mupdf.pdf_new_name(name), ind);
         }
     }
 }

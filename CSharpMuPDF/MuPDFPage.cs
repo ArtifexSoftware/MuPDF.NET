@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Runtime.Remoting;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.SqlServer.Server;
@@ -18,6 +19,8 @@ namespace CSharpMuPDF
         private MuPDFDocument _parent;
 
         public int NUMBER { get; set; }
+
+        public bool IsOwn { get; set; }
 
         public int ROTATION
         {
@@ -699,10 +702,216 @@ namespace CSharpMuPDF
 
         }
 
-        public void AddUnderlineAnnot(List<Quad> quads = null, Point start = null, Point stop = null, Rect clip)
+        public MuPDFAnnotation AddUnderlineAnnot(List<Quad> quads = null, Point start = null, Point stop = null, Rect clip)
         {
+            List<Quad> q = new List<Quad>();
             if (quads == null)
-                quads = 
+            {
+                List<Rect> rs = GetHighlightSelection(q, start, stop, clip);
+                foreach (Rect r in rs)
+                    q.Add(r.QUAD);
+            }
+
+            return AddTextMarker(q, PdfAnnotType.PDF_ANNOT_UNDERLINE);
+        }
+
+        public static PdfObj PdfObjFromStr(PdfDocument doc, string src)
+       {
+            byte[] bSrc = Encoding.UTF8.GetBytes(src);
+            IntPtr scrPtr = new IntPtr(bSrc.Length);
+            Marshal.Copy(bSrc, 0, scrPtr, bSrc.Length);
+            SWIGTYPE_p_unsigned_char swigSrc = new SWIGTYPE_p_unsigned_char(scrPtr, true);
+
+            FzBuffer buffer_ = mupdf.mupdf.fz_new_buffer_from_copied_data(swigSrc, (uint)bSrc.Length);
+            FzStream stream = buffer_.fz_open_buffer();
+            PdfLexbuf lexBuf = new PdfLexbuf(256);
+            PdfObj ret = doc.pdf_parse_stm_obj(stream, lexBuf);
+
+            return ret;
+        }
+
+        public void AddAnnotFromString(List<string> links)
+        {
+            PdfPage page = _nativePage;
+            int lCount = links.Count;
+            if (lCount < 1)
+                return;
+            int i = -1;
+
+            if (page.obj().pdf_dict_get(new PdfObj("Annots")) == null)
+                page.obj().pdf_dict_put_array(new PdfObj("Annots"), lCount);
+            PdfObj annots = page.obj().pdf_dict_get(new PdfObj("Annots"));
+            Debug.Assert(annots == null, $"{lCount} is {annots}");
+
+            for (i = 0; i < lCount; i ++)
+            {
+                string text = links[i];
+                if (text == null)
+                {
+                    Console.WriteLine($"skipping bad link / annot item {i}.\\n");
+                    continue;
+                }
+                try
+                {
+                    PdfObj annot = page.doc().pdf_add_object(MuPDFPage.PdfObjFromStr(page.doc(), text));
+                    PdfObj indObj = page.doc().pdf_new_indirect(annot.pdf_to_num(), 0);
+                    annots.pdf_array_push(indObj);
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine($"skipping bad link / annot item {i}.");
+                }
+            }
+        }
+
+        public MuPDFAnnotation AddWidget(PdfWidgetType fieldType, string fieldName)
+        {
+            PdfPage page = _nativePage;
+            PdfDocument pdf = page.doc();
+            PdfAnnot annot = Utils.CreateWidget(pdf, page, fieldType, fieldName);
+
+            if (annot == null)
+                throw new Exception("cannot create widget");
+            Utils.AddAnnotId(annot, "W");
+
+            return new MuPDFAnnotation(annot);
+        }
+
+        private int ApplyRedactions(int images)
+        {
+            PdfPage page = _nativePage;
+            PdfRedactOptions opts = new PdfRedactOptions();
+            opts.black_boxes = 0;
+            opts.image_method = images;
+            int success = page.doc().pdf_redact_page(page, opts);
+            
+            return success;
+        }
+
+        private void ResetAnnotRefs()
+        {
+            ANNOT_REFS.Clear();
+        }
+        private void Erase()
+        {
+            this.ResetAnnotRefs();
+            try
+            {
+                _parent.ForgetPage(this);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
+
+            _parent = null;
+            IsOwn = false;
+            NUMBER = 0;
+        }
+
+        private List<(string, int)> GetResourceProperties()
+        {
+            PdfPage page = _nativePage;
+            List<(string, int)> rc = Utils.GetResourceProperties(page.obj());
+
+            return rc;
+        }
+
+        private void SetResourceProperty(string mc, int xref)
+        {
+            PdfPage page = _nativePage;
+            Utils.SetResourceProperty(page.obj(), mc, xref);
+        }
+
+        private string GetOptionalContent(int oc)
+        {
+            if (oc == 0) return null;
+
+            MuPDFDocument doc = _parent;
+            string check = "";//doc.XREF//issue
+            if (!(check.Contains("/Type/OCG") || check.Contains("/Type/OCMD")))
+                throw new Exception("bad optional content: 'oc'");
+            Dictionary<int, string> props = new Dictionary<int, string>();
+
+            foreach ((string p, int x) in GetResourceProperties())
+            {
+                props[x] = p;
+            }
+            if (props.Keys.Contains(oc))
+                return props[oc];
+            int i = 0;
+            string mc = $"MC{i}";
+
+            while (props.Values.Contains(mc))
+            {
+                i += 1;
+                mc = $"MC{i}";
+            }
+            
+            SetResourceProperty(mc, oc);
+            return mc;
+        }
+
+        private void InsertImage(
+            string filename = null, Pixmap pixmap = null, byte[] stream = null, byte[] imask = null, Rect clip = null,
+            int overlay = 1, int rotate = 0, int keepProportion = 1, int oc = 0, int width = 0, int height = 0,
+            int xref = 0, int alpha = -1, string imageName = null, string digests = null)
+        {
+            FzBuffer maskBuf = new FzBuffer();
+            PdfPage page = _nativePage;
+            PdfDocument pdf = page.doc();
+            int w = width;
+            int h = height;
+            int imgXRef = xref;
+            int rcDigest = 0;
+            string template = "\nq\n{0} {1} {2} {3} {4} {5} cm\n/{6} Do\nQ\n";
+
+            int do_process_pixmap = 1;
+            int do_process_stream = 1;
+            int do_have_imask = 1;
+            int do_have_image = 1;
+            int do_have_xref = 1;
+
+            if (xref > 0)
+            {
+                PdfObj refer = pdf.pdf_new_indirect(xref, 0);
+                w = refer.pdf_dict_geta(new PdfObj("Width"), new PdfObj("W")).pdf_to_int();
+                h = refer.pdf_dict_geta(new PdfObj("Height"), new PdfObj("H")).pdf_to_int();
+
+                if (w + h == 0)
+                    throw new Exception(Utils.ErrorMessages["MSG_IS_NO_IMAGE"]);
+
+                do_process_pixmap = 0;
+                do_process_pixmap = 0;
+                do_have_imask = 0;
+                do_have_image = 0;
+            }
+            else
+            {
+                FzBuffer imgBuf = null;
+                if (stream != null)
+                {
+                    imgBuf = Utils.BufferFromBytes(stream);
+                    do_process_pixmap = 0;
+                }
+                else
+                {
+                    if (filename != null)
+                    {
+                        imgBuf = mupdf.mupdf.fz_read_file(filename);
+                        do_process_pixmap = 0;
+                    }
+                }
+            }
+
+            if (do_process_pixmap != 0)
+            {
+                FzPixmap argPix = pixmap.ToFzPixmap();
+                w = argPix.w();
+                h = argPix.h();
+                vectoruc digest = argPix.fz_md5_pixmap2();
+
+            }
         }
     }
 }

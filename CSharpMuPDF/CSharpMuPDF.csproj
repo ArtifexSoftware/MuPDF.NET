@@ -51,7 +51,9 @@
     <Compile Include="enums\ImageType.cs" />
     <Compile Include="enums\PdfAnnotStatus.cs" />
     <Compile Include="enums\PdfAnnotType.cs" />
+    <Compile Include="enums\PdfFieldType.cs" />
     <Compile Include="enums\PdfLineEnding.cs" />
+    <Compile Include="enums\PdfWidgetType.cs" />
     <Compile Include="enums\TextFlags.cs" />
     <Compile Include="enums\TextLanguage.cs" />
     <Compile Include="MuPDFAnnotation.cs" />
