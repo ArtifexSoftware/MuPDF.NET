@@ -23,6 +23,10 @@ namespace CSharpMuPDF
 
         public static int SigFlag_SignaturesExist = 1;
         public static int SigFlag_AppendOnly = 2;
+
+        public static int UNIQUE_ID = 0;
+
+        public static List<string> MUPDF_WARNINGS_STORE = new List<string>();
         public static string GetImageExtention(int type)
         {
             if (type == (int)ImageType.FZ_IMAGE_FAX) return "fax";
@@ -609,7 +613,7 @@ namespace CSharpMuPDF
                     delimiters
                     );
             }
-
+            
             Rect cb = null;
             if ((new List<string>() { "html", "xml", "xhtml" }).Contains(option))
                 clip = page.CROPBOX;
@@ -623,25 +627,25 @@ namespace CSharpMuPDF
                 tp = page.GetSTextPage(clip, flags);
             else if (tp._parent != page)
                 throw new Exception("not a textpage of this page");
-
+            
             dynamic t = null;
             if (option == "json")
-                t = stPage.ExtractJSON(cb, sort);
+                t = tp.ExtractJSON(cb, sort);
             else if (option == "rawjson")
-                t = stPage.ExtractRawJSON(cb, sort);
+                t = tp.ExtractRawJSON(cb, sort);
             else if (option == "dict")
-                t = stPage.ExtractDict(cb, sort);
+                t = tp.ExtractDict(cb, sort);
             else if (option == "rawdict")
-                t = stPage.ExtractRAWDict(cb, sort);
+                t = tp.ExtractRAWDict(cb, sort);
             else if (option == "html")
-                t = stPage.ExtractHtml();
+                t = tp.ExtractHtml();
             else if (option == "xml")
-                t = stPage.ExtractXML();
+                t = tp.ExtractXML();
             else if (option == "xhtml")
-                t = stPage.ExtractText();
+                t = tp.ExtractText();
 
             if (stPage is null)
-                stPage.Dispose();
+                tp.Dispose();
             return t;
         }
 
@@ -710,7 +714,7 @@ namespace CSharpMuPDF
                 Utils.SetFieldType(doc, annotObj, type);
                 annotObj.pdf_dict_put_text_string(new PdfObj("T"), fieldName);
 
-                if (type == PdfWidgetType.PDF_WIDGET_TYPE_SIGNATURE)
+                /*if (type == PdfWidgetType.PDF_WIDGET_TYPE_SIGNATURE)
                 {
                     int sigFlags = oldSigFlags | (Utils.SigFlag_SignaturesExist | Utils.SigFlag_AppendOnly);
                     Utils.pdf_dict_putl(
@@ -721,7 +725,7 @@ namespace CSharpMuPDF
                             "Root", "AcroForm", "SigFlags"
                         }
                     );
-                }
+                }*/
 
                 PdfObj form = doc.pdf_trailer().pdf_dict_getp("Root/AcroForm/Fields");
                 if (form == null)
@@ -800,6 +804,47 @@ namespace CSharpMuPDF
                 properties = resource.pdf_dict_put_dict(new PdfObj("Properties"), 1);
 
             properties.pdf_dict_put(mupdf.mupdf.pdf_new_name(name), ind);
+        }
+
+        public static int GenID()
+        {
+            UNIQUE_ID += 1;
+            return UNIQUE_ID;
+        }
+
+        public static void EmbeddedClean(PdfDocument pdf)
+        {
+            PdfObj root = pdf.pdf_trailer().pdf_dict_get(new PdfObj("Root"));
+            PdfObj coll = root.pdf_dict_get(new PdfObj("Collection"));
+            if (coll != null && coll.pdf_dict_len() > 0)
+            {
+                root.pdf_dict_del(new PdfObj("Collection"));
+            }
+
+            PdfObj efiles = Utils.pdf_dict_getl(
+                root,
+                new string[]
+                {
+                    "Names", "EmbeddedFiles", "Names"
+                }
+                );
+            if (efiles != null)
+                root.pdf_dict_put_name(new PdfObj("PageMode"), "UseAttachments");
+        }
+
+        public static void EnsureIdentity()
+        {
+            IntPtr rndPtr = Marshal.AllocHGlobal(10);
+            Console.WriteLine(rndPtr);
+            SWIGTYPE_p_unsigned_char swigRnd = new SWIGTYPE_p_unsigned_char(rndPtr, false);
+            mupdf.mupdf.fz_memrnd(swigRnd, 16);
+            Console.WriteLine(rndPtr);
+            /*PdfObj id_ = pdf.pdf_trailer().pdf_dict_get(new PdfObj("ID"));
+            if (id_ == null)
+            {
+                
+
+            }*/
         }
     }
 }

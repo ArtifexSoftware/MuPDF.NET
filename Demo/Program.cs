@@ -10,19 +10,25 @@ namespace Demo
         static void Main(string[] args)
         {
             MuPDFDocument doc = new MuPDFDocument("1.pdf");
-            
+
             MuPDFSTextPage stpage = new MuPDFSTextPage(doc.GetPage(0));
+
+            //Console.WriteLine(stpage.ExtractText());
 
             MuPDFPage page = new MuPDFPage(doc.GetPage(0), doc);
 
-            Console.WriteLine(stpage.ExtractText());
+            List<Quad> matches = page.SearchFor("Pixmap");
+            
+            foreach (Quad match in matches)
+            {
+                page.AddHighlightAnnot(match.Rect);
+            }
 
-            Console.WriteLine("Page 0 : ");
-            List<Quad> matches = MuPDFSTextPage.Search(stpage, "Pixmap");
+            Console.WriteLine(stpage.Char2Canon("dabcdf"));
 
-            Console.WriteLine(matches.Count);
+            Console.WriteLine(Convert.ToInt32('d'));
 
-            page.AddHighlightAnnot(matches, new Point(0, 0), new Point(page.MEDIABOX.Width, page.MEDIABOX.Height), page.MEDIABOX);
+            doc.Save("output.pdf");
         }
     }
 }

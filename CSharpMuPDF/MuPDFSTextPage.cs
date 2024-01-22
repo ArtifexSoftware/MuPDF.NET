@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Text;
 using Newtonsoft.Json;
 using mupdf;
+using System.Runtime.InteropServices;
 
 namespace CSharpMuPDF
 {
@@ -505,15 +506,17 @@ namespace CSharpMuPDF
         /// <param name="stPage">Stext Page</param>
         /// <param name="needle">Text to search</param>
         /// <returns></returns>
-        public static List<Quad> Search(MuPDFSTextPage stPage, string needle)
+        public static List<Quad> Search(MuPDFSTextPage stPage, string needle, int hitMax = 0, bool quad = true)
         {
             FzRect rect = stPage.MEDIABOX;
             if (needle == null || needle == "")
                 return null;
+            List<Quad> quads = new List<Quad>();
+
             Hits hits = new Hits();
 
             hits.LEN = 0;
-            hits.QUADS = new List<Quad>();
+            hits.QUADS = quads;
             hits.HFUZZ = 0.2f;
             hits.VFUZZ = 0.1f;
 
@@ -521,6 +524,7 @@ namespace CSharpMuPDF
             string hayStackString = buffer.fz_string_from_buffer();
             int hayStack = 0;
             (int begin, int end) = stPage.FindString(hayStackString.Substring(hayStack), needle);
+            Console.WriteLine($"{begin} {end}");
             if (begin == -1)
             {
                 return hits.QUADS;
@@ -547,9 +551,10 @@ namespace CSharpMuPDF
                     try_new_match:
                         {
                             if (inside == 0)
+                            {
                                 if (i >= begin)
                                     inside = 1;
-
+                            }
                             if (inside != 0)
                             {
                                 if (i < end)
@@ -561,6 +566,7 @@ namespace CSharpMuPDF
                                     inside = 0;
                                     hayStack = end + 1;
                                     (begin, end) = stPage.FindString(hayStackString.Substring(hayStack), needle);
+                                    
                                     if (begin == -1)
                                     {
                                         goto no_more_matches;
@@ -573,17 +579,50 @@ namespace CSharpMuPDF
                                     }
                                 }
                             }
+                            hayStackString += mupdf.mupdf.fz_chartorune(new SWIGTYPE_p_int(IntPtr.Zero, false), hayStackString);
                         }
   
                     next_char:;
                     }
                     Debug.Assert(hayStackString.ToCharArray()[hayStack] == '\n', "{hayStack=} {hayStackString[hayStack]=}");
+                    hayStack++;
                 }
                 Debug.Assert(hayStackString.ToCharArray()[hayStack] == '\n');
+                hayStack++;
             }
     no_more_matches:;
             buffer.fz_clear_buffer();
-            return hits.QUADS;
+
+            int items = quads.Count;
+            if (items == 0)
+                return quads;
+            
+            List<Rect> ret = new List<Rect> ();
+            for (i = 0; i < items; i++)
+            {
+                if (!quad)
+                    ret.Add(quads[i].Rect);
+            }
+
+            if (quad)
+                return quads;
+
+            i = 0;
+            while (i < items - 1)
+            {
+                Quad v1 = quads[i];
+                Quad v2 = quads[i + 1];
+                if ((v1.Rect.Y1 != v2.Rect.Y1) || (v1.Rect & v2.Rect).IsEmpty)
+                {
+                    i += 1;
+                    continue;
+                }
+                quads[i] = (v1.Rect | v2.Rect).QUAD;
+                quads.RemoveAt(i + 1);
+                items -= 1;
+            }
+            
+            return quads;
         }
 
 
@@ -596,7 +635,8 @@ namespace CSharpMuPDF
             if (hits.LEN > 0)
             {
                 FzQuad end = hits.QUADS[hits.LEN - 1].ToFzQuad();
-                if (true && HDist(new FzPoint(line.m_internal.dir), new FzPoint(end.lr), new FzPoint(chQuad.ll)) < hFuzz
+                if (true
+                    && HDist(new FzPoint(line.m_internal.dir), new FzPoint(end.lr), new FzPoint(chQuad.ll)) < hFuzz
                     && VDist(new FzPoint(line.m_internal.dir), new FzPoint(end.lr), new FzPoint(chQuad.ll)) < vFuzz
                     && HDist(new FzPoint(line.m_internal.dir), new FzPoint(end.ur), new FzPoint(chQuad.ul)) < hFuzz
                     && VDist(new FzPoint(line.m_internal.dir), new FzPoint(end.ur), new FzPoint(chQuad.ll)) < vFuzz)
@@ -607,6 +647,7 @@ namespace CSharpMuPDF
                     return;
                 }
             }
+            
             hits.QUADS.Add(new Quad(chQuad));
             hits.LEN += 1;
         }
@@ -657,13 +698,18 @@ namespace CSharpMuPDF
 
         public (int, int) FindString(string s, string needle)
         {
-            for (int index = 0; index < s.Length; index ++)
+            /*int start = s.IndexOf(needle, StringComparison.OrdinalIgnoreCase);
+            if (start != -1)
+            {
+                return (start, start + needle.Length);
+            }*/
+            for (int index = 0; index < s.Length - needle.Length; index++)
             {
                 int end = MatchString(s.Substring(index), needle);
                 if (end != -1)
                 {
                     end += index;
-                    return (index, end); 
+                    return (index, end);
                 }
             }
 
@@ -741,13 +787,15 @@ namespace CSharpMuPDF
         }
             
 
-        internal Tuple<int, int> Char2Canon(string s)
+        public Tuple<int, int> Char2Canon(string s)
         {
-            ll_fz_chartorune_outparams outparams = new ll_fz_chartorune_outparams();
+            /*ll_fz_chartorune_outparams outparams = new ll_fz_chartorune_outparams();
 
             int n = mupdf.mupdf.ll_fz_chartorune_outparams_fn(s, outparams);
-            int c = Canon(outparams.rune);
-            return new Tuple<int, int>( n, c);
+            int c = Canon(outparams.rune);*/
+            if (s.Length == 0)
+                return new Tuple<int, int> (0, 0);
+            return new Tuple<int, int>( 1, Convert.ToInt32(s[0]));
         }
 
         internal int AppendWord(List<WordBlock> lines, FzBuffer buf, FzRect wordBox, int blockNum, int lineNum, int wordNum)
@@ -832,7 +880,7 @@ namespace CSharpMuPDF
                 HEIGHT = MEDIABOX.y1 - MEDIABOX.y0,
                 BLOCKS = new List<BlockStruct>()
             };
-
+            
             GetNewBlockList(pageDict, raw);
             return pageDict;
         }
@@ -1132,9 +1180,11 @@ namespace CSharpMuPDF
             float desc = font.fz_font_descender();
             float fontSize = ch.m_internal.size;
             float asc_desc = asc - desc + (float)Utils.FLT_EPSILON;
-            
-            /*            if (asc_desc >= 1)
-                            return new FzQuad(ch.m_internal.quad);*/
+
+            /*if (asc_desc >= 1)
+            {
+                return new FzQuad(ch.m_internal.quad);
+            }*/
 
             FzRect bbox = mupdf.mupdf.fz_font_bbox(font);
             float fontWidth = bbox.y1 - bbox.y0;
@@ -1200,7 +1250,7 @@ namespace CSharpMuPDF
             }
             quad = mupdf.mupdf.fz_transform_quad(quad, trm2);
             quad = mupdf.mupdf.fz_transform_quad(quad, xlate2);
-
+            
             return quad;
         }
     

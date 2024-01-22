@@ -67,6 +67,7 @@
     <Compile Include="structures\Hits.cs" />
     <Compile Include="structures\IRect.cs" />
     <Compile Include="structures\Matrix.cs" />
+    <Compile Include="structures\Outline.cs" />
     <Compile Include="structures\Pixmap.cs" />
     <Compile Include="structures\Point.cs" />
     <Compile Include="structures\Quad.cs" />

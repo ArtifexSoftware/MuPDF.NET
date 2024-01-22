@@ -161,6 +161,24 @@ namespace CSharpMuPDF
             }
         }
 
+        public List<Quad> SearchFor(
+            string needle,
+            Rect clip = null,
+            bool quads = false,
+            int flags = (int)(TextFlags.TEXT_DEHYPHENATE | TextFlags.TEXT_PRESERVE_WHITESPACE | TextFlags.TEXT_PRESERVE_LIGATURES | TextFlags.TEXT_MEDIABOX_CLIP),
+            MuPDFSTextPage stPage = null
+            )
+        {
+            MuPDFSTextPage tp = stPage;
+            if (tp == null)
+                tp = GetSTextPage(clip, flags);
+            List<Quad> ret = MuPDFSTextPage.Search(tp, needle, quad: quads);
+            if (stPage == null)
+                tp.Dispose();
+
+            return ret;
+        }
+
         public Rect OtherBox(string boxtype)
         {
             FzRect rect = new FzRect(FzRect.Fixed.Fixed_INFINITE);
@@ -638,10 +656,14 @@ namespace CSharpMuPDF
             return lines;
         }
 
-        public MuPDFAnnotation AddHighlightAnnot(List<Quad> quads, Point start, Point stop, Rect clip)
+        public MuPDFAnnotation AddHighlightAnnot(dynamic quads, Point start = null, Point stop = null, Rect clip = null)
         {
             List<Quad> q = new List<Quad>();
-            if (quads is null)
+            if (quads is Rect)
+                q.Add(quads.QUAD);
+            else if (quads is Quad)
+                q.Add(quads);
+            else if (quads is null)
             {
                 List<Rect> rs = GetHighlightSelection(q, start, stop, clip);
                 foreach (Rect r in rs)
@@ -657,7 +679,7 @@ namespace CSharpMuPDF
         {
             PdfPage page = _nativePage;
             FzStextOptions options = new FzStextOptions(flags);
-            FzRect rect = clip == null ? mupdf.mupdf.fz_bound_page(new FzPage(page)) : clip.ToFzRect();
+            FzRect rect = (clip == null) ? mupdf.mupdf.fz_bound_page(new FzPage(page)) : clip.ToFzRect();
             FzMatrix ctm = matrix.ToFzMatrix();
             FzStextPage stPage = new FzStextPage(rect);
             FzDevice dev = stPage.fz_new_stext_device(options);
@@ -669,11 +691,9 @@ namespace CSharpMuPDF
                 Debug.Assert(false, "Unrecognised type");
             _page.fz_run_page(dev, ctm, new FzCookie());
             dev.fz_close_device();
-
+            //Console.WriteLine(new MuPDFSTextPage(stPage).ExtractText());
             return new MuPDFSTextPage(stPage);
         }
-
-
 
         public MuPDFSTextPage GetSTextPage(Rect clip, int flags = 0, Matrix matrix = null)
         {
@@ -702,7 +722,7 @@ namespace CSharpMuPDF
 
         }
 
-        public MuPDFAnnotation AddUnderlineAnnot(List<Quad> quads = null, Point start = null, Point stop = null, Rect clip)
+        public MuPDFAnnotation AddUnderlineAnnot(List<Quad> quads = null, Point start = null, Point stop = null, Rect clip = null)
         {
             List<Quad> q = new List<Quad>();
             if (quads == null)
@@ -797,7 +817,7 @@ namespace CSharpMuPDF
             this.ResetAnnotRefs();
             try
             {
-                _parent.ForgetPage(this);
+                /*_parent.ForgetPage(this);*/
             }
             catch (Exception e)
             {
@@ -871,6 +891,7 @@ namespace CSharpMuPDF
             int do_have_imask = 1;
             int do_have_image = 1;
             int do_have_xref = 1;
+            FzBuffer imgBuf = null;
 
             if (xref > 0)
             {
@@ -882,13 +903,12 @@ namespace CSharpMuPDF
                     throw new Exception(Utils.ErrorMessages["MSG_IS_NO_IMAGE"]);
 
                 do_process_pixmap = 0;
-                do_process_pixmap = 0;
+                do_process_stream = 0;
                 do_have_imask = 0;
                 do_have_image = 0;
             }
             else
             {
-                FzBuffer imgBuf = null;
                 if (stream != null)
                 {
                     imgBuf = Utils.BufferFromBytes(stream);
@@ -910,8 +930,54 @@ namespace CSharpMuPDF
                 w = argPix.w();
                 h = argPix.h();
                 vectoruc digest = argPix.fz_md5_pixmap2();
+                dynamic temp = null;//digest.//issue
 
+                if (temp != null)
+                {
+                    imgXRef = temp;
+                    PdfObj refer = page.doc().pdf_new_indirect(imgXRef, 0);
+                    do_process_stream = 0;
+                    do_have_imask = 0;
+                    do_have_image = 0;
+                }
+                else
+                {
+                    FzImage image = null;
+                    if (argPix.alpha() == 0)
+                        image = argPix.fz_new_image_from_pixmap(new FzImage());
+                    else
+                    {
+                        FzPixmap pm = argPix.fz_convert_pixmap(
+                            new FzColorspace(0),
+                            new FzColorspace(0),
+                            new FzDefaultColorspaces(),
+                            new FzColorParams(),
+                            1
+                            );
+                        pm.m_internal.alpha = 0;
+                        pm.m_internal.colorspace = null;
+                        FzImage mask = pm.fz_new_image_from_pixmap(new FzImage());
+                        image = argPix.fz_new_image_from_pixmap(mask);
+                    }
+                    do_process_stream = 0;
+                    do_have_imask = 0;
+                }
             }
+
+            /*if (do_process_stream != 0)
+            {
+                FzMd5 state = new FzMd5();
+                state.fz_md5_update(imgBuf.m_internal.data, imgBuf.m_internal.len);
+
+                FzBuffer maskBuf = null;
+                if (imask != null)
+                {
+                    maskBuf = Utils.BufferFromBytes(imask);
+                    state.fz_md5_update(maskBuf.m_internal.data, maskBuf.m_internal.len);
+                    vectoruc digests = state.fz_md5_final2();
+                    byte[] md5
+                }
+            }*/
         }
     }
 }
