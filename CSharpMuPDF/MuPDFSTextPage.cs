@@ -5,6 +5,7 @@ using System.Text;
 using Newtonsoft.Json;
 using mupdf;
 using System.Runtime.InteropServices;
+using System.Linq;
 
 namespace CSharpMuPDF
 {
@@ -523,16 +524,11 @@ namespace CSharpMuPDF
             FzBuffer buffer = stPage.GetBufferFromStextPage();
             string hayStackString = buffer.fz_string_from_buffer();
             int hayStack = 0;
-            (int begin, int end) = stPage.FindString(hayStackString.Substring(hayStack), needle);
-            Console.WriteLine($"{begin} {end}");
-            if (begin == -1)
-            {
-                return hits.QUADS;
-            }
-            begin += hayStack;
-            end += hayStack;
+            int begin = 0;
+            int end = 0;
+
             int inside = 0;
-            int i = 0;
+
             foreach (FzStextBlock block in stPage.BLOCKS)
             {
                 if (block.m_internal.type != (int)STextBlockType.FZ_STEXT_BLOCK_TEXT)
@@ -541,30 +537,31 @@ namespace CSharpMuPDF
                 {
                     for (fz_stext_char ch = line.first_char; ch != null; ch = ch.next)
                     {
-                        i += 1;
                         if (rect.fz_is_infinite_rect() == 0)
                         {
                             FzRect r = stPage.GetCharBbox(new FzStextLine(line), new FzStextChar(ch));
                             if (!stPage.IsRectsOverlap(rect, r))
-                                goto next_char;
+                                continue;
                         }
-                    try_new_match:
+                        while (true)
                         {
                             if (inside == 0)
                             {
-                                if (i >= begin)
+                                if (hayStack >= begin)
+                                {
                                     inside = 1;
+                                }
                             }
                             if (inside != 0)
                             {
-                                if (i < end)
+                                if (hayStack < end)
                                 {
                                     stPage.OnHighlightChar(hits, new FzStextLine(line), new FzStextChar(ch));
+                                    break;
                                 }
                                 else
                                 {
                                     inside = 0;
-                                    hayStack = end + 1;
                                     (begin, end) = stPage.FindString(hayStackString.Substring(hayStack), needle);
                                     
                                     if (begin == -1)
@@ -575,20 +572,18 @@ namespace CSharpMuPDF
                                     {
                                         begin += hayStack;
                                         end += hayStack;
-                                        goto try_new_match;
+                                        continue;
                                     }
                                 }
                             }
-                            hayStackString += mupdf.mupdf.fz_chartorune(new SWIGTYPE_p_int(IntPtr.Zero, false), hayStackString);
+                            break;
                         }
-  
-                    next_char:;
+                        Tuple<int, int> res = MuPDFSTextPage.Char2Canon(hayStackString.Substring(hayStack));
+                        hayStack += res.Item1;
                     }
-                    Debug.Assert(hayStackString.ToCharArray()[hayStack] == '\n', "{hayStack=} {hayStackString[hayStack]=}");
-                    hayStack++;
+                    hayStack += 1;
                 }
-                Debug.Assert(hayStackString.ToCharArray()[hayStack] == '\n');
-                hayStack++;
+                hayStack += 1;
             }
     no_more_matches:;
             buffer.fz_clear_buffer();
@@ -596,8 +591,8 @@ namespace CSharpMuPDF
             int items = quads.Count;
             if (items == 0)
                 return quads;
-            
-            List<Rect> ret = new List<Rect> ();
+            int i = 0;
+            List<Rect> ret = new List<Rect>();
             for (i = 0; i < items; i++)
             {
                 if (!quad)
@@ -621,7 +616,7 @@ namespace CSharpMuPDF
                 quads.RemoveAt(i + 1);
                 items -= 1;
             }
-            
+
             return quads;
         }
 
@@ -698,11 +693,6 @@ namespace CSharpMuPDF
 
         public (int, int) FindString(string s, string needle)
         {
-            /*int start = s.IndexOf(needle, StringComparison.OrdinalIgnoreCase);
-            if (start != -1)
-            {
-                return (start, start + needle.Length);
-            }*/
             for (int index = 0; index < s.Length - needle.Length; index++)
             {
                 int end = MatchString(s.Substring(index), needle);
@@ -763,10 +753,11 @@ namespace CSharpMuPDF
                     n += nc.Item1;
                 }
             }
-            return n0.Length > e ? -1 : e;
+
+            return n <= n0.Length ? -1 : e;
         }
 
-        internal int Canon(int c)
+        public static int Canon(int c)
         {
             if (c == 0xA0 || c == 0x2028 || c == 0x2029)
             {
@@ -778,7 +769,7 @@ namespace CSharpMuPDF
             }
 
             int A = Convert.ToInt32('A');
-            if (c >= A || c <= Convert.ToInt32('Z'))
+            if (c >= A && c <= Convert.ToInt32('Z'))
             {
                 return c - A + Convert.ToInt32('a');
             }
@@ -787,15 +778,15 @@ namespace CSharpMuPDF
         }
             
 
-        public Tuple<int, int> Char2Canon(string s)
+        public static Tuple<int, int> Char2Canon(string s)
         {
-            /*ll_fz_chartorune_outparams outparams = new ll_fz_chartorune_outparams();
+            ll_fz_chartorune_outparams outparams = new ll_fz_chartorune_outparams();
 
             int n = mupdf.mupdf.ll_fz_chartorune_outparams_fn(s, outparams);
-            int c = Canon(outparams.rune);*/
-            if (s.Length == 0)
-                return new Tuple<int, int> (0, 0);
-            return new Tuple<int, int>( 1, Convert.ToInt32(s[0]));
+            int c = Canon(outparams.rune);
+            /*if (s.Length == 0)
+                return new Tuple<int, int>(1, -1);*/
+            return new Tuple<int, int>( n, c);
         }
 
         internal int AppendWord(List<WordBlock> lines, FzBuffer buf, FzRect wordBox, int blockNum, int lineNum, int wordNum)
