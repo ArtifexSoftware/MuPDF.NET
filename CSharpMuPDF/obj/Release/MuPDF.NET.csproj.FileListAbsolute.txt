@@ -1,0 +1,14 @@
+E:\c#\CSharpMuPDF\CSharpMuPDF\bin\Release\mupdfcpp64.dll
+E:\c#\CSharpMuPDF\CSharpMuPDF\bin\Release\mupdfcsharp.dll
+E:\c#\CSharpMuPDF\CSharpMuPDF\bin\Release\MuPDF.NET.dll
+E:\c#\CSharpMuPDF\CSharpMuPDF\bin\Release\MuPDF.NET.pdb
+E:\c#\CSharpMuPDF\CSharpMuPDF\bin\Release\Newtonsoft.Json.dll
+E:\c#\CSharpMuPDF\CSharpMuPDF\bin\Release\Newtonsoft.Json.xml
+E:\c#\CSharpMuPDF\CSharpMuPDF\obj\Release\MuPDF.NET.csproj.AssemblyReference.cache
+E:\c#\CSharpMuPDF\CSharpMuPDF\obj\Release\MuPDF.NET.csproj.CoreCompileInputs.cache
+E:\c#\CSharpMuPDF\CSharpMuPDF\obj\Release\MuPDF.NET.csproj.CopyComplete
+E:\c#\CSharpMuPDF\CSharpMuPDF\obj\Release\MuPDF.NET.dll
+E:\c#\CSharpMuPDF\CSharpMuPDF\obj\Release\MuPDF.NET.pdb
+E:\c#\CSharpMuPDF\CSharpMuPDF\bin\Release\MuPDF.NET.dll.config
+E:\c#\CSharpMuPDF\CSharpMuPDF\obj\Release\MuPDF.NET.Properties.Resources.resources
+E:\c#\CSharpMuPDF\CSharpMuPDF\obj\Release\MuPDF.NET.csproj.GenerateResource.cache

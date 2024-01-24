@@ -7,7 +7,7 @@ using mupdf;
 using System.Runtime.InteropServices;
 using System.Linq;
 
-namespace CSharpMuPDF
+namespace MuPDF.NET
 {
     public class MuPDFSTextPage : IDisposable
     {
@@ -427,7 +427,7 @@ namespace CSharpMuPDF
         /// </summary>
         /// <param name="delimiters"></param>
         /// <returns></returns>
-        public List<WordBlock> ExtractWords(char[] delimiters)
+        public List<WordBlock> ExtractWords(char[] delimiters = null)
         {
             int bufferLen;
             int blockNum = -1;

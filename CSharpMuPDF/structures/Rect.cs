@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Security.Cryptography;
 using FzRect = mupdf.FzRect;
 
-namespace CSharpMuPDF
+namespace MuPDF.NET
 {
     public class Rect
     {

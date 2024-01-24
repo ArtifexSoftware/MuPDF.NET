@@ -10,13 +10,15 @@ using Microsoft.SqlServer.Server;
 using mupdf;
 using static mupdf.FzBandWriter;
 
-namespace CSharpMuPDF
+namespace MuPDF.NET
 {
     public class MuPDFPage
     {
         private PdfPage _nativePage;
 
         private MuPDFDocument _parent;
+
+        public PdfObj PAGEOBJ;
 
         public int NUMBER { get; set; }
 
@@ -212,6 +214,7 @@ namespace CSharpMuPDF
         {
             _nativePage = nativePage;
             _parent = parent;
+            PAGEOBJ = nativePage.obj();
 
             if (_nativePage == null)
                 NUMBER = 0;
@@ -233,15 +236,23 @@ namespace CSharpMuPDF
         private PdfAnnot AddCaretAnnot(Point point)
         {
             PdfPage page = _nativePage;
-            PdfAnnot annot = page.pdf_create_annot(pdf_annot_type.PDF_ANNOT_CARET);
-            if (point != null)
+            PdfAnnot annot = null;
+            try
             {
-                FzRect r = annot.pdf_annot_rect();
-                r = new FzRect(point.X, point.Y, point.X + r.x1 -r.x0, point.Y + r.y1 -r.y0);
-                annot.pdf_set_annot_rect(r);
+                annot = page.pdf_create_annot(pdf_annot_type.PDF_ANNOT_CARET);
+                if (point != null)
+                {
+                    FzRect r = annot.pdf_annot_rect();
+                    r = new FzRect(point.X, point.Y, point.X + r.x1 - r.x0, point.Y + r.y1 - r.y0);
+                    annot.pdf_set_annot_rect(r);
+                }
+                annot.pdf_update_annot();
+                Utils.AddAnnotId(annot, "A");
             }
-            annot.pdf_update_annot();
-            Utils.AddAnnotId(annot, "A");
+            catch
+            {
+                annot = null;
+            }
             
             return annot;
         }
@@ -556,19 +567,27 @@ namespace CSharpMuPDF
             return new MuPDFAnnotation(annot);
         }
 
-        private MuPDFAnnotation AddTextMarker(List<Quad> quads, PdfAnnotType annotType)
+        private MuPDFAnnotation AddTextMarker(List<Quad> quads, pdf_annot_type annotType)
         {
             MuPDFAnnotation ret = null;
             PdfAnnot annot = null;
-            PdfPage page = _nativePage;
+            PdfPage page = new PdfPage(_nativePage.m_internal);
             if (!_parent.IsPDF)
                 throw new Exception("is not pdf");
-            int rotation = Utils.PageRotation(page);
+            int rotation = ROTATION;
             try
             {
                 if (rotation != 0)
                     page.obj().pdf_dict_put_int(new PdfObj("Rotate"), rotation);
-                annot = page.pdf_create_annot((pdf_annot_type)annotType);
+                try
+                {
+                    annot = page.pdf_create_annot(annotType);
+                }
+                catch(Exception ae)
+                {
+                    Console.WriteLine("message catched");
+                    annot = new PdfAnnot();
+                }
                 foreach (Quad item in quads)
                 {
                     annot.pdf_add_annot_quad_point(item.ToFzQuad());
@@ -588,7 +607,7 @@ namespace CSharpMuPDF
             if (ret == null)
                 return null;
             ANNOT_REFS.Add(ret.GetHashCode(), ret);
-            
+          
             return ret;
         }
 
@@ -671,7 +690,7 @@ namespace CSharpMuPDF
             }
             else
                 q = quads;
-            MuPDFAnnotation ret = AddTextMarker(q, PdfAnnotType.PDF_ANNOT_HIGHLIGHT);
+            MuPDFAnnotation ret = AddTextMarker(q, pdf_annot_type.PDF_ANNOT_HIGHLIGHT);
             return ret;
         }
 
@@ -732,7 +751,7 @@ namespace CSharpMuPDF
                     q.Add(r.QUAD);
             }
 
-            return AddTextMarker(q, PdfAnnotType.PDF_ANNOT_UNDERLINE);
+            return AddTextMarker(q, pdf_annot_type.PDF_ANNOT_UNDERLINE);
         }
 
         public static PdfObj PdfObjFromStr(PdfDocument doc, string src)

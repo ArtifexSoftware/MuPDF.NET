@@ -12,7 +12,7 @@ using System.Net;
 using static System.Net.Mime.MediaTypeNames;
 using System.Security.Policy;
 
-namespace CSharpMuPDF
+namespace MuPDF.NET
 {
     public class Pixmap
     {

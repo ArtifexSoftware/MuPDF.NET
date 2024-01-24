@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using mupdf;
 
-namespace CSharpMuPDF
+namespace MuPDF.NET
 {
     public class Hits
     {

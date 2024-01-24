@@ -8,7 +8,7 @@ using System.Text;
 using mupdf;
 
 
-namespace CSharpMuPDF
+namespace MuPDF.NET
 {
     public class MuPDFDocument
     {

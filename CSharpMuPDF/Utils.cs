@@ -9,7 +9,7 @@ using System.Text;
 using System.Threading.Tasks;
 using mupdf;
 
-namespace CSharpMuPDF
+namespace MuPDF.NET
 {
     public static class Utils
     {
@@ -316,8 +316,10 @@ namespace CSharpMuPDF
 
         public static int PageRotation(PdfPage page)
         {
-            int rotate = 0;
-            PdfObj obj = page.obj().pdf_dict_get_inheritable(new PdfObj("Rotate"));
+            int rotate;
+            if (page.obj() == null)
+                Console.WriteLine(page.obj().ToString());
+            PdfObj obj = page   .obj().pdf_dict_get(new PdfObj("Rotate"));
             rotate = obj.pdf_to_int();
             rotate = NormalizeRotation(rotate);
             return rotate;
