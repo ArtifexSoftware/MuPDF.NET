@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using CSharpMuPDF;
+using MuPDF.NET;
 using mupdf;
 
 namespace Demo
@@ -9,6 +9,9 @@ namespace Demo
     {
         static void Main(string[] args)
         {
+            var watch = new System.Diagnostics.Stopwatch();
+
+            watch.Start();
             MuPDFDocument doc = new MuPDFDocument("1.pdf");
 
             MuPDFPage page = new MuPDFPage(doc.GetPage(0), doc);
@@ -18,6 +21,7 @@ namespace Demo
                 page.AddHighlightAnnot(matches);
 
             doc.Save("output.pdf");
+
         }
     }
 }

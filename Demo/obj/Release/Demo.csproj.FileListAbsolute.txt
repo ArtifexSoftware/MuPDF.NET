@@ -11,8 +11,6 @@ C:\Users\palma\source\repos\CSharpMuPDF\Demo\obj\Release\Demo.csproj.AssemblyRef
 E:\c#\CSharpMuPDF\Demo\bin\Release\Demo.exe.config
 E:\c#\CSharpMuPDF\Demo\bin\Release\Demo.exe
 E:\c#\CSharpMuPDF\Demo\bin\Release\Demo.pdb
-E:\c#\CSharpMuPDF\Demo\bin\Release\CSharpMuPDF.dll
-E:\c#\CSharpMuPDF\Demo\bin\Release\CSharpMuPDF.pdb
 E:\c#\CSharpMuPDF\Demo\obj\Release\Demo.csproj.AssemblyReference.cache
 E:\c#\CSharpMuPDF\Demo\obj\Release\Demo.csproj.SuggestedBindingRedirects.cache
 E:\c#\CSharpMuPDF\Demo\obj\Release\Demo.csproj.CoreCompileInputs.cache
@@ -21,3 +19,8 @@ E:\c#\CSharpMuPDF\Demo\obj\Release\Demo.exe
 E:\c#\CSharpMuPDF\Demo\obj\Release\Demo.pdb
 E:\c#\CSharpMuPDF\Demo\bin\Release\Newtonsoft.Json.dll
 E:\c#\CSharpMuPDF\Demo\bin\Release\Newtonsoft.Json.xml
+E:\c#\CSharpMuPDF\Demo\bin\Release\mupdfcpp64.dll
+E:\c#\CSharpMuPDF\Demo\bin\Release\mupdfcsharp.dll
+E:\c#\CSharpMuPDF\Demo\bin\Release\MuPDF.NET.dll
+E:\c#\CSharpMuPDF\Demo\bin\Release\MuPDF.NET.pdb
+E:\c#\CSharpMuPDF\Demo\bin\Release\MuPDF.NET.dll.config

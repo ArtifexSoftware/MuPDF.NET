@@ -1,9 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.34301.259
+# Visual Studio Version 17
+VisualStudioVersion = 17.6.33723.286
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSharpMuPDF", "CSharpMuPDF\CSharpMuPDF.csproj", "{497AD831-BC9C-41B1-88A4-6CA47521FA2A}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MuPDF.NET", "CSharpMuPDF\MuPDF.NET.csproj", "{497AD831-BC9C-41B1-88A4-6CA47521FA2A}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Demo", "Demo\Demo.csproj", "{33E4F2C8-C8C4-4230-AA37-BE787CAEEA3C}"
 	ProjectSection(ProjectDependencies) = postProject
