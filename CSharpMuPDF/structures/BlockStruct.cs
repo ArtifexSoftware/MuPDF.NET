@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using mupdf;
 
-namespace CSharpMuPDF
+namespace MuPDF.NET
 {
     public struct BlockStruct
     {
@@ -39,6 +39,6 @@ namespace CSharpMuPDF
 
         public vectoruc DIGEST;
 
-        public List<LineStruct> lines;
+        public List<LineStruct> LINES;
     }
 }

@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using mupdf;
 
-namespace CSharpMuPDF
+namespace MuPDF.NET
 {
     public class Quad
     {
@@ -38,8 +38,8 @@ namespace CSharpMuPDF
                 Rect r = new Rect();
                 r.X0 = Math.Min(Math.Min(UpperLeft.X, UpperRight.X), Math.Min(LowerLeft.X, LowerRight.X));
                 r.Y0 = Math.Min(Math.Min(UpperLeft.Y, UpperRight.Y), Math.Min(LowerLeft.Y, LowerRight.Y));
-                r.X1 = Math.Max(Math.Min(UpperLeft.X, UpperRight.X), Math.Min(LowerLeft.X, LowerRight.X));
-                r.Y1 = Math.Max(Math.Min(UpperLeft.Y, UpperRight.Y), Math.Min(LowerLeft.Y, LowerRight.Y));
+                r.X1 = Math.Max(Math.Max(UpperLeft.X, UpperRight.X), Math.Max(LowerLeft.X, LowerRight.X));
+                r.Y1 = Math.Max(Math.Max(UpperLeft.Y, UpperRight.Y), Math.Max(LowerLeft.Y, LowerRight.Y));
                 return r;
             }
         }
@@ -124,6 +124,14 @@ namespace CSharpMuPDF
             UpperRight = quad.UpperRight;
             LowerLeft = quad.LowerLeft;
             LowerRight = quad.LowerRight;
+        }
+
+        public Quad(FzQuad quad)
+        {
+            UpperLeft = new Point(new FzPoint(quad.ul));
+            UpperRight = new Point(new FzPoint(quad.ur));
+            LowerLeft = new Point(new FzPoint(quad.ll));
+            LowerRight = new Point(new FzPoint(quad.lr));
         }
 
         public Point this[int i]

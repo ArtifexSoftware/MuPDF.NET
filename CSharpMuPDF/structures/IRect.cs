@@ -7,7 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using static mupdf.FzBandWriter;
 
-namespace CSharpMuPDF
+namespace MuPDF.NET
 {
     public class IRect
     {

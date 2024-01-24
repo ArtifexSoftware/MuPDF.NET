@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using mupdf;
 
-namespace CSharpMuPDF
+namespace MuPDF.NET
 {
 
     public class Point

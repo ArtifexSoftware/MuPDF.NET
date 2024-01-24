@@ -1,13 +1,15 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Resources;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using mupdf;
 
-namespace CSharpMuPDF
+namespace MuPDF.NET
 {
     public static class Utils
     {
@@ -16,6 +18,15 @@ namespace CSharpMuPDF
         public static int FZ_MAX_INF_RECT = (int)0x7fffff80;
 
         public static double FLT_EPSILON = 1e-5;
+
+        public static string ANNOT_ID_STEM = "fitz";
+
+        public static int SigFlag_SignaturesExist = 1;
+        public static int SigFlag_AppendOnly = 2;
+
+        public static int UNIQUE_ID = 0;
+
+        public static List<string> MUPDF_WARNINGS_STORE = new List<string>();
         public static string GetImageExtention(int type)
         {
             if (type == (int)ImageType.FZ_IMAGE_FAX) return "fax";
@@ -305,8 +316,10 @@ namespace CSharpMuPDF
 
         public static int PageRotation(PdfPage page)
         {
-            int rotate = 0;
-            PdfObj obj = page.obj().pdf_dict_get_inheritable(new PdfObj("Rotate"));
+            int rotate;
+            if (page.obj() == null)
+                Console.WriteLine(page.obj().ToString());
+            PdfObj obj = page   .obj().pdf_dict_get(new PdfObj("Rotate"));
             rotate = obj.pdf_to_int();
             rotate = NormalizeRotation(rotate);
             return rotate;
@@ -402,6 +415,438 @@ namespace CSharpMuPDF
             ret[pixel] = count;
 
             return ret;
+        }
+
+        public static void GetWidgetProperties(PdfAnnot annot, Widget widget)
+        {
+            PdfObj annotObj = mupdf.mupdf.pdf_annot_obj(annot);
+            PdfPage page = mupdf.mupdf.pdf_annot_page(annot);
+            PdfDocument pdf = page.doc();
+            PdfAnnot tw = annot;
+
+
+        }
+
+        public static void AddAnnotId(PdfAnnot annot, string stem)
+        {
+            PdfPage page = annot.pdf_annot_page();
+            PdfObj annotObj = annot.pdf_annot_obj();
+            List<string> names = GetAnnotIDList(page);
+            int i = 0;
+            string stemId = "";
+            while (true)
+            {
+                stemId = $"{ANNOT_ID_STEM}-{stem}{i}";
+                if (!names.Contains(stemId))
+                    break;
+                i += 1;
+            }
+            PdfObj name = mupdf.mupdf.pdf_new_string(stemId, (uint)stemId.Length);
+            annotObj.pdf_dict_puts("NM", name);
+            page.doc().m_internal.resynth_required = 0;
+        }
+
+        public static List<string> GetAnnotIDList(PdfPage page)
+        {
+            List<string> ids = new List<string>();
+            PdfObj annots = page.obj().pdf_dict_get(new PdfObj("Annots"));
+            if (annots == null)
+                return ids;
+            for (int i = 0; i < annots.pdf_array_len(); i++)
+            {
+                PdfObj annotObj = annots.pdf_array_get(i);
+                PdfObj name = annotObj.pdf_dict_gets("NM");
+                if (name != null)
+                    ids.Add(name.pdf_to_text_string());
+            }
+            return ids;
+        }
+
+        public static byte[] ToByte(string s)
+        {
+            UTF8Encoding utf8 = new UTF8Encoding();
+            return utf8.GetBytes(s);
+        }
+
+        public static PdfObj EmbedFile(
+            PdfDocument pdf,
+            FzBuffer buf,
+            string filename,
+            string ufilename,
+            string desc,
+            int compress)
+        {
+            int len = 0;
+            PdfObj val = pdf.pdf_new_dict(6);
+            val.pdf_dict_put_dict(new PdfObj("CI"), 4);
+            PdfObj ef = val.pdf_dict_put_dict(new PdfObj("EF"), 4);
+            val.pdf_dict_put_text_string(new PdfObj("F"), filename);
+            val.pdf_dict_put_text_string(new PdfObj("UF"), ufilename);
+            val.pdf_dict_put_text_string(new PdfObj("Desc"), desc);
+            val.pdf_dict_put(new PdfObj("Type"), new PdfObj("Filespec"));
+            byte[] bs = Utils.ToByte("  ");
+
+            IntPtr bufPtr = new IntPtr(bs.Length);
+            Marshal.Copy(bufPtr, bs, 0, bs.Length);
+            SWIGTYPE_p_unsigned_char swigBuf = new SWIGTYPE_p_unsigned_char(bufPtr, false);
+
+            PdfObj f = pdf.pdf_add_stream(
+                mupdf.mupdf.fz_new_buffer_from_copied_data(swigBuf, (uint)bs.Length),
+                new PdfObj(),
+                0
+                );
+            ef.pdf_dict_put(new PdfObj("F"), f);
+            Utils.UpdateStream(pdf, f, buf, compress);
+            len = (int)buf.fz_buffer_storage(new SWIGTYPE_p_p_unsigned_char(IntPtr.Zero, false));
+            f.pdf_dict_put_int(new PdfObj("DL"), len);
+            f.pdf_dict_put_int(new PdfObj("Length"), len);
+            PdfObj param = f.pdf_dict_put_dict(new PdfObj("Params"), 4);
+            param.pdf_dict_put_int(new PdfObj("Size"), len);
+
+            return val;
+        }
+
+        public static void MakeAnnotDA(PdfAnnot annot, int nCol, float[] col, string fontName, float fontSize)
+        {
+            string buf = "";
+            if (nCol > 0)
+                buf += "0 g ";
+            else if (nCol == 1)
+                buf += $"{col[0]:g} g ";
+            else if (nCol == 2)
+                Debug.Assert(false);
+            else if (nCol == 3)
+                buf += $"{col[0]:g} {col[1]:g} {col[2]:g} rg ";
+            else
+                buf += $"{col[0]:g} {col[1]:g} {col[2]:g} {col[3]:g} k ";
+            buf += $"/{ExpandFileName(fontName)} {fontSize} Tf";
+            annot.pdf_annot_obj().pdf_dict_put_text_string(new PdfObj("DA"), buf);
+        }
+
+        public static string ExpandFileName(string filename)
+        {
+            if (filename == null) return "Helv";
+            if (filename.StartsWith("Co")) return "Cour";
+            if (filename.StartsWith("co")) return "Cour";
+            if (filename.StartsWith("Ti")) return "TiRo";
+            if (filename.StartsWith("ti")) return "TiRo";
+            if (filename.StartsWith("Sy")) return "Symb";
+            if (filename.StartsWith("sy")) return "Symb";
+            if (filename.StartsWith("Za")) return "ZaDb";
+            if (filename.StartsWith("za")) return "ZaDb";
+            return "Helv";
+        }
+
+        public static List<WordBlock> GetTextWords(
+            MuPDFPage page,
+            Rect clip = null,
+            int flags = 0,
+            MuPDFSTextPage stPage = null,
+            bool sort = false,
+            char[] delimiters = null
+            )
+        {
+            if (flags == 0)
+                flags = flags = (int)(TextFlags.TEXT_PRESERVE_WHITESPACE | TextFlags.TEXT_PRESERVE_LIGATURES | TextFlags.TEXT_MEDIABOX_CLIP);
+            MuPDFSTextPage tp = stPage;
+            if (tp == null)
+                tp = page.GetSTextPage(clip, flags);
+            else if (tp._parent != page)
+                throw new Exception("not a textpage of this page");
+
+            List<WordBlock> words = tp.ExtractWords(delimiters);
+            if (stPage is null)
+                tp.Dispose();
+            if (sort)
+                words.Sort((WordBlock w1, WordBlock w2) =>
+                {
+                    var result = w1.Y1.CompareTo(w2.Y1);
+                    if (result == 0)
+                    {
+                        result = w1.X0.CompareTo(w2.X0);
+                    }
+                    return result;
+                });
+            return words;
+        }
+
+        public static dynamic GetText(
+            MuPDFPage page,
+            string option = "text",
+            Rect clip = null,
+            int flags = 0,
+            MuPDFSTextPage stPage = null,
+            bool sort = false,
+            char[] delimiters = null
+            )
+        {
+            Dictionary<string, int> formats = new Dictionary<string, int>()
+            {
+                { "text", 0 },
+                { "html", 1 },
+                { "json", 1 },
+                { "rawjson", 1 },
+                { "xml", 0 },
+                { "xhtml", 1 },
+                { "dict", 1 },
+                { "rawdict", 1 },
+                { "words", 0 },
+                { "blocks", 1 },
+            };
+
+            option = option.ToLower();
+            if (!formats.Keys.Contains(option))
+                option = "text";
+            if (flags == 0)
+            {
+                flags = (int)(TextFlags.TEXT_PRESERVE_WHITESPACE | TextFlags.TEXT_PRESERVE_LIGATURES | TextFlags.TEXT_MEDIABOX_CLIP);
+                if (formats[option] == 1)
+                    flags = flags | (int)TextFlags.TEXT_PRESERVE_IMAGES;
+            }
+
+            if (option == "words")
+            {
+                return Utils.GetTextWords(
+                    page,
+                    clip,
+                    flags,
+                    stPage,
+                    sort,
+                    delimiters
+                    );
+            }
+            
+            Rect cb = null;
+            if ((new List<string>() { "html", "xml", "xhtml" }).Contains(option))
+                clip = page.CROPBOX;
+            if (clip != null)
+                cb = null;
+            else if (page is MuPDFPage)
+                cb = page.CROPBOX;
+
+            MuPDFSTextPage tp = stPage;
+            if (tp is null)
+                tp = page.GetSTextPage(clip, flags);
+            else if (tp._parent != page)
+                throw new Exception("not a textpage of this page");
+            
+            dynamic t = null;
+            if (option == "json")
+                t = tp.ExtractJSON(cb, sort);
+            else if (option == "rawjson")
+                t = tp.ExtractRawJSON(cb, sort);
+            else if (option == "dict")
+                t = tp.ExtractDict(cb, sort);
+            else if (option == "rawdict")
+                t = tp.ExtractRAWDict(cb, sort);
+            else if (option == "html")
+                t = tp.ExtractHtml();
+            else if (option == "xml")
+                t = tp.ExtractXML();
+            else if (option == "xhtml")
+                t = tp.ExtractText();
+
+            if (stPage is null)
+                tp.Dispose();
+            return t;
+        }
+
+        public static void SetFieldType(PdfDocument doc, PdfObj annotObj, PdfWidgetType type)
+        {
+            PdfFieldType setBits = 0;
+            PdfFieldType clearBits = 0;
+            PdfObj typeName = null;
+
+            if (type == PdfWidgetType.PDF_WIDGET_TYPE_BUTTON)
+            {
+                typeName = new PdfObj("Btn");
+                setBits = PdfFieldType.PDF_BTN_FIELD_IS_PUSHBUTTON;
+            }
+            else if (type == PdfWidgetType.PDF_WIDGET_TYPE_RADIOBUTTON)
+            {
+                typeName = new PdfObj("Btn");
+                clearBits = PdfFieldType.PDF_BTN_FIELD_IS_PUSHBUTTON;
+                setBits = PdfFieldType.PDF_BTN_FIELD_IS_RADIO;
+            }
+            else if (type == PdfWidgetType.PDF_WIDGET_TYPE_CHECKBOX)
+            {
+                typeName = new PdfObj("Btn");
+                clearBits = (PdfFieldType.PDF_BTN_FIELD_IS_PUSHBUTTON | PdfFieldType.PDF_BTN_FIELD_IS_RADIO);
+            }
+            else if (type == PdfWidgetType.PDF_WIDGET_TYPE_TEXT)
+            {
+                typeName = new PdfObj("Tx");
+            }
+            else if (type == PdfWidgetType.PDF_WIDGET_TYPE_LISTBOX)
+            {
+                typeName = new PdfObj("Ch");
+                clearBits = PdfFieldType.PDF_CH_FIELD_IS_COMBO;
+            }
+            else if (type == PdfWidgetType.PDF_WIDGET_TYPE_COMBOBOX)
+            {
+                typeName = new PdfObj("Ch");
+                setBits = PdfFieldType.PDF_CH_FIELD_IS_COMBO;
+            }
+            else if (type == PdfWidgetType.PDF_WIDGET_TYPE_SIGNATURE)
+            {
+                typeName = new PdfObj("Sig");
+            }
+
+            if (typeName != null)
+                annotObj.pdf_dict_put(new PdfObj("FT"), typeName);
+
+            int bits = 0;
+            if ((int)setBits != 0 || (int)setBits != 0)
+            {
+                bits = annotObj.pdf_dict_get_int(new PdfObj("Ff"));
+                bits &= ~(int)clearBits;
+                bits |= (int)setBits;
+                annotObj.pdf_dict_put_int(new PdfObj("Ff"), bits);
+            }
+
+        }
+
+        public static PdfAnnot CreateWidget(PdfDocument doc, PdfPage page, PdfWidgetType type, string fieldName)
+        {
+            int oldSigFlags = doc.pdf_trailer().pdf_dict_getp("Root/AcroForm/SigFlags").pdf_to_int();
+            PdfAnnot annot = page.pdf_create_annot_raw(pdf_annot_type.PDF_ANNOT_WIDGET);
+            PdfObj annotObj = annot.pdf_annot_obj();
+            try
+            {
+                Utils.SetFieldType(doc, annotObj, type);
+                annotObj.pdf_dict_put_text_string(new PdfObj("T"), fieldName);
+
+                /*if (type == PdfWidgetType.PDF_WIDGET_TYPE_SIGNATURE)
+                {
+                    int sigFlags = oldSigFlags | (Utils.SigFlag_SignaturesExist | Utils.SigFlag_AppendOnly);
+                    Utils.pdf_dict_putl(
+                        doc.pdf_trailer(),
+                        mupdf.mupdf.pdf_new_nt(sigFlags),
+                        new string[]
+                        {
+                            "Root", "AcroForm", "SigFlags"
+                        }
+                    );
+                }*/
+
+                PdfObj form = doc.pdf_trailer().pdf_dict_getp("Root/AcroForm/Fields");
+                if (form == null)
+                {
+                    form = doc.pdf_new_array(1);
+                    Utils.pdf_dict_putl(
+                        doc.pdf_trailer(),
+                        form,
+                        new string[]
+                        {
+                            "Root", "AcroForm", "Fields"
+                        }
+                        );
+                }
+
+                form.pdf_array_push(annotObj);
+            }
+            catch (Exception e)
+            {
+                page.pdf_delete_annot(annot);
+
+                if (type == PdfWidgetType.PDF_WIDGET_TYPE_SIGNATURE)
+                {
+                    Utils.pdf_dict_putl(
+                        doc.pdf_trailer(),
+                        mupdf.mupdf.pdf_new_int(oldSigFlags),
+                        new string[]
+                        {
+                            "Root", "AcroForm", "SigFlags"
+                        }
+                        );
+                }
+                throw e;
+            }
+            return annot;
+        }
+
+        public static List<(string, int)> GetResourceProperties(PdfObj refer)
+        {
+            PdfObj properties = Utils.pdf_dict_getl(refer, new string[] { "Resource", "Properties" });
+            List<(string, int)> rc = new List<(string, int)>();
+            if (properties == null)
+                return null;
+            else
+            {
+                int n = properties.pdf_dict_len();
+                if (n < 1)
+                    return null;
+                
+                for (int i =0; i < n; i++)
+                {
+                    PdfObj key = properties.pdf_dict_get_key(i);
+                    PdfObj val = properties.pdf_dict_get_val(i);
+                    string c = key.pdf_to_name();
+                    int xref = val.pdf_to_num();
+                    rc.Add((c, xref));
+                }
+            }
+            return rc;
+        }
+
+        public static void SetResourceProperty(PdfObj refer, string name, int xref)
+        {
+            PdfDocument pdf = refer.pdf_get_bound_document();
+            PdfObj ind = pdf.pdf_new_indirect(xref, 0);
+
+            if (ind == null)
+                Console.WriteLine(Utils.ErrorMessages["MSG_BAD_XREF"]);
+
+            PdfObj resource = refer.pdf_dict_get(new PdfObj("Resource"));
+            if (resource == null)
+                resource = refer.pdf_dict_put_dict(new PdfObj("Resources"), 1);
+            
+            PdfObj properties = resource.pdf_dict_get(new PdfObj("Properties"));
+            if (properties == null)
+                properties = resource.pdf_dict_put_dict(new PdfObj("Properties"), 1);
+
+            properties.pdf_dict_put(mupdf.mupdf.pdf_new_name(name), ind);
+        }
+
+        public static int GenID()
+        {
+            UNIQUE_ID += 1;
+            return UNIQUE_ID;
+        }
+
+        public static void EmbeddedClean(PdfDocument pdf)
+        {
+            PdfObj root = pdf.pdf_trailer().pdf_dict_get(new PdfObj("Root"));
+            PdfObj coll = root.pdf_dict_get(new PdfObj("Collection"));
+            if (coll != null && coll.pdf_dict_len() > 0)
+            {
+                root.pdf_dict_del(new PdfObj("Collection"));
+            }
+
+            PdfObj efiles = Utils.pdf_dict_getl(
+                root,
+                new string[]
+                {
+                    "Names", "EmbeddedFiles", "Names"
+                }
+                );
+            if (efiles != null)
+                root.pdf_dict_put_name(new PdfObj("PageMode"), "UseAttachments");
+        }
+
+        public static void EnsureIdentity()
+        {
+            IntPtr rndPtr = Marshal.AllocHGlobal(10);
+            Console.WriteLine(rndPtr);
+            SWIGTYPE_p_unsigned_char swigRnd = new SWIGTYPE_p_unsigned_char(rndPtr, false);
+            mupdf.mupdf.fz_memrnd(swigRnd, 16);
+            Console.WriteLine(rndPtr);
+            /*PdfObj id_ = pdf.pdf_trailer().pdf_dict_get(new PdfObj("ID"));
+            if (id_ == null)
+            {
+                
+
+            }*/
         }
     }
 }

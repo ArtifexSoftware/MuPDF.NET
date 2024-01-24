@@ -1,5 +1,4 @@
-﻿using Microsoft.SqlServer.Server;
-using mupdf;
+﻿using mupdf;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -8,9 +7,9 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace CSharpMuPDF
+namespace MuPDF.NET
 {
-    public class MuPDFAnnotation
+    public class MuPDFAnnotation : IDisposable
     {
         internal PdfAnnot _nativeAnnotion;
 
@@ -939,7 +938,9 @@ namespace CSharpMuPDF
 
                 }
                 else
-                    filter.sanitize = sanitize; //issue
+                {
+                    //filter.sanitize = sanitize; //issue
+                }
             }
             return filter;
         }
@@ -2306,6 +2307,11 @@ namespace CSharpMuPDF
                 stream.pdf_dict_put_text_string(new PdfObj("Desc"), desc);
                 fs.pdf_dict_put_text_string(new PdfObj("Desc"), desc);
             }
+        }
+
+        public void Dispose()
+        {
+            throw new NotImplementedException();
         }
     }
 

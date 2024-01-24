@@ -53,5 +53,11 @@
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\CSharpMuPDF\MuPDF.NET.csproj">
+      <Project>{497ad831-bc9c-41b1-88a4-6ca47521fa2a}</Project>
+      <Name>MuPDF.NET</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

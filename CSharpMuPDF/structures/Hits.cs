@@ -2,13 +2,13 @@
 using System.Collections.Generic;
 using mupdf;
 
-namespace CSharpMuPDF
+namespace MuPDF.NET
 {
     public class Hits
     {
         public int LEN;
 
-        public List<FzQuad> QUADS;
+        public List<Quad> QUADS;
 
         public float HFUZZ;
 
