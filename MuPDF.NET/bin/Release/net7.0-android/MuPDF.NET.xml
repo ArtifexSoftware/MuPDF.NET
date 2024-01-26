@@ -1,0 +1,191 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>MuPDF.NET</name>
+    </assembly>
+    <members>
+        <member name="P:MuPDF.NET.MuPDFSTextPage.MEDIABOX">
+            <summary>
+            Rect of Stext Page
+            </summary>
+        </member>
+        <member name="P:MuPDF.NET.MuPDFSTextPage.BLOCKS">
+            <summary>
+            Block List of Text
+            </summary>
+        </member>
+        <member name="M:MuPDF.NET.MuPDFSTextPage.#ctor(mupdf.FzRect)">
+            <summary>
+            MuPDFStextPage Constructor 
+            </summary>
+            <param name="rect">Page Rectangle Size</param>
+        </member>
+        <member name="M:MuPDF.NET.MuPDFSTextPage.#ctor(MuPDF.NET.MuPDFSTextPage)">
+            <summary>
+            MuPDFStextPage Contructor
+            </summary>
+            <param name="stPage">MuPDFStextPage object</param>
+        </member>
+        <member name="M:MuPDF.NET.MuPDFSTextPage.ExtractText(MuPDF.NET.ExtractFormat)">
+            <summary>
+            Extract Stext Page
+            </summary>
+            <param name="format">format of return value</param>
+            <returns>string of Text, HTML, XHTML, .. according to format</returns>
+        </member>
+        <member name="M:MuPDF.NET.MuPDFSTextPage.ExtractBlocks">
+            <summary>
+            Extract Blocks in StextPage
+            </summary>
+            <returns>Return List of TextBlock</returns>
+        </member>
+        <member name="M:MuPDF.NET.MuPDFSTextPage.ExtractDict(MuPDF.NET.Rect,System.Boolean)">
+            <summary>
+            Extract Stext Page
+            </summary>
+            <param name="cropbox">Rectangle to extract in StextPage</param>
+            <param name="sort"></param>
+            <returns>Page information of CropBox</returns>
+        </member>
+        <member name="M:MuPDF.NET.MuPDFSTextPage.ExtractHtml">
+            <summary>
+            Extract Stext Page in HTML
+            </summary>
+            <returns>string of HTML</returns>
+        </member>
+        <member name="M:MuPDF.NET.MuPDFSTextPage.ExtractImageInfo(System.Int32)">
+            <summary>
+            Extract Stext Page with Image Information
+            </summary>
+            <param name="hashes">Encode image with given hash value</param>
+        </member>
+        <member name="M:MuPDF.NET.MuPDFSTextPage.ExtractJSON(MuPDF.NET.Rect,System.Boolean)">
+            <summary>
+            Extract StextPage in JSON format
+            </summary>
+            <param name="cropbox">Rectangle area to extract</param>
+            <param name="sort"></param>
+        </member>
+        <member name="M:MuPDF.NET.MuPDFSTextPage.ExtractRAWDict(MuPDF.NET.Rect,System.Boolean)">
+            <summary>
+            Extract Stext Page in format of PageStruct
+            </summary>
+            <param name="cropbox">Rectangle Area to Extract</param>
+            <param name="sort"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MuPDF.NET.MuPDFSTextPage.ExtractSelection(mupdf.FzPoint,mupdf.FzPoint)">
+            <summary>
+            Extract selection in format of string
+            </summary>
+            <param name="a">begin point of selection</param>
+            <param name="b">end point of selection</param>
+            <returns>returns text in format of string</returns>
+        </member>
+        <member name="M:MuPDF.NET.MuPDFSTextPage.ExtractText(System.Boolean)">
+            <summary>
+            Extract Stext Page in format of Text
+            </summary>
+            <param name="sort"></param>
+            <returns>Return String</returns>
+        </member>
+        <member name="M:MuPDF.NET.MuPDFSTextPage.ExtractTextBox(mupdf.FzRect)">
+            <summary>
+            Extract TextBoxes
+            </summary>
+            <param name="area">Rectangle Area to extract</param>
+            <returns>Returns string in area</returns>
+        </member>
+        <member name="M:MuPDF.NET.MuPDFSTextPage.ExtractWords(System.Char[])">
+            <summary>
+            Extract Words
+            </summary>
+            <param name="delimiters"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MuPDF.NET.MuPDFSTextPage.ExtractXHtml">
+            <summary>
+            Extract Stext Page in format of XHtml
+            </summary>
+            <returns>Returns string in format of XHtml</returns>
+        </member>
+        <member name="M:MuPDF.NET.MuPDFSTextPage.Search(MuPDF.NET.MuPDFSTextPage,System.String,System.Int32,System.Boolean)">
+            <summary>
+            Extract Hits of Matching in format of FzQuad List
+            </summary>
+            <param name="stPage">Stext Page</param>
+            <param name="needle">Text to search</param>
+            <returns></returns>
+        </member>
+        <member name="M:MuPDF.NET.MuPDFSTextPage.GetBufferFromStextPage">
+            <summary>
+            Get Buffer from Stext Page
+            </summary>
+            <returns>Buffer</returns>
+        </member>
+        <member name="M:MuPDF.NET.MuPDFSTextPage.MakeEscape(System.Int32)">
+            <summary>
+            Utf8 to Unicode
+            </summary>
+            <param name="ch"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MuPDF.NET.MuPDFSTextPage.GetNewBlockList(MuPDF.NET.PageStruct,System.Boolean)">
+            <summary>
+            Make Block List of Stext Page
+            </summary>
+            <param name="pageDict">PageStruct including BlockList</param>
+            <param name="raw"></param>
+        </member>
+        <member name="M:MuPDF.NET.MuPDFSTextPage.DecodeRawUnicodeEscape(System.String)">
+            <summary>
+            Decode Raw Unicode
+            </summary>
+            <param name="s"></param>
+            <returns></returns>
+        </member>
+        <member name="M:MuPDF.NET.MuPDFSTextPage.DecodeRawUnicodeEscape(mupdf.FzBuffer)">
+            <summary>
+            Decode Raw Unicode
+            </summary>
+            <param name="s"></param>
+            <returns></returns>
+        </member>
+        <!-- Badly formed XML comment ignored for member "M:MuPDF.NET.Pixmap.ColorCount(System.Boolean,System.Object)" -->
+        <member name="F:MuPDF.NET.Utils.CS_RGB">
+            <summary>
+            ColorSpace types
+            </summary>
+        </member>
+        <member name="T:mupdf.vectoruc.vectorucEnumerator">
+            Note that the IEnumerator documentation requires an InvalidOperationException to be thrown
+            whenever the collection is modified. This has been done for changes in the size of the
+            collection but not when one of the elements of the collection is modified as it is a bit
+            tricky to detect unmanaged code that modifies the collection under our feet.
+        </member>
+        <member name="T:mupdf.vectori.vectoriEnumerator">
+            Note that the IEnumerator documentation requires an InvalidOperationException to be thrown
+            whenever the collection is modified. This has been done for changes in the size of the
+            collection but not when one of the elements of the collection is modified as it is a bit
+            tricky to detect unmanaged code that modifies the collection under our feet.
+        </member>
+        <member name="T:mupdf.vectors.vectorsEnumerator">
+            Note that the IEnumerator documentation requires an InvalidOperationException to be thrown
+            whenever the collection is modified. This has been done for changes in the size of the
+            collection but not when one of the elements of the collection is modified as it is a bit
+            tricky to detect unmanaged code that modifies the collection under our feet.
+        </member>
+        <member name="T:mupdf.vectorq.vectorqEnumerator">
+            Note that the IEnumerator documentation requires an InvalidOperationException to be thrown
+            whenever the collection is modified. This has been done for changes in the size of the
+            collection but not when one of the elements of the collection is modified as it is a bit
+            tricky to detect unmanaged code that modifies the collection under our feet.
+        </member>
+        <member name="T:mupdf.vector_search_page2_hit.vector_search_page2_hitEnumerator">
+            Note that the IEnumerator documentation requires an InvalidOperationException to be thrown
+            whenever the collection is modified. This has been done for changes in the size of the
+            collection but not when one of the elements of the collection is modified as it is a bit
+            tricky to detect unmanaged code that modifies the collection under our feet.
+        </member>
+    </members>
+</doc>
