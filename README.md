@@ -2,7 +2,7 @@
 
 ## Prerequistion
 - Visual Studio 2019, 2022
-- .Net Framework v7 or later
+- .Net v7 or later
 - Windows OS
 
 ## How to build
@@ -14,6 +14,6 @@
 
 ## How to use CSharpMuPDF
 - You need `mupdfcpp64.dll` and `mupdfcsharp.dll`.
-- You have to select CSharpMuPDF.dll as a reference and use with `using mupdf;` and `using MuPDF.NET;`. For this, you have to copy these files in same level with MuPDF.NET project.
+- You have to select MuPDF.NET.dll as a reference and use with `using MuPDF.NET;`. For this, you have to copy these files in same level with MuPDF.NET project.
 
 ## After build, you can run on `bin/Release/Demo.exe` for testing
