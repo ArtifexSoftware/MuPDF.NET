@@ -1,6 +1,6 @@
 # MuPDF.NET
 
-## Prerequistion
+## Prerequisite
 - Visual Studio 2019, 2022
 - .Net v7 or later
 - Windows OS
