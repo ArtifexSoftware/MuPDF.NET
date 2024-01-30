@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using System.Runtime.Remoting;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Maui.Controls.Shapes;
 using Microsoft.SqlServer.Server;
 using mupdf;
 using static mupdf.FzBandWriter;
@@ -23,6 +24,22 @@ namespace MuPDF.NET
         public int NUMBER { get; set; }
 
         public bool IsOwn { get; set; }
+
+        public Point MEDIABOX_SIZE
+        {
+            get
+            {
+                return new Point(MEDIABOX.X1, MEDIABOX.Y1);
+            }
+        }
+
+        public Point CROPBOX_POSITION
+        {
+            get
+            {
+                return CROPBOX.TopLeft;
+            }
+        }
 
         public int ROTATION
         {
@@ -1041,6 +1058,81 @@ namespace MuPDF.NET
                     byte[] md5
                 }
             }*/
+        }
+
+        public int InsertText(
+            Point point,
+            dynamic text,
+            float fontSize = 11,
+            float lineHeight = 0,
+            string fontName = "helv",
+            string fontFile = null,
+            int setSimple = 0,
+            int encoding = 0,
+            float[] color = null,
+            float[] fill = null,
+            float borderWidth = 0.05f,
+            int renderMode = 0,
+            int rotate = 0,
+            float[] morph = null,
+            bool overlay = true,
+            float strokeOpacity = 1,
+            float fillOpacity = 1,
+            int oc = 0
+            )
+        {
+            Shape img = new Shape(this);
+            int rc = img.InsertText(
+                point,
+                text,
+                fontSize: fontSize,
+                lineHeight: lineHeight,
+                fontName: fontName,
+                setSimple: setSimple != 0,
+                encoding: encoding,
+                color: color,
+                fill: fill,
+                borderWidth: borderWidth,
+                renderMode: renderMode,
+                rotate: rotate,
+                morph: morph,
+                strokeOpacity: strokeOpacity,
+                fillOpacity: fillOpacity,
+                oc: oc
+                );
+            if (rc >= 0)
+                img.Commit(overlay);
+            return rc;
+        }
+
+        public int InsertFont(
+            string fontName = "helv",
+            string fontFile = null,
+            byte[] fontBuffer = null,
+            bool setSimple = false,
+            int wmode = 0,
+            int encoding = 0
+            )
+        {
+            MuPDFDocument doc = _parent;
+            if (doc is null)
+                throw new Exception("orphaned object: parent is None");
+            int idx = 0;
+            if (fontName.StartsWith("/"))
+                fontName = fontName.Substring(1);
+
+            HashSet<char> INVALID_NAME_CHARS = new HashSet<char>(" \t\n\r\v\f()<>[]{}/%" + '\0');
+            INVALID_NAME_CHARS.IntersectWith(fontName);
+
+            if (INVALID_NAME_CHARS.Count > 0)
+                throw new Exception($"bad fontname chars {INVALID_NAME_CHARS.ToString()}");
+
+            
+        }
+
+        public void GetFonts(bool full = false)
+        {
+            return _parent.GetPageFonts(NUMBER, full);
         }
     }
 }

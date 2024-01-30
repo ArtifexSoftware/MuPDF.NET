@@ -850,5 +850,289 @@ namespace MuPDF.NET
 
             }*/
         }
+
+        public Tuple CheckFont(MuPDFPage page, string fontName)
+        {
+            foreach (f in page.GetFonts())
+        }
+
+        public FontInfo CheckFontInfo(MuPDFDocument doc, int xref)
+        {
+            foreach (dynamic f in doc.FONTINFO)
+            {
+                if (xref == f[0])
+                    return 
+            }
+        }
+
+        public static void ScanResources(PdfDocument pdf, PdfObj rsrc, List<List<dynamic>> liste, int what, int streamXRef, List<dynamic> tracer)
+        {
+            if (rsrc.pdf_mark_obj() != 0)
+            {
+                mupdf.mupdf.fz_warn("Circular dependencies! Consider page cleaning.");
+                return;
+            }
+            try
+            {
+                PdfObj xObj = rsrc.pdf_dict_get(new PdfObj("XObject"));
+
+                if (what == 1)
+                {
+                    PdfObj font = rsrc.pdf_dict_get(new PdfObj("Font"));
+                    GatherFonts(pdf, font, liste, streamXRef);
+                }
+                else if (what == 2)
+                {
+                    GatherIamges(pdf, xObj, liste, streamXRef);
+                }
+                else if (what == 3)
+                    GatherForms(pdf, xObj, liste, streamXRef);
+                else
+                    return;
+
+                int n = xObj.pdf_dict_len();
+                for (int i = 0; i <n; i++)
+                {
+                    PdfObj obj = xObj.pdf_dict_get_val(i);
+                    int sxref = 0;
+                    if (obj.pdf_is_stream() != 0)
+                        sxref = obj.pdf_to_num();
+                    else
+                        sxref = 0;
+                    PdfObj subrsrc = obj.pdf_dict_get(new PdfObj("Resources"));
+                    if (subrsrc != null)
+                    {
+                        int sxref_t = sxref;
+                        if (!tracer.Contains(sxref_t))
+                        {
+                            tracer.Add(sxref_t);
+                            Utils.ScanResources(pdf, subrsrc, liste, what, streamXRef, tracer);
+                        }
+                        else
+                        {
+                            mupdf.mupdf.fz_warn("Circular dependencies! Consider page cleaning.");
+                            return;
+                        }
+                    }
+                }
+            }
+            finally
+            {
+                mupdf.mupdf.pdf_unmark_obj(rsrc);
+            }
+        }
+
+        public static int GatherFonts(PdfDocument pdf, PdfObj dict, List<List<dynamic>> fontList, int streamXRef)
+        {
+            int rc = 1;
+            int n = dict.pdf_dict_len();
+
+            for (int i = 0; i < n; i ++)
+            {
+                PdfObj refName = dict.pdf_dict_get_key(i);
+                PdfObj fontDict = dict.pdf_dict_get_val(i);
+                if (fontDict.pdf_is_dict() == 0)
+                {
+                    mupdf.mupdf.fz_warn($"'{refName.pdf_to_name()}' is no font dict ({fontDict.pdf_to_num()} 0 R)");
+                    continue;
+                }
+
+                PdfObj subType = fontDict.pdf_dict_get(new PdfObj("Subtype"));
+                PdfObj baseFont = fontDict.pdf_dict_get(new PdfObj("Base"));
+                PdfObj name = null;
+                if (baseFont == null || baseFont.pdf_is_null() != 0)
+                    name = fontDict.pdf_dict_get(new PdfObj("Name"));
+                else
+                    name = baseFont;
+                PdfObj encoding = fontDict.pdf_dict_get(new PdfObj("Encoding"));
+                if (encoding.pdf_is_dict() != 0)
+                    encoding = encoding.pdf_dict_get(new PdfObj("BaseEncoding"));
+                int xref = fontDict.pdf_to_num();
+                string ext = "n/a";
+
+                if (xref != 0)
+                    ext = Utils.GetFontExtension(pdf, xref);
+
+                List<dynamic> entry = new List<dynamic>{
+                    xref,
+                    ext,
+                    subType.pdf_to_name(),
+                    Utils.EscapeStrFromStr(name.pdf_to_name()),
+                    refName.pdf_to_name(),
+                    encoding.pdf_to_name(),
+                    streamXRef
+                    };
+                fontList.Add( entry );
+            }
+
+            return rc;
+        }
+
+        public static string GetFontExtension(PdfDocument doc, int xref)
+        {
+            if (xref < 1)
+                return "n/a";
+            PdfObj o = mupdf.mupdf.pdf_load_object(doc, xref);
+            PdfObj desft = o.pdf_dict_get(new PdfObj("DescendantFonts"));
+            PdfObj obj = null;
+            if (desft != null)
+            {
+                obj = desft.pdf_array_get(0).pdf_resolve_indirect();
+                obj = obj.pdf_dict_get(new PdfObj("FontDescriptor"));
+            }
+            else
+                obj = o.pdf_dict_get(new PdfObj("FontDescriptor"));
+            if (obj == null)
+                return "n/a";
+
+            o = obj;
+            obj = o.pdf_dict_get(new PdfObj("FontFile"));
+            if (obj != null)
+                return "pfa";
+
+            obj = o.pdf_dict_get(new PdfObj("FontFile2"));
+            if (obj != null)
+                return "ttf";
+
+            obj = o.pdf_dict_get(new PdfObj("FontFile3"));
+            if (obj != null)
+            {
+                obj = obj.pdf_dict_get(new PdfObj("Subtype"));
+                if (obj != null && obj.pdf_is_name() == 0)
+                    return "n/a";
+                if (obj.pdf_name_eq(new PdfObj("Type1C")) != 0)
+                    return "cff";
+                else if (obj.pdf_name_eq(new PdfObj("CIDFontType0C")) != 0)
+                    return "cid";
+                else if (obj.pdf_name_eq(new PdfObj("OpenType")) != 0)
+                    return "otf";
+                else
+                    Console.WriteLine("unhandled font type '%s'", obj.pdf_to_name());
+            }
+            
+            return "n/a";
+        }
+
+        public static string EscapeStrFromStr(string c)
+        {
+            if (c == null)
+                return "";
+            byte[] b = Encoding.UTF8.GetBytes(c);
+            string ret = "";
+            foreach (byte bb in b)
+            {
+                ret += (char)bb;
+            }
+
+            return ret;
+        }
+
+        public static int GatherForms(PdfDocument doc, PdfObj dict, List<List<dynamic>> imageList, int streamXRef)
+        {
+            int rc = 1;
+            int n = dict.pdf_dict_len();
+            for (int i =0; i < n; i++)
+            {
+                PdfObj refName = dict.pdf_dict_get_key(i);
+                PdfObj imageDict = dict.pdf_dict_get_val(i);
+                if (imageDict == null)
+                {
+                    mupdf.mupdf.fz_warn($"'{refName.pdf_to_name()}' is no form dict ({imageDict.pdf_to_num()} 0 R)");
+                    continue;
+                }
+
+                PdfObj type = imageDict.pdf_dict_get(new PdfObj("BBox"));
+                if (type.pdf_name_eq(new PdfObj("Form")) != 0)
+                    continue;
+
+                PdfObj o = imageDict.pdf_dict_get(new PdfObj("BBox"));
+                PdfObj m = imageDict.pdf_dict_get(new PdfObj("Matrix"));
+                FzMatrix mat = null;
+                if (m != null)
+                    mat = m.pdf_to_matrix();
+                else
+                    mat = new FzMatrix();
+
+                FzRect bbox;
+                if (o != null)
+                    bbox = o.pdf_to_rect().fz_transform_rect(mat);
+                else
+                    bbox = new FzRect(FzRect.Fixed.Fixed_INFINITE);
+                int xref = imageDict.pdf_to_num();
+
+                List<dynamic> entry = new List<dynamic> {
+                    xref,
+                    refName.pdf_to_name(),
+                    streamXRef,
+                    bbox
+                };
+                imageList.Add(entry);
+            }
+            return rc;
+        }
+
+        public static int GatherIamges(PdfDocument doc, PdfObj dict, List<List<dynamic>> imageList, int streamXRef)
+        {
+            int rc = 1;
+            int n = dict.pdf_dict_len();
+            for (int i =0; i < n; i++)
+            {
+                PdfObj refName = dict.pdf_dict_get_key(i);
+                PdfObj imageDict = dict.pdf_dict_get_val(i);
+                if (imageDict.pdf_is_dict() == 0)
+                {
+                    mupdf.mupdf.fz_warn($"'{refName.pdf_to_name()}' is no image dict ({imageDict.pdf_to_name()} 0 R)");
+                    continue;
+                }
+
+                PdfObj type = imageDict.pdf_dict_get(new PdfObj("Subtype"));
+                if (type.pdf_name_eq(new PdfObj("Image")) == 0)
+                    continue;
+
+                int xref = imageDict.pdf_to_num();
+                int gen = 0;
+                PdfObj smask = imageDict.pdf_dict_geta(new PdfObj("SMask"), new PdfObj("Mask"));
+                if (smask != null)
+                    gen = smask.pdf_to_num();
+
+                PdfObj filter = imageDict.pdf_dict_geta(new PdfObj("Filter"), new PdfObj("F"));
+                if (filter.pdf_is_array() != 0)
+                    filter = filter.pdf_array_get(0);
+
+                PdfObj altcs = new PdfObj(0);
+                PdfObj cs = imageDict.pdf_dict_geta(new PdfObj("ColorSpace"), new PdfObj("CS"));
+                if (cs.pdf_is_array() != 0)
+                {
+                    PdfObj cses = new PdfObj(cs);
+                    cs = cses.pdf_array_get(0);
+                    if (cs.pdf_name_eq(new PdfObj("DeviceN")) != 0 || cs.pdf_name_eq(new PdfObj("Separation")) != 0)
+                    {
+                        altcs = cses.pdf_array_get(2);
+                        if (altcs.pdf_is_array() != 0)
+                            altcs = altcs.pdf_array_get(0);
+                    }
+                }
+
+                PdfObj width = imageDict.pdf_dict_geta(new PdfObj("Width"), new PdfObj("W"));
+                PdfObj height = imageDict.pdf_dict_geta(new PdfObj("Height"), new PdfObj("H"));
+                PdfObj bpc = imageDict.pdf_dict_geta(new PdfObj("BitsPerComponent"), new PdfObj("BPC"));
+
+                List<dynamic> entry = new List<dynamic> {
+                    xref,
+                    gen,
+                    width.pdf_to_int(),
+                    height.pdf_to_int(),
+                    bpc.pdf_to_int(),
+                    Utils.EscapeStrFromStr(cs.pdf_to_name()),
+                    Utils.EscapeStrFromStr(altcs.pdf_to_name()),
+                    Utils.EscapeStrFromStr(refName.pdf_to_name()),
+                    Utils.EscapeStrFromStr(filter.pdf_to_name()),
+                    streamXRef
+                };
+                imageList.Add(entry);
+            }
+            return rc;
+        }
+
     }
 }

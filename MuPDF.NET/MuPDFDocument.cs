@@ -22,7 +22,7 @@ namespace MuPDF.NET
 
         public Dictionary<string, string> METADATA;
 
-        public List<dynamic> FONTINFO = null;
+        public List<dynamic> FONTINFO = new List<dynamic>();
 
         public string GRAFTMAPS = "";
 
@@ -341,7 +341,7 @@ namespace MuPDF.NET
             return _nativeDocument;
         }
 
-        private static PdfDocument AsPdfDocument(dynamic document)
+        public static PdfDocument AsPdfDocument(dynamic document)
         {
             if (document is MuPDFDocument)
                 return document._nativeDocument.pdf_document_from_fz_document();
@@ -576,6 +576,121 @@ namespace MuPDF.NET
                 output = new FilePtrOutput(filename);
                 pdf.pdf_write_document(output, opts);
             }
+        }
+
+        public int InsertPage(
+            int pno,
+            dynamic text = null,
+            float fontSize = 11.0f,
+            float width = 595,
+            float height = 842,
+            string fontName = "helv",
+            string fontFile = null,
+            string color = null
+        )
+        {
+            MuPDFPage page = NewPage(pno, width, height);
+            if (text == null)
+                return 0;
+            dynamic rc = page.InsertText(
+                new Point(50, 72),
+                text,
+                fontSize: fontSize,
+                fontName: fontName,
+                fontFile: fontFile,
+                color: color
+                );
+        }
+
+        public void ResetPageRefs()
+        {
+            if (_isClosed)
+                return;
+            PAGEREFS.Clear();
+        }
+
+        public FzPage this[int i = 0]
+        {
+            get
+            {
+                if (i == -1)
+                    i = LEN - 1;
+                if (i < 0 || i > LEN)
+                {
+                    throw new Exception($"Page {i} not in document");
+                }
+                return GetPage(i);
+            }
+        }
+
+        public MuPDFPage NewPage(
+            int pno = -1,
+            float width = 595,
+            float height = 842
+            )
+        {
+            if (_isClosed || is_Encrypted)
+                throw new Exception("document closed or encrypted");
+            else
+            {
+                PdfDocument pdf = AsPdfDocument(this);
+                FzRect mediaBox = new FzRect(FzRect.Fixed.Fixed_UNIT);
+                mediaBox.x1 = width;
+                mediaBox.y1 = height;
+                FzBuffer contents = new FzBuffer();
+
+                if (pno < -1)
+                    throw new Exception(Utils.ErrorMessages["MSG_BAD_PAGENO"]);
+                PdfObj resources = pdf.pdf_add_new_dict(1);
+                PdfObj pageObj = pdf.pdf_add_page(mediaBox, 0, resources, contents);
+                pdf.pdf_insert_page(pno, pageObj);
+            }
+
+            ResetPageRefs();
+            return new MuPDFPage(this[pno], this);
+        }
+
+        public List<List<dynamic>> GetPageFonts(int pno, bool full = false)
+        {
+            if (_isClosed || is_Encrypted)
+                throw new Exception("document closed or encrypted");
+            if (IsPDF)
+                return null;
+            List<List<dynamic>> val = GetPageInfo(pno, 1);
+            List<List<dynamic>> ret = new List<List<dynamic>>();
+            if (full == false)
+            {
+                foreach (List<dynamic> v in val)
+                {
+                    v.RemoveAt(v.Count - 1);
+                    ret.Add(v);
+                }
+            }
+            return ret;
+        }
+
+        private List<List<dynamic>> GetPageInfo(int pno, int what)
+        {
+            if (_isClosed || _isEncrypted)
+                throw new Exception("document closed or encrypted");
+            PdfDocument pdf = AsPdfDocument(this);
+            int pageCount = mupdf.mupdf.fz_count_pages(_nativeDocument);
+            int n = pno;
+
+            while (n < 0)
+                n += pageCount;
+            if (n >= pageCount)
+                throw new Exception(Utils.ErrorMessages["MSG_BAD_PAGENO"]);
+
+            PdfObj pageRef = pdf.pdf_lookup_page_obj(n);
+            PdfObj rsrc = pageRef.pdf_dict_get_inheritable(new PdfObj("Resources"));
+            
+            List<List<dynamic>> liste = new List<List<dynamic>>();
+            List<dynamic> tracer = new List<dynamic>();
+
+            if (rsrc != null)
+                Utils.ScanResources(pdf, rsrc, liste, what, 0, tracer);
+            return liste;
         }
     }
 }
