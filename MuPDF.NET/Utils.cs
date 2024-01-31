@@ -1,12 +1,14 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Data;
 using System.Diagnostics;
 using System.Linq;
 using System.Resources;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging.Abstractions;
 using mupdf;
 
 namespace MuPDF.NET
@@ -27,6 +29,525 @@ namespace MuPDF.NET
         public static int UNIQUE_ID = 0;
 
         public static List<string> MUPDF_WARNINGS_STORE = new List<string>();
+
+        public static List<(int, double)> zapf_glyphs = new List<(int, double)>() {
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (32, 0.278),
+        (33, 0.974),
+        (34, 0.961),
+        (35, 0.974),
+        (36, 0.98),
+        (37, 0.719),
+        (38, 0.789),
+        (39, 0.79),
+        (40, 0.791),
+        (41, 0.69),
+        (42, 0.96),
+        (43, 0.939),
+        (44, 0.549),
+        (45, 0.855),
+        (46, 0.911),
+        (47, 0.933),
+        (48, 0.911),
+        (49, 0.945),
+        (50, 0.974),
+        (51, 0.755),
+        (52, 0.846),
+        (53, 0.762),
+        (54, 0.761),
+        (55, 0.571),
+        (56, 0.677),
+        (57, 0.763),
+        (58, 0.76),
+        (59, 0.759),
+        (60, 0.754),
+        (61, 0.494),
+        (62, 0.552),
+        (63, 0.537),
+        (64, 0.577),
+        (65, 0.692),
+        (66, 0.786),
+        (67, 0.788),
+        (68, 0.788),
+        (69, 0.79),
+        (70, 0.793),
+        (71, 0.794),
+        (72, 0.816),
+        (73, 0.823),
+        (74, 0.789),
+        (75, 0.841),
+        (76, 0.823),
+        (77, 0.833),
+        (78, 0.816),
+        (79, 0.831),
+        (80, 0.923),
+        (81, 0.744),
+        (82, 0.723),
+        (83, 0.749),
+        (84, 0.79),
+        (85, 0.792),
+        (86, 0.695),
+        (87, 0.776),
+        (88, 0.768),
+        (89, 0.792),
+        (90, 0.759),
+        (91, 0.707),
+        (92, 0.708),
+        (93, 0.682),
+        (94, 0.701),
+        (95, 0.826),
+        (96, 0.815),
+        (97, 0.789),
+        (98, 0.789),
+        (99, 0.707),
+        (100, 0.687),
+        (101, 0.696),
+        (102, 0.689),
+        (103, 0.786),
+        (104, 0.787),
+        (105, 0.713),
+        (106, 0.791),
+        (107, 0.785),
+        (108, 0.791),
+        (109, 0.873),
+        (110, 0.761),
+        (111, 0.762),
+        (112, 0.762),
+        (113, 0.759),
+        (114, 0.759),
+        (115, 0.892),
+        (116, 0.892),
+        (117, 0.788),
+        (118, 0.784),
+        (119, 0.438),
+        (120, 0.138),
+        (121, 0.277),
+        (122, 0.415),
+        (123, 0.392),
+        (124, 0.392),
+        (125, 0.668),
+        (126, 0.668),
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (183, 0.788),
+        (161, 0.732),
+        (162, 0.544),
+        (163, 0.544),
+        (164, 0.91),
+        (165, 0.667),
+        (166, 0.76),
+        (167, 0.76),
+        (168, 0.776),
+        (169, 0.595),
+        (170, 0.694),
+        (171, 0.626),
+        (172, 0.788),
+        (173, 0.788),
+        (174, 0.788),
+        (175, 0.788),
+        (176, 0.788),
+        (177, 0.788),
+        (178, 0.788),
+        (179, 0.788),
+        (180, 0.788),
+        (181, 0.788),
+        (182, 0.788),
+        (183, 0.788),
+        (184, 0.788),
+        (185, 0.788),
+        (186, 0.788),
+        (187, 0.788),
+        (188, 0.788),
+        (189, 0.788),
+        (190, 0.788),
+        (191, 0.788),
+        (192, 0.788),
+        (193, 0.788),
+        (194, 0.788),
+        (195, 0.788),
+        (196, 0.788),
+        (197, 0.788),
+        (198, 0.788),
+        (199, 0.788),
+        (200, 0.788),
+        (201, 0.788),
+        (202, 0.788),
+        (203, 0.788),
+        (204, 0.788),
+        (205, 0.788),
+        (206, 0.788),
+        (207, 0.788),
+        (208, 0.788),
+        (209, 0.788),
+        (210, 0.788),
+        (211, 0.788),
+        (212, 0.894),
+        (213, 0.838),
+        (214, 1.016),
+        (215, 0.458),
+        (216, 0.748),
+        (217, 0.924),
+        (218, 0.748),
+        (219, 0.918),
+        (220, 0.927),
+        (221, 0.928),
+        (222, 0.928),
+        (223, 0.834),
+        (224, 0.873),
+        (225, 0.828),
+        (226, 0.924),
+        (227, 0.924),
+        (228, 0.917),
+        (229, 0.93),
+        (230, 0.931),
+        (231, 0.463),
+        (232, 0.883),
+        (233, 0.836),
+        (234, 0.836),
+        (235, 0.867),
+        (236, 0.867),
+        (237, 0.696),
+        (238, 0.696),
+        (239, 0.874),
+        (183, 0.788),
+        (241, 0.874),
+        (242, 0.76),
+        (243, 0.946),
+        (244, 0.771),
+        (245, 0.865),
+        (246, 0.771),
+        (247, 0.888),
+        (248, 0.967),
+        (249, 0.888),
+        (250, 0.831),
+        (251, 0.873),
+        (252, 0.927),
+        (253, 0.97),
+        (183, 0.788),
+        (183, 0.788),
+        };
+
+        public static List<(int, double)> symbol_glyphs = new List<(int, double)>() {
+        (183, 0.46),
+        (183, 0.46),
+        (183, 0.46),
+        (183, 0.46),
+        (183, 0.46),
+        (183, 0.46),
+        (183, 0.46),
+        (183, 0.46),
+        (183, 0.46),
+        (183, 0.46),
+        (183, 0.46),
+        (183, 0.46),
+        (183, 0.46),
+        (183, 0.46),
+        (183, 0.46),
+        (183, 0.46),
+        (183, 0.46),
+        (183, 0.46),
+        (183, 0.46),
+        (183, 0.46),
+        (183, 0.46),
+        (183, 0.46),
+        (183, 0.46),
+        (183, 0.46),
+        (183, 0.46),
+        (183, 0.46),
+        (183, 0.46),
+        (183, 0.46),
+        (183, 0.46),
+        (183, 0.46),
+        (183, 0.46),
+        (183, 0.46),
+        (32, 0.25),
+        (33, 0.333),
+        (34, 0.713),
+        (35, 0.5),
+        (36, 0.549),
+        (37, 0.833),
+        (38, 0.778),
+        (39, 0.439),
+        (40, 0.333),
+        (41, 0.333),
+        (42, 0.5),
+        (43, 0.549),
+        (44, 0.25),
+        (45, 0.549),
+        (46, 0.25),
+        (47, 0.278),
+        (48, 0.5),
+        (49, 0.5),
+        (50, 0.5),
+        (51, 0.5),
+        (52, 0.5),
+        (53, 0.5),
+        (54, 0.5),
+        (55, 0.5),
+        (56, 0.5),
+        (57, 0.5),
+        (58, 0.278),
+        (59, 0.278),
+        (60, 0.549),
+        (61, 0.549),
+        (62, 0.549),
+        (63, 0.444),
+        (64, 0.549),
+        (65, 0.722),
+        (66, 0.667),
+        (67, 0.722),
+        (68, 0.612),
+        (69, 0.611),
+        (70, 0.763),
+        (71, 0.603),
+        (72, 0.722),
+        (73, 0.333),
+        (74, 0.631),
+        (75, 0.722),
+        (76, 0.686),
+        (77, 0.889),
+        (78, 0.722),
+        (79, 0.722),
+        (80, 0.768),
+        (81, 0.741),
+        (82, 0.556),
+        (83, 0.592),
+        (84, 0.611),
+        (85, 0.69),
+        (86, 0.439),
+        (87, 0.768),
+        (88, 0.645),
+        (89, 0.795),
+        (90, 0.611),
+        (91, 0.333),
+        (92, 0.863),
+        (93, 0.333),
+        (94, 0.658),
+        (95, 0.5),
+        (96, 0.5),
+        (97, 0.631),
+        (98, 0.549),
+        (99, 0.549),
+        (100, 0.494),
+        (101, 0.439),
+        (102, 0.521),
+        (103, 0.411),
+        (104, 0.603),
+        (105, 0.329),
+        (106, 0.603),
+        (107, 0.549),
+        (108, 0.549),
+        (109, 0.576),
+        (110, 0.521),
+        (111, 0.549),
+        (112, 0.549),
+        (113, 0.521),
+        (114, 0.549),
+        (115, 0.603),
+        (116, 0.439),
+        (117, 0.576),
+        (118, 0.713),
+        (119, 0.686),
+        (120, 0.493),
+        (121, 0.686),
+        (122, 0.494),
+        (123, 0.48),
+        (124, 0.2),
+        (125, 0.48),
+        (126, 0.549),
+        (183, 0.46),
+        (183, 0.46),
+        (183, 0.46),
+        (183, 0.46),
+        (183, 0.46),
+        (183, 0.46),
+        (183, 0.46),
+        (183, 0.46),
+        (183, 0.46),
+        (183, 0.46),
+        (183, 0.46),
+        (183, 0.46),
+        (183, 0.46),
+        (183, 0.46),
+        (183, 0.46),
+        (183, 0.46),
+        (183, 0.46),
+        (183, 0.46),
+        (183, 0.46),
+        (183, 0.46),
+        (183, 0.46),
+        (183, 0.46),
+        (183, 0.46),
+        (183, 0.46),
+        (183, 0.46),
+        (183, 0.46),
+        (183, 0.46),
+        (183, 0.46),
+        (183, 0.46),
+        (183, 0.46),
+        (183, 0.46),
+        (183, 0.46),
+        (183, 0.46),
+        (160, 0.25),
+        (161, 0.62),
+        (162, 0.247),
+        (163, 0.549),
+        (164, 0.167),
+        (165, 0.713),
+        (166, 0.5),
+        (167, 0.753),
+        (168, 0.753),
+        (169, 0.753),
+        (170, 0.753),
+        (171, 1.042),
+        (172, 0.713),
+        (173, 0.603),
+        (174, 0.987),
+        (175, 0.603),
+        (176, 0.4),
+        (177, 0.549),
+        (178, 0.411),
+        (179, 0.549),
+        (180, 0.549),
+        (181, 0.576),
+        (182, 0.494),
+        (183, 0.46),
+        (184, 0.549),
+        (185, 0.549),
+        (186, 0.549),
+        (187, 0.549),
+        (188, 1),
+        (189, 0.603),
+        (190, 1),
+        (191, 0.658),
+        (192, 0.823),
+        (193, 0.686),
+        (194, 0.795),
+        (195, 0.987),
+        (196, 0.768),
+        (197, 0.768),
+        (198, 0.823),
+        (199, 0.768),
+        (200, 0.768),
+        (201, 0.713),
+        (202, 0.713),
+        (203, 0.713),
+        (204, 0.713),
+        (205, 0.713),
+        (206, 0.713),
+        (207, 0.713),
+        (208, 0.768),
+        (209, 0.713),
+        (210, 0.79),
+        (211, 0.79),
+        (212, 0.89),
+        (213, 0.823),
+        (214, 0.549),
+        (215, 0.549),
+        (216, 0.713),
+        (217, 0.603),
+        (218, 0.603),
+        (219, 1.042),
+        (220, 0.987),
+        (221, 0.603),
+        (222, 0.987),
+        (223, 0.603),
+        (224, 0.494),
+        (225, 0.329),
+        (226, 0.79),
+        (227, 0.79),
+        (228, 0.786),
+        (229, 0.713),
+        (230, 0.384),
+        (231, 0.384),
+        (232, 0.384),
+        (233, 0.384),
+        (234, 0.384),
+        (235, 0.384),
+        (236, 0.494),
+        (237, 0.494),
+        (238, 0.494),
+        (239, 0.494),
+        (183, 0.46),
+        (241, 0.329),
+        (242, 0.274),
+        (243, 0.686),
+        (244, 0.686),
+        (245, 0.686),
+        (246, 0.384),
+        (247, 0.549),
+        (248, 0.384),
+        (249, 0.384),
+        (250, 0.384),
+        (251, 0.384),
+        (252, 0.494),
+        (253, 0.494),
+        (254, 0.494),
+        (183, 0.46),
+        };
+
         public static string GetImageExtention(int type)
         {
             if (type == (int)ImageType.FZ_IMAGE_FAX) return "fax";
@@ -851,18 +1372,35 @@ namespace MuPDF.NET
             }*/
         }
 
-        public Tuple CheckFont(MuPDFPage page, string fontName)
+        public static FontStruct CheckFont(MuPDFPage page, string fontName)
         {
-            foreach (f in page.GetFonts())
+            foreach (List<dynamic>f in page.GetFonts())
+            {
+                if (f[4] == fontName)
+                {
+                    return new FontStruct()
+                    {
+                        XREF = f[0],
+                        EXT = f[1],
+                        TYPE = f[2],
+                        NAME = f[3],
+                        REFNAME = f[4],
+                        ENCODING = f[5],
+                        STREAM_XREF = f[6]
+                    };
+                }
+            }
+            return null;
         }
 
-        public FontInfo CheckFontInfo(MuPDFDocument doc, int xref)
+        public static dynamic CheckFontInfo(MuPDFDocument doc, int xref)
         {
             foreach (dynamic f in doc.FONTINFO)
             {
                 if (xref == f[0])
-                    return 
+                    return f;
             }
+            return null;
         }
 
         public static void ScanResources(PdfDocument pdf, PdfObj rsrc, List<List<dynamic>> liste, int what, int streamXRef, List<dynamic> tracer)
@@ -1132,6 +1670,291 @@ namespace MuPDF.NET
                 imageList.Add(entry);
             }
             return rc;
+        }
+
+        public static int InsertContents(MuPDFPage page, byte[] newCont, int overlay = 1)
+        {
+            PdfPage pdfpage = page.GetPdfPage();
+            FzBuffer contbuf = Utils.BufferFromBytes(newCont);
+            int xref = Utils.InsertContents(pdfpage.doc(), pdfpage.obj(), contbuf, overlay);
+            return xref;
+        }
+
+        public static int InsertContents(PdfDocument pdf, PdfObj pageRef, FzBuffer newcont, int overlay)
+        {
+            PdfObj contents = pageRef.pdf_dict_get(new PdfObj("Contents"));
+            PdfObj newconts = pdf.pdf_add_stream(newcont, new PdfObj(), 0);
+            int xref = newconts.pdf_to_num();
+            if (contents.pdf_is_array() != 0)
+            {
+                if (overlay != 0)
+                    contents.pdf_array_push(newconts);
+                else
+                    contents.pdf_array_insert(newconts, 0);
+            }
+            else
+            {
+                PdfObj carr = pdf.pdf_new_array(5);
+                if (overlay != 0)
+                {
+                    if (contents != null)
+                        carr.pdf_array_push(contents);
+                    carr.pdf_array_push(newconts);
+                }
+                else
+                {
+                    carr.pdf_array_push(newconts);
+                    if (contents != null)
+                        carr.pdf_array_push(contents);
+                }
+                pageRef.pdf_dict_put(new PdfObj("Contents"), carr);
+            }
+            return xref;
+        }
+
+        public static (string, string, string, float, float)
+        GetFontProperties(MuPDFDocument doc, int xref)
+        {
+            List<dynamic> res = doc.ExtractFont(xref);
+            float asc = 0.8f;
+            float dsc = -0.2f;
+
+            if (res[1] == "")
+                return (res[0], res[1], res[2], asc, dsc);
+
+            if (res[3] != null)
+            {
+                try
+                {
+                    Font font = new Font(res[3]);
+                    asc = font.ASCENDER;
+                    dsc = font.DESCENDER;
+                    Rect bbox = font.bbox;
+                    if (asc - dsc < 1)
+                    {
+                        if (bbox.Y0 < dsc)
+                            dsc = bbox.Y0;
+                        asc = 1 - dsc;
+                    }
+                }
+                catch (Exception e)
+                {
+                    asc *= 1.2f;
+                    dsc *= 1.2f;
+                }
+                return (res[0], res[1], res[2], asc, dsc);
+            }
+            if (res[1] != "n/a")
+            {
+                try
+                {
+                    Font font = new Font(res[0]);
+                    asc = font.ASCENDER;
+                    dsc = font.DESCENDER;
+                }
+                catch (Exception e)
+                {
+                    asc *= 1.2f;
+                    dsc *= 1.2f;
+                }
+            }
+            else
+            {
+                asc *= 1.2f;
+                dsc *= 1.2f;
+            }
+            return (res[0], res[1], res[2], asc, dsc);
+        }
+
+        public static FzBuffer GetFontBuffer(PdfDocument doc, int xref)
+        {
+            if (xref < 1)
+                return null;
+
+            PdfObj o = doc.pdf_load_object(xref);
+            PdfObj desft = o.pdf_dict_get(new PdfObj("DescendantFonts"));
+            PdfObj obj = null;
+            if (desft != null)
+            {
+                obj = desft.pdf_array_get(0).pdf_resolve_indirect();
+                obj = obj.pdf_dict_get(new PdfObj("FontDescriptor"));
+            }
+            else
+            {
+                obj = o.pdf_dict_get(new PdfObj("FontDescriptor"));
+            }
+
+            if (obj == null)
+            {
+                Console.WriteLine("invalid font - FontDescriptor missing");
+                return null;
+            }
+
+            o = obj;
+            PdfObj stream = null;
+            obj = o.pdf_dict_get(new PdfObj("FontFile"));
+            if (obj != null)
+                stream = obj;
+            obj = o.pdf_dict_get(new PdfObj("FontFile2"));
+            if (obj != null)
+                stream = obj;
+            obj = o.pdf_dict_get(new PdfObj("FontFile3"));
+            if (obj != null)
+            {
+                stream = obj;
+                obj = obj.pdf_dict_get(new PdfObj("Subtype"));
+                if (obj != null && obj.pdf_is_name() == 0)
+                {
+                    Console.WriteLine("invalid font descriptor subtype");
+                    return null;
+                }
+
+                if (obj.pdf_name_eq(new PdfObj("Type1C")) != 0) { }
+                else if (obj.pdf_name_eq(new PdfObj("CIDFontType0C")) != 0) { }
+                else if (obj.pdf_name_eq(new PdfObj("OpenType")) != 0) { }
+                else Console.WriteLine("warning: unhandled font type {pdf_to_name(ctx, obj)!r}");
+            }
+
+            if (stream == null)
+            {
+                Console.WriteLine("warning: unhandled font type");
+                return null;
+            }
+
+            return stream.pdf_load_stream();
+        }
+
+        public static string UnicodeFromStr(dynamic s)
+        {
+            if (s = null)
+                return "";
+
+            if (s is byte[])
+                return Encoding.UTF8.GetString(s);
+
+            if (s is string)
+                return s;
+
+            return null;
+        }
+
+        public static void UpdateFontInfo(MuPDFDocument doc, List<dynamic> info)
+        {
+            int xref = info[0];
+            bool found = false;
+
+            int i = 0;
+            for (; i < doc.FONTINFO.Count; i ++)
+            {
+                if (doc.FONTINFO[i][0] == xref)
+                {
+                    found = true;
+                    break;
+                }
+            }
+            if (found)
+                doc.FONTINFO[i] = info;
+            else
+                doc.FONTINFO.Add(info);
+        }
+
+        public static List<(int, double)> GetCharWidths(
+            MuPDFDocument doc,
+            int xref,
+            int limit = 256,
+            int idx = 0,
+            FontStruct fontDict = null
+            )
+        {
+            dynamic fontInfo = Utils.CheckFontInfo(doc, xref);
+            FontStruct fontStruct = new FontStruct();
+            string name = "";
+            string ext = "";
+            string stype = "";
+            float asc = 0.0f;
+            float dsc = 0.0f;
+            bool simple = false;
+            int ordering = 0;
+            List<(int, double)> glyphs = null;
+
+            if (fontInfo == null)
+            {
+                if (fontDict == null)
+                {
+                    (name, ext, stype, asc, dsc) = Utils.GetFontProperties(doc, xref);
+                    fontStruct.NAME = name;
+                    fontStruct.EXT = ext;
+                    fontStruct.TYPE = stype;
+                    fontStruct.ASCENDER = asc;
+                    fontStruct.DESCENDER = dsc;
+                }
+                else
+                {
+                    name = fontDict.NAME;
+                    ext = fontDict.EXT;
+                    stype = fontDict.TYPE;
+                    ordering = fontDict.ORDERING;
+                    simple = fontDict.SIMPLE;
+                }
+
+                if (ext == "")
+                    throw new Exception("xref is not a font");
+
+                if (stype == "Type1" || stype == "MMType1" || stype == "TrueType")
+                    simple = true;
+                else
+                    simple = false;
+
+                if (name == "Fangti" || name == "Ming")
+                    ordering = 0;
+                else if (name == "Heiti" || name == "Song")
+                    ordering = 1;
+                else if (name == "Gothic" || name == "Mincho")
+                    ordering = 2;
+                else if (name == "Dotum" || name == "Batang")
+                    ordering = 3;
+                else
+                    ordering = -1;
+
+                fontDict.SIMPLE = simple;
+
+                if (name == "ZapfDingbats")
+                    glyphs = new List<(int, double)>(Utils.zapf_glyphs);
+                else if (name == "Symbol")
+                    glyphs = new List<(int, double)>(Utils.symbol_glyphs);
+                else
+                    glyphs = null;
+
+                fontDict.GLYPHS = glyphs;
+                fontDict.ORDERING = ordering;
+                fontInfo = new List<dynamic>() { xref, fontDict };
+                doc.FONTINFO.Add(fontInfo);
+            }
+            else
+            {
+                fontDict = fontInfo[1];
+                glyphs = new List<(int, double)>(fontDict.GLYPHS);
+                simple = fontDict.SIMPLE;
+                ordering = fontDict.ORDERING;
+            }
+
+            int oldLimit = 0;
+            if (glyphs != null)
+                oldLimit = glyphs.Count;
+            int myLimit = Math.Max(256, limit);
+            if (myLimit <= oldLimit)
+                return glyphs;
+
+            if (ordering < 0)
+                glyphs = doc._GetCharWidths(xref, fontDict.NAME, fontDict.EXT, fontDict.ORDERING, myLimit, idx);
+            else
+                glyphs = null;
+
+            fontDict.GLYPHS = glyphs;
+            fontInfo[1] = fontDict;
+            Utils.UpdateFontInfo(doc, fontInfo);
+
+            return glyphs;
         }
 
     }

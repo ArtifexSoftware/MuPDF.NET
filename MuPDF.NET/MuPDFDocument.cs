@@ -5,6 +5,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
+using Microsoft.VisualBasic;
 using mupdf;
 
 
@@ -586,13 +587,13 @@ namespace MuPDF.NET
             float height = 842,
             string fontName = "helv",
             string fontFile = null,
-            string color = null
+            float[] color = null
         )
         {
             MuPDFPage page = NewPage(pno, width, height);
             if (text == null)
                 return 0;
-            dynamic rc = page.InsertText(
+            int rc = page.InsertText(
                 new Point(50, 72),
                 text,
                 fontSize: fontSize,
@@ -600,6 +601,7 @@ namespace MuPDF.NET
                 fontFile: fontFile,
                 color: color
                 );
+            return rc;
         }
 
         public void ResetPageRefs()
@@ -691,6 +693,121 @@ namespace MuPDF.NET
             if (rsrc != null)
                 Utils.ScanResources(pdf, rsrc, liste, what, 0, tracer);
             return liste;
+        }
+
+        
+
+        public dynamic ExtractFont(int xref = 0, int infoOnly = 0, string named = null)
+        {
+            dynamic ret = new Dictionary<string, dynamic>();
+
+            PdfDocument pdf = AsPdfDocument(this);
+            PdfObj obj = pdf.pdf_load_object(xref);
+            PdfObj type = obj.pdf_dict_get(new PdfObj("Type"));
+            PdfObj subType = obj.pdf_dict_get(new PdfObj("Subtype"));
+            if (type.pdf_name_eq(new PdfObj("Font")) != 0 && !subType.pdf_to_name().StartsWith("CIDFontType"))
+            {
+                PdfObj bName = null;
+                PdfObj baseFont = obj.pdf_dict_get(new PdfObj("BaseFont"));
+                if (baseFont == null || baseFont.pdf_is_null() != 0)
+                {
+                    bName = obj.pdf_dict_get(new PdfObj("Name"));
+                }
+                else
+                {
+                    bName = baseFont;
+                }
+                string ext = Utils.GetFontExtension(pdf, xref);
+                byte[] bytes = null;
+                if (ext != "n/a" && infoOnly == 0)
+                {
+                    FzBuffer buf = Utils.GetFontBuffer(pdf, xref);
+                    bytes = Utils.BinFromBuffer(buf);
+                }
+                else
+                    bytes = Encoding.UTF8.GetBytes("");
+
+                if (named == null)
+                {
+                    return new List<dynamic>()
+                    {
+                        Utils.EscapeStrFromStr(bName.pdf_to_name()),
+                        Utils.UnicodeFromStr(ext),
+                        Utils.UnicodeFromStr(subType.pdf_to_name()),
+                        bytes
+                    };
+                }
+                else
+                {
+                    ret.Add("NAME", Utils.EscapeStrFromStr(bName.pdf_to_name()));
+                    ret.Add("EXT", Utils.UnicodeFromStr(ext));
+                    ret.Add("TYPE", Utils.UnicodeFromStr(subType.pdf_to_name()));
+                    ret.Add("CONTENT", bytes);
+                }
+            }
+            else
+            {
+                if (named == null)
+                    return new List<dynamic>()
+                    {
+                        "", "", "", Encoding.UTF8.GetBytes("")
+                    };
+                else
+                    return new Dictionary<string, dynamic>
+                    {
+                        { "NAME", "" },
+                        { "EXT", "" },
+                        { "TYPE", "" },
+                        { "CONTENT", Encoding.UTF8.GetBytes("") }
+                    };
+            }
+
+            return ret;
+        }
+
+        public List<(int, double)> _GetCharWidths(int xref, string bfName, string ext, int ordering, int limit, int idx = 0)
+        {
+            PdfDocument pdf = AsPdfDocument(this);
+            int myLimit = limit;
+            FzFont font = null;
+
+            if (myLimit < 256)
+                myLimit = 256;
+            if (ordering >= 0)
+            {
+                ll_fz_lookup_cjk_font_outparams cjk = new ll_fz_lookup_cjk_font_outparams();
+                SWIGTYPE_p_unsigned_char data = mupdf.mupdf.ll_fz_lookup_cjk_font_outparams_fn(ordering, cjk);
+
+                font = mupdf.mupdf.fz_new_font_from_memory(null, data, cjk.len, cjk.index, 0);
+            }
+            else
+            {
+                ll_fz_lookup_base14_font_outparams base14 = new ll_fz_lookup_base14_font_outparams();
+                SWIGTYPE_p_unsigned_char data = mupdf.mupdf.ll_fz_lookup_base14_font_outparams_fn(bfName, base14);
+                if (data != null)
+                    font = mupdf.mupdf.fz_new_font_from_memory(bfName, data, base14.len, 0, 0);
+                else
+                {
+                    FzBuffer buf = Utils.GetFontBuffer(pdf, xref);
+                    if (buf == null)
+                        throw new Exception($"font at xref {xref} is not supported");
+                    font = mupdf.mupdf.fz_new_font_from_buffer(null, buf, idx, 0);
+                }
+            }
+            List<(int, double)> wList = new List<(int, double)>();
+            for (int i = 0; i < myLimit; i++)
+            {
+                int glyph = font.fz_encode_character(i);
+                float adv = font.fz_advance_glyph(glyph, 0);
+                if (ordering >= 0)
+                    glyph = i;
+                if (glyph > 0)
+                    wList.Add((glyph, adv));
+                else
+                    wList.Add((glyph, 0.0f));
+            }
+
+            return wList;
         }
     }
 }

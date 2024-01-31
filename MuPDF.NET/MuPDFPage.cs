@@ -1101,7 +1101,7 @@ namespace MuPDF.NET
                 oc: oc
                 );
             if (rc >= 0)
-                img.Commit(overlay);
+                img.Commit(overlay ? 1 : 0);
             return rc;
         }
 
@@ -1127,12 +1127,26 @@ namespace MuPDF.NET
             if (INVALID_NAME_CHARS.Count > 0)
                 throw new Exception($"bad fontname chars {INVALID_NAME_CHARS.ToString()}");
 
-            
+            FontStruct font = Utils.CheckFont(this, fontName);
+            if (font != null)
+            {
+                int xref = font.XREF;
+                if (Utils.CheckFontInfo(doc, xref))
+                    return xref;
+
+                Utils.GetCharWidths(doc, xref);
+                return xref;
+            }
         }
 
-        public void GetFonts(bool full = false)
+        public List<List<dynamic>> GetFonts(bool full = false)
         {
             return _parent.GetPageFonts(NUMBER, full);
+        }
+
+        public PdfPage GetPdfPage()
+        {
+            return _nativePage;
         }
     }
 }
