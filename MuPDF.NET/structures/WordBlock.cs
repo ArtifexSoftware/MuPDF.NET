@@ -16,13 +16,13 @@ namespace MuPDF.NET
 
         public float Y1;
 
-        public string TEXT;
+        public string Text;
 
-        public int BLOCKNUM;
+        public int BlockNum;
 
-        public int LINENUM;
+        public int LineNum;
 
-        public int WORDNUM;
+        public int WordNum;
 
     }
 }

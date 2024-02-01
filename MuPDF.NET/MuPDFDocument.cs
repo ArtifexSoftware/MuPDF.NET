@@ -3,9 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
-using System.Security.Cryptography;
 using System.Text;
-using Microsoft.VisualBasic;
 using mupdf;
 
 
@@ -13,38 +11,38 @@ namespace MuPDF.NET
 {
     public class MuPDFDocument
     {
-        public bool _isClosed = false;
+        public bool IsClosed = false;
 
-        public bool _isEncrypted = false;
+        public bool IsEncrypted = false;
 
-        public bool is_Encrypted;
+        public bool Is_Encrypted;
 
         private int _graftID;
 
-        public Dictionary<string, string> METADATA;
+        public Dictionary<string, string> MetaData;
 
-        public List<dynamic> FONTINFO = new List<dynamic>();
+        public List<FontStruct> FontInfo = new List<FontStruct>();
 
-        public string GRAFTMAPS = "";
+        public string GraftMaps = "";
 
-        public string SHOWNPAGES = "";
+        public string ShownPages = "";
 
-        public string INSERTEDIMAGES = "";
+        public string InsertedImages = "";
 
         private FzDocument _nativeDocument;
 
-        public Dictionary<int, MuPDFPage> PAGEREFS;
+        public Dictionary<int, MuPDFPage> PageRefs;
 
-        public string NAME = null;
+        public string Name = null;
 
-        public PdfDocument PDFDOCUMENT;
+        public PdfDocument PdfDocument;
 
-        public List<byte> STREAM;
+        public List<byte> Stream;
 
-        public bool NEEDS_PASS {
+        public bool NeedsPass {
             get
             {
-                if (_isClosed)
+                if (IsClosed)
                     throw new Exception("Document closed");
                 FzDocument doc = _nativeDocument;
                 int ret = doc.fz_needs_password();
@@ -80,15 +78,15 @@ namespace MuPDF.NET
         {
             try
             {
-                _isClosed = false;
-                _isEncrypted = false;
-                METADATA = null;
-                FONTINFO = new List<dynamic>();
-                PAGEREFS = new Dictionary<int, MuPDFPage>();
+                IsClosed = false;
+                IsEncrypted = false;
+                MetaData = null;
+                FontInfo = new List<FontStruct>();
+                PageRefs = new Dictionary<int, MuPDFPage>();
 
                 if (filename is PdfDocument)
                 {
-                    PDFDOCUMENT = filename;
+                    this.PdfDocument = filename;
                     IsPDF = true;
                     return;
                 }
@@ -101,20 +99,20 @@ namespace MuPDF.NET
                     throw new Exception("Bad filename");
 
                 if (stream != null)
-                    STREAM = new List<byte>(stream);
+                    Stream = new List<byte>(stream);
                 else
-                    STREAM = null;
+                    Stream = null;
 
                 bool fromFile = false;
                 if (filename != null && stream is null)
                 {
                     fromFile = true;
-                    NAME = filename;
+                    Name = filename;
                 }
                 else
                 {
                     fromFile = false;
-                    NAME = "";
+                    Name = "";
                 }
 
                 string msg = "";
@@ -128,7 +126,7 @@ namespace MuPDF.NET
                     // is file test
                 }
 
-                if (fromFile && (new FileInfo(filename).Length == 0 || STREAM.Count == 0))
+                if (fromFile && (new FileInfo(filename).Length == 0 || Stream.Count == 0))
                 {
                     msg = $"cannot open empty document";
                     throw new Exception(msg);
@@ -218,10 +216,10 @@ namespace MuPDF.NET
                 if (IsOwn)
                 {
                     _graftID = Utils.GenID();
-                    if (NEEDS_PASS)
+                    if (NeedsPass)
                     {
-                        _isEncrypted = true;
-                        is_Encrypted = true;
+                        IsEncrypted = true;
+                        Is_Encrypted = true;
                     }
                     else
                         InitDocument();
@@ -253,7 +251,7 @@ namespace MuPDF.NET
 
         public byte[] Convert2Pdf(int from = 0, int to = -1, int rotate = 0)
         {
-            if (_isClosed || _isEncrypted)
+            if (IsClosed || IsEncrypted)
                 throw new Exception("document closed or encrypted");
             FzDocument doc = _nativeDocument;
             int fp = from;
@@ -355,10 +353,10 @@ namespace MuPDF.NET
 
         public void InitDocument()
         {
-            if (is_Encrypted)
+            if (Is_Encrypted)
                 throw new Exception("cannot initialize - document still encrypted");
             OUTLINE = LoadOutline();
-            METADATA = new Dictionary<string, string>();
+            MetaData = new Dictionary<string, string>();
 
 
         }
@@ -462,7 +460,7 @@ namespace MuPDF.NET
 
         public void SetKeyXRef(int xref, string key, string value)
         {
-            if (_isClosed)
+            if (IsClosed)
                 throw new Exception("Document closed");
 
             HashSet<char> INVALID_NAME_CHARS = new HashSet<char>(new char[] { ' ', '(', ')', '<', '>', '[', ']', '{', '}', '/', '%', '\0' });
@@ -528,7 +526,7 @@ namespace MuPDF.NET
             string userPW = null
             )
         {
-            if (_isClosed || _isEncrypted)
+            if (IsClosed || IsEncrypted)
                 throw new Exception("document is closed or encrypted");
             if (filename is string)
             {
@@ -606,9 +604,9 @@ namespace MuPDF.NET
 
         public void ResetPageRefs()
         {
-            if (_isClosed)
+            if (IsClosed)
                 return;
-            PAGEREFS.Clear();
+            PageRefs.Clear();
         }
 
         public FzPage this[int i = 0]
@@ -631,7 +629,7 @@ namespace MuPDF.NET
             float height = 842
             )
         {
-            if (_isClosed || is_Encrypted)
+            if (IsClosed || Is_Encrypted)
                 throw new Exception("document closed or encrypted");
             else
             {
@@ -654,7 +652,7 @@ namespace MuPDF.NET
 
         public List<List<dynamic>> GetPageFonts(int pno, bool full = false)
         {
-            if (_isClosed || is_Encrypted)
+            if (IsClosed || Is_Encrypted)
                 throw new Exception("document closed or encrypted");
             if (IsPDF)
                 return null;
@@ -673,7 +671,7 @@ namespace MuPDF.NET
 
         private List<List<dynamic>> GetPageInfo(int pno, int what)
         {
-            if (_isClosed || _isEncrypted)
+            if (IsClosed || IsEncrypted)
                 throw new Exception("document closed or encrypted");
             PdfDocument pdf = AsPdfDocument(this);
             int pageCount = mupdf.mupdf.fz_count_pages(_nativeDocument);
@@ -697,9 +695,9 @@ namespace MuPDF.NET
 
         
 
-        public dynamic ExtractFont(int xref = 0, int infoOnly = 0, string named = null)
+        public FontStruct ExtractFont(int xref = 0, int infoOnly = 0, string named = null)
         {
-            dynamic ret = new Dictionary<string, dynamic>();
+            FontStruct ret = new FontStruct();
 
             PdfDocument pdf = AsPdfDocument(this);
             PdfObj obj = pdf.pdf_load_object(xref);
@@ -727,39 +725,25 @@ namespace MuPDF.NET
                 else
                     bytes = Encoding.UTF8.GetBytes("");
 
-                if (named == null)
+
+                return new FontStruct()
                 {
-                    return new List<dynamic>()
-                    {
-                        Utils.EscapeStrFromStr(bName.pdf_to_name()),
-                        Utils.UnicodeFromStr(ext),
-                        Utils.UnicodeFromStr(subType.pdf_to_name()),
-                        bytes
-                    };
-                }
-                else
-                {
-                    ret.Add("NAME", Utils.EscapeStrFromStr(bName.pdf_to_name()));
-                    ret.Add("EXT", Utils.UnicodeFromStr(ext));
-                    ret.Add("TYPE", Utils.UnicodeFromStr(subType.pdf_to_name()));
-                    ret.Add("CONTENT", bytes);
-                }
+                    Name = Utils.EscapeStrFromStr(bName.pdf_to_name()),
+                    Ext = Utils.UnicodeFromStr(ext),
+                    Type = Utils.UnicodeFromStr(subType.pdf_to_name()),
+                    Content = bytes
+                };
             }
             else
-            {
-                if (named == null)
-                    return new List<dynamic>()
-                    {
-                        "", "", "", Encoding.UTF8.GetBytes("")
-                    };
-                else
-                    return new Dictionary<string, dynamic>
-                    {
-                        { "NAME", "" },
-                        { "EXT", "" },
-                        { "TYPE", "" },
-                        { "CONTENT", Encoding.UTF8.GetBytes("") }
-                    };
+            { 
+                return new FontStruct()
+                {
+                    Name = "",
+                    Ext = "",
+                    Type = "",
+                    Content = Encoding.UTF8.GetBytes("")
+                };
+                
             }
 
             return ret;

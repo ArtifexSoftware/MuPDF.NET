@@ -8,10 +8,10 @@ namespace MuPDF.NET
 {
     public struct PageStruct
     {
-        public float WIDTH;
+        public float Width;
 
-        public float HEIGHT;
+        public float Height;
 
-        public List<BlockStruct> BLOCKS;
+        public List<BlockStruct> Blocks;
     }
 }

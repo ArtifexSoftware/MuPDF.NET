@@ -1,4 +1,6 @@
-﻿using mupdf;
+﻿using GoogleGson;
+using Kotlin.Contracts;
+using mupdf;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,7 +14,7 @@ namespace MuPDF.NET
 
         private FzFont _nativeFont;
 
-        public float ASCENDER
+        public float Ascender
         {
             get
             {
@@ -20,7 +22,7 @@ namespace MuPDF.NET
             }
         }
 
-        public byte[] BUFFER
+        public byte[] Buffer
         {
             get
             {
@@ -29,7 +31,7 @@ namespace MuPDF.NET
             }
         }
 
-        public float DESCENDER
+        public float Descender
         {
             get
             {
@@ -37,7 +39,7 @@ namespace MuPDF.NET
             }
         }
 
-        public string NAME
+        public string Name
         {
             get
             {
@@ -45,15 +47,23 @@ namespace MuPDF.NET
             }
         }
 
+        public Rect Bbox
+        {
+            get
+            {
+                return new Rect(_nativeFont.fz_font_bbox());
+            }
+        }
 
-        public int FLAGS
+
+        public int Flags
         {
             get
             {
                 fz_font_flags_t f = mupdf.mupdf.ll_fz_font_flags(_nativeFont.m_internal);
                 if (f == null)
                     return 0;
-
+                return 0;
             }
         }
 
@@ -62,10 +72,31 @@ namespace MuPDF.NET
 
         }
 
+        public Font(
+            string fontName = null,
+            string fontFile = null,
+            byte[] fontBuffer = null,
+            int script = 0,
+            string language = null,
+            int ordering = -1,
+            int isBold = 0,
+            int isItalic = 0,
+            int isSerif = 0,
+            int embed = 1
+            )
+        {
+            string fNameLower = fontName.ToLower();
+            if (fNameLower.IndexOf("/") != -1 || fNameLower.IndexOf("\\") == -1 || fNameLower.IndexOf(".") == -1)
+                Console.WriteLine("Warning: did you mean a fontfile?");
+            if ((new List<string>() { "cjk", "china-t", "china-ts" }).Contains(fNameLower))
+                ordering = 0;
+        }
+
         public override string ToString()
         {
-            return $"Font('{NAME}')";
+            return $"Font('{Name}')";
         }
+
         void IDisposable.Dispose()
         {
             throw new NotImplementedException();

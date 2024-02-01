@@ -19,7 +19,7 @@ namespace MuPDF.NET
             }
         }
 
-        public string NAME
+        public string Name
         {
             get
             {
@@ -57,7 +57,7 @@ namespace MuPDF.NET
         public override string ToString()
         {
             string x = (new List<string>(){"", "GRAY", "RGB", "CMYK"})[N];
-            return $"ColorSpace(CS_{x}) - {NAME}";
+            return $"ColorSpace(CS_{x}) - {Name}";
         } 
     }
 }

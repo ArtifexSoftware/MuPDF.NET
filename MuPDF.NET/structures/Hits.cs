@@ -6,17 +6,17 @@ namespace MuPDF.NET
 {
     public class Hits
     {
-        public int LEN;
+        public int Len;
 
-        public List<Quad> QUADS;
+        public List<Quad> Quads;
 
-        public float HFUZZ;
+        public float HFuzz;
 
-        public float VFUZZ;
+        public float VFuzz;
 
         public override string ToString()
         {
-            return $"Hits(len={LEN} quads={QUADS} hfuzz={HFUZZ} vfuzz={VFUZZ})";
+            return $"Hits(len={Len} quads={Quads} hfuzz={HFuzz} vfuzz={VFuzz})";
         }
     }
 }

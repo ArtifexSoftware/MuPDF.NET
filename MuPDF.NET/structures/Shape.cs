@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using mupdf;
 using MuPDF.NET;
 
@@ -39,17 +38,17 @@ namespace MuPDF.NET
         public Shape(MuPDFPage page)
         {
             this.PAGE = page;
-            this.DOC = page.PARENT;
+            this.DOC = page.Parent;
 
             if (!DOC.IsPDF)
                 throw new Exception("is no PDF");
-            HEIGHT = page.MEDIABOX_SIZE.Y;
-            WIDTH = page.MEDIABOX_SIZE.X;
-            X = page.CROPBOX_POSITION.X;
-            Y = page.CROPBOX_POSITION.Y;
+            HEIGHT = page.MediaBoxSize.Y;
+            WIDTH = page.MediaBoxSize.X;
+            X = page.CropBoxPosition.X;
+            Y = page.CropBoxPosition.Y;
 
-            PCTM = page.transformationMatrix;
-            IPCTM = ~page.transformationMatrix;
+            PCTM = page.TransformationMatrix;
+            IPCTM = ~page.TransformationMatrix;
 
             DRAWCONT = "";
             TEXTCONT = "";
@@ -80,15 +79,15 @@ namespace MuPDF.NET
             int oc = 0
             )
         {
-            string text = "";
+            List<string> text = null;
             if (buffer is null)
                 return 0;
-            if (!(buffer is List<byte>) || !(buffer is Tuple<byte>))
-                text = buffer.splitlines();
+            if (!(buffer is List<string>) || !(buffer is Tuple<string>))
+                text = Convert.ToString(buffer).Split("\n");
             else
                 text = buffer;
 
-            if (text.Length <= 0)
+            if (text.Count <= 0)
                 return 0;
 
             FzPoint p = point.ToFzPoint();
@@ -116,7 +115,52 @@ namespace MuPDF.NET
                 encoding: encoding,
                 setSimple: setSimple
                 );
-            
+
+            FontStruct fontInfo = Utils.CheckFontInfo(DOC, xref);
+
+            int ordering = fontInfo.Ordering;
+            bool simple = fontInfo.Simple;
+            string bfName = fontInfo.Name;
+            float ascender = fontInfo.Ascender;
+            float descender = fontInfo.Descender;
+            float lheight = 0;
+
+            if (lineHeight != 0)
+                lineHeight = fontSize * lineHeight;
+            else if (ascender - descender <= 1)
+                lheight = fontSize * 1.2f;
+            else
+                lheight = fontSize * (ascender - descender);
+
+            List<(int, double)> glyphs = new List<(int, double)>();
+            if (maxCode > 255)
+                glyphs = Utils.GetCharWidths(DOC, xref: xref, limit: maxCode + 1);
+            else
+                glyphs = fontInfo.Glyphs;
+
+            List<string> tab = new List<string>();
+            List<(int, double)> g = null;
+            foreach (string t in text)
+            {
+                if (simple && (bfName != "Symbol" || bfName != "ZapfDingbats"))
+                    g = null;
+                else
+                    g = new List<(int, double)>(glyphs);
+                tab.Add(Utils.GetTJstr(t, g, simple, ordering));
+            }
+
+            text = tab;
+
+            string colorStr = Utils.GetColorCode(color, "c");
+            string fillStr = Utils.GetColorCode(fill, "f");
+            if (fill == null && renderMode == 0)
+            {
+                fill = color;
+                fillStr = Utils.GetColorCode(color, "f");
+            }
+
+            bool morphing = Utils.CheckMorph(new List<float>(morph));
+
         }
 
         public void Commit(int overlay)

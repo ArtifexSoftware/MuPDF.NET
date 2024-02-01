@@ -5,9 +5,6 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Runtime.Remoting;
 using System.Text;
-using System.Threading.Tasks;
-using Microsoft.Maui.Controls.Shapes;
-using Microsoft.SqlServer.Server;
 using mupdf;
 using static mupdf.FzBandWriter;
 
@@ -19,29 +16,29 @@ namespace MuPDF.NET
 
         private MuPDFDocument _parent;
 
-        public PdfObj PAGEOBJ;
+        public PdfObj PageObj;
 
-        public int NUMBER { get; set; }
+        public int Number { get; set; }
 
         public bool IsOwn { get; set; }
 
-        public Point MEDIABOX_SIZE
+        public Point MediaBoxSize
         {
             get
             {
-                return new Point(MEDIABOX.X1, MEDIABOX.Y1);
+                return new Point(MediaBox.X1, MediaBox.Y1);
             }
         }
 
-        public Point CROPBOX_POSITION
+        public Point CropBoxPosition
         {
             get
             {
-                return CROPBOX.TopLeft;
+                return CropBox.TopLeft;
             }
         }
 
-        public int ROTATION
+        public int Rotation
         {
             get
             {
@@ -51,9 +48,9 @@ namespace MuPDF.NET
             }
         }
 
-        public Dictionary<int, MuPDFAnnotation> ANNOT_REFS = new Dictionary<int, MuPDFAnnotation>();
+        public Dictionary<int, MuPDFAnnotation> AnnotRefs = new Dictionary<int, MuPDFAnnotation>();
 
-        public Matrix transformationMatrix
+        public Matrix TransformationMatrix
         {
             get
             {
@@ -65,26 +62,26 @@ namespace MuPDF.NET
                 FzRect mediabax = new FzRect(FzRect.Fixed.Fixed_UNIT);
                 page.pdf_page_transform(mediabax, ctm);
 
-                if (ROTATION % 360 == 0)
+                if (Rotation % 360 == 0)
                     return new Matrix(ctm);
                 else
-                    return new Matrix(1, 0, 0, -1, 0, CROPBOX.Height);
+                    return new Matrix(1, 0, 0, -1, 0, CropBox.Height);
             }
         }
 
-        public Rect ARTBOX
+        public Rect ArtBox
         {
             get
             {
                 Rect rect = OtherBox("ArtBox");
                 if (rect is null)
-                    return CROPBOX;
-                Rect mb = MEDIABOX;
+                    return CropBox;
+                Rect mb = MediaBox;
                 return new Rect(rect[0], mb.Y1 - rect[3], rect[2], mb.Y1 - rect[1]);
             }
         }
 
-        public Rect MEDIABOX
+        public Rect MediaBox
         {
             get
             {
@@ -98,19 +95,19 @@ namespace MuPDF.NET
             }
         }
 
-        public Rect BLEEDBOX
+        public Rect BleedBox
         {
             get
             {
                 Rect rect = OtherBox("BLEEDBOX");
                 if (rect is null)
-                    return CROPBOX;
-                Rect mb = MEDIABOX;
+                    return CropBox;
+                Rect mb = MediaBox;
                 return new Rect(rect[0], mb.Y1 - rect[3], rect[2], mb.Y1 - rect[1]);
             }
         }
 
-        public Rect CROPBOX
+        public Rect CropBox
         {
             get
             {
@@ -125,7 +122,7 @@ namespace MuPDF.NET
             }
         }
 
-        public Matrix derotationMatrix
+        public Matrix DerotationMatrix
         {
             get
             {
@@ -136,7 +133,7 @@ namespace MuPDF.NET
             }
         }
 
-        public MuPDFAnnotation FIRST_ANNOT
+        public MuPDFAnnotation FirstAnnot
         {
             get
             {
@@ -152,7 +149,7 @@ namespace MuPDF.NET
             }
         }
 
-        public FzLink FIRST_LINK//issue
+        public FzLink FirstLink//issue
         {
             get
             {
@@ -161,7 +158,7 @@ namespace MuPDF.NET
             }
         }
 
-        public Widget FIRST_WIDGET
+        public Widget FirstWidget
         {
             get
             {
@@ -219,7 +216,7 @@ namespace MuPDF.NET
             return base.ToString(); 
         }
 
-        public MuPDFDocument PARENT
+        public MuPDFDocument Parent
         {
             get
             {
@@ -231,12 +228,12 @@ namespace MuPDF.NET
         {
             _nativePage = nativePage;
             _parent = parent;
-            PAGEOBJ = nativePage.obj();
+            PageObj = nativePage.obj();
 
             if (_nativePage == null)
-                NUMBER = 0;
+                Number = 0;
             else
-                NUMBER = _nativePage.m_internal.super.number;
+                Number = _nativePage.m_internal.super.number;
         }
 
         public MuPDFPage(FzPage fzPage, MuPDFDocument parent)
@@ -245,9 +242,9 @@ namespace MuPDF.NET
             _parent = parent;
 
             if (_nativePage == null)
-                NUMBER = 0;
+                Number = 0;
             else
-                NUMBER = _nativePage.m_internal.super.number;
+                Number = _nativePage.m_internal.super.number;
         }
 
         private PdfAnnot AddCaretAnnot(Point point)
@@ -591,7 +588,7 @@ namespace MuPDF.NET
             PdfPage page = new PdfPage(_nativePage.m_internal);
             if (!_parent.IsPDF)
                 throw new Exception("is not pdf");
-            int rotation = ROTATION;
+            int rotation = Rotation;
             try
             {
                 if (rotation != 0)
@@ -623,7 +620,7 @@ namespace MuPDF.NET
             }
             if (ret == null)
                 return null;
-            ANNOT_REFS.Add(ret.GetHashCode(), ret);
+            AnnotRefs.Add(ret.GetHashCode(), ret);
           
             return ret;
         }
@@ -631,7 +628,7 @@ namespace MuPDF.NET
         private List<Rect> GetHighlightSelection(List<Quad> quads, Point start, Point stop, Rect clip)
         {
             if (clip is null)
-                clip = this.MEDIABOX;
+                clip = this.MediaBox;
             if (start is null)
                 start = clip.TopLeft;
             if (stop is null)
@@ -647,13 +644,13 @@ namespace MuPDF.NET
             List<Rect> lines = new List<Rect>();
             foreach (BlockStruct b in  blocks)
             {
-                Rect bbox = new Rect(b.BBOX);
+                Rect bbox = new Rect(b.Bbox);
                 if (bbox.IsInfinite || bbox.IsEmpty)
                     continue;
 
-                foreach (LineStruct line in b.LINES)
+                foreach (LineStruct line in b.Lines)
                 {
-                    bbox = new Rect(line.BBOX);
+                    bbox = new Rect(line.Bbox);
                     if (bbox.IsInfinite || bbox.IsEmpty)
                         continue;
                     lines.Add(bbox);
@@ -703,7 +700,7 @@ namespace MuPDF.NET
             {
                 List<Rect> rs = GetHighlightSelection(q, start, stop, clip);
                 foreach (Rect r in rs)
-                    q.Add(r.QUAD);
+                    q.Add(r.Quad);
             }
             else
                 q = quads;
@@ -735,7 +732,7 @@ namespace MuPDF.NET
         {
             if (matrix == null)
                 matrix = new Matrix(1, 1);
-            int oldRotation = ROTATION;
+            int oldRotation = Rotation;
             if (oldRotation != 0) SetRotation(0);
             MuPDFSTextPage stPage = null;
             try
@@ -769,7 +766,7 @@ namespace MuPDF.NET
             {
                 List<Rect> rs = GetHighlightSelection(q, start, stop, clip);
                 foreach (Rect r in rs)
-                    q.Add(r.QUAD);
+                    q.Add(r.Quad);
             }
             else
                 q = quads;
@@ -788,7 +785,7 @@ namespace MuPDF.NET
             {
                 List<Rect> rs = GetHighlightSelection(q, start, stop, clip);
                 foreach (Rect r in rs)
-                    q.Add(r.QUAD);
+                    q.Add(r.Quad);
             }
             else
                 q = quads;
@@ -807,7 +804,7 @@ namespace MuPDF.NET
             {
                 List<Rect> rs = GetHighlightSelection(q, start, stop, clip);
                 foreach (Rect r in rs)
-                    q.Add(r.QUAD);
+                    q.Add(r.Quad);
             }
             else
                 q = quads;
@@ -890,7 +887,7 @@ namespace MuPDF.NET
 
         private void ResetAnnotRefs()
         {
-            ANNOT_REFS.Clear();
+            AnnotRefs.Clear();
         }
         private void Erase()
         {
@@ -906,7 +903,7 @@ namespace MuPDF.NET
 
             _parent = null;
             IsOwn = false;
-            NUMBER = 0;
+            Number = 0;
         }
 
         private List<(string, int)> GetResourceProperties()
@@ -1115,8 +1112,11 @@ namespace MuPDF.NET
             )
         {
             MuPDFDocument doc = _parent;
+            int xref = 0;
+
             if (doc is null)
                 throw new Exception("orphaned object: parent is None");
+
             int idx = 0;
             if (fontName.StartsWith("/"))
                 fontName = fontName.Substring(1);
@@ -1130,23 +1130,105 @@ namespace MuPDF.NET
             FontStruct font = Utils.CheckFont(this, fontName);
             if (font != null)
             {
-                int xref = font.XREF;
+                xref = font.Xref;
                 if (Utils.CheckFontInfo(doc, xref))
                     return xref;
 
                 Utils.GetCharWidths(doc, xref);
                 return xref;
             }
+
+            string bfName = null;
+            try
+            {
+                bfName = Utils.Base14_fontdict[fontName.ToLower()];
+            }
+            catch
+            {
+                bfName = "";
+            }
+            int serif = 0;
+            int CJK_number = -1;
+            List<string> CJK_list_n = new List<string>() { "china-t", "china-s", "japan", "korea" };
+            List<string> CJK_list_s = new List<string>() { "china-ts", "china-ss", "japan-s", "korea-s" };
+
+            try
+            {
+                CJK_number = CJK_list_n.IndexOf(fontName);
+                serif = 0;
+            }
+            catch (Exception e) { }
+
+            if (CJK_number < 0)
+            {
+                try
+                {
+                    CJK_number = CJK_list_n.IndexOf(fontName);
+                    serif = 1;
+                }
+                catch (Exception e) { }
+            }
+
+            /*if (fontName.ToLower())//issue
+            {
+
+            }*/
+
+            if (fontFile == null)
+            {
+                throw new Exception("bad fontfile");
+            }
+            FontStruct val = _InsertFont(fontName, bfName, fontFile, fontBuffer, setSimple, idx,
+                wmode, serif, encoding, CJK_number);
+
+            if (val == null)
+                return -1;
+
+            FontStruct fontDict = val;
+            var _ = Utils.GetCharWidths(doc, xref: fontDict.Xref, fontDict: fontDict);
+            return fontDict.Xref;
         }
 
         public List<List<dynamic>> GetFonts(bool full = false)
         {
-            return _parent.GetPageFonts(NUMBER, full);
+            return _parent.GetPageFonts(Number, full);
         }
 
         public PdfPage GetPdfPage()
         {
             return _nativePage;
+        }
+
+        private FontStruct _InsertFont(
+            string fontName, 
+            string bfName,
+            string fontFile,
+            byte[] fontBuffer,
+            bool setSimple,
+            int idx, int wmode,
+            int serif, int encoding,
+            int ordering
+            )
+        {
+            PdfPage page = GetPdfPage();
+            PdfDocument pdf = page.doc();
+
+            FontStruct value = Utils.InsertFont(pdf, bfName, fontFile, fontBuffer, setSimple, idx, wmode, serif, encoding, ordering);
+            PdfObj resources = mupdf.mupdf.pdf_dict_get_inheritable(page.obj(), new PdfObj("Resources"));
+
+            PdfObj fonts = mupdf.mupdf.pdf_dict_get(resources, new PdfObj("Font"));
+            if (fonts == null)
+            {
+                fonts = pdf.pdf_new_dict(5);
+                Utils.pdf_dict_putl(page.obj(), fonts, new string[2] { "Resources", "Font" });
+            }
+
+            if (value.Xref == 0)
+                throw new Exception("cannot insert font");
+
+            PdfObj fontObj = pdf.pdf_new_indirect(value.Xref, 0);
+            fonts.pdf_dict_puts(fontName, fontObj);
+            return value;
         }
     }
 }

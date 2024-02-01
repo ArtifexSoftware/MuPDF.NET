@@ -17,14 +17,14 @@ namespace MuPDF.NET
     {
         private FzPixmap _nativePixmap;
 
-        private string TESSDATA_PREFIX = Environment.GetEnvironmentVariable("TESSDATA_PREFIX");
+        private string TessDataPrefix = Environment.GetEnvironmentVariable("TESSDATA_PREFIX");
 
         public Pixmap(ColorSpace cs, IRect irect, int alpha)
         {
             _nativePixmap = mupdf.mupdf.fz_new_pixmap_with_bbox(cs.ToFzColorspace(), irect.ToFzIrect(), new FzSeparations(0), alpha);
         }
 
-        public IRect IRECT
+        public IRect IRect
         {
             get
             {
@@ -33,7 +33,7 @@ namespace MuPDF.NET
             }
         }
 
-        public int ALPHA
+        public int Alpha
         {
             get
             {
@@ -41,7 +41,7 @@ namespace MuPDF.NET
             }
         }
 
-        public ColorSpace COLORSPACE
+        public ColorSpace ColorSpace
         {
             get
             {
@@ -49,7 +49,7 @@ namespace MuPDF.NET
             }
         }
 
-        public byte[] DIGEST
+        public byte[] Digest
         {
             get
             {
@@ -119,7 +119,7 @@ namespace MuPDF.NET
             }
         }*/
 
-        public long SAMPLES_PTR
+        public long SamplesPtr
         {
             get
             {
@@ -127,7 +127,7 @@ namespace MuPDF.NET
             }
         }
 
-        public int SIZE
+        public int Size
         {
             get
             {
@@ -135,7 +135,7 @@ namespace MuPDF.NET
             }
         }
 
-        public int STRIDE
+        public int Stripe
         {
             get
             {
@@ -159,7 +159,7 @@ namespace MuPDF.NET
             }
         }
 
-        public int XRES
+        public int Xres
         {
             get
             {
@@ -175,7 +175,7 @@ namespace MuPDF.NET
             }
         }
 
-        public int YRES
+        public int Yres
         {
             get
             {
@@ -442,7 +442,7 @@ namespace MuPDF.NET
             int count = 0;
             List<byte> maxPixel = null;
             if (clip != null)
-                clip = IRECT;
+                clip = this.IRect;
 
             Dictionary < List<byte>, int> colorCount = (Dictionary < List<byte>, int>)ColorCount(true, clip);
             
@@ -537,7 +537,7 @@ namespace MuPDF.NET
 
         public void SavePdfOCR(dynamic filename, int compress = 1, string language = null, string tessdata = null)
         {
-            if (TESSDATA_PREFIX == null && tessdata == null)
+            if (TessDataPrefix == null && tessdata == null)
                 throw new Exception("No OCR support: TESSDATA_PREFIX not set");
             FzPdfocrOptions opts = new FzPdfocrOptions();
             opts.compress = compress;
@@ -561,7 +561,7 @@ namespace MuPDF.NET
 
         public byte[] Pdfocr2Bytes(int compress = 1, string language = "eng", string tessdata = null)
         {
-            if (TESSDATA_PREFIX == null && tessdata == null)
+            if (TessDataPrefix == null && tessdata == null)
                 throw new Exception("No OCR support: TESSDATA_PREFIX not set");
             MemoryStream fstream = new MemoryStream();
             SavePdfOCR(fstream, compress, language, tessdata);
@@ -570,14 +570,14 @@ namespace MuPDF.NET
 
         public void SaveDrawing()
         {
-            ColorSpace cspace = COLORSPACE;
+            ColorSpace cspace = ColorSpace;
             string mode = null;
             if (cspace is null)
                 mode = "L";
             else if (cspace.N == 1)
-                mode = (this.ALPHA == 0) ? "L" : "LA";
+                mode = (this.Alpha == 0) ? "L" : "LA";
             else if (cspace.N == 3)
-                mode = (ALPHA == 0) ? "RGB" : "RGBA";
+                mode = (Alpha == 0) ? "RGB" : "RGBA";
             else
                 mode = "CMYK";
             
@@ -634,16 +634,16 @@ namespace MuPDF.NET
             int idx = validFormats[output_.ToLower()];
             if (idx is -1)
                 throw new Exception($"Image format {output_} not in {validFormats.Keys}");
-            if (ALPHA != 0 && (new List<int>() { 2, 6, 7}).Contains(idx))
+            if (Alpha != 0 && (new List<int>() { 2, 6, 7}).Contains(idx))
             {
                 throw new Exception(string.Format("'{0}' cannot have alpha", output_));
             }
-            if (COLORSPACE != null && COLORSPACE.N > 3 && (new List<int>() { 1, 2, 4 }).Contains(idx))
+            if (ColorSpace != null && ColorSpace.N > 3 && (new List<int>() { 1, 2, 4 }).Contains(idx))
             {
                 throw new Exception(string.Format("unsupported colorspace for '{0}'", output_));
             }
             if (idx == 7)
-                SetDpi(XRES, YRES);
+                SetDpi(Xres, Yres);
             writeImg(filename_, idx, jpgQuality);
         }
 
@@ -788,13 +788,13 @@ namespace MuPDF.NET
             {
                 throw new Exception($"Image format {output} not in {string.Join(", ", validFormats.Keys)}");
             }
-            if (ALPHA != 0 && (new List<int>() { 2, 6, 7 }).Contains(idx))
+            if (Alpha != 0 && (new List<int>() { 2, 6, 7 }).Contains(idx))
                 throw new Exception($"'{output}' cannot have alpha");
-            if (COLORSPACE != null && COLORSPACE.N > 3 && (new List<int>() { 1, 2, 4 }).Contains(idx))
+            if (ColorSpace != null && ColorSpace.N > 3 && (new List<int>() { 1, 2, 4 }).Contains(idx))
                 throw new Exception($"unsupported colorspace for '{output}'");
 
             if (idx == 7)
-                SetDpi(XRES, YRES);
+                SetDpi(Xres, Yres);
             return ToBytes_(idx, jpgQuality);
         }
 
@@ -891,7 +891,7 @@ namespace MuPDF.NET
 
         public void TintWith(int black, int white)
         {
-            if (COLORSPACE == null || COLORSPACE.N > 3)
+            if (ColorSpace == null || ColorSpace.N > 3)
             {
                 Console.WriteLine("warning: colorspace invalid for function");
                 return;

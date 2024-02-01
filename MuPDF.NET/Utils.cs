@@ -567,6 +567,24 @@ namespace MuPDF.NET
             return "n/a";
         }
 
+        public static Dictionary<string, string> Base14_fontdict = new Dictionary<string, string>()
+        {
+            {"helv", "Helvetica" },
+            {"heit", "Helvetica-Oblique" },
+            {"hebo", "Helvetica-Bold" },
+            {"hebi", "Helvetica-BoldOblique" },
+            {"cour", "Courier" },
+            {"coit", "Courier-Obliqu" },
+            {"cobo", "Courier-Bold" },
+            {"cobi", "Courier-BoldOblique" },
+            {"tiro", "Times-Roman" },
+            {"tibo", "Times-Bold" },
+            {"tiit", "Times-Italic" },
+            {"tibi", "Times-BoldItalic" },
+            {"symb", "Symbol" },
+            {"zadb", "ZapfDingbats" }
+        };
+
         public static Rect INFINITE_RECT()
         {
             return new Rect(Utils.FZ_MIN_INF_RECT, Utils.FZ_MIN_INF_RECT, Utils.FZ_MAX_INF_RECT, Utils.FZ_MAX_INF_RECT);
@@ -1139,13 +1157,13 @@ namespace MuPDF.NET
             
             Rect cb = null;
             if ((new List<string>() { "html", "xml", "xhtml" }).Contains(option))
-                clip = page.CROPBOX;
+                clip = page.CropBox;
             if (clip != null)
                 cb = null;
             else if (page is MuPDFPage)
-                cb = page.CROPBOX;
+                cb = page.CropBox;
             if (clip == null)
-                clip = page.CROPBOX;
+                clip = page.CropBox;
 
             MuPDFSTextPage tp = stPage;
             if (tp is null)
@@ -1380,13 +1398,13 @@ namespace MuPDF.NET
                 {
                     return new FontStruct()
                     {
-                        XREF = f[0],
-                        EXT = f[1],
-                        TYPE = f[2],
-                        NAME = f[3],
-                        REFNAME = f[4],
-                        ENCODING = f[5],
-                        STREAM_XREF = f[6]
+                        Xref = f[0],
+                        Ext = f[1],
+                        Type = f[2],
+                        Name = f[3],
+                        RefName = f[4],
+                        Encoding = f[5],
+                        StreamXref = f[6]
                     };
                 }
             }
@@ -1395,9 +1413,9 @@ namespace MuPDF.NET
 
         public static dynamic CheckFontInfo(MuPDFDocument doc, int xref)
         {
-            foreach (dynamic f in doc.FONTINFO)
+            foreach (FontStruct f in doc.FontInfo)
             {
-                if (xref == f[0])
+                if (xref == f.Xref)
                     return f;
             }
             return null;
@@ -1715,21 +1733,21 @@ namespace MuPDF.NET
         public static (string, string, string, float, float)
         GetFontProperties(MuPDFDocument doc, int xref)
         {
-            List<dynamic> res = doc.ExtractFont(xref);
+            FontStruct res = doc.ExtractFont(xref);
             float asc = 0.8f;
             float dsc = -0.2f;
 
-            if (res[1] == "")
-                return (res[0], res[1], res[2], asc, dsc);
+            if (res.Ext == "")
+                return (res.Name, res.Ext, res.Type, asc, dsc);
 
-            if (res[3] != null)
+            if (res.Content != null)
             {
                 try
                 {
-                    Font font = new Font(res[3]);
-                    asc = font.ASCENDER;
-                    dsc = font.DESCENDER;
-                    Rect bbox = font.bbox;
+                    Font font = new Font(res.Content);
+                    asc = font.Ascender;
+                    dsc = font.Descender;
+                    Rect bbox = font.Bbox;
                     if (asc - dsc < 1)
                     {
                         if (bbox.Y0 < dsc)
@@ -1742,15 +1760,15 @@ namespace MuPDF.NET
                     asc *= 1.2f;
                     dsc *= 1.2f;
                 }
-                return (res[0], res[1], res[2], asc, dsc);
+                return (res.Name, res.Ext, res.Type, asc, dsc);
             }
-            if (res[1] != "n/a")
+            if (res.Ext != "n/a")
             {
                 try
                 {
-                    Font font = new Font(res[0]);
-                    asc = font.ASCENDER;
-                    dsc = font.DESCENDER;
+                    Font font = new Font(res.Name);
+                    asc = font.Ascender;
+                    dsc = font.Descender;
                 }
                 catch (Exception e)
                 {
@@ -1763,7 +1781,7 @@ namespace MuPDF.NET
                 asc *= 1.2f;
                 dsc *= 1.2f;
             }
-            return (res[0], res[1], res[2], asc, dsc);
+            return (res.Name, res.Ext, res.Type, asc, dsc);
         }
 
         public static FzBuffer GetFontBuffer(PdfDocument doc, int xref)
@@ -1838,24 +1856,24 @@ namespace MuPDF.NET
             return null;
         }
 
-        public static void UpdateFontInfo(MuPDFDocument doc, List<dynamic> info)
+        public static void UpdateFontInfo(MuPDFDocument doc, FontStruct info)
         {
-            int xref = info[0];
+            int xref = info.Xref;
             bool found = false;
 
             int i = 0;
-            for (; i < doc.FONTINFO.Count; i ++)
+            for (; i < doc.FontInfo.Count; i ++)
             {
-                if (doc.FONTINFO[i][0] == xref)
+                if (doc.FontInfo[i].Xref == xref)
                 {
                     found = true;
                     break;
                 }
             }
             if (found)
-                doc.FONTINFO[i] = info;
+                doc.FontInfo[i] = info;
             else
-                doc.FONTINFO.Add(info);
+                doc.FontInfo.Add(info);
         }
 
         public static List<(int, double)> GetCharWidths(
@@ -1866,8 +1884,7 @@ namespace MuPDF.NET
             FontStruct fontDict = null
             )
         {
-            dynamic fontInfo = Utils.CheckFontInfo(doc, xref);
-            FontStruct fontStruct = new FontStruct();
+            FontStruct fontStruct = Utils.CheckFontInfo(doc, xref);
             string name = "";
             string ext = "";
             string stype = "";
@@ -1877,24 +1894,24 @@ namespace MuPDF.NET
             int ordering = 0;
             List<(int, double)> glyphs = null;
 
-            if (fontInfo == null)
+            if (fontStruct == null)
             {
                 if (fontDict == null)
                 {
                     (name, ext, stype, asc, dsc) = Utils.GetFontProperties(doc, xref);
-                    fontStruct.NAME = name;
-                    fontStruct.EXT = ext;
-                    fontStruct.TYPE = stype;
-                    fontStruct.ASCENDER = asc;
-                    fontStruct.DESCENDER = dsc;
+                    fontStruct.Name = name;
+                    fontStruct.Ext = ext;
+                    fontStruct.Type = stype;
+                    fontStruct.Ascender = asc;
+                    fontStruct.Descender = dsc;
                 }
                 else
                 {
-                    name = fontDict.NAME;
-                    ext = fontDict.EXT;
-                    stype = fontDict.TYPE;
-                    ordering = fontDict.ORDERING;
-                    simple = fontDict.SIMPLE;
+                    name = fontDict.Name;
+                    ext = fontDict.Ext;
+                    stype = fontDict.Type;
+                    ordering = fontDict.Ordering;
+                    simple = fontDict.Simple;
                 }
 
                 if (ext == "")
@@ -1916,7 +1933,7 @@ namespace MuPDF.NET
                 else
                     ordering = -1;
 
-                fontDict.SIMPLE = simple;
+                fontDict.Simple = simple;
 
                 if (name == "ZapfDingbats")
                     glyphs = new List<(int, double)>(Utils.zapf_glyphs);
@@ -1925,17 +1942,17 @@ namespace MuPDF.NET
                 else
                     glyphs = null;
 
-                fontDict.GLYPHS = glyphs;
-                fontDict.ORDERING = ordering;
-                fontInfo = new List<dynamic>() { xref, fontDict };
-                doc.FONTINFO.Add(fontInfo);
+                fontDict.Glyphs = glyphs;
+                fontDict.Ordering = ordering;
+                fontDict.Xref = xref;
+                doc.FontInfo.Add(fontDict);
             }
             else
             {
-                fontDict = fontInfo[1];
-                glyphs = new List<(int, double)>(fontDict.GLYPHS);
-                simple = fontDict.SIMPLE;
-                ordering = fontDict.ORDERING;
+                fontDict = fontStruct;
+                glyphs = new List<(int, double)>(fontDict.Glyphs);
+                simple = fontDict.Simple;
+                ordering = fontDict.Ordering;
             }
 
             int oldLimit = 0;
@@ -1946,16 +1963,186 @@ namespace MuPDF.NET
                 return glyphs;
 
             if (ordering < 0)
-                glyphs = doc._GetCharWidths(xref, fontDict.NAME, fontDict.EXT, fontDict.ORDERING, myLimit, idx);
+                glyphs = doc._GetCharWidths(xref, fontDict.Name, fontDict.Ext, fontDict.Ordering, myLimit, idx);
             else
                 glyphs = null;
 
-            fontDict.GLYPHS = glyphs;
-            fontInfo[1] = fontDict;
-            Utils.UpdateFontInfo(doc, fontInfo);
+            fontDict.Glyphs = glyphs;
+            Utils.UpdateFontInfo(doc, fontDict);
 
             return glyphs;
         }
 
+        public static FontStruct InsertFont(PdfDocument pdf, string bfName, string fontFile, byte[] fontBuffer, bool setSample, int idx, int wmode, int serif, int encoding, int ordering)
+        {
+            FzFont font = new FzFont();
+            FzBuffer res = null;
+            SWIGTYPE_p_unsigned_char data = null;
+            int ixref = 0;
+            int index = 0;
+            int simple = 0;
+            FontStruct value = null;
+            string name = "";
+            string subt = "";
+            string exto = "";
+            ll_fz_lookup_cjk_font_outparams cjk_params = new ll_fz_lookup_cjk_font_outparams();
+            PdfObj fontObj = null;
+
+            if (ordering > -1)
+                data = mupdf.mupdf.ll_fz_lookup_cjk_font_outparams_fn(ordering, cjk_params);
+            if (data != null)
+            {
+                font = mupdf.mupdf.fz_new_font_from_memory(null, data, cjk_params.len, cjk_params.index, 0);
+                fontObj = pdf.pdf_add_simple_font(font, encoding);
+                exto = "n/a";
+                simple = 1;
+            }
+            else
+            {
+                if (bfName != null)
+                    font = mupdf.mupdf.fz_new_font_from_file(null, fontFile, idx, 0);
+                else
+                {
+                    res = Utils.BufferFromBytes(fontBuffer);
+                    if (res == null)
+                        throw new Exception(Utils.ErrorMessages["MSG_FILE_OR_BUFFER"]);
+                    font = mupdf.mupdf.fz_new_font_from_buffer(null, res, idx, 0);
+                }
+
+                if (setSample)
+                {
+                    fontObj = mupdf.mupdf.pdf_add_cid_font(pdf, font);
+                    simple = 0;
+                }
+                else
+                {
+                    fontObj = pdf.pdf_add_simple_font(font, encoding);
+                    simple = 2;
+                }
+            }
+            ixref = fontObj.pdf_to_num();
+            name = Utils.EscapeStrFromStr(fontObj.pdf_dict_get(new PdfObj("BaseFont")).pdf_to_name());
+            subt = Utils.UnicodeFromStr(fontObj.pdf_dict_get(new PdfObj("Subtype")).pdf_to_name());
+            if (exto == null)
+                exto = Utils.UnicodeFromStr(Utils.GetFontExtension(pdf, ixref));
+
+            float asc = font.fz_font_ascender();
+            float dsc = font.fz_font_descender();
+
+            value = new FontStruct()
+            {
+                Xref = ixref,
+                Name = name,
+                Type = subt,
+                Ext = exto,
+                Simple = simple != 0,
+                Ordering = ordering,
+                Ascender = asc,
+                Descender = dsc
+            };
+
+            return value;
+        }
+
+        public static string GetTJstr(string text, List<(int, double)> glyphs, bool simple, int ordering)
+        {
+            if (text.StartsWith("[<") && text.EndsWith(">]"))
+                return text;
+            if (text == "" || text == null)
+                return "[<>]";
+            
+            string otxt = "";
+            if (simple)
+            {
+                if (glyphs == null)
+                {
+                    foreach (char c in text.ToCharArray())
+                    {
+                        if (Convert.ToInt32(c) < 256)
+                            otxt += Convert.ToInt32(c).ToString("x2");
+                        else
+                            otxt += Convert.ToInt32("b7", 16).ToString("x2");
+                    }
+                }
+                else
+                {
+                    foreach (char c in text.ToCharArray())
+                    {
+                        if (Convert.ToInt32(c) < 256)
+                            otxt += (glyphs[Convert.ToInt32(c)].Item1).ToString("x2");
+                        else
+                            otxt += (glyphs[Convert.ToInt32("b7", 16)].Item1).ToString("x2");
+                    }
+                }
+                return $"[<{otxt}>]";
+            }
+            if (ordering < 0)
+            {
+                foreach (char c in text.ToCharArray())
+                    otxt += (glyphs[Convert.ToInt32(c)].Item1).ToString("x4");
+            }
+            else
+            {
+                foreach (char c in text.ToCharArray())
+                    otxt += Convert.ToInt32(c).ToString("x4");
+            }
+            return $"[<{otxt}>]";
+        }
+
+        public static void CheckColor(dynamic c)
+        {
+            if (c != null || c != 0)
+            {
+                if (!(c is List<dynamic>) || !(c is Tuple)
+                    || (c.Count != 1) || (c.Count != 3) || (c.Count != 4)
+                    || c.Min() < 0 || c.Max() > 1)
+                {
+                    throw new Exception("need 1, 3 or 4 color components in range 0 to 1");
+                }
+            }
+        }
+
+        public static string GetColorCode(dynamic c, string f)
+        {
+            if (c == null)
+                return "";
+            if (c is float)
+                c = new List<float>() { c, };
+            Utils.CheckColor(c);
+            string s = "";
+            if (c.Count == 1)
+            {
+                s = $"{c[0]} ";
+                return s + (f == "c" ? "G " : "g ");
+            }
+
+            if (c.Count == 3)
+            {
+                s = $"{c[0]} {c[1]} {c[2]} ";
+            }
+
+            s = $"{c[0]} {c[1]} {c[2]} {c[3]} ";
+            return s + (f == "c" ? "K " : "k ");
+        }
+
+        public static bool CheckMorph(dynamic o)
+        {
+            try
+            {
+                if (Convert.ToBoolean(o) == false)
+                    return false;
+                if (o is List<dynamic> || o is Tuple || o.Count == 2)
+                    throw new Exception("morph must be a sequence of length 2");
+                if (!(o[0].Count == 2 && o[1].Count == 6))
+                    throw new Exception("invalid morph parm 0");
+                if (!(o[1][4] == o[1][5] && o[1][5] == 0))
+                    throw new Exception("invalid morph parm 1");
+                return true;
+            }
+            catch (Exception e)
+            {
+                return false;
+            }
+        }
     }
 }

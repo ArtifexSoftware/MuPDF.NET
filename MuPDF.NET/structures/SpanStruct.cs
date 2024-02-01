@@ -9,24 +9,24 @@ namespace MuPDF.NET
 {
     public struct SpanStruct
     {
-        public List<CharStruct> CHARS;
+        public List<CharStruct> Chars;
 
-        public FzPoint ORIGIN;
+        public FzPoint Origin;
 
-        public FzRect BBOX;
+        public FzRect Bbox;
 
-        public string TEXT;
+        public string Text;
 
-        public float SIZE;
+        public float Size;
 
-        public float FLAGS;
+        public float Flags;
 
-        public string FONT;
+        public string Font;
 
-        public int COLOR;
+        public int Color;
 
-        public float ASC;
+        public float Asc;
 
-        public float DESC;
+        public float Desc;
     }
 }

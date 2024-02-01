@@ -8,29 +8,31 @@ namespace MuPDF.NET
 {
     public class FontStruct
     {
-        public int XREF;
+        public int Xref;
 
-        public string EXT;
+        public string Ext;
 
-        public string TYPE;
+        public string Type;
 
-        public string NAME;
+        public string Name;
 
-        public string REFNAME;
+        public string RefName;
 
-        public string ENCODING;
+        public string Encoding;
 
-        public int STREAM_XREF;
+        public int StreamXref;
 
-        public int ORDERING;
+        public int Ordering;
 
-        public bool SIMPLE;
+        public bool Simple;
 
-        public List<(int, double)> GLYPHS;
+        public List<(int, double)> Glyphs;
 
-        public float ASCENDER;
+        public float Ascender;
         
-        public float DESCENDER;
+        public float Descender;
+
+        public byte[] Content;
 
     }
 }

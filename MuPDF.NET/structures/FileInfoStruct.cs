@@ -8,12 +8,12 @@ namespace MuPDF.NET
 {
     public struct FileInfoStruct
     {
-        public string FILENAME;
+        public string FileName;
 
-        public string DESC;
+        public string Desc;
 
-        public int LENGTH;
+        public int Length;
 
-        public int SIZE;
+        public int Size;
     }
 }

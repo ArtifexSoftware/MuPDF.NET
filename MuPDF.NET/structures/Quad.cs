@@ -251,7 +251,7 @@ namespace MuPDF.NET
         {
             if (IsInfinite)
             {
-                return Utils.INFINITE_RECT().QUAD;
+                return Utils.INFINITE_RECT().Quad;
             }
 
             Matrix delta = (new Matrix(1f, 1f)).Pretranslate(p.X, p.Y);
