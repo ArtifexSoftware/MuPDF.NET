@@ -13,7 +13,7 @@ namespace MuPDF.NET
     {
         internal PdfAnnot _nativeAnnotion;
 
-        private bool _isOwner = false;
+        public bool IsOwner = false;
 
         delegate string LE_FUNCTION(MuPDFAnnotation annot, Point p1, Point p2, bool lr, float[] fillColor);
 
@@ -310,7 +310,7 @@ namespace MuPDF.NET
                 {
                     return null;
                 }
-                val._isOwner = true;
+                val.IsOwner = true;
                 //val._parent._annot_refs[]
 
                 if (val.Type.Item1 == PdfAnnotType.PDF_ANNOT_WIDGET)
@@ -562,12 +562,12 @@ namespace MuPDF.NET
         public MuPDFAnnotation(PdfAnnot annotion)
         {
             _nativeAnnotion = annotion;
-            _isOwner = true;
+            IsOwner = true;
         }
 
         private void Erase()
         {
-            _isOwner = false;
+            IsOwner = false;
         }
 
         private Nullable<AnnotStruct> GetRedactVaues()
@@ -861,9 +861,9 @@ namespace MuPDF.NET
                     annotObj.pdf_dict_put(new PdfObj("IC"), col);
                 }
             }
-            catch (Exception e)
+            catch (Exception)
             {
-                throw e;
+                
             }
 
             if ((opacity < 0 || opacity > 1) && blendMode == null)
@@ -904,10 +904,8 @@ namespace MuPDF.NET
 
                 extg.pdf_dict_put(new PdfObj("H"), alp0);
             }
-            catch (Exception e)
-            {
-                throw e;
-            }
+            catch (Exception)
+            { }
 
             return true;
         }
@@ -1082,7 +1080,6 @@ namespace MuPDF.NET
             PdfObj annotObj = annot.pdf_annot_obj();
             PdfAnnotType type = (PdfAnnotType)annot.pdf_annot_type();
             PdfObj sound = annotObj.pdf_dict_get(new PdfObj("Sound"));
-            KeyValuePair<int, int> p = new KeyValuePair<int, int>();
 
             if (type != PdfAnnotType.PDF_ANNOT_SOUND || sound == null)
             {

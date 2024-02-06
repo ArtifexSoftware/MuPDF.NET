@@ -1,6 +1,4 @@
-﻿using GoogleGson;
-using Kotlin.Contracts;
-using mupdf;
+﻿using mupdf;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,7 +10,7 @@ namespace MuPDF.NET
     public class Font : IDisposable
     {
 
-        private FzFont _nativeFont;
+        private FzFont _nativeFont = null;
 
         public float Ascender
         {

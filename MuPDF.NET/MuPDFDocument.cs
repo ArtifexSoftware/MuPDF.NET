@@ -39,6 +39,8 @@ namespace MuPDF.NET
 
         public List<byte> Stream;
 
+
+
         public bool NeedsPass {
             get
             {
@@ -50,7 +52,7 @@ namespace MuPDF.NET
             }
         }
 
-        public Outline OUTLINE;
+        public Outline Outline;
         public bool IsPDF
         {
             get
@@ -65,7 +67,7 @@ namespace MuPDF.NET
 
         public bool IsOwn { get; set; }
 
-        public int LEN
+        public int Len
         {
             get
             {
@@ -167,7 +169,7 @@ namespace MuPDF.NET
                             }
                             catch (Exception e)
                             {
-                                throw e;
+                                Console.WriteLine(e.Message);
                             }
                         }
                         else
@@ -181,7 +183,7 @@ namespace MuPDF.NET
                                     {
                                         doc = mupdf.mupdf.ll_fz_document_open_fn_call(handler.open, filename);
                                     }
-                                    catch (Exception e)
+                                    catch (Exception)
                                     {
                                         throw new Exception(Utils.ErrorMessages["MSG_BAD_DOCUMENT"]);
                                     }
@@ -231,7 +233,7 @@ namespace MuPDF.NET
                         {
                             byte[] _ = Convert2Pdf();
                         }
-                        catch (Exception e)
+                        catch (Exception)
                         {
                             throw new Exception("cannot open broken document");
                         }
@@ -355,7 +357,7 @@ namespace MuPDF.NET
         {
             if (Is_Encrypted)
                 throw new Exception("cannot initialize - document still encrypted");
-            OUTLINE = LoadOutline();
+            Outline = LoadOutline();
             MetaData = new Dictionary<string, string>();
 
 
@@ -367,11 +369,30 @@ namespace MuPDF.NET
             {
                 return _nativeDocument.fz_lookup_metadata2(key);
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 return "";
             }
             
+        }
+
+        public int GetPageXref(int pno)
+        {
+            if (IsClosed)
+                throw new Exception("document closed");
+            int pageCount = Len;
+            int n = pno;
+
+            while (n < 0)
+                n += pageCount;
+
+            PdfDocument pdf = AsPdfDocument(this);
+            int xref = 0;
+            if (n >= pageCount)
+                throw new Exception(Utils.ErrorMessages["MSG_BAD_PAGENO"]);
+            xref = pdf.pdf_lookup_page_obj(n).pdf_to_num();
+
+            return xref;
         }
 
         private Outline LoadOutline()
@@ -424,7 +445,7 @@ namespace MuPDF.NET
                 throw new Exception(string.Format("cannot insert value for '{0}'", key));
 
             FzBuffer res = Object2Buffer(obj, 1, 0);
-            string objStr = MuPDFSTextPage.EscapeStrFromBuffer(res);
+            string objStr = Utils.EscapeStrFromBuffer(res);
 
             string nullVal = string.Format("{0}({1})", skey, eyecatcher);
             string newVal = string.Format("%s %s", skey, value);
@@ -532,7 +553,7 @@ namespace MuPDF.NET
             {
                 //do something
             }
-            if (LEN < 1)
+            if (Len < 1)
                 throw new Exception("cannot save with zero pages");
             if ((userPW != null && userPW.Length > 40) || (ownerPW != null && ownerPW.Length > 40))
                 throw new Exception("password length must not exceed 40");
@@ -606,16 +627,17 @@ namespace MuPDF.NET
         {
             if (IsClosed)
                 return;
-            PageRefs.Clear();
+            if (PageRefs != null)
+                PageRefs.Clear();
         }
 
-        public FzPage this[int i = 0]
+        public FzPage this[int i]
         {
             get
             {
                 if (i == -1)
-                    i = LEN - 1;
-                if (i < 0 || i > LEN)
+                    i = Len - 1;
+                if (i < 0 || i > Len)
                 {
                     throw new Exception($"Page {i} not in document");
                 }
@@ -645,7 +667,7 @@ namespace MuPDF.NET
                 PdfObj pageObj = pdf.pdf_add_page(mediaBox, 0, resources, contents);
                 pdf.pdf_insert_page(pno, pageObj);
             }
-
+            
             ResetPageRefs();
             return new MuPDFPage(this[pno], this);
         }
@@ -654,7 +676,7 @@ namespace MuPDF.NET
         {
             if (IsClosed || Is_Encrypted)
                 throw new Exception("document closed or encrypted");
-            if (IsPDF)
+            if (!IsPDF)
                 return null;
             List<List<dynamic>> val = GetPageInfo(pno, 1);
             List<List<dynamic>> ret = new List<List<dynamic>>();
@@ -697,12 +719,11 @@ namespace MuPDF.NET
 
         public FontStruct ExtractFont(int xref = 0, int infoOnly = 0, string named = null)
         {
-            FontStruct ret = new FontStruct();
-
             PdfDocument pdf = AsPdfDocument(this);
             PdfObj obj = pdf.pdf_load_object(xref);
             PdfObj type = obj.pdf_dict_get(new PdfObj("Type"));
             PdfObj subType = obj.pdf_dict_get(new PdfObj("Subtype"));
+
             if (type.pdf_name_eq(new PdfObj("Font")) != 0 && !subType.pdf_to_name().StartsWith("CIDFontType"))
             {
                 PdfObj bName = null;
@@ -725,7 +746,6 @@ namespace MuPDF.NET
                 else
                     bytes = Encoding.UTF8.GetBytes("");
 
-
                 return new FontStruct()
                 {
                     Name = Utils.EscapeStrFromStr(bName.pdf_to_name()),
@@ -745,8 +765,6 @@ namespace MuPDF.NET
                 };
                 
             }
-
-            return ret;
         }
 
         public List<(int, double)> _GetCharWidths(int xref, string bfName, string ext, int ordering, int limit, int idx = 0)
@@ -792,6 +810,204 @@ namespace MuPDF.NET
             }
 
             return wList;
+        }
+
+        public string GetXrefObject(int xref, int compressed = 0, int ascii = 0)
+        {
+            if (IsClosed)
+                throw new Exception("document closed");
+            PdfDocument pdf = AsPdfDocument(this);
+            int xrefLen = pdf.pdf_xref_len();
+            PdfObj obj = null;
+
+            if (Utils.INRANGE(xref, 1, xrefLen - 1) && xref != -1)
+                throw new Exception(Utils.ErrorMessages["MSG_BAD_XREF"]);
+            if (xref > 0)
+                obj = pdf.pdf_load_object(xref);
+            else
+                obj = pdf.pdf_trailer();
+
+            FzBuffer res = Utils.Object2Buffer(obj.pdf_resolve_indirect(), compressed, ascii);
+            string text = Utils.EscapeStrFromBuffer(res);
+
+            return text;
+        }
+
+        /// <summary>
+        /// PDF only: Delete a page given by its 0-based number in -∞ < pno < page_count - 1.
+        /// </summary>
+        /// <param name="pno">the page to be deleted. Negative number count backwards from the end of the document (like with indices). Default is the last page.</param>
+        /// <exception cref="Exception"></exception>
+        public void DeletePage(int pno = -1)
+        {
+            if (!IsPDF)
+                throw new Exception("is no PDF");
+            if (IsClosed)
+                throw new Exception("document closed");
+
+            int pageCount = this.Len;
+            while (pno < 0)
+                pno += pageCount;
+
+            if (pno >= pageCount)
+                throw new Exception("bad page number(s)");
+
+            // remove TOC bookmarks pointing to deleted page
+            
+        }
+
+        public List<dynamic> GetToc(bool simple)
+        {
+            if (IsClosed)
+                throw new Exception("document closed");
+            InitDocument();
+            Outline olItem = Outline;
+            if (olItem == null)
+                return null;
+
+            int lvl = 1;
+            List<dynamic> liste = new List<dynamic>();
+
+            olItem.v
+        }
+
+        public (dynamic, float, float) ResovleLink(string uri = null, int chapters = 0)
+        {
+            fz_location loc = null;
+            float xp = 0.0f;
+            float yp = 0.0f;
+
+            if (uri == null)
+            {
+                if (chapters != 0)
+                    return ((-1, -1), 0, 0);
+                return (-1, 0, 0);
+            }
+            try
+            {
+                ll_fz_resolve_link_outparams outparams = new ll_fz_resolve_link_outparams();
+                loc = mupdf.mupdf.ll_fz_resolve_link_outparams_fn(_nativeDocument.m_internal, uri, outparams);
+                xp = outparams.xp;
+                yp = outparams.yp;
+            }
+            catch (Exception e)
+            {
+                if (chapters != 0)
+                    return ((-1, -1), 0, 0);
+                return (-1, 0, 0);
+            }
+
+            if (chapters != 0)
+                return ((loc.chapter, loc.page), xp, yp);
+            int pno = _nativeDocument.fz_page_number_from_location(new FzLocation(loc));
+            return (pno, xp, yp);
+        }
+
+        private string ObjString(PdfObj obj)
+        {
+            FzBuffer buffer = mupdf.mupdf.fz_new_buffer(512);
+            FzOutput output = new FzOutput(buffer);
+            output.pdf_print_obj(obj, 1, 0);
+            return Utils.UnicodeFromBuffer(buffer);
+        }
+
+        private Dictionary<string, dynamic> GetArray(PdfObj val, Dictionary<int, int> page_refs)
+        {
+            Dictionary<string, dynamic> template = new Dictionary<string, dynamic>()
+            {
+                {"page", -1 }, {"dest", ""}
+            };
+
+            string array = "";
+            if (val.pdf_is_indirect() != 0)
+                val = val.pdf_resolve_indirect();
+            if (val.pdf_is_array() != 0)
+                array = ObjString(val);
+            else if (val.pdf_is_dict() != 0)
+                array = ObjString(val.pdf_dict_gets("D"));
+            else return template;
+
+            // replace PDF "null" by zero, omit the square brackets
+            array = array.Replace("null", "0").Substring(1, -1);
+
+            // find stuff before first /
+            int idx = array.IndexOf("/");
+            if (idx < 1)
+            {
+                template["dest"] = array;
+                return template;
+            }
+
+            string subval = array.Substring(0, idx);
+            array = array.Substring(idx);
+            template["dest"] = array;
+
+            if (array.StartsWith("/XYZ"))
+            {
+                template.Remove("dest");
+                string[] arr_t = array.Split();
+                string[] arr = new string[5];
+                Array.Copy(arr_t, arr, arr_t.Length - 1);
+                float x = float.Parse(arr_t[0]);
+                float y = float.Parse(arr_t[1]);
+                float z = float.Parse(arr_t[2]);
+                template.Add("to", (x, y));
+                template.Add("zoom", z);
+            }
+
+            // extract page number
+            if (subval.Contains("0 R"))
+                template.Add("page", page_refs[int.Parse(subval.Split()[0])]);
+            else
+                template.Add("page", int.Parse(subval));
+
+            return template;
+        }
+
+        private void FillDict(Dictionary<string, dynamic> destDict, PdfObj pdfDict, Dictionary<int, int> page_refs)
+        {
+            int nameCount = pdfDict.pdf_dict_len();
+
+            for (int i = 0; i < nameCount; i++)
+            {
+                PdfObj key = pdfDict.pdf_dict_get_key(i);
+                PdfObj val = pdfDict.pdf_dict_get_val(i);
+                string dictKey = "";
+                if (key.pdf_is_name() != 0)
+                    dictKey = key.pdf_to_name();
+                else
+                {
+                    Console.WriteLine($"key {i} is no /Name");
+                    dictKey = null;
+                }
+
+                if (dictKey != null)
+                    destDict.Add(dictKey, GetArray(val, page_refs));
+            }
+        }
+
+        public Dictionary<string, dynamic> ResolveNames()
+        {
+            Dictionary<int, int> page_refs = new Dictionary<int, int>();
+            for (int i = 0; i < Len; i++)
+                page_refs.Add(GetPageXref(i), i);
+
+            PdfDocument pdf = this.PdfDocument;
+
+            // access PDF catalog
+            PdfObj catalog = pdf.pdf_trailer().pdf_dict_gets("Root");
+            Dictionary<string, dynamic> destDict = new Dictionary<string, dynamic>();
+            PdfObj dests = mupdf.mupdf.pdf_new_name("Dests");
+
+            PdfObj oldDests = catalog.pdf_dict_get(dests);
+            if (oldDests.pdf_is_dict() != 0)
+                FillDict(destDict, oldDests, page_refs);
+
+            PdfObj tree = pdf.pdf_load_name_tree(dests);
+            if (tree.pdf_is_dict() != 0)
+                FillDict(destDict, tree, page_refs);
+
+            return destDict;
         }
     }
 }

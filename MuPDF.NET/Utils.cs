@@ -667,7 +667,7 @@ namespace MuPDF.NET
                 return;
 
             PdfDocument doc = obj.pdf_get_bound_document();
-            for (int i = 0; i < keys.Length; i++)
+            for (int i = 0; i < keys.Length -1; i++)
             {
                 PdfObj nextObj = obj.pdf_dict_get(new PdfObj(keys[i]));
                 if (nextObj == null)
@@ -677,7 +677,7 @@ namespace MuPDF.NET
                 }
                 obj = nextObj;
             }
-            string key = keys[keys.Length - 1];
+            string key = keys[keys.Length - 2];
             obj.pdf_dict_put(new PdfObj(key), val);
         }
 
@@ -1392,7 +1392,7 @@ namespace MuPDF.NET
 
         public static FontStruct CheckFont(MuPDFPage page, string fontName)
         {
-            foreach (List<dynamic>f in page.GetFonts())
+            foreach (List<dynamic> f in page.GetFonts())
             {
                 if (f[4] == fontName)
                 {
@@ -1736,13 +1736,13 @@ namespace MuPDF.NET
             FontStruct res = doc.ExtractFont(xref);
             float asc = 0.8f;
             float dsc = -0.2f;
-
+            
             if (res.Ext == "")
                 return (res.Name, res.Ext, res.Type, asc, dsc);
 
             if (res.Content != null)
             {
-                try
+                /*try
                 {
                     Font font = new Font(res.Content);
                     asc = font.Ascender;
@@ -1760,7 +1760,7 @@ namespace MuPDF.NET
                     asc *= 1.2f;
                     dsc *= 1.2f;
                 }
-                return (res.Name, res.Ext, res.Type, asc, dsc);
+                return (res.Name, res.Ext, res.Type, asc, dsc);*/
             }
             if (res.Ext != "n/a")
             {
@@ -1770,7 +1770,7 @@ namespace MuPDF.NET
                     asc = font.Ascender;
                     dsc = font.Descender;
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
                     asc *= 1.2f;
                     dsc *= 1.2f;
@@ -1844,7 +1844,7 @@ namespace MuPDF.NET
 
         public static string UnicodeFromStr(dynamic s)
         {
-            if (s = null)
+            if (s == null)
                 return "";
 
             if (s is byte[])
@@ -1982,9 +1982,9 @@ namespace MuPDF.NET
             int index = 0;
             int simple = 0;
             FontStruct value = null;
-            string name = "";
-            string subt = "";
-            string exto = "";
+            string name = null;
+            string subt = null;
+            string exto = null;
             ll_fz_lookup_cjk_font_outparams cjk_params = new ll_fz_lookup_cjk_font_outparams();
             PdfObj fontObj = null;
 
@@ -2000,7 +2000,9 @@ namespace MuPDF.NET
             else
             {
                 if (bfName != null)
+                {
                     font = mupdf.mupdf.fz_new_font_from_file(null, fontFile, idx, 0);
+                }
                 else
                 {
                     res = Utils.BufferFromBytes(fontBuffer);
@@ -2023,9 +2025,10 @@ namespace MuPDF.NET
             ixref = fontObj.pdf_to_num();
             name = Utils.EscapeStrFromStr(fontObj.pdf_dict_get(new PdfObj("BaseFont")).pdf_to_name());
             subt = Utils.UnicodeFromStr(fontObj.pdf_dict_get(new PdfObj("Subtype")).pdf_to_name());
+            
             if (exto == null)
-                exto = Utils.UnicodeFromStr(Utils.GetFontExtension(pdf, ixref));
-
+                exto = Utils.GetFontExtension(pdf, ixref);
+            
             float asc = font.fz_font_ascender();
             float dsc = font.fz_font_descender();
 
@@ -2139,10 +2142,98 @@ namespace MuPDF.NET
                     throw new Exception("invalid morph parm 1");
                 return true;
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 return false;
             }
         }
+
+        public static string EscapeStrFromBuffer(FzBuffer buf)
+        {
+            if (buf.m_internal == null)
+                return "";
+            FzBuffer s = buf.fz_clone_buffer();
+            return DecodeRawUnicodeEscape(s);
+        }
+
+        /// <summary>
+        /// Decode Raw Unicode
+        /// </summary>
+        /// <param name="s"></param>
+        /// <returns></returns>
+        public static string DecodeRawUnicodeEscape(string s)
+        {
+            return System.Text.RegularExpressions.Regex.Unescape(s);
+        }
+
+        /// <summary>
+        /// Decode Raw Unicode
+        /// </summary>
+        /// <param name="s"></param>
+        /// <returns></returns>
+        public static string DecodeRawUnicodeEscape(FzBuffer s)
+        {
+            string ret = s.fz_string_from_buffer();
+            return DecodeRawUnicodeEscape(ret);
+        }
+
+        public static FzBuffer Object2Buffer(PdfObj what, int compress, int ascii)
+        {
+            FzBuffer res = mupdf.mupdf.fz_new_buffer(512);
+            FzOutput output = new FzOutput(res);
+            output.pdf_print_obj(what, compress, ascii);
+            res.fz_terminate_buffer();
+
+            return res;
+        }
+
+        public static string UnicodeFromBuffer(FzBuffer buf)
+        {
+            byte[] bufBytes = buf.fz_buffer_extract();
+            string val = Encoding.UTF8.GetString(bufBytes);
+            int z = val.IndexOf((char)0);
+
+            if (z >= 0)
+                val = val.Substring(0, z);
+            return val;
+        }
+
+        public static Recurse(MuPDFDocument doc, Outline olItem, List<dynamic> liste, int lvl, bool simple)
+        {
+            int page = 0;
+            while (olItem != null && !olItem.IsExternal)
+            {
+                string title = "";
+                if (olItem.Title != null)
+                    title = olItem.Title;
+                else
+                    title = " ";
+
+                if (!olItem.IsExternal)
+                {
+                    if (olItem.Uri != null)
+                    {
+                        if (olItem.Page == -1)
+                        {
+                            var resolve = doc.ResovleLink(olItem.Uri);
+                            page = resolve.Item1 + 1;
+                        }
+                        else
+                            page = olItem.Page + 1;
+                    }
+                    else
+                        page = -1;
+                }
+                else
+                    page = -1;
+
+                if (!simple)
+                {
+
+                }
+            }
+        }
+
+        //public static void GetLinkDict()
     }
 }

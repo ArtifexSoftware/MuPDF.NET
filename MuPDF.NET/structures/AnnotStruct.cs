@@ -9,19 +9,19 @@ namespace MuPDF.NET
 {
     public struct AnnotStruct
     {
-        public int XREF;
+        public int Xref;
 
-        public string TEXT;
+        public string Text;
 
-        public int ALIGN;
+        public int Align;
 
-        public Rect RECT;
+        public Rect Rect;
 
-        public List<float> TEXTCOLOR;
+        public List<float> TextColor;
 
-        public string FONTNAME;
+        public string FontName;
 
-        public float FONTSIZE;
+        public float FontSize;
 
     }
 }

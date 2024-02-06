@@ -216,7 +216,7 @@ namespace MuPDF.NET
         {
             FzPixmap srcPix = src.ToFzPixmap();
             FzIrect bBox = new FzIrect(clip);
-            FzPixmap pm = null;
+            /*FzPixmap pm = null;*/
 
             /*if (bBox.fz_is_infinite_irect() == 0)
                 _nativePixmap = srcPix.fz_scale_pixmap_cached(src_pix.x, src_pix.y, w, h, bbox);

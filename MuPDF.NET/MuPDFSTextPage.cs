@@ -13,7 +13,7 @@ namespace MuPDF.NET
     {
         internal FzStextPage _nativeSTextPage;
 
-        internal MuPDFPage _parent;
+        internal MuPDFPage _parent = null;
         /// <summary>
         /// Rect of Stext Page
         /// </summary>
@@ -143,7 +143,7 @@ namespace MuPDF.NET
 
                         blockRect = FzRect.fz_union_rect(blockRect, lineRect);
                     }
-                    text = EscapeStrFromBuffer(res);
+                    text = Utils.EscapeStrFromBuffer(res);
                 }
                 else if (IsRectsOverlap(stPageRect, new FzRect(block.m_internal.bbox)) || stPageRect.fz_is_infinite_rect() != 0)
                 {
@@ -267,7 +267,7 @@ namespace MuPDF.NET
         /// <summary>
         /// Extract StextPage in JSON format
         /// </summary>
-        /// <param name="cropbox">Rectangle area to extract</param>
+        /// <param name="cb">Rectangle area to extract</param>
         /// <param name="sort"></param>
         public string ExtractJSON(Rect cb, bool sort = false)
         {
@@ -419,7 +419,7 @@ namespace MuPDF.NET
                 }
             }
 
-            return DecodeRawUnicodeEscape(ret);
+            return Utils.DecodeRawUnicodeEscape(ret);
         }
 
         /// <summary>
@@ -791,7 +791,7 @@ namespace MuPDF.NET
 
         internal int AppendWord(List<WordBlock> lines, FzBuffer buf, FzRect wordBox, int blockNum, int lineNum, int wordNum)
         {
-            string s = EscapeStrFromBuffer(buf);
+            string s = Utils.EscapeStrFromBuffer(buf);
             WordBlock item = new WordBlock()
             {
                 X0 = wordBox.x0,
@@ -1027,7 +1027,7 @@ namespace MuPDF.NET
                                     }
                                     else
                                     {
-                                        span.Text = EscapeStrFromBuffer(textBuffer);
+                                        span.Text = Utils.EscapeStrFromBuffer(textBuffer);
                                         mupdf.mupdf.fz_clear_buffer(textBuffer);
                                     }
                                     span.Origin = spanOrigin;
@@ -1080,7 +1080,7 @@ namespace MuPDF.NET
                             }
                             else
                             {
-                                span.Text = EscapeStrFromBuffer(textBuffer);
+                                span.Text = Utils.EscapeStrFromBuffer(textBuffer);
                                 textBuffer.fz_clear_buffer();
                             }
                             span.Origin = spanOrigin;
@@ -1109,35 +1109,6 @@ namespace MuPDF.NET
             }
         }
 
-        public static string EscapeStrFromBuffer(FzBuffer buf)
-        {
-            if (buf.m_internal == null)
-                return "";
-            FzBuffer s = buf.fz_clone_buffer();
-            return DecodeRawUnicodeEscape(s);
-        }
-
-        /// <summary>
-        /// Decode Raw Unicode
-        /// </summary>
-        /// <param name="s"></param>
-        /// <returns></returns>
-        public static string DecodeRawUnicodeEscape(string s)
-        {
-            return System.Text.RegularExpressions.Regex.Unescape(s);
-        }
-
-        /// <summary>
-        /// Decode Raw Unicode
-        /// </summary>
-        /// <param name="s"></param>
-        /// <returns></returns>
-        public static string DecodeRawUnicodeEscape(FzBuffer s)
-        {
-            string ret = s.fz_string_from_buffer();
-            return DecodeRawUnicodeEscape(ret);
-        }
-
         internal float CharFontFlags(FzFont font, FzStextLine line, FzStextChar ch)
         {
             float flags = DetectSuperScript(line, ch);
@@ -1147,7 +1118,6 @@ namespace MuPDF.NET
             flags += font.fz_font_is_bold() * (int)FontStyle.TEXT_FONT_BOLD;
             return flags;
         }
-
         internal float DetectSuperScript(FzStextLine line, FzStextChar ch)
         {
             if (line.m_internal.wmode == 0 && line.m_internal.dir.x == 1 && line.m_internal.dir.y == 0)

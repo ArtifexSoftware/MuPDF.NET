@@ -16,7 +16,13 @@ namespace MuPDF.NET
 
         private MuPDFDocument _parent;
 
-        public PdfObj PageObj;
+        public PdfObj PageObj
+        {
+            get
+            {
+                return _nativePage.obj();
+            }
+        }
 
         public int Number { get; set; }
 
@@ -228,7 +234,6 @@ namespace MuPDF.NET
         {
             _nativePage = nativePage;
             _parent = parent;
-            PageObj = nativePage.obj();
 
             if (_nativePage == null)
                 Number = 0;
@@ -554,7 +559,7 @@ namespace MuPDF.NET
             {
                 annot.pdf_annot_obj().pdf_dict_put(new PdfObj("Name"), name);
             }
-            catch (Exception e)
+            catch (Exception)
             {
 
             }
@@ -597,7 +602,7 @@ namespace MuPDF.NET
                 {
                     annot = page.pdf_create_annot(annotType);
                 }
-                catch(Exception ae)
+                catch(Exception)
                 {
                     Console.WriteLine("message catched");
                     annot = new PdfAnnot();
@@ -612,7 +617,7 @@ namespace MuPDF.NET
                     page.obj().pdf_dict_put_int(new PdfObj("Rotate"), rotation);
                 ret = new MuPDFAnnotation(annot);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 if (rotation != 0)
                     page.obj().pdf_dict_put_int(new PdfObj("Rotate"), rotation);
@@ -848,13 +853,14 @@ namespace MuPDF.NET
                     Console.WriteLine($"skipping bad link / annot item {i}.\\n");
                     continue;
                 }
+
                 try
                 {
                     PdfObj annot = page.doc().pdf_add_object(MuPDFPage.PdfObjFromStr(page.doc(), text));
                     PdfObj indObj = page.doc().pdf_new_indirect(annot.pdf_to_num(), 0);
                     annots.pdf_array_push(indObj);
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
                     Console.WriteLine($"skipping bad link / annot item {i}.");
                 }
@@ -918,35 +924,6 @@ namespace MuPDF.NET
         {
             PdfPage page = _nativePage;
             Utils.SetResourceProperty(page.obj(), mc, xref);
-        }
-
-        private string GetOptionalContent(int oc)
-        {
-            if (oc == 0) return null;
-
-            MuPDFDocument doc = _parent;
-            string check = "";//doc.XREF//issue
-            if (!(check.Contains("/Type/OCG") || check.Contains("/Type/OCMD")))
-                throw new Exception("bad optional content: 'oc'");
-            Dictionary<int, string> props = new Dictionary<int, string>();
-
-            foreach ((string p, int x) in GetResourceProperties())
-            {
-                props[x] = p;
-            }
-            if (props.Keys.Contains(oc))
-                return props[oc];
-            int i = 0;
-            string mc = $"MC{i}";
-
-            while (props.Values.Contains(mc))
-            {
-                i += 1;
-                mc = $"MC{i}";
-            }
-            
-            SetResourceProperty(mc, oc);
-            return mc;
         }
 
         private void InsertImage(
@@ -1071,7 +1048,7 @@ namespace MuPDF.NET
             float borderWidth = 0.05f,
             int renderMode = 0,
             int rotate = 0,
-            float[] morph = null,
+            MorphStruct morph = new MorphStruct(),
             bool overlay = true,
             float strokeOpacity = 1,
             float fillOpacity = 1,
@@ -1083,6 +1060,7 @@ namespace MuPDF.NET
                 point,
                 text,
                 fontSize: fontSize,
+                fontFile: fontFile,
                 lineHeight: lineHeight,
                 fontName: fontName,
                 setSimple: setSimple != 0,
@@ -1097,6 +1075,7 @@ namespace MuPDF.NET
                 fillOpacity: fillOpacity,
                 oc: oc
                 );
+            
             if (rc >= 0)
                 img.Commit(overlay ? 1 : 0);
             return rc;
@@ -1157,7 +1136,7 @@ namespace MuPDF.NET
                 CJK_number = CJK_list_n.IndexOf(fontName);
                 serif = 0;
             }
-            catch (Exception e) { }
+            catch (Exception) { }
 
             if (CJK_number < 0)
             {
@@ -1166,7 +1145,7 @@ namespace MuPDF.NET
                     CJK_number = CJK_list_n.IndexOf(fontName);
                     serif = 1;
                 }
-                catch (Exception e) { }
+                catch (Exception) { }
             }
 
             /*if (fontName.ToLower())//issue
@@ -1214,21 +1193,88 @@ namespace MuPDF.NET
             PdfDocument pdf = page.doc();
 
             FontStruct value = Utils.InsertFont(pdf, bfName, fontFile, fontBuffer, setSimple, idx, wmode, serif, encoding, ordering);
-            PdfObj resources = mupdf.mupdf.pdf_dict_get_inheritable(page.obj(), new PdfObj("Resources"));
+            PdfObj resources = page.obj().pdf_dict_get_inheritable(new PdfObj("Resources"));
 
-            PdfObj fonts = mupdf.mupdf.pdf_dict_get(resources, new PdfObj("Font"));
-            if (fonts == null)
+            PdfObj fonts = resources.pdf_dict_get(new PdfObj("Font"));
+
+            if (fonts.pdf_dict_len() == 0)
             {
                 fonts = pdf.pdf_new_dict(5);
                 Utils.pdf_dict_putl(page.obj(), fonts, new string[2] { "Resources", "Font" });
             }
-
+            
             if (value.Xref == 0)
                 throw new Exception("cannot insert font");
 
             PdfObj fontObj = pdf.pdf_new_indirect(value.Xref, 0);
+
             fonts.pdf_dict_puts(fontName, fontObj);
             return value;
+        }
+
+        public string GetOptionalContent(int oc)
+        {
+            if (oc == 0)
+                return null;
+            MuPDFDocument doc = Parent;
+            string check = doc.GetXrefObject(oc, 1);
+            if (!(check.IndexOf("/Type/OCG") != -1 || check.IndexOf("/Type/OCMD") != -1))
+                throw new Exception("bad optional content: 'oc'");
+
+            Dictionary<int, string> propsDict = new Dictionary<int, string>();
+            List<(string, int)> props = GetResourceProperties();
+            foreach ((string p, int x) in props)
+            {
+                propsDict[x] = p;
+            }
+
+            if (propsDict.Keys.Contains(oc))
+                return propsDict[oc];
+            int i = 0;
+            string mc = $"MC{i}";
+            while (propsDict.Values.Contains(mc))
+            {
+                i += 1;
+                mc = $"MC{i}";
+            }
+            SetResourceProperty(mc, oc);
+            return mc;
+        }
+
+        public string SetOpacity(string gstate = null, float CA = 1, float ca = 1, string blendMode = null)
+        {
+            if (CA > 1 && ca >= 1 && blendMode == null)
+                return null;
+            int tCA = Convert.ToInt32(Math.Round(Math.Max(CA, 0) * 100));
+            if (tCA >= 100)
+                tCA = 99;
+            int tca = Convert.ToInt32(Math.Round(Math.Max(ca, 0) * 100));
+            if (tca >= 100)
+                tca = 99;
+            gstate = $"fitzca{tCA.ToString("2i")}{tca.ToString("2i")}";
+
+            if (gstate == null) return null;
+
+            PdfObj resources = PageObj.pdf_dict_get(new PdfObj("Resources"));
+            if (resources == null)
+                resources = mupdf.mupdf.pdf_dict_put_dict(PageObj, new PdfObj("Resources"), 2);
+            PdfObj extg = resources.pdf_dict_get(new PdfObj("ExtGState"));
+            int n = extg.pdf_dict_len();
+
+            for (int i = 0; i< n; i++)
+            {
+                PdfObj o1 = extg.pdf_dict_get_key(i);
+                string name = o1.pdf_to_name();
+                if (name == gstate)
+                    return gstate;
+            }
+
+            PdfObj opa = _nativePage.doc().pdf_new_dict(3);
+            opa.pdf_dict_put_real(new PdfObj("CA"), CA);
+            opa.pdf_dict_put_real(new PdfObj("ca"), ca);
+            extg.pdf_dict_puts(gstate, opa);
+
+            return gstate;
         }
     }
 }
