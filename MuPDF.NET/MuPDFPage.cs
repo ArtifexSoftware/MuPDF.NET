@@ -10,7 +10,7 @@ using static mupdf.FzBandWriter;
 
 namespace MuPDF.NET
 {
-    public class MuPDFPage
+    public class MuPDFPage : IDisposable
     {
         private PdfPage _nativePage;
 
@@ -54,7 +54,7 @@ namespace MuPDF.NET
             }
         }
 
-        public Dictionary<int, MuPDFAnnotation> AnnotRefs = new Dictionary<int, MuPDFAnnotation>();
+        public Dictionary<int, dynamic> AnnotRefs = new Dictionary<int, dynamic>();
 
         public Matrix TransformationMatrix
         {
@@ -1275,6 +1275,27 @@ namespace MuPDF.NET
             extg.pdf_dict_puts(gstate, opa);
 
             return gstate;
+        }
+
+        public List<string> GetAnnotNames()
+        {
+            PdfPage page = GetPdfPage();
+            if (page == null)
+                return null;
+            return Utils.GetAnnotIdList(page);
+        }
+
+        public List<(int, pdf_annot_type, string)> GetAnnotXrefs()
+        {
+            PdfPage page = GetPdfPage();
+            if (page == null)
+                return null;
+            return Utils.GetAnnotXrefList(page.obj());
+        }
+
+        public void Dispose()
+        {
+            _nativePage.Dispose();
         }
     }
 }

@@ -9,7 +9,7 @@ using mupdf;
 
 namespace MuPDF.NET
 {
-    public class MuPDFDocument
+    public class MuPDFDocument : IDisposable
     {
         public bool IsClosed = false;
 
@@ -38,8 +38,6 @@ namespace MuPDF.NET
         public PdfDocument PdfDocument;
 
         public List<byte> Stream;
-
-
 
         public bool NeedsPass {
             get
@@ -527,6 +525,81 @@ namespace MuPDF.NET
 
         }
 
+        public (string, string) GetKeyXref(int xref, string key)
+        {
+            if (IsClosed)
+                throw new Exception("document closed");
+
+            PdfDocument pdf = AsPdfDocument(this);
+            int xrefLen = pdf.pdf_xref_len();
+            if (Utils.INRANGE(xref, 1, xrefLen - 1) && xref != -1)
+                throw new Exception(Utils.ErrorMessages["MSG_BAD_XREF"]);
+
+            PdfObj obj = null;
+            if (xref > 0)
+                obj = pdf.pdf_load_object(xref);
+            else
+                obj = pdf.pdf_trailer();
+            if (obj == null)
+                return ("null", "null");
+
+            PdfObj subObj = obj.pdf_dict_getp(key);
+            if (subObj == null)
+                return ("null", "null");
+
+            string type = null;
+            string text = null;
+            if (subObj.pdf_is_indirect() != 0)
+            {
+                type = "xref";
+                text = $"{subObj.pdf_to_num()} 0 R";
+            }
+            else if (subObj.pdf_is_array() != 0)
+                type = "array";
+            else if (subObj.pdf_is_dict() != 0)
+                type = "dict";
+            else if (subObj.pdf_is_int() != 0)
+            {
+                type = "int";
+                text = $"{subObj.pdf_to_int()} ";
+            }
+            else if (subObj.pdf_is_real() != 0)
+                type = "float";
+            else if (subObj.pdf_is_null() != 0)
+            {
+                type = "null";
+                text = "null";
+            }
+            else if (subObj.pdf_is_bool() != 0)
+            {
+                type = "bool";
+                if (subObj.pdf_to_bool() != 0)
+                    text = "true";
+                else
+                    text = "false";
+            }
+            else if (subObj.pdf_is_name() != 0)
+            {
+                type = "name";
+                text = $"/{subObj.pdf_to_name()}";
+            }
+            else if (subObj.pdf_is_string() != 0)
+            {
+                type = "string";
+                text = Utils.UnicodeFromStr(subObj.pdf_to_text_string());
+            }
+            else
+                type = "unknown";
+            if (text is null)
+            {
+                FzBuffer res = Utils.Object2Buffer(subObj, 1, 0);
+                text = Utils.UnicodeFromBuffer(res);
+            }
+
+            return (type, text);
+
+        }
+
         public void Save(
             dynamic filename,
             int garbage = 0,
@@ -871,7 +944,7 @@ namespace MuPDF.NET
             olItem.v
         }
 
-        public (dynamic, float, float) ResovleLink(string uri = null, int chapters = 0)
+        public (dynamic, float, float) ResolveLink(string uri = null, int chapters = 0)
         {
             fz_location loc = null;
             float xp = 0.0f;
@@ -1008,6 +1081,11 @@ namespace MuPDF.NET
                 FillDict(destDict, tree, page_refs);
 
             return destDict;
+        }
+
+        public void Dispose()
+        {
+            _nativeDocument.Dispose();
         }
     }
 }

@@ -13,7 +13,7 @@ using System.Security.Policy;
 
 namespace MuPDF.NET
 {
-    public class Pixmap
+    public class Pixmap : IDisposable
     {
         private FzPixmap _nativePixmap;
 
@@ -913,6 +913,11 @@ namespace MuPDF.NET
             };
             //FzPixmap dst = mupdf.mupdf.fz_warp_pixmap(_nativePixmap, points, width, height);//issue
             return null;//issue
+        }
+
+        public void Dispose()
+        {
+            _nativePixmap.Dispose();
         }
     }
 

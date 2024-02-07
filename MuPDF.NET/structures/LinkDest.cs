@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace MuPDF.NET
 {
-    public class LinkDest
+    public class LinkDest : IDisposable
     {
         public string Dest = "";
 
@@ -35,7 +35,13 @@ namespace MuPDF.NET
 
         public Dictionary<string, dynamic> Named;
 
-        public LinkDest(Outline obj, dynamic rlink = null, MuPDFDocument document = null)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="obj">Link or Outline destination</param>
+        /// <param name="rlink"></param>
+        /// <param name="document"></param>
+        public LinkDest(dynamic obj, dynamic rlink = null, MuPDFDocument document = null)
         {
             bool isExt = obj.IsExternal;
             bool isInt = !isExt;
@@ -148,6 +154,11 @@ namespace MuPDF.NET
                     ret[item] = null;
             }
             return ret;
+        }
+
+        public void Dispose()
+        {
+            
         }
     }
 }

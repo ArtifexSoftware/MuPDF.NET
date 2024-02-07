@@ -2215,7 +2215,7 @@ namespace MuPDF.NET
                     {
                         if (olItem.Page == -1)
                         {
-                            var resolve = doc.ResovleLink(olItem.Uri);
+                            var resolve = doc.ResolveLink(olItem.Uri);
                             page = resolve.Item1 + 1;
                         }
                         else
@@ -2234,6 +2234,153 @@ namespace MuPDF.NET
             }
         }
 
-        //public static void GetLinkDict()
+        public static void GetLinkDict(dynamic ln, MuPDFDocument document = null)
+        {
+            if (ln is Outline)
+
+        }
+
+        public static BorderStruct GetAnnotBorder(PdfObj annotObj)
+        {
+            List<int> dash = new List<int>();
+            float width = -1;
+            float clouds = -1;
+            PdfObj obj = null;
+            string style = null;
+
+            obj = annotObj.pdf_dict_get(new PdfObj("Border"));
+            if (obj.pdf_is_array() != 0)
+            {
+                width = obj.pdf_array_get(2).pdf_to_real();
+                if (obj.pdf_array_len() == 4)
+                {
+                    PdfObj dashObj = obj.pdf_array_get(3);
+                    for (int i = 0; i < dashObj.pdf_array_len(); i ++)
+                    {
+                        int val = dashObj.pdf_array_get(i).pdf_to_int();
+                        dash.Add(val);
+                    }
+                }
+            }
+
+            PdfObj bsObj = annotObj.pdf_dict_get(new PdfObj("BS"));
+            if (bsObj != null)
+            {
+                width = bsObj.pdf_dict_get(new PdfObj("W")).pdf_to_real();
+                style = bsObj.pdf_dict_get(new PdfObj("S")).pdf_to_name();
+                if (style == "")
+                    style = null;
+                obj = bsObj.pdf_dict_get(new PdfObj("D"));
+                if (obj != null)
+                {
+                    for (int i = 0; i < obj.pdf_array_len(); i ++)
+                    {
+                        int val = obj.pdf_array_get(i).pdf_to_int();
+                        dash.Add(val);
+                    }
+                }
+            }
+
+            obj = annotObj.pdf_dict_get(new PdfObj("BE"));
+            if (obj != null)
+                clouds = obj.pdf_dict_get(new PdfObj("I")).pdf_to_int();
+
+            BorderStruct res = new BorderStruct();
+            res.Width = width;
+            res.Dashes = dash.ToArray();
+            res.Style = style;
+            res.Clouds = clouds;
+
+            return res;
+        }
+
+        public static ColorStruct GetAnnotColors(PdfObj annotObj)
+        {
+            ColorStruct res = new ColorStruct();
+            List<float> bc = new List<float>();
+            List<float> fc = new List<float>();
+
+            PdfObj obj = annotObj.pdf_dict_get(new PdfObj("C"));
+            if (obj.pdf_is_array() != 0)
+            {
+                int n = obj.pdf_array_len();
+                for (int i =0; i < n; i ++)
+                {
+                    float col = obj.pdf_array_get(i).pdf_to_real();
+                    bc.Add(col);
+                }
+            }
+            res.Stroke = bc.ToArray();
+
+            obj = annotObj.pdf_dict_gets("IC");
+            if (obj.pdf_is_array() != 0)
+            {
+                int n = obj.pdf_array_len();
+                for (int i = 0; i < n; i++)
+                {
+                    float col = obj.pdf_array_get(i).pdf_to_real();
+                    fc.Add(col);
+                }
+            }
+            res.Fill = fc.ToArray();
+
+            return res;
+        }
+
+        public static void SetAnnotBorder(BorderStruct border, PdfDocument pdf, PdfObj linkObj)
+        {
+            PdfObj obj = null;
+            int dashLen = 0;
+            float nWidth = border.Width;
+            int[] nDashes = border.Dashes;
+            string nStyle = border.Style;
+            float nClouds = border.Clouds;
+
+            // get old border properties
+        }
+
+        public static List<string> GetAnnotIdList(PdfPage page)
+        {
+            List<string> names = new List<string>();
+            PdfObj annots = page.obj().pdf_dict_get(new PdfObj("Annots"));
+            if (annots == null)
+                return null;
+
+            int n = annots.pdf_array_len();
+            for (int i =0; i < n; i ++)
+            {
+                PdfObj annotObj = annots.pdf_array_get(i);
+                PdfObj name = annotObj.pdf_dict_gets("NM");
+                if (name != null)
+                    names.Add(name.pdf_to_text_string());
+            }
+
+            return names;
+        }
+
+        public static List<(int, pdf_annot_type, string)> GetAnnotXrefList(PdfObj pageObj)
+        {
+            List<(int, pdf_annot_type, string)> names = new List<(int, pdf_annot_type, string)>();
+            PdfObj annots = pageObj.pdf_dict_get(new PdfObj("Annots"));
+            if (annots == null)
+                return null;
+
+            int n = annots.pdf_array_len();
+            for (int i = 0; i < n; i++)
+            {
+                PdfObj annotObj = annots.pdf_array_get(i);
+                int xref = annotObj.pdf_to_num();
+                PdfObj subtype = annotObj.pdf_dict_get(new PdfObj("Subtype"));
+                if (subtype == null)
+                    continue;
+
+                pdf_annot_type type = mupdf.mupdf.pdf_annot_type_from_string(subtype.pdf_to_name());
+                if (type == pdf_annot_type.PDF_ANNOT_UNKNOWN)
+                    continue;
+                PdfObj id_ = annotObj.pdf_dict_gets("NM");
+                names.Add((xref, type, id_.pdf_to_text_string()));
+            }
+            return names;
+        }
     }
 }

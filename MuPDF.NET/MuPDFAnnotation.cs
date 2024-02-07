@@ -421,7 +421,7 @@ namespace MuPDF.NET
             }
         }
 
-        public BorderStyle Border
+        public BorderStruct Border
         {
             get
             {
@@ -436,7 +436,7 @@ namespace MuPDF.NET
                     PdfAnnotType.PDF_ANNOT_SQUARE
                 }).Contains(atype))
                 {
-                    return new BorderStyle();
+                    return new BorderStruct();
                 }
 
                 PdfObj annotObj = _nativeAnnotion.pdf_annot_obj();
@@ -1171,7 +1171,7 @@ namespace MuPDF.NET
             annotObj.pdf_dict_put_name(new PdfObj("BM"), blendMode);
         }
 
-        public void SetBorder(BorderStyle? border, float width = -1, string style = null, int[] dashes = null, int clouds = -1)
+        public void SetBorder(BorderStruct? border, float width = -1, string style = null, int[] dashes = null, int clouds = -1)
         {
             int atype = 0;
             string atname = "";//issue
@@ -1206,7 +1206,7 @@ namespace MuPDF.NET
                 }
             }
 
-            BorderStyle border_ = new BorderStyle();
+            BorderStruct border_ = new BorderStruct();
             if (border == null)
             {
                 border_.Width = width;
@@ -1221,7 +1221,7 @@ namespace MuPDF.NET
             SetBorderAnnot(border_, pdf, annotObj);
         }
 
-        public static BorderStyle GetBorderFromAnnot(PdfObj annotObj)
+        public static BorderStruct GetBorderFromAnnot(PdfObj annotObj)
         {
             List<int> dashes = new List<int>();
             string style = "";
@@ -1264,7 +1264,7 @@ namespace MuPDF.NET
             if (obj != null)
                 clouds = obj.pdf_dict_get(new PdfObj("I")).pdf_to_int();
 
-            BorderStyle ret = new BorderStyle();
+            BorderStruct ret = new BorderStruct();
             ret.Width = width;
             ret.Dashes = dashes.ToArray();
             ret.Style = style;
@@ -1319,15 +1319,15 @@ namespace MuPDF.NET
             return val;
         }
 
-        public static void SetBorderAnnot(BorderStyle border, PdfDocument doc, PdfObj annotObj)
+        public static void SetBorderAnnot(BorderStruct border, PdfDocument doc, PdfObj annotObj)
         {
             int dashLen = 0;
             float nWidth = border.Width;
             int[] nDashes = border.Dashes;
             string nStyle = border.Style;
-            int nClouds = border.Clouds;
+            float nClouds = border.Clouds;
 
-            BorderStyle oldBorder = GetBorderFromAnnot(annotObj);
+            BorderStruct oldBorder = GetBorderFromAnnot(annotObj);
 
             annotObj.pdf_dict_del(new PdfObj("BS"));
             annotObj.pdf_dict_del(new PdfObj("BE"));

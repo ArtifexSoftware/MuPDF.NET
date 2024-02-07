@@ -152,5 +152,9 @@ namespace MuPDF.NET
             return this;
         }
 
+        public void Dispose()
+        {
+            
+        }
     }
 }
