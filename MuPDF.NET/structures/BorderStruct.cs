@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace MuPDF.NET
 {
-    public struct BorderStyle
+    public struct BorderStruct
     {
         public float Width;
 
@@ -14,7 +14,7 @@ namespace MuPDF.NET
 
         public int[] Dashes;
 
-        public int Clouds;
+        public float Clouds;
 
     }
 }
