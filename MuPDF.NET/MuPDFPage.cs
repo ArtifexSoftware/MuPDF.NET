@@ -1081,6 +1081,44 @@ namespace MuPDF.NET
             return rc;
         }
 
+        public float InsertHtmlBox(
+            Rect rect,
+            string text,
+            string css = null,
+            float opacity = 0,
+            int rotate = 0,
+            float scaleLow = 0,
+            FzArchive archive = null,
+            int oc = 0,
+            bool overlay = true
+            )
+        {
+            if (rotate % 90 != 0)
+                throw new Exception("bad rotation angle");
+            while (rotate < 0)
+                rotate += 360;
+            while (rotate >= 360)
+                rotate -= 360;
+
+            if (!(0 <= scaleLow && scaleLow <= 1))
+                throw new Exception("'scale_low' must be in [0, 1]");
+
+            if (css == null)
+                css = "";
+
+            Rect tempRect = null;
+            if (rotate == 90 || rotate == 270)
+                tempRect = new Rect(0, 0, rect.Height, rect.Width);
+            else 
+                tempRect = new Rect(0, 0, rect.Width, rect.Height);
+
+            // use a small border by default
+            string mycss = "body {margin:1px;}" + css;
+
+            // either make a story or accept a given one
+            return 0.0f;
+        }
+
         public int InsertFont(
             string fontName = "helv",
             string fontFile = null,

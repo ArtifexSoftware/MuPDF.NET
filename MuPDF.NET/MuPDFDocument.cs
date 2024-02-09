@@ -929,7 +929,7 @@ namespace MuPDF.NET
             
         }
 
-        public List<dynamic> GetToc(bool simple)
+        /*public List<dynamic> GetToc(bool simple)
         {
             if (IsClosed)
                 throw new Exception("document closed");
@@ -942,7 +942,7 @@ namespace MuPDF.NET
             List<dynamic> liste = new List<dynamic>();
 
             olItem.v
-        }
+        }*/
 
         public (dynamic, float, float) ResolveLink(string uri = null, int chapters = 0)
         {
@@ -1082,6 +1082,8 @@ namespace MuPDF.NET
 
             return destDict;
         }
+
+
 
         public void Dispose()
         {

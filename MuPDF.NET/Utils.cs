@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
 using System.Linq;
+using System.Numerics;
 using System.Resources;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -27,6 +28,11 @@ namespace MuPDF.NET
         public static int SigFlag_AppendOnly = 2;
 
         public static int UNIQUE_ID = 0;
+
+        public static int TEXT_ALIGN_LEFT = 0;
+        public static int TEXT_ALIGN_CENTER = 1;
+        public static int TEXT_ALIGN_RIGHT = 2;
+        public static int TEXT_ALIGN_JUSTIFY = 3;
 
         public static List<string> MUPDF_WARNINGS_STORE = new List<string>();
 
@@ -766,12 +772,12 @@ namespace MuPDF.NET
 
         public static bool INRANGE(int v, int low, int high)
         {
-            return low <= v && high <= v;
+            return low <= v && v <= high;
         }
 
         public static bool INRANGE(float v, float low, float high)
         {
-            return low <= v && high <= v;
+            return low <= v && v <= high;
         }
 
         public static Matrix RotatePageMatrix(PdfPage page)
@@ -2198,7 +2204,7 @@ namespace MuPDF.NET
             return val;
         }
 
-        public static Recurse(MuPDFDocument doc, Outline olItem, List<dynamic> liste, int lvl, bool simple)
+        public static void Recurse(MuPDFDocument doc, Outline olItem, List<dynamic> liste, int lvl, bool simple)
         {
             int page = 0;
             while (olItem != null && !olItem.IsExternal)
@@ -2234,11 +2240,11 @@ namespace MuPDF.NET
             }
         }
 
-        public static void GetLinkDict(dynamic ln, MuPDFDocument document = null)
+        /*public static void GetLinkDict(dynamic ln, MuPDFDocument document = null)
         {
             if (ln is Outline)
 
-        }
+        }*/
 
         public static BorderStruct GetAnnotBorder(PdfObj annotObj)
         {
@@ -2381,6 +2387,14 @@ namespace MuPDF.NET
                 names.Add((xref, type, id_.pdf_to_text_string()));
             }
             return names;
+        }
+
+        public static (int, int, int) sRGB2rgb(int srgb)
+        {
+            int r = srgb >> 16;
+            int g = (srgb - (r << 16) >> 8);
+            int b = srgb - (r << 16) - (g << 8);
+            return (r, g, b);
         }
     }
 }

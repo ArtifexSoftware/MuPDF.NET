@@ -109,7 +109,7 @@ namespace MuPDF.NET
 
         public LinkDest Destination(PdfDocument doc)
         {
-            return new LinkDest(this, null, doc);
+            return new LinkDest(this, null, new MuPDFDocument(doc));
         }
 
         public void Dispose()
