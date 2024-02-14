@@ -54,7 +54,7 @@ namespace MuPDF.NET
             }
         }
 
-        public Dictionary<int, dynamic> AnnotRefs = new Dictionary<int, dynamic>();
+        public Dictionary<int, MuPDFAnnotation> AnnotRefs = new Dictionary<int, MuPDFAnnotation>();
 
         public Matrix TransformationMatrix
         {
@@ -820,9 +820,10 @@ namespace MuPDF.NET
         public static PdfObj PdfObjFromStr(PdfDocument doc, string src)
         {
             byte[] bSrc = Encoding.UTF8.GetBytes(src);
-            IntPtr scrPtr = new IntPtr(bSrc.Length);
+            IntPtr scrPtr = Marshal.AllocHGlobal(bSrc.Length);
             Marshal.Copy(bSrc, 0, scrPtr, bSrc.Length);
             SWIGTYPE_p_unsigned_char swigSrc = new SWIGTYPE_p_unsigned_char(scrPtr, true);
+            Marshal.FreeHGlobal(scrPtr);
 
             FzBuffer buffer_ = mupdf.mupdf.fz_new_buffer_from_copied_data(swigSrc, (uint)bSrc.Length);
             FzStream stream = buffer_.fz_open_buffer();
@@ -924,6 +925,14 @@ namespace MuPDF.NET
         {
             PdfPage page = _nativePage;
             Utils.SetResourceProperty(page.obj(), mc, xref);
+        }
+
+        public void InsertLink(LinkStruct link, bool mark = true)
+        {
+            string annot = Utils.GetLinkText(this, link);
+            if (annot == "" || annot == null)
+                throw new Exception("link kind not supported");
+            AddAnnotFromString(new List<string>() { annot });
         }
 
         private void InsertImage(
@@ -1081,14 +1090,14 @@ namespace MuPDF.NET
             return rc;
         }
 
-        public float InsertHtmlBox(
+        public (int, float) InsertHtmlBox(
             Rect rect,
-            string text,
+            dynamic text,
             string css = null,
             float opacity = 0,
             int rotate = 0,
             float scaleLow = 0,
-            FzArchive archive = null,
+            MuPDFArchive archive = null,
             int oc = 0,
             bool overlay = true
             )
@@ -1116,7 +1125,24 @@ namespace MuPDF.NET
             string mycss = "body {margin:1px;}" + css;
 
             // either make a story or accept a given one
-            return 0.0f;
+            MuPDFStory story = null;
+            if (text is string)
+                story = new MuPDFStory(text, mycss, archive: archive);
+            else if (text is MuPDFStory)
+                story = text;
+            else
+                throw new Exception("'text' must be a string or a Story");
+
+            float scaleMax = scaleLow == 0 ? 0.0f : 1 / scaleLow;
+            FitResult fit = story.FitScale(tempRect, scaleMin: 1, scaleMax: scaleMax);
+
+            if (fit.BigEnough == false)
+                return (-1, scaleLow);
+
+            var filled = fit.Filled;
+            float scale = 1 / fit.Parameter;
+
+            float spareHeight = fit.Rect.Y1 - filled[3]
         }
 
         public int InsertFont(
@@ -1217,7 +1243,7 @@ namespace MuPDF.NET
         }
 
         private FontStruct _InsertFont(
-            string fontName, 
+            string fontName,
             string bfName,
             string fontFile,
             byte[] fontBuffer,

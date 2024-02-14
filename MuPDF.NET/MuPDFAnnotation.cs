@@ -1108,7 +1108,9 @@ namespace MuPDF.NET
             if (obj != null)
                 ret.Compression = obj.pdf_to_name();
             FzBuffer buf = sound.pdf_load_stream();
-            //issue
+            byte[] stream = Utils.BinFromBuffer(buf);
+            ret.Stream = stream;
+
             return ret;
         }
 
@@ -1173,8 +1175,7 @@ namespace MuPDF.NET
 
         public void SetBorder(BorderStruct? border, float width = -1, string style = null, int[] dashes = null, int clouds = -1)
         {
-            int atype = 0;
-            string atname = "";//issue
+            (PdfAnnotType atype, string atname, string _) = this.Type;
 
             if (!(new List<PdfAnnotType>()
             {
@@ -1185,7 +1186,7 @@ namespace MuPDF.NET
                 PdfAnnotType.PDF_ANNOT_POLY_LINE,
                 PdfAnnotType.PDF_ANNOT_POLYGON,
                 PdfAnnotType.PDF_ANNOT_SQUARE
-            }).Contains((PdfAnnotType)atype))
+            }).Contains(atype))
             {
                 Console.WriteLine(string.Format("Cannot set cloudy border for '{0}'.", atname));
                 return;
@@ -1197,7 +1198,7 @@ namespace MuPDF.NET
                 PdfAnnotType.PDF_ANNOT_FREE_TEXT,
                 PdfAnnotType.PDF_ANNOT_POLYGON,
                 PdfAnnotType.PDF_ANNOT_SQUARE
-            }).Contains((PdfAnnotType)atype))
+            }).Contains(atype))
             {
                 if (clouds > 0)
                 {

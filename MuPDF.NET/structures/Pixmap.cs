@@ -921,7 +921,7 @@ namespace MuPDF.NET
         }
     }
 
-    internal class FilePtrOutput : FzOutput2
+    public class FilePtrOutput : FzOutput2
     {
         public MemoryStream fstream { get; set; }
 

@@ -93,7 +93,7 @@ namespace MuPDF.NET
 
                 if (filename != null || filename is string)
                 {
-
+                    // pass
                 }
                 else
                     throw new Exception("Bad filename");
@@ -145,7 +145,7 @@ namespace MuPDF.NET
                 FzDocument doc = null;
                 if (stream != null)
                 {
-                    IntPtr dataPtr = IntPtr.Zero;
+                    IntPtr dataPtr = Marshal.AllocHGlobal(stream.Length);
                     Marshal.Copy(stream, 0, dataPtr, stream.Length);
                     SWIGTYPE_p_unsigned_char swigData = new SWIGTYPE_p_unsigned_char(dataPtr, true);
                     data = mupdf.mupdf.fz_open_memory(swigData, (uint)stream.Length);

@@ -129,6 +129,8 @@ namespace MuPDF.NET
             IntPtr unmanagedPointer = Marshal.AllocHGlobal(bytes.Length);
             Marshal.Copy(bytes, 0, unmanagedPointer, bytes.Length);
             SWIGTYPE_p_unsigned_char s = new SWIGTYPE_p_unsigned_char(unmanagedPointer, false);
+            Marshal.FreeHGlobal(unmanagedPointer);
+
             FzBuffer buf = mupdf.mupdf.fz_new_buffer_from_copied_data(s, (uint)bytes.Length);
             _nativeXml = mupdf.mupdf.fz_parse_xml_from_html5(buf);
         }
@@ -750,6 +752,11 @@ namespace MuPDF.NET
                 i += 1;
             }
             return ret;
+        }
+
+        public MuPDFXml GetBodyTag()
+        {
+            return new MuPDFXml(_nativeXml.fz_dom_body());
         }
 
         public string GetAttributeValue(string attr)

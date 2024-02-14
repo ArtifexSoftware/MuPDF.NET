@@ -10,10 +10,12 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.UI.Xaml.Automation;
 using mupdf;
 
 namespace MuPDF.NET
 {
+    
     public static class Utils
     {
         public static int FZ_MIN_INF_RECT = (int)(-0x80000000);
@@ -33,6 +35,16 @@ namespace MuPDF.NET
         public static int TEXT_ALIGN_CENTER = 1;
         public static int TEXT_ALIGN_RIGHT = 2;
         public static int TEXT_ALIGN_JUSTIFY = 3;
+
+        public static Dictionary<string, string> AnnotSkel = new Dictionary<string, string>(){
+            { "goto1", "<</A<</S/GoTo/D[{0, 10} 0 R/XYZ {1} {2} {3}]>>/Rect[{4}]/BS<</W 0>>/Subtype/Link>>" },
+            { "goto2", "<</A<</S/GoTo/D{0}>>/Rect[{1}]/BS<</W 0>>/Subtype/Link>>" },
+            { "gotor1", "<</A<</S/GoToR/D[{0} /XYZ {1} {2} {3}]/F<</F({4})/UF({5})/Type/Filespec>>>>/Rect[{6}]/BS<</W 0>>/Subtype/Link>>" },
+            { "gotor2", "<</A<</S/GoToR/D{0}/F({1})>>/Rect[{2}]/BS<</W 0>>/Subtype/Link>>" },
+            { "launch", "<</A<</S/Launch/F<</F({0})/UF({1})/Type/Filespec>>>>/Rect[{2}]/BS<</W 0>>/Subtype/Link>>" },
+            { "uri", "<</A<</S/URI/URI({0})>>/Rect[{1}]/BS<</W 0>>/Subtype/Link>>" },
+            { "named", "<</A<</S/GoTo/D({0})/Type/Action>>/Rect[{1}]/BS<</W 0>>/Subtype/Link>>" }
+        };
 
         public static List<string> MUPDF_WARNINGS_STORE = new List<string>();
 
@@ -747,6 +759,8 @@ namespace MuPDF.NET
             if (ret == null || unmanagedPointer.ToInt64() == 0)
                 return null;
             FzBuffer buf = new FzBuffer(mupdf.mupdf.fz_new_buffer_from_data(ret, (uint)unmanagedPointer.ToInt64()));
+            Marshal.FreeHGlobal(unmanagedPointer);
+
             buf.fz_resize_buffer((uint)unmanagedPointer.ToInt64());
             return buf;
         }
@@ -1031,7 +1045,7 @@ namespace MuPDF.NET
             val.pdf_dict_put(new PdfObj("Type"), new PdfObj("Filespec"));
             byte[] bs = Utils.ToByte("  ");
 
-            IntPtr bufPtr = new IntPtr(bs.Length);
+            IntPtr bufPtr = Marshal.AllocHGlobal(bs.Length);
             Marshal.Copy(bufPtr, bs, 0, bs.Length);
             SWIGTYPE_p_unsigned_char swigBuf = new SWIGTYPE_p_unsigned_char(bufPtr, false);
 
@@ -1040,6 +1054,8 @@ namespace MuPDF.NET
                 new PdfObj(),
                 0
                 );
+            Marshal.FreeHGlobal(bufPtr);
+
             ef.pdf_dict_put(new PdfObj("F"), f);
             Utils.UpdateStream(pdf, f, buf, compress);
             len = (int)buf.fz_buffer_storage(new SWIGTYPE_p_p_unsigned_char(IntPtr.Zero, false));
@@ -1384,12 +1400,11 @@ namespace MuPDF.NET
         public static void EnsureIdentity()
         {
             IntPtr rndPtr = Marshal.AllocHGlobal(10);
-            Console.WriteLine(rndPtr);
             SWIGTYPE_p_unsigned_char swigRnd = new SWIGTYPE_p_unsigned_char(rndPtr, false);
             mupdf.mupdf.fz_memrnd(swigRnd, 16);
             Console.WriteLine(rndPtr);
             /*PdfObj id_ = pdf.pdf_trailer().pdf_dict_get(new PdfObj("ID"));
-            if (id_ == null)
+            if (id_ == null)//issue
             {
                 
 
@@ -2395,6 +2410,159 @@ namespace MuPDF.NET
             int g = (srgb - (r << 16) >> 8);
             int b = srgb - (r << 16) - (g << 8);
             return (r, g, b);
+        }
+
+        public static string GetLinkText(MuPDFPage page, LinkStruct link)
+        {
+            Matrix ctm = page.TransformationMatrix;
+            Matrix ictm = ~ctm;
+            Rect r = link.From * ictm;
+            string rectStr = $"{r.X0} {r.Y0} {r.X1} {r.Y1}";
+            string txt;
+
+            string annot = "";
+            if (link.Kind == LinkType.LINK_GOTO)
+                if (link.Page >= 0)
+                {
+                    txt = Utils.AnnotSkel["goto2"];
+                    int pno = link.Page;
+                    int xref = page.Parent.GetPageXref(pno);
+                    Point pnt = link.To == null ? new Point(0, 0) : link.To;
+                    Point ipnt = pnt * ictm;
+                    annot = string.Format(txt, xref, ipnt.X, ipnt.Y, link.Zoom, rectStr);
+                }
+                else
+                {
+                    txt = Utils.AnnotSkel["goto2"];
+                    annot = string.Format(txt, Utils.GetPdfStr(link.To), rectStr);//issue force point to string
+                }
+            else if (link.Kind == LinkType.LINK_GOTOR)
+            {
+                txt = Utils.AnnotSkel["goto2"];
+                if (link.Page >= 0)
+                {
+                    txt = Utils.AnnotSkel["gotor1"];
+                    Point pnt = link.To;
+                    annot = string.Format(txt, link.Page, pnt.X, pnt.Y, link.Zoom, link.File, link.File, rectStr);
+                }
+                else
+                {
+                    txt = Utils.AnnotSkel["gotor2"];
+                    annot = string.Format(txt, Utils.GetPdfStr(link.To), link.File rectStr);//issue force point to string
+                }
+            }
+            else if (link.Kind == LinkType.LINK_LAUNCH)
+            {
+                txt = Utils.AnnotSkel["launch"];
+                annot = string.Format(txt, link.File, link.File, rectStr);
+            }
+            else if (link.Kind == LinkType.LINK_URI)
+            {
+                txt = Utils.AnnotSkel["uri"];
+                annot = string.Format(txt, link.Uri, rectStr);
+            }
+            else if (link.Kind == LinkType.LINK_NAMED)
+            {
+                txt = Utils.AnnotSkel["named"];
+                annot = string.Format(txt, link.Name, rectStr);
+            }
+            if (annot == null)
+                return annot;
+
+            Dictionary<int, string> linkNames = new Dictionary<int, string>();
+            foreach ((int, pdf_annot_type, string) x in page.GetAnnotXrefs())
+            {
+                if (x.Item2 == pdf_annot_type.PDF_ANNOT_LINK)
+                    linkNames.Add(x.Item1, x.Item3);
+            }
+
+            string oldName = link.Id;
+            string name;
+            if (oldName != null && linkNames.Contains(new KeyValuePair<int, string>(link.Xref, oldName)))
+                name = oldName;
+            else
+            {
+                int i = 0;
+                string stem = Utils.SetAnnotStem() + "-L{0}";
+                while (true)
+                {
+                    name = string.Format(stem, i);
+                    if (!linkNames.Values.Contains(name))
+                        break;
+                    i += 1;
+                }
+            }
+            annot = annot.Replace("/Link", $"/Link/NM({name})");
+            return annot;
+        }
+
+        public static string GetPdfStr(string s)
+        {
+            if (!Convert.ToBoolean(s))
+                return "()";
+
+            string MakeUtf16be(string s)
+            {
+                byte[] r = new byte[] { 254, 255 };
+                byte[] sBytes = Encoding.BigEndianUnicode.GetBytes(s);
+                byte[] combined = new byte[r.Length + sBytes.Length];
+                Buffer.BlockCopy(r, 0, combined, 0, r.Length);
+                Buffer.BlockCopy(sBytes, 0, combined, r.Length, sBytes.Length);
+
+                StringBuilder hex = new StringBuilder(combined.Length * 2);
+                foreach (byte b in combined)
+                {
+                    hex.AppendFormat("{0:x2}", b);
+                }
+                return "<" + hex.ToString() + ">";
+            }
+
+            string r = "";
+            foreach (char c in s)
+            {
+                int oc = Convert.ToInt32(c);
+                if (oc > 255)
+                    return MakeUtf16be(s);
+                if (oc > 31 && oc < 127)
+                {
+                    if (c == '(' || c == ')' || c == '\\')
+                    {
+                        r += '\\';
+                    }
+                    r += c;
+                    continue;
+                }
+
+                if (oc < 127)
+                {
+                    r += string.Format("\\{0:D3}", oc);
+                }
+
+                if (oc == 8)
+                    r += "\\b";
+                else if (oc == 9)
+                    r += "\\t";
+                else if (oc == 10)
+                    r += "\\n";
+                else if (oc == 12)
+                    r += "\\f";
+                else if (oc == 13)
+                    r += "\\r";
+                else
+                    r += "\\267";
+            }
+            return "(" + r + ")";
+        }
+
+        public static string SetAnnotStem(string stem = null)
+        {
+            if (stem == null)
+                return Utils.ANNOT_ID_STEM;
+            int len = stem.Length + 1;
+            if (len > 50)
+                len = 50;
+            Utils.ANNOT_ID_STEM = stem.Substring(0, 50);
+            return Utils.ANNOT_ID_STEM;
         }
     }
 }

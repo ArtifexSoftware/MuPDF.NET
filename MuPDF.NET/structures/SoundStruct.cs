@@ -17,5 +17,7 @@ namespace MuPDF.NET
         public string Encoding;
 
         public string Compression;
+
+        public byte[] Stream;
     }
 }
