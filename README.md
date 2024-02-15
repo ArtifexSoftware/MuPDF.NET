@@ -16,4 +16,5 @@
 - You need `mupdfcpp64.dll` and `mupdfcsharp.dll`.
 - You have to select MuPDF.NET.dll as a reference and use with `using MuPDF.NET;`. For this, you have to copy these files in same level with MuPDF.NET project.
 
-## After build, you can run on `bin/Release/Demo.exe` for testing
+## License and Copyright
+MuPDF.NET is available under open-source AGPL and commercial license agreements. If you determine you cannot meet the requirements of the AGPL, please contact Artifex for more information regarding a commercial license.
