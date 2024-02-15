@@ -1,5 +1,8 @@
 # MuPDF.NET
 
+## About
+MuPDF.NET adds C#/.NET bindings and abstractions to MuPDF, a lightweight PDF, XPS, and eBook viewer, renderer, and toolkit. Both MuPDF.NET and MuPDF are maintained and developed by Artifex Software, Inc.
+
 ## Prerequisite
 - Visual Studio 2019, 2022
 - .Net v7 or later
