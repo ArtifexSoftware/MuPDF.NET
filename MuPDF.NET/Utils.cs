@@ -10,7 +10,6 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.UI.Xaml.Automation;
 using mupdf;
 
 namespace MuPDF.NET
@@ -2563,6 +2562,16 @@ namespace MuPDF.NET
                 len = 50;
             Utils.ANNOT_ID_STEM = stem.Substring(0, 50);
             return Utils.ANNOT_ID_STEM;
+        }
+
+        public static (Rect, Rect, IdentityMatrix) RectFunction(FitResult fit)
+        {
+            return (fit.Rect, fit.Rect, new IdentityMatrix());
+        }
+
+        public static void PositionFn2(Position pos)
+        {
+
         }
     }
 }

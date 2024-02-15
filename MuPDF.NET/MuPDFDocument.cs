@@ -17,7 +17,7 @@ namespace MuPDF.NET
 
         public bool Is_Encrypted;
 
-        private int _graftID;
+        public int GraftID;
 
         public Dictionary<string, string> MetaData;
 
@@ -215,7 +215,7 @@ namespace MuPDF.NET
 
                 if (IsOwn)
                 {
-                    _graftID = Utils.GenID();
+                    GraftID = Utils.GenID();
                     if (NeedsPass)
                     {
                         IsEncrypted = true;
@@ -906,6 +906,34 @@ namespace MuPDF.NET
             return text;
         }
 
+        public List<List<dynamic>> GetPageXObjects(int pno)
+        {
+            if (IsClosed || IsEncrypted)
+                throw new Exception("document closed or encrypted");
+            if (!IsPDF)
+                return new List<List<dynamic>>();
+            List<List<dynamic>> val = GetPageInfo(pno, 3);
+            return val;
+        }
+
+        public List<List<dynamic>> GetPageImages(int pno, bool full = false)
+        {
+            if (IsClosed || IsEncrypted)
+                throw new Exception("document closed or encrypted");
+            if (!IsPDF)
+                return new List<List<dynamic>>();
+            List<List<dynamic>>  val = GetPageInfo(pno, 2);
+            if (full == false)
+            {
+                List<List<dynamic>> ret = new List<List<dynamic>>();
+                foreach (List<dynamic> v in val)
+                    ret.Add(v.Take(v.Count - 1).ToList());
+                return ret;
+            }
+
+            return val;
+        }
+
         /// <summary>
         /// PDF only: Delete a page given by its 0-based number in -∞ < pno < page_count - 1.
         /// </summary>
@@ -1083,11 +1111,14 @@ namespace MuPDF.NET
             return destDict;
         }
 
-
-
         public void Dispose()
         {
             _nativeDocument.Dispose();
+        }
+
+        public void Select()
+        {
+            
         }
     }
 }

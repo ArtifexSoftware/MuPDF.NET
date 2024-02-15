@@ -60,7 +60,7 @@ namespace MuPDF.NET
             }
         }
 
-        public static AddHeaderIds(dynamic docOrStream, List<Position> positions)
+        public static void AddHeaderIds(dynamic docOrStream, List<Position> positions)
         {
             MuPDFDocument doc;
             if (docOrStream is MuPDFDocument)
@@ -334,6 +334,29 @@ namespace MuPDF.NET
             Rect rect = new Rect(origin.X, origin.Y, 0, origin.Y + height);
             Fit(WidthFn, rect, widthMin, widthMax, delta, verbose);
         }
+
+        public void WriteWithLinks()
+        {
+            MemoryStream stream = new MemoryStream();
+            MuPDFDocumentWriter writer = new MuPDFDocumentWriter(stream);
+            List<Position> positions = new List<Position>();
+        }
+
+        /*public void Write(MuPDFDocumentWriter writer)
+        {
+            int pageNum = 0;
+            int rectNum = 0;
+            Rect filled = new Rect(0, 0, 0, 0);
+            while (true)
+            {
+                (Rect mediabox, Rect rect, IdentityMatrix ctm) = Utils.RectFunction();
+                rectNum += 1;
+                if (mediabox != null)
+                    pageNum += 1;
+                (bool more, filled) = Place(rect);
+                if (positionFn)
+            }
+        }*/
     }
 
     internal class State

@@ -44,6 +44,14 @@ namespace MuPDF.NET
             }
         }
 
+        public Rect Rect
+        {
+            get
+            {
+                return GetBound();
+            }
+        }
+
         public int Rotation
         {
             get
@@ -55,6 +63,36 @@ namespace MuPDF.NET
         }
 
         public Dictionary<int, MuPDFAnnotation> AnnotRefs = new Dictionary<int, MuPDFAnnotation>();
+
+        public Rect GetBound()
+        {
+            FzPage page = _nativePage.super();
+            Rect val = new Rect(page.fz_bound_page());
+
+            if (val.IsInfinite && Parent.IsPDF)
+            {
+                Rect cb = CropBox;
+                float w = cb.Width;
+                float h = cb.Height;
+                if (Rotation != 0 || Rotation != 180)
+                    (w, h) = (h, w);
+                val = new Rect(0, 0, w, h);
+                // print warning message - __init__/8391
+            }
+            return val;
+        }
+
+        public FzPage AsFzPage(dynamic page)
+        {
+            if (page is MuPDFPage)
+                return (page as MuPDFPage).GetPdfPage().super();
+            if (page is PdfPage)
+                return (page as PdfPage).super();
+            else if (page is FzPage)
+                return page;
+
+            return null;
+        }
 
         public Matrix TransformationMatrix
         {
@@ -1142,7 +1180,105 @@ namespace MuPDF.NET
             var filled = fit.Filled;
             float scale = 1 / fit.Parameter;
 
-            float spareHeight = fit.Rect.Y1 - filled[3]
+            float spareHeight = fit.Rect.Y1 - filled[3];
+            if (scale != 1 || spareHeight < 0)
+                spareHeight = 0;
+
+            //story // issue
+
+            ShowP
+        }
+
+        public Matrix CalcMatrix(Rect sr, Rect tr, bool keep = true, int rotate = 0)
+        {
+            Point smp = (sr.TopLeft + sr.BottomRight) / 2.0f;
+            Point tmp = (tr.TopLeft + tr.BottomRight) / 2.0f;
+
+            Matrix m = new Matrix(1, 0, 0, 1, -smp.X, -smp.Y) * new Matrix(rotate);
+            Rect sr1 = sr * m;
+
+            float fw = tr.Width / sr1.Width;
+            float fh = tr.Height / sr1.Height;
+            if (keep)
+                fw = fh = Math.Min(fw, fh);
+
+            m *= new Matrix(fw, fh);
+            m *= new Matrix(1, 0, 0, 1, tmp.X, tmp.Y);
+            return m;
+        }
+
+        public int ShowPdfPage(
+            Rect rect,
+            MuPDFDocument src,
+            int pno = 0,
+            bool keepProportion = true,
+            bool overlay = true,
+            int oc = 0,
+            int rotate = 0,
+            Rect clip = null
+            )
+        {
+            MuPDFDocument doc = Parent;
+            if (!doc.IsPDF || !src.IsPDF)
+            {
+                throw new Exception("is not PDF");
+            }
+
+            if (rect.IsEmpty || rect.IsInfinite)
+                throw new Exception("rect must be finite and not empty");
+
+            while (pno < 0)
+                pno += src.GetPageCount();
+
+            MuPDFPage srcPage = new MuPDFPage(src[pno], src);
+            if (srcPage.GetContents().Count == 0)
+            {
+                throw new Exception("nothing to show - source page empty");
+            }
+
+            Rect tarRect = rect * ~TransformationMatrix;
+            Rect srcRect = clip == null ? srcPage.Rect : srcPage.Rect & clip;
+            if (srcRect.IsEmpty || srcRect.IsInfinite)
+                throw new Exception("clip must be finite and not empty");
+            srcRect = srcRect * ~srcPage.TransformationMatrix;
+
+            Matrix matrix = CalcMatrix(srcRect, tarRect, keep: keepProportion, rotate: rotate);
+
+            List<dynamic> iList = new List<dynamic>();
+            List<List<dynamic>> res = doc.GetPageXObjects(Number);
+            for (int i = 0; i < res.Count; i++)
+                iList.Add(iList[i][1]);
+
+            res = doc.GetPageImages(Number);
+            for (int i = 0; i < res.Count; i++)
+                iList.Add(iList[i][7]);
+
+            res = doc.GetPageFonts(Number);
+            for (int i = 0; i < res.Count; i++)
+                iList.Add(iList[i][4]);
+        }
+
+        public List<int> GetContents()
+        {
+            List<int> ret = new List<int> ();
+            PdfObj obj = _nativePage.obj();
+            PdfObj contents = obj.pdf_dict_get(new PdfObj("Contents"));
+            if (contents.pdf_is_array() != 0)
+            {
+                int n = contents.pdf_array_len();
+                for (int i = 0; i < n; i ++)
+                {
+                    PdfObj icont = contents.pdf_array_get(i);
+                    int xref = icont.pdf_to_num();
+                    ret.Add(xref);
+                }
+            }
+            else if (contents != null)
+            {
+                int xref = contents.pdf_to_num();
+                ret.Add(xref);
+            }
+            return ret;
         }
 
         public int InsertFont(
