@@ -9,7 +9,7 @@ MuPDF.NET adds C# bindings and abstractions to MuPDF, a lightweight PDF, XPS, an
 - Windows OS
 
 ## How to build
-- Clone this project from https://github.com/greendreamer/MuPDF.NET.
+- Clone this project.
 - Open `MuPDF.NET` solution.
 - Maybe all settings are ready.
 - Release, x64 `Build`
