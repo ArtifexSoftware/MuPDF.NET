@@ -9,7 +9,7 @@ namespace Demo
         static void Main(string[] args)
         {
 
-            /*MuPDFDocument doc = new MuPDFDocument("1.pdf");
+            MuPDFDocument doc = new MuPDFDocument("1.pdf");
 
             MuPDFPage page = new MuPDFPage(doc.GetPage(0), doc);
 
@@ -20,9 +20,9 @@ namespace Demo
 
             //doc.InsertPage(3, text: "hello", fontName: "kenpixel", fontFile: "./kenpixel.ttf");
 
-            doc.Save("output.pdf", userPW: "hello", encryption: 3);*/
+            doc.Save("output.pdf", userPW: "hello", encryption: 3);
 
-            MuPDFStory s = new MuPDF.NET.MuPDFStory(html: "hello world");
+            // MuPDFStory s = new MuPDF.NET.MuPDFStory(html: "hello world");
 
         }
     }

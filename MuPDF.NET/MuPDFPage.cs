@@ -62,7 +62,7 @@ namespace MuPDF.NET
             }
         }
 
-        public Dictionary<int, MuPDFAnnotation> AnnotRefs = new Dictionary<int, MuPDFAnnotation>();
+        public Dictionary<int, dynamic> AnnotRefs = new Dictionary<int, dynamic>();
 
         public Rect GetBound()
         {
@@ -1186,7 +1186,8 @@ namespace MuPDF.NET
 
             //story // issue
 
-            ShowP
+            // ShowP
+            return (0, 0.0f);
         }
 
         public Matrix CalcMatrix(Rect sr, Rect tr, bool keep = true, int rotate = 0)
@@ -1256,6 +1257,8 @@ namespace MuPDF.NET
             res = doc.GetPageFonts(Number);
             for (int i = 0; i < res.Count; i++)
                 iList.Add(iList[i][4]);
+
+            return 0;
         }
 
         public List<int> GetContents()

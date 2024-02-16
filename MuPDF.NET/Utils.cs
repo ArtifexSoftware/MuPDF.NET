@@ -2433,7 +2433,7 @@ namespace MuPDF.NET
                 else
                 {
                     txt = Utils.AnnotSkel["goto2"];
-                    annot = string.Format(txt, Utils.GetPdfStr(link.To), rectStr);//issue force point to string
+                    // annot = string.Format(txt, Utils.GetPdfStr(link.To), rectStr);//issue force point to string
                 }
             else if (link.Kind == LinkType.LINK_GOTOR)
             {
@@ -2447,7 +2447,7 @@ namespace MuPDF.NET
                 else
                 {
                     txt = Utils.AnnotSkel["gotor2"];
-                    annot = string.Format(txt, Utils.GetPdfStr(link.To), link.File rectStr);//issue force point to string
+                    // annot = string.Format(txt, Utils.GetPdfStr(link.To), link.File rectStr);//issue force point to string
                 }
             }
             else if (link.Kind == LinkType.LINK_LAUNCH)

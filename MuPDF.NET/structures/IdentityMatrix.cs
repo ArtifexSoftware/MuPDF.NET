@@ -1,5 +1,4 @@
-﻿using Android.Text.Style;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -11,7 +10,7 @@ namespace MuPDF.NET
     {
         public IdentityMatrix()
         {
-            Matrix
+            // Matrix
         }
     }
 }
