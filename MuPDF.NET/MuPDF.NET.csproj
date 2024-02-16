@@ -16,7 +16,23 @@
 		<TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'tizen'">6.5</SupportedOSPlatformVersion>
 		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+		<PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
+		<PackageTags>MuPDF</PackageTags>
+		<RepositoryUrl>https://github.com/ArtifexSoftware/MuPDF.NET</RepositoryUrl>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<PackageProjectUrl>https://github.com/ArtifexSoftware/MuPDF.NET</PackageProjectUrl>
 	</PropertyGroup>
+
+	<ItemGroup>
+	  <None Include="C:\Users\Green\Downloads\LICENSE.txt">
+	    <Pack>True</Pack>
+	    <PackagePath>\</PackagePath>
+	  </None>
+	  <None Include="C:\Users\Green\Downloads\README.md">
+	    <Pack>True</Pack>
+	    <PackagePath>\</PackagePath>
+	  </None>
+	</ItemGroup>
 
 	<ItemGroup>
 	  <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
