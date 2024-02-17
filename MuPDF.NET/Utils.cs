@@ -2564,14 +2564,15 @@ namespace MuPDF.NET
             return Utils.ANNOT_ID_STEM;
         }
 
-        public static (Rect, Rect, IdentityMatrix) RectFunction(FitResult fit)
+        public static (Rect, Rect, IdentityMatrix) RectFunction(FitResult fit) // issue, originally, two parameters in PyMuPDF
         {
             return (fit.Rect, fit.Rect, new IdentityMatrix());
         }
 
-        public static void PositionFn2(Position pos)
+        public static void PositionFn2(Position pos, int pageNumber)
         {
-
+            pos.PageNum = pageNumber;
         }
+
     }
 }

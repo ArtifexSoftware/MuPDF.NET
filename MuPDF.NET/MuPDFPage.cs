@@ -62,6 +62,14 @@ namespace MuPDF.NET
             }
         }
 
+        public Link FristLink
+        {
+            get
+            {
+                return LoadLinks();
+            }
+        }
+
         public Dictionary<int, dynamic> AnnotRefs = new Dictionary<int, dynamic>();
 
         public Rect GetBound()
@@ -193,12 +201,12 @@ namespace MuPDF.NET
             }
         }
 
-        public FzLink FirstLink//issue
+        public Link FirstLink//issue
         {
             get
             {
                 
-                return _nativePage.pdf_load_links();
+                return new Link(_nativePage.pdf_load_links());
             }
         }
 
@@ -1128,7 +1136,7 @@ namespace MuPDF.NET
             return rc;
         }
 
-        public (int, float) InsertHtmlBox(
+        public (float, float) InsertHtmlBox(
             Rect rect,
             dynamic text,
             string css = null,
@@ -1185,10 +1193,106 @@ namespace MuPDF.NET
                 spareHeight = 0;
 
             //story // issue
+            MuPDFDocument doc = story.WriteWithLinks();
 
-            // ShowP
-            return (0, 0.0f);
+            ShowPdfPage(rect, doc, 0, rotate: rotate, oc: oc, overlay: overlay);
+            Point mp1 = (fit.Rect.TopLeft + fit.Rect.BottomRight) / 2 * scale;
+            Point mp2 = (rect.TopLeft + rect.BottomRight) / 2;
+
+            Matrix mat = (new Matrix(scale, 0, 0, scale, -mp1.X, -mp1.Y) * new Matrix(-rotate) * new Matrix(1, 0, 0, 1, mp2.X, mp2.Y));
+
+            foreach (LinkStruct link in doc[0].GetLinks())
+            {
+                LinkStruct t = link;
+                t.From *= mat;
+                InsertLink(t);
+            }
+            return (spareHeight, scale);
         }
+
+        public List<LinkStruct> GetLinks()
+        {
+            Link ln = FirstLink;
+            List<LinkStruct> links = new List<LinkStruct>();
+            while (ln != null)
+            {
+                LinkStruct nl = GetLinkDict(ln, Parent);
+                links.Add(nl);
+                ln = ln.Next;
+            }
+
+            if (links.Count != 0 && Parent.IsPDF)
+            {
+                List<(int, pdf_annot_type, string)> xrefs = GetAnnotXrefs();
+                xrefs = xrefs.Where(xref => xref.Item2 == pdf_annot_type.PDF_ANNOT_LINK).ToList();
+                if (xrefs.Count == links.Count)
+                {
+                    for (int i = 0; i < xrefs.Count; i ++)
+                    {
+                        LinkStruct t = links[i];
+                        t.Xref = xrefs[i].Item1;
+                        t.Id = xrefs[i].Item3;
+                        links.Insert(i, t);
+                    }
+                }
+            }
+
+            return links;
+        }
+
+        public LinkStruct GetLinkDict(Link ln, MuPDFDocument document = null)
+        {
+            LinkStruct nl = new LinkStruct();
+            nl.Kind = ln.Dest.Kind;
+            nl.Xref = 0;
+            nl.From = ln.Rect;
+            Point pnt = new Point(0, 0);
+
+            if ((ln.Dest.Flags & (int)LinkFlags.LINK_FLAG_L_VALID) != 0)
+                pnt.X = ln.Dest.TopLeft.X;
+            if ((ln.Dest.Flags & (int)LinkFlags.LINK_FLAG_T_VALID) != 0)
+                pnt.Y = ln.Dest.TopLeft.Y;
+
+            if (ln.Dest.Kind == LinkType.LINK_URI)
+                nl.Uri = ln.Dest.Uri;
+            else if (ln.Dest.Kind == LinkType.LINK_GOTO)
+            {
+                nl.Page = ln.Dest.Page;
+                nl.To = pnt;
+                if ((ln.Dest.Flags & (int)LinkFlags.LINK_FLAG_R_IS_ZOOM) != 0)
+                    nl.Zoom = ln.Dest.BottomRight.X;
+                else
+                    nl.Zoom = 0.0f;
+            }
+            else if (ln.Dest.Kind == LinkType.LINK_GOTOR)
+            {
+                nl.File = ln.Dest.FileSpec.Replace("\\", "/");
+                nl.Page = ln.Dest.Page;
+                if (ln.Dest.Page < 0)
+                    nl.To = ln.Dest.Dest;
+                else
+                {
+                    nl.To = pnt;
+                    if ((ln.Dest.Flags & (int)LinkFlags.LINK_FLAG_R_IS_ZOOM) != 0)
+                        nl.Zoom = ln.Dest.BottomRight.X;
+                    else
+                        nl.Zoom = 0.0f;
+                }
+            }
+            else if (ln.Dest.Kind == LinkType.LINK_LAUNCH)
+                nl.File = ln.Dest.FileSpec.Replace("\\", "/");
+            else if (ln.Dest.Kind == LinkType.LINK_NAMED)
+            {
+                // issue
+                /*foreach (string k in ln.Dest.Named.Keys)
+                    if (typeof(LinkStruct).GetField(k) == null)
+                        nl.*/
+
+            }
+            else
+                nl.Page = ln.Dest.Page;
+            return nl;
+        }       
 
         public Matrix CalcMatrix(Rect sr, Rect tr, bool keep = true, int rotate = 0)
         {
@@ -1231,7 +1335,7 @@ namespace MuPDF.NET
             while (pno < 0)
                 pno += src.GetPageCount();
 
-            MuPDFPage srcPage = new MuPDFPage(src[pno], src);
+            MuPDFPage srcPage = src[pno];
             if (srcPage.GetContents().Count == 0)
             {
                 throw new Exception("nothing to show - source page empty");
@@ -1494,6 +1598,38 @@ namespace MuPDF.NET
             if (page == null)
                 return null;
             return Utils.GetAnnotXrefList(page.obj());
+        }
+
+        public Link LoadLinks()
+        {
+            FzLink _val = mupdf.mupdf.fz_load_links(AsFzPage(_nativePage));
+            if (_val == null)
+                return null;
+
+            Link val = new Link(_val);
+            val.ThisOwn = true;
+            val.Parent = this;
+            AnnotRefs.Add(val.GetHashCode(), val);
+
+            val.Xref = 0;
+            val.Id = "";
+            if (Parent.IsPDF)
+            {
+                List<(int, pdf_annot_type, string)> xrefs = GetAnnotXrefs();
+                xrefs = xrefs.Where(xref => xref.Item2 == pdf_annot_type.PDF_ANNOT_LINK).ToList();
+                if (xrefs.Count > 0)
+                {
+                    (int, pdf_annot_type, string) linkId = xrefs[0];
+                    val.Xref = linkId.Item1;
+                    val.Id = linkId.Item3;
+                }
+            }
+            else
+            {
+                val.Xref = 0;
+                val.Id = "";
+            }
+            return val;
         }
 
         public void Dispose()

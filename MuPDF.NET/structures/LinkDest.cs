@@ -10,7 +10,7 @@ namespace MuPDF.NET
 {
     public class LinkDest : IDisposable
     {
-        public string Dest = "";
+        public Point Dest;
 
         public string FileSpec = "";
 
@@ -44,7 +44,7 @@ namespace MuPDF.NET
         {
             bool isExt = obj.IsExternal;
             bool isInt = !isExt;
-            this.Dest = "";
+            this.Dest = new Point(0, 0);
             this.FileSpec = "";
             this.Flags = 0;
             this.IsMap = false;
