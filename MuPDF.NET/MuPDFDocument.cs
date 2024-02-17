@@ -704,7 +704,7 @@ namespace MuPDF.NET
                 PageRefs.Clear();
         }
 
-        public FzPage this[int i]
+        public MuPDFPage this[int i]
         {
             get
             {
@@ -714,7 +714,7 @@ namespace MuPDF.NET
                 {
                     throw new Exception($"Page {i} not in document");
                 }
-                return GetPage(i);
+                return new MuPDFPage(GetPage(i), this);
             }
         }
 

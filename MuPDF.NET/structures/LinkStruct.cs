@@ -20,7 +20,7 @@ namespace MuPDF.NET
 
         public string Uri;
 
-        public int Zoom;
+        public float Zoom;
 
         public string File;
 

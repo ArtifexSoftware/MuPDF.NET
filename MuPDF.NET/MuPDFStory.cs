@@ -60,74 +60,6 @@ namespace MuPDF.NET
             }
         }
 
-        public static void AddHeaderIds(dynamic docOrStream, List<Position> positions)
-        {
-            MuPDFDocument doc;
-            if (docOrStream is MuPDFDocument)
-                doc = docOrStream;
-            else
-                doc = new MuPDFDocument("pdf", stream: docOrStream); // docOrStream is byte[]
-
-            Dictionary<string, Position> idToPosition = new Dictionary<string, Position>();
-
-            foreach (Position position in positions)
-            {
-                if (position.OpenClose & true && position.Id != null)
-                {
-                    if (idToPosition.ContainsKey(position.Id))
-                    {
-                        // pass
-                    }
-                    else
-                        idToPosition.Add(position.Id, position);
-                }
-            }
-
-            foreach (Position positionFrom in positions)
-            {
-                if ((positionFrom.OpenClose & true) && positionFrom.Href != null)
-                {
-                    LinkStruct link = new LinkStruct();
-                    link.From = positionFrom.Rect;
-
-                    string targetId = "";
-                    Position positionTo = new Position();
-                    if (positionFrom.Href.StartsWith("#"))
-                    {
-                        targetId = positionFrom.Href.Substring(1);
-                        try
-                        {
-                            positionTo = idToPosition[targetId];
-                        }
-                        catch(Exception e)
-                        {
-                            throw new Exception($"No destination with id={targetId}, required by position_from: {positionFrom}");
-                        }
-
-                        link.Kind = LinkType.LINK_GOTO;
-                        link.To = new Point(positionTo.Rect.X0, positionTo.Rect.Y0);
-                        link.Page = positionTo.PageNum - 1;
-                    }
-                    else
-                    {
-                        if (positionFrom.Href.StartsWith("name:"))
-                        {
-                            link.Kind = LinkType.LINK_NAMED;
-                            link.Name = positionFrom.Href.Substring(5);
-                        }
-                        else
-                        {
-                            link.Kind = LinkType.LINK_URI;
-                            link.Uri = positionFrom.Href;
-                        }
-                    }
-
-                    MuPDFPage page = new MuPDFPage(doc[positionFrom.PageNum - 1], doc);//issue
-                    
-                }
-            }
-        }
-
         public MuPDFXml GetDocument()
         {
             FzXml dom = _nativeStory.fz_story_document();
@@ -304,6 +236,66 @@ namespace MuPDF.NET
             return null;
         }
 
+        public static MuPDFDocument AddPdfLinks(MemoryStream stream, List<Position> positions)
+        {
+            MuPDFDocument document = new MuPDFDocument("pdf", stream.ToArray());
+            Dictionary<string, Position> id2Position = new Dictionary<string, Position>();
+            foreach (Position position in positions)
+            {
+                if ((position.OpenClose & true) && position.Id != null)
+                {
+                    if (id2Position.Keys.Contains(position.Id))
+                    {
+                        // pass
+                    }
+                    else
+                        id2Position.Add(position.Id, position);
+                }
+            }
+
+            foreach (Position positionFrom in positions)
+            {
+                if ((positionFrom.OpenClose & true) && positionFrom.Href != null)
+                {
+                    LinkStruct link = new LinkStruct();
+                    link.From = new Rect(positionFrom.Rect);
+                    Position positionTo;
+                    if (positionFrom.Href.StartsWith("#"))
+                    {
+                        string targetId = positionFrom.Href.Substring(1);
+                        try
+                        {
+                            positionTo = id2Position.GetValueOrDefault(targetId);
+                        }
+                        catch (Exception e)
+                        {
+                            throw new Exception($"No destination with id={targetId}, required by position_from: {positionFrom}");
+                        }
+
+                        link.Kind = LinkType.LINK_GOTO;
+                        link.To = new Point(positionTo.Rect.X0, positionTo.Rect.Y0);
+                        link.Page = positionTo.PageNum - 1;
+                    }
+                    else
+                    {
+                        if (positionFrom.Href.StartsWith("name:"))
+                        {
+                            link.Kind = LinkType.LINK_NAMED;
+                            link.Name = positionFrom.Href.Substring(5);
+                        }
+                        else
+                        {
+                            link.Kind = LinkType.LINK_URI;
+                            link.Uri = positionFrom.Href;
+                        }
+                    }
+                    document[positionFrom.PageNum - 1].InsertLink(link);
+                }
+            }
+
+            return document;
+        }
+
         public (bool, Rect) Place(Rect where)
         {
             FzRect filled = new FzRect();
@@ -335,28 +327,71 @@ namespace MuPDF.NET
             Fit(WidthFn, rect, widthMin, widthMax, delta, verbose);
         }
 
-        public void WriteWithLinks()
+        public MuPDFDocument WriteWithLinks()
         {
             MemoryStream stream = new MemoryStream();
             MuPDFDocumentWriter writer = new MuPDFDocumentWriter(stream);
             List<Position> positions = new List<Position>();
+
+            Write(writer);
+            writer.Close();
+            stream.Seek(0, SeekOrigin.Begin);
+            return AddPdfLinks(stream, positions);
         }
 
-        /*public void Write(MuPDFDocumentWriter writer)
+        public void Write(MuPDFDocumentWriter writer) // issue
         {
+            MuPDFDeviceWrapper dev = null;
             int pageNum = 0;
             int rectNum = 0;
             Rect filled = new Rect(0, 0, 0, 0);
             while (true)
             {
-                (Rect mediabox, Rect rect, IdentityMatrix ctm) = Utils.RectFunction();
+                (Rect mediabox, Rect rect, IdentityMatrix ctm) = Utils.RectFunction(null);// issue
                 rectNum += 1;
                 if (mediabox != null)
                     pageNum += 1;
                 (bool more, filled) = Place(rect);
-                if (positionFn)
+                if (false) // if (positionFn)
+                {
+
+                }
+
+                if (writer != null)
+                {
+                    if (mediabox != null)
+                    {
+                        if (dev != null)
+                        {
+                            if (false) // if (pageFn)
+                            {
+
+                            }
+                            writer.EndPage();
+                        }
+                        dev = writer.BeginPage(mediabox);
+                        if (false) // if (pageFn)
+                        {
+                            // pass
+                        }
+                    }
+                    Draw(dev.ToFzDevice(), ctm);
+                    if (!more)
+                    {
+                        if (false) // if (pageFn)
+                        {
+                            // pass
+                        }
+                        writer.EndPage();
+                    }
+                }
+                else
+                    Draw(null, ctm);
+
+                if (!more)
+                    break;
             }
-        }*/
+        }
     }
 
     internal class State

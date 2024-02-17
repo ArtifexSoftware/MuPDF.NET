@@ -35,5 +35,10 @@ namespace MuPDF.NET
             FzStextOptions opts = new FzStextOptions(flags);
             _nativeDevice = stpage._nativeSTextPage.fz_new_stext_device(opts);
         }
+
+        public FzDevice ToFzDevice()
+        {
+            return _nativeDevice;
+        }
     }
 }
