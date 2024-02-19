@@ -150,6 +150,7 @@ namespace MuPDF.NET
                     SWIGTYPE_p_unsigned_char swigData = new SWIGTYPE_p_unsigned_char(dataPtr, true);
                     data = mupdf.mupdf.fz_open_memory(swigData, (uint)stream.Length);
                 
+                    Marshal.FreeHGlobal(dataPtr);
                     string magic = filename;
                     if (magic == null)
                         magic = filetype;
@@ -471,6 +472,7 @@ namespace MuPDF.NET
             SWIGTYPE_p_unsigned_char swigData = new SWIGTYPE_p_unsigned_char(unmanagedBytes, false);
             FzBuffer buffer = mupdf.mupdf.fz_new_buffer_from_copied_data(swigData, (uint)bytes.Length);
             FzStream stream = buffer.fz_open_buffer();
+            Marshal.Free
             PdfLexbuf lexBuffer = new PdfLexbuf(256);
             PdfObj ret = doc.pdf_parse_stm_obj(stream,lexBuffer);
 
