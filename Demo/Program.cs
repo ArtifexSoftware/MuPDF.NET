@@ -14,17 +14,17 @@ namespace Demo
 
             MuPDFPage page = new MuPDFPage(doc.GetPage(0), doc);
 
-            List<Quad> matches = page.SearchFor("the");
+            page.InsertHtmlBox(new Rect(0, 0, 400, 400), text: "<b>hello world</b>", rotate: 90);
+            /*List<Quad> matches = page.SearchFor("the");
 
             if (matches.Count > 0)
-                page.AddStrikeoutAnnot(matches);
+                page.AddStrikeoutAnnot(matches);*/
 
             //doc.InsertPage(3, text: "hello", fontName: "kenpixel", fontFile: "./kenpixel.ttf");
 
-            doc.Save("output.pdf", userPW: "hello", encryption: 3);
-
-            // MuPDFStory s = new MuPDF.NET.MuPDFStory(html: "hello world");
+            doc.Save("output.pdf");
 
         }
+
     }
 }

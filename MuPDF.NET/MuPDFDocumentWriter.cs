@@ -31,7 +31,7 @@ namespace MuPDF.NET
 
         public void Close()
         {
-            _nativeDocumentWriter.fz_close_document_writer();
+            // _nativeDocumentWriter.fz_close_document_writer();
         }
 
         public void EndPage()

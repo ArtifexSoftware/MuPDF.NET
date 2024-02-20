@@ -708,7 +708,7 @@ namespace MuPDF.NET
                 IEnumerable<int> iColors = colors;
                 IEnumerable<int> iBgColor = bgColor;
 
-                mupdf.mupdf.Pixmap_set_alpha_helper(
+        mupdf.mupdf.Pixmap_set_alpha_helper(
                     balen,
                     n,
                     dataLen,

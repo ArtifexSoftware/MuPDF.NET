@@ -1396,18 +1396,25 @@ namespace MuPDF.NET
                 root.pdf_dict_put_name(new PdfObj("PageMode"), "UseAttachments");
         }
 
-        public static void EnsureIdentity()
+        public static string EnsureIdentity(MuPDFDocument pdf)
         {
-            IntPtr rndPtr = Marshal.AllocHGlobal(10);
-            SWIGTYPE_p_unsigned_char swigRnd = new SWIGTYPE_p_unsigned_char(rndPtr, false);
-            mupdf.mupdf.fz_memrnd(swigRnd, 16);
-            Console.WriteLine(rndPtr);
-            /*PdfObj id_ = pdf.pdf_trailer().pdf_dict_get(new PdfObj("ID"));
-            if (id_ == null)//issue
+            PdfObj id = MuPDFDocument.AsPdfDocument(pdf).pdf_trailer().pdf_dict_get(new PdfObj("ID"));
+            if (id == null)
             {
-                
+                IntPtr p_block = Marshal.AllocHGlobal(16);
+                SWIGTYPE_p_unsigned_char swigBlock = new SWIGTYPE_p_unsigned_char(p_block, true);
+                mupdf.mupdf.fz_memrnd(swigBlock, 16);
+                string rnd = Marshal.PtrToStringUTF8(p_block);
+                Marshal.FreeHGlobal(p_block);
 
-            }*/
+                id = mupdf.mupdf.pdf_dict_put_array(MuPDFDocument.AsPdfDocument(pdf).pdf_trailer(), new PdfObj("ID"), 2);
+                id.pdf_array_push(mupdf.mupdf.pdf_new_string(rnd, 16));
+                id.pdf_array_push(mupdf.mupdf.pdf_new_string(rnd, 16));
+
+                return rnd;
+            }
+
+            return "";
         }
 
         public static FontStruct CheckFont(MuPDFPage page, string fontName)
