@@ -1193,7 +1193,15 @@ namespace MuPDF.NET
                 spareHeight = 0;
 
             //story // issue
-            MuPDFDocument doc = story.WriteWithLinks();
+            MuPDFDocument doc = story.WriteWithLinks(fit);
+
+            if (0 <= opacity && opacity < 1)
+            {
+                MuPDFPage tpage = doc[0];
+                string alpha = tpage.SetOpacity(CA: opacity, ca: opacity);
+                string s = $"/{alpha} gs\n";
+                Utils.InsertContents(tpage, Encoding.UTF8.GetBytes(s), 0);
+            }
 
             ShowPdfPage(rect, doc, 0, rotate: rotate, oc: oc, overlay: overlay);
             Point mp1 = (fit.Rect.TopLeft + fit.Rect.BottomRight) / 2 * scale;

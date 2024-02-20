@@ -66,6 +66,11 @@ namespace MuPDF.NET
             return new MuPDFXml(dom);
         }
 
+        /// <summary>
+        /// Write the content part prepared by Story.place() to the page.
+        /// </summary>
+        /// <param name="device">the Device created by dev = writer.begin_page(mediabox). The device knows how to call all MuPDF functions needed to write the content.</param>
+        /// <param name="matrix">a matrix for transforming content when writing to the page. An example may be writing rotated text. The default means no transformation (i.e. the Identity matrix).</param>
         public void Draw(FzDevice device, Matrix matrix = null)
         {
             FzMatrix ctm2 = matrix.ToFzMatrix();
@@ -75,6 +80,9 @@ namespace MuPDF.NET
             _nativeStory.fz_draw_story(device, ctm2);
         }
 
+        /// <summary>
+        /// Rewind the story’s document to the beginning for starting over its output.
+        /// </summary>
         public void Reset()
         {
             _nativeStory.fz_reset_story();
@@ -90,6 +98,16 @@ namespace MuPDF.NET
             return Fit(ScaleFn, rect, scaleMin, scaleMax, delta, verbose);
         }
 
+        /// <summary>
+        /// Finds optimal rect that contains the story
+        /// </summary>
+        /// <param name="fn"></param>
+        /// <param name="rect"></param>
+        /// <param name="pmin">Minimum parameter to consider</param>
+        /// <param name="pmax">Maximum parameter to consider</param>
+        /// <param name="delta">Maximum error in returned parameter.</param>
+        /// <param name="verbose">If true we output diagnostics.</param>
+        /// <returns></returns>
         public FitResult Fit(Func<Rect, float, Rect> fn, Rect rect, float pmin, float pmax, float delta = 0.001f, bool verbose = false)
         {
             void Log(string text)
@@ -296,6 +314,11 @@ namespace MuPDF.NET
             return document;
         }
 
+        /// <summary>
+        /// Calculate that part of the story’s content, that will fit in the provided rectangle. The method maintains a pointer which part of the story’s content has already been written and upon the next invocation resumes from that pointer’s position.
+        /// </summary>
+        /// <param name="where">layout the current part of the content to fit into this rectangle. This must be a sub-rectangle of the page’s MediaBox.</param>
+        /// <returns>a bool (int) more and a rectangle filled. If more == 0, all content of the story has been written, otherwise more is waiting to be written to subsequent rectangles / pages. Rectangle filled is the part of where that has actually been filled.</returns>
         public (bool, Rect) Place(Rect where)
         {
             FzRect filled = new FzRect();
@@ -327,19 +350,24 @@ namespace MuPDF.NET
             Fit(WidthFn, rect, widthMin, widthMax, delta, verbose);
         }
 
-        public MuPDFDocument WriteWithLinks()
+        public MuPDFDocument WriteWithLinks(FitResult fit)
         {
             MemoryStream stream = new MemoryStream();
             MuPDFDocumentWriter writer = new MuPDFDocumentWriter(stream);
             List<Position> positions = new List<Position>();
 
-            Write(writer);
+            Write(writer, fit);
             writer.Close();
             stream.Seek(0, SeekOrigin.Begin);
             return AddPdfLinks(stream, positions);
         }
 
-        public void Write(MuPDFDocumentWriter writer) // issue
+        /// <summary>
+        /// Places and draws Story to a DocumentWriter. Avoids the need for calling code to implement a loop that calls Story.place() and Story.draw() etc,
+        /// </summary>
+        /// <param name="writer"></param>
+        /// <param name="fit"></param>
+        public void Write(MuPDFDocumentWriter writer, FitResult fit) // issue
         {
             MuPDFDeviceWrapper dev = null;
             int pageNum = 0;
@@ -347,7 +375,7 @@ namespace MuPDF.NET
             Rect filled = new Rect(0, 0, 0, 0);
             while (true)
             {
-                (Rect mediabox, Rect rect, IdentityMatrix ctm) = Utils.RectFunction(null);// issue
+                (Rect mediabox, Rect rect, IdentityMatrix ctm) = Utils.RectFunction(fit);// issue
                 rectNum += 1;
                 if (mediabox != null)
                     pageNum += 1;

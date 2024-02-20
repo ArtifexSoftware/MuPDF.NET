@@ -1396,7 +1396,7 @@ namespace MuPDF.NET
                 root.pdf_dict_put_name(new PdfObj("PageMode"), "UseAttachments");
         }
 
-        public static void EnsureIdentity(MuPDFDocument pdf)
+        public static string EnsureIdentity(MuPDFDocument pdf)
         {
             PdfObj id = MuPDFDocument.AsPdfDocument(pdf).pdf_trailer().pdf_dict_get(new PdfObj("ID"));
             if (id == null)
@@ -1410,7 +1410,11 @@ namespace MuPDF.NET
                 id = mupdf.mupdf.pdf_dict_put_array(MuPDFDocument.AsPdfDocument(pdf).pdf_trailer(), new PdfObj("ID"), 2);
                 id.pdf_array_push(mupdf.mupdf.pdf_new_string(rnd, 16));
                 id.pdf_array_push(mupdf.mupdf.pdf_new_string(rnd, 16));
+
+                return rnd;
             }
+
+            return "";
         }
 
         public static FontStruct CheckFont(MuPDFPage page, string fontName)

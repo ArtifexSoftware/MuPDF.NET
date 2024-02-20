@@ -472,7 +472,8 @@ namespace MuPDF.NET
             SWIGTYPE_p_unsigned_char swigData = new SWIGTYPE_p_unsigned_char(unmanagedBytes, false);
             FzBuffer buffer = mupdf.mupdf.fz_new_buffer_from_copied_data(swigData, (uint)bytes.Length);
             FzStream stream = buffer.fz_open_buffer();
-            Marshal.Free
+            Marshal.FreeHGlobal(unmanagedBytes);
+
             PdfLexbuf lexBuffer = new PdfLexbuf(256);
             PdfObj ret = doc.pdf_parse_stm_obj(stream,lexBuffer);
 
@@ -744,7 +745,7 @@ namespace MuPDF.NET
             }
             
             ResetPageRefs();
-            return new MuPDFPage(this[pno], this);
+            return this[pno];
         }
 
         public List<List<dynamic>> GetPageFonts(int pno, bool full = false)
