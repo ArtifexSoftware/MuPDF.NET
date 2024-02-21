@@ -1432,7 +1432,7 @@ namespace MuPDF.NET
                 return xref;
             }
 
-            string bfName = null;
+            string bfName;
             try
             {
                 bfName = Utils.Base14_fontdict[fontName.ToLower()];

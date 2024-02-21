@@ -91,7 +91,7 @@ namespace MuPDF.NET
                     return;
                 }
 
-                if (filename != null || filename is string)
+                if (filename == null || filename is string)
                 {
                     // pass
                 }
@@ -134,7 +134,7 @@ namespace MuPDF.NET
 
                 float w = width;
                 float h = height;
-                FzRect r = rect.ToFzRect();
+                FzRect r = rect == null ? new FzRect(FzRect.Fixed.Fixed_EMPTY) : rect.ToFzRect();
                 if (r.fz_is_infinite_rect() != 0)
                 {
                     w = r.x1 - r.x0;

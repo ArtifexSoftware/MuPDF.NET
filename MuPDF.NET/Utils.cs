@@ -1839,10 +1839,10 @@ namespace MuPDF.NET
             PdfObj stream = null;
             obj = o.pdf_dict_get(new PdfObj("FontFile"));
             if (obj != null)
-                stream = obj;
+                stream = obj; // pfa
             obj = o.pdf_dict_get(new PdfObj("FontFile2"));
             if (obj != null)
-                stream = obj;
+                stream = obj; // ttf
             obj = o.pdf_dict_get(new PdfObj("FontFile3"));
             if (obj != null)
             {
@@ -1854,9 +1854,9 @@ namespace MuPDF.NET
                     return null;
                 }
 
-                if (obj.pdf_name_eq(new PdfObj("Type1C")) != 0) { }
-                else if (obj.pdf_name_eq(new PdfObj("CIDFontType0C")) != 0) { }
-                else if (obj.pdf_name_eq(new PdfObj("OpenType")) != 0) { }
+                if (obj.pdf_name_eq(new PdfObj("Type1C")) != 0) { } // cff
+                else if (obj.pdf_name_eq(new PdfObj("CIDFontType0C")) != 0) { } //cid
+                else if (obj.pdf_name_eq(new PdfObj("OpenType")) != 0) { } // otf
                 else Console.WriteLine("warning: unhandled font type {pdf_to_name(ctx, obj)!r}");
             }
 
