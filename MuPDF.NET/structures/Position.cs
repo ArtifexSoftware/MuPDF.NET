@@ -17,5 +17,13 @@ namespace MuPDF.NET
         public string Id;
 
         public Rect Rect;
+
+        public int RectNum;
+
+        public string Text;
+
+        public int Depth;
+
+        public string Heading;
     }
 }
