@@ -298,6 +298,11 @@ namespace MuPDF.NET
                 Number = _nativePage.m_internal.super.number;
         }
 
+        /// <summary>
+        /// PDF only: Add a caret icon. A caret annotation is a visual symbol normally used to indicate the presence of text edits on the page.
+        /// </summary>
+        /// <param name="point">the top left point of a 20 x 20 rectangle containing the MuPDF-provided icon.</param>
+        /// <returns>the created annotation. Stroke color blue = (0, 0, 1), no fill color support.</returns>
         private PdfAnnot AddCaretAnnot(Point point)
         {
             PdfPage page = _nativePage;
@@ -616,6 +621,13 @@ namespace MuPDF.NET
             return new MuPDFAnnotation(annot);
         }
 
+        /// <summary>
+        /// PDF only: Add a comment icon (“sticky note”) with accompanying text. Only the icon is visible, the accompanying text is hidden and can be visualized by many PDF viewers by hovering the mouse over the symbol.
+        /// </summary>
+        /// <param name="point">the top left point of a 20 x 20 rectangle containing the MuPDF-provided “note” icon.</param>
+        /// <param name="text">the top left point of a 20 x 20 rectangle containing the MuPDF-provided “note” icon.</param>
+        /// <param name="icon">the top left point of a 20 x 20 rectangle containing the MuPDF-provided “note” icon.</param>
+        /// <returns></returns>
         private MuPDFAnnotation AddTextAnnot(Point point, string text, string icon = null)
         {
             PdfPage page = _nativePage;
@@ -674,6 +686,38 @@ namespace MuPDF.NET
             AnnotRefs.Add(ret.GetHashCode(), ret);
           
             return ret;
+        }
+
+        /// <summary>
+        /// PDF only: Add a rectangle, resp. circle annotation.
+        /// </summary>
+        /// <param name="rect">the rectangle in which the circle or rectangle is drawn, must be finite and not empty. If the rectangle is not equal-sided, an ellipse is drawn.</param>
+        /// <returns></returns>
+        public MuPDFAnnotation AddCircleAnnot(Rect rect)
+        {
+            int oldRotation = AnnotPreProcess(this);
+            MuPDFAnnotation ret;
+            try
+            {
+                ret = AddSequareOrCircle(rect, PdfAnnotType.PDF_ANNOT_CIRCLE);
+            }
+            finally
+            {
+                if (oldRotation != 0)
+                    SetRotation(0);
+            }
+            AnnotPreProcess(this);
+            return ret;
+        }
+
+        public int AnnotPreProcess(MuPDFPage page)
+        {
+            if (!page.Parent.IsPDF)
+                throw new Exception("is not PDF");
+            int oldRotation = page.Rotation;
+            if (oldRotation != 0)
+                page.SetRotation(0);
+            return oldRotation;
         }
 
         private List<Rect> GetHighlightSelection(List<Quad> quads, Point start, Point stop, Rect clip)

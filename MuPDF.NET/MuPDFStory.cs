@@ -12,6 +12,9 @@ namespace MuPDF.NET
     {
         private FzStory _nativeStory;
 
+        /// <summary>
+        /// The body part of the story’s DOM. This attribute contains the Xml node of body. All relevant content for PDF production is contained between “<body>” and “</body>”.
+        /// </summary>
         public MuPDFXml Body
         {
             get
