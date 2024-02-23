@@ -12,9 +12,9 @@ namespace MuPDF.NET
     {
         private FzStory _nativeStory;
 
-        /// <summary>
-        /// The body part of the story’s DOM. This attribute contains the Xml node of body. All relevant content for PDF production is contained between “<body>” and “</body>”.
-        /// </summary>
+        public delegate string ContentFunction(List<Position> positions);
+        public delegate (Rect, Rect, IdentityMatrix) RectFunction(int rectN, Rect filled); // Define the delegate signature according to actual use
+
         public MuPDFXml Body
         {
             get
@@ -24,9 +24,7 @@ namespace MuPDF.NET
             }
         }
 
-
-
-        public MuPDFStory(string html = "", string userCss = null, int em = 12, MuPDFArchive archive = null)
+        public MuPDFStory(string html = "", string userCss = null, float em = 12, MuPDFArchive archive = null)
         {
             byte[] bytes = Encoding.UTF8.GetBytes(html);
             
@@ -357,16 +355,22 @@ namespace MuPDF.NET
             Fit(WidthFn, rect, widthMin, widthMax, delta, verbose);
         }
 
-        public MuPDFDocument WriteWithLinks(FitResult fit)
+        public MuPDFDocument WriteWithLinks(RectFunction rectFn, Action<Position> positionfn, Action<int, Rect, MuPDFDeviceWrapper, bool> pageFn)
         {
             MemoryStream stream = new MemoryStream(100);
             MuPDFDocumentWriter writer = new MuPDFDocumentWriter(stream);
             List<Position> positions = new List<Position>();
 
-            Write(writer, fit);
+            Action<Position> positionfn2 = position =>
+            {
+                positions.Add(position);
+                positionfn(position);
+            };
+
+            Write(writer, rectFn, positionFn: positionfn2, pageFn);
             writer.Close();
             stream.Seek(0, SeekOrigin.Begin);
-            return AddPdfLinks(stream, positions);
+            return MuPDFStory.AddPdfLinks(stream, positions);
         }
 
         /// <summary>
@@ -374,7 +378,7 @@ namespace MuPDF.NET
         /// </summary>
         /// <param name="writer"></param>
         /// <param name="fit"></param>
-        public void Write(MuPDFDocumentWriter writer, FitResult fit) // issue
+        public void Write(MuPDFDocumentWriter writer, RectFunction rectFn, Action<Position> positionFn, Action<int, Rect, MuPDFDeviceWrapper, bool> pageFn) // issue
         {
             MuPDFDeviceWrapper dev = null;
             int pageNum = 0;
@@ -382,14 +386,20 @@ namespace MuPDF.NET
             Rect filled = new Rect(0, 0, 0, 0);
             while (true)
             {
-                (Rect mediabox, Rect rect, IdentityMatrix ctm) = Utils.RectFunction(fit);// issue
+                (Rect mediabox, Rect rect, IdentityMatrix ctm) = rectFn(rectNum, filled);// issue
                 rectNum += 1;
                 if (mediabox != null)
                     pageNum += 1;
                 (bool more, filled) = Place(rect);
-                if (false) // if (positionFn)
+                if (positionFn != null) // if (positionFn)
                 {
+                    Action<Position> positionFn2 = position =>
+                    {
+                        position.PageNum = pageNum;
+                        positionFn(position);
+                    };
 
+                    ElementPositions(positionFn);
                 }
 
                 if (writer != null)
@@ -398,24 +408,24 @@ namespace MuPDF.NET
                     {
                         if (dev != null)
                         {
-                            if (false) // if (pageFn)
+                            if (pageFn != null)
                             {
-
+                                pageFn(pageNum, mediabox, dev, true);
                             }
                             writer.EndPage();
                         }
                         dev = writer.BeginPage(mediabox);
-                        if (false) // if (pageFn)
+                        if (pageFn != null)
                         {
-                            // pass
+                            pageFn(pageNum, mediabox, dev, false);
                         }
                     }
                     Draw(dev.ToFzDevice(), ctm);
                     if (!more)
                     {
-                        if (false) // if (pageFn)
+                        if (pageFn != null)
                         {
-                            // pass
+                            pageFn(pageNum, mediabox, dev, true);
                         }
                         writer.EndPage();
                     }
@@ -425,6 +435,117 @@ namespace MuPDF.NET
 
                 if (!more)
                     break;
+            }
+        }
+
+        public static MuPDFDocument WriteStabilizedWithLinks(
+            ContentFunction contentfn,
+            RectFunction rectfn,
+            string userCss = null,
+            int em = 12,
+            Action<Position> positionfn = null,
+            Action<int, Rect, MuPDFDeviceWrapper, bool> pagefn = null,
+            MuPDFArchive archive = null,
+            bool addHeaderIds = true
+            )
+        {
+            MemoryStream stream = new MemoryStream();
+            MuPDFDocumentWriter writer = new MuPDFDocumentWriter(stream);
+            List<Position> positions = new List<Position>();
+
+            Action<Position> positionfn2 = position =>
+            {
+                positions.Add(position);
+                positionfn(position);
+            };
+
+            MuPDFStory.WriteStabilized(writer, contentfn, rectfn, userCss, em, positionfn2, pagefn, archive, addHeaderIds);
+            writer.Close();
+            stream.Seek(0, SeekOrigin.Begin);
+            return MuPDFStory.AddPdfLinks(stream, positions);
+        }
+
+        public void ElementPositions(Action<Position> function, Dictionary<string, dynamic> args = null)
+        {
+            if (args == null)
+            {
+                args = new Dictionary<string, dynamic>();
+            }
+
+            Action<Position> function2 = position =>
+            {
+                Position position2 = new Position
+                {
+                    Depth = position.Depth,
+                    Heading = position.Heading,
+                    Id = position.Id,
+                    Rect = position.Rect,
+                    Text = position.Text,
+                    OpenClose = position.OpenClose,
+                    RectNum = position.RectNum,
+                    Href = position.Href
+                };
+                if (args != null)
+                {
+                    foreach ((string k, var v) in args)
+                    {
+                        // position2
+                    }
+                }
+                function(position2);
+            };
+            
+        }
+
+        public static void WriteStabilized(
+            MuPDFDocumentWriter writer, // Assuming Writer is a defined class
+            ContentFunction contentfn,
+            RectFunction rectfn,
+            string userCss = null,
+            int em = 12,
+            Action<Position> positionfn = null,
+            Action<int, Rect, MuPDFDeviceWrapper, bool> pageFn = null,
+            MuPDFArchive archive = null, // Assuming Archive is a defined class
+            bool addHeaderIds = true
+            )
+        {
+            List<Position> positions = new List<Position>();
+            string content = null;
+
+            while (true)
+            {
+                string contentPrev = content;
+                content = contentfn(positions);
+                bool stable = false;
+                if (content == contentPrev)
+                {
+                    stable = true;
+                }
+                string content2 = content;
+                MuPDFStory story = new MuPDFStory(content2, userCss, em, archive); // Assuming Story is a defined class
+                if (addHeaderIds)
+                {
+                    story.AddHeaderIds(); // Assuming AddHeaderIds is a method of Story
+                }
+                positions.Clear();
+                void Positionfn2(Position position)
+                {
+                    positions.Add(position);
+                    if (stable && positionfn != null)
+                    {
+                        positionfn(position);
+                    }
+                }
+                story.Write(
+                    stable ? writer : null,
+                    rectfn,
+                    Positionfn2,
+                    pageFn
+                );
+                if (stable)
+                {
+                    break;
+                }
             }
         }
     }
