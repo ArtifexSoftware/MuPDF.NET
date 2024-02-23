@@ -1839,10 +1839,10 @@ namespace MuPDF.NET
             PdfObj stream = null;
             obj = o.pdf_dict_get(new PdfObj("FontFile"));
             if (obj != null)
-                stream = obj;
+                stream = obj; // pfa
             obj = o.pdf_dict_get(new PdfObj("FontFile2"));
             if (obj != null)
-                stream = obj;
+                stream = obj; // ttf
             obj = o.pdf_dict_get(new PdfObj("FontFile3"));
             if (obj != null)
             {
@@ -1854,9 +1854,9 @@ namespace MuPDF.NET
                     return null;
                 }
 
-                if (obj.pdf_name_eq(new PdfObj("Type1C")) != 0) { }
-                else if (obj.pdf_name_eq(new PdfObj("CIDFontType0C")) != 0) { }
-                else if (obj.pdf_name_eq(new PdfObj("OpenType")) != 0) { }
+                if (obj.pdf_name_eq(new PdfObj("Type1C")) != 0) { } // cff
+                else if (obj.pdf_name_eq(new PdfObj("CIDFontType0C")) != 0) { } //cid
+                else if (obj.pdf_name_eq(new PdfObj("OpenType")) != 0) { } // otf
                 else Console.WriteLine("warning: unhandled font type {pdf_to_name(ctx, obj)!r}");
             }
 
@@ -2571,14 +2571,47 @@ namespace MuPDF.NET
             return Utils.ANNOT_ID_STEM;
         }
 
-        public static (Rect, Rect, IdentityMatrix) RectFunction(FitResult fit) // issue, originally, two parameters in PyMuPDF
+        public static PdfAnnot GetAnnotByName(MuPDFPage page, string name)
         {
-            return (fit.Rect, fit.Rect, new IdentityMatrix());
+            if (name == null)
+                return null;
+            PdfAnnot annot = mupdf.mupdf.pdf_first_annot(page.GetPdfPage());
+            bool found = false;
+            while (true)
+            {
+                if (annot == null)
+                    break;
+                (string res, ulong len) = annot.pdf_annot_obj().pdf_to_string();
+                if (name == res)
+                {
+                    found = true;
+                    break;
+                }
+                annot = annot.pdf_next_annot();
+            }
+            if (!found)
+                throw new Exception($"'{name}' is not an annot of this page");
+            return annot;
         }
 
-        public static void PositionFn2(Position pos, int pageNumber)
+        public static PdfAnnot GetAnnotByXref(MuPDFPage page, int xref)
         {
-            pos.PageNum = pageNumber;
+            bool found = false;
+            PdfAnnot annot = page.GetPdfPage().pdf_first_annot();
+            while (true)
+            {
+                if (annot == null)
+                    break;
+                if (xref == annot.pdf_annot_obj().pdf_to_num())
+                {
+                    found = true;
+                    break;
+                }
+                annot = annot.pdf_next_annot();
+            }
+            if (!found)
+                throw new Exception($"xref {xref} is not an annot of this page");
+            return annot;
         }
 
     }

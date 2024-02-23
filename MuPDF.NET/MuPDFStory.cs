@@ -61,6 +61,10 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// Get Document object
+        /// </summary>
+        /// <returns></returns>
         public MuPDFXml GetDocument()
         {
             FzXml dom = _nativeStory.fz_story_document();
@@ -353,7 +357,7 @@ namespace MuPDF.NET
 
         public MuPDFDocument WriteWithLinks(RectFunction rectFn, Action<Position> positionfn, Action<int, Rect, MuPDFDeviceWrapper, bool> pageFn)
         {
-            MemoryStream stream = new MemoryStream();
+            MemoryStream stream = new MemoryStream(100);
             MuPDFDocumentWriter writer = new MuPDFDocumentWriter(stream);
             List<Position> positions = new List<Position>();
 

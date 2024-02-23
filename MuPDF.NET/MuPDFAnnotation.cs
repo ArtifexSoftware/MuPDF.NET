@@ -15,6 +15,8 @@ namespace MuPDF.NET
 
         public bool IsOwner = false;
 
+        public bool ThisOwn = false;
+
         delegate string LE_FUNCTION(MuPDFAnnotation annot, Point p1, Point p2, bool lr, float[] fillColor);
 
         internal Rect Rect
@@ -25,7 +27,7 @@ namespace MuPDF.NET
             }
         }
 
-        internal MuPDFPage _parent
+        internal MuPDFPage Parent
         {
             get
             {
@@ -39,7 +41,7 @@ namespace MuPDF.NET
             }
             set
             {
-                _parent = value;
+                Parent = value;
             }
         }
 
@@ -61,8 +63,8 @@ namespace MuPDF.NET
                     val = ap.pdf_dict_get_rect(new PdfObj("BBOX"));
                 }
                 Rect ret = new Rect(val);
-                ret = ret * _parent.TransformationMatrix;
-                ret = ret * _parent.DerotationMatrix;
+                ret = ret * Parent.TransformationMatrix;
+                ret = ret * Parent.DerotationMatrix;
                 return ret;
             }
         }
@@ -351,8 +353,8 @@ namespace MuPDF.NET
                 }
 
                 Rect val = new Rect(rect);
-                val = val * _parent.TransformationMatrix;
-                val *= _parent.DerotationMatrix;
+                val = val * Parent.TransformationMatrix;
+                val *= Parent.DerotationMatrix;
 
                 return val;
             }
@@ -381,7 +383,7 @@ namespace MuPDF.NET
             get
             {
                 Rect val = new Rect(_nativeAnnotion.pdf_bound_annot());
-                val *= _parent.DerotationMatrix;
+                val *= Parent.DerotationMatrix;
 
                 return val;
             }
@@ -1135,7 +1137,7 @@ namespace MuPDF.NET
 
         private void SetApnBbox(Rect bbox)
         {
-            MuPDFPage page = _parent;
+            MuPDFPage page = Parent;
             Matrix rot = page.DerotationMatrix;
             Matrix mat = page.TransformationMatrix;
             bbox = bbox * (rot * ~mat);
@@ -1374,7 +1376,7 @@ namespace MuPDF.NET
 
         public void SetColors(ColorStruct? colors = null, float[] stroke = null, float[] fill = null)
         {
-            MuPDFDocument doc = _parent.Parent;
+            MuPDFDocument doc = Parent.Parent;
 
             ColorStruct colors_ = new ColorStruct();
             if (colors == null)
@@ -1743,7 +1745,7 @@ namespace MuPDF.NET
                 byte[] bFill = ColorString(fill, "f");
                 byte[] bStroke = ColorString(stroke, "f");
 
-                Matrix pCTM = _parent.TransformationMatrix;
+                Matrix pCTM = Parent.TransformationMatrix;
                 Matrix iMat = ~pCTM;
                 string dashStr = "";
                 List<byte> bDash = new List<byte>();

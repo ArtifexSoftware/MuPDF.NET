@@ -38,7 +38,5 @@ namespace MuPDF.NET
         {
             _nativeDocumentWriter.fz_end_page();
         }
-
-
     }
 }
