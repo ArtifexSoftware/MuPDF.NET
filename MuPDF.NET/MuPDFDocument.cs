@@ -73,7 +73,13 @@ namespace MuPDF.NET
             }
         }
 
-        public MuPDFDocument(dynamic filename = null, byte[] stream = null, string filetype = null,
+        public MuPDFDocument(PdfDocument doc)
+        {
+            PdfDocument = doc;
+            IsPDF = true;
+        }
+
+        public MuPDFDocument(string filename = null, byte[] stream = null, string filetype = null,
             Rect rect = null, float width = 0, float height = 0, int fontSize = 11)
         {
             try
@@ -84,27 +90,13 @@ namespace MuPDF.NET
                 FontInfo = new List<FontStruct>();
                 PageRefs = new Dictionary<int, MuPDFPage>();
 
-                if (filename is PdfDocument)
-                {
-                    this.PdfDocument = filename;
-                    IsPDF = true;
-                    return;
-                }
-
-                if (filename == null || filename is string)
-                {
-                    // pass
-                }
-                else
-                    throw new Exception("Bad filename");
-
                 if (stream != null)
                     Stream = new List<byte>(stream);
                 else
                     Stream = null;
 
-                bool fromFile = false;
-                if (filename != null && stream is null)
+                bool fromFile;
+                if (filename != null && stream == null)
                 {
                     fromFile = true;
                     Name = filename;
@@ -115,15 +107,16 @@ namespace MuPDF.NET
                     Name = "";
                 }
 
-                string msg = "";
+                string msg;
                 if (fromFile)
                 {
                     if (!File.Exists(filename))
                     {
-                        msg = $"no such file: {filename}";
-                        throw new FileNotFoundException();
+                        msg = $"No such file: {filename}";
+                        throw new FileNotFoundException(msg);
                     }
-                    // is file test
+                    _nativeDocument = new FzDocument(filename);
+                    return;
                 }
 
                 if (fromFile && (new FileInfo(filename).Length == 0 || Stream.Count == 0))
@@ -141,7 +134,7 @@ namespace MuPDF.NET
                     h = r.y1 - r.y0;
                 }
 
-                FzStream data = null;
+                FzStream data;
                 FzDocument doc = null;
                 if (stream != null)
                 {
@@ -150,7 +143,7 @@ namespace MuPDF.NET
                     SWIGTYPE_p_unsigned_char swigData = new SWIGTYPE_p_unsigned_char(dataPtr, true);
                     data = mupdf.mupdf.fz_open_memory(swigData, (uint)stream.Length);
                 
-                    Marshal.FreeHGlobal(dataPtr);
+                    //Marshal.FreeHGlobal(dataPtr);
                     string magic = filename;
                     if (magic == null)
                         magic = filetype;
@@ -160,7 +153,7 @@ namespace MuPDF.NET
                 {
                     if (filename != null)
                     {
-                        if (filename == null)
+                        if (filetype == null)
                         {
                             try
                             {
@@ -180,7 +173,7 @@ namespace MuPDF.NET
                                 {
                                     try
                                     {
-                                        doc = mupdf.mupdf.ll_fz_document_open_fn_call(handler.open, filename);
+                                        doc.m_internal = mupdf.mupdf.ll_fz_document_open_fn_call(handler.open, filename);
                                     }
                                     catch (Exception)
                                     {
@@ -243,11 +236,6 @@ namespace MuPDF.NET
             {
                 //issue
             }
-        }
-
-        public MuPDFDocument(string filename)
-        {
-            _nativeDocument = new FzDocument(filename);
         }
 
         public byte[] Convert2Pdf(int from = 0, int to = -1, int rotate = 0)
@@ -319,11 +307,6 @@ namespace MuPDF.NET
                 Console.WriteLine($"{Utils.MUPDF_WARNINGS_STORE[i]}");
             }
             return docBytes;
-        }
-
-        public MuPDFDocument(PdfDocument doc)
-        {
-            _nativeDocument = new FzDocument(doc);
         }
 
         public int GetPageCount()

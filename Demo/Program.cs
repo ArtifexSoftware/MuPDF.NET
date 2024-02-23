@@ -9,29 +9,30 @@ namespace Demo
     {
         static void Main(string[] args)
         {
+            string fileName = "1.pdf";
+            byte[] buff = null;
+            FileStream fs = new FileStream(fileName,
+                                           FileMode.Open,
+                                           FileAccess.Read);
+            BinaryReader br = new BinaryReader(fs);
+            long numBytes = new FileInfo(fileName).Length;
+            buff = br.ReadBytes((int)numBytes);
 
-            MuPDFDocument doc = new MuPDFDocument("1.pdf");
+            MuPDFDocument doc = new MuPDFDocument(filename: "pdf", buff);
 
-            /*MuPDFPage page = new MuPDFPage(doc.GetPage(0), doc);
+            MuPDFPage page = new MuPDFPage(doc.GetPage(0), doc);
 
-            page.InsertHtmlBox(new Rect(0, 0, 400, 400), text: "<b>hello world</b>", rotate: 90);
-            *//*List<Quad> matches = page.SearchFor("the");
+            /*List<Quad> matches = page.SearchFor("the");
 
             if (matches.Count > 0)
-                page.AddStrikeoutAnnot(matches);*//*
+                page.AddStrikeoutAnnot(matches);*/
+
+            page.InsertHtmlBox(new Rect(0, 0, 400, 400), text: "<b>hello world</b>", rotate: 90);
+            
 
             //doc.InsertPage(3, text: "hello", fontName: "kenpixel", fontFile: "./kenpixel.ttf");
 
-            doc.Save("output.pdf");*/
-
-            List<List<dynamic>> fonts = doc.GetPageFonts(0);
-            foreach (List<dynamic> font in fonts)
-            {
-                foreach (dynamic e in  font)
-                {
-                    Console.WriteLine(e);
-                }
-            }
+            doc.Save("output.pdf");
         }
 
     }
