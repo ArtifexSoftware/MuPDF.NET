@@ -628,7 +628,7 @@ namespace MuPDF.NET
         /// <param name="text">the top left point of a 20 x 20 rectangle containing the MuPDF-provided “note” icon.</param>
         /// <param name="icon">the top left point of a 20 x 20 rectangle containing the MuPDF-provided “note” icon.</param>
         /// <returns></returns>
-        private MuPDFAnnotation AddTextAnnot(Point point, string text, string icon = null)
+        public MuPDFAnnotation AddTextAnnot(Point point, string text, string icon = "Note")
         {
             PdfPage page = _nativePage;
             PdfAnnot annot = page.pdf_create_annot(pdf_annot_type.PDF_ANNOT_TEXT);
@@ -706,9 +706,11 @@ namespace MuPDF.NET
                 if (oldRotation != 0)
                     SetRotation(0);
             }
-            AnnotPreProcess(this);
+            AnnotPostProcess(this, ret);
             return ret;
         }
+
+
 
         public int AnnotPreProcess(MuPDFPage page)
         {
@@ -718,6 +720,67 @@ namespace MuPDF.NET
             if (oldRotation != 0)
                 page.SetRotation(0);
             return oldRotation;
+        }
+
+        public void AnnotPostProcess(MuPDFPage page, MuPDFAnnotation annot)
+        {
+            annot.Parent = page;
+            if (page.AnnotRefs.Keys.Contains(annot.GetHashCode()))
+                page.AnnotRefs[annot.GetHashCode()] = annot;
+            else
+                page.AnnotRefs.Add(annot.GetHashCode(), annot);
+            annot.ThisOwn = true;
+        }
+
+        public MuPDFAnnotation AddPolygonAnnot(List<Point> points)
+        {
+            int oldRotation = AnnotPreProcess(this);
+            MuPDFAnnotation annot;
+            try
+            {
+                annot = AddMultiLine(points, PdfAnnotType.PDF_ANNOT_POLYGON);
+            }
+            finally
+            {
+                if (oldRotation != 0)
+                    SetRotation(oldRotation);
+            }
+            AnnotPostProcess(this, annot);
+            return annot;
+        }
+
+        public MuPDFAnnotation AddPolylineAnnot(List<Point> points)
+        {
+            int oldRotation = AnnotPreProcess(this);
+            MuPDFAnnotation annot;
+            try
+            {
+                annot = AddMultiLine(points, PdfAnnotType.PDF_ANNOT_POLY_LINE);
+            }
+            finally
+            {
+                if (oldRotation != 0)
+                    SetRotation(oldRotation);
+            }
+            AnnotPostProcess(this, annot);
+            return annot;
+        }
+
+        public MuPDFAnnotation AddRectAnnot(Rect rect)
+        {
+            int oldRotation = AnnotPreProcess(this);
+            MuPDFAnnotation annot;
+            try
+            {
+                annot = AddSequareOrCircle(rect, PdfAnnotType.PDF_ANNOT_SQUARE);
+            }
+            finally
+            {
+                if (oldRotation != 0)
+                    SetRotation(oldRotation);
+            }
+            AnnotPostProcess(this, annot);
+            return annot;
         }
 
         private List<Rect> GetHighlightSelection(List<Quad> quads, Point start, Point stop, Rect clip)
@@ -1650,6 +1713,63 @@ namespace MuPDF.NET
             if (page == null)
                 return null;
             return Utils.GetAnnotXrefList(page.obj());
+        }
+
+        public List<(int, pdf_annot_type, string)> GetUnusedAnnotXrefs()
+        {
+            PdfPage page = GetPdfPage();
+            if (page == null)
+                return null;
+            return Utils.GetAnnotXrefList(page.obj());
+        }
+
+        public void GetAnnots(List<PdfAnnotType> types = null)
+        {
+            List<PdfAnnotType> skipTypes = new List<PdfAnnotType>() { PdfAnnotType.PDF_ANNOT_LINK, PdfAnnotType.PDF_ANNOT_POPUP, PdfAnnotType.PDF_ANNOT_WIDGET };
+            List<int> annotXrefs = new List<int>();
+            foreach ((int, pdf_annot_type, string) annot in GetAnnotXrefs())
+            {
+                if (types == null)
+                {
+                    if (!skipTypes.Contains((PdfAnnotType)annot.Item2))
+                        annotXrefs.Add(annot.Item1);
+                }
+                else
+                {
+                    if (!skipTypes.Contains((PdfAnnotType)annot.Item2) && types.Contains((PdfAnnotType)annot.Item2))
+                        annotXrefs.Add(annot.Item1);
+                }
+            }
+
+            foreach (int xref in annotXrefs)
+            {
+                // issue
+            }
+        }
+
+        public MuPDFAnnotation LoadAnnot(string name)
+        {
+            MuPDFAnnotation val = _LoadAnnot(name, 0);
+            if (val == null)
+                return null;
+            val.ThisOwn = true;
+            val.Parent = this;
+            if (AnnotRefs.Keys.Contains(val.GetHashCode()))
+                AnnotRefs[val.GetHashCode()] = val;
+            else AnnotRefs.Add(val.GetHashCode(), val);
+
+            return val;
+        }
+
+        private MuPDFAnnotation _LoadAnnot(string name, int xref)
+        {
+            PdfPage page = GetPdfPage();
+            PdfAnnot annot;
+            if (xref == 0)
+                annot = Utils.GetAnnotByName(this, name);
+            else
+                annot = Utils.GetAnnotByXref(this, xref);
+            return annot == null ? null : new MuPDFAnnotation(annot);
         }
 
         public Link LoadLinks()
