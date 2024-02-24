@@ -2614,5 +2614,32 @@ namespace MuPDF.NET
             return annot;
         }
 
+        public static void StoreShrink(int percent)
+        {
+            if (percent >= 100)
+            {
+                mupdf.mupdf.fz_empty_store();
+                return;
+            }
+            if (percent > 0)
+                mupdf.mupdf.fz_shrink_store((uint)(100 - percent));
+        }
+
+        public static void RefreshLinks(PdfPage page)
+        {
+            if (page == null)
+                return;
+            PdfObj obj = page.obj().pdf_dict_get(new PdfObj("Annots"));
+            if (obj != null)
+            {
+                PdfDocument pdf = page.doc();
+                int number = pdf.pdf_lookup_page_number(page.obj());
+                FzRect pageMediabox = new FzRect();
+                FzMatrix pageCtm = new FzMatrix();
+                page.pdf_page_transform(pageMediabox, pageCtm);
+                FzLink link = pdf.pdf_load_link_annots(page, obj, number, pageCtm);
+                page.m_internal.links = mupdf.mupdf.ll_fz_keep_link(link.m_internal);
+            }
+        }
     }
 }

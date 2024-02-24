@@ -355,7 +355,7 @@ namespace MuPDF.NET
             Fit(WidthFn, rect, widthMin, widthMax, delta, verbose);
         }
 
-        public MuPDFDocument WriteWithLinks(RectFunction rectFn, Action<Position> positionfn, Action<int, Rect, MuPDFDeviceWrapper, bool> pageFn)
+        public MuPDFDocument WriteWithLinks(RectFunction rectFn = null, Action<Position> positionfn = null, Action<int, Rect, MuPDFDeviceWrapper, bool> pageFn = null)
         {
             MemoryStream stream = new MemoryStream(100);
             MuPDFDocumentWriter writer = new MuPDFDocumentWriter(stream);

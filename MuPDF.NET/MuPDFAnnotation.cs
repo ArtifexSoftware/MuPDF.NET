@@ -567,7 +567,7 @@ namespace MuPDF.NET
             IsOwner = true;
         }
 
-        private void Erase()
+        public void Erase()
         {
             IsOwner = false;
         }
@@ -944,6 +944,9 @@ namespace MuPDF.NET
             }
             return filter;
         }
+
+
+        public PdfAnnot ToPdfAnnot() { return _nativeAnnotion; }
 
         public static PdfAnnot FindAnnotIRT(PdfAnnot annot)
         {
