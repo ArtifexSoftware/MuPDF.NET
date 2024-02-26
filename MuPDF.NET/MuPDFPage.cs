@@ -26,7 +26,7 @@ namespace MuPDF.NET
 
         public int Number { get; set; }
 
-        public bool IsOwn { get; set; }
+        public bool ThisOwn { get; set; }
 
         public Point MediaBoxSize
         {
@@ -273,6 +273,10 @@ namespace MuPDF.NET
             get
             {
                 return _parent;
+            }
+            set
+            {
+                Parent = value;
             }
         }
 
@@ -710,8 +714,6 @@ namespace MuPDF.NET
             return ret;
         }
 
-
-
         public int AnnotPreProcess(MuPDFPage page)
         {
             if (!page.Parent.IsPDF)
@@ -1049,7 +1051,7 @@ namespace MuPDF.NET
         {
             AnnotRefs.Clear();
         }
-        private void Erase()
+        public void Erase()
         {
             this.ResetAnnotRefs();
             try
@@ -1062,7 +1064,7 @@ namespace MuPDF.NET
             }
 
             _parent = null;
-            IsOwn = false;
+            ThisOwn = false;
             Number = 0;
         }
 
@@ -1300,7 +1302,7 @@ namespace MuPDF.NET
                 spareHeight = 0;
 
             //story // issue
-            MuPDFDocument doc = new MuPDFDocument();
+            MuPDFDocument doc = story.WriteWithLinks();
 
             if (0 <= opacity && opacity < 1)
             {
@@ -1747,9 +1749,28 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// PDF only: return the annotation identified by ident. This may be its unique name (PDF /NM key), or its xref.
+        /// </summary>
+        /// <param name="name"></param>
+        /// <returns></returns>
         public MuPDFAnnotation LoadAnnot(string name)
         {
             MuPDFAnnotation val = _LoadAnnot(name, 0);
+            if (val == null)
+                return null;
+            val.ThisOwn = true;
+            val.Parent = this;
+            if (AnnotRefs.Keys.Contains(val.GetHashCode()))
+                AnnotRefs[val.GetHashCode()] = val;
+            else AnnotRefs.Add(val.GetHashCode(), val);
+
+            return val;
+        }
+
+        public MuPDFAnnotation LoadAnnot(int xref)
+        {
+            MuPDFAnnotation val = _LoadAnnot(null, xref);
             if (val == null)
                 return null;
             val.ThisOwn = true;
@@ -1772,6 +1793,10 @@ namespace MuPDF.NET
             return annot == null ? null : new MuPDFAnnotation(annot);
         }
 
+        /// <summary>
+        /// Return the first link on a page. Synonym of property first_link.
+        /// </summary>
+        /// <returns>Return the first link on a page. Synonym of property first_link.</returns>
         public Link LoadLinks()
         {
             FzLink _val = mupdf.mupdf.fz_load_links(AsFzPage(_nativePage));
@@ -1781,7 +1806,7 @@ namespace MuPDF.NET
             Link val = new Link(_val);
             val.ThisOwn = true;
             val.Parent = this;
-            AnnotRefs.Add(val.GetHashCode(), val);
+            AnnotRefs.Add(_val.GetHashCode(), val);// issue
 
             val.Xref = 0;
             val.Id = "";
@@ -1804,9 +1829,279 @@ namespace MuPDF.NET
             return val;
         }
 
+        
+
+        public MuPDFAnnotation DeleteAnnot(MuPDFAnnotation annot)
+        {
+            PdfPage page = GetPdfPage();
+            while ( true )
+            {
+                PdfAnnot irtAnnot = MuPDFAnnotation.FindAnnotIRT(annot.ToPdfAnnot());
+                if (irtAnnot == null)
+                    break;
+                page.pdf_delete_annot(irtAnnot);
+            }
+            PdfAnnot nextAnnot = annot.ToPdfAnnot().pdf_next_annot();
+            page.pdf_delete_annot(annot.ToPdfAnnot());
+            MuPDFAnnotation val = new MuPDFAnnotation(nextAnnot);
+
+            if (val != null)
+            {
+                val.ThisOwn = true;
+                val.Parent = this;
+                if (AnnotRefs.Keys.Contains(val.GetHashCode()))
+                    AnnotRefs[val.GetHashCode()] = val;
+                else AnnotRefs.Add(val.GetHashCode(), val);
+            }
+            annot.Erase();
+            return val;
+        }
+
+        public void DeleteLink(LinkStruct link)
+        {
+            void Finished()
+            { 
+                if (link.Xref == 0) return;
+                try
+                {
+                    string linkId = link.Id;
+                    var linkObj = AnnotRefs[0];// MuPDFAnnotation or Link, Widget
+                    linkObj.Erase();
+                }
+                catch (Exception ex)
+                {
+                    // pass
+                }
+            }
+
+            PdfPage page = _nativePage;
+            if (page == null)
+            {
+                Finished();
+                return;
+            }
+
+            int xref = link.Xref;
+            if (xref < 1)
+            {
+                Finished();
+                return;
+            }
+
+            PdfObj annots = page.obj().pdf_dict_get(new PdfObj("Annots"));
+            if (annots == null)
+            {
+                Finished();
+                return;
+            }
+
+            int len = annots.pdf_array_len();
+            if (len == 0)
+            {
+                Finished();
+                return;
+            }
+
+            int oxref = 0;
+            int i;
+            for (i = 0; i < len; i++)
+            {
+                oxref = annots.pdf_array_get(i).pdf_to_num();
+                if (xref == oxref)
+                    break;
+            }
+
+            if (xref != oxref)
+            {
+                Finished();
+                return;
+            }
+            annots.pdf_array_delete(i);
+            page.doc().pdf_delete_object(xref);
+            page.obj().pdf_dict_put(new PdfObj("Annots"), annots);
+
+            Utils.RefreshLinks(page);
+            Finished();
+        }
+
+        public void Refresh()
+        {
+            MuPDFDocument doc = Parent;
+            MuPDFPage page = doc.ReloadPage(this);
+            // issue
+        }
+
+        public void ExtendTextPage(MuPDFSTextPage tpage, int flags = 0, Matrix m = null)
+        {
+            PdfPage page = _nativePage;
+            FzStextPage tp = tpage._nativeSTextPage;
+            FzStextOptions options = new FzStextOptions();
+            options.flags = flags;
+
+            FzDevice dev = new FzDevice(tp, options);
+            mupdf.mupdf.fz_run_page(page.super(), dev, m.ToFzMatrix(), new FzCookie());
+            mupdf.mupdf.fz_close_device(dev);
+        }
+
+        public List<Rect> GetBboxlog(bool layers = false)
+        {
+            int oldRotation = Rotation;
+            if (oldRotation != 0)
+                SetRotation(0);
+
+            FzPage page = _nativePage.super();
+            List<Rect> rc = new List<Rect>();
+
+            BoxDevice dev = new BoxDevice(rc, layers);
+            page.fz_run_page(dev, new FzMatrix(), new FzCookie());
+            dev.fz_close_device();
+
+            if (oldRotation != 0)
+                SetRotation(oldRotation);
+            return rc;
+        }
+
+        public List<Rect> GetCDrawings(bool extended = false) // not complete
+        {
+            int oldRotation = Rotation;
+            if (oldRotation != 0)
+                SetRotation(0);
+
+            FzPage page = new FzPage(_nativePage);
+            bool clips = extended ? true : false;
+            FzRect prect = page.fz_bound_page();
+
+            List<Rect> rc = new List<Rect>();
+            LineartDevice dev = new LineartDevice(clips);
+
+            dev.Ptm = new FzMatrix(1, 0, 0, -1, 0, prect.y1);
+            page.fz_run_page(dev, new FzMatrix(), new FzCookie());
+            dev.fz_close_device();
+
+            if (oldRotation != 0)
+                SetRotation(oldRotation);
+            return rc;
+        }
+
+        public void GetDrawings(bool extended = false) // not complete
+        {
+            List<string> allkeys = new List<string>() { "closePath", "fill", "color", "width", "lineCap", "lineJoin", "dashes", "stroke_opacity", "fill_opacity", "even_odd" };
+            List<Rect> val = GetCDrawings(extended);
+            
+            // issue
+        }
+
+        public void GetImageBbox(string name, bool transform = false)
+        {
+            MuPDFDocument doc = Parent;
+            if (doc.IsClosed || doc.IsEncrypted)
+                throw new Exception("document closed or encrypted");
+
+            Rect infRect = new Rect(1, 1, -1, -1);
+            Matrix nullMat = new Matrix();
+            (Rect, Matrix) rc;
+            if (transform)
+                rc = (infRect, nullMat);
+
+        }
+
         public void Dispose()
         {
             _nativePage.Dispose();
+        }
+    }
+
+    public class BoxDevice : FzDevice2
+    {
+        public List<Rect> rc;
+
+        public bool layers;
+        public BoxDevice(List<Rect> rc, bool layers) : base()
+        {
+            this.rc = rc;
+            this.layers = layers;
+
+            use_virtual_fill_path();
+            use_virtual_stroke_path();
+            use_virtual_fill_text();
+            use_virtual_stroke_text();
+            use_virtual_ignore_text();
+            use_virtual_fill_shade();
+            use_virtual_fill_image();
+            use_virtual_fill_image_mask();
+
+            use_virtual_begin_layer();
+            use_virtual_end_layer();
+        }
+
+        // not implemented some logics
+    }
+
+    public class LineartDevice : FzDevice2
+    {
+        public int SeqNo;
+        public int Depth;
+        public bool Clips;
+        public int Method;
+
+        public Dictionary<string, int> PathDict;
+        public List<int> Scissors;
+        public int LineWidth;
+        public FzMatrix Ptm;
+        public FzMatrix Ctm;
+        public FzMatrix Rot;
+
+        public FzPoint LastPoint;
+        public FzRect PathRect;
+        public int PathFactor;
+        public int LineCount;
+        public int PathType;
+        public string LayerName;
+        public LineartDevice(bool clips) : base()
+        {
+            use_virtual_fill_path();
+            use_virtual_stroke_path();
+            use_virtual_clip_path();
+            use_virtual_clip_image_mask();
+            use_virtual_clip_stroke_path();
+            use_virtual_clip_stroke_text();
+            use_virtual_clip_text();
+
+
+            use_virtual_fill_text();
+            use_virtual_stroke_text();
+            use_virtual_ignore_text();
+
+
+            use_virtual_fill_shade();
+            use_virtual_fill_image();
+            use_virtual_fill_image_mask();
+
+            use_virtual_pop_clip();
+
+            use_virtual_begin_group();
+            use_virtual_end_group();
+
+            use_virtual_begin_layer();
+            use_virtual_end_layer();
+
+            SeqNo = 0;
+            Depth = 0;
+            Clips = clips;
+            Method = 0;
+
+            PathDict = new Dictionary<string, int>();
+            Scissors = new List<int>();
+            LineWidth = 0;
+            Ptm = new FzMatrix();
+            Ctm = new FzMatrix();
+            Rot = new FzMatrix();
+            LastPoint = new FzPoint();
+            PathRect = new FzRect();
+            PathFactor = 0;
+            LineCount = 0;
+            PathType = 0;
+            LayerName = "";
         }
     }
 }

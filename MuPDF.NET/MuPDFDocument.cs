@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -774,7 +775,82 @@ namespace MuPDF.NET
             return liste;
         }
 
-        
+        public MuPDFPage LoadPage(int pageId)
+        {
+            if (IsClosed || IsEncrypted)
+                throw new Exception("document closed or encrypted");
+            int np;
+            if (pageId < 0)
+            {
+                np = GetPageCount();
+                while (pageId < 0)
+                    pageId += np;
+            }
+
+            FzPage page = _nativeDocument.fz_load_page(pageId);
+            MuPDFPage val = new MuPDFPage(page, this);
+
+            val.ThisOwn = true;
+            val.Parent = this;
+            PageRefs[val.GetHashCode()] = val;
+            val.AnnotRefs = new Dictionary<int, dynamic>();
+            val.Number = pageId;
+
+            return val;
+        }
+
+        public MuPDFPage LoadPage(int chapter, int pagenum)
+        {
+            if (IsClosed || IsEncrypted)
+                throw new Exception("document closed or encrypted");
+
+            FzPage page = _nativeDocument.fz_load_chapter_page(chapter, pagenum);
+            MuPDFPage val = new MuPDFPage(page, this);
+
+            val.ThisOwn = true;
+            val.Parent = this;
+            PageRefs[val.GetHashCode()] = val;
+            val.AnnotRefs = new Dictionary<int, dynamic>();
+            val.Number = 0;
+
+            return val;
+        }
+
+        public MuPDFPage ReloadPage(MuPDFPage page)
+        {
+            Dictionary<int, dynamic> oldAnnots = new Dictionary<int, dynamic>();
+            int pno = page.Number;
+            foreach ((int k, dynamic v) in page.AnnotRefs)
+                oldAnnots.Add(k, v);
+
+            int old_ref = page.GetPdfPage().super().m_internal.refs;
+            long m_internal_old = page.GetPdfPage().super().m_internal_value();
+
+            page.Dispose();
+            page.Erase();
+            page = null;
+            Utils.StoreShrink(100);
+
+            page = LoadPage(pno);
+
+            foreach ((int k, dynamic v) in oldAnnots)
+            {
+                dynamic annot = oldAnnots[k];
+                page.AnnotRefs[k] = annot;
+            }
+
+            if (old_ref == 1)
+            {
+                // pass
+            }
+            else
+            {
+                long m_internal_new = page.GetPdfPage().super().m_internal_value();
+                Debug.Assert(m_internal_old != m_internal_new);
+            }
+
+            return page;
+        }
 
         public FontStruct ExtractFont(int xref = 0, int infoOnly = 0, string named = null)
         {
@@ -1096,6 +1172,8 @@ namespace MuPDF.NET
 
             return destDict;
         }
+
+        
 
         public void Dispose()
         {

@@ -169,7 +169,7 @@ namespace MuPDF.NET
             return Utils.GetAnnotColors(linkObj);
         }
 
-        private void _Erase()
+        public void Erase()
         {
             Parent = null;
             ThisOwn = false;
