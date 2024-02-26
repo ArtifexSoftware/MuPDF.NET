@@ -13,7 +13,7 @@ namespace MuPDF.NET
         private FzText _nativeText;
 
         public float Opacity;
-        public MuPDFTextWriter(Rect pageRect, float opacity = 1, ColorStruct color)
+        public MuPDFTextWriter(Rect pageRect, float opacity, ColorStruct color)
         {
             _nativeText = mupdf.mupdf.fz_new_text();
             Opacity = opacity;
