@@ -1300,7 +1300,7 @@ namespace MuPDF.NET
                 spareHeight = 0;
 
             //story // issue
-            MuPDFDocument doc = story.WriteWithLinks(fit);
+            MuPDFDocument doc = new MuPDFDocument();
 
             if (0 <= opacity && opacity < 1)
             {
