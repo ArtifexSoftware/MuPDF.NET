@@ -8,6 +8,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="Program.cs~RF12e10cb.TMP" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Reference Include="MuPDF.NET">
       <HintPath>..\MuPDF.NET\bin\Release\net7.0\MuPDF.NET.dll</HintPath>
     </Reference>

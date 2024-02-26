@@ -31,6 +31,11 @@ namespace MuPDF.NET
             Add(content: dirName, path: dirName);
         }
 
+        public MuPDFArchive()
+        {
+            _subArchives = new List<SubArchiveStruct>();
+        }
+
         public MuPDFArchive(FileInfo file, string path = null)
         {
 
@@ -69,7 +74,7 @@ namespace MuPDF.NET
         {
             FzArchive sub = null;
             if (type == 1)
-                sub = mupdf.mupdf.fz_open_zip_archive(filePath);
+                sub = mupdf.mupdf.fz_open_zip_archive(filePath); // issue
             else
                 sub = mupdf.mupdf.fz_open_tar_archive(filePath);
             _nativeArchive.fz_mount_multi_archive(sub, path);
@@ -113,7 +118,7 @@ namespace MuPDF.NET
             }
         }
 
-        /*public void Add(dynamic content, string path)
+        public void Add(dynamic content, string path)
         {
             string fmt = null;
             List<string> entries = new List<string>();
@@ -132,7 +137,7 @@ namespace MuPDF.NET
                 string filename = Directory.GetParent(Directory.GetCurrentDirectory()).FullName + path;
 
                 if (filename != null)
-                    _AddZiptarFile(filename, 0, path); //issue
+                    _AddZiptarFile(filename, 1, path); //issue
                 MakeSubArch(fmt, entries, mount);
                 return;
             }
@@ -154,7 +159,7 @@ namespace MuPDF.NET
                 MakeSubArch(fmt, entries, mount);
                 return;
             }
-        }*/
+        }
 
         public void Add(FzArchive content, string path)
         {
