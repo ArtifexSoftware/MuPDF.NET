@@ -26,7 +26,9 @@ namespace MuPDF.NET
 
         public MuPDFArchive(string dirName)
         {
-
+            _subArchives = new List<SubArchiveStruct>();
+            _nativeArchive = mupdf.mupdf.fz_new_multi_archive();
+            Add(content: dirName, path: dirName);
         }
 
         public MuPDFArchive(FileInfo file, string path = null)
@@ -91,13 +93,14 @@ namespace MuPDF.NET
             {
                 Fmt = fmt, Entries = entries, Path = mount
             };
+
             if (fmt != "tree" || _subArchives.Count == 0)
             {
                 _subArchives.Add(subarch);
             }
             else
             {
-                SubArchiveStruct ltree = _subArchives[-1];
+                SubArchiveStruct ltree = _subArchives[_subArchives.Count - 1];
                 if (ltree.Fmt != "tree" || ltree.Path != subarch.Path)
                 {
                     _subArchives.Add(subarch);
@@ -110,31 +113,31 @@ namespace MuPDF.NET
             }
         }
 
-        public void Add(dynamic content, string path)
+        /*public void Add(dynamic content, string path)
         {
             string fmt = null;
             List<string> entries = new List<string>();
             string mount = null;
 
-            if (content == typeof(ZipArchive))
+            if (content is ZipArchive)
             {
                 fmt = "zip";
                 ZipArchive tmp = (content as ZipArchive);
-                
+
                 foreach (ZipArchiveEntry e in tmp.Entries)
                 {
                     entries.Add(e.FullName);
                 }
                 mount = path;
                 string filename = Directory.GetParent(Directory.GetCurrentDirectory()).FullName + path;
-                
+
                 if (filename != null)
                     _AddZiptarFile(filename, 0, path); //issue
                 MakeSubArch(fmt, entries, mount);
                 return;
             }
-            
-            if (content == typeof(TarReader))
+
+            if (content is TarReader)
             {
                 fmt = "tar";
                 TarReader tmp = content as TarReader;
@@ -151,29 +154,32 @@ namespace MuPDF.NET
                 MakeSubArch(fmt, entries, mount);
                 return;
             }
+        }*/
 
-            if (content is FzArchive)
-            {
-                fmt = "multi";
-                mount = path;
-                _AddArch(content as FzArchive, path);
-                MakeSubArch(fmt, entries, mount);
-                return;
-            }
+        public void Add(FzArchive content, string path)
+        {
+            _AddArch(content, path);
+            MakeSubArch("multi", new List<string>(), path);
+        }
 
-            if (content is byte[])
-            {
-                if (path == null)
-                    throw new Exception("need name for binary content");
-                fmt = "tree";
-                mount = null;
-                entries.Add(path);
-                _AddTreeItem(content as byte[], path);
-                MakeSubArch(fmt, entries, mount);
-                return;
-            }
+        public void Add(byte[] content, string path)
+        {
+            List<string> entries = new List<string>();
 
-            if (content is string && Directory.Exists(content))
+            if (path == null)
+                throw new Exception("Need name for binary content");
+            entries.Add(path);
+            _AddTreeItem(content as byte[], path);
+            MakeSubArch("tree", entries, null);
+        }
+
+        public void Add(string content, string path)
+        {
+            string fmt = null;
+            List<string> entries = new List<string>();
+            string mount = null;
+
+            if (Directory.Exists(content))
             {
                 fmt = "dir";
                 mount = path;
@@ -182,7 +188,7 @@ namespace MuPDF.NET
                 MakeSubArch(fmt, entries, mount);
             }
 
-            if (content is string && File.Exists(content))
+            if (File.Exists(content))
             {
                 if (path == null)
                     throw new Exception("need name for binary content");
@@ -192,10 +198,7 @@ namespace MuPDF.NET
                 entries.Add(path);
                 _AddTreeItem(ff, path);
                 MakeSubArch(fmt, entries, mount);
-                return;
             }
-
-            //issue
         }
 
         public int HasEntry(string name)
