@@ -1961,7 +1961,7 @@ namespace MuPDF.NET
             return rc;
         }
 
-        public List<Rect> GetCDrawings(bool extended = false)
+        public List<Rect> GetCDrawings(bool extended = false) // not complete
         {
             int oldRotation = Rotation;
             if (oldRotation != 0)
@@ -1983,12 +1983,26 @@ namespace MuPDF.NET
             return rc;
         }
 
-        public void GetDrawings(bool extended = false)
+        public void GetDrawings(bool extended = false) // not complete
         {
             List<string> allkeys = new List<string>() { "closePath", "fill", "color", "width", "lineCap", "lineJoin", "dashes", "stroke_opacity", "fill_opacity", "even_odd" };
             List<Rect> val = GetCDrawings(extended);
             
             // issue
+        }
+
+        public void GetImageBbox(string name, bool transform = false)
+        {
+            MuPDFDocument doc = Parent;
+            if (doc.IsClosed || doc.IsEncrypted)
+                throw new Exception("document closed or encrypted");
+
+            Rect infRect = new Rect(1, 1, -1, -1);
+            Matrix nullMat = new Matrix();
+            (Rect, Matrix) rc;
+            if (transform)
+                rc = (infRect, nullMat);
+
         }
 
         public void Dispose()
