@@ -1074,12 +1074,9 @@ namespace MuPDF.NET
             return Utils.UnicodeFromBuffer(buffer);
         }
 
-        private Dictionary<string, dynamic> GetArray(PdfObj val, Dictionary<int, int> page_refs)
+        private DestNameStruct GetArray(PdfObj val, Dictionary<int, int> page_refs)
         {
-            Dictionary<string, dynamic> template = new Dictionary<string, dynamic>()
-            {
-                {"page", -1 }, {"dest", ""}
-            };
+            DestNameStruct template = new DestNameStruct() { Page = -1, Dest = "" };
 
             string array = "";
             if (val.pdf_is_indirect() != 0)
@@ -1097,37 +1094,37 @@ namespace MuPDF.NET
             int idx = array.IndexOf("/");
             if (idx < 1)
             {
-                template["dest"] = array;
+                template.Dest = array;
                 return template;
             }
 
             string subval = array.Substring(0, idx);
             array = array.Substring(idx);
-            template["dest"] = array;
+            template.Dest = array;
 
             if (array.StartsWith("/XYZ"))
             {
-                template.Remove("dest");
+                template.Dest = "";
                 string[] arr_t = array.Split();
                 string[] arr = new string[5];
                 Array.Copy(arr_t, arr, arr_t.Length - 1);
                 float x = float.Parse(arr_t[0]);
                 float y = float.Parse(arr_t[1]);
                 float z = float.Parse(arr_t[2]);
-                template.Add("to", (x, y));
-                template.Add("zoom", z);
+                template.To = new Point(x, y);
+                template.Zoom = z;
             }
 
             // extract page number
             if (subval.Contains("0 R"))
-                template.Add("page", page_refs[int.Parse(subval.Split()[0])]);
+                template.Page = page_refs[int.Parse(subval.Split()[0])];
             else
-                template.Add("page", int.Parse(subval));
+                template.Page = int.Parse(subval);
 
             return template;
         }
 
-        private void FillDict(Dictionary<string, dynamic> destDict, PdfObj pdfDict, Dictionary<int, int> page_refs)
+        private void FillDict(Dictionary<string, DestNameStruct> destDict, PdfObj pdfDict, Dictionary<int, int> page_refs)
         {
             int nameCount = pdfDict.pdf_dict_len();
 
@@ -1145,11 +1142,17 @@ namespace MuPDF.NET
                 }
 
                 if (dictKey != null)
+                {
                     destDict.Add(dictKey, GetArray(val, page_refs));
+                }
             }
         }
 
-        public Dictionary<string, dynamic> ResolveNames()
+        /// <summary>
+        /// PDF only: Convert destination names into a Python dict.
+        /// </summary>
+        /// <returns>PDF only: Convert destination names into a Python dict.</returns>
+        public Dictionary<string, DestNameStruct> ResolveNames()
         {
             Dictionary<int, int> page_refs = new Dictionary<int, int>();
             for (int i = 0; i < Len; i++)
@@ -1159,7 +1162,7 @@ namespace MuPDF.NET
 
             // access PDF catalog
             PdfObj catalog = pdf.pdf_trailer().pdf_dict_gets("Root");
-            Dictionary<string, dynamic> destDict = new Dictionary<string, dynamic>();
+            Dictionary<string, DestNameStruct> destDict = new Dictionary<string, DestNameStruct>();
             PdfObj dests = mupdf.mupdf.pdf_new_name("Dests");
 
             PdfObj oldDests = catalog.pdf_dict_get(dests);
