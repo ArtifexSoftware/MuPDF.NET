@@ -2243,7 +2243,7 @@ namespace MuPDF.NET
                         if (olItem.Page == -1)
                         {
                             var resolve = doc.ResolveLink(olItem.Uri);
-                            page = resolve.Item1 + 1;
+                            page = resolve.Item1[0] + 1;
                         }
                         else
                             page = olItem.Page + 1;
@@ -2614,5 +2614,112 @@ namespace MuPDF.NET
             return annot;
         }
 
+        public static void PageMerge(MuPDFDocument docDes, MuPDFDocument docSrc, int pageFrom, int pageTo, int rotate,
+            int links, int copyAnnots, MuPDFGraftMap graftmap)
+        {
+            List<PdfObj> knownPageObjs = new List<PdfObj>()
+            {
+                new PdfObj("Contents"),
+                new PdfObj("Resources"),
+                new PdfObj("MediaBox"),
+                new PdfObj("CropBox"),
+                new PdfObj("BleedBox"),
+                new PdfObj("TrimBox"),
+                new PdfObj("ArtBox"),
+                new PdfObj("Rotate"),
+                new PdfObj("UserUnit")
+            };
+
+            PdfObj pageRef = docSrc.PdfDocument.pdf_lookup_page_obj(pageFrom);
+            PdfObj pageDict = docDes.PdfDocument.pdf_new_dict(4);
+            pageDict.pdf_dict_put(new PdfObj("Type"), new PdfObj("Page"));
+
+            foreach (PdfObj e in knownPageObjs)
+            {
+                PdfObj obj = pageRef.pdf_dict_get_inheritable(e);
+                if (obj != null)
+                {
+                    pageDict.pdf_dict_put(e, mupdf.mupdf.pdf_graft_mapped_object(graftmap.ToPdfGraftMap(), obj));
+                }
+            }
+
+            if (copyAnnots != 0)
+            {
+                PdfObj oldAnnots = pageRef.pdf_dict_get(new PdfObj("Annots"));
+                int n = oldAnnots.pdf_array_len();
+                if (n > 0)
+                {
+                    PdfObj newAnnots = pageDict.pdf_dict_put_array(new PdfObj("Annots"), n);
+                    for (int i = 0; i < n; i ++)
+                    {
+                        PdfObj o = oldAnnots.pdf_array_get(i);
+                        if (o == null || o.pdf_is_dict() != 0)
+                            continue;
+                        if (o.pdf_dict_gets("IRT") != null)
+                            continue;
+                        PdfObj subtype = o.pdf_dict_get(new PdfObj("Subtype"));
+                        if (subtype.pdf_name_eq(new PdfObj("Link")) != 0)
+                            continue;
+                        if (subtype.pdf_name_eq(new PdfObj("Popup")) != 0)
+                            continue;
+                        if (subtype.pdf_name_eq(new PdfObj("Widget")) != 0)
+                        {
+                            mupdf.mupdf.fz_warn("skipping widget annotation");
+                            continue;
+                        }
+
+                        o.pdf_dict_del(new PdfObj("Popup"));
+                        o.pdf_dict_del(new PdfObj("P"));
+                        PdfObj copyO = graftmap.ToPdfGraftMap().pdf_graft_mapped_object(o);
+                        PdfObj annot = docDes.PdfDocument.pdf_new_indirect(copyO.pdf_to_num(), 0);
+                        newAnnots.pdf_array_push(annot);
+                    }
+                }
+            }
+            if (rotate != -1)
+                pageDict.pdf_dict_put_int(new PdfObj("Rotate"), rotate);
+            PdfObj ref_ = docDes.PdfDocument.pdf_add_object(pageDict);
+            docDes.PdfDocument.pdf_insert_page(pageTo, ref_);
+        }
+
+        public static void MergeRange(MuPDFDocument docDes, MuPDFDocument docSrc, int spage, int epage, int apage, int rotate,
+            int links, int annots, int showProgress, MuPDFGraftMap graftmap)
+        {
+            int afterPage = apage;
+            int counter = 0;
+            int total = mupdf.mupdf.fz_absi(epage - spage) + 1;
+
+            if (spage < epage)
+            {
+                int page = spage;
+                while (page <= epage)
+                {
+                    Utils.PageMerge(docDes, docSrc, page, afterPage, rotate, links, annots, graftmap);
+                    counter += 1;
+                    if (showProgress > 0 && counter % showProgress == 0)
+                        Console.WriteLine(string.Format("Inserted {0} of {1} pages", counter, total));
+                    page += 1;
+                    afterPage += 1;
+                }
+            }
+            else
+            {
+                int page = spage;
+                while (page >= epage)
+                {
+                    Utils.PageMerge(docDes, docSrc, page, afterPage, rotate, links, annots, graftmap);
+                    counter += 1;
+                    if (showProgress > 0 && counter % showProgress == 0)
+                        Console.WriteLine(string.Format("Inserted {0} of {1} pages", counter, total));
+                    page -= 1;
+                    afterPage += 1;
+                }
+            }
+        }
+
+        /*public static void DoLinks(MuPDFDocument doc1, MuPDFDocument doc2, int fromPage = -1, int toPage = -1, int startAt = -1)
+        {
+            string CreateAnnot(LinkStruct link, )
+        }*/
     }
 }
