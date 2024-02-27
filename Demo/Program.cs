@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
+using System.IO.Compression;
 using System.Runtime.InteropServices;
 using mupdf;
 using MuPDF.NET;
@@ -27,13 +29,23 @@ namespace Demo
 
             /*doc.Save("output.pdf");*/
 
-            MuPDFArchive arch = new MuPDFArchive("../net7.0");
-            FzStream stream = new FzStream("./1.zip");
-            Console.WriteLine(stream.fz_is_zip_archive());
-            FzArchive ar = new FzArchive(stream, 435);
+            /*MuPDFDocument doc = new MuPDFDocument("1.pdf");
+            MuPDFPage page = new MuPDFPage(doc.GetPage(0), doc);
 
-            arch.Add(ar, "");
+            byte[] buf = File.ReadAllBytes("kenpixel.ttf");
+            page.InsertFont(fontName: "kenpixel", "kenpixel.ttf", fontBuffer: buf);*/
 
+            ZipArchive arch = ZipFile.OpenRead("1.zip");
+            MuPDFArchive a = new MuPDFArchive();
+            a.Add(arch, "./");
+
+            foreach (SubArchiveStruct e in a.EntryList)
+            {
+                foreach (string ee in e.Entries)
+                {
+                    Console.WriteLine(ee);
+                }
+            }
         }
 
     }

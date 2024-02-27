@@ -31,9 +31,15 @@ namespace MuPDF.NET
             Add(content: dirName, path: dirName);
         }
 
+        public MuPDFArchive()
+        {
+            _nativeArchive = mupdf.mupdf.fz_new_multi_archive();
+            _subArchives = new List<SubArchiveStruct>();
+        }
+
         public MuPDFArchive(FileInfo file, string path = null)
         {
-
+            _nativeArchive = mupdf.mupdf.fz_new_multi_archive();
         }
 
         public FzArchive ToFzArchive()
@@ -113,48 +119,48 @@ namespace MuPDF.NET
             }
         }
 
-        /*public void Add(dynamic content, string path)
+        public void Add(ZipArchive content, string path = null)
         {
-            string fmt = null;
+            string fmt = "zip";
+            string filename = path == null ? "" : Path.GetFileName(path);
             List<string> entries = new List<string>();
-            string mount = null;
-
-            if (content is ZipArchive)
+            foreach (ZipArchiveEntry e in content.Entries)
             {
-                fmt = "zip";
-                ZipArchive tmp = (content as ZipArchive);
-
-                foreach (ZipArchiveEntry e in tmp.Entries)
-                {
-                    entries.Add(e.FullName);
-                }
-                mount = path;
-                string filename = Directory.GetParent(Directory.GetCurrentDirectory()).FullName + path;
-
-                if (filename != null)
-                    _AddZiptarFile(filename, 0, path); //issue
-                MakeSubArch(fmt, entries, mount);
-                return;
+                entries.Add(e.FullName);
             }
 
-            if (content is TarReader)
+            if (filename == "")
             {
-                fmt = "tar";
-                TarReader tmp = content as TarReader;
-                TarEntry? entry;
-                while ((entry = tmp.GetNextEntry(true)) != null)
-                {
-                    entries.Add(entry.Name);
-                }
-                mount = path;
-                string filename = Directory.GetParent(Directory.GetCurrentDirectory()).FullName + path;
-
-                if (filename != null)
-                    _AddZiptarFile(filename, 0, path);
-                MakeSubArch(fmt, entries, mount);
-                return;
+                
             }
-        }*/
+            else
+            {
+                _AddZiptarFile(filename, 1, path);
+            }
+            MakeSubArch(fmt, entries, path);
+        }
+
+        public void Add(TarReader content, string path = null)
+        {
+            string fmt = "zip";
+            string filename = path == null ? "" : Path.GetFileName(path);
+            List<string> entries = new List<string>();
+            TarEntry? entry;
+            while ((entry = content.GetNextEntry(true)) != null)
+            {
+                entries.Add(entry.Name);
+            }
+
+            if (filename == "")
+            {
+
+            }
+            else
+            {
+                _AddZiptarFile(filename, 0, path);
+            }
+            MakeSubArch(fmt, entries, path);
+        }
 
         public void Add(FzArchive content, string path)
         {
