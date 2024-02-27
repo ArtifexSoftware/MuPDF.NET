@@ -3,8 +3,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection.Metadata;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.IO;
+using CoreData;
 using mupdf;
 
 
@@ -24,7 +27,7 @@ namespace MuPDF.NET
 
         public List<FontStruct> FontInfo = new List<FontStruct>();
 
-        public string GraftMaps = "";
+        public Dictionary<int, MuPDFGraftMap> GraftMaps = new Dictionary<int, MuPDFGraftMap>();
 
         public string ShownPages = "";
 
@@ -325,15 +328,14 @@ namespace MuPDF.NET
             return _nativeDocument;
         }
 
-        public static PdfDocument AsPdfDocument(dynamic document)
+        public static PdfDocument AsPdfDocument(FzDocument document)
         {
-            if (document is MuPDFDocument)
-                return document._nativeDocument.pdf_document_from_fz_document();
-            if (document is PdfDocument)
-                return document;
-            if (document is FzDocument)
-                return new PdfDocument(document);
-            return null;
+            return new PdfDocument(document);
+        }
+
+        public static PdfDocument AsPdfDocument(MuPDFDocument document)
+        {
+            return document._nativeDocument.pdf_document_from_fz_document();
         }
 
         public void InitDocument()
@@ -343,7 +345,26 @@ namespace MuPDF.NET
             Outline = LoadOutline();
             MetaData = new Dictionary<string, string>();
 
+            Dictionary<string, string> values = new Dictionary<string, string>()
+            {
+                { "format", "format" },
+                { "title", "info:Title" },
+                { "author", "info:Author" },
+                { "subject", "info:Subject" },
+                { "keywords", "info:Keywords" },
+                { "creator", "info:Creator" },
+                { "producer", "info:Producer" },
+                { "creationDate", "info:CreationDate" },
+                { "modDate", "info:ModDate" },
+                { "trapped", "info:Trapped" }
+            };
 
+            foreach ((string key, string value) in values)
+            {
+                MetaData.Add(key, GetMetadata(value));
+            }
+            string enc = GetMetadata("encryption");
+            MetaData.Add("encryption", enc == "None" ? null : enc);
         }
 
         private string GetMetadata(string key)
@@ -354,7 +375,7 @@ namespace MuPDF.NET
             }
             catch (Exception)
             {
-                return "";
+                return "None";
             }
             
         }
@@ -1034,7 +1055,7 @@ namespace MuPDF.NET
             olItem.v
         }*/
 
-        public (dynamic, float, float) ResolveLink(string uri = null, int chapters = 0)
+        public (List<int>, float, float) ResolveLink(string uri = null, int chapters = 0)
         {
             fz_location loc = null;
             float xp = 0.0f;
@@ -1043,8 +1064,8 @@ namespace MuPDF.NET
             if (uri == null)
             {
                 if (chapters != 0)
-                    return ((-1, -1), 0, 0);
-                return (-1, 0, 0);
+                    return (new List<int>() { -1, -1}, 0, 0);
+                return (new List<int>() { -1 }, 0, 0);
             }
             try
             {
@@ -1056,14 +1077,14 @@ namespace MuPDF.NET
             catch (Exception e)
             {
                 if (chapters != 0)
-                    return ((-1, -1), 0, 0);
-                return (-1, 0, 0);
+                    return (new List<int>() { -1, -1 }, 0, 0);
+                return (new List<int>() { -1 }, 0, 0);
             }
 
             if (chapters != 0)
-                return ((loc.chapter, loc.page), xp, yp);
+                return (new List<int>() { loc.chapter, loc.page }, xp, yp);
             int pno = _nativeDocument.fz_page_number_from_location(new FzLocation(loc));
-            return (pno, xp, yp);
+            return (new List<int>() { pno }, xp, yp);
         }
 
         private string ObjString(PdfObj obj)
@@ -1177,6 +1198,127 @@ namespace MuPDF.NET
         }
 
         
+        /// <summary>
+        /// PDF only: Return whether the document contains signature fields. This is an optional PDF property: if not present (return value -1), no conclusions can be drawn – the PDF creator may just not have bothered using it.
+        /// </summary>
+        /// <returns>int</returns>
+        public int GetSigFlags()
+        {
+            PdfDocument pdf = AsPdfDocument(this);
+            if (pdf == null)
+                return -1;
+            PdfObj sigflags = Utils.pdf_dict_getl(pdf.pdf_trailer(), new string[] { "Root", "AcroForm", "SigFlags" });
+            int sigflag = -1;
+            if (sigflags != null)
+                sigflag = sigflags.pdf_to_int();
+            return sigflag;
+        }
+
+        /// <summary>
+        /// PDF only: Get the document XML metadata.
+        /// </summary>
+        /// <returns>XML metadata of the document. Empty string if not present or not a PDF.</returns>
+        public string GetXmlMetadata()
+        {
+            PdfObj xml = null;
+            PdfDocument pdf = AsPdfDocument(this);
+            if (pdf != null)
+            {
+                xml = Utils.pdf_dict_getl(pdf.pdf_trailer(), new string[] { "Root", "Metadata" });
+            }
+
+            string rc = "";
+            if (xml != null)
+            {
+                FzBuffer buff = xml.pdf_load_stream();
+                rc = Utils.UnicodeFromBuffer(buff);
+            }
+
+            return rc;
+        }
+
+        /// <summary>
+        /// PDF only: Add an arbitrary supported document to the current PDF. Opens “infile” as a document, converts it to a PDF and then invokes Document.insert_pdf(). Parameters are the same as for that method. Among other things, this features an easy way to append images as full pages to an output PDF.
+        /// </summary>
+        /// <param name="infile"></param>
+        /// <param name="fromPage"></param>
+        /// <param name="toPage"></param>
+        /// <param name="startAt"></param>
+        /// <param name="rotate"></param>
+        /// <param name="links"></param>
+        /// <param name="annots"></param>
+        /// <param name="showProgress"></param>
+        /// <param name="final"></param>
+        /// <exception cref="Exception"></exception>
+        public void InsertFile(MuPDFDocument infile, int fromPage = -1, int toPage = -1, int startAt = -1, int rotate = -1,
+            bool links = true, bool annots = true, int showProgress = 0, int final = 1)
+        {
+            MuPDFDocument src = infile;
+            if (src == null)
+                throw new Exception("bad infile parameter");
+            if (!src.IsPDF)
+            {
+                byte[] pdfBytes = src.Convert2Pdf();
+                src = new MuPDFDocument("pdf", pdfBytes);
+            }
+
+            InsertPdf(src, fromPage, toPage, startAt, rotate, links, annots, showProgress, final);
+        }
+
+        public void InsertPdf(MuPDFDocument docSrc, int fromPage = -1, int toPage = -1, int startAt = -1, int rotate = -1,
+            bool links = true, bool annots = true, int showProgress = 0, int final = 1, MuPDFGraftMap gmap = null)
+        {
+            if (IsClosed || IsEncrypted)
+                throw new Exception("document closed or encrypted");
+            if (GraftID == docSrc.GraftID)
+                throw new Exception("source and target cannot be same object");
+            int sa = startAt;
+            if (sa < 0)
+                sa = GetPageCount();
+            if (docSrc.Len > showProgress && showProgress > 0)
+            {
+                string inname = Path.GetFileName(docSrc.Name);
+                if (inname == null)
+                    inname = "memory PDF";
+                string outname = Path.GetFileName(Name);
+                if (outname == null)
+                    outname = "memory PDF";
+                Console.WriteLine(string.Format("Inserting {0} at {1}", inname, outname));
+            }
+
+            int isrt = docSrc.GraftID;
+            Dictionary<string, string> t = new Dictionary<string, string>();
+
+            gmap = GraftMaps.GetValueOrDefault(isrt, null);
+
+            PdfDocument pdfout = AsPdfDocument(this);
+            PdfDocument pdfsrc = AsPdfDocument(docSrc);
+            int outCount = _nativeDocument.fz_count_pages();
+            int srcCount = docSrc.ToFzDocument().fz_count_pages();
+
+            int fp = fromPage;
+            int tp = toPage;
+            sa = startAt;
+
+            fp = Math.Max(fp, 0);
+            fp = Math.Min(fp, srcCount - 1);
+
+            if (tp < 0)
+                tp = srcCount - 1;
+            tp = Math.Min(tp, srcCount - 1);
+
+            if (sa < 0)
+                sa = outCount;
+            sa = Math.Min(sa, outCount);
+
+            if (pdfout == null || pdfsrc == null)
+                throw new Exception("source or target not a PDF");
+
+            ResetPageRefs();
+            if (links != null)
+                
+        }
+
 
         public void Dispose()
         {
