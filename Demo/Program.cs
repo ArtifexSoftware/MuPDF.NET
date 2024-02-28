@@ -29,13 +29,15 @@ namespace Demo
 
             /*doc.Save("output.pdf");*/
 
+            ////////////////////////////////
             /*MuPDFDocument doc = new MuPDFDocument("1.pdf");
             MuPDFPage page = new MuPDFPage(doc.GetPage(0), doc);
 
             byte[] buf = File.ReadAllBytes("kenpixel.ttf");
             page.InsertFont(fontName: "kenpixel", "kenpixel.ttf", fontBuffer: buf);*/
 
-            ZipArchive arch = ZipFile.OpenRead("1.zip");
+            ////////////////////////////////////
+            /*ZipArchive arch = ZipFile.OpenRead("1.zip");
             MuPDFArchive a = new MuPDFArchive();
             a.Add(arch, "./");
 
@@ -45,7 +47,17 @@ namespace Demo
                 {
                     Console.WriteLine(ee);
                 }
-            }
+            }*/
+
+            MuPDFXml xml = new MuPDFXml("<html><head><title>Hello</title></head><body><p>Hellow world!</p></body></html>");
+
+            MuPDFXml a = xml.AddParagraph();
+
+            a.AddClass("first_element");
+
+            a.AddText("hello, first element");
+
+            Console.WriteLine(xml.Text);
         }
 
     }

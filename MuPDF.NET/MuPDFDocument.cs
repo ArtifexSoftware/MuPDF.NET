@@ -7,9 +7,8 @@ using System.Reflection.Metadata;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.IO;
-using CoreData;
 using mupdf;
-
+using System.Reflection;
 
 namespace MuPDF.NET
 {
@@ -1170,10 +1169,10 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// PDF only: Convert destination names into a Python dict.
+        /// PDF only: Convert destination names into a  dict.
         /// </summary>
-        /// <returns>PDF only: Convert destination names into a Python dict.</returns>
-        public Dictionary<string, DestNameStruct> ResolveNames()
+        /// <returns>PDF only: Convert destination names into a  dict.</returns>
+        public Dictionary<string, dynamic> ResolveNames()
         {
             Dictionary<int, int> page_refs = new Dictionary<int, int>();
             for (int i = 0; i < Len; i++)
@@ -1194,7 +1193,11 @@ namespace MuPDF.NET
             if (tree.pdf_is_dict() != 0)
                 FillDict(destDict, tree, page_refs);
 
-            return destDict;
+            Dictionary<string, dynamic> ret = new Dictionary<string, dynamic>();
+            foreach ((string k, DestNameStruct v) in destDict)
+                ret.Add(k, v);
+
+            return ret;
         }
 
         
@@ -1315,7 +1318,7 @@ namespace MuPDF.NET
                 throw new Exception("source or target not a PDF");
 
             ResetPageRefs();
-            if (links != null)
+            /*if (links != null)*/
                 
         }
 

@@ -1,5 +1,4 @@
-﻿using Android.Net.Wifi.Aware;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
