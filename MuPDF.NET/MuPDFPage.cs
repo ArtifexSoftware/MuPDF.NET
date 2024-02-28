@@ -1829,8 +1829,6 @@ namespace MuPDF.NET
             return val;
         }
 
-        
-
         public MuPDFAnnotation DeleteAnnot(MuPDFAnnotation annot)
         {
             PdfPage page = GetPdfPage();

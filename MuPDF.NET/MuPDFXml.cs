@@ -98,7 +98,7 @@ namespace MuPDF.NET
                 if (_nativeXml.fz_xml_text() == null)
                     return null;
                 FzXml ret = _nativeXml.fz_dom_first_child();
-                if (ret != null)
+                if (ret.m_internal != null)
                     return new MuPDFXml(ret);
                 else
                     return null;
@@ -128,8 +128,8 @@ namespace MuPDF.NET
 
             IntPtr unmanagedPointer = Marshal.AllocHGlobal(bytes.Length);
             Marshal.Copy(bytes, 0, unmanagedPointer, bytes.Length);
-            SWIGTYPE_p_unsigned_char s = new SWIGTYPE_p_unsigned_char(unmanagedPointer, false);
-            Marshal.FreeHGlobal(unmanagedPointer);
+            SWIGTYPE_p_unsigned_char s = new SWIGTYPE_p_unsigned_char(unmanagedPointer, true);
+            //Marshal.FreeHGlobal(unmanagedPointer);
 
             FzBuffer buf = mupdf.mupdf.fz_new_buffer_from_copied_data(s, (uint)bytes.Length);
             _nativeXml = mupdf.mupdf.fz_parse_xml_from_html5(buf);
@@ -170,7 +170,7 @@ namespace MuPDF.NET
 
         public MuPDFXml CreateElement(string tag)
         {
-            return new MuPDFXml(_nativeXml.fz_dom_create_text_node(tag));
+            return new MuPDFXml(_nativeXml.fz_dom_create_element(tag));
         }
 
         public MuPDFXml CreateTextNode(string text)
@@ -374,7 +374,10 @@ namespace MuPDF.NET
             {
                 prev.AppendChild(CreateTextNode(lines[i]));
                 if (i < lineCount - 1)
-                    prev.AppendChild(CreateElement("br"));
+                {
+                    MuPDFXml br = CreateElement("br");
+                    prev.AppendChild(br);
+                }
             }
             return this;
         }
