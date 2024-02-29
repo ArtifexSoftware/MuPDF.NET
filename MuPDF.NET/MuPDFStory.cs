@@ -39,6 +39,9 @@ namespace MuPDF.NET
             _nativeStory = new FzStory(buf, userCss, em, arch);
         }
 
+        /// <summary>
+        /// Look for `<h1..6>` items in `self` and adds unique `id` attributes if not already present.
+        /// </summary>
         public void AddHeaderIds()
         {
             MuPDFXml dom = Body;
@@ -112,7 +115,7 @@ namespace MuPDF.NET
         /// <param name="pmax">Maximum parameter to consider</param>
         /// <param name="delta">Maximum error in returned parameter.</param>
         /// <param name="verbose">If true we output diagnostics.</param>
-        /// <returns></returns>
+        /// <returns>Returns a `Story.FitResult` instance.</returns>
         public FitResult Fit(Func<Rect, float, Rect> fn, Rect rect, float pmin, float pmax, float delta = 0.001f, bool verbose = false)
         {
             void Log(string text)
@@ -336,12 +339,22 @@ namespace MuPDF.NET
             return new Rect(rect.X0, rect.Y0, rect.X1, rect.Y0 + height);
         }
 
-        public void FitHeight(float width, float heightMin = 0, float heightMax = 0, Point origin = null, float delta = 0.001f, bool verbose = false)
+        /// <summary>
+        /// Finds smallest height in range `height_min..height_max` where a rect with size `(width, height)` is large enough to contain the story
+        /// </summary>
+        /// <param name="width">width of rect</param>
+        /// <param name="heightMin">Minimum height to consider; must be >= 0.</param>
+        /// <param name="heightMax">Maximum height to consider, must be >= height_min or `None` for infinite.</param>
+        /// <param name="origin">point of rect.</param>
+        /// <param name="delta">Maximum error in returned height.</param>
+        /// <param name="verbose">If true we output diagnostics.</param>
+        /// <returns>Returns a `Story.FitResult` instance.</returns>
+        public FitResult FitHeight(float width, float heightMin = 0, float heightMax = 0, Point origin = null, float delta = 0.001f, bool verbose = false)
         {
             if (origin != null)
                 origin = new Point(0, 0);
             Rect rect = new Rect(origin.X, origin.Y, origin.X + width, 0);
-            Fit(HeightFn, rect, heightMin, heightMax, delta, verbose);
+            return Fit(HeightFn, rect, heightMin, heightMax, delta, verbose);
         }
 
         public Rect WidthFn(Rect rect, float width)
@@ -349,10 +362,10 @@ namespace MuPDF.NET
             return new Rect(rect.X0, rect.Y0, rect.X0 + width, rect.Y1);
         }
 
-        public void FitWidth(float height, float widthMin = 0, float widthMax = 0, Point origin = null, float delta = 0.001f, bool verbose = false)
+        public FitResult FitWidth(float height, float widthMin = 0, float widthMax = 0, Point origin = null, float delta = 0.001f, bool verbose = false)
         {
             Rect rect = new Rect(origin.X, origin.Y, 0, origin.Y + height);
-            Fit(WidthFn, rect, widthMin, widthMax, delta, verbose);
+            return Fit(WidthFn, rect, widthMin, widthMax, delta, verbose);
         }
 
         public MuPDFDocument WriteWithLinks(RectFunction rectFn = null, Action<Position> positionfn = null, Action<int, Rect, MuPDFDeviceWrapper, bool> pageFn = null)
@@ -465,6 +478,11 @@ namespace MuPDF.NET
             return MuPDFStory.AddPdfLinks(stream, positions);
         }
 
+        /// <summary>
+        /// Trigger a callback function to record where items have been placed.
+        /// </summary>
+        /// <param name="function"></param>
+        /// <param name="args"></param>
         public void ElementPositions(Action<Position> function, Dictionary<string, dynamic> args = null)
         {
             if (args == null)

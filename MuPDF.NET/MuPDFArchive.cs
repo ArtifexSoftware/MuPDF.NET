@@ -37,9 +37,10 @@ namespace MuPDF.NET
             _subArchives = new List<SubArchiveStruct>();
         }
 
-        public MuPDFArchive(FileInfo file, string path = null)
+        public MuPDFArchive(string filename, string path = null)
         {
             _nativeArchive = mupdf.mupdf.fz_new_multi_archive();
+            Add(filename, path);
         }
 
         public FzArchive ToFzArchive()
@@ -194,7 +195,7 @@ namespace MuPDF.NET
                 MakeSubArch(fmt, entries, mount);
             }
 
-            if (File.Exists(content))
+            if (File.Exists(Path.Combine(path, content)))
             {
                 if (path == null)
                     throw new Exception("need name for binary content");
