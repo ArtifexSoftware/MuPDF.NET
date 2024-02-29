@@ -10,6 +10,21 @@ namespace Demo
 {
     class Program
     {
+        /*public (Rect, Rect, IdentityMatrix) RectFunction(int rectN, Rect filled)
+        {
+            return (new Rect(), new Rect(), new IdentityMatrix());
+        }
+
+        public string ContentFunction(List<Position> positions)
+        {
+            return string.Format("Hello world {0}", positions.Count);
+        }
+
+        public Rect Fn(Rect r, float f)
+        {
+            return new Rect(0, 0, 1, 1);
+        }*/
+
         static void Main(string[] args)
         {
             /*string fileName = "2.pdf";
@@ -49,7 +64,8 @@ namespace Demo
                 }
             }*/
 
-            MuPDFXml xml = new MuPDFXml("<html><head><title>Hello</title></head><body><p>Hellow world!</p></body></html>");
+            ////////----------------------------Xml
+            /*MuPDFXml xml = new MuPDFXml("<html><head><title>Hello</title></head><body><p>Hellow world!</p></body></html>");
 
             MuPDFXml a = xml.AddParagraph();
 
@@ -57,7 +73,23 @@ namespace Demo
 
             a.AddText("hello, first element");
 
-            Console.WriteLine(xml.Text);
+            Console.WriteLine(xml.Text);*/
+
+            ///////---------------Story---------------
+            /*MuPDFArchive archive = new MuPDFArchive("./");
+            string html = "<p>Hello world</p>";
+            string css = "* {display: hidden;}";
+
+            MuPDFStory story = new MuPDFStory(html: html, userCss: css, archive: archive);
+            (bool more, Rect filled) = story.Place(new Rect(0, 0, 100, 100));
+            Console.WriteLine(filled.ToString());
+
+            Program p = new Program();
+
+            // MuPDFStory.WriteStabilizedWithLinks(contentfn: p.ContentFunction, rectfn: p.RectFunction);
+
+            FitResult ret = story.Fit(p.Fn, new Rect(0, 0, 100, 100), 0.3f, 0.7f);
+            Console.WriteLine(ret.ToString());*/
         }
 
     }
