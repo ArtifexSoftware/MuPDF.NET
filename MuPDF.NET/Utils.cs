@@ -2642,7 +2642,7 @@ namespace MuPDF.NET
             }
         }
         public static void PageMerge(MuPDFDocument docDes, MuPDFDocument docSrc, int pageFrom, int pageTo, int rotate,
-            int links, int copyAnnots, MuPDFGraftMap graftmap)
+            bool links, bool copyAnnots, MuPDFGraftMap graftmap)
         {
             List<PdfObj> knownPageObjs = new List<PdfObj>()
             {
@@ -2670,7 +2670,7 @@ namespace MuPDF.NET
                 }
             }
 
-            if (copyAnnots != 0)
+            if (copyAnnots)
             {
                 PdfObj oldAnnots = pageRef.pdf_dict_get(new PdfObj("Annots"));
                 int n = oldAnnots.pdf_array_len();
@@ -2710,7 +2710,7 @@ namespace MuPDF.NET
         }
 
         public static void MergeRange(MuPDFDocument docDes, MuPDFDocument docSrc, int spage, int epage, int apage, int rotate,
-            int links, int annots, int showProgress, MuPDFGraftMap graftmap)
+            bool links, bool annots, int showProgress, MuPDFGraftMap graftmap)
         {
             int afterPage = apage;
             int counter = 0;
@@ -2744,9 +2744,115 @@ namespace MuPDF.NET
             }
         }
 
-        /*public static void DoLinks(MuPDFDocument doc1, MuPDFDocument doc2, int fromPage = -1, int toPage = -1, int startAt = -1)
+        public static void DoLinks(MuPDFDocument doc1, MuPDFDocument doc2, int fromPage = -1, int toPage = -1, int startAt = -1)
         {
-            string CreateAnnot(LinkStruct link, )
-        }*/
+            string CreateAnnot(LinkStruct link, List<int> xrefDest, List<int> pnoSrc, Matrix ctm)
+            {
+                Rect r = link.From * ctm;
+                string rStr = string.Format("{0} {1} {2} {3}", r[0], r[1], r[2], r[3]);
+                string annot = "";
+                if (link.Kind == LinkType.LINK_GOTO)
+                {
+                    string txt = Utils.AnnotSkel["goto1"];
+                    int idx = pnoSrc.IndexOf(link.Page);
+                    Point p = link.To * ctm;
+                    annot = string.Format(txt, xrefDest[idx], p.X, p.Y, link.Zoom, rStr);
+                }
+                else if (link.Kind == LinkType.LINK_GOTOR)
+                {
+                    if (link.Page >= 0)
+                    {
+                        string txt = Utils.AnnotSkel["gotor1"];
+                        Point pnt = link.To == null ? new Point(0, 0) : link.To;
+                        annot = string.Format(txt, link.Page, pnt.X, pnt.Y, link.Zoom, link.File, link.File, rStr);
+                    }
+                    else
+                    {
+                        string txt = Utils.AnnotSkel["gotor2"];
+                        string to = Utils.GetPdfStr(link.To); // issue
+                        to = to.Substring(1, -1);
+                        string f = link.File;
+                        annot = string.Format(txt, to, f, rStr);
+                    }
+                }
+                else if (link.Kind == LinkType.LINK_LAUNCH)
+                {
+                    string txt = Utils.AnnotSkel["launch"];
+                    annot = string.Format(txt, link.File, link.File, rStr);
+                }
+                else if (link.Kind == LinkType.LINK_URI)
+                {
+                    string txt = Utils.AnnotSkel["uri"];
+                    annot = string.Format(txt, link.Uri, rStr);
+                }
+                else annot = "";
+
+                return annot;
+            }
+            // --------------------validate & normalize parameters-------------------------
+            int fp, tp;
+            if (fromPage < 0)
+                fp = 0;
+            else if (fromPage >= doc2.GetPageCount())
+                fp = doc2.GetPageCount() - 1;
+            else fp = fromPage;
+
+            if (toPage < 0 || toPage >= doc2.GetPageCount())
+                tp = doc2.GetPageCount() - 1;
+            else
+                tp = toPage;
+
+            if (startAt < 0)
+                throw new Exception("'start_at' must be >= 0");
+            int sa = startAt;
+            int incr = fp <= tp ? 1 : -1;
+
+            // lists of source / destination page numbers
+            List<int> pnoSrc = new List<int>();
+            List<int> pnoDst = new List<int>();
+            for (int i = fp; i < tp + incr; i += incr)
+                pnoSrc.Add(i);
+            for (int i = 0; i < pnoSrc.Count; i++)
+                pnoDst.Add(sa + i);
+
+            List<int> xrefSrc = new List<int>();
+            List<int> xrefDst = new List<int>();
+            for (int i = 0; i < pnoSrc.Count; i ++)
+            {
+                int pSrc = pnoSrc[i];
+                int pDst = pnoDst[i];
+                int oldXref = doc2.GetPageXref(pSrc);
+                int newXref = doc1.GetPageXref(pDst);
+                xrefSrc.Add(oldXref);
+                xrefDst.Add(newXref);
+            }
+
+            // create the links for each copied page in destination PDF
+            for (int i = 0; i < xrefSrc.Count; i++)
+            {
+                MuPDFPage pageSrc = doc2[pnoSrc[i]];
+                List<LinkStruct> links = pageSrc.GetLinks();
+                if (links.Count == 0)
+                {
+                    pageSrc = null;
+                    continue;
+                }
+
+                Matrix ctm = ~pageSrc.TransformationMatrix;
+                MuPDFPage pageDst = doc1[pnoDst[i]];
+                List<string> linkTab = new List<string>();
+
+                foreach (LinkStruct l in links)
+                {
+                    if (l.Kind == LinkType.LINK_GOTO && pnoSrc.Contains(l.Page))
+                        continue;
+                    string annotText = CreateAnnot(l, xrefDst, pnoSrc, ctm);
+                    if (annotText != null || annotText != "")
+                        linkTab.Add(annotText);
+                }
+                if (linkTab.Count != 0)
+                    pageDst.AddAnnotFromString(linkTab);
+            }
+        }
     }
 }

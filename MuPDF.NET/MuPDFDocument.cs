@@ -76,6 +76,72 @@ namespace MuPDF.NET
             }
         }
 
+        public bool IsDirty
+        {
+            get
+            {
+                PdfDocument pdf = MuPDFDocument.AsPdfDocument(_nativeDocument);
+                if (pdf == null)
+                    return false;
+                int r = pdf.pdf_has_unsaved_changes();
+                return r != 0;
+            }
+        }
+
+        public bool IsFastWebaccess
+        {
+            get
+            {
+                PdfDocument pdf = MuPDFDocument.AsPdfDocument(_nativeDocument);
+                if (pdf != null)
+                    return pdf.pdf_doc_was_linearized() != 0;
+                return false;
+            }
+        }
+
+        public int IsFormPDF // return -1 or fields count
+        {
+            get
+            {
+                PdfDocument pdf = MuPDFDocument.AsPdfDocument(_nativeDocument);
+                if (pdf == null)
+                    return -1;
+                int count = -1;
+                try
+                {
+                    PdfObj fields = Utils.pdf_dict_getl(pdf.pdf_trailer(), new string[] { "Root", "AcroForm", "Fields" });
+                    if (fields.pdf_is_array() != 0)
+                        count = fields.pdf_array_len();
+                }
+                catch (Exception e) { return -1; }
+
+                if (count >= 0)
+                    return count;
+                return -1;
+            }
+        }
+
+        public bool IsReflowable
+        {
+            get
+            {
+                if (IsClosed)
+                    throw new Exception("document is closed");
+                return _nativeDocument.fz_is_document_reflowable() != 0;
+            }
+        }
+
+        public bool IsRepaired
+        {
+            get
+            {
+                PdfDocument pdf = MuPDFDocument.AsPdfDocument(_nativeDocument);
+                if (pdf == null)
+                    return false;
+                return pdf.pdf_was_repaired() != 0;
+            }
+        }
+
         public MuPDFDocument(PdfDocument doc)
         {
             PdfDocument = doc;
@@ -1316,12 +1382,170 @@ namespace MuPDF.NET
 
             if (pdfout == null || pdfsrc == null)
                 throw new Exception("source or target not a PDF");
+            Utils.MergeRange(new MuPDFDocument(pdfout), new MuPDFDocument(pdfsrc), fp, tp, sa, rotate, links, annots, showProgress, gmap);
 
             ResetPageRefs();
-            /*if (links != null)*/
-                
+            if (links)
+                Utils.DoLinks(this, docSrc, fromPage, toPage, sa);
+            if (final == 1)
+                GraftMaps[isrt] = null;
         }
 
+        /// <summary>
+        /// Show if undo and / or redo are possible.
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        public (bool, bool) JournalCanDo()
+        {
+            if (IsClosed || IsEncrypted)
+                throw new Exception("document closed or encrypted");
+            int undo = 0;
+            int redo = 0;
+            PdfDocument pdf = MuPDFDocument.AsPdfDocument(_nativeDocument);
+            undo = pdf.pdf_can_undo();
+            redo = pdf.pdf_can_redo();
+            return (undo != 0, redo != 0);
+        }
+
+        /// <summary>
+        /// Activate document journalling.
+        /// </summary>
+        /// <exception cref="Exception"></exception>
+        public void JournalEnable()
+        {
+            if (IsClosed || IsEncrypted)
+                throw new Exception("document closed or encrypted");
+            PdfDocument pdf = MuPDFDocument.AsPdfDocument(_nativeDocument);
+            pdf.pdf_enable_journal();
+        }
+
+        /// <summary>
+        /// Check if journalling is enabled.
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        public bool IsEnabledJournal()
+        {
+            if (IsClosed || IsEncrypted)
+                throw new Exception("document closed or encrypted");
+            PdfDocument pdf = MuPDFDocument.AsPdfDocument(_nativeDocument);
+            bool enabled = (pdf != null) && (pdf.m_internal.journal != null);
+            return enabled;
+        }
+
+        /// <summary>
+        /// Load a journal from a file.
+        /// </summary>
+        /// <param name="filename">File name for loading journal</param>
+        /// <exception cref="Exception"></exception>
+        public void JournalLoad(string filename)
+        {
+            if (IsClosed || IsEncrypted)
+                throw new Exception("document closed or encrypted");
+            PdfDocument pdf = MuPDFDocument.AsPdfDocument(_nativeDocument);
+
+            pdf.pdf_load_journal(filename);
+            if (pdf.m_internal.journal == null)
+                throw new Exception("Journal and document do not match");
+        }
+
+        /// <summary>
+        /// Load a journal from a file.
+        /// </summary>
+        /// <param name="journal">Journal bytes</param>
+        /// <exception cref="Exception"></exception>
+        public void JournalLoad(byte[] journal)
+        {
+            if (IsClosed || IsEncrypted)
+                throw new Exception("document closed or encrypted");
+            PdfDocument pdf = MuPDFDocument.AsPdfDocument(_nativeDocument);
+            FzBuffer res = Utils.BufferFromBytes(journal);
+            FzStream stream = res.fz_open_buffer();
+            pdf.pdf_deserialise_journal(stream);
+
+            if (pdf.m_internal.journal == null)
+                throw new Exception("Journal and document do not match");
+        }
+
+        /// <summary>
+        /// Show operation name for given step.
+        /// </summary>
+        /// <param name="step">Steps to redo or undo</param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        public string JournalOpName(int step)
+        {
+            if (IsClosed || IsEncrypted)
+                throw new Exception("document closed or encrypted");
+            PdfDocument pdf = MuPDFDocument.AsPdfDocument(_nativeDocument);
+            string name = pdf.pdf_undoredo_step(step);
+
+            return name;
+        }
+
+        /// <summary>
+        /// Show journalling state.
+        /// </summary>
+        /// <exception cref="Exception"></exception>
+        public (int, int) JournalPosition()
+        {
+            if (IsClosed || IsEncrypted)
+                throw new Exception("document closed or encrypted");
+            PdfDocument pdf = MuPDFDocument.AsPdfDocument(_nativeDocument);
+            (int, int) rc = pdf.pdf_undoredo_state();
+
+            return rc;
+        }
+
+        /// <summary>
+        /// Save journal to a file
+        /// </summary>
+        /// <param name="filename"></param>
+        /// <exception cref="Exception"></exception>
+        public void JournalSave(string filename)
+        {
+            if (IsClosed || IsEncrypted)
+                throw new Exception("document closed or encrypted");
+            PdfDocument pdf = MuPDFDocument.AsPdfDocument(_nativeDocument);
+            pdf.pdf_save_journal(filename);
+        }
+
+        /// <summary>
+        /// Save journal to a file
+        /// </summary>
+        /// <param name="filename"></param>
+        /// <exception cref="Exception"></exception>
+        public void JournalSave(byte[] journal)
+        {
+            if (IsClosed || IsEncrypted)
+                throw new Exception("document closed or encrypted");
+            PdfDocument pdf = MuPDFDocument.AsPdfDocument(_nativeDocument);
+
+            MemoryStream memoryStream = new MemoryStream(journal.Length);
+            memoryStream.Write(journal, 0, journal.Length);
+
+            FilePtrOutput output = new FilePtrOutput(memoryStream);
+            pdf.pdf_write_journal(output);
+        }
+
+        /// <summary>
+        /// Begin a journaling operation.
+        /// </summary>
+        /// <param name="name"></param>
+        /// <exception cref="Exception"></exception>
+        public void JournalStartOp(string name)
+        {
+            if (IsClosed || IsEncrypted)
+                throw new Exception("document closed or encrypted");
+            PdfDocument pdf = MuPDFDocument.AsPdfDocument(_nativeDocument);
+            if (pdf.m_internal.journal == null)
+                throw new Exception("Journalling not enabled");
+            if (name != null && name != "")
+                pdf.pdf_begin_operation(name);
+            else
+                pdf.pdf_begin_implicit_operation();
+        }
 
         public void Dispose()
         {

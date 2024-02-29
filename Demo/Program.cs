@@ -53,11 +53,19 @@ namespace Demo
 
             MuPDFXml a = xml.AddParagraph();
 
+            xml.InsertAfter(a);
+
             a.AddClass("first_element");
 
             a.AddText("hello, first element");
 
-            Console.WriteLine(xml.Text);
+            MuPDFXml b = xml.AddParagraph();
+
+            b.AddText("Hello b element");
+
+            a.InsertAfter(b);
+
+            Console.WriteLine(xml.FirstChild);
         }
 
     }
