@@ -154,7 +154,7 @@ namespace MuPDF.NET
                     return null;
                 if (Utils.MUPDF_VERSION.CompareTo((1, 23, 7)) < 0)
                     throw new Exception("not implemented yet'");
-                return mupdf.mupdf.fz_string// issue
+                return mupdf.mupdf.fz_string_from_text_language2(lang);
             }
         }
 
@@ -408,7 +408,9 @@ namespace MuPDF.NET
                     break;
                 FzPage page = doc.fz_load_page(i);
                 FzRect mediabox = page.fz_bound_page();
-                (FzDevice dev, PdfObj resources, FzBuffer contents) = pdfout.pdf_page_write(mediabox);
+                PdfObj resources = new PdfObj();
+                FzBuffer contents = new FzBuffer();
+                FzDevice dev = pdfout.pdf_page_write(mediabox, resources, contents);
                 page.fz_run_page(dev, new FzMatrix(), new FzCookie());
                 dev.fz_close_device();
                 dev = null;
@@ -1804,7 +1806,7 @@ namespace MuPDF.NET
         {
             PdfDocument pdf = AsPdfDocument(_nativeDocument);
             int same = 0;
-            // int page1, parent1, i1 = mupdf.mupdf.pdf_lookup_page_loc( 
+            // int page1, parent1, i1 = 
         }
 
         public void Dispose()

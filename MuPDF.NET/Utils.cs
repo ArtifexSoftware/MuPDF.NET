@@ -2767,7 +2767,7 @@ namespace MuPDF.NET
                     else
                     {
                         string txt = Utils.AnnotSkel["gotor2"];
-                        string to = Utils.GetPdfStr(link.To); // issue
+                        string to = ""; // Utils.GetPdfStr(link.To); // issue
                         to = to.Substring(1, -1);
                         string f = link.File;
                         annot = string.Format(txt, to, f, rStr);
