@@ -1307,7 +1307,7 @@ namespace MuPDF.NET
 
                 form.pdf_array_push(annotObj);
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 page.pdf_delete_annot(annot);
 
@@ -1322,7 +1322,6 @@ namespace MuPDF.NET
                         }
                         );
                 }
-                throw e;
             }
             return annot;
         }
@@ -2006,7 +2005,6 @@ namespace MuPDF.NET
             FzBuffer res = null;
             SWIGTYPE_p_unsigned_char data = null;
             int ixref = 0;
-            int index = 0;
             int simple = 0;
             FontStruct value = null;
             string name = null;

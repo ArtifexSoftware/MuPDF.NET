@@ -293,7 +293,7 @@ namespace MuPDF.NET
                         {
                             positionTo = id2Position.GetValueOrDefault(targetId);
                         }
-                        catch (Exception e)
+                        catch (Exception)
                         {
                             throw new Exception($"No destination with id={targetId}, required by position_from: {positionFrom}");
                         }
@@ -390,7 +390,9 @@ namespace MuPDF.NET
         /// Places and draws Story to a DocumentWriter. Avoids the need for calling code to implement a loop that calls Story.place() and Story.draw() etc,
         /// </summary>
         /// <param name="writer"></param>
-        /// <param name="fit"></param>
+        /// <param name="rectFn"></param>
+        /// <param name="positionFn"></param>
+        /// <param name="pageFn"></param>
         public void Write(MuPDFDocumentWriter writer, RectFunction rectFn, Action<Position> positionFn, Action<int, Rect, MuPDFDeviceWrapper, bool> pageFn) // issue
         {
             MuPDFDeviceWrapper dev = null;

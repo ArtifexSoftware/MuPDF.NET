@@ -113,7 +113,7 @@ namespace MuPDF.NET
                     if (fields.pdf_is_array() != 0)
                         count = fields.pdf_array_len();
                 }
-                catch (Exception e) { return -1; }
+                catch (Exception) { return -1; }
 
                 if (count >= 0)
                     return count;
@@ -472,9 +472,9 @@ namespace MuPDF.NET
             {
                 ol = doc.fz_load_outline();
             }
-            catch (Exception e)
+            catch (Exception)
             {
-                throw e;
+                
             }
             return new Outline(ol);
         }
@@ -1139,7 +1139,7 @@ namespace MuPDF.NET
                 xp = outparams.xp;
                 yp = outparams.yp;
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 if (chapters != 0)
                     return (new List<int>() { -1, -1 }, 0, 0);
@@ -1514,7 +1514,7 @@ namespace MuPDF.NET
         /// <summary>
         /// Save journal to a file
         /// </summary>
-        /// <param name="filename"></param>
+        /// <param name="journal"></param>
         /// <exception cref="Exception"></exception>
         public void JournalSave(byte[] journal)
         {
