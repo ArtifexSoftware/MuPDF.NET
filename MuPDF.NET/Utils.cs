@@ -2852,5 +2852,16 @@ namespace MuPDF.NET
                     pageDst.AddAnnotFromString(linkTab);
             }
         }
+
+        public static int FZ_LANG_TAG2(char c1, char c2)
+        {
+            return ((c1 - 'a' + 1) + ((c2 - 'a' + 1) * 27));
+        }
+
+        public static int FZ_LANG_TAG3(char c1, char c2, char c3)
+        {
+            return ((c1 - 'a' + 1) + ((c2 - 'a' + 1) * 27) + ((c3 - 'a' + 1) * 27 * 27));
+        }
+
     }
 }

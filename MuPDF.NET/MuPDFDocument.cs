@@ -142,6 +142,73 @@ namespace MuPDF.NET
             }
         }
 
+        public string Language
+        {
+            get
+            {
+                PdfDocument pdf = AsPdfDocument(_nativeDocument);
+                if (pdf == null)
+                    return null;
+                fz_text_language lang = mupdf.mupdf.pdf_document_language(pdf);
+                if (lang == fz_text_language.FZ_LANG_UNSET)
+                    return null;
+                if (Utils.MUPDF_VERSION.CompareTo((1, 23, 7)) < 0)
+                    throw new Exception("not implemented yet'");
+                return mupdf.mupdf.fz_string// issue
+            }
+        }
+
+        public (int, int) LastLocation
+        {
+            get
+            {
+                if (IsClosed)
+                    throw new Exception("document closed");
+                FzLocation lastLoc = _nativeDocument.fz_last_page();
+                return (lastLoc.chapter, lastLoc.page);
+            }
+        }
+
+        public Dictionary<string, bool> MarkInfo
+        {
+            get
+            {
+                int xref = GetPdfCatelog();
+                string val;
+                if (xref == 0)
+                    return null;
+                (string, string) rc = GetKeyXref(xref, "MarkInfo");
+                if (rc.Item1 == "null")
+                    return new Dictionary<string, bool>();
+                if (rc.Item1 == "xref")
+                {
+                    xref = Convert.ToInt32(rc.Item2.Split(" ")[0]);
+                    val = GetXrefObject(xref, compressed: 1);
+                }
+                else if (rc.Item1 == "dict")
+                    val = rc.Item2;
+                else
+                    val = null;
+                if (val == null || (val.Substring(0, 2) == "<<" && val.Substring(-2) == ">>"))
+                    return new Dictionary<string, bool>();
+                Dictionary<string, bool> valid = new Dictionary<string, bool>()
+                {
+                    { "Marked", false },
+                    { "UserProperties", false },
+                    { "Suspects", false}
+                };
+
+                string[] valArray = val.Substring(2, -2).Split("/").Skip(1).ToArray();
+                foreach (string v in valArray)
+                {
+                    string[] kv = v.Split(" ");
+                    if (kv.Length == 2 && kv[1] == "true")
+                        valid.Add(kv[0], true);
+                }
+                return valid;
+            }
+        }
+
         public MuPDFDocument(PdfDocument doc)
         {
             PdfDocument = doc;
@@ -1545,6 +1612,199 @@ namespace MuPDF.NET
                 pdf.pdf_begin_operation(name);
             else
                 pdf.pdf_begin_implicit_operation();
+        }
+
+        /// <summary>
+        /// End a journalling operation.
+        /// </summary>
+        public void JournalStopOp()
+        {
+            if (IsClosed || IsEncrypted)
+                throw new Exception("document closed or encrypted");
+            PdfDocument pdf = AsPdfDocument(_nativeDocument);
+            pdf.pdf_end_operation();
+        }
+
+        /// <summary>
+        /// Move backwards in the journal.
+        /// </summary>
+        /// <returns>true</returns>
+        /// <exception cref="Exception">document closed or encrypted</exception>
+        public bool JournalUndo()
+        {
+            if (IsClosed || IsEncrypted)
+                throw new Exception("document closed or encrypted");
+            PdfDocument pdf = AsPdfDocument(_nativeDocument);
+            pdf.pdf_undo();
+            return true;
+        }
+
+        /// <summary>
+        /// Show OC visibility status modifiable by user.
+        /// </summary>
+        /// <returns></returns>
+        public List<LayerConfigUI> LayerUIConfigs()
+        {
+            PdfDocument pdf = MuPDFDocument.AsPdfDocument(_nativeDocument);
+            PdfLayerConfigUi info = new PdfLayerConfigUi();
+            int n = pdf.pdf_count_layer_config_ui();
+            string type;
+
+            List<LayerConfigUI> rc = new List<LayerConfigUI>();
+            for (int i = 0; i < n; i ++)
+            {
+                pdf.pdf_layer_config_ui_info(i, info);
+                switch ((int)info.type)
+                {
+                    case 1:
+                        type = "checkbox";
+                        break;
+                    case 2:
+                        type = "radiobox";
+                        break;
+                    default:
+                        type = "label";
+                        break;
+                }
+
+                LayerConfigUI item = new LayerConfigUI()
+                {
+                    Number = i,
+                    Text = info.text,
+                    Depth = info.depth,
+                    Type = type,
+                    On = info.selected != 0,
+                    IsLocked = info.locked != 0
+                };
+                rc.Add(item);
+            }
+            return rc;
+        }
+
+        /// <summary>
+        /// Re-layout a reflowable document.
+        /// </summary>
+        /// <param name="rect"></param>
+        /// <param name="width"></param>
+        /// <param name="height"></param>
+        /// <param name="fontSize"></param>
+        /// <exception cref="Exception"></exception>
+        public void SetLayout(Rect rect = null, float width = 0, float height = 0, int fontSize = 11)
+        {
+            if (IsClosed || IsEncrypted)
+                throw new Exception("document closed or encrypted");
+            FzDocument doc = _nativeDocument;
+            if (doc.fz_is_document_reflowable() == 0)
+                return;
+            float w = width;
+            float h = height;
+            FzRect r = rect.ToFzRect();
+            if (r.fz_is_infinite_rect() == 0)
+            {
+                w = r.x1 - r.x0;
+                h = r.y1 - r.y0;
+            }
+            if (w <= 0.0f || h <= 0.0f)
+                throw new Exception("bad page size");
+            doc.fz_layout_document(w, h, fontSize);
+
+            ResetPageRefs();
+            InitDocument();
+        }
+
+        /// <summary>
+        /// Convert pno to (chapter, page)
+        /// </summary>
+        /// <param name="pno"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        public (int, int) GetLocationFromPageNumber(int pno)
+        {
+            if (IsClosed)
+            {
+                throw new Exception("document is closed");
+            }
+            FzDocument doc = _nativeDocument;
+            FzLocation loc = mupdf.mupdf.fz_make_location(-1, -1);
+            int pageCount = doc.fz_count_pages();
+            while (pno < 0)
+                pno += pageCount;
+            if (pno >= pageCount)
+                throw new Exception(Utils.ErrorMessages["MSG_BAD_PAGENO"]);
+            loc = doc.fz_location_from_page_number(pno);
+            return (loc.chapter, loc.page);
+        }
+
+        /// <summary>
+        /// Make a page pointer before layouting document.
+        /// </summary>
+        /// <param name="locNumbers">Contains chapter and page numbers</param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        public ulong MakeBookmark((int, int) locNumbers)
+        {
+            if (IsClosed || IsEncrypted)
+                throw new Exception("document closed or encrypted");
+            FzLocation loc = new FzLocation(locNumbers.Item1, locNumbers.Item2);
+            ulong mark = mupdf.mupdf.ll_fz_make_bookmark2(_nativeDocument.m_internal, loc.internal_());
+            return mark;
+        }
+
+        /// <summary>
+        /// Get xref of PDF catalog.
+        /// </summary>
+        /// <returns></returns>
+        public int GetPdfCatelog()
+        {
+            PdfDocument pdf = MuPDFDocument.AsPdfDocument(_nativeDocument);
+            int xref = 0;
+            if (pdf == null)
+                return xref;
+            PdfObj root = pdf.pdf_trailer().pdf_dict_get(new PdfObj("Root"));
+            xref = root.pdf_to_num();
+
+            return xref;
+        }
+
+        /// <summary>
+        /// Get PDF trailer as a string.
+        /// </summary>
+        /// <param name="compressed"></param>
+        /// <param name="ascii"></param>
+        /// <returns></returns>
+        public string GetPdfTrailer(int compressed = 0, int ascii = 0)
+        {
+            return GetXrefObject(-1, compressed, ascii);
+        }
+
+        /// <summary>
+        /// Move a page within a PDF document.
+        /// </summary>
+        /// <param name="pno">source page number.</param>
+        /// <param name="to">put before this page, '-1' means after last page.</param>
+        /// <exception cref="Exception"></exception>
+        public void MovePage(int pno, int to = -1)
+        {
+            if (IsClosed)
+                throw new Exception("document closed");
+            int pageCount = GetPageCount();
+            if (pno >= pageCount || (to < -1 && to >= pageCount))
+                throw new Exception("bad page numbers(s)");
+            int before = 1;
+            int copy = 0;
+            if (to == -1)
+            {
+                to = pageCount -1;
+                before = 0;
+            }
+            MoveCopyPage(pno, to, before, copy);
+        }
+
+        private void MoveCopyPage(int pno, int nb, int before, int copy)
+        {
+            PdfDocument pdf = AsPdfDocument(_nativeDocument);
+            int same = 0;
+            // int page1, parent1, i1 = mupdf.mupdf.pdf_lookup_page_loc( 
         }
 
         public void Dispose()
