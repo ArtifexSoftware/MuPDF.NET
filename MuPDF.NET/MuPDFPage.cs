@@ -276,7 +276,7 @@ namespace MuPDF.NET
             }
             set
             {
-                Parent = value;
+                _parent = value;
             }
         }
 
@@ -2001,6 +2001,48 @@ namespace MuPDF.NET
             if (transform)
                 rc = (infRect, nullMat);
 
+        }
+
+        public Pixmap GetPixmap(IdentityMatrix matrix = null, int dpi = 0, string colorSpace = null,
+            Rect clip = null, bool alpha = false, bool annots = true)
+        {
+            if (matrix == null)
+                matrix = new IdentityMatrix();
+
+            float zoom;
+            if (dpi != 0)
+            {
+                zoom = dpi / 72;
+                matrix = new IdentityMatrix(zoom, zoom);
+            }
+
+            ColorSpace _colorSpace;
+            if (colorSpace == null)
+                _colorSpace = new ColorSpace(Utils.CS_RGB);
+            else if (colorSpace.ToUpper() == "GRAY")
+                _colorSpace = new ColorSpace(Utils.CS_GRAY);
+            else if (colorSpace.ToUpper() == "CMYK")
+                _colorSpace = new ColorSpace(Utils.CS_CMYK);
+            else _colorSpace = new ColorSpace(Utils.CS_RGB);
+
+            if (!(new List<int>() { 1, 3, 4 }).Contains(_colorSpace.N))
+                throw new Exception("unsupported colorspace");
+
+            DisplayList dl = GetDisplayList(annots ? 1 : 0);
+            Pixmap pix = dl.GetPixmap(matrix, colorSpace: _colorSpace, alpha: alpha ? 1 : 0, clip: clip);
+            dl.Dispose();
+            dl = null;
+            if (dpi != 0)
+                pix.SetDpi(dpi, dpi);
+            return pix;
+        }
+
+        public DisplayList GetDisplayList(int annots = 1)
+        {
+            if (annots != 0)
+                return new DisplayList(mupdf.mupdf.fz_new_display_list_from_page(_nativePage.super()));
+            else
+                return new DisplayList(mupdf.mupdf.fz_new_display_list_from_page_contents(_nativePage.super()));
         }
 
         public void Dispose()
