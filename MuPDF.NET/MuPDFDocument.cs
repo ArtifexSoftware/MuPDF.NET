@@ -169,6 +169,38 @@ namespace MuPDF.NET
             }
         }
 
+        public string PageLayout
+        {
+            get
+            {
+                int xref = GetPdfCatelog();
+                if (xref == 0)
+                    return null;
+                (string, string) rc = GetKeyXref(xref, "PageLayout");
+                if (rc.Item1 == "null")
+                    return "SinglePage";
+                if (rc.Item1 == "name")
+                    return rc.Item2.Substring(1);
+                return "SinglePage";
+            }
+        }
+
+        public string PageMode
+        {
+            get
+            {
+                int xref = GetPdfCatelog();
+                if (xref == 0)
+                    return null;
+                (string, string) rc = GetKeyXref(xref, "PageMode");
+                if (rc.Item1 == "null")
+                    return "UseNone";
+                if (rc.Item1 == "name")
+                    return rc.Item2.Substring(1);
+                return "UseNone";
+            }
+        }
+
         public Dictionary<string, bool> MarkInfo
         {
             get
@@ -1591,8 +1623,7 @@ namespace MuPDF.NET
                 throw new Exception("document closed or encrypted");
             PdfDocument pdf = MuPDFDocument.AsPdfDocument(_nativeDocument);
 
-            MemoryStream memoryStream = new MemoryStream(journal.Length);
-            memoryStream.Write(journal, 0, journal.Length);
+            ByteStream memoryStream = new ByteStream(journal);
 
             FilePtrOutput output = new FilePtrOutput(memoryStream);
             pdf.pdf_write_journal(output);
@@ -1792,21 +1823,187 @@ namespace MuPDF.NET
             int pageCount = GetPageCount();
             if (pno >= pageCount || (to < -1 && to >= pageCount))
                 throw new Exception("bad page numbers(s)");
-            int before = 1;
-            int copy = 0;
+            bool before = true;
+            bool copy = false;
             if (to == -1)
             {
                 to = pageCount -1;
-                before = 0;
+                before = false;
             }
             MoveCopyPage(pno, to, before, copy);
         }
 
-        private void MoveCopyPage(int pno, int nb, int before, int copy)
+        private void MoveCopyPage(int pno, int nb, bool before, bool copy)
         {
             PdfDocument pdf = AsPdfDocument(_nativeDocument);
-            int same = 0;
-            // int page1, parent1, i1 = 
+            bool same;
+            (PdfObj page1, PdfObj parent1, int i1) = pdf.pdf_lookup_page_loc(pno);
+            PdfObj kids1 = parent1.pdf_dict_get(new PdfObj("Kids"));
+
+            (PdfObj page2, PdfObj parent2, int i2) = pdf.pdf_lookup_page_loc(nb);
+            PdfObj kids2 = parent2.pdf_dict_get(new PdfObj("Kids"));
+
+            PdfObj parent;
+            int pos;
+            if (before)
+                pos = i2;
+            else
+                pos = i2 + 1;
+
+            same = mupdf.mupdf.pdf_objcmp(kids1, kids2) == 0; // if same, true else false
+            if (!copy && !same)
+                page1.pdf_dict_put(new PdfObj("Parent"), parent2);
+            kids2.pdf_array_insert(page1, pos);
+
+            if (!same) // not same
+            {
+                parent = parent2;
+                while (parent != null)
+                {
+                    int count = parent.pdf_dict_get_int(new PdfObj("Count"));
+                    parent.pdf_dict_put_int(new PdfObj("Count"), count + 1);
+                    parent = parent.pdf_dict_get(new PdfObj("Parent"));
+                }
+                if (!copy)
+                {
+                    kids1.pdf_array_delete(i1);
+                    parent = parent1;
+                    while (parent != null)
+                    {
+                        int count = parent.pdf_dict_get_int(new PdfObj("Count"));
+                        parent.pdf_dict_put_int(new PdfObj("Count"), count - 1);
+                        parent = parent.pdf_dict_get(new PdfObj("Parent"));
+                    }
+                }
+            }
+            else
+            {
+
+            }
+        }
+
+        public int NeedAppearances(int value = 0)
+        {
+            if (IsFormPDF == 0)
+                return 0;
+            PdfDocument pdf = MuPDFDocument.AsPdfDocument(_nativeDocument);
+            int oldVal = -1;
+            string appkey = "NeedAppearances";
+
+            PdfObj form = Utils.pdf_dict_getl(pdf.pdf_trailer(), new string[] { "Root/AcroForm" });
+            PdfObj app = form.pdf_dict_gets(appkey);
+            if (app.pdf_is_bool() == 1)
+                oldVal = app.pdf_to_bool();
+            if (value != 0)
+                form.pdf_dict_puts(appkey, new PdfObj(mupdf.mupdf.PDF_ENUM_TRUE));
+            else
+                form.pdf_dict_puts(appkey, new PdfObj(mupdf.mupdf.PDF_ENUM_FALSE));
+            if (value == 0)
+                return Convert.ToInt32(oldVal >= 0);
+            return value;
+        }
+
+        public (int, int) NextLocation(int pageId)
+        {
+            if (IsClosed || IsEncrypted)
+                throw new Exception("document closed or encrypted");
+            (int, int) _pageId;
+            _pageId = (0, pageId);
+            // issue
+            if (_pageId == LastLocation)
+                return (-1, -1);
+            PdfDocument pdf = MuPDFDocument.AsPdfDocument(_nativeDocument);
+            int val = _pageId.Item1;
+            int chapter = val;
+            val = _pageId.Item2;
+            int pno = val;
+            FzLocation loc = mupdf.mupdf.fz_make_location(chapter, pno);
+            FzLocation nextLoc = mupdf.mupdf.fz_next_page(_nativeDocument, loc);
+            return (nextLoc.chapter, nextLoc.page);
+        }
+
+        public List<(int, pdf_annot_type, string)> PageAnnotXrefs(int n)
+        {
+            PdfDocument pdf = AsPdfDocument(_nativeDocument);
+            int pageCount = pdf.pdf_count_pages();
+            while (n < 0)
+            {
+                n += pageCount;
+            }
+
+            if (n > pageCount)
+                throw new Exception(Utils.ErrorMessages["MSG_BAD_PAGENO"]);
+            PdfObj pageObj = pdf.pdf_lookup_page_obj(n);
+            return Utils.GetAnnotXrefList(pageObj);
+        }
+
+        public Rect PageCropBox(int pno)
+        {
+            if (IsClosed)
+                throw new Exception("document closed");
+            FzDocument doc = _nativeDocument;
+            int pageCount = doc.fz_count_pages();
+            int n = pno;
+            while (n < 0)
+                n += pageCount;
+            PdfDocument pdf = AsPdfDocument(doc);
+            if (n >= pageCount)
+                throw new Exception(Utils.ErrorMessages["MSG_BAD_PAGENO"]);
+            PdfObj pageRef = pdf.pdf_lookup_page_obj(n);
+            Rect cropbox = Utils.GetCropBox(pageRef);
+            
+            return cropbox;
+        }
+
+        public int GetPageNumberFromLocation(int pageId)
+        {
+            int pageN = GetPageCount();
+            while (pageId < 0)
+                pageId += pageN;
+            (int, int) _pageId = (0, pageId);
+            // issue: Check whether pageId is in this
+            (int chapter, int pno) = _pageId;
+            FzLocation loc = mupdf.mupdf.fz_make_location(chapter, pno);
+            pageN = _nativeDocument.fz_page_number_from_location(loc);
+            return pageN;
+        }
+
+        public int PageXref(int pno)
+        {
+            if (IsClosed)
+                throw new Exception("document closed");
+            int pageCount = _nativeDocument.fz_count_pages();
+            int n = pno;
+            while (n < 0)
+                n += pageCount;
+            PdfDocument pdf = AsPdfDocument(_nativeDocument);
+            int xref = 0;
+            if (n >= pageCount)
+                throw new Exception(Utils.ErrorMessages["MSG_BAD_PAGENO"]);
+            xref = pdf.pdf_lookup_page_obj(n).pdf_to_num();
+            return xref;
+        }
+
+        public List<MuPDFPage> GetPages(int start, int stop, int step)
+        {
+            while (start < 0)
+                start += GetPageCount();
+            if (!(GetPageCount() > start && start >= 0))
+                throw new Exception("bad start page number");
+            stop = (stop <= GetPageCount()) ? stop : GetPageCount();
+            if (step == 0)
+                throw new Exception("arg 3 must not be zero");
+
+            if ((start > stop && step > 0) || (start < stop && step < 0))
+                throw new Exception("bad step, pick right direction");
+
+            List<MuPDFPage> ret = new List<MuPDFPage> ();
+            for (int i = start; i < stop; i += step)
+            {
+                ret.Add(LoadPage(i));
+            }
+
+            return ret;
         }
 
         public void Dispose()

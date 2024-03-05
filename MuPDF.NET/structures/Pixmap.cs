@@ -10,6 +10,7 @@ using mupdf;
 using System.Net;
 using static System.Net.Mime.MediaTypeNames;
 using System.Security.Policy;
+using System.Security.Cryptography;
 
 namespace MuPDF.NET
 {
@@ -279,6 +280,16 @@ namespace MuPDF.NET
             }
 
             //issue
+        }
+
+        public Pixmap(string arg0, FzPixmap arg1)
+        {
+            if (arg0 == "raw")
+            {
+                _nativePixmap = arg1;
+            }
+            else
+                throw new Exception("arg0 must be `raw`.");
         }
 
         public Pixmap(PdfDocument doc, int xref)
@@ -915,6 +926,45 @@ namespace MuPDF.NET
             return null;//issue
         }
 
+        public byte[] PdfOCR2Bytes(bool compress = true, string language = "eng", string tessdata = null)
+        {
+            if (Utils.TESSDATA_PREFIX == null && tessdata == null)
+                throw new Exception("No OCR support: TESSDATA_PREFIX not set");
+            List<byte> bytes = new List<byte>();
+            SavePdfOCR(bytes, compress ? 1 : 0, language, tessdata);
+
+            return bytes.ToArray();
+        }
+
+        public void SavePdfOCR(string filename, int compress = 1, string language = null, string tessdata = null)
+        {
+            if (Utils.TESSDATA_PREFIX == null && tessdata == null)
+                throw new Exception("No OCR support: TESSDATA_PREFIX not set");
+            FzPdfocrOptions options = new FzPdfocrOptions();
+            options.compress = compress;
+            if (language != null)
+                options.language_set2(language);
+            if (tessdata != null)
+                options.datadir_set2(tessdata);
+            FzPixmap pix = _nativePixmap;
+            pix.fz_save_pixmap_as_pdfocr(filename, 0, options);
+        }
+
+        public void SavePdfOCR(List<byte> filename, int compress = 1, string language = null, string tessdata = null)
+        {
+            if (Utils.TESSDATA_PREFIX == null && tessdata == null)
+                throw new Exception("No OCR support: TESSDATA_PREFIX not set");
+            FzPdfocrOptions options = new FzPdfocrOptions();
+            options.compress = compress;
+            if (language != null)
+                options.language_set2(language);
+            if (tessdata != null)
+                options.datadir_set2(tessdata);
+            FzPixmap pix = _nativePixmap;
+            FilePtrOutput output = new FilePtrOutput(new ByteStream(filename.ToArray()));
+            output.fz_write_pixmap_as_pdfocr(pix, options);
+        }
+
         public void Dispose()
         {
             _nativePixmap.Dispose();
@@ -923,11 +973,11 @@ namespace MuPDF.NET
 
     public class FilePtrOutput : FzOutput2
     {
-        public MemoryStream fstream { get; set; }
+        public ByteStream data { get; set; }
 
-        public FilePtrOutput(MemoryStream s) : base()
+        public FilePtrOutput(ByteStream s) : base()
         {
-            this.fstream = s;
+            this.data = s;
             this.use_virtual_write();
             this.use_virtual_seek();
             this.use_virtual_tell();
@@ -936,22 +986,23 @@ namespace MuPDF.NET
 
         public long Seek(FzContext ctx, int offset, int whence)
         {
-            return fstream.Seek(offset, (SeekOrigin)whence);
+            data.Seek(offset, whence);
+            return data.Offset;
         }
 
         public long Tell(FzContext ctx)
         {
-            return fstream.Position;
+            return data.Offset;
         }
 
         public void Truncate(FzContext ctx)
         {
-            fstream.SetLength(0);
+            data.Resize(0);
         }
 
         public void Write(FzContext ctx, byte[] rawData, int dataLength)
         {
-            fstream.Write(rawData, 0, dataLength);
+            data.Write(rawData, dataLength);
         }
     }
 }

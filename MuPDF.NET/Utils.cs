@@ -35,6 +35,8 @@ namespace MuPDF.NET
         public static int TEXT_ALIGN_RIGHT = 2;
         public static int TEXT_ALIGN_JUSTIFY = 3;
 
+        public static string TESSDATA_PREFIX = Environment.GetEnvironmentVariable("TESSDATA_PREFIX");
+
         public static Dictionary<string, string> AnnotSkel = new Dictionary<string, string>(){
             { "goto1", "<</A<</S/GoTo/D[{0, 10} 0 R/XYZ {1} {2} {3}]>>/Rect[{4}]/BS<</W 0>>/Subtype/Link>>" },
             { "goto2", "<</A<</S/GoTo/D{0}>>/Rect[{1}]/BS<</W 0>>/Subtype/Link>>" },
@@ -2861,6 +2863,39 @@ namespace MuPDF.NET
         public static int FZ_LANG_TAG3(char c1, char c2, char c3)
         {
             return ((c1 - 'a' + 1) + ((c2 - 'a' + 1) * 27) + ((c3 - 'a' + 1) * 27 * 27));
+        }
+
+        public static Pixmap GetPixmapFromDisplaylist(FzDisplayList list, Matrix ctm, FzColorspace cs, int alpha, Rect clip,
+            FzSeparations seps = null)
+        {
+            if (seps == null)
+                seps = new FzSeparations();
+            FzRect rect = mupdf.mupdf.fz_bound_display_list(list);
+            FzMatrix matrix = ctm.ToFzMatrix();
+            FzRect rclip = clip.ToFzRect();
+            rect = FzRect.fz_intersect_rect(rect, rclip);
+            FzIrect irect = rect.fz_round_rect();
+
+            FzPixmap pix = mupdf.mupdf.fz_new_pixmap_with_bbox(cs, irect, seps, alpha);
+            if (alpha != 0)
+                pix.fz_clear_pixmap();
+            else
+                pix.fz_clear_pixmap_with_value(0xFF);
+
+            FzDevice dev;
+            if (rclip.fz_is_infinite_rect() == 0)
+            {
+                dev = mupdf.mupdf.fz_new_draw_device_with_bbox(matrix, pix, irect);
+                list.fz_run_display_list(dev, new FzMatrix(), rclip, new FzCookie());
+            }
+            else
+            {
+                dev = mupdf.mupdf.fz_new_draw_device(matrix, pix);
+                list.fz_run_display_list(dev, new FzMatrix(), new FzRect(FzRect.Fixed.Fixed_INFINITE), new FzCookie());
+            }
+
+            mupdf.mupdf.fz_close_device(dev);
+            return new Pixmap("raw", pix);
         }
 
     }
