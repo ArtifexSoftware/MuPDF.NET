@@ -2870,9 +2870,10 @@ namespace MuPDF.NET
         {
             if (seps == null)
                 seps = new FzSeparations();
+
             FzRect rect = mupdf.mupdf.fz_bound_display_list(list);
-            FzMatrix matrix = ctm.ToFzMatrix();
-            FzRect rclip = clip.ToFzRect();
+            FzMatrix matrix = new FzMatrix(ctm.A, ctm.B, ctm.C, ctm.D, ctm.E, ctm.F);
+            FzRect rclip = clip == null ? new FzRect(FzRect.Fixed.Fixed_INFINITE) : clip.ToFzRect();
             rect = FzRect.fz_intersect_rect(rect, rclip);
             FzIrect irect = rect.fz_round_rect();
 

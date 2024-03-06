@@ -897,7 +897,7 @@ namespace MuPDF.NET
                 Console.WriteLine("ignoring shrink factor < 1");
                 return;
             }
-            //mupdf.fz_subsample_pixmap(self.this, factor)
+            _nativePixmap.fz_subsample_pixmap(factor);
         }
 
         public void TintWith(int black, int white)
@@ -922,7 +922,7 @@ namespace MuPDF.NET
                 quad.LowerRight.ToFzPoint(),
                 quad.UpperLeft.ToFzPoint()
             };
-            //FzPixmap dst = mupdf.mupdf.fz_warp_pixmap(_nativePixmap, points, width, height);//issue
+            //FzPixmap dst = mupdf.mupdf.fz_warp_pixmap(_nativePixmap, points, width, height); //issue
             return null;//issue
         }
 
@@ -946,8 +946,8 @@ namespace MuPDF.NET
                 options.language_set2(language);
             if (tessdata != null)
                 options.datadir_set2(tessdata);
-            FzPixmap pix = _nativePixmap;
-            pix.fz_save_pixmap_as_pdfocr(filename, 0, options);
+
+            mupdf.mupdf.fz_save_pixmap_as_pdfocr(_nativePixmap, filename, 0, options);
         }
 
         public void SavePdfOCR(List<byte> filename, int compress = 1, string language = null, string tessdata = null)
@@ -984,23 +984,23 @@ namespace MuPDF.NET
             this.use_virtual_truncate();
         }
 
-        public long Seek(FzContext ctx, int offset, int whence)
+        public long seek(FzContext ctx, int offset, int whence)
         {
             data.Seek(offset, whence);
             return data.Offset;
         }
 
-        public long Tell(FzContext ctx)
+        public long tell(FzContext ctx)
         {
             return data.Offset;
         }
 
-        public void Truncate(FzContext ctx)
+        public void truncate(FzContext ctx)
         {
             data.Resize(0);
         }
 
-        public void Write(FzContext ctx, byte[] rawData, int dataLength)
+        public void write(FzContext ctx, byte[] rawData, int dataLength)
         {
             data.Write(rawData, dataLength);
         }
