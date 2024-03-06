@@ -2030,6 +2030,7 @@ namespace MuPDF.NET
 
             DisplayList dl = GetDisplayList(annots ? 1 : 0);
             Pixmap pix = dl.GetPixmap(matrix, colorSpace: _colorSpace, alpha: alpha ? 1 : 0, clip: clip);
+
             dl.Dispose();
             dl = null;
             if (dpi != 0)

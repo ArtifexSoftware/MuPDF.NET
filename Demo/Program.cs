@@ -93,7 +93,13 @@ namespace Demo
             FitResult ret = story.Fit(p.Fn, new Rect(0, 0, 100, 100), 0.3f, 0.7f);
             Console.WriteLine(ret.ToString());*/
 
-            Console.WriteLine($"{mupdf.mupdf.FZ_VERSION_PATCH}");
+
+            MuPDFDocument doc = new MuPDFDocument("1.pdf");
+            MuPDFPage page = doc.LoadPage(1);
+            Pixmap pix = page.GetPixmap();
+            byte[] bytes = pix.PdfOCR2Bytes();
+
+            Console.WriteLine(bytes.Length);
         }
 
     }
