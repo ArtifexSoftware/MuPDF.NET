@@ -561,7 +561,7 @@ namespace MuPDF.NET
             return new MuPDFAnnotation(annot);
         }
 
-        private MuPDFAnnotation AddSequareOrCircle(Rect rect, PdfAnnotType annotType)
+        private MuPDFAnnotation AddSequarOrCircle(Rect rect, PdfAnnotType annotType)
         {
             PdfPage page = _nativePage;
             FzRect r = rect.ToFzRect();
