@@ -112,7 +112,6 @@ namespace MuPDF.NET
             if (text.Count <= 0)
                 return 0;
 
-            FzPoint p = point.ToFzPoint();
             int maxCode = 0;
             try
             {
@@ -195,7 +194,7 @@ namespace MuPDF.NET
             string cm180 = "-1 0 0 -1 0 0 cm\n";// rotates by 180 deg.
             float height = Height;
             float width = Width;
-            string cm = "";
+            string cm;
 
             if (morphing)
             {
@@ -256,25 +255,28 @@ namespace MuPDF.NET
             if (fill != null)
                 nres += fillStr;
 
+            /// start text insertion
             nres += text[0];
             int nLines = 1;
+            string template = "TJ\n0 -{0} TD\n";
             if (text.Count > 1)
-                nres += $"TJ\n0 -{lheight} TD\n";
-            else nres += "TJ";
+                nres += string.Format(template, lheight);
+            else nres += template.Substring(0, 2);
 
             for (int i = 1; i < text.Count; i ++)
             {
                 if (space < lheight)
-                    break;
+                    break; // no space left on page
                 if (i > 1)
                     nres += "\nT* ";
-                nres += text[i] + "TJ";
+                nres += text[i] + template.Substring(0, 2);
                 space -= lheight;
                 nLines += 1;
             }
 
             nres += $"\nET\n{emc}Q\n";
 
+            // end of text insertion
             TextCont += nres;
             return nLines;
         }

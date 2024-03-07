@@ -1576,11 +1576,10 @@ namespace MuPDF.NET
             {
 
             }*/
-
-            if (fontFile == null)
+            /*if (fontFile == null)
             {
                 throw new Exception("bad fontfile");
-            }
+            }*/
             FontStruct val = _InsertFont(fontName, bfName, fontFile, fontBuffer, setSimple, idx,
                 wmode, serif, encoding, CJK_number);
 
@@ -1680,9 +1679,11 @@ namespace MuPDF.NET
             if (gstate == null) return null;
 
             PdfObj resources = PageObj.pdf_dict_get(new PdfObj("Resources"));
-            if (resources == null)
+            if (resources.m_internal == null)
                 resources = mupdf.mupdf.pdf_dict_put_dict(PageObj, new PdfObj("Resources"), 2);
             PdfObj extg = resources.pdf_dict_get(new PdfObj("ExtGState"));
+            if (extg.m_internal == null)
+                extg = resources.pdf_dict_put_dict(new PdfObj("ExtGState"), 2);
             int n = extg.pdf_dict_len();
 
             for (int i = 0; i< n; i++)

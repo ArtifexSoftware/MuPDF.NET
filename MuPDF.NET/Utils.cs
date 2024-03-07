@@ -1381,7 +1381,7 @@ namespace MuPDF.NET
         {
             PdfObj root = pdf.pdf_trailer().pdf_dict_get(new PdfObj("Root"));
             PdfObj coll = root.pdf_dict_get(new PdfObj("Collection"));
-            if (coll != null && coll.pdf_dict_len() > 0)
+            if (coll.m_internal != null && coll.pdf_dict_len() == 0)
             {
                 root.pdf_dict_del(new PdfObj("Collection"));
             }
@@ -1393,7 +1393,7 @@ namespace MuPDF.NET
                     "Names", "EmbeddedFiles", "Names"
                 }
                 );
-            if (efiles != null)
+            if (efiles.m_internal != null)
                 root.pdf_dict_put_name(new PdfObj("PageMode"), "UseAttachments");
         }
 
@@ -1819,8 +1819,8 @@ namespace MuPDF.NET
 
             PdfObj o = doc.pdf_load_object(xref);
             PdfObj desft = o.pdf_dict_get(new PdfObj("DescendantFonts"));
-            PdfObj obj = null;
-            if (desft != null)
+            PdfObj obj;
+            if (desft.m_internal != null)
             {
                 obj = desft.pdf_array_get(0).pdf_resolve_indirect();
                 obj = obj.pdf_dict_get(new PdfObj("FontDescriptor"));
@@ -1830,7 +1830,7 @@ namespace MuPDF.NET
                 obj = o.pdf_dict_get(new PdfObj("FontDescriptor"));
             }
 
-            if (obj == null)
+            if (obj.m_internal == null)
             {
                 Console.WriteLine("invalid font - FontDescriptor missing");
                 return null;
@@ -1839,13 +1839,15 @@ namespace MuPDF.NET
             o = obj;
             PdfObj stream = null;
             obj = o.pdf_dict_get(new PdfObj("FontFile"));
-            if (obj != null)
+            if (obj.m_internal_value() != 0)
                 stream = obj; // pfa
+
             obj = o.pdf_dict_get(new PdfObj("FontFile2"));
-            if (obj != null)
+            if (obj.m_internal != null)
                 stream = obj; // ttf
+
             obj = o.pdf_dict_get(new PdfObj("FontFile3"));
-            if (obj != null)
+            if (obj.m_internal != null)
             {
                 stream = obj;
                 obj = obj.pdf_dict_get(new PdfObj("Subtype"));
@@ -2026,7 +2028,7 @@ namespace MuPDF.NET
             }
             else
             {
-                if (bfName != null)
+                if (fontFile != null)
                 {
                     font = mupdf.mupdf.fz_new_font_from_file(null, fontFile, idx, 0);
                 }
