@@ -1381,7 +1381,7 @@ namespace MuPDF.NET
         {
             PdfObj root = pdf.pdf_trailer().pdf_dict_get(new PdfObj("Root"));
             PdfObj coll = root.pdf_dict_get(new PdfObj("Collection"));
-            if (coll != null && coll.pdf_dict_len() > 0)
+            if (coll.m_internal != null && coll.pdf_dict_len() == 0)
             {
                 root.pdf_dict_del(new PdfObj("Collection"));
             }
@@ -1393,7 +1393,7 @@ namespace MuPDF.NET
                     "Names", "EmbeddedFiles", "Names"
                 }
                 );
-            if (efiles != null)
+            if (efiles.m_internal != null)
                 root.pdf_dict_put_name(new PdfObj("PageMode"), "UseAttachments");
         }
 

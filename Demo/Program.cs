@@ -102,17 +102,11 @@ namespace Demo
             Console.WriteLine(bytes.Length);*/
 
             MuPDFDocument doc = new MuPDFDocument("1.pdf");
-            doc.JournalEnable();
-            doc.JournalStartOp("add");
             MuPDFPage page = doc.NewPage();
-            doc.JournalStopOp();
 
-            doc.JournalStartOp("insert");
-            page.InsertText(new Point(100, 100), "Line 1", fontName: "kenpixel", fontFile: "./kenpixel.ttf");
-            doc.JournalStopOp();
-            
-            (int, int) pos = doc.JournalPosition();
-            Console.WriteLine($"{pos.Item1} {pos.Item2}");
+            page.InsertText(new Point(500, 500), "Line fdsfdsasdgasddsfsdf", fontName: "kenpixel", fontFile: "./kenpixel.ttf");
+
+            doc.Save("output.pdf");
         }
 
     }
