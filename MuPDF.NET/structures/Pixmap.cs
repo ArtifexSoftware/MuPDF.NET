@@ -926,10 +926,10 @@ namespace MuPDF.NET
         {
             if (Utils.TESSDATA_PREFIX == null && tessdata == null)
                 throw new Exception("No OCR support: TESSDATA_PREFIX not set");
-            List<byte> bytes = new List<byte>();
-            SavePdfOCR(bytes, compress ? 1 : 0, language, tessdata);
+            ByteStream byteStream = new ByteStream();
+            SavePdfOCR(byteStream, compress ? 1 : 0, language, tessdata);
 
-            return bytes.ToArray();
+            return byteStream.Data;
         }
 
         public void SavePdfOCR(string filename, int compress = 1, string language = null, string tessdata = null)
@@ -946,7 +946,7 @@ namespace MuPDF.NET
             mupdf.mupdf.fz_save_pixmap_as_pdfocr(_nativePixmap, filename, 0, options);
         }
 
-        public void SavePdfOCR(List<byte> filename, int compress = 1, string language = null, string tessdata = null)
+        public void SavePdfOCR(ByteStream filename, int compress = 1, string language = null, string tessdata = null)
         {
             if (Utils.TESSDATA_PREFIX == null && tessdata == null)
                 throw new Exception("No OCR support: TESSDATA_PREFIX not set");
@@ -957,7 +957,7 @@ namespace MuPDF.NET
             if (tessdata != null)
                 options.datadir_set2(tessdata);
             FzPixmap pix = _nativePixmap;
-            FilePtrOutput output = new FilePtrOutput(new ByteStream(filename.ToArray()));
+            FilePtrOutput output = new FilePtrOutput(filename);
             output.fz_write_pixmap_as_pdfocr(pix, options);
         }
 
@@ -973,7 +973,7 @@ namespace MuPDF.NET
 
         public FilePtrOutput(ByteStream src) : base()
         {
-            this.data = new ByteStream(src.Data);
+            this.data = src;
             this.use_virtual_write();
             this.use_virtual_seek();
             this.use_virtual_tell();
@@ -997,7 +997,9 @@ namespace MuPDF.NET
 
         public override void write(fz_context arg_0, SWIGTYPE_p_void arg_2, ulong arg_3)
         {
-            
+            byte[] data = new byte[(int)arg_3];
+            Marshal.Copy(SWIGTYPE_p_void.getCPtr(arg_2).Handle, data, 0, data.Length);
+            this.data.Write(data, data.Length);
         }
     }
 }
