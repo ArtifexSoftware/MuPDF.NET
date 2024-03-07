@@ -32,6 +32,13 @@ namespace MuPDF.NET
             _length= data.Length;
         }
 
+        public ByteStream()
+        {
+            _data = new byte[0];
+            _offset = 0;
+            _length = _data.Length;
+        }
+
         public ByteStream(int capacity)
         {
             _data= new byte[capacity];
