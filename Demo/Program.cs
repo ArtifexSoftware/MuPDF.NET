@@ -93,13 +93,26 @@ namespace Demo
             FitResult ret = story.Fit(p.Fn, new Rect(0, 0, 100, 100), 0.3f, 0.7f);
             Console.WriteLine(ret.ToString());*/
 
-
-            MuPDFDocument doc = new MuPDFDocument("1.pdf");
+            ////////////-----------OCR
+            /*MuPDFDocument doc = new MuPDFDocument("1.pdf");
             MuPDFPage page = doc.LoadPage(1);
             Pixmap pix = page.GetPixmap();
             byte[] bytes = pix.PdfOCR2Bytes();
 
-            Console.WriteLine(bytes.Length);
+            Console.WriteLine(bytes.Length);*/
+
+            MuPDFDocument doc = new MuPDFDocument("1.pdf");
+            doc.JournalEnable();
+            doc.JournalStartOp("add");
+            MuPDFPage page = doc.NewPage();
+            doc.JournalStopOp();
+
+            doc.JournalStartOp("insert");
+            page.InsertText(new Point(100, 100), "Line 1", fontName: "kenpixel", fontFile: "./kenpixel.ttf");
+            doc.JournalStopOp();
+            
+            (int, int) pos = doc.JournalPosition();
+            Console.WriteLine($"{pos.Item1} {pos.Item2}");
         }
 
     }
