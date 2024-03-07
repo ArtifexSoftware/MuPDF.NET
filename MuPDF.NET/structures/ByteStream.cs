@@ -10,7 +10,7 @@ namespace MuPDF.NET
     {
         private byte[] _data;
 
-        private int _offset;
+        private long _offset;
 
         private int _length;
 
@@ -44,30 +44,32 @@ namespace MuPDF.NET
             get { return _data; }
         }
 
-        public int Offset
+        public long Offset
         {
             get { return _offset; }
         }
 
         public int Write(byte[] buffer, int length)
         {
-            int t = _offset + length - _length;
-            List<byte> list = new List<byte>(_data);
+            long t = _offset + length - _length;
             if (t > 0)
-                for (int i = 0; i < t; i++)
-                    list.Add(0);// resize
+            {
+                byte[] tmp = new byte[_offset + length];
+                for (int i = 0; i < _length; i++)
+                    tmp[i] = _data[i];
+                _data = tmp;
+            }
 
             for (int i = 0; i < buffer.Length; i++)
-                list[_offset + i] = buffer[i];
+                _data[_offset + i] = buffer[i];
 
-            _data = list.ToArray();
             _length = _data.Length;
             _offset += length;
 
             return _length;
         }
 
-        public void Seek(int offset, int option)
+        public void Seek(long offset, int option)
         {
             switch (option)
             {

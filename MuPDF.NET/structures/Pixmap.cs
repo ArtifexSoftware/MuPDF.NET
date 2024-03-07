@@ -7,10 +7,6 @@ using System.Security.Permissions;
 using System.Text;
 using System.Threading.Tasks;
 using mupdf;
-using System.Net;
-using static System.Net.Mime.MediaTypeNames;
-using System.Security.Policy;
-using System.Security.Cryptography;
 
 namespace MuPDF.NET
 {
@@ -975,34 +971,33 @@ namespace MuPDF.NET
     {
         public ByteStream data { get; set; }
 
-        public FilePtrOutput(ByteStream s) : base()
+        public FilePtrOutput(ByteStream src) : base()
         {
-            this.data = s;
+            this.data = new ByteStream(src.Data);
             this.use_virtual_write();
             this.use_virtual_seek();
             this.use_virtual_tell();
             this.use_virtual_truncate();
         }
 
-        public long seek(FzContext ctx, int offset, int whence)
+        public override void seek(fz_context arg_0, long arg_2, int arg_3)
         {
-            data.Seek(offset, whence);
+            data.Seek(arg_2, arg_3);
+        }
+
+        public override long tell(fz_context arg_0)
+        {
             return data.Offset;
         }
 
-        public long tell(FzContext ctx)
-        {
-            return data.Offset;
-        }
-
-        public void truncate(FzContext ctx)
+        public override void truncate(fz_context arg_0)
         {
             data.Resize(0);
         }
 
-        public void write(FzContext ctx, byte[] rawData, int dataLength)
+        public override void write(fz_context arg_0, SWIGTYPE_p_void arg_2, ulong arg_3)
         {
-            data.Write(rawData, dataLength);
+            
         }
     }
 }
