@@ -152,6 +152,21 @@ namespace MuPDF.NET
             return this;
         }
 
+        /// <summary>
+        /// Unit vector of the point.
+        /// </summary>
+        public Point Unit
+        {
+            get
+            {
+                float s = X * X + Y * Y;
+                if (s < Utils.FLT_EPSILON)
+                    return new Point(0, 0);
+                s = (float)Math.Sqrt(s);
+                return new Point(X / s, Y / s);
+            }
+        }
+
         public void Dispose()
         {
             
