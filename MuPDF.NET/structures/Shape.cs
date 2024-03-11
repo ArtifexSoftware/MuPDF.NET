@@ -2,8 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using GoogleGson;
-using Microsoft.Maui.Layouts;
 using mupdf;
 using MuPDF.NET;
 
@@ -59,6 +57,54 @@ namespace MuPDF.NET
             Rect = null;
         }
 
+        public int InsertText(
+            Point point,
+            List<string> buffer,
+            float fontSize = 11,
+            float lineHeight = 0,
+            string fontName = "helv",
+            string fontFile = null,
+            bool setSimple = false,
+            int encoding = 0,
+            float[] color = null,
+            float[] fill = null,
+            int renderMode = 0,
+            float borderWidth = 0.05f,
+            int rotate = 0,
+            Morph morph = null,
+            float strokeOpacity = 1,
+            float fillOpacity = 1,
+            int oc = 0
+            )
+        {
+            return _InsertText(point, buffer, fontSize, lineHeight, fontName, fontFile, setSimple, encoding,
+                color, fill, renderMode, borderWidth, rotate, morph, strokeOpacity, fillOpacity, oc);
+        }
+
+        public int InsertText(
+            Point point,
+            string buffer,
+            float fontSize = 11,
+            float lineHeight = 0,
+            string fontName = "helv",
+            string fontFile = null,
+            bool setSimple = false,
+            int encoding = 0,
+            float[] color = null,
+            float[] fill = null,
+            int renderMode = 0,
+            float borderWidth = 0.05f,
+            int rotate = 0,
+            Morph morph = null,
+            float strokeOpacity = 1,
+            float fillOpacity = 1,
+            int oc = 0
+            )
+        {
+            string[] list = buffer.Split(" ");
+            return _InsertText(point, new List<string>(list), fontSize, lineHeight, fontName, fontFile, setSimple, encoding,
+                color, fill, renderMode, borderWidth, rotate, morph, strokeOpacity, fillOpacity, oc);
+        }
 
         /// <summary>
         /// Insert text lines
@@ -82,9 +128,9 @@ namespace MuPDF.NET
         /// <param name="oc">the xref number of an OCG or OCMD to make this text conditionally displayable</param>
         /// <returns></returns>
         /// <exception cref="Exception"></exception>
-        public int InsertText(
+        public int _InsertText(
             Point point,
-            dynamic buffer,
+            List<string> buffer,
             float fontSize = 11,
             float lineHeight = 0,
             string fontName = "helv",
@@ -96,20 +142,13 @@ namespace MuPDF.NET
             int renderMode = 0,
             float borderWidth = 0.05f,
             int rotate = 0,
-            MorphStruct morph = new MorphStruct(),
+            Morph morph = null,
             float strokeOpacity = 1,
             float fillOpacity = 1,
             int oc = 0
             )
         {
-            List<string> text = new List<string>();
-            if (buffer is null)
-                return 0;
-            if (!(buffer is List<string>) || !(buffer is Tuple<string>))
-                text = new List<string>(Convert.ToString(buffer).Split("\n"));
-            else
-                text = buffer;
-
+            List<string> text = buffer;
             if (text.Count <= 0)
                 return 0;
 
@@ -181,7 +220,7 @@ namespace MuPDF.NET
                 fillStr = Utils.GetColorCode(color, "f");
             }
 
-            bool morphing = Utils.CheckMorph(morph);
+            bool morphing = (morph != null);
             int rot = rotate;
             if (rot % 90 != 0)
                 throw new Exception("bad rotate value");
@@ -199,8 +238,8 @@ namespace MuPDF.NET
 
             if (morphing)
             {
-                Matrix m1 = new Matrix(1, 0, 0, 1, morph.FixPoint.X + X, height - morph.FixPoint.Y - Y);
-                Matrix mat = ~m1 * morph.Matrix * m1;
+                Matrix m1 = new Matrix(1, 0, 0, 1, morph.P.X + X, height - morph.P.Y - Y);
+                Matrix mat = ~m1 * morph.M * m1;
                 cm = $"{mat.A} {mat.B} {mat.C} {mat.D} {mat.E} {mat.F} cm\n";
             }
             else cm = "";
@@ -680,11 +719,489 @@ namespace MuPDF.NET
             return p2;
         }
 
+        /// <summary>
+        /// Finish the current drawing segment.
+        /// Apply colors, opacity, dashes, line style and width, or morphing.Also whether to close the path by connecting last to first point.
+        /// </summary>
+        /// <param name="width"></param>
+        /// <param name="color"></param>
+        /// <param name="fill"></param>
+        /// <param name="lineCap"></param>
+        /// <param name="lineJoin"></param>
+        /// <param name="dashes"></param>
+        /// <param name="evenOdd">request the “even-odd rule” for filling operations. Default is False, so that the “nonzero winding number rule” is used.</param>
+        /// <param name="morph">morph the text or the compound drawing around some arbitrary Point fixpoint by applying Matrix matrix to it. This implies that fixpoint is a fixed point of this operation: it will not change its position. Default is no morphing (None). The matrix can contain any values in its first 4 components, matrix.e == matrix.f == 0 must be true, however. This means that any combination of scaling, shearing, rotating, flipping, etc. is possible, but translations are not.</param>
+        /// <param name="closePath"></param>
+        /// <param name="fillOpacity">(new in v1.18.1) set transparency for fill colors. Default is 1 (intransparent).</param>
+        /// <param name="strokeOpacity">(new in v1.18.1) set transparency for stroke colors. Value < 0 or > 1 will be ignored. Default is 1 (intransparent).</param>
+        /// <param name="oc">(new in v1.18.4) the xref number of an OCG or OCMD to make this drawing conditionally displayable.</param>
         public void Finish(float width = 1.0f, float[] color = null, float[] fill = null, int lineCap = 0,
-            int lineJoin = 0, string dashes = null, bool evenOdd = false, float[] morph = null, bool closePath = true,
+            int lineJoin = 0, string dashes = null, bool evenOdd = false, Morph morph = null, bool closePath = true,
             float fillOpacity = 1.0f, float strokeOpacity = 1.0f, int oc = 0)
         {
+            if (DrawCont == "")
+                return;
 
+            if (width == 0)
+                color = null;
+            else if (color is null)
+                width = 0;
+
+            string colorStr = Utils.GetColorCode(color, "c");
+            string fillStr = Utils.GetColorCode(fill, "f");
+
+            string optCont = Page.GetOptionalContent(oc);
+            string emc = "";
+            if (optCont != null || optCont != "")
+            {
+                DrawCont = $"/OC /{optCont + DrawCont} BDC\n";
+                emc = "EMC\n";
+            }
+
+            string alpha = Page.SetOpacity(CA: strokeOpacity, ca: fillOpacity);
+            if (alpha != null || alpha != "")
+                DrawCont = $"/{alpha} gs\n" + DrawCont;
+            if (width != 1 && width != 0)
+                DrawCont += $"{width} w\n";
+
+            if (lineCap != 0)
+                DrawCont = $"{lineCap} J\n" + DrawCont;
+            if (lineJoin != 0)
+                DrawCont = $"{lineJoin} j\n" + DrawCont;
+
+            if (!(dashes == null || dashes == "" || dashes == "[] 0"))
+                DrawCont = $"{dashes} d\n" + DrawCont;
+
+            if (closePath)
+            {
+                DrawCont += "h\n";
+                LastPoint = null;
+            }
+
+            if (color != null)
+                DrawCont += colorStr;
+
+            if (fill != null)
+            {
+                DrawCont += fillStr;
+                if (color != null)
+                {
+                    if (!evenOdd)
+                    {
+                        DrawCont += "B\n";
+                    }
+                    else
+                    {
+                        DrawCont += "B*\n";
+                    }
+                }
+                else
+                {
+                    if (!evenOdd)
+                        DrawCont += "f\n";
+                    else
+                        DrawCont += "f*\n";
+                }
+            }
+            else
+            {
+                DrawCont += "S\n";
+            }
+
+            DrawCont += emc;
+            if (morph != null)
+            {
+                Matrix m1 = new Matrix(1, 0, 0, 1, morph.P.X + X, Height - morph.P.Y - Y);
+                Matrix mat = ~m1 * morph.M * m1;
+                DrawCont = $"{mat.A} {mat.B} {mat.C} {mat.D} {mat.E} {mat.F} cm\n";
+            }
+
+            TotalCont += "\nq\n" + DrawCont + "Q\n";
+            DrawCont = "";
+            LastPoint = null;
+            return;
+        }
+
+        /// <summary>
+        /// Insert text into a given rectangle.
+        /// </summary>
+        /// <param name="rect">the textbox to fill</param>
+        /// <param name="buffer">text to be inserted</param>
+        /// <param name="fontSize">font size</param>
+        /// <param name="lineHeight">overwrite the font property</param>
+        /// <param name="fontName">a Base-14 font, font name or '/name'</param>
+        /// <param name="fontFile">name of a font file</param>
+        /// <param name="setSimple"></param>
+        /// <param name="encoding"></param>
+        /// <param name="color">RGB stroke color triple</param>
+        /// <param name="fill">RGB fill color triple</param>
+        /// <param name="expandTabs">handles tabulators with string function</param>
+        /// <param name="align">left, center, right, justified</param>
+        /// <param name="renderMode">text rendering control</param>
+        /// <param name="borderWidth">thickness of glyph borders</param>
+        /// <param name="rotate">0, 90, 180, or 270 degrees</param>
+        /// <param name="morph">morph box with a matrix and a fixpoint</param>
+        /// <param name="strokeOpacity"></param>
+        /// <param name="fillOpacity"></param>
+        /// <param name="oc"></param>
+        /// <returns>unused or deficit rectangle area (float)</returns>
+        public float InsertTextbox(
+            Rect rect,
+            List<string> buffer,
+            float fontSize = 11,
+            float lineHeight = 0,
+            string fontName = "helv",
+            string fontFile = null,
+            bool setSimple = false,
+            int encoding = 0,
+            float[] color = null,
+            float[] fill = null,
+            int expandTabs = 1,
+            int align = 1,
+            int renderMode = 0,
+            float borderWidth = 1.0f,
+            int rotate = 0,
+            Morph morph = null,
+            float strokeOpacity = 1,
+            float fillOpacity = 1,
+            int oc = 0
+            )
+        {
+            return _InsertTextbox(rect, buffer, fontSize, lineHeight, fontName, fontFile, setSimple, encoding,
+                color, fill, expandTabs, align, renderMode, borderWidth, rotate, morph, strokeOpacity, fillOpacity, oc);
+        }
+
+        public float InsertTextbox(
+            Rect rect,
+            string buffer,
+            float fontSize = 11,
+            float lineHeight = 0,
+            string fontName = "helv",
+            string fontFile = null,
+            bool setSimple = false,
+            int encoding = 0,
+            float[] color = null,
+            float[] fill = null,
+            int expandTabs = 1,
+            int align = 1,
+            int renderMode = 0,
+            float borderWidth = 0.05f,
+            int rotate = 0,
+            Morph morph = null,
+            float strokeOpacity = 1,
+            float fillOpacity = 1,
+            int oc = 0
+            )
+        {
+            string[] list = buffer.Split(" ");
+            return _InsertTextbox(rect, new List<string>(list), fontSize, lineHeight, fontName, fontFile, setSimple, encoding,
+                color, fill, expandTabs, align, renderMode, borderWidth, rotate, morph, strokeOpacity, fillOpacity, oc);
+        }
+
+        public float _InsertTextbox(
+            Rect rect,
+            List<string> buffer,
+            float fontSize = 11,
+            float lineHeight = 0,
+            string fontName = "helv",
+            string fontFile = null,
+            bool setSimple = false,
+            int encoding = 0,
+            float[] color = null,
+            float[] fill = null,
+            int expandTabs = 1,
+            int align = 1,
+            int renderMode = 0,
+            float borderWidth = 0.05f,
+            int rotate = 0,
+            Morph morph = null,
+            float strokeOpacity = 1,
+            float fillOpacity = 1,
+            int oc = 0
+            )
+        {
+            if (rect.IsEmpty || rect.IsInfinite)
+                throw new Exception("text box must be finite and not empty");
+
+            string colorStr = Utils.GetColorCode(color, "c");
+            string fillStr = Utils.GetColorCode(fill, "f");
+            if (fill == null || renderMode == 0)
+            {
+                fill = color;
+                fillStr = Utils.GetColorCode(color, "f");
+            }
+
+            string optCont = Page.GetOptionalContent(oc);
+            string bdc = "", emc = "";
+            if (optCont != null)
+            {
+                bdc = $"/OC /{optCont} BDC\n";
+                emc = "EMC\n";
+            }
+
+            string alpha = Page.SetOpacity(CA: strokeOpacity, ca: fillOpacity);
+            if (alpha == null)
+                alpha = "";
+            else
+                alpha = $"/s{alpha} gs\n";
+
+            if (rotate % 90 != 0)
+                throw new Exception("rotate must be multiple of 90");
+
+            int rot = rotate;
+            while (rot < 0)
+                rot += 360;
+            rot = rot % 360;
+
+            if (buffer.Count == 0)
+                return (rot == 0 && rot == 180) ? rect.Height : rect.Width;
+
+            string cmp90 = "0 1 -1 0 0 0 cm\n";
+            string cmm90 = "0 -1 1 0 0 0 cm\n";
+            string cm180 = "-1 0 0 -1 0 0 cm\n";
+            float height = this.Height;
+
+            string fname = fontName;
+            if (fname.StartsWith("/"))
+                fname = fname.Substring(1);
+
+            int xref = Page.InsertFont(fontName: fname, fontFile: fontFile, encoding: encoding, setSimple: setSimple);
+            FontStruct fontInfo = Utils.CheckFontInfo(Doc, xref);
+
+            if (fontInfo == null)
+                throw new Exception("no found font info");
+            int ordering = fontInfo.Ordering;
+            bool simple = fontInfo.Simple;
+            List<(int, double)> glyphs = fontInfo.Glyphs;
+            string bfName = fontInfo.Name;
+            float asc = fontInfo.Ascender;
+            float des = fontInfo.Descender;
+
+            float lheightFactor;
+            if (lineHeight != 0)
+                lheightFactor = lineHeight;
+            else if (asc - des <= 1)
+                lheightFactor = 1.2f;
+            else
+                lheightFactor = asc - des;
+            float lheight = fontSize * lheightFactor;
+
+            string t0 = string.Join('\n', buffer);
+            int maxCode = 0;
+            foreach (char c in t0)
+                maxCode = maxCode < Convert.ToInt32(c) ? Convert.ToInt32(c) : maxCode;
+
+            string t1 = "";
+            if (simple && maxCode > 255)
+                foreach (char c in t0)
+                    t1 += Convert.ToInt32(c) < 256 ? $"{c}" : "?";
+
+            string[] t2 = t1.Split("\n");
+            glyphs = Utils.GetCharWidths(Doc, xref, maxCode + 1);
+            List<(int, double)> tj_glyphs;
+            if (simple && !(bfName == "Symbol" && bfName == "ZapfDingbats"))
+                tj_glyphs = null;
+            else
+                tj_glyphs = glyphs;
+
+            float PixLen(string x)
+            {
+                if (ordering < 0)
+                {
+                    double sum = 0;
+                    foreach (char c in x)
+                        sum += glyphs[Convert.ToInt32(c)].Item2;
+                    return (float)(sum * fontSize);
+                }
+                else
+                {
+                    return x.Length * fontSize;
+                }
+            }
+
+            float blen;
+            if (ordering < 0)
+                blen = (float)(glyphs[32].Item2 * fontSize);
+            else
+                blen = fontSize;
+
+            string text = "";
+            string cm = "";
+            if (morph != null)
+            {
+                Matrix m1 = new Matrix(1, 0, 0, 1, morph.P.X + X, Height - morph.P.Y - Y);
+                Matrix mat = ~m1 * morph.M * m1;
+                cm = $"{mat.A} {mat.B} {mat.C} {mat.D} {mat.E} {mat.F} cm\n";
+            }
+
+            int progr = 1;
+            Point cPnt = new Point(0, fontSize * asc);
+            Point point = new Point();
+            float pos = 0, maxWidth = 0, maxPos = 0;
+            if (rot == 0)
+            {
+                point = rect.TopLeft + Y;
+                pos = point.Y + Y;
+                maxWidth = rect.Width;
+                maxPos = rect.Y1 + Y;
+            }
+            else if (rot == 90)
+            {
+                cPnt = new Point(fontSize * asc, 0);
+                point = rect.BottomLeft + cPnt;
+                pos = point.X + X;
+                maxWidth = rect.Height;
+                maxPos = rect.X1 + X;
+            }
+            else if (rot == 180)
+            {
+                cPnt = -(new Point(0, fontSize * asc));
+                point = rect.BottomRight + cPnt;
+                pos = point.Y + Y;
+                maxWidth = rect.Width;
+                progr = -1;
+                maxPos = rect.Y0 + Y;
+                cm += cmm90;
+            }
+
+            List<bool> justTab = new List<bool>();
+            for (int i = 0; i < t2.Length; i ++)
+            {
+                string[] line_t = t2[i].Replace("\t", new string(' ', expandTabs)).Split(" ");
+                string lbuff = "";
+                float rest = maxWidth;
+
+                foreach (string word in line_t)
+                {
+                    float pl_w = PixLen(word);
+                    if (rest >= pl_w)
+                    {
+                        lbuff += word + " ";
+                        rest -= pl_w + blen;
+                        continue;
+                    }
+                    if (lbuff.Length > 0)
+                    {
+                        lbuff = lbuff.TrimEnd() + "\n";
+                        text += lbuff;
+                        pos += lheight * progr;
+                        justTab.Append(true);
+                        lbuff = "";
+                    }
+                    rest = maxWidth;
+                    if (pl_w <= maxWidth)
+                    {
+                        lbuff = word + " ";
+                        rest = maxWidth - pl_w - blen;
+                        continue;
+                    }
+
+                    if (justTab.Count > 0)
+                        justTab[justTab.Count - 1] = false;
+                    foreach (char c in word)
+                    {
+                        if (PixLen(lbuff) <= maxWidth - PixLen($"{c}"))
+                            lbuff += c;
+                        else
+                        {
+                            lbuff += "\n";
+                            text += lbuff;
+                            pos += lheight * progr;
+                            justTab.Append(false);
+                            lbuff = $"{c}";
+                        }
+                    }
+
+                    lbuff += " ";
+                    rest = maxWidth - PixLen(lbuff);
+                }
+                if (lbuff != "")
+                {
+                    text += lbuff.TrimEnd();
+                    justTab.Append(false);
+                }
+                if (i < t2.Count() - 1)
+                {
+                    text += "\n";
+                    pos += lheight * progr;
+                }
+            }
+
+            float more = (pos - maxPos) * progr;
+            if (more > Utils.FLT_EPSILON)
+                return (-1) * more;
+
+            more = Math.Abs(more);
+            if (more < Utils.FLT_EPSILON)
+                more = 0;
+
+            string nres = $"\nq\n{bdc}{alpha}BT\n" + cm;
+            string template = "1 0 0 1 {0} {1} Tm /{2} {3} Tf ";
+            string[] text_t = text.Split(" ");
+            justTab[justTab.Count - 1] = false;
+            
+            for (int i = 0; i < text_t.Length; i ++)
+            {
+                float pl = maxWidth - PixLen(text_t[i]);
+                Point pnt = point + cPnt * (i * lheightFactor);
+                float spacing = 0;
+                if (align == 1)
+                {
+                    if (rot == 0 && rot == 180)
+                        pnt = pnt + new Point(pl, 0) * progr;
+                    else
+                        pnt = pnt - new Point(0, pl / 2) * progr;
+                }
+                else if (align == 2)
+                {
+                    if (rot == 0 && rot == 180)
+                        pnt = pnt + new Point(pl, 0) * progr;
+                    else
+                        pnt = pnt - new Point(0, pl) * progr;
+                }
+                else if (align == 3)
+                {
+                    int spaces = text_t[i].Count(c => c == ' ');
+                    if (spaces > 0 && justTab[i])
+                        spacing = pl / spaces;
+                }
+                float top = height - pnt.Y - Y;
+                float left = pnt.X + X;
+                if (rot == 90)
+                {
+                    left = height - pnt.Y - Y;
+                    top = -pnt.X - X;
+                }
+                else if (rot == 270)
+                {
+                    left = -height + pnt.Y + Y;
+                    top = pnt.X + X;
+                }
+                else if (rot == 180)
+                {
+                    left = -pnt.X - X;
+                    top = -height + pnt.Y + Y;
+                }
+
+                nres += string.Format(template, left, top, fname, fontSize);
+                if (renderMode > 0)
+                    nres += $"{renderMode} Tr ";
+                if (align == 3)
+                    nres = $"{spacing} Tw ";
+
+                if (color != null)
+                    nres += colorStr;
+                if (fill != null)
+                    nres += fillStr;
+                if (borderWidth != 1)
+                    nres += $"{borderWidth} w ";
+                nres += $"{Utils.GetTJstr(text_t[i], tj_glyphs, simple, ordering)}TJ\n";
+            }
+            nres += $"ET\n{emc}Q\n";
+
+            TextCont += nres;
+            UpdateRect(rect);
+            return more;
         }
     }
 }
