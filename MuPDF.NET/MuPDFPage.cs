@@ -1212,7 +1212,7 @@ namespace MuPDF.NET
             float borderWidth = 0.05f,
             int renderMode = 0,
             int rotate = 0,
-            MorphStruct morph = new MorphStruct(),
+            Morph morph = null,
             bool overlay = true,
             float strokeOpacity = 1,
             float fillOpacity = 1,
@@ -1534,7 +1534,7 @@ namespace MuPDF.NET
             if (font != null)
             {
                 xref = font.Xref;
-                if (Utils.CheckFontInfo(doc, xref))
+                if (Utils.CheckFontInfo(doc, xref) != null)
                     return xref;
 
                 Utils.GetCharWidths(doc, xref);
