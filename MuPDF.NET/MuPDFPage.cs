@@ -384,80 +384,91 @@ namespace MuPDF.NET
             int rotate = 0
             )
         {
-            PdfPage page = _nativePage;
-            float[] fColor = MuPDFAnnotation.ColorFromSequence(fillColor);
-            float[] tColor = MuPDFAnnotation.ColorFromSequence(textColor);
-            if (rect.fz_is_infinite_rect() != 0 && rect.fz_is_empty_rect() != 0)
+            int oldRotation = AnnotPreProcess(this);
+            MuPDFAnnotation val;
+            try
             {
-                throw new Exception(Utils.ErrorMessages["MSG_BAD_RECT"]);
-            }
+                PdfPage page = _nativePage;
+                float[] fColor = MuPDFAnnotation.ColorFromSequence(fillColor);
+                float[] tColor = MuPDFAnnotation.ColorFromSequence(textColor);
+                if (rect.fz_is_infinite_rect() != 0 && rect.fz_is_empty_rect() != 0)
+                {
+                    throw new Exception(Utils.ErrorMessages["MSG_BAD_RECT"]);
+                }
 
-            PdfAnnot annot = page.pdf_create_annot(pdf_annot_type.PDF_ANNOT_FREE_TEXT);
-            PdfObj annotObj = annot.pdf_annot_obj();
-            annot.pdf_set_annot_contents(text);
-            annot.pdf_set_annot_rect(rect);
-            annotObj.pdf_dict_put_int(new PdfObj("Rotate"), rotate);
-            annotObj.pdf_dict_put_int(new PdfObj("Q"), align);
+                PdfAnnot annot = page.pdf_create_annot(pdf_annot_type.PDF_ANNOT_FREE_TEXT);
+                PdfObj annotObj = annot.pdf_annot_obj();
+                annot.pdf_set_annot_contents(text);
+                annot.pdf_set_annot_rect(rect);
+                annotObj.pdf_dict_put_int(new PdfObj("Rotate"), rotate);
+                annotObj.pdf_dict_put_int(new PdfObj("Q"), align);
 
-            if (fColor.Length > 0)
-            {
-                IntPtr fColorPtr = new IntPtr(fColor.Length);
-                Marshal.Copy(fColor, 0, fColorPtr, fColor.Length);
-                SWIGTYPE_p_float swigFColor = new SWIGTYPE_p_float(fColorPtr, false);
-                annot.pdf_set_annot_color(fColor.Length, swigFColor);
-            }
+                if (fColor != null && fColor.Length > 0)
+                {
+                    IntPtr fColorPtr = Marshal.AllocHGlobal(fColor.Length);
+                    Marshal.Copy(fColor, 0, fColorPtr, fColor.Length);
+                    SWIGTYPE_p_float swigFColor = new SWIGTYPE_p_float(fColorPtr, false);
+                    annot.pdf_set_annot_color(fColor.Length, swigFColor);
+                }
 
-            Utils.MakeAnnotDA(annot, tColor.Length, tColor, fontName, fontSize);
-            annot.pdf_update_annot();
-            Utils.AddAnnotId(annot, "A");
-            MuPDFAnnotation val = new MuPDFAnnotation(annot);
+                Utils.MakeAnnotDA(annot, tColor == null ? -1 : tColor.Length, tColor, fontName, fontSize);
+                annot.pdf_update_annot();
+                Utils.AddAnnotId(annot, "A");
+                val = new MuPDFAnnotation(annot);
 
-            byte[] ap = val.GetAP();
-            int BT = Convert.ToString(ap).IndexOf("BT");
-            int ET = Convert.ToString(ap).IndexOf("ET");
-            ap = Utils.ToByte(Convert.ToString(ap).Substring(BT, ET));
+                byte[] ap = val.GetAP();
+                int BT = Convert.ToString(ap).IndexOf("BT");
+                int ET = Convert.ToString(ap).IndexOf("ET");
+                ap = Utils.ToByte(Convert.ToString(ap).Substring(BT, ET));
 
-            Rect r = new Rect(rect);
-            float w = r[2] - r[0];
-            float h = r[3] - r[1];
-            if ((new List<float>() { 90, -90, 270}).Contains(rotate))
-            {
-                float t = w;
-                w = h;
-                h = t;
-            }
+                Rect r = new Rect(rect);
+                float w = r[2] - r[0];
+                float h = r[3] - r[1];
+                if ((new List<float>() { 90, -90, 270 }).Contains(rotate))
+                {
+                    float t = w;
+                    w = h;
+                    h = t;
+                }
 
-            byte[] re = Utils.ToByte($"0 0 {w} {h} re");
-            ap = MuPDFAnnotation.MergeByte(MuPDFAnnotation.MergeByte(re, Utils.ToByte($"\nW\nn\n")), ap);
-            byte[] ope = null;
-            byte[] bWidth = null;
-            byte[] fillBytes = Utils.ToByte((MuPDFAnnotation.ColorCode(fColor, "f")));
-            if (fillBytes != null || fillBytes.Length != 0)
-            {
-                fillBytes = MuPDFAnnotation.MergeByte(fillBytes, Utils.ToByte("\n"));
-                ope = Utils.ToByte("f");
-            }
-            byte[] strokeBytes = Utils.ToByte(MuPDFAnnotation.ColorCode(borderColor, "c"));
-            if (strokeBytes != null || strokeBytes.Length != 0)
-            {
-                strokeBytes = MuPDFAnnotation.MergeByte(strokeBytes, Utils.ToByte("\n"));
-                bWidth = Utils.ToByte("1 w\n");
-                ope = Utils.ToByte("S");
-            }
+                byte[] re = Utils.ToByte($"0 0 {w} {h} re");
+                ap = MuPDFAnnotation.MergeByte(MuPDFAnnotation.MergeByte(re, Utils.ToByte($"\nW\nn\n")), ap);
+                byte[] ope = null;
+                byte[] bWidth = null;
+                byte[] fillBytes = Utils.ToByte((MuPDFAnnotation.ColorCode(fColor, "f")));
+                if (fillBytes != null || fillBytes.Length != 0)
+                {
+                    fillBytes = MuPDFAnnotation.MergeByte(fillBytes, Utils.ToByte("\n"));
+                    ope = Utils.ToByte("f");
+                }
+                byte[] strokeBytes = Utils.ToByte(MuPDFAnnotation.ColorCode(borderColor, "c"));
+                if (strokeBytes != null || strokeBytes.Length != 0)
+                {
+                    strokeBytes = MuPDFAnnotation.MergeByte(strokeBytes, Utils.ToByte("\n"));
+                    bWidth = Utils.ToByte("1 w\n");
+                    ope = Utils.ToByte("S");
+                }
 
-            if (fillBytes != null && strokeBytes != null)
-                ope = Utils.ToByte("B");
-            if (ope != null)
-            {
-                ap = MuPDFAnnotation.MergeByte(
-                    MuPDFAnnotation.MergeByte(
+                if (fillBytes != null && strokeBytes != null)
+                    ope = Utils.ToByte("B");
+                if (ope != null)
+                {
+                    ap = MuPDFAnnotation.MergeByte(
                         MuPDFAnnotation.MergeByte(
                             MuPDFAnnotation.MergeByte(
-                                MuPDFAnnotation.MergeByte(bWidth, fillBytes), strokeBytes), re), Utils.ToByte("\n")),
-                    MuPDFAnnotation.MergeByte(Utils.ToByte("\n"), ap));
-            }
+                                MuPDFAnnotation.MergeByte(
+                                    MuPDFAnnotation.MergeByte(bWidth, fillBytes), strokeBytes), re), Utils.ToByte("\n")),
+                        MuPDFAnnotation.MergeByte(Utils.ToByte("\n"), ap));
+                }
 
-            val.SetAP(ap);
+                val.SetAP(ap);
+            }
+            finally
+            {
+                if (oldRotation != 0)
+                    SetRotation(oldRotation);
+            }
+            AnnotPostProcess(this, val);
             return val;
         }
 
@@ -700,7 +711,7 @@ namespace MuPDF.NET
         public MuPDFAnnotation AddCircleAnnot(Rect rect)
         {
             int oldRotation = AnnotPreProcess(this);
-            MuPDFAnnotation ret;
+            MuPDFAnnotation ret = null;
             try
             {
                 ret = AddSquareOrCircle(rect, PdfAnnotType.PDF_ANNOT_CIRCLE);
@@ -1239,7 +1250,7 @@ namespace MuPDF.NET
                 fillOpacity: fillOpacity,
                 oc: oc
                 );
-            
+
             if (rc >= 0)
                 img.Commit(overlay ? 1 : 0);
             return rc;
@@ -1286,7 +1297,7 @@ namespace MuPDF.NET
             else if (text is MuPDFStory)
                 story = text;
             else
-                throw new Exception("'text' must be a string or a Story");
+                throw new Exception($"{text} must be a string or a Story");
 
             float scaleMax = scaleLow == 0 ? 0.0f : 1 / scaleLow;
             FitResult fit = story.FitScale(tempRect, scaleMin: 1, scaleMax: scaleMax);
@@ -1544,7 +1555,7 @@ namespace MuPDF.NET
             string bfName;
             try
             {
-                bfName = Utils.Base14_fontdict[fontName.ToLower()];
+                bfName = Utils.Base14_fontdict.GetValueOrDefault(fontName.ToLower(), null);
             }
             catch
             {
@@ -1674,7 +1685,7 @@ namespace MuPDF.NET
             int tca = Convert.ToInt32(Math.Round(Math.Max(ca, 0) * 100));
             if (tca >= 100)
                 tca = 99;
-            gstate = $"fitzca{tCA.ToString("2i")}{tca.ToString("2i")}";
+            gstate = String.Format("fitzca{0:D2}{1:D2}", tCA, tca);
 
             if (gstate == null) return null;
 

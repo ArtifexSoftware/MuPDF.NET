@@ -1076,7 +1076,7 @@ namespace MuPDF.NET
         public static void MakeAnnotDA(PdfAnnot annot, int nCol, float[] col, string fontName, float fontSize)
         {
             string buf = "";
-            if (nCol > 0)
+            if (nCol < 1)
                 buf += "0 g ";
             else if (nCol == 1)
                 buf += $"{col[0]:g} g ";

@@ -98,14 +98,23 @@ namespace Demo
             MuPDFPage page = doc.LoadPage(1);
             Pixmap pix = page.GetPixmap();
             byte[] bytes = pix.PdfOCR2Bytes();
-
             Console.WriteLine(bytes.Length);*/
 
             MuPDFDocument doc = new MuPDFDocument("1.pdf");
-            MuPDFPage page = doc.NewPage();
+            MuPDFPage page = new MuPDFPage(doc.GetPage(1), doc);
 
-            page.InsertText(new Point(500, 500), "Line fdsfdsasdgasddsfsdf", fontName: "kenpixel", fontFile: "./kenpixel.ttf");
 
+            /*foreach (string line in Utils.GetGlyphText())
+                Console.WriteLine(line);*/
+            /*MuPDFDocument doc = new MuPDFDocument("1.pdf");
+            MuPDFPage page = new MuPDFPage(doc.GetPage(0), doc);
+            page.AddCircleAnnot(new Rect(0, 0, 400, 400));
+            doc.Save("output.pdf");*/
+
+
+            /*Console.WriteLine(page.InsertText(new Point(50, 100), "Line fdsfdsasdgasddsfsdf", fontFile: "./kenpixel.ttf", fontName: "kenpixel"));*/
+
+            page.InsertHtmlBox(new Rect(0, 0, 100, 100), "<h2>Hello world</h2>");
             doc.Save("output.pdf");
         }
 

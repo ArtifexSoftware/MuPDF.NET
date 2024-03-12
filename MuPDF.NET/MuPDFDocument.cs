@@ -42,6 +42,8 @@ namespace MuPDF.NET
 
         public List<byte> Stream;
 
+        private bool _isPDF;
+
         public bool NeedsPass {
             get
             {
@@ -62,7 +64,7 @@ namespace MuPDF.NET
             }
             set
             {
-                IsPDF = value;
+                _isPDF = value;
             }
         }
 
