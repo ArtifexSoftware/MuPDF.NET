@@ -6,7 +6,6 @@ using System.Runtime.InteropServices;
 using System.Runtime.Remoting;
 using System.Text;
 using mupdf;
-using static mupdf.FzBandWriter;
 
 namespace MuPDF.NET
 {

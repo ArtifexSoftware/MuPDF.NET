@@ -120,4 +120,11 @@ public class PageTest : TestBase
         page.InsertHtmlBox(new Rect(0, 0, 100, 100), "<h2>Hello world</h2>");
         Assert.Pass();
     }
+
+    [Test]
+    public void Test_GetCDrawings()
+    {
+        page.GetCDrawings();
+        Assert.Pass();
+    }
 }
