@@ -2409,6 +2409,9 @@ namespace MuPDF.NET
         {
             Matrix ctm = page.TransformationMatrix;
             Matrix ictm = ~ctm;
+            if (link.From == null)
+                throw new Exception("should contain 'From' in Link");
+
             Rect r = link.From * ictm;
             string rectStr = $"{r.X0} {r.Y0} {r.X1} {r.Y1}";
             string txt;
@@ -3000,6 +3003,33 @@ namespace MuPDF.NET
                 }
             }
             return AdobeGlyphs.GetValueOrDefault(ch, ".notdef");
+        }
+
+        public static FzMatrix ShowStringCS(FzText text, Font userFont, FzMatrix trm,string s, int wmode,
+            fz_bidi_direction bidi_level, int markupDir, fz_text_language langauge)
+        {
+            int i = 0;
+            while (i < s.Length)
+            {
+                ll_fz_chartorune_outparams outparams = new ll_fz_chartorune_outparams();
+                int l = mupdf.mupdf.ll_fz_chartorune_outparams_fn(s.Substring(i), outparams);
+                i += l;
+                FzFont font;
+                int gid = mupdf.mupdf.fz_encode_character_sc(userFont.ToFzFont(), outparams.rune);
+                if (gid == 0)
+                    (gid, font) = userFont.ToFzFont().fz_encode_character_with_fallback(outparams.rune, 0, (int)langauge);
+                else
+                    font = userFont.ToFzFont();
+
+                mupdf.mupdf.fz_show_glyph(text, font, trm, gid, outparams.rune, (int)bidi_level, wmode, (fz_bidi_direction)markupDir, langauge);
+                float adv = mupdf.mupdf.fz_advance_glyph(font, gid, wmode);
+                if (wmode == 0)
+                    trm = trm.fz_pre_translate(adv, 0);
+                else
+                    trm = trm.fz_pre_translate(0, -adv);
+            }
+
+            return trm;
         }
     }
 }

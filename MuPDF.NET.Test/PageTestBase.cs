@@ -1,8 +1,7 @@
 ﻿namespace MuPDF.NET.Test
 {
-    public class TestBase
+    public class PageTestBase
     {
-
         public MuPDFDocument doc;
 
         public MuPDFPage page;

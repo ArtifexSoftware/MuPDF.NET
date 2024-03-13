@@ -94,6 +94,11 @@ namespace MuPDF.NET
             }
         }
 
+        public FzFont ToFzFont()
+        {
+            return _nativeFont;
+        }
+
         public Dictionary<string, uint> Flags
         {
             get

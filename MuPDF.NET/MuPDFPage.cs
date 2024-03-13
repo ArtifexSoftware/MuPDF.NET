@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
-using System.Runtime.Remoting;
 using System.Text;
 using mupdf;
 
@@ -14,6 +13,8 @@ namespace MuPDF.NET
         private PdfPage _nativePage;
 
         private MuPDFDocument _parent;
+
+        private static FitResult fit;
 
         public PdfObj PageObj
         {
@@ -87,6 +88,11 @@ namespace MuPDF.NET
                 // print warning message - __init__/8391
             }
             return val;
+        }
+
+        public static (Rect, Rect, IdentityMatrix) RectFunction(int rectN, Rect filled)
+        {
+            return (fit.Rect, fit.Rect, new IdentityMatrix());
         }
 
         public FzPage AsFzPage(dynamic page)
@@ -988,7 +994,6 @@ namespace MuPDF.NET
             IntPtr scrPtr = Marshal.AllocHGlobal(bSrc.Length);
             Marshal.Copy(bSrc, 0, scrPtr, bSrc.Length);
             SWIGTYPE_p_unsigned_char swigSrc = new SWIGTYPE_p_unsigned_char(scrPtr, true);
-            Marshal.FreeHGlobal(scrPtr);
 
             FzBuffer buffer_ = mupdf.mupdf.fz_new_buffer_from_copied_data(swigSrc, (uint)bSrc.Length);
             FzStream stream = buffer_.fz_open_buffer();
@@ -1006,7 +1011,7 @@ namespace MuPDF.NET
                 return;
             int i = -1;
 
-            if (page.obj().pdf_dict_get(new PdfObj("Annots")) == null)
+            if (page.obj().pdf_dict_get(new PdfObj("Annots")).m_internal == null)
                 page.obj().pdf_dict_put_array(new PdfObj("Annots"), lCount);
             PdfObj annots = page.obj().pdf_dict_get(new PdfObj("Annots"));
             Debug.Assert(annots == null, $"{lCount} is {annots}");
@@ -1095,7 +1100,7 @@ namespace MuPDF.NET
         public void InsertLink(LinkStruct link, bool mark = true)
         {
             string annot = Utils.GetLinkText(this, link);
-            if (annot == "" || annot == null)
+            if (annot == "")
                 throw new Exception("link kind not supported");
             AddAnnotFromString(new List<string>() { annot });
         }
@@ -1299,7 +1304,7 @@ namespace MuPDF.NET
                 throw new Exception($"{text} must be a string or a Story");
 
             float scaleMax = scaleLow == 0 ? 0.0f : 1 / scaleLow;
-            FitResult fit = story.FitScale(tempRect, scaleMin: 1, scaleMax: scaleMax);
+            fit = story.FitScale(tempRect, scaleMin: 1, scaleMax: scaleMax);
 
             if (fit.BigEnough == false)
                 return (-1, scaleLow);
@@ -1311,8 +1316,7 @@ namespace MuPDF.NET
             if (scale != 1 || spareHeight < 0)
                 spareHeight = 0;
 
-            //story // issue
-            MuPDFDocument doc = story.WriteWithLinks();
+            MuPDFDocument doc = story.WriteWithLinks(RectFunction);
 
             if (0 <= opacity && opacity < 1)
             {

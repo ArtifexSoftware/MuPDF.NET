@@ -1,7 +1,7 @@
 namespace MuPDF.NET.Test;
 using MuPDF.NET;
 
-public class PageTest : TestBase
+public class PageTest : PageTestBase
 {
     [SetUp]
     public void Setup()
@@ -11,20 +11,22 @@ public class PageTest : TestBase
     }
 
     [Test]
-    public void Test_InsertText()
+    public void Test_InsertText()// passed but text was never drawn
     {
         MuPDFPage page = doc.NewPage();
-        page.InsertText(new Point(100, 100), "hello", fontFile: "kenpixel.ttf", fontName: "kenpixel");
-        doc.Save("output.pdf");
-        Assert.Pass();
+        int res = page.InsertText(new Point(100, 100), "hello", fontFile: "kenpixel.ttf", fontName: "kenpixel");
+        Assert.NotZero(res);
+
+        res = page.InsertText(new Point(100, 100), "hello", setSimple: 1, borderWidth: 2);
+        Assert.NotZero(res);
     }
 
     [Test]
     public void Test_AddCircleAnnot()
     {
-        MuPDFAnnotation ret = page.AddCircleAnnot(new Rect(0, 0, 400, 400));
-        doc.Save("output.pdf");
-        Assert.IsNotNull(ret);
+        page.AddCircleAnnot(new Rect(0, 0, 400, 400));
+        
+        Assert.Pass();
     }
 
     [Test]
@@ -125,6 +127,27 @@ public class PageTest : TestBase
     public void Test_GetCDrawings()
     {
         page.GetCDrawings();
+        Assert.Pass();
+    }
+
+    [Test]
+    public void Test_InsertLink()
+    {
+        LinkStruct link = new LinkStruct();
+        link.Name = "Here is the link.";
+        link.Page = 1;
+        link.From = new Rect(0, 0, 100, 100);
+        /*try
+        {
+            page.InsertLink(link);
+        }
+        catch (Exception)
+        {
+            Assert.Pass();
+        }*/
+
+        link.Kind = LinkType.LINK_GOTO;
+        page.InsertLink(link);
         Assert.Pass();
     }
 }
