@@ -126,13 +126,13 @@ namespace MuPDF.NET
             return new FzPoint(p.X, p.Y);
         }
 
-        public Point TrueDivide(dynamic m)
+        public Point TrueDivide(float m)
         {
-            if (m is float)
-            {
-                return new Point(this.X * 1.0 / m, this.Y * 1.0 / m);
-            }
+            return new Point((float)(this.X * 1.0 / m), (float)(this.Y * 1.0 / m));
+        }
 
+        public Point TrueDivide(Matrix m)
+        {
             (int, Matrix) result = Utils.InvertMatrix(m); // util
 
             if (result.Item1 == 0)

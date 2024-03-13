@@ -19,6 +19,8 @@ namespace MuPDF.NET
 
         delegate string LE_FUNCTION(MuPDFAnnotation annot, Point p1, Point p2, bool lr, float[] fillColor);
 
+        private MuPDFPage _parent;
+
         internal Rect Rect
         {
             get
@@ -31,17 +33,11 @@ namespace MuPDF.NET
         {
             get
             {
-                PdfPage page = _nativeAnnotion.pdf_annot_page();
-                PdfDocument document = null;
-                if (page != null)
-                    document = new PdfDocument(page.doc());
-
-                MuPDFPage ret = new MuPDFPage(page, new MuPDFDocument(document));
-                return ret;
+                return _parent;
             }
             set
             {
-                Parent = value;
+                _parent = value;
             }
         }
 
@@ -564,6 +560,14 @@ namespace MuPDF.NET
         public MuPDFAnnotation(PdfAnnot annotion)
         {
             _nativeAnnotion = annotion;
+
+            PdfPage page = _nativeAnnotion.pdf_annot_page();
+            PdfDocument document = null;
+            if (page != null)
+                document = new PdfDocument(page.doc());
+
+            _parent = new MuPDFPage(page, new MuPDFDocument(document));
+
             IsOwner = true;
         }
 
@@ -730,7 +734,7 @@ namespace MuPDF.NET
             }
 
             byte[] r = null;
-            if (ret != null)
+            if (ret.m_internal != null)
                 r = Utils.BinFromBuffer(ret);
             return r;
         }
@@ -771,6 +775,9 @@ namespace MuPDF.NET
 
         public static float[] ColorFromSequence(float[] seq)
         {
+            if (seq == null)
+                return null;
+
             if (!(new List<int>() { 0, 1, 3, 4 }).Contains(seq.Length))
                 return null;
 
