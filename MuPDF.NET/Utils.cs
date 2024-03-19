@@ -42,6 +42,11 @@ namespace MuPDF.NET
 
         public static string TESSDATA_PREFIX = Environment.GetEnvironmentVariable("TESSDATA_PREFIX");
 
+        public static int trace_device_FILL_PATH = 1;
+        public static int trace_device_STROKE_PATH = 2;
+        public static int trace_device_CLIP_PATH = 3;
+        public static int trace_device_CLIP_STROKE_PATH = 4;
+
         public static Dictionary<string, string> AnnotSkel = new Dictionary<string, string>(){
             { "goto1", "<</A<</S/GoTo/D[{0, 10} 0 R/XYZ {1} {2} {3}]>>/Rect[{4}]/BS<</W 0>>/Subtype/Link>>" },
             { "goto2", "<</A<</S/GoTo/D{0}>>/Rect[{1}]/BS<</W 0>>/Subtype/Link>>" },
@@ -3030,6 +3035,96 @@ namespace MuPDF.NET
             }
 
             return trm;
+        }
+
+        public static int CheckQuad(LineartDevice dev)
+        {
+            var items = dev.PathDict["items"];
+            int len = items.Count;
+            float[] f = new float[8] { 0, 0, 0, 0, 0, 0, 0, 0};
+            FzPoint lp = new FzPoint();
+
+            for (int i = 0; i < 4; i++)
+            {
+                List<dynamic> line = items[len - 4 + i];
+                FzPoint tmp = line[1];
+                f[i * 2] = tmp.x;
+                f[i * 2 + 1] = tmp.y;
+                lp = line[2];
+            }
+
+            if (lp.x != f[0] || lp.y != f[1])
+                return 0;
+
+            dev.LineCount = 0;
+            FzQuad q = mupdf.mupdf.fz_make_quad(f[0], f[1], f[6], f[7], f[2], f[3], f[4], f[5]);
+            List<dynamic> rect = new List<dynamic> { "qu", q };
+
+            items[len - 4] = rect;
+            for (int i = len - 3; i < len; i++)
+                items.RemoveAt(len - 3);
+            return 1;
+        }
+
+        public static int CheckRect(LineartDevice dev)
+        {
+            dev.LineCount = 0;
+            int orientation = 0;
+            var items = dev.PathDict["items"];
+            int len = items.Count;
+
+            List<dynamic> line0 = items[len - 3];
+            FzPoint ll = line0[1];
+            FzPoint lr = line0[2];
+
+            List<dynamic> line2 = items[len - 1];
+            FzPoint ur = line2[1];
+            FzPoint ul = line2[2];
+
+            if (ll.y != lr.y || ll.x != ul.x || ur.y != ul.y || ur.x != lr.x)
+                return 0;
+
+            FzRect r;
+            if (ul.y < lr.y)
+            {
+                r = mupdf.mupdf.fz_make_rect(ul.x, ul.y, lr.x, lr.y);
+                orientation = 1;
+            }
+            else
+            {
+                r = mupdf.mupdf.fz_make_rect(ll.x, ll.y, ur.x, ur.y);
+                orientation = -1;
+            }
+
+            List<dynamic> rect = new List<dynamic>() { "re", new Rect(r), orientation};
+            items[len - 3] = rect;
+            for (int i = len -2; i < len; i++)
+            {
+                items.RemoveAt(i);
+            }
+
+            return 1;
+        }
+
+        public static FzRect ComputerScissor(LineartDevice dev)
+        {
+            if (dev.Scissors == null)
+                dev.Scissors = new List<FzRect>();
+            int numScissors = dev.Scissors.Count;
+            FzRect scissor;
+            if (numScissors > 0)
+            {
+                FzRect lastScissor = dev.Scissors[numScissors - 1];
+                scissor = lastScissor;
+                scissor = FzRect.fz_intersect_rect(scissor, dev.PathRect);
+            }
+            else
+            {
+                scissor = dev.PathRect;
+            }
+            dev.Scissors.Add(scissor);
+
+            return scissor;
         }
     }
 }

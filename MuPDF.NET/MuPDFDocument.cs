@@ -317,6 +317,7 @@ namespace MuPDF.NET
                     string magic = filename;
                     if (magic == null)
                         magic = filetype;
+                    
                     doc = mupdf.mupdf.fz_open_document_with_stream(magic, data);
                 }
                 else
