@@ -5,5 +5,7 @@
         public MuPDFDocument doc;
 
         public MuPDFPage page;
+
+        public MuPDFSTextPage textPage;
     }
 }

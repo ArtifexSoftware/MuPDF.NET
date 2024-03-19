@@ -904,10 +904,14 @@ namespace MuPDF.NET
             return new MuPDFSTextPage(stPage);
         }
 
-        public MuPDFSTextPage GetSTextPage(Rect clip, int flags = 0, Matrix matrix = null)
+        public MuPDFSTextPage GetSTextPage(Rect clip = null, int flags = 0, Matrix matrix = null)
         {
             if (matrix == null)
                 matrix = new Matrix(1, 1);
+
+            if (clip == null)
+                clip = new Rect(new FzRect(FzRect.Fixed.Fixed_INFINITE));
+
             int oldRotation = Rotation;
             if (oldRotation != 0) SetRotation(0);
             MuPDFSTextPage stPage = null;
@@ -927,6 +931,7 @@ namespace MuPDF.NET
         public void SetRotation(int rotation)
         {
             PdfPage page = _nativePage;
+            rotation = Utils.NormalizeRotation(rotation);
             page.obj().pdf_dict_put_int(new PdfObj("Rotate"), rotation);
 
         }
@@ -1974,7 +1979,7 @@ namespace MuPDF.NET
             return rc;
         }
 
-        public List<Rect> GetCDrawings(bool extended = false) // not complete
+        public List<Dictionary<string, dynamic>> GetCDrawings(bool extended = false) // not complete
         {
             int oldRotation = Rotation;
             if (oldRotation != 0)
@@ -1984,8 +1989,8 @@ namespace MuPDF.NET
             bool clips = extended ? true : false;
             FzRect prect = page.fz_bound_page();
 
-            List<Rect> rc = new List<Rect>();
-            LineartDevice dev = new LineartDevice(clips);
+            List<Dictionary<string, dynamic>> rc = new List<Dictionary<string, dynamic>>();
+            LineartDevice dev = new LineartDevice(rc, clips);
 
             dev.Ptm = new FzMatrix(1, 0, 0, -1, 0, prect.y1);
             page.fz_run_page(dev, new FzMatrix(), new FzCookie());
@@ -1999,7 +2004,7 @@ namespace MuPDF.NET
         public void GetDrawings(bool extended = false) // not complete
         {
             List<string> allkeys = new List<string>() { "closePath", "fill", "color", "width", "lineCap", "lineJoin", "dashes", "stroke_opacity", "fill_opacity", "even_odd" };
-            List<Rect> val = GetCDrawings(extended);
+            List<Dictionary<string, dynamic>> val = GetCDrawings(extended);
             
             // issue
         }
@@ -2100,8 +2105,8 @@ namespace MuPDF.NET
         public bool Clips;
         public int Method;
 
-        public Dictionary<string, int> PathDict;
-        public List<int> Scissors;
+        public Dictionary<string, dynamic> PathDict;
+        public List<FzRect> Scissors;
         public int LineWidth;
         public FzMatrix Ptm;
         public FzMatrix Ctm;
@@ -2109,11 +2114,14 @@ namespace MuPDF.NET
 
         public FzPoint LastPoint;
         public FzRect PathRect;
-        public int PathFactor;
+        public float PathFactor;
         public int LineCount;
         public int PathType;
         public string LayerName;
-        public LineartDevice(bool clips) : base()
+
+        public List<Dictionary<string, dynamic>> Out;
+
+        public LineartDevice(List<Dictionary<string, dynamic>> rc, bool clips) : base()
         {
             use_virtual_fill_path();
             use_virtual_stroke_path();
@@ -2145,9 +2153,10 @@ namespace MuPDF.NET
             Depth = 0;
             Clips = clips;
             Method = 0;
+            Out = rc;
 
-            PathDict = new Dictionary<string, int>();
-            Scissors = new List<int>();
+            PathDict = new Dictionary<string, dynamic>();
+            Scissors = new List<FzRect>();
             LineWidth = 0;
             Ptm = new FzMatrix();
             Ctm = new FzMatrix();
@@ -2158,6 +2167,434 @@ namespace MuPDF.NET
             LineCount = 0;
             PathType = 0;
             LayerName = "";
+        }
+
+        public override void clip_path(fz_context arg_0, SWIGTYPE_p_fz_path arg_2, int arg_3, fz_matrix arg_4, fz_rect arg_5)
+        {
+            if (!Clips)
+                return;
+
+            Ctm = new FzMatrix(arg_4);
+            PathType = Utils.trace_device_CLIP_PATH;
+            LineartPath(arg_0, arg_2);
+            if (PathDict == null)
+                return;
+
+            PathDict["type"] = "clip";
+            PathDict["even_odd"] = Convert.ToBoolean(arg_3);
+            if (!PathDict.Keys.Contains("closePath"))
+                PathDict["closePath"] = false;
+
+            PathDict["scissor"] = Utils.ComputerScissor(this);
+            PathDict["level"] = Depth;
+            PathDict["layer"] = LayerName;
+            AppendMerge();
+            Depth += 1;
+        }
+
+        public override void stroke_path(fz_context ctx, SWIGTYPE_p_fz_path path, fz_stroke_state stroke, fz_matrix ctm, fz_colorspace cs, SWIGTYPE_p_float color, float alpha, fz_color_params colorparam)
+        {
+            PathFactor = 1;
+            if (Math.Abs(Ctm.a) == Math.Abs(Ctm.d))
+                PathFactor = Math.Abs(Ctm.a);
+            Ctm = new FzMatrix(ctm);
+            PathType = Utils.trace_device_CLIP_STROKE_PATH;
+
+            LineartPath(ctx, path);
+            if (PathDict == null)
+                return;
+            PathDict["type"] = "s";
+            PathDict["stroke_opacity"] = alpha;
+            PathDict["color"] = LineartColor(cs, color);
+            PathDict["width"] = PathFactor * stroke.linewidth;
+            PathDict["lineCap"] = new List<fz_linecap>() { stroke.start_cap, stroke.dash_cap, stroke.end_cap };
+            PathDict["lineJoin"] = PathFactor * (int)stroke.linejoin;
+
+            if (!PathDict.Keys.Contains("closePath"))
+                PathDict.Add("closePath", false);
+
+            if (stroke.dash_len != 0)
+            {
+                FzBuffer buff = mupdf.mupdf.fz_new_buffer(256);
+                buff.fz_append_string("[ ");
+                for (int i = 0; i < stroke.dash_len; i++)
+                {
+                    float value = mupdf.mupdf.floats_getitem(stroke.dash_list, (uint)i);
+                    buff.fz_append_string($"{PathFactor * value} ");
+                }
+                buff.fz_append_string($"] {PathFactor * stroke.dash_phase}");
+                PathDict["dashes"] = buff;
+            }
+            else
+                PathDict["dashes"] = "[] 0";
+            PathDict["rect"] = PathRect;
+            PathDict["layer"] = LayerName;
+            PathDict["seqno"] = SeqNo;
+            if (Clips)
+                PathDict["level"] = Depth;
+            AppendMerge();
+            SeqNo += 1;
+        }
+
+        public override void fill_path(fz_context ctx, SWIGTYPE_p_fz_path path, int evenOdd, fz_matrix ctm, fz_colorspace cs, SWIGTYPE_p_float color, float alpha, fz_color_params colorParams)
+        {
+            bool bEvenOdoo = evenOdd != 0 ? true : false;
+            try
+            {
+                Ctm = new FzMatrix(ctm);
+                PathType = Utils.trace_device_FILL_PATH;
+                LineartPath(ctx, path);
+                if (PathDict == null)
+                    return;
+                Console.WriteLine(PathDict.Count);
+                PathDict["type"] = "f";
+                PathDict["even_odd"] = bEvenOdoo;
+                PathDict["fill_opacity"] = alpha;
+                PathDict["fill"] = LineartColor(cs, color);
+                PathDict["rect"] = PathRect;
+                PathDict["seqno"] = SeqNo;
+                PathDict["layer"] = LayerName;
+                if (Clips)
+                    PathDict["level"] = Depth;
+
+                AppendMerge();
+                SeqNo += 1;
+            }
+            catch (Exception e)
+            {
+                throw e;
+            }
+        }
+
+        public override void clip_image_mask(fz_context ctx, fz_image image, fz_matrix ctm, fz_rect scissors)
+        {
+            if (!Clips) return;
+            Utils.ComputerScissor(this);
+            Depth += 1;
+        }
+
+        public override void clip_stroke_path(fz_context ctx, SWIGTYPE_p_fz_path path, fz_stroke_state stroke, fz_matrix ctm, fz_rect scissors)
+        {
+            if (!Clips)
+                return;
+            Ctm = new FzMatrix(ctm);
+            PathType = Utils.trace_device_CLIP_STROKE_PATH;
+            LineartPath(ctx, path);
+            if (PathDict == null)
+                return;
+
+            PathDict["type"] = "clip";
+            PathDict["evenOdd"] = null;
+            if (!PathDict.Keys.Contains("closePath"))
+                PathDict["closePath"] = false;
+            PathDict["scissor"] = Utils.ComputerScissor(this);
+            PathDict["level"] = Depth;
+            PathDict["layer"] = LayerName;
+            AppendMerge();
+            Depth += 1;
+        }
+
+        public override void clip_stroke_text(fz_context arg_0, fz_text arg_2, fz_stroke_state arg_3, fz_matrix arg_4, fz_rect arg_5)
+        {
+            if (!Clips)
+                return;
+            Utils.ComputerScissor(this);
+            Depth += 1;
+        }
+
+        public override void clip_text(fz_context ctx, fz_text text, fz_matrix ctm, fz_rect scissor)
+        {
+            if (!Clips)
+                return;
+            Utils.ComputerScissor(this);
+            Depth += 1;
+        }
+
+        public override void fill_text(fz_context arg_0, fz_text arg_2, fz_matrix arg_3, fz_colorspace arg_4, SWIGTYPE_p_float arg_5, float arg_6, fz_color_params arg_7)
+        {
+            SeqNo++;
+        }
+
+        public override void stroke_text(fz_context arg_0, fz_text arg_2, fz_stroke_state arg_3, fz_matrix arg_4, fz_colorspace arg_5, SWIGTYPE_p_float arg_6, float arg_7, fz_color_params arg_8)
+        {
+            SeqNo++;
+        }
+
+        public override void ignore_text(fz_context arg_0, fz_text arg_2, fz_matrix arg_3)
+        {
+            SeqNo++;
+        }
+
+        public override void fill_shade(fz_context arg_0, fz_shade arg_2, fz_matrix arg_3, float arg_4, fz_color_params arg_5)
+        {
+            SeqNo++;
+        }
+
+        public override void fill_image(fz_context arg_0, fz_image arg_2, fz_matrix arg_3, float arg_4, fz_color_params arg_5)
+        {
+            SeqNo++;
+        }
+
+        public override void fill_image_mask(fz_context arg_0, fz_image arg_2, fz_matrix arg_3, fz_colorspace arg_4, SWIGTYPE_p_float arg_5, float arg_6, fz_color_params arg_7)
+        {
+            SeqNo++;
+        }
+
+        public override void pop_clip(fz_context arg_0)
+        {
+            if (!Clips || Scissors == null)
+                return;
+            int len = Scissors.Count;
+            if (len < 1)
+                return;
+            Scissors.RemoveAt(Scissors.Count - 1);
+            Depth -= 1;
+        }
+
+        public override void begin_group(fz_context ctx, fz_rect bbox, fz_colorspace cs, int isolated, int knockout, int blendmode, float alpha)
+        {
+            if (!Clips)
+                return;
+            PathDict = new Dictionary<string, dynamic>
+            {
+                {"type", "group" },
+                {"rect",  bbox},
+                {"isolated", Convert.ToBoolean(isolated) },
+                {"knockout", Convert.ToBoolean(knockout) },
+                {"blendmode", mupdf.mupdf.fz_blendmode_name(blendmode)},
+                {"opacity", alpha },
+                {"level", Depth },
+                {"layer", LayerName }
+            };
+            AppendMerge();
+            Depth += 1;
+        }
+
+        public override void end_group(fz_context arg_0)
+        {
+            if (!Clips)
+                return;
+            Depth -= 1;
+        }
+
+        public override void begin_layer(fz_context arg_0, string name)
+        {
+            if (name == "" || name == null)
+                LayerName = name;
+            else
+                LayerName = "";
+        }
+
+        public override void end_layer(fz_context arg_0)
+        {
+            LayerName = "";
+        }
+
+        public float[] LineartColor(fz_colorspace colorSpace, SWIGTYPE_p_float color)
+        {
+            if (colorSpace != null)
+            {
+                try
+                {
+                    FzColorspace cs = new FzColorspace(mupdf.FzColorspace.Fixed.Fixed_RGB);
+                    FzColorParams cp = new FzColorParams();
+
+                    IntPtr pColor = Marshal.AllocHGlobal(3 * sizeof(float));
+                    SWIGTYPE_p_float swigColor = new SWIGTYPE_p_float(pColor, true);
+                    mupdf.mupdf.ll_fz_convert_color(colorSpace, color, cs.m_internal, swigColor, null, cp.internal_());
+
+                    float[] ret = new float[3];
+                    Marshal.Copy(pColor, ret, 0, 3);
+                    Marshal.FreeHGlobal(pColor);
+
+                    return ret;
+                }
+                catch(Exception) { return null;  }
+            }
+            return null;
+        }
+
+        public void LineartPath(fz_context arg0, SWIGTYPE_p_fz_path path)
+        {
+            try
+            {
+                PathRect = new FzRect(FzRect.Fixed.Fixed_INFINITE);
+                LineCount = 0;
+                LastPoint = new FzPoint(0, 0);
+                PathDict = new Dictionary<string, dynamic>();
+
+                Walker walker = new Walker(this);
+
+                FzPathWalker pathWalker = new FzPathWalker(walker.m_internal);
+
+                //mupdf.mupdf.fz_walk_path(new FzPath(mupdf.mupdf.ll_fz_keep_path(path)), pathWalker, ); //issue
+                
+                if (PathDict.GetValueOrDefault("items", null) == null)
+                    PathDict = null;
+            }
+            catch (Exception e)
+            {
+                throw e;
+            }
+        }
+
+        public void AppendMerge()
+        {
+            void Append()
+            {
+                this.Out.Add(PathDict.ToDictionary(entry => entry.Key, entry => entry.Value)); // copy key & value
+                PathDict.Clear();
+            }
+
+            int len = Out.Count;
+            if (len == 0)
+            {
+                Append();
+                return;
+            }
+
+            string type = PathDict["type"];
+            if (type != "s")
+            {
+                Append();
+                return;
+            }
+
+            Dictionary<string, dynamic> prev = Out[Out.Count - 1];
+            string prevType = prev["type"];
+
+            if (prevType != "f")
+            {
+                Append();
+                return;
+            }
+            List<dynamic> prevItems = prev["items"];
+            List<dynamic> thisItems = PathDict["items"];
+            if (!Enumerable.SequenceEqual(prevItems, thisItems))
+            {
+                Append();
+                return;
+            }
+
+            int rc;
+            try
+            {
+                foreach ((string k, var v) in PathDict)
+                {
+                    if (prev.Keys.Contains(k))
+                    {
+                        prev[k] = v;
+                    }
+                }
+                rc = 0;
+            }
+            catch (Exception)
+            {
+                rc = -1;
+            }
+
+            if (rc == 0)
+            {
+                prev["type"] = "fs";
+                PathDict.Clear();
+            }
+            else
+            {
+                Console.WriteLine("could not merge stroke and fill path");
+                Append();
+            }
+        }
+    }
+
+    public class Walker : FzPathWalker2
+    {
+        public LineartDevice Dev;
+
+        public Walker(LineartDevice dev) : base()
+        {
+            use_virtual_moveto();
+            use_virtual_lineto();
+            use_virtual_curveto();
+            use_virtual_closepath();
+            this.Dev = dev;
+        }
+
+        public override void closepath(fz_context arg_0)
+        {
+            try
+            {
+                if (Dev.LineCount == 3)
+                    if (Utils.CheckRect(Dev) != 0)
+                        return;
+                Dev.PathDict["closePath"] = true;
+                Dev.LineCount = 0;
+            }
+            catch (Exception)
+            {
+
+            }
+        }
+
+        public override void curveto(fz_context arg_0, float x1, float y1, float x2, float y2, float x3, float y3)
+        {
+            try
+            {
+                Dev.LineCount = 0;
+                FzPoint p1 = mupdf.mupdf.fz_make_point(x1, y1);
+                FzPoint p2 = mupdf.mupdf.fz_make_point(x2, y2);
+                FzPoint p3 = mupdf.mupdf.fz_make_point(x3, y3);
+                p1 = mupdf.mupdf.fz_transform_point(p1, Dev.Ctm);
+                p2 = mupdf.mupdf.fz_transform_point(p2, Dev.Ctm);
+                p3 = mupdf.mupdf.fz_transform_point(p3, Dev.Ctm);
+                Dev.PathRect = mupdf.mupdf.fz_include_point_in_rect(Dev.PathRect, p1);
+                Dev.PathRect = mupdf.mupdf.fz_include_point_in_rect(Dev.PathRect, p2);
+                Dev.PathRect = mupdf.mupdf.fz_include_point_in_rect(Dev.PathRect, p3);
+
+                List<dynamic> list = new List<dynamic>()
+                { "c", Dev.LastPoint, p1, p2, p3};
+
+                Dev.LastPoint = p3;
+                Dev.PathDict["items"].Add(list);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("curveto exception");
+            }
+        }
+
+        public override void lineto(fz_context arg_0, float x, float y)
+        {
+            try
+            {
+                FzPoint p1 = mupdf.mupdf.fz_transform_point(mupdf.mupdf.fz_make_point(x, y), Dev.Ctm);
+                Dev.PathRect = mupdf.mupdf.fz_include_point_in_rect(Dev.PathRect, p1);
+                List<dynamic> list = new List<dynamic>() { "l", Dev.LastPoint, p1 };
+
+                Dev.LastPoint = p1;
+                var items = Dev.PathDict["items"];
+                items.Add(list);
+                Dev.LineCount += 1;
+                if (Dev.LineCount == 4 && Dev.PathType != Utils.trace_device_FILL_PATH)
+                    Utils.CheckQuad(Dev);
+            }
+            catch (Exception)
+            {
+                throw new Exception("lineto exception");
+            }
+        }
+
+        public override void moveto(fz_context arg_0, float x, float y)
+        {
+            try
+            {
+                Dev.LastPoint = mupdf.mupdf.fz_transform_point(mupdf.mupdf.fz_make_point(x, y), Dev.Ctm);
+                if (Dev.PathRect.fz_is_infinite_rect() != 0)
+                    Dev.PathRect = mupdf.mupdf.fz_make_rect
+                        ( Dev.LastPoint.x, Dev.LastPoint.y,
+                          Dev.LastPoint.x, Dev.LastPoint.y );
+                Dev.LineCount = 0;
+            }
+            catch (Exception) { throw new Exception("moveto exception");  }
         }
     }
 }

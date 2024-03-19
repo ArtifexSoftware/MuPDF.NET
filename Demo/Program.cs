@@ -31,17 +31,27 @@ namespace Demo
 
             Console.WriteLine($"Elapsed Time is {ts.TotalMilliseconds}");*/
 
-            /*MuPDFDocument doc = new MuPDFDocument("1.pdf");
-            
-            MuPDFPage page = doc.LoadPage(1);
+            MuPDFDocument src = new MuPDFDocument("1.pdf");
 
-            page.InsertHtmlBox(new Rect(0, 0, 100, 100), "<h1>Hello World</h1>");
+            MuPDFDocument doc = new MuPDFDocument();
+            MuPDFPage page = doc.NewPage();
+            Rect r1 = new Rect(0, 0, page.Rect.Width, page.Rect.Height / 2.0f);
+            Rect r2 = r1 + new Rect(0, page.Rect.Height / 2.0f, 0, page.Rect.Height / 2.0f);
 
-            doc.Save("output.pdf");*/
-            Matrix m1 = new Matrix(1, 2, 3, 4, 5, 6);
-            Matrix m2 = new Matrix(2, 3, 4, 5, 6, 7);
-            m2.Invert(m1);
-            Console.WriteLine($"{m2.A} {m2.B} {m2.C} {m2.D} {m2.E} {m2.F} ");
+            page.ShowPdfPage(r1, src, 0, rotate: 90);
+            page.ShowPdfPage(r2, src, 0, rotate: -90);
+
+            doc.Save("output.pdf");
+            /*for (int i = 0; i < doc.GetPageCount(); i++)
+            {
+                MuPDFPage page = doc.LoadPage(i);
+                foreach (var k in page.GetCDrawings(true)[0].Keys)
+                    Console.WriteLine(k);
+            }
+            *//*foreach (Rect r in page.GetCDrawings())
+            {
+                Console.WriteLine(r.ToString());
+            }*/
 
         }
 

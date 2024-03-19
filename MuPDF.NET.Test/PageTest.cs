@@ -6,7 +6,7 @@ public class PageTest : PageTestBase
     [SetUp]
     public void Setup()
     {
-        doc = new MuPDFDocument("1.pdf");
+        doc = new MuPDFDocument("test.pdf");
         page = new MuPDFPage(doc.GetPage(0), doc);
     }
 
