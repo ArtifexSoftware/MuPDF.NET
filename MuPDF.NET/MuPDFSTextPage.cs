@@ -269,13 +269,13 @@ namespace MuPDF.NET
         /// </summary>
         /// <param name="cb">Rectangle area to extract</param>
         /// <param name="sort"></param>
-        public string ExtractJSON(Rect cb, bool sort = false)
+        public string ExtractJSON(Rect cropbox, bool sort = false)
         {
             PageStruct pageDict = TextPage2Dict(false);
-            if (cb != null)
+            if (cropbox != null)
             {
-                pageDict.Width = cb.Width;
-                pageDict.Height = cb.Height;
+                pageDict.Width = cropbox.Width;
+                pageDict.Height = cropbox.Height;
             }
 
             if (sort)
@@ -876,13 +876,13 @@ namespace MuPDF.NET
             return pageDict;
         }
 
-        public string ExtractRawJSON(Rect cb = null, bool sort = false)
+        public string ExtractRawJSON(Rect cropbox = null, bool sort = false)
         {
             PageStruct val = TextPage2Dict(true);
-            if (cb != null)
+            if (cropbox != null)
             {
-                val.Width = cb.Width;
-                val.Height = cb.Height;
+                val.Width = cropbox.Width;
+                val.Height = cropbox.Height;
             }
             if (sort == true)
             {
