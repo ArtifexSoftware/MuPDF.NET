@@ -27,5 +27,13 @@ namespace MuPDF.NET
         public string Id;
 
         public int Xref;
+
+        public bool Italic;
+
+        public bool Bold;
+
+        public bool Collapse;
+
+        public float[] Color;
     }
 }

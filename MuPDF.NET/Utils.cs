@@ -2253,11 +2253,67 @@ namespace MuPDF.NET
             }
         }
 
-        /*public static void GetLinkDict(dynamic ln, MuPDFDocument document = null)
+        public static LinkStruct GetLinkStruct(Link ln, MuPDFDocument doc = null)
         {
-            if (ln is Outline)
+            return Utils._GetLinkDict(ln.Dest, ln.Rect, doc);
+        }
 
-        }*/
+        public static LinkStruct GetLinkStruct(Outline ol, MuPDFDocument doc = null)
+        {
+            return Utils._GetLinkDict(ol.Dest, null, doc);
+        }
+
+        public static LinkStruct _GetLinkDict(LinkDest dest, Rect r, MuPDFDocument document)
+        {
+            LinkStruct nl = new LinkStruct();
+            nl.Kind = dest.Kind;
+            nl.Xref = 0;
+            nl.From = r;
+            Point pnt = new Point(0, 0);
+
+            if ((dest.Flags & (int)LinkFlags.LINK_FLAG_L_VALID) != 0)
+                pnt.X = dest.TopLeft.X;
+            if ((dest.Flags & (int)LinkFlags.LINK_FLAG_T_VALID) != 0)
+                pnt.Y = dest.TopLeft.Y;
+
+            if (dest.Kind == LinkType.LINK_URI)
+                nl.Uri = dest.Uri;
+            else if (dest.Kind == LinkType.LINK_GOTO)
+            {
+                nl.Page = dest.Page;
+                nl.To = pnt;
+                if ((dest.Flags & (int)LinkFlags.LINK_FLAG_R_IS_ZOOM) != 0)
+                    nl.Zoom = dest.BottomRight.X;
+                else
+                    nl.Zoom = 0.0f;
+            }
+            else if (dest.Kind == LinkType.LINK_GOTOR)
+            {
+                nl.File = dest.FileSpec.Replace("\\", "/");
+                nl.Page = dest.Page;
+                if (dest.Page < 0)
+                    nl.To = dest.Dest;
+                else
+                {
+                    nl.To = pnt;
+                    if ((dest.Flags & (int)LinkFlags.LINK_FLAG_R_IS_ZOOM) != 0)
+                        nl.Zoom = dest.BottomRight.X;
+                    else
+                        nl.Zoom = 0.0f;
+                }
+            }
+            else if (dest.Kind == LinkType.LINK_LAUNCH)
+                nl.File = dest.FileSpec.Replace("\\", "/");
+            else if (dest.Kind == LinkType.LINK_NAMED)
+            {
+                bool andKeys = dest.Named.Keys.Intersect(nl.GetType().GetFields().Select(e => e.Name)).Any();
+                if (!andKeys)
+                    throw new Exception("not same keys");
+            }
+            else
+                nl.Page = dest.Page;
+            return nl;
+        }
 
         public static BorderStruct GetAnnotBorder(PdfObj annotObj)
         {
@@ -3125,6 +3181,31 @@ namespace MuPDF.NET
             dev.Scissors.Add(scissor);
 
             return scissor;
+        }
+
+        public static List<int> GetOutlineXrefs(PdfObj obj, List<int> xrefs)
+        {
+            if (obj.m_internal == null)
+                return xrefs;
+            PdfObj thisobj = obj;
+            while (thisobj.m_internal != null)
+            {
+                int newXref = thisobj.pdf_to_num();
+                if (xrefs.Contains(newXref) || thisobj.pdf_dict_get(new PdfObj("Type")).m_internal != null)
+                    break;
+                xrefs.Add(newXref);
+                PdfObj first = thisobj.pdf_dict_get(new PdfObj("First"));
+                if (first.pdf_is_dict() != 0)
+                {
+                    xrefs = Utils.GetOutlineXrefs(first, xrefs);
+                }
+
+                thisobj = thisobj.pdf_dict_get(new PdfObj("Next"));
+                PdfObj parent = thisobj.pdf_dict_get(new PdfObj("Parent"));
+                if (thisobj.pdf_is_dict() == 0)
+                    thisobj = parent;
+            }
+            return xrefs;
         }
     }
 }

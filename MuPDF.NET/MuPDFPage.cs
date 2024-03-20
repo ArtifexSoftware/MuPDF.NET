@@ -1352,7 +1352,7 @@ namespace MuPDF.NET
             List<LinkStruct> links = new List<LinkStruct>();
             while (ln != null)
             {
-                LinkStruct nl = GetLinkDict(ln, Parent);
+                LinkStruct nl = Utils.GetLinkDict(ln, Parent);
                 links.Add(nl);
                 ln = ln.Next;
             }
@@ -1375,60 +1375,6 @@ namespace MuPDF.NET
 
             return links;
         }
-
-        public LinkStruct GetLinkDict(Link ln, MuPDFDocument document = null)
-        {
-            LinkStruct nl = new LinkStruct();
-            nl.Kind = ln.Dest.Kind;
-            nl.Xref = 0;
-            nl.From = ln.Rect;
-            Point pnt = new Point(0, 0);
-
-            if ((ln.Dest.Flags & (int)LinkFlags.LINK_FLAG_L_VALID) != 0)
-                pnt.X = ln.Dest.TopLeft.X;
-            if ((ln.Dest.Flags & (int)LinkFlags.LINK_FLAG_T_VALID) != 0)
-                pnt.Y = ln.Dest.TopLeft.Y;
-
-            if (ln.Dest.Kind == LinkType.LINK_URI)
-                nl.Uri = ln.Dest.Uri;
-            else if (ln.Dest.Kind == LinkType.LINK_GOTO)
-            {
-                nl.Page = ln.Dest.Page;
-                nl.To = pnt;
-                if ((ln.Dest.Flags & (int)LinkFlags.LINK_FLAG_R_IS_ZOOM) != 0)
-                    nl.Zoom = ln.Dest.BottomRight.X;
-                else
-                    nl.Zoom = 0.0f;
-            }
-            else if (ln.Dest.Kind == LinkType.LINK_GOTOR)
-            {
-                nl.File = ln.Dest.FileSpec.Replace("\\", "/");
-                nl.Page = ln.Dest.Page;
-                if (ln.Dest.Page < 0)
-                    nl.To = ln.Dest.Dest;
-                else
-                {
-                    nl.To = pnt;
-                    if ((ln.Dest.Flags & (int)LinkFlags.LINK_FLAG_R_IS_ZOOM) != 0)
-                        nl.Zoom = ln.Dest.BottomRight.X;
-                    else
-                        nl.Zoom = 0.0f;
-                }
-            }
-            else if (ln.Dest.Kind == LinkType.LINK_LAUNCH)
-                nl.File = ln.Dest.FileSpec.Replace("\\", "/");
-            else if (ln.Dest.Kind == LinkType.LINK_NAMED)
-            {
-                // issue
-                /*foreach (string k in ln.Dest.Named.Keys)
-                    if (typeof(LinkStruct).GetField(k) == null)
-                        nl.*/
-
-            }
-            else
-                nl.Page = ln.Dest.Page;
-            return nl;
-        }       
 
         public Matrix CalcMatrix(Rect sr, Rect tr, bool keep = true, int rotate = 0)
         {
