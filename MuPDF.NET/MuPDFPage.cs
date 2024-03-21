@@ -993,21 +993,6 @@ namespace MuPDF.NET
             return AddTextMarker(q, pdf_annot_type.PDF_ANNOT_STRIKE_OUT);
         }
 
-        public static PdfObj PdfObjFromStr(PdfDocument doc, string src)
-        {
-            byte[] bSrc = Encoding.UTF8.GetBytes(src);
-            IntPtr scrPtr = Marshal.AllocHGlobal(bSrc.Length);
-            Marshal.Copy(bSrc, 0, scrPtr, bSrc.Length);
-            SWIGTYPE_p_unsigned_char swigSrc = new SWIGTYPE_p_unsigned_char(scrPtr, true);
-
-            FzBuffer buffer_ = mupdf.mupdf.fz_new_buffer_from_copied_data(swigSrc, (uint)bSrc.Length);
-            FzStream stream = buffer_.fz_open_buffer();
-            PdfLexbuf lexBuf = new PdfLexbuf(256);
-            PdfObj ret = doc.pdf_parse_stm_obj(stream, lexBuf);
-
-            return ret;
-        }
-
         public void AddAnnotFromString(List<string> links)
         {
             PdfPage page = _nativePage;
@@ -1032,7 +1017,7 @@ namespace MuPDF.NET
 
                 try
                 {
-                    PdfObj annot = page.doc().pdf_add_object(MuPDFPage.PdfObjFromStr(page.doc(), text));
+                    PdfObj annot = page.doc().pdf_add_object(Utils.PdfObjFromStr(page.doc(), text));
                     PdfObj indObj = page.doc().pdf_new_indirect(annot.pdf_to_num(), 0);
                     annots.pdf_array_push(indObj);
                 }
@@ -1352,7 +1337,7 @@ namespace MuPDF.NET
             List<LinkStruct> links = new List<LinkStruct>();
             while (ln != null)
             {
-                LinkStruct nl = Utils.GetLinkDict(ln, Parent);
+                LinkStruct nl = Utils.GetLinkStruct(ln, Parent);
                 links.Add(nl);
                 ln = ln.Next;
             }

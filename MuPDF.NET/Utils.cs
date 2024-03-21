@@ -3,12 +3,14 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO.Compression;
 using System.Linq;
 using System.Numerics;
 using System.Resources;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.Unicode;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging.Abstractions;
 using mupdf;
@@ -2553,64 +2555,6 @@ namespace MuPDF.NET
             return annot;
         }
 
-        public static string GetPdfStr(string s)
-        {
-            if (!Convert.ToBoolean(s))
-                return "()";
-
-            string MakeUtf16be(string s)
-            {
-                byte[] r = new byte[] { 254, 255 };
-                byte[] sBytes = Encoding.BigEndianUnicode.GetBytes(s);
-                byte[] combined = new byte[r.Length + sBytes.Length];
-                Buffer.BlockCopy(r, 0, combined, 0, r.Length);
-                Buffer.BlockCopy(sBytes, 0, combined, r.Length, sBytes.Length);
-
-                StringBuilder hex = new StringBuilder(combined.Length * 2);
-                foreach (byte b in combined)
-                {
-                    hex.AppendFormat("{0:x2}", b);
-                }
-                return "<" + hex.ToString() + ">";
-            }
-
-            string r = "";
-            foreach (char c in s)
-            {
-                int oc = Convert.ToInt32(c);
-                if (oc > 255)
-                    return MakeUtf16be(s);
-                if (oc > 31 && oc < 127)
-                {
-                    if (c == '(' || c == ')' || c == '\\')
-                    {
-                        r += '\\';
-                    }
-                    r += c;
-                    continue;
-                }
-
-                if (oc < 127)
-                {
-                    r += string.Format("\\{0:D3}", oc);
-                }
-
-                if (oc == 8)
-                    r += "\\b";
-                else if (oc == 9)
-                    r += "\\t";
-                else if (oc == 10)
-                    r += "\\n";
-                else if (oc == 12)
-                    r += "\\f";
-                else if (oc == 13)
-                    r += "\\r";
-                else
-                    r += "\\267";
-            }
-            return "(" + r + ")";
-        }
-
         public static string SetAnnotStem(string stem = null)
         {
             if (stem == null)
@@ -3206,6 +3150,185 @@ namespace MuPDF.NET
                     thisobj = parent;
             }
             return xrefs;
+        }
+
+        public static void GetPageLabels(List<(int, string)> list, PdfObj nums)
+        {
+            int n = nums.pdf_array_len();
+            for (int i = 0; i < n; i += 2)
+            {
+                PdfObj key = nums.pdf_array_get(i).pdf_resolve_indirect();
+                int pno = key.pdf_to_int();
+                PdfObj val = nums.pdf_array_get(i + 1).pdf_resolve_indirect();
+                FzBuffer res = Utils.Object2Buffer(val, 1, 0);
+                byte[] c = res.fz_buffer_extract();
+
+                string cStr = Encoding.UTF8.GetString(c);
+                list.Add((pno, cStr));
+            }
+        }
+
+        public static void RemoveDestRange(PdfDocument pdf, List<int> numbers)
+        {
+            int pageCount = pdf.pdf_count_pages();
+            for (int i = 0; i < pageCount; i++)
+            {
+                int n1 = i;
+                if (numbers.Contains(n1))
+                    continue;
+
+                PdfObj pageRef = pdf.pdf_lookup_page_obj(i);
+                PdfObj annots = pageRef.pdf_dict_get(new PdfObj("Annots"));
+                if (annots.m_internal == null)
+                    continue;
+
+                int len = annots.pdf_array_len();
+                for (int j = len - 1; j > -1; j -= 1)
+                {
+                    PdfObj o = annots.pdf_array_get(j);
+                    if (mupdf.mupdf.pdf_name_eq(o.pdf_dict_get(new PdfObj("Subtype")), new PdfObj("Link")) == 0)
+                        continue;
+                    PdfObj action = o.pdf_dict_get(new PdfObj("A"));
+                    PdfObj dest = o.pdf_dict_get(new PdfObj("Dest"));
+                    if (action.m_internal != null)
+                    {
+                        if (mupdf.mupdf.pdf_name_eq(action.pdf_dict_get(new PdfObj("S")), new PdfObj("GoTo")) == 0)
+                            continue;
+                        dest = action.pdf_dict_get(new PdfObj("D"));
+                    }
+
+                    int pno = -1;
+                    if (dest.pdf_is_array() != 0)
+                    {
+                        PdfObj target = dest.pdf_array_get(0);
+                        pno = pdf.pdf_lookup_page_number(target);
+                    }
+                    else if (dest.pdf_is_string() != 0)
+                    {
+                        FzLocation location = pdf.super().fz_resolve_link(dest.pdf_to_text_string(), null, null);
+                        pno = location.page;
+                    }
+                    if (pno < 0)
+                        continue;
+                    n1 = pno;
+                    if (numbers.Contains(n1))
+                        annots.pdf_array_delete(j);
+                }
+            }
+        }
+
+        public static PdfPage AsPdfPage(dynamic page)
+        {
+            if (page is MuPDFPage)
+                return (page as MuPDFPage).GetPdfPage();
+            if (page is PdfPage)
+                return page;
+            else if (page is FzPage)
+                return (page as FzPage).pdf_page_from_fz_page();
+            else if (page == null)
+                throw new Exception("Page is none");
+            return null;
+        }
+
+        public static PdfObj PdfObjFromStr(PdfDocument doc, string src)
+        {
+            byte[] bSrc = Encoding.UTF8.GetBytes(src);
+            IntPtr scrPtr = Marshal.AllocHGlobal(bSrc.Length);
+            Marshal.Copy(bSrc, 0, scrPtr, bSrc.Length);
+            SWIGTYPE_p_unsigned_char swigSrc = new SWIGTYPE_p_unsigned_char(scrPtr, true);
+
+            FzBuffer buffer_ = mupdf.mupdf.fz_new_buffer_from_copied_data(swigSrc, (uint)bSrc.Length);
+            FzStream stream = buffer_.fz_open_buffer();
+            PdfLexbuf lexBuf = new PdfLexbuf(256);
+            PdfObj ret = doc.pdf_parse_stm_obj(stream, lexBuf);
+
+            return ret;
+        }
+
+        public static string GetPdfNow()
+        {
+            DateTimeOffset dto = DateTimeOffset.Now;
+            int offsetHours = dto.Offset.Hours;
+            int offsetMinutes = dto.Offset.Minutes;
+
+            string offset = string.Format("{0:00}'{1:00}'", Math.Abs(offsetHours), Math.Abs(offsetMinutes));
+            string timestamp = dto.ToString("D:yyyyMMddHHmmss");
+
+            if (dto.Offset > TimeSpan.Zero)
+            {
+                timestamp += "-" + offset;
+            }
+
+            else if (dto.Offset < TimeSpan.Zero)
+            {
+                timestamp += "+" + offset;
+            }
+
+            return timestamp;
+        }
+
+        private static string MakeUtf16Be(string s)
+        {
+            byte[] bytes = Encoding.BigEndianUnicode.GetBytes(s);
+            byte[] resBytes = new byte[bytes.Length + 2];
+            resBytes[0] = 254;
+            resBytes[1] = 255;
+            Array.Copy(bytes, 0, resBytes, 2, bytes.Length);
+            return "<" + BitConverter.ToString(resBytes).Replace("-", string.Empty) + ">";
+        }
+
+        public static string GetPdfStr(string s)
+        {
+            if (string.IsNullOrEmpty(s))
+            {
+                return "()";
+            }
+
+            byte[] bytes;
+
+            StringBuilder sb = new StringBuilder();
+            foreach (char c in s)
+            {
+                int oc = (int)c;
+
+                if (oc > 255) //if beyond 8-bit code range
+                {
+                    return MakeUtf16Be(s);
+                }
+
+                if (oc > 31 && oc < 127) //ASCII range
+                {
+                    if ("()?\\".Contains(c)) //these characters need to be escaped
+                    {
+                        sb.Append("\\");
+                    }
+                    sb.Append(c);
+                    continue;
+                }
+
+                if (oc > 127) //beyond ASCII
+                {
+                    sb.Append("\\");
+                    sb.Append(String.Format("{0:o3}", oc));
+                    continue;
+                }
+
+                // now the white spaces
+                if (oc == 8)  // backspace
+                    sb.Append("\\b");
+                else if (oc == 9)  // tab
+                    sb.Append("\\t");
+                else if (oc == 10)  // line feed
+                    sb.Append("\\n");
+                else if (oc == 12)  // form feed
+                    sb.Append("\\f");
+                else if (oc == 13)  // carriage return
+                    sb.Append("\\r");
+                else
+                    sb.Append("\\267"); //unsupported: replace by 0xB7
+            }
+
+            return "(" + sb.ToString() + ")";
         }
     }
 }

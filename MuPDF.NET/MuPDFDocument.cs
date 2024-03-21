@@ -9,6 +9,7 @@ using System.Text;
 using System.IO;
 using mupdf;
 using System.Reflection;
+using System.Globalization;
 
 namespace MuPDF.NET
 {
@@ -1186,26 +1187,12 @@ namespace MuPDF.NET
             return val;
         }
 
-        /// <summary>
-        /// PDF only: Delete a page given by its 0-based number in -∞ < pno < page_count - 1.
-        /// </summary>
-        /// <param name="pno">the page to be deleted. Negative number count backwards from the end of the document (like with indices). Default is the last page.</param>
-        /// <exception cref="Exception"></exception>
-        public void DeletePage(int pno = -1)
+        private void _DeletePage(int pno)
         {
-            if (!IsPDF)
-                throw new Exception("is no PDF");
-            if (IsClosed)
-                throw new Exception("document closed");
-
-            int pageCount = this.Len;
-            while (pno < 0)
-                pno += pageCount;
-
-            if (pno >= pageCount)
-                throw new Exception("bad page number(s)");
-
-            // remove TOC bookmarks pointing to deleted page
+            PdfDocument pdf = AsPdfDocument(this);
+            pdf.pdf_delete_page(pno);
+            if (pdf.m_internal.rev_page_map != null)
+                mupdf.mupdf.ll_pdf_drop_page_tree(pdf.m_internal);
             
         }
 
@@ -1215,7 +1202,7 @@ namespace MuPDF.NET
         /// <param name="simple">a bool to control output.</param>
         /// <returns>Returns a list, where each entry consists of outline level, title, page number and link destination (if simple = False). For details see PyMuPDF's documentation.</returns>
         /// <exception cref="Exception"></exception>
-        public List<List<dynamic>> GetToc(bool simple)
+        public List<List<dynamic>> GetToc(bool simple = true)
         {
             List<List<dynamic>> Recurse(Outline olItem, List<List<dynamic>> list, int lvl)
             {
@@ -1272,7 +1259,7 @@ namespace MuPDF.NET
             List<List<dynamic>> toc = Recurse(olItem, liste, lvl);
 
             if (IsPDF && simple == false)
-                ExtendToc
+                ExtendTocItems(toc);
 
             return toc;
         }
@@ -2158,10 +2145,15 @@ namespace MuPDF.NET
             if (fonts.m_internal == null || fonts.pdf_is_dict() == 0)
                 throw new Exception("PDF has no form fonts yet");
             PdfObj k = mupdf.mupdf.pdf_new_name(name);
-            PdfObj v = MuPDFPage.PdfObjFromStr(pdf, font);
+            PdfObj v = Utils.PdfObjFromStr(pdf, font);
             fonts.pdf_dict_put(k, v);
         }
 
+        /// <summary>
+        /// Add color info to all items of an extended TOC list.
+        /// </summary>
+        /// <param name="items"></param>
+        /// <exception cref="Exception"></exception>
         public void ExtendTocItems(List<List<dynamic>> items)
         {
             if (IsClosed)
@@ -2263,6 +2255,517 @@ namespace MuPDF.NET
             {
                 PageRefs.Remove(pid);
             }
+        }
+
+        public List<(int, string)> GetPageLabels()
+        {
+            PdfDocument pdf = AsPdfDocument(this);
+            List<(int, string)> rc = new List<(int, string)>();
+
+            PdfObj pageLabels = mupdf.mupdf.pdf_new_name("PageLabels");
+            PdfObj obj = Utils.pdf_dict_getl(pdf.pdf_trailer(), new string[] { "Root", "PageLabels" });
+            if (obj.m_internal == null)
+                return rc;
+
+            PdfObj nums = obj.pdf_dict_get(new PdfObj("Nums")).pdf_resolve_indirect();
+            if (nums.m_internal != null)
+            {
+                Utils.GetPageLabels(rc, nums);
+                return rc;
+            }
+
+            nums = Utils.pdf_dict_getl(obj, new string[] { "Kids", "Nums" }).pdf_resolve_indirect();
+            if (nums.m_internal != null)
+            {
+                Utils.GetPageLabels(rc, nums);
+                return rc;
+            }
+
+            PdfObj kids = obj.pdf_dict_get(new PdfObj("Kids")).pdf_resolve_indirect();
+            if (kids.m_internal == null || kids.pdf_is_array() == 0)
+            {
+                return rc;
+            }
+
+            int n = kids.pdf_array_len();
+            for (int i = 0; i < n; i ++)
+            {
+                nums = kids.pdf_array_get(i).pdf_dict_get(new PdfObj("Nums")).pdf_resolve_indirect();
+                Utils.GetPageLabels(rc, nums);
+            }
+            return rc;
+        }
+
+        /// <summary>
+        /// Get xref of Outline Root, create it if missing.
+        /// </summary>
+        public int GetOlRootNumber()
+        {
+            if (IsClosed || IsEncrypted)
+                throw new Exception("document closed or encrypted");
+            PdfDocument pdf = AsPdfDocument(this);
+
+            PdfObj root = pdf.pdf_trailer().pdf_dict_get(new PdfObj("Root"));
+            PdfObj olRoot = root.pdf_dict_get(new PdfObj("Outlines"));
+
+            if (olRoot.m_internal == null)
+            {
+                olRoot = pdf.pdf_new_dict(4);
+                olRoot.pdf_dict_put(new PdfObj("Type"), new PdfObj("Outlines"));
+                PdfObj indObj = pdf.pdf_add_object(olRoot);
+                root.pdf_dict_put(new PdfObj("Outlines"), indObj);
+                olRoot = root.pdf_dict_get(new PdfObj("Outlines"));
+            }
+
+            return olRoot.pdf_to_num();
+        }
+
+        /// <summary>
+        /// Get PDF file id.
+        /// </summary>
+        /// <returns>string list or null</returns>
+        public List<string> GetPdfFileID()
+        {
+            PdfDocument pdf = AsPdfDocument(this);
+            if (pdf == null)
+                return null;
+
+            List<string> idList = new List<string>();
+            PdfObj identity = pdf.pdf_trailer().pdf_dict_get(new PdfObj("ID"));
+            if (identity.m_internal != null)
+            {
+                int n = identity.pdf_array_len();
+                for (int i = 0; i < n; i ++)
+                {
+                    PdfObj o = identity.pdf_array_get(i);
+                    string text = o.pdf_to_text_string();
+                    byte[] ba = Encoding.Default.GetBytes(text);
+                    var hexString = BitConverter.ToString(ba);
+                    string hex = hexString.Replace("-", "");
+
+                    idList.Add(hex);
+                }
+            }
+            return idList;
+        }
+
+        /// <summary>
+        /// Make an array page number -> page object.
+        /// </summary>
+        /// <exception cref="Exception"></exception>
+        public void MakePageMap()
+        {
+            if (IsClosed)
+                throw new Exception("document closed");
+        }
+
+        public void RemoveLinksTo(List<int> numbers)
+        {
+            PdfDocument pdf = AsPdfDocument(this);
+            Utils.RemoveDestRange(pdf, numbers);
+        }
+
+        /// <summary>
+        /// "remove" bookmark by letting it point to nowhere
+        /// </summary>
+        /// <param name="xref"></param>
+        public void RemoveTocItem(int xref)
+        {
+            PdfDocument pdf = AsPdfDocument(this);
+            PdfObj item = pdf.pdf_new_indirect(xref, 0);
+            item.pdf_dict_del(new PdfObj("Dest"));
+            item.pdf_dict_del(new PdfObj("A"));
+            PdfObj color = pdf.pdf_new_array(3);
+            for (int i = 0; i < 3; i++)
+                color.pdf_array_push_real(0.8f);
+            item.pdf_dict_put(new PdfObj("C"), color);
+        }
+
+        public void SetPageLabels(string labels)
+        {
+            PdfDocument pdf = AsPdfDocument(this);
+            PdfObj root = pdf.pdf_trailer().pdf_dict_get(new PdfObj("Root"));
+
+            root.pdf_dict_del(new PdfObj("PageLabels"));
+            Utils.pdf_dict_putl(root, mupdf.mupdf.pdf_new_array(pdf, 0), new string[] { "PageLabels", "Nums" });
+            int xref = GetPdfCatelog();
+            string text = GetXrefObject(xref, compressed: 1);
+            text = text.Replace("/Nums[]", $"/Nums[{labels}]");
+            UpdateObject(xref, text);
+        }
+
+        /// <summary>
+        /// Replace xref stream part.
+        /// </summary>
+        /// <param name="xref"></param>
+        /// <param name="stream"></param>
+        /// <param name="_new"></param>
+        /// <param name="compress"></param>
+        /// <exception cref="Exception"></exception>
+        public void UpdateStream(int xref, byte[] stream = null, int _new = 1, int compress = 1)
+        {
+            if (IsClosed || IsEncrypted)
+                throw new Exception("document closed or encrypted");
+            PdfDocument pdf = AsPdfDocument(this);
+            int xrefLen = pdf.pdf_xref_len();
+            if (xref < 1 || xref > xrefLen)
+                throw new Exception(Utils.ErrorMessages["MSG_BAD_XREF"]);
+            PdfObj obj = pdf.pdf_new_indirect(xref, 0);
+            if (obj.pdf_is_dict() == 0)
+                throw new Exception(Utils.ErrorMessages["MSG_IS_NO_DICT"]);
+            FzBuffer res = Utils.BufferFromBytes(stream);
+            if (res == null)
+                throw new Exception(Utils.ErrorMessages["MSG_BAD_BUFFER"]);
+            Utils.UpdateStream(pdf, obj, res, compress);
+            // pdfdocument does not have `dirty` property
+        }
+
+        /// <summary>
+        /// Replace object definition source.
+        /// </summary>
+        /// <param name="xref"></param>
+        /// <param name="text"></param>
+        /// <param name="page"></param>
+        /// <exception cref="Exception"></exception>
+        public void UpdateObject(int xref, string text, PdfPage page = null)
+        {
+            if (IsClosed || IsEncrypted)
+                throw new Exception("document closed or encrypted");
+            PdfDocument pdf = AsPdfDocument(this);
+            int xrefLen = pdf.pdf_xref_len();
+            if (!Utils.INRANGE(xref, 1, xrefLen - 1))
+                throw new Exception(Utils.ErrorMessages["MSG_BAD_XREF"]);
+            PdfObj newObj = Utils.PdfObjFromStr(pdf, text);
+            pdf.pdf_update_object(xref, newObj);
+
+            Utils.RefreshLinks(page);
+        }
+
+        public void CopyPage(int pno, int to = -1)
+        {
+            if (IsClosed)
+                throw new Exception("document closed");
+            int pageCount = Len;
+            if (!(pno < pageCount) || !Utils.INRANGE(to, -1, pageCount - 1))
+                throw new Exception("bad page number(s)");
+
+            int before = 1;
+            int copy = 1;
+            if (to == -1)
+            {
+                to = pageCount - 1;
+                before = 0;
+            }
+
+            MoveCopyPage(pno, to, before != 0, copy != 0);
+        }
+
+        /// <summary>
+        /// Delete XML metadata.
+        /// </summary>
+        /// <exception cref="Exception"></exception>
+        public void DeleteXmlMetadata()
+        {
+            if (IsClosed || IsEncrypted)
+                throw new Exception("document closed or encrypted");
+            PdfDocument pdf = AsPdfDocument(this);
+            PdfObj root = pdf.pdf_trailer().pdf_dict_get(new PdfObj("Root"));
+            if (root.m_internal != null)
+                root.pdf_dict_del(new PdfObj("Metadata"));
+        }
+
+        /// <summary>
+        /// PDF only: Delete a page given by its 0-based number in -∞ < pno < page_count - 1.
+        /// </summary>
+        /// <param name="pno">the page to be deleted. Negative number count backwards from the end of the document (like with indices). Default is the last page.</param>
+        /// <exception cref="Exception"></exception>
+        public void DeletePage(int pno = -1)
+        {
+            if (!IsPDF)
+                throw new Exception("is no pdf");
+            if (IsClosed)
+                throw new Exception("document is closed");
+
+            int pageCount = Len;
+            while (pno < 0)
+                pno += pageCount;
+
+            if (pno >= pageCount)
+                throw new Exception("bad page number(s)");
+
+            List<List<dynamic>> toc = GetToc();
+            List<int> olXrefs = GetOutlineXrefs();
+
+            for (int i = 0; i < toc.Count; i++)
+            {
+                if (toc[i][2] == pno + 1)
+                    RemoveTocItem(olXrefs[i]);
+            }
+
+            RemoveLinksTo(new List<int>() { pno });
+            _DeletePage(pno);
+            ResetPageRefs();
+        }
+
+        public void DeletePages(int from = -1, int to = -1)
+        {
+            if (!IsPDF)
+                throw new Exception("is no PDF");
+            if (IsClosed)
+                throw new Exception("document is closed");
+            int pageCount = Len;
+            List<int> numbers = new List<int>();
+
+            while (from < 0)
+                from += pageCount;
+            while (to < 0)
+                to += pageCount;
+
+            for (int i = from; i < to; i++)
+                numbers.Add(i);
+            if (numbers.Count == 0)
+            {
+                Console.WriteLine("noting to delete");
+                return;
+            }
+
+            numbers.Sort();
+            if (numbers[0] < 0 || numbers[numbers.Count - 1] >= pageCount)
+                throw new ArgumentException("bad page number(s)");
+            List<List<dynamic>> toc = GetToc();
+            List<int> olXrefs = GetOutlineXrefs();
+            for (int i = 0; i < olXrefs.Count; i ++)
+            {
+                if (numbers.Contains(toc[i][2] - 1))
+                    RemoveTocItem(olXrefs[i]);
+            }
+            RemoveLinksTo(numbers);
+            numbers.Reverse();
+            foreach (int j in numbers)
+            {
+                DeletePage(j);
+            }
+
+            ResetPageRefs();
+        }
+
+        public void DeletePages(List<int> numbers)
+        {
+            if (numbers.Count == 0)
+            {
+                Console.WriteLine("noting to delete");
+                return;
+            }
+
+            numbers.Sort();
+            if (numbers[0] < 0 || numbers[numbers.Count - 1] >= Len)
+                throw new ArgumentException("bad page number(s)");
+            List<List<dynamic>> toc = GetToc();
+            List<int> olXrefs = GetOutlineXrefs();
+            for (int i = 0; i < olXrefs.Count; i++)
+            {
+                if (numbers.Contains(toc[i][2] - 1))
+                    RemoveTocItem(olXrefs[i]);
+            }
+            RemoveLinksTo(numbers);
+            numbers.Reverse();
+            foreach (int j in numbers)
+            {
+                DeletePage(j);
+            }
+
+            ResetPageRefs();
+        }
+
+        public void DeletePages(int[] nums)
+        {
+            List<int> numbers = new List<int>(nums);
+            if (numbers.Count == 0)
+            {
+                Console.WriteLine("noting to delete");
+                return;
+            }
+
+            numbers.Sort();
+            if (numbers[0] < 0 || numbers[numbers.Count - 1] >= Len)
+                throw new ArgumentException("bad page number(s)");
+            List<List<dynamic>> toc = GetToc();
+            List<int> olXrefs = GetOutlineXrefs();
+            for (int i = 0; i < olXrefs.Count; i++)
+            {
+                if (numbers.Contains(toc[i][2] - 1))
+                    RemoveTocItem(olXrefs[i]);
+            }
+            RemoveLinksTo(numbers);
+            numbers.Reverse();
+            foreach (int j in numbers)
+            {
+                DeletePage(j);
+            }
+
+            ResetPageRefs();
+        }
+
+        public List<int> GetOutlineXrefs()
+        {
+            List<int> xrefs = new List<int>();
+            PdfDocument pdf = AsPdfDocument(this);
+            if (!IsPDF)
+                return xrefs;
+            PdfObj root = pdf.pdf_trailer().pdf_dict_get(new PdfObj("Root"));
+            if (root.m_internal == null)
+                return xrefs;
+
+            PdfObj olRoot = root.pdf_dict_get(new PdfObj("Outlines"));
+            if (olRoot.m_internal == null)
+                return xrefs;
+
+            PdfObj first = olRoot.pdf_dict_get(new PdfObj("First"));
+            if (first.m_internal == null)
+                return xrefs;
+
+            xrefs = Utils.GetOutlineXrefs(first, xrefs);
+            return xrefs;
+        }
+
+        public int AddEmbfile(string name, byte[] buffer, string filename = null, string ufilename = null, string desc = null)
+        {
+            List<string> filenames = GetEmbfileNames();
+            string msg = $"Name {name} already exists.";
+            if (filenames.Contains(name))
+                throw new Exception(msg);
+
+            if (filename == null)
+                filename = name;
+            if (ufilename == null)
+                ufilename = filename;
+            if (desc == null)
+                desc = name;
+            int xref = _AddEmbfile(name, buffer, filename, ufilename, desc);
+            string date = Utils.GetPdfNow();
+            SetKeyXRef(xref, "Type", "/EmbeddedFile");
+            SetKeyXRef(xref, "Params/CreationDate", Utils.GetPdfStr(date));
+            SetKeyXRef(xref, "Params/ModDate", Utils.GetPdfStr(date));
+
+            return xref;
+        }
+
+        public int _AddEmbfile(string name, byte[] buffer, string filename = null, string ufilename = null, string desc = null)
+        {
+            PdfDocument pdf = AsPdfDocument(this);
+            FzBuffer data = Utils.BufferFromBytes(buffer);
+            if (data.m_internal == null)
+                throw new Exception(Utils.ErrorMessages["MSG_BAD_BUFFER"]);
+
+            PdfObj names = Utils.pdf_dict_getl(pdf.pdf_trailer(), new string[] { "Root", "Names", "EmbeddedFiles", "Names" });
+            if (names.pdf_is_array() == 0)
+            {
+                PdfObj root = pdf.pdf_trailer().pdf_dict_get(new PdfObj("Root"));
+                names = pdf.pdf_new_array(6);
+                Utils.pdf_dict_putl(root, names, new string[] { "Names", "EmbeddedFiles", "Names" });
+            }
+
+            PdfObj fileEntry = Utils.EmbedFile(pdf, data, filename, ufilename, desc, 1);
+            int xref = Utils.pdf_dict_getl(fileEntry, new string[] { "EF", "F" }).pdf_to_num();
+            names.pdf_array_push(mupdf.mupdf.pdf_new_text_string(name));
+            names.pdf_array_push(fileEntry);
+
+            return xref;
+        }
+
+        /// <summary>
+        /// Get list of names of EmbeddedFiles.
+        /// </summary>
+        /// <returns></returns>
+        public List<string> GetEmbfileNames()
+        {
+            List<string> names = new List<string>();
+            _EmbfileNames(names);
+            return names;
+        }
+
+        private void _EmbfileNames(List<string> filenames)
+        {
+            PdfDocument pdf = AsPdfDocument(this);
+            PdfObj names = Utils.pdf_dict_getl(pdf.pdf_trailer(), new string[] { "Root", "Names", "EmbeddedFiles", "Names" });
+            if (names.pdf_is_array() != 0)
+            {
+                int n = names.pdf_array_len();
+                for (int i = 0; i < n; i += 2)
+                {
+                    string val = Utils.EscapeStrFromStr(names.pdf_array_get(i).pdf_to_text_string());
+                    filenames.Add(val);
+                }
+            }
+        }
+
+        public int GetEmbfileCount()
+        {
+            return GetEmbfileNames().Count;
+        }
+
+        /// <summary>
+        /// Delete an entry from EmbeddedFiles.
+        /// </summary>
+        /// <param name="item">name or number of item.></param>
+        public void DeleteEmbfile(int item)
+        {
+            int idx = EmbeddedfileIndex(item);
+            _DeleteEmbfile(idx);
+        }
+
+        /// <summary>
+        /// Delete an entry from EmbeddedFiles.
+        /// </summary>
+        /// <param name="item">name or number of item.></param>
+        public void DeleteEmbfile(string item)
+        {
+            int idx = EmbeddedfileIndex(item);
+            _DeleteEmbfile(idx);
+        }
+
+        public void _DeleteEmbfile(int idx)
+        {
+            PdfDocument pdf = AsPdfDocument(this);
+            PdfObj names = Utils.pdf_dict_getl(pdf.pdf_trailer(), new string[] { "Root", "Names", "EmbeddedFiles", "Names" });
+            names.pdf_array_delete(idx + 1);
+            names.pdf_array_delete(idx);
+        }
+
+        public int EmbeddedfileIndex(dynamic item)
+        {
+            List<string> filenames = GetEmbfileNames();
+            string msg = $"{item} not in EmbeddedFiles array";
+            int idx = 0;
+
+            if (item is string && filenames.Contains(item))
+                idx = filenames.IndexOf(item);
+            else if (item is int && Utils.INRANGE(item, 0, filenames.Count - 1))
+                idx = item;
+            else throw new Exception(msg);
+            return idx;
+        }
+
+        public byte[] _GetEmbeddedFile(int idx)
+        {
+            PdfDocument pdf = AsPdfDocument(this);
+            PdfObj names = Utils.pdf_dict_getl(pdf.pdf_trailer(), new string[] { "Root", "Names", "EmbeddedFiles", "Names" });
+            PdfObj entry = names.pdf_array_get(2 * idx + 1);
+            PdfObj fileSpec = Utils.pdf_dict_getl(entry, new string[] { "EF", "F" });
+            FzBuffer buf = fileSpec.pdf_load_stream();
+            byte[] cont = Utils.BinFromBuffer(buf);
+
+            return cont;
+        }
+
+        /// <summary>
+        /// Get the content of an item in the EmbeddedFiles array.
+        /// </summary>
+        /// <param name="item"></param>
+        public byte[] GetEmbfile(int item)
+        {
+            int idx = EmbeddedfileIndex(item);
+            return _GetEmbeddedFile(idx);
         }
 
         public void Dispose()
