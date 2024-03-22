@@ -25,6 +25,6 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore MuPDF.NET
     - name: Build
-      run: dotnet build --no-restore
+      run: dotnet build --no-restore MuPDF.NET
     - name: Test
-      run: dotnet test --no-build --verbosity normal
+      run: dotnet test --no-build --verbosity normal MuPDF.NET.Test
