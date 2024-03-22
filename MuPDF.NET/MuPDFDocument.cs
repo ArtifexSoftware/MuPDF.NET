@@ -29,7 +29,7 @@ namespace MuPDF.NET
 
         public Dictionary<int, MuPDFGraftMap> GraftMaps = new Dictionary<int, MuPDFGraftMap>();
 
-        public string ShownPages = "";
+        public Dictionary<(int, int), int> ShownPages = new Dictionary<(int, int), int>();
 
         public string InsertedImages = "";
 

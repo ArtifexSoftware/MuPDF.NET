@@ -722,6 +722,7 @@ namespace MuPDF.NET
                 return;
             }
         }
+
         public byte[] GetAP()
         {
             PdfObj obj = _nativeAnnotion.pdf_annot_obj();
@@ -2238,6 +2239,9 @@ namespace MuPDF.NET
 
         public static string ColorCode(dynamic cs, string code) 
         {
+            if (cs == null || cs.Length == 0)
+                return "";
+
             List<float> c = new List<float>();
             string s = "";
 

@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.Unicode;
 using mupdf;
 
 namespace MuPDF.NET
@@ -422,9 +423,9 @@ namespace MuPDF.NET
                 val = new MuPDFAnnotation(annot);
 
                 byte[] ap = val.GetAP();
-                int BT = Convert.ToString(ap).IndexOf("BT");
-                int ET = Convert.ToString(ap).IndexOf("ET");
-                ap = Utils.ToByte(Convert.ToString(ap).Substring(BT, ET));
+                int BT = Encoding.UTF8.GetString(ap).IndexOf("BT");
+                int ET = Encoding.UTF8.GetString(ap).IndexOf("ET") + 2;
+                ap = Utils.ToByte(Encoding.UTF8.GetString(ap).Substring(BT, ET - BT));
 
                 Rect r = new Rect(rect);
                 float w = r[2] - r[0];
@@ -1418,18 +1419,88 @@ namespace MuPDF.NET
 
             List<dynamic> iList = new List<dynamic>();
             List<List<dynamic>> res = doc.GetPageXObjects(Number);
-            for (int i = 0; i < res.Count; i++)
-                iList.Add(iList[i][1]);
+            int i = 0;
+            for (i = 0; i < res.Count; i++)
+            {
+                iList.Add(res[i][1]);
+            }
 
             res = doc.GetPageImages(Number);
-            for (int i = 0; i < res.Count; i++)
-                iList.Add(iList[i][7]);
+            for (i = 0; i < res.Count; i++)
+                iList.Add(res[i][7]);
 
             res = doc.GetPageFonts(Number);
-            for (int i = 0; i < res.Count; i++)
-                iList.Add(iList[i][4]);
+            for (i = 0; i < res.Count; i++)
+                iList.Add(res[i][4]);
 
-            return 0;
+            string n = "fzFrm";
+            i = 0;
+            string imgName = n + "0";
+            while (iList.Contains(imgName))
+            {
+                i += 1;
+                imgName = n + $"{i}";
+            }
+
+            int isrc = src.GraftID;
+            if (doc.GraftID == isrc)
+                throw new Exception("source document must not equal target");
+
+            MuPDFGraftMap gmap = doc.GraftMaps.GetValueOrDefault(isrc, null);
+            if (gmap == null)
+            {
+                gmap = new MuPDFGraftMap(doc);
+                doc.GraftMaps[isrc] = gmap;
+            }
+
+            int xref = doc.ShownPages.GetValueOrDefault((isrc, pno), 0);
+            xref = _ShowPdfPage(srcPage, overlay, matrix, xref, oc, srcRect.ToFzRect(), gmap, imgName);
+            doc.ShownPages[(isrc, pno)] = xref;
+
+            return xref;
+        }
+
+        private int _ShowPdfPage(MuPDFPage srcPage, bool overlay = true, Matrix matrix = null, int xref = 0, int oc = 0, FzRect clip = null,
+            MuPDFGraftMap gmap = null, string imgName = null)
+        {
+            if (clip == null)
+                clip = new FzRect(FzRect.Fixed.Fixed_INFINITE);
+            FzMatrix mat = matrix != null ? matrix.ToFzMatrix() : new FzMatrix();
+            PdfPage tpage = _nativePage;
+            PdfObj tpageObj = tpage.obj();
+            PdfDocument pdfOut = tpage.doc();
+            Utils.EnsureOperations(pdfOut);
+
+            PdfObj xobj1 = Utils.GetXObjectFromPage(pdfOut, srcPage.GetPdfPage(), xref, gmap);
+            if (xref == 0)
+                xref = xobj1.pdf_to_num();
+
+            // create refereneing xobject (controls display on target page)
+            PdfObj subRes1 = mupdf.mupdf.pdf_new_dict(pdfOut, 5);
+            subRes1.pdf_dict_puts("fullpage", xobj1);
+            PdfObj subRes = mupdf.mupdf.pdf_new_dict(pdfOut, 5);
+            subRes.pdf_dict_put(new PdfObj("XObject"), subRes1);
+
+            FzBuffer res = mupdf.mupdf.fz_new_buffer(20);
+            res.fz_append_string("/fullpage Do");
+            PdfObj xobj2 = pdfOut.pdf_new_xobject(clip, mat, subRes, res);
+            if (oc > 0)
+                Utils.AddOcObject(pdfOut, xobj2, oc);
+
+            // update target page with xobj2
+            PdfObj resources = tpageObj.pdf_dict_get_inheritable(new PdfObj("Resources"));
+            subRes = resources.pdf_dict_get(new PdfObj("XObject"));
+            if (subRes.m_internal == null)
+                subRes = resources.pdf_dict_put_dict(new PdfObj("XObject"), 5);
+            subRes.pdf_dict_puts(imgName, xobj2);
+
+            FzBuffer nres = mupdf.mupdf.fz_new_buffer(50); // buffer for Do command
+            nres.fz_append_string(" q /"); // Do command
+            nres.fz_append_string(imgName);
+            nres.fz_append_string(" Do Q ");
+
+            Utils.InsertContents(pdfOut, tpageObj, nres, overlay ? 1 : 0);
+            return xref;
         }
 
         public List<int> GetContents()
@@ -1466,11 +1537,11 @@ namespace MuPDF.NET
         {
             MuPDFDocument doc = _parent;
             int xref = 0;
+            int idx = 0;
 
             if (doc is null)
                 throw new Exception("orphaned object: parent is None");
 
-            int idx = 0;
             if (fontName.StartsWith("/"))
                 fontName = fontName.Substring(1);
 
@@ -1877,7 +1948,7 @@ namespace MuPDF.NET
         {
             MuPDFDocument doc = Parent;
             MuPDFPage page = doc.ReloadPage(this);
-            // issue
+            
         }
 
         public void ExtendTextPage(MuPDFSTextPage tpage, int flags = 0, Matrix m = null)

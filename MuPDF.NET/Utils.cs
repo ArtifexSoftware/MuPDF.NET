@@ -679,13 +679,13 @@ namespace MuPDF.NET
 
         public static PdfObj pdf_dict_getl(PdfObj obj, string[] keys)
         {
-            PdfObj ret = new PdfObj();
             foreach (string key in keys)
             {
-                ret = obj.pdf_dict_get(new PdfObj(key));
+                if (obj.m_internal == null)
+                    break;
+                obj = obj.pdf_dict_get(new PdfObj(key));
             }
-
-            return ret;
+            return obj;
         }
 
         public static void pdf_dict_putl(PdfObj obj, PdfObj val, string[] keys)
@@ -3329,6 +3329,120 @@ namespace MuPDF.NET
             }
 
             return "(" + sb.ToString() + ")";
+        }
+
+        public static int Find(byte[] haystack, byte[] needle)
+        {
+            for (var i = 0; i < haystack.Length - needle.Length + 1; i++)
+            {
+                if (haystack[i] == needle[0])
+                {
+                    var fail = false;
+                    for (var j = 1; j < needle.Length; j++)
+                    {
+                        if (haystack[i + j] != needle[j])
+                        {
+                            fail = true;
+                            break;
+                        }
+                    }
+                    if (!fail) return i;
+                }
+            }
+            return -1; // if not found
+        }
+
+        public static void EnsureOperations(PdfDocument pdf)
+        {
+            if (!HaveOperations(pdf))
+                throw new Exception("No journalling operation started");
+        }
+
+        /// <summary>
+        /// Ensure valid journalling state
+        /// </summary>
+        /// <param name="pdf"></param>
+        /// <returns></returns>
+        public static bool HaveOperations(PdfDocument pdf)
+        {
+            if (pdf.m_internal.journal != null && string.IsNullOrEmpty(pdf.pdf_undoredo_step(0)))
+                return false;
+            return true;
+                
+        }
+
+        public static PdfObj GetXObjectFromPage(PdfDocument pdfOut, PdfPage pdfPage, int xref, MuPDFGraftMap gmap)
+        {
+            PdfObj xobj, resources;
+            if (xref > 0)
+                xobj = pdfOut.pdf_new_indirect(xref, 0);
+            else
+            {
+                PdfPage srcPage = pdfPage;
+                PdfObj srcPageRef = srcPage.obj();
+                FzRect mediaBox = srcPageRef.pdf_dict_get_inheritable(new PdfObj("MediaBox")).pdf_to_rect();
+                PdfObj o = srcPageRef.pdf_dict_get_inheritable(new PdfObj("Resources"));
+                if (gmap.ToPdfGraftMap().m_internal != null)
+                {
+                    resources = gmap.ToPdfGraftMap().pdf_graft_mapped_object(o);
+                }
+                else
+                {
+                    resources = pdfOut.pdf_graft_object(o);
+                }
+                FzBuffer res = Utils.ReadContents(srcPageRef);
+
+                xobj = pdfOut.pdf_new_xobject(mediaBox, new FzMatrix(), new PdfObj(0), res);
+                Utils.UpdateStream(pdfOut, xobj, res, 1);
+
+                xobj.pdf_dict_put(new PdfObj("Resources"), resources);
+            }
+            return xobj;
+        }
+
+        /// <summary>
+        /// Read and concatenate a PDF page's /Conents object(s) in a buffer
+        /// </summary>
+        /// <param name="pageRef"></param>
+        /// <returns></returns>
+        public static FzBuffer ReadContents(PdfObj pageRef)
+        {
+            PdfObj contents = pageRef.pdf_dict_get(new PdfObj("Contents"));
+            FzBuffer res = null;
+            if (contents.pdf_is_array() != 0)
+            {
+                res = new FzBuffer(1024);
+                for (int i = 0; i < contents.pdf_array_len(); i++)
+                {
+                    PdfObj obj = contents.pdf_array_get(i);
+                    FzBuffer nres = obj.pdf_load_stream();
+                    res.fz_append_buffer(nres);
+                }
+            }
+            else if (contents.m_internal != null)
+                res = contents.pdf_load_stream();
+
+            return res;
+        }
+
+        /// <summary>
+        /// Add OC object reference to a dictionary
+        /// </summary>
+        /// <param name="pdf"></param>
+        /// <param name="_ref"></param>
+        /// <param name="xref"></param>
+        /// <exception cref="Exception"></exception>
+        public static void AddOcObject(PdfDocument pdf, PdfObj _ref, int xref)
+        {
+            PdfObj indObj = pdf.pdf_new_indirect(xref, 0);
+            if (indObj.pdf_is_dict() == 0)
+                throw new Exception(ErrorMessages["MSG_BAD_OC_REF"]);
+            PdfObj type = indObj.pdf_dict_get(new PdfObj("Type"));
+            if (type.pdf_objcmp(new PdfObj("OCG")) == 0 || type.pdf_objcmp(new PdfObj("OCMD")) == 0)
+            {
+                _ref.pdf_dict_put(new PdfObj("OC"), indObj);
+            }
+            else throw new Exception(ErrorMessages["MSG_BAD_OC_REF"]);
         }
     }
 }
