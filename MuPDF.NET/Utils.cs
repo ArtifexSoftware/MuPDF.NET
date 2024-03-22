@@ -12,7 +12,6 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Unicode;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging.Abstractions;
 using mupdf;
 
 namespace MuPDF.NET
