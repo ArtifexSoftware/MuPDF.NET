@@ -35,9 +35,9 @@ namespace Demo
 
             MuPDFDocument doc = new MuPDFDocument();
             MuPDFPage page = doc.NewPage();
-            Rect r1 = new Rect(0, 0, page.Rect.Width, page.Rect.Height / 2.0f);
-            Rect r2 = r1 + new Rect(0, page.Rect.Height / 2.0f, 0, page.Rect.Height / 2.0f);
-
+            
+            Rect r1 = new Rect(0, 0, page.Rect.Width, page.Rect.Height / 2);
+            Rect r2 = r1 + new Rect(0, page.Rect.Height / 2, 0, page.Rect.Height / 2);
             page.ShowPdfPage(r1, src, 0, rotate: 90);
             page.ShowPdfPage(r2, src, 0, rotate: -90);
 
