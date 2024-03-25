@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace MuPDF.NET
 {
-    public struct DestNameStruct
+    public class DestNameStruct
     {
         public int Page;
 

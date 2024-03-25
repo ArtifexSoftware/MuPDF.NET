@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace MuPDF.NET
 {
-    public struct ColorStruct
+    public class ColorStruct
     {
         public float[] Fill;
 

@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace MuPDF.NET
 {
-    public struct Position
+    public class Position
     {
         public string Href;
 

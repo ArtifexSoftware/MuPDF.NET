@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace MuPDF.NET
 {
-    public struct SubArchiveStruct
+    public class SubArchiveStruct
     {
         public string Fmt;
 

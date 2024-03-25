@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace MuPDF.NET
 {
-    public struct PageStruct
+    public class PageStruct
     {
         public float Width;
 

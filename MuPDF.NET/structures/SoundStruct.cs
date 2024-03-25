@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace MuPDF.NET
 {
-    public struct SoundStruct
+    public class SoundStruct
     {
         public float Rate;
 

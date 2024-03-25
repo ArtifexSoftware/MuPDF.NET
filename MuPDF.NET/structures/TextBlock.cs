@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace MuPDF.NET
 {
-    public struct TextBlock
+    public class TextBlock
     {
         public float X0;
 

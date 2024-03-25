@@ -7,7 +7,7 @@ using mupdf;
 
 namespace MuPDF.NET
 {
-    public struct BlockStruct
+    public class BlockStruct
     {
         public int Number;
 
