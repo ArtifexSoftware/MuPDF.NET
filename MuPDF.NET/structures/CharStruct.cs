@@ -7,7 +7,7 @@ using mupdf;
 
 namespace MuPDF.NET
 {
-    public struct CharStruct
+    public class CharStruct
     {
         public FzPoint Origin;
 

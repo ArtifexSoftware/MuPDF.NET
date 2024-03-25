@@ -7,7 +7,7 @@ using mupdf;
 
 namespace MuPDF.NET
 {
-    public struct LineStruct
+    public class LineStruct
     {
         public List<SpanStruct> Spans;
 

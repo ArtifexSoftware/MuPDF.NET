@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace MuPDF.NET
 {
-    public struct FileInfoStruct
+    public class FileInfoStruct
     {
         public string FileName;
 

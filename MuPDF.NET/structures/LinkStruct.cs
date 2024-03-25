@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace MuPDF.NET
 {
-    public struct LinkStruct
+    public class LinkStruct
     {
         public Rect From;
 

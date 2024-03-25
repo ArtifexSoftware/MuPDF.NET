@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace MuPDF.NET
 {
-    public struct AnnotStruct
+    public class AnnotStruct
     {
         public int Xref;
 
@@ -23,5 +23,6 @@ namespace MuPDF.NET
 
         public float FontSize;
 
+        public float[] Fill;
     }
 }
