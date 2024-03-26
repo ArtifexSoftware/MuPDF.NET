@@ -9,9 +9,9 @@ namespace MuPDF.NET
 {
     public struct CharStruct
     {
-        public FzPoint ORIGIN;
+        public FzPoint Origin;
 
-        public FzRect BBOX;
+        public FzRect Bbox;
 
         public char C;
     }

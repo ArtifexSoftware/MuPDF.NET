@@ -8,14 +8,16 @@ namespace MuPDF.NET
 {
     public struct SoundStruct
     {
-        public float RATE;
+        public float Rate;
 
-        public int CHANNELS;
+        public int Channels;
 
-        public int BPS;
+        public int Bps;
 
-        public string ENCODING;
+        public string Encoding;
 
-        public string COMPRESSION;
+        public string Compression;
+
+        public byte[] Stream;
     }
 }

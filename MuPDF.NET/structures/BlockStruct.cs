@@ -9,36 +9,36 @@ namespace MuPDF.NET
 {
     public struct BlockStruct
     {
-        public int NUMBER;
+        public int Number;
 
-        public int TYPE;
+        public int Type;
 
-        public FzRect BBOX;
+        public FzRect Bbox;
 
-        public int WIDTH;
+        public int Width;
 
-        public int HEIGHT;
+        public int Height;
 
-        public string EXT;
+        public string Ext;
 
-        public int COLORSPACE;
+        public int ColorSpace;
 
-        public int XRES;
+        public int Xres;
 
-        public int YRES;
+        public int Yres;
 
-        public byte BPC;
+        public byte Bpc;
 
-        public FzMatrix MATRIX;
+        public FzMatrix Matrix;
 
-        public uint SIZE;
+        public uint Size;
 
-        public FzBuffer IMAGE;
+        public FzBuffer Image;
 
-        public string CSNAME;
+        public string CsName;
 
-        public vectoruc DIGEST;
+        public vectoruc Digest;
 
-        public List<LineStruct> LINES;
+        public List<LineStruct> Lines;
     }
 }

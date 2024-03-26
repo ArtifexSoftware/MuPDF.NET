@@ -8,8 +8,8 @@ namespace MuPDF.NET
 {
     public struct ColorStruct
     {
-        public float[] FILL;
+        public float[] Fill;
 
-        public float[] STROKE;
+        public float[] Stroke;
     }
 }

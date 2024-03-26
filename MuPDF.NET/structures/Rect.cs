@@ -12,7 +12,7 @@ namespace MuPDF.NET
         public float Y0 { get; set; }
         public float X1 { get; set; }
         public float Y1 { get; set; }
-        public int LENGTH { get; set; } = 4;
+        public int Length { get; set; } = 4;
 
         public Point BottomLeft
         {
@@ -82,7 +82,7 @@ namespace MuPDF.NET
                 return X0 >= X1 || Y0 >= Y1;
             }
         }
-        public Quad QUAD
+        public Quad Quad
         {
             get
             {
@@ -309,15 +309,15 @@ namespace MuPDF.NET
         {
             if (this.IsInfinite)
             {
-                return Utils.INFINITE_RECT().QUAD;
+                return Utils.INFINITE_RECT().Quad;
             }
-            return this.QUAD.Morph(p, m);
+            return this.Quad.Morph(p, m);
         }
 
         public float Norm()
         {
             float ret = 0.0f;
-            for (int i = 0; i < this.LENGTH; i ++)
+            for (int i = 0; i < this.Length; i ++)
             {
                 ret += this[i] * this[i];
             }

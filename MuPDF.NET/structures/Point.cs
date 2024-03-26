@@ -126,13 +126,13 @@ namespace MuPDF.NET
             return new FzPoint(p.X, p.Y);
         }
 
-        public Point TrueDivide(dynamic m)
+        public Point TrueDivide(float m)
         {
-            if (m is float)
-            {
-                return new Point(this.X * 1.0 / m, this.Y * 1.0 / m);
-            }
+            return new Point((float)(this.X * 1.0 / m), (float)(this.Y * 1.0 / m));
+        }
 
+        public Point TrueDivide(Matrix m)
+        {
             (int, Matrix) result = Utils.InvertMatrix(m); // util
 
             if (result.Item1 == 0)
@@ -152,5 +152,24 @@ namespace MuPDF.NET
             return this;
         }
 
+        /// <summary>
+        /// Unit vector of the point.
+        /// </summary>
+        public Point Unit
+        {
+            get
+            {
+                float s = X * X + Y * Y;
+                if (s < Utils.FLT_EPSILON)
+                    return new Point(0, 0);
+                s = (float)Math.Sqrt(s);
+                return new Point(X / s, Y / s);
+            }
+        }
+
+        public void Dispose()
+        {
+            
+        }
     }
 }

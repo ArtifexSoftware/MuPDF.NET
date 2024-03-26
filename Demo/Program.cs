@@ -1,6 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
+using System.IO.Compression;
+using System.Runtime.InteropServices;
+using mupdf;
 using MuPDF.NET;
+using System.Diagnostics;
 
 namespace Demo
 {
@@ -8,18 +13,47 @@ namespace Demo
     {
         static void Main(string[] args)
         {
+            /*Stopwatch stopWatch = new Stopwatch();
+            stopWatch.Start();
 
-            MuPDFDocument doc = new MuPDFDocument("1.pdf");
+            // start
+            MuPDFDocument doc = new MuPDFDocument("pandas.pdf");
+            for (int i = 0; i < doc.GetPageCount(); i++)
+            {
+                MuPDFSTextPage stpage = new MuPDFSTextPage(doc.GetPage(i));
+                stpage.ExtractHtml();
+            }
 
-            MuPDFPage page = new MuPDFPage(doc.GetPage(0), doc);
+            // end
+            stopWatch.Stop();
 
-            List<Quad> matches = page.SearchFor("Pixmap");
+            TimeSpan ts = stopWatch.Elapsed;
 
-            if (matches.Count > 0)
-                page.AddStrikeoutAnnot(matches);
+            Console.WriteLine($"Elapsed Time is {ts.TotalMilliseconds}");*/
+
+            MuPDFDocument src = new MuPDFDocument("1.pdf");
+
+            MuPDFDocument doc = new MuPDFDocument();
+            MuPDFPage page = doc.NewPage();
+            
+            Rect r1 = new Rect(0, 0, page.Rect.Width, page.Rect.Height / 2);
+            Rect r2 = r1 + new Rect(0, page.Rect.Height / 2, 0, page.Rect.Height / 2);
+            page.ShowPdfPage(r1, src, 0, rotate: 90);
+            page.ShowPdfPage(r2, src, 0, rotate: -90);
 
             doc.Save("output.pdf");
+            /*for (int i = 0; i < doc.GetPageCount(); i++)
+            {
+                MuPDFPage page = doc.LoadPage(i);
+                foreach (var k in page.GetCDrawings(true)[0].Keys)
+                    Console.WriteLine(k);
+            }
+            *//*foreach (Rect r in page.GetCDrawings())
+            {
+                Console.WriteLine(r.ToString());
+            }*/
 
         }
+
     }
 }

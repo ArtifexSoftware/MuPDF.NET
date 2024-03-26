@@ -9,12 +9,12 @@ namespace MuPDF.NET
 {
     public struct LineStruct
     {
-        public List<SpanStruct> SPANS;
+        public List<SpanStruct> Spans;
 
-        public int WMODE;
+        public int WMode;
 
-        public FzPoint DIR;
+        public FzPoint Dir;
 
-        public FzRect BBOX;
+        public FzRect Bbox;
     }
 }

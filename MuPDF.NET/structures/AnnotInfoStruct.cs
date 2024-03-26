@@ -8,18 +8,18 @@ namespace MuPDF.NET
 {
     public class AnnotInfoStruct
     {
-        public string CONTENT;
+        public string Content;
 
-        public string NAME;
+        public string Name;
 
-        public string TITLE;
+        public string Title;
 
-        public string CREATION_DATE;
+        public string CreationDate;
 
-        public string MOD_DATE;
+        public string ModDate;
 
-        public string SUBJECT;
+        public string Subject;
 
-        public string ID;
+        public string Id;
     }
 }

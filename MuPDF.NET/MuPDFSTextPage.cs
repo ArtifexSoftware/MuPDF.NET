@@ -13,11 +13,11 @@ namespace MuPDF.NET
     {
         internal FzStextPage _nativeSTextPage;
 
-        internal MuPDFPage _parent;
+        internal MuPDFPage _parent = null;
         /// <summary>
         /// Rect of Stext Page
         /// </summary>
-        private FzRect MEDIABOX
+        private FzRect MediaBox
         {
             get
             {
@@ -28,7 +28,7 @@ namespace MuPDF.NET
         /// <summary>
         /// Block List of Text
         /// </summary>
-        public List<FzStextBlock> BLOCKS
+        public List<FzStextBlock> Blocks
         {
             get
             {
@@ -113,7 +113,7 @@ namespace MuPDF.NET
             FzBuffer res = new FzBuffer(1024);
             List<TextBlock> lines = new List<TextBlock>();
 
-            foreach (FzStextBlock block in BLOCKS)
+            foreach (FzStextBlock block in Blocks)
             {
                 blockNum += 1;
                 FzRect blockRect = new FzRect(FzRect.Fixed.Fixed_EMPTY);
@@ -143,7 +143,7 @@ namespace MuPDF.NET
 
                         blockRect = FzRect.fz_union_rect(blockRect, lineRect);
                     }
-                    text = EscapeStrFromBuffer(res);
+                    text = Utils.EscapeStrFromBuffer(res);
                 }
                 else if (IsRectsOverlap(stPageRect, new FzRect(block.m_internal.bbox)) || stPageRect.fz_is_infinite_rect() != 0)
                 {
@@ -162,9 +162,9 @@ namespace MuPDF.NET
                     line.Y0 = blockRect.y0;
                     line.X1 = blockRect.x1;
                     line.Y1 = blockRect.y1;
-                    line.BLOCKNUM = blockNum;
-                    line.TEXT = text;
-                    line.TYPE = block.m_internal.type;
+                    line.BlockNum = blockNum;
+                    line.Text = text;
+                    line.Type = block.m_internal.type;
 
                     lines.Add(line);
                 }
@@ -183,24 +183,24 @@ namespace MuPDF.NET
             PageStruct pageDict = TextPage2Dict(false);
             if (cropbox != null)
             {
-                pageDict.WIDTH = cropbox.Width;
-                pageDict.HEIGHT = cropbox.Height;
+                pageDict.Width = cropbox.Width;
+                pageDict.Height = cropbox.Height;
             }
             if (sort is true)
             {
-                List<BlockStruct> blocks = pageDict.BLOCKS;
+                List<BlockStruct> blocks = pageDict.Blocks;
                 blocks.Sort((b1, b2) => { 
-                    if (b1.BBOX.y1 == b2.BBOX.y1)
+                    if (b1.Bbox.y1 == b2.Bbox.y1)
                     {
-                        return b1.BBOX.x0.CompareTo(b2.BBOX.x0);
+                        return b1.Bbox.x0.CompareTo(b2.Bbox.x0);
                     }
                     else
                     {
-                        return b1.BBOX.y1.CompareTo(b2.BBOX.y1);
+                        return b1.Bbox.y1.CompareTo(b2.Bbox.y1);
                     }
                 });
 
-                pageDict.BLOCKS = blocks;
+                pageDict.Blocks = blocks;
             }
             return pageDict;
         }
@@ -221,7 +221,7 @@ namespace MuPDF.NET
         internal void ExtractImageInfo(int hashes = 0)
         {
             int blockNum = -1;
-            foreach (FzStextBlock block in BLOCKS)
+            foreach (FzStextBlock block in Blocks)
             {
                 blockNum += 1;
                 List<BlockStruct> rc = new List<BlockStruct>();
@@ -245,20 +245,20 @@ namespace MuPDF.NET
                 }
                 FzColorspace cs = new FzColorspace(mupdf.mupdf.ll_fz_keep_colorspace(img.m_internal.colorspace));
                 BlockStruct blockDict = new BlockStruct();
-                blockDict.NUMBER = blockNum;
-                blockDict.BBOX = new FzRect(block.m_internal.bbox);
-                blockDict.MATRIX = block.i_transform();
-                blockDict.WIDTH = img.w();
-                blockDict.HEIGHT = img.h();
-                blockDict.COLORSPACE = cs.fz_colorspace_n();
-                blockDict.CSNAME = cs.fz_colorspace_name();
-                blockDict.XRES = img.xres();
-                blockDict.YRES = img.yres();
-                blockDict.BPC = img.bpc();
-                blockDict.SIZE = img.fz_image_size();
+                blockDict.Number = blockNum;
+                blockDict.Bbox = new FzRect(block.m_internal.bbox);
+                blockDict.Matrix = block.i_transform();
+                blockDict.Width = img.w();
+                blockDict.Height = img.h();
+                blockDict.ColorSpace = cs.fz_colorspace_n();
+                blockDict.CsName = cs.fz_colorspace_name();
+                blockDict.Xres = img.xres();
+                blockDict.Yres = img.yres();
+                blockDict.Bpc = img.bpc();
+                blockDict.Size = img.fz_image_size();
                 if (hashes != 0)
                 {
-                    blockDict.DIGEST = digest;
+                    blockDict.Digest = digest;
                 }
                 rc.Add(blockDict);
             }
@@ -267,32 +267,32 @@ namespace MuPDF.NET
         /// <summary>
         /// Extract StextPage in JSON format
         /// </summary>
-        /// <param name="cropbox">Rectangle area to extract</param>
+        /// <param name="cb">Rectangle area to extract</param>
         /// <param name="sort"></param>
-        public string ExtractJSON(Rect cb, bool sort = false)
+        public string ExtractJSON(Rect cropbox, bool sort = false)
         {
             PageStruct pageDict = TextPage2Dict(false);
-            if (cb != null)
+            if (cropbox != null)
             {
-                pageDict.WIDTH = cb.Width;
-                pageDict.HEIGHT = cb.Height;
+                pageDict.Width = cropbox.Width;
+                pageDict.Height = cropbox.Height;
             }
 
             if (sort)
             {
-                List<BlockStruct> blocks = pageDict.BLOCKS;
+                List<BlockStruct> blocks = pageDict.Blocks;
                 blocks.Sort((b1, b2) => {
-                    if (b1.BBOX.y1 == b2.BBOX.y1)
+                    if (b1.Bbox.y1 == b2.Bbox.y1)
                     {
-                        return b1.BBOX.x0.CompareTo(b2.BBOX.x0);
+                        return b1.Bbox.x0.CompareTo(b2.Bbox.x0);
                     }
                     else
                     {
-                        return b1.BBOX.y1.CompareTo(b2.BBOX.y1);
+                        return b1.Bbox.y1.CompareTo(b2.Bbox.y1);
                     }
                 });
 
-                pageDict.BLOCKS = blocks;
+                pageDict.Blocks = blocks;
             }
             string ret = JsonConvert.SerializeObject(pageDict, Formatting.Indented);
             return ret;
@@ -314,24 +314,24 @@ namespace MuPDF.NET
             PageStruct pageDict = TextPage2Dict(false);
             if (cropbox != null)
             {
-                pageDict.WIDTH = cropbox.Width;
-                pageDict.HEIGHT = cropbox.Height;
+                pageDict.Width = cropbox.Width;
+                pageDict.Height = cropbox.Height;
             }
             if (sort is true)
             {
-                List<BlockStruct> blocks = pageDict.BLOCKS;
+                List<BlockStruct> blocks = pageDict.Blocks;
                 blocks.Sort((b1, b2) => {
-                    if (b1.BBOX.y1 == b2.BBOX.y1)
+                    if (b1.Bbox.y1 == b2.Bbox.y1)
                     {
-                        return b1.BBOX.x0.CompareTo(b2.BBOX.x0);
+                        return b1.Bbox.x0.CompareTo(b2.Bbox.x0);
                     }
                     else
                     {
-                        return b1.BBOX.y1.CompareTo(b2.BBOX.y1);
+                        return b1.Bbox.y1.CompareTo(b2.Bbox.y1);
                     }
                 });
 
-                pageDict.BLOCKS = blocks;
+                pageDict.Blocks = blocks;
             }
             return pageDict;
         }
@@ -375,7 +375,7 @@ namespace MuPDF.NET
             string ret = "";
             foreach (TextBlock b in blocks)
             {
-                ret += b.TEXT;
+                ret += b.Text;
             }
 
             return ret;
@@ -391,7 +391,7 @@ namespace MuPDF.NET
             bool isNeedNewLine = false;
             string ret = "";
 
-            foreach (FzStextBlock block in BLOCKS)
+            foreach (FzStextBlock block in Blocks)
             {
                 if (block.m_internal.type != (int)STextBlockType.FZ_STEXT_BLOCK_TEXT)
                     continue;
@@ -419,7 +419,7 @@ namespace MuPDF.NET
                 }
             }
 
-            return DecodeRawUnicodeEscape(ret);
+            return Utils.DecodeRawUnicodeEscape(ret);
         }
 
         /// <summary>
@@ -432,11 +432,11 @@ namespace MuPDF.NET
             int bufferLen;
             int blockNum = -1;
             FzRect wordBox = new FzRect(FzRect.Fixed.Fixed_EMPTY);
-            FzRect stPageRect = MEDIABOX;
+            FzRect stPageRect = MediaBox;
 
             List<WordBlock> lines = new List<WordBlock>();
             FzBuffer buf = new FzBuffer(64);
-            foreach (FzStextBlock block in BLOCKS)
+            foreach (FzStextBlock block in Blocks)
             {
                 blockNum += 1;
                 if (block.m_internal.type != (int)STextBlockType.FZ_STEXT_BLOCK_TEXT)
@@ -509,17 +509,17 @@ namespace MuPDF.NET
         /// <returns></returns>
         public static List<Quad> Search(MuPDFSTextPage stPage, string needle, int hitMax = 0, bool quad = true)
         {
-            FzRect rect = stPage.MEDIABOX;
+            FzRect rect = stPage.MediaBox;
             if (needle == null || needle == "")
                 return null;
             List<Quad> quads = new List<Quad>();
 
             Hits hits = new Hits();
 
-            hits.LEN = 0;
-            hits.QUADS = quads;
-            hits.HFUZZ = 0.2f;
-            hits.VFUZZ = 0.1f;
+            hits.Len = 0;
+            hits.Quads = quads;
+            hits.HFuzz = 0.2f;
+            hits.VFuzz = 0.1f;
 
             FzBuffer buffer = stPage.GetBufferFromStextPage();
             string hayStackString = buffer.fz_string_from_buffer();
@@ -529,7 +529,7 @@ namespace MuPDF.NET
 
             int inside = 0;
 
-            foreach (FzStextBlock block in stPage.BLOCKS)
+            foreach (FzStextBlock block in stPage.Blocks)
             {
                 if (block.m_internal.type != (int)STextBlockType.FZ_STEXT_BLOCK_TEXT)
                     continue;
@@ -612,7 +612,7 @@ namespace MuPDF.NET
                     i += 1;
                     continue;
                 }
-                quads[i] = (v1.Rect | v2.Rect).QUAD;
+                quads[i] = (v1.Rect | v2.Rect).Quad;
                 quads.RemoveAt(i + 1);
                 items -= 1;
             }
@@ -623,13 +623,13 @@ namespace MuPDF.NET
 
         internal void OnHighlightChar(Hits hits, FzStextLine line, FzStextChar ch)
         {
-            float vFuzz = ch.m_internal.size * hits.VFUZZ;
-            float hFuzz = ch.m_internal.size * hits.HFUZZ;
+            float vFuzz = ch.m_internal.size * hits.VFuzz;
+            float hFuzz = ch.m_internal.size * hits.HFuzz;
             FzQuad chQuad = GetCharQuad(line, ch);
 
-            if (hits.LEN > 0)
+            if (hits.Len > 0)
             {
-                FzQuad end = hits.QUADS[hits.LEN - 1].ToFzQuad();
+                FzQuad end = hits.Quads[hits.Len - 1].ToFzQuad();
                 if (true
                     && HDist(new FzPoint(line.m_internal.dir), new FzPoint(end.lr), new FzPoint(chQuad.ll)) < hFuzz
                     && VDist(new FzPoint(line.m_internal.dir), new FzPoint(end.lr), new FzPoint(chQuad.ll)) < vFuzz
@@ -638,13 +638,13 @@ namespace MuPDF.NET
                 {
                     end.ur = chQuad.ur;
                     end.lr = chQuad.lr;
-                    Debug.Assert(hits.QUADS[-1].ToFzQuad() == end);
+                    Debug.Assert(hits.Quads[-1].ToFzQuad() == end);
                     return;
                 }
             }
             
-            hits.QUADS.Add(new Quad(chQuad));
-            hits.LEN += 1;
+            hits.Quads.Add(new Quad(chQuad));
+            hits.Len += 1;
         }
 
         internal float HDist(FzPoint dir, FzPoint a, FzPoint b)
@@ -667,9 +667,9 @@ namespace MuPDF.NET
         /// <returns>Buffer</returns>
         internal FzBuffer GetBufferFromStextPage()
         {
-            FzRect r = MEDIABOX;
+            FzRect r = MediaBox;
             FzBuffer buf = new FzBuffer(256);
-            foreach (FzStextBlock block in BLOCKS)
+            foreach (FzStextBlock block in Blocks)
             {
                 if (block.m_internal.type == (int)STextBlockType.FZ_STEXT_BLOCK_TEXT)
                 {
@@ -791,17 +791,17 @@ namespace MuPDF.NET
 
         internal int AppendWord(List<WordBlock> lines, FzBuffer buf, FzRect wordBox, int blockNum, int lineNum, int wordNum)
         {
-            string s = EscapeStrFromBuffer(buf);
+            string s = Utils.EscapeStrFromBuffer(buf);
             WordBlock item = new WordBlock()
             {
                 X0 = wordBox.x0,
                 Y0 = wordBox.y0,
                 X1 = wordBox.x1,
                 Y1 = wordBox.y1,
-                TEXT = s,
-                BLOCKNUM = blockNum,
-                LINENUM = lineNum,
-                WORDNUM = wordNum
+                Text = s,
+                BlockNum = blockNum,
+                LineNum = lineNum,
+                WordNum = wordNum
             };
 
             lines.Add(item);
@@ -867,37 +867,37 @@ namespace MuPDF.NET
         internal PageStruct TextPage2Dict(bool raw = false)
         {
             PageStruct pageDict = new PageStruct {
-                WIDTH = MEDIABOX.x1 - MEDIABOX.x0,
-                HEIGHT = MEDIABOX.y1 - MEDIABOX.y0,
-                BLOCKS = new List<BlockStruct>()
+                Width = MediaBox.x1 - MediaBox.x0,
+                Height = MediaBox.y1 - MediaBox.y0,
+                Blocks = new List<BlockStruct>()
             };
             
             GetNewBlockList(pageDict, raw);
             return pageDict;
         }
 
-        public string ExtractRawJSON(Rect cb = null, bool sort = false)
+        public string ExtractRawJSON(Rect cropbox = null, bool sort = false)
         {
             PageStruct val = TextPage2Dict(true);
-            if (cb != null)
+            if (cropbox != null)
             {
-                val.WIDTH = cb.Width;
-                val.HEIGHT = cb.Height;
+                val.Width = cropbox.Width;
+                val.Height = cropbox.Height;
             }
             if (sort == true)
             {
-                List<BlockStruct> blocks = val.BLOCKS;
+                List<BlockStruct> blocks = val.Blocks;
                 blocks.Sort((b1, b2) => {
-                    if (b1.BBOX.y1 == b2.BBOX.y1)
+                    if (b1.Bbox.y1 == b2.Bbox.y1)
                     {
-                        return b1.BBOX.x0.CompareTo(b2.BBOX.x0);
+                        return b1.Bbox.x0.CompareTo(b2.Bbox.x0);
                     }
                     else
                     {
-                        return b1.BBOX.y1.CompareTo(b2.BBOX.y1);
+                        return b1.Bbox.y1.CompareTo(b2.Bbox.y1);
                     }
                 });
-                val.BLOCKS = blocks;
+                val.Blocks = blocks;
             }
 
             string ret = JsonConvert.SerializeObject(val, Formatting.Indented);
@@ -907,29 +907,29 @@ namespace MuPDF.NET
         internal void MakeTextPage2Dict(PageStruct pageDict, bool raw)
         {
             FzBuffer textBuffer = new FzBuffer(128);
-            FzRect stPageRect = MEDIABOX;
+            FzRect stPageRect = MediaBox;
             int blockNum = -1;
-            foreach (FzStextBlock block in BLOCKS)
+            foreach (FzStextBlock block in Blocks)
             {
                 blockNum += 1;
 
-                if (!MEDIABOX.contains(new FzRect(block.m_internal.bbox))
-                    && MEDIABOX.fz_is_infinite_rect() == 0
+                if (!MediaBox.contains(new FzRect(block.m_internal.bbox))
+                    && MediaBox.fz_is_infinite_rect() == 0
                     && block.m_internal.type == (int)STextBlockType.FZ_STEXT_BLOCK_IMAGE)
                     continue;
 
-                if (MEDIABOX.fz_is_infinite_rect() != 0
-                    && (FzRect.fz_intersect_rect(MEDIABOX, new FzRect(block.m_internal.bbox))).fz_is_empty_rect() != 0)
+                if (MediaBox.fz_is_infinite_rect() != 0
+                    && (FzRect.fz_intersect_rect(MediaBox, new FzRect(block.m_internal.bbox))).fz_is_empty_rect() != 0)
                     continue;
 
                 BlockStruct blockDict = new BlockStruct();
 
-                blockDict.NUMBER = blockNum;
-                blockDict.TYPE = block.m_internal.type;
+                blockDict.Number = blockNum;
+                blockDict.Type = block.m_internal.type;
 
                 if (block.m_internal.type == (int)STextBlockType.FZ_STEXT_BLOCK_IMAGE)
                 {
-                    blockDict.BBOX = new FzRect(block.m_internal.bbox);
+                    blockDict.Bbox = new FzRect(block.m_internal.bbox);
 
                     FzImage image = block.i_image();
                     int n = image.colorspace().fz_colorspace_n();
@@ -962,16 +962,16 @@ namespace MuPDF.NET
                         ext = "png";
                     }
 
-                    blockDict.WIDTH = w;
-                    blockDict.HEIGHT = h;
-                    blockDict.EXT = ext;
-                    blockDict.COLORSPACE = n;
-                    blockDict.XRES = image.xres();
-                    blockDict.YRES = image.yres();
-                    blockDict.BPC = image.bpc();
-                    blockDict.MATRIX = block.i_transform();
-                    blockDict.SIZE = mupdf.mupdf.fz_image_size(image);
-                    blockDict.IMAGE = buf;
+                    blockDict.Width = w;
+                    blockDict.Height = h;
+                    blockDict.Ext = ext;
+                    blockDict.ColorSpace = n;
+                    blockDict.Xres = image.xres();
+                    blockDict.Yres = image.yres();
+                    blockDict.Bpc = image.bpc();
+                    blockDict.Matrix = block.i_transform();
+                    blockDict.Size = mupdf.mupdf.fz_image_size(image);
+                    blockDict.Image = buf;
                 }
                 else
                 {
@@ -1009,55 +1009,56 @@ namespace MuPDF.NET
 
                             float flags = CharFontFlags(new FzFont(mupdf.mupdf.ll_fz_keep_font(ch.font)), new FzStextLine(line), new FzStextChar(ch));
                             FzPoint origin = new FzPoint(ch.origin);
-                            style.SIZE = ch.size;
-                            style.FLAGS = flags;
-                            style.FONT = GetFontName(new FzFont(mupdf.mupdf.ll_fz_keep_font(ch.font)));
-                            style.COLOR = ch.color;
-                            style.ASC = (new FzFont(mupdf.mupdf.ll_fz_keep_font(ch.font))).fz_font_ascender();
-                            style.DESC = (new FzFont(mupdf.mupdf.ll_fz_keep_font(ch.font))).fz_font_descender();
+                            style.Size = ch.size;
+                            style.Flags = flags;
+                            style.Font = GetFontName(new FzFont(mupdf.mupdf.ll_fz_keep_font(ch.font)));
+                            style.Color = ch.color;
+                            style.Asc = (new FzFont(mupdf.mupdf.ll_fz_keep_font(ch.font))).fz_font_ascender();
+                            style.Desc = (new FzFont(mupdf.mupdf.ll_fz_keep_font(ch.font))).fz_font_descender();
 
-                            if (style.SIZE != oldStyle.SIZE || style.FLAGS != oldStyle.FLAGS || style.COLOR != oldStyle.COLOR || style.FONT != oldStyle.FONT)
+                            if (style.Size != oldStyle.Size || style.Flags != oldStyle.Flags || style.Color != oldStyle.Color || style.Font != oldStyle.Font)
                             { 
-                                if (oldStyle.SIZE >= 0)
+                                if (oldStyle.Size >= 0)
                                 {
                                     if (raw)
                                     {
-                                        span.CHARS = charList;
+                                        span.Chars = charList;
                                         charList = null;
                                     }
                                     else
                                     {
-                                        span.TEXT = EscapeStrFromBuffer(textBuffer);
+                                        span.Text = Utils.EscapeStrFromBuffer(textBuffer);
                                         mupdf.mupdf.fz_clear_buffer(textBuffer);
                                     }
-                                    span.ORIGIN = spanOrigin;
-                                    span.BBOX = spanRect;
+                                    span.Origin = spanOrigin;
+                                    span.Origin = spanOrigin;
+                                    span.Bbox = spanRect;
                                     lineRect = FzRect.fz_union_rect(lineRect, spanRect);
                                     spanList.Add(span);
                                 }
                                 span = new SpanStruct();
-                                float asc = style.ASC;
-                                float desc = style.DESC;
-                                if (style.ASC < 1e-3)
+                                float asc = style.Asc;
+                                float desc = style.Desc;
+                                if (style.Asc < 1e-3)
                                 {
                                     asc = 0.9f;
                                     desc = -0.1f;
                                 }
 
-                                span.SIZE = style.SIZE;
-                                span.FLAGS = style.FLAGS;
-                                span.FONT = style.FONT;
-                                span.COLOR = style.COLOR;
-                                span.ASC = asc;
-                                span.DESC = desc;
+                                span.Size = style.Size;
+                                span.Flags = style.Flags;
+                                span.Font = style.Font;
+                                span.Color = style.Color;
+                                span.Asc = asc;
+                                span.Desc = desc;
                             }
                             spanRect = FzRect.fz_union_rect(spanRect, r);
 
                             if (raw)
                             {
                                 CharStruct charDict = new CharStruct();
-                                charDict.ORIGIN = new FzPoint(ch.origin);
-                                charDict.BBOX = r;
+                                charDict.Origin = new FzPoint(ch.origin);
+                                charDict.Bbox = r;
                                 charDict.C = (char)ch.c;
 
                                 if (charList != null)
@@ -1071,70 +1072,41 @@ namespace MuPDF.NET
                         }
 
                         // all characters processed, now flush remaining span
-                        if (span.CHARS != null)
+                        if (span.Chars != null)
                         {
                             if (raw)
                             {
-                                span.CHARS = charList;
+                                span.Chars = charList;
                             }
                             else
                             {
-                                span.TEXT = EscapeStrFromBuffer(textBuffer);
+                                span.Text = Utils.EscapeStrFromBuffer(textBuffer);
                                 textBuffer.fz_clear_buffer();
                             }
-                            span.ORIGIN = spanOrigin;
-                            span.BBOX = spanRect;
+                            span.Origin = spanOrigin;
+                            span.Bbox = spanRect;
 
                             if (spanRect.fz_is_empty_rect() != 0)
                             {
                                 spanList.Add(span);
                                 lineRect = FzRect.fz_union_rect(lineRect, spanRect);
                             }
-                            span.CHARS = null;
+                            span.Chars = null;
                         }
 
-                        lineDict.SPANS = spanList;
+                        lineDict.Spans = spanList;
 
                         blockRect = FzRect.fz_union_rect(blockRect, lineRect);
-                        lineDict.WMODE = line.wmode;
-                        lineDict.DIR = new FzPoint(line.dir);
-                        lineDict.BBOX = new FzRect(line.bbox);
+                        lineDict.WMode = line.wmode;
+                        lineDict.Dir = new FzPoint(line.dir);
+                        lineDict.Bbox = new FzRect(line.bbox);
                         lineList.Add(lineDict);
                     }
-                    blockDict.BBOX = blockRect;
-                    blockDict.LINES = lineList;
+                    blockDict.Bbox = blockRect;
+                    blockDict.Lines = lineList;
                 }
-                pageDict.BLOCKS.Add(blockDict);
+                pageDict.Blocks.Add(blockDict);
             }
-        }
-
-        public static string EscapeStrFromBuffer(FzBuffer buf)
-        {
-            if (buf.m_internal == null)
-                return "";
-            FzBuffer s = buf.fz_clone_buffer();
-            return DecodeRawUnicodeEscape(s);
-        }
-
-        /// <summary>
-        /// Decode Raw Unicode
-        /// </summary>
-        /// <param name="s"></param>
-        /// <returns></returns>
-        public static string DecodeRawUnicodeEscape(string s)
-        {
-            return System.Text.RegularExpressions.Regex.Unescape(s);
-        }
-
-        /// <summary>
-        /// Decode Raw Unicode
-        /// </summary>
-        /// <param name="s"></param>
-        /// <returns></returns>
-        public static string DecodeRawUnicodeEscape(FzBuffer s)
-        {
-            string ret = s.fz_string_from_buffer();
-            return DecodeRawUnicodeEscape(ret);
         }
 
         internal float CharFontFlags(FzFont font, FzStextLine line, FzStextChar ch)
@@ -1146,7 +1118,6 @@ namespace MuPDF.NET
             flags += font.fz_font_is_bold() * (int)FontStyle.TEXT_FONT_BOLD;
             return flags;
         }
-
         internal float DetectSuperScript(FzStextLine line, FzStextChar ch)
         {
             if (line.m_internal.wmode == 0 && line.m_internal.dir.x == 1 && line.m_internal.dir.y == 0)
@@ -1278,41 +1249,41 @@ namespace MuPDF.NET
 
     public class MuPDFCharStyle
     {
-        public float SIZE;
+        public float Size;
 
-        public float FLAGS;
+        public float Flags;
 
-        public string FONT;
+        public string Font;
 
-        public int COLOR;
+        public int Color;
 
-        public float ASC;
+        public float Asc;
 
-        public float DESC;
+        public float Desc;
 
         public MuPDFCharStyle(Dictionary<string, dynamic> rhs)
         {
-            SIZE = rhs["Size"];
-            FLAGS = rhs["Flags"];
-            FONT = rhs["Font"];
-            COLOR = rhs["Color"];
-            ASC = rhs["Asc"];
-            DESC = rhs["Desc"];
+            Size = rhs["Size"];
+            Flags = rhs["Flags"];
+            Font = rhs["Font"];
+            Color = rhs["Color"];
+            Asc = rhs["Asc"];
+            Desc = rhs["Desc"];
         }
 
         public MuPDFCharStyle()
         {
-            SIZE = -1;
-            FLAGS = -1;
-            FONT = "";
-            COLOR = -1;
-            ASC = 0;
-            DESC = 0;
+            Size = -1;
+            Flags = -1;
+            Font = "";
+            Color = -1;
+            Asc = 0;
+            Desc = 0;
         }
 
         public override string ToString()
         {
-            return $"{SIZE} {FLAGS} {FONT} {COLOR} {ASC} {DESC}";
+            return $"{Size} {Flags} {Font} {Color} {Asc} {Desc}";
         }
     }
 
