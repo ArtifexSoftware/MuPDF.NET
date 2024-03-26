@@ -3443,5 +3443,37 @@ namespace MuPDF.NET
             }
             else throw new Exception(ErrorMessages["MSG_BAD_OC_REF"]);
         }
+
+        public static bool IsJbig2Image(PdfObj obj)
+        {
+            return false;
+        }
+
+        public static List<int> GetOcgArraysImp(PdfObj arr)
+        {
+            List<int> list = new List<int> ();
+            if (arr.pdf_is_array() != 0)
+            {
+                int n = arr.pdf_array_len();
+                for (int i = 0; i < n; i ++)
+                {
+                    PdfObj obj = arr.pdf_array_get(i);
+                    int item = obj.pdf_to_num();
+                    if (!list.Contains(item))
+                        list.Add(item);
+                }
+            }
+            return list;
+        }
+
+        public static void SetOcgArraysImp(PdfObj arr, List<int> list)
+        {
+            PdfDocument pdf = mupdf.mupdf.pdf_get_bound_document(arr);
+            foreach (int xref in list)
+            {
+                PdfObj obj = pdf.pdf_new_indirect(xref, 0);
+                arr.pdf_array_push(obj);
+            }
+        }
     }
 }

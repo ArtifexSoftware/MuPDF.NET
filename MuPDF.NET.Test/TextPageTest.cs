@@ -11,7 +11,7 @@ namespace MuPDF.NET.Test
         [SetUp]
         public void Setup()
         {
-            doc = new MuPDFDocument("test.pdf");
+            doc = new MuPDFDocument("input.pdf");
 
             textPage = doc.LoadPage(0).GetSTextPage();
         }

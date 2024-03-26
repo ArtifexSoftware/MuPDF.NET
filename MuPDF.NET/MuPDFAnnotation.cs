@@ -576,7 +576,7 @@ namespace MuPDF.NET
             IsOwner = false;
         }
 
-        private Nullable<AnnotStruct> GetRedactVaues()
+        private AnnotStruct GetRedactVaues()
         {
             PdfAnnot annot = _nativeAnnotion;
 
@@ -615,14 +615,15 @@ namespace MuPDF.NET
                 return null;
             }
 
-            if (values.Text == "")
+            if (values == null)
                 return values;
 
             values.Rect = this.Rect;
             values.TextColor = new List<float>();
             (values.TextColor, values.FontName, values.FontSize) = ParseData(this);
-            /*values.Fill = *///issue
-
+            values.Fill = new float[Colors.Fill.Length];
+            Array.Copy(Colors.Fill, values.Fill, values.Fill.Length);
+            
             return values;
         }
 
