@@ -16,7 +16,7 @@ MuPDF.NET adds C#/.NET bindings and abstractions to MuPDF, a lightweight PDF, XP
 - The result is `MuPDF.NET.dll` and `Demo.exe`. Users can use `MuPDF.NET.dll` as a reference in C# project and use defined classes and functions. `Demo.exe` is one of examples.
 
 ## How to use MuPDF.NET
-- You need `mupdfcpp64.dll` and `mupdfcsharp.dll`.
+- You need `mupdfcpp64.dll` and `mupdfcsharp.dll` from [Building the C# bindings](https://mupdf.readthedocs.io/en/latest/language-bindings.html?utm_source=mupdf&utm_medium=website&utm_content=cta-header-link#id1)
 - You have to select MuPDF.NET.dll as a reference and use with `using MuPDF.NET;`. For this, you have to copy these files in same level with MuPDF.NET project.
 
 ## License and Copyright
