@@ -6,7 +6,7 @@ public class PageTest : PageTestBase
     [SetUp]
     public void Setup()
     {
-        doc = new MuPDFDocument("test.pdf");
+        doc = new MuPDFDocument("input.pdf");
         page = new MuPDFPage(doc.GetPage(0), doc);
     }
 
@@ -106,7 +106,7 @@ public class PageTest : PageTestBase
     {
         page.AddTextAnnot(new Point(100, 100), "Hello world");
         List<string> names = page.GetAnnotNames();
-        Assert.That(names.Count, Is.EqualTo(2));
+        Assert.That(names.Count, Is.EqualTo(3));
     }
 
     [Test]
