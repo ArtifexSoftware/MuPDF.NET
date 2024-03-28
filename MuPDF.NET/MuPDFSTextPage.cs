@@ -1,11 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Text;
+﻿using mupdf;
 using Newtonsoft.Json;
-using mupdf;
-using System.Runtime.InteropServices;
-using System.Linq;
+using System.Diagnostics;
 
 namespace MuPDF.NET
 {
@@ -189,7 +184,8 @@ namespace MuPDF.NET
             if (sort is true)
             {
                 List<BlockStruct> blocks = pageDict.Blocks;
-                blocks.Sort((b1, b2) => { 
+                blocks.Sort((b1, b2) =>
+                {
                     if (b1.Bbox.y1 == b2.Bbox.y1)
                     {
                         return b1.Bbox.x0.CompareTo(b2.Bbox.x0);
@@ -233,7 +229,7 @@ namespace MuPDF.NET
                 if (hashes != 0)
                 {
                     FzIrect r = new FzIrect(Utils.FZ_MIN_INF_RECT, Utils.FZ_MIN_INF_RECT, Utils.FZ_MAX_INF_RECT, Utils.FZ_MAX_INF_RECT);
-                    
+
                     Debug.Assert(r.fz_is_infinite_irect() != 0, "Rect is infinite");
 
                     FzMatrix m = new FzMatrix(img.w(), 0, 0, img.h(), 0, 0);
@@ -281,7 +277,8 @@ namespace MuPDF.NET
             if (sort)
             {
                 List<BlockStruct> blocks = pageDict.Blocks;
-                blocks.Sort((b1, b2) => {
+                blocks.Sort((b1, b2) =>
+                {
                     if (b1.Bbox.y1 == b2.Bbox.y1)
                     {
                         return b1.Bbox.x0.CompareTo(b2.Bbox.x0);
@@ -320,7 +317,8 @@ namespace MuPDF.NET
             if (sort is true)
             {
                 List<BlockStruct> blocks = pageDict.Blocks;
-                blocks.Sort((b1, b2) => {
+                blocks.Sort((b1, b2) =>
+                {
                     if (b1.Bbox.y1 == b2.Bbox.y1)
                     {
                         return b1.Bbox.x0.CompareTo(b2.Bbox.x0);
@@ -563,7 +561,7 @@ namespace MuPDF.NET
                                 {
                                     inside = 0;
                                     (begin, end) = stPage.FindString(hayStackString.Substring(hayStack), needle);
-                                    
+
                                     if (begin == -1)
                                     {
                                         goto no_more_matches;
@@ -585,7 +583,7 @@ namespace MuPDF.NET
                 }
                 hayStack += 1;
             }
-    no_more_matches:;
+        no_more_matches:;
             buffer.fz_clear_buffer();
 
             int items = quads.Count;
@@ -642,7 +640,7 @@ namespace MuPDF.NET
                     return;
                 }
             }
-            
+
             hits.Quads.Add(new Quad(chQuad));
             hits.Len += 1;
         }
@@ -776,7 +774,7 @@ namespace MuPDF.NET
 
             return c;
         }
-            
+
 
         public static Tuple<int, int> Char2Canon(string s)
         {
@@ -786,7 +784,7 @@ namespace MuPDF.NET
             int c = Canon(outparams.rune);
             /*if (s.Length == 0)
                 return new Tuple<int, int>(1, -1);*/
-            return new Tuple<int, int>( n, c);
+            return new Tuple<int, int>(n, c);
         }
 
         internal int AppendWord(List<WordBlock> lines, FzBuffer buf, FzRect wordBox, int blockNum, int lineNum, int wordNum)
@@ -866,12 +864,13 @@ namespace MuPDF.NET
 
         internal PageStruct TextPage2Dict(bool raw = false)
         {
-            PageStruct pageDict = new PageStruct {
+            PageStruct pageDict = new PageStruct
+            {
                 Width = MediaBox.x1 - MediaBox.x0,
                 Height = MediaBox.y1 - MediaBox.y0,
                 Blocks = new List<BlockStruct>()
             };
-            
+
             GetNewBlockList(pageDict, raw);
             return pageDict;
         }
@@ -887,7 +886,8 @@ namespace MuPDF.NET
             if (sort == true)
             {
                 List<BlockStruct> blocks = val.Blocks;
-                blocks.Sort((b1, b2) => {
+                blocks.Sort((b1, b2) =>
+                {
                     if (b1.Bbox.y1 == b2.Bbox.y1)
                     {
                         return b1.Bbox.x0.CompareTo(b2.Bbox.x0);
@@ -1017,7 +1017,7 @@ namespace MuPDF.NET
                             style.Desc = (new FzFont(mupdf.mupdf.ll_fz_keep_font(ch.font))).fz_font_descender();
 
                             if (style.Size != oldStyle.Size || style.Flags != oldStyle.Flags || style.Color != oldStyle.Color || style.Font != oldStyle.Font)
-                            { 
+                            {
                                 if (oldStyle.Size >= 0)
                                 {
                                     if (raw)
@@ -1130,7 +1130,7 @@ namespace MuPDF.NET
             string name = font.fz_font_name();
             int s = name.IndexOf("+");
 
-            return name.Substring(s+1);
+            return name.Substring(s + 1);
         }
         public FzQuad GetCharQuad(FzStextLine line, FzStextChar ch)
         {
@@ -1150,7 +1150,7 @@ namespace MuPDF.NET
 
             FzRect bbox = mupdf.mupdf.fz_font_bbox(font);
             float fontWidth = bbox.y1 - bbox.y0;
-            
+
             if (asc < 1e-3)
             {
                 desc = -0.1f;
@@ -1161,7 +1161,7 @@ namespace MuPDF.NET
             asc_desc = asc - desc;
             asc = asc * fontSize / asc_desc;
             desc = desc * fontSize / asc_desc;
-            
+
             float c = line.m_internal.dir.x;
             float s = line.m_internal.dir.y;
             FzMatrix trm1 = new FzMatrix(c, -s, s, c, 0, 0);
@@ -1173,7 +1173,7 @@ namespace MuPDF.NET
             }
             FzMatrix xlate1 = new FzMatrix(1, 0, 0, 1, -ch.m_internal.origin.x, -ch.m_internal.origin.y);
             FzMatrix xlate2 = new FzMatrix(1, 0, 0, 1, ch.m_internal.origin.x, ch.m_internal.origin.y);
-            
+
             FzQuad quad = mupdf.mupdf.fz_transform_quad(new FzQuad(ch.m_internal.quad), xlate1);
             quad = mupdf.mupdf.fz_transform_quad(quad, trm1);
 
@@ -1212,10 +1212,10 @@ namespace MuPDF.NET
             }
             quad = mupdf.mupdf.fz_transform_quad(quad, trm2);
             quad = mupdf.mupdf.fz_transform_quad(quad, xlate2);
-            
+
             return quad;
         }
-    
+
         public FzRect GetCharBbox(FzStextLine line, FzStextChar ch)
         {
             FzQuad q = GetCharQuad(line, ch);

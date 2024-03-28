@@ -1,22 +1,13 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
+﻿using mupdf;
 using System.Data;
 using System.Diagnostics;
-using System.Globalization;
 using System.IO.Compression;
-using System.Linq;
-using System.Numerics;
-using System.Resources;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Text.Unicode;
-using System.Threading.Tasks;
-using mupdf;
 
 namespace MuPDF.NET
 {
-    
+
     public static class Utils
     {
         public static int FZ_MIN_INF_RECT = (int)(-0x80000000);
@@ -650,7 +641,7 @@ namespace MuPDF.NET
                 FzMatrix dst = new FzMatrix();
                 float rdet = 1 / det;
                 dst.a = src.d * rdet;
-                dst.b = -src.d * rdet;
+                dst.b = -src.b * rdet;
                 dst.c = -src.c * rdet;
                 dst.d = a * rdet;
                 a = -src.e * dst.a - src.f * dst.c;
@@ -697,7 +688,7 @@ namespace MuPDF.NET
                 return;
 
             PdfDocument doc = obj.pdf_get_bound_document();
-            for (int i = 0; i < keys.Length -1; i++)
+            for (int i = 0; i < keys.Length - 1; i++)
             {
                 PdfObj nextObj = obj.pdf_dict_get(new PdfObj(keys[i]));
                 if (nextObj == null)
@@ -760,7 +751,7 @@ namespace MuPDF.NET
         {
             IntPtr unmanagedPointer = Marshal.AllocHGlobal(bytes.Length);
             Marshal.Copy(bytes, 0, unmanagedPointer, bytes.Length);
-            return mupdf.mupdf.fz_new_buffer_from_copied_data(new SWIGTYPE_p_unsigned_char(unmanagedPointer, false), (uint)bytes.Length);
+            return mupdf.mupdf.fz_new_buffer_from_copied_data(new SWIGTYPE_p_unsigned_char(unmanagedPointer, true), (uint)bytes.Length);
         }
 
         public static FzBuffer CompressBuffer(FzBuffer buffer)
@@ -890,7 +881,7 @@ namespace MuPDF.NET
             int rotate;
             if (page.obj() == null)
                 Console.WriteLine(page.obj().ToString());
-            PdfObj obj = page   .obj().pdf_dict_get(new PdfObj("Rotate"));
+            PdfObj obj = page.obj().pdf_dict_get(new PdfObj("Rotate"));
             rotate = obj.pdf_to_int();
             rotate = NormalizeRotation(rotate);
             return rotate;
@@ -1152,7 +1143,7 @@ namespace MuPDF.NET
             bool sort = false,
             char[] delimiters = null
             )
-        { 
+        {
             Dictionary<string, int> formats = new Dictionary<string, int>()
             {
                 { "text", 0 },
@@ -1188,7 +1179,7 @@ namespace MuPDF.NET
                     delimiters
                     );
             }
-            
+
             Rect cb = null;
             if ((new List<string>() { "html", "xml", "xhtml" }).Contains(option))
                 clip = page.CropBox;
@@ -1204,7 +1195,7 @@ namespace MuPDF.NET
                 tp = page.GetSTextPage(clip, flags);
             else if (tp._parent != page)
                 throw new Exception("not a textpage of this page");
-            
+
             dynamic t = null;
             if (option == "json")
                 t = tp.ExtractJSON(cb, sort);
@@ -1350,8 +1341,8 @@ namespace MuPDF.NET
                 int n = properties.pdf_dict_len();
                 if (n < 1)
                     return null;
-                
-                for (int i =0; i < n; i++)
+
+                for (int i = 0; i < n; i++)
                 {
                     PdfObj key = properties.pdf_dict_get_key(i);
                     PdfObj val = properties.pdf_dict_get_val(i);
@@ -1374,7 +1365,7 @@ namespace MuPDF.NET
             PdfObj resource = refer.pdf_dict_get(new PdfObj("Resource"));
             if (resource == null)
                 resource = refer.pdf_dict_put_dict(new PdfObj("Resources"), 1);
-            
+
             PdfObj properties = resource.pdf_dict_get(new PdfObj("Properties"));
             if (properties == null)
                 properties = resource.pdf_dict_put_dict(new PdfObj("Properties"), 1);
@@ -1486,7 +1477,7 @@ namespace MuPDF.NET
                     return;
 
                 int n = xObj.pdf_dict_len();
-                for (int i = 0; i <n; i++)
+                for (int i = 0; i < n; i++)
                 {
                     PdfObj obj = xObj.pdf_dict_get_val(i);
                     int sxref = 0;
@@ -1522,7 +1513,7 @@ namespace MuPDF.NET
             int rc = 1;
             int n = dict.pdf_dict_len();
 
-            for (int i = 0; i < n; i ++)
+            for (int i = 0; i < n; i++)
             {
                 PdfObj refName = dict.pdf_dict_get_key(i);
                 PdfObj fontDict = dict.pdf_dict_get_val(i);
@@ -1557,7 +1548,7 @@ namespace MuPDF.NET
                     encoding.pdf_to_name(),
                     streamXRef
                     };
-                fontList.Add( entry );
+                fontList.Add(entry);
             }
 
             return rc;
@@ -1604,7 +1595,7 @@ namespace MuPDF.NET
                 else
                     Console.WriteLine("unhandled font type '%s'", obj.pdf_to_name());
             }
-            
+
             return "n/a";
         }
 
@@ -1626,7 +1617,7 @@ namespace MuPDF.NET
         {
             int rc = 1;
             int n = dict.pdf_dict_len();
-            for (int i =0; i < n; i++)
+            for (int i = 0; i < n; i++)
             {
                 PdfObj refName = dict.pdf_dict_get_key(i);
                 PdfObj imageDict = dict.pdf_dict_get_val(i);
@@ -1670,7 +1661,7 @@ namespace MuPDF.NET
         {
             int rc = 1;
             int n = dict.pdf_dict_len();
-            for (int i =0; i < n; i++)
+            for (int i = 0; i < n; i++)
             {
                 PdfObj refName = dict.pdf_dict_get_key(i);
                 PdfObj imageDict = dict.pdf_dict_get_val(i);
@@ -1775,7 +1766,7 @@ namespace MuPDF.NET
             FontStruct res = doc.ExtractFont(xref);
             float asc = 0.8f;
             float dsc = -0.2f;
-            
+
             if (res.Ext == "")
                 return (res.Name, res.Ext, res.Type, asc, dsc);
 
@@ -1903,7 +1894,7 @@ namespace MuPDF.NET
             bool found = false;
 
             int i = 0;
-            for (; i < doc.FontInfo.Count; i ++)
+            for (; i < doc.FontInfo.Count; i++)
             {
                 if (doc.FontInfo[i].Xref == xref)
                 {
@@ -2065,10 +2056,10 @@ namespace MuPDF.NET
             ixref = fontObj.pdf_to_num();
             name = Utils.EscapeStrFromStr(fontObj.pdf_dict_get(new PdfObj("BaseFont")).pdf_to_name());
             subt = Utils.UnicodeFromStr(fontObj.pdf_dict_get(new PdfObj("Subtype")).pdf_to_name());
-            
+
             if (exto == null)
                 exto = Utils.GetFontExtension(pdf, ixref);
-            
+
             float asc = font.fz_font_ascender();
             float dsc = font.fz_font_descender();
 
@@ -2093,7 +2084,7 @@ namespace MuPDF.NET
                 return text;
             if (text == "" || text == null)
                 return "[<>]";
-            
+
             string otxt = "";
             if (simple)
             {
@@ -2132,13 +2123,12 @@ namespace MuPDF.NET
             return $"[<{otxt}>]";
         }
 
-        public static void CheckColor(dynamic c)
+        public static void CheckColor(float[] c)
         {
-            if (c != null || c != 0)
+            Console.WriteLine($"{c[0]} {c[1]} {c[2]} {c.Length}");
+            if (c != null)
             {
-                if (!(c is List<dynamic>) || !(c is Tuple)
-                    || (c.Count != 1) || (c.Count != 3) || (c.Count != 4)
-                    || c.Min() < 0 || c.Max() > 1)
+                if (c.Length != 1 && c.Length != 3 && c.Length != 4 || c.Min() < 0 || c.Max() > 1)
                 {
                     throw new Exception("need 1, 3 or 4 color components in range 0 to 1");
                 }
@@ -2331,7 +2321,7 @@ namespace MuPDF.NET
                 if (obj.pdf_array_len() == 4)
                 {
                     PdfObj dashObj = obj.pdf_array_get(3);
-                    for (int i = 0; i < dashObj.pdf_array_len(); i ++)
+                    for (int i = 0; i < dashObj.pdf_array_len(); i++)
                     {
                         int val = dashObj.pdf_array_get(i).pdf_to_int();
                         dash.Add(val);
@@ -2349,7 +2339,7 @@ namespace MuPDF.NET
                 obj = bsObj.pdf_dict_get(new PdfObj("D"));
                 if (obj != null)
                 {
-                    for (int i = 0; i < obj.pdf_array_len(); i ++)
+                    for (int i = 0; i < obj.pdf_array_len(); i++)
                     {
                         int val = obj.pdf_array_get(i).pdf_to_int();
                         dash.Add(val);
@@ -2380,7 +2370,7 @@ namespace MuPDF.NET
             if (obj.pdf_is_array() != 0)
             {
                 int n = obj.pdf_array_len();
-                for (int i =0; i < n; i ++)
+                for (int i = 0; i < n; i++)
                 {
                     float col = obj.pdf_array_get(i).pdf_to_real();
                     bc.Add(col);
@@ -2423,7 +2413,7 @@ namespace MuPDF.NET
                 return null;
 
             int n = annots.pdf_array_len();
-            for (int i =0; i < n; i ++)
+            for (int i = 0; i < n; i++)
             {
                 PdfObj annotObj = annots.pdf_array_get(i);
                 PdfObj name = annotObj.pdf_dict_gets("NM");
@@ -2671,7 +2661,7 @@ namespace MuPDF.NET
                 if (n > 0)
                 {
                     PdfObj newAnnots = pageDict.pdf_dict_put_array(new PdfObj("Annots"), n);
-                    for (int i = 0; i < n; i ++)
+                    for (int i = 0; i < n; i++)
                     {
                         PdfObj o = oldAnnots.pdf_array_get(i);
                         if (o == null || o.pdf_is_dict() != 0)
@@ -2811,7 +2801,7 @@ namespace MuPDF.NET
 
             List<int> xrefSrc = new List<int>();
             List<int> xrefDst = new List<int>();
-            for (int i = 0; i < pnoSrc.Count; i ++)
+            for (int i = 0; i < pnoSrc.Count; i++)
             {
                 int pSrc = pnoSrc[i];
                 int pDst = pnoDst[i];
@@ -2912,7 +2902,7 @@ namespace MuPDF.NET
                 font = mupdf.mupdf.fz_new_font_from_file(null, fontFile, index, 0);
                 return Fertig(font);
             }
-            
+
             if (ordering > -1)
             {
                 font = mupdf.mupdf.fz_new_cjk_font(ordering);
@@ -3009,7 +2999,7 @@ namespace MuPDF.NET
             return AdobeGlyphs.GetValueOrDefault(ch, ".notdef");
         }
 
-        public static FzMatrix ShowStringCS(FzText text, Font userFont, FzMatrix trm,string s, int wmode,
+        public static FzMatrix ShowStringCS(FzText text, Font userFont, FzMatrix trm, string s, int wmode,
             fz_bidi_direction bidi_level, int markupDir, fz_text_language langauge)
         {
             int i = 0;
@@ -3040,7 +3030,7 @@ namespace MuPDF.NET
         {
             var items = dev.PathDict["items"];
             int len = items.Count;
-            float[] f = new float[8] { 0, 0, 0, 0, 0, 0, 0, 0};
+            float[] f = new float[8] { 0, 0, 0, 0, 0, 0, 0, 0 };
             FzPoint lp = new FzPoint();
 
             for (int i = 0; i < 4; i++)
@@ -3095,9 +3085,9 @@ namespace MuPDF.NET
                 orientation = -1;
             }
 
-            List<dynamic> rect = new List<dynamic>() { "re", new Rect(r), orientation};
+            List<dynamic> rect = new List<dynamic>() { "re", new Rect(r), orientation };
             items[len - 3] = rect;
-            for (int i = len -2; i < len; i++)
+            for (int i = len - 2; i < len; i++)
             {
                 items.RemoveAt(i);
             }
@@ -3367,7 +3357,7 @@ namespace MuPDF.NET
             if (pdf.m_internal.journal != null && string.IsNullOrEmpty(pdf.pdf_undoredo_step(0)))
                 return false;
             return true;
-                
+
         }
 
         public static PdfObj GetXObjectFromPage(PdfDocument pdfOut, PdfPage pdfPage, int xref, MuPDFGraftMap gmap)
@@ -3451,11 +3441,11 @@ namespace MuPDF.NET
 
         public static List<int> GetOcgArraysImp(PdfObj arr)
         {
-            List<int> list = new List<int> ();
+            List<int> list = new List<int>();
             if (arr.pdf_is_array() != 0)
             {
                 int n = arr.pdf_array_len();
-                for (int i = 0; i < n; i ++)
+                for (int i = 0; i < n; i++)
                 {
                     PdfObj obj = arr.pdf_array_get(i);
                     int item = obj.pdf_to_num();
