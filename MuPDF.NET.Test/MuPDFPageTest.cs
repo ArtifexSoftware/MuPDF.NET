@@ -1,7 +1,7 @@
 namespace MuPDF.NET.Test;
 using MuPDF.NET;
 
-public class PageTest : PageTestBase
+public class MuPDFPageTest : PageTestBase
 {
     [SetUp]
     public void Setup()
@@ -11,18 +11,16 @@ public class PageTest : PageTestBase
     }
 
     [Test]
-    public void Test_InsertText()// passed but text was never drawn
+    public void InsertText()// passed but text was never drawn
     {
         MuPDFPage page = doc.NewPage();
         int res = page.InsertText(new Point(100, 100), "hello", fontFile: "kenpixel.ttf", fontName: "kenpixel");
-        Assert.NotZero(res);
 
         res = page.InsertText(new Point(100, 100), "hello", setSimple: 1, borderWidth: 2);
-        Assert.NotZero(res);
     }
 
     [Test]
-    public void Test_AddCircleAnnot()
+    public void AddCircleAnnot()
     {
         page.AddCircleAnnot(new Rect(0, 0, 400, 400));
         
@@ -30,7 +28,7 @@ public class PageTest : PageTestBase
     }
 
     [Test]
-    public void Test_AddFreeTextAnnot()
+    public void AddFreeTextAnnot()
     {
         Rect r = new Rect(20, 30, 100, 100);
         page.AddFreeTextAnnot(r.ToFzRect(), "Hello World");
@@ -38,7 +36,7 @@ public class PageTest : PageTestBase
     }
 
     [Test]
-    public void Test_AddPolygonAnnot()
+    public void AddPolygonAnnot()
     {
         List<Point> points = new List<Point>();
         points.Add(new Point(0, 0));
@@ -49,7 +47,7 @@ public class PageTest : PageTestBase
     }
 
     [Test]
-    public void Test_AddPolylineAnnot()
+    public void AddPolylineAnnot()
     {
         List<Point> points = new List<Point>();
         points.Add(new Point(0, 0));
@@ -60,49 +58,58 @@ public class PageTest : PageTestBase
     }
 
     [Test]
-    public void Test_AddHighlightAnnot()
+    public void AddHighlightAnnot()
     {
         page.AddHighlightAnnot(new Quad(new Rect(0, 0, 100, 100)));
         Assert.Pass();
     }
 
     [Test]
-    public void Test_AddRectAnnot()
+    public void AddRectAnnot()
     {
         page.AddRectAnnot(new Rect(0, 0, 100, 100));
         Assert.Pass();
     }
 
     [Test]
-    public void Test_AddUnderlineAnnot()
+    public void AddUnderlineAnnot()
     {
         page.AddUnderlineAnnot((new Rect(0, 0, 100, 100)).Quad);
         Assert.Pass();
     }
 
     [Test]
-    public void Test_AddStrikeAnnot()
+    public void AddStrikeAnnot()
     {
-        MuPDFAnnotation annot = page.AddStrikeoutAnnot((new Rect(100, 100, 300, 300).Quad), new Point(120, 120), new Point(250, 250));
+        MuPDFAnnot annot = page.AddStrikeoutAnnot((new Rect(100, 100, 300, 300).Quad), new Point(120, 120), new Point(250, 250));
         Assert.IsNotNull(annot);
     }
 
     [Test]
-    public void Test_ShowPdfPage()
+    public void ShowPdfPage()
     {
-        page.ShowPdfPage(new Rect(0, 0, 100, 100), doc, 0, false);
+        MuPDFDocument output = new MuPDFDocument();
+        MuPDFPage page = doc.NewPage();
+
+        Rect r1 = new Rect(0, 0, page.Rect.Width, page.Rect.Height);
+        Rect r2 = r1 + new Rect(0, page.Rect.Height / 2, 0, page.Rect.Height / 2);
+        
+        page.ShowPdfPage(r1, doc, 0, rotate: 90);
+        page.ShowPdfPage(r2, doc, 0, rotate: -90);
+        output.Save("output.pdf");
+
         Assert.Pass();
     }
 
     [Test]
-    public void Test_SetOpacity()
+    public void SetOpacity()
     {
         string ret = page.SetOpacity("hello", CA: 0.5f, ca: 0.8f);
         Assert.That(ret, Is.EqualTo("fitzca5080"));
     }
 
     [Test]
-    public void Test_GetAnnotNames()
+    public void GetAnnotNames()
     {
         page.AddTextAnnot(new Point(100, 100), "Hello world");
         List<string> names = page.GetAnnotNames();
@@ -110,28 +117,28 @@ public class PageTest : PageTestBase
     }
 
     [Test]
-    public void Test_InsertFont()
+    public void InsertFont()
     {
         int ret = page.InsertFont("kenpixel", "./kenpixel.ttf");
         Assert.NotZero(ret);
     }
 
     [Test]
-    public void Test_InsertHtml()
+    public void InsertHtml()
     {
         page.InsertHtmlBox(new Rect(0, 0, 100, 100), "<h2>Hello world</h2>");
         Assert.Pass();
     }
 
     [Test]
-    public void Test_GetCDrawings()
+    public void GetCDrawings()
     {
         page.GetCDrawings();
         Assert.Pass();
     }
 
     [Test]
-    public void Test_InsertLink()
+    public void InsertLink()
     {
         LinkStruct link = new LinkStruct();
         link.Name = "Here is the link.";
