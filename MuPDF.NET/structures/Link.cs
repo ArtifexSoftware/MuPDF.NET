@@ -1,9 +1,4 @@
 ﻿using mupdf;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace MuPDF.NET
 {
@@ -51,7 +46,7 @@ namespace MuPDF.NET
                     throw new Exception("orphaned object: parent is None");
                 if (Parent.Parent.IsClosed || Parent.Parent.IsEncrypted)
                     throw new Exception("document closed or encrypted");
-                
+
                 (dynamic, float, float) uri;
                 if (IsExternal || Uri.StartsWith("#"))
                     uri = (null, 0, 0);
@@ -184,7 +179,7 @@ namespace MuPDF.NET
             if (linkObj == null)
                 return;
 
-            MuPDFAnnotation.SetBorderAnnot(border, pdf, linkObj);
+            MuPDFAnnot.SetBorderAnnot(border, pdf, linkObj);
         }
 
         public dynamic SetBorder(dynamic border, float width = 0, int[] dashes = null, string style = null)

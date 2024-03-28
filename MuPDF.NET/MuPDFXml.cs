@@ -1,11 +1,6 @@
 ﻿using mupdf;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Runtime.InteropServices;
-using Microsoft.Maui.Layouts;
+using System.Text;
 
 namespace MuPDF.NET
 {
@@ -243,7 +238,7 @@ namespace MuPDF.NET
             string tagName = TagName;
             string newTag = $"h{level}";
             MuPDFXml child = CreateElement(newTag);
-            if (!(new[] {"h1", "h2", "h3", "h4", "h5", "h6"}).Contains(tagName))
+            if (!(new[] { "h1", "h2", "h3", "h4", "h5", "h6" }).Contains(tagName))
             {
                 AppendChild(child);
                 return child;
@@ -421,7 +416,7 @@ namespace MuPDF.NET
 
         public void Debug()
         {
-            List < (int, string) > items = GetNodeTree();
+            List<(int, string)> items = GetNodeTree();
             foreach ((int k, string v) in items)
             {
                 Console.WriteLine($"{k}: " + v.Replace("\n", "\\n"));

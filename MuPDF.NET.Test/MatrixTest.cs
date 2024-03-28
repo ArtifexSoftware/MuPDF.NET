@@ -21,7 +21,7 @@ namespace MuPDF.NET.Test
         }
 
         [Test]
-        public void Test_Constructor()
+        public void Constructor()
         {
             m1 = new Matrix();
             Assert.That(m1[0], Is.EqualTo(0.0f));
@@ -35,24 +35,24 @@ namespace MuPDF.NET.Test
         }
 
         [Test]
-        public void Test_Addition()
+        public void Addition()
         {
             Matrix m = m1 + m2;
             Assert.That(m[4], Is.EqualTo(11.0f));
         }
 
         [Test]
-        public void Test_PreScale()
+        public void PreScale()
         {
             m1.Prescale(1, 2);
             Assert.That(m1[3], Is.EqualTo(8.0f));
         }
 
         [Test]
-        public void Test_Invert()
+        public void Invert()
         {
             m2.Invert(m1);
-            Assert.That(m2[5], Is.EqualTo(-7.0f));
+            Assert.That(m2[5], Is.EqualTo(-2.0f));
         }
     }
 }

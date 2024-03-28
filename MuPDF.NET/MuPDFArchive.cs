@@ -1,11 +1,6 @@
 ﻿using mupdf;
-using System;
-using System.Collections.Generic;
 using System.Formats.Tar;
 using System.IO.Compression;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace MuPDF.NET
 {
@@ -98,7 +93,9 @@ namespace MuPDF.NET
         {
             SubArchiveStruct subarch = new SubArchiveStruct()
             {
-                Fmt = fmt, Entries = entries, Path = mount
+                Fmt = fmt,
+                Entries = entries,
+                Path = mount
             };
 
             if (fmt != "tree" || _subArchives.Count == 0)
@@ -130,9 +127,9 @@ namespace MuPDF.NET
                 entries.Add(e.FullName);
             }
 
-            if (filename == "")
+            if (string.IsNullOrEmpty(filename))
             {
-                
+
             }
             else
             {
@@ -154,7 +151,7 @@ namespace MuPDF.NET
 
             if (filename == "")
             {
-
+                
             }
             else
             {

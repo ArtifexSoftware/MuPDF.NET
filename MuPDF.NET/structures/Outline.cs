@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using mupdf;
+﻿using mupdf;
 
 namespace MuPDF.NET
 {
@@ -36,7 +31,7 @@ namespace MuPDF.NET
             {
                 if (_nativeOutline == null)
                     return false;
-                
+
                 string uri = _nativeOutline.m_internal.uri;
                 if (uri is null)
                     return false;

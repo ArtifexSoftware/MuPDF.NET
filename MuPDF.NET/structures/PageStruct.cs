@@ -1,12 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace MuPDF.NET
+﻿namespace MuPDF.NET
 {
-    public struct PageStruct
+    public class PageStruct
     {
         public float Width;
 

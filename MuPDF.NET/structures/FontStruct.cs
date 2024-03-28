@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace MuPDF.NET
+﻿namespace MuPDF.NET
 {
     public class FontStruct
     {
@@ -29,7 +23,7 @@ namespace MuPDF.NET
         public List<(int, double)> Glyphs;
 
         public float Ascender;
-        
+
         public float Descender;
 
         public byte[] Content;

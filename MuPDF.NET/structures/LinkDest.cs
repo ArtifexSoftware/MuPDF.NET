@@ -1,10 +1,4 @@
-﻿using mupdf;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
+﻿using System.Text.RegularExpressions;
 
 namespace MuPDF.NET
 {
@@ -75,7 +69,7 @@ namespace MuPDF.NET
                 {
                     Kind = LinkType.LINK_GOTO;
                     Match m = Regex.Match(Uri, "^#page=([0-9]+)&zoom=([0-9.]+),(-?[0-9.]+),(-?[0-9.]+)$");
-                    
+
                     if (m != null)
                     {
                         Page = Convert.ToInt32(m.Groups[1].Value) - 1;
@@ -157,7 +151,7 @@ namespace MuPDF.NET
 
         public void Dispose()
         {
-            
+
         }
     }
 }

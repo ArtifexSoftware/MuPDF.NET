@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using mupdf;
-using MuPDF.NET;
+﻿using System.Text;
 
 namespace MuPDF.NET
 {
@@ -149,7 +144,7 @@ namespace MuPDF.NET
             )
         {
             List<string> text = buffer;
-            if (text.Count <= 0)
+            if (text.Count == 0)
                 return 0;
 
             int maxCode = 0;
@@ -178,7 +173,7 @@ namespace MuPDF.NET
                 );
 
             FontStruct fontInfo = Utils.CheckFontInfo(Doc, xref);
-
+            
             int ordering = fontInfo.Ordering;
             bool simple = fontInfo.Simple;
             string bfName = fontInfo.Name;
@@ -327,8 +322,8 @@ namespace MuPDF.NET
             byte[] bTotal = Encoding.UTF8.GetBytes(TotalCont);
             if (TotalCont != "")
             {
-                int xref = Utils.InsertContents(Page, bTotal, overlay);
-                /*mupdf.mupdf.pdf_update_stream(Doc, xref, TotalCont);//issue*/
+                int xref = Utils.InsertContents(Page, Encoding.UTF8.GetBytes(" "), overlay);
+                Doc.UpdateStream(xref, bTotal);
             }
 
             LastPoint = null;
@@ -403,7 +398,7 @@ namespace MuPDF.NET
             float w45 = w90 / 2;
             while (Math.Abs(betar) > 2 * Math.PI)
                 betar += 360;
-            
+
             if (!(LastPoint == point))
             {
                 Point t = point * IPctm;
@@ -700,7 +695,7 @@ namespace MuPDF.NET
             float mb = rad / cnt;
             Matrix matrix = Utils.HorMatrix(p1, p2);
             Matrix iMat = ~matrix;
-            
+
             List<Point> points = new List<Point>();
             for (int i = 1; i < cnt; i++)
             {
@@ -715,7 +710,7 @@ namespace MuPDF.NET
             points.Insert(0, p1);
             points.Append(p2);
             DrawPolyline(points.ToArray());
-            
+
             return p2;
         }
 
@@ -1065,7 +1060,7 @@ namespace MuPDF.NET
             }
 
             List<bool> justTab = new List<bool>();
-            for (int i = 0; i < t2.Length; i ++)
+            for (int i = 0; i < t2.Length; i++)
             {
                 string[] line_t = t2[i].Replace("\t", new string(' ', expandTabs)).Split(" ");
                 string lbuff = "";
@@ -1139,8 +1134,8 @@ namespace MuPDF.NET
             string template = "1 0 0 1 {0} {1} Tm /{2} {3} Tf ";
             string[] text_t = text.Split(" ");
             justTab[justTab.Count - 1] = false;
-            
-            for (int i = 0; i < text_t.Length; i ++)
+
+            for (int i = 0; i < text_t.Length; i++)
             {
                 float pl = maxWidth - PixLen(text_t[i]);
                 Point pnt = point + cPnt * (i * lheightFactor);

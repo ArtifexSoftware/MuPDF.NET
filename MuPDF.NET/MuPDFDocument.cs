@@ -1,15 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using mupdf;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Reflection.Metadata;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.IO;
-using mupdf;
-using System.Reflection;
-using System.Globalization;
 
 namespace MuPDF.NET
 {
@@ -45,7 +37,8 @@ namespace MuPDF.NET
 
         private bool _isPDF;
 
-        public bool NeedsPass {
+        public bool NeedsPass
+        {
             get
             {
                 if (IsClosed)
@@ -287,10 +280,9 @@ namespace MuPDF.NET
                         throw new FileNotFoundException(msg);
                     }
                     _nativeDocument = new FzDocument(filename);
-                    return;
                 }
 
-                if (fromFile && (new FileInfo(filename).Length == 0 || Stream.Count == 0))
+                if (fromFile && Stream != null && (new FileInfo(filename).Length == 0 || Stream.Count == 0))
                 {
                     msg = $"cannot open empty document";
                     throw new Exception(msg);
@@ -313,12 +305,12 @@ namespace MuPDF.NET
                     Marshal.Copy(stream, 0, dataPtr, stream.Length);
                     SWIGTYPE_p_unsigned_char swigData = new SWIGTYPE_p_unsigned_char(dataPtr, true);
                     data = mupdf.mupdf.fz_open_memory(swigData, (uint)stream.Length);
-                
+
                     //Marshal.FreeHGlobal(dataPtr);
                     string magic = filename;
                     if (magic == null)
                         magic = filetype;
-                    
+
                     doc = mupdf.mupdf.fz_open_document_with_stream(magic, data);
                 }
                 else
@@ -345,17 +337,30 @@ namespace MuPDF.NET
                                 {
                                     try
                                     {
-                                        doc.m_internal = mupdf.mupdf.ll_fz_document_open_fn_call(handler.open, filename);
+                                        if (Utils.MUPDF_VERSION.Item1 == 1 && Utils.MUPDF_VERSION.Item2 >= 24)
+                                        {
+                                            FzStream _stream = new FzStream(filename);
+                                            FzStream accel = new FzStream();
+                                            FzArchive archive = new FzArchive();
+                                            doc = new FzDocument(mupdf.mupdf.ll_fz_document_open_fn_call(handler.open, _stream.m_internal,
+                                                accel.m_internal, archive.m_internal));
+                                        }
+                                        /*else
+                                        {
+                                            doc = new FzDocument(mupdf.mupdf.ll_fz_document_open_fn_call(handler.open, filename));
+                                        }*/
                                     }
                                     catch (Exception)
                                     {
                                         throw new Exception(Utils.ErrorMessages["MSG_BAD_DOCUMENT"]);
                                     }
                                 }
-                                else if (handler.open_with_stream != null)
+                                else if (Utils.MUPDF_VERSION.Item1 >= 1 && Utils.MUPDF_VERSION.Item2 >= 24)
                                 {
-                                    data = mupdf.mupdf.fz_open_file(filename);
-                                    doc.m_internal = mupdf.mupdf.ll_fz_document_open_with_stream_fn_call(handler.open_with_stream, data.m_internal);
+                                    Debug.Assert(false);
+                                    ///////////////////////// in less than version 1.24
+                                    /*data = mupdf.mupdf.fz_open_file(filename);
+                                    doc.m_internal = mupdf.mupdf.ll_fz_document_open_with_stream_fn_call(handler.open_with_stream, data.m_internal);*/
                                 }
                             }
                             else
@@ -475,8 +480,8 @@ namespace MuPDF.NET
 
             byte[] docBytes = Utils.BinFromBuffer(res);
             int len1 = Utils.MUPDF_WARNINGS_STORE.Count;
-            
-            for (i = len0; i < len1; i ++)
+
+            for (i = len0; i < len1; i++)
             {
                 Console.WriteLine($"{Utils.MUPDF_WARNINGS_STORE[i]}");
             }
@@ -547,7 +552,7 @@ namespace MuPDF.NET
             {
                 return "None";
             }
-            
+
         }
 
         public int GetPageXref(int pno)
@@ -579,7 +584,7 @@ namespace MuPDF.NET
             }
             catch (Exception)
             {
-                
+
             }
             return new Outline(ol);
         }
@@ -650,7 +655,7 @@ namespace MuPDF.NET
             Marshal.FreeHGlobal(unmanagedBytes);
 
             PdfLexbuf lexBuffer = new PdfLexbuf(256);
-            PdfObj ret = doc.pdf_parse_stm_obj(stream,lexBuffer);
+            PdfObj ret = doc.pdf_parse_stm_obj(stream, lexBuffer);
 
             return ret;
         }
@@ -918,7 +923,7 @@ namespace MuPDF.NET
                 PdfObj pageObj = pdf.pdf_add_page(mediaBox, 0, resources, contents);
                 pdf.pdf_insert_page(pno, pageObj);
             }
-            
+
             ResetPageRefs();
             return this[pno];
         }
@@ -957,11 +962,11 @@ namespace MuPDF.NET
 
             PdfObj pageRef = pdf.pdf_lookup_page_obj(n);
             PdfObj rsrc = pageRef.pdf_dict_get_inheritable(new PdfObj("Resources"));
-            
+
             List<List<dynamic>> liste = new List<List<dynamic>>();
             List<dynamic> tracer = new List<dynamic>();
 
-            if (rsrc != null)
+            if (rsrc.m_internal != null)
                 Utils.ScanResources(pdf, rsrc, liste, what, 0, tracer);
             return liste;
         }
@@ -1081,7 +1086,7 @@ namespace MuPDF.NET
                 };
             }
             else
-            { 
+            {
                 return new FontStruct()
                 {
                     Name = "",
@@ -1089,7 +1094,7 @@ namespace MuPDF.NET
                     Type = "",
                     Content = Encoding.UTF8.GetBytes("")
                 };
-                
+
             }
         }
 
@@ -1175,7 +1180,7 @@ namespace MuPDF.NET
                 throw new Exception("document closed or encrypted");
             if (!IsPDF)
                 return new List<List<dynamic>>();
-            List<List<dynamic>>  val = GetPageInfo(pno, 2);
+            List<List<dynamic>> val = GetPageInfo(pno, 2);
             if (full == false)
             {
                 List<List<dynamic>> ret = new List<List<dynamic>>();
@@ -1193,7 +1198,7 @@ namespace MuPDF.NET
             pdf.pdf_delete_page(pno);
             if (pdf.m_internal.rev_page_map != null)
                 mupdf.mupdf.ll_pdf_drop_page_tree(pdf.m_internal);
-            
+
         }
 
         /// <summary>
@@ -1279,7 +1284,7 @@ namespace MuPDF.NET
             if (uri == null)
             {
                 if (chapters != 0)
-                    return (new List<int>() { -1, -1}, 0, 0);
+                    return (new List<int>() { -1, -1 }, 0, 0);
                 return (new List<int>() { -1 }, 0, 0);
             }
             try
@@ -1427,7 +1432,7 @@ namespace MuPDF.NET
             return ret;
         }
 
-        
+
         /// <summary>
         /// PDF only: Return whether the document contains signature fields. This is an optional PDF property: if not present (return value -1), no conclusions can be drawn – the PDF creator may just not have bothered using it.
         /// </summary>
@@ -1758,7 +1763,7 @@ namespace MuPDF.NET
             string type;
 
             List<LayerConfigUI> rc = new List<LayerConfigUI>();
-            for (int i = 0; i < n; i ++)
+            for (int i = 0; i < n; i++)
             {
                 pdf.pdf_layer_config_ui_info(i, info);
                 switch ((int)info.type)
@@ -1901,7 +1906,7 @@ namespace MuPDF.NET
             bool copy = false;
             if (to == -1)
             {
-                to = pageCount -1;
+                to = pageCount - 1;
                 before = false;
             }
             MoveCopyPage(pno, to, before, copy);
@@ -2048,7 +2053,7 @@ namespace MuPDF.NET
                 throw new Exception(Utils.ErrorMessages["MSG_BAD_PAGENO"]);
             PdfObj pageRef = pdf.pdf_lookup_page_obj(n);
             Rect cropbox = Utils.GetCropBox(pageRef);
-            
+
             return cropbox;
         }
 
@@ -2113,7 +2118,7 @@ namespace MuPDF.NET
             if ((start > stop && step > 0) || (start < stop && step < 0))
                 throw new Exception("bad step, pick right direction");
 
-            List<MuPDFPage> ret = new List<MuPDFPage> ();
+            List<MuPDFPage> ret = new List<MuPDFPage>();
             for (int i = start; i < stop; i += step)
             {
                 ret.Add(LoadPage(i));
@@ -2288,7 +2293,7 @@ namespace MuPDF.NET
             }
 
             int n = kids.pdf_array_len();
-            for (int i = 0; i < n; i ++)
+            for (int i = 0; i < n; i++)
             {
                 nums = kids.pdf_array_get(i).pdf_dict_get(new PdfObj("Nums")).pdf_resolve_indirect();
                 Utils.GetPageLabels(rc, nums);
@@ -2335,7 +2340,7 @@ namespace MuPDF.NET
             if (identity.m_internal != null)
             {
                 int n = identity.pdf_array_len();
-                for (int i = 0; i < n; i ++)
+                for (int i = 0; i < n; i++)
                 {
                     PdfObj o = identity.pdf_array_get(i);
                     string text = o.pdf_to_text_string();
@@ -2534,7 +2539,7 @@ namespace MuPDF.NET
                 throw new ArgumentException("bad page number(s)");
             List<List<dynamic>> toc = GetToc();
             List<int> olXrefs = GetOutlineXrefs();
-            for (int i = 0; i < olXrefs.Count; i ++)
+            for (int i = 0; i < olXrefs.Count; i++)
             {
                 if (numbers.Contains(toc[i][2] - 1))
                     RemoveTocItem(olXrefs[i]);
@@ -2768,14 +2773,931 @@ namespace MuPDF.NET
             return _GetEmbeddedFile(idx);
         }
 
+        public EmbfileInfoStruct GetEmbfileInfo(dynamic item)
+        {
+            int index = EmbeddedfileIndex(item);
+            EmbfileInfoStruct infoDict = new EmbfileInfoStruct() { Name = GetEmbfileNames()[index] };
+            PdfDocument pdf = AsPdfDocument(this);
+            int xref = 0;
+            int ciXref = 0;
+
+            PdfObj trailer = pdf.pdf_trailer();
+            PdfObj names = Utils.pdf_dict_getl(trailer, new string[] { "Root", "Names", "EmbeddedFiles", "Names" });
+            PdfObj o = names.pdf_array_get(2 * index + 1);
+            PdfObj ci = o.pdf_dict_get(new PdfObj("CI"));
+            if (ci.m_internal != null)
+                ciXref = ci.pdf_to_num();
+
+            infoDict.Collection = ciXref;
+            string name = o.pdf_dict_get(new PdfObj("F")).pdf_to_text_string();
+            infoDict.FileName = Utils.EscapeStrFromStr(name);
+
+            name = o.pdf_dict_get(new PdfObj("UF")).pdf_to_text_string();
+            infoDict.UFileName = Utils.EscapeStrFromStr(name);
+
+            name = o.pdf_dict_get(new PdfObj("Desc")).pdf_to_text_string();
+            infoDict.Desc = Utils.UnicodeFromStr(name);
+
+            int len = -1;
+            int DL = -1;
+            PdfObj fileEntry = Utils.pdf_dict_getl(o, new string[] { "EF", "F" });
+            xref = fileEntry.pdf_to_num();
+            o = fileEntry.pdf_dict_get(new PdfObj("Length"));
+            if (o.m_internal != null)
+                len = o.pdf_to_int();
+
+            o = fileEntry.pdf_dict_get(new PdfObj("DL"));
+            if (o.m_internal != null)
+                DL = o.pdf_to_int();
+            else
+            {
+                o = Utils.pdf_dict_getl(fileEntry, new string[] { "Params", "Size" });
+                if (o.m_internal != null)
+                    DL = o.pdf_to_int();
+            }
+            infoDict.Size = DL;
+            infoDict.Length = len;
+            (string t, string date) = GetKeyXref(xref, "Params/CreationDate");
+            if (t != "null")
+                infoDict.ModDate = date;
+            (t, string md5) = GetKeyXref(xref, "Params/ModDate");
+            if (t != "null")
+            {
+                byte[] textBytes = Encoding.UTF8.GetBytes(md5);
+                string hexString = BitConverter.ToString(textBytes).Replace("-", "").ToLower();
+                infoDict.CheckSum = hexString;
+            }
+            return infoDict;
+        }
+
+        /// <summary>
+        /// Change an item of the EmbeddedFiles array.
+        /// </summary>
+        /// <param name="item">number or name</param>
+        /// <param name="buffer">new file content</param>
+        /// <param name="filename">new file name</param>
+        /// <param name="ufilename">unicode new file name</param>
+        /// <param name="desc">the new description</param>
+        /// <returns></returns>
+        public int GetEmbfileUpd(dynamic item, byte[] buffer = null, string filename = null, string ufilename = null,
+            string desc = null)
+        {
+            int idx = EmbeddedfileIndex(item);
+            PdfDocument pdf = AsPdfDocument(this);
+            int xref = 0;
+            PdfObj names = Utils.pdf_dict_getl(pdf.pdf_trailer(), new string[] { "Root", "Names", "EmbeddedFiles", "Names" });
+            PdfObj entry = names.pdf_array_get(2 * idx + 1);
+            PdfObj fileSpec = Utils.pdf_dict_getl(entry, new string[] { "EF", "F" });
+            if (fileSpec.m_internal == null)
+                throw new Exception("bad PDF: no /EF object");
+            FzBuffer res = Utils.BufferFromBytes(buffer);
+            if (buffer != null && res.m_internal == null)
+                throw new Exception(Utils.ErrorMessages["MSG_BAD_BUFFER"]);
+            if (res.m_internal != null && buffer != null)
+            {
+                Utils.UpdateStream(pdf, fileSpec, res, 1);
+                uint len = res.fz_buffer_storage(null);
+                PdfObj l = mupdf.mupdf.pdf_new_int(len);
+                fileSpec.pdf_dict_put(new PdfObj("DL"), l);
+                Utils.pdf_dict_putl(fileSpec, l, new string[] { "Params", "Size" });
+            }
+            xref = fileSpec.pdf_to_num();
+            if (!string.IsNullOrEmpty(filename))
+                entry.pdf_dict_put_text_string(new PdfObj("F"), filename);
+            if (!string.IsNullOrEmpty(ufilename))
+                entry.pdf_dict_put_text_string(new PdfObj("UF"), ufilename);
+            if (!string.IsNullOrEmpty(desc))
+                entry.pdf_dict_put_text_string(new PdfObj("Desc"), desc);
+
+            string date = Utils.GetPdfNow();
+            SetKeyXRef(xref, "Params/ModDate", Utils.GetPdfStr(date));
+            return xref;
+        }
+
+        /// <summary>
+        /// Get image by xref. Returns a dictionary.
+        /// </summary>
+        /// <param name="xref"></param>
+        /// <returns></returns>
+        public ImageInfoStruct ExtractImage(int xref)
+        {
+            if (IsClosed || IsEncrypted)
+                throw new Exception("document closed or encrypted");
+
+            PdfDocument pdf = AsPdfDocument(this);
+            int imgType = 0;
+            int smask = 0;
+            string ext = null;
+            FzBuffer res;
+            FzImage img;
+            if (!Utils.INRANGE(xref, 1, pdf.pdf_xref_len() - 1))
+                throw new Exception(Utils.ErrorMessages["MSG_BAD_XREF"]);
+
+            PdfObj obj = pdf.pdf_new_indirect(xref, 0);
+            PdfObj subtype = obj.pdf_dict_get(new PdfObj("Subtype"));
+            if (subtype.pdf_name_eq(new PdfObj("Image")) != 0) // mismatch
+                throw new Exception("not an image");
+
+            PdfObj o = obj.pdf_dict_geta(new PdfObj("SMask"), new PdfObj("Mask"));
+            if (o.m_internal != null)
+                smask = o.pdf_to_num();
+            if (obj.pdf_is_jpx_image() != 0)
+            {
+                imgType = (int)ImageType.FZ_IMAGE_JPX;
+                res = obj.pdf_load_stream();
+                ext = "jpx";
+            }
+            if (Utils.IsJbig2Image(obj))
+            {
+                imgType = (int)ImageType.FZ_IMAGE_JBIG2;
+                res = obj.pdf_load_stream();
+                ext = "jb2";
+            }
+            res = obj.pdf_load_raw_stream();
+            if (imgType == (int)ImageType.FZ_IMAGE_UNKNOWN)
+            {
+                res = obj.pdf_load_raw_stream();
+                ll_fz_buffer_storage_outparams outparams = new ll_fz_buffer_storage_outparams();
+                uint len = mupdf.mupdf.ll_fz_buffer_storage_outparams_fn(res.m_internal, outparams);
+                imgType = mupdf.mupdf.fz_recognize_image_format(outparams.datap);
+                ext = Utils.GetImageExtention(imgType);
+            }
+            if (imgType == (int)ImageType.FZ_IMAGE_UNKNOWN)
+            {
+                res = null;
+                img = pdf.pdf_load_image(obj);
+                fz_compressed_buffer llCbuf = mupdf.mupdf.ll_fz_compressed_image_buffer(img.m_internal);
+                if (llCbuf != null && !(
+                    llCbuf.params_.type == (int)ImageType.FZ_IMAGE_RAW ||
+                    llCbuf.params_.type == (int)ImageType.FZ_IMAGE_FAX ||
+                    llCbuf.params_.type == (int)ImageType.FZ_IMAGE_FLATE ||
+                    llCbuf.params_.type == (int)ImageType.FZ_IMAGE_LZW ||
+                    llCbuf.params_.type == (int)ImageType.FZ_IMAGE_RLD))
+                {
+                    imgType = llCbuf.params_.type;
+                    ext = Utils.GetImageExtention(imgType);
+                    res = new FzBuffer(mupdf.mupdf.ll_fz_keep_buffer(llCbuf.buffer));
+                }
+                else
+                {
+                    fz_color_params defaultColorParams = new fz_color_params();
+                    defaultColorParams.ri = 1;
+                    defaultColorParams.bp = 1;
+                    defaultColorParams.op = 0;
+                    defaultColorParams.opm = 0;
+                    res = img.fz_new_buffer_from_image_as_png(new FzColorParams(defaultColorParams));
+                    ext = "png";
+                }
+            }
+            else
+                img = res.fz_new_image_from_buffer();
+
+            (float xres, float yres) = img.fz_image_resolution();
+            float width = img.w();
+            float height = img.h();
+            int colorspace = img.n();
+            int bpc = img.bpc();
+            string csName = img.colorspace().fz_colorspace_name();
+
+            ImageInfoStruct ret = new ImageInfoStruct()
+            {
+                Ext = ext,
+                Smask = smask,
+                Width = width,
+                Height = height,
+                ColorSpace = colorspace,
+                Bpc = bpc,
+                Xres = xres,
+                Yres = yres,
+                CsName = csName,
+                Image = Utils.BinFromBuffer(res)
+            };
+
+            return ret;
+        }
+
+        /// <summary>
+        /// Find new location after layouting a document.
+        /// </summary>
+        /// <returns></returns>
+        public LocationStruct FindBookmark(int bm)
+        {
+            if (IsClosed || IsEncrypted)
+                throw new Exception("document closed or encrypted");
+            FzLocation location = _nativeDocument.fz_lookup_bookmark(bm);
+            return new LocationStruct() { Chapter = location.chapter, Page = location.page };
+        }
+
+        public void CopyFullPage(int pno, int to = -1)
+        {
+            PdfDocument pdf = AsPdfDocument(this);
+            int pageCount = pdf.pdf_count_pages();
+            int xref;
+            try
+            {
+                if (!Utils.INRANGE(pno, 0, pageCount - 1) || !Utils.INRANGE(to, -1, pageCount - 1))
+                    throw new Exception(Utils.ErrorMessages["MSG_BAD_PAGENO"]);
+                PdfObj page1 = pdf.pdf_lookup_page_obj(pno).pdf_resolve_indirect();
+                PdfObj page2 = page1.pdf_deep_copy_obj();
+                PdfObj oldAnnots = page2.pdf_dict_get(new PdfObj("Annots"));
+
+                if (oldAnnots.m_internal != null)
+                {
+                    int n = oldAnnots.pdf_array_len();
+                    PdfObj newAnnots = pdf.pdf_new_array(n);
+                    for (int i = 0; i < n; i++)
+                    {
+                        PdfObj o = oldAnnots.pdf_dict_get(i);
+                        PdfObj subtype = o.pdf_dict_get(new PdfObj("Subtype"));
+                        if (subtype.pdf_name_eq(new PdfObj("Popup")) != 0)
+                            continue;
+                        if (o.pdf_dict_gets("IRT").m_internal != null)
+                            continue;
+                        PdfObj copyObj = o.pdf_resolve_indirect().pdf_deep_copy_obj();
+                        xref = pdf.pdf_create_object();
+                        pdf.pdf_update_object(xref, copyObj);
+                        copyObj = pdf.pdf_new_indirect(xref, 0);
+                        copyObj.pdf_dict_del(new PdfObj("Popup"));
+                        copyObj.pdf_dict_del(new PdfObj("P"));
+                        newAnnots.pdf_dict_del(copyObj);
+                    }
+                    page2.pdf_dict_put(new PdfObj("Annots"), newAnnots);
+                }
+                FzBuffer res = Utils.ReadContents(page1);
+
+                if (res.m_internal != null)
+                {
+                    IntPtr pBuf = Marshal.AllocHGlobal(1);
+                    Marshal.Copy(Encoding.UTF8.GetBytes(" "), 0, pBuf, 1);
+                    SWIGTYPE_p_unsigned_char swigBuf = new SWIGTYPE_p_unsigned_char(pBuf, true);
+                    PdfObj contents = pdf.pdf_add_stream(mupdf.mupdf.fz_new_buffer_from_copied_data(swigBuf, 1), new PdfObj(), 0);
+                    Utils.UpdateStream(pdf, contents, res, 1);
+                    page2.pdf_dict_put(new PdfObj("Contents"), contents);
+                }
+
+                xref = pdf.pdf_create_object();
+                pdf.pdf_update_object(xref, page2);
+
+                page2 = pdf.pdf_new_indirect(xref, 0);
+                pdf.pdf_insert_page(to, page2);
+            }
+            finally
+            {
+                mupdf.mupdf.ll_pdf_drop_page_tree(pdf.m_internal);
+            }
+
+        }
+
+        /// <summary>
+        /// Content of ON, OFF, RBGroups of an OC layer.
+        /// </summary>
+        /// <param name="config"></param>
+        /// <returns>OCLayer object</returns>
+        /// <exception cref="Exception"></exception>
+        public OCLayer GetLayer(int config = -1)
+        {
+            PdfDocument pdf = AsPdfDocument(this);
+            PdfObj ocp = Utils.pdf_dict_getl(pdf.pdf_trailer(), new string[] { "Root", "OCProperties" });
+            PdfObj obj, o;
+
+            if (ocp.m_internal == null)
+                return null;
+            if (config == -1)
+                obj = ocp.pdf_dict_get(new PdfObj("D"));
+            else
+            {
+                obj = ocp.pdf_dict_get(new PdfObj("Configs")).pdf_array_get(config);
+            }
+            if (obj.m_internal == null)
+                throw new Exception(Utils.ErrorMessages["MSG_BAD_OC_CONFIG"]);
+
+            OCLayer ret = new OCLayer();
+
+            PdfObj arr = obj.pdf_dict_get(new PdfObj("ON"));
+            List<int> list = Utils.GetOcgArraysImp(arr);
+            if (list != null || list.Count != 0)
+                ret.On = list.ToArray();
+
+            arr = obj.pdf_dict_get(new PdfObj("OFF"));
+            list = Utils.GetOcgArraysImp(arr);
+            if (list != null || list.Count != 0)
+                ret.Off = list.ToArray();
+
+            arr = obj.pdf_dict_get(new PdfObj("Locked"));
+            list = Utils.GetOcgArraysImp(arr);
+            if (list != null || list.Count != 0)
+                ret.Locked = list.ToArray();
+
+            arr = obj.pdf_dict_get(new PdfObj("RBGroups"));
+            List<int[]> rb = new List<int[]>();
+            if (arr.pdf_is_array() != 0)
+            {
+                int n = arr.pdf_array_len();
+                for (int i = 0; i < n; i++)
+                {
+                    o = arr.pdf_array_get(i);
+                    int[] list1 = Utils.GetOcgArraysImp(o).ToArray();
+                    rb.Add(list1);
+                }
+            }
+            if (rb.Count != 0)
+                ret.RBGroups = rb;
+            o = obj.pdf_dict_get(new PdfObj("BaseState"));
+            if (o.m_internal != null)
+                ret.BaseState = o.pdf_to_name();
+            return ret;
+        }
+
+        /// <summary>
+        /// Show optional OC layers.
+        /// </summary>
+        /// <returns>OCLayer config list</returns>
+        public List<OCLayerConfig> GetLayers()
+        {
+            PdfDocument pdf = AsPdfDocument(this);
+            int n = pdf.pdf_count_layer_configs();
+            if (n == 1)
+            {
+                PdfObj obj = Utils.pdf_dict_getl(pdf.pdf_trailer(), new string[] { "Root", "OCProperties", "Configs" });
+                if (obj.pdf_is_array() == 0)
+                    n = 0;
+            }
+            List<OCLayerConfig> ret = new List<OCLayerConfig>();
+            PdfLayerConfig info = new PdfLayerConfig();
+            for (int i = 0; i < n; i++)
+            {
+                pdf.pdf_layer_config_info(i, info);
+                ret.Add(new OCLayerConfig(i, info.name, info.creator));
+            }
+            return ret;
+        }
+
+        /// <summary>
+        /// Make new xref
+        /// </summary>
+        /// <returns>number of xref</returns>
+        /// <exception cref="Exception"></exception>
+        public int GetNexXref()
+        {
+            if (IsClosed || IsEncrypted)
+                throw new Exception("document closed or encrypted");
+            PdfDocument pdf = AsPdfDocument(this);
+            int xref = 0;
+            Utils.EnsureOperations(pdf);
+            xref = pdf.pdf_create_object();
+            return xref;
+        }
+
+        /// <summary>
+        /// Show existing optional content groups.
+        /// </summary>
+        /// <returns></returns>
+        public Dictionary<int, OCGroup> GetOcgs()
+        {
+            PdfObj ci = mupdf.mupdf.pdf_new_name("CreatorInfo");
+            PdfDocument pdf = AsPdfDocument(this);
+            PdfObj ocgs = Utils.pdf_dict_getl(pdf.pdf_trailer().pdf_dict_get(new PdfObj("Root")), new string[] { "OCProperties", "OCGs" });
+
+            Dictionary<int, OCGroup> ret = new Dictionary<int, OCGroup>();
+            if (ocgs.pdf_is_array() == 0)
+                return ret;
+            int n = ocgs.pdf_array_len();
+            for (int i = 0; i < n; i++)
+            {
+                PdfObj ocg = ocgs.pdf_array_get(i);
+                int xref = ocg.pdf_to_num();
+                string name = ocg.pdf_dict_get(new PdfObj("Name")).pdf_to_text_string();
+                PdfObj obj = Utils.pdf_dict_getl(ocg, new string[] { "Usage", "CreatorInfo", " Subtype" });
+                string usage = "";
+                if (obj.m_internal != null)
+                {
+                    usage = obj.pdf_to_name();
+                }
+                List<string> intents = new List<string>();
+                PdfObj intent = ocg.pdf_dict_get(new PdfObj("Intent"));
+                if (intent.m_internal != null)
+                {
+                    if (intent.pdf_is_name() != 0)
+                        intents.Add(intent.pdf_to_name());
+                    else if (intent.pdf_is_array() != 0)
+                    {
+                        int m = intent.pdf_array_len();
+                        for (int j = 0; j < m; j++)
+                        {
+                            PdfObj o = intent.pdf_array_get(j);
+                            if (o.pdf_is_name() != 0)
+                                intents.Add(o.pdf_to_name());
+                        }
+                    }
+                }
+                int hidden = pdf.pdf_is_ocg_hidden(new PdfObj(), usage, ocg);
+                OCGroup item = new OCGroup()
+                {
+                    Name = name,
+                    Intents = intents,
+                    On = 1 - hidden,
+                    Usage = usage
+                };
+                ret[xref] = item;
+            }
+            return ret;
+        }
+
+        /// <summary>
+        /// Save a file snapshot suitable for journalling.
+        /// </summary>
+        /// <param name="filename"></param>
+        public void SaveSnapshot(string filename)
+        {
+            if (IsClosed)
+                throw new Exception("doc is closed");
+            if (filename == Name)
+                throw new Exception("cannot snapshot to original");
+            PdfDocument pdf = AsPdfDocument(this);
+            pdf.pdf_save_snapshot(filename);
+        }
+
+        /// <summary>
+        /// Save PDF incrementally
+        /// </summary>
+        public void SaveIncremental()
+        {
+            Save(Name, incremental: 1, encryption: (int)PdfCrypt.PDF_ENCRYPT_KEEP);
+        }
+
         public void Dispose()
         {
             _nativeDocument.Dispose();
         }
 
-        public void Select()
+        /// <summary>
+        /// Build sub-pdf with page numbers in the list.
+        /// </summary>
+        /// <param name="list">numbers of pages</param>
+        /// <exception cref="Exception"></exception>
+        public void Select(List<int> list)
         {
-            
+            if (IsClosed || IsEncrypted)
+                throw new Exception("document closed or encrypted");
+            if (!IsPDF)
+                throw new Exception("is no PDF");
+            if (list.Count == 0 || list.Min() < 0 || list.Max() > Len)
+                throw new Exception("bad page number(s)");
+
+            PdfDocument pdf = AsPdfDocument(this);
+
+            IntPtr pNumbers = Marshal.AllocHGlobal(list.Count * sizeof(int));
+            Marshal.Copy(list.ToArray(), 0, pNumbers, list.Count);
+            SWIGTYPE_p_int swigNumbers = new SWIGTYPE_p_int(pNumbers, true);
+            //pdf.pdf_rearrange_pages(list.Count, swigNumbers);
+            ResetPageRefs();
+        }
+
+        public bool SetLanguage(string language)
+        {
+            PdfDocument pdf = AsPdfDocument(this);
+            fz_text_language lang;
+            if (string.IsNullOrEmpty(language))
+                lang = fz_text_language.FZ_LANG_UNSET;
+            else
+                lang = mupdf.mupdf.fz_text_language_from_string(language);
+            pdf.pdf_set_document_language(lang);
+            return true;
+        }
+
+        public void SetLayer(int config, string baseState = null, int[] on = null, int[] off = null,
+            List<int[]> rbgroups = null, int[] locked = null)
+        {
+            if (IsClosed)
+                throw new Exception("document is closed");
+            HashSet<int> ocgs = new HashSet<int>(GetOcgs().Keys);
+            HashSet<int> s;
+
+            if (on != null)
+            {
+                s = new HashSet<int>(on);
+                s.ExceptWith(ocgs);
+            }
+            if (off != null)
+            {
+                s = new HashSet<int>(off);
+                s.ExceptWith(ocgs);
+            }
+            if (locked != null)
+            {
+                s = new HashSet<int>(locked);
+                s.ExceptWith(ocgs);
+            }
+            if (rbgroups != null)
+            {
+                foreach (int[] x in rbgroups)
+                {
+                    s = new HashSet<int>(x);
+                    s.ExceptWith(ocgs);
+                }
+            }
+            if (!string.IsNullOrEmpty(baseState))
+            {
+                baseState = baseState.ToUpper();
+                if (baseState == "UNCHANGED")
+                    baseState = "Unchanged";
+                if (!(new List<string>() { "ON", "OFF", "Unchanged" }).Contains(baseState))
+                    throw new Exception("bad 'baseState'");
+            }
+            PdfDocument pdf = AsPdfDocument(this);
+            PdfObj obj;
+            PdfObj ocp = Utils.pdf_dict_getl(pdf.pdf_trailer(), new string[] { "Root", "OCProperties" });
+            if (ocp.m_internal == null)
+                return;
+            if (config == -1)
+                obj = ocp.pdf_dict_get(new PdfObj("D"));
+            else
+                obj = ocp.pdf_dict_get(new PdfObj("Configs")).pdf_array_get(config);
+            if (obj.m_internal == null)
+                throw new Exception(Utils.ErrorMessages["MSG_BAD_OC_CONFIG"]);
+
+            // set_ocg_arrays
+            if (!string.IsNullOrEmpty(baseState))
+                obj.pdf_dict_put_name(new PdfObj("BaseState"), baseState);
+            if (on != null)
+            {
+                obj.pdf_dict_del(new PdfObj("ON"));
+                PdfObj arr = obj.pdf_dict_put_array(new PdfObj("ON"), 1);
+                Utils.SetOcgArraysImp(arr, new List<int>(on));
+            }
+            if (off != null)
+            {
+                obj.pdf_dict_del(new PdfObj("OFF"));
+                PdfObj arr = obj.pdf_dict_put_array(new PdfObj("OFF"), 1);
+                Utils.SetOcgArraysImp(arr, new List<int>(off));
+            }
+            if (locked != null)
+            {
+                obj.pdf_dict_del(new PdfObj("Locked"));
+                PdfObj arr = obj.pdf_dict_put_array(new PdfObj("Locked"), 1);
+                Utils.SetOcgArraysImp(arr, new List<int>(locked));
+            }
+            if (rbgroups != null)
+            {
+                obj.pdf_dict_del(new PdfObj("RBGroups"));
+                PdfObj arr = obj.pdf_dict_put_array(new PdfObj("RBGroups"), 1);
+                int n = rbgroups.Count;
+                for (int i = 0; i < n; i++)
+                {
+                    List<int> item = new List<int>(rbgroups[i]);
+                    PdfObj o = arr.pdf_array_push_array(1);
+                    Utils.SetOcgArraysImp(o, item);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Set / unset OC intent configuration.
+        /// </summary>
+        /// <param name="number">string or int</param>
+        /// <param name="action"></param>
+        public void SetLayerUIConfig(dynamic number, int action = 0)
+        {
+            int num;
+            if (number is string)
+            {
+                List<int> select = LayerUIConfigs().Where(ui => ui.Text == number).Select(ui => ui.Number).ToList();
+                if (select.Count == 0)
+                {
+                    throw new Exception($"bad OCG '{number}'");
+                }
+                num = select[0];
+            }
+            else if (number is int) num = number;
+            else num = -1;
+
+            PdfDocument pdf = AsPdfDocument(this);
+            if (action == 1)
+                pdf.pdf_toggle_layer_config_ui(num);
+            else if (action == 2)
+                pdf.pdf_deselect_layer_config_ui(num);
+            else
+                pdf.pdf_select_layer_config_ui(num);
+        }
+
+        /// <summary>
+        /// Set the PDF MarkInfo values.
+        /// </summary>
+        /// <param name="markInfo"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        public bool SetMarkInfo(Dictionary<string, bool> markInfo)
+        {
+            int xref = GetPdfCatelog();
+            if (xref == 0)
+                throw new Exception("not a pdf");
+            if (markInfo == null)
+                return false;
+            Dictionary<string, bool> valid = new Dictionary<string, bool>()
+            {
+                {"Marked", false }, {"UserProperties", false}, {"Suspects", false}
+            };
+
+            if (valid.Keys.Except(markInfo.Keys).Count() <= 0)
+                throw new Exception("bad MarkInfo key(s)");
+            string pdfDict = "<<";
+            foreach ((string k, bool v) in valid)
+            {
+                string vStr = v.ToString().ToLower();
+                if (vStr != "true" || vStr != "false")
+                    throw new Exception($"bad key value {k} : {v}");
+                pdfDict += $"/{k} {v}";
+            }
+            pdfDict += ">>";
+            SetKeyXRef(xref, "MarkInfo", pdfDict);
+            return true;
+        }
+
+        /// <summary>
+        /// Set the PDF PageLayout value.
+        /// </summary>
+        /// <param name="pageLayout"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        public bool SetPageLayout(string pageLayout)
+        {
+            string[] valid = { "SinglePage", "OneColumn", "TwoColumnLeft", "TwoColumnRight", "TwoPageLeft", "TwoPageRight" };
+            int xref = GetPdfCatelog();
+            if (xref == 0)
+                throw new Exception("not a PDF");
+            if (string.IsNullOrEmpty(pageLayout))
+                throw new Exception("bad PageLayout value");
+            if (pageLayout[0] == '/')
+                pageLayout = pageLayout.Substring(1);
+            foreach (string v in valid)
+            {
+                if (pageLayout.ToLower() == v.ToLower())
+                {
+                    SetKeyXRef(xref, "PageLayout", $"/{v}");
+                    return true;
+                }
+            }
+            throw new Exception("bad pagelayout value");
+        }
+
+        /// <summary>
+        /// Set the PDF PageMode value.
+        /// </summary>
+        /// <param name="pageMode"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        public bool SetPageMode(string pageMode)
+        {
+            string[] valid = { "UseNone", "UseOutlines", "UseThumbs", "FullScreen", "UseOC", "UseAttachments" };
+            int xref = GetPdfCatelog();
+            if (xref == 0)
+                throw new Exception("not a PDF");
+            if (string.IsNullOrEmpty(pageMode))
+                throw new Exception("bad page mode value");
+            if (pageMode[0] == '/')
+                pageMode = pageMode.Substring(1);
+            foreach (string v in valid)
+            {
+                if (pageMode.ToLower() == v.ToLower())
+                {
+                    SetKeyXRef(xref, "PageMode", $"/{v}");
+                    return true;
+                }
+            }
+            throw new Exception("bad page mode value");
+        }
+
+        /// <summary>
+        /// Store XML document level metadata.
+        /// </summary>
+        public void SetXmlMetaData(string metadata)
+        {
+            if (IsClosed || IsEncrypted)
+                throw new Exception("document is closed or encrypted");
+            PdfDocument pdf = AsPdfDocument(this);
+            PdfObj root = pdf.pdf_trailer().pdf_dict_get(new PdfObj("Root"));
+            if (root.m_internal == null)
+                throw new Exception(Utils.ErrorMessages["MSG_BAD_PDFROOT"]);
+
+            byte[] utf8 = Encoding.UTF8.GetBytes(metadata);
+            IntPtr pBuf = Marshal.AllocHGlobal(utf8.Length);
+            Marshal.Copy(utf8, 0, pBuf, utf8.Length);
+            SWIGTYPE_p_unsigned_char swigBuf = new SWIGTYPE_p_unsigned_char(pBuf, true);
+
+            FzBuffer res = mupdf.mupdf.fz_new_buffer_from_copied_data(swigBuf, (uint)utf8.Length);
+            PdfObj xml = root.pdf_dict_get(new PdfObj("Metadata"));
+            if (xml.m_internal != null)
+                Utils.UpdateStream(pdf, xml, res, 0);
+            else
+            {
+                xml = pdf.pdf_add_stream(res, new PdfObj(), 0);
+                xml.pdf_dict_put(new PdfObj("Type"), new PdfObj("Metadata"));
+                xml.pdf_dict_put(new PdfObj("Subtype"), new PdfObj("XML"));
+                root.pdf_dict_put(new PdfObj("Metadata"), xml);
+            }
+        }
+
+        /// <summary>
+        /// Activate an OC layer.
+        /// </summary>
+        /// <param name="config">config number as returned by layerconfigs</param>
+        /// <param name="asDefault">make this the default configuration.</param>
+        /// <exception cref="Exception"></exception>
+        public void SwitchLayer(int config, int asDefault = 0)
+        {
+            PdfDocument pdf = AsPdfDocument(this);
+            PdfObj cfgs = Utils.pdf_dict_getl(pdf.pdf_trailer(), new string[] { "Root", "OCProperties", "Configs" });
+            if (cfgs.pdf_is_array() == 0 || cfgs.pdf_array_len() == 0)
+            {
+                if (config < 1)
+                    return;
+                throw new Exception(Utils.ErrorMessages["MSG_BAD_OC_LAYER"]);
+            }
+            if (config < 0)
+                return;
+            pdf.pdf_select_layer_config(config);
+            if (asDefault != 0)
+            {
+                pdf.pdf_set_layer_config_as_default();
+                mupdf.mupdf.ll_pdf_read_ocg(pdf.m_internal);
+            }
+        }
+
+        public byte[] Write(bool garbage = false, bool clean = false, bool deflate = false, bool deflateImages = false,
+            bool deflateFonts = false, bool incremental = false, bool ascii = false, bool expand = false, bool linear = false,
+            bool noNewId = false, bool appearance = false, bool pretty = false, int encryption = 1, int permissions = 4095,
+            string ownerPW = null, string userPW = null)
+        {
+            ByteStream byteStream = new ByteStream();
+            Save(
+                filename: byteStream,
+                garbage: garbage ? 1 : 0,
+                clean: clean ? 1 : 0,
+                noNewId: noNewId ? 1 : 0,
+                appearance: appearance ? 1 : 0,
+                deflate: deflate ? 1 : 0,
+                deflateImages: deflateImages ? 1 : 0,
+                deflateFonts: deflateFonts ? 1 : 0,
+                incremental: incremental ? 1 : 0,
+                ascii: ascii ? 1 : 0,
+                expand: expand ? 1 : 0,
+                linear: linear ? 1 : 0,
+                pretty: pretty ? 1 : 0,
+                encryption: encryption,
+                permissions: permissions,
+                ownerPW: ownerPW,
+                userPW: userPW);
+            return byteStream.Data;
+        }
+
+        public List<string> GetXrefKeys(int xref)
+        {
+            PdfDocument pdf = AsPdfDocument(this);
+            int len = pdf.pdf_xref_len();
+            PdfObj obj;
+
+            if (!Utils.INRANGE(xref, 1, len - 1) && xref != -1)
+                throw new Exception(Utils.ErrorMessages["MSG_BAD_XREF"]);
+            if (xref > 0)
+                obj = pdf.pdf_load_object(xref);
+            else
+                obj = pdf.pdf_trailer();
+            int n = obj.pdf_dict_len();
+            List<string> ret = new List<string>();
+            if (n == 0)
+                return ret;
+            for (int i = 0; i < n; i++)
+            {
+                string key = obj.pdf_dict_get_key(i).pdf_to_name();
+                ret.Add(key);
+            }
+            return ret;
+        }
+
+        /// <summary>
+        /// Check if xref is an image object.
+        /// </summary>
+        /// <param name="xref"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        public bool XrefIsFont(int xref)
+        {
+            if (IsClosed || IsEncrypted)
+                throw new Exception("document closed or encrypted");
+            if (GetKeyXref(xref, "Subtype").Item2 == "/Image")
+                return true;
+            return false;
+        }
+
+        /// <summary>
+        /// Check if xref is a stream object.
+        /// </summary>
+        /// <param name="xref"></param>
+        /// <returns></returns>
+        public bool XrefIsStream(int xref = 0)
+        {
+            PdfDocument pdf = AsPdfDocument(this);
+            if (pdf == null)
+                return false;
+            return pdf.pdf_obj_num_is_stream(xref) != 0;
+        }
+
+        /// <summary>
+        /// Check if xref is a form xobject.
+        /// </summary>
+        /// <param name="xref"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        public bool XrefIsXObject(int xref)
+        {
+            if (IsClosed || IsEncrypted)
+                throw new Exception("document is closed or encrypted");
+            if (GetKeyXref(xref, "Subtype").Item2 == "/From")
+                return true;
+            return false;
+        }
+
+        /// <summary>
+        /// Get length of xref table.
+        /// </summary>
+        /// <returns></returns>
+        public int XrefLength()
+        {
+            int len = 0;
+            PdfDocument pdf = AsPdfDocument(this);
+            if (pdf != null)
+                len = pdf.pdf_xref_len();
+            return len;
+        }
+
+        public byte[] GetXrefStream(int xref)
+        {
+            if (IsClosed || IsEncrypted)
+                throw new Exception("document closed or encrypted");
+            PdfDocument pdf = AsPdfDocument(this);
+            int len = pdf.pdf_xref_len();
+            PdfObj obj;
+
+            if (!Utils.INRANGE(xref, 1, len - 1) && xref != -1)
+                throw new Exception(Utils.ErrorMessages["MSG_BAD_XREF"]);
+            if (xref >= 0)
+                obj = pdf.pdf_new_indirect(xref, 0);
+            else
+                obj = pdf.pdf_trailer();
+            byte[] r = null;
+            if (obj.pdf_is_stream() != 0)
+            {
+                FzBuffer res = pdf.pdf_load_stream_number(xref);
+                r = Utils.BinFromBuffer(res);
+            }
+            return r;
+        }
+
+        /// <summary>
+        /// Get xref stream without decompression.
+        /// </summary>
+        /// <param name="xref"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        public byte[] GetXrefStreamRaw(int xref)
+        {
+            if (IsClosed || IsEncrypted)
+                throw new Exception("document closed or encrypted");
+            PdfDocument pdf = AsPdfDocument(this);
+            int len = pdf.pdf_xref_len();
+            PdfObj obj;
+
+            if (!Utils.INRANGE(xref, 1, len - 1) && xref != -1)
+                throw new Exception(Utils.ErrorMessages["MSG_BAD_XREF"]);
+            if (xref >= 0)
+                obj = pdf.pdf_new_indirect(xref, 0);
+            else
+                obj = pdf.pdf_trailer();
+            byte[] r = null;
+            if (obj.pdf_is_stream() != 0)
+            {
+                FzBuffer res = pdf.pdf_load_raw_stream_number(xref);
+                r = Utils.BinFromBuffer(res);
+            }
+            return r;
+        }
+
+        /// <summary>
+        /// Get xref of document XML metadata.
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        public int XrefXmlMetaData()
+        {
+            PdfDocument pdf = AsPdfDocument(this);
+            PdfObj root = pdf.pdf_trailer().pdf_dict_get(new PdfObj("Root"));
+            if (root.m_internal == null)
+                throw new Exception(Utils.ErrorMessages["MSG_BAD_PDFROOT"]);
+            PdfObj xml = root.pdf_dict_get(new PdfObj("Metadata"));
+            int xref = 0;
+            if (xml.m_internal != null)
+                xref = xml.pdf_to_num();
+            return xref;
         }
     }
 }

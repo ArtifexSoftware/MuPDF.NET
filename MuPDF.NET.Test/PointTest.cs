@@ -21,7 +21,7 @@ namespace MuPDF.NET.Test
         }
 
         [Test]
-        public void Test_Contructor()
+        public void Contructor()
         {
             Point t1 = new Point(0, 0);
             t1 = new Point(op1);
@@ -33,7 +33,7 @@ namespace MuPDF.NET.Test
         }
 
         [Test]
-        public void Test_Addition()
+        public void Addition()
         {
             Point t = op1 + op2;
             Assert.IsTrue(t.X.Equals(3.0f));
@@ -44,7 +44,7 @@ namespace MuPDF.NET.Test
         }
 
         [Test]
-        public void Test_Subtraction()
+        public void Subtraction()
         {
             Point t = op1 - op2;
             Assert.IsTrue(t.X.Equals(-3f));
@@ -52,7 +52,7 @@ namespace MuPDF.NET.Test
         }
 
         [Test]
-        public void Test_Transform()
+        public void Transform()
         {
             Matrix m = new Matrix(0, 0, 0, 1, 1, 1);
             Point t = op2.Transform(m);
@@ -61,14 +61,14 @@ namespace MuPDF.NET.Test
         }
 
         [Test]
-        public void Test_Abs()
+        public void Abs()
         {
             float abs = new Point(3.0f, 4.0f).Abs();
             Assert.That(abs, Is.EqualTo(5.0f));
         }
 
         [Test]
-        public void Test_TrueDivide()
+        public void TrueDivide()
         {
             Point t = op1.TrueDivide(3.0f);
             Assert.Pass();

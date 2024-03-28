@@ -1,13 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using mupdf;
+﻿using mupdf;
 
 namespace MuPDF.NET
 {
-    public struct LineStruct
+    public class LineStruct
     {
         public List<SpanStruct> Spans;
 

@@ -1,10 +1,6 @@
 ﻿using mupdf;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace MuPDF.NET
 {
@@ -27,7 +23,7 @@ namespace MuPDF.NET
         public MuPDFStory(string html = "", string userCss = null, float em = 12, MuPDFArchive archive = null)
         {
             byte[] bytes = Encoding.UTF8.GetBytes(html);
-            
+
             IntPtr unmanagedPointer = Marshal.AllocHGlobal(bytes.Length);
             Marshal.Copy(bytes, 0, unmanagedPointer, bytes.Length);
             // Call unmanaged code
@@ -124,7 +120,7 @@ namespace MuPDF.NET
             }
 
             State state = new State(pmin, pmax, verbose);
-            
+
             if (verbose)
                 Log($"starting. {state.Pmin} {state.Pmax}.");
 
@@ -514,7 +510,7 @@ namespace MuPDF.NET
                 }
                 function(position2);
             };
-            
+
         }
 
         public static void WriteStabilized(
