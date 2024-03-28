@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace MuPDF.NET
+﻿namespace MuPDF.NET
 {
     public class ByteStream
     {
@@ -27,9 +21,9 @@ namespace MuPDF.NET
 
         public ByteStream(byte[] data)
         {
-            _data= data;
+            _data = data;
             _offset = 0;
-            _length= data.Length;
+            _length = data.Length;
         }
 
         public ByteStream()
@@ -41,7 +35,7 @@ namespace MuPDF.NET
 
         public ByteStream(int capacity)
         {
-            _data= new byte[capacity];
+            _data = new byte[capacity];
             _offset = 0;
             _length = capacity;
         }

@@ -1,10 +1,4 @@
 ﻿using mupdf;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Security.Principal;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace MuPDF.NET
 {
@@ -254,7 +248,7 @@ namespace MuPDF.NET
             FzFont thisfont = _nativeFont;
             int lang = (int)mupdf.mupdf.fz_text_language_from_string(language);
             float rc = 0;
-            
+
             foreach (char ch in text)
             {
                 int c = Convert.ToInt32(ch);

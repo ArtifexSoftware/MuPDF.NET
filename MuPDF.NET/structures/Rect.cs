@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Security.Cryptography;
-using FzRect = mupdf.FzRect;
+﻿using FzRect = mupdf.FzRect;
 
 namespace MuPDF.NET
 {
@@ -119,7 +115,7 @@ namespace MuPDF.NET
             Y1 = rect.y1;
         }
 
-        public Rect(IRect rect): this(rect.X0, rect.Y0, rect.X1, rect.Y1)
+        public Rect(IRect rect) : this(rect.X0, rect.Y0, rect.X1, rect.Y1)
         {
 
         }
@@ -317,7 +313,7 @@ namespace MuPDF.NET
         public float Norm()
         {
             float ret = 0.0f;
-            for (int i = 0; i < this.Length; i ++)
+            for (int i = 0; i < this.Length; i++)
             {
                 ret += this[i] * this[i];
             }
@@ -370,5 +366,5 @@ namespace MuPDF.NET
             return this;
         }
     }
-    
+
 }

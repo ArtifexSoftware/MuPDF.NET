@@ -1,11 +1,4 @@
 ﻿using mupdf;
-using System;
-using System.CodeDom;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using static mupdf.FzBandWriter;
 
 namespace MuPDF.NET
 {
@@ -97,7 +90,7 @@ namespace MuPDF.NET
         {
             get
             {
-                return (X0 == Utils.FZ_MIN_INF_RECT) && (Y0 == Utils.FZ_MIN_INF_RECT) && (X1 == Utils.FZ_MAX_INF_RECT ) && (Y1 == Utils.FZ_MAX_INF_RECT);
+                return (X0 == Utils.FZ_MIN_INF_RECT) && (Y0 == Utils.FZ_MIN_INF_RECT) && (X1 == Utils.FZ_MAX_INF_RECT) && (Y1 == Utils.FZ_MAX_INF_RECT);
             }
         }
 
