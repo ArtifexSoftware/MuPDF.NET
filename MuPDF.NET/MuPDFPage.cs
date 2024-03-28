@@ -1,11 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using mupdf;
 using System.Diagnostics;
-using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Text.Unicode;
-using mupdf;
 
 namespace MuPDF.NET
 {
@@ -114,7 +110,7 @@ namespace MuPDF.NET
             {
                 FzMatrix ctm = new FzMatrix();
                 PdfPage page = _nativePage;
-                if (page == null)
+                if (page.m_internal == null)
                     return new Matrix(ctm);
 
                 FzRect mediabax = new FzRect(FzRect.Fixed.Fixed_UNIT);
@@ -191,7 +187,7 @@ namespace MuPDF.NET
             }
         }
 
-        public MuPDFAnnotation FirstAnnot
+        public MuPDFAnnot FirstAnnot
         {
             get
             {
@@ -202,7 +198,7 @@ namespace MuPDF.NET
                 if (annot == null)
                     return null;
 
-                MuPDFAnnotation ret = new MuPDFAnnotation(annot);
+                MuPDFAnnot ret = new MuPDFAnnot(annot);
                 return ret;
             }
         }
@@ -211,7 +207,7 @@ namespace MuPDF.NET
         {
             get
             {
-                
+
                 return new Link(_nativePage.pdf_load_links());
             }
         }
@@ -228,7 +224,7 @@ namespace MuPDF.NET
                 if (annot == null)
                     return null;
 
-                MuPDFAnnotation val = new MuPDFAnnotation(annot);
+                MuPDFAnnot val = new MuPDFAnnot(annot);
 
                 Widget widget = new Widget();
                 return widget;//issue
@@ -270,8 +266,8 @@ namespace MuPDF.NET
 
         public override string ToString()
         {
-            
-            return base.ToString(); 
+
+            return base.ToString();
         }
 
         public MuPDFDocument Parent
@@ -333,11 +329,11 @@ namespace MuPDF.NET
             {
                 annot = null;
             }
-            
+
             return annot;
         }
 
-        private MuPDFAnnotation AddFileAnnot(
+        private MuPDFAnnot AddFileAnnot(
             Point point,
             byte[] buffer_,
             string filename,
@@ -375,10 +371,10 @@ namespace MuPDF.NET
             annot.pdf_set_annot_flags(flags);
             Utils.AddAnnotId(annot, "A");
 
-            return new MuPDFAnnotation(annot);
+            return new MuPDFAnnot(annot);
         }
 
-        public MuPDFAnnotation AddFreeTextAnnot(
+        public MuPDFAnnot AddFreeTextAnnot(
             FzRect rect,
             string text,
             int fontSize = 11,
@@ -391,12 +387,12 @@ namespace MuPDF.NET
             )
         {
             int oldRotation = AnnotPreProcess(this);
-            MuPDFAnnotation val;
+            MuPDFAnnot val;
             try
             {
                 PdfPage page = _nativePage;
-                float[] fColor = MuPDFAnnotation.ColorFromSequence(fillColor);
-                float[] tColor = MuPDFAnnotation.ColorFromSequence(textColor);
+                float[] fColor = MuPDFAnnot.ColorFromSequence(fillColor);
+                float[] tColor = MuPDFAnnot.ColorFromSequence(textColor);
                 if (rect.fz_is_infinite_rect() != 0 && rect.fz_is_empty_rect() != 0)
                 {
                     throw new Exception(Utils.ErrorMessages["MSG_BAD_RECT"]);
@@ -420,7 +416,7 @@ namespace MuPDF.NET
                 Utils.MakeAnnotDA(annot, tColor == null ? -1 : tColor.Length, tColor, fontName, fontSize);
                 annot.pdf_update_annot();
                 Utils.AddAnnotId(annot, "A");
-                val = new MuPDFAnnotation(annot);
+                val = new MuPDFAnnot(annot);
 
                 byte[] ap = val.GetAP();
                 int BT = Encoding.UTF8.GetString(ap).IndexOf("BT");
@@ -438,19 +434,20 @@ namespace MuPDF.NET
                 }
 
                 byte[] re = Utils.ToByte($"0 0 {w} {h} re");
-                ap = MuPDFAnnotation.MergeByte(MuPDFAnnotation.MergeByte(re, Utils.ToByte($"\nW\nn\n")), ap);
+                ap = MuPDFAnnot.MergeByte(MuPDFAnnot.MergeByte(re, Utils.ToByte($"\nW\nn\n")), ap);
                 byte[] ope = null;
                 byte[] bWidth = null;
-                byte[] fillBytes = Utils.ToByte((MuPDFAnnotation.ColorCode(fColor, "f")));
+                byte[] fillBytes = Utils.ToByte((MuPDFAnnot.ColorCode(fColor, "f")));
                 if (fillBytes != null || fillBytes.Length != 0)
                 {
-                    fillBytes = MuPDFAnnotation.MergeByte(fillBytes, Utils.ToByte("\n"));
+                    fillBytes = MuPDFAnnot.MergeByte(fillBytes, Utils.ToByte("\n"));
                     ope = Utils.ToByte("f");
                 }
-                byte[] strokeBytes = Utils.ToByte(MuPDFAnnotation.ColorCode(borderColor, "c"));
+
+                byte[] strokeBytes = Utils.ToByte(MuPDFAnnot.ColorCode(borderColor, "c"));
                 if (strokeBytes != null || strokeBytes.Length != 0)
                 {
-                    strokeBytes = MuPDFAnnotation.MergeByte(strokeBytes, Utils.ToByte("\n"));
+                    strokeBytes = MuPDFAnnot.MergeByte(strokeBytes, Utils.ToByte("\n"));
                     bWidth = Utils.ToByte("1 w\n");
                     ope = Utils.ToByte("S");
                 }
@@ -459,12 +456,12 @@ namespace MuPDF.NET
                     ope = Utils.ToByte("B");
                 if (ope != null)
                 {
-                    ap = MuPDFAnnotation.MergeByte(
-                        MuPDFAnnotation.MergeByte(
-                            MuPDFAnnotation.MergeByte(
-                                MuPDFAnnotation.MergeByte(
-                                    MuPDFAnnotation.MergeByte(bWidth, fillBytes), strokeBytes), re), Utils.ToByte("\n")),
-                        MuPDFAnnotation.MergeByte(Utils.ToByte("\n"), ap));
+                    ap = MuPDFAnnot.MergeByte(
+                        MuPDFAnnot.MergeByte(
+                            MuPDFAnnot.MergeByte(
+                                MuPDFAnnot.MergeByte(
+                                    MuPDFAnnot.MergeByte(bWidth, fillBytes), strokeBytes), re), Utils.ToByte("\n")),
+                        MuPDFAnnot.MergeByte(Utils.ToByte("\n"), ap));
                 }
 
                 val.SetAP(ap);
@@ -478,10 +475,10 @@ namespace MuPDF.NET
             return val;
         }
 
-        private MuPDFAnnotation AddInkAnnot(dynamic list)
+        private MuPDFAnnot AddInkAnnot(dynamic list)
         {
             PdfPage page = _nativePage;
-            if (list is Tuple ||  list is List<List<Point>>)
+            if (list is Tuple || list is List<List<Point>>)
             {
                 throw new Exception(Utils.ErrorMessages["MSG_BAD_ARG_INK_ANNOT"]);
             }
@@ -494,13 +491,13 @@ namespace MuPDF.NET
             int n0 = list.Count;
             PdfObj inkList = page.doc().pdf_new_array(n0);
 
-            for (int j = 0; j < n0; j ++)
+            for (int j = 0; j < n0; j++)
             {
                 dynamic subList = list[j];
                 int n1 = subList.Count;
                 PdfObj stroke = page.doc().pdf_new_array(n1 * 2);
 
-                for (int i = 0; i < n1; i ++)
+                for (int i = 0; i < n1; i++)
                 {
                     Point p = subList[i];
                     FzPoint point = mupdf.mupdf.fz_transform_point(p.ToFzPoint(), invCtm);
@@ -512,20 +509,20 @@ namespace MuPDF.NET
             annotObj.pdf_dict_put(new PdfObj("InkList"), inkList);
             annot.pdf_update_annot();
             Utils.AddAnnotId(annot, "A");
-            return new MuPDFAnnotation(annot);
+            return new MuPDFAnnot(annot);
         }
 
-        private MuPDFAnnotation AddLineAnnot(Point p1, Point p2)
+        private MuPDFAnnot AddLineAnnot(Point p1, Point p2)
         {
             PdfPage page = _nativePage;
             PdfAnnot annot = page.pdf_create_annot(pdf_annot_type.PDF_ANNOT_LINE);
             annot.pdf_set_annot_line(p1.ToFzPoint(), p2.ToFzPoint());
             annot.pdf_update_annot();
             Utils.AddAnnotId(annot, "A");
-            return new MuPDFAnnotation(annot);
+            return new MuPDFAnnot(annot);
         }
 
-        private MuPDFAnnotation AddMultiLine(List<Point> points, PdfAnnotType annotType)
+        private MuPDFAnnot AddMultiLine(List<Point> points, PdfAnnotType annotType)
         {
             PdfPage page = _nativePage;
             if (points.Count < 2)
@@ -540,10 +537,10 @@ namespace MuPDF.NET
 
             annot.pdf_update_annot();
             Utils.AddAnnotId(annot, "A");
-            return new MuPDFAnnotation(annot);
+            return new MuPDFAnnot(annot);
         }
 
-        private MuPDFAnnotation AddRedactAnnot(Quad quad, string text = null, string dataStr = null, int align = 0, float[] fill = null, float[] textColr = null)
+        private MuPDFAnnot AddRedactAnnot(Quad quad, string text = null, string dataStr = null, int align = 0, float[] fill = null, float[] textColr = null)
         {
             PdfPage page = _nativePage;
             float[] fCol = new float[4] { 1, 1, 1, 0 };
@@ -554,7 +551,7 @@ namespace MuPDF.NET
 
             if (fill != null)
             {
-                fCol = MuPDFAnnotation.ColorFromSequence(fill);
+                fCol = MuPDFAnnot.ColorFromSequence(fill);
                 nFCol = fCol.Length;
                 PdfObj arr = page.doc().pdf_new_array(nFCol);
                 for (int i = 0; i < nFCol; i++)
@@ -575,10 +572,10 @@ namespace MuPDF.NET
 
             SWIGTYPE_p_pdf_annot swigAnnot = mupdf.mupdf.ll_pdf_keep_annot(annot.m_internal);
             annot = new PdfAnnot(swigAnnot);
-            return new MuPDFAnnotation(annot);
+            return new MuPDFAnnot(annot);
         }
 
-        private MuPDFAnnotation AddSquareOrCircle(Rect rect, PdfAnnotType annotType)
+        private MuPDFAnnot AddSquareOrCircle(Rect rect, PdfAnnotType annotType)
         {
             PdfPage page = _nativePage;
             FzRect r = rect.ToFzRect();
@@ -590,10 +587,10 @@ namespace MuPDF.NET
             PdfAnnot annot = page.pdf_create_annot((pdf_annot_type)annotType);
             annot.pdf_set_annot_rect(r);
             annot.pdf_update_annot();
-            return new MuPDFAnnotation(annot);
+            return new MuPDFAnnot(annot);
         }
 
-        private MuPDFAnnotation AddStampAnnot(Rect rect, int stamp = 0)
+        private MuPDFAnnot AddStampAnnot(Rect rect, int stamp = 0)
         {
             PdfPage page = _nativePage;
             List<PdfObj> stampIds = new List<PdfObj>()
@@ -616,11 +613,11 @@ namespace MuPDF.NET
             int n = stampIds.Count;
             PdfObj name = stampIds[0];
             FzRect r = rect.ToFzRect();
-            if (r.fz_is_infinite_rect() != 0|| r.fz_is_empty_rect() != 0)
+            if (r.fz_is_infinite_rect() != 0 || r.fz_is_empty_rect() != 0)
             {
                 throw new Exception(Utils.ErrorMessages["MSG_BAD_RECT"]);
             }
-            if (Utils.INRANGE(stamp, 0 , n - 1))
+            if (Utils.INRANGE(stamp, 0, n - 1))
             {
                 name = stampIds[stamp];
             }
@@ -639,7 +636,7 @@ namespace MuPDF.NET
             annot.pdf_set_annot_contents(annot.pdf_annot_obj().pdf_dict_get_name(new PdfObj("Name")));
             annot.pdf_update_annot();
             Utils.AddAnnotId(annot, "A");
-            return new MuPDFAnnotation(annot);
+            return new MuPDFAnnot(annot);
         }
 
         /// <summary>
@@ -649,7 +646,7 @@ namespace MuPDF.NET
         /// <param name="text">the top left point of a 20 x 20 rectangle containing the MuPDF-provided “note” icon.</param>
         /// <param name="icon">the top left point of a 20 x 20 rectangle containing the MuPDF-provided “note” icon.</param>
         /// <returns></returns>
-        public MuPDFAnnotation AddTextAnnot(Point point, string text, string icon = "Note")
+        public MuPDFAnnot AddTextAnnot(Point point, string text, string icon = "Note")
         {
             PdfPage page = _nativePage;
             PdfAnnot annot = page.pdf_create_annot(pdf_annot_type.PDF_ANNOT_TEXT);
@@ -662,12 +659,12 @@ namespace MuPDF.NET
 
             annot.pdf_update_annot();
             Utils.AddAnnotId(annot, "A");
-            return new MuPDFAnnotation(annot);
+            return new MuPDFAnnot(annot);
         }
 
-        private MuPDFAnnotation AddTextMarker(List<Quad> quads, pdf_annot_type annotType)
+        private MuPDFAnnot AddTextMarker(List<Quad> quads, pdf_annot_type annotType)
         {
-            MuPDFAnnotation ret = null;
+            MuPDFAnnot ret = null;
             PdfAnnot annot = null;
             PdfPage page = new PdfPage(_nativePage.m_internal);
             if (!_parent.IsPDF)
@@ -681,7 +678,7 @@ namespace MuPDF.NET
                 {
                     annot = page.pdf_create_annot(annotType);
                 }
-                catch(Exception)
+                catch (Exception)
                 {
                     Console.WriteLine("message catched");
                     annot = new PdfAnnot();
@@ -694,7 +691,7 @@ namespace MuPDF.NET
                 Utils.AddAnnotId(annot, "A");
                 if (rotation != 0)
                     page.obj().pdf_dict_put_int(new PdfObj("Rotate"), rotation);
-                ret = new MuPDFAnnotation(annot);
+                ret = new MuPDFAnnot(annot);
             }
             catch (Exception)
             {
@@ -705,7 +702,7 @@ namespace MuPDF.NET
             if (ret == null)
                 return null;
             AnnotRefs.Add(ret.GetHashCode(), ret);
-          
+
             return ret;
         }
 
@@ -714,10 +711,10 @@ namespace MuPDF.NET
         /// </summary>
         /// <param name="rect">the rectangle in which the circle or rectangle is drawn, must be finite and not empty. If the rectangle is not equal-sided, an ellipse is drawn.</param>
         /// <returns></returns>
-        public MuPDFAnnotation AddCircleAnnot(Rect rect)
+        public MuPDFAnnot AddCircleAnnot(Rect rect)
         {
             int oldRotation = AnnotPreProcess(this);
-            MuPDFAnnotation ret = null;
+            MuPDFAnnot ret = null;
             try
             {
                 ret = AddSquareOrCircle(rect, PdfAnnotType.PDF_ANNOT_CIRCLE);
@@ -741,7 +738,7 @@ namespace MuPDF.NET
             return oldRotation;
         }
 
-        public void AnnotPostProcess(MuPDFPage page, MuPDFAnnotation annot)
+        public void AnnotPostProcess(MuPDFPage page, MuPDFAnnot annot)
         {
             annot.Parent = page;
             if (page.AnnotRefs.Keys.Contains(annot.GetHashCode()))
@@ -751,10 +748,10 @@ namespace MuPDF.NET
             annot.ThisOwn = true;
         }
 
-        public MuPDFAnnotation AddPolygonAnnot(List<Point> points)
+        public MuPDFAnnot AddPolygonAnnot(List<Point> points)
         {
             int oldRotation = AnnotPreProcess(this);
-            MuPDFAnnotation annot;
+            MuPDFAnnot annot;
             try
             {
                 annot = AddMultiLine(points, PdfAnnotType.PDF_ANNOT_POLYGON);
@@ -768,10 +765,10 @@ namespace MuPDF.NET
             return annot;
         }
 
-        public MuPDFAnnotation AddPolylineAnnot(List<Point> points)
+        public MuPDFAnnot AddPolylineAnnot(List<Point> points)
         {
             int oldRotation = AnnotPreProcess(this);
-            MuPDFAnnotation annot;
+            MuPDFAnnot annot;
             try
             {
                 annot = AddMultiLine(points, PdfAnnotType.PDF_ANNOT_POLY_LINE);
@@ -785,10 +782,10 @@ namespace MuPDF.NET
             return annot;
         }
 
-        public MuPDFAnnotation AddRectAnnot(Rect rect)
+        public MuPDFAnnot AddRectAnnot(Rect rect)
         {
             int oldRotation = AnnotPreProcess(this);
-            MuPDFAnnotation annot;
+            MuPDFAnnot annot;
             try
             {
                 annot = AddSquareOrCircle(rect, PdfAnnotType.PDF_ANNOT_SQUARE);
@@ -819,7 +816,7 @@ namespace MuPDF.NET
             List<BlockStruct> blocks = Utils.GetText(this, "dict", clip, 0).BLOCKS;
 
             List<Rect> lines = new List<Rect>();
-            foreach (BlockStruct b in  blocks)
+            foreach (BlockStruct b in blocks)
             {
                 Rect bbox = new Rect(b.Bbox);
                 if (bbox.IsInfinite || bbox.IsEmpty)
@@ -866,7 +863,7 @@ namespace MuPDF.NET
             return lines;
         }
 
-        public MuPDFAnnotation AddHighlightAnnot(dynamic quads, Point start = null, Point stop = null, Rect clip = null)
+        public MuPDFAnnot AddHighlightAnnot(dynamic quads, Point start = null, Point stop = null, Rect clip = null)
         {
             List<Quad> q = new List<Quad>();
             if (quads is Rect)
@@ -881,7 +878,7 @@ namespace MuPDF.NET
             }
             else
                 q = quads;
-            MuPDFAnnotation ret = AddTextMarker(q, pdf_annot_type.PDF_ANNOT_HIGHLIGHT);
+            MuPDFAnnot ret = AddTextMarker(q, pdf_annot_type.PDF_ANNOT_HIGHLIGHT);
             return ret;
         }
 
@@ -937,7 +934,7 @@ namespace MuPDF.NET
 
         }
 
-        public MuPDFAnnotation AddUnderlineAnnot(dynamic quads = null, Point start = null, Point stop = null, Rect clip = null)
+        public MuPDFAnnot AddUnderlineAnnot(dynamic quads = null, Point start = null, Point stop = null, Rect clip = null)
         {
             List<Quad> q = new List<Quad>();
             if (quads is Rect)
@@ -956,7 +953,7 @@ namespace MuPDF.NET
             return AddTextMarker(q, pdf_annot_type.PDF_ANNOT_UNDERLINE);
         }
 
-        public MuPDFAnnotation AddSquigglyAnnot(dynamic quads = null, Point start = null, Point stop = null, Rect clip = null)
+        public MuPDFAnnot AddSquigglyAnnot(dynamic quads = null, Point start = null, Point stop = null, Rect clip = null)
         {
             List<Quad> q = new List<Quad>();
             if (quads is Rect)
@@ -975,7 +972,7 @@ namespace MuPDF.NET
             return AddTextMarker(q, pdf_annot_type.PDF_ANNOT_SQUIGGLY);
         }
 
-        public MuPDFAnnotation AddStrikeoutAnnot(dynamic quads = null, Point start = null, Point stop = null, Rect clip = null)
+        public MuPDFAnnot AddStrikeoutAnnot(dynamic quads = null, Point start = null, Point stop = null, Rect clip = null)
         {
             List<Quad> q = new List<Quad>();
             if (quads is Rect)
@@ -1007,7 +1004,7 @@ namespace MuPDF.NET
             PdfObj annots = page.obj().pdf_dict_get(new PdfObj("Annots"));
             Debug.Assert(annots == null, $"{lCount} is {annots}");
 
-            for (i = 0; i < lCount; i ++)
+            for (i = 0; i < lCount; i++)
             {
                 string text = links[i];
                 if (text == null)
@@ -1029,7 +1026,7 @@ namespace MuPDF.NET
             }
         }
 
-        public MuPDFAnnotation AddWidget(PdfWidgetType fieldType, string fieldName)
+        public MuPDFAnnot AddWidget(PdfWidgetType fieldType, string fieldName)
         {
             PdfPage page = _nativePage;
             PdfDocument pdf = page.doc();
@@ -1039,7 +1036,7 @@ namespace MuPDF.NET
                 throw new Exception("cannot create widget");
             Utils.AddAnnotId(annot, "W");
 
-            return new MuPDFAnnotation(annot);
+            return new MuPDFAnnot(annot);
         }
 
         private int ApplyRedactions(int images)
@@ -1049,7 +1046,7 @@ namespace MuPDF.NET
             opts.black_boxes = 0;
             opts.image_method = images;
             int success = page.doc().pdf_redact_page(page, opts);
-            
+
             return success;
         }
 
@@ -1279,7 +1276,7 @@ namespace MuPDF.NET
             Rect tempRect = null;
             if (rotate == 90 || rotate == 270)
                 tempRect = new Rect(0, 0, rect.Height, rect.Width);
-            else 
+            else
                 tempRect = new Rect(0, 0, rect.Width, rect.Height);
 
             // use a small border by default
@@ -1349,7 +1346,7 @@ namespace MuPDF.NET
                 xrefs = xrefs.Where(xref => xref.Item2 == pdf_annot_type.PDF_ANNOT_LINK).ToList();
                 if (xrefs.Count == links.Count)
                 {
-                    for (int i = 0; i < xrefs.Count; i ++)
+                    for (int i = 0; i < xrefs.Count; i++)
                     {
                         LinkStruct t = links[i];
                         t.Xref = xrefs[i].Item1;
@@ -1424,10 +1421,13 @@ namespace MuPDF.NET
             {
                 iList.Add(res[i][1]);
             }
-
+            
             res = doc.GetPageImages(Number);
             for (i = 0; i < res.Count; i++)
+            {
                 iList.Add(res[i][7]);
+                Console.WriteLine(res[i][7]);
+            }
 
             res = doc.GetPageFonts(Number);
             for (i = 0; i < res.Count; i++)
@@ -1454,26 +1454,27 @@ namespace MuPDF.NET
             }
 
             int xref = doc.ShownPages.GetValueOrDefault((isrc, pno), 0);
-            xref = _ShowPdfPage(srcPage, overlay, matrix, xref, oc, srcRect.ToFzRect(), gmap, imgName);
+            xref = ShowPdfPage(srcPage, overlay, matrix, xref, oc, srcRect.ToFzRect(), gmap, imgName);
             doc.ShownPages[(isrc, pno)] = xref;
 
             return xref;
         }
 
-        private int _ShowPdfPage(MuPDFPage srcPage, bool overlay = true, Matrix matrix = null, int xref = 0, int oc = 0, FzRect clip = null,
-            MuPDFGraftMap gmap = null, string imgName = null)
+        private int ShowPdfPage(MuPDFPage srcPage, bool overlay = true, Matrix matrix = null, int xref = 0, int oc = 0, FzRect clip = null, MuPDFGraftMap gmap = null, string imgName = null)
         {
-            if (clip == null)
-                clip = new FzRect(FzRect.Fixed.Fixed_INFINITE);
+            FzRect cropBox = new FzRect(FzRect.Fixed.Fixed_INFINITE);
+            if (clip != null)
+                cropBox = clip;
             FzMatrix mat = matrix != null ? matrix.ToFzMatrix() : new FzMatrix();
+            int rcXref = xref;
             PdfPage tpage = _nativePage;
             PdfObj tpageObj = tpage.obj();
             PdfDocument pdfOut = tpage.doc();
             Utils.EnsureOperations(pdfOut);
 
-            PdfObj xobj1 = Utils.GetXObjectFromPage(pdfOut, srcPage.GetPdfPage(), xref, gmap);
-            if (xref == 0)
-                xref = xobj1.pdf_to_num();
+            PdfObj xobj1 = Utils.GetXObjectFromPage(pdfOut, srcPage.GetPdfPage(), rcXref, gmap);
+            if (rcXref == 0)
+                rcXref = xobj1.pdf_to_num();
 
             // create refereneing xobject (controls display on target page)
             PdfObj subRes1 = mupdf.mupdf.pdf_new_dict(pdfOut, 5);
@@ -1483,7 +1484,7 @@ namespace MuPDF.NET
 
             FzBuffer res = mupdf.mupdf.fz_new_buffer(20);
             res.fz_append_string("/fullpage Do");
-            PdfObj xobj2 = pdfOut.pdf_new_xobject(clip, mat, subRes, res);
+            PdfObj xobj2 = pdfOut.pdf_new_xobject(cropBox, mat, subRes, res);
             if (oc > 0)
                 Utils.AddOcObject(pdfOut, xobj2, oc);
 
@@ -1500,18 +1501,18 @@ namespace MuPDF.NET
             nres.fz_append_string(" Do Q ");
 
             Utils.InsertContents(pdfOut, tpageObj, nres, overlay ? 1 : 0);
-            return xref;
+            return rcXref;
         }
 
         public List<int> GetContents()
         {
-            List<int> ret = new List<int> ();
+            List<int> ret = new List<int>();
             PdfObj obj = _nativePage.obj();
             PdfObj contents = obj.pdf_dict_get(new PdfObj("Contents"));
             if (contents.pdf_is_array() != 0)
             {
                 int n = contents.pdf_array_len();
-                for (int i = 0; i < n; i ++)
+                for (int i = 0; i < n; i++)
                 {
                     PdfObj icont = contents.pdf_array_get(i);
                     int xref = icont.pdf_to_num();
@@ -1646,7 +1647,7 @@ namespace MuPDF.NET
                 fonts = pdf.pdf_new_dict(5);
                 Utils.pdf_dict_putl(page.obj(), fonts, new string[2] { "Resources", "Font" });
             }
-            
+
             if (value.Xref == 0)
                 throw new Exception("cannot insert font");
 
@@ -1707,7 +1708,7 @@ namespace MuPDF.NET
                 extg = resources.pdf_dict_put_dict(new PdfObj("ExtGState"), 2);
             int n = extg.pdf_dict_len();
 
-            for (int i = 0; i< n; i++)
+            for (int i = 0; i < n; i++)
             {
                 PdfObj o1 = extg.pdf_dict_get_key(i);
                 string name = o1.pdf_to_name();
@@ -1776,9 +1777,9 @@ namespace MuPDF.NET
         /// </summary>
         /// <param name="name"></param>
         /// <returns></returns>
-        public MuPDFAnnotation LoadAnnot(string name)
+        public MuPDFAnnot LoadAnnot(string name)
         {
-            MuPDFAnnotation val = _LoadAnnot(name, 0);
+            MuPDFAnnot val = _LoadAnnot(name, 0);
             if (val == null)
                 return null;
             val.ThisOwn = true;
@@ -1790,9 +1791,9 @@ namespace MuPDF.NET
             return val;
         }
 
-        public MuPDFAnnotation LoadAnnot(int xref)
+        public MuPDFAnnot LoadAnnot(int xref)
         {
-            MuPDFAnnotation val = _LoadAnnot(null, xref);
+            MuPDFAnnot val = _LoadAnnot(null, xref);
             if (val == null)
                 return null;
             val.ThisOwn = true;
@@ -1804,7 +1805,7 @@ namespace MuPDF.NET
             return val;
         }
 
-        private MuPDFAnnotation _LoadAnnot(string name, int xref)
+        private MuPDFAnnot _LoadAnnot(string name, int xref)
         {
             PdfPage page = GetPdfPage();
             PdfAnnot annot;
@@ -1812,7 +1813,7 @@ namespace MuPDF.NET
                 annot = Utils.GetAnnotByName(this, name);
             else
                 annot = Utils.GetAnnotByXref(this, xref);
-            return annot == null ? null : new MuPDFAnnotation(annot);
+            return annot == null ? null : new MuPDFAnnot(annot);
         }
 
         /// <summary>
@@ -1851,19 +1852,19 @@ namespace MuPDF.NET
             return val;
         }
 
-        public MuPDFAnnotation DeleteAnnot(MuPDFAnnotation annot)
+        public MuPDFAnnot DeleteAnnot(MuPDFAnnot annot)
         {
             PdfPage page = GetPdfPage();
-            while ( true )
+            while (true)
             {
-                PdfAnnot irtAnnot = MuPDFAnnotation.FindAnnotIRT(annot.ToPdfAnnot());
+                PdfAnnot irtAnnot = MuPDFAnnot.FindAnnotIRT(annot.ToPdfAnnot());
                 if (irtAnnot == null)
                     break;
                 page.pdf_delete_annot(irtAnnot);
             }
             PdfAnnot nextAnnot = annot.ToPdfAnnot().pdf_next_annot();
             page.pdf_delete_annot(annot.ToPdfAnnot());
-            MuPDFAnnotation val = new MuPDFAnnotation(nextAnnot);
+            MuPDFAnnot val = new MuPDFAnnot(nextAnnot);
 
             if (val != null)
             {
@@ -1880,7 +1881,7 @@ namespace MuPDF.NET
         public void DeleteLink(LinkStruct link)
         {
             void Finished()
-            { 
+            {
                 if (link.Xref == 0) return;
                 try
                 {
@@ -1948,7 +1949,7 @@ namespace MuPDF.NET
         {
             MuPDFDocument doc = Parent;
             MuPDFPage page = doc.ReloadPage(this);
-            
+
         }
 
         public void ExtendTextPage(MuPDFSTextPage tpage, int flags = 0, Matrix m = null)
@@ -2007,7 +2008,7 @@ namespace MuPDF.NET
         {
             List<string> allkeys = new List<string>() { "closePath", "fill", "color", "width", "lineCap", "lineJoin", "dashes", "stroke_opacity", "fill_opacity", "even_odd" };
             List<Dictionary<string, dynamic>> val = GetCDrawings(extended);
-            
+
             // issue
         }
 
@@ -2411,7 +2412,7 @@ namespace MuPDF.NET
 
                     return ret;
                 }
-                catch(Exception) { return null;  }
+                catch (Exception) { return null; }
             }
             return null;
         }
@@ -2430,7 +2431,7 @@ namespace MuPDF.NET
                 FzPathWalker pathWalker = new FzPathWalker(walker.m_internal);
 
                 //mupdf.mupdf.fz_walk_path(new FzPath(mupdf.mupdf.ll_fz_keep_path(path)), pathWalker, ); //issue
-                
+
                 if (PathDict.GetValueOrDefault("items", null) == null)
                     PathDict = null;
             }
@@ -2592,11 +2593,11 @@ namespace MuPDF.NET
                 Dev.LastPoint = mupdf.mupdf.fz_transform_point(mupdf.mupdf.fz_make_point(x, y), Dev.Ctm);
                 if (Dev.PathRect.fz_is_infinite_rect() != 0)
                     Dev.PathRect = mupdf.mupdf.fz_make_rect
-                        ( Dev.LastPoint.x, Dev.LastPoint.y,
-                          Dev.LastPoint.x, Dev.LastPoint.y );
+                        (Dev.LastPoint.x, Dev.LastPoint.y,
+                          Dev.LastPoint.x, Dev.LastPoint.y);
                 Dev.LineCount = 0;
             }
-            catch (Exception) { throw new Exception("moveto exception");  }
+            catch (Exception) { throw new Exception("moveto exception"); }
         }
     }
 }
