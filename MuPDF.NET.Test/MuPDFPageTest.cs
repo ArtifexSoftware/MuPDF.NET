@@ -140,7 +140,7 @@ public class MuPDFPageTest : PageTestBase
     [Test]
     public void InsertLink()
     {
-        LinkStruct link = new LinkStruct();
+        Link link = new Link();
         link.Name = "Here is the link.";
         link.Page = 1;
         link.From = new Rect(0, 0, 100, 100);
