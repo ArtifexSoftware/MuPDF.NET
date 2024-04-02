@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO.Compression;
 using System.Runtime.InteropServices;
 using System.Text;
+using Newtonsoft.Json;
 
 namespace MuPDF.NET
 {
@@ -1105,17 +1106,17 @@ namespace MuPDF.NET
             MuPDFPage page,
             Rect clip = null,
             int flags = 0,
-            MuPDFSTextPage stPage = null,
+            MuPDFTextPage stPage = null,
             bool sort = false,
             char[] delimiters = null
             )
         {
             if (flags == 0)
                 flags = flags = (int)(TextFlags.TEXT_PRESERVE_WHITESPACE | TextFlags.TEXT_PRESERVE_LIGATURES | TextFlags.TEXT_MEDIABOX_CLIP);
-            MuPDFSTextPage tp = stPage;
+            MuPDFTextPage tp = stPage;
             if (tp == null)
-                tp = page.GetSTextPage(clip, flags);
-            else if (tp._parent != page)
+                tp = page.GetTextPage(clip, flags);
+            else if (tp.Parent != page)
                 throw new Exception("not a textpage of this page");
 
             List<WordBlock> words = tp.ExtractWords(delimiters);
@@ -1134,12 +1135,45 @@ namespace MuPDF.NET
             return words;
         }
 
+        public static List<TextBlock> GetTextBlocks(
+            MuPDFPage page,
+            Rect clip = null,
+            int flags = 0,
+            MuPDFTextPage textPage = null,
+            bool sort = false)
+        {
+            if (flags == 0)
+            {
+                flags = (int)(TextFlags.TEXT_PRESERVE_WHITESPACE | TextFlags.TEXT_PRESERVE_IMAGES | TextFlags.TEXT_PRESERVE_LIGATURES | TextFlags.TEXT_MEDIABOX_CLIP);
+            }
+            MuPDFTextPage tp = textPage;
+            if (tp == null)
+                tp = page.GetTextPage(clip, flags);
+            else if (tp.Parent != page)
+                throw new Exception("not a textpage of this page");
+
+            List<TextBlock> blocks = tp.ExtractBlocks();
+            if (textPage == null)
+                tp = null;
+            if (sort == true)
+                blocks.Sort((TextBlock t1, TextBlock t2) =>
+                {
+                    var result = t1.Y1.CompareTo(t2.Y1);
+                    if (result == 0)
+                    {
+                        result = t1.X0.CompareTo(t2.X0);
+                    }
+                    return result;
+                });
+            return blocks;
+        }
+
         public static dynamic GetText(
             MuPDFPage page,
             string option = "text",
             Rect clip = null,
             int flags = 0,
-            MuPDFSTextPage stPage = null,
+            MuPDFTextPage stPage = null,
             bool sort = false,
             char[] delimiters = null
             )
@@ -1180,6 +1214,17 @@ namespace MuPDF.NET
                     );
             }
 
+            if (option == "blocks")
+            {
+                return Utils.GetTextBlocks(
+                    page,
+                    clip,
+                    flags,
+                    stPage,
+                    sort
+                    );
+            }
+
             Rect cb = null;
             if ((new List<string>() { "html", "xml", "xhtml" }).Contains(option))
                 clip = page.CropBox;
@@ -1190,10 +1235,10 @@ namespace MuPDF.NET
             if (clip == null)
                 clip = page.CropBox;
 
-            MuPDFSTextPage tp = stPage;
-            if (tp is null)
-                tp = page.GetSTextPage(clip, flags);
-            else if (tp._parent != page)
+            MuPDFTextPage tp = stPage;
+            if (tp == null)
+                tp = page.GetTextPage(clip, flags);
+            else if (tp.Parent != page)
                 throw new Exception("not a textpage of this page");
 
             dynamic t = null;
@@ -1210,9 +1255,9 @@ namespace MuPDF.NET
             else if (option == "xml")
                 t = tp.ExtractXML();
             else if (option == "xhtml")
-                t = tp.ExtractText();
+                t = tp.ExtractText(sort);
 
-            if (stPage is null)
+            if (stPage == null)
                 tp.Dispose();
             return t;
         }
@@ -1420,30 +1465,30 @@ namespace MuPDF.NET
             return "";
         }
 
-        public static FontStruct CheckFont(MuPDFPage page, string fontName)
+        public static Font CheckFont(MuPDFPage page, string fontName)
         {
-            foreach (List<dynamic> f in page.GetFonts())
+            foreach (Entry f in page.GetFonts())
             {
-                if (f[4] == fontName)
+                if (f.RefName == fontName)
                 {
-                    return new FontStruct()
+                    return new Font()
                     {
-                        Xref = f[0],
-                        Ext = f[1],
-                        Type = f[2],
-                        Name = f[3],
-                        RefName = f[4],
-                        Encoding = f[5],
-                        StreamXref = f[6]
+                        Xref = f.Xref,
+                        Ext = f.Ext,
+                        Type = f.Type,
+                        Name = f.Name,
+                        RefName = f.RefName,
+                        Encoding = f.Encoding,
+                        StreamXref = f.StreamXref
                     };
                 }
             }
             return null;
         }
 
-        public static FontStruct CheckFontInfo(MuPDFDocument doc, int xref)
+        public static Font CheckFontInfo(MuPDFDocument doc, int xref)
         {
-            foreach (FontStruct f in doc.FontInfo)
+            foreach (Font f in doc.FontInfo)
             {
                 if (xref == f.Xref)
                     return f;
@@ -1451,7 +1496,7 @@ namespace MuPDF.NET
             return null;
         }
 
-        public static void ScanResources(PdfDocument pdf, PdfObj rsrc, List<List<dynamic>> liste, int what, int streamXRef, List<dynamic> tracer)
+        public static void ScanResources(PdfDocument pdf, PdfObj rsrc, List<Entry> liste, int what, int streamXRef, List<dynamic> tracer)
         {
             if (rsrc.pdf_mark_obj() != 0)
             {
@@ -1508,7 +1553,7 @@ namespace MuPDF.NET
             }
         }
 
-        public static int GatherFonts(PdfDocument pdf, PdfObj dict, List<List<dynamic>> fontList, int streamXRef)
+        public static int GatherFonts(PdfDocument pdf, PdfObj dict, List<Entry> fontList, int streamXRef)
         {
             int rc = 1;
             int n = dict.pdf_dict_len();
@@ -1539,14 +1584,14 @@ namespace MuPDF.NET
                 if (xref != 0)
                     ext = Utils.GetFontExtension(pdf, xref);
 
-                List<dynamic> entry = new List<dynamic>{
-                    xref,
-                    ext,
-                    subType.pdf_to_name(),
-                    Utils.EscapeStrFromStr(name.pdf_to_name()),
-                    refName.pdf_to_name(),
-                    encoding.pdf_to_name(),
-                    streamXRef
+                Entry entry = new Entry{
+                    Xref = xref,
+                    Ext = ext,
+                    Type = subType.pdf_to_name(),
+                    Name = Utils.EscapeStrFromStr(name.pdf_to_name()),
+                    RefName = refName.pdf_to_name(),
+                    Encoding = encoding.pdf_to_name(),
+                    StreamXref = streamXRef
                     };
                 fontList.Add(entry);
             }
@@ -1613,7 +1658,7 @@ namespace MuPDF.NET
             return ret;
         }
 
-        public static int GatherForms(PdfDocument doc, PdfObj dict, List<List<dynamic>> imageList, int streamXRef)
+        public static int GatherForms(PdfDocument doc, PdfObj dict, List<Entry> imageList, int streamXRef)
         {
             int rc = 1;
             int n = dict.pdf_dict_len();
@@ -1646,18 +1691,18 @@ namespace MuPDF.NET
                     bbox = new FzRect(FzRect.Fixed.Fixed_INFINITE);
                 int xref = imageDict.pdf_to_num();
 
-                List<dynamic> entry = new List<dynamic> {
-                    xref,
-                    refName.pdf_to_name(),
-                    streamXRef,
-                    bbox
+                Entry entry = new Entry() {
+                    Xref = xref,
+                    RefName = refName.pdf_to_name(),
+                    StreamXref = streamXRef,
+                    Bbox = new Rect(bbox)
                 };
                 imageList.Add(entry);
             }
             return rc;
         }
 
-        public static int GatherIamges(PdfDocument doc, PdfObj dict, List<List<dynamic>> imageList, int streamXRef)
+        public static int GatherIamges(PdfDocument doc, PdfObj dict, List<Entry> imageList, int streamXRef)
         {
             int rc = 1;
             int n = dict.pdf_dict_len();
@@ -1703,17 +1748,17 @@ namespace MuPDF.NET
                 PdfObj height = imageDict.pdf_dict_geta(new PdfObj("Height"), new PdfObj("H"));
                 PdfObj bpc = imageDict.pdf_dict_geta(new PdfObj("BitsPerComponent"), new PdfObj("BPC"));
 
-                List<dynamic> entry = new List<dynamic> {
-                    xref,
-                    gen,
-                    width.pdf_to_int(),
-                    height.pdf_to_int(),
-                    bpc.pdf_to_int(),
-                    Utils.EscapeStrFromStr(cs.pdf_to_name()),
-                    Utils.EscapeStrFromStr(altcs.pdf_to_name()),
-                    Utils.EscapeStrFromStr(refName.pdf_to_name()),
-                    Utils.EscapeStrFromStr(filter.pdf_to_name()),
-                    streamXRef
+                Entry entry = new Entry() {
+                    Xref = xref,
+                    Smask = gen,
+                    Width = width.pdf_to_int(),
+                    Height = height.pdf_to_int(),
+                    Bpc = bpc.pdf_to_int(),
+                    CsName = Utils.EscapeStrFromStr(cs.pdf_to_name()),
+                    AltCsName = Utils.EscapeStrFromStr(altcs.pdf_to_name()),
+                    RefName = Utils.EscapeStrFromStr(refName.pdf_to_name()),
+                    Filter = Utils.EscapeStrFromStr(filter.pdf_to_name()),
+                    StreamXref = streamXRef
                 };
                 imageList.Add(entry);
             }
@@ -1763,7 +1808,7 @@ namespace MuPDF.NET
         public static (string, string, string, float, float)
         GetFontProperties(MuPDFDocument doc, int xref)
         {
-            FontStruct res = doc.ExtractFont(xref);
+            Font res = doc.ExtractFont(xref);
             float asc = 0.8f;
             float dsc = -0.2f;
 
@@ -1796,7 +1841,7 @@ namespace MuPDF.NET
             {
                 try
                 {
-                    Font font = new Font(res.Name);
+                    MuPDFFont font = new MuPDFFont(res.Name);
                     asc = font.Ascender;
                     dsc = font.Descender;
                 }
@@ -1888,7 +1933,7 @@ namespace MuPDF.NET
             return null;
         }
 
-        public static void UpdateFontInfo(MuPDFDocument doc, FontStruct info)
+        public static void UpdateFontInfo(MuPDFDocument doc, Font info)
         {
             int xref = info.Xref;
             bool found = false;
@@ -1913,10 +1958,10 @@ namespace MuPDF.NET
             int xref,
             int limit = 256,
             int idx = 0,
-            FontStruct fontDict = null
+            Font fontDict = null
             )
         {
-            FontStruct fontStruct = Utils.CheckFontInfo(doc, xref);
+            Font fontStruct = Utils.CheckFontInfo(doc, xref);
             string name = "";
             string ext = "";
             string stype = "";
@@ -2005,14 +2050,14 @@ namespace MuPDF.NET
             return glyphs;
         }
 
-        public static FontStruct InsertFont(PdfDocument pdf, string bfName, string fontFile, byte[] fontBuffer, bool setSample, int idx, int wmode, int serif, int encoding, int ordering)
+        public static Font InsertFont(PdfDocument pdf, string bfName, string fontFile, byte[] fontBuffer, bool setSample, int idx, int wmode, int serif, int encoding, int ordering)
         {
             FzFont font = new FzFont();
             FzBuffer res = null;
             SWIGTYPE_p_unsigned_char data = null;
             int ixref = 0;
             int simple = 0;
-            FontStruct value = null;
+            Font value = null;
             string name = null;
             string subt = null;
             string exto = null;
@@ -2063,7 +2108,7 @@ namespace MuPDF.NET
             float asc = font.fz_font_ascender();
             float dsc = font.fz_font_descender();
 
-            value = new FontStruct()
+            value = new Font()
             {
                 Xref = ixref,
                 Name = name,
@@ -2244,19 +2289,19 @@ namespace MuPDF.NET
             }
         }
 
-        public static LinkStruct GetLinkStruct(Link ln, MuPDFDocument doc = null)
+        public static Link GetLinkDict(MuPDFLink ln, MuPDFDocument doc = null)
         {
             return Utils._GetLinkDict(ln.Dest, ln.Rect, doc);
         }
 
-        public static LinkStruct GetLinkStruct(Outline ol, MuPDFDocument doc = null)
+        public static Link GetLinkDict(Outline ol, MuPDFDocument doc = null)
         {
             return Utils._GetLinkDict(ol.Dest, null, doc);
         }
 
-        public static LinkStruct _GetLinkDict(LinkDest dest, Rect r, MuPDFDocument document)
+        public static Link _GetLinkDict(LinkDest dest, Rect r, MuPDFDocument document)
         {
-            LinkStruct nl = new LinkStruct();
+            Link nl = new Link();
             nl.Kind = dest.Kind;
             nl.Xref = 0;
             nl.From = r;
@@ -2306,7 +2351,7 @@ namespace MuPDF.NET
             return nl;
         }
 
-        public static BorderStruct GetAnnotBorder(PdfObj annotObj)
+        public static Border GetAnnotBorder(PdfObj annotObj)
         {
             List<int> dash = new List<int>();
             float width = -1;
@@ -2351,7 +2396,7 @@ namespace MuPDF.NET
             if (obj != null)
                 clouds = obj.pdf_dict_get(new PdfObj("I")).pdf_to_int();
 
-            BorderStruct res = new BorderStruct();
+            Border res = new Border();
             res.Width = width;
             res.Dashes = dash.ToArray();
             res.Style = style;
@@ -2360,9 +2405,9 @@ namespace MuPDF.NET
             return res;
         }
 
-        public static ColorStruct GetAnnotColors(PdfObj annotObj)
+        public static Color GetAnnotColors(PdfObj annotObj)
         {
-            ColorStruct res = new ColorStruct();
+            Color res = new Color();
             List<float> bc = new List<float>();
             List<float> fc = new List<float>();
 
@@ -2393,7 +2438,7 @@ namespace MuPDF.NET
             return res;
         }
 
-        public static void SetAnnotBorder(BorderStruct border, PdfDocument pdf, PdfObj linkObj)
+        public static void SetAnnotBorder(Border border, PdfDocument pdf, PdfObj linkObj)
         {
             PdfObj obj = null;
             int dashLen = 0;
@@ -2457,7 +2502,7 @@ namespace MuPDF.NET
             return (r, g, b);
         }
 
-        public static string GetLinkText(MuPDFPage page, LinkStruct link)
+        public static string GetLinkText(MuPDFPage page, Link link)
         {
             Matrix ctm = page.TransformationMatrix;
             Matrix ictm = ~ctm;
@@ -2628,6 +2673,8 @@ namespace MuPDF.NET
         public static void PageMerge(MuPDFDocument docDes, MuPDFDocument docSrc, int pageFrom, int pageTo, int rotate,
             bool links, bool copyAnnots, MuPDFGraftMap graftmap)
         {
+            PdfDocument pdfDes = MuPDFDocument.AsPdfDocument(docDes);
+            PdfDocument pdfSrc = MuPDFDocument.AsPdfDocument(docSrc);
             List<PdfObj> knownPageObjs = new List<PdfObj>()
             {
                 new PdfObj("Contents"),
@@ -2641,8 +2688,8 @@ namespace MuPDF.NET
                 new PdfObj("UserUnit")
             };
 
-            PdfObj pageRef = docSrc.PdfDocument.pdf_lookup_page_obj(pageFrom);
-            PdfObj pageDict = docDes.PdfDocument.pdf_new_dict(4);
+            PdfObj pageRef = pdfSrc.pdf_lookup_page_obj(pageFrom);
+            PdfObj pageDict = pdfDes.pdf_new_dict(4);
             pageDict.pdf_dict_put(new PdfObj("Type"), new PdfObj("Page"));
 
             foreach (PdfObj e in knownPageObjs)
@@ -2682,15 +2729,15 @@ namespace MuPDF.NET
                         o.pdf_dict_del(new PdfObj("Popup"));
                         o.pdf_dict_del(new PdfObj("P"));
                         PdfObj copyO = graftmap.ToPdfGraftMap().pdf_graft_mapped_object(o);
-                        PdfObj annot = docDes.PdfDocument.pdf_new_indirect(copyO.pdf_to_num(), 0);
+                        PdfObj annot = pdfDes.pdf_new_indirect(copyO.pdf_to_num(), 0);
                         newAnnots.pdf_array_push(annot);
                     }
                 }
             }
             if (rotate != -1)
                 pageDict.pdf_dict_put_int(new PdfObj("Rotate"), rotate);
-            PdfObj ref_ = docDes.PdfDocument.pdf_add_object(pageDict);
-            docDes.PdfDocument.pdf_insert_page(pageTo, ref_);
+            PdfObj ref_ = pdfDes.pdf_add_object(pageDict);
+            pdfDes.pdf_insert_page(pageTo, ref_);
         }
 
         public static void MergeRange(MuPDFDocument docDes, MuPDFDocument docSrc, int spage, int epage, int apage, int rotate,
@@ -2730,7 +2777,7 @@ namespace MuPDF.NET
 
         public static void DoLinks(MuPDFDocument doc1, MuPDFDocument doc2, int fromPage = -1, int toPage = -1, int startAt = -1)
         {
-            string CreateAnnot(LinkStruct link, List<int> xrefDest, List<int> pnoSrc, Matrix ctm)
+            string CreateAnnot(Link link, List<int> xrefDest, List<int> pnoSrc, Matrix ctm)
             {
                 Rect r = link.From * ctm;
                 string rStr = string.Format("{0} {1} {2} {3}", r[0], r[1], r[2], r[3]);
@@ -2815,7 +2862,7 @@ namespace MuPDF.NET
             for (int i = 0; i < xrefSrc.Count; i++)
             {
                 MuPDFPage pageSrc = doc2[pnoSrc[i]];
-                List<LinkStruct> links = pageSrc.GetLinks();
+                List<Link> links = pageSrc.GetLinks();
                 if (links.Count == 0)
                 {
                     pageSrc = null;
@@ -2826,7 +2873,7 @@ namespace MuPDF.NET
                 MuPDFPage pageDst = doc1[pnoDst[i]];
                 List<string> linkTab = new List<string>();
 
-                foreach (LinkStruct l in links)
+                foreach (Link l in links)
                 {
                     if (l.Kind == LinkType.LINK_GOTO && pnoSrc.Contains(l.Page))
                         continue;
@@ -2999,7 +3046,7 @@ namespace MuPDF.NET
             return AdobeGlyphs.GetValueOrDefault(ch, ".notdef");
         }
 
-        public static FzMatrix ShowStringCS(FzText text, Font userFont, FzMatrix trm, string s, int wmode,
+        public static FzMatrix ShowStringCS(FzText text, MuPDFFont userFont, FzMatrix trm, string s, int wmode,
             fz_bidi_direction bidi_level, int markupDir, fz_text_language langauge)
         {
             int i = 0;
@@ -3141,7 +3188,7 @@ namespace MuPDF.NET
             return xrefs;
         }
 
-        public static void GetPageLabels(List<(int, string)> list, PdfObj nums)
+        public static void GetPageLabels(List<Label> list, PdfObj nums)
         {
             int n = nums.pdf_array_len();
             for (int i = 0; i < n; i += 2)
@@ -3153,7 +3200,7 @@ namespace MuPDF.NET
                 byte[] c = res.fz_buffer_extract();
 
                 string cStr = Encoding.UTF8.GetString(c);
-                list.Add((pno, cStr));
+                list.Add(new Label() { PageNumber = pno, LabelText = cStr });
             }
         }
 
@@ -3464,6 +3511,467 @@ namespace MuPDF.NET
                 PdfObj obj = pdf.pdf_new_indirect(xref, 0);
                 arr.pdf_array_push(obj);
             }
+        }
+
+        public static FzMatrix CalcImageMatrix(int width, int height, Rect tr, float rotate, bool keep)
+        {
+            FzMatrix rot = mupdf.mupdf.fz_rotate(rotate);
+            float trw = tr.X1 - tr.X0;
+            float trh = tr.Y1 - tr.Y0;
+            float w = trw;
+            float h = trh;
+            float fw;
+            float fh;
+            if (keep)
+            {
+                float large = Math.Max(width, height);
+                fw = width / large;
+                fh = height / large;
+            }
+            else fw = fh = 1;
+            float small = Math.Min(fw, fh);
+            if (rotate != 0 && rotate != 180)
+            {
+                float f = fw;
+                fw = fh;
+                fh = f;
+            }
+            if (fw < 1)
+            {
+                if (trw / fw > trh / fh)
+                {
+                    w = trh * small;
+                    h = trh;
+                }
+                else
+                {
+                    w = trw;
+                    h = trw / small;
+                }
+            }
+            else if (fw != fh)
+            {
+                if (trw / fw > trh / fh)
+                {
+                    w = trh / small;
+                    h = trh;
+                }
+                else
+                {
+                    w = trw;
+                    h = trw * small;
+                }
+            }
+            else
+            {
+                w = trw;
+                h = trh;
+            }
+            FzPoint tmp = mupdf.mupdf.fz_make_point((tr.X0 + tr.X1) / 2, (tr.Y0 + tr.Y1) / 2);
+            FzMatrix mat = mupdf.mupdf.fz_make_matrix(1, 0, 0, 1, -0.5f, -0.5f);
+            mat = FzMatrix.fz_concat(mat, rot);
+            mat = FzMatrix.fz_concat(mat, mupdf.mupdf.fz_scale(w, h));
+            mat = FzMatrix.fz_concat(mat, mupdf.mupdf.fz_translate(tmp.x, tmp.y));
+            return mat;
+        }
+
+        public static string GetPageLabel(int pno, List<Label> labels)
+        {
+            List<Label> items = new List<Label>();
+            foreach (Label label in labels)
+            {
+                if (label.PageNumber <= pno)
+                    items.Add(label);
+            }
+
+            Rule rule = Utils.RuleDict(items.Last());
+            string prefix = rule.Prefix;
+            string style = rule.Style;
+            int pageNumber = pno - rule.StartPage + rule.FirstPageNum;
+            return Utils.ConstructLabel(style, prefix, pageNumber);
+        }
+
+        public static Rule RuleDict(Label item)
+        {
+            string rule = item.LabelText;
+            string[] rules = rule.Substring(2, rule.Length - 2 - 2).Split("/").Skip(1).ToArray();
+            Rule ret = new Rule() { StartPage = item.PageNumber, Prefix = "", FirstPageNum = 1 };
+            bool skip = false;
+            int i = 0;
+
+            foreach (string s in rules)
+            {
+                if (skip)
+                {
+                    skip = false;
+                    continue;
+                }
+                if (s == "S")
+                {
+                    ret.Style = rules[i + 1];
+                    skip = true;
+                    continue;
+                }
+                if (s.StartsWith("P"))
+                {
+                    string x = s.Substring(1).Replace("(", "").Replace(")", "");
+                    ret.Prefix = x;
+                    continue;
+                }
+                if (s.StartsWith("St"))
+                {
+                    int x = Convert.ToInt32(s.Substring(2));
+                    ret.FirstPageNum = x;
+                }
+            }
+            return ret;
+        }
+
+        public static string ConstructLabel(string style, string prefix, int pno)
+        {
+            string nStr = "";
+            if (style == "D")
+                nStr = Convert.ToString(pno);
+            else if (style == "r")
+                nStr = Utils.Integer2Roman(pno).ToLower();
+            else if (style == "R")
+                nStr = Utils.Integer2Roman(pno).ToUpper();
+            else if (style == "a")
+                nStr = Utils.Integer2Letter(pno).ToLower();
+            else if (style == "A")
+                nStr = Utils.Integer2Letter(pno).ToUpper();
+            string ret = prefix + nStr;
+            return ret;
+        }
+
+        public static string Integer2Letter(int i)
+        {
+            string asciiUppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+            int n = 1;
+            int a = i;
+            while (Math.Pow(26, n) <= a)
+            {
+                a -= Convert.ToInt32(Math.Pow(26, n));
+                n += 1;
+            }
+            string ret = "";
+            for (int j = n - 1; j >= 0; j --)
+            {
+                int g = a % Convert.ToInt32(Math.Pow(26, n));
+                int f = a / Convert.ToInt32(Math.Pow(26, n));
+                ret += asciiUppercase[f];
+            }
+            return ret;
+        }
+
+        public static string Integer2Roman(int num)
+        {
+            Dictionary<int, string> roman = new Dictionary<int, string>()
+            {
+                {1000, "M" },
+                {900, "CM" },
+                {500, "D" },
+                {400, "CD" },
+                {100, "C" },
+                {90, "XC" },
+                {50, "L" },
+                {40, "XL" },
+                {10, "X" },
+                {9, "IX" },
+                {5, "V" },
+                {4, "IV" },
+                {1, "I" },
+            };
+
+            IEnumerable<string> RomanNum(int num)
+            {
+                foreach ((int r, string ltr) in roman)
+                {
+                    int x = num / r;
+                    yield return string.Concat(Enumerable.Repeat(ltr, x));
+                    num -= r * x;
+                    if (num <= 0)
+                        break;
+                }
+            }
+
+            return string.Concat(RomanNum(num).ToArray());
+        }
+
+        public static string GetTextBox(MuPDFPage page, Rect rect, MuPDFTextPage textPage = null)
+        {
+            MuPDFTextPage tp = textPage;
+            if (tp == null)
+                tp = page.GetTextPage();
+            else if (tp.Parent != page)
+                throw new Exception("not a textpage of this page");
+            string ret = tp.ExtractTextBox(rect.ToFzRect());
+            if (textPage == null)
+                tp = null;
+            return ret;
+        }
+
+        public static string GetTextSelection(
+            MuPDFPage page,
+            Point p1,
+            Point p2,
+            Rect clip = null,
+            MuPDFTextPage textPage = null)
+        {
+            MuPDFTextPage tp = textPage;
+            if (tp == null)
+                tp = page.GetTextPage(clip, flags: (int)TextFlags.TEXT_DEHYPHENATE);
+            else if (tp.Parent != page)
+                throw new Exception("not a textpage of this page");
+            string ret = tp.ExtractSelection(p1.ToFzPoint(), p2.ToFzPoint());
+            if (textPage == null)
+                tp = null;
+            return ret;
+        }
+
+        public static void UpdateLink(MuPDFPage page, Link link)
+        {
+            string annot = GetLinkText(page, link);
+            if (annot == "")
+                throw new Exception("link kind not supported");
+            page.Parent.UpdateObject(link.Xref, annot, page.GetPdfPage());
+            return;
+        }
+
+        public static void WriteText(
+            MuPDFPage page,
+            Rect rect = null,
+            MuPDFTextWriter[] writers = null,
+            bool overlay = true,
+            float[] color = null,
+            float opacity = 0,
+            bool keepProportion = true,
+            int rotate = 0,
+            int oc = 0
+            )
+        {
+            if (writers == null)
+                throw new Exception("need at least one TextWriter");
+            if (writers.Length == 1 && rotate == 0 && rect == null)
+            {
+                writers[0].WriteText(page, opacity: opacity, color: color, overlay: overlay ? 1 : 0);
+                return;
+            }
+            Rect clip = writers[0].TextRect;
+            MuPDFDocument textDoc = new MuPDFDocument();
+            MuPDFPage tpage = textDoc.NewPage(width: page.Rect.Width, height: page.Rect.Height);
+            foreach (MuPDFTextWriter writer in writers)
+            {
+                clip = clip | writer.TextRect;
+                writer.WriteText(tpage, opacity: opacity, color: color);
+            }
+
+            if (rect == null)
+                rect = clip;
+            page.ShowPdfPage(
+                rect,
+                textDoc,
+                0,
+                overlay: overlay,
+                keepProportion: keepProportion,
+                rotate: rotate,
+                clip: clip,
+                oc: oc
+                );
+            textDoc = null;
+            tpage = null;
+        }
+
+        public static (int, int) MergeResources(PdfPage page, PdfObj res)
+        {
+            PdfObj resources = page.obj().pdf_dict_get(new PdfObj("Resources"));
+            PdfObj mainExtg = page.obj().pdf_dict_get(new PdfObj("ExtGState"));
+            PdfObj mainFonts = page.obj().pdf_dict_get(new PdfObj("Font"));
+
+            PdfObj tmpExtg = res.pdf_dict_get(new PdfObj("ExtGState"));
+            PdfObj tmpFonts = res.pdf_dict_get(new PdfObj("Font"));
+            int maxAlp = -1;
+            int maxFonts = -1;
+            int n = 0;
+
+            if (tmpExtg.pdf_is_dict() != 0)
+            {
+                n = tmpExtg.pdf_dict_len();
+                if (mainExtg.pdf_is_dict() != 0)
+                {
+                    for (int i = 0; i < mainExtg.pdf_dict_len(); i++)
+                    {
+                        string alp = mainExtg.pdf_dict_get_key(i).pdf_to_name();
+                        if (!alp.StartsWith("Alp"))
+                            continue;
+                        int j = mupdf.mupdf.fz_atoi(alp.Substring(3));
+                        if (j > maxAlp)
+                            maxAlp = j;
+                    }
+                }
+                else
+                    mainExtg = resources.pdf_dict_put_dict(new PdfObj("ExtGState"), n);
+
+                maxAlp += 1;
+                for (int i = 0; i < n; i++)
+                {
+                    string alp = tmpExtg.pdf_dict_get_key(i).pdf_to_name();
+                    int j = mupdf.mupdf.fz_atoi(alp.Substring(3)) + maxAlp;
+                    string text = $"Alp{j}";
+                    PdfObj val = tmpExtg.pdf_dict_get_val(i);
+                    mainExtg.pdf_dict_puts(text, val);
+                }
+            }
+            if (mainFonts.pdf_is_dict() != 0)
+            {
+                for (int i = 0; i < mainFonts.pdf_dict_len(); i++)
+                {
+                    string font = mainFonts.pdf_dict_get_key(i).pdf_to_name();
+                    if (!font.StartsWith("F"))
+                        continue;
+                    int j = mupdf.mupdf.fz_atoi(font.Substring(1));
+                    if (j > maxFonts)
+                        maxFonts = j;
+                }
+            }
+            else
+                mainFonts = resources.pdf_dict_put_dict(new PdfObj("Font"), 2);
+
+            maxFonts += 1;
+            for (int i = 0; i < tmpFonts.pdf_dict_len(); i ++)
+            {
+                string font = tmpFonts.pdf_dict_get_key(i).pdf_to_name();
+                int j = mupdf.mupdf.fz_atoi(font.Substring(1)) + maxFonts;
+                string text = $"F{j}";
+                PdfObj val = tmpFonts.pdf_dict_get_val(i);
+                mainFonts.pdf_dict_puts(text, val);
+            }
+            return (maxAlp, maxFonts);
+        }
+
+        public static void RepairMonoFont(MuPDFPage page, MuPDFFont font)
+        {
+            if (font.Flags["mono"] == 0)
+                return;
+            MuPDFDocument doc = page.Parent;
+            List<Entry> fonts = page.GetFonts();
+            List<int> xrefs = new List<int>();
+            foreach (Entry f in fonts)
+            {
+                if (f.Name == font.Name && f.RefName.StartsWith("F") && f.Encoding.StartsWith("Identity"))
+                    xrefs.Add(f.Xref);
+            }
+
+            if (xrefs.Count == 0)
+                return;
+            int width = Convert.ToInt32(font.GlyphAdvance(32) * 1000);
+            foreach (int xref in xrefs)
+            {
+                if (Utils.SetFontWidth(doc, xref, width))
+                    Console.WriteLine($"Cannot set width for {font.Name} in xref {xref}");
+            }
+        }
+
+        public static bool SetFontWidth(MuPDFDocument doc, int xref, int width)
+        {
+            PdfDocument pdf = MuPDFDocument.AsPdfDocument(doc);
+            if (pdf == null) return false;
+
+            PdfObj font = pdf.pdf_load_object(xref);
+            PdfObj dFonts = font.pdf_dict_get(new PdfObj("DescendantFonts"));
+            if (dFonts.pdf_is_array() != 0)
+            {
+                int n = dFonts.pdf_array_len();
+                for (int i  = 0; i < n; i++)
+                {
+                    PdfObj dFont = dFonts.pdf_array_get(i);
+                    PdfObj wArray = pdf.pdf_new_array(3);
+                    wArray.pdf_array_push(mupdf.mupdf.pdf_new_int(0));
+                    wArray.pdf_array_push(mupdf.mupdf.pdf_new_int(65535));
+                    wArray.pdf_array_push(mupdf.mupdf.pdf_new_int(width));
+                    dFont.pdf_dict_put(new PdfObj("W"), wArray);
+                }
+            }
+            return true;
+        }
+
+        public static int GetOC(MuPDFDocument doc, int xref)
+        {
+            if (doc.IsClosed || doc.IsEncrypted)
+                throw new Exception("document close or encrypted");
+            (string t, string name) = doc.GetKeyXref(xref, "Subtype");
+            if (t != "name" || !(name == "/Image" || name == "/Form"))
+                throw new Exception($"bad object type at xref {xref}");
+            (t, string oc) = doc.GetKeyXref(xref, "OC");
+            if (t != "xref")
+                return 0;
+            return Convert.ToInt32(oc.Replace("0 R", ""));
+        }
+
+        public static OCMD GetOCMD(MuPDFDocument doc, int xref)
+        {
+            if (!INRANGE(xref, 0, doc.XrefLength() - 1))
+                throw new Exception("bad xref");
+            string text = doc.GetXrefObject(xref, compressed: 1);
+            if (!text.Contains("/Type/OCMD"))
+                throw new Exception("bad object type");
+            int textLen = text.Length;
+
+            int p0 = text.IndexOf("/OCGs[");
+            int p1 = text.IndexOf("]", p0);
+            string[] ocgs;
+
+            if (p0 < 0 || p1 < 0)
+                ocgs = null;
+            else
+            {
+                ocgs = text.Substring(p0 + 6, p1 - p0 - 6).Replace("0 R", " ").Split(" ");
+            }
+
+            p0 = text.IndexOf("/P/");
+            string policy;
+            string ve;
+
+            if (p0 < 0)
+                policy = null;
+            else
+            {
+                p1 = text.IndexOf("ff", p0);
+                if (p1 < 0)
+                    p1 = text.IndexOf("on", p0);
+                if (p1 < 0)
+                    throw new Exception("bad object at xref");
+                else
+                    policy = text.Substring(p0 + 3, p1 + 2);
+            }
+
+            p0 = text.IndexOf("/VE[");
+            if (p0 < 0)
+                ve = null;
+            else
+            {
+                int lp = 0;
+                int rp = 0;
+                p1 = p0;
+                while (lp < 1 || lp != rp)
+                {
+                    p1 += 1;
+                    if (!(p1 < textLen))
+                        throw new Exception("bad object ast xref");
+                    if (text[p1] == '[')
+                        lp += 1;
+                    if (text[p1] == ']')
+                        rp += 1;
+                }
+                ve = text.Substring(p0 + 3, p1 + 1);
+                ve = ve.Replace("/And", "\"and\",").Replace("/Not", "\"not\",").Replace("/Or", "\"or\",");
+                ve = ve.Replace(" 0 R]", "]").Replace(" 0 R", ",").Replace("][", "],[");
+                
+                var obj = JsonConvert.DeserializeObject(ve);
+                if (obj == null)
+                    throw new Exception($"bad /VE key: {ve}");
+            }
+            return new OCMD() { Xref = xref, Ocgs = ocgs, Policy = policy, Ve = ve };
         }
     }
 }

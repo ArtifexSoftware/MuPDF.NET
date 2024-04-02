@@ -279,7 +279,7 @@ namespace MuPDF.NET
             {
                 if ((positionFrom.OpenClose & true) && positionFrom.Href != null)
                 {
-                    LinkStruct link = new LinkStruct();
+                    Link link = new Link();
                     link.From = new Rect(positionFrom.Rect);
                     Position positionTo;
                     if (positionFrom.Href.StartsWith("#"))
