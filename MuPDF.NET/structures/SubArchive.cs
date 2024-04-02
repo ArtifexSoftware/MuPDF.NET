@@ -1,6 +1,6 @@
 ﻿namespace MuPDF.NET
 {
-    public class SubArchiveStruct
+    public class SubArchive
     {
         public string Fmt;
 

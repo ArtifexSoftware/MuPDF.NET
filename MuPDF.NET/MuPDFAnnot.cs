@@ -201,13 +201,13 @@ namespace MuPDF.NET
             }
         }
 
-        public AnnotInfoStruct AnnotInfo
+        public AnnotInfo AnnotInfo
         {
             get
             {
                 PdfAnnot annot = _nativeAnnotion;
                 PdfObj annotObj = annot.pdf_annot_obj();
-                AnnotInfoStruct res = new AnnotInfoStruct();
+                AnnotInfo res = new AnnotInfo();
 
                 res.Content = annot.pdf_annot_contents();
 
@@ -403,7 +403,7 @@ namespace MuPDF.NET
             }
         }
 
-        public BorderStruct Border
+        public Border Border
         {
             get
             {
@@ -418,7 +418,7 @@ namespace MuPDF.NET
                     PdfAnnotType.PDF_ANNOT_SQUARE
                 }).Contains(atype))
                 {
-                    return new BorderStruct();
+                    return new Border();
                 }
 
                 PdfObj annotObj = _nativeAnnotion.pdf_annot_obj();
@@ -426,7 +426,7 @@ namespace MuPDF.NET
             }
         }
 
-        public ColorStruct Colors
+        public Color Colors
         {
             get
             {
@@ -1068,7 +1068,7 @@ namespace MuPDF.NET
             return new Pixmap(pix);
         }
 
-        public SoundStruct GetSound()
+        public Sound GetSound()
         {
             PdfAnnot annot = _nativeAnnotion;
             PdfObj annotObj = annot.pdf_annot_obj();
@@ -1085,7 +1085,7 @@ namespace MuPDF.NET
                 throw new Exception("Unsupported Sound Stream");
             }
 
-            SoundStruct ret = new SoundStruct();
+            Sound ret = new Sound();
             PdfObj obj = sound.pdf_dict_get(new PdfObj("R"));
             if (obj != null)
                 ret.Rate = obj.pdf_to_real();
@@ -1108,13 +1108,13 @@ namespace MuPDF.NET
             return ret;
         }
 
-        public MuPDFSTextPage GetTextPage(Rect clip = null, int flags = 0)
+        public MuPDFTextPage GetTextPage(Rect clip = null, int flags = 0)
         {
             FzStextOptions options = new FzStextOptions();
             options.flags = flags;
             PdfAnnot annot = _nativeAnnotion;
             FzStextPage stPage = new FzStextPage(annot, options);
-            return new MuPDFSTextPage(stPage);
+            return new MuPDFTextPage(stPage);
         }
 
         public int IrtXRef()
@@ -1167,7 +1167,7 @@ namespace MuPDF.NET
             annotObj.pdf_dict_put_name(new PdfObj("BM"), blendMode);
         }
 
-        public void SetBorder(BorderStruct? border, float width = -1, string style = null, int[] dashes = null, int clouds = -1)
+        public void SetBorder(Border? border, float width = -1, string style = null, int[] dashes = null, int clouds = -1)
         {
             (PdfAnnotType atype, string atname, string _) = this.Type;
 
@@ -1201,7 +1201,7 @@ namespace MuPDF.NET
                 }
             }
 
-            BorderStruct border_ = new BorderStruct();
+            Border border_ = new Border();
             if (border == null)
             {
                 border_.Width = width;
@@ -1216,7 +1216,7 @@ namespace MuPDF.NET
             SetBorderAnnot(border_, pdf, annotObj);
         }
 
-        public static BorderStruct GetBorderFromAnnot(PdfObj annotObj)
+        public static Border GetBorderFromAnnot(PdfObj annotObj)
         {
             List<int> dashes = new List<int>();
             string style = "";
@@ -1259,7 +1259,7 @@ namespace MuPDF.NET
             if (obj != null)
                 clouds = obj.pdf_dict_get(new PdfObj("I")).pdf_to_int();
 
-            BorderStruct ret = new BorderStruct();
+            Border ret = new Border();
             ret.Width = width;
             ret.Dashes = dashes.ToArray();
             ret.Style = style;
@@ -1267,9 +1267,9 @@ namespace MuPDF.NET
             return ret;
         }
 
-        public static ColorStruct GetColorFromAnnot(PdfObj annotObj)
+        public static Color GetColorFromAnnot(PdfObj annotObj)
         {
-            ColorStruct ret = new ColorStruct();
+            Color ret = new Color();
             List<float> bc = new List<float>();
             List<float> fc = new List<float>();
 
@@ -1314,7 +1314,7 @@ namespace MuPDF.NET
             return val;
         }
 
-        public static void SetBorderAnnot(BorderStruct border, PdfDocument doc, PdfObj annotObj)
+        public static void SetBorderAnnot(Border border, PdfDocument doc, PdfObj annotObj)
         {
             int dashLen = 0;
             float nWidth = border.Width;
@@ -1322,7 +1322,7 @@ namespace MuPDF.NET
             string nStyle = border.Style;
             float nClouds = border.Clouds;
 
-            BorderStruct oldBorder = GetBorderFromAnnot(annotObj);
+            Border oldBorder = GetBorderFromAnnot(annotObj);
 
             annotObj.pdf_dict_del(new PdfObj("BS"));
             annotObj.pdf_dict_del(new PdfObj("BE"));
@@ -1366,11 +1366,11 @@ namespace MuPDF.NET
             }
         }
 
-        public void SetColors(ColorStruct? colors = null, float[] stroke = null, float[] fill = null)
+        public void SetColors(Color? colors = null, float[] stroke = null, float[] fill = null)
         {
             MuPDFDocument doc = Parent.Parent;
 
-            ColorStruct colors_ = new ColorStruct();
+            Color colors_ = new Color();
             if (colors == null)
             {
                 colors_.Fill = fill;
@@ -1442,7 +1442,7 @@ namespace MuPDF.NET
         }
 
         public void SetInfo(
-            AnnotInfoStruct info = null,
+            AnnotInfo info = null,
             string content = null,
             string title = null,
             string creationDate = null,
@@ -2255,6 +2255,39 @@ namespace MuPDF.NET
             if (code == "c")
                 return s + "K ";
             return s + "k ";
+        }
+
+        public dynamic GetText(
+            MuPDFPage page,
+            string option = "text",
+            Rect clip = null,
+            int flags = 0,
+            MuPDFTextPage stPage = null,
+            bool sort = false,
+            char[] delimiters = null
+            )
+        {
+            return Utils.GetText(
+                page,
+                option,
+                clip,
+                flags,
+                stPage,
+                sort,
+                delimiters
+                );
+        }
+
+        /// <summary>
+        /// Get text in the box area
+        /// </summary>
+        /// <param name="page"></param>
+        /// <param name="rect"></param>
+        /// <param name="textPage"></param>
+        /// <returns></returns>
+        public string GetTextBox(MuPDFPage page, Rect rect, MuPDFTextPage textPage)
+        {
+            return Utils.GetTextBox(page, rect, textPage );
         }
 
         public void UpdateFile(byte[] buffer = null, string filename = null, string uFilename = null, string desc = null)

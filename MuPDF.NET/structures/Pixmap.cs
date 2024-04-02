@@ -305,6 +305,26 @@ namespace MuPDF.NET
             _nativePixmap = pix;
         }
 
+        public Pixmap(Pixmap pix, int alpha)
+        {
+            FzPixmap srcPix = pix.ToFzPixmap();
+            if (!Utils.INRANGE(alpha, 0, 1))
+                throw new Exception("bad alpha value");
+            FzColorspace cs = mupdf.mupdf.fz_pixmap_colorspace(srcPix);
+            if (cs.m_internal == null && alpha == 0)
+                throw new Exception("cannot drop alpha for 'Null' colorspace");
+            FzSeparations seps = new FzSeparations();
+            int n = srcPix.fz_pixmap_colorants();
+            int w = srcPix.fz_pixmap_width();
+            int h = srcPix.fz_pixmap_height();
+            FzPixmap pm = mupdf.mupdf.fz_new_pixmap(cs, w, h, seps, alpha);
+            pm.m_internal.x = srcPix.m_internal.x;
+            pm.m_internal.y = srcPix.m_internal.y;
+            pm.m_internal.xres = srcPix.m_internal.xres;
+            pm.m_internal.yres = srcPix.m_internal.yres;
+            
+        }
+
         public FzPixmap ToFzPixmap() { return _nativePixmap; }
 
         public byte[] ToBytes(int format, int jpgQuality)

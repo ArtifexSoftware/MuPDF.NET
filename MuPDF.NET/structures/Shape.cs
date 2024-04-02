@@ -172,7 +172,7 @@ namespace MuPDF.NET
                 setSimple: setSimple
                 );
 
-            FontStruct fontInfo = Utils.CheckFontInfo(Doc, xref);
+            Font fontInfo = Utils.CheckFontInfo(Doc, xref);
             
             int ordering = fontInfo.Ordering;
             bool simple = fontInfo.Simple;
@@ -316,13 +316,13 @@ namespace MuPDF.NET
             return nLines;
         }
 
-        public void Commit(int overlay)
+        public void Commit(bool overlay)
         {
             TotalCont += this.TextCont;
             byte[] bTotal = Encoding.UTF8.GetBytes(TotalCont);
             if (TotalCont != "")
             {
-                int xref = Utils.InsertContents(Page, Encoding.UTF8.GetBytes(" "), overlay);
+                int xref = Utils.InsertContents(Page, Encoding.UTF8.GetBytes(" "), overlay ? 1 : 0);
                 Doc.UpdateStream(xref, bTotal);
             }
 
@@ -645,7 +645,7 @@ namespace MuPDF.NET
         /// <param name="p2"></param>
         /// <param name="breadth"></param>
         /// <returns></returns>
-        public Point DrawSquiggle(Point p1, Point p2, int breadth = 2)
+        public Point DrawSquiggle(Point p1, Point p2, float breadth = 2)
         {
             Point s = p2 - p1;
             float rad = s.Abs();
@@ -730,9 +730,20 @@ namespace MuPDF.NET
         /// <param name="fillOpacity">(new in v1.18.1) set transparency for fill colors. Default is 1 (intransparent).</param>
         /// <param name="strokeOpacity">(new in v1.18.1) set transparency for stroke colors. Value < 0 or > 1 will be ignored. Default is 1 (intransparent).</param>
         /// <param name="oc">(new in v1.18.4) the xref number of an OCG or OCMD to make this drawing conditionally displayable.</param>
-        public void Finish(float width = 1.0f, float[] color = null, float[] fill = null, int lineCap = 0,
-            int lineJoin = 0, string dashes = null, bool evenOdd = false, Morph morph = null, bool closePath = true,
-            float fillOpacity = 1.0f, float strokeOpacity = 1.0f, int oc = 0)
+        public void Finish(
+            float width = 1.0f,
+            float[] color = null,
+            float[] fill = null,
+            int lineCap = 0,
+            int lineJoin = 0,
+            string dashes = null,
+            bool evenOdd = false,
+            Morph morph = null,
+            bool closePath = true,
+            float fillOpacity = 1.0f,
+            float strokeOpacity = 1.0f,
+            int oc = 0
+            )
         {
             if (DrawCont == "")
                 return;
@@ -961,7 +972,7 @@ namespace MuPDF.NET
                 fname = fname.Substring(1);
 
             int xref = Page.InsertFont(fontName: fname, fontFile: fontFile, encoding: encoding, setSimple: setSimple);
-            FontStruct fontInfo = Utils.CheckFontInfo(Doc, xref);
+            Font fontInfo = Utils.CheckFontInfo(Doc, xref);
 
             if (fontInfo == null)
                 throw new Exception("no found font info");

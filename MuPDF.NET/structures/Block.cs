@@ -2,8 +2,10 @@
 
 namespace MuPDF.NET
 {
-    public class BlockStruct
+    public class Block
     {
+        public int Xref;
+
         public int Number;
 
         public int Type;
@@ -28,12 +30,12 @@ namespace MuPDF.NET
 
         public uint Size;
 
-        public FzBuffer Image;
+        public byte[] Image;
 
         public string CsName;
 
         public vectoruc Digest;
 
-        public List<LineStruct> Lines;
+        public List<Line> Lines;
     }
 }

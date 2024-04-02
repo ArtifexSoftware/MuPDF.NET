@@ -2,9 +2,9 @@
 
 namespace MuPDF.NET
 {
-    public class LineStruct
+    public class Line
     {
-        public List<SpanStruct> Spans;
+        public List<Span> Spans;
 
         public int WMode;
 

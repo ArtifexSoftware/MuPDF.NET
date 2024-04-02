@@ -1,4 +1,6 @@
 ﻿using mupdf;
+using System.Runtime.InteropServices;
+using System.Text;
 
 namespace MuPDF.NET
 {
@@ -19,7 +21,7 @@ namespace MuPDF.NET
 
         public Rect TextRect;
 
-        public List<Font> UsedFonts;
+        public List<MuPDFFont> UsedFonts;
 
         public bool ThisOwn;
 
@@ -34,7 +36,7 @@ namespace MuPDF.NET
             ICtm = ~Ctm;
             LastPoint = new Point();
             TextRect = new Rect();
-            UsedFonts = new List<Font>();
+            UsedFonts = new List<MuPDFFont>();
             Color = color;
             ThisOwn = false;
         }
@@ -48,12 +50,12 @@ namespace MuPDF.NET
             }
         }
 
-        public (Rect, Point) Append(Point pos, string text, Font font, float fontSize = 11.0f, string language = null, int right2left = 0, int smallCaps = 0)
+        public (Rect, Point) Append(Point pos, string text, MuPDFFont font, float fontSize = 11.0f, string language = null, int right2left = 0, int smallCaps = 0)
         {
             pos = pos * ICtm;
             if (font == null)
             {
-                font = new Font("helv");
+                font = new MuPDFFont("helv");
             }
 
             if (!font.IsWriteable)
@@ -127,7 +129,7 @@ namespace MuPDF.NET
             return text;
         }
 
-        public (Rect, Point) Appendv(Point pos, string text, Font font = null, float fontSiz = 11.0f,
+        public (Rect, Point) Appendv(Point pos, string text, MuPDFFont font = null, float fontSiz = 11.0f,
             string language = null, bool smallCaps = false)
         {
             float lheight = fontSiz * 1.2f;
@@ -139,46 +141,123 @@ namespace MuPDF.NET
             return (TextRect, LastPoint);
         }
 
-        /*public void WriteText(MuPDFPage page, float[] color = null, float opacity = -1, float overlay = 1, Morph morph = null,
+        public void WriteText(MuPDFPage page, float[] color = null, float opacity = -1, int overlay = 1, Morph morph = null,
             Matrix matrix = null, int renderMode = 0, int oc = 0)
         {
             if ((Rect - page.Rect).Abs() > 1e-3)
                 throw new Exception("incompatible page rect");
-
+            if (matrix != null && morph != null)
+                throw new Exception("only one of matrix, m");
             if (opacity == -1)
-                opacity = this.Opacity;
+                opacity = Opacity;
             if (color == null)
-                color = this.Color;
+                color = Color;
 
-            PdfPage pdfpage = page.GetPdfPage();
+            PdfPage pdfPage = page.GetPdfPage();
+            float alpha = 1;
             FzColorspace colorSpace;
 
-            float alpha = 1;
-            if (opacity > 0 && opacity < 1)
+            if (opacity >= 0 && opacity <= 1)
                 alpha = opacity;
             int nCol = 1;
-            float[] devColor = new float[] { 0, 0, 0, 0 };
+            float[] devColor = { 0, 0, 0, 0 };
             if (color != null)
-                devColor = MuPDFAnnotation.ColorFromSequence(color);
-            if (devColor != null && devColor.Length == 3)
+                devColor = MuPDFAnnot.ColorFromSequence(color);
+            if (devColor.Length == 3)
                 colorSpace = mupdf.mupdf.fz_device_rgb();
-            else if (devColor != null && devColor.Length == 4)
+            else if (devColor.Length == 4)
                 colorSpace = mupdf.mupdf.fz_device_cmyk();
             else
                 colorSpace = mupdf.mupdf.fz_device_gray();
 
-            PdfObj resources = pdfpage.doc().pdf_new_dict(5);
+            PdfObj resources = pdfPage.doc().pdf_new_dict(5);
             FzBuffer contents = mupdf.mupdf.fz_new_buffer(1024);
-            FzDevice dev = pdfpage.doc().pdf_new_pdf_device(new FzMatrix(), resources, contents);
+            FzDevice dev = mupdf.mupdf.pdf_new_pdf_device(pdfPage.doc(), new FzMatrix(), resources, contents);
 
-            IntPtr p_devColor = Marshal.AllocHGlobal(devColor.Length);
-            Marshal.Copy(devColor, 0, p_devColor, devColor.Length);
-            SWIGTYPE_p_float swig_devColor = new SWIGTYPE_p_float(p_devColor, true);
-            mupdf.mupdf.fz_fill_text(dev, _nativeText, new FzMatrix(), colorSpace, swig_devColor, alpha, new FzColorParams(mupdf.mupdf.fz_default_color_params));
-            mupdf.mupdf.fz_close_device(dev);
+            IntPtr pDevColor = Marshal.AllocHGlobal(devColor.Length * sizeof(float));
+            Marshal.Copy(devColor, 0, pDevColor, devColor.Length);
+            SWIGTYPE_p_float swigDevColor = new SWIGTYPE_p_float(pDevColor, true);
 
-            int maxNums = Utils.MergeResources()
+            dev.fz_fill_text(_nativeText, new FzMatrix(), colorSpace, swigDevColor, alpha, new FzColorParams(mupdf.mupdf.fz_default_color_params));
+            dev.fz_close_device();
 
-        }*/
+            (int, int) maxNums = Utils.MergeResources(pdfPage, resources);
+            string cont = Utils.EscapeStrFromBuffer(contents);
+            (int maxAlp, int maxFont) = maxNums;
+            string[] oldLines = cont.Split('\n');
+
+            string optCont = page.GetOptionalContent(oc);
+            string bdc = "";
+            string emc = "";
+            if (!string.IsNullOrEmpty(optCont))
+            {
+                bdc = $"/OC /{optCont} BDC";
+                emc = "EMC";
+            }
+            List<string> newContLines = new List<string>();
+            if (string.IsNullOrEmpty(bdc))
+                newContLines.Add(bdc);
+
+            Point cb = page.CropBoxPosition;
+            float delta = 0;
+            if (page.Rotation == 90 || page.Rotation == 270)
+                delta = page.Rect.Height - page.Rect.Width;
+            Rect mb = page.MediaBox;
+            if (cb != null || mb.Y0 != 0 || delta != 0)
+                newContLines.Add($"1 0 0 1 {cb.X} {cb.Y + mb.Y0 - delta} cm");
+
+            Matrix matrix_ = new Matrix();
+            if (morph != null)
+            {
+                Point p = morph.P * ICtm;
+                Matrix matrixDelta = (new Matrix(1, 1)).Pretranslate(p.X, p.Y);
+                matrix_ = ~matrixDelta * morph.M * matrixDelta;
+            }
+
+            if (morph != null || matrix != null)
+                newContLines.Add($"{matrix_.A} {matrix_.B} {matrix_.C} {matrix_.D} {matrix_.E} {matrix_.F}");
+            foreach (string line in newContLines)
+            {
+                string line_ = line;
+                if (line_.EndsWith(" cm"))
+                    continue;
+                if (line_ == "BT")
+                {
+                    newContLines.Add(line_);
+                    newContLines.Add($"{renderMode} Tr");
+                    continue;
+                }
+                if (line_.EndsWith(" gs"))
+                {
+                    int alp = Convert.ToInt32(line_.Split(" ")[0].Substring(4)) + maxAlp;
+                    line_ = $"/Alp{alp} gs";
+                }
+                else if (line_.EndsWith(" Tf"))
+                {
+                    string[] temp = line_.Split(" ");
+                    float fSize = (float)Convert.ToDouble(temp[1]);
+                    float w = 1;
+                    if (renderMode != 0)
+                        w = fSize * 0.05f;
+                    newContLines.Add($"{w} w");
+                    int font = Convert.ToInt32(temp[0].Substring(2)) + maxFont;
+                    line_ = string.Join(" ", (new List<string>() { $"/F{font}" }).Concat(temp.Skip(1)));
+                }
+                else if (line_.EndsWith(" rg"))
+                    newContLines.Add(line_.Replace("rg", "RG"));
+                else if (line_.EndsWith(" g"))
+                    newContLines.Add(line_.Replace(" g", " G"));
+                else if (line_.EndsWith(" k"))
+                    newContLines.Add(line_.Replace(" k", " K"));
+                newContLines.Add(line_);
+            }
+            if (string.IsNullOrEmpty(emc))
+                newContLines.Add(emc);
+            newContLines.Add("Q\n");
+            byte[] content = Encoding.UTF8.GetBytes(string.Join("\n", newContLines));
+            Utils.InsertContents(page, content, overlay);
+            foreach (MuPDFFont font in UsedFonts)
+                Utils.RepairMonoFont(page, font);
+        }
     }
 }

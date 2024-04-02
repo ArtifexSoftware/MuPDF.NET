@@ -13,16 +13,16 @@ namespace MuPDF.NET.Test
         {
             doc = new MuPDFDocument("input.pdf");
 
-            textPage = doc.LoadPage(0).GetSTextPage();
+            textPage = doc.LoadPage(0).GetTextPage();
         }
 
         [Test]
         public void Constructor()
         {
-            textPage = new MuPDFSTextPage(new mupdf.FzRect());
+            textPage = new MuPDFTextPage(new mupdf.FzRect());
             Assert.Pass();
 
-            textPage = new MuPDFSTextPage(doc.LoadPage(0).GetSTextPage());
+            textPage = new MuPDFTextPage(doc.LoadPage(0).GetTextPage());
             Assert.Pass();
         }
 
