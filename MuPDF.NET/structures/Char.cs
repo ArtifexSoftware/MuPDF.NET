@@ -2,7 +2,7 @@
 
 namespace MuPDF.NET
 {
-    public class CharStruct
+    public class Char
     {
         public FzPoint Origin;
 

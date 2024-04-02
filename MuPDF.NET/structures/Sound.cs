@@ -1,6 +1,6 @@
 ﻿namespace MuPDF.NET
 {
-    public class SoundStruct
+    public class Sound
     {
         public float Rate;
 

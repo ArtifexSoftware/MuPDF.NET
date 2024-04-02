@@ -2,9 +2,9 @@
 
 namespace MuPDF.NET
 {
-    public class SpanStruct
+    public class Span
     {
-        public List<CharStruct> Chars;
+        public List<Char> Chars;
 
         public FzPoint Origin;
 

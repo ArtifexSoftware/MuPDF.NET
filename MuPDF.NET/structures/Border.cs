@@ -1,6 +1,6 @@
 ﻿namespace MuPDF.NET
 {
-    public class BorderStruct
+    public class Border
     {
         public float Width;
 

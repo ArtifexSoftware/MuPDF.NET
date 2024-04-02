@@ -1,6 +1,6 @@
 ﻿namespace MuPDF.NET
 {
-    public class AnnotInfoStruct
+    public class AnnotInfo
     {
         public string Content;
 

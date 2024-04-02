@@ -1,6 +1,6 @@
 ﻿namespace MuPDF.NET
 {
-    public class ImageInfoStruct
+    public class ImageInfo
     {
         public string Ext;
 

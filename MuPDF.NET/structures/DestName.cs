@@ -1,6 +1,6 @@
 ﻿namespace MuPDF.NET
 {
-    public class DestNameStruct
+    public class DestName
     {
         public int Page;
 

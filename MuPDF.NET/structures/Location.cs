@@ -1,6 +1,6 @@
 ﻿namespace MuPDF.NET
 {
-    public class LocationStruct
+    public class Location
     {
         public int Chapter;
 

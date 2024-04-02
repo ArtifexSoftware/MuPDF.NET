@@ -1,6 +1,6 @@
 ﻿namespace MuPDF.NET
 {
-    public class EmbfileInfoStruct
+    public class EmbfileInfo
     {
         public string Name;
 
