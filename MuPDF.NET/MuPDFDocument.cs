@@ -1,4 +1,5 @@
-﻿using mupdf;
+﻿using Microsoft.Maui.Graphics;
+using mupdf;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -17,25 +18,23 @@ namespace MuPDF.NET
 
         public Dictionary<string, string> MetaData;
 
-        public List<FontStruct> FontInfo = new List<FontStruct>();
+        public List<Font> FontInfo = new List<Font>();
 
         public Dictionary<int, MuPDFGraftMap> GraftMaps = new Dictionary<int, MuPDFGraftMap>();
 
         public Dictionary<(int, int), int> ShownPages = new Dictionary<(int, int), int>();
 
-        public string InsertedImages = "";
-
-        private FzDocument _nativeDocument;
+        public Dictionary<string, int> InsertedImages = new Dictionary<string, int> ();
 
         public Dictionary<int, MuPDFPage> PageRefs;
 
         public string Name = null;
 
-        public PdfDocument PdfDocument;
-
         public List<byte> Stream;
 
         private bool _isPDF;
+
+        private FzDocument _nativeDocument;
 
         public bool NeedsPass
         {
@@ -239,7 +238,7 @@ namespace MuPDF.NET
 
         public MuPDFDocument(PdfDocument doc)
         {
-            PdfDocument = doc;
+            _nativeDocument = doc.super();
             IsPDF = true;
         }
 
@@ -251,7 +250,7 @@ namespace MuPDF.NET
                 IsClosed = false;
                 IsEncrypted = false;
                 MetaData = null;
-                FontInfo = new List<FontStruct>();
+                FontInfo = new List<Font>();
                 PageRefs = new Dictionary<int, MuPDFPage>();
 
                 if (stream != null)
@@ -928,26 +927,26 @@ namespace MuPDF.NET
             return this[pno];
         }
 
-        public List<List<dynamic>> GetPageFonts(int pno, bool full = false)
+        public List<Entry> GetPageFonts(int pno, bool full = false)
         {
             if (IsClosed || Is_Encrypted)
                 throw new Exception("document closed or encrypted");
             if (!IsPDF)
                 return null;
-            List<List<dynamic>> val = GetPageInfo(pno, 1);
-            List<List<dynamic>> ret = new List<List<dynamic>>();
+            List<Entry> val = GetPageInfo(pno, 1);
+            List<Entry> ret = new List<Entry>();
             if (full == false)
             {
-                foreach (List<dynamic> v in val)
+                foreach (Entry v in val)
                 {
-                    v.RemoveAt(v.Count - 1);
+                    v.StreamXref = 0;
                     ret.Add(v);
                 }
             }
             return ret;
         }
 
-        private List<List<dynamic>> GetPageInfo(int pno, int what)
+        private List<Entry> GetPageInfo(int pno, int what)
         {
             if (IsClosed || IsEncrypted)
                 throw new Exception("document closed or encrypted");
@@ -963,7 +962,7 @@ namespace MuPDF.NET
             PdfObj pageRef = pdf.pdf_lookup_page_obj(n);
             PdfObj rsrc = pageRef.pdf_dict_get_inheritable(new PdfObj("Resources"));
 
-            List<List<dynamic>> liste = new List<List<dynamic>>();
+            List<Entry> liste = new List<Entry>();
             List<dynamic> tracer = new List<dynamic>();
 
             if (rsrc.m_internal != null)
@@ -1048,7 +1047,7 @@ namespace MuPDF.NET
             return page;
         }
 
-        public FontStruct ExtractFont(int xref = 0, int infoOnly = 0, string named = null)
+        public Font ExtractFont(int xref = 0, int infoOnly = 0, string named = null)
         {
             PdfDocument pdf = AsPdfDocument(this);
             PdfObj obj = pdf.pdf_load_object(xref);
@@ -1077,7 +1076,7 @@ namespace MuPDF.NET
                 else
                     bytes = Encoding.UTF8.GetBytes("");
 
-                return new FontStruct()
+                return new Font()
                 {
                     Name = Utils.EscapeStrFromStr(bName.pdf_to_name()),
                     Ext = Utils.UnicodeFromStr(ext),
@@ -1087,7 +1086,7 @@ namespace MuPDF.NET
             }
             else
             {
-                return new FontStruct()
+                return new Font()
                 {
                     Name = "",
                     Ext = "",
@@ -1164,28 +1163,31 @@ namespace MuPDF.NET
             return text;
         }
 
-        public List<List<dynamic>> GetPageXObjects(int pno)
+        public List<Entry> GetPageXObjects(int pno)
         {
             if (IsClosed || IsEncrypted)
                 throw new Exception("document closed or encrypted");
             if (!IsPDF)
-                return new List<List<dynamic>>();
-            List<List<dynamic>> val = GetPageInfo(pno, 3);
+                return new List<Entry>();
+            List<Entry> val = GetPageInfo(pno, 3);
             return val;
         }
 
-        public List<List<dynamic>> GetPageImages(int pno, bool full = false)
+        public List<Entry> GetPageImages(int pno, bool full = false)
         {
             if (IsClosed || IsEncrypted)
                 throw new Exception("document closed or encrypted");
             if (!IsPDF)
-                return new List<List<dynamic>>();
-            List<List<dynamic>> val = GetPageInfo(pno, 2);
+                return new List<Entry>();
+            List<Entry> val = GetPageInfo(pno, 2);
             if (full == false)
             {
-                List<List<dynamic>> ret = new List<List<dynamic>>();
-                foreach (List<dynamic> v in val)
-                    ret.Add(v.Take(v.Count - 1).ToList());
+                List<Entry> ret = new List<Entry>();
+                foreach (Entry v in val)
+                {
+                    v.StreamXref = 0;
+                    ret.Add(v);
+                }
                 return ret;
             }
 
@@ -1238,7 +1240,7 @@ namespace MuPDF.NET
 
                     if (!simple)
                     {
-                        LinkStruct link = Utils.GetLinkStruct(olItem, this);
+                        Link link = Utils.GetLinkDict(olItem, this);
                         list.Add(new List<dynamic>() { lvl, title, page, link });
                     }
                     else
@@ -1326,9 +1328,9 @@ namespace MuPDF.NET
         /// <param name="val"></param>
         /// <param name="page_refs"></param>
         /// <returns></returns>
-        private DestNameStruct GetArray(PdfObj val, Dictionary<int, int> page_refs)
+        private DestName GetArray(PdfObj val, Dictionary<int, int> page_refs)
         {
-            DestNameStruct template = new DestNameStruct() { Page = -1, Dest = "" };
+            DestName template = new DestName() { Page = -1, Dest = "" };
 
             string array = "";
             if (val.pdf_is_indirect() != 0)
@@ -1376,7 +1378,7 @@ namespace MuPDF.NET
             return template;
         }
 
-        private void FillDict(Dictionary<string, DestNameStruct> destDict, PdfObj pdfDict, Dictionary<int, int> page_refs)
+        private void FillDict(Dictionary<string, DestName> destDict, PdfObj pdfDict, Dictionary<int, int> page_refs)
         {
             int nameCount = pdfDict.pdf_dict_len();
 
@@ -1410,11 +1412,11 @@ namespace MuPDF.NET
             for (int i = 0; i < Len; i++)
                 page_refs.Add(GetPageXref(i), i);
 
-            PdfDocument pdf = this.PdfDocument;
+            PdfDocument pdf = MuPDFDocument.AsPdfDocument(this);
 
             // access PDF catalog
             PdfObj catalog = pdf.pdf_trailer().pdf_dict_gets("Root");
-            Dictionary<string, DestNameStruct> destDict = new Dictionary<string, DestNameStruct>();
+            Dictionary<string, DestName> destDict = new Dictionary<string, DestName>();
             PdfObj dests = mupdf.mupdf.pdf_new_name("Dests");
 
             PdfObj oldDests = catalog.pdf_dict_get(dests);
@@ -1426,7 +1428,7 @@ namespace MuPDF.NET
                 FillDict(destDict, tree, page_refs);
 
             Dictionary<string, dynamic> ret = new Dictionary<string, dynamic>();
-            foreach ((string k, DestNameStruct v) in destDict)
+            foreach ((string k, DestName v) in destDict)
                 ret.Add(k, v);
 
             return ret;
@@ -2018,7 +2020,7 @@ namespace MuPDF.NET
         /// <param name="n"></param>
         /// <returns></returns>
         /// <exception cref="Exception"></exception>
-        public List<(int, pdf_annot_type, string)> PageAnnotXrefs(int n)
+        public List<AnnotXref> PageAnnotXrefs(int n)
         {
             PdfDocument pdf = AsPdfDocument(_nativeDocument);
             int pageCount = pdf.pdf_count_pages();
@@ -2195,7 +2197,7 @@ namespace MuPDF.NET
             {
                 int xref = xrefs[i];
                 List<dynamic> item = items[i];
-                LinkStruct link;
+                Link link;
                 if (item.Count == 4)
                     link = item[3];
                 else
@@ -2262,10 +2264,10 @@ namespace MuPDF.NET
             }
         }
 
-        public List<(int, string)> GetPageLabels()
+        public List<Label> GetPageLabels()
         {
             PdfDocument pdf = AsPdfDocument(this);
-            List<(int, string)> rc = new List<(int, string)>();
+            List<Label> rc = new List<Label>();
 
             PdfObj pageLabels = mupdf.mupdf.pdf_new_name("PageLabels");
             PdfObj obj = Utils.pdf_dict_getl(pdf.pdf_trailer(), new string[] { "Root", "PageLabels" });
@@ -2649,8 +2651,8 @@ namespace MuPDF.NET
             int xref = _AddEmbfile(name, buffer, filename, ufilename, desc);
             string date = Utils.GetPdfNow();
             SetKeyXRef(xref, "Type", "/EmbeddedFile");
-            SetKeyXRef(xref, "Params/CreationDate", Utils.GetPdfStr(date));
-            SetKeyXRef(xref, "Params/ModDate", Utils.GetPdfStr(date));
+            SetKeyXRef(xref, "Params/CreationDate", Utils.GetPdfString(date));
+            SetKeyXRef(xref, "Params/ModDate", Utils.GetPdfString(date));
 
             return xref;
         }
@@ -2773,10 +2775,10 @@ namespace MuPDF.NET
             return _GetEmbeddedFile(idx);
         }
 
-        public EmbfileInfoStruct GetEmbfileInfo(dynamic item)
+        public EmbfileInfo GetEmbfileInfo(dynamic item)
         {
             int index = EmbeddedfileIndex(item);
-            EmbfileInfoStruct infoDict = new EmbfileInfoStruct() { Name = GetEmbfileNames()[index] };
+            EmbfileInfo infoDict = new EmbfileInfo() { Name = GetEmbfileNames()[index] };
             PdfDocument pdf = AsPdfDocument(this);
             int xref = 0;
             int ciXref = 0;
@@ -2870,7 +2872,7 @@ namespace MuPDF.NET
                 entry.pdf_dict_put_text_string(new PdfObj("Desc"), desc);
 
             string date = Utils.GetPdfNow();
-            SetKeyXRef(xref, "Params/ModDate", Utils.GetPdfStr(date));
+            SetKeyXRef(xref, "Params/ModDate", Utils.GetPdfString(date));
             return xref;
         }
 
@@ -2879,7 +2881,7 @@ namespace MuPDF.NET
         /// </summary>
         /// <param name="xref"></param>
         /// <returns></returns>
-        public ImageInfoStruct ExtractImage(int xref)
+        public ImageInfo ExtractImage(int xref)
         {
             if (IsClosed || IsEncrypted)
                 throw new Exception("document closed or encrypted");
@@ -2959,7 +2961,7 @@ namespace MuPDF.NET
             int bpc = img.bpc();
             string csName = img.colorspace().fz_colorspace_name();
 
-            ImageInfoStruct ret = new ImageInfoStruct()
+            ImageInfo ret = new ImageInfo()
             {
                 Ext = ext,
                 Smask = smask,
@@ -2980,12 +2982,12 @@ namespace MuPDF.NET
         /// Find new location after layouting a document.
         /// </summary>
         /// <returns></returns>
-        public LocationStruct FindBookmark(int bm)
+        public Location FindBookmark(int bm)
         {
             if (IsClosed || IsEncrypted)
                 throw new Exception("document closed or encrypted");
             FzLocation location = _nativeDocument.fz_lookup_bookmark(bm);
-            return new LocationStruct() { Chapter = location.chapter, Page = location.page };
+            return new Location() { Chapter = location.chapter, Page = location.page };
         }
 
         public void CopyFullPage(int pno, int to = -1)
@@ -3137,7 +3139,7 @@ namespace MuPDF.NET
         /// </summary>
         /// <returns>number of xref</returns>
         /// <exception cref="Exception"></exception>
-        public int GetNexXref()
+        public int GetNewXref()
         {
             if (IsClosed || IsEncrypted)
                 throw new Exception("document closed or encrypted");
@@ -3550,7 +3552,7 @@ namespace MuPDF.NET
             return byteStream.Data;
         }
 
-        public List<string> GetXrefKeys(int xref)
+        public List<string> GetKeysXref(int xref)
         {
             PdfDocument pdf = AsPdfDocument(this);
             int len = pdf.pdf_xref_len();
@@ -3621,7 +3623,7 @@ namespace MuPDF.NET
         /// Get length of xref table.
         /// </summary>
         /// <returns></returns>
-        public int XrefLength()
+        public int GetXrefLength()
         {
             int len = 0;
             PdfDocument pdf = AsPdfDocument(this);
@@ -3698,6 +3700,506 @@ namespace MuPDF.NET
             if (xml.m_internal != null)
                 xref = xml.pdf_to_num();
             return xref;
+        }
+
+        /// <summary>
+        /// Check if xref is an image object
+        /// </summary>
+        /// <param name="xref"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        public bool XrefIsImage(int xref)
+        {
+            if (IsClosed || IsEncrypted)
+                throw new Exception("document closed or encrypted");
+            if (GetKeyXref(xref, "Subtype").Item2 == "/Image")
+                return true;
+            return false;
+        }
+
+        /// <summary>
+        /// Copy a PDF dictionary object to another one given their xref numbers.
+        /// </summary>
+        /// <param name="newXref"></param>
+        /// <param name="xref"></param>
+        public void CopyXref(int newXref, int xref, List<string> keep = null)
+        {
+            if (XrefIsStream(newXref))
+            {
+                byte[] stream = GetXrefStreamRaw(newXref);
+                UpdateStream(xref, stream, 0);
+            }
+
+            if (keep == null)
+                keep = new List<string>();
+            foreach (string key in GetKeysXref(xref))
+            {
+                if (keep.Contains(key))
+                    continue;
+                SetKeyXRef(xref, key, "null");
+            }
+            foreach (string key in GetKeysXref(newXref))
+            {
+                (string, string) item = GetKeyXref(newXref, key);
+                SetKeyXRef(xref, key, item.Item2);
+            }
+        }
+
+        /// <summary>
+        /// Search for a string on a page.
+        /// </summary>
+        /// <param name="pno">page number</param>
+        /// <param name="text">string to be searched for</param>
+        /// <param name="quads">return quads instead of rectangles</param>
+        /// <param name="clip">restrict search to this rectangle</param>
+        /// <param name="flags">bit switches, default: join hyphened words</param>
+        /// <param name="textpage">reuse a prepared textpage</param>
+        /// <returns>a list of rectangles or quads, each containing an occurrence.</returns>
+        public List<Quad> SearchPageFor(
+            int pno,
+            string text,
+            bool quads = false,
+            Rect clip = null,
+            int flags = (int)(
+                TextFlags.TEXT_DEHYPHENATE
+                | TextFlags.TEXT_PRESERVE_WHITESPACE
+                | TextFlags.TEXT_PRESERVE_LIGATURES
+                | TextFlags.TEXT_MEDIABOX_CLIP
+            ), // 83
+            MuPDFTextPage textpage = null)
+        {
+            return this[pno].SearchFor(text, clip, quads, flags, textpage);
+        }
+        
+        public void DoLinks(MuPDFDocument doc, int fromPage = -1, int toPage = -1, int startAt = -1)
+        {
+            Utils.DoLinks(this, doc, fromPage, toPage, startAt);
+        }
+
+        /// <summary>
+        /// Delete TOC / bookmark item by index.
+        /// </summary>
+        /// <param name="idx"></param>
+        public void DeleteTocItem(int idx)
+        {
+            int xref = GetOutlineXrefs()[idx];
+            RemoveTocItem(xref);
+        }
+
+        public int GetOC(int xref)
+        {
+            return Utils.GetOC(this, xref);
+        }
+
+        public OCMD GetOCMD(int xref)
+        {
+            return Utils.GetOCMD(this, xref);
+        }
+
+        /// <summary>
+        /// Return a list of page numbers with the given label
+        /// </summary>
+        /// <param name="label">label</param>
+        /// <param name="onlyOne">(bool) stop searching after first hit</param>
+        /// <returns></returns>
+        public List<int> GetPageNumbers(string label, bool onlyOne = false)
+        {
+            return Utils.GetPageNumbers(this, label, onlyOne);
+        }
+
+        /// <summary>
+        /// Create pixmap of document page by page number.
+        /// </summary>
+        /// <param name="doc"></param>
+        /// <param name="pno">page number</param>
+        /// <param name="matrix">Matrix for transformation </param>
+        /// <param name="dpi"></param>
+        /// <param name="colorSpace">rgb, rgb, gray - case ignored, default csRGB</param>
+        /// <param name="clip">restrict rendering to this area</param>
+        /// <param name="alpha">include alpha channel</param>
+        /// <param name="annots">also render annotations</param>
+        /// <returns></returns>
+        public Pixmap GetPagePixmap(
+            int pno,
+            IdentityMatrix matrix,
+            int dpi = 0,
+            string colorSpance = null,
+            Rect clip = null,
+            bool alpha = false,
+            bool annots = true)
+        {
+            return Utils.GetPagePixmap(this, pno, matrix, dpi, colorSpance, clip, alpha, annots);
+        }
+
+        /// <summary>
+        /// Extract a document page's text by page number
+        /// </summary>
+        /// <param name="pno">page number</param>
+        /// <param name="option">text, words, blocks, html, dict, json, rawdict, xhtml or xml.</param>
+        /// <param name="clip"></param>
+        /// <param name="flags"></param>
+        /// <param name="textPage"></param>
+        /// <param name="sort"></param>
+        /// <returns>output from TextPage</returns>
+        public dynamic GetPageText(
+            int pno,
+            string option = "text",
+            Rect clip = null,
+            int flags = 0,
+            MuPDFTextPage textPage = null,
+            bool sort = false)
+        {
+            return this[pno].GetText(option, clip, flags, textPage, sort);
+        }
+
+        /// <summary>
+        /// Check whether there are annotations on any page.
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        public bool HasAnnots()
+        {
+            if (IsClosed)
+                throw new Exception("document closed");
+            if (!IsPDF)
+                throw new Exception("is no pdf");
+            for (int i = 0; i < Len; i ++)
+            {
+                foreach (AnnotXref item in PageAnnotXrefs(i))
+                {
+                    if (item.AnnotType == PdfAnnotType.PDF_ANNOT_LINK
+                        || item.AnnotType == PdfAnnotType.PDF_ANNOT_WIDGET)
+                        return true;
+                }
+            }
+            return false;
+        }
+
+        public bool HasLinks()
+        {
+            if (IsClosed)
+                throw new Exception("document closed");
+            if (!IsPDF)
+                throw new Exception("is no pdf");
+            for (int i = 0; i < Len; i++)
+            {
+                foreach (AnnotXref item in PageAnnotXrefs(i))
+                {
+                    if (item.AnnotType == PdfAnnotType.PDF_ANNOT_LINK)
+                        return true;
+                }
+            }
+            return false;
+        }
+
+        public void Scrub(
+            bool attachedFiles = true,
+            bool cleanPages = true,
+            bool embeddedFiles = true,
+            bool hiddenText = true,
+            bool javascript = true,
+            bool metadata = true,
+            bool redactions = true,
+            int redactImages = 0,
+            bool removeLinks = true,
+            bool resetFields = true,
+            bool resetResponses = true,
+            bool thumbnails = true,
+            bool xmlMetadata = true)
+        {
+            List<string> RemoveHidden(string[] contLines)
+            {
+                List<string> outlines = new List<string>();
+                bool inText = false;
+                bool suppress = false;
+                bool makeReturn = false;
+                foreach (string line in contLines)
+                {
+                    if (line == "BT")
+                    {
+                        inText = true;
+                        outlines.Add(line);
+                        continue;
+                    }
+                    if (line == "ET")
+                    {
+                        inText = false;
+                        outlines.Add(line);
+                        continue;
+                    }
+                    if (line == "3 Tr")
+                    {
+                        suppress = true;
+                        makeReturn = true;
+                        continue;
+                    }
+                    if (line.Substring(line.Length - 2, 2) == "Tr" && line[0] == '3' )
+                    {
+                        suppress = false;
+                        outlines.Add(line);
+                        continue;
+                    }
+                    if (suppress && inText)
+                        continue;
+                    outlines.Add(line);
+                }
+                if (makeReturn)
+                    return outlines;
+                else
+                    return null;
+            }
+
+            if (!IsPDF)
+                throw new Exception("is no PDF");
+            if (IsEncrypted || IsClosed)
+                throw new Exception("closed or encrypted doc");
+            if (cleanPages == false)
+            {
+                hiddenText = false;
+                redactions = false;
+            }
+            if (metadata)
+                SetMetadata(new Dictionary<string, string>());// empty metadata
+
+            for (int i = 0; i < Len; i ++)
+            {
+                MuPDFPage page = this[i];
+                if (resetFields)
+                {
+                    //issue widget
+                }
+                if (removeLinks)
+                {
+                    List<Link> links = page.GetLinks();
+                    foreach (Link link in links)
+                        page.DeleteLink(link);
+                }
+                bool foundRedacts = false;
+                foreach (MuPDFAnnot annot in page.GetAnnots())
+                {
+                    if (annot.Type.Item1 == PdfAnnotType.PDF_ANNOT_FILE_ATTACHMENT && attachedFiles)
+                        annot.UpdateFile(buffer: new byte[] { 32 });
+                    if (resetResponses)
+                        annot.DeleteResponses();
+                    if (annot.Type.Item1 == PdfAnnotType.PDF_ANNOT_REDACT)
+                        foundRedacts = true;
+                }
+
+                if (redactions && foundRedacts)
+                    page.ApplyRedactions(redactImages);
+                if (!(cleanPages || hiddenText))
+                    continue;
+                page.CleanContetns();
+                if (page.GetContents().Count == 0)
+                    continue;
+                if (hiddenText)
+                {
+                    int xref = page.GetContents()[0];
+                    byte[] cont = GetXrefStream(xref);
+                    List<string> contLines = RemoveHidden(Encoding.UTF8.GetString(cont).Split("\n"));
+                    if (contLines.Count != 0)
+                    {
+                        cont = Encoding.UTF8.GetBytes(string.Join("\n", contLines.ToArray()));
+                        UpdateStream(xref, cont);
+                    }
+                }
+                if (thumbnails)
+                {
+                    if (GetKeyXref(page.Xref, "Thumb").Item1 != "null")
+                        SetKeyXRef(page.Xref, "Thumb", "null");
+                }
+            }
+            if (embeddedFiles)
+            {
+                foreach (string name in GetEmbfileNames())
+                    DeleteEmbfile(name);
+            }
+
+            if (xmlMetadata)
+                DeleteXmlMetadata();
+
+            int xrefLimit = 0;
+            if (xmlMetadata || javascript)
+                xrefLimit = GetXrefLength();
+
+            for (int xref = 1; xref <= xrefLimit; xref ++)
+            {
+                if (string.IsNullOrEmpty(GetXrefObject(xref)))
+                    throw new Exception($"bad xref {xref} - clean PDF before scrubbing");
+                if (javascript && GetKeyXref(xref, "S").Item2 == "/JavaScript")
+                {
+                    string obj = "<</S/JavaScript/JS()>>";
+                    UpdateObject(xref, obj);
+                    continue;
+                }
+                if (!xmlMetadata)
+                    continue;
+
+                if (GetKeyXref(xref, "Type").Item2 == "/Metadata")
+                {
+                    UpdateObject(xref, "<<>>");
+                    UpdateStream(xref, Encoding.UTF8.GetBytes("deleted")); // new is 1 as default
+                    continue;
+                }
+
+                if (GetKeyXref(xref, "Metadata").Item1 != "null")
+                    SetKeyXRef(xref, "Metadata", null);
+            }
+
+        }
+
+        public void SetMetadata(Dictionary<string, string> metadata)
+        {
+            if (!IsPDF)
+                throw new Exception("is no PDF");
+            if (IsEncrypted || IsClosed)
+                throw new Exception("closed or encrypted doc");
+            Dictionary<string, string> keymap = new Dictionary<string, string>()
+            {
+                { "author", "Author"},
+                { "producer", "Producer"},
+                { "creator", "Creator" },
+                { "title", "Title" },
+                { "format", null },
+                { "encryption", null },
+                { "creationDate", "CreationDate" },
+                { "modDate", "ModDate" },
+                { "subject", "Subject" },
+                { "keywords", "Keywords" },
+                { "trapped", "Trapped" }
+            };
+            HashSet<string> keys = new HashSet<string>(keymap.Keys);
+            List<string> diffKeys = (new HashSet<string>(metadata.Keys)).Except(keys).ToList();
+            if (diffKeys.Count != 0)
+                throw new Exception("bad dict key(s)");
+
+            (string t, string temp) = GetKeyXref(-1, "Info");
+            int infoXref = 0;
+            if (t != "xref")
+                infoXref = 0;
+            else
+                infoXref = Convert.ToInt32(temp.Replace("0 R", ""));
+            if (metadata.Count == 0 && infoXref == 0)
+                return;
+            if (infoXref == 0)
+            {
+                infoXref = GetNewXref();
+                UpdateObject(infoXref, "<<>>");
+                SetKeyXRef(-1, "Info", $"{infoXref} 0 R");
+            }
+            else if (metadata.Count == 0)
+            {
+                SetKeyXRef(-1, "Info", "null");
+                return;
+            }
+
+            foreach (string k in metadata.Keys)
+            {
+                if (keymap.GetValueOrDefault(k, null) != null)
+                {
+                    string pdfKey = keymap[k];
+                    string val = metadata[k];
+                    if (string.IsNullOrEmpty(val) || (val == "none" || val == "null"))
+                        val = "null";
+                    else
+                        val = Utils.GetPdfString(val);
+                    SetKeyXRef(infoXref, pdfKey, val);
+                }
+            }
+            InitDocument();
+        }
+
+        /// <summary>
+        /// Attach optional content object to image or form xobject.
+        /// </summary>
+        /// <param name="xref"xref number of an image or form xobject></param>
+        /// <param name="oc">xref number of an OCG or OCMD</param>
+        /// <exception cref="Exception"></exception>
+        public void SetOC(int xref, int oc)
+        {
+            if (IsClosed || IsEncrypted)
+                throw new Exception("document close or encrypted");
+            (string t, string name) = GetKeyXref(xref, "Subtype");
+            if (t != "name" || !(name == "/Image" || name == " /Form"))
+                throw new Exception($"bad object type at xref {xref}");
+            if (oc > 0)
+                (t, name) = GetKeyXref(oc, "Type");
+            if (t != "name" || !(name == "/OCG" || name == "/OCMD"))
+                throw new Exception($"bad object type at xref {oc}");
+            if (oc == 0)
+            {
+                SetKeyXRef(xref, "OC", "null");
+                return;
+            }
+            SetKeyXRef(xref, "OC", $"{oc} 0 R");
+        }
+
+        /// <summary>
+        /// Create or update an OCMD object in a PDF document.
+        /// </summary>
+        /// <param name="xref">0 for creating a new object, otherwise update existing one.</param>
+        /// <param name="ocgs">OCG xref numbers, which shall be subject to 'policy'.</param>
+        /// <param name="policy">one of 'AllOn', 'AllOff', 'AnyOn', 'AnyOff' (any casing).</param>
+        /// <param name="ve">visibility expression. Use instead of 'ocgs' with 'policy'.</param>
+        /// <returns>Xref of the created or updated OCMD.</returns>
+        public int SetOCMD(int xref = 0, Dictionary<int, OCGroup> ocgs = null, string policy = null, int ve = 0)
+        {
+            HashSet<int> allOcgs = new HashSet<int>(ocgs.Keys);
+            // issue
+            return 0;
+        }
+
+        public void SetToc()// issue related to Toc
+        {
+
+        }
+
+        /// <summary>
+        /// Update TOC item by index.
+        /// </summary>
+        /// <param name="idx">desired index of the TOC list, as created by get_toc.</param>
+        /// <param name="dest">destination dictionary as created by get_toc(False). Outrules all other parameters.If None, the remaining parameters are used to make a dest dictionary.</param>
+        /// <param name="kind"></param>
+        /// <param name="pno"></param>
+        /// <param name="uri"></param>
+        /// <param name="title"></param>
+        /// <param name="to"></param>
+        /// <param name="filename"></param>
+        /// <param name="zoom"></param>
+        public void SetTocItem(
+            int idx,
+            Link dest,
+            int kind = 0,
+            int pno = 0,
+            string uri = null,
+            string title = null,
+            Point to = null,
+            string filename = null,
+            float zoom = 0)
+        {
+            int xref = GetOutlineXrefs()[idx];
+            int pageXref = 0;
+            if (dest.Kind == LinkType.LINK_GOTO)
+            {
+                pno = dest.Page;
+                pageXref = GetPageXref(pno);
+                float pageHight = PageCropBox(pno).Height;
+                to = dest.To == null ? new Point(72, 36) : dest.To;
+                to.Y = pageHight - to.Y;
+                dest.To = to;
+            }
+        }
+
+        public void Close()
+        {
+            if (IsClosed)
+                throw new Exception("document closed");
+            if (Outline != null)
+                Outline = null;
+            ResetPageRefs();
+            IsClosed = true;
+            GraftMaps = new Dictionary<int, MuPDFGraftMap>();
+            _nativeDocument = null;
         }
     }
 }
