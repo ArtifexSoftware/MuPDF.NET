@@ -8,6 +8,8 @@
 
         public Point To;
 
+        public string ToStr; //used page number is less than 0
+
         public int Page;
 
         public string Name;

@@ -12,6 +12,8 @@ namespace MuPDF.NET
 
         public bool ThisOwn = false;
 
+        public bool Yielded = false;
+
         delegate string LE_FUNCTION(MuPDFAnnot annot, Point p1, Point p2, bool lr, float[] fillColor);
 
         private MuPDFPage _parent;
@@ -604,8 +606,6 @@ namespace MuPDF.NET
             return values;
         }
 
-
-
         public static (List<float>, string, float) ParseData(MuPDFAnnot annot)
         {
             PdfObj obj = annot._nativeAnnotion.pdf_annot_obj();
@@ -904,36 +904,9 @@ namespace MuPDF.NET
         {
             PdfAnnot annot = _nativeAnnotion;
             PdfDocument pdf = annot.pdf_annot_obj().pdf_get_bound_document();
-            PdfFilterOptions filter = MakeFilterOptions(recurse: 1, instanceForms: 0, ascii: 0, sanitize: sanitize);
+            PdfFilterOptions filter = Utils.MakePdfFilterOptions(recurse: 1, instanceForms: 0, ascii: 0, sanitize: sanitize);
             pdf.pdf_filter_annot_contents(annot, filter);
         }
-
-        private PdfFilterOptions MakeFilterOptions(int recurse = 0, int instanceForms = 0, int ascii = 0, int noUpdate = 0, int sanitize = 0, PdfSanitizeFilterOptions sopts = null)
-        {
-            PdfFilterOptions filter = new PdfFilterOptions();
-            filter.recurse = recurse;
-            filter.instance_forms = instanceForms;
-            filter.ascii = ascii;
-
-            if (Utils.MUPDF_VERSION.Item1 >= 1 && Utils.MUPDF_VERSION.Item2 >= 22)
-            {
-                filter.no_update = noUpdate;
-                if (sanitize != 0)
-                {
-                    if (sopts == null)
-                        sopts = new PdfSanitizeFilterOptions();
-                    Factory factory = new Factory(sopts);
-                    filter.add_factory(factory.internal_());
-
-                }
-                else
-                {
-                    //filter.sanitize = sanitize; //issue
-                }
-            }
-            return filter;
-        }
-
 
         public PdfAnnot ToPdfAnnot() { return _nativeAnnotion; }
 

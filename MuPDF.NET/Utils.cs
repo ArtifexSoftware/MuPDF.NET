@@ -5,6 +5,7 @@ using System.IO.Compression;
 using System.Runtime.InteropServices;
 using System.Text;
 using Newtonsoft.Json;
+using System.Security.Cryptography.X509Certificates;
 
 namespace MuPDF.NET
 {
@@ -2328,7 +2329,7 @@ namespace MuPDF.NET
                 nl.File = dest.FileSpec.Replace("\\", "/");
                 nl.Page = dest.Page;
                 if (dest.Page < 0)
-                    nl.To = dest.Dest;
+                    nl.ToStr = dest.Dest;
                 else
                 {
                     nl.To = pnt;
@@ -2469,9 +2470,9 @@ namespace MuPDF.NET
             return names;
         }
 
-        public static List<(int, pdf_annot_type, string)> GetAnnotXrefList(PdfObj pageObj)
+        public static List<AnnotXref> GetAnnotXrefList(PdfObj pageObj)
         {
-            List<(int, pdf_annot_type, string)> names = new List<(int, pdf_annot_type, string)>();
+            List<AnnotXref> names = new List<AnnotXref> ();
             PdfObj annots = pageObj.pdf_dict_get(new PdfObj("Annots"));
             if (annots == null)
                 return null;
@@ -2489,7 +2490,7 @@ namespace MuPDF.NET
                 if (type == pdf_annot_type.PDF_ANNOT_UNKNOWN)
                     continue;
                 PdfObj id_ = annotObj.pdf_dict_gets("NM");
-                names.Add((xref, type, id_.pdf_to_text_string()));
+                names.Add(new AnnotXref() { Xref = xref, AnnotType = (PdfAnnotType)type, Id = id_.pdf_to_text_string() });
             }
             return names;
         }
@@ -2527,7 +2528,7 @@ namespace MuPDF.NET
                 else
                 {
                     txt = Utils.AnnotSkel["goto2"];
-                    // annot = string.Format(txt, Utils.GetPdfStr(link.To), rectStr);//issue force point to string
+                    annot = string.Format(txt, Utils.GetPdfString(link.ToStr), rectStr);
                 }
             else if (link.Kind == LinkType.LINK_GOTOR)
             {
@@ -2541,7 +2542,7 @@ namespace MuPDF.NET
                 else
                 {
                     txt = Utils.AnnotSkel["gotor2"];
-                    // annot = string.Format(txt, Utils.GetPdfStr(link.To), link.File rectStr);//issue force point to string
+                    annot = string.Format(txt, Utils.GetPdfString(link.ToStr), link.File, rectStr);
                 }
             }
             else if (link.Kind == LinkType.LINK_LAUNCH)
@@ -2563,10 +2564,10 @@ namespace MuPDF.NET
                 return annot;
 
             Dictionary<int, string> linkNames = new Dictionary<int, string>();
-            foreach ((int, pdf_annot_type, string) x in page.GetAnnotXrefs())
+            foreach (AnnotXref x in page.GetAnnotXrefs())
             {
-                if (x.Item2 == pdf_annot_type.PDF_ANNOT_LINK)
-                    linkNames.Add(x.Item1, x.Item3);
+                if (x.AnnotType == PdfAnnotType.PDF_ANNOT_LINK)
+                    linkNames.Add(x.Xref, x.Id);
             }
 
             string oldName = link.Id;
@@ -2800,7 +2801,7 @@ namespace MuPDF.NET
                     else
                     {
                         string txt = Utils.AnnotSkel["gotor2"];
-                        string to = ""; // Utils.GetPdfStr(link.To); // issue
+                        string to = Utils.GetPdfString(link.ToStr);
                         to = to.Substring(1, -1);
                         string f = link.File;
                         annot = string.Format(txt, to, f, rStr);
@@ -3311,60 +3312,6 @@ namespace MuPDF.NET
             resBytes[1] = 255;
             Array.Copy(bytes, 0, resBytes, 2, bytes.Length);
             return "<" + BitConverter.ToString(resBytes).Replace("-", string.Empty) + ">";
-        }
-
-        public static string GetPdfStr(string s)
-        {
-            if (string.IsNullOrEmpty(s))
-            {
-                return "()";
-            }
-
-            byte[] bytes;
-
-            StringBuilder sb = new StringBuilder();
-            foreach (char c in s)
-            {
-                int oc = (int)c;
-
-                if (oc > 255) //if beyond 8-bit code range
-                {
-                    return MakeUtf16Be(s);
-                }
-
-                if (oc > 31 && oc < 127) //ASCII range
-                {
-                    if ("()?\\".Contains(c)) //these characters need to be escaped
-                    {
-                        sb.Append("\\");
-                    }
-                    sb.Append(c);
-                    continue;
-                }
-
-                if (oc > 127) //beyond ASCII
-                {
-                    sb.Append("\\");
-                    sb.Append(String.Format("{0:o3}", oc));
-                    continue;
-                }
-
-                // now the white spaces
-                if (oc == 8)  // backspace
-                    sb.Append("\\b");
-                else if (oc == 9)  // tab
-                    sb.Append("\\t");
-                else if (oc == 10)  // line feed
-                    sb.Append("\\n");
-                else if (oc == 12)  // form feed
-                    sb.Append("\\f");
-                else if (oc == 13)  // carriage return
-                    sb.Append("\\r");
-                else
-                    sb.Append("\\267"); //unsupported: replace by 0xB7
-            }
-
-            return "(" + sb.ToString() + ")";
         }
 
         public static int Find(byte[] haystack, byte[] needle)
@@ -3910,7 +3857,7 @@ namespace MuPDF.NET
 
         public static OCMD GetOCMD(MuPDFDocument doc, int xref)
         {
-            if (!INRANGE(xref, 0, doc.XrefLength() - 1))
+            if (!INRANGE(xref, 0, doc.GetXrefLength() - 1))
                 throw new Exception("bad xref");
             string text = doc.GetXrefObject(xref, compressed: 1);
             if (!text.Contains("/Type/OCMD"))
@@ -3972,6 +3919,147 @@ namespace MuPDF.NET
                     throw new Exception($"bad /VE key: {ve}");
             }
             return new OCMD() { Xref = xref, Ocgs = ocgs, Policy = policy, Ve = ve };
+        }
+
+        /// <summary>
+        /// Return a list of page numbers with the given label
+        /// </summary>
+        /// <param name="label">label</param>
+        /// <param name="onlyOne">(bool) stop searching after first hit</param>
+        /// <returns></returns>
+        public static List<int> GetPageNumbers(MuPDFDocument doc, string label, bool onlyOne = false)
+        {
+            List<int> numbers = new List<int>();
+            if (string.IsNullOrEmpty(label))
+                return numbers;
+            List<Label> labels = doc.GetPageLabels();
+            if (labels.Count == 0)
+                return numbers;
+            for (int i = 0; i < doc.Len; i++)
+            {
+                string pageLabel = GetPageLabel(i, labels);
+                if (pageLabel == label)
+                {
+                    numbers.Add(i);
+                    if (onlyOne)
+                        break;
+                }    
+            }
+            return numbers;
+        }
+
+        /// <summary>
+        /// Create pixmap of document page by page number.
+        /// </summary>
+        /// <param name="doc"></param>
+        /// <param name="pno">page number</param>
+        /// <param name="matrix">Matrix for transformation </param>
+        /// <param name="dpi"></param>
+        /// <param name="colorSpace">rgb, rgb, gray - case ignored, default csRGB</param>
+        /// <param name="clip">restrict rendering to this area</param>
+        /// <param name="alpha">include alpha channel</param>
+        /// <param name="annots">also render annotations</param>
+        /// <returns></returns>
+        public static Pixmap GetPagePixmap(
+            MuPDFDocument doc,
+            int pno,
+            IdentityMatrix matrix = null,
+            int dpi = 0,
+            string colorSpace = null,
+            Rect clip = null,
+            bool alpha = false,
+            bool annots = true)
+        {
+            return doc[pno].GetPixmap(
+                matrix: matrix,
+                dpi: dpi,
+                colorSpace: colorSpace,
+                clip: clip,
+                alpha: alpha,
+                annots: annots
+                );
+        }
+
+        /// <summary>
+        /// Return a PDF string depending on its coding
+        /// </summary>
+        /// <param name="s"></param>
+        /// <returns></returns>
+        public static string GetPdfString(string s)
+        {
+            if (!string.IsNullOrEmpty(s))
+                return "()";
+            string MakeUtf16be(string s)
+            {
+                byte[] r = MuPDFAnnot.MergeByte(new byte[] { 254, 255}, Encoding.BigEndianUnicode.GetBytes(s));
+                return "<" + BitConverter.ToString(r).Replace("-", string.Empty) +">";
+            }
+
+            string r = "";
+            foreach (char c in s)
+            {
+                int oc = Convert.ToInt32(c);
+                if (oc > 255)
+                    return MakeUtf16Be(s);
+                if (oc > 31 && oc < 127)
+                {
+                    if (c == '(' || c == ')' || c == '\\')
+                        r += '\\';
+                    r += c;
+                    continue;
+                }
+                if (oc > 127)
+                {
+                    r += string.Format("\\{0}", Convert.ToString(oc, 8).PadLeft(3, '0'));
+                    continue;
+                }
+
+                if (oc == 8)
+                    r += "\\b";
+                else if (oc == 9)
+                    r += "\\t";
+                else if (oc == 10)
+                    r += "\\n";
+                else if (oc == 12)
+                    r += "\\f";
+                else if (oc == 13)
+                    r += "\\r";
+                else
+                    r += "\\267";
+            }
+            return "(" + r + ")";
+        }
+
+        public static byte[] GetAllContents(MuPDFPage page)
+        {
+            FzBuffer res = Utils.ReadContents(page.GetPdfPage().obj());
+            return Utils.BinFromBuffer(res);
+        }
+
+        public static PdfFilterOptions MakePdfFilterOptions(int recurse = 0, int instanceForms = 0, int ascii = 0, int noUpdate = 0, int sanitize = 0, PdfSanitizeFilterOptions sopts = null)
+        {
+            PdfFilterOptions filter = new PdfFilterOptions();
+            filter.recurse = recurse;
+            filter.instance_forms = instanceForms;
+            filter.ascii = ascii;
+
+            if (Utils.MUPDF_VERSION.Item1 >= 1 && Utils.MUPDF_VERSION.Item2 >= 22)
+            {
+                filter.no_update = noUpdate;
+                if (sanitize != 0)
+                {
+                    if (sopts == null)
+                        sopts = new PdfSanitizeFilterOptions();
+                    Factory factory = new Factory(sopts);
+                    filter.add_factory(factory.internal_());
+
+                }
+                else
+                {
+                    //filter.sanitize = sanitize; //issue
+                }
+            }
+            return filter;
         }
     }
 }
