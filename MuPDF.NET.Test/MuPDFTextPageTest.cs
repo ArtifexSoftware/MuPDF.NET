@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace MuPDF.NET.Test
 {
-    public class MuPDFTextPageTest : PageTestBase
+    public class MuPDFTextPageTest : PdfTestBase
     {
         [SetUp]
         public void Setup()

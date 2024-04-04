@@ -1,7 +1,7 @@
 namespace MuPDF.NET.Test;
 using MuPDF.NET;
 
-public class MuPDFPageTest : PageTestBase
+public class MuPDFPageTest : PdfTestBase
 {
     [SetUp]
     public void Setup()
@@ -31,7 +31,7 @@ public class MuPDFPageTest : PageTestBase
     public void AddFreeTextAnnot()
     {
         Rect r = new Rect(20, 30, 100, 100);
-        page.AddFreeTextAnnot(r.ToFzRect(), "Hello World");
+        page.AddFreeTextAnnot(r, "Hello World");
         Assert.Pass();
     }
 
@@ -156,5 +156,17 @@ public class MuPDFPageTest : PageTestBase
         link.Kind = LinkType.LINK_GOTO;
         page.InsertLink(link);
         Assert.Pass();
+    }
+
+    [Test]
+    public void DrawLine()
+    {
+        MuPDFPage page = doc.LoadPage(0);
+        Point p1 = new Point(100, 100);
+        Point p2 = new Point(300, 300);
+        
+        float[] color = { 0, 0, 1 };
+        page.DrawLine(p1, p2, color: color, width: 9, strokeOpacity: 0.5f);
+        doc.Save("output.pdf");
     }
 }
