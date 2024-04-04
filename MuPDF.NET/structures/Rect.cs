@@ -365,6 +365,28 @@ namespace MuPDF.NET
             Y1 = r.y1;
             return this;
         }
+
+        /// <summary>
+        /// Calculate area of rectangle.\nparameter is one of 'px' (default), 'in', 'cm', or 'mm'.
+        /// </summary>
+        /// <param name="unit"></param>
+        /// <returns></returns>
+        public float GetArea(string unit = null)
+        {
+            string unit_ = "px";
+            if (!string.IsNullOrEmpty(unit))
+                unit_ = unit;
+            Dictionary<string, (float, float)> u = new Dictionary<string, (float, float)>
+            {
+                { "px", (1, 1) },
+                { "in", (1.0f, 72.0f) },
+                { "cm", (2.54f, 72.0f) },
+                { "mm", (25.4f, 72.0f) }
+            };
+
+            float f = (float)Math.Pow(u[unit].Item1 / u[unit].Item2, 2);
+            return f * Width * Height;
+        }
     }
 
 }

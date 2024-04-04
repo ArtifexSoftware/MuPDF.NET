@@ -103,13 +103,13 @@ namespace MuPDF.NET
                     {
                         List<int> linkXrefs = new List<int>();
                         List<string> linkIds = new List<string>();
-                        List<(int, pdf_annot_type, string)> annotXrefs = Parent.GetAnnotXrefs();
+                        List<AnnotXref> annotXrefs = Parent.GetAnnotXrefs();
                         for (int i = 0; i < annotXrefs.Count; i++)
                         {
-                            if (annotXrefs[i].Item2 == pdf_annot_type.PDF_ANNOT_LINK)
+                            if (annotXrefs[i].AnnotType == PdfAnnotType.PDF_ANNOT_LINK)
                             {
-                                linkXrefs.Add(annotXrefs[i].Item1);
-                                linkIds.Add(annotXrefs[i].Item3);
+                                linkXrefs.Add(annotXrefs[i].Xref);
+                                linkIds.Add(annotXrefs[i].Id);
                             }
                             int idx = linkXrefs.IndexOf(Xref);
                             val.Xref = linkXrefs[idx + 1];

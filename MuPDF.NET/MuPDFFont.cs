@@ -243,7 +243,7 @@ namespace MuPDF.NET
             return gid;
         }
 
-        public float GetTextLength(string text, float fontSzie = 11.0f, string language = null, int script = 0, int wmode = 0, int smallCaps = 0)
+        public float GetTextLength(string text, float fontSize = 11.0f, string language = null, int script = 0, int wmode = 0, int smallCaps = 0)
         {
             FzFont thisfont = _nativeFont;
             int lang = (int)mupdf.mupdf.fz_text_language_from_string(language);
@@ -263,7 +263,7 @@ namespace MuPDF.NET
                 else
                     (gid, font) = thisfont.fz_encode_character_with_fallback(c, script, lang);
             }
-            rc *= fontSzie;
+            rc *= fontSize;
 
             return rc;
         }

@@ -1,4 +1,5 @@
 ﻿using mupdf;
+using System.Runtime.InteropServices;
 
 namespace MuPDF.NET
 {
@@ -47,11 +48,13 @@ namespace MuPDF.NET
             _nativeDisplayList.Dispose();
         }
 
-        /*public MuPDFSTextPage GetTextPage(int flags = 3)
+        public MuPDFTextPage GetTextPage(int flags = 3)
         {
             FzStextOptions opts = new FzStextOptions();
             opts.flags = flags;
-            // issue mupdf.mupdf.
-        }*/
+
+            // fz_new_stext_page_from_display_list // issue
+            return null;
+        }
     }
 }

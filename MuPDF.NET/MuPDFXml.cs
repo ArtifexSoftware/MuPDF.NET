@@ -407,7 +407,7 @@ namespace MuPDF.NET
                 (int, int, int) rgb = Utils.sRGB2rgb(color);
                 return $"rgb({rgb.Item1},{rgb.Item2},{rgb.Item3})";
             }
-            if ((color is Tuple || color is List<int> || color is List<float>))//issue: list length
+            if ((color is List<float> && color.Count == 3))
             {
                 return $"rbg({color[0]},{color[1]},{color[2]}";
             }
