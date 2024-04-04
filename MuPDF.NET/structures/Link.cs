@@ -6,7 +6,7 @@
 
         public LinkType Kind;
 
-        public Point To;
+        public Point To = new Point(0, 0);
 
         public string ToStr; //used page number is less than 0
 
@@ -16,7 +16,7 @@
 
         public string Uri;
 
-        public float Zoom;
+        public float Zoom = 0;
 
         public string File;
 
@@ -24,12 +24,12 @@
 
         public int Xref;
 
-        public bool Italic;
+        public bool Italic = false;
 
-        public bool Bold;
+        public bool Bold = false;
 
         public bool Collapse;
 
-        public float[] Color;
+        public float[] Color = null;
     }
 }

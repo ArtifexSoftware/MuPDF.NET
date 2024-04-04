@@ -162,6 +162,11 @@ namespace MuPDF.NET
             }
         }
 
+        public override string ToString()
+        {
+            return $"Point({X}, {Y})";
+        }
+
         public void Dispose()
         {
 

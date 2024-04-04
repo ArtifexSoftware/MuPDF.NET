@@ -2,7 +2,6 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace MuPDF.NET
 {
@@ -217,7 +216,7 @@ namespace MuPDF.NET
             {
                 PdfPage page = _pdfPage;
                 if (page == null)
-                    return new Matrix(new FzMatrix());//issues
+                    return new Matrix();// new FzRect(FzRect.Fixed.Fixed_UNIT));//issue
                 return new Matrix(Utils.DerotatePageMatrix(page));
             }
         }
@@ -238,11 +237,13 @@ namespace MuPDF.NET
             }
         }
 
-        public MuPDFLink FirstLink//issue
+        /// <summary>
+        /// First link on page
+        /// </summary>
+        public MuPDFLink FirstLink
         {
             get
             {
-
                 return new MuPDFLink(_pdfPage.pdf_load_links());
             }
         }
@@ -260,7 +261,9 @@ namespace MuPDF.NET
                     return null;
 
                 MuPDFAnnot val = new MuPDFAnnot(annot);
-
+                val.ThisOwn = true;
+                val.Parent = this;
+                AnnotRefs[val.GetHashCode()] = val;
                 Widget widget = new Widget();
                 return widget;//issue
             }
@@ -2002,7 +2005,7 @@ namespace MuPDF.NET
             MuPDFLink val = new MuPDFLink(_val);
             val.ThisOwn = true;
             val.Parent = this;
-            AnnotRefs.Add(_val.GetHashCode(), val);// issue
+            AnnotRefs.Add(val.GetHashCode(), val);
 
             val.Xref = 0;
             val.Id = "";
@@ -2182,7 +2185,10 @@ namespace MuPDF.NET
             List<string> allkeys = new List<string>() { "closePath", "fill", "color", "width", "lineCap", "lineJoin", "dashes", "stroke_opacity", "fill_opacity", "even_odd" };
             List<Dictionary<string, dynamic>> val = GetCDrawings(extended);
 
-            // issue
+            /*foreach (Dictionary<string, dynamic> npath in val)
+            {
+                if (npath["Type"].StartsWith)
+            }*/
         }
 
         public void GetImageBbox(string name, bool transform = false)
@@ -2196,7 +2202,6 @@ namespace MuPDF.NET
             (Rect, Matrix) rc;
             if (transform)
                 rc = (infRect, nullMat);
-
         }
 
         public Pixmap GetPixmap(IdentityMatrix matrix = null, int dpi = 0, string colorSpace = null,
@@ -2475,7 +2480,6 @@ namespace MuPDF.NET
             Point p1,
             Point p2,
             float[] color = null,
-            float[] fill = null,
             Morph morph = null,
             string dashes = null,
             float width = 1,
@@ -2491,9 +2495,9 @@ namespace MuPDF.NET
 
             img.Finish(
                 color: color,
-                fill: fill,
                 dashes: dashes,
                 width: width,
+                closePath: false,
                 lineCap: lineCap,
                 lineJoin: lineJoin,
                 morph: morph,
@@ -2577,7 +2581,7 @@ namespace MuPDF.NET
             float[] fill = null,
             Morph morph = null,
             string dashes = null,
-            float width = 1,
+            float width = 1.0f,
             int lineCap = 0,
             int lineJoin = 0,
             bool overlay = true,
@@ -2999,6 +3003,11 @@ namespace MuPDF.NET
             return Utils.GetAllContents(this);
         }
 
+        public Shape NewShape()
+        {
+            return new Shape(this);
+        }
+
         public void Dispose()
         {
             _pdfPage.Dispose();
@@ -3360,7 +3369,7 @@ namespace MuPDF.NET
 
                 FzPathWalker pathWalker = new FzPathWalker(walker.m_internal);
 
-                //mupdf.mupdf.fz_walk_path(new FzPath(mupdf.mupdf.ll_fz_keep_path(path)), pathWalker, ); //issue
+                //mupdf.mupdf.fz_walk_path(new FzPath(mupdf.mupdf.ll_fz_keep_path(path)), pathWalker,  ); //issue
 
                 if (PathDict.GetValueOrDefault("items", null) == null)
                     PathDict = null;

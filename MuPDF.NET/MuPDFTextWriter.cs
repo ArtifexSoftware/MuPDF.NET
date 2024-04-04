@@ -1,5 +1,6 @@
 ﻿using mupdf;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 
 namespace MuPDF.NET
@@ -258,6 +259,226 @@ namespace MuPDF.NET
             Utils.InsertContents(page, content, overlay);
             foreach (MuPDFFont font in UsedFonts)
                 Utils.RepairMonoFont(page, font);
+        }
+
+        public List<(string, float)> FillTextbox(
+            Rect rect,
+            string text,
+            Point pos = null,
+            MuPDFFont font = null,
+            float fontSize = 11,
+            float lineHeight = 0,
+            int align = 0,
+            bool warn = false,
+            bool rtl = false,
+            bool smallCaps = false)
+        {
+            if (rect.IsEmpty)
+                throw new Exception("fill rect must not empty");
+            if (font == null)
+                font = new MuPDFFont("helv");
+
+            float TextLen(string x)
+            {
+                return font.GetTextLength(x, fontSize: fontSize, smallCaps: smallCaps ? 1 : 0);
+            }
+
+            List<float> CharLengths(string x)
+            {
+                return font.GetCharLengths(x, fontSize: fontSize, smallCaps: smallCaps ? 1 : 0);
+            }
+
+            (Rect, Point) AppendThis(Point pos, string text)
+            {
+                return Append(pos, text, font: font, fontSize: fontSize, smallCaps: smallCaps ? 1 : 0);
+            }
+
+            float tolerance = fontSize * 0.2f;
+            float spaceLen = TextLen(" ");
+            float stdWidth = rect.Width - tolerance;
+            float stdStart = rect.X0 + tolerance;
+
+            (List<string>, List<float>) NormWords(float width, List<string> words)
+            {
+                List<string> nwords = new List<string>();
+                List<float> wordLengths = new List<float>();
+                foreach (string word in words)
+                {
+                    List<float> charLengths = CharLengths(word);
+                    float wl = charLengths.Sum(x => x);
+                    if (wl <= width)
+                    {
+                        nwords.Add(word);
+                        wordLengths.Add(wl);
+                        continue;
+                    }
+
+                    int n = charLengths.Count;
+                    while (n > 0)
+                    {
+                        wl = charLengths.Take(n).Sum(x => x);
+                        if (wl <= width)
+                        {
+                            nwords.Add(word.Substring(0, n));
+                            wordLengths.Add(wl);
+                            string word_ = word.Substring(n);
+                            charLengths = charLengths.Skip(n).ToList();
+                            n = charLengths.Count;
+                        }
+                        else
+                            n -= 1;
+                    }
+                }
+                return (nwords, wordLengths);
+            }
+
+            void OutputJustify(Point start, string line)
+            {
+                string[] words = line.Split(' ').Where(x => x != "").ToArray();
+                int nwords = words.Length;
+                if (nwords == 0)
+                    return;
+                if (nwords == 1)
+                {
+                    AppendThis(start, words[0]);
+                    return;
+                }
+                float tl = words.Sum(x => TextLen(x));
+                int gaps = nwords - 1;
+                float gapl = (stdWidth - tl) / gaps;
+                foreach (string w in words)
+                {
+                    (Rect _, Point lp) = AppendThis(start, w);
+                    start.X = lp.X + gapl;
+                }
+            }
+
+            float asc = font.Ascender;
+            float dsc = font.Descender;
+            float lheight = 0;
+            if (lineHeight == 0)
+            {
+                if (asc - dsc <= 1)
+                    lheight = 1.2f;
+                else
+                    lheight = asc - dsc;
+            }
+            else
+                lheight = lineHeight;
+
+            float LineHeight = fontSize * lheight;
+            float width = stdWidth;
+
+            if (pos == null)
+                pos = rect.TopLeft + new Point(tolerance, fontSize * asc);
+            if (!(rect.IncludePoint(pos) == rect))
+                throw new Exception("Text must start in rectangle");
+
+            float factor = 0;
+            if (align == Utils.TEXT_ALIGN_CENTER)
+                factor = 0.5f;
+            else if (align == Utils.TEXT_ALIGN_RIGHT)
+                factor = 1.0f;
+            string[] textLines = text.Split(" ");
+            int maxLines = Convert.ToInt32((rect.Y1 - pos.Y) / LineHeight) + 1;
+
+            List<(string, float)> newLines = new List<(string, float)>();
+            List<int> noJustify = new List<int>();
+
+            int i = -1;
+            foreach (string line in textLines)
+            {
+                i += 1;
+                if (line == "" || line == " ")
+                {
+                    newLines.Add((line, spaceLen));
+                    width = rect.Width - tolerance;
+                    noJustify.Add(newLines.Count - 1);
+                    continue;
+                }
+                if (i == 0)
+                    width = rect.X1 - pos.X;
+                else
+                    width = rect.Width - tolerance;
+
+                string line_ = line;
+                if (rtl)
+                    line_ = CleanRtl(line_);
+                float tl = TextLen(line_);
+                if (tl <= width)
+                {
+                    newLines.Append((line, tl));
+                    noJustify.Add((newLines.Count - 1));
+                    continue;
+                }
+
+                string[] words = line.Split(" ");
+                (List<string> words_, List<float> wordLengths_) = NormWords(stdWidth, new List<string>(words));
+
+                int n = words_.Count;
+                while (true)
+                {
+                    string line0 = string.Join(" ", words_.Take(n).ToArray());
+                    float wl = wordLengths_.Take(n).Sum() + spaceLen * (wordLengths_.Count - 1);
+                    if (wl <= width)
+                    {
+                        newLines.Add((line0, wl));
+                        words_ = words_.Take(n).ToList();
+                        wordLengths_ = wordLengths_.Take(n).ToList();
+                        n = words_.Count;
+                        line0 = null;
+                    }
+                    else n -= 1;
+
+                    if (words_.Count == 0)
+                    {
+                        break;
+                    }
+                }
+            }
+            int nLines = newLines.Count;
+            if (nLines > maxLines)
+            {
+                if (warn)
+                    Console.WriteLine($"Only fitting {maxLines} of {nLines} lines");
+                else
+                    throw new Exception($"Only fitting {maxLines} of {nLines} lines");
+            }
+
+            Point start = new Point();
+            noJustify.Add(newLines.Count - 1);
+            for (i = 0; i < maxLines; i++)
+            {
+                string line;
+                float tl;
+                try
+                {
+                    (line, tl) = newLines[0];
+                    newLines.RemoveAt(0);
+                }
+                catch(Exception)
+                {
+                    break;
+                }
+                if (rtl)
+                    line = string.Join("", line.Reverse().ToArray());
+                if (i == 0)
+                    start = pos;
+                if (align == Utils.TEXT_ALIGN_JUSTIFY && !noJustify.Contains(i) && tl < stdWidth)
+                {
+                    OutputJustify(start, line);
+                    start.X = stdStart;
+                    start.Y += LineHeight;
+                    continue;
+                }
+                if (i > 0 || pos.X == stdStart)
+                    start.X += (width - tl) * factor;
+
+                AppendThis(start, line);
+                start.X = stdStart;
+                start.Y += LineHeight;
+            }
+            return newLines;
         }
     }
 }

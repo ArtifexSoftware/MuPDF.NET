@@ -132,7 +132,7 @@ namespace MuPDF.NET
                 FitResult result = null;
                 if (state.Pmax != 0)
                 {
-                    if (state.LastP != state.Pmax)//issue
+                    if (state.LastP != state.Pmax)
                     {
                         if (verbose)
                             Log($"Calling update() with pmax, because was overwritten by later calls.");
@@ -389,7 +389,7 @@ namespace MuPDF.NET
         /// <param name="rectFn"></param>
         /// <param name="positionFn"></param>
         /// <param name="pageFn"></param>
-        public void Write(MuPDFDocumentWriter writer, RectFunction rectFn, Action<Position> positionFn, Action<int, Rect, MuPDFDeviceWrapper, bool> pageFn) // issue
+        public void Write(MuPDFDocumentWriter writer, RectFunction rectFn, Action<Position> positionFn, Action<int, Rect, MuPDFDeviceWrapper, bool> pageFn)
         {
             MuPDFDeviceWrapper dev = null;
             int pageNum = 0;
@@ -397,7 +397,7 @@ namespace MuPDF.NET
             Rect filled = new Rect(0, 0, 0, 0);
             while (true)
             {
-                (Rect mediabox, Rect rect, IdentityMatrix ctm) = rectFn(rectNum, filled);// issue
+                (Rect mediabox, Rect rect, IdentityMatrix ctm) = rectFn(rectNum, filled);
                 rectNum += 1;
                 if (mediabox != null)
                     pageNum += 1;

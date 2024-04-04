@@ -2171,7 +2171,6 @@ namespace MuPDF.NET
 
         public static void CheckColor(float[] c)
         {
-            Console.WriteLine($"{c[0]} {c[1]} {c[2]} {c.Length}");
             if (c != null)
             {
                 if (c.Length != 1 && c.Length != 3 && c.Length != 4 || c.Min() < 0 || c.Max() > 1)
@@ -2181,27 +2180,36 @@ namespace MuPDF.NET
             }
         }
 
-        public static string GetColorCode(dynamic c, string f)
+        public static string GetColorCode(float[] c, string f)
         {
-            if (c == null)
+            if (c == null || c.Length == 0)
                 return "";
-            if (c is float)
-                c = new List<float>() { c, };
+            
             Utils.CheckColor(c);
             string s = "";
-            if (c.Count == 1)
+            if (c.Length == 1)
             {
                 s = $"{c[0]} ";
                 return s + (f == "c" ? "G " : "g ");
             }
 
-            if (c.Count == 3)
+            if (c.Length == 3)
             {
                 s = $"{c[0]} {c[1]} {c[2]} ";
+                return s + (f == "c" ? "RG " : "rg ");
             }
-
+            
             s = $"{c[0]} {c[1]} {c[2]} {c[3]} ";
             return s + (f == "c" ? "K " : "k ");
+        }
+
+        public static string GetColorCode(float c, string f)
+        {
+            float[] color = { c, };
+            Utils.CheckColor(color);
+            string s = "";
+            s = $"{color[0]} ";
+            return s + (f == "c" ? "G " : "g ");
         }
 
         public static string EscapeStrFromBuffer(FzBuffer buf)
@@ -4036,30 +4044,106 @@ namespace MuPDF.NET
             return Utils.BinFromBuffer(res);
         }
 
-        public static PdfFilterOptions MakePdfFilterOptions(int recurse = 0, int instanceForms = 0, int ascii = 0, int noUpdate = 0, int sanitize = 0, PdfSanitizeFilterOptions sopts = null)
+        public static PdfFilterOptions MakePdfFilterOptions(
+            int recurse = 0,
+            int instanceForms = 0,
+            int ascii = 0,
+            int noUpdate = 0,
+            int sanitize = 0,
+            PdfSanitizeFilterOptions sopts = null
+            )
         {
             PdfFilterOptions filter = new PdfFilterOptions();
             filter.recurse = recurse;
             filter.instance_forms = instanceForms;
             filter.ascii = ascii;
-
-            if (Utils.MUPDF_VERSION.Item1 >= 1 && Utils.MUPDF_VERSION.Item2 >= 22)
+            filter.no_update = noUpdate;
+            if (sanitize != 0)
             {
-                filter.no_update = noUpdate;
-                if (sanitize != 0)
-                {
-                    if (sopts == null)
-                        sopts = new PdfSanitizeFilterOptions();
-                    Factory factory = new Factory(sopts);
-                    filter.add_factory(factory.internal_());
-
-                }
-                else
-                {
-                    //filter.sanitize = sanitize; //issue
-                }
+                if (sopts == null)
+                    sopts = new PdfSanitizeFilterOptions();
+                Factory factory = new Factory(sopts);
+                filter.add_factory(factory.internal_());
             }
+            
             return filter;
+        }
+
+        /// <summary>
+        /// Calculate the PDF action string.
+        /// </summary>
+        /// <param name="xref"></param>
+        /// <param name="dDict"></param>
+        /// <returns></returns>
+        public static string GetDestString(int xref, int dDict)
+        {
+            string goto_ = "/A<</S/GoTo/D[{0} 0 R/XYZ {1} {2} {3}]>>";
+
+            return string.Format(goto_, xref, 0, dDict, 0);
+        }
+
+        /// <summary>
+        /// Calculate the PDF action string.
+        /// </summary>
+        /// <param name="xref"></param>
+        /// <param name="dDict"></param>
+        /// <returns></returns>
+        public static string GetDestString(int xref, float dDict)
+        {
+            string goto_ = "/A<</S/GoTo/D[{0} 0 R/XYZ {1} {2} {3}]>>";
+
+            return string.Format(goto_, xref, 0, dDict, 0);
+        }
+
+        /// <summary>
+        /// Calculate the PDF action string.
+        /// </summary>
+        /// <param name="xref"></param>
+        /// <param name="dDict"></param>
+        /// <returns></returns>
+        public static string GetDestString(int xref, Link dDict)
+        {
+            if (dDict == null)
+                return "";
+            string goto_ = "/A<</S/GoTo/D[{0} 0 R/XYZ {1} {2} {3}]>>";
+            string gotor1 = "/A<</S/GoToR/D[{0} /XYZ {1} {2} {3}]/F<</F{4}/UF{5}/Type/Filespec>>>>";
+            string gotor2 = "/A<</S/GoToR/D{0}/F<</F{1}/UF{2}/Type/Filespec>>>>";
+            string launch = "/A<</S/Launch/F<</F{0}/UF{1}/Type/Filespec>>>>";
+            string uri = "/A<</S/URI/URI{0}>>";
+
+            if (dDict.Kind == LinkType.LINK_GOTO)
+            {
+                float zoom = dDict.Zoom;
+                Point to = dDict.To;
+                float left = to.X;
+                float top = to.Y;
+                return string.Format(goto_, xref, left, top, zoom);
+            }
+
+            if (dDict.Kind == LinkType.LINK_URI)
+            {
+                return string.Format(uri, Utils.GetPdfString(dDict.Uri));
+            }
+
+            if (dDict.Kind == LinkType.LINK_LAUNCH)
+            {
+                string fSpec = Utils.GetPdfString(dDict.File);
+                return string.Format(launch, fSpec, fSpec);
+            }
+
+            if (dDict.Kind == LinkType.LINK_GOTOR && dDict.Page < 0)
+            {
+                string fSpec = Utils.GetPdfString(dDict.File);
+                return string.Format(gotor2, Utils.GetPdfString(dDict.ToStr), fSpec, fSpec);
+            }
+
+            if (dDict.Kind == LinkType.LINK_GOTOR && dDict.Page >= 0)
+            {
+                string fSpec = Utils.GetPdfString(dDict.File);
+                return string.Format(gotor1, dDict.Page, dDict.To.X, dDict.To.Y, dDict.Zoom, fSpec, fSpec);
+            }
+
+            return "";
         }
     }
 }

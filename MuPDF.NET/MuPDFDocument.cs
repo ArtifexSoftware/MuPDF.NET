@@ -410,7 +410,7 @@ namespace MuPDF.NET
             }
             finally
             {
-                //issue
+                
             }
         }
 
@@ -1226,8 +1226,8 @@ namespace MuPDF.NET
                         {
                             if (olItem.Page == -1)
                             {
-                                (List<int>, float, float) resolve = ResolveLink(olItem.Uri);
-                                // issue
+                                (dynamic, float, float) resolve = ResolveLink(olItem.Uri);
+                                page = resolve.Item1 + 1;
                             }
                             else
                                 page = olItem.Page + 1;
@@ -2002,7 +2002,7 @@ namespace MuPDF.NET
             (int, int) _pageId;
             _pageId = (0, pageId);
             // issue
-            if (_pageId == LastLocation)
+            if (_pageId.Item1 == LastLocation.Item1 && _pageId.Item2 == LastLocation.Item2)
                 return (-1, -1);
             PdfDocument pdf = MuPDFDocument.AsPdfDocument(_nativeDocument);
             int val = _pageId.Item1;
@@ -4188,6 +4188,140 @@ namespace MuPDF.NET
                 to.Y = pageHight - to.Y;
                 dest.To = to;
             }
+            string action = Utils.GetDestString(pageXref, dest);
+            if (!action.StartsWith("/A"))
+                throw new Exception("bad bookmark dest");
+            float[] color = dest.Color;
+            if (color != null)
+            {
+                if (color.Length != 3 || color.Min() < 0 || color.Max() > 1)
+                    throw new Exception("bad color value");
+            }
+            bool bold = dest.Bold;
+            bool italic = dest.Italic;
+            int flags = italic ? 1 : 0 + 2 * (bold ? 1 : 0);
+            bool collapse = dest.Collapse;
+            UpdateTocItem( xref, action, title, flags, collapse, color);
+        }
+
+        /// <summary>
+        ///  "update" bookmark by letting it point to nowhere
+        /// </summary>
+        /// <param name="xref"></param>
+        /// <param name="action"></param>
+        /// <param name="title"></param>
+        /// <param name="flags"></param>
+        /// <param name="collapse"></param>
+        /// <param name="color"></param>
+        public void UpdateTocItem(
+            int xref,
+            string action = null,
+            string title = null,
+            int flags = 0,
+            bool collapse = false,
+            float[] color = null)
+        {
+            PdfDocument pdf = MuPDFDocument.AsPdfDocument(this);
+            PdfObj item = pdf.pdf_new_indirect(xref, 0);
+            if (!string.IsNullOrEmpty(title))
+                item.pdf_dict_put_text_string(new PdfObj("Title"), title);
+            if (!string.IsNullOrEmpty(action))
+            {
+                item.pdf_dict_del(new PdfObj("Dest"));
+                PdfObj obj = Utils.PdfObjFromStr(pdf, action);
+                item.pdf_dict_put(new PdfObj("A"), obj);
+            }
+            item.pdf_dict_put_int(new PdfObj("F"), flags);
+            if (color != null && color.Count() == 3)
+            {
+                PdfObj c = pdf.pdf_new_array(3);
+                for (int i = 0; i < 3; i++)
+                {
+                    c.pdf_array_push_int((long)color[i]);
+                }
+                item.pdf_dict_put(new PdfObj("C"), c);
+            }
+            else if (color != null)
+                item.pdf_dict_del(new PdfObj("C"));
+            if (collapse)
+            {
+                int i = item.pdf_dict_get_int(new PdfObj("Count"));
+                if ((i < 0 && collapse == false) || (i > 0 && collapse == true))
+                {
+                    i = i * -1;
+                    item.pdf_dict_put_int(new PdfObj("Count"), i);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Build font subsets of a PDF. Requires package 'fontTools'.
+        /// </summary>
+        /// <param name="verbose"></param>
+        public void SubsetFonts(bool verbose = false)// not complete
+        {
+            ///Retrieve old font '/W' and '/DW' values.
+            (string, string) GetOldWidths(int xref)
+            {
+                (string, string) df = GetKeyXref(xref, "DescendantFonts");
+                if (df.Item1 != "array")
+                    return (null, null);
+                int dfXref = Convert.ToInt32(df.Item2.Substring(1, df.Item2.Length - 1).Replace("0 R", ""));
+
+                (string, string) widths = GetKeyXref(dfXref, "W");
+                string width_ = null;
+                if (widths.Item1 == "array")
+                    width_ = widths.Item2;
+
+                (string, string) dWidths = GetKeyXref(dfXref, "DW");
+                string dWidth_ = null;
+                if (dWidths.Item1 == "int")
+                    dWidth_ = dWidths.Item2;
+                return (width_, dWidth_);
+            }
+
+            void SetOldWidths(int xref, string width, string dWidth)
+            {
+                (string, string) df = GetKeyXref(xref, "DescentdantFonts");
+                if (df.Item1 != "array")
+                    return;
+                int dfXref = Convert.ToInt32(df.Item2.Substring(1, df.Item2.Length - 1).Replace("0 R", ""));
+
+                if (GetKeyXref(dfXref, "W").Item2 != "null")
+                    SetKeyXRef(dfXref, "W", "null");
+                else
+                    SetKeyXRef(dfXref, "W", width);
+                if (GetKeyXref(dfXref, "DW").Item2 != "null")
+                    SetKeyXRef(dfXref, "DW", "null");
+                else
+                    SetKeyXRef(dfXref, "DW", dWidth);
+            }
+
+            void SetSubsetFontname(int newXref)
+            {
+                Random random = new Random();
+                string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+                string prefix = new string(Enumerable.Repeat(chars, 6).Select(s => s[random.Next(s.Length)]).ToArray()) + "+";
+                string fontStr = GetXrefObject(newXref, compressed: 1);
+                fontStr = fontStr.Replace("/BaseFont/", "/BaseFont/" + prefix);
+
+                (string, string) df = GetKeyXref(newXref, "DescendantFonts");
+                if (df.Item1 == "array")
+                {
+                    int dfXref = Convert.ToInt32(df.Item2.Substring(1, df.Item2.Length - 1).Replace("0 R", ""));
+                    (string, string) fd = GetKeyXref(dfXref, "FontDescriptor");
+                    if (fd.Item1 == "xref")
+                    {
+                        int fdXref = Convert.ToInt32(fd.Item2.Replace("0 R", ""));
+                        string fdStr = GetXrefObject(fdXref, compressed: 1);
+                        fdStr = fdStr.Replace("/FontName/", "/FontName/" + prefix);
+                        UpdateObject(fdXref, fdStr);
+                    }
+                }
+                UpdateObject(newXref, fontStr);
+            }
+
+            //void BuildSubSet(byte[] buffer, )
         }
 
         public void Close()

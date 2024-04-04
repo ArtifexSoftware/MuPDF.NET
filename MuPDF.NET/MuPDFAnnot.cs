@@ -2327,6 +2327,7 @@ namespace MuPDF.NET
             : base()
         {
             this.sopts = sopts;
+            use_virtual_filter();
         }
 
         public pdf_processor filter(

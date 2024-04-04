@@ -202,16 +202,19 @@ namespace MuPDF.NET
             }
         }
 
-        public Pixmap(Pixmap src, float width, float height, dynamic clip)
+        public Pixmap(Pixmap src, float width, float height, Rect clip)
         {
-            FzPixmap srcPix = src.ToFzPixmap();
-            FzIrect bBox = new FzIrect(clip);
-            /*FzPixmap pm = null;*/
+            FzIrect bBox = new FzIrect(mupdf.mupdf.fz_infinite_irect);
+            if (clip != null)
+                bBox = new FzIrect(clip.ToFzRect());
 
-            /*if (bBox.fz_is_infinite_irect() == 0)
-                _nativePixmap = srcPix.fz_scale_pixmap_cached(src_pix.x, src_pix.y, w, h, bbox);
+            FzPixmap srcPix = src.ToFzPixmap();
+            FzPixmap pm;
+            if (bBox.fz_is_infinite_irect() == 0)
+                pm = srcPix.fz_scale_pixmap(srcPix.x(), srcPix.y(), width, height, bBox);
             else
-                _nativePixmap = srcPix.fz_scale_pixmap(src_pix.x, src_pix.y, w, h, None);*///issue
+                pm = srcPix.fz_scale_pixmap(srcPix.x(), srcPix.y(), width, height, new FzIrect(mupdf.mupdf.fz_infinite_irect));
+            _nativePixmap = pm;
         }
 
         public Pixmap(FzPixmap fzPix)
@@ -250,7 +253,7 @@ namespace MuPDF.NET
             _nativePixmap = pix;
         }
 
-        public Pixmap(ColorSpace cs, int w, int h, dynamic samples, int alpha)
+        public Pixmap(ColorSpace cs, int w, int h, byte[] samples, int alpha)
         {
             int n = cs.N;
             int stride = (n + alpha) * w;
@@ -258,17 +261,14 @@ namespace MuPDF.NET
             FzPixmap pixmap = mupdf.mupdf.fz_new_pixmap(cs.ToFzColorspace(), w, h, seps, alpha);
             int size = 0;
 
-            if (samples is List<byte> || samples is byte[])
-            {
-                FzBuffer samples2 = Utils.BufferFromBytes(samples is List<byte> ? samples.ToArray() : samples);
-                size = samples is List<byte> ? samples.Count : samples.Length;
-            }
-            else
-            {
+            FzBuffer samples2 = Utils.BufferFromBytes(samples);
+            size = samples.Length;
 
+            if (stride * h != size)
+            {
+                throw new Exception($"bad samples length {w} {h} {alpha} {n} {stride} {size}");
             }
-
-            //issue
+            // issue
         }
 
         public Pixmap(string arg0, FzPixmap arg1)
@@ -339,7 +339,7 @@ namespace MuPDF.NET
             else if (format == 3) mupdf.mupdf.fz_write_pixmap_as_pam(output, pixmap);
             else if (format == 5) mupdf.mupdf.fz_write_pixmap_as_psd(output, pixmap);
             else if (format == 6) mupdf.mupdf.fz_write_pixmap_as_ps(output, pixmap);
-            //else if (format == 7) mupdf.mupdf.fz_write_pixmap_as_jpeg(output, pixmap, jpgQuality); //issue
+            else if (format == 7) output.fz_write_pixmap_as_jpeg(pixmap, jpgQuality, 0); // v1.24 later
             else mupdf.mupdf.fz_write_pixmap_as_png(output, pixmap);
 
             byte[] barray = Utils.BinFromBuffer(res);
@@ -1027,8 +1027,8 @@ namespace MuPDF.NET
                 quad.UpperLeft.ToFzPoint()
             };
 
-            //FzPixmap dst = mupdf.mupdf.fz_warp_pixmap(_nativePixmap, , width, height); //issue
-            return null;//issue
+            // FzPixmap dst = fz_warp_pixmap
+            return null;
         }
 
         public byte[] PdfOCR2Bytes(bool compress = true, string language = "eng", string tessdata = null)
