@@ -359,11 +359,8 @@ namespace MuPDF.NET
         public Rect Transform(Matrix matrix)
         {
             FzRect r = mupdf.mupdf.fz_transform_rect(ToFzRect(), matrix.ToFzMatrix());
-            X0 = r.x0;
-            Y0 = r.y0;
-            X1 = r.x1;
-            Y1 = r.y1;
-            return this;
+            
+            return new Rect(r);
         }
 
         /// <summary>
