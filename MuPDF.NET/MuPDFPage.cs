@@ -11,7 +11,7 @@ namespace MuPDF.NET
 
         private PdfPage _pdfPage;
 
-        private MuPDFDocument _parent;
+        public MuPDFDocument Parent;
 
         private static FitResult fit;
 
@@ -244,7 +244,9 @@ namespace MuPDF.NET
         {
             get
             {
-                return new MuPDFLink(_pdfPage.pdf_load_links());
+                MuPDFLink ret = new MuPDFLink(_pdfPage.pdf_load_links());
+                ret.Parent = this;
+                return ret;
             }
         }
 
@@ -317,23 +319,11 @@ namespace MuPDF.NET
             return base.ToString();
         }
 
-        public MuPDFDocument Parent
-        {
-            get
-            {
-                return _parent;
-            }
-            set
-            {
-                _parent = value;
-            }
-        }
-
         public MuPDFPage(PdfPage pdfPage, MuPDFDocument parent)
         {
             _pdfPage = pdfPage;
             _nativePage = pdfPage.super();
-            _parent = parent;
+            Parent = parent;
 
             if (_pdfPage.m_internal == null)
                 Number = 0;
@@ -345,7 +335,7 @@ namespace MuPDF.NET
         {
             _pdfPage = fzPage.pdf_page_from_fz_page();
             _nativePage = fzPage;
-            _parent = parent;
+            Parent = parent;
 
             if (_pdfPage.m_internal == null)
                 Number = 0;
@@ -716,7 +706,7 @@ namespace MuPDF.NET
             MuPDFAnnot ret = null;
             PdfAnnot annot = null;
             PdfPage page = new PdfPage(_pdfPage.m_internal);
-            if (!_parent.IsPDF)
+            if (!Parent.IsPDF)
                 throw new Exception("is not pdf");
             int rotation = Rotation;
             try
@@ -1109,14 +1099,14 @@ namespace MuPDF.NET
             this.ResetAnnotRefs();
             try
             {
-                _parent.ForgetPage(this);
+                Parent.ForgetPage(this);
             }
             catch (Exception e)
             {
                 Console.WriteLine(e.Message);
             }
 
-            _parent = null;
+            Parent = null;
             ThisOwn = false;
             Number = 0;
         }
@@ -1238,7 +1228,7 @@ namespace MuPDF.NET
                 }
                 else
                 {
-                    if (filename != null)
+                    if (!string.IsNullOrEmpty(filename))
                     {
                         imgBuf = mupdf.mupdf.fz_read_file(filename);
                         do_process_pixmap = 0;
@@ -1253,7 +1243,6 @@ namespace MuPDF.NET
                 h = argPix.h();
                 vectoruc digest = argPix.fz_md5_pixmap2();
                 int temp = digests.GetValueOrDefault(Encoding.UTF8.GetString(digest.ToArray()), -1);
-
                 if (temp != -1)
                 {
                     imgXRef = temp;
@@ -1269,8 +1258,8 @@ namespace MuPDF.NET
                     else
                     {
                         FzPixmap pm = argPix.fz_convert_pixmap(
-                            new FzColorspace(0),
-                            new FzColorspace(0),
+                            new FzColorspace(),
+                            new FzColorspace(),
                             new FzDefaultColorspaces(),
                             new FzColorParams(),
                             1
@@ -1305,7 +1294,7 @@ namespace MuPDF.NET
                     w = ref_.pdf_dict_geta(new PdfObj("Width"), new PdfObj("W")).pdf_to_int();
                     h = ref_.pdf_dict_geta(new PdfObj("Height"), new PdfObj("H")).pdf_to_int();
                     do_have_imask = 0;
-                    do_have_image = 1;
+                    do_have_image = 0;
                 }
                 else
                 {
@@ -1364,7 +1353,7 @@ namespace MuPDF.NET
                 FzMatrix mat = Utils.CalcImageMatrix(w, h, clip, rotate, keepProportion != 0);
                 xobject.pdf_dict_puts(imageName, ref_);
                 FzBuffer nres = mupdf.mupdf.fz_new_buffer(50);
-                nres.fz_append_string(string.Format(template, mat.a, mat.b, mat.c, mat.d, mat.e, mat.f));
+                nres.fz_append_string(string.Format(template, mat.a, mat.b, mat.c, mat.d, mat.e, mat.f, imageName));
                 Utils.InsertContents(pdf, page.obj(), nres, overlay);
             }
 
@@ -1710,7 +1699,7 @@ namespace MuPDF.NET
             int encoding = 0
             )
         {
-            MuPDFDocument doc = _parent;
+            MuPDFDocument doc = Parent;
             int xref = 0;
             int idx = 0;
 
@@ -1789,7 +1778,7 @@ namespace MuPDF.NET
 
         public List<Entry> GetFonts(bool full = false)
         {
-            return _parent.GetPageFonts(Number, full);
+            return Parent.GetPageFonts(Number, full);
         }
 
         public PdfPage GetPdfPage()
@@ -2264,7 +2253,7 @@ namespace MuPDF.NET
         /// </summary>
         public void ReplaceImage(int xref, string filename = null, Pixmap pixmap = null, byte[] stream = null)
         {
-            MuPDFDocument doc = _parent;
+            MuPDFDocument doc = Parent;
             if (!doc.XrefIsImage(xref))
                 throw new Exception("xref not an image");
             if ((filename == null ? 0 : 1) + (pixmap == null ? 0 : 1) + (stream == null ? 0 : 1) != 1)

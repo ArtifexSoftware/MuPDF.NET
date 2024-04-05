@@ -1283,7 +1283,7 @@ namespace MuPDF.NET
             float xp = 0.0f;
             float yp = 0.0f;
 
-            if (uri == null)
+            if (string.IsNullOrEmpty(uri))
             {
                 if (chapters != 0)
                     return (new List<int>() { -1, -1 }, 0, 0);
