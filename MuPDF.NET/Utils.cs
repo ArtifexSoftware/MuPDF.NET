@@ -836,10 +836,10 @@ namespace MuPDF.NET
         {
             FzRect mediabox = Utils.GetMediaBox(pageObj).ToFzRect();
             FzRect cropBox = pageObj.pdf_dict_get_inheritable(new PdfObj("CropBox")).pdf_to_rect();
-            if (cropBox.fz_is_infinite_rect() != 0 && cropBox.fz_is_empty_rect() != 0)
+            if (cropBox.fz_is_infinite_rect() != 0 || cropBox.fz_is_empty_rect() != 0)
                 cropBox = mediabox;
             float y0 = mediabox.y1 - cropBox.y1;
-            float y1 = mediabox.y1 = cropBox.y0;
+            float y1 = mediabox.y1 - cropBox.y0;
             cropBox.y0 = y0;
             cropBox.y1 = y1;
 
@@ -849,7 +849,7 @@ namespace MuPDF.NET
         public static Rect GetMediaBox(PdfObj pageObj)
         {
             FzRect pageMediaBox = new FzRect(FzRect.Fixed.Fixed_UNIT);
-            FzRect mediaBox = pageObj.pdf_dict_getp_inheritable("MediaBox").pdf_to_rect();
+            FzRect mediaBox = pageObj.pdf_dict_get_inheritable(new PdfObj("MediaBox")).pdf_to_rect();
             if (mediaBox.fz_is_empty_rect() != 0 || mediaBox.fz_is_infinite_rect() != 0)
             {
                 mediaBox.x0 = 0;
@@ -865,7 +865,7 @@ namespace MuPDF.NET
                 );
 
             if (pageMediaBox.x1 - pageMediaBox.x0 < 1
-                || pageMediaBox.y1 - pageMediaBox.y0 < 0)
+                || pageMediaBox.y1 - pageMediaBox.y0 < 1)
             {
                 pageMediaBox = new FzRect(FzRect.Fixed.Fixed_UNIT);
             }
@@ -1489,7 +1489,7 @@ namespace MuPDF.NET
 
         public static Font CheckFontInfo(MuPDFDocument doc, int xref)
         {
-            foreach (Font f in doc.FontInfo)
+            foreach (Font f in doc.FontInfos)
             {
                 if (xref == f.Xref)
                     return f;
@@ -1940,18 +1940,18 @@ namespace MuPDF.NET
             bool found = false;
 
             int i = 0;
-            for (; i < doc.FontInfo.Count; i++)
+            for (; i < doc.FontInfos.Count; i++)
             {
-                if (doc.FontInfo[i].Xref == xref)
+                if (doc.FontInfos[i].Xref == xref)
                 {
                     found = true;
                     break;
                 }
             }
             if (found)
-                doc.FontInfo[i] = info;
+                doc.FontInfos[i] = info;
             else
-                doc.FontInfo.Add(info);
+                doc.FontInfos.Add(info);
         }
 
         public static List<(int, double)> GetCharWidths(
@@ -1992,7 +1992,7 @@ namespace MuPDF.NET
                     simple = fontDict.Simple;
                 }
 
-                if (ext == "")
+                if (string.IsNullOrEmpty(ext))
                     throw new Exception("xref is not a font");
 
                 if (stype == "Type1" || stype == "MMType1" || stype == "TrueType")
@@ -2023,7 +2023,7 @@ namespace MuPDF.NET
                 fontDict.Glyphs = glyphs;
                 fontDict.Ordering = ordering;
                 fontDict.Xref = xref;
-                doc.FontInfo.Add(fontDict);
+                doc.FontInfos.Add(fontDict);
             }
             else
             {
@@ -2128,7 +2128,7 @@ namespace MuPDF.NET
         {
             if (text.StartsWith("[<") && text.EndsWith(">]"))
                 return text;
-            if (text == "" || text == null)
+            if (string.IsNullOrEmpty(text))
                 return "[<>]";
 
             string otxt = "";
@@ -2136,7 +2136,7 @@ namespace MuPDF.NET
             {
                 if (glyphs == null)
                 {
-                    foreach (char c in text.ToCharArray())
+                    foreach (char c in text)
                     {
                         if (Convert.ToInt32(c) < 256)
                             otxt += Convert.ToInt32(c).ToString("x2");

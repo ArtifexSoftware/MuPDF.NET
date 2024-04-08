@@ -34,7 +34,7 @@ namespace MuPDF.NET
         /// <param name="obj">Link or Outline destination</param>
         /// <param name="rlink"></param>
         /// <param name="document"></param>
-        public LinkDest(dynamic obj, dynamic rlink = null, MuPDFDocument document = null)
+        public LinkDest(dynamic obj, (List<int>, float, float) rlink, MuPDFDocument document = null)
         {
             bool isExt = obj.IsExternal;
             bool isInt = !isExt;
@@ -49,9 +49,12 @@ namespace MuPDF.NET
             this.Page = obj.Page;
             this.BottomRight = new Point(0, 0);
             this.Uri = obj.Uri;
-
-            if (rlink != null && !Uri.StartsWith("#"))
-                Uri = $"#page={rlink[0] + 1}&zoom=0,{rlink[1]},{rlink[2]}";
+            
+            if (rlink.Item1 != null && !Uri.StartsWith("#"))
+            {
+                Uri = $"#page={rlink.Item1[0] + 1}&zoom=0,{rlink.Item2},{rlink.Item3}";
+                Console.WriteLine(rlink.Item1[0]);
+            }
             if (obj.IsExternal)
             {
                 Page = -1;
@@ -69,11 +72,10 @@ namespace MuPDF.NET
                 {
                     Kind = LinkType.LINK_GOTO;
                     Match m = Regex.Match(Uri, "^#page=([0-9]+)&zoom=([0-9.]+),(-?[0-9.]+),(-?[0-9.]+)$");
-
                     if (m != null)
                     {
                         Page = Convert.ToInt32(m.Groups[1].Value) - 1;
-                        TopLeft = new Point((float)Convert.ToDouble(m.Groups[3]), (float)Convert.ToDouble(m.Groups[4]));
+                        TopLeft = new Point((float)Convert.ToDouble(m.Groups[3].Value), (float)Convert.ToDouble(m.Groups[4].Value));
                         Flags = Flags | (int)LinkFlags.LINK_FLAG_L_VALID | (int)LinkFlags.LINK_FLAG_T_VALID;
                     }
                     else

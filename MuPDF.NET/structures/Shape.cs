@@ -41,7 +41,6 @@ namespace MuPDF.NET
             Width = page.MediaBoxSize.X;
             X = page.CropBoxPosition.X;
             Y = page.CropBoxPosition.Y;
-
             Pctm = page.TransformationMatrix;
             IPctm = ~page.TransformationMatrix;
 
@@ -96,7 +95,7 @@ namespace MuPDF.NET
             int oc = 0
             )
         {
-            string[] list = buffer.Split(" ");
+            string[] list = buffer.Split('\n');
             return _InsertText(point, new List<string>(list), fontSize, lineHeight, fontName, fontFile, setSimple, encoding,
                 color, fill, renderMode, borderWidth, rotate, morph, strokeOpacity, fillOpacity, oc);
         }
@@ -171,7 +170,6 @@ namespace MuPDF.NET
                 encoding: encoding,
                 setSimple: setSimple
                 );
-
             Font fontInfo = Utils.CheckFontInfo(Doc, xref);
             
             int ordering = fontInfo.Ordering;
@@ -182,12 +180,12 @@ namespace MuPDF.NET
             float lheight = 0;
 
             if (lineHeight != 0)
-                lineHeight = fontSize * lineHeight;
+                lheight = fontSize * lineHeight;
             else if (ascender - descender <= 1)
                 lheight = fontSize * 1.2f;
             else
                 lheight = fontSize * (ascender - descender);
-
+            
             List<(int, double)> glyphs = new List<(int, double)>();
             if (maxCode > 255)
                 glyphs = Utils.GetCharWidths(Doc, xref: xref, limit: maxCode + 1);
@@ -198,7 +196,7 @@ namespace MuPDF.NET
             List<(int, double)> g = null;
             foreach (string t in text)
             {
-                if (simple && (bfName != "Symbol" || bfName != "ZapfDingbats"))
+                if (simple && !(bfName == "Symbol" || bfName == "ZapfDingbats"))
                     g = null;
                 else
                     g = new List<(int, double)>(glyphs);
@@ -206,7 +204,7 @@ namespace MuPDF.NET
             }
 
             text = tab;
-
+            
             string colorStr = Utils.GetColorCode(color, "c");
             string fillStr = Utils.GetColorCode(fill, "f");
             if (fill == null && renderMode == 0)
@@ -214,7 +212,7 @@ namespace MuPDF.NET
                 fill = color;
                 fillStr = Utils.GetColorCode(color, "f");
             }
-
+            
             bool morphing = (morph != null);
             int rot = rotate;
             if (rot % 90 != 0)
@@ -230,7 +228,7 @@ namespace MuPDF.NET
             float height = Height;
             float width = Width;
             string cm;
-
+            
             if (morphing)
             {
                 Matrix m1 = new Matrix(1, 0, 0, 1, morph.P.X + X, height - morph.P.Y - Y);
@@ -654,11 +652,13 @@ namespace MuPDF.NET
             if (cnt < 4)
                 throw new Exception("points too close");
             float mb = rad / cnt;
+            
             Matrix matrix = Utils.HorMatrix(p1, p2);
             Matrix iMat = ~matrix;
             float k = 2.4142135623765633f;
-
+            
             List<Point> points = new List<Point>();
+
             int i;
             for (i = 1; i < cnt; i++)
             {
@@ -671,8 +671,7 @@ namespace MuPDF.NET
                     p = (new Point(i, 0)) * mb;
                 points.Add(p * iMat);
             }
-            points.Insert(0, p1);
-            points.Add(p2);
+            points = (new List<Point>() { p1}).Concat(points).Concat(new List<Point>() { p2 }).ToList(); 
             cnt = points.Count;
             i = 0;
             
@@ -979,14 +978,13 @@ namespace MuPDF.NET
 
             if (fontInfo == null)
                 throw new Exception("no found font info");
-
+            
             int ordering = fontInfo.Ordering;
             bool simple = fontInfo.Simple;
             List<(int, double)> glyphs = fontInfo.Glyphs;
             string bfName = fontInfo.Name;
             float asc = fontInfo.Ascender;
             float des = fontInfo.Descender;
-
             float lheightFactor;
             if (lineHeight != 0)
                 lheightFactor = lineHeight;
@@ -1006,8 +1004,9 @@ namespace MuPDF.NET
                 foreach (char c in t0)
                     t1 += Convert.ToInt32(c) < 256 ? c : '?';
 
-            string[] t2 = t1.Split("\n");
+            string[] t2 = string.IsNullOrEmpty(t1) ? t0.Split("\n") : t1.Split("\n");
             glyphs = Utils.GetCharWidths(Doc, xref, maxCode + 1);
+
             List<(int, double)> tj_glyphs;
             if (simple && !(bfName == "Symbol" || bfName == "ZapfDingbats"))
                 tj_glyphs = null;
@@ -1158,7 +1157,8 @@ namespace MuPDF.NET
 
             string nres = $"\nq\n{bdc}{alpha}BT\n" + cm;
             string template = "1 0 0 1 {0} {1} Tm /{2} {3} Tf ";
-            string[] text_t = text.Split(" ");
+            string[] text_t = text.Split("\n");
+
             justTab[justTab.Count - 1] = false;
 
             for (int i = 0; i < text_t.Length; i++)

@@ -18,7 +18,7 @@ namespace MuPDF.NET
 
         public Dictionary<string, string> MetaData;
 
-        public List<Font> FontInfo = new List<Font>();
+        public List<Font> FontInfos = new List<Font>();
 
         public Dictionary<int, MuPDFGraftMap> GraftMaps = new Dictionary<int, MuPDFGraftMap>();
 
@@ -250,7 +250,7 @@ namespace MuPDF.NET
                 IsClosed = false;
                 IsEncrypted = false;
                 MetaData = null;
-                FontInfo = new List<Font>();
+                FontInfos = new List<Font>();
                 PageRefs = new Dictionary<int, MuPDFPage>();
 
                 if (stream != null)

@@ -142,9 +142,7 @@ namespace MuPDF.NET
         public Point Transform(Matrix m)
         {
             FzPoint p = mupdf.mupdf.fz_transform_point(ToFzPoint(), m.ToFzMatrix());
-            this.X = p.x;
-            this.Y = p.y;
-            return this;
+            return new Point(p);
         }
 
         /// <summary>

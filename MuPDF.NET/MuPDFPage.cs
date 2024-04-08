@@ -201,11 +201,10 @@ namespace MuPDF.NET
             {
                 PdfPage page = _pdfPage;
                 Rect ret = null;
-                if (page == null)
-                    ret = new Rect(page.pdf_bound_page(fz_box_type.FZ_CROP_BOX));
+                if (page.m_internal == null)
+                    ret = new Rect(_nativePage.fz_bound_page());
                 else
                     ret = Utils.GetCropBox(page.obj());
-
                 return ret;
             }
         }
@@ -244,9 +243,7 @@ namespace MuPDF.NET
         {
             get
             {
-                MuPDFLink ret = new MuPDFLink(_pdfPage.pdf_load_links());
-                ret.Parent = this;
-                return ret;
+                return LoadLinks();
             }
         }
 
@@ -1416,7 +1413,7 @@ namespace MuPDF.NET
             Rect rect,
             dynamic text,
             string css = null,
-            float opacity = 0,
+            float opacity = 1,
             int rotate = 0,
             float scaleLow = 0,
             MuPDFArchive archive = null,
@@ -1469,7 +1466,7 @@ namespace MuPDF.NET
                 spareHeight = 0;
 
             MuPDFDocument doc = story.WriteWithLinks(RectFunction);
-
+            
             if (0 <= opacity && opacity < 1)
             {
                 MuPDFPage tpage = doc[0];
@@ -1477,13 +1474,12 @@ namespace MuPDF.NET
                 string s = $"/{alpha} gs\n";
                 Utils.InsertContents(tpage, Encoding.UTF8.GetBytes(s), 0);
             }
-
             ShowPdfPage(rect, doc, 0, rotate: rotate, oc: oc, overlay: overlay);
             Point mp1 = (fit.Rect.TopLeft + fit.Rect.BottomRight) / 2 * scale;
             Point mp2 = (rect.TopLeft + rect.BottomRight) / 2;
-
+            
             Matrix mat = (new Matrix(scale, 0, 0, scale, -mp1.X, -mp1.Y) * new Matrix(-rotate) * new Matrix(1, 0, 0, 1, mp2.X, mp2.Y));
-
+            
             foreach (Link link in doc[0].GetLinks())
             {
                 Link t = link;
@@ -1577,7 +1573,7 @@ namespace MuPDF.NET
             srcRect = srcRect * ~srcPage.TransformationMatrix;
 
             Matrix matrix = CalcMatrix(srcRect, tarRect, keep: keepProportion, rotate: rotate);
-
+            
             List<dynamic> iList = new List<dynamic>();
             List<Entry> res = doc.GetPageXObjects(Number);
             int i = 0;
@@ -1585,7 +1581,7 @@ namespace MuPDF.NET
             {
                 iList.Add(res[i].RefName);
             }
-            
+            Console.WriteLine(doc.GetPageFonts(Number).Count);
             res = doc.GetPageImages(Number);
             for (i = 0; i < res.Count; i++)
             {
@@ -1618,6 +1614,7 @@ namespace MuPDF.NET
 
             int xref = doc.ShownPages.GetValueOrDefault((isrc, pno), 0);
             xref = ShowPdfPage(srcPage, overlay, matrix, xref, oc, srcRect.ToFzRect(), gmap, imgName);
+            
             doc.ShownPages[(isrc, pno)] = xref;
 
             return xref;
@@ -1647,6 +1644,7 @@ namespace MuPDF.NET
 
             FzBuffer res = mupdf.mupdf.fz_new_buffer(20);
             res.fz_append_string("/fullpage Do");
+
             PdfObj xobj2 = pdfOut.pdf_new_xobject(cropBox, mat, subRes, res);
             if (oc > 0)
                 Utils.AddOcObject(pdfOut, xobj2, oc);
@@ -1851,7 +1849,7 @@ namespace MuPDF.NET
 
         public string SetOpacity(string gstate = null, float CA = 1, float ca = 1, string blendMode = null)
         {
-            if (CA > 1 && ca >= 1 && blendMode == null)
+            if (CA >= 1 && ca >= 1 && string.IsNullOrEmpty(blendMode))
                 return null;
             int tCA = Convert.ToInt32(Math.Round(Math.Max(CA, 0) * 100));
             if (tCA >= 100)
@@ -1863,9 +1861,9 @@ namespace MuPDF.NET
 
             if (gstate == null) return null;
 
-            PdfObj resources = PageObj.pdf_dict_get(new PdfObj("Resources"));
+            PdfObj resources = _pdfPage.obj().pdf_dict_get(new PdfObj("Resources"));
             if (resources.m_internal == null)
-                resources = mupdf.mupdf.pdf_dict_put_dict(PageObj, new PdfObj("Resources"), 2);
+                resources = _pdfPage.obj().pdf_dict_put_dict(new PdfObj("Resources"), 2);
             PdfObj extg = resources.pdf_dict_get(new PdfObj("ExtGState"));
             if (extg.m_internal == null)
                 extg = resources.pdf_dict_put_dict(new PdfObj("ExtGState"), 2);
@@ -1988,7 +1986,7 @@ namespace MuPDF.NET
         public MuPDFLink LoadLinks()
         {
             FzLink _val = mupdf.mupdf.fz_load_links(AsFzPage(_pdfPage));
-            if (_val == null)
+            if (_val.m_internal == null)
                 return null;
 
             MuPDFLink val = new MuPDFLink(_val);
@@ -2615,12 +2613,12 @@ namespace MuPDF.NET
         {
             Shape img = new Shape(this);
             Point ret = img.DrawSquiggle(p1, p2, breadth);
-
             img.Finish(
                 color: color,
                 fill: fill,
                 dashes: dashes,
                 width: width,
+                closePath: false,
                 lineCap: lineCap,
                 lineJoin: lineJoin,
                 morph: morph,
