@@ -601,7 +601,7 @@ namespace MuPDF.NET
             len = list.Length;
             PdfObj testkey = obj.pdf_dict_getp(key);
 
-            if (testkey is null)
+            if (testkey.m_internal == null)
             {
                 while (len > 0)
                 {
@@ -615,7 +615,7 @@ namespace MuPDF.NET
 
             obj.pdf_dict_putp(key, mupdf.mupdf.pdf_new_text_string(eyecatcher));
             testkey = obj.pdf_dict_getp(key);
-            if (testkey.pdf_is_string() != 0)
+            if (testkey.pdf_is_string() == 0)
                 throw new Exception(string.Format("cannot insert value for '{0}'", key));
 
             string temp = mupdf.mupdf.pdf_to_text_string(testkey);
@@ -629,7 +629,7 @@ namespace MuPDF.NET
             string newVal = string.Format("%s %s", skey, value);
             string newStr = objStr.Replace(nullVal, newVal);
 
-            PdfObj newObj = ObjectFromStr(pdf, newStr);
+            PdfObj newObj = Utils.PdfObjFromStr(pdf, newStr);
             return newObj;
         }
 
@@ -643,22 +643,6 @@ namespace MuPDF.NET
             return ret;
         }
 
-        public static PdfObj ObjectFromStr(PdfDocument doc, string src)
-        {
-            byte[] bytes = Encoding.UTF8.GetBytes(src);
-            IntPtr unmanagedBytes = Marshal.AllocHGlobal(bytes.Length);
-            Marshal.Copy(bytes, 0, unmanagedBytes, bytes.Length);
-            SWIGTYPE_p_unsigned_char swigData = new SWIGTYPE_p_unsigned_char(unmanagedBytes, false);
-            FzBuffer buffer = mupdf.mupdf.fz_new_buffer_from_copied_data(swigData, (uint)bytes.Length);
-            FzStream stream = buffer.fz_open_buffer();
-            Marshal.FreeHGlobal(unmanagedBytes);
-
-            PdfLexbuf lexBuffer = new PdfLexbuf(256);
-            PdfObj ret = doc.pdf_parse_stm_obj(stream, lexBuffer);
-
-            return ret;
-        }
-
         public void SetKeyXRef(int xref, string key, string value)
         {
             if (IsClosed)
@@ -668,7 +652,7 @@ namespace MuPDF.NET
             var invalidChars = new HashSet<char>(INVALID_NAME_CHARS);
             var intersection = invalidChars.Intersect(key);
 
-            if (key != null || (intersection.Any() && !intersection.Equals(new HashSet<char> { '/' })))
+            if (key == null || !(intersection.Count() == 0 || intersection.Equals(new HashSet<char> { '/' })))
             {
                 throw new Exception("Bad Key");
             }
@@ -680,9 +664,9 @@ namespace MuPDF.NET
             PdfDocument pdf = AsPdfDocument(this);
             int xrefLen = pdf.pdf_xref_len();
             PdfObj obj = null;
-            if (Utils.INRANGE(xref, 1, xrefLen - 1) && xref != -1)
+            if (!Utils.INRANGE(xref, 1, xrefLen - 1) && xref != -1)
             {
-                throw new Exception(Utils.ErrorMessages["MS_BAD_XREF"]);
+                throw new Exception(Utils.ErrorMessages["MSG_BAD_XREF"]);
             }
 
             if (xref != -1)
@@ -2072,6 +2056,21 @@ namespace MuPDF.NET
             (int, int) _pageId = (0, pageId);
             // issue: Check whether pageId is in this
             (int chapter, int pno) = _pageId;
+            FzLocation loc = mupdf.mupdf.fz_make_location(chapter, pno);
+            pageN = _nativeDocument.fz_page_number_from_location(loc);
+            return pageN;
+        }
+
+        /// <summary>
+        /// Convert (chapter, pno) to page number.
+        /// </summary>
+        /// <param name="pageId">page id</param>
+        /// <returns>chapter and pno</returns>
+        public int GetPageNumberFromLocation(int chapter, int pno)
+        {
+            int pageN = GetPageCount();
+            while (pno < 0)
+                pno += pageN;
             FzLocation loc = mupdf.mupdf.fz_make_location(chapter, pno);
             pageN = _nativeDocument.fz_page_number_from_location(loc);
             return pageN;

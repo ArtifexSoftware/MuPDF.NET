@@ -751,6 +751,8 @@ namespace MuPDF.NET
 
         public static FzBuffer BufferFromBytes(byte[] bytes)
         {
+            if (bytes == null)
+                return new FzBuffer();
             IntPtr unmanagedPointer = Marshal.AllocHGlobal(bytes.Length);
             Marshal.Copy(bytes, 0, unmanagedPointer, bytes.Length);
             return mupdf.mupdf.fz_new_buffer_from_copied_data(new SWIGTYPE_p_unsigned_char(unmanagedPointer, true), (uint)bytes.Length);
@@ -3285,7 +3287,7 @@ namespace MuPDF.NET
             FzBuffer buffer_ = mupdf.mupdf.fz_new_buffer_from_copied_data(swigSrc, (uint)bSrc.Length);
             FzStream stream = buffer_.fz_open_buffer();
             PdfLexbuf lexBuf = new PdfLexbuf(256);
-            PdfObj ret = doc.pdf_parse_stm_obj(stream, lexBuf);
+            PdfObj ret = doc.pdf_parse_stm_obj(stream, lexBuf);// issue
 
             return ret;
         }

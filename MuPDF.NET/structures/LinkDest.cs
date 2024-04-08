@@ -53,7 +53,6 @@ namespace MuPDF.NET
             if (rlink.Item1 != null && !Uri.StartsWith("#"))
             {
                 Uri = $"#page={rlink.Item1[0] + 1}&zoom=0,{rlink.Item2},{rlink.Item3}";
-                Console.WriteLine(rlink.Item1[0]);
             }
             if (obj.IsExternal)
             {

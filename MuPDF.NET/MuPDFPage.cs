@@ -3175,7 +3175,7 @@ namespace MuPDF.NET
                 LineartPath(ctx, path);
                 if (PathDict == null)
                     return;
-                Console.WriteLine(PathDict.Count);
+
                 PathDict["type"] = "f";
                 PathDict["even_odd"] = bEvenOdoo;
                 PathDict["fill_opacity"] = alpha;

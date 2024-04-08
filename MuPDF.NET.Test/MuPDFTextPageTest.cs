@@ -95,7 +95,6 @@ namespace MuPDF.NET.Test
             Assert.Pass();
 
             string ret = textPage.ExtractSelection(new mupdf.FzPoint(-5, -15), null);
-            Console.WriteLine(ret);
             Assert.Pass();
         }
     }
