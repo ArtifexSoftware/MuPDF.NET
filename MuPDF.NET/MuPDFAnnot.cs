@@ -288,7 +288,10 @@ namespace MuPDF.NET
             }
         }
 
-        public MuPDFAnnot Next
+        /// <summary>
+        /// return MuPDFAnnot or Widget
+        /// </summary>
+        public dynamic Next
         {
             get
             {
@@ -300,19 +303,20 @@ namespace MuPDF.NET
                 else
                     annot = annot.pdf_next_widget();
 
-                MuPDFAnnot val = annot == null ? null : new MuPDFAnnot(annot);
+                MuPDFAnnot val = (annot == null ? null : new MuPDFAnnot(annot));
                 if (val == null)
                 {
                     return null;
                 }
                 val.IsOwner = true;
-                //val._parent._annot_refs[]
+                val.Parent.AnnotRefs[val.GetHashCode()] = val;
 
                 if (val.Type.Item1 == PdfAnnotType.PDF_ANNOT_WIDGET)
                 {
-
+                    Widget widget = new Widget(Parent);
+                    Utils.FillWidget(val, widget);
+                    return widget;
                 }
-
                 return val;
             }
         }

@@ -13,6 +13,8 @@ namespace MuPDF.NET
 
         public int Xref;
 
+        public int Page = -1;
+
         public string Uri
         {
             get
@@ -49,12 +51,11 @@ namespace MuPDF.NET
                 if (Parent.Parent.IsClosed || Parent.Parent.IsEncrypted)
                     throw new Exception("document closed or encrypted");
 
-                (dynamic, float, float) uri;
+                (List<int>, float, float) uri;
                 if (IsExternal || Uri.StartsWith("#"))
                     uri = (null, 0, 0);
                 else
                     uri = Parent.Parent.ResolveLink(Uri);
-
                 return new LinkDest(this, uri, Parent.Parent);
             }
         }
@@ -77,7 +78,7 @@ namespace MuPDF.NET
         {
             get
             {
-                if (_nativeLink == null || _nativeLink.m_internal.uri == null)
+                if (_nativeLink.m_internal == null || string.IsNullOrEmpty(_nativeLink.m_internal.uri))
                     return false;
                 return mupdf.mupdf.fz_is_external_link(_nativeLink.m_internal.uri) != 0;
             }
@@ -131,7 +132,7 @@ namespace MuPDF.NET
             get
             {
                 if (_nativeLink == null || _nativeLink.m_internal == null)
-                    throw new Exception("self.this.m_internal not available");
+                    throw new Exception("FzLink.m_internal not available");
                 return new Rect(new FzRect(_nativeLink.rect()));
             }
         }

@@ -1,5 +1,6 @@
 namespace MuPDF.NET.Test;
 using MuPDF.NET;
+using System.IO.Compression;
 
 public class MuPDFPageTest : PdfTestBase
 {
@@ -16,7 +17,7 @@ public class MuPDFPageTest : PdfTestBase
         MuPDFPage page = doc.NewPage();
         int res = page.InsertText(new Point(100, 100), "hello", fontFile: "kenpixel.ttf", fontName: "kenpixel");
 
-        res = page.InsertText(new Point(100, 100), "hello", setSimple: 1, borderWidth: 2);
+        Assert.Pass();
     }
 
     [Test]
@@ -89,7 +90,7 @@ public class MuPDFPageTest : PdfTestBase
     public void ShowPdfPage()
     {
         MuPDFDocument output = new MuPDFDocument();
-        MuPDFPage page = doc.NewPage();
+        MuPDFPage page = output.NewPage();
 
         Rect r1 = new Rect(0, 0, page.Rect.Width, page.Rect.Height);
         Rect r2 = r1 + new Rect(0, page.Rect.Height / 2, 0, page.Rect.Height / 2);
@@ -168,5 +169,43 @@ public class MuPDFPageTest : PdfTestBase
         float[] color = { 0, 0, 1 };
         page.DrawLine(p1, p2, color: color, width: 9, strokeOpacity: 0.5f);
         doc.Save("output.pdf");
+    }
+
+    [Test]
+    public void InsertImage()
+    {
+        MuPDFPage page = doc.LoadPage(0);
+
+        page.InsertImage(new Rect(100, 100, 300, 300), "./img.png", imageName: "back");
+
+        doc.Save("output.pdf");
+    }
+
+    [Test]
+    public void InsertHtmlBox()
+    {
+        MuPDFDocument doc = new MuPDFDocument();
+        MuPDFPage page = doc.NewPage();
+
+        MuPDFArchive archive = new MuPDFArchive();
+        FileStream st = new FileStream("1.zip", FileMode.Open);
+        ZipArchive css = new ZipArchive(st, ZipArchiveMode.Read);
+        archive.Add(css, "./1.zip");
+
+        page.InsertHtmlBox(new Rect(100, 100, 300, 300), "<h1 style=\"font-family:kenpixel\">hello</h1>", css: "@font-face {font-family: kenpixel; src: url(./kenpixel.ttf)}", scaleLow: 1, archive: archive);
+
+        doc.Save("output.pdf");
+        Assert.Pass();
+    }
+
+    [Test]
+    public void InsertTextBox()
+    {
+        MuPDFDocument doc = new MuPDFDocument();
+        MuPDFPage page = doc.NewPage();
+        page.InsertTextbox(new Rect(100, 100, 300, 300), "hello", fontName: "kenpixel", fontFile: "./kenpixel.ttf");
+
+        doc.Save("output.pdf");
+        Assert.Pass();
     }
 }

@@ -18,7 +18,7 @@ namespace MuPDF.NET
 
         public Dictionary<string, string> MetaData;
 
-        public List<Font> FontInfo = new List<Font>();
+        public List<Font> FontInfos = new List<Font>();
 
         public Dictionary<int, MuPDFGraftMap> GraftMaps = new Dictionary<int, MuPDFGraftMap>();
 
@@ -250,7 +250,7 @@ namespace MuPDF.NET
                 IsClosed = false;
                 IsEncrypted = false;
                 MetaData = null;
-                FontInfo = new List<Font>();
+                FontInfos = new List<Font>();
                 PageRefs = new Dictionary<int, MuPDFPage>();
 
                 if (stream != null)
@@ -601,7 +601,7 @@ namespace MuPDF.NET
             len = list.Length;
             PdfObj testkey = obj.pdf_dict_getp(key);
 
-            if (testkey is null)
+            if (testkey.m_internal == null)
             {
                 while (len > 0)
                 {
@@ -615,7 +615,7 @@ namespace MuPDF.NET
 
             obj.pdf_dict_putp(key, mupdf.mupdf.pdf_new_text_string(eyecatcher));
             testkey = obj.pdf_dict_getp(key);
-            if (testkey.pdf_is_string() != 0)
+            if (testkey.pdf_is_string() == 0)
                 throw new Exception(string.Format("cannot insert value for '{0}'", key));
 
             string temp = mupdf.mupdf.pdf_to_text_string(testkey);
@@ -629,7 +629,7 @@ namespace MuPDF.NET
             string newVal = string.Format("%s %s", skey, value);
             string newStr = objStr.Replace(nullVal, newVal);
 
-            PdfObj newObj = ObjectFromStr(pdf, newStr);
+            PdfObj newObj = Utils.PdfObjFromStr(pdf, newStr);
             return newObj;
         }
 
@@ -643,22 +643,6 @@ namespace MuPDF.NET
             return ret;
         }
 
-        public static PdfObj ObjectFromStr(PdfDocument doc, string src)
-        {
-            byte[] bytes = Encoding.UTF8.GetBytes(src);
-            IntPtr unmanagedBytes = Marshal.AllocHGlobal(bytes.Length);
-            Marshal.Copy(bytes, 0, unmanagedBytes, bytes.Length);
-            SWIGTYPE_p_unsigned_char swigData = new SWIGTYPE_p_unsigned_char(unmanagedBytes, false);
-            FzBuffer buffer = mupdf.mupdf.fz_new_buffer_from_copied_data(swigData, (uint)bytes.Length);
-            FzStream stream = buffer.fz_open_buffer();
-            Marshal.FreeHGlobal(unmanagedBytes);
-
-            PdfLexbuf lexBuffer = new PdfLexbuf(256);
-            PdfObj ret = doc.pdf_parse_stm_obj(stream, lexBuffer);
-
-            return ret;
-        }
-
         public void SetKeyXRef(int xref, string key, string value)
         {
             if (IsClosed)
@@ -668,7 +652,7 @@ namespace MuPDF.NET
             var invalidChars = new HashSet<char>(INVALID_NAME_CHARS);
             var intersection = invalidChars.Intersect(key);
 
-            if (key != null || (intersection.Any() && !intersection.Equals(new HashSet<char> { '/' })))
+            if (key == null || !(intersection.Count() == 0 || intersection.Equals(new HashSet<char> { '/' })))
             {
                 throw new Exception("Bad Key");
             }
@@ -680,9 +664,9 @@ namespace MuPDF.NET
             PdfDocument pdf = AsPdfDocument(this);
             int xrefLen = pdf.pdf_xref_len();
             PdfObj obj = null;
-            if (Utils.INRANGE(xref, 1, xrefLen - 1) && xref != -1)
+            if (!Utils.INRANGE(xref, 1, xrefLen - 1) && xref != -1)
             {
-                throw new Exception(Utils.ErrorMessages["MS_BAD_XREF"]);
+                throw new Exception(Utils.ErrorMessages["MSG_BAD_XREF"]);
             }
 
             if (xref != -1)
@@ -1283,7 +1267,7 @@ namespace MuPDF.NET
             float xp = 0.0f;
             float yp = 0.0f;
 
-            if (uri == null)
+            if (string.IsNullOrEmpty(uri))
             {
                 if (chapters != 0)
                     return (new List<int>() { -1, -1 }, 0, 0);
@@ -1959,8 +1943,27 @@ namespace MuPDF.NET
             }
             else
             {
-
+                if (copy)
+                {
+                    parent = parent2;
+                    while (parent.m_internal != null)
+                    {
+                        int count = parent.pdf_dict_get_int(new PdfObj("Count"));
+                        parent.pdf_dict_put_int(new PdfObj("Count"), count + 1);
+                        parent = parent.pdf_dict_get(new PdfObj("Parent"));
+                    }
+                }
+                else
+                {
+                    if (i1 < pos)
+                        kids1.pdf_array_delete(i1);
+                    else
+                        kids1.pdf_array_delete(i1 + 1);
+                }
             }
+            if (pdf.m_internal.rev_page_map != null)
+                mupdf.mupdf.ll_pdf_drop_page_tree(pdf.m_internal);
+            ResetPageRefs();
         }
 
         /// <summary>
@@ -2072,6 +2075,21 @@ namespace MuPDF.NET
             (int, int) _pageId = (0, pageId);
             // issue: Check whether pageId is in this
             (int chapter, int pno) = _pageId;
+            FzLocation loc = mupdf.mupdf.fz_make_location(chapter, pno);
+            pageN = _nativeDocument.fz_page_number_from_location(loc);
+            return pageN;
+        }
+
+        /// <summary>
+        /// Convert (chapter, pno) to page number.
+        /// </summary>
+        /// <param name="pageId">page id</param>
+        /// <returns>chapter and pno</returns>
+        public int GetPageNumberFromLocation(int chapter, int pno)
+        {
+            int pageN = GetPageCount();
+            while (pno < 0)
+                pno += pageN;
             FzLocation loc = mupdf.mupdf.fz_make_location(chapter, pno);
             pageN = _nativeDocument.fz_page_number_from_location(loc);
             return pageN;
@@ -3009,7 +3027,7 @@ namespace MuPDF.NET
                     PdfObj newAnnots = pdf.pdf_new_array(n);
                     for (int i = 0; i < n; i++)
                     {
-                        PdfObj o = oldAnnots.pdf_dict_get(i);
+                        PdfObj o = oldAnnots.pdf_array_get(i);
                         PdfObj subtype = o.pdf_dict_get(new PdfObj("Subtype"));
                         if (subtype.pdf_name_eq(new PdfObj("Popup")) != 0)
                             continue;
@@ -3021,7 +3039,7 @@ namespace MuPDF.NET
                         copyObj = pdf.pdf_new_indirect(xref, 0);
                         copyObj.pdf_dict_del(new PdfObj("Popup"));
                         copyObj.pdf_dict_del(new PdfObj("P"));
-                        newAnnots.pdf_dict_del(copyObj);
+                        newAnnots.pdf_array_push(copyObj);
                     }
                     page2.pdf_dict_put(new PdfObj("Annots"), newAnnots);
                 }
@@ -3029,10 +3047,8 @@ namespace MuPDF.NET
 
                 if (res.m_internal != null)
                 {
-                    IntPtr pBuf = Marshal.AllocHGlobal(1);
-                    Marshal.Copy(Encoding.UTF8.GetBytes(" "), 0, pBuf, 1);
-                    SWIGTYPE_p_unsigned_char swigBuf = new SWIGTYPE_p_unsigned_char(pBuf, true);
-                    PdfObj contents = pdf.pdf_add_stream(mupdf.mupdf.fz_new_buffer_from_copied_data(swigBuf, 1), new PdfObj(), 0);
+                    FzBuffer buf = Utils.fz_new_buffer_from_data(Encoding.UTF8.GetBytes(" "));
+                    PdfObj contents = pdf.pdf_add_stream(buf, new PdfObj(), 0);
                     Utils.UpdateStream(pdf, contents, res, 1);
                     page2.pdf_dict_put(new PdfObj("Contents"), contents);
                 }
@@ -3482,11 +3498,7 @@ namespace MuPDF.NET
                 throw new Exception(Utils.ErrorMessages["MSG_BAD_PDFROOT"]);
 
             byte[] utf8 = Encoding.UTF8.GetBytes(metadata);
-            IntPtr pBuf = Marshal.AllocHGlobal(utf8.Length);
-            Marshal.Copy(utf8, 0, pBuf, utf8.Length);
-            SWIGTYPE_p_unsigned_char swigBuf = new SWIGTYPE_p_unsigned_char(pBuf, true);
-
-            FzBuffer res = mupdf.mupdf.fz_new_buffer_from_copied_data(swigBuf, (uint)utf8.Length);
+            FzBuffer res = Utils.fz_new_buffer_from_data(utf8);
             PdfObj xml = root.pdf_dict_get(new PdfObj("Metadata"));
             if (xml.m_internal != null)
                 Utils.UpdateStream(pdf, xml, res, 0);
@@ -3771,7 +3783,7 @@ namespace MuPDF.NET
             return this[pno].SearchFor(text, clip, quads, flags, textpage);
         }
         
-        public void DoLinks(MuPDFDocument doc, int fromPage = -1, int toPage = -1, int startAt = -1)
+        private void DoLinks(MuPDFDocument doc, int fromPage = -1, int toPage = -1, int startAt = -1)
         {
             Utils.DoLinks(this, doc, fromPage, toPage, startAt);
         }
