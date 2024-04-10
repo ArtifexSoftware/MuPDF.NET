@@ -6,77 +6,77 @@ using System.Threading.Tasks;
 
 namespace MuPDF.NET.Test
 {
-    public class TextPageTest : PageTestBase
+    public class MuPDFTextPageTest : PdfTestBase
     {
         [SetUp]
         public void Setup()
         {
-            doc = new MuPDFDocument("test.pdf");
+            doc = new MuPDFDocument("input.pdf");
 
-            textPage = doc.LoadPage(0).GetSTextPage();
+            textPage = doc.LoadPage(0).GetTextPage();
         }
 
         [Test]
-        public void Test_Constructor()
+        public void Constructor()
         {
-            textPage = new MuPDFSTextPage(new mupdf.FzRect());
+            textPage = new MuPDFTextPage(new mupdf.FzRect());
             Assert.Pass();
 
-            textPage = new MuPDFSTextPage(doc.LoadPage(0).GetSTextPage());
+            textPage = new MuPDFTextPage(doc.LoadPage(0).GetTextPage());
             Assert.Pass();
         }
 
         [Test]
-        public void Test_ExtractHtml()
+        public void ExtractHtml()
         {
             textPage.ExtractHtml();
             Assert.Pass();
         }
 
         [Test]
-        public void Test_ExtractText()
+        public void ExtractText()
         {
             textPage.ExtractText();
             Assert.Pass();
         }
 
         [Test]
-        public void Test_ExtractXml()
+        public void ExtractXml()
         {
             textPage.ExtractXML();
             Assert.Pass();
         }
 
         [Test]
-        public void Test_ExtractBlocks()
+        public void ExtractBlocks()
         {
             List<TextBlock> blocks = textPage.ExtractBlocks();
             Assert.NotZero(blocks.Count);
         }
 
         [Test]
-        public void Test_ExtractXHtml()
+        public void ExtractXHtml()
         {
             textPage.ExtractXHtml();
             Assert.Pass();
         }
 
         [Test]
-        public void Test_ExtractDict()
+        public void ExtractDict()
         {
             textPage.ExtractDict(new Rect(0, 0, 300, 300));
             Assert.Pass();
         }
 
         [Test]
-        public void Test_ExtractJson()
+        public void ExtractJson()
         {
             textPage.ExtractJSON(new Rect(0, 0, 300, 300));
             Assert.Pass();
         }
 
         [Test]
-        public void Test_ExtractRAWDict()
+        public void ExtractRAWDict()
         {
             textPage.ExtractRAWDict(new Rect(0, 0, 300, 300));
             Assert.Pass();
@@ -86,7 +86,7 @@ namespace MuPDF.NET.Test
         }
 
         [Test]
-        public void Test_ExtractSelection()
+        public void ExtractSelection()
         {
             textPage.ExtractSelection(new mupdf.FzPoint(20, 20), new mupdf.FzPoint(100, 100));
             Assert.Pass();
@@ -95,7 +95,6 @@ namespace MuPDF.NET.Test
             Assert.Pass();
 
             string ret = textPage.ExtractSelection(new mupdf.FzPoint(-5, -15), null);
-            Console.WriteLine(ret);
             Assert.Pass();
         }
     }

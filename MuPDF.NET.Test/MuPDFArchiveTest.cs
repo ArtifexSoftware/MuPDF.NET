@@ -4,12 +4,14 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace MuPDF.NET
+namespace MuPDF.NET.Test
 {
-    public struct ColorStruct
+    public class MuPDFArchiveTest
     {
-        public float[] Fill;
+        [Test]
+        public void Contructor()
+        {
 
-        public float[] Stroke;
+        }
     }
 }

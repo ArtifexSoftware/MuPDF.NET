@@ -1,9 +1,4 @@
 ﻿using mupdf;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace MuPDF.NET
 {
@@ -18,7 +13,7 @@ namespace MuPDF.NET
             return _nativeGraftMap;
         }
 
-        public MuPDFGraftMap(MuPDFDocument doc) 
+        public MuPDFGraftMap(MuPDFDocument doc)
         {
             PdfDocument pdf = MuPDFDocument.AsPdfDocument(doc);
             PdfGraftMap map = pdf.pdf_new_graft_map();

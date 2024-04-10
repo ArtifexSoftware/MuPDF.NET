@@ -1,9 +1,4 @@
 ﻿using mupdf;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace MuPDF.NET
 {
@@ -30,10 +25,10 @@ namespace MuPDF.NET
             _nativeDevice = dl.fz_new_list_device();
         }
 
-        public MuPDFDeviceWrapper(MuPDFSTextPage stpage, int flags)
+        public MuPDFDeviceWrapper(MuPDFTextPage stpage, int flags)
         {
             FzStextOptions opts = new FzStextOptions(flags);
-            _nativeDevice = stpage._nativeSTextPage.fz_new_stext_device(opts);
+            _nativeDevice = stpage._nativeTextPage.fz_new_stext_device(opts);
         }
 
         public FzDevice ToFzDevice()

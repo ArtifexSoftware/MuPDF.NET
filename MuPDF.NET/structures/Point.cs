@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using mupdf;
+﻿using mupdf;
 
 namespace MuPDF.NET
 {
@@ -113,7 +108,7 @@ namespace MuPDF.NET
 
         public static Point operator -(Point p1, Point p2)
         {
-            return new Point(p1.X -p2.X, p1.Y - p2.Y);
+            return new Point(p1.X - p2.X, p1.Y - p2.Y);
         }
 
         public Point Position()
@@ -147,9 +142,7 @@ namespace MuPDF.NET
         public Point Transform(Matrix m)
         {
             FzPoint p = mupdf.mupdf.fz_transform_point(ToFzPoint(), m.ToFzMatrix());
-            this.X = p.x;
-            this.Y = p.y;
-            return this;
+            return new Point(p);
         }
 
         /// <summary>
@@ -167,9 +160,14 @@ namespace MuPDF.NET
             }
         }
 
+        public override string ToString()
+        {
+            return $"Point({X}, {Y})";
+        }
+
         public void Dispose()
         {
-            
+
         }
     }
 }

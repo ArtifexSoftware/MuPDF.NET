@@ -1,19 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Text;
+﻿using mupdf;
 using Newtonsoft.Json;
-using mupdf;
-using System.Runtime.InteropServices;
-using System.Linq;
+using System.Diagnostics;
 
 namespace MuPDF.NET
 {
-    public class MuPDFSTextPage : IDisposable
+    public class MuPDFTextPage : IDisposable
     {
-        internal FzStextPage _nativeSTextPage;
+        internal FzStextPage _nativeTextPage;
 
-        internal MuPDFPage _parent = null;
+        public MuPDFPage Parent = null;
         /// <summary>
         /// Rect of Stext Page
         /// </summary>
@@ -21,7 +16,7 @@ namespace MuPDF.NET
         {
             get
             {
-                return new FzRect(_nativeSTextPage.m_internal.mediabox);
+                return new FzRect(_nativeTextPage.m_internal.mediabox);
             }
         }
 
@@ -33,7 +28,7 @@ namespace MuPDF.NET
             get
             {
                 List<FzStextBlock> blocks = new List<FzStextBlock>();
-                for (fz_stext_block block = _nativeSTextPage.m_internal.first_block; block != null; block = block.next)
+                for (fz_stext_block block = _nativeTextPage.m_internal.first_block; block != null; block = block.next)
                 {
                     blocks.Add(new FzStextBlock(block));
                 }
@@ -45,28 +40,31 @@ namespace MuPDF.NET
         /// MuPDFStextPage Constructor 
         /// </summary>
         /// <param name="rect">Page Rectangle Size</param>
-        public MuPDFSTextPage(FzRect rect)
+        public MuPDFTextPage(FzRect rect)
         {
-            _nativeSTextPage = new FzStextPage(rect);
+            _nativeTextPage = new FzStextPage(rect);
+            Parent = null;
         }
 
-        public MuPDFSTextPage(FzStextPage stPage)
+        public MuPDFTextPage(FzStextPage stPage)
         {
-            _nativeSTextPage = stPage;
+            _nativeTextPage = stPage;
+            Parent = null;
         }
 
         /// <summary>
         /// MuPDFStextPage Contructor
         /// </summary>
         /// <param name="stPage">MuPDFStextPage object</param>
-        public MuPDFSTextPage(MuPDFSTextPage stPage)
+        public MuPDFTextPage(MuPDFTextPage stPage)
         {
-            _nativeSTextPage = stPage._nativeSTextPage;
+            _nativeTextPage = stPage._nativeTextPage;
+            Parent = stPage.Parent;
         }
 
-        public MuPDFSTextPage(FzPage page)
+        public MuPDFTextPage(FzPage page)
         {
-            _nativeSTextPage = new FzStextPage(page, new FzStextOptions());
+            _nativeTextPage = new FzStextPage(page, new FzStextOptions());
         }
 
         /// <summary>
@@ -76,7 +74,7 @@ namespace MuPDF.NET
         /// <returns>string of Text, HTML, XHTML, .. according to format</returns>
         public string ExtractText(ExtractFormat format)
         {
-            FzStextPage stPage = _nativeSTextPage;
+            FzStextPage stPage = _nativeTextPage;
             FzBuffer buffer = new FzBuffer(1024);
             FzOutput output = new mupdf.FzOutput(buffer);
 
@@ -109,7 +107,7 @@ namespace MuPDF.NET
         public List<TextBlock> ExtractBlocks()
         {
             int blockNum = -1;
-            FzRect stPageRect = new FzRect(_nativeSTextPage.m_internal.mediabox);
+            FzRect stPageRect = new FzRect(_nativeTextPage.m_internal.mediabox);
             FzBuffer res = new FzBuffer(1024);
             List<TextBlock> lines = new List<TextBlock>();
 
@@ -178,9 +176,9 @@ namespace MuPDF.NET
         /// <param name="cropbox">Rectangle to extract in StextPage</param>
         /// <param name="sort"></param>
         /// <returns>Page information of CropBox</returns>
-        public PageStruct ExtractDict(Rect cropbox, bool sort = false)
+        public PageInfo ExtractDict(Rect cropbox, bool sort = false)
         {
-            PageStruct pageDict = TextPage2Dict(false);
+            PageInfo pageDict = TextPage2Dict(false);
             if (cropbox != null)
             {
                 pageDict.Width = cropbox.Width;
@@ -188,8 +186,9 @@ namespace MuPDF.NET
             }
             if (sort is true)
             {
-                List<BlockStruct> blocks = pageDict.Blocks;
-                blocks.Sort((b1, b2) => { 
+                List<Block> blocks = pageDict.Blocks;
+                blocks.Sort((b1, b2) =>
+                {
                     if (b1.Bbox.y1 == b2.Bbox.y1)
                     {
                         return b1.Bbox.x0.CompareTo(b2.Bbox.x0);
@@ -218,13 +217,13 @@ namespace MuPDF.NET
         /// Extract Stext Page with Image Information
         /// </summary>
         /// <param name="hashes">Encode image with given hash value</param>
-        internal void ExtractImageInfo(int hashes = 0)
+        public List<Block> ExtractImageInfo(int hashes = 0)
         {
             int blockNum = -1;
+            List<Block> rc = new List<Block>();
             foreach (FzStextBlock block in Blocks)
             {
                 blockNum += 1;
-                List<BlockStruct> rc = new List<BlockStruct>();
 
                 if (block.m_internal.type == (int)STextBlockType.FZ_STEXT_BLOCK_TEXT)
                     continue;
@@ -233,7 +232,7 @@ namespace MuPDF.NET
                 if (hashes != 0)
                 {
                     FzIrect r = new FzIrect(Utils.FZ_MIN_INF_RECT, Utils.FZ_MIN_INF_RECT, Utils.FZ_MAX_INF_RECT, Utils.FZ_MAX_INF_RECT);
-                    
+
                     Debug.Assert(r.fz_is_infinite_irect() != 0, "Rect is infinite");
 
                     FzMatrix m = new FzMatrix(img.w(), 0, 0, img.h(), 0, 0);
@@ -244,7 +243,7 @@ namespace MuPDF.NET
                     digest = pixmap.fz_md5_pixmap2();
                 }
                 FzColorspace cs = new FzColorspace(mupdf.mupdf.ll_fz_keep_colorspace(img.m_internal.colorspace));
-                BlockStruct blockDict = new BlockStruct();
+                Block blockDict = new Block();
                 blockDict.Number = blockNum;
                 blockDict.Bbox = new FzRect(block.m_internal.bbox);
                 blockDict.Matrix = block.i_transform();
@@ -262,6 +261,7 @@ namespace MuPDF.NET
                 }
                 rc.Add(blockDict);
             }
+            return rc;
         }
 
         /// <summary>
@@ -271,7 +271,7 @@ namespace MuPDF.NET
         /// <param name="sort"></param>
         public string ExtractJSON(Rect cropbox, bool sort = false)
         {
-            PageStruct pageDict = TextPage2Dict(false);
+            PageInfo pageDict = TextPage2Dict(false);
             if (cropbox != null)
             {
                 pageDict.Width = cropbox.Width;
@@ -280,8 +280,9 @@ namespace MuPDF.NET
 
             if (sort)
             {
-                List<BlockStruct> blocks = pageDict.Blocks;
-                blocks.Sort((b1, b2) => {
+                List<Block> blocks = pageDict.Blocks;
+                blocks.Sort((b1, b2) =>
+                {
                     if (b1.Bbox.y1 == b2.Bbox.y1)
                     {
                         return b1.Bbox.x0.CompareTo(b2.Bbox.x0);
@@ -309,9 +310,9 @@ namespace MuPDF.NET
         /// <param name="cropbox">Rectangle Area to Extract</param>
         /// <param name="sort"></param>
         /// <returns></returns>
-        public PageStruct ExtractRAWDict(Rect cropbox, bool sort = false)
+        public PageInfo ExtractRAWDict(Rect cropbox, bool sort = false)
         {
-            PageStruct pageDict = TextPage2Dict(false);
+            PageInfo pageDict = TextPage2Dict(false);
             if (cropbox != null)
             {
                 pageDict.Width = cropbox.Width;
@@ -319,8 +320,9 @@ namespace MuPDF.NET
             }
             if (sort is true)
             {
-                List<BlockStruct> blocks = pageDict.Blocks;
-                blocks.Sort((b1, b2) => {
+                List<Block> blocks = pageDict.Blocks;
+                blocks.Sort((b1, b2) =>
+                {
                     if (b1.Bbox.y1 == b2.Bbox.y1)
                     {
                         return b1.Bbox.x0.CompareTo(b2.Bbox.x0);
@@ -344,7 +346,7 @@ namespace MuPDF.NET
         /// <returns>returns text in format of string</returns>
         public string ExtractSelection(FzPoint a, FzPoint b)
         {
-            return mupdf.mupdf.fz_copy_selection(_nativeSTextPage, a, b, 0);
+            return mupdf.mupdf.fz_copy_selection(_nativeTextPage, a, b, 0);
         }
 
         /// <summary>
@@ -495,7 +497,7 @@ namespace MuPDF.NET
 
         public uint PoolSize()
         {
-            FzPool pool = new FzPool(_nativeSTextPage.m_internal.pool);
+            FzPool pool = new FzPool(_nativeTextPage.m_internal.pool);
             uint size = pool.fz_pool_size();
             pool.m_internal = null;
             return size;
@@ -507,7 +509,7 @@ namespace MuPDF.NET
         /// <param name="stPage">Stext Page</param>
         /// <param name="needle">Text to search</param>
         /// <returns></returns>
-        public static List<Quad> Search(MuPDFSTextPage stPage, string needle, int hitMax = 0, bool quad = true)
+        public static List<Quad> Search(MuPDFTextPage stPage, string needle, int hitMax = 0, bool quad = true)
         {
             FzRect rect = stPage.MediaBox;
             if (needle == null || needle == "")
@@ -563,7 +565,7 @@ namespace MuPDF.NET
                                 {
                                     inside = 0;
                                     (begin, end) = stPage.FindString(hayStackString.Substring(hayStack), needle);
-                                    
+
                                     if (begin == -1)
                                     {
                                         goto no_more_matches;
@@ -578,14 +580,14 @@ namespace MuPDF.NET
                             }
                             break;
                         }
-                        Tuple<int, int> res = MuPDFSTextPage.Char2Canon(hayStackString.Substring(hayStack));
+                        Tuple<int, int> res = MuPDFTextPage.Char2Canon(hayStackString.Substring(hayStack));
                         hayStack += res.Item1;
                     }
                     hayStack += 1;
                 }
                 hayStack += 1;
             }
-    no_more_matches:;
+        no_more_matches:;
             buffer.fz_clear_buffer();
 
             int items = quads.Count;
@@ -642,7 +644,7 @@ namespace MuPDF.NET
                     return;
                 }
             }
-            
+
             hits.Quads.Add(new Quad(chQuad));
             hits.Len += 1;
         }
@@ -776,7 +778,7 @@ namespace MuPDF.NET
 
             return c;
         }
-            
+
 
         public static Tuple<int, int> Char2Canon(string s)
         {
@@ -786,7 +788,7 @@ namespace MuPDF.NET
             int c = Canon(outparams.rune);
             /*if (s.Length == 0)
                 return new Tuple<int, int>(1, -1);*/
-            return new Tuple<int, int>( n, c);
+            return new Tuple<int, int>(n, c);
         }
 
         internal int AppendWord(List<WordBlock> lines, FzBuffer buf, FzRect wordBox, int blockNum, int lineNum, int wordNum)
@@ -859,26 +861,27 @@ namespace MuPDF.NET
         /// </summary>
         /// <param name="pageDict">PageStruct including BlockList</param>
         /// <param name="raw"></param>
-        internal void GetNewBlockList(PageStruct pageDict, bool raw)
+        internal void GetNewBlockList(PageInfo pageDict, bool raw)
         {
             MakeTextPage2Dict(pageDict, raw);
         }
 
-        internal PageStruct TextPage2Dict(bool raw = false)
+        internal PageInfo TextPage2Dict(bool raw = false)
         {
-            PageStruct pageDict = new PageStruct {
+            PageInfo pageDict = new PageInfo
+            {
                 Width = MediaBox.x1 - MediaBox.x0,
                 Height = MediaBox.y1 - MediaBox.y0,
-                Blocks = new List<BlockStruct>()
+                Blocks = new List<Block>()
             };
-            
+
             GetNewBlockList(pageDict, raw);
             return pageDict;
         }
 
         public string ExtractRawJSON(Rect cropbox = null, bool sort = false)
         {
-            PageStruct val = TextPage2Dict(true);
+            PageInfo val = TextPage2Dict(true);
             if (cropbox != null)
             {
                 val.Width = cropbox.Width;
@@ -886,8 +889,9 @@ namespace MuPDF.NET
             }
             if (sort == true)
             {
-                List<BlockStruct> blocks = val.Blocks;
-                blocks.Sort((b1, b2) => {
+                List<Block> blocks = val.Blocks;
+                blocks.Sort((b1, b2) =>
+                {
                     if (b1.Bbox.y1 == b2.Bbox.y1)
                     {
                         return b1.Bbox.x0.CompareTo(b2.Bbox.x0);
@@ -904,7 +908,7 @@ namespace MuPDF.NET
             return ret;
         }
 
-        internal void MakeTextPage2Dict(PageStruct pageDict, bool raw)
+        internal void MakeTextPage2Dict(PageInfo pageDict, bool raw)
         {
             FzBuffer textBuffer = new FzBuffer(128);
             FzRect stPageRect = MediaBox;
@@ -922,7 +926,7 @@ namespace MuPDF.NET
                     && (FzRect.fz_intersect_rect(MediaBox, new FzRect(block.m_internal.bbox))).fz_is_empty_rect() != 0)
                     continue;
 
-                BlockStruct blockDict = new BlockStruct();
+                Block blockDict = new Block();
 
                 blockDict.Number = blockNum;
                 blockDict.Type = block.m_internal.type;
@@ -971,11 +975,11 @@ namespace MuPDF.NET
                     blockDict.Bpc = image.bpc();
                     blockDict.Matrix = block.i_transform();
                     blockDict.Size = mupdf.mupdf.fz_image_size(image);
-                    blockDict.Image = buf;
+                    blockDict.Image = Utils.BinFromBuffer(buf);
                 }
                 else
                 {
-                    List<LineStruct> lineList = new List<LineStruct>();
+                    List<Line> lineList = new List<Line>();
 
                     FzRect blockRect = new FzRect(FzRect.Fixed.Fixed_EMPTY);
 
@@ -985,11 +989,11 @@ namespace MuPDF.NET
                             && stPageRect.fz_is_infinite_rect() == 0)
                             continue;
 
-                        LineStruct lineDict = new LineStruct();
+                        Line lineDict = new Line();
 
                         ///JM_make_spanlist
-                        List<CharStruct> charList = new List<CharStruct>();
-                        List<SpanStruct> spanList = new List<SpanStruct>();
+                        List<Char> charList = new List<Char>();
+                        List<Span> spanList = new List<Span>();
                         mupdf.mupdf.fz_clear_buffer(textBuffer);
                         FzRect spanRect = new FzRect(FzRect.Fixed.Fixed_EMPTY);
                         FzRect lineRect = new FzRect(FzRect.Fixed.Fixed_EMPTY);
@@ -997,7 +1001,7 @@ namespace MuPDF.NET
                         MuPDFCharStyle style = new MuPDFCharStyle();
                         MuPDFCharStyle oldStyle = new MuPDFCharStyle();
 
-                        SpanStruct span = new SpanStruct();
+                        Span span = new Span();
                         FzPoint spanOrigin = new FzPoint();
 
                         for (fz_stext_char ch = line.first_char; ch != null; ch = ch.next)
@@ -1017,7 +1021,7 @@ namespace MuPDF.NET
                             style.Desc = (new FzFont(mupdf.mupdf.ll_fz_keep_font(ch.font))).fz_font_descender();
 
                             if (style.Size != oldStyle.Size || style.Flags != oldStyle.Flags || style.Color != oldStyle.Color || style.Font != oldStyle.Font)
-                            { 
+                            {
                                 if (oldStyle.Size >= 0)
                                 {
                                     if (raw)
@@ -1036,7 +1040,7 @@ namespace MuPDF.NET
                                     lineRect = FzRect.fz_union_rect(lineRect, spanRect);
                                     spanList.Add(span);
                                 }
-                                span = new SpanStruct();
+                                span = new Span();
                                 float asc = style.Asc;
                                 float desc = style.Desc;
                                 if (style.Asc < 1e-3)
@@ -1056,13 +1060,13 @@ namespace MuPDF.NET
 
                             if (raw)
                             {
-                                CharStruct charDict = new CharStruct();
+                                Char charDict = new Char();
                                 charDict.Origin = new FzPoint(ch.origin);
                                 charDict.Bbox = r;
                                 charDict.C = (char)ch.c;
 
                                 if (charList != null)
-                                    charList = new List<CharStruct>();
+                                    charList = new List<Char>();
                                 charList.Add(charDict);
                             }
                             else
@@ -1130,7 +1134,7 @@ namespace MuPDF.NET
             string name = font.fz_font_name();
             int s = name.IndexOf("+");
 
-            return name.Substring(s+1);
+            return name.Substring(s + 1);
         }
         public FzQuad GetCharQuad(FzStextLine line, FzStextChar ch)
         {
@@ -1150,7 +1154,7 @@ namespace MuPDF.NET
 
             FzRect bbox = mupdf.mupdf.fz_font_bbox(font);
             float fontWidth = bbox.y1 - bbox.y0;
-            
+
             if (asc < 1e-3)
             {
                 desc = -0.1f;
@@ -1161,7 +1165,7 @@ namespace MuPDF.NET
             asc_desc = asc - desc;
             asc = asc * fontSize / asc_desc;
             desc = desc * fontSize / asc_desc;
-            
+
             float c = line.m_internal.dir.x;
             float s = line.m_internal.dir.y;
             FzMatrix trm1 = new FzMatrix(c, -s, s, c, 0, 0);
@@ -1173,7 +1177,7 @@ namespace MuPDF.NET
             }
             FzMatrix xlate1 = new FzMatrix(1, 0, 0, 1, -ch.m_internal.origin.x, -ch.m_internal.origin.y);
             FzMatrix xlate2 = new FzMatrix(1, 0, 0, 1, ch.m_internal.origin.x, ch.m_internal.origin.y);
-            
+
             FzQuad quad = mupdf.mupdf.fz_transform_quad(new FzQuad(ch.m_internal.quad), xlate1);
             quad = mupdf.mupdf.fz_transform_quad(quad, trm1);
 
@@ -1212,10 +1216,10 @@ namespace MuPDF.NET
             }
             quad = mupdf.mupdf.fz_transform_quad(quad, trm2);
             quad = mupdf.mupdf.fz_transform_quad(quad, xlate2);
-            
+
             return quad;
         }
-    
+
         public FzRect GetCharBbox(FzStextLine line, FzStextChar ch)
         {
             FzQuad q = GetCharQuad(line, ch);
@@ -1242,7 +1246,7 @@ namespace MuPDF.NET
 
         public void Dispose()
         {
-            _nativeSTextPage.Dispose();
+            _nativeTextPage.Dispose();
         }
     }
 

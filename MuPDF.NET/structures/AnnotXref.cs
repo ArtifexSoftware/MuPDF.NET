@@ -6,15 +6,12 @@ using System.Threading.Tasks;
 
 namespace MuPDF.NET
 {
-    public struct BorderStruct
+    public class AnnotXref
     {
-        public float Width;
+        public string Id;
 
-        public string Style;
+        public int Xref;
 
-        public int[] Dashes;
-
-        public float Clouds;
-
+        public PdfAnnotType AnnotType;
     }
 }

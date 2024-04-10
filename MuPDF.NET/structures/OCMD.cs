@@ -6,12 +6,14 @@ using System.Threading.Tasks;
 
 namespace MuPDF.NET
 {
-    public struct PageStruct
+    public class OCMD
     {
-        public float Width;
+        public int Xref;
 
-        public float Height;
+        public string[] Ocgs;
 
-        public List<BlockStruct> Blocks;
+        public string Policy;
+
+        public object Ve;
     }
 }

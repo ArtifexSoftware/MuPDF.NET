@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using mupdf;
-
-namespace MuPDF.NET
+﻿namespace MuPDF.NET
 {
     public class Hits
     {

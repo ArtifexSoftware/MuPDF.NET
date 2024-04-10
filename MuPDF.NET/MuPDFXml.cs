@@ -1,11 +1,6 @@
 ﻿using mupdf;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Runtime.InteropServices;
-using Microsoft.Maui.Layouts;
+using System.Text;
 
 namespace MuPDF.NET
 {
@@ -125,13 +120,7 @@ namespace MuPDF.NET
         public MuPDFXml(string rhs)
         {
             byte[] bytes = Encoding.UTF8.GetBytes(rhs);
-
-            IntPtr unmanagedPointer = Marshal.AllocHGlobal(bytes.Length);
-            Marshal.Copy(bytes, 0, unmanagedPointer, bytes.Length);
-            SWIGTYPE_p_unsigned_char s = new SWIGTYPE_p_unsigned_char(unmanagedPointer, true);
-            //Marshal.FreeHGlobal(unmanagedPointer);
-
-            FzBuffer buf = mupdf.mupdf.fz_new_buffer_from_copied_data(s, (uint)bytes.Length);
+            FzBuffer buf = Utils.fz_new_buffer_from_data(bytes);
             _nativeXml = mupdf.mupdf.fz_parse_xml_from_html5(buf);
         }
 
@@ -243,7 +232,7 @@ namespace MuPDF.NET
             string tagName = TagName;
             string newTag = $"h{level}";
             MuPDFXml child = CreateElement(newTag);
-            if (!(new[] {"h1", "h2", "h3", "h4", "h5", "h6"}).Contains(tagName))
+            if (!(new[] { "h1", "h2", "h3", "h4", "h5", "h6" }).Contains(tagName))
             {
                 AppendChild(child);
                 return child;
@@ -412,7 +401,7 @@ namespace MuPDF.NET
                 (int, int, int) rgb = Utils.sRGB2rgb(color);
                 return $"rgb({rgb.Item1},{rgb.Item2},{rgb.Item3})";
             }
-            if ((color is Tuple || color is List<int> || color is List<float>))//issue: list length
+            if ((color is List<float> && color.Count == 3))
             {
                 return $"rbg({color[0]},{color[1]},{color[2]}";
             }
@@ -421,7 +410,7 @@ namespace MuPDF.NET
 
         public void Debug()
         {
-            List < (int, string) > items = GetNodeTree();
+            List<(int, string)> items = GetNodeTree();
             foreach ((int k, string v) in items)
             {
                 Console.WriteLine($"{k}: " + v.Replace("\n", "\\n"));

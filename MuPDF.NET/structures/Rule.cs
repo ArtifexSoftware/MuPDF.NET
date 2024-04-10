@@ -6,12 +6,14 @@ using System.Threading.Tasks;
 
 namespace MuPDF.NET
 {
-    public struct SubArchiveStruct
+    public class Rule
     {
-        public string Fmt;
+        public int StartPage;
 
-        public List<string> Entries;
+        public string Prefix;
 
-        public string Path;
+        public int FirstPageNum;
+
+        public string Style;
     }
 }

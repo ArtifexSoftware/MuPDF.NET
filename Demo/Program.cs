@@ -5,7 +5,6 @@ using System.IO.Compression;
 using System.Runtime.InteropServices;
 using mupdf;
 using MuPDF.NET;
-using System.Diagnostics;
 
 namespace Demo
 {
@@ -31,17 +30,9 @@ namespace Demo
 
             Console.WriteLine($"Elapsed Time is {ts.TotalMilliseconds}");*/
 
-            MuPDFDocument src = new MuPDFDocument("1.pdf");
+            MuPDFDocument doc = new MuPDFDocument("1.pdf");
+            Console.WriteLine(doc.Name);
 
-            MuPDFDocument doc = new MuPDFDocument();
-            MuPDFPage page = doc.NewPage();
-            
-            Rect r1 = new Rect(0, 0, page.Rect.Width, page.Rect.Height / 2);
-            Rect r2 = r1 + new Rect(0, page.Rect.Height / 2, 0, page.Rect.Height / 2);
-            page.ShowPdfPage(r1, src, 0, rotate: 90);
-            page.ShowPdfPage(r2, src, 0, rotate: -90);
-
-            doc.Save("output.pdf");
             /*for (int i = 0; i < doc.GetPageCount(); i++)
             {
                 MuPDFPage page = doc.LoadPage(i);

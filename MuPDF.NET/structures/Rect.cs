@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Security.Cryptography;
-using FzRect = mupdf.FzRect;
+﻿using FzRect = mupdf.FzRect;
 
 namespace MuPDF.NET
 {
@@ -119,7 +115,7 @@ namespace MuPDF.NET
             Y1 = rect.y1;
         }
 
-        public Rect(IRect rect): this(rect.X0, rect.Y0, rect.X1, rect.Y1)
+        public Rect(IRect rect) : this(rect.X0, rect.Y0, rect.X1, rect.Y1)
         {
 
         }
@@ -317,7 +313,7 @@ namespace MuPDF.NET
         public float Norm()
         {
             float ret = 0.0f;
-            for (int i = 0; i < this.Length; i ++)
+            for (int i = 0; i < this.Length; i++)
             {
                 ret += this[i] * this[i];
             }
@@ -363,12 +359,31 @@ namespace MuPDF.NET
         public Rect Transform(Matrix matrix)
         {
             FzRect r = mupdf.mupdf.fz_transform_rect(ToFzRect(), matrix.ToFzMatrix());
-            X0 = r.x0;
-            Y0 = r.y0;
-            X1 = r.x1;
-            Y1 = r.y1;
-            return this;
+            
+            return new Rect(r);
+        }
+
+        /// <summary>
+        /// Calculate area of rectangle.\nparameter is one of 'px' (default), 'in', 'cm', or 'mm'.
+        /// </summary>
+        /// <param name="unit"></param>
+        /// <returns></returns>
+        public float GetArea(string unit = null)
+        {
+            string unit_ = "px";
+            if (!string.IsNullOrEmpty(unit))
+                unit_ = unit;
+            Dictionary<string, (float, float)> u = new Dictionary<string, (float, float)>
+            {
+                { "px", (1, 1) },
+                { "in", (1.0f, 72.0f) },
+                { "cm", (2.54f, 72.0f) },
+                { "mm", (25.4f, 72.0f) }
+            };
+
+            float f = (float)Math.Pow(u[unit].Item1 / u[unit].Item2, 2);
+            return f * Width * Height;
         }
     }
-    
+
 }

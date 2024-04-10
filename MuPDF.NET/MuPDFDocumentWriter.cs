@@ -1,9 +1,4 @@
 ﻿using mupdf;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace MuPDF.NET
 {
@@ -31,7 +26,7 @@ namespace MuPDF.NET
 
         public void Close()
         {
-            // _nativeDocumentWriter.fz_close_document_writer();
+            _nativeDocumentWriter.fz_close_document_writer();
         }
 
         public void EndPage()

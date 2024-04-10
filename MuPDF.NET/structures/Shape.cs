@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using mupdf;
-using MuPDF.NET;
+﻿using System.Text;
 
 namespace MuPDF.NET
 {
@@ -46,7 +41,6 @@ namespace MuPDF.NET
             Width = page.MediaBoxSize.X;
             X = page.CropBoxPosition.X;
             Y = page.CropBoxPosition.Y;
-
             Pctm = page.TransformationMatrix;
             IPctm = ~page.TransformationMatrix;
 
@@ -101,7 +95,7 @@ namespace MuPDF.NET
             int oc = 0
             )
         {
-            string[] list = buffer.Split(" ");
+            string[] list = buffer.Split('\n');
             return _InsertText(point, new List<string>(list), fontSize, lineHeight, fontName, fontFile, setSimple, encoding,
                 color, fill, renderMode, borderWidth, rotate, morph, strokeOpacity, fillOpacity, oc);
         }
@@ -149,7 +143,7 @@ namespace MuPDF.NET
             )
         {
             List<string> text = buffer;
-            if (text.Count <= 0)
+            if (text.Count == 0)
                 return 0;
 
             int maxCode = 0;
@@ -176,9 +170,8 @@ namespace MuPDF.NET
                 encoding: encoding,
                 setSimple: setSimple
                 );
-
-            FontStruct fontInfo = Utils.CheckFontInfo(Doc, xref);
-
+            Font fontInfo = Utils.CheckFontInfo(Doc, xref);
+            
             int ordering = fontInfo.Ordering;
             bool simple = fontInfo.Simple;
             string bfName = fontInfo.Name;
@@ -187,12 +180,12 @@ namespace MuPDF.NET
             float lheight = 0;
 
             if (lineHeight != 0)
-                lineHeight = fontSize * lineHeight;
+                lheight = fontSize * lineHeight;
             else if (ascender - descender <= 1)
                 lheight = fontSize * 1.2f;
             else
                 lheight = fontSize * (ascender - descender);
-
+            
             List<(int, double)> glyphs = new List<(int, double)>();
             if (maxCode > 255)
                 glyphs = Utils.GetCharWidths(Doc, xref: xref, limit: maxCode + 1);
@@ -203,7 +196,7 @@ namespace MuPDF.NET
             List<(int, double)> g = null;
             foreach (string t in text)
             {
-                if (simple && (bfName != "Symbol" || bfName != "ZapfDingbats"))
+                if (simple && !(bfName == "Symbol" || bfName == "ZapfDingbats"))
                     g = null;
                 else
                     g = new List<(int, double)>(glyphs);
@@ -211,7 +204,7 @@ namespace MuPDF.NET
             }
 
             text = tab;
-
+            
             string colorStr = Utils.GetColorCode(color, "c");
             string fillStr = Utils.GetColorCode(fill, "f");
             if (fill == null && renderMode == 0)
@@ -219,7 +212,7 @@ namespace MuPDF.NET
                 fill = color;
                 fillStr = Utils.GetColorCode(color, "f");
             }
-
+            
             bool morphing = (morph != null);
             int rot = rotate;
             if (rot % 90 != 0)
@@ -235,7 +228,7 @@ namespace MuPDF.NET
             float height = Height;
             float width = Width;
             string cm;
-
+            
             if (morphing)
             {
                 Matrix m1 = new Matrix(1, 0, 0, 1, morph.P.X + X, height - morph.P.Y - Y);
@@ -321,14 +314,14 @@ namespace MuPDF.NET
             return nLines;
         }
 
-        public void Commit(int overlay)
+        public void Commit(bool overlay = true)
         {
             TotalCont += this.TextCont;
             byte[] bTotal = Encoding.UTF8.GetBytes(TotalCont);
             if (TotalCont != "")
             {
-                int xref = Utils.InsertContents(Page, bTotal, overlay);
-                /*mupdf.mupdf.pdf_update_stream(Doc, xref, TotalCont);//issue*/
+                int xref = Utils.InsertContents(Page, Encoding.UTF8.GetBytes(" "), overlay ? 1 : 0);
+                Doc.UpdateStream(xref, bTotal);
             }
 
             LastPoint = null;
@@ -350,7 +343,7 @@ namespace MuPDF.NET
         /// <returns></returns>
         public Point DrawBezier(Point p1, Point p2, Point p3, Point p4)
         {
-            if (LastPoint != p1)
+            if (LastPoint == null || !(LastPoint.X == p1.X && LastPoint.Y == p1.Y))
             {
                 Point t = p1 * IPctm;
                 DrawCont += $"{t.X} {t.Y} m\n";
@@ -365,6 +358,7 @@ namespace MuPDF.NET
             UpdateRect(p2);
             UpdateRect(p3);
             UpdateRect(p4);
+            LastPoint = p4;
             return LastPoint;
         }
 
@@ -397,14 +391,14 @@ namespace MuPDF.NET
             string l3 = "{0} {1} m\n";
             string l4 = "{0} {1} {2} {3} {4} {5} c\n";
             string l5 = "{0} {1} l\n";
-            float betar = (float)Math.PI / 180 * (-beta);
-            float w360 = (float)Math.PI / 180 * (360 * betar / Math.Abs(betar)) * -1;
-            float w90 = (float)Math.PI / 180 * (90 * betar / Math.Abs(betar));
+            float betar = (float)((-beta) * Math.PI / 180);
+            float w360 = (float)(Math.Sign(betar) * 360 * (Math.PI / 180) * -1);
+            float w90 = (float)(Math.Sign(betar) * 90 * (Math.PI / 180));
             float w45 = w90 / 2;
             while (Math.Abs(betar) > 2 * Math.PI)
-                betar += 360;
-            
-            if (!(LastPoint == point))
+                betar += w360;
+
+            if (LastPoint == null || !(LastPoint.X == point.X && LastPoint.Y == point.Y))
             {
                 Point t = point * IPctm;
                 DrawCont += string.Format(l3, t.X, t.Y);
@@ -427,7 +421,7 @@ namespace MuPDF.NET
                 float q2 = c.Y + (float)(Math.Sin(alfa + w90) * rad);
                 q = new Point(q1, q2);
                 float r1 = c.X + (float)(Math.Cos(alfa + w45) * rad / Math.Cos(w45));
-                float r2 = c.Y + (float)(Math.Cos(alfa + w45) * rad / Math.Cos(w45));
+                float r2 = c.Y + (float)(Math.Sin(alfa + w45) * rad / Math.Cos(w45));
                 Point r = new Point(r1, r2);
 
                 float kappah = (float)(((double)1 - Math.Cos(w45)) * 4 / 3 / (r - q).Abs());
@@ -486,8 +480,8 @@ namespace MuPDF.NET
             {
                 Rect.X0 = Math.Min(Rect.X0, x.X);
                 Rect.Y0 = Math.Min(Rect.Y0, x.Y);
-                Rect.X1 = Math.Min(Rect.X1, x.X);
-                Rect.Y1 = Math.Min(Rect.Y1, x.Y);
+                Rect.X1 = Math.Max(Rect.X1, x.X);
+                Rect.Y1 = Math.Max(Rect.Y1, x.Y);
             }
         }
 
@@ -499,8 +493,8 @@ namespace MuPDF.NET
             {
                 Rect.X0 = Math.Min(Rect.X0, x.X0);
                 Rect.Y0 = Math.Min(Rect.Y0, x.Y0);
-                Rect.X1 = Math.Min(Rect.X1, x.X1);
-                Rect.Y1 = Math.Min(Rect.Y1, x.Y1);
+                Rect.X1 = Math.Max(Rect.X1, x.X1);
+                Rect.Y1 = Math.Max(Rect.Y1, x.Y1);
             }
         }
 
@@ -517,7 +511,7 @@ namespace MuPDF.NET
             }
             else
             {
-                if (s.Y > 0) { }
+                if (s.Y >= 0) { }
                 else alfa -= alfa;
             }
             return alfa;
@@ -540,7 +534,7 @@ namespace MuPDF.NET
         public Point DrawLine(Point p1, Point p2)
         {
             Point t;
-            if (!(LastPoint == p1))
+            if (LastPoint == null || !(LastPoint.X == p1.X && LastPoint.Y == p1.Y))
             {
                 t = p1 * IPctm;
                 DrawCont += $"{t.X} {t.Y} m\n";
@@ -650,40 +644,40 @@ namespace MuPDF.NET
         /// <param name="p2"></param>
         /// <param name="breadth"></param>
         /// <returns></returns>
-        public Point DrawSquiggle(Point p1, Point p2, int breadth = 2)
+        public Point DrawSquiggle(Point p1, Point p2, float breadth = 2)
         {
             Point s = p2 - p1;
             float rad = s.Abs();
-            int cnt = 4 * (int)Math.Round(rad / (4 * breadth), 0);
+            int cnt = 4 * Convert.ToInt32(Math.Round(rad / (4 * breadth), 0));
             if (cnt < 4)
                 throw new Exception("points too close");
             float mb = rad / cnt;
+            
             Matrix matrix = Utils.HorMatrix(p1, p2);
             Matrix iMat = ~matrix;
             float k = 2.4142135623765633f;
-
+            
             List<Point> points = new List<Point>();
+
             int i;
-            for (i = 0; i < cnt; i++)
+            for (i = 1; i < cnt; i++)
             {
                 Point p;
                 if (i % 4 == 1)
-                    p = (new Point(i, -k) * mb);
+                    p = (new Point(i, -k)) * mb;
                 else if (i % 4 == 3)
-                    p = (new Point(i, k) * mb);
+                    p = (new Point(i, k)) * mb;
                 else
-                    p = (new Point(i, 0) * mb);
-                points.Append(p * iMat);
+                    p = (new Point(i, 0)) * mb;
+                points.Add(p * iMat);
             }
-
-            points.Insert(0, p1);
-            points.Append(p2);
+            points = (new List<Point>() { p1}).Concat(points).Concat(new List<Point>() { p2 }).ToList(); 
             cnt = points.Count;
             i = 0;
-
+            
             while ((i + 2) < cnt)
             {
-                DrawCurve(points[i], points[i + 2], points[i + 2]);
+                DrawCurve(points[i], points[i + 1], points[i + 2]);
                 i += 2;
             }
 
@@ -700,7 +694,7 @@ namespace MuPDF.NET
             float mb = rad / cnt;
             Matrix matrix = Utils.HorMatrix(p1, p2);
             Matrix iMat = ~matrix;
-            
+
             List<Point> points = new List<Point>();
             for (int i = 1; i < cnt; i++)
             {
@@ -715,7 +709,7 @@ namespace MuPDF.NET
             points.Insert(0, p1);
             points.Append(p2);
             DrawPolyline(points.ToArray());
-            
+
             return p2;
         }
 
@@ -735,16 +729,28 @@ namespace MuPDF.NET
         /// <param name="fillOpacity">(new in v1.18.1) set transparency for fill colors. Default is 1 (intransparent).</param>
         /// <param name="strokeOpacity">(new in v1.18.1) set transparency for stroke colors. Value < 0 or > 1 will be ignored. Default is 1 (intransparent).</param>
         /// <param name="oc">(new in v1.18.4) the xref number of an OCG or OCMD to make this drawing conditionally displayable.</param>
-        public void Finish(float width = 1.0f, float[] color = null, float[] fill = null, int lineCap = 0,
-            int lineJoin = 0, string dashes = null, bool evenOdd = false, Morph morph = null, bool closePath = true,
-            float fillOpacity = 1.0f, float strokeOpacity = 1.0f, int oc = 0)
+        public void Finish(
+            float width = 1.0f,
+            float[] color = null,
+            float[] fill = null,
+            int lineCap = 0,
+            int lineJoin = 0,
+            string dashes = null,
+            bool evenOdd = false,
+            Morph morph = null,
+            bool closePath = true,
+            float fillOpacity = 1.0f,
+            float strokeOpacity = 1.0f,
+            int oc = 0
+            )
         {
-            if (DrawCont == "")
+            if (string.IsNullOrEmpty(DrawCont))
                 return;
-
+            if (color == null)
+                color = new float[]{ 0f, };
             if (width == 0)
                 color = null;
-            else if (color is null)
+            else if (color == null)
                 width = 0;
 
             string colorStr = Utils.GetColorCode(color, "c");
@@ -752,14 +758,14 @@ namespace MuPDF.NET
 
             string optCont = Page.GetOptionalContent(oc);
             string emc = "";
-            if (optCont != null || optCont != "")
+            if (!string.IsNullOrEmpty(optCont))
             {
-                DrawCont = $"/OC /{optCont + DrawCont} BDC\n";
+                DrawCont = $"/OC /{optCont} BDC\n" + DrawCont;
                 emc = "EMC\n";
             }
 
             string alpha = Page.SetOpacity(CA: strokeOpacity, ca: fillOpacity);
-            if (alpha != null || alpha != "")
+            if (!string.IsNullOrEmpty(alpha))
                 DrawCont = $"/{alpha} gs\n" + DrawCont;
             if (width != 1 && width != 0)
                 DrawCont += $"{width} w\n";
@@ -769,7 +775,7 @@ namespace MuPDF.NET
             if (lineJoin != 0)
                 DrawCont = $"{lineJoin} j\n" + DrawCont;
 
-            if (!(dashes == null || dashes == "" || dashes == "[] 0"))
+            if (!string.IsNullOrEmpty(dashes) || dashes != "[] 0")
                 DrawCont = $"{dashes} d\n" + DrawCont;
 
             if (closePath)
@@ -813,7 +819,7 @@ namespace MuPDF.NET
             {
                 Matrix m1 = new Matrix(1, 0, 0, 1, morph.P.X + X, Height - morph.P.Y - Y);
                 Matrix mat = ~m1 * morph.M * m1;
-                DrawCont = $"{mat.A} {mat.B} {mat.C} {mat.D} {mat.E} {mat.F} cm\n";
+                DrawCont = $"{mat.A} {mat.B} {mat.C} {mat.D} {mat.E} {mat.F} cm\n" + DrawCont;
             }
 
             TotalCont += "\nq\n" + DrawCont + "Q\n";
@@ -925,7 +931,9 @@ namespace MuPDF.NET
 
             string colorStr = Utils.GetColorCode(color, "c");
             string fillStr = Utils.GetColorCode(fill, "f");
-            if (fill == null || renderMode == 0)
+            
+            
+            if (fill == null && renderMode == 0)
             {
                 fill = color;
                 fillStr = Utils.GetColorCode(color, "f");
@@ -933,17 +941,17 @@ namespace MuPDF.NET
 
             string optCont = Page.GetOptionalContent(oc);
             string bdc = "", emc = "";
-            if (optCont != null)
+            if (!string.IsNullOrEmpty(optCont))
             {
                 bdc = $"/OC /{optCont} BDC\n";
                 emc = "EMC\n";
             }
 
             string alpha = Page.SetOpacity(CA: strokeOpacity, ca: fillOpacity);
-            if (alpha == null)
+            if (string.IsNullOrEmpty(alpha))
                 alpha = "";
             else
-                alpha = $"/s{alpha} gs\n";
+                alpha = $"/{alpha} gs\n";
 
             if (rotate % 90 != 0)
                 throw new Exception("rotate must be multiple of 90");
@@ -953,8 +961,8 @@ namespace MuPDF.NET
                 rot += 360;
             rot = rot % 360;
 
-            if (buffer.Count == 0)
-                return (rot == 0 && rot == 180) ? rect.Height : rect.Width;
+            if (buffer.Count == 0 )
+                return (rot == 0 || rot == 180) ? rect.Height : rect.Width;
 
             string cmp90 = "0 1 -1 0 0 0 cm\n";
             string cmm90 = "0 -1 1 0 0 0 cm\n";
@@ -966,17 +974,17 @@ namespace MuPDF.NET
                 fname = fname.Substring(1);
 
             int xref = Page.InsertFont(fontName: fname, fontFile: fontFile, encoding: encoding, setSimple: setSimple);
-            FontStruct fontInfo = Utils.CheckFontInfo(Doc, xref);
+            Font fontInfo = Utils.CheckFontInfo(Doc, xref);
 
             if (fontInfo == null)
                 throw new Exception("no found font info");
+            
             int ordering = fontInfo.Ordering;
             bool simple = fontInfo.Simple;
             List<(int, double)> glyphs = fontInfo.Glyphs;
             string bfName = fontInfo.Name;
             float asc = fontInfo.Ascender;
             float des = fontInfo.Descender;
-
             float lheightFactor;
             if (lineHeight != 0)
                 lheightFactor = lineHeight;
@@ -994,12 +1002,13 @@ namespace MuPDF.NET
             string t1 = "";
             if (simple && maxCode > 255)
                 foreach (char c in t0)
-                    t1 += Convert.ToInt32(c) < 256 ? $"{c}" : "?";
+                    t1 += Convert.ToInt32(c) < 256 ? c : '?';
 
-            string[] t2 = t1.Split("\n");
+            string[] t2 = string.IsNullOrEmpty(t1) ? t0.Split("\n") : t1.Split("\n");
             glyphs = Utils.GetCharWidths(Doc, xref, maxCode + 1);
+
             List<(int, double)> tj_glyphs;
-            if (simple && !(bfName == "Symbol" && bfName == "ZapfDingbats"))
+            if (simple && !(bfName == "Symbol" || bfName == "ZapfDingbats"))
                 tj_glyphs = null;
             else
                 tj_glyphs = glyphs;
@@ -1040,7 +1049,7 @@ namespace MuPDF.NET
             float pos = 0, maxWidth = 0, maxPos = 0;
             if (rot == 0)
             {
-                point = rect.TopLeft + Y;
+                point = rect.TopLeft + cPnt;
                 pos = point.Y + Y;
                 maxWidth = rect.Width;
                 maxPos = rect.Y1 + Y;
@@ -1052,6 +1061,7 @@ namespace MuPDF.NET
                 pos = point.X + X;
                 maxWidth = rect.Height;
                 maxPos = rect.X1 + X;
+                cm += cmp90;
             }
             else if (rot == 180)
             {
@@ -1061,11 +1071,21 @@ namespace MuPDF.NET
                 maxWidth = rect.Width;
                 progr = -1;
                 maxPos = rect.Y0 + Y;
+                cm += cm180;
+            }
+            else
+            {
+                cPnt = -(new Point(fontSize * asc, 0));
+                point = rect.TopRight + cPnt;
+                pos = point.X + X;
+                maxWidth = rect.Height;
+                progr = -1;
+                maxPos = rect.X0 + X;
                 cm += cmm90;
             }
 
             List<bool> justTab = new List<bool>();
-            for (int i = 0; i < t2.Length; i ++)
+            for (int i = 0; i < t2.Length; i++)
             {
                 string[] line_t = t2[i].Replace("\t", new string(' ', expandTabs)).Split(" ");
                 string lbuff = "";
@@ -1085,7 +1105,7 @@ namespace MuPDF.NET
                         lbuff = lbuff.TrimEnd() + "\n";
                         text += lbuff;
                         pos += lheight * progr;
-                        justTab.Append(true);
+                        justTab.Add(true);
                         lbuff = "";
                     }
                     rest = maxWidth;
@@ -1100,25 +1120,25 @@ namespace MuPDF.NET
                         justTab[justTab.Count - 1] = false;
                     foreach (char c in word)
                     {
-                        if (PixLen(lbuff) <= maxWidth - PixLen($"{c}"))
+                        if (PixLen(lbuff) <= maxWidth - PixLen(Convert.ToString(c)))
                             lbuff += c;
                         else
                         {
                             lbuff += "\n";
                             text += lbuff;
                             pos += lheight * progr;
-                            justTab.Append(false);
-                            lbuff = $"{c}";
+                            justTab.Add(false);
+                            lbuff = Convert.ToString(c);
                         }
                     }
 
                     lbuff += " ";
                     rest = maxWidth - PixLen(lbuff);
                 }
-                if (lbuff != "")
+                if (!string.IsNullOrEmpty(lbuff))
                 {
                     text += lbuff.TrimEnd();
-                    justTab.Append(false);
+                    justTab.Add(false);
                 }
                 if (i < t2.Count() - 1)
                 {
@@ -1137,10 +1157,11 @@ namespace MuPDF.NET
 
             string nres = $"\nq\n{bdc}{alpha}BT\n" + cm;
             string template = "1 0 0 1 {0} {1} Tm /{2} {3} Tf ";
-            string[] text_t = text.Split(" ");
+            string[] text_t = text.Split("\n");
+
             justTab[justTab.Count - 1] = false;
-            
-            for (int i = 0; i < text_t.Length; i ++)
+
+            for (int i = 0; i < text_t.Length; i++)
             {
                 float pl = maxWidth - PixLen(text_t[i]);
                 Point pnt = point + cPnt * (i * lheightFactor);
@@ -1148,13 +1169,13 @@ namespace MuPDF.NET
                 if (align == 1)
                 {
                     if (rot == 0 && rot == 180)
-                        pnt = pnt + new Point(pl, 0) * progr;
+                        pnt = pnt + new Point(pl / 2, 0) * progr;
                     else
                         pnt = pnt - new Point(0, pl / 2) * progr;
                 }
                 else if (align == 2)
                 {
-                    if (rot == 0 && rot == 180)
+                    if (rot == 0 || rot == 180)
                         pnt = pnt + new Point(pl, 0) * progr;
                     else
                         pnt = pnt - new Point(0, pl) * progr;
@@ -1187,7 +1208,7 @@ namespace MuPDF.NET
                 if (renderMode > 0)
                     nres += $"{renderMode} Tr ";
                 if (align == 3)
-                    nres = $"{spacing} Tw ";
+                    nres += $"{spacing} Tw ";
 
                 if (color != null)
                     nres += colorStr;

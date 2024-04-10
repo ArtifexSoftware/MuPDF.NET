@@ -1,10 +1,6 @@
 ﻿using mupdf;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace MuPDF.NET
 {
@@ -27,13 +23,7 @@ namespace MuPDF.NET
         public MuPDFStory(string html = "", string userCss = null, float em = 12, MuPDFArchive archive = null)
         {
             byte[] bytes = Encoding.UTF8.GetBytes(html);
-            
-            IntPtr unmanagedPointer = Marshal.AllocHGlobal(bytes.Length);
-            Marshal.Copy(bytes, 0, unmanagedPointer, bytes.Length);
-            // Call unmanaged code
-            SWIGTYPE_p_unsigned_char s = new SWIGTYPE_p_unsigned_char(unmanagedPointer, false);
-            FzBuffer buf = mupdf.mupdf.fz_new_buffer_from_copied_data(s, (uint)bytes.Length);
-            Marshal.FreeHGlobal(unmanagedPointer);
+            FzBuffer buf = Utils.fz_new_buffer_from_data(bytes);
 
             FzArchive arch = archive != null ? archive.ToFzArchive() : new FzArchive();
             _nativeStory = new FzStory(buf, userCss, em, arch);
@@ -124,7 +114,7 @@ namespace MuPDF.NET
             }
 
             State state = new State(pmin, pmax, verbose);
-            
+
             if (verbose)
                 Log($"starting. {state.Pmin} {state.Pmax}.");
 
@@ -136,7 +126,7 @@ namespace MuPDF.NET
                 FitResult result = null;
                 if (state.Pmax != 0)
                 {
-                    if (state.LastP != state.Pmax)//issue
+                    if (state.LastP != state.Pmax)
                     {
                         if (verbose)
                             Log($"Calling update() with pmax, because was overwritten by later calls.");
@@ -283,7 +273,7 @@ namespace MuPDF.NET
             {
                 if ((positionFrom.OpenClose & true) && positionFrom.Href != null)
                 {
-                    LinkStruct link = new LinkStruct();
+                    Link link = new Link();
                     link.From = new Rect(positionFrom.Rect);
                     Position positionTo;
                     if (positionFrom.Href.StartsWith("#"))
@@ -393,7 +383,7 @@ namespace MuPDF.NET
         /// <param name="rectFn"></param>
         /// <param name="positionFn"></param>
         /// <param name="pageFn"></param>
-        public void Write(MuPDFDocumentWriter writer, RectFunction rectFn, Action<Position> positionFn, Action<int, Rect, MuPDFDeviceWrapper, bool> pageFn) // issue
+        public void Write(MuPDFDocumentWriter writer, RectFunction rectFn, Action<Position> positionFn, Action<int, Rect, MuPDFDeviceWrapper, bool> pageFn)
         {
             MuPDFDeviceWrapper dev = null;
             int pageNum = 0;
@@ -401,7 +391,7 @@ namespace MuPDF.NET
             Rect filled = new Rect(0, 0, 0, 0);
             while (true)
             {
-                (Rect mediabox, Rect rect, IdentityMatrix ctm) = rectFn(rectNum, filled);// issue
+                (Rect mediabox, Rect rect, IdentityMatrix ctm) = rectFn(rectNum, filled);
                 rectNum += 1;
                 if (mediabox != null)
                     pageNum += 1;
@@ -514,7 +504,7 @@ namespace MuPDF.NET
                 }
                 function(position2);
             };
-            
+
         }
 
         public static void WriteStabilized(

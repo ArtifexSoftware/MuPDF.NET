@@ -1,14 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using mupdf;
+﻿using mupdf;
 
 namespace MuPDF.NET
 {
-    public struct BlockStruct
+    public class Block
     {
+        public int Xref;
+
         public int Number;
 
         public int Type;
@@ -33,12 +30,12 @@ namespace MuPDF.NET
 
         public uint Size;
 
-        public FzBuffer Image;
+        public byte[] Image;
 
         public string CsName;
 
         public vectoruc Digest;
 
-        public List<LineStruct> Lines;
+        public List<Line> Lines;
     }
 }

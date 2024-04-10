@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using mupdf;
+﻿using mupdf;
 
 namespace MuPDF.NET
 {
@@ -15,7 +10,7 @@ namespace MuPDF.NET
         {
             get
             {
-                return new LinkDest(this, null, null);
+                return new LinkDest(this, (null, 0, 0), null);
             }
         }
 
@@ -36,7 +31,7 @@ namespace MuPDF.NET
             {
                 if (_nativeOutline == null)
                     return false;
-                
+
                 string uri = _nativeOutline.m_internal.uri;
                 if (uri is null)
                     return false;
@@ -109,7 +104,7 @@ namespace MuPDF.NET
 
         public LinkDest Destination(PdfDocument doc)
         {
-            return new LinkDest(this, null, new MuPDFDocument(doc));
+            return new LinkDest(this, (null, 0, 0), new MuPDFDocument(doc));
         }
 
         public void Dispose()

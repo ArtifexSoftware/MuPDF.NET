@@ -1,11 +1,6 @@
 ﻿using mupdf;
-using System;
-using System.Collections.Generic;
 using System.Formats.Tar;
 using System.IO.Compression;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace MuPDF.NET
 {
@@ -14,9 +9,9 @@ namespace MuPDF.NET
 
         private FzArchive _nativeArchive;
 
-        private List<SubArchiveStruct> _subArchives;
+        private List<SubArchive> _subArchives;
 
-        public List<SubArchiveStruct> EntryList
+        public List<SubArchive> EntryList
         {
             get
             {
@@ -26,7 +21,7 @@ namespace MuPDF.NET
 
         public MuPDFArchive(string dirName)
         {
-            _subArchives = new List<SubArchiveStruct>();
+            _subArchives = new List<SubArchive>();
             _nativeArchive = mupdf.mupdf.fz_new_multi_archive();
             Add(content: dirName, path: dirName);
         }
@@ -34,7 +29,7 @@ namespace MuPDF.NET
         public MuPDFArchive()
         {
             _nativeArchive = mupdf.mupdf.fz_new_multi_archive();
-            _subArchives = new List<SubArchiveStruct>();
+            _subArchives = new List<SubArchive>();
         }
 
         public MuPDFArchive(string filename, string path = null)
@@ -96,9 +91,11 @@ namespace MuPDF.NET
 
         private void MakeSubArch(string fmt, List<string> entries, string mount)
         {
-            SubArchiveStruct subarch = new SubArchiveStruct()
+            SubArchive subarch = new SubArchive()
             {
-                Fmt = fmt, Entries = entries, Path = mount
+                Fmt = fmt,
+                Entries = entries,
+                Path = mount
             };
 
             if (fmt != "tree" || _subArchives.Count == 0)
@@ -107,7 +104,7 @@ namespace MuPDF.NET
             }
             else
             {
-                SubArchiveStruct ltree = _subArchives[_subArchives.Count - 1];
+                SubArchive ltree = _subArchives[_subArchives.Count - 1];
                 if (ltree.Fmt != "tree" || ltree.Path != subarch.Path)
                 {
                     _subArchives.Add(subarch);
@@ -130,9 +127,9 @@ namespace MuPDF.NET
                 entries.Add(e.FullName);
             }
 
-            if (filename == "")
+            if (string.IsNullOrEmpty(filename))
             {
-                
+
             }
             else
             {
@@ -154,7 +151,7 @@ namespace MuPDF.NET
 
             if (filename == "")
             {
-
+                
             }
             else
             {

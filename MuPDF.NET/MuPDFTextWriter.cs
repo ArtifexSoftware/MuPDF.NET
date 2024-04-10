@@ -1,10 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using mupdf;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
-using System.Threading.Tasks;
-using mupdf;
 
 namespace MuPDF.NET
 {
@@ -25,7 +22,7 @@ namespace MuPDF.NET
 
         public Rect TextRect;
 
-        public List<Font> UsedFonts;
+        public List<MuPDFFont> UsedFonts;
 
         public bool ThisOwn;
 
@@ -40,7 +37,7 @@ namespace MuPDF.NET
             ICtm = ~Ctm;
             LastPoint = new Point();
             TextRect = new Rect();
-            UsedFonts = new List<Font>();
+            UsedFonts = new List<MuPDFFont>();
             Color = color;
             ThisOwn = false;
         }
@@ -54,12 +51,12 @@ namespace MuPDF.NET
             }
         }
 
-        public (Rect, Point) Append(Point pos, string text, Font font, float fontSize = 11.0f, string language = null, int right2left = 0, int smallCaps = 0)
+        public (Rect, Point) Append(Point pos, string text, MuPDFFont font, float fontSize = 11.0f, string language = null, int right2left = 0, int smallCaps = 0)
         {
             pos = pos * ICtm;
             if (font == null)
             {
-                font = new Font("helv");
+                font = new MuPDFFont("helv");
             }
 
             if (!font.IsWriteable)
@@ -133,7 +130,7 @@ namespace MuPDF.NET
             return text;
         }
 
-        public (Rect, Point) Appendv(Point pos, string text, Font font = null, float fontSiz = 11.0f,
+        public (Rect, Point) Appendv(Point pos, string text, MuPDFFont font = null, float fontSiz = 11.0f,
             string language = null, bool smallCaps = false)
         {
             float lheight = fontSiz * 1.2f;
@@ -145,46 +142,343 @@ namespace MuPDF.NET
             return (TextRect, LastPoint);
         }
 
-        /*public void WriteText(MuPDFPage page, float[] color = null, float opacity = -1, float overlay = 1, Morph morph = null,
+        public void WriteText(MuPDFPage page, float[] color = null, float opacity = -1, int overlay = 1, Morph morph = null,
             Matrix matrix = null, int renderMode = 0, int oc = 0)
         {
             if ((Rect - page.Rect).Abs() > 1e-3)
                 throw new Exception("incompatible page rect");
-
+            if (matrix != null && morph != null)
+                throw new Exception("only one of matrix, m");
             if (opacity == -1)
-                opacity = this.Opacity;
+                opacity = Opacity;
             if (color == null)
-                color = this.Color;
+                color = Color;
 
-            PdfPage pdfpage = page.GetPdfPage();
+            PdfPage pdfPage = page.GetPdfPage();
+            float alpha = 1;
             FzColorspace colorSpace;
 
-            float alpha = 1;
-            if (opacity > 0 && opacity < 1)
+            if (opacity >= 0 && opacity <= 1)
                 alpha = opacity;
             int nCol = 1;
-            float[] devColor = new float[] { 0, 0, 0, 0 };
+            float[] devColor = { 0, 0, 0, 0 };
             if (color != null)
-                devColor = MuPDFAnnotation.ColorFromSequence(color);
-            if (devColor != null && devColor.Length == 3)
+                devColor = MuPDFAnnot.ColorFromSequence(color);
+            if (devColor.Length == 3)
                 colorSpace = mupdf.mupdf.fz_device_rgb();
-            else if (devColor != null && devColor.Length == 4)
+            else if (devColor.Length == 4)
                 colorSpace = mupdf.mupdf.fz_device_cmyk();
             else
                 colorSpace = mupdf.mupdf.fz_device_gray();
 
-            PdfObj resources = pdfpage.doc().pdf_new_dict(5);
+            PdfObj resources = pdfPage.doc().pdf_new_dict(5);
             FzBuffer contents = mupdf.mupdf.fz_new_buffer(1024);
-            FzDevice dev = pdfpage.doc().pdf_new_pdf_device(new FzMatrix(), resources, contents);
+            FzDevice dev = mupdf.mupdf.pdf_new_pdf_device(pdfPage.doc(), new FzMatrix(), resources, contents);
 
-            IntPtr p_devColor = Marshal.AllocHGlobal(devColor.Length);
-            Marshal.Copy(devColor, 0, p_devColor, devColor.Length);
-            SWIGTYPE_p_float swig_devColor = new SWIGTYPE_p_float(p_devColor, true);
-            mupdf.mupdf.fz_fill_text(dev, _nativeText, new FzMatrix(), colorSpace, swig_devColor, alpha, new FzColorParams(mupdf.mupdf.fz_default_color_params));
-            mupdf.mupdf.fz_close_device(dev);
+            IntPtr pDevColor = Marshal.AllocHGlobal(devColor.Length * sizeof(float));
+            Marshal.Copy(devColor, 0, pDevColor, devColor.Length);
+            SWIGTYPE_p_float swigDevColor = new SWIGTYPE_p_float(pDevColor, true);
 
-            int maxNums = Utils.MergeResources()
+            dev.fz_fill_text(_nativeText, new FzMatrix(), colorSpace, swigDevColor, alpha, new FzColorParams(mupdf.mupdf.fz_default_color_params));
+            dev.fz_close_device();
 
-        }*/
+            (int, int) maxNums = Utils.MergeResources(pdfPage, resources);
+            string cont = Utils.EscapeStrFromBuffer(contents);
+            (int maxAlp, int maxFont) = maxNums;
+            string[] oldLines = cont.Split('\n');
+
+            string optCont = page.GetOptionalContent(oc);
+            string bdc = "";
+            string emc = "";
+            if (!string.IsNullOrEmpty(optCont))
+            {
+                bdc = $"/OC /{optCont} BDC";
+                emc = "EMC";
+            }
+            List<string> newContLines = new List<string>();
+            if (string.IsNullOrEmpty(bdc))
+                newContLines.Add(bdc);
+
+            Point cb = page.CropBoxPosition;
+            float delta = 0;
+            if (page.Rotation == 90 || page.Rotation == 270)
+                delta = page.Rect.Height - page.Rect.Width;
+            Rect mb = page.MediaBox;
+            if (cb != null || mb.Y0 != 0 || delta != 0)
+                newContLines.Add($"1 0 0 1 {cb.X} {cb.Y + mb.Y0 - delta} cm");
+
+            Matrix matrix_ = new Matrix();
+            if (morph != null)
+            {
+                Point p = morph.P * ICtm;
+                Matrix matrixDelta = (new Matrix(1, 1)).Pretranslate(p.X, p.Y);
+                matrix_ = ~matrixDelta * morph.M * matrixDelta;
+            }
+
+            if (morph != null || matrix != null)
+                newContLines.Add($"{matrix_.A} {matrix_.B} {matrix_.C} {matrix_.D} {matrix_.E} {matrix_.F}");
+            foreach (string line in newContLines)
+            {
+                string line_ = line;
+                if (line_.EndsWith(" cm"))
+                    continue;
+                if (line_ == "BT")
+                {
+                    newContLines.Add(line_);
+                    newContLines.Add($"{renderMode} Tr");
+                    continue;
+                }
+                if (line_.EndsWith(" gs"))
+                {
+                    int alp = Convert.ToInt32(line_.Split(" ")[0].Substring(4)) + maxAlp;
+                    line_ = $"/Alp{alp} gs";
+                }
+                else if (line_.EndsWith(" Tf"))
+                {
+                    string[] temp = line_.Split(" ");
+                    float fSize = (float)Convert.ToDouble(temp[1]);
+                    float w = 1;
+                    if (renderMode != 0)
+                        w = fSize * 0.05f;
+                    newContLines.Add($"{w} w");
+                    int font = Convert.ToInt32(temp[0].Substring(2)) + maxFont;
+                    line_ = string.Join(" ", (new List<string>() { $"/F{font}" }).Concat(temp.Skip(1)));
+                }
+                else if (line_.EndsWith(" rg"))
+                    newContLines.Add(line_.Replace("rg", "RG"));
+                else if (line_.EndsWith(" g"))
+                    newContLines.Add(line_.Replace(" g", " G"));
+                else if (line_.EndsWith(" k"))
+                    newContLines.Add(line_.Replace(" k", " K"));
+                newContLines.Add(line_);
+            }
+            if (string.IsNullOrEmpty(emc))
+                newContLines.Add(emc);
+            newContLines.Add("Q\n");
+            byte[] content = Encoding.UTF8.GetBytes(string.Join("\n", newContLines));
+            Utils.InsertContents(page, content, overlay);
+            foreach (MuPDFFont font in UsedFonts)
+                Utils.RepairMonoFont(page, font);
+        }
+
+        public List<(string, float)> FillTextbox(
+            Rect rect,
+            string text,
+            Point pos = null,
+            MuPDFFont font = null,
+            float fontSize = 11,
+            float lineHeight = 0,
+            int align = 0,
+            bool warn = false,
+            bool rtl = false,
+            bool smallCaps = false)
+        {
+            if (rect.IsEmpty)
+                throw new Exception("fill rect must not empty");
+            if (font == null)
+                font = new MuPDFFont("helv");
+
+            float TextLen(string x)
+            {
+                return font.GetTextLength(x, fontSize: fontSize, smallCaps: smallCaps ? 1 : 0);
+            }
+
+            List<float> CharLengths(string x)
+            {
+                return font.GetCharLengths(x, fontSize: fontSize, smallCaps: smallCaps ? 1 : 0);
+            }
+
+            (Rect, Point) AppendThis(Point pos, string text)
+            {
+                return Append(pos, text, font: font, fontSize: fontSize, smallCaps: smallCaps ? 1 : 0);
+            }
+
+            float tolerance = fontSize * 0.2f;
+            float spaceLen = TextLen(" ");
+            float stdWidth = rect.Width - tolerance;
+            float stdStart = rect.X0 + tolerance;
+
+            (List<string>, List<float>) NormWords(float width, List<string> words)
+            {
+                List<string> nwords = new List<string>();
+                List<float> wordLengths = new List<float>();
+                foreach (string word in words)
+                {
+                    List<float> charLengths = CharLengths(word);
+                    float wl = charLengths.Sum(x => x);
+                    if (wl <= width)
+                    {
+                        nwords.Add(word);
+                        wordLengths.Add(wl);
+                        continue;
+                    }
+
+                    int n = charLengths.Count;
+                    while (n > 0)
+                    {
+                        wl = charLengths.Take(n).Sum(x => x);
+                        if (wl <= width)
+                        {
+                            nwords.Add(word.Substring(0, n));
+                            wordLengths.Add(wl);
+                            string word_ = word.Substring(n);
+                            charLengths = charLengths.Skip(n).ToList();
+                            n = charLengths.Count;
+                        }
+                        else
+                            n -= 1;
+                    }
+                }
+                return (nwords, wordLengths);
+            }
+
+            void OutputJustify(Point start, string line)
+            {
+                string[] words = line.Split(' ').Where(x => x != "").ToArray();
+                int nwords = words.Length;
+                if (nwords == 0)
+                    return;
+                if (nwords == 1)
+                {
+                    AppendThis(start, words[0]);
+                    return;
+                }
+                float tl = words.Sum(x => TextLen(x));
+                int gaps = nwords - 1;
+                float gapl = (stdWidth - tl) / gaps;
+                foreach (string w in words)
+                {
+                    (Rect _, Point lp) = AppendThis(start, w);
+                    start.X = lp.X + gapl;
+                }
+            }
+
+            float asc = font.Ascender;
+            float dsc = font.Descender;
+            float lheight = 0;
+            if (lineHeight == 0)
+            {
+                if (asc - dsc <= 1)
+                    lheight = 1.2f;
+                else
+                    lheight = asc - dsc;
+            }
+            else
+                lheight = lineHeight;
+
+            float LineHeight = fontSize * lheight;
+            float width = stdWidth;
+
+            if (pos == null)
+                pos = rect.TopLeft + new Point(tolerance, fontSize * asc);
+            if (!(rect.IncludePoint(pos) == rect))
+                throw new Exception("Text must start in rectangle");
+
+            float factor = 0;
+            if (align == Utils.TEXT_ALIGN_CENTER)
+                factor = 0.5f;
+            else if (align == Utils.TEXT_ALIGN_RIGHT)
+                factor = 1.0f;
+            string[] textLines = text.Split(" ");
+            int maxLines = Convert.ToInt32((rect.Y1 - pos.Y) / LineHeight) + 1;
+
+            List<(string, float)> newLines = new List<(string, float)>();
+            List<int> noJustify = new List<int>();
+
+            int i = -1;
+            foreach (string line in textLines)
+            {
+                i += 1;
+                if (line == "" || line == " ")
+                {
+                    newLines.Add((line, spaceLen));
+                    width = rect.Width - tolerance;
+                    noJustify.Add(newLines.Count - 1);
+                    continue;
+                }
+                if (i == 0)
+                    width = rect.X1 - pos.X;
+                else
+                    width = rect.Width - tolerance;
+
+                string line_ = line;
+                if (rtl)
+                    line_ = CleanRtl(line_);
+                float tl = TextLen(line_);
+                if (tl <= width)
+                {
+                    newLines.Append((line, tl));
+                    noJustify.Add((newLines.Count - 1));
+                    continue;
+                }
+
+                string[] words = line.Split(" ");
+                (List<string> words_, List<float> wordLengths_) = NormWords(stdWidth, new List<string>(words));
+
+                int n = words_.Count;
+                while (true)
+                {
+                    string line0 = string.Join(" ", words_.Take(n).ToArray());
+                    float wl = wordLengths_.Take(n).Sum() + spaceLen * (wordLengths_.Count - 1);
+                    if (wl <= width)
+                    {
+                        newLines.Add((line0, wl));
+                        words_ = words_.Take(n).ToList();
+                        wordLengths_ = wordLengths_.Take(n).ToList();
+                        n = words_.Count;
+                        line0 = null;
+                    }
+                    else n -= 1;
+
+                    if (words_.Count == 0)
+                    {
+                        break;
+                    }
+                }
+            }
+            int nLines = newLines.Count;
+            if (nLines > maxLines)
+            {
+                if (warn)
+                    Console.WriteLine($"Only fitting {maxLines} of {nLines} lines");
+                else
+                    throw new Exception($"Only fitting {maxLines} of {nLines} lines");
+            }
+
+            Point start = new Point();
+            noJustify.Add(newLines.Count - 1);
+            for (i = 0; i < maxLines; i++)
+            {
+                string line;
+                float tl;
+                try
+                {
+                    (line, tl) = newLines[0];
+                    newLines.RemoveAt(0);
+                }
+                catch(Exception)
+                {
+                    break;
+                }
+                if (rtl)
+                    line = string.Join("", line.Reverse().ToArray());
+                if (i == 0)
+                    start = pos;
+                if (align == Utils.TEXT_ALIGN_JUSTIFY && !noJustify.Contains(i) && tl < stdWidth)
+                {
+                    OutputJustify(start, line);
+                    start.X = stdStart;
+                    start.Y += LineHeight;
+                    continue;
+                }
+                if (i > 0 || pos.X == stdStart)
+                    start.X += (width - tl) * factor;
+
+                AppendThis(start, line);
+                start.X = stdStart;
+                start.Y += LineHeight;
+            }
+            return newLines;
+        }
     }
 }

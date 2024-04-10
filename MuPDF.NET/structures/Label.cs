@@ -6,14 +6,10 @@ using System.Threading.Tasks;
 
 namespace MuPDF.NET
 {
-    public struct FileInfoStruct
+    public class Label
     {
-        public string FileName;
+        public int PageNumber;
 
-        public string Desc;
-
-        public int Length;
-
-        public int Size;
+        public string LabelText;
     }
 }
