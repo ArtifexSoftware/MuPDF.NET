@@ -120,13 +120,7 @@ namespace MuPDF.NET
         public MuPDFXml(string rhs)
         {
             byte[] bytes = Encoding.UTF8.GetBytes(rhs);
-
-            IntPtr unmanagedPointer = Marshal.AllocHGlobal(bytes.Length);
-            Marshal.Copy(bytes, 0, unmanagedPointer, bytes.Length);
-            SWIGTYPE_p_unsigned_char s = new SWIGTYPE_p_unsigned_char(unmanagedPointer, true);
-            //Marshal.FreeHGlobal(unmanagedPointer);
-
-            FzBuffer buf = mupdf.mupdf.fz_new_buffer_from_copied_data(s, (uint)bytes.Length);
+            FzBuffer buf = Utils.fz_new_buffer_from_data(bytes);
             _nativeXml = mupdf.mupdf.fz_parse_xml_from_html5(buf);
         }
 

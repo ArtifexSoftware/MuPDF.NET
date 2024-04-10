@@ -263,8 +263,10 @@ namespace MuPDF.NET
                 val.ThisOwn = true;
                 val.Parent = this;
                 AnnotRefs[val.GetHashCode()] = val;
-                Widget widget = new Widget();
-                return widget;//issue
+                Widget widget = new Widget(this);
+                Utils.FillWidget(val, widget);
+                
+                return widget;
             }
         }
 
@@ -509,6 +511,43 @@ namespace MuPDF.NET
             }
             AnnotPostProcess(this, val);
             return val;
+        }
+
+        /// <summary>
+        /// page load widget by xref
+        /// </summary>
+        /// <param name="xref"></param>
+        /// <returns></returns>
+        public Widget LoadWidget(int xref)
+        {
+            PdfPage page = _nativePage.pdf_page_from_fz_page();
+            PdfAnnot annot = Utils.GetWidgetByXref(page, xref);
+            MuPDFAnnot val = new MuPDFAnnot(annot);
+
+            val.ThisOwn = true;
+            val.Parent = this;
+            AnnotRefs[val.GetHashCode()] = val;
+            Widget widget = new Widget(this);
+            Utils.FillWidget(val, widget);
+
+            return widget;
+        }
+
+        /// <summary>
+        /// Generator over the widgets of a page.
+        /// </summary>
+        /// <param name="types">field types to subselect from. If none, all fields are returned.E.g.types=[PDF_WIDGET_TYPE_TEXT] will only yield text fields.</param>
+        /// <returns></returns>
+        public IEnumerable<Widget> GetWidgets(int[] types = null)
+        {
+            List<AnnotXref> refs = GetAnnotXrefs();
+            List<int> xrefs = refs.Where(a => a.AnnotType == PdfAnnotType.PDF_ANNOT_WIDGET).Select(a => a.Xref).ToList();
+            foreach (int xref in xrefs)
+            {
+                Widget widget = LoadWidget(xref);
+                if (types == null || types.Contains(widget.FieldType))
+                    yield return widget;
+            }
         }
 
         public MuPDFAnnot AddInkAnnot(List<List<Point>> list)
@@ -2993,6 +3032,31 @@ namespace MuPDF.NET
         public Shape NewShape()
         {
             return new Shape(this);
+        }
+
+        public MuPDFAnnot AddWidget(Widget widget)
+        {
+            MuPDFDocument doc = Parent;
+            if (!doc.IsPDF)
+                throw new Exception("is no PDF");
+            widget.Validate();
+            PdfPage page = GetPdfPage();
+            PdfDocument pdf = page.doc();
+            PdfAnnot annot = Utils.CreateWidget(pdf, page, (PdfWidgetType)widget.FieldType, widget.FieldName);
+            if (annot.m_internal == null)
+                throw new Exception("cannot create widget");
+            Utils.AddAnnotId(annot, "W");
+            
+            MuPDFAnnot annot_ = new MuPDFAnnot(annot);
+            annot_.ThisOwn = true;
+            annot_.Parent = this;
+            AnnotRefs[annot_.GetHashCode()] = annot_;
+
+            widget.Parent = annot_.Parent;
+            widget._annot = annot;
+            widget.Update();
+
+            return annot_;
         }
 
         public void Dispose()
