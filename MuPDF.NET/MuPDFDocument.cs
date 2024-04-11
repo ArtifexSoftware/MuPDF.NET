@@ -3640,11 +3640,10 @@ namespace MuPDF.NET
         /// <returns></returns>
         public int GetXrefLength()
         {
-            int len = 0;
             PdfDocument pdf = AsPdfDocument(this);
             if (pdf != null)
-                len = pdf.pdf_xref_len();
-            return len;
+                return pdf.pdf_xref_len();
+            return 0;
         }
 
         public byte[] GetXrefStream(int xref)
