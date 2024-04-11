@@ -516,9 +516,10 @@ namespace MuPDF.NET
         {
             if (Is_Encrypted)
                 throw new Exception("cannot initialize - document still encrypted");
+            
             Outline = LoadOutline();
             MetaData = new Dictionary<string, string>();
-
+            
             Dictionary<string, string> values = new Dictionary<string, string>()
             {
                 { "format", "format" },
@@ -580,10 +581,12 @@ namespace MuPDF.NET
             try
             {
                 ol = doc.fz_load_outline();
+                if (ol.m_internal == null)
+                    return null;
             }
             catch (Exception)
             {
-
+                
             }
             return new Outline(ol);
         }
@@ -2521,7 +2524,7 @@ namespace MuPDF.NET
             List<List<dynamic>> toc = GetToc();
             List<int> olXrefs = GetOutlineXrefs();
 
-            for (int i = 0; i < toc.Count; i++)
+            for (int i = 0; i < (toc != null ? toc.Count : 0); i++)
             {
                 if (toc[i][2] == pno + 1)
                     RemoveTocItem(olXrefs[i]);
