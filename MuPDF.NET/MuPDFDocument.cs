@@ -1452,7 +1452,7 @@ namespace MuPDF.NET
             }
 
             string rc = "";
-            if (xml != null)
+            if (xml.m_internal != null)
             {
                 FzBuffer buff = xml.pdf_load_stream();
                 rc = Utils.UnicodeFromBuffer(buff);
