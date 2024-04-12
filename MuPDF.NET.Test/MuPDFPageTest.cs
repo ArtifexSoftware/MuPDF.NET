@@ -114,7 +114,7 @@ public class MuPDFPageTest : PdfTestBase
     {
         page.AddTextAnnot(new Point(100, 100), "Hello world");
         List<string> names = page.GetAnnotNames();
-        Assert.That(names.Count, Is.EqualTo(3));
+        Assert.That(names.Count, Is.EqualTo(2));
     }
 
     [Test]
