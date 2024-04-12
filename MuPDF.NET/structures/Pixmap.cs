@@ -268,7 +268,7 @@ namespace MuPDF.NET
             {
                 throw new Exception($"bad samples length {w} {h} {alpha} {n} {stride} {size}");
             }
-            // issue
+            
         }
 
         public Pixmap(string arg0, FzPixmap arg1)
