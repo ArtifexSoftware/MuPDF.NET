@@ -516,9 +516,10 @@ namespace MuPDF.NET
         {
             if (Is_Encrypted)
                 throw new Exception("cannot initialize - document still encrypted");
+            
             Outline = LoadOutline();
             MetaData = new Dictionary<string, string>();
-
+            
             Dictionary<string, string> values = new Dictionary<string, string>()
             {
                 { "format", "format" },
@@ -580,10 +581,12 @@ namespace MuPDF.NET
             try
             {
                 ol = doc.fz_load_outline();
+                if (ol.m_internal == null)
+                    return null;
             }
             catch (Exception)
             {
-
+                
             }
             return new Outline(ol);
         }
@@ -1449,7 +1452,7 @@ namespace MuPDF.NET
             }
 
             string rc = "";
-            if (xml != null)
+            if (xml.m_internal != null)
             {
                 FzBuffer buff = xml.pdf_load_stream();
                 rc = Utils.UnicodeFromBuffer(buff);
@@ -2521,7 +2524,7 @@ namespace MuPDF.NET
             List<List<dynamic>> toc = GetToc();
             List<int> olXrefs = GetOutlineXrefs();
 
-            for (int i = 0; i < toc.Count; i++)
+            for (int i = 0; i < (toc != null ? toc.Count : 0); i++)
             {
                 if (toc[i][2] == pno + 1)
                     RemoveTocItem(olXrefs[i]);
@@ -3637,11 +3640,10 @@ namespace MuPDF.NET
         /// <returns></returns>
         public int GetXrefLength()
         {
-            int len = 0;
             PdfDocument pdf = AsPdfDocument(this);
             if (pdf != null)
-                len = pdf.pdf_xref_len();
-            return len;
+                return pdf.pdf_xref_len();
+            return 0;
         }
 
         public byte[] GetXrefStream(int xref)

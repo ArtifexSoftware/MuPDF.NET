@@ -553,10 +553,6 @@ namespace MuPDF.NET
         public MuPDFAnnot AddInkAnnot(List<List<Point>> list)
         {
             PdfPage page = _pdfPage;
-            /*if (list is Tuple || list is List<List<Point>>)
-            {
-                throw new Exception(Utils.ErrorMessages["MSG_BAD_ARG_INK_ANNOT"]);
-            }*/
 
             FzMatrix ctm = new FzMatrix();
             page.pdf_page_transform(new FzRect(0), ctm);
@@ -584,6 +580,7 @@ namespace MuPDF.NET
             annotObj.pdf_dict_put(new PdfObj("InkList"), inkList);
             annot.pdf_update_annot();
             Utils.AddAnnotId(annot, "A");
+            
             return new MuPDFAnnot(annot);
         }
 
