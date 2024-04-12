@@ -1041,7 +1041,7 @@ namespace MuPDF.NET
             PdfObj type = obj.pdf_dict_get(new PdfObj("Type"));
             PdfObj subType = obj.pdf_dict_get(new PdfObj("Subtype"));
 
-            if (type.pdf_name_eq(new PdfObj("Font")) != 0 && !subType.pdf_to_name().StartsWith("CIDFontType"))
+            if (type.pdf_name_eq(new PdfObj("Font")) != 0 && !subType.pdf_to_name().StartsWith("CIDFontType")) // matched
             {
                 PdfObj bName = null;
                 PdfObj baseFont = obj.pdf_dict_get(new PdfObj("BaseFont"));
@@ -2918,7 +2918,7 @@ namespace MuPDF.NET
 
             PdfObj obj = pdf.pdf_new_indirect(xref, 0);
             PdfObj subtype = obj.pdf_dict_get(new PdfObj("Subtype"));
-            if (subtype.pdf_name_eq(new PdfObj("Image")) != 0) // mismatch
+            if (subtype.pdf_name_eq(new PdfObj("Image")) == 0) // mismatch
                 throw new Exception("not an image");
 
             PdfObj o = obj.pdf_dict_geta(new PdfObj("SMask"), new PdfObj("Mask"));
