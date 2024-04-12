@@ -3270,7 +3270,8 @@ namespace MuPDF.NET
             IntPtr pNumbers = Marshal.AllocHGlobal(list.Count * sizeof(int));
             Marshal.Copy(list.ToArray(), 0, pNumbers, list.Count);
             SWIGTYPE_p_int swigNumbers = new SWIGTYPE_p_int(pNumbers, true);
-            //pdf.pdf_rearrange_pages(list.Count, swigNumbers);
+
+            pdf.pdf_rearrange_pages(list.Count, swigNumbers);
             ResetPageRefs();
         }
 
