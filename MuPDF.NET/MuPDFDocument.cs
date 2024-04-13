@@ -1691,7 +1691,7 @@ namespace MuPDF.NET
                 throw new Exception("document closed or encrypted");
             PdfDocument pdf = MuPDFDocument.AsPdfDocument(_nativeDocument);
 
-            ByteStream memoryStream = new ByteStream(journal);
+            MemoryStream memoryStream = new MemoryStream(journal);
 
             FilePtrOutput output = new FilePtrOutput(memoryStream);
             pdf.pdf_write_journal(output);
@@ -2279,6 +2279,7 @@ namespace MuPDF.NET
         public void ForgetPage(MuPDFPage page)
         {
             int pid = page.GetHashCode();
+            Console.WriteLine(PageRefs.Count);
             if (PageRefs.ContainsKey(pid))
             {
                 PageRefs.Remove(pid);
@@ -3546,7 +3547,7 @@ namespace MuPDF.NET
             bool noNewId = false, bool appearance = false, bool pretty = false, int encryption = 1, int permissions = 4095,
             string ownerPW = null, string userPW = null)
         {
-            ByteStream byteStream = new ByteStream();
+            MemoryStream byteStream = new MemoryStream();
             Save(
                 filename: byteStream,
                 garbage: garbage ? 1 : 0,
@@ -3565,7 +3566,7 @@ namespace MuPDF.NET
                 permissions: permissions,
                 ownerPW: ownerPW,
                 userPW: userPW);
-            return byteStream.Data;
+            return byteStream.ToArray();
         }
 
         public List<string> GetKeysXref(int xref)

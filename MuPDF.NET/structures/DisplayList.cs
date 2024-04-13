@@ -1,5 +1,6 @@
 ﻿using mupdf;
 using System.Runtime.InteropServices;
+using System.Runtime.Serialization.Formatters.Binary;
 
 namespace MuPDF.NET
 {
@@ -53,7 +54,13 @@ namespace MuPDF.NET
             FzStextOptions opts = new FzStextOptions();
             opts.flags = flags;
 
-            // fz_new_stext_page_from_display_list // issue
+            /*IntPtr pList = Marshal.AllocHGlobal(Marshal.SizeOf(_nativeDisplayList.m_internal));
+            Marshal.StructureToPtr(_nativeDisplayList.m_internal, pList, false);
+
+            fz_stext_page val = mupdf.mupdf.ll_fz_new_stext_page_from_display_list(new SWIGTYPE_p_fz_display_list(pList, true), opts.internal_());
+            MuPDFTextPage ret = new MuPDFTextPage(new FzStextPage(val));
+            ret.ThisOwn = true;*/
+            Console.WriteLine(Marshal.SizeOf(_nativeDisplayList.m_internal));
             return null;
         }
     }
