@@ -1035,10 +1035,10 @@ namespace MuPDF.NET
         {
             if (Utils.TESSDATA_PREFIX == null && tessdata == null)
                 throw new Exception("No OCR support: TESSDATA_PREFIX not set");
-            ByteStream byteStream = new ByteStream();
+            MemoryStream byteStream = new MemoryStream();
             SavePdfOCR(byteStream, compress ? 1 : 0, language, tessdata);
 
-            return byteStream.Data;
+            return byteStream.ToArray();
         }
 
         public void SavePdfOCR(string filename, int compress = 1, string language = null, string tessdata = null)
