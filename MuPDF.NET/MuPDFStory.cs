@@ -252,9 +252,9 @@ namespace MuPDF.NET
             return null;
         }
 
-        public static MuPDFDocument AddPdfLinks(ByteStream stream, List<Position> positions)
+        public static MuPDFDocument AddPdfLinks(MemoryStream stream, List<Position> positions)
         {
-            MuPDFDocument document = new MuPDFDocument("pdf", stream.Data);
+            MuPDFDocument document = new MuPDFDocument("pdf", stream.ToArray());
             Dictionary<string, Position> id2Position = new Dictionary<string, Position>();
             foreach (Position position in positions)
             {
@@ -360,7 +360,7 @@ namespace MuPDF.NET
 
         public MuPDFDocument WriteWithLinks(RectFunction rectFn = null, Action<Position> positionfn = null, Action<int, Rect, MuPDFDeviceWrapper, bool> pageFn = null)
         {
-            ByteStream stream = new ByteStream(100);
+            MemoryStream stream = new MemoryStream(100);
             MuPDFDocumentWriter writer = new MuPDFDocumentWriter(stream);
             List<Position> positions = new List<Position>();
 
@@ -372,7 +372,7 @@ namespace MuPDF.NET
 
             Write(writer, rectFn, positionFn: positionfn2, pageFn);
             writer.Close();
-            stream.Seek(0, 1);
+            stream.Seek(0, (SeekOrigin)1);
             return MuPDFStory.AddPdfLinks(stream, positions);
         }
 
@@ -454,7 +454,7 @@ namespace MuPDF.NET
             bool addHeaderIds = true
             )
         {
-            ByteStream stream = new ByteStream(0);
+            MemoryStream stream = new MemoryStream();
             MuPDFDocumentWriter writer = new MuPDFDocumentWriter(stream);
             List<Position> positions = new List<Position>();
 
@@ -466,7 +466,7 @@ namespace MuPDF.NET
 
             MuPDFStory.WriteStabilized(writer, contentfn, rectfn, userCss, em, positionfn2, pagefn, archive, addHeaderIds);
             writer.Close();
-            stream.Seek(0, 1);
+            stream.Seek(0, (SeekOrigin)1);
             return MuPDFStory.AddPdfLinks(stream, positions);
         }
 

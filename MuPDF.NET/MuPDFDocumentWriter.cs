@@ -11,7 +11,7 @@ namespace MuPDF.NET
             _nativeDocumentWriter = new FzDocumentWriter(path, options, FzDocumentWriter.PathType.PathType_PDF);
         }
 
-        public MuPDFDocumentWriter(ByteStream memory, string options = "")
+        public MuPDFDocumentWriter(MemoryStream memory, string options = "")
         {
             FilePtrOutput filePtr = new FilePtrOutput(memory);
             _nativeDocumentWriter = new FzDocumentWriter(filePtr, options, FzDocumentWriter.OutputType.OutputType_PDF);

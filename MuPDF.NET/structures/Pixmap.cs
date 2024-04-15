@@ -1035,10 +1035,10 @@ namespace MuPDF.NET
         {
             if (Utils.TESSDATA_PREFIX == null && tessdata == null)
                 throw new Exception("No OCR support: TESSDATA_PREFIX not set");
-            ByteStream byteStream = new ByteStream();
+            MemoryStream byteStream = new MemoryStream();
             SavePdfOCR(byteStream, compress ? 1 : 0, language, tessdata);
 
-            return byteStream.Data;
+            return byteStream.ToArray();
         }
 
         public void SavePdfOCR(string filename, int compress = 1, string language = null, string tessdata = null)
@@ -1055,7 +1055,7 @@ namespace MuPDF.NET
             mupdf.mupdf.fz_save_pixmap_as_pdfocr(_nativePixmap, filename, 0, options);
         }
 
-        public void SavePdfOCR(ByteStream filename, int compress = 1, string language = null, string tessdata = null)
+        public void SavePdfOCR(MemoryStream filename, int compress = 1, string language = null, string tessdata = null)
         {
             if (Utils.TESSDATA_PREFIX == null && tessdata == null)
                 throw new Exception("No OCR support: TESSDATA_PREFIX not set");
@@ -1078,9 +1078,9 @@ namespace MuPDF.NET
 
     public class FilePtrOutput : FzOutput2
     {
-        public ByteStream data { get; set; }
+        public MemoryStream data { get; set; }
 
-        public FilePtrOutput(ByteStream src) : base()
+        public FilePtrOutput(MemoryStream src) : base()
         {
             this.data = src;
             this.use_virtual_write();
@@ -1091,24 +1091,25 @@ namespace MuPDF.NET
 
         public override void seek(fz_context arg_0, long arg_2, int arg_3)
         {
-            data.Seek(arg_2, arg_3);
+            data.Seek(arg_2, (SeekOrigin)arg_3);
         }
 
         public override long tell(fz_context arg_0)
         {
-            return data.Offset;
+            return data.Position;
         }
 
         public override void truncate(fz_context arg_0)
         {
-            data.Resize(0);
+            data.SetLength(0);
         }
 
         public override void write(fz_context arg_0, SWIGTYPE_p_void arg_2, ulong arg_3)
         {
             byte[] data = new byte[(int)arg_3];
             Marshal.Copy(SWIGTYPE_p_void.getCPtr(arg_2).Handle, data, 0, data.Length);
-            this.data.Write(data, data.Length);
+
+            this.data.Write(data, 0, data.Length);
         }
     }
 }
