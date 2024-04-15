@@ -1791,14 +1791,17 @@ namespace MuPDF.NET
                 catch (Exception) { }
             }
 
-            /*if (fontName.ToLower())//issue
+            
+
+            /*if (fontName.ToLower())// issue
             {
 
-            }*/
-            /*if (fontFile == null)
+            }
+            if (fontFile == null)
             {
                 throw new Exception("bad fontfile");
             }*/
+
             Font val = _InsertFont(fontName, bfName, fontFile, fontBuffer, setSimple, idx,
                 wmode, serif, encoding, CJK_number);
 
