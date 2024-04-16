@@ -237,6 +237,17 @@ namespace MuPDF.NET
         }
 
         /// <summary>
+        /// Reflects page rotation.
+        /// </summary>
+        public Matrix RotationMatrix
+        {
+            get
+            {
+                return Utils.GetRotateMatrix(this);
+            }
+        }
+
+        /// <summary>
         /// First link on page
         /// </summary>
         public MuPDFLink FirstLink
