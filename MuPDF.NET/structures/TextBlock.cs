@@ -2,18 +2,18 @@
 {
     public class TextBlock
     {
-        public float X0;
+        public float X0 { get; set; }
 
-        public float Y0;
+        public float Y0 { get; set; }
 
-        public float X1;
+        public float X1 { get; set; }
 
-        public float Y1;
+        public float Y1 { get; set; }
 
-        public string Text;
+        public string Text { get; set; }
 
-        public int BlockNum;
+        public int BlockNum { get; set; }
 
-        public int Type;
+        public int Type { get; set; }
     }
 }

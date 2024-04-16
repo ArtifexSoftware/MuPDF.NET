@@ -1,19 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace MuPDF.NET
+﻿namespace MuPDF.NET
 {
     public class Rule
     {
-        public int StartPage;
+        public int StartPage { get; set; }
 
-        public string Prefix;
+        public string Prefix { get; set; }
 
-        public int FirstPageNum;
+        public int FirstPageNum { get; set; }
 
-        public string Style;
+        public string Style { get; set; }
     }
 }

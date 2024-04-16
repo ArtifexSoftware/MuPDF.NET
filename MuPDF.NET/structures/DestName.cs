@@ -2,12 +2,12 @@
 {
     public class DestName
     {
-        public int Page;
+        public int Page { get; set; }
 
-        public Point To;
+        public Point To { get; set; }
 
-        public float Zoom;
+        public float Zoom { get; set; }
 
-        public string Dest;
+        public string Dest { get; set; }
     }
 }

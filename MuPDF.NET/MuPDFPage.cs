@@ -11,7 +11,7 @@ namespace MuPDF.NET
 
         private PdfPage _pdfPage;
 
-        public MuPDFDocument Parent;
+        public MuPDFDocument Parent { get; set; }
 
         private static FitResult fit;
 
@@ -37,7 +37,7 @@ namespace MuPDF.NET
 
         public bool ThisOwn { get; set; }
 
-        public bool WasWrapped = false;
+        public bool WasWrapped { get; set; }
 
         public Point MediaBoxSize
         {
@@ -233,6 +233,17 @@ namespace MuPDF.NET
 
                 MuPDFAnnot ret = new MuPDFAnnot(annot);
                 return ret;
+            }
+        }
+
+        /// <summary>
+        /// Reflects page rotation.
+        /// </summary>
+        public Matrix RotationMatrix
+        {
+            get
+            {
+                return Utils.GetRotateMatrix(this);
             }
         }
 
@@ -1790,17 +1801,6 @@ namespace MuPDF.NET
                 }
                 catch (Exception) { }
             }
-
-            
-
-            /*if (fontName.ToLower())// issue
-            {
-
-            }
-            if (fontFile == null)
-            {
-                throw new Exception("bad fontfile");
-            }*/
 
             Font val = _InsertFont(fontName, bfName, fontFile, fontBuffer, setSimple, idx,
                 wmode, serif, encoding, CJK_number);
@@ -3420,7 +3420,7 @@ namespace MuPDF.NET
 
                 FzPathWalker pathWalker = new FzPathWalker(walker.m_internal);
 
-                //mupdf.mupdf.fz_walk_path(new FzPath(mupdf.mupdf.ll_fz_keep_path(path)), pathWalker,  ); //issue
+                mupdf.mupdf.fz_walk_path(new FzPath(mupdf.mupdf.ll_fz_keep_path(path)), pathWalker,  ); //issue
 
                 if (PathDict.GetValueOrDefault("items", null) == null)
                     PathDict = null;

@@ -8,29 +8,29 @@ namespace MuPDF.NET
 {
     public class MuPDFDocument : IDisposable
     {
-        public bool IsClosed = false;
+        public bool IsClosed { get; set; }
 
-        public bool IsEncrypted = false;
+        public bool IsEncrypted { get; set; }
 
-        public bool Is_Encrypted;
+        public bool Is_Encrypted { get; set; }
 
-        public int GraftID;
+        public int GraftID { get; set; }
 
-        public Dictionary<string, string> MetaData;
+        public Dictionary<string, string> MetaData { get; set; }
 
-        public List<Font> FontInfos = new List<Font>();
+        public List<Font> FontInfos { get; set; }
 
-        public Dictionary<int, MuPDFGraftMap> GraftMaps = new Dictionary<int, MuPDFGraftMap>();
+        public Dictionary<int, MuPDFGraftMap> GraftMaps { get; set; }
 
-        public Dictionary<(int, int), int> ShownPages = new Dictionary<(int, int), int>();
+        public Dictionary<(int, int), int> ShownPages { get; set; }
 
-        public Dictionary<string, int> InsertedImages = new Dictionary<string, int> ();
+        public Dictionary<string, int> InsertedImages { get; set;}
 
-        public Dictionary<int, MuPDFPage> PageRefs;
+        public Dictionary<int, MuPDFPage> PageRefs { get; set; }
 
-        public string Name = null;
+        public string Name { get; set; }
 
-        public List<byte> Stream;
+        public List<byte> Stream { get; set; }
 
         private bool _isPDF;
 
@@ -80,6 +80,16 @@ namespace MuPDF.NET
                     return false;
                 int r = pdf.pdf_has_unsaved_changes();
                 return r != 0;
+            }
+        }
+
+        public int ChapterCount
+        {
+            get
+            {
+                if (IsClosed)
+                    throw new Exception("document closed");
+                return _nativeDocument.fz_count_chapters();
             }
         }
 
@@ -2007,13 +2017,40 @@ namespace MuPDF.NET
                 throw new Exception("document closed or encrypted");
             (int, int) _pageId;
             _pageId = (0, pageId);
-            // issue
+
+            if (!Contains(_pageId))
+                throw new Exception("page id not in document");
+
             if (_pageId.Item1 == LastLocation.Item1 && _pageId.Item2 == LastLocation.Item2)
                 return (-1, -1);
             PdfDocument pdf = MuPDFDocument.AsPdfDocument(_nativeDocument);
             int val = _pageId.Item1;
             int chapter = val;
             val = _pageId.Item2;
+            int pno = val;
+            FzLocation loc = mupdf.mupdf.fz_make_location(chapter, pno);
+            FzLocation nextLoc = mupdf.mupdf.fz_next_page(_nativeDocument, loc);
+            return (nextLoc.chapter, nextLoc.page);
+        }
+
+        /// <summary>
+        /// Get (chapter, page) of next page.
+        /// </summary>
+        /// <param name="pageId"></param>
+        /// <returns></returns>
+        public (int, int) NextLocation((int, int) pageId)
+        {
+            if (IsClosed || IsEncrypted)
+                throw new Exception("document closed or encrypted");
+            if (pageId.Item1 == LastLocation.Item1 && pageId.Item2 == LastLocation.Item2)
+                return (-1, -1);
+            if (!Contains(pageId))
+                throw new Exception("page id not in document");
+
+            PdfDocument pdf = MuPDFDocument.AsPdfDocument(_nativeDocument);
+            int val = pageId.Item1;
+            int chapter = val;
+            val = pageId.Item2;
             int pno = val;
             FzLocation loc = mupdf.mupdf.fz_make_location(chapter, pno);
             FzLocation nextLoc = mupdf.mupdf.fz_next_page(_nativeDocument, loc);
@@ -2076,7 +2113,9 @@ namespace MuPDF.NET
             while (pageId < 0)
                 pageId += pageN;
             (int, int) _pageId = (0, pageId);
-            // issue: Check whether pageId is in this
+            if (!Contains(_pageId))
+                throw new Exception("page id not in document");
+
             (int chapter, int pno) = _pageId;
             FzLocation loc = mupdf.mupdf.fz_make_location(chapter, pno);
             pageN = _nativeDocument.fz_page_number_from_location(loc);
@@ -2156,7 +2195,7 @@ namespace MuPDF.NET
         /// <param name="name"></param>
         /// <param name="font"></param>
         /// <exception cref="Exception"></exception>
-        public void AddFormFont(string name, string font)
+        private void AddFormFont(string name, string font)
         {
             if (IsClosed || IsEncrypted)
                 throw new Exception("document closed or encrypted");
@@ -3982,7 +4021,8 @@ namespace MuPDF.NET
                 MuPDFPage page = this[i];
                 if (resetFields)
                 {
-                    //issue widget
+                    foreach (Widget widget in page.GetWidgets())
+                        widget.Reset();
                 }
                 if (removeLinks)
                 {
@@ -4165,9 +4205,230 @@ namespace MuPDF.NET
             return 0;
         }
 
-        public void SetToc()// issue related to Toc
+        /// <summary>
+        /// Create new outline tree (table of contents, TOC)
+        /// </summary>
+        /// <param name="tocs">each entry must contain level, title, page and optionally top margin on the page.None or '()' remove the TOC</param>
+        /// <param name="collapse">collapses entries beyond this level. Zero or None shows all entries unfolded.</param>
+        /// <returns>the number of inserted items, or the number of removed items respectively.</returns>
+        public int SetToc(List<Toc> tocs, int collapse = 1)// issue related to Toc
         {
+            if (IsClosed || IsEncrypted)
+                throw new Exception("document closed or encrypted");
+            if (!IsPDF)
+                throw new Exception("is no pdf");
+            if (tocs == null)
+                return 0;
 
+            int n = tocs.Count;
+            int pageCount = Len;
+            Toc t0 = tocs[0];
+            if (t0.Level != 1)
+                throw new Exception("hierarchy level of item 0 must be 1");
+
+            foreach (int i in Enumerable.Range(1, n -1))
+            {
+                Toc t1 = tocs[i];
+                Toc t2 = tocs[i + 1];
+                if (!(-1 <= t1.Page && t1.Page <= pageCount))
+                    throw new Exception($"row {i}: page number out of range");
+                if (t2.Level < 1)
+                    throw new Exception($"bad hierarchy level in row {i + 1}");
+                if (t2.Level > t1.Level + 1)
+                    throw new Exception($"bad hierarchy level in row {i + 1}");
+            }
+            List<int> oldXrefs = DeleteToc();
+            oldXrefs = new List<int>();
+
+            List<int> xref = new List<int>() { 0}.Concat(oldXrefs).ToList();
+            xref[0] = GetOlRootNumber();
+            if (n > oldXrefs.Count)
+            {
+                for (int i = 0; i < (n - oldXrefs.Count); i++)
+                {
+                    xref.Add(GetNewXref());
+                }
+            }
+
+            List<Dictionary<string, dynamic>> olItems = new List<Dictionary<string, dynamic>>()
+                {
+                    new Dictionary<string, dynamic>()
+                    {
+                        {"count", 0 },
+                        {"first", -1 },
+                        {"last", -1 },
+                        {"xref", xref[0] }
+                    }
+                };
+
+            Dictionary<int, int> lvlTab = new Dictionary<int, int>();
+            lvlTab.Add(0, 0);
+
+            for (int i = 0; i < n; i ++)
+            {
+                Toc o = tocs[i];
+                int lvl = o.Level;
+                string title = Utils.GetPdfString(o.Title);
+                int pno = Math.Min(Len - 1, Math.Max(0, o.Page - 1));
+                int pageXref = GetPageXref(pno);
+                float pageHeight = PageCropBox(pno).Height;
+                Point top = new Point(72, pageHeight - 36);
+
+                Link dest = new Link() { To = top, Kind = LinkType.LINK_GOTO};
+                if (o.Page < 0)
+                    dest.Kind = LinkType.LINK_NONE;
+                if (o.Link != null)
+                {
+                    dest = o.Link;
+                    if (dest.To == null)
+                        dest.To = top;
+                    else
+                    {
+                        MuPDFPage page = this[pno];
+                        Point point = new Point(dest.To);
+                        point.Y = page.CropBox.Height - point.Y;
+                        point = point * page.RotationMatrix;
+                        dest.To = new Point(point);
+                    }
+                }
+                
+                Dictionary<string, dynamic> d = new Dictionary<string, dynamic>();
+                d.Add("first", -1);
+                d.Add("count", 0);
+                d.Add("last", -1);
+                d.Add("prev", -1);
+                d.Add("next", -1);
+                d.Add("dest", Utils.GetDestString(pageXref, dest));
+                d.Add("top", dest.To);
+                d.Add("title", title);
+                d.Add("parent", lvlTab[lvl - 1]);
+                d.Add("xref", xref[i + 1]);
+                d.Add("color", dest.Color);
+                d.Add("flags", (dest.Italic ? 1 : 0) + 2 * (dest.Bold ? 1 : 0));
+                lvlTab.Add(lvl, i + 1);
+                Dictionary<string, dynamic> parent = olItems[lvlTab[lvl - 1]];
+
+                if (dest.Collapse || (collapse != 0 && lvl > collapse))
+                    parent["count"] -= 1;
+                else
+                    parent["count"] += 1;
+
+                if (parent["first"] == -1)
+                {
+                    parent["first"] = i + 1;
+                    parent["last"] = i + 1;
+                }
+                else
+                {
+                    d["prev"] = parent["last"];
+                    Dictionary<string, dynamic> prev = olItems[parent["last"]];
+                    prev["next"] = i + 1;
+                    parent["last"] = i + 1;
+                }
+                olItems.Add(d);
+            }
+
+            int index = 0;
+            foreach (Dictionary<string, dynamic> ol in olItems)
+            {
+                string txt = "<<";
+                if (ol["count"] != 0)
+                    txt += $"/Count {ol["count"]}";
+                try
+                {
+                    txt += ol["dest"];
+                }
+                catch (Exception) { }
+
+                try
+                {
+                    if (ol["first"] > -1)
+                        txt += $"/First {xref[ol["first"]]} 0 R";
+                }
+                catch (Exception) { }
+
+                try
+                {
+                    if (ol["last"] > -1)
+                        txt += $"/Last {xref[ol["last"]]} 0 R";
+                }
+                catch (Exception) { }
+
+                try
+                {
+                    if (ol["next"] > -1)
+                        txt += $"/Next {xref[ol["next"]]} 0 R";
+                }
+                catch (Exception) { }
+
+                try
+                {
+                    if (ol["parent"] > -1)
+                        txt += $"/Parent {xref[ol["parent"]]} 0 R";
+                }
+                catch (Exception) { }
+
+                try
+                {
+                    if (ol["prev"] > -1)
+                        txt += $"/Prev {xref[ol["prev"]]} 0 R";
+                }
+                catch (Exception) { }
+
+                try
+                {
+                    txt += "/Title" + ol["title"];
+                }
+                catch (Exception) { }
+
+                if (ol["count"] && ol["color"].Length == 3)
+                    txt += $"/C[ {ol["color"][0]} {ol["color"][1]} {ol["color"][2]}]";
+                if (ol.GetValueOrDefault("flags", 0) > 0)
+                    txt += $"/F {ol["flags"]}";
+                if (index == 0)
+                    txt += "/Type/Outlines";
+                txt += ">>";
+                UpdateObject(xref[index], txt);
+            }
+            InitDocument();
+            return n;
+        }
+
+        /// <summary>
+        /// Delete the Toc
+        /// </summary>
+        /// <returns></returns>
+        private List<int> DeleteToc()
+        {
+            if (IsClosed || IsEncrypted)
+                throw new Exception("document closed or encrypted");
+            List<int> xrefs = new List<int>();
+            PdfDocument pdf = AsPdfDocument(this);
+            if (pdf == null)
+                return xrefs;
+
+            PdfObj root = pdf.pdf_trailer().pdf_dict_get(new PdfObj("Root"));
+            PdfObj olRoot = root.pdf_dict_get(new PdfObj("Outlines"));
+            if (olRoot.m_internal == null)
+                return xrefs;
+
+            PdfObj first = olRoot.pdf_dict_get(new PdfObj("First"));
+            xrefs = Utils.GetOutlineXrefs(first, xrefs);
+            int xrefCount = xrefs.Count;
+
+            int olRootXref = olRoot.pdf_to_num();
+            pdf.pdf_delete_object(olRootXref);
+            root.pdf_dict_del(new PdfObj("Outlines"));
+
+            for (int i = 0; i < xrefCount; i++)
+            {
+                int xref = xrefs[i];
+                pdf.pdf_delete_object(xref);
+            }
+            xrefs.Add(olRootXref);
+            InitDocument();
+
+            return xrefs;
         }
 
         /// <summary>
@@ -4337,6 +4598,114 @@ namespace MuPDF.NET
                 UpdateObject(newXref, fontStr);
             }
 
+            void BuildSubset(byte[] buffer, HashSet<int> uncSet, HashSet<int> gidSet)
+            {
+                string tmpDir = Path.GetTempPath();
+
+                string oldfontPath = Path.Combine(tmpDir, "oldfont.ttf");
+                string newfontPath = Path.Combine(tmpDir, "newfont.ttf");
+                string uncfilePath = Path.Combine(tmpDir, "uncfile.txt");
+
+                string[] arguments = new string[] {
+                                        oldfontPath,
+                                        "--retain-gids",
+                                        $"--output-file={newfontPath}",
+                                        "--layout-features='*'",
+                                        "--passthrough-tables",
+                                        "--ignore-missing-glyphs",
+                                        "--ignore-missing-unicodes",
+                                        "--symbol-cmap"
+                                    };
+
+                List<int> uncList;
+
+                string[] AddToArray(string[] array, string newElement)
+                {
+                    Array.Resize(ref array, array.Length + 1);
+                    array[array.Length - 1] = newElement;
+                    return array;
+                }
+
+                void DeleteFile(string filePath)
+                {
+                    try
+                    {
+                        File.Delete(filePath);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine(ex.Message);
+                    }
+                }
+
+                using (StreamWriter uncFile = new StreamWriter(uncfilePath, false, Encoding.UTF8))
+                {
+                    if (uncSet.Contains(0xFFFD)) // error unicode exists -> use glyphs
+                    {
+                        arguments = AddToArray(arguments, $"--gids-file={uncfilePath}");
+                        gidSet.Add(189);
+                        uncList = new List<int>(gidSet);
+                        foreach (int unc in uncList)
+                        {
+                            uncFile.WriteLine($"{unc}");
+                        }
+                    }
+                    else
+                    {
+                        arguments = AddToArray(arguments, $"--unicodes-file={uncfilePath}");
+                        uncSet.Add(255);
+                        uncList = new List<int>(uncSet);
+                        foreach (int unc in uncList)
+                        {
+                            uncFile.WriteLine("{0:x4}", unc);
+                        }
+                    }
+                }
+
+                using (FileStream fontfile = new FileStream(oldfontPath, FileMode.Create, FileAccess.Write))
+                {
+                    fontfile.Write(buffer, 0, buffer.Length);
+                }
+
+                try
+                {
+                    File.Delete(newfontPath);  // remove old file
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                }
+
+
+            }
+
+        }
+
+        public bool Contains(int page)
+        {
+            if (page < Len)
+                return true;
+            return false;
+        }
+
+        public bool Contains((int, int) loc)
+        {
+            (int chapter, int pno) = loc;
+            if (chapter < 0 || chapter >= ChapterCount)
+                return false;
+            if (pno < 0 || pno >= GetChapterPageCount(chapter))
+                return false;
+            return true;
+        }
+
+        public int GetChapterPageCount(int chapter)
+        {
+            if (IsClosed)
+                throw new Exception("document closed");
+            int chapters = _nativeDocument.fz_count_chapters();
+            if (chapters < 0 || chapter >= chapters)
+                throw new Exception("bad chapter number");
+            return _nativeDocument.fz_count_chapter_pages(chapter);
         }
 
         public void Close()

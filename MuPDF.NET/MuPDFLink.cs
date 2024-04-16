@@ -5,15 +5,15 @@ namespace MuPDF.NET
     public class MuPDFLink : IDisposable
     {
 
-        public bool ThisOwn;
+        public bool ThisOwn { get; set; }
 
         private FzLink _nativeLink;
 
-        public MuPDFPage Parent;
+        public MuPDFPage Parent { get; set; }
 
-        public int Xref;
+        public int Xref { get; set; }
 
-        public int Page = -1;
+        public int Page { get; set; }
 
         public string Uri
         {
@@ -23,7 +23,7 @@ namespace MuPDF.NET
             }
         }
 
-        public string Id;
+        public string Id { get; set; }
 
         public MuPDFLink(FzLink t) { _nativeLink = t; }
 

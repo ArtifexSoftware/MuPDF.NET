@@ -4,38 +4,38 @@ namespace MuPDF.NET
 {
     public class Block
     {
-        public int Xref;
+        public int Xref { get; set; }
 
-        public int Number;
+        public int Number { get; set; }
 
-        public int Type;
+        public int Type { get; set; }
 
-        public FzRect Bbox;
+        public FzRect Bbox { get; set; }
 
-        public int Width;
+        public int Width { get; set; }
 
-        public int Height;
+        public int Height { get; set; }
 
-        public string Ext;
+        public string Ext { get; set; }
 
-        public int ColorSpace;
+        public int ColorSpace { get; set; }
 
-        public int Xres;
+        public int Xres { get; set; }
 
-        public int Yres;
+        public int Yres { get; set; }
 
-        public byte Bpc;
+        public byte Bpc { get; set; }
 
-        public FzMatrix Matrix;
+        public FzMatrix Matrix { get; set; }
 
-        public uint Size;
+        public uint Size { get; set; }
 
-        public byte[] Image;
+        public byte[] Image { get; set; }
 
-        public string CsName;
+        public string CsName { get; set; }
 
-        public vectoruc Digest;
+        public vectoruc Digest { get; set; }
 
-        public List<Line> Lines;
+        public List<Line> Lines { get; set; }
     }
 }

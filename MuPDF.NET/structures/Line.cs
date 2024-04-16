@@ -4,12 +4,12 @@ namespace MuPDF.NET
 {
     public class Line
     {
-        public List<Span> Spans;
+        public List<Span> Spans { get; set; }
 
-        public int WMode;
+        public int WMode { get; set; }
 
-        public FzPoint Dir;
+        public FzPoint Dir { get; set; }
 
-        public FzRect Bbox;
+        public FzRect Bbox { get; set; }
     }
 }

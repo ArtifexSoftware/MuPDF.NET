@@ -2,12 +2,12 @@
 {
     public class OCGroup
     {
-        public string Name;
+        public string Name { get; set; }
 
-        public List<string> Intents;
+        public List<string> Intents { get; set; }
 
-        public int On;
+        public int On { get; set; }
 
-        public string Usage;
+        public string Usage { get; set; }
     }
 }

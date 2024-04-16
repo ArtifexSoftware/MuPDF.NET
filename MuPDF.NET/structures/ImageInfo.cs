@@ -2,24 +2,24 @@
 {
     public class ImageInfo
     {
-        public string Ext;
+        public string Ext { get; set; }
 
-        public int Smask;
+        public int Smask { get; set; }
 
-        public float Width;
+        public float Width { get; set; }
 
-        public float Height;
+        public float Height { get; set; }
 
-        public int ColorSpace;
+        public int ColorSpace { get; set; }
 
-        public int Bpc;
+        public int Bpc { get; set; }
 
-        public float Xres;
+        public float Xres { get; set; }
 
-        public float Yres;
+        public float Yres { get; set; }
 
-        public string CsName;
+        public string CsName { get; set; }
 
-        public byte[] Image;
+        public byte[] Image { get; set; }
     }
 }

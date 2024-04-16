@@ -2,34 +2,34 @@
 {
     public class Link
     {
-        public Rect From;
+        public Rect From { get; set; }
 
-        public LinkType Kind;
+        public LinkType Kind { get; set; }
 
-        public Point To = new Point(0, 0);
+        public Point To { get; set; } = null;
 
-        public string ToStr; //used page number is less than 0
+        public string ToStr { get; set; } //used page number is less than 0
 
-        public int Page;
+        public int Page { get; set; }
 
-        public string Name;
+        public string Name { get; set; }
 
-        public string Uri;
+        public string Uri { get; set; }
 
-        public float Zoom = 0;
+        public float Zoom { get; set; } = 0;
 
-        public string File;
+        public string File { get; set; }
 
-        public string Id;
+        public string Id { get; set; }
 
-        public int Xref;
+        public int Xref { get; set; }
 
-        public bool Italic = false;
+        public bool Italic { get; set; } = false;
 
-        public bool Bold = false;
+        public bool Bold { get; set; } = false;
 
-        public bool Collapse;
+        public bool Collapse { get; set; }
 
-        public float[] Color = null;
+        public float[] Color { get; set; }
     }
 }

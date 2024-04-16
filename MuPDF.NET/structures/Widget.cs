@@ -4,71 +4,71 @@ namespace MuPDF.NET
 {
     public class Widget
     {
-        public float[] BorderColor;
+        public float[] BorderColor { get; set; }
 
-        public string BorderStyle;
+        public string BorderStyle { get; set; }
 
-        public float BorderWidth;
+        public float BorderWidth { get; set; }
 
-        public int[] BorderDashes;
+        public int[] BorderDashes { get; set; }
 
-        public List<List<string>> ChoiceValues;
+        public List<List<string>> ChoiceValues { get; set; }
 
-        public int RbParent;
+        public int RbParent { get; set; }
 
-        public string FieldName;
+        public string FieldName { get; set; }
 
-        public string FieldLabel;
+        public string FieldLabel { get; set; }
 
-        public string FieldValue;
+        public string FieldValue { get; set; }
 
-        public int FieldFlags;
+        public int FieldFlags { get; set; }
 
-        public int FieldType;
+        public int FieldType { get; set; }
 
-        public int FieldDisplay;
+        public int FieldDisplay { get; set; }
 
-        public string FieldTypeString;
+        public string FieldTypeString { get; set; }
 
-        public float[] FillColor;
+        public float[] FillColor { get; set; }
 
-        public string ButtonCaption;
+        public string ButtonCaption { get; set; }
 
-        public bool IsSigned;
+        public bool IsSigned { get; set; }
 
-        public float[] TextColor;
+        public float[] TextColor { get; set; }
 
-        public string TextFont;
+        public string TextFont { get; set; }
 
-        public float TextFontSize;
+        public float TextFontSize { get; set; }
 
-        public int TextMaxLen;
+        public int TextMaxLen { get; set; }
 
-        public int TextFormat;
+        public int TextFormat { get; set; }
 
-        public string TextDa;
+        public string TextDa { get; set; }
 
-        public string Script;
+        public string Script { get; set; }
 
-        public string ScriptStroke;
+        public string ScriptStroke { get; set; }
 
-        public string ScriptFormat;
+        public string ScriptFormat { get; set; }
 
-        public string ScriptChange;
+        public string ScriptChange { get; set; }
 
-        public string ScriptCalc;
+        public string ScriptCalc { get; set; }
 
-        public string ScriptBlur;
+        public string ScriptBlur { get; set; }
 
-        public string ScriptFocus;
+        public string ScriptFocus { get; set; }
 
-        public int Xref;
+        public int Xref { get; set; }
 
-        public Rect Rect;
+        public Rect Rect { get; set; }
 
-        public MuPDFPage Parent;
+        public MuPDFPage Parent { get; set; }
 
-        public PdfAnnot _annot;
+        public PdfAnnot _annot { get; set; }
 
         public Widget(MuPDFPage page)
         {

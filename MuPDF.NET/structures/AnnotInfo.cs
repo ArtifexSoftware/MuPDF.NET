@@ -2,18 +2,18 @@
 {
     public class AnnotInfo
     {
-        public string Content;
+        public string Content { get; set; }
 
-        public string Name;
+        public string Name { get; set; }
 
-        public string Title;
+        public string Title { get; set; }
 
-        public string CreationDate;
+        public string CreationDate { get; set; }
 
-        public string ModDate;
+        public string ModDate { get; set; }
 
-        public string Subject;
+        public string Subject { get; set; }
 
-        public string Id;
+        public string Id { get; set; }
     }
 }

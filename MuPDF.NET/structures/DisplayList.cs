@@ -10,7 +10,7 @@ namespace MuPDF.NET
 
         private FzColorspace _colorSpace;
 
-        public bool ThisOwn;
+        public bool ThisOwn { get; set; }
 
         public DisplayList(Rect rect)
         {

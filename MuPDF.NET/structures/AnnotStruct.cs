@@ -2,20 +2,20 @@
 {
     public class AnnotStruct
     {
-        public int Xref;
+        public int Xref { get; set; }
 
-        public string Text;
+        public string Text { get; set; }
 
-        public int Align;
+        public int Align { get; set; }
 
-        public Rect Rect;
+        public Rect Rect { get; set; }
 
-        public List<float> TextColor;
+        public List<float> TextColor { get; set; }
 
-        public string FontName;
+        public string FontName { get; set; }
 
-        public float FontSize;
+        public float FontSize { get; set; }
 
-        public float[] Fill;
+        public float[] Fill { get; set; }
     }
 }
