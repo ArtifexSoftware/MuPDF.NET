@@ -1,19 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace MuPDF.NET
+﻿namespace MuPDF.NET
 {
     public class Toc
     {
-        public int Level = 0;
+        public int Level { get; set; }
 
-        public string Title = null;
+        public string Title { get; set; }
 
-        public int Page = 0;
+        public int Page { get; set; }
 
-        public Link Link = null;
+        public Link Link { get; set; } = null;
     }
 }

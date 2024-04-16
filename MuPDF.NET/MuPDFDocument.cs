@@ -8,29 +8,29 @@ namespace MuPDF.NET
 {
     public class MuPDFDocument : IDisposable
     {
-        public bool IsClosed = false;
+        public bool IsClosed { get; set; }
 
-        public bool IsEncrypted = false;
+        public bool IsEncrypted { get; set; }
 
-        public bool Is_Encrypted;
+        public bool Is_Encrypted { get; set; }
 
-        public int GraftID;
+        public int GraftID { get; set; }
 
-        public Dictionary<string, string> MetaData;
+        public Dictionary<string, string> MetaData { get; set; }
 
-        public List<Font> FontInfos = new List<Font>();
+        public List<Font> FontInfos { get; set; }
 
-        public Dictionary<int, MuPDFGraftMap> GraftMaps = new Dictionary<int, MuPDFGraftMap>();
+        public Dictionary<int, MuPDFGraftMap> GraftMaps { get; set; }
 
-        public Dictionary<(int, int), int> ShownPages = new Dictionary<(int, int), int>();
+        public Dictionary<(int, int), int> ShownPages { get; set; }
 
-        public Dictionary<string, int> InsertedImages = new Dictionary<string, int> ();
+        public Dictionary<string, int> InsertedImages { get; set;}
 
-        public Dictionary<int, MuPDFPage> PageRefs;
+        public Dictionary<int, MuPDFPage> PageRefs { get; set; }
 
-        public string Name = null;
+        public string Name { get; set; }
 
-        public List<byte> Stream;
+        public List<byte> Stream { get; set; }
 
         private bool _isPDF;
 
@@ -80,6 +80,16 @@ namespace MuPDF.NET
                     return false;
                 int r = pdf.pdf_has_unsaved_changes();
                 return r != 0;
+            }
+        }
+
+        public int ChapterCount
+        {
+            get
+            {
+                if (IsClosed)
+                    throw new Exception("document closed");
+                return _nativeDocument.fz_count_chapters();
             }
         }
 
@@ -2007,13 +2017,40 @@ namespace MuPDF.NET
                 throw new Exception("document closed or encrypted");
             (int, int) _pageId;
             _pageId = (0, pageId);
-            // issue
+
+            if (!Contains(_pageId))
+                throw new Exception("page id not in document");
+
             if (_pageId.Item1 == LastLocation.Item1 && _pageId.Item2 == LastLocation.Item2)
                 return (-1, -1);
             PdfDocument pdf = MuPDFDocument.AsPdfDocument(_nativeDocument);
             int val = _pageId.Item1;
             int chapter = val;
             val = _pageId.Item2;
+            int pno = val;
+            FzLocation loc = mupdf.mupdf.fz_make_location(chapter, pno);
+            FzLocation nextLoc = mupdf.mupdf.fz_next_page(_nativeDocument, loc);
+            return (nextLoc.chapter, nextLoc.page);
+        }
+
+        /// <summary>
+        /// Get (chapter, page) of next page.
+        /// </summary>
+        /// <param name="pageId"></param>
+        /// <returns></returns>
+        public (int, int) NextLocation((int, int) pageId)
+        {
+            if (IsClosed || IsEncrypted)
+                throw new Exception("document closed or encrypted");
+            if (pageId.Item1 == LastLocation.Item1 && pageId.Item2 == LastLocation.Item2)
+                return (-1, -1);
+            if (!Contains(pageId))
+                throw new Exception("page id not in document");
+
+            PdfDocument pdf = MuPDFDocument.AsPdfDocument(_nativeDocument);
+            int val = pageId.Item1;
+            int chapter = val;
+            val = pageId.Item2;
             int pno = val;
             FzLocation loc = mupdf.mupdf.fz_make_location(chapter, pno);
             FzLocation nextLoc = mupdf.mupdf.fz_next_page(_nativeDocument, loc);
@@ -2076,7 +2113,9 @@ namespace MuPDF.NET
             while (pageId < 0)
                 pageId += pageN;
             (int, int) _pageId = (0, pageId);
-            // issue: Check whether pageId is in this
+            if (!Contains(_pageId))
+                throw new Exception("page id not in document");
+
             (int chapter, int pno) = _pageId;
             FzLocation loc = mupdf.mupdf.fz_make_location(chapter, pno);
             pageN = _nativeDocument.fz_page_number_from_location(loc);
@@ -2156,7 +2195,7 @@ namespace MuPDF.NET
         /// <param name="name"></param>
         /// <param name="font"></param>
         /// <exception cref="Exception"></exception>
-        public void AddFormFont(string name, string font)
+        private void AddFormFont(string name, string font)
         {
             if (IsClosed || IsEncrypted)
                 throw new Exception("document closed or encrypted");
@@ -3982,7 +4021,8 @@ namespace MuPDF.NET
                 MuPDFPage page = this[i];
                 if (resetFields)
                 {
-                    //issue widget
+                    foreach (Widget widget in page.GetWidgets())
+                        widget.Reset();
                 }
                 if (removeLinks)
                 {
@@ -4337,6 +4377,35 @@ namespace MuPDF.NET
                 UpdateObject(newXref, fontStr);
             }
 
+            void BuildSubset()
+
+        }
+
+        public bool Contains(int page)
+        {
+            if (page < Len)
+                return true;
+            return false;
+        }
+
+        public bool Contains((int, int) loc)
+        {
+            (int chapter, int pno) = loc;
+            if (chapter < 0 || chapter >= ChapterCount)
+                return false;
+            if (pno < 0 || pno >= GetChapterPageCount(chapter))
+                return false;
+            return true;
+        }
+
+        public int GetChapterPageCount(int chapter)
+        {
+            if (IsClosed)
+                throw new Exception("document closed");
+            int chapters = _nativeDocument.fz_count_chapters();
+            if (chapters < 0 || chapter >= chapters)
+                throw new Exception("bad chapter number");
+            return _nativeDocument.fz_count_chapter_pages(chapter);
         }
 
         public void Close()

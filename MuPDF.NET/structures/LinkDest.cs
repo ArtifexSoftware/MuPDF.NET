@@ -4,29 +4,29 @@ namespace MuPDF.NET
 {
     public class LinkDest : IDisposable
     {
-        public string Dest;
+        public string Dest { get; set; }
 
-        public string FileSpec = "";
+        public string FileSpec { get; set; }
 
-        public int Flags = 0;
+        public int Flags { get; set; }
 
-        public bool IsMap = false;
+        public bool IsMap { get; set; }
 
-        public bool IsUri = false;
+        public bool IsUri { get; set; }
 
-        public Point TopLeft = new Point(0, 0);
+        public Point TopLeft { get; set; } = new Point(0, 0);
 
-        public string NewWindow = "";
+        public string NewWindow { get; set; }
 
-        public Point BottomRight = new Point(0, 0);
+        public Point BottomRight { get; set; } = new Point(0, 0);
 
-        public LinkType Kind;
+        public LinkType Kind { get; set; }
 
-        public int Page;
+        public int Page { get; set; }
 
-        public string Uri;
+        public string Uri { get; set; }
 
-        public Dictionary<string, dynamic> Named;
+        public Dictionary<string, dynamic> Named { get; set; }
 
         /// <summary>
         /// 

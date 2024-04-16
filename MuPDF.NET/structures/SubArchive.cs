@@ -2,10 +2,10 @@
 {
     public class SubArchive
     {
-        public string Fmt;
+        public string Fmt { get; set; }
 
-        public List<string> Entries;
+        public List<string> Entries { get; set; }
 
-        public string Path;
+        public string Path { get; set; }
     }
 }

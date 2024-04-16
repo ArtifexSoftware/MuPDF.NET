@@ -8,10 +8,10 @@ namespace MuPDF.NET
 {
     public class AnnotXref
     {
-        public string Id;
+        public string Id { get; set; }
 
-        public int Xref;
+        public int Xref { get; set; }
 
-        public PdfAnnotType AnnotType;
+        public PdfAnnotType AnnotType { get; set; }
     }
 }

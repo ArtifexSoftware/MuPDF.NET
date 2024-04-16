@@ -8,11 +8,11 @@ namespace MuPDF.NET
     {
         internal PdfAnnot _nativeAnnotion;
 
-        public bool IsOwner = false;
+        public bool IsOwner { get; set; }
 
-        public bool ThisOwn = false;
+        public bool ThisOwn { get; set; }
 
-        public bool Yielded = false;
+        public bool Yielded { get; set; }
 
         delegate string LE_FUNCTION(MuPDFAnnot annot, Point p1, Point p2, bool lr, float[] fillColor);
 

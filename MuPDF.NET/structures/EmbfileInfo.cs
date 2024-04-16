@@ -2,24 +2,24 @@
 {
     public class EmbfileInfo
     {
-        public string Name;
+        public string Name { get; set; }
 
-        public string CreationDate;
+        public string CreationDate { get; set; }
 
-        public string ModDate;
+        public string ModDate { get; set; }
 
-        public string CheckSum;
+        public string CheckSum { get; set; }
 
-        public int Collection;
+        public int Collection { get; set; }
 
-        public string FileName;
+        public string FileName { get; set; }
 
-        public string UFileName;
+        public string UFileName { get; set; }
 
-        public string Desc;
+        public string Desc { get; set; }
 
-        public int Size;
+        public int Size { get; set; }
 
-        public int Length;
+        public int Length { get; set; }
     }
 }

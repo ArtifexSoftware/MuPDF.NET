@@ -2,12 +2,12 @@
 {
     public class FileInfoStruct
     {
-        public string FileName;
+        public string FileName { get; set; }
 
-        public string Desc;
+        public string Desc { get; set; }
 
-        public int Length;
+        public int Length { get; set; }
 
-        public int Size;
+        public int Size { get; set; }
     }
 }

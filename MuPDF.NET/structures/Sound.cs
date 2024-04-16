@@ -2,16 +2,16 @@
 {
     public class Sound
     {
-        public float Rate;
+        public float Rate { get; set; }
 
-        public int Channels;
+        public int Channels { get; set; }
 
-        public int Bps;
+        public int Bps { get; set; }
 
-        public string Encoding;
+        public string Encoding { get; set; }
 
-        public string Compression;
+        public string Compression { get; set; }
 
-        public byte[] Stream;
+        public byte[] Stream { get; set; }
     }
 }

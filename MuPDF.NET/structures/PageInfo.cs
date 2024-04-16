@@ -2,10 +2,10 @@
 {
     public class PageInfo
     {
-        public float Width;
+        public float Width { get; set; }
 
-        public float Height;
+        public float Height { get; set; }
 
-        public List<Block> Blocks;
+        public List<Block> Blocks { get; set; }
     }
 }

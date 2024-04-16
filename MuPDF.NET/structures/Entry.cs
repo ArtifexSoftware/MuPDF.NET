@@ -1,47 +1,41 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace MuPDF.NET
+﻿namespace MuPDF.NET
 {
     public class Entry
     {
         // image info struct
 
-        public string Ext;
+        public string Ext { get; set; }
 
-        public int Smask;
+        public int Smask { get; set; }
 
-        public float Width;
+        public float Width { get; set; }
 
-        public float Height;
+        public float Height { get; set; }
 
-        public int Bpc;
+        public int Bpc { get; set; }
 
-        public string CsName;
+        public string CsName { get; set; }
 
-        public string AltCsName;
+        public string AltCsName { get; set; }
 
-        public string Filter;
+        public string Filter { get; set; }
 
         // font struct
 
-        public int Xref;
+        public int Xref { get; set; }
 
-        public string Type;
+        public string Type { get; set; }
 
-        public string Name;
+        public string Name { get; set; }
 
-        public string RefName;
+        public string RefName { get; set; }
 
-        public string Encoding;
+        public string Encoding { get; set; }
 
-        public int StreamXref;
+        public int StreamXref { get; set; }
 
         // form info struct
 
-        public Rect Bbox = null;
+        public Rect Bbox = null { get; set; }
     }
 }

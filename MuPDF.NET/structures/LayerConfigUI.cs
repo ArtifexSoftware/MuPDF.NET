@@ -2,16 +2,16 @@
 {
     public class LayerConfigUI
     {
-        public int Number;
+        public int Number { get; set; }
 
-        public string Text;
+        public string Text { get; set; }
 
-        public string Type;
+        public string Type { get; set; }
 
-        public int Depth;
+        public int Depth { get; set; }
 
-        public bool On;
+        public bool On { get; set; }
 
-        public bool IsLocked;
+        public bool IsLocked { get; set; }
     }
 }

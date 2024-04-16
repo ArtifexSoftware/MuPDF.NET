@@ -2,14 +2,14 @@
 {
     public class OCLayer
     {
-        public int[] On;
+        public int[] On { get; set; }
 
-        public int[] Off;
+        public int[] Off { get; set; }
 
-        public int[] Locked;
+        public int[] Locked { get; set; }
 
-        public List<int[]> RBGroups;
+        public List<int[]> RBGroups { get; set; }
 
-        public string BaseState;
+        public string BaseState { get; set; }
     }
 }

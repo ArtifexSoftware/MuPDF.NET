@@ -2,8 +2,8 @@
 {
     public class Color
     {
-        public float[] Fill;
+        public float[] Fill { get; set; }
 
-        public float[] Stroke;
+        public float[] Stroke { get; set; }
     }
 }

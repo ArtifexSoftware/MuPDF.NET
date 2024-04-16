@@ -8,7 +8,7 @@ namespace MuPDF.NET
     {
         internal FzStextPage _nativeTextPage;
 
-        public bool ThisOwn;
+        public bool ThisOwn { get; set; }
 
         public MuPDFPage Parent = null;
         /// <summary>
