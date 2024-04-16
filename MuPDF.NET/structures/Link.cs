@@ -6,7 +6,7 @@
 
         public LinkType Kind { get; set; }
 
-        public Point To { get; set; } = new Point(0, 0);
+        public Point To { get; set; } = null;
 
         public string ToStr { get; set; } //used page number is less than 0
 

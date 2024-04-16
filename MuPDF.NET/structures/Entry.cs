@@ -36,6 +36,6 @@
 
         // form info struct
 
-        public Rect Bbox = null { get; set; }
+        public Rect Bbox { get; set; } = null;
     }
 }
