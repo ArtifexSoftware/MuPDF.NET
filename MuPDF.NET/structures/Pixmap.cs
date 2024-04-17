@@ -112,7 +112,7 @@ namespace MuPDF.NET
                 if (_nativePixmap.m_internal == null)
                     return null;
 
-                int size = _nativePixmap.w() * _nativePixmap.h();
+                int size = (ColorSpace.N + Alpha) * _nativePixmap.w() * _nativePixmap.h();
                 byte[] data = new byte[size];
                 SWIGTYPE_p_unsigned_char pData = _nativePixmap.samples();
                 Marshal.Copy(SWIGTYPE_p_unsigned_char.getCPtr(pData).Handle, data, 0, size);
@@ -273,14 +273,14 @@ namespace MuPDF.NET
             FzPixmap pixmap = mupdf.mupdf.fz_new_pixmap(cs.ToFzColorspace(), w, h, seps, alpha);
             int size = 0;
 
-            FzBuffer samples2 = Utils.BufferFromBytes(samples);
             size = samples.Length;
 
             if (stride * h != size)
             {
                 throw new Exception($"bad samples length {w} {h} {alpha} {n} {stride} {size}");
             }
-            
+            Marshal.Copy(samples, 0, SWIGTYPE_p_unsigned_char.getCPtr(pixmap.samples()).Handle, size);
+            _nativePixmap = pixmap;
         }
 
         public Pixmap(string arg0, FzPixmap arg1)
@@ -686,7 +686,7 @@ namespace MuPDF.NET
         /// <param name="output">only use to overrule filename extension. Default is PNG. Others are JPEG, JPG, PNM, PGM, PPM, PBM, PAM, PSD, PS.</param>
         /// <param name="jpgQuality">The desired image quality, default 95. Only applies to JPEG images, else ignored</param>
         /// <exception cref="Exception"></exception>
-        public void Save(dynamic filename, string output, int jpgQuality = 95)
+        public void Save(string filename, string output, int jpgQuality = 95)
         {
             Dictionary<string, int> validFormats = new Dictionary<string, int>()
             {
@@ -702,16 +702,15 @@ namespace MuPDF.NET
                 {"jpeg", 7 }
             };
 
-            string filename_ = "";
-            string output_ = "";
+            string filename_ = filename;
+            string output_ = output;
 
-            if (filename is string)
-                filename_ = filename;
-            else if (filename is Dictionary<string, string> && filename.ContainsKey("absolute"))
-                filename_ = filename["absolute"];
-            else if (output is null)
-                output_ = Path.GetExtension(filename).Substring(1);
+            if (string.IsNullOrEmpty(filename))
+                throw new Exception("filename must be set");
 
+            if (string.IsNullOrEmpty(output_))
+                output_ = Path.GetExtension(filename_).Substring(1);
+            
             int idx = validFormats[output_.ToLower()];
             if (idx is -1)
                 throw new Exception($"Image format {output_} not in {validFormats.Keys}");
