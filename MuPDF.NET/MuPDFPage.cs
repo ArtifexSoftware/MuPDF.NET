@@ -216,7 +216,7 @@ namespace MuPDF.NET
             {
                 PdfPage page = _pdfPage;
                 if (page == null)
-                    return new Matrix(new Rect(new FzRect(FzRect.Fixed.Fixed_UNIT))));
+                    return new Matrix(new Rect(new FzRect(FzRect.Fixed.Fixed_UNIT)));
                 return new Matrix(Utils.DerotatePageMatrix(page));
             }
         }
