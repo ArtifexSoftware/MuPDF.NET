@@ -875,7 +875,7 @@ namespace MuPDF.NET
             return rc;
         }
 
-        public void ResetPageRefs()
+        private void ResetPageRefs()
         {
             if (IsClosed)
                 return;
@@ -1274,7 +1274,7 @@ namespace MuPDF.NET
         /// <param name="uri"></param>
         /// <param name="chapters"></param>
         /// <returns></returns>
-        public (List<int>, float, float) ResolveLink(string uri = null, int chapters = 0)
+        internal (List<int>, float, float) ResolveLink(string uri = null, int chapters = 0)
         {
             fz_location loc = null;
             float xp = 0.0f;
@@ -2718,7 +2718,7 @@ namespace MuPDF.NET
             return xref;
         }
 
-        public int _AddEmbfile(string name, byte[] buffer, string filename = null, string ufilename = null, string desc = null)
+        private int _AddEmbfile(string name, byte[] buffer, string filename = null, string ufilename = null, string desc = null)
         {
             PdfDocument pdf = AsPdfDocument(this);
             FzBuffer data = Utils.BufferFromBytes(buffer);
@@ -2792,7 +2792,7 @@ namespace MuPDF.NET
             _DeleteEmbfile(idx);
         }
 
-        public void _DeleteEmbfile(int idx)
+        private void _DeleteEmbfile(int idx)
         {
             PdfDocument pdf = AsPdfDocument(this);
             PdfObj names = Utils.pdf_dict_getl(pdf.pdf_trailer(), new string[] { "Root", "Names", "EmbeddedFiles", "Names" });
@@ -2814,7 +2814,7 @@ namespace MuPDF.NET
             return idx;
         }
 
-        public byte[] _GetEmbeddedFile(int idx)
+        private byte[] _GetEmbeddedFile(int idx)
         {
             PdfDocument pdf = AsPdfDocument(this);
             PdfObj names = Utils.pdf_dict_getl(pdf.pdf_trailer(), new string[] { "Root", "Names", "EmbeddedFiles", "Names" });
@@ -4211,7 +4211,7 @@ namespace MuPDF.NET
         /// <param name="tocs">each entry must contain level, title, page and optionally top margin on the page.None or '()' remove the TOC</param>
         /// <param name="collapse">collapses entries beyond this level. Zero or None shows all entries unfolded.</param>
         /// <returns>the number of inserted items, or the number of removed items respectively.</returns>
-        public int SetToc(List<Toc> tocs, int collapse = 1)// issue related to Toc
+        public int SetToc(List<Toc> tocs, int collapse = 1)
         {
             if (IsClosed || IsEncrypted)
                 throw new Exception("document closed or encrypted");
@@ -4532,153 +4532,13 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Build font subsets of a PDF. Requires package 'fontTools'.
+        /// Build font subsets of a PDF.
         /// </summary>
         /// <param name="verbose"></param>
-        public void SubsetFonts(bool verbose = false)// not complete
+        public void SubsetFonts(bool verbose = false)
         {
-            ///Retrieve old font '/W' and '/DW' values.
-            (string, string) GetOldWidths(int xref)
-            {
-                (string, string) df = GetKeyXref(xref, "DescendantFonts");
-                if (df.Item1 != "array")
-                    return (null, null);
-                int dfXref = Convert.ToInt32(df.Item2.Substring(1, df.Item2.Length - 1).Replace("0 R", ""));
-
-                (string, string) widths = GetKeyXref(dfXref, "W");
-                string width_ = null;
-                if (widths.Item1 == "array")
-                    width_ = widths.Item2;
-
-                (string, string) dWidths = GetKeyXref(dfXref, "DW");
-                string dWidth_ = null;
-                if (dWidths.Item1 == "int")
-                    dWidth_ = dWidths.Item2;
-                return (width_, dWidth_);
-            }
-
-            void SetOldWidths(int xref, string width, string dWidth)
-            {
-                (string, string) df = GetKeyXref(xref, "DescentdantFonts");
-                if (df.Item1 != "array")
-                    return;
-                int dfXref = Convert.ToInt32(df.Item2.Substring(1, df.Item2.Length - 1).Replace("0 R", ""));
-
-                if (GetKeyXref(dfXref, "W").Item2 != "null")
-                    SetKeyXRef(dfXref, "W", "null");
-                else
-                    SetKeyXRef(dfXref, "W", width);
-                if (GetKeyXref(dfXref, "DW").Item2 != "null")
-                    SetKeyXRef(dfXref, "DW", "null");
-                else
-                    SetKeyXRef(dfXref, "DW", dWidth);
-            }
-
-            void SetSubsetFontname(int newXref)
-            {
-                Random random = new Random();
-                string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-                string prefix = new string(Enumerable.Repeat(chars, 6).Select(s => s[random.Next(s.Length)]).ToArray()) + "+";
-                string fontStr = GetXrefObject(newXref, compressed: 1);
-                fontStr = fontStr.Replace("/BaseFont/", "/BaseFont/" + prefix);
-
-                (string, string) df = GetKeyXref(newXref, "DescendantFonts");
-                if (df.Item1 == "array")
-                {
-                    int dfXref = Convert.ToInt32(df.Item2.Substring(1, df.Item2.Length - 1).Replace("0 R", ""));
-                    (string, string) fd = GetKeyXref(dfXref, "FontDescriptor");
-                    if (fd.Item1 == "xref")
-                    {
-                        int fdXref = Convert.ToInt32(fd.Item2.Replace("0 R", ""));
-                        string fdStr = GetXrefObject(fdXref, compressed: 1);
-                        fdStr = fdStr.Replace("/FontName/", "/FontName/" + prefix);
-                        UpdateObject(fdXref, fdStr);
-                    }
-                }
-                UpdateObject(newXref, fontStr);
-            }
-
-            void BuildSubset(byte[] buffer, HashSet<int> uncSet, HashSet<int> gidSet)
-            {
-                string tmpDir = Path.GetTempPath();
-
-                string oldfontPath = Path.Combine(tmpDir, "oldfont.ttf");
-                string newfontPath = Path.Combine(tmpDir, "newfont.ttf");
-                string uncfilePath = Path.Combine(tmpDir, "uncfile.txt");
-
-                string[] arguments = new string[] {
-                                        oldfontPath,
-                                        "--retain-gids",
-                                        $"--output-file={newfontPath}",
-                                        "--layout-features='*'",
-                                        "--passthrough-tables",
-                                        "--ignore-missing-glyphs",
-                                        "--ignore-missing-unicodes",
-                                        "--symbol-cmap"
-                                    };
-
-                List<int> uncList;
-
-                string[] AddToArray(string[] array, string newElement)
-                {
-                    Array.Resize(ref array, array.Length + 1);
-                    array[array.Length - 1] = newElement;
-                    return array;
-                }
-
-                void DeleteFile(string filePath)
-                {
-                    try
-                    {
-                        File.Delete(filePath);
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine(ex.Message);
-                    }
-                }
-
-                using (StreamWriter uncFile = new StreamWriter(uncfilePath, false, Encoding.UTF8))
-                {
-                    if (uncSet.Contains(0xFFFD)) // error unicode exists -> use glyphs
-                    {
-                        arguments = AddToArray(arguments, $"--gids-file={uncfilePath}");
-                        gidSet.Add(189);
-                        uncList = new List<int>(gidSet);
-                        foreach (int unc in uncList)
-                        {
-                            uncFile.WriteLine($"{unc}");
-                        }
-                    }
-                    else
-                    {
-                        arguments = AddToArray(arguments, $"--unicodes-file={uncfilePath}");
-                        uncSet.Add(255);
-                        uncList = new List<int>(uncSet);
-                        foreach (int unc in uncList)
-                        {
-                            uncFile.WriteLine("{0:x4}", unc);
-                        }
-                    }
-                }
-
-                using (FileStream fontfile = new FileStream(oldfontPath, FileMode.Create, FileAccess.Write))
-                {
-                    fontfile.Write(buffer, 0, buffer.Length);
-                }
-
-                try
-                {
-                    File.Delete(newfontPath);  // remove old file
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.Message);
-                }
-
-
-            }
-
+            mupdf.mupdf.pdf_subset_fonts2(AsPdfDocument(this), new vectori(Enumerable.Range(0, Len)));
+            return;
         }
 
         public bool Contains(int page)

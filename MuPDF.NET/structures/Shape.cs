@@ -904,7 +904,7 @@ namespace MuPDF.NET
                 color, fill, expandTabs, align, renderMode, borderWidth, rotate, morph, strokeOpacity, fillOpacity, oc);
         }
 
-        public float _InsertTextbox(
+        internal float _InsertTextbox(
             Rect rect,
             List<string> buffer,
             float fontSize = 11,

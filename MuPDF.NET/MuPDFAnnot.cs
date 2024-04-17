@@ -593,7 +593,7 @@ namespace MuPDF.NET
                 values.Align = align;
 
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 return null;
             }
@@ -750,7 +750,7 @@ namespace MuPDF.NET
                     apObj.pdf_dict_put_rect(new PdfObj("Rect"), bbox);
                 }
             }
-            catch (Exception e)
+            catch (Exception)
             {
 
             }
@@ -1144,7 +1144,7 @@ namespace MuPDF.NET
             annotObj.pdf_dict_put_name(new PdfObj("BM"), blendMode);
         }
 
-        public void SetBorder(Border? border, float width = -1, string style = null, int[] dashes = null, int clouds = -1)
+        public void SetBorder(Border border, float width = -1, string style = null, int[] dashes = null, int clouds = -1)
         {
             (PdfAnnotType atype, string atname, string _) = this.Type;
 
@@ -1343,7 +1343,7 @@ namespace MuPDF.NET
             }
         }
 
-        public void SetColors(Color? colors = null, float[] stroke = null, float[] fill = null)
+        public void SetColors(Color colors = null, float[] stroke = null, float[] fill = null)
         {
             MuPDFDocument doc = Parent.Parent;
 
