@@ -3514,6 +3514,7 @@ namespace MuPDF.NET
         {
             try
             {
+                Console.WriteLine(Dev.LineCount);
                 if (Dev.LineCount == 3)
                     if (Utils.CheckRect(Dev) != 0)
                         return;
@@ -3563,7 +3564,6 @@ namespace MuPDF.NET
                 Dev.LastPoint = p1;
 
                 List<Item> items = Dev.PathDict.Items;
-
                 items.Add(line);
                 Dev.LineCount += 1;
                 if (Dev.LineCount == 4 && Dev.PathType != Utils.trace_device_FILL_PATH)

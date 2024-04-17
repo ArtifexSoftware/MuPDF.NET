@@ -3263,9 +3263,9 @@ namespace MuPDF.NET
             Item rect = new Item() { Type = "re", Rect = new Rect(r), Orientation = orientation };
             Console.WriteLine(rect.Rect.ToString());
             items[len - 3] = rect;
-            for (int i = len - 2; i < len; i++)
+            for (int i = 0; i < len - 1; i ++)
             {
-                items.RemoveAt(i);
+                items.RemoveAt(1);
             }
 
             return 1;
