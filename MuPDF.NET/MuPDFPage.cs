@@ -2091,7 +2091,7 @@ namespace MuPDF.NET
                     var linkObj = AnnotRefs[0];// MuPDFAnnotation or Link, Widget
                     linkObj.Erase();
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     // pass
                 }
@@ -3067,9 +3067,9 @@ namespace MuPDF.NET
 
     public class BoxDevice : FzDevice2
     {
-        public List<Rect> rc;
+        public List<Rect> rc { get; set; }
 
-        public bool layers;
+        public bool layers { get; set; }
         public BoxDevice(List<Rect> rc, bool layers) : base()
         {
             this.rc = rc;
@@ -3093,26 +3093,26 @@ namespace MuPDF.NET
 
     public class LineartDevice : FzDevice2
     {
-        public int SeqNo;
-        public int Depth;
-        public bool Clips;
-        public int Method;
+        public int SeqNo { get; set; }
+        public int Depth { get; set; }
+        public bool Clips { get; set; }
+        public int Method { get; set; }
 
-        public Dictionary<string, dynamic> PathDict;
-        public List<FzRect> Scissors;
-        public int LineWidth;
-        public FzMatrix Ptm;
-        public FzMatrix Ctm;
-        public FzMatrix Rot;
+        public Dictionary<string, dynamic> PathDict { get; set; }
+        public List<FzRect> Scissors { get; set; }
+        public int LineWidth { get; set; }
+        public FzMatrix Ptm { get; set; }
+        public FzMatrix Ctm { get; set; }
+        public FzMatrix Rot { get; set; }
 
-        public FzPoint LastPoint;
-        public FzRect PathRect;
-        public float PathFactor;
-        public int LineCount;
-        public int PathType;
-        public string LayerName;
+        public FzPoint LastPoint { get; set; }
+        public FzRect PathRect { get; set; }
+        public float PathFactor { get; set; }
+        public int LineCount { get; set; }
+        public int PathType { get; set; }
+        public string LayerName { get; set; }
 
-        public List<Dictionary<string, dynamic>> Out;
+        public List<Dictionary<string, dynamic>> Out { get; set; }
 
         public LineartDevice(List<Dictionary<string, dynamic>> rc, bool clips) : base()
         {
@@ -3420,7 +3420,7 @@ namespace MuPDF.NET
 
                 FzPathWalker pathWalker = new FzPathWalker(walker.m_internal);
 
-                mupdf.mupdf.fz_walk_path(new FzPath(mupdf.mupdf.ll_fz_keep_path(path)), pathWalker,  ); //issue
+                // mupdf.mupdf.fz_walk_path(new FzPath(mupdf.mupdf.ll_fz_keep_path(path)), pathWalker, walker.m_internal); //issue
 
                 if (PathDict.GetValueOrDefault("items", null) == null)
                     PathDict = null;

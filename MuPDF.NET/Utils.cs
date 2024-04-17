@@ -4654,5 +4654,13 @@ namespace MuPDF.NET
                 throw new Exception($"xref {xref} is not a widget of this page");
             return annot;
         }
+
+        public static Matrix GetRotateMatrix(MuPDFPage page)
+        {
+            PdfPage pdfpage = page.GetPdfPage();
+            if (pdfpage.m_internal == null)
+                return new Matrix();
+            return Utils.RotatePageMatrix(pdfpage);
+        }
     }
 }
