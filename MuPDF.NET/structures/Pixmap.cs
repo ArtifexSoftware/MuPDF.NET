@@ -93,21 +93,33 @@ namespace MuPDF.NET
             }
         }
 
-        /*public void SAMPLES_MV
+        public Memory<byte> SAMPLES_MV
         {
             get
             {
-                return _nativePixmap.fz_pixmap_samples_memoryview
-            }
-        }*/
+                if (_nativePixmap.m_internal == null)
+                    return null;
 
-        /*public byte[] SAMPLES
+                Memory<byte> ret = new Memory<byte>(SAMPLES);
+                return ret;
+            }
+        }
+
+        public byte[] SAMPLES
         {
             get
             {
+                if (_nativePixmap.m_internal == null)
+                    return null;
 
+                int size = _nativePixmap.w() * _nativePixmap.h();
+                byte[] data = new byte[size];
+                SWIGTYPE_p_unsigned_char pData = _nativePixmap.samples();
+                Marshal.Copy(SWIGTYPE_p_unsigned_char.getCPtr(pData).Handle, data, 0, size);
+
+                return data;
             }
-        }*/
+        }
 
         public long SamplesPtr
         {
@@ -1027,7 +1039,7 @@ namespace MuPDF.NET
                 quad.UpperLeft.ToFzPoint()
             };
 
-            // FzPixmap dst = fz_warp_pixmap
+            // FzPixmap dst = fz_warp_pixmap // issue
             return null;
         }
 
