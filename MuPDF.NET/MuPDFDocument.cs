@@ -2318,7 +2318,6 @@ namespace MuPDF.NET
         public void ForgetPage(MuPDFPage page)
         {
             int pid = page.GetHashCode();
-            Console.WriteLine(PageRefs.Count);
             if (PageRefs.ContainsKey(pid))
             {
                 PageRefs.Remove(pid);
