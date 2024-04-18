@@ -1,5 +1,4 @@
-﻿using Microsoft.Maui.Graphics;
-using mupdf;
+﻿using mupdf;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -4197,11 +4196,89 @@ namespace MuPDF.NET
         /// <param name="policy">one of 'AllOn', 'AllOff', 'AnyOn', 'AnyOff' (any casing).</param>
         /// <param name="ve">visibility expression. Use instead of 'ocgs' with 'policy'.</param>
         /// <returns>Xref of the created or updated OCMD.</returns>
-        public int SetOCMD(int xref = 0, Dictionary<int, OCGroup> ocgs = null, string policy = null, int ve = 0)
+        public int SetOCMD(OCMD ocmd = null, int xref = 0, int[] ocgs = null, string policy = null, dynamic[] ve = null)
         {
-            HashSet<int> allOcgs = new HashSet<int>(ocgs.Keys);
-            // issue
-            return 0;
+            List<int> allOcgs = GetOcgs().Keys.ToList();
+
+            if (ocmd != null)
+            {
+                if (xref == 0)
+                    xref = ocmd.Xref;
+                if (ocgs == null)
+                    ocgs = ocmd.Ocgs;
+                if (string.IsNullOrEmpty(policy))
+                    policy = ocmd.Policy;
+                if (ve == null)
+                    ve = ocmd.Ve;
+            }
+
+            string VeMaker(dynamic[] v)
+            {
+                if (v.Length < 2)
+                    throw new Exception($"bad ve length: {v.Length}");
+                if (!(v[0] is string) || !(new List<string>(){ "and", "or", "not" }).Contains(v[0].ToLower()))
+                    throw new Exception($"bad operand: {v[0]}");
+                if (v[0].ToLower() == "not" && v.Length != 2)
+                    throw new Exception($"operand is not, but ve length: {v.Length}");
+                
+                string item = $"[/{v[0]}";
+                item = char.ToUpper(item[0]) + item.Substring(1).ToLower();
+                foreach (var x in v.Skip(1).ToArray())
+                {
+                    if (x is int)
+                    {
+                        if (!allOcgs.Contains(x))
+                            throw new Exception($"bad OCG {x}");
+                        item += $" {x} 0 R";
+                    }
+                    else
+                    {
+                        item += $" {VeMaker(x)}";   
+                    }
+                }
+                item += "]";
+                return item;
+            }
+
+            string text = "<</Type/OCMD";
+            Console.WriteLine(allOcgs.Count);
+            if (ocgs != null)
+            {
+                List<int> s = ocgs.Except(allOcgs).ToList();
+                if (s.Count != 0)
+                    throw new Exception($"bad OCGs count: {s.Count}");
+                text += "/OCGs[" + string.Join(" ", ocgs.Select(x => $"{x} 0 R")) + "]";
+            }
+
+            if (!string.IsNullOrEmpty(policy))
+            {
+                policy = policy.ToLower();
+                Dictionary<string, string> pols = new Dictionary<string, string>()
+                {
+                    {"anyon", "AnyOn" },
+                    {"allon", "AllOn" },
+                    {"anyoff", "AnyOff" },
+                    {"alloff", "AnyOff" },
+                };
+
+                if (!pols.Keys.Contains(policy))
+                    throw new Exception($"bad policy: {policy}");
+                text += $"/P/{pols[policy]}";
+            }
+
+            if (ve != null)
+            {
+                text += $"/VE{VeMaker(ve)}";
+            }
+
+            text += ">>";
+            if (xref == 0)
+                xref = GetNewXref();
+            else if (!GetXrefObject(xref, 1).Contains("/Type/OCMD"))
+                throw new Exception("bad xref or not an OCMD");
+            UpdateObject(xref, text);
+
+            return xref;
         }
 
         /// <summary>

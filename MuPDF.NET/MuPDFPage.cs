@@ -2185,7 +2185,7 @@ namespace MuPDF.NET
             return rc;
         }
 
-        public List<PathInfo> GetCDrawings(bool extended = false) // not complete
+        public List<PathInfo> GetDrawings(bool extended = false)
         {
             int oldRotation = Rotation;
             if (oldRotation != 0)
@@ -2205,17 +2205,6 @@ namespace MuPDF.NET
             if (oldRotation != 0)
                 SetRotation(oldRotation);
             return rc;
-        }
-
-        public void GetDrawings(bool extended = false) // not complete
-        {
-            List<string> allkeys = new List<string>() { "closePath", "fill", "color", "width", "lineCap", "lineJoin", "dashes", "stroke_opacity", "fill_opacity", "even_odd" };
-            List<PathInfo> val = GetCDrawings(extended);
-
-            /*foreach (Dictionary<string, dynamic> npath in val)
-            {
-                if (npath["Type"].StartsWith)
-            }*/
         }
 
         public void GetImageBbox(string name, bool transform = false)
@@ -3514,7 +3503,6 @@ namespace MuPDF.NET
         {
             try
             {
-                Console.WriteLine(Dev.LineCount);
                 if (Dev.LineCount == 3)
                     if (Utils.CheckRect(Dev) != 0)
                         return;
