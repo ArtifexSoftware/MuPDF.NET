@@ -68,13 +68,13 @@ namespace MuPDF.NET
         /// </summary>
         /// <param name="device">the Device created by dev = writer.begin_page(mediabox). The device knows how to call all MuPDF functions needed to write the content.</param>
         /// <param name="matrix">a matrix for transforming content when writing to the page. An example may be writing rotated text. The default means no transformation (i.e. the Identity matrix).</param>
-        public void Draw(FzDevice device, Matrix matrix = null)
+        public void Draw(MuPDFDeviceWrapper device, Matrix matrix = null)
         {
-            FzMatrix ctm2 = matrix.ToFzMatrix();
+            FzMatrix ctm2 = (matrix != null) ? matrix.ToFzMatrix() : new FzMatrix();
             if (ctm2 == null)
                 ctm2 = new FzMatrix();
-            FzDevice dev = device == null ? new FzDevice() : device;
-            _nativeStory.fz_draw_story(device, ctm2);
+            FzDevice dev = device == null ? new FzDevice() : device.ToFzDevice();
+            _nativeStory.fz_draw_story(dev, ctm2);
         }
 
         /// <summary>
@@ -239,16 +239,15 @@ namespace MuPDF.NET
                 }
             }
 
-            /*if (verbose)
-                Log($"doing binary search with {{state.pmin=}} {state.Pmax}.");
+            if (verbose)
+                Log($"doing binary search with {state.Pmin} {state.Pmax}.");
             while (true)
             {
                 if (state.Pmax - state.Pmin < delta)
                     return Ret(rect, state);
-                int parameter = (state.Pmin + state.Pmax) / 2;
+                float parameter = (state.Pmin + state.Pmax) / 2;
                 Update(rect, parameter);
-            }*/
-            return null;
+            }
         }
 
         public static MuPDFDocument AddPdfLinks(MemoryStream stream, List<Position> positions)
@@ -424,7 +423,7 @@ namespace MuPDF.NET
                             pageFn(pageNum, mediabox, dev, false);
                         }
                     }
-                    Draw(dev.ToFzDevice(), ctm);
+                    Draw(dev, ctm);
                     if (!more)
                     {
                         if (pageFn != null)
@@ -474,13 +473,8 @@ namespace MuPDF.NET
         /// </summary>
         /// <param name="function"></param>
         /// <param name="args"></param>
-        public void ElementPositions(Action<Position> function, Dictionary<string, dynamic> args = null)
+        public void ElementPositions(Action<Position> function, Position arg = null)
         {
-            if (args == null)
-            {
-                args = new Dictionary<string, dynamic>();
-            }
-
             Action<Position> function2 = position =>
             {
                 Position position2 = new Position
@@ -494,12 +488,9 @@ namespace MuPDF.NET
                     RectNum = position.RectNum,
                     Href = position.Href
                 };
-                if (args != null)
+                if (arg != null)
                 {
-                    foreach ((string k, var v) in args)
-                    {
-                        // position2
-                    }
+                    position2 = new Position(arg); // copy position
                 }
                 function(position2);
             };
