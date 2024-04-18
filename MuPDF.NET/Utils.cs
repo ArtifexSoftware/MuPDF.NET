@@ -52,6 +52,54 @@ namespace MuPDF.NET
 
         public static List<string> MUPDF_WARNINGS_STORE = new List<string>();
 
+        private static Dictionary<string, (int, int)> PageSizes = new Dictionary<string, (int, int)>()
+        {
+            { "a0", (2384, 3370) },
+            { "a1", (1684, 2384) },
+            { "a10", (74, 105) },
+            { "a2", (1191, 1684) },
+            { "a3", (842, 1191) },
+            { "a4", (595, 842) },
+            { "a5", (420, 595) },
+            { "a6", (298, 420) },
+            { "a7", (210, 298) },
+            { "a8", (147, 210) },
+            { "a9", (105, 147) },
+            { "b0", (2835, 4008) },
+            { "b1", (2004, 2835) },
+            { "b10", (88, 125) },
+            { "b2", (1417, 2004) },
+            { "b3", (1001, 1417) },
+            { "b4", (709, 1001) },
+            { "b5", (499, 709) },
+            { "b6", (354, 499) },
+            { "b7", (249, 354) },
+            { "b8", (176, 249) },
+            { "b9", (125, 176) },
+            { "c0", (2599, 3677) },
+            { "c1", (1837, 2599) },
+            { "c10", (79, 113) },
+            { "c2", (1298, 1837) },
+            { "c3", (918, 1298) },
+            { "c4", (649, 918) },
+            { "c5", (459, 649) },
+            { "c6", (323, 459) },
+            { "c7", (230, 323) },
+            { "c8", (162, 230) },
+            { "c9", (113, 162) },
+            { "card-4x6", (288, 432) },
+            { "card-5x7", (360, 504) },
+            { "commercial", (297, 684) },
+            { "executive", (522, 756) },
+            { "invoice", (396, 612) },
+            { "ledger", (792, 1224) },
+            { "legal", (612, 1008) },
+            { "legal-13", (612, 936) },
+            { "letter", (612, 792) },
+            { "monarch", (279, 540) },
+            { "tabloid-extra", (864, 1296) }
+        };
+
         public static List<(int, double)> zapf_glyphs = new List<(int, double)>() {
         (183, 0.788),
         (183, 0.788),
@@ -3991,18 +4039,19 @@ namespace MuPDF.NET
 
             int p0 = text.IndexOf("/OCGs[");
             int p1 = text.IndexOf("]", p0);
-            string[] ocgs;
+            int[] ocgs = null;
 
             if (p0 < 0 || p1 < 0)
                 ocgs = null;
             else
             {
-                ocgs = text.Substring(p0 + 6, p1 - p0 - 6).Replace("0 R", " ").Split(" ");
+                ocgs = text.Substring(p0 + 6, p1 - p0 - 6).Replace("0 R", " ").Split(" ").Select(x => int.Parse(x)).ToArray();
             }
 
             p0 = text.IndexOf("/P/");
             string policy;
             string ve;
+            List<dynamic> obj = null;
 
             if (p0 < 0)
                 policy = null;
@@ -4038,13 +4087,53 @@ namespace MuPDF.NET
                 ve = text.Substring(p0 + 3, p1 + 1);
                 ve = ve.Replace("/And", "\"and\",").Replace("/Not", "\"not\",").Replace("/Or", "\"or\",");
                 ve = ve.Replace(" 0 R]", "]").Replace(" 0 R", ",").Replace("][", "],[");
-                
-                var obj = JsonConvert.DeserializeObject(ve);
+
+                obj = JsonConvert.DeserializeObject<List<dynamic>>(ve, new JsonSerializerSettings()
+                {
+                    Converters = { new VEConverter() }
+                });
+
                 if (obj == null)
                     throw new Exception($"bad /VE key: {ve}");
             }
-            return new OCMD() { Xref = xref, Ocgs = ocgs, Policy = policy, Ve = ve };
+            return new OCMD() { Xref = xref, Ocgs = ocgs, Policy = policy, Ve = obj.ToArray() };
         }
+
+        public class VEConverter : JsonConverter
+        {
+            public override bool CanConvert(Type objectType)
+            {
+                return (objectType == typeof(List<dynamic>));
+            }
+
+            public override void WriteJson(JsonWriter writer, dynamic value, JsonSerializer serializer)
+            {
+                throw new NotImplementedException();
+            }
+
+            public override dynamic ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+            {
+                List<dynamic> result = new List<dynamic>();
+                while (reader.Read())
+                {
+                    if (reader.TokenType == JsonToken.StartArray)
+                    {
+                        result.Add(ReadJson(reader, objectType, existingValue, serializer));
+                    }
+                    else if (reader.TokenType == JsonToken.EndArray)
+                    {
+                        return result;
+                    }
+                    else
+                    {
+                        dynamic value = (reader.ValueType == typeof(long) ? Convert.ToInt32(reader.Value) : reader.Value);
+                        result.Add(value);
+                    }
+                }
+                return result;
+            }
+        }
+
 
         /// <summary>
         /// Return a list of page numbers with the given label
@@ -4662,6 +4751,32 @@ namespace MuPDF.NET
             if (pdfpage.m_internal == null)
                 return new Matrix();
             return Utils.RotatePageMatrix(pdfpage);
+        }
+
+        public static Rect PageRect(string size)
+        {
+            (int width, int height) = Utils.PageSize(size);
+            return new Rect(0, 0, width, height);
+        }
+
+        public static (int, int) PageSize(string size)
+        {
+            string s = size.ToLower();
+            string f = "p";
+            if (s.EndsWith("-l"))
+            {
+                f = "l";
+                s = s.Substring(0, s.Length - 2);
+            }
+            if (s.EndsWith("-p"))
+            {
+                s = s.Substring(0, s.Length - 2);
+            }
+            
+            (int, int) ret = Utils.PageSizes.GetValueOrDefault(s, (-1, -1));
+            if (f == "p")
+                return ret;
+            return (ret.Item2, ret.Item1);
         }
     }
 }
