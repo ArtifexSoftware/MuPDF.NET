@@ -73,13 +73,16 @@ namespace MuPDF.NET.Test
         }
 
         [Test]
-        public void GetPageImage()
+        public void GetPageImage_ExtractImage()
         {
             int n = doc.GetPageImages(0).Count;
 
             Assert.AreEqual(n, 1); // in case of current input pdf, if other file, real count should be fixed
-        }
 
+            n = doc.ExtractImage(doc.GetPageImages(0)[0].Xref).Image.Length;
+
+            Assert.Pass();
+        }
 
     }
 }

@@ -4,10 +4,10 @@
     {
         public int Xref { get; set; }
 
-        public string[] Ocgs { get; set; }
+        public int[] Ocgs { get; set; }
 
         public string Policy { get; set; }
 
-        public object Ve { get; set; }
+        public dynamic[] Ve { get; set; }
     }
 }

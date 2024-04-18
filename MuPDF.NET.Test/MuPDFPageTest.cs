@@ -132,9 +132,11 @@ public class MuPDFPageTest : PdfTestBase
     }
 
     [Test]
-    public void GetCDrawings()
+    public void GetDrawings()
     {
-        page.GetCDrawings();
+        MuPDFPage page = doc[0];
+
+        page.GetDrawings();
         Assert.Pass();
     }
 

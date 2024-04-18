@@ -1,5 +1,4 @@
 ﻿using mupdf;
-using System.Runtime.InteropServices;
 using System.Text;
 
 namespace MuPDF.NET
@@ -562,23 +561,23 @@ namespace MuPDF.NET
 
     internal class State
     {
-        public float Pmin;
+        public float Pmin { get; set; }
 
-        public float Pmax;
+        public float Pmax { get; set; }
 
-        public FitResult PminResult;
+        public FitResult PminResult { get; set; }
 
-        public FitResult PmaxResult;
+        public FitResult PmaxResult { get; set; }
 
-        public int Result;
+        public int Result { get; set; }
 
-        public int Numcalls;
+        public int Numcalls { get; set; }
 
-        public float Pmin0;
+        public float Pmin0 { get; set; }
 
-        public float Pmax0;
+        public float Pmax0 { get; set; }
 
-        public float LastP;
+        public float LastP { get; set; }
         public State(float pmin, float pmax, bool verbose)
         {
             Pmin = pmin;
@@ -597,17 +596,17 @@ namespace MuPDF.NET
 
     public class FitResult
     {
-        public bool BigEnough;
+        public bool BigEnough { get; set; }
 
-        public dynamic Filled;
+        public dynamic Filled { get; set; }
 
-        public bool More;
+        public bool More { get; set; }
 
-        public int NumCalls;
+        public int NumCalls { get; set; }
 
-        public float Parameter;
+        public float Parameter { get; set; }
 
-        public Rect Rect;
+        public Rect Rect { get; set; }
 
         public FitResult(bool bigEnough = false, dynamic filled = null, bool more = false, int numcalls = 0, float parameter = 0, Rect rect = null)
         {

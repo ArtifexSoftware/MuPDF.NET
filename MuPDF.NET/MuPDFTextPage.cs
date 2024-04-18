@@ -269,7 +269,7 @@ namespace MuPDF.NET
         /// <summary>
         /// Extract StextPage in JSON format
         /// </summary>
-        /// <param name="cb">Rectangle area to extract</param>
+        /// <param name="cropbox">Rectangle area to extract</param>
         /// <param name="sort"></param>
         public string ExtractJSON(Rect cropbox, bool sort = false)
         {
@@ -1255,17 +1255,17 @@ namespace MuPDF.NET
 
     public class MuPDFCharStyle
     {
-        public float Size;
+        public float Size { get; set; }
 
-        public float Flags;
+        public float Flags { get; set; }
 
-        public string Font;
+        public string Font { get; set; }
 
-        public int Color;
+        public int Color { get; set; }
 
-        public float Asc;
+        public float Asc { get; set; }
 
-        public float Desc;
+        public float Desc { get; set; }
 
         public MuPDFCharStyle(Dictionary<string, dynamic> rhs)
         {

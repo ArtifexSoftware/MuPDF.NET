@@ -143,7 +143,7 @@ namespace MuPDF.NET
             string fmt = "zip";
             string filename = path == null ? "" : Path.GetFileName(path);
             List<string> entries = new List<string>();
-            TarEntry? entry;
+            TarEntry entry;
             while ((entry = content.GetNextEntry(true)) != null)
             {
                 entries.Add(entry.Name);

@@ -3203,26 +3203,26 @@ namespace MuPDF.NET
 
         public static int CheckQuad(LineartDevice dev)
         {
-            var items = dev.PathDict["items"];
+            List<Item> items = dev.PathDict.Items;
             int len = items.Count;
             float[] f = new float[8] { 0, 0, 0, 0, 0, 0, 0, 0 };
-            FzPoint lp = new FzPoint();
+            Point lp = new Point();
 
             for (int i = 0; i < 4; i++)
             {
-                List<dynamic> line = items[len - 4 + i];
-                FzPoint tmp = line[1];
-                f[i * 2] = tmp.x;
-                f[i * 2 + 1] = tmp.y;
-                lp = line[2];
+                Item line = items[len - 4 + i];
+                Point tmp = line.LastPoint;
+                f[i * 2] = tmp.X;
+                f[i * 2 + 1] = tmp.Y;
+                lp = line.P1;
             }
 
-            if (lp.x != f[0] || lp.y != f[1])
+            if (lp.X != f[0] || lp.Y != f[1])
                 return 0;
 
             dev.LineCount = 0;
             FzQuad q = mupdf.mupdf.fz_make_quad(f[0], f[1], f[6], f[7], f[2], f[3], f[4], f[5]);
-            List<dynamic> rect = new List<dynamic> { "qu", q };
+            Item rect = new Item() { Type = "qu", Quad = new Quad(q) };
 
             items[len - 4] = rect;
             for (int i = len - 3; i < len; i++)
@@ -3234,37 +3234,38 @@ namespace MuPDF.NET
         {
             dev.LineCount = 0;
             int orientation = 0;
-            var items = dev.PathDict["items"];
+            List<Item> items = dev.PathDict.Items;
             int len = items.Count;
 
-            List<dynamic> line0 = items[len - 3];
-            FzPoint ll = line0[1];
-            FzPoint lr = line0[2];
+            Item line0 = items[len - 3];
+            Point ll = line0.LastPoint;
+            Point lr = line0.P1;
 
-            List<dynamic> line2 = items[len - 1];
-            FzPoint ur = line2[1];
-            FzPoint ul = line2[2];
+            Item line2 = items[len - 1];
+            Point ur = line2.LastPoint;
+            Point ul = line2.P1;
 
-            if (ll.y != lr.y || ll.x != ul.x || ur.y != ul.y || ur.x != lr.x)
+            if (ll.Y != lr.Y || ll.X != ul.X || ur.Y != ul.Y || ur.X != lr.X)
                 return 0;
 
             FzRect r;
-            if (ul.y < lr.y)
+            if (ul.Y < lr.Y)
             {
-                r = mupdf.mupdf.fz_make_rect(ul.x, ul.y, lr.x, lr.y);
+                r = mupdf.mupdf.fz_make_rect(ul.X, ul.Y, lr.X, lr.Y);
                 orientation = 1;
             }
             else
             {
-                r = mupdf.mupdf.fz_make_rect(ll.x, ll.y, ur.x, ur.y);
+                r = mupdf.mupdf.fz_make_rect(ll.X, ll.Y, ur.X, ur.Y);
                 orientation = -1;
             }
 
-            List<dynamic> rect = new List<dynamic>() { "re", new Rect(r), orientation };
+            Item rect = new Item() { Type = "re", Rect = new Rect(r), Orientation = orientation };
+            Console.WriteLine(rect.Rect.ToString());
             items[len - 3] = rect;
-            for (int i = len - 2; i < len; i++)
+            for (int i = 0; i < len - 1; i ++)
             {
-                items.RemoveAt(i);
+                items.RemoveAt(1);
             }
 
             return 1;
@@ -4653,6 +4654,14 @@ namespace MuPDF.NET
             if (!found)
                 throw new Exception($"xref {xref} is not a widget of this page");
             return annot;
+        }
+
+        public static Matrix GetRotateMatrix(MuPDFPage page)
+        {
+            PdfPage pdfpage = page.GetPdfPage();
+            if (pdfpage.m_internal == null)
+                return new Matrix();
+            return Utils.RotatePageMatrix(pdfpage);
         }
     }
 }

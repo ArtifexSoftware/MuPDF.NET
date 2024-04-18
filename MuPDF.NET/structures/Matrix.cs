@@ -29,7 +29,18 @@ namespace MuPDF.NET
             F = f;
         }
 
-        public Matrix(float arg)
+        public Matrix(Rect arg)
+        {
+            double theta = Math.PI * arg.X0 / 180;
+            double c = Math.Round(Math.Cos(theta), 8);
+            double s = Math.Round(Math.Sin(theta), 8);
+            A = D = (float)c;
+            B = (float)s;
+            C = (float)-s;
+            E = F = 0;
+        }
+
+        public Matrix(int arg)
         {
             double theta = Math.PI * arg / 180;
             double c = Math.Round(Math.Cos(theta), 8);
