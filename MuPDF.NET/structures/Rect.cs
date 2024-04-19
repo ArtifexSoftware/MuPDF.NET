@@ -242,9 +242,14 @@ namespace MuPDF.NET
             return new Rect(-op.X0, -op.Y0, -op.X1, -op.Y1);
         }
 
-        public static Rect operator |(Rect op1, Rect op2) // or
+        public static Rect operator |(Rect op1, Rect op2) // |
         {
             return op1.IncludeRect(op2);
+        }
+
+        public static Rect operator |(Rect op1, Point op2)
+        {
+            return op1.IncludePoint(op2);
         }
 
         public static Rect operator +(Rect op) // positive
