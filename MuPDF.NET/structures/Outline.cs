@@ -70,7 +70,7 @@ namespace MuPDF.NET
         {
             get
             {
-                return _nativeOutline.m_internal.title;
+                return _nativeOutline.title();
             }
         }
 

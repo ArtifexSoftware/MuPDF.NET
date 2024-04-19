@@ -9,5 +9,10 @@
         public int Page { get; set; }
 
         public Link Link { get; set; } = null;
+
+        public override string ToString()
+        {
+            return $"Level={Level}, Title={Title}, Page={Page}, Link={Link != null}";
+        }
     }
 }

@@ -280,7 +280,7 @@ namespace MuPDF.NET
 
             float TextLen(string x)
             {
-                return font.GetTextLength(x, fontSize: fontSize, smallCaps: smallCaps ? 1 : 0);
+                return font.TextLength(x, fontSize: fontSize, smallCaps: smallCaps ? 1 : 0);
             }
 
             List<float> CharLengths(string x)

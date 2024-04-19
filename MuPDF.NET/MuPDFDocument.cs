@@ -1,4 +1,5 @@
-﻿using mupdf;
+﻿using Microsoft.Maui.Platform;
+using mupdf;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -1209,7 +1210,7 @@ namespace MuPDF.NET
         {
             List<Toc> Recurse(Outline olItem, List<Toc> list, int lvl)
             {
-                while (olItem != null)
+                while (olItem != null && olItem.ToFzOutline().m_internal != null)
                 {
                     string title = "";
                     int page = -1;
@@ -1255,7 +1256,7 @@ namespace MuPDF.NET
             InitDocument();
             Outline olItem = Outline;
             if (olItem == null)
-                return null;
+                return new List<Toc>();
 
             int lvl = 1;
             List<Toc> liste = new List<Toc>();
@@ -4642,6 +4643,20 @@ namespace MuPDF.NET
             if (chapters < 0 || chapter >= chapters)
                 throw new Exception("bad chapter number");
             return _nativeDocument.fz_count_chapter_pages(chapter);
+        }
+
+        /// <summary>
+        /// Convert annotations or fields to permanent content.
+        /// </summary>
+        /// <param name="annots">convert annotations</param>
+        /// <param name="widgets">convert form fields</param>
+        /// <exception cref="Exception"></exception>
+        public void Bake(bool annots = true, bool widgets = true)
+        {
+            PdfDocument pdf = AsPdfDocument(this);
+            if (pdf == null)
+                throw new Exception("not a PDF");
+            pdf.pdf_bake_document(annots ? 1 : 0, widgets ? 1 : 0);
         }
 
         public void Close()

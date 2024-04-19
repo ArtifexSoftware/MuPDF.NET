@@ -3309,7 +3309,7 @@ namespace MuPDF.NET
             }
 
             Item rect = new Item() { Type = "re", Rect = new Rect(r), Orientation = orientation };
-            Console.WriteLine(rect.Rect.ToString());
+
             items[len - 3] = rect;
             for (int i = 0; i < len - 1; i ++)
             {
@@ -4777,6 +4777,70 @@ namespace MuPDF.NET
             if (f == "p")
                 return ret;
             return (ret.Item2, ret.Item1);
+        }
+
+        /// <summary>
+        /// Calculate length of a string for a built-in font.
+        /// </summary>
+        /// <param name="text"></param>
+        /// <param name="fontname">name of the font.</param>
+        /// <param name="fontsize">font size points.</param>
+        /// <param name="encoding">encoding to use, 0=Latin (default), 1=Greek, 2=Cyrillic.</param>
+        /// <returns>length of text.</returns>
+        /// <exception cref="Exception"></exception>
+        public static float GetTextLength(string text, string fontname = "helv", float fontsize = 11, int encoding = 0)
+        {
+            fontname = fontname.ToLower();
+            string basename = Utils.Base14_fontdict.GetValueOrDefault(fontname, null);
+
+            List<(int, double)> glyphs = new List<(int, double)>();
+            if (basename == "Symbol")
+                glyphs = Utils.symbol_glyphs;
+            if (basename == "ZapfDingbats")
+                glyphs = Utils.zapf_glyphs;
+            if (glyphs.Count != 0)
+            {
+                float w = 0f;
+                foreach (char c in text)
+                {
+                    int cInt = Convert.ToInt32(c);
+                    w += (float)((Convert.ToInt32(c)) < 256 ? glyphs[cInt].Item2 : glyphs[183].Item2);
+                }
+                return w * fontsize;
+            }
+
+            if (Utils.Base14_fontdict.Keys.Contains(fontname))
+                return Utils.MeasureString(text, fontname, fontsize, encoding);
+            if ((new string[] { "china-t", "china-s", "china-ts", "china-ss", "japan", "japan-s", "korea", "korea-s" }).Contains(fontname))
+                return text.Length * fontsize;
+            throw new Exception($"Font {fontname} is unsupported");
+        }
+
+        public static float MeasureString(string text, string fontname, float fontsize, int encoding)
+        {
+            FzFont font = mupdf.mupdf.fz_new_base14_font(fontname);
+            float w = 0;
+            int pos = 0;
+            while (pos < text.Length)
+            {
+                ll_fz_chartorune_outparams o = new ll_fz_chartorune_outparams();
+                int t = mupdf.mupdf.ll_fz_chartorune_outparams_fn(text.Substring(pos, text.Length - pos), o);
+                int c = o.rune;
+                pos += t;
+                if (encoding == (int)SimpleEncoding.PDF_SIMPLE_ENCODING_GREEK)
+                    c = mupdf.mupdf.fz_iso8859_7_from_unicode(c);
+                else if (encoding == (int)SimpleEncoding.PDF_SIMPLE_ENCODING_CYRILLIC)
+                    c = mupdf.mupdf.fz_windows_1251_from_unicode(c);
+                else
+                    c = mupdf.mupdf.fz_windows_1252_from_unicode(c);
+                if (c < 0)
+                    c = 0xB7;
+                int g = font.fz_encode_character(c);
+                float dw = font.fz_advance_glyph(g, 0);
+                w += dw;
+            }
+            float ret = w * fontsize;
+            return ret;
         }
     }
 }
