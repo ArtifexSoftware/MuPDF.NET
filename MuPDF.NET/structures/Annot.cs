@@ -1,16 +1,16 @@
 ﻿namespace MuPDF.NET
 {
-    public class AnnotStruct
+    public class Annot
     {
         public int Xref { get; set; }
 
-        public string Text { get; set; }
+        public string Text { get; set; } = null;
 
-        public int Align { get; set; }
+        public int Align { get; set; } = 0;
 
         public Rect Rect { get; set; }
 
-        public List<float> TextColor { get; set; }
+        public float[] TextColor { get; set; }
 
         public string FontName { get; set; }
 

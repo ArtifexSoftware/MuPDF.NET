@@ -559,11 +559,11 @@ namespace MuPDF.NET
             IsOwner = false;
         }
 
-        private AnnotStruct GetRedactVaues()
+        public Annot GetRedactVaues()
         {
             PdfAnnot annot = _nativeAnnotion;
 
-            AnnotStruct values = new AnnotStruct();
+            Annot values = new Annot();
             try
             {
                 PdfObj obj = annot.pdf_annot_obj().pdf_dict_gets("RO");
@@ -602,8 +602,9 @@ namespace MuPDF.NET
                 return values;
 
             values.Rect = this.Rect;
-            values.TextColor = new List<float>();
-            (values.TextColor, values.FontName, values.FontSize) = ParseData(this);
+            List<float> tColor = new List<float>();
+            (tColor, values.FontName, values.FontSize) = ParseData(this);
+            values.TextColor = tColor.ToArray();
             values.Fill = new float[Colors.Fill.Length];
             Array.Copy(Colors.Fill, values.Fill, values.Fill.Length);
 
