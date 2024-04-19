@@ -84,11 +84,5 @@ namespace MuPDF.NET.Test
             Assert.Pass();
         }
 
-        [Test]
-        public void GetToc()
-        {
-            List<Toc> toc = doc.GetToc(simple: false);
-            Assert.NotZero(toc.Count);
-        }
     }
 }

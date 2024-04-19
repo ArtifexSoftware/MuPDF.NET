@@ -1,7 +1,10 @@
-﻿using MuPDF.NET;
-using System.Diagnostics;
-using System.Drawing;
-using System.Drawing.Text;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.IO.Compression;
+using System.Runtime.InteropServices;
+using mupdf;
+using MuPDF.NET;
 
 namespace Demo
 {
@@ -9,26 +12,39 @@ namespace Demo
     {
         static void Main(string[] args)
         {
-            MuPDFDocument doc = new MuPDFDocument("input.pdf");
+            /*Stopwatch stopWatch = new Stopwatch();
+            stopWatch.Start();
 
-            for (int i = 0; i < doc.Len; i++)
+            // start
+            MuPDFDocument doc = new MuPDFDocument("pandas.pdf");
+            for (int i = 0; i < doc.GetPageCount(); i++)
             {
-                if (doc[i].ApplyRedactions())
-                    Console.WriteLine(i);
+                MuPDFSTextPage stpage = new MuPDFSTextPage(doc.GetPage(i));
+                stpage.ExtractHtml();
             }
 
-            doc.Save("output.pdf");
+            // end
+            stopWatch.Stop();
 
-            /*Stopwatch sw = Stopwatch.StartNew();
+            TimeSpan ts = stopWatch.Elapsed;
 
-            sw.Start();
+            Console.WriteLine($"Elapsed Time is {ts.TotalMilliseconds}");*/
 
-            byte[] data = doc.Write();
+            MuPDFDocument doc = new MuPDFDocument("1.pdf");
+            Console.WriteLine(doc.Name);
 
-            sw.Stop();
-
-            Console.WriteLine(sw.ElapsedMilliseconds);*/
+            /*for (int i = 0; i < doc.GetPageCount(); i++)
+            {
+                MuPDFPage page = doc.LoadPage(i);
+                foreach (var k in page.GetCDrawings(true)[0].Keys)
+                    Console.WriteLine(k);
+            }
+            *//*foreach (Rect r in page.GetCDrawings())
+            {
+                Console.WriteLine(r.ToString());
+            }*/
 
         }
+
     }
 }
