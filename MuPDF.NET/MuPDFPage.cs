@@ -2,7 +2,6 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Reflection;
 
 namespace MuPDF.NET
 {
@@ -1124,15 +1123,127 @@ namespace MuPDF.NET
             return new MuPDFAnnot(annot);
         }
 
-        public int ApplyRedactions(int images)
+        /// <summary>
+        /// Apply the redaction annotations of the page.
+        /// </summary>
+        /// <param name="images"></param>
+        /// <param name="graphics"></param>
+        /// <param name="text"></param>
+        /// <returns></returns>
+        private int _ApplyRedactions(int text = 0, int images = 2, int graphics = 1)
         {
             PdfPage page = _pdfPage;
             PdfRedactOptions opts = new PdfRedactOptions();
             opts.black_boxes = 0;
             opts.image_method = images;
+            opts.line_art = graphics;
+            // opts.m // issue
             int success = page.doc().pdf_redact_page(page, opts);
 
             return success;
+        }
+
+        /// <summary>
+        /// Apply the redaction annotations of the page.
+        /// </summary>
+        /// <param name="images">
+        /// 0 - ignore images
+        /// 1 - remove all overlapping images
+        /// 2 - blank out overlapping image parts
+        /// 3 - remove image unless invisible
+        /// </param>
+        /// <param name="graphics">
+        /// 0 - ignore graphics
+        /// 1 - remove graphics if contained in rectangle
+        /// 2 - remove all overlapping graphics
+        /// </param>
+        /// <param name="text">
+        /// 0 - remove text
+        /// 1 - ignore text
+        /// </param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        public bool ApplyRedactions(int images = 2, int graphics = 1, int text = 0)
+        {
+            Rect CenterRect(Rect annotRect, string newText, string fname, float fsize)
+            {
+                if (string.IsNullOrEmpty(newText))
+                    return annotRect;
+                float textWidth = 0f;
+                try
+                {
+                    textWidth = Utils.GetTextLength(newText, fname, fsize);
+                }
+                catch (Exception)
+                {
+                    return annotRect;
+                }
+
+                float lineHeight = fsize * 1.2f;
+                float limit = annotRect.Width;
+                float h = (float)Math.Ceiling(textWidth / limit) * lineHeight;
+                if (h >= annotRect.Height)
+                    return annotRect;
+
+                Rect r = annotRect;
+                float y = (annotRect.TopLeft.Y + annotRect.BottomLeft.Y) * 0.5f;
+                r.Y0 = y;
+                return r;
+            }
+
+            MuPDFDocument doc = Parent;
+            if (doc.IsEncrypted || doc.IsClosed)
+                throw new Exception("document is closed or encrypted");
+            if (!doc.IsPDF)
+                throw new Exception("is no PDF");
+
+            List<Annot> redactAnnots = new List<Annot>();
+            foreach (MuPDFAnnot annot in GetAnnots(new List<PdfAnnotType>() { PdfAnnotType.PDF_ANNOT_REDACT }))
+                redactAnnots.Add(annot.GetRedactVaues());
+            Console.WriteLine(redactAnnots.Count);
+            if (redactAnnots.Count == 0)
+                return false;
+            int res = _ApplyRedactions(text, images, graphics);
+            if (res == 0)
+                throw new Exception("Error applying redactions");
+
+            Shape shape = NewShape();
+            foreach (Annot redact in redactAnnots)
+            {
+                Rect annotRect = redact.Rect;
+                float[] fill = redact.Fill;
+                if (fill != null)
+                {
+                    shape.DrawRect(annotRect);
+                    shape.Finish(fill: fill, color: fill);
+                }
+
+                if (string.IsNullOrEmpty(redact.Text))
+                {
+                    string newText = redact.Text;
+                    int align = redact.Align;
+                    string fname = redact.FontName;
+                    float fsize = redact.FontSize;
+                    float[] color = redact.TextColor;
+                    Rect trect = CenterRect(annotRect, newText, fname, fsize);
+
+                    float ret = -1f;
+                    while (ret < 0 && fsize >= 4)
+                    {
+                        ret = shape.InsertTextbox(
+                            trect,
+                            newText,
+                            fontName: fname,
+                            fontSize: fsize,
+                            color: color,
+                            align: align
+                            );
+                        fsize -= 0.5f;
+                    }
+                }
+            }
+            shape.Commit();
+            return true;
         }
 
         private void ResetAnnotRefs()
@@ -3047,6 +3158,74 @@ namespace MuPDF.NET
             widget.Update();
 
             return annot_;
+        }
+
+        /// <summary>
+        /// Join rectangles of neighboring vector graphic items.
+        /// </summary>
+        /// <param name="clip">optional rect-like to restrict the page area to consider.</param>
+        /// <param name="drawings">(optional) output of a previous "get_drawings()".</param>
+        /// <param name="xTolerance">horizontal neighborhood threshold.</param>
+        /// <param name="yTolerance">vertical neighborhood threshold.</param>
+        /// <returns></returns>
+        public List<Rect> ClusterDrawings(Rect clip = null, List<PathInfo> drawings = null, float xTolerance = 3f, float yTolerance = 3f)
+        {
+            Rect pArea = Rect;
+            if (clip != null)
+                pArea = new Rect(clip);
+
+            float deltaX = xTolerance;
+            float deltaY = yTolerance;
+            if (drawings == null)
+                drawings = GetDrawings();
+
+            bool AreNeighbors(Rect r1, Rect r2)
+            {
+                float rr1_X0, rr1_X1, rr1_Y0, rr1_Y1, rr2_X0, rr2_X1, rr2_Y0, rr2_Y1;
+                (rr1_X0, rr1_X1) = (r1.X1 > r1.X0) ? (r1.X0, r1.X1) : (r1.X1, r1.X0);
+                (rr1_Y0, rr1_Y1) = (r1.Y1 > r1.Y0) ? (r1.Y0, r1.Y1) : (r1.Y1, r1.Y0);
+                (rr2_X0, rr2_X1) = (r2.X1 > r2.X0) ? (r2.X0, r2.X1) : (r2.X1, r2.X0);
+                (rr2_Y0, rr2_Y1) = (r2.Y1 > r2.Y0) ? (r2.Y0, r2.Y1) : (r2.Y1, r2.Y0);
+
+                if ((rr1_X1 < rr2_X0 - deltaX) || (rr1_X0 > rr2_X1 + deltaX)
+                    || (rr1_Y1 < rr2_Y0 - deltaY) || (rr1_Y0 > rr2_Y1 + deltaY))
+                    return false;
+                else 
+                    return true;
+            }
+
+            List<Rect> pRects = drawings.Where(p =>
+                    (p.Rect.X0 >= pArea.X0)
+                    && (p.Rect.X1 <= pArea.X1)
+                    && (p.Rect.Y0 >= pArea.Y0)
+                    && (p.Rect.Y1 <= pArea.Y1)).OrderBy(p => p.Rect.Y1).ThenBy(p => p.Rect.X0).Select(p => p.Rect).ToList();
+            
+            List<Rect> newRects= new List<Rect>();
+
+            while (pRects.Count > 0)
+            {
+                Rect r = pRects[0];
+                bool repeat = true;
+                while (repeat)
+                {
+                    repeat = false;
+                    for (int i = pRects.Count - 1; i > 0; i--)
+                    {
+                        if (AreNeighbors(pRects[i], r))
+                        {
+                            r = r | pRects[i].TopLeft;
+                            r = r | pRects[i].BottomRight;
+                            pRects.RemoveAt(i);
+                            repeat = true;
+                        }
+                    }
+                }
+                newRects.Add(r);
+                pRects.RemoveAt(0);
+                pRects = pRects.OrderBy(p => p.Y1).ThenBy(p => p.X0).ToList();
+            }
+            newRects = newRects.OrderBy(p => p.Y1).ThenBy(p => p.X0).ToList();
+            return newRects.Where(r => r.Width > deltaX && r.Height > deltaY).ToList();
         }
 
         public void Dispose()
