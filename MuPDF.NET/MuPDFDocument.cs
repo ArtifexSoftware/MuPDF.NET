@@ -24,7 +24,7 @@ namespace MuPDF.NET
 
         public Dictionary<(int, int), int> ShownPages { get; set; }
 
-        public Dictionary<string, int> InsertedImages { get; set;}
+        public Dictionary<string, int> InsertedImages { get; set; } = new Dictionary<string, int>();
 
         public Dictionary<int, MuPDFPage> PageRefs { get; set; }
 
@@ -801,10 +801,7 @@ namespace MuPDF.NET
         {
             if (IsClosed || IsEncrypted)
                 throw new Exception("document is closed or encrypted");
-            if (filename is string)
-            {
-                //do something
-            }
+
             if (Len < 1)
                 throw new Exception("cannot save with zero pages");
             if ((userPW != null && userPW.Length > 40) || (ownerPW != null && ownerPW.Length > 40))
@@ -837,9 +834,6 @@ namespace MuPDF.NET
             FzOutput output = null;
             pdf.m_internal.resynth_required = 0;
             Utils.EmbeddedClean(pdf);
-
-            /*if (noNewId == 0)
-                Utils.EnsureIdentity();*/
 
             if (filename is string)
                 pdf.pdf_save_document(filename, opts);
