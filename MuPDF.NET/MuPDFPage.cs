@@ -1300,7 +1300,7 @@ namespace MuPDF.NET
             if (xref == 0 && (string.IsNullOrEmpty(filename) ? 0 : 1) + (stream == null ? 0 : 1) + (pixmap == null ? 0 : 1) != 1)
                 throw new Exception("xref=0 needs exactly one of filename, pixmap, stream");
 
-            if (!File.Exists(filename))
+            if (filename != null && !File.Exists(filename))
                 throw new Exception($"No such file: {filename}");
             else if (mask != null && (stream == null || string.IsNullOrEmpty(filename)))
                 throw new Exception("mask requires stream or filename");
@@ -1332,12 +1332,16 @@ namespace MuPDF.NET
             
             string n = "fzImg";
             int j = 0;
+
             string imgName = n + "0";
-            while (iList.Contains(imgName))
-            {
-                j += 1;
-                imgName = n + $"{j}";
-            }
+            if (string.IsNullOrEmpty(imageName))
+                while (iList.Contains(imgName))
+                {
+                    j += 1;
+                    imgName = n + $"{j}";
+                }
+            else
+                imgName = imageName;
 
             Dictionary<string, int> digests = doc.InsertedImages;
 
@@ -1360,7 +1364,7 @@ namespace MuPDF.NET
             FzImage maskImage = null;
             byte[] md5 = null;
             PdfObj ref_ = new PdfObj();
-
+            
             if (xref > 0)
             {
                 PdfObj refer = pdf.pdf_new_indirect(xref, 0);
@@ -1368,7 +1372,9 @@ namespace MuPDF.NET
                 h = refer.pdf_dict_geta(new PdfObj("Height"), new PdfObj("H")).pdf_to_int();
 
                 if (w + h == 0)
+                {
                     throw new Exception(Utils.ErrorMessages["MSG_IS_NO_IMAGE"]);
+                }
 
                 do_process_pixmap = 0;
                 do_process_stream = 0;
@@ -1391,14 +1397,15 @@ namespace MuPDF.NET
                     }
                 }
             }
-
+            
             if (do_process_pixmap != 0)
             {
                 FzPixmap argPix = pixmap.ToFzPixmap();
                 w = argPix.w();
                 h = argPix.h();
                 vectoruc digest = argPix.fz_md5_pixmap2();
-                int temp = digests.GetValueOrDefault(Encoding.UTF8.GetString(digest.ToArray()), -1);
+                md5 = digest.ToArray();
+                int temp = digests.GetValueOrDefault(Encoding.UTF8.GetString(md5), -1);
                 if (temp != -1)
                 {
                     imgXRef = temp;
@@ -1429,7 +1436,7 @@ namespace MuPDF.NET
                     do_have_imask = 0;
                 }
             }
-
+            
             if (do_process_stream != 0)
             {
                 FzMd5 state = new FzMd5();
@@ -1494,7 +1501,7 @@ namespace MuPDF.NET
                 if (oc != 0)
                     Utils.AddOcObject(pdf, ref_, oc);
                 imgXRef = ref_.pdf_to_num();
-                digests[Encoding.UTF8.GetString(md5)] = imgXRef;
+                digests.Add(Encoding.UTF8.GetString(md5), imgXRef);
                 rcDigest = 1;
             }
 
@@ -1507,9 +1514,10 @@ namespace MuPDF.NET
                 if (xobject.m_internal == null)
                     xobject = resources.pdf_dict_put_dict(new PdfObj("XObject"), 2);
                 FzMatrix mat = Utils.CalcImageMatrix(w, h, clip, rotate, keepProportion != 0);
-                xobject.pdf_dict_puts(imageName, ref_);
+
+                xobject.pdf_dict_puts(imgName, ref_);
                 FzBuffer nres = mupdf.mupdf.fz_new_buffer(50);
-                nres.fz_append_string(string.Format(template, mat.a, mat.b, mat.c, mat.d, mat.e, mat.f, imageName));
+                nres.fz_append_string(string.Format(template, mat.a, mat.b, mat.c, mat.d, mat.e, mat.f, imgName));
                 Utils.InsertContents(pdf, page.obj(), nres, overlay);
             }
 

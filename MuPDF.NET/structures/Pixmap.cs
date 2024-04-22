@@ -1,5 +1,7 @@
 ﻿using mupdf;
 using System.Runtime.InteropServices;
+using System.Drawing;
+using System.Drawing.Imaging;
 
 namespace MuPDF.NET
 {
@@ -339,6 +341,12 @@ namespace MuPDF.NET
 
         public FzPixmap ToFzPixmap() { return _nativePixmap; }
 
+        /// <summary>
+        /// Convert to binary image stream of desired type.
+        /// </summary>
+        /// <param name="format"></param>
+        /// <param name="jpgQuality"></param>
+        /// <returns></returns>
         public byte[] ToBytes(int format, int jpgQuality)
         {
             FzPixmap pixmap = _nativePixmap;
@@ -636,26 +644,15 @@ namespace MuPDF.NET
             return fstream.GetBuffer();
         }
 
-        public void SaveDrawing()
+        /*public void SaveDrawing()
         {
-            ColorSpace cspace = ColorSpace;
-            string mode = null;
-            if (cspace is null)
-                mode = "L";
-            else if (cspace.N == 1)
-                mode = (this.Alpha == 0) ? "L" : "LA";
-            else if (cspace.N == 3)
-                mode = (Alpha == 0) ? "RGB" : "RGBA";
-            else
-                mode = "CMYK";
-
-
+            
         }
 
         public void Drawing2Bytes()
         {
 
-        }
+        }*/
 
         /// <summary>
         /// Return the value of the pixel at location (x, y) (column, line)
@@ -663,7 +660,7 @@ namespace MuPDF.NET
         /// <param name="x">the column number of the pixel. Must be in range(pix.width)</param>
         /// <param name="y">the line number of the pixel, Must be in range(pix.height)</param>
         /// <exception cref="Exception"></exception>
-        public void GetPixel(int x, int y)
+        public byte[] GetPixel(int x, int y)
         {
             if (false || x < 0 || x >= _nativePixmap.m_internal.w
                 || y < 0 || y >= _nativePixmap.m_internal.h
@@ -672,11 +669,12 @@ namespace MuPDF.NET
                 throw new Exception(Utils.ErrorMessages["MSG_PIXEL_OUTSIDE"]);
             }
 
-            int n = _nativePixmap.m_internal.w;
+            int n = _nativePixmap.m_internal.n;
             int stride = _nativePixmap.fz_pixmap_stride();
             int i = stride * y + n * x;
 
-            //int ret = new Tuple()
+            byte[] pixel = SAMPLES.Skip(i).Take(n).ToArray();
+            return pixel;
         }
 
         /// <summary>
@@ -878,8 +876,8 @@ namespace MuPDF.NET
                 {"jpeg", 7 }
             };
 
-            int idx = 0;
-            if (validFormats.TryGetValue(output, out idx))
+            int idx = validFormats.GetValueOrDefault(output.ToLower(), 0);
+            if (idx == 0)
             {
                 throw new Exception($"Image format {output} not in {string.Join(", ", validFormats.Keys)}");
             }
@@ -899,6 +897,11 @@ namespace MuPDF.NET
             _nativePixmap.m_internal.yres = yres;
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="x"></param>
+        /// <param name="y"></param>
         public void SetOrigin(int x, int y)
         {
             _nativePixmap.m_internal.x = x;
