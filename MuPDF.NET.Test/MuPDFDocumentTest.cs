@@ -90,5 +90,15 @@ namespace MuPDF.NET.Test
             List<Toc> toc = doc.GetToc(simple: false);
             Assert.NotZero(toc.Count);
         }
+
+        [Test]
+        public void Save()
+        {
+            doc.Save("output.pdf");
+
+            doc.Save("output.pdf", 1, 1, 1, 1, 1, 1, 1, 1);
+
+            Assert.Pass();
+        }
     }
 }

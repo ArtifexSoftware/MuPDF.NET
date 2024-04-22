@@ -210,4 +210,29 @@ public class MuPDFPageTest : PdfTestBase
         doc.Save("output.pdf");
         Assert.Pass();
     }
+
+    [Test]
+    public void ApplyRedactions()
+    {
+        for (int i = 0; i < doc.Len; i++)
+        {
+            if (doc[i].ApplyRedactions())
+                Console.WriteLine(i);
+        }
+        Assert.Pass();
+    }
+
+    [Test]
+    public void InsertImage1()
+    { 
+        List<Entry> images = page.GetImages();
+
+        int xref = images[0].Xref;
+
+        Pixmap pix = new Pixmap(new ColorSpace(Utils.CS_GRAY), new IRect(0, 0, 1, 1), 0);
+
+        int nXref = page.InsertImage(page.Rect, pixmap: pix);
+
+        doc.Save("output.pdf");
+    }
 }
