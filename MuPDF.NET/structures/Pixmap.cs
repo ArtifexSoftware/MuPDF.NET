@@ -544,8 +544,9 @@ namespace MuPDF.NET
             _nativePixmap.fz_gamma_pixmap(gamma);
         }
 
-        private int InvertPixmapRect(FzPixmap dest, FzIrect b)
+        private int InvertPixmapRect(FzPixmap dest, FzIrect bb)
         {
+            FzIrect b = bb.fz_intersect_irect(dest.fz_pixmap_bbox());  
             int w = b.x1 - b.x0;
             int y = b.y1 - b.y0;
             if (w <= 0 || y <= 0)
