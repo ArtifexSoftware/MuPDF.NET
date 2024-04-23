@@ -473,7 +473,7 @@ namespace MuPDF.NET
         public dynamic ColorCount(bool colors = false, dynamic clip = null)
         {
             FzPixmap pm = _nativePixmap;
-            Dictionary<List<byte>, int> rc = Utils.ColorCount(pm, clip);
+            Dictionary<string, int> rc = Utils.ColorCount(pm, clip);
             if (rc == null)
                 throw new Exception(Utils.ErrorMessages["MSG_COLOR_COUNT_FAILED"]);
             if (!colors)
@@ -486,29 +486,29 @@ namespace MuPDF.NET
         /// </summary>
         /// <param name="clip">Return most frequent color and its usage ratio.</param>
         /// <returns></returns>
-        public (int, List<byte>) ColorTopUsage(dynamic clip = null)
+        public (float, byte[]) ColorTopUsage(dynamic clip = null)
         {
             int allPixels = 0;
             int count = 0;
-            List<byte> maxPixel = null;
+            string maxPixel = null;
             if (clip != null)
                 clip = this.IRect;
 
-            Dictionary<List<byte>, int> colorCount = (Dictionary<List<byte>, int>)ColorCount(true, clip);
-
-            for (int i = 0; i < colorCount.Count; i++)
+            Dictionary<string, int> colorCount = (Dictionary<string, int>)ColorCount(true, clip);
+            foreach (string pixel in colorCount.Keys)
             {
-                int c = colorCount.Values.ElementAt(i);
+                int c = colorCount[pixel];
                 allPixels += c;
                 if (c > count)
                 {
                     count = c;
-                    maxPixel = colorCount.Keys.ElementAt(i);
+                    maxPixel = pixel;
                 }
             }
+
             if (allPixels == 0)
-                return (1, Enumerable.Repeat((byte)255, N).ToList());
-            return (count / allPixels, maxPixel);
+                return (1, Enumerable.Repeat((byte)255, N).ToArray());
+            return (count / (float)allPixels, maxPixel.Split(',').Select(b => byte.Parse(b)).ToArray());
         }
 
         /// <summary>

@@ -957,32 +957,51 @@ namespace MuPDF.NET
         {
             if (r is FzRect)
                 return r;
-            if (r is Rect)
-                return r.ToFzRect();
-            if (r.Length != 4)
+            if (r is FzIrect)
+                return new FzRect(r);
+            if (r is Rect || r is IRect)
+                return mupdf.mupdf.fz_make_rect(r.X0, r.Y0, r.X1, r.Y1);
+            if (r == null || r.Length != 4)
                 return new FzRect(FzRect.Fixed.Fixed_INFINITE);
-            return new FzRect(
-                (float)Convert.ToDouble(r[0]),
-                (float)Convert.ToDouble(r[1]),
-                (float)Convert.ToDouble(r[2]),
-                (float)Convert.ToDouble(r[3])
-                );
+            if (r is float[] || r is Tuple<float> || r is List<float>)
+            {
+                for (int i = 0; i < 4; i ++)
+                {
+                    try
+                    {
+                        if (r[i] < Utils.FZ_MIN_INF_RECT)
+                            r[i] = Utils.FZ_MIN_INF_RECT;
+                        if (r[i] > Utils.FZ_MAX_INF_RECT)
+                            r[i] = Utils.FZ_MAX_INF_RECT;
+                    }
+                    catch(Exception)
+                    {
+                        return new FzRect(FzRect.Fixed.Fixed_INFINITE);
+                    }
+                }
+            }
+            return mupdf.mupdf.fz_make_rect(r[0], r[1], r[2], r[3]);
         }
 
-        public static List<byte> ReadSamples(FzPixmap pixmap, int offset, int n)
+        public static string ReadSamples(FzPixmap pixmap, int offset, int n)
         {
             List<byte> ret = new List<byte>();
             for (int i = 0; i < n; i++)
                 ret.Add((byte)pixmap.fz_samples_get(offset + i));
-            return ret;
+            return Utils.Bytes2Str(ret);
         }
 
-        public static Dictionary<List<byte>, int> ColorCount(FzPixmap pm, dynamic clip)
+        public static string Bytes2Str(List<byte> bytes)
         {
-            Dictionary<List<byte>, int> ret = new Dictionary<List<byte>, int>();
+            return string.Join(',', bytes.Select(b => $"{b}"));
+        }
+
+        public static Dictionary<string, int> ColorCount(FzPixmap pm, dynamic clip)
+        {
+            Dictionary<string, int> ret = new Dictionary<string, int>();
             int count = 0;
             FzIrect irect = pm.fz_pixmap_bbox();
-            irect = irect.fz_intersect_irect(RectFromObj(clip));
+            irect = irect.fz_intersect_irect(new FzIrect(RectFromObj(clip)));
             int stride = pm.fz_pixmap_stride();
             int width = irect.x1 - irect.x0;
             int height = irect.y1 - irect.y0;
@@ -990,20 +1009,22 @@ namespace MuPDF.NET
 
             int substride = width * n;
             int s = stride * (irect.y0 - pm.y()) + (irect.x0 - pm.x()) * n;
-            List<byte> oldPix = Utils.ReadSamples(pm, s, n);
+            string oldPix = Utils.ReadSamples(pm, s, n);
+
             count = 0;
             if (irect.fz_is_empty_irect() != 0)
                 return ret;
-            List<byte> pixel = null;
+            string pixel = null;
             int c = 0;
             for (int i = 0; i < height; i++)
             {
-                for (int j = 0; j < n; i += substride)
+                for (int j = 0; j < substride; j += n)
                 {
-                    List<byte> newPix = Utils.ReadSamples(pm, s + j, n);
-                    if (newPix != oldPix)
+                    string newPix = Utils.ReadSamples(pm, s + j, n);
+                    if (!newPix.SequenceEqual(oldPix))
                     {
-                        c = ret[pixel];
+                        pixel = oldPix;
+                        c = ret.GetValueOrDefault(pixel, 0);
                         if (c != 0)
                         {
                             count += c;
@@ -1018,13 +1039,13 @@ namespace MuPDF.NET
                 s += stride;
             }
             pixel = oldPix;
-            c = ret[pixel];
+            c = ret.GetValueOrDefault(pixel, 0);
             if (c != 0)
             {
                 count += c;
             }
             ret[pixel] = count;
-
+            Console.WriteLine(ret.Count);
             return ret;
         }
 
