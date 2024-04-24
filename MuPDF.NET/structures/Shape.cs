@@ -4,31 +4,31 @@ namespace MuPDF.NET
 {
     public class Shape
     {
-        public MuPDFPage Page;
+        public MuPDFPage Page { get; set; }
 
-        public MuPDFDocument Doc;
+        public MuPDFDocument Doc { get; set; }
 
-        public float Height;
+        public float Height { get; set; }
 
-        public float Width;
+        public float Width { get; set; }
 
-        public float X;
+        public float X { get; set; }
 
-        public float Y;
+        public float Y { get; set; }
 
-        public Matrix Pctm;
+        public Matrix Pctm { get; set; }
 
-        public Matrix IPctm;
+        public Matrix IPctm { get; set; }
 
-        public string DrawCont;
+        public string DrawCont { get; set; }
 
-        public string TextCont;
+        public string TextCont { get; set; }
 
-        public string TotalCont;
+        public string TotalCont { get; set; }
 
-        public Point LastPoint;
+        public Point LastPoint { get; set; }
 
-        public Rect Rect;
+        public Rect Rect { get; set; }
 
         public Shape(MuPDFPage page)
         {
@@ -904,7 +904,7 @@ namespace MuPDF.NET
                 color, fill, expandTabs, align, renderMode, borderWidth, rotate, morph, strokeOpacity, fillOpacity, oc);
         }
 
-        public float _InsertTextbox(
+        internal float _InsertTextbox(
             Rect rect,
             List<string> buffer,
             float fontSize = 11,

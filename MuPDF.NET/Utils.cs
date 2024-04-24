@@ -52,6 +52,54 @@ namespace MuPDF.NET
 
         public static List<string> MUPDF_WARNINGS_STORE = new List<string>();
 
+        private static Dictionary<string, (int, int)> PageSizes = new Dictionary<string, (int, int)>()
+        {
+            { "a0", (2384, 3370) },
+            { "a1", (1684, 2384) },
+            { "a10", (74, 105) },
+            { "a2", (1191, 1684) },
+            { "a3", (842, 1191) },
+            { "a4", (595, 842) },
+            { "a5", (420, 595) },
+            { "a6", (298, 420) },
+            { "a7", (210, 298) },
+            { "a8", (147, 210) },
+            { "a9", (105, 147) },
+            { "b0", (2835, 4008) },
+            { "b1", (2004, 2835) },
+            { "b10", (88, 125) },
+            { "b2", (1417, 2004) },
+            { "b3", (1001, 1417) },
+            { "b4", (709, 1001) },
+            { "b5", (499, 709) },
+            { "b6", (354, 499) },
+            { "b7", (249, 354) },
+            { "b8", (176, 249) },
+            { "b9", (125, 176) },
+            { "c0", (2599, 3677) },
+            { "c1", (1837, 2599) },
+            { "c10", (79, 113) },
+            { "c2", (1298, 1837) },
+            { "c3", (918, 1298) },
+            { "c4", (649, 918) },
+            { "c5", (459, 649) },
+            { "c6", (323, 459) },
+            { "c7", (230, 323) },
+            { "c8", (162, 230) },
+            { "c9", (113, 162) },
+            { "card-4x6", (288, 432) },
+            { "card-5x7", (360, 504) },
+            { "commercial", (297, 684) },
+            { "executive", (522, 756) },
+            { "invoice", (396, 612) },
+            { "ledger", (792, 1224) },
+            { "legal", (612, 1008) },
+            { "legal-13", (612, 936) },
+            { "letter", (612, 792) },
+            { "monarch", (279, 540) },
+            { "tabloid-extra", (864, 1296) }
+        };
+
         public static List<(int, double)> zapf_glyphs = new List<(int, double)>() {
         (183, 0.788),
         (183, 0.788),
@@ -909,32 +957,51 @@ namespace MuPDF.NET
         {
             if (r is FzRect)
                 return r;
-            if (r is Rect)
-                return r.ToFzRect();
-            if (r.Length != 4)
+            if (r is FzIrect)
+                return new FzRect(r);
+            if (r is Rect || r is IRect)
+                return mupdf.mupdf.fz_make_rect(r.X0, r.Y0, r.X1, r.Y1);
+            if (r == null || r.Length != 4)
                 return new FzRect(FzRect.Fixed.Fixed_INFINITE);
-            return new FzRect(
-                (float)Convert.ToDouble(r[0]),
-                (float)Convert.ToDouble(r[1]),
-                (float)Convert.ToDouble(r[2]),
-                (float)Convert.ToDouble(r[3])
-                );
+            if (r is float[] || r is Tuple<float> || r is List<float>)
+            {
+                for (int i = 0; i < 4; i ++)
+                {
+                    try
+                    {
+                        if (r[i] < Utils.FZ_MIN_INF_RECT)
+                            r[i] = Utils.FZ_MIN_INF_RECT;
+                        if (r[i] > Utils.FZ_MAX_INF_RECT)
+                            r[i] = Utils.FZ_MAX_INF_RECT;
+                    }
+                    catch(Exception)
+                    {
+                        return new FzRect(FzRect.Fixed.Fixed_INFINITE);
+                    }
+                }
+            }
+            return mupdf.mupdf.fz_make_rect(r[0], r[1], r[2], r[3]);
         }
 
-        public static List<byte> ReadSamples(FzPixmap pixmap, int offset, int n)
+        public static string ReadSamples(FzPixmap pixmap, int offset, int n)
         {
             List<byte> ret = new List<byte>();
             for (int i = 0; i < n; i++)
                 ret.Add((byte)pixmap.fz_samples_get(offset + i));
-            return ret;
+            return Utils.Bytes2Str(ret);
         }
 
-        public static Dictionary<List<byte>, int> ColorCount(FzPixmap pm, dynamic clip)
+        public static string Bytes2Str(List<byte> bytes)
         {
-            Dictionary<List<byte>, int> ret = new Dictionary<List<byte>, int>();
+            return string.Join(',', bytes.Select(b => $"{b}"));
+        }
+
+        public static Dictionary<string, int> ColorCount(FzPixmap pm, dynamic clip)
+        {
+            Dictionary<string, int> ret = new Dictionary<string, int>();
             int count = 0;
             FzIrect irect = pm.fz_pixmap_bbox();
-            irect = irect.fz_intersect_irect(RectFromObj(clip));
+            irect = irect.fz_intersect_irect(new FzIrect(RectFromObj(clip)));
             int stride = pm.fz_pixmap_stride();
             int width = irect.x1 - irect.x0;
             int height = irect.y1 - irect.y0;
@@ -942,20 +1009,22 @@ namespace MuPDF.NET
 
             int substride = width * n;
             int s = stride * (irect.y0 - pm.y()) + (irect.x0 - pm.x()) * n;
-            List<byte> oldPix = Utils.ReadSamples(pm, s, n);
+            string oldPix = Utils.ReadSamples(pm, s, n);
+
             count = 0;
             if (irect.fz_is_empty_irect() != 0)
                 return ret;
-            List<byte> pixel = null;
+            string pixel = null;
             int c = 0;
             for (int i = 0; i < height; i++)
             {
-                for (int j = 0; j < n; i += substride)
+                for (int j = 0; j < substride; j += n)
                 {
-                    List<byte> newPix = Utils.ReadSamples(pm, s + j, n);
-                    if (newPix != oldPix)
+                    string newPix = Utils.ReadSamples(pm, s + j, n);
+                    if (!newPix.SequenceEqual(oldPix))
                     {
-                        c = ret[pixel];
+                        pixel = oldPix;
+                        c = ret.GetValueOrDefault(pixel, 0);
                         if (c != 0)
                         {
                             count += c;
@@ -970,13 +1039,13 @@ namespace MuPDF.NET
                 s += stride;
             }
             pixel = oldPix;
-            c = ret[pixel];
+            c = ret.GetValueOrDefault(pixel, 0);
             if (c != 0)
             {
                 count += c;
             }
             ret[pixel] = count;
-
+            Console.WriteLine(ret.Count);
             return ret;
         }
 
@@ -3203,26 +3272,26 @@ namespace MuPDF.NET
 
         public static int CheckQuad(LineartDevice dev)
         {
-            var items = dev.PathDict["items"];
+            List<Item> items = dev.PathDict.Items;
             int len = items.Count;
             float[] f = new float[8] { 0, 0, 0, 0, 0, 0, 0, 0 };
-            FzPoint lp = new FzPoint();
+            Point lp = new Point();
 
             for (int i = 0; i < 4; i++)
             {
-                List<dynamic> line = items[len - 4 + i];
-                FzPoint tmp = line[1];
-                f[i * 2] = tmp.x;
-                f[i * 2 + 1] = tmp.y;
-                lp = line[2];
+                Item line = items[len - 4 + i];
+                Point tmp = line.LastPoint;
+                f[i * 2] = tmp.X;
+                f[i * 2 + 1] = tmp.Y;
+                lp = line.P1;
             }
 
-            if (lp.x != f[0] || lp.y != f[1])
+            if (lp.X != f[0] || lp.Y != f[1])
                 return 0;
 
             dev.LineCount = 0;
             FzQuad q = mupdf.mupdf.fz_make_quad(f[0], f[1], f[6], f[7], f[2], f[3], f[4], f[5]);
-            List<dynamic> rect = new List<dynamic> { "qu", q };
+            Item rect = new Item() { Type = "qu", Quad = new Quad(q) };
 
             items[len - 4] = rect;
             for (int i = len - 3; i < len; i++)
@@ -3234,37 +3303,38 @@ namespace MuPDF.NET
         {
             dev.LineCount = 0;
             int orientation = 0;
-            var items = dev.PathDict["items"];
+            List<Item> items = dev.PathDict.Items;
             int len = items.Count;
 
-            List<dynamic> line0 = items[len - 3];
-            FzPoint ll = line0[1];
-            FzPoint lr = line0[2];
+            Item line0 = items[len - 3];
+            Point ll = line0.LastPoint;
+            Point lr = line0.P1;
 
-            List<dynamic> line2 = items[len - 1];
-            FzPoint ur = line2[1];
-            FzPoint ul = line2[2];
+            Item line2 = items[len - 1];
+            Point ur = line2.LastPoint;
+            Point ul = line2.P1;
 
-            if (ll.y != lr.y || ll.x != ul.x || ur.y != ul.y || ur.x != lr.x)
+            if (ll.Y != lr.Y || ll.X != ul.X || ur.Y != ul.Y || ur.X != lr.X)
                 return 0;
 
             FzRect r;
-            if (ul.y < lr.y)
+            if (ul.Y < lr.Y)
             {
-                r = mupdf.mupdf.fz_make_rect(ul.x, ul.y, lr.x, lr.y);
+                r = mupdf.mupdf.fz_make_rect(ul.X, ul.Y, lr.X, lr.Y);
                 orientation = 1;
             }
             else
             {
-                r = mupdf.mupdf.fz_make_rect(ll.x, ll.y, ur.x, ur.y);
+                r = mupdf.mupdf.fz_make_rect(ll.X, ll.Y, ur.X, ur.Y);
                 orientation = -1;
             }
 
-            List<dynamic> rect = new List<dynamic>() { "re", new Rect(r), orientation };
+            Item rect = new Item() { Type = "re", Rect = new Rect(r), Orientation = orientation };
+
             items[len - 3] = rect;
-            for (int i = len - 2; i < len; i++)
+            for (int i = 0; i < len - 1; i ++)
             {
-                items.RemoveAt(i);
+                items.RemoveAt(1);
             }
 
             return 1;
@@ -3990,18 +4060,19 @@ namespace MuPDF.NET
 
             int p0 = text.IndexOf("/OCGs[");
             int p1 = text.IndexOf("]", p0);
-            string[] ocgs;
+            int[] ocgs = null;
 
             if (p0 < 0 || p1 < 0)
                 ocgs = null;
             else
             {
-                ocgs = text.Substring(p0 + 6, p1 - p0 - 6).Replace("0 R", " ").Split(" ");
+                ocgs = text.Substring(p0 + 6, p1 - p0 - 6).Replace("0 R", " ").Split(" ").Select(x => int.Parse(x)).ToArray();
             }
 
             p0 = text.IndexOf("/P/");
             string policy;
             string ve;
+            List<dynamic> obj = null;
 
             if (p0 < 0)
                 policy = null;
@@ -4037,13 +4108,53 @@ namespace MuPDF.NET
                 ve = text.Substring(p0 + 3, p1 + 1);
                 ve = ve.Replace("/And", "\"and\",").Replace("/Not", "\"not\",").Replace("/Or", "\"or\",");
                 ve = ve.Replace(" 0 R]", "]").Replace(" 0 R", ",").Replace("][", "],[");
-                
-                var obj = JsonConvert.DeserializeObject(ve);
+
+                obj = JsonConvert.DeserializeObject<List<dynamic>>(ve, new JsonSerializerSettings()
+                {
+                    Converters = { new VEConverter() }
+                });
+
                 if (obj == null)
                     throw new Exception($"bad /VE key: {ve}");
             }
-            return new OCMD() { Xref = xref, Ocgs = ocgs, Policy = policy, Ve = ve };
+            return new OCMD() { Xref = xref, Ocgs = ocgs, Policy = policy, Ve = obj.ToArray() };
         }
+
+        public class VEConverter : JsonConverter
+        {
+            public override bool CanConvert(Type objectType)
+            {
+                return (objectType == typeof(List<dynamic>));
+            }
+
+            public override void WriteJson(JsonWriter writer, dynamic value, JsonSerializer serializer)
+            {
+                throw new NotImplementedException();
+            }
+
+            public override dynamic ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+            {
+                List<dynamic> result = new List<dynamic>();
+                while (reader.Read())
+                {
+                    if (reader.TokenType == JsonToken.StartArray)
+                    {
+                        result.Add(ReadJson(reader, objectType, existingValue, serializer));
+                    }
+                    else if (reader.TokenType == JsonToken.EndArray)
+                    {
+                        return result;
+                    }
+                    else
+                    {
+                        dynamic value = (reader.ValueType == typeof(long) ? Convert.ToInt32(reader.Value) : reader.Value);
+                        result.Add(value);
+                    }
+                }
+                return result;
+            }
+        }
+
 
         /// <summary>
         /// Return a list of page numbers with the given label
@@ -4653,6 +4764,104 @@ namespace MuPDF.NET
             if (!found)
                 throw new Exception($"xref {xref} is not a widget of this page");
             return annot;
+        }
+
+        public static Matrix GetRotateMatrix(MuPDFPage page)
+        {
+            PdfPage pdfpage = page.GetPdfPage();
+            if (pdfpage.m_internal == null)
+                return new Matrix();
+            return Utils.RotatePageMatrix(pdfpage);
+        }
+
+        public static Rect PageRect(string size)
+        {
+            (int width, int height) = Utils.PageSize(size);
+            return new Rect(0, 0, width, height);
+        }
+
+        public static (int, int) PageSize(string size)
+        {
+            string s = size.ToLower();
+            string f = "p";
+            if (s.EndsWith("-l"))
+            {
+                f = "l";
+                s = s.Substring(0, s.Length - 2);
+            }
+            if (s.EndsWith("-p"))
+            {
+                s = s.Substring(0, s.Length - 2);
+            }
+            
+            (int, int) ret = Utils.PageSizes.GetValueOrDefault(s, (-1, -1));
+            if (f == "p")
+                return ret;
+            return (ret.Item2, ret.Item1);
+        }
+
+        /// <summary>
+        /// Calculate length of a string for a built-in font.
+        /// </summary>
+        /// <param name="text"></param>
+        /// <param name="fontname">name of the font.</param>
+        /// <param name="fontsize">font size points.</param>
+        /// <param name="encoding">encoding to use, 0=Latin (default), 1=Greek, 2=Cyrillic.</param>
+        /// <returns>length of text.</returns>
+        /// <exception cref="Exception"></exception>
+        public static float GetTextLength(string text, string fontname = "helv", float fontsize = 11, int encoding = 0)
+        {
+            fontname = fontname.ToLower();
+            string basename = Utils.Base14_fontdict.GetValueOrDefault(fontname, null);
+
+            List<(int, double)> glyphs = new List<(int, double)>();
+            if (basename == "Symbol")
+                glyphs = Utils.symbol_glyphs;
+            if (basename == "ZapfDingbats")
+                glyphs = Utils.zapf_glyphs;
+            if (glyphs.Count != 0)
+            {
+                float w = 0f;
+                foreach (char c in text)
+                {
+                    int cInt = Convert.ToInt32(c);
+                    w += (float)((Convert.ToInt32(c)) < 256 ? glyphs[cInt].Item2 : glyphs[183].Item2);
+                }
+                return w * fontsize;
+            }
+
+            if (Utils.Base14_fontdict.Keys.Contains(fontname))
+                return Utils.MeasureString(text, fontname, fontsize, encoding);
+            if ((new string[] { "china-t", "china-s", "china-ts", "china-ss", "japan", "japan-s", "korea", "korea-s" }).Contains(fontname))
+                return text.Length * fontsize;
+            throw new Exception($"Font {fontname} is unsupported");
+        }
+
+        public static float MeasureString(string text, string fontname, float fontsize, int encoding)
+        {
+            FzFont font = mupdf.mupdf.fz_new_base14_font(fontname);
+            float w = 0;
+            int pos = 0;
+            while (pos < text.Length)
+            {
+                ll_fz_chartorune_outparams o = new ll_fz_chartorune_outparams();
+                int t = mupdf.mupdf.ll_fz_chartorune_outparams_fn(text.Substring(pos, text.Length - pos), o);
+                int c = o.rune;
+                pos += t;
+                if (encoding == (int)SimpleEncoding.PDF_SIMPLE_ENCODING_GREEK)
+                    c = mupdf.mupdf.fz_iso8859_7_from_unicode(c);
+                else if (encoding == (int)SimpleEncoding.PDF_SIMPLE_ENCODING_CYRILLIC)
+                    c = mupdf.mupdf.fz_windows_1251_from_unicode(c);
+                else
+                    c = mupdf.mupdf.fz_windows_1252_from_unicode(c);
+                if (c < 0)
+                    c = 0xB7;
+                int g = font.fz_encode_character(c);
+                float dw = font.fz_advance_glyph(g, 0);
+                w += dw;
+            }
+            float ret = w * fontsize;
+            return ret;
         }
     }
 }

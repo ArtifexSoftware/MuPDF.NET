@@ -6,12 +6,12 @@ using System.Threading.Tasks;
 
 namespace MuPDF.NET
 {
-    public class AnnotXref
+    public enum SimpleEncoding
     {
-        public string Id { get; set; }
+        PDF_SIMPLE_ENCODING_LATIN,
 
-        public int Xref { get; set; }
+        PDF_SIMPLE_ENCODING_GREEK,
 
-        public PdfAnnotType AnnotType { get; set; }
+        PDF_SIMPLE_ENCODING_CYRILLIC
     }
 }

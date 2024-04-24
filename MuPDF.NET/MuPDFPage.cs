@@ -11,7 +11,7 @@ namespace MuPDF.NET
 
         private PdfPage _pdfPage;
 
-        public MuPDFDocument Parent;
+        public MuPDFDocument Parent { get; set; }
 
         private static FitResult fit;
 
@@ -37,7 +37,7 @@ namespace MuPDF.NET
 
         public bool ThisOwn { get; set; }
 
-        public bool WasWrapped = false;
+        public bool WasWrapped { get; set; }
 
         public Point MediaBoxSize
         {
@@ -215,7 +215,7 @@ namespace MuPDF.NET
             {
                 PdfPage page = _pdfPage;
                 if (page == null)
-                    return new Matrix();// new FzRect(FzRect.Fixed.Fixed_UNIT));//issue
+                    return new Matrix(new Rect(new FzRect(FzRect.Fixed.Fixed_UNIT)));
                 return new Matrix(Utils.DerotatePageMatrix(page));
             }
         }
@@ -233,6 +233,17 @@ namespace MuPDF.NET
 
                 MuPDFAnnot ret = new MuPDFAnnot(annot);
                 return ret;
+            }
+        }
+
+        /// <summary>
+        /// Reflects page rotation.
+        /// </summary>
+        public Matrix RotationMatrix
+        {
+            get
+            {
+                return Utils.GetRotateMatrix(this);
             }
         }
 
@@ -1112,15 +1123,127 @@ namespace MuPDF.NET
             return new MuPDFAnnot(annot);
         }
 
-        public int ApplyRedactions(int images)
+        /// <summary>
+        /// Apply the redaction annotations of the page.
+        /// </summary>
+        /// <param name="images"></param>
+        /// <param name="graphics"></param>
+        /// <param name="text"></param>
+        /// <returns></returns>
+        private int _ApplyRedactions(int text = 0, int images = 2, int graphics = 1)
         {
             PdfPage page = _pdfPage;
             PdfRedactOptions opts = new PdfRedactOptions();
             opts.black_boxes = 0;
             opts.image_method = images;
+            opts.line_art = graphics;
+            // opts.m // issue
             int success = page.doc().pdf_redact_page(page, opts);
 
             return success;
+        }
+
+        /// <summary>
+        /// Apply the redaction annotations of the page.
+        /// </summary>
+        /// <param name="images">
+        /// 0 - ignore images
+        /// 1 - remove all overlapping images
+        /// 2 - blank out overlapping image parts
+        /// 3 - remove image unless invisible
+        /// </param>
+        /// <param name="graphics">
+        /// 0 - ignore graphics
+        /// 1 - remove graphics if contained in rectangle
+        /// 2 - remove all overlapping graphics
+        /// </param>
+        /// <param name="text">
+        /// 0 - remove text
+        /// 1 - ignore text
+        /// </param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        public bool ApplyRedactions(int images = 2, int graphics = 1, int text = 0)
+        {
+            Rect CenterRect(Rect annotRect, string newText, string fname, float fsize)
+            {
+                if (string.IsNullOrEmpty(newText))
+                    return annotRect;
+                float textWidth = 0f;
+                try
+                {
+                    textWidth = Utils.GetTextLength(newText, fname, fsize);
+                }
+                catch (Exception)
+                {
+                    return annotRect;
+                }
+
+                float lineHeight = fsize * 1.2f;
+                float limit = annotRect.Width;
+                float h = (float)Math.Ceiling(textWidth / limit) * lineHeight;
+                if (h >= annotRect.Height)
+                    return annotRect;
+
+                Rect r = annotRect;
+                float y = (annotRect.TopLeft.Y + annotRect.BottomLeft.Y) * 0.5f;
+                r.Y0 = y;
+                return r;
+            }
+
+            MuPDFDocument doc = Parent;
+            if (doc.IsEncrypted || doc.IsClosed)
+                throw new Exception("document is closed or encrypted");
+            if (!doc.IsPDF)
+                throw new Exception("is no PDF");
+
+            List<Annot> redactAnnots = new List<Annot>();
+            foreach (MuPDFAnnot annot in GetAnnots(new List<PdfAnnotType>() { PdfAnnotType.PDF_ANNOT_REDACT }))
+                redactAnnots.Add(annot.GetRedactVaues());
+            Console.WriteLine(redactAnnots.Count);
+            if (redactAnnots.Count == 0)
+                return false;
+            int res = _ApplyRedactions(text, images, graphics);
+            if (res == 0)
+                throw new Exception("Error applying redactions");
+
+            Shape shape = NewShape();
+            foreach (Annot redact in redactAnnots)
+            {
+                Rect annotRect = redact.Rect;
+                float[] fill = redact.Fill;
+                if (fill != null)
+                {
+                    shape.DrawRect(annotRect);
+                    shape.Finish(fill: fill, color: fill);
+                }
+
+                if (string.IsNullOrEmpty(redact.Text))
+                {
+                    string newText = redact.Text;
+                    int align = redact.Align;
+                    string fname = redact.FontName;
+                    float fsize = redact.FontSize;
+                    float[] color = redact.TextColor;
+                    Rect trect = CenterRect(annotRect, newText, fname, fsize);
+
+                    float ret = -1f;
+                    while (ret < 0 && fsize >= 4)
+                    {
+                        ret = shape.InsertTextbox(
+                            trect,
+                            newText,
+                            fontName: fname,
+                            fontSize: fsize,
+                            color: color,
+                            align: align
+                            );
+                        fsize -= 0.5f;
+                    }
+                }
+            }
+            shape.Commit();
+            return true;
         }
 
         private void ResetAnnotRefs()
@@ -1177,7 +1300,7 @@ namespace MuPDF.NET
             if (xref == 0 && (string.IsNullOrEmpty(filename) ? 0 : 1) + (stream == null ? 0 : 1) + (pixmap == null ? 0 : 1) != 1)
                 throw new Exception("xref=0 needs exactly one of filename, pixmap, stream");
 
-            if (!File.Exists(filename))
+            if (filename != null && !File.Exists(filename))
                 throw new Exception($"No such file: {filename}");
             else if (mask != null && (stream == null || string.IsNullOrEmpty(filename)))
                 throw new Exception("mask requires stream or filename");
@@ -1209,12 +1332,16 @@ namespace MuPDF.NET
             
             string n = "fzImg";
             int j = 0;
+
             string imgName = n + "0";
-            while (iList.Contains(imgName))
-            {
-                j += 1;
-                imgName = n + $"{j}";
-            }
+            if (string.IsNullOrEmpty(imageName))
+                while (iList.Contains(imgName))
+                {
+                    j += 1;
+                    imgName = n + $"{j}";
+                }
+            else
+                imgName = imageName;
 
             Dictionary<string, int> digests = doc.InsertedImages;
 
@@ -1237,7 +1364,7 @@ namespace MuPDF.NET
             FzImage maskImage = null;
             byte[] md5 = null;
             PdfObj ref_ = new PdfObj();
-
+            
             if (xref > 0)
             {
                 PdfObj refer = pdf.pdf_new_indirect(xref, 0);
@@ -1245,7 +1372,9 @@ namespace MuPDF.NET
                 h = refer.pdf_dict_geta(new PdfObj("Height"), new PdfObj("H")).pdf_to_int();
 
                 if (w + h == 0)
+                {
                     throw new Exception(Utils.ErrorMessages["MSG_IS_NO_IMAGE"]);
+                }
 
                 do_process_pixmap = 0;
                 do_process_stream = 0;
@@ -1268,14 +1397,15 @@ namespace MuPDF.NET
                     }
                 }
             }
-
+            
             if (do_process_pixmap != 0)
             {
                 FzPixmap argPix = pixmap.ToFzPixmap();
                 w = argPix.w();
                 h = argPix.h();
                 vectoruc digest = argPix.fz_md5_pixmap2();
-                int temp = digests.GetValueOrDefault(Encoding.UTF8.GetString(digest.ToArray()), -1);
+                md5 = digest.ToArray();
+                int temp = digests.GetValueOrDefault(Encoding.UTF8.GetString(md5), -1);
                 if (temp != -1)
                 {
                     imgXRef = temp;
@@ -1306,7 +1436,7 @@ namespace MuPDF.NET
                     do_have_imask = 0;
                 }
             }
-
+            
             if (do_process_stream != 0)
             {
                 FzMd5 state = new FzMd5();
@@ -1371,7 +1501,7 @@ namespace MuPDF.NET
                 if (oc != 0)
                     Utils.AddOcObject(pdf, ref_, oc);
                 imgXRef = ref_.pdf_to_num();
-                digests[Encoding.UTF8.GetString(md5)] = imgXRef;
+                digests.Add(Encoding.UTF8.GetString(md5), imgXRef);
                 rcDigest = 1;
             }
 
@@ -1384,9 +1514,10 @@ namespace MuPDF.NET
                 if (xobject.m_internal == null)
                     xobject = resources.pdf_dict_put_dict(new PdfObj("XObject"), 2);
                 FzMatrix mat = Utils.CalcImageMatrix(w, h, clip, rotate, keepProportion != 0);
-                xobject.pdf_dict_puts(imageName, ref_);
+
+                xobject.pdf_dict_puts(imgName, ref_);
                 FzBuffer nres = mupdf.mupdf.fz_new_buffer(50);
-                nres.fz_append_string(string.Format(template, mat.a, mat.b, mat.c, mat.d, mat.e, mat.f, imageName));
+                nres.fz_append_string(string.Format(template, mat.a, mat.b, mat.c, mat.d, mat.e, mat.f, imgName));
                 Utils.InsertContents(pdf, page.obj(), nres, overlay);
             }
 
@@ -1617,7 +1748,7 @@ namespace MuPDF.NET
             {
                 iList.Add(res[i].RefName);
             }
-            Console.WriteLine(doc.GetPageFonts(Number).Count);
+            
             res = doc.GetPageImages(Number);
             for (i = 0; i < res.Count; i++)
             {
@@ -1791,14 +1922,6 @@ namespace MuPDF.NET
                 catch (Exception) { }
             }
 
-            /*if (fontName.ToLower())//issue
-            {
-
-            }*/
-            /*if (fontFile == null)
-            {
-                throw new Exception("bad fontfile");
-            }*/
             Font val = _InsertFont(fontName, bfName, fontFile, fontBuffer, setSimple, idx,
                 wmode, serif, encoding, CJK_number);
 
@@ -2088,7 +2211,7 @@ namespace MuPDF.NET
                     var linkObj = AnnotRefs[0];// MuPDFAnnotation or Link, Widget
                     linkObj.Erase();
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     // pass
                 }
@@ -2181,7 +2304,7 @@ namespace MuPDF.NET
             return rc;
         }
 
-        public List<Dictionary<string, dynamic>> GetCDrawings(bool extended = false) // not complete
+        public List<PathInfo> GetDrawings(bool extended = false)
         {
             int oldRotation = Rotation;
             if (oldRotation != 0)
@@ -2191,7 +2314,7 @@ namespace MuPDF.NET
             bool clips = extended ? true : false;
             FzRect prect = page.fz_bound_page();
 
-            List<Dictionary<string, dynamic>> rc = new List<Dictionary<string, dynamic>>();
+            List<PathInfo> rc = new List<PathInfo>();
             LineartDevice dev = new LineartDevice(rc, clips);
 
             dev.Ptm = new FzMatrix(1, 0, 0, -1, 0, prect.y1);
@@ -2201,17 +2324,6 @@ namespace MuPDF.NET
             if (oldRotation != 0)
                 SetRotation(oldRotation);
             return rc;
-        }
-
-        public void GetDrawings(bool extended = false) // not complete
-        {
-            List<string> allkeys = new List<string>() { "closePath", "fill", "color", "width", "lineCap", "lineJoin", "dashes", "stroke_opacity", "fill_opacity", "even_odd" };
-            List<Dictionary<string, dynamic>> val = GetCDrawings(extended);
-
-            /*foreach (Dictionary<string, dynamic> npath in val)
-            {
-                if (npath["Type"].StartsWith)
-            }*/
         }
 
         public void GetImageBbox(string name, bool transform = false)
@@ -2894,7 +3006,7 @@ namespace MuPDF.NET
                 float zoom = dpi / 72.0f;
                 Matrix mat = new Matrix(zoom, zoom);
                 Pixmap pix = page.GetPixmap(matrix: (IdentityMatrix)mat);
-                MuPDFDocument ocrPdf = new MuPDFDocument("pdf", pix.PdfOcr2Bytes(0, language, tessdata));
+                MuPDFDocument ocrPdf = new MuPDFDocument("pdf", pix.PdfOCR2Bytes(true, language, tessdata));
 
                 MuPDFPage ocrPage = ocrPdf.LoadPage(0);
                 float unZoom = page.Rect.Width / ocrPage.Rect.Width;
@@ -2926,7 +3038,7 @@ namespace MuPDF.NET
                         pix = new Pixmap(pix, 0);
                     MuPDFDocument imgDoc = new MuPDFDocument(
                         "pdf",
-                        pix.PdfOcr2Bytes(language: language, tessdata: tessdata)
+                        pix.PdfOCR2Bytes(language: language, tessdata: tessdata)
                         );
                     MuPDFPage imgPage = imgDoc.LoadPage(0);
                     pix = null;
@@ -3056,6 +3168,74 @@ namespace MuPDF.NET
             return annot_;
         }
 
+        /// <summary>
+        /// Join rectangles of neighboring vector graphic items.
+        /// </summary>
+        /// <param name="clip">optional rect-like to restrict the page area to consider.</param>
+        /// <param name="drawings">(optional) output of a previous "get_drawings()".</param>
+        /// <param name="xTolerance">horizontal neighborhood threshold.</param>
+        /// <param name="yTolerance">vertical neighborhood threshold.</param>
+        /// <returns></returns>
+        public List<Rect> ClusterDrawings(Rect clip = null, List<PathInfo> drawings = null, float xTolerance = 3f, float yTolerance = 3f)
+        {
+            Rect pArea = Rect;
+            if (clip != null)
+                pArea = new Rect(clip);
+
+            float deltaX = xTolerance;
+            float deltaY = yTolerance;
+            if (drawings == null)
+                drawings = GetDrawings();
+
+            bool AreNeighbors(Rect r1, Rect r2)
+            {
+                float rr1_X0, rr1_X1, rr1_Y0, rr1_Y1, rr2_X0, rr2_X1, rr2_Y0, rr2_Y1;
+                (rr1_X0, rr1_X1) = (r1.X1 > r1.X0) ? (r1.X0, r1.X1) : (r1.X1, r1.X0);
+                (rr1_Y0, rr1_Y1) = (r1.Y1 > r1.Y0) ? (r1.Y0, r1.Y1) : (r1.Y1, r1.Y0);
+                (rr2_X0, rr2_X1) = (r2.X1 > r2.X0) ? (r2.X0, r2.X1) : (r2.X1, r2.X0);
+                (rr2_Y0, rr2_Y1) = (r2.Y1 > r2.Y0) ? (r2.Y0, r2.Y1) : (r2.Y1, r2.Y0);
+
+                if ((rr1_X1 < rr2_X0 - deltaX) || (rr1_X0 > rr2_X1 + deltaX)
+                    || (rr1_Y1 < rr2_Y0 - deltaY) || (rr1_Y0 > rr2_Y1 + deltaY))
+                    return false;
+                else 
+                    return true;
+            }
+
+            List<Rect> pRects = drawings.Where(p =>
+                    (p.Rect.X0 >= pArea.X0)
+                    && (p.Rect.X1 <= pArea.X1)
+                    && (p.Rect.Y0 >= pArea.Y0)
+                    && (p.Rect.Y1 <= pArea.Y1)).OrderBy(p => p.Rect.Y1).ThenBy(p => p.Rect.X0).Select(p => p.Rect).ToList();
+            
+            List<Rect> newRects= new List<Rect>();
+
+            while (pRects.Count > 0)
+            {
+                Rect r = pRects[0];
+                bool repeat = true;
+                while (repeat)
+                {
+                    repeat = false;
+                    for (int i = pRects.Count - 1; i > 0; i--)
+                    {
+                        if (AreNeighbors(pRects[i], r))
+                        {
+                            r = r | pRects[i].TopLeft;
+                            r = r | pRects[i].BottomRight;
+                            pRects.RemoveAt(i);
+                            repeat = true;
+                        }
+                    }
+                }
+                newRects.Add(r);
+                pRects.RemoveAt(0);
+                pRects = pRects.OrderBy(p => p.Y1).ThenBy(p => p.X0).ToList();
+            }
+            newRects = newRects.OrderBy(p => p.Y1).ThenBy(p => p.X0).ToList();
+            return newRects.Where(r => r.Width > deltaX && r.Height > deltaY).ToList();
+        }
+
         public void Dispose()
         {
             _pdfPage.Dispose();
@@ -3064,9 +3244,9 @@ namespace MuPDF.NET
 
     public class BoxDevice : FzDevice2
     {
-        public List<Rect> rc;
+        public List<Rect> rc { get; set; }
 
-        public bool layers;
+        public bool layers { get; set; }
         public BoxDevice(List<Rect> rc, bool layers) : base()
         {
             this.rc = rc;
@@ -3090,28 +3270,28 @@ namespace MuPDF.NET
 
     public class LineartDevice : FzDevice2
     {
-        public int SeqNo;
-        public int Depth;
-        public bool Clips;
-        public int Method;
+        public int SeqNo { get; set; }
+        public int Depth { get; set; }
+        public bool Clips { get; set; }
+        public int Method { get; set; }
 
-        public Dictionary<string, dynamic> PathDict;
-        public List<FzRect> Scissors;
-        public int LineWidth;
-        public FzMatrix Ptm;
-        public FzMatrix Ctm;
-        public FzMatrix Rot;
+        public PathInfo PathDict { get; set; }
+        public List<FzRect> Scissors { get; set; }
+        public int LineWidth { get; set; }
+        public FzMatrix Ptm { get; set; }
+        public FzMatrix Ctm { get; set; }
+        public FzMatrix Rot { get; set; }
 
-        public FzPoint LastPoint;
-        public FzRect PathRect;
-        public float PathFactor;
-        public int LineCount;
-        public int PathType;
-        public string LayerName;
+        public FzPoint LastPoint { get; set; }
+        public FzRect PathRect { get; set; }
+        public float PathFactor { get; set; }
+        public int LineCount { get; set; }
+        public int PathType { get; set; }
+        public string LayerName { get; set; }
 
-        public List<Dictionary<string, dynamic>> Out;
+        public List<PathInfo> Out { get; set; }
 
-        public LineartDevice(List<Dictionary<string, dynamic>> rc, bool clips) : base()
+        public LineartDevice(List<PathInfo> rc, bool clips) : base()
         {
             use_virtual_fill_path();
             use_virtual_stroke_path();
@@ -3145,7 +3325,7 @@ namespace MuPDF.NET
             Method = 0;
             Out = rc;
 
-            PathDict = new Dictionary<string, dynamic>();
+            PathDict = new PathInfo();
             Scissors = new List<FzRect>();
             LineWidth = 0;
             Ptm = new FzMatrix();
@@ -3170,14 +3350,13 @@ namespace MuPDF.NET
             if (PathDict == null)
                 return;
 
-            PathDict["type"] = "clip";
-            PathDict["even_odd"] = Convert.ToBoolean(arg_3);
-            if (!PathDict.Keys.Contains("closePath"))
-                PathDict["closePath"] = false;
+            PathDict.Type = "clip";
+            PathDict.EvenOdd = Convert.ToBoolean(arg_3);
+            PathDict.ClosePath = false;
 
-            PathDict["scissor"] = Utils.ComputerScissor(this);
-            PathDict["level"] = Depth;
-            PathDict["layer"] = LayerName;
+            PathDict.Scissor = new Rect(Utils.ComputerScissor(this));
+            PathDict.Level = Depth;
+            PathDict.Layer = LayerName;
             AppendMerge();
             Depth += 1;
         }
@@ -3193,15 +3372,14 @@ namespace MuPDF.NET
             LineartPath(ctx, path);
             if (PathDict == null)
                 return;
-            PathDict["type"] = "s";
-            PathDict["stroke_opacity"] = alpha;
-            PathDict["color"] = LineartColor(cs, color);
-            PathDict["width"] = PathFactor * stroke.linewidth;
-            PathDict["lineCap"] = new List<fz_linecap>() { stroke.start_cap, stroke.dash_cap, stroke.end_cap };
-            PathDict["lineJoin"] = PathFactor * (int)stroke.linejoin;
+            PathDict.Type = "s";
+            PathDict.StrokeOpacity = alpha;
+            PathDict.Color = LineartColor(cs, color);
+            PathDict.Width = PathFactor * stroke.linewidth;
+            PathDict.LineCap = new List<LineCapType>() { (LineCapType)stroke.start_cap, (LineCapType)stroke.dash_cap, (LineCapType)stroke.end_cap };
+            PathDict.LineJoin = PathFactor * (int)stroke.linejoin;
 
-            if (!PathDict.Keys.Contains("closePath"))
-                PathDict.Add("closePath", false);
+            PathDict.ClosePath = false;
 
             if (stroke.dash_len != 0)
             {
@@ -3213,15 +3391,15 @@ namespace MuPDF.NET
                     buff.fz_append_string($"{PathFactor * value} ");
                 }
                 buff.fz_append_string($"] {PathFactor * stroke.dash_phase}");
-                PathDict["dashes"] = buff;
+                PathDict.Dashes = Encoding.UTF8.GetString(Utils.BinFromBuffer(buff));
             }
             else
-                PathDict["dashes"] = "[] 0";
-            PathDict["rect"] = PathRect;
-            PathDict["layer"] = LayerName;
-            PathDict["seqno"] = SeqNo;
+                PathDict.Dashes = "[] 0";
+            PathDict.Rect = new Rect(PathRect);
+            PathDict.Layer = LayerName;
+            PathDict.SeqNo = SeqNo;
             if (Clips)
-                PathDict["level"] = Depth;
+                PathDict.Level = Depth;
             AppendMerge();
             SeqNo += 1;
         }
@@ -3237,15 +3415,16 @@ namespace MuPDF.NET
                 if (PathDict == null)
                     return;
 
-                PathDict["type"] = "f";
-                PathDict["even_odd"] = bEvenOdoo;
-                PathDict["fill_opacity"] = alpha;
-                PathDict["fill"] = LineartColor(cs, color);
-                PathDict["rect"] = PathRect;
-                PathDict["seqno"] = SeqNo;
-                PathDict["layer"] = LayerName;
+                PathDict.Type = "f";
+                PathDict.EvenOdd = bEvenOdoo;
+                PathDict.FillOpacity = alpha;
+                PathDict.Fill = LineartColor(cs, color);
+                PathDict.Rect = new Rect(PathRect);
+                PathDict.SeqNo = SeqNo;
+                PathDict.Layer = LayerName;
+                
                 if (Clips)
-                    PathDict["level"] = Depth;
+                    PathDict.Level = Depth;
 
                 AppendMerge();
                 SeqNo += 1;
@@ -3273,13 +3452,12 @@ namespace MuPDF.NET
             if (PathDict == null)
                 return;
 
-            PathDict["type"] = "clip";
-            PathDict["evenOdd"] = null;
-            if (!PathDict.Keys.Contains("closePath"))
-                PathDict["closePath"] = false;
-            PathDict["scissor"] = Utils.ComputerScissor(this);
-            PathDict["level"] = Depth;
-            PathDict["layer"] = LayerName;
+            PathDict.Type = "clip";
+            PathDict.EvenOdd = false;
+            PathDict.ClosePath = false;
+            PathDict.Scissor = new Rect(Utils.ComputerScissor(this));
+            PathDict.Level = Depth;
+            PathDict.Layer = LayerName;
             AppendMerge();
             Depth += 1;
         }
@@ -3345,17 +3523,18 @@ namespace MuPDF.NET
         {
             if (!Clips)
                 return;
-            PathDict = new Dictionary<string, dynamic>
+            PathDict = new PathInfo()
             {
-                {"type", "group" },
-                {"rect",  bbox},
-                {"isolated", Convert.ToBoolean(isolated) },
-                {"knockout", Convert.ToBoolean(knockout) },
-                {"blendmode", mupdf.mupdf.fz_blendmode_name(blendmode)},
-                {"opacity", alpha },
-                {"level", Depth },
-                {"layer", LayerName }
+                Type = "group",
+                Rect = new Rect(new FzRect(bbox)),
+                Isolated = Convert.ToBoolean(isolated),
+                Knockout = Convert.ToBoolean(knockout),
+                BlendMode = mupdf.mupdf.fz_blendmode_name(blendmode),
+                Opacity = alpha,
+                Level = Depth,
+                Layer = LayerName
             };
+            
             AppendMerge();
             Depth += 1;
         }
@@ -3394,7 +3573,7 @@ namespace MuPDF.NET
                     mupdf.mupdf.ll_fz_convert_color(colorSpace, color, cs.m_internal, swigColor, null, cp.internal_());
 
                     float[] ret = new float[3];
-                    Marshal.Copy(pColor, ret, 0, 3);
+                    Marshal.Copy(SWIGTYPE_p_float.getCPtr(swigColor).Handle, ret, 0, 3);
                     Marshal.FreeHGlobal(pColor);
 
                     return ret;
@@ -3411,15 +3590,17 @@ namespace MuPDF.NET
                 PathRect = new FzRect(FzRect.Fixed.Fixed_INFINITE);
                 LineCount = 0;
                 LastPoint = new FzPoint(0, 0);
-                PathDict = new Dictionary<string, dynamic>();
+                PathDict = new PathInfo();
+                PathDict.Items = new List<Item>();
 
                 Walker walker = new Walker(this);
 
                 FzPathWalker pathWalker = new FzPathWalker(walker.m_internal);
+                SWIGTYPE_p_void swigArg = new SWIGTYPE_p_void(fz_path_walker.getCPtr(walker.m_internal).Handle, true);
 
-                //mupdf.mupdf.fz_walk_path(new FzPath(mupdf.mupdf.ll_fz_keep_path(path)), pathWalker,  ); //issue
+                mupdf.mupdf.fz_walk_path(new FzPath(mupdf.mupdf.ll_fz_keep_path(path)), pathWalker, swigArg);
 
-                if (PathDict.GetValueOrDefault("items", null) == null)
+                if (PathDict.Items.Count == 0)
                     PathDict = null;
             }
             catch (Exception e)
@@ -3432,8 +3613,8 @@ namespace MuPDF.NET
         {
             void Append()
             {
-                this.Out.Add(PathDict.ToDictionary(entry => entry.Key, entry => entry.Value)); // copy key & value
-                PathDict.Clear();
+                this.Out.Add(PathDict); // copy key & value
+                PathDict = null;
             }
 
             int len = Out.Count;
@@ -3443,23 +3624,23 @@ namespace MuPDF.NET
                 return;
             }
 
-            string type = PathDict["type"];
+            string type = PathDict.Type;
             if (type != "s")
             {
                 Append();
                 return;
             }
 
-            Dictionary<string, dynamic> prev = Out[Out.Count - 1];
-            string prevType = prev["type"];
+            PathInfo prev = Out[Out.Count - 1];
+            string prevType = prev.Type;
 
             if (prevType != "f")
             {
                 Append();
                 return;
             }
-            List<dynamic> prevItems = prev["items"];
-            List<dynamic> thisItems = PathDict["items"];
+            List<Item> prevItems = prev.Items;
+            List<Item> thisItems = PathDict.Items;
             if (!Enumerable.SequenceEqual(prevItems, thisItems))
             {
                 Append();
@@ -3469,13 +3650,7 @@ namespace MuPDF.NET
             int rc;
             try
             {
-                foreach ((string k, var v) in PathDict)
-                {
-                    if (prev.Keys.Contains(k))
-                    {
-                        prev[k] = v;
-                    }
-                }
+                prev = new PathInfo(PathDict);
                 rc = 0;
             }
             catch (Exception)
@@ -3485,8 +3660,8 @@ namespace MuPDF.NET
 
             if (rc == 0)
             {
-                prev["type"] = "fs";
-                PathDict.Clear();
+                prev.Type = "fs";
+                PathDict = null;
             }
             else
             {
@@ -3518,7 +3693,7 @@ namespace MuPDF.NET
                 if (Dev.LineCount == 3)
                     if (Utils.CheckRect(Dev) != 0)
                         return;
-                Dev.PathDict["closePath"] = true;
+                Dev.PathDict.ClosePath = true;
                 Dev.LineCount = 0;
             }
             catch (Exception)
@@ -3542,11 +3717,10 @@ namespace MuPDF.NET
                 Dev.PathRect = mupdf.mupdf.fz_include_point_in_rect(Dev.PathRect, p2);
                 Dev.PathRect = mupdf.mupdf.fz_include_point_in_rect(Dev.PathRect, p3);
 
-                List<dynamic> list = new List<dynamic>()
-                { "c", Dev.LastPoint, p1, p2, p3};
+                Item curve = new Item() { Type = "c", LastPoint = new Point(Dev.LastPoint), P1 = new Point(p1), P2 = new Point(p2), P3 = new Point(p3)};
 
                 Dev.LastPoint = p3;
-                Dev.PathDict["items"].Add(list);
+                Dev.PathDict.Items.Add(curve);
             }
             catch (Exception ex)
             {
@@ -3560,11 +3734,12 @@ namespace MuPDF.NET
             {
                 FzPoint p1 = mupdf.mupdf.fz_transform_point(mupdf.mupdf.fz_make_point(x, y), Dev.Ctm);
                 Dev.PathRect = mupdf.mupdf.fz_include_point_in_rect(Dev.PathRect, p1);
-                List<dynamic> list = new List<dynamic>() { "l", Dev.LastPoint, p1 };
+                Item line = new Item() { Type = "l", LastPoint = new Point(Dev.LastPoint), P1 = new Point(p1) };
 
                 Dev.LastPoint = p1;
-                var items = Dev.PathDict["items"];
-                items.Add(list);
+
+                List<Item> items = Dev.PathDict.Items;
+                items.Add(line);
                 Dev.LineCount += 1;
                 if (Dev.LineCount == 4 && Dev.PathType != Utils.trace_device_FILL_PATH)
                     Utils.CheckQuad(Dev);

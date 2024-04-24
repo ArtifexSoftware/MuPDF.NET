@@ -4,10 +4,10 @@ namespace MuPDF.NET
 {
     public class Char
     {
-        public FzPoint Origin;
+        public FzPoint Origin { get; set; }
 
-        public FzRect Bbox;
+        public FzRect Bbox { get; set; }
 
-        public char C;
+        public char C { get; set; }
     }
 }

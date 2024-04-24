@@ -1,4 +1,4 @@
-﻿using Microsoft.Maui.Graphics;
+﻿using Microsoft.Maui.Platform;
 using mupdf;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
@@ -8,29 +8,29 @@ namespace MuPDF.NET
 {
     public class MuPDFDocument : IDisposable
     {
-        public bool IsClosed = false;
+        public bool IsClosed { get; set; }
 
-        public bool IsEncrypted = false;
+        public bool IsEncrypted { get; set; }
 
-        public bool Is_Encrypted;
+        public bool Is_Encrypted { get; set; }
 
-        public int GraftID;
+        public int GraftID { get; set; }
 
-        public Dictionary<string, string> MetaData;
+        public Dictionary<string, string> MetaData { get; set; }
 
-        public List<Font> FontInfos = new List<Font>();
+        public List<Font> FontInfos { get; set; }
 
-        public Dictionary<int, MuPDFGraftMap> GraftMaps = new Dictionary<int, MuPDFGraftMap>();
+        public Dictionary<int, MuPDFGraftMap> GraftMaps { get; set; }
 
-        public Dictionary<(int, int), int> ShownPages = new Dictionary<(int, int), int>();
+        public Dictionary<(int, int), int> ShownPages { get; set; }
 
-        public Dictionary<string, int> InsertedImages = new Dictionary<string, int> ();
+        public Dictionary<string, int> InsertedImages { get; set; } = new Dictionary<string, int>();
 
-        public Dictionary<int, MuPDFPage> PageRefs;
+        public Dictionary<int, MuPDFPage> PageRefs { get; set; }
 
-        public string Name = null;
+        public string Name { get; set; }
 
-        public List<byte> Stream;
+        public List<byte> Stream { get; set; }
 
         private bool _isPDF;
 
@@ -80,6 +80,16 @@ namespace MuPDF.NET
                     return false;
                 int r = pdf.pdf_has_unsaved_changes();
                 return r != 0;
+            }
+        }
+
+        public int ChapterCount
+        {
+            get
+            {
+                if (IsClosed)
+                    throw new Exception("document closed");
+                return _nativeDocument.fz_count_chapters();
             }
         }
 
@@ -791,10 +801,7 @@ namespace MuPDF.NET
         {
             if (IsClosed || IsEncrypted)
                 throw new Exception("document is closed or encrypted");
-            if (filename is string)
-            {
-                //do something
-            }
+
             if (Len < 1)
                 throw new Exception("cannot save with zero pages");
             if ((userPW != null && userPW.Length > 40) || (ownerPW != null && ownerPW.Length > 40))
@@ -827,9 +834,6 @@ namespace MuPDF.NET
             FzOutput output = null;
             pdf.m_internal.resynth_required = 0;
             Utils.EmbeddedClean(pdf);
-
-            /*if (noNewId == 0)
-                Utils.EnsureIdentity();*/
 
             if (filename is string)
                 pdf.pdf_save_document(filename, opts);
@@ -865,7 +869,7 @@ namespace MuPDF.NET
             return rc;
         }
 
-        public void ResetPageRefs()
+        private void ResetPageRefs()
         {
             if (IsClosed)
                 return;
@@ -1041,7 +1045,7 @@ namespace MuPDF.NET
             PdfObj type = obj.pdf_dict_get(new PdfObj("Type"));
             PdfObj subType = obj.pdf_dict_get(new PdfObj("Subtype"));
 
-            if (type.pdf_name_eq(new PdfObj("Font")) != 0 && !subType.pdf_to_name().StartsWith("CIDFontType"))
+            if (type.pdf_name_eq(new PdfObj("Font")) != 0 && !subType.pdf_to_name().StartsWith("CIDFontType")) // matched
             {
                 PdfObj bName = null;
                 PdfObj baseFont = obj.pdf_dict_get(new PdfObj("BaseFont"));
@@ -1196,11 +1200,11 @@ namespace MuPDF.NET
         /// <param name="simple">a bool to control output.</param>
         /// <returns>Returns a list, where each entry consists of outline level, title, page number and link destination (if simple = False). For details see PyMuPDF's documentation.</returns>
         /// <exception cref="Exception"></exception>
-        public List<List<dynamic>> GetToc(bool simple = true)
+        public List<Toc> GetToc(bool simple = true)
         {
-            List<List<dynamic>> Recurse(Outline olItem, List<List<dynamic>> list, int lvl)
+            List<Toc> Recurse(Outline olItem, List<Toc> list, int lvl)
             {
-                while (olItem != null)
+                while (olItem != null && olItem.ToFzOutline().m_internal != null)
                 {
                     string title = "";
                     int page = -1;
@@ -1214,7 +1218,7 @@ namespace MuPDF.NET
                             if (olItem.Page == -1)
                             {
                                 (dynamic, float, float) resolve = ResolveLink(olItem.Uri);
-                                page = resolve.Item1 + 1;
+                                page = resolve.Item1 + 1;// if page is -1, resolve's first is int, not List<int>
                             }
                             else
                                 page = olItem.Page + 1;
@@ -1228,10 +1232,10 @@ namespace MuPDF.NET
                     if (!simple)
                     {
                         Link link = Utils.GetLinkDict(olItem, this);
-                        list.Add(new List<dynamic>() { lvl, title, page, link });
+                        list.Add(new Toc() { Level = lvl, Title = title, Page = page, Link = link });
                     }
                     else
-                        list.Add(new List<dynamic>() { lvl, title, page });
+                        list.Add(new Toc() { Level = lvl, Title = title, Page = page });
 
                     if (olItem.Down != null)
                         list = Recurse(olItem.Down, list, lvl + 1);
@@ -1246,11 +1250,11 @@ namespace MuPDF.NET
             InitDocument();
             Outline olItem = Outline;
             if (olItem == null)
-                return null;
+                return new List<Toc>();
 
             int lvl = 1;
-            List<List<dynamic>> liste = new List<List<dynamic>>();
-            List<List<dynamic>> toc = Recurse(olItem, liste, lvl);
+            List<Toc> liste = new List<Toc>();
+            List<Toc> toc = Recurse(olItem, liste, lvl);
 
             if (IsPDF && simple == false)
                 ExtendTocItems(toc);
@@ -1264,7 +1268,7 @@ namespace MuPDF.NET
         /// <param name="uri"></param>
         /// <param name="chapters"></param>
         /// <returns></returns>
-        public (List<int>, float, float) ResolveLink(string uri = null, int chapters = 0)
+        internal (List<int>, float, float) ResolveLink(string uri = null, int chapters = 0)
         {
             fz_location loc = null;
             float xp = 0.0f;
@@ -1691,7 +1695,7 @@ namespace MuPDF.NET
                 throw new Exception("document closed or encrypted");
             PdfDocument pdf = MuPDFDocument.AsPdfDocument(_nativeDocument);
 
-            ByteStream memoryStream = new ByteStream(journal);
+            MemoryStream memoryStream = new MemoryStream(journal);
 
             FilePtrOutput output = new FilePtrOutput(memoryStream);
             pdf.pdf_write_journal(output);
@@ -2007,13 +2011,40 @@ namespace MuPDF.NET
                 throw new Exception("document closed or encrypted");
             (int, int) _pageId;
             _pageId = (0, pageId);
-            // issue
+
+            if (!Contains(_pageId))
+                throw new Exception("page id not in document");
+
             if (_pageId.Item1 == LastLocation.Item1 && _pageId.Item2 == LastLocation.Item2)
                 return (-1, -1);
             PdfDocument pdf = MuPDFDocument.AsPdfDocument(_nativeDocument);
             int val = _pageId.Item1;
             int chapter = val;
             val = _pageId.Item2;
+            int pno = val;
+            FzLocation loc = mupdf.mupdf.fz_make_location(chapter, pno);
+            FzLocation nextLoc = mupdf.mupdf.fz_next_page(_nativeDocument, loc);
+            return (nextLoc.chapter, nextLoc.page);
+        }
+
+        /// <summary>
+        /// Get (chapter, page) of next page.
+        /// </summary>
+        /// <param name="pageId"></param>
+        /// <returns></returns>
+        public (int, int) NextLocation((int, int) pageId)
+        {
+            if (IsClosed || IsEncrypted)
+                throw new Exception("document closed or encrypted");
+            if (pageId.Item1 == LastLocation.Item1 && pageId.Item2 == LastLocation.Item2)
+                return (-1, -1);
+            if (!Contains(pageId))
+                throw new Exception("page id not in document");
+
+            PdfDocument pdf = MuPDFDocument.AsPdfDocument(_nativeDocument);
+            int val = pageId.Item1;
+            int chapter = val;
+            val = pageId.Item2;
             int pno = val;
             FzLocation loc = mupdf.mupdf.fz_make_location(chapter, pno);
             FzLocation nextLoc = mupdf.mupdf.fz_next_page(_nativeDocument, loc);
@@ -2076,7 +2107,9 @@ namespace MuPDF.NET
             while (pageId < 0)
                 pageId += pageN;
             (int, int) _pageId = (0, pageId);
-            // issue: Check whether pageId is in this
+            if (!Contains(_pageId))
+                throw new Exception("page id not in document");
+
             (int chapter, int pno) = _pageId;
             FzLocation loc = mupdf.mupdf.fz_make_location(chapter, pno);
             pageN = _nativeDocument.fz_page_number_from_location(loc);
@@ -2156,7 +2189,7 @@ namespace MuPDF.NET
         /// <param name="name"></param>
         /// <param name="font"></param>
         /// <exception cref="Exception"></exception>
-        public void AddFromFont(string name, string font)
+        private void AddFormFont(string name, string font)
         {
             if (IsClosed || IsEncrypted)
                 throw new Exception("document closed or encrypted");
@@ -2182,7 +2215,7 @@ namespace MuPDF.NET
         /// </summary>
         /// <param name="items"></param>
         /// <exception cref="Exception"></exception>
-        public void ExtendTocItems(List<List<dynamic>> items)
+        public void ExtendTocItems(List<Toc> items)
         {
             if (IsClosed)
                 throw new Exception("document closed");
@@ -2217,10 +2250,10 @@ namespace MuPDF.NET
             for (int i = 0; i < n; i++)
             {
                 int xref = xrefs[i];
-                List<dynamic> item = items[i];
+                Toc item = items[i];
                 Link link;
-                if (item.Count == 4)
-                    link = item[3];
+                if (item.Link != null)
+                    link = item.Link;
                 else
                     throw new Exception("need non-simple TOC format");
 
@@ -2267,7 +2300,7 @@ namespace MuPDF.NET
                 }
 
                 link.Zoom = z;
-                item[3] = link;
+                item.Link = link;
                 items[i] = item;
             }
         }
@@ -2521,12 +2554,12 @@ namespace MuPDF.NET
             if (pno >= pageCount)
                 throw new Exception("bad page number(s)");
 
-            List<List<dynamic>> toc = GetToc();
+            List<Toc> toc = GetToc();
             List<int> olXrefs = GetOutlineXrefs();
 
             for (int i = 0; i < (toc != null ? toc.Count : 0); i++)
             {
-                if (toc[i][2] == pno + 1)
+                if (toc[i].Page == pno + 1)
                     RemoveTocItem(olXrefs[i]);
             }
 
@@ -2560,11 +2593,11 @@ namespace MuPDF.NET
             numbers.Sort();
             if (numbers[0] < 0 || numbers[numbers.Count - 1] >= pageCount)
                 throw new ArgumentException("bad page number(s)");
-            List<List<dynamic>> toc = GetToc();
+            List<Toc> toc = GetToc();
             List<int> olXrefs = GetOutlineXrefs();
             for (int i = 0; i < olXrefs.Count; i++)
             {
-                if (numbers.Contains(toc[i][2] - 1))
+                if (numbers.Contains(toc[i].Page - 1))
                     RemoveTocItem(olXrefs[i]);
             }
             RemoveLinksTo(numbers);
@@ -2588,11 +2621,11 @@ namespace MuPDF.NET
             numbers.Sort();
             if (numbers[0] < 0 || numbers[numbers.Count - 1] >= Len)
                 throw new ArgumentException("bad page number(s)");
-            List<List<dynamic>> toc = GetToc();
+            List<Toc> toc = GetToc();
             List<int> olXrefs = GetOutlineXrefs();
             for (int i = 0; i < olXrefs.Count; i++)
             {
-                if (numbers.Contains(toc[i][2] - 1))
+                if (numbers.Contains(toc[i].Page - 1))
                     RemoveTocItem(olXrefs[i]);
             }
             RemoveLinksTo(numbers);
@@ -2617,11 +2650,11 @@ namespace MuPDF.NET
             numbers.Sort();
             if (numbers[0] < 0 || numbers[numbers.Count - 1] >= Len)
                 throw new ArgumentException("bad page number(s)");
-            List<List<dynamic>> toc = GetToc();
+            List<Toc> toc = GetToc();
             List<int> olXrefs = GetOutlineXrefs();
             for (int i = 0; i < olXrefs.Count; i++)
             {
-                if (numbers.Contains(toc[i][2] - 1))
+                if (numbers.Contains(toc[i].Page - 1))
                     RemoveTocItem(olXrefs[i]);
             }
             RemoveLinksTo(numbers);
@@ -2678,7 +2711,7 @@ namespace MuPDF.NET
             return xref;
         }
 
-        public int _AddEmbfile(string name, byte[] buffer, string filename = null, string ufilename = null, string desc = null)
+        private int _AddEmbfile(string name, byte[] buffer, string filename = null, string ufilename = null, string desc = null)
         {
             PdfDocument pdf = AsPdfDocument(this);
             FzBuffer data = Utils.BufferFromBytes(buffer);
@@ -2752,7 +2785,7 @@ namespace MuPDF.NET
             _DeleteEmbfile(idx);
         }
 
-        public void _DeleteEmbfile(int idx)
+        private void _DeleteEmbfile(int idx)
         {
             PdfDocument pdf = AsPdfDocument(this);
             PdfObj names = Utils.pdf_dict_getl(pdf.pdf_trailer(), new string[] { "Root", "Names", "EmbeddedFiles", "Names" });
@@ -2774,7 +2807,7 @@ namespace MuPDF.NET
             return idx;
         }
 
-        public byte[] _GetEmbeddedFile(int idx)
+        private byte[] _GetEmbeddedFile(int idx)
         {
             PdfDocument pdf = AsPdfDocument(this);
             PdfObj names = Utils.pdf_dict_getl(pdf.pdf_trailer(), new string[] { "Root", "Names", "EmbeddedFiles", "Names" });
@@ -2918,7 +2951,7 @@ namespace MuPDF.NET
 
             PdfObj obj = pdf.pdf_new_indirect(xref, 0);
             PdfObj subtype = obj.pdf_dict_get(new PdfObj("Subtype"));
-            if (subtype.pdf_name_eq(new PdfObj("Image")) != 0) // mismatch
+            if (subtype.pdf_name_eq(new PdfObj("Image")) == 0) // mismatch
                 throw new Exception("not an image");
 
             PdfObj o = obj.pdf_dict_geta(new PdfObj("SMask"), new PdfObj("Mask"));
@@ -3270,7 +3303,8 @@ namespace MuPDF.NET
             IntPtr pNumbers = Marshal.AllocHGlobal(list.Count * sizeof(int));
             Marshal.Copy(list.ToArray(), 0, pNumbers, list.Count);
             SWIGTYPE_p_int swigNumbers = new SWIGTYPE_p_int(pNumbers, true);
-            //pdf.pdf_rearrange_pages(list.Count, swigNumbers);
+
+            pdf.pdf_rearrange_pages(list.Count, swigNumbers);
             ResetPageRefs();
         }
 
@@ -3545,7 +3579,7 @@ namespace MuPDF.NET
             bool noNewId = false, bool appearance = false, bool pretty = false, int encryption = 1, int permissions = 4095,
             string ownerPW = null, string userPW = null)
         {
-            ByteStream byteStream = new ByteStream();
+            MemoryStream byteStream = new MemoryStream();
             Save(
                 filename: byteStream,
                 garbage: garbage ? 1 : 0,
@@ -3564,7 +3598,7 @@ namespace MuPDF.NET
                 permissions: permissions,
                 ownerPW: ownerPW,
                 userPW: userPW);
-            return byteStream.Data;
+            return byteStream.ToArray();
         }
 
         public List<string> GetKeysXref(int xref)
@@ -3980,7 +4014,8 @@ namespace MuPDF.NET
                 MuPDFPage page = this[i];
                 if (resetFields)
                 {
-                    //issue widget
+                    foreach (Widget widget in page.GetWidgets())
+                        widget.Reset();
                 }
                 if (removeLinks)
                 {
@@ -4156,16 +4191,315 @@ namespace MuPDF.NET
         /// <param name="policy">one of 'AllOn', 'AllOff', 'AnyOn', 'AnyOff' (any casing).</param>
         /// <param name="ve">visibility expression. Use instead of 'ocgs' with 'policy'.</param>
         /// <returns>Xref of the created or updated OCMD.</returns>
-        public int SetOCMD(int xref = 0, Dictionary<int, OCGroup> ocgs = null, string policy = null, int ve = 0)
+        public int SetOCMD(OCMD ocmd = null, int xref = 0, int[] ocgs = null, string policy = null, dynamic[] ve = null)
         {
-            HashSet<int> allOcgs = new HashSet<int>(ocgs.Keys);
-            // issue
-            return 0;
+            List<int> allOcgs = GetOcgs().Keys.ToList();
+
+            if (ocmd != null)
+            {
+                if (xref == 0)
+                    xref = ocmd.Xref;
+                if (ocgs == null)
+                    ocgs = ocmd.Ocgs;
+                if (string.IsNullOrEmpty(policy))
+                    policy = ocmd.Policy;
+                if (ve == null)
+                    ve = ocmd.Ve;
+            }
+
+            string VeMaker(dynamic[] v)
+            {
+                if (v.Length < 2)
+                    throw new Exception($"bad ve length: {v.Length}");
+                if (!(v[0] is string) || !(new List<string>(){ "and", "or", "not" }).Contains(v[0].ToLower()))
+                    throw new Exception($"bad operand: {v[0]}");
+                if (v[0].ToLower() == "not" && v.Length != 2)
+                    throw new Exception($"operand is not, but ve length: {v.Length}");
+                
+                string item = $"[/{v[0]}";
+                item = char.ToUpper(item[0]) + item.Substring(1).ToLower();
+                foreach (var x in v.Skip(1).ToArray())
+                {
+                    if (x is int)
+                    {
+                        if (!allOcgs.Contains(x))
+                            throw new Exception($"bad OCG {x}");
+                        item += $" {x} 0 R";
+                    }
+                    else
+                    {
+                        item += $" {VeMaker(x)}";   
+                    }
+                }
+                item += "]";
+                return item;
+            }
+
+            string text = "<</Type/OCMD";
+            Console.WriteLine(allOcgs.Count);
+            if (ocgs != null)
+            {
+                List<int> s = ocgs.Except(allOcgs).ToList();
+                if (s.Count != 0)
+                    throw new Exception($"bad OCGs count: {s.Count}");
+                text += "/OCGs[" + string.Join(" ", ocgs.Select(x => $"{x} 0 R")) + "]";
+            }
+
+            if (!string.IsNullOrEmpty(policy))
+            {
+                policy = policy.ToLower();
+                Dictionary<string, string> pols = new Dictionary<string, string>()
+                {
+                    {"anyon", "AnyOn" },
+                    {"allon", "AllOn" },
+                    {"anyoff", "AnyOff" },
+                    {"alloff", "AnyOff" },
+                };
+
+                if (!pols.Keys.Contains(policy))
+                    throw new Exception($"bad policy: {policy}");
+                text += $"/P/{pols[policy]}";
+            }
+
+            if (ve != null)
+            {
+                text += $"/VE{VeMaker(ve)}";
+            }
+
+            text += ">>";
+            if (xref == 0)
+                xref = GetNewXref();
+            else if (!GetXrefObject(xref, 1).Contains("/Type/OCMD"))
+                throw new Exception("bad xref or not an OCMD");
+            UpdateObject(xref, text);
+
+            return xref;
         }
 
-        public void SetToc()// issue related to Toc
+        /// <summary>
+        /// Create new outline tree (table of contents, TOC)
+        /// </summary>
+        /// <param name="tocs">each entry must contain level, title, page and optionally top margin on the page.None or '()' remove the TOC</param>
+        /// <param name="collapse">collapses entries beyond this level. Zero or None shows all entries unfolded.</param>
+        /// <returns>the number of inserted items, or the number of removed items respectively.</returns>
+        public int SetToc(List<Toc> tocs, int collapse = 1)
         {
+            if (IsClosed || IsEncrypted)
+                throw new Exception("document closed or encrypted");
+            if (!IsPDF)
+                throw new Exception("is no pdf");
+            if (tocs == null)
+                return 0;
 
+            int n = tocs.Count;
+            int pageCount = Len;
+            Toc t0 = tocs[0];
+            if (t0.Level != 1)
+                throw new Exception("hierarchy level of item 0 must be 1");
+
+            foreach (int i in Enumerable.Range(1, n -1))
+            {
+                Toc t1 = tocs[i];
+                Toc t2 = tocs[i + 1];
+                if (!(-1 <= t1.Page && t1.Page <= pageCount))
+                    throw new Exception($"row {i}: page number out of range");
+                if (t2.Level < 1)
+                    throw new Exception($"bad hierarchy level in row {i + 1}");
+                if (t2.Level > t1.Level + 1)
+                    throw new Exception($"bad hierarchy level in row {i + 1}");
+            }
+            List<int> oldXrefs = DeleteToc();
+            oldXrefs = new List<int>();
+
+            List<int> xref = new List<int>() { 0}.Concat(oldXrefs).ToList();
+            xref[0] = GetOlRootNumber();
+            if (n > oldXrefs.Count)
+            {
+                for (int i = 0; i < (n - oldXrefs.Count); i++)
+                {
+                    xref.Add(GetNewXref());
+                }
+            }
+
+            List<Dictionary<string, dynamic>> olItems = new List<Dictionary<string, dynamic>>()
+                {
+                    new Dictionary<string, dynamic>()
+                    {
+                        {"count", 0 },
+                        {"first", -1 },
+                        {"last", -1 },
+                        {"xref", xref[0] }
+                    }
+                };
+
+            Dictionary<int, int> lvlTab = new Dictionary<int, int>();
+            lvlTab.Add(0, 0);
+
+            for (int i = 0; i < n; i ++)
+            {
+                Toc o = tocs[i];
+                int lvl = o.Level;
+                string title = Utils.GetPdfString(o.Title);
+                int pno = Math.Min(Len - 1, Math.Max(0, o.Page - 1));
+                int pageXref = GetPageXref(pno);
+                float pageHeight = PageCropBox(pno).Height;
+                Point top = new Point(72, pageHeight - 36);
+
+                Link dest = new Link() { To = top, Kind = LinkType.LINK_GOTO};
+                if (o.Page < 0)
+                    dest.Kind = LinkType.LINK_NONE;
+                if (o.Link != null)
+                {
+                    dest = o.Link;
+                    if (dest.To == null)
+                        dest.To = top;
+                    else
+                    {
+                        MuPDFPage page = this[pno];
+                        Point point = new Point(dest.To);
+                        point.Y = page.CropBox.Height - point.Y;
+                        point = point * page.RotationMatrix;
+                        dest.To = new Point(point);
+                    }
+                }
+                
+                Dictionary<string, dynamic> d = new Dictionary<string, dynamic>();
+                d.Add("first", -1);
+                d.Add("count", 0);
+                d.Add("last", -1);
+                d.Add("prev", -1);
+                d.Add("next", -1);
+                d.Add("dest", Utils.GetDestString(pageXref, dest));
+                d.Add("top", dest.To);
+                d.Add("title", title);
+                d.Add("parent", lvlTab[lvl - 1]);
+                d.Add("xref", xref[i + 1]);
+                d.Add("color", dest.Color);
+                d.Add("flags", (dest.Italic ? 1 : 0) + 2 * (dest.Bold ? 1 : 0));
+                lvlTab.Add(lvl, i + 1);
+                Dictionary<string, dynamic> parent = olItems[lvlTab[lvl - 1]];
+
+                if (dest.Collapse || (collapse != 0 && lvl > collapse))
+                    parent["count"] -= 1;
+                else
+                    parent["count"] += 1;
+
+                if (parent["first"] == -1)
+                {
+                    parent["first"] = i + 1;
+                    parent["last"] = i + 1;
+                }
+                else
+                {
+                    d["prev"] = parent["last"];
+                    Dictionary<string, dynamic> prev = olItems[parent["last"]];
+                    prev["next"] = i + 1;
+                    parent["last"] = i + 1;
+                }
+                olItems.Add(d);
+            }
+
+            int index = 0;
+            foreach (Dictionary<string, dynamic> ol in olItems)
+            {
+                string txt = "<<";
+                if (ol["count"] != 0)
+                    txt += $"/Count {ol["count"]}";
+                try
+                {
+                    txt += ol["dest"];
+                }
+                catch (Exception) { }
+
+                try
+                {
+                    if (ol["first"] > -1)
+                        txt += $"/First {xref[ol["first"]]} 0 R";
+                }
+                catch (Exception) { }
+
+                try
+                {
+                    if (ol["last"] > -1)
+                        txt += $"/Last {xref[ol["last"]]} 0 R";
+                }
+                catch (Exception) { }
+
+                try
+                {
+                    if (ol["next"] > -1)
+                        txt += $"/Next {xref[ol["next"]]} 0 R";
+                }
+                catch (Exception) { }
+
+                try
+                {
+                    if (ol["parent"] > -1)
+                        txt += $"/Parent {xref[ol["parent"]]} 0 R";
+                }
+                catch (Exception) { }
+
+                try
+                {
+                    if (ol["prev"] > -1)
+                        txt += $"/Prev {xref[ol["prev"]]} 0 R";
+                }
+                catch (Exception) { }
+
+                try
+                {
+                    txt += "/Title" + ol["title"];
+                }
+                catch (Exception) { }
+
+                if (ol["count"] && ol["color"].Length == 3)
+                    txt += $"/C[ {ol["color"][0]} {ol["color"][1]} {ol["color"][2]}]";
+                if (ol.GetValueOrDefault("flags", 0) > 0)
+                    txt += $"/F {ol["flags"]}";
+                if (index == 0)
+                    txt += "/Type/Outlines";
+                txt += ">>";
+                UpdateObject(xref[index], txt);
+            }
+            InitDocument();
+            return n;
+        }
+
+        /// <summary>
+        /// Delete the Toc
+        /// </summary>
+        /// <returns></returns>
+        private List<int> DeleteToc()
+        {
+            if (IsClosed || IsEncrypted)
+                throw new Exception("document closed or encrypted");
+            List<int> xrefs = new List<int>();
+            PdfDocument pdf = AsPdfDocument(this);
+            if (pdf == null)
+                return xrefs;
+
+            PdfObj root = pdf.pdf_trailer().pdf_dict_get(new PdfObj("Root"));
+            PdfObj olRoot = root.pdf_dict_get(new PdfObj("Outlines"));
+            if (olRoot.m_internal == null)
+                return xrefs;
+
+            PdfObj first = olRoot.pdf_dict_get(new PdfObj("First"));
+            xrefs = Utils.GetOutlineXrefs(first, xrefs);
+            int xrefCount = xrefs.Count;
+
+            int olRootXref = olRoot.pdf_to_num();
+            pdf.pdf_delete_object(olRootXref);
+            root.pdf_dict_del(new PdfObj("Outlines"));
+
+            for (int i = 0; i < xrefCount; i++)
+            {
+                int xref = xrefs[i];
+                pdf.pdf_delete_object(xref);
+            }
+            xrefs.Add(olRootXref);
+            InitDocument();
+
+            return xrefs;
         }
 
         /// <summary>
@@ -4269,73 +4603,54 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Build font subsets of a PDF. Requires package 'fontTools'.
+        /// Build font subsets of a PDF.
         /// </summary>
         /// <param name="verbose"></param>
-        public void SubsetFonts(bool verbose = false)// not complete
+        public void SubsetFonts(bool verbose = false)
         {
-            ///Retrieve old font '/W' and '/DW' values.
-            (string, string) GetOldWidths(int xref)
-            {
-                (string, string) df = GetKeyXref(xref, "DescendantFonts");
-                if (df.Item1 != "array")
-                    return (null, null);
-                int dfXref = Convert.ToInt32(df.Item2.Substring(1, df.Item2.Length - 1).Replace("0 R", ""));
+            mupdf.mupdf.pdf_subset_fonts2(AsPdfDocument(this), new vectori(Enumerable.Range(0, Len)));
+            return;
+        }
 
-                (string, string) widths = GetKeyXref(dfXref, "W");
-                string width_ = null;
-                if (widths.Item1 == "array")
-                    width_ = widths.Item2;
+        public bool Contains(int page)
+        {
+            if (page < Len)
+                return true;
+            return false;
+        }
 
-                (string, string) dWidths = GetKeyXref(dfXref, "DW");
-                string dWidth_ = null;
-                if (dWidths.Item1 == "int")
-                    dWidth_ = dWidths.Item2;
-                return (width_, dWidth_);
-            }
+        public bool Contains((int, int) loc)
+        {
+            (int chapter, int pno) = loc;
+            if (chapter < 0 || chapter >= ChapterCount)
+                return false;
+            if (pno < 0 || pno >= GetChapterPageCount(chapter))
+                return false;
+            return true;
+        }
 
-            void SetOldWidths(int xref, string width, string dWidth)
-            {
-                (string, string) df = GetKeyXref(xref, "DescentdantFonts");
-                if (df.Item1 != "array")
-                    return;
-                int dfXref = Convert.ToInt32(df.Item2.Substring(1, df.Item2.Length - 1).Replace("0 R", ""));
+        public int GetChapterPageCount(int chapter)
+        {
+            if (IsClosed)
+                throw new Exception("document closed");
+            int chapters = _nativeDocument.fz_count_chapters();
+            if (chapters < 0 || chapter >= chapters)
+                throw new Exception("bad chapter number");
+            return _nativeDocument.fz_count_chapter_pages(chapter);
+        }
 
-                if (GetKeyXref(dfXref, "W").Item2 != "null")
-                    SetKeyXRef(dfXref, "W", "null");
-                else
-                    SetKeyXRef(dfXref, "W", width);
-                if (GetKeyXref(dfXref, "DW").Item2 != "null")
-                    SetKeyXRef(dfXref, "DW", "null");
-                else
-                    SetKeyXRef(dfXref, "DW", dWidth);
-            }
-
-            void SetSubsetFontname(int newXref)
-            {
-                Random random = new Random();
-                string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-                string prefix = new string(Enumerable.Repeat(chars, 6).Select(s => s[random.Next(s.Length)]).ToArray()) + "+";
-                string fontStr = GetXrefObject(newXref, compressed: 1);
-                fontStr = fontStr.Replace("/BaseFont/", "/BaseFont/" + prefix);
-
-                (string, string) df = GetKeyXref(newXref, "DescendantFonts");
-                if (df.Item1 == "array")
-                {
-                    int dfXref = Convert.ToInt32(df.Item2.Substring(1, df.Item2.Length - 1).Replace("0 R", ""));
-                    (string, string) fd = GetKeyXref(dfXref, "FontDescriptor");
-                    if (fd.Item1 == "xref")
-                    {
-                        int fdXref = Convert.ToInt32(fd.Item2.Replace("0 R", ""));
-                        string fdStr = GetXrefObject(fdXref, compressed: 1);
-                        fdStr = fdStr.Replace("/FontName/", "/FontName/" + prefix);
-                        UpdateObject(fdXref, fdStr);
-                    }
-                }
-                UpdateObject(newXref, fontStr);
-            }
-
-            //void BuildSubSet(byte[] buffer, )
+        /// <summary>
+        /// Convert annotations or fields to permanent content.
+        /// </summary>
+        /// <param name="annots">convert annotations</param>
+        /// <param name="widgets">convert form fields</param>
+        /// <exception cref="Exception"></exception>
+        public void Bake(bool annots = true, bool widgets = true)
+        {
+            PdfDocument pdf = AsPdfDocument(this);
+            if (pdf == null)
+                throw new Exception("not a PDF");
+            pdf.pdf_bake_document(annots ? 1 : 0, widgets ? 1 : 0);
         }
 
         public void Close()

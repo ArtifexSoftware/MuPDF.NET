@@ -6,12 +6,14 @@ using System.Threading.Tasks;
 
 namespace MuPDF.NET
 {
-    public class AnnotXref
+    public enum LineCapType
     {
-        public string Id { get; set; }
+        FZ_LINECAP_BUTT = 0,
 
-        public int Xref { get; set; }
+        FZ_LINECAP_ROUND = 1,
 
-        public PdfAnnotType AnnotType { get; set; }
+        FZ_LINECAP_SQUARE = 2,
+
+        FZ_LINECAP_TRIANGLE = 3
     }
 }

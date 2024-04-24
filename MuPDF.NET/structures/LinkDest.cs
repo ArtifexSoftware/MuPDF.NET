@@ -1,32 +1,33 @@
-﻿using System.Text.RegularExpressions;
+﻿using System;
+using System.Text.RegularExpressions;
 
 namespace MuPDF.NET
 {
     public class LinkDest : IDisposable
     {
-        public string Dest;
+        public string Dest { get; set; }
 
-        public string FileSpec = "";
+        public string FileSpec { get; set; }
 
-        public int Flags = 0;
+        public int Flags { get; set; }
 
-        public bool IsMap = false;
+        public bool IsMap { get; set; }
 
-        public bool IsUri = false;
+        public bool IsUri { get; set; }
 
-        public Point TopLeft = new Point(0, 0);
+        public Point TopLeft { get; set; } = new Point(0, 0);
 
-        public string NewWindow = "";
+        public string NewWindow { get; set; }
 
-        public Point BottomRight = new Point(0, 0);
+        public Point BottomRight { get; set; } = new Point(0, 0);
 
-        public LinkType Kind;
+        public LinkType Kind { get; set; }
 
-        public int Page;
+        public int Page { get; set; }
 
-        public string Uri;
+        public string Uri { get; set; }
 
-        public Dictionary<string, dynamic> Named;
+        public Dictionary<string, dynamic> Named { get; set; }
 
         /// <summary>
         /// 
@@ -70,23 +71,25 @@ namespace MuPDF.NET
                 if (Uri.StartsWith("#"))
                 {
                     Kind = LinkType.LINK_GOTO;
-                    Match m = Regex.Match(Uri, "^#page=([0-9]+)&zoom=([0-9.]+),(-?[0-9.]+),(-?[0-9.]+)$");
-                    if (m != null)
+                    Regex regex = new Regex("^#page=([0-9]+)&zoom=([0-9.]+),(-?[0-9.]+),(-?[0-9.]+)$");
+                    Match m = regex.Match(Uri);
+                    if (m.Success)
                     {
-                        Page = Convert.ToInt32(m.Groups[1].Value) - 1;
+                        Page = int.Parse(m.Groups[1].Value) - 1;
                         TopLeft = new Point((float)Convert.ToDouble(m.Groups[3].Value), (float)Convert.ToDouble(m.Groups[4].Value));
                         Flags = Flags | (int)LinkFlags.LINK_FLAG_L_VALID | (int)LinkFlags.LINK_FLAG_T_VALID;
                     }
                     else
                     {
                         m = Regex.Match(Uri, "^#page=([0-9]+)$");
-                        if (m != null)
+                        if (m.Success)
                         {
                             Kind = LinkType.LINK_NAMED;
                             m = Regex.Match(Uri, "^#nameddest=(.*)");
-                            if (document != null && m != null)
+                            if (document != null && m.Success)
                             {
                                 string named = m.Groups[1].Value;
+                                Console.WriteLine(named);
                                 this.Named = document.ResolveNames();
                                 if (Named is null)
                                     Named = new Dictionary<string, dynamic>();

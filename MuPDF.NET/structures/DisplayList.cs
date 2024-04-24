@@ -1,5 +1,6 @@
 ﻿using mupdf;
 using System.Runtime.InteropServices;
+using System.Runtime.Serialization.Formatters.Binary;
 
 namespace MuPDF.NET
 {
@@ -9,7 +10,7 @@ namespace MuPDF.NET
 
         private FzColorspace _colorSpace;
 
-        public bool ThisOwn;
+        public bool ThisOwn { get; set; }
 
         public DisplayList(Rect rect)
         {
@@ -53,8 +54,11 @@ namespace MuPDF.NET
             FzStextOptions opts = new FzStextOptions();
             opts.flags = flags;
 
-            // fz_new_stext_page_from_display_list // issue
-            return null;
+            FzStextPage textPage = new FzStextPage(_nativeDisplayList, opts);
+            MuPDFTextPage ret = new MuPDFTextPage(textPage);
+            ret.ThisOwn = true;
+           
+            return ret;
         }
     }
 }

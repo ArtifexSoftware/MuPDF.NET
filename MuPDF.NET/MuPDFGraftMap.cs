@@ -6,7 +6,7 @@ namespace MuPDF.NET
     {
         private PdfGraftMap _nativeGraftMap;
 
-        public bool ThisOwn = false;
+        public bool ThisOwn { get; set; }
 
         public PdfGraftMap ToPdfGraftMap()
         {

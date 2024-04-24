@@ -1,5 +1,4 @@
 ﻿using mupdf;
-using System.Runtime.InteropServices;
 using System.Text;
 
 namespace MuPDF.NET
@@ -69,13 +68,13 @@ namespace MuPDF.NET
         /// </summary>
         /// <param name="device">the Device created by dev = writer.begin_page(mediabox). The device knows how to call all MuPDF functions needed to write the content.</param>
         /// <param name="matrix">a matrix for transforming content when writing to the page. An example may be writing rotated text. The default means no transformation (i.e. the Identity matrix).</param>
-        public void Draw(FzDevice device, Matrix matrix = null)
+        public void Draw(MuPDFDeviceWrapper device, Matrix matrix = null)
         {
-            FzMatrix ctm2 = matrix.ToFzMatrix();
+            FzMatrix ctm2 = (matrix != null) ? matrix.ToFzMatrix() : new FzMatrix();
             if (ctm2 == null)
                 ctm2 = new FzMatrix();
-            FzDevice dev = device == null ? new FzDevice() : device;
-            _nativeStory.fz_draw_story(device, ctm2);
+            FzDevice dev = device == null ? new FzDevice() : device.ToFzDevice();
+            _nativeStory.fz_draw_story(dev, ctm2);
         }
 
         /// <summary>
@@ -240,21 +239,20 @@ namespace MuPDF.NET
                 }
             }
 
-            /*if (verbose)
-                Log($"doing binary search with {{state.pmin=}} {state.Pmax}.");
+            if (verbose)
+                Log($"doing binary search with {state.Pmin} {state.Pmax}.");
             while (true)
             {
                 if (state.Pmax - state.Pmin < delta)
                     return Ret(rect, state);
-                int parameter = (state.Pmin + state.Pmax) / 2;
+                float parameter = (state.Pmin + state.Pmax) / 2;
                 Update(rect, parameter);
-            }*/
-            return null;
+            }
         }
 
-        public static MuPDFDocument AddPdfLinks(ByteStream stream, List<Position> positions)
+        public static MuPDFDocument AddPdfLinks(MemoryStream stream, List<Position> positions)
         {
-            MuPDFDocument document = new MuPDFDocument("pdf", stream.Data);
+            MuPDFDocument document = new MuPDFDocument("pdf", stream.ToArray());
             Dictionary<string, Position> id2Position = new Dictionary<string, Position>();
             foreach (Position position in positions)
             {
@@ -360,7 +358,7 @@ namespace MuPDF.NET
 
         public MuPDFDocument WriteWithLinks(RectFunction rectFn = null, Action<Position> positionfn = null, Action<int, Rect, MuPDFDeviceWrapper, bool> pageFn = null)
         {
-            ByteStream stream = new ByteStream(100);
+            MemoryStream stream = new MemoryStream(100);
             MuPDFDocumentWriter writer = new MuPDFDocumentWriter(stream);
             List<Position> positions = new List<Position>();
 
@@ -372,7 +370,7 @@ namespace MuPDF.NET
 
             Write(writer, rectFn, positionFn: positionfn2, pageFn);
             writer.Close();
-            stream.Seek(0, 1);
+            stream.Seek(0, (SeekOrigin)1);
             return MuPDFStory.AddPdfLinks(stream, positions);
         }
 
@@ -425,7 +423,7 @@ namespace MuPDF.NET
                             pageFn(pageNum, mediabox, dev, false);
                         }
                     }
-                    Draw(dev.ToFzDevice(), ctm);
+                    Draw(dev, ctm);
                     if (!more)
                     {
                         if (pageFn != null)
@@ -454,7 +452,7 @@ namespace MuPDF.NET
             bool addHeaderIds = true
             )
         {
-            ByteStream stream = new ByteStream(0);
+            MemoryStream stream = new MemoryStream();
             MuPDFDocumentWriter writer = new MuPDFDocumentWriter(stream);
             List<Position> positions = new List<Position>();
 
@@ -466,7 +464,7 @@ namespace MuPDF.NET
 
             MuPDFStory.WriteStabilized(writer, contentfn, rectfn, userCss, em, positionfn2, pagefn, archive, addHeaderIds);
             writer.Close();
-            stream.Seek(0, 1);
+            stream.Seek(0, (SeekOrigin)1);
             return MuPDFStory.AddPdfLinks(stream, positions);
         }
 
@@ -475,13 +473,8 @@ namespace MuPDF.NET
         /// </summary>
         /// <param name="function"></param>
         /// <param name="args"></param>
-        public void ElementPositions(Action<Position> function, Dictionary<string, dynamic> args = null)
+        public void ElementPositions(Action<Position> function, Position arg = null)
         {
-            if (args == null)
-            {
-                args = new Dictionary<string, dynamic>();
-            }
-
             Action<Position> function2 = position =>
             {
                 Position position2 = new Position
@@ -495,12 +488,9 @@ namespace MuPDF.NET
                     RectNum = position.RectNum,
                     Href = position.Href
                 };
-                if (args != null)
+                if (arg != null)
                 {
-                    foreach ((string k, var v) in args)
-                    {
-                        // position2
-                    }
+                    position2 = new Position(arg); // copy position
                 }
                 function(position2);
             };
@@ -562,23 +552,23 @@ namespace MuPDF.NET
 
     internal class State
     {
-        public float Pmin;
+        public float Pmin { get; set; }
 
-        public float Pmax;
+        public float Pmax { get; set; }
 
-        public FitResult PminResult;
+        public FitResult PminResult { get; set; }
 
-        public FitResult PmaxResult;
+        public FitResult PmaxResult { get; set; }
 
-        public int Result;
+        public int Result { get; set; }
 
-        public int Numcalls;
+        public int Numcalls { get; set; }
 
-        public float Pmin0;
+        public float Pmin0 { get; set; }
 
-        public float Pmax0;
+        public float Pmax0 { get; set; }
 
-        public float LastP;
+        public float LastP { get; set; }
         public State(float pmin, float pmax, bool verbose)
         {
             Pmin = pmin;
@@ -597,17 +587,17 @@ namespace MuPDF.NET
 
     public class FitResult
     {
-        public bool BigEnough;
+        public bool BigEnough { get; set; }
 
-        public dynamic Filled;
+        public dynamic Filled { get; set; }
 
-        public bool More;
+        public bool More { get; set; }
 
-        public int NumCalls;
+        public int NumCalls { get; set; }
 
-        public float Parameter;
+        public float Parameter { get; set; }
 
-        public Rect Rect;
+        public Rect Rect { get; set; }
 
         public FitResult(bool bigEnough = false, dynamic filled = null, bool more = false, int numcalls = 0, float parameter = 0, Rect rect = null)
         {

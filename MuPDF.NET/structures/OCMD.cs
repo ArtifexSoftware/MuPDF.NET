@@ -1,19 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace MuPDF.NET
+﻿namespace MuPDF.NET
 {
     public class OCMD
     {
-        public int Xref;
+        public int Xref { get; set; }
 
-        public string[] Ocgs;
+        public int[] Ocgs { get; set; }
 
-        public string Policy;
+        public string Policy { get; set; }
 
-        public object Ve;
+        public dynamic[] Ve { get; set; }
     }
 }

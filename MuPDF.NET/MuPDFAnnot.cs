@@ -8,11 +8,11 @@ namespace MuPDF.NET
     {
         internal PdfAnnot _nativeAnnotion;
 
-        public bool IsOwner = false;
+        public bool IsOwner { get; set; }
 
-        public bool ThisOwn = false;
+        public bool ThisOwn { get; set; }
 
-        public bool Yielded = false;
+        public bool Yielded { get; set; }
 
         delegate string LE_FUNCTION(MuPDFAnnot annot, Point p1, Point p2, bool lr, float[] fillColor);
 
@@ -559,11 +559,11 @@ namespace MuPDF.NET
             IsOwner = false;
         }
 
-        private AnnotStruct GetRedactVaues()
+        public Annot GetRedactVaues()
         {
             PdfAnnot annot = _nativeAnnotion;
 
-            AnnotStruct values = new AnnotStruct();
+            Annot values = new Annot();
             try
             {
                 PdfObj obj = annot.pdf_annot_obj().pdf_dict_gets("RO");
@@ -593,7 +593,7 @@ namespace MuPDF.NET
                 values.Align = align;
 
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 return null;
             }
@@ -602,8 +602,9 @@ namespace MuPDF.NET
                 return values;
 
             values.Rect = this.Rect;
-            values.TextColor = new List<float>();
-            (values.TextColor, values.FontName, values.FontSize) = ParseData(this);
+            List<float> tColor = new List<float>();
+            (tColor, values.FontName, values.FontSize) = ParseData(this);
+            values.TextColor = tColor.ToArray();
             values.Fill = new float[Colors.Fill.Length];
             Array.Copy(Colors.Fill, values.Fill, values.Fill.Length);
 
@@ -750,7 +751,7 @@ namespace MuPDF.NET
                     apObj.pdf_dict_put_rect(new PdfObj("Rect"), bbox);
                 }
             }
-            catch (Exception e)
+            catch (Exception)
             {
 
             }
@@ -1144,7 +1145,7 @@ namespace MuPDF.NET
             annotObj.pdf_dict_put_name(new PdfObj("BM"), blendMode);
         }
 
-        public void SetBorder(Border? border, float width = -1, string style = null, int[] dashes = null, int clouds = -1)
+        public void SetBorder(Border border, float width = -1, string style = null, int[] dashes = null, int clouds = -1)
         {
             (PdfAnnotType atype, string atname, string _) = this.Type;
 
@@ -1343,7 +1344,7 @@ namespace MuPDF.NET
             }
         }
 
-        public void SetColors(Color? colors = null, float[] stroke = null, float[] fill = null)
+        public void SetColors(Color colors = null, float[] stroke = null, float[] fill = null)
         {
             MuPDFDocument doc = Parent.Parent;
 

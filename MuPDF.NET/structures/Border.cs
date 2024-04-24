@@ -2,13 +2,13 @@
 {
     public class Border
     {
-        public float Width;
+        public float Width { get; set; }
 
-        public string Style;
+        public string Style { get; set; }
 
-        public int[] Dashes;
+        public int[] Dashes { get; set; }
 
-        public float Clouds;
+        public float Clouds { get; set; }
 
     }
 }

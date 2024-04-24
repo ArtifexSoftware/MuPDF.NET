@@ -2,22 +2,37 @@
 {
     public class Position
     {
-        public string Href;
+        public int Depth { get; set; }
 
-        public int PageNum;
+        public int Heading { get; set; }
 
-        public bool OpenClose;
+        public string Href { get; set; }
 
-        public string Id;
+        public string Id { get; set; }
 
-        public Rect Rect;
+        public Rect Rect { get; set; }
 
-        public int RectNum;
+        public string Text { get; set; }
 
-        public string Text;
+        public bool OpenClose { get; set; }
 
-        public int Depth;
+        public int RectNum { get; set; }
 
-        public string Heading;
+        public int PageNum { get; set; }
+
+        public Position() { }
+
+        public Position(Position arg)
+        {
+            Depth = arg.Depth;
+            Heading = arg.Heading;
+            Href = arg.Href;
+            Id = arg.Id;
+            Rect = arg.Rect;
+            Text = arg.Text;
+            OpenClose = arg.OpenClose;
+            RectNum = arg.RectNum;
+            PageNum = arg.PageNum;
+        }
     }
 }

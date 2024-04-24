@@ -2,31 +2,31 @@
 {
     public class Font
     {
-        public int Xref;
+        public int Xref { get; set; }
 
-        public string Ext;
+        public string Ext { get; set; }
 
-        public string Type;
+        public string Type { get; set; }
 
-        public string Name;
+        public string Name { get; set; }
 
-        public string RefName;
+        public string RefName { get; set; }
 
-        public string Encoding;
+        public string Encoding { get; set; }
 
-        public int StreamXref;
+        public int StreamXref { get; set; }
 
-        public int Ordering;
+        public int Ordering { get; set; }
 
-        public bool Simple;
+        public bool Simple { get; set; }
 
-        public List<(int, double)> Glyphs;
+        public List<(int, double)> Glyphs { get; set; }
 
-        public float Ascender;
+        public float Ascender { get; set; }
 
-        public float Descender;
+        public float Descender { get; set; }
 
-        public byte[] Content;
+        public byte[] Content { get; set; }
 
     }
 }

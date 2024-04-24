@@ -2,13 +2,13 @@
 {
     public class Hits
     {
-        public int Len;
+        public int Len { get; set; }
 
-        public List<Quad> Quads;
+        public List<Quad> Quads { get; set; }
 
-        public float HFuzz;
+        public float HFuzz { get; set; }
 
-        public float VFuzz;
+        public float VFuzz { get; set; }
 
         public override string ToString()
         {

@@ -2,9 +2,9 @@
 {
     public class Morph
     {
-        public Point P;
+        public Point P { get; set; }
 
-        public Matrix M;
+        public Matrix M { get; set; }
 
         public Morph()
         {

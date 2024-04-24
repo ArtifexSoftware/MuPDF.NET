@@ -2,8 +2,8 @@
 {
     public class Location
     {
-        public int Chapter;
+        public int Chapter { get; set; }
 
-        public int Page;
+        public int Page { get; set; }
     }
 }

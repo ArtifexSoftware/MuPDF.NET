@@ -1,13 +1,13 @@
 ﻿using mupdf;
 using System.Runtime.InteropServices;
+using System.Drawing;
+using System.Drawing.Imaging;
 
 namespace MuPDF.NET
 {
     public class Pixmap : IDisposable
     {
         private FzPixmap _nativePixmap;
-
-        private string TessDataPrefix = Environment.GetEnvironmentVariable("TESSDATA_PREFIX");
 
         public Pixmap(ColorSpace cs, IRect irect, int alpha)
         {
@@ -93,21 +93,33 @@ namespace MuPDF.NET
             }
         }
 
-        /*public void SAMPLES_MV
+        public Memory<byte> SAMPLES_MV
         {
             get
             {
-                return _nativePixmap.fz_pixmap_samples_memoryview
-            }
-        }*/
+                if (_nativePixmap.m_internal == null)
+                    return null;
 
-        /*public byte[] SAMPLES
+                Memory<byte> ret = new Memory<byte>(SAMPLES);
+                return ret;
+            }
+        }
+
+        public byte[] SAMPLES
         {
             get
             {
+                if (_nativePixmap.m_internal == null)
+                    return null;
 
+                int size = (ColorSpace.N + Alpha) * _nativePixmap.w() * _nativePixmap.h();
+                byte[] data = new byte[size];
+                SWIGTYPE_p_unsigned_char pData = _nativePixmap.samples();
+                Marshal.Copy(SWIGTYPE_p_unsigned_char.getCPtr(pData).Handle, data, 0, size);
+
+                return data;
             }
-        }*/
+        }
 
         public long SamplesPtr
         {
@@ -261,14 +273,14 @@ namespace MuPDF.NET
             FzPixmap pixmap = mupdf.mupdf.fz_new_pixmap(cs.ToFzColorspace(), w, h, seps, alpha);
             int size = 0;
 
-            FzBuffer samples2 = Utils.BufferFromBytes(samples);
             size = samples.Length;
 
             if (stride * h != size)
             {
                 throw new Exception($"bad samples length {w} {h} {alpha} {n} {stride} {size}");
             }
-            
+            Marshal.Copy(samples, 0, SWIGTYPE_p_unsigned_char.getCPtr(pixmap.samples()).Handle, size);
+            _nativePixmap = pixmap;
         }
 
         public Pixmap(string arg0, FzPixmap arg1)
@@ -327,6 +339,12 @@ namespace MuPDF.NET
 
         public FzPixmap ToFzPixmap() { return _nativePixmap; }
 
+        /// <summary>
+        /// Convert to binary image stream of desired type.
+        /// </summary>
+        /// <param name="format"></param>
+        /// <param name="jpgQuality"></param>
+        /// <returns></returns>
         public byte[] ToBytes(int format, int jpgQuality)
         {
             FzPixmap pixmap = _nativePixmap;
@@ -453,7 +471,7 @@ namespace MuPDF.NET
         public dynamic ColorCount(bool colors = false, dynamic clip = null)
         {
             FzPixmap pm = _nativePixmap;
-            Dictionary<List<byte>, int> rc = Utils.ColorCount(pm, clip);
+            Dictionary<string, int> rc = Utils.ColorCount(pm, clip);
             if (rc == null)
                 throw new Exception(Utils.ErrorMessages["MSG_COLOR_COUNT_FAILED"]);
             if (!colors)
@@ -466,29 +484,29 @@ namespace MuPDF.NET
         /// </summary>
         /// <param name="clip">Return most frequent color and its usage ratio.</param>
         /// <returns></returns>
-        public (int, List<byte>) ColorTopUsage(dynamic clip = null)
+        public (float, byte[]) ColorTopUsage(dynamic clip = null)
         {
             int allPixels = 0;
             int count = 0;
-            List<byte> maxPixel = null;
+            string maxPixel = null;
             if (clip != null)
                 clip = this.IRect;
 
-            Dictionary<List<byte>, int> colorCount = (Dictionary<List<byte>, int>)ColorCount(true, clip);
-
-            for (int i = 0; i < colorCount.Count; i++)
+            Dictionary<string, int> colorCount = (Dictionary<string, int>)ColorCount(true, clip);
+            foreach (string pixel in colorCount.Keys)
             {
-                int c = colorCount.Values.ElementAt(i);
+                int c = colorCount[pixel];
                 allPixels += c;
                 if (c > count)
                 {
                     count = c;
-                    maxPixel = colorCount.Keys.ElementAt(i);
+                    maxPixel = pixel;
                 }
             }
+
             if (allPixels == 0)
-                return (1, Enumerable.Repeat((byte)255, N).ToList());
-            return (count / allPixels, maxPixel);
+                return (1, Enumerable.Repeat((byte)255, N).ToArray());
+            return (count / (float)allPixels, maxPixel.Split(',').Select(b => byte.Parse(b)).ToArray());
         }
 
         /// <summary>
@@ -524,8 +542,9 @@ namespace MuPDF.NET
             _nativePixmap.fz_gamma_pixmap(gamma);
         }
 
-        private int InvertPixmapRect(FzPixmap dest, FzIrect b)
+        private int InvertPixmapRect(FzPixmap dest, FzIrect bb)
         {
+            FzIrect b = bb.fz_intersect_irect(dest.fz_pixmap_bbox());  
             int w = b.x1 - b.x0;
             int y = b.y1 - b.y0;
             if (w <= 0 || y <= 0)
@@ -584,14 +603,14 @@ namespace MuPDF.NET
         /// <summary>
         /// Save pixmap as an OCR-ed PDF page
         /// </summary>
-        /// <param name="filename"></param>
+        /// <param name="filename">File name </param>
         /// <param name="compress">(bool) compress, default 1 (True)</param>
         /// <param name="language">language(s) occurring on page, default "eng"</param>
         /// <param name="tessdata">folder name of Tesseract's language support. Must be given if environment variable TESSDATA_PREFIX is not set</param>
         /// <exception cref="Exception"></exception>
-        public void SavePdfOCR(dynamic filename, int compress = 1, string language = null, string tessdata = null)
+        public void SavePdfOCR(string filename, int compress = 1, string language = null, string tessdata = null)
         {
-            if (TessDataPrefix == null && tessdata == null)
+            if (Utils.TESSDATA_PREFIX == null && tessdata == null)
                 throw new Exception("No OCR support: TESSDATA_PREFIX not set");
             FzPdfocrOptions opts = new FzPdfocrOptions();
             opts.compress = compress;
@@ -606,43 +625,36 @@ namespace MuPDF.NET
                 opts.datadir_set2(tessdata);
             }
 
-            if (filename is string)
-                pix.fz_save_pixmap_as_pdfocr(filename, 0, opts);
-            else
-            {
-                FilePtrOutput output = new FilePtrOutput(filename);
-                output.fz_write_pixmap_as_pdfocr(pix, opts);
-            }
+            pix.fz_save_pixmap_as_pdfocr(filename, 0, opts);
         }
 
-        public byte[] PdfOcr2Bytes(int compress = 1, string language = "eng", string tessdata = null)
+        /// <summary>
+        /// Save pixmap as an OCR-ed PDF page
+        /// </summary>
+        /// <param name="filename">Buffer to store page data</param>
+        /// <param name="compress">(bool) compress, default 1 (True)</param>
+        /// <param name="language">language(s) occurring on page, default "eng"</param>
+        /// <param name="tessdata">folder name of Tesseract's language support. Must be given if environment variable TESSDATA_PREFIX is not set</param>
+        /// <exception cref="Exception"></exception>
+        public void SavePdfOCR(MemoryStream filename, int compress = 1, string language = null, string tessdata = null)
         {
-            if (TessDataPrefix == null && tessdata == null)
+            if (Utils.TESSDATA_PREFIX == null && tessdata == null)
                 throw new Exception("No OCR support: TESSDATA_PREFIX not set");
-            MemoryStream fstream = new MemoryStream();
-            SavePdfOCR(fstream, compress, language, tessdata);
-            return fstream.GetBuffer();
-        }
+            FzPdfocrOptions opts = new FzPdfocrOptions();
+            opts.compress = compress;
+            FzPixmap pix = _nativePixmap;
 
-        public void SaveDrawing()
-        {
-            ColorSpace cspace = ColorSpace;
-            string mode = null;
-            if (cspace is null)
-                mode = "L";
-            else if (cspace.N == 1)
-                mode = (this.Alpha == 0) ? "L" : "LA";
-            else if (cspace.N == 3)
-                mode = (Alpha == 0) ? "RGB" : "RGBA";
-            else
-                mode = "CMYK";
+            if (language != null)
+            {
+                opts.language_set2(language);
+            }
+            if (tessdata != null)
+            {
+                opts.datadir_set2(tessdata);
+            }
 
-
-        }
-
-        public void Drawing2Bytes()
-        {
-
+            FilePtrOutput output = new FilePtrOutput(filename);
+            output.fz_write_pixmap_as_pdfocr(pix, opts);
         }
 
         /// <summary>
@@ -651,7 +663,7 @@ namespace MuPDF.NET
         /// <param name="x">the column number of the pixel. Must be in range(pix.width)</param>
         /// <param name="y">the line number of the pixel, Must be in range(pix.height)</param>
         /// <exception cref="Exception"></exception>
-        public void GetPixel(int x, int y)
+        public byte[] GetPixel(int x, int y)
         {
             if (false || x < 0 || x >= _nativePixmap.m_internal.w
                 || y < 0 || y >= _nativePixmap.m_internal.h
@@ -660,11 +672,12 @@ namespace MuPDF.NET
                 throw new Exception(Utils.ErrorMessages["MSG_PIXEL_OUTSIDE"]);
             }
 
-            int n = _nativePixmap.m_internal.w;
+            int n = _nativePixmap.m_internal.n;
             int stride = _nativePixmap.fz_pixmap_stride();
             int i = stride * y + n * x;
 
-            //int ret = new Tuple()
+            byte[] pixel = SAMPLES.Skip(i).Take(n).ToArray();
+            return pixel;
         }
 
         /// <summary>
@@ -674,7 +687,7 @@ namespace MuPDF.NET
         /// <param name="output">only use to overrule filename extension. Default is PNG. Others are JPEG, JPG, PNM, PGM, PPM, PBM, PAM, PSD, PS.</param>
         /// <param name="jpgQuality">The desired image quality, default 95. Only applies to JPEG images, else ignored</param>
         /// <exception cref="Exception"></exception>
-        public void Save(dynamic filename, string output, int jpgQuality = 95)
+        public void Save(string filename, string output, int jpgQuality = 95)
         {
             Dictionary<string, int> validFormats = new Dictionary<string, int>()
             {
@@ -690,16 +703,15 @@ namespace MuPDF.NET
                 {"jpeg", 7 }
             };
 
-            string filename_ = "";
-            string output_ = "";
+            string filename_ = filename;
+            string output_ = output;
 
-            if (filename is string)
-                filename_ = filename;
-            else if (filename is Dictionary<string, string> && filename.ContainsKey("absolute"))
-                filename_ = filename["absolute"];
-            else if (output is null)
-                output_ = Path.GetExtension(filename).Substring(1);
+            if (string.IsNullOrEmpty(filename))
+                throw new Exception("filename must be set");
 
+            if (string.IsNullOrEmpty(output_))
+                output_ = Path.GetExtension(filename_).Substring(1);
+            
             int idx = validFormats[output_.ToLower()];
             if (idx is -1)
                 throw new Exception($"Image format {output_} not in {validFormats.Keys}");
@@ -867,8 +879,8 @@ namespace MuPDF.NET
                 {"jpeg", 7 }
             };
 
-            int idx = 0;
-            if (validFormats.TryGetValue(output, out idx))
+            int idx = validFormats.GetValueOrDefault(output.ToLower(), 0);
+            if (idx == 0)
             {
                 throw new Exception($"Image format {output} not in {string.Join(", ", validFormats.Keys)}");
             }
@@ -888,6 +900,11 @@ namespace MuPDF.NET
             _nativePixmap.m_internal.yres = yres;
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="x"></param>
+        /// <param name="y"></param>
         public void SetOrigin(int x, int y)
         {
             _nativePixmap.m_internal.x = x;
@@ -1027,7 +1044,7 @@ namespace MuPDF.NET
                 quad.UpperLeft.ToFzPoint()
             };
 
-            // FzPixmap dst = fz_warp_pixmap
+            // mupdf.mupdf.ll_fz_warp_pixmap()
             return null;
         }
 
@@ -1035,40 +1052,12 @@ namespace MuPDF.NET
         {
             if (Utils.TESSDATA_PREFIX == null && tessdata == null)
                 throw new Exception("No OCR support: TESSDATA_PREFIX not set");
-            ByteStream byteStream = new ByteStream();
+            MemoryStream byteStream = new MemoryStream();
             SavePdfOCR(byteStream, compress ? 1 : 0, language, tessdata);
 
-            return byteStream.Data;
+            return byteStream.ToArray();
         }
 
-        public void SavePdfOCR(string filename, int compress = 1, string language = null, string tessdata = null)
-        {
-            if (Utils.TESSDATA_PREFIX == null && tessdata == null)
-                throw new Exception("No OCR support: TESSDATA_PREFIX not set");
-            FzPdfocrOptions options = new FzPdfocrOptions();
-            options.compress = compress;
-            if (language != null)
-                options.language_set2(language);
-            if (tessdata != null)
-                options.datadir_set2(tessdata);
-
-            mupdf.mupdf.fz_save_pixmap_as_pdfocr(_nativePixmap, filename, 0, options);
-        }
-
-        public void SavePdfOCR(ByteStream filename, int compress = 1, string language = null, string tessdata = null)
-        {
-            if (Utils.TESSDATA_PREFIX == null && tessdata == null)
-                throw new Exception("No OCR support: TESSDATA_PREFIX not set");
-            FzPdfocrOptions options = new FzPdfocrOptions();
-            options.compress = compress;
-            if (language != null)
-                options.language_set2(language);
-            if (tessdata != null)
-                options.datadir_set2(tessdata);
-            FzPixmap pix = _nativePixmap;
-            FilePtrOutput output = new FilePtrOutput(filename);
-            output.fz_write_pixmap_as_pdfocr(pix, options);
-        }
 
         public void Dispose()
         {
@@ -1078,9 +1067,9 @@ namespace MuPDF.NET
 
     public class FilePtrOutput : FzOutput2
     {
-        public ByteStream data { get; set; }
+        public MemoryStream data { get; set; }
 
-        public FilePtrOutput(ByteStream src) : base()
+        public FilePtrOutput(MemoryStream src) : base()
         {
             this.data = src;
             this.use_virtual_write();
@@ -1091,24 +1080,26 @@ namespace MuPDF.NET
 
         public override void seek(fz_context arg_0, long arg_2, int arg_3)
         {
-            data.Seek(arg_2, arg_3);
+            data.Seek(arg_2, (SeekOrigin)arg_3);
         }
 
         public override long tell(fz_context arg_0)
         {
-            return data.Offset;
+            return data.Position;
         }
 
         public override void truncate(fz_context arg_0)
         {
-            data.Resize(0);
+            data.SetLength(0);
         }
 
         public override void write(fz_context arg_0, SWIGTYPE_p_void arg_2, ulong arg_3)
         {
             byte[] data = new byte[(int)arg_3];
             Marshal.Copy(SWIGTYPE_p_void.getCPtr(arg_2).Handle, data, 0, data.Length);
-            this.data.Write(data, data.Length);
+
+            this.data.Write(data, 0, data.Length);
         }
     }
 }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  

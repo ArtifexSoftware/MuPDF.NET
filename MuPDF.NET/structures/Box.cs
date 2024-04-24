@@ -8,9 +8,9 @@ namespace MuPDF.NET
 {
     public class Box
     {
-        public Rect Rect;
+        public Rect Rect { get; set; }
 
-        public Matrix Matrix;
+        public Matrix Matrix { get; set; }
 
         public dynamic this[int index]
         {
