@@ -9,8 +9,6 @@ namespace MuPDF.NET
     {
         private FzPixmap _nativePixmap;
 
-        private string TessDataPrefix = Environment.GetEnvironmentVariable("TESSDATA_PREFIX");
-
         public Pixmap(ColorSpace cs, IRect irect, int alpha)
         {
             _nativePixmap = mupdf.mupdf.fz_new_pixmap_with_bbox(cs.ToFzColorspace(), irect.ToFzIrect(), new FzSeparations(0), alpha);
@@ -605,14 +603,14 @@ namespace MuPDF.NET
         /// <summary>
         /// Save pixmap as an OCR-ed PDF page
         /// </summary>
-        /// <param name="filename"></param>
+        /// <param name="filename">File name </param>
         /// <param name="compress">(bool) compress, default 1 (True)</param>
         /// <param name="language">language(s) occurring on page, default "eng"</param>
         /// <param name="tessdata">folder name of Tesseract's language support. Must be given if environment variable TESSDATA_PREFIX is not set</param>
         /// <exception cref="Exception"></exception>
-        public void SavePdfOCR(dynamic filename, int compress = 1, string language = null, string tessdata = null)
+        public void SavePdfOCR(string filename, int compress = 1, string language = null, string tessdata = null)
         {
-            if (TessDataPrefix == null && tessdata == null)
+            if (Utils.TESSDATA_PREFIX == null && tessdata == null)
                 throw new Exception("No OCR support: TESSDATA_PREFIX not set");
             FzPdfocrOptions opts = new FzPdfocrOptions();
             opts.compress = compress;
@@ -627,33 +625,37 @@ namespace MuPDF.NET
                 opts.datadir_set2(tessdata);
             }
 
-            if (filename is string)
-                pix.fz_save_pixmap_as_pdfocr(filename, 0, opts);
-            else
-            {
-                FilePtrOutput output = new FilePtrOutput(filename);
-                output.fz_write_pixmap_as_pdfocr(pix, opts);
-            }
+            pix.fz_save_pixmap_as_pdfocr(filename, 0, opts);
         }
 
-        public byte[] PdfOcr2Bytes(int compress = 1, string language = "eng", string tessdata = null)
+        /// <summary>
+        /// Save pixmap as an OCR-ed PDF page
+        /// </summary>
+        /// <param name="filename">Buffer to store page data</param>
+        /// <param name="compress">(bool) compress, default 1 (True)</param>
+        /// <param name="language">language(s) occurring on page, default "eng"</param>
+        /// <param name="tessdata">folder name of Tesseract's language support. Must be given if environment variable TESSDATA_PREFIX is not set</param>
+        /// <exception cref="Exception"></exception>
+        public void SavePdfOCR(MemoryStream filename, int compress = 1, string language = null, string tessdata = null)
         {
-            if (TessDataPrefix == null && tessdata == null)
+            if (Utils.TESSDATA_PREFIX == null && tessdata == null)
                 throw new Exception("No OCR support: TESSDATA_PREFIX not set");
-            MemoryStream fstream = new MemoryStream();
-            SavePdfOCR(fstream, compress, language, tessdata);
-            return fstream.GetBuffer();
+            FzPdfocrOptions opts = new FzPdfocrOptions();
+            opts.compress = compress;
+            FzPixmap pix = _nativePixmap;
+
+            if (language != null)
+            {
+                opts.language_set2(language);
+            }
+            if (tessdata != null)
+            {
+                opts.datadir_set2(tessdata);
+            }
+
+            FilePtrOutput output = new FilePtrOutput(filename);
+            output.fz_write_pixmap_as_pdfocr(pix, opts);
         }
-
-        /*public void SaveDrawing()
-        {
-            
-        }
-
-        public void Drawing2Bytes()
-        {
-
-        }*/
 
         /// <summary>
         /// Return the value of the pixel at location (x, y) (column, line)
@@ -1042,7 +1044,7 @@ namespace MuPDF.NET
                 quad.UpperLeft.ToFzPoint()
             };
 
-            // FzPixmap dst = fz_warp_pixmap // issue
+            // mupdf.mupdf.ll_fz_warp_pixmap()
             return null;
         }
 
@@ -1056,34 +1058,6 @@ namespace MuPDF.NET
             return byteStream.ToArray();
         }
 
-        public void SavePdfOCR(string filename, int compress = 1, string language = null, string tessdata = null)
-        {
-            if (Utils.TESSDATA_PREFIX == null && tessdata == null)
-                throw new Exception("No OCR support: TESSDATA_PREFIX not set");
-            FzPdfocrOptions options = new FzPdfocrOptions();
-            options.compress = compress;
-            if (language != null)
-                options.language_set2(language);
-            if (tessdata != null)
-                options.datadir_set2(tessdata);
-
-            mupdf.mupdf.fz_save_pixmap_as_pdfocr(_nativePixmap, filename, 0, options);
-        }
-
-        public void SavePdfOCR(MemoryStream filename, int compress = 1, string language = null, string tessdata = null)
-        {
-            if (Utils.TESSDATA_PREFIX == null && tessdata == null)
-                throw new Exception("No OCR support: TESSDATA_PREFIX not set");
-            FzPdfocrOptions options = new FzPdfocrOptions();
-            options.compress = compress;
-            if (language != null)
-                options.language_set2(language);
-            if (tessdata != null)
-                options.datadir_set2(tessdata);
-            FzPixmap pix = _nativePixmap;
-            FilePtrOutput output = new FilePtrOutput(filename);
-            output.fz_write_pixmap_as_pdfocr(pix, options);
-        }
 
         public void Dispose()
         {
@@ -1128,3 +1102,4 @@ namespace MuPDF.NET
         }
     }
 }
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  

@@ -3006,7 +3006,7 @@ namespace MuPDF.NET
                 float zoom = dpi / 72.0f;
                 Matrix mat = new Matrix(zoom, zoom);
                 Pixmap pix = page.GetPixmap(matrix: (IdentityMatrix)mat);
-                MuPDFDocument ocrPdf = new MuPDFDocument("pdf", pix.PdfOcr2Bytes(0, language, tessdata));
+                MuPDFDocument ocrPdf = new MuPDFDocument("pdf", pix.PdfOCR2Bytes(true, language, tessdata));
 
                 MuPDFPage ocrPage = ocrPdf.LoadPage(0);
                 float unZoom = page.Rect.Width / ocrPage.Rect.Width;
@@ -3038,7 +3038,7 @@ namespace MuPDF.NET
                         pix = new Pixmap(pix, 0);
                     MuPDFDocument imgDoc = new MuPDFDocument(
                         "pdf",
-                        pix.PdfOcr2Bytes(language: language, tessdata: tessdata)
+                        pix.PdfOCR2Bytes(language: language, tessdata: tessdata)
                         );
                     MuPDFPage imgPage = imgDoc.LoadPage(0);
                     pix = null;
