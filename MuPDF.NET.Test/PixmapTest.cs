@@ -54,5 +54,49 @@ namespace MuPDF.NET
 
             Assert.That(bytes.Length, Is.EqualTo(167863));
         }
+
+        [Test]
+        public void ColorToUsage()
+        {
+            MuPDFDocument doc = new MuPDFDocument("input.pdf");
+
+            MuPDFPage page = doc[0];
+
+            Pixmap pix = page.GetPixmap();
+
+            (float f, byte[] max) = pix.ColorTopUsage();
+
+            Assert.That(max[0], Is.EqualTo(255));
+            Assert.That(max[1], Is.EqualTo(255));
+            Assert.That(max[2], Is.EqualTo(255));
+        }
+
+        [Test]
+        public void InvertIrect()
+        {
+            MuPDFDocument doc = new MuPDFDocument("input.pdf");
+
+            MuPDFPage page = doc[0];
+
+            Pixmap pix = page.GetPixmap();
+
+            bool result = pix.InvertIrect(new IRect(100, 100, 900, 900));
+
+            Assert.That(result, Is.True);
+        }
+
+        [Test]
+        public void PdfOCR()
+        {
+            MuPDFDocument doc = new MuPDFDocument("input.pdf");
+
+            MuPDFPage page = doc[0];
+
+            Pixmap pix = page.GetPixmap();
+
+            pix.PdfOCR2Bytes();
+
+            Assert.Pass();
+        }
     }
 }
