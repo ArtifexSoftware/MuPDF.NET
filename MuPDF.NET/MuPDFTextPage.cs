@@ -514,9 +514,9 @@ namespace MuPDF.NET
         public static List<Quad> Search(MuPDFTextPage stPage, string needle, int hitMax = 0, bool quad = true)
         {
             FzRect rect = stPage.MediaBox;
-            if (needle == null || needle == "")
-                return null;
             List<Quad> quads = new List<Quad>();
+            if (string.IsNullOrEmpty(needle))
+                return quads;
 
             Hits hits = new Hits();
 
@@ -524,9 +524,10 @@ namespace MuPDF.NET
             hits.Quads = quads;
             hits.HFuzz = 0.2f;
             hits.VFuzz = 0.1f;
-
+            
             FzBuffer buffer = stPage.GetBufferFromStextPage();
             string hayStackString = buffer.fz_string_from_buffer();
+            
             int hayStack = 0;
             int begin = 0;
             int end = 0;
@@ -681,7 +682,7 @@ namespace MuPDF.NET
                     {
                         for (fz_stext_char ch = line.first_char; ch != null; ch = ch.next)
                         {
-                            if (!IsRectsOverlap(r, GetCharBbox(new FzStextLine(line), new FzStextChar(ch))) || r.fz_is_infinite_rect() != 0)
+                            if (!IsRectsOverlap(r, GetCharBbox(new FzStextLine(line), new FzStextChar(ch))) && r.fz_is_infinite_rect() == 0)
                             {
                                 continue;
                             }
