@@ -950,7 +950,7 @@ namespace MuPDF.NET
         {
             List<Quad> q = new List<Quad>();
             if (quads is Rect)
-                q.Add(quads.QUAD);
+                q.Add(quads.Quad);
             else if (quads is Quad)
                 q.Add(quads);
             else if (quads is null)
