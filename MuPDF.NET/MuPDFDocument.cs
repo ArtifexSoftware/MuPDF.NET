@@ -20,9 +20,9 @@ namespace MuPDF.NET
 
         public List<Font> FontInfos { get; set; }
 
-        public Dictionary<int, MuPDFGraftMap> GraftMaps { get; set; }
+        public Dictionary<int, MuPDFGraftMap> GraftMaps { get; set; } = new Dictionary<int, MuPDFGraftMap> ();
 
-        public Dictionary<(int, int), int> ShownPages { get; set; }
+        public Dictionary<(int, int), int> ShownPages { get; set; } = new Dictionary<(int, int), int> ();
 
         public Dictionary<string, int> InsertedImages { get; set; } = new Dictionary<string, int>();
 
