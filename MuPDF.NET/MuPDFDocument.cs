@@ -4530,8 +4530,8 @@ namespace MuPDF.NET
                 throw new Exception("document closed or encrypted");
             if (!IsPDF)
                 throw new Exception("is no pdf");
-            if (tocs == null)
-                return 0;
+            if (tocs == null || tocs.Count == 0)
+                return DeleteToc().Count;
 
             int n = tocs.Count;
             int pageCount = Len;
