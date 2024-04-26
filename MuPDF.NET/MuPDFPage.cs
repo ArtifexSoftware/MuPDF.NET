@@ -268,7 +268,7 @@ namespace MuPDF.NET
                 if (page == null)
                     return null;
                 PdfAnnot annot = page.pdf_first_widget();
-                if (annot == null)
+                if (annot.m_internal == null)
                     return null;
 
                 MuPDFAnnot val = new MuPDFAnnot(annot);
@@ -3172,6 +3172,7 @@ namespace MuPDF.NET
             MuPDFDocument doc = Parent;
             if (!doc.IsPDF)
                 throw new Exception("is no PDF");
+
             widget.Validate();
             PdfPage page = GetPdfPage();
             PdfDocument pdf = page.doc();
@@ -3185,8 +3186,8 @@ namespace MuPDF.NET
             annot_.Parent = this;
             AnnotRefs[annot_.GetHashCode()] = annot_;
 
-            widget.Parent = annot_.Parent;
-            widget._annot = annot;
+            widget.Parent = this;
+            widget._annot = new PdfAnnot(annot);
             widget.Update();
 
             return annot_;

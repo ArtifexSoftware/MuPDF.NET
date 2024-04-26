@@ -1516,21 +1516,21 @@ namespace MuPDF.NET
                 Utils.SetFieldType(doc, annotObj, type);
                 annotObj.pdf_dict_put_text_string(new PdfObj("T"), fieldName);
 
-                /*if (type == PdfWidgetType.PDF_WIDGET_TYPE_SIGNATURE)
+                if (type == PdfWidgetType.PDF_WIDGET_TYPE_SIGNATURE)
                 {
                     int sigFlags = oldSigFlags | (Utils.SigFlag_SignaturesExist | Utils.SigFlag_AppendOnly);
                     Utils.pdf_dict_putl(
                         doc.pdf_trailer(),
-                        mupdf.mupdf.pdf_new_nt(sigFlags),
+                        mupdf.mupdf.pdf_new_int(sigFlags),
                         new string[]
                         {
                             "Root", "AcroForm", "SigFlags"
                         }
                     );
-                }*/
+                }
 
                 PdfObj form = doc.pdf_trailer().pdf_dict_getp("Root/AcroForm/Fields");
-                if (form == null)
+                if (form.m_internal == null)
                 {
                     form = doc.pdf_new_array(1);
                     Utils.pdf_dict_putl(
@@ -4424,7 +4424,6 @@ namespace MuPDF.NET
             PdfPage page = annot.pdf_annot_page();
             PdfObj annotObj = annot.pdf_annot_obj();
             PdfDocument pdf = page.doc();
-
             int value = widget.FieldType;
             int fieldType = value;
 
@@ -4439,7 +4438,7 @@ namespace MuPDF.NET
                 int n = color.Length;
                 PdfObj fillCol = pdf.pdf_new_array(n);
                 float col = 0;
-                for (int i = 0; i < 3; i++)
+                for (int i = 0; i < n; i++)
                 {
                     col = color[i];
                     fillCol.pdf_array_push_real(col);
@@ -4452,7 +4451,7 @@ namespace MuPDF.NET
             {
                 int n = borderDashes.Length;
                 PdfObj dashes = pdf.pdf_new_array(n);
-                for (int i = 0; i < 3; i++)
+                for (int i = 0; i < n; i++)
                 {
                     dashes.pdf_array_push_int(borderDashes[i]);
                 }
@@ -4612,7 +4611,7 @@ namespace MuPDF.NET
             {
                 if (key2 == null || key2.m_internal == null)
                     annotObj.pdf_dict_del(key1);
-                else if (key1Obj.m_internal == null)
+                else if (key1Obj.m_internal != null)
                     key1Obj.pdf_dict_del(key2);
                 return;
             }

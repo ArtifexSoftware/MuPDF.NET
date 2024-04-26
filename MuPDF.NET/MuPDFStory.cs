@@ -98,7 +98,9 @@ namespace MuPDF.NET
         /// <summary>
         /// Finds optimal rect that contains the story
         /// </summary>
-        /// <param name="fn"></param>
+        /// <param name="fn">A callable taking a floating point `parameter` and returning a `fitz.Rect()`.
+        /// <br/> If the rect is empty, we assume the story will not fit and do not call `self.place()`.
+        /// </param>
         /// <param name="rect"></param>
         /// <param name="pmin">Minimum parameter to consider</param>
         /// <param name="pmax">Maximum parameter to consider</param>
