@@ -235,4 +235,32 @@ public class MuPDFPageTest : PdfTestBase
 
         doc.Save("output.pdf");
     }
+
+    [Test]
+    public void GetImageRects()
+    {
+        MuPDFDocument doc = new MuPDFDocument("resources/image-file1.pdf");
+        MuPDFPage page = doc.LoadPage(0);
+        List<Box> imgs = page.GetImageRects(5, true);
+
+        Assert.That(imgs.Count, Is.EqualTo(2));
+    }
+
+    [Test]
+    public void Bbox()
+    {
+        MuPDFDocument doc = new MuPDFDocument();
+        MuPDFPage page = doc.NewPage();
+        int xref = page.InsertImage(page.Rect, "resources/img-transparent.png");
+        List<Block> imginfo = page.GetImageInfo(xrefs: true);
+        Assert.That(imginfo.Count, Is.EqualTo(1));
+
+        Block info = imginfo[0];
+        Assert.That(info.Xref, Is.EqualTo(xref));
+
+        List<BoxLog> bboxlog = page.GetBboxlog();
+        Assert.That(bboxlog.Count, Is.EqualTo(1));
+
+        Assert.That(bboxlog[0].Code, Is.EqualTo("fill-image"));
+    }
 }

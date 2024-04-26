@@ -32,8 +32,9 @@ namespace MuPDF.NET
             _subArchives = new List<SubArchive>();
         }
 
-        public MuPDFArchive(string filename, string path = null)
+        public MuPDFArchive(string filename, string path = "")
         {
+            _subArchives = new List<SubArchive>();
             _nativeArchive = mupdf.mupdf.fz_new_multi_archive();
             Add(filename, path);
         }
@@ -177,7 +178,7 @@ namespace MuPDF.NET
             MakeSubArch("tree", entries, null);
         }
 
-        public void Add(string content, string path)
+        public void Add(string content, string path = "")
         {
             string fmt = null;
             List<string> entries = new List<string>();

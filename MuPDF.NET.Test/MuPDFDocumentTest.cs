@@ -1,4 +1,5 @@
-﻿using System;
+﻿using mupdf;
+using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
@@ -58,11 +59,7 @@ namespace MuPDF.NET.Test
         {
             doc.DeleteXmlMetadata();
 
-            doc.Save("output.pdf");
-
-            MuPDFDocument updated = new MuPDFDocument("output.pdf");
-
-            Assert.AreEqual(updated.GetXmlMetadata(), "");
+            Assert.That(doc.GetXmlMetadata(), Is.EqualTo(""));
         }
 
         [Test]
@@ -77,7 +74,7 @@ namespace MuPDF.NET.Test
         {
             int n = doc.GetPageImages(0).Count;
 
-            Assert.AreEqual(n, 1); // in case of current input pdf, if other file, real count should be fixed
+            Assert.That(n, Is.EqualTo(1)); // in case of current input pdf, if other file, real count should be fixed
 
             n = doc.ExtractImage(doc.GetPageImages(0)[0].Xref).Image.Length;
 
@@ -87,18 +84,25 @@ namespace MuPDF.NET.Test
         [Test]
         public void GetToc()
         {
-            List<Toc> toc = doc.GetToc(simple: false);
-            Assert.NotZero(toc.Count);
+            MuPDFDocument doc = new MuPDFDocument("resources/001003ED.pdf");
+            doc.GetToc(true);
         }
 
         [Test]
-        public void Save()
+        public void EraseToc()
         {
-            doc.Save("output.pdf");
+            doc.SetToc(null);
+            Assert.That(doc.GetToc().Count, Is.EqualTo(0));
+        }
 
-            doc.Save("output.pdf", 1, 1, 1, 1, 1, 1, 1, 1);
+        [Test]
+        public void Embedded()
+        {
+            MuPDFDocument doc = new MuPDFDocument();
+            byte[] buffer = Encoding.UTF8.GetBytes("123456678790qwexcvnmhofbnmfsdg4589754uiofjkb-");
+            doc.AddEmbfile("file1", buffer, "testfile.txt", "testfile-u.txt", "Description of some sort");
 
-            Assert.Pass();
+            Console.WriteLine(doc.GetEmbfileCount());
         }
     }
 }

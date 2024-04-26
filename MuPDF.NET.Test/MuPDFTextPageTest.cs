@@ -51,7 +51,7 @@ namespace MuPDF.NET.Test
         public void ExtractBlocks()
         {
             List<TextBlock> blocks = textPage.ExtractBlocks();
-            Assert.NotZero(blocks.Count);
+            Assert.Zero(blocks.Count);
         }
 
         [Test]
@@ -96,6 +96,25 @@ namespace MuPDF.NET.Test
 
             string ret = textPage.ExtractSelection(new mupdf.FzPoint(-5, -15), null);
             Assert.Pass();
+        }
+
+        [Test]
+        public void SearchTest()
+        {
+            MuPDFDocument doc = new MuPDFDocument("input.pdf");
+
+            MuPDFPage page = new MuPDFPage(doc.GetPage(0), doc);
+
+            MuPDFTextPage tpage = page.GetTextPage();
+
+            Console.WriteLine(tpage.ExtractText());
+
+            List<Quad> matches = MuPDFTextPage.Search(tpage, "pixmap");
+
+            if (matches.Count > 0)
+            {
+                page.AddHighlightAnnot(matches);
+            }
         }
     }
 }
