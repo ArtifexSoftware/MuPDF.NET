@@ -1,7 +1,5 @@
 ﻿using mupdf;
 using System.Runtime.InteropServices;
-using System.Drawing;
-using System.Drawing.Imaging;
 
 namespace MuPDF.NET
 {

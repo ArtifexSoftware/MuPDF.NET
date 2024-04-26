@@ -740,7 +740,7 @@ namespace MuPDF.NET
             for (int i = 0; i < keys.Length - 1; i++)
             {
                 PdfObj nextObj = obj.pdf_dict_get(new PdfObj(keys[i]));
-                if (nextObj == null)
+                if (nextObj.m_internal == null)
                 {
                     nextObj = doc.pdf_new_dict(1);
                     obj.pdf_dict_put(new PdfObj(keys[i]), nextObj);

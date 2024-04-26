@@ -358,7 +358,7 @@ namespace MuPDF.NET
         /// </summary>
         /// <param name="point">the top left point of a 20 x 20 rectangle containing the MuPDF-provided icon.</param>
         /// <returns>the created annotation. Stroke color blue = (0, 0, 1), no fill color support.</returns>
-        private PdfAnnot AddCaretAnnot(Point point)
+        public MuPDFAnnot AddCaretAnnot(Point point)
         {
             PdfPage page = _pdfPage;
             PdfAnnot annot = null;
@@ -379,7 +379,7 @@ namespace MuPDF.NET
                 annot = null;
             }
 
-            return annot;
+            return new MuPDFAnnot(annot);
         }
 
         public MuPDFAnnot AddFileAnnot(
