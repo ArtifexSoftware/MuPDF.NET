@@ -740,7 +740,7 @@ namespace MuPDF.NET
             for (int i = 0; i < keys.Length - 1; i++)
             {
                 PdfObj nextObj = obj.pdf_dict_get(new PdfObj(keys[i]));
-                if (nextObj == null)
+                if (nextObj.m_internal == null)
                 {
                     nextObj = doc.pdf_new_dict(1);
                     obj.pdf_dict_put(new PdfObj(keys[i]), nextObj);
@@ -1891,6 +1891,14 @@ namespace MuPDF.NET
             return rc;
         }
 
+        /// <summary>
+        /// Store info of an image in Python list
+        /// </summary>
+        /// <param name="doc"></param>
+        /// <param name="dict"></param>
+        /// <param name="imageList"></param>
+        /// <param name="streamXRef"></param>
+        /// <returns></returns>
         public static int GatherIamges(PdfDocument doc, PdfObj dict, List<Entry> imageList, int streamXRef)
         {
             int rc = 1;

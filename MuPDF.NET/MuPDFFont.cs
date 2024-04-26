@@ -253,7 +253,7 @@ namespace MuPDF.NET
             {
                 int c = Convert.ToInt32(ch);
                 int gid;
-                FzFont font;
+                FzFont font = new FzFont();
                 if (smallCaps != 0)
                 {
                     gid = thisfont.fz_encode_character_sc(c);
@@ -262,6 +262,7 @@ namespace MuPDF.NET
                 }
                 else
                     (gid, font) = thisfont.fz_encode_character_with_fallback(c, script, lang);
+                rc += font.fz_advance_glyph(gid, wmode);
             }
             rc *= fontSize;
 

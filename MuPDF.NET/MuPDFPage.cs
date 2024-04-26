@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace MuPDF.NET
 {
@@ -15,7 +16,7 @@ namespace MuPDF.NET
 
         private static FitResult fit;
 
-        private List<Block> _imageInfo = null;
+        private List<Block> _imageInfo = new List<Block>();
 
         public PdfObj PageObj
         {
@@ -358,7 +359,7 @@ namespace MuPDF.NET
         /// </summary>
         /// <param name="point">the top left point of a 20 x 20 rectangle containing the MuPDF-provided icon.</param>
         /// <returns>the created annotation. Stroke color blue = (0, 0, 1), no fill color support.</returns>
-        private PdfAnnot AddCaretAnnot(Point point)
+        public MuPDFAnnot AddCaretAnnot(Point point)
         {
             PdfPage page = _pdfPage;
             PdfAnnot annot = null;
@@ -379,16 +380,16 @@ namespace MuPDF.NET
                 annot = null;
             }
 
-            return annot;
+            return new MuPDFAnnot(annot);
         }
 
         public MuPDFAnnot AddFileAnnot(
             Point point,
             byte[] buffer_,
             string filename,
-            dynamic ufilename,
-            string desc,
-            string icon)
+            dynamic ufilename = null,
+            string desc = null,
+            string icon = null)
         {
             PdfPage page = _pdfPage;
             string uf = ufilename != null ? ufilename : filename;
@@ -950,7 +951,7 @@ namespace MuPDF.NET
         {
             List<Quad> q = new List<Quad>();
             if (quads is Rect)
-                q.Add(quads.QUAD);
+                q.Add(quads.Quad);
             else if (quads is Quad)
                 q.Add(quads);
             else if (quads is null)
@@ -2286,14 +2287,14 @@ namespace MuPDF.NET
             mupdf.mupdf.fz_close_device(dev);
         }
 
-        public List<Rect> GetBboxlog(bool layers = false)
+        public List<BoxLog> GetBboxlog(bool layers = false)
         {
             int oldRotation = Rotation;
             if (oldRotation != 0)
                 SetRotation(0);
 
             FzPage page = _pdfPage.super();
-            List<Rect> rc = new List<Rect>();
+            List<BoxLog> rc = new List<BoxLog>();
 
             BoxDevice dev = new BoxDevice(rc, layers);
             page.fz_run_page(dev, new FzMatrix(), new FzCookie());
@@ -2813,6 +2814,12 @@ namespace MuPDF.NET
             return ret;
         }
 
+        /// <summary>
+        /// Extract image information only from a fitz.TextPage.
+        /// </summary>
+        /// <param name="hashes">include MD5 hash for each image.</param>
+        /// <param name="xrefs">try to find the xref for each image. Sets hashes to true.</param>
+        /// <returns></returns>
         public List<Block> GetImageInfo(bool hashes = false, bool xrefs = false)
         {
             MuPDFDocument doc = Parent;
@@ -2821,13 +2828,13 @@ namespace MuPDF.NET
             if (!doc.IsPDF)
                 xrefs = false;
             List<Block> imgInfo = _imageInfo;
-            if (imgInfo == null)
+            if (imgInfo.Count == 0)
             {
                 MuPDFTextPage textpage = GetTextPage(flags: (int)TextFlags.TEXT_PRESERVE_IMAGES);
                 imgInfo = textpage.ExtractImageInfo(hashes ? 1 : 0);
                 textpage = null;
                 if (hashes)
-                    _imageInfo = imgInfo;
+                   _imageInfo = imgInfo;
             }
 
             if (!xrefs || !doc.IsPDF)
@@ -2847,18 +2854,29 @@ namespace MuPDF.NET
             for (int i = 0; i < imgInfo.Count; i ++)
             {
                 Block item = imgInfo[i];
-                int xref = digests.GetValueOrDefault(Encoding.UTF8.GetString(item.Digest.ToArray()));
+                int xref = digests.GetValueOrDefault(Encoding.UTF8.GetString(item.Digest.ToArray()), 0);
                 item.Xref = xref;
                 imgInfo[i] = item;
             }
             return imgInfo;
         }
 
+        /// <summary>
+        /// List of images defined in the page object.
+        /// </summary>
+        /// <param name="full"></param>
+        /// <returns></returns>
         public List<Entry> GetImages(bool full = false)
         {
             return Parent.GetPageImages(Number, full);
         }
 
+        /// <summary>
+        /// Return list of image positions on a page.
+        /// </summary>
+        /// <param name="name">image identification. May be reference name, an item of the page's image list or an xref.</param>
+        /// <param name="transform">whether to also return the transformation matrix.</param>
+        /// <exception cref="Exception"></exception>
         public void GetImageRects(string name, bool transform = false)
         {
             List<Entry> imgs = GetImages();
@@ -2867,14 +2885,20 @@ namespace MuPDF.NET
                 throw new Exception("bad image name");
             else if (imgs.Count != 1)
                 throw new Exception("multiple image names found");
+            int xref = imgs[0].Xref;
+
         }
 
         public List<Box> GetImageRects(int name, bool transform = false)
         {
             int xref = name;
             Pixmap pix = new Pixmap(MuPDFDocument.AsPdfDocument(Parent), xref);
-            byte[] digest = pix.Digest;
+
+            byte[] digest = new byte[pix.Digest.Length];
+            Array.Copy(pix.Digest, digest, digest.Length);
+
             pix.Dispose();
+            pix = null;
 
             List<Block> infos = GetImageInfo(hashes: true);
             List<Box> bboxes = new List<Box>();
@@ -2883,16 +2907,16 @@ namespace MuPDF.NET
                 foreach (Block im in infos)
                 {
                     if (im.Digest.ToArray().SequenceEqual(digest))
-                        bboxes.Add(new Box() { Rect = new Rect(im.Bbox), Matrix = null });
+                        bboxes.Add(new Box() { Rect = new Rect(im.Bbox), Matrix = new Matrix() });
                 }
             }
             else
-            {// is it possible to include transform in Image
-                /*foreach (Block im in infos)
+            {
+                foreach (Block im in infos)
                 {
                     if (im.Digest.ToArray().SequenceEqual(digest))
-                        bboxes.Add(new Box() { Rect = new Rect(im.Bbox), Matrix = im.t });
-                }*/
+                        bboxes.Add(new Box() { Rect = new Rect(im.Bbox), Matrix = new Matrix(im.Transform) });
+                }
             }
 
             return bboxes;
@@ -3244,10 +3268,13 @@ namespace MuPDF.NET
 
     public class BoxDevice : FzDevice2
     {
-        public List<Rect> rc { get; set; }
+        public List<BoxLog> rc { get; set; }
 
         public bool layers { get; set; }
-        public BoxDevice(List<Rect> rc, bool layers) : base()
+
+        public string LayerName { get; set; }
+
+        public BoxDevice(List<BoxLog> rc, bool layers) : base()
         {
             this.rc = rc;
             this.layers = layers;
@@ -3265,7 +3292,133 @@ namespace MuPDF.NET
             use_virtual_end_layer();
         }
 
-        // not implemented some logics
+        public override void begin_layer(fz_context arg_0, string arg_2)
+        {
+            if (string.IsNullOrEmpty(arg_2))
+                LayerName = "";
+            else
+                LayerName = arg_2;
+        }
+
+        public override void end_layer(fz_context arg_0)
+        {
+            LayerName = "";
+        }
+
+        public override void fill_path(fz_context arg_0, SWIGTYPE_p_fz_path arg_2, int evenOdd, fz_matrix arg_4, fz_colorspace arg_5, SWIGTYPE_p_float arg_6, float arg_7, fz_color_params arg_8)
+        {
+            try
+            {
+                if (!layers)
+                    rc.Add(new BoxLog("fill-path", mupdf.mupdf.ll_fz_bound_path(arg_2, null, arg_4)));
+                else
+                    rc.Add(new BoxLog("fill-path", mupdf.mupdf.ll_fz_bound_path(arg_2, null, arg_4), LayerName));
+            }
+            catch (Exception)
+            {
+
+            }
+        }
+
+        public override void stroke_path(fz_context arg_0, SWIGTYPE_p_fz_path arg_2, fz_stroke_state arg_3, fz_matrix arg_4, fz_colorspace arg_5, SWIGTYPE_p_float arg_6, float arg_7, fz_color_params arg_8)
+        {
+            try
+            {
+                if (!layers)
+                    rc.Add(new BoxLog("stroke-path", mupdf.mupdf.ll_fz_bound_path(arg_2, arg_3, arg_4)));
+                else
+                    rc.Add(new BoxLog("stroke-path", mupdf.mupdf.ll_fz_bound_path(arg_2, arg_3, arg_4), LayerName));
+            }
+            catch (Exception)
+            {
+
+            }
+        }
+
+        public override void fill_text(fz_context arg_0, fz_text arg_2, fz_matrix arg_3, fz_colorspace arg_4, SWIGTYPE_p_float arg_5, float arg_6, fz_color_params arg_7)
+        {
+            try
+            {
+                if (!layers)
+                    rc.Add(new BoxLog("fill-text", mupdf.mupdf.ll_fz_bound_text(arg_2, null, arg_3)));
+                else
+                    rc.Add(new BoxLog("fill-text", mupdf.mupdf.ll_fz_bound_text(arg_2, null, arg_3), LayerName));
+            }
+            catch (Exception)
+            {
+
+            }
+        }
+
+        public override void stroke_text(fz_context arg_0, fz_text arg_2, fz_stroke_state arg_3, fz_matrix arg_4, fz_colorspace arg_5, SWIGTYPE_p_float arg_6, float arg_7, fz_color_params arg_8)
+        {
+            try
+            {
+                if (!layers)
+                    rc.Add(new BoxLog("stroke-text", mupdf.mupdf.ll_fz_bound_text(arg_2, arg_3, arg_4)));
+                else
+                    rc.Add(new BoxLog("stroke-text", mupdf.mupdf.ll_fz_bound_text(arg_2, arg_3, arg_4), LayerName));
+            }
+            catch (Exception)
+            {
+
+            }
+        }
+
+        public override void ignore_text(fz_context arg_0, fz_text arg_2, fz_matrix arg_3)
+        {
+            try
+            {
+                if (!layers)
+                    rc.Add(new BoxLog("ignore-text", mupdf.mupdf.ll_fz_bound_text(arg_2, null, arg_3)));
+                else
+                    rc.Add(new BoxLog("ignore-text", mupdf.mupdf.ll_fz_bound_text(arg_2, null, arg_3), LayerName));
+            }
+            catch (Exception)
+            {
+
+            }
+        }
+
+        public override void fill_shade(fz_context arg_0, fz_shade arg_2, fz_matrix arg_3, float arg_4, fz_color_params arg_5)
+        {
+            try
+            {
+                if (!layers)
+                    rc.Add(new BoxLog("fill-shade", mupdf.mupdf.ll_fz_bound_shade(arg_2, arg_3)));
+                else
+                    rc.Add(new BoxLog("fill-shade", mupdf.mupdf.ll_fz_bound_shade(arg_2, arg_3), LayerName));
+            }
+            catch (Exception)
+            {
+
+            }
+        }
+
+        public override void fill_image(fz_context arg_0, fz_image arg_2, fz_matrix arg_3, float arg_4, fz_color_params arg_5)
+        {
+            FzRect r = new FzRect(FzRect.Fixed.Fixed_UNIT);
+            fz_rect rr = mupdf.mupdf.ll_fz_transform_rect(r.internal_(), arg_3);
+            if (!layers)
+                rc.Add(new BoxLog("fill-image", rr));
+            else
+                rc.Add(new BoxLog("fill-image", rr, LayerName));
+        }
+
+        public override void fill_image_mask(fz_context arg_0, fz_image arg_2, fz_matrix arg_3, fz_colorspace arg_4, SWIGTYPE_p_float arg_5, float arg_6, fz_color_params arg_7)
+        {
+            try
+            {
+                if (!layers)
+                    rc.Add(new BoxLog("fill-imgmask", mupdf.mupdf.ll_fz_transform_rect(mupdf.mupdf.fz_unit_rect, arg_3)));
+                else
+                    rc.Add(new BoxLog("fill-imgmask", mupdf.mupdf.ll_fz_transform_rect(mupdf.mupdf.fz_unit_rect, arg_3), LayerName));
+            }
+            catch (Exception)
+            {
+
+            }
+        }
     }
 
     public class LineartDevice : FzDevice2
