@@ -1274,6 +1274,7 @@ namespace MuPDF.NET
                 }
             }
             ret.Fill = fc.ToArray();
+
             return ret;
         }
 
@@ -1626,6 +1627,7 @@ namespace MuPDF.NET
             float borderWidth = Border.Width;
             float[] stroke = Colors.Stroke;
 
+            Console.WriteLine(Colors.Fill.Length);
             List<float> fill = null;
             if (fillColor != null)
                 fill = new List<float>(fillColor);
@@ -1711,7 +1713,6 @@ namespace MuPDF.NET
                 if (!res)
                     throw new Exception("Error updating annotation");
 
-
                 byte[] bFill = ColorString(fill, "f");
                 byte[] bStroke = ColorString(stroke, "f");
 
@@ -1780,7 +1781,7 @@ namespace MuPDF.NET
                     string apStr = utf8.GetString(ap);
                     int bt = apStr.IndexOf("BT");
                     int et = apStr.IndexOf("ET") + 2;
-                    apStr = apStr.Substring(bt, et);
+                    apStr = apStr.Substring(bt, et - bt);
                     float w = this.Rect.Width;
                     float h = this.Rect.Height;
 
@@ -2190,9 +2191,11 @@ namespace MuPDF.NET
         public static byte[] ColorString(dynamic cs, string code)
         {
             UTF8Encoding utf8 = new UTF8Encoding();
+            if (cs is List<float>)
+                cs = cs.ToArray();
             string cc = ColorCode(cs, code);
-            if (cc == null)
-                return null;
+            if (cc == "")
+                return utf8.GetBytes("");
             return utf8.GetBytes(cc + "\n");
         }
 
