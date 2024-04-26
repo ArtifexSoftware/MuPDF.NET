@@ -8,10 +8,6 @@ namespace MuPDF.NET.Test
 {
     public class MuPDFArchiveTest
     {
-        [Test]
-        public void Contructor()
-        {
 
-        }
     }
 }
