@@ -248,7 +248,7 @@ namespace MuPDF.NET
                 Block blockDict = new Block();
                 blockDict.Number = blockNum;
                 blockDict.Bbox = new FzRect(block.m_internal.bbox);
-                blockDict.Matrix = block.i_transform();
+                blockDict.Transform = block.i_transform();
                 blockDict.Width = img.w();
                 blockDict.Height = img.h();
                 blockDict.ColorSpace = cs.fz_colorspace_n();
@@ -974,7 +974,7 @@ namespace MuPDF.NET
                     blockDict.Xres = image.xres();
                     blockDict.Yres = image.yres();
                     blockDict.Bpc = image.bpc();
-                    blockDict.Matrix = block.i_transform();
+                    blockDict.Transform = block.i_transform();
                     blockDict.Size = mupdf.mupdf.fz_image_size(image);
                     blockDict.Image = Utils.BinFromBuffer(buf);
                 }

@@ -957,6 +957,13 @@ namespace MuPDF.NET
             return ret;
         }
 
+        /// <summary>
+        /// List fonts, images, XObjects used on a page.
+        /// </summary>
+        /// <param name="pno"></param>
+        /// <param name="what"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
         private List<Entry> GetPageInfo(int pno, int what)
         {
             if (IsClosed || IsEncrypted)
@@ -1200,6 +1207,13 @@ namespace MuPDF.NET
             return val;
         }
 
+        /// <summary>
+        /// Retrieve a list of images used on a page.
+        /// </summary>
+        /// <param name="pno"></param>
+        /// <param name="full"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
         public List<Entry> GetPageImages(int pno, bool full = false)
         {
             if (IsClosed || IsEncrypted)

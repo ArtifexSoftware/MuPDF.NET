@@ -15,7 +15,7 @@ namespace MuPDF.NET
 
         private static FitResult fit;
 
-        private List<Block> _imageInfo = null;
+        private List<Block> _imageInfo = new List<Block>();
 
         public PdfObj PageObj
         {
@@ -386,9 +386,9 @@ namespace MuPDF.NET
             Point point,
             byte[] buffer_,
             string filename,
-            dynamic ufilename,
-            string desc,
-            string icon)
+            dynamic ufilename = null,
+            string desc = null,
+            string icon = null)
         {
             PdfPage page = _pdfPage;
             string uf = ufilename != null ? ufilename : filename;
@@ -2813,6 +2813,12 @@ namespace MuPDF.NET
             return ret;
         }
 
+        /// <summary>
+        /// Extract image information only from a fitz.TextPage.
+        /// </summary>
+        /// <param name="hashes">include MD5 hash for each image.</param>
+        /// <param name="xrefs">try to find the xref for each image. Sets hashes to true.</param>
+        /// <returns></returns>
         public List<Block> GetImageInfo(bool hashes = false, bool xrefs = false)
         {
             MuPDFDocument doc = Parent;
@@ -2821,13 +2827,13 @@ namespace MuPDF.NET
             if (!doc.IsPDF)
                 xrefs = false;
             List<Block> imgInfo = _imageInfo;
-            if (imgInfo == null)
+            if (imgInfo.Count == 0)
             {
                 MuPDFTextPage textpage = GetTextPage(flags: (int)TextFlags.TEXT_PRESERVE_IMAGES);
                 imgInfo = textpage.ExtractImageInfo(hashes ? 1 : 0);
                 textpage = null;
                 if (hashes)
-                    _imageInfo = imgInfo;
+                   _imageInfo = imgInfo;
             }
 
             if (!xrefs || !doc.IsPDF)
@@ -2847,18 +2853,29 @@ namespace MuPDF.NET
             for (int i = 0; i < imgInfo.Count; i ++)
             {
                 Block item = imgInfo[i];
-                int xref = digests.GetValueOrDefault(Encoding.UTF8.GetString(item.Digest.ToArray()));
+                int xref = digests.GetValueOrDefault(Encoding.UTF8.GetString(item.Digest.ToArray()), 0);
                 item.Xref = xref;
                 imgInfo[i] = item;
             }
             return imgInfo;
         }
 
+        /// <summary>
+        /// List of images defined in the page object.
+        /// </summary>
+        /// <param name="full"></param>
+        /// <returns></returns>
         public List<Entry> GetImages(bool full = false)
         {
             return Parent.GetPageImages(Number, full);
         }
 
+        /// <summary>
+        /// Return list of image positions on a page.
+        /// </summary>
+        /// <param name="name">image identification. May be reference name, an item of the page's image list or an xref.</param>
+        /// <param name="transform">whether to also return the transformation matrix.</param>
+        /// <exception cref="Exception"></exception>
         public void GetImageRects(string name, bool transform = false)
         {
             List<Entry> imgs = GetImages();
@@ -2867,14 +2884,20 @@ namespace MuPDF.NET
                 throw new Exception("bad image name");
             else if (imgs.Count != 1)
                 throw new Exception("multiple image names found");
+            int xref = imgs[0].Xref;
+
         }
 
         public List<Box> GetImageRects(int name, bool transform = false)
         {
             int xref = name;
             Pixmap pix = new Pixmap(MuPDFDocument.AsPdfDocument(Parent), xref);
-            byte[] digest = pix.Digest;
+
+            byte[] digest = new byte[pix.Digest.Length];
+            Array.Copy(pix.Digest, digest, digest.Length);
+
             pix.Dispose();
+            pix = null;
 
             List<Block> infos = GetImageInfo(hashes: true);
             List<Box> bboxes = new List<Box>();
@@ -2883,16 +2906,16 @@ namespace MuPDF.NET
                 foreach (Block im in infos)
                 {
                     if (im.Digest.ToArray().SequenceEqual(digest))
-                        bboxes.Add(new Box() { Rect = new Rect(im.Bbox), Matrix = null });
+                        bboxes.Add(new Box() { Rect = new Rect(im.Bbox), Matrix = new Matrix() });
                 }
             }
             else
-            {// is it possible to include transform in Image
-                /*foreach (Block im in infos)
+            {
+                foreach (Block im in infos)
                 {
                     if (im.Digest.ToArray().SequenceEqual(digest))
-                        bboxes.Add(new Box() { Rect = new Rect(im.Bbox), Matrix = im.t });
-                }*/
+                        bboxes.Add(new Box() { Rect = new Rect(im.Bbox), Matrix = new Matrix(im.Transform) });
+                }
             }
 
             return bboxes;

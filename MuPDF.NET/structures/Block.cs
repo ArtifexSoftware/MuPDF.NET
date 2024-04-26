@@ -26,7 +26,7 @@ namespace MuPDF.NET
 
         public byte Bpc { get; set; }
 
-        public FzMatrix Matrix { get; set; }
+        public FzMatrix Transform { get; set; }
 
         public uint Size { get; set; }
 

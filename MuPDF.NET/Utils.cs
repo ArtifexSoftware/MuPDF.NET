@@ -1891,6 +1891,14 @@ namespace MuPDF.NET
             return rc;
         }
 
+        /// <summary>
+        /// Store info of an image in Python list
+        /// </summary>
+        /// <param name="doc"></param>
+        /// <param name="dict"></param>
+        /// <param name="imageList"></param>
+        /// <param name="streamXRef"></param>
+        /// <returns></returns>
         public static int GatherIamges(PdfDocument doc, PdfObj dict, List<Entry> imageList, int streamXRef)
         {
             int rc = 1;
