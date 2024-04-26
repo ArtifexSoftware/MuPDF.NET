@@ -1,4 +1,5 @@
 ﻿using FzRect = mupdf.FzRect;
+using mupdf;
 
 namespace MuPDF.NET
 {
@@ -52,6 +53,12 @@ namespace MuPDF.NET
         {
             X0 = r[0]; Y0 = r[1];
             X1 = r[2]; Y1 = r[3];
+        }
+
+        public Rect(fz_rect r)
+        {
+            X0 = r.x0; Y0 = r.y0;
+            X1 = r.x1; Y1 = r.y1;
         }
 
         public Rect(Point p1, Point p2)

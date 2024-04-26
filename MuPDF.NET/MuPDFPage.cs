@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace MuPDF.NET
 {
@@ -2286,14 +2287,14 @@ namespace MuPDF.NET
             mupdf.mupdf.fz_close_device(dev);
         }
 
-        public List<Rect> GetBboxlog(bool layers = false)
+        public List<BoxLog> GetBboxlog(bool layers = false)
         {
             int oldRotation = Rotation;
             if (oldRotation != 0)
                 SetRotation(0);
 
             FzPage page = _pdfPage.super();
-            List<Rect> rc = new List<Rect>();
+            List<BoxLog> rc = new List<BoxLog>();
 
             BoxDevice dev = new BoxDevice(rc, layers);
             page.fz_run_page(dev, new FzMatrix(), new FzCookie());
@@ -3267,10 +3268,13 @@ namespace MuPDF.NET
 
     public class BoxDevice : FzDevice2
     {
-        public List<Rect> rc { get; set; }
+        public List<BoxLog> rc { get; set; }
 
         public bool layers { get; set; }
-        public BoxDevice(List<Rect> rc, bool layers) : base()
+
+        public string LayerName { get; set; }
+
+        public BoxDevice(List<BoxLog> rc, bool layers) : base()
         {
             this.rc = rc;
             this.layers = layers;
@@ -3288,7 +3292,133 @@ namespace MuPDF.NET
             use_virtual_end_layer();
         }
 
-        // not implemented some logics
+        public override void begin_layer(fz_context arg_0, string arg_2)
+        {
+            if (string.IsNullOrEmpty(arg_2))
+                LayerName = "";
+            else
+                LayerName = arg_2;
+        }
+
+        public override void end_layer(fz_context arg_0)
+        {
+            LayerName = "";
+        }
+
+        public override void fill_path(fz_context arg_0, SWIGTYPE_p_fz_path arg_2, int evenOdd, fz_matrix arg_4, fz_colorspace arg_5, SWIGTYPE_p_float arg_6, float arg_7, fz_color_params arg_8)
+        {
+            try
+            {
+                if (!layers)
+                    rc.Add(new BoxLog("fill-path", mupdf.mupdf.ll_fz_bound_path(arg_2, null, arg_4)));
+                else
+                    rc.Add(new BoxLog("fill-path", mupdf.mupdf.ll_fz_bound_path(arg_2, null, arg_4), LayerName));
+            }
+            catch (Exception)
+            {
+
+            }
+        }
+
+        public override void stroke_path(fz_context arg_0, SWIGTYPE_p_fz_path arg_2, fz_stroke_state arg_3, fz_matrix arg_4, fz_colorspace arg_5, SWIGTYPE_p_float arg_6, float arg_7, fz_color_params arg_8)
+        {
+            try
+            {
+                if (!layers)
+                    rc.Add(new BoxLog("stroke-path", mupdf.mupdf.ll_fz_bound_path(arg_2, arg_3, arg_4)));
+                else
+                    rc.Add(new BoxLog("stroke-path", mupdf.mupdf.ll_fz_bound_path(arg_2, arg_3, arg_4), LayerName));
+            }
+            catch (Exception)
+            {
+
+            }
+        }
+
+        public override void fill_text(fz_context arg_0, fz_text arg_2, fz_matrix arg_3, fz_colorspace arg_4, SWIGTYPE_p_float arg_5, float arg_6, fz_color_params arg_7)
+        {
+            try
+            {
+                if (!layers)
+                    rc.Add(new BoxLog("fill-text", mupdf.mupdf.ll_fz_bound_text(arg_2, null, arg_3)));
+                else
+                    rc.Add(new BoxLog("fill-text", mupdf.mupdf.ll_fz_bound_text(arg_2, null, arg_3), LayerName));
+            }
+            catch (Exception)
+            {
+
+            }
+        }
+
+        public override void stroke_text(fz_context arg_0, fz_text arg_2, fz_stroke_state arg_3, fz_matrix arg_4, fz_colorspace arg_5, SWIGTYPE_p_float arg_6, float arg_7, fz_color_params arg_8)
+        {
+            try
+            {
+                if (!layers)
+                    rc.Add(new BoxLog("stroke-text", mupdf.mupdf.ll_fz_bound_text(arg_2, arg_3, arg_4)));
+                else
+                    rc.Add(new BoxLog("stroke-text", mupdf.mupdf.ll_fz_bound_text(arg_2, arg_3, arg_4), LayerName));
+            }
+            catch (Exception)
+            {
+
+            }
+        }
+
+        public override void ignore_text(fz_context arg_0, fz_text arg_2, fz_matrix arg_3)
+        {
+            try
+            {
+                if (!layers)
+                    rc.Add(new BoxLog("ignore-text", mupdf.mupdf.ll_fz_bound_text(arg_2, null, arg_3)));
+                else
+                    rc.Add(new BoxLog("ignore-text", mupdf.mupdf.ll_fz_bound_text(arg_2, null, arg_3), LayerName));
+            }
+            catch (Exception)
+            {
+
+            }
+        }
+
+        public override void fill_shade(fz_context arg_0, fz_shade arg_2, fz_matrix arg_3, float arg_4, fz_color_params arg_5)
+        {
+            try
+            {
+                if (!layers)
+                    rc.Add(new BoxLog("fill-shade", mupdf.mupdf.ll_fz_bound_shade(arg_2, arg_3)));
+                else
+                    rc.Add(new BoxLog("fill-shade", mupdf.mupdf.ll_fz_bound_shade(arg_2, arg_3), LayerName));
+            }
+            catch (Exception)
+            {
+
+            }
+        }
+
+        public override void fill_image(fz_context arg_0, fz_image arg_2, fz_matrix arg_3, float arg_4, fz_color_params arg_5)
+        {
+            FzRect r = new FzRect(FzRect.Fixed.Fixed_UNIT);
+            fz_rect rr = mupdf.mupdf.ll_fz_transform_rect(r.internal_(), arg_3);
+            if (!layers)
+                rc.Add(new BoxLog("fill-image", rr));
+            else
+                rc.Add(new BoxLog("fill-image", rr, LayerName));
+        }
+
+        public override void fill_image_mask(fz_context arg_0, fz_image arg_2, fz_matrix arg_3, fz_colorspace arg_4, SWIGTYPE_p_float arg_5, float arg_6, fz_color_params arg_7)
+        {
+            try
+            {
+                if (!layers)
+                    rc.Add(new BoxLog("fill-imgmask", mupdf.mupdf.ll_fz_transform_rect(mupdf.mupdf.fz_unit_rect, arg_3)));
+                else
+                    rc.Add(new BoxLog("fill-imgmask", mupdf.mupdf.ll_fz_transform_rect(mupdf.mupdf.fz_unit_rect, arg_3), LayerName));
+            }
+            catch (Exception)
+            {
+
+            }
+        }
     }
 
     public class LineartDevice : FzDevice2
