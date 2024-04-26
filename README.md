@@ -35,5 +35,6 @@ While being portable to other platforms, this documentation is targeted to the W
 
 - The generated executable of your app is the `.exe` file in the `bin` folder.
 
+
 ## License and Copyright
 MuPDF.NET is available under open-source AGPL and commercial license agreements. If you determine you cannot meet the requirements of the AGPL, please contact Artifex for more information regarding a commercial license.
