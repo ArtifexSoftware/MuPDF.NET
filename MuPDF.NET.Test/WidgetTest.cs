@@ -35,5 +35,31 @@ namespace MuPDF.NET.Test
 
             Assert.That(first.FieldTypeString, Is.EqualTo("Text"));
         }
+
+        [Test]
+        public void Checkbox()
+        {
+            MuPDFDocument doc = new MuPDFDocument();
+            MuPDFPage page = doc.NewPage();
+            Widget w = new Widget(page);
+
+            w.BorderStyle = "b";
+            w.FieldName = "Button-1";
+            w.FieldLabel = "a simple check box button";
+            w.FieldType = (int)PdfWidgetType.PDF_WIDGET_TYPE_CHECKBOX;
+            w.FillColor = new float[] { 0, 1, 1 };
+            w.Rect = new Rect(50, 72, 60, 77);
+            w.TextColor = new float[] { 0, 0, 1 };
+            w.TextFont = "ZaDb";
+            w.FieldValue = "true";
+            page.AddWidget(w);
+
+            Widget field = page.FirstWidget;
+            Assert.That(field.FieldTypeString, Is.EqualTo("CheckBox"));
+
+            w.FieldFlags |= (int)FormFlags.PDF_FIELD_IS_READ_ONLY;
+            w.Update();
+            Assert.Pass();
+        }
     }
 }
