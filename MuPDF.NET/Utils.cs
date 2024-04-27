@@ -848,11 +848,11 @@ namespace MuPDF.NET
 
         public static Matrix RotatePageMatrix(PdfPage page)
         {
-            if (page == null)
-                return new Matrix();
+            if (page.m_internal == null)
+                return new Matrix(new FzMatrix());
             int rotation = Utils.PageRotation(page);
             if (rotation == 0)
-                return new Matrix();
+                return new Matrix(new FzMatrix());
 
             Point cbSize = GetCropBoxSize(page.obj());
             float w = cbSize.X;
@@ -928,9 +928,8 @@ namespace MuPDF.NET
         public static int PageRotation(PdfPage page)
         {
             int rotate;
-            if (page.obj() == null)
-                Console.WriteLine(page.obj().ToString());
-            PdfObj obj = page.obj().pdf_dict_get(new PdfObj("Rotate"));
+
+            PdfObj obj = page.obj().pdf_dict_get_inheritable(new PdfObj("Rotate"));
             rotate = obj.pdf_to_int();
             rotate = NormalizeRotation(rotate);
             return rotate;
@@ -946,7 +945,7 @@ namespace MuPDF.NET
             {
                 rotate -= 360;
             }
-            while (rotate % 90 != 0)
+            if (rotate % 90 != 0)
             {
                 return 0;
             }
@@ -4424,11 +4423,13 @@ namespace MuPDF.NET
             PdfPage page = annot.pdf_annot_page();
             PdfObj annotObj = annot.pdf_annot_obj();
             PdfDocument pdf = page.doc();
+            
             int value = widget.FieldType;
             int fieldType = value;
 
             Rect rect = widget.Rect;
             Matrix rotMat = Utils.RotatePageMatrix(page);
+            Console.WriteLine(rotMat.ToString());
             FzRect rect_ = mupdf.mupdf.fz_transform_rect(rect.ToFzRect(), rotMat.ToFzMatrix());
             annot.pdf_set_annot_rect(rect_);
 
@@ -4483,7 +4484,7 @@ namespace MuPDF.NET
             {
                 string oldName = annotObj.pdf_load_field_name();
                 if (fieldName != oldName)
-                    annotObj.pdf_dict_put_text_string(new PdfObj("T"), oldName);
+                    annotObj.pdf_dict_put_text_string(new PdfObj("T"), fieldName);
             }
 
             if (fieldType == (int)PdfWidgetType.PDF_WIDGET_TYPE_TEXT)
@@ -4504,7 +4505,7 @@ namespace MuPDF.NET
 
             string borderStyle = widget.BorderStyle;
             int val = Utils.GetBorderStyle(borderStyle);
-            Utils.pdf_dict_putl(annotObj, mupdf.mupdf.pdf_new_int(val), new string[] { "BS", "S" });
+            Utils.pdf_dict_putl(annotObj, new PdfObj(val), new string[] { "BS", "S" });
 
             float borderWidth = widget.BorderWidth;
             Utils.pdf_dict_putl(annotObj, mupdf.mupdf.pdf_new_real(borderWidth), new string[] { "BS", "S" });
@@ -4593,7 +4594,7 @@ namespace MuPDF.NET
             else if (!string.IsNullOrEmpty(fieldVal))
             {
                 pdf.pdf_set_field_value(annotObj, fieldVal, 1);
-                if (fieldType == (int)PdfWidgetType.PDF_WIDGET_TYPE_COMBOBOX || fieldType == (int)PdfWidgetType.PDF_WIDGET_TYPE_CHECKBOX)
+                if (fieldType == (int)PdfWidgetType.PDF_WIDGET_TYPE_COMBOBOX || fieldType == (int)PdfWidgetType.PDF_WIDGET_TYPE_LISTBOX)
                     annotObj.pdf_dict_del(new PdfObj("I"));
             }
             annot.pdf_dirty_annot();

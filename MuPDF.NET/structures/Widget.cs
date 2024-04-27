@@ -332,17 +332,21 @@ namespace MuPDF.NET
         {
             Validate();
             AdjustFont();
+
             TextDa = "";
             string fmt = "";
+
             if (TextColor != null && TextColor.Length == 3)
                 fmt = $"{TextColor[0]} {TextColor[1]} {TextColor[2]} rg /" + "{0} {1} Tf" + TextDa;
             else if (TextColor.Length == 1)
                 fmt = $"{TextColor[0]} g /" + "{0} {1} Tf" + TextDa;
             else if (TextColor.Length == 4)
                 fmt = $"{TextColor[0]} {TextColor[1]} {TextColor[2]} {TextColor[3]} k /" + "{0} {1} Tf" + TextDa;
+            
             TextDa = string.Format(fmt, TextFont, TextFontSize);
             if (!string.IsNullOrEmpty(ScriptCalc))
                 Utils.EnsureWidgetCalc(_annot);
+            
             Utils.SaveWidget(_annot, this);
             TextDa = "";
         }
