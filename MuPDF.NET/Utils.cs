@@ -4429,7 +4429,6 @@ namespace MuPDF.NET
 
             Rect rect = widget.Rect;
             Matrix rotMat = Utils.RotatePageMatrix(page);
-            Console.WriteLine(rotMat.ToString());
             FzRect rect_ = mupdf.mupdf.fz_transform_rect(rect.ToFzRect(), rotMat.ToFzMatrix());
             annot.pdf_set_annot_rect(rect_);
 
