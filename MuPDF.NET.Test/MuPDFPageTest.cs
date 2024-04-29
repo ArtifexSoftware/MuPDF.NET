@@ -263,4 +263,104 @@ public class MuPDFPageTest : PdfTestBase
 
         Assert.That(bboxlog[0].Code, Is.EqualTo("fill-image"));
     }
+
+    [Test]
+    public void GetDrawings1()
+    {
+        MuPDFDocument doc = new MuPDFDocument("resources/test-2462.pdf");
+        MuPDFPage page = doc[0];
+
+        Assert.That(page.GetDrawings(extended: true).Count, Is.Not.Zero);
+    }
+
+    [Test]
+    public void ExtractImage()
+    {
+        string path = "resources/test_2348.pdf";
+        MuPDFDocument doc = new MuPDFDocument();
+        MuPDFPage page = doc.NewPage(width: 500, height: 842);
+        Rect r = new Rect(20, 20, 480, 820);
+        page.InsertImage(r, filename: "resources/nur-ruhig.jpg");
+        page = doc.NewPage(width: 500, height: 842);
+        page.InsertImage(r, filename: "resources/img-transparent.png");
+        doc.Save(path);
+        doc.Close();
+
+        doc = new MuPDFDocument(path);
+        page = doc[0];
+        List<Entry> imlist = page.GetImages();
+        ImageInfo img = doc.ExtractImage(imlist[0].Xref);
+        string ext = img.Ext;
+        Assert.That(ext, Is.EqualTo("jpeg"));
+
+        page = doc[1];
+        imlist = page.GetImages();
+        img = doc.ExtractImage(imlist[0].Xref);
+        ext = img.Ext;
+        Assert.That(ext, Is.EqualTo("png"));
+    }
+
+    [Test]
+    public void ObjectStream1()
+    {
+        string text = "Hello, world! Hallo, Welt!";
+        MuPDFDocument doc = new MuPDFDocument();
+        MuPDFPage page = doc.NewPage();
+        Rect r = new Rect(50, 50, 200, 500);
+
+        page.InsertHtmlBox(r, text);
+        doc.Write(useObjstms: true);
+        bool found = false;
+
+        foreach (int xref in Enumerable.Range(1, doc.GetXrefLength()))
+        {
+            string objstring = doc.GetXrefObject(xref, compressed: 1);
+            if (objstring.Contains("/Type/ObjStm"))
+            {
+                found = true;
+                break;
+            }
+        }
+        Assert.That(found, Is.True);
+    }
+
+    [Test]
+    public void NamedLink()
+    {
+        Dictionary<string, LinkType> text = new Dictionary<string, LinkType>()
+        {
+            { "https://www.google.de", LinkType.LINK_URI },
+            { "http://www.google.de", LinkType.LINK_URI },
+            { "mailto:jorj.x.mckie@outlook.de", LinkType.LINK_URI },
+            { "www.wikipedia.de", LinkType.LINK_LAUNCH },
+            { "awkward:resource", LinkType.LINK_URI },
+            { "ftp://www.google.de", LinkType.LINK_URI },
+            { "some.program", LinkType.LINK_LAUNCH },
+            { "file://some.program", LinkType.LINK_LAUNCH },
+            { "another.exe", LinkType.LINK_LAUNCH }
+        };
+
+        Rect r = new Rect(0, 0, 50, 20);
+        List<Rect> rs = new List<Rect>();
+        int i = 0;
+
+        for (i = 0; i < text.Keys.Count; i++)
+            rs.Add(r + new Rect(0, r.Height * i, 0, r.Height * i));
+
+        MuPDFDocument doc = new MuPDFDocument();
+        MuPDFPage page = doc.NewPage();
+        i = 0;
+        foreach (string k in text.Keys)
+        {
+            Link link = new Link() { Kind = LinkType.LINK_URI, Uri = k, From = rs[i] };
+            page.InsertLink(link);
+            i++;
+        }
+
+        byte[] pdfData = doc.Write();
+        doc = new MuPDFDocument("pdf", pdfData);
+        page = doc[0];
+
+        Assert.That(page.GetLinks().Count, Is.Not.Zero);
+    }
 }

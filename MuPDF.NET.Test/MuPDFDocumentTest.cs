@@ -104,5 +104,21 @@ namespace MuPDF.NET.Test
 
             Console.WriteLine(doc.GetEmbfileCount());
         }
+
+        [Test]
+        public void Test_IsNoPDF()
+        {
+            MuPDFDocument doc = new MuPDFDocument("resources/Bezier.epub");
+            Assert.That(doc.IsPDF, Is.False);
+        }
+
+        [Test]
+        public void Test_PageIds()
+        {
+            MuPDFDocument doc = new MuPDFDocument("resources/Bezier.epub");
+
+            Assert.That(doc.ChapterCount, Is.EqualTo(7));
+            Assert.That(doc.LastLocation.Item1, Is.EqualTo(6));
+        }
     }
 }
