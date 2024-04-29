@@ -92,8 +92,9 @@ namespace MuPDF.NET
                     return null;
 
                 FzLink fzVal = _nativeLink.next();
-                if (fzVal == null)
+                if (fzVal.m_internal == null)
                     return null;
+
                 MuPDFLink val = new MuPDFLink(fzVal);
                 if (val != null)
                 {
@@ -105,13 +106,18 @@ namespace MuPDF.NET
                         List<int> linkXrefs = new List<int>();
                         List<string> linkIds = new List<string>();
                         List<AnnotXref> annotXrefs = Parent.GetAnnotXrefs();
-                        for (int i = 0; i < annotXrefs.Count; i++)
+                        int i = 0;
+                        for (i = 0; i < annotXrefs.Count; i++)
                         {
                             if (annotXrefs[i].AnnotType == PdfAnnotType.PDF_ANNOT_LINK)
                             {
                                 linkXrefs.Add(annotXrefs[i].Xref);
                                 linkIds.Add(annotXrefs[i].Id);
                             }
+                        }
+
+                        for (i = 0; i < annotXrefs.Count; i ++)
+                        {
                             int idx = linkXrefs.IndexOf(Xref);
                             val.Xref = linkXrefs[idx + 1];
                             val.Id = linkIds[idx + 1];

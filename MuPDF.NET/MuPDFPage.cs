@@ -1087,14 +1087,14 @@ namespace MuPDF.NET
             if (page.obj().pdf_dict_get(new PdfObj("Annots")).m_internal == null)
                 page.obj().pdf_dict_put_array(new PdfObj("Annots"), lCount);
             PdfObj annots = page.obj().pdf_dict_get(new PdfObj("Annots"));
-            Debug.Assert(annots == null, $"{lCount} is {annots}");
+            Debug.Assert(annots.m_internal == null, $"{lCount} is {annots}");
 
             for (i = 0; i < lCount; i++)
             {
                 string text = links[i];
-                if (text == null)
+                if (string.IsNullOrEmpty(text))
                 {
-                    Console.WriteLine($"skipping bad link / annot item {i}.\\n");
+                    Console.WriteLine($"skipping bad link / annot item {i}.\n");
                     continue;
                 }
 
@@ -1667,19 +1667,16 @@ namespace MuPDF.NET
                 links.Add(nl);
                 ln = ln.Next;
             }
-
             if (links.Count != 0 && Parent.IsPDF)
             {
                 List<AnnotXref> xrefs = GetAnnotXrefs();
-                xrefs = xrefs.Where(xref => xref.AnnotType ==PdfAnnotType.PDF_ANNOT_LINK).ToList();
+                xrefs = xrefs.Where(xref => xref.AnnotType == PdfAnnotType.PDF_ANNOT_LINK).ToList();
                 if (xrefs.Count == links.Count)
                 {
                     for (int i = 0; i < xrefs.Count; i++)
                     {
-                        Link t = links[i];
-                        t.Xref = xrefs[i].Xref;
-                        t.Id = xrefs[i].Id;
-                        links.Insert(i, t);
+                        links[i].Xref = xrefs[i].Xref;
+                        links[i].Id = xrefs[i].Id;
                     }
                 }
             }
@@ -2056,7 +2053,7 @@ namespace MuPDF.NET
         public List<AnnotXref> GetAnnotXrefs()
         {
             PdfPage page = GetPdfPage();
-            if (page == null)
+            if (page.m_internal == null)
                 return null;
             return Utils.GetAnnotXrefList(page.obj());
         }

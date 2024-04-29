@@ -2508,7 +2508,7 @@ namespace MuPDF.NET
             Link nl = new Link();
             nl.Kind = dest.Kind;
             nl.Xref = 0;
-            nl.From = r;
+            nl.From = new Rect(r);
             Point pnt = new Point(0, 0);
 
             if ((dest.Flags & (int)LinkFlags.LINK_FLAG_L_VALID) != 0)
@@ -2517,11 +2517,13 @@ namespace MuPDF.NET
                 pnt.Y = dest.TopLeft.Y;
 
             if (dest.Kind == LinkType.LINK_URI)
+            {
                 nl.Uri = dest.Uri;
+            }
             else if (dest.Kind == LinkType.LINK_GOTO)
             {
                 nl.Page = dest.Page;
-                nl.To = pnt;
+                nl.To = new Point(pnt);
                 if ((dest.Flags & (int)LinkFlags.LINK_FLAG_R_IS_ZOOM) != 0)
                     nl.Zoom = dest.BottomRight.X;
                 else
@@ -2543,7 +2545,9 @@ namespace MuPDF.NET
                 }
             }
             else if (dest.Kind == LinkType.LINK_LAUNCH)
-                nl.File = dest.FileSpec.Replace("\\", "/");
+            {
+                nl.File = (string.IsNullOrEmpty(dest.FileSpec) ? dest.Uri : dest.FileSpec).Replace("\\", "/");
+            }
             else if (dest.Kind == LinkType.LINK_NAMED)
             {
                 bool andKeys = dest.Named.Keys.Intersect(nl.GetType().GetFields().Select(e => e.Name)).Any();
@@ -2686,7 +2690,7 @@ namespace MuPDF.NET
                 PdfObj annotObj = annots.pdf_array_get(i);
                 int xref = annotObj.pdf_to_num();
                 PdfObj subtype = annotObj.pdf_dict_get(new PdfObj("Subtype"));
-                if (subtype == null)
+                if (subtype.m_internal == null)
                     continue;
 
                 pdf_annot_type type = mupdf.mupdf.pdf_annot_type_from_string(subtype.pdf_to_name());

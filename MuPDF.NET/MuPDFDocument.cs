@@ -51,8 +51,17 @@ namespace MuPDF.NET
         public Outline Outline;
         public bool IsPDF
         {
-            get { return true; }
-            set { _isPDF = value; }
+            get
+            {
+                if (mupdf.mupdf.ll_pdf_specifics(_nativeDocument.m_internal) != null)
+                    return true;
+                else
+                    return false;
+            }
+            set
+            {
+                _isPDF = value;
+            }
         }
 
         public bool IsOwn { get; set; }
@@ -820,7 +829,10 @@ namespace MuPDF.NET
             int encryption = 1,
             int permissions = 4095,
             string ownerPW = null,
-            string userPW = null
+            string userPW = null,
+            int preserveMetadata = 1,
+            int useObjstms = 0,
+            int compressionEffort = 0
         )
         {
             if (IsClosed || IsEncrypted)
@@ -854,6 +866,9 @@ namespace MuPDF.NET
                 opts.opwd_utf8_set_value(userPW);
             if (userPW != null)
                 opts.upwd_utf8_set_value(userPW);
+            opts.do_preserve_metadata = preserveMetadata;
+            opts.do_use_objstms = useObjstms;
+            opts.compression_effort = compressionEffort;
 
             FzOutput output = null;
             pdf.m_internal.resynth_required = 0;
@@ -1182,9 +1197,10 @@ namespace MuPDF.NET
                 throw new Exception("document closed");
             PdfDocument pdf = AsPdfDocument(this);
             int xrefLen = pdf.pdf_xref_len();
+            Console.WriteLine(xrefLen);
             PdfObj obj = null;
 
-            if (Utils.INRANGE(xref, 1, xrefLen - 1) && xref != -1)
+            if (!Utils.INRANGE(xref, 1, xrefLen - 1) && xref != -1)
                 throw new Exception(Utils.ErrorMessages["MSG_BAD_XREF"]);
             if (xref > 0)
                 obj = pdf.pdf_load_object(xref);
@@ -3809,7 +3825,10 @@ namespace MuPDF.NET
             int encryption = 1,
             int permissions = 4095,
             string ownerPW = null,
-            string userPW = null
+            string userPW = null,
+            bool preserveMetadata = true,
+            bool useObjstms = false,
+            bool compressionEffort = false
         )
         {
             MemoryStream byteStream = new MemoryStream();
@@ -3830,7 +3849,10 @@ namespace MuPDF.NET
                 encryption: encryption,
                 permissions: permissions,
                 ownerPW: ownerPW,
-                userPW: userPW
+                userPW: userPW,
+                preserveMetadata: preserveMetadata ? 1 : 0,
+                useObjstms: useObjstms ? 1 : 0,
+                compressionEffort: compressionEffort ? 1 : 0
             );
             return byteStream.ToArray();
         }
