@@ -7,10 +7,69 @@ namespace MuPDF.NET
     {
         private FzPixmap _nativePixmap;
 
-        public Pixmap(ColorSpace cs, IRect irect, int alpha)
+        public Pixmap(ColorSpace cs, IRect irect, int alpha = 0)
         {
             _nativePixmap = mupdf.mupdf.fz_new_pixmap_with_bbox(cs.ToFzColorspace(), irect.ToFzIrect(), new FzSeparations(0), alpha);
         }
+
+        public Pixmap(MuPDFDocument doc, int xref)
+        {
+            PdfDocument pdf = MuPDFDocument.AsPdfDocument(doc);
+            int xrefLen = pdf.pdf_xref_len();
+            if (!Utils.INRANGE(xref, 1, xrefLen - 1))
+                throw new Exception(Utils.ErrorMessages["MSG_BAD_XREF"]);
+            PdfObj r = pdf.pdf_new_indirect(xref, 0);
+            PdfObj type = r.pdf_dict_get(new PdfObj("Subtype"));
+            if (type.pdf_name_eq(new PdfObj("Image")) == 0 &&
+                type.pdf_name_eq(new PdfObj("Alpha")) == 0 &&
+                type.pdf_name_eq(new PdfObj("Luminosity")) == 0)
+                throw new Exception(Utils.ErrorMessages["MSG_IS_NO_IMAGE"]);
+            FzImage img = pdf.pdf_load_image(r);
+            FzPixmap pix = img.fz_get_pixmap_from_image(new FzIrect(Utils.FZ_MIN_INF_RECT, Utils.FZ_MIN_INF_RECT, Utils.FZ_MAX_INF_RECT, Utils.FZ_MAX_INF_RECT),
+                new FzMatrix(img.w(), 0, 0, img.h(), 0, 0),
+                null,
+                null
+                );
+            _nativePixmap = pix;
+        }
+
+        public Pixmap(Pixmap spix, float w, float h)
+        {
+            FzIrect bbox = new FzIrect(mupdf.mupdf.fz_infinite_irect);
+            if (spix == null)
+                throw new Exception("bad pixmap");
+            FzPixmap srcPix = spix.ToFzPixmap();
+            FzPixmap pm = null;
+            if (bbox.fz_is_infinite_irect() == 0)
+                pm = srcPix.fz_scale_pixmap(srcPix.x(), srcPix.y(), w, h, bbox);
+            else
+                pm = srcPix.fz_scale_pixmap(srcPix.x(), srcPix.y(), w, h, new FzIrect(mupdf.mupdf.fz_infinite_irect));
+            _nativePixmap = pm;
+        }
+
+        /*public Pixmap(Pixmap spix, float alpha = 1)
+        {
+            FzPixmap srcPix = spix != null ? spix.ToFzPixmap() : throw new Exception("bad pixmpa");
+            if (!Utils.INRANGE(alpha, 0, 1))
+                throw new Exception("bad alpha value");
+
+            FzColorspace cs = srcPix.fz_pixmap_colorspace();
+            if (cs.m_internal == null && alpha == 0)
+                throw new Exception("cannot drop alpha for  'Null' colorspace");
+            FzSeparations seps = new FzSeparations();
+            int n = srcPix.fz_pixmap_colorants();
+            float w = srcPix.m_internal.x;
+            float h = srcPix.m_internal.y;
+            FzPixmap pm = mupdf.mupdf.fz_new_pixmap(cs, (int)w, (int)h, seps, (int)alpha);
+
+            pm.m_internal.x = srcPix.m_internal.x;
+            pm.m_internal.y = srcPix.m_internal.y;
+            pm.m_internal.xres = srcPix.m_internal.xres;
+            pm.m_internal.yres = srcPix.m_internal.yres;
+
+            mupdf.mupdf.ll_fz_pixmap_co
+
+        }*/
 
         public IRect IRect
         {
@@ -281,14 +340,14 @@ namespace MuPDF.NET
             _nativePixmap = pixmap;
         }
 
-        public Pixmap(string arg0, FzPixmap arg1)
+        public Pixmap(string arg0, Pixmap arg1)
         {
-            if (arg0 == "raw")
+            if (arg0 == "raw" && arg1 != null)
             {
-                _nativePixmap = arg1;
+                _nativePixmap = arg1.ToFzPixmap();
             }
             else
-                throw new Exception("arg0 must be `raw`.");
+                throw new Exception("arg0 must be `raw` or arg1 must be not null.");
         }
 
         public Pixmap(PdfDocument doc, int xref)

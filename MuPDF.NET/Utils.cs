@@ -3136,7 +3136,7 @@ namespace MuPDF.NET
             }
 
             mupdf.mupdf.fz_close_device(dev);
-            return new Pixmap("raw", pix);
+            return new Pixmap("raw", new Pixmap(pix));
         }
 
         public static FzFont GetFont(string fontName, string fontFile, byte[] fontBuffer, int script,
