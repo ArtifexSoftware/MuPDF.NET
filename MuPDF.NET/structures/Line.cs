@@ -8,8 +8,8 @@ namespace MuPDF.NET
 
         public int WMode { get; set; }
 
-        public FzPoint Dir { get; set; }
+        public Point Dir { get; set; }
 
-        public FzRect Bbox { get; set; }
+        public Rect Bbox { get; set; }
     }
 }

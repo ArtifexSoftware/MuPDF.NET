@@ -118,6 +118,11 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// Append a sub-archive. The meaning of the parameters are exactly the same as explained above. Of course, parameter content is not optional here.
+        /// </summary>
+        /// <param name="content">The fully qualified name of the entry.</param>
+        /// <param name="path"></param>
         public void Add(ZipArchive content, string path = null)
         {
             string fmt = "zip";
@@ -206,11 +211,21 @@ namespace MuPDF.NET
             }
         }
 
-        public int HasEntry(string name)
+        /// <summary>
+        /// Checks whether an entry exists in any of the sub-archives.
+        /// </summary>
+        /// <param name="name">The fully qualified name of the entry.</param>
+        /// <returns></returns>
+        public bool HasEntry(string name)
         {
-            return _nativeArchive.fz_has_archive_entry(name);
+            return _nativeArchive.fz_has_archive_entry(name) != 0;
         }
 
+        /// <summary>
+        /// Retrieve the data of an entry.
+        /// </summary>
+        /// <param name="name">The fully qualified name of the entry.</param>
+        /// <returns></returns>
         public byte[] ReadEntry(string name)
         {
             FzBuffer buf = _nativeArchive.fz_read_archive_entry(name);

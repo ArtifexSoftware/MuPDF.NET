@@ -239,6 +239,10 @@ namespace MuPDF.NET
             Checker();
         }
 
+        /// <summary>
+        /// Return the names of On / Off (i.e. selected / clicked or not) states a button field may have. While the ‘Off’ state usually is also named like so, the ‘On’ state is often given a name relating to the functional context, for example ‘Yes’, ‘Female’, etc.
+        /// </summary>
+        /// <returns></returns>
         public Dictionary<string, List<string>> ButtonStates()
         {
             if (!(FieldType == 2 || FieldType == 5))
@@ -302,6 +306,10 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// Return the value of the “ON” state of check boxes and radio buttons. For check boxes this is always the value “Yes”. For radio buttons, this is the value to select / activate the button.
+        /// </summary>
+        /// <returns></returns>
         public string OnState()
         {
             if (!(FieldType == 2 || FieldType == 5))
@@ -323,26 +331,36 @@ namespace MuPDF.NET
             return "";
         }
 
+        /// <summary>
+        /// Reset the field’s value to its default – if defined – or remove it. Do not forget to issue update() afterwards.
+        /// </summary>
         public void Reset()
         {
             Utils.ResetWidget(_annot);
         }
 
+        /// <summary>
+        /// After any changes to a widget, this method must be used to store them in the PDF 
+        /// </summary>
         public void Update()
         {
             Validate();
             AdjustFont();
+
             TextDa = "";
             string fmt = "";
+
             if (TextColor != null && TextColor.Length == 3)
                 fmt = $"{TextColor[0]} {TextColor[1]} {TextColor[2]} rg /" + "{0} {1} Tf" + TextDa;
             else if (TextColor.Length == 1)
                 fmt = $"{TextColor[0]} g /" + "{0} {1} Tf" + TextDa;
             else if (TextColor.Length == 4)
                 fmt = $"{TextColor[0]} {TextColor[1]} {TextColor[2]} {TextColor[3]} k /" + "{0} {1} Tf" + TextDa;
+            
             TextDa = string.Format(fmt, TextFont, TextFontSize);
             if (!string.IsNullOrEmpty(ScriptCalc))
                 Utils.EnsureWidgetCalc(_annot);
+            
             Utils.SaveWidget(_annot, this);
             TextDa = "";
         }

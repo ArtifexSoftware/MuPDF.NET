@@ -549,7 +549,7 @@ namespace MuPDF.NET
 
         public MuPDFAnnot(PdfAnnot annotion)
         {
-            _nativeAnnotion = annotion;
+            _nativeAnnotion = new PdfAnnot(annotion);
 
             IsOwner = true;
         }

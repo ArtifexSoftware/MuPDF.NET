@@ -51,6 +51,27 @@ namespace MuPDF.NET
             Rect = null;
         }
 
+        /// <summary>
+        /// Insert text lines
+        /// </summary>
+        /// <param name="point">the bottom-left position of the first character of text in pixels</param>
+        /// <param name="buffer"></param>
+        /// <param name="fontSize"></param>
+        /// <param name="lineHeight"></param>
+        /// <param name="fontName"></param>
+        /// <param name="fontFile"></param>
+        /// <param name="setSimple"></param>
+        /// <param name="encoding"></param>
+        /// <param name="color"></param>
+        /// <param name="fill"></param>
+        /// <param name="renderMode"></param>
+        /// <param name="borderWidth"></param>
+        /// <param name="rotate"></param>
+        /// <param name="morph"></param>
+        /// <param name="strokeOpacity">set transparency for stroke colors (the border line of a character). Only 0 <= value <= 1 will be considered. Default is 1</param>
+        /// <param name="fillOpacity">set transparency for fill colors. Default is 1</param>
+        /// <param name="oc">the xref number of an OCG or OCMD to make this text conditionally displayable</param>
+        /// <returns>number of lines inserted.</returns>
         public int InsertText(
             Point point,
             List<string> buffer,
@@ -75,6 +96,27 @@ namespace MuPDF.NET
                 color, fill, renderMode, borderWidth, rotate, morph, strokeOpacity, fillOpacity, oc);
         }
 
+        /// <summary>
+        /// Insert text lines
+        /// </summary>
+        /// <param name="point">the bottom-left position of the first character of text in pixels</param>
+        /// <param name="buffer"></param>
+        /// <param name="fontSize"></param>
+        /// <param name="lineHeight"></param>
+        /// <param name="fontName"></param>
+        /// <param name="fontFile"></param>
+        /// <param name="setSimple"></param>
+        /// <param name="encoding"></param>
+        /// <param name="color"></param>
+        /// <param name="fill"></param>
+        /// <param name="renderMode"></param>
+        /// <param name="borderWidth"></param>
+        /// <param name="rotate"></param>
+        /// <param name="morph"></param>
+        /// <param name="strokeOpacity">set transparency for stroke colors (the border line of a character). Only 0 <= value <= 1 will be considered. Default is 1</param>
+        /// <param name="fillOpacity">set transparency for fill colors. Default is 1</param>
+        /// <param name="oc">the xref number of an OCG or OCMD to make this text conditionally displayable</param>
+        /// <returns>number of lines inserted.</returns>
         public int InsertText(
             Point point,
             string buffer,
@@ -100,29 +142,7 @@ namespace MuPDF.NET
                 color, fill, renderMode, borderWidth, rotate, morph, strokeOpacity, fillOpacity, oc);
         }
 
-        /// <summary>
-        /// Insert text lines
-        /// </summary>
-        /// <param name="point">the bottom-left position of the first character of text in pixels</param>
-        /// <param name="buffer"></param>
-        /// <param name="fontSize"></param>
-        /// <param name="lineHeight"></param>
-        /// <param name="fontName"></param>
-        /// <param name="fontFile"></param>
-        /// <param name="setSimple"></param>
-        /// <param name="encoding"></param>
-        /// <param name="color"></param>
-        /// <param name="fill"></param>
-        /// <param name="renderMode"></param>
-        /// <param name="borderWidth"></param>
-        /// <param name="rotate"></param>
-        /// <param name="morph"></param>
-        /// <param name="strokeOpacity">set transparency for stroke colors (the border line of a character). Only 0 <= value <= 1 will be considered. Default is 1</param>
-        /// <param name="fillOpacity">set transparency for fill colors. Default is 1</param>
-        /// <param name="oc">the xref number of an OCG or OCMD to make this text conditionally displayable</param>
-        /// <returns></returns>
-        /// <exception cref="Exception"></exception>
-        public int _InsertText(
+        internal int _InsertText(
             Point point,
             List<string> buffer,
             float fontSize = 11,
@@ -877,6 +897,29 @@ namespace MuPDF.NET
                 color, fill, expandTabs, align, renderMode, borderWidth, rotate, morph, strokeOpacity, fillOpacity, oc);
         }
 
+        /// <summary>
+        /// Insert text into a given rectangle.
+        /// </summary>
+        /// <param name="rect">the textbox to fill</param>
+        /// <param name="buffer">text to be inserted</param>
+        /// <param name="fontSize">font size</param>
+        /// <param name="lineHeight">overwrite the font property</param>
+        /// <param name="fontName">a Base-14 font, font name or '/name'</param>
+        /// <param name="fontFile">name of a font file</param>
+        /// <param name="setSimple"></param>
+        /// <param name="encoding"></param>
+        /// <param name="color">RGB stroke color triple</param>
+        /// <param name="fill">RGB fill color triple</param>
+        /// <param name="expandTabs">handles tabulators with string function</param>
+        /// <param name="align">left, center, right, justified</param>
+        /// <param name="renderMode">text rendering control</param>
+        /// <param name="borderWidth">thickness of glyph borders</param>
+        /// <param name="rotate">0, 90, 180, or 270 degrees</param>
+        /// <param name="morph">morph box with a matrix and a fixpoint</param>
+        /// <param name="strokeOpacity"></param>
+        /// <param name="fillOpacity"></param>
+        /// <param name="oc"></param>
+        /// <returns>unused or deficit rectangle area (float)</returns>
         public float InsertTextbox(
             Rect rect,
             string buffer,
@@ -899,7 +942,7 @@ namespace MuPDF.NET
             int oc = 0
             )
         {
-            string[] list = buffer.Split(" ");
+            string[] list = buffer.Split("\n");
             return _InsertTextbox(rect, new List<string>(list), fontSize, lineHeight, fontName, fontFile, setSimple, encoding,
                 color, fill, expandTabs, align, renderMode, borderWidth, rotate, morph, strokeOpacity, fillOpacity, oc);
         }
@@ -975,7 +1018,7 @@ namespace MuPDF.NET
 
             int xref = Page.InsertFont(fontName: fname, fontFile: fontFile, encoding: encoding, setSimple: setSimple);
             Font fontInfo = Utils.CheckFontInfo(Doc, xref);
-
+            
             if (fontInfo == null)
                 throw new Exception("no found font info");
             
@@ -993,7 +1036,6 @@ namespace MuPDF.NET
             else
                 lheightFactor = asc - des;
             float lheight = fontSize * lheightFactor;
-
             string t0 = string.Join('\n', buffer);
             int maxCode = 0;
             foreach (char c in t0)
@@ -1046,31 +1088,27 @@ namespace MuPDF.NET
             int progr = 1;
             Point cPnt = new Point(0, fontSize * asc);
             Point point = new Point();
-            float pos = 0, maxWidth = 0, maxPos = 0;
+            float pos = 0, maxWidth = 0, maxHeight = 0;
             if (rot == 0)
             {
                 point = rect.TopLeft + cPnt;
-                pos = point.Y + Y;
                 maxWidth = rect.Width;
-                maxPos = rect.Y1 + Y;
+                maxHeight = rect.Height;
             }
             else if (rot == 90)
             {
                 cPnt = new Point(fontSize * asc, 0);
                 point = rect.BottomLeft + cPnt;
-                pos = point.X + X;
                 maxWidth = rect.Height;
-                maxPos = rect.X1 + X;
+                maxHeight = rect.Width;
                 cm += cmp90;
             }
             else if (rot == 180)
             {
                 cPnt = -(new Point(0, fontSize * asc));
                 point = rect.BottomRight + cPnt;
-                pos = point.Y + Y;
                 maxWidth = rect.Width;
-                progr = -1;
-                maxPos = rect.Y0 + Y;
+                maxHeight = rect.Height;
                 cm += cm180;
             }
             else
@@ -1080,7 +1118,7 @@ namespace MuPDF.NET
                 pos = point.X + X;
                 maxWidth = rect.Height;
                 progr = -1;
-                maxPos = rect.X0 + X;
+                maxHeight = rect.Width;
                 cm += cmm90;
             }
 
@@ -1097,17 +1135,16 @@ namespace MuPDF.NET
                     if (rest >= pl_w)
                     {
                         lbuff += word + " ";
-                        rest -= pl_w + blen;
+                        rest -= (pl_w + blen);
                         continue;
                     }
-                    if (lbuff.Length > 0)
+                    if (!string.IsNullOrEmpty(lbuff))
                     {
                         lbuff = lbuff.TrimEnd() + "\n";
                         text += lbuff;
-                        pos += lheight * progr;
                         justTab.Add(true);
-                        lbuff = "";
                     }
+                    lbuff = "";
                     rest = maxWidth;
                     if (pl_w <= maxWidth)
                     {
@@ -1120,13 +1157,12 @@ namespace MuPDF.NET
                         justTab[justTab.Count - 1] = false;
                     foreach (char c in word)
                     {
-                        if (PixLen(lbuff) <= maxWidth - PixLen(Convert.ToString(c)))
+                        if (PixLen(lbuff) <= (maxWidth - PixLen(Convert.ToString(c))))
                             lbuff += c;
                         else
                         {
                             lbuff += "\n";
                             text += lbuff;
-                            pos += lheight * progr;
                             justTab.Add(false);
                             lbuff = Convert.ToString(c);
                         }
@@ -1143,14 +1179,17 @@ namespace MuPDF.NET
                 if (i < t2.Count() - 1)
                 {
                     text += "\n";
-                    pos += lheight * progr;
                 }
             }
+            if (text.EndsWith("\n"))
+                text = text.Substring(0, text.Length - 1);
 
-            float more = (pos - maxPos) * progr;
+            int lbCount = text.Split('\n').Length;
+
+            float more = (lheight * lbCount) - des * fontSize - maxHeight;
             if (more > Utils.FLT_EPSILON)
                 return (-1) * more;
-
+            
             more = Math.Abs(more);
             if (more < Utils.FLT_EPSILON)
                 more = 0;
@@ -1160,7 +1199,7 @@ namespace MuPDF.NET
             string[] text_t = text.Split("\n");
 
             justTab[justTab.Count - 1] = false;
-
+            
             for (int i = 0; i < text_t.Length; i++)
             {
                 float pl = maxWidth - PixLen(text_t[i]);

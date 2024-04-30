@@ -10,23 +10,23 @@ namespace MuPDF.NET
 
         private FzText _nativeText;
 
-        public float Opacity;
+        public float Opacity { get; set; }
 
-        public Rect Rect;
+        public Rect Rect { get; set; }
 
-        public Matrix Ctm;
+        public Matrix Ctm { get; set; }
 
-        public Matrix ICtm;
+        public Matrix ICtm { get; set; }
 
-        public Point LastPoint;
+        public Point LastPoint { get; set; }
 
-        public Rect TextRect;
+        public Rect TextRect { get; set; }
 
-        public List<MuPDFFont> UsedFonts;
+        public List<MuPDFFont> UsedFonts { get; set; }
 
-        public bool ThisOwn;
+        public bool ThisOwn { get; set; }
 
-        public float[] Color;
+        public float[] Color { get; set; }
 
         public MuPDFTextWriter(Rect pageRect, float opacity = 1, float[] color = null)
         {
@@ -51,6 +51,18 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// Add some new text in horizontal writing.
+        /// </summary>
+        /// <param name="pos">start position of the text, the bottom left point of the first character.</param>
+        /// <param name="text">a string of arbitrary length. It will be written starting at position “pos”.</param>
+        /// <param name="font">a Font. If omitted, fitz.Font("helv") will be used.</param>
+        /// <param name="fontSize">the fontsize, a positive number, default 11.</param>
+        /// <param name="language">the language to use, e.g. “en” for English. Meaningful values should be compliant with the ISO 639 standards 1, 2, 3 or 5. Reserved for future use: currently has no effect as far as we know.</param>
+        /// <param name="right2left">whether the text should be written from right to left. Applicable for languages like Arabian or Hebrew. Default is False. If True, any Latin parts within the text will automatically converted.</param>
+        /// <param name="smallCaps"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
         public (Rect, Point) Append(Point pos, string text, MuPDFFont font, float fontSize = 11.0f, string language = null, int right2left = 0, int smallCaps = 0)
         {
             pos = pos * ICtm;
@@ -130,6 +142,16 @@ namespace MuPDF.NET
             return text;
         }
 
+        /// <summary>
+        /// Add some new text in vertical, top-to-bottom writing.
+        /// </summary>
+        /// <param name="pos">start position of the text, the bottom left point of the first character.</param>
+        /// <param name="text">a string. It will be written starting at position “pos”.</param>
+        /// <param name="font"> a Font. If omitted, fitz.Font("helv") will be used.</param>
+        /// <param name="fontSiz">the fontsize, a positive float, default 11.</param>
+        /// <param name="language">the language to use</param>
+        /// <param name="smallCaps"></param>
+        /// <returns></returns>
         public (Rect, Point) Appendv(Point pos, string text, MuPDFFont font = null, float fontSiz = 11.0f,
             string language = null, bool smallCaps = false)
         {
@@ -142,6 +164,18 @@ namespace MuPDF.NET
             return (TextRect, LastPoint);
         }
 
+        /// <summary>
+        /// Write the TextWriter text to a page, which is the only mandatory parameter. The other parameters can be used to temporarily override the values used when the TextWriter was created.
+        /// </summary>
+        /// <param name="page">write to this Page.</param>
+        /// <param name="color"> override the value of the TextWriter for this output.</param>
+        /// <param name="opacity">override the value of the TextWriter for this output.</param>
+        /// <param name="overlay">put in foreground (default) or background.</param>
+        /// <param name="morph">modify the text appearance by applying a matrix to it.</param>
+        /// <param name="matrix"></param>
+        /// <param name="renderMode">The PDF Tr operator value. Values: 0 (default), 1, 2, 3 (invisible).</param>
+        /// <param name="oc"> the xref of an OCG or OCMD.</param>
+        /// <exception cref="Exception"></exception>
         public void WriteText(MuPDFPage page, float[] color = null, float opacity = -1, int overlay = 1, Morph morph = null,
             Matrix matrix = null, int renderMode = 0, int oc = 0)
         {
@@ -261,6 +295,21 @@ namespace MuPDF.NET
                 Utils.RepairMonoFont(page, font);
         }
 
+        /// <summary>
+        /// Fill a given rectangle with text in horizontal writing mode.
+        /// </summary>
+        /// <param name="rect">the area to fill. No part of the text will appear outside of this.</param>
+        /// <param name="text">the text.</param>
+        /// <param name="pos">start storing at this point. Default is a point near rectangle top-left.</param>
+        /// <param name="font">the Font.</param>
+        /// <param name="fontSize">the fontsize.</param>
+        /// <param name="lineHeight"></param>
+        /// <param name="align">text alignment. Use one of TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER, TEXT_ALIGN_RIGHT or TEXT_ALIGN_JUSTIFY.</param>
+        /// <param name="warn">on text overflow do nothing, warn, or raise an exception. Overflow text will never be written.</param>
+        /// <param name="rtl"></param>
+        /// <param name="smallCaps"></param>
+        /// <returns>List of lines that did not fit in the rectangle.</returns>
+        /// <exception cref="Exception"></exception>
         public List<(string, float)> FillTextbox(
             Rect rect,
             string text,
