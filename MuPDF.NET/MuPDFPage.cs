@@ -1139,7 +1139,10 @@ namespace MuPDF.NET
         }
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 =======
+=======
+>>>>>>> Stashed changes
         public void GetTextTrace()
         {
             int oldRotation = Rotation;
@@ -1150,6 +1153,9 @@ namespace MuPDF.NET
 
         }
 
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
         /// <summary>
         /// PDF only: Set the rotation of the page.
@@ -4504,7 +4510,10 @@ namespace MuPDF.NET
             }
             catch (Exception) { throw new Exception("moveto exception"); }
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 =======
+=======
+>>>>>>> Stashed changes
         }
     }
 
@@ -4677,6 +4686,9 @@ namespace MuPDF.NET
         public override void end_layer(fz_context arg_0)
         {
             LayerName = "";
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
         }
     }
