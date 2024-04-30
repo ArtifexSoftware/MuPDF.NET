@@ -1,6 +1,7 @@
 namespace MuPDF.NET.Test;
 using MuPDF.NET;
 using System.IO.Compression;
+using static System.Net.Mime.MediaTypeNames;
 
 public class MuPDFPageTest : PdfTestBase
 {
@@ -164,7 +165,8 @@ public class MuPDFPageTest : PdfTestBase
     [Test]
     public void DrawLine()
     {
-        MuPDFPage page = doc.LoadPage(0);
+        MuPDFDocument doc = new MuPDFDocument();
+        MuPDFPage page = doc.NewPage();
         Point p1 = new Point(100, 100);
         Point p2 = new Point(300, 300);
 
@@ -410,5 +412,28 @@ public class MuPDFPageTest : PdfTestBase
             fontFile: "kenpixel.ttf");
 
         Assert.That(page.GetText(), Is.EqualTo(page.GetText(clip: rect)));
+    }
+
+    [Test]
+    public void Htmlbox1()
+    {
+        Rect rect = new Rect(100, 100, 200, 200);
+        MuPDFDocument doc = new MuPDFDocument();
+        MuPDFPage page = doc.NewPage();
+        (float s, float scale) = page.InsertHtmlBox(rect, "hello world", scaleLow: 1, rotate: 90);
+        Assert.That(scale, Is.EqualTo(1));
+    }
+
+    [Test]
+    public void Htmlbox2()
+    {
+        Rect rect = new Rect(100, 250, 300, 350);
+        string text = "<span style=\"color: red; font - size:20px \">Just some text.</span>";
+        MuPDFDocument doc = new MuPDFDocument();
+        MuPDFPage page = doc.NewPage();
+
+        page.InsertHtmlBox(rect, text, opacity: 0.5f);
+
+        //Span span = page.GetText
     }
 }
