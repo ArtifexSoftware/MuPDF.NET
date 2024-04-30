@@ -12,9 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Reference Include="MuPDF.NET">
-      <HintPath>..\MuPDF.NET\bin\Release\net7.0\MuPDF.NET.dll</HintPath>
-    </Reference>
+    <ProjectReference Include="..\MuPDF.NET\MuPDF.NET.csproj" />
   </ItemGroup>
 
 </Project>

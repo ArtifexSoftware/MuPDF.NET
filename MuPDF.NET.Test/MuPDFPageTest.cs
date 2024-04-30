@@ -24,7 +24,7 @@ public class MuPDFPageTest : PdfTestBase
     public void AddCircleAnnot()
     {
         page.AddCircleAnnot(new Rect(0, 0, 400, 400));
-        
+
         Assert.Pass();
     }
 
@@ -94,7 +94,7 @@ public class MuPDFPageTest : PdfTestBase
 
         Rect r1 = new Rect(0, 0, page.Rect.Width, page.Rect.Height);
         Rect r2 = r1 + new Rect(0, page.Rect.Height / 2, 0, page.Rect.Height / 2);
-        
+
         page.ShowPdfPage(r1, doc, 0, rotate: 90);
         page.ShowPdfPage(r2, doc, 0, rotate: -90);
         output.Save("output.pdf");
@@ -167,7 +167,7 @@ public class MuPDFPageTest : PdfTestBase
         MuPDFPage page = doc.LoadPage(0);
         Point p1 = new Point(100, 100);
         Point p2 = new Point(300, 300);
-        
+
         float[] color = { 0, 0, 1 };
         page.DrawLine(p1, p2, color: color, width: 9, strokeOpacity: 0.5f);
         doc.Save("output.pdf");
@@ -224,7 +224,7 @@ public class MuPDFPageTest : PdfTestBase
 
     [Test]
     public void InsertImage1()
-    { 
+    {
         List<Entry> images = page.GetImages();
 
         int xref = images[0].Xref;
@@ -265,6 +265,7 @@ public class MuPDFPageTest : PdfTestBase
     }
 
     [Test]
+<<<<<<< Updated upstream
     public void GetDrawings1()
     {
         MuPDFDocument doc = new MuPDFDocument("resources/test-2462.pdf");
@@ -364,3 +365,54 @@ public class MuPDFPageTest : PdfTestBase
         Assert.That(page.GetLinks().Count, Is.Not.Zero);
     }
 }
+=======
+    public void Insert()
+    {
+        MuPDFDocument doc = new MuPDFDocument();
+        MuPDFPage page = doc.NewPage();
+        Rect rect = new Rect(50, 50, 100, 100);
+        MuPDFDocument img = new MuPDFDocument("resources/nur-ruhig.jpg");
+        byte[] tobytes = img.Convert2Pdf();
+
+        MuPDFDocument src = new MuPDFDocument("pdf", tobytes);
+        int xref = page.ShowPdfPage(rect, src, 0, rotate: -23);
+
+        Block img2 = page.GetImageInfo()[0];
+        Assert.That((rect + new Rect(-1, -1, 1, 1)).Contains(img2.Bbox), Is.True);
+    }
+
+    [Test]
+    public void PageLinks()
+    {
+        MuPDFDocument doc = new MuPDFDocument("resources/2.pdf");
+        MuPDFPage page = doc[-1];
+
+        Assert.That(page.GetLinks().Count, Is.EqualTo(7));
+    }
+
+    [Test]
+    public void TextBox()
+    {
+        MuPDFDocument doc = new MuPDFDocument();
+        MuPDFPage page = doc.NewPage();
+        Rect rect = new Rect(50, 50, 400, 500);
+
+        string text = "Der Kleine Schwertwal (Pseudorca crassidens), auch bekannt als Unechter oder Schwarzer Schwertwal, ist eine Art der Delfine (Delphinidae) und der einzige rezente Vertreter der Gattung Pseudorca.\r\n\r\nEr ähnelt dem Orca in Form und Proportionen, ist aber einfarbig schwarz und mit einer Maximallänge von etwa sechs Metern deutlich kleiner.\r\n\r\nKleine Schwertwale bilden Schulen von durchschnittlich zehn bis fünfzig Tieren, wobei sie sich auch mit anderen Delfinen vergesellschaften und sich meistens abseits der Küsten aufhalten.\r\n\r\nSie sind in allen Ozeanen gemäßigter, subtropischer und tropischer Breiten beheimatet, sind jedoch vor allem in wärmeren Jahreszeiten auch bis in die gemäßigte bis subpolare Zone südlich der Südspitze Südamerikas, vor Nordeuropa und bis vor Kanada anzutreffen.";
+        int ocg = doc.AddOcg("ocg1");
+        float[] blue = Utils.GetColor("lightblue");
+        float[] red = Utils.GetColorHSV("red");
+        page.InsertTextbox(
+            rect,
+            text,
+            align: (int)TextAlign.TEXT_ALIGN_LEFT,
+            fontSize: 12,
+            color: blue,
+            oc: ocg,
+            fontName: "kenpixel",
+            fontFile: "kenpixel.ttf");
+
+        Assert.That(page.GetText(), Is.EqualTo(page.GetText(clip: rect)));
+    }
+}
+                         
+>>>>>>> Stashed changes
