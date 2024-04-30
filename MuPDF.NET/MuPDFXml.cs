@@ -18,6 +18,9 @@ namespace MuPDF.NET
             _nativeXml = rhs;
         }
 
+        /// <summary>
+        /// Either the node’s text or Null if a tag node.
+        /// </summary>
         public string Text
         {
             get
@@ -26,6 +29,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// Check if a text node.
+        /// </summary>
         public bool IsText
         {
             get
@@ -34,6 +40,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// Either the HTML tag name like p or Null if a text node.
+        /// </summary>
         public string TagName
         {
             get
@@ -42,6 +51,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// The top node of the DOM, which hence has the tagname
+        /// </summary>
         public MuPDFXml Root
         {
             get
@@ -50,6 +62,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// The previous node at the same level.
+        /// </summary>
         public MuPDFXml Previous
         {
             get
@@ -62,6 +77,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// The next node at the same level (or None).
+        /// </summary>
         public MuPDFXml Next
         {
             get
@@ -157,21 +175,39 @@ namespace MuPDF.NET
             return items;
         }
 
+        /// <summary>
+        /// Create a new node with a given tag. This a low-level method used by other methods like
+        /// </summary>
+        /// <param name="tag">the element tag.</param>
+        /// <returns>the created element. To actually bind it to the DOM</returns>
         public MuPDFXml CreateElement(string tag)
         {
             return new MuPDFXml(_nativeXml.fz_dom_create_element(tag));
         }
 
+        /// <summary>
+        /// Create direct text for the current node.
+        /// </summary>
+        /// <param name="text">the text to append.</param>
+        /// <returns>the created element.</returns>
         public MuPDFXml CreateTextNode(string text)
         {
             return new MuPDFXml(_nativeXml.fz_dom_create_text_node(text));
         }
 
+        /// <summary>
+        /// Append a child node.
+        /// </summary>
+        /// <param name="child">the Xml node to append.</param>
         public void AppendChild(MuPDFXml child)
         {
             _nativeXml.fz_dom_append_child(child.ToFzXml());
         }
 
+        /// <summary>
+        /// Add an ul tag - bulleted list, context manager.
+        /// </summary>
+        /// <returns></returns>
         public MuPDFXml AddBulletList()
         {
             MuPDFXml child = CreateElement("ul");
@@ -179,6 +215,11 @@ namespace MuPDF.NET
             return child;
         }
 
+        /// <summary>
+        /// Set (add) some “class” attribute.
+        /// </summary>
+        /// <param name="text">the name of the class. Must have been defined in either the HTML or the CSS source of the DOM.</param>
+        /// <returns></returns>
         public MuPDFXml AddClass(string text)
         {
             string cls = GetAttributeValue("class");
@@ -193,6 +234,11 @@ namespace MuPDF.NET
             return this;
         }
 
+        /// <summary>
+        /// Add “code” text (code tag) - inline element, treated like text.
+        /// </summary>
+        /// <param name="text"></param>
+        /// <returns></returns>
         public MuPDFXml AddCode(string text = null)
         {
             MuPDFXml child = CreateElement("code");
@@ -204,6 +250,10 @@ namespace MuPDF.NET
             return this;
         }
 
+        /// <summary>
+        /// Add a pre tag, context manager.
+        /// </summary>
+        /// <returns></returns>
         public MuPDFXml AddCodeBlock()
         {
             MuPDFXml child = CreateElement("pre");
@@ -211,6 +261,10 @@ namespace MuPDF.NET
             return child;
         }
 
+        /// <summary>
+        /// Add a dl tag, context manager.
+        /// </summary>
+        /// <returns></returns>
         public MuPDFXml AddDescriptionList()
         {
             MuPDFXml child = CreateElement("dl");
@@ -218,6 +272,10 @@ namespace MuPDF.NET
             return child;
         }
 
+        /// <summary>
+        /// Add a div tag, context manager.
+        /// </summary>
+        /// <returns></returns>
         public MuPDFXml AddDivision()
         {
             MuPDFXml child = CreateElement("div");
@@ -225,6 +283,12 @@ namespace MuPDF.NET
             return child;
         }
 
+        /// <summary>
+        /// Add a header tag (one of h1 to h6), context manager.
+        /// </summary>
+        /// <param name="level"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
         public MuPDFXml AddHeader(int level = 1)
         {
             if (!Utils.INRANGE(level, 1, 6))
@@ -241,6 +305,10 @@ namespace MuPDF.NET
             return child;
         }
 
+        /// <summary>
+        /// Add a hr tag.
+        /// </summary>
+        /// <returns></returns>
         public MuPDFXml AddHorizontalLine()
         {
             MuPDFXml child = CreateElement("hr");
@@ -248,6 +316,15 @@ namespace MuPDF.NET
             return child;
         }
 
+        /// <summary>
+        /// Add an img tag. This causes the inclusion of the named image in the DOM.
+        /// </summary>
+        /// <param name="name">the filename of the image. This must be the member name of some entry of the MuPDFArchive parameter of the MuPDFStory constructor.</param>
+        /// <param name="width">if provided, either an absolute (int) value, or a percentage string like “30%”.</param>
+        /// <param name="height"> if provided, either an absolute (int) value, or a percentage string like “30%”.</param>
+        /// <param name="imgFloat"></param>
+        /// <param name="align"></param>
+        /// <returns></returns>
         public MuPDFXml AddImage(string name, string width = null, string height = null, string imgFloat = null, string align = null)
         {
             MuPDFXml child = CreateElement("img");
@@ -264,6 +341,12 @@ namespace MuPDF.NET
             return child;
         }
 
+        /// <summary>
+        /// Add an a tag - inline element, treated like text.
+        /// </summary>
+        /// <param name="href">the URL target.</param>
+        /// <param name="text">the text to display. If omitted, the href text is shown instead.</param>
+        /// <returns></returns>
         public MuPDFXml AddLink(string href, string text = null)
         {
             MuPDFXml child = CreateElement("a");
@@ -278,6 +361,11 @@ namespace MuPDF.NET
             return this;
         }
 
+        /// <summary>
+        /// Add an ol tag, context manager.
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
         public MuPDFXml AddListItem()
         {
             if (TagName != "ol" || TagName != "ul")
@@ -287,6 +375,12 @@ namespace MuPDF.NET
             return child;
         }
 
+        /// <summary>
+        /// Add an ol tag, context manager.
+        /// </summary>
+        /// <param name="start"></param>
+        /// <param name="numType"></param>
+        /// <returns></returns>
         public MuPDFXml AddNumberList(int start = 1, string numType = null)
         {
             MuPDFXml child = CreateElement("ol");
@@ -298,6 +392,10 @@ namespace MuPDF.NET
             return child;
         }
 
+        /// <summary>
+        /// Add a <b>p</b> tag, context manager.
+        /// </summary>
+        /// <returns></returns>
         public MuPDFXml AddParagraph()
         {
             MuPDFXml child = CreateElement("p");
@@ -308,6 +406,10 @@ namespace MuPDF.NET
             return child;
         }
 
+        /// <summary>
+        /// Add a span tag, context manager.
+        /// </summary>
+        /// <returns></returns>
         public MuPDFXml AddSpan()
         {
             MuPDFXml child = CreateElement("span");
@@ -315,6 +417,11 @@ namespace MuPDF.NET
             return child;
         }
 
+        /// <summary>
+        /// Set (add) some style attribute not supported by its own set_ method.
+        /// </summary>
+        /// <param name="text">any valid CSS style value.</param>
+        /// <returns></returns>
         public MuPDFXml AddStyle(string text)
         {
             string style = GetAttributeValue("style");
@@ -329,6 +436,11 @@ namespace MuPDF.NET
             return this;
         }
 
+        /// <summary>
+        /// Add “subscript” text(sub tag) - inline element, treated like text.
+        /// </summary>
+        /// <param name="text"></param>
+        /// <returns></returns>
         public MuPDFXml AddSubscript(string text)
         {
             MuPDFXml child = CreateElement("sub");
@@ -340,6 +452,11 @@ namespace MuPDF.NET
             return this;
         }
 
+        /// <summary>
+        /// Add “superscript” text (sup tag) - inline element, treated like text.
+        /// </summary>
+        /// <param name="text"></param>
+        /// <returns></returns>
         public MuPDFXml AddSuperscript(string text = null)
         {
             MuPDFXml child = CreateElement("sup");
@@ -351,6 +468,11 @@ namespace MuPDF.NET
             return this;
         }
 
+        /// <summary>
+        /// Add a text string. Line breaks n are honored as br tags.
+        /// </summary>
+        /// <param name="text"></param>
+        /// <returns></returns>
         public MuPDFXml AddText(string text)
         {
             string[] lines = text.Split("\n");
@@ -371,6 +493,11 @@ namespace MuPDF.NET
             return this;
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="style"></param>
+        /// <returns></returns>
         public MuPDFXml AppendStyledSpan(string style)
         {
             MuPDFXml span = CreateElement("span");
@@ -380,11 +507,6 @@ namespace MuPDF.NET
                 prev = this;
             prev.AppendChild(span);
             return prev;
-        }
-
-        public MuPDFXml BodyTag()
-        {
-            return new MuPDFXml(_nativeXml.fz_dom_body());
         }
 
         public MuPDFXml Clone()
@@ -408,6 +530,9 @@ namespace MuPDF.NET
             return color;
         }
 
+        /// <summary>
+        /// For debugging purposes, print this node’s structure in a simplified form.
+        /// </summary>
         public void Debug()
         {
             List<(int, string)> items = GetNodeTree();
@@ -417,6 +542,13 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// Under the current node, find the first node with the given tag, attribute att and value match.
+        /// </summary>
+        /// <param name="tag">restrict search to this tag. May be null for unrestricted searches.</param>
+        /// <param name="att">check this attribute. May be None.</param>
+        /// <param name="match">the desired attribute value to match. May be null.</param>
+        /// <returns></returns>
         public MuPDFXml Find(string tag, string att, string match)
         {
             FzXml ret = _nativeXml.fz_dom_find(tag, att, match);
@@ -425,6 +557,13 @@ namespace MuPDF.NET
             return null;
         }
 
+        /// <summary>
+        /// Continue a previous Xml.find() (or find_next()) with the same values.
+        /// </summary>
+        /// <param name="tag"></param>
+        /// <param name="att"></param>
+        /// <param name="match"></param>
+        /// <returns>Null if null more found, otherwise the next matching node.</returns>
         public MuPDFXml FindNext(string tag, string att, string match)
         {
             FzXml ret = _nativeXml.fz_dom_find_next(tag, att, match);
@@ -433,11 +572,19 @@ namespace MuPDF.NET
             return null;
         }
 
+        /// <summary>
+        /// Insert the given element elem after this node.
+        /// </summary>
+        /// <param name="node"></param>
         public void InsertAfter(MuPDFXml node)
         {
             _nativeXml.fz_dom_insert_after(node.ToFzXml());
         }
 
+        /// <summary>
+        /// Insert the given element elem before this node.
+        /// </summary>
+        /// <param name="node"></param>
         public void InsertBefore(MuPDFXml node)
         {
             _nativeXml.fz_dom_insert_before(node.ToFzXml());
@@ -462,6 +609,12 @@ namespace MuPDF.NET
             _nativeXml.fz_dom_remove();
         }
 
+        /// <summary>
+        /// Set the text alignment. Only works for block-level tags.
+        /// </summary>
+        /// <param name="align">either one of the Text Alignment or the text-align values.</param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
         public MuPDFXml SetAlign(dynamic align)
         {
             string text = "text-align: ";
@@ -482,6 +635,11 @@ namespace MuPDF.NET
             return this;
         }
 
+        /// <summary>
+        /// Set the background color. Only works for block-level tags.
+        /// </summary>
+        /// <param name="color">either an RGB value like (255, 0, 0) (for “red”) or a valid background-color value.</param>
+        /// <returns></returns>
         public MuPDFXml SetBgColor(dynamic color)
         {
             string text = $"backgroud-color: {MuPDFXml.ColorText(color)}";
@@ -489,6 +647,11 @@ namespace MuPDF.NET
             return this;
         }
 
+        /// <summary>
+        /// Set bold on or off or to some string value.
+        /// </summary>
+        /// <param name="isBold">True, False or a valid font-weight value.</param>
+        /// <returns></returns>
         public MuPDFXml SetBold(bool isBold)
         {
             string text = "font-weight: ";
@@ -500,6 +663,11 @@ namespace MuPDF.NET
             return this;
         }
 
+        /// <summary>
+        /// Set the color of the text following.
+        /// </summary>
+        /// <param name="color">either an RGB value like (255, 0, 0) (for “red”) or a valid color value.</param>
+        /// <returns></returns>
         public MuPDFXml SetColor(dynamic color)
         {
             string text = $"color: {MuPDFXml.ColorText(color)}";
@@ -507,6 +675,11 @@ namespace MuPDF.NET
             return this;
         }
 
+        /// <summary>
+        /// Set the number of columns.
+        /// </summary>
+        /// <param name="cols">a valid columns value.</param>
+        /// <returns></returns>
         public MuPDFXml SetColumns(int cols)
         {
             string text = $"columns: {cols}";
@@ -514,6 +687,11 @@ namespace MuPDF.NET
             return this;
         }
 
+        /// <summary>
+        /// Set the font-family.
+        /// </summary>
+        /// <param name="font"></param>
+        /// <returns></returns>
         public MuPDFXml SetFont(string font)
         {
             string text = $"font-family: {font}";
@@ -521,6 +699,11 @@ namespace MuPDF.NET
             return this;
         }
 
+        /// <summary>
+        /// Set the font size for text following.
+        /// </summary>
+        /// <param name="fontSize">a float or a valid font-size value.</param>
+        /// <returns></returns>
         public MuPDFXml SetFontSize(int fontSize)
         {
             string text = $"font-size: {fontSize}px";
@@ -528,6 +711,12 @@ namespace MuPDF.NET
             return this;
         }
 
+        /// <summary>
+        /// Set a id. This serves as a unique identification of the node within the DOM.
+        /// </summary>
+        /// <param name="unique">id string of the node.</param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
         public MuPDFXml SetId(string unique)
         {
             MuPDFXml root = Root;
@@ -537,6 +726,11 @@ namespace MuPDF.NET
             return this;
         }
 
+        /// <summary>
+        /// Set italic on or off or to some string value for the text following it.
+        /// </summary>
+        /// <param name="isItalic">True, False or some valid font-style value.</param>
+        /// <returns></returns>
         public MuPDFXml SetItalic(bool isItalic)
         {
             string text = "font-style: ";
@@ -548,6 +742,11 @@ namespace MuPDF.NET
             return this;
         }
 
+        /// <summary>
+        /// Set inter-block text distance (-mupdf-leading), only works on block-level nodes.
+        /// </summary>
+        /// <param name="leading">the distance in points to the previous block.</param>
+        /// <returns></returns>
         public MuPDFXml SetLeading(string leading)
         {
             string text = $"-mupdf-leading: {leading}";
@@ -555,6 +754,11 @@ namespace MuPDF.NET
             return this;
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="spacing"></param>
+        /// <returns></returns>
         public MuPDFXml SetLetterSpacing(string spacing)
         {
             string text = $"leter-spacing: {spacing}";
@@ -562,6 +766,11 @@ namespace MuPDF.NET
             return this;
         }
 
+        /// <summary>
+        /// Set height of a line.
+        /// </summary>
+        /// <param name="lineHeight">a float like 1.5 (which sets to 1.5 * fontsize), or some valid line-height value.</param>
+        /// <returns></returns>
         public MuPDFXml SetLineHeight(string lineHeight)
         {
             string text = $"line-height: {lineHeight}";
@@ -569,6 +778,11 @@ namespace MuPDF.NET
             return this;
         }
 
+        /// <summary>
+        /// Set the margin(s).
+        /// </summary>
+        /// <param name="val">float or string with up to 4 values.</param>
+        /// <returns></returns>
         public MuPDFXml SetMargins(string val)
         {
             string text = $"margin: {val}";
@@ -576,6 +790,11 @@ namespace MuPDF.NET
             return this;
         }
 
+        /// <summary>
+        /// Set opacity
+        /// </summary>
+        /// <param name="opacity"></param>
+        /// <returns></returns>
         public MuPDFXml SetOpacity(string opacity)
         {
             string text = $"opacity: {opacity}";
@@ -583,6 +802,10 @@ namespace MuPDF.NET
             return this;
         }
 
+        /// <summary>
+        /// Insert a page break after this node.
+        /// </summary>
+        /// <returns></returns>
         public MuPDFXml SetPageBreakAfter()
         {
             string text = "page-break-after: always";
@@ -590,6 +813,10 @@ namespace MuPDF.NET
             return this;
         }
 
+        /// <summary>
+        /// Insert a page break before this node.
+        /// </summary>
+        /// <returns></returns>
         public MuPDFXml SetPageBreakBefore()
         {
             string text = "page-break-before: always";
@@ -597,6 +824,28 @@ namespace MuPDF.NET
             return this;
         }
 
+        /// <summary>
+        /// Set any or all desired properties in one call. The meaning of argument values equal the values of the corresponding set_ methods.
+        /// </summary>
+        /// <param name="align"></param>
+        /// <param name="bgcolor"></param>
+        /// <param name="bold"></param>
+        /// <param name="color"></param>
+        /// <param name="columns"></param>
+        /// <param name="font"></param>
+        /// <param name="fontSize"></param>
+        /// <param name="italic"></param>
+        /// <param name="indent"></param>
+        /// <param name="leading"></param>
+        /// <param name="letterSpacing"></param>
+        /// <param name="lineHeight"></param>
+        /// <param name="margins"></param>
+        /// <param name="pageBreakAfter"></param>
+        /// <param name="pageBreakBefore"></param>
+        /// <param name="wordSpacing"></param>
+        /// <param name="unqid"></param>
+        /// <param name="cls"></param>
+        /// <returns></returns>
         public MuPDFXml SetProperties(
             string align = null,
             string bgcolor = null,
@@ -707,7 +956,11 @@ namespace MuPDF.NET
             temp.Remove();
             return this;
         }
-
+        /// <summary>
+        /// Set indentation for the first textblock line. Only works for block-level nodes.
+        /// </summary>
+        /// <param name="indent"></param>
+        /// <returns></returns>
         public MuPDFXml SetTextIndent(string indent)
         {
             string text = $"text-indent: {indent}";

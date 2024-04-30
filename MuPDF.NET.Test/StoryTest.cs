@@ -33,5 +33,28 @@ namespace MuPDF.NET
             }
             writer.Close();
         }
+
+        [Test]
+        public void Draw1()
+        {
+            MuPDFStory.RectFunction rectfunc = new MuPDFStory.RectFunction((int rectnum, Rect fill) =>
+            {
+                return (new Rect(0, 0, 200, 200), new Rect(50, 50, 100, 100), null);
+            });
+
+            MuPDFDocument MakePdf(string html, string path)
+            {
+                MuPDFStory story = new MuPDFStory(html: html);
+                MuPDFDocument doc = story.WriteWithLinks(rectfunc);
+                return doc;
+            }
+
+            MuPDFDocument doc1 = MakePdf("<p>Before</p><p style=\"page-break-before: always;\"></p><p>After</p>", "After.pdf");
+
+            MuPDFDocument doc2 = MakePdf("<p>before</p>", "before.pdf");
+
+            Assert.That(doc1.Len, Is.EqualTo(2));
+            Assert.That(doc2.Len, Is.EqualTo(1));
+        }
     }
 }

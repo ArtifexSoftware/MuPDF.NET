@@ -24,7 +24,7 @@ public class MuPDFPageTest : PdfTestBase
     public void AddCircleAnnot()
     {
         page.AddCircleAnnot(new Rect(0, 0, 400, 400));
-        
+
         Assert.Pass();
     }
 
@@ -94,7 +94,7 @@ public class MuPDFPageTest : PdfTestBase
 
         Rect r1 = new Rect(0, 0, page.Rect.Width, page.Rect.Height);
         Rect r2 = r1 + new Rect(0, page.Rect.Height / 2, 0, page.Rect.Height / 2);
-        
+
         page.ShowPdfPage(r1, doc, 0, rotate: 90);
         page.ShowPdfPage(r2, doc, 0, rotate: -90);
         output.Save("output.pdf");
@@ -167,7 +167,7 @@ public class MuPDFPageTest : PdfTestBase
         MuPDFPage page = doc.LoadPage(0);
         Point p1 = new Point(100, 100);
         Point p2 = new Point(300, 300);
-        
+
         float[] color = { 0, 0, 1 };
         page.DrawLine(p1, p2, color: color, width: 9, strokeOpacity: 0.5f);
         doc.Save("output.pdf");
@@ -224,7 +224,7 @@ public class MuPDFPageTest : PdfTestBase
 
     [Test]
     public void InsertImage1()
-    { 
+    {
         List<Entry> images = page.GetImages();
 
         int xref = images[0].Xref;
@@ -263,4 +263,156 @@ public class MuPDFPageTest : PdfTestBase
 
         Assert.That(bboxlog[0].Code, Is.EqualTo("fill-image"));
     }
+
+    [Test]
+<<<<<<< Updated upstream
+    public void GetDrawings1()
+    {
+        MuPDFDocument doc = new MuPDFDocument("resources/test-2462.pdf");
+        MuPDFPage page = doc[0];
+
+        Assert.That(page.GetDrawings(extended: true).Count, Is.Not.Zero);
+    }
+
+    [Test]
+    public void ExtractImage()
+    {
+        string path = "resources/test_2348.pdf";
+        MuPDFDocument doc = new MuPDFDocument();
+        MuPDFPage page = doc.NewPage(width: 500, height: 842);
+        Rect r = new Rect(20, 20, 480, 820);
+        page.InsertImage(r, filename: "resources/nur-ruhig.jpg");
+        page = doc.NewPage(width: 500, height: 842);
+        page.InsertImage(r, filename: "resources/img-transparent.png");
+        doc.Save(path);
+        doc.Close();
+
+        doc = new MuPDFDocument(path);
+        page = doc[0];
+        List<Entry> imlist = page.GetImages();
+        ImageInfo img = doc.ExtractImage(imlist[0].Xref);
+        string ext = img.Ext;
+        Assert.That(ext, Is.EqualTo("jpeg"));
+
+        page = doc[1];
+        imlist = page.GetImages();
+        img = doc.ExtractImage(imlist[0].Xref);
+        ext = img.Ext;
+        Assert.That(ext, Is.EqualTo("png"));
+    }
+
+    [Test]
+    public void ObjectStream1()
+    {
+        string text = "Hello, world! Hallo, Welt!";
+        MuPDFDocument doc = new MuPDFDocument();
+        MuPDFPage page = doc.NewPage();
+        Rect r = new Rect(50, 50, 200, 500);
+
+        page.InsertHtmlBox(r, text);
+        doc.Write(useObjstms: true);
+        bool found = false;
+
+        foreach (int xref in Enumerable.Range(1, doc.GetXrefLength()))
+        {
+            string objstring = doc.GetXrefObject(xref, compressed: 1);
+            if (objstring.Contains("/Type/ObjStm"))
+            {
+                found = true;
+                break;
+            }
+        }
+        Assert.That(found, Is.True);
+    }
+
+    [Test]
+    public void NamedLink()
+    {
+        Dictionary<string, LinkType> text = new Dictionary<string, LinkType>()
+        {
+            { "https://www.google.de", LinkType.LINK_URI },
+            { "http://www.google.de", LinkType.LINK_URI },
+            { "mailto:jorj.x.mckie@outlook.de", LinkType.LINK_URI },
+            { "www.wikipedia.de", LinkType.LINK_LAUNCH },
+            { "awkward:resource", LinkType.LINK_URI },
+            { "ftp://www.google.de", LinkType.LINK_URI },
+            { "some.program", LinkType.LINK_LAUNCH },
+            { "file://some.program", LinkType.LINK_LAUNCH },
+            { "another.exe", LinkType.LINK_LAUNCH }
+        };
+
+        Rect r = new Rect(0, 0, 50, 20);
+        List<Rect> rs = new List<Rect>();
+        int i = 0;
+
+        for (i = 0; i < text.Keys.Count; i++)
+            rs.Add(r + new Rect(0, r.Height * i, 0, r.Height * i));
+
+        MuPDFDocument doc = new MuPDFDocument();
+        MuPDFPage page = doc.NewPage();
+        i = 0;
+        foreach (string k in text.Keys)
+        {
+            Link link = new Link() { Kind = LinkType.LINK_URI, Uri = k, From = rs[i] };
+            page.InsertLink(link);
+            i++;
+        }
+
+        byte[] pdfData = doc.Write();
+        doc = new MuPDFDocument("pdf", pdfData);
+        page = doc[0];
+
+        Assert.That(page.GetLinks().Count, Is.Not.Zero);
+    }
 }
+=======
+    public void Insert()
+    {
+        MuPDFDocument doc = new MuPDFDocument();
+        MuPDFPage page = doc.NewPage();
+        Rect rect = new Rect(50, 50, 100, 100);
+        MuPDFDocument img = new MuPDFDocument("resources/nur-ruhig.jpg");
+        byte[] tobytes = img.Convert2Pdf();
+
+        MuPDFDocument src = new MuPDFDocument("pdf", tobytes);
+        int xref = page.ShowPdfPage(rect, src, 0, rotate: -23);
+
+        Block img2 = page.GetImageInfo()[0];
+        Assert.That((rect + new Rect(-1, -1, 1, 1)).Contains(img2.Bbox), Is.True);
+    }
+
+    [Test]
+    public void PageLinks()
+    {
+        MuPDFDocument doc = new MuPDFDocument("resources/2.pdf");
+        MuPDFPage page = doc[-1];
+
+        Assert.That(page.GetLinks().Count, Is.EqualTo(7));
+    }
+
+    [Test]
+    public void TextBox()
+    {
+        MuPDFDocument doc = new MuPDFDocument();
+        MuPDFPage page = doc.NewPage();
+        Rect rect = new Rect(50, 50, 400, 500);
+
+        string text = "Der Kleine Schwertwal (Pseudorca crassidens), auch bekannt als Unechter oder Schwarzer Schwertwal, ist eine Art der Delfine (Delphinidae) und der einzige rezente Vertreter der Gattung Pseudorca.\r\n\r\nEr ähnelt dem Orca in Form und Proportionen, ist aber einfarbig schwarz und mit einer Maximallänge von etwa sechs Metern deutlich kleiner.\r\n\r\nKleine Schwertwale bilden Schulen von durchschnittlich zehn bis fünfzig Tieren, wobei sie sich auch mit anderen Delfinen vergesellschaften und sich meistens abseits der Küsten aufhalten.\r\n\r\nSie sind in allen Ozeanen gemäßigter, subtropischer und tropischer Breiten beheimatet, sind jedoch vor allem in wärmeren Jahreszeiten auch bis in die gemäßigte bis subpolare Zone südlich der Südspitze Südamerikas, vor Nordeuropa und bis vor Kanada anzutreffen.";
+        int ocg = doc.AddOcg("ocg1");
+        float[] blue = Utils.GetColor("lightblue");
+        float[] red = Utils.GetColorHSV("red");
+        page.InsertTextbox(
+            rect,
+            text,
+            align: (int)TextAlign.TEXT_ALIGN_LEFT,
+            fontSize: 12,
+            color: blue,
+            oc: ocg,
+            fontName: "kenpixel",
+            fontFile: "kenpixel.ttf");
+
+        Assert.That(page.GetText(), Is.EqualTo(page.GetText(clip: rect)));
+    }
+}
+                         
+>>>>>>> Stashed changes

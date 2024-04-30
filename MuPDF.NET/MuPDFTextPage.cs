@@ -191,13 +191,13 @@ namespace MuPDF.NET
                 List<Block> blocks = pageDict.Blocks;
                 blocks.Sort((b1, b2) =>
                 {
-                    if (b1.Bbox.y1 == b2.Bbox.y1)
+                    if (b1.Bbox.Y1 == b2.Bbox.Y1)
                     {
-                        return b1.Bbox.x0.CompareTo(b2.Bbox.x0);
+                        return b1.Bbox.X0.CompareTo(b2.Bbox.X0);
                     }
                     else
                     {
-                        return b1.Bbox.y1.CompareTo(b2.Bbox.y1);
+                        return b1.Bbox.Y1.CompareTo(b2.Bbox.Y1);
                     }
                 });
 
@@ -247,8 +247,8 @@ namespace MuPDF.NET
                 FzColorspace cs = new FzColorspace(mupdf.mupdf.ll_fz_keep_colorspace(img.m_internal.colorspace));
                 Block blockDict = new Block();
                 blockDict.Number = blockNum;
-                blockDict.Bbox = new FzRect(block.m_internal.bbox);
-                blockDict.Transform = block.i_transform();
+                blockDict.Bbox = new Rect(new FzRect(block.m_internal.bbox));
+                blockDict.Transform = new Matrix(block.i_transform());
                 blockDict.Width = img.w();
                 blockDict.Height = img.h();
                 blockDict.ColorSpace = cs.fz_colorspace_n();
@@ -285,13 +285,13 @@ namespace MuPDF.NET
                 List<Block> blocks = pageDict.Blocks;
                 blocks.Sort((b1, b2) =>
                 {
-                    if (b1.Bbox.y1 == b2.Bbox.y1)
+                    if (b1.Bbox.Y1 == b2.Bbox.Y1)
                     {
-                        return b1.Bbox.x0.CompareTo(b2.Bbox.x0);
+                        return b1.Bbox.X0.CompareTo(b2.Bbox.X0);
                     }
                     else
                     {
-                        return b1.Bbox.y1.CompareTo(b2.Bbox.y1);
+                        return b1.Bbox.Y1.CompareTo(b2.Bbox.Y1);
                     }
                 });
 
@@ -325,13 +325,13 @@ namespace MuPDF.NET
                 List<Block> blocks = pageDict.Blocks;
                 blocks.Sort((b1, b2) =>
                 {
-                    if (b1.Bbox.y1 == b2.Bbox.y1)
+                    if (b1.Bbox.Y1 == b2.Bbox.Y1)
                     {
-                        return b1.Bbox.x0.CompareTo(b2.Bbox.x0);
+                        return b1.Bbox.X0.CompareTo(b2.Bbox.X0);
                     }
                     else
                     {
-                        return b1.Bbox.y1.CompareTo(b2.Bbox.y1);
+                        return b1.Bbox.X0.CompareTo(b2.Bbox.X0);
                     }
                 });
 
@@ -895,13 +895,13 @@ namespace MuPDF.NET
                 List<Block> blocks = val.Blocks;
                 blocks.Sort((b1, b2) =>
                 {
-                    if (b1.Bbox.y1 == b2.Bbox.y1)
+                    if (b1.Bbox.Y1 == b2.Bbox.Y1)
                     {
-                        return b1.Bbox.x0.CompareTo(b2.Bbox.x0);
+                        return b1.Bbox.X0.CompareTo(b2.Bbox.X0);
                     }
                     else
                     {
-                        return b1.Bbox.y1.CompareTo(b2.Bbox.y1);
+                        return b1.Bbox.Y1.CompareTo(b2.Bbox.Y1);
                     }
                 });
                 val.Blocks = blocks;
@@ -935,7 +935,7 @@ namespace MuPDF.NET
                 blockDict.Type = block.m_internal.type;
                 if (block.m_internal.type == (int)STextBlockType.FZ_STEXT_BLOCK_IMAGE)
                 {
-                    blockDict.Bbox = new FzRect(block.m_internal.bbox);
+                    blockDict.Bbox = new Rect(new FzRect(block.m_internal.bbox));
                     FzImage image = block.i_image();
                     int n = image.colorspace().fz_colorspace_n();
                     int w = image.w();
@@ -974,7 +974,7 @@ namespace MuPDF.NET
                     blockDict.Xres = image.xres();
                     blockDict.Yres = image.yres();
                     blockDict.Bpc = image.bpc();
-                    blockDict.Transform = block.i_transform();
+                    blockDict.Transform = new Matrix(block.i_transform());
                     blockDict.Size = mupdf.mupdf.fz_image_size(image);
                     blockDict.Image = Utils.BinFromBuffer(buf);
                 }
@@ -1033,8 +1033,8 @@ namespace MuPDF.NET
                                         span.Text = Utils.EscapeStrFromBuffer(textBuffer);
                                         mupdf.mupdf.fz_clear_buffer(textBuffer);
                                     }
-                                    span.Origin = spanOrigin;
-                                    span.Bbox = spanRect;
+                                    span.Origin = new Point(spanOrigin);
+                                    span.Bbox = new Rect(spanRect);
                                     lineRect = FzRect.fz_union_rect(lineRect, spanRect);
                                     spanList.Add(span);
                                 }
@@ -1089,8 +1089,8 @@ namespace MuPDF.NET
                                 span.Text = Utils.EscapeStrFromBuffer(textBuffer);
                                 textBuffer.fz_clear_buffer();
                             }
-                            span.Origin = spanOrigin;
-                            span.Bbox = spanRect;
+                            span.Origin = new Point(spanOrigin);
+                            span.Bbox = new Rect(spanRect);
 
                             if (spanRect.fz_is_empty_rect() == 0)
                             {
@@ -1104,11 +1104,11 @@ namespace MuPDF.NET
 
                         blockRect = FzRect.fz_union_rect(blockRect, lineRect);
                         lineDict.WMode = line.wmode;
-                        lineDict.Dir = new FzPoint(line.dir);
-                        lineDict.Bbox = new FzRect(line.bbox);
+                        lineDict.Dir = new Point(new FzPoint(line.dir));
+                        lineDict.Bbox = new Rect(new FzRect(line.bbox));
                         lineList.Add(lineDict);
                     }
-                    blockDict.Bbox = blockRect;
+                    blockDict.Bbox = new Rect(blockRect);
                     blockDict.Lines = lineList;
                 }
                 pageDict.Blocks.Add(blockDict);
