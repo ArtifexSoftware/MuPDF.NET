@@ -265,7 +265,6 @@ public class MuPDFPageTest : PdfTestBase
     }
 
     [Test]
-<<<<<<< Updated upstream
     public void GetDrawings1()
     {
         MuPDFDocument doc = new MuPDFDocument("resources/test-2462.pdf");
@@ -364,8 +363,7 @@ public class MuPDFPageTest : PdfTestBase
 
         Assert.That(page.GetLinks().Count, Is.Not.Zero);
     }
-}
-=======
+
     public void Insert()
     {
         MuPDFDocument doc = new MuPDFDocument();
@@ -397,7 +395,7 @@ public class MuPDFPageTest : PdfTestBase
         MuPDFPage page = doc.NewPage();
         Rect rect = new Rect(50, 50, 400, 500);
 
-        string text = "Der Kleine Schwertwal (Pseudorca crassidens), auch bekannt als Unechter oder Schwarzer Schwertwal, ist eine Art der Delfine (Delphinidae) und der einzige rezente Vertreter der Gattung Pseudorca.\r\n\r\nEr ähnelt dem Orca in Form und Proportionen, ist aber einfarbig schwarz und mit einer Maximallänge von etwa sechs Metern deutlich kleiner.\r\n\r\nKleine Schwertwale bilden Schulen von durchschnittlich zehn bis fünfzig Tieren, wobei sie sich auch mit anderen Delfinen vergesellschaften und sich meistens abseits der Küsten aufhalten.\r\n\r\nSie sind in allen Ozeanen gemäßigter, subtropischer und tropischer Breiten beheimatet, sind jedoch vor allem in wärmeren Jahreszeiten auch bis in die gemäßigte bis subpolare Zone südlich der Südspitze Südamerikas, vor Nordeuropa und bis vor Kanada anzutreffen.";
+        string text = "Der Kleine Schwertwal (Pseudorca crassidens), auch bekannt als Unechter oder Schwarzer Schwertwal, ist eine Art der Delfine (Delphinidae) und der einzige rezente Vertreter der Gattung Pseudorca.\r\n\r\nEr ï¿½hnelt dem Orca in Form und Proportionen, ist aber einfarbig schwarz und mit einer Maximallï¿½nge von etwa sechs Metern deutlich kleiner.\r\n\r\nKleine Schwertwale bilden Schulen von durchschnittlich zehn bis fï¿½nfzig Tieren, wobei sie sich auch mit anderen Delfinen vergesellschaften und sich meistens abseits der Kï¿½sten aufhalten.\r\n\r\nSie sind in allen Ozeanen gemï¿½ï¿½igter, subtropischer und tropischer Breiten beheimatet, sind jedoch vor allem in wï¿½rmeren Jahreszeiten auch bis in die gemï¿½ï¿½igte bis subpolare Zone sï¿½dlich der Sï¿½dspitze Sï¿½damerikas, vor Nordeuropa und bis vor Kanada anzutreffen.";
         int ocg = doc.AddOcg("ocg1");
         float[] blue = Utils.GetColor("lightblue");
         float[] red = Utils.GetColorHSV("red");
@@ -414,5 +412,3 @@ public class MuPDFPageTest : PdfTestBase
         Assert.That(page.GetText(), Is.EqualTo(page.GetText(clip: rect)));
     }
 }
-                         
->>>>>>> Stashed changes
