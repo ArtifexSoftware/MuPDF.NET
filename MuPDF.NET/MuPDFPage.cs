@@ -1138,6 +1138,19 @@ namespace MuPDF.NET
             return stPage;
         }
 
+<<<<<<< Updated upstream
+=======
+        public void GetTextTrace()
+        {
+            int oldRotation = Rotation;
+            if (oldRotation != 0)
+                SetRotation(0);
+
+            MuPDFPage page = this;
+
+        }
+
+>>>>>>> Stashed changes
         /// <summary>
         /// PDF only: Set the rotation of the page.
         /// </summary>
@@ -4490,6 +4503,181 @@ namespace MuPDF.NET
                 Dev.LineCount = 0;
             }
             catch (Exception) { throw new Exception("moveto exception"); }
+<<<<<<< Updated upstream
+=======
+        }
+    }
+
+    public class TextTraceDevice : FzDevice2
+    {
+        public int SeqNo { get; set; }
+
+        public int Depth { get; set; }
+        public bool Clips { get; set; }
+        public int Method { get; set; }
+
+        public PathInfo PathDict { get; set; }
+        public List<FzRect> Scissors { get; set; }
+        public float LineWidth { get; set; }
+        public FzMatrix Ptm { get; set; }
+        public FzMatrix Ctm { get; set; }
+        public FzMatrix Rot { get; set; }
+
+        public FzPoint LastPoint { get; set; }
+        public FzRect PathRect { get; set; }
+        public float PathFactor { get; set; }
+        public int LineCount { get; set; }
+        public int PathType { get; set; }
+        public string LayerName { get; set; }
+
+        public List<PathInfo> Out { get; set; }
+
+        public TextTraceDevice(List<PathInfo> o) : base()
+        {
+            Out = o;
+            use_virtual_fill_path();
+            use_virtual_stroke_path();
+            use_virtual_fill_text();
+            use_virtual_stroke_text();
+            use_virtual_ignore_text();
+            use_virtual_fill_shade();
+            use_virtual_fill_image();
+            use_virtual_fill_image_mask();
+
+            use_virtual_begin_layer();
+            use_virtual_end_layer();
+        }
+
+        public override void fill_path(fz_context arg_0, SWIGTYPE_p_fz_path arg_2, int arg_3, fz_matrix arg_4, fz_colorspace arg_5, SWIGTYPE_p_float arg_6, float arg_7, fz_color_params arg_8)
+        {
+            SeqNo += 1;
+        }
+
+        public override void stroke_path(fz_context arg_0, SWIGTYPE_p_fz_path arg_2, fz_stroke_state arg_3, fz_matrix arg_4, fz_colorspace arg_5, SWIGTYPE_p_float arg_6, float arg_7, fz_color_params arg_8)
+        {
+            LineWidth = arg_3.linewidth;
+        }
+
+        public override void fill_text(fz_context arg_0, fz_text text, fz_matrix ctm, fz_colorspace colorspace, SWIGTYPE_p_float color, float alpha, fz_color_params arg_7)
+        {
+            fz_text_span span = text.head;
+            while (true)
+            {
+                if (span == null)
+                    break;
+                TraceTextSpan(span, 1, ctm, colorspace, color, alpha);
+                span = span.next;
+
+            }
+            SeqNo += 1;
+        }
+
+        public override void stroke_text(fz_context arg_0, fz_text text, fz_stroke_state arg_3, fz_matrix ctm, fz_colorspace colorspace, SWIGTYPE_p_float color, float alpha, fz_color_params arg_8)
+        {
+            fz_text_span span = text.head;
+            while (true)
+            {
+                if (span == null)
+                    break;
+                TraceTextSpan(span, 1, ctm, colorspace, color, alpha);
+                span = span.next;
+            }
+            SeqNo += 1;
+        }
+
+        internal void TraceTextSpan(fz_text_span span, int type, fz_matrix ctm, fz_colorspace colorspace, SWIGTYPE_p_float color, float alpha)
+        {
+            FzTextSpan fzSpan = new FzTextSpan(span);
+            Ctm = new FzMatrix(ctm);
+            string fontName = Utils.GetFontName(span.font);
+
+            FzMatrix mat = mupdf.mupdf.fz_concat(new FzMatrix(span.trm), Ctm);
+            FzPoint dir = mupdf.mupdf.fz_transform_vector(mupdf.mupdf.fz_make_point(1, 0), mat);
+            float fsize = (float)Math.Sqrt(dir.x * dir.x + dir.y * dir.y);
+            dir = mupdf.mupdf.fz_normalize_vector(dir);
+            float spaceAdv = 0;
+
+            float asc = mupdf.mupdf.fz_font_ascender(new FzFont(span.font));
+            float desc = mupdf.mupdf.fz_font_descender(new FzFont(span.font));
+            if (asc < 1e-3)
+            {
+                desc = -0.1f;
+                asc = 0.9f;
+            }
+
+            float ascSize = asc * fsize / (asc - desc);
+            float dscSize = desc * fsize / (asc - desc);
+            float fflags = 0;
+            int mono = mupdf.mupdf.fz_font_is_monospaced(new FzFont(span.font));
+            fflags += mono * (int)TextType.TEXT_FONT_MONOSPACED;
+            fflags += mupdf.mupdf.fz_font_is_italic(new FzFont(span.font)) * (int)TextType.TEXT_FONT_ITALIC;
+            fflags += mupdf.mupdf.fz_font_is_serif(new FzFont(span.font)) * (int)TextType.TEXT_FONT_SERIFED;
+            fflags += mupdf.mupdf.fz_font_is_bold(new FzFont(span.font)) * (int)TextType.TEXT_FONT_BOLD;
+
+            float lastAdv = 0;
+            FzRect spanBbox = new FzRect();
+            FzMatrix rot = mupdf.mupdf.fz_make_matrix(dir.x, dir.y, -dir.y, dir.x, 0, 0);
+            if (dir.x == -1)
+                rot.d = 1;
+
+            for (int i = 0; i < span.len; i++)
+            {
+                float adv = 0;
+                FzTextSpan t = new FzTextSpan(span);
+                if (t.items(i).gid >= 0)
+                    adv = mupdf.mupdf.fz_advance_glyph(t.font(), t.items(i).gid, (int)t.m_internal.wmode);
+                adv *= fsize;
+                lastAdv = adv;
+                if (t.items(i).ucs == 32)
+                    spaceAdv = adv;
+
+                FzPoint charOrig = mupdf.mupdf.fz_make_point(t.items(i).x, t.items(i).y);
+                charOrig = mupdf.mupdf.fz_transform_point(charOrig, new FzMatrix(ctm));
+                FzMatrix m1 = mupdf.mupdf.fz_make_matrix(1, 0, 0, 1, -charOrig.x, -charOrig.y);
+                m1 = mupdf.mupdf.fz_concat(m1, rot);
+                m1 = mupdf.mupdf.fz_concat(m1, new FzMatrix(1, 0, 0, 1, charOrig.x, charOrig.y));
+                float x0 = charOrig.x;
+                float x1 = x0 + adv;
+
+                if ((mat.d > 0) && (dir.x == 1 || dir.x == -1))
+            }
+        }
+
+        public override void ignore_text(fz_context arg_0, fz_text text, fz_matrix ctm)
+        {
+            fz_text_span span = text.head;
+            while (true)
+            {
+                if (span == null)
+                    break;
+                TraceTextSpan(span, 1, ctm, null, null, 1);
+                span = span.next;
+            }
+            SeqNo += 1;
+        }
+
+        public override void fill_shade(fz_context arg_0, fz_shade arg_2, fz_matrix arg_3, float arg_4, fz_color_params arg_5)
+        {
+            SeqNo += 1;
+        }
+
+        public override void fill_image(fz_context arg_0, fz_image arg_2, fz_matrix arg_3, float arg_4, fz_color_params arg_5)
+        {
+            SeqNo += 1;
+        }
+
+        public override void begin_layer(fz_context arg_0, string name)
+        {
+            if (!string.IsNullOrEmpty(name))
+                LayerName = name;
+            else
+                LayerName = "";
+        }
+
+        public override void end_layer(fz_context arg_0)
+        {
+            LayerName = "";
+>>>>>>> Stashed changes
         }
     }
 }
