@@ -1,7 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
-using Microsoft.Maui.Platform;
 using mupdf;
 
 namespace MuPDF.NET
@@ -466,6 +465,8 @@ namespace MuPDF.NET
             int srcCount = doc.fz_count_pages();
 
             if (fp < 0)
+                fp = 0;
+            if (fp > srcCount - 1)
                 fp = srcCount - 1;
             if (tp < 0)
                 tp = srcCount - 1;
@@ -508,9 +509,9 @@ namespace MuPDF.NET
             opts.do_compress_images = 1;
             opts.do_compress_fonts = 1;
             opts.do_sanitize = 1;
-            opts.do_incremental = 1;
-            opts.do_ascii = 1;
-            opts.do_decompress = 1;
+            opts.do_incremental = 0;
+            opts.do_ascii = 0;
+            opts.do_decompress = 0;
             opts.do_linear = 0;
             opts.do_clean = 1;
             opts.do_pretty = 0;
@@ -518,15 +519,16 @@ namespace MuPDF.NET
             FzBuffer res = mupdf.mupdf.fz_new_buffer(8192);
             FzOutput output = new FzOutput(res);
             pdfout.pdf_write_document(output, opts);
+            output.fz_close_output(); 
 
-            byte[] docBytes = Utils.BinFromBuffer(res);
+            byte[] ret = Utils.BinFromBuffer(res);
             int len1 = Utils.MUPDF_WARNINGS_STORE.Count;
 
             for (i = len0; i < len1; i++)
             {
                 Console.WriteLine($"{Utils.MUPDF_WARNINGS_STORE[i]}");
             }
-            return docBytes;
+            return ret;
         }
 
         public int GetPageCount()
@@ -930,6 +932,14 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// PDF only: Insert an empty page.
+        /// </summary>
+        /// <param name="pno">page number in front of which the new page should be inserted. Must be in 1 < pno <= page_count. Special values -1 and doc.page_count insert after the last page.</param>
+        /// <param name="width">page width.</param>
+        /// <param name="height">page height.</param>
+        /// <returns>the created page object.</returns>
+        /// <exception cref="Exception"></exception>
         public MuPDFPage NewPage(int pno = -1, float width = 595, float height = 842)
         {
             if (IsClosed || Is_Encrypted)
@@ -1003,6 +1013,12 @@ namespace MuPDF.NET
             return liste;
         }
 
+        /// <summary>
+        /// Create a Page object for further processing (like rendering, text searching, etc.).
+        /// </summary>
+        /// <param name="pageId">Either a 0-based page number, or a tuple (chapter, pno). For an integer, any -∞ < page_id < page_count is acceptable.</param>
+        /// <returns>page object</returns>
+        /// <exception cref="Exception"></exception>
         public MuPDFPage LoadPage(int pageId)
         {
             if (IsClosed || IsEncrypted)
@@ -1027,6 +1043,13 @@ namespace MuPDF.NET
             return val;
         }
 
+        /// <summary>
+        /// Create a Page object for further processing (like rendering, text searching, etc.).
+        /// </summary>
+        /// <param name="chapter"></param>
+        /// <param name="pagenum"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
         public MuPDFPage LoadPage(int chapter, int pagenum)
         {
             if (IsClosed || IsEncrypted)
@@ -1044,6 +1067,11 @@ namespace MuPDF.NET
             return val;
         }
 
+        /// <summary>
+        /// PDF only: Provide a new copy of a page after finishing and updating all pending changes.
+        /// </summary>
+        /// <param name="page">page object.</param>
+        /// <returns>a new copy of the same page. All pending updates (e.g. to annotations or widgets) will be finalized and a fresh copy of the page will be loaded.</returns>
         public MuPDFPage ReloadPage(MuPDFPage page)
         {
             Dictionary<int, dynamic> oldAnnots = new Dictionary<int, dynamic>();
@@ -1080,6 +1108,15 @@ namespace MuPDF.NET
             return page;
         }
 
+        /// <summary>
+        /// PDF Only: Return an embedded font file’s data and appropriate file extension.
+        /// <br/>
+        /// This can be used to store the font as an external file. The method does not throw exceptions (other than via checking for PDF and valid xref).
+        /// </summary>
+        /// <param name="xref">PDF object number of the font to extract.</param>
+        /// <param name="infoOnly">only return font information, not the buffer. To be used for information-only purposes, avoids allocation of large buffer areas.</param>
+        /// <param name="named"> If true, a dictionary with the following keys is returned: ‘name’ (font base name), ‘ext’ (font file extension), ‘type’ (font type), ‘content’ (font file content).</param>
+        /// <returns>Font object, where ext is a 3-byte suggested file extension (str), basename is the font’s name (str), type is the font’s type (e.g. “Type1”) and content is a bytes object containing the font file’s content (or b””).</returns>
         public Font ExtractFont(int xref = 0, int infoOnly = 0, string named = null)
         {
             PdfDocument pdf = AsPdfDocument(this);
@@ -1191,6 +1228,13 @@ namespace MuPDF.NET
             return wList;
         }
 
+        /// <summary>
+        /// PDF only: Return the definition source of a PDF object.
+        /// </summary>
+        /// <param name="xref">the object’s xref.</param>
+        /// <param name="compressed">whether to generate a compact output with no line breaks or spaces.</param>
+        /// <param name="ascii">whether to ASCII-encode binary data.</param>
+        /// <returns>whether to ASCII-encode binary data.</returns>
         public string GetXrefObject(int xref, int compressed = 0, int ascii = 0)
         {
             if (IsClosed)
@@ -1213,6 +1257,12 @@ namespace MuPDF.NET
             return text;
         }
 
+        /// <summary>
+        /// PDF only: Return a list of all XObjects referenced by a page.
+        /// </summary>
+        /// <param name="pno">page number, 0-based, -∞ < pno < page_count.</param>
+        /// <returns>a list of (non-image) XObjects. These objects typically represent pages embedded (not copied) from other PDFs.</returns>
+        /// <exception cref="Exception"></exception>
         public List<Entry> GetPageXObjects(int pno)
         {
             if (IsClosed || IsEncrypted)
@@ -1226,9 +1276,9 @@ namespace MuPDF.NET
         /// <summary>
         /// Retrieve a list of images used on a page.
         /// </summary>
-        /// <param name="pno"></param>
-        /// <param name="full"></param>
-        /// <returns></returns>
+        /// <param name="pno"> page number, 0-based, -∞ < pno < page_count.</param>
+        /// <param name="full"> whether to also include the referencer’s xref (which is zero if this is the page).</param>
+        /// <returns>a list of images referenced by this page.</returns>
         /// <exception cref="Exception"></exception>
         public List<Entry> GetPageImages(int pno, bool full = false)
         {
@@ -1387,7 +1437,7 @@ namespace MuPDF.NET
         /// <summary>
         /// Return string version of a PDF object definition.
         /// </summary>
-        /// <param name="obj"></param>
+        /// <param name="obj">PdfObj</param>
         /// <returns></returns>
         private string ObjString(PdfObj obj)
         {
@@ -1559,7 +1609,7 @@ namespace MuPDF.NET
         /// <summary>
         /// PDF only: Add an arbitrary supported document to the current PDF. Opens “infile” as a document, converts it to a PDF and then invokes Document.insert_pdf(). Parameters are the same as for that method. Among other things, this features an easy way to append images as full pages to an output PDF.
         /// </summary>
-        /// <param name="infile"></param>
+        /// <param name="infile"> the input document to insert. May be a filename specification as is valid for creating a Document or a Pixmap.</param>
         /// <param name="fromPage"></param>
         /// <param name="toPage"></param>
         /// <param name="startAt"></param>
@@ -2001,7 +2051,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Get PDF trailer as a string.
+        /// PDF only: Return the trailer source of the PDF, which is usually located at the PDF file’s end.
         /// </summary>
         /// <param name="compressed"></param>
         /// <param name="ascii"></param>
@@ -2131,8 +2181,8 @@ namespace MuPDF.NET
         /// <summary>
         /// Get (chapter, page) of next page.
         /// </summary>
-        /// <param name="pageId"></param>
-        /// <returns></returns>
+        /// <param name="pageId">the current page id. This must be a tuple (chapter, pno) identifying an existing page.</param>
+        /// <returns>The tuple of the following page, i.e. either (chapter, pno + 1) or (chapter + 1, 0), or the empty tuple () if the argument was the last page. Relevant only for document types with chapter support (EPUB currently).</returns>
         /// <exception cref="Exception"></exception>
         public (int, int) NextLocation(int pageId)
         {
@@ -2576,6 +2626,10 @@ namespace MuPDF.NET
             item.pdf_dict_put(new PdfObj("C"), color);
         }
 
+        /// <summary>
+        /// PDF only: Add or update the page label definitions of the PDF.
+        /// </summary>
+        /// <param name="labels">a list of dictionaries. Each dictionary defines a label building rule and a 0-based “start” page number.</param>
         public void SetPageLabels(string labels)
         {
             PdfDocument pdf = AsPdfDocument(this);
@@ -2596,10 +2650,10 @@ namespace MuPDF.NET
         /// <summary>
         /// Replace xref stream part.
         /// </summary>
-        /// <param name="xref"></param>
-        /// <param name="stream"></param>
-        /// <param name="_new"></param>
-        /// <param name="compress"></param>
+        /// <param name="xref">xref number</param>
+        /// <param name="stream">the new content of the stream.</param>
+        /// <param name="_new">deprecated</param>
+        /// <param name="compress">whether to compress the inserted stream.</param>
         /// <exception cref="Exception"></exception>
         public void UpdateStream(int xref, byte[] stream = null, int _new = 1, int compress = 1)
         {
@@ -2622,9 +2676,9 @@ namespace MuPDF.NET
         /// <summary>
         /// Replace object definition source.
         /// </summary>
-        /// <param name="xref"></param>
-        /// <param name="text"></param>
-        /// <param name="page"></param>
+        /// <param name="xref">xref number.</param>
+        /// <param name="text">a string containing a valid PDF object definition.</param>
+        /// <param name="page"> a page object. If provided, indicates, that annotations of this page should be refreshed (reloaded) to reflect changes incurred with links and / or annotations.</param>
         /// <exception cref="Exception"></exception>
         public void UpdateObject(int xref, string text, PdfPage page = null)
         {
@@ -2640,6 +2694,12 @@ namespace MuPDF.NET
             Utils.RefreshLinks(page);
         }
 
+        /// <summary>
+        /// PDF only: Copy a page reference within the document.
+        /// </summary>
+        /// <param name="pno">the page to be copied. Must be in range 0 <= pno < page_count.</param>
+        /// <param name="to">the page number in front of which to copy. The default inserts after the last page.</param>
+        /// <exception cref="Exception"></exception>
         public void CopyPage(int pno, int to = -1)
         {
             if (IsClosed)
@@ -2706,6 +2766,13 @@ namespace MuPDF.NET
             ResetPageRefs();
         }
 
+        /// <summary>
+        /// PDF only: Delete multiple pages given as 0-based numbers.
+        /// </summary>
+        /// <param name="from">start page number</param>
+        /// <param name="to">end page number</param>
+        /// <exception cref="Exception"></exception>
+        /// <exception cref="ArgumentException"></exception>
         public void DeletePages(int from = -1, int to = -1)
         {
             if (!IsPDF)
@@ -2748,6 +2815,11 @@ namespace MuPDF.NET
             ResetPageRefs();
         }
 
+        /// <summary>
+        /// PDF only: Delete multiple pages given as 0-based numbers.
+        /// </summary>
+        /// <param name="numbers">page list</param>
+        /// <exception cref="ArgumentException"></exception>
         public void DeletePages(List<int> numbers)
         {
             if (numbers.Count == 0)
@@ -2805,6 +2877,10 @@ namespace MuPDF.NET
             ResetPageRefs();
         }
 
+        /// <summary>
+        /// PDF only: Return the xref of the outline item. This is mainly used for internal purposes.
+        /// </summary>
+        /// <returns>xref numbers</returns>
         public List<int> GetOutlineXrefs()
         {
             List<int> xrefs = new List<int>();
@@ -2827,6 +2903,16 @@ namespace MuPDF.NET
             return xrefs;
         }
 
+        /// <summary>
+        /// PDF only: Embed a new file. All string parameters except the name may be unicode (in previous versions, only ASCII worked correctly). File contents will be compressed (where beneficial).
+        /// </summary>
+        /// <param name="name">entry identifier, must not already exist.</param>
+        /// <param name="buffer">file contents.</param>
+        /// <param name="filename">optional filename. Documentation only, will be set to name if None.</param>
+        /// <param name="ufilename">optional unicode filename. Documentation only, will be set to filename if None.</param>
+        /// <param name="desc">optional description. Documentation only, will be set to name if None.</param>
+        /// <returns>The method now returns the xref of the inserted file.</returns>
+        /// <exception cref="Exception"></exception>
         public int AddEmbfile(
             string name,
             byte[] buffer,
@@ -2892,9 +2978,9 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Get list of names of EmbeddedFiles.
+        /// PDF only: Retrieve the content of embedded file by its entry number or name. If the document is not a PDF, or entry cannot be found, an exception is raised.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>index or name of entry.</returns>
         public List<string> GetEmbfileNames()
         {
             List<string> names = new List<string>();
@@ -4097,11 +4183,21 @@ namespace MuPDF.NET
             RemoveTocItem(xref);
         }
 
+        /// <summary>
+        /// Return the cross reference number of an OCG or OCMD attached to an image or form xobject.
+        /// </summary>
+        /// <param name="xref">the xref of an image or form xobject. Valid such cross reference numbers are returned by Document.get_page_images()</param>
+        /// <returns></returns>
         public int GetOC(int xref)
         {
             return Utils.GetOC(this, xref);
         }
 
+        /// <summary>
+        /// Retrieve the definition of an OCMD.
+        /// </summary>
+        /// <param name="xref">the xref of the OCMD.</param>
+        /// <returns></returns>
         public OCMD GetOCMD(int xref)
         {
             return Utils.GetOCMD(this, xref);
@@ -4168,7 +4264,7 @@ namespace MuPDF.NET
         /// <summary>
         /// Check whether there are annotations on any page.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>True / False. As opposed to fields, which are also stored in a central place of a PDF document, the existence of links / annotations can only be detected by parsing each page.</returns>
         /// <exception cref="Exception"></exception>
         public bool HasAnnots()
         {
@@ -4190,6 +4286,12 @@ namespace MuPDF.NET
             return false;
         }
 
+
+        /// <summary>
+        /// PDF only: Check whether there are links, resp. annotations anywhere in the document.
+        /// </summary>
+        /// <returns>True / False. As opposed to fields, which are also stored in a central place of a PDF document, the existence of links / annotations can only be detected by parsing each page.</returns>
+        /// <exception cref="Exception"></exception>
         public bool HasLinks()
         {
             if (IsClosed)
@@ -4207,6 +4309,23 @@ namespace MuPDF.NET
             return false;
         }
 
+        /// <summary>
+        /// PDF only: Remove potentially sensitive data from the PDF. This function is inspired by the similar “Sanitize” function in Adobe Acrobat products. The process is configurable by a number of options.
+        /// </summary>
+        /// <param name="attachedFiles">Search for ‘FileAttachment’ annotations and remove the file content.</param>
+        /// <param name="cleanPages">Remove any comments from page painting sources. If this option is set to False, then this is also done for hidden_text and redactions.</param>
+        /// <param name="embeddedFiles">Remove embedded files.</param>
+        /// <param name="hiddenText">Remove OCRed text and invisible text.</param>
+        /// <param name="javascript">Remove JavaScript sources.</param>
+        /// <param name="metadata">Remove PDF standard metadata.</param>
+        /// <param name="redactions">Apply redaction annotations.</param>
+        /// <param name="redactImages">how to handle images if applying redactions. One of 0 (ignore), 1 (blank out overlaps) or 2 (remove).</param>
+        /// <param name="removeLinks">how to handle images if applying redactions. One of 0 (ignore), 1 (blank out overlaps) or 2 (remove).</param>
+        /// <param name="resetFields">Reset all form fields to their defaults.</param>
+        /// <param name="resetResponses">Remove all responses from all annotations.</param>
+        /// <param name="thumbnails">Remove all responses from all annotations.</param>
+        /// <param name="xmlMetadata">Remove all responses from all annotations.</param>
+        /// <exception cref="Exception"></exception>
         public void Scrub(
             bool attachedFiles = true,
             bool cleanPages = true,
@@ -4366,6 +4485,11 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// PDF only: Sets or updates the metadata of the document as specified in m, a Python dictionary.
+        /// </summary>
+        /// <param name="metadata">A dictionary with the same keys as metadata (see below). All keys are optional. A PDF’s format and encryption method cannot be set or changed and will be ignored. If any value should not contain data, do not specify its key or set the value to None. If you use {} all metadata information will be cleared to the string “none”. If you want to selectively change only some values, modify a copy of doc.metadata and use it as the argument. Arbitrary unicode values are possible if specified as UTF-8-encoded.</param>
+        /// <exception cref="Exception"></exception>
         public void SetMetadata(Dictionary<string, string> metadata)
         {
             if (!IsPDF)
@@ -4514,7 +4638,7 @@ namespace MuPDF.NET
             }
 
             string text = "<</Type/OCMD";
-            Console.WriteLine(allOcgs.Count);
+            
             if (ocgs != null)
             {
                 List<int> s = ocgs.Except(allOcgs).ToList();
@@ -4558,7 +4682,7 @@ namespace MuPDF.NET
         /// Create new outline tree (table of contents, TOC)
         /// </summary>
         /// <param name="tocs">each entry must contain level, title, page and optionally top margin on the page.None or '()' remove the TOC</param>
-        /// <param name="collapse">collapses entries beyond this level. Zero or None shows all entries unfolded.</param>
+        /// <param name="collapse">collapses entries beyond this level. Zero or Null shows all entries unfolded.</param>
         /// <returns>the number of inserted items, or the number of removed items respectively.</returns>
         public int SetToc(List<Toc> tocs, int collapse = 1)
         {
@@ -4834,7 +4958,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        ///  "update" bookmark by letting it point to nowhere
+        /// "update" bookmark by letting it point to nowhere
         /// </summary>
         /// <param name="xref"></param>
         /// <param name="action"></param>
@@ -4887,7 +5011,7 @@ namespace MuPDF.NET
         /// <summary>
         /// Build font subsets of a PDF.
         /// </summary>
-        /// <param name="verbose"></param>
+        /// <param name="verbose">write various progress information to sysout. This currently only has an effect if fallback is True.</param>
         public void SubsetFonts(bool verbose = false)
         {
             mupdf.mupdf.pdf_subset_fonts2(
@@ -4948,6 +5072,83 @@ namespace MuPDF.NET
             IsClosed = true;
             GraftMaps = new Dictionary<int, MuPDFGraftMap>();
             _nativeDocument = null;
+        }
+
+        /// <summary>
+        /// Add an optional content group. An OCG is the most important unit of information to determine object visibility. For a PDF, in order to be regarded as having optional content, at least one OCG must exist.
+        /// </summary>
+        /// <param name="name">arbitrary name. Will show up in supporting PDF viewers.</param>
+        /// <param name="config">layer configuration number. Default -1 is the standard configuration.</param>
+        /// <param name="on">standard visibility status for objects pointing to this OCG.</param>
+        /// <param name="intent">a string or list of strings declaring the visibility intents. There are two PDF standard values to choose from: “View” and “Design”. Default is “View”. Correct spelling is important.</param>
+        /// <param name="usage">another influencer for OCG visibility. This will become part of the OCG’s /Usage key. There are two PDF standard values to choose from: “Artwork” and “Technical”. Default is “Artwork”. Please only change when required.</param>
+        /// <returns>xref of the created OCG. Use as entry for oc parameter in supporting objects.</returns>
+        /// <exception cref="Exception"></exception>
+        public int AddOcg(string name, int config = -1, bool on = true, string intent = null, string usage = null)
+        {
+            int xref = 0;
+            PdfDocument pdf = MuPDFDocument.AsPdfDocument(this);
+
+            PdfObj ocg = pdf.pdf_add_new_dict(3);
+            ocg.pdf_dict_put(new PdfObj("Type"), new PdfObj("OCG"));
+            ocg.pdf_dict_put_text_string(new PdfObj("Name"), name);
+            PdfObj intents = ocg.pdf_dict_put_array(new PdfObj("Intent"), 2);
+
+            if (string.IsNullOrEmpty(intent))
+                intents.pdf_array_push(new PdfObj("View"));
+            else
+                intents.pdf_array_push(mupdf.mupdf.pdf_new_name(intent));
+            PdfObj useFor = ocg.pdf_dict_put_dict(new PdfObj("Usage"), 3);
+            PdfObj ciName = mupdf.mupdf.pdf_new_name("CreatorInfo");
+            PdfObj creInfo = useFor.pdf_dict_put_dict(ciName, 2);
+            creInfo.pdf_dict_put_text_string(new PdfObj("Creator"), "PyMuPDF");
+
+            if (!string.IsNullOrEmpty(usage))
+                creInfo.pdf_dict_put_name(new PdfObj("Subtype"), usage);
+            else
+                creInfo.pdf_dict_put_name(new PdfObj("Subtype"), "Artwork");
+            PdfObj indOcg = pdf.pdf_add_object(ocg);
+
+            PdfObj ocp = Utils.EnsureOCProperties(pdf);
+            PdfObj obj = ocp.pdf_dict_get(new PdfObj("OCGs"));
+            obj.pdf_array_push(indOcg);
+            PdfObj cfg;
+            if (config > -1)
+            {
+                obj = ocp.pdf_dict_get(new PdfObj("Configs"));
+                if (obj.pdf_is_array() == 0)
+                    throw new Exception(Utils.ErrorMessages["MSG_BAD_OC_CONFIG"]);
+                cfg = obj.pdf_array_get(config);
+                if (cfg.m_internal == null)
+                    throw new Exception(Utils.ErrorMessages["MSG_BAD_OC_CONFIG"]);
+            }
+            else
+            {
+                cfg = ocp.pdf_dict_get(new PdfObj("D"));
+            }
+
+            obj = cfg.pdf_dict_get(new PdfObj("Order"));
+            if (obj.m_internal == null)
+                cfg.pdf_dict_put_array(new PdfObj("Order"), 1);
+            obj.pdf_array_push(indOcg);
+
+            if (on)
+            {
+                obj = cfg.pdf_dict_get(new PdfObj("ON"));
+                if (obj.m_internal == null)
+                    obj = cfg.pdf_dict_put_array(new PdfObj("ON"), 1);
+            }
+            else
+            {
+                obj = cfg.pdf_dict_get(new PdfObj("OFF"));
+                if (obj.m_internal == null)
+                    obj = cfg.pdf_dict_put_array(new PdfObj("OFF"), 1);
+            }
+            obj.pdf_array_push(indOcg);
+            mupdf.mupdf.ll_pdf_read_ocg(pdf.m_internal);
+
+            xref = indOcg.pdf_to_num();
+            return xref;
         }
     }
 }

@@ -26,6 +26,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// The page’s PDF xref. Zero if not a PDF.
+        /// </summary>
         public int Xref
         {
             get
@@ -34,12 +37,18 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// The page number.
+        /// </summary>
         public int Number { get; set; }
 
         public bool ThisOwn { get; set; }
 
         public bool WasWrapped { get; set; }
 
+        /// <summary>
+        /// Contains the width and height of the page’s Page.mediabox for a PDF, otherwise the bottom-right coordinates of Page.rect.
+        /// </summary>
         public Point MediaBoxSize
         {
             get
@@ -68,6 +77,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// Contains the top-left point of the page’s /CropBox for a PDF, otherwise Point(0, 0).
+        /// </summary>
         public Point CropBoxPosition
         {
             get
@@ -76,6 +88,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// Contains the rectangle of the page. Same as result of Page.bound().
+        /// </summary>
         public Rect Rect
         {
             get
@@ -84,6 +99,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// Contains the rotation of the page in degrees (always 0 for non-PDF types). This is a copy of the value in the PDF file.
+        /// </summary>
         public int Rotation
         {
             get
@@ -94,6 +112,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// Contains the first Link of a page (or None).
+        /// </summary>
         public MuPDFLink FristLink
         {
             get
@@ -104,6 +125,10 @@ namespace MuPDF.NET
 
         public Dictionary<int, dynamic> AnnotRefs = new Dictionary<int, dynamic>();
 
+        /// <summary>
+        /// Determine the rectangle of the page. Same as property Page.rect. For PDF documents this usually also coincides with mediabox and cropbox, but not always.
+        /// </summary>
+        /// <returns></returns>
         public Rect GetBound()
         {
             FzPage page = _pdfPage.super();
@@ -139,6 +164,9 @@ namespace MuPDF.NET
             return null;
         }
 
+        /// <summary>
+        /// This matrix translates coordinates from the PDF space to the MuPDF space.
+        /// </summary>
         public Matrix TransformationMatrix
         {
             get
@@ -158,6 +186,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
         public Rect ArtBox
         {
             get
@@ -170,6 +201,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// The page’s mediabox for a PDF, otherwise Page.rect.
+        /// </summary>
         public Rect MediaBox
         {
             get
@@ -196,6 +230,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// The page’s /CropBox for a PDF. Always the unrotated page rectangle is returned.
+        /// </summary>
         public Rect CropBox
         {
             get
@@ -210,6 +247,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// These matrices may be used for dealing with rotated PDF pages.
+        /// </summary>
         public Matrix DerotationMatrix
         {
             get
@@ -221,6 +261,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// Contains the first Annot of a page (or None).
+        /// </summary>
         public MuPDFAnnot FirstAnnot
         {
             get
@@ -259,6 +302,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// Contains the first Widget of a page (or None).
+        /// </summary>
         public Widget FirstWidget
         {
             get
@@ -308,6 +354,7 @@ namespace MuPDF.NET
 
             return ret;
         }
+
 
         public Rect OtherBox(string boxtype)
         {
@@ -383,6 +430,17 @@ namespace MuPDF.NET
             return new MuPDFAnnot(annot);
         }
 
+        /// <summary>
+        /// PDF only: Add a file attachment annotation with a “PushPin” icon at the specified location.
+        /// </summary>
+        /// <param name="point">the top-left point of a 18x18 rectangle containing the MuPDF-provided “PushPin” icon.</param>
+        /// <param name="buffer_">the data to be stored (actual file content, any data, etc.).</param>
+        /// <param name="filename">the filename to associate with the data.</param>
+        /// <param name="ufilename">the optional PDF unicode version of filename. Defaults to filename.</param>
+        /// <param name="desc">the optional PDF unicode version of filename. Defaults to filename.</param>
+        /// <param name="icon">choose one of “PushPin” (default), “Graph”, “Paperclip”, “Tag” as the visual symbol for the attached data.</param>
+        /// <returns>the created annotation. Stroke color yellow = (1, 1, 0), no fill color support.</returns>
+        /// <exception cref="Exception"></exception>
         public MuPDFAnnot AddFileAnnot(
             Point point,
             byte[] buffer_,
@@ -424,6 +482,20 @@ namespace MuPDF.NET
             return new MuPDFAnnot(annot);
         }
 
+        /// <summary>
+        /// PDF only: Add text in a given rectangle.
+        /// </summary>
+        /// <param name="rect">the rectangle into which the text should be inserted. Text is automatically wrapped to a new line at box width. Lines not fitting into the box will be invisible.param>
+        /// <param name="text">the text. May contain any mixture of Latin, Greek, Cyrillic, Chinese, Japanese and Korean characters.</param>
+        /// <param name="fontSize">the fontsize.</param>
+        /// <param name="fontName">the font name. Have to include this param.</param>
+        /// <param name="textColor">the text color. Default is black.</param>
+        /// <param name="fillColor">the fill color. Default is white.</param>
+        /// <param name="borderColor">the border color.</param>
+        /// <param name="align">text alignment, one of TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER, TEXT_ALIGN_RIGHT</param>
+        /// <param name="rotate">the text orientation.</param>
+        /// <returns>the created annotation.</returns>
+        /// <exception cref="Exception"></exception>
         public MuPDFAnnot AddFreeTextAnnot(
             Rect rect,
             string text,
@@ -562,6 +634,11 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// PDF only: Add a “freehand” scribble annotation.
+        /// </summary>
+        /// <param name="list">a list of one or more lists, each containing point_like items.</param>
+        /// <returns>the created annotation in default appearance black =(0, 0, 0),line width 1. No fill color support.</returns>
         public MuPDFAnnot AddInkAnnot(List<List<Point>> list)
         {
             PdfPage page = _pdfPage;
@@ -596,6 +673,12 @@ namespace MuPDF.NET
             return new MuPDFAnnot(annot);
         }
 
+        /// <summary>
+        /// PDF only: Add a line annotation.
+        /// </summary>
+        /// <param name="p1">the starting point of the line.</param>
+        /// <param name="p2">the end point of the line.</param>
+        /// <returns>the created annotation.</returns>
         public MuPDFAnnot AddLineAnnot(Point p1, Point p2)
         {
             PdfPage page = _pdfPage;
@@ -606,6 +689,13 @@ namespace MuPDF.NET
             return new MuPDFAnnot(annot);
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="points"></param>
+        /// <param name="annotType"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
         public MuPDFAnnot AddMultiLine(List<Point> points, PdfAnnotType annotType)
         {
             PdfPage page = _pdfPage;
@@ -624,7 +714,17 @@ namespace MuPDF.NET
             return new MuPDFAnnot(annot);
         }
 
-        public MuPDFAnnot AddRedactAnnot(Quad quad, string text = null, string dataStr = null, int align = 0, float[] fill = null, float[] textColr = null)
+        /// <summary>
+        /// PDF only: Add a redaction annotation. A redaction annotation identifies content to be removed from the document.
+        /// </summary>
+        /// <param name="quad">specifies the (rectangular) area to be removed which is always equal to the annotation rectangle.</param>
+        /// <param name="text">text to be placed in the rectangle after applying the redaction (and thus removing old content).</param>
+        /// <param name="dataStr"></param>
+        /// <param name="align">the horizontal alignment for the replacing text.</param>
+        /// <param name="fill"> the fill color of the rectangle after applying the redaction.param>
+        /// <param name="textColr"> the fill color of the rectangle after applying the redaction.</param>
+        /// <returns>the created annotation.</returns>
+        public MuPDFAnnot AddRedactAnnot(Quad quad, string text = null, string dataStr = null, TextAlign align = TextAlign.TEXT_ALIGN_LEFT, float[] fill = null, float[] textColr = null)
         {
             PdfPage page = _pdfPage;
             float[] fCol = new float[4] { 1, 1, 1, 0 };
@@ -648,7 +748,7 @@ namespace MuPDF.NET
             {
                 annot.pdf_annot_obj().pdf_dict_puts("OverlayText", mupdf.mupdf.pdf_new_text_string(text));
                 annot.pdf_annot_obj().pdf_dict_put_text_string(new PdfObj("DA"), dataStr);
-                annot.pdf_annot_obj().pdf_dict_put_int(new PdfObj("Q"), align);
+                annot.pdf_annot_obj().pdf_dict_put_int(new PdfObj("Q"), (int)align);
             }
 
             annot.pdf_update_annot();
@@ -832,6 +932,11 @@ namespace MuPDF.NET
             annot.ThisOwn = true;
         }
 
+        /// <summary>
+        /// PDF only: Add an annotation consisting of lines which connect the given points. A Polygon’s first and last points are automatically connected, which does not happen for a PolyLine.
+        /// </summary>
+        /// <param name="points">a list of point_like objects.</param>
+        /// <returns>the created annotation.</returns>
         public MuPDFAnnot AddPolygonAnnot(List<Point> points)
         {
             int oldRotation = AnnotPreProcess(this);
@@ -849,6 +954,11 @@ namespace MuPDF.NET
             return annot;
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="points"></param>
+        /// <returns></returns>
         public MuPDFAnnot AddPolylineAnnot(List<Point> points)
         {
             int oldRotation = AnnotPreProcess(this);
@@ -866,6 +976,7 @@ namespace MuPDF.NET
             return annot;
         }
 
+
         public MuPDFAnnot AddRectAnnot(Rect rect)
         {
             int oldRotation = AnnotPreProcess(this);
@@ -882,6 +993,7 @@ namespace MuPDF.NET
             AnnotPostProcess(this, annot);
             return annot;
         }
+
 
         private List<Rect> GetHighlightSelection(List<Quad> quads, Point start, Point stop, Rect clip)
         {
@@ -947,6 +1059,14 @@ namespace MuPDF.NET
             return lines;
         }
 
+        /// <summary>
+        /// PDF only: These annotations are normally used for marking text which has previously been somehow located
+        /// </summary>
+        /// <param name="quads"></param>
+        /// <param name="start"></param>
+        /// <param name="stop"></param>
+        /// <param name="clip"></param>
+        /// <returns></returns>
         public MuPDFAnnot AddHighlightAnnot(dynamic quads, Point start = null, Point stop = null, Rect clip = null)
         {
             List<Quad> q = new List<Quad>();
@@ -986,6 +1106,13 @@ namespace MuPDF.NET
             return new MuPDFTextPage(stPage);
         }
 
+        /// <summary>
+        /// Create a TextPage for the page.
+        /// </summary>
+        /// <param name="clip">restrict extracted text to this area.</param>
+        /// <param name="flags">indicator bits controlling the content available for subsequent text extractions and searches</param>
+        /// <param name="matrix"></param>
+        /// <returns></returns>
         public MuPDFTextPage GetTextPage(Rect clip = null, int flags = 0, Matrix matrix = null)
         {
             if (matrix == null)
@@ -1011,6 +1138,10 @@ namespace MuPDF.NET
             return stPage;
         }
 
+        /// <summary>
+        /// PDF only: Set the rotation of the page.
+        /// </summary>
+        /// <param name="rotation">An integer specifying the required rotation in degrees.</param>
         public void SetRotation(int rotation)
         {
             PdfPage page = _pdfPage;
@@ -1111,6 +1242,13 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// PDF only: Add a PDF Form field (“widget”) to a page.
+        /// </summary>
+        /// <param name="fieldType"></param>
+        /// <param name="fieldName"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
         public MuPDFAnnot AddWidget(PdfWidgetType fieldType, string fieldName)
         {
             PdfPage page = _pdfPage;
@@ -1282,6 +1420,12 @@ namespace MuPDF.NET
             Utils.SetResourceProperty(page.obj(), mc, xref);
         }
 
+        /// <summary>
+        /// PDF only: Insert a new link on this page.
+        /// </summary>
+        /// <param name="link">the link to be inserted.</param>
+        /// <param name="mark"></param>
+        /// <exception cref="Exception"></exception>
         public void InsertLink(Link link, bool mark = true)
         {
             string annot = Utils.GetLinkText(this, link);
@@ -1290,6 +1434,26 @@ namespace MuPDF.NET
             AddAnnotFromString(new List<string>() { annot });
         }
 
+        /// <summary>
+        /// PDF only: Put an image inside the given rectangle.
+        /// </summary>
+        /// <param name="rect">where to put the image. Must be finite and not empty.</param>
+        /// <param name="filename">name of an image file (all formats supported by MuPDF</param>
+        /// <param name="pixmap"> a pixmap containing the image.</param>
+        /// <param name="stream">image in memory all formats supported by MuPDF</param>
+        /// <param name="imask">image in memory – to be used as image mask (alpha values) for the base image.</param>
+        /// <param name="overlay"></param>
+        /// <param name="rotate">rotate the image.</param>
+        /// <param name="keepProportion">maintain the aspect ratio of the image.</param>
+        /// <param name="oc">make image visibility dependent on this OCG or OCMD.</param>
+        /// <param name="width"></param>
+        /// <param name="height"></param>
+        /// <param name="xref">the xref of an image already present in the PDF.</param>
+        /// <param name="alpha"></param>
+        /// <param name="imageName"></param>
+        /// <param name="mask"></param>
+        /// <returns>The xref of the embedded image.</returns>
+        /// <exception cref="Exception"></exception>
         public int InsertImage(
             Rect rect = null, string filename = null, Pixmap pixmap = null, byte[] stream = null, byte[] imask = null,
             int overlay = 1, int rotate = 0, int keepProportion = 1, int oc = 0, int width = 0, int height = 0,
@@ -1530,6 +1694,28 @@ namespace MuPDF.NET
             return imgXRef;
         }
 
+        /// <summary>
+        /// PDF only: Insert text starting at point. See Shape.InsertText
+        /// </summary>
+        /// <param name="point"></param>
+        /// <param name="text"></param>
+        /// <param name="fontSize"></param>
+        /// <param name="lineHeight"></param>
+        /// <param name="fontName"></param>
+        /// <param name="fontFile"></param>
+        /// <param name="setSimple"></param>
+        /// <param name="encoding"></param>
+        /// <param name="color"></param>
+        /// <param name="fill"></param>
+        /// <param name="borderWidth"></param>
+        /// <param name="renderMode"></param>
+        /// <param name="rotate"></param>
+        /// <param name="morph"></param>
+        /// <param name="overlay"></param>
+        /// <param name="strokeOpacity"></param>
+        /// <param name="fillOpacity"></param>
+        /// <param name="oc"></param>
+        /// <returns></returns>
         public int InsertText(
             Point point,
             dynamic text,
@@ -1577,6 +1763,20 @@ namespace MuPDF.NET
             return rc;
         }
 
+        /// <summary>
+        /// PDF only: Insert text into the specified rectangle.
+        /// </summary>
+        /// <param name="rect">rectangle on page to receive the text.</param>
+        /// <param name="text">the text to be written. Can contain a mixture of plain text and HTML tags with styling instructions.</param>
+        /// <param name="css">optional string containing additional CSS instructions.</param>
+        /// <param name="opacity"></param>
+        /// <param name="rotate">one of the values 0, 90, 180, 270. Depending on this, text will be filled:</param>
+        /// <param name="scaleLow">if necessary, scale down the content until it fits in the target rectangle.</param>
+        /// <param name="archive">an Archive object that points to locations where to find images or non-standard fonts.</param>
+        /// <param name="oc">the xref of an OCG / OCMD or 0.</param>
+        /// <param name="overlay">put the text in front of other content.</param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
         public (float, float) InsertHtmlBox(
             Rect rect,
             dynamic text,
@@ -1657,6 +1857,10 @@ namespace MuPDF.NET
             return (spareHeight, scale);
         }
 
+        /// <summary>
+        /// Retrieves all links of a page.
+        /// </summary>
+        /// <returns>Retrieves all links of a page.</returns>
         public List<Link> GetLinks()
         {
             MuPDFLink ln = FirstLink;
@@ -1684,6 +1888,14 @@ namespace MuPDF.NET
             return links;
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="sr"></param>
+        /// <param name="tr"></param>
+        /// <param name="keep"></param>
+        /// <param name="rotate"></param>
+        /// <returns></returns>
         public Matrix CalcMatrix(Rect sr, Rect tr, bool keep = true, int rotate = 0)
         {
             Point smp = (sr.TopLeft + sr.BottomRight) / 2.0f;
@@ -1702,6 +1914,19 @@ namespace MuPDF.NET
             return m;
         }
 
+        /// <summary>
+        /// PDF only: Display a page of another PDF as a vector image (otherwise similar to Page.insert_image()).
+        /// </summary>
+        /// <param name="rect">where to place the image on current page.</param>
+        /// <param name="src">source PDF document containing the page. Must be a different document object, but may be the same file.</param>
+        /// <param name="pno"></param>
+        /// <param name="keepProportion">page number</param>
+        /// <param name="overlay">put image in foreground (default) or background.</param>
+        /// <param name="oc">make visibility dependent on this OCG / OCMD </param>
+        /// <param name="rotate">show the source rectangle rotated by some angle.</param>
+        /// <param name="clip">show the source rectangle rotated by some angle.</param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
         public int ShowPdfPage(
             Rect rect,
             MuPDFDocument src,
@@ -1812,7 +2037,7 @@ namespace MuPDF.NET
 
             PdfObj xobj2 = pdfOut.pdf_new_xobject(cropBox, mat, subRes, res);
             if (oc > 0)
-                Utils.AddOcObject(pdfOut, xobj2, oc);
+                Utils.AddOcObject(pdfOut, xobj2.pdf_resolve_indirect(), oc);
 
             // update target page with xobj2
             PdfObj resources = tpageObj.pdf_dict_get_inheritable(new PdfObj("Resources"));
@@ -1853,6 +2078,17 @@ namespace MuPDF.NET
             return ret;
         }
 
+        /// <summary>
+        /// PDF only: Add a new font to be used by text output methods and return its xref.
+        /// </summary>
+        /// <param name="fontName">PDF only: Add a new font to be used by text output methods and return its xref.</param>
+        /// <param name="fontFile">a path to a font file. If used, fontname must be different from all reserved names.</param>
+        /// <param name="fontBuffer">the memory image of a font file. If used, fontname must be different from all reserved names.</param>
+        /// <param name="setSimple">applicable for fontfile / fontbuffer cases only: enforce treatment as a “simple” font</param>
+        /// <param name="wmode"></param>
+        /// <param name="encoding">Select one of the available encodings Latin (0), Cyrillic (2) or Greek (1).</param>
+        /// <returns>the xref of the installed font.</returns>
+        /// <exception cref="Exception"></exception>
         public int InsertFont(
             string fontName = "helv",
             string fontFile = null,
@@ -1931,6 +2167,11 @@ namespace MuPDF.NET
             return fontDict.Xref;
         }
 
+        /// <summary>
+        /// PDF only: Return a list of fonts referenced by the page.
+        /// </summary>
+        /// <param name="full"></param>
+        /// <returns></returns>
         public List<Entry> GetFonts(bool full = false)
         {
             return Parent.GetPageFonts(Number, full);
@@ -1975,6 +2216,12 @@ namespace MuPDF.NET
             return value;
         }
 
+        /// <summary>
+        /// Get optical contents from page
+        /// </summary>
+        /// <param name="oc"></param>
+        /// <returns>returns contents</returns>
+        /// <exception cref="Exception"></exception>
         public string GetOptionalContent(int oc)
         {
             if (oc == 0)
@@ -1986,6 +2233,7 @@ namespace MuPDF.NET
 
             Dictionary<int, string> propsDict = new Dictionary<int, string>();
             List<(string, int)> props = GetResourceProperties();
+            Console.WriteLine(props == null);
             foreach ((string p, int x) in props)
             {
                 propsDict[x] = p;
@@ -2004,6 +2252,14 @@ namespace MuPDF.NET
             return mc;
         }
 
+        /// <summary>
+        /// Set the transparency.
+        /// </summary>
+        /// <param name="gstate"></param>
+        /// <param name="CA"></param>
+        /// <param name="ca"></param>
+        /// <param name="blendMode"></param>
+        /// <returns></returns>
         public string SetOpacity(string gstate = null, float CA = 1, float ca = 1, string blendMode = null)
         {
             if (CA >= 1 && ca >= 1 && string.IsNullOrEmpty(blendMode))
@@ -2042,6 +2298,10 @@ namespace MuPDF.NET
             return gstate;
         }
 
+        /// <summary>
+        /// PDF only: return a list of the names of annotations, widgets and links.
+        /// </summary>
+        /// <returns></returns>
         public List<string> GetAnnotNames()
         {
             PdfPage page = GetPdfPage();
@@ -2050,6 +2310,10 @@ namespace MuPDF.NET
             return Utils.GetAnnotIdList(page);
         }
 
+        /// <summary>
+        /// PDF only: return a list of the :data`xref` numbers of annotations, widgets and links – technically of all entries found in the page’s /Annots array.
+        /// </summary>
+        /// <returns>PDF only: return a list of the :data`xref` numbers of annotations, widgets and links – technically of all entries found in the page’s /Annots array.</returns>
         public List<AnnotXref> GetAnnotXrefs()
         {
             PdfPage page = GetPdfPage();
@@ -2058,6 +2322,10 @@ namespace MuPDF.NET
             return Utils.GetAnnotXrefList(page.obj());
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
         public List<AnnotXref> GetUnusedAnnotXrefs()
         {
             PdfPage page = GetPdfPage();
@@ -2066,6 +2334,11 @@ namespace MuPDF.NET
             return Utils.GetAnnotXrefList(page.obj());
         }
 
+        /// <summary>
+        /// Return a generator over the page’s annotations.
+        /// </summary>
+        /// <param name="types">a sequence of integers to down-select to one or more annotation types.</param>
+        /// <returns></returns>
         public IEnumerable<MuPDFAnnot> GetAnnots(List<PdfAnnotType> types = null)
         {
             List<PdfAnnotType> skipTypes = new List<PdfAnnotType>() { PdfAnnotType.PDF_ANNOT_LINK, PdfAnnotType.PDF_ANNOT_POPUP, PdfAnnotType.PDF_ANNOT_WIDGET };
@@ -2125,6 +2398,12 @@ namespace MuPDF.NET
             return val;
         }
 
+        /// <summary>
+        /// PDF only: return the annotation identified by ident. This may be its unique name (PDF /NM key), or its xref.
+        /// </summary>
+        /// <param name="name">the annotation name or xref.</param>
+        /// <param name="xref"></param>
+        /// <returns>the annotation or None.</returns>
         private MuPDFAnnot _LoadAnnot(string name, int xref)
         {
             PdfPage page = GetPdfPage();
@@ -2172,6 +2451,11 @@ namespace MuPDF.NET
             return val;
         }
 
+        /// <summary>
+        /// PDF only: Delete annotation from the page and return the next one.
+        /// </summary>
+        /// <param name="annot">the annotation to be deleted.</param>
+        /// <returns></returns>
         public MuPDFAnnot DeleteAnnot(MuPDFAnnot annot)
         {
             PdfPage page = GetPdfPage();
@@ -2198,6 +2482,10 @@ namespace MuPDF.NET
             return val;
         }
 
+        /// <summary>
+        /// PDF only: Delete the specified link from the page.
+        /// </summary>
+        /// <param name="link">the link to be deleted.</param>
         public void DeleteLink(Link link)
         {
             void Finished()
@@ -2302,6 +2590,11 @@ namespace MuPDF.NET
             return rc;
         }
 
+        /// <summary>
+        /// Return the vector graphics of the page. These are instructions which draw lines, rectangles, quadruples or curves, including properties like colors, transparency, line width and dashing, etc. Alternative terms are “line art” and “drawings”.
+        /// </summary>
+        /// <param name="extended"></param>
+        /// <returns>a list of dictionaries.</returns>
         public List<PathInfo> GetDrawings(bool extended = false)
         {
             int oldRotation = Rotation;
@@ -2337,6 +2630,17 @@ namespace MuPDF.NET
                 rc = (infRect, nullMat);
         }
 
+        /// <summary>
+        /// Create a pixmap from the page. This is probably the most often used method to create a Pixmap.
+        /// </summary>
+        /// <param name="matrix">default is Identity.</param>
+        /// <param name="dpi">desired resolution in x and y direction.</param>
+        /// <param name="colorSpace"> The desired colorspace, one of “GRAY”, “RGB” or “CMYK” (case insensitive).</param>
+        /// <param name="clip">restrict rendering to the intersection of this area with the page’s rectangle.</param>
+        /// <param name="alpha">whether to add an alpha channel. Always accept the default False if you do not really need transparency. This will save a lot of memory (25% in case of RGB … and pixmaps are typically large!), and also processing time.</param>
+        /// <param name="annots">whether to also render annotations or to suppress them.</param>
+        /// <returns>Pixmap of the page.</returns>
+        /// <exception cref="Exception"></exception>
         public Pixmap GetPixmap(IdentityMatrix matrix = null, int dpi = 0, string colorSpace = null,
             Rect clip = null, bool alpha = false, bool annots = true)
         {
@@ -2409,11 +2713,45 @@ namespace MuPDF.NET
             doc.UpdateStream(lastXref, Encoding.UTF8.GetBytes(" "));
         }
 
-        public void DeleteWidget()
+        /// <summary>
+        /// PDF only: Delete field from the page and return the next one.
+        /// </summary>
+        /// <param name="widget">the widget to be deleted.</param>
+        /// <returns>the widget following the deleted one. Please remember that physical removal requires saving to a new file with garbage > 0.</returns>
+        /// <exception cref="Exception"></exception>
+        public MuPDFAnnot DeleteWidget(Widget widget)
         {
+            PdfAnnot annot = widget._annot;
+            if (annot == null)
+                throw new Exception("bad type: widget");
+            MuPDFAnnot nextWidget = widget.Next;
+            DeleteAnnot(new MuPDFAnnot(annot));
+            widget.Parent = null;
+            widget = null;
 
+            return nextWidget;
         }
 
+        /// <summary>
+        /// PDF only: Draw a cubic Bézier curve from p1 to p4 with the control points p2 and p3.
+        /// </summary>
+        /// <param name="p1"></param>
+        /// <param name="p2"></param>
+        /// <param name="p3"></param>
+        /// <param name="p4"></param>
+        /// <param name="color"></param>
+        /// <param name="fill"></param>
+        /// <param name="dashes"></param>
+        /// <param name="width"></param>
+        /// <param name="morph"></param>
+        /// <param name="closePath"></param>
+        /// <param name="lineCap"></param>
+        /// <param name="lineJoin"></param>
+        /// <param name="overlay"></param>
+        /// <param name="strokeOpacity"></param>
+        /// <param name="fillOpacity"></param>
+        /// <param name="oc"></param>
+        /// <returns></returns>
         public Point DrawBezier(
             Point p1,
             Point p2,
@@ -2452,6 +2790,26 @@ namespace MuPDF.NET
             return ret;
         }
 
+        /// <summary>
+        /// PDF only: Draw a circular sector, optionally connecting the arc to the circle’s center (like a piece of pie).
+        /// </summary>
+        /// <param name="center"></param>
+        /// <param name="point"></param>
+        /// <param name="beta"></param>
+        /// <param name="color"></param>
+        /// <param name="fill"></param>
+        /// <param name="dashes"></param>
+        /// <param name="fullSector"></param>
+        /// <param name="morph"></param>
+        /// <param name="width"></param>
+        /// <param name="closePath"></param>
+        /// <param name="lineCap"></param>
+        /// <param name="lineJoin"></param>
+        /// <param name="overlay"></param>
+        /// <param name="strokeOpacity"></param>
+        /// <param name="fillOpacity"></param>
+        /// <param name="oc"></param>
+        /// <returns></returns>
         public Point DrawSector(
             Point center,
             Point point,
@@ -2489,6 +2847,23 @@ namespace MuPDF.NET
             return ret;
         }
 
+        /// <summary>
+        /// PDF only: Draw a circle around center (point_like) with a radius of radius.
+        /// </summary>
+        /// <param name="center"></param>
+        /// <param name="radius"></param>
+        /// <param name="color"></param>
+        /// <param name="fill"></param>
+        /// <param name="morph"></param>
+        /// <param name="dashes"></param>
+        /// <param name="width"></param>
+        /// <param name="lineCap"></param>
+        /// <param name="lineJoin"></param>
+        /// <param name="overlay"></param>
+        /// <param name="strokeOpacity"></param>
+        /// <param name="fillOpacity"></param>
+        /// <param name="oc"></param>
+        /// <returns></returns>
         public Point DrawCircle(
             Point center,
             float radius,
@@ -2572,6 +2947,25 @@ namespace MuPDF.NET
             return ret;
         }
 
+        /// <summary>
+        /// PDF only: This is a special case of draw_bezier().
+        /// </summary>
+        /// <param name="p1"></param>
+        /// <param name="p2"></param>
+        /// <param name="p3"></param>
+        /// <param name="color"></param>
+        /// <param name="fill"></param>
+        /// <param name="morph"></param>
+        /// <param name="closePath"></param>
+        /// <param name="dashes"></param>
+        /// <param name="width"></param>
+        /// <param name="lineCap"></param>
+        /// <param name="lineJoin"></param>
+        /// <param name="overlay"></param>
+        /// <param name="strokeOpacity"></param>
+        /// <param name="fillOpacity"></param>
+        /// <param name="oc"></param>
+        /// <returns></returns>
         public Point DrawCurve(
             Point p1,
             Point p2,
@@ -2609,6 +3003,22 @@ namespace MuPDF.NET
             return ret;
         }
 
+        /// <summary>
+        /// PDF only: Draw a line from p1 to p2.
+        /// </summary>
+        /// <param name="p1"></param>
+        /// <param name="p2"></param>
+        /// <param name="color"></param>
+        /// <param name="morph"></param>
+        /// <param name="dashes"></param>
+        /// <param name="width"></param>
+        /// <param name="lineCap"></param>
+        /// <param name="lineJoin"></param>
+        /// <param name="overlay"></param>
+        /// <param name="strokeOpacity"></param>
+        /// <param name="fillOpacity"></param>
+        /// <param name="oc"></param>
+        /// <returns></returns>
         public Point DrawLine(
             Point p1,
             Point p2,
@@ -2642,6 +3052,22 @@ namespace MuPDF.NET
             return ret;
         }
 
+        /// <summary>
+        /// PDF only: Draw several connected lines defined by a sequence of points.
+        /// </summary>
+        /// <param name="points"></param>
+        /// <param name="color"></param>
+        /// <param name="fill"></param>
+        /// <param name="morph"></param>
+        /// <param name="dashes"></param>
+        /// <param name="width"></param>
+        /// <param name="lineCap"></param>
+        /// <param name="lineJoin"></param>
+        /// <param name="overlay"></param>
+        /// <param name="strokeOpacity"></param>
+        /// <param name="fillOpacity"></param>
+        /// <param name="oc"></param>
+        /// <returns></returns>
         public Point DrawPolyline(
             Point[] points,
             float[] color = null,
@@ -2675,6 +3101,22 @@ namespace MuPDF.NET
             return ret;
         }
 
+        /// <summary>
+        /// PDF only: Draw a quadrilateral.
+        /// </summary>
+        /// <param name="quad"></param>
+        /// <param name="color"></param>
+        /// <param name="fill"></param>
+        /// <param name="morph"></param>
+        /// <param name="dashes"></param>
+        /// <param name="width"></param>
+        /// <param name="lineCap"></param>
+        /// <param name="lineJoin"></param>
+        /// <param name="overlay"></param>
+        /// <param name="strokeOpacity"></param>
+        /// <param name="fillOpacity"></param>
+        /// <param name="oc"></param>
+        /// <returns></returns>
         public Point DrawQuad(
             Quad quad,
             float[] color = null,
@@ -2708,6 +3150,22 @@ namespace MuPDF.NET
             return ret;
         }
 
+        /// <summary>
+        /// PDF only: Draw a rectangle.
+        /// </summary>
+        /// <param name="rect"></param>
+        /// <param name="color"></param>
+        /// <param name="fill"></param>
+        /// <param name="morph"></param>
+        /// <param name="dashes"></param>
+        /// <param name="width"></param>
+        /// <param name="lineCap"></param>
+        /// <param name="lineJoin"></param>
+        /// <param name="overlay"></param>
+        /// <param name="strokeOpacity"></param>
+        /// <param name="fillOpacity"></param>
+        /// <param name="oc"></param>
+        /// <returns></returns>
         public Point DrawRect(
             Rect rect,
             float[] color = null,
@@ -2741,6 +3199,24 @@ namespace MuPDF.NET
             return ret;
         }
 
+        /// <summary>
+        /// PDF only: Draw a squiggly (wavy, undulated) line from p1 to p2.
+        /// </summary>
+        /// <param name="p1"></param>
+        /// <param name="p2"></param>
+        /// <param name="breadth"></param>
+        /// <param name="color"></param>
+        /// <param name="fill"></param>
+        /// <param name="morph"></param>
+        /// <param name="dashes"></param>
+        /// <param name="width"></param>
+        /// <param name="lineCap"></param>
+        /// <param name="lineJoin"></param>
+        /// <param name="overlay"></param>
+        /// <param name="strokeOpacity"></param>
+        /// <param name="fillOpacity"></param>
+        /// <param name="oc"></param>
+        /// <returns></returns>
         public Point DrawSquiggle(
             Point p1,
             Point p2,
@@ -2776,6 +3252,24 @@ namespace MuPDF.NET
             return ret;
         }
 
+        /// <summary>
+        /// PDF only: Draw a zigzag line from p1 to p2.
+        /// </summary>
+        /// <param name="p1"></param>
+        /// <param name="p2"></param>
+        /// <param name="breadth"></param>
+        /// <param name="color"></param>
+        /// <param name="fill"></param>
+        /// <param name="morph"></param>
+        /// <param name="dashes"></param>
+        /// <param name="width"></param>
+        /// <param name="lineCap"></param>
+        /// <param name="lineJoin"></param>
+        /// <param name="overlay"></param>
+        /// <param name="strokeOpacity"></param>
+        /// <param name="fillOpacity"></param>
+        /// <param name="oc"></param>
+        /// <returns></returns>
         public Point DrawZigzag(
             Point p1,
             Point p2,
@@ -2886,6 +3380,12 @@ namespace MuPDF.NET
 
         }
 
+        /// <summary>
+        /// PDF only: Return boundary boxes and transformation matrices of an embedded image.
+        /// </summary>
+        /// <param name="name">an item of the list MuPDFPage.GetImages(), or the reference name entry of such an item (item[7]), or the image </param>
+        /// <param name="transform">also return the matrix used to transform the image rectangle to the bbox on the page.</param>
+        /// <returns></returns>
         public List<Box> GetImageRects(int name, bool transform = false)
         {
             int xref = name;
@@ -2933,14 +3433,33 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// 
+        /// Retrieves the content of a page in a variety of formats. This is a wrapper for multiple TextPage methods by choosing the output option opt as follows:
+        /// • “text” – TextPage.extractTEXT(), default
+        /// </br>
+        /// • “blocks” – TextPage.extractBLOCKS()
+        /// </br>
+        /// • “words” – TextPage.extractWORDS()
+        /// </br>
+        /// • “html” – TextPage.extractHTML()
+        /// </br>
+        /// • “xhtml” – TextPage.extractXHTML()
+        /// </br>
+        /// • “xml” – TextPage.extractXML()
+        /// </br>
+        /// • “dict” – TextPage.extractDICT()
+        /// </br>
+        /// • “json” – TextPage.extractJSON()
+        /// </br>
+        /// • “rawdict” – TextPage.extractRAWDICT()
+        /// </br>
+        /// • “rawjson” – TextPage.extractRAWJSON()
         /// </summary>
-        /// <param name="option"></param>
-        /// <param name="clip"></param>
-        /// <param name="flags"></param>
-        /// <param name="textpage"></param>
-        /// <param name="sort"></param>
-        /// <param name="delimiters"></param>
+        /// <param name="option">A string indicating the requested format, one of the above. A mixture of upper and lower case is supported.</param>
+        /// <param name="clip">restrict extracted text to this rectangle. If None, the full page is taken. Has no effect for options “html”, “xhtml” and “xml”. </param>
+        /// <param name="flags">indicator bits to control whether to include images or how text should be handled with respect to white spaces and ligatures.</param>
+        /// <param name="textpage">use a previously created TextPage.</param>
+        /// <param name="sort">sort the output by vertical, then horizontal coordinates. In many cases, this should suffice to generate a “natural” reading order.</param>
+        /// <param name="delimiters">use these characters as additional word separators with the “words” output option (ignored otherwise).</param>
         /// <returns>return value depends on option type.
         /// if option is "text", </returns>
         public dynamic GetText(
@@ -2986,6 +3505,15 @@ namespace MuPDF.NET
             return Utils.GetTextSelection(this, p1, p2, clip, textPage);
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="clip"></param>
+        /// <param name="flags"></param>
+        /// <param name="textPage"></param>
+        /// <param name="sort"></param>
+        /// <param name="delimiters"></param>
+        /// <returns></returns>
         public List<WordBlock> GetTextWords(
             Rect clip = null,
             int flags = 0,
@@ -3080,6 +3608,30 @@ namespace MuPDF.NET
             return tp;
         }
 
+        /// <summary>
+        /// PDF only: Insert text into the specified rect.
+        /// </summary>
+        /// <param name="rect"></param>
+        /// <param name="text"></param>
+        /// <param name="fontSize"></param>
+        /// <param name="lineHeight"></param>
+        /// <param name="fontName"></param>
+        /// <param name="fontFile"></param>
+        /// <param name="setSimple"></param>
+        /// <param name="encoding"></param>
+        /// <param name="color"></param>
+        /// <param name="fill"></param>
+        /// <param name="expandTabs"></param>
+        /// <param name="align"></param>
+        /// <param name="borderWidth"></param>
+        /// <param name="renderMode"></param>
+        /// <param name="rotate"></param>
+        /// <param name="morph"></param>
+        /// <param name="overlay"></param>
+        /// <param name="strokeOpacity"></param>
+        /// <param name="fillOpacity"></param>
+        /// <param name="oc"></param>
+        /// <returns></returns>
         public float InsertTextbox(
             Rect rect,
             dynamic text,
@@ -3129,11 +3681,19 @@ namespace MuPDF.NET
             return ret;
         }
 
+        /// <summary>
+        /// PDF only: Modify the specified link. The parameter must be a (modified) original item of Links
+        /// </summary>
+        /// <param name="link">the link to be modified.</param>
         public void UpdateLink(Link link)
         {
             Utils.UpdateLink(this, link);
         }
 
+        /// <summary>
+        /// PDF only: Clean and concatenate all contents objects associated with this page.
+        /// </summary>
+        /// <param name="sanitize">if true, synchronization between resources and their actual use in the contents object is snychronized.</param>
         public void CleanContetns(int sanitize = 1)
         {
             if (sanitize == 0 && IsWrapped)
@@ -3145,6 +3705,9 @@ namespace MuPDF.NET
             page.doc().pdf_filter_page_contents(page, filter);
         }
 
+        /// <summary>
+        /// Ensures that the page’s so-called graphics state is balanced and new content can be inserted correctly.
+        /// </summary>
         public void WrapContents()
         {
             if (IsWrapped)
@@ -3154,16 +3717,30 @@ namespace MuPDF.NET
             WasWrapped = true;
         }
 
+        /// <summary>
+        /// New in version 1.17.0. Return the concatenation of all contents objects associated with the page – without cleaning or otherwise modifying them.
+        /// </summary>
+        /// <returns></returns>
         public byte[] ReadContents()
         {
             return Utils.GetAllContents(this);
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
         public Shape NewShape()
         {
             return new Shape(this);
         }
 
+        /// <summary>
+        /// PDF only: Add a PDF Form field (“widget”) to a page.
+        /// </summary>
+        /// <param name="widget">a Widget object which must have been created upfront.</param>
+        /// <returns>a widget annotation.</returns>
+        /// <exception cref="Exception"></exception>
         public MuPDFAnnot AddWidget(Widget widget)
         {
             MuPDFDocument doc = Parent;

@@ -6,9 +6,9 @@ namespace MuPDF.NET
     {
         public List<Char> Chars { get; set; }
 
-        public FzPoint Origin { get; set; }
+        public Point Origin { get; set; }
 
-        public FzRect Bbox { get; set; }
+        public Rect Bbox { get; set; }
 
         public string Text { get; set; }
 

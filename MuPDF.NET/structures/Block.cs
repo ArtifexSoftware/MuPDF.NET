@@ -10,7 +10,7 @@ namespace MuPDF.NET
 
         public int Type { get; set; }
 
-        public FzRect Bbox { get; set; }
+        public Rect Bbox { get; set; }
 
         public int Width { get; set; }
 
@@ -26,7 +26,7 @@ namespace MuPDF.NET
 
         public byte Bpc { get; set; }
 
-        public FzMatrix Transform { get; set; }
+        public Matrix Transform { get; set; }
 
         public uint Size { get; set; }
 

@@ -37,11 +37,17 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// Meaningful for PDF only: A dictionary of two tuples of floats in range 0 <= float <= 1 specifying the stroke and the interior (fill) colors. If not a PDF, null is returned. As mentioned above, the fill color is always None for links. The stroke color is used for the border of the link rectangle. The length of the tuple implicitly determines the colorspace: 1 = GRAY, 3 = RGB, 4 = CMYK. So (1.0, 0.0, 0.0) stands for RGB color red. The value of each float f is mapped to the integer value i in range 0 to 255 via the computation f = i / 255.
+        /// </summary>
         public Color Colors
         {
             get { return _Colors(Parent.Parent, Xref); }
         }
 
+        /// <summary>
+        /// The link destination details object.
+        /// </summary>
         public LinkDest Dest
         {
             get
@@ -60,6 +66,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// Return the link annotation flags, an integer (see Annot.flags for details). Zero if not a PDF.
+        /// </summary>
         public int Flags
         {
             get
@@ -74,6 +83,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// A bool specifying whether the link target is outside of the current document.
+        /// </summary>
         public bool IsExternal
         {
             get
@@ -133,6 +145,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// The area that can be clicked in untransformed coordinates.
+        /// </summary>
         public Rect Rect
         {
             get
@@ -173,6 +188,9 @@ namespace MuPDF.NET
             return Utils.GetAnnotColors(linkObj);
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
         public void Erase()
         {
             Parent = null;
@@ -191,6 +209,13 @@ namespace MuPDF.NET
             MuPDFAnnot.SetBorderAnnot(border, pdf, linkObj);
         }
 
+        /// <summary>
+        /// PDF only: Change border width and dashing properties.
+        /// </summary>
+        /// <param name="border">a dictionary as returned by the border property, with keys “width” (float), “style” (str) and “dashes” (sequence). Omitted keys will leave the resp. property unchanged.</param>
+        /// <param name="width"></param>
+        /// <param name="dashes"></param>
+        /// <param name="style"></param>
         public void SetBorder(Border border, float width = 0, int[] dashes = null, string style = null)
         {
             if (border == null)
@@ -199,6 +224,12 @@ namespace MuPDF.NET
             _SetBorder(border, Parent.Parent, Xref);
         }
 
+        /// <summary>
+        /// PDF only: Changes the “stroke” color.
+        /// </summary>
+        /// <param name="colors">a dictionary containing color specifications. For accepted dictionary keys and values see below. The most practical way should be to first make a copy of the colors property and then modify this dictionary as required.</param>
+        /// <param name="stroke"></param>
+        /// <param name="fill"></param>
         public void SetColors(Color colors = null, float[] stroke = null, float[] fill = null)
         {
             MuPDFDocument doc = Parent.Parent;
@@ -227,6 +258,11 @@ namespace MuPDF.NET
             doc.SetKeyXRef(Xref, "C", s);
         }
 
+        /// <summary>
+        /// Set the PDF /F property of the link annotation.
+        /// </summary>
+        /// <param name="flags"></param>
+        /// <exception cref="Exception"></exception>
         public void SetFlags(int flags)
         {
             MuPDFDocument doc = Parent.Parent;

@@ -130,7 +130,7 @@ namespace MuPDF.NET
 
         public MuPDFFont()
         {
-
+            _nativeFont = new FzFont();
         }
 
         public MuPDFFont(
@@ -164,6 +164,16 @@ namespace MuPDF.NET
             _nativeFont = Utils.GetFont(fontName, fontFile, fontBuffer, script, (int)lang, ordering, isBold, isItalic, isSerif, embed);
         }
 
+        /// <summary>
+        /// Sequence of character lengths in points of a unicode string.
+        /// </summary>
+        /// <param name="text">a text string, UTF-8 encoded.</param>
+        /// <param name="fontSize">the fontsize.</param>
+        /// <param name="language"></param>
+        /// <param name="script"></param>
+        /// <param name="wmode"></param>
+        /// <param name="smallCaps"></param>
+        /// <returns>the lengths in points of the characters of a string when stored in the PDF. It works like Font.text_length().</returns>
         public List<float> GetCharLengths(string text, float fontSize = 11, string language = null, int script = 0, int wmode = 0,
             int smallCaps = 0)
         {
@@ -187,6 +197,15 @@ namespace MuPDF.NET
             return rc;
         }
 
+        /// <summary>
+        /// Calculate the “width” of the character’s glyph (visual representation).
+        /// </summary>
+        /// <param name="chr">the unicode number of the character. Use ord(), not the character itself. Again, this should normally work even if a character is not supported by that font, because fallback fonts will be checked where necessary.</param>
+        /// <param name="language"></param>
+        /// <param name="script"></param>
+        /// <param name="wmode">write mode, 0 = horizontal, 1 = vertical.</param>
+        /// <param name="small_caps"></param>
+        /// <returns></returns>
         public float GlyphAdvance(int chr, string language = null, int script = 0, int wmode = 0, int small_caps = 0)
         {
             fz_text_language lang = mupdf.mupdf.fz_text_language_from_string(language);
@@ -203,6 +222,14 @@ namespace MuPDF.NET
             return font.fz_advance_glyph(gid, wmode);
         }
 
+        /// <summary>
+        /// The glyph rectangle relative to fontsize
+        /// </summary>
+        /// <param name="chr">ord() of the character.</param>
+        /// <param name="language"></param>
+        /// <param name="script"></param>
+        /// <param name="small_caps"></param>
+        /// <returns>returns rect</returns>
         public Rect GlyphBbox(int chr, string language = null, int script = 0, int small_caps = 0)
         {
             fz_text_language lang = mupdf.mupdf.fz_text_language_from_string(language);
@@ -219,11 +246,25 @@ namespace MuPDF.NET
             return new Rect(font.fz_bound_glyph(gid, new FzMatrix()));
         }
 
+        /// <summary>
+        /// Return the unicode value for a given glyph name. Use it in conjunction with chr() if you want to output e.g. a certain symbol.
+        /// </summary>
+        /// <param name="name">The name of the glyph.</param>
+        /// <returns>The unicode integer, or 65533 = 0xFFFD if the name is unknown.</returns>
         public int GlyphName2Unicode(string name)
         {
             return Utils.GlyphName2Unicode(name);
         }
 
+        /// <summary>
+        /// Check whether the unicode chr exists in the font or (option) some fallback font. May be used to check whether any “TOFU” symbols will appear on output.
+        /// </summary>
+        /// <param name="chr">the unicode of the character (i.e. ord()).</param>
+        /// <param name="language">the language – currently unused.</param>
+        /// <param name="script">the UCDN script number.</param>
+        /// <param name="fallback">perform an extended search in fallback fonts or restrict to current font (default).</param>
+        /// <param name="smallCaps"></param>
+        /// <returns>the glyph number. Zero indicates no glyph found.</returns>
         public int HasGlyph(int chr, string language = null, int script = 0, int fallback = 0, int smallCaps = 0)
         {
             int gid;
@@ -243,6 +284,16 @@ namespace MuPDF.NET
             return gid;
         }
 
+        /// <summary>
+        /// Calculate the length in points of a unicode string.
+        /// </summary>
+        /// <param name="text">a text string, UTF-8 encoded.</param>
+        /// <param name="fontSize">the fontsize.</param>
+        /// <param name="language"></param>
+        /// <param name="script"></param>
+        /// <param name="wmode"></param>
+        /// <param name="smallCaps"></param>
+        /// <returns>the length of the string in points when stored in the PDF. If a character is not contained in the font, it will automatically be looked up in a fallback font.</returns>
         public float TextLength(string text, float fontSize = 11.0f, string language = null, int script = 0, int wmode = 0, int smallCaps = 0)
         {
             FzFont thisfont = _nativeFont;
@@ -269,11 +320,20 @@ namespace MuPDF.NET
             return rc;
         }
 
+        /// <summary>
+        /// Show the name of the character’s glyph.
+        /// </summary>
+        /// <param name="ch">the unicode number of the character. Use ord(), not the character itself.</param>
+        /// <returns></returns>
         public string Unicode2GlyphName(int ch)
         {
             return Utils.Unicode2GlyphName(ch);
         }
 
+        /// <summary>
+        /// Return an array of unicodes supported by this font.
+        /// </summary>
+        /// <returns>an array.array of length at most Font.glyph_count.</returns>
         public List<int> GetValidCodePoints()
         {
             return new List<int>();
