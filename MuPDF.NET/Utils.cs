@@ -3136,7 +3136,7 @@ namespace MuPDF.NET
             }
 
             mupdf.mupdf.fz_close_device(dev);
-            return new Pixmap("raw", pix);
+            return new Pixmap("raw", new Pixmap(pix));
         }
 
         public static FzFont GetFont(string fontName, string fontFile, byte[] fontBuffer, int script,
@@ -5602,6 +5602,13 @@ namespace MuPDF.NET
             D.pdf_dict_put_array(new PdfObj("RBGroups"), 0);
             
             return ocp;
+        }
+
+        internal static string GetFontName(fz_font font)
+        {
+            string name = mupdf.mupdf.fz_font_name(new FzFont(font));
+            int s = name.IndexOf("+");
+            return name.Substring(s + 1, name.Length - s - 1);
         }
     }
 }
