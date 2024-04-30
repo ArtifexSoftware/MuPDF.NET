@@ -2338,20 +2338,15 @@ namespace MuPDF.NET
             use_virtual_filter();
         }
 
-        public pdf_processor filter(
-            pdf_document doc,
-            pdf_processor chain,
-            int struct_parents,
-            fz_matrix transform,
-            pdf_filter_options options)
+        public override pdf_processor filter(fz_context arg_0, pdf_document doc, pdf_processor chain, int stParents, fz_matrix transform, pdf_filter_options options)
         {
             return mupdf.mupdf.ll_pdf_new_sanitize_filter(
                 doc,
                 chain,
-                struct_parents,
+                stParents,
                 transform,
                 options,
-                sopts.internal_().opaque);
+                new SWIGTYPE_p_void(pdf_sanitize_filter_options.getCPtr(sopts.internal_()).Handle, true));
         }
     }
 }

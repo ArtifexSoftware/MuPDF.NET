@@ -670,7 +670,7 @@ namespace MuPDF.NET
             string objStr = Utils.EscapeStrFromBuffer(res);
 
             string nullVal = string.Format("{0}({1})", skey, eyecatcher);
-            string newVal = string.Format("%s %s", skey, value);
+            string newVal = string.Format("{0} {1}", skey, value);
             string newStr = objStr.Replace(nullVal, newVal);
 
             PdfObj newObj = Utils.PdfObjFromStr(pdf, newStr);
@@ -696,14 +696,13 @@ namespace MuPDF.NET
                 new char[] { ' ', '(', ')', '<', '>', '[', ']', '{', '}', '/', '%', '\0' }
             );
             var invalidChars = new HashSet<char>(INVALID_NAME_CHARS);
-            var intersection = invalidChars.Intersect(key);
+            var intersection = invalidChars.Intersect(key.ToArray());
 
             if (
-                key == null
-                || !(intersection.Count() == 0 || intersection.Equals(new HashSet<char> { '/' }))
-            )
+                string.IsNullOrEmpty(key) || intersection.Count() != 0)
             {
-                throw new Exception("Bad Key");
+                if (intersection.Count() == 1 && intersection.First() != '/')
+                    throw new Exception("Bad Key");
             }
             if (
                 !(value is string)
@@ -727,7 +726,7 @@ namespace MuPDF.NET
             else
                 obj = pdf.pdf_trailer();
             PdfObj nObj = SetObjectValue(obj, key, value);
-            if (nObj == null)
+            if (nObj.m_internal == null)
                 return;
 
             if (xref != -1)

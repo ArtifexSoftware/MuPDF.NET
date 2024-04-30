@@ -98,5 +98,19 @@ namespace MuPDF.NET
 
             Assert.Pass();
         }
+
+        [Test]
+        public void PdfPixmap()
+        {
+            MuPDFDocument doc = new MuPDFDocument("resources/001003ED.pdf");
+            Entry img = doc.GetPageImages(0)[0];
+            Pixmap pix = new Pixmap(doc, img.Xref);
+            Assert.That(pix.W, Is.EqualTo(img.Width));
+            Assert.That(pix.H, Is.EqualTo(img.Height));
+
+            ImageInfo ex = doc.ExtractImage(img.Xref);
+            Assert.That(ex.Width, Is.EqualTo(pix.W));
+            Assert.That(ex.Height, Is.EqualTo(pix.H));
+        }
     }
 }
