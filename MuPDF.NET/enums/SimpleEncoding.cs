@@ -6,14 +6,12 @@ using System.Threading.Tasks;
 
 namespace MuPDF.NET
 {
-    public struct FileInfoStruct
+    public enum SimpleEncoding
     {
-        public string FILENAME;
+        PDF_SIMPLE_ENCODING_LATIN,
 
-        public string DESC;
+        PDF_SIMPLE_ENCODING_GREEK,
 
-        public int LENGTH;
-
-        public int SIZE;
+        PDF_SIMPLE_ENCODING_CYRILLIC
     }
 }

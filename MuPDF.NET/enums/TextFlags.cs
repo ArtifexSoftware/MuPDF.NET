@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace MuPDF.NET
+﻿namespace MuPDF.NET
 {
     public enum TextFlags
     {
@@ -20,6 +14,8 @@ namespace MuPDF.NET
 
         TEXT_PRESERVE_SPANS = 32,
 
-        TEXT_MEDIABOX_CLIP = 64
+        TEXT_MEDIABOX_CLIP = 64,
+
+        TEXT_CID_FOR_UNKNOWN_UNICODE = 128
     }
 }

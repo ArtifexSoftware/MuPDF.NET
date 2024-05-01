@@ -5,7 +5,12 @@ VisualStudioVersion = 17.6.33723.286
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MuPDF.NET", "MuPDF.NET.csproj", "{4048ED0E-2B1D-4098-8645-21CDB7D5DA08}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Demo", "..\Demo\Demo.csproj", "{0DE69513-FE00-4068-8D6B-7F55C6750913}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Demo", "..\Demo\Demo.csproj", "{0DE69513-FE00-4068-8D6B-7F55C6750913}"
+	ProjectSection(ProjectDependencies) = postProject
+		{4048ED0E-2B1D-4098-8645-21CDB7D5DA08} = {4048ED0E-2B1D-4098-8645-21CDB7D5DA08}
+	EndProjectSection
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MuPDF.NET.Test", "..\MuPDF.NET.Test\MuPDF.NET.Test.csproj", "{46E22AED-428E-465C-BE1D-CB9118838AB9}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +26,10 @@ Global
 		{0DE69513-FE00-4068-8D6B-7F55C6750913}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0DE69513-FE00-4068-8D6B-7F55C6750913}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0DE69513-FE00-4068-8D6B-7F55C6750913}.Release|Any CPU.Build.0 = Release|Any CPU
+		{46E22AED-428E-465C-BE1D-CB9118838AB9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{46E22AED-428E-465C-BE1D-CB9118838AB9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{46E22AED-428E-465C-BE1D-CB9118838AB9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{46E22AED-428E-465C-BE1D-CB9118838AB9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

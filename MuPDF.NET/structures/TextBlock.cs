@@ -1,25 +1,19 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace MuPDF.NET
+﻿namespace MuPDF.NET
 {
-    public struct TextBlock
+    public class TextBlock
     {
-        public float X0;
+        public float X0 { get; set; }
 
-        public float Y0;
+        public float Y0 { get; set; }
 
-        public float X1;
+        public float X1 { get; set; }
 
-        public float Y1;
+        public float Y1 { get; set; }
 
-        public string TEXT;
+        public string Text { get; set; }
 
-        public int BLOCKNUM;
+        public int BlockNum { get; set; }
 
-        public int TYPE;
+        public int Type { get; set; }
     }
 }

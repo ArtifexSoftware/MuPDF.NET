@@ -1,8 +1,5 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Security.Cryptography;
-using FzRect = mupdf.FzRect;
+﻿using FzRect = mupdf.FzRect;
+using mupdf;
 
 namespace MuPDF.NET
 {
@@ -12,7 +9,7 @@ namespace MuPDF.NET
         public float Y0 { get; set; }
         public float X1 { get; set; }
         public float Y1 { get; set; }
-        public int LENGTH { get; set; } = 4;
+        public int Length { get; set; } = 4;
 
         public Point BottomLeft
         {
@@ -58,6 +55,12 @@ namespace MuPDF.NET
             X1 = r[2]; Y1 = r[3];
         }
 
+        public Rect(fz_rect r)
+        {
+            X0 = r.x0; Y0 = r.y0;
+            X1 = r.x1; Y1 = r.y1;
+        }
+
         public Rect(Point p1, Point p2)
         {
             X0 = p1.X;
@@ -82,7 +85,7 @@ namespace MuPDF.NET
                 return X0 >= X1 || Y0 >= Y1;
             }
         }
-        public Quad QUAD
+        public Quad Quad
         {
             get
             {
@@ -119,7 +122,7 @@ namespace MuPDF.NET
             Y1 = rect.y1;
         }
 
-        public Rect(IRect rect): this(rect.X0, rect.Y0, rect.X1, rect.Y1)
+        public Rect(IRect rect) : this(rect.X0, rect.Y0, rect.X1, rect.Y1)
         {
 
         }
@@ -246,9 +249,14 @@ namespace MuPDF.NET
             return new Rect(-op.X0, -op.Y0, -op.X1, -op.Y1);
         }
 
-        public static Rect operator |(Rect op1, Rect op2) // or
+        public static Rect operator |(Rect op1, Rect op2) // |
         {
             return op1.IncludeRect(op2);
+        }
+
+        public static Rect operator |(Rect op1, Point op2)
+        {
+            return op1.IncludePoint(op2);
         }
 
         public static Rect operator +(Rect op) // positive
@@ -309,15 +317,15 @@ namespace MuPDF.NET
         {
             if (this.IsInfinite)
             {
-                return Utils.INFINITE_RECT().QUAD;
+                return Utils.INFINITE_RECT().Quad;
             }
-            return this.QUAD.Morph(p, m);
+            return this.Quad.Morph(p, m);
         }
 
         public float Norm()
         {
             float ret = 0.0f;
-            for (int i = 0; i < this.LENGTH; i ++)
+            for (int i = 0; i < this.Length; i++)
             {
                 ret += this[i] * this[i];
             }
@@ -363,12 +371,31 @@ namespace MuPDF.NET
         public Rect Transform(Matrix matrix)
         {
             FzRect r = mupdf.mupdf.fz_transform_rect(ToFzRect(), matrix.ToFzMatrix());
-            X0 = r.x0;
-            Y0 = r.y0;
-            X1 = r.x1;
-            Y1 = r.y1;
-            return this;
+            
+            return new Rect(r);
+        }
+
+        /// <summary>
+        /// Calculate area of rectangle.\nparameter is one of 'px' (default), 'in', 'cm', or 'mm'.
+        /// </summary>
+        /// <param name="unit"></param>
+        /// <returns></returns>
+        public float GetArea(string unit = null)
+        {
+            string unit_ = "px";
+            if (!string.IsNullOrEmpty(unit))
+                unit_ = unit;
+            Dictionary<string, (float, float)> u = new Dictionary<string, (float, float)>
+            {
+                { "px", (1, 1) },
+                { "in", (1.0f, 72.0f) },
+                { "cm", (2.54f, 72.0f) },
+                { "mm", (25.4f, 72.0f) }
+            };
+
+            float f = (float)Math.Pow(u[unit].Item1 / u[unit].Item2, 2);
+            return f * Width * Height;
         }
     }
-    
+
 }

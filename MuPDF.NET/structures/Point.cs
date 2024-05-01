@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using mupdf;
+﻿using mupdf;
 
 namespace MuPDF.NET
 {
@@ -113,7 +108,7 @@ namespace MuPDF.NET
 
         public static Point operator -(Point p1, Point p2)
         {
-            return new Point(p1.X -p2.X, p1.Y - p2.Y);
+            return new Point(p1.X - p2.X, p1.Y - p2.Y);
         }
 
         public Point Position()
@@ -126,13 +121,13 @@ namespace MuPDF.NET
             return new FzPoint(p.X, p.Y);
         }
 
-        public Point TrueDivide(dynamic m)
+        public Point TrueDivide(float m)
         {
-            if (m is float)
-            {
-                return new Point(this.X * 1.0 / m, this.Y * 1.0 / m);
-            }
+            return new Point((float)(this.X * 1.0 / m), (float)(this.Y * 1.0 / m));
+        }
 
+        public Point TrueDivide(Matrix m)
+        {
             (int, Matrix) result = Utils.InvertMatrix(m); // util
 
             if (result.Item1 == 0)
@@ -147,10 +142,32 @@ namespace MuPDF.NET
         public Point Transform(Matrix m)
         {
             FzPoint p = mupdf.mupdf.fz_transform_point(ToFzPoint(), m.ToFzMatrix());
-            this.X = p.x;
-            this.Y = p.y;
-            return this;
+            return new Point(p);
         }
 
+        /// <summary>
+        /// Unit vector of the point.
+        /// </summary>
+        public Point Unit
+        {
+            get
+            {
+                float s = X * X + Y * Y;
+                if (s < Utils.FLT_EPSILON)
+                    return new Point(0, 0);
+                s = (float)Math.Sqrt(s);
+                return new Point(X / s, Y / s);
+            }
+        }
+
+        public override string ToString()
+        {
+            return $"Point({X}, {Y})";
+        }
+
+        public void Dispose()
+        {
+
+        }
     }
 }

@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using mupdf;
+﻿using mupdf;
 
 namespace MuPDF.NET
 {
@@ -49,7 +43,7 @@ namespace MuPDF.NET
         {
             get
             {
-                
+
                 Matrix m = Utils.PlanishLine(this.UpperLeft, this.LowerRight);
                 Point p1 = this.LowerLeft * m;
                 Point p2 = this.UpperRight * m;
@@ -251,7 +245,7 @@ namespace MuPDF.NET
         {
             if (IsInfinite)
             {
-                return Utils.INFINITE_RECT().QUAD;
+                return Utils.INFINITE_RECT().Quad;
             }
 
             Matrix delta = (new Matrix(1f, 1f)).Pretranslate(p.X, p.Y);

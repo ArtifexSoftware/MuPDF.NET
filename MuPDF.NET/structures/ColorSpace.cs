@@ -1,9 +1,4 @@
 ﻿using mupdf;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace MuPDF.NET
 {
@@ -19,7 +14,7 @@ namespace MuPDF.NET
             }
         }
 
-        public string NAME
+        public string Name
         {
             get
             {
@@ -41,7 +36,7 @@ namespace MuPDF.NET
 
         public ColorSpace(ColorSpace cs) : this(cs.N)
         {
-            
+
         }
 
         public ColorSpace(FzColorspace nativeColorSpace)
@@ -56,8 +51,8 @@ namespace MuPDF.NET
 
         public override string ToString()
         {
-            string x = (new List<string>(){"", "GRAY", "RGB", "CMYK"})[N];
-            return $"ColorSpace(CS_{x}) - {NAME}";
-        } 
+            string x = (new List<string>() { "", "GRAY", "RGB", "CMYK" })[N];
+            return $"ColorSpace(CS_{x}) - {Name}";
+        }
     }
 }

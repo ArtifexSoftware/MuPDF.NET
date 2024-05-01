@@ -3,16 +3,17 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using mupdf;
 
 namespace MuPDF.NET
 {
-    public struct CharStruct
+    public enum LineCapType
     {
-        public FzPoint ORIGIN;
+        FZ_LINECAP_BUTT = 0,
 
-        public FzRect BBOX;
+        FZ_LINECAP_ROUND = 1,
 
-        public char C;
+        FZ_LINECAP_SQUARE = 2,
+
+        FZ_LINECAP_TRIANGLE = 3
     }
 }

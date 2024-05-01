@@ -1,19 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Security.Cryptography;
-using System.Text;
-using System.Threading.Tasks;
-using mupdf;
+﻿using mupdf;
 
 namespace MuPDF.NET
 {
     public class Matrix
     {
-        public float A {  get; set; }
+        public float A { get; set; }
         public float B { get; set; }
         public float C { get; set; }
-        public float D { get; set; }    
+        public float D { get; set; }
         public float E { get; set; }
         public float F { get; set; }
         public int Length { get; set; } = 6;
@@ -25,7 +19,7 @@ namespace MuPDF.NET
                 (Math.Abs(A) < float.Epsilon && Math.Abs(D) < float.Epsilon);
             }
         }
-        public Matrix(float a = 0.0f, float b = 0.0f, float c = 0.0f, float d = 0.0f, float e = 0.0f, float f = 0.0f)
+        public Matrix(float a, float b, float c, float d, float e, float f)
         {
             A = a;
             B = b;
@@ -33,6 +27,43 @@ namespace MuPDF.NET
             D = d;
             E = e;
             F = f;
+        }
+
+        public Matrix(Rect arg)
+        {
+            double theta = Math.PI * arg.X0 / 180;
+            double c = Math.Round(Math.Cos(theta), 8);
+            double s = Math.Round(Math.Sin(theta), 8);
+            A = D = (float)c;
+            B = (float)s;
+            C = (float)-s;
+            E = F = 0;
+        }
+
+        public Matrix(int arg)
+        {
+            double theta = Math.PI * arg / 180;
+            double c = Math.Round(Math.Cos(theta), 8);
+            double s = Math.Round(Math.Sin(theta), 8);
+            A = D = (float)c;
+            B = (float)s;
+            C = (float)-s;
+            E = F = 0;
+        }
+
+        public Matrix(float arg0, float arg1, float arg2)
+        {
+            if (arg2 == 0)
+                (A, B, C, D, E, F) = (arg0, 0, 0, arg1, 0, 0);
+            else if (arg2 == 1)
+                (A, B, C, D, E, F) = (1, 0, 0, arg1, 0, 0);
+            else
+                throw new ArgumentException("bad args");
+        }
+
+        public Matrix(float arg0, float arg1)
+        {
+            (A, B, C, D, E, F) = (arg0, 0, 0, arg1, 0, 0);
         }
 
         public float Abs()
@@ -73,22 +104,6 @@ namespace MuPDF.NET
             F = m.F;
         }
 
-        public Matrix(float x, float y) //zoom
-        {
-            (A, B, C, D, E, F) = (x, 0.0f, 0.0f, y, 0.0f, 0.0f);
-        }
-
-        public Matrix(float sx, float sy, int t)
-        {
-            if (t == 0)
-            {
-                (A, B, C, D, E, F) = (sx, 0.0f, 0.0f, sy, 0.0f, 0.0f);
-            }
-            if (t == 1)
-            {
-                (A, B, C, D, E, F) = (1.0f, sy, sx, 1.0f, 0.0f, 0.0f);
-            }
-        }
         public static Matrix operator +(Matrix op1, Matrix op2)
         {
             return new Matrix(op1.A + op2.A, op1.B + op2.B, op1.C + op2.C, op1.D + op2.D, op1.E + op2.E, op1.F + op2.F);
@@ -112,7 +127,7 @@ namespace MuPDF.NET
             }
             set
             {
-                switch(i)
+                switch (i)
                 {
                     case 0: A = value; break;
                     case 1: B = value; break;
@@ -157,7 +172,7 @@ namespace MuPDF.NET
             {
                 dst = Utils.InvertMatrix(src);
             }
-            
+
             if (dst.Item1 == 1)
                 return 1;
 
@@ -253,8 +268,14 @@ namespace MuPDF.NET
 
         public static Matrix operator ~(Matrix m)
         {
-            int _ = m.Invert(null);
-            return m;
+            Matrix m1 = new Matrix();
+            int _ = m1.Invert(m);
+            return m1;
+        }
+
+        public override string ToString()
+        {
+            return $"{A} {B} {C} {D} {E} {F}";
         }
 
     }

@@ -1,22 +1,18 @@
-﻿using System;
-using System.Collections.Generic;
-using mupdf;
-
-namespace MuPDF.NET
+﻿namespace MuPDF.NET
 {
     public class Hits
     {
-        public int LEN;
+        public int Len { get; set; }
 
-        public List<Quad> QUADS;
+        public List<Quad> Quads { get; set; }
 
-        public float HFUZZ;
+        public float HFuzz { get; set; }
 
-        public float VFUZZ;
+        public float VFuzz { get; set; }
 
         public override string ToString()
         {
-            return $"Hits(len={LEN} quads={QUADS} hfuzz={HFUZZ} vfuzz={VFUZZ})";
+            return $"Hits(len={Len} quads={Quads} hfuzz={HFuzz} vfuzz={VFuzz})";
         }
     }
 }

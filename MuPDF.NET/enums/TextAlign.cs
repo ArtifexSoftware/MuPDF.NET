@@ -6,12 +6,14 @@ using System.Threading.Tasks;
 
 namespace MuPDF.NET
 {
-    public struct PageStruct
+    public enum TextAlign
     {
-        public float WIDTH;
+        TEXT_ALIGN_LEFT = 0,
 
-        public float HEIGHT;
+        TEXT_ALIGN_CENTER = 1,
 
-        public List<BlockStruct> BLOCKS;
+        TEXT_ALIGN_RIGHT = 2,
+
+        TEXT_ALIGN_JUSTIFY = 3
     }
 }

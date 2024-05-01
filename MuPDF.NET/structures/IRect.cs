@@ -1,11 +1,4 @@
 ﻿using mupdf;
-using System;
-using System.CodeDom;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using static mupdf.FzBandWriter;
 
 namespace MuPDF.NET
 {
@@ -67,7 +60,7 @@ namespace MuPDF.NET
             }
         }
 
-        public int LENGTH
+        public int Length
         {
             get { return 4; }
         }
@@ -97,7 +90,7 @@ namespace MuPDF.NET
         {
             get
             {
-                return (X0 == Utils.FZ_MIN_INF_RECT) && (Y0 == Utils.FZ_MIN_INF_RECT) && (X1 == Utils.FZ_MAX_INF_RECT ) && (Y1 == Utils.FZ_MAX_INF_RECT);
+                return (X0 == Utils.FZ_MIN_INF_RECT) && (Y0 == Utils.FZ_MIN_INF_RECT) && (X1 == Utils.FZ_MAX_INF_RECT) && (Y1 == Utils.FZ_MAX_INF_RECT);
             }
         }
 
@@ -117,7 +110,7 @@ namespace MuPDF.NET
             }
         }
 
-        public Quad QUAD
+        public Quad Quad
         {
             get
             {
@@ -125,7 +118,7 @@ namespace MuPDF.NET
             }
         }
 
-        public Rect RECT
+        public Rect Rect
         {
             get
             {
@@ -135,7 +128,7 @@ namespace MuPDF.NET
 
         public FzIrect ToFzIrect()
         {
-            return new FzIrect(RECT.ToFzRect());
+            return new FzIrect(Rect.ToFzRect());
         }
 
         public IRect(Point ul, Point br)
@@ -281,14 +274,14 @@ namespace MuPDF.NET
         public Quad Morph(Point p, Matrix m)
         {
             if (IsInfinite)
-                return Utils.INFINITE_RECT().QUAD;
-            return QUAD.Morph(p, m);
+                return Utils.INFINITE_RECT().Quad;
+            return Quad.Morph(p, m);
         }
 
         public float Norm()
         {
             float ret = 0.0f;
-            for (int i = 0; i < this.LENGTH; i++)
+            for (int i = 0; i < this.Length; i++)
             {
                 ret += this[i] * this[i];
             }
