@@ -17,29 +17,29 @@
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'tizen'">6.5</SupportedOSPlatformVersion>
 		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
 		<Title>MuPDF.NET</Title>
-		<Version>2.0.0</Version>
+		<Version>2.0.3</Version>
 		<Authors>Chris Palman</Authors>
 		<Company>Artifex</Company>
-		<Description>A .NET binding for MuPDF</Description>
+		<Description>A C# binding for MuPDF</Description>
 		<Copyright>Artifex</Copyright>
 		<PackageProjectUrl>https://github.com/ArtifexSoftware/MuPDF.NET</PackageProjectUrl>
 		<PackageIcon>muPDF-plus-text.png</PackageIcon>
-		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<PackageReadmeFile>Description.md</PackageReadmeFile>
 		<RepositoryUrl>https://github.com/ArtifexSoftware/MuPDF.NET</RepositoryUrl>
-		<PackageTags>dotnet mupdf pdf</PackageTags>
-		<PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
+		<PackageTags>c# dotnet mupdf pdf</PackageTags>
+		<PackageLicenseFile>LICENSE</PackageLicenseFile>
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <None Include="C:\Users\Green\Downloads\LICENSE.txt">
+	  <None Include="..\LICENSE">
 	    <Pack>True</Pack>
 	    <PackagePath>\</PackagePath>
 	  </None>
-	  <None Include="C:\Users\Green\Downloads\muPDF-plus-text.png">
+	  <None Include="..\muPDF-plus-text.png">
 	    <Pack>True</Pack>
 	    <PackagePath>\</PackagePath>
 	  </None>
-	  <None Include="C:\Users\Green\Downloads\README.md">
+	  <None Include="..\Description.md">
 	    <Pack>True</Pack>
 	    <PackagePath>\</PackagePath>
 	  </None>
