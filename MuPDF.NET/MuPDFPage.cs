@@ -1138,14 +1138,22 @@ namespace MuPDF.NET
             return stPage;
         }
 
-        public void GetTextTrace()
+        public List<SpanInfo> GetTextTrace()
         {
             int oldRotation = Rotation;
             if (oldRotation != 0)
                 SetRotation(0);
 
-            MuPDFPage page = this;
+            List<SpanInfo> rc = new List<SpanInfo>();
+            TextTraceDevice dev = new TextTraceDevice(rc);
+            FzRect pRect = mupdf.mupdf.fz_bound_page(_nativePage);
+            dev.Ptm = new FzMatrix(1, 0, 0, -1, 0, pRect.y1);
+            _nativePage.fz_run_page(dev, new FzMatrix(), new FzCookie());
+            mupdf.mupdf.fz_close_device(dev);
 
+            if (oldRotation != 0)
+                SetRotation(oldRotation);
+            return rc;
         }
 
         /// <summary>
@@ -4525,9 +4533,9 @@ namespace MuPDF.NET
         public int PathType { get; set; }
         public string LayerName { get; set; }
 
-        public List<PathInfo> Out { get; set; }
+        public List<SpanInfo> Out { get; set; }
 
-        public TextTraceDevice(List<PathInfo> o) : base()
+        public TextTraceDevice(List<SpanInfo> o) : base()
         {
             Out = o;
             use_virtual_fill_path();
@@ -4541,6 +4549,24 @@ namespace MuPDF.NET
 
             use_virtual_begin_layer();
             use_virtual_end_layer();
+
+            SeqNo = 0;
+            Depth = 0;
+            Clips = false;
+            Method = 0;
+
+            Ctm = new FzMatrix();
+            Rot = new FzMatrix();
+            PathDict = new PathInfo();
+            Scissors = new List<FzRect>();
+            LineWidth = 0;
+            Ptm = new FzMatrix();
+            LastPoint = new FzPoint();
+            PathRect = new FzRect();
+            PathFactor = 0;
+            LineCount = 0;
+            PathType = 0;
+            LayerName = "";
         }
 
         public override void fill_path(fz_context arg_0, SWIGTYPE_p_fz_path arg_2, int arg_3, fz_matrix arg_4, fz_colorspace arg_5, SWIGTYPE_p_float arg_6, float arg_7, fz_color_params arg_8)
@@ -4615,6 +4641,7 @@ namespace MuPDF.NET
             if (dir.x == -1)
                 rot.d = 1;
 
+            List<Char> chars = new List<Char>();
             for (int i = 0; i < span.len; i++)
             {
                 float adv = 0;
@@ -4634,8 +4661,98 @@ namespace MuPDF.NET
                 float x0 = charOrig.x;
                 float x1 = x0 + adv;
 
-                if ((mat.d > 0) && (dir.x == 1 || dir.x == -1))
+                float y0, y1;
+                if ((mat.d > 0) && (dir.x == 1 || dir.x == -1) || (mat.b != 0 && mat.b == -mat.c))
+                {
+                    y0 = charOrig.y + dscSize;
+                    y1 = charOrig.y + ascSize;
+                }
+                else
+                {
+                    y0 = charOrig.y + ascSize;
+                    y1 = charOrig.y - dscSize;
+                }
+                FzRect charBbox = mupdf.mupdf.fz_make_rect(x0, y0, x1, y1);
+                charBbox = mupdf.mupdf.fz_transform_rect(charBbox, m1);
+                
+                chars.Add(
+                    new Char() {
+                        UCS = t.items(i).ucs,
+                        GID = t.items(i).gid,
+                        Origin = new FzPoint(charOrig.x, charOrig.y),
+                        Bbox = new FzRect(charBbox)
+                });
+                if (i > 0)
+                    spanBbox = mupdf.mupdf.fz_union_rect(spanBbox, charBbox);
+                else
+                    spanBbox = charBbox;
             }
+            
+            if (spaceAdv == 0)
+            {
+                if (mono == 0)
+                {
+                    int c = mupdf.mupdf.fz_encode_character_with_fallback(new FzFont(span.font), 32, 0, 0, new FzFont());
+                    spaceAdv = mupdf.mupdf.fz_advance_glyph(new FzFont(span.font), c, (int)span.wmode);
+                    spaceAdv *= fsize;
+                    if (spaceAdv == 0)
+                        spaceAdv = lastAdv;
+                }
+                else
+                    spaceAdv = lastAdv;
+            }
+
+            SpanInfo spanInfo = new SpanInfo();
+            spanInfo.Dir = new Point(dir);
+            spanInfo.Font = Utils.EscapeStrFromStr(fontName);
+            spanInfo.WMode = fzSpan.m_internal.wmode;
+            spanInfo.Flags = fflags;
+            spanInfo.BidiLevel = fzSpan.m_internal.bidi_level;
+            spanInfo.BidiDir = fzSpan.m_internal.markup_dir;
+            spanInfo.Ascender = asc;
+            spanInfo.Descender = desc;
+            spanInfo.ColorSpace = 3;
+
+            float[] rgb = new float[3];
+            if (colorspace != null)
+            {
+                IntPtr pDV = Marshal.AllocHGlobal(4 * sizeof(float));
+                SWIGTYPE_p_float swigDV = new SWIGTYPE_p_float(pDV, true);
+                mupdf.mupdf.fz_convert_color(
+                    new FzColorspace(colorspace),
+                    color,
+                    mupdf.mupdf.fz_device_rgb(),
+                    swigDV,
+                    new FzColorspace(),
+                    new FzColorParams()
+                    );
+
+                float[] ret = new float[4];
+                Marshal.Copy(SWIGTYPE_p_float.getCPtr(swigDV).Handle, ret, 0, 4);
+                Marshal.FreeHGlobal(pDV);
+                rgb = ret.Take(3).ToArray();
+            }
+            else
+                rgb = [ 0, 0, 0];
+
+            float lineWidth = 0;
+            if (LineWidth > 0)
+                lineWidth = LineWidth;
+            else
+                lineWidth = fsize * 0.05f;
+
+            spanInfo.Color = rgb;
+            spanInfo.Size = fsize;
+            spanInfo.Opacity = alpha;
+            spanInfo.LineWidth = lineWidth;
+            spanInfo.SpaceWidth = spaceAdv;
+            spanInfo.Type = type;
+            spanInfo.Bbox = new Rect(spanBbox);
+            spanInfo.Layer = LayerName;
+            spanInfo.SeqNo = SeqNo;
+            spanInfo.Chars = chars;
+
+            Out.Add(spanInfo);
         }
 
         public override void ignore_text(fz_context arg_0, fz_text text, fz_matrix ctm)

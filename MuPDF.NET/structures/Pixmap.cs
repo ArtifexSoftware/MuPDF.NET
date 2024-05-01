@@ -47,30 +47,6 @@ namespace MuPDF.NET
             _nativePixmap = pm;
         }
 
-        /*public Pixmap(Pixmap spix, float alpha = 1)
-        {
-            FzPixmap srcPix = spix != null ? spix.ToFzPixmap() : throw new Exception("bad pixmpa");
-            if (!Utils.INRANGE(alpha, 0, 1))
-                throw new Exception("bad alpha value");
-
-            FzColorspace cs = srcPix.fz_pixmap_colorspace();
-            if (cs.m_internal == null && alpha == 0)
-                throw new Exception("cannot drop alpha for  'Null' colorspace");
-            FzSeparations seps = new FzSeparations();
-            int n = srcPix.fz_pixmap_colorants();
-            float w = srcPix.m_internal.x;
-            float h = srcPix.m_internal.y;
-            FzPixmap pm = mupdf.mupdf.fz_new_pixmap(cs, (int)w, (int)h, seps, (int)alpha);
-
-            pm.m_internal.x = srcPix.m_internal.x;
-            pm.m_internal.y = srcPix.m_internal.y;
-            pm.m_internal.xres = srcPix.m_internal.xres;
-            pm.m_internal.yres = srcPix.m_internal.yres;
-
-            mupdf.mupdf.ll_fz_pixmap_co
-
-        }*/
-
         public IRect IRect
         {
             get
