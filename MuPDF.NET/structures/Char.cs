@@ -9,5 +9,9 @@ namespace MuPDF.NET
         public FzRect Bbox { get; set; }
 
         public char C { get; set; }
+
+        public int UCS { get; set; }
+
+        public int GID { get; set; }
     }
 }

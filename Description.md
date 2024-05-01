@@ -1,0 +1,1 @@
+MuPDF.NET adds C#/.NET bindings and abstractions to MuPDF, a lightweight PDF, XPS, and eBook viewer, renderer, and toolkit. Both MuPDF.NET and MuPDF are maintained and developed by Artifex Software, Inc.
