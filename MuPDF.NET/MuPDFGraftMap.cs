@@ -4,6 +4,12 @@ namespace MuPDF.NET
 {
     public class MuPDFGraftMap : IDisposable
     {
+        static MuPDFGraftMap()
+        {
+            if (!File.Exists("mupdfcsharp.dll"))
+                Utils.LoadEmbeddedDll();
+        }
+
         private PdfGraftMap _nativeGraftMap;
 
         public bool ThisOwn { get; set; }

@@ -5,8 +5,14 @@ using mupdf;
 
 namespace MuPDF.NET
 {
-    public class MuPDFDocument : IDisposable
+    public class MuPDFDocument
     {
+        static MuPDFDocument()
+        {
+            if (!File.Exists("mupdfcpp64.dll"))
+                Utils.LoadEmbeddedDll();
+        }
+
         public bool IsClosed { get; set; }
 
         public bool IsEncrypted { get; set; }
@@ -19,9 +25,11 @@ namespace MuPDF.NET
 
         public List<Font> FontInfos { get; set; }
 
-        public Dictionary<int, MuPDFGraftMap> GraftMaps { get; set; } = new Dictionary<int, MuPDFGraftMap> ();
+        public Dictionary<int, MuPDFGraftMap> GraftMaps { get; set; } =
+            new Dictionary<int, MuPDFGraftMap>();
 
-        public Dictionary<(int, int), int> ShownPages { get; set; } = new Dictionary<(int, int), int> ();
+        public Dictionary<(int, int), int> ShownPages { get; set; } =
+            new Dictionary<(int, int), int>();
 
         public Dictionary<string, int> InsertedImages { get; set; } = new Dictionary<string, int>();
 
@@ -57,10 +65,7 @@ namespace MuPDF.NET
                 else
                     return false;
             }
-            set
-            {
-                _isPDF = value;
-            }
+            set { _isPDF = value; }
         }
 
         public bool IsOwn { get; set; }
@@ -519,7 +524,7 @@ namespace MuPDF.NET
             FzBuffer res = mupdf.mupdf.fz_new_buffer(8192);
             FzOutput output = new FzOutput(res);
             pdfout.pdf_write_document(output, opts);
-            output.fz_close_output(); 
+            output.fz_close_output();
 
             byte[] ret = Utils.BinFromBuffer(res);
             int len1 = Utils.MUPDF_WARNINGS_STORE.Count;
@@ -698,8 +703,7 @@ namespace MuPDF.NET
             var invalidChars = new HashSet<char>(INVALID_NAME_CHARS);
             var intersection = invalidChars.Intersect(key.ToArray());
 
-            if (
-                string.IsNullOrEmpty(key) || intersection.Count() != 0)
+            if (string.IsNullOrEmpty(key) || intersection.Count() != 0)
             {
                 if (intersection.Count() == 1 && intersection.First() != '/')
                     throw new Exception("Bad Key");
@@ -1081,7 +1085,6 @@ namespace MuPDF.NET
             int old_ref = page.GetPdfPage().super().m_internal.refs;
             long m_internal_old = page.GetPdfPage().super().m_internal_value();
 
-            page.Dispose();
             page.Erase();
             page = null;
             Utils.StoreShrink(100);
@@ -3564,11 +3567,6 @@ namespace MuPDF.NET
             Save(Name, incremental: 1, encryption: (int)PdfCrypt.PDF_ENCRYPT_KEEP);
         }
 
-        public void Dispose()
-        {
-            _nativeDocument.Dispose();
-        }
-
         /// <summary>
         /// Build sub-pdf with page numbers in the list.
         /// </summary>
@@ -4285,7 +4283,6 @@ namespace MuPDF.NET
             return false;
         }
 
-
         /// <summary>
         /// PDF only: Check whether there are links, resp. annotations anywhere in the document.
         /// </summary>
@@ -4637,7 +4634,7 @@ namespace MuPDF.NET
             }
 
             string text = "<</Type/OCMD";
-            
+
             if (ocgs != null)
             {
                 List<int> s = ocgs.Except(allOcgs).ToList();
@@ -5083,7 +5080,13 @@ namespace MuPDF.NET
         /// <param name="usage">another influencer for OCG visibility. This will become part of the OCG’s /Usage key. There are two PDF standard values to choose from: “Artwork” and “Technical”. Default is “Artwork”. Please only change when required.</param>
         /// <returns>xref of the created OCG. Use as entry for oc parameter in supporting objects.</returns>
         /// <exception cref="Exception"></exception>
-        public int AddOcg(string name, int config = -1, bool on = true, string intent = null, string usage = null)
+        public int AddOcg(
+            string name,
+            int config = -1,
+            bool on = true,
+            string intent = null,
+            string usage = null
+        )
         {
             int xref = 0;
             PdfDocument pdf = MuPDFDocument.AsPdfDocument(this);

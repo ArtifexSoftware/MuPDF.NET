@@ -1,11 +1,17 @@
-﻿using mupdf;
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 using System.Text;
+using mupdf;
 
 namespace MuPDF.NET
 {
     public class MuPDFXml : IDisposable
     {
+        static MuPDFXml()
+        {
+            if (!File.Exists("mupdfcsharp.dll"))
+                Utils.LoadEmbeddedDll();
+        }
+
         private FzXml _nativeXml;
 
         public FzXml ToFzXml()
@@ -23,10 +29,7 @@ namespace MuPDF.NET
         /// </summary>
         public string Text
         {
-            get
-            {
-                return _nativeXml.fz_xml_text();
-            }
+            get { return _nativeXml.fz_xml_text(); }
         }
 
         /// <summary>
@@ -34,10 +37,7 @@ namespace MuPDF.NET
         /// </summary>
         public bool IsText
         {
-            get
-            {
-                return Text != null;
-            }
+            get { return Text != null; }
         }
 
         /// <summary>
@@ -45,10 +45,7 @@ namespace MuPDF.NET
         /// </summary>
         public string TagName
         {
-            get
-            {
-                return _nativeXml.fz_xml_tag();
-            }
+            get { return _nativeXml.fz_xml_tag(); }
         }
 
         /// <summary>
@@ -56,10 +53,7 @@ namespace MuPDF.NET
         /// </summary>
         public MuPDFXml Root
         {
-            get
-            {
-                return new MuPDFXml(_nativeXml.fz_xml_root());
-            }
+            get { return new MuPDFXml(_nativeXml.fz_xml_root()); }
         }
 
         /// <summary>
@@ -325,7 +319,13 @@ namespace MuPDF.NET
         /// <param name="imgFloat"></param>
         /// <param name="align"></param>
         /// <returns></returns>
-        public MuPDFXml AddImage(string name, string width = null, string height = null, string imgFloat = null, string align = null)
+        public MuPDFXml AddImage(
+            string name,
+            string width = null,
+            string height = null,
+            string imgFloat = null,
+            string align = null
+        )
         {
             MuPDFXml child = CreateElement("img");
             if (width != null)
@@ -494,7 +494,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <param name="style"></param>
         /// <returns></returns>
@@ -755,7 +755,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <param name="spacing"></param>
         /// <returns></returns>
@@ -865,7 +865,7 @@ namespace MuPDF.NET
             string wordSpacing = null,
             string unqid = null,
             string cls = null
-            )
+        )
         {
             MuPDFXml root = Root;
             MuPDFXml temp = root.AddDivision();
@@ -956,6 +956,7 @@ namespace MuPDF.NET
             temp.Remove();
             return this;
         }
+
         /// <summary>
         /// Set indentation for the first textblock line. Only works for block-level nodes.
         /// </summary>
@@ -1053,11 +1054,6 @@ namespace MuPDF.NET
                 else
                     return parent;
             }
-        }
-
-        public void Dispose()
-        {
-            _nativeXml.Dispose();
         }
     }
 }
