@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 
 namespace MuPDF.NET
 {
-    public class Pixmap : IDisposable
+    public class Pixmap
     {
         private FzPixmap _nativePixmap;
 
@@ -1089,12 +1089,6 @@ namespace MuPDF.NET
             SavePdfOCR(byteStream, compress ? 1 : 0, language, tessdata);
 
             return byteStream.ToArray();
-        }
-
-
-        public void Dispose()
-        {
-            _nativePixmap.Dispose();
         }
     }
 

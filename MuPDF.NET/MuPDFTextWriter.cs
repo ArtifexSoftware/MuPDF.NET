@@ -7,6 +7,11 @@ namespace MuPDF.NET
 {
     public class MuPDFTextWriter
     {
+        static MuPDFTextWriter()
+        {
+            if (!File.Exists("mupdfcsharp.dll"))
+                Utils.LoadEmbeddedDll();
+        }
 
         private FzText _nativeText;
 

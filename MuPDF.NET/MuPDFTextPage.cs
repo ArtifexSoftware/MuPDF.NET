@@ -1,25 +1,29 @@
-﻿using mupdf;
+﻿using System.Diagnostics;
+using mupdf;
 using Newtonsoft.Json;
-using System.Diagnostics;
 
 namespace MuPDF.NET
 {
-    public class MuPDFTextPage : IDisposable
+    public class MuPDFTextPage
     {
+        static MuPDFTextPage()
+        {
+            if (!File.Exists("mupdfcsharp.dll"))
+                Utils.LoadEmbeddedDll();
+        }
+
         internal FzStextPage _nativeTextPage;
 
         public bool ThisOwn { get; set; }
 
         public MuPDFPage Parent = null;
+
         /// <summary>
         /// Rect of Stext Page
         /// </summary>
         private FzRect MediaBox
         {
-            get
-            {
-                return new FzRect(_nativeTextPage.m_internal.mediabox);
-            }
+            get { return new FzRect(_nativeTextPage.m_internal.mediabox); }
         }
 
         /// <summary>
@@ -30,7 +34,11 @@ namespace MuPDF.NET
             get
             {
                 List<FzStextBlock> blocks = new List<FzStextBlock>();
-                for (fz_stext_block block = _nativeTextPage.m_internal.first_block; block != null; block = block.next)
+                for (
+                    fz_stext_block block = _nativeTextPage.m_internal.first_block;
+                    block != null;
+                    block = block.next
+                )
                 {
                     blocks.Add(new FzStextBlock(block));
                 }
@@ -39,7 +47,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// MuPDFStextPage Constructor 
+        /// MuPDFStextPage Constructor
         /// </summary>
         /// <param name="rect">Page Rectangle Size</param>
         public MuPDFTextPage(FzRect rect)
@@ -123,14 +131,21 @@ namespace MuPDF.NET
                     res.fz_clear_buffer();
                     int lineNum = -1;
                     int lastChar = 0;
-                    for (fz_stext_line line = block.begin().__ref__().m_internal; line != null; line = line.next)
+                    for (
+                        fz_stext_line line = block.begin().__ref__().m_internal;
+                        line != null;
+                        line = line.next
+                    )
                     {
                         lineNum += 1;
                         FzRect lineRect = new FzRect(FzRect.Fixed.Fixed_EMPTY);
                         for (fz_stext_char ch = line.first_char; ch != null; ch = ch.next)
                         {
                             FzRect cbbox = GetCharBbox(new FzStextLine(line), new FzStextChar(ch));
-                            if (!IsRectsOverlap(stPageRect, cbbox) && stPageRect.fz_is_infinite_rect() == 0)
+                            if (
+                                !IsRectsOverlap(stPageRect, cbbox)
+                                && stPageRect.fz_is_infinite_rect() == 0
+                            )
                                 continue;
 
                             res.fz_append_rune(ch.c);
@@ -145,14 +160,20 @@ namespace MuPDF.NET
                     }
                     text = Utils.EscapeStrFromBuffer(res);
                 }
-                else if (IsRectsOverlap(stPageRect, new FzRect(block.m_internal.bbox)) || stPageRect.fz_is_infinite_rect() != 0)
+                else if (
+                    IsRectsOverlap(stPageRect, new FzRect(block.m_internal.bbox))
+                    || stPageRect.fz_is_infinite_rect() != 0
+                )
                 {
                     FzImage img = block.i_image();
                     FzColorspace cs = img.colorspace();
-                    text = string.Format("<image: {0}, width: {1}, height: {2}, bpc: {3}>",
-                                        cs.fz_colorspace_name(),
-                                        img.w(), img.h(), img.bpc()
-                                    );
+                    text = string.Format(
+                        "<image: {0}, width: {1}, height: {2}, bpc: {3}>",
+                        cs.fz_colorspace_name(),
+                        img.w(),
+                        img.h(),
+                        img.bpc()
+                    );
                     blockRect = FzRect.fz_union_rect(blockRect, new FzRect(block.m_internal.bbox));
                 }
                 if (blockRect.fz_is_empty_rect() == 0)
@@ -189,17 +210,19 @@ namespace MuPDF.NET
             if (sort is true)
             {
                 List<Block> blocks = pageDict.Blocks;
-                blocks.Sort((b1, b2) =>
-                {
-                    if (b1.Bbox.Y1 == b2.Bbox.Y1)
+                blocks.Sort(
+                    (b1, b2) =>
                     {
-                        return b1.Bbox.X0.CompareTo(b2.Bbox.X0);
+                        if (b1.Bbox.Y1 == b2.Bbox.Y1)
+                        {
+                            return b1.Bbox.X0.CompareTo(b2.Bbox.X0);
+                        }
+                        else
+                        {
+                            return b1.Bbox.Y1.CompareTo(b2.Bbox.Y1);
+                        }
                     }
-                    else
-                    {
-                        return b1.Bbox.Y1.CompareTo(b2.Bbox.Y1);
-                    }
-                });
+                );
 
                 pageDict.Blocks = blocks;
             }
@@ -233,7 +256,12 @@ namespace MuPDF.NET
                 vectoruc digest = new vectoruc();
                 if (hashes != 0)
                 {
-                    FzIrect r = new FzIrect(Utils.FZ_MIN_INF_RECT, Utils.FZ_MIN_INF_RECT, Utils.FZ_MAX_INF_RECT, Utils.FZ_MAX_INF_RECT);
+                    FzIrect r = new FzIrect(
+                        Utils.FZ_MIN_INF_RECT,
+                        Utils.FZ_MIN_INF_RECT,
+                        Utils.FZ_MAX_INF_RECT,
+                        Utils.FZ_MAX_INF_RECT
+                    );
 
                     Debug.Assert(r.fz_is_infinite_irect() != 0, "Rect is infinite");
 
@@ -244,7 +272,9 @@ namespace MuPDF.NET
                     FzPixmap pixmap = img.fz_get_pixmap_from_image(r, m, swigW, swigH);
                     digest = pixmap.fz_md5_pixmap2();
                 }
-                FzColorspace cs = new FzColorspace(mupdf.mupdf.ll_fz_keep_colorspace(img.m_internal.colorspace));
+                FzColorspace cs = new FzColorspace(
+                    mupdf.mupdf.ll_fz_keep_colorspace(img.m_internal.colorspace)
+                );
                 Block blockDict = new Block();
                 blockDict.Number = blockNum;
                 blockDict.Bbox = new Rect(new FzRect(block.m_internal.bbox));
@@ -283,17 +313,19 @@ namespace MuPDF.NET
             if (sort)
             {
                 List<Block> blocks = pageDict.Blocks;
-                blocks.Sort((b1, b2) =>
-                {
-                    if (b1.Bbox.Y1 == b2.Bbox.Y1)
+                blocks.Sort(
+                    (b1, b2) =>
                     {
-                        return b1.Bbox.X0.CompareTo(b2.Bbox.X0);
+                        if (b1.Bbox.Y1 == b2.Bbox.Y1)
+                        {
+                            return b1.Bbox.X0.CompareTo(b2.Bbox.X0);
+                        }
+                        else
+                        {
+                            return b1.Bbox.Y1.CompareTo(b2.Bbox.Y1);
+                        }
                     }
-                    else
-                    {
-                        return b1.Bbox.Y1.CompareTo(b2.Bbox.Y1);
-                    }
-                });
+                );
 
                 pageDict.Blocks = blocks;
             }
@@ -323,17 +355,19 @@ namespace MuPDF.NET
             if (sort is true)
             {
                 List<Block> blocks = pageDict.Blocks;
-                blocks.Sort((b1, b2) =>
-                {
-                    if (b1.Bbox.Y1 == b2.Bbox.Y1)
+                blocks.Sort(
+                    (b1, b2) =>
                     {
-                        return b1.Bbox.X0.CompareTo(b2.Bbox.X0);
+                        if (b1.Bbox.Y1 == b2.Bbox.Y1)
+                        {
+                            return b1.Bbox.X0.CompareTo(b2.Bbox.X0);
+                        }
+                        else
+                        {
+                            return b1.Bbox.X0.CompareTo(b2.Bbox.X0);
+                        }
                     }
-                    else
-                    {
-                        return b1.Bbox.X0.CompareTo(b2.Bbox.X0);
-                    }
-                });
+                );
 
                 pageDict.Blocks = blocks;
             }
@@ -364,17 +398,19 @@ namespace MuPDF.NET
             }
 
             List<TextBlock> blocks = ExtractBlocks();
-            blocks.Sort((b1, b2) =>
-            {
-                if (b1.Y1 == b2.Y1)
+            blocks.Sort(
+                (b1, b2) =>
                 {
-                    return b1.X0.CompareTo(b2.X0);
+                    if (b1.Y1 == b2.Y1)
+                    {
+                        return b1.X0.CompareTo(b2.X0);
+                    }
+                    else
+                    {
+                        return b1.Y1.CompareTo(b2.Y1);
+                    }
                 }
-                else
-                {
-                    return b1.Y1.CompareTo(b2.Y1);
-                }
-            });
+            );
 
             string ret = "";
             foreach (TextBlock b in blocks)
@@ -400,7 +436,11 @@ namespace MuPDF.NET
                 if (block.m_internal.type != (int)STextBlockType.FZ_STEXT_BLOCK_TEXT)
                     continue;
 
-                for (fz_stext_line line = block.begin().__ref__().m_internal; line != null; line = line.next)
+                for (
+                    fz_stext_line line = block.begin().__ref__().m_internal;
+                    line != null;
+                    line = line.next
+                )
                 {
                     bool isLineHadText = false;
                     for (fz_stext_char ch = line.first_char; ch != null; ch = ch.next)
@@ -447,7 +487,11 @@ namespace MuPDF.NET
                     continue;
 
                 int lineNum = -1;
-                for (fz_stext_line line = block.begin().__ref__().m_internal; line != null; line = line.next)
+                for (
+                    fz_stext_line line = block.begin().__ref__().m_internal;
+                    line != null;
+                    line = line.next
+                )
                 {
                     lineNum += 1;
                     int wordNum = 0;
@@ -456,7 +500,10 @@ namespace MuPDF.NET
                     for (fz_stext_char ch = line.first_char; ch != null; ch = ch.next)
                     {
                         FzRect cbBox = GetCharBbox(new FzStextLine(line), new FzStextChar(ch));
-                        if (!IsRectsOverlap(stPageRect, cbBox) && stPageRect.fz_is_empty_rect() == 0)
+                        if (
+                            !IsRectsOverlap(stPageRect, cbBox)
+                            && stPageRect.fz_is_empty_rect() == 0
+                        )
                             continue;
 
                         bool isWordDelimiter = IsWordDelimiter(ch.c, delimiters);
@@ -466,7 +513,14 @@ namespace MuPDF.NET
                                 continue;
                             if (wordBox.fz_is_empty_rect() == 0)
                             {
-                                wordNum = AppendWord(lines, buf, wordBox, blockNum, lineNum, wordNum);
+                                wordNum = AppendWord(
+                                    lines,
+                                    buf,
+                                    wordBox,
+                                    blockNum,
+                                    lineNum,
+                                    wordNum
+                                );
                                 wordBox = new FzRect(FzRect.Fixed.Fixed_EMPTY);
                             }
                             buf.fz_clear_buffer();
@@ -475,7 +529,10 @@ namespace MuPDF.NET
                         }
                         buf.fz_append_rune(ch.c);
                         bufferLen += 1;
-                        wordBox = FzRect.fz_union_rect(wordBox, GetCharBbox(new FzStextLine(line), new FzStextChar(ch)));
+                        wordBox = FzRect.fz_union_rect(
+                            wordBox,
+                            GetCharBbox(new FzStextLine(line), new FzStextChar(ch))
+                        );
                     }
                     if (bufferLen != 0 && wordBox.fz_is_empty_rect() == 0)
                     {
@@ -511,7 +568,12 @@ namespace MuPDF.NET
         /// <param name="stPage">Stext Page</param>
         /// <param name="needle">Text to search</param>
         /// <returns></returns>
-        public static List<Quad> Search(MuPDFTextPage stPage, string needle, int hitMax = 0, bool quad = true)
+        public static List<Quad> Search(
+            MuPDFTextPage stPage,
+            string needle,
+            int hitMax = 0,
+            bool quad = true
+        )
         {
             FzRect rect = stPage.MediaBox;
             List<Quad> quads = new List<Quad>();
@@ -524,10 +586,10 @@ namespace MuPDF.NET
             hits.Quads = quads;
             hits.HFuzz = 0.2f;
             hits.VFuzz = 0.1f;
-            
+
             FzBuffer buffer = stPage.GetBufferFromStextPage();
             string hayStackString = buffer.fz_string_from_buffer();
-            
+
             int hayStack = 0;
             int begin = 0;
             int end = 0;
@@ -538,13 +600,20 @@ namespace MuPDF.NET
             {
                 if (block.m_internal.type != (int)STextBlockType.FZ_STEXT_BLOCK_TEXT)
                     continue;
-                for (fz_stext_line line = block.begin().__ref__().m_internal; line != null; line = line.next)
+                for (
+                    fz_stext_line line = block.begin().__ref__().m_internal;
+                    line != null;
+                    line = line.next
+                )
                 {
                     for (fz_stext_char ch = line.first_char; ch != null; ch = ch.next)
                     {
                         if (rect.fz_is_infinite_rect() == 0)
                         {
-                            FzRect r = stPage.GetCharBbox(new FzStextLine(line), new FzStextChar(ch));
+                            FzRect r = stPage.GetCharBbox(
+                                new FzStextLine(line),
+                                new FzStextChar(ch)
+                            );
                             if (!stPage.IsRectsOverlap(rect, r))
                                 continue;
                         }
@@ -561,13 +630,20 @@ namespace MuPDF.NET
                             {
                                 if (hayStack < end)
                                 {
-                                    stPage.OnHighlightChar(hits, new FzStextLine(line), new FzStextChar(ch));
+                                    stPage.OnHighlightChar(
+                                        hits,
+                                        new FzStextLine(line),
+                                        new FzStextChar(ch)
+                                    );
                                     break;
                                 }
                                 else
                                 {
                                     inside = 0;
-                                    (begin, end) = stPage.FindString(hayStackString.Substring(hayStack), needle);
+                                    (begin, end) = stPage.FindString(
+                                        hayStackString.Substring(hayStack),
+                                        needle
+                                    );
 
                                     if (begin == -1)
                                     {
@@ -583,14 +659,17 @@ namespace MuPDF.NET
                             }
                             break;
                         }
-                        Tuple<int, int> res = MuPDFTextPage.Char2Canon(hayStackString.Substring(hayStack));
+                        Tuple<int, int> res = MuPDFTextPage.Char2Canon(
+                            hayStackString.Substring(hayStack)
+                        );
                         hayStack += res.Item1;
                     }
                     hayStack += 1;
                 }
                 hayStack += 1;
             }
-        no_more_matches:;
+            no_more_matches:
+            ;
             buffer.fz_clear_buffer();
 
             int items = quads.Count;
@@ -625,7 +704,6 @@ namespace MuPDF.NET
             return quads;
         }
 
-
         internal void OnHighlightChar(Hits hits, FzStextLine line, FzStextChar ch)
         {
             float vFuzz = ch.m_internal.size * hits.VFuzz;
@@ -635,11 +713,29 @@ namespace MuPDF.NET
             if (hits.Len > 0)
             {
                 FzQuad end = hits.Quads[hits.Len - 1].ToFzQuad();
-                if (true
-                    && HDist(new FzPoint(line.m_internal.dir), new FzPoint(end.lr), new FzPoint(chQuad.ll)) < hFuzz
-                    && VDist(new FzPoint(line.m_internal.dir), new FzPoint(end.lr), new FzPoint(chQuad.ll)) < vFuzz
-                    && HDist(new FzPoint(line.m_internal.dir), new FzPoint(end.ur), new FzPoint(chQuad.ul)) < hFuzz
-                    && VDist(new FzPoint(line.m_internal.dir), new FzPoint(end.ur), new FzPoint(chQuad.ll)) < vFuzz)
+                if (
+                    true
+                    && HDist(
+                        new FzPoint(line.m_internal.dir),
+                        new FzPoint(end.lr),
+                        new FzPoint(chQuad.ll)
+                    ) < hFuzz
+                    && VDist(
+                        new FzPoint(line.m_internal.dir),
+                        new FzPoint(end.lr),
+                        new FzPoint(chQuad.ll)
+                    ) < vFuzz
+                    && HDist(
+                        new FzPoint(line.m_internal.dir),
+                        new FzPoint(end.ur),
+                        new FzPoint(chQuad.ul)
+                    ) < hFuzz
+                    && VDist(
+                        new FzPoint(line.m_internal.dir),
+                        new FzPoint(end.ur),
+                        new FzPoint(chQuad.ll)
+                    ) < vFuzz
+                )
                 {
                     end.ur = chQuad.ur;
                     end.lr = chQuad.lr;
@@ -678,11 +774,21 @@ namespace MuPDF.NET
             {
                 if (block.m_internal.type == (int)STextBlockType.FZ_STEXT_BLOCK_TEXT)
                 {
-                    for (fz_stext_line line = block.begin().__ref__().m_internal; line != null; line = line.next)
+                    for (
+                        fz_stext_line line = block.begin().__ref__().m_internal;
+                        line != null;
+                        line = line.next
+                    )
                     {
                         for (fz_stext_char ch = line.first_char; ch != null; ch = ch.next)
                         {
-                            if (!IsRectsOverlap(r, GetCharBbox(new FzStextLine(line), new FzStextChar(ch))) && r.fz_is_infinite_rect() == 0)
+                            if (
+                                !IsRectsOverlap(
+                                    r,
+                                    GetCharBbox(new FzStextLine(line), new FzStextChar(ch))
+                                )
+                                && r.fz_is_infinite_rect() == 0
+                            )
                             {
                                 continue;
                             }
@@ -768,7 +874,11 @@ namespace MuPDF.NET
             {
                 return Convert.ToInt32(' ');
             }
-            if (c == Convert.ToInt32('\r') || c == Convert.ToInt32('\n') || c == Convert.ToInt32('\t'))
+            if (
+                c == Convert.ToInt32('\r')
+                || c == Convert.ToInt32('\n')
+                || c == Convert.ToInt32('\t')
+            )
             {
                 return Convert.ToInt32(' ');
             }
@@ -782,7 +892,6 @@ namespace MuPDF.NET
             return c;
         }
 
-
         public static Tuple<int, int> Char2Canon(string s)
         {
             ll_fz_chartorune_outparams outparams = new ll_fz_chartorune_outparams();
@@ -794,7 +903,14 @@ namespace MuPDF.NET
             return new Tuple<int, int>(n, c);
         }
 
-        internal int AppendWord(List<WordBlock> lines, FzBuffer buf, FzRect wordBox, int blockNum, int lineNum, int wordNum)
+        internal int AppendWord(
+            List<WordBlock> lines,
+            FzBuffer buf,
+            FzRect wordBox,
+            int blockNum,
+            int lineNum,
+            int wordNum
+        )
         {
             string s = Utils.EscapeStrFromBuffer(buf);
             WordBlock item = new WordBlock()
@@ -893,17 +1009,19 @@ namespace MuPDF.NET
             if (sort == true)
             {
                 List<Block> blocks = val.Blocks;
-                blocks.Sort((b1, b2) =>
-                {
-                    if (b1.Bbox.Y1 == b2.Bbox.Y1)
+                blocks.Sort(
+                    (b1, b2) =>
                     {
-                        return b1.Bbox.X0.CompareTo(b2.Bbox.X0);
+                        if (b1.Bbox.Y1 == b2.Bbox.Y1)
+                        {
+                            return b1.Bbox.X0.CompareTo(b2.Bbox.X0);
+                        }
+                        else
+                        {
+                            return b1.Bbox.Y1.CompareTo(b2.Bbox.Y1);
+                        }
                     }
-                    else
-                    {
-                        return b1.Bbox.Y1.CompareTo(b2.Bbox.Y1);
-                    }
-                });
+                );
                 val.Blocks = blocks;
             }
 
@@ -920,13 +1038,19 @@ namespace MuPDF.NET
             {
                 blockNum += 1;
 
-                if (stPageRect.fz_contains_rect(new FzRect(block.m_internal.bbox)) == 0
+                if (
+                    stPageRect.fz_contains_rect(new FzRect(block.m_internal.bbox)) == 0
                     && stPageRect.fz_is_infinite_rect() == 0
-                    && block.m_internal.type == (int)STextBlockType.FZ_STEXT_BLOCK_IMAGE)
+                    && block.m_internal.type == (int)STextBlockType.FZ_STEXT_BLOCK_IMAGE
+                )
                     continue;
 
-                if (stPageRect.fz_is_infinite_rect() != 0
-                    && (FzRect.fz_intersect_rect(stPageRect, new FzRect(block.m_internal.bbox))).fz_is_empty_rect() != 0)
+                if (
+                    stPageRect.fz_is_infinite_rect() != 0
+                    && (
+                        FzRect.fz_intersect_rect(stPageRect, new FzRect(block.m_internal.bbox))
+                    ).fz_is_empty_rect() != 0
+                )
                     continue;
 
                 Block blockDict = new Block();
@@ -942,7 +1066,9 @@ namespace MuPDF.NET
                     int h = image.h();
                     int type = (int)ImageType.FZ_IMAGE_UNKNOWN;
 
-                    FzCompressedBuffer compressedBuffer = new FzCompressedBuffer(mupdf.mupdf.ll_fz_compressed_image_buffer(image.m_internal));
+                    FzCompressedBuffer compressedBuffer = new FzCompressedBuffer(
+                        mupdf.mupdf.ll_fz_compressed_image_buffer(image.m_internal)
+                    );
                     if (compressedBuffer != null)
                     {
                         type = compressedBuffer.m_internal.params_.type;
@@ -958,12 +1084,17 @@ namespace MuPDF.NET
 
                     if (compressedBuffer != null && type != (int)ImageType.FZ_IMAGE_UNKNOWN)
                     {
-                        buf = new FzBuffer(mupdf.mupdf.ll_fz_keep_buffer(compressedBuffer.m_internal.buffer));
+                        buf = new FzBuffer(
+                            mupdf.mupdf.ll_fz_keep_buffer(compressedBuffer.m_internal.buffer)
+                        );
                         ext = Utils.GetImageExtention(type);
                     }
                     else
                     {
-                        buf = mupdf.mupdf.fz_new_buffer_from_image_as_png(image, new FzColorParams());
+                        buf = mupdf.mupdf.fz_new_buffer_from_image_as_png(
+                            image,
+                            new FzColorParams()
+                        );
                         ext = "png";
                     }
 
@@ -984,10 +1115,18 @@ namespace MuPDF.NET
 
                     FzRect blockRect = new FzRect(FzRect.Fixed.Fixed_EMPTY);
 
-                    for (fz_stext_line line = block.begin().__ref__().m_internal; line != null; line = line.next)
+                    for (
+                        fz_stext_line line = block.begin().__ref__().m_internal;
+                        line != null;
+                        line = line.next
+                    )
                     {
-                        if (FzRect.fz_intersect_rect(stPageRect, new FzRect(line.bbox)).fz_is_empty_rect() != 0
-                            && stPageRect.fz_is_infinite_rect() == 0)
+                        if (
+                            FzRect
+                                .fz_intersect_rect(stPageRect, new FzRect(line.bbox))
+                                .fz_is_empty_rect() != 0
+                            && stPageRect.fz_is_infinite_rect() == 0
+                        )
                             continue;
 
                         Line lineDict = new Line();
@@ -1008,18 +1147,35 @@ namespace MuPDF.NET
                         for (fz_stext_char ch = line.first_char; ch != null; ch = ch.next)
                         {
                             FzRect r = GetCharBbox(new FzStextLine(line), new FzStextChar(ch));
-                            if (!IsRectsOverlap(stPageRect, r)
-                                && stPageRect.fz_is_infinite_rect() != 0)
+                            if (
+                                !IsRectsOverlap(stPageRect, r)
+                                && stPageRect.fz_is_infinite_rect() != 0
+                            )
                                 continue;
-                            float flags = CharFontFlags(new FzFont(mupdf.mupdf.ll_fz_keep_font(ch.font)), new FzStextLine(line), new FzStextChar(ch));
+                            float flags = CharFontFlags(
+                                new FzFont(mupdf.mupdf.ll_fz_keep_font(ch.font)),
+                                new FzStextLine(line),
+                                new FzStextChar(ch)
+                            );
                             FzPoint origin = new FzPoint(ch.origin);
                             style.Size = ch.size;
                             style.Flags = flags;
-                            style.Font = GetFontName(new FzFont(mupdf.mupdf.ll_fz_keep_font(ch.font)));
+                            style.Font = GetFontName(
+                                new FzFont(mupdf.mupdf.ll_fz_keep_font(ch.font))
+                            );
                             style.Color = ch.color;
-                            style.Asc = (new FzFont(mupdf.mupdf.ll_fz_keep_font(ch.font))).fz_font_ascender();
-                            style.Desc = (new FzFont(mupdf.mupdf.ll_fz_keep_font(ch.font))).fz_font_descender();
-                            if (style.Size != oldStyle.Size || style.Flags != oldStyle.Flags || style.Color != oldStyle.Color || style.Font != oldStyle.Font)
+                            style.Asc = (
+                                new FzFont(mupdf.mupdf.ll_fz_keep_font(ch.font))
+                            ).fz_font_ascender();
+                            style.Desc = (
+                                new FzFont(mupdf.mupdf.ll_fz_keep_font(ch.font))
+                            ).fz_font_descender();
+                            if (
+                                style.Size != oldStyle.Size
+                                || style.Flags != oldStyle.Flags
+                                || style.Color != oldStyle.Color
+                                || style.Font != oldStyle.Font
+                            )
                             {
                                 if (oldStyle.Size >= 0)
                                 {
@@ -1124,10 +1280,20 @@ namespace MuPDF.NET
             flags += font.fz_font_is_bold() * (int)FontStyle.TEXT_FONT_BOLD;
             return flags;
         }
+
         internal float DetectSuperScript(FzStextLine line, FzStextChar ch)
         {
-            if (line.m_internal.wmode == 0 && line.m_internal.dir.x == 1 && line.m_internal.dir.y == 0)
-                return (ch.m_internal.origin.y < (line.m_internal.first_char.origin.y - ch.m_internal.size * 0.1)) ? 1.0f : 0.0f;
+            if (
+                line.m_internal.wmode == 0
+                && line.m_internal.dir.x == 1
+                && line.m_internal.dir.y == 0
+            )
+                return (
+                    ch.m_internal.origin.y
+                    < (line.m_internal.first_char.origin.y - ch.m_internal.size * 0.1)
+                )
+                    ? 1.0f
+                    : 0.0f;
             return 0.0f;
         }
 
@@ -1138,6 +1304,7 @@ namespace MuPDF.NET
 
             return name.Substring(s + 1);
         }
+
         public FzQuad GetCharQuad(FzStextLine line, FzStextChar ch)
         {
             if (line.m_internal.wmode != 0)
@@ -1177,8 +1344,22 @@ namespace MuPDF.NET
                 trm1.d = 1;
                 trm2.d = 1;
             }
-            FzMatrix xlate1 = new FzMatrix(1, 0, 0, 1, -ch.m_internal.origin.x, -ch.m_internal.origin.y);
-            FzMatrix xlate2 = new FzMatrix(1, 0, 0, 1, ch.m_internal.origin.x, ch.m_internal.origin.y);
+            FzMatrix xlate1 = new FzMatrix(
+                1,
+                0,
+                0,
+                1,
+                -ch.m_internal.origin.x,
+                -ch.m_internal.origin.y
+            );
+            FzMatrix xlate2 = new FzMatrix(
+                1,
+                0,
+                0,
+                1,
+                ch.m_internal.origin.x,
+                ch.m_internal.origin.y
+            );
 
             FzQuad quad = mupdf.mupdf.fz_transform_quad(new FzQuad(ch.m_internal.quad), xlate1);
             quad = mupdf.mupdf.fz_transform_quad(quad, trm1);
@@ -1203,7 +1384,6 @@ namespace MuPDF.NET
                 quad.ll.x = 0;
                 quad.ul.x = 0;
             }
-
 
             float cwidth = quad.lr.x - quad.ll.x;
             if (cwidth < Utils.FLT_EPSILON)
@@ -1236,22 +1416,11 @@ namespace MuPDF.NET
 
         public bool IsRectsOverlap(FzRect a, FzRect b)
         {
-            if (false
-                || a.x0 >= b.x1
-                || a.y0 >= b.y1
-                || a.x1 <= b.x0
-                || a.y1 <= b.y0
-            )
+            if (false || a.x0 >= b.x1 || a.y0 >= b.y1 || a.x1 <= b.x0 || a.y1 <= b.y0)
                 return false;
             return true;
         }
-
-        public void Dispose()
-        {
-            _nativeTextPage.Dispose();
-        }
     }
-
 
     public class MuPDFCharStyle
     {
@@ -1302,5 +1471,4 @@ namespace MuPDF.NET
             return $"{Size} {Flags} {Font} {Color} {Asc} {Desc}";
         }
     }
-
 }

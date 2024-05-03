@@ -5,6 +5,12 @@ namespace MuPDF.NET
 {
     public class MuPDFStory
     {
+        static MuPDFStory()
+        {
+            if (!File.Exists("mupdfcsharp.dll"))
+                Utils.LoadEmbeddedDll();
+        }
+
         private FzStory _nativeStory;
 
         public delegate string ContentFunction(List<Position> positions);

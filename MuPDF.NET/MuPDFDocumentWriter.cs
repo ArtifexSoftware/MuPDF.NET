@@ -4,6 +4,12 @@ namespace MuPDF.NET
 {
     public class MuPDFDocumentWriter
     {
+        static MuPDFDocumentWriter()
+        {
+            if (!File.Exists("mupdfcsharp.dll"))
+                Utils.LoadEmbeddedDll();
+        }
+
         private FzDocumentWriter _nativeDocumentWriter;
 
         public MuPDFDocumentWriter(string path, string options = "")
