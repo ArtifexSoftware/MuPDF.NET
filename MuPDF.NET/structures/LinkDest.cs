@@ -3,7 +3,7 @@ using System.Text.RegularExpressions;
 
 namespace MuPDF.NET
 {
-    public class LinkDest : IDisposable
+    public class LinkDest
     {
         public string Dest { get; set; }
 
@@ -151,11 +151,6 @@ namespace MuPDF.NET
                     ret[item] = null;
             }
             return ret;
-        }
-
-        public void Dispose()
-        {
-
         }
     }
 }

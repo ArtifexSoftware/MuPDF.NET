@@ -6,6 +6,11 @@ namespace MuPDF.NET
 {
     public class MuPDFArchive
     {
+        static MuPDFArchive()
+        {
+            if (!File.Exists("mupdfcsharp.dll"))
+                Utils.LoadEmbeddedDll();
+        }
 
         private FzArchive _nativeArchive;
 

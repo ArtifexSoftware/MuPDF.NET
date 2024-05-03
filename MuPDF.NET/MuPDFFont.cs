@@ -2,90 +2,70 @@
 
 namespace MuPDF.NET
 {
-    public class MuPDFFont : IDisposable
+    public class MuPDFFont
     {
+        static MuPDFFont()
+        {
+            if (!File.Exists("mupdfcsharp.dll"))
+                Utils.LoadEmbeddedDll();
+        }
 
         private FzFont _nativeFont = null;
 
         public float Ascender
         {
-            get
-            {
-                return _nativeFont.fz_font_ascender();
-            }
+            get { return _nativeFont.fz_font_ascender(); }
         }
 
         public byte[] Buffer
         {
             get
             {
-                FzBuffer buf = new FzBuffer(mupdf.mupdf.ll_fz_keep_buffer(_nativeFont.m_internal.buffer));
+                FzBuffer buf = new FzBuffer(
+                    mupdf.mupdf.ll_fz_keep_buffer(_nativeFont.m_internal.buffer)
+                );
                 return buf.fz_buffer_extract();
             }
         }
 
         public float Descender
         {
-            get
-            {
-                return _nativeFont.fz_font_descender();
-            }
+            get { return _nativeFont.fz_font_descender(); }
         }
 
         public string Name
         {
-            get
-            {
-                return _nativeFont.fz_font_name();
-            }
+            get { return _nativeFont.fz_font_name(); }
         }
 
         public Rect Bbox
         {
-            get
-            {
-                return new Rect(_nativeFont.fz_font_bbox());
-            }
+            get { return new Rect(_nativeFont.fz_font_bbox()); }
         }
 
         public int IsBold
         {
-            get
-            {
-                return _nativeFont.fz_font_is_bold();
-            }
+            get { return _nativeFont.fz_font_is_bold(); }
         }
 
         public int IsItalic
         {
-            get
-            {
-                return _nativeFont.fz_font_is_italic();
-            }
+            get { return _nativeFont.fz_font_is_italic(); }
         }
 
         public int IsMonospaced
         {
-            get
-            {
-                return _nativeFont.fz_font_is_monospaced();
-            }
+            get { return _nativeFont.fz_font_is_monospaced(); }
         }
 
         public int IsSerif
         {
-            get
-            {
-                return _nativeFont.fz_font_is_serif();
-            }
+            get { return _nativeFont.fz_font_is_serif(); }
         }
 
         public bool IsWriteable
         {
-            get
-            {
-                return true;
-            }
+            get { return true; }
         }
 
         public FzFont ToFzFont()
@@ -122,10 +102,7 @@ namespace MuPDF.NET
 
         public int GlyphCount
         {
-            get
-            {
-                return _nativeFont.m_internal.glyph_count;
-            }
+            get { return _nativeFont.m_internal.glyph_count; }
         }
 
         public MuPDFFont()
@@ -144,10 +121,14 @@ namespace MuPDF.NET
             int isItalic = 0,
             int isSerif = 0,
             int embed = 1
-            )
+        )
         {
             string fNameLower = fontName.ToLower();
-            if (fNameLower.IndexOf("/") != -1 || fNameLower.IndexOf("\\") == -1 || fNameLower.IndexOf(".") == -1)
+            if (
+                fNameLower.IndexOf("/") != -1
+                || fNameLower.IndexOf("\\") == -1
+                || fNameLower.IndexOf(".") == -1
+            )
                 Console.WriteLine("Warning: did you mean a fontfile?");
             if ((new List<string>() { "cjk", "china-t", "china-ts" }).Contains(fNameLower))
                 ordering = 0;
@@ -161,7 +142,18 @@ namespace MuPDF.NET
             else if (ordering < 0)
                 fontName = Utils.Base14_fontdict.GetValueOrDefault(fontName, fontName);
             fz_text_language lang = mupdf.mupdf.fz_text_language_from_string(language);
-            _nativeFont = Utils.GetFont(fontName, fontFile, fontBuffer, script, (int)lang, ordering, isBold, isItalic, isSerif, embed);
+            _nativeFont = Utils.GetFont(
+                fontName,
+                fontFile,
+                fontBuffer,
+                script,
+                (int)lang,
+                ordering,
+                isBold,
+                isItalic,
+                isSerif,
+                embed
+            );
         }
 
         /// <summary>
@@ -174,8 +166,14 @@ namespace MuPDF.NET
         /// <param name="wmode"></param>
         /// <param name="smallCaps"></param>
         /// <returns>the lengths in points of the characters of a string when stored in the PDF. It works like Font.text_length().</returns>
-        public List<float> GetCharLengths(string text, float fontSize = 11, string language = null, int script = 0, int wmode = 0,
-            int smallCaps = 0)
+        public List<float> GetCharLengths(
+            string text,
+            float fontSize = 11,
+            string language = null,
+            int script = 0,
+            int wmode = 0,
+            int smallCaps = 0
+        )
         {
             fz_text_language lang = mupdf.mupdf.fz_text_language_from_string(language);
             List<float> rc = new List<float>();
@@ -191,7 +189,11 @@ namespace MuPDF.NET
                         font = _nativeFont;
                 }
                 else
-                    (gid, font) = _nativeFont.fz_encode_character_with_fallback(c, script, (int)lang);
+                    (gid, font) = _nativeFont.fz_encode_character_with_fallback(
+                        c,
+                        script,
+                        (int)lang
+                    );
                 rc.Add(fontSize * font.fz_advance_glyph(gid, wmode));
             }
             return rc;
@@ -206,7 +208,13 @@ namespace MuPDF.NET
         /// <param name="wmode">write mode, 0 = horizontal, 1 = vertical.</param>
         /// <param name="small_caps"></param>
         /// <returns></returns>
-        public float GlyphAdvance(int chr, string language = null, int script = 0, int wmode = 0, int small_caps = 0)
+        public float GlyphAdvance(
+            int chr,
+            string language = null,
+            int script = 0,
+            int wmode = 0,
+            int small_caps = 0
+        )
         {
             fz_text_language lang = mupdf.mupdf.fz_text_language_from_string(language);
             int gid = 0;
@@ -265,13 +273,23 @@ namespace MuPDF.NET
         /// <param name="fallback">perform an extended search in fallback fonts or restrict to current font (default).</param>
         /// <param name="smallCaps"></param>
         /// <returns>the glyph number. Zero indicates no glyph found.</returns>
-        public int HasGlyph(int chr, string language = null, int script = 0, int fallback = 0, int smallCaps = 0)
+        public int HasGlyph(
+            int chr,
+            string language = null,
+            int script = 0,
+            int fallback = 0,
+            int smallCaps = 0
+        )
         {
             int gid;
             if (fallback != 0)
             {
                 fz_text_language lang = mupdf.mupdf.fz_text_language_from_string(language);
-                (gid, FzFont font) = _nativeFont.fz_encode_character_with_fallback(chr, script, (int)lang);
+                (gid, FzFont font) = _nativeFont.fz_encode_character_with_fallback(
+                    chr,
+                    script,
+                    (int)lang
+                );
             }
             else
             {
@@ -294,7 +312,14 @@ namespace MuPDF.NET
         /// <param name="wmode"></param>
         /// <param name="smallCaps"></param>
         /// <returns>the length of the string in points when stored in the PDF. If a character is not contained in the font, it will automatically be looked up in a fallback font.</returns>
-        public float TextLength(string text, float fontSize = 11.0f, string language = null, int script = 0, int wmode = 0, int smallCaps = 0)
+        public float TextLength(
+            string text,
+            float fontSize = 11.0f,
+            string language = null,
+            int script = 0,
+            int wmode = 0,
+            int smallCaps = 0
+        )
         {
             FzFont thisfont = _nativeFont;
             int lang = (int)mupdf.mupdf.fz_text_language_from_string(language);
@@ -342,11 +367,6 @@ namespace MuPDF.NET
         public override string ToString()
         {
             return $"Font('{Name}')";
-        }
-
-        void IDisposable.Dispose()
-        {
-            _nativeFont.Dispose();
         }
     }
 }
