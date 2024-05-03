@@ -4,7 +4,7 @@ using System.Runtime.Serialization.Formatters.Binary;
 
 namespace MuPDF.NET
 {
-    public class DisplayList : IDisposable
+    public class DisplayList
     {
         private FzDisplayList _nativeDisplayList;
 
@@ -42,11 +42,6 @@ namespace MuPDF.NET
             Pixmap val = Utils.GetPixmapFromDisplaylist(_nativeDisplayList, matrix, _colorSpace, alpha, clip, null);
             ThisOwn = true;
             return val;
-        }
-
-        public void Dispose()
-        {
-            _nativeDisplayList.Dispose();
         }
 
         public MuPDFTextPage GetTextPage(int flags = 3)

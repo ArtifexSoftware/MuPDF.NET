@@ -2,7 +2,7 @@
 
 namespace MuPDF.NET
 {
-    public class MuPDFGraftMap : IDisposable
+    public class MuPDFGraftMap
     {
         static MuPDFGraftMap()
         {

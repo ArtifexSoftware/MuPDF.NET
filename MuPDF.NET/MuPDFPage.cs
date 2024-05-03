@@ -6,7 +6,7 @@ using static System.Net.Mime.MediaTypeNames;
 
 namespace MuPDF.NET
 {
-    public class MuPDFPagef
+    public class MuPDFPage
     {
         static MuPDFPage()
         {

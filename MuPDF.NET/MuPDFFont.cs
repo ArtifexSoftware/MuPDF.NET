@@ -2,7 +2,7 @@
 
 namespace MuPDF.NET
 {
-    public class MuPDFFont : IDisposable
+    public class MuPDFFont
     {
         static MuPDFFont()
         {

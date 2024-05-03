@@ -2,7 +2,7 @@
 
 namespace MuPDF.NET
 {
-    public class Outline : IDisposable
+    public class Outline
     {
         private FzOutline _nativeOutline;
 
@@ -105,11 +105,6 @@ namespace MuPDF.NET
         public LinkDest Destination(PdfDocument doc)
         {
             return new LinkDest(this, (null, 0, 0), new MuPDFDocument(doc));
-        }
-
-        public void Dispose()
-        {
-            _nativeOutline.Dispose();
         }
 
         public FzOutline ToFzOutline()

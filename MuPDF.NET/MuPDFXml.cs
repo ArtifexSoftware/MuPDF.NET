@@ -4,7 +4,7 @@ using mupdf;
 
 namespace MuPDF.NET
 {
-    public class MuPDFXml : IDisposable
+    public class MuPDFXml
     {
         static MuPDFXml()
         {
