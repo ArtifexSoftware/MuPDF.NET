@@ -6090,5 +6090,32 @@ namespace MuPDF.NET
             resourceStream?.Dispose();
             tempFile.Dispose();
         }
+
+        internal static void AddLayerConfig(PdfDocument pdf, string name, string creator, OCLayerConfig on)
+        {
+            PdfObj ocp = Utils.EnsureOCProperties(pdf);
+            PdfObj configs = ocp.pdf_dict_get(new PdfObj("Configs"));
+            if (configs.pdf_is_array() == 0)
+                configs = ocp.pdf_dict_put_array(new PdfObj("Configs"), 1);
+            PdfObj d = pdf.pdf_new_dict(5);
+            d.pdf_dict_put_text_string(new PdfObj("Name"), name);
+            if (!string.IsNullOrEmpty(creator))
+                d.pdf_dict_put_text_string(new PdfObj("Creator"), creator);
+            d.pdf_dict_put(new PdfObj("BaseState"), new PdfObj("OFF"));
+            PdfObj onarray = d.pdf_dict_put_array(new PdfObj("ON"), 5);
+            if (on != null)
+            {
+
+            }
+            else
+            {
+                PdfObj ocgs = ocp.pdf_dict_get(new PdfObj("OCGs"));
+                int xref = on.Number;
+                PdfObj ind = pdf.pdf_new_indirect(xref, 0);
+                if (ocgs.pdf_array_contains(ind) != 0)
+                    onarray.pdf_array_push(ind);
+            }
+            configs.pdf_array_push(d);
+        }
     }
 }
