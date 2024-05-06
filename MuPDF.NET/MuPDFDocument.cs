@@ -442,7 +442,7 @@ namespace MuPDF.NET
 
                 float w = width;
                 float h = height;
-                FzRect r = rect == null ? new FzRect(FzRect.Fixed.Fixed_EMPTY) : rect.ToFzRect();
+                FzRect r = (rect == null) ? new FzRect(FzRect.Fixed.Fixed_INFINITE) : rect.ToFzRect();
                 if (r.fz_is_infinite_rect() != 0)
                 {
                     w = r.x1 - r.x0;

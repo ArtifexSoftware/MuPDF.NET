@@ -734,45 +734,91 @@ namespace MuPDF.NET
         public MuPDFAnnot AddRedactAnnot(
             Quad quad,
             string text = null,
-            string dataStr = null,
+            string fontName = "Helv",
+            float fontSize = 11.0f,
             TextAlign align = TextAlign.TEXT_ALIGN_LEFT,
             float[] fill = null,
-            float[] textColr = null
+            float[] textColor = null,
+            bool crossOut = true
         )
         {
-            PdfPage page = _pdfPage;
-            float[] fCol = new float[4] { 1, 1, 1, 0 };
-            int nFCol = 0;
-            PdfAnnot annot = page.pdf_create_annot(pdf_annot_type.PDF_ANNOT_REDACT);
-            Rect r = quad.Rect;
-            annot.pdf_set_annot_rect(r.ToFzRect());
-
-            if (fill != null)
+            string dataStr = "";
+            MuPDFAnnot ret = null;
+            if (!string.IsNullOrEmpty(text))
             {
-                fCol = MuPDFAnnot.ColorFromSequence(fill);
-                nFCol = fCol.Length;
-                PdfObj arr = page.doc().pdf_new_array(nFCol);
-                for (int i = 0; i < nFCol; i++)
+                if (textColor == null)
+                    textColor = new float[3] { 0, 0, 0 };
+                if (textColor.Length > 3)
+                    textColor = new float[3] { textColor[0], textColor[1], textColor[2] };
+                dataStr = $"{textColor[0]} {textColor[1]} {textColor[2]} rg /{fontName} {fontSize} Tf";
+                if (fill == null)
+                    fill = new float[3] { 1, 1, 1 };
+            }
+            int oldRotation = AnnotPreProcess(this);
+
+            try
+            {
+                PdfPage page = _pdfPage;
+                float[] fCol = new float[4] { 1, 1, 1, 0 };
+                int nFCol = 0;
+                PdfAnnot annot = page.pdf_create_annot(pdf_annot_type.PDF_ANNOT_REDACT);
+                Rect r = quad.Rect;
+                annot.pdf_set_annot_rect(r.ToFzRect());
+
+                if (fill != null)
                 {
-                    arr.pdf_array_push_real(fCol[i]);
+                    fCol = MuPDFAnnot.ColorFromSequence(fill);
+                    nFCol = fCol.Length;
+                    PdfObj arr = page.doc().pdf_new_array(nFCol);
+                    for (int i = 0; i < nFCol; i++)
+                    {
+                        arr.pdf_array_push_real(fCol[i]);
+                    }
+                    annot.pdf_annot_obj().pdf_dict_put(new PdfObj("IC"), arr);
                 }
-                annot.pdf_annot_obj().pdf_dict_put(new PdfObj("IC"), arr);
+                if (!string.IsNullOrEmpty(text))
+                {
+                    annot
+                        .pdf_annot_obj()
+                        .pdf_dict_puts("OverlayText", mupdf.mupdf.pdf_new_text_string(text));
+                    annot.pdf_annot_obj().pdf_dict_put_text_string(new PdfObj("DA"), dataStr);
+                    annot.pdf_annot_obj().pdf_dict_put_int(new PdfObj("Q"), (int)align);
+                }
+
+                annot.pdf_update_annot();
+                Utils.AddAnnotId(annot, "A");
+
+                SWIGTYPE_p_pdf_annot swigAnnot = mupdf.mupdf.ll_pdf_keep_annot(annot.m_internal);
+                annot = new PdfAnnot(swigAnnot);
+                ret = new MuPDFAnnot(annot);
             }
-            if (text != null)
+            finally
             {
-                annot
-                    .pdf_annot_obj()
-                    .pdf_dict_puts("OverlayText", mupdf.mupdf.pdf_new_text_string(text));
-                annot.pdf_annot_obj().pdf_dict_put_text_string(new PdfObj("DA"), dataStr);
-                annot.pdf_annot_obj().pdf_dict_put_int(new PdfObj("Q"), (int)align);
+                if (oldRotation != 0)
+                    SetRotation(oldRotation);
             }
 
-            annot.pdf_update_annot();
-            Utils.AddAnnotId(annot, "A");
+            AnnotPostProcess(this, ret);
 
-            SWIGTYPE_p_pdf_annot swigAnnot = mupdf.mupdf.ll_pdf_keep_annot(annot.m_internal);
-            annot = new PdfAnnot(swigAnnot);
-            return new MuPDFAnnot(annot);
+            if (crossOut)
+            {
+                string apStr = Encoding.UTF8.GetString(ret.GetAP());
+                string[] tabStrArr = apStr.Split("\n");
+
+                tabStrArr = tabStrArr.Take(tabStrArr.Length - 2).ToArray();
+                List<string> nTabs = new List<string>(tabStrArr);
+                tabStrArr = tabStrArr.Skip(1).ToArray();
+                nTabs.Add(tabStrArr[1]);
+                nTabs.Add(tabStrArr[0]);
+                nTabs.Add(tabStrArr[2]);
+                nTabs.Add(tabStrArr[0]);
+                nTabs.Add(tabStrArr[3]);
+                nTabs.Add("S");
+ 
+                ret.SetAP(Encoding.UTF8.GetBytes(string.Join("\n", nTabs)));
+            }
+
+            return ret;
         }
 
         private MuPDFAnnot AddSquareOrCircle(Rect rect, PdfAnnotType annotType)
