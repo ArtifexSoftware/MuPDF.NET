@@ -17,8 +17,6 @@ namespace MuPDF.NET
 
         public bool IsEncrypted { get; set; }
 
-        public bool Is_Encrypted { get; set; }
-
         public int GraftID { get; set; }
 
         public Dictionary<string, string> MetaData { get; set; }
@@ -68,7 +66,18 @@ namespace MuPDF.NET
             set { _isPDF = value; }
         }
 
-        public bool IsOwn { get; set; }
+        public bool ThisOwn { get; set; }
+
+        public int VersionCount
+        {
+            get
+            {
+                PdfDocument pdf = MuPDFDocument.AsPdfDocument(this);
+                if (pdf.m_internal != null)
+                    pdf.pdf_count_versions();
+                return 0;
+            }
+        }
 
         public int Len
         {
@@ -427,15 +436,14 @@ namespace MuPDF.NET
                     doc.fz_layout_document(400, 600, 11);
                 _nativeDocument = doc;
 
-                IsOwn = true;
+                ThisOwn = true;
 
-                if (IsOwn)
+                if (ThisOwn)
                 {
                     GraftID = Utils.GenID();
                     if (NeedsPass)
                     {
                         IsEncrypted = true;
-                        Is_Encrypted = true;
                     }
                     else
                         InitDocument();
@@ -563,7 +571,7 @@ namespace MuPDF.NET
 
         public void InitDocument()
         {
-            if (Is_Encrypted)
+            if (IsEncrypted)
                 throw new Exception("cannot initialize - document still encrypted");
 
             Outline = LoadOutline();
@@ -945,7 +953,7 @@ namespace MuPDF.NET
         /// <exception cref="Exception"></exception>
         public MuPDFPage NewPage(int pno = -1, float width = 595, float height = 842)
         {
-            if (IsClosed || Is_Encrypted)
+            if (IsClosed || IsEncrypted)
                 throw new Exception("document closed or encrypted");
             else
             {
@@ -968,7 +976,7 @@ namespace MuPDF.NET
 
         public List<Entry> GetPageFonts(int pno, bool full = false)
         {
-            if (IsClosed || Is_Encrypted)
+            if (IsClosed || IsEncrypted)
                 throw new Exception("document closed or encrypted");
             if (!IsPDF)
                 return null;
@@ -1764,6 +1772,20 @@ namespace MuPDF.NET
                 throw new Exception("document closed or encrypted");
             PdfDocument pdf = MuPDFDocument.AsPdfDocument(_nativeDocument);
             pdf.pdf_enable_journal();
+        }
+
+        /// <summary>
+        /// Move forward in the journal.
+        /// </summary>
+        /// <returns>true if success</returns>
+        /// <exception cref="Exception"></exception>
+        public bool JournalRedo()
+        {
+            if (IsClosed || IsEncrypted)
+                throw new Exception("document closed or encrypted");
+            PdfDocument pdf = MuPDFDocument.AsPdfDocument(this);
+            pdf.pdf_redo();
+            return true;
         }
 
         /// <summary>
@@ -5151,6 +5173,68 @@ namespace MuPDF.NET
 
             xref = indOcg.pdf_to_num();
             return xref;
+        }
+
+        /// <summary>
+        /// Check whether incremental saves are possible.
+        /// </summary>
+        /// <returns></returns>
+        public bool CanSaveIncrementally()
+        {
+            PdfDocument pdf = MuPDFDocument.AsPdfDocument(this);
+            if (pdf.m_internal != null)
+                return false;
+            return pdf.pdf_can_be_saved_incrementally() != 0;
+        }
+
+        /// <summary>
+        /// Add a new OC layer.
+        /// </summary>
+        /// <param name="name">arbitrary name.</param>
+        /// <param name="creator">(optional) creating software.</param>
+        /// <param name="on">a sequence of OCG</param>
+        public void AddLayer(string name, string creator = null, OCLayerConfig on = null)
+        {
+            PdfDocument pdf = MuPDFDocument.AsPdfDocument(this);
+            Utils.AddLayerConfig(pdf, name, creator, on);
+            mupdf.mupdf.ll_pdf_read_ocg(pdf.m_internal);
+        }
+
+        /// <summary>
+        /// Decrypt document.
+        /// </summary>
+        /// <param name="password"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        public int Authenticate(string password)
+        {
+            if (IsClosed)
+                throw new Exception("document closed");
+            int val = _nativeDocument.fz_authenticate_password(password);
+            if (val != 0)
+            {
+                IsEncrypted = false;
+                InitDocument();
+                ThisOwn = true;
+            }
+            return val;
+        }
+
+        /// <summary>
+        /// Get (chapter, page) of previous page.
+        /// </summary>
+        /// <param name="pno">current page number</param>
+        /// <param name="chapter">chapter number</param>
+        /// <returns>The tuple of the preceding page.</returns>
+        public (int, int) PrevLocation(int pno, int chapter = 0)
+        {
+            if (IsClosed || IsEncrypted)
+                throw new Exception("document closed or encrypted");
+            if (pno == 0 && chapter == 0)
+                return (-1, -1);
+            FzLocation loc = mupdf.mupdf.fz_make_location(chapter, pno);
+            FzLocation prevLoc = _nativeDocument.fz_previous_page(loc);
+            return (prevLoc.chapter, prevLoc.page);
         }
     }
 }
