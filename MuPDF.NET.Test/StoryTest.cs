@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace MuPDF.NET
+namespace MuPDF.NET.Test
 {
     public class StoryTest
     {

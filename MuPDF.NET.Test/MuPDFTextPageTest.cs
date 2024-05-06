@@ -11,7 +11,7 @@ namespace MuPDF.NET.Test
         [SetUp]
         public void Setup()
         {
-            doc = new MuPDFDocument("input.pdf");
+            doc = new MuPDFDocument("resources/cython.pdf");
 
             textPage = doc.LoadPage(0).GetTextPage();
         }
@@ -51,7 +51,7 @@ namespace MuPDF.NET.Test
         public void ExtractBlocks()
         {
             List<TextBlock> blocks = textPage.ExtractBlocks();
-            Assert.Zero(blocks.Count);
+            Assert.That(blocks.Count, Is.EqualTo(4));
         }
 
         [Test]

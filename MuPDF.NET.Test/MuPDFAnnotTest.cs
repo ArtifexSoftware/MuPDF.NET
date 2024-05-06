@@ -72,5 +72,17 @@ namespace MuPDF.NET.Test
 
             Assert.That((int)annot.Type.Item1, Is.EqualTo(17));
         }
+
+        [Test]
+        public void TestRedaction1()
+        {
+            MuPDFDocument doc = new MuPDFDocument();
+            MuPDFPage page = doc.NewPage();
+
+            MuPDFAnnot annot = page.AddRedactAnnot((new Rect(72, 72, 220, 100)).Quad, text: "Hello");
+            annot.Update(crossOut: true, rotate: -1);
+
+            Assert.That((int)annot.Type.Item1, Is.EqualTo(12));
+        }
     }
 }
