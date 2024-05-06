@@ -4575,7 +4575,7 @@ namespace MuPDF.NET
             List<Label> labels = doc.GetPageLabels();
             if (labels.Count == 0)
                 return numbers;
-            for (int i = 0; i < doc.Len; i++)
+            for (int i = 0; i < doc.PageCount; i++)
             {
                 string pageLabel = GetPageLabel(i, labels);
                 if (pageLabel == label)

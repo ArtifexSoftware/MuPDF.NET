@@ -53,8 +53,8 @@ namespace MuPDF.NET
 
             MuPDFDocument doc2 = MakePdf("<p>before</p>", "before.pdf");
 
-            Assert.That(doc1.Len, Is.EqualTo(2));
-            Assert.That(doc2.Len, Is.EqualTo(1));
+            Assert.That(doc1.PageCount, Is.EqualTo(2));
+            Assert.That(doc2.PageCount, Is.EqualTo(1));
         }
     }
 }

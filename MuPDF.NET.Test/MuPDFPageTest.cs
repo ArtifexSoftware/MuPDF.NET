@@ -216,7 +216,7 @@ public class MuPDFPageTest : PdfTestBase
     [Test]
     public void ApplyRedactions()
     {
-        for (int i = 0; i < doc.Len; i++)
+        for (int i = 0; i < doc.PageCount; i++)
         {
             if (doc[i].ApplyRedactions())
                 Console.WriteLine(i);
