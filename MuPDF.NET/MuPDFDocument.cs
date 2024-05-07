@@ -1371,7 +1371,6 @@ namespace MuPDF.NET
                 throw new Exception("document closed");
             PdfDocument pdf = AsPdfDocument(this);
             int xrefLen = pdf.pdf_xref_len();
-            Console.WriteLine(xrefLen);
             PdfObj obj = null;
 
             if (!Utils.INRANGE(xref, 1, xrefLen - 1) && xref != -1)

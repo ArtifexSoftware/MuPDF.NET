@@ -197,13 +197,13 @@ namespace MuPDF.NET
                 PdfAnnot annot = _nativeAnnotion;
                 PdfObj obj = annot.pdf_annot_obj().pdf_dict_get(new PdfObj("Popup"));
 
-                if (obj != null)
+                if (obj.m_internal != null)
                     return true;
                 return false;
             }
         }
 
-        public AnnotInfo AnnotInfo
+        public AnnotInfo Info
         {
             get
             {
@@ -562,7 +562,7 @@ namespace MuPDF.NET
             IsOwner = false;
         }
 
-        public Annot GetRedactVaues()
+        public Annot GetRedactValues()
         {
             PdfAnnot annot = _nativeAnnotion;
 
@@ -1049,11 +1049,12 @@ namespace MuPDF.NET
             if (dpi != 0)
                 matrix = new Matrix(dpi / 72, dpi / 72);
 
-            FzMatrix ctm = matrix.ToFzMatrix();
+            FzMatrix ctm = matrix == null ? new FzMatrix() : matrix.ToFzMatrix();
             FzColorspace cs = null;
             if (colorSpace == null)
                 cs = mupdf.mupdf.fz_device_rgb();
-            cs = colorSpace.ToFzColorspace();
+            else
+                cs = colorSpace.ToFzColorspace();
             FzPixmap pix = mupdf.mupdf.pdf_new_pixmap_from_annot(
                 _nativeAnnotion,
                 ctm,
@@ -1469,6 +1470,15 @@ namespace MuPDF.NET
             mupdf.mupdf.pdf_set_annot_flags(annot, flags);
         }
 
+        /// <summary>
+        /// Set various properties.
+        /// </summary>
+        /// <param name="info">a dictionary compatible with the info property</param>
+        /// <param name="content">a string containing the text for type Text and FreeText annotations. Commonly used for filling the text field of annotation pop-up windows.</param>
+        /// <param name="title">a string containing the title of the annotation pop-up window. By convention, this is used for the annotation author.</param>
+        /// <param name="creationDate">creation timestamp.</param>
+        /// <param name="modDate">last modified timestamp.</param>
+        /// <param name="subject">subject.</param>
         public void SetInfo(
             AnnotInfo info = null,
             string content = null,
@@ -1688,7 +1698,6 @@ namespace MuPDF.NET
             float borderWidth = Border.Width;
             float[] stroke = Colors.Stroke;
 
-            Console.WriteLine(Colors.Fill.Length);
             List<float> fill = null;
             if (fillColor != null)
                 fill = new List<float>(fillColor);
