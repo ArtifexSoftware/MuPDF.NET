@@ -252,5 +252,9 @@ namespace MuPDF.NET
             return (this * ~delta * m) * delta;
         }
 
+        public override bool Equals(object obj)
+        {
+            return Rect.Equals(((Quad)obj).Rect);
+        }
     }
 }

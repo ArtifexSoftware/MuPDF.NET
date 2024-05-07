@@ -31,7 +31,7 @@ namespace MuPDF.NET.Test
         {
             MuPDFDocument doc = new MuPDFDocument("resources/2.pdf");
 
-            int n = doc.Len;
+            int n = doc.PageCount;
 
             mupdf.mupdf.pdf_subset_fonts2(MuPDFDocument.AsPdfDocument(doc), new mupdf.vectori(Enumerable.Range(0, n / 2).Select(i => i * 2)));
         }

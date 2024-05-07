@@ -165,9 +165,9 @@ namespace MuPDF.NET
             return $"Point({X}, {Y})";
         }
 
-        public void Dispose()
+        public override bool Equals(object obj)
         {
-
+            return X == ((Point)obj).X && Y == ((Point)obj).Y;
         }
     }
 }

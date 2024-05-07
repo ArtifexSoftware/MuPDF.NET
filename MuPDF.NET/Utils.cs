@@ -1094,7 +1094,6 @@ namespace MuPDF.NET
                 count += c;
             }
             ret[pixel] = count;
-            Console.WriteLine(ret.Count);
             return ret;
         }
 
@@ -2040,7 +2039,6 @@ namespace MuPDF.NET
                     continue;
 
                 int xref = imageDict.pdf_to_num();
-                Console.WriteLine(xref);
                 int gen = 0;
                 PdfObj smask = imageDict.pdf_dict_geta(new PdfObj("SMask"), new PdfObj("Mask"));
                 if (smask != null)
@@ -4575,7 +4573,7 @@ namespace MuPDF.NET
             List<Label> labels = doc.GetPageLabels();
             if (labels.Count == 0)
                 return numbers;
-            for (int i = 0; i < doc.Len; i++)
+            for (int i = 0; i < doc.PageCount; i++)
             {
                 string pageLabel = GetPageLabel(i, labels);
                 if (pageLabel == label)

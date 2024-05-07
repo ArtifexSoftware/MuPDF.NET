@@ -56,8 +56,11 @@
             EvenOdd = path.EvenOdd;
             FillOpacity = path.FillOpacity;
 
-            Fill = new float[path.Fill.Length];
-            Array.Copy(path.Fill, Fill, Fill.Length);
+            if (path.Fill != null)
+            {
+                Fill = new float[path.Fill.Length];
+                Array.Copy(path.Fill, Fill, Fill.Length);
+            }
 
             Rect = new Rect(path.Rect);
             SeqNo = path.SeqNo;
@@ -68,8 +71,11 @@
             ClosePath = path.ClosePath;
             Dashes = path.Dashes;
 
-            Color = new float[path.Color.Length];
-            Array.Copy(path.Color, Color, Color.Length);
+            if (path.Color != null)
+            {
+                Color = new float[path.Color.Length];
+                Array.Copy(path.Color, Color, Color.Length);
+            }
 
             LineCap = new List<LineCapType>(path.LineCap);
             Scissor = path.Scissor;
@@ -87,7 +93,7 @@
 
         public Rect Rect { get; set; }
 
-        public int Orientation { get; set; }
+        public int Orientation { get; set; } = -1;
 
         public Point LastPoint { get; set; }
 
@@ -98,5 +104,20 @@
         public Point P3 { get; set; }
 
         public Quad Quad { get; set; }
+
+        public bool Equal(Item other)
+        {
+            if (Type != other.Type) return false;
+
+            bool ret = true;
+            ret = other != null && (Rect == null ? other.Rect == null : Rect.Equals(other.Rect));
+            ret = other != null && (LastPoint == null ? other.LastPoint == null : LastPoint.Equals(other.LastPoint));
+            ret = other != null && (P1 == null ? other.P1 == null : P1.Equals(other.P1));
+            ret = other != null && (P2 == null ? other.P2 == null : P2.Equals(other.P2));
+            ret = other != null && (P3 == null ? other.P3 == null : P3.Equals(other.P3));
+            ret = other != null && (Quad == null ? other.Quad == null : Quad.Equals(other.Quad));
+
+            return true;
+        }
     }
 }
