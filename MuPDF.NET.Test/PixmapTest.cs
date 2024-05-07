@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace MuPDF.NET
+namespace MuPDF.NET.Test
 {
     public class PixmapTest
     {
@@ -44,7 +44,7 @@ namespace MuPDF.NET
         [Test]
         public void ToBytes()
         {
-            MuPDFDocument doc = new MuPDFDocument("input.pdf");
+            MuPDFDocument doc = new MuPDFDocument("resources/cython.pdf");
 
             MuPDFPage page = doc[0];
 
@@ -52,7 +52,7 @@ namespace MuPDF.NET
 
             byte[] bytes = pix.ToBytes();
 
-            Assert.That(bytes.Length, Is.EqualTo(167863));
+            Assert.That(bytes.Length, Is.EqualTo(21908));
         }
 
         [Test]

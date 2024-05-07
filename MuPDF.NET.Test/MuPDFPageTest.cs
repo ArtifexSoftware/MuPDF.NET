@@ -180,7 +180,7 @@ public class MuPDFPageTest : PdfTestBase
     {
         MuPDFPage page = doc.LoadPage(0);
 
-        page.InsertImage(new Rect(100, 100, 300, 300), "./img.png", imageName: "back");
+        page.InsertImage(new Rect(100, 100, 300, 300), "resources/nur-ruhig.jpg", imageName: "back");
 
         doc.Save("output.pdf");
     }
@@ -216,7 +216,7 @@ public class MuPDFPageTest : PdfTestBase
     [Test]
     public void ApplyRedactions()
     {
-        for (int i = 0; i < doc.Len; i++)
+        for (int i = 0; i < doc.PageCount; i++)
         {
             if (doc[i].ApplyRedactions())
                 Console.WriteLine(i);

@@ -19,39 +19,39 @@ namespace MuPDF.NET.Test
         [Test]
         public void CopyFullPage()
         {
-            int oldLen = doc.Len;
+            int oldLen = doc.PageCount;
             doc.CopyFullPage(0);
 
-            Assert.AreEqual(doc.Len, oldLen + 1);
+            Assert.AreEqual(doc.PageCount, oldLen + 1);
         }
 
         [Test]
         public void CopyPage()
         {
-            int oldLen = doc.Len;
+            int oldLen = doc.PageCount;
             doc.CopyPage(2);
 
-            Assert.AreEqual(doc.Len, oldLen + 1);
+            Assert.AreEqual(doc.PageCount, oldLen + 1);
         }
 
         [Test]
         public void DeletePage()
         {
-            int oldLen = doc.Len;
+            int oldLen = doc.PageCount;
             doc.DeletePage(1);
-            Assert.AreEqual(doc.Len, oldLen - 1);
+            Assert.AreEqual(doc.PageCount, oldLen - 1);
         }
 
         [Test]
         public void DeletePages()
         {
-            int oldLen = doc.Len;
+            int oldLen = doc.PageCount;
 
             doc.DeletePages(1, 2); // delete one page
 
             doc.DeletePages(new int[] { 2, 3 }); // delete 2 pages
 
-            Assert.AreEqual(doc.Len, oldLen - 3);
+            Assert.AreEqual(doc.PageCount, oldLen - 3);
         }
 
         [Test]
@@ -101,8 +101,6 @@ namespace MuPDF.NET.Test
             MuPDFDocument doc = new MuPDFDocument();
             byte[] buffer = Encoding.UTF8.GetBytes("123456678790qwexcvnmhofbnmfsdg4589754uiofjkb-");
             doc.AddEmbfile("file1", buffer, "testfile.txt", "testfile-u.txt", "Description of some sort");
-
-            Console.WriteLine(doc.GetEmbfileCount());
         }
 
         [Test]

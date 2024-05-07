@@ -89,7 +89,6 @@ namespace MuPDF.NET
                             if (document != null && m.Success)
                             {
                                 string named = m.Groups[1].Value;
-                                Console.WriteLine(named);
                                 this.Named = document.ResolveNames();
                                 if (Named is null)
                                     Named = new Dictionary<string, dynamic>();

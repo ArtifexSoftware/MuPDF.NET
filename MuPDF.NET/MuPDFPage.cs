@@ -734,45 +734,195 @@ namespace MuPDF.NET
         public MuPDFAnnot AddRedactAnnot(
             Quad quad,
             string text = null,
-            string dataStr = null,
+            string fontName = "Helv",
+            float fontSize = 11.0f,
             TextAlign align = TextAlign.TEXT_ALIGN_LEFT,
             float[] fill = null,
-            float[] textColr = null
+            float[] textColor = null,
+            bool crossOut = true
         )
         {
-            PdfPage page = _pdfPage;
-            float[] fCol = new float[4] { 1, 1, 1, 0 };
-            int nFCol = 0;
-            PdfAnnot annot = page.pdf_create_annot(pdf_annot_type.PDF_ANNOT_REDACT);
-            Rect r = quad.Rect;
-            annot.pdf_set_annot_rect(r.ToFzRect());
-
-            if (fill != null)
+            string dataStr = "";
+            MuPDFAnnot ret = null;
+            if (!string.IsNullOrEmpty(text))
             {
-                fCol = MuPDFAnnot.ColorFromSequence(fill);
-                nFCol = fCol.Length;
-                PdfObj arr = page.doc().pdf_new_array(nFCol);
-                for (int i = 0; i < nFCol; i++)
+                if (textColor == null)
+                    textColor = new float[3] { 0, 0, 0 };
+                if (textColor.Length > 3)
+                    textColor = new float[3] { textColor[0], textColor[1], textColor[2] };
+                dataStr = $"{textColor[0]} {textColor[1]} {textColor[2]} rg /{fontName} {fontSize} Tf";
+                if (fill == null)
+                    fill = new float[3] { 1, 1, 1 };
+            }
+            int oldRotation = AnnotPreProcess(this);
+
+            try
+            {
+                PdfPage page = _pdfPage;
+                float[] fCol = new float[4] { 1, 1, 1, 0 };
+                int nFCol = 0;
+                PdfAnnot annot = page.pdf_create_annot(pdf_annot_type.PDF_ANNOT_REDACT);
+                Rect r = quad.Rect;
+                annot.pdf_set_annot_rect(r.ToFzRect());
+
+                if (fill != null)
                 {
-                    arr.pdf_array_push_real(fCol[i]);
+                    fCol = MuPDFAnnot.ColorFromSequence(fill);
+                    nFCol = fCol.Length;
+                    PdfObj arr = page.doc().pdf_new_array(nFCol);
+                    for (int i = 0; i < nFCol; i++)
+                    {
+                        arr.pdf_array_push_real(fCol[i]);
+                    }
+                    annot.pdf_annot_obj().pdf_dict_put(new PdfObj("IC"), arr);
                 }
-                annot.pdf_annot_obj().pdf_dict_put(new PdfObj("IC"), arr);
+                if (!string.IsNullOrEmpty(text))
+                {
+                    annot
+                        .pdf_annot_obj()
+                        .pdf_dict_puts("OverlayText", mupdf.mupdf.pdf_new_text_string(text));
+                    annot.pdf_annot_obj().pdf_dict_put_text_string(new PdfObj("DA"), dataStr);
+                    annot.pdf_annot_obj().pdf_dict_put_int(new PdfObj("Q"), (int)align);
+                }
+
+                annot.pdf_update_annot();
+                Utils.AddAnnotId(annot, "A");
+
+                SWIGTYPE_p_pdf_annot swigAnnot = mupdf.mupdf.ll_pdf_keep_annot(annot.m_internal);
+                annot = new PdfAnnot(swigAnnot);
+                ret = new MuPDFAnnot(annot);
             }
-            if (text != null)
+            finally
             {
-                annot
-                    .pdf_annot_obj()
-                    .pdf_dict_puts("OverlayText", mupdf.mupdf.pdf_new_text_string(text));
-                annot.pdf_annot_obj().pdf_dict_put_text_string(new PdfObj("DA"), dataStr);
-                annot.pdf_annot_obj().pdf_dict_put_int(new PdfObj("Q"), (int)align);
+                if (oldRotation != 0)
+                    SetRotation(oldRotation);
             }
 
-            annot.pdf_update_annot();
-            Utils.AddAnnotId(annot, "A");
+            AnnotPostProcess(this, ret);
 
-            SWIGTYPE_p_pdf_annot swigAnnot = mupdf.mupdf.ll_pdf_keep_annot(annot.m_internal);
-            annot = new PdfAnnot(swigAnnot);
-            return new MuPDFAnnot(annot);
+            if (crossOut)
+            {
+                string apStr = Encoding.UTF8.GetString(ret.GetAP());
+                string[] tabStrArr = apStr.Split("\n");
+
+                tabStrArr = tabStrArr.Take(tabStrArr.Length - 2).ToArray();
+                List<string> nTabs = new List<string>(tabStrArr);
+                tabStrArr = tabStrArr.Skip(1).ToArray();
+                nTabs.Add(tabStrArr[1]);
+                nTabs.Add(tabStrArr[0]);
+                nTabs.Add(tabStrArr[2]);
+                nTabs.Add(tabStrArr[0]);
+                nTabs.Add(tabStrArr[3]);
+                nTabs.Add("S");
+ 
+                ret.SetAP(Encoding.UTF8.GetBytes(string.Join("\n", nTabs)));
+            }
+
+            return ret;
+        }
+
+        /// <summary>
+        /// PDF only: Add a redaction annotation. A redaction annotation identifies content to be removed from the document.
+        /// </summary>
+        /// <param name="quad">specifies the (rectangular) area to be removed which is always equal to the annotation rectangle.</param>
+        /// <param name="text">text to be placed in the rectangle after applying the redaction (and thus removing old content).</param>
+        /// <param name="dataStr"></param>
+        /// <param name="align">the horizontal alignment for the replacing text.</param>
+        /// <param name="fill"> the fill color of the rectangle after applying the redaction.param>
+        /// <param name="textColr"> the fill color of the rectangle after applying the redaction.</param>
+        /// <returns>the created annotation.</returns>
+        public MuPDFAnnot AddRedactAnnot(
+            Rect r,
+            string text = null,
+            string fontName = "Helv",
+            float fontSize = 11.0f,
+            TextAlign align = TextAlign.TEXT_ALIGN_LEFT,
+            float[] fill = null,
+            float[] textColor = null,
+            bool crossOut = true
+        )
+        {
+            string dataStr = "";
+            MuPDFAnnot ret = null;
+            if (!string.IsNullOrEmpty(text))
+            {
+                Utils.CheckColor(fill);
+                Utils.CheckColor(textColor);
+                if (textColor == null)
+                    textColor = new float[3] { 0, 0, 0 };
+                if (textColor.Length > 3)
+                    textColor = new float[3] { textColor[0], textColor[1], textColor[2] };
+                dataStr = $"{textColor[0]} {textColor[1]} {textColor[2]} rg /{fontName} {fontSize} Tf";
+                if (fill == null)
+                    fill = new float[3] { 1, 1, 1 };
+                else
+                {
+                    if (fill.Length > 3)
+                        fill = new float[3] { fill[0], fill[1], fill[2] };
+                }
+            }
+            int oldRotation = AnnotPreProcess(this);
+
+            try
+            {
+                PdfPage page = _pdfPage;
+                PdfAnnot annot = page.pdf_create_annot(pdf_annot_type.PDF_ANNOT_REDACT);
+                annot.pdf_set_annot_rect(r.ToFzRect());
+
+                if (fill != null)
+                {
+                    float[] fCol = MuPDFAnnot.ColorFromSequence(fill);
+                    int nFCol = fCol.Length;
+                    PdfObj arr = page.doc().pdf_new_array(nFCol);
+                    for (int i = 0; i < nFCol; i++)
+                    {
+                        arr.pdf_array_push_real(fCol[i]);
+                    }
+                    annot.pdf_annot_obj().pdf_dict_put(new PdfObj("IC"), arr);
+                }
+                if (!string.IsNullOrEmpty(text))
+                {
+                    annot
+                        .pdf_annot_obj()
+                        .pdf_dict_puts("OverlayText", mupdf.mupdf.pdf_new_text_string(text));
+                    annot.pdf_annot_obj().pdf_dict_put_text_string(new PdfObj("DA"), dataStr);
+                    annot.pdf_annot_obj().pdf_dict_put_int(new PdfObj("Q"), (int)align);
+                }
+
+                annot.pdf_update_annot();
+                Utils.AddAnnotId(annot, "A");
+
+                SWIGTYPE_p_pdf_annot swigAnnot = mupdf.mupdf.ll_pdf_keep_annot(annot.m_internal);
+                annot = new PdfAnnot(swigAnnot);
+                ret = new MuPDFAnnot(annot);
+            }
+            finally
+            {
+                if (oldRotation != 0)
+                    SetRotation(oldRotation);
+            }
+
+            AnnotPostProcess(this, ret);
+
+            if (crossOut)
+            {
+                string apStr = Encoding.UTF8.GetString(ret.GetAP());
+                string[] tabStrArr = apStr.Split("\n");
+
+                tabStrArr = tabStrArr.Take(tabStrArr.Length - 2).ToArray();
+                List<string> nTabs = new List<string>(tabStrArr);
+                tabStrArr = tabStrArr.Skip(1).ToArray();
+                nTabs.Add(tabStrArr[1]);
+                nTabs.Add(tabStrArr[0]);
+                nTabs.Add(tabStrArr[2]);
+                nTabs.Add(tabStrArr[0]);
+                nTabs.Add(tabStrArr[3]);
+                nTabs.Add("S");
+
+                ret.SetAP(Encoding.UTF8.GetBytes(string.Join("\n", nTabs)));
+            }
+
+            return ret;
         }
 
         private MuPDFAnnot AddSquareOrCircle(Rect rect, PdfAnnotType annotType)
@@ -1404,8 +1554,7 @@ namespace MuPDF.NET
                     new List<PdfAnnotType>() { PdfAnnotType.PDF_ANNOT_REDACT }
                 )
             )
-                redactAnnots.Add(annot.GetRedactVaues());
-            Console.WriteLine(redactAnnots.Count);
+                redactAnnots.Add(annot.GetRedactValues());
             if (redactAnnots.Count == 0)
                 return false;
             int res = _ApplyRedactions(text, images, graphics);
@@ -1417,7 +1566,7 @@ namespace MuPDF.NET
             {
                 Rect annotRect = redact.Rect;
                 float[] fill = redact.Fill;
-                if (fill != null)
+                if (fill != null && fill.Length > 0)
                 {
                     shape.DrawRect(annotRect);
                     shape.Finish(fill: fill, color: fill);
@@ -2372,7 +2521,6 @@ namespace MuPDF.NET
 
             Dictionary<int, string> propsDict = new Dictionary<int, string>();
             List<(string, int)> props = GetResourceProperties();
-            Console.WriteLine(props == null);
             foreach ((string p, int x) in props)
             {
                 propsDict[x] = p;
@@ -2754,7 +2902,7 @@ namespace MuPDF.NET
             if (oldRotation != 0)
                 SetRotation(0);
 
-            FzPage page = new FzPage(_pdfPage);
+            FzPage page = _nativePage;
             bool clips = extended ? true : false;
             FzRect prect = page.fz_bound_page();
 
@@ -2764,7 +2912,7 @@ namespace MuPDF.NET
             dev.Ptm = new FzMatrix(1, 0, 0, -1, 0, prect.y1);
             page.fz_run_page(dev, new FzMatrix(), new FzCookie());
             dev.fz_close_device();
-
+            
             if (oldRotation != 0)
                 SetRotation(oldRotation);
             return rc;
@@ -3635,25 +3783,18 @@ namespace MuPDF.NET
 
         /// <summary>
         /// Retrieves the content of a page in a variety of formats. This is a wrapper for multiple TextPage methods by choosing the output option opt as follows:
-        /// • “text” – TextPage.extractTEXT(), default
-        /// </br>
-        /// • “blocks” – TextPage.extractBLOCKS()
-        /// </br>
-        /// • “words” – TextPage.extractWORDS()
-        /// </br>
-        /// • “html” – TextPage.extractHTML()
-        /// </br>
-        /// • “xhtml” – TextPage.extractXHTML()
-        /// </br>
-        /// • “xml” – TextPage.extractXML()
-        /// </br>
-        /// • “dict” – TextPage.extractDICT()
-        /// </br>
-        /// • “json” – TextPage.extractJSON()
-        /// </br>
-        /// • “rawdict” – TextPage.extractRAWDICT()
-        /// </br>
-        /// • “rawjson” – TextPage.extractRAWJSON()
+        /// <list type="bullet">
+        /// <item><description>"text" – TextPage.extractTEXT(), default</description></item>
+        /// <item><description>"blocks" – TextPage.extractBLOCKS()</description></item>
+        /// <item><description>"words" – TextPage.extractWORDS()</description></item>
+        /// <item><description>"html" – TextPage.extractHTML()</description></item>
+        /// <item><description>"xhtml" – TextPage.extractXHTML()</description></item>
+        /// <item><description>"xml" – TextPage.extractXML()</description></item>
+        /// <item><description>"dict" – TextPage.extractDICT()</description></item>
+        /// <item><description>"json" – TextPage.extractJSON()</description></item>
+        /// <item><description>"rawdict" – TextPage.extractRAWDICT()</description></item>
+        /// <item><description>"rawjson" – TextPage.extractRAWJSON()</description></item>
+        /// </list>
         /// </summary>
         /// <param name="option">A string indicating the requested format, one of the above. A mixture of upper and lower case is supported.</param>
         /// <param name="clip">restrict extracted text to this rectangle. If None, the full page is taken. Has no effect for options “html”, “xhtml” and “xml”. </param>
@@ -4336,6 +4477,7 @@ namespace MuPDF.NET
         public FzMatrix Rot { get; set; }
 
         public FzPoint LastPoint { get; set; }
+        public FzPoint FirstPoint { get; set; }
         public FzRect PathRect { get; set; }
         public float PathFactor { get; set; }
         public int LineCount { get; set; }
@@ -4384,6 +4526,7 @@ namespace MuPDF.NET
             Ctm = new FzMatrix();
             Rot = new FzMatrix();
             LastPoint = new FzPoint();
+            FirstPoint = new FzPoint();
             PathRect = new FzRect();
             PathFactor = 0;
             LineCount = 0;
@@ -4495,7 +4638,6 @@ namespace MuPDF.NET
                 LineartPath(ctx, path);
                 if (PathDict == null)
                     return;
-
                 PathDict.Type = "f";
                 PathDict.EvenOdd = bEvenOdoo;
                 PathDict.FillOpacity = alpha;
@@ -4512,7 +4654,7 @@ namespace MuPDF.NET
             }
             catch (Exception e)
             {
-                throw e;
+                throw;
             }
         }
 
@@ -4766,7 +4908,7 @@ namespace MuPDF.NET
             }
             catch (Exception e)
             {
-                throw e;
+                throw;
             }
         }
 
@@ -4802,33 +4944,29 @@ namespace MuPDF.NET
             }
             List<Item> prevItems = prev.Items;
             List<Item> thisItems = PathDict.Items;
-            if (!Enumerable.SequenceEqual(prevItems, thisItems))
+
+            if (prevItems.Count != thisItems.Count)
             {
                 Append();
                 return;
             }
-
-            int rc;
-            try
-            {
-                prev = new PathInfo(PathDict);
-                rc = 0;
-            }
-            catch (Exception)
-            {
-                rc = -1;
-            }
-
-            if (rc == 0)
-            {
-                prev.Type = "fs";
-                PathDict = null;
-            }
             else
             {
-                Console.WriteLine("could not merge stroke and fill path");
-                Append();
+                for (int i = 0; i < prevItems.Count; i ++)
+                {
+                    if (!prevItems[i].Equal(thisItems[i]))
+                    {
+                        Append();
+                        return;
+                    }
+                }
             }
+
+            prev = new PathInfo(PathDict);
+            prev.Type = "fs";
+            Out[Out.Count - 1] = prev;
+
+            PathDict = null;
         }
     }
 

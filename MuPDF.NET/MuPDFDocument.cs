@@ -13,13 +13,17 @@ namespace MuPDF.NET
                 Utils.LoadEmbeddedDll();
         }
 
+        /// <summary>
+        /// False if document is still open. If closed, most other attributes and methods will have been deleted / disabled.
+        /// </summary>
         public bool IsClosed { get; set; }
 
+        /// <summary>
+        /// True if this is a PDF document and contains unsaved changes, else False.
+        /// </summary>
         public bool IsEncrypted { get; set; }
 
-        public bool Is_Encrypted { get; set; }
-
-        public int GraftID { get; set; }
+        internal int GraftID { get; set; }
 
         public Dictionary<string, string> MetaData { get; set; }
 
@@ -35,6 +39,9 @@ namespace MuPDF.NET
 
         public Dictionary<int, MuPDFPage> PageRefs { get; set; }
 
+        /// <summary>
+        /// Contains the filename or filetype value with which Document was created.
+        /// </summary>
         public string Name { get; set; }
 
         public List<byte> Stream { get; set; }
@@ -43,6 +50,11 @@ namespace MuPDF.NET
 
         private FzDocument _nativeDocument;
 
+        /// <summary>
+        /// Indicates whether the document is password-protected against access.
+        /// <br/>
+        /// This indicator remains unchanged – even after the document has been authenticated. Precludes incremental saves if true.
+        /// </summary>
         public bool NeedsPass
         {
             get
@@ -55,7 +67,14 @@ namespace MuPDF.NET
             }
         }
 
-        public Outline Outline;
+        /// <summary>
+        /// True if this is a PDF document, else False.
+        /// </summary>
+        public Outline Outline { get; set; }
+
+        /// <summary>
+        /// True if this is a PDF document, else False.
+        /// </summary>
         public bool IsPDF
         {
             get
@@ -68,9 +87,26 @@ namespace MuPDF.NET
             set { _isPDF = value; }
         }
 
-        public bool IsOwn { get; set; }
+        public bool ThisOwn { get; set; }
 
-        public int Len
+        /// <summary>
+        /// An integer counting the number of versions present in the document. Zero if not a PDF, otherwise the number of incremental saves plus one.
+        /// </summary>
+        public int VersionCount
+        {
+            get
+            {
+                PdfDocument pdf = MuPDFDocument.AsPdfDocument(this);
+                if (pdf.m_internal != null)
+                    pdf.pdf_count_versions();
+                return 0;
+            }
+        }
+
+        /// <summary>
+        /// Number of pages.
+        /// </summary>
+        public int PageCount
         {
             get { return GetPageCount(); }
         }
@@ -87,6 +123,11 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// Contains the number of chapters in the document. Always at least 1.
+        /// <br/>
+        /// Relevant only for document types with chapter support (EPUB currently). Other documents will return 1.
+        /// </summary>
         public int ChapterCount
         {
             get
@@ -97,6 +138,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// True if PDF is in linearized format. False for non-PDF documents.
+        /// </summary>
         public bool IsFastWebaccess
         {
             get
@@ -108,6 +152,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// False if this is not a PDF or has no form fields, otherwise the number of root form fields (fields with no ancestors).
+        /// </summary>
         public int IsFormPDF // return -1 or fields count
         {
             get
@@ -136,6 +183,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// True if document has a variable page layout (like e-books or HTML).
+        /// </summary>
         public bool IsReflowable
         {
             get
@@ -146,6 +196,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// True if PDF has been repaired during open (because of major structure issues). Always False for non-PDF documents.
+        /// </summary>
         public bool IsRepaired
         {
             get
@@ -173,6 +226,11 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// Contains (chapter, pno) of the document’s last page.
+        /// <br/>
+        /// Relevant only for document types with chapter support (EPUB currently). Other documents will return (0, page_count - 1) and (0, -1) if it has no pages.
+        /// </summary>
         public (int, int) LastLocation
         {
             get
@@ -184,6 +242,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// A string containing the /PageLayout value. If not specified, the default “SinglePage” is returned. If not a PDF, None is returned.
+        /// </summary>
         public string PageLayout
         {
             get
@@ -200,6 +261,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// A string containing the /PageMode value. If not specified, the default “UseNone” is returned. If not a PDF, None is returned.
+        /// </summary>
         public string PageMode
         {
             get
@@ -216,6 +280,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// A dictionary indicating the /MarkInfo value. If not specified, the empty dictionary is returned. If not a PDF, None is returned.
+        /// </summary>
         public Dictionary<string, bool> MarkInfo
         {
             get
@@ -253,6 +320,61 @@ namespace MuPDF.NET
                         valid.Add(kv[0], true);
                 }
                 return valid;
+            }
+        }
+
+        /// <summary>
+        /// Get list of field font resource names.
+        /// </summary>
+        public List<string> FormFonts
+        {
+            get
+            {
+                PdfDocument pdf = MuPDFDocument.AsPdfDocument(this);
+                if (pdf == null)
+                    return null;
+                PdfObj fonts = Utils.pdf_dict_getl(
+                    pdf.pdf_trailer(),
+                    new string[] { "Root", "AcroForm", "DR", "Font" });
+                List<string> ret = new List<string>();
+                if (fonts.m_internal != null && fonts.pdf_is_dict() != 0)
+                {
+                    int n = fonts.pdf_dict_len();
+                    for (int i = 0; i < n; i ++)
+                    {
+                        PdfObj f = fonts.pdf_dict_get_key(i);
+                        ret.Add(Utils.UnicodeFromStr(f.pdf_to_name()));
+                    }
+                }
+                return ret;
+            }
+        }
+
+        /// <summary>
+        /// Document permissions.
+        /// </summary>
+        public uint Permission
+        {
+            get
+            {
+                if (IsEncrypted)
+                    return 0;
+                FzDocument doc = _nativeDocument;
+                PdfDocument pdf = doc.pdf_document_from_fz_document();
+
+                if (pdf.m_internal != null)
+                    return (uint)pdf.pdf_document_permissions();
+
+                uint perm = 0xFFFFFFFC;
+                if (doc.fz_has_permission(fz_permission.FZ_PERMISSION_PRINT) == 0)
+                    perm = perm ^ (uint)mupdf.mupdf.PDF_PERM_PRINT;
+                if (doc.fz_has_permission(fz_permission.FZ_PERMISSION_EDIT) == 0)
+                    perm = perm ^ (uint)mupdf.mupdf.PDF_PERM_MODIFY;
+                if (doc.fz_has_permission(fz_permission.FZ_PERMISSION_COPY) == 0)
+                    perm = perm ^ (uint)mupdf.mupdf.PDF_PERM_COPY;
+                if (doc.fz_has_permission(fz_permission.FZ_PERMISSION_ANNOTATE) == 0)
+                    perm = perm ^ (uint)mupdf.mupdf.PDF_PERM_ANNOTATE;
+                return perm;
             }
         }
 
@@ -320,7 +442,7 @@ namespace MuPDF.NET
 
                 float w = width;
                 float h = height;
-                FzRect r = rect == null ? new FzRect(FzRect.Fixed.Fixed_EMPTY) : rect.ToFzRect();
+                FzRect r = (rect == null) ? new FzRect(FzRect.Fixed.Fixed_INFINITE) : rect.ToFzRect();
                 if (r.fz_is_infinite_rect() != 0)
                 {
                     w = r.x1 - r.x0;
@@ -427,15 +549,14 @@ namespace MuPDF.NET
                     doc.fz_layout_document(400, 600, 11);
                 _nativeDocument = doc;
 
-                IsOwn = true;
+                ThisOwn = true;
 
-                if (IsOwn)
+                if (ThisOwn)
                 {
                     GraftID = Utils.GenID();
                     if (NeedsPass)
                     {
                         IsEncrypted = true;
-                        Is_Encrypted = true;
                     }
                     else
                         InitDocument();
@@ -536,8 +657,15 @@ namespace MuPDF.NET
             return ret;
         }
 
+        /// <summary>
+        /// Number of pages.
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
         public int GetPageCount()
         {
+            if (IsClosed)
+                throw new Exception("document closed");
             return _nativeDocument.fz_count_pages();
         }
 
@@ -563,7 +691,7 @@ namespace MuPDF.NET
 
         public void InitDocument()
         {
-            if (Is_Encrypted)
+            if (IsEncrypted)
                 throw new Exception("cannot initialize - document still encrypted");
 
             Outline = LoadOutline();
@@ -607,7 +735,7 @@ namespace MuPDF.NET
         {
             if (IsClosed)
                 throw new Exception("document closed");
-            int pageCount = Len;
+            int pageCount = PageCount;
             int n = pno;
 
             while (n < 0)
@@ -843,7 +971,7 @@ namespace MuPDF.NET
             if (IsClosed || IsEncrypted)
                 throw new Exception("document is closed or encrypted");
 
-            if (Len < 1)
+            if (PageCount < 1)
                 throw new Exception("cannot save with zero pages");
             if ((userPW != null && userPW.Length > 40) || (ownerPW != null && ownerPW.Length > 40))
                 throw new Exception("password length must not exceed 40");
@@ -926,8 +1054,8 @@ namespace MuPDF.NET
             get
             {
                 if (i == -1)
-                    i = Len - 1;
-                if (i < 0 || i > Len)
+                    i = PageCount - 1;
+                if (i < 0 || i > PageCount)
                 {
                     throw new Exception($"Page {i} not in document");
                 }
@@ -945,7 +1073,7 @@ namespace MuPDF.NET
         /// <exception cref="Exception"></exception>
         public MuPDFPage NewPage(int pno = -1, float width = 595, float height = 842)
         {
-            if (IsClosed || Is_Encrypted)
+            if (IsClosed || IsEncrypted)
                 throw new Exception("document closed or encrypted");
             else
             {
@@ -968,7 +1096,7 @@ namespace MuPDF.NET
 
         public List<Entry> GetPageFonts(int pno, bool full = false)
         {
-            if (IsClosed || Is_Encrypted)
+            if (IsClosed || IsEncrypted)
                 throw new Exception("document closed or encrypted");
             if (!IsPDF)
                 return null;
@@ -1243,7 +1371,6 @@ namespace MuPDF.NET
                 throw new Exception("document closed");
             PdfDocument pdf = AsPdfDocument(this);
             int xrefLen = pdf.pdf_xref_len();
-            Console.WriteLine(xrefLen);
             PdfObj obj = null;
 
             if (!Utils.INRANGE(xref, 1, xrefLen - 1) && xref != -1)
@@ -1541,7 +1668,7 @@ namespace MuPDF.NET
         public Dictionary<string, dynamic> ResolveNames()
         {
             Dictionary<int, int> page_refs = new Dictionary<int, int>();
-            for (int i = 0; i < Len; i++)
+            for (int i = 0; i < PageCount; i++)
                 page_refs.Add(GetPageXref(i), i);
 
             PdfDocument pdf = MuPDFDocument.AsPdfDocument(this);
@@ -1679,7 +1806,7 @@ namespace MuPDF.NET
             int sa = startAt;
             if (sa < 0)
                 sa = GetPageCount();
-            if (docSrc.Len > showProgress && showProgress > 0)
+            if (docSrc.PageCount > showProgress && showProgress > 0)
             {
                 string inname = Path.GetFileName(docSrc.Name);
                 if (inname == null)
@@ -1764,6 +1891,20 @@ namespace MuPDF.NET
                 throw new Exception("document closed or encrypted");
             PdfDocument pdf = MuPDFDocument.AsPdfDocument(_nativeDocument);
             pdf.pdf_enable_journal();
+        }
+
+        /// <summary>
+        /// Move forward in the journal.
+        /// </summary>
+        /// <returns>true if success</returns>
+        /// <exception cref="Exception"></exception>
+        public bool JournalRedo()
+        {
+            if (IsClosed || IsEncrypted)
+                throw new Exception("document closed or encrypted");
+            PdfDocument pdf = MuPDFDocument.AsPdfDocument(this);
+            pdf.pdf_redo();
+            return true;
         }
 
         /// <summary>
@@ -2706,7 +2847,7 @@ namespace MuPDF.NET
         {
             if (IsClosed)
                 throw new Exception("document closed");
-            int pageCount = Len;
+            int pageCount = PageCount;
             if (!(pno < pageCount) || !Utils.INRANGE(to, -1, pageCount - 1))
                 throw new Exception("bad page number(s)");
 
@@ -2747,7 +2888,7 @@ namespace MuPDF.NET
             if (IsClosed)
                 throw new Exception("document is closed");
 
-            int pageCount = Len;
+            int pageCount = PageCount;
             while (pno < 0)
                 pno += pageCount;
 
@@ -2781,7 +2922,7 @@ namespace MuPDF.NET
                 throw new Exception("is no PDF");
             if (IsClosed)
                 throw new Exception("document is closed");
-            int pageCount = Len;
+            int pageCount = PageCount;
             List<int> numbers = new List<int>();
 
             while (from < 0)
@@ -2831,7 +2972,7 @@ namespace MuPDF.NET
             }
 
             numbers.Sort();
-            if (numbers[0] < 0 || numbers[numbers.Count - 1] >= Len)
+            if (numbers[0] < 0 || numbers[numbers.Count - 1] >= PageCount)
                 throw new ArgumentException("bad page number(s)");
             List<Toc> toc = GetToc();
             List<int> olXrefs = GetOutlineXrefs();
@@ -2860,7 +3001,7 @@ namespace MuPDF.NET
             }
 
             numbers.Sort();
-            if (numbers[0] < 0 || numbers[numbers.Count - 1] >= Len)
+            if (numbers[0] < 0 || numbers[numbers.Count - 1] >= PageCount)
                 throw new ArgumentException("bad page number(s)");
             List<Toc> toc = GetToc();
             List<int> olXrefs = GetOutlineXrefs();
@@ -3578,7 +3719,7 @@ namespace MuPDF.NET
                 throw new Exception("document closed or encrypted");
             if (!IsPDF)
                 throw new Exception("is no PDF");
-            if (list.Count == 0 || list.Min() < 0 || list.Max() > Len)
+            if (list.Count == 0 || list.Min() < 0 || list.Max() > PageCount)
                 throw new Exception("bad page number(s)");
 
             PdfDocument pdf = AsPdfDocument(this);
@@ -4269,7 +4410,7 @@ namespace MuPDF.NET
                 throw new Exception("document closed");
             if (!IsPDF)
                 throw new Exception("is no pdf");
-            for (int i = 0; i < Len; i++)
+            for (int i = 0; i < PageCount; i++)
             {
                 foreach (AnnotXref item in PageAnnotXrefs(i))
                 {
@@ -4294,7 +4435,7 @@ namespace MuPDF.NET
                 throw new Exception("document closed");
             if (!IsPDF)
                 throw new Exception("is no pdf");
-            for (int i = 0; i < Len; i++)
+            for (int i = 0; i < PageCount; i++)
             {
                 foreach (AnnotXref item in PageAnnotXrefs(i))
                 {
@@ -4392,7 +4533,7 @@ namespace MuPDF.NET
             if (metadata)
                 SetMetadata(new Dictionary<string, string>()); // empty metadata
 
-            for (int i = 0; i < Len; i++)
+            for (int i = 0; i < PageCount; i++)
             {
                 MuPDFPage page = this[i];
                 if (resetFields)
@@ -4690,7 +4831,7 @@ namespace MuPDF.NET
                 return DeleteToc().Count;
 
             int n = tocs.Count;
-            int pageCount = Len;
+            int pageCount = PageCount;
             Toc t0 = tocs[0];
             if (t0.Level != 1)
                 throw new Exception("hierarchy level of item 0 must be 1");
@@ -4740,7 +4881,7 @@ namespace MuPDF.NET
                 Toc o = tocs[i];
                 int lvl = o.Level;
                 string title = Utils.GetPdfString(o.Title);
-                int pno = Math.Min(Len - 1, Math.Max(0, o.Page - 1));
+                int pno = Math.Min(PageCount - 1, Math.Max(0, o.Page - 1));
                 int pageXref = GetPageXref(pno);
                 float pageHeight = PageCropBox(pno).Height;
                 Point top = new Point(72, pageHeight - 36);
@@ -5012,14 +5153,14 @@ namespace MuPDF.NET
         {
             mupdf.mupdf.pdf_subset_fonts2(
                 AsPdfDocument(this),
-                new vectori(Enumerable.Range(0, Len))
+                new vectori(Enumerable.Range(0, PageCount))
             );
             return;
         }
 
         public bool Contains(int page)
         {
-            if (page < Len)
+            if (page < PageCount)
                 return true;
             return false;
         }
@@ -5151,6 +5292,68 @@ namespace MuPDF.NET
 
             xref = indOcg.pdf_to_num();
             return xref;
+        }
+
+        /// <summary>
+        /// Check whether incremental saves are possible.
+        /// </summary>
+        /// <returns></returns>
+        public bool CanSaveIncrementally()
+        {
+            PdfDocument pdf = MuPDFDocument.AsPdfDocument(this);
+            if (pdf.m_internal != null)
+                return false;
+            return pdf.pdf_can_be_saved_incrementally() != 0;
+        }
+
+        /// <summary>
+        /// Add a new OC layer.
+        /// </summary>
+        /// <param name="name">arbitrary name.</param>
+        /// <param name="creator">(optional) creating software.</param>
+        /// <param name="on">a sequence of OCG</param>
+        public void AddLayer(string name, string creator = null, OCLayerConfig on = null)
+        {
+            PdfDocument pdf = MuPDFDocument.AsPdfDocument(this);
+            Utils.AddLayerConfig(pdf, name, creator, on);
+            mupdf.mupdf.ll_pdf_read_ocg(pdf.m_internal);
+        }
+
+        /// <summary>
+        /// Decrypt document.
+        /// </summary>
+        /// <param name="password"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        public int Authenticate(string password)
+        {
+            if (IsClosed)
+                throw new Exception("document closed");
+            int val = _nativeDocument.fz_authenticate_password(password);
+            if (val != 0)
+            {
+                IsEncrypted = false;
+                InitDocument();
+                ThisOwn = true;
+            }
+            return val;
+        }
+
+        /// <summary>
+        /// Get (chapter, page) of previous page.
+        /// </summary>
+        /// <param name="pno">current page number</param>
+        /// <param name="chapter">chapter number</param>
+        /// <returns>The tuple of the preceding page.</returns>
+        public (int, int) PrevLocation(int pno, int chapter = 0)
+        {
+            if (IsClosed || IsEncrypted)
+                throw new Exception("document closed or encrypted");
+            if (pno == 0 && chapter == 0)
+                return (-1, -1);
+            FzLocation loc = mupdf.mupdf.fz_make_location(chapter, pno);
+            FzLocation prevLoc = _nativeDocument.fz_previous_page(loc);
+            return (prevLoc.chapter, prevLoc.page);
         }
     }
 }
