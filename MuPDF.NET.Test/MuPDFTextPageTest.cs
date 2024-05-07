@@ -107,8 +107,6 @@ namespace MuPDF.NET.Test
 
             MuPDFTextPage tpage = page.GetTextPage();
 
-            Console.WriteLine(tpage.ExtractText());
-
             List<Quad> matches = MuPDFTextPage.Search(tpage, "pixmap");
 
             if (matches.Count > 0)

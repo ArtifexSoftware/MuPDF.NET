@@ -101,8 +101,6 @@ namespace MuPDF.NET.Test
             MuPDFDocument doc = new MuPDFDocument();
             byte[] buffer = Encoding.UTF8.GetBytes("123456678790qwexcvnmhofbnmfsdg4589754uiofjkb-");
             doc.AddEmbfile("file1", buffer, "testfile.txt", "testfile-u.txt", "Description of some sort");
-
-            Console.WriteLine(doc.GetEmbfileCount());
         }
 
         [Test]
