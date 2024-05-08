@@ -289,29 +289,39 @@ namespace MuPDF.NET
         {
             get
             {
-                PdfAnnot annot = _nativeAnnotion;
-                pdf_annot_type type = annot.pdf_annot_type();
-
-                if (type != pdf_annot_type.PDF_ANNOT_WIDGET)
-                    annot = annot.pdf_next_annot();
-                else
-                    annot = annot.pdf_next_widget();
-
-                MuPDFAnnot val = (annot == null ? null : new MuPDFAnnot(annot));
-                if (val == null)
+                try
                 {
-                    return null;
-                }
-                val.IsOwner = true;
-                val.Parent.AnnotRefs[val.GetHashCode()] = val;
+                    PdfAnnot annot = _nativeAnnotion;
+                    pdf_annot_type type = annot.pdf_annot_type();
 
-                if (val.Type.Item1 == PdfAnnotType.PDF_ANNOT_WIDGET)
-                {
-                    Widget widget = new Widget(Parent);
-                    Utils.FillWidget(val, widget);
-                    return widget;
+                    if (type != pdf_annot_type.PDF_ANNOT_WIDGET)
+                        annot = annot.pdf_next_annot();
+                    else
+                        annot = annot.pdf_next_widget();
+
+                    MuPDFAnnot val = (annot == null ? null : new MuPDFAnnot(annot));
+                    if (val == null)
+                    {
+                        return null;
+                    }
+                    val.IsOwner = true;
+                    if (val.GetParent() == null)
+                        throw new Exception("null parent");
+                    
+                    val.Parent.AnnotRefs[val.GetHashCode()] = val;
+
+                    if (val.Type.Item1 == PdfAnnotType.PDF_ANNOT_WIDGET)
+                    {
+                        Widget widget = new Widget(Parent);
+                        Utils.FillWidget(val, widget);
+                        return widget;
+                    }
+                    return val;
                 }
-                return val;
+                catch(Exception e)
+                {
+                    throw;
+                }
             }
         }
 
@@ -553,7 +563,6 @@ namespace MuPDF.NET
         public MuPDFAnnot(PdfAnnot annotion)
         {
             _nativeAnnotion = new PdfAnnot(annotion);
-
             IsOwner = true;
         }
 
@@ -1643,6 +1652,22 @@ namespace MuPDF.NET
             {
                 Console.WriteLine(string.Format("cannot set rect: {0}", e));
             }
+        }
+
+        public MuPDFPage GetParent()
+        {
+            MuPDFPage ret = null;
+            if (Parent != null)
+                ret = Parent;
+            else
+            {
+                PdfPage page = _nativeAnnotion.pdf_annot_page();
+                MuPDFDocument doc = (page.m_internal == null) ? null : new MuPDFDocument(page.doc());
+                ret = new MuPDFPage(page, doc);
+
+                Parent = ret;
+            }
+            return ret;
         }
 
         public void SetRotation(int rotate = 0)
