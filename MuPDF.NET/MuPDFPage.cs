@@ -1488,7 +1488,7 @@ namespace MuPDF.NET
             opts.black_boxes = 0;
             opts.image_method = images;
             opts.line_art = graphics;
-            // opts.m // issue
+            opts.text = text;
             int success = page.doc().pdf_redact_page(page, opts);
 
             return success;
