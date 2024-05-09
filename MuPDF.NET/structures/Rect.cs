@@ -399,7 +399,10 @@ namespace MuPDF.NET
 
         public override bool Equals(object obj)
         {
-            return (X0 == ((Rect)obj).X0 && Y0 == ((Rect)obj).Y0 && X1 == ((Rect)obj).X1 && Y1 == ((Rect)obj).Y1);
+            if (obj is Rect)
+                return (X0 == ((Rect)obj).X0 && Y0 == ((Rect)obj).Y0 && X1 == ((Rect)obj).X1 && Y1 == ((Rect)obj).Y1);
+            else
+                return false;
         }
     }
 
