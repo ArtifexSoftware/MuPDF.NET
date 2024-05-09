@@ -457,8 +457,9 @@ namespace MuPDF.NET
                     Marshal.Copy(stream, 0, dataPtr, stream.Length);
                     SWIGTYPE_p_unsigned_char swigData = new SWIGTYPE_p_unsigned_char(dataPtr, true);
                     data = mupdf.mupdf.fz_open_memory(swigData, (uint)stream.Length);
-
-                    //Marshal.FreeHGlobal(dataPtr);
+                    if (string.IsNullOrEmpty(filename) || string.IsNullOrEmpty(filetype))
+                        filename = "pdf";
+                    
                     string magic = filename;
                     if (magic == null)
                         magic = filetype;

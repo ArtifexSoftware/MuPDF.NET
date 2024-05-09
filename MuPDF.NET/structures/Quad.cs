@@ -254,7 +254,10 @@ namespace MuPDF.NET
 
         public override bool Equals(object obj)
         {
-            return Rect.Equals(((Quad)obj).Rect);
+            if (obj is Quad)
+                return Rect.Equals(((Quad)obj).Rect);
+            else
+                return false;
         }
     }
 }

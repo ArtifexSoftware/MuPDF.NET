@@ -3946,9 +3946,14 @@ namespace MuPDF.NET
                 res = new FzBuffer(1024);
                 for (int i = 0; i < contents.pdf_array_len(); i++)
                 {
+                    if (i > 0)
+                        res.fz_append_byte(32);
                     PdfObj obj = contents.pdf_array_get(i);
-                    FzBuffer nres = obj.pdf_load_stream();
-                    res.fz_append_buffer(nres);
+                    if (obj.pdf_is_stream() != 0)
+                    {
+                        FzBuffer nres = obj.pdf_load_stream();
+                        res.fz_append_buffer(nres);
+                    }
                 }
             }
             else if (contents.m_internal != null)
@@ -6091,29 +6096,36 @@ namespace MuPDF.NET
 
         internal static void AddLayerConfig(PdfDocument pdf, string name, string creator, OCLayerConfig on)
         {
-            PdfObj ocp = Utils.EnsureOCProperties(pdf);
-            PdfObj configs = ocp.pdf_dict_get(new PdfObj("Configs"));
-            if (configs.pdf_is_array() == 0)
-                configs = ocp.pdf_dict_put_array(new PdfObj("Configs"), 1);
-            PdfObj d = pdf.pdf_new_dict(5);
-            d.pdf_dict_put_text_string(new PdfObj("Name"), name);
-            if (!string.IsNullOrEmpty(creator))
-                d.pdf_dict_put_text_string(new PdfObj("Creator"), creator);
-            d.pdf_dict_put(new PdfObj("BaseState"), new PdfObj("OFF"));
-            PdfObj onarray = d.pdf_dict_put_array(new PdfObj("ON"), 5);
-            if (on != null)
+            try
             {
+                PdfObj ocp = Utils.EnsureOCProperties(pdf);
+                PdfObj configs = ocp.pdf_dict_get(new PdfObj("Configs"));
+                if (configs.pdf_is_array() == 0)
+                    configs = ocp.pdf_dict_put_array(new PdfObj("Configs"), 1);
+                PdfObj d = pdf.pdf_new_dict(5);
+                d.pdf_dict_put_text_string(new PdfObj("Name"), name);
+                if (!string.IsNullOrEmpty(creator))
+                    d.pdf_dict_put_text_string(new PdfObj("Creator"), creator);
+                d.pdf_dict_put(new PdfObj("BaseState"), new PdfObj("OFF"));
+                PdfObj onarray = d.pdf_dict_put_array(new PdfObj("ON"), 5);
+                if (on == null)
+                {
 
+                }
+                else
+                {
+                    PdfObj ocgs = ocp.pdf_dict_get(new PdfObj("OCGs"));
+                    int xref = on.Number;
+                    PdfObj ind = pdf.pdf_new_indirect(xref, 0);
+                    if (ocgs.pdf_array_contains(ind) != 0)
+                        onarray.pdf_array_push(ind);
+                }
+                configs.pdf_array_push(d);
             }
-            else
+            catch (Exception e)
             {
-                PdfObj ocgs = ocp.pdf_dict_get(new PdfObj("OCGs"));
-                int xref = on.Number;
-                PdfObj ind = pdf.pdf_new_indirect(xref, 0);
-                if (ocgs.pdf_array_contains(ind) != 0)
-                    onarray.pdf_array_push(ind);
+                throw;
             }
-            configs.pdf_array_push(d);
         }
     }
 }

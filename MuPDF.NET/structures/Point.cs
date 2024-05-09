@@ -167,7 +167,10 @@ namespace MuPDF.NET
 
         public override bool Equals(object obj)
         {
-            return X == ((Point)obj).X && Y == ((Point)obj).Y;
+            if (obj is Point)
+                return X == ((Point)obj).X && Y == ((Point)obj).Y;
+            else
+                return false;
         }
     }
 }
