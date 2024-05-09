@@ -3946,9 +3946,14 @@ namespace MuPDF.NET
                 res = new FzBuffer(1024);
                 for (int i = 0; i < contents.pdf_array_len(); i++)
                 {
+                    if (i > 0)
+                        res.fz_append_byte(32);
                     PdfObj obj = contents.pdf_array_get(i);
-                    FzBuffer nres = obj.pdf_load_stream();
-                    res.fz_append_buffer(nres);
+                    if (obj.pdf_is_stream() != 0)
+                    {
+                        FzBuffer nres = obj.pdf_load_stream();
+                        res.fz_append_buffer(nres);
+                    }
                 }
             }
             else if (contents.m_internal != null)
