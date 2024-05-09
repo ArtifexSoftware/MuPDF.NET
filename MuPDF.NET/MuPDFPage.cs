@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using mupdf;
@@ -4109,6 +4110,83 @@ namespace MuPDF.NET
         public Shape NewShape()
         {
             return new Shape(this);
+        }
+
+        /// <summary>
+        /// Set page rotation to 0 while maintaining visual appearance.
+        /// </summary>
+        /// <returns>return Matrix</returns>
+        public Matrix RemoveRotation()
+        {
+            int rot = Rotation;
+            if (rot == 0)
+                return new IdentityMatrix();
+
+            Rect mb = MediaBox;
+            Matrix mat0 = null;
+            if (rot == 90)
+                mat0 = new Matrix(1, 0, 0, 1, mb.Y1 - mb.X1 - mb.X0 - mb.Y0, 0);
+            else if (rot == 270)
+                mat0 = new Matrix(1, 0, 0, 1, 0, mb.Y1 - mb.X1 - mb.X0 - mb.Y0);
+            else
+                mat0 = new Matrix(1, 0, 0, 1, -2 * mb.X0, -2 * mb.Y0);
+
+            Matrix mat = mat0 * DerotationMatrix;
+            string cmd = $"{mat.A} {mat.B} {mat.C} {mat.D} {mat.E} {mat.F} cm ";
+            Utils.InsertContents(this, Encoding.UTF8.GetBytes(cmd), 0);
+
+            if (rot == 90 || rot == 270)
+            {
+                float x0 = mb.X0;
+                float y0 = mb.Y0;
+                float x1 = mb.X1;
+                float y1 = mb.Y1;
+                mb.X0 = y0;
+                mb.Y0 = x0;
+                mb.X1 = y1;
+                mb.Y1 = x1;
+                SetMediaBox(mb);
+            }
+            SetRotation(0);
+            Matrix iMat = ~mat;
+            Rect r = null;
+            foreach (MuPDFAnnot annot in GetAnnots())
+            {
+                r = annot.Rect * iMat;
+                annot.SetRect(r);
+            }
+            foreach (Link link in GetLinks())
+            {
+                r = link.From * iMat;
+                DeleteLink(link);
+                link.From = r;
+                InsertLink(link);
+            }
+            foreach (Widget widget in GetWidgets())
+            {
+                r = widget.Rect * iMat;
+                widget.Rect = r;
+                widget.Update();
+            }
+            return iMat;
+        }
+
+        /// <summary>
+        /// Set the MediaBox.
+        /// </summary>
+        /// <param name="rect"></param>
+        /// <exception cref="Exception"></exception>
+        public void SetMediaBox(Rect rect)
+        {
+            PdfPage page = GetPdfPage();
+            FzRect mediabox = rect.ToFzRect();
+            if (mediabox.fz_is_empty_rect() != 0 || mediabox.fz_is_infinite_rect() != 0)
+                throw new Exception(Utils.ErrorMessages["MSG_BAD_RECT"]);
+            page.obj().pdf_dict_put_rect(new PdfObj("MediaBox"), mediabox);
+            page.obj().pdf_dict_del(new PdfObj("CropBox"));
+            page.obj().pdf_dict_del(new PdfObj("ArtBox"));
+            page.obj().pdf_dict_del(new PdfObj("BleedBox"));
+            page.obj().pdf_dict_del(new PdfObj("TrimBox"));
         }
 
         /// <summary>
