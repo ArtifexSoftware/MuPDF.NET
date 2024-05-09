@@ -13,7 +13,7 @@ namespace MuPDF.NET.Test
         [SetUp]
         public void Setup()
         {
-            doc = new MuPDFDocument("input.pdf");
+            doc = new MuPDFDocument("resources/001003ED.pdf");
         }
 
         [Test]
@@ -117,6 +117,29 @@ namespace MuPDF.NET.Test
 
             Assert.That(doc.ChapterCount, Is.EqualTo(7));
             Assert.That(doc.LastLocation.Item1, Is.EqualTo(6));
+        }
+
+        [Test]
+        public void OC1()
+        {
+            MuPDFDocument doc = new MuPDFDocument();
+            int ocg1 = doc.AddOcg("ocg1");
+            int ocg2 = doc.AddOcg("ocg2");
+            doc.SetOCMD(xref: 0, ocgs: new int[] { ocg1, ocg2 });
+            doc.SetLayer(-1);
+            doc.AddLayer("layer1");
+
+            doc.GetLayer();
+            doc.GetLayers();
+            doc.GetOcgs();
+            doc.LayerUIConfigs();
+            doc.SwitchLayer(0);
+        }
+
+        [Test]
+        public void OC2()
+        {
+
         }
     }
 }
