@@ -2130,6 +2130,25 @@ namespace MuPDF.NET
         }
 
         /// <summary>
+        /// Set object at 'xref' as the page's /Contents.
+        /// </summary>
+        /// <param name="xref"></param>
+        /// <exception cref="Exception"></exception>
+        public void SetContents(int xref)
+        {
+            MuPDFDocument doc = Parent;
+            if (doc.IsClosed)
+                throw new Exception("document closed");
+            if (!doc.IsPDF)
+                throw new Exception("is no PDF");
+            if (!Utils.INRANGE(xref, 1, doc.GetXrefLength()))
+                throw new Exception("bad xref");
+            if (!doc.XrefIsStream(xref))
+                throw new Exception("xref is no stream");
+            doc.SetKeyXRef(Xref, "Contents", $"{xref} 0 R");
+        }
+
+        /// <summary>
         ///
         /// </summary>
         /// <param name="sr"></param>
@@ -2314,10 +2333,14 @@ namespace MuPDF.NET
             return rcXref;
         }
 
+        /// <summary>
+        /// Get xrefs of /Contents objects.
+        /// </summary>
+        /// <returns></returns>
         public List<int> GetContents()
         {
             List<int> ret = new List<int>();
-            PdfObj obj = _pdfPage.obj();
+            PdfObj obj = _nativePage.pdf_page_from_fz_page().obj();
             PdfObj contents = obj.pdf_dict_get(new PdfObj("Contents"));
             if (contents.pdf_is_array() != 0)
             {
@@ -2326,10 +2349,11 @@ namespace MuPDF.NET
                 {
                     PdfObj icont = contents.pdf_array_get(i);
                     int xref = icont.pdf_to_num();
-                    ret.Add(xref);
+                    if (xref != 0)
+                        ret.Add(xref);
                 }
             }
-            else if (contents != null)
+            else if (contents.m_internal != null)
             {
                 int xref = contents.pdf_to_num();
                 ret.Add(xref);
@@ -5177,6 +5201,7 @@ namespace MuPDF.NET
         )
         {
             LineWidth = arg_3.linewidth;
+            SeqNo += 1;
         }
 
         public override void fill_text(
@@ -5194,7 +5219,7 @@ namespace MuPDF.NET
             {
                 if (span == null)
                     break;
-                TraceTextSpan(span, 1, ctm, colorspace, color, alpha);
+                TraceTextSpan(span, 0, ctm, colorspace, color, alpha);
                 span = span.next;
             }
             SeqNo += 1;
@@ -5241,8 +5266,8 @@ namespace MuPDF.NET
             dir = mupdf.mupdf.fz_normalize_vector(dir);
             float spaceAdv = 0;
 
-            float asc = mupdf.mupdf.fz_font_ascender(new FzFont(span.font));
-            float desc = mupdf.mupdf.fz_font_descender(new FzFont(span.font));
+            float asc = mupdf.mupdf.fz_font_ascender(fzSpan.font());
+            float desc = mupdf.mupdf.fz_font_descender(fzSpan.font());
             if (asc < 1e-3)
             {
                 desc = -0.1f;
@@ -5252,16 +5277,16 @@ namespace MuPDF.NET
             float ascSize = asc * fsize / (asc - desc);
             float dscSize = desc * fsize / (asc - desc);
             float fflags = 0;
-            int mono = mupdf.mupdf.fz_font_is_monospaced(new FzFont(span.font));
+            int mono = mupdf.mupdf.fz_font_is_monospaced(fzSpan.font());
             fflags += mono * (int)TextType.TEXT_FONT_MONOSPACED;
             fflags +=
-                mupdf.mupdf.fz_font_is_italic(new FzFont(span.font))
+                mupdf.mupdf.fz_font_is_italic(fzSpan.font())
                 * (int)TextType.TEXT_FONT_ITALIC;
             fflags +=
-                mupdf.mupdf.fz_font_is_serif(new FzFont(span.font))
+                mupdf.mupdf.fz_font_is_serif(fzSpan.font())
                 * (int)TextType.TEXT_FONT_SERIFED;
             fflags +=
-                mupdf.mupdf.fz_font_is_bold(new FzFont(span.font)) * (int)TextType.TEXT_FONT_BOLD;
+                mupdf.mupdf.fz_font_is_bold(fzSpan.font()) * (int)TextType.TEXT_FONT_BOLD;
 
             float lastAdv = 0;
             FzRect spanBbox = new FzRect();
@@ -5293,8 +5318,7 @@ namespace MuPDF.NET
                 float x0 = charOrig.x;
                 float x1 = x0 + adv;
 
-                float y0,
-                    y1;
+                float y0, y1;
                 if ((mat.d > 0) && (dir.x == 1 || dir.x == -1) || (mat.b != 0 && mat.b == -mat.c))
                 {
                     y0 = charOrig.y + dscSize;
@@ -5302,7 +5326,7 @@ namespace MuPDF.NET
                 }
                 else
                 {
-                    y0 = charOrig.y + ascSize;
+                    y0 = charOrig.y - ascSize;
                     y1 = charOrig.y - dscSize;
                 }
                 FzRect charBbox = mupdf.mupdf.fz_make_rect(x0, y0, x1, y1);
@@ -5328,16 +5352,16 @@ namespace MuPDF.NET
                 if (mono == 0)
                 {
                     int c = mupdf.mupdf.fz_encode_character_with_fallback(
-                        new FzFont(span.font),
+                        fzSpan.font(),
                         32,
                         0,
                         0,
                         new FzFont()
                     );
                     spaceAdv = mupdf.mupdf.fz_advance_glyph(
-                        new FzFont(span.font),
+                        fzSpan.font(),
                         c,
-                        (int)span.wmode
+                        (int)fzSpan.m_internal.wmode
                     );
                     spaceAdv *= fsize;
                     if (spaceAdv == 0)
@@ -5374,7 +5398,7 @@ namespace MuPDF.NET
 
                 float[] ret = new float[4];
                 Marshal.Copy(SWIGTYPE_p_float.getCPtr(swigDV).Handle, ret, 0, 4);
-                Marshal.FreeHGlobal(pDV);
+                
                 rgb = ret.Take(3).ToArray();
             }
             else
@@ -5407,7 +5431,7 @@ namespace MuPDF.NET
             {
                 if (span == null)
                     break;
-                TraceTextSpan(span, 1, ctm, null, null, 1);
+                TraceTextSpan(span, 3, ctm, null, null, 1);
                 span = span.next;
             }
             SeqNo += 1;
@@ -5431,6 +5455,11 @@ namespace MuPDF.NET
             float arg_4,
             fz_color_params arg_5
         )
+        {
+            SeqNo += 1;
+        }
+
+        public override void fill_image_mask(fz_context arg_0, fz_image arg_2, fz_matrix arg_3, fz_colorspace arg_4, SWIGTYPE_p_float arg_5, float arg_6, fz_color_params arg_7)
         {
             SeqNo += 1;
         }
