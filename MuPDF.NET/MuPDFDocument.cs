@@ -116,7 +116,7 @@ namespace MuPDF.NET
             get
             {
                 PdfDocument pdf = MuPDFDocument.AsPdfDocument(_nativeDocument);
-                if (pdf == null)
+                if (pdf.m_internal == null)
                     return false;
                 int r = pdf.pdf_has_unsaved_changes();
                 return r != 0;
@@ -160,7 +160,7 @@ namespace MuPDF.NET
             get
             {
                 PdfDocument pdf = MuPDFDocument.AsPdfDocument(_nativeDocument);
-                if (pdf == null)
+                if (pdf.m_internal == null)
                     return -1;
                 int count = -1;
                 try
@@ -204,7 +204,7 @@ namespace MuPDF.NET
             get
             {
                 PdfDocument pdf = MuPDFDocument.AsPdfDocument(_nativeDocument);
-                if (pdf == null)
+                if (pdf.m_internal == null)
                     return false;
                 return pdf.pdf_was_repaired() != 0;
             }

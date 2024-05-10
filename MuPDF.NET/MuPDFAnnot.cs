@@ -1071,9 +1071,10 @@ namespace MuPDF.NET
                 new FzSeparations(0),
                 alpha
             );
+            Pixmap ret = new Pixmap(pix);
             if (dpi != 0)
-                pix.fz_set_pixmap_resolution(dpi, dpi);
-            return new Pixmap(pix);
+                ret.SetDpi(dpi, dpi);
+            return ret;
         }
 
         public Sound GetSound()
