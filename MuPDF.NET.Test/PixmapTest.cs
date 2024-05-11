@@ -11,7 +11,7 @@ namespace MuPDF.NET.Test
         [Test]
         public void GetPixamp_Save()
         {
-            MuPDFDocument doc = new MuPDFDocument("input.pdf");
+            MuPDFDocument doc = new MuPDFDocument("../../../resources/cython.pdf");
 
             MuPDFPage page = doc[0];
 
@@ -27,7 +27,7 @@ namespace MuPDF.NET.Test
         [Test]
         public void GetPixel()
         {
-            MuPDFDocument doc = new MuPDFDocument("input.pdf");
+            MuPDFDocument doc = new MuPDFDocument("../../../resources/cython.pdf");
 
             MuPDFPage page = doc[0];
 
@@ -44,7 +44,7 @@ namespace MuPDF.NET.Test
         [Test]
         public void ToBytes()
         {
-            MuPDFDocument doc = new MuPDFDocument("resources/cython.pdf");
+            MuPDFDocument doc = new MuPDFDocument("../../../resources/cython.pdf");
 
             MuPDFPage page = doc[0];
 
@@ -58,7 +58,7 @@ namespace MuPDF.NET.Test
         [Test]
         public void ColorToUsage()
         {
-            MuPDFDocument doc = new MuPDFDocument("input.pdf");
+            MuPDFDocument doc = new MuPDFDocument("../../../resources/cython.pdf");
 
             MuPDFPage page = doc[0];
 
@@ -74,7 +74,7 @@ namespace MuPDF.NET.Test
         [Test]
         public void InvertIrect()
         {
-            MuPDFDocument doc = new MuPDFDocument("input.pdf");
+            MuPDFDocument doc = new MuPDFDocument("../../../resources/cython.pdf");
 
             MuPDFPage page = doc[0];
 
@@ -88,7 +88,7 @@ namespace MuPDF.NET.Test
         [Test]
         public void PdfOCR()
         {
-            MuPDFDocument doc = new MuPDFDocument("input.pdf");
+            MuPDFDocument doc = new MuPDFDocument("../../../resources/cython.pdf");
 
             MuPDFPage page = doc[0];
 
@@ -102,7 +102,7 @@ namespace MuPDF.NET.Test
         [Test]
         public void PdfPixmap()
         {
-            MuPDFDocument doc = new MuPDFDocument("resources/001003ED.pdf");
+            MuPDFDocument doc = new MuPDFDocument("../../../resources/toc.pdf");
             Entry img = doc.GetPageImages(0)[0];
             Pixmap pix = new Pixmap(doc, img.Xref);
             Assert.That(pix.W, Is.EqualTo(img.Width));

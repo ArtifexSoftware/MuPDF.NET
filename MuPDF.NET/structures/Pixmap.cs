@@ -111,7 +111,7 @@ namespace MuPDF.NET
                 for (int i = n; i < count; i += n)
                 {
                     sample = PixmapReadSamples(i, n);
-                    if (!sample.Equals(sample0))
+                    if (!sample.SequenceEqual(sample0))
                         return false;
                 }
                 return true;
