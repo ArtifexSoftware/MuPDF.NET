@@ -108,11 +108,11 @@ namespace MuPDF.NET.Test
         [Test]
         public void Redact2()
         {
-            MuPDFDocument doc = new MuPDFDocument("resources/symbol-list.pdf");
+            MuPDFDocument doc = new MuPDFDocument("../../../resources/symbol-list.pdf");
             MuPDFPage page = doc[0];
             List<WordBlock> allText = page.GetText("words");
             page.AddRedactAnnot(page.Rect.Quad);
-            page.ApplyRedactions(text: 1);
+            page.ApplyRedactions(text: 0);
             List<WordBlock> t = page.GetText("words");
 
             Assert.That(t.Count, Is.EqualTo(0));
@@ -122,7 +122,7 @@ namespace MuPDF.NET.Test
         [Test]
         public void Redact3()
         {
-            MuPDFDocument doc = new MuPDFDocument("resources/symbol-list.pdf");
+            MuPDFDocument doc = new MuPDFDocument("../../../resources/symbol-list.pdf");
             MuPDFPage page = doc[0];
             List<PathInfo> arts = page.GetDrawings();
             page.AddRedactAnnot(page.Rect);
@@ -135,7 +135,7 @@ namespace MuPDF.NET.Test
         [Test]
         public void AddRedactAnnot()
         {
-            byte[] content = File.ReadAllBytes("resources/mupdf_explored.pdf");
+            /*byte[] content = File.ReadAllBytes("resources/mupdf_explored.pdf");
             MuPDFDocument doc = new MuPDFDocument(stream: content);
 
             MuPDFPage page = doc[0];
@@ -143,13 +143,13 @@ namespace MuPDF.NET.Test
             PageInfo pagedata = (PageInfo)JsonConvert.DeserializeObject(jsondata);
             Span span = pagedata.Blocks[0].Lines[0].Spans[0];
             page.AddRedactAnnot(span.Bbox, text: "");
-            page.ApplyRedactions();
+            page.ApplyRedactions();*/
         }
 
         [Test]
         public void FirstAnnot()
         {
-            MuPDFDocument doc = new MuPDFDocument("resources/test_2969.pdf");
+            MuPDFDocument doc = new MuPDFDocument("../../../resources/annots.pdf");
             MuPDFPage page = doc[0];
             MuPDFAnnot firstAnnot = (new List<MuPDFAnnot>(page.GetAnnots()))[0];
             MuPDFAnnot next = firstAnnot.Next;

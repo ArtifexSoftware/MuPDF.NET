@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using mupdf;
@@ -505,10 +506,10 @@ namespace MuPDF.NET
             FzRect r = rect.ToFzRect();
             try
             {
-                PdfPage page = _pdfPage;
+                PdfPage page = GetPdfPage();
                 float[] fColor = MuPDFAnnot.ColorFromSequence(fillColor);
                 float[] tColor = MuPDFAnnot.ColorFromSequence(textColor);
-                if (r.fz_is_infinite_rect() != 0 && r.fz_is_empty_rect() != 0)
+                if (r.fz_is_infinite_rect() != 0 || r.fz_is_empty_rect() != 0)
                 {
                     throw new Exception(Utils.ErrorMessages["MSG_BAD_RECT"]);
                 }
@@ -527,7 +528,6 @@ namespace MuPDF.NET
                     SWIGTYPE_p_float swigFColor = new SWIGTYPE_p_float(fColorPtr, false);
                     annot.pdf_set_annot_color(fColor.Length, swigFColor);
                 }
-
                 Utils.MakeAnnotDA(
                     annot,
                     tColor == null ? -1 : tColor.Length,
@@ -600,6 +600,47 @@ namespace MuPDF.NET
             }
             AnnotPostProcess(this, val);
             return val;
+        }
+
+        /// <summary>
+        /// Set the CropBox. Will also change Page.rect.
+        /// </summary>
+        /// <param name="rect"></param>
+        public void SetCropBox(Rect rect)
+        {
+            SetPageBox("CropBox", rect);
+        }
+
+        private void SetPageBox(string boxtype, Rect rect)
+        {
+            MuPDFDocument doc = Parent;
+            if (doc == null)
+                throw new Exception("orphaned object: parent is None");
+
+            if (!doc.IsPDF)
+                throw new Exception("is no PDF");
+
+            string[] validBoxes = { "CropBox", "BleedBox", "TrimBox", "ArtBox" };
+            if (!validBoxes.Contains(boxtype))
+                throw new Exception("bad boxtype");
+
+            Rect mb = MediaBox;
+            Rect rect_ = new Rect(rect.X0, mb.Y1 - rect.Y1, rect.X1, mb.Y1 - rect.Y0);
+            if (!((mb.X0 <= rect_.X0 && rect_.X0 < rect_.X1 && rect_.X1 <= mb.X1)
+                && (mb.Y0 <= rect_.Y0 && rect_.Y0 < rect_.Y1 && rect_.Y1 <= mb.Y1)))
+                throw new Exception(boxtype + " not in Mediabox");
+
+            doc.SetKeyXRef(Xref, boxtype, $"[{Format(new float[] { rect_.X0, rect_.Y0, rect_.X1, rect_.Y1 })}]");
+        }
+
+        public string Format(float[] value)
+        {
+            string ret = "";
+            foreach (float v in value)
+            {
+                ret += v + " ";
+            }
+            return ret;
         }
 
         /// <summary>
@@ -4109,6 +4150,83 @@ namespace MuPDF.NET
         public Shape NewShape()
         {
             return new Shape(this);
+        }
+
+        /// <summary>
+        /// Set page rotation to 0 while maintaining visual appearance.
+        /// </summary>
+        /// <returns>return Matrix</returns>
+        public Matrix RemoveRotation()
+        {
+            int rot = Rotation;
+            if (rot == 0)
+                return new IdentityMatrix();
+
+            Rect mb = MediaBox;
+            Matrix mat0 = null;
+            if (rot == 90)
+                mat0 = new Matrix(1, 0, 0, 1, mb.Y1 - mb.X1 - mb.X0 - mb.Y0, 0);
+            else if (rot == 270)
+                mat0 = new Matrix(1, 0, 0, 1, 0, mb.Y1 - mb.X1 - mb.X0 - mb.Y0);
+            else
+                mat0 = new Matrix(1, 0, 0, 1, -2 * mb.X0, -2 * mb.Y0);
+
+            Matrix mat = mat0 * DerotationMatrix;
+            string cmd = $"{mat.A} {mat.B} {mat.C} {mat.D} {mat.E} {mat.F} cm ";
+            Utils.InsertContents(this, Encoding.UTF8.GetBytes(cmd), 0);
+
+            if (rot == 90 || rot == 270)
+            {
+                float x0 = mb.X0;
+                float y0 = mb.Y0;
+                float x1 = mb.X1;
+                float y1 = mb.Y1;
+                mb.X0 = y0;
+                mb.Y0 = x0;
+                mb.X1 = y1;
+                mb.Y1 = x1;
+                SetMediaBox(mb);
+            }
+            SetRotation(0);
+            Matrix iMat = ~mat;
+            Rect r = null;
+            foreach (MuPDFAnnot annot in GetAnnots())
+            {
+                r = annot.Rect * iMat;
+                annot.SetRect(r);
+            }
+            foreach (Link link in GetLinks())
+            {
+                r = link.From * iMat;
+                DeleteLink(link);
+                link.From = r;
+                InsertLink(link);
+            }
+            foreach (Widget widget in GetWidgets())
+            {
+                r = widget.Rect * iMat;
+                widget.Rect = r;
+                widget.Update();
+            }
+            return iMat;
+        }
+
+        /// <summary>
+        /// Set the MediaBox.
+        /// </summary>
+        /// <param name="rect"></param>
+        /// <exception cref="Exception"></exception>
+        public void SetMediaBox(Rect rect)
+        {
+            PdfPage page = GetPdfPage();
+            FzRect mediabox = rect.ToFzRect();
+            if (mediabox.fz_is_empty_rect() != 0 || mediabox.fz_is_infinite_rect() != 0)
+                throw new Exception(Utils.ErrorMessages["MSG_BAD_RECT"]);
+            page.obj().pdf_dict_put_rect(new PdfObj("MediaBox"), mediabox);
+            page.obj().pdf_dict_del(new PdfObj("CropBox"));
+            page.obj().pdf_dict_del(new PdfObj("ArtBox"));
+            page.obj().pdf_dict_del(new PdfObj("BleedBox"));
+            page.obj().pdf_dict_del(new PdfObj("TrimBox"));
         }
 
         /// <summary>

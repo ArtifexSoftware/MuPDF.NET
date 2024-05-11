@@ -116,7 +116,7 @@ namespace MuPDF.NET
             get
             {
                 PdfDocument pdf = MuPDFDocument.AsPdfDocument(_nativeDocument);
-                if (pdf == null)
+                if (pdf.m_internal == null)
                     return false;
                 int r = pdf.pdf_has_unsaved_changes();
                 return r != 0;
@@ -160,7 +160,7 @@ namespace MuPDF.NET
             get
             {
                 PdfDocument pdf = MuPDFDocument.AsPdfDocument(_nativeDocument);
-                if (pdf == null)
+                if (pdf.m_internal == null)
                     return -1;
                 int count = -1;
                 try
@@ -204,7 +204,7 @@ namespace MuPDF.NET
             get
             {
                 PdfDocument pdf = MuPDFDocument.AsPdfDocument(_nativeDocument);
-                if (pdf == null)
+                if (pdf.m_internal == null)
                     return false;
                 return pdf.pdf_was_repaired() != 0;
             }
@@ -879,7 +879,7 @@ namespace MuPDF.NET
 
             PdfDocument pdf = AsPdfDocument(this);
             int xrefLen = pdf.pdf_xref_len();
-            if (Utils.INRANGE(xref, 1, xrefLen - 1) && xref != -1)
+            if (!Utils.INRANGE(xref, 1, xrefLen - 1) && xref != -1)
                 throw new Exception(Utils.ErrorMessages["MSG_BAD_XREF"]);
 
             PdfObj obj = null;

@@ -397,12 +397,9 @@ namespace MuPDF.NET
             return f * Width * Height;
         }
 
-        public override bool Equals(object obj)
+        public bool EqualTo(Rect obj)
         {
-            if (obj is Rect)
-                return (X0 == ((Rect)obj).X0 && Y0 == ((Rect)obj).Y0 && X1 == ((Rect)obj).X1 && Y1 == ((Rect)obj).Y1);
-            else
-                return false;
+            return (X0 == ((Rect)obj).X0 && Y0 == ((Rect)obj).Y0 && X1 == ((Rect)obj).X1 && Y1 == ((Rect)obj).Y1);
         }
     }
 

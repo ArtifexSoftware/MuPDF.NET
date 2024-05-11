@@ -860,9 +860,9 @@ namespace MuPDF.NET
             FzBuffer buf = new FzBuffer(
                 mupdf.mupdf.fz_new_buffer_from_data(ret, (uint)unmanagedPointer.ToInt64())
             );
-            Marshal.FreeHGlobal(unmanagedPointer);
 
             buf.fz_resize_buffer((uint)unmanagedPointer.ToInt64());
+            Marshal.FreeHGlobal(unmanagedPointer);
             return buf;
         }
 
@@ -1343,11 +1343,11 @@ namespace MuPDF.NET
                 buf += $"{col[0]:g} {col[1]:g} {col[2]:g} rg ";
             else
                 buf += $"{col[0]:g} {col[1]:g} {col[2]:g} {col[3]:g} k ";
-            buf += $"/{ExpandFileName(fontName)} {fontSize} Tf";
+            buf += $"/{ExpandFontName(fontName)} {fontSize} Tf";
             annot.pdf_annot_obj().pdf_dict_put_text_string(new PdfObj("DA"), buf);
         }
 
-        public static string ExpandFileName(string filename)
+        public static string ExpandFontName(string filename)
         {
             if (filename == null)
                 return "Helv";

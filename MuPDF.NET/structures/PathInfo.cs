@@ -110,12 +110,12 @@
             if (Type != other.Type) return false;
 
             bool ret = true;
-            ret = other != null && (Rect == null ? other.Rect == null : Rect.Equals(other.Rect));
-            ret = other != null && (LastPoint == null ? other.LastPoint == null : LastPoint.Equals(other.LastPoint));
-            ret = other != null && (P1 == null ? other.P1 == null : P1.Equals(other.P1));
-            ret = other != null && (P2 == null ? other.P2 == null : P2.Equals(other.P2));
-            ret = other != null && (P3 == null ? other.P3 == null : P3.Equals(other.P3));
-            ret = other != null && (Quad == null ? other.Quad == null : Quad.Equals(other.Quad));
+            ret = other != null && (Rect == null ? other.Rect == null : Rect.EqualTo(other.Rect));
+            ret = other != null && (LastPoint == null ? other.LastPoint == null : LastPoint.EqualTo(other.LastPoint));
+            ret = other != null && (P1 == null ? other.P1 == null : P1.EqualTo(other.P1));
+            ret = other != null && (P2 == null ? other.P2 == null : P2.EqualTo(other.P2));
+            ret = other != null && (P3 == null ? other.P3 == null : P3.EqualTo(other.P3));
+            ret = other != null && (Quad == null ? other.Quad == null : Quad.EqualTo(other.Quad));
 
             return true;
         }

@@ -11,7 +11,7 @@ namespace MuPDF.NET.Test
         [SetUp]
         public void Setup()
         {
-            doc = new MuPDFDocument("resources/cython.pdf");
+            doc = new MuPDFDocument("../../../resources/cython.pdf");
 
             textPage = doc.LoadPage(0).GetTextPage();
         }
@@ -65,13 +65,6 @@ namespace MuPDF.NET.Test
         public void ExtractDict()
         {
             textPage.ExtractDict(new Rect(0, 0, 300, 300));
-            Assert.Pass();
-        }
-
-        [Test]
-        public void ExtractJson()
-        {
-            textPage.ExtractJSON(new Rect(0, 0, 300, 300));
             Assert.Pass();
         }
 

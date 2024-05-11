@@ -717,14 +717,14 @@ namespace MuPDF.NET
             PdfObj obj = _nativeAnnotion.pdf_annot_obj();
             PdfObj ap = Utils.pdf_dict_getl(obj, new string[] { "AP", "N" });
 
-            FzBuffer ret = new FzBuffer();
+            FzBuffer ret = null;
             if (ap.pdf_is_stream() != 0)
             {
                 ret = ap.pdf_load_stream();
             }
 
             byte[] r = null;
-            if (ret.m_internal != null)
+            if (ret != null && ret.m_internal != null)
                 r = Utils.BinFromBuffer(ret);
             return r;
         }
@@ -746,7 +746,7 @@ namespace MuPDF.NET
                     throw new Exception("bad or missing annot AP/N");
                 }
                 FzBuffer buf = Utils.BufferFromBytes(buffer);
-                if (buf == null)
+                if (buf.m_internal == null)
                 {
                     throw new Exception("bad type: 'buffer'");
                 }
@@ -1071,9 +1071,10 @@ namespace MuPDF.NET
                 new FzSeparations(0),
                 alpha
             );
+            Pixmap ret = new Pixmap(pix);
             if (dpi != 0)
-                pix.fz_set_pixmap_resolution(dpi, dpi);
-            return new Pixmap(pix);
+                ret.SetDpi(dpi, dpi);
+            return ret;
         }
 
         public Sound GetSound()

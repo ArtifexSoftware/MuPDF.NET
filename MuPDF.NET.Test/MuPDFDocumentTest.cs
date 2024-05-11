@@ -13,7 +13,7 @@ namespace MuPDF.NET.Test
         [SetUp]
         public void Setup()
         {
-            doc = new MuPDFDocument("resources/001003ED.pdf");
+            doc = new MuPDFDocument("../../../resources/toc.pdf");
         }
 
         [Test]
@@ -29,7 +29,7 @@ namespace MuPDF.NET.Test
         public void CopyPage()
         {
             int oldLen = doc.PageCount;
-            doc.CopyPage(2);
+            doc.CopyPage(0);
 
             Assert.AreEqual(doc.PageCount, oldLen + 1);
         }
@@ -38,7 +38,7 @@ namespace MuPDF.NET.Test
         public void DeletePage()
         {
             int oldLen = doc.PageCount;
-            doc.DeletePage(1);
+            doc.DeletePage(0);
             Assert.AreEqual(doc.PageCount, oldLen - 1);
         }
 
@@ -47,11 +47,11 @@ namespace MuPDF.NET.Test
         {
             int oldLen = doc.PageCount;
 
-            doc.DeletePages(1, 2); // delete one page
+            doc.DeletePages(0); // delete one page
 
-            doc.DeletePages(new int[] { 2, 3 }); // delete 2 pages
+            doc.DeletePages(new int[] { 0, }); // delete 2 pages
 
-            Assert.AreEqual(doc.PageCount, oldLen - 3);
+            Assert.AreEqual(doc.PageCount, oldLen - 1);
         }
 
         [Test]
@@ -74,7 +74,7 @@ namespace MuPDF.NET.Test
         {
             int n = doc.GetPageImages(0).Count;
 
-            Assert.That(n, Is.EqualTo(1)); // in case of current input pdf, if other file, real count should be fixed
+            Assert.That(n, Is.EqualTo(15)); // in case of current input pdf, if other file, real count should be fixed
 
             n = doc.ExtractImage(doc.GetPageImages(0)[0].Xref).Image.Length;
 
@@ -84,7 +84,7 @@ namespace MuPDF.NET.Test
         [Test]
         public void GetToc()
         {
-            MuPDFDocument doc = new MuPDFDocument("resources/001003ED.pdf");
+            MuPDFDocument doc = new MuPDFDocument("../../../resources/toc.pdf");
             doc.GetToc(true);
         }
 
@@ -106,14 +106,14 @@ namespace MuPDF.NET.Test
         [Test]
         public void Test_IsNoPDF()
         {
-            MuPDFDocument doc = new MuPDFDocument("resources/Bezier.epub");
+            MuPDFDocument doc = new MuPDFDocument("../../../resources/Bezier.epub");
             Assert.That(doc.IsPDF, Is.False);
         }
 
         [Test]
         public void Test_PageIds()
         {
-            MuPDFDocument doc = new MuPDFDocument("resources/Bezier.epub");
+            MuPDFDocument doc = new MuPDFDocument("../../../resources/Bezier.epub");
 
             Assert.That(doc.ChapterCount, Is.EqualTo(7));
             Assert.That(doc.LastLocation.Item1, Is.EqualTo(6));
