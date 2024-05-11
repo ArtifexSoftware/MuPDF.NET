@@ -879,7 +879,7 @@ namespace MuPDF.NET
 
             PdfDocument pdf = AsPdfDocument(this);
             int xrefLen = pdf.pdf_xref_len();
-            if (Utils.INRANGE(xref, 1, xrefLen - 1) && xref != -1)
+            if (!Utils.INRANGE(xref, 1, xrefLen - 1) && xref != -1)
                 throw new Exception(Utils.ErrorMessages["MSG_BAD_XREF"]);
 
             PdfObj obj = null;

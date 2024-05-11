@@ -506,10 +506,10 @@ namespace MuPDF.NET
             FzRect r = rect.ToFzRect();
             try
             {
-                PdfPage page = _pdfPage;
+                PdfPage page = GetPdfPage();
                 float[] fColor = MuPDFAnnot.ColorFromSequence(fillColor);
                 float[] tColor = MuPDFAnnot.ColorFromSequence(textColor);
-                if (r.fz_is_infinite_rect() != 0 && r.fz_is_empty_rect() != 0)
+                if (r.fz_is_infinite_rect() != 0 || r.fz_is_empty_rect() != 0)
                 {
                     throw new Exception(Utils.ErrorMessages["MSG_BAD_RECT"]);
                 }
@@ -528,7 +528,6 @@ namespace MuPDF.NET
                     SWIGTYPE_p_float swigFColor = new SWIGTYPE_p_float(fColorPtr, false);
                     annot.pdf_set_annot_color(fColor.Length, swigFColor);
                 }
-
                 Utils.MakeAnnotDA(
                     annot,
                     tColor == null ? -1 : tColor.Length,
@@ -601,6 +600,47 @@ namespace MuPDF.NET
             }
             AnnotPostProcess(this, val);
             return val;
+        }
+
+        /// <summary>
+        /// Set the CropBox. Will also change Page.rect.
+        /// </summary>
+        /// <param name="rect"></param>
+        public void SetCropBox(Rect rect)
+        {
+            SetPageBox("CropBox", rect);
+        }
+
+        private void SetPageBox(string boxtype, Rect rect)
+        {
+            MuPDFDocument doc = Parent;
+            if (doc == null)
+                throw new Exception("orphaned object: parent is None");
+
+            if (!doc.IsPDF)
+                throw new Exception("is no PDF");
+
+            string[] validBoxes = { "CropBox", "BleedBox", "TrimBox", "ArtBox" };
+            if (!validBoxes.Contains(boxtype))
+                throw new Exception("bad boxtype");
+
+            Rect mb = MediaBox;
+            Rect rect_ = new Rect(rect.X0, mb.Y1 - rect.Y1, rect.X1, mb.Y1 - rect.Y0);
+            if (!((mb.X0 <= rect_.X0 && rect_.X0 < rect_.X1 && rect_.X1 <= mb.X1)
+                && (mb.Y0 <= rect_.Y0 && rect_.Y0 < rect_.Y1 && rect_.Y1 <= mb.Y1)))
+                throw new Exception(boxtype + " not in Mediabox");
+
+            doc.SetKeyXRef(Xref, boxtype, $"[{Format(new float[] { rect_.X0, rect_.Y0, rect_.X1, rect_.Y1 })}]");
+        }
+
+        public string Format(float[] value)
+        {
+            string ret = "";
+            foreach (float v in value)
+            {
+                ret += v + " ";
+            }
+            return ret;
         }
 
         /// <summary>
