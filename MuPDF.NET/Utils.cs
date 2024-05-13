@@ -1274,13 +1274,13 @@ namespace MuPDF.NET
         {
             List<string> ids = new List<string>();
             PdfObj annots = page.obj().pdf_dict_get(new PdfObj("Annots"));
-            if (annots == null)
+            if (annots.m_internal == null)
                 return ids;
             for (int i = 0; i < annots.pdf_array_len(); i++)
             {
                 PdfObj annotObj = annots.pdf_array_get(i);
                 PdfObj name = annotObj.pdf_dict_gets("NM");
-                if (name != null)
+                if (name.m_internal != null)
                     ids.Add(name.pdf_to_text_string());
             }
             return ids;
