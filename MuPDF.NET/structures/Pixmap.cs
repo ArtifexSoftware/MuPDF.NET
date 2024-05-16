@@ -720,7 +720,7 @@ namespace MuPDF.NET
         /// <param name="output">only use to overrule filename extension. Default is PNG. Others are JPEG, JPG, PNM, PGM, PPM, PBM, PAM, PSD, PS.</param>
         /// <param name="jpgQuality">The desired image quality, default 95. Only applies to JPEG images, else ignored</param>
         /// <exception cref="Exception"></exception>
-        public void Save(string filename, string output, int jpgQuality = 95)
+        public void Save(string filename, string output = null, int jpgQuality = 95)
         {
             Dictionary<string, int> validFormats = new Dictionary<string, int>()
             {
