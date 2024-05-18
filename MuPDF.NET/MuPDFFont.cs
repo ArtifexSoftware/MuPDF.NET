@@ -213,13 +213,13 @@ namespace MuPDF.NET
             string language = null,
             int script = 0,
             int wmode = 0,
-            int small_caps = 0
+            int smallCaps = 0
         )
         {
             fz_text_language lang = mupdf.mupdf.fz_text_language_from_string(language);
             int gid = 0;
             FzFont font = null;
-            if (small_caps != 0)
+            if (smallCaps != 0)
             {
                 gid = _nativeFont.fz_encode_character_sc(chr);
                 if (gid >= 0)
@@ -236,14 +236,14 @@ namespace MuPDF.NET
         /// <param name="chr">ord() of the character.</param>
         /// <param name="language"></param>
         /// <param name="script"></param>
-        /// <param name="small_caps"></param>
+        /// <param name="smallCaps"></param>
         /// <returns>returns rect</returns>
-        public Rect GlyphBbox(int chr, string language = null, int script = 0, int small_caps = 0)
+        public Rect GlyphBbox(int chr, string language = null, int script = 0, int smallCaps = 0)
         {
             fz_text_language lang = mupdf.mupdf.fz_text_language_from_string(language);
             int gid = 0;
             FzFont font = null;
-            if (small_caps != 0)
+            if (smallCaps != 0)
             {
                 gid = _nativeFont.fz_encode_character_sc(chr);
                 if (gid >= 0)

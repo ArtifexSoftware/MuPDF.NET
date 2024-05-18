@@ -112,6 +112,18 @@ namespace MuPDF.NET
             get { return LoadLinks(); }
         }
 
+        public Rect TrimBox
+        {
+            get
+            {
+                Rect rect = OtherBox("TrimBox");
+                if (rect == null)
+                    return CropBox;
+                Rect mb = MediaBox;
+                return new Rect(rect[0], mb.Y1 - rect[3], rect[2], mb.Y1 - rect[1]);
+            }
+        }
+
         public Dictionary<int, dynamic> AnnotRefs = new Dictionary<int, dynamic>();
 
         /// <summary>
@@ -600,6 +612,33 @@ namespace MuPDF.NET
             }
             AnnotPostProcess(this, val);
             return val;
+        }
+
+        /// <summary>
+        /// Set the ArtBox.
+        /// </summary>
+        /// <param name="rect"></param>
+        public void SetArtBox(Rect rect)
+        {
+            SetPageBox("ArtBox", rect);
+        }
+
+        /// <summary>
+        /// Set the TrimBox.
+        /// </summary>
+        /// <param name="rect"></param>
+        public void SetTrimBox(Rect rect)
+        {
+            SetPageBox("TrimBox", rect);
+        }
+
+        /// <summary>
+        /// Set the BleedBox.
+        /// </summary>
+        /// <param name="rect"></param>
+        public void SetBleedBox(Rect rect)
+        {
+            SetPageBox("BleedBox", rect);
         }
 
         /// <summary>
@@ -1496,6 +1535,46 @@ namespace MuPDF.NET
         }
 
         /// <summary>
+        /// Write the text of one or more pymupdf.TextWriter objects.
+        /// </summary>
+        /// <param name="rect">target rectangle. If None, the union of the text writers is used.</param>
+        /// <param name="writers">one or more pymupdf.TextWriter objects.</param>
+        /// <param name="overlay">put in foreground or background.</param>
+        /// <param name="color"></param>
+        /// <param name="opacity"></param>
+        /// <param name="keepProportion">maintain aspect ratio of rectangle sides.</param>
+        /// <param name="rotate">arbitrary rotation angle.</param>
+        /// <param name="oc">the xref of an optional content object</param>
+        /// <exception cref="Exception"></exception>
+        public void WriteText(Rect rect = null, List<MuPDFTextWriter> writers = null, bool overlay = true,
+            float[] color = null, float opacity = -1, bool keepProportion = true, int rotate = 0, int oc = 0)
+        {
+            if (writers == null || writers.Count == 0)
+                throw new Exception("need at least one pymupdf.TextWriter");
+            Rect clip = writers[0].TextRect;
+            MuPDFDocument textDoc = new MuPDFDocument();
+            MuPDFPage page = textDoc.NewPage(width: Rect.Width, height: Rect.Height);
+            foreach (MuPDFTextWriter writer in writers)
+            {
+                clip = clip | writer.TextRect;
+                writer.WriteText(page, opacity: opacity, color: color);
+            }
+            if (rect == null)
+                rect = clip;
+            page.ShowPdfPage(
+                rect,
+                textDoc,
+                0,
+                overlay: overlay,
+                keepProportion: keepProportion,
+                rotate: rotate,
+                clip: clip,
+                oc: oc);
+            textDoc = null;
+            page = null;
+        }
+
+        /// <summary>
         /// PDF only: Add a PDF Form field (“widget”) to a page.
         /// </summary>
         /// <param name="fieldType"></param>
@@ -1609,7 +1688,7 @@ namespace MuPDF.NET
                 float[] fill = redact.Fill;
                 if (fill != null && fill.Length > 0)
                 {
-                    shape.DrawRect(annotRect);
+                    shape.DrawRect(annotRect, 0);
                     shape.Finish(fill: fill, color: fill);
                 }
 
@@ -1686,7 +1765,7 @@ namespace MuPDF.NET
         public void InsertLink(Link link, bool mark = true)
         {
             string annot = Utils.GetLinkText(this, link);
-            if (annot == "")
+            if (string.IsNullOrEmpty(annot))
                 throw new Exception("link kind not supported");
             AddAnnotFromString(new List<string>() { annot });
         }
@@ -2318,6 +2397,15 @@ namespace MuPDF.NET
             doc.ShownPages[(isrc, pno)] = xref;
 
             return xref;
+        }
+
+        /// <summary>
+        /// List of xobjects defined in the page object.
+        /// </summary>
+        /// <returns></returns>
+        public List<Entry> GetXObjects()
+        {
+            return Parent.GetPageXObjects(Number);
         }
 
         private int ShowPdfPage(
@@ -3579,11 +3667,12 @@ namespace MuPDF.NET
             bool overlay = true,
             float strokeOpacity = 1,
             float fillOpacity = 1,
-            int oc = 0
+            int oc = 0,
+            float radius = 0
         )
         {
             Shape img = new Shape(this);
-            Point ret = img.DrawRect(rect);
+            Point ret = img.DrawRect(rect, radius);
 
             img.Finish(
                 color: color,
@@ -3934,9 +4023,9 @@ namespace MuPDF.NET
             return Utils.GetTextWords(this, clip, flags, textPage, sort, delimiters);
         }
 
-        public string GetTextBox(Rect rect = null, MuPDFTextPage textPage = null)
+        public string GetTextbox(Rect rect = null, MuPDFTextPage textPage = null)
         {
-            return Utils.GetTextBox(this, rect, textPage);
+            return Utils.GetTextbox(this, rect, textPage);
         }
 
         /// <summary>
@@ -4354,6 +4443,32 @@ namespace MuPDF.NET
             }
             newRects = newRects.OrderBy(p => p.Y1).ThenBy(p => p.X0).ToList();
             return newRects.Where(r => r.Width > deltaX && r.Height > deltaY).ToList();
+        }
+
+        /// <summary>
+        /// Make SVG image from page.
+        /// </summary>
+        /// <param name="matrix"></param>
+        /// <param name="textAsPath"></param>
+        public string GetSvgImage(Matrix matrix = null, int textAsPath = 1)
+        {
+            FzRect mediabox = _nativePage.fz_bound_page();
+            FzMatrix ctm = matrix == null ? new FzMatrix() : matrix.ToFzMatrix();
+            SvgText textOpt = (textAsPath == 1) ? SvgText.FZ_SVG_TEXT_AS_PATH : SvgText.FZ_SVG_TEXT_AS_TEXT;
+            FzRect bounds = mediabox.fz_transform_rect(ctm);
+
+            FzBuffer res = mupdf.mupdf.fz_new_buffer(1024);
+            FzOutput output = new FzOutput(res);
+            FzDevice dev = output.fz_new_svg_device(
+                bounds.x1 - bounds.x0,
+                bounds.y1 - bounds.y0,
+                (int)textOpt,
+                1);
+            _nativePage.fz_run_page(dev, ctm, new FzCookie());
+            mupdf.mupdf.fz_close_device(dev);
+            output.fz_close_output();
+            string text = Utils.EscapeStrFromBuffer(res);
+            return text;
         }
     }
 

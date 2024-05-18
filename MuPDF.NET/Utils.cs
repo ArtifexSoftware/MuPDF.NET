@@ -834,6 +834,10 @@ namespace MuPDF.NET
         public static int CS_GRAY = 2;
         public static int CS_CMYK = 3;
 
+        public static ColorSpace csRGB = new ColorSpace(Utils.CS_RGB);
+        public static ColorSpace csGRAY = new ColorSpace(Utils.CS_GRAY);
+        public static ColorSpace csCMYK = new ColorSpace(Utils.CS_CMYK);
+
         public static byte[] BinFromBuffer(FzBuffer buffer)
         {
             return buffer.fz_buffer_extract();
@@ -848,21 +852,20 @@ namespace MuPDF.NET
 
         public static FzBuffer CompressBuffer(FzBuffer buffer)
         {
-            IntPtr unmanagedPointer = Marshal.AllocHGlobal(8);
-            SWIGTYPE_p_size_t swigSizeT = new SWIGTYPE_p_size_t(unmanagedPointer, false);
-            SWIGTYPE_p_unsigned_char ret = mupdf.mupdf.fz_new_deflated_data_from_buffer(
-                swigSizeT,
-                buffer,
-                fz_deflate_level.FZ_DEFLATE_BEST
-            );
-            if (ret == null || unmanagedPointer.ToInt64() == 0)
+            ll_fz_new_deflated_data_from_buffer_outparams outparams = new ll_fz_new_deflated_data_from_buffer_outparams();
+            SWIGTYPE_p_unsigned_char data = mupdf.mupdf.ll_fz_new_deflated_data_from_buffer_outparams_fn(
+                buffer.m_internal,
+                fz_deflate_level.FZ_DEFLATE_BEST,
+                outparams
+                );
+
+            if (data == null || outparams.compressed_length == 0)
                 return null;
             FzBuffer buf = new FzBuffer(
-                mupdf.mupdf.fz_new_buffer_from_data(ret, (uint)unmanagedPointer.ToInt64())
+                mupdf.mupdf.fz_new_buffer_from_data(data, outparams.compressed_length)
             );
 
-            buf.fz_resize_buffer((uint)unmanagedPointer.ToInt64());
-            Marshal.FreeHGlobal(unmanagedPointer);
+            buf.fz_resize_buffer(outparams.compressed_length);
             return buf;
         }
 
@@ -3107,7 +3110,7 @@ namespace MuPDF.NET
             foreach (PdfObj e in knownPageObjs)
             {
                 PdfObj obj = pageRef.pdf_dict_get_inheritable(e);
-                if (obj != null)
+                if (obj.m_internal != null)
                 {
                     pageDict.pdf_dict_put(
                         e,
@@ -3126,9 +3129,9 @@ namespace MuPDF.NET
                     for (int i = 0; i < n; i++)
                     {
                         PdfObj o = oldAnnots.pdf_array_get(i);
-                        if (o == null || o.pdf_is_dict() != 0)
+                        if (o.m_internal == null || o.pdf_is_dict() == 0)
                             continue;
-                        if (o.pdf_dict_gets("IRT") != null)
+                        if (o.pdf_dict_gets("IRT").m_internal != null)
                             continue;
                         PdfObj subtype = o.pdf_dict_get(new PdfObj("Subtype"));
                         if (subtype.pdf_name_eq(new PdfObj("Link")) != 0)
@@ -4212,7 +4215,7 @@ namespace MuPDF.NET
             return string.Concat(RomanNum(num).ToArray());
         }
 
-        public static string GetTextBox(MuPDFPage page, Rect rect, MuPDFTextPage textPage = null)
+        public static string GetTextbox(MuPDFPage page, Rect rect, MuPDFTextPage textPage = null)
         {
             MuPDFTextPage tp = textPage;
             if (tp == null)
