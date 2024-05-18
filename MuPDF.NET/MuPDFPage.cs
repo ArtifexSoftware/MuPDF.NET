@@ -618,7 +618,7 @@ namespace MuPDF.NET
         /// Set the ArtBox.
         /// </summary>
         /// <param name="rect"></param>
-        public void SetArtbox(Rect rect)
+        public void SetArtBox(Rect rect)
         {
             SetPageBox("ArtBox", rect);
         }
@@ -627,7 +627,7 @@ namespace MuPDF.NET
         /// Set the TrimBox.
         /// </summary>
         /// <param name="rect"></param>
-        public void SetTrimbox(Rect rect)
+        public void SetTrimBox(Rect rect)
         {
             SetPageBox("TrimBox", rect);
         }
@@ -636,7 +636,7 @@ namespace MuPDF.NET
         /// Set the BleedBox.
         /// </summary>
         /// <param name="rect"></param>
-        public void SetBleedbox(Rect rect)
+        public void SetBleedBox(Rect rect)
         {
             SetPageBox("BleedBox", rect);
         }
@@ -1688,7 +1688,7 @@ namespace MuPDF.NET
                 float[] fill = redact.Fill;
                 if (fill != null && fill.Length > 0)
                 {
-                    shape.DrawRect(annotRect);
+                    shape.DrawRect(annotRect, 0);
                     shape.Finish(fill: fill, color: fill);
                 }
 
@@ -3667,11 +3667,12 @@ namespace MuPDF.NET
             bool overlay = true,
             float strokeOpacity = 1,
             float fillOpacity = 1,
-            int oc = 0
+            int oc = 0,
+            float radius = 0
         )
         {
             Shape img = new Shape(this);
-            Point ret = img.DrawRect(rect);
+            Point ret = img.DrawRect(rect, radius);
 
             img.Finish(
                 color: color,

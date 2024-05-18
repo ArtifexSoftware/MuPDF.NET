@@ -145,6 +145,61 @@ namespace MuPDF.NET
             return new Point(p);
         }
 
+        public float DistanceTo(Point p, string unit = "px")
+        {
+            Dictionary<string, (float, float)> u = new Dictionary<string, (float, float)>
+            {
+                {"px", (1.0f, 1.0f) },
+                {"in", (1.0f, 72.0f) },
+                {"cm", (2.54f, 72.0f) },
+                {"mm", (25.4f, 72.0f) }
+            };
+            float f = u[unit].Item1 / u[unit].Item2;
+            return (this - p).Abs() * f;
+        }
+
+        public float DistanceTo(Rect rect, string unit = "px")
+        {
+            Dictionary<string, (float, float)> u = new Dictionary<string, (float, float)>
+            {
+                {"px", (1.0f, 1.0f) },
+                {"in", (1.0f, 72.0f) },
+                {"cm", (2.54f, 72.0f) },
+                {"mm", (25.4f, 72.0f) }
+            };
+            float f = u[unit].Item1 / u[unit].Item2;
+
+            Rect r = new Rect(rect.TopLeft, rect.TopLeft);
+            r = r | rect.BottomRight;
+            if ((r.X0 < X && r.X1 > X) && (r.Y0 < Y && r.Y1 > Y))
+                return 0.0f;
+            if (X > r.X1)
+            {
+                if (Y >= r.Y1)
+                    return DistanceTo(r.BottomRight, unit);
+                else if (Y <= r.Y0)
+                    return DistanceTo(r.TopRight, unit);
+                else
+                    return (X - r.X1) * f;
+            }
+            else if (r.X0 <= X && X <= r.X1)
+            {
+                if (Y >= r.Y1)
+                    return (Y - r.Y1) * f;
+                else
+                    return (r.Y0 - Y) * f;
+            }
+            else
+            {
+                if (Y >= r.Y1)
+                    return DistanceTo(r.BottomLeft, unit);
+                else if (Y <= r.Y0)
+                    return DistanceTo(r.TopLeft, unit);
+                else
+                    return (r.X0- X) * f;
+            }
+        }
+
         /// <summary>
         /// Unit vector of the point.
         /// </summary>
