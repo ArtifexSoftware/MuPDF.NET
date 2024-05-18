@@ -145,5 +145,72 @@ namespace MuPDF.NET.Test
             Assert.That(error);
             Assert.That(text, Is.EqualTo("CropBox not in Mediabox"));
         }
+
+        [Test]
+        public void Insert()
+        {
+            MuPDFDocument doc = new MuPDFDocument();
+            MuPDFPage page = doc.NewPage();
+
+            Rect r1 = new Rect(50, 50, 100, 100);
+            Rect r2 = new Rect(50, 150, 200, 400);
+            page.InsertImage(r1, filename: "../../../resources/nur-ruhig.jpg");
+            page.InsertImage(r1, filename: "../../../resources/nur-ruhig.jpg", rotate: 270);
+            List<Block> lists = page.GetImageInfo();
+            Assert.That(lists.Count, Is.EqualTo(2));
+
+            Rect bbox1 = new Rect(lists[0].Bbox);
+            Rect bbox2 = new Rect(lists[1].Bbox);
+        }
+
+        [Test]
+        public void Compress()
+        {
+            MuPDFDocument doc = new MuPDFDocument("../../../resources/2.pdf");
+            MuPDFDocument npdf = new MuPDFDocument();
+            for (int i = 0; i < doc.PageCount; i++)
+            {
+                Pixmap pixmap = doc[i].GetPixmap(colorSpace: "RGB", dpi: 72, annots: false);
+                MuPDFPage pageNew = npdf.NewPage();
+                pageNew.InsertImage(rect: pageNew.GetBound(), pixmap: pixmap);
+            }
+            npdf.Save("2.pdf.compress.pdf", garbage: 3, deflate: 1, deflateImages: 1, deflateFonts: 1, pretty: 1);
+        }
+
+        [Test]
+        public void PageLinksGenerator()
+        {
+            MuPDFDocument doc = new MuPDFDocument("../../../resources/2.pdf");
+            MuPDFPage page = doc[-1];
+
+            List<Link> links = page.GetLinks();
+            Assert.That(links.Count, Is.EqualTo(7));
+        }
+
+        [Test]
+        public void Deletion()
+        {
+            MuPDFDocument doc = new MuPDFDocument();
+            Link link = new Link()
+            {
+                From = new Rect(100, 100, 120, 120),
+                Kind = LinkType.LINK_GOTO,
+                Page = 5,
+                To = new Point(100, 100)
+            };
+
+            List<Toc> tocs = new List<Toc>();
+
+            for (int i = 0; i < 100; i ++)
+            {
+                MuPDFPage page = doc.NewPage();
+                page.InsertText(new Point(100, 100), $"{i}", fontFile: "../../../resources/kenpixel.ttf");
+                if (i > 5)
+                    page.InsertLink(link);
+                tocs.Add(new Toc() { Level = 1, Title = $"{i}", Page = i + 1 });
+            }
+            doc.SetToc(tocs);
+            Assert.That(doc.HasLinks());
+        }
     }
 }

@@ -2547,9 +2547,9 @@ namespace MuPDF.NET
         /// <param name="rect"></param>
         /// <param name="textPage"></param>
         /// <returns></returns>
-        public string GetTextBox(MuPDFPage page, Rect rect, MuPDFTextPage textPage)
+        public string GetTextbox(MuPDFPage page, Rect rect, MuPDFTextPage textPage)
         {
-            return Utils.GetTextBox(page, rect, textPage);
+            return Utils.GetTextbox(page, rect, textPage);
         }
 
         public void UpdateFile(

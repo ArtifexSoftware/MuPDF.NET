@@ -353,7 +353,7 @@ namespace MuPDF.NET
         /// <summary>
         /// Document permissions.
         /// </summary>
-        public uint Permission
+        public uint Permissions
         {
             get
             {
@@ -408,7 +408,7 @@ namespace MuPDF.NET
                     Stream = null;
 
                 bool fromFile;
-                if (filename != null && stream == null)
+                if (!string.IsNullOrEmpty(filename) && stream == null)
                 {
                     fromFile = true;
                     Name = filename;
@@ -468,7 +468,7 @@ namespace MuPDF.NET
                 }
                 else
                 {
-                    if (filename != null)
+                    if (!string.IsNullOrEmpty(filename))
                     {
                         if (filetype == null)
                         {
@@ -479,6 +479,7 @@ namespace MuPDF.NET
                             catch (Exception e)
                             {
                                 Console.WriteLine(e.Message);
+                                throw;
                             }
                         }
                         else
@@ -492,10 +493,10 @@ namespace MuPDF.NET
                                 {
                                     try
                                     {
-                                        if (
+/*                                        if (
                                             Utils.MUPDF_VERSION.Item1 == 1
                                             && Utils.MUPDF_VERSION.Item2 >= 24
-                                        )
+                                        )*/
                                         {
                                             FzStream _stream = new FzStream(filename);
                                             FzStream accel = new FzStream();
@@ -4628,12 +4629,15 @@ namespace MuPDF.NET
         /// </summary>
         /// <param name="metadata">A dictionary with the same keys as metadata (see below). All keys are optional. A PDF’s format and encryption method cannot be set or changed and will be ignored. If any value should not contain data, do not specify its key or set the value to None. If you use {} all metadata information will be cleared to the string “none”. If you want to selectively change only some values, modify a copy of doc.metadata and use it as the argument. Arbitrary unicode values are possible if specified as UTF-8-encoded.</param>
         /// <exception cref="Exception"></exception>
-        public void SetMetadata(Dictionary<string, string> metadata)
+        public void SetMetadata(Dictionary<string, string> metadata = null)
         {
             if (!IsPDF)
                 throw new Exception("is no PDF");
             if (IsEncrypted || IsClosed)
                 throw new Exception("closed or encrypted doc");
+            if (metadata == null)
+                metadata = new Dictionary<string, string>();
+
             Dictionary<string, string> keymap = new Dictionary<string, string>()
             {
                 { "author", "Author" },
@@ -4837,7 +4841,7 @@ namespace MuPDF.NET
             if (t0.Level != 1)
                 throw new Exception("hierarchy level of item 0 must be 1");
 
-            foreach (int i in Enumerable.Range(1, n - 1))
+            foreach (int i in Enumerable.Range(0, n - 1))
             {
                 Toc t1 = tocs[i];
                 Toc t2 = tocs[i + 1];
@@ -4918,7 +4922,7 @@ namespace MuPDF.NET
                 d.Add("xref", xref[i + 1]);
                 d.Add("color", dest.Color);
                 d.Add("flags", (dest.Italic ? 1 : 0) + 2 * (dest.Bold ? 1 : 0));
-                lvlTab.Add(lvl, i + 1);
+                lvlTab[lvl] = i + 1;
                 Dictionary<string, dynamic> parent = olItems[lvlTab[lvl - 1]];
 
                 if (dest.Collapse || (collapse != 0 && lvl > collapse))
@@ -4958,7 +4962,7 @@ namespace MuPDF.NET
                     if (ol["first"] > -1)
                         txt += $"/First {xref[ol["first"]]} 0 R";
                 }
-                catch (Exception) { }
+                catch (Exception) {  }
 
                 try
                 {
@@ -4994,7 +4998,7 @@ namespace MuPDF.NET
                 }
                 catch (Exception) { }
 
-                if (ol["count"] && ol["color"].Length == 3)
+                if (ol["count"] != 0 && ol.GetValueOrDefault("color", new float[] { }).Length == 3)
                     txt += $"/C[ {ol["color"][0]} {ol["color"][1]} {ol["color"][2]}]";
                 if (ol.GetValueOrDefault("flags", 0) > 0)
                     txt += $"/F {ol["flags"]}";

@@ -135,11 +135,5 @@ namespace MuPDF.NET.Test
             doc.LayerUIConfigs();
             doc.SwitchLayer(0);
         }
-
-        [Test]
-        public void OC2()
-        {
-
-        }
     }
 }

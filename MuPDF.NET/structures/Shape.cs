@@ -648,7 +648,7 @@ namespace MuPDF.NET
         /// </summary>
         /// <param name="rect"></param>
         /// <returns></returns>
-        public Point DrawRect(Rect rect)
+        public Point DrawRect(Rect rect, float radius)
         {
             Point t = rect.BottomLeft * IPctm;
             DrawCont += $"{t.X} {t.Y} {rect.Width} {rect.Height} re\n";
