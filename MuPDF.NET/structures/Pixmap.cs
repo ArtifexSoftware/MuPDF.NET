@@ -170,7 +170,7 @@ namespace MuPDF.NET
             }
         }
 
-        public int Stripe
+        public int Stride
         {
             get
             {

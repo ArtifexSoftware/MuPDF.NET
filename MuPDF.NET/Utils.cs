@@ -1100,7 +1100,7 @@ namespace MuPDF.NET
             return ret;
         }
 
-        public static void GetWidgetProperties(MuPDFAnnot annot, Widget widget)
+        public static void GetWidgetProperties(MuPDFAnnot annot, MuPDFWidget widget)
         {
             PdfObj annotObj = mupdf.mupdf.pdf_annot_obj(annot.ToPdfAnnot());
             PdfPage page = mupdf.mupdf.pdf_annot_page(annot.ToPdfAnnot());
@@ -2677,7 +2677,7 @@ namespace MuPDF.NET
             return Utils._GetLinkDict(ol.Dest, null, doc);
         }
 
-        public static Link _GetLinkDict(LinkDest dest, Rect r, MuPDFDocument document)
+        public static Link _GetLinkDict(MuPDFLinkDest dest, Rect r, MuPDFDocument document)
         {
             Link nl = new Link();
             nl.Kind = dest.Kind;
@@ -4838,7 +4838,7 @@ namespace MuPDF.NET
                 co.pdf_array_push(pdf.pdf_new_indirect(xref, 0));
         }
 
-        public static void SaveWidget(PdfAnnot annot, Widget widget)
+        public static void SaveWidget(PdfAnnot annot, MuPDFWidget widget)
         {
             PdfPage page = annot.pdf_annot_page();
             PdfObj annotObj = annot.pdf_annot_obj();
@@ -5169,7 +5169,7 @@ namespace MuPDF.NET
             return ret;
         }
 
-        public static void FillWidget(MuPDFAnnot annot, Widget widget)
+        public static void FillWidget(MuPDFAnnot annot, MuPDFWidget widget)
         {
             Utils.GetWidgetProperties(annot, widget);
         }

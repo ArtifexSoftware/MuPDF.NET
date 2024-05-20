@@ -4540,7 +4540,7 @@ namespace MuPDF.NET
                 MuPDFPage page = this[i];
                 if (resetFields)
                 {
-                    foreach (Widget widget in page.GetWidgets())
+                    foreach (MuPDFWidget widget in page.GetWidgets())
                         widget.Reset();
                 }
                 if (removeLinks)
