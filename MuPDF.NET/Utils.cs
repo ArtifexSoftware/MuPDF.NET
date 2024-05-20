@@ -4241,7 +4241,7 @@ namespace MuPDF.NET
                 tp = page.GetTextPage(clip, flags: (int)TextFlags.TEXT_DEHYPHENATE);
             else if (tp.Parent != page)
                 throw new Exception("not a textpage of this page");
-            string ret = tp.ExtractSelection(p1.ToFzPoint(), p2.ToFzPoint());
+            string ret = tp.ExtractSelection(p1, p2);
             if (textPage == null)
                 tp = null;
             return ret;

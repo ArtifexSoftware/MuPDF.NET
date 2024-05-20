@@ -81,13 +81,13 @@ namespace MuPDF.NET.Test
         [Test]
         public void ExtractSelection()
         {
-            textPage.ExtractSelection(new mupdf.FzPoint(20, 20), new mupdf.FzPoint(100, 100));
+            textPage.ExtractSelection(new Point(20, 20), new Point(100, 100));
             Assert.Pass();
 
             textPage.ExtractSelection(null, null);
             Assert.Pass();
 
-            string ret = textPage.ExtractSelection(new mupdf.FzPoint(-5, -15), null);
+            string ret = textPage.ExtractSelection(new Point(-5, -15), null);
             Assert.Pass();
         }
 

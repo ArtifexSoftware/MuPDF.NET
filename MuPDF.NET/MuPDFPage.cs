@@ -148,7 +148,7 @@ namespace MuPDF.NET
             return val;
         }
 
-        public static (Rect, Rect, IdentityMatrix) RectFunction(int rectN, Rect filled)
+        public static (Rect, Rect, Matrix) RectFunction(int rectN, Rect filled)
         {
             return (fit.Rect, fit.Rect, new IdentityMatrix());
         }
@@ -1681,7 +1681,7 @@ namespace MuPDF.NET
             if (res == 0)
                 throw new Exception("Error applying redactions");
 
-            Shape shape = NewShape();
+            MuPDFShape shape = NewShape();
             foreach (Annot redact in redactAnnots)
             {
                 Rect annotRect = redact.Rect;
@@ -2094,7 +2094,7 @@ namespace MuPDF.NET
             int oc = 0
         )
         {
-            Shape img = new Shape(this);
+            MuPDFShape img = new MuPDFShape(this);
             int rc = img.InsertText(
                 point,
                 text,
@@ -3246,7 +3246,7 @@ namespace MuPDF.NET
             int oc = 0
         )
         {
-            Shape img = new Shape(this);
+            MuPDFShape img = new MuPDFShape(this);
             Point ret = img.DrawBezier(p1, p2, p3, p4);
             img.Finish(
                 color: color,
@@ -3304,7 +3304,7 @@ namespace MuPDF.NET
             int oc = 0
         )
         {
-            Shape img = new Shape(this);
+            MuPDFShape img = new MuPDFShape(this);
             Point ret = img.DrawSector(center, point, beta, fullSector);
             img.Finish(
                 color: color,
@@ -3357,7 +3357,7 @@ namespace MuPDF.NET
             int oc = 0
         )
         {
-            Shape img = new Shape(this);
+            MuPDFShape img = new MuPDFShape(this);
             Point ret = img.DrawCircle(center, radius);
 
             img.Finish(
@@ -3408,7 +3408,7 @@ namespace MuPDF.NET
             int oc = 0
         )
         {
-            Shape img = new Shape(this);
+            MuPDFShape img = new MuPDFShape(this);
             Point ret = img.DrawOval(rect);
 
             img.Finish(
@@ -3465,7 +3465,7 @@ namespace MuPDF.NET
             int oc = 0
         )
         {
-            Shape img = new Shape(this);
+            MuPDFShape img = new MuPDFShape(this);
             Point ret = img.DrawCurve(p1, p2, p3);
 
             img.Finish(
@@ -3517,7 +3517,7 @@ namespace MuPDF.NET
             int oc = 0
         )
         {
-            Shape img = new Shape(this);
+            MuPDFShape img = new MuPDFShape(this);
             Point ret = img.DrawLine(p1, p2);
 
             img.Finish(
@@ -3568,7 +3568,7 @@ namespace MuPDF.NET
             int oc = 0
         )
         {
-            Shape img = new Shape(this);
+            MuPDFShape img = new MuPDFShape(this);
             Point ret = img.DrawPolyline(points);
 
             img.Finish(
@@ -3619,7 +3619,7 @@ namespace MuPDF.NET
             int oc = 0
         )
         {
-            Shape img = new Shape(this);
+            MuPDFShape img = new MuPDFShape(this);
             Point ret = img.DrawQuad(quad);
 
             img.Finish(
@@ -3671,7 +3671,7 @@ namespace MuPDF.NET
             float radius = 0
         )
         {
-            Shape img = new Shape(this);
+            MuPDFShape img = new MuPDFShape(this);
             Point ret = img.DrawRect(rect, radius);
 
             img.Finish(
@@ -3726,7 +3726,7 @@ namespace MuPDF.NET
             int oc = 0
         )
         {
-            Shape img = new Shape(this);
+            MuPDFShape img = new MuPDFShape(this);
             Point ret = img.DrawSquiggle(p1, p2, breadth);
             img.Finish(
                 color: color,
@@ -3781,7 +3781,7 @@ namespace MuPDF.NET
             int oc = 0
         )
         {
-            Shape img = new Shape(this);
+            MuPDFShape img = new MuPDFShape(this);
             Point ret = img.DrawZigzag(p1, p2, breadth);
 
             img.Finish(
@@ -4160,7 +4160,7 @@ namespace MuPDF.NET
             int oc = 0
         )
         {
-            Shape img = new Shape(this);
+            MuPDFShape img = new MuPDFShape(this);
             float ret = img.InsertTextbox(
                 rect,
                 text,
@@ -4236,9 +4236,9 @@ namespace MuPDF.NET
         ///
         /// </summary>
         /// <returns></returns>
-        public Shape NewShape()
+        public MuPDFShape NewShape()
         {
-            return new Shape(this);
+            return new MuPDFShape(this);
         }
 
         /// <summary>

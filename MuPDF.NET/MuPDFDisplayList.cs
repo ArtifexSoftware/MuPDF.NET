@@ -2,7 +2,7 @@
 
 namespace MuPDF.NET
 {
-    public class DisplayList
+    public class MuPDFDisplayList
     {
         private FzDisplayList _nativeDisplayList;
 
@@ -23,18 +23,18 @@ namespace MuPDF.NET
         /// 
         /// </summary>
         /// <param name="rect">The page's rectangle.</param>
-        public DisplayList(Rect rect)
+        public MuPDFDisplayList(Rect rect)
         {
             _nativeDisplayList = new FzDisplayList(rect.ToFzRect());
             ThisOwn = true;
         }
 
-        public DisplayList(DisplayList displayList)
+        public MuPDFDisplayList(MuPDFDisplayList displayList)
         {
             _nativeDisplayList = displayList.ToFzDisplayList();
         }
 
-        public DisplayList(FzDisplayList displayList)
+        public MuPDFDisplayList(FzDisplayList displayList)
         {
             _nativeDisplayList = displayList;
         }
