@@ -1501,7 +1501,7 @@ namespace MuPDF.NET
 
         public void AddAnnotFromString(List<string> links)
         {
-            PdfPage page = _pdfPage;
+            PdfPage page = _nativePage.pdf_page_from_fz_page();
             int lCount = links.Count;
             if (lCount < 1)
                 return;
@@ -1510,7 +1510,6 @@ namespace MuPDF.NET
             if (page.obj().pdf_dict_get(new PdfObj("Annots")).m_internal == null)
                 page.obj().pdf_dict_put_array(new PdfObj("Annots"), lCount);
             PdfObj annots = page.obj().pdf_dict_get(new PdfObj("Annots"));
-            Debug.Assert(annots.m_internal == null, $"{lCount} is {annots}");
 
             for (i = 0; i < lCount; i++)
             {

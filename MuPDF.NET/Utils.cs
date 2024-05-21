@@ -2911,7 +2911,7 @@ namespace MuPDF.NET
             if (link.Kind == LinkType.LINK_GOTO)
                 if (link.Page >= 0)
                 {
-                    txt = Utils.AnnotSkel["goto2"];
+                    txt = Utils.AnnotSkel["goto1"];
                     int pno = link.Page;
                     int xref = page.Parent.GetPageXref(pno);
                     Point pnt = link.To == null ? new Point(0, 0) : link.To;
@@ -2925,7 +2925,6 @@ namespace MuPDF.NET
                 }
             else if (link.Kind == LinkType.LINK_GOTOR)
             {
-                txt = Utils.AnnotSkel["goto2"];
                 if (link.Page >= 0)
                 {
                     txt = Utils.AnnotSkel["gotor1"];
