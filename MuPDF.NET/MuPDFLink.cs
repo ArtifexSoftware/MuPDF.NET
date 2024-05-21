@@ -50,7 +50,7 @@ namespace MuPDF.NET
         /// <summary>
         /// The link destination details object.
         /// </summary>
-        public LinkDest Dest
+        public MuPDFLinkDest Dest
         {
             get
             {
@@ -64,7 +64,7 @@ namespace MuPDF.NET
                     uri = (null, 0, 0);
                 else
                     uri = Parent.Parent.ResolveLink(Uri);
-                return new LinkDest(this, uri, Parent.Parent);
+                return new MuPDFLinkDest(this, uri, Parent.Parent);
             }
         }
 

@@ -380,9 +380,9 @@ namespace MuPDF.NET
         /// <param name="a">begin point of selection</param>
         /// <param name="b">end point of selection</param>
         /// <returns>returns text in format of string</returns>
-        public string ExtractSelection(FzPoint a, FzPoint b)
+        public string ExtractSelection(Point a, Point b)
         {
-            return mupdf.mupdf.fz_copy_selection(_nativeTextPage, a, b, 0);
+            return mupdf.mupdf.fz_copy_selection(_nativeTextPage, a.ToFzPoint(), b.ToFzPoint(), 0);
         }
 
         /// <summary>

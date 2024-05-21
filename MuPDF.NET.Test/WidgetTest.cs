@@ -14,7 +14,7 @@ namespace MuPDF.NET.Test
         {
             MuPDFDocument doc = new MuPDFDocument();
             MuPDFPage page = doc.NewPage();
-            Widget w = new Widget(page);
+            MuPDFWidget w = new MuPDFWidget(page);
 
             w.BorderColor = new float[] { 0, 0, 1 };
             w.BorderWidth = 0.3f;
@@ -31,7 +31,7 @@ namespace MuPDF.NET.Test
             w.TextMaxLen = 50;
             w.FieldValue = "Times-Roman";
             page.AddWidget(w);
-            Widget first = page.FirstWidget;
+            MuPDFWidget first = page.FirstWidget;
 
             Assert.That(first.FieldTypeString, Is.EqualTo("Text"));
         }
@@ -41,7 +41,7 @@ namespace MuPDF.NET.Test
         {
             MuPDFDocument doc = new MuPDFDocument();
             MuPDFPage page = doc.NewPage();
-            Widget w = new Widget(page);
+            MuPDFWidget w = new MuPDFWidget(page);
 
             w.BorderStyle = "b";
             w.FieldName = "Button-1";
@@ -54,7 +54,7 @@ namespace MuPDF.NET.Test
             w.FieldValue = "true";
             page.AddWidget(w);
 
-            Widget field = page.FirstWidget;
+            MuPDFWidget field = page.FirstWidget;
             Assert.That(field.FieldTypeString, Is.EqualTo("CheckBox"));
 
             w.FieldFlags |= (int)FormFlags.PDF_FIELD_IS_READ_ONLY;

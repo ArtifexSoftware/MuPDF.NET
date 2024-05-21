@@ -6,14 +6,20 @@ namespace MuPDF.NET
     {
         private FzOutline _nativeOutline;
 
-        public LinkDest Dest
+        /// <summary>
+        /// The link destination details object.
+        /// </summary>
+        public MuPDFLinkDest Dest
         {
             get
             {
-                return new LinkDest(this, (null, 0, 0), null);
+                return new MuPDFLinkDest(this, (null, 0, 0), null);
             }
         }
 
+        /// <summary>
+        /// The next outline item on the next level down.
+        /// </summary>
         public Outline Down
         {
             get
@@ -25,6 +31,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// A bool specifying whether the target is outside of the current document.
+        /// </summary>
         public bool IsExternal
         {
             get
@@ -39,6 +48,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// Indicator showing whether any sub-outlines should be expanded (true) or be collapsed (false). This information is interpreted by PDF reader software.
+        /// </summary>
         public bool IsOpen
         {
             get
@@ -47,6 +59,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// The next outline item at the same level as this item.
+        /// </summary>
         public Outline Next
         {
             get
@@ -58,6 +73,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// The page number (0-based) this bookmark points to.
+        /// </summary>
         public int Page
         {
             get
@@ -66,6 +84,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// The item's title as a string or *null*.
+        /// </summary>
         public string Title
         {
             get
@@ -74,6 +95,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// A string specifying the link target.
+        /// </summary>
         public string Uri
         {
             get
@@ -102,9 +126,14 @@ namespace MuPDF.NET
             _nativeOutline = ol;
         }
 
-        public LinkDest Destination(PdfDocument doc)
+        /// <summary>
+        /// Like `dest` property but uses `document` to resolve destinations for kind=LINK_NAMED.
+        /// </summary>
+        /// <param name="doc"></param>
+        /// <returns></returns>
+        public MuPDFLinkDest Destination(PdfDocument doc)
         {
-            return new LinkDest(this, (null, 0, 0), new MuPDFDocument(doc));
+            return new MuPDFLinkDest(this, (null, 0, 0), new MuPDFDocument(doc));
         }
 
         public FzOutline ToFzOutline()

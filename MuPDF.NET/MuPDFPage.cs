@@ -148,7 +148,7 @@ namespace MuPDF.NET
             return val;
         }
 
-        public static (Rect, Rect, IdentityMatrix) RectFunction(int rectN, Rect filled)
+        public static (Rect, Rect, Matrix) RectFunction(int rectN, Rect filled)
         {
             return (fit.Rect, fit.Rect, new IdentityMatrix());
         }
@@ -300,7 +300,7 @@ namespace MuPDF.NET
         /// <summary>
         /// Contains the first Widget of a page (or None).
         /// </summary>
-        public Widget FirstWidget
+        public MuPDFWidget FirstWidget
         {
             get
             {
@@ -316,7 +316,7 @@ namespace MuPDF.NET
                 val.ThisOwn = true;
                 val.Parent = this;
                 AnnotRefs[val.GetHashCode()] = val;
-                Widget widget = new Widget(this);
+                MuPDFWidget widget = new MuPDFWidget(this);
                 Utils.FillWidget(val, widget);
 
                 return widget;
@@ -687,7 +687,7 @@ namespace MuPDF.NET
         /// </summary>
         /// <param name="xref"></param>
         /// <returns></returns>
-        public Widget LoadWidget(int xref)
+        public MuPDFWidget LoadWidget(int xref)
         {
             PdfPage page = _nativePage.pdf_page_from_fz_page();
             PdfAnnot annot = Utils.GetWidgetByXref(page, xref);
@@ -696,7 +696,7 @@ namespace MuPDF.NET
             val.ThisOwn = true;
             val.Parent = this;
             AnnotRefs[val.GetHashCode()] = val;
-            Widget widget = new Widget(this);
+            MuPDFWidget widget = new MuPDFWidget(this);
             Utils.FillWidget(val, widget);
 
             return widget;
@@ -707,7 +707,7 @@ namespace MuPDF.NET
         /// </summary>
         /// <param name="types">field types to subselect from. If none, all fields are returned.E.g.types=[PDF_WIDGET_TYPE_TEXT] will only yield text fields.</param>
         /// <returns></returns>
-        public IEnumerable<Widget> GetWidgets(int[] types = null)
+        public IEnumerable<MuPDFWidget> GetWidgets(int[] types = null)
         {
             List<AnnotXref> refs = GetAnnotXrefs();
             List<int> xrefs = refs.Where(a => a.AnnotType == PdfAnnotType.PDF_ANNOT_WIDGET)
@@ -715,7 +715,7 @@ namespace MuPDF.NET
                 .ToList();
             foreach (int xref in xrefs)
             {
-                Widget widget = LoadWidget(xref);
+                MuPDFWidget widget = LoadWidget(xref);
                 if (types == null || types.Contains(widget.FieldType))
                     yield return widget;
             }
@@ -1501,7 +1501,7 @@ namespace MuPDF.NET
 
         public void AddAnnotFromString(List<string> links)
         {
-            PdfPage page = _pdfPage;
+            PdfPage page = _nativePage.pdf_page_from_fz_page();
             int lCount = links.Count;
             if (lCount < 1)
                 return;
@@ -1510,7 +1510,6 @@ namespace MuPDF.NET
             if (page.obj().pdf_dict_get(new PdfObj("Annots")).m_internal == null)
                 page.obj().pdf_dict_put_array(new PdfObj("Annots"), lCount);
             PdfObj annots = page.obj().pdf_dict_get(new PdfObj("Annots"));
-            Debug.Assert(annots.m_internal == null, $"{lCount} is {annots}");
 
             for (i = 0; i < lCount; i++)
             {
@@ -1681,7 +1680,7 @@ namespace MuPDF.NET
             if (res == 0)
                 throw new Exception("Error applying redactions");
 
-            Shape shape = NewShape();
+            MuPDFShape shape = NewShape();
             foreach (Annot redact in redactAnnots)
             {
                 Rect annotRect = redact.Rect;
@@ -2094,7 +2093,7 @@ namespace MuPDF.NET
             int oc = 0
         )
         {
-            Shape img = new Shape(this);
+            MuPDFShape img = new MuPDFShape(this);
             int rc = img.InsertText(
                 point,
                 text,
@@ -3127,7 +3126,7 @@ namespace MuPDF.NET
             if (!(new List<int>() { 1, 3, 4 }).Contains(_colorSpace.N))
                 throw new Exception("unsupported colorspace");
 
-            DisplayList dl = GetDisplayList(annots ? 1 : 0);
+            MuPDFDisplayList dl = GetDisplayList(annots ? 1 : 0);
             Pixmap pix = dl.GetPixmap(
                 matrix,
                 colorSpace: _colorSpace,
@@ -3141,12 +3140,12 @@ namespace MuPDF.NET
             return pix;
         }
 
-        public DisplayList GetDisplayList(int annots = 1)
+        public MuPDFDisplayList GetDisplayList(int annots = 1)
         {
             if (annots != 0)
-                return new DisplayList(mupdf.mupdf.fz_new_display_list_from_page(_pdfPage.super()));
+                return new MuPDFDisplayList(mupdf.mupdf.fz_new_display_list_from_page(_pdfPage.super()));
             else
-                return new DisplayList(
+                return new MuPDFDisplayList(
                     mupdf.mupdf.fz_new_display_list_from_page_contents(_pdfPage.super())
                 );
         }
@@ -3194,7 +3193,7 @@ namespace MuPDF.NET
         /// <param name="widget">the widget to be deleted.</param>
         /// <returns>the widget following the deleted one. Please remember that physical removal requires saving to a new file with garbage > 0.</returns>
         /// <exception cref="Exception"></exception>
-        public MuPDFAnnot DeleteWidget(Widget widget)
+        public MuPDFAnnot DeleteWidget(MuPDFWidget widget)
         {
             PdfAnnot annot = widget._annot;
             if (annot == null)
@@ -3246,7 +3245,7 @@ namespace MuPDF.NET
             int oc = 0
         )
         {
-            Shape img = new Shape(this);
+            MuPDFShape img = new MuPDFShape(this);
             Point ret = img.DrawBezier(p1, p2, p3, p4);
             img.Finish(
                 color: color,
@@ -3304,7 +3303,7 @@ namespace MuPDF.NET
             int oc = 0
         )
         {
-            Shape img = new Shape(this);
+            MuPDFShape img = new MuPDFShape(this);
             Point ret = img.DrawSector(center, point, beta, fullSector);
             img.Finish(
                 color: color,
@@ -3357,7 +3356,7 @@ namespace MuPDF.NET
             int oc = 0
         )
         {
-            Shape img = new Shape(this);
+            MuPDFShape img = new MuPDFShape(this);
             Point ret = img.DrawCircle(center, radius);
 
             img.Finish(
@@ -3408,7 +3407,7 @@ namespace MuPDF.NET
             int oc = 0
         )
         {
-            Shape img = new Shape(this);
+            MuPDFShape img = new MuPDFShape(this);
             Point ret = img.DrawOval(rect);
 
             img.Finish(
@@ -3465,7 +3464,7 @@ namespace MuPDF.NET
             int oc = 0
         )
         {
-            Shape img = new Shape(this);
+            MuPDFShape img = new MuPDFShape(this);
             Point ret = img.DrawCurve(p1, p2, p3);
 
             img.Finish(
@@ -3517,7 +3516,7 @@ namespace MuPDF.NET
             int oc = 0
         )
         {
-            Shape img = new Shape(this);
+            MuPDFShape img = new MuPDFShape(this);
             Point ret = img.DrawLine(p1, p2);
 
             img.Finish(
@@ -3568,7 +3567,7 @@ namespace MuPDF.NET
             int oc = 0
         )
         {
-            Shape img = new Shape(this);
+            MuPDFShape img = new MuPDFShape(this);
             Point ret = img.DrawPolyline(points);
 
             img.Finish(
@@ -3619,7 +3618,7 @@ namespace MuPDF.NET
             int oc = 0
         )
         {
-            Shape img = new Shape(this);
+            MuPDFShape img = new MuPDFShape(this);
             Point ret = img.DrawQuad(quad);
 
             img.Finish(
@@ -3671,7 +3670,7 @@ namespace MuPDF.NET
             float radius = 0
         )
         {
-            Shape img = new Shape(this);
+            MuPDFShape img = new MuPDFShape(this);
             Point ret = img.DrawRect(rect, radius);
 
             img.Finish(
@@ -3726,7 +3725,7 @@ namespace MuPDF.NET
             int oc = 0
         )
         {
-            Shape img = new Shape(this);
+            MuPDFShape img = new MuPDFShape(this);
             Point ret = img.DrawSquiggle(p1, p2, breadth);
             img.Finish(
                 color: color,
@@ -3781,7 +3780,7 @@ namespace MuPDF.NET
             int oc = 0
         )
         {
-            Shape img = new Shape(this);
+            MuPDFShape img = new MuPDFShape(this);
             Point ret = img.DrawZigzag(p1, p2, breadth);
 
             img.Finish(
@@ -4160,7 +4159,7 @@ namespace MuPDF.NET
             int oc = 0
         )
         {
-            Shape img = new Shape(this);
+            MuPDFShape img = new MuPDFShape(this);
             float ret = img.InsertTextbox(
                 rect,
                 text,
@@ -4236,9 +4235,9 @@ namespace MuPDF.NET
         ///
         /// </summary>
         /// <returns></returns>
-        public Shape NewShape()
+        public MuPDFShape NewShape()
         {
-            return new Shape(this);
+            return new MuPDFShape(this);
         }
 
         /// <summary>
@@ -4291,7 +4290,7 @@ namespace MuPDF.NET
                 link.From = r;
                 InsertLink(link);
             }
-            foreach (Widget widget in GetWidgets())
+            foreach (MuPDFWidget widget in GetWidgets())
             {
                 r = widget.Rect * iMat;
                 widget.Rect = r;
@@ -4324,7 +4323,7 @@ namespace MuPDF.NET
         /// <param name="widget">a Widget object which must have been created upfront.</param>
         /// <returns>a widget annotation.</returns>
         /// <exception cref="Exception"></exception>
-        public MuPDFAnnot AddWidget(Widget widget)
+        public MuPDFAnnot AddWidget(MuPDFWidget widget)
         {
             MuPDFDocument doc = Parent;
             if (!doc.IsPDF)

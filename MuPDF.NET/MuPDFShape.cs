@@ -2,7 +2,7 @@
 
 namespace MuPDF.NET
 {
-    public class Shape
+    public class MuPDFShape
     {
         public MuPDFPage Page { get; set; }
 
@@ -30,7 +30,7 @@ namespace MuPDF.NET
 
         public Rect Rect { get; set; }
 
-        public Shape(MuPDFPage page)
+        public MuPDFShape(MuPDFPage page)
         {
             this.Page = page;
             this.Doc = page.Parent;
@@ -75,10 +75,10 @@ namespace MuPDF.NET
         public int InsertText(
             Point point,
             List<string> buffer,
+            string fontName,
+            string fontFile,
             float fontSize = 11,
             float lineHeight = 0,
-            string fontName = "helv",
-            string fontFile = null,
             bool setSimple = false,
             int encoding = 0,
             float[] color = null,
@@ -92,6 +92,9 @@ namespace MuPDF.NET
             int oc = 0
             )
         {
+            if (string.IsNullOrEmpty(fontName) || string.IsNullOrEmpty(fontFile))
+                throw new Exception("should include fontName and fontFile.");
+
             return _InsertText(point, buffer, fontSize, lineHeight, fontName, fontFile, setSimple, encoding,
                 color, fill, renderMode, borderWidth, rotate, morph, strokeOpacity, fillOpacity, oc);
         }
@@ -120,10 +123,10 @@ namespace MuPDF.NET
         public int InsertText(
             Point point,
             string buffer,
+            string fontName,
+            string fontFile,
             float fontSize = 11,
             float lineHeight = 0,
-            string fontName = "helv",
-            string fontFile = null,
             bool setSimple = false,
             int encoding = 0,
             float[] color = null,
@@ -138,6 +141,9 @@ namespace MuPDF.NET
             )
         {
             string[] list = buffer.Split('\n');
+            if (string.IsNullOrEmpty(fontName) || string.IsNullOrEmpty(fontFile))
+                throw new Exception("should include fontName and fontFile.");
+
             return _InsertText(point, new List<string>(list), fontSize, lineHeight, fontName, fontFile, setSimple, encoding,
                 color, fill, renderMode, borderWidth, rotate, morph, strokeOpacity, fillOpacity, oc);
         }

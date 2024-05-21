@@ -1100,7 +1100,7 @@ namespace MuPDF.NET
             return ret;
         }
 
-        public static void GetWidgetProperties(MuPDFAnnot annot, Widget widget)
+        public static void GetWidgetProperties(MuPDFAnnot annot, MuPDFWidget widget)
         {
             PdfObj annotObj = mupdf.mupdf.pdf_annot_obj(annot.ToPdfAnnot());
             PdfPage page = mupdf.mupdf.pdf_annot_page(annot.ToPdfAnnot());
@@ -2677,7 +2677,7 @@ namespace MuPDF.NET
             return Utils._GetLinkDict(ol.Dest, null, doc);
         }
 
-        public static Link _GetLinkDict(LinkDest dest, Rect r, MuPDFDocument document)
+        public static Link _GetLinkDict(MuPDFLinkDest dest, Rect r, MuPDFDocument document)
         {
             Link nl = new Link();
             nl.Kind = dest.Kind;
@@ -2911,7 +2911,7 @@ namespace MuPDF.NET
             if (link.Kind == LinkType.LINK_GOTO)
                 if (link.Page >= 0)
                 {
-                    txt = Utils.AnnotSkel["goto2"];
+                    txt = Utils.AnnotSkel["goto1"];
                     int pno = link.Page;
                     int xref = page.Parent.GetPageXref(pno);
                     Point pnt = link.To == null ? new Point(0, 0) : link.To;
@@ -2925,7 +2925,6 @@ namespace MuPDF.NET
                 }
             else if (link.Kind == LinkType.LINK_GOTOR)
             {
-                txt = Utils.AnnotSkel["goto2"];
                 if (link.Page >= 0)
                 {
                     txt = Utils.AnnotSkel["gotor1"];
@@ -4241,7 +4240,7 @@ namespace MuPDF.NET
                 tp = page.GetTextPage(clip, flags: (int)TextFlags.TEXT_DEHYPHENATE);
             else if (tp.Parent != page)
                 throw new Exception("not a textpage of this page");
-            string ret = tp.ExtractSelection(p1.ToFzPoint(), p2.ToFzPoint());
+            string ret = tp.ExtractSelection(p1, p2);
             if (textPage == null)
                 tp = null;
             return ret;
@@ -4838,7 +4837,7 @@ namespace MuPDF.NET
                 co.pdf_array_push(pdf.pdf_new_indirect(xref, 0));
         }
 
-        public static void SaveWidget(PdfAnnot annot, Widget widget)
+        public static void SaveWidget(PdfAnnot annot, MuPDFWidget widget)
         {
             PdfPage page = annot.pdf_annot_page();
             PdfObj annotObj = annot.pdf_annot_obj();
@@ -5169,7 +5168,7 @@ namespace MuPDF.NET
             return ret;
         }
 
-        public static void FillWidget(MuPDFAnnot annot, Widget widget)
+        public static void FillWidget(MuPDFAnnot annot, MuPDFWidget widget)
         {
             Utils.GetWidgetProperties(annot, widget);
         }

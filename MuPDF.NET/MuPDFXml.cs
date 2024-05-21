@@ -244,6 +244,21 @@ namespace MuPDF.NET
             return this;
         }
 
+        public MuPDFXml AddVar(string text = null)
+        {
+            return AddCode(text);
+        }
+
+        public MuPDFXml AddSamp(string text = null)
+        {
+            return AddCode(text);
+        }
+
+        public MuPDFXml AddKbd(string text = null)
+        {
+            return AddCode(text);
+        }
+
         /// <summary>
         /// Add a pre tag, context manager.
         /// </summary>
@@ -523,7 +538,7 @@ namespace MuPDF.NET
                 (int, int, int) rgb = Utils.sRGB2rgb(color);
                 return $"rgb({rgb.Item1},{rgb.Item2},{rgb.Item3})";
             }
-            if ((color is List<float> && color.Count == 3))
+            if ((color is float[] && color.Length == 3))
             {
                 return $"rbg({color[0]},{color[1]},{color[2]}";
             }
@@ -640,7 +655,31 @@ namespace MuPDF.NET
         /// </summary>
         /// <param name="color">either an RGB value like (255, 0, 0) (for “red”) or a valid background-color value.</param>
         /// <returns></returns>
-        public MuPDFXml SetBgColor(dynamic color)
+        public MuPDFXml SetBgColor(int color)
+        {
+            string text = $"backgroud-color: {MuPDFXml.ColorText(color)}";
+            AddStyle(text);
+            return this;
+        }
+
+        /// <summary>
+        /// Set the background color. Only works for block-level tags.
+        /// </summary>
+        /// <param name="color">either an RGB value like (255, 0, 0) (for “red”) or a valid background-color value.</param>
+        /// <returns></returns>
+        public MuPDFXml SetBgColor(float[] color)
+        {
+            string text = $"backgroud-color: {MuPDFXml.ColorText(color)}";
+            AddStyle(text);
+            return this;
+        }
+
+        /// <summary>
+        /// Set the background color. Only works for block-level tags.
+        /// </summary>
+        /// <param name="color">either an RGB value like (255, 0, 0) (for “red”) or a valid background-color value.</param>
+        /// <returns></returns>
+        public MuPDFXml SetBgColor(string color)
         {
             string text = $"backgroud-color: {MuPDFXml.ColorText(color)}";
             AddStyle(text);
