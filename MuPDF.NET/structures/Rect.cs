@@ -396,6 +396,11 @@ namespace MuPDF.NET
             float f = (float)Math.Pow(u[unit].Item1 / u[unit].Item2, 2);
             return f * Width * Height;
         }
+
+        public bool EqualTo(Rect obj)
+        {
+            return (X0 == ((Rect)obj).X0 && Y0 == ((Rect)obj).Y0 && X1 == ((Rect)obj).X1 && Y1 == ((Rect)obj).Y1);
+        }
     }
 
 }

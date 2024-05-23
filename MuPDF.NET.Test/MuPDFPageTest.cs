@@ -8,7 +8,7 @@ public class MuPDFPageTest : PdfTestBase
     [SetUp]
     public void Setup()
     {
-        doc = new MuPDFDocument("input.pdf");
+        doc = new MuPDFDocument("../../../resources/toc.pdf");
         page = new MuPDFPage(doc.GetPage(0), doc);
     }
 
@@ -16,7 +16,7 @@ public class MuPDFPageTest : PdfTestBase
     public void InsertText()// passed but text was never drawn
     {
         MuPDFPage page = doc.NewPage();
-        int res = page.InsertText(new Point(100, 100), "hello", fontFile: "kenpixel.ttf", fontName: "kenpixel");
+        int res = page.InsertText(new Point(100, 100), "hello", fontFile: "../../../resources/kenpixel.ttf", fontName: "kenpixel");
 
         Assert.Pass();
     }
@@ -121,7 +121,7 @@ public class MuPDFPageTest : PdfTestBase
     [Test]
     public void InsertFont()
     {
-        int ret = page.InsertFont("kenpixel", "./kenpixel.ttf");
+        int ret = page.InsertFont("kenpixel", "../../../resources/kenpixel.ttf");
         Assert.NotZero(ret);
     }
 
@@ -146,16 +146,8 @@ public class MuPDFPageTest : PdfTestBase
     {
         Link link = new Link();
         link.Name = "Here is the link.";
-        link.Page = 1;
+        link.Page = 0;
         link.From = new Rect(0, 0, 100, 100);
-        /*try
-        {
-            page.InsertLink(link);
-        }
-        catch (Exception)
-        {
-            Assert.Pass();
-        }*/
 
         link.Kind = LinkType.LINK_GOTO;
         page.InsertLink(link);
@@ -180,7 +172,7 @@ public class MuPDFPageTest : PdfTestBase
     {
         MuPDFPage page = doc.LoadPage(0);
 
-        page.InsertImage(new Rect(100, 100, 300, 300), "./img.png", imageName: "back");
+        page.InsertImage(new Rect(100, 100, 300, 300), "../../../resources/nur-ruhig.jpg", imageName: "back");
 
         doc.Save("output.pdf");
     }
@@ -192,9 +184,9 @@ public class MuPDFPageTest : PdfTestBase
         MuPDFPage page = doc.NewPage();
 
         MuPDFArchive archive = new MuPDFArchive();
-        FileStream st = new FileStream("1.zip", FileMode.Open);
+        FileStream st = new FileStream("../../../resources/kenpixel.zip", FileMode.Open);
         ZipArchive css = new ZipArchive(st, ZipArchiveMode.Read);
-        archive.Add(css, "./1.zip");
+        archive.Add(css, "../../../resources/kenpixel.zip");
 
         page.InsertHtmlBox(new Rect(100, 100, 300, 300), "<h1 style=\"font-family:kenpixel\">hello</h1>", css: "@font-face {font-family: kenpixel; src: url(./kenpixel.ttf)}", scaleLow: 1, archive: archive);
 
@@ -207,7 +199,7 @@ public class MuPDFPageTest : PdfTestBase
     {
         MuPDFDocument doc = new MuPDFDocument();
         MuPDFPage page = doc.NewPage();
-        page.InsertTextbox(new Rect(100, 100, 300, 300), "hello", fontName: "kenpixel", fontFile: "./kenpixel.ttf");
+        page.InsertTextbox(new Rect(100, 100, 300, 300), "hello", fontName: "kenpixel", fontFile: "../../../resources/kenpixel.ttf");
 
         doc.Save("output.pdf");
         Assert.Pass();
@@ -216,7 +208,7 @@ public class MuPDFPageTest : PdfTestBase
     [Test]
     public void ApplyRedactions()
     {
-        for (int i = 0; i < doc.Len; i++)
+        for (int i = 0; i < doc.PageCount; i++)
         {
             if (doc[i].ApplyRedactions())
                 Console.WriteLine(i);
@@ -241,7 +233,7 @@ public class MuPDFPageTest : PdfTestBase
     [Test]
     public void GetImageRects()
     {
-        MuPDFDocument doc = new MuPDFDocument("resources/image-file1.pdf");
+        MuPDFDocument doc = new MuPDFDocument("../../../resources/image-file1.pdf");
         MuPDFPage page = doc.LoadPage(0);
         List<Box> imgs = page.GetImageRects(5, true);
 
@@ -253,7 +245,7 @@ public class MuPDFPageTest : PdfTestBase
     {
         MuPDFDocument doc = new MuPDFDocument();
         MuPDFPage page = doc.NewPage();
-        int xref = page.InsertImage(page.Rect, "resources/img-transparent.png");
+        int xref = page.InsertImage(page.Rect, "../../../resources/img-transparent.png");
         List<Block> imginfo = page.GetImageInfo(xrefs: true);
         Assert.That(imginfo.Count, Is.EqualTo(1));
 
@@ -269,7 +261,7 @@ public class MuPDFPageTest : PdfTestBase
     [Test]
     public void GetDrawings1()
     {
-        MuPDFDocument doc = new MuPDFDocument("resources/test-2462.pdf");
+        MuPDFDocument doc = new MuPDFDocument("../../../resources/drawings.pdf");
         MuPDFPage page = doc[0];
 
         Assert.That(page.GetDrawings(extended: true).Count, Is.Not.Zero);
@@ -278,13 +270,13 @@ public class MuPDFPageTest : PdfTestBase
     [Test]
     public void ExtractImage()
     {
-        string path = "resources/test_2348.pdf";
+        string path = "../../../resources/images.pdf";
         MuPDFDocument doc = new MuPDFDocument();
         MuPDFPage page = doc.NewPage(width: 500, height: 842);
         Rect r = new Rect(20, 20, 480, 820);
-        page.InsertImage(r, filename: "resources/nur-ruhig.jpg");
+        page.InsertImage(r, filename: "../../../resources/nur-ruhig.jpg");
         page = doc.NewPage(width: 500, height: 842);
-        page.InsertImage(r, filename: "resources/img-transparent.png");
+        page.InsertImage(r, filename: "../../../resources/img-transparent.png");
         doc.Save(path);
         doc.Close();
 
@@ -371,7 +363,7 @@ public class MuPDFPageTest : PdfTestBase
         MuPDFDocument doc = new MuPDFDocument();
         MuPDFPage page = doc.NewPage();
         Rect rect = new Rect(50, 50, 100, 100);
-        MuPDFDocument img = new MuPDFDocument("resources/nur-ruhig.jpg");
+        MuPDFDocument img = new MuPDFDocument("../../../resources/nur-ruhig.jpg");
         byte[] tobytes = img.Convert2Pdf();
 
         MuPDFDocument src = new MuPDFDocument("pdf", tobytes);
@@ -384,7 +376,7 @@ public class MuPDFPageTest : PdfTestBase
     [Test]
     public void PageLinks()
     {
-        MuPDFDocument doc = new MuPDFDocument("resources/2.pdf");
+        MuPDFDocument doc = new MuPDFDocument("../../../resources/2.pdf");
         MuPDFPage page = doc[-1];
 
         Assert.That(page.GetLinks().Count, Is.EqualTo(7));
@@ -409,7 +401,7 @@ public class MuPDFPageTest : PdfTestBase
             color: blue,
             oc: ocg,
             fontName: "kenpixel",
-            fontFile: "kenpixel.ttf");
+            fontFile: "../../../resources/kenpixel.ttf");
 
         Assert.That(page.GetText(), Is.EqualTo(page.GetText(clip: rect)));
     }
@@ -436,4 +428,5 @@ public class MuPDFPageTest : PdfTestBase
 
         //Span span = page.GetText
     }
+
 }

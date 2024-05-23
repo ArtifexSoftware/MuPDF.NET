@@ -13,45 +13,45 @@ namespace MuPDF.NET.Test
         [SetUp]
         public void Setup()
         {
-            doc = new MuPDFDocument("input.pdf");
+            doc = new MuPDFDocument("../../../resources/toc.pdf");
         }
 
         [Test]
         public void CopyFullPage()
         {
-            int oldLen = doc.Len;
+            int oldLen = doc.PageCount;
             doc.CopyFullPage(0);
 
-            Assert.AreEqual(doc.Len, oldLen + 1);
+            Assert.AreEqual(doc.PageCount, oldLen + 1);
         }
 
         [Test]
         public void CopyPage()
         {
-            int oldLen = doc.Len;
-            doc.CopyPage(2);
+            int oldLen = doc.PageCount;
+            doc.CopyPage(0);
 
-            Assert.AreEqual(doc.Len, oldLen + 1);
+            Assert.AreEqual(doc.PageCount, oldLen + 1);
         }
 
         [Test]
         public void DeletePage()
         {
-            int oldLen = doc.Len;
-            doc.DeletePage(1);
-            Assert.AreEqual(doc.Len, oldLen - 1);
+            int oldLen = doc.PageCount;
+            doc.DeletePage(0);
+            Assert.AreEqual(doc.PageCount, oldLen - 1);
         }
 
         [Test]
         public void DeletePages()
         {
-            int oldLen = doc.Len;
+            int oldLen = doc.PageCount;
 
-            doc.DeletePages(1, 2); // delete one page
+            doc.DeletePages(0); // delete one page
 
-            doc.DeletePages(new int[] { 2, 3 }); // delete 2 pages
+            doc.DeletePages(new int[] { 0, }); // delete 2 pages
 
-            Assert.AreEqual(doc.Len, oldLen - 3);
+            Assert.AreEqual(doc.PageCount, oldLen - 1);
         }
 
         [Test]
@@ -74,7 +74,7 @@ namespace MuPDF.NET.Test
         {
             int n = doc.GetPageImages(0).Count;
 
-            Assert.That(n, Is.EqualTo(1)); // in case of current input pdf, if other file, real count should be fixed
+            Assert.That(n, Is.EqualTo(15)); // in case of current input pdf, if other file, real count should be fixed
 
             n = doc.ExtractImage(doc.GetPageImages(0)[0].Xref).Image.Length;
 
@@ -84,7 +84,7 @@ namespace MuPDF.NET.Test
         [Test]
         public void GetToc()
         {
-            MuPDFDocument doc = new MuPDFDocument("resources/001003ED.pdf");
+            MuPDFDocument doc = new MuPDFDocument("../../../resources/toc.pdf");
             doc.GetToc(true);
         }
 
@@ -101,24 +101,39 @@ namespace MuPDF.NET.Test
             MuPDFDocument doc = new MuPDFDocument();
             byte[] buffer = Encoding.UTF8.GetBytes("123456678790qwexcvnmhofbnmfsdg4589754uiofjkb-");
             doc.AddEmbfile("file1", buffer, "testfile.txt", "testfile-u.txt", "Description of some sort");
-
-            Console.WriteLine(doc.GetEmbfileCount());
         }
 
         [Test]
         public void Test_IsNoPDF()
         {
-            MuPDFDocument doc = new MuPDFDocument("resources/Bezier.epub");
+            MuPDFDocument doc = new MuPDFDocument("../../../resources/Bezier.epub");
             Assert.That(doc.IsPDF, Is.False);
         }
 
         [Test]
         public void Test_PageIds()
         {
-            MuPDFDocument doc = new MuPDFDocument("resources/Bezier.epub");
+            MuPDFDocument doc = new MuPDFDocument("../../../resources/Bezier.epub");
 
             Assert.That(doc.ChapterCount, Is.EqualTo(7));
             Assert.That(doc.LastLocation.Item1, Is.EqualTo(6));
+        }
+
+        [Test]
+        public void OC1()
+        {
+            MuPDFDocument doc = new MuPDFDocument();
+            int ocg1 = doc.AddOcg("ocg1");
+            int ocg2 = doc.AddOcg("ocg2");
+            doc.SetOCMD(xref: 0, ocgs: new int[] { ocg1, ocg2 });
+            doc.SetLayer(-1);
+            doc.AddLayer("layer1");
+
+            doc.GetLayer();
+            doc.GetLayers();
+            doc.GetOcgs();
+            doc.LayerUIConfigs();
+            doc.SwitchLayer(0);
         }
     }
 }

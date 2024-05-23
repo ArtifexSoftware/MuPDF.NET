@@ -11,7 +11,7 @@ namespace MuPDF.NET.Test
         [SetUp]
         public void Setup()
         {
-            doc = new MuPDFDocument("input.pdf");
+            doc = new MuPDFDocument("../../../resources/cython.pdf");
 
             textPage = doc.LoadPage(0).GetTextPage();
         }
@@ -51,7 +51,7 @@ namespace MuPDF.NET.Test
         public void ExtractBlocks()
         {
             List<TextBlock> blocks = textPage.ExtractBlocks();
-            Assert.Zero(blocks.Count);
+            Assert.That(blocks.Count, Is.EqualTo(4));
         }
 
         [Test]
@@ -69,13 +69,6 @@ namespace MuPDF.NET.Test
         }
 
         [Test]
-        public void ExtractJson()
-        {
-            textPage.ExtractJSON(new Rect(0, 0, 300, 300));
-            Assert.Pass();
-        }
-
-        [Test]
         public void ExtractRAWDict()
         {
             textPage.ExtractRAWDict(new Rect(0, 0, 300, 300));
@@ -88,13 +81,13 @@ namespace MuPDF.NET.Test
         [Test]
         public void ExtractSelection()
         {
-            textPage.ExtractSelection(new mupdf.FzPoint(20, 20), new mupdf.FzPoint(100, 100));
+            textPage.ExtractSelection(new Point(20, 20), new Point(100, 100));
             Assert.Pass();
 
             textPage.ExtractSelection(null, null);
             Assert.Pass();
 
-            string ret = textPage.ExtractSelection(new mupdf.FzPoint(-5, -15), null);
+            string ret = textPage.ExtractSelection(new Point(-5, -15), null);
             Assert.Pass();
         }
 
@@ -106,8 +99,6 @@ namespace MuPDF.NET.Test
             MuPDFPage page = new MuPDFPage(doc.GetPage(0), doc);
 
             MuPDFTextPage tpage = page.GetTextPage();
-
-            Console.WriteLine(tpage.ExtractText());
 
             List<Quad> matches = MuPDFTextPage.Search(tpage, "pixmap");
 

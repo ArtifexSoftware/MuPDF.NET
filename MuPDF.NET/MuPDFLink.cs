@@ -2,8 +2,13 @@
 
 namespace MuPDF.NET
 {
-    public class MuPDFLink : IDisposable
+    public class MuPDFLink
     {
+        static MuPDFLink()
+        {
+            if (!File.Exists("mupdfcsharp.dll"))
+                Utils.LoadEmbeddedDll();
+        }
 
         public bool ThisOwn { get; set; }
 
@@ -17,24 +22,21 @@ namespace MuPDF.NET
 
         public string Uri
         {
-            get
-            {
-                return _nativeLink.m_internal != null ? _nativeLink.m_internal.uri : "";
-            }
+            get { return _nativeLink.m_internal != null ? _nativeLink.m_internal.uri : ""; }
         }
 
         public string Id { get; set; }
 
-        public MuPDFLink(FzLink t) { _nativeLink = t; }
+        public MuPDFLink(FzLink t)
+        {
+            _nativeLink = t;
+        }
 
         public MuPDFLink() { }
 
         public Border Border
         {
-            get
-            {
-                return _Border(Parent.Parent, Xref);
-            }
+            get { return _Border(Parent.Parent, Xref); }
         }
 
         /// <summary>
@@ -48,7 +50,7 @@ namespace MuPDF.NET
         /// <summary>
         /// The link destination details object.
         /// </summary>
-        public LinkDest Dest
+        public MuPDFLinkDest Dest
         {
             get
             {
@@ -62,7 +64,7 @@ namespace MuPDF.NET
                     uri = (null, 0, 0);
                 else
                     uri = Parent.Parent.ResolveLink(Uri);
-                return new LinkDest(this, uri, Parent.Parent);
+                return new MuPDFLinkDest(this, uri, Parent.Parent);
             }
         }
 
@@ -90,7 +92,10 @@ namespace MuPDF.NET
         {
             get
             {
-                if (_nativeLink.m_internal == null || string.IsNullOrEmpty(_nativeLink.m_internal.uri))
+                if (
+                    _nativeLink.m_internal == null
+                    || string.IsNullOrEmpty(_nativeLink.m_internal.uri)
+                )
                     return false;
                 return mupdf.mupdf.fz_is_external_link(_nativeLink.m_internal.uri) != 0;
             }
@@ -128,7 +133,7 @@ namespace MuPDF.NET
                             }
                         }
 
-                        for (i = 0; i < annotXrefs.Count; i ++)
+                        for (i = 0; i < annotXrefs.Count; i++)
                         {
                             int idx = linkXrefs.IndexOf(Xref);
                             val.Xref = linkXrefs[idx + 1];
@@ -189,7 +194,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public void Erase()
         {
@@ -216,10 +221,20 @@ namespace MuPDF.NET
         /// <param name="width"></param>
         /// <param name="dashes"></param>
         /// <param name="style"></param>
-        public void SetBorder(Border border, float width = 0, int[] dashes = null, string style = null)
+        public void SetBorder(
+            Border border,
+            float width = 0,
+            int[] dashes = null,
+            string style = null
+        )
         {
             if (border == null)
-                border = new Border() { Width = width, Style = style, Dashes = dashes };
+                border = new Border()
+                {
+                    Width = width,
+                    Style = style,
+                    Dashes = dashes
+                };
 
             _SetBorder(border, Parent.Parent, Xref);
         }
@@ -269,11 +284,6 @@ namespace MuPDF.NET
             if (!doc.IsPDF)
                 throw new Exception("is no PDF");
             doc.SetKeyXRef(Xref, "F", flags.ToString());
-        }
-
-        public void Dispose()
-        {
-            _nativeLink.Dispose();
         }
     }
 }

@@ -1,8 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFrameworks>net8.0;net8.0-android;net8.0-ios;net8.0-maccatalyst</TargetFrameworks>
-		<TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net8.0-windows10.0.19041.0</TargetFrameworks>
+		<TargetFrameworks>net8.0</TargetFrameworks>
 		<!-- Uncomment to also build the tizen app. You will need to install tizen by following this: https://github.com/Samsung/Tizen.NET -->
 		<!-- <TargetFrameworks>$(TargetFrameworks);net7.0-tizen</TargetFrameworks> -->
 		<UseMaui>true</UseMaui>
@@ -17,29 +16,29 @@
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'tizen'">6.5</SupportedOSPlatformVersion>
 		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
 		<Title>MuPDF.NET</Title>
-		<Version>2.0.0</Version>
+		<Version>2.0.5-alpha</Version>
 		<Authors>Chris Palman</Authors>
 		<Company>Artifex</Company>
-		<Description>A .NET binding for MuPDF</Description>
+		<Description>A C# binding for MuPDF</Description>
 		<Copyright>Artifex</Copyright>
 		<PackageProjectUrl>https://github.com/ArtifexSoftware/MuPDF.NET</PackageProjectUrl>
-		<PackageIcon>muPDF-plus-text.png</PackageIcon>
-		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<PackageIcon>logo.png</PackageIcon>
+		<PackageReadmeFile>Description.md</PackageReadmeFile>
 		<RepositoryUrl>https://github.com/ArtifexSoftware/MuPDF.NET</RepositoryUrl>
-		<PackageTags>dotnet mupdf pdf</PackageTags>
-		<PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
+		<PackageTags>c# dotnet mupdf pdf</PackageTags>
+		<PackageLicenseFile>LICENSE</PackageLicenseFile>
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <None Include="C:\Users\Green\Downloads\LICENSE.txt">
+	  <None Include="..\LICENSE">
 	    <Pack>True</Pack>
 	    <PackagePath>\</PackagePath>
 	  </None>
-	  <None Include="C:\Users\Green\Downloads\muPDF-plus-text.png">
+	  <None Include="..\logo.png">
 	    <Pack>True</Pack>
 	    <PackagePath>\</PackagePath>
 	  </None>
-	  <None Include="C:\Users\Green\Downloads\README.md">
+	  <None Include="..\Description.md">
 	    <Pack>True</Pack>
 	    <PackagePath>\</PackagePath>
 	  </None>
@@ -57,4 +56,15 @@
 	  <PackageReference Update="Microsoft.Maui.Controls.Compatibility" Version="8.0.14" />
 	</ItemGroup>
 
+	<ItemGroup>
+		<EmbeddedResource Include="mupdfcsharp.dll">
+			<LogicalName>mupdfcsharp.dll</LogicalName>
+		</EmbeddedResource>
+	</ItemGroup>
+	<ItemGroup>
+		<EmbeddedResource Include="mupdfcpp64.dll">
+			<LogicalName>mupdfcpp64.dll</LogicalName>
+		</EmbeddedResource>
+	</ItemGroup>
+	
 </Project>

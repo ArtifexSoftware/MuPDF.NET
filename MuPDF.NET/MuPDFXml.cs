@@ -1,11 +1,17 @@
-﻿using mupdf;
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 using System.Text;
+using mupdf;
 
 namespace MuPDF.NET
 {
-    public class MuPDFXml : IDisposable
+    public class MuPDFXml
     {
+        static MuPDFXml()
+        {
+            if (!File.Exists("mupdfcsharp.dll"))
+                Utils.LoadEmbeddedDll();
+        }
+
         private FzXml _nativeXml;
 
         public FzXml ToFzXml()
@@ -23,10 +29,7 @@ namespace MuPDF.NET
         /// </summary>
         public string Text
         {
-            get
-            {
-                return _nativeXml.fz_xml_text();
-            }
+            get { return _nativeXml.fz_xml_text(); }
         }
 
         /// <summary>
@@ -34,10 +37,7 @@ namespace MuPDF.NET
         /// </summary>
         public bool IsText
         {
-            get
-            {
-                return Text != null;
-            }
+            get { return Text != null; }
         }
 
         /// <summary>
@@ -45,10 +45,7 @@ namespace MuPDF.NET
         /// </summary>
         public string TagName
         {
-            get
-            {
-                return _nativeXml.fz_xml_tag();
-            }
+            get { return _nativeXml.fz_xml_tag(); }
         }
 
         /// <summary>
@@ -56,10 +53,7 @@ namespace MuPDF.NET
         /// </summary>
         public MuPDFXml Root
         {
-            get
-            {
-                return new MuPDFXml(_nativeXml.fz_xml_root());
-            }
+            get { return new MuPDFXml(_nativeXml.fz_xml_root()); }
         }
 
         /// <summary>
@@ -250,6 +244,21 @@ namespace MuPDF.NET
             return this;
         }
 
+        public MuPDFXml AddVar(string text = null)
+        {
+            return AddCode(text);
+        }
+
+        public MuPDFXml AddSamp(string text = null)
+        {
+            return AddCode(text);
+        }
+
+        public MuPDFXml AddKbd(string text = null)
+        {
+            return AddCode(text);
+        }
+
         /// <summary>
         /// Add a pre tag, context manager.
         /// </summary>
@@ -325,7 +334,13 @@ namespace MuPDF.NET
         /// <param name="imgFloat"></param>
         /// <param name="align"></param>
         /// <returns></returns>
-        public MuPDFXml AddImage(string name, string width = null, string height = null, string imgFloat = null, string align = null)
+        public MuPDFXml AddImage(
+            string name,
+            string width = null,
+            string height = null,
+            string imgFloat = null,
+            string align = null
+        )
         {
             MuPDFXml child = CreateElement("img");
             if (width != null)
@@ -494,7 +509,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <param name="style"></param>
         /// <returns></returns>
@@ -523,7 +538,7 @@ namespace MuPDF.NET
                 (int, int, int) rgb = Utils.sRGB2rgb(color);
                 return $"rgb({rgb.Item1},{rgb.Item2},{rgb.Item3})";
             }
-            if ((color is List<float> && color.Count == 3))
+            if ((color is float[] && color.Length == 3))
             {
                 return $"rbg({color[0]},{color[1]},{color[2]}";
             }
@@ -640,7 +655,31 @@ namespace MuPDF.NET
         /// </summary>
         /// <param name="color">either an RGB value like (255, 0, 0) (for “red”) or a valid background-color value.</param>
         /// <returns></returns>
-        public MuPDFXml SetBgColor(dynamic color)
+        public MuPDFXml SetBgColor(int color)
+        {
+            string text = $"backgroud-color: {MuPDFXml.ColorText(color)}";
+            AddStyle(text);
+            return this;
+        }
+
+        /// <summary>
+        /// Set the background color. Only works for block-level tags.
+        /// </summary>
+        /// <param name="color">either an RGB value like (255, 0, 0) (for “red”) or a valid background-color value.</param>
+        /// <returns></returns>
+        public MuPDFXml SetBgColor(float[] color)
+        {
+            string text = $"backgroud-color: {MuPDFXml.ColorText(color)}";
+            AddStyle(text);
+            return this;
+        }
+
+        /// <summary>
+        /// Set the background color. Only works for block-level tags.
+        /// </summary>
+        /// <param name="color">either an RGB value like (255, 0, 0) (for “red”) or a valid background-color value.</param>
+        /// <returns></returns>
+        public MuPDFXml SetBgColor(string color)
         {
             string text = $"backgroud-color: {MuPDFXml.ColorText(color)}";
             AddStyle(text);
@@ -755,7 +794,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <param name="spacing"></param>
         /// <returns></returns>
@@ -865,7 +904,7 @@ namespace MuPDF.NET
             string wordSpacing = null,
             string unqid = null,
             string cls = null
-            )
+        )
         {
             MuPDFXml root = Root;
             MuPDFXml temp = root.AddDivision();
@@ -956,6 +995,7 @@ namespace MuPDF.NET
             temp.Remove();
             return this;
         }
+
         /// <summary>
         /// Set indentation for the first textblock line. Only works for block-level nodes.
         /// </summary>
@@ -1053,11 +1093,6 @@ namespace MuPDF.NET
                 else
                     return parent;
             }
-        }
-
-        public void Dispose()
-        {
-            _nativeXml.Dispose();
         }
     }
 }

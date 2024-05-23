@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace MuPDF.NET
+namespace MuPDF.NET.Test
 {
     public class StoryTest
     {
@@ -53,8 +53,8 @@ namespace MuPDF.NET
 
             MuPDFDocument doc2 = MakePdf("<p>before</p>", "before.pdf");
 
-            Assert.That(doc1.Len, Is.EqualTo(2));
-            Assert.That(doc2.Len, Is.EqualTo(1));
+            Assert.That(doc1.PageCount, Is.EqualTo(2));
+            Assert.That(doc2.PageCount, Is.EqualTo(1));
         }
     }
 }

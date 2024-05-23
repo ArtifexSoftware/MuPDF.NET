@@ -5,11 +5,20 @@ namespace MuPDF.NET
 {
     public class MuPDFStory
     {
+        static MuPDFStory()
+        {
+            if (!File.Exists("mupdfcsharp.dll"))
+                Utils.LoadEmbeddedDll();
+        }
+
         private FzStory _nativeStory;
 
         public delegate string ContentFunction(List<Position> positions);
-        public delegate (Rect, Rect, IdentityMatrix) RectFunction(int rectN, Rect filled); // Define the delegate signature according to actual use
+        public delegate (Rect, Rect, Matrix) RectFunction(int rectN, Rect filled); // Define the delegate signature according to actual use
 
+        /// <summary>
+        /// the story's underlying Body
+        /// </summary>
         public MuPDFXml Body
         {
             get
@@ -391,7 +400,7 @@ namespace MuPDF.NET
             Rect filled = new Rect(0, 0, 0, 0);
             while (true)
             {
-                (Rect mediabox, Rect rect, IdentityMatrix ctm) = rectFn(rectNum, filled);
+                (Rect mediabox, Rect rect, Matrix ctm) = rectFn(rectNum, filled);
                 rectNum += 1;
                 if (mediabox != null)
                     pageNum += 1;

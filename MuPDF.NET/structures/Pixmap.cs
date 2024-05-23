@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 
 namespace MuPDF.NET
 {
-    public class Pixmap : IDisposable
+    public class Pixmap
     {
         private FzPixmap _nativePixmap;
 
@@ -111,7 +111,7 @@ namespace MuPDF.NET
                 for (int i = n; i < count; i += n)
                 {
                     sample = PixmapReadSamples(i, n);
-                    if (!sample.Equals(sample0))
+                    if (!sample.SequenceEqual(sample0))
                         return false;
                 }
                 return true;
@@ -170,7 +170,7 @@ namespace MuPDF.NET
             }
         }
 
-        public int Stripe
+        public int Stride
         {
             get
             {
@@ -720,7 +720,7 @@ namespace MuPDF.NET
         /// <param name="output">only use to overrule filename extension. Default is PNG. Others are JPEG, JPG, PNM, PGM, PPM, PBM, PAM, PSD, PS.</param>
         /// <param name="jpgQuality">The desired image quality, default 95. Only applies to JPEG images, else ignored</param>
         /// <exception cref="Exception"></exception>
-        public void Save(string filename, string output, int jpgQuality = 95)
+        public void Save(string filename, string output = null, int jpgQuality = 95)
         {
             Dictionary<string, int> validFormats = new Dictionary<string, int>()
             {
@@ -1089,12 +1089,6 @@ namespace MuPDF.NET
             SavePdfOCR(byteStream, compress ? 1 : 0, language, tessdata);
 
             return byteStream.ToArray();
-        }
-
-
-        public void Dispose()
-        {
-            _nativePixmap.Dispose();
         }
     }
 

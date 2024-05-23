@@ -4,14 +4,14 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace MuPDF.NET
+namespace MuPDF.NET.Test
 {
     public class PixmapTest
     {
         [Test]
         public void GetPixamp_Save()
         {
-            MuPDFDocument doc = new MuPDFDocument("input.pdf");
+            MuPDFDocument doc = new MuPDFDocument("../../../resources/cython.pdf");
 
             MuPDFPage page = doc[0];
 
@@ -27,7 +27,7 @@ namespace MuPDF.NET
         [Test]
         public void GetPixel()
         {
-            MuPDFDocument doc = new MuPDFDocument("input.pdf");
+            MuPDFDocument doc = new MuPDFDocument("../../../resources/cython.pdf");
 
             MuPDFPage page = doc[0];
 
@@ -44,7 +44,7 @@ namespace MuPDF.NET
         [Test]
         public void ToBytes()
         {
-            MuPDFDocument doc = new MuPDFDocument("input.pdf");
+            MuPDFDocument doc = new MuPDFDocument("../../../resources/cython.pdf");
 
             MuPDFPage page = doc[0];
 
@@ -52,13 +52,13 @@ namespace MuPDF.NET
 
             byte[] bytes = pix.ToBytes();
 
-            Assert.That(bytes.Length, Is.EqualTo(167863));
+            Assert.That(bytes.Length, Is.EqualTo(21908));
         }
 
         [Test]
         public void ColorToUsage()
         {
-            MuPDFDocument doc = new MuPDFDocument("input.pdf");
+            MuPDFDocument doc = new MuPDFDocument("../../../resources/cython.pdf");
 
             MuPDFPage page = doc[0];
 
@@ -74,7 +74,7 @@ namespace MuPDF.NET
         [Test]
         public void InvertIrect()
         {
-            MuPDFDocument doc = new MuPDFDocument("input.pdf");
+            MuPDFDocument doc = new MuPDFDocument("../../../resources/cython.pdf");
 
             MuPDFPage page = doc[0];
 
@@ -88,7 +88,7 @@ namespace MuPDF.NET
         [Test]
         public void PdfOCR()
         {
-            MuPDFDocument doc = new MuPDFDocument("input.pdf");
+            MuPDFDocument doc = new MuPDFDocument("../../../resources/cython.pdf");
 
             MuPDFPage page = doc[0];
 
@@ -102,7 +102,7 @@ namespace MuPDF.NET
         [Test]
         public void PdfPixmap()
         {
-            MuPDFDocument doc = new MuPDFDocument("resources/001003ED.pdf");
+            MuPDFDocument doc = new MuPDFDocument("../../../resources/toc.pdf");
             Entry img = doc.GetPageImages(0)[0];
             Pixmap pix = new Pixmap(doc, img.Xref);
             Assert.That(pix.W, Is.EqualTo(img.Width));

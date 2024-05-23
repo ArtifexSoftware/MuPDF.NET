@@ -1,12 +1,16 @@
 ﻿using mupdf;
 using System.Runtime.InteropServices;
-using System.Security.Cryptography.X509Certificates;
 using System.Text;
 
 namespace MuPDF.NET
 {
     public class MuPDFTextWriter
     {
+        static MuPDFTextWriter()
+        {
+            if (!File.Exists("mupdfcsharp.dll"))
+                Utils.LoadEmbeddedDll();
+        }
 
         private FzText _nativeText;
 

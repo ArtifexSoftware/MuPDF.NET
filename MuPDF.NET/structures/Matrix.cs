@@ -11,6 +11,10 @@ namespace MuPDF.NET
         public float E { get; set; }
         public float F { get; set; }
         public int Length { get; set; } = 6;
+
+        /// <summary>
+        /// Rectilinear means that no shearing is present and that any rotations are integer multiples of 90 degrees. Usually this is used to confirm that (axis-aligned) rectangles before the transformation are still axis-aligned rectangles afterwards.
+        /// </summary>
         public bool IsRectilinear
         {
             get
@@ -72,6 +76,15 @@ namespace MuPDF.NET
             for (int i = 0; i < Length; i++)
                 sum += this[i] * this[i];
             return (float)Math.Sqrt((double)sum);
+        }
+
+        /// <summary>
+        /// the Euclidean norm
+        /// </summary>
+        /// <returns></returns>
+        public float Norm()
+        {
+            return Abs();
         }
 
         public Matrix(FzMatrix m)
@@ -161,6 +174,11 @@ namespace MuPDF.NET
             return new Matrix(op1.A - m, op1.B - m, op1.C - m, op1.D - m, op1.E - m, op1.F - m);
         }
 
+        /// <summary>
+        /// Calculate the matrix inverse of *m* and store the result in the current matrix.
+        /// </summary>
+        /// <param name="src"></param>
+        /// <returns></returns>
         public int Invert(Matrix src)
         {
             (int, Matrix) dst;
@@ -180,12 +198,23 @@ namespace MuPDF.NET
             return 0;
         }
 
+        /// <summary>
+        /// Calculate the matrix product *m1 * m2* and store the result in the current matrix.
+        /// </summary>
+        /// <param name="op1"></param>
+        /// <param name="op2"></param>
+        /// <returns></returns>
         public static Matrix Concat(Matrix op1, Matrix op2)
         {
             Matrix ret = new Matrix(mupdf.mupdf.fz_concat(op1.ToFzMatrix(), op2.ToFzMatrix()));
             return ret;
         }
 
+        /// <summary>
+        /// Modify the matrix to perform a counter-clockwise rotation for positive *deg* degrees, else clockwise.
+        /// </summary>
+        /// <param name="theta"></param>
+        /// <returns></returns>
         public Matrix Prerotate(float theta)
         {
             while (theta < 0)
@@ -240,6 +269,11 @@ namespace MuPDF.NET
             return this;
         }
 
+        /// <summary>
+        /// Modify the matrix to scale by the zoom factors sx and sy.
+        /// </summary>
+        /// <param name="sx">Zoom factor in X direction.</param>
+        /// <param name="sy">Zoom factor in Y direction.</param>
         public void Prescale(float sx, float sy)
         {
             this.A *= sx;
@@ -248,6 +282,12 @@ namespace MuPDF.NET
             this.D *= sy;
         }
 
+        /// <summary>
+        /// Modify the matrix to perform a shearing, i.e. transformation of rectangles into parallelograms (rhomboids).
+        /// </summary>
+        /// <param name="h">Shearing effect in X direction.</param>
+        /// <param name="v">Shearing effect in Y direction.</param>
+        /// <returns></returns>
         public Matrix Preshear(float h, float v)
         {
             float a = A;
@@ -259,6 +299,12 @@ namespace MuPDF.NET
             return this;
         }
 
+        /// <summary>
+        /// Modify the matrix to perform a shifting / translation operation along the x and / or y axis.
+        /// </summary>
+        /// <param name="tx">Translation effect in X direction.</param>
+        /// <param name="ty">Translation effect in Y direction.</param>
+        /// <returns></returns>
         public Matrix Pretranslate(float tx, float ty)
         {
             E += tx * A + ty * C;
