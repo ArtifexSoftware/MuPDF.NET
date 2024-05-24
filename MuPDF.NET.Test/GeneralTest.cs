@@ -212,5 +212,64 @@ namespace MuPDF.NET.Test
             doc.SetToc(tocs);
             Assert.That(doc.HasLinks());
         }
+
+        [Test]
+        public void DeletePages()
+        {
+            MuPDFDocument doc = new MuPDFDocument("../../../resources/cython.pdf");
+            int[] pages = { 3, 3, 3, 2, 3, 1, 0, 0 };
+            doc.Select(new List<int>(pages));
+            Assert.That(doc.PageCount, Is.EqualTo(8));
+        }
+
+        [Test]
+        public void SetLabels()
+        {
+            MuPDFDocument doc = new MuPDFDocument();
+            for (int i = 0; i < 10; i++)
+                doc.NewPage();
+
+            List<Label> labels = new List<Label>();
+            labels.Add(new Label() { StartPage = 0, Prefix = "A-", Style = "D", FirstPageNum = 1 });
+            labels.Add(new Label() { StartPage = 4, Prefix = "", Style = "R", FirstPageNum = 1 });
+
+            doc.SetPageLabels(labels);
+            List<string> pageLabels = new List<string>();
+            for (int i = 0; i < doc.PageCount; i ++)
+            {
+                string l = doc[i].GetLabel();
+                pageLabels.Add(l);
+            }
+
+            string[] answers = { "A-1", "A-2", "A-3", "A-4", "I", "II", "III", "IV", "V", "VI" };
+            Assert.That(pageLabels.SequenceEqual(answers));
+        }
+
+        [Test]
+        public void SetLabelA()
+        {
+            MuPDFDocument doc = new MuPDFDocument();
+            for (int i = 0; i < 10; i++)
+                doc.NewPage();
+
+            List<Label> labels = new List<Label>();
+            labels.Add(new Label() { StartPage = 0, Prefix = "", Style = "a", FirstPageNum = 1 });
+            labels.Add(new Label() { StartPage = 5, Prefix = "", Style = "A", FirstPageNum = 1 });
+
+            doc.SetPageLabels(labels);
+            byte[] pdfdata = doc.Write();
+            doc.Close();
+
+            doc = new MuPDFDocument("pdf", pdfdata);
+            string[] answer = { "a", "b", "c", "d", "e", "A", "B", "C", "D", "E" };
+
+            List<string> pageLabels = new List<string>();
+            for (int i = 0; i < doc.PageCount; i++)
+            {
+                string l = doc[i].GetLabel();
+                pageLabels.Add(l);
+            }
+            Assert.That(pageLabels.SequenceEqual(answer));
+        }
     }
 }
