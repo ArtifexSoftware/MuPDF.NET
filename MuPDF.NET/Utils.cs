@@ -3721,7 +3721,7 @@ namespace MuPDF.NET
             return xrefs;
         }
 
-        public static void GetPageLabels(List<Label> list, PdfObj nums)
+        public static void GetPageLabels(List<(int, string)> list, PdfObj nums)
         {
             int n = nums.pdf_array_len();
             for (int i = 0; i < n; i += 2)
@@ -3733,7 +3733,7 @@ namespace MuPDF.NET
                 byte[] c = res.fz_buffer_extract();
 
                 string cStr = Encoding.UTF8.GetString(c);
-                list.Add(new Label() { PageNumber = pno, LabelText = cStr });
+                list.Add((pno, cStr));
             }
         }
 
@@ -4086,37 +4086,39 @@ namespace MuPDF.NET
             return mat;
         }
 
-        public static string GetPageLabel(int pno, List<Label> labels)
+        public static string GetPageLabel(int pno, List<(int, string)> labels)
         {
-            List<Label> items = new List<Label>();
-            foreach (Label label in labels)
+            List<(int, string)> items = new List<(int, string)>();
+            foreach ((int, string) label in labels)
             {
-                if (label.PageNumber <= pno)
+                if (label.Item1 <= pno)
                     items.Add(label);
             }
 
-            Rule rule = Utils.RuleDict(items.Last());
+            Label rule = Utils.RuleDict(items.Last());
             string prefix = rule.Prefix;
             string style = rule.Style;
-            int pageNumber = pno - rule.StartPage + rule.FirstPageNum;
+            int delta = (style == "a" || style == "A") ? -1 : 0;
+            int pageNumber = pno - rule.StartPage + rule.FirstPageNum + delta;
             return Utils.ConstructLabel(style, prefix, pageNumber);
         }
 
-        public static Rule RuleDict(Label item)
+        public static Label RuleDict((int, string) item)
         {
-            string rule = item.LabelText;
+            string rule = item.Item2;
             string[] rules = rule.Substring(2, rule.Length - 2 - 2).Split("/").Skip(1).ToArray();
-            Rule ret = new Rule()
+            Label ret = new Label()
             {
-                StartPage = item.PageNumber,
+                StartPage = item.Item1,
                 Prefix = "",
                 FirstPageNum = 1
             };
             bool skip = false;
-            int i = 0;
+            int i = -1;
 
             foreach (string s in rules)
             {
+                i++;
                 if (skip)
                 {
                     skip = false;
@@ -4138,7 +4140,7 @@ namespace MuPDF.NET
                 {
                     int x = Convert.ToInt32(s.Substring(2));
                     ret.FirstPageNum = x;
-                }
+                };
             }
             return ret;
         }
@@ -4173,8 +4175,8 @@ namespace MuPDF.NET
             string ret = "";
             for (int j = n - 1; j >= 0; j--)
             {
-                int g = a % Convert.ToInt32(Math.Pow(26, n));
-                int f = a / Convert.ToInt32(Math.Pow(26, n));
+                int g = a % Convert.ToInt32(Math.Pow(26, j));
+                int f = a / Convert.ToInt32(Math.Pow(26, j));
                 ret += asciiUppercase[f];
             }
             return ret;
@@ -4577,7 +4579,7 @@ namespace MuPDF.NET
             List<int> numbers = new List<int>();
             if (string.IsNullOrEmpty(label))
                 return numbers;
-            List<Label> labels = doc.GetPageLabels();
+            List<(int, string)> labels = doc._getPageLabels();
             if (labels.Count == 0)
                 return numbers;
             for (int i = 0; i < doc.PageCount; i++)

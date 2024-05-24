@@ -3927,7 +3927,7 @@ namespace MuPDF.NET
         /// <returns>The label (str) of the page. Errors return an empty string.</returns>
         public string GetLabel()
         {
-            List<Label> labels = Parent.GetPageLabels();
+            List<(int, string)> labels = Parent._getPageLabels();
             if (labels.Count == 0)
                 return "";
             labels.Sort();

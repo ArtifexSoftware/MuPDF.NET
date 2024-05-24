@@ -2642,12 +2642,11 @@ namespace MuPDF.NET
             }
         }
 
-        public List<Label> GetPageLabels()
+        internal List<(int, string)> _getPageLabels()
         {
             PdfDocument pdf = AsPdfDocument(this);
-            List<Label> rc = new List<Label>();
+            List<(int, string)> rc = new List<(int, string)>();
 
-            PdfObj pageLabels = mupdf.mupdf.pdf_new_name("PageLabels");
             PdfObj obj = Utils.pdf_dict_getl(
                 pdf.pdf_trailer(),
                 new string[] { "Root", "PageLabels" }
@@ -2655,7 +2654,7 @@ namespace MuPDF.NET
             if (obj.m_internal == null)
                 return rc;
 
-            PdfObj nums = obj.pdf_dict_get(new PdfObj("Nums")).pdf_resolve_indirect();
+            PdfObj nums = obj.pdf_dict_get(new PdfObj("PageLabels")).pdf_resolve_indirect();
             if (nums.m_internal != null)
             {
                 Utils.GetPageLabels(rc, nums);
@@ -2684,6 +2683,21 @@ namespace MuPDF.NET
                 Utils.GetPageLabels(rc, nums);
             }
             return rc;
+        }
+
+        /// <summary>
+        /// Return page label definitions in PDF document.
+        /// </summary>
+        /// <returns>A list of dictionaries with the following format</returns>
+        public List<Label> GetPageLabels()
+        {
+            List<Label> ret = new List<Label>();
+            foreach ((int, string) item in _getPageLabels())
+            {
+                Label d = Utils.RuleDict(item);
+                ret.Add(d);
+            }
+            return ret;
         }
 
         /// <summary>
@@ -2775,12 +2789,35 @@ namespace MuPDF.NET
         /// PDF only: Add or update the page label definitions of the PDF.
         /// </summary>
         /// <param name="labels">a list of dictionaries. Each dictionary defines a label building rule and a 0-based “start” page number.</param>
-        public void SetPageLabels(string labels)
+        public void SetPageLabels(List<Label> labels)
         {
+            string CreateLabelStr(Label label)
+            {
+                string s = $"{label.StartPage}<<";
+                if (!string.IsNullOrEmpty(label.Prefix))
+                    s += $"/P({label.Prefix})";
+                if (!string.IsNullOrEmpty(label.Style))
+                    s += $"/S/{label.Style}";
+                if (label.FirstPageNum > 1)
+                    s += $"/St {label.FirstPageNum}";
+                s += ">>";
+                return s;
+            }
+
+            string CreateNums(List<Label> labels)
+            {
+                labels.Sort((a, b) =>
+                {
+                    return a.StartPage - b.StartPage;
+                });
+                string s = string.Join("", labels.Select(label => CreateLabelStr(label)).ToArray());
+                return s;
+            }
+
             PdfDocument pdf = AsPdfDocument(this);
             PdfObj root = pdf.pdf_trailer().pdf_dict_get(new PdfObj("Root"));
 
-            root.pdf_dict_del(new PdfObj("PageLabels"));
+            root.pdf_dict_del(mupdf.mupdf.pdf_new_name("PageLabels"));
             Utils.pdf_dict_putl(
                 root,
                 mupdf.mupdf.pdf_new_array(pdf, 0),
@@ -2788,7 +2825,8 @@ namespace MuPDF.NET
             );
             int xref = GetPdfCatelog();
             string text = GetXrefObject(xref, compressed: 1);
-            text = text.Replace("/Nums[]", $"/Nums[{labels}]");
+            Console.WriteLine(text);
+            text = text.Replace("/PageLabels[]", $"/PageLabels[{CreateNums(labels)}]");
             UpdateObject(xref, text);
         }
 
