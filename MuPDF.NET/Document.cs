@@ -5,9 +5,9 @@ using mupdf;
 
 namespace MuPDF.NET
 {
-    public class MuPDFDocument
+    public class Document
     {
-        static MuPDFDocument()
+        static Document()
         {
             if (!File.Exists("mupdfcpp64.dll"))
                 Utils.LoadEmbeddedDll();
@@ -96,7 +96,7 @@ namespace MuPDF.NET
         {
             get
             {
-                PdfDocument pdf = MuPDFDocument.AsPdfDocument(this);
+                PdfDocument pdf = Document.AsPdfDocument(this);
                 if (pdf.m_internal != null)
                     pdf.pdf_count_versions();
                 return 0;
@@ -115,7 +115,7 @@ namespace MuPDF.NET
         {
             get
             {
-                PdfDocument pdf = MuPDFDocument.AsPdfDocument(_nativeDocument);
+                PdfDocument pdf = Document.AsPdfDocument(_nativeDocument);
                 if (pdf.m_internal == null)
                     return false;
                 int r = pdf.pdf_has_unsaved_changes();
@@ -145,7 +145,7 @@ namespace MuPDF.NET
         {
             get
             {
-                PdfDocument pdf = MuPDFDocument.AsPdfDocument(_nativeDocument);
+                PdfDocument pdf = Document.AsPdfDocument(_nativeDocument);
                 if (pdf != null)
                     return pdf.pdf_doc_was_linearized() != 0;
                 return false;
@@ -159,7 +159,7 @@ namespace MuPDF.NET
         {
             get
             {
-                PdfDocument pdf = MuPDFDocument.AsPdfDocument(_nativeDocument);
+                PdfDocument pdf = Document.AsPdfDocument(_nativeDocument);
                 if (pdf.m_internal == null)
                     return -1;
                 int count = -1;
@@ -203,7 +203,7 @@ namespace MuPDF.NET
         {
             get
             {
-                PdfDocument pdf = MuPDFDocument.AsPdfDocument(_nativeDocument);
+                PdfDocument pdf = Document.AsPdfDocument(_nativeDocument);
                 if (pdf.m_internal == null)
                     return false;
                 return pdf.pdf_was_repaired() != 0;
@@ -330,7 +330,7 @@ namespace MuPDF.NET
         {
             get
             {
-                PdfDocument pdf = MuPDFDocument.AsPdfDocument(this);
+                PdfDocument pdf = Document.AsPdfDocument(this);
                 if (pdf == null)
                     return null;
                 PdfObj fonts = Utils.pdf_dict_getl(
@@ -378,13 +378,13 @@ namespace MuPDF.NET
             }
         }
 
-        public MuPDFDocument(PdfDocument doc)
+        public Document(PdfDocument doc)
         {
             _nativeDocument = doc.super();
             IsPDF = true;
         }
 
-        public MuPDFDocument(
+        public Document(
             string filename = null,
             byte[] stream = null,
             string filetype = null,
@@ -686,7 +686,7 @@ namespace MuPDF.NET
             return new PdfDocument(document);
         }
 
-        public static PdfDocument AsPdfDocument(MuPDFDocument document)
+        public static PdfDocument AsPdfDocument(Document document)
         {
             return document._nativeDocument.pdf_document_from_fz_document();
         }
@@ -1673,7 +1673,7 @@ namespace MuPDF.NET
             for (int i = 0; i < PageCount; i++)
                 page_refs.Add(GetPageXref(i), i);
 
-            PdfDocument pdf = MuPDFDocument.AsPdfDocument(this);
+            PdfDocument pdf = Document.AsPdfDocument(this);
 
             // access PDF catalog
             PdfObj catalog = pdf.pdf_trailer().pdf_dict_gets("Root");
@@ -1751,7 +1751,7 @@ namespace MuPDF.NET
         /// <param name="final"></param>
         /// <exception cref="Exception"></exception>
         public void InsertFile(
-            MuPDFDocument infile,
+            Document infile,
             int fromPage = -1,
             int toPage = -1,
             int startAt = -1,
@@ -1762,13 +1762,13 @@ namespace MuPDF.NET
             int final = 1
         )
         {
-            MuPDFDocument src = infile;
+            Document src = infile;
             if (src == null)
                 throw new Exception("bad infile parameter");
             if (!src.IsPDF)
             {
                 byte[] pdfBytes = src.Convert2Pdf();
-                src = new MuPDFDocument("pdf", pdfBytes);
+                src = new Document("pdf", pdfBytes);
             }
 
             InsertPdf(src, fromPage, toPage, startAt, rotate, links, annots, showProgress, final);
@@ -1789,7 +1789,7 @@ namespace MuPDF.NET
         /// <param name="gmap">internal use only</param>
         /// <exception cref="Exception"></exception>
         public void InsertPdf(
-            MuPDFDocument docSrc,
+            Document docSrc,
             int fromPage = -1,
             int toPage = -1,
             int startAt = -1,
@@ -1847,8 +1847,8 @@ namespace MuPDF.NET
             if (pdfout == null || pdfsrc == null)
                 throw new Exception("source or target not a PDF");
             Utils.MergeRange(
-                new MuPDFDocument(pdfout),
-                new MuPDFDocument(pdfsrc),
+                new Document(pdfout),
+                new Document(pdfsrc),
                 fp,
                 tp,
                 sa,
@@ -1877,7 +1877,7 @@ namespace MuPDF.NET
                 throw new Exception("document closed or encrypted");
             int undo = 0;
             int redo = 0;
-            PdfDocument pdf = MuPDFDocument.AsPdfDocument(_nativeDocument);
+            PdfDocument pdf = Document.AsPdfDocument(_nativeDocument);
             undo = pdf.pdf_can_undo();
             redo = pdf.pdf_can_redo();
             return (undo != 0, redo != 0);
@@ -1891,7 +1891,7 @@ namespace MuPDF.NET
         {
             if (IsClosed || IsEncrypted)
                 throw new Exception("document closed or encrypted");
-            PdfDocument pdf = MuPDFDocument.AsPdfDocument(_nativeDocument);
+            PdfDocument pdf = Document.AsPdfDocument(_nativeDocument);
             pdf.pdf_enable_journal();
         }
 
@@ -1904,7 +1904,7 @@ namespace MuPDF.NET
         {
             if (IsClosed || IsEncrypted)
                 throw new Exception("document closed or encrypted");
-            PdfDocument pdf = MuPDFDocument.AsPdfDocument(this);
+            PdfDocument pdf = Document.AsPdfDocument(this);
             pdf.pdf_redo();
             return true;
         }
@@ -1918,7 +1918,7 @@ namespace MuPDF.NET
         {
             if (IsClosed || IsEncrypted)
                 throw new Exception("document closed or encrypted");
-            PdfDocument pdf = MuPDFDocument.AsPdfDocument(_nativeDocument);
+            PdfDocument pdf = Document.AsPdfDocument(_nativeDocument);
             bool enabled = (pdf != null) && (pdf.m_internal.journal != null);
             return enabled;
         }
@@ -1932,7 +1932,7 @@ namespace MuPDF.NET
         {
             if (IsClosed || IsEncrypted)
                 throw new Exception("document closed or encrypted");
-            PdfDocument pdf = MuPDFDocument.AsPdfDocument(_nativeDocument);
+            PdfDocument pdf = Document.AsPdfDocument(_nativeDocument);
 
             pdf.pdf_load_journal(filename);
             if (pdf.m_internal.journal == null)
@@ -1948,7 +1948,7 @@ namespace MuPDF.NET
         {
             if (IsClosed || IsEncrypted)
                 throw new Exception("document closed or encrypted");
-            PdfDocument pdf = MuPDFDocument.AsPdfDocument(_nativeDocument);
+            PdfDocument pdf = Document.AsPdfDocument(_nativeDocument);
             FzBuffer res = Utils.BufferFromBytes(journal);
             FzStream stream = res.fz_open_buffer();
             pdf.pdf_deserialise_journal(stream);
@@ -1967,7 +1967,7 @@ namespace MuPDF.NET
         {
             if (IsClosed || IsEncrypted)
                 throw new Exception("document closed or encrypted");
-            PdfDocument pdf = MuPDFDocument.AsPdfDocument(_nativeDocument);
+            PdfDocument pdf = Document.AsPdfDocument(_nativeDocument);
             string name = pdf.pdf_undoredo_step(step);
 
             return name;
@@ -1981,7 +1981,7 @@ namespace MuPDF.NET
         {
             if (IsClosed || IsEncrypted)
                 throw new Exception("document closed or encrypted");
-            PdfDocument pdf = MuPDFDocument.AsPdfDocument(_nativeDocument);
+            PdfDocument pdf = Document.AsPdfDocument(_nativeDocument);
             (int, int) rc = pdf.pdf_undoredo_state();
 
             return rc;
@@ -1996,7 +1996,7 @@ namespace MuPDF.NET
         {
             if (IsClosed || IsEncrypted)
                 throw new Exception("document closed or encrypted");
-            PdfDocument pdf = MuPDFDocument.AsPdfDocument(_nativeDocument);
+            PdfDocument pdf = Document.AsPdfDocument(_nativeDocument);
             pdf.pdf_save_journal(filename);
         }
 
@@ -2009,7 +2009,7 @@ namespace MuPDF.NET
         {
             if (IsClosed || IsEncrypted)
                 throw new Exception("document closed or encrypted");
-            PdfDocument pdf = MuPDFDocument.AsPdfDocument(_nativeDocument);
+            PdfDocument pdf = Document.AsPdfDocument(_nativeDocument);
 
             MemoryStream memoryStream = new MemoryStream(journal);
 
@@ -2026,7 +2026,7 @@ namespace MuPDF.NET
         {
             if (IsClosed || IsEncrypted)
                 throw new Exception("document closed or encrypted");
-            PdfDocument pdf = MuPDFDocument.AsPdfDocument(_nativeDocument);
+            PdfDocument pdf = Document.AsPdfDocument(_nativeDocument);
             if (pdf.m_internal.journal == null)
                 throw new Exception("Journalling not enabled");
             if (name != null && name != "")
@@ -2066,7 +2066,7 @@ namespace MuPDF.NET
         /// <returns></returns>
         public List<LayerConfigUI> LayerUIConfigs()
         {
-            PdfDocument pdf = MuPDFDocument.AsPdfDocument(_nativeDocument);
+            PdfDocument pdf = Document.AsPdfDocument(_nativeDocument);
             PdfLayerConfigUi info = new PdfLayerConfigUi();
             int n = pdf.pdf_count_layer_config_ui();
             string type;
@@ -2185,7 +2185,7 @@ namespace MuPDF.NET
         /// <returns></returns>
         public int GetPdfCatelog()
         {
-            PdfDocument pdf = MuPDFDocument.AsPdfDocument(_nativeDocument);
+            PdfDocument pdf = Document.AsPdfDocument(_nativeDocument);
             int xref = 0;
             if (pdf == null)
                 return xref;
@@ -2306,7 +2306,7 @@ namespace MuPDF.NET
         {
             if (IsFormPDF == 0)
                 return 0;
-            PdfDocument pdf = MuPDFDocument.AsPdfDocument(_nativeDocument);
+            PdfDocument pdf = Document.AsPdfDocument(_nativeDocument);
             int oldVal = -1;
             string appkey = "NeedAppearances";
 
@@ -2341,7 +2341,7 @@ namespace MuPDF.NET
 
             if (_pageId.Item1 == LastLocation.Item1 && _pageId.Item2 == LastLocation.Item2)
                 return (-1, -1);
-            PdfDocument pdf = MuPDFDocument.AsPdfDocument(_nativeDocument);
+            PdfDocument pdf = Document.AsPdfDocument(_nativeDocument);
             int val = _pageId.Item1;
             int chapter = val;
             val = _pageId.Item2;
@@ -2365,7 +2365,7 @@ namespace MuPDF.NET
             if (!Contains(pageId))
                 throw new Exception("page id not in document");
 
-            PdfDocument pdf = MuPDFDocument.AsPdfDocument(_nativeDocument);
+            PdfDocument pdf = Document.AsPdfDocument(_nativeDocument);
             int val = pageId.Item1;
             int chapter = val;
             val = pageId.Item2;
@@ -4342,7 +4342,7 @@ namespace MuPDF.NET
         }
 
         private void DoLinks(
-            MuPDFDocument doc,
+            Document doc,
             int fromPage = -1,
             int toPage = -1,
             int startAt = -1
@@ -5155,7 +5155,7 @@ namespace MuPDF.NET
             float[] color = null
         )
         {
-            PdfDocument pdf = MuPDFDocument.AsPdfDocument(this);
+            PdfDocument pdf = Document.AsPdfDocument(this);
             PdfObj item = pdf.pdf_new_indirect(xref, 0);
             if (!string.IsNullOrEmpty(title))
                 item.pdf_dict_put_text_string(new PdfObj("Title"), title);
@@ -5273,7 +5273,7 @@ namespace MuPDF.NET
         )
         {
             int xref = 0;
-            PdfDocument pdf = MuPDFDocument.AsPdfDocument(this);
+            PdfDocument pdf = Document.AsPdfDocument(this);
 
             PdfObj ocg = pdf.pdf_add_new_dict(3);
             ocg.pdf_dict_put(new PdfObj("Type"), new PdfObj("OCG"));
@@ -5343,7 +5343,7 @@ namespace MuPDF.NET
         /// <returns></returns>
         public bool CanSaveIncrementally()
         {
-            PdfDocument pdf = MuPDFDocument.AsPdfDocument(this);
+            PdfDocument pdf = Document.AsPdfDocument(this);
             if (pdf.m_internal != null)
                 return false;
             return pdf.pdf_can_be_saved_incrementally() != 0;
@@ -5357,7 +5357,7 @@ namespace MuPDF.NET
         /// <param name="on">a sequence of OCG</param>
         public void AddLayer(string name, string creator = null, OCLayerConfig on = null)
         {
-            PdfDocument pdf = MuPDFDocument.AsPdfDocument(this);
+            PdfDocument pdf = Document.AsPdfDocument(this);
             Utils.AddLayerConfig(pdf, name, creator, on);
             mupdf.mupdf.ll_pdf_read_ocg(pdf.m_internal);
         }

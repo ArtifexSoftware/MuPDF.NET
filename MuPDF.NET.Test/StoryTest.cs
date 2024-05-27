@@ -42,16 +42,16 @@ namespace MuPDF.NET.Test
                 return (new Rect(0, 0, 200, 200), new Rect(50, 50, 100, 100), null);
             });
 
-            MuPDFDocument MakePdf(string html, string path)
+            Document MakePdf(string html, string path)
             {
                 MuPDFStory story = new MuPDFStory(html: html);
-                MuPDFDocument doc = story.WriteWithLinks(rectfunc);
+                Document doc = story.WriteWithLinks(rectfunc);
                 return doc;
             }
 
-            MuPDFDocument doc1 = MakePdf("<p>Before</p><p style=\"page-break-before: always;\"></p><p>After</p>", "After.pdf");
+            Document doc1 = MakePdf("<p>Before</p><p style=\"page-break-before: always;\"></p><p>After</p>", "After.pdf");
 
-            MuPDFDocument doc2 = MakePdf("<p>before</p>", "before.pdf");
+            Document doc2 = MakePdf("<p>before</p>", "before.pdf");
 
             Assert.That(doc1.PageCount, Is.EqualTo(2));
             Assert.That(doc2.PageCount, Is.EqualTo(1));

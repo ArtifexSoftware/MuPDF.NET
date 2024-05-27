@@ -11,7 +11,7 @@ namespace MuPDF.NET.Test
         [SetUp]
         public void Setup()
         {
-            doc = new MuPDFDocument("../../../resources/cython.pdf");
+            doc = new Document("../../../resources/cython.pdf");
 
             textPage = doc.LoadPage(0).GetTextPage();
         }
@@ -94,7 +94,7 @@ namespace MuPDF.NET.Test
         [Test]
         public void SearchTest()
         {
-            MuPDFDocument doc = new MuPDFDocument("input.pdf");
+            Document doc = new Document("input.pdf");
 
             MuPDFPage page = new MuPDFPage(doc.GetPage(0), doc);
 

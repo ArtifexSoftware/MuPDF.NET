@@ -6,7 +6,7 @@ namespace MuPDF.NET
     {
         public MuPDFPage Page { get; set; }
 
-        public MuPDFDocument Doc { get; set; }
+        public Document Doc { get; set; }
 
         public float Height { get; set; }
 

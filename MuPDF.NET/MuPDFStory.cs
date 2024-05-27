@@ -261,9 +261,9 @@ namespace MuPDF.NET
             }
         }
 
-        public static MuPDFDocument AddPdfLinks(MemoryStream stream, List<Position> positions)
+        public static Document AddPdfLinks(MemoryStream stream, List<Position> positions)
         {
-            MuPDFDocument document = new MuPDFDocument("pdf", stream.ToArray());
+            Document document = new Document("pdf", stream.ToArray());
             Dictionary<string, Position> id2Position = new Dictionary<string, Position>();
             foreach (Position position in positions)
             {
@@ -367,7 +367,7 @@ namespace MuPDF.NET
             return Fit(WidthFn, rect, widthMin, widthMax, delta, verbose);
         }
 
-        public MuPDFDocument WriteWithLinks(RectFunction rectFn = null, Action<Position> positionfn = null, Action<int, Rect, MuPDFDeviceWrapper, bool> pageFn = null)
+        public Document WriteWithLinks(RectFunction rectFn = null, Action<Position> positionfn = null, Action<int, Rect, MuPDFDeviceWrapper, bool> pageFn = null)
         {
             MemoryStream stream = new MemoryStream(100);
             MuPDFDocumentWriter writer = new MuPDFDocumentWriter(stream);
@@ -452,7 +452,7 @@ namespace MuPDF.NET
             }
         }
 
-        public static MuPDFDocument WriteStabilizedWithLinks(
+        public static Document WriteStabilizedWithLinks(
             ContentFunction contentfn,
             RectFunction rectfn,
             string userCss = null,

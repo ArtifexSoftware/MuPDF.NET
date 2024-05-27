@@ -140,7 +140,7 @@ namespace MuPDF.NET
 
             if (FieldType == (int)PdfWidgetType.PDF_WIDGET_TYPE_RADIOBUTTON)
             {
-                MuPDFDocument doc = Parent.Parent;
+                Document doc = Parent.Parent;
                 (string kidsType, string kidsValue) = doc.GetKeyXref(Xref, "Parent/Kids");
                 if (kidsType == "array")
                 {
@@ -247,7 +247,7 @@ namespace MuPDF.NET
         {
             if (!(FieldType == 2 || FieldType == 5))
                 return null;
-            MuPDFDocument doc = Parent.Parent;
+            Document doc = Parent.Parent;
             if (doc == null)
                 return null;
 

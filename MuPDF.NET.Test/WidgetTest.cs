@@ -12,7 +12,7 @@ namespace MuPDF.NET.Test
         [Test]
         public void Text()
         {
-            MuPDFDocument doc = new MuPDFDocument();
+            Document doc = new Document();
             MuPDFPage page = doc.NewPage();
             MuPDFWidget w = new MuPDFWidget(page);
 
@@ -39,7 +39,7 @@ namespace MuPDF.NET.Test
         [Test]
         public void Checkbox()
         {
-            MuPDFDocument doc = new MuPDFDocument();
+            Document doc = new Document();
             MuPDFPage page = doc.NewPage();
             MuPDFWidget w = new MuPDFWidget(page);
 

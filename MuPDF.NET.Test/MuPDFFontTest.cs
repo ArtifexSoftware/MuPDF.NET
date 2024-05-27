@@ -29,11 +29,11 @@ namespace MuPDF.NET.Test
         [Test]
         public void SubsetFonts()
         {
-            MuPDFDocument doc = new MuPDFDocument("../../../resources/subset.pdf");
+            Document doc = new Document("../../../resources/subset.pdf");
 
             int n = doc.PageCount;
 
-            mupdf.mupdf.pdf_subset_fonts2(MuPDFDocument.AsPdfDocument(doc), new mupdf.vectori(Enumerable.Range(0, n / 2).Select(i => i * 2)));
+            mupdf.mupdf.pdf_subset_fonts2(Document.AsPdfDocument(doc), new mupdf.vectori(Enumerable.Range(0, n / 2).Select(i => i * 2)));
         }
     }
 }

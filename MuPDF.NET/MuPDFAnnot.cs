@@ -1396,7 +1396,7 @@ namespace MuPDF.NET
 
         public void SetColors(Color colors = null, float[] stroke = null, float[] fill = null)
         {
-            MuPDFDocument doc = Parent.Parent;
+            Document doc = Parent.Parent;
 
             Color colors_ = new Color();
             if (colors == null)
@@ -1663,7 +1663,7 @@ namespace MuPDF.NET
             else
             {
                 PdfPage page = _nativeAnnotion.pdf_annot_page();
-                MuPDFDocument doc = (page.m_internal == null) ? null : new MuPDFDocument(page.doc());
+                Document doc = (page.m_internal == null) ? null : new Document(page.doc());
                 ret = new MuPDFPage(page, doc);
 
                 Parent = ret;

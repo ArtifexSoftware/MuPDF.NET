@@ -2,7 +2,7 @@
 {
     public class PdfTestBase
     {
-        public MuPDFDocument doc;
+        public Document doc;
 
         public MuPDFPage page;
 

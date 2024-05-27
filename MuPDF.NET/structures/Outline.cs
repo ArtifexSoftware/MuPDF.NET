@@ -133,7 +133,7 @@ namespace MuPDF.NET
         /// <returns></returns>
         public MuPDFLinkDest Destination(PdfDocument doc)
         {
-            return new MuPDFLinkDest(this, (null, 0, 0), new MuPDFDocument(doc));
+            return new MuPDFLinkDest(this, (null, 0, 0), new Document(doc));
         }
 
         public FzOutline ToFzOutline()

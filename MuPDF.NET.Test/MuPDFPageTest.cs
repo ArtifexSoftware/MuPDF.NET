@@ -8,7 +8,7 @@ public class MuPDFPageTest : PdfTestBase
     [SetUp]
     public void Setup()
     {
-        doc = new MuPDFDocument("../../../resources/toc.pdf");
+        doc = new Document("../../../resources/toc.pdf");
         page = new MuPDFPage(doc.GetPage(0), doc);
     }
 
@@ -90,7 +90,7 @@ public class MuPDFPageTest : PdfTestBase
     [Test]
     public void ShowPdfPage()
     {
-        MuPDFDocument output = new MuPDFDocument();
+        Document output = new Document();
         MuPDFPage page = output.NewPage();
 
         Rect r1 = new Rect(0, 0, page.Rect.Width, page.Rect.Height);
@@ -157,7 +157,7 @@ public class MuPDFPageTest : PdfTestBase
     [Test]
     public void DrawLine()
     {
-        MuPDFDocument doc = new MuPDFDocument();
+        Document doc = new Document();
         MuPDFPage page = doc.NewPage();
         Point p1 = new Point(100, 100);
         Point p2 = new Point(300, 300);
@@ -180,7 +180,7 @@ public class MuPDFPageTest : PdfTestBase
     [Test]
     public void InsertHtmlBox()
     {
-        MuPDFDocument doc = new MuPDFDocument();
+        Document doc = new Document();
         MuPDFPage page = doc.NewPage();
 
         MuPDFArchive archive = new MuPDFArchive();
@@ -197,7 +197,7 @@ public class MuPDFPageTest : PdfTestBase
     [Test]
     public void InsertTextBox()
     {
-        MuPDFDocument doc = new MuPDFDocument();
+        Document doc = new Document();
         MuPDFPage page = doc.NewPage();
         page.InsertTextbox(new Rect(100, 100, 300, 300), "hello", fontName: "kenpixel", fontFile: "../../../resources/kenpixel.ttf");
 
@@ -233,7 +233,7 @@ public class MuPDFPageTest : PdfTestBase
     [Test]
     public void GetImageRects()
     {
-        MuPDFDocument doc = new MuPDFDocument("../../../resources/image-file1.pdf");
+        Document doc = new Document("../../../resources/image-file1.pdf");
         MuPDFPage page = doc.LoadPage(0);
         List<Box> imgs = page.GetImageRects(5, true);
 
@@ -243,7 +243,7 @@ public class MuPDFPageTest : PdfTestBase
     [Test]
     public void Bbox()
     {
-        MuPDFDocument doc = new MuPDFDocument();
+        Document doc = new Document();
         MuPDFPage page = doc.NewPage();
         int xref = page.InsertImage(page.Rect, "../../../resources/img-transparent.png");
         List<Block> imginfo = page.GetImageInfo(xrefs: true);
@@ -261,7 +261,7 @@ public class MuPDFPageTest : PdfTestBase
     [Test]
     public void GetDrawings1()
     {
-        MuPDFDocument doc = new MuPDFDocument("../../../resources/drawings.pdf");
+        Document doc = new Document("../../../resources/drawings.pdf");
         MuPDFPage page = doc[0];
 
         Assert.That(page.GetDrawings(extended: true).Count, Is.Not.Zero);
@@ -271,7 +271,7 @@ public class MuPDFPageTest : PdfTestBase
     public void ExtractImage()
     {
         string path = "../../../resources/images.pdf";
-        MuPDFDocument doc = new MuPDFDocument();
+        Document doc = new Document();
         MuPDFPage page = doc.NewPage(width: 500, height: 842);
         Rect r = new Rect(20, 20, 480, 820);
         page.InsertImage(r, filename: "../../../resources/nur-ruhig.jpg");
@@ -280,7 +280,7 @@ public class MuPDFPageTest : PdfTestBase
         doc.Save(path);
         doc.Close();
 
-        doc = new MuPDFDocument(path);
+        doc = new Document(path);
         page = doc[0];
         List<Entry> imlist = page.GetImages();
         ImageInfo img = doc.ExtractImage(imlist[0].Xref);
@@ -298,7 +298,7 @@ public class MuPDFPageTest : PdfTestBase
     public void ObjectStream1()
     {
         string text = "Hello, world! Hallo, Welt!";
-        MuPDFDocument doc = new MuPDFDocument();
+        Document doc = new Document();
         MuPDFPage page = doc.NewPage();
         Rect r = new Rect(50, 50, 200, 500);
 
@@ -341,7 +341,7 @@ public class MuPDFPageTest : PdfTestBase
         for (i = 0; i < text.Keys.Count; i++)
             rs.Add(r + new Rect(0, r.Height * i, 0, r.Height * i));
 
-        MuPDFDocument doc = new MuPDFDocument();
+        Document doc = new Document();
         MuPDFPage page = doc.NewPage();
         i = 0;
         foreach (string k in text.Keys)
@@ -352,7 +352,7 @@ public class MuPDFPageTest : PdfTestBase
         }
 
         byte[] pdfData = doc.Write();
-        doc = new MuPDFDocument("pdf", pdfData);
+        doc = new Document("pdf", pdfData);
         page = doc[0];
 
         Assert.That(page.GetLinks().Count, Is.Not.Zero);
@@ -360,13 +360,13 @@ public class MuPDFPageTest : PdfTestBase
 
     public void Insert()
     {
-        MuPDFDocument doc = new MuPDFDocument();
+        Document doc = new Document();
         MuPDFPage page = doc.NewPage();
         Rect rect = new Rect(50, 50, 100, 100);
-        MuPDFDocument img = new MuPDFDocument("../../../resources/nur-ruhig.jpg");
+        Document img = new Document("../../../resources/nur-ruhig.jpg");
         byte[] tobytes = img.Convert2Pdf();
 
-        MuPDFDocument src = new MuPDFDocument("pdf", tobytes);
+        Document src = new Document("pdf", tobytes);
         int xref = page.ShowPdfPage(rect, src, 0, rotate: -23);
 
         Block img2 = page.GetImageInfo()[0];
@@ -376,7 +376,7 @@ public class MuPDFPageTest : PdfTestBase
     [Test]
     public void PageLinks()
     {
-        MuPDFDocument doc = new MuPDFDocument("../../../resources/2.pdf");
+        Document doc = new Document("../../../resources/2.pdf");
         MuPDFPage page = doc[-1];
 
         Assert.That(page.GetLinks().Count, Is.EqualTo(7));
@@ -385,7 +385,7 @@ public class MuPDFPageTest : PdfTestBase
     [Test]
     public void TextBox()
     {
-        MuPDFDocument doc = new MuPDFDocument();
+        Document doc = new Document();
         MuPDFPage page = doc.NewPage();
         Rect rect = new Rect(50, 50, 400, 500);
 
@@ -410,7 +410,7 @@ public class MuPDFPageTest : PdfTestBase
     public void Htmlbox1()
     {
         Rect rect = new Rect(100, 100, 200, 200);
-        MuPDFDocument doc = new MuPDFDocument();
+        Document doc = new Document();
         MuPDFPage page = doc.NewPage();
         (float s, float scale) = page.InsertHtmlBox(rect, "hello world", scaleLow: 1, rotate: 90);
         Assert.That(scale, Is.EqualTo(1));
@@ -421,7 +421,7 @@ public class MuPDFPageTest : PdfTestBase
     {
         Rect rect = new Rect(100, 250, 300, 350);
         string text = "<span style=\"color: red; font - size:20px \">Just some text.</span>";
-        MuPDFDocument doc = new MuPDFDocument();
+        Document doc = new Document();
         MuPDFPage page = doc.NewPage();
 
         page.InsertHtmlBox(rect, text, opacity: 0.5f);

@@ -19,9 +19,9 @@ namespace MuPDF.NET
             return _nativeGraftMap;
         }
 
-        public MuPDFGraftMap(MuPDFDocument doc)
+        public MuPDFGraftMap(Document doc)
         {
-            PdfDocument pdf = MuPDFDocument.AsPdfDocument(doc);
+            PdfDocument pdf = Document.AsPdfDocument(doc);
             PdfGraftMap map = pdf.pdf_new_graft_map();
             _nativeGraftMap = map;
             ThisOwn = true;

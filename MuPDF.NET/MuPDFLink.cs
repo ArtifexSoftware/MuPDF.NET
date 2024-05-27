@@ -171,9 +171,9 @@ namespace MuPDF.NET
             return base.ToString();
         }
 
-        private Border _Border(MuPDFDocument doc, int xref)
+        private Border _Border(Document doc, int xref)
         {
-            PdfDocument pdf = MuPDFDocument.AsPdfDocument(doc);
+            PdfDocument pdf = Document.AsPdfDocument(doc);
             if (pdf == null)
                 return null;
             PdfObj linkObj = pdf.pdf_new_indirect(xref, 0);
@@ -184,9 +184,9 @@ namespace MuPDF.NET
             return b;
         }
 
-        private Color _Colors(MuPDFDocument doc, int xref)
+        private Color _Colors(Document doc, int xref)
         {
-            PdfDocument pdf = MuPDFDocument.AsPdfDocument(doc);
+            PdfDocument pdf = Document.AsPdfDocument(doc);
             if (pdf == null)
                 return null;
             PdfObj linkObj = pdf.pdf_new_indirect(xref, 0);
@@ -205,9 +205,9 @@ namespace MuPDF.NET
             ThisOwn = false;
         }
 
-        private void _SetBorder(Border border, MuPDFDocument doc, int xref)
+        private void _SetBorder(Border border, Document doc, int xref)
         {
-            PdfDocument pdf = MuPDFDocument.AsPdfDocument(doc);
+            PdfDocument pdf = Document.AsPdfDocument(doc);
             if (pdf == null)
                 return;
             PdfObj linkObj = pdf.pdf_new_indirect(xref, 0);
@@ -250,7 +250,7 @@ namespace MuPDF.NET
         /// <param name="fill"></param>
         public void SetColors(Color colors = null, float[] stroke = null, float[] fill = null)
         {
-            MuPDFDocument doc = Parent.Parent;
+            Document doc = Parent.Parent;
             if (colors == null)
                 colors = new Color() { Fill = fill, Stroke = stroke };
 
@@ -283,7 +283,7 @@ namespace MuPDF.NET
         /// <exception cref="Exception"></exception>
         public void SetFlags(int flags)
         {
-            MuPDFDocument doc = Parent.Parent;
+            Document doc = Parent.Parent;
             if (!doc.IsPDF)
                 throw new Exception("is no PDF");
             doc.SetKeyXRef(Xref, "F", flags.ToString());

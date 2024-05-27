@@ -19,7 +19,7 @@ namespace MuPDF.NET
 
         private PdfPage _pdfPage;
 
-        public MuPDFDocument Parent { get; set; }
+        public Document Parent { get; set; }
 
         private static FitResult fit;
 
@@ -376,7 +376,7 @@ namespace MuPDF.NET
             return base.ToString();
         }
 
-        public MuPDFPage(PdfPage pdfPage, MuPDFDocument parent)
+        public MuPDFPage(PdfPage pdfPage, Document parent)
         {
             _pdfPage = pdfPage;
             _nativePage = pdfPage.super();
@@ -388,7 +388,7 @@ namespace MuPDF.NET
                 Number = _pdfPage.m_internal.super.number;
         }
 
-        public MuPDFPage(FzPage fzPage, MuPDFDocument parent)
+        public MuPDFPage(FzPage fzPage, Document parent)
         {
             _pdfPage = fzPage.pdf_page_from_fz_page();
             _nativePage = fzPage;
@@ -652,7 +652,7 @@ namespace MuPDF.NET
 
         private void SetPageBox(string boxtype, Rect rect)
         {
-            MuPDFDocument doc = Parent;
+            Document doc = Parent;
             if (doc == null)
                 throw new Exception("orphaned object: parent is None");
 
@@ -1551,7 +1551,7 @@ namespace MuPDF.NET
             if (writers == null || writers.Count == 0)
                 throw new Exception("need at least one pymupdf.TextWriter");
             Rect clip = writers[0].TextRect;
-            MuPDFDocument textDoc = new MuPDFDocument();
+            Document textDoc = new Document();
             MuPDFPage page = textDoc.NewPage(width: Rect.Width, height: Rect.Height);
             foreach (MuPDFTextWriter writer in writers)
             {
@@ -1661,7 +1661,7 @@ namespace MuPDF.NET
                 return r;
             }
 
-            MuPDFDocument doc = Parent;
+            Document doc = Parent;
             if (doc.IsEncrypted || doc.IsClosed)
                 throw new Exception("document is closed or encrypted");
             if (!doc.IsPDF)
@@ -1807,7 +1807,7 @@ namespace MuPDF.NET
             byte[] mask = null
         )
         {
-            MuPDFDocument doc = Parent;
+            Document doc = Parent;
             if (!Parent.IsPDF)
                 throw new Exception("is no pdf");
             if (
@@ -2189,7 +2189,7 @@ namespace MuPDF.NET
             if (scale != 1 || spareHeight < 0)
                 spareHeight = 0;
 
-            MuPDFDocument doc = story.WriteWithLinks(RectFunction);
+            Document doc = story.WriteWithLinks(RectFunction);
 
             if (0 <= opacity && opacity < 1)
             {
@@ -2255,7 +2255,7 @@ namespace MuPDF.NET
         /// <exception cref="Exception"></exception>
         public void SetContents(int xref)
         {
-            MuPDFDocument doc = Parent;
+            Document doc = Parent;
             if (doc.IsClosed)
                 throw new Exception("document closed");
             if (!doc.IsPDF)
@@ -2308,7 +2308,7 @@ namespace MuPDF.NET
         /// <exception cref="Exception"></exception>
         public int ShowPdfPage(
             Rect rect,
-            MuPDFDocument src,
+            Document src,
             int pno = 0,
             bool keepProportion = true,
             bool overlay = true,
@@ -2317,7 +2317,7 @@ namespace MuPDF.NET
             Rect clip = null
         )
         {
-            MuPDFDocument doc = Parent;
+            Document doc = Parent;
             if (!doc.IsPDF || !src.IsPDF)
             {
                 throw new Exception("is not PDF");
@@ -2509,7 +2509,7 @@ namespace MuPDF.NET
             int encoding = 0
         )
         {
-            MuPDFDocument doc = Parent;
+            Document doc = Parent;
             int xref = 0;
             int idx = 0;
 
@@ -2666,7 +2666,7 @@ namespace MuPDF.NET
         {
             if (oc == 0)
                 return null;
-            MuPDFDocument doc = Parent;
+            Document doc = Parent;
             string check = doc.GetXrefObject(oc, 1);
             if (!(check.IndexOf("/Type/OCG") != -1 || check.IndexOf("/Type/OCMD") != -1))
                 throw new Exception("bad optional content: 'oc'");
@@ -3009,7 +3009,7 @@ namespace MuPDF.NET
 
         public void Refresh()
         {
-            MuPDFDocument doc = Parent;
+            Document doc = Parent;
             MuPDFPage page = doc.ReloadPage(this);
         }
 
@@ -3072,7 +3072,7 @@ namespace MuPDF.NET
 
         public void GetImageBbox(string name, bool transform = false)
         {
-            MuPDFDocument doc = Parent;
+            Document doc = Parent;
             if (doc.IsClosed || doc.IsEncrypted)
                 throw new Exception("document closed or encrypted");
 
@@ -3172,7 +3172,7 @@ namespace MuPDF.NET
             byte[] stream = null
         )
         {
-            MuPDFDocument doc = Parent;
+            Document doc = Parent;
             if (!doc.XrefIsImage(xref))
                 throw new Exception("xref not an image");
             if (
@@ -3808,7 +3808,7 @@ namespace MuPDF.NET
         /// <returns></returns>
         public List<Block> GetImageInfo(bool hashes = false, bool xrefs = false)
         {
-            MuPDFDocument doc = Parent;
+            Document doc = Parent;
             if (xrefs && doc.IsPDF)
                 hashes = true;
             if (!doc.IsPDF)
@@ -3833,7 +3833,7 @@ namespace MuPDF.NET
             foreach (Entry entry in imgList)
             {
                 int xref = entry.Xref;
-                Pixmap pix = new Pixmap(MuPDFDocument.AsPdfDocument(Parent), xref);
+                Pixmap pix = new Pixmap(Document.AsPdfDocument(Parent), xref);
                 digests.Add(Encoding.UTF8.GetString(pix.Digest), xref);
                 pix = null;
             }
@@ -3886,7 +3886,7 @@ namespace MuPDF.NET
         public List<Box> GetImageRects(int name, bool transform = false)
         {
             int xref = name;
-            Pixmap pix = new Pixmap(MuPDFDocument.AsPdfDocument(Parent), xref);
+            Pixmap pix = new Pixmap(Document.AsPdfDocument(Parent), xref);
 
             byte[] digest = new byte[pix.Digest.Length];
             Array.Copy(pix.Digest, digest, digest.Length);
@@ -4052,7 +4052,7 @@ namespace MuPDF.NET
                 float zoom = dpi / 72.0f;
                 Matrix mat = new Matrix(zoom, zoom);
                 Pixmap pix = page.GetPixmap(matrix: (IdentityMatrix)mat);
-                MuPDFDocument ocrPdf = new MuPDFDocument(
+                Document ocrPdf = new Document(
                     "pdf",
                     pix.PdfOCR2Bytes(true, language, tessdata)
                 );
@@ -4089,7 +4089,7 @@ namespace MuPDF.NET
                         pix = new Pixmap(new ColorSpace(Utils.CS_RGB), pix);
                     if (pix.Alpha != 0)
                         pix = new Pixmap(pix, 0);
-                    MuPDFDocument imgDoc = new MuPDFDocument(
+                    Document imgDoc = new Document(
                         "pdf",
                         pix.PdfOCR2Bytes(language: language, tessdata: tessdata)
                     );
@@ -4325,7 +4325,7 @@ namespace MuPDF.NET
         /// <exception cref="Exception"></exception>
         public MuPDFAnnot AddWidget(MuPDFWidget widget)
         {
-            MuPDFDocument doc = Parent;
+            Document doc = Parent;
             if (!doc.IsPDF)
                 throw new Exception("is no PDF");
 

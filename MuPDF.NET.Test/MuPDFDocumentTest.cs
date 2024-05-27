@@ -13,7 +13,7 @@ namespace MuPDF.NET.Test
         [SetUp]
         public void Setup()
         {
-            doc = new MuPDFDocument("../../../resources/toc.pdf");
+            doc = new Document("../../../resources/toc.pdf");
         }
 
         [Test]
@@ -84,7 +84,7 @@ namespace MuPDF.NET.Test
         [Test]
         public void GetToc()
         {
-            MuPDFDocument doc = new MuPDFDocument("../../../resources/toc.pdf");
+            Document doc = new Document("../../../resources/toc.pdf");
             doc.GetToc(true);
         }
 
@@ -98,7 +98,7 @@ namespace MuPDF.NET.Test
         [Test]
         public void Embedded()
         {
-            MuPDFDocument doc = new MuPDFDocument();
+            Document doc = new Document();
             byte[] buffer = Encoding.UTF8.GetBytes("123456678790qwexcvnmhofbnmfsdg4589754uiofjkb-");
             doc.AddEmbfile("file1", buffer, "testfile.txt", "testfile-u.txt", "Description of some sort");
         }
@@ -106,14 +106,14 @@ namespace MuPDF.NET.Test
         [Test]
         public void Test_IsNoPDF()
         {
-            MuPDFDocument doc = new MuPDFDocument("../../../resources/Bezier.epub");
+            Document doc = new Document("../../../resources/Bezier.epub");
             Assert.That(doc.IsPDF, Is.False);
         }
 
         [Test]
         public void Test_PageIds()
         {
-            MuPDFDocument doc = new MuPDFDocument("../../../resources/Bezier.epub");
+            Document doc = new Document("../../../resources/Bezier.epub");
 
             Assert.That(doc.ChapterCount, Is.EqualTo(7));
             Assert.That(doc.LastLocation.Item1, Is.EqualTo(6));
@@ -122,7 +122,7 @@ namespace MuPDF.NET.Test
         [Test]
         public void OC1()
         {
-            MuPDFDocument doc = new MuPDFDocument();
+            Document doc = new Document();
             int ocg1 = doc.AddOcg("ocg1");
             int ocg2 = doc.AddOcg("ocg2");
             doc.SetOCMD(xref: 0, ocgs: new int[] { ocg1, ocg2 });

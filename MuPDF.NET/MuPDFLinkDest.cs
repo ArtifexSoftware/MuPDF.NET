@@ -35,7 +35,7 @@ namespace MuPDF.NET
         /// <param name="obj">Link or Outline destination</param>
         /// <param name="rlink"></param>
         /// <param name="document"></param>
-        public MuPDFLinkDest(dynamic obj, (List<int>, float, float) rlink, MuPDFDocument document = null)
+        public MuPDFLinkDest(dynamic obj, (List<int>, float, float) rlink, Document document = null)
         {
             bool isExt = obj.IsExternal;
             bool isInt = !isExt;
