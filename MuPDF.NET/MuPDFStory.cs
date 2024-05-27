@@ -28,7 +28,7 @@ namespace MuPDF.NET
             }
         }
 
-        public MuPDFStory(string html = "", string userCss = null, float em = 12, MuPDFArchive archive = null)
+        public MuPDFStory(string html = "", string userCss = null, float em = 12, Archive archive = null)
         {
             byte[] bytes = Encoding.UTF8.GetBytes(html);
             FzBuffer buf = Utils.fz_new_buffer_from_data(bytes);
@@ -459,7 +459,7 @@ namespace MuPDF.NET
             int em = 12,
             Action<Position> positionfn = null,
             Action<int, Rect, DeviceWrapper, bool> pagefn = null,
-            MuPDFArchive archive = null,
+            Archive archive = null,
             bool addHeaderIds = true
             )
         {
@@ -516,7 +516,7 @@ namespace MuPDF.NET
             int em = 12,
             Action<Position> positionfn = null,
             Action<int, Rect, DeviceWrapper, bool> pageFn = null,
-            MuPDFArchive archive = null, // Assuming Archive is a defined class
+            Archive archive = null, // Assuming Archive is a defined class
             bool addHeaderIds = true
             )
         {

@@ -4,9 +4,9 @@ using System.IO.Compression;
 
 namespace MuPDF.NET
 {
-    public class MuPDFArchive
+    public class Archive
     {
-        static MuPDFArchive()
+        static Archive()
         {
             if (!File.Exists("mupdfcsharp.dll"))
                 Utils.LoadEmbeddedDll();
@@ -24,20 +24,20 @@ namespace MuPDF.NET
             }
         }
 
-        public MuPDFArchive(string dirName)
+        public Archive(string dirName)
         {
             _subArchives = new List<SubArchive>();
             _nativeArchive = mupdf.mupdf.fz_new_multi_archive();
             Add(content: dirName, path: dirName);
         }
 
-        public MuPDFArchive()
+        public Archive()
         {
             _nativeArchive = mupdf.mupdf.fz_new_multi_archive();
             _subArchives = new List<SubArchive>();
         }
 
-        public MuPDFArchive(string filename, string path = "")
+        public Archive(string filename, string path = "")
         {
             _subArchives = new List<SubArchive>();
             _nativeArchive = mupdf.mupdf.fz_new_multi_archive();

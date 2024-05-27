@@ -183,7 +183,7 @@ public class MuPDFPageTest : PdfTestBase
         Document doc = new Document();
         MuPDFPage page = doc.NewPage();
 
-        MuPDFArchive archive = new MuPDFArchive();
+        Archive archive = new Archive();
         FileStream st = new FileStream("../../../resources/kenpixel.zip", FileMode.Open);
         ZipArchive css = new ZipArchive(st, ZipArchiveMode.Read);
         archive.Add(css, "../../../resources/kenpixel.zip");

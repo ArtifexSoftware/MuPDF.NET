@@ -2140,7 +2140,7 @@ namespace MuPDF.NET
             float opacity = 1,
             int rotate = 0,
             float scaleLow = 0,
-            MuPDFArchive archive = null,
+            Archive archive = null,
             int oc = 0,
             bool overlay = true
         )
