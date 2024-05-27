@@ -8,8 +8,6 @@ Xml
 
 .. role:: htmlTag(emphasis)
 
-* New in v1.21.0
-
 This represents an HTML or an XML node. It is a helper class intended to access the DOM (Document Object Model) content of a :ref:`Story` object.
 
 There is no need to ever directly construct an :ref:`Xml` object: after creating a :ref:`Story`, simply take :attr:`Story.body` -- which is an Xml node -- and use it to navigate your way through the story's DOM.

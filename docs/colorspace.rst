@@ -22,13 +22,13 @@ Represents the color space of a :ref:`Pixmap`.
 
    .. attribute:: Name
 
-      The name identifying the colorspace. Example: *fitz.csCMYK.name = 'DeviceCMYK'*.
+      The name identifying the colorspace.
 
       :type: str
 
    .. attribute:: N
 
-      The number of bytes required to define the color of one pixel. Example: *fitz.csCMYK.n == 4*.
+      The number of bytes required to define the color of one pixel.
 
       :type: int
 

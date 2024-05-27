@@ -33,7 +33,7 @@
     <cite>PyMuPDF</cite>
 
 
-Welcome to MuPDF.NET
+Welcome to |MuPDF.NET|
 ==================================================
 
 **MuPDF** for **.NET**.
@@ -42,7 +42,7 @@ Welcome to MuPDF.NET
 
 |MuPDF.NET| is hosted on `GitHub <https://github.com/ArtifexSoftware/MuPDF.NET>`_ and is registered on `NuGet <https://www.nuget.org/packages/MuPDF.NET/>`_.
 
-|MuPDF.NET| has been derived from `PyMuPDF <https://github.com/pymupdf/PyMuPDF>`_ and it closely follows its structure. So for most of |PyMuPDF|'s classes, features and functions you will find a respective |MuPDF.NET| object doing the same sort of thing.
+|MuPDF.NET| has been derived from `PyMuPDF <https://github.com/pymupdf/PyMuPDF>`_ and it closely follows its structure. So for most of PyMuPDF's classes, features and functions you will find a respective MuPDF.NET object doing the same sort of thing.
 
 Pease note that there are deviations as per how objects are named. We will publish a table in due time that maps |MuPDF.NET| and |PyMuPDF| names.
 
@@ -64,7 +64,7 @@ Developer documentation to help you get started
 .. rst-class:: hide-me
 
 .. toctree::
-    :caption: Welcome to PDF.co Documentation
+    :caption: Welcome to MuPDF.NET Documentation
     :maxdepth: 2
 
     getting-started/index.rst
@@ -75,8 +75,6 @@ Developer documentation to help you get started
 
    classes.rst
    glossary.rst
-
-
 
 
 

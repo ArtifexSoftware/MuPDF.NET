@@ -2,14 +2,14 @@
 
 .. _Matrix:
 
-==========
+============
 Matrix
-==========
+============
 
 Matrix is a row-major 3x3 matrix used by image transformations in MuPDF (which complies with the respective concepts laid down in the :ref:`AdobeManual`). With matrices you can manipulate the rendered image of a page in a variety of ways: (parts of) the page can be rotated, zoomed, flipped, sheared and shifted by setting some or all of just six float values.
 
 
-Since all points or pixels live in a two-dimensional space, one column vector of that matrix is a constant unit vector, and only the remaining six elements are used for manipulations. These six elements are usually represented by *[a, b, c, d, e, f]*. Here is how they are positioned in the matrix:
+Since all points or pixels live in a two-dimensional space, one column vector of that matrix is a constant unit vector, and only the remaining six elements are used for manipulations. These six elements are usually represented by `[a, b, c, d, e, f]`. Here is how they are positioned in the matrix:
 
 .. image:: images/img-matrix.*
 
@@ -35,7 +35,7 @@ Please note:
 :attr:`Matrix.D`                 zoom factor Y direction
 :attr:`Matrix.E`                 horizontal shift
 :attr:`Matrix.F`                 vertical shift
-:attr:`Matrix.IsRectilinear`    true if rect corners will remain rect corners
+:attr:`Matrix.IsRectilinear`     true if rect corners will remain rect corners
 ================================ ==============================================
 
 **Class API**
@@ -72,8 +72,6 @@ Please note:
 
    .. method:: Norm()
 
-      * New in version 1.16.0
-      
       Return the Euclidean norm of the matrix as a vector.
 
    .. method:: Prerotate(deg)
@@ -118,7 +116,7 @@ Please note:
       :arg m2: Second (right) matrix.
       :type m2: :ref:`Matrix`
 
-   .. method:: Invert(m = None)
+   .. method:: Invert(m: null)
 
       Calculate the matrix inverse of *m* and store the result in the current matrix. Returns *1* if *m* is not invertible ("degenerate"). In this case the current matrix **will not change**. Returns *0* if *m* is invertible, and the current matrix is replaced with the inverted *m*.
 
@@ -171,8 +169,6 @@ Please note:
 
 .. note::
 
-   * This class adheres to the Python sequence protocol, so components can be accessed via their index, too. Also refer to :ref:`SequenceTypes`.
-   * Matrices can be used with arithmetic operators almost like ordinary numbers: they can be added, subtracted, multiplied or divided -- see chapter :ref:`Algebra`.
    * Matrix multiplication is **not commutative** -- changing the sequence of the multiplicands will change the result in general. So it can quickly become unclear which result a transformation will yield.
 
 

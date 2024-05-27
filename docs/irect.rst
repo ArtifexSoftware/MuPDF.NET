@@ -49,14 +49,14 @@ IRect is a rectangular bounding box, very similar to :ref:`Rect`, except that al
 
       If another irect is specified, a **new copy** will be made.
 
-      If sequence is specified, it must be a Python sequence type of 4 numbers (see :ref:`SequenceTypes`). Non-integer numbers will be truncated, non-numeric values will raise an exception.
+      If sequence is specified, it must be a sequence type of 4 numbers (see :ref:`SequenceTypes`). Non-integer numbers will be truncated, non-numeric values will raise an exception.
 
       The other parameters mean integer coordinates.
 
 
    .. method:: GetArea([unit])
 
-      Calculates the area of the rectangle and, with no parameter, equals *abs(IRect)*. Like an empty rectangle, the area of an infinite rectangle is also zero.
+      Calculates the area of the rectangle and, with no parameter, equals `abs(IRect)`. Like an empty rectangle, the area of an infinite rectangle is also zero.
 
       :arg str unit: Specify required unit: respective squares of "px" (pixels, default), "in" (inches), "cm" (centimeters), or "mm" (millimeters).
 
@@ -70,7 +70,7 @@ IRect is a rectangular bounding box, very similar to :ref:`Rect`, except that al
 
    .. method:: Contains(x)
 
-      Checks whether *x* is contained in the rectangle. It may be :data:`rect_like`, :data:`point_like` or a number. If *x* is an empty rectangle, this is always true. Conversely, if the rectangle is empty this is always *false*, if *x* is not an empty rectangle and not a number. If *x* is a number, it will be checked to be one of the four components. *x in irect* and *irect.contains(x)* are equivalent.
+      Checks whether *x* is contained in the rectangle. It may be :data:`rect_like`, :data:`point_like` or a number. If *x* is an empty rectangle, this is always true. Conversely, if the rectangle is empty this is always `false`, if *x* is not an empty rectangle and not a number. If *x* is a number, it will be checked to be one of the four components. *x in irect* and `irect.contains(x)` are equivalent.
 
       :arg x: the object to check.
       :type x: :ref:`IRect` or :ref:`Rect` or :ref:`Point` or int
@@ -79,7 +79,7 @@ IRect is a rectangular bounding box, very similar to :ref:`Rect`, except that al
 
    .. method:: Intersects(r)
 
-      Checks whether the rectangle and the :data:`rect_like` "r" contain a common non-empty :ref:`IRect`. This will always be *false* if either is infinite or empty.
+      Checks whether the rectangle and the :data:`rect_like` "r" contain a common non-empty :ref:`IRect`. This will always be `false` if either is infinite or empty.
 
       :arg rect_like r: the rectangle to check.
 
@@ -87,9 +87,7 @@ IRect is a rectangular bounding box, very similar to :ref:`Rect`, except that al
 
    .. method:: ToRect(rect)
 
-      * New in version 1.19.3
-      
-      Compute the matrix which transforms this rectangle to a given one. See :meth:`Rect.torect`.
+      Compute the matrix which transforms this rectangle to a given one. See :meth:`MuPDFRect.torect`.
 
       :arg rect_like rect: the target rectangle. Must not be empty or infinite.
       :rtype: :ref:`Matrix`
@@ -114,25 +112,25 @@ IRect is a rectangular bounding box, very similar to :ref:`Rect`, except that al
 
    .. attribute:: TopLeft
 
-      Equals *Point(x0, y0)*.
+      Equals `Point(x0, y0)`.
 
       :type: :ref:`Point`
 
    .. attribute:: TopRight
 
-      Equals *Point(x1, y0)*.
+      Equals `Point(x1, y0)`.
 
       :type: :ref:`Point`
 
    .. attribute:: BottomLeft
 
-      Equals *Point(x0, y1)*.
+      Equals `Point(x0, y1)`.
 
       :type: :ref:`Point`
 
    .. attribute:: BottomRight
 
-      Equals *Point(x1, y1)*.
+      Equals `Point(x1, y1)`.
 
       :type: :ref:`Point`
 
@@ -144,19 +142,19 @@ IRect is a rectangular bounding box, very similar to :ref:`Rect`, except that al
 
    .. attribute:: Quad
 
-      The quadrilateral *Quad(irect.tl, irect.tr, irect.bl, irect.br)*.
+      The quadrilateral `Quad(irect.tl, irect.tr, irect.bl, irect.br)`.
 
       :type: :ref:`Quad`
 
    .. attribute:: Width
 
-      Contains the width of the bounding box. Equals *abs(x1 - x0)*.
+      Contains the width of the bounding box. Equals `abs(x1 - x0)`.
 
       :type: int
 
    .. attribute:: Height
 
-      Contains the height of the bounding box. Equals *abs(y1 - y0)*.
+      Contains the height of the bounding box. Equals `abs(y1 - y0)`.
 
       :type: int
 
@@ -186,21 +184,16 @@ IRect is a rectangular bounding box, very similar to :ref:`Rect`, except that al
 
    .. attribute:: IsInfinite
 
-      *true* if rectangle is infinite, *false* otherwise.
+      *true* if rectangle is infinite, `false` otherwise.
 
       :type: bool
 
    .. attribute:: IsEmpty
 
-      *true* if rectangle is empty, *false* otherwise.
+      *true* if rectangle is empty, `false` otherwise.
 
       :type: bool
 
-
-.. note::
-
-   * This class adheres to the Python sequence protocol, so components can be accessed via their index, too. Also refer to :ref:`SequenceTypes`.
-   * Rectangles can be used with arithmetic operators -- see chapter :ref:`Algebra`.
 
 .. include:: footer.rst
 

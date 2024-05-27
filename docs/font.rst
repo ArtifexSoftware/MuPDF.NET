@@ -11,26 +11,26 @@ This class represents a font as defined in MuPDF (*fz_font_s* structure). It is 
 A Font object also contains useful general information, like the font bbox, the number of defined glyphs, glyph names or the bbox of a single glyph.
 
 
-==================================== ============================================
-**Method / Attribute**               **Short Description**
-==================================== ============================================
-:meth:`~Font.GlyphAdvance`           Width of a character
-:meth:`~Font.GlyphBbox`              Glyph rectangle
-:meth:`~Font.GlyphName2Unicode`      Get unicode from glyph name
-:meth:`~Font.HasGlyph`               Return glyph id of unicode
-:meth:`~Font.TextLength`             Compute string length
-:meth:`~Font.GetCharLengths`         Tuple of char widths of a string
-:meth:`~Font.Unicode2GlyphName`      Get glyph name of a unicode
-:meth:`~Font.GetValidCodePoints`     Array of supported unicodes
-:attr:`~Font.Ascender`               Font ascender
-:attr:`~Font.Descender`              Font descender
-:attr:`~Font.Bbox`                   Font rectangle
-:attr:`~Font.Buffer`                 Copy of the font's binary image
-:attr:`~Font.Flags`                  Collection of font properties
-:attr:`~Font.GlyphCount`             Number of supported glyphs
-:attr:`~Font.Name`                   Name of font
-:attr:`~Font.IsWriteable`            Font usable with :ref:`TextWriter`
-==================================== ============================================
+======================================== ============================================
+**Method / Attribute**                   **Short Description**
+======================================== ============================================
+:meth:`Font.GlyphAdvance`                Width of a character
+:meth:`Font.GlyphBbox`                   Glyph rectangle
+:meth:`Font.GlyphName2Unicode`           Get unicode from glyph name
+:meth:`Font.HasGlyph`                    Return glyph id of unicode
+:meth:`Font.TextLength`                  Compute string length
+:meth:`Font.GetCharLengths`              Tuple of char widths of a string
+:meth:`Font.Unicode2GlyphName`           Get glyph name of a unicode
+:meth:`Font.GetValidCodePoints`          Array of supported unicodes
+:attr:`Font.Ascender`                    Font ascender
+:attr:`Font.Descender`                   Font descender
+:attr:`Font.Bbox`                        Font rectangle
+:attr:`Font.Buffer`                      Copy of the font's binary image
+:attr:`Font.Flags`                       Collection of font properties
+:attr:`Font.GlyphCount`                  Number of supported glyphs
+:attr:`Font.Name`                        Name of font
+:attr:`Font.IsWriteable`                 Font usable with :ref:`TextWriter`
+======================================== ============================================
 
 
 **Class API**
@@ -48,16 +48,11 @@ A Font object also contains useful general information, like the font bbox, the 
       pair: Font, fontName
       pair: Font, language
 
-   .. method:: MuPDFFont(string fontName = null, string fontFile = null, byte[] fontBuffer = null, int script = 0, string language = null, int ordering = -1, int isBold = 0, int isItalic = 0, int isSerif = 0, int embed = 1)
+   .. method:: Font(string fontName = null, string fontFile = null, byte[] fontBuffer = null, int script = 0, string language = null, int ordering = -1, int isBold = 0, int isItalic = 0, int isSerif = 0, int embed = 1)
 
       Font constructor. The large number of parameters are used to locate font, which most closely resembles the requirements. Not all parameters are ever required -- see the below pseudo code explaining the logic how the parameters are evaluated.
 
-      :arg str fontname: one of the :ref:`Base-14-Fonts` or CJK fontnames. Also possible are a select few other names like (watch the correct spelling): "Arial", "Times", "Times Roman".
-      
-         *(Changed in v1.17.5)*
-
-         If you have installed `pymupdf-fonts <https://pypi.org/project/pymupdf-fonts/>`_, there are also new "reserved" fontnames available, which are listed in :attr:`fitz_fonts` and in the table further down.
-
+      :arg str fontname: one of the :ref:`Base-14-Fonts` or CJK fontnames. Also possible are a select few other names like (watch the correct spelling): "Arial", "Times", "Times Roman".      
       :arg str fontfile: the filename of a fontfile somewhere on your system [#f1]_.
       :arg bytes,bytearray,io.BytesIO fontbuffer: a fontfile loaded in memory [#f1]_.
       :arg in script: the number of a UCDN script. Currently supported in PyMuPDF are numbers 24, and 32 through 35.
@@ -109,18 +104,16 @@ A Font object also contains useful general information, like the font bbox, the 
       :arg int chr: the unicode of the character (i.e. *ord()*).
       :arg str language: the language -- currently unused.
       :arg int script: the UCDN script number.
-      :arg bool fallback: *(new in v1.17.5)* perform an extended search in fallback fonts or restrict to current font (default).
-      :returns: *(changed in 1.17.7)* the glyph number. Zero indicates no glyph found.
+      :arg bool fallback: Perform an extended search in fallback fonts or restrict to current font (default).
+      :returns: The glyph number. Zero indicates no glyph found.
 
    .. method:: GetValidCodePoints()
-
-      * New in v1.17.5
 
       Return an array of unicodes supported by this font.
 
       :returns: an *array.array* [#f2]_ of length at most :attr:`Font.glyph_count`. I.e. *chr()* of every item in this array has a glyph in the font without using fallbacks. This is an example display of the supported glyphs:
 
-         MuPDFFont font =  new MuPDFFont("math")
+         Font font =  new Font("math")
          List<int> vuc = font.GetValidCodePoints()
          foreach(int i in vuc)
             print($"%04X %s (%s)" % (i, chr(i), font.Unicode2GlyphName(i)))
@@ -194,8 +187,6 @@ A Font object also contains useful general information, like the font bbox, the 
 
       :returns: a string representing the glyph's name. E.g. `font.glyph_name(ord("#")) = "numbersign"`. For an invalid code ".notfound" is returned.
       
-        .. note:: *(Changed in v1.18.0)* This method and :meth:`Font.glyph_name_to_unicode` no longer depend on a font and instead retrieve information from the **Adobe Glyph List**. Also available as `fitz.Unicode2GlyphName()` and resp. `fitz.glyph_name_to_unicode()`.
-
    .. index::
       pair: TextLength, fontSize
       pair: TextLength, language
@@ -217,13 +208,6 @@ A Font object also contains useful general information, like the font bbox, the 
 
       :returns: the length of the string in points when stored in the PDF. If a character is not contained in the font, it will automatically be looked up in a fallback font.
 
-         .. note:: This method was originally implemented in Python, based on calling :meth:`Font.GlyphAdvance`. For performance reasons, it has been rewritten in C for v1.18.14. To compute the width of a single character, you can now use either of the following without performance penalty:
-
-            1. `font.GlyphAdvance(ord("Ä")) * fontsize`
-            2. `font.TextLength("Ä", fontSize=fontsize)`
-
-            For multi-character strings, the method offers a huge performance advantage compared to the previous implementation: instead of about 0.5 microseconds for each character, only 12.5 nanoseconds are required for the second and subsequent ones.
-
    .. index::
       pair: GetCharLengths, fontSize
       pair: GetCharLengths, language
@@ -232,8 +216,6 @@ A Font object also contains useful general information, like the font bbox, the 
       pair: GetCharLengths, smallCaps
 
    .. method:: GetCharLengths(string text, float fontSize=11, string language = null, int script = 0, int wmode = 0, int smallCaps = 0)
-
-      *New in v1.18.14*
 
       Sequence of character lengths in points of a unicode string.
 
@@ -245,7 +227,7 @@ A Font object also contains useful general information, like the font bbox, the 
 
       :returns: the lengths in points of the characters of a string when stored in the PDF. It works like :meth:`Font.Textlength` broken down to single characters. This is a high speed method, used e.g. in :meth:`TextWriter.FillTextbox`. The following is true (allowing rounding errors): `font.TextLength(text) == sum(font.GetCharLengths(text))`.
 
-         MuPDFFont font = new MuPDFFont("helv");
+         Font font = new Font("helv");
          string text = "PyMuPDF";
          font.text_length(text);
          Utils.GetTextLength(text, fontName="helv");
@@ -253,8 +235,6 @@ A Font object also contains useful general information, like the font bbox, the 
          Console.WriteLine(font.GetCharLengths(text));
 
    .. attribute:: Buffer
-
-      * New in v1.17.6
 
       Copy of the binary font file content.
       
@@ -286,23 +266,17 @@ A Font object also contains useful general information, like the font bbox, the 
 
    .. attribute:: Ascender
 
-      * New in v1.18.0
-
       The ascender value of the font, see `here <https://en.wikipedia.org/wiki/Ascender_(typography)>`_ for details. Please note that there is a difference to the strict definition: our value includes everything above the baseline -- not just the height difference between upper case "A" and and lower case "a".
 
       :rtype: float
 
    .. attribute:: Descender
 
-      * New in v1.18.0
-
       The descender value of the font, see `here <https://en.wikipedia.org/wiki/Descender>`_ for details. This value always is negative and is the portion that some glyphs descend below the base line, for example "g" or "y". As a consequence, the value `Ascender - Descender` is the total height, that every glyph of the font fits into. This is true at least for most fonts -- as always, there are exceptions, especially for calligraphic fonts, etc.
 
       :rtype: float
 
    .. attribute:: IsWritable
-
-      * New in v1.18.0
 
       Indicates whether this font can be used with :ref:`TextWriter`.
 

@@ -40,7 +40,7 @@ For a description of what this class is all about, see Appendix 2.
 
       Return a string of the page's complete text. The text is UTF-8 unicode and in the same sequence as specified at the time of document creation.
 
-      :arg bool sort: (new in v1.19.1) sort the output by vertical, then horizontal coordinates. In many cases, this should suffice to generate a "natural" reading order.
+      :arg bool sort: Sort the output by vertical, then horizontal coordinates. In many cases, this should suffice to generate a "natural" reading order.
 
       :rtype: str
 
@@ -61,13 +61,11 @@ For a description of what this class is all about, see Appendix 2.
 
    .. method:: ExtractWords(char[] delimiters=null)
 
-      * Changed in v1.23.5: added `delimiters` parameter
-
       Textpage content as a list of single words with bbox information. An item of this list looks like this::
 
          (x0, y0, x1, y1, "word", block_no, line_no, word_no)
 
-      :arg str delimiters: (new in v1.23.5) use these characters as *additional* word separators. By default, all white spaces (including the non-breaking space `0xA0`) indicate start and end of a word. Now you can specify more characters causing this. For instance, the default will return `"john.doe@outlook.com"` as **one** word. If you specify `delimiters="@."` then the **four** words `"john"`, `"doe"`, `"outlook"`, `"com"` will be returned. Other possible uses include ignoring punctuation characters `delimiters=string.punctuation`. The "word" strings will not contain any delimiting character.
+      :arg str delimiters: Use these characters as *additional* word separators. By default, all white spaces (including the non-breaking space `0xA0`) indicate start and end of a word. Now you can specify more characters causing this. For instance, the default will return `"john.doe@outlook.com"` as **one** word. If you specify `delimiters="@."` then the **four** words `"john"`, `"doe"`, `"outlook"`, `"com"` will be returned. Other possible uses include ignoring punctuation characters `delimiters=string.punctuation`. The "word" strings will not contain any delimiting character.
 
       This is a high-speed method which e.g. allows extracting text from within given areas or recovering the text reading sequence.
 
@@ -75,15 +73,15 @@ For a description of what this class is all about, see Appendix 2.
 
    .. method:: ExtractHtml
 
-      Textpage content as a string in HTML format. This version contains complete formatting and positioning information. Images are included (encoded as base64 strings). You need an HTML package to interpret the output in Python. Your internet browser should be able to adequately display this information, but see :ref:`HTMLQuality`.
+      Textpage content as a string in HTML format. This version contains complete formatting and positioning information. Images are included (encoded as base64 strings). You need an HTML package to interpret the output. Your internet browser should be able to adequately display this information, but see :ref:`HTMLQuality`.
 
       :rtype: str
 
    .. method:: ExtractDict(bool sort=false)
 
-      Textpage content as a Python dictionary. Provides same information detail as HTML. See below for the structure.
+      Textpage content as a dictionary. Provides same information detail as HTML. See below for the structure.
 
-      :arg bool sort: (new in v1.19.1) sort the output by vertical, then horizontal coordinates. In many cases, this should suffice to generate a "natural" reading order.
+      :arg bool sort: Sort the output by vertical, then horizontal coordinates. In many cases, this should suffice to generate a "natural" reading order.
 
       :rtype: dict
 
@@ -91,7 +89,7 @@ For a description of what this class is all about, see Appendix 2.
 
       Textpage content as a JSON string. Created by `JsonConvert.SerializeObject(TextPage.ExtractDict())`. It is included for backlevel compatibility. You will probably use this method ever only for outputting the result to some file. The  method detects binary image data and converts them to base64 encoded strings.
 
-      :arg bool sort: (new in v1.19.1) sort the output by vertical, then horizontal coordinates. In many cases, this should suffice to generate a "natural" reading order.
+      :arg bool sort: Sort the output by vertical, then horizontal coordinates. In many cases, this should suffice to generate a "natural" reading order.
 
       :rtype: str
 
@@ -103,15 +101,15 @@ For a description of what this class is all about, see Appendix 2.
 
    .. method:: ExtractXML
 
-      Textpage content as a string in XML format. This contains complete formatting information about every single character on the page: font, size, line, paragraph, location, color, etc. Contains no images. You need an XML package to interpret the output in Python.
+      Textpage content as a string in XML format. This contains complete formatting information about every single character on the page: font, size, line, paragraph, location, color, etc. Contains no images. You need an XML package to interpret the output.
 
       :rtype: str
 
    .. method:: ExtractRAWDict(bool sort=false)
 
-      Textpage content as a Python dictionary -- technically similar to :meth:`ExtractDict`, and it contains that information as a subset (including any images). It provides additional detail down to each character, which makes using XML obsolete in many cases. See below for the structure.
+      Textpage content as a dictionary -- technically similar to :meth:`ExtractDict`, and it contains that information as a subset (including any images). It provides additional detail down to each character, which makes using XML obsolete in many cases. See below for the structure.
 
-      :arg bool sort: (new in v1.19.1) sort the output by vertical, then horizontal coordinates. In many cases, this should suffice to generate a "natural" reading order.
+      :arg bool sort: Sort the output by vertical, then horizontal coordinates. In many cases, this should suffice to generate a "natural" reading order.
 
       :rtype: dict
 
@@ -119,20 +117,18 @@ For a description of what this class is all about, see Appendix 2.
 
       Textpage content as a JSON string. Created by `JsonConvert.SerializeObject(TextPage.ExtractRAWDict())`. You will probably use this method ever only for outputting the result to some file. The  method detects binary image data and converts them to base64 encoded strings.
 
-      :arg bool sort: (new in v1.19.1) sort the output by vertical, then horizontal coordinates. In many cases, this should suffice to generate a "natural" reading order.
+      :arg bool sort: Sort the output by vertical, then horizontal coordinates. In many cases, this should suffice to generate a "natural" reading order.
 
       :rtype: str
 
    .. method:: Search(string needle, bool quads=false)
-
-      * Changed in v1.18.2
 
       Search for *string* and return a list of found locations.
 
       :arg str needle: the string to search for. Upper and lower cases will all match if needle consists of ASCII letters only -- it does not yet work for "Ä" versus "ä", etc.
       :arg bool quads: return quadrilaterals instead of rectangles.
       :rtype: list
-      :returns: a list of :ref:`Rect` or :ref:`Quad` objects, each surrounding a found *needle* occurrence. As the search string may contain spaces, its parts may be found on different lines. In this case, more than one rectangle (resp. quadrilateral) are returned. **(Changed in v1.18.2)** The method **now supports dehyphenation**, so it will find e.g. "method", even if it was hyphenated in two parts "meth-" and "od" across two lines. The two returned rectangles will contain "meth" (no hyphen) and "od".
+      :returns: a list of :ref:`Rect` or :ref:`Quad` objects, each surrounding a found *needle* occurrence. As the search string may contain spaces, its parts may be found on different lines. In this case, more than one rectangle (resp. quadrilateral) are returned. The method **now supports dehyphenation**, so it will find e.g. "method", even if it was hyphenated in two parts "meth-" and "od" across two lines. The two returned rectangles will contain "meth" (no hyphen) and "od".
 
       .. note:: **Overview of changes in v1.18.2:**
 
@@ -163,12 +159,7 @@ Methods :meth:`TextPage.ExtractDict`, :meth:`TextPage.ExtractJSON`, :meth:`TextP
 * A **span** either consists of the text itself or, for the RAW variants, a list of **character dictionaries**.
 * RAW variants: a **character** is a dictionary of its origin, bbox and unicode.
 
-All PyMuPDF geometry objects herein (points, rectangles, matrices) are represented by there **"like"** formats: a :data:`rect_like` *tuple* is used instead of a :ref:`Rect`, etc. The reasons for this are performance and memory considerations:
-
-* This code is written in C, where Python tuples can easily be generated. The geometry objects on the other hand are defined in Python source only. A conversion of each Python tuple into its corresponding geometry object would add significant -- and largely unnecessary -- execution time.
-* A 4-tuple needs about 168 bytes, the corresponding :ref:`Rect` 472 bytes - almost three times the size. A "dict" dictionary for a text-heavy page contains 300+ bbox objects -- which thus require about 50 KB storage as 4-tuples versus 140 KB as :ref:`Rect` objects. A "rawdict" output for such a page will however contain **4 to 5 thousand** bboxes, so in this case we talk about 750 KB versus 2 MB.
-
-Please also note, that only **bboxes** (= :data:`rect_like` 4-tuples) are returned, whereas a :ref:`TextPage` actually has the **full position information** -- in :ref:`Quad` format. The reason for this decision is again a memory consideration: a :data:`quad_like` needs 488 bytes (3 times the size of a :data:`rect_like`). Given the mentioned amounts of generated bboxes, returning :data:`quad_like` information would have a significant impact.
+Please note, that only **bboxes** (= :data:`rect_like` 4-tuples) are returned, whereas a :ref:`TextPage` actually has the **full position information** -- in :ref:`Quad` format. The reason for this decision is a memory consideration: a :data:`quad_like` needs 488 bytes (3 times the size of a :data:`rect_like`). Given the mentioned amounts of generated bboxes, returning :data:`quad_like` information would have a significant impact.
 
 In the vast majority of cases, we are dealing with **horizontal text only**, where bboxes provide entirely sufficient information.
 
@@ -265,9 +256,6 @@ Span Dictionary
 
 Spans contain the actual text. A line contains **more than one span only**, if it contains text with different font properties.
 
-* Changed in version 1.14.17 Spans now also have a *bbox* key (again).
-* Changed in version 1.17.6 Spans now also have an *origin* key.
-
 =============== =====================================================================
 **Key**             **Value**
 =============== =====================================================================
@@ -283,9 +271,6 @@ Text            (only for :meth:`ExtractDict`) text *(str)*
 Chars           (only for :meth:`ExtractRAWDict`) *list* of character dictionaries
 =============== =====================================================================
 
-*(New in version 1.16.0):* *"color"* is the text color encoded in sRGB (int) format, e.g. 0xFF0000 for red. There are functions for converting this integer back to formats (r, g, b) (PDF with float values from 0 to 1) :meth:`sRGB_to_pdf`, or (R, G, B), :meth:`sRGB_to_rgb` (with integer values from 0 to 255).
-
-*(New in v1.18.5):* *"ascender"* and *"descender"* are font properties, provided relative to :data:`fontsize` 1. Note that descender is a negative value. The following picture shows the relationship to other values and properties.
 
 .. image:: images/img-asc-desc.*
    :scale: 60
@@ -299,9 +284,7 @@ Point o = new Point(span.Origin)  # its y-value is the baseline
 r.y1 = o.y - span.Size * d / (a - d)
 r.y0 = r.y1 - span.Size
 
-.. caution:: The above calculation may deliver a **larger** height! This may e.g. happen for OCRed documents, where the risk of all sorts of text artifacts is high. MuPDF tries to come up with a reasonable bbox height, independently from the :data:`fontsize` found in the PDF. So please ensure that the height of `span["bbox"]` is **larger** than `span["size"]`.
-
-.. note:: You may request PyMuPDF to do all of the above automatically by executing `fitz.TOOLS.set_small_glyph_heights(true)`. This sets a global parameter so that all subsequent text searches and text extractions are based on reduced glyph heights, where meaningful.
+.. caution:: The above calculation may deliver a **larger** height! This may e.g. happen for OCRed documents, where the risk of text artifacts is high. MuPDF tries to come up with a reasonable bbox height, independently from the :data:`fontsize` found in the PDF. So please ensure that the height of `span["bbox"]` is **larger** than `span["size"]`.
 
 The following shows the original span rectangle in red and the rectangle with re-computed height in blue.
 
@@ -315,11 +298,6 @@ The following shows the original span rectangle in red and the rectangle with re
 * bit 2: serifed (2\ :sup:`2`)
 * bit 3: monospaced (2\ :sup:`3`)
 * bit 4: bold (2\ :sup:`4`)
-
-Test these characteristics like so:
-
->>> if flags & 2**1: print("italic")
->>> # etc.
 
 Bits 1 thru 4 are font properties, i.e. encoded in the font program. Please note, that this information is not necessarily correct or complete: fonts quite often contain wrong data here.
 

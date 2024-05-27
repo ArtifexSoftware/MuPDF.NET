@@ -50,7 +50,7 @@ Several draw methods can be executed in a row and each one of them will contribu
 
 .. class:: Shape
 
-   .. method:: Shape(MuPDFPage page)
+   .. method:: Shape(Page page)
 
       Create a new drawing. During importing PyMuPDF, the *fitz.Page* object is being given the convenience method *new_shape()* to construct a *Shape* object. During instantiation, a check will be made whether we do have a PDF page. An exception is otherwise raised.
 

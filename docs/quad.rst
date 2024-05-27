@@ -8,15 +8,15 @@ Quad
 
 Represents a four-sided mathematical shape (also called "quadrilateral" or "tetragon") in the plane, defined as a sequence of four :ref:`Point` objects ul, ur, ll, lr (conveniently called upper left, upper right, lower left, lower right).
 
-Quads can **be obtained** as results of text search methods (:meth:`Page.search_for`), and they **are used** to define text marker annotations (see e.g. :meth:`Page.add_squiggly_annot` and friends), and in several draw methods (like :meth:`Page.draw_quad` / :meth:`Shape.draw_quad`, :meth:`Page.draw_oval`/ :meth:`Shape.draw_quad`).
+Quads can **be obtained** as results of text search methods (:meth:`Page.search_for`), and they **are used** to define text marker annotations (see e.g. :meth:`Page.AddSquigglyAnnot` and friends), and in several draw methods (like :meth:`Page.DrawQuad` / :meth:`Shape.DrawQuad`, :meth:`Page.DrawOval`/ :meth:`Shape.DrawQuad`).
 
 .. note::
 
-   * If the corners of a rectangle are transformed with a **rotation**, **scale** or **translation** :ref:`Matrix`, then the resulting quad is **rectangular** (= congruent to a rectangle), i.e. all of its corners again enclose angles of 90 degrees. Property :attr:`Quad.is_rectangular` checks whether a quad can be thought of being the result of such an operation.
+   * If the corners of a rectangle are transformed with a **rotation**, **scale** or **translation** :ref:`Matrix`, then the resulting quad is **rectangular** (= congruent to a rectangle), i.e. all of its corners again enclose angles of 90 degrees. Property :attr:`Quad.IsRectangular` checks whether a quad can be thought of being the result of such an operation.
 
    * This is not true for all matrices: e.g. shear matrices produce parallelograms, and non-invertible matrices deliver "degenerate" tetragons like triangles or lines.
 
-   * Attribute :attr:`Quad.rect` obtains the enveloping rectangle. Vice versa, rectangles now have attributes :attr:`Rect.quad`, resp. :attr:`IRect.quad` to obtain their respective tetragon versions.
+   * Attribute :attr:`Quad.Rect` obtains the enveloping rectangle. Vice versa, rectangles now have attributes :attr:`Rect.Quad`, resp. :attr:`IRect.quad` to obtain their respective tetragon versions.
 
 
 ============================= =======================================================
@@ -46,7 +46,7 @@ Quads can **be obtained** as results of text search methods (:meth:`Page.search_
 
    .. method:: Quad(Quad quad)
 
-      Overloaded constructors: "ul", "ur", "ll", "lr" stand for :data:`point_like` objects (the four corners), "sequence" is a Python sequence with four :data:`point_like` objects.
+      Overloaded constructors: "ul", "ur", "ll", "lr" stand for :data:`point_like` objects (the four corners), "sequence" is a sequence with four :data:`point_like` objects.
 
       If "quad" is specified, the constructor creates a **new copy** of it.
 
@@ -133,18 +133,5 @@ Quads can **be obtained** as results of text search methods (:meth:`Page.search_
 
       :type: float
 
-Remark
-------
-This class adheres to the sequence protocol, so components can be dealt with via their indices, too. Also refer to :ref:`SequenceTypes`.
-
-Algebra and Containment Checks
--------------------------------
-Starting with v1.19.6, quads can be used in algebraic expressions like the other geometry object -- the respective restrictions have been lifted. In particular, all the following combinations of containment checking are now possible:
-
-`{Point | IRect | Rect | Quad} in {IRect | Rect | Quad}`
-
-Please note the following interesting detail:
-
-For a rectangle, only its top-left point belongs to it. Since v1.19.0, rectangles are defined to be "open", such that its bottom and its right edge do not belong to it -- including the respective corners. But for quads there exists no such notion like "openness", so we have the following somewhat surprising implication:
 
 .. include:: footer.rst

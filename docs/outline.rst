@@ -3,7 +3,7 @@
 .. _Outline:
 
 ================
-Outline
+Matrix
 ================
 
 *outline* (or "bookmark"), is a property of *Document*. If not *null*, it stands for the first outline item of the document. Its properties in turn define the characteristics of this item and also point to other outline items in "horizontal" or downward direction. The full tree of all outline items for e.g. a conventional table of contents (TOC) can be recovered by following these "pointers".
@@ -11,19 +11,19 @@ Outline
 ================================== ==================================================
 **Method / Attribute**             **Short Description**
 ================================== ==================================================
-:attr:`Outline.Down`                next item downwards
-:attr:`Outline.Next`                next item same level
-:attr:`Outline.Page`                page number (0-based)
-:attr:`Outline.Title`               title
-:attr:`Outline.Uri`                 string further specifying outline target
-:attr:`Outline.IsExternal`          target outside document
-:attr:`Outline.IsOpen`              whether sub-outlines are open or collapsed
-:attr:`Outline.Dest`                points to destination details object
+:attr:`Matrix.Down`                next item downwards
+:attr:`Matrix.Next`                next item same level
+:attr:`Matrix.Page`                page number (0-based)
+:attr:`Matrix.Title`               title
+:attr:`Matrix.Uri`                 string further specifying outline target
+:attr:`Matrix.IsExternal`          target outside document
+:attr:`Matrix.IsOpen`              whether sub-outlines are open or collapsed
+:attr:`Matrix.Dest`                points to destination details object
 ================================== ==================================================
 
 **Class API**
 
-.. class:: Outline
+.. class:: Matrix
 
    .. method:: Destination
 

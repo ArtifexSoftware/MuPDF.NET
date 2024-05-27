@@ -5,26 +5,26 @@
 ================
 Link
 ================
-Represents a pointer to somewhere (this document, other documents, the internet). Links exist per document page, and they are forward-chained to each other, starting from an initial link which is accessible by the :attr:`Page.FirstLink` property.
+Represents a pointer to somewhere (this document, other documents, the internet). Links exist per document page, and they are forward-chained to each other, starting from an initial link which is accessible by the :attr:`MuPDFPage.FirstLink` property.
 
 There is a parent-child relationship between a link and its page. If the page object becomes unusable (closed document, any document structure change, etc.), then so does every of its existing link objects -- an exception is raised saying that the object is "orphaned", whenever a link property or method is accessed.
 
-========================= ============================================
-**Attribute**             **Short Description**
-========================= ============================================
-:meth:`Link.SetBorder`   modify border properties
-:meth:`Link.SetColors`   modify color properties
-:meth:`Link.SetFlags`    modify link flags
-:attr:`Link.Border`      border characteristics
-:attr:`Link.Colors`      border line color
-:attr:`Link.Dest`        points to destination details
-:attr:`Link.IsExternal`  checks if the link is an external destination
-:attr:`Link.Flags`       link annotation flags
-:attr:`Link.Next`        points to next link
-:attr:`Link.Rect`        clickable area in untransformed coordinates
-:attr:`Link.Uri`         link destination
-:attr:`Link.Xref`        :data:`xref` number of the entry
-========================= ============================================
+============================= ============================================
+**Method / Attribute**                 **Short Description**
+============================= ============================================
+:meth:`Link.SetBorder`        modify border properties
+:meth:`Link.SetColors`        modify color properties
+:meth:`Link.SetFlags`         modify link flags
+:attr:`Link.Border`           border characteristics
+:attr:`Link.Colors`           border line color
+:attr:`Link.Dest`             points to destination details
+:attr:`Link.IsExternal`       checks if the link is an external destination
+:attr:`Link.Flags`            link annotation flags
+:attr:`Link.Next`             points to next link
+:attr:`Link.Rect`             clickable area in untransformed coordinates
+:attr:`Link.Uri`              link destination
+:attr:`Link.Xref`             :data:`xref` number of the entry
+============================= ============================================
 
 **Class API**
 
@@ -33,8 +33,6 @@ There is a parent-child relationship between a link and its page. If the page ob
    .. method:: SetBorder(Border border=null, float width=0, string style=null, int[] dashes=null)
 
       PDF only: Change border width and dashing properties.
-
-      *(Changed in version 1.16.9)* Allow specification without using a dictionary. The direct parameters are used if *border* is not a dictionary.
 
       :arg dict border: a dictionary as returned by the :attr:`Border` property, with keys *"width"* (*float*), *"style"* (*str*) and *"dashes"* (*sequence*). Omitted keys will leave the resp. property unchanged. To e.g. remove dashing use: *"dashes": []*. If dashes is not an empty sequence, "style" will automatically be set to "D" (dashed).
 
@@ -48,21 +46,15 @@ There is a parent-child relationship between a link and its page. If the page ob
 
       .. note:: In PDF, links are a subtype of annotations technically and **do not support fill colors**. However, to keep a consistent API, we do allow specifying a `fill=` parameter like with all annotations, which will be ignored with a warning.
 
-      *(Changed in version 1.16.9)* Allow colors to be directly set. These parameters are used if *colors* is not a dictionary.
-
       :arg dict colors: a dictionary containing color specifications. For accepted dictionary keys and values see below. The most practical way should be to first make a copy of the *colors* property and then modify this dictionary as required.
       :arg sequence stroke: see above.
 
    .. method:: SetFlags(int flags)
 
-      *New in v1.18.16*
-
       Set the PDF `/F` property of the link annotation. See :meth:`Annot.SetFlags` for details. If not a PDF, this method is a no-op.
 
 
    .. attribute:: Flags
-
-      *New in v1.18.16*
 
       Return the link annotation flags, an integer (see :attr:`Annot.Flags` for details). Zero if not a PDF.
 

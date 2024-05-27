@@ -11,19 +11,19 @@ DisplayList is a list containing drawing commands (text, images, etc.). The inte
 1. as a caching-mechanism to reduce parsing of a page
 2. as a data structure in multi-threading setups, where one thread parses the page and another one renders pages. This aspect is currently not supported by PyMuPDF.
 
-A display list is populated with objects from a page, usually by executing :meth:`Page.GetDisplaylist`. There also exists an independent constructor.
+A display list is populated with objects from a page, usually by executing :meth:`MuPDFPage.GetDisplaylist`. There also exists an independent constructor.
 
-"Replay" the list (once or many times) by invoking one of its methods :meth:`~DisplayList.run`, :meth:`~DisplayList.get_pixmap` or :meth:`~DisplayList.get_textpage`.
+"Replay" the list (once or many times) by invoking one of its methods :meth:`DisplayList.Run`, :meth:`DisplayList.get_pixmap` or :meth:`DisplayList.GetTextPage`.
 
 
-================================= ============================================
-**Method**                        **Short Description**
-================================= ============================================
-:meth:`~DisplayList.Run`          Run a display list through a device.
-:meth:`~DisplayList.GetPixmap`    generate a pixmap
-:meth:`~DisplayList.GetTextPage`  generate a text page
-:attr:`~DisplayList.Rect`         mediabox of the display list
-================================= ============================================
+==================================== ============================================
+**Method**                           **Short Description**
+==================================== ============================================
+:meth:`DisplayList.Run`              Run a display list through a device.
+:meth:`DisplayList.GetPixmap`        generate a pixmap
+:meth:`DisplayList.GetTextPage`      generate a text page
+:attr:`DisplayList.Rect`             mediabox of the display list
+==================================== ============================================
 
 
 **Class API**
@@ -37,7 +37,7 @@ A display list is populated with objects from a page, usually by executing :meth
       :arg mediabox: The page's rectangle.
       :type mediabox: :ref:`Rect`
 
-      :rtype: *DisplayList*
+      :rtype: DisplayList
 
    .. method:: Run(MuPDFDeviceWrapper device, Matrix matrix, Rect area)
     
@@ -88,7 +88,7 @@ A display list is populated with objects from a page, usually by executing :meth
 
    .. attribute:: Rect
 
-      Contains the display list's mediabox. This will equal the page's rectangle if it was created via :meth:`Page.GetDisplaylist`.
+      Contains the display list's mediabox. This will equal the page's rectangle if it was created via :meth:`MuPDFPage.GetDisplaylist`.
 
       :type: :ref:`Rect`
 

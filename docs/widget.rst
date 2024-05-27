@@ -12,7 +12,7 @@ This class represents a PDF Form field, also called a "widget". Throughout this 
 
 Like annotations, widgets live on PDF pages. Similar to annotations, the first widget on a page is accessible via :attr:`Page.first_widget` and subsequent widgets can be accessed via the :attr:`Widget.next` property.
 
-*(Changed in version 1.16.0)* MuPDF no longer treats widgets as a subset of general annotations. Consequently, :attr:`Page.first_annot` and :meth:`Annot.next` will deliver **non-widget annotations exclusively**, and be *None* if only form fields exist on a page. Vice versa, :attr:`Page.first_widget` and :meth:`Widget.next` will only show widgets. This design decision is purely internal to MuPDF; technically, links, annotations and fields have a lot in common and also continue to share the better part of their code within (Py-) MuPDF.
+MuPDF no longer treats widgets as a subset of general annotations. Consequently, :attr:`Page.first_annot` and :meth:`Annot.next` will deliver **non-widget annotations exclusively**, and be *None* if only form fields exist on a page. Vice versa, :attr:`Page.first_widget` and :meth:`Widget.next` will only show widgets. This design decision is purely internal to MuPDF; technically, links, annotations and fields have a lot in common and also continue to share the better part of their code within (Py-) MuPDF.
 
 
 **Class API**
@@ -75,11 +75,11 @@ Like annotations, widgets live on PDF pages. Similar to annotations, the first w
 
     .. attribute:: BorderDashes
 
-       A list/tuple of integers defining the dash properties of the border line. This is only meaningful if *BorderStyle == "D"* and :attr:`BorderColor` is provided.
+       A list/tuple of integers defining the dash properties of the border line. This is only meaningful if `BorderStyle` equals "D" and :attr:`BorderColor` is provided.
 
     .. attribute:: ChoiceValues
 
-       Python sequence of strings defining the valid choices of list boxes and combo boxes. For these widget types, this property is mandatory and must contain at least two items. Ignored for other types.
+       Sequence of strings defining the valid choices of list boxes and combo boxes. For these widget types, this property is mandatory and must contain at least two items. Ignored for other types.
 
     .. attribute:: FieldName
 
@@ -157,14 +157,10 @@ Like annotations, widgets live on PDF pages. Similar to annotations, the first w
 
     .. attribute:: ScriptChange
 
-       * New in version 1.16.12
-       
        JavaScript text (unicode) to be performed when the field’s value is changed. This action can check the new value for validity. *None* if not present.
 
     .. attribute:: ScriptCalc
 
-       * New in version 1.16.12
-       
        JavaScript text (unicode) to be performed to recalculate the value of this field when that of another field changes. *None* if not present.
 
     .. attribute:: ScriptBlur
@@ -224,14 +220,14 @@ You are generally free to use any font for every widget. However, we recommend u
 
 Supported Widget Types
 -----------------------
-PyMuPDF supports the creation and update of many, but not all widget types.
+MuPDF.NET supports the creation and update of many, but not all widget types.
 
 * text (`PDF_WIDGET_TYPE_TEXT`)
 * push button (`PDF_WIDGET_TYPE_BUTTON`)
 * check box (`PDF_WIDGET_TYPE_CHECKBOX`)
 * combo box (`PDF_WIDGET_TYPE_COMBOBOX`)
 * list box (`PDF_WIDGET_TYPE_LISTBOX`)
-* radio button (`PDF_WIDGET_TYPE_RADIOBUTTON`): PyMuPDF does not currently support the **creation** of groups of (interconnected) radio buttons, where setting one automatically unsets the other buttons in the group. The widget object also does not reflect the presence of a button group. However: consistently selecting (or unselecting) a radio button is supported. This includes correctly setting the value maintained in the owning button group. Selecting a radio button may be done by either assigning `true` or `field.OnState()` to the field value. **De-selecting** the button should be done assigning `false`.
+* radio button (`PDF_WIDGET_TYPE_RADIOBUTTON`): MuPDF.NET does not currently support the **creation** of groups of (interconnected) radio buttons, where setting one automatically unsets the other buttons in the group. The widget object also does not reflect the presence of a button group. However: consistently selecting (or unselecting) a radio button is supported. This includes correctly setting the value maintained in the owning button group. Selecting a radio button may be done by either assigning `true` or `field.OnState()` to the field value. **De-selecting** the button should be done assigning `false`.
 * signature (`PDF_WIDGET_TYPE_SIGNATURE`) **read only**.
 
 .. rubric:: Footnotes

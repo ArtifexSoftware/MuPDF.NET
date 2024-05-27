@@ -8,7 +8,7 @@ Archive
 
 This class represents a generalization of file folders and container files like ZIP and TAR archives. Archives allow accessing arbitrary collections of file folders, ZIP / TAR files and single binary data elements as if they all were part of one hierarchical tree of folders.
 
-In PyMuPDF, archives are currently only used by :ref:`Story` objects to specify where to look for fonts, images and other resources.
+Archives are currently only used by :ref:`Story` objects to specify where to look for fonts, images and other resources.
 
 ================================ ===================================================
 **Method / Attribute**           **Short Description**
@@ -34,15 +34,13 @@ In PyMuPDF, archives are currently only used by :ref:`Story` objects to specify 
       * a string: this must be the name of a local folder or file. `pathlib.Path` objects are also supported.
 
          - A **folder** will be converted to a sub-archive, so its files (and any sub-folders) can be accessed by their names.
-         - A **file** will be read with mode `"rb"` and these binary data (a `bytes` object) be treated as a single-member sub-archive. In this case, the `path` parameter is **mandatory** and should be the member name under which this item can be found / retrieved.
+         - A **file** will be read with mode `"rb"` and these binary data be treated as a single-member sub-archive. In this case, the `path` parameter is **mandatory** and should be the member name under which this item can be found / retrieved.
 
-      * a `zipfile.ZipFile` or `tarfile.TarFile` object: Will be added as a sub-archive.
+      * a binary object: this will add a single-member sub-archive. In this case, the `path` parameter is **mandatory** and should be the member name under which this item can be found / retrieved.
 
-      * a Python binary object (`bytes`, `bytearray`, `io.BytesIO`): this will add a single-member sub-archive. In this case, the `path` parameter is **mandatory** and should be the member name under which this item can be found / retrieved.
+      * a tuple `(data, name)`: This will add a single-member sub-archive with the member name `name`. `data` may be a binary object or a local file name (in which case its binary file content is used). Use this format if you need to specify `path`.
 
-      * a tuple `(data, name)`: This will add a single-member sub-archive with the member name `name`. `data` may be a Python binary object or a local file name (in which case its binary file content is used). Use this format if you need to specify `path`.
-
-      * a Python sequence: This is a convenience format to specify any combination of the above.
+      * a sequence: This is a convenience format to specify any combination of the above.
 
       If provided, `path` must be a string.
       
@@ -66,7 +64,7 @@ In PyMuPDF, archives are currently only used by :ref:`Story` objects to specify 
 
       :arg str name: The fully qualified name of the entry. So must include any `path` prefix under which the entry's sub-archive has been added.
 
-      :returns: `True` or `False`.
+      :returns: `true` or `false`.
 
    .. method:: ReadEntry(string name)
 

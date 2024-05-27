@@ -8,8 +8,6 @@ Story
 
 .. role:: htmlTag(emphasis)
 
-* New in v1.21.0
-
 =========================================== =============================================================
 **Method / Attribute**                      **Short Description**
 =========================================== =============================================================
@@ -46,7 +44,7 @@ Story
       Here are some general remarks:
 
       * The :ref:`Story` constructor parses and validates the provided HTML to create the DOM.
-      * PyMuPDF provides a number of ways to manipulate the HTML source by
+      * There are a number of ways to manipulate the HTML source by
         providing access to the *nodes* of the underlying DOM.
         Documents can be completely built from ground up programmatically,
         or the existing DOM can be modified pretty arbitrarily.
@@ -129,15 +127,15 @@ Story
 
    .. method:: ElementPositions(Action<Position> function, Position arg=null)
 
-      Let the Story provide positioning information about certain HTML elements once their place on the current page has been computed - i.e. invoke this method **directly after** :meth:`Story.place`.
+      Let the Story provide positioning information about certain HTML elements once their place on the current page has been computed - i.e. invoke this method **directly after** :meth:`Story.Place`.
 
-      *Story* will pass position information to *function*. This information can for example be used to generate a Table of Contents.
+      `Story` will pass position information to `function`. This information can for example be used to generate a Table of Contents.
 
-      :arg callable function: a Python function accepting an :class:`ElementPosition` object. It will be invoked by the Story object to process positioning information. The function **must** be a callable accepting exactly one argument.
+      :arg callable function: a function accepting an :class:`ElementPosition` object. It will be invoked by the Story object to process positioning information. The function **must** be a callable accepting exactly one argument.
       :arg dict args: an optional dictionary with any **additional** information
         that should be added to the :class:`ElementPosition` instance passed to `function`.
         Like for example the current output page number.
-        Every key in this dictionary must be a string that conforms to the rules for a valid Python identifier.
+        Every key in this dictionary must be a string that conforms to the rules for a valid dictionary identifier.
         The complete set of information is explained below.
 
 

@@ -73,13 +73,13 @@ There is a parent-child relationship between an annotation and its page. If the 
       pair: alpha; Annot.GetPixmap
       pair: dpi; Annot.GetPixmap
 
-   .. method:: GetPixmap(Matrix matrix = null, int dpi = 0, ColorSpace colorSpace = null, int alpha = 0)
+   .. method:: GetPixmap(Matrix matrix: null, int dpi: 0, ColorSpace colorSpace: null, int alpha: 0)
 
       Creates a pixmap from the annotation as it appears on the page in untransformed coordinates. The pixmap's :ref:`IRect` equals *Annot.rect.irect* (see below).
 
       :arg matrix_like matrix: a matrix to be used for image creation. Default is :ref:`Identity`.
 
-      :arg int dpi: (new in v1.19.2) desired resolution in dots per inch. If not `null`, the matrix parameter is ignored.
+      :arg int dpi: desired resolution in dots per inch. If not `null`, the matrix parameter is ignored.
 
       :arg colorspace: a colorspace to be used for image creation. Default is *fitz.csRGB*.
       :type colorspace: :ref:`Colorspace`
@@ -95,7 +95,7 @@ There is a parent-child relationship between an annotation and its page. If the 
          * The pixmap will have *"premultiplied"* pixels if `alpha=True`. To learn about some background, e.g. look for "Premultiplied alpha" `here <https://en.wikipedia.org/wiki/Glossary_of_computer_graphics#P>`_.
 
 
-   .. method:: SetInfo(AnnotInfoStruct info = null, string content = null, string title = null, string creationDate = null, string modDate = null, string subject = null)
+   .. method:: SetInfo(AnnotInfoStruct info: null, string content: null, string title: null, string creationDate: null, string modDate: null, string subject: null)
 
       Changes annotation properties. These include dates, contents, subject and author (title). Changes for *name* and *id* will be ignored. The update happens selectively: To leave a property unchanged, set it to *null*. To delete existing data, use an empty string.
 
@@ -118,9 +118,9 @@ There is a parent-child relationship between an annotation and its page. If the 
       :arg start: The symbol number for the first point.
       :arg end: The symbol number for the last point.
 
-   .. method:: SetOC(int oc = 0)
+   .. method:: SetOC(int oc: 0)
 
-      Set the annotation's visibility using PDF optional content mechanisms. This visibility is controlled by the user interface of supporting PDF viewers. It is independent from other attributes like :attr:`Annot.flags`.
+      Set the annotation's visibility using PDF optional content mechanisms. This visibility is controlled by the user interface of supporting PDF viewers. It is independent from other attributes like :attr:`Annot.Flags`.
 
       :arg int oc: the :data:`xref` of an optional contents group (OCG or OCMD). Any previous xref will be overwritten. If zero, a previous entry will be removed. An exception occurs if the xref is not zero and does not point to a valid PDF object.
 
@@ -192,14 +192,14 @@ There is a parent-child relationship between an annotation and its page. If the 
 
    .. method:: SetRect(Rect rect)
 
-      Change the rectangle of an annotation. The annotation can be moved around and both sides of the rectangle can be independently scaled. However, the annotation appearance will never get rotated, flipped or sheared. This method only affects certain annotation types [#f2]_ and will lead to a message on Python's `sys.stderr` in other cases. No exception will be raised, but `False` will be returned.
+      Change the rectangle of an annotation. The annotation can be moved around and both sides of the rectangle can be independently scaled. However, the annotation appearance will never get rotated, flipped or sheared. This method only affects certain annotation types [#f2]_ and will lead to a  console message in other cases. No exception will be raised, but `false` will be returned.
 
-      :arg rect: the new rectangle of the annotation (finite and not empty). E.g. using a value of `annot.rect + (5, 5, 5, 5)` will shift the annot position 5 pixels to the right and downwards.
+      :arg rect: the new rectangle of the annotation (finite and not empty).
 
       .. note:: You **need not** invoke :meth:`Annot.Update` for activation of the effect.
 
 
-   .. method:: SetRotation(int rotate = 0)
+   .. method:: SetRotation(int rotate: 0)
 
       Set the rotation of an annotation. This rotates the annotation rectangle around its center point. Then a **new annotation rectangle** is calculated from the resulting quad.
 
@@ -211,16 +211,12 @@ There is a parent-child relationship between an annotation and its page. If the 
         * Otherwise, only the :ref:`AnnotationTypes` 'Square', 'Circle', 'Caret', 'Text', 'FileAttachment', 'Ink', 'Line', 'Polyline', 'Polygon', and 'Stamp' can be rotated. For all others the method is a no-op.
 
 
-   .. method:: SetBorder(Border border=null, float width=-1, string style=null, int[] dashes=null, int clouds=-1)
-
-      * Changed in version 1.16.9: Allow specification without using a dictionary. The direct parameters are used if *border* is not a dictionary.
-
-      * Changed in version 1.22.5: Support of the "cloudy" border effect.
+   .. method:: SetBorder(Border border: null, float width: -1, string style: null, int[] dashes: null, int clouds: -1)
 
       PDF only: Change border width, dashing, style and cloud effect. See the :attr:`Annot.Border` attribute for more details.
 
 
-      :arg dict border: a dictionary as returned by the :attr:`Border` property, with keys *"width"* (*float*), *"style"* (*str*),  *"dashes"* (*sequence*) and *clouds* (*int*). Omitted keys will leave the resp. property unchanged. Set the border argument to `null` (the default) to use the other arguments.
+      :arg dict border: a dictionary as returned by the :attr:`Border` property, with keys `"width"` (`float`), `"style"` (`str`),  `"dashes"` (`sequence`) and `clouds` (`int`). Omitted keys will leave the resp. property unchanged. Set the border argument to `null` (the default) to use the other arguments.
 
       :arg float width: A non-negative value will change the border line width.
       :arg str style: A value other than `null` will change this border property.
@@ -233,17 +229,13 @@ There is a parent-child relationship between an annotation and its page. If the 
 
       :arg int flags: an integer specifying the required flags.
 
-   .. method:: SetColors(Color colors=null, float[] stroke=null, float[] fill=null)
-
-      * Changed in version 1.16.9: Allow colors to be directly set. These parameters are used if *colors* is not a dictionary.
+   .. method:: SetColors(Color colors: null, float[] stroke: null, float[] fill: null)
 
       Changes the "stroke" and "fill" colors for supported annotation types -- not all annotations accept both.
 
       :arg dict colors: a dictionary containing color specifications. For accepted dictionary keys and values see below. The most practical way should be to first make a copy of the *colors* property and then modify this dictionary as required.
       :arg sequence stroke: see above.
       :arg sequence fill: see above.
-
-      *Changed in v1.18.5:* To completely remove a color specification, use an empty sequence like `[]`. If you specify `null`, an existing specification will not be changed.
 
 
    .. method:: DeleteResponses()
@@ -260,7 +252,7 @@ There is a parent-child relationship between an annotation and its page. If the 
       pair: crossOut; Annot.Update
       pair: rotate; Annot.Update
 
-   .. method:: Update(string blendMode = null, float opacity = 0.0f, float fontSize = 0.0f, string fontName = null, float[] textColor = null, float[] borderColor = null, float[] fillColor = null, bool crossOut = true, int rotate = -1)
+   .. method:: Update(string blendMode: null, float opacity: 0.0f, float fontSize: 0.0f, string fontName: null, float[] textColor: null, float[] borderColor: null, float[] fillColor: null, bool crossOut: true, int rotate: -1)
 
       Synchronize the appearance of an annotation with its properties after relevant changes. 
 
@@ -313,7 +305,7 @@ There is a parent-child relationship between an annotation and its page. If the 
       pair: ufilename; Annot.UpdateFile
       pair: desc; Annot.UpdateFile
 
-   .. method:: UpdateFile(byte[] buffer = null, string filename = null, string uFilename = null, string desc = null)
+   .. method:: UpdateFile(byte[] buffer: null, string filename: null, string uFilename: null, string desc: null)
 
       Updates the content of an attached file. All arguments are optional. Default-only arguments lead to a no-op.
 
@@ -391,7 +383,7 @@ There is a parent-child relationship between an annotation and its page. If the 
       * `creationDate` -- creation timestamp.
       * `modDate` -- last modified timestamp.
       * `subject` -- subject.
-      * `id` -- a unique identification of the annotation. This is taken from PDF key `/NM`. Annotations added by PyMuPDF will have a unique name, which appears here.
+      * `id` -- a unique identification of the annotation. This is taken from PDF key `/NM`. Annotations added by MuPDF.NET will have a unique name, which appears here.
 
       :rtype: AnnotInfoStruct
 
@@ -477,7 +469,7 @@ There is a parent-child relationship between an annotation and its page. If the 
 
       * `style` -- 1-byte border style: **"S"** (Solid) = solid line surrounding the annotation, **"D"** (Dashed) = dashed line surrounding the annotation, the dash pattern is specified by the *dashes* entry, **"B"** (Beveled) = a simulated embossed rectangle that appears to be raised above the surface of the page, **"I"** (Inset) = a simulated engraved rectangle that appears to be recessed below the surface of the page, **"U"** (Underline) = a single line along the bottom of the annotation rectangle.
 
-      * `clouds` -- an integer indicating a "cloudy" border, where `n` is an integer `-1 <= n <= 2`. A value `n = 0` indicates a straight line (no clouds), 1 means small and 2 means large semi-circles, mimicking the cloudy appearance. If -1, then no specification is present.
+      * `clouds` -- an integer indicating a "cloudy" border, where `n` is an integer `-1 <= n <= 2`. A value `n: 0` indicates a straight line (no clouds), 1 means small and 2 means large semi-circles, mimicking the cloudy appearance. If -1, then no specification is present.
 
       :rtype: dict
 
