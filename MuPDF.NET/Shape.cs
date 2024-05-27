@@ -4,6 +4,12 @@ namespace MuPDF.NET
 {
     public class Shape
     {
+        static Shape()
+        {
+            if (!File.Exists("mupdfcpp64.dll"))
+                Utils.LoadEmbeddedDll();
+        }
+
         public Page Page { get; set; }
 
         public Document Doc { get; set; }

@@ -4,6 +4,13 @@ namespace MuPDF.NET
 {
     public class DisplayList
     {
+
+        static DisplayList()
+        {
+            if (!File.Exists("mupdfcpp64.dll"))
+                Utils.LoadEmbeddedDll();
+        }
+
         private FzDisplayList _nativeDisplayList;
 
         /// <summary>
