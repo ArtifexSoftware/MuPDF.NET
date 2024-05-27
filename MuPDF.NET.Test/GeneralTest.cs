@@ -13,7 +13,7 @@ namespace MuPDF.NET.Test
         public void Test_Opacity()
         {
             Document doc = new Document();
-            MuPDFPage page = doc.NewPage();
+            Page page = doc.NewPage();
 
             Annot annot1 = page.AddCircleAnnot(new Rect(50, 50, 100, 100));
             annot1.SetColors(fill: new float[] { 1, 0, 0 }, stroke: new float[] { 1, 0, 0 });
@@ -32,7 +32,7 @@ namespace MuPDF.NET.Test
         public void TestWrapContents()
         {
             Document doc = new Document("../../../resources/toc.pdf");
-            MuPDFPage page = doc[0];
+            Page page = doc[0];
             page.WrapContents();
             int xref = page.GetContents()[0];
             byte[] cont = page.ReadContents();
@@ -47,7 +47,7 @@ namespace MuPDF.NET.Test
         public void TestPageCleanContents()
         {
             Document doc = new Document();
-            MuPDFPage page = doc.NewPage();
+            Page page = doc.NewPage();
             page.DrawRect(new Rect(10, 10, 20, 20));
             page.DrawRect(new Rect(20, 20, 30, 30));
             Assert.That(page.GetContents().Count, Is.EqualTo(2));
@@ -65,7 +65,7 @@ namespace MuPDF.NET.Test
             foreach (string name in files)
             {
                 Document doc = new Document("../../../resources/" + name);
-                MuPDFPage page = doc[0];
+                Page page = doc[0];
                 float size0 = page.GetTextTrace()[0].Size;
                 float size1 = page.GetText("dict", flags: (int)TextFlagsExtension.TEXTFLAGS_TEXT).Blocks[0].Lines[0].Spans[0].Size;
 
@@ -77,7 +77,7 @@ namespace MuPDF.NET.Test
         public void TestFontSize()
         {
             Document doc = new Document();
-            MuPDFPage page = doc.NewPage();
+            Page page = doc.NewPage();
             Point point = new Point(100, 300);
             float fontSize = 11f;
             string text = "Hello";
@@ -109,7 +109,7 @@ namespace MuPDF.NET.Test
         public void Reload()
         {
             Document doc = new Document("../../../resources/test_2596.pdf");
-            MuPDFPage page = doc[0];
+            Page page = doc[0];
             Pixmap pix0 = page.GetPixmap();
             doc.Write(garbage: true);
 
@@ -122,7 +122,7 @@ namespace MuPDF.NET.Test
         public void Cropbox()
         {
             Document doc = new Document();
-            MuPDFPage page = doc.NewPage();
+            Page page = doc.NewPage();
 
             doc.SetKeyXRef(page.Xref, "MediaBox", "[-30 -20 595 842]");
             Assert.That(page.CropBox.EqualTo(new Rect(-30, 0, 595, 862)));
@@ -150,7 +150,7 @@ namespace MuPDF.NET.Test
         public void Insert()
         {
             Document doc = new Document();
-            MuPDFPage page = doc.NewPage();
+            Page page = doc.NewPage();
 
             Rect r1 = new Rect(50, 50, 100, 100);
             Rect r2 = new Rect(50, 150, 200, 400);
@@ -171,7 +171,7 @@ namespace MuPDF.NET.Test
             for (int i = 0; i < doc.PageCount; i++)
             {
                 Pixmap pixmap = doc[i].GetPixmap(colorSpace: "RGB", dpi: 72, annots: false);
-                MuPDFPage pageNew = npdf.NewPage();
+                Page pageNew = npdf.NewPage();
                 pageNew.InsertImage(rect: pageNew.GetBound(), pixmap: pixmap);
             }
             npdf.Save("2.pdf.compress.pdf", garbage: 3, deflate: 1, deflateImages: 1, deflateFonts: 1, pretty: 1);
@@ -181,7 +181,7 @@ namespace MuPDF.NET.Test
         public void PageLinksGenerator()
         {
             Document doc = new Document("../../../resources/2.pdf");
-            MuPDFPage page = doc[-1];
+            Page page = doc[-1];
 
             List<LinkInfo> links = page.GetLinks();
             Assert.That(links.Count, Is.EqualTo(7));
@@ -203,7 +203,7 @@ namespace MuPDF.NET.Test
 
             for (int i = 0; i < 100; i ++)
             {
-                MuPDFPage page = doc.NewPage();
+                Page page = doc.NewPage();
                 page.InsertText(new Point(100, 100), $"{i}", fontFile: "../../../resources/kenpixel.ttf");
                 if (i > 5)
                     page.InsertLink(link);
@@ -276,7 +276,7 @@ namespace MuPDF.NET.Test
         public void Search1()
         {
             Document doc = new Document("../../../resources/2.pdf");
-            MuPDFPage page = doc[0];
+            Page page = doc[0];
             string needle = "mupdf";
             List<Quad> qlist = page.SearchFor(needle);
             Assert.That(qlist.Count, Is.Not.Zero);
@@ -299,7 +299,7 @@ namespace MuPDF.NET.Test
             int encryptMeth = mupdf.mupdf.PDF_ENCRYPT_AES_256;
 
             Document doc = new Document();
-            MuPDFPage page = doc.NewPage();
+            Page page = doc.NewPage();
             page.InsertText(new Point(50, 72), text, fontFile: "../../../resources/kenpixel.ttf");
             byte[] tobytes = doc.Write(
                 encryption: encryptMeth,
@@ -349,7 +349,7 @@ namespace MuPDF.NET.Test
         public void CompareWords()
         {
             Document doc = new Document("../../../resources/test-707673.pdf");
-            MuPDFPage page = doc[0];
+            Page page = doc[0];
             List<WordBlock> words0 = page.GetText("words");
             page.CleanContetns();
             List<WordBlock> words1 = page.GetText("words");
@@ -360,7 +360,7 @@ namespace MuPDF.NET.Test
         public void Rotation1()
         {
             Document doc = new Document();
-            MuPDFPage page = doc.NewPage();
+            Page page = doc.NewPage();
             page.SetRotation(270);
             Assert.That(doc.GetKeyXref(page.Xref, "Rotate").Item1, Is.EqualTo("int"));
             Assert.That(doc.GetKeyXref(page.Xref, "Rotate").Item2, Is.EqualTo("270"));
@@ -370,7 +370,7 @@ namespace MuPDF.NET.Test
         public void Rotation2()
         {
             Document doc = new Document();
-            MuPDFPage page = doc.NewPage();
+            Page page = doc.NewPage();
             doc.SetKeyXRef(page.Xref, "Rotate", "270");
             Assert.That(page.Rotation, Is.EqualTo(270));
         }
@@ -379,7 +379,7 @@ namespace MuPDF.NET.Test
         public void ValidName()
         {
             Document doc = new Document();
-            MuPDFPage page = doc.NewPage();
+            Page page = doc.NewPage();
             doc.SetKeyXRef(page.Xref, "Rotate", "90");
             Assert.That(page.Rotation, Is.EqualTo(90));
 

@@ -13,7 +13,7 @@ namespace MuPDF.NET.Test
         public void Text()
         {
             Document doc = new Document();
-            MuPDFPage page = doc.NewPage();
+            Page page = doc.NewPage();
             MuPDFWidget w = new MuPDFWidget(page);
 
             w.BorderColor = new float[] { 0, 0, 1 };
@@ -40,7 +40,7 @@ namespace MuPDF.NET.Test
         public void Checkbox()
         {
             Document doc = new Document();
-            MuPDFPage page = doc.NewPage();
+            Page page = doc.NewPage();
             MuPDFWidget w = new MuPDFWidget(page);
 
             w.BorderStyle = "b";

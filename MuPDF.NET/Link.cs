@@ -14,7 +14,7 @@ namespace MuPDF.NET
 
         private FzLink _nativeLink;
 
-        public MuPDFPage Parent { get; set; }
+        public Page Parent { get; set; }
 
         public int Xref { get; set; }
 

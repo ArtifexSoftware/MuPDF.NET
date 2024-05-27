@@ -7,9 +7,9 @@ using static System.Net.Mime.MediaTypeNames;
 
 namespace MuPDF.NET
 {
-    public class MuPDFPage
+    public class Page
     {
-        static MuPDFPage()
+        static Page()
         {
             if (!File.Exists("mupdfcsharp.dll"))
                 Utils.LoadEmbeddedDll();
@@ -155,8 +155,8 @@ namespace MuPDF.NET
 
         public FzPage AsFzPage(dynamic page)
         {
-            if (page is MuPDFPage)
-                return (page as MuPDFPage).GetPdfPage().super();
+            if (page is Page)
+                return (page as Page).GetPdfPage().super();
             if (page is PdfPage)
                 return (page as PdfPage).super();
             else if (page is FzPage)
@@ -376,7 +376,7 @@ namespace MuPDF.NET
             return base.ToString();
         }
 
-        public MuPDFPage(PdfPage pdfPage, Document parent)
+        public Page(PdfPage pdfPage, Document parent)
         {
             _pdfPage = pdfPage;
             _nativePage = pdfPage.super();
@@ -388,7 +388,7 @@ namespace MuPDF.NET
                 Number = _pdfPage.m_internal.super.number;
         }
 
-        public MuPDFPage(FzPage fzPage, Document parent)
+        public Page(FzPage fzPage, Document parent)
         {
             _pdfPage = fzPage.pdf_page_from_fz_page();
             _nativePage = fzPage;
@@ -1162,7 +1162,7 @@ namespace MuPDF.NET
             return ret;
         }
 
-        public int AnnotPreProcess(MuPDFPage page)
+        public int AnnotPreProcess(Page page)
         {
             if (!page.Parent.IsPDF)
                 throw new Exception("is not PDF");
@@ -1172,7 +1172,7 @@ namespace MuPDF.NET
             return oldRotation;
         }
 
-        public void AnnotPostProcess(MuPDFPage page, Annot annot)
+        public void AnnotPostProcess(Page page, Annot annot)
         {
             annot.Parent = page;
             if (page.AnnotRefs.Keys.Contains(annot.GetHashCode()))
@@ -1552,7 +1552,7 @@ namespace MuPDF.NET
                 throw new Exception("need at least one pymupdf.TextWriter");
             Rect clip = writers[0].TextRect;
             Document textDoc = new Document();
-            MuPDFPage page = textDoc.NewPage(width: Rect.Width, height: Rect.Height);
+            Page page = textDoc.NewPage(width: Rect.Width, height: Rect.Height);
             foreach (MuPDFTextWriter writer in writers)
             {
                 clip = clip | writer.TextRect;
@@ -2193,7 +2193,7 @@ namespace MuPDF.NET
 
             if (0 <= opacity && opacity < 1)
             {
-                MuPDFPage tpage = doc[0];
+                Page tpage = doc[0];
                 string alpha = tpage.SetOpacity(CA: opacity, ca: opacity);
                 string s = $"/{alpha} gs\n";
                 Utils.InsertContents(tpage, Encoding.UTF8.GetBytes(s), 0);
@@ -2329,7 +2329,7 @@ namespace MuPDF.NET
             while (pno < 0)
                 pno += src.GetPageCount();
 
-            MuPDFPage srcPage = src[pno];
+            Page srcPage = src[pno];
             if (srcPage.GetContents().Count == 0)
             {
                 throw new Exception("nothing to show - source page empty");
@@ -2408,7 +2408,7 @@ namespace MuPDF.NET
         }
 
         private int ShowPdfPage(
-            MuPDFPage srcPage,
+            Page srcPage,
             bool overlay = true,
             Matrix matrix = null,
             int xref = 0,
@@ -3010,7 +3010,7 @@ namespace MuPDF.NET
         public void Refresh()
         {
             Document doc = Parent;
-            MuPDFPage page = doc.ReloadPage(this);
+            Page page = doc.ReloadPage(this);
         }
 
         public void ExtendTextPage(MuPDFTextPage tpage, int flags = 0, Matrix m = null)
@@ -4047,7 +4047,7 @@ namespace MuPDF.NET
             if (string.IsNullOrEmpty(Utils.TESSDATA_PREFIX) && string.IsNullOrEmpty(tessdata))
                 throw new Exception("No OCR support: TESSDATA_PREFIX not set");
 
-            MuPDFTextPage FullOcr(MuPDFPage page, int dpi, string language, int flags)
+            MuPDFTextPage FullOcr(Page page, int dpi, string language, int flags)
             {
                 float zoom = dpi / 72.0f;
                 Matrix mat = new Matrix(zoom, zoom);
@@ -4057,7 +4057,7 @@ namespace MuPDF.NET
                     pix.PdfOCR2Bytes(true, language, tessdata)
                 );
 
-                MuPDFPage ocrPage = ocrPdf.LoadPage(0);
+                Page ocrPage = ocrPdf.LoadPage(0);
                 float unZoom = page.Rect.Width / ocrPage.Rect.Width;
                 Matrix ctm = new Matrix(unZoom, unZoom) * page.DerotationMatrix;
                 MuPDFTextPage tp = ocrPage.GetTextPage(flags: flags, matrix: ctm);
@@ -4093,7 +4093,7 @@ namespace MuPDF.NET
                         "pdf",
                         pix.PdfOCR2Bytes(language: language, tessdata: tessdata)
                     );
-                    MuPDFPage imgPage = imgDoc.LoadPage(0);
+                    Page imgPage = imgDoc.LoadPage(0);
                     pix = null;
                     Rect imgRect = imgPage.Rect;
                     Matrix shrink = new Matrix(1 / imgRect.Width, 1 / imgRect.Height);

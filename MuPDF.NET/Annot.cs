@@ -28,14 +28,14 @@ namespace MuPDF.NET
             float[] fillColor
         );
 
-        private MuPDFPage _parent;
+        private Page _parent;
 
         public Rect Rect
         {
             get { return new Rect(mupdf.mupdf.pdf_bound_annot(_nativeAnnotion)); }
         }
 
-        internal MuPDFPage Parent
+        internal Page Parent
         {
             get { return _parent; }
             set { _parent = value; }
@@ -1138,7 +1138,7 @@ namespace MuPDF.NET
 
         private void SetApnBbox(Rect bbox)
         {
-            MuPDFPage page = Parent;
+            Page page = Parent;
             Matrix rot = page.DerotationMatrix;
             Matrix mat = page.TransformationMatrix;
             bbox = bbox * (rot * ~mat);
@@ -1655,16 +1655,16 @@ namespace MuPDF.NET
             }
         }
 
-        public MuPDFPage GetParent()
+        public Page GetParent()
         {
-            MuPDFPage ret = null;
+            Page ret = null;
             if (Parent != null)
                 ret = Parent;
             else
             {
                 PdfPage page = _nativeAnnotion.pdf_annot_page();
                 Document doc = (page.m_internal == null) ? null : new Document(page.doc());
-                ret = new MuPDFPage(page, doc);
+                ret = new Page(page, doc);
 
                 Parent = ret;
             }
@@ -2528,7 +2528,7 @@ namespace MuPDF.NET
         }
 
         public dynamic GetText(
-            MuPDFPage page,
+            Page page,
             string option = "text",
             Rect clip = null,
             int flags = 0,
@@ -2547,7 +2547,7 @@ namespace MuPDF.NET
         /// <param name="rect"></param>
         /// <param name="textPage"></param>
         /// <returns></returns>
-        public string GetTextbox(MuPDFPage page, Rect rect, MuPDFTextPage textPage)
+        public string GetTextbox(Page page, Rect rect, MuPDFTextPage textPage)
         {
             return Utils.GetTextbox(page, rect, textPage);
         }

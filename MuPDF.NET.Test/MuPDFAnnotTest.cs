@@ -12,7 +12,7 @@ namespace MuPDF.NET.Test
         public void Annot_CleanContents()
         {
             Document doc = new Document();
-            MuPDFPage page = doc.NewPage();
+            Page page = doc.NewPage();
             Annot annot = page.AddHighlightAnnot(new Rect(10, 10, 20, 20));
 
             annot.CleanContents();
@@ -33,7 +33,7 @@ namespace MuPDF.NET.Test
         public void TestCaret()
         {
             Document doc = new Document();
-            MuPDFPage page = doc.NewPage();
+            Page page = doc.NewPage();
             Rect r = new Rect(72, 72, 220, 100);
             Annot annot = page.AddCaretAnnot(r.TopLeft);
 
@@ -50,7 +50,7 @@ namespace MuPDF.NET.Test
         public void TestFreeTest()
         {
             Document doc = new Document();
-            MuPDFPage page = doc.NewPage();
+            Page page = doc.NewPage();
             Rect r = new Rect(72, 72, 220, 100);
             string t1 = "têxt üsès Lätiñ charß,\nEUR: €, mu: µ, super scripts: ²³!";
             Annot annot = page.AddFreeTextAnnot(
@@ -73,7 +73,7 @@ namespace MuPDF.NET.Test
         public void AddPolyLine()
         {
             Document doc = new Document();
-            MuPDFPage page = doc.NewPage();
+            Page page = doc.NewPage();
             Rect r = new Rect(72, 72, 220, 100);
             Annot annot = page.AddFileAnnot(
                 r.TopLeft,
@@ -88,7 +88,7 @@ namespace MuPDF.NET.Test
         public void Redact1()
         {
             Document doc = new Document();
-            MuPDFPage page = doc.NewPage();
+            Page page = doc.NewPage();
             Annot annot = page.AddRedactAnnot(new Rect(72, 72, 200, 200).Quad, text: "Hello");
             annot.Update(rotate: -1);
             Assert.That((int)annot.Type.Item1, Is.EqualTo(12));
@@ -109,7 +109,7 @@ namespace MuPDF.NET.Test
         public void Redact2()
         {
             Document doc = new Document("../../../resources/symbol-list.pdf");
-            MuPDFPage page = doc[0];
+            Page page = doc[0];
             List<WordBlock> allText = page.GetText("words");
             page.AddRedactAnnot(page.Rect.Quad);
             page.ApplyRedactions(text: 0);
@@ -123,7 +123,7 @@ namespace MuPDF.NET.Test
         public void Redact3()
         {
             Document doc = new Document("../../../resources/symbol-list.pdf");
-            MuPDFPage page = doc[0];
+            Page page = doc[0];
             List<PathInfo> arts = page.GetDrawings();
             page.AddRedactAnnot(page.Rect);
             page.ApplyRedactions(graphics: 0);
@@ -150,7 +150,7 @@ namespace MuPDF.NET.Test
         public void FirstAnnot()
         {
             Document doc = new Document("../../../resources/annots.pdf");
-            MuPDFPage page = doc[0];
+            Page page = doc[0];
             Annot firstAnnot = (new List<Annot>(page.GetAnnots()))[0];
             Annot next = firstAnnot.Next;
         }
@@ -159,7 +159,7 @@ namespace MuPDF.NET.Test
         public void AddLineAnnot()
         {
             Document doc = new Document();
-            MuPDFPage page = doc.NewPage();
+            Page page = doc.NewPage();
 
             page.AddLineAnnot(new Point(0, 0), new Point(1, 1));
             page.AddLineAnnot(new Point(1, 0), new Point(0, 1));

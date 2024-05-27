@@ -13,7 +13,7 @@ namespace MuPDF.NET.Test
         {
             Document doc = new Document("../../../resources/cython.pdf");
 
-            MuPDFPage page = doc[0];
+            Page page = doc[0];
 
             Pixmap source = page.GetPixmap();
 
@@ -29,7 +29,7 @@ namespace MuPDF.NET.Test
         {
             Document doc = new Document("../../../resources/cython.pdf");
 
-            MuPDFPage page = doc[0];
+            Page page = doc[0];
 
             Pixmap pix = page.GetPixmap();
 
@@ -46,7 +46,7 @@ namespace MuPDF.NET.Test
         {
             Document doc = new Document("../../../resources/cython.pdf");
 
-            MuPDFPage page = doc[0];
+            Page page = doc[0];
 
             Pixmap pix = page.GetPixmap();
 
@@ -60,7 +60,7 @@ namespace MuPDF.NET.Test
         {
             Document doc = new Document("../../../resources/cython.pdf");
 
-            MuPDFPage page = doc[0];
+            Page page = doc[0];
 
             Pixmap pix = page.GetPixmap();
 
@@ -76,7 +76,7 @@ namespace MuPDF.NET.Test
         {
             Document doc = new Document("../../../resources/cython.pdf");
 
-            MuPDFPage page = doc[0];
+            Page page = doc[0];
 
             Pixmap pix = page.GetPixmap();
 
@@ -90,7 +90,7 @@ namespace MuPDF.NET.Test
         {
             Document doc = new Document("../../../resources/cython.pdf");
 
-            MuPDFPage page = doc[0];
+            Page page = doc[0];
 
             Pixmap pix = page.GetPixmap();
 

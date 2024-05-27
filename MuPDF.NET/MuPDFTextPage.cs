@@ -16,7 +16,7 @@ namespace MuPDF.NET
 
         public bool ThisOwn { get; set; }
 
-        public MuPDFPage Parent = null;
+        public Page Parent = null;
 
         /// <summary>
         /// Rect of Stext Page

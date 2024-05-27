@@ -37,7 +37,7 @@ namespace MuPDF.NET
 
         public Dictionary<string, int> InsertedImages { get; set; } = new Dictionary<string, int>();
 
-        public Dictionary<int, MuPDFPage> PageRefs { get; set; }
+        public Dictionary<int, Page> PageRefs { get; set; }
 
         /// <summary>
         /// Contains the filename or filetype value with which Document was created.
@@ -400,7 +400,7 @@ namespace MuPDF.NET
                 IsEncrypted = false;
                 MetaData = null;
                 FontInfos = new List<FontInfo>();
-                PageRefs = new Dictionary<int, MuPDFPage>();
+                PageRefs = new Dictionary<int, Page>();
 
                 if (stream != null)
                     Stream = new List<byte>(stream);
@@ -1029,7 +1029,7 @@ namespace MuPDF.NET
             float[] color = null
         )
         {
-            MuPDFPage page = NewPage(pno, width, height);
+            Page page = NewPage(pno, width, height);
             if (text == null)
                 return 0;
             int rc = page.InsertText(
@@ -1051,7 +1051,7 @@ namespace MuPDF.NET
                 PageRefs.Clear();
         }
 
-        public MuPDFPage this[int i]
+        public Page this[int i]
         {
             get
             {
@@ -1061,7 +1061,7 @@ namespace MuPDF.NET
                 {
                     throw new Exception($"Page {i} not in document");
                 }
-                return new MuPDFPage(GetPage(i), this);
+                return new Page(GetPage(i), this);
             }
         }
 
@@ -1073,7 +1073,7 @@ namespace MuPDF.NET
         /// <param name="height">page height.</param>
         /// <returns>the created page object.</returns>
         /// <exception cref="Exception"></exception>
-        public MuPDFPage NewPage(int pno = -1, float width = 595, float height = 842)
+        public Page NewPage(int pno = -1, float width = 595, float height = 842)
         {
             if (IsClosed || IsEncrypted)
                 throw new Exception("document closed or encrypted");
@@ -1152,7 +1152,7 @@ namespace MuPDF.NET
         /// <param name="pageId">Either a 0-based page number, or a tuple (chapter, pno). For an integer, any -∞ < page_id < page_count is acceptable.</param>
         /// <returns>page object</returns>
         /// <exception cref="Exception"></exception>
-        public MuPDFPage LoadPage(int pageId)
+        public Page LoadPage(int pageId)
         {
             if (IsClosed || IsEncrypted)
                 throw new Exception("document closed or encrypted");
@@ -1165,7 +1165,7 @@ namespace MuPDF.NET
             }
 
             FzPage page = _nativeDocument.fz_load_page(pageId);
-            MuPDFPage val = new MuPDFPage(page, this);
+            Page val = new Page(page, this);
 
             val.ThisOwn = true;
             val.Parent = this;
@@ -1183,13 +1183,13 @@ namespace MuPDF.NET
         /// <param name="pagenum"></param>
         /// <returns></returns>
         /// <exception cref="Exception"></exception>
-        public MuPDFPage LoadPage(int chapter, int pagenum)
+        public Page LoadPage(int chapter, int pagenum)
         {
             if (IsClosed || IsEncrypted)
                 throw new Exception("document closed or encrypted");
 
             FzPage page = _nativeDocument.fz_load_chapter_page(chapter, pagenum);
-            MuPDFPage val = new MuPDFPage(page, this);
+            Page val = new Page(page, this);
 
             val.ThisOwn = true;
             val.Parent = this;
@@ -1205,7 +1205,7 @@ namespace MuPDF.NET
         /// </summary>
         /// <param name="page">page object.</param>
         /// <returns>a new copy of the same page. All pending updates (e.g. to annotations or widgets) will be finalized and a fresh copy of the page will be loaded.</returns>
-        public MuPDFPage ReloadPage(MuPDFPage page)
+        public Page ReloadPage(Page page)
         {
             Dictionary<int, dynamic> oldAnnots = new Dictionary<int, dynamic>();
             int pno = page.Number;
@@ -2485,7 +2485,7 @@ namespace MuPDF.NET
         /// <param name="step">stop iteration at this page number.</param>
         /// <returns>a generator iterator over the document’s pages.</returns>
         /// <exception cref="Exception"></exception>
-        public List<MuPDFPage> GetPages(int start, int stop, int step)
+        public List<Page> GetPages(int start, int stop, int step)
         {
             while (start < 0)
                 start += GetPageCount();
@@ -2498,7 +2498,7 @@ namespace MuPDF.NET
             if ((start > stop && step > 0) || (start < stop && step < 0))
                 throw new Exception("bad step, pick right direction");
 
-            List<MuPDFPage> ret = new List<MuPDFPage>();
+            List<Page> ret = new List<Page>();
             for (int i = start; i < stop; i += step)
             {
                 ret.Add(LoadPage(i));
@@ -2633,7 +2633,7 @@ namespace MuPDF.NET
         /// Remove a page from document page dict.
         /// </summary>
         /// <param name="page"></param>
-        public void ForgetPage(MuPDFPage page)
+        public void ForgetPage(Page page)
         {
             int pid = page.GetHashCode();
             if (PageRefs.ContainsKey(pid))
@@ -4575,7 +4575,7 @@ namespace MuPDF.NET
 
             for (int i = 0; i < PageCount; i++)
             {
-                MuPDFPage page = this[i];
+                Page page = this[i];
                 if (resetFields)
                 {
                     foreach (MuPDFWidget widget in page.GetWidgets())
@@ -4939,7 +4939,7 @@ namespace MuPDF.NET
                         dest.To = top;
                     else
                     {
-                        MuPDFPage page = this[pno];
+                        Page page = this[pno];
                         Point point = new Point(dest.To);
                         point.Y = page.CropBox.Height - point.Y;
                         point = point * page.RotationMatrix;

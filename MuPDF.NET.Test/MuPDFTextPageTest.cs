@@ -96,7 +96,7 @@ namespace MuPDF.NET.Test
         {
             Document doc = new Document("input.pdf");
 
-            MuPDFPage page = new MuPDFPage(doc.GetPage(0), doc);
+            Page page = new Page(doc.GetPage(0), doc);
 
             MuPDFTextPage tpage = page.GetTextPage();
 

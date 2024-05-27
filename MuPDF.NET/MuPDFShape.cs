@@ -4,7 +4,7 @@ namespace MuPDF.NET
 {
     public class MuPDFShape
     {
-        public MuPDFPage Page { get; set; }
+        public Page Page { get; set; }
 
         public Document Doc { get; set; }
 
@@ -30,7 +30,7 @@ namespace MuPDF.NET
 
         public Rect Rect { get; set; }
 
-        public MuPDFShape(MuPDFPage page)
+        public MuPDFShape(Page page)
         {
             this.Page = page;
             this.Doc = page.Parent;

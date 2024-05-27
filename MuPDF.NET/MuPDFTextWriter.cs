@@ -180,7 +180,7 @@ namespace MuPDF.NET
         /// <param name="renderMode">The PDF Tr operator value. Values: 0 (default), 1, 2, 3 (invisible).</param>
         /// <param name="oc"> the xref of an OCG or OCMD.</param>
         /// <exception cref="Exception"></exception>
-        public void WriteText(MuPDFPage page, float[] color = null, float opacity = -1, int overlay = 1, Morph morph = null,
+        public void WriteText(Page page, float[] color = null, float opacity = -1, int overlay = 1, Morph morph = null,
             Matrix matrix = null, int renderMode = 0, int oc = 0)
         {
             if ((Rect - page.Rect).Abs() > 1e-3)

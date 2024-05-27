@@ -9,13 +9,13 @@ public class MuPDFPageTest : PdfTestBase
     public void Setup()
     {
         doc = new Document("../../../resources/toc.pdf");
-        page = new MuPDFPage(doc.GetPage(0), doc);
+        page = new Page(doc.GetPage(0), doc);
     }
 
     [Test]
     public void InsertText()// passed but text was never drawn
     {
-        MuPDFPage page = doc.NewPage();
+        Page page = doc.NewPage();
         int res = page.InsertText(new Point(100, 100), "hello", fontFile: "../../../resources/kenpixel.ttf", fontName: "kenpixel");
 
         Assert.Pass();
@@ -91,7 +91,7 @@ public class MuPDFPageTest : PdfTestBase
     public void ShowPdfPage()
     {
         Document output = new Document();
-        MuPDFPage page = output.NewPage();
+        Page page = output.NewPage();
 
         Rect r1 = new Rect(0, 0, page.Rect.Width, page.Rect.Height);
         Rect r2 = r1 + new Rect(0, page.Rect.Height / 2, 0, page.Rect.Height / 2);
@@ -135,7 +135,7 @@ public class MuPDFPageTest : PdfTestBase
     [Test]
     public void GetDrawings()
     {
-        MuPDFPage page = doc[0];
+        Page page = doc[0];
 
         page.GetDrawings();
         Assert.Pass();
@@ -158,7 +158,7 @@ public class MuPDFPageTest : PdfTestBase
     public void DrawLine()
     {
         Document doc = new Document();
-        MuPDFPage page = doc.NewPage();
+        Page page = doc.NewPage();
         Point p1 = new Point(100, 100);
         Point p2 = new Point(300, 300);
 
@@ -170,7 +170,7 @@ public class MuPDFPageTest : PdfTestBase
     [Test]
     public void InsertImage()
     {
-        MuPDFPage page = doc.LoadPage(0);
+        Page page = doc.LoadPage(0);
 
         page.InsertImage(new Rect(100, 100, 300, 300), "../../../resources/nur-ruhig.jpg", imageName: "back");
 
@@ -181,7 +181,7 @@ public class MuPDFPageTest : PdfTestBase
     public void InsertHtmlBox()
     {
         Document doc = new Document();
-        MuPDFPage page = doc.NewPage();
+        Page page = doc.NewPage();
 
         Archive archive = new Archive();
         FileStream st = new FileStream("../../../resources/kenpixel.zip", FileMode.Open);
@@ -198,7 +198,7 @@ public class MuPDFPageTest : PdfTestBase
     public void InsertTextBox()
     {
         Document doc = new Document();
-        MuPDFPage page = doc.NewPage();
+        Page page = doc.NewPage();
         page.InsertTextbox(new Rect(100, 100, 300, 300), "hello", fontName: "kenpixel", fontFile: "../../../resources/kenpixel.ttf");
 
         doc.Save("output.pdf");
@@ -234,7 +234,7 @@ public class MuPDFPageTest : PdfTestBase
     public void GetImageRects()
     {
         Document doc = new Document("../../../resources/image-file1.pdf");
-        MuPDFPage page = doc.LoadPage(0);
+        Page page = doc.LoadPage(0);
         List<Box> imgs = page.GetImageRects(5, true);
 
         Assert.That(imgs.Count, Is.EqualTo(2));
@@ -244,7 +244,7 @@ public class MuPDFPageTest : PdfTestBase
     public void Bbox()
     {
         Document doc = new Document();
-        MuPDFPage page = doc.NewPage();
+        Page page = doc.NewPage();
         int xref = page.InsertImage(page.Rect, "../../../resources/img-transparent.png");
         List<Block> imginfo = page.GetImageInfo(xrefs: true);
         Assert.That(imginfo.Count, Is.EqualTo(1));
@@ -262,7 +262,7 @@ public class MuPDFPageTest : PdfTestBase
     public void GetDrawings1()
     {
         Document doc = new Document("../../../resources/drawings.pdf");
-        MuPDFPage page = doc[0];
+        Page page = doc[0];
 
         Assert.That(page.GetDrawings(extended: true).Count, Is.Not.Zero);
     }
@@ -272,7 +272,7 @@ public class MuPDFPageTest : PdfTestBase
     {
         string path = "../../../resources/images.pdf";
         Document doc = new Document();
-        MuPDFPage page = doc.NewPage(width: 500, height: 842);
+        Page page = doc.NewPage(width: 500, height: 842);
         Rect r = new Rect(20, 20, 480, 820);
         page.InsertImage(r, filename: "../../../resources/nur-ruhig.jpg");
         page = doc.NewPage(width: 500, height: 842);
@@ -299,7 +299,7 @@ public class MuPDFPageTest : PdfTestBase
     {
         string text = "Hello, world! Hallo, Welt!";
         Document doc = new Document();
-        MuPDFPage page = doc.NewPage();
+        Page page = doc.NewPage();
         Rect r = new Rect(50, 50, 200, 500);
 
         page.InsertHtmlBox(r, text);
@@ -342,7 +342,7 @@ public class MuPDFPageTest : PdfTestBase
             rs.Add(r + new Rect(0, r.Height * i, 0, r.Height * i));
 
         Document doc = new Document();
-        MuPDFPage page = doc.NewPage();
+        Page page = doc.NewPage();
         i = 0;
         foreach (string k in text.Keys)
         {
@@ -361,7 +361,7 @@ public class MuPDFPageTest : PdfTestBase
     public void Insert()
     {
         Document doc = new Document();
-        MuPDFPage page = doc.NewPage();
+        Page page = doc.NewPage();
         Rect rect = new Rect(50, 50, 100, 100);
         Document img = new Document("../../../resources/nur-ruhig.jpg");
         byte[] tobytes = img.Convert2Pdf();
@@ -377,7 +377,7 @@ public class MuPDFPageTest : PdfTestBase
     public void PageLinks()
     {
         Document doc = new Document("../../../resources/2.pdf");
-        MuPDFPage page = doc[-1];
+        Page page = doc[-1];
 
         Assert.That(page.GetLinks().Count, Is.EqualTo(7));
     }
@@ -386,7 +386,7 @@ public class MuPDFPageTest : PdfTestBase
     public void TextBox()
     {
         Document doc = new Document();
-        MuPDFPage page = doc.NewPage();
+        Page page = doc.NewPage();
         Rect rect = new Rect(50, 50, 400, 500);
 
         string text = "Der Kleine Schwertwal (Pseudorca crassidens), auch bekannt als Unechter oder Schwarzer Schwertwal, ist eine Art der Delfine (Delphinidae) und der einzige rezente Vertreter der Gattung Pseudorca.\r\n\r\nEr �hnelt dem Orca in Form und Proportionen, ist aber einfarbig schwarz und mit einer Maximall�nge von etwa sechs Metern deutlich kleiner.\r\n\r\nKleine Schwertwale bilden Schulen von durchschnittlich zehn bis f�nfzig Tieren, wobei sie sich auch mit anderen Delfinen vergesellschaften und sich meistens abseits der K�sten aufhalten.\r\n\r\nSie sind in allen Ozeanen gem��igter, subtropischer und tropischer Breiten beheimatet, sind jedoch vor allem in w�rmeren Jahreszeiten auch bis in die gem��igte bis subpolare Zone s�dlich der S�dspitze S�damerikas, vor Nordeuropa und bis vor Kanada anzutreffen.";
@@ -411,7 +411,7 @@ public class MuPDFPageTest : PdfTestBase
     {
         Rect rect = new Rect(100, 100, 200, 200);
         Document doc = new Document();
-        MuPDFPage page = doc.NewPage();
+        Page page = doc.NewPage();
         (float s, float scale) = page.InsertHtmlBox(rect, "hello world", scaleLow: 1, rotate: 90);
         Assert.That(scale, Is.EqualTo(1));
     }
@@ -422,7 +422,7 @@ public class MuPDFPageTest : PdfTestBase
         Rect rect = new Rect(100, 250, 300, 350);
         string text = "<span style=\"color: red; font - size:20px \">Just some text.</span>";
         Document doc = new Document();
-        MuPDFPage page = doc.NewPage();
+        Page page = doc.NewPage();
 
         page.InsertHtmlBox(rect, text, opacity: 0.5f);
 

@@ -66,11 +66,11 @@ namespace MuPDF.NET
 
         public Rect Rect { get; set; }
 
-        public MuPDFPage Parent { get; set; }
+        public Page Parent { get; set; }
 
         public PdfAnnot _annot { get; set; }
 
-        public MuPDFWidget(MuPDFPage page)
+        public MuPDFWidget(Page page)
         {
             Parent = page;
             BorderColor = null;
@@ -247,7 +247,7 @@ namespace MuPDF.NET
         {
             if (!(FieldType == 2 || FieldType == 5))
                 return null;
-            Document doc = Parent.Parent;
+            Document doc = this.Parent.Parent;
             if (doc == null)
                 return null;
 
