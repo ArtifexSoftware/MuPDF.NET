@@ -3,7 +3,7 @@ using MuPDF.NET;
 using System.IO.Compression;
 using static System.Net.Mime.MediaTypeNames;
 
-public class MuPDFPageTest : PdfTestBase
+public class PageTest : PdfTestBase
 {
     [SetUp]
     public void Setup()

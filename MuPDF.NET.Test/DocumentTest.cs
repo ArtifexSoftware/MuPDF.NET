@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace MuPDF.NET.Test
 {
-    public class MuPDFDocumentTest : PdfTestBase
+    public class DocumentTest : PdfTestBase
     {
         [SetUp]
         public void Setup()

@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace MuPDF.NET.Test
 {
-    public class MuPDFArchiveTest
+    public class ArchiveTest
     {
 
     }

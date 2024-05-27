@@ -6,7 +6,7 @@ using Newtonsoft.Json;
 
 namespace MuPDF.NET.Test
 {
-    public class MuPDFAnnotTest
+    public class AnnotTest
     {
         [Test]
         public void Annot_CleanContents()
