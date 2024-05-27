@@ -3126,7 +3126,7 @@ namespace MuPDF.NET
             if (!(new List<int>() { 1, 3, 4 }).Contains(_colorSpace.N))
                 throw new Exception("unsupported colorspace");
 
-            MuPDFDisplayList dl = GetDisplayList(annots ? 1 : 0);
+            DisplayList dl = GetDisplayList(annots ? 1 : 0);
             Pixmap pix = dl.GetPixmap(
                 matrix,
                 colorSpace: _colorSpace,
@@ -3140,12 +3140,12 @@ namespace MuPDF.NET
             return pix;
         }
 
-        public MuPDFDisplayList GetDisplayList(int annots = 1)
+        public DisplayList GetDisplayList(int annots = 1)
         {
             if (annots != 0)
-                return new MuPDFDisplayList(mupdf.mupdf.fz_new_display_list_from_page(_pdfPage.super()));
+                return new DisplayList(mupdf.mupdf.fz_new_display_list_from_page(_pdfPage.super()));
             else
-                return new MuPDFDisplayList(
+                return new DisplayList(
                     mupdf.mupdf.fz_new_display_list_from_page_contents(_pdfPage.super())
                 );
         }
