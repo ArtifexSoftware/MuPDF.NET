@@ -370,7 +370,7 @@ namespace MuPDF.NET
         public Document WriteWithLinks(RectFunction rectFn = null, Action<Position> positionfn = null, Action<int, Rect, DeviceWrapper, bool> pageFn = null)
         {
             MemoryStream stream = new MemoryStream(100);
-            MuPDFDocumentWriter writer = new MuPDFDocumentWriter(stream);
+            DocumentWriter writer = new DocumentWriter(stream);
             List<Position> positions = new List<Position>();
 
             Action<Position> positionfn2 = position =>
@@ -392,7 +392,7 @@ namespace MuPDF.NET
         /// <param name="rectFn"></param>
         /// <param name="positionFn"></param>
         /// <param name="pageFn"></param>
-        public void Write(MuPDFDocumentWriter writer, RectFunction rectFn, Action<Position> positionFn, Action<int, Rect, DeviceWrapper, bool> pageFn)
+        public void Write(DocumentWriter writer, RectFunction rectFn, Action<Position> positionFn, Action<int, Rect, DeviceWrapper, bool> pageFn)
         {
             DeviceWrapper dev = null;
             int pageNum = 0;
@@ -464,7 +464,7 @@ namespace MuPDF.NET
             )
         {
             MemoryStream stream = new MemoryStream();
-            MuPDFDocumentWriter writer = new MuPDFDocumentWriter(stream);
+            DocumentWriter writer = new DocumentWriter(stream);
             List<Position> positions = new List<Position>();
 
             Action<Position> positionfn2 = position =>
@@ -509,7 +509,7 @@ namespace MuPDF.NET
         }
 
         public static void WriteStabilized(
-            MuPDFDocumentWriter writer, // Assuming Writer is a defined class
+            DocumentWriter writer, // Assuming Writer is a defined class
             ContentFunction contentfn,
             RectFunction rectfn,
             string userCss = null,

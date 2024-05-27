@@ -2,9 +2,9 @@
 
 namespace MuPDF.NET
 {
-    public class MuPDFDocumentWriter
+    public class DocumentWriter
     {
-        static MuPDFDocumentWriter()
+        static DocumentWriter()
         {
             if (!File.Exists("mupdfcsharp.dll"))
                 Utils.LoadEmbeddedDll();
@@ -12,12 +12,12 @@ namespace MuPDF.NET
 
         private FzDocumentWriter _nativeDocumentWriter;
 
-        public MuPDFDocumentWriter(string path, string options = "")
+        public DocumentWriter(string path, string options = "")
         {
             _nativeDocumentWriter = new FzDocumentWriter(path, options, FzDocumentWriter.PathType.PathType_PDF);
         }
 
-        public MuPDFDocumentWriter(MemoryStream memory, string options = "")
+        public DocumentWriter(MemoryStream memory, string options = "")
         {
             FilePtrOutput filePtr = new FilePtrOutput(memory);
             _nativeDocumentWriter = new FzDocumentWriter(filePtr, options, FzDocumentWriter.OutputType.OutputType_PDF);

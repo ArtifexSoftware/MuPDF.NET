@@ -16,7 +16,7 @@ namespace MuPDF.NET.Test
             Rect box = Utils.PageRect("letter");
             Rect where = box + new Rect(36, 36, -36, -36);
             MuPDFStory story = new MuPDFStory(html: html);
-            MuPDFDocumentWriter writer = new MuPDFDocumentWriter("output.pdf");
+            DocumentWriter writer = new DocumentWriter("output.pdf");
 
             int pno = 0;
             bool more = true;
