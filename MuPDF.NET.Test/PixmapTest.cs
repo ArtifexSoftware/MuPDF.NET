@@ -11,9 +11,9 @@ namespace MuPDF.NET.Test
         [Test]
         public void GetPixamp_Save()
         {
-            MuPDFDocument doc = new MuPDFDocument("../../../resources/cython.pdf");
+            Document doc = new Document("../../../resources/cython.pdf");
 
-            MuPDFPage page = doc[0];
+            Page page = doc[0];
 
             Pixmap source = page.GetPixmap();
 
@@ -27,9 +27,9 @@ namespace MuPDF.NET.Test
         [Test]
         public void GetPixel()
         {
-            MuPDFDocument doc = new MuPDFDocument("../../../resources/cython.pdf");
+            Document doc = new Document("../../../resources/cython.pdf");
 
-            MuPDFPage page = doc[0];
+            Page page = doc[0];
 
             Pixmap pix = page.GetPixmap();
 
@@ -44,9 +44,9 @@ namespace MuPDF.NET.Test
         [Test]
         public void ToBytes()
         {
-            MuPDFDocument doc = new MuPDFDocument("../../../resources/cython.pdf");
+            Document doc = new Document("../../../resources/cython.pdf");
 
-            MuPDFPage page = doc[0];
+            Page page = doc[0];
 
             Pixmap pix = page.GetPixmap();
 
@@ -58,9 +58,9 @@ namespace MuPDF.NET.Test
         [Test]
         public void ColorToUsage()
         {
-            MuPDFDocument doc = new MuPDFDocument("../../../resources/cython.pdf");
+            Document doc = new Document("../../../resources/cython.pdf");
 
-            MuPDFPage page = doc[0];
+            Page page = doc[0];
 
             Pixmap pix = page.GetPixmap();
 
@@ -74,9 +74,9 @@ namespace MuPDF.NET.Test
         [Test]
         public void InvertIrect()
         {
-            MuPDFDocument doc = new MuPDFDocument("../../../resources/cython.pdf");
+            Document doc = new Document("../../../resources/cython.pdf");
 
-            MuPDFPage page = doc[0];
+            Page page = doc[0];
 
             Pixmap pix = page.GetPixmap();
 
@@ -88,9 +88,9 @@ namespace MuPDF.NET.Test
         [Test]
         public void PdfOCR()
         {
-            MuPDFDocument doc = new MuPDFDocument("../../../resources/cython.pdf");
+            Document doc = new Document("../../../resources/cython.pdf");
 
-            MuPDFPage page = doc[0];
+            Page page = doc[0];
 
             Pixmap pix = page.GetPixmap();
 
@@ -102,7 +102,7 @@ namespace MuPDF.NET.Test
         [Test]
         public void PdfPixmap()
         {
-            MuPDFDocument doc = new MuPDFDocument("../../../resources/toc.pdf");
+            Document doc = new Document("../../../resources/toc.pdf");
             Entry img = doc.GetPageImages(0)[0];
             Pixmap pix = new Pixmap(doc, img.Xref);
             Assert.That(pix.W, Is.EqualTo(img.Width));
@@ -111,6 +111,15 @@ namespace MuPDF.NET.Test
             ImageInfo ex = doc.ExtractImage(img.Xref);
             Assert.That(ex.Width, Is.EqualTo(pix.W));
             Assert.That(ex.Height, Is.EqualTo(pix.H));
+        }
+
+        [Test]
+        public void InvertIrect1()
+        {
+            Pixmap pix = new Pixmap("../../../resources/img-transparent.png");
+            Rect rect = new Rect(0, 0, 100, 100);
+            pix.InvertIrect(new IRect(rect));
+            Assert.Pass();
         }
     }
 }

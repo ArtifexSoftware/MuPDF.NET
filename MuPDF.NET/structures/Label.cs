@@ -2,8 +2,12 @@
 {
     public class Label
     {
-        public int PageNumber { get; set; }
+        public int StartPage { get; set; }
 
-        public string LabelText { get; set; }
+        public string Prefix { get; set; }
+
+        public int FirstPageNum { get; set; }
+
+        public string Style { get; set; }
     }
 }

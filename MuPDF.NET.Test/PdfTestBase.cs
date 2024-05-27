@@ -2,10 +2,10 @@
 {
     public class PdfTestBase
     {
-        public MuPDFDocument doc;
+        public Document doc;
 
-        public MuPDFPage page;
+        public Page page;
 
-        public MuPDFTextPage textPage;
+        public TextPage textPage;
     }
 }

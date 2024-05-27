@@ -12,9 +12,9 @@ namespace MuPDF.NET
             _nativePixmap = mupdf.mupdf.fz_new_pixmap_with_bbox(cs.ToFzColorspace(), irect.ToFzIrect(), new FzSeparations(0), alpha);
         }
 
-        public Pixmap(MuPDFDocument doc, int xref)
+        public Pixmap(Document doc, int xref)
         {
-            PdfDocument pdf = MuPDFDocument.AsPdfDocument(doc);
+            PdfDocument pdf = Document.AsPdfDocument(doc);
             int xrefLen = pdf.pdf_xref_len();
             if (!Utils.INRANGE(xref, 1, xrefLen - 1))
                 throw new Exception(Utils.ErrorMessages["MSG_BAD_XREF"]);
