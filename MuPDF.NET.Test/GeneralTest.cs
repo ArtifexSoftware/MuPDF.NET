@@ -365,5 +365,26 @@ namespace MuPDF.NET.Test
             Assert.That(doc.GetKeyXref(page.Xref, "Rotate").Item1, Is.EqualTo("int"));
             Assert.That(doc.GetKeyXref(page.Xref, "Rotate").Item2, Is.EqualTo("270"));
         }
+
+        [Test]
+        public void Rotation2()
+        {
+            MuPDFDocument doc = new MuPDFDocument();
+            MuPDFPage page = doc.NewPage();
+            doc.SetKeyXRef(page.Xref, "Rotate", "270");
+            Assert.That(page.Rotation, Is.EqualTo(270));
+        }
+
+        [Test]
+        public void ValidName()
+        {
+            MuPDFDocument doc = new MuPDFDocument();
+            MuPDFPage page = doc.NewPage();
+            doc.SetKeyXRef(page.Xref, "Rotate", "90");
+            Assert.That(page.Rotation, Is.EqualTo(90));
+
+            doc.SetKeyXRef(page.Xref, "my_rotate/something", "90");
+            Assert.That(doc.GetKeyXref(page.Xref, "my_rotate/something").Item2, Is.EqualTo("90"));
+        }
     }
 }
