@@ -1748,13 +1748,13 @@ namespace MuPDF.NET
             return "";
         }
 
-        public static Font CheckFont(MuPDFPage page, string fontName)
+        public static FontInfo CheckFont(MuPDFPage page, string fontName)
         {
             foreach (Entry f in page.GetFonts())
             {
                 if (f.RefName == fontName)
                 {
-                    return new Font()
+                    return new FontInfo()
                     {
                         Xref = f.Xref,
                         Ext = f.Ext,
@@ -1769,9 +1769,9 @@ namespace MuPDF.NET
             return null;
         }
 
-        public static Font CheckFontInfo(Document doc, int xref)
+        public static FontInfo CheckFontInfo(Document doc, int xref)
         {
-            foreach (Font f in doc.FontInfos)
+            foreach (FontInfo f in doc.FontInfos)
             {
                 if (xref == f.Xref)
                     return f;
@@ -2143,7 +2143,7 @@ namespace MuPDF.NET
             int xref
         )
         {
-            Font res = doc.ExtractFont(xref);
+            FontInfo res = doc.ExtractFont(xref);
             float asc = 0.8f;
             float dsc = -0.2f;
 
@@ -2176,7 +2176,7 @@ namespace MuPDF.NET
             {
                 try
                 {
-                    MuPDFFont font = new MuPDFFont(res.Name);
+                    Font font = new Font(res.Name);
                     asc = font.Ascender;
                     dsc = font.Descender;
                 }
@@ -2269,7 +2269,7 @@ namespace MuPDF.NET
             return null;
         }
 
-        public static void UpdateFontInfo(Document doc, Font info)
+        public static void UpdateFontInfo(Document doc, FontInfo info)
         {
             int xref = info.Xref;
             bool found = false;
@@ -2294,10 +2294,10 @@ namespace MuPDF.NET
             int xref,
             int limit = 256,
             int idx = 0,
-            Font fontDict = null
+            FontInfo fontDict = null
         )
         {
-            Font fontStruct = Utils.CheckFontInfo(doc, xref);
+            FontInfo fontStruct = Utils.CheckFontInfo(doc, xref);
             string name = "";
             string ext = "";
             string stype = "";
@@ -2393,7 +2393,7 @@ namespace MuPDF.NET
             return glyphs;
         }
 
-        public static Font InsertFont(
+        public static FontInfo InsertFont(
             PdfDocument pdf,
             string bfName,
             string fontFile,
@@ -2411,7 +2411,7 @@ namespace MuPDF.NET
             SWIGTYPE_p_unsigned_char data = null;
             int ixref = 0;
             int simple = 0;
-            Font value = null;
+            FontInfo value = null;
             string name = null;
             string subt = null;
             string exto = null;
@@ -2470,7 +2470,7 @@ namespace MuPDF.NET
             float asc = font.fz_font_ascender();
             float dsc = font.fz_font_descender();
 
-            value = new Font()
+            value = new FontInfo()
             {
                 Xref = ixref,
                 Name = name,
@@ -3552,7 +3552,7 @@ namespace MuPDF.NET
 
         public static FzMatrix ShowStringCS(
             FzText text,
-            MuPDFFont userFont,
+            Font userFont,
             FzMatrix trm,
             string s,
             int wmode,
@@ -4369,7 +4369,7 @@ namespace MuPDF.NET
             return (maxAlp, maxFonts);
         }
 
-        public static void RepairMonoFont(MuPDFPage page, MuPDFFont font)
+        public static void RepairMonoFont(MuPDFPage page, Font font)
         {
             if (font.Flags["mono"] == 0)
                 return;

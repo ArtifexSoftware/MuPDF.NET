@@ -196,7 +196,7 @@ namespace MuPDF.NET
                 encoding: encoding,
                 setSimple: setSimple
                 );
-            Font fontInfo = Utils.CheckFontInfo(Doc, xref);
+            FontInfo fontInfo = Utils.CheckFontInfo(Doc, xref);
             
             int ordering = fontInfo.Ordering;
             bool simple = fontInfo.Simple;
@@ -1023,7 +1023,7 @@ namespace MuPDF.NET
                 fname = fname.Substring(1);
 
             int xref = Page.InsertFont(fontName: fname, fontFile: fontFile, encoding: encoding, setSimple: setSimple);
-            Font fontInfo = Utils.CheckFontInfo(Doc, xref);
+            FontInfo fontInfo = Utils.CheckFontInfo(Doc, xref);
             
             if (fontInfo == null)
                 throw new Exception("no found font info");

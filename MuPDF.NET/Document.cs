@@ -27,7 +27,7 @@ namespace MuPDF.NET
 
         public Dictionary<string, string> MetaData { get; set; }
 
-        public List<Font> FontInfos { get; set; }
+        public List<FontInfo> FontInfos { get; set; }
 
         public Dictionary<int, MuPDFGraftMap> GraftMaps { get; set; } =
             new Dictionary<int, MuPDFGraftMap>();
@@ -399,7 +399,7 @@ namespace MuPDF.NET
                 IsClosed = false;
                 IsEncrypted = false;
                 MetaData = null;
-                FontInfos = new List<Font>();
+                FontInfos = new List<FontInfo>();
                 PageRefs = new Dictionary<int, MuPDFPage>();
 
                 if (stream != null)
@@ -1249,7 +1249,7 @@ namespace MuPDF.NET
         /// <param name="infoOnly">only return font information, not the buffer. To be used for information-only purposes, avoids allocation of large buffer areas.</param>
         /// <param name="named"> If true, a dictionary with the following keys is returned: ‘name’ (font base name), ‘ext’ (font file extension), ‘type’ (font type), ‘content’ (font file content).</param>
         /// <returns>Font object, where ext is a 3-byte suggested file extension (str), basename is the font’s name (str), type is the font’s type (e.g. “Type1”) and content is a bytes object containing the font file’s content (or b””).</returns>
-        public Font ExtractFont(int xref = 0, int infoOnly = 0, string named = null)
+        public FontInfo ExtractFont(int xref = 0, int infoOnly = 0, string named = null)
         {
             PdfDocument pdf = AsPdfDocument(this);
             PdfObj obj = pdf.pdf_load_object(xref);
@@ -1281,7 +1281,7 @@ namespace MuPDF.NET
                 else
                     bytes = Encoding.UTF8.GetBytes("");
 
-                return new Font()
+                return new FontInfo()
                 {
                     Name = Utils.EscapeStrFromStr(bName.pdf_to_name()),
                     Ext = Utils.UnicodeFromStr(ext),
@@ -1291,7 +1291,7 @@ namespace MuPDF.NET
             }
             else
             {
-                return new Font()
+                return new FontInfo()
                 {
                     Name = "",
                     Ext = "",

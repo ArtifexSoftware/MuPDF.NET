@@ -2525,7 +2525,7 @@ namespace MuPDF.NET
             if (INVALID_NAME_CHARS.Count > 0)
                 throw new Exception($"bad fontname chars {INVALID_NAME_CHARS.ToString()}");
 
-            Font font = Utils.CheckFont(this, fontName);
+            FontInfo font = Utils.CheckFont(this, fontName);
             if (font != null)
             {
                 xref = font.Xref;
@@ -2573,7 +2573,7 @@ namespace MuPDF.NET
                 catch (Exception) { }
             }
 
-            Font val = _InsertFont(
+            FontInfo val = _InsertFont(
                 fontName,
                 bfName,
                 fontFile,
@@ -2589,7 +2589,7 @@ namespace MuPDF.NET
             if (val == null)
                 return -1;
 
-            Font fontDict = val;
+            FontInfo fontDict = val;
             var _ = Utils.GetCharWidths(doc, xref: fontDict.Xref, fontDict: fontDict);
             return fontDict.Xref;
         }
@@ -2609,7 +2609,7 @@ namespace MuPDF.NET
             return _pdfPage;
         }
 
-        private Font _InsertFont(
+        private FontInfo _InsertFont(
             string fontName,
             string bfName,
             string fontFile,
@@ -2625,7 +2625,7 @@ namespace MuPDF.NET
             PdfPage page = GetPdfPage();
             PdfDocument pdf = page.doc();
 
-            Font value = Utils.InsertFont(
+            FontInfo value = Utils.InsertFont(
                 pdf,
                 bfName,
                 fontFile,

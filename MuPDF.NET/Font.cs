@@ -2,9 +2,9 @@
 
 namespace MuPDF.NET
 {
-    public class MuPDFFont
+    public class Font
     {
-        static MuPDFFont()
+        static Font()
         {
             if (!File.Exists("mupdfcsharp.dll"))
                 Utils.LoadEmbeddedDll();
@@ -105,12 +105,12 @@ namespace MuPDF.NET
             get { return _nativeFont.m_internal.glyph_count; }
         }
 
-        public MuPDFFont()
+        public Font()
         {
             _nativeFont = new FzFont();
         }
 
-        public MuPDFFont(
+        public Font(
             string fontName = null,
             string fontFile = null,
             byte[] fontBuffer = null,

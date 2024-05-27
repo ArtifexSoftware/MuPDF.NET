@@ -26,7 +26,7 @@ namespace MuPDF.NET
 
         public Rect TextRect { get; set; }
 
-        public List<MuPDFFont> UsedFonts { get; set; }
+        public List<Font> UsedFonts { get; set; }
 
         public bool ThisOwn { get; set; }
 
@@ -41,7 +41,7 @@ namespace MuPDF.NET
             ICtm = ~Ctm;
             LastPoint = new Point();
             TextRect = new Rect();
-            UsedFonts = new List<MuPDFFont>();
+            UsedFonts = new List<Font>();
             Color = color;
             ThisOwn = false;
         }
@@ -67,12 +67,12 @@ namespace MuPDF.NET
         /// <param name="smallCaps"></param>
         /// <returns></returns>
         /// <exception cref="Exception"></exception>
-        public (Rect, Point) Append(Point pos, string text, MuPDFFont font, float fontSize = 11.0f, string language = null, int right2left = 0, int smallCaps = 0)
+        public (Rect, Point) Append(Point pos, string text, Font font, float fontSize = 11.0f, string language = null, int right2left = 0, int smallCaps = 0)
         {
             pos = pos * ICtm;
             if (font == null)
             {
-                font = new MuPDFFont("helv");
+                font = new Font("helv");
             }
 
             if (!font.IsWriteable)
@@ -156,7 +156,7 @@ namespace MuPDF.NET
         /// <param name="language">the language to use</param>
         /// <param name="smallCaps"></param>
         /// <returns></returns>
-        public (Rect, Point) Appendv(Point pos, string text, MuPDFFont font = null, float fontSiz = 11.0f,
+        public (Rect, Point) Appendv(Point pos, string text, Font font = null, float fontSiz = 11.0f,
             string language = null, bool smallCaps = false)
         {
             float lheight = fontSiz * 1.2f;
@@ -295,7 +295,7 @@ namespace MuPDF.NET
             newContLines.Add("Q\n");
             byte[] content = Encoding.UTF8.GetBytes(string.Join("\n", newContLines));
             Utils.InsertContents(page, content, overlay);
-            foreach (MuPDFFont font in UsedFonts)
+            foreach (Font font in UsedFonts)
                 Utils.RepairMonoFont(page, font);
         }
 
@@ -318,7 +318,7 @@ namespace MuPDF.NET
             Rect rect,
             string text,
             Point pos = null,
-            MuPDFFont font = null,
+            Font font = null,
             float fontSize = 11,
             float lineHeight = 0,
             int align = 0,
@@ -329,7 +329,7 @@ namespace MuPDF.NET
             if (rect.IsEmpty)
                 throw new Exception("fill rect must not empty");
             if (font == null)
-                font = new MuPDFFont("helv");
+                font = new Font("helv");
 
             float TextLen(string x)
             {

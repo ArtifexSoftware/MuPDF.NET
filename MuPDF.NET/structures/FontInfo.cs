@@ -1,6 +1,6 @@
 ﻿namespace MuPDF.NET
 {
-    public class Font
+    public class FontInfo
     {
         public int Xref { get; set; }
 

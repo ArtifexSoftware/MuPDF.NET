@@ -11,7 +11,7 @@ namespace MuPDF.NET.Test
         [Test]
         public void Flags()
         {
-            MuPDFFont font = new MuPDFFont("kenpixel", "../../../resources/kenpixel.ttf", isBold: 1);
+            Font font = new Font("kenpixel", "../../../resources/kenpixel.ttf", isBold: 1);
 
             Assert.Pass();
         }
@@ -19,7 +19,7 @@ namespace MuPDF.NET.Test
         [Test]
         public void TextLength()
         {
-            MuPDFFont font = new MuPDFFont("kenpixel", "../../../resources/kenpixel.ttf", isBold: 1);
+            Font font = new Font("kenpixel", "../../../resources/kenpixel.ttf", isBold: 1);
 
             float length = font.TextLength("hello world", 15);
 
