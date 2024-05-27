@@ -1100,7 +1100,7 @@ namespace MuPDF.NET
             return ret;
         }
 
-        public static void GetWidgetProperties(MuPDFAnnot annot, MuPDFWidget widget)
+        public static void GetWidgetProperties(Annot annot, Widget widget)
         {
             PdfObj annotObj = mupdf.mupdf.pdf_annot_obj(annot.ToPdfAnnot());
             PdfPage page = mupdf.mupdf.pdf_annot_page(annot.ToPdfAnnot());
@@ -1374,10 +1374,10 @@ namespace MuPDF.NET
         }
 
         public static List<WordBlock> GetTextWords(
-            MuPDFPage page,
+            Page page,
             Rect clip = null,
             int flags = 0,
-            MuPDFTextPage stPage = null,
+            TextPage stPage = null,
             bool sort = false,
             char[] delimiters = null
         )
@@ -1388,7 +1388,7 @@ namespace MuPDF.NET
                     | TextFlags.TEXT_PRESERVE_LIGATURES
                     | TextFlags.TEXT_MEDIABOX_CLIP
                 );
-            MuPDFTextPage tp = stPage;
+            TextPage tp = stPage;
             if (tp == null)
                 tp = page.GetTextPage(clip, flags);
             else if (tp.Parent != page)
@@ -1413,10 +1413,10 @@ namespace MuPDF.NET
         }
 
         public static List<TextBlock> GetTextBlocks(
-            MuPDFPage page,
+            Page page,
             Rect clip = null,
             int flags = 0,
-            MuPDFTextPage textPage = null,
+            TextPage textPage = null,
             bool sort = false
         )
         {
@@ -1429,7 +1429,7 @@ namespace MuPDF.NET
                     | TextFlags.TEXT_MEDIABOX_CLIP
                 );
             }
-            MuPDFTextPage tp = textPage;
+            TextPage tp = textPage;
             if (tp == null)
                 tp = page.GetTextPage(clip, flags);
             else if (tp.Parent != page)
@@ -1454,11 +1454,11 @@ namespace MuPDF.NET
         }
 
         public static dynamic GetText(
-            MuPDFPage page,
+            Page page,
             string option = "text",
             Rect clip = null,
             int flags = 0,
-            MuPDFTextPage stPage = null,
+            TextPage stPage = null,
             bool sort = false,
             char[] delimiters = null
         )
@@ -1506,12 +1506,12 @@ namespace MuPDF.NET
                 clip = page.CropBox;
             if (clip != null)
                 cb = null;
-            else if (page is MuPDFPage)
+            else if (page is Page)
                 cb = page.CropBox;
             if (clip == null)
                 clip = page.CropBox;
 
-            MuPDFTextPage tp = stPage;
+            TextPage tp = stPage;
             if (tp == null)
                 tp = page.GetTextPage(clip, flags);
             else if (tp.Parent != page)
@@ -1720,9 +1720,9 @@ namespace MuPDF.NET
                 root.pdf_dict_put_name(new PdfObj("PageMode"), "UseAttachments");
         }
 
-        public static string EnsureIdentity(MuPDFDocument pdf)
+        public static string EnsureIdentity(Document pdf)
         {
-            PdfObj id = MuPDFDocument
+            PdfObj id = Document
                 .AsPdfDocument(pdf)
                 .pdf_trailer()
                 .pdf_dict_get(new PdfObj("ID"));
@@ -1735,7 +1735,7 @@ namespace MuPDF.NET
                 Marshal.FreeHGlobal(p_block);
 
                 id = mupdf.mupdf.pdf_dict_put_array(
-                    MuPDFDocument.AsPdfDocument(pdf).pdf_trailer(),
+                    Document.AsPdfDocument(pdf).pdf_trailer(),
                     new PdfObj("ID"),
                     2
                 );
@@ -1748,13 +1748,13 @@ namespace MuPDF.NET
             return "";
         }
 
-        public static Font CheckFont(MuPDFPage page, string fontName)
+        public static FontInfo CheckFont(Page page, string fontName)
         {
             foreach (Entry f in page.GetFonts())
             {
                 if (f.RefName == fontName)
                 {
-                    return new Font()
+                    return new FontInfo()
                     {
                         Xref = f.Xref,
                         Ext = f.Ext,
@@ -1769,9 +1769,9 @@ namespace MuPDF.NET
             return null;
         }
 
-        public static Font CheckFontInfo(MuPDFDocument doc, int xref)
+        public static FontInfo CheckFontInfo(Document doc, int xref)
         {
-            foreach (Font f in doc.FontInfos)
+            foreach (FontInfo f in doc.FontInfos)
             {
                 if (xref == f.Xref)
                     return f;
@@ -2093,7 +2093,7 @@ namespace MuPDF.NET
             return rc;
         }
 
-        public static int InsertContents(MuPDFPage page, byte[] newCont, int overlay = 1)
+        public static int InsertContents(Page page, byte[] newCont, int overlay = 1)
         {
             PdfPage pdfpage = page.GetPdfPage();
             FzBuffer contbuf = Utils.BufferFromBytes(newCont);
@@ -2139,11 +2139,11 @@ namespace MuPDF.NET
         }
 
         public static (string, string, string, float, float) GetFontProperties(
-            MuPDFDocument doc,
+            Document doc,
             int xref
         )
         {
-            Font res = doc.ExtractFont(xref);
+            FontInfo res = doc.ExtractFont(xref);
             float asc = 0.8f;
             float dsc = -0.2f;
 
@@ -2176,7 +2176,7 @@ namespace MuPDF.NET
             {
                 try
                 {
-                    MuPDFFont font = new MuPDFFont(res.Name);
+                    Font font = new Font(res.Name);
                     asc = font.Ascender;
                     dsc = font.Descender;
                 }
@@ -2269,7 +2269,7 @@ namespace MuPDF.NET
             return null;
         }
 
-        public static void UpdateFontInfo(MuPDFDocument doc, Font info)
+        public static void UpdateFontInfo(Document doc, FontInfo info)
         {
             int xref = info.Xref;
             bool found = false;
@@ -2290,14 +2290,14 @@ namespace MuPDF.NET
         }
 
         public static List<(int, double)> GetCharWidths(
-            MuPDFDocument doc,
+            Document doc,
             int xref,
             int limit = 256,
             int idx = 0,
-            Font fontDict = null
+            FontInfo fontDict = null
         )
         {
-            Font fontStruct = Utils.CheckFontInfo(doc, xref);
+            FontInfo fontStruct = Utils.CheckFontInfo(doc, xref);
             string name = "";
             string ext = "";
             string stype = "";
@@ -2393,7 +2393,7 @@ namespace MuPDF.NET
             return glyphs;
         }
 
-        public static Font InsertFont(
+        public static FontInfo InsertFont(
             PdfDocument pdf,
             string bfName,
             string fontFile,
@@ -2411,7 +2411,7 @@ namespace MuPDF.NET
             SWIGTYPE_p_unsigned_char data = null;
             int ixref = 0;
             int simple = 0;
-            Font value = null;
+            FontInfo value = null;
             string name = null;
             string subt = null;
             string exto = null;
@@ -2470,7 +2470,7 @@ namespace MuPDF.NET
             float asc = font.fz_font_ascender();
             float dsc = font.fz_font_descender();
 
-            value = new Font()
+            value = new FontInfo()
             {
                 Xref = ixref,
                 Name = name,
@@ -2629,7 +2629,7 @@ namespace MuPDF.NET
         }
 
         public static void Recurse(
-            MuPDFDocument doc,
+            Document doc,
             Outline olItem,
             List<dynamic> liste,
             int lvl,
@@ -2667,19 +2667,19 @@ namespace MuPDF.NET
             }
         }
 
-        public static Link GetLinkDict(MuPDFLink ln, MuPDFDocument doc = null)
+        public static LinkInfo GetLinkDict(Link ln, Document doc = null)
         {
             return Utils._GetLinkDict(ln.Dest, ln.Rect, doc);
         }
 
-        public static Link GetLinkDict(Outline ol, MuPDFDocument doc = null)
+        public static LinkInfo GetLinkDict(Outline ol, Document doc = null)
         {
             return Utils._GetLinkDict(ol.Dest, null, doc);
         }
 
-        public static Link _GetLinkDict(MuPDFLinkDest dest, Rect r, MuPDFDocument document)
+        public static LinkInfo _GetLinkDict(LinkDest dest, Rect r, Document document)
         {
-            Link nl = new Link();
+            LinkInfo nl = new LinkInfo();
             nl.Kind = dest.Kind;
             nl.Xref = 0;
             nl.From = new Rect(r);
@@ -2896,7 +2896,7 @@ namespace MuPDF.NET
             return (r, g, b);
         }
 
-        public static string GetLinkText(MuPDFPage page, Link link)
+        public static string GetLinkText(Page page, LinkInfo link)
         {
             Matrix ctm = page.TransformationMatrix;
             Matrix ictm = ~ctm;
@@ -3005,7 +3005,7 @@ namespace MuPDF.NET
             return Utils.ANNOT_ID_STEM;
         }
 
-        public static PdfAnnot GetAnnotByName(MuPDFPage page, string name)
+        public static PdfAnnot GetAnnotByName(Page page, string name)
         {
             if (name == null)
                 return null;
@@ -3028,7 +3028,7 @@ namespace MuPDF.NET
             return annot;
         }
 
-        public static PdfAnnot GetAnnotByXref(MuPDFPage page, int xref)
+        public static PdfAnnot GetAnnotByXref(Page page, int xref)
         {
             bool found = false;
             PdfAnnot annot = page.GetPdfPage().pdf_first_annot();
@@ -3077,18 +3077,18 @@ namespace MuPDF.NET
         }
 
         public static void PageMerge(
-            MuPDFDocument docDes,
-            MuPDFDocument docSrc,
+            Document docDes,
+            Document docSrc,
             int pageFrom,
             int pageTo,
             int rotate,
             bool links,
             bool copyAnnots,
-            MuPDFGraftMap graftmap
+            GraftMap graftmap
         )
         {
-            PdfDocument pdfDes = MuPDFDocument.AsPdfDocument(docDes);
-            PdfDocument pdfSrc = MuPDFDocument.AsPdfDocument(docSrc);
+            PdfDocument pdfDes = Document.AsPdfDocument(docDes);
+            PdfDocument pdfSrc = Document.AsPdfDocument(docSrc);
             List<PdfObj> knownPageObjs = new List<PdfObj>()
             {
                 new PdfObj("Contents"),
@@ -3158,8 +3158,8 @@ namespace MuPDF.NET
         }
 
         public static void MergeRange(
-            MuPDFDocument docDes,
-            MuPDFDocument docSrc,
+            Document docDes,
+            Document docSrc,
             int spage,
             int epage,
             int apage,
@@ -3167,7 +3167,7 @@ namespace MuPDF.NET
             bool links,
             bool annots,
             int showProgress,
-            MuPDFGraftMap graftmap
+            GraftMap graftmap
         )
         {
             int afterPage = apage;
@@ -3225,14 +3225,14 @@ namespace MuPDF.NET
         }
 
         public static void DoLinks(
-            MuPDFDocument doc1,
-            MuPDFDocument doc2,
+            Document doc1,
+            Document doc2,
             int fromPage = -1,
             int toPage = -1,
             int startAt = -1
         )
         {
-            string CreateAnnot(Link link, List<int> xrefDest, List<int> pnoSrc, Matrix ctm)
+            string CreateAnnot(LinkInfo link, List<int> xrefDest, List<int> pnoSrc, Matrix ctm)
             {
                 Rect r = link.From * ctm;
                 string rStr = string.Format("{0} {1} {2} {3}", r[0], r[1], r[2], r[3]);
@@ -3328,8 +3328,8 @@ namespace MuPDF.NET
             // create the links for each copied page in destination PDF
             for (int i = 0; i < xrefSrc.Count; i++)
             {
-                MuPDFPage pageSrc = doc2[pnoSrc[i]];
-                List<Link> links = pageSrc.GetLinks();
+                Page pageSrc = doc2[pnoSrc[i]];
+                List<LinkInfo> links = pageSrc.GetLinks();
                 if (links.Count == 0)
                 {
                     pageSrc = null;
@@ -3337,10 +3337,10 @@ namespace MuPDF.NET
                 }
 
                 Matrix ctm = ~pageSrc.TransformationMatrix;
-                MuPDFPage pageDst = doc1[pnoDst[i]];
+                Page pageDst = doc1[pnoDst[i]];
                 List<string> linkTab = new List<string>();
 
-                foreach (Link l in links)
+                foreach (LinkInfo l in links)
                 {
                     if (l.Kind == LinkType.LINK_GOTO && pnoSrc.Contains(l.Page))
                         continue;
@@ -3552,7 +3552,7 @@ namespace MuPDF.NET
 
         public static FzMatrix ShowStringCS(
             FzText text,
-            MuPDFFont userFont,
+            Font userFont,
             FzMatrix trm,
             string s,
             int wmode,
@@ -3721,7 +3721,7 @@ namespace MuPDF.NET
             return xrefs;
         }
 
-        public static void GetPageLabels(List<Label> list, PdfObj nums)
+        public static void GetPageLabels(List<(int, string)> list, PdfObj nums)
         {
             int n = nums.pdf_array_len();
             for (int i = 0; i < n; i += 2)
@@ -3733,7 +3733,7 @@ namespace MuPDF.NET
                 byte[] c = res.fz_buffer_extract();
 
                 string cStr = Encoding.UTF8.GetString(c);
-                list.Add(new Label() { PageNumber = pno, LabelText = cStr });
+                list.Add((pno, cStr));
             }
         }
 
@@ -3799,8 +3799,8 @@ namespace MuPDF.NET
 
         public static PdfPage AsPdfPage(dynamic page)
         {
-            if (page is MuPDFPage)
-                return (page as MuPDFPage).GetPdfPage();
+            if (page is Page)
+                return (page as Page).GetPdfPage();
             if (page is PdfPage)
                 return page;
             else if (page is FzPage)
@@ -3901,7 +3901,7 @@ namespace MuPDF.NET
             PdfDocument pdfOut,
             PdfPage pdfPage,
             int xref,
-            MuPDFGraftMap gmap
+            GraftMap gmap
         )
         {
             PdfObj xobj,
@@ -4086,37 +4086,39 @@ namespace MuPDF.NET
             return mat;
         }
 
-        public static string GetPageLabel(int pno, List<Label> labels)
+        public static string GetPageLabel(int pno, List<(int, string)> labels)
         {
-            List<Label> items = new List<Label>();
-            foreach (Label label in labels)
+            List<(int, string)> items = new List<(int, string)>();
+            foreach ((int, string) label in labels)
             {
-                if (label.PageNumber <= pno)
+                if (label.Item1 <= pno)
                     items.Add(label);
             }
 
-            Rule rule = Utils.RuleDict(items.Last());
+            Label rule = Utils.RuleDict(items.Last());
             string prefix = rule.Prefix;
             string style = rule.Style;
-            int pageNumber = pno - rule.StartPage + rule.FirstPageNum;
+            int delta = (style == "a" || style == "A") ? -1 : 0;
+            int pageNumber = pno - rule.StartPage + rule.FirstPageNum + delta;
             return Utils.ConstructLabel(style, prefix, pageNumber);
         }
 
-        public static Rule RuleDict(Label item)
+        public static Label RuleDict((int, string) item)
         {
-            string rule = item.LabelText;
+            string rule = item.Item2;
             string[] rules = rule.Substring(2, rule.Length - 2 - 2).Split("/").Skip(1).ToArray();
-            Rule ret = new Rule()
+            Label ret = new Label()
             {
-                StartPage = item.PageNumber,
+                StartPage = item.Item1,
                 Prefix = "",
                 FirstPageNum = 1
             };
             bool skip = false;
-            int i = 0;
+            int i = -1;
 
             foreach (string s in rules)
             {
+                i++;
                 if (skip)
                 {
                     skip = false;
@@ -4138,7 +4140,7 @@ namespace MuPDF.NET
                 {
                     int x = Convert.ToInt32(s.Substring(2));
                     ret.FirstPageNum = x;
-                }
+                };
             }
             return ret;
         }
@@ -4173,8 +4175,8 @@ namespace MuPDF.NET
             string ret = "";
             for (int j = n - 1; j >= 0; j--)
             {
-                int g = a % Convert.ToInt32(Math.Pow(26, n));
-                int f = a / Convert.ToInt32(Math.Pow(26, n));
+                int g = a % Convert.ToInt32(Math.Pow(26, j));
+                int f = a / Convert.ToInt32(Math.Pow(26, j));
                 ret += asciiUppercase[f];
             }
             return ret;
@@ -4214,9 +4216,9 @@ namespace MuPDF.NET
             return string.Concat(RomanNum(num).ToArray());
         }
 
-        public static string GetTextbox(MuPDFPage page, Rect rect, MuPDFTextPage textPage = null)
+        public static string GetTextbox(Page page, Rect rect, TextPage textPage = null)
         {
-            MuPDFTextPage tp = textPage;
+            TextPage tp = textPage;
             if (tp == null)
                 tp = page.GetTextPage();
             else if (tp.Parent != page)
@@ -4228,14 +4230,14 @@ namespace MuPDF.NET
         }
 
         public static string GetTextSelection(
-            MuPDFPage page,
+            Page page,
             Point p1,
             Point p2,
             Rect clip = null,
-            MuPDFTextPage textPage = null
+            TextPage textPage = null
         )
         {
-            MuPDFTextPage tp = textPage;
+            TextPage tp = textPage;
             if (tp == null)
                 tp = page.GetTextPage(clip, flags: (int)TextFlags.TEXT_DEHYPHENATE);
             else if (tp.Parent != page)
@@ -4246,7 +4248,7 @@ namespace MuPDF.NET
             return ret;
         }
 
-        public static void UpdateLink(MuPDFPage page, Link link)
+        public static void UpdateLink(Page page, LinkInfo link)
         {
             string annot = GetLinkText(page, link);
             if (annot == "")
@@ -4256,9 +4258,9 @@ namespace MuPDF.NET
         }
 
         public static void WriteText(
-            MuPDFPage page,
+            Page page,
             Rect rect = null,
-            MuPDFTextWriter[] writers = null,
+            TextWriter[] writers = null,
             bool overlay = true,
             float[] color = null,
             float opacity = 0,
@@ -4276,9 +4278,9 @@ namespace MuPDF.NET
                 return;
             }
             Rect clip = writers[0].TextRect;
-            MuPDFDocument textDoc = new MuPDFDocument();
-            MuPDFPage tpage = textDoc.NewPage(width: page.Rect.Width, height: page.Rect.Height);
-            foreach (MuPDFTextWriter writer in writers)
+            Document textDoc = new Document();
+            Page tpage = textDoc.NewPage(width: page.Rect.Width, height: page.Rect.Height);
+            foreach (TextWriter writer in writers)
             {
                 clip = clip | writer.TextRect;
                 writer.WriteText(tpage, opacity: opacity, color: color);
@@ -4367,11 +4369,11 @@ namespace MuPDF.NET
             return (maxAlp, maxFonts);
         }
 
-        public static void RepairMonoFont(MuPDFPage page, MuPDFFont font)
+        public static void RepairMonoFont(Page page, Font font)
         {
             if (font.Flags["mono"] == 0)
                 return;
-            MuPDFDocument doc = page.Parent;
+            Document doc = page.Parent;
             List<Entry> fonts = page.GetFonts();
             List<int> xrefs = new List<int>();
             foreach (Entry f in fonts)
@@ -4394,9 +4396,9 @@ namespace MuPDF.NET
             }
         }
 
-        public static bool SetFontWidth(MuPDFDocument doc, int xref, int width)
+        public static bool SetFontWidth(Document doc, int xref, int width)
         {
-            PdfDocument pdf = MuPDFDocument.AsPdfDocument(doc);
+            PdfDocument pdf = Document.AsPdfDocument(doc);
             if (pdf == null)
                 return false;
 
@@ -4418,7 +4420,7 @@ namespace MuPDF.NET
             return true;
         }
 
-        public static int GetOC(MuPDFDocument doc, int xref)
+        public static int GetOC(Document doc, int xref)
         {
             if (doc.IsClosed || doc.IsEncrypted)
                 throw new Exception("document close or encrypted");
@@ -4431,7 +4433,7 @@ namespace MuPDF.NET
             return Convert.ToInt32(oc.Replace("0 R", ""));
         }
 
-        public static OCMD GetOCMD(MuPDFDocument doc, int xref)
+        public static OCMD GetOCMD(Document doc, int xref)
         {
             if (!INRANGE(xref, 0, doc.GetXrefLength() - 1))
                 throw new Exception("bad xref");
@@ -4569,7 +4571,7 @@ namespace MuPDF.NET
         /// <param name="onlyOne">(bool) stop searching after first hit</param>
         /// <returns></returns>
         public static List<int> GetPageNumbers(
-            MuPDFDocument doc,
+            Document doc,
             string label,
             bool onlyOne = false
         )
@@ -4577,7 +4579,7 @@ namespace MuPDF.NET
             List<int> numbers = new List<int>();
             if (string.IsNullOrEmpty(label))
                 return numbers;
-            List<Label> labels = doc.GetPageLabels();
+            List<(int, string)> labels = doc._getPageLabels();
             if (labels.Count == 0)
                 return numbers;
             for (int i = 0; i < doc.PageCount; i++)
@@ -4606,7 +4608,7 @@ namespace MuPDF.NET
         /// <param name="annots">also render annotations</param>
         /// <returns></returns>
         public static Pixmap GetPagePixmap(
-            MuPDFDocument doc,
+            Document doc,
             int pno,
             IdentityMatrix matrix = null,
             int dpi = 0,
@@ -4638,7 +4640,7 @@ namespace MuPDF.NET
                 return "()";
             string MakeUtf16be(string s)
             {
-                byte[] r = MuPDFAnnot.MergeByte(
+                byte[] r = Annot.MergeByte(
                     new byte[] { 254, 255 },
                     Encoding.BigEndianUnicode.GetBytes(s)
                 );
@@ -4680,7 +4682,7 @@ namespace MuPDF.NET
             return "(" + r + ")";
         }
 
-        public static byte[] GetAllContents(MuPDFPage page)
+        public static byte[] GetAllContents(Page page)
         {
             FzBuffer res = Utils.ReadContents(page.GetPdfPage().obj());
             return Utils.BinFromBuffer(res);
@@ -4743,7 +4745,7 @@ namespace MuPDF.NET
         /// <param name="xref"></param>
         /// <param name="dDict"></param>
         /// <returns></returns>
-        public static string GetDestString(int xref, Link dDict)
+        public static string GetDestString(int xref, LinkInfo dDict)
         {
             if (dDict == null)
                 return "";
@@ -4837,7 +4839,7 @@ namespace MuPDF.NET
                 co.pdf_array_push(pdf.pdf_new_indirect(xref, 0));
         }
 
-        public static void SaveWidget(PdfAnnot annot, MuPDFWidget widget)
+        public static void SaveWidget(PdfAnnot annot, Widget widget)
         {
             PdfPage page = annot.pdf_annot_page();
             PdfObj annotObj = annot.pdf_annot_obj();
@@ -5168,7 +5170,7 @@ namespace MuPDF.NET
             return ret;
         }
 
-        public static void FillWidget(MuPDFAnnot annot, MuPDFWidget widget)
+        public static void FillWidget(Annot annot, Widget widget)
         {
             Utils.GetWidgetProperties(annot, widget);
         }
@@ -5209,7 +5211,7 @@ namespace MuPDF.NET
             return annot;
         }
 
-        public static Matrix GetRotateMatrix(MuPDFPage page)
+        public static Matrix GetRotateMatrix(Page page)
         {
             PdfPage pdfpage = page.GetPdfPage();
             if (pdfpage.m_internal == null)

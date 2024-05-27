@@ -8,7 +8,7 @@
 
         public int Page { get; set; }
 
-        public Link Link { get; set; } = null;
+        public LinkInfo Link { get; set; } = null;
 
         public override string ToString()
         {

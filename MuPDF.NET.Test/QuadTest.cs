@@ -12,8 +12,8 @@ namespace MuPDF.NET.Test
         public void QuadCalc()
         {
             string text = " angle 327";
-            MuPDFDocument doc = new MuPDFDocument("../../../resources/quad-calc-0.pdf");
-            MuPDFPage page = doc[0];
+            Document doc = new Document("../../../resources/quad-calc-0.pdf");
+            Page page = doc[0];
 
             Block block = (page.GetText("dict", flags: 0) as PageInfo).Blocks[0];
             Line line = block.Lines[0];

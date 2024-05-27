@@ -15,8 +15,8 @@ namespace MuPDF.NET.Test
 
             Rect box = Utils.PageRect("letter");
             Rect where = box + new Rect(36, 36, -36, -36);
-            MuPDFStory story = new MuPDFStory(html: html);
-            MuPDFDocumentWriter writer = new MuPDFDocumentWriter("output.pdf");
+            Story story = new Story(html: html);
+            DocumentWriter writer = new DocumentWriter("output.pdf");
 
             int pno = 0;
             bool more = true;
@@ -24,7 +24,7 @@ namespace MuPDF.NET.Test
             while (more)
             {
                 Rect filled = new Rect();
-                MuPDFDeviceWrapper dev = writer.BeginPage(box);
+                DeviceWrapper dev = writer.BeginPage(box);
                 (more, filled) = story.Place(where);
                 story.ElementPositions(null, new Position() { PageNum = pno });
                 story.Draw(dev);
@@ -37,21 +37,21 @@ namespace MuPDF.NET.Test
         [Test]
         public void Draw1()
         {
-            MuPDFStory.RectFunction rectfunc = new MuPDFStory.RectFunction((int rectnum, Rect fill) =>
+            Story.RectFunction rectfunc = new Story.RectFunction((int rectnum, Rect fill) =>
             {
                 return (new Rect(0, 0, 200, 200), new Rect(50, 50, 100, 100), null);
             });
 
-            MuPDFDocument MakePdf(string html, string path)
+            Document MakePdf(string html, string path)
             {
-                MuPDFStory story = new MuPDFStory(html: html);
-                MuPDFDocument doc = story.WriteWithLinks(rectfunc);
+                Story story = new Story(html: html);
+                Document doc = story.WriteWithLinks(rectfunc);
                 return doc;
             }
 
-            MuPDFDocument doc1 = MakePdf("<p>Before</p><p style=\"page-break-before: always;\"></p><p>After</p>", "After.pdf");
+            Document doc1 = MakePdf("<p>Before</p><p style=\"page-break-before: always;\"></p><p>After</p>", "After.pdf");
 
-            MuPDFDocument doc2 = MakePdf("<p>before</p>", "before.pdf");
+            Document doc2 = MakePdf("<p>before</p>", "before.pdf");
 
             Assert.That(doc1.PageCount, Is.EqualTo(2));
             Assert.That(doc2.PageCount, Is.EqualTo(1));

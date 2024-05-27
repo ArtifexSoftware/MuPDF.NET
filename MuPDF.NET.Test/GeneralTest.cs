@@ -12,15 +12,15 @@ namespace MuPDF.NET.Test
         [Test]
         public void Test_Opacity()
         {
-            MuPDFDocument doc = new MuPDFDocument();
-            MuPDFPage page = doc.NewPage();
+            Document doc = new Document();
+            Page page = doc.NewPage();
 
-            MuPDFAnnot annot1 = page.AddCircleAnnot(new Rect(50, 50, 100, 100));
+            Annot annot1 = page.AddCircleAnnot(new Rect(50, 50, 100, 100));
             annot1.SetColors(fill: new float[] { 1, 0, 0 }, stroke: new float[] { 1, 0, 0 });
             annot1.SetOpacity(2 / 3.0f);
             annot1.Update(blendMode: "Multiply");
 
-            MuPDFAnnot annot2 = page.AddCircleAnnot(new Rect(75, 75, 125, 125));
+            Annot annot2 = page.AddCircleAnnot(new Rect(75, 75, 125, 125));
             annot2.SetColors(fill: new float[] { 0, 0, 1 }, stroke: new float[] { 0, 0, 1 });
             annot2.SetOpacity(1 / 3.0f);
             annot2.Update(blendMode: "Multiply");
@@ -31,8 +31,8 @@ namespace MuPDF.NET.Test
         [Test]
         public void TestWrapContents()
         {
-            MuPDFDocument doc = new MuPDFDocument("../../../resources/toc.pdf");
-            MuPDFPage page = doc[0];
+            Document doc = new Document("../../../resources/toc.pdf");
+            Page page = doc[0];
             page.WrapContents();
             int xref = page.GetContents()[0];
             byte[] cont = page.ReadContents();
@@ -46,8 +46,8 @@ namespace MuPDF.NET.Test
         [Test]
         public void TestPageCleanContents()
         {
-            MuPDFDocument doc = new MuPDFDocument();
-            MuPDFPage page = doc.NewPage();
+            Document doc = new Document();
+            Page page = doc.NewPage();
             page.DrawRect(new Rect(10, 10, 20, 20));
             page.DrawRect(new Rect(20, 20, 30, 30));
             Assert.That(page.GetContents().Count, Is.EqualTo(2));
@@ -64,8 +64,8 @@ namespace MuPDF.NET.Test
             string[] files = { "test_2645_1.pdf", "test_2645_2.pdf", "test_2645_3.pdf" };
             foreach (string name in files)
             {
-                MuPDFDocument doc = new MuPDFDocument("../../../resources/" + name);
-                MuPDFPage page = doc[0];
+                Document doc = new Document("../../../resources/" + name);
+                Page page = doc[0];
                 float size0 = page.GetTextTrace()[0].Size;
                 float size1 = page.GetText("dict", flags: (int)TextFlagsExtension.TEXTFLAGS_TEXT).Blocks[0].Lines[0].Spans[0].Size;
 
@@ -76,8 +76,8 @@ namespace MuPDF.NET.Test
         [Test]
         public void TestFontSize()
         {
-            MuPDFDocument doc = new MuPDFDocument();
-            MuPDFPage page = doc.NewPage();
+            Document doc = new Document();
+            Page page = doc.NewPage();
             Point point = new Point(100, 300);
             float fontSize = 11f;
             string text = "Hello";
@@ -108,8 +108,8 @@ namespace MuPDF.NET.Test
         [Test]
         public void Reload()
         {
-            MuPDFDocument doc = new MuPDFDocument("../../../resources/test_2596.pdf");
-            MuPDFPage page = doc[0];
+            Document doc = new Document("../../../resources/test_2596.pdf");
+            Page page = doc[0];
             Pixmap pix0 = page.GetPixmap();
             doc.Write(garbage: true);
 
@@ -121,8 +121,8 @@ namespace MuPDF.NET.Test
         [Test]
         public void Cropbox()
         {
-            MuPDFDocument doc = new MuPDFDocument();
-            MuPDFPage page = doc.NewPage();
+            Document doc = new Document();
+            Page page = doc.NewPage();
 
             doc.SetKeyXRef(page.Xref, "MediaBox", "[-30 -20 595 842]");
             Assert.That(page.CropBox.EqualTo(new Rect(-30, 0, 595, 862)));
@@ -149,8 +149,8 @@ namespace MuPDF.NET.Test
         [Test]
         public void Insert()
         {
-            MuPDFDocument doc = new MuPDFDocument();
-            MuPDFPage page = doc.NewPage();
+            Document doc = new Document();
+            Page page = doc.NewPage();
 
             Rect r1 = new Rect(50, 50, 100, 100);
             Rect r2 = new Rect(50, 150, 200, 400);
@@ -166,12 +166,12 @@ namespace MuPDF.NET.Test
         [Test]
         public void Compress()
         {
-            MuPDFDocument doc = new MuPDFDocument("../../../resources/2.pdf");
-            MuPDFDocument npdf = new MuPDFDocument();
+            Document doc = new Document("../../../resources/2.pdf");
+            Document npdf = new Document();
             for (int i = 0; i < doc.PageCount; i++)
             {
                 Pixmap pixmap = doc[i].GetPixmap(colorSpace: "RGB", dpi: 72, annots: false);
-                MuPDFPage pageNew = npdf.NewPage();
+                Page pageNew = npdf.NewPage();
                 pageNew.InsertImage(rect: pageNew.GetBound(), pixmap: pixmap);
             }
             npdf.Save("2.pdf.compress.pdf", garbage: 3, deflate: 1, deflateImages: 1, deflateFonts: 1, pretty: 1);
@@ -180,18 +180,18 @@ namespace MuPDF.NET.Test
         [Test]
         public void PageLinksGenerator()
         {
-            MuPDFDocument doc = new MuPDFDocument("../../../resources/2.pdf");
-            MuPDFPage page = doc[-1];
+            Document doc = new Document("../../../resources/2.pdf");
+            Page page = doc[-1];
 
-            List<Link> links = page.GetLinks();
+            List<LinkInfo> links = page.GetLinks();
             Assert.That(links.Count, Is.EqualTo(7));
         }
 
         [Test]
         public void Deletion()
         {
-            MuPDFDocument doc = new MuPDFDocument();
-            Link link = new Link()
+            Document doc = new Document();
+            LinkInfo link = new LinkInfo()
             {
                 From = new Rect(100, 100, 120, 120),
                 Kind = LinkType.LINK_GOTO,
@@ -203,7 +203,7 @@ namespace MuPDF.NET.Test
 
             for (int i = 0; i < 100; i ++)
             {
-                MuPDFPage page = doc.NewPage();
+                Page page = doc.NewPage();
                 page.InsertText(new Point(100, 100), $"{i}", fontFile: "../../../resources/kenpixel.ttf");
                 if (i > 5)
                     page.InsertLink(link);
@@ -211,6 +211,180 @@ namespace MuPDF.NET.Test
             }
             doc.SetToc(tocs);
             Assert.That(doc.HasLinks());
+        }
+
+        [Test]
+        public void DeletePages()
+        {
+            Document doc = new Document("../../../resources/cython.pdf");
+            int[] pages = { 3, 3, 3, 2, 3, 1, 0, 0 };
+            doc.Select(new List<int>(pages));
+            Assert.That(doc.PageCount, Is.EqualTo(8));
+        }
+
+        [Test]
+        public void SetLabels()
+        {
+            Document doc = new Document();
+            for (int i = 0; i < 10; i++)
+                doc.NewPage();
+
+            List<Label> labels = new List<Label>();
+            labels.Add(new Label() { StartPage = 0, Prefix = "A-", Style = "D", FirstPageNum = 1 });
+            labels.Add(new Label() { StartPage = 4, Prefix = "", Style = "R", FirstPageNum = 1 });
+
+            doc.SetPageLabels(labels);
+            List<string> pageLabels = new List<string>();
+            for (int i = 0; i < doc.PageCount; i ++)
+            {
+                string l = doc[i].GetLabel();
+                pageLabels.Add(l);
+            }
+
+            string[] answers = { "A-1", "A-2", "A-3", "A-4", "I", "II", "III", "IV", "V", "VI" };
+            Assert.That(pageLabels.SequenceEqual(answers));
+        }
+
+        [Test]
+        public void SetLabelA()
+        {
+            Document doc = new Document();
+            for (int i = 0; i < 10; i++)
+                doc.NewPage();
+
+            List<Label> labels = new List<Label>();
+            labels.Add(new Label() { StartPage = 0, Prefix = "", Style = "a", FirstPageNum = 1 });
+            labels.Add(new Label() { StartPage = 5, Prefix = "", Style = "A", FirstPageNum = 1 });
+
+            doc.SetPageLabels(labels);
+            byte[] pdfdata = doc.Write();
+            doc.Close();
+
+            doc = new Document("pdf", pdfdata);
+            string[] answer = { "a", "b", "c", "d", "e", "A", "B", "C", "D", "E" };
+
+            List<string> pageLabels = new List<string>();
+            for (int i = 0; i < doc.PageCount; i++)
+            {
+                string l = doc[i].GetLabel();
+                pageLabels.Add(l);
+            }
+            Assert.That(pageLabels.SequenceEqual(answer));
+        }
+
+        [Test]
+        public void Search1()
+        {
+            Document doc = new Document("../../../resources/2.pdf");
+            Page page = doc[0];
+            string needle = "mupdf";
+            List<Quad> qlist = page.SearchFor(needle);
+            Assert.That(qlist.Count, Is.Not.Zero);
+            foreach (Quad q in qlist)
+            {
+                Assert.That(page.GetTextbox(q.Rect).ToLower(), Is.Not.Null);
+            }
+        }
+
+        [Test]
+        public void Encryption()
+        {
+            string text = "some secret information";
+            int perm = (int)(mupdf.mupdf.PDF_PERM_ACCESSIBILITY
+                | mupdf.mupdf.PDF_PERM_PRINT
+                | mupdf.mupdf.PDF_PERM_COPY
+                | mupdf.mupdf.PDF_PERM_ANNOTATE);
+            string ownerPass = "owner";
+            string userPass = "user";
+            int encryptMeth = mupdf.mupdf.PDF_ENCRYPT_AES_256;
+
+            Document doc = new Document();
+            Page page = doc.NewPage();
+            page.InsertText(new Point(50, 72), text, fontFile: "../../../resources/kenpixel.ttf");
+            byte[] tobytes = doc.Write(
+                encryption: encryptMeth,
+                ownerPW: ownerPass,
+                userPW: userPass,
+                permissions: perm);
+            doc.Close();
+            doc = new Document("pdf", tobytes);
+            Assert.That(doc.NeedsPass);
+            Assert.That(doc.IsEncrypted);
+            int rc = doc.Authenticate("owner");
+            Assert.That(rc, Is.EqualTo(4));
+            Assert.That(doc.IsEncrypted, Is.False);
+            doc.Close();
+            doc = new Document("pdf", tobytes);
+            rc = doc.Authenticate("user");
+            Assert.That(rc, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void HasLinks()
+        {
+            Document doc = new Document("../../../resources/toc.pdf");
+            Assert.That(doc.HasLinks(), Is.False);
+        }
+
+        [Test]
+        public void IsRepaired()
+        {
+            Document doc = new Document("../../../resources/toc.pdf");
+            Assert.That(doc.IsRepaired, Is.False);
+        }
+
+        [Test]
+        public void RemoveRotation()
+        {
+            Document doc = new Document("../../../resources/test-2812.pdf");
+            for (int i = 1; i < doc.PageCount; i ++) // because of first page's rotation is zero
+            {
+                Assert.That(doc[i].Rotation, Is.Not.Zero);
+                doc[i].RemoveRotation();
+                Assert.That(doc[i].Rotation, Is.Zero);
+            }
+        }
+
+        [Test]
+        public void CompareWords()
+        {
+            Document doc = new Document("../../../resources/test-707673.pdf");
+            Page page = doc[0];
+            List<WordBlock> words0 = page.GetText("words");
+            page.CleanContetns();
+            List<WordBlock> words1 = page.GetText("words");
+            Assert.That(words0.Count, Is.EqualTo(words1.Count));
+        }
+
+        [Test]
+        public void Rotation1()
+        {
+            Document doc = new Document();
+            Page page = doc.NewPage();
+            page.SetRotation(270);
+            Assert.That(doc.GetKeyXref(page.Xref, "Rotate").Item1, Is.EqualTo("int"));
+            Assert.That(doc.GetKeyXref(page.Xref, "Rotate").Item2, Is.EqualTo("270"));
+        }
+
+        [Test]
+        public void Rotation2()
+        {
+            Document doc = new Document();
+            Page page = doc.NewPage();
+            doc.SetKeyXRef(page.Xref, "Rotate", "270");
+            Assert.That(page.Rotation, Is.EqualTo(270));
+        }
+
+        [Test]
+        public void ValidName()
+        {
+            Document doc = new Document();
+            Page page = doc.NewPage();
+            doc.SetKeyXRef(page.Xref, "Rotate", "90");
+            Assert.That(page.Rotation, Is.EqualTo(90));
+
+            doc.SetKeyXRef(page.Xref, "my_rotate/something", "90");
+            Assert.That(doc.GetKeyXref(page.Xref, "my_rotate/something").Item2, Is.EqualTo("90"));
         }
     }
 }
