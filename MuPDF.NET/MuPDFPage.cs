@@ -107,7 +107,7 @@ namespace MuPDF.NET
         /// <summary>
         /// Contains the first Link of a page (or None).
         /// </summary>
-        public MuPDFLink FristLink
+        public Link FristLink
         {
             get { return LoadLinks(); }
         }
@@ -292,7 +292,7 @@ namespace MuPDF.NET
         /// <summary>
         /// First link on page
         /// </summary>
-        public MuPDFLink FirstLink
+        public Link FirstLink
         {
             get { return LoadLinks(); }
         }
@@ -1761,7 +1761,7 @@ namespace MuPDF.NET
         /// <param name="link">the link to be inserted.</param>
         /// <param name="mark"></param>
         /// <exception cref="Exception"></exception>
-        public void InsertLink(Link link, bool mark = true)
+        public void InsertLink(LinkInfo link, bool mark = true)
         {
             string annot = Utils.GetLinkText(this, link);
             if (string.IsNullOrEmpty(annot))
@@ -2168,10 +2168,10 @@ namespace MuPDF.NET
             string mycss = "body {margin:1px;}" + css;
 
             // either make a story or accept a given one
-            MuPDFStory story = null;
+            Story story = null;
             if (text is string)
-                story = new MuPDFStory(text, mycss, archive: archive);
-            else if (text is MuPDFStory)
+                story = new Story(text, mycss, archive: archive);
+            else if (text is Story)
                 story = text;
             else
                 throw new Exception($"{text} must be a string or a Story");
@@ -2208,9 +2208,9 @@ namespace MuPDF.NET
                 * new Matrix(1, 0, 0, 1, mp2.X, mp2.Y)
             );
 
-            foreach (Link link in doc[0].GetLinks())
+            foreach (LinkInfo link in doc[0].GetLinks())
             {
-                Link t = link;
+                LinkInfo t = link;
                 t.From *= mat;
                 InsertLink(t);
             }
@@ -2221,13 +2221,13 @@ namespace MuPDF.NET
         /// Retrieves all links of a page.
         /// </summary>
         /// <returns>Retrieves all links of a page.</returns>
-        public List<Link> GetLinks()
+        public List<LinkInfo> GetLinks()
         {
-            MuPDFLink ln = FirstLink;
-            List<Link> links = new List<Link>();
+            Link ln = FirstLink;
+            List<LinkInfo> links = new List<LinkInfo>();
             while (ln != null)
             {
-                Link nl = Utils.GetLinkDict(ln, Parent);
+                LinkInfo nl = Utils.GetLinkDict(ln, Parent);
                 links.Add(nl);
                 ln = ln.Next;
             }
@@ -2374,10 +2374,10 @@ namespace MuPDF.NET
             if (doc.GraftID == isrc)
                 throw new Exception("source document must not equal target");
 
-            MuPDFGraftMap gmap = doc.GraftMaps.GetValueOrDefault(isrc, null);
+            GraftMap gmap = doc.GraftMaps.GetValueOrDefault(isrc, null);
             if (gmap == null)
             {
-                gmap = new MuPDFGraftMap(doc);
+                gmap = new GraftMap(doc);
                 doc.GraftMaps[isrc] = gmap;
             }
 
@@ -2414,7 +2414,7 @@ namespace MuPDF.NET
             int xref = 0,
             int oc = 0,
             FzRect clip = null,
-            MuPDFGraftMap gmap = null,
+            GraftMap gmap = null,
             string imgName = null
         )
         {
@@ -2871,13 +2871,13 @@ namespace MuPDF.NET
         /// Return the first link on a page. Synonym of property first_link.
         /// </summary>
         /// <returns>Return the first link on a page. Synonym of property first_link.</returns>
-        public MuPDFLink LoadLinks()
+        public Link LoadLinks()
         {
             FzLink _val = mupdf.mupdf.fz_load_links(AsFzPage(_pdfPage));
             if (_val.m_internal == null)
                 return null;
 
-            MuPDFLink val = new MuPDFLink(_val);
+            Link val = new Link(_val);
             val.ThisOwn = true;
             val.Parent = this;
             AnnotRefs.Add(val.GetHashCode(), val);
@@ -2939,7 +2939,7 @@ namespace MuPDF.NET
         /// PDF only: Delete the specified link from the page.
         /// </summary>
         /// <param name="link">the link to be deleted.</param>
-        public void DeleteLink(Link link)
+        public void DeleteLink(LinkInfo link)
         {
             void Finished()
             {
@@ -4190,7 +4190,7 @@ namespace MuPDF.NET
         /// PDF only: Modify the specified link. The parameter must be a (modified) original item of Links
         /// </summary>
         /// <param name="link">the link to be modified.</param>
-        public void UpdateLink(Link link)
+        public void UpdateLink(LinkInfo link)
         {
             Utils.UpdateLink(this, link);
         }
@@ -4283,7 +4283,7 @@ namespace MuPDF.NET
                 r = annot.Rect * iMat;
                 annot.SetRect(r);
             }
-            foreach (Link link in GetLinks())
+            foreach (LinkInfo link in GetLinks())
             {
                 r = link.From * iMat;
                 DeleteLink(link);

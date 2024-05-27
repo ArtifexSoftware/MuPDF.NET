@@ -2,9 +2,9 @@
 
 namespace MuPDF.NET
 {
-    public class MuPDFGraftMap
+    public class GraftMap
     {
-        static MuPDFGraftMap()
+        static GraftMap()
         {
             if (!File.Exists("mupdfcsharp.dll"))
                 Utils.LoadEmbeddedDll();
@@ -19,7 +19,7 @@ namespace MuPDF.NET
             return _nativeGraftMap;
         }
 
-        public MuPDFGraftMap(Document doc)
+        public GraftMap(Document doc)
         {
             PdfDocument pdf = Document.AsPdfDocument(doc);
             PdfGraftMap map = pdf.pdf_new_graft_map();

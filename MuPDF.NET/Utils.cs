@@ -2667,19 +2667,19 @@ namespace MuPDF.NET
             }
         }
 
-        public static Link GetLinkDict(MuPDFLink ln, Document doc = null)
+        public static LinkInfo GetLinkDict(Link ln, Document doc = null)
         {
             return Utils._GetLinkDict(ln.Dest, ln.Rect, doc);
         }
 
-        public static Link GetLinkDict(Outline ol, Document doc = null)
+        public static LinkInfo GetLinkDict(Outline ol, Document doc = null)
         {
             return Utils._GetLinkDict(ol.Dest, null, doc);
         }
 
-        public static Link _GetLinkDict(MuPDFLinkDest dest, Rect r, Document document)
+        public static LinkInfo _GetLinkDict(LinkDest dest, Rect r, Document document)
         {
-            Link nl = new Link();
+            LinkInfo nl = new LinkInfo();
             nl.Kind = dest.Kind;
             nl.Xref = 0;
             nl.From = new Rect(r);
@@ -2896,7 +2896,7 @@ namespace MuPDF.NET
             return (r, g, b);
         }
 
-        public static string GetLinkText(MuPDFPage page, Link link)
+        public static string GetLinkText(MuPDFPage page, LinkInfo link)
         {
             Matrix ctm = page.TransformationMatrix;
             Matrix ictm = ~ctm;
@@ -3084,7 +3084,7 @@ namespace MuPDF.NET
             int rotate,
             bool links,
             bool copyAnnots,
-            MuPDFGraftMap graftmap
+            GraftMap graftmap
         )
         {
             PdfDocument pdfDes = Document.AsPdfDocument(docDes);
@@ -3167,7 +3167,7 @@ namespace MuPDF.NET
             bool links,
             bool annots,
             int showProgress,
-            MuPDFGraftMap graftmap
+            GraftMap graftmap
         )
         {
             int afterPage = apage;
@@ -3232,7 +3232,7 @@ namespace MuPDF.NET
             int startAt = -1
         )
         {
-            string CreateAnnot(Link link, List<int> xrefDest, List<int> pnoSrc, Matrix ctm)
+            string CreateAnnot(LinkInfo link, List<int> xrefDest, List<int> pnoSrc, Matrix ctm)
             {
                 Rect r = link.From * ctm;
                 string rStr = string.Format("{0} {1} {2} {3}", r[0], r[1], r[2], r[3]);
@@ -3329,7 +3329,7 @@ namespace MuPDF.NET
             for (int i = 0; i < xrefSrc.Count; i++)
             {
                 MuPDFPage pageSrc = doc2[pnoSrc[i]];
-                List<Link> links = pageSrc.GetLinks();
+                List<LinkInfo> links = pageSrc.GetLinks();
                 if (links.Count == 0)
                 {
                     pageSrc = null;
@@ -3340,7 +3340,7 @@ namespace MuPDF.NET
                 MuPDFPage pageDst = doc1[pnoDst[i]];
                 List<string> linkTab = new List<string>();
 
-                foreach (Link l in links)
+                foreach (LinkInfo l in links)
                 {
                     if (l.Kind == LinkType.LINK_GOTO && pnoSrc.Contains(l.Page))
                         continue;
@@ -3901,7 +3901,7 @@ namespace MuPDF.NET
             PdfDocument pdfOut,
             PdfPage pdfPage,
             int xref,
-            MuPDFGraftMap gmap
+            GraftMap gmap
         )
         {
             PdfObj xobj,
@@ -4248,7 +4248,7 @@ namespace MuPDF.NET
             return ret;
         }
 
-        public static void UpdateLink(MuPDFPage page, Link link)
+        public static void UpdateLink(MuPDFPage page, LinkInfo link)
         {
             string annot = GetLinkText(page, link);
             if (annot == "")
@@ -4745,7 +4745,7 @@ namespace MuPDF.NET
         /// <param name="xref"></param>
         /// <param name="dDict"></param>
         /// <returns></returns>
-        public static string GetDestString(int xref, Link dDict)
+        public static string GetDestString(int xref, LinkInfo dDict)
         {
             if (dDict == null)
                 return "";

@@ -29,8 +29,8 @@ namespace MuPDF.NET
 
         public List<FontInfo> FontInfos { get; set; }
 
-        public Dictionary<int, MuPDFGraftMap> GraftMaps { get; set; } =
-            new Dictionary<int, MuPDFGraftMap>();
+        public Dictionary<int, GraftMap> GraftMaps { get; set; } =
+            new Dictionary<int, GraftMap>();
 
         public Dictionary<(int, int), int> ShownPages { get; set; } =
             new Dictionary<(int, int), int>();
@@ -1477,7 +1477,7 @@ namespace MuPDF.NET
 
                     if (!simple)
                     {
-                        Link link = Utils.GetLinkDict(olItem, this);
+                        LinkInfo link = Utils.GetLinkDict(olItem, this);
                         list.Add(
                             new Toc()
                             {
@@ -1798,7 +1798,7 @@ namespace MuPDF.NET
             bool annots = true,
             int showProgress = 0,
             int final = 1,
-            MuPDFGraftMap gmap = null
+            GraftMap gmap = null
         )
         {
             if (IsClosed || IsEncrypted)
@@ -2575,7 +2575,7 @@ namespace MuPDF.NET
             {
                 int xref = xrefs[i];
                 Toc item = items[i];
-                Link link;
+                LinkInfo link;
                 if (item.Link != null)
                     link = item.Link;
                 else
@@ -4583,8 +4583,8 @@ namespace MuPDF.NET
                 }
                 if (removeLinks)
                 {
-                    List<Link> links = page.GetLinks();
-                    foreach (Link link in links)
+                    List<LinkInfo> links = page.GetLinks();
+                    foreach (LinkInfo link in links)
                         page.DeleteLink(link);
                 }
                 bool foundRedacts = false;
@@ -4929,7 +4929,7 @@ namespace MuPDF.NET
                 float pageHeight = PageCropBox(pno).Height;
                 Point top = new Point(72, pageHeight - 36);
 
-                Link dest = new Link() { To = top, Kind = LinkType.LINK_GOTO };
+                LinkInfo dest = new LinkInfo() { To = top, Kind = LinkType.LINK_GOTO };
                 if (o.Page < 0)
                     dest.Kind = LinkType.LINK_NONE;
                 if (o.Link != null)
@@ -5100,7 +5100,7 @@ namespace MuPDF.NET
         /// <param name="zoom"></param>
         public void SetTocItem(
             int idx,
-            Link dest,
+            LinkInfo dest,
             int kind = 0,
             int pno = 0,
             string uri = null,
@@ -5250,7 +5250,7 @@ namespace MuPDF.NET
                 Outline = null;
             ResetPageRefs();
             IsClosed = true;
-            GraftMaps = new Dictionary<int, MuPDFGraftMap>();
+            GraftMaps = new Dictionary<int, GraftMap>();
             _nativeDocument = null;
         }
 

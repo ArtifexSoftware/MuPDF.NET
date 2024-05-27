@@ -183,7 +183,7 @@ namespace MuPDF.NET.Test
             Document doc = new Document("../../../resources/2.pdf");
             MuPDFPage page = doc[-1];
 
-            List<Link> links = page.GetLinks();
+            List<LinkInfo> links = page.GetLinks();
             Assert.That(links.Count, Is.EqualTo(7));
         }
 
@@ -191,7 +191,7 @@ namespace MuPDF.NET.Test
         public void Deletion()
         {
             Document doc = new Document();
-            Link link = new Link()
+            LinkInfo link = new LinkInfo()
             {
                 From = new Rect(100, 100, 120, 120),
                 Kind = LinkType.LINK_GOTO,

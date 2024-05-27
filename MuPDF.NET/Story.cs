@@ -3,9 +3,9 @@ using System.Text;
 
 namespace MuPDF.NET
 {
-    public class MuPDFStory
+    public class Story
     {
-        static MuPDFStory()
+        static Story()
         {
             if (!File.Exists("mupdfcsharp.dll"))
                 Utils.LoadEmbeddedDll();
@@ -28,7 +28,7 @@ namespace MuPDF.NET
             }
         }
 
-        public MuPDFStory(string html = "", string userCss = null, float em = 12, Archive archive = null)
+        public Story(string html = "", string userCss = null, float em = 12, Archive archive = null)
         {
             byte[] bytes = Encoding.UTF8.GetBytes(html);
             FzBuffer buf = Utils.fz_new_buffer_from_data(bytes);
@@ -282,7 +282,7 @@ namespace MuPDF.NET
             {
                 if ((positionFrom.OpenClose & true) && positionFrom.Href != null)
                 {
-                    Link link = new Link();
+                    LinkInfo link = new LinkInfo();
                     link.From = new Rect(positionFrom.Rect);
                     Position positionTo;
                     if (positionFrom.Href.StartsWith("#"))
@@ -382,7 +382,7 @@ namespace MuPDF.NET
             Write(writer, rectFn, positionFn: positionfn2, pageFn);
             writer.Close();
             stream.Seek(0, (SeekOrigin)1);
-            return MuPDFStory.AddPdfLinks(stream, positions);
+            return Story.AddPdfLinks(stream, positions);
         }
 
         /// <summary>
@@ -473,10 +473,10 @@ namespace MuPDF.NET
                 positionfn(position);
             };
 
-            MuPDFStory.WriteStabilized(writer, contentfn, rectfn, userCss, em, positionfn2, pagefn, archive, addHeaderIds);
+            Story.WriteStabilized(writer, contentfn, rectfn, userCss, em, positionfn2, pagefn, archive, addHeaderIds);
             writer.Close();
             stream.Seek(0, (SeekOrigin)1);
-            return MuPDFStory.AddPdfLinks(stream, positions);
+            return Story.AddPdfLinks(stream, positions);
         }
 
         /// <summary>
@@ -533,7 +533,7 @@ namespace MuPDF.NET
                     stable = true;
                 }
                 string content2 = content;
-                MuPDFStory story = new MuPDFStory(content2, userCss, em, archive); // Assuming Story is a defined class
+                Story story = new Story(content2, userCss, em, archive); // Assuming Story is a defined class
                 if (addHeaderIds)
                 {
                     story.AddHeaderIds(); // Assuming AddHeaderIds is a method of Story

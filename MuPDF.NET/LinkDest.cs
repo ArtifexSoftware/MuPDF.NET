@@ -3,7 +3,7 @@ using System.Text.RegularExpressions;
 
 namespace MuPDF.NET
 {
-    public class MuPDFLinkDest
+    public class LinkDest
     {
         public string Dest { get; set; }
 
@@ -35,7 +35,7 @@ namespace MuPDF.NET
         /// <param name="obj">Link or Outline destination</param>
         /// <param name="rlink"></param>
         /// <param name="document"></param>
-        public MuPDFLinkDest(dynamic obj, (List<int>, float, float) rlink, Document document = null)
+        public LinkDest(dynamic obj, (List<int>, float, float) rlink, Document document = null)
         {
             bool isExt = obj.IsExternal;
             bool isInt = !isExt;

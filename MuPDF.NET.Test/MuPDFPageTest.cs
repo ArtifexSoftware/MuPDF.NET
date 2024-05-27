@@ -144,7 +144,7 @@ public class MuPDFPageTest : PdfTestBase
     [Test]
     public void InsertLink()
     {
-        Link link = new Link();
+        LinkInfo link = new LinkInfo();
         link.Name = "Here is the link.";
         link.Page = 0;
         link.From = new Rect(0, 0, 100, 100);
@@ -346,7 +346,7 @@ public class MuPDFPageTest : PdfTestBase
         i = 0;
         foreach (string k in text.Keys)
         {
-            Link link = new Link() { Kind = LinkType.LINK_URI, Uri = k, From = rs[i] };
+            LinkInfo link = new LinkInfo() { Kind = LinkType.LINK_URI, Uri = k, From = rs[i] };
             page.InsertLink(link);
             i++;
         }

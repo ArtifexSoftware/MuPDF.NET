@@ -1,6 +1,6 @@
 ﻿namespace MuPDF.NET
 {
-    public class Link
+    public class LinkInfo
     {
         public Rect From { get; set; }
 

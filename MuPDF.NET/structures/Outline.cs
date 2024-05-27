@@ -9,11 +9,11 @@ namespace MuPDF.NET
         /// <summary>
         /// The link destination details object.
         /// </summary>
-        public MuPDFLinkDest Dest
+        public LinkDest Dest
         {
             get
             {
-                return new MuPDFLinkDest(this, (null, 0, 0), null);
+                return new LinkDest(this, (null, 0, 0), null);
             }
         }
 
@@ -131,9 +131,9 @@ namespace MuPDF.NET
         /// </summary>
         /// <param name="doc"></param>
         /// <returns></returns>
-        public MuPDFLinkDest Destination(PdfDocument doc)
+        public LinkDest Destination(PdfDocument doc)
         {
-            return new MuPDFLinkDest(this, (null, 0, 0), new Document(doc));
+            return new LinkDest(this, (null, 0, 0), new Document(doc));
         }
 
         public FzOutline ToFzOutline()

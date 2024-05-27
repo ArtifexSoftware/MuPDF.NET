@@ -2,9 +2,9 @@
 
 namespace MuPDF.NET
 {
-    public class MuPDFLink
+    public class Link
     {
-        static MuPDFLink()
+        static Link()
         {
             if (!File.Exists("mupdfcsharp.dll"))
                 Utils.LoadEmbeddedDll();
@@ -30,12 +30,12 @@ namespace MuPDF.NET
 
         public string Id { get; set; }
 
-        public MuPDFLink(FzLink link)
+        public Link(FzLink link)
         {
             _nativeLink = link;
         }
 
-        public MuPDFLink() { }
+        public Link() { }
 
         public Border Border
         {
@@ -53,7 +53,7 @@ namespace MuPDF.NET
         /// <summary>
         /// The link destination details object.
         /// </summary>
-        public MuPDFLinkDest Dest
+        public LinkDest Dest
         {
             get
             {
@@ -67,7 +67,7 @@ namespace MuPDF.NET
                     uri = (null, 0, 0);
                 else
                     uri = Parent.Parent.ResolveLink(Uri);
-                return new MuPDFLinkDest(this, uri, Parent.Parent);
+                return new LinkDest(this, uri, Parent.Parent);
             }
         }
 
@@ -104,7 +104,7 @@ namespace MuPDF.NET
             }
         }
 
-        public MuPDFLink Next
+        public Link Next
         {
             get
             {
@@ -115,7 +115,7 @@ namespace MuPDF.NET
                 if (fzVal.m_internal == null)
                     return null;
 
-                MuPDFLink val = new MuPDFLink(fzVal);
+                Link val = new Link(fzVal);
                 if (val != null)
                 {
                     val.ThisOwn = true;

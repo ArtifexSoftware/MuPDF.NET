@@ -15,7 +15,7 @@ namespace MuPDF.NET.Test
 
             Rect box = Utils.PageRect("letter");
             Rect where = box + new Rect(36, 36, -36, -36);
-            MuPDFStory story = new MuPDFStory(html: html);
+            Story story = new Story(html: html);
             DocumentWriter writer = new DocumentWriter("output.pdf");
 
             int pno = 0;
@@ -37,14 +37,14 @@ namespace MuPDF.NET.Test
         [Test]
         public void Draw1()
         {
-            MuPDFStory.RectFunction rectfunc = new MuPDFStory.RectFunction((int rectnum, Rect fill) =>
+            Story.RectFunction rectfunc = new Story.RectFunction((int rectnum, Rect fill) =>
             {
                 return (new Rect(0, 0, 200, 200), new Rect(50, 50, 100, 100), null);
             });
 
             Document MakePdf(string html, string path)
             {
-                MuPDFStory story = new MuPDFStory(html: html);
+                Story story = new Story(html: html);
                 Document doc = story.WriteWithLinks(rectfunc);
                 return doc;
             }
