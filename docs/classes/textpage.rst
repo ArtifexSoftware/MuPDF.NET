@@ -184,9 +184,7 @@ As mentioned, using these functions is ever only needed, if the text is **not wr
 
 .. image:: images/img-textpage.*
 
-..
-  We used to do `:scale: 66` here, but current (2024-04-22) sphinx messes up
-  the aspect ratio.
+
 
 Page Dictionary
 ~~~~~~~~~~~~~~~~~
@@ -309,7 +307,6 @@ The following shows the original span rectangle in red and the rectangle with re
 
 .. image:: images/img-span-rect.*
    :scale: 200
-
 
 *"flags"* is an integer, which represents font properties except for the first bit 0. They are to be interpreted like this:
 

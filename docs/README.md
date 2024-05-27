@@ -36,6 +36,15 @@ This then creates the HTML documentation within `build/html`.
 > Use: `sphinx-build -a -b html . build/html` to build all, including the assets in `_static` (important if you have updated CSS).
 
 
+- Alternatively you can also use [Sphinx Autobuild](https://pypi.org/project/sphinx-autobuild/) and do:
+
+`sphinx-autobuild . _build/html`
+
+This will ensure that the documentation runs in a localhost and will also hot-reload changes.
+
+
+
+
 ---
 
 

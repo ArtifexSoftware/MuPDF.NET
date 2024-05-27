@@ -1,4 +1,4 @@
-.. include:: ../header.rst
+.. include:: header.rst
 
 .. _Annot:
 
@@ -6,9 +6,10 @@
 Annot
 ================
 
+
 |pdf_only_class|
 
-Quote from the :ref:`AdobeManual`: "An annotation associates an object such as a note, sound, or movie with a location on a page of a PDF document, or provides a way to interact with the user by means of the mouse and keyboard."
+Quote from the :ref:`AdobeManual` : *"An annotation associates an object such as a note, sound, or movie with a location on a page of a PDF document, or provides a way to interact with the user by means of the mouse and keyboard."*
 
 There is a parent-child relationship between an annotation and its page. If the page object becomes unusable (closed document, any document structure change, etc.), then so does every of its existing annotation objects -- an exception is raised saying that the object is "orphaned", whenever an annotation property or method is accessed.
 
@@ -485,6 +486,7 @@ There is a parent-child relationship between an annotation and its page. If the 
 
 Annotation Icons in MuPDF
 -------------------------
+
 This is a list of icons referenceable by name for annotation types 'Text' and 'FileAttachment'. You can use them via the *icon* parameter when adding an annotation, or use the as argument in :meth:`Annot.SetName`. It is left to your discretion which item to choose when -- no mechanism will keep you from using e.g. the "Speaker" icon for a 'FileAttachment'.
 
 .. image:: images/mupdf-icons.*

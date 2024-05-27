@@ -33,6 +33,18 @@ How to use **MuPDF.NET**
 - You need `mupdfcpp64.dll` and `mupdfcsharp.dll`.
 - You have to select MuPDF.NET.dll as a reference and use with `using MuPDF.NET;`. For this, you have to copy these files in same level as your **MuPDF.NET** project.
 
+
+
+.. _AdobeManual:
+
+Adobe PDF References
+---------------------------
+
+.. note:: This PDF Reference manual published by **Adobe** is frequently quoted throughout this documentation. It can be viewed and downloaded from `opensource.adobe.com <https://opensource.adobe.com/dc-acrobat-sdk-docs/standards/pdfstandards/pdf/PDF32000_2008.pdf>`_.
+
+
+
+
 License and Copyright
 ----------------------------------
 

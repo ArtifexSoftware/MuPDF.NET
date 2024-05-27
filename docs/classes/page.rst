@@ -280,7 +280,7 @@ In a nutshell, this is what you can do with PyMuPDF:
 
    .. method:: AddRedactAnnot(Quad quad, string text = null, string fontname = null, int fontsize=11, int align=TEXT_ALIGN_LEFT, float[] fill=(1, 1, 1), float[] text_color=(0, 0, 0), bool cross_out=true)
       
-      **PDF only**: Add a redaction annotation. A redaction annotation identifies content to be removed from the document. Adding such an annotation is the first of two steps. It makes visible what will be removed in the subsequent step, :meth:`Page.ApplyRaedactions`.
+      **PDF only**: Add a redaction annotation. A redaction annotation identifies content to be removed from the document. Adding such an annotation is the first of two steps. It makes visible what will be removed in the subsequent step, :meth:`Page.ApplyRedactions`.
 
       :arg quad_like,rect_like quad: specifies the (rectangular) area to be removed which is always equal to the annotation rectangle. This may be a :data:`Rect` or :data:`Quad` object. If a quad is specified, then the enveloping rectangle is taken.
 
@@ -291,15 +291,7 @@ In a nutshell, this is what you can do with PyMuPDF:
          .. note::
 
             * For an **existing** font of the page, use its reference name as *fontname* (this is *item[4]* of its entry in :meth:`Page.GetFonts`).
-            * For a **new, non-builtin** font, proceed as follows::
 
-               page.insert_text(point,  # anywhere, but outside all redaction rectangles
-                   "something",  # some non-empty string
-                   fontname="newname",  # new, unused reference name
-                   fontfile="...",  # desired font file
-                   render_mode=3,  # makes the text invisible
-               )
-               page.add_redact_annot(..., fontname="newname")
 
       :arg float fontsize: the :data:`fontsize` to use for the replacing text. If the text is too large to fit, several insertion attempts will be made, gradually reducing the :data:`fontsize` to no less than 4. If then the text will still not fit, no text insertion will take place at all. (New in v1.16.12)
 
@@ -311,8 +303,8 @@ In a nutshell, this is what you can do with PyMuPDF:
 
       :arg bool cross_out: add two diagonal lines to the annotation rectangle. (New in v1.17.2)
 
-      :rtype: :ref:`MuPDFAnnot`
-      :returns: the created annotation. Its standard appearance looks like a red rectangle (no fill color), optionally showing two diagonal lines. Colors, line width, dashing, opacity and blend mode can now be set and applied via :meth:`Annot.update` like with other annotations. (Changed in v1.17.2)
+      :rtype: :ref:`Annot`
+      :returns: the created annotation. Its standard appearance looks like a red rectangle (no fill color), optionally showing two diagonal lines. Colors, line width, dashing, opacity and blend mode can now be set and applied via :meth:`Annot.update` like with other annotations.
 
       .. image:: images/img-redact.*
 
@@ -420,8 +412,8 @@ In a nutshell, this is what you can do with PyMuPDF:
       :arg point_like stop: stop text marking at this point. Defaults to the bottom-right point of *clip*. Must be used if `quads` is *null*. (New in v1.16.14)
       :arg rect_like clip: only consider text lines intersecting this area. Defaults to the page rectangle. Only use if `start` and `stop` are provided. (New in v1.16.14)
 
-      :rtype: :ref:`MuPDFAnnot` or *null* (changed in v1.16.14).
-      :returns: the created annotation. If *quads* is an empty list, **no annotation** is created (changed in v1.16.14).
+      :rtype: :ref:`Annot` or *null*.
+      :returns: the created annotation. If *quads* is an empty list, **no annotation** is created.
 
       .. note::
         You can use parameters *start*, *stop* and *clip* to highlight consecutive lines between the points *start* and *stop* (starting with v1.16.14).
@@ -441,70 +433,71 @@ In a nutshell, this is what you can do with PyMuPDF:
 
       :arg float x_tolerance: 
 
-   .. method:: find_tables(clip=None, strategy=None, vertical_strategy=None, horizontal_strategy=None, vertical_lines=None, horizontal_lines=None, snap_tolerance=None, snap_x_tolerance=None, snap_y_tolerance=None, join_tolerance=None, join_x_tolerance=None, join_y_tolerance=None, edge_min_length=3, min_words_vertical=3, min_words_horizontal=1, intersection_tolerance=None, intersection_x_tolerance=None, intersection_y_tolerance=None, text_tolerance=None, text_x_tolerance=None, text_y_tolerance=None, add_lines=None)
+   ..
+      .. method:: find_tables(clip=None, strategy=None, vertical_strategy=None, horizontal_strategy=None, vertical_lines=None, horizontal_lines=None, snap_tolerance=None, snap_x_tolerance=None, snap_y_tolerance=None, join_tolerance=None, join_x_tolerance=None, join_y_tolerance=None, edge_min_length=3, min_words_vertical=3, min_words_horizontal=1, intersection_tolerance=None, intersection_x_tolerance=None, intersection_y_tolerance=None, text_tolerance=None, text_x_tolerance=None, text_y_tolerance=None, add_lines=None)
 
-      Find tables on the page and return an object with related information. Typically, the default values of the many parameters will be sufficient. Adjustments should ever only be needed in corner case situations.
+         Find tables on the page and return an object with related information. Typically, the default values of the many parameters will be sufficient. Adjustments should ever only be needed in corner case situations.
 
-      :arg rect_like clip: specify a region to consider within the page rectangle and ignore the rest. Default is the full page.
+         :arg rect_like clip: specify a region to consider within the page rectangle and ignore the rest. Default is the full page.
 
-      :arg str strategy: Request a **table detection** strategy. Valid values are "lines", "lines_strict" and "text".
-      
-         Default is **"lines"** which uses all vector graphics on the page to detect grid lines.
-         
-         Strategy **"lines_strict"** ignores borderless rectangle vector graphics. Sometimes single text pieces have background colors which may lead to false columns or lines. This strategy ignores them and can thus increase detection precision.
-         
-         If **"text"** is specified, text positions are used to generate "virtual" column and / or row boundaries. Use `min_words_*` to request the number of words for considering their coordinates.
-         
-         Use parameters `vertical_strategy` and `horizontal_strategy` **instead** for a more fine-grained treatment of the dimensions.
+         :arg str strategy: Request a **table detection** strategy. Valid values are "lines", "lines_strict" and "text".
 
-      :arg sequence[floats] horizontal_lines: y-coordinates of rows. If provided, there will be no attempt to identify additional table rows. This influences table detection.
+            Default is **"lines"** which uses all vector graphics on the page to detect grid lines.
 
-      :arg sequence[floats] vertical_lines: x-coordinates of columns. If provided, there will be no attempt to identify additional table columns. This influences table detection.
+            Strategy **"lines_strict"** ignores borderless rectangle vector graphics. Sometimes single text pieces have background colors which may lead to false columns or lines. This strategy ignores them and can thus increase detection precision.
 
-      :arg int min_words_vertical: relevant for vertical strategy option "text": at least this many words must coincide to establish a **virtual column** boundary.
+            If **"text"** is specified, text positions are used to generate "virtual" column and / or row boundaries. Use `min_words_*` to request the number of words for considering their coordinates.
 
-      :arg int min_words_horizontal: relevant for horizontal strategy option "text": at least this many words must coincide to establish a **virtual row** boundary.
+            Use parameters `vertical_strategy` and `horizontal_strategy` **instead** for a more fine-grained treatment of the dimensions.
 
-      :arg float snap_tolerance: Any two horizontal lines whose y-values differ by no more than this value will be **snapped** into one. Accordingly for vertical lines. Default is 3. Separate values can be specified instead for the dimensions, using `snap_x_tolerance` and `snap_y_tolerance`.
+         :arg sequence[floats] horizontal_lines: y-coordinates of rows. If provided, there will be no attempt to identify additional table rows. This influences table detection.
 
-      :arg float join_tolerance: Any two lines will be **joined** to one if the end and the start points differ by no more than this value (in points). Default is 3. Instead of this value, separate values can be specified for the dimensions using `join_x_tolerance` and `join_y_tolerance`.
+         :arg sequence[floats] vertical_lines: x-coordinates of columns. If provided, there will be no attempt to identify additional table columns. This influences table detection.
 
-      :arg float edge_min_length: Ignore a line if its length does not exceed this value (points). Default is 3.
+         :arg int min_words_vertical: relevant for vertical strategy option "text": at least this many words must coincide to establish a **virtual column** boundary.
 
-      :arg float intersection_tolerance: When combining lines into cell borders, orthogonal lines must be within this value (points) to be considered intersecting. Default is 3. Instead of this value, separate values can be specified for the dimensions using `intersection_x_tolerance` and `intersection_y_tolerance`.
+         :arg int min_words_horizontal: relevant for horizontal strategy option "text": at least this many words must coincide to establish a **virtual row** boundary.
 
-      :arg float text_tolerance: Characters will be combined into words only if their distance is no larger than this value (points). Default is 3. Instead of this value, separate values can be specified for the dimensions using `text_x_tolerance` and `text_y_tolerance`.
+         :arg float snap_tolerance: Any two horizontal lines whose y-values differ by no more than this value will be **snapped** into one. Accordingly for vertical lines. Default is 3. Separate values can be specified instead for the dimensions, using `snap_x_tolerance` and `snap_y_tolerance`.
 
-      :arg tuple,list add_lines: Specify a list of "lines" (i.e. pairs of :data:`point_like` objects) as **additional**, "virtual" vector graphics. These lines may help with table and / or cell detection and will not otherwise influence the detection strategy. Especially, in contrast to parameters `horizontal_lines` and `vertical_lines`, they will not prevent detecting rows or columns in other ways. These lines will be treated exactly like "real" vector graphics in terms of joining, snapping, intersectiing, minimum length and containment in the `clip` rectangle. Similarly, lines not parallel to any of the coordinate axes will be ignored.
+         :arg float join_tolerance: Any two lines will be **joined** to one if the end and the start points differ by no more than this value (in points). Default is 3. Instead of this value, separate values can be specified for the dimensions using `join_x_tolerance` and `join_y_tolerance`.
 
-      .. image:: images/img-findtables.*
+         :arg float edge_min_length: Ignore a line if its length does not exceed this value (points). Default is 3.
 
-      :returns: a `TableFinder` object that has the following significant attributes:
+         :arg float intersection_tolerance: When combining lines into cell borders, orthogonal lines must be within this value (points) to be considered intersecting. Default is 3. Instead of this value, separate values can be specified for the dimensions using `intersection_x_tolerance` and `intersection_y_tolerance`.
 
-         * `cells`: a list of **all bboxes** on the page, that have been identified as table cells (across all tables). Each cell is a :data:`rect_like` tuple `(x0, y0, x1, y1)` of coordinates or `null`.
-         * `tables`: a list of `Table` objects. This is `[]` if the page has no tables. Single tables can be found as items of this list. But the `TableFinder` object itself is also a sequence of its tables. This means that if `tabs` is a `TableFinder` object, then table "n" is delivered by `tabs.tables[n]` as well as by the shorter `tabs[n]`.
+         :arg float text_tolerance: Characters will be combined into words only if their distance is no larger than this value (points). Default is 3. Instead of this value, separate values can be specified for the dimensions using `text_x_tolerance` and `text_y_tolerance`.
+
+         :arg tuple,list add_lines: Specify a list of "lines" (i.e. pairs of :data:`point_like` objects) as **additional**, "virtual" vector graphics. These lines may help with table and / or cell detection and will not otherwise influence the detection strategy. Especially, in contrast to parameters `horizontal_lines` and `vertical_lines`, they will not prevent detecting rows or columns in other ways. These lines will be treated exactly like "real" vector graphics in terms of joining, snapping, intersectiing, minimum length and containment in the `clip` rectangle. Similarly, lines not parallel to any of the coordinate axes will be ignored.
+
+         .. image:: images/img-findtables.*
+
+         :returns: a `TableFinder` object that has the following significant attributes:
+
+            * `cells`: a list of **all bboxes** on the page, that have been identified as table cells (across all tables). Each cell is a :data:`rect_like` tuple `(x0, y0, x1, y1)` of coordinates or `null`.
+            * `tables`: a list of `Table` objects. This is `[]` if the page has no tables. Single tables can be found as items of this list. But the `TableFinder` object itself is also a sequence of its tables. This means that if `tabs` is a `TableFinder` object, then table "n" is delivered by `tabs.tables[n]` as well as by the shorter `tabs[n]`.
 
 
-         * The `Table` object has the following attributes:
+            * The `Table` object has the following attributes:
 
-           * `bbox`: the bounding box of the table as a tuple `(x0, y0, x1, y1)`.
-           * `cells`: bounding boxes of the table's cells (list of tuples). A cell may also be `null`.
-           * `extract()`: this method returns the text content of each table cell as a list of list of strings.
-           * `to_markdown()`: this method returns the table as a **string in markdown format** (compatible to Github). Supporting viewers can render the string as a table. This output is optimized for **small token** sizes, which is especially beneficial for LLM/RAG feeds. Pandas DataFrames (see method `to_pandas()` below) offer an equivalent markdown table output which however is better readable for the human eye.
-           * `to_pandas()`: this method returns the table as a `pandas <https://pypi.org/project/pandas/>`_ `DataFrame <https://pandas.pydata.org/docs/reference/frame.html>`_. DataFrames are very versatile objects allowing a plethora of table manipulation methods and outputs to almost 20 well-known formats, among them Excel files, CSV, JSON, markdown-formatted tables and more. `DataFrame.to_markdown()` generates a Github-compatible markdown format optimized for human readability. This method however requires the package [tablutate](https://pypi.org/project/tabulate/) to installed in addition to pandas itself.
-           * ``header``: a `TableHeader` object containing header information of the table.
-           * `col_count`: an integer containing the number of table columns.
-           * `row_count`: an integer containing the number of table rows. 
-           * `rows`: a list of `TableRow` objects containing two attributes, ``bbox`` is the boundary box of the row, and `cells` is a list of table cells contained in this row.
+              * `bbox`: the bounding box of the table as a tuple `(x0, y0, x1, y1)`.
+              * `cells`: bounding boxes of the table's cells (list of tuples). A cell may also be `null`.
+              * `extract()`: this method returns the text content of each table cell as a list of list of strings.
+              * `to_markdown()`: this method returns the table as a **string in markdown format** (compatible to Github). Supporting viewers can render the string as a table. This output is optimized for **small token** sizes, which is especially beneficial for LLM/RAG feeds. Pandas DataFrames (see method `to_pandas()` below) offer an equivalent markdown table output which however is better readable for the human eye.
+              * `to_pandas()`: this method returns the table as a `pandas <https://pypi.org/project/pandas/>`_ `DataFrame <https://pandas.pydata.org/docs/reference/frame.html>`_. DataFrames are very versatile objects allowing a plethora of table manipulation methods and outputs to almost 20 well-known formats, among them Excel files, CSV, JSON, markdown-formatted tables and more. `DataFrame.to_markdown()` generates a Github-compatible markdown format optimized for human readability. This method however requires the package [tablutate](https://pypi.org/project/tabulate/) to installed in addition to pandas itself.
+              * ``header``: a `TableHeader` object containing header information of the table.
+              * `col_count`: an integer containing the number of table columns.
+              * `row_count`: an integer containing the number of table rows.
+              * `rows`: a list of `TableRow` objects containing two attributes, ``bbox`` is the boundary box of the row, and `cells` is a list of table cells contained in this row.
 
-         * The `TableHeader` object has the following attributes:
+            * The `TableHeader` object has the following attributes:
 
-           * ``bbox``: the bounding box of the header.
-           * `cells`: a list of bounding boxes containing the name of the respective column.
-           * `names`: a list of strings containing the text of each of the cell bboxes. They represent the column names -- which are used when exporting the table to pandas DataFrames, markdown, etc.
-           * `external`: a bool indicating whether the header bbox is outside the table body (`true`) or not. Table headers are never identified by the `TableFinder` logic. Therefore, if `external` is true, then the header cells are not part of any cell identified by `TableFinder`. If `external == false`, then the first table row is the header.
+              * ``bbox``: the bounding box of the header.
+              * `cells`: a list of bounding boxes containing the name of the respective column.
+              * `names`: a list of strings containing the text of each of the cell bboxes. They represent the column names -- which are used when exporting the table to pandas DataFrames, markdown, etc.
+              * `external`: a bool indicating whether the header bbox is outside the table body (`true`) or not. Table headers are never identified by the `TableFinder` logic. Therefore, if `external` is true, then the header cells are not part of any cell identified by `TableFinder`. If `external == false`, then the first table row is the header.
 
-         Please have a look at these `Jupyter notebooks <https://github.com/pymupdf/PyMuPDF-Utilities/tree/master/table-analysis>`_, which cover standard situations like multiple tables on one page or joining table fragments across multiple pages.
+            Please have a look at these `Jupyter notebooks <https://github.com/pymupdf/PyMuPDF-Utilities/tree/master/table-analysis>`_, which cover standard situations like multiple tables on one page or joining table fragments across multiple pages.
 
       |history_begin|
 
@@ -513,9 +506,9 @@ In a nutshell, this is what you can do with PyMuPDF:
 
       |history_end|
 
-      .. important::
+         .. important::
 
-         There is also the `pdf2docx extract tables method`_ which is capable of table extraction if you prefer.
+            There is also the `pdf2docx extract tables method`_ which is capable of table extraction if you prefer.
 
 
    .. method:: AddStampAnnot(Rect rect, int stamp = 0)
@@ -546,7 +539,7 @@ In a nutshell, this is what you can do with PyMuPDF:
 
       :returns: a widget annotation.
 
-   .. method:: DeleteAnnot(MuPDFAnnot annot)
+   .. method:: DeleteAnnot(Annot annot)
 
       * The removal will now include any bound 'Popup' or response annotations and related objects (changed in v1.16.6).
 
@@ -986,12 +979,6 @@ In a nutshell, this is what you can do with PyMuPDF:
 
       PDF only: Draw several connected lines defined by a sequence of :data:`point_like` \s. See :meth:`Shape.DrawPolyline`.
 
-      |history_begin|
-
-      * Changed in v1.18.4
-
-      |history_end|
-
 
    .. index::
       pair: p1; DrawBezier
@@ -1015,12 +1002,6 @@ In a nutshell, this is what you can do with PyMuPDF:
 
       PDF only: Draw a cubic Bézier curve from *p1* to *p4* with the control points *p2* and *p3* (all are :data:`point_like` \s). See :meth:`Shape.DrawBezier`.
 
-      |history_begin|
-
-      * Changed in v1.18.4
-
-      |history_end|
-
    .. index::
       pair: p1; DrawCurve
       pair: p2; DrawCurve
@@ -1042,11 +1023,6 @@ In a nutshell, this is what you can do with PyMuPDF:
 
       PDF only: This is a special case of *DrawBezier()*. See :meth:`Shape.DrawCurve`.
 
-      |history_begin|
-
-      * Changed in v1.18.4
-
-      |history_end|
 
    .. index::
       pair: rect; DrawRect
@@ -1068,12 +1044,6 @@ In a nutshell, this is what you can do with PyMuPDF:
 
       PDF only: Draw a rectangle. See :meth:`Shape.DrawRect`.
 
-      |history_begin|
-
-      * Changed in v1.18.4
-      * Changed in v1.22.0: Added parameter *radius*.
-
-      |history_end|
 
    .. index::
       pair: closePath; DrawQuad
@@ -1092,13 +1062,6 @@ In a nutshell, this is what you can do with PyMuPDF:
    .. method:: DrawQuad(quad, float[] color=(0,), float[] fill=null, float width=1, string dashes=null, float lineCap=0, float lineJoin=0, bool overlay=true, Morph morph=null, float strokeOpacity=1, float fillOpacity=1, int oc=0)
 
       PDF only: Draw a quadrilateral. See :meth:`Shape.DrawQuad`.
-
-      |history_begin|
-
-      * Changed in v1.18.4
-
-      |history_end|
-
 
    .. index::
       pair: encoding; InsertFont
@@ -1226,32 +1189,6 @@ In a nutshell, this is what you can do with PyMuPDF:
            :meth:`Document.Convert2Pdf` for how to obtain intermediary PDFs
            usable for that method.
 
-      |history_begin|
-
-      * Changed in v1.14.1: By default, the image keeps its aspect ratio.
-      * Changed in v1.14.11: Added args `keepProportion`, `rotate`.
-      * Changed in v1.14.13:
-
-        *
-          The image is now always placed **centered** in the rectangle, i.e.
-          the centers of image and rectangle are equal.
-        * Added support for `stream` as `io.BytesIO`.
-      
-      * Changed in v1.17.6:
-        Insertion rectangle no longer needs to have a non-empty intersection
-        with the page's :attr:`Page.cropbox` [#f5]_.
-      * Changed in v1.18.1: Added `mask` arg.
-      * Changed in v1.18.3: Added `oc` arg.
-      * Changed in v1.18.13:
-        
-        * Allow providing the image as the xref of an existing one.
-        * Added `xref` arg.
-        * Return `xref` of stored image.
-      
-      * Changed in v1.19.3: deprecate and ignore `alpha` arg.
-
-      |history_end|
-
    
    .. index::
       pair: filename; ReplaceImage
@@ -1274,12 +1211,6 @@ In a nutshell, this is what you can do with PyMuPDF:
 
       This method mainly exists for technical purposes. Typical uses include replacing large images by smaller versions, like a lower resolution, graylevel instead of colored, etc., or changing transparency.
 
-      |history_begin|
-
-      * New in v1.21.0
-
-      |history_end|
-   
    
    .. index::
       pair: xref; DeleteImage
@@ -1297,12 +1228,6 @@ In a nutshell, this is what you can do with PyMuPDF:
       the replacing "dummy" image will be detected like so
       `(45, 47, 1, 1, 8, 'DeviceGray', '', 'Im1', 'FlateDecode')`
       and also seem to "cover" the same boundary box on the page.
-
-      |history_begin|
-
-      * New in v1.21.0
-
-      |history_end|
 
    
    .. index::
@@ -1358,15 +1283,6 @@ In a nutshell, this is what you can do with PyMuPDF:
         1. You can use this method as a **document conversion tool** from :ref:`any supported document type<Supported_File_Types>` to one of TEXT, HTML, XHTML or XML documents.
         2. The inclusion of text via the *clip* parameter is decided on a by-character level: a character becomes part of the output, if its bbox is contained in *clip* (changed in v1.18.2). This **deviates** from the algorithm used in redaction annotations: a character will be **removed if its bbox intersects** any redaction annotation.
 
-      |history_begin|
-
-      * Changed in v1.19.0: added `textpage` parameter
-      * Changed in v1.19.1: added `sort` parameter
-      * Changed in v1.19.6: added new constants for defining default flags per method.
-      * Changed in v1.23.5: added `delimiters` parameter
-
-      |history_end|
-
    .. index::
       pair: rect; GetTextbox
       pair: textpage; GetTextbox
@@ -1383,13 +1299,6 @@ In a nutshell, this is what you can do with PyMuPDF:
         List<Rect> rl = page.SearchFor("currency:");
         page.GetTextbox(rl[0]);
 
-      |history_begin|
-
-      * New in v1.17.7
-      * Changed in v1.19.0: add `textpage` parameter
-
-      |history_end|
-
 
    .. index::
       pair: flags; GetTextPage
@@ -1404,13 +1313,6 @@ In a nutshell, this is what you can do with PyMuPDF:
       :arg rect-like clip: restrict extracted text to this area. (New in v1.17.7)
 
       :returns: :ref:`TextPage`
-
-      |history_begin|
-
-      * New in v1.16.5
-      * Changed in v1.17.7: introduced `clip` parameter.
-
-      |history_end|
 
 
    .. index::
@@ -1445,13 +1347,6 @@ In a nutshell, this is what you can do with PyMuPDF:
             **OCRed text is only available** to PyMuPDF's text extractions and searches if their `textpage` parameter specifies the output of this method.
 
             `This <https://github.com/pymupdf/PyMuPDF-Utilities/blob/master/jupyter-notebooks/partial-ocr.ipynb>`_ Jupyter notebook walks through an example for using OCR textpages.
-
-      |history_begin|
-
-      * New in v.1.19.0
-      * Changed in v1.19.1: support full and partial OCRing a page.
-
-      |history_end|
 
 
    .. method:: GetDrawings(bool extended=false)
@@ -1557,17 +1452,6 @@ In a nutshell, this is what you can do with PyMuPDF:
 
       .. note:: The method is based on the output of :meth:`Page.get_cdrawings` -- which is much faster, but requires somewhat more attention processing its output.
 
-      |history_begin|
-      
-      * New in v1.18.0
-      * Changed in v1.18.17
-      * Changed in v1.19.0: add "seqno" key, remove "clippings" key
-      * Changed in v1.19.1: "color" / "fill" keys now always are either are RGB tuples or `null`. This resolves issues caused by exotic colorspaces.
-      * Changed in v1.19.2: add an indicator for the *"orientation"* of the area covered by an "re" item.
-      * Changed in v1.22.0: add new key `"layer"` which contains the name of the Optional Content Group of the path (or `null`).
-      * Changed in v1.22.0: add parameter `extended` to also return clipping and group paths.
-      
-      |history_end|
 
    .. method:: GetFonts(bool full=false)
 
@@ -1614,13 +1498,6 @@ In a nutshell, this is what you can do with PyMuPDF:
 
          Multiple occurrences of the same image are always reported. You can detect duplicates by comparing their `digest` values.
 
-      |history_begin|
-
-      * New in v1.18.11
-      * Changed in v1.18.13: added image MD5 hashcode computation and :data:`xref` search.
-
-      |history_end|
-
 
    .. method:: GetXObjects()
 
@@ -1644,12 +1521,6 @@ In a nutshell, this is what you can do with PyMuPDF:
       :rtype: list
       :returns: Boundary boxes and respective transformation matrices for each image occurrence on the page. If the item is not on the page, an empty list `[]` is returned.
 
-      |history_begin|
-
-      New in v1.18.13
-
-      |history_end|
-
 
    .. index::
       pair: transform; get_image_bbox
@@ -1664,26 +1535,12 @@ In a nutshell, this is what you can do with PyMuPDF:
       :rtype: :ref:`Rect` or (:ref:`Rect`, :ref:`Matrix`)
       :returns: the boundary box of the image -- optionally also its transformation matrix.
 
-        |history_begin|
-        
-        * (Changed in v1.16.7): If the page in fact does not display this image, an infinite rectangle is returned now. In previous versions, an exception was raised. Formally invalid parameters still raise exceptions.
-        * (Changed in v1.17.0): Only images referenced directly by the page are considered. This means that images occurring in embedded PDF pages are ignored and an exception is raised.
-        * (Changed in v1.18.5): Removed the restriction introduced in v1.17.0: any item of the page's image list may be specified.
-        * (Changed in v1.18.11): Partially re-instated a restriction: only those images are considered, that are either directly referenced by the page or by a Form XObject directly referenced by the page.
-        * (Changed in v1.18.11): Optionally also return the transformation matrix together with the bbox as the tuple `(bbox, transform)`.
-
-        |history_end|
 
       .. note::
 
          1. Be aware that :meth:`Page.GetImages` may contain "dead" entries i.e. images, which the page **does not display**. This is no error, but intended by the PDF creator. No exception will be raised in this case, but an infinite rectangle is returned. You can avoid this from happening by executing :meth:`Page.clean_contents` before this method.
          2. The image's "transformation matrix" is defined as the matrix, for which the expression `bbox / transform == fitz.Rect(0, 0, 1, 1)` is true, lookup details here: :ref:`ImageTransformation`.
 
-      |history_begin|
-
-      * Changed in v1.18.11: return image transformation matrix
-
-      |history_end|
 
    .. index::
       pair: matrix; GetSvgImage
@@ -1720,22 +1577,6 @@ In a nutshell, this is what you can do with PyMuPDF:
      :arg irect_like clip: restrict rendering to the intersection of this area with the page's rectangle.
      :arg bool alpha: whether to add an alpha channel. Always accept the default *false* if you do not really need transparency. This will save a lot of memory (25% in case of RGB ... and pixmaps are typically **large**!), and also processing time. Also note an **important difference** in how the image will be rendered: with *true* the pixmap's samples area will be pre-cleared with *0x00*. This results in **transparent** areas where the page is empty. With *false* the pixmap's samples will be pre-cleared with *0xff*. This results in **white** where the page has nothing to show.
 
-       |history_begin|
-      
-       Changed in v1.14.17
-         The default alpha value is now *false*.
-
-         * Generated with *alpha=true*
-
-         .. image:: images/img-alpha-1.*
-
-
-         * Generated with *alpha=false*
-
-         .. image:: images/img-alpha-0.*
-
-       |history_end|
-
      :arg bool annots: *(new in version 1.16.0)* whether to also render annotations or to suppress them. You can create pixmaps for annotations separately.
 
      :rtype: :ref:`Pixmap`
@@ -1745,28 +1586,6 @@ In a nutshell, this is what you can do with PyMuPDF:
 
          * The pixmap will have *"premultiplied"* pixels if `alpha=true`. To learn about some background, e.g. look for "Premultiplied alpha" `here <https://en.wikipedia.org/wiki/Glossary_of_computer_graphics#P>`_.
 
-         * The method will respect any page rotation and will not exceed the intersection of `clip` and :attr:`Page.cropbox`. If you need the page's mediabox (and if this is a different rectangle), you can use a snippet like the following to achieve this::
-
-            In [1]: import fitz
-            In [2]: doc=fitz.open("demo1.pdf")
-            In [3]: page=doc[0]
-            In [4]: rotation = page.rotation
-            In [5]: cropbox = page.cropbox
-            In [6]: page.SetCropBox(page.mediabox)
-            In [7]: page.SetRotation(0)
-            In [8]: pix = page.GetPixmap()
-            In [9]: page.SetCropBox(cropbox)
-            In [10]: if rotation != 0:
-               ...:     page.SetRotation(rotation)
-               ...:
-            In [11]:
-
-     |history_begin|
-
-     * Changed in v1.19.2: added support of parameter dpi.
-
-     |history_end|
-
 
 
    .. method:: GetAnnotNames()
@@ -1775,12 +1594,6 @@ In a nutshell, this is what you can do with PyMuPDF:
 
       :rtype: list
 
-      |history_begin|
-
-      * New in v1.16.10
-
-      |history_end|
-
 
    .. method:: GetAnnotXrefs()
 
@@ -1788,12 +1601,6 @@ In a nutshell, this is what you can do with PyMuPDF:
 
       :rtype: list
       :returns: a list of items *(xref, type)* where type is the annotation type. Use the type to tell apart links, fields and annotations, see :ref:`AnnotationTypes`.
-
-      |history_begin|
-
-      * New in v1.17.1
-
-      |history_end|
 
 
    .. method:: LoadAnnot(ident)
@@ -1807,12 +1614,6 @@ In a nutshell, this is what you can do with PyMuPDF:
 
       .. note:: Methods :meth:`Page.GetAnnotNames`, :meth:`Page.GetAnnotXrefs` provide lists of names or xrefs, respectively, from where an item may be picked and loaded via this method.
 
-      |history_begin|
-
-      * New in v1.17.1
-
-      |history_end|
-
    .. method:: LoadWidget(int xref)
 
       PDF only: return the field identified by *xref*.
@@ -1824,11 +1625,6 @@ In a nutshell, this is what you can do with PyMuPDF:
 
       .. note:: This is similar to the analogous method :meth:`Page.LoadAnnot` -- except that here only the xref is supported as identifier.
 
-      |history_begin|
-
-      * New in v1.19.6
-
-      |history_end|
 
    .. method:: LoadLinks()
 
@@ -1860,7 +1656,7 @@ In a nutshell, this is what you can do with PyMuPDF:
       pair: overlay; ShowPdfPage
       pair: rotate; ShowPdfPage
 
-   .. method:: ShowPdfPage(Rect rect, MuPDFDocument docsrc, int pno=0, bool keepProportion=true, bool overlay=true, int oc=0, int rotate=0, Rect clip=null)
+   .. method:: ShowPdfPage(Rect rect, Document docsrc, int pno=0, bool keepProportion=true, bool overlay=true, int oc=0, int rotate=0, Rect clip=null)
 
       PDF only: Display a page of another PDF as a **vector image** (otherwise similar to :meth:`Page.InsertImage`). This is a multi-purpose method. For example, you can use it to
 
@@ -1887,30 +1683,26 @@ In a nutshell, this is what you can do with PyMuPDF:
 
       Example: Show the same source page, rotated by 90 and by -90 degrees:
 
-      MuPDFDocument doc = new MuPDFDocument()  # new empty PDF
-      MuPDFPage page=doc.NewPage()  # new page in A4 format
-      
-      # upper half page
-      Rect r1 = new Rect(0, 0, page.rect.width, page.rect.height/2)
-      
-      # lower half page
-      r2 = r1 + new Rect(0, page.rect.height/2, 0, page.rect.height/2)
-      
-      MuPDFDocument src = new MuPDFDocument("PyMuPDF.pdf")  # show page 0 of this
-      
-      page.ShowPdfPage(r1, src, 0, rotate=90)
-      page.ShowPdfPage(r2, src, 0, rotate=-90)
-      doc.Save("show.pdf")
+      .. code-block:: c
+
+         Document doc = new Document()  // new empty PDF
+         Page page=doc.NewPage()  // new page in A4 format
+
+         // upper half page
+         Rect r1 = new Rect(0, 0, page.rect.width, page.rect.height/2)
+
+         // lower half page
+         Rect r2 = r1 + new Rect(0, page.rect.height/2, 0, page.rect.height/2)
+
+         Document src = new Document("PyMuPDF.pdf")  // show page 0 of this
+
+         page.ShowPdfPage(r1, src, 0, rotate=90)
+         page.ShowPdfPage(r2, src, 0, rotate=-90)
+         doc.Save("show.pdf")
 
       .. image:: images/img-showpdfpage.*
          :scale: 70
 
-      |history_begin|
-
-      * Changed in v1.14.11: Parameter *reuse_xref* has been deprecated. Position the source rectangle centered in target rectangle. Any rotation angle is now supported.
-      * Changed in v1.18.3: New parameter `oc`.
-
-      |history_end|
 
    .. method:: NewShape()
 
@@ -1942,14 +1734,6 @@ In a nutshell, this is what you can do with PyMuPDF:
 
         A list of :ref:`Rect` or  :ref:`Quad` objects, each of which  -- **normally!** -- surrounds one occurrence of *needle*. **However:** if parts of *needle* occur on more than one line, then a separate item is generated for each these parts. So, if `needle = "search string"`, two rectangles may be generated.
 
-        |history_begin|
-        
-        Changes in v1.18.2:
-
-        * There no longer is a limit on the list length (removal of the `hit_max` parameter).
-        * If a word is **hyphenated** at a line break, it will still be found. E.g. the needle "method" will be found even if hyphenated as "meth-od" at a line break, and two rectangles will be returned: one surrounding "meth" (without the hyphen) and another one surrounding "od".
-
-        |history_end|
 
       .. note:: The method supports multi-line text marker annotations: you can use the full returned list as **one single** parameter for creating the annotation.
 
@@ -1958,20 +1742,6 @@ In a nutshell, this is what you can do with PyMuPDF:
          * There is a tricky aspect: the search logic regards **contiguous multiple occurrences** of *needle* as one: assuming *needle* is "abc", and the page contains "abc" and "abcabc", then only **two** rectangles will be returned, one for "abc", and a second one for "abcabc".
          * You can always use :meth:`Page.GetTextbox` to check what text actually is being surrounded by each rectangle.
 
-      .. note:: A feature repeatedly asked for is supporting **regular expressions** when specifying the `"needle"` string: **There is no way to do this.** If you need something in that direction, first extract text in the desired format and then subselect the result by matching with some regex pattern. Here is an example for matching words::
-
-         >>> pattern = re.compile(r"...")  # the regex pattern
-         >>> words = page.GetText("words")  # extract words on page
-         >>> matches = [w for w in words if pattern.search(w[4])]
-
-         The `matches` list will contain the words matching the given pattern. In the same way you can select `span["text"]` from the output of `page.GetText("dict")`.
-
-      |history_begin|
-
-      * Changed in v1.18.2: added `clip` parameter. Remove `hit_max` parameter. Add default "dehyphenate".
-      * Changed in v1.19.0: added `textpage` parameter.
-
-      |history_end|
 
 
    .. method:: SetMediaBox(r)
@@ -1984,13 +1754,6 @@ In a nutshell, this is what you can do with PyMuPDF:
 
       .. caution:: For non-empty pages this may have undesired effects, because the location of all content depends on this value and will therefore change position or even disappear.
 
-      |history_begin|
-
-      * New in v1.16.13
-      * Changed in v1.19.4: remove all other rectangle definitions.
-
-      |history_end|
-
 
    .. method:: SetCropBox(r)
 
@@ -1998,31 +1761,9 @@ In a nutshell, this is what you can do with PyMuPDF:
 
       :arg rect_like r: the new visible area of the page. Note that this **must** be specified in **unrotated coordinates**, not empty, nor infinite and be completely contained in the :attr:`Page.mediabox`.
 
-      After execution **(if the page is not rotated)**, :attr:`Page.rect` will equal this rectangle, but be shifted to the top-left position (0, 0) if necessary. Example session:
+      After execution **(if the page is not rotated)**, :attr:`Page.rect` will equal this rectangle, but be shifted to the top-left position (0, 0) if necessary.
 
-      >>> MuPDFPage page = doc.NewPage()
-      >>> page.Rect
-      Rect(0.0, 0.0, 595.0, 842.0)
-      >>>
-      >>> page.CropBox  # cropbox and mediabox still equal
-      Rect(0.0, 0.0, 595.0, 842.0)
-      >>>
-      >>> # now set cropbox to a part of the page
-      >>> page.SetCropBox(fitz.Rect(100, 100, 400, 400))
-      >>> # this will also change the "rect" property:
-      >>> page.Rect
-      Rect(0.0, 0.0, 300.0, 300.0)
-      >>>
-      >>> # but mediabox remains unaffected
-      >>> page.MediaBox
-      Rect(0.0, 0.0, 595.0, 842.0)
-      >>>
-      >>> # revert CropBox change
-      >>> # either set it to MediaBox
-      >>> page.SetCropBox(page.MediaBox)
-      >>> # or 'refresh' MediaBox: will remove all other rectangles
-      >>> page.SetMediaBox(page.MediaBox)
-
+      
    .. method:: SetArtBox(Rect r)
 
    .. method:: SetBleedBox(Rect r)
@@ -2210,15 +1951,15 @@ Homologous Methods of :ref:`Document` and :ref:`Page`
 --------------------------------------------------------
 This is an overview of homologous methods on the :ref:`Document` and on the :ref:`Page` level.
 
-====================================== =====================================
-**Document Level**                     **Page Level**
-====================================== =====================================
+========================================= =====================================
+**Document Level**                        **Page Level**
+========================================= =====================================
 *Document.GetPageFonts(pno)*         :meth:`Page.GetFonts`
 *Document.GetPageImages(pno)*        :meth:`Page.GetImages`
 *Document.GetPagePixmap(pno, ...)*   :meth:`Page.GetPixmap`
 *Document.GetPageText(pno, ...)*     :meth:`Page.GetText`
 *Document.SearchPageFor(pno, ...)*   :meth:`Page.SearchFor`
-====================================== =====================================
+========================================= =====================================
 
 The page number "pno" is a 0-based integer `-∞ < pno < PageCount`.
 

@@ -11,7 +11,7 @@ DisplayList is a list containing drawing commands (text, images, etc.). The inte
 1. as a caching-mechanism to reduce parsing of a page
 2. as a data structure in multi-threading setups, where one thread parses the page and another one renders pages. This aspect is currently not supported by PyMuPDF.
 
-A display list is populated with objects from a page, usually by executing :meth:`Page.get_displaylist`. There also exists an independent constructor.
+A display list is populated with objects from a page, usually by executing :meth:`Page.GetDisplaylist`. There also exists an independent constructor.
 
 "Replay" the list (once or many times) by invoking one of its methods :meth:`~DisplayList.run`, :meth:`~DisplayList.get_pixmap` or :meth:`~DisplayList.get_textpage`.
 
@@ -43,7 +43,7 @@ A display list is populated with objects from a page, usually by executing :meth
     
       Run the display list through a device. The device will populate the display list with its "commands" (i.e. text extraction or image creation). The display list can later be used to "read" a page many times without having to re-interpret it from the document file.
 
-      You will most probably instead use one of the specialized run methods below -- :meth:`get_pixmap` or :meth:`get_textpage`.
+      You will most probably instead use one of the specialized run methods below -- :meth:`GetPixmap` or :meth:`GetTextpage`.
 
       :arg device: Device
       :type device: :ref:`Device`
@@ -88,7 +88,7 @@ A display list is populated with objects from a page, usually by executing :meth
 
    .. attribute:: Rect
 
-      Contains the display list's mediabox. This will equal the page's rectangle if it was created via :meth:`Page.get_displaylist`.
+      Contains the display list's mediabox. This will equal the page's rectangle if it was created via :meth:`Page.GetDisplaylist`.
 
       :type: :ref:`Rect`
 

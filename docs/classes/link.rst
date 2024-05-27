@@ -104,9 +104,9 @@ There is a parent-child relationship between a link and its page. If the page ob
       
       *
         `IsExternal` is true: `uri` points to some target outside the current
-        PDF, which may be an internet resource (`uri` starts with "http://" or
-        similar), another file (`uri` starts with "file:" or "file://") or some
-        other service like an e-mail address (`uri` starts with "mailto:").
+        PDF, which may be an internet resource (`uri` starts with ``http://`` or
+        similar), another file (`uri` starts with "file:" or ``file://``) or some
+        other service like an e-mail address (`uri` starts with ``mailto:``).
 
       *
         `IsExternal` is false: `uri` will be `null` or point to an

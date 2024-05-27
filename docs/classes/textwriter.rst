@@ -75,8 +75,8 @@ Using this object entails three steps:
       :arg bool right_to_left: whether the text should be written from right to left. Applicable for languages like Arabian or Hebrew. Default is *false*. If *true*, any Latin parts within the text will automatically converted. There are no other consequences, i.e. :attr:`TextWriter.last_point` will still be the rightmost character, and there neither is any alignment taking place. Hence you may want to use :meth:`TextWriter.fill_textbox` instead.
       :arg bool smallCaps: look for the character's Small Capital version in the font. If present, take that value instead. Otherwise the original character (this font or the fallback font) will be taken. The fallback font will never return small caps. For example, this snippet::
 
-         MuPDFDocument doc = new MuPDFDocument();
-         MuPDFPage page = doc.NewPage();
+         Document doc = new Document();
+         Page page = doc.NewPage();
          string text = "PyMuPDF: the Python bindings for MuPDF";
          MuPDFFont font = new Font("figo");                       // choose a font with small caps
          MuPDFTextWriter tw = new MuPDFTextWriter(page.rect);
@@ -126,9 +126,9 @@ Using this object entails three steps:
       :rtype: list
       :returns: List of lines that did not fit in the rectangle. Each item is a tuple `(text, length)` containing a string and its length (on the page).
 
-   .. note:: Use these methods as often as is required -- there is no technical limit (except memory constraints of your system). You can also mix :meth:`Append` and text boxes and have multiple of both. Text positioning is exclusively controlled by the insertion point. Therefore there is no need to adhere to any order. *(Changed in Raise an exception for an unsupported font -- checked via :attr:`Font.IsWritable`.
+   .. note:: Use these methods as often as is required -- there is no technical limit (except memory constraints of your system). You can also mix :meth:`Append` and text boxes and have multiple of both. Text positioning is exclusively controlled by the insertion point. Therefore there is no need to adhere to any order. Raise an exception for an unsupported font -- checked via :attr:`Font.IsWritable`.
 
-   .. method:: WriteText(MuPDFPage page, float opacity = -1, float[] color = null, Morph morph = null, int overlay = 1, int oc = 0, int renderMode = 0)
+   .. method:: WriteText(Page page, float opacity = -1, float[] color = null, Morph morph = null, int overlay = 1, int oc = 0, int renderMode = 0)
 
       Write the TextWriter text to a page, which is the only mandatory parameter. The other parameters can be used to temporarily override the values used when the TextWriter was created.
 

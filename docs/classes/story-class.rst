@@ -32,7 +32,7 @@ Story
 
 .. class:: Story
 
-   .. method:: Story(string html="", string user_css=null, float em=12, MuPDFArchive archive=null)
+   .. method:: Story(string html="", string user_css=null, float em=12, Archive archive=null)
 
       Create a **story**, optionally providing HTML and CSS source.
       The HTML is parsed, and held within the Story as a DOM (Document Object Model).
@@ -149,14 +149,14 @@ Story
 
       The :htmlTag:`body` part of the story's DOM. This attribute contains the :ref:`Xml` node of :htmlTag:`body`. All relevant content for PDF production is contained between "<body>" and "</body>".
 
-   .. method:: Write(MuPDFDocumentWriter writer, RectFunction rectfn, Action<Position> positionfn=null, Action<int, Rect, MuPDFDeviceWrapper, bool> pagefn=null)
+   .. method:: Write(DocumentWriter writer, RectFunction rectfn, Action<Position> positionfn=null, Action<int, Rect, MuPDFDeviceWrapper, bool> pagefn=null)
 
         Places and draws Story to a `DocumentWriter`. Avoids the need for
         calling code to implement a loop that calls `Story.Place()` and
         `Story.Draw()` etc, at the expense of having to provide at least the
         `rectfn()` callback.
        
-        :arg writer: a `MuPDFDocumentWriter` or null.
+        :arg writer: a `DocumentWriter` or null.
         :arg rectfn: a callable taking `(rect_num: int, filled: Rect)` and
             returning `(mediabox, rect, ctm)`:
             
@@ -173,7 +173,7 @@ Story
             null, or a callable taking `Action<int, Rect, MuPDFDeviceWrapper, bool>`;
             called at start (`after=0`) and end (`after=1`) of each page.
 
-   .. staticmethod:: WriteStabilized(MuPDFDocumentWriter writer, ContentFunction contentfn, RectFunction rectfn, string user_css=null, int em=12, Action<Position> positionfn=null, Action<int, Rect, MuPDFDeviceWrapper, bool> pagefn=null, MuPDFArchive archive=null, bool addHeaderIds=true)
+   .. staticmethod:: WriteStabilized(DocumentWriter writer, ContentFunction contentfn, RectFunction rectfn, string user_css=null, int em=12, Action<Position> positionfn=null, Action<int, Rect, MuPDFDeviceWrapper, bool> pagefn=null, Archive archive=null, bool addHeaderIds=true)
    
         Static method that does iterative layout of html content to a
         `DocumentWriter`.
@@ -222,7 +222,7 @@ Story
         and we return a PDF `Document` in which links have been created
         for each internal html link.
 
-   .. staticmethod:: WriteStabilizedWithLinks(ContentFunction contentfn, RectFunction rectfn, string userCss=null, int em=12, Action<Position> positionfn=null, Action<int, Rect, MuPDFDeviceWrapper, bool> pagefn=null, MuPDFArchive archive=null, bool addHeaderIds=true)
+   .. staticmethod:: WriteStabilizedWithLinks(ContentFunction contentfn, RectFunction rectfn, string userCss=null, int em=12, Action<Position> positionfn=null, Action<int, Rect, MuPDFDeviceWrapper, bool> pagefn=null, Archive archive=null, bool addHeaderIds=true)
 
         Similar to `write_stabilized()` except that we don't have a `writer`
         arg and instead return a PDF `Document` in which links have been

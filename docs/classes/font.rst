@@ -6,9 +6,7 @@
 Font
 ================
 
-* New in v1.16.18
-
-This class represents a font as defined in MuPDF (*fz_font_s* structure). It is required for the new class :ref:`TextWriter` and the new :meth:`Page.write_text`. Currently, it has no connection to how fonts are used in methods :meth:`Page.insert_text` or :meth:`Page.insert_textbox`, respectively.
+This class represents a font as defined in MuPDF (*fz_font_s* structure). It is required for the new class :ref:`TextWriter` and the new :meth:`Page.WriteText`. Currently, it has no connection to how fonts are used in methods :meth:`Page.InsertText` or :meth:`Page.InsertTextbox`, respectively.
 
 A Font object also contains useful general information, like the font bbox, the number of defined glyphs, glyph names or the bbox of a single glyph.
 
@@ -84,7 +82,7 @@ A Font object also contains useful general information, like the font bbox, the 
 
       .. note::
 
-        With the usual reserved names "helv", "tiro", etc., you will create fonts with the expected names "Helvetica", "Times-Roman" and so on. **However**, and in contrast to :meth:`Page.insert_font` and friends,
+        With the usual reserved names "helv", "tiro", etc., you will create fonts with the expected names "Helvetica", "Times-Roman" and so on. **However**, and in contrast to :meth:`Page.InsertFont` and friends,
 
          * a font file will **always** be embedded in your PDF,
          * Greek and Cyrillic characters are supported without needing the *encoding* parameter.
@@ -96,35 +94,6 @@ A Font object also contains useful general information, like the font bbox, the 
         If you **know** you have a mixture of CJK and Latin text, consider just using `Font("cjk")` because this supports everything and also significantly (by a factor of up to three) speeds up execution: MuPDF will always find any character in this single font and never needs to check fallbacks.
 
         But if you do use some other font, you will still automatically be able to also write CJK characters: MuPDF detects this situation and silently falls back to the universal font (which will then of course also be embedded in your PDF).
-
-        *(New in v1.17.5)* Optionally, some new "reserved" fontname codes become available if you install `pymupdf-fonts <https://pypi.org/project/pymupdf-fonts/>`_, `pip install pymupdf-fonts`. **"Fira Mono"** is a mono-spaced sans font set and **FiraGO** is another non-serifed "universal" font set which supports all Latin (including Cyrillic and Greek) plus Thai, Arabian, Hewbrew and Devanagari -- but none of the CJK languages. The size of a FiraGO font is only a quarter of the "Droid Sans Fallback" size (compressed 400 KB vs. 1.65 MB) -- **and** it provides the weights bold, italic, bold-italic -- which the universal font doesn't.
-
-        **"Space Mono"** is another nice and small mono-spaced font from Google Fonts, which supports Latin Extended characters and comes with all 4 important weights.
-
-        The following table maps a fontname code to the corresponding font. For the current content of the package please see its documentation:
-
-            =========== =========================== ======= =============================
-            Code        Fontname                    New in  Comment
-            =========== =========================== ======= =============================
-            figo        FiraGO Regular              v1.0.0  narrower than Helvetica
-            figbo       FiraGO Bold                 v1.0.0
-            figit       FiraGO Italic               v1.0.0
-            figbi       FiraGO Bold Italic          v1.0.0
-            fimo        Fira Mono Regular           v1.0.0
-            fimbo       Fira Mono Bold              v1.0.0
-            spacemo     Space Mono Regular          v1.0.1
-            spacembo    Space Mono Bold             v1.0.1
-            spacemit    Space Mono Italic           v1.0.1
-            spacembi    Space Mono Bold-Italic      v1.0.1
-            math        Noto Sans Math Regular      v1.0.2  math symbols
-            music       Noto Music Regular          v1.0.2  musical symbols
-            symbol1     Noto Sans Symbols Regular   v1.0.2  replacement for "symb"
-            symbol2     Noto Sans Symbols2 Regular  v1.0.2  extended symbol set
-            notos       Noto Sans Regular           v1.0.3  alternative to Helvetica
-            notosit     Noto Sans Italic            v1.0.3
-            notosbo     Noto Sans Bold              v1.0.3
-            notosbi     Noto Sans BoldItalic        v1.0.3
-            =========== =========================== ======= =============================
 
    .. index::
       pair: Font.HasGlyph, language
@@ -201,11 +170,7 @@ A Font object also contains useful general information, like the font bbox, the 
 
       :arg str name: The name of the glyph.
 
-      :returns: The unicode integer, or 65533 = 0xFFFD if the name is unknown. Examples: `font.glyph_name_to_unicode("Sigma") = 931`, `font.glyph_name_to_unicode("sigma") = 963`. Refer to the `Adobe Glyph List <https://github.com/adobe-type-tools/agl-aglfn/blob/master/glyphlist.txt>`_ publication for a list of glyph names and their unicode numbers. Example:
-
-         >>> font = fitz.Font("helv")
-         >>> font.HasGlyph(font.glyph_name_to_unicode("infinity"))
-         True
+      :returns: The unicode integer, or 65533 = 0xFFFD if the name is unknown. Examples: `font.glyph_name_to_unicode("Sigma") = 931`, `font.glyph_name_to_unicode("sigma") = 963`. Refer to the `Adobe Glyph List <https://github.com/adobe-type-tools/agl-aglfn/blob/master/glyphlist.txt>`_ publication for a list of glyph names and their unicode numbers.
 
    .. index::
       pair: Font.GlyphBbox, language

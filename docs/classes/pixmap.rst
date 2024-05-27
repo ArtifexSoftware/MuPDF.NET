@@ -166,7 +166,7 @@ Have a look at the :ref:`FAQ` section to see some pixmap usage "at work".
          2. Starting with version 1.14.13, the samples data are **copied** to the pixmap.
 
 
-   .. method:: Pixmap(MuPDFDocument doc, int xref)
+   .. method:: Pixmap(Document doc, int xref)
 
       **From a PDF image:** Create a pixmap from an image **contained in PDF** *doc* identified by its :data:`xref`. All pimap properties are set by the image. Have a look at `extract-img1.py <https://github.com/pymupdf/PyMuPDF/tree/master/demo/extract-img1.py>`_ and `extract-img2.py <https://github.com/pymupdf/PyMuPDF/tree/master/demo/extract-img2.py>`_ to see how this can be used to recover all of a PDF's images.
 
@@ -298,7 +298,9 @@ Have a look at the :ref:`FAQ` section to see some pixmap usage "at work".
 
       :arg irect_like irect: The area to be copied.
 
-      .. note:: Example: Suppose you have two pixmaps, `pix1` and `pix2` and you want to copy the lower right quarter of `pix2` to `pix1` such that it starts at the top-left point of `pix1`. Use the following snippet::
+      .. note:: Example: Suppose you have two pixmaps, `pix1` and `pix2` and you want to copy the lower right quarter of `pix2` to `pix1` such that it starts at the top-left point of `pix1`. Use the following snippet:
+
+      .. code-block:: c
 
          // safeguard: set top-left of pix1 and pix2 to (0, 0)
          pix1.SetOrigin(0, 0)
@@ -309,8 +311,8 @@ Have a look at the :ref:`FAQ` section to see some pixmap usage "at work".
          pix2.SetOrigin(-x1, -y1)
          pix1.Copy(pix2, (0, 0, x1, y1))
 
-         .. image:: images/img-pixmapcopy.*
-             :scale: 20
+      .. image:: images/img-pixmapcopy.*
+         :scale: 20
 
    .. method:: Save(string filename, string output=null, int jpg_quality=95)
 
@@ -361,17 +363,19 @@ Have a look at the :ref:`FAQ` section to see some pixmap usage "at work".
 
       Perform text recognition using Tesseract and convert the image to a 1-page PDF with an OCR text layer. Internally invokes :meth:`Pixmap.SavePdfOCR`.
 
-      :returns: A 1-page PDF file in memory. Could be opened like `doc=new MuPDFDocument("pdf", pix.PdfOCR2Bytes())`, and text extractions could be performed on its `page=doc[0]`.
+      :returns: A 1-page PDF file in memory. Could be opened like `doc=new Document("pdf", pix.PdfOCR2Bytes())`, and text extractions could be performed on its `page=doc[0]`.
       
          .. note::
          
-            Another possible use is insertion into some pdf. The following snippet reads the images of a folder and stores them as pages in a new PDF that contain an OCR text layer::
+            Another possible use is insertion into some pdf. The following snippet reads the images of a folder and stores them as pages in a new PDF that contain an OCR text layer:
 
-            doc = new MuPDFDocument();
+         .. code-block:: c
+
+            Document doc = new Document();
             foreach (string imgfile in Directory.GetFiles(folder))
             {
                Pixmap pix = new Pixmap(imgfile);
-               MuPDFDocument imgpdf = new MuPDFDocument("pdf", pix.PdfOCR2Bytes());
+               Document imgpdf = new Document("pdf", pix.PdfOCR2Bytes());
                doc.InsertPdf(imgpdf);
                pix = null;
                imgpdf.Close();

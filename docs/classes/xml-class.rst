@@ -413,23 +413,28 @@ In addition, these methods return there parent node, so they can be concatenated
 
 Context Manager support
 ------------------------
-The standard way to add nodes to a DOM is this::
+The standard way to add nodes to a DOM is this:
 
-   MuPDFXml body = story.Body;
-   MuPDFXml para = body.AddParagraph();  # add a paragraph
-   para.SetBold();  # text that follows will be bold
+
+.. code-block:: c
+
+   Xml body = story.Body;
+   Xml para = body.AddParagraph();  // add a paragraph
+   para.SetBold();  // text that follows will be bold
    para.AddText("some bold text");
-   para.SetItalic();  # text that follows will additionally be italic
+   para.SetItalic();  // text that follows will additionally be italic
    para.add_txt("this is bold and italic");
-   para.SetItalic(false).SetBold(false);  # all following text will be regular
+   para.SetItalic(false).SetBold(false);  // all following text will be regular
    para.AddText("regular text");
 
 
 
-Methods that are flagged as "context managers" can conveniently be used in this way::
+Methods that are flagged as "context managers" can conveniently be used in this way:
 
-   MuPDFXml body = story.Body;
-   MuPDFXml para = body.AddParagraph();
+.. code-block:: c
+
+   Xml body = story.Body;
+   Xml para = body.AddParagraph();
    para.SetBold().AddText("some bold text");
    para.SetItalic().AddText("this is bold and italic");
    para.SetItalic(false).SetBold(false).AddText("regular text");
