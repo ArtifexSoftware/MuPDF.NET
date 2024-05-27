@@ -15,12 +15,12 @@ namespace MuPDF.NET.Test
             Document doc = new Document();
             MuPDFPage page = doc.NewPage();
 
-            MuPDFAnnot annot1 = page.AddCircleAnnot(new Rect(50, 50, 100, 100));
+            Annot annot1 = page.AddCircleAnnot(new Rect(50, 50, 100, 100));
             annot1.SetColors(fill: new float[] { 1, 0, 0 }, stroke: new float[] { 1, 0, 0 });
             annot1.SetOpacity(2 / 3.0f);
             annot1.Update(blendMode: "Multiply");
 
-            MuPDFAnnot annot2 = page.AddCircleAnnot(new Rect(75, 75, 125, 125));
+            Annot annot2 = page.AddCircleAnnot(new Rect(75, 75, 125, 125));
             annot2.SetColors(fill: new float[] { 0, 0, 1 }, stroke: new float[] { 0, 0, 1 });
             annot2.SetOpacity(1 / 3.0f);
             annot2.Update(blendMode: "Multiply");

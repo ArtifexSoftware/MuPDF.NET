@@ -298,11 +298,11 @@ namespace MuPDF.NET
             return states;
         }
 
-        public MuPDFAnnot Next
+        public Annot Next
         {
             get
             {
-                return (new MuPDFAnnot(_annot)).Next;
+                return (new Annot(_annot)).Next;
             }
         }
 

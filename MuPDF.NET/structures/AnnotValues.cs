@@ -1,6 +1,6 @@
 ﻿namespace MuPDF.NET
 {
-    public class Annot
+    public class AnnotValues
     {
         public int Xref { get; set; }
 

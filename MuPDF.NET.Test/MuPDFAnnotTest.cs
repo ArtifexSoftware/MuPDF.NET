@@ -13,7 +13,7 @@ namespace MuPDF.NET.Test
         {
             Document doc = new Document();
             MuPDFPage page = doc.NewPage();
-            MuPDFAnnot annot = page.AddHighlightAnnot(new Rect(10, 10, 20, 20));
+            Annot annot = page.AddHighlightAnnot(new Rect(10, 10, 20, 20));
 
             annot.CleanContents();
 
@@ -35,7 +35,7 @@ namespace MuPDF.NET.Test
             Document doc = new Document();
             MuPDFPage page = doc.NewPage();
             Rect r = new Rect(72, 72, 220, 100);
-            MuPDFAnnot annot = page.AddCaretAnnot(r.TopLeft);
+            Annot annot = page.AddCaretAnnot(r.TopLeft);
 
             Assert.That(annot.Type.Item2, Is.EqualTo("Caret"));
             Assert.That((int)annot.Type.Item1, Is.EqualTo(14));
@@ -53,7 +53,7 @@ namespace MuPDF.NET.Test
             MuPDFPage page = doc.NewPage();
             Rect r = new Rect(72, 72, 220, 100);
             string t1 = "têxt üsès Lätiñ charß,\nEUR: €, mu: µ, super scripts: ²³!";
-            MuPDFAnnot annot = page.AddFreeTextAnnot(
+            Annot annot = page.AddFreeTextAnnot(
                 r,
                 t1,
                 fontSize: 10,
@@ -75,7 +75,7 @@ namespace MuPDF.NET.Test
             Document doc = new Document();
             MuPDFPage page = doc.NewPage();
             Rect r = new Rect(72, 72, 220, 100);
-            MuPDFAnnot annot = page.AddFileAnnot(
+            Annot annot = page.AddFileAnnot(
                 r.TopLeft,
                 Encoding.UTF8.GetBytes("just anything for testing"),
                 "testdata.txt"
@@ -89,7 +89,7 @@ namespace MuPDF.NET.Test
         {
             Document doc = new Document();
             MuPDFPage page = doc.NewPage();
-            MuPDFAnnot annot = page.AddRedactAnnot(new Rect(72, 72, 200, 200).Quad, text: "Hello");
+            Annot annot = page.AddRedactAnnot(new Rect(72, 72, 200, 200).Quad, text: "Hello");
             annot.Update(rotate: -1);
             Assert.That((int)annot.Type.Item1, Is.EqualTo(12));
 
@@ -151,8 +151,8 @@ namespace MuPDF.NET.Test
         {
             Document doc = new Document("../../../resources/annots.pdf");
             MuPDFPage page = doc[0];
-            MuPDFAnnot firstAnnot = (new List<MuPDFAnnot>(page.GetAnnots()))[0];
-            MuPDFAnnot next = firstAnnot.Next;
+            Annot firstAnnot = (new List<Annot>(page.GetAnnots()))[0];
+            Annot next = firstAnnot.Next;
         }
 
         [Test]
@@ -164,8 +164,8 @@ namespace MuPDF.NET.Test
             page.AddLineAnnot(new Point(0, 0), new Point(1, 1));
             page.AddLineAnnot(new Point(1, 0), new Point(0, 1));
 
-            MuPDFAnnot firstAnnot = (new List<MuPDFAnnot>(page.GetAnnots()))[0];
-            int type = (int)(firstAnnot.Next as MuPDFAnnot).Type.Item1;
+            Annot firstAnnot = (new List<Annot>(page.GetAnnots()))[0];
+            int type = (int)(firstAnnot.Next as Annot).Type.Item1;
         }
     }
 }

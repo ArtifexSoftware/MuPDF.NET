@@ -83,7 +83,7 @@ public class MuPDFPageTest : PdfTestBase
     [Test]
     public void AddStrikeAnnot()
     {
-        MuPDFAnnot annot = page.AddStrikeoutAnnot((new Rect(100, 100, 300, 300).Quad), new Point(120, 120), new Point(250, 250));
+        Annot annot = page.AddStrikeoutAnnot((new Rect(100, 100, 300, 300).Quad), new Point(120, 120), new Point(250, 250));
         Assert.IsNotNull(annot);
     }
 

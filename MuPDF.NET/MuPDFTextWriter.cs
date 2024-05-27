@@ -201,7 +201,7 @@ namespace MuPDF.NET
             int nCol = 1;
             float[] devColor = { 0, 0, 0, 0 };
             if (color != null)
-                devColor = MuPDFAnnot.ColorFromSequence(color);
+                devColor = Annot.ColorFromSequence(color);
             if (devColor.Length == 3)
                 colorSpace = mupdf.mupdf.fz_device_rgb();
             else if (devColor.Length == 4)

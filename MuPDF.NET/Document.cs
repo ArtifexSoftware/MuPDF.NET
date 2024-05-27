@@ -4588,7 +4588,7 @@ namespace MuPDF.NET
                         page.DeleteLink(link);
                 }
                 bool foundRedacts = false;
-                foreach (MuPDFAnnot annot in page.GetAnnots())
+                foreach (Annot annot in page.GetAnnots())
                 {
                     if (annot.Type.Item1 == PdfAnnotType.PDF_ANNOT_FILE_ATTACHMENT && attachedFiles)
                         annot.UpdateFile(buffer: new byte[] { 32 });

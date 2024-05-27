@@ -4,9 +4,9 @@ using mupdf;
 
 namespace MuPDF.NET
 {
-    public class MuPDFAnnot
+    public class Annot
     {
-        static MuPDFAnnot()
+        static Annot()
         {
             if (!File.Exists("mupdfcsharp.dll"))
                 Utils.LoadEmbeddedDll();
@@ -21,7 +21,7 @@ namespace MuPDF.NET
         public bool Yielded { get; set; }
 
         delegate string LE_FUNCTION(
-            MuPDFAnnot annot,
+            Annot annot,
             Point p1,
             Point p2,
             bool lr,
@@ -299,7 +299,7 @@ namespace MuPDF.NET
                     else
                         annot = annot.pdf_next_widget();
 
-                    MuPDFAnnot val = (annot == null ? null : new MuPDFAnnot(annot));
+                    Annot val = (annot == null ? null : new Annot(annot));
                     if (val == null)
                     {
                         return null;
@@ -560,7 +560,7 @@ namespace MuPDF.NET
             return string.Format("'{0}' annotation on", 0);
         }
 
-        public MuPDFAnnot(PdfAnnot annotion)
+        public Annot(PdfAnnot annotion)
         {
             _nativeAnnotion = new PdfAnnot(annotion);
             IsOwner = true;
@@ -571,11 +571,11 @@ namespace MuPDF.NET
             IsOwner = false;
         }
 
-        public Annot GetRedactValues()
+        public AnnotValues GetRedactValues()
         {
             PdfAnnot annot = _nativeAnnotion;
 
-            Annot values = new Annot();
+            AnnotValues values = new AnnotValues();
             try
             {
                 PdfObj obj = annot.pdf_annot_obj().pdf_dict_gets("RO");
@@ -622,7 +622,7 @@ namespace MuPDF.NET
             return values;
         }
 
-        public static (List<float>, string, float) ParseData(MuPDFAnnot annot)
+        public static (List<float>, string, float) ParseData(Annot annot)
         {
             PdfObj obj = annot._nativeAnnotion.pdf_annot_obj();
             PdfDocument pdf = obj.pdf_get_bound_document();
@@ -2085,7 +2085,7 @@ namespace MuPDF.NET
         }
 
         internal static string le_square(
-            MuPDFAnnot annot,
+            Annot annot,
             Point p1,
             Point p2,
             bool lr,
@@ -2116,7 +2116,7 @@ namespace MuPDF.NET
         }
 
         internal static string le_diamond(
-            MuPDFAnnot annot,
+            Annot annot,
             Point p1,
             Point p2,
             bool lr,
@@ -2152,7 +2152,7 @@ namespace MuPDF.NET
         }
 
         internal static string le_openarrow(
-            MuPDFAnnot annot,
+            Annot annot,
             Point p1,
             Point p2,
             bool lr,
@@ -2189,7 +2189,7 @@ namespace MuPDF.NET
         }
 
         internal static string le_closedarrow(
-            MuPDFAnnot annot,
+            Annot annot,
             Point p1,
             Point p2,
             bool lr,
@@ -2223,7 +2223,7 @@ namespace MuPDF.NET
         }
 
         internal static string le_butt(
-            MuPDFAnnot annot,
+            Annot annot,
             Point p1,
             Point p2,
             bool lr,
@@ -2253,7 +2253,7 @@ namespace MuPDF.NET
         }
 
         internal static string le_ropenarrow(
-            MuPDFAnnot annot,
+            Annot annot,
             Point p1,
             Point p2,
             bool lr,
@@ -2289,7 +2289,7 @@ namespace MuPDF.NET
         }
 
         internal static string le_rclosedarrow(
-            MuPDFAnnot annot,
+            Annot annot,
             Point p1,
             Point p2,
             bool lr,
@@ -2323,7 +2323,7 @@ namespace MuPDF.NET
         }
 
         internal static string le_slash(
-            MuPDFAnnot annot,
+            Annot annot,
             Point p1,
             Point p2,
             bool lr,
@@ -2353,7 +2353,7 @@ namespace MuPDF.NET
         }
 
         internal static string le_circle(
-            MuPDFAnnot annot,
+            Annot annot,
             Point p1,
             Point p2,
             bool lr,
@@ -2412,10 +2412,10 @@ namespace MuPDF.NET
             Point ul2 = ml + (p4 - ml) * kappa;
 
             string ap = string.Format("{0} {1} m\n", ml.X, ml.Y);
-            ap += MuPDFAnnot.bezier(ol1, ol2, mo);
-            ap += MuPDFAnnot.bezier(or1, or2, mr);
-            ap += MuPDFAnnot.bezier(ur1, ur2, mu);
-            ap += MuPDFAnnot.bezier(ul1, ul2, ml);
+            ap += Annot.bezier(ol1, ol2, mo);
+            ap += Annot.bezier(or1, or2, mr);
+            ap += Annot.bezier(ur1, ur2, mu);
+            ap += Annot.bezier(ul1, ul2, ml);
             return ap;
         }
 
@@ -2428,7 +2428,7 @@ namespace MuPDF.NET
             string,
             string,
             string
-        ) le_annot_parms(MuPDFAnnot annot, Point p1, Point p2, float[] fillColor)
+        ) le_annot_parms(Annot annot, Point p1, Point p2, float[] fillColor)
         {
             float w = annot.Border.Width;
             float[] sc = annot.Colors.Stroke;

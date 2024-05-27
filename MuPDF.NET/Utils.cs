@@ -1100,7 +1100,7 @@ namespace MuPDF.NET
             return ret;
         }
 
-        public static void GetWidgetProperties(MuPDFAnnot annot, MuPDFWidget widget)
+        public static void GetWidgetProperties(Annot annot, MuPDFWidget widget)
         {
             PdfObj annotObj = mupdf.mupdf.pdf_annot_obj(annot.ToPdfAnnot());
             PdfPage page = mupdf.mupdf.pdf_annot_page(annot.ToPdfAnnot());
@@ -4640,7 +4640,7 @@ namespace MuPDF.NET
                 return "()";
             string MakeUtf16be(string s)
             {
-                byte[] r = MuPDFAnnot.MergeByte(
+                byte[] r = Annot.MergeByte(
                     new byte[] { 254, 255 },
                     Encoding.BigEndianUnicode.GetBytes(s)
                 );
@@ -5170,7 +5170,7 @@ namespace MuPDF.NET
             return ret;
         }
 
-        public static void FillWidget(MuPDFAnnot annot, MuPDFWidget widget)
+        public static void FillWidget(Annot annot, MuPDFWidget widget)
         {
             Utils.GetWidgetProperties(annot, widget);
         }

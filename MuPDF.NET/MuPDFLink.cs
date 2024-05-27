@@ -214,7 +214,7 @@ namespace MuPDF.NET
             if (linkObj == null)
                 return;
 
-            MuPDFAnnot.SetBorderAnnot(border, pdf, linkObj);
+            Annot.SetBorderAnnot(border, pdf, linkObj);
         }
 
         /// <summary>
