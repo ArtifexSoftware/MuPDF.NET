@@ -271,5 +271,78 @@ namespace MuPDF.NET.Test
             }
             Assert.That(pageLabels.SequenceEqual(answer));
         }
+
+        [Test]
+        public void Search1()
+        {
+            MuPDFDocument doc = new MuPDFDocument("../../../resources/2.pdf");
+            MuPDFPage page = doc[0];
+            string needle = "mupdf";
+            List<Quad> qlist = page.SearchFor(needle);
+            Assert.That(qlist.Count, Is.Not.Zero);
+            foreach (Quad q in qlist)
+            {
+                Assert.That(page.GetTextbox(q.Rect).ToLower(), Is.Not.Null);
+            }
+        }
+
+        [Test]
+        public void Encryption()
+        {
+            string text = "some secret information";
+            int perm = (int)(mupdf.mupdf.PDF_PERM_ACCESSIBILITY
+                | mupdf.mupdf.PDF_PERM_PRINT
+                | mupdf.mupdf.PDF_PERM_COPY
+                | mupdf.mupdf.PDF_PERM_ANNOTATE);
+            string ownerPass = "owner";
+            string userPass = "user";
+            int encryptMeth = mupdf.mupdf.PDF_ENCRYPT_AES_256;
+
+            MuPDFDocument doc = new MuPDFDocument();
+            MuPDFPage page = doc.NewPage();
+            page.InsertText(new Point(50, 72), text, fontFile: "../../../resources/kenpixel.ttf");
+            byte[] tobytes = doc.Write(
+                encryption: encryptMeth,
+                ownerPW: ownerPass,
+                userPW: userPass,
+                permissions: perm);
+            doc.Close();
+            doc = new MuPDFDocument("pdf", tobytes);
+            Assert.That(doc.NeedsPass);
+            Assert.That(doc.IsEncrypted);
+            int rc = doc.Authenticate("owner");
+            Assert.That(rc, Is.EqualTo(4));
+            Assert.That(doc.IsEncrypted, Is.False);
+            doc.Close();
+            doc = new MuPDFDocument("pdf", tobytes);
+            rc = doc.Authenticate("user");
+            Assert.That(rc, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void HasLinks()
+        {
+            MuPDFDocument doc = new MuPDFDocument("../../../resources/toc.pdf");
+            Assert.That(doc.HasLinks(), Is.False);
+        }
+
+        [Test]
+        public void IsRepaired()
+        {
+            MuPDFDocument doc = new MuPDFDocument("../../../resources/toc.pdf");
+            Assert.That(doc.IsRepaired, Is.False);
+        }
+
+        [Test]
+        public void RemoveRotation()
+        {
+            MuPDFDocument doc = new MuPDFDocument("../../../resources/test-2812.pdf");
+            for (int i = 1; i < doc.PageCount; i ++) // because of first page's rotation is zero
+            {
+                Assert.That(doc[i].Rotation, Is.Not.Zero);
+                doc[i].RemoveRotation();
+                Assert.That(doc[i].Rotation, Is.Zero);
+            }
+        }
     }
 }

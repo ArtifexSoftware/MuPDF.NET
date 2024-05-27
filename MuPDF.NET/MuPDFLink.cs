@@ -22,14 +22,17 @@ namespace MuPDF.NET
 
         public string Uri
         {
-            get { return _nativeLink.m_internal != null ? _nativeLink.m_internal.uri : ""; }
+            get
+            { 
+                return _nativeLink.m_internal != null ? _nativeLink.m_internal.uri : "";
+            }
         }
 
         public string Id { get; set; }
 
-        public MuPDFLink(FzLink t)
+        public MuPDFLink(FzLink link)
         {
-            _nativeLink = t;
+            _nativeLink = link;
         }
 
         public MuPDFLink() { }

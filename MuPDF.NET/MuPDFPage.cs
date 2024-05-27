@@ -124,7 +124,7 @@ namespace MuPDF.NET
             }
         }
 
-        public Dictionary<int, dynamic> AnnotRefs = new Dictionary<int, dynamic>();
+        public Dictionary<int, dynamic> AnnotRefs { get;  set; } = new Dictionary<int, dynamic>();
 
         /// <summary>
         /// Determine the rectangle of the page. Same as property Page.rect. For PDF documents this usually also coincides with mediabox and cropbox, but not always.
