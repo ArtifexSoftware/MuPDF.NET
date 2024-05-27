@@ -112,5 +112,14 @@ namespace MuPDF.NET.Test
             Assert.That(ex.Width, Is.EqualTo(pix.W));
             Assert.That(ex.Height, Is.EqualTo(pix.H));
         }
+
+        [Test]
+        public void InvertIrect1()
+        {
+            Pixmap pix = new Pixmap("../../../resources/img-transparent.png");
+            Rect rect = new Rect(0, 0, 100, 100);
+            pix.InvertIrect(new IRect(rect));
+            Assert.Pass();
+        }
     }
 }

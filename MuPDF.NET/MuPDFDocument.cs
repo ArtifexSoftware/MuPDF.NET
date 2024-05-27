@@ -909,7 +909,7 @@ namespace MuPDF.NET
             else if (subObj.pdf_is_int() != 0)
             {
                 type = "int";
-                text = $"{subObj.pdf_to_int()} ";
+                text = $"{subObj.pdf_to_int()}";
             }
             else if (subObj.pdf_is_real() != 0)
                 type = "float";

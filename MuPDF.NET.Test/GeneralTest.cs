@@ -344,5 +344,26 @@ namespace MuPDF.NET.Test
                 Assert.That(doc[i].Rotation, Is.Zero);
             }
         }
+
+        [Test]
+        public void CompareWords()
+        {
+            MuPDFDocument doc = new MuPDFDocument("../../../resources/test-707673.pdf");
+            MuPDFPage page = doc[0];
+            List<WordBlock> words0 = page.GetText("words");
+            page.CleanContetns();
+            List<WordBlock> words1 = page.GetText("words");
+            Assert.That(words0.Count, Is.EqualTo(words1.Count));
+        }
+
+        [Test]
+        public void Rotation1()
+        {
+            MuPDFDocument doc = new MuPDFDocument();
+            MuPDFPage page = doc.NewPage();
+            page.SetRotation(270);
+            Assert.That(doc.GetKeyXref(page.Xref, "Rotate").Item1, Is.EqualTo("int"));
+            Assert.That(doc.GetKeyXref(page.Xref, "Rotate").Item2, Is.EqualTo("270"));
+        }
     }
 }
