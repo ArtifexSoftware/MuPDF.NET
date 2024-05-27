@@ -24,7 +24,7 @@ namespace MuPDF.NET.Test
             while (more)
             {
                 Rect filled = new Rect();
-                MuPDFDeviceWrapper dev = writer.BeginPage(box);
+                DeviceWrapper dev = writer.BeginPage(box);
                 (more, filled) = story.Place(where);
                 story.ElementPositions(null, new Position() { PageNum = pno });
                 story.Draw(dev);

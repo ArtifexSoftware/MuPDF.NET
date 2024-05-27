@@ -77,7 +77,7 @@ namespace MuPDF.NET
         /// </summary>
         /// <param name="device">the Device created by dev = writer.begin_page(mediabox). The device knows how to call all MuPDF functions needed to write the content.</param>
         /// <param name="matrix">a matrix for transforming content when writing to the page. An example may be writing rotated text. The default means no transformation (i.e. the Identity matrix).</param>
-        public void Draw(MuPDFDeviceWrapper device, Matrix matrix = null)
+        public void Draw(DeviceWrapper device, Matrix matrix = null)
         {
             FzMatrix ctm2 = (matrix != null) ? matrix.ToFzMatrix() : new FzMatrix();
             if (ctm2 == null)
@@ -367,7 +367,7 @@ namespace MuPDF.NET
             return Fit(WidthFn, rect, widthMin, widthMax, delta, verbose);
         }
 
-        public Document WriteWithLinks(RectFunction rectFn = null, Action<Position> positionfn = null, Action<int, Rect, MuPDFDeviceWrapper, bool> pageFn = null)
+        public Document WriteWithLinks(RectFunction rectFn = null, Action<Position> positionfn = null, Action<int, Rect, DeviceWrapper, bool> pageFn = null)
         {
             MemoryStream stream = new MemoryStream(100);
             MuPDFDocumentWriter writer = new MuPDFDocumentWriter(stream);
@@ -392,9 +392,9 @@ namespace MuPDF.NET
         /// <param name="rectFn"></param>
         /// <param name="positionFn"></param>
         /// <param name="pageFn"></param>
-        public void Write(MuPDFDocumentWriter writer, RectFunction rectFn, Action<Position> positionFn, Action<int, Rect, MuPDFDeviceWrapper, bool> pageFn)
+        public void Write(MuPDFDocumentWriter writer, RectFunction rectFn, Action<Position> positionFn, Action<int, Rect, DeviceWrapper, bool> pageFn)
         {
-            MuPDFDeviceWrapper dev = null;
+            DeviceWrapper dev = null;
             int pageNum = 0;
             int rectNum = 0;
             Rect filled = new Rect(0, 0, 0, 0);
@@ -458,7 +458,7 @@ namespace MuPDF.NET
             string userCss = null,
             int em = 12,
             Action<Position> positionfn = null,
-            Action<int, Rect, MuPDFDeviceWrapper, bool> pagefn = null,
+            Action<int, Rect, DeviceWrapper, bool> pagefn = null,
             MuPDFArchive archive = null,
             bool addHeaderIds = true
             )
@@ -515,7 +515,7 @@ namespace MuPDF.NET
             string userCss = null,
             int em = 12,
             Action<Position> positionfn = null,
-            Action<int, Rect, MuPDFDeviceWrapper, bool> pageFn = null,
+            Action<int, Rect, DeviceWrapper, bool> pageFn = null,
             MuPDFArchive archive = null, // Assuming Archive is a defined class
             bool addHeaderIds = true
             )

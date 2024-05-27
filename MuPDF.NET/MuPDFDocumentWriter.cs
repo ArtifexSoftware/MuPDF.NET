@@ -28,10 +28,10 @@ namespace MuPDF.NET
         /// </summary>
         /// <param name="mediabox">a rectangle specifying the page size.</param>
         /// <returns></returns>
-        public MuPDFDeviceWrapper BeginPage(Rect mediabox)
+        public DeviceWrapper BeginPage(Rect mediabox)
         {
             FzDevice device = _nativeDocumentWriter.fz_begin_page(mediabox.ToFzRect());
-            MuPDFDeviceWrapper deviceWrapper = new MuPDFDeviceWrapper(device);
+            DeviceWrapper deviceWrapper = new DeviceWrapper(device);
             return deviceWrapper;
         }
 

@@ -2,9 +2,9 @@
 
 namespace MuPDF.NET
 {
-    public class MuPDFDeviceWrapper
+    public class DeviceWrapper
     {
-        static MuPDFDeviceWrapper()
+        static DeviceWrapper()
         {
             if (!File.Exists("mupdfcsharp.dll"))
                 Utils.LoadEmbeddedDll();
@@ -12,12 +12,12 @@ namespace MuPDF.NET
 
         internal FzDevice _nativeDevice;
 
-        public MuPDFDeviceWrapper(FzDevice device)
+        public DeviceWrapper(FzDevice device)
         {
             _nativeDevice = device;
         }
 
-        public MuPDFDeviceWrapper(Pixmap pixmap, Rect clip)
+        public DeviceWrapper(Pixmap pixmap, Rect clip)
         {
             FzIrect bbox = new IRect(clip).ToFzIrect();
             if (bbox.fz_is_infinite_irect() != 0)
@@ -30,12 +30,12 @@ namespace MuPDF.NET
                 );
         }
 
-        public MuPDFDeviceWrapper(FzDisplayList dl)
+        public DeviceWrapper(FzDisplayList dl)
         {
             _nativeDevice = dl.fz_new_list_device();
         }
 
-        public MuPDFDeviceWrapper(MuPDFTextPage stpage, int flags)
+        public DeviceWrapper(MuPDFTextPage stpage, int flags)
         {
             FzStextOptions opts = new FzStextOptions(flags);
             _nativeDevice = stpage._nativeTextPage.fz_new_stext_device(opts);

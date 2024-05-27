@@ -91,7 +91,7 @@ namespace MuPDF.NET
         /// <param name="dw">Device</param>
         /// <param name="matrix">Transformation matrix to apply to the display list contents.</param>
         /// <param name="area">Only the part visible within this area will be considered when the list is run through the device.</param>
-        public void Run(MuPDFDeviceWrapper dw, Matrix matrix, Rect area)
+        public void Run(DeviceWrapper dw, Matrix matrix, Rect area)
         {
             _nativeDisplayList.fz_run_display_list(
                 dw.ToFzDevice(),
