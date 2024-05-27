@@ -4,9 +4,9 @@ using System.Text;
 
 namespace MuPDF.NET
 {
-    public class MuPDFTextWriter
+    public class TextWriter
     {
-        static MuPDFTextWriter()
+        static TextWriter()
         {
             if (!File.Exists("mupdfcsharp.dll"))
                 Utils.LoadEmbeddedDll();
@@ -32,7 +32,7 @@ namespace MuPDF.NET
 
         public float[] Color { get; set; }
 
-        public MuPDFTextWriter(Rect pageRect, float opacity = 1, float[] color = null)
+        public TextWriter(Rect pageRect, float opacity = 1, float[] color = null)
         {
             _nativeText = mupdf.mupdf.fz_new_text();
             Opacity = opacity;

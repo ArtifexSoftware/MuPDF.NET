@@ -300,7 +300,7 @@ namespace MuPDF.NET
         /// <summary>
         /// Contains the first Widget of a page (or None).
         /// </summary>
-        public MuPDFWidget FirstWidget
+        public Widget FirstWidget
         {
             get
             {
@@ -316,7 +316,7 @@ namespace MuPDF.NET
                 val.ThisOwn = true;
                 val.Parent = this;
                 AnnotRefs[val.GetHashCode()] = val;
-                MuPDFWidget widget = new MuPDFWidget(this);
+                Widget widget = new Widget(this);
                 Utils.FillWidget(val, widget);
 
                 return widget;
@@ -687,7 +687,7 @@ namespace MuPDF.NET
         /// </summary>
         /// <param name="xref"></param>
         /// <returns></returns>
-        public MuPDFWidget LoadWidget(int xref)
+        public Widget LoadWidget(int xref)
         {
             PdfPage page = _nativePage.pdf_page_from_fz_page();
             PdfAnnot annot = Utils.GetWidgetByXref(page, xref);
@@ -696,7 +696,7 @@ namespace MuPDF.NET
             val.ThisOwn = true;
             val.Parent = this;
             AnnotRefs[val.GetHashCode()] = val;
-            MuPDFWidget widget = new MuPDFWidget(this);
+            Widget widget = new Widget(this);
             Utils.FillWidget(val, widget);
 
             return widget;
@@ -707,7 +707,7 @@ namespace MuPDF.NET
         /// </summary>
         /// <param name="types">field types to subselect from. If none, all fields are returned.E.g.types=[PDF_WIDGET_TYPE_TEXT] will only yield text fields.</param>
         /// <returns></returns>
-        public IEnumerable<MuPDFWidget> GetWidgets(int[] types = null)
+        public IEnumerable<Widget> GetWidgets(int[] types = null)
         {
             List<AnnotXref> refs = GetAnnotXrefs();
             List<int> xrefs = refs.Where(a => a.AnnotType == PdfAnnotType.PDF_ANNOT_WIDGET)
@@ -715,7 +715,7 @@ namespace MuPDF.NET
                 .ToList();
             foreach (int xref in xrefs)
             {
-                MuPDFWidget widget = LoadWidget(xref);
+                Widget widget = LoadWidget(xref);
                 if (types == null || types.Contains(widget.FieldType))
                     yield return widget;
             }
@@ -1545,7 +1545,7 @@ namespace MuPDF.NET
         /// <param name="rotate">arbitrary rotation angle.</param>
         /// <param name="oc">the xref of an optional content object</param>
         /// <exception cref="Exception"></exception>
-        public void WriteText(Rect rect = null, List<MuPDFTextWriter> writers = null, bool overlay = true,
+        public void WriteText(Rect rect = null, List<TextWriter> writers = null, bool overlay = true,
             float[] color = null, float opacity = -1, bool keepProportion = true, int rotate = 0, int oc = 0)
         {
             if (writers == null || writers.Count == 0)
@@ -1553,7 +1553,7 @@ namespace MuPDF.NET
             Rect clip = writers[0].TextRect;
             Document textDoc = new Document();
             Page page = textDoc.NewPage(width: Rect.Width, height: Rect.Height);
-            foreach (MuPDFTextWriter writer in writers)
+            foreach (TextWriter writer in writers)
             {
                 clip = clip | writer.TextRect;
                 writer.WriteText(page, opacity: opacity, color: color);
@@ -3193,7 +3193,7 @@ namespace MuPDF.NET
         /// <param name="widget">the widget to be deleted.</param>
         /// <returns>the widget following the deleted one. Please remember that physical removal requires saving to a new file with garbage > 0.</returns>
         /// <exception cref="Exception"></exception>
-        public Annot DeleteWidget(MuPDFWidget widget)
+        public Annot DeleteWidget(Widget widget)
         {
             PdfAnnot annot = widget._annot;
             if (annot == null)
@@ -4290,7 +4290,7 @@ namespace MuPDF.NET
                 link.From = r;
                 InsertLink(link);
             }
-            foreach (MuPDFWidget widget in GetWidgets())
+            foreach (Widget widget in GetWidgets())
             {
                 r = widget.Rect * iMat;
                 widget.Rect = r;
@@ -4323,7 +4323,7 @@ namespace MuPDF.NET
         /// <param name="widget">a Widget object which must have been created upfront.</param>
         /// <returns>a widget annotation.</returns>
         /// <exception cref="Exception"></exception>
-        public Annot AddWidget(MuPDFWidget widget)
+        public Annot AddWidget(Widget widget)
         {
             Document doc = Parent;
             if (!doc.IsPDF)

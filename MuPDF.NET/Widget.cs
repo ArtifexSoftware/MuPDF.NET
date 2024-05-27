@@ -2,7 +2,7 @@
 
 namespace MuPDF.NET
 {
-    public class MuPDFWidget
+    public class Widget
     {
         public float[] BorderColor { get; set; }
 
@@ -70,7 +70,7 @@ namespace MuPDF.NET
 
         public PdfAnnot _annot { get; set; }
 
-        public MuPDFWidget(Page page)
+        public Widget(Page page)
         {
             Parent = page;
             BorderColor = null;

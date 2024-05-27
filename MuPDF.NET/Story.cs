@@ -19,11 +19,11 @@ namespace MuPDF.NET
         /// <summary>
         /// the story's underlying Body
         /// </summary>
-        public MuPDFXml Body
+        public Xml Body
         {
             get
             {
-                MuPDFXml dom = GetDocument();
+                Xml dom = GetDocument();
                 return dom.GetBodyTag();
             }
         }
@@ -42,9 +42,9 @@ namespace MuPDF.NET
         /// </summary>
         public void AddHeaderIds()
         {
-            MuPDFXml dom = Body;
+            Xml dom = Body;
             int i = 0;
-            MuPDFXml x = dom.Find(null, null, null);
+            Xml x = dom.Find(null, null, null);
             while (x != null)
             {
                 string name = x.TagName;
@@ -66,10 +66,10 @@ namespace MuPDF.NET
         /// Get Document object
         /// </summary>
         /// <returns></returns>
-        public MuPDFXml GetDocument()
+        public Xml GetDocument()
         {
             FzXml dom = _nativeStory.fz_story_document();
-            return new MuPDFXml(dom);
+            return new Xml(dom);
         }
 
         /// <summary>

@@ -1100,7 +1100,7 @@ namespace MuPDF.NET
             return ret;
         }
 
-        public static void GetWidgetProperties(Annot annot, MuPDFWidget widget)
+        public static void GetWidgetProperties(Annot annot, Widget widget)
         {
             PdfObj annotObj = mupdf.mupdf.pdf_annot_obj(annot.ToPdfAnnot());
             PdfPage page = mupdf.mupdf.pdf_annot_page(annot.ToPdfAnnot());
@@ -4260,7 +4260,7 @@ namespace MuPDF.NET
         public static void WriteText(
             Page page,
             Rect rect = null,
-            MuPDFTextWriter[] writers = null,
+            TextWriter[] writers = null,
             bool overlay = true,
             float[] color = null,
             float opacity = 0,
@@ -4280,7 +4280,7 @@ namespace MuPDF.NET
             Rect clip = writers[0].TextRect;
             Document textDoc = new Document();
             Page tpage = textDoc.NewPage(width: page.Rect.Width, height: page.Rect.Height);
-            foreach (MuPDFTextWriter writer in writers)
+            foreach (TextWriter writer in writers)
             {
                 clip = clip | writer.TextRect;
                 writer.WriteText(tpage, opacity: opacity, color: color);
@@ -4839,7 +4839,7 @@ namespace MuPDF.NET
                 co.pdf_array_push(pdf.pdf_new_indirect(xref, 0));
         }
 
-        public static void SaveWidget(PdfAnnot annot, MuPDFWidget widget)
+        public static void SaveWidget(PdfAnnot annot, Widget widget)
         {
             PdfPage page = annot.pdf_annot_page();
             PdfObj annotObj = annot.pdf_annot_obj();
@@ -5170,7 +5170,7 @@ namespace MuPDF.NET
             return ret;
         }
 
-        public static void FillWidget(Annot annot, MuPDFWidget widget)
+        public static void FillWidget(Annot annot, Widget widget)
         {
             Utils.GetWidgetProperties(annot, widget);
         }

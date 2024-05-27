@@ -312,7 +312,7 @@ namespace MuPDF.NET
 
                     if (val.Type.Item1 == PdfAnnotType.PDF_ANNOT_WIDGET)
                     {
-                        MuPDFWidget widget = new MuPDFWidget(Parent);
+                        Widget widget = new Widget(Parent);
                         Utils.FillWidget(val, widget);
                         return widget;
                     }
