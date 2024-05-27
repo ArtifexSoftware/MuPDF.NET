@@ -35,7 +35,7 @@ namespace MuPDF.NET
             _nativeDevice = dl.fz_new_list_device();
         }
 
-        public DeviceWrapper(MuPDFTextPage stpage, int flags)
+        public DeviceWrapper(TextPage stpage, int flags)
         {
             FzStextOptions opts = new FzStextOptions(flags);
             _nativeDevice = stpage._nativeTextPage.fz_new_stext_device(opts);

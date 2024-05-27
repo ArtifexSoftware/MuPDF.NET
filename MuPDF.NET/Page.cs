@@ -343,13 +343,13 @@ namespace MuPDF.NET
                     | TextFlags.TEXT_PRESERVE_LIGATURES
                     | TextFlags.TEXT_MEDIABOX_CLIP
                 ),
-            MuPDFTextPage stPage = null
+            TextPage stPage = null
         )
         {
-            MuPDFTextPage tp = stPage;
+            TextPage tp = stPage;
             if (tp == null)
                 tp = GetTextPage(clip, flags);
-            List<Quad> ret = MuPDFTextPage.Search(tp, needle, quad: quads);
+            List<Quad> ret = TextPage.Search(tp, needle, quad: quads);
             if (stPage == null)
                 tp = null;
 
@@ -1344,7 +1344,7 @@ namespace MuPDF.NET
             return ret;
         }
 
-        private MuPDFTextPage _GetTextPage(Rect clip = null, int flags = 0, Matrix matrix = null)
+        private TextPage _GetTextPage(Rect clip = null, int flags = 0, Matrix matrix = null)
         {
             PdfPage page = _pdfPage;
             FzStextOptions options = new FzStextOptions(flags);
@@ -1362,7 +1362,7 @@ namespace MuPDF.NET
             _page.fz_run_page(dev, ctm, new FzCookie());
             dev.fz_close_device();
 
-            return new MuPDFTextPage(stPage);
+            return new TextPage(stPage);
         }
 
         /// <summary>
@@ -1372,7 +1372,7 @@ namespace MuPDF.NET
         /// <param name="flags">indicator bits controlling the content available for subsequent text extractions and searches</param>
         /// <param name="matrix"></param>
         /// <returns></returns>
-        public MuPDFTextPage GetTextPage(Rect clip = null, int flags = 0, Matrix matrix = null)
+        public TextPage GetTextPage(Rect clip = null, int flags = 0, Matrix matrix = null)
         {
             if (matrix == null)
                 matrix = new Matrix(1, 1);
@@ -1384,7 +1384,7 @@ namespace MuPDF.NET
             if (oldRotation != 0)
                 SetRotation(0);
 
-            MuPDFTextPage stPage = null;
+            TextPage stPage = null;
             try
             {
                 stPage = _GetTextPage(clip, flags, matrix);
@@ -1680,7 +1680,7 @@ namespace MuPDF.NET
             if (res == 0)
                 throw new Exception("Error applying redactions");
 
-            MuPDFShape shape = NewShape();
+            Shape shape = NewShape();
             foreach (AnnotValues redact in redactAnnots)
             {
                 Rect annotRect = redact.Rect;
@@ -2093,7 +2093,7 @@ namespace MuPDF.NET
             int oc = 0
         )
         {
-            MuPDFShape img = new MuPDFShape(this);
+            Shape img = new Shape(this);
             int rc = img.InsertText(
                 point,
                 text,
@@ -3013,7 +3013,7 @@ namespace MuPDF.NET
             Page page = doc.ReloadPage(this);
         }
 
-        public void ExtendTextPage(MuPDFTextPage tpage, int flags = 0, Matrix m = null)
+        public void ExtendTextPage(TextPage tpage, int flags = 0, Matrix m = null)
         {
             PdfPage page = _pdfPage;
             FzStextPage tp = tpage._nativeTextPage;
@@ -3245,7 +3245,7 @@ namespace MuPDF.NET
             int oc = 0
         )
         {
-            MuPDFShape img = new MuPDFShape(this);
+            Shape img = new Shape(this);
             Point ret = img.DrawBezier(p1, p2, p3, p4);
             img.Finish(
                 color: color,
@@ -3303,7 +3303,7 @@ namespace MuPDF.NET
             int oc = 0
         )
         {
-            MuPDFShape img = new MuPDFShape(this);
+            Shape img = new Shape(this);
             Point ret = img.DrawSector(center, point, beta, fullSector);
             img.Finish(
                 color: color,
@@ -3356,7 +3356,7 @@ namespace MuPDF.NET
             int oc = 0
         )
         {
-            MuPDFShape img = new MuPDFShape(this);
+            Shape img = new Shape(this);
             Point ret = img.DrawCircle(center, radius);
 
             img.Finish(
@@ -3407,7 +3407,7 @@ namespace MuPDF.NET
             int oc = 0
         )
         {
-            MuPDFShape img = new MuPDFShape(this);
+            Shape img = new Shape(this);
             Point ret = img.DrawOval(rect);
 
             img.Finish(
@@ -3464,7 +3464,7 @@ namespace MuPDF.NET
             int oc = 0
         )
         {
-            MuPDFShape img = new MuPDFShape(this);
+            Shape img = new Shape(this);
             Point ret = img.DrawCurve(p1, p2, p3);
 
             img.Finish(
@@ -3516,7 +3516,7 @@ namespace MuPDF.NET
             int oc = 0
         )
         {
-            MuPDFShape img = new MuPDFShape(this);
+            Shape img = new Shape(this);
             Point ret = img.DrawLine(p1, p2);
 
             img.Finish(
@@ -3567,7 +3567,7 @@ namespace MuPDF.NET
             int oc = 0
         )
         {
-            MuPDFShape img = new MuPDFShape(this);
+            Shape img = new Shape(this);
             Point ret = img.DrawPolyline(points);
 
             img.Finish(
@@ -3618,7 +3618,7 @@ namespace MuPDF.NET
             int oc = 0
         )
         {
-            MuPDFShape img = new MuPDFShape(this);
+            Shape img = new Shape(this);
             Point ret = img.DrawQuad(quad);
 
             img.Finish(
@@ -3670,7 +3670,7 @@ namespace MuPDF.NET
             float radius = 0
         )
         {
-            MuPDFShape img = new MuPDFShape(this);
+            Shape img = new Shape(this);
             Point ret = img.DrawRect(rect, radius);
 
             img.Finish(
@@ -3725,7 +3725,7 @@ namespace MuPDF.NET
             int oc = 0
         )
         {
-            MuPDFShape img = new MuPDFShape(this);
+            Shape img = new Shape(this);
             Point ret = img.DrawSquiggle(p1, p2, breadth);
             img.Finish(
                 color: color,
@@ -3780,7 +3780,7 @@ namespace MuPDF.NET
             int oc = 0
         )
         {
-            MuPDFShape img = new MuPDFShape(this);
+            Shape img = new Shape(this);
             Point ret = img.DrawZigzag(p1, p2, breadth);
 
             img.Finish(
@@ -3816,7 +3816,7 @@ namespace MuPDF.NET
             List<Block> imgInfo = _imageInfo;
             if (imgInfo.Count == 0)
             {
-                MuPDFTextPage textpage = GetTextPage(flags: (int)TextFlags.TEXT_PRESERVE_IMAGES);
+                TextPage textpage = GetTextPage(flags: (int)TextFlags.TEXT_PRESERVE_IMAGES);
                 imgInfo = textpage.ExtractImageInfo(hashes ? 1 : 0);
                 textpage = null;
                 if (hashes)
@@ -3961,7 +3961,7 @@ namespace MuPDF.NET
             string option = "text",
             Rect clip = null,
             int flags = 0,
-            MuPDFTextPage textpage = null,
+            TextPage textpage = null,
             bool sort = false,
             char[] delimiters = null
         )
@@ -3977,7 +3977,7 @@ namespace MuPDF.NET
         public List<TextBlock> GetTextBlocks(
             Rect clip = null,
             int flags = 0,
-            MuPDFTextPage textPage = null,
+            TextPage textPage = null,
             bool sort = false
         )
         {
@@ -3996,7 +3996,7 @@ namespace MuPDF.NET
             Point p1,
             Point p2,
             Rect clip = null,
-            MuPDFTextPage textPage = null
+            TextPage textPage = null
         )
         {
             return Utils.GetTextSelection(this, p1, p2, clip, textPage);
@@ -4014,7 +4014,7 @@ namespace MuPDF.NET
         public List<WordBlock> GetTextWords(
             Rect clip = null,
             int flags = 0,
-            MuPDFTextPage textPage = null,
+            TextPage textPage = null,
             bool sort = false,
             char[] delimiters = null
         )
@@ -4022,7 +4022,7 @@ namespace MuPDF.NET
             return Utils.GetTextWords(this, clip, flags, textPage, sort, delimiters);
         }
 
-        public string GetTextbox(Rect rect = null, MuPDFTextPage textPage = null)
+        public string GetTextbox(Rect rect = null, TextPage textPage = null)
         {
             return Utils.GetTextbox(this, rect, textPage);
         }
@@ -4036,7 +4036,7 @@ namespace MuPDF.NET
         /// <param name="full">whether to OCR the full page image, or only its images (default)</param>
         /// <param name="tessdata"></param>
         /// <returns></returns>
-        public MuPDFTextPage GetTextPageOcr(
+        public TextPage GetTextPageOcr(
             int flags = 0,
             string language = "eng",
             int dpi = 72,
@@ -4047,7 +4047,7 @@ namespace MuPDF.NET
             if (string.IsNullOrEmpty(Utils.TESSDATA_PREFIX) && string.IsNullOrEmpty(tessdata))
                 throw new Exception("No OCR support: TESSDATA_PREFIX not set");
 
-            MuPDFTextPage FullOcr(Page page, int dpi, string language, int flags)
+            TextPage FullOcr(Page page, int dpi, string language, int flags)
             {
                 float zoom = dpi / 72.0f;
                 Matrix mat = new Matrix(zoom, zoom);
@@ -4060,7 +4060,7 @@ namespace MuPDF.NET
                 Page ocrPage = ocrPdf.LoadPage(0);
                 float unZoom = page.Rect.Width / ocrPage.Rect.Width;
                 Matrix ctm = new Matrix(unZoom, unZoom) * page.DerotationMatrix;
-                MuPDFTextPage tp = ocrPage.GetTextPage(flags: flags, matrix: ctm);
+                TextPage tp = ocrPage.GetTextPage(flags: flags, matrix: ctm);
                 ocrPdf.Close();
 
                 pix = null;
@@ -4070,7 +4070,7 @@ namespace MuPDF.NET
 
             if (full)
                 return FullOcr(this, dpi, language, flags);
-            MuPDFTextPage tp = GetTextPage(flags: flags);
+            TextPage tp = GetTextPage(flags: flags);
             foreach (
                 Block block in (
                     GetText("dict", flags: (int)TextFlags.TEXT_PRESERVE_IMAGES) as PageInfo
@@ -4159,7 +4159,7 @@ namespace MuPDF.NET
             int oc = 0
         )
         {
-            MuPDFShape img = new MuPDFShape(this);
+            Shape img = new Shape(this);
             float ret = img.InsertTextbox(
                 rect,
                 text,
@@ -4235,9 +4235,9 @@ namespace MuPDF.NET
         ///
         /// </summary>
         /// <returns></returns>
-        public MuPDFShape NewShape()
+        public Shape NewShape()
         {
-            return new MuPDFShape(this);
+            return new Shape(this);
         }
 
         /// <summary>

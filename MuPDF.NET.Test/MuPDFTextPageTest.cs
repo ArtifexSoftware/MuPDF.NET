@@ -19,10 +19,10 @@ namespace MuPDF.NET.Test
         [Test]
         public void Constructor()
         {
-            textPage = new MuPDFTextPage(new mupdf.FzRect());
+            textPage = new TextPage(new mupdf.FzRect());
             Assert.Pass();
 
-            textPage = new MuPDFTextPage(doc.LoadPage(0).GetTextPage());
+            textPage = new TextPage(doc.LoadPage(0).GetTextPage());
             Assert.Pass();
         }
 
@@ -98,9 +98,9 @@ namespace MuPDF.NET.Test
 
             Page page = new Page(doc.GetPage(0), doc);
 
-            MuPDFTextPage tpage = page.GetTextPage();
+            TextPage tpage = page.GetTextPage();
 
-            List<Quad> matches = MuPDFTextPage.Search(tpage, "pixmap");
+            List<Quad> matches = TextPage.Search(tpage, "pixmap");
 
             if (matches.Count > 0)
             {

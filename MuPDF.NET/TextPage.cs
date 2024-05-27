@@ -4,9 +4,9 @@ using Newtonsoft.Json;
 
 namespace MuPDF.NET
 {
-    public class MuPDFTextPage
+    public class TextPage
     {
-        static MuPDFTextPage()
+        static TextPage()
         {
             if (!File.Exists("mupdfcsharp.dll"))
                 Utils.LoadEmbeddedDll();
@@ -50,13 +50,13 @@ namespace MuPDF.NET
         /// MuPDFStextPage Constructor
         /// </summary>
         /// <param name="rect">Page Rectangle Size</param>
-        public MuPDFTextPage(FzRect rect)
+        public TextPage(FzRect rect)
         {
             _nativeTextPage = new FzStextPage(rect);
             Parent = null;
         }
 
-        public MuPDFTextPage(FzStextPage stPage)
+        public TextPage(FzStextPage stPage)
         {
             _nativeTextPage = stPage;
             Parent = null;
@@ -66,13 +66,13 @@ namespace MuPDF.NET
         /// MuPDFStextPage Contructor
         /// </summary>
         /// <param name="stPage">MuPDFStextPage object</param>
-        public MuPDFTextPage(MuPDFTextPage stPage)
+        public TextPage(TextPage stPage)
         {
             _nativeTextPage = stPage._nativeTextPage;
             Parent = stPage.Parent;
         }
 
-        public MuPDFTextPage(FzPage page)
+        public TextPage(FzPage page)
         {
             _nativeTextPage = new FzStextPage(page, new FzStextOptions());
         }
@@ -569,7 +569,7 @@ namespace MuPDF.NET
         /// <param name="needle">Text to search</param>
         /// <returns></returns>
         public static List<Quad> Search(
-            MuPDFTextPage stPage,
+            TextPage stPage,
             string needle,
             int hitMax = 0,
             bool quad = true
@@ -659,7 +659,7 @@ namespace MuPDF.NET
                             }
                             break;
                         }
-                        Tuple<int, int> res = MuPDFTextPage.Char2Canon(
+                        Tuple<int, int> res = TextPage.Char2Canon(
                             hayStackString.Substring(hayStack)
                         );
                         hayStack += res.Item1;

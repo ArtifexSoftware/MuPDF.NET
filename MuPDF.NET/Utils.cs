@@ -1377,7 +1377,7 @@ namespace MuPDF.NET
             Page page,
             Rect clip = null,
             int flags = 0,
-            MuPDFTextPage stPage = null,
+            TextPage stPage = null,
             bool sort = false,
             char[] delimiters = null
         )
@@ -1388,7 +1388,7 @@ namespace MuPDF.NET
                     | TextFlags.TEXT_PRESERVE_LIGATURES
                     | TextFlags.TEXT_MEDIABOX_CLIP
                 );
-            MuPDFTextPage tp = stPage;
+            TextPage tp = stPage;
             if (tp == null)
                 tp = page.GetTextPage(clip, flags);
             else if (tp.Parent != page)
@@ -1416,7 +1416,7 @@ namespace MuPDF.NET
             Page page,
             Rect clip = null,
             int flags = 0,
-            MuPDFTextPage textPage = null,
+            TextPage textPage = null,
             bool sort = false
         )
         {
@@ -1429,7 +1429,7 @@ namespace MuPDF.NET
                     | TextFlags.TEXT_MEDIABOX_CLIP
                 );
             }
-            MuPDFTextPage tp = textPage;
+            TextPage tp = textPage;
             if (tp == null)
                 tp = page.GetTextPage(clip, flags);
             else if (tp.Parent != page)
@@ -1458,7 +1458,7 @@ namespace MuPDF.NET
             string option = "text",
             Rect clip = null,
             int flags = 0,
-            MuPDFTextPage stPage = null,
+            TextPage stPage = null,
             bool sort = false,
             char[] delimiters = null
         )
@@ -1511,7 +1511,7 @@ namespace MuPDF.NET
             if (clip == null)
                 clip = page.CropBox;
 
-            MuPDFTextPage tp = stPage;
+            TextPage tp = stPage;
             if (tp == null)
                 tp = page.GetTextPage(clip, flags);
             else if (tp.Parent != page)
@@ -4216,9 +4216,9 @@ namespace MuPDF.NET
             return string.Concat(RomanNum(num).ToArray());
         }
 
-        public static string GetTextbox(Page page, Rect rect, MuPDFTextPage textPage = null)
+        public static string GetTextbox(Page page, Rect rect, TextPage textPage = null)
         {
-            MuPDFTextPage tp = textPage;
+            TextPage tp = textPage;
             if (tp == null)
                 tp = page.GetTextPage();
             else if (tp.Parent != page)
@@ -4234,10 +4234,10 @@ namespace MuPDF.NET
             Point p1,
             Point p2,
             Rect clip = null,
-            MuPDFTextPage textPage = null
+            TextPage textPage = null
         )
         {
-            MuPDFTextPage tp = textPage;
+            TextPage tp = textPage;
             if (tp == null)
                 tp = page.GetTextPage(clip, flags: (int)TextFlags.TEXT_DEHYPHENATE);
             else if (tp.Parent != page)

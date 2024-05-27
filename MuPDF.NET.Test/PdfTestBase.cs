@@ -6,6 +6,6 @@
 
         public Page page;
 
-        public MuPDFTextPage textPage;
+        public TextPage textPage;
     }
 }

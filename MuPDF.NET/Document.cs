@@ -4335,7 +4335,7 @@ namespace MuPDF.NET
                     | TextFlags.TEXT_PRESERVE_LIGATURES
                     | TextFlags.TEXT_MEDIABOX_CLIP
                 ), // 83
-            MuPDFTextPage textpage = null
+            TextPage textpage = null
         )
         {
             return this[pno].SearchFor(text, clip, quads, flags, textpage);
@@ -4432,7 +4432,7 @@ namespace MuPDF.NET
             string option = "text",
             Rect clip = null,
             int flags = 0,
-            MuPDFTextPage textPage = null,
+            TextPage textPage = null,
             bool sort = false
         )
         {

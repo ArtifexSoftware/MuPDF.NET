@@ -1117,13 +1117,13 @@ namespace MuPDF.NET
             return ret;
         }
 
-        public MuPDFTextPage GetTextPage(Rect clip = null, int flags = 0)
+        public TextPage GetTextPage(Rect clip = null, int flags = 0)
         {
             FzStextOptions options = new FzStextOptions();
             options.flags = flags;
             PdfAnnot annot = _nativeAnnotion;
             FzStextPage stPage = new FzStextPage(annot, options);
-            return new MuPDFTextPage(stPage);
+            return new TextPage(stPage);
         }
 
         public int IrtXRef()
@@ -2532,7 +2532,7 @@ namespace MuPDF.NET
             string option = "text",
             Rect clip = null,
             int flags = 0,
-            MuPDFTextPage stPage = null,
+            TextPage stPage = null,
             bool sort = false,
             char[] delimiters = null
         )
@@ -2547,7 +2547,7 @@ namespace MuPDF.NET
         /// <param name="rect"></param>
         /// <param name="textPage"></param>
         /// <returns></returns>
-        public string GetTextbox(Page page, Rect rect, MuPDFTextPage textPage)
+        public string GetTextbox(Page page, Rect rect, TextPage textPage)
         {
             return Utils.GetTextbox(page, rect, textPage);
         }

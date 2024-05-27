@@ -73,13 +73,13 @@ namespace MuPDF.NET
         /// </summary>
         /// <param name="flags"control which information is parsed into a text page.</param>
         /// <returns>text page of the display list.</returns>
-        public MuPDFTextPage GetTextPage(int flags = 3)
+        public TextPage GetTextPage(int flags = 3)
         {
             FzStextOptions opts = new FzStextOptions();
             opts.flags = flags;
 
             FzStextPage textPage = new FzStextPage(_nativeDisplayList, opts);
-            MuPDFTextPage ret = new MuPDFTextPage(textPage);
+            TextPage ret = new TextPage(textPage);
             ret.ThisOwn = true;
            
             return ret;
