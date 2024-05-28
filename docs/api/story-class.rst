@@ -344,35 +344,29 @@ The callback function can be used to log information about story output. The fun
 
 A typical loop for executing a story with using this method would look like this:
 
-.. code-block:: python
+.. code-block:: c
 
-    HTML = """
-    <html>
-        <head></head>
-        <body>
-            <h1>Header level 1</h1>
-            <h2>Header level 2</h2>
-            <p>Hello MuPDF!</p>
-        </body>
-    </html>
-    """
-    MEDIABOX = fitz.paper_rect("letter")  # size of a page
-    WHERE = MEDIABOX + (36, 36, -36, -36)  # leave borders of 0.5 inches
-    story =  fitz.Story(html=HTML)  # make the story
-    writer = fitz.DocumentWriter("test.pdf")  # make the writer
-    pno = 0 # current page number
-    more = 1  # will be set to 0 when done
-    while more:  # loop until all story content is processed
-        dev = writer.begin_page(MEDIABOX)  # make a device to write on the page
-        more, filled = story.place(WHERE)  # compute content positions on page
-        story.element_positions(recorder, {"page": pno})  # provide page number in addition
-        story.draw(dev)
-        writer.end_page()
-        pno += 1  # increase page number
-    writer.close()  # close output file
+    string html = "<html><head></head><body><h1>Header level 1</h1><h2>Header level 2</h2></body><p>Hello MuPDF</p></html>";
 
-    def recorder(elpos):
-        pass
+    Rect box = Utils.PageRect("letter");
+    Rect where = box + new Rect(36, 36, -36, -36);
+    Story story = new Story(html: html);
+    DocumentWriter writer = new DocumentWriter("output.pdf");
+
+    int pno = 0;
+    bool more = true;
+
+    while (more)
+    {
+        Rect filled = new Rect();
+        DeviceWrapper dev = writer.BeginPage(box);
+        (more, filled) = story.Place(where);
+        story.ElementPositions(null, new Position() { PageNum = pno });
+        story.Draw(dev);
+        writer.EndPage();
+        pno += 1;
+    }
+    writer.Close();
 
 
 Attributes of the ElementPosition class
