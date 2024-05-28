@@ -203,7 +203,9 @@ This class represents a document. It can be constructed from a file or from memo
       * HTM, HTML, XHTML: **always** opened, `metadata["format"]` is "HTML5", resp. "XHTML".
       * XML, FB2: **always** opened, `metadata["format"]` is "FictionBook2".
 
-    Overview of possible forms, note: `open` is a synonym of `Document`
+    Overview of possible forms, note: `open` is a synonym of `Document`:
+
+    .. code-block:: c
 
         // from a file
         Document doc = new Document("some.pdf");
@@ -674,15 +676,7 @@ This class represents a document. It can be constructed from a file or from memo
 
       - If in doubt, we **strongly recommend** to use :meth:`GetPdfStr`! This function automatically generates the right brackets, escapes, and overall format.
 
-  .. method:: GetPagePixmap(
-            int pno,
-            Matrix matrix: IdentityMatrix,
-            int dpi: 0,
-            string ColorSpace: null,
-            Rect clip: null,
-            bool alpha: false,
-            bool annots: true
-        )
+  .. method:: GetPagePixmap(int pno, Matrix matrix: IdentityMatrix, int dpi: 0, string ColorSpace: null, Rect clip: null, bool alpha: false, bool annots: true)
 
     Creates a pixmap from page *pno* (zero-based). Invokes :meth:`Page.GetPixmap`.
 
@@ -1689,7 +1683,9 @@ This class represents a document. It can be constructed from a file or from memo
 
 Other Examples
 ----------------
-**Extract all page-referenced images of a PDF into separate PNG files**::
+**Extract all page-referenced images of a PDF into separate PNG files**:
+
+.. code-block:: c
 
   MuPDFDocument doc = new MuPDFDocument("input.pdf");
 
@@ -1714,6 +1710,8 @@ Other Examples
 
 **Rotate all pages of a PDF:**
 
+.. code-block:: c
+
   for (int i = 0; i < doc.PageCount; i ++)
   {
       doc[i].SetRotation(90);
@@ -1723,7 +1721,7 @@ Other Examples
 
 .. [#f1] Content streams describe what (e.g. text or images) appears where and how on a page. PDF uses a specialized mini language similar to PostScript to do this (pp. 643 in :ref:`AdobeManual`), which gets interpreted when a page is loaded.
 
-.. [#f2] However, you **can** use :meth:`Document.GetToc` and :meth:`MuPDFPage.GetLinks` (which are available for all document types) and copy this information over to the output PDF.
+.. [#f2] However, you **can** use :meth:`Document.GetToc` and :meth:`Page.GetLinks` (which are available for all document types) and copy this information over to the output PDF.
 
 .. [#f3] For applicable (EPUB) document types, loading a page via its absolute number may result in layouting a large part of the document, before the page can be accessed. To avoid this performance impact, prefer chapter-based access. Use convenience methods and attributes :meth:`Document.NextLocation`, :meth:`Document.PrevLocation` and :attr:`Document.LastLocation` for maintaining a high level of coding efficiency.
 
