@@ -1,4 +1,4 @@
-.. include:: header.rst
+.. include:: ../header.rst
 
 .. _TextWriter:
 
@@ -84,7 +84,7 @@ Using this object entails three steps:
 
          will produce this PDF text:
 
-         .. image:: images/img-smallcaps.*
+         .. image:: ../images/img-smallcaps.*
 
 
       :returns: :attr:`TextRect` and :attr:`LastPoint`. Raises an exception for an unsupported font -- checked via :attr:`Font.IsWritable`.
@@ -138,7 +138,7 @@ Using this object entails three steps:
       :arg int oc: the :data:`Xref` of an :data:`OCG` or :data:`OCMD`.
       :arg int renderMode: The PDF `Tr` operator value. Values: 0 (default), 1, 2, 3 (invisible).
 
-         .. image:: images/img-rendermode.*
+         .. image:: ../images/img-rendermode.*
 
 
    .. attribute:: TextRect
@@ -181,4 +181,4 @@ Using this object entails three steps:
   5. You can use the *pos* argument of :meth:`TextWriter.FillTextbox` to set the position of the first text character. This allows filling the same textbox with contents from different :ref:`TextWriter` objects, thus allowing for multiple colors, opacities, etc.
   6. MuPDF does not support all fonts with this feature, e.g. no Type3 fonts. Starting with v1.18.0 this can be checked via the font attribute :attr:`Font.IsWritable`. This attribute is also checked when using :ref:`TextWriter` methods.
 
-.. include:: footer.rst
+.. include:: ../footer.rst

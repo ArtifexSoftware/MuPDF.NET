@@ -1,4 +1,4 @@
-.. include:: header.rst
+.. include:: ../header.rst
 
 .. _Page:
 
@@ -157,7 +157,7 @@ In a nutshell, this is what you can do with PyMuPDF:
       :rtype: :ref:`Annot`
       :returns: the created annotation. Stroke color blue = (0, 0, 1), no fill color support.
 
-      .. image:: images/img-caret-annot.*
+      .. image:: ../images/img-caret-annot.*
          :scale: 70
 
 
@@ -293,7 +293,7 @@ In a nutshell, this is what you can do with PyMuPDF:
       :rtype: :ref:`Annot`
       :returns: the created annotation. Its standard appearance looks like a red rectangle (no fill color), optionally showing two diagonal lines. Colors, line width, dashing, opacity and blend mode can now be set and applied via :meth:`Annot.update` like with other annotations.
 
-      .. image:: images/img-redact.*
+      .. image:: ../images/img-redact.*
 
 
       .. method:: ApplyRedactions(int images=PDF_REDACT_IMAGE_PIXELS|2, int graphics=PDF_REDACT_LINE_ART_IF_TOUCHED|2, int text=PDF_REDACT_TEXT_REMOVE|0)
@@ -343,7 +343,7 @@ In a nutshell, this is what you can do with PyMuPDF:
       :rtype: :ref:`Annot`
       :returns: the created annotation. It is drawn with line color black, line width 1 no fill color but fill color support. Use methods of :ref:`Annot` to make any changes to achieve something like this:
 
-      .. image:: images/img-polyline.*
+      .. image:: ../images/img-polyline.*
          :scale: 70
 
    .. method:: AddUnderlineAnnot(dynamic quads=null, Point start=null, Pint stop=null, Rect clip=null)
@@ -384,7 +384,7 @@ In a nutshell, this is what you can do with PyMuPDF:
         Make use of *clip* to further reduce the selected line bboxes and thus deal with e.g. multi-column pages.
         The following multi-line highlight on a page with three text columns was created by specifying the two red points and setting clip accordingly.
 
-      .. image:: images/img-markers.*
+      .. image:: ../images/img-markers.*
          :scale: 100
 
    .. method:: ClusterDrawings(Rect clip=null, List<PathInfo> drawings=null, float x_tolerance=3, float y_tolerance=3)
@@ -434,7 +434,7 @@ In a nutshell, this is what you can do with PyMuPDF:
 
          :arg tuple,list add_lines: Specify a list of "lines" (i.e. pairs of :data:`point_like` objects) as **additional**, "virtual" vector graphics. These lines may help with table and / or cell detection and will not otherwise influence the detection strategy. Especially, in contrast to parameters `horizontal_lines` and `vertical_lines`, they will not prevent detecting rows or columns in other ways. These lines will be treated exactly like "real" vector graphics in terms of joining, snapping, intersectiing, minimum length and containment in the `clip` rectangle. Similarly, lines not parallel to any of the coordinate axes will be ignored.
 
-         .. image:: images/img-findtables.*
+         .. image:: ../images/img-findtables.*
 
          :returns: a `TableFinder` object that has the following significant attributes:
 
@@ -485,7 +485,7 @@ In a nutshell, this is what you can do with PyMuPDF:
          * This can be used to create watermark images: on a temporary PDF page create a stamp annotation with a low opacity value, make a pixmap from it with *alpha=true* (and potentially also rotate it), discard the temporary PDF page and use the pixmap with :meth:`InsertImage` for your target PDF.
 
 
-      .. image:: images/img-stampannot.*
+      .. image:: ../images/img-stampannot.*
          :scale: 80
 
    .. method:: AddWidget(widget)
@@ -695,7 +695,7 @@ In a nutshell, this is what you can do with PyMuPDF:
           - 180: bottom-right to top-left.
           - 270: top-right to bottom-left.
 
-          .. image:: images/img-rotate.*
+          .. image:: ../images/img-rotate.*
 
       :arg int oc:  the xref of an :data:`OCG` / :data:`OCMD` or 0. Please refer to :meth:`Page.ShowPdfPage` for details.
       :arg float opacity: set the fill and stroke opacity of the content. Only values `0 <= opacity < 1` are considered.
@@ -1564,7 +1564,7 @@ In a nutshell, this is what you can do with PyMuPDF:
          page.ShowPdfPage(r2, src, 0, rotate=-90)
          doc.Save("show.pdf")
 
-      .. image:: images/img-showpdfpage.*
+      .. image:: ../images/img-showpdfpage.*
          :scale: 70
 
 
@@ -1843,4 +1843,4 @@ The page number "pno" is a 0-based integer `-∞ < pno < PageCount`.
 
 .. [#f9] Objects inside the source page, like images, text or drawings, are never aware of whether their owning page now is under OC control inside the target PDF. If source page objects are OC-controlled in the source PDF, then this will not be retained on the target: they will become unconditionally visible.
 
-.. include:: footer.rst
+.. include:: ../footer.rst

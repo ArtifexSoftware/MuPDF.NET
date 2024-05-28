@@ -1,4 +1,4 @@
-.. include:: header.rst
+.. include:: ../header.rst
 
 .. _Archive:
 
@@ -82,4 +82,4 @@ Archives are currently only used by :ref:`Story` objects to specify where to loo
       * `fmt` -- the format of the sub-archive. This is one of the strings "dir" (file folder), "zip" (ZIP archive), "tar" (TAR archive), or "tree" for single binary entries or file content.
       * `path` -- the value of the `path` parameter under which this sub-archive was added.
 
-.. include:: footer.rst
+.. include:: ../footer.rst

@@ -1,4 +1,4 @@
-.. include:: header.rst
+.. include:: ../header.rst
 
 .. _Matrix:
 
@@ -11,7 +11,7 @@ Matrix is a row-major 3x3 matrix used by image transformations in MuPDF (which c
 
 Since all points or pixels live in a two-dimensional space, one column vector of that matrix is a constant unit vector, and only the remaining six elements are used for manipulations. These six elements are usually represented by `[a, b, c, d, e, f]`. Here is how they are positioned in the matrix:
 
-.. image:: images/img-matrix.*
+.. image:: ../images/img-matrix.*
 
 
 Please note:
@@ -178,44 +178,44 @@ Here are examples that illustrate some of the achievable effects. All pictures s
 
 1. The :ref:`Identity` matrix performs no operation.
 
-.. image:: images/img-matrix-0.*
+.. image:: ../images/img-matrix-0.*
    :scale: 66
 
 2. The scaling matrix `Matrix(2, 0.5)` stretches by a factor of 2 in horizontal, and shrinks by factor 0.5 in vertical direction.
 
-.. image:: images/img-matrix-1.*
+.. image:: ../images/img-matrix-1.*
    :scale: 66
 
 3. Attributes :attr:`Matrix.E` and :attr:`Matrix.F` shift horizontally and, respectively vertically. In the following 10 to the right and 20 down.
 
-.. image:: images/img-matrix-2.*
+.. image:: ../images/img-matrix-2.*
    :scale: 66
 
 4. A negative :attr:`Matrix.A` causes a left-right flip.
 
-.. image:: images/img-matrix-3.*
+.. image:: ../images/img-matrix-3.*
    :scale: 66
 
 5. A negative :attr:`Matrix.D` causes an up-down flip.
 
-.. image:: images/img-matrix-4.*
+.. image:: ../images/img-matrix-4.*
    :scale: 66
 
 6. Attribute :attr:`Matrix.B` tilts upwards / downwards along the x-axis.
 
-.. image:: images/img-matrix-5.*
+.. image:: ../images/img-matrix-5.*
    :scale: 66
 
 7. Attribute :attr:`Matrix.C` tilts left / right along the y-axis.
 
-.. image:: images/img-matrix-6.*
+.. image:: ../images/img-matrix-6.*
    :scale: 66
 
 8. Matrix `Matrix(beta)` performs counterclockwise rotations for positive angles `beta`.
 
-.. image:: images/img-matrix-7.*
+.. image:: ../images/img-matrix-7.*
    :scale: 66
 
 
 
-.. include:: footer.rst
+.. include:: ../footer.rst

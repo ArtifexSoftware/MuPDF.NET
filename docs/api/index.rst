@@ -1,7 +1,7 @@
-.. include:: header.rst
+.. include:: ../header.rst
 
 ============
-Classes
+API
 ============
 
 .. toctree::
@@ -17,20 +17,20 @@ Classes
    identity.rst
    irect.rst
    link.rst
-   linkdest.rst
+   .. linkdest.rst
    matrix.rst
    outline.rst
    page.rst
    pixmap.rst
    point.rst
    quad.rst
-   rect.rst
+   .. rect.rst
    shape.rst
    story-class.rst
    textpage.rst
    textwriter.rst
-   tools.rst
+   .. tools.rst
    widget.rst
    xml-class.rst
 
-.. include:: footer.rst
+.. include:: ../footer.rst

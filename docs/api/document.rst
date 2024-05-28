@@ -1,4 +1,4 @@
-.. include:: header.rst
+.. include:: ../header.rst
 
 .. _Document:
 
@@ -1733,4 +1733,4 @@ Other Examples
 
 .. [#f7] This only works under certain conditions. For example, if there is normal text covered by some image on top of it, then this is undetectable and the respective text is **not** removed. Similar is true for white text on white background, and so on.
 
-.. include:: footer.rst
+.. include:: ../footer.rst

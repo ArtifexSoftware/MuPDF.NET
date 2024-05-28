@@ -1,4 +1,4 @@
-.. include:: header.rst
+.. include:: ../header.rst
 
 .. _Point:
 
@@ -69,7 +69,7 @@ Point
 
       Result of dividing each coordinate by *norm(point)*, the distance of the point to (0,0). This is a vector of length 1 pointing in the same direction as the point does. Its x, resp. y values are equal to the cosine, resp. sine of the angle this vector (and the point itself) has with the x axis.
 
-      .. image:: images/img-point-unit.*
+      .. image:: ../images/img-point-unit.*
 
       :type: :ref:`Point`
 
@@ -92,4 +92,4 @@ Point
       :type: float
 
 
-.. include:: footer.rst
+.. include:: ../footer.rst

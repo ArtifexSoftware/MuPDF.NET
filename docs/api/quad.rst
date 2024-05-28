@@ -1,4 +1,4 @@
-.. include:: header.rst
+.. include:: ../header.rst
 
 .. _Quad:
 
@@ -72,7 +72,7 @@ Quads can **be obtained** as results of text search methods (:meth:`Page.search_
 
       The smallest rectangle containing the quad, represented by the blue area in the following picture.
 
-      .. image:: images/img-quads.*
+      .. image:: ../images/img-quads.*
 
       :type: :ref:`Rect`
 
@@ -104,7 +104,7 @@ Quads can **be obtained** as results of text search methods (:meth:`Page.search_
 
       Checks if for any two points of the quad, all points on their connecting line also belong to the quad.
 
-         .. image:: images/img-convexity.*
+         .. image:: ../images/img-convexity.*
             :scale: 30
 
       :type: bool
@@ -134,4 +134,4 @@ Quads can **be obtained** as results of text search methods (:meth:`Page.search_
       :type: float
 
 
-.. include:: footer.rst
+.. include:: ../footer.rst

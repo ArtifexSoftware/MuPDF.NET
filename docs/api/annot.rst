@@ -1,4 +1,4 @@
-.. include:: header.rst
+.. include:: ../header.rst
 
 .. _Annot:
 
@@ -165,7 +165,7 @@ There is a parent-child relationship between an annotation and its page. If the 
 
       Three overlapping 'Circle' annotations with each opacity set to 0.5:
 
-      .. image:: images/img-opacity.*
+      .. image:: ../images/img-opacity.*
 
    .. attribute:: BLENDMODE
 
@@ -481,7 +481,7 @@ Annotation Icons in MuPDF
 
 This is a list of icons referenceable by name for annotation types 'Text' and 'FileAttachment'. You can use them via the *icon* parameter when adding an annotation, or use the as argument in :meth:`Annot.SetName`. It is left to your discretion which item to choose when -- no mechanism will keep you from using e.g. the "Speaker" icon for a 'FileAttachment'.
 
-.. image:: images/mupdf-icons.*
+.. image:: ../images/mupdf-icons.*
 
 
 .. rubric:: Footnotes
@@ -490,4 +490,4 @@ This is a list of icons referenceable by name for annotation types 'Text' and 'F
 
 .. [#f2] Only the following annotation types support method :meth:`Annot.SetRect`: Text, FreeText, Square, Circle, Redact, Stamp, Caret, FileAttachment, Sound, and Movie.
 
-.. include:: footer.rst
+.. include:: ../footer.rst

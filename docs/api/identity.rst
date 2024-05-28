@@ -1,4 +1,4 @@
-.. include:: header.rst
+.. include:: ../header.rst
 
 .. _Identity:
 
@@ -20,4 +20,4 @@ If you need a **mutable** identity matrix as a starting point, use one of the fo
     Matrix m = new Matrix(0);                 // use rotation by zero degrees
     Matrix m = new Matrix(Matrix.Identity);     // make a copy of Identity
 
-.. include:: footer.rst
+.. include:: ../footer.rst

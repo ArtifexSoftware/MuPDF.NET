@@ -1,4 +1,4 @@
-.. include:: header.rst
+.. include:: ../header.rst
 
 .. _DisplayList:
 
@@ -93,4 +93,4 @@ A display list is populated with objects from a page, usually by executing :meth
       :type: :ref:`Rect`
 
 
-.. include:: footer.rst
+.. include:: ../footer.rst

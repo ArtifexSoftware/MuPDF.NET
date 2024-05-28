@@ -1,4 +1,4 @@
-.. include:: header.rst
+.. include:: ../header.rst
 
 .. _Colorspace:
 
@@ -41,4 +41,4 @@ Represents the color space of a :ref:`Pixmap`.
     * :data:`csGRAY` = *new ColorSpace(Utils.CS_GRAY)*
     * :data:`csCMYK` = *new ColorSpace(Utils.CS_CMYK)*
 
-.. include:: footer.rst
+.. include:: ../footer.rst

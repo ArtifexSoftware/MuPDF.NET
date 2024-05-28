@@ -1,4 +1,4 @@
-.. include:: header.rst
+.. include:: ../header.rst
 
 .. _IRect:
 
@@ -195,5 +195,5 @@ IRect is a rectangular bounding box, very similar to :ref:`Rect`, except that al
       :type: bool
 
 
-.. include:: footer.rst
+.. include:: ../footer.rst
 

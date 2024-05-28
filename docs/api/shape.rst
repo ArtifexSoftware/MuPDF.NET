@@ -1,4 +1,4 @@
-.. include:: header.rst
+.. include:: ../header.rst
 
 .. _Shape:
 
@@ -84,11 +84,11 @@ Several draw methods can be executed in a row and each one of them will contribu
       :rtype: :ref:`Point`
       :returns: the end point, *p2*.
 
-      .. image:: images/img-breadth.*
+      .. image:: ../images/img-breadth.*
 
       Here is an example of three connected lines, forming a closed, filled triangle. Little arrows indicate the stroking direction.
 
-      .. image:: images/img-squiggly.*
+      .. image:: ../images/img-squiggly.*
 
       .. note:: Waves drawn are **not** trigonometric (sine / cosine). If you need that, have a look at `draw.py <https://github.com/pymupdf/PyMuPDF-Utilities/blob/master/examples/draw-sines/draw.py>`_.
 
@@ -130,7 +130,7 @@ Several draw methods can be executed in a row and each one of them will contribu
 
       Example:
 
-      .. image:: images/img-drawBezier.*
+      .. image:: ../images/img-drawBezier.*
 
    .. method:: DrawOval(Rect tetra)
 
@@ -143,7 +143,7 @@ Several draw methods can be executed in a row and each one of them will contribu
       :rtype: :ref:`Point`
       :returns: the middle point of line `rect.BottomLeft -> rect.TopLeft`, or resp. `quad.LowLeft -> quad.UpperLeft`. Look at just a few examples here, or at the *quad-show?.py* scripts in the PyMuPDF-Utilities repository.
 
-      .. image:: images/img-drawquad.*
+      .. image:: ../images/img-drawquad.*
          :scale: 50
 
    .. method:: DrawCircle(Point center, float radius)
@@ -159,7 +159,7 @@ Several draw methods can be executed in a row and each one of them will contribu
       :rtype: :ref:`Point`
       :returns: `Point(center.x - radius, center.y)`.
 
-         .. image:: images/img-drawcircle.*
+         .. image:: ../images/img-drawcircle.*
             :scale: 60
 
    .. method:: DrawCurve(Point p1, Point p2, Point p3)
@@ -171,7 +171,7 @@ Several draw methods can be executed in a row and each one of them will contribu
       :rtype: :ref:`Point`
       :returns: the end point, *p3*. The following is a filled quarter ellipse segment. The yellow area is oriented **clockwise:**
 
-         .. image:: images/img-drawCurve.png
+         .. image:: ../images/img-drawCurve.png
             :align: center
 
 
@@ -193,9 +193,9 @@ Several draw methods can be executed in a row and each one of them will contribu
       :rtype: :ref:`Point`
       :returns: the other end point of the arc. Can be used as starting point for a following invocation to create logically connected pies charts. Examples:
 
-         .. image:: images/img-drawSector1.*
+         .. image:: ../images/img-drawSector1.*
 
-         .. image:: images/img-drawSector2.*
+         .. image:: ../images/img-drawSector2.*
 
 
    .. method:: DrawRect(Rect rect, float radius=0)
@@ -249,7 +249,7 @@ Several draw methods can be executed in a row and each one of them will contribu
 
       :arg int oc: the :data:`xref` number of an :data:`OCG` or :data:`OCMD` to make this drawing conditionally displayable.
 
-      .. image:: images/img-even-odd.*
+      .. image:: ../images/img-even-odd.*
 
       .. note:: For each pixel in a shape, the following will happen:
 
@@ -281,7 +281,7 @@ Several draw methods can be executed in a row and each one of them will contribu
 
       :arg Point point: the bottom-left position of the first character of *text* in pixels. It is important to understand, how this works in conjunction with the *rotate* parameter. Please have a look at the following picture. The small red dots indicate the positions of *point* in each of the four possible cases.
 
-         .. image:: images/img-inserttext.*
+         .. image:: ../images/img-inserttext.*
             :scale: 33
 
       :arg str/sequence text: the text to be inserted. May be specified as either a string type or as a sequence type. For sequences, or strings containing line breaks *\n*, several lines will be inserted. No care will be taken if lines are too wide, but the number of inserted lines will be limited by "vertical" space on the page (in the sense of reading direction as established by the *rotate* parameter). Any rest of *text* is discarded -- the return code however contains the number of inserted lines.
@@ -342,9 +342,9 @@ Several draw methods can be executed in a row and each one of them will contribu
 
           **If negative**: no execution. The value returned is the space deficit to store text lines. Enlarge rectangle, decrease *fontsize*, decrease text amount, etc.
 
-      .. image:: images/img-rotate.*
+      .. image:: ../images/img-rotate.*
 
-      .. image:: images/img-rot+morph.*
+      .. image:: ../images/img-rot+morph.*
 
       For a description of the other parameters see :ref:`CommonParms`.
 
@@ -464,7 +464,7 @@ Examples
 
 Here is an example for 5 colors:
 
-.. image:: images/img-cake.*
+.. image:: ../images/img-cake.*
 
 2. Create a regular n-edged polygon (fill yellow, red border). We use *DrawSector()* only to calculate the points on the circumference, and empty the draw command buffer again before drawing the polygon::
 
@@ -483,7 +483,7 @@ Here is an example for 5 colors:
 
 Here is the polygon for n = 7:
 
-.. image:: images/img-7edges.*
+.. image:: ../images/img-7edges.*
 
 .. _CommonParms:
 
@@ -581,7 +581,7 @@ Common Parameters
 
   The following examples use border_width=0.3, together with a fontsize of 15. Stroke color is blue and fill color is some yellow.
 
-  .. image:: images/img-rendermode.*
+  .. image:: ../images/img-rendermode.*
 
 ----
 
@@ -617,4 +617,4 @@ Common Parameters
 
   Causes the end point of a drawing to be automatically connected with the starting point (by a straight line).
 
-.. include:: footer.rst
+.. include:: ../footer.rst

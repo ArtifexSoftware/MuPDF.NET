@@ -1,4 +1,4 @@
-.. include:: header.rst
+.. include:: ../header.rst
 
 .. _Widget:
 
@@ -234,4 +234,4 @@ MuPDF.NET supports the creation and update of many, but not all widget types.
 
 .. [#f1] If you intend to re-access a new or updated field (e.g. for making a pixmap), make sure to reload the page first. Either close and re-open the document, or load another page first, or simply do `page = doc.reload_page(page)`.
 
-.. include:: footer.rst
+.. include:: ../footer.rst

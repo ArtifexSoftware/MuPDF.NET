@@ -73,9 +73,7 @@ Developer documentation to help you get started
    :caption: API Reference
    :maxdepth: 2
 
-   classes.rst
-   glossary.rst
-
+   api/index.rst
 
 
 .. include:: footer.rst

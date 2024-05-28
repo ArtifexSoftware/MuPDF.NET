@@ -1,4 +1,4 @@
-.. include:: header.rst
+.. include:: ../header.rst
 
 .. _Font:
 
@@ -288,4 +288,4 @@ A Font object also contains useful general information, like the font bbox, the 
 
 .. [#f2] The built-in module *array* has been chosen for its speed and its compact representation of values.
 
-.. include:: footer.rst
+.. include:: ../footer.rst

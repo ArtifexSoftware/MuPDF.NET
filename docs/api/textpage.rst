@@ -1,4 +1,4 @@
-.. include:: header.rst
+.. include:: ../header.rst
 
 .. _TextPage:
 
@@ -139,7 +139,7 @@ For a description of what this class is all about, see Appendix 2.
 
       Example Quad versus Rect: when searching for needle "pymupdf", then the corresponding entry will either be the blue rectangle, or, if *quads* was specified, the quad *Quad(ul, ur, ll, lr)*.
 
-      .. image:: images/img-quads.*
+      .. image:: ../images/img-quads.*
 
    .. attribute:: Rect
 
@@ -173,7 +173,7 @@ In addition, **the full quad information is not lost**: it can be recovered as n
 As mentioned, using these functions is ever only needed, if the text is **not written horizontally** -- `line["dir"] != (1, 0)` -- and you need the quad for text marker annotations (:meth:`Page.add_highlight_annot` and friends).
 
 
-.. image:: images/img-textpage.*
+.. image:: ../images/img-textpage.*
 
 
 
@@ -248,7 +248,7 @@ Spans           *list* of span dictionaries
 
 The value of key *"dir"* is the **unit vector** `dir = (cosine, -sine)` of the angle, which the text has relative to the x-axis [#f2]_. See the following picture: The word in each quadrant (counter-clockwise from top-right to bottom-right) is rotated by 30, 120, 210 and 300 degrees respectively.
 
-.. image:: images/img-line-dir.*
+.. image:: ../images/img-line-dir.*
    :scale: 100
 
 Span Dictionary
@@ -272,7 +272,7 @@ Chars           (only for :meth:`ExtractRAWDict`) *list* of character dictionari
 =============== =====================================================================
 
 
-.. image:: images/img-asc-desc.*
+.. image:: ../images/img-asc-desc.*
    :scale: 60
 
 These numbers may be used to compute the minimum height of a character (or span) -- as opposed to the standard height provided in the "bbox" values (which actually represents the **line height**). The following code recalculates the span bbox to have a height of **fontsize** exactly fitting the text inside:
@@ -288,7 +288,7 @@ r.y0 = r.y1 - span.Size
 
 The following shows the original span rectangle in red and the rectangle with re-computed height in blue.
 
-.. image:: images/img-span-rect.*
+.. image:: ../images/img-span-rect.*
    :scale: 200
 
 *"flags"* is an integer, which represents font properties except for the first bit 0. They are to be interpreted like this:
@@ -325,4 +325,4 @@ This image shows the relationship between a character's bbox and its quad: |text
 
 .. [#f2] The coordinate systems of MuPDF and PDF are different in that MuPDF uses the page's top-left point as `(0, 0)`. In PDF, this is the bottom-left point. Therefore, the positive direction for MuPDF's y-axis is **from top to bottom**. This causes the sign change for the sine value here: a **negative** value indicates anti-clockwise rotation of the text.
 
-.. include:: footer.rst
+.. include:: ../footer.rst

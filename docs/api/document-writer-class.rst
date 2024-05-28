@@ -1,4 +1,4 @@
-.. include:: header.rst
+.. include:: ../header.rst
 
 .. _DocumentWriter:
 
@@ -53,4 +53,4 @@ Using DocumentWriter_ also for other document types might happen in the future.
 
    For usage examples consult the section of :ref:`Story`.
 
-.. include:: footer.rst
+.. include:: ../footer.rst

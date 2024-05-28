@@ -1,4 +1,4 @@
-.. include:: header.rst
+.. include:: ../header.rst
 
 .. _Link:
 
@@ -128,4 +128,4 @@ There is a parent-child relationship between a link and its page. If the page ob
 
       :type: :ref:`LinkDest`
 
-.. include:: footer.rst
+.. include:: ../footer.rst

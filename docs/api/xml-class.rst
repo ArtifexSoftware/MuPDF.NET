@@ -1,4 +1,4 @@
-.. include:: header.rst
+.. include:: ../header.rst
 
 .. _Xml:
 
@@ -438,7 +438,7 @@ Methods that are flagged as "context managers" can conveniently be used in this 
    para.SetItalic(false).SetBold(false).AddText("regular text");
    para.AddText("more regular text");
 
-.. include:: footer.rst
+.. include:: ../footer.rst
 
 .. External links:
 

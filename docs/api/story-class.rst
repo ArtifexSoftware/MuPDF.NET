@@ -1,4 +1,4 @@
-.. include:: header.rst
+.. include:: ../header.rst
 
 .. _Story:
 
@@ -342,7 +342,9 @@ Element Positioning CallBack function
 
 The callback function can be used to log information about story output. The function's access to the information is read-only: it has no way to influence the story's output.
 
-A typical loop for executing a story with using this method would look like this::
+A typical loop for executing a story with using this method would look like this:
+
+.. code-block:: python
 
     HTML = """
     <html>
@@ -397,4 +399,4 @@ The parameter passed to the `recorder` function is an object with the following 
 
 * `elpos.page_num` (int) -- page number; only present when using `fitz.Story.write*()` functions.
 
-.. include:: footer.rst
+.. include:: ../footer.rst

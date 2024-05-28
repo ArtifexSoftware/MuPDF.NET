@@ -1,4 +1,4 @@
-.. include:: header.rst
+.. include:: ../header.rst
 
 .. _Outline:
 
@@ -6,7 +6,7 @@
 Outline
 ================
 
-*outline* (or "bookmark"), is a property of *Document*. If not *null*, it stands for the first outline item of the document. Its properties in turn define the characteristics of this item and also point to other outline items in "horizontal" or downward direction. The full tree of all outline items for e.g. a conventional table of contents (TOC) can be recovered by following these "pointers".
+*Outline* (or "bookmark"), is a property of *Document*. If not *null*, it stands for the first outline item of the document. Its properties in turn define the characteristics of this item and also point to other outline items in "horizontal" or downward direction. The full tree of all outline items for e.g. a conventional table of contents (TOC) can be recovered by following these "pointers".
 
 ================================== ==================================================
 **Method / Attribute**             **Short Description**
@@ -92,4 +92,4 @@ Outline
 
       :type: :ref:`linkDest`
 
-.. include:: footer.rst
+.. include:: ../footer.rst

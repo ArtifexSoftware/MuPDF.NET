@@ -1,4 +1,4 @@
-.. include:: header.rst
+.. include:: ../header.rst
 
 .. _Pixmap:
 
@@ -290,7 +290,7 @@ Have a look at the :ref:`FAQ` section to see some pixmap usage "at work".
          pix2.SetOrigin(-x1, -y1)
          pix1.Copy(pix2, (0, 0, x1, y1))
 
-      .. image:: images/img-pixmapcopy.*
+      .. image:: ../images/img-pixmapcopy.*
          :scale: 20
 
    .. method:: Save(string filename, string output: null, int jpg_quality: 95)
@@ -358,7 +358,7 @@ Have a look at the :ref:`FAQ` section to see some pixmap usage "at work".
       :returns: A new pixmap where the quad corners are mapped to the pixmap corners in a clockwise fashion: `quad.UpperLeft -> irect.TopLeft`, `quad.UpperRight -> irect.TopRight`, etc.
       :rtype: :ref:`Pixmap`
 
-         .. image:: images/img-warp.*
+         .. image:: ../images/img-warp.*
               :scale: 40
               :align: center
 
@@ -558,4 +558,4 @@ psd        gray, rgb, cmyk yes       .psd           Adobe Photoshop Document
 
 .. [#f2] To also set the alpha property, add an additional step to this method by dropping or adding an alpha channel to the result.
 
-.. include:: footer.rst
+.. include:: ../footer.rst
