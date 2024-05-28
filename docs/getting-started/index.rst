@@ -10,13 +10,15 @@ Prerequisites
 
 - Visual Studio 2019, 2022
 - .NET v7 or later
-- Windows OS
+- Microsoft Windows OS
 
 
 Usage with Nuget
 ---------------------
 
-Add **MuPDF.NET** to your existing project by adding the `MuPDF.NET package from NuGet`_.
+In order to use **MuPDF.NET** in your project you need to add the `MuPDF.NET package from NuGet`_.
+
+Should you ever want to create the package locally, then the following sections will provide guidance. Otherwise, you can safely skip the remainder of this page.
 
 
 How to build
