@@ -124,7 +124,7 @@ html_theme_options = {
             # Label for this link
             "name": "Discord",
             # URL where the link will redirect
-            "url": "https://discord.gg/taPnFQp5gb",  # required
+            "url": "https://discord.gg/DQ8GBG6V4g",  # required
             # Icon class (if "type": "fontawesome"), or path to local image (if "type": "local")
             "icon": "fa-brands fa-discord",
             # The type of image to be used (see below for details)

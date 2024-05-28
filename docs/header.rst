@@ -10,6 +10,19 @@
 
    <div class="dot-net-logo"></div>
 
+
+.. |MuPDF.NET| raw:: html
+
+    <cite>MuPDF.NET</cite>
+
+.. |PyMuPDF| raw:: html
+
+    <cite>PyMuPDF</cite>
+
+.. |pdf_only_class| raw:: html
+
+    <div style="width:100%; text-align:right"><b>This class is for PDF only.</b></div>
+
 .. meta::
    :description: MuPDF.NET Developer documentation.
    :keywords: mupdf, .net, pdf, document, api, split, merge, extract, view

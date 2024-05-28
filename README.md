@@ -10,7 +10,8 @@ While being portable to other platforms, this documentation is targeted to the W
 - Visual Studio Community version 2019 or version 2022
 - .Net v7 or later
 
-## Installation
+## Generating MuPDF.NET
+This is only required if you want to create a local version of the package. For creating an application that **uses** MuPDF.NET, please skip to the next section.
 
 - Clone this repository.
 
@@ -27,14 +28,14 @@ While being portable to other platforms, this documentation is targeted to the W
 
 ## Creating a MuPDF.NET Application
 
-- Create a C# application using the same Visual Studio version that created above system DLLs.
+- Create a C# application using Visual Studio.
 
-- Download and add MuPDF.NET package from Nuget. Refer to it via instruction `using MuPDF.NET;` in your C# source.
+- Download and add MuPDF.NET package from [NuGet](https://www.nuget.org/packages/MuPDF.NET/2.0.5-alpha). Refer to it via instruction `using MuPDF.NET;` in your C# source.
 
-- Code your program and build it using the VS menu items `Build|Solution`. If the system DLLs are not globally accessible as mentioned above, copy `mupdfcpp64.dll` and `mupdfcsharp.dll` to your application's `bin` folder.
+- Code your program and build it using the VS menu items `Build|Solution`.
 
 - The generated executable of your app is the `.exe` file in the `bin` folder.
 
 
 ## License and Copyright
-MuPDF.NET is available under open-source AGPL and commercial license agreements. If you determine you cannot meet the requirements of the AGPL, please contact Artifex for more information regarding a commercial license.
+MuPDF.NET is available under open-source [AGPL](https://github.com/ArtifexSoftware/MuPDF.NET/blob/main/LICENSE) (included in this repository as `LICENSE` file) and commercial license agreements. If you determine you cannot meet the requirements of the AGPL, please contact [Artifex](https://artifex.com/contact/) for more information regarding a commercial license.
