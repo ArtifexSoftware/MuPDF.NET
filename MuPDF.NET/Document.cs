@@ -9,7 +9,7 @@ namespace MuPDF.NET
     {
         static Document()
         {
-            if (!File.Exists("mupdfcpp64.dll"))
+            if (!File.Exists("mupdfcsharp.dll"))
                 Utils.LoadEmbeddedDll();
         }
 
