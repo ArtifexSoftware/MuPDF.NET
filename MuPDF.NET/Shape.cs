@@ -603,7 +603,7 @@ namespace MuPDF.NET
             Point mt = tetra.UpperLeft + (tetra.UpperRight - tetra.UpperLeft) * 0.5f;
             Point mr = tetra.UpperRight + (tetra.LowerRight - tetra.UpperRight) * 0.5f;
             Point mb = tetra.LowerLeft + (tetra.LowerRight - tetra.LowerLeft) * 0.5f;
-            Point ml = tetra.LowerLeft + (tetra.LowerLeft - tetra.UpperLeft) * 0.5f;
+            Point ml = tetra.UpperLeft + (tetra.LowerLeft - tetra.UpperLeft) * 0.5f;
 
             if (!(LastPoint == ml))
             {
