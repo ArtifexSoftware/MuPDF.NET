@@ -65,8 +65,8 @@ namespace MuPDF.NET
         {
             X0 = p1.X;
             Y0 = p1.Y;
-            X1 = p1.X;
-            Y1 = p1.Y;
+            X1 = p2.X;
+            Y1 = p2.Y;
         }
 
         public bool IsInfinite
