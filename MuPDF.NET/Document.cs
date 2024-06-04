@@ -1463,8 +1463,8 @@ namespace MuPDF.NET
                         {
                             if (olItem.Page == -1)
                             {
-                                (dynamic, float, float) resolve = ResolveLink(olItem.Uri);
-                                page = resolve.Item1 + 1; // if page is -1, resolve's first is int, not List<int>
+                                (List<int>, float, float) resolve = ResolveLink(olItem.Uri);
+                                page = resolve.Item1[0] + 1;
                             }
                             else
                                 page = olItem.Page + 1;
@@ -5035,8 +5035,7 @@ namespace MuPDF.NET
                     txt += "/Title" + ol["title"];
                 }
                 catch (Exception) { }
-
-                if (ol["count"] != 0 && ol.GetValueOrDefault("color", new float[] { }).Length == 3)
+                if (ol.GetValueOrDefault("count", 0) != 0 && ol.GetValueOrDefault("color", new float[] { }).Length == 3)
                     txt += $"/C[ {ol["color"][0]} {ol["color"][1]} {ol["color"][2]}]";
                 if (ol.GetValueOrDefault("flags", 0) > 0)
                     txt += $"/F {ol["flags"]}";
