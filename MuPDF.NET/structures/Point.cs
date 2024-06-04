@@ -47,6 +47,11 @@ namespace MuPDF.NET
             return new Point(p.X + t, p.Y + t);
         }
 
+        public static Point operator +(Point p, double t)
+        {
+            return new Point((float)(p.X + t), (float)(p.Y + (float)t));
+        }
+
         public static Point operator +(Point p1, Point p2)
         {
             return new Point(p1.X + p2.X, p1.Y + p2.Y);
@@ -77,6 +82,11 @@ namespace MuPDF.NET
         public static Point operator *(Point p, float m)
         {
             return new Point(p.X * m, p.Y * m);
+        }
+
+        public static Point operator *(Point p, double m)
+        {
+            return new Point((float)(p.X * m), (float)(p.Y * m));
         }
 
         public static Point operator *(Point op1, Matrix m)
