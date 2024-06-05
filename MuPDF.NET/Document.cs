@@ -427,7 +427,7 @@ namespace MuPDF.NET
                         msg = $"No such file: {filename}";
                         throw new FileNotFoundException(msg);
                     }
-                    _nativeDocument = new FzDocument(filename);
+                    /*_nativeDocument = mupdf.mupdf.fz_open_document(filename);*/
                 }
 
                 if (
@@ -476,9 +476,8 @@ namespace MuPDF.NET
                             {
                                 doc = mupdf.mupdf.fz_open_document(filename);
                             }
-                            catch (Exception e)
+                            catch (Exception)
                             {
-                                Console.WriteLine(e.Message);
                                 throw;
                             }
                         }
@@ -4701,6 +4700,7 @@ namespace MuPDF.NET
                 infoXref = 0;
             else
                 infoXref = Convert.ToInt32(temp.Replace("0 R", ""));
+
             if (metadata.Count == 0 && infoXref == 0)
                 return;
             if (infoXref == 0)
@@ -4709,6 +4709,7 @@ namespace MuPDF.NET
                 UpdateObject(infoXref, "<<>>");
                 SetKeyXRef(-1, "Info", $"{infoXref} 0 R");
             }
+
             else if (metadata.Count == 0)
             {
                 SetKeyXRef(-1, "Info", "null");
@@ -4720,11 +4721,12 @@ namespace MuPDF.NET
                 if (keymap.GetValueOrDefault(k, null) != null)
                 {
                     string pdfKey = keymap[k];
+                    Console.WriteLine(pdfKey);
                     string val = metadata[k];
                     if (string.IsNullOrEmpty(val) || (val == "none" || val == "null"))
                         val = "null";
                     else
-                        val = Utils.GetPdfString(val);
+                        val = Utils.GetPdfString(val);                                                                                                                                                    
                     SetKeyXRef(infoXref, pdfKey, val);
                 }
             }

@@ -4636,7 +4636,7 @@ namespace MuPDF.NET
         /// <returns></returns>
         public static string GetPdfString(string s)
         {
-            if (!string.IsNullOrEmpty(s))
+            if (string.IsNullOrEmpty(s))
                 return "()";
             string MakeUtf16be(string s)
             {
