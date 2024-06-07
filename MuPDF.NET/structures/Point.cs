@@ -152,7 +152,7 @@ namespace MuPDF.NET
         public Point Transform(Matrix m)
         {
             FzPoint p = mupdf.mupdf.fz_transform_point(ToFzPoint(), m.ToFzMatrix());
-            return new Point(p);
+            return new Point(p.x < 1e-3 ? 0 : p.x, p.y < 1e-3 ? 0 : p.y);
         }
 
         public float DistanceTo(Point p, string unit = "px")

@@ -463,7 +463,7 @@ namespace MuPDF.NET
 
                 Point t1 = cp1 * IPctm;
                 Point t2 = cp2 * IPctm;
-                Point t3 = q * IPctm;
+                Point t3 = q * IPctm;                                                                                                        
                 DrawCont += string.Format(l4, t1.X, t1.Y, t2.X, t2.Y, t3.X, t3.Y);
                 betar -= w90;
                 alfa += w90;
@@ -489,7 +489,6 @@ namespace MuPDF.NET
                 Point t2 = cp2 * IPctm;
                 Point t3 = q * IPctm;
                 DrawCont += string.Format(l4, t1.X, t1.Y, t2.X, t2.Y, t3.X, t3.Y);
-                Console.WriteLine($"{kappa} {kappah}");
             }
             
             if (fullSector)
@@ -501,6 +500,7 @@ namespace MuPDF.NET
                 t = q * IPctm;
                 DrawCont += string.Format(l5, t.X, t.Y);
             }
+            Console.WriteLine(DrawCont);
             LastPoint = q;
             return LastPoint;
         }
