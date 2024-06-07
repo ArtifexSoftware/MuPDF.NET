@@ -500,7 +500,7 @@ namespace MuPDF.NET
                 t = q * IPctm;
                 DrawCont += string.Format(l5, t.X, t.Y);
             }
-            Console.WriteLine(DrawCont);
+
             LastPoint = q;
             return LastPoint;
         }
