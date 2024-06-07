@@ -31,5 +31,10 @@
         public bool Collapse { get; set; }
 
         public float[] Color { get; set; }
+
+        public override string ToString()
+        {
+            return $"Kind = {(int)Kind}, Xref = {Xref}, Page = {Page}, To = {To.ToString()}, Zoom = {Zoom}, Collapse = {Collapse}";
+        }
     }
 }

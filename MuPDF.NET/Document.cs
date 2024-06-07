@@ -9,7 +9,7 @@ namespace MuPDF.NET
     {
         static Document()
         {
-            if (!File.Exists("mupdfcpp64.dll"))
+            if (!File.Exists("mupdfcsharp.dll"))
                 Utils.LoadEmbeddedDll();
         }
 
@@ -427,7 +427,7 @@ namespace MuPDF.NET
                         msg = $"No such file: {filename}";
                         throw new FileNotFoundException(msg);
                     }
-                    _nativeDocument = new FzDocument(filename);
+                    /*_nativeDocument = mupdf.mupdf.fz_open_document(filename);*/
                 }
 
                 if (
@@ -476,9 +476,8 @@ namespace MuPDF.NET
                             {
                                 doc = mupdf.mupdf.fz_open_document(filename);
                             }
-                            catch (Exception e)
+                            catch (Exception)
                             {
-                                Console.WriteLine(e.Message);
                                 throw;
                             }
                         }
@@ -1463,8 +1462,8 @@ namespace MuPDF.NET
                         {
                             if (olItem.Page == -1)
                             {
-                                (dynamic, float, float) resolve = ResolveLink(olItem.Uri);
-                                page = resolve.Item1 + 1; // if page is -1, resolve's first is int, not List<int>
+                                (List<int>, float, float) resolve = ResolveLink(olItem.Uri);
+                                page = resolve.Item1[0] + 1;
                             }
                             else
                                 page = olItem.Page + 1;
@@ -4701,6 +4700,7 @@ namespace MuPDF.NET
                 infoXref = 0;
             else
                 infoXref = Convert.ToInt32(temp.Replace("0 R", ""));
+
             if (metadata.Count == 0 && infoXref == 0)
                 return;
             if (infoXref == 0)
@@ -4709,6 +4709,7 @@ namespace MuPDF.NET
                 UpdateObject(infoXref, "<<>>");
                 SetKeyXRef(-1, "Info", $"{infoXref} 0 R");
             }
+
             else if (metadata.Count == 0)
             {
                 SetKeyXRef(-1, "Info", "null");
@@ -4720,11 +4721,12 @@ namespace MuPDF.NET
                 if (keymap.GetValueOrDefault(k, null) != null)
                 {
                     string pdfKey = keymap[k];
+                    Console.WriteLine(pdfKey);
                     string val = metadata[k];
                     if (string.IsNullOrEmpty(val) || (val == "none" || val == "null"))
                         val = "null";
                     else
-                        val = Utils.GetPdfString(val);
+                        val = Utils.GetPdfString(val);                                                                                                                                                    
                     SetKeyXRef(infoXref, pdfKey, val);
                 }
             }
@@ -5035,8 +5037,7 @@ namespace MuPDF.NET
                     txt += "/Title" + ol["title"];
                 }
                 catch (Exception) { }
-
-                if (ol["count"] != 0 && ol.GetValueOrDefault("color", new float[] { }).Length == 3)
+                if (ol.GetValueOrDefault("count", 0) != 0 && ol.GetValueOrDefault("color", new float[] { }).Length == 3)
                     txt += $"/C[ {ol["color"][0]} {ol["color"][1]} {ol["color"][2]}]";
                 if (ol.GetValueOrDefault("flags", 0) > 0)
                     txt += $"/F {ol["flags"]}";

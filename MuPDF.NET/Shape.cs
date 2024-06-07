@@ -418,15 +418,15 @@ namespace MuPDF.NET
         /// <param name="fullSector"></param>
         /// <returns></returns>
         /// <exception cref="Exception"></exception>
-        public Point DrawSector(Point center, Point point, float beta, bool fullSector)
+        public Point DrawSector(Point center, Point point, float beta, bool fullSector = true)
         {
             string l3 = "{0} {1} m\n";
             string l4 = "{0} {1} {2} {3} {4} {5} c\n";
             string l5 = "{0} {1} l\n";
-            float betar = (float)((-beta) * Math.PI / 180);
-            float w360 = (float)(Math.Sign(betar) * 360 * (Math.PI / 180) * -1);
-            float w90 = (float)(Math.Sign(betar) * 90 * (Math.PI / 180));
-            float w45 = w90 / 2;
+            double betar = ((-beta) * Math.PI / 180);
+            double w360 = (Math.Sign(betar) * 360.0f * (Math.PI / 180) * -1);
+            double w90 = (Math.Sign(betar) * 90.0f * (Math.PI / 180));
+            double w45 = w90 / 2;
             while (Math.Abs(betar) > 2 * Math.PI)
                 betar += w360;
 
@@ -446,7 +446,7 @@ namespace MuPDF.NET
             if (!(rad > Utils.FLT_EPSILON))
                 throw new Exception("radius must be positive");
 
-            float alfa = HorizontalAngle(center, point);
+            double alfa = HorizontalAngle(center, point);
             while (Math.Abs(betar) > Math.Abs(w90))
             {
                 float q1 = c.X + (float)(Math.Cos(alfa + w90) * rad);
@@ -463,9 +463,8 @@ namespace MuPDF.NET
 
                 Point t1 = cp1 * IPctm;
                 Point t2 = cp2 * IPctm;
-                Point t3 = q * IPctm;
+                Point t3 = q * IPctm;                                                                                                        
                 DrawCont += string.Format(l4, t1.X, t1.Y, t2.X, t2.Y, t3.X, t3.Y);
-
                 betar -= w90;
                 alfa += w90;
                 p = q;
@@ -473,15 +472,16 @@ namespace MuPDF.NET
 
             if (Math.Abs(betar) > 1e-3)
             {
-                float beta2 = betar / 2;
-                float q1 = c.X + (float)(Math.Cos(alfa + betar) * rad);
-                float q2 = c.Y + (float)(Math.Sin(alfa + betar) * rad);
-                q = new Point(q1, q2);
-                float r1 = c.X + (float)(Math.Cos(alfa + beta2) * rad / Math.Cos(beta2));
-                float r2 = c.Y + (float)(Math.Sin(alfa + beta2) * rad / Math.Cos(beta2));
-                Point r = new Point(r1, r2);
-                float kappah = (float)(1 - Math.Cos(beta2) * 4 / 3 / (r - q).Abs());
-                float kappa = (float)(kappah * (p - q).Abs() / (1 - Math.Cos(betar)));
+                double beta2 = betar / 2.0f;
+                double q1 = c.X + (Math.Cos(alfa + betar) * rad);
+                double q2 = c.Y + (Math.Sin(alfa + betar) * rad);
+                q = new Point((float)q1, (float)q2);
+                double r1 = c.X + Math.Cos(alfa + beta2) * rad / Math.Cos(beta2);
+                double r2 = c.Y + Math.Sin(alfa + beta2) * rad / Math.Cos(beta2);
+                Point r = new Point((float)r1, (float)r2);
+
+                double kappah = (1 - Math.Cos(beta2)) * 4 / 3 / (r - q).Abs();
+                double kappa = kappah * (p - q).Abs() / (1 - Math.Cos(betar));
                 Point cp1 = p + (r - p) * kappa;
                 Point cp2 = q + (r - q) * kappa;
 
@@ -490,7 +490,7 @@ namespace MuPDF.NET
                 Point t3 = q * IPctm;
                 DrawCont += string.Format(l4, t1.X, t1.Y, t2.X, t2.Y, t3.X, t3.Y);
             }
-
+            
             if (fullSector)
             {
                 Point t = point * IPctm;
@@ -500,6 +500,7 @@ namespace MuPDF.NET
                 t = q * IPctm;
                 DrawCont += string.Format(l5, t.X, t.Y);
             }
+            Console.WriteLine(DrawCont);
             LastPoint = q;
             return LastPoint;
         }
@@ -530,10 +531,10 @@ namespace MuPDF.NET
             }
         }
 
-        public static float HorizontalAngle(Point c, Point p)
+        public static double HorizontalAngle(Point c, Point p)
         {
             Point s = (p - c).Unit;
-            float alfa = (float)Math.Asin(Math.Abs(s.Y));
+            double alfa = Math.Asin(Math.Abs(s.Y));
             if (s.X < 0)
             {
                 if (s.Y <= 0)
@@ -544,7 +545,7 @@ namespace MuPDF.NET
             else
             {
                 if (s.Y >= 0) { }
-                else alfa -= alfa;
+                else alfa = -alfa;
             }
             return alfa;
         }
@@ -603,7 +604,7 @@ namespace MuPDF.NET
             Point mt = tetra.UpperLeft + (tetra.UpperRight - tetra.UpperLeft) * 0.5f;
             Point mr = tetra.UpperRight + (tetra.LowerRight - tetra.UpperRight) * 0.5f;
             Point mb = tetra.LowerLeft + (tetra.LowerRight - tetra.LowerLeft) * 0.5f;
-            Point ml = tetra.LowerLeft + (tetra.LowerLeft - tetra.UpperLeft) * 0.5f;
+            Point ml = tetra.UpperLeft + (tetra.LowerLeft - tetra.UpperLeft) * 0.5f;
 
             if (!(LastPoint == ml))
             {

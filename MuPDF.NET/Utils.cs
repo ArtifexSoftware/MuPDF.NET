@@ -2682,7 +2682,7 @@ namespace MuPDF.NET
             LinkInfo nl = new LinkInfo();
             nl.Kind = dest.Kind;
             nl.Xref = 0;
-            nl.From = new Rect(r);
+            nl.From = (r == null) ? null : new Rect(r);
             Point pnt = new Point(0, 0);
 
             if ((dest.Flags & (int)LinkFlags.LINK_FLAG_L_VALID) != 0)
@@ -4636,7 +4636,7 @@ namespace MuPDF.NET
         /// <returns></returns>
         public static string GetPdfString(string s)
         {
-            if (!string.IsNullOrEmpty(s))
+            if (string.IsNullOrEmpty(s))
                 return "()";
             string MakeUtf16be(string s)
             {
