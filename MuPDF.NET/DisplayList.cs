@@ -7,7 +7,7 @@ namespace MuPDF.NET
 
         static DisplayList()
         {
-            if (!File.Exists("mupdfcpp64.dll"))
+            if (!File.Exists("mupdfcsharp.dll"))
                 Utils.LoadEmbeddedDll();
         }
 

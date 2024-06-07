@@ -4,6 +4,7 @@ using System.IO.Compression;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
+using Microsoft.Maui.Storage;
 using mupdf;
 using Newtonsoft.Json;
 
@@ -2437,7 +2438,15 @@ namespace MuPDF.NET
             {
                 if (fontFile != null)
                 {
-                    font = mupdf.mupdf.fz_new_font_from_file(null, fontFile, idx, 0);
+                    IntPtr utf8Ptr = Utils.Utf16_Utf8Ptr(fontFile);
+                    try
+                    {
+                        font = mupdf.mupdf.fz_new_font_from_file(null, utf8Ptr, idx, 0);
+                    }
+                    catch (Exception)
+                    {
+                        Marshal.FreeHGlobal(utf8Ptr);
+                    }
                 }
                 else
                 {
@@ -2682,7 +2691,7 @@ namespace MuPDF.NET
             LinkInfo nl = new LinkInfo();
             nl.Kind = dest.Kind;
             nl.Xref = 0;
-            nl.From = new Rect(r);
+            nl.From = (r == null) ? null : new Rect(r);
             Point pnt = new Point(0, 0);
 
             if ((dest.Flags & (int)LinkFlags.LINK_FLAG_L_VALID) != 0)
@@ -3434,7 +3443,16 @@ namespace MuPDF.NET
             FzFont font = null;
             if (fontFile != null)
             {
-                font = mupdf.mupdf.fz_new_font_from_file(null, fontFile, index, 0);
+                IntPtr utf8Ptr = Utils.Utf16_Utf8Ptr(fontFile);
+                try
+                {
+                    font = mupdf.mupdf.fz_new_font_from_file(null, utf8Ptr, index, 0);
+                }
+                catch (Exception)
+                {
+                    Marshal.FreeHGlobal(utf8Ptr);
+                }
+                
                 return Fertig(font);
             }
 
@@ -4636,7 +4654,7 @@ namespace MuPDF.NET
         /// <returns></returns>
         public static string GetPdfString(string s)
         {
-            if (!string.IsNullOrEmpty(s))
+            if (string.IsNullOrEmpty(s))
                 return "()";
             string MakeUtf16be(string s)
             {
@@ -5282,7 +5300,8 @@ namespace MuPDF.NET
                 return w * fontsize;
             }
 
-            if (Utils.Base14_fontdict.Keys.Contains(fontname))
+            //if (Utils.Base14_fontdict.Keys.Contains(fontname))
+            if (true)
                 return Utils.MeasureString(text, fontname, fontsize, encoding);
             if (
                 (
@@ -5310,7 +5329,8 @@ namespace MuPDF.NET
             int encoding
         )
         {
-            FzFont font = mupdf.mupdf.fz_new_base14_font(fontname);
+            //FzFont fon = mupdf.mupdf.fz_new_base14_font(fontname);
+            FzFont font = new FzFont("Kenpixel", "e://res/kenpixel.ttf", 0, 0);
             float w = 0;
             int pos = 0;
             while (pos < text.Length)
@@ -6130,6 +6150,17 @@ namespace MuPDF.NET
             {
                 throw;
             }
+        }
+
+        internal static IntPtr Utf16_Utf8Ptr(string s)
+        {
+            byte[] utf8Bytes = Encoding.UTF8.GetBytes(s);
+            byte[] nullTerminator = { 0 };
+            byte[] bytes = utf8Bytes.Concat(nullTerminator).ToArray();
+            IntPtr utf8Ptr = Marshal.AllocHGlobal(bytes.Length);
+            Marshal.Copy(bytes, 0, utf8Ptr, bytes.Length);
+
+            return utf8Ptr;
         }
     }
 }

@@ -135,5 +135,12 @@ namespace MuPDF.NET.Test
             doc.LayerUIConfigs();
             doc.SwitchLayer(0);
         }
+
+        [Test]
+        public void OpenDocument()
+        {
+            Document doc = new Document("../../../resources/你好.pdf");
+            Assert.That(doc.PageCount, Is.EqualTo(1));
+        }
     }
 }

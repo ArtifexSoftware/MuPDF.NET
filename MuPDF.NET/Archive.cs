@@ -24,11 +24,11 @@ namespace MuPDF.NET
             }
         }
 
-        public Archive(string dirName)
+        public Archive(string dirName, string path = "")
         {
             _subArchives = new List<SubArchive>();
             _nativeArchive = mupdf.mupdf.fz_new_multi_archive();
-            Add(content: dirName, path: dirName);
+            Add(content: dirName, path: path);
         }
 
         public Archive()
@@ -37,11 +37,11 @@ namespace MuPDF.NET
             _subArchives = new List<SubArchive>();
         }
 
-        public Archive(string filename, string path = "")
+        public Archive(byte[] content, string path = "")
         {
             _subArchives = new List<SubArchive>();
             _nativeArchive = mupdf.mupdf.fz_new_multi_archive();
-            Add(filename, path);
+            Add(content: content, path: path);
         }
 
         public FzArchive ToFzArchive()
@@ -131,7 +131,9 @@ namespace MuPDF.NET
         public void Add(ZipArchive content, string path = null)
         {
             string fmt = "zip";
-            string filename = path == null ? "" : Path.GetFileName(path);
+            if (!File.Exists(path))
+                throw new Exception("Need name for zip file");
+            string filename = Path.GetFileName(path);
             List<string> entries = new List<string>();
             foreach (ZipArchiveEntry e in content.Entries)
             {
@@ -151,8 +153,10 @@ namespace MuPDF.NET
 
         public void Add(TarReader content, string path = null)
         {
-            string fmt = "zip";
-            string filename = path == null ? "" : Path.GetFileName(path);
+            string fmt = "tar";
+            if (!File.Exists(path))
+                throw new Exception("Need name for zip file");
+            string filename = Path.GetFileName(path);
             List<string> entries = new List<string>();
             TarEntry entry;
             while ((entry = content.GetNextEntry(true)) != null)
@@ -160,7 +164,7 @@ namespace MuPDF.NET
                 entries.Add(entry.Name);
             }
 
-            if (filename == "")
+            if (string.IsNullOrEmpty(filename))
             {
                 
             }
@@ -181,7 +185,7 @@ namespace MuPDF.NET
         {
             List<string> entries = new List<string>();
 
-            if (path == null)
+            if (string.IsNullOrEmpty(path))
                 throw new Exception("Need name for binary content");
             entries.Add(path);
             _AddTreeItem(content as byte[], path);
@@ -198,14 +202,14 @@ namespace MuPDF.NET
             {
                 fmt = "dir";
                 mount = path;
-                entries = new List<string>(Directory.GetFiles(path));
+                entries = new List<string>(Directory.GetFiles(content));
+                Console.WriteLine(entries.Count);
                 _AddDir(content, path);
                 MakeSubArch(fmt, entries, mount);
             }
-
-            if (File.Exists(Path.Combine(path, content)))
+            else if (File.Exists(content))
             {
-                if (path == null)
+                if (string.IsNullOrEmpty(path))
                     throw new Exception("need name for binary content");
                 byte[] ff = File.ReadAllBytes(content);
                 fmt = "tree";
@@ -214,6 +218,8 @@ namespace MuPDF.NET
                 _AddTreeItem(ff, path);
                 MakeSubArch(fmt, entries, mount);
             }
+            else
+                throw new Exception("Not a file or directory");
         }
 
         /// <summary>

@@ -16,7 +16,7 @@ namespace MuPDF.NET.Test
             Page page = doc[0];
 
             Pixmap source = page.GetPixmap();
-
+            
             Pixmap p = new Pixmap(source.ColorSpace, source.W, source.H, source.SAMPLES, 0);
 
             p.Save("1.jpg", "JPEG");

@@ -9,7 +9,7 @@ namespace MuPDF.NET
     {
         static Document()
         {
-            if (!File.Exists("mupdfcpp64.dll"))
+            if (!File.Exists("mupdfcsharp.dll"))
                 Utils.LoadEmbeddedDll();
         }
 
@@ -427,7 +427,7 @@ namespace MuPDF.NET
                         msg = $"No such file: {filename}";
                         throw new FileNotFoundException(msg);
                     }
-                    _nativeDocument = new FzDocument(filename);
+                    /*_nativeDocument = mupdf.mupdf.fz_open_document(filename);*/
                 }
 
                 if (
@@ -472,14 +472,14 @@ namespace MuPDF.NET
                     {
                         if (filetype == null)
                         {
+                            IntPtr utf8Ptr = Utils.Utf16_Utf8Ptr(filename);
                             try
                             {
-                                doc = mupdf.mupdf.fz_open_document(filename);
+                                doc = mupdf.mupdf.fz_open_document(utf8Ptr);
                             }
-                            catch (Exception e)
+                            finally
                             {
-                                Console.WriteLine(e.Message);
-                                throw;
+                                Marshal.FreeHGlobal(utf8Ptr);
                             }
                         }
                         else
@@ -1010,7 +1010,17 @@ namespace MuPDF.NET
             Utils.EmbeddedClean(pdf);
 
             if (filename is string)
-                pdf.pdf_save_document(filename, opts);
+            {
+                IntPtr utf8Ptr = Utils.Utf16_Utf8Ptr(filename);
+                try
+                {
+                    pdf.pdf_save_document(utf8Ptr, opts);
+                }
+                catch (Exception)
+                {
+                    Marshal.FreeHGlobal(utf8Ptr);
+                }
+            }
             else
             {
                 output = new FilePtrOutput(filename);
@@ -1463,8 +1473,8 @@ namespace MuPDF.NET
                         {
                             if (olItem.Page == -1)
                             {
-                                (dynamic, float, float) resolve = ResolveLink(olItem.Uri);
-                                page = resolve.Item1 + 1; // if page is -1, resolve's first is int, not List<int>
+                                (List<int>, float, float) resolve = ResolveLink(olItem.Uri);
+                                page = resolve.Item1[0] + 1;
                             }
                             else
                                 page = olItem.Page + 1;
@@ -1934,7 +1944,16 @@ namespace MuPDF.NET
                 throw new Exception("document closed or encrypted");
             PdfDocument pdf = Document.AsPdfDocument(_nativeDocument);
 
-            pdf.pdf_load_journal(filename);
+            IntPtr utf8Ptr = Utils.Utf16_Utf8Ptr(filename);
+            try
+            {
+                pdf.pdf_load_journal(utf8Ptr);
+            }
+            catch (Exception)
+            {
+                Marshal.FreeHGlobal(utf8Ptr);
+            }
+            
             if (pdf.m_internal.journal == null)
                 throw new Exception("Journal and document do not match");
         }
@@ -1997,7 +2016,8 @@ namespace MuPDF.NET
             if (IsClosed || IsEncrypted)
                 throw new Exception("document closed or encrypted");
             PdfDocument pdf = Document.AsPdfDocument(_nativeDocument);
-            pdf.pdf_save_journal(filename);
+            IntPtr utf8Ptr = Utils.Utf16_Utf8Ptr(filename);
+            pdf.pdf_save_journal(utf8Ptr);
         }
 
         /// <summary>
@@ -4693,7 +4713,7 @@ namespace MuPDF.NET
             HashSet<string> keys = new HashSet<string>(keymap.Keys);
             List<string> diffKeys = (new HashSet<string>(metadata.Keys)).Except(keys).ToList();
             if (diffKeys.Count != 0)
-                throw new Exception("bad dict key(s)");
+                throw new Exception($"bad dict key(s) - {string.Join(", ", diffKeys.ToArray())}");
 
             (string t, string temp) = GetKeyXref(-1, "Info");
             int infoXref = 0;
@@ -4701,6 +4721,7 @@ namespace MuPDF.NET
                 infoXref = 0;
             else
                 infoXref = Convert.ToInt32(temp.Replace("0 R", ""));
+
             if (metadata.Count == 0 && infoXref == 0)
                 return;
             if (infoXref == 0)
@@ -4709,6 +4730,7 @@ namespace MuPDF.NET
                 UpdateObject(infoXref, "<<>>");
                 SetKeyXRef(-1, "Info", $"{infoXref} 0 R");
             }
+
             else if (metadata.Count == 0)
             {
                 SetKeyXRef(-1, "Info", "null");
@@ -4720,11 +4742,12 @@ namespace MuPDF.NET
                 if (keymap.GetValueOrDefault(k, null) != null)
                 {
                     string pdfKey = keymap[k];
+                    Console.WriteLine(pdfKey);
                     string val = metadata[k];
                     if (string.IsNullOrEmpty(val) || (val == "none" || val == "null"))
                         val = "null";
                     else
-                        val = Utils.GetPdfString(val);
+                        val = Utils.GetPdfString(val);                                                                                                                                                    
                     SetKeyXRef(infoXref, pdfKey, val);
                 }
             }
@@ -5035,9 +5058,9 @@ namespace MuPDF.NET
                     txt += "/Title" + ol["title"];
                 }
                 catch (Exception) { }
-
-                if (ol["count"] != 0 && ol.GetValueOrDefault("color", new float[] { }).Length == 3)
-                    txt += $"/C[ {ol["color"][0]} {ol["color"][1]} {ol["color"][2]}]";
+                if (ol.GetValueOrDefault("count", 0) != 0 && ol.GetValueOrDefault("color", null) != null)
+                    if (ol["color"].Length == 3)
+                        txt += $"/C[ {ol["color"][0]} {ol["color"][1]} {ol["color"][2]}]";
                 if (ol.GetValueOrDefault("flags", 0) > 0)
                     txt += $"/F {ol["flags"]}";
                 if (index == 0)
@@ -5121,7 +5144,7 @@ namespace MuPDF.NET
                 to.Y = pageHight - to.Y;
                 dest.To = to;
             }
-            string action = Utils.GetDestString(pageXref, dest);
+            string action = Utils.GetDestString(pageXref, dest);;
             if (!action.StartsWith("/A"))
                 throw new Exception("bad bookmark dest");
             float[] color = dest.Color;
@@ -5166,20 +5189,21 @@ namespace MuPDF.NET
                 item.pdf_dict_put(new PdfObj("A"), obj);
             }
             item.pdf_dict_put_int(new PdfObj("F"), flags);
-            if (color != null && color.Count() == 3)
+            int i;
+            if (color != null && color.Length == 3)
             {
                 PdfObj c = pdf.pdf_new_array(3);
-                for (int i = 0; i < 3; i++)
+                for (i = 0; i < 3; i++)
                 {
-                    c.pdf_array_push_int((long)color[i]);
+                    c.pdf_array_push_real((long)color[i]);
                 }
                 item.pdf_dict_put(new PdfObj("C"), c);
             }
             else if (color != null)
                 item.pdf_dict_del(new PdfObj("C"));
-            if (collapse)
+            if (item.pdf_dict_get(new PdfObj("Count")).m_internal != null)
             {
-                int i = item.pdf_dict_get_int(new PdfObj("Count"));
+                i = item.pdf_dict_get_int(new PdfObj("Count"));
                 if ((i < 0 && collapse == false) || (i > 0 && collapse == true))
                 {
                     i = i * -1;
