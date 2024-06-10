@@ -375,7 +375,7 @@ namespace MuPDF.NET
         /// <returns></returns>
         public Point DrawBezier(Point p1, Point p2, Point p3, Point p4)
         {
-            if (LastPoint == null || !(LastPoint.X == p1.X && LastPoint.Y == p1.Y))
+            if (LastPoint == null || !LastPoint.EqualTo(p1))
             {
                 Point t = p1 * IPctm;
                 DrawCont += $"{t.X} {t.Y} m\n";
@@ -430,7 +430,7 @@ namespace MuPDF.NET
             while (Math.Abs(betar) > 2 * Math.PI)
                 betar += w360;
 
-            if (LastPoint == null || !(LastPoint.X == point.X && LastPoint.Y == point.Y))
+            if (LastPoint == null || !LastPoint.EqualTo(point))
             {
                 Point t = point * IPctm;
                 DrawCont += string.Format(l3, t.X, t.Y);
@@ -567,7 +567,7 @@ namespace MuPDF.NET
         public Point DrawLine(Point p1, Point p2)
         {
             Point t;
-            if (LastPoint == null || !(LastPoint.X == p1.X && LastPoint.Y == p1.Y))
+            if (LastPoint == null || !LastPoint.EqualTo(p1))
             {
                 t = p1 * IPctm;
                 DrawCont += $"{t.X} {t.Y} m\n";
@@ -606,7 +606,7 @@ namespace MuPDF.NET
             Point mb = tetra.LowerLeft + (tetra.LowerRight - tetra.LowerLeft) * 0.5f;
             Point ml = tetra.UpperLeft + (tetra.LowerLeft - tetra.UpperLeft) * 0.5f;
 
-            if (!(LastPoint == ml))
+            if (LastPoint == null || !LastPoint.EqualTo(ml))
             {
                 Point t = ml * IPctm;
                 DrawCont += $"{t.X} {t.Y} m\n";
@@ -627,7 +627,7 @@ namespace MuPDF.NET
             {
                 if (i == 0)
                 {
-                    if (!(LastPoint == points[i]))
+                    if (LastPoint == null || !LastPoint.EqualTo(points[i]))
                     {
                         Point t = points[i] * IPctm;
                         DrawCont += $"{t.X} {t.Y} m\n";
@@ -637,7 +637,7 @@ namespace MuPDF.NET
                 else
                 {
                     Point t = points[i] * IPctm;
-                    DrawCont += $"{t.X} {t.Y} m\n";
+                    DrawCont += $"{t.X} {t.Y} l\n";
                 }
                 UpdateRect(points[i]);
             }
