@@ -230,9 +230,16 @@ namespace MuPDF.NET
             return $"Point({X}, {Y})";
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="obj"></param>
+        /// <returns></returns>
         public bool EqualTo(Point obj)
         {
-            return X == ((Point)obj).X && Y == ((Point)obj).Y;
+            if (obj == null)
+                throw new NullReferenceException("is null object.");
+            return X == obj.X && Y == obj.Y;
         }
     }
 }
