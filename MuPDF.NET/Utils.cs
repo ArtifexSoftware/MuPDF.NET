@@ -791,11 +791,11 @@ namespace MuPDF.NET
             obj.pdf_dict_put(new PdfObj(key), val);
         }
 
-        public static (int, int, int) MUPDF_VERSION = (
+/*        public static (int, int, int) MUPDF_VERSION = (
             mupdf.mupdf.FZ_VERSION_MAJOR,
             mupdf.mupdf.FZ_VERSION_MINOR,
             mupdf.mupdf.FZ_VERSION_PATCH
-        );
+        );*/
 
         public static Dictionary<string, string> ErrorMessages = new Dictionary<string, string>()
         {
