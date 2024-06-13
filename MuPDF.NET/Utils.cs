@@ -3096,9 +3096,9 @@ namespace MuPDF.NET
             GraftMap graftmap
         )
         {
-            PdfDocument pdfDes = Document.AsPdfDocument(docDes);
-            PdfDocument pdfSrc = Document.AsPdfDocument(docSrc);
-            List<PdfObj> knownPageObjs = new List<PdfObj>()
+                PdfDocument pdfDes = Document.AsPdfDocument(docDes);
+                PdfDocument pdfSrc = Document.AsPdfDocument(docSrc);
+                List<PdfObj> knownPageObjs = new List<PdfObj>()
             {
                 new PdfObj("Contents"),
                 new PdfObj("Resources"),
@@ -3111,60 +3111,60 @@ namespace MuPDF.NET
                 new PdfObj("UserUnit")
             };
 
-            PdfObj pageRef = pdfSrc.pdf_lookup_page_obj(pageFrom);
-            PdfObj pageDict = pdfDes.pdf_new_dict(4);
-            pageDict.pdf_dict_put(new PdfObj("Type"), new PdfObj("Page"));
+                PdfObj pageRef = pdfSrc.pdf_lookup_page_obj(pageFrom);
+                PdfObj pageDict = pdfDes.pdf_new_dict(4);
+                pageDict.pdf_dict_put(new PdfObj("Type"), new PdfObj("Page"));
 
-            foreach (PdfObj e in knownPageObjs)
-            {
-                PdfObj obj = pageRef.pdf_dict_get_inheritable(e);
-                if (obj.m_internal != null)
+                foreach (PdfObj e in knownPageObjs)
                 {
-                    pageDict.pdf_dict_put(
-                        e,
-                        mupdf.mupdf.pdf_graft_mapped_object(graftmap.ToPdfGraftMap(), obj)
-                    );
-                }
-            }
-
-            if (copyAnnots)
-            {
-                PdfObj oldAnnots = pageRef.pdf_dict_get(new PdfObj("Annots"));
-                int n = oldAnnots.pdf_array_len();
-                if (n > 0)
-                {
-                    PdfObj newAnnots = pageDict.pdf_dict_put_array(new PdfObj("Annots"), n);
-                    for (int i = 0; i < n; i++)
+                    PdfObj obj = pageRef.pdf_dict_get_inheritable(e);
+                    if (obj.m_internal != null)
                     {
-                        PdfObj o = oldAnnots.pdf_array_get(i);
-                        if (o.m_internal == null || o.pdf_is_dict() == 0)
-                            continue;
-                        if (o.pdf_dict_gets("IRT").m_internal != null)
-                            continue;
-                        PdfObj subtype = o.pdf_dict_get(new PdfObj("Subtype"));
-                        if (subtype.pdf_name_eq(new PdfObj("Link")) != 0)
-                            continue;
-                        if (subtype.pdf_name_eq(new PdfObj("Popup")) != 0)
-                            continue;
-                        if (subtype.pdf_name_eq(new PdfObj("Widget")) != 0)
-                        {
-                            mupdf.mupdf.fz_warn("skipping widget annotation");
-                            continue;
-                        }
-
-                        o.pdf_dict_del(new PdfObj("Popup"));
-                        o.pdf_dict_del(new PdfObj("P"));
-                        PdfObj copyO = graftmap.ToPdfGraftMap().pdf_graft_mapped_object(o);
-                        PdfObj annot = pdfDes.pdf_new_indirect(copyO.pdf_to_num(), 0);
-                        newAnnots.pdf_array_push(annot);
+                        pageDict.pdf_dict_put(
+                            e,
+                            mupdf.mupdf.pdf_graft_mapped_object(graftmap.ToPdfGraftMap(), obj)
+                        );
                     }
                 }
+
+                if (copyAnnots)
+                {
+                    PdfObj oldAnnots = pageRef.pdf_dict_get(new PdfObj("Annots"));
+                    int n = oldAnnots.pdf_array_len();
+                    if (n > 0)
+                    {
+                        PdfObj newAnnots = pageDict.pdf_dict_put_array(new PdfObj("Annots"), n);
+                        for (int i = 0; i < n; i++)
+                        {
+                            PdfObj o = oldAnnots.pdf_array_get(i);
+                            if (o.m_internal == null || o.pdf_is_dict() == 0)
+                                continue;
+                            if (o.pdf_dict_gets("IRT").m_internal != null)
+                                continue;
+                            PdfObj subtype = o.pdf_dict_get(new PdfObj("Subtype"));
+                            if (subtype.pdf_name_eq(new PdfObj("Link")) != 0)
+                                continue;
+                            if (subtype.pdf_name_eq(new PdfObj("Popup")) != 0)
+                                continue;
+                            if (subtype.pdf_name_eq(new PdfObj("Widget")) != 0)
+                            {
+                                mupdf.mupdf.fz_warn("skipping widget annotation");
+                                continue;
+                            }
+
+                            o.pdf_dict_del(new PdfObj("Popup"));
+                            o.pdf_dict_del(new PdfObj("P"));
+                            PdfObj copyO = graftmap.ToPdfGraftMap().pdf_graft_mapped_object(o);
+                            PdfObj annot = pdfDes.pdf_new_indirect(copyO.pdf_to_num(), 0);
+                            newAnnots.pdf_array_push(annot);
+                        }
+                    }
+                }
+                if (rotate != -1)
+                    pageDict.pdf_dict_put_int(new PdfObj("Rotate"), rotate);
+                PdfObj ref_ = pdfDes.pdf_add_object(pageDict);
+                pdfDes.pdf_insert_page(pageTo, ref_);
             }
-            if (rotate != -1)
-                pageDict.pdf_dict_put_int(new PdfObj("Rotate"), rotate);
-            PdfObj ref_ = pdfDes.pdf_add_object(pageDict);
-            pdfDes.pdf_insert_page(pageTo, ref_);
-        }
 
         public static void MergeRange(
             Document docDes,
@@ -3348,10 +3348,9 @@ namespace MuPDF.NET
                 Matrix ctm = ~pageSrc.TransformationMatrix;
                 Page pageDst = doc1[pnoDst[i]];
                 List<string> linkTab = new List<string>();
-
                 foreach (LinkInfo l in links)
                 {
-                    if (l.Kind == LinkType.LINK_GOTO && pnoSrc.Contains(l.Page))
+                    if (l.Kind == LinkType.LINK_GOTO && !pnoSrc.Contains(l.Page))
                         continue;
                     string annotText = CreateAnnot(l, xrefDst, pnoSrc, ctm);
                     if (annotText != null || annotText != "")
