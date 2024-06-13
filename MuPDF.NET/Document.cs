@@ -1832,6 +1832,11 @@ namespace MuPDF.NET
             Dictionary<string, string> t = new Dictionary<string, string>();
 
             gmap = GraftMaps.GetValueOrDefault(isrt, null);
+            if (gmap == null)
+            {
+                gmap = new GraftMap(this);
+                GraftMaps[isrt] = gmap;
+            }
 
             PdfDocument pdfout = AsPdfDocument(this);
             PdfDocument pdfsrc = AsPdfDocument(docSrc);
@@ -2844,7 +2849,6 @@ namespace MuPDF.NET
             );
             int xref = GetPdfCatelog();
             string text = GetXrefObject(xref, compressed: 1);
-            Console.WriteLine(text);
             text = text.Replace("/PageLabels[]", $"/PageLabels[{CreateNums(labels)}]");
             UpdateObject(xref, text);
         }
@@ -4741,7 +4745,6 @@ namespace MuPDF.NET
                 if (keymap.GetValueOrDefault(k, null) != null)
                 {
                     string pdfKey = keymap[k];
-                    Console.WriteLine(pdfKey);
                     string val = metadata[k];
                     if (string.IsNullOrEmpty(val) || (val == "none" || val == "null"))
                         val = "null";
