@@ -2763,7 +2763,7 @@ namespace MuPDF.NET
         {
             PdfPage page = GetPdfPage();
             if (page.m_internal == null)
-                return null;
+                return new List<AnnotXref>();
             return Utils.GetAnnotXrefList(page.obj());
         }
 
