@@ -4959,16 +4959,23 @@ namespace MuPDF.NET
                     dest.Kind = LinkType.LINK_NONE;
                 if (o.Link != null)
                 {
-                    dest = o.Link;
-                    if (dest.To == null)
-                        dest.To = top;
-                    else
+                    if (o.Link is LinkInfo)
                     {
-                        Page page = this[pno];
-                        Point point = new Point(dest.To);
-                        point.Y = page.CropBox.Height - point.Y;
-                        point = point * page.RotationMatrix;
-                        dest.To = new Point(point);
+                        dest = o.Link;
+                        if (dest.To == null)
+                            dest.To = top;
+                        else
+                        {
+                            Page page = this[pno];
+                            Point point = new Point(dest.To);
+                            point.Y = page.CropBox.Height - point.Y;
+                            point = point * page.RotationMatrix;
+                            dest.To = new Point(point);
+                        }
+                    }
+                    else if (o.Link is float)
+                    {
+                        dest.To = new Point(72, pageHeight - o.Link);
                     }
                 }
 
@@ -5068,7 +5075,9 @@ namespace MuPDF.NET
                 if (index == 0)
                     txt += "/Type/Outlines";
                 txt += ">>";
+                Console.WriteLine(txt);
                 UpdateObject(xref[index], txt);
+                index++;
             }
             InitDocument();
             return n;
