@@ -7,4 +7,10 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Reference Include="MuPDF.NET">
+      <HintPath>..\..\..\MuPDF.NET\bin\Release\net8.0\MuPDF.NET.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
 </Project>
