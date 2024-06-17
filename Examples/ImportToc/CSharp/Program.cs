@@ -10,7 +10,7 @@ foreach (string line in lines)
 {
     string[] row = line.Split(';');
     float p4 = float.Parse(row[3]);
-    Toc t = new Toc() { Level = int.Parse(row[0]), Title = row[1], Page = int.Parse(row[2]), Link = float.Parse(row[3]) };
+    Toc t = new Toc() { Level = int.Parse(row[0]), Title = row[1], Page = int.Parse(row[2]), Link = p4 };
     toc.Add(t);
 }
 

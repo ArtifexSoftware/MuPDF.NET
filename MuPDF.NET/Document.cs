@@ -5075,7 +5075,6 @@ namespace MuPDF.NET
                 if (index == 0)
                     txt += "/Type/Outlines";
                 txt += ">>";
-                Console.WriteLine(txt);
                 UpdateObject(xref[index], txt);
                 index++;
             }
@@ -5155,7 +5154,8 @@ namespace MuPDF.NET
                 to.Y = pageHight - to.Y;
                 dest.To = to;
             }
-            string action = Utils.GetDestString(pageXref, dest);;
+            string action = Utils.GetDestString(pageXref, dest);
+            Console.WriteLine(action);
             if (!action.StartsWith("/A"))
                 throw new Exception("bad bookmark dest");
             float[] color = dest.Color;

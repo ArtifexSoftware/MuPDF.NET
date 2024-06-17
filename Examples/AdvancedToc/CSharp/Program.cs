@@ -5,7 +5,7 @@ internal class Program
 {
     private static void Main(string[] args)
     {
-        Document doc = new Document("../../../example.pdf");
+        Document doc = new Document("../../../../example.pdf");
         List<Toc> tocs = doc.GetToc(false);
 
         for (int i = 0; i < tocs.Count; i++)
@@ -33,6 +33,6 @@ internal class Program
             }
             doc.SetTocItem(i, dest);
         }
-        doc.Save("../../../new-toc.pdf");
+        doc.Save("../../../../new-toc.pdf");
     }
 }
