@@ -220,8 +220,7 @@ namespace MuPDF.NET
                 fz_text_language lang = mupdf.mupdf.pdf_document_language(pdf);
                 if (lang == fz_text_language.FZ_LANG_UNSET)
                     return null;
-                if (Utils.MUPDF_VERSION.CompareTo((1, 23, 7)) < 0)
-                    throw new Exception("not implemented yet'");
+
                 return mupdf.mupdf.fz_string_from_text_language2(lang);
             }
         }
@@ -523,8 +522,8 @@ namespace MuPDF.NET
                                     }
                                 }
                                 else if (
-                                    Utils.MUPDF_VERSION.Item1 >= 1
-                                    && Utils.MUPDF_VERSION.Item2 >= 24
+                                    mupdf.mupdf.FZ_VERSION_MAJOR >= 1
+                                    && mupdf.mupdf.FZ_VERSION_MINOR >= 24
                                 )
                                 {
                                     Debug.Assert(false);
@@ -1833,6 +1832,11 @@ namespace MuPDF.NET
             Dictionary<string, string> t = new Dictionary<string, string>();
 
             gmap = GraftMaps.GetValueOrDefault(isrt, null);
+            if (gmap == null)
+            {
+                gmap = new GraftMap(this);
+                GraftMaps[isrt] = gmap;
+            }
 
             PdfDocument pdfout = AsPdfDocument(this);
             PdfDocument pdfsrc = AsPdfDocument(docSrc);
@@ -2845,7 +2849,6 @@ namespace MuPDF.NET
             );
             int xref = GetPdfCatelog();
             string text = GetXrefObject(xref, compressed: 1);
-            Console.WriteLine(text);
             text = text.Replace("/PageLabels[]", $"/PageLabels[{CreateNums(labels)}]");
             UpdateObject(xref, text);
         }
@@ -4742,7 +4745,6 @@ namespace MuPDF.NET
                 if (keymap.GetValueOrDefault(k, null) != null)
                 {
                     string pdfKey = keymap[k];
-                    Console.WriteLine(pdfKey);
                     string val = metadata[k];
                     if (string.IsNullOrEmpty(val) || (val == "none" || val == "null"))
                         val = "null";
@@ -4957,16 +4959,23 @@ namespace MuPDF.NET
                     dest.Kind = LinkType.LINK_NONE;
                 if (o.Link != null)
                 {
-                    dest = o.Link;
-                    if (dest.To == null)
-                        dest.To = top;
-                    else
+                    if (o.Link is LinkInfo)
                     {
-                        Page page = this[pno];
-                        Point point = new Point(dest.To);
-                        point.Y = page.CropBox.Height - point.Y;
-                        point = point * page.RotationMatrix;
-                        dest.To = new Point(point);
+                        dest = o.Link;
+                        if (dest.To == null)
+                            dest.To = top;
+                        else
+                        {
+                            Page page = this[pno];
+                            Point point = new Point(dest.To);
+                            point.Y = page.CropBox.Height - point.Y;
+                            point = point * page.RotationMatrix;
+                            dest.To = new Point(point);
+                        }
+                    }
+                    else if (o.Link is float)
+                    {
+                        dest.To = new Point(72, pageHeight - o.Link);
                     }
                 }
 
@@ -5067,6 +5076,7 @@ namespace MuPDF.NET
                     txt += "/Type/Outlines";
                 txt += ">>";
                 UpdateObject(xref[index], txt);
+                index++;
             }
             InitDocument();
             return n;
@@ -5144,7 +5154,8 @@ namespace MuPDF.NET
                 to.Y = pageHight - to.Y;
                 dest.To = to;
             }
-            string action = Utils.GetDestString(pageXref, dest);;
+            string action = Utils.GetDestString(pageXref, dest);
+            Console.WriteLine(action);
             if (!action.StartsWith("/A"))
                 throw new Exception("bad bookmark dest");
             float[] color = dest.Color;
