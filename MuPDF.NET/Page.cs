@@ -824,7 +824,7 @@ namespace MuPDF.NET
         {
             string dataStr = "";
             Annot ret = null;
-            if (!string.IsNullOrEmpty(text))
+            if (!string.IsNullOrEmpty(text) && text.Any(char.IsWhiteSpace))
             {
                 if (textColor == null)
                     textColor = new float[3] { 0, 0, 0 };
@@ -924,7 +924,7 @@ namespace MuPDF.NET
         {
             string dataStr = "";
             Annot ret = null;
-            if (!string.IsNullOrEmpty(text))
+            if (!string.IsNullOrEmpty(text) && text.Any(char.IsWhiteSpace))
             {
                 Utils.CheckColor(fill);
                 Utils.CheckColor(textColor);
@@ -1637,7 +1637,7 @@ namespace MuPDF.NET
         {
             Rect CenterRect(Rect annotRect, string newText, string fname, float fsize)
             {
-                if (string.IsNullOrEmpty(newText))
+                if (string.IsNullOrEmpty(newText) || annotRect.Width <= Utils.FLT_EPSILON)
                     return annotRect;
                 float textWidth = 0f;
                 try
@@ -4288,7 +4288,15 @@ namespace MuPDF.NET
                 r = link.From * iMat;
                 DeleteLink(link);
                 link.From = r;
-                InsertLink(link);
+                try
+                {
+                    InsertLink(link);
+                }
+                catch(Exception)
+                {
+
+                }
+                
             }
             foreach (Widget widget in GetWidgets())
             {
