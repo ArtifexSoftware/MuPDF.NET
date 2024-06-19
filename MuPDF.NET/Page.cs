@@ -4838,8 +4838,10 @@ namespace MuPDF.NET
         )
         {
             PathFactor = 1;
-            if (Math.Abs(Ctm.a) == Math.Abs(Ctm.d))
+            if (Ctm.a != 0 && Math.Abs(Ctm.a) == Math.Abs(Ctm.d))
                 PathFactor = Math.Abs(Ctm.a);
+            else if (Ctm.b != 0 && Math.Abs(Ctm.b) == Math.Abs(Ctm.c))
+                PathFactor = Math.Abs(Ctm.b);
             Ctm = new FzMatrix(ctm);
             PathType = Utils.trace_device_CLIP_STROKE_PATH;
 

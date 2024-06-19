@@ -429,4 +429,13 @@ public class PageTest : PdfTestBase
         //Span span = page.GetText
     }
 
+    [Test]
+    public void GetDrawings2()
+    {
+        Document doc = new Document("../../../resources/test-3591.pdf");
+        Page page = doc[0];
+        List<PathInfo> paths = page.GetDrawings();
+        foreach (PathInfo p in paths)
+            Assert.That(p.Width, Is.EqualTo(15));
+    }
 }
