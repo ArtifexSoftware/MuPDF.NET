@@ -132,9 +132,8 @@ namespace MuPDF.NET
         /// <returns></returns>
         public Rect GetBound()
         {
-            FzPage page = _pdfPage.super();
-            Rect val = new Rect(page.fz_bound_page());
-
+            Rect val = new Rect(_nativePage.fz_bound_page());
+            Console.WriteLine(val.ToString());
             if (val.IsInfinite && Parent.IsPDF)
             {
                 Rect cb = CropBox;
@@ -2501,8 +2500,8 @@ namespace MuPDF.NET
         /// <returns>the xref of the installed font.</returns>
         /// <exception cref="Exception"></exception>
         public int InsertFont(
-            string fontName = "helv",
-            string fontFile = null,
+            string fontName,
+            string fontFile,
             byte[] fontBuffer = null,
             bool setSimple = false,
             int wmode = 0,
@@ -2641,7 +2640,7 @@ namespace MuPDF.NET
 
             PdfObj fonts = resources.pdf_dict_get(new PdfObj("Font"));
 
-            if (fonts.pdf_dict_len() == 0)
+            if (fonts.m_internal == null)
             {
                 fonts = pdf.pdf_new_dict(5);
                 Utils.pdf_dict_putl(page.obj(), fonts, new string[2] { "Resources", "Font" });
