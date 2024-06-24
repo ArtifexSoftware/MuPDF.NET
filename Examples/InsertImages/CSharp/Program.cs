@@ -14,7 +14,7 @@ foreach (string file in list)
 
     Document img = new Document(file);
     Rect rect = img[0].Rect;
-    Console.WriteLine(rect.ToString());
+    Console.WriteLine(img.PageCount);
     byte[] pdfbytes = img.Convert2Pdf();
     img.Close();
 
@@ -23,4 +23,4 @@ foreach (string file in list)
     page.ShowPdfPage(rect, imgPdf, 0);
 }
 
-doc.Save("ouput.pdf");
+doc.Save("output.pdf");
