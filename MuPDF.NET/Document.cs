@@ -469,16 +469,15 @@ namespace MuPDF.NET
                 {
                     if (!string.IsNullOrEmpty(filename))
                     {
-                        if (filetype == null)
+                        if (string.IsNullOrEmpty(filetype))
                         {
-                            IntPtr utf8Ptr = Utils.Utf16_Utf8Ptr(filename);
                             try
                             {
-                                doc = mupdf.mupdf.fz_open_document(utf8Ptr);
+                                doc = mupdf.mupdf.fz_open_document(filename);
                             }
-                            finally
+                            catch(Exception)
                             {
-                                Marshal.FreeHGlobal(utf8Ptr);
+                                throw new Exception("Failed to open document");
                             }
                         }
                         else
@@ -1013,7 +1012,7 @@ namespace MuPDF.NET
                 IntPtr utf8Ptr = Utils.Utf16_Utf8Ptr(filename);
                 try
                 {
-                    pdf.pdf_save_document(utf8Ptr, opts);
+                    pdf.pdf_save_document(filename, opts);
                 }
                 catch (Exception)
                 {
@@ -1064,13 +1063,7 @@ namespace MuPDF.NET
         {
             get
             {
-                if (i == -1)
-                    i = PageCount - 1;
-                if (i < 0 || i > PageCount)
-                {
-                    throw new Exception($"Page {i} not in document");
-                }
-                return new Page(GetPage(i), this);
+                return LoadPage(i);
             }
         }
 
@@ -1951,7 +1944,7 @@ namespace MuPDF.NET
             IntPtr utf8Ptr = Utils.Utf16_Utf8Ptr(filename);
             try
             {
-                pdf.pdf_load_journal(utf8Ptr);
+                pdf.pdf_load_journal(filename);
             }
             catch (Exception)
             {
@@ -2021,7 +2014,7 @@ namespace MuPDF.NET
                 throw new Exception("document closed or encrypted");
             PdfDocument pdf = Document.AsPdfDocument(_nativeDocument);
             IntPtr utf8Ptr = Utils.Utf16_Utf8Ptr(filename);
-            pdf.pdf_save_journal(utf8Ptr);
+            pdf.pdf_save_journal(filename);
         }
 
         /// <summary>
