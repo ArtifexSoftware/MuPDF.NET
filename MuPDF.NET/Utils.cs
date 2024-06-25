@@ -5280,13 +5280,13 @@ namespace MuPDF.NET
         /// <exception cref="Exception"></exception>
         public static float GetTextLength(
             string text,
-            string fontname = "helv",
-            float fontsize = 11,
+            string fontName = "helv",
+            float fontSize = 11,
             int encoding = 0
         )
         {
-            fontname = fontname.ToLower();
-            string basename = Utils.Base14_fontdict.GetValueOrDefault(fontname, null);
+            fontName = fontName.ToLower();
+            string basename = Utils.Base14_fontdict.GetValueOrDefault(fontName, null);
 
             List<(int, double)> glyphs = new List<(int, double)>();
             if (basename == "Symbol")
@@ -5303,12 +5303,12 @@ namespace MuPDF.NET
                         (Convert.ToInt32(c)) < 256 ? glyphs[cInt].Item2 : glyphs[183].Item2
                     );
                 }
-                return w * fontsize;
+                return w * fontSize;
             }
 
             //if (Utils.Base14_fontdict.Keys.Contains(fontname))
             if (true)
-                return Utils.MeasureString(text, fontname, fontsize, encoding);
+                return Utils.MeasureString(text, fontName, fontSize, encoding);
             if (
                 (
                     new string[]
@@ -5322,16 +5322,16 @@ namespace MuPDF.NET
                         "korea",
                         "korea-s"
                     }
-                ).Contains(fontname)
+                ).Contains(fontName)
             )
-                return text.Length * fontsize;
-            throw new Exception($"Font {fontname} is unsupported");
+                return text.Length * fontSize;
+            throw new Exception($"Font {fontName} is unsupported");
         }
 
         public static float MeasureString(
             string text,
-            string fontname,
-            float fontsize,
+            string fontName,
+            float fontSize,
             int encoding
         )
         {
@@ -5360,7 +5360,7 @@ namespace MuPDF.NET
                 float dw = font.fz_advance_glyph(g, 0);
                 w += dw;
             }
-            float ret = w * fontsize;
+            float ret = w * fontSize;
             return ret;
         }
 

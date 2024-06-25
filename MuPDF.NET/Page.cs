@@ -142,11 +142,10 @@ namespace MuPDF.NET
                 if (Rotation != 0 || Rotation != 180)
                     (w, h) = (h, w);
                 val = new Rect(0, 0, w, h);
-                // print warning message - __init__/8391
             }
             return val;
-        }
 
+        }
         public static (Rect, Rect, Matrix) RectFunction(int rectN, Rect filled)
         {
             return (fit.Rect, fit.Rect, new IdentityMatrix());
