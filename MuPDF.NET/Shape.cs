@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using mupdf;
+using System.Text;
 
 namespace MuPDF.NET
 {
@@ -326,7 +327,7 @@ namespace MuPDF.NET
             string template = "TJ\n0 -{0} TD\n";
             if (text.Count > 1)
                 nres += string.Format(template, lheight);
-            else nres += template.Substring(0, 2);
+            else nres += "TJ";
 
             for (int i = 1; i < text.Count; i++)
             {
@@ -334,7 +335,7 @@ namespace MuPDF.NET
                     break; // no space left on page
                 if (i > 1)
                     nres += "\nT* ";
-                nres += text[i] + template.Substring(0, 2);
+                nres += text[i] + "TJ";
                 space -= lheight;
                 nLines += 1;
             }
@@ -353,7 +354,9 @@ namespace MuPDF.NET
             if (TotalCont != "")
             {
                 int xref = Utils.InsertContents(Page, Encoding.UTF8.GetBytes(" "), overlay ? 1 : 0);
-                Doc.UpdateStream(xref, bTotal);
+                //Doc.UpdateStream(xref, bTotal);
+                PdfDocument doc = Document.AsPdfDocument(Doc);
+                doc.pdf_update_stream(doc.pdf_load_object(xref), Utils.BufferFromBytes(bTotal), 1);
             }
 
             LastPoint = null;
@@ -967,7 +970,7 @@ namespace MuPDF.NET
             float lineHeight = 0,
             string fontName = "helv",
             string fontFile = null,
-            bool setSimple = false,
+            bool setSimple = true,
             int encoding = 0,
             float[] color = null,
             float[] fill = null,

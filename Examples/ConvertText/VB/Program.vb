@@ -16,7 +16,7 @@ Module Program
         Dim nlines As Integer = CInt((size.height - 108.0F) / lineHeight)
 
         For Each line As String In File.ReadLines("e://res/input.txt")
-            outBuf &= line
+            outBuf &= line + "\n"
             lineCtr += 1
             totalCtr += 1
             If lineCtr = nlines Then
@@ -39,10 +39,10 @@ Module Program
             Dim page = doc(i)
             Dim footer As String = $"{page.Number + 1} ({doc.PageCount})"
             Dim plenftr As Single = Utils.GetTextLength(footer, fontsize:=fFontsz, fontname:="Kenpixel")
-            page.InsertText(New Point(50, 50), "input.txt", color:=blue, fontSize:=hFontsz, fontFile:="e://res/kenpixel.ttf")
+            page.InsertText(New Point(50, 50), "input.txt", color:=blue, fontSize:=hFontsz, fontFile:="e://res/kenpixel.ttf", fontName:="Kenpixel")
             page.DrawLine(New Point(50, 60), New Point(50 + pspace, 60), color:=blue, width:=0.5F)
             page.DrawLine(New Point(50, size.height - 33), New Point(50 + pspace, size.height - 33), color:=blue, width:=0.5F)
-            page.InsertText(New Point(50 + pspace - plenftr, size.height - 33 + fFontsz * 1.2F), footer, fontSize:=fFontsz, color:=blue, fontFile:="e://res/kenpixel.ttf")
+            page.InsertText(New Point(50 + pspace - plenftr, size.height - 33 + fFontsz * 1.2F), footer, fontSize:=fFontsz, color:=blue, fontFile:="e://res/kenpixel.ttf", fontName:="Kenpixel")
             page.CleanContetns()
         Next
 

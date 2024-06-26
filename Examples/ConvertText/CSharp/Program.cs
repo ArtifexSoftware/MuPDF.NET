@@ -20,12 +20,12 @@ class Program
         int PageOut(string b)
         {
             Page page = doc.NewPage(width: width, height: height);
-            return page.InsertText(new Point(50, 72), text: b, fontSize: fontsize, fontFile: "e://res/kenpixel.ttf");
+            return page.InsertText(new Point(50, 72), text: b, fontSize: fontsize, fontFile: "e://res/apo.ttf", fontName: "Atop");
         }
 
         foreach (string line in File.ReadLines("e://res/input.txt"))
         {
-            outBuf += line;
+            outBuf += line + "\n";
             lineCtr++;
             totalCtr++;
             if (lineCtr == nlines)
@@ -35,7 +35,7 @@ class Program
                 lineCtr = 0;
             }
         }
-
+        
         if (outBuf.Length > 0)
             outCtr += PageOut(outBuf);
 
@@ -48,11 +48,11 @@ class Program
         {
             Page page = doc[i];
             string footer = $"{page.Number + 1} ({doc.PageCount})";
-            float plenftr = Utils.GetTextLength(footer, fontsize: fFontsz, fontname: "Kenpixel");
-            page.InsertText(new Point(50, 50), "input.txt", color: blue, fontSize: hFontsz, fontFile: "e://res/kenpixel.ttf");
+            float plenftr = Utils.GetTextLength(footer, fontSize: fFontsz, fontName: "Kenpixel");
+            page.InsertText(new Point(50, 50), "input.txt", color: blue, fontSize: hFontsz, fontFile: "e://res/apo.ttf", fontName: "Atop");
             page.DrawLine(new Point(50, 60), new Point(50 + pspace, 60), color: blue, width: 0.5f);
             page.DrawLine(new Point(50, height - 33), new Point(50 + pspace, height - 33), color: blue, width: 0.5f);
-            page.InsertText(new Point(50 + pspace - plenftr, height - 33 + fFontsz * 1.2f), footer, fontSize: fFontsz, color: blue, fontFile: "e://res/kenpixel.ttf");
+            page.InsertText(new Point(50 + pspace - plenftr, height - 33 + fFontsz * 1.2f), footer, fontSize: fFontsz, color: blue, fontFile: "e://res/apo.ttf", fontName: "Atop");
             page.CleanContetns();
         }
 

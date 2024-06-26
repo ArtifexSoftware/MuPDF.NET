@@ -773,7 +773,7 @@ namespace MuPDF.NET
                 obj = obj.pdf_resolve_indirect_chain();
             if (obj.pdf_is_dict() == 0)
                 throw new Exception(string.Format("Not a dict: {0}", obj));
-            if (keys == null)
+            if (keys.Length == 0)
                 return;
 
             PdfDocument doc = obj.pdf_get_bound_document();
@@ -787,7 +787,7 @@ namespace MuPDF.NET
                 }
                 obj = nextObj;
             }
-            string key = keys[keys.Length - 2];
+            string key = keys[keys.Length - 1];
             obj.pdf_dict_put(new PdfObj(key), val);
         }
 
@@ -1905,30 +1905,30 @@ namespace MuPDF.NET
             PdfObj o = mupdf.mupdf.pdf_load_object(doc, xref);
             PdfObj desft = o.pdf_dict_get(new PdfObj("DescendantFonts"));
             PdfObj obj = null;
-            if (desft != null)
+            if (desft.m_internal != null)
             {
                 obj = desft.pdf_array_get(0).pdf_resolve_indirect();
                 obj = obj.pdf_dict_get(new PdfObj("FontDescriptor"));
             }
             else
                 obj = o.pdf_dict_get(new PdfObj("FontDescriptor"));
-            if (obj == null)
+            if (obj.m_internal == null)
                 return "n/a";
 
             o = obj;
             obj = o.pdf_dict_get(new PdfObj("FontFile"));
-            if (obj != null)
+            if (obj.m_internal != null)
                 return "pfa";
 
             obj = o.pdf_dict_get(new PdfObj("FontFile2"));
-            if (obj != null)
+            if (obj.m_internal != null)
                 return "ttf";
 
             obj = o.pdf_dict_get(new PdfObj("FontFile3"));
-            if (obj != null)
+            if (obj.m_internal != null)
             {
                 obj = obj.pdf_dict_get(new PdfObj("Subtype"));
-                if (obj != null && obj.pdf_is_name() == 0)
+                if (obj.m_internal != null && obj.pdf_is_name() == 0)
                     return "n/a";
                 if (obj.pdf_name_eq(new PdfObj("Type1C")) != 0)
                     return "cff";
@@ -2399,7 +2399,7 @@ namespace MuPDF.NET
             string bfName,
             string fontFile,
             byte[] fontBuffer,
-            bool setSample,
+            bool setSimple,
             int idx,
             int wmode,
             int serif,
@@ -2436,35 +2436,42 @@ namespace MuPDF.NET
             }
             else
             {
-                if (fontFile != null)
+                ll_fz_lookup_base14_font_outparams outparams = new ll_fz_lookup_base14_font_outparams();
+                if (!string.IsNullOrEmpty(bfName))
                 {
-                    IntPtr utf8Ptr = Utils.Utf16_Utf8Ptr(fontFile);
-                    try
-                    {
-                        font = mupdf.mupdf.fz_new_font_from_file(null, utf8Ptr, idx, 0);
-                    }
-                    catch (Exception)
-                    {
-                        Marshal.FreeHGlobal(utf8Ptr);
-                    }
+                    data = mupdf.mupdf.ll_fz_lookup_base14_font_outparams_fn(bfName, outparams);
                 }
-                else
+                if (data != null)
                 {
-                    res = Utils.BufferFromBytes(fontBuffer);
-                    if (res.m_internal == null)
-                        throw new Exception(Utils.ErrorMessages["MSG_FILE_OR_BUFFER"]);
-                    font = mupdf.mupdf.fz_new_font_from_buffer(null, res, idx, 0);
-                }
-
-                if (setSample)
-                {
-                    fontObj = mupdf.mupdf.pdf_add_cid_font(pdf, font);
-                    simple = 0;
-                }
-                else
-                {
+                    font = mupdf.mupdf.fz_new_font_from_memory(bfName, data, outparams.len, 0, 0);
                     fontObj = pdf.pdf_add_simple_font(font, encoding);
-                    simple = 2;
+                    exto = "n/a";
+                    simple = 1;
+                }
+                else
+                {
+                    if (!string.IsNullOrEmpty(fontFile))
+                    {
+                         font = mupdf.mupdf.fz_new_font_from_file(null, fontFile, idx, 0);
+                    }
+                    else
+                    {
+                        res = Utils.BufferFromBytes(fontBuffer);
+                        if (res.m_internal == null)
+                            throw new Exception(Utils.ErrorMessages["MSG_FILE_OR_BUFFER"]);
+                        font = mupdf.mupdf.fz_new_font_from_buffer(null, res, idx, 0);
+                    }
+
+                    if (!setSimple)
+                    {
+                        fontObj = mupdf.mupdf.pdf_add_cid_font(pdf, font);
+                        simple = 0;
+                    }
+                    else
+                    {
+                        fontObj = pdf.pdf_add_simple_font(font, encoding);
+                        simple = 2;
+                    }
                 }
             }
             ixref = fontObj.pdf_to_num();
@@ -2473,7 +2480,7 @@ namespace MuPDF.NET
             );
             subt = Utils.UnicodeFromStr(fontObj.pdf_dict_get(new PdfObj("Subtype")).pdf_to_name());
 
-            if (exto == null)
+            if (string.IsNullOrEmpty(exto))
                 exto = Utils.GetFontExtension(pdf, ixref);
 
             float asc = font.fz_font_ascender();
@@ -2924,7 +2931,10 @@ namespace MuPDF.NET
                     int pno = link.Page;
                     int xref = page.Parent.GetPageXref(pno);
                     Point pnt = link.To == null ? new Point(0, 0) : link.To;
-                    Point ipnt = pnt * ictm;
+                    Page destPage = page.Parent[pno];
+                    Matrix destCtm = destPage.TransformationMatrix;
+                    Matrix destIctm = ~destCtm;
+                    Point ipnt = pnt * destIctm;
                     annot = string.Format(txt, xref, ipnt.X, ipnt.Y, link.Zoom, rectStr);
                 }
                 else
@@ -3445,7 +3455,7 @@ namespace MuPDF.NET
                 IntPtr utf8Ptr = Utils.Utf16_Utf8Ptr(fontFile);
                 try
                 {
-                    font = mupdf.mupdf.fz_new_font_from_file(null, utf8Ptr, index, 0);
+                    font = mupdf.mupdf.fz_new_font_from_file(null, fontFile, index, 0);
                 }
                 catch (Exception)
                 {
@@ -4416,7 +4426,7 @@ namespace MuPDF.NET
         public static bool SetFontWidth(Document doc, int xref, int width)
         {
             PdfDocument pdf = Document.AsPdfDocument(doc);
-            if (pdf == null)
+            if (pdf.m_internal == null)
                 return false;
 
             PdfObj font = pdf.pdf_load_object(xref);
@@ -5273,13 +5283,13 @@ namespace MuPDF.NET
         /// <exception cref="Exception"></exception>
         public static float GetTextLength(
             string text,
-            string fontname = "helv",
-            float fontsize = 11,
+            string fontName = "helv",
+            float fontSize = 11,
             int encoding = 0
         )
         {
-            fontname = fontname.ToLower();
-            string basename = Utils.Base14_fontdict.GetValueOrDefault(fontname, null);
+            fontName = fontName.ToLower();
+            string basename = Utils.Base14_fontdict.GetValueOrDefault(fontName, null);
 
             List<(int, double)> glyphs = new List<(int, double)>();
             if (basename == "Symbol")
@@ -5296,12 +5306,12 @@ namespace MuPDF.NET
                         (Convert.ToInt32(c)) < 256 ? glyphs[cInt].Item2 : glyphs[183].Item2
                     );
                 }
-                return w * fontsize;
+                return w * fontSize;
             }
 
             //if (Utils.Base14_fontdict.Keys.Contains(fontname))
             if (true)
-                return Utils.MeasureString(text, fontname, fontsize, encoding);
+                return Utils.MeasureString(text, fontName, fontSize, encoding);
             if (
                 (
                     new string[]
@@ -5315,16 +5325,16 @@ namespace MuPDF.NET
                         "korea",
                         "korea-s"
                     }
-                ).Contains(fontname)
+                ).Contains(fontName)
             )
-                return text.Length * fontsize;
-            throw new Exception($"Font {fontname} is unsupported");
+                return text.Length * fontSize;
+            throw new Exception($"Font {fontName} is unsupported");
         }
 
         public static float MeasureString(
             string text,
-            string fontname,
-            float fontsize,
+            string fontName,
+            float fontSize,
             int encoding
         )
         {
@@ -5353,7 +5363,7 @@ namespace MuPDF.NET
                 float dw = font.fz_advance_glyph(g, 0);
                 w += dw;
             }
-            float ret = w * fontsize;
+            float ret = w * fontSize;
             return ret;
         }
 
