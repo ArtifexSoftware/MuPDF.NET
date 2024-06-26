@@ -215,7 +215,7 @@ namespace MuPDF.NET
             get
             {
                 PdfDocument pdf = AsPdfDocument(_nativeDocument);
-                if (pdf == null)
+                if (pdf.m_internal == null)
                     return null;
                 fz_text_language lang = mupdf.mupdf.pdf_document_language(pdf);
                 if (lang == fz_text_language.FZ_LANG_UNSET)
@@ -330,7 +330,7 @@ namespace MuPDF.NET
             get
             {
                 PdfDocument pdf = Document.AsPdfDocument(this);
-                if (pdf == null)
+                if (pdf.m_internal == null)
                     return null;
                 PdfObj fonts = Utils.pdf_dict_getl(
                     pdf.pdf_trailer(),
@@ -679,13 +679,21 @@ namespace MuPDF.NET
             return _nativeDocument;
         }
 
-        public static PdfDocument AsPdfDocument(FzDocument document)
+        public static PdfDocument AsPdfDocument(FzDocument document, bool required = true)
         {
-            return new PdfDocument(document);
+            PdfDocument ret = new PdfDocument(document);
+            if (required)
+                if (ret.m_internal == null)
+                    throw new Exception("document is Null");
+            return ret;
         }
 
         public static PdfDocument AsPdfDocument(Document document)
         {
+            if (document.IsClosed)
+                throw new Exception("document closed");
+            if (document == null)
+                throw new Exception("document is Null");
             return document._nativeDocument.pdf_document_from_fz_document();
         }
 
@@ -1704,7 +1712,7 @@ namespace MuPDF.NET
         public int GetSigFlags()
         {
             PdfDocument pdf = AsPdfDocument(this);
-            if (pdf == null)
+            if (pdf.m_internal == null)
                 return -1;
             PdfObj sigflags = Utils.pdf_dict_getl(
                 pdf.pdf_trailer(),
@@ -2204,7 +2212,7 @@ namespace MuPDF.NET
         {
             PdfDocument pdf = Document.AsPdfDocument(_nativeDocument);
             int xref = 0;
-            if (pdf == null)
+            if (pdf.m_internal == null)
                 return xref;
             PdfObj root = pdf.pdf_trailer().pdf_dict_get(new PdfObj("Root"));
             xref = root.pdf_to_num();
@@ -2536,7 +2544,7 @@ namespace MuPDF.NET
                 throw new Exception("document closed or encrypted");
 
             PdfDocument pdf = AsPdfDocument(this);
-            if (pdf == null)
+            if (pdf.m_internal == null)
                 return;
 
             PdfObj fonts = Utils.pdf_dict_getl(
@@ -3084,7 +3092,7 @@ namespace MuPDF.NET
         {
             List<int> xrefs = new List<int>();
             PdfDocument pdf = AsPdfDocument(this);
-            if (!IsPDF)
+            if (pdf.m_internal == null)
                 return xrefs;
             PdfObj root = pdf.pdf_trailer().pdf_dict_get(new PdfObj("Root"));
             if (root.m_internal == null)
@@ -4184,7 +4192,7 @@ namespace MuPDF.NET
         public bool XrefIsStream(int xref = 0)
         {
             PdfDocument pdf = AsPdfDocument(this);
-            if (pdf == null)
+            if (pdf.m_internal == null)
                 return false;
             return pdf.pdf_obj_num_is_stream(xref) != 0;
         }
@@ -5085,7 +5093,7 @@ namespace MuPDF.NET
                 throw new Exception("document closed or encrypted");
             List<int> xrefs = new List<int>();
             PdfDocument pdf = AsPdfDocument(this);
-            if (pdf == null)
+            if (pdf.m_internal == null)
                 return xrefs;
 
             PdfObj root = pdf.pdf_trailer().pdf_dict_get(new PdfObj("Root"));

@@ -2931,7 +2931,10 @@ namespace MuPDF.NET
                     int pno = link.Page;
                     int xref = page.Parent.GetPageXref(pno);
                     Point pnt = link.To == null ? new Point(0, 0) : link.To;
-                    Point ipnt = pnt * ictm;
+                    Page destPage = page.Parent[pno];
+                    Matrix destCtm = destPage.TransformationMatrix;
+                    Matrix destIctm = ~destCtm;
+                    Point ipnt = pnt * destIctm;
                     annot = string.Format(txt, xref, ipnt.X, ipnt.Y, link.Zoom, rectStr);
                 }
                 else
@@ -4423,7 +4426,7 @@ namespace MuPDF.NET
         public static bool SetFontWidth(Document doc, int xref, int width)
         {
             PdfDocument pdf = Document.AsPdfDocument(doc);
-            if (pdf == null)
+            if (pdf.m_internal == null)
                 return false;
 
             PdfObj font = pdf.pdf_load_object(xref);
