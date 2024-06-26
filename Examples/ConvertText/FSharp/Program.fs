@@ -18,10 +18,10 @@ let nlines = (int)(((float32)height - 108.0f) / lineHeight)
 
 let PageOut b =
     let page = doc.NewPage(width = (float32)width, height = (float32)height)
-    page.InsertText(Point(50f, 72f), text = b, fontSize = (float32)fontsize, fontFile = "e://res/kenpixel.ttf")
+    page.InsertText(Point(50f, 72f), text = b, fontSize = (float32)fontsize, fontFile = "e://res/kenpixel.ttf", fontName = "Kenpixel")
 
 for line in File.ReadLines("e://res/input.txt") do
-    outBuf <- outBuf + line
+    outBuf <- outBuf + line + "\n"
     lineCtr <- lineCtr + 1
     totalCtr <- totalCtr + 1
     if lineCtr = nlines then
@@ -40,11 +40,11 @@ let pspace = 500f
 for i in 0 .. doc.PageCount - 1 do
     let page: Page = doc.[i]
     let footer = $"{(page.Number + 1)} ({doc.PageCount})"
-    let plenftr = Utils.GetTextLength(footer, fontsize = fFontsz, fontname = "Kenpixel")
-    let _ = page.InsertText(Point(50f, 50f), "input.txt", color = blue, fontSize = hFontsz, fontFile = "e://res/kenpixel.ttf")
+    let plenftr = Utils.GetTextLength(footer, fontSize = fFontsz, fontName = "Kenpixel")
+    let _ = page.InsertText(Point(50f, 50f), "input.txt", color = blue, fontSize = hFontsz, fontFile = "e://res/kenpixel.ttf", fontName = "Kenpixel")
     let _ = page.DrawLine(Point(50f, 60f), Point(50f + pspace, 60f), color = blue, width = 0.5f)
     let _ = page.DrawLine(Point(50f, (float32)height - 33f), Point(50f + pspace, (float32)height - 33f), color = blue, width = 0.5f)
-    let _ = page.InsertText(Point(50f + pspace - plenftr, (float32)height - 33f + fFontsz * 1.2f), footer, fontSize = fFontsz, color = blue, fontFile = "e://res/kenpixel.ttf")
+    let _ = page.InsertText(Point(50f + pspace - plenftr, (float32)height - 33f + fFontsz * 1.2f), footer, fontSize = fFontsz, color = blue, fontFile = "e://res/kenpixel.ttf", fontName = "Kenpixel")
     page.CleanContetns()
 
 let metadata: Dictionary<string, string> = Dictionary<string, string>(dict [
