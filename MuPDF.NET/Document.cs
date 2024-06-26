@@ -248,7 +248,7 @@ namespace MuPDF.NET
         {
             get
             {
-                int xref = GetPdfCatelog();
+                int xref = GetPdfCatalog();
                 if (xref == 0)
                     return null;
                 (string, string) rc = GetKeyXref(xref, "PageLayout");
@@ -267,7 +267,7 @@ namespace MuPDF.NET
         {
             get
             {
-                int xref = GetPdfCatelog();
+                int xref = GetPdfCatalog();
                 if (xref == 0)
                     return null;
                 (string, string) rc = GetKeyXref(xref, "PageMode");
@@ -286,7 +286,7 @@ namespace MuPDF.NET
         {
             get
             {
-                int xref = GetPdfCatelog();
+                int xref = GetPdfCatalog();
                 string val;
                 if (xref == 0)
                     return null;
@@ -384,7 +384,7 @@ namespace MuPDF.NET
         }
 
         public Document(
-            string filename = null,
+            string fileName = null,
             byte[] stream = null,
             string filetype = null,
             Rect rect = null,
@@ -407,10 +407,10 @@ namespace MuPDF.NET
                     Stream = null;
 
                 bool fromFile;
-                if (!string.IsNullOrEmpty(filename) && stream == null)
+                if (!string.IsNullOrEmpty(fileName) && stream == null)
                 {
                     fromFile = true;
-                    Name = filename;
+                    Name = fileName;
                 }
                 else
                 {
@@ -421,9 +421,9 @@ namespace MuPDF.NET
                 string msg;
                 if (fromFile)
                 {
-                    if (!File.Exists(filename))
+                    if (!File.Exists(fileName))
                     {
-                        msg = $"No such file: {filename}";
+                        msg = $"No such file: {fileName}";
                         throw new FileNotFoundException(msg);
                     }
                     /*_nativeDocument = mupdf.mupdf.fz_open_document(filename);*/
@@ -432,7 +432,7 @@ namespace MuPDF.NET
                 if (
                     fromFile
                     && Stream != null
-                    && (new FileInfo(filename).Length == 0 || Stream.Count == 0)
+                    && (new FileInfo(fileName).Length == 0 || Stream.Count == 0)
                 )
                 {
                     msg = $"cannot open empty document";
@@ -456,10 +456,10 @@ namespace MuPDF.NET
                     Marshal.Copy(stream, 0, dataPtr, stream.Length);
                     SWIGTYPE_p_unsigned_char swigData = new SWIGTYPE_p_unsigned_char(dataPtr, true);
                     data = mupdf.mupdf.fz_open_memory(swigData, (uint)stream.Length);
-                    if (string.IsNullOrEmpty(filename) || string.IsNullOrEmpty(filetype))
-                        filename = "pdf";
+                    if (string.IsNullOrEmpty(fileName) || string.IsNullOrEmpty(filetype))
+                        fileName = "pdf";
                     
-                    string magic = filename;
+                    string magic = fileName;
                     if (magic == null)
                         magic = filetype;
 
@@ -467,14 +467,14 @@ namespace MuPDF.NET
                 }
                 else
                 {
-                    if (!string.IsNullOrEmpty(filename))
+                    if (!string.IsNullOrEmpty(fileName))
                     {
                         if (string.IsNullOrEmpty(filetype))
                         {
 
                             try
                             {
-                                doc = mupdf.mupdf.fz_open_document(Utils.Utf16_Utf8Ptr(filename));
+                                doc = mupdf.mupdf.fz_open_document(Utils.Utf16_Utf8Ptr(fileName));
                             }
                             catch(Exception)
                             {
@@ -497,7 +497,7 @@ namespace MuPDF.NET
                                             && Utils.MUPDF_VERSION.Item2 >= 24
                                         )*/
                                         {
-                                            FzStream _stream = new FzStream(filename);
+                                            FzStream _stream = new FzStream(fileName);
                                             FzStream accel = new FzStream();
                                             FzArchive archive = new FzArchive();
                                             doc = new FzDocument(
@@ -562,9 +562,9 @@ namespace MuPDF.NET
                     else
                         InitDocument();
 
-                    string filename_ = filename;
+                    string filename_ = fileName;
                     if (
-                        (filename != null && filename_.ToLower().EndsWith("svg"))
+                        (fileName != null && filename_.ToLower().EndsWith("svg"))
                         || (filetype != null && filetype.ToLower().Contains("svg"))
                     )
                     {
@@ -2201,9 +2201,9 @@ namespace MuPDF.NET
         /// Get xref of PDF catalog.
         /// </summary>
         /// <returns></returns>
-        public int GetPdfCatelog()
+        public int GetPdfCatalog()
         {
-            PdfDocument pdf = Document.AsPdfDocument(_nativeDocument);
+            PdfDocument pdf = Document.AsPdfDocument(_nativeDocument, false);
             int xref = 0;
             if (pdf.m_internal == null)
                 return xref;
@@ -2841,7 +2841,7 @@ namespace MuPDF.NET
                 mupdf.mupdf.pdf_new_array(pdf, 0),
                 new string[] { "PageLabels", "Nums" }
             );
-            int xref = GetPdfCatelog();
+            int xref = GetPdfCatalog();
             string text = GetXrefObject(xref, compressed: 1);
             text = text.Replace("/PageLabels[]", $"/PageLabels[{CreateNums(labels)}]");
             UpdateObject(xref, text);
@@ -3938,7 +3938,7 @@ namespace MuPDF.NET
         /// <exception cref="Exception"></exception>
         public bool SetMarkInfo(Dictionary<string, bool> markInfo)
         {
-            int xref = GetPdfCatelog();
+            int xref = GetPdfCatalog();
             if (xref == 0)
                 throw new Exception("not a pdf");
             if (markInfo == null)
@@ -3982,7 +3982,7 @@ namespace MuPDF.NET
                 "TwoPageLeft",
                 "TwoPageRight"
             };
-            int xref = GetPdfCatelog();
+            int xref = GetPdfCatalog();
             if (xref == 0)
                 throw new Exception("not a PDF");
             if (string.IsNullOrEmpty(pageLayout))
@@ -4017,7 +4017,7 @@ namespace MuPDF.NET
                 "UseOC",
                 "UseAttachments"
             };
-            int xref = GetPdfCatelog();
+            int xref = GetPdfCatalog();
             if (xref == 0)
                 throw new Exception("not a PDF");
             if (string.IsNullOrEmpty(pageMode))

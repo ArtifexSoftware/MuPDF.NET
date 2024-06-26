@@ -386,5 +386,14 @@ namespace MuPDF.NET.Test
             doc.SetKeyXRef(page.Xref, "my_rotate/something", "90");
             Assert.That(doc.GetKeyXref(page.Xref, "my_rotate/something").Item2, Is.EqualTo("90"));
         }
+
+        [Test]
+        public void Epub()
+        {
+            Document doc = new Document("../../../resources/test_3615.epub");
+            Console.WriteLine(doc.PageMode);
+            Console.WriteLine(doc.PageLayout);
+            Assert.Pass();
+        }
     }
 }
