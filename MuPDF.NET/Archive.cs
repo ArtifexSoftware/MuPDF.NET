@@ -77,9 +77,9 @@ namespace MuPDF.NET
         {
             FzArchive sub = null;
             if (type == 1)
-                sub = mupdf.mupdf.fz_open_zip_archive(filePath);
+                sub = mupdf.mupdf.fz_open_zip_archive(path);
             else
-                sub = mupdf.mupdf.fz_open_tar_archive(filePath);
+                sub = mupdf.mupdf.fz_open_tar_archive(path);
             _nativeArchive.fz_mount_multi_archive(sub, path);
         }
 

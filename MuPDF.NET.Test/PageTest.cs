@@ -186,7 +186,7 @@ public class PageTest : PdfTestBase
         Archive archive = new Archive();
         FileStream st = new FileStream("../../../resources/kenpixel.zip", FileMode.Open);
         ZipArchive css = new ZipArchive(st, ZipArchiveMode.Read);
-        archive.Add(css, "./kenpixel.zip");
+        archive.Add(css, "../../../resources/kenpixel.zip");
 
         page.InsertHtmlBox(new Rect(100, 100, 300, 300), "<h1 style=\"font-family:kenpixel\">hello</h1>", css: "@font-face {font-family: kenpixel; src: url(./kenpixel.ttf)}", scaleLow: 1, archive: archive);
 
