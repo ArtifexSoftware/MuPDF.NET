@@ -2554,7 +2554,7 @@ namespace MuPDF.NET
 
         public void UpdateFile(
             byte[] buffer = null,
-            string filename = null,
+            string fileName = null,
             string uFilename = null,
             string desc = null
         )

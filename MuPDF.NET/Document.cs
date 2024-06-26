@@ -471,9 +471,10 @@ namespace MuPDF.NET
                     {
                         if (string.IsNullOrEmpty(filetype))
                         {
+
                             try
                             {
-                                doc = mupdf.mupdf.fz_open_document(filename);
+                                doc = mupdf.mupdf.fz_open_document(Utils.Utf16_Utf8Ptr(filename));
                             }
                             catch(Exception)
                             {
@@ -1017,15 +1018,7 @@ namespace MuPDF.NET
 
             if (filename is string)
             {
-                IntPtr utf8Ptr = Utils.Utf16_Utf8Ptr(filename);
-                try
-                {
-                    pdf.pdf_save_document(filename, opts);
-                }
-                catch (Exception)
-                {
-                    Marshal.FreeHGlobal(utf8Ptr);
-                }
+                pdf.pdf_save_document(Utils.Utf16_Utf8Ptr(filename), opts);
             }
             else
             {
