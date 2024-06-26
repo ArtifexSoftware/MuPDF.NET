@@ -174,7 +174,7 @@ namespace MuPDF.NET
         private Border _Border(Document doc, int xref)
         {
             PdfDocument pdf = Document.AsPdfDocument(doc);
-            if (pdf == null)
+            if (pdf.m_internal == null)
                 return null;
             PdfObj linkObj = pdf.pdf_new_indirect(xref, 0);
             if (linkObj == null)
@@ -187,7 +187,7 @@ namespace MuPDF.NET
         private Color _Colors(Document doc, int xref)
         {
             PdfDocument pdf = Document.AsPdfDocument(doc);
-            if (pdf == null)
+            if (pdf.m_internal == null)
                 return null;
             PdfObj linkObj = pdf.pdf_new_indirect(xref, 0);
             if (linkObj == null)
@@ -208,7 +208,7 @@ namespace MuPDF.NET
         private void _SetBorder(Border border, Document doc, int xref)
         {
             PdfDocument pdf = Document.AsPdfDocument(doc);
-            if (pdf == null)
+            if (pdf.m_internal == null)
                 return;
             PdfObj linkObj = pdf.pdf_new_indirect(xref, 0);
             if (linkObj == null)

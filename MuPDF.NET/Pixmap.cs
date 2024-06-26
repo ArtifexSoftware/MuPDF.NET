@@ -269,8 +269,7 @@ namespace MuPDF.NET
 
         public Pixmap(string filename)
         {
-            IntPtr utf8Ptr = Utils.Utf16_Utf8Ptr(filename);
-            FzImage img = mupdf.mupdf.fz_new_image_from_file(utf8Ptr);
+            FzImage img = mupdf.mupdf.fz_new_image_from_file(filename);
             FzPixmap pix = img.fz_get_pixmap_from_image(
                 new FzIrect(Utils.FZ_MIN_INF_RECT, Utils.FZ_MIN_INF_RECT, Utils.FZ_MAX_INF_RECT, Utils.FZ_MAX_INF_RECT),
                 new FzMatrix(img.w(), 0, 0, img.h(), 0, 0),
@@ -402,21 +401,13 @@ namespace MuPDF.NET
         {
             FzPixmap pixmap = _nativePixmap;
 
-            IntPtr utf8Ptr = Utils.Utf16_Utf8Ptr(filename);
-            try
-            {
-                if (format == 1) mupdf.mupdf.fz_save_pixmap_as_png(pixmap, utf8Ptr);
-                else if (format == 2) mupdf.mupdf.fz_save_pixmap_as_pnm(pixmap, utf8Ptr);
-                else if (format == 3) mupdf.mupdf.fz_save_pixmap_as_pam(pixmap, utf8Ptr);
-                else if (format == 5) mupdf.mupdf.fz_save_pixmap_as_psd(pixmap, utf8Ptr);
-                else if (format == 6) mupdf.mupdf.fz_save_pixmap_as_ps(pixmap, utf8Ptr, 0);
-                else if (format == 7) mupdf.mupdf.fz_save_pixmap_as_jpeg(pixmap, utf8Ptr, jpgQuality);
-                else mupdf.mupdf.fz_save_pixmap_as_png(pixmap, utf8Ptr);
-            }
-            catch(Exception)
-            {
-                Marshal.FreeHGlobal(utf8Ptr);
-            }
+            if (format == 1) mupdf.mupdf.fz_save_pixmap_as_png(pixmap, Utils.Utf16_Utf8Ptr(filename));
+            else if (format == 2) mupdf.mupdf.fz_save_pixmap_as_pnm(pixmap, Utils.Utf16_Utf8Ptr(filename));
+            else if (format == 3) mupdf.mupdf.fz_save_pixmap_as_pam(pixmap, Utils.Utf16_Utf8Ptr(filename));
+            else if (format == 5) mupdf.mupdf.fz_save_pixmap_as_psd(pixmap, Utils.Utf16_Utf8Ptr(filename));
+            else if (format == 6) mupdf.mupdf.fz_save_pixmap_as_ps(pixmap, Utils.Utf16_Utf8Ptr(filename), 0);
+            else if (format == 7) mupdf.mupdf.fz_save_pixmap_as_jpeg(pixmap, Utils.Utf16_Utf8Ptr(filename), jpgQuality);
+            else mupdf.mupdf.fz_save_pixmap_as_png(pixmap, Utils.Utf16_Utf8Ptr(filename));
         }
 
         public static int ClearPixmap_RectWithValue(Pixmap pixmap, int v = 0, FzIrect bbox = null)
@@ -667,16 +658,7 @@ namespace MuPDF.NET
                 opts.datadir_set2(tessdata);
             }
 
-            IntPtr utf8Ptr = Utils.Utf16_Utf8Ptr(filename);
-            try
-            {
-                pix.fz_save_pixmap_as_pdfocr(utf8Ptr, 0, opts);
-            }
-            catch(Exception)
-            {
-                Marshal.FreeHGlobal(utf8Ptr);
-            }
-            
+            pix.fz_save_pixmap_as_pdfocr(filename, 0, opts);
         }
 
         /// <summary>

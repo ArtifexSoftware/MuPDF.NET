@@ -6,14 +6,4 @@
     <TargetFramework>net8.0</TargetFramework>
   </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Reference Include="MuPDF.NET">
-      <HintPath>..\..\..\MuPDF.NET\bin\Release\net8.0\MuPDF.NET.dll</HintPath>
-    </Reference>
-  </ItemGroup>
-
 </Project>

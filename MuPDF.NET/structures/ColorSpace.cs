@@ -4,6 +4,12 @@ namespace MuPDF.NET
 {
     public class ColorSpace
     {
+        static ColorSpace()
+        {
+            if (!File.Exists("mupdfcsharp.dll"))
+                Utils.LoadEmbeddedDll();
+        }
+
         private readonly FzColorspace _nativeColorSpace;
 
         public int N

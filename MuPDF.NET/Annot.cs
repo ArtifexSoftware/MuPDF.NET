@@ -2554,7 +2554,7 @@ namespace MuPDF.NET
 
         public void UpdateFile(
             byte[] buffer = null,
-            string filename = null,
+            string fileName = null,
             string uFilename = null,
             string desc = null
         )
@@ -2587,13 +2587,13 @@ namespace MuPDF.NET
                 stream.pdf_dict_put(new PdfObj("DL"), l);
                 Utils.pdf_dict_putl(stream, l, new string[] { "Params", "Size" });
             }
-            if (filename != null)
+            if (fileName != null)
             {
-                stream.pdf_dict_put_text_string(new PdfObj("F"), filename);
-                fs.pdf_dict_put_text_string(new PdfObj("F"), filename);
-                stream.pdf_dict_put_text_string(new PdfObj("UF"), filename);
-                fs.pdf_dict_put_text_string(new PdfObj("UF"), filename);
-                annotObj.pdf_dict_put_text_string(new PdfObj("Contents"), filename);
+                stream.pdf_dict_put_text_string(new PdfObj("F"), fileName);
+                fs.pdf_dict_put_text_string(new PdfObj("F"), fileName);
+                stream.pdf_dict_put_text_string(new PdfObj("UF"), fileName);
+                fs.pdf_dict_put_text_string(new PdfObj("UF"), fileName);
+                annotObj.pdf_dict_put_text_string(new PdfObj("Contents"), fileName);
             }
             if (uFilename != null)
             {

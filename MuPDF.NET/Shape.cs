@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using mupdf;
+using System.Text;
 
 namespace MuPDF.NET
 {
@@ -326,7 +327,7 @@ namespace MuPDF.NET
             string template = "TJ\n0 -{0} TD\n";
             if (text.Count > 1)
                 nres += string.Format(template, lheight);
-            else nres += template.Substring(0, 2);
+            else nres += "TJ";
 
             for (int i = 1; i < text.Count; i++)
             {
@@ -334,7 +335,7 @@ namespace MuPDF.NET
                     break; // no space left on page
                 if (i > 1)
                     nres += "\nT* ";
-                nres += text[i] + template.Substring(0, 2);
+                nres += text[i] + "TJ";
                 space -= lheight;
                 nLines += 1;
             }
@@ -353,7 +354,9 @@ namespace MuPDF.NET
             if (TotalCont != "")
             {
                 int xref = Utils.InsertContents(Page, Encoding.UTF8.GetBytes(" "), overlay ? 1 : 0);
-                Doc.UpdateStream(xref, bTotal);
+                //Doc.UpdateStream(xref, bTotal);
+                PdfDocument doc = Document.AsPdfDocument(Doc);
+                doc.pdf_update_stream(doc.pdf_load_object(xref), Utils.BufferFromBytes(bTotal), 1);
             }
 
             LastPoint = null;
@@ -375,7 +378,7 @@ namespace MuPDF.NET
         /// <returns></returns>
         public Point DrawBezier(Point p1, Point p2, Point p3, Point p4)
         {
-            if (LastPoint == null || !(LastPoint.X == p1.X && LastPoint.Y == p1.Y))
+            if (LastPoint == null || !LastPoint.EqualTo(p1))
             {
                 Point t = p1 * IPctm;
                 DrawCont += $"{t.X} {t.Y} m\n";
@@ -430,7 +433,7 @@ namespace MuPDF.NET
             while (Math.Abs(betar) > 2 * Math.PI)
                 betar += w360;
 
-            if (LastPoint == null || !(LastPoint.X == point.X && LastPoint.Y == point.Y))
+            if (LastPoint == null || !LastPoint.EqualTo(point))
             {
                 Point t = point * IPctm;
                 DrawCont += string.Format(l3, t.X, t.Y);
@@ -567,7 +570,7 @@ namespace MuPDF.NET
         public Point DrawLine(Point p1, Point p2)
         {
             Point t;
-            if (LastPoint == null || !(LastPoint.X == p1.X && LastPoint.Y == p1.Y))
+            if (LastPoint == null || !LastPoint.EqualTo(p1))
             {
                 t = p1 * IPctm;
                 DrawCont += $"{t.X} {t.Y} m\n";
@@ -606,7 +609,7 @@ namespace MuPDF.NET
             Point mb = tetra.LowerLeft + (tetra.LowerRight - tetra.LowerLeft) * 0.5f;
             Point ml = tetra.UpperLeft + (tetra.LowerLeft - tetra.UpperLeft) * 0.5f;
 
-            if (!(LastPoint == ml))
+            if (LastPoint == null || !LastPoint.EqualTo(ml))
             {
                 Point t = ml * IPctm;
                 DrawCont += $"{t.X} {t.Y} m\n";
@@ -627,7 +630,7 @@ namespace MuPDF.NET
             {
                 if (i == 0)
                 {
-                    if (!(LastPoint == points[i]))
+                    if (LastPoint == null || !LastPoint.EqualTo(points[i]))
                     {
                         Point t = points[i] * IPctm;
                         DrawCont += $"{t.X} {t.Y} m\n";
@@ -637,7 +640,7 @@ namespace MuPDF.NET
                 else
                 {
                     Point t = points[i] * IPctm;
-                    DrawCont += $"{t.X} {t.Y} m\n";
+                    DrawCont += $"{t.X} {t.Y} l\n";
                 }
                 UpdateRect(points[i]);
             }
@@ -967,7 +970,7 @@ namespace MuPDF.NET
             float lineHeight = 0,
             string fontName = "helv",
             string fontFile = null,
-            bool setSimple = false,
+            bool setSimple = true,
             int encoding = 0,
             float[] color = null,
             float[] fill = null,

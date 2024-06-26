@@ -132,9 +132,8 @@ namespace MuPDF.NET
         /// <returns></returns>
         public Rect GetBound()
         {
-            FzPage page = _pdfPage.super();
-            Rect val = new Rect(page.fz_bound_page());
-
+            Rect val = new Rect(_nativePage.fz_bound_page());
+            Console.WriteLine(val.ToString());
             if (val.IsInfinite && Parent.IsPDF)
             {
                 Rect cb = CropBox;
@@ -143,11 +142,10 @@ namespace MuPDF.NET
                 if (Rotation != 0 || Rotation != 180)
                     (w, h) = (h, w);
                 val = new Rect(0, 0, w, h);
-                // print warning message - __init__/8391
             }
             return val;
-        }
 
+        }
         public static (Rect, Rect, Matrix) RectFunction(int rectN, Rect filled)
         {
             return (fit.Rect, fit.Rect, new IdentityMatrix());
@@ -824,7 +822,7 @@ namespace MuPDF.NET
         {
             string dataStr = "";
             Annot ret = null;
-            if (!string.IsNullOrEmpty(text))
+            if (!string.IsNullOrEmpty(text) && text.Any(char.IsWhiteSpace))
             {
                 if (textColor == null)
                     textColor = new float[3] { 0, 0, 0 };
@@ -924,7 +922,7 @@ namespace MuPDF.NET
         {
             string dataStr = "";
             Annot ret = null;
-            if (!string.IsNullOrEmpty(text))
+            if (!string.IsNullOrEmpty(text) && text.Any(char.IsWhiteSpace))
             {
                 Utils.CheckColor(fill);
                 Utils.CheckColor(textColor);
@@ -1637,7 +1635,7 @@ namespace MuPDF.NET
         {
             Rect CenterRect(Rect annotRect, string newText, string fname, float fsize)
             {
-                if (string.IsNullOrEmpty(newText))
+                if (string.IsNullOrEmpty(newText) || annotRect.Width <= Utils.FLT_EPSILON)
                     return annotRect;
                 float textWidth = 0f;
                 try
@@ -2501,8 +2499,8 @@ namespace MuPDF.NET
         /// <returns>the xref of the installed font.</returns>
         /// <exception cref="Exception"></exception>
         public int InsertFont(
-            string fontName = "helv",
-            string fontFile = null,
+            string fontName,
+            string fontFile,
             byte[] fontBuffer = null,
             bool setSimple = false,
             int wmode = 0,
@@ -2641,7 +2639,7 @@ namespace MuPDF.NET
 
             PdfObj fonts = resources.pdf_dict_get(new PdfObj("Font"));
 
-            if (fonts.pdf_dict_len() == 0)
+            if (fonts.m_internal == null)
             {
                 fonts = pdf.pdf_new_dict(5);
                 Utils.pdf_dict_putl(page.obj(), fonts, new string[2] { "Resources", "Font" });
@@ -2763,7 +2761,7 @@ namespace MuPDF.NET
         {
             PdfPage page = GetPdfPage();
             if (page.m_internal == null)
-                return null;
+                return new List<AnnotXref>();
             return Utils.GetAnnotXrefList(page.obj());
         }
 
@@ -4288,7 +4286,15 @@ namespace MuPDF.NET
                 r = link.From * iMat;
                 DeleteLink(link);
                 link.From = r;
-                InsertLink(link);
+                try
+                {
+                    InsertLink(link);
+                }
+                catch(Exception)
+                {
+
+                }
+                
             }
             foreach (Widget widget in GetWidgets())
             {
@@ -4830,8 +4836,10 @@ namespace MuPDF.NET
         )
         {
             PathFactor = 1;
-            if (Math.Abs(Ctm.a) == Math.Abs(Ctm.d))
+            if (Ctm.a != 0 && Math.Abs(Ctm.a) == Math.Abs(Ctm.d))
                 PathFactor = Math.Abs(Ctm.a);
+            else if (Ctm.b != 0 && Math.Abs(Ctm.b) == Math.Abs(Ctm.c))
+                PathFactor = Math.Abs(Ctm.b);
             Ctm = new FzMatrix(ctm);
             PathType = Utils.trace_device_CLIP_STROKE_PATH;
 
