@@ -61,7 +61,7 @@ namespace MuPDF.NET
 
         private void _AddDir(string folder, string path = null)
         {
-            FzArchive sub = mupdf.mupdf.fz_open_directory(Utils.Utf16_Utf8Ptr(folder));
+            FzArchive sub = mupdf.mupdf.fz_open_directory(folder);
             _nativeArchive.fz_mount_multi_archive(sub, path);
         }
 
