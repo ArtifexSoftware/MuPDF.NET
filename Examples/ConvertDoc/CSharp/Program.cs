@@ -16,7 +16,7 @@ pdf.SetToc(toc);
 
 Dictionary<string, string> meta = doc.MetaData;
 if (meta.GetValueOrDefault("producer", null) != null)
-    meta["producer"] = "MuPDF.NET v2.0.6-alpha";
+    meta["producer"] = "MuPDF.NET v2.0.8-alpha";
 
 if (meta.GetValueOrDefault("creator", null) != null)
     meta["creator"] = "MuPDF.NET PDF Converter";
