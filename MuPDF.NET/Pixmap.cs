@@ -401,13 +401,13 @@ namespace MuPDF.NET
         {
             FzPixmap pixmap = _nativePixmap;
 
-            if (format == 1) mupdf.mupdf.fz_save_pixmap_as_png(pixmap, Utils.Utf16_Utf8Ptr(filename));
-            else if (format == 2) mupdf.mupdf.fz_save_pixmap_as_pnm(pixmap, Utils.Utf16_Utf8Ptr(filename));
-            else if (format == 3) mupdf.mupdf.fz_save_pixmap_as_pam(pixmap, Utils.Utf16_Utf8Ptr(filename));
-            else if (format == 5) mupdf.mupdf.fz_save_pixmap_as_psd(pixmap, Utils.Utf16_Utf8Ptr(filename));
-            else if (format == 6) mupdf.mupdf.fz_save_pixmap_as_ps(pixmap, Utils.Utf16_Utf8Ptr(filename), 0);
-            else if (format == 7) mupdf.mupdf.fz_save_pixmap_as_jpeg(pixmap, Utils.Utf16_Utf8Ptr(filename), jpgQuality);
-            else mupdf.mupdf.fz_save_pixmap_as_png(pixmap, Utils.Utf16_Utf8Ptr(filename));
+            if (format == 1) mupdf.mupdf.fz_save_pixmap_as_png(pixmap, filename);
+            else if (format == 2) mupdf.mupdf.fz_save_pixmap_as_pnm(pixmap, filename);
+            else if (format == 3) mupdf.mupdf.fz_save_pixmap_as_pam(pixmap, filename);
+            else if (format == 5) mupdf.mupdf.fz_save_pixmap_as_psd(pixmap, filename);
+            else if (format == 6) mupdf.mupdf.fz_save_pixmap_as_ps(pixmap, filename, 0);
+            else if (format == 7) mupdf.mupdf.fz_save_pixmap_as_jpeg(pixmap, filename, jpgQuality);
+            else mupdf.mupdf.fz_save_pixmap_as_png(pixmap, filename);
         }
 
         public static int ClearPixmap_RectWithValue(Pixmap pixmap, int v = 0, FzIrect bbox = null)

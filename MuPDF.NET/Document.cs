@@ -474,7 +474,7 @@ namespace MuPDF.NET
 
                             try
                             {
-                                doc = mupdf.mupdf.fz_open_document(Utils.Utf16_Utf8Ptr(fileName));
+                                doc = mupdf.mupdf.fz_open_document(fileName);
                             }
                             catch(Exception)
                             {
@@ -501,12 +501,7 @@ namespace MuPDF.NET
                                             FzStream accel = new FzStream();
                                             FzArchive archive = new FzArchive();
                                             doc = new FzDocument(
-                                                mupdf.mupdf.ll_fz_document_open_fn_call(
-                                                    handler.open,
-                                                    _stream.m_internal,
-                                                    accel.m_internal,
-                                                    archive.m_internal
-                                                )
+                                                mupdf.mupdf.ll_fz_document_handler_open(handler, _stream.m_internal, accel.m_internal, archive.m_internal)       
                                             );
                                         }
                                         /*else
