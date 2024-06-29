@@ -1013,7 +1013,7 @@ namespace MuPDF.NET
 
             if (filename is string)
             {
-                pdf.pdf_save_document(Utils.Utf16_Utf8Ptr(filename), opts);
+                pdf.pdf_save_document(filename, opts);
             }
             else
             {
