@@ -1162,6 +1162,9 @@ namespace MuPDF.NET
                     pageId += np;
             }
 
+            if (Utils.INRANGE(pageId, 0, PageCount - 1) == false)
+                throw new Exception("document page count is not enough");
+
             FzPage page = _nativeDocument.fz_load_page(pageId);
             Page val = new Page(page, this);
 

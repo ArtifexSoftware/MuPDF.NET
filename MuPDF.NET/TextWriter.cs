@@ -424,7 +424,7 @@ namespace MuPDF.NET
 
             if (pos == null)
                 pos = rect.TopLeft + new Point(tolerance, fontSize * asc);
-            if (!(rect.IncludePoint(pos) == rect))
+            if (!(rect.IncludePoint(pos).EqualTo(rect)))
                 throw new Exception("Text must start in rectangle");
 
             float factor = 0;
