@@ -2127,14 +2127,14 @@ namespace MuPDF.NET
                 PdfObj carr = pdf.pdf_new_array(5);
                 if (overlay != 0)
                 {
-                    if (contents != null)
+                    if (contents.m_internal != null)
                         carr.pdf_array_push(contents);
                     carr.pdf_array_push(newconts);
                 }
                 else
                 {
                     carr.pdf_array_push(newconts);
-                    if (contents != null)
+                    if (contents.m_internal != null)
                         carr.pdf_array_push(contents);
                 }
                 pageRef.pdf_dict_put(new PdfObj("Contents"), carr);
@@ -6180,7 +6180,7 @@ namespace MuPDF.NET
         {
             if (Utils.IsInitialized)
                 return;
-            Console.WriteLine("hello");
+            
             Utils.SetDotCultureForNumber();
             if (!File.Exists("mupdfcsharp.dll"))
                 Utils.LoadEmbeddedDll();
