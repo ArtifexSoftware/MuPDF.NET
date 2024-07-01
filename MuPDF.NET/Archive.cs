@@ -203,7 +203,6 @@ namespace MuPDF.NET
                 fmt = "dir";
                 mount = path;
                 entries = new List<string>(Directory.GetFiles(content));
-                Console.WriteLine(entries.Count);
                 _AddDir(content, path);
                 MakeSubArch(fmt, entries, mount);
             }

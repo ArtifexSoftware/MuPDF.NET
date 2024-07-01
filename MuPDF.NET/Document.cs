@@ -5147,7 +5147,6 @@ namespace MuPDF.NET
                 dest.To = to;
             }
             string action = Utils.GetDestString(pageXref, dest);
-            Console.WriteLine(action);
             if (!action.StartsWith("/A"))
                 throw new Exception("bad bookmark dest");
             float[] color = dest.Color;
