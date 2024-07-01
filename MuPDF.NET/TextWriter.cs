@@ -196,15 +196,23 @@ namespace MuPDF.NET
             float alpha = 1;
             FzColorspace colorSpace;
 
-            if (opacity >= 0 && opacity <= 1)
+            if (opacity >= 0 && opacity < 1)
                 alpha = opacity;
             int nCol = 1;
-            float[] devColor = { 0, 0, 0, 0 };
+            float[] devColor = { };
             if (color != null)
+            {
                 devColor = Annot.ColorFromSequence(color);
-            if (devColor.Length == 3)
+
+                if (devColor == null)
+                    nCol = -1;
+                else
+                    nCol = devColor.Length;
+            }
+
+            if (nCol == 3)
                 colorSpace = mupdf.mupdf.fz_device_rgb();
-            else if (devColor.Length == 4)
+            else if (nCol == 4)
                 colorSpace = mupdf.mupdf.fz_device_cmyk();
             else
                 colorSpace = mupdf.mupdf.fz_device_gray();
@@ -233,8 +241,8 @@ namespace MuPDF.NET
                 bdc = $"/OC /{optCont} BDC";
                 emc = "EMC";
             }
-            List<string> newContLines = new List<string>();
-            if (string.IsNullOrEmpty(bdc))
+            List<string> newContLines = new List<string>() { "q" };
+            if (!string.IsNullOrEmpty(bdc))
                 newContLines.Add(bdc);
 
             Point cb = page.CropBoxPosition;
@@ -242,7 +250,7 @@ namespace MuPDF.NET
             if (page.Rotation == 90 || page.Rotation == 270)
                 delta = page.Rect.Height - page.Rect.Width;
             Rect mb = page.MediaBox;
-            if (cb != null || mb.Y0 != 0 || delta != 0)
+            if (!cb.IsZero()  || mb.Y0 != 0 || delta != 0)
                 newContLines.Add($"1 0 0 1 {cb.X} {cb.Y + mb.Y0 - delta} cm");
 
             Matrix matrix_ = new Matrix();
@@ -255,10 +263,11 @@ namespace MuPDF.NET
 
             if (morph != null || matrix != null)
                 newContLines.Add($"{matrix_.A} {matrix_.B} {matrix_.C} {matrix_.D} {matrix_.E} {matrix_.F}");
-            foreach (string line in newContLines)
+
+            foreach (string line in oldLines)
             {
                 string line_ = line;
-                if (line_.EndsWith(" cm"))
+                if (line_.EndsWith(" cm") || string.IsNullOrEmpty(line_))
                     continue;
                 if (line_ == "BT")
                 {
@@ -290,9 +299,10 @@ namespace MuPDF.NET
                     newContLines.Add(line_.Replace(" k", " K"));
                 newContLines.Add(line_);
             }
-            if (string.IsNullOrEmpty(emc))
+            if (!string.IsNullOrEmpty(emc))
                 newContLines.Add(emc);
             newContLines.Add("Q\n");
+            Console.WriteLine(string.Join("\n", newContLines));
             byte[] content = Encoding.UTF8.GetBytes(string.Join("\n", newContLines));
             Utils.InsertContents(page, content, overlay);
             foreach (Font font in UsedFonts)
@@ -317,8 +327,8 @@ namespace MuPDF.NET
         public List<(string, float)> FillTextbox(
             Rect rect,
             string text,
+            Font font,
             Point pos = null,
-            Font font = null,
             float fontSize = 11,
             float lineHeight = 0,
             int align = 0,
@@ -328,8 +338,8 @@ namespace MuPDF.NET
         {
             if (rect.IsEmpty)
                 throw new Exception("fill rect must not empty");
-            if (font == null)
-                font = new Font("helv");
+            if (font.IsNull)
+                throw new Exception("font must not empty");
 
             float TextLen(string x)
             {
@@ -460,7 +470,7 @@ namespace MuPDF.NET
                 float tl = TextLen(line_);
                 if (tl <= width)
                 {
-                    newLines.Append((line, tl));
+                    newLines.Add((line, tl));
                     noJustify.Add((newLines.Count - 1));
                     continue;
                 }

@@ -133,7 +133,6 @@ namespace MuPDF.NET
         public Rect GetBound()
         {
             Rect val = new Rect(_nativePage.fz_bound_page());
-            Console.WriteLine(val.ToString());
             if (val.IsInfinite && Parent.IsPDF)
             {
                 Rect cb = CropBox;

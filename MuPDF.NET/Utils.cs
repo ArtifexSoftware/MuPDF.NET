@@ -3452,16 +3452,7 @@ namespace MuPDF.NET
             FzFont font = null;
             if (fontFile != null)
             {
-                IntPtr utf8Ptr = Utils.Utf16_Utf8Ptr(fontFile);
-                try
-                {
-                    font = mupdf.mupdf.fz_new_font_from_file(null, fontFile, index, 0);
-                }
-                catch (Exception)
-                {
-                    Marshal.FreeHGlobal(utf8Ptr);
-                }
-                
+                font = mupdf.mupdf.fz_new_font_from_file(null, fontFile, index, 0);                
                 return Fertig(font);
             }
 

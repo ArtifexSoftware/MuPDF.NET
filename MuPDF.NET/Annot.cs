@@ -762,7 +762,7 @@ namespace MuPDF.NET
 
         public static float[] ColorFromSequence(float[] seq)
         {
-            if (seq == null)
+            if (!(seq is List<float> || seq is float[]) || seq == null)
                 return null;
 
             if (!(new List<int>() { 0, 1, 3, 4 }).Contains(seq.Length))
