@@ -8,8 +8,7 @@ namespace MuPDF.NET
     {
         static Annot()
         {
-            if (!File.Exists("mupdfcsharp.dll"))
-                Utils.LoadEmbeddedDll();
+            Utils.InitApp();
         }
 
         internal PdfAnnot _nativeAnnotion;

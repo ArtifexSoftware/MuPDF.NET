@@ -11,8 +11,7 @@ namespace MuPDF.NET
     {
         static Page()
         {
-            if (!File.Exists("mupdfcsharp.dll"))
-                Utils.LoadEmbeddedDll();
+            Utils.InitApp();
         }
 
         private FzPage _nativePage;

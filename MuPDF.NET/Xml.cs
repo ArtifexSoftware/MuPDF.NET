@@ -8,8 +8,7 @@ namespace MuPDF.NET
     {
         static Xml()
         {
-            if (!File.Exists("mupdfcsharp.dll"))
-                Utils.LoadEmbeddedDll();
+            Utils.InitApp();
         }
 
         private FzXml _nativeXml;

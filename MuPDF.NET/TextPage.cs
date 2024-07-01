@@ -8,8 +8,7 @@ namespace MuPDF.NET
     {
         static TextPage()
         {
-            if (!File.Exists("mupdfcsharp.dll"))
-                Utils.LoadEmbeddedDll();
+            Utils.InitApp();
         }
 
         internal FzStextPage _nativeTextPage;

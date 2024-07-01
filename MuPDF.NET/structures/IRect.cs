@@ -4,6 +4,11 @@ namespace MuPDF.NET
 {
     public class IRect
     {
+        static IRect()
+        {
+            Utils.InitApp();
+        }
+
         public float X0 { get; set; }
 
         public float Y0 { get; set; }

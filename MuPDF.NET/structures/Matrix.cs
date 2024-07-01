@@ -1,9 +1,14 @@
 ﻿using mupdf;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace MuPDF.NET
 {
     public class Matrix
     {
+        static Matrix()
+        {
+            Utils.InitApp();
+        }
         public float A { get; set; }
         public float B { get; set; }
         public float C { get; set; }
