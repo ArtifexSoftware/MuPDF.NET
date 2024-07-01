@@ -1,5 +1,6 @@
 ﻿using System.Data;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO.Compression;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -17,6 +18,8 @@ namespace MuPDF.NET
         public static int FZ_MAX_INF_RECT = (int)0x7fffff80;
 
         public static double FLT_EPSILON = 1e-5;
+
+        public static bool IsInitialized = false;
 
         public static string ANNOT_ID_STEM = "fitz";
 
@@ -6161,6 +6164,28 @@ namespace MuPDF.NET
             Marshal.Copy(bytes, 0, utf8Ptr, bytes.Length);
 
             return utf8Ptr;
+        }
+
+        public static void SetDotCultureForNumber()
+        {
+            CultureInfo culture = new CultureInfo("en-US"); // or any specific culture you want
+            culture.NumberFormat.NumberDecimalSeparator = ".";
+            culture.NumberFormat.CurrencyDecimalSeparator = ".";
+
+            CultureInfo.CurrentCulture = culture;
+            CultureInfo.CurrentUICulture = culture;
+        }
+
+        public static void InitApp()
+        {
+            if (Utils.IsInitialized)
+                return;
+            Console.WriteLine("hello");
+            Utils.SetDotCultureForNumber();
+            if (!File.Exists("mupdfcsharp.dll"))
+                Utils.LoadEmbeddedDll();
+
+            Utils.IsInitialized = true;
         }
     }
 }
