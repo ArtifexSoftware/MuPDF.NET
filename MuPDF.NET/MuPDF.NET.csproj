@@ -25,7 +25,7 @@
 		<PackageIcon>logo.png</PackageIcon>
 		<PackageReadmeFile>Description.md</PackageReadmeFile>
 		<RepositoryUrl>https://github.com/ArtifexSoftware/MuPDF.NET</RepositoryUrl>
-		<PackageTags>c# dotnet mupdf pdf</PackageTags>
+		<PackageTags>C#;F#;VB.Net;MuPDF;DotNet;PDF</PackageTags>
 		<PackageLicenseFile>LICENSE</PackageLicenseFile>
 	</PropertyGroup>
 
