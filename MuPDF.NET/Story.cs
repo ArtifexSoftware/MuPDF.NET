@@ -7,8 +7,7 @@ namespace MuPDF.NET
     {
         static Story()
         {
-            if (!File.Exists("mupdfcsharp.dll"))
-                Utils.LoadEmbeddedDll();
+            Utils.InitApp();
         }
 
         private FzStory _nativeStory;

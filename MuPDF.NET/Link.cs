@@ -6,8 +6,7 @@ namespace MuPDF.NET
     {
         static Link()
         {
-            if (!File.Exists("mupdfcsharp.dll"))
-                Utils.LoadEmbeddedDll();
+            Utils.InitApp();
         }
 
         public bool ThisOwn { get; set; }

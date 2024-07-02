@@ -7,8 +7,7 @@ namespace MuPDF.NET
 
         static DisplayList()
         {
-            if (!File.Exists("mupdfcsharp.dll"))
-                Utils.LoadEmbeddedDll();
+            Utils.InitApp();
         }
 
         private FzDisplayList _nativeDisplayList;

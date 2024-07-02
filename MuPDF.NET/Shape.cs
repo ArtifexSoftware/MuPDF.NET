@@ -7,8 +7,7 @@ namespace MuPDF.NET
     {
         static Shape()
         {
-            if (!File.Exists("mupdfcpp64.dll"))
-                Utils.LoadEmbeddedDll();
+            Utils.InitApp();
         }
 
         public Page Page { get; set; }

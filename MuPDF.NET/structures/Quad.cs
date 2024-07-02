@@ -4,6 +4,11 @@ namespace MuPDF.NET
 {
     public class Quad
     {
+        static Quad()
+        {
+            Utils.InitApp();
+        }
+
         public Point UpperLeft { get; set; }
         public Point UpperRight { get; set; }
         public Point LowerLeft { get; set; }

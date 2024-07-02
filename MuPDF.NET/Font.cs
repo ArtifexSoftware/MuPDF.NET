@@ -6,8 +6,7 @@ namespace MuPDF.NET
     {
         static Font()
         {
-            if (!File.Exists("mupdfcsharp.dll"))
-                Utils.LoadEmbeddedDll();
+            Utils.InitApp();
         }
 
         private FzFont _nativeFont = null;
@@ -26,6 +25,11 @@ namespace MuPDF.NET
                 );
                 return buf.fz_buffer_extract();
             }
+        }
+
+        public bool IsNull
+        {
+            get { return _nativeFont == null || _nativeFont.m_internal == null; }
         }
 
         public float Descender
@@ -126,8 +130,8 @@ namespace MuPDF.NET
             string fNameLower = fontName.ToLower();
             if (
                 fNameLower.IndexOf("/") != -1
-                || fNameLower.IndexOf("\\") == -1
-                || fNameLower.IndexOf(".") == -1
+                || fNameLower.IndexOf("\\") != -1
+                || fNameLower.IndexOf(".") != -1
             )
                 Console.WriteLine("Warning: did you mean a fontfile?");
             if ((new List<string>() { "cjk", "china-t", "china-ts" }).Contains(fNameLower))

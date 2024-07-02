@@ -11,8 +11,7 @@ namespace MuPDF.NET
     {
         static Page()
         {
-            if (!File.Exists("mupdfcsharp.dll"))
-                Utils.LoadEmbeddedDll();
+            Utils.InitApp();
         }
 
         private FzPage _nativePage;
@@ -133,7 +132,6 @@ namespace MuPDF.NET
         public Rect GetBound()
         {
             Rect val = new Rect(_nativePage.fz_bound_page());
-            Console.WriteLine(val.ToString());
             if (val.IsInfinite && Parent.IsPDF)
             {
                 Rect cb = CropBox;

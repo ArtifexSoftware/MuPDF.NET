@@ -6,8 +6,7 @@ namespace MuPDF.NET
     {
         static DeviceWrapper()
         {
-            if (!File.Exists("mupdfcsharp.dll"))
-                Utils.LoadEmbeddedDll();
+            Utils.InitApp();
         }
 
         internal FzDevice _nativeDevice;

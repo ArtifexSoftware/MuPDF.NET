@@ -9,8 +9,7 @@ namespace MuPDF.NET
     {
         static Document()
         {
-            if (!File.Exists("mupdfcsharp.dll"))
-                Utils.LoadEmbeddedDll();
+            Utils.InitApp();
         }
 
         /// <summary>
@@ -1161,6 +1160,9 @@ namespace MuPDF.NET
                 while (pageId < 0)
                     pageId += np;
             }
+
+            if (Utils.INRANGE(pageId, 0, PageCount - 1) == false)
+                throw new Exception("document page count is not enough");
 
             FzPage page = _nativeDocument.fz_load_page(pageId);
             Page val = new Page(page, this);
@@ -5144,7 +5146,6 @@ namespace MuPDF.NET
                 dest.To = to;
             }
             string action = Utils.GetDestString(pageXref, dest);
-            Console.WriteLine(action);
             if (!action.StartsWith("/A"))
                 throw new Exception("bad bookmark dest");
             float[] color = dest.Color;
