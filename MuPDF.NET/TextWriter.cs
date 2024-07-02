@@ -8,8 +8,7 @@ namespace MuPDF.NET
     {
         static TextWriter()
         {
-            if (!File.Exists("mupdfcsharp.dll"))
-                Utils.LoadEmbeddedDll();
+            Utils.InitApp();
         }
 
         private FzText _nativeText;
@@ -107,7 +106,7 @@ namespace MuPDF.NET
 
         public string CleanRtl(string text)
         {
-            if (text == null || text == "")
+            if (string.IsNullOrEmpty(text))
                 return null;
             string[] words = text.Split(" ");
             List<int> idx = new List<int>();
@@ -117,29 +116,26 @@ namespace MuPDF.NET
 
                 if (!(w.Length < 2 || w.ToCharArray().Any(c => (int)c > 255)))
                 {
-                    words[i] = w.ToCharArray().Reverse().ToString();
+                    words[i] = new string(w.ToCharArray().Reverse().ToArray());
                     idx.Add(i);
                 }
             }
 
             List<int> idx2 = new List<int>();
-            foreach (int i in idx)
+            for (int j = 0; j < idx.Count ; j ++)
             {
                 if (idx2.Count == 0)
-                    idx2.Add(idx[i]);
-                else if (idx[i] > idx2[idx2.Count - 1] + 1)
+                    idx2.Add(idx[j]);
+                else if (idx[j] > idx2[idx2.Count - 1] + 1)
                 {
                     if (idx2.Count > 1)
                     {
-                        string[] part = words.Skip(idx2[0]).Take(idx2[idx2.Count - 1] + 1 - idx2[0]).ToArray();
-                        part.Reverse();
-                        for (int j = 0; j < part.Length; j++)
-                            words[j + idx2[0]] = part[j];
+                        Array.Reverse(words, idx2[0], idx2[idx2.Count - 1] - idx2[0] + 1);
                     }
-                    idx2 = new List<int>() { idx[i] };
+                    idx2 = new List<int>() { idx[j] };
                 }
-                else if (idx[i] == idx2[idx2.Count - 1] + 1)
-                    idx2.Add(idx[i]);
+                else if (idx[j] == idx2[idx2.Count - 1] + 1)
+                    idx2.Add(idx[j]);
             }
 
             text = string.Join(" ", words);
@@ -196,15 +192,23 @@ namespace MuPDF.NET
             float alpha = 1;
             FzColorspace colorSpace;
 
-            if (opacity >= 0 && opacity <= 1)
+            if (opacity >= 0 && opacity < 1)
                 alpha = opacity;
             int nCol = 1;
-            float[] devColor = { 0, 0, 0, 0 };
+            float[] devColor = { };
             if (color != null)
+            {
                 devColor = Annot.ColorFromSequence(color);
-            if (devColor.Length == 3)
+
+                if (devColor == null)
+                    nCol = -1;
+                else
+                    nCol = devColor.Length;
+            }
+
+            if (nCol == 3)
                 colorSpace = mupdf.mupdf.fz_device_rgb();
-            else if (devColor.Length == 4)
+            else if (nCol == 4)
                 colorSpace = mupdf.mupdf.fz_device_cmyk();
             else
                 colorSpace = mupdf.mupdf.fz_device_gray();
@@ -233,8 +237,8 @@ namespace MuPDF.NET
                 bdc = $"/OC /{optCont} BDC";
                 emc = "EMC";
             }
-            List<string> newContLines = new List<string>();
-            if (string.IsNullOrEmpty(bdc))
+            List<string> newContLines = new List<string>() { "q" };
+            if (!string.IsNullOrEmpty(bdc))
                 newContLines.Add(bdc);
 
             Point cb = page.CropBoxPosition;
@@ -242,7 +246,7 @@ namespace MuPDF.NET
             if (page.Rotation == 90 || page.Rotation == 270)
                 delta = page.Rect.Height - page.Rect.Width;
             Rect mb = page.MediaBox;
-            if (cb != null || mb.Y0 != 0 || delta != 0)
+            if (!cb.IsZero()  || mb.Y0 != 0 || delta != 0)
                 newContLines.Add($"1 0 0 1 {cb.X} {cb.Y + mb.Y0 - delta} cm");
 
             Matrix matrix_ = new Matrix();
@@ -255,10 +259,11 @@ namespace MuPDF.NET
 
             if (morph != null || matrix != null)
                 newContLines.Add($"{matrix_.A} {matrix_.B} {matrix_.C} {matrix_.D} {matrix_.E} {matrix_.F}");
-            foreach (string line in newContLines)
+
+            foreach (string line in oldLines)
             {
                 string line_ = line;
-                if (line_.EndsWith(" cm"))
+                if (line_.EndsWith(" cm") || string.IsNullOrEmpty(line_))
                     continue;
                 if (line_ == "BT")
                 {
@@ -290,9 +295,10 @@ namespace MuPDF.NET
                     newContLines.Add(line_.Replace(" k", " K"));
                 newContLines.Add(line_);
             }
-            if (string.IsNullOrEmpty(emc))
+            if (!string.IsNullOrEmpty(emc))
                 newContLines.Add(emc);
             newContLines.Add("Q\n");
+            Console.WriteLine(string.Join("\n", newContLines));
             byte[] content = Encoding.UTF8.GetBytes(string.Join("\n", newContLines));
             Utils.InsertContents(page, content, overlay);
             foreach (Font font in UsedFonts)
@@ -317,8 +323,8 @@ namespace MuPDF.NET
         public List<(string, float)> FillTextbox(
             Rect rect,
             string text,
+            Font font,
             Point pos = null,
-            Font font = null,
             float fontSize = 11,
             float lineHeight = 0,
             int align = 0,
@@ -328,8 +334,8 @@ namespace MuPDF.NET
         {
             if (rect.IsEmpty)
                 throw new Exception("fill rect must not empty");
-            if (font == null)
-                font = new Font("helv");
+            if (font.IsNull)
+                throw new Exception("font must not empty");
 
             float TextLen(string x)
             {
@@ -424,7 +430,7 @@ namespace MuPDF.NET
 
             if (pos == null)
                 pos = rect.TopLeft + new Point(tolerance, fontSize * asc);
-            if (!(rect.IncludePoint(pos) == rect))
+            if (!(rect.IncludePoint(pos).EqualTo(rect)))
                 throw new Exception("Text must start in rectangle");
 
             float factor = 0;
@@ -432,7 +438,7 @@ namespace MuPDF.NET
                 factor = 0.5f;
             else if (align == Utils.TEXT_ALIGN_RIGHT)
                 factor = 1.0f;
-            string[] textLines = text.Split(" ");
+            string[] textLines = text.Split("\n");
             int maxLines = Convert.ToInt32((rect.Y1 - pos.Y) / LineHeight) + 1;
 
             List<(string, float)> newLines = new List<(string, float)>();
@@ -460,7 +466,7 @@ namespace MuPDF.NET
                 float tl = TextLen(line_);
                 if (tl <= width)
                 {
-                    newLines.Append((line, tl));
+                    newLines.Add((line, tl));
                     noJustify.Add((newLines.Count - 1));
                     continue;
                 }

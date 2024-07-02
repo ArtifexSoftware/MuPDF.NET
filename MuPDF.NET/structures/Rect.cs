@@ -5,6 +5,11 @@ namespace MuPDF.NET
 {
     public class Rect
     {
+        static Rect()
+        {
+            Utils.InitApp();
+        }
+
         public float X0 { get; set; }
         public float Y0 { get; set; }
         public float X1 { get; set; }

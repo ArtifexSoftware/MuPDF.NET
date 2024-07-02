@@ -8,8 +8,7 @@ namespace MuPDF.NET
     {
         static Archive()
         {
-            if (!File.Exists("mupdfcsharp.dll"))
-                Utils.LoadEmbeddedDll();
+            Utils.InitApp();
         }
 
         private FzArchive _nativeArchive;
@@ -203,7 +202,6 @@ namespace MuPDF.NET
                 fmt = "dir";
                 mount = path;
                 entries = new List<string>(Directory.GetFiles(content));
-                Console.WriteLine(entries.Count);
                 _AddDir(content, path);
                 MakeSubArch(fmt, entries, mount);
             }

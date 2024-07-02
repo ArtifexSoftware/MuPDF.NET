@@ -6,8 +6,7 @@ namespace MuPDF.NET
     {
         static DocumentWriter()
         {
-            if (!File.Exists("mupdfcsharp.dll"))
-                Utils.LoadEmbeddedDll();
+            Utils.InitApp();
         }
 
         private FzDocumentWriter _nativeDocumentWriter;

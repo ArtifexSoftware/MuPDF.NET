@@ -1,10 +1,17 @@
 ﻿using mupdf;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace MuPDF.NET
 {
 
     public class Point
     {
+
+        static Point()
+        {
+            Utils.InitApp();
+        }
+
         public float X { get; set; }
         public float Y { get; set; }
         public int Length { get; } = 2;

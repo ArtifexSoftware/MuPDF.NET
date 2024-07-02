@@ -6,8 +6,7 @@ namespace MuPDF.NET
     {
         static GraftMap()
         {
-            if (!File.Exists("mupdfcsharp.dll"))
-                Utils.LoadEmbeddedDll();
+            Utils.InitApp();
         }
 
         private PdfGraftMap _nativeGraftMap;

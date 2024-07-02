@@ -5,6 +5,11 @@ namespace MuPDF.NET
 {
     public class LinkDest
     {
+        static LinkDest()
+        {
+            Utils.InitApp();
+        }
+
         public string Dest { get; set; }
 
         public string FileSpec { get; set; }

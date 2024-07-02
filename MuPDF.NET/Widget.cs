@@ -4,6 +4,11 @@ namespace MuPDF.NET
 {
     public class Widget
     {
+        static Widget()
+        {
+            Utils.InitApp();
+        }
+
         public float[] BorderColor { get; set; }
 
         public string BorderStyle { get; set; }
