@@ -5276,6 +5276,7 @@ namespace MuPDF.NET
             ResetPageRefs();
             IsClosed = true;
             GraftMaps = new Dictionary<int, GraftMap>();
+            _nativeDocument.Dispose();
             _nativeDocument = null;
         }
 
