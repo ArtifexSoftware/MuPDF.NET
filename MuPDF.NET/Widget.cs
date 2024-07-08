@@ -17,7 +17,7 @@ namespace MuPDF.NET
 
         public int[] BorderDashes { get; set; }
 
-        public List<List<string>> ChoiceValues { get; set; }
+        public List<dynamic> ChoiceValues { get; set; }
 
         public int RbParent { get; set; }
 

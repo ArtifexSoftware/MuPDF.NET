@@ -889,10 +889,10 @@ namespace MuPDF.NET
         public float InsertTextbox(
             Rect rect,
             List<string> buffer,
+            string fontName,
+            string fontFile,
             float fontSize = 11,
             float lineHeight = 0,
-            string fontName = "helv",
-            string fontFile = null,
             bool setSimple = false,
             int encoding = 0,
             float[] color = null,
@@ -908,7 +908,7 @@ namespace MuPDF.NET
             int oc = 0
             )
         {
-            return _InsertTextbox(rect, buffer, fontSize, lineHeight, fontName, fontFile, setSimple, encoding,
+            return _InsertTextbox(rect, buffer, fontName, fontFile, fontSize, lineHeight, setSimple, encoding,
                 color, fill, expandTabs, align, renderMode, borderWidth, rotate, morph, strokeOpacity, fillOpacity, oc);
         }
 
@@ -958,17 +958,17 @@ namespace MuPDF.NET
             )
         {
             string[] list = buffer.Split("\n");
-            return _InsertTextbox(rect, new List<string>(list), fontSize, lineHeight, fontName, fontFile, setSimple, encoding,
+            return _InsertTextbox(rect, new List<string>(list), fontName, fontFile, fontSize, lineHeight, setSimple, encoding,
                 color, fill, expandTabs, align, renderMode, borderWidth, rotate, morph, strokeOpacity, fillOpacity, oc);
         }
 
         internal float _InsertTextbox(
             Rect rect,
             List<string> buffer,
+            string fontName,
+            string fontFile,
             float fontSize = 11,
             float lineHeight = 0,
-            string fontName = "helv",
-            string fontFile = null,
             bool setSimple = true,
             int encoding = 0,
             float[] color = null,

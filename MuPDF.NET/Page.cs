@@ -4135,10 +4135,10 @@ namespace MuPDF.NET
         public float InsertTextbox(
             Rect rect,
             dynamic text,
+            string fontName,
+            string fontFile,
             float fontSize = 11,
             float lineHeight = 0,
-            string fontName = "helv",
-            string fontFile = null,
             int setSimple = 0,
             int encoding = 0,
             float[] color = null,
