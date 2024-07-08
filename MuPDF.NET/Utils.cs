@@ -1226,7 +1226,7 @@ namespace MuPDF.NET
             );
         }
 
-        public static List<List<string>> GetChoiceOptions(PdfAnnot annot)
+        public static List<dynamic> GetChoiceOptions(PdfAnnot annot)
         {
             PdfObj annotObj = annot.pdf_annot_obj();
             vectors opts = mupdf.mupdf.pdf_choice_widget_options2(annot, 0);
@@ -1235,7 +1235,7 @@ namespace MuPDF.NET
             if (n == 0)
                 return null;
             PdfObj optArr = annotObj.pdf_dict_get(new PdfObj("Opt"));
-            List<List<string>> ret = new List<List<string>>();
+            List<dynamic> ret = new List<dynamic>();
 
             for (int i = 0; i < n; i++)
             {
@@ -3400,8 +3400,9 @@ namespace MuPDF.NET
             FzMatrix matrix = new FzMatrix(ctm.A, ctm.B, ctm.C, ctm.D, ctm.E, ctm.F);
             FzRect rclip = clip == null ? new FzRect(FzRect.Fixed.Fixed_INFINITE) : clip.ToFzRect();
             rect = FzRect.fz_intersect_rect(rect, rclip);
-            FzIrect irect = rect.fz_round_rect();
 
+            rect = rect.fz_transform_rect(matrix);
+            FzIrect irect = rect.fz_round_rect();
             FzPixmap pix = mupdf.mupdf.fz_new_pixmap_with_bbox(cs, irect, seps, alpha);
             if (alpha != 0)
                 pix.fz_clear_pixmap();
@@ -4943,7 +4944,7 @@ namespace MuPDF.NET
                 || fieldType == (int)PdfWidgetType.PDF_WIDGET_TYPE_COMBOBOX
             )
             {
-                List<List<string>> choiceValues = widget.ChoiceValues;
+                List<dynamic> choiceValues = widget.ChoiceValues;
                 SetChoiceOptions(annot, choiceValues);
             }
 
@@ -5133,7 +5134,7 @@ namespace MuPDF.NET
             return null;
         }
 
-        public static void SetChoiceOptions(PdfAnnot annot, List<List<string>> list)
+        public static void SetChoiceOptions(PdfAnnot annot, List<dynamic> list)
         {
             if (list == null)
                 return;
@@ -5145,9 +5146,9 @@ namespace MuPDF.NET
             PdfObj optArr = pdf.pdf_new_array(n);
             for (int i = 0; i < n; i++)
             {
-                List<string> val = list[i];
-                if (val.Count == 1)
-                    optArr.pdf_array_push_text_string(val[0]);
+                dynamic val = list[i];
+                if (val is string)
+                    optArr.pdf_array_push_text_string(val);
                 else
                 {
                     PdfObj optArrSub = optArr.pdf_array_push_array(2);
