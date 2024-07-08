@@ -3086,7 +3086,7 @@ namespace MuPDF.NET
             if (page == null)
                 return;
             PdfObj obj = page.obj().pdf_dict_get(new PdfObj("Annots"));
-            if (obj != null)
+            if (obj.m_internal != null)
             {
                 PdfDocument pdf = page.doc();
                 int number = pdf.pdf_lookup_page_number(page.obj());

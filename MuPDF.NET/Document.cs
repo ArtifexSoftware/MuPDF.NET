@@ -2669,7 +2669,7 @@ namespace MuPDF.NET
             if (obj.m_internal == null)
                 return rc;
 
-            PdfObj nums = obj.pdf_dict_get(new PdfObj("PageLabels")).pdf_resolve_indirect();
+            PdfObj nums = obj.pdf_dict_get(new PdfObj("Nums")).pdf_resolve_indirect();
             if (nums.m_internal != null)
             {
                 Utils.GetPageLabels(rc, nums);
@@ -2840,7 +2840,7 @@ namespace MuPDF.NET
             );
             int xref = GetPdfCatalog();
             string text = GetXrefObject(xref, compressed: 1);
-            text = text.Replace("/PageLabels[]", $"/PageLabels[{CreateNums(labels)}]");
+            text = text.Replace("/Nums[]", $"/Nums[{CreateNums(labels)}]");
             UpdateObject(xref, text);
         }
 
