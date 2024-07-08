@@ -35,8 +35,7 @@ This class represents a document. It can be constructed from a file or from memo
 :meth:`Document.GetNewXref`            
 :meth:`Document.GetXrefLength`            
 :meth:`Document.ExtractFont`           
-:meth:`Document.ExtractImage`          
-:meth:`Document.ez_save`                
+:meth:`Document.ExtractImage`                       
 :meth:`Document.FindBookmark`          
 :meth:`Document.CopyFullPage`          
 :meth:`Document.GetLayer`              
@@ -160,21 +159,15 @@ This class represents a document. It can be constructed from a file or from memo
 .. class:: Document
 
   .. index::
-    pair: filename; open
-    pair: stream; open
-    pair: filetype; open
-    pair: rect; open
-    pair: width; open
-    pair: height; open
-    pair: fontsize; open
-    pair: open; Document
-    pair: filename; Document
+    pair: fileName; Document
     pair: stream; Document
     pair: filetype; Document
     pair: rect; Document
-    pair: fontsize; Document
+    pair: width; Document
+    pair: height; Document
+    pair: fontSize; Document
 
-  .. method:: Document(string filename = null, byte[] stream = null, filetype = null, rect = null, width = 0, height = 0, fontsize = 11)
+  .. method:: Document(string fileName = null, byte[] stream = null, filetype = null, rect = null, width = 0, height = 0, fontSize = 11)
 
     Creates a *Document* object.
 
@@ -182,19 +175,19 @@ This class represents a document. It can be constructed from a file or from memo
     * If *stream* is given, then the document is created from memory and, if not a PDF, either *filename* or *filetype* must indicate its type.
     * If *stream* is `null`, then a document is created from the file given by *filename*. Its type is inferred from the extension. This can be overruled by *filetype.*
 
-    :arg str,pathlib filename: A UTF-8 string or *pathlib* object containing a file path. The document type is inferred from the filename extension. If not present or not matching :ref:`a supported type<Supported_File_Types>`, a PDF document is assumed. For memory documents, this argument may be used instead of `filetype`, see below.
+    :arg string fileName: A UTF-8 string or *pathlib* object containing a file path. The document type is inferred from the filename extension. If not present or not matching :ref:`a supported type<Supported_File_Types>`, a PDF document is assumed. For memory documents, this argument may be used instead of `filetype`, see below.
 
-    :arg bytes,bytearray,BytesIO stream: A memory area containing a supported document. If not a PDF, its type **must** be specified by either `filename` or `filetype`.
+    :arg bytes stream: A memory area containing a supported document. If not a PDF, its type **must** be specified by either `filename` or `filetype`.
 
-    :arg str filetype: A string specifying the type of document. This may be anything looking like a filename (e.g. "x.pdf"), in which case MuPDF uses the extension to determine the type, or a mime type like *application/pdf*. Just using strings like "pdf"  or ".pdf" will also work. May be omitted for PDF documents, otherwise must match :ref:`a supported document type<Supported_File_Types>`.
+    :arg string filetype: A string specifying the type of document. This may be anything looking like a filename (e.g. "x.pdf"), in which case MuPDF uses the extension to determine the type, or a mime type like *application/pdf*. Just using strings like "pdf"  or ".pdf" will also work. May be omitted for PDF documents, otherwise must match :ref:`a supported document type<Supported_File_Types>`.
 
-    :arg rect_like rect: a rectangle specifying the desired page size. This parameter is only meaningful for documents with a variable page layout ("reflowable" documents), like e-books or HTML, and ignored otherwise. If specified, it must be a non-empty, finite rectangle with top-left coordinates (0, 0). Together with parameter *fontsize*, each page will be accordingly laid out and hence also determine the number of pages.
+    :arg Rect rect: a rectangle specifying the desired page size. This parameter is only meaningful for documents with a variable page layout ("reflowable" documents), like e-books or HTML, and ignored otherwise. If specified, it must be a non-empty, finite rectangle with top-left coordinates (0, 0). Together with parameter *fontsize*, each page will be accordingly laid out and hence also determine the number of pages.
 
     :arg float width: may used together with *height* as an alternative to *rect* to specify layout information.
 
     :arg float height: may used together with *width* as an alternative to *rect* to specify layout information.
 
-    :arg float fontsize: the default :data:`fontsize` for reflowable document types. This parameter is ignored if none of the parameters *rect* or *width* and *height* are specified. Will be used to calculate the page layout.
+    :arg float fontSize: the default :data:`fontSize` for reflowable document types. This parameter is ignored if none of the parameters *rect* or *width* and *height* are specified. Will be used to calculate the page layout.
 
     :return: A document object. If the document cannot be created, an exception is raised.
 
@@ -224,7 +217,7 @@ This class represents a document. It can be constructed from a file or from memo
     .. note:: Raster images with a wrong (but supported) file extension **are no problem**. MuPDF will determine the correct image type when file **content** is actually accessed and will process it without complaint. So `new Document("file.jpg")` will work even for a PNG image.
 
 
-  .. method:: GetOC(xref)
+  .. method:: GetOC(int xref)
 
     Return the cross reference number of an :data:`OCG` or :data:`OCMD` attached to an image or form xobject.
 
@@ -232,11 +225,11 @@ This class represents a document. It can be constructed from a file or from memo
     :rtype: int
     :returns: the cross reference number of an optional contents object or zero if there is none.
 
-  .. method:: SetOC(xref, ocxref)
+  .. method:: SetOC(int xref, int ocxref)
 
     If `xref` represents an image or form xobject, set or remove the cross reference number `ocxref` of an optional contents object.
 
-    :arg int xref: the :data:`xref` of an image or form xobject [#f5]_. Valid such cross reference numbers are returned by :meth:`Document.get_page_images`, resp. :meth:`Document.GetPageXobjects`. For invalid numbers, an exception is raised.
+    :arg int xref: the :data:`xref` of an image or form xobject [#f5]_. Valid such cross reference numbers are returned by :meth:`Document.GetPageImages`, resp. :meth:`Document.GetPageXobjects`. For invalid numbers, an exception is raised.
     :arg int ocxref: the :data:`xref` number of an :data:`OCG` / :data:`OCMD`. If not zero, an invalid reference raises an exception. If zero, any OC reference is removed.
 
 
@@ -244,13 +237,13 @@ This class represents a document. It can be constructed from a file or from memo
 
     Show optional layer configurations. There always is a standard one, which is not included in the response.
 
-  .. method:: AddLayer(string name, string creator = null, on = null)
+  .. method:: AddLayer(string name, string creator = null, OCLayerConfig on = null)
 
     Add an optional content configuration. Layers serve as a collection of ON / OFF states for optional content groups and allow fast visibility switches between different views on the same document.
 
-    :arg str name: arbitrary name.
-    :arg str creator: (optional) creating software.
-    :arg sequ on: a sequence of OCG :data:`xref` numbers which should be set to ON when this layer gets activated. All OCGs not listed here will be set to OFF.
+    :arg string name: arbitrary name.
+    :arg string creator: (optional) creating software.
+    :arg OCLayerConfig on: a sequence of OCG :data:`xref` numbers which should be set to ON when this layer gets activated. All OCGs not listed here will be set to OFF.
 
 
   .. method:: SwitchLayer(int config, int asDefault = 0)
@@ -258,7 +251,7 @@ This class represents a document. It can be constructed from a file or from memo
     Switch to a document view as defined by the optional layer's configuration number. This is temporary, except if established as default.
 
     :arg int number: config number as returned by :meth:`Document.layer_configs`.
-    :arg bool as_default: make this the default configuration.
+    :arg int asDefault: make this the default configuration.
 
     Activates the ON / OFF states of OCGs as defined in the identified layer. If *as_default=True*, then additionally all layers, including the standard one, are merged and the result is written back to the standard layer, and **all optional layers are deleted**.
 
@@ -1021,12 +1014,12 @@ This class represents a document. It can be constructed from a file or from memo
      pair: join; Document.InsertPdf
      pair: merge; Document.InsertPdf
      pair: from_page; Document.InsertPdf
-     pair: to_page; Document.InsertPdf
-     pair: start_at; Document.InsertPdf
+     pair: toPage; Document.InsertPdf
+     pair: startAt; Document.InsertPdf
      pair: rotate; Document.InsertPdf
      pair: links; Document.InsertPdf
      pair: annots; Document.InsertPdf
-     pair: show_progress; Document.InsertPdf
+     pair: showProgress; Document.InsertPdf
 
   .. method:: InsertPdf(Document docsrc, int fromPage=-1, int toPage=-1, int startAt=-1, int rotate=-1, bool links=true, bool annots=true, int showProgress=0, int final=1)
 
@@ -1061,13 +1054,13 @@ This class represents a document. It can be constructed from a file or from memo
      pair: append; Document.InsertFile
      pair: join; Document.InsertFile
      pair: merge; Document.InsertFile
-     pair: from_page; Document.InsertFile
-     pair: to_page; Document.InsertFile
-     pair: start_at; Document.InsertFile
+     pair: fromPage; Document.InsertFile
+     pair: toPage; Document.InsertFile
+     pair: startAt; Document.InsertFile
      pair: rotate; Document.InsertFile
      pair: links; Document.InsertFile
      pair: annots; Document.InsertFile
-     pair: show_progress; Document.InsertFile
+     pair: showProgress; Document.InsertFile
 
   .. method:: InsertFile(infile, fromPage=-1, toPage=-1, startAt=-1, rotate=-1, links=true, annots=true, showProgress=0, final=1)
 

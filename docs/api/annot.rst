@@ -28,8 +28,9 @@ There is a parent-child relationship between an annotation and its page. If the 
 :meth:`Annot.SetBlendMode`
 :meth:`Annot.SetColors`    
 :meth:`Annot.SetFlags`     
-:meth:`Annot.SetIrtXRef`  
-:meth:`Annot.set_name`      
+:meth:`Annot.SetIrtXRef`
+:meth:`Annot.SetLineEnds`
+:meth:`Annot.SetName`      
 :meth:`Annot.SetOC`        
 :meth:`Annot.SetOpacity`   
 :meth:`Annot.SetOpen`      
@@ -55,7 +56,7 @@ There is a parent-child relationship between an annotation and its page. If the 
 :attr:`Annot.PARENT`        
 :attr:`Annot.POPUP_RECT`    
 :attr:`Annot.POPUP_XREF`
-:attr:`Annot.RECT_`
+:attr:`Annot.RECT`
 :attr:`Annot.RECT_DELTA`
 :attr:`Annot.ROTATION`
 :attr:`Annot.TYPE`
@@ -69,7 +70,7 @@ There is a parent-child relationship between an annotation and its page. If the 
 
    .. index::
       pair: matrix; Annot.GetPixmap
-      pair: colorspace; Annot.GetPixmap
+      pair: colorSpace; Annot.GetPixmap
       pair: alpha; Annot.GetPixmap
       pair: dpi; Annot.GetPixmap
 
@@ -77,7 +78,7 @@ There is a parent-child relationship between an annotation and its page. If the 
 
       Creates a pixmap from the annotation as it appears on the page in untransformed coordinates. The pixmap's :ref:`IRect` equals *Annot.rect.irect* (see below).
 
-      :arg matrix_like matrix: a matrix to be used for image creation. Default is :ref:`Identity`.
+      :arg Matrix matrix: a matrix to be used for image creation. Default is :ref:`Identity`.
 
       :arg int dpi: desired resolution in dots per inch. If not `null`, the matrix parameter is ignored.
 
@@ -90,7 +91,7 @@ There is a parent-child relationship between an annotation and its page. If the 
 
       .. note::
          
-         * If the annotation has just been created or modified, you should :meth:`Document.reload_page` the page first via `page = doc.reload_page(page)`.
+         * If the annotation has just been created or modified, you should :meth:`Document.ReloadPage` the page first via `page = doc.ReloadPage(page)`.
 
          * The pixmap will have *"premultiplied"* pixels if `alpha=True`. To learn about some background, e.g. look for "Premultiplied alpha" `here <https://en.wikipedia.org/wiki/Glossary_of_computer_graphics#P>`_.
 
@@ -100,11 +101,11 @@ There is a parent-child relationship between an annotation and its page. If the 
       Changes annotation properties. These include dates, contents, subject and author (title). Changes for *name* and *id* will be ignored. The update happens selectively: To leave a property unchanged, set it to *null*. To delete existing data, use an empty string.
 
       :arg info: a dictionary compatible with the *info* property (see below). All entries must be strings. If this argument is not a dictionary, the other arguments are used instead -- else they are ignored.
-      :arg string content: see description in :attr:`info`.
-      :arg string title: see description in :attr:`info`.
+      :arg string content: see description in :attr:`Info`.
+      :arg string title: see description in :attr:`Info`.
       :arg string creationDate: date of annot creation. If given, should be in PDF datetime format.
       :arg string modDate: date of last modification. If given, should be in PDF datetime format.
-      :arg string subject: see description in :attr:`info`.
+      :arg string subject: see description in :attr:`Info`.
 
    .. method:: SetLineEnds(PdfLineEnding start, PdfLineEnding end)
 
@@ -112,8 +113,8 @@ There is a parent-child relationship between an annotation and its page. If the 
 
       .. note::
 
-         * While 'FreeText', 'Line', 'PolyLine', and 'Polygon' annotations can have these properties, (Py-) MuPDF does not support line ends for 'FreeText', because the call-out variant of it is not supported.
-         * Some symbols have an interior area (diamonds, circles, squares, etc.). By default, these areas are filled with the fill color of the annotation. If this is `null`, then white is chosen. The `fill_color` argument of :meth:`Annot.Update` can now be used to override this and give line end symbols their own fill color.
+         * While 'FreeText', 'Line', 'PolyLine', and 'Polygon' annotations can have these properties, MuPDF does not support line ends for 'FreeText', because the call-out variant of it is not supported.
+         * Some symbols have an interior area (diamonds, circles, squares, etc.). By default, these areas are filled with the fill color of the annotation. If this is `null`, then white is chosen. The `fillColor` argument of :meth:`Annot.Update` can now be used to override this and give line end symbols their own fill color.
 
       :arg start: The symbol number for the first point.
       :arg end: The symbol number for the last point.
@@ -177,7 +178,7 @@ There is a parent-child relationship between an annotation and its page. If the 
 
    .. method:: SetBlendMode(string blendMode)
 
-      Set the annotation's blend mode. See :ref:`AdobeManual`, page 324 for explanations. The blend mode can also be set in :meth:`Annot.update`.
+      Set the annotation's blend mode. See :ref:`AdobeManual`, page 324 for explanations. The blend mode can also be set in :meth:`Annot.Update`.
 
       :arg string blendmode: set the blend mode. Use :meth:`Annot.update` to reflect this in the visual appearance. For predefined values see :ref:`BlendModes`. Use `PDF_BM_Normal` to **remove** a blend mode.
 
@@ -216,11 +217,11 @@ There is a parent-child relationship between an annotation and its page. If the 
       PDF only: Change border width, dashing, style and cloud effect. See the :attr:`Annot.Border` attribute for more details.
 
 
-      :arg dict border: a dictionary as returned by the :attr:`Border` property, with keys `"width"` (`float`), `"style"` (`str`),  `"dashes"` (`sequence`) and `clouds` (`int`). Omitted keys will leave the resp. property unchanged. Set the border argument to `null` (the default) to use the other arguments.
+      :arg Border border: a dictionary as returned by the :attr:`Border` property, with keys `"width"` (`float`), `"style"` (`str`),  `"dashes"` (`sequence`) and `clouds` (`int`). Omitted keys will leave the resp. property unchanged. Set the border argument to `null` (the default) to use the other arguments.
 
       :arg float width: A non-negative value will change the border line width.
-      :arg str style: A value other than `null` will change this border property.
-      :arg sequence dashes: All items of the sequence must be integers, otherwise the parameter is ignored. To remove dashing use: `dashes=[]`. If dashes is a non-empty sequence, "style" will automatically be set to "D" (dashed). 
+      :arg string style: A value other than `null` will change this border property.
+      :arg int[] dashes: All items of the sequence must be integers, otherwise the parameter is ignored. To remove dashing use: `dashes=[]`. If dashes is a non-empty sequence, "style" will automatically be set to "D" (dashed). 
       :arg int clouds: A value >= 0 will change this property. Use `clouds=0` to remove the cloudy appearance completely. Only annotation types 'Square', 'Circle', and 'Polygon' are supported with this property.
 
    .. method:: SetFlags(int flags)
@@ -233,9 +234,9 @@ There is a parent-child relationship between an annotation and its page. If the 
 
       Changes the "stroke" and "fill" colors for supported annotation types -- not all annotations accept both.
 
-      :arg dict colors: a dictionary containing color specifications. For accepted dictionary keys and values see below. The most practical way should be to first make a copy of the *colors* property and then modify this dictionary as required.
-      :arg sequence stroke: see above.
-      :arg sequence fill: see above.
+      :arg Color colors: a dictionary containing color specifications. For accepted dictionary keys and values see below. The most practical way should be to first make a copy of the *colors* property and then modify this dictionary as required.
+      :arg float[] stroke: see above.
+      :arg float[] fill: see above.
 
 
    .. method:: DeleteResponses()
@@ -289,7 +290,7 @@ There is a parent-child relationship between an annotation and its page. If the 
 
       Basic information of the annot's attached file.
 
-      :rtype: dict
+      :rtype: Dictionary
       :returns: a dictionary with keys `filename`, `ufilename`, `desc` (description), `size` (uncompressed file size), `length` (compressed length) for FileAttachment annot types, else `null`.
 
    .. method:: GetFile()
@@ -301,11 +302,11 @@ There is a parent-child relationship between an annotation and its page. If the 
 
    .. index::
       pair: buffer; Annot.UpdateFile
-      pair: filename; Annot.UpdateFile
-      pair: ufilename; Annot.UpdateFile
+      pair: fileName; Annot.UpdateFile
+      pair: uFilename; Annot.UpdateFile
       pair: desc; Annot.UpdateFile
 
-   .. method:: UpdateFile(byte[] buffer: null, string filename: null, string uFilename: null, string desc: null)
+   .. method:: UpdateFile(byte[] buffer: null, string fileName: null, string uFilename: null, string desc: null)
 
       Updates the content of an attached file. All arguments are optional. Default-only arguments lead to a no-op.
 
@@ -398,7 +399,7 @@ There is a parent-child relationship between an annotation and its page. If the 
 
       A pair of integers specifying start and end symbol of annotations types 'FreeText', 'Line', 'PolyLine', and 'Polygon'. `null` if not applicable. For possible values and descriptions in this list, see the :ref:`AdobeManual`, table 1.76 on page 400.
 
-      :rtype: tuple
+      :rtype: Tuple
 
    .. attribute:: VERTICES
 
@@ -417,7 +418,7 @@ There is a parent-child relationship between an annotation and its page. If the 
 
       Dictionary of two lists of floats in range `0 <= float <= 1` specifying the "stroke" and the interior ("fill") colors. The stroke color is used for borders and everything that is actively painted or written ("stroked"). The fill color is used for the interior of objects like line ends, circles and squares. The lengths of these lists implicitly determine the colorspaces: 1 = GRAY, 3 = RGB, 4 = CMYK. So `[1.0, 0.0, 0.0]` stands for RGB color red. Both lists can be empty if no color is specified.
 
-      :rtype: dict
+      :rtype: Color
 
    .. attribute:: Xref
 
@@ -471,7 +472,7 @@ There is a parent-child relationship between an annotation and its page. If the 
 
       * `clouds` -- an integer indicating a "cloudy" border, where `n` is an integer `-1 <= n <= 2`. A value `n: 0` indicates a straight line (no clouds), 1 means small and 2 means large semi-circles, mimicking the cloudy appearance. If -1, then no specification is present.
 
-      :rtype: dict
+      :rtype: Border
 
 
 .. _mupdficons:

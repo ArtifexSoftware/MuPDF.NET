@@ -35,7 +35,7 @@ Using DocumentWriter_ also for other document types might happen in the future.
 
       :arg path: the output file. This may be a string file name, or any Python file pointer.
       
-      :arg str options: specify saving options for the output PDF. Typical are "compress" or "clean". More possible values may be taken from help output of the `mutool convert` CLI utility.
+      :arg string options: specify saving options for the output PDF. Typical are "compress" or "clean". More possible values may be taken from help output of the `mutool convert` CLI utility.
 
    .. method:: BeginPage(Rect mediabox)
 

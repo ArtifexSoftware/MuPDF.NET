@@ -31,7 +31,7 @@ Archives are currently only used by :ref:`Story` objects to specify where to loo
 
       * another Archive: the archive is being made a sub-archive of the new one.
 
-      * a string: this must be the name of a local folder or file. `pathlib.Path` objects are also supported.
+      * a string: this must be the name of a local folder or file.
 
          - A **folder** will be converted to a sub-archive, so its files (and any sub-folders) can be accessed by their names.
          - A **file** will be read with mode `"rb"` and these binary data be treated as a single-member sub-archive. In this case, the `path` parameter is **mandatory** and should be the member name under which this item can be found / retrieved.
@@ -62,7 +62,7 @@ Archives are currently only used by :ref:`Story` objects to specify where to loo
 
       Checks whether an entry exists in any of the sub-archives.
 
-      :arg str name: The fully qualified name of the entry. So must include any `path` prefix under which the entry's sub-archive has been added.
+      :arg string name: The fully qualified name of the entry. So must include any `path` prefix under which the entry's sub-archive has been added.
 
       :returns: `true` or `false`.
 
@@ -70,7 +70,7 @@ Archives are currently only used by :ref:`Story` objects to specify where to loo
 
       Retrieve the data of an entry.
 
-      :arg str name: The fully qualified name of the entry. So must include any `path` prefix under which the entry's sub-archive has been added.
+      :arg string name: The fully qualified name of the entry. So must include any `path` prefix under which the entry's sub-archive has been added.
 
       :returns: The binary data (`bytes`) of the entry. If not found, an exception is raised.
 

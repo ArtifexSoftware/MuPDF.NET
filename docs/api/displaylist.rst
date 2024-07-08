@@ -9,11 +9,11 @@ DisplayList
 DisplayList is a list containing drawing commands (text, images, etc.). The intent is two-fold:
 
 1. as a caching-mechanism to reduce parsing of a page
-2. as a data structure in multi-threading setups, where one thread parses the page and another one renders pages. This aspect is currently not supported by PyMuPDF.
+2. as a data structure in multi-threading setups, where one thread parses the page and another one renders pages.
 
 A display list is populated with objects from a page, usually by executing :meth:`MuPDFPage.GetDisplaylist`. There also exists an independent constructor.
 
-"Replay" the list (once or many times) by invoking one of its methods :meth:`DisplayList.Run`, :meth:`DisplayList.get_pixmap` or :meth:`DisplayList.GetTextPage`.
+"Replay" the list (once or many times) by invoking one of its methods :meth:`DisplayList.Run`, :meth:`DisplayList.GetPixmap` or :meth:`DisplayList.GetTextPage`.
 
 
 ==================================== ============================================
@@ -49,7 +49,7 @@ A display list is populated with objects from a page, usually by executing :meth
       :type device: :ref:`Device`
 
       :arg matrix: Transformation matrix to apply to the display list contents.
-      :type matrix: :ref:`Matrix`
+      :type Matrix: :ref:`Matrix`
 
       :arg area: Only the part visible within this area will be considered when the list is run through the device.
       :type area: :ref:`Rect`
@@ -60,19 +60,19 @@ A display list is populated with objects from a page, usually by executing :meth
       pair: clip; DisplayList.GetPixmap
       pair: alpha; DisplayList.GetPixmap
 
-   .. method:: GetPixmap(Matrix matrix = null, ColorSpace colorspace = null, float alpha=0, Rect clip=null)
+   .. method:: GetPixmap(Matrix matrix = null, ColorSpace colorspace = null, float alpha = 0, Rect clip = null)
 
       Run the display list through a draw device and return a pixmap.
 
       :arg matrix: matrix to use. Default is the identity matrix.
-      :type matrix: :ref:`Matrix`
+      :type Matrix: :ref:`Matrix`
 
       :arg colorspace: the desired colorspace. Default is RGB.
       :type colorspace: :ref:`ColorSpace`
 
       :arg int alpha: determine whether or not (0, default) to include a transparency channel.
 
-      :arg irect_like clip: restrict rendering to the intersection of this area with :attr:`DisplayList.Rect`.
+      :arg Rect clip: restrict rendering to the intersection of this area with :attr:`DisplayList.Rect`.
 
       :rtype: :ref:`Pixmap`
       :returns: pixmap of the display list.
