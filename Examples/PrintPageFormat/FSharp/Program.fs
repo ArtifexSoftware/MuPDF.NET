@@ -1,7 +1,5 @@
 ﻿// For more information see https://aka.ms/fsharp-console-apps
 open System
-open System.Collections.Generic
-open System.Linq
 
 let FindFit (w: float) (h: float) =
     let PaperSizes = dict [
@@ -54,9 +52,20 @@ let FindFit (w: float) (h: float) =
     let w1, h1 = if w <= h then (wi, hi) else (hi, wi)
     let sw = $"{w1}"
     let sh = $"{h1}"
-    let stab = PaperSizes.Values |> Seq.map (fun size -> Math.Abs(float w1 - size.Item1) + Math.Abs(float h1 - size.Item2)) |> Seq.toList
+    let stab = PaperSizes.Values |> Seq.map (fun size -> Math.Abs(float32(w1) - fst(size)) + Math.Abs(float32 h1 - snd(size))) |> Seq.toList
     let small = Seq.min stab
-    let idx = stab.IndexOf(small)
+    let idx = stab |> List.findIndex (fun size -> size = small)
     let f = PaperSizes.Keys |> Seq.toList |> Seq.item idx
-    let ff, ss = if w <= h then (f + "-P", $"{PaperSizes.[f].Item1}" + " x " + $"{PaperSizes.[f].Item2}")
-                 else (f + "-L", $"{PaperSizes.[f].Item2}" + " x " + $"{PaperSizes.[f].Item1}")
+
+    let ff = if w <= h then f + "-P"
+                else f + "-L"
+    
+    let ss = if w <= h then
+                    sprintf "%A x %A" (fst(PaperSizes.[f]), snd(PaperSizes.[f]))
+                else
+                    sprintf "%A x %A" (snd(PaperSizes.[f]), fst(PaperSizes.[f]))
+    if small < 2f then ff
+    else sprintf "%A x %A (other), closest: %A = %A" sw sh ff ss
+    
+let rr: string  = FindFit 300 300
+printf "%s" rr

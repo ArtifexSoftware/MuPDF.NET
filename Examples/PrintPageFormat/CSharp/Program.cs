@@ -71,7 +71,7 @@ string FindFit(float w, float h)
     float small = stab.Min();
     int idx = stab.IndexOf(small);
     string f = new List<string>(PaperSizes.Keys)[idx];
-    string ff, ss;
+    string ff, ss;  
     if (w <= h)
     {
         ff = f + "-P";
