@@ -1,7 +1,7 @@
 ﻿// See https://aka.ms/new-console-template for more information
 using MuPDF.NET;
 
-string SortKey(float[] x)
+/*string SortKey(float[] x)
 {
     float r = x[1] / 255f;
     float g = x[2] / 255f;
@@ -31,7 +31,7 @@ string SortKey(float[] x)
         sat = delta / cmax;
     string s = ((int)Math.Round(sat * 100)).ToString("D3");
     return h + s + v;
-}
+}*/
 
 List<(string, int, int, int)> myList = Utils.GetColorInfoList();
 

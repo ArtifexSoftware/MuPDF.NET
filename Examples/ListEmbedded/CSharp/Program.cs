@@ -9,7 +9,7 @@ int filenameLen = 0;
 int totalLen = 0;
 int totalSize = 0;
 
-List<(string, string, int, int)> efList = new List<(string, string, int, int)> (); ;
+List<(string, string, int, int)> efList = new List<(string, string, int, int)> ();
 
 for (int i = 0; i < doc.GetEmbfileCount(); i++)
 {

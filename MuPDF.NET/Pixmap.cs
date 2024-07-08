@@ -65,7 +65,7 @@ namespace MuPDF.NET
         {
             get
             {
-                return _nativePixmap.fz_pixmap_alpha();
+                return _nativePixmap.alpha();
             }
         }
 

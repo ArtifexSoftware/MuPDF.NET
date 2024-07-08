@@ -67,4 +67,4 @@ doc.Close();
 
 if (totalToc.Count != 0)
     pdfOut.SetToc(totalToc);
-pdfOut.Save("e://res/output1.pdf");
+pdfOut.Save("output1.pdf");

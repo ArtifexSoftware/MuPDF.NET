@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MuPDF.NET" Version="2.0.11-alpha" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="MuPDF.NET">
+      <HintPath>..\..\..\MuPDF.NET\bin\Release\net8.0\MuPDF.NET.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+</Project>

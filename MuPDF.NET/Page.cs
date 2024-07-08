@@ -3105,7 +3105,7 @@ namespace MuPDF.NET
             float zoom;
             if (dpi != 0)
             {
-                zoom = dpi / 72;
+                zoom = dpi / 72f;
                 matrix = new IdentityMatrix(zoom, zoom);
             }
 
@@ -3139,10 +3139,10 @@ namespace MuPDF.NET
         public DisplayList GetDisplayList(int annots = 1)
         {
             if (annots != 0)
-                return new DisplayList(mupdf.mupdf.fz_new_display_list_from_page(_pdfPage.super()));
+                return new DisplayList(mupdf.mupdf.fz_new_display_list_from_page(new FzPage(_pdfPage)));
             else
                 return new DisplayList(
-                    mupdf.mupdf.fz_new_display_list_from_page_contents(_pdfPage.super())
+                    mupdf.mupdf.fz_new_display_list_from_page_contents(new FzPage(_pdfPage))
                 );
         }
 
@@ -4135,10 +4135,10 @@ namespace MuPDF.NET
         public float InsertTextbox(
             Rect rect,
             dynamic text,
+            string fontName,
+            string fontFile,
             float fontSize = 11,
             float lineHeight = 0,
-            string fontName = "helv",
-            string fontFile = null,
             int setSimple = 0,
             int encoding = 0,
             float[] color = null,
