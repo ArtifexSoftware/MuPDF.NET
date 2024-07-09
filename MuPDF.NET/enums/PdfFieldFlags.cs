@@ -1,6 +1,6 @@
 ﻿namespace MuPDF.NET
 {
-    public enum PdfFieldType
+    public enum PdfFieldFlags
     {
         PDF_FIELD_IS_READ_ONLY = 1,
         PDF_FIELD_IS_REQUIRED = 1 << 1,

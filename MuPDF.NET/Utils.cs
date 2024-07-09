@@ -1544,26 +1544,26 @@ namespace MuPDF.NET
 
         public static void SetFieldType(PdfDocument doc, PdfObj annotObj, PdfWidgetType type)
         {
-            PdfFieldType setBits = 0;
-            PdfFieldType clearBits = 0;
+            PdfFieldFlags setBits = 0;
+            PdfFieldFlags clearBits = 0;
             PdfObj typeName = null;
 
             if (type == PdfWidgetType.PDF_WIDGET_TYPE_BUTTON)
             {
                 typeName = new PdfObj("Btn");
-                setBits = PdfFieldType.PDF_BTN_FIELD_IS_PUSHBUTTON;
+                setBits = PdfFieldFlags.PDF_BTN_FIELD_IS_PUSHBUTTON;
             }
             else if (type == PdfWidgetType.PDF_WIDGET_TYPE_RADIOBUTTON)
             {
                 typeName = new PdfObj("Btn");
-                clearBits = PdfFieldType.PDF_BTN_FIELD_IS_PUSHBUTTON;
-                setBits = PdfFieldType.PDF_BTN_FIELD_IS_RADIO;
+                clearBits = PdfFieldFlags.PDF_BTN_FIELD_IS_PUSHBUTTON;
+                setBits = PdfFieldFlags.PDF_BTN_FIELD_IS_RADIO;
             }
             else if (type == PdfWidgetType.PDF_WIDGET_TYPE_CHECKBOX)
             {
                 typeName = new PdfObj("Btn");
                 clearBits = (
-                    PdfFieldType.PDF_BTN_FIELD_IS_PUSHBUTTON | PdfFieldType.PDF_BTN_FIELD_IS_RADIO
+                    PdfFieldFlags.PDF_BTN_FIELD_IS_PUSHBUTTON | PdfFieldFlags.PDF_BTN_FIELD_IS_RADIO
                 );
             }
             else if (type == PdfWidgetType.PDF_WIDGET_TYPE_TEXT)
@@ -1573,12 +1573,12 @@ namespace MuPDF.NET
             else if (type == PdfWidgetType.PDF_WIDGET_TYPE_LISTBOX)
             {
                 typeName = new PdfObj("Ch");
-                clearBits = PdfFieldType.PDF_CH_FIELD_IS_COMBO;
+                clearBits = PdfFieldFlags.PDF_CH_FIELD_IS_COMBO;
             }
             else if (type == PdfWidgetType.PDF_WIDGET_TYPE_COMBOBOX)
             {
                 typeName = new PdfObj("Ch");
-                setBits = PdfFieldType.PDF_CH_FIELD_IS_COMBO;
+                setBits = PdfFieldFlags.PDF_CH_FIELD_IS_COMBO;
             }
             else if (type == PdfWidgetType.PDF_WIDGET_TYPE_SIGNATURE)
             {
@@ -4956,7 +4956,7 @@ namespace MuPDF.NET
             Utils.pdf_dict_putl(
                 annotObj,
                 mupdf.mupdf.pdf_new_real(borderWidth),
-                new string[] { "BS", "S" }
+                new string[] { "BS", "W" }
             );
 
             string da = widget.TextDa;
@@ -4968,11 +4968,11 @@ namespace MuPDF.NET
             if (fieldFlags != 0)
             {
                 if (fieldType == (int)PdfWidgetType.PDF_WIDGET_TYPE_COMBOBOX)
-                    fieldFlags |= mupdf.mupdf.PDF_CH_FIELD_IS_COMBO;
+                    fieldFlags |= (int)PdfFieldFlags.PDF_CH_FIELD_IS_COMBO;
                 else if (fieldType == (int)PdfWidgetType.PDF_WIDGET_TYPE_RADIOBUTTON)
-                    fieldType |= mupdf.mupdf.PDF_BTN_FIELD_IS_RADIO;
+                    fieldType |= (int)PdfFieldFlags.PDF_BTN_FIELD_IS_RADIO;
                 else if (fieldType == (int)PdfWidgetType.PDF_WIDGET_TYPE_BUTTON)
-                    fieldType |= mupdf.mupdf.PDF_BTN_FIELD_IS_PUSHBUTTON;
+                    fieldType |= (int)PdfFieldFlags.PDF_BTN_FIELD_IS_PUSHBUTTON;
                 annotObj.pdf_dict_put_int(new PdfObj("Ff"), fieldFlags);
             }
 
