@@ -23,6 +23,7 @@ namespace MuPDF.NET
             int xrefLen = pdf.pdf_xref_len();
             if (!Utils.INRANGE(xref, 1, xrefLen - 1))
                 throw new Exception(Utils.ErrorMessages["MSG_BAD_XREF"]);
+
             PdfObj r = pdf.pdf_new_indirect(xref, 0);
             PdfObj type = r.pdf_dict_get(new PdfObj("Subtype"));
             if (type.pdf_name_eq(new PdfObj("Image")) == 0 &&
@@ -563,7 +564,7 @@ namespace MuPDF.NET
             if (pm.alpha() != srcPm.alpha())
                 throw new Exception("source and target alpha must be equal");
 
-            //pm.fz_copy
+            pm.fz_copy_pixmap_rect(srcPm, bbox.ToFzIrect(), new FzDefaultColorspaces());
         }
 
         /// <summary>

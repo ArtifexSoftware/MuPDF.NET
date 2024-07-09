@@ -248,7 +248,7 @@ namespace MuPDF.NET
 
         public override string ToString()
         {
-            return "IRect";
+            return $"IRect({X0}, {Y0}, {X1}, {Y1})";
         }
 
         public static IRect operator -(IRect left, IRect right)
