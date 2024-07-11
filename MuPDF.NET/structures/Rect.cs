@@ -54,6 +54,14 @@ namespace MuPDF.NET
             this.X1 = X1; this.Y1 = Y1;
         }
 
+        public Rect(Point tl, float x1, float y1)
+        {
+            this.X0 = tl.X;
+            this.Y0 = tl.Y;
+            X1 = x1;
+            Y1 = y1;
+        }
+
         public Rect(Rect r)
         {
             X0 = r[0]; Y0 = r[1];
@@ -284,7 +292,7 @@ namespace MuPDF.NET
 
         public Rect IncludeRect(Rect r)
         {
-            if (r.IsInfinite || this.IsEmpty)
+            if (r.IsInfinite || this.IsInfinite)
             {
                 this.X0 = Utils.FZ_MIN_INF_RECT;
                 this.Y0 = Utils.FZ_MIN_INF_RECT;

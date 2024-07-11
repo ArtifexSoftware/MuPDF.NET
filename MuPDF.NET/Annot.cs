@@ -298,7 +298,7 @@ namespace MuPDF.NET
                     else
                         annot = annot.pdf_next_widget();
 
-                    Annot val = (annot == null ? null : new Annot(annot));
+                    Annot val = (annot == null ? null : new Annot(annot, _parent));
                     if (val == null)
                     {
                         return null;
@@ -559,9 +559,10 @@ namespace MuPDF.NET
             return string.Format("'{0}' annotation on", 0);
         }
 
-        public Annot(PdfAnnot annotion)
+        public Annot(PdfAnnot annotion, Page parent)
         {
             _nativeAnnotion = new PdfAnnot(annotion);
+            _parent = parent;
             IsOwner = true;
         }
 
