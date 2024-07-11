@@ -291,7 +291,7 @@ There is a parent-child relationship between an annotation and its page. If the 
       Basic information of the annot's attached file.
 
       :rtype: Dictionary
-      :returns: a dictionary with keys `filename`, `ufilename`, `desc` (description), `size` (uncompressed file size), `length` (compressed length) for FileAttachment annot types, else `null`.
+      :returns: a dictionary with keys `filename`, `ufilename`, `desc` (description), `size` (uncompressed file size), `length` (compressed length) for 'FileAttachment' annotation types, else `null`.
 
    .. method:: GetFile()
 

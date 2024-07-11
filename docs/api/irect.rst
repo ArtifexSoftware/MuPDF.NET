@@ -6,7 +6,7 @@
 IRect
 ==========
 
-IRect is a rectangular bounding box, very similar to :ref:`Rect`, except that all corner coordinates are integers. IRect is used to specify an area of pixels, e.g. to receive image data during rendering. Otherwise, e.g. considerations concerning emptiness and validity of rectangles also apply to this class. Methods and attributes have the same names, and in many cases are implemented by re-using the respective :ref:`Rect` counterparts.
+`IRect` is a rectangular bounding box, very similar to :ref:`Rect`, except that all corner coordinates are integers. `IRect` is used to specify an area of pixels, e.g. to receive image data during rendering. Otherwise, e.g. considerations concerning emptiness and validity of rectangles also apply to this class. Methods and attributes have the same names, and in many cases are implemented by re-using the respective :ref:`Rect` counterparts.
 
 ============================== ==============================================
 **Attribute / Method**          **Short Description**
