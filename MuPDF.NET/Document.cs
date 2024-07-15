@@ -385,7 +385,7 @@ namespace MuPDF.NET
         public Document(
             string fileName = null,
             byte[] stream = null,
-            string filetype = null,
+            string fileType = null,
             Rect rect = null,
             float width = 0,
             float height = 0,
@@ -431,7 +431,7 @@ namespace MuPDF.NET
                 if (
                     fromFile
                     && Stream != null
-                    && (new FileInfo(fileName).Length == 0 || Stream.Count == 0)
+                    && (new System.IO.FileInfo(fileName).Length == 0 || Stream.Count == 0)
                 )
                 {
                     msg = $"cannot open empty document";
@@ -455,12 +455,12 @@ namespace MuPDF.NET
                     Marshal.Copy(stream, 0, dataPtr, stream.Length);
                     SWIGTYPE_p_unsigned_char swigData = new SWIGTYPE_p_unsigned_char(dataPtr, true);
                     data = mupdf.mupdf.fz_open_memory(swigData, (uint)stream.Length);
-                    if (string.IsNullOrEmpty(fileName) || string.IsNullOrEmpty(filetype))
+                    if (string.IsNullOrEmpty(fileName) || string.IsNullOrEmpty(fileType))
                         fileName = "pdf";
                     
                     string magic = fileName;
                     if (magic == null)
-                        magic = filetype;
+                        magic = fileType;
 
                     doc = mupdf.mupdf.fz_open_document_with_stream(magic, data);
                 }
@@ -468,7 +468,7 @@ namespace MuPDF.NET
                 {
                     if (!string.IsNullOrEmpty(fileName))
                     {
-                        if (string.IsNullOrEmpty(filetype))
+                        if (string.IsNullOrEmpty(fileType))
                         {
 
                             try
@@ -483,7 +483,7 @@ namespace MuPDF.NET
                         else
                         {
                             fz_document_handler handler = mupdf.mupdf.ll_fz_recognize_document(
-                                filetype
+                                fileType
                             );
                             if (handler != null)
                             {
@@ -559,7 +559,7 @@ namespace MuPDF.NET
                     string filename_ = fileName;
                     if (
                         (fileName != null && filename_.ToLower().EndsWith("svg"))
-                        || (filetype != null && filetype.ToLower().Contains("svg"))
+                        || (fileType != null && fileType.ToLower().Contains("svg"))
                     )
                     {
                         try
@@ -4422,13 +4422,13 @@ namespace MuPDF.NET
             int pno,
             IdentityMatrix matrix,
             int dpi = 0,
-            string colorSpance = null,
+            string colorSpace = null,
             Rect clip = null,
             bool alpha = false,
             bool annots = true
         )
         {
-            return Utils.GetPagePixmap(this, pno, matrix, dpi, colorSpance, clip, alpha, annots);
+            return Utils.GetPagePixmap(this, pno, matrix, dpi, colorSpace, clip, alpha, annots);
         }
 
         /// <summary>

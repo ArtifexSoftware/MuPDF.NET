@@ -253,7 +253,7 @@ namespace MuPDF.NET
             }
         }
 
-        public Pixmap(Pixmap src, float width, float height, Rect clip)
+        public Pixmap(Pixmap src, float width, float height, Rect clip = null)
         {
             FzIrect bBox = new FzIrect(mupdf.mupdf.fz_infinite_irect);
             if (clip != null)
@@ -1071,7 +1071,7 @@ namespace MuPDF.NET
         /// <param name="height">desired resulting height</param>
         /// <returns></returns>
         /// <exception cref="Exception"></exception>
-        public Pixmap Warp(Quad quad, int width, int height)
+        public Pixmap Warp(Quad quad, float width, float height)
         {
             if (!quad.IsConvex)
                 throw new Exception("quad must be convex");

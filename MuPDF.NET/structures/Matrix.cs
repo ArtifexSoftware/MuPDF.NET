@@ -38,9 +38,9 @@ namespace MuPDF.NET
             F = f;
         }
 
-        public Matrix(Rect arg)
+        public Matrix(Rect rect)
         {
-            double theta = Math.PI * arg.X0 / 180;
+            double theta = Math.PI * rect.X0 / 180;
             double c = Math.Round(Math.Cos(theta), 8);
             double s = Math.Round(Math.Sin(theta), 8);
             A = D = (float)c;
@@ -49,9 +49,9 @@ namespace MuPDF.NET
             E = F = 0;
         }
 
-        public Matrix(int arg)
+        public Matrix(int degree)
         {
-            double theta = Math.PI * arg / 180;
+            double theta = Math.PI * degree / 180.0f;
             double c = Math.Round(Math.Cos(theta), 8);
             double s = Math.Round(Math.Sin(theta), 8);
             A = D = (float)c;
@@ -60,19 +60,19 @@ namespace MuPDF.NET
             E = F = 0;
         }
 
-        public Matrix(float arg0, float arg1, float arg2)
+        public Matrix(float shear_x, float shear_y, float arg2)
         {
             if (arg2 == 0)
-                (A, B, C, D, E, F) = (arg0, 0, 0, arg1, 0, 0);
+                (A, B, C, D, E, F) = (shear_x, 0, 0, shear_y, 0, 0);
             else if (arg2 == 1)
-                (A, B, C, D, E, F) = (1, 0, 0, arg1, 0, 0);
+                (A, B, C, D, E, F) = (1, 0, 0, shear_y, 0, 0);
             else
                 throw new ArgumentException("bad args");
         }
 
-        public Matrix(float arg0, float arg1)
+        public Matrix(float zoom_x, float zoom_y)
         {
-            (A, B, C, D, E, F) = (arg0, 0, 0, arg1, 0, 0);
+            (A, B, C, D, E, F) = (zoom_x, 0, 0, zoom_y, 0, 0);
         }
 
         public float Abs()

@@ -321,5 +321,10 @@ namespace MuPDF.NET
         {
             return new Rect(this).Transform(m);
         }
+
+        public float GetArea(Rect rect, string unit = "px")
+        {
+            return Utils.GetArea(rect, unit);
+        }
     }
 }

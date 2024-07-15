@@ -89,7 +89,7 @@ namespace MuPDF.NET
                 PdfObj obj = annotObj.pdf_dict_get(new PdfObj("BM"));
                 string blendMode = "";
 
-                if (obj != null)
+                if (obj.m_internal != null)
                 {
                     blendMode = obj.pdf_to_name();
                     return blendMode;
@@ -109,7 +109,7 @@ namespace MuPDF.NET
                         {
                             int m = obj1.pdf_dict_len();
                             for (int j = 0; j < m; j++)
-                            {
+                            {   
                                 PdfObj obj2 = obj1.pdf_dict_get_key(j);
                                 if (obj2.pdf_objcmp(new PdfObj("BM")) == 0)
                                 {
@@ -125,11 +125,11 @@ namespace MuPDF.NET
             }
         }
 
-        public FileInfoStruct FileInfo
+        public FileInfo FileInfo
         {
             get
             {
-                FileInfoStruct ret = new FileInfoStruct();
+                FileInfo ret = new FileInfo();
                 int length = -1;
                 int size = -1;
                 PdfAnnot annot = _nativeAnnotion;
@@ -1126,14 +1126,17 @@ namespace MuPDF.NET
             return new TextPage(stPage);
         }
 
-        public int IrtXRef()
+        public int IrtXref
         {
-            PdfAnnot annot = _nativeAnnotion;
-            PdfObj annotObj = annot.pdf_annot_obj();
-            PdfObj irt = annotObj.pdf_dict_get(new PdfObj("IRT"));
-            if (irt == null)
-                return 0;
-            return irt.pdf_to_num();
+            get
+            {
+                PdfAnnot annot = _nativeAnnotion;
+                PdfObj annotObj = annot.pdf_annot_obj();
+                PdfObj irt = annotObj.pdf_dict_get(new PdfObj("IRT"));
+                if (irt == null)
+                    return 0;
+                return irt.pdf_to_num();
+            }
         }
 
         private void SetApnBbox(Rect bbox)
@@ -1173,7 +1176,7 @@ namespace MuPDF.NET
         }
 
         public void SetBorder(
-            Border border,
+            Border border = null,
             float width = -1,
             string style = null,
             int[] dashes = null,
@@ -1529,7 +1532,7 @@ namespace MuPDF.NET
             }
         }
 
-        public void SetIrtXRef(int xref)
+        public void SetIrtXref(int xref)
         {
             PdfAnnot annot = _nativeAnnotion;
             PdfObj annotObj = annot.pdf_annot_obj();

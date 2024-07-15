@@ -29,7 +29,7 @@ namespace MuPDF.NET
 
         public bool ThisOwn { get; set; }
 
-        public float[] Color { get; set; }
+        public float[] Color { get; set; } = {0, 0, 0};
 
         public TextWriter(Rect pageRect, float opacity = 1, float[] color = null)
         {
