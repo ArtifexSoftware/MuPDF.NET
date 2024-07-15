@@ -272,7 +272,7 @@ namespace MuPDF.NET
                 if (annot == null)
                     return null;
 
-                Annot ret = new Annot(annot);
+                Annot ret = new Annot(annot, this);
                 return ret;
             }
         }
@@ -308,7 +308,7 @@ namespace MuPDF.NET
                 if (annot.m_internal == null)
                     return null;
 
-                Annot val = new Annot(annot);
+                Annot val = new Annot(annot, this);
                 val.ThisOwn = true;
                 val.Parent = this;
                 AnnotRefs[val.GetHashCode()] = val;
@@ -422,7 +422,7 @@ namespace MuPDF.NET
                 annot = null;
             }
 
-            return new Annot(annot);
+            return new Annot(annot, this);
         }
 
         /// <summary>
@@ -480,7 +480,7 @@ namespace MuPDF.NET
             annot.pdf_set_annot_flags(flags);
             Utils.AddAnnotId(annot, "A");
 
-            return new Annot(annot);
+            return new Annot(annot, this);
         }
 
         /// <summary>
@@ -545,7 +545,7 @@ namespace MuPDF.NET
                 );
                 annot.pdf_update_annot();
                 Utils.AddAnnotId(annot, "A");
-                val = new Annot(annot);
+                val = new Annot(annot, this);
 
                 byte[] ap = val.GetAP();
                 int BT = Encoding.UTF8.GetString(ap).IndexOf("BT");
@@ -687,7 +687,7 @@ namespace MuPDF.NET
         {
             PdfPage page = _nativePage.pdf_page_from_fz_page();
             PdfAnnot annot = Utils.GetWidgetByXref(page, xref);
-            Annot val = new Annot(annot);
+            Annot val = new Annot(annot, this);
 
             val.ThisOwn = true;
             val.Parent = this;
@@ -753,7 +753,7 @@ namespace MuPDF.NET
             annot.pdf_update_annot();
             Utils.AddAnnotId(annot, "A");
 
-            return new Annot(annot);
+            return new Annot(annot, this);
         }
 
         /// <summary>
@@ -769,7 +769,7 @@ namespace MuPDF.NET
             annot.pdf_set_annot_line(p1.ToFzPoint(), p2.ToFzPoint());
             annot.pdf_update_annot();
             Utils.AddAnnotId(annot, "A");
-            return new Annot(annot);
+            return new Annot(annot, this);
         }
 
         /// <summary>
@@ -794,7 +794,7 @@ namespace MuPDF.NET
 
             annot.pdf_update_annot();
             Utils.AddAnnotId(annot, "A");
-            return new Annot(annot);
+            return new Annot(annot, this);
         }
 
         /// <summary>
@@ -866,7 +866,7 @@ namespace MuPDF.NET
 
                 SWIGTYPE_p_pdf_annot swigAnnot = mupdf.mupdf.ll_pdf_keep_annot(annot.m_internal);
                 annot = new PdfAnnot(swigAnnot);
-                ret = new Annot(annot);
+                ret = new Annot(annot, this);
             }
             finally
             {
@@ -909,8 +909,8 @@ namespace MuPDF.NET
         /// <returns>the created annotation.</returns>
         public Annot AddRedactAnnot(
             Rect r,
-            string text = null,
-            string fontName = "Helv",
+            string text,
+            string fontName,
             float fontSize = 11.0f,
             TextAlign align = TextAlign.TEXT_ALIGN_LEFT,
             float[] fill = null,
@@ -970,7 +970,7 @@ namespace MuPDF.NET
 
                 SWIGTYPE_p_pdf_annot swigAnnot = mupdf.mupdf.ll_pdf_keep_annot(annot.m_internal);
                 annot = new PdfAnnot(swigAnnot);
-                ret = new Annot(annot);
+                ret = new Annot(annot, this);
             }
             finally
             {
@@ -1013,7 +1013,7 @@ namespace MuPDF.NET
             PdfAnnot annot = page.pdf_create_annot((pdf_annot_type)annotType);
             annot.pdf_set_annot_rect(r);
             annot.pdf_update_annot();
-            return new Annot(annot);
+            return new Annot(annot, this);
         }
 
         private Annot AddStampAnnot(Rect rect, int stamp = 0)
@@ -1061,7 +1061,7 @@ namespace MuPDF.NET
             );
             annot.pdf_update_annot();
             Utils.AddAnnotId(annot, "A");
-            return new Annot(annot);
+            return new Annot(annot, this);
         }
 
         /// <summary>
@@ -1084,15 +1084,15 @@ namespace MuPDF.NET
             );
             annot.pdf_set_annot_rect(r);
             annot.pdf_set_annot_contents(text);
-            if (icon != null || icon != "")
+            if (!string.IsNullOrEmpty(icon))
                 annot.pdf_set_annot_icon_name(icon);
 
             annot.pdf_update_annot();
             Utils.AddAnnotId(annot, "A");
-            return new Annot(annot);
+            return new Annot(annot, this);
         }
 
-        private Annot AddTextMarker(List<Quad> quads, pdf_annot_type annotType)
+        private Annot AddTextMarker(List<Quad> quads, PdfAnnotType annotType)
         {
             Annot ret = null;
             PdfAnnot annot = null;
@@ -1106,7 +1106,7 @@ namespace MuPDF.NET
                     page.obj().pdf_dict_put_int(new PdfObj("Rotate"), rotation);
                 try
                 {
-                    annot = page.pdf_create_annot(annotType);
+                    annot = page.pdf_create_annot((pdf_annot_type)annotType);
                 }
                 catch (Exception)
                 {
@@ -1121,7 +1121,7 @@ namespace MuPDF.NET
                 Utils.AddAnnotId(annot, "A");
                 if (rotation != 0)
                     page.obj().pdf_dict_put_int(new PdfObj("Rotate"), rotation);
-                ret = new Annot(annot);
+                ret = new Annot(annot, this);
             }
             catch (Exception)
             {
@@ -1336,7 +1336,7 @@ namespace MuPDF.NET
             }
             else
                 q = quads;
-            Annot ret = AddTextMarker(q, pdf_annot_type.PDF_ANNOT_HIGHLIGHT);
+            Annot ret = AddTextMarker(q, PdfAnnotType.PDF_ANNOT_HIGHLIGHT);
             return ret;
         }
 
@@ -1444,7 +1444,7 @@ namespace MuPDF.NET
             else
                 q = quads;
 
-            return AddTextMarker(q, pdf_annot_type.PDF_ANNOT_UNDERLINE);
+            return AddTextMarker(q, PdfAnnotType.PDF_ANNOT_UNDERLINE);
         }
 
         public Annot AddSquigglyAnnot(
@@ -1468,7 +1468,7 @@ namespace MuPDF.NET
             else
                 q = quads;
 
-            return AddTextMarker(q, pdf_annot_type.PDF_ANNOT_SQUIGGLY);
+            return AddTextMarker(q, PdfAnnotType.PDF_ANNOT_SQUIGGLY);
         }
 
         public Annot AddStrikeoutAnnot(
@@ -1492,7 +1492,7 @@ namespace MuPDF.NET
             else
                 q = quads;
 
-            return AddTextMarker(q, pdf_annot_type.PDF_ANNOT_STRIKE_OUT);
+            return AddTextMarker(q, PdfAnnotType.PDF_ANNOT_STRIKE_OUT);
         }
 
         public void AddAnnotFromString(List<string> links)
@@ -1586,7 +1586,7 @@ namespace MuPDF.NET
                 throw new Exception("cannot create widget");
             Utils.AddAnnotId(annot, "W");
 
-            return new Annot(annot);
+            return new Annot(annot, this);
         }
 
         /// <summary>
@@ -2860,7 +2860,7 @@ namespace MuPDF.NET
                 annot = Utils.GetAnnotByName(this, name);
             else
                 annot = Utils.GetAnnotByXref(this, xref);
-            return annot == null ? null : new Annot(annot);
+            return annot == null ? null : new Annot(annot, this);
         }
 
         /// <summary>
@@ -2916,7 +2916,7 @@ namespace MuPDF.NET
             }
             PdfAnnot nextAnnot = annot.ToPdfAnnot().pdf_next_annot();
             page.pdf_delete_annot(annot.ToPdfAnnot());
-            Annot val = new Annot(nextAnnot);
+            Annot val = new Annot(nextAnnot, this);
 
             if (val != null)
             {
@@ -3195,7 +3195,7 @@ namespace MuPDF.NET
             if (annot == null)
                 throw new Exception("bad type: widget");
             Annot nextWidget = widget.Next;
-            DeleteAnnot(new Annot(annot));
+            DeleteAnnot(new Annot(annot, this));
             widget.Parent = null;
             widget = null;
 
@@ -4346,7 +4346,7 @@ namespace MuPDF.NET
                 throw new Exception("cannot create widget");
             Utils.AddAnnotId(annot, "W");
 
-            Annot annot_ = new Annot(annot);
+            Annot annot_ = new Annot(annot, this);
             annot_.ThisOwn = true;
             annot_.Parent = this;
             AnnotRefs[annot_.GetHashCode()] = annot_;
