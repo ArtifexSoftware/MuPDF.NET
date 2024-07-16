@@ -30,24 +30,25 @@ There is a parent-child relationship between a link and its page. If the page ob
 
 .. class:: Link
 
-   .. method:: SetBorder(Border border=null, float width=0, string style=null, int[] dashes=null)
+   .. method:: SetBorder(Border border: null, float width=0, string style=null, int[] dashes=null)
 
       PDF only: Change border width and dashing properties.
 
-      :arg dict border: a dictionary as returned by the :attr:`Border` property, with keys *"width"* (*float*), *"style"* (*str*) and *"dashes"* (*sequence*). Omitted keys will leave the resp. property unchanged. To e.g. remove dashing use: *"dashes": []*. If dashes is not an empty sequence, "style" will automatically be set to "D" (dashed).
+      :arg Border border: a dictionary as returned by the :attr:`Border` property, with keys *"width"* (*float*), *"style"* (*string*) and *"dashes"* (*int[]*). Omitted keys will leave the resp. property unchanged. To e.g. remove dashing use: *"dashes": []*. If dashes is not an empty sequence, "style" will automatically be set to "D" (dashed).
 
       :arg float width: see above.
-      :arg str style: see above.
-      :arg sequence dashes: see above.
+      :arg string style: see above.
+      :arg int[] dashes: see above.
 
-   .. method:: SetColors(float[] colors=null, float[] stroke=null)
+   .. method:: SetColors(Color colors: null, float[] stroke: null, float[] fill: null)
 
       PDF only: Changes the "stroke" color.
 
       .. note:: In PDF, links are a subtype of annotations technically and **do not support fill colors**. However, to keep a consistent API, we do allow specifying a `fill=` parameter like with all annotations, which will be ignored with a warning.
 
-      :arg dict colors: a dictionary containing color specifications. For accepted dictionary keys and values see below. The most practical way should be to first make a copy of the *colors* property and then modify this dictionary as required.
-      :arg sequence stroke: see above.
+      :arg Color colors: a dictionary containing color specifications. For accepted dictionary keys and values see below. The most practical way should be to first make a copy of the *colors* property and then modify this dictionary as required.
+      :arg float[] stroke: see above.
+      :arg float[] fill: see above.
 
    .. method:: SetFlags(int flags)
 
@@ -59,11 +60,11 @@ There is a parent-child relationship between a link and its page. If the page ob
       Return the link annotation flags, an integer (see :attr:`Annot.Flags` for details). Zero if not a PDF.
 
 
-   .. attribute:: Colors
+   .. attribute:: Color
 
       Meaningful for PDF only: A dictionary of two tuples of floats in range `0 <= float <= 1` specifying the *stroke* and the interior (*fill*) colors. If not a PDF, *null* is returned. As mentioned above, the fill color is always `null` for links. The stroke color is used for the border of the link rectangle. The length of the tuple implicitly determines the colorspace: 1 = GRAY, 3 = RGB, 4 = CMYK. So `(1.0, 0.0, 0.0)` stands for RGB color red. The value of each float *f* is mapped to the integer value *i* in range 0 to 255 via the computation *f = i / 255*.
 
-      :rtype: dict
+      :rtype: Color
 
    .. attribute:: Border
 
@@ -108,7 +109,7 @@ There is a parent-child relationship between a link and its page. If the page ob
         "../FixedDoc.fdoc#PG_2_LNK_1" for page number 2 (1-based) in an XPS
         document.
 
-      :type: str
+      :type: string
 
    .. attribute:: Xref
 

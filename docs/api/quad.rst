@@ -8,7 +8,7 @@ Quad
 
 Represents a four-sided mathematical shape (also called "quadrilateral" or "tetragon") in the plane, defined as a sequence of four :ref:`Point` objects ul, ur, ll, lr (conveniently called upper left, upper right, lower left, lower right).
 
-Quads can **be obtained** as results of text search methods (:meth:`Page.search_for`), and they **are used** to define text marker annotations (see e.g. :meth:`Page.AddSquigglyAnnot` and friends), and in several draw methods (like :meth:`Page.DrawQuad` / :meth:`Shape.DrawQuad`, :meth:`Page.DrawOval`/ :meth:`Shape.DrawQuad`).
+Quads can **be obtained** as results of text search methods (:meth:`Page.SearchFor`), and they **are used** to define text marker annotations (see e.g. :meth:`Page.AddSquigglyAnnot` and friends), and in several draw methods (like :meth:`Page.DrawQuad` / :meth:`Shape.DrawQuad`, :meth:`Page.DrawOval`/ :meth:`Shape.DrawQuad`).
 
 .. note::
 
@@ -46,7 +46,7 @@ Quads can **be obtained** as results of text search methods (:meth:`Page.search_
 
    .. method:: Quad(Quad quad)
 
-      Overloaded constructors: "ul", "ur", "ll", "lr" stand for :data:`point_like` objects (the four corners), "sequence" is a sequence with four :data:`point_like` objects.
+      Overloaded constructors: "ul", "ur", "ll", "lr" stand for :data:`Point` objects (the four corners), "sequence" is a sequence with four :data:`Point` objects.
 
       If "quad" is specified, the constructor creates a **new copy** of it.
 
@@ -57,14 +57,14 @@ Quads can **be obtained** as results of text search methods (:meth:`Page.search_
 
       Modify the quadrilateral by transforming each of its corners with a matrix.
 
-      :arg matrix_like matrix: the matrix.
+      :arg Matrix matrix: the matrix.
 
-   .. method:: Morph(Point fixpoint, Matrix matrix)
+   .. method:: Morph(Point p, Matrix m)
 
       "Morph" the quad with a matrix-like using a point-like as fixed point.
 
-      :arg point_like fixpoint: the point.
-      :arg matrix_like matrix: the matrix.
+      :arg Point p: the point.
+      :arg Matrix m: the matrix.
       :returns: a new quad (no operation if this is the infinite quad).
 
 

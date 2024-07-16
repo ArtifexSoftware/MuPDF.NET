@@ -30,7 +30,7 @@ Story
 
 .. class:: Story
 
-   .. method:: Story(string html="", string user_css=null, float em=12, Archive archive=null)
+   .. method:: Story(string html: "", string userCss: null, float em: 12, Archive archive: null)
 
       Create a **story**, optionally providing HTML and CSS source.
       The HTML is parsed, and held within the Story as a DOM (Document Object Model).
@@ -73,21 +73,21 @@ Story
              until the caller is happy with the results. 
           4. Optionally, at this point,
              we can request details of where interesting items have been placed,
-             by calling the `element_positions()` method.
+             by calling the `ElementPositions()` method.
              Items are deemed to be interesting if their integer `heading` attribute is a non-zero
              (corresponding to HTML tags :htmlTag:`h1` - :htmlTag:`h6`),
              if their `id` attribute is not `null` (corresponding to HTML tag :htmlTag:`id`),
              or if their `href` attribute is not `null` (responding to HTML tag :htmlTag:`href`).
              This can conveniently be used for automatic generation of a Table of Contents,
              an index of images or the like.
-          5. Next, draw that rectangle out to the device with the `draw()` method.
-          6. If the most recent call to `place()` indicated that all the story data had fitted,
+          5. Next, draw that rectangle out to the device with the `Draw()` method.
+          6. If the most recent call to `Place()` indicated that all the story data had fitted,
              stop now.
           7. Otherwise, we can loop back.
              If there are more rectangles to be placed on the current device (page),
              we jump back to step 3 - if not, we jump back to step 1 to get a new device.
         * Alternatively, in the case where you are using a :ref:`DocumentWriter`,
-          the `write()` or `write_stabilized()` methods can be used.
+          the `Write()` or `WriteStabilized()` methods can be used.
           These handle all the looping for you,
           in exchange for being provided with callbacks that control the behaviour
           (notably a callback that enumerates the rectangles/pages to use).
@@ -98,12 +98,12 @@ Story
         For example, one may have separate stories for page header,
         page footer, regular text, comment boxes, etc.
 
-      :arg str html: HTML source code. If omitted, a basic minimum is generated (see below).
+      :arg string html: HTML source code. If omitted, a basic minimum is generated (see below).
         If provided, not a complete HTML document is needed.
         The in-built source parser will forgive (many / most)
         HTML syntax errors and also accepts HTML fragments like
         `"<b>Hello, <i>World!</i></b>"`.
-      :arg str user_css: CSS source code. If provided, must contain valid CSS specifications.
+      :arg string userCss: CSS source code. If provided, must contain valid CSS specifications.
       :arg float em: the default text font size.
       :arg archive: an :ref:`Archive` from which to load resources for rendering. Currently supported resource types are images and text fonts. If omitted, the story will not try to look up any such data and may thus produce incomplete output.
       
@@ -113,26 +113,26 @@ Story
 
       Calculate that part of the story's content, that will fit in the provided rectangle. The method maintains a pointer which part of the story's content has already been written and upon the next invocation resumes from that pointer's position.
 
-      :arg rect_like where: layout the current part of the content to fit into this rectangle. This must be a sub-rectangle of the page's :ref:`MediaBox<Glossary_MediaBox>`.
+      :arg Rect where: layout the current part of the content to fit into this rectangle. This must be a sub-rectangle of the page's :ref:`MediaBox<Glossary_MediaBox>`.
 
-      :rtype: tuple[bool, rect_like]
+      :rtype: Tuple(bool, Rect)
       :returns: a bool (int) `more` and a rectangle `filled`. If `more == 0`, all content of the story has been written, otherwise more is waiting to be written to subsequent rectangles / pages. Rectangle `filled` is the part of `where` that has actually been filled.
 
-   .. method:: Draw(MuPDFDeviceWrapper dev, Matrix matrix=null)
+   .. method:: Draw(DeviceWrapper dev, Matrix matrix: null)
 
       Write the content part prepared by :meth:`Story.Place` to the page.
 
       :arg dev: the :ref:`Device` created by `dev = writer.BeginPage(Rect mediabox)`. The device knows how to call all MuPDF functions needed to write the content.
-      :arg matrix_like matrix: a matrix for transforming content when writing to the page. An example may be writing rotated text. The default means no transformation (i.e. the :ref:`Identity` matrix).
+      :arg Matrix matrix: a matrix for transforming content when writing to the page. An example may be writing rotated text. The default means no transformation (i.e. the :ref:`Identity` matrix).
 
-   .. method:: ElementPositions(Action<Position> function, Position arg=null)
+   .. method:: ElementPositions(Action<Position> function, Position arg: null)
 
       Let the Story provide positioning information about certain HTML elements once their place on the current page has been computed - i.e. invoke this method **directly after** :meth:`Story.Place`.
 
       `Story` will pass position information to `function`. This information can for example be used to generate a Table of Contents.
 
       :arg callable function: a function accepting an :class:`ElementPosition` object. It will be invoked by the Story object to process positioning information. The function **must** be a callable accepting exactly one argument.
-      :arg dict args: an optional dictionary with any **additional** information
+      :arg Position args: an optional dictionary with any **additional** information
         that should be added to the :class:`ElementPosition` instance passed to `function`.
         Like for example the current output page number.
         Every key in this dictionary must be a string that conforms to the rules for a valid dictionary identifier.
@@ -147,7 +147,7 @@ Story
 
       The :htmlTag:`body` part of the story's DOM. This attribute contains the :ref:`Xml` node of :htmlTag:`body`. All relevant content for PDF production is contained between "<body>" and "</body>".
 
-   .. method:: Write(DocumentWriter writer, RectFunction rectfn, Action<Position> positionfn=null, Action<int, Rect, MuPDFDeviceWrapper, bool> pagefn=null)
+   .. method:: Write(DocumentWriter writer, RectFunction rectfn, Action<Position> positionfn: null, Action<int, Rect, DeviceWrapper, bool> pagefn: null)
 
         Places and draws Story to a `DocumentWriter`. Avoids the need for
         calling code to implement a loop that calls `Story.Place()` and
@@ -155,7 +155,7 @@ Story
         `rectfn()` callback.
        
         :arg writer: a `DocumentWriter` or null.
-        :arg rectfn: a callable taking `(rect_num: int, filled: Rect)` and
+        :arg rectfn: a callable taking `(rectN: int, filled: Rect)` and
             returning `(mediabox, rect, ctm)`:
             
             * mediabox: null or rect for new page.
@@ -168,10 +168,10 @@ Story
             Typically called multiple times as we generate elements that
             are headings or have an id.
         :arg pagefn:
-            null, or a callable taking `Action<int, Rect, MuPDFDeviceWrapper, bool>`;
+            null, or a callable taking `Action<int, Rect, DeviceWrapper, bool>`;
             called at start (`after=0`) and end (`after=1`) of each page.
 
-   .. staticmethod:: WriteStabilized(DocumentWriter writer, ContentFunction contentfn, RectFunction rectfn, string user_css=null, int em=12, Action<Position> positionfn=null, Action<int, Rect, MuPDFDeviceWrapper, bool> pagefn=null, Archive archive=null, bool addHeaderIds=true)
+   .. staticmethod:: WriteStabilized(DocumentWriter writer, ContentFunction contentfn, RectFunction rectfn, string userCss: null, int em: 12, Action<Position> positionfn: null, Action<int, Rect, DeviceWrapper, bool> pagefn: null, Archive archive: null, bool addHeaderIds: true)
    
         Static method that does iterative layout of html content to a
         `DocumentWriter`.
@@ -203,8 +203,8 @@ Story
             * rect: The next rect into which content should be placed.
             * ctm: A `Matrix`.
         :arg pagefn:
-            null, or a callable taking `(int page_num, Rect medibox,
-            MuPDFDeviceWrapper dev, bool after)`; called at start (`after=0`) and end
+            null, or a callable taking `(int pageN, Rect medibox,
+            DeviceWrapper dev, bool after)`; called at start (`after=0`) and end
             (`after=1`) of each page.
         :arg archive:
         :arg addHeaderIds:
@@ -214,15 +214,15 @@ Story
         Returns:
             null.
        
-   .. method:: WriteWithLinks(RectFunction rectfn, Action<Position> positionfn=null, Action<int, Rect, MuPDFDeviceWrapper, bool> pagefn=null)
+   .. method:: WriteWithLinks(RectFunction rectfn, Action<Position> positionFn: null, Action<int, Rect, DeviceWrapper, bool> pageFn: null)
 
         Similar to `Write()` except that we don't have a `writer` arg
         and we return a PDF `Document` in which links have been created
         for each internal html link.
 
-   .. staticmethod:: WriteStabilizedWithLinks(ContentFunction contentfn, RectFunction rectfn, string userCss=null, int em=12, Action<Position> positionfn=null, Action<int, Rect, MuPDFDeviceWrapper, bool> pagefn=null, Archive archive=null, bool addHeaderIds=true)
+   .. staticmethod:: WriteStabilizedWithLinks(ContentFunction contentfn, RectFunction rectfn, string userCss: null, int em=12, Action<Position> positionFn: null, Action<int, Rect, DeviceWrapper, bool> pageFn=null, Archive archive=null, bool addHeaderIds: true)
 
-        Similar to `write_stabilized()` except that we don't have a `writer`
+        Similar to `WriteStabilized()` except that we don't have a `writer`
         arg and instead return a PDF `Document` in which links have been
         created for each internal html link.
     
@@ -245,7 +245,7 @@ Story
         `Rect`:
             The rect created from `parameter`.
         
-   .. method:: Fit(Func<Rect, float, Rect> fn, Rect rect, float pmin=null, float pmax=null, float delta=0.001, bool verbose=false)
+   .. method:: Fit(Func<Rect, float, Rect> fn, Rect rect, float pmin: null, float pmax: null, float delta: 0.001, bool verbose: false)
 
         Finds optimal rect that contains the story `self`.
         
@@ -272,7 +272,7 @@ Story
         :arg verbose:
             If true we output diagnostics.
 
-   .. method:: FitScale(Rect rect, float scaleMin=0, float scaleMax=0, float delta=0.001, bool verbose=false)
+   .. method:: FitScale(Rect rect, float scaleMin: 0, float scaleMax: 0, float delta: 0.001, bool verbose: false)
 
         Finds smallest value `scale` in range `scaleMin..scaleMax` where
         `scale * rect` is large enough to contain the story `self`.
@@ -293,7 +293,7 @@ Story
         :arg verbose:
             If true we output diagnostics.
 
-   .. method:: FitHeight(float width, float heightMin=0, float heightMax=null, Point origin=null, float delta=0.001, bool verbose=false)
+   .. method:: FitHeight(float width, float heightMin: 0, float heightMax: null, Point origin: null, float delta: 0.001, bool verbose: false)
 
         Finds smallest height in range `heightMin..heightMax` where a rect
         with size `(width, height)` is large enough to contain the story
@@ -315,7 +315,7 @@ Story
         :arg verbose:
             If true we output diagnostics.
 
-   .. method:: FitWidth(float height, float widthMin=0, float widthMax=0, Point origin=null, float delta=0.001, bool verbose=false)
+   .. method:: FitWidth(float height, float widthMin: 0, float widthMax: 0, Point origin: null, float delta: 0.001, bool verbose: false)
 
         Finds smallest width in range `widthMin..widthMax` where a rect with size
         `(width, height)` is large enough to contain the story `self`.
@@ -371,7 +371,7 @@ A typical loop for executing a story with using this method would look like this
 
 Attributes of the ElementPosition class
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Exactly one parameter must be passed to the function provided by :meth:`Story.element_positions`. It is an object with the following attributes:
+Exactly one parameter must be passed to the function provided by :meth:`Story.ElementPositions`. It is an object with the following attributes:
 
 The parameter passed to the `recorder` function is an object with the following attributes:
 
@@ -391,6 +391,6 @@ The parameter passed to the `recorder` function is an object with the following 
 
 * `elpos.rect_num` (int) -- count of rectangles filled by the story so far.
 
-* `elpos.page_num` (int) -- page number; only present when using `fitz.Story.write*()` functions.
+* `elpos.page_num` (int) -- page number; only present when using `Story.Write*()` functions.
 
 .. include:: ../footer.rst

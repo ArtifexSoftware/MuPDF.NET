@@ -10,9 +10,9 @@ Widget
 
 This class represents a PDF Form field, also called a "widget". Throughout this documentation, we are using these terms synonymously. Fields technically are a special case of PDF annotations, which allow users with limited permissions to enter information in a PDF. This is primarily used for filling out forms.
 
-Like annotations, widgets live on PDF pages. Similar to annotations, the first widget on a page is accessible via :attr:`Page.first_widget` and subsequent widgets can be accessed via the :attr:`Widget.next` property.
+Like annotations, widgets live on PDF pages. Similar to annotations, the first widget on a page is accessible via :attr:`Page.FirstWidget` and subsequent widgets can be accessed via the :attr:`Widget.Next` property.
 
-MuPDF no longer treats widgets as a subset of general annotations. Consequently, :attr:`Page.first_annot` and :meth:`Annot.next` will deliver **non-widget annotations exclusively**, and be *None* if only form fields exist on a page. Vice versa, :attr:`Page.first_widget` and :meth:`Widget.next` will only show widgets. This design decision is purely internal to MuPDF; technically, links, annotations and fields have a lot in common and also continue to share the better part of their code within (Py-) MuPDF.
+MuPDF no longer treats widgets as a subset of general annotations. Consequently, :attr:`Page.FirstAnnot` and :meth:`Annot.Next` will deliver **non-widget annotations exclusively**, and be *None* if only form fields exist on a page. Vice versa, :attr:`Page.first_widget` and :meth:`Widget.next` will only show widgets. This design decision is purely internal to MuPDF; technically, links, annotations and fields have a lot in common and also continue to share the better part of their code within (Py-) MuPDF.
 
 
 **Class API**
@@ -127,11 +127,11 @@ MuPDF no longer treats widgets as a subset of general annotations. Consequently,
 
     .. attribute:: TextFont
 
-       A string defining the font to be used. Default and replacement for invalid values is *"Helv"*. For valid font reference names see the table below.
+       A string defining the font to be used.
 
     .. attribute:: TextFontSize
 
-       A float defining the text :data:`fontsize`. Default value is zero, which causes PDF viewer software to dynamically choose a size suitable for the annotation's rectangle and text amount.
+       A float defining the text :data:`fontSize`. Default value is zero, which causes PDF viewer software to dynamically choose a size suitable for the annotation's rectangle and text amount.
 
     .. attribute:: TextMaxLen
 
@@ -153,11 +153,11 @@ MuPDF no longer treats widgets as a subset of general annotations. Consequently,
 
     .. attribute:: ScriptFormat
        
-       JavaScript text (unicode) to be performed before the field is formatted to display its current value. This action can modify the field’s value before formatting. *None* if not present.
+       JavaScript text (unicode) to be performed before the field is formatted to display its current value. This action can modify the field's value before formatting. *None* if not present.
 
     .. attribute:: ScriptChange
 
-       JavaScript text (unicode) to be performed when the field’s value is changed. This action can check the new value for validity. *None* if not present.
+       JavaScript text (unicode) to be performed when the field's value is changed. This action can check the new value for validity. *None* if not present.
 
     .. attribute:: ScriptCalc
 
@@ -177,7 +177,7 @@ MuPDF no longer treats widgets as a subset of general annotations. Consequently,
          just put the appropriate JavaScript source code in the widget attribute.
          To **remove** a script, set the respective attribute to *None*.
 
-       2. Button fields only support :attr:`script`.
+       2. Button fields only support :attr:`Script`.
          Other script entries will automatically be set to *None*.
 
        3. It is worthwhile to look at
@@ -216,7 +216,7 @@ TiRo          Times-Roman
 ZaDb          ZapfDingbats
 ============= =======================
 
-You are generally free to use any font for every widget. However, we recommend using *ZaDb* ("ZapfDingbats") and :data:`fontsize` 0 for check boxes: typical viewers will put a correctly sized tickmark in the field's rectangle, when it is clicked.
+You are generally free to use any font for every widget. However, we recommend using *ZaDb* ("ZapfDingbats") and :data:`fontSize` 0 for check boxes: typical viewers will put a correctly sized tickmark in the field's rectangle, when it is clicked.
 
 Supported Widget Types
 -----------------------
@@ -232,6 +232,6 @@ MuPDF.NET supports the creation and update of many, but not all widget types.
 
 .. rubric:: Footnotes
 
-.. [#f1] If you intend to re-access a new or updated field (e.g. for making a pixmap), make sure to reload the page first. Either close and re-open the document, or load another page first, or simply do `page = doc.reload_page(page)`.
+.. [#f1] If you intend to re-access a new or updated field (e.g. for making a pixmap), make sure to reload the page first. Either close and re-open the document, or load another page first, or simply do `page = doc.ReloadPage(page)`.
 
 .. include:: ../footer.rst

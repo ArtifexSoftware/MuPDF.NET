@@ -27,17 +27,15 @@ Outline
 
    .. method:: Destination
 
-
-
    .. attribute:: Down
 
-      The next outline item on the next level down. Is *null* if the item has no children.
+      The next outline item on the next level down. Is *Null* if the item has no children.
 
       :type: :ref:`Outline`
 
    .. attribute:: Next
 
-      The next outline item at the same level as this item. Is *null* if this is the last one in its level.
+      The next outline item at the same level as this item. Is *Null* if this is the last one in its level.
 
       :type: `Outline`
 
@@ -49,9 +47,9 @@ Outline
 
    .. attribute:: Title
 
-      The item's title as a string or `null`.
+      The item's title as a string or *Null*.
 
-      :type: str
+      :type: string
 
    .. attribute:: IsOpen
 
@@ -84,7 +82,7 @@ Outline
         "../FixedDoc.fdoc#PG_2_LNK_1" for page number 2 (1-based) in an XPS
         document.
 
-      :type: str
+      :type: string
 
    .. attribute:: Dest
 

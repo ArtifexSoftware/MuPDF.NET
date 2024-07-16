@@ -43,7 +43,7 @@ IRect
 
    .. method:: IRect(float x0, float y0, float x1, float y1)
 
-   .. method:: IRect(Irect irect)
+   .. method:: IRect(IRect irect)
 
       Overloaded constructors. Also see examples below and those for the :ref:`Rect` class.
 
@@ -70,36 +70,36 @@ IRect
 
    .. method:: Contains(x)
 
-      Checks whether *x* is contained in the rectangle. It may be :data:`rect_like`, :data:`point_like` or a number. If *x* is an empty rectangle, this is always true. Conversely, if the rectangle is empty this is always `false`, if *x* is not an empty rectangle and not a number. If *x* is a number, it will be checked to be one of the four components. *x in irect* and `irect.contains(x)` are equivalent.
+      Checks whether *x* is contained in the rectangle. It may be :data:`Rect`, :data:`Point` or a number. If *x* is an empty rectangle, this is always true. Conversely, if the rectangle is empty this is always `false`, if *x* is not an empty rectangle and not a number. If *x* is a number, it will be checked to be one of the four components. *x in irect* and `irect.contains(x)` are equivalent.
 
       :arg x: the object to check.
       :type x: :ref:`IRect` or :ref:`Rect` or :ref:`Point` or int
 
       :rtype: bool
 
-   .. method:: Intersects(r)
+   .. method:: Intersects(Rect r)
 
-      Checks whether the rectangle and the :data:`rect_like` "r" contain a common non-empty :ref:`IRect`. This will always be `false` if either is infinite or empty.
+      Checks whether the rectangle and the :data:`Rect` "r" contain a common non-empty :ref:`IRect`. This will always be `false` if either is infinite or empty.
 
-      :arg rect_like r: the rectangle to check.
+      :arg Rect r: the rectangle to check.
 
       :rtype: bool
 
    .. method:: ToRect(rect)
 
-      Compute the matrix which transforms this rectangle to a given one. See :meth:`MuPDFRect.torect`.
+      Compute the matrix which transforms this rectangle to a given one. See :meth:`MuPDFRect.ToRect`.
 
-      :arg rect_like rect: the target rectangle. Must not be empty or infinite.
+      :arg Rect rect: the target rectangle. Must not be empty or infinite.
       :rtype: :ref:`Matrix`
       :returns: a matrix `mat` such that `self * mat = rect`. Can for example be used to transform between the page and the pixmap coordinates.
 
 
-   .. method:: Morph(Point fixpoint, Matrix matrix)
+   .. method:: Morph(Point p, Matrix m)
       
       Return a new quad after applying a matrix to it using a fixed point.
 
-      :arg point_like fixpoint: the fixed point.
-      :arg matrix_like matrix: the matrix.
+      :arg Point p: the fixed point.
+      :arg Matrix m: the matrix.
       :returns: a new :ref:`Quad`. This a wrapper of the same-named quad method. If infinite, the infinite quad is returned.
 
    .. method:: Norm()

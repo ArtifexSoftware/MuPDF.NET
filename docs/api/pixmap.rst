@@ -11,7 +11,7 @@ Pixmaps ("pixel maps") are objects at the heart of MuPDF's rendering capabilitie
 There exist several ways to create a pixmap. Except the first one, all of them are available as overloaded constructors. A pixmap can be created ...
 
 1. from a document page (method :meth:`Page.GetPixmap`)
-2. empty, based on :ref:`Colorspace` and :ref:`IRect` information
+2. empty, based on :ref:`ColorSpace` and :ref:`IRect` information
 3. from a file
 4. from an in-memory image
 5. from a memory area of plain pixels
@@ -71,12 +71,12 @@ Have a look at the :ref:`FAQ` section to see some pixmap usage "at work".
 
    .. method:: Pixmap(ColorSpace colorspace, IRect irect, bool alpha)
 
-      **New empty pixmap:** Create an empty pixmap of size and origin given by the rectangle. So, *irect.top_left* designates the top left corner of the pixmap, and its width and height are *irect.width* resp. *irect.height*. Note that the image area is **not initialized** and will contain crap data -- use eg. :meth:`ClearWith` or :meth:`SetRect` to be sure.
+      **New empty pixmap:** Create an empty pixmap of size and origin given by the rectangle. So, *irect.TopLeft* designates the top left corner of the pixmap, and its width and height are *irect.Width* resp. *irect.Height*. Note that the image area is **not initialized** and will contain crap data -- use eg. :meth:`ClearWith` or :meth:`SetRect` to be sure.
 
       :arg colorspace: colorspace.
       :type colorspace: :ref:`Colorspace`
 
-      :arg irect_like irect: The pixmap's position and dimension.
+      :arg IRect irect: The pixmap's position and dimension.
 
       :arg bool alpha: Specifies whether transparency bytes should be included. Default is *false*.
 
@@ -84,8 +84,8 @@ Have a look at the :ref:`FAQ` section to see some pixmap usage "at work".
 
       **Copy and set colorspace:** Copy *source* pixmap converting colorspace. Any colorspace combination is possible, but source colorspace must not be *null*.
 
-      :arg colorspace: desired **target** colorspace. This **may also be** *null*. In this case, a "masking" pixmap is created: its :attr:`Pixmap.samples` will consist of the source's alpha bytes only.
-      :type colorspace: :ref:`Colorspace`
+      :arg colorspace: desired **target** colorspace. This **may also be** *null*. In this case, a "masking" pixmap is created: its :attr:`Pixmap.Samples` will consist of the source's alpha bytes only.
+      :type colorspace: :ref:`ColorSpace`
 
       :arg source: the source pixmap.
       :type source: *Pixmap*
@@ -100,7 +100,7 @@ Have a look at the :ref:`FAQ` section to see some pixmap usage "at work".
       :arg mask: a mask pixmap. Must be a graysale pixmap.
       :type mask: :ref:`Pixmap`
 
-   .. method:: Pixmap(Pixmap source, float width, float height, [clip])
+   .. method:: Pixmap(Pixmap source, float width, float height, Rect clip: null)
 
       **Copy and scale:** Copy *source* pixmap, scaling new width and height values -- the image will appear stretched or shrunk accordingly. Supports partial copying. The source colorspace may be *null*.
 
@@ -111,13 +111,13 @@ Have a look at the :ref:`FAQ` section to see some pixmap usage "at work".
 
       :arg float height: desired target height.
 
-      :arg irect_like clip: restrict the resulting pixmap to this region of the **scaled** pixmap.
+      :arg IRect clip: restrict the resulting pixmap to this region of the **scaled** pixmap.
 
-      .. note:: If width or height do not *represent* integers (i.e. `value.is_integer() != true`), then the resulting pixmap **will have an alpha channel**.
+      .. note:: If width or height do not *represent* integers, then the resulting pixmap **will have an alpha channel**.
 
    .. method:: Pixmap(Pixmap source, int alpha: 1)
 
-      **Copy and add or drop alpha:** Copy *source* and add or drop its alpha channel. Identical copy if *alpha* equals *source.alpha*. If an alpha channel is added, its values will be set to 255.
+      **Copy and add or drop alpha:** Copy *source* and add or drop its alpha channel. Identical copy if *alpha* equals *source.Alpha*. If an alpha channel is added, its values will be set to 255.
 
       :arg source: source pixmap.
       :type source: *Pixmap*
@@ -134,20 +134,20 @@ Have a look at the :ref:`FAQ` section to see some pixmap usage "at work".
 
       **From memory:** Create a pixmap from a memory area. All properties are inferred from the input. The origin of the resulting pixmap is *(0, 0)*.
 
-      :arg bytes,bytearray,BytesIO stream: Data containing a complete, valid image.
+      :arg byte[] stream: Data containing a complete, valid image.
 
    .. method:: Pixmap(ColorSpace colorspace, float width, float height, byte[] samples, bool alpha)
 
       **From plain pixels:** Create a pixmap from *samples*. Each pixel must be represented by a number of bytes as controlled by the *colorspace* and *alpha* parameters. The origin of the resulting pixmap is *(0, 0)*. This method is useful when raw image data are provided by some other program -- see :ref:`FAQ`.
 
-      :arg colorspace: Colorspace of image.
-      :type colorspace: :ref:`Colorspace`
+      :arg colorspace: ColorSpace of image.
+      :type colorspace: :ref:`ColorSpace`
 
-      :arg int width: image width
+      :arg float width: image width
 
-      :arg int height: image height
+      :arg float height: image height
 
-      :arg bytes,bytearray,BytesIO samples:  an area containing all pixels of the image. Must include alpha values if specified.
+      :arg byte[] samples:  an area containing all pixels of the image. Must include alpha values if specified.
 
       :arg bool alpha: whether a transparency channel is included.
 
@@ -159,7 +159,7 @@ Have a look at the :ref:`FAQ` section to see some pixmap usage "at work".
 
    .. method:: Pixmap(Document doc, int xref)
 
-      **From a PDF image:** Create a pixmap from an image **contained in PDF** *doc* identified by its :data:`xref`. All pimap properties are set by the image.
+      **From a PDF image:** Create a pixmap from an image **contained in PDF** *doc* identified by its :data:`xref`. All pixmap properties are set by the image.
 
       :arg doc: an opened **PDF** document.
       :type doc: :ref:`Document`
@@ -172,7 +172,7 @@ Have a look at the :ref:`FAQ` section to see some pixmap usage "at work".
 
       :arg int value: if specified, values from 0 to 255 are valid. Each color byte of each pixel will be set to this value, while alpha will be set to 255 (non-transparent) if present. If omitted, then all bytes (including any alpha) are cleared to *0x00*.
 
-      :arg irect_like irect: the area to be cleared. Omit to clear the whole pixmap. Can only be specified, if *value* is also specified.
+      :arg IRect irect: the area to be cleared. Omit to clear the whole pixmap. Can only be specified, if *value* is also specified.
 
    .. method:: TintWith(int black, int white)
 
@@ -218,15 +218,15 @@ Have a look at the :ref:`FAQ` section to see some pixmap usage "at work".
 
       :arg int x: the column number of the pixel. Must be in `range(pix.Width)`.
       :arg int y: the line number of the pixel. Must be in `range(pix.Height)`.
-      :arg sequence color: the desired pixel value given as a sequence of integers in `range(256)`. The length of the sequence must equal :attr:`Pixmap.N`, which includes any alpha byte.
+      :arg float[] color: the desired pixel value given as a sequence of integers in `range(256)`. The length of the sequence must equal :attr:`Pixmap.N`, which includes any alpha byte.
 
    .. method:: SetRect(IRect bbox, byte[] color)
 
-      :arg irect_like irect: the rectangle to be filled with the value. The actual area is the intersection of this parameter and :attr:`Pixmap.Irect`. For an empty intersection (or an invalid parameter), no change will happen.
+      :arg IRect irect: the rectangle to be filled with the value. The actual area is the intersection of this parameter and :attr:`Pixmap.IRect`. For an empty intersection (or an invalid parameter), no change will happen.
       :arg byte[] color: the desired value, given as a sequence of integers in `range(256)`. The length of the sequence must equal :attr:`Pixmap.N`, which includes any alpha byte.
 
       :rtype: bool
-      :returns: *false* if the rectangle was invalid or had an empty intersection with :attr:`Pixmap.Irect`, else *true*.
+      :returns: *false* if the rectangle was invalid or had an empty intersection with :attr:`Pixmap.IRect`, else *true*.
 
       .. note::
 
@@ -249,20 +249,21 @@ Have a look at the :ref:`FAQ` section to see some pixmap usage "at work".
       :arg int yres: resolution in y direction.
 
 
-   .. method:: SetAlpha(dynamic alphavalues: null, int premultiply: 1, dyanmic opaque: null)
+   .. method:: SetAlpha(dynamic alphavalues: null, int premultiply: 1, dyanmic opaque: null, dynamic matte: null)
 
       Change the alpha values. The pixmap must have an alpha channel.
 
-      :arg bytes,bytearray,BytesIO alphavalues: the new alpha values. If provided, its length must be at least *width * height*. If omitted (`null`), all alpha values are set to 255 (no transparency). `io.BytesIO` is now also accepted.
+      :arg byte[] alphavalues: the new alpha values. If provided, its length must be at least *width * height*. If omitted (`null`), all alpha values are set to 255 (no transparency).
       :arg bool premultiply: Whether to premultiply color components with the alpha value.
       :arg list,tuple opaque: ignore the alpha value and set this color to fully transparent. A sequence of integers in `range(256)` with a length of :attr:`Pixmap.N`. Default is *null*. For example, a typical choice for RGB would be `opaque=(255, 255, 255)` (white).
+      :arg list,tuple matte: preblending background color.
 
 
-   .. method:: InvertIrect([irect])
+   .. method:: InvertIrect(IRect bbox: null)
 
       Invert the color of all pixels in :ref:`IRect` *irect*. Will have no effect if colorspace is *null*.
 
-      :arg irect_like irect: The area to be inverted. Omit to invert everything.
+      :arg IRect irect: The area to be inverted. Omit to invert everything.
 
    .. method:: Copy(Pixmap source, IRect bbox)
 
@@ -275,7 +276,7 @@ Have a look at the :ref:`FAQ` section to see some pixmap usage "at work".
       :arg source: source pixmap.
       :type source: :ref:`Pixmap`
 
-      :arg irect_like irect: The area to be copied.
+      :arg IRect irect: The area to be copied.
 
       .. note:: Example: Suppose you have two pixmaps, `pix1` and `pix2` and you want to copy the lower right quarter of `pix2` to `pix1` such that it starts at the top-left point of `pix1`. Use the following snippet:
 
@@ -293,21 +294,21 @@ Have a look at the :ref:`FAQ` section to see some pixmap usage "at work".
       .. image:: ../images/img-pixmapcopy.*
          :scale: 20
 
-   .. method:: Save(string filename, string output: null, int jpg_quality: 95)
+   .. method:: Save(string filename, string output: null, int jpgQuality: 95)
 
       Save pixmap as an image file. Depending on the output chosen, only some or all colorspaces are supported and different file extensions can be chosen. Please see the table below.
 
-      :arg str filename: The file to save to. May be provided as a string. In the latter two cases, the filename is taken from the resp. object. The filename's extension determines the image format, which can be overruled by the output parameter.
+      :arg string filename: The file to save to. May be provided as a string. In the latter two cases, the filename is taken from the resp. object. The filename's extension determines the image format, which can be overruled by the output parameter.
 
-      :arg str output: The desired image format. The default is the filename's extension. If both, this value and the file extension are unsupported, an exception is raised. For possible values see :ref:`PixmapOutput`.
-      :arg int jpg_quality: The desired image quality, default 95. Only applies to JPEG images, else ignored. This parameter trades quality against file size. A value of 98 is close to lossless. Higher values should not lead to better quality.
+      :arg string output: The desired image format. The default is the filename's extension. If both, this value and the file extension are unsupported, an exception is raised. For possible values see :ref:`PixmapOutput`.
+      :arg int jpgQuality: The desired image quality, default 95. Only applies to JPEG images, else ignored. This parameter trades quality against file size. A value of 98 is close to lossless. Higher values should not lead to better quality.
 
       :raises ValueError: For unsupported image formats.
 
-   .. method:: ToBytes(string output: "png", int jpg_quality: 95)
+   .. method:: ToBytes(string output: "png", int jpgQuality: 95)
 
-      :arg str output: The desired image format. The default is "png". For possible values see :ref:`PixmapOutput`.
-      :arg int jpg_quality: The desired image quality, default 95. Only applies to JPEG images, else ignored. This parameter trades quality against file size. A value of 98 is close to lossless. Higher values should not lead to better quality.
+      :arg string output: The desired image format. The default is "png". For possible values see :ref:`PixmapOutput`.
+      :arg int jpgQuality: The desired image quality, default 95. Only applies to JPEG images, else ignored. This parameter trades quality against file size. A value of 98 is close to lossless. Higher values should not lead to better quality.
 
       :raises ValueError: For unsupported image formats.
       :rtype: bytes
@@ -318,10 +319,10 @@ Have a look at the :ref:`FAQ` section to see some pixmap usage "at work".
 
       Perform text recognition using Tesseract and save the image as a 1-page PDF with an OCR text layer.
 
-      :arg str,fp filename: identifies the file to save to. May be either a string or a pointer to a file opened with "wb" (includes `io.BytesIO()` objects).
+      :arg string filename: identifies the file to save to. May be either a string or a pointer to a file opened with "wb".
       :arg bool compress: whether to compress the resulting PDF, default is `true`.
-      :arg str language: the languages occurring in the image. This must be specified in Tesseract format. Default is "eng" for English. Use "+"-separated Tesseract language codes for multiple languages, like "eng+spa" for English and Spanish.
-      :arg str tessdata: folder name of Tesseract's language support. If omitted, this information must be present as environment variable `TESSDATA_PREFIX`.
+      :arg string language: the languages occurring in the image. This must be specified in Tesseract format. Default is "eng" for English. Use "+"-separated Tesseract language codes for multiple languages, like "eng+spa" for English and Spanish.
+      :arg string tessdata: folder name of Tesseract's language support. If omitted, this information must be present as environment variable `TESSDATA_PREFIX`.
 
       .. note:: **Will fail** if Tesseract is not installed or if the environment variable "TESSDATA_PREFIX" is not set to the `tessdata` folder name and not provided as parameter.
 
@@ -348,11 +349,11 @@ Have a look at the :ref:`FAQ` section to see some pixmap usage "at work".
             }
             doc.Save("ocr-images.pdf")
 
-   ..  method:: warp(Quad quad, float width, float height)
+   ..  method:: Warp(Quad quad, float width, float height)
 
-      Return a new pixmap by "warping" the quad such that the quad corners become the new pixmap's corners. The target pixmap's `Irect` will be `(0, 0, Width, Height)`.
+      Return a new pixmap by "warping" the quad such that the quad corners become the new pixmap's corners. The target pixmap's `IRect` will be `(0, 0, Width, Height)`.
 
-      :arg quad_like quad: a convex quad with coordinates inside :attr:`Pixmap.Irect` (including the border points).
+      :arg Quad quad: a convex quad with coordinates inside :attr:`Pixmap.IRect` (including the border points).
       :arg int width: desired resulting width.
       :arg int height: desired resulting height.
       :returns: A new pixmap where the quad corners are mapped to the pixmap corners in a clockwise fashion: `quad.UpperLeft -> irect.TopLeft`, `quad.UpperRight -> irect.TopRight`, etc.
@@ -368,8 +369,8 @@ Have a look at the :ref:`FAQ` section to see some pixmap usage "at work".
       Determine the pixmap's unique colors and their count.
 
       :arg bool colors: If `true` return a dictionary of color pixels and their usage count, else just the number of unique colors.
-      :arg rect_like clip: a rectangle inside :attr:`Pixmap.Irect`. If provided, only those pixels are considered. This allows inspecting sub-rectangles of a given pixmap directly -- instead of building sub-pixmaps.
-      :rtype: dict or int
+      :arg Rect, Tuple clip: a rectangle inside :attr:`Pixmap.IRect`. If provided, only those pixels are considered. This allows inspecting sub-rectangles of a given pixmap directly -- instead of building sub-pixmaps.
+      :rtype: Dictionary<string, int>
       :returns: either the number of colors, or a dictionary with the items `pixel: count`. The pixel key is a `bytes` object of length :attr:`Pixmap.N`.
       
          .. note:: To recover the **tuple** of a pixel, use `tuple(colors.keys()[i])` for the i-th item.
@@ -382,9 +383,9 @@ Have a look at the :ref:`FAQ` section to see some pixmap usage "at work".
 
       Return the most frequently used color and its relative frequency.
 
-      :arg rect_like clip: A rectangle inside :attr:`Pixmap.Rect`. If provided, only those pixels are considered. This allows inspecting sub-rectangles of a given pixmap directly -- instead of building sub-pixmaps.
-      :rtype: tuple
-      :returns: A tuple `(ratio, pixel)` where `0 < ratio <= 1` and *pixel* is the pixel value of the color. Use this to decide if the image is "almost" unicolor: a response `(0.95, b"\x00\x00\x00")` means that 95% of all pixels are black. See an example here :ref:`RecipesImages_P`.
+      :arg Rect, Tuple clip: A rectangle inside :attr:`Pixmap.Rect`. If provided, only those pixels are considered. This allows inspecting sub-rectangles of a given pixmap directly -- instead of building sub-pixmaps.
+      :rtype: Tuple(float, byte[])
+      :returns: A Tuple `(ratio, pixel)` where `0 < ratio <= 1` and *pixel* is the pixel value of the color. Use this to decide if the image is "almost" unicolor: a response `(0.95, b"\x00\x00\x00")` means that 95% of all pixels are black.
 
 
    .. attribute:: Alpha
@@ -429,7 +430,7 @@ Have a look at the :ref:`FAQ` section to see some pixmap usage "at work".
       :type: bool
 
 
-   .. attribute:: Irect
+   .. attribute:: IRect
 
       Contains the :ref:`IRect` of the pixmap.
 
@@ -437,7 +438,7 @@ Have a look at the :ref:`FAQ` section to see some pixmap usage "at work".
 
    .. attribute:: SAMPLES
 
-      The color and (if :attr:`Pixmap.alpha` is true) transparency values for all pixels. It is an area of `width * height * n` bytes. Each n bytes define one pixel. Each successive n bytes yield another pixel in scanline order. Subsequent scanlines follow each other with no padding. E.g. for an RGBA colorspace this means, *samples* is a sequence of bytes like *..., R, G, B, A, ...*, and the four byte values R, G, B, A define one pixel.
+      The color and (if :attr:`Pixmap.Alpha` is true) transparency values for all pixels. It is an area of `width * height * n` bytes. Each n bytes define one pixel. Each successive n bytes yield another pixel in scanline order. Subsequent scanlines follow each other with no padding. E.g. for an RGBA colorspace this means, *samples* is a sequence of bytes like *..., R, G, B, A, ...*, and the four byte values R, G, B, A define one pixel.
 
 
       .. note::
@@ -464,7 +465,7 @@ Have a look at the :ref:`FAQ` section to see some pixmap usage "at work".
 
       Contains *len(pixmap)*. This will generally equal *len(pix.samples)* plus some platform-specific value for defining other attributes of the object.
 
-      :type: int
+      :type: float
 
    .. attribute:: W
 
@@ -472,7 +473,7 @@ Have a look at the :ref:`FAQ` section to see some pixmap usage "at work".
 
       Width of the region in pixels.
 
-      :type: int
+      :type: float
 
    .. attribute:: H
 
@@ -480,37 +481,37 @@ Have a look at the :ref:`FAQ` section to see some pixmap usage "at work".
 
       Height of the region in pixels.
 
-      :type: int
+      :type: float
 
    .. attribute:: X
 
       X-coordinate of top-left corner in pixels. Cannot directly be changed -- use :meth:`Pixmap.SetOrigin`.
 
-      :type: int
+      :type: float
 
    .. attribute:: Y
 
       Y-coordinate of top-left corner in pixels. Cannot directly be changed -- use :meth:`Pixmap.SetOrigin`.
 
-      :type: int
+      :type: float
 
    .. attribute:: N
 
       Number of components per pixel. This number depends on colorspace and alpha. If colorspace is not *null* (stencil masks), then *Pixmap.n - Pixmap.alpha == pixmap.colorspace.n* is true. If colorspace is *null*, then *n == alpha == 1*.
 
-      :type: int
+      :type: float
 
    .. attribute:: Xres
 
       Horizontal resolution in dpi (dots per inch). Please also see :data:`Resolution`. Cannot directly be changed -- use :meth:`Pixmap.SetDpi`.
 
-      :type: int
+      :type: float
 
    .. attribute:: Yres
 
       Vertical resolution in dpi (dots per inch). Please also see :data:`Resolution`. Cannot directly be changed -- use :meth:`Pixmap.SetDpi`.
 
-      :type: int
+      :type: float
 
 .. _ImageFiles:
 
@@ -518,9 +519,9 @@ Supported Input Image Formats
 -----------------------------------------------
 The following file types are supported as **input** to construct pixmaps: **BMP, JPEG, GIF, TIFF, JXR, JPX**, **PNG**, **PAM** and all of the **Portable Anymap** family (**PBM, PGM, PNM, PPM**). This support is two-fold:
 
-1. Directly create a pixmap with *Pixmap(filename)* or *Pixmap(byterray)*. The pixmap will then have properties as determined by the image.
+1. Directly create a pixmap with *Pixmap(filename)* or *Pixmap(byte[])*. The pixmap will then have properties as determined by the image.
 
-2. Open such files with *fitz.open(...)*. The result will then appear as a document containing one single page. Creating a pixmap of this page offers all the options available in this context: apply a matrix, choose colorspace and alpha, confine the pixmap to a clip area, etc.
+2. Open such files with *Document(filename)*. The result will then appear as a document containing one single page. Creating a pixmap of this page offers all the options available in this context: apply a matrix, choose colorspace and alpha, confine the pixmap to a clip area, etc.
 
 **SVG images** are only supported via method 2 above, not directly as pixmaps. But remember: the result of this is a **raster image** as is always the case with pixmaps [#f1]_.
 
@@ -528,7 +529,7 @@ The following file types are supported as **input** to construct pixmaps: **BMP,
 
 Supported Output Image Formats
 ---------------------------------------------------------------------------
-A number of image **output** formats are supported. You have the option to either write an image directly to a file (:meth:`Pixmap.save`), or to generate a bytes object (:meth:`Pixmap.tobytes`). Both methods accept a string identifying the desired format (**Format** column below). Please note that not all combinations of pixmap colorspace, transparency support (alpha) and image format are possible.
+A number of image **output** formats are supported. You have the option to either write an image directly to a file (:meth:`Pixmap.Save`), or to generate a bytes object (:meth:`Pixmap.ToBytes`). Both methods accept a string identifying the desired format (**Format** column below). Please note that not all combinations of pixmap colorspace, transparency support (alpha) and image format are possible.
 
 ========== =============== ========= ============== =================================
 **Format** **Colorspaces** **alpha** **Extensions** **Description**
@@ -548,7 +549,7 @@ psd        gray, rgb, cmyk yes       .psd           Adobe Photoshop Document
     * Not all image file types are supported (or at least common) on all OS platforms. E.g. PAM and the Portable Anymap formats are rare or even unknown on Windows.
     * Especially pertaining to CMYK colorspaces, you can always convert a CMYK pixmap to an RGB pixmap with *rgb_pix = fitz.Pixmap(fitz.csRGB, cmyk_pix)* and then save that in the desired format.
     * As can be seen, MuPDF's image support range is different for input and output. Among those supported both ways, PNG and JPEG are probably the most popular.
-    * We also recommend using "ppm" formats as input to tkinter's *PhotoImage* method like this: *tkimg = tkinter.PhotoImage(data=pix.tobytes("ppm"))* (also see the tutorial). This is **very** fast (**60 times** faster than PNG).
+    * We also recommend using "ppm" formats as input to tkinter's *PhotoImage* method like this: *tkimg = tkinter.PhotoImage(data=pix.ToBytes("ppm"))* (also see the tutorial). This is **very** fast (**60 times** faster than PNG).
 
 
 

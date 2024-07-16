@@ -39,28 +39,28 @@ A Font object also contains useful general information, like the font bbox, the 
 
    .. index::
       pair: Font, fontFile
+      pair: Font, fontName
       pair: Font, fontBuffer
       pair: Font, script
       pair: Font, ordering
       pair: Font, isBold
       pair: Font, isItalic
       pair: Font, isSerif
-      pair: Font, fontName
       pair: Font, language
 
-   .. method:: Font(string fontName = null, string fontFile = null, byte[] fontBuffer = null, int script = 0, string language = null, int ordering = -1, int isBold = 0, int isItalic = 0, int isSerif = 0, int embed = 1)
+   .. method:: Font(string fontName, string fontFile, byte[] fontBuffer: null, int script: 0, string language: null, int ordering: -1, int isBold: 0, int isItalic: 0, int isSerif: 0, int embed: 1)
 
       Font constructor. The large number of parameters are used to locate font, which most closely resembles the requirements. Not all parameters are ever required -- see the below pseudo code explaining the logic how the parameters are evaluated.
 
-      :arg str fontname: one of the :ref:`Base-14-Fonts` or CJK fontnames. Also possible are a select few other names like (watch the correct spelling): "Arial", "Times", "Times Roman".      
-      :arg str fontfile: the filename of a fontfile somewhere on your system [#f1]_.
-      :arg bytes,bytearray,io.BytesIO fontbuffer: a fontfile loaded in memory [#f1]_.
-      :arg in script: the number of a UCDN script. Currently supported in PyMuPDF are numbers 24, and 32 through 35.
-      :arg str language: one of the values "zh-Hant" (traditional Chinese), "zh-Hans" (simplified Chinese), "ja" (Japanese) and "ko" (Korean). Otherwise, all ISO 639 codes from the subsets 1, 2, 3 and 5 are also possible, but are currently documentary only.
+      :arg string fontName: one of the :ref:`Base-14-Fonts` or CJK fontNames, Custom font name and file path. Also possible are a select few other names like (watch the correct spelling): "Arial", "Times", "Times Roman".
+      :arg string fontFile: the filename of a fontFile somewhere on your system [#f1]_.
+      :arg byte[] fontBuffer: a fontFile loaded in memory [#f1]_.
+      :arg int script: the number of a UCDN script. Currently supported in PyMuPDF are numbers 24, and 32 through 35.
+      :arg string language: one of the values "zh-Hant" (traditional Chinese), "zh-Hans" (simplified Chinese), "ja" (Japanese) and "ko" (Korean). Otherwise, all ISO 639 codes from the subsets 1, 2, 3 and 5 are also possible, but are currently documentary only.
       :arg int ordering: an alternative selector for one of the CJK fonts.
-      :arg bool isBold: look for a bold font.
-      :arg bool isItalic: look for an italic font.
-      :arg bool isSerif: look for a serifed font.
+      :arg int isBold: look for a bold font.
+      :arg int isItalic: look for an italic font.
+      :arg int isSerif: look for a serifed font.
 
       :returns: a MuPDF font if successful. This is the overall sequence of checks to determine an appropriate font:
 
@@ -73,7 +73,6 @@ A Font object also contains useful general information, like the font bbox, the 
          fontName?   Create a Base-14 font, universal font, or font
                      provided by `pymupdf-fonts <https://pypi.org/project/pymupdf-fonts/>`_. See table below.
          =========== ============================================================
-
 
       .. note::
 
@@ -97,12 +96,12 @@ A Font object also contains useful general information, like the font bbox, the 
       pair: Font.HasGlyph, smallCaps
 
 
-   .. method:: HasGlyph(int chr, string language=null, int script=0, int fallback=0, int smallCaps = 0)
+   .. method:: HasGlyph(int chr, string language: null, int script: 0, int fallback: 0, int smallCaps: 0)
 
       Check whether the unicode *chr* exists in the font or (option) some fallback font. May be used to check whether any "TOFU" symbols will appear on output.
 
       :arg int chr: the unicode of the character (i.e. *ord()*).
-      :arg str language: the language -- currently unused.
+      :arg string language: the language -- currently unused.
       :arg int script: the UCDN script number.
       :arg bool fallback: Perform an extended search in fallback fonts or restrict to current font (default).
       :returns: The glyph number. Zero indicates no glyph found.
@@ -111,7 +110,7 @@ A Font object also contains useful general information, like the font bbox, the 
 
       Return an array of unicodes supported by this font.
 
-      :returns: an *array.array* [#f2]_ of length at most :attr:`Font.glyph_count`. I.e. *chr()* of every item in this array has a glyph in the font without using fallbacks. This is an example display of the supported glyphs:
+      :returns: an *array.array* [#f2]_ of length at most :attr:`Font.GlyphCount`. I.e. *chr()* of every item in this array has a glyph in the font without using fallbacks. This is an example display of the supported glyphs:
 
          Font font =  new Font("math")
          List<int> vuc = font.GetValidCodePoints()
@@ -146,7 +145,7 @@ A Font object also contains useful general information, like the font bbox, the 
       pair: Font.GlyphAdvance, wmode
       pair: Font.GlyphAdvance, smallCaps
 
-   .. method:: GlyphAdvance(int chr, string language=null, int script=0, int wmode=0, int smallCaps = 0 )
+   .. method:: GlyphAdvance(int chr, string language: null, int script: 0, int wmode: 0, int smallCaps: 0 )
 
       Calculate the "width" of the character's glyph (visual representation).
 
@@ -161,31 +160,31 @@ A Font object also contains useful general information, like the font bbox, the 
 
       Return the unicode value for a given glyph name. Use it in conjunction with `chr()` if you want to output e.g. a certain symbol.
 
-      :arg str name: The name of the glyph.
+      :arg string name: The name of the glyph.
 
-      :returns: The unicode integer, or 65533 = 0xFFFD if the name is unknown. Examples: `font.glyph_name_to_unicode("Sigma") = 931`, `font.glyph_name_to_unicode("sigma") = 963`. Refer to the `Adobe Glyph List <https://github.com/adobe-type-tools/agl-aglfn/blob/master/glyphlist.txt>`_ publication for a list of glyph names and their unicode numbers.
+      :returns: The unicode integer, or 65533 = 0xFFFD if the name is unknown. Examples: `font.GlyphName2Unicode("Sigma") = 931`, `font.GlyphName2Unicode("sigma") = 963`. Refer to the `Adobe Glyph List <https://github.com/adobe-type-tools/agl-aglfn/blob/master/glyphlist.txt>`_ publication for a list of glyph names and their unicode numbers.
 
    .. index::
       pair: Font.GlyphBbox, language
       pair: Font.GlyphBbox, script
       pair: Font.GlyphBbox, smallCaps
 
-   .. method:: glyph_bbox(chr, string language=null, int script=0, int smallCaps = 0 )
+   .. method:: GlyphBbox(chr, string language: null, int script: 0, int smallCaps: 0 )
 
-      The glyph rectangle relative to :data:`fontsize` 1.
+      The glyph rectangle relative to :data:`fontSize` 1.
 
       :arg int chr: *ord()* of the character.
 
       :returns: a :ref:`Rect`.
 
 
-   .. method:: Unicode2GlyphName(ch)
+   .. method:: Unicode2GlyphName(int ch)
 
       Show the name of the character's glyph.
 
       :arg int ch: the unicode number of the character. Use *ord()*, not the character itself.
 
-      :returns: a string representing the glyph's name. E.g. `font.glyph_name(ord("#")) = "numbersign"`. For an invalid code ".notfound" is returned.
+      :returns: a string representing the glyph's name. For an invalid code ".notfound" is returned.
       
    .. index::
       pair: TextLength, fontSize
@@ -194,7 +193,7 @@ A Font object also contains useful general information, like the font bbox, the 
       pair: TextLength, wmode
       pair: TextLength, smallCaps
 
-   .. method:: TextLength(string text, float fontsize=11, string language=null, int wmode = 0, int script=0, int smallCaps=0)
+   .. method:: TextLength(string text, float fontsize: 11, string language: null, int wmode: 0, int script: 0, int smallCaps: 0)
 
       Calculate the length in points of a unicode string.
 
@@ -215,40 +214,40 @@ A Font object also contains useful general information, like the font bbox, the 
       pair: GetCharLengths, wmode
       pair: GetCharLengths, smallCaps
 
-   .. method:: GetCharLengths(string text, float fontSize=11, string language = null, int script = 0, int wmode = 0, int smallCaps = 0)
+   .. method:: GetCharLengths(string text, float fontSize: 11, string language: null, int script: 0, int wmode: 0, int smallCaps: 0)
 
       Sequence of character lengths in points of a unicode string.
 
-      :arg str text: a text string, UTF-8 encoded.
+      :arg string text: a text string, UTF-8 encoded.
 
       :arg float fontSize: the :data:`FontSize`.
 
-      :rtype: tuple
+      :rtype: List<float>
 
-      :returns: the lengths in points of the characters of a string when stored in the PDF. It works like :meth:`Font.Textlength` broken down to single characters. This is a high speed method, used e.g. in :meth:`TextWriter.FillTextbox`. The following is true (allowing rounding errors): `font.TextLength(text) == sum(font.GetCharLengths(text))`.
+      :returns: the lengths in points of the characters of a string when stored in the PDF. It works like :meth:`Font.TextLength` broken down to single characters. This is a high speed method, used e.g. in :meth:`TextWriter.FillTextbox`. The following is true (allowing rounding errors): `font.TextLength(text) == sum(font.GetCharLengths(text))`.
 
-         Font font = new Font("helv");
+         Font font = new Font("helv", "../helv.ttf");
          string text = "PyMuPDF";
-         font.text_length(text);
+         font.TextLength(text);
          Utils.GetTextLength(text, fontName="helv");
-         sum(font.GetCharLengths(text));
+         Math.Sum(font.GetCharLengths(text));
          Console.WriteLine(font.GetCharLengths(text));
 
    .. attribute:: Buffer
 
       Copy of the binary font file content.
       
-      :rtype: bytes
+      :rtype: byte[]
 
    .. attribute:: Flags
 
       A dictionary with various font properties, each represented as bools. Example for Helvetica::
 
-      :rtype: dict
+      :rtype: Dictionary<string, uint>
 
    .. attribute:: Name
 
-      :rtype: str
+      :rtype: string
 
       Name of the font. May be "" or "(null)".
 

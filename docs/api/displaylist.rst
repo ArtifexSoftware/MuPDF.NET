@@ -11,7 +11,7 @@ DisplayList is a list containing drawing commands (text, images, etc.). The inte
 1. as a caching-mechanism to reduce parsing of a page
 2. as a data structure in multi-threading setups, where one thread parses the page and another one renders pages.
 
-A display list is populated with objects from a page, usually by executing :meth:`MuPDFPage.GetDisplaylist`. There also exists an independent constructor.
+A display list is populated with objects from a page, usually by executing :meth:`Page.GetDisplaylist`. There also exists an independent constructor.
 
 "Replay" the list (once or many times) by invoking one of its methods :meth:`DisplayList.Run`, :meth:`DisplayList.GetPixmap` or :meth:`DisplayList.GetTextPage`.
 
@@ -19,10 +19,10 @@ A display list is populated with objects from a page, usually by executing :meth
 ==================================== ============================================
 **Method**                           **Short Description**
 ==================================== ============================================
-:meth:`DisplayList.Run`              Run a display list through a device.
-:meth:`DisplayList.GetPixmap`        Generate a pixmap
-:meth:`DisplayList.GetTextPage`      Generate a text page
-:attr:`DisplayList.Rect`             Mediabox of the display list
+:meth:`DisplayList.Run`              run a display list through a device.
+:meth:`DisplayList.GetPixmap`        generate a pixmap
+:meth:`DisplayList.GetTextPage`      generate a text page
+:attr:`DisplayList.Rect`             mediabox of the display list
 ==================================== ============================================
 
 
@@ -35,11 +35,11 @@ A display list is populated with objects from a page, usually by executing :meth
       Create a new display list.
 
       :arg mediabox: The page's rectangle.
-      :type mediabox: :ref:`Rect`
+      :type Rect: :ref:`Rect`
 
       :rtype: DisplayList
 
-   .. method:: Run(MuPDFDeviceWrapper device, Matrix matrix, Rect area)
+   .. method:: Run(Device device, Matrix matrix, Rect area)
     
       Run the display list through a device. The device will populate the display list with its "commands" (i.e. text extraction or image creation). The display list can later be used to "read" a page many times without having to re-interpret it from the document file.
 
@@ -56,19 +56,19 @@ A display list is populated with objects from a page, usually by executing :meth
 
    .. index::
       pair: matrix; DisplayList.GetPixmap
-      pair: colorspace; DisplayList.GetPixmap
+      pair: colorSpace; DisplayList.GetPixmap
       pair: clip; DisplayList.GetPixmap
       pair: alpha; DisplayList.GetPixmap
 
-   .. method:: GetPixmap(Matrix matrix = null, ColorSpace colorspace = null, float alpha = 0, Rect clip = null)
+   .. method:: GetPixmap(Matrix matrix: null, ColorSpace colorSpace: null, float alpha: 0, Rect clip: null)
 
       Run the display list through a draw device and return a pixmap.
 
       :arg matrix: matrix to use. Default is the identity matrix.
       :type Matrix: :ref:`Matrix`
 
-      :arg colorspace: the desired colorspace. Default is RGB.
-      :type colorspace: :ref:`ColorSpace`
+      :arg colorSpace: the desired colorspace. Default is RGB.
+      :type colorSpace: :ref:`ColorSpace`
 
       :arg int alpha: determine whether or not (0, default) to include a transparency channel.
 
@@ -77,7 +77,7 @@ A display list is populated with objects from a page, usually by executing :meth
       :rtype: :ref:`Pixmap`
       :returns: pixmap of the display list.
 
-   .. method:: GetTextpage(int flags)
+   .. method:: GetTextPage(int flags)
 
       Run the display list through a text device and return a text page.
 
@@ -88,7 +88,7 @@ A display list is populated with objects from a page, usually by executing :meth
 
    .. attribute:: Rect
 
-      Contains the display list's mediabox. This will equal the page's rectangle if it was created via :meth:`MuPDFPage.GetDisplaylist`.
+      Contains the display list's mediabox. This will equal the page's rectangle if it was created via :meth:`Page.GetDisplayList`.
 
       :type: :ref:`Rect`
 
