@@ -13,6 +13,8 @@ namespace MuPDF.NET
 {
     public static class Utils
     {
+        public static (string, string) VERSION = ("1.25.0", "2.0.12-alpha");
+
         public static int FZ_MIN_INF_RECT = (int)(-0x80000000);
 
         public static int FZ_MAX_INF_RECT = (int)0x7fffff80;
@@ -794,11 +796,7 @@ namespace MuPDF.NET
             obj.pdf_dict_put(new PdfObj(key), val);
         }
 
-/*        public static (int, int, int) MUPDF_VERSION = (
-            mupdf.mupdf.FZ_VERSION_MAJOR,
-            mupdf.mupdf.FZ_VERSION_MINOR,
-            mupdf.mupdf.FZ_VERSION_PATCH
-        );*/
+        public static (int, int, int) MUPDF_VERSION = (1, 25, 0);
 
         public static Dictionary<string, string> ErrorMessages = new Dictionary<string, string>()
         {
@@ -6187,6 +6185,19 @@ namespace MuPDF.NET
                 Utils.LoadEmbeddedDll();
 
             Utils.IsInitialized = true;
+        }
+
+        public static float GetArea(Rect rect, string unit = "px")
+        {
+            Dictionary<string, (float, float)> u = new Dictionary<string, (float, float)>()
+            {
+                {"px", (1f, 1f) },
+                {"in", (1f, 72.0f) },
+                {"cm", (2.54f, 72.0f) },
+                {"mm", (25.4f, 72f) }
+            };
+            float f = (float)Math.Pow(u[unit].Item1 / u[unit].Item2, 2);
+            return f * rect.Width * rect.Height;
         }
     }
 }
