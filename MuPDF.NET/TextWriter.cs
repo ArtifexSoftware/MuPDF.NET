@@ -29,19 +29,20 @@ namespace MuPDF.NET
 
         public bool ThisOwn { get; set; }
 
-        public float[] Color { get; set; } = {0, 0, 0};
+        public float[] Color { get; set; } = { 0, 0, 0 };
 
         public TextWriter(Rect pageRect, float opacity = 1, float[] color = null)
         {
             _nativeText = mupdf.mupdf.fz_new_text();
             Opacity = opacity;
             Rect = pageRect;
-            Ctm = new Matrix(1, 01, 0, -1, 0, Rect.Height);
+            Ctm = new Matrix(1, 0, 0, -1, 0, Rect.Height);
             ICtm = ~Ctm;
             LastPoint = new Point();
             TextRect = new Rect();
             UsedFonts = new List<Font>();
-            Color = color;
+            if (color != null)
+                Color = color;
             ThisOwn = false;
         }
 
@@ -187,7 +188,7 @@ namespace MuPDF.NET
                 opacity = Opacity;
             if (color == null)
                 color = Color;
-
+            
             PdfPage pdfPage = page.GetPdfPage();
             float alpha = 1;
             FzColorspace colorSpace;
@@ -195,7 +196,7 @@ namespace MuPDF.NET
             if (opacity >= 0 && opacity < 1)
                 alpha = opacity;
             int nCol = 1;
-            float[] devColor = { };
+            float[] devColor = { 0, 0 , 0, 0 };
             if (color != null)
             {
                 devColor = Annot.ColorFromSequence(color);
@@ -258,7 +259,7 @@ namespace MuPDF.NET
             }
 
             if (morph != null || matrix != null)
-                newContLines.Add($"{matrix_.A} {matrix_.B} {matrix_.C} {matrix_.D} {matrix_.E} {matrix_.F}");
+                newContLines.Add($"{matrix_.A} {matrix_.B} {matrix_.C} {matrix_.D} {matrix_.E} {matrix_.F} cm");
 
             foreach (string line in oldLines)
             {
@@ -280,7 +281,7 @@ namespace MuPDF.NET
                 {
                     string[] temp = line_.Split(" ");
                     float fSize = (float)Convert.ToDouble(temp[1]);
-                    float w = 1;
+                    float w = 1f;
                     if (renderMode != 0)
                         w = fSize * 0.05f;
                     newContLines.Add($"{w} w");
@@ -298,7 +299,6 @@ namespace MuPDF.NET
             if (!string.IsNullOrEmpty(emc))
                 newContLines.Add(emc);
             newContLines.Add("Q\n");
-            Console.WriteLine(string.Join("\n", newContLines));
             byte[] content = Encoding.UTF8.GetBytes(string.Join("\n", newContLines));
             Utils.InsertContents(page, content, overlay);
             foreach (Font font in UsedFonts)
