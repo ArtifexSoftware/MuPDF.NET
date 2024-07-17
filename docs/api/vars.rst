@@ -11,37 +11,37 @@ Constants
 
 .. py:data:: csRGB
 
-    Predefined RGB colorspace *Colorspace(Utils.CS_RGB)*.
+    Predefined RGB colorspace *ColorSpace(Utils.CS_RGB)*.
 
-    :type: :ref:`Colorspace`
+    :type: :ref:`ColorSpace`
 
 .. py:data:: csGRAY
 
-    Predefined GRAY colorspace *Colorspace(Utils.CS_GRAY)*.
+    Predefined GRAY colorspace *ColorSpace(Utils.CS_GRAY)*.
 
-    :type: :ref:`Colorspace`
+    :type: :ref:`ColorSpace`
 
 .. py:data:: csCMYK
 
-    Predefined CMYK colorspace *Colorspace(Utils.CS_CMYK)*.
+    Predefined CMYK colorspace *ColorSpace(Utils.CS_CMYK)*.
 
-    :type: :ref:`Colorspace`
+    :type: :ref:`ColorSpace`
 
 .. py:data:: CS_RGB
 
-    1 -- Type of :ref:`Colorspace` is RGBA
+    1 -- Type of :ref:`ColorSpace` is RGBA
 
     :type: int
 
 .. py:data:: CS_GRAY
 
-    2 -- Type of :ref:`Colorspace` is GRAY
+    2 -- Type of :ref:`ColorSpace` is GRAY
 
     :type: int
 
 .. py:data:: CS_CMYK
 
-    3 -- Type of :ref:`Colorspace` is CMYK
+    3 -- Type of :ref:`ColorSpace` is CMYK
 
     :type: int
 

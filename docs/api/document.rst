@@ -1016,9 +1016,9 @@ This class represents a document. It can be constructed from a file or from memo
      pair: append; Document.InsertPdf
      pair: join; Document.InsertPdf
      pair: merge; Document.InsertPdf
-     pair: from_page; Document.InsertPdf
-     pair: to_page; Document.InsertPdf
-     pair: start_at; Document.InsertPdf
+     pair: fromPage; Document.InsertPdf
+     pair: toPage; Document.InsertPdf
+     pair: startAt; Document.InsertPdf
      pair: rotate; Document.InsertPdf
      pair: links; Document.InsertPdf
      pair: annots; Document.InsertPdf
@@ -1618,7 +1618,7 @@ This class represents a document. It can be constructed from a file or from memo
 
   .. attribute:: Permissions
 
-    Contains the permissions to access the document. This is an integer containing bool values in respective bit positions. For example, if *doc.Permissions & mupdf.mupdf.PDF_PERM_MODIFY > 0*, you may change the document. See :ref:`PermissionCodes` for details.
+    Contains the permissions to access the document. This is an integer containing bool values in respective bit positions. For example, if *doc.Permissions & PermissionCodes.PDF_PERM_MODIFY > 0*, you may change the document. See :ref:`PermissionCodes` for details.
 
     :type: int
 
