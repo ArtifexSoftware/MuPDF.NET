@@ -32,8 +32,8 @@ This class represents a document. It can be constructed from a file or from memo
 :meth:`Document.GetEmbfileInfo`                 PDF only: metadata of an embedded file
 :meth:`Document.GetEmbfileNames`                PDF only: list of embedded files
 :meth:`Document.GetEmbfileUpd`                  PDF only: change an embedded file
-:meth:`Document.GetNewXref`                     make new xref
-:meth:`Document.GetXrefLength`                  get length of xref table
+:meth:`Document.GetNewXref`                     make new `xref`
+:meth:`Document.GetXrefLength`                  get length of `xref` table
 :meth:`Document.ExtractFont`                    PDF only: extract a font by `xref`
 :meth:`Document.ExtractImage`                   PDF only: extract an embedded image by `xref`       
 :meth:`Document.FindBookmark`                   retrieve page location after laid out document
@@ -81,15 +81,15 @@ This class represents a document. It can be constructed from a file or from memo
 :meth:`Document.NewPage`                        PDF only: insert a new empty page
 :meth:`Document.NextLocation`                   return (chapter, pno) of following page
 :meth:`Document.PageCropBox`                    PDF only: the unrotated page rectangle
-:meth:`Document.Pagexref`                       PDF only: xref of a page number
+:meth:`Document.Pagexref`                       PDF only: `xref` of a page number
 :meth:`Document.GetPages`                       iterator over a page range
-:meth:`Document.GetPdfCatelog`                  PDF only: xref of catalog (root)
+:meth:`Document.GetPdfCatelog`                  PDF only: `xref` of catalog (root)
 :meth:`Document.GetPdfTrailer`                  PDF only: trailer source
 :meth:`Document.PrevLocation`                   return (chapter, pno) of preceding page
 :meth:`Document.GetLocationFromPageNumber`      convert pno to (chapter, page)
 :meth:`Document.GetPageNumberFromLocation`      convert (chapter, pno) to page number
 :meth:`Document.GetMetadata`                    get metadata
-:meth:`Document.GetPageXref`                    get xref of page number
+:meth:`Document.GetPageXref`                    get `xref` of page number
 :meth:`Document.LoadOutline`                    load first outline
 :meth:`Document.ReloadPage`                     PDF only: provide a new copy of a page
 :meth:`Document.ForgetPage`                     remove a page from document page dict
@@ -119,14 +119,14 @@ This class represents a document. It can be constructed from a file or from memo
 :meth:`Document.GetKeyXref`                     PDF only: get the value of a dictionary key
 :meth:`Document.GetKeysXref`                    PDF only: list the keys of object at `xref`
 :meth:`Document.GetXrefObject`                  PDF only: get the definition source of `xref`
-:meth:`Document.XrefIsFont`                     check if xref is a font object
-:meth:`Document.XrefIsImage`                    check if xref is a image object
-:meth:`Document.XrefIsStream`                   check if xref is a stream object
-:meth:`Document.XrefIsXObject`                  check if xref is a form xobject
+:meth:`Document.XrefIsFont`                     check if `xref` is a font object
+:meth:`Document.XrefIsImage`                    check if `xref` is a image object
+:meth:`Document.XrefIsStream`                   check if `xref` is a stream object
+:meth:`Document.XrefIsXObject`                  check if `xref` is a form xobject
 :meth:`Document.SetKeyXRef`                     PDF only: set the value of a dictionary key
-:meth:`Document.GetXrefStream`                  get decompressed xref stream
-:meth:`Document.GetXrefStreamRaw`               PDF only: raw stream source at xref
-:meth:`Document.XrefXmlMetaData`                PDF only: xref of XML metadata
+:meth:`Document.GetXrefStream`                  get decompressed `xref` stream
+:meth:`Document.GetXrefStreamRaw`               PDF only: raw stream source at `xref`
+:meth:`Document.XrefXmlMetaData`                PDF only: `xref` of XML metadata
 :attr:`Document.ChapterCount`                   number of chapters
 :attr:`Document.FormFonts`                      number of chapters
 :attr:`Document.IsClosed`                       has document been closed?
@@ -344,7 +344,7 @@ This class represents a document. It can be constructed from a file or from memo
     :arg int[] off: list of :data:`xref` of OCGs to set OFF. Replaces previous values. An empty list will cause no OCG being set to OFF anymore. Should be specified if `baseState="OFF"` is used.
     :arg string baseState: state of OCGs that are not mentioned in *on* or *off*. Possible values are "ON", "OFF" or "Unchanged". Upper / lower case possible.
     :arg List<int[]> rbgroups: a list of lists. Replaces previous values. Each sublist should contain two or more OCG xrefs. OCGs in the same sublist are handled like buttons in a radio button group: setting one to ON automatically sets all other group members to OFF.
-    :arg int[] locked: a list of OCG xref number that cannot be changed by the user interface.
+    :arg int[] locked: a list of OCG `xref` number that cannot be changed by the user interface.
 
     Values `null` will not change the corresponding PDF array.
 
@@ -651,7 +651,7 @@ This class represents a document. It can be constructed from a file or from memo
 
   .. method:: SetKeyXRef(int xref, string key, string value)
 
-    PDF only: Set (add, update, delete) the value of a PDF key for the :data:`dictionary` object given by its xref.
+    PDF only: Set (add, update, delete) the value of a PDF key for the :data:`dictionary` object given by its `xref`.
 
     .. caution:: This is an expert function: if you do not know what you are doing, there is a high risk to render (parts of) the PDF unusable. Please do consult :ref:`AdobeManual` about object specification formats (page 18) and the structure of special dictionary types like page objects.
 
@@ -659,8 +659,8 @@ This class represents a document. It can be constructed from a file or from memo
     :arg string key: the desired PDF key (without leading "/"). Must not be empty. Any valid PDF key -- whether already present in the object (which will be overwritten) -- or new. It is possible to use PDF path notation like `"Resources/ExtGState"` -- which sets the value for key `"/ExtGState"` as a sub-object of `"/Resources"`.
     :arg string value: the value for the key. It must be a non-empty string and, depending on the desired PDF object type, the following rules must be observed. There is some syntax checking, but **no type checking** and no checking if it makes sense PDF-wise, i.e. **no semantics checking**. Upper / lower case is important!
 
-    * **xref** -- must be provided as `"nnn 0 R"` with a valid :data:`xref` number nnn of the PDF. The suffix "`0 R`" is required to be recognizable as an xref by PDF applications.
-    * **array** -- a string like `"[a b c d e f]"`. The brackets are required. Array items must be separated by at least one space (not commas). An empty array `"[]"` is possible and *equivalent* to removing the key. Array items may be any PDF objects, like dictionaries, xrefs, other arrays, etc. Array items may be of different types.
+    * **xref** -- must be provided as `"nnn 0 R"` with a valid :data:`xref` number nnn of the PDF. The suffix "`0 R`" is required to be recognizable as an `xref` by PDF applications.
+    * **array** -- a string like `"[a b c d e f]"`. The brackets are required. Array items must be separated by at least one space (not commas). An empty array `"[]"` is possible and *equivalent* to removing the key. Array items may be any PDF objects, like dictionaries, `xrefs`, other arrays, etc. Array items may be of different types.
     * **dict** -- a string like `"<< ... >>"`. The brackets are required and must enclose a valid PDF dictionary definition. The empty dictionary `"<<>>"` is possible and *equivalent* to removing the key.
     * **int** -- an integer formatted **as a string**.
     * **float** -- a float formatted **as a string**. Scientific notation (with exponents) is **not allowed by PDF**.
@@ -741,7 +741,7 @@ This class represents a document. It can be constructed from a file or from memo
 
     where
 
-        * **Xref** (*int*) is the font object number (may be zero if the PDF uses one of the builtin fonts directly)
+        * **Xref** (*int*) is the font object number (may be zero if the PDF uses one of the built-in fonts directly)
         * **Ext** (*string*) font file extension (e.g. "ttf", see :ref:`FontExtensions`)
         * **Type** (*string*) is the font type (like "Type1" or "TrueType" etc.)
         * **BaseFont** (*string*) is the base font name,
@@ -1281,7 +1281,7 @@ This class represents a document. It can be constructed from a file or from memo
     :arg string desc: the new description.
 
     :rtype: int
-    :returns: xref of the file object. Automatically, its `/ModDate` PDF key will be updated with the current date-time.
+    :returns: `xref` of the file object. Automatically, its `/ModDate` PDF key will be updated with the current date-time.
 
 
   .. method:: Close()
@@ -1352,7 +1352,7 @@ This class represents a document. It can be constructed from a file or from memo
     :arg int new: *deprecated* and ignored. Will be removed some time.
     :arg int compress: whether to compress the inserted stream. If `1` (default), the stream will be inserted using `/FlateDecode` compression (if beneficial), otherwise the stream will inserted as is.
 
-    :raises ValueError: if *xref* does not represent a PDF :data:`dict`. An empty dictionary ``<<>>`` is accepted. So if you just created the xref and want to give it a stream, first execute `doc.UpdateObject(xref, "<<>>")`, and then insert the stream data with this method.
+    :raises ValueError: if `xref` does not represent a PDF :data:`dict`. An empty dictionary ``<<>>`` is accepted. So if you just created the `xref` and want to give it a stream, first execute `doc.UpdateObject(xref, "<<>>")`, and then insert the stream data with this method.
 
     The method is primarily (but not exclusively) intended to manipulate streams containing PDF operator syntax (see pp. 643 of the :ref:`AdobeManual`) as it is the case for e.g. page content streams.
 
@@ -1363,15 +1363,15 @@ This class represents a document. It can be constructed from a file or from memo
 
   .. method:: Document.CopyXref(int newXref, int xref, List<string> keep: null)
 
-    PDF Only: Make *target* xref an exact copy of *source*. If *source* is a :data:`stream`, then these data are also copied.
+    PDF Only: Make *target* `xref` an exact copy of *source*. If *source* is a :data:`stream`, then these data are also copied.
 
     :arg int source: the source :data:`xref`. It must be an existing **dictionary** object.
-    :arg int target: the target xref. Must be an existing **dictionary** object. If the xref has just been created, make sure to initialize it as a PDF dictionary with the minimum specification ``<<>>``.
+    :arg int target: the target `xref`. Must be an existing **dictionary** object. If the `xref` has just been created, make sure to initialize it as a PDF dictionary with the minimum specification ``<<>>``.
     :arg List<string> keep: an optional list of top-level keys in *target*, that should not be removed in preparation of the copy process.
 
     .. note::
 
-        * Both xref numbers must represent existing dictionaries.
+        * Both `xref` numbers must represent existing dictionaries.
         * Before data is copied from *source*, all *target* dictionary keys are deleted. You can specify exceptions from this in the *keep* list. If *source* however has a same-named key, its value will still replace the target.
         * If *source* is a :data:`stream` object, then these data will also be copied over, and *target* will be converted to a stream object.
         * A typical use case is to replace or remove an existing image without using redaction annotations. Example scripts can be seen `https://github.com/ArtifexSoftware/MuPDF.NET/tree/main/Examples/ReplaceImage`.
@@ -1405,7 +1405,7 @@ This class represents a document. It can be constructed from a file or from memo
 
     .. note:: There is a functional overlap with *pix = new Pixmap(doc, xref)*, followed by a *pix.ToBytes()*. Main differences are that extract_image, **(1)** does not always deliver PNG image formats, **(2)** is **very** much faster with non-PNG images, **(3)** usually results in much less disk storage for extracted images, **(4)** returns `None` in error cases (generates no exception). Look at the following example images within the same PDF.
 
-       * xref 1186 is a JPEG -- :meth:`Document.ExtractImage` is **many times faster** and produces a **much smaller** output (2.48 MB vs. 0.35 MB)::
+       * `xref` 1186 is a JPEG -- :meth:`Document.ExtractImage` is **many times faster** and produces a **much smaller** output (2.48 MB vs. 0.35 MB)::
 
           In [27]: %timeit pix =  new Pixmap(doc, 1186);pix.ToBytes()
           341 ms ± 2.86 ms per loop (mean ± std. dev. of 7 runs, 1 loop each)
@@ -1429,7 +1429,7 @@ This class represents a document. It can be constructed from a file or from memo
     :rtype: FontInfo
     :returns: a tuple `(basename, ext, type, content)`, where *ext* is a 3-byte suggested file extension (*str*), *basename* is the font's name (*str*), *type* is the font's type (e.g. "Type1") and *content* is a bytes object containing the font file's content (or *b""*). For possible extension values and their meaning see :ref:`FontExtensions`. Return details on error:
 
-          * `("", "", "", b"")` -- invalid xref or xref is not a (valid) font object.
+          * `("", "", "", b"")` -- invalid `xref` or `xref` is not a (valid) font object.
           * `(basename, "n/a", "Type1", b"")` -- *basename* is not embedded and thus cannot be extracted. This is the case for e.g. the :ref:`Base-14-Fonts` and Type 3 fonts.
 
 
