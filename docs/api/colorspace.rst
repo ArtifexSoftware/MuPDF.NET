@@ -24,7 +24,7 @@ Represents the color space of a :ref:`Pixmap`.
 
       The name identifying the colorspace.
 
-      :type: str
+      :type: string
 
    .. attribute:: N
 

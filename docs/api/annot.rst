@@ -16,51 +16,53 @@ There is a parent-child relationship between an annotation and its page. If the 
 ================================== ==============================================================
 **Attribute**                      **Short Description**
 ================================== ==============================================================
-:meth:`Annot.DeleteResponses` 
-:meth:`Annot.GetFile`  
-:meth:`Annot.GetOC`  
-:meth:`Annot.GetPixmap`
-:meth:`Annot.GetSound` 
-:meth:`Annot.GetTextPage` 
-:meth:`Annot.SetApnBbox` 
-:meth:`Annot.SetApnMatrix` 
-:meth:`Annot.SetBorder` 
-:meth:`Annot.SetBlendMode`
-:meth:`Annot.SetColors`    
-:meth:`Annot.SetFlags`     
-:meth:`Annot.SetIrtXRef`  
-:meth:`Annot.set_name`      
-:meth:`Annot.SetOC`        
-:meth:`Annot.SetOpacity`   
-:meth:`Annot.SetOpen`      
-:meth:`Annot.SetPopup`     
-:meth:`Annot.SetRect`      
-:meth:`Annot.SetRotation`  
-:meth:`Annot.UpdateFile`   
-:meth:`Annot.Update`        
-:attr:`Annot.APN_BBOX`             
-:attr:`Annot.APN_MATRIX`            
-:attr:`Annot.BLENDMODE`     
-:attr:`Annot.BORDER`        
-:attr:`Annot.COLORS`        
-:attr:`Annot.FILEINFO`      
-:attr:`Annot.FLAGS`     
-:attr:`Annot.HAS_POPUP`     
-:attr:`Annot.IrtXRef`      
-:attr:`Annot.ANNOT_INFO`      
-:attr:`Annot.IsOpen`
-:attr:`Annot.LINE_ENDS`
-:attr:`Annot.NEXT`
-:attr:`Annot.OPACITY`       
-:attr:`Annot.PARENT`        
-:attr:`Annot.POPUP_RECT`    
-:attr:`Annot.POPUP_XREF`
-:attr:`Annot.RECT_`
-:attr:`Annot.RECT_DELTA`
-:attr:`Annot.ROTATION`
-:attr:`Annot.TYPE`
-:attr:`Annot.VERTICES`
-:attr:`Annot.Xref` 
+:meth:`Annot.DeleteResponses`      delete all responding annotions
+:meth:`Annot.GetFile`              get attached file content
+:meth:`Annot.GetOC`                get :data:`xref` of an :data:`OCG` / :data:`OCMD`
+:meth:`Annot.GetPixmap`            image of the annotation as a pixmap
+:meth:`Annot.GetSound`             get the sound of an audio annotation
+:meth:`Annot.GetText`              extract annotation text
+:meth:`Annot.GetTextbox`           extract annotation text
+:meth:`Annot.GetTextPage`          extract text page 
+:meth:`Annot.SetApnBbox`           set annotation appearance bbox.
+:meth:`Annot.SetApnMatrix`         set annotation appearance matrix.
+:meth:`Annot.SetBorder`            set annotation's border properties
+:meth:`Annot.SetBlendMode`         set annotation's blend mode
+:meth:`Annot.SetColors`            set annotation's colors
+:meth:`Annot.SetFlags`             set annotation's flags field
+:meth:`Annot.SetIrtXRef`           define the annotation to being "In Response To"
+:meth:`Annot.SetName`              set annotation's name field
+:meth:`Annot.SetOC`                set :data:`xref` to an :data:`OCG` / :data:`OCMD`
+:meth:`Annot.SetOpacity`           change transparency
+:meth:`Annot.SetOpen`              open / close annotation or its Popup
+:meth:`Annot.SetPopup`             create a Popup for the annotation
+:meth:`Annot.SetRect`              change annotation rectangle
+:meth:`Annot.SetRotation`          change rotation
+:meth:`Annot.UpdateFile`           update attached file content
+:meth:`Annot.Update`               apply accumulated annot changes
+:attr:`Annot.ApnBbox`              annotation appearance bbox
+:attr:`Annot.ApnMatrix`            annotation appearance matrix
+:attr:`Annot.BlendMode`            annotation BlendMode
+:attr:`Annot.Border`               border details
+:attr:`Annot.Colors`               border / background and fill colors
+:attr:`Annot.FileInfo`             get attached file information
+:attr:`Annot.Flags`                annotation flags
+:attr:`Annot.HasPopup`             whether annotation has a Popup
+:attr:`Annot.IrtXref`              annotation to which this one responds
+:attr:`Annot.Info`                 various information
+:attr:`Annot.IsOpen`               whether annotation or its Popup is open
+:attr:`Annot.LineEnds`             start / end appearance of line-type annotations
+:attr:`Annot.Next`                 link to the next annotation
+:attr:`Annot.Opacity`              the annot's transparency
+:attr:`Annot.Parent`               page object of the annotation
+:attr:`Annot.PopupRect`            rectangle of the annotation's Popup
+:attr:`Annot.PopupXref`            the PDF :data:`xref` number of the annotation's Popup
+:attr:`Annot.Rect`                 rectangle containing the annotation
+:attr:`Annot.RectDelta`            annotation delta values to rectangle
+:attr:`Annot.Rotation`             annotation rotation
+:attr:`Annot.Type`                 type of the annotation
+:attr:`Annot.Vertices`             point coordinates of Polygons, PolyLines, etc.
+:attr:`Annot.Xref`                 the PDF :data:`xref` number
 ================================== ==============================================================
 
 **Class API**
@@ -69,7 +71,7 @@ There is a parent-child relationship between an annotation and its page. If the 
 
    .. index::
       pair: matrix; Annot.GetPixmap
-      pair: colorspace; Annot.GetPixmap
+      pair: colorSpace; Annot.GetPixmap
       pair: alpha; Annot.GetPixmap
       pair: dpi; Annot.GetPixmap
 
@@ -77,34 +79,34 @@ There is a parent-child relationship between an annotation and its page. If the 
 
       Creates a pixmap from the annotation as it appears on the page in untransformed coordinates. The pixmap's :ref:`IRect` equals *Annot.rect.irect* (see below).
 
-      :arg matrix_like matrix: a matrix to be used for image creation. Default is :ref:`Identity`.
+      :arg Matrix matrix: a matrix to be used for image creation. Default is :ref:`Identity`.
 
       :arg int dpi: desired resolution in dots per inch. If not `null`, the matrix parameter is ignored.
 
-      :arg colorspace: a colorspace to be used for image creation. Default is *fitz.csRGB*.
-      :type colorspace: :ref:`Colorspace`
+      :arg colorSpace: a colorspace to be used for image creation. Default is *Utils.csRGB*.
+      :type ColorSpace: :ref:`ColorSpace`
 
-      :arg bool alpha: whether to include transparency information. Default is *False*.
+      :arg bool alpha: whether to include transparency information. Default is *false*.
 
       :rtype: :ref:`Pixmap`
 
       .. note::
          
-         * If the annotation has just been created or modified, you should :meth:`Document.reload_page` the page first via `page = doc.reload_page(page)`.
+         * If the annotation has just been created or modified, you should :meth:`Document.ReloadPage` the page first via `page = doc.ReloadPage(page)`.
 
-         * The pixmap will have *"premultiplied"* pixels if `alpha=True`. To learn about some background, e.g. look for "Premultiplied alpha" `here <https://en.wikipedia.org/wiki/Glossary_of_computer_graphics#P>`_.
+         * The pixmap will have *"premultiplied"* pixels if `alpha=1`. To learn about some background, e.g. look for "Premultiplied alpha" `here <https://en.wikipedia.org/wiki/Glossary_of_computer_graphics#P>`_.
 
 
-   .. method:: SetInfo(AnnotInfoStruct info: null, string content: null, string title: null, string creationDate: null, string modDate: null, string subject: null)
+   .. method:: SetInfo(AnnotInfo info: null, string content: null, string title: null, string creationDate: null, string modDate: null, string subject: null)
 
       Changes annotation properties. These include dates, contents, subject and author (title). Changes for *name* and *id* will be ignored. The update happens selectively: To leave a property unchanged, set it to *null*. To delete existing data, use an empty string.
 
       :arg info: a dictionary compatible with the *info* property (see below). All entries must be strings. If this argument is not a dictionary, the other arguments are used instead -- else they are ignored.
-      :arg string content: see description in :attr:`info`.
-      :arg string title: see description in :attr:`info`.
+      :arg string content: see description in :attr:`Info`.
+      :arg string title: see description in :attr:`Info`.
       :arg string creationDate: date of annot creation. If given, should be in PDF datetime format.
       :arg string modDate: date of last modification. If given, should be in PDF datetime format.
-      :arg string subject: see description in :attr:`info`.
+      :arg string subject: see description in :attr:`Info`.
 
    .. method:: SetLineEnds(PdfLineEnding start, PdfLineEnding end)
 
@@ -112,8 +114,8 @@ There is a parent-child relationship between an annotation and its page. If the 
 
       .. note::
 
-         * While 'FreeText', 'Line', 'PolyLine', and 'Polygon' annotations can have these properties, (Py-) MuPDF does not support line ends for 'FreeText', because the call-out variant of it is not supported.
-         * Some symbols have an interior area (diamonds, circles, squares, etc.). By default, these areas are filled with the fill color of the annotation. If this is `null`, then white is chosen. The `fill_color` argument of :meth:`Annot.Update` can now be used to override this and give line end symbols their own fill color.
+         * While 'FreeText', 'Line', 'PolyLine', and 'Polygon' annotations can have these properties, MuPDF does not support line ends for 'FreeText', because the call-out variant of it is not supported.
+         * Some symbols have an interior area (diamonds, circles, squares, etc.). By default, these areas are filled with the fill color of the annotation. If this is `null`, then white is chosen. The `fillColor` argument of :meth:`Annot.Update` can now be used to override this and give line end symbols their own fill color.
 
       :arg start: The symbol number for the first point.
       :arg end: The symbol number for the last point.
@@ -142,11 +144,11 @@ There is a parent-child relationship between an annotation and its page. If the 
          .. note:: Must refer to an existing annotation on this page. Setting this property requires no subsequent `Update()`.
 
 
-   .. method:: SetOpen(value)
+   .. method:: SetOpen(int isOpen)
 
       Set the annotation's Popup annotation to open or closed -- **or** the annotation itself, if its type is 'Text' ("sticky note").
 
-      :arg int value: the desired open state (1 = `true`, 0 = `false`)`.`
+      :arg int isOpen: the desired open state (1 = `true`, 0 = `false`)`.`
 
 
    .. method:: SetPopup(Rect rect)
@@ -157,17 +159,17 @@ There is a parent-child relationship between an annotation and its page. If the 
 
 
 
-   .. method:: SetOpacity(float value)
+   .. method:: SetOpacity(float opacity)
 
       Set the annotation's opacity. Opacity can also be set in :meth:`Annot.Update`.
 
-      :arg float value: a float in range `[0, 1]`. Any value outside is assumed to be 1. E.g. a value of 0.5 sets the transparency to 50%.
+      :arg float opacity: a float in range `[0, 1]`. Any value outside is assumed to be 1. E.g. a value of 0.5 sets the transparency to 50%.
 
       Three overlapping 'Circle' annotations with each opacity set to 0.5:
 
       .. image:: ../images/img-opacity.*
 
-   .. attribute:: BLENDMODE
+   .. attribute:: BlendMode
 
       The annotation's blend mode. See :ref:`AdobeManual`, page 324 for explanations.
 
@@ -177,9 +179,9 @@ There is a parent-child relationship between an annotation and its page. If the 
 
    .. method:: SetBlendMode(string blendMode)
 
-      Set the annotation's blend mode. See :ref:`AdobeManual`, page 324 for explanations. The blend mode can also be set in :meth:`Annot.update`.
+      Set the annotation's blend mode. See :ref:`AdobeManual`, page 324 for explanations. The blend mode can also be set in :meth:`Annot.Update`.
 
-      :arg string blendmode: set the blend mode. Use :meth:`Annot.update` to reflect this in the visual appearance. For predefined values see :ref:`BlendModes`. Use `PDF_BM_Normal` to **remove** a blend mode.
+      :arg string blendmode: set the blend mode. Use :meth:`Annot.Update` to reflect this in the visual appearance. For predefined values see :ref:`BlendMode`. Use `PDF_BM_Normal` to **remove** a blend mode.
 
 
    .. method:: SetName(string name)
@@ -188,7 +190,7 @@ There is a parent-child relationship between an annotation and its page. If the 
 
       :arg string name: the new name.
 
-      .. caution:: If you set the name of a 'Stamp' annotation, then this will **not change** the rectangle, nor will the text be layouted in any way. If you choose a standard text from :ref:`StampIcons` (the **exact** name piece after `"STAMP_"`), you should receive the original layout. An **arbitrary text** will not be changed to upper case, but be written in font "Times-Bold" as is, horizontally centered in **one line** and be shortened to fit. To get your text fully displayed, its length using :data:`fontsize` 20 must not exceed 190 points. So please make sure that the following inequality is true: `fitz.get_text_length(text, fontname="tibo", fontsize=20) <= 190`.
+      .. caution:: If you set the name of a 'Stamp' annotation, then this will **not change** the rectangle, nor will the text be layouted in any way. If you choose a standard text from :ref:`StampIcons` (the **exact** name piece after `"STAMP_"`), you should receive the original layout. An **arbitrary text** will not be changed to upper case, but be written in font "Times-Bold" as is, horizontally centered in **one line** and be shortened to fit. To get your text fully displayed, its length using :data:`fontSize` 20 must not exceed 190 points. So please make sure that the following inequality is true: `Utils.GetTextLength(text, fontName: "tibo", fontSize: 20) <= 190`.
 
    .. method:: SetRect(Rect rect)
 
@@ -216,11 +218,11 @@ There is a parent-child relationship between an annotation and its page. If the 
       PDF only: Change border width, dashing, style and cloud effect. See the :attr:`Annot.Border` attribute for more details.
 
 
-      :arg dict border: a dictionary as returned by the :attr:`Border` property, with keys `"width"` (`float`), `"style"` (`str`),  `"dashes"` (`sequence`) and `clouds` (`int`). Omitted keys will leave the resp. property unchanged. Set the border argument to `null` (the default) to use the other arguments.
+      :arg Dictionary border: a dictionary as returned by the :attr:`Border` property, with keys `"width"` (`float`), `"style"` (`string`),  `"dashes"` (`int[]`) and `clouds` (`int`). Omitted keys will leave the resp. property unchanged. Set the border argument to `null` (the default) to use the other arguments.
 
       :arg float width: A non-negative value will change the border line width.
-      :arg str style: A value other than `null` will change this border property.
-      :arg sequence dashes: All items of the sequence must be integers, otherwise the parameter is ignored. To remove dashing use: `dashes=[]`. If dashes is a non-empty sequence, "style" will automatically be set to "D" (dashed). 
+      :arg string style: A value other than `null` will change this border property.
+      :arg int[] dashes: All items of the sequence must be integers, otherwise the parameter is ignored. To remove dashing use: `dashes=[]`. If dashes is a non-empty sequence, "style" will automatically be set to "D" (dashed). 
       :arg int clouds: A value >= 0 will change this property. Use `clouds=0` to remove the cloudy appearance completely. Only annotation types 'Square', 'Circle', and 'Polygon' are supported with this property.
 
    .. method:: SetFlags(int flags)
@@ -233,9 +235,9 @@ There is a parent-child relationship between an annotation and its page. If the 
 
       Changes the "stroke" and "fill" colors for supported annotation types -- not all annotations accept both.
 
-      :arg dict colors: a dictionary containing color specifications. For accepted dictionary keys and values see below. The most practical way should be to first make a copy of the *colors* property and then modify this dictionary as required.
-      :arg sequence stroke: see above.
-      :arg sequence fill: see above.
+      :arg Dictionary colors: a dictionary containing color specifications. For accepted dictionary keys and values see below. The most practical way should be to first make a copy of the *colors* property and then modify this dictionary as required.
+      :arg float[] stroke: see above.
+      :arg float[] fill: see above.
 
 
    .. method:: DeleteResponses()
@@ -268,16 +270,16 @@ There is a parent-child relationship between an annotation and its page. If the 
 
       Color specifications may be made in the usual format used in PuMuPDF as sequences of floats ranging from 0.0 to 1.0 (including both). The sequence length must be 1, 3 or 4 (supporting GRAY, RGB and CMYK colorspaces respectively). For GRAY, just a float is also acceptable.
 
-      :arg opacity: **valid for all annotation types:** change or set the annotation's transparency. Valid values are *0 <= opacity < 1*.
-      :arg string blend_mode: **valid for all annotation types:** change or set the annotation's blend mode. For valid values see :ref:`BlendModes`.
-      :arg float fontsize: change :data:`fontsize` of the text. 'FreeText' annotations only.
-      :arg text_color: change the text color. 'FreeText' annotations only.
-      :arg border_color: change the border color. 'FreeText' annotations only.
-      :arg fill_color: the fill color.
+      :arg float opacity: **valid for all annotation types:** change or set the annotation's transparency. Valid values are *0 <= opacity < 1*.
+      :arg string blendMode: **valid for all annotation types:** change or set the annotation's blend mode. For valid values see :ref:`BlendModes`.
+      :arg float fontSize: change :data:`fontSize` of the text. 'FreeText' annotations only.
+      :arg float[] textColor: change the text color. 'FreeText' annotations only.
+      :arg float[] borderColor: change the border color. 'FreeText' annotations only.
+      :arg float[] fillColor: the fill color.
 
           * 'Line', 'Polyline', 'Polygon' annotations: use it to give applicable line end symbols a fill color other than that of the annotation.
 
-      :arg bool cross_out: add two diagonal lines to the annotation rectangle. 'Redact' annotations only. If not desired, *False* must be specified even if the annotation was created with *False*.
+      :arg bool crossOut: add two diagonal lines to the annotation rectangle. 'Redact' annotations only. If not desired, *false* must be specified even if the annotation was created with *false*.
       :arg int rotate: new rotation value. Default (-1) means no change. Supports 'FreeText' and several other annotation types (see :meth:`Annot.SetRotation`), [#f1]_. Only choose 0, 90, 180, or 270 degrees for 'FreeText'. Otherwise any integer is acceptable.
 
       :rtype: bool
@@ -285,55 +287,55 @@ There is a parent-child relationship between an annotation and its page. If the 
       .. note:: Using this method inside a :meth:`Page.GetAnnots` loop is **not recommended!** This is because most annotation updates require the owning page to be reloaded -- which cannot be done inside this loop. Please use the example coding pattern given in the documentation of this generator.
 
 
-   .. attribute:: FILEINFO
+   .. attribute:: FileInfo
 
       Basic information of the annot's attached file.
 
-      :rtype: dict
-      :returns: a dictionary with keys `filename`, `ufilename`, `desc` (description), `size` (uncompressed file size), `length` (compressed length) for FileAttachment annot types, else `null`.
+      :rtype: FileInfo
+      :returns: a structure with keys `FileName`, `Desc` (description), `Size` (uncompressed file size), `Length` (compressed length) for FileAttachment annot types, else `null`.
 
    .. method:: GetFile()
 
       Returns attached file content.
 
-      :rtype: bytes
+      :rtype: byte[]
       :returns: the content of the attached file.
 
    .. index::
       pair: buffer; Annot.UpdateFile
-      pair: filename; Annot.UpdateFile
-      pair: ufilename; Annot.UpdateFile
+      pair: fileName; Annot.UpdateFile
+      pair: uFilename; Annot.UpdateFile
       pair: desc; Annot.UpdateFile
 
-   .. method:: UpdateFile(byte[] buffer: null, string filename: null, string uFilename: null, string desc: null)
+   .. method:: UpdateFile(byte[] buffer: null, string fileName: null, string uFilename: null, string desc: null)
 
       Updates the content of an attached file. All arguments are optional. Default-only arguments lead to a no-op.
 
       :arg buffer: the new file content. Omit to only change meta-information.
-      :arg string filename: new filename to associate with the file.
-      :arg string ufilename: new unicode filename to associate with the file.
+      :arg string fileName: new filename to associate with the file.
+      :arg string uFilename: new unicode filename to associate with the file.
       :arg string desc: new description of the file content.
 
    .. method:: GetSound()
 
       Return the embedded sound of an audio annotation.
 
-      :rtype: dict
+      :rtype: Sound
       :returns: the sound audio file and accompanying properties. These are the possible dictionary keys, of which only "rate" and "stream" are always present.
 
         =========== =======================================================
         Key         Description
         =========== =======================================================
-        rate        (float, requ.) samples per second
-        channels    (int, opt.) number of sound channels
-        bps         (int, opt.) bits per sample value per channel
-        encoding    (str, opt.) encoding format: Raw, Signed, muLaw, ALaw
-        compression (str, opt.) name of compression filter
-        stream      (bytes, requ.) the sound file content
+        Rate        (float, requ.) samples per second
+        Channels    (int, opt.) number of sound channels
+        Bps         (int, opt.) bits per sample value per channel
+        Encoding    (string, opt.) encoding format: Raw, Signed, muLaw, ALaw
+        Compression (string, opt.) name of compression filter
+        Stream      (byte[], requ.) the sound file content
         =========== =======================================================
 
 
-   .. attribute:: OPACITY
+   .. attribute:: Opacity
 
       The annotation's opacity. If set, it is a value in range `[0, 1]`. The PDF default is 1. However, in an effort to tell the difference, we return `-1.0` if not set.
 
@@ -345,32 +347,32 @@ There is a parent-child relationship between an annotation and its page. If the 
 
       :rtype: :ref:`Page`
 
-   .. attribute:: ROTATION
+   .. attribute:: Rotation
 
       The annot rotation.
 
       :rtype: int
       :returns: a value [-1, 359]. If rotation is not at all, -1 is returned (and implies a rotation angle of 0). Other possible values are normalized to some value value 0 <= angle < 360.
 
-   .. attribute:: RECT
+   .. attribute:: Rect
 
       The rectangle containing the annotation.
 
       :rtype: :ref:`Rect`
 
-   .. attribute:: NEXT
+   .. attribute:: Next
 
       The next annotation on this page or `null`. "Next", as usual in PDF, means the next annotation in the page's array of annotation references. This has nothing to do with geometrical annotation positions on the page.
 
       :rtype: :ref:`Annot`
 
-   .. attribute:: TYPE
+   .. attribute:: Type
 
       A number and one or two strings describing the annotation type, like `[2, 'FreeText', 'FreeTextCallout']`. The second string entry is optional and may be empty. See the appendix :ref:`AnnotationTypes` for a list of possible values and their meanings.
 
-      :rtype: (PdfAnnotType, string, string)
+      :rtype: Tuple(PdfAnnotType, string, string)
 
-   .. attribute:: INFO
+   .. attribute:: Info
 
       A dictionary containing various information. All fields are optional strings. Items not provided are represented by empty strings.
 
@@ -381,26 +383,28 @@ There is a parent-child relationship between an annotation and its page. If the 
       * `title` -- a string containing the title of the annotation pop-up window. By convention, this is used for the **annotation author**.
 
       * `creationDate` -- creation timestamp.
+
       * `modDate` -- last modified timestamp.
+
       * `subject` -- subject.
+
       * `id` -- a unique identification of the annotation. This is taken from PDF key `/NM`. Annotations added by MuPDF.NET will have a unique name, which appears here.
 
-      :rtype: AnnotInfoStruct
+      :rtype: :ref:`AnnotInfo`
 
-
-   .. attribute:: FLAGS
+   .. attribute:: Flags
 
       An integer whose bit positions contain flags for how the annotation should be presented.
 
       :rtype: int
 
-   .. attribute:: LINE_ENDS
+   .. attribute:: LineEnds
 
       A pair of integers specifying start and end symbol of annotations types 'FreeText', 'Line', 'PolyLine', and 'Polygon'. `null` if not applicable. For possible values and descriptions in this list, see the :ref:`AdobeManual`, table 1.76 on page 400.
 
-      :rtype: tuple
+      :rtype: Tuple(PdfLineEnding, PdfLineEnding)
 
-   .. attribute:: VERTICES
+   .. attribute:: Vertices
 
       A list containing a variable number of point ("vertices") coordinates (each given by a pair of floats) for various types of annotations:
 
@@ -410,14 +414,14 @@ There is a parent-child relationship between an annotation and its page. If the 
       * text markup annotations -- 4 float pairs specifying the *QuadPoints* of the marked text span (see :ref:`AdobeManual`, page 403).
       * `Ink` -- list of one to many sublists of vertex coordinates. Each such sublist represents a separate line in the drawing.
 
-      :rtype: list
+      :rtype: Dynamic
 
 
-   .. attribute:: COLORS
+   .. attribute:: Colors
 
       Dictionary of two lists of floats in range `0 <= float <= 1` specifying the "stroke" and the interior ("fill") colors. The stroke color is used for borders and everything that is actively painted or written ("stroked"). The fill color is used for the interior of objects like line ends, circles and squares. The lengths of these lists implicitly determine the colorspaces: 1 = GRAY, 3 = RGB, 4 = CMYK. So `[1.0, 0.0, 0.0]` stands for RGB color red. Both lists can be empty if no color is specified.
 
-      :rtype: dict
+      :rtype: float[]
 
    .. attribute:: Xref
 
@@ -425,19 +429,19 @@ There is a parent-child relationship between an annotation and its page. If the 
 
       :rtype: int
 
-   .. attribute:: IrtXRef
+   .. attribute:: IrtXref
 
       The PDF :data:`xref` of an annotation to which this one responds. Return zero if this is no response annotation.
 
       :rtype: int
 
-   .. attribute:: POPUP_XREF
+   .. attribute:: PopupXref
 
       The PDF :data:`xref` of the associated Popup annotation. Zero if non-existent.
 
       :rtype: int
 
-   .. attribute:: HAS_POPUP
+   .. attribute:: HasPopup
 
       Whether the annotation has a Popup annotation.
 
@@ -449,17 +453,17 @@ There is a parent-child relationship between an annotation and its page. If the 
 
       :rtype: bool
 
-   .. attribute:: POPUP_RECT
+   .. attribute:: PopupRect
 
       The rectangle of the associated Popup annotation. Infinite rectangle if non-existent.
 
       :rtype: :ref:`Rect`
 
-   .. attribute:: RECT_DELTA
+   .. attribute:: RectDelta
 
       A tuple of four floats representing the `/RD` entry of the annotation. The four numbers describe the numerical differences (left, top, -right, -bottom) between two rectangles: the :attr:`Rect` of the annotation and a rectangle contained within that rectangle. If the entry is missing, this property is `(0, 0, 0, 0)`. If the annotation border is a normal, straight line, these numbers are typically border width divided by 2. If the annotation has a "cloudy" border, you will see the breadth of the cloud semi-circles here. In general, the numbers need not be identical. To compute the inner rectangle do `a.rect + a.rect_delta`.
 
-   .. attribute:: BORDER
+   .. attribute:: Border
 
       A dictionary containing border characteristics. Empty if no border information exists. The following keys may be present:
 
@@ -471,7 +475,7 @@ There is a parent-child relationship between an annotation and its page. If the 
 
       * `clouds` -- an integer indicating a "cloudy" border, where `n` is an integer `-1 <= n <= 2`. A value `n: 0` indicates a straight line (no clouds), 1 means small and 2 means large semi-circles, mimicking the cloudy appearance. If -1, then no specification is present.
 
-      :rtype: dict
+      :rtype: Border
 
 
 .. _mupdficons:

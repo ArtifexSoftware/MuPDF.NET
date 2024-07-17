@@ -254,6 +254,8 @@ namespace MuPDF.NET
             }
 
             Matrix delta = (new Matrix(1f, 1f)).Pretranslate(p.X, p.Y);
+            Console.WriteLine(this.ToString());
+            Console.WriteLine((~delta).ToString());
             return (this * ~delta * m) * delta;
         }
 

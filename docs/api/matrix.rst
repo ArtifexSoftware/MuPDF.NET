@@ -68,13 +68,13 @@ Please note:
 
       A "rect" must be any Rect object.
 
-      *fitz.Matrix(1, 1)* and *fitz.Matrix(fitz.Identity)* create modifiable versions of the :ref:`Identity` matrix, which looks like *[1, 0, 0, 1, 0, 0]*.
+      *Matrix(1, 1)* and *Matrix(IdentityMatrix)* create modifiable versions of the :ref:`Identity` matrix, which looks like *[1, 0, 0, 1, 0, 0]*.
 
    .. method:: Norm()
 
       Return the Euclidean norm of the matrix as a vector.
 
-   .. method:: Prerotate(deg)
+   .. method:: Prerotate(float deg)
 
       Modify the matrix to perform a counter-clockwise rotation for positive *deg* degrees, else clockwise. The matrix elements of an identity matrix will change in the following way:
 
@@ -82,7 +82,7 @@ Please note:
 
       :arg float deg: The rotation angle in degrees (use conventional notation based on Pi = 180 degrees).
 
-   .. method:: Prescale(sx, sy)
+   .. method:: Prescale(float sx, float sy)
 
       Modify the matrix to scale by the zoom factors sx and sy. Has effects on attributes *a* thru *d* only: *[a, b, c, d, e, f] -> [a*sx, b*sx, c*sy, d*sy, e, f]*.
 
@@ -90,7 +90,7 @@ Please note:
 
       :arg float sy: Zoom factor in Y direction. For the effect see description of attribute *d*.
 
-   .. method:: Preshear(sx, sy)
+   .. method:: Preshear(float sx, float sy)
 
       Modify the matrix to perform a shearing, i.e. transformation of rectangles into parallelograms (rhomboids). Has effects on attributes *a* thru *d* only: *[a, b, c, d, e, f] -> [c*sy, d*sy, a*sx, b*sx, e, f]*.
 
@@ -98,7 +98,7 @@ Please note:
 
       :arg float sy: Shearing effect in Y direction. See attribute *b*.
 
-   .. method:: Pretranslate(tx, ty)
+   .. method:: Pretranslate(float tx, float ty)
 
       Modify the matrix to perform a shifting / translation operation along the x and / or y axis. Has effects on attributes *e* and *f* only: *[a, b, c, d, e, f] -> [a, b, c, d, tx*a + ty*c, tx*b + ty*d]*.
 
@@ -106,7 +106,7 @@ Please note:
 
       :arg float ty: Translation effect in Y direction. See attribute *f*.
 
-   .. method:: Concat(m1, m2)
+   .. method:: Concat(Matrix m1, Matrix m2)
 
       Calculate the matrix product *m1 * m2* and store the result in the current matrix. Any of *m1* or *m2* may be the current matrix. Be aware that matrix multiplication is not commutative. So the sequence of *m1*, *m2* is important.
 
@@ -116,7 +116,7 @@ Please note:
       :arg m2: Second (right) matrix.
       :type m2: :ref:`Matrix`
 
-   .. method:: Invert(m: null)
+   .. method:: Invert(Matrix m: null)
 
       Calculate the matrix inverse of *m* and store the result in the current matrix. Returns *1* if *m* is not invertible ("degenerate"). In this case the current matrix **will not change**. Returns *0* if *m* is invertible, and the current matrix is replaced with the inverted *m*.
 

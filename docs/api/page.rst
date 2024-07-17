@@ -6,7 +6,7 @@
 Page
 ================
 
-Class representing a document page. A page object is created by :meth:`Document.load_page` or, equivalently, via indexing the document like `doc[n]` - it has no independent constructor.
+Class representing a document page. A page object is created by :meth:`Document.LoadPage` or, equivalently, via indexing the document like `doc[n]` - it has no independent constructor.
 
 There is a parent-child relationship between a document and its pages. If the document is closed or deleted, all page objects (and their respective children, too) in existence will become unusable ("orphaned"): If a page property or method is being used, an exception is raised.
 
@@ -18,7 +18,7 @@ Modifying Pages
 ---------------
 Changing page properties and adding or changing page content is available for PDF documents only.
 
-In a nutshell, this is what you can do with PyMuPDF:
+In a nutshell, this is what you can do with MuPDF.NET:
 
 * Modify page rotation and the visible part ("cropbox") of the page.
 * Insert images, other PDF pages, text and simple geometrical objects.
@@ -34,7 +34,7 @@ In a nutshell, this is what you can do with PyMuPDF:
 
    If you add or update annotations, links or form fields on the page and immediately afterwards need to work with them (i.e. **without leaving the page**), you should reload the page using :meth:`Document.ReloadPage` before referring to these new or updated items.
 
-   Reloading the page is generally recommended -- although not strictly required in all cases. However, some annotation and widget types have extended features in PyMuPDF compared to MuPDF. More of these extensions may also be added in the future.
+   Reloading the page is generally recommended -- although not strictly required in all cases. However, some annotation and widget types have extended features in MuPDF.NET compared to MuPDF. More of these extensions may also be added in the future.
 
    Releoading the page ensures all your changes have been fully applied to PDF structures, so you can safely create Pixmaps or successfully iterate over annotations, links and form fields.
 
@@ -83,7 +83,7 @@ In a nutshell, this is what you can do with PyMuPDF:
 :meth:`Page.GetFonts`              PDF only: get list of referenced fonts
 :meth:`Page.GetImageBbox`          PDF only: get bbox and matrix of embedded image
 :meth:`Page.GetImageInfo`          get list of meta information for all used images
-:meth:`Page.GetImageRects`         PDF only: improved version of :meth:`Page.get_image_bbox`
+:meth:`Page.GetImageRects`         PDF only: improved version of :meth:`Page.GetImageBbox`
 :meth:`Page.GetImages`             PDF only: get list of referenced images
 :meth:`Page.GetLabel`              PDF only: return the label of the page
 :meth:`Page.GetLinks`              get all links
@@ -152,7 +152,7 @@ In a nutshell, this is what you can do with PyMuPDF:
 
       PDF only: Add a caret icon. A caret annotation is a visual symbol normally used to indicate the presence of text edits on the page.
 
-      :arg point_like point: the top left point of a 20 x 20 rectangle containing the MuPDF-provided icon.
+      :arg Point point: the top left point of a 20 x 20 rectangle containing the MuPDF-provided icon.
 
       :rtype: :ref:`Annot`
       :returns: the created annotation. Stroke color blue = (0, 0, 1), no fill color support.
@@ -161,38 +161,38 @@ In a nutshell, this is what you can do with PyMuPDF:
          :scale: 70
 
 
-   .. method:: AddTextAnnot(Point point, string text, string icon = "Note")
+   .. method:: AddTextAnnot(Point point, string text, string icon: "Note")
 
       PDF only: Add a comment icon ("sticky note") with accompanying text. Only the icon is visible, the accompanying text is hidden and can be visualized by many PDF viewers by hovering the mouse over the symbol.
 
-      :arg point_like point: the top left point of a 20 x 20 rectangle containing the MuPDF-provided "note" icon.
+      :arg Point point: the top left point of a 20 x 20 rectangle containing the MuPDF-provided "note" icon.
 
-      :arg str text: the commentary text. This will be shown on double clicking or hovering over the icon. May contain any Latin characters.
-      :arg str icon: choose one of "Note" (default), "Comment", "Help", "Insert", "Key", "NewParagraph", "Paragraph" as the visual symbol for the embodied text [#f4]_.
+      :arg string text: the commentary text. This will be shown on double clicking or hovering over the icon. May contain any Latin characters.
+      :arg string icon: choose one of "Note" (default), "Comment", "Help", "Insert", "Key", "NewParagraph", "Paragraph" as the visual symbol for the embodied text [#f4]_.
 
       :rtype: :ref:`Annot`
       :returns: the created annotation. Stroke color yellow = (1, 1, 0), no fill color support.
 
    .. index::
-      pair: color; add_freetext_annot
-      pair: fontname; add_freetext_annot
-      pair: fontsize; add_freetext_annot
-      pair: rect; add_freetext_annot
-      pair: rotate; add_freetext_annot
-      pair: align; add_freetext_annot
-      pair: text_color; add_freetext_annot
-      pair: border_color; add_freetext_annot
-      pair: fill_color; add_freetext_annot
+      pair: color; AddFreeTextAnnot
+      pair: fontName; AddFreeTextAnnot
+      pair: fontSize; AddFreeTextAnnot
+      pair: rect; AddFreeTextAnnot
+      pair: rotate; AddFreeTextAnnot
+      pair: align; AddFreeTextAnnot
+      pair: textColor; AddFreeTextAnnot
+      pair: borderColor; AddFreeTextAnnot
+      pair: fillColor; AddFreeTextAnnot
 
-   .. method:: AddFreeTextAnnot(Rect rect, string text, int fontsize=12, string fontname="helv", float[] border_color = null, float[] text_color=0, float[] fill_color=1, int rotate=0, int align=TEXT_ALIGN_LEFT)
+   .. method:: AddFreeTextAnnot(Rect rect, string text, string fontName, int fontSize: 12, float[] borderColor: null, float[] textColor: null, float[] fillColor: null, int rotate: 0, int align: TEXT_ALIGN_LEFT)
 
       PDF only: Add text in a given rectangle.
 
-      :arg rect_like rect: the rectangle into which the text should be inserted. Text is automatically wrapped to a new line at box width. Lines not fitting into the box will be invisible.
+      :arg Rect rect: the rectangle into which the text should be inserted. Text is automatically wrapped to a new line at box width. Lines not fitting into the box will be invisible.
 
-      :arg str text: the text. May contain any mixture of Latin, Greek, Cyrillic, Chinese, Japanese and Korean characters. The respective required font is automatically determined.
-      :arg float fontsize: the :data:`fontsize`. Default is 12.
-      :arg str fontname: the font name. Default is "Helv".
+      :arg string text: the text. May contain any mixture of Latin, Greek, Cyrillic, Chinese, Japanese and Korean characters. The respective required font is automatically determined.
+      :arg float fontSize: the :data:`fontSize`. Default is 12.
+      :arg str fontName: the font name.
         Accepted alternatives are "Cour", "TiRo", "ZaDb" and "Symb".
         The name may be abbreviated to the first two characters, like "Co" for "Cour".
         Lower case is also accepted.
@@ -201,31 +201,31 @@ In a nutshell, this is what you can do with PyMuPDF:
         The actual font to use is now determined on a by-character level, and all required fonts (or sub-fonts) are automatically included.
         Therefore, you should rarely ever need to care about this parameter and let it default (except you insist on a serifed font for your non-CJK text parts).
         
-      :arg sequence,float text_color: the text color. Default is black.
+      :arg float[] textColor: the text color. Default is black.
 
-      :arg sequence,float fill_color: the fill color. Default is white.
-      :arg sequence,float text_color: the text color. Default is black.
-      :arg sequence,float border_color: the border color. Default is `null`. 
+      :arg float[] fillColor: the fill color. Default is white.
+      :arg float[] textColor: the text color. Default is black.
+      :arg float[] borderColor: the border color. Default is `null`. 
       :arg int align: text alignment, one of TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER, TEXT_ALIGN_RIGHT - justify is **not supported**.
 
       :arg int rotate: the text orientation. Accepted values are 0, 90, 270, invalid entries are set to zero.
 
       :rtype: :ref:`Annot`
-      :returns: the created annotation. Color properties **can only be changed** using special parameters of :meth:`Annot.update`. There, you can also set a border color different from the text color.
+      :returns: the created annotation. Color properties **can only be changed** using special parameters of :meth:`Annot.Update`. There, you can also set a border color different from the text color.
 
 
-   .. method:: AddFileAnnot(Point pos, byte[] buffer, string filename, dynamic ufilename = null, string desc = null, string icon="PushPin")
+   .. method:: AddFileAnnot(Point pos, byte[] buffer, string fileName, dynamic uFilename: null, string desc: null, string icon: "PushPin")
 
       PDF only: Add a file attachment annotation with a "PushPin" icon at the specified location.
 
-      :arg point_like pos: the top-left point of a 18x18 rectangle containing the MuPDF-provided "PushPin" icon.
+      :arg Point pos: the top-left point of a 18x18 rectangle containing the MuPDF-provided "PushPin" icon.
 
-      :arg bytes,bytearray,BytesIO buffer: the data to be stored (actual file content, any data, etc.).
+      :arg byte[] buffer: the data to be stored (actual file content, any data, etc.).
 
-      :arg str filename: the filename to associate with the data.
-      :arg str ufilename: the optional PDF unicode version of filename. Defaults to filename.
-      :arg str desc: an optional description of the file. Defaults to filename.
-      :arg str icon: choose one of "PushPin" (default), "Graph", "Paperclip", "Tag" as the visual symbol for the attached data [#f4]_.
+      :arg string fileName: the filename to associate with the data.
+      :arg string uFilename: the optional PDF unicode version of filename. Defaults to filename.
+      :arg string desc: an optional description of the file. Defaults to filename.
+      :arg string icon: choose one of "PushPin" (default), "Graph", "Paperclip", "Tag" as the visual symbol for the attached data [#f4]_.
 
       :rtype: :ref:`Annot`
       :returns: the created annotation.  Stroke color yellow = (1, 1, 0), no fill color support.
@@ -234,7 +234,7 @@ In a nutshell, this is what you can do with PyMuPDF:
 
       PDF only: Add a "freehand" scribble annotation.
 
-      :arg sequence list: a list of one or more lists, each containing :data:`point_like` items. Each item in these sublists is interpreted as a :ref:`Point` through which a connecting line is drawn. Separate sublists thus represent separate drawing lines.
+      :arg List<List<Point>> list: a list of one or more lists, each containing :data:`Point` items. Each item in these sublists is interpreted as a :ref:`Point` through which a connecting line is drawn. Separate sublists thus represent separate drawing lines.
 
       :rtype: :ref:`Annot`
       :returns: the created annotation in default appearance black =(0, 0, 0),line width 1. No fill color support.
@@ -266,29 +266,29 @@ In a nutshell, this is what you can do with PyMuPDF:
    Redactions
    ~~~~~~~~~~~
 
-   .. method:: AddRedactAnnot(Quad quad, string text = null, string fontname = null, int fontsize=11, int align=TEXT_ALIGN_LEFT, float[] fill=(1, 1, 1), float[] text_color=(0, 0, 0), bool cross_out=true)
+   .. method:: AddRedactAnnot(Quad quad, string text, string fontName, int fontSize: 11, int align: TEXT_ALIGN_LEFT, float[] fill: (1, 1, 1), float[] textColor: (0, 0, 0), bool crossOut: true)
       
       **PDF only**: Add a redaction annotation. A redaction annotation identifies content to be removed from the document. Adding such an annotation is the first of two steps. It makes visible what will be removed in the subsequent step, :meth:`Page.ApplyRedactions`.
 
-      :arg quad_like,rect_like quad: specifies the (rectangular) area to be removed which is always equal to the annotation rectangle. This may be a :data:`Rect` or :data:`Quad` object. If a quad is specified, then the enveloping rectangle is taken.
+      :arg Quad quad: specifies the (rectangular) area to be removed which is always equal to the annotation rectangle. This may be a :data:`Rect` or :data:`Quad` object. If a quad is specified, then the enveloping rectangle is taken.
 
-      :arg str text: text to be placed in the rectangle after applying the redaction (and thus removing old content).
+      :arg string text: text to be placed in the rectangle after applying the redaction (and thus removing old content).
 
-      :arg str fontname: the font to use when *text* is given, otherwise ignored. The same rules apply as for :meth:`Page.InsertTextbox` -- which is the method :meth:`Page.ApplyRedactions` internally invokes. The replacement text will be **vertically centered**, if this is one of the CJK or :ref:`Base-14-Fonts`.
+      :arg string fontName: the font to use when *text* is given, otherwise ignored. The same rules apply as for :meth:`Page.InsertTextbox` -- which is the method :meth:`Page.ApplyRedactions` internally invokes. The replacement text will be **vertically centered**, if this is one of the CJK or :ref:`Base-14-Fonts`.
 
          .. note::
 
-            * For an **existing** font of the page, use its reference name as *fontname* (this is *item[4]* of its entry in :meth:`Page.GetFonts`).
+            * For an **existing** font of the page, use its reference name as *fontName* (this is *item[4]* of its entry in :meth:`Page.GetFonts`).
 
 
-      :arg float fontsize: the :data:`fontsize` to use for the replacing text. If the text is too large to fit, several insertion attempts will be made, gradually reducing the :data:`fontsize` to no less than 4. If then the text will still not fit, no text insertion will take place at all.
+      :arg float fontSize: the :data:`fontSize` to use for the replacing text. If the text is too large to fit, several insertion attempts will be made, gradually reducing the :data:`fontSize` to no less than 4. If then the text will still not fit, no text insertion will take place at all.
       :arg int align: the horizontal alignment for the replacing text. See :meth:`InsertTextbox` for available values. The vertical alignment is (approximately) centered if a PDF built-in font is used (CJK or :ref:`Base-14-Fonts`).
 
-      :arg sequence fill: the fill color of the rectangle **after applying** the redaction. The default is *white = (1, 1, 1)*, which is also taken if *null* is specified. To suppress a fill color altogether, specify *false*. In this cases the rectangle remains transparent.
+      :arg float[] fill: the fill color of the rectangle **after applying** the redaction. The default is *white = (1, 1, 1)*, which is also taken if *null* is specified. To suppress a fill color altogether, specify *false*. In this cases the rectangle remains transparent.
 
-      :arg sequence text_color: the color of the replacing text. Default is *black = (0, 0, 0)*.
+      :arg float[] textColor: the color of the replacing text. Default is *black = (0, 0, 0)*.
 
-      :arg bool cross_out: add two diagonal lines to the annotation rectangle.
+      :arg bool crossOut: add two diagonal lines to the annotation rectangle.
 
       :rtype: :ref:`Annot`
       :returns: the created annotation. Its standard appearance looks like a red rectangle (no fill color), optionally showing two diagonal lines. Colors, line width, dashing, opacity and blend mode can now be set and applied via :meth:`Annot.update` like with other annotations.
@@ -296,7 +296,7 @@ In a nutshell, this is what you can do with PyMuPDF:
       .. image:: ../images/img-redact.*
 
 
-      .. method:: ApplyRedactions(int images=PDF_REDACT_IMAGE_PIXELS|2, int graphics=PDF_REDACT_LINE_ART_IF_TOUCHED|2, int text=PDF_REDACT_TEXT_REMOVE|0)
+      .. method:: ApplyRedactions(int images: PDF_REDACT_IMAGE_PIXELS|2, int graphics: PDF_REDACT_LINE_ART_IF_TOUCHED|2, int text: PDF_REDACT_TEXT_REMOVE|0)
 
       **PDF only**: Remove all **content** contained in any redaction rectangle on the page.
 
@@ -311,7 +311,7 @@ In a nutshell, this is what you can do with PyMuPDF:
       :returns: `true` if at least one redaction annotation has been processed, `false` otherwise.
 
       .. note::
-         * Text contained in a redaction rectangle will be **physically** removed from the page (assuming :meth:`Document.save` with a suitable garbage option) and will no longer appear in e.g. text extractions or anywhere else. All redaction annotations will also be removed. Other annotations are unaffected.
+         * Text contained in a redaction rectangle will be **physically** removed from the page (assuming :meth:`Document.Save` with a suitable garbage option) and will no longer appear in e.g. text extractions or anywhere else. All redaction annotations will also be removed. Other annotations are unaffected.
 
          * All overlapping links will be removed. If the rectangle of the link was covering text, then only the overlapping part of the text is being removed. Similar applies to images covered by link rectangles.
 
@@ -338,7 +338,7 @@ In a nutshell, this is what you can do with PyMuPDF:
 
       PDF only: Add an annotation consisting of lines which connect the given points. A **Polygon's** first and last points are automatically connected, which does not happen for a **PolyLine**. The **rectangle** is automatically created as the smallest rectangle containing the points, each one surrounded by a circle of radius 3 (= 3 * line width). The following shows a 'PolyLine' that has been modified with colors and line ends.
 
-      :arg list points: a list of :data:`point_like` objects.
+      :arg List<Point> points: a list of :data:`Point` objects.
 
       :rtype: :ref:`Annot`
       :returns: the created annotation. It is drawn with line color black, line width 1 no fill color but fill color support. Use methods of :ref:`Annot` to make any changes to achieve something like this:
@@ -346,13 +346,13 @@ In a nutshell, this is what you can do with PyMuPDF:
       .. image:: ../images/img-polyline.*
          :scale: 70
 
-   .. method:: AddUnderlineAnnot(dynamic quads=null, Point start=null, Pint stop=null, Rect clip=null)
+   .. method:: AddUnderlineAnnot(dynamic quads: null, Point start: null, Pint stop: null, Rect clip: null)
 
-   .. method:: AddStrikeoutAnnot(dynamic quads=null, Point start=null, Point stop=null, Rect clip=null)
+   .. method:: AddStrikeoutAnnot(dynamic quads: null, Point start: null, Point stop: null, Rect clip: null)
 
-   .. method:: AddSquigglyAnnot(dynamic quads=null, Point start=null, Point stop=null, Rect clip=null)
+   .. method:: AddSquigglyAnnot(dynamic quads: null, Point start: null, Point stop: null, Rect clip: null)
 
-   .. method:: AddHighlightAnnot(dynamic quads=null, Point start=null, Point stop=null, Rect clip=null)
+   .. method:: AddHighlightAnnot(dynamic quads: null, Point start: null, Point stop: null, Rect clip: null)
 
       PDF only: These annotations are normally used for **marking text** which has previously been somehow located (for example via :meth:`Page.SearchFor`). But this is not required: you are free to "mark" just anything.
 
@@ -365,16 +365,16 @@ In a nutshell, this is what you can do with PyMuPDF:
 
         Therefore, we **strongly recommend** to use the `quads` option for text searches, to ensure correct annotations. A similar consideration applies to marking **text spans** extracted with the "dict" / "rawdict" options of :meth:`Page.GetText`. For more details on how to compute quadrilaterals in this case, see section "How to Mark Non-horizontal Text" of :ref:`FAQ`.
 
-      :arg rect_like,quad_like,list,tuple quads:
+      :arg Rect, Quad, List<Quad>:
         the location(s) -- rectangle(s) or quad(s) -- to be marked.
-        A list or tuple must consist of :data:`rect_like` or :data:`quad_like` items (or even a mixture of either).
+        A list or tuple must consist of :data:`Rect` or :data:`Quad` items (or even a mixture of either).
         Every item must be finite, convex and not empty (as applicable).
         **Set this parameter to** *null* if you want to use the following arguments.
         And vice versa: if not *null*, the remaining parameters must be *null*.
         
-      :arg point_like start: start text marking at this point. Defaults to the top-left point of *clip*. Must be provided if `quads` is *null*. 
-      :arg point_like stop: stop text marking at this point. Defaults to the bottom-right point of *clip*. Must be used if `quads` is *null*. 
-      :arg rect_like clip: only consider text lines intersecting this area. Defaults to the page rectangle. Only use if `start` and `stop` are provided.
+      :arg Point start: start text marking at this point. Defaults to the top-left point of *clip*. Must be provided if `quads` is *null*. 
+      :arg Point stop: stop text marking at this point. Defaults to the bottom-right point of *clip*. Must be used if `quads` is *null*. 
+      :arg Rect clip: only consider text lines intersecting this area. Defaults to the page rectangle. Only use if `start` and `stop` are provided.
 
       :rtype: :ref:`Annot` or *null*.
       :returns: the created annotation. If *quads* is an empty list, **no annotation** is created.
@@ -387,15 +387,17 @@ In a nutshell, this is what you can do with PyMuPDF:
       .. image:: ../images/img-markers.*
          :scale: 100
 
-   .. method:: ClusterDrawings(Rect clip=null, List<PathInfo> drawings=null, float x_tolerance=3, float y_tolerance=3)
+   .. method:: ClusterDrawings(Rect clip: null, List<PathInfo> drawings: null, float xTolerance=3, float yTolerance=3)
 
       Cluster vector graphics (synonyms are line-art or drawings) based on their geometrical vicinity. The method walks through the output of :meth:`Page.GetDrawings` and joins paths whose `path["rect"]` are closer to each other than some tolerance values (given in the arguments). The result is a list of rectangles that each wrap things like tables (with gridlines), pie charts, bar charts, etc.
 
       :arg Rect clip: only consider paths inside this area. The default is the full page.
 
-      :arg list drawings: (optional) provide a previously generated output of :meth:`Page.GetDrawings`. If `null` the method will execute the method.
+      :arg List<PathInfo> drawings: (optional) provide a previously generated output of :meth:`Page.GetDrawings`. If `null` the method will execute the method.
 
-      :arg float x_tolerance: 
+      :arg float xTolerance:
+
+      :arg float yTolerance:
 
    ..
       .. method:: find_tables(clip=None, strategy=None, vertical_strategy=None, horizontal_strategy=None, vertical_lines=None, horizontal_lines=None, snap_tolerance=None, snap_x_tolerance=None, snap_y_tolerance=None, join_tolerance=None, join_x_tolerance=None, join_y_tolerance=None, edge_min_length=3, min_words_vertical=3, min_words_horizontal=1, intersection_tolerance=None, intersection_x_tolerance=None, intersection_y_tolerance=None, text_tolerance=None, text_x_tolerance=None, text_y_tolerance=None, add_lines=None)
@@ -469,11 +471,11 @@ In a nutshell, this is what you can do with PyMuPDF:
             There is also the `pdf2docx extract tables method`_ which is capable of table extraction if you prefer.
 
 
-   .. method:: AddStampAnnot(Rect rect, int stamp = 0)
+   .. method:: AddStampAnnot(Rect rect, int stamp: 0)
 
       PDF only: Add a "rubber stamp" like annotation to e.g. indicate the document's intended use ("DRAFT", "CONFIDENTIAL", etc.).
 
-      :arg rect_like rect: rectangle where to place the annotation.
+      :arg Rect rect: rectangle where to place the annotation.
 
       :arg int stamp: id number of the stamp text. For available stamps see :ref:`StampIcons`.
 
@@ -525,19 +527,19 @@ In a nutshell, this is what you can do with PyMuPDF:
 
       PDF only: Delete the specified link from the page. The parameter must be an **original item** of :meth:`GetLinks()`, see :ref:`link_dict_description`. The reason for this is the dictionary's *"xref"* key, which identifies the PDF object to be deleted.
 
-      :arg dict linkdict: the link to be deleted.
+      :arg Link linkdict: the link to be deleted.
 
-   .. method:: InsertLink(linkdict)
+   .. method:: InsertLink(Link linkdict)
 
       PDF only: Insert a new link on this page. The parameter must be a dictionary of format as provided by :meth:`GetLinks()`, see :ref:`link_dict_description`.
 
-      :arg dict linkdict: the link to be inserted.
+      :arg dict Link: the link to be inserted.
 
-   .. method:: UpdateLink(linkdict)
+   .. method:: UpdateLink(Link linkdict)
 
       PDF only: Modify the specified link. The parameter must be a (modified) **original item** of :meth:`GetLinks()`, see :ref:`link_dict_description`. The reason for this is the dictionary's *"xref"* key, which identifies the PDF object to be changed.
 
-      :arg dict linkdict: the link to be modified.
+      :arg Link linkdict: the link to be modified.
 
       .. warning:: If updating / inserting a URI link (`"kind": LINK_URI`), please make sure to start the value for the `"uri"` key with a disambiguating string like `"http://"`, `"https://"`, `"file://"`, `"ftp://"`, `"mailto:"`, etc. Otherwise -- depending on your browser or other "consumer" software -- unexpected default assumptions may lead to unwanted behaviours.
 
@@ -546,7 +548,7 @@ In a nutshell, this is what you can do with PyMuPDF:
 
       PDF only: Return the label for the page.
 
-      :rtype: str
+      :rtype: string
 
       :returns: the label string like "vii" for Roman numbering or "" if not defined.
 
@@ -555,10 +557,10 @@ In a nutshell, this is what you can do with PyMuPDF:
 
       Retrieves **all** links of a page.
 
-      :rtype: list
-      :returns: A list of dictionaries. For a description of the dictionary entries, see :ref:`link_dict_description`. Always use this or the :meth:`Page.links` method if you intend to make changes to the links of a page.
+      :rtype: List<LinkInfo>
+      :returns: A list of dictionaries. For a description of the dictionary entries, see :ref:`link_dict_description`. Always use this or the :meth:`Page.GetLinks` method if you intend to make changes to the links of a page.
 
-   .. method:: links(kinds=None)
+   .. method:: GetLinks()
 
       Return a generator over the page's links. The results equal the entries of :meth:`Page.GetLinks`.
 
@@ -568,35 +570,35 @@ In a nutshell, this is what you can do with PyMuPDF:
       :returns: an entry of :meth:`Page.GetLinks()` for each iteration.
 
 
-   .. method:: GetAnnots(List<PdfAnnotType> types=None)
+   .. method:: GetAnnots(List<PdfAnnotType> types: null)
 
       Return a generator over the page's annotations.
 
-      :arg sequence types: a sequence of integers to down-select to one or more annotation types. Default is all annotations. Example: `types=(PDF_ANNOT_FREETEXT, PDF_ANNOT_TEXT)` will only return 'FreeText' and 'Text' annotations.
+      :arg List<PdfAnnotType> types: a sequence of integers to down-select to one or more annotation types. Default is all annotations. Example: `types=(PDF_ANNOT_FREETEXT, PDF_ANNOT_TEXT)` will only return 'FreeText' and 'Text' annotations.
 
-      :rtype: generator
+      :rtype: IEnumerable<Annot>
       :returns: an :ref:`Annot` for each iteration.
 
 
-   .. method:: GetWidgets(int[] types = null)
+   .. method:: GetWidgets(int[] type: null)
 
       Return a generator over the page's form fields.
 
-      :arg sequence types: a sequence of integers to down-select to one or more widget types. Default is all form fields. Example: `types=(PDF_WIDGET_TYPE_TEXT,)` will only return 'Text' fields.
+      :arg int[] types: a sequence of integers to down-select to one or more widget types. Default is all form fields. Example: `types=(PDF_WIDGET_TYPE_TEXT,)` will only return 'Text' fields.
 
-      :rtype: generator
+      :rtype: IEnumerable<Widget>
       :returns: a :ref:`Widget` for each iteration.
 
 
 
-   .. method:: WriteText(Rect rect = null, List<MuPDFTextWriter> writers = null, bool overlay = true, float[] color = null, float opacity = -1, bool keepProportion = true, int rotate = 0, int oc = 0)
+   .. method:: WriteText(Rect rect: null, List<MuPDFTextWriter> writers: null, bool overlay: true, float[] color: null, float opacity: -1, bool keepProportion: true, int rotate: 0, int oc: 0)
 
-      PDF only: Write the text of one or more :ref:`Textwriter` objects to the page.
+      PDF only: Write the text of one or more :ref:`TextWriter` objects to the page.
 
-      :arg rect_like rect: where to place the text. If omitted, the rectangle union of the text writers is used.
-      :arg sequence writers: a non-empty tuple / list of :ref:`TextWriter` objects or a single :ref:`TextWriter`.
+      :arg Rect rect: where to place the text. If omitted, the rectangle union of the text writers is used.
+      :arg List<TextWriter> writers: a non-empty tuple / list of :ref:`TextWriter` objects or a single :ref:`TextWriter`.
       :arg float opacity: set transparency, overwrites resp. value in the text writers.
-      :arg sequ color: set the text color, overwrites  resp. value in the text writers.
+      :arg float[] color: set the text color, overwrites  resp. value in the text writers.
       :arg bool overlay: put the text in foreground or background.
       :arg bool keepProportion: maintain the aspect ratio.
       :arg float rotate: rotate the text by an arbitrary angle.
@@ -621,9 +623,9 @@ In a nutshell, this is what you can do with PyMuPDF:
       pair: fillOpacity; InsertText
       pair: oc; InsertText
 
-   .. method:: InsertText( Point point, dynamic text, float fontSize = 11, float lineHeight = 0, string fontName = "helv", string fontFile = null, int setSimple = 0, int encoding = 0, float[] color = null, float[] fill = null, float borderWidth = 0.05f, int renderMode = 0, int rotate = 0, Morph morph = null, bool overlay = true, float strokeOpacity = 1, float fillOpacity = 1, int oc = 0)
+   .. method:: InsertText( Point point, dynamic text, string fontName, string fontFile, float fontSize: 11, float lineHeight: 0, int setSimple: 0, int encoding: 0, float[] color = null, float[] fill = null, float borderWidth = 0.05f, int renderMode = 0, int rotate = 0, Morph morph = null, bool overlay = true, float strokeOpacity: 1, float fillOpacity: 1, int oc: 0)
 
-      PDF only: Insert text starting at :data:`point_like` *point*. See :meth:`Shape.insert_text`.
+      PDF only: Insert text starting at :data:`Point` *point*. See :meth:`Shape.InsertText`.
 
 
    .. index::
@@ -635,7 +637,7 @@ In a nutshell, this is what you can do with PyMuPDF:
       pair: fill; InsertTextbox
       pair: fontFile; InsertTextbox
       pair: fontName; InsertTextbox
-      pair: fontsize; InsertTextbox
+      pair: fontSize; InsertTextbox
       pair: morph; InsertTextbox
       pair: overlay; InsertTextbox
       pair: renderMode; InsertTextbox
@@ -644,9 +646,9 @@ In a nutshell, this is what you can do with PyMuPDF:
       pair: fillOpacity; InsertTextbox
       pair: oc; InsertTextbox
 
-   .. method:: InsertTextbox(rect, buffer, fontsize=11, fontname="helv", fontfile=None, idx=0, color=None, fill=None, render_mode=0, border_width=1, encoding=TEXT_ENCODING_LATIN, expandtabs=8, align=TEXT_ALIGN_LEFT, charwidths=None, rotate=0, morph=None, strokeOpacity=1, fillOpacity=1, oc=0, overlay=true)
+   .. method:: InsertTextbox(Rect rect, dynamic buffer, string fontName, string fontFile, float fontSize: 11, int idx: 0, float[] color: null, float[] fill: null, int renderMode: 0, float borderWidth: 0.05f, int encoding: TEXT_ENCODING_LATIN, int expandTabs: 1, int align: TEXT_ALIGN_LEFT, int rotate: 0, Morph morph: null, float strokeOpacity: 1, float fillOpacity: 1, int oc: 0, bool overlay: true)
 
-      PDF only: Insert text into the specified :data:`rect_like` *rect*. See :meth:`Shape.InsertTextbox`.
+      PDF only: Insert text into the specified :data:`Rect` *rect*. See :meth:`Shape.InsertTextbox`.
 
 
    .. index::
@@ -661,7 +663,7 @@ In a nutshell, this is what you can do with PyMuPDF:
       pair: opacity; InsertHtmlBox
       pair: morph; InsertHtmlBox
 
-   .. method:: InsertHtmlBox(Rect rect, dynamic text, string css=null, float scaleLow=0, archive=None, float rotate=0, int oc=0, int opacity=1, bool overlay=true)
+   .. method:: InsertHtmlBox(Rect rect, dynamic text, string css: null, float scaleLow: 0, Archive archive: null, int rotate: 0, int oc: 0, float opacity: 1, bool overlay: true)
 
       **PDF only:** Insert text into the specified rectangle. The method has similarities with methods :meth:`Page.InsertTextbox` and :meth:`TextWriter.FillTextbox`, but is **much more powerful**. This is achieved by letting a :ref:`Story` object do all the required processing.
 
@@ -681,12 +683,12 @@ In a nutshell, this is what you can do with PyMuPDF:
       * If content does not fit in the rectangle, the developer has two choices:
          
         - **either** only be informed about this (and accept a no-op, just like with the other textbox insertion methods), 
-        - **or** (`scale_low=0` - the default) scale down the content until it fits.
+        - **or** (`scaleLow=0` - the default) scale down the content until it fits.
 
-      :arg rect_like rect: rectangle on page to receive the text.
-      :arg str,Story text: the text to be written. Can contain a mixture of plain text and HTML tags with styling instructions. Alternatively, a :ref:`Story` object may be specified (in which case the internal Story generation step will be omitted). A Story must have been generated with all required styling and Archive information.
-      :arg str css: optional string containing additional CSS instructions. This parameter is ignored if `text` is a Story.
-      :arg float scale_low: if necessary, scale down the content until it fits in the target rectangle. This sets the down scaling limit. Default is 0, no limit. A value of 1 means no down-scaling permitted. A value of e.g. 0.2 means maximum down-scaling by 80%.
+      :arg Rect rect: rectangle on page to receive the text.
+      :arg string,Story text: the text to be written. Can contain a mixture of plain text and HTML tags with styling instructions. Alternatively, a :ref:`Story` object may be specified (in which case the internal Story generation step will be omitted). A Story must have been generated with all required styling and Archive information.
+      :arg string css: optional string containing additional CSS instructions. This parameter is ignored if `text` is a Story.
+      :arg float scaleLow: if necessary, scale down the content until it fits in the target rectangle. This sets the down scaling limit. Default is 0, no limit. A value of 1 means no down-scaling permitted. A value of e.g. 0.2 means maximum down-scaling by 80%.
       :arg Archive archive: an Archive object that points to locations where to find images or non-standard fonts. If `text` refers to images or non-standard fonts, this parameter is required. This parameter is ignored if `text` is a Story.
       :arg int rotate: one of the values 0, 90, 180, 270. Depending on this, text will be filled:
       
@@ -727,9 +729,9 @@ In a nutshell, this is what you can do with PyMuPDF:
       pair: fillOpacity; DrawLine
       pair: oc; DrawLine
 
-   .. method:: DrawLine(Point p1, Point p2, float[] color=(0,), float width=1, string dashes=None, float lineCap=0, int lineJoin=0, bool overlay=true, Morph morph=None, float strokeOpacity=1, float fillOpacity=1, int oc=0)
+   .. method:: DrawLine(Point p1, Point p2, float[] color: 0, float[] fill: null, float width: 1, string dashes: null, float lineCap: 0, int lineJoin: 0, bool overlay: true, Morph morph: null, float strokeOpacity: 1, float fillOpacity: 1, int oc: 0)
 
-      PDF only: Draw a line from *p1* to *p2* (:data:`point_like` \s). See :meth:`Shape.draw_line`.
+      PDF only: Draw a line from *p1* to *p2* (:data:`Point` \s). See :meth:`Shape.DrawLine`.
 
 
    .. index::
@@ -747,9 +749,9 @@ In a nutshell, this is what you can do with PyMuPDF:
       pair: fillOpacity; DrawZigzag
       pair: oc; DrawZigzag
 
-   .. method:: DrawZigzag(Point p1, Point p2, int breadth=2, float[] color=(0,), int width=1, string dashes=null, int lineCap=0, int lineJoin=0, bool overlay=true, Morph morph=null, float strokeOpacity=1, float fillOpacity=1, int oc=0)
+   .. method:: DrawZigzag(Point p1, Point p2, float breadth: 2, float[] color: 0, float[] fill: null, int width: 1, string dashes: null, int lineCap: 0, int lineJoin: 0, bool overlay: true, Morph morph: null, float strokeOpacity: 1, float fillOpacity: 1, int oc: 0)
 
-      PDF only: Draw a zigzag line from *p1* to *p2* (:data:`point_like` \s). See :meth:`Shape.DrawZigzag`.
+      PDF only: Draw a zigzag line from *p1* to *p2* (:data:`Point` \s). See :meth:`Shape.DrawZigzag`.
 
 
    .. index::
@@ -767,9 +769,9 @@ In a nutshell, this is what you can do with PyMuPDF:
       pair: fillOpacity; DrawSquiggle
       pair: oc; DrawSquiggle
 
-   .. method:: DrawSquiggle(Point p1, Point p2, float breadth=2, float[] color=(0,), float width=1, string dashes=null, int lineCap=0, int lineJoin=0, bool overlay=true, Morph morph=null, float strokeOpacity=1, float fillOpacity=1, int oc=0)
+   .. method:: DrawSquiggle(Point p1, Point p2, float breadth: 2, float[] color: 0, float width: 1, string dashes: null, int lineCap: 0, int lineJoin: 0, bool overlay: true, Morph morph: null, float strokeOpacity: 1, float fillOpacity: 1, int oc: 0)
 
-      PDF only: Draw a squiggly (wavy, undulated) line from *p1* to *p2* (:data:`point_like` \s). See :meth:`Shape.DrawSquiggle`.
+      PDF only: Draw a squiggly (wavy, undulated) line from *p1* to *p2* (:data:`Point` \s). See :meth:`Shape.DrawSquiggle`.
 
 
    .. index::
@@ -786,9 +788,9 @@ In a nutshell, this is what you can do with PyMuPDF:
       pair: fillOpacity; DrawCircle
       pair: oc; DrawCircle
 
-   .. method:: DrawCircle(Point center, float radius, float[] color=(0,), float[] fill=null, float width=1, string dashes=null, int lineCap=0, int lineJoin=0, bool overlay=true, Morph morph=null, float strokeOpacity=1, float fillOpacity=1, int oc=0)
+   .. method:: DrawCircle(Point center, float radius, float[] color: null, float[] fill: null, float width: 1, string dashes: null, int lineCap: 0, int lineJoin: 0, bool overlay: true, Morph morph: null, float strokeOpacity: 1, float fillOpacity: 1, int oc: 0)
 
-      PDF only: Draw a circle around *center* (:data:`point_like`) with a radius of *radius*. See :meth:`Shape.draw_circle`.
+      PDF only: Draw a circle around *center* (:data:`Point`) with a radius of *radius*. See :meth:`Shape.DrawCircle`.
 
 
    .. index::
@@ -805,9 +807,9 @@ In a nutshell, this is what you can do with PyMuPDF:
       pair: fillOpacity; DrawOval
       pair: oc; DrawOval
 
-   .. method:: DrawOval(Rect rect, float[] color=(0,), float fill=null, float width=1, string dashes=None, int lineCap=0, float lineJoin=0, bool overlay=true, Morph morph=null, float strokeOpacity=1, float fillOpacity=1, int oc=0)
+   .. method:: DrawOval(Rect rect, float[] color: null, float[] fill: null, float width: 1, string dashes: null, int lineCap: 0, float lineJoin: 0, bool overlay: true, Morph morph: null, float strokeOpacity: 1, float fillOpacity: 1, int oc: 0)
 
-      PDF only: Draw an oval (ellipse) within the given :data:`rect_like` or :data:`quad_like`. See :meth:`Shape.DrawOval`.
+      PDF only: Draw an oval (ellipse) within the given :data:`Rect` or :data:`Quad`. See :meth:`Shape.DrawOval`.
 
 
    .. index::
@@ -826,7 +828,7 @@ In a nutshell, this is what you can do with PyMuPDF:
       pair: fillOpacity; DrawSector
       pair: oc; DrawSector
 
-   .. method:: DrawSector(Point center, Point point, angle, float[] color=(0,), float[] fill=null, float width=1, string dashes=null, int lineCap=0, int lineJoin=0, bool fullSector=true, bool overlay=true, bool closePath=false, Morph morph=null, float strokeOpacity=1, float fillOpacity=1, int oc=0)
+   .. method:: DrawSector(Point center, Point point, int beta, float[] color: null, float[] fill: null, float width: 1, string dashes: null, int lineCap: 0, int lineJoin: 0, bool fullSector: true, bool overlay: true, bool closePath: false, Morph morph: null, float strokeOpacity: 1, float fillOpacity: 1, int oc: 0)
 
       PDF only: Draw a circular sector, optionally connecting the arc to the circle's center (like a piece of pie). See :meth:`Shape.DrawSector`.
 
@@ -848,7 +850,7 @@ In a nutshell, this is what you can do with PyMuPDF:
 
    .. method:: DrawPolyline(Point[] points, float[] color=(0,), float[] fill=null, float width=1, string dashes=null, int lineCap=0, int lineJoin=0, bool overlay=true, bool closePath=false, Morph morph=null, float strokeOpacity=1, float fillOpacity=1, int oc=0)
 
-      PDF only: Draw several connected lines defined by a sequence of :data:`point_like` \s. See :meth:`Shape.DrawPolyline`.
+      PDF only: Draw several connected lines defined by a sequence of :data:`Point` \s. See :meth:`Shape.DrawPolyline`.
 
 
    .. index::
@@ -869,9 +871,9 @@ In a nutshell, this is what you can do with PyMuPDF:
       pair: oc; DrawBezier
       pair: closePath; DrawCurve
 
-   .. method:: DrawBezier(Point p1, Point p2, Point p3, Point p4, float[] color=(0,), float[] fill=None, float width=1, string dashes=null, float lineCap=0, float lineJoin=0, bool overlay=true, bool closePath=false, Morph morph=null, float strokeOpacity=1, float fillOpacity=1, int oc=0)
+   .. method:: DrawBezier(Point p1, Point p2, Point p3, Point p4, float[] color: 0, float[] fill: 0, float width: 1, string dashes: null, float lineCap: 0, float lineJoin: 0, bool overlay: true, bool closePath: false, Morph morph: null, float strokeOpacity: 1, float fillOpacity: 1, int oc: 0)
 
-      PDF only: Draw a cubic Bézier curve from *p1* to *p4* with the control points *p2* and *p3* (all are :data:`point_like` \s). See :meth:`Shape.DrawBezier`.
+      PDF only: Draw a cubic Bézier curve from *p1* to *p4* with the control points *p2* and *p3* (all are :data:`Point` \s). See :meth:`Shape.DrawBezier`.
 
    .. index::
       pair: p1; DrawCurve
@@ -890,7 +892,7 @@ In a nutshell, this is what you can do with PyMuPDF:
       pair: oc; DrawCurve
       pair: closePath; DrawCurve
 
-   .. method:: DrawCurve(Point p1, Point p2, Point p3, float[] color=(0,), float[] fill=null, float width=1, string dashes=null, int lineCap=0, int lineJoin=0, bool overlay=true, bool closePath=false, Morph morph=null, float strokeOpacity=1, float fillOpacity=1, int oc=0)
+   .. method:: DrawCurve(Point p1, Point p2, Point p3, float[] color: null, float[] fill: null, float width: 1, string dashes: null, int lineCap: 0, int lineJoin: 0, bool overlay: true, bool closePath: false, Morph morph: null, float strokeOpacity: 1, float fillOpacity: 1, int oc: 0)
 
       PDF only: This is a special case of *DrawBezier()*. See :meth:`Shape.DrawCurve`.
 
@@ -911,7 +913,7 @@ In a nutshell, this is what you can do with PyMuPDF:
       pair: radius; DrawRect
       pair: oc; DrawRect
 
-   .. method:: DrawRect(Rect rect, float[] color=(0,), float[] fill=null, float width=1, string dashes=None, int lineCap=0, int lineJoin=0, bool overlay=true, Morph morph=null, float strokeOpacity=1, float fillOpacity=1, float radius=None, int oc=0)
+   .. method:: DrawRect(Rect rect, float[] color: null, float[] fill: null, float width: 1, string dashes: null, int lineCap: 0, int lineJoin: 0, bool overlay: true, Morph morph: null, float strokeOpacity: 1, float fillOpacity: 1, float radius: 0, int oc: 0)
 
       PDF only: Draw a rectangle. See :meth:`Shape.DrawRect`.
 
@@ -930,7 +932,7 @@ In a nutshell, this is what you can do with PyMuPDF:
       pair: fillOpacity; DrawQuad
       pair: oc; DrawQuad
 
-   .. method:: DrawQuad(quad, float[] color=(0,), float[] fill=null, float width=1, string dashes=null, float lineCap=0, float lineJoin=0, bool overlay=true, Morph morph=null, float strokeOpacity=1, float fillOpacity=1, int oc=0)
+   .. method:: DrawQuad(Quad quad, float[] color: null, float[] fill: null, float width: 1, string dashes: null, float lineCap: 0, float lineJoin: 0, bool overlay: true, Morph morph: null, float strokeOpacity: 1, float fillOpacity: 1, int oc: 0)
 
       PDF only: Draw a quadrilateral. See :meth:`Shape.DrawQuad`.
 
@@ -941,21 +943,21 @@ In a nutshell, this is what you can do with PyMuPDF:
       pair: fontName; InsertFont
       pair: setSimple; InsertFont
 
-   .. method:: InsertFont(string fontName="helv", string fontFile=None, byte[] fontBuffer=null, bool setSimple=false, int encoding=TEXT_ENCODING_LATIN)
+   .. method:: InsertFont(string fontName, string fontFile, byte[] fontBuffer: null, bool setSimple: false, int encoding: TEXT_ENCODING_LATIN)
 
       PDF only: Add a new font to be used by text output methods and return its :data:`xref`. If not already present in the file, the font definition will be added. Supported are the built-in :data:`Base14_Fonts` and the CJK fonts via **"reserved"** fontnames. Fonts can also be provided as a file path or a memory area containing the image of a font file.
 
-      :arg str fontName: The name by which this font shall be referenced when outputting text on this page. In general, you have a "free" choice here (but consult the :ref:`AdobeManual`, page 16, section 7.3.5 for a formal description of building legal PDF names). However, if it matches one of the :data:`Base14_Fonts` or one of the CJK fonts, *fontfile* and *fontbuffer* **are ignored**.
+      :arg string fontName: The name by which this font shall be referenced when outputting text on this page. In general, you have a "free" choice here (but consult the :ref:`AdobeManual`, page 16, section 7.3.5 for a formal description of building legal PDF names). However, if it matches one of the :data:`Base14_Fonts` or one of the CJK fonts, *fontFile* and *fontBuffer* **are ignored**.
 
-        In other words, you cannot insert a font via *fontfile* / *fontbuffer* and also give it a reserved *fontname*.
+        In other words, you cannot insert a font via *fontFile* / *fontBuffer* and also give it a reserved *fontName*.
 
-        .. note:: A reserved fontname can be specified in any mixture of upper or lower case and still match the right built-in font definition: fontnames "helv", "Helv", "HELV", "Helvetica", etc. all lead to the same font definition "Helvetica". But from a :ref:`Page` perspective, these are **different references**. You can exploit this fact when using different *encoding* variants (Latin, Greek, Cyrillic) of the same font on a page.
+        .. note:: A reserved fontName can be specified in any mixture of upper or lower case and still match the right built-in font definition: fontnames "helv", "Helv", "HELV", "Helvetica", etc. all lead to the same font definition "Helvetica". But from a :ref:`Page` perspective, these are **different references**. You can exploit this fact when using different *encoding* variants (Latin, Greek, Cyrillic) of the same font on a page.
 
-      :arg str fontFile: a path to a font file. If used, *fontname* must be **different from all reserved names**.
+      :arg string fontFile: a path to a font file. If used, *fontName* must be **different from all reserved names**.
 
-      :arg bytearray fontBuffer: the memory image of a font file. If used, *fontname* must be **different from all reserved names**. This parameter would typically be used with :attr:`Font.Buffer` for fonts supported / available via :ref:`Font`.
+      :arg byte[] fontBuffer: the memory image of a font file. If used, *fontName* must be **different from all reserved names**. This parameter would typically be used with :attr:`Font.Buffer` for fonts supported / available via :ref:`Font`.
 
-      :arg int setSimple: applicable for *fontfile* / *fontbuffer* cases only: enforce treatment as a "simple" font, i.e. one that only uses character codes up to 255.
+      :arg int setSimple: applicable for *fontFile* / *fontBuffer* cases only: enforce treatment as a "simple" font, i.e. one that only uses character codes up to 255.
 
       :arg int encoding: applicable for the "Helvetica", "Courier" and "Times" sets of :data:`Base14_Fonts` only. Select one of the available encodings Latin (0), Cyrillic (2) or Greek (1). Only use the default (0 = Latin) for "Symbol" and "ZapfDingBats".
 
@@ -965,7 +967,7 @@ In a nutshell, this is what you can do with PyMuPDF:
       .. note:: Built-in fonts will not lead to the inclusion of a font file. So the resulting PDF file will remain small. However, your PDF viewer software is responsible for generating an appropriate appearance -- and there **exist** differences on whether or how each one of them does this. This is especially true for the CJK fonts. But also Symbol and ZapfDingbats are incorrectly handled in some cases. Following are the **Font Names** and their correspondingly installed **Base Font** names:
 
    .. index::
-      pair: filename; InsertImage
+      pair: fileName; InsertImage
       pair: keepProportion; InsertImage
       pair: overlay; InsertImage
       pair: pixmap; InsertImage
@@ -980,15 +982,15 @@ In a nutshell, this is what you can do with PyMuPDF:
       PDF only: Put an image inside the given rectangle. The image may already
       exist in the PDF or be taken from a pixmap, a file, or a memory area.
 
-      :arg rect_like rect: where to put the image. Must be finite and not empty.
+      :arg Rect rect: where to put the image. Must be finite and not empty.
       :arg int alpha: deprecated and ignored.
-      :arg str filename:
+      :arg string fileName:
         name of an image file (all formats supported by MuPDF -- see
         :ref:`ImageFiles`).
       :arg int height:
       :arg bool keepProportion:
         maintain the aspect ratio of the image.
-      :arg bytes,bytearray,io.BytesIO mask:
+      :arg byte[] mask:
         image in memory -- to be used as image mask (alpha values) for the base
         image. When specified, the base image must be provided as a filename or
         a stream -- and must not be an image that already has a mask.
@@ -1006,7 +1008,7 @@ In a nutshell, this is what you can do with PyMuPDF:
         consider converting the image to a PDF
         (:meth:`Document.Convert2Pdf`)
         first and then use :meth:`Page.ShowPdfPage` instead.
-      :arg bytes,bytearray,io.BytesIO stream:
+      :arg byte[] stream:
         image in memory (all formats supported by MuPDF -- see :ref:`ImageFiles`).
       :arg int width:
       :arg int xref:
@@ -1067,7 +1069,7 @@ In a nutshell, this is what you can do with PyMuPDF:
       pair: stream; ReplaceImage
       pair: xref; ReplaceImage
 
-   .. method:: ReplaceImage(int xref, string filename=null, Pixmap pixmap=null, byte[] stream=null)
+   .. method:: ReplaceImage(int xref, string filename: null, Pixmap pixmap: null, byte[] stream: null)
 
       Replace the image at xref with another one.
 
@@ -1117,7 +1119,7 @@ In a nutshell, this is what you can do with PyMuPDF:
       pair: sort; Page.GetText
       pair: delimiters; Page.GetText
 
-   .. method:: GetText(string option, Rect clip=null, int flags=0, MuPDFTextPage textpage=null, bool sort=false, char[] delimiters=null)
+   .. method:: GetText(string option, Rect clip: null, int flags: 0, TextPage textpage: null, bool sort: false, char[] delimiters: null)
 
       Retrieves the content of a page in a variety of formats. This is a wrapper for multiple :ref:`TextPage` methods by choosing the output option `opt` as follows:
 
@@ -1136,16 +1138,17 @@ In a nutshell, this is what you can do with PyMuPDF:
 
         Values "words" and "blocks" are also accepted.
 
-      :arg rect-like clip: restrict extracted text to this rectangle. If None, the full page is taken. Has **no effect** for options "html", "xhtml" and "xml".
+      :arg Rect clip: restrict extracted text to this rectangle. If None, the full page is taken. Has **no effect** for options "html", "xhtml" and "xml".
 
       :arg int flags: indicator bits to control whether to include images or how text should be handled with respect to white spaces and :data:`ligatures`. See :ref:`TextPreserve` for available indicators and :ref:`text_extraction_flags` for default settings. 
 
-      :arg textpage: use a previously created :ref:`TextPage`. This reduces execution time **very significantly:** by more than 50% and up to 95%, depending on the extraction option. If specified, the 'flags' and 'clip' arguments are ignored, because they are textpage-only properties. If omitted, a new, temporary textpage will be created. 
+      :arg TextPage textpage: use a previously created :ref:`TextPage`. This reduces execution time **very significantly:** by more than 50% and up to 95%, depending on the extraction option. If specified, the 'flags' and 'clip' arguments are ignored, because they are textpage-only properties. If omitted, a new, temporary textpage will be created. 
 
       :arg bool sort: sort the output by vertical, then horizontal coordinates. In many cases, this should suffice to generate a "natural" reading order. Has no effect on (X)HTML and XML. Output option **"words"** sorts by `(y1, x0)` of the words' bboxes. Similar is true for "blocks", "dict", "json", "rawdict", "rawjson": they all are sorted by `(y1, x0)` of the resp. block bbox. If specified for "text", then internally "blocks" is used. 
 
-      :arg str delimiters: use these characters as *additional* word separators with the "words" output option (ignored otherwise). By default, all white spaces (including non-breaking space `0xA0`) indicate start and end of a word. Now you can specify more characters causing this. For instance, the default will return `"john.doe@outlook.com"` as **one** word. If you specify `delimiters="@."` then the **four** words `"john"`, `"doe"`, `"outlook"`, `"com"` will be returned. Other possible uses include ignoring punctuation characters `delimiters=string.punctuation`. The "word" strings will not contain any delimiting character.
-      :rtype: *str, list, dict*
+      :arg string delimiters: use these characters as *additional* word separators with the "words" output option (ignored otherwise). By default, all white spaces (including non-breaking space `0xA0`) indicate start and end of a word. Now you can specify more characters causing this. For instance, the default will return `"john.doe@outlook.com"` as **one** word. If you specify `delimiters="@."` then the **four** words `"john"`, `"doe"`, `"outlook"`, `"com"` will be returned. Other possible uses include ignoring punctuation characters `delimiters=string.punctuation`. The "word" strings will not contain any delimiting character.
+      
+      :rtype: *string, list, dict*
       :returns: The page's content as a string, a list or a dictionary. Refer to the corresponding :ref:`TextPage` method for details.
 
       .. note::
@@ -1157,11 +1160,11 @@ In a nutshell, this is what you can do with PyMuPDF:
       pair: rect; GetTextbox
       pair: textpage; GetTextbox
 
-   .. method:: GetTextbox(Rect rect, MuPDFTextPage textpage=None)
+   .. method:: GetTextbox(Rect rect, TextPage textpage: null)
 
       Retrieve the text contained in a rectangle.
 
-      :arg rect-like rect: rect-like.
+      :arg Rect rect: Rect.
       :arg textpage: a :ref:`TextPage` to use. If omitted, a new, temporary textpage will be created.
 
       :returns: a string with interspersed linebreaks where necessary. It is based on dedicated code. A tyical use is checking the result of :meth:`Page.SearchFor`:
@@ -1174,13 +1177,13 @@ In a nutshell, this is what you can do with PyMuPDF:
       pair: flags; GetTextPage
       pair: clip; GetTextPage
 
-   .. method:: GetTextPage(Rect clip=null, int flags=3, Matrix matrix=null)
+   .. method:: GetTextPage(Rect clip: null, int flags: 3, Matrix matrix: null)
 
       Create a :ref:`TextPage` for the page.
 
       :arg int flags: indicator bits controlling the content available for subsequent text extractions and searches -- see the parameter of :meth:`Page.GetText`.
 
-      :arg rect-like clip: restrict extracted text to this area.
+      :arg Rect clip: restrict extracted text to this area.
 
       :returns: :ref:`TextPage`
 
@@ -1192,17 +1195,17 @@ In a nutshell, this is what you can do with PyMuPDF:
       pair: full; GetTextPageOcr
       pair: tessdata; GetTextPageOcr
 
-   .. method:: GetTextPageOcr(int flags=3, string language="eng", int dpi=72, bool full=false, string tessdata=None)
+   .. method:: GetTextPageOcr(int flags: 3, string language: "eng", int dpi: 72, bool full: false, string tessdata: null)
 
       **Optical Character Recognition** (**OCR**) technology can be used to extract text data for documents where text is in a raster image format throughout the page. Use this method to **OCR** a page for text extraction.
 
       This method returns a :ref:`TextPage` for the page that includes OCRed text. MuPDF will invoke Tesseract-OCR if this method is used. Otherwise this is a normal :ref:`TextPage` object.
 
       :arg int flags: indicator bits controlling the content available for subsequent test extractions and searches -- see the parameter of :meth:`Page.GetText`.
-      :arg str language: the expected language(s). Use "+"-separated values if multiple languages are expected, "eng+spa" for English and Spanish.
+      :arg string language: the expected language(s). Use "+"-separated values if multiple languages are expected, "eng+spa" for English and Spanish.
       :arg int dpi: the desired resolution in dots per inch. Influences recognition quality (and execution time).
       :arg bool full: whether to OCR the full page, or just the displayed images.
-      :arg str tessdata: The name of Tesseract's language support folder `tessdata`. If omitted, this information must be present as environment variable `TESSDATA_PREFIX`. Can be determined by function :meth:`get_tessdata`.
+      :arg string tessdata: The name of Tesseract's language support folder `tessdata`. If omitted, this information must be present as environment variable `TESSDATA_PREFIX`.
 
       .. note:: This method does **not** support a clip parameter -- OCR will always happen for the complete page rectangle.
 
@@ -1215,11 +1218,11 @@ In a nutshell, this is what you can do with PyMuPDF:
          .. note:: **OCRed text is only available** to text extractions and searches if their `textpage` parameter specifies the output of this method.
 
 
-   .. method:: GetDrawings(bool extended=false)
+   .. method:: GetDrawings(bool extended: false)
 
       Return the vector graphics of the page. These are instructions which draw lines, rectangles, quadruples or curves, including properties like colors, transparency, line width and dashing, etc. Alternative terms are "line art" and "drawings".
 
-      :returns: a list of dictionaries. Each dictionary item contains one or more single draw commands belonging together: they have the same properties (colors, dashing, etc.). This is called a **"path"** in PDF, so we adopted that name here, but the method **works for all document types**.
+      :returns: a list of PathInfo. Each dictionary item contains one or more single draw commands belonging together: they have the same properties (colors, dashing, etc.). This is called a **"path"** in PDF, so we adopted that name here, but the method **works for all document types**.
 
       The path dictionary for fill, stroke and fill-stroke paths has been designed to be compatible with class :ref:`Shape`. There are the following keys:
 
@@ -1318,12 +1321,12 @@ In a nutshell, this is what you can do with PyMuPDF:
 
       .. note:: The method is based on the output of :meth:`Page.GetCDrawings` -- which is much faster, but requires somewhat more attention processing its output.
 
-   .. method:: GetFonts(bool full=false)
+   .. method:: GetFonts(bool full: false)
 
       PDF only: Return a list of fonts referenced by the page. Wrapper for :meth:`Document.GetPageFonts`.
 
 
-   .. method:: GetImages(bool full=false)
+   .. method:: GetImages(bool full: false)
 
       PDF only: Return a list of images referenced by the page. Wrapper for :meth:`Document.GetPageImages`.
 
@@ -1332,15 +1335,15 @@ In a nutshell, this is what you can do with PyMuPDF:
       pair: hashes; GetImageInfo
       pair: xrefs; GetImageInfo
 
-   .. method:: GetImageInfo(bool hashes=false, bool xrefs=false)
+   .. method:: GetImageInfo(bool hashes: false, bool xrefs: false)
 
-      Return a list of meta information dictionaries for all images shown on the page. This works for all document types. Technically, this is a subset of the dictionary output of :meth:`Page.GetText`: the image binary content and any text on the page are ignored.
+      Return a list of meta information `Block` for all images shown on the page. This works for all document types. Technically, this is a subset of the dictionary output of :meth:`Page.GetText`: the image binary content and any text on the page are ignored.
 
       :arg bool hashes: Compute the MD5 hashcode for each encountered image, which allows identifying image duplicates. This adds the key `"digest"` to the output, whose value is a 16 byte `bytes` object.
 
       :arg bool xrefs: **PDF only.** Try to find the :data:`xref` for each image. Implies `hashes=true`. Adds the `"xref"` key to the dictionary. If not found, the value is 0, which means, the image is either "inline" or otherwise undetectable. Please note that this option has an extended response time, because the MD5 hashcode will be computed at least two times for each image with an xref.
 
-      :rtype: list[dict]
+      :rtype: list of Block
       :returns: A list of dictionaries. This includes information for **exactly those** images, that are shown on the page -- including *"inline images"*. In contrast to images included in :meth:`Page.GetText`, image **binary content** is not loaded, which drastically reduces memory usage. The dictionary layout is similar to that of image blocks in `page.GetText("dict")`.
 
          =============== ===============================================================
@@ -1370,9 +1373,9 @@ In a nutshell, this is what you can do with PyMuPDF:
 
 
    .. index::
-      pair: transform; get_image_rects
+      pair: transform; GetImageRects
 
-   .. method:: GetImageRects(string name, bool transform=false)
+   .. method:: GetImageRects(string name, bool transform: false)
 
       PDF only: Return boundary boxes and transformation matrices of an embedded image. This is an improved version of :meth:`Page.GetImageBbox` with the following differences:
 
@@ -1380,7 +1383,7 @@ In a nutshell, this is what you can do with PyMuPDF:
       * The result is a list of :ref:`Rect` or (:ref:`Rect`, :ref:`Matrix`) objects -- depending on *transform*. Each list item represents one location of the image on the page. Multiple occurrences might not be detectable by :meth:`Page.GetImageBbox`.
       * The method invokes :meth:`Page.GetImageInfo` with `xrefs=true` and therefore has a noticeably longer response time than :meth:`Page.GetImageBbox`.
 
-      :arg list,str,int item: an item of the list :meth:`Page.GetImages`, or the reference **name** entry of such an item (item[7]), or the image :data:`xref`.
+      :arg string item: an item of the list :meth:`Page.GetImages`, or the reference **name** entry of such an item (item[7]), or the image :data:`xref`.
       :arg bool transform: also return the matrix used to transform the image rectangle to the bbox on the page. If true, then tuples `(bbox, matrix)` are returned.
 
       :rtype: list
@@ -1388,13 +1391,13 @@ In a nutshell, this is what you can do with PyMuPDF:
 
 
    .. index::
-      pair: transform; get_image_bbox
+      pair: transform; GetImageBbox
 
-   .. method:: GetImageBbox(string name, bool transform=false)
+   .. method:: GetImageBbox(string name, bool transform: false)
 
       PDF only: Return boundary box and transformation matrix of an embedded image.
 
-      :arg list,str item: an item of the list :meth:`Page.GetImages` with *full=true* specified, or the reference **name** entry of such an item, which is item[-3] (or item[7] respectively).
+      :arg string item: an item of the list :meth:`Page.GetImages` with *full=true* specified, or the reference **name** entry of such an item, which is item[-3] (or item[7] respectively).
       :arg bool transform: return the matrix used to transform the image rectangle to the bbox on the page. Default is just the bbox. If true, then a tuple `(bbox, matrix)` is returned.
 
       :rtype: :ref:`Rect` or (:ref:`Rect`, :ref:`Matrix`)
@@ -1403,19 +1406,19 @@ In a nutshell, this is what you can do with PyMuPDF:
 
       .. note::
 
-         1. Be aware that :meth:`Page.GetImages` may contain "dead" entries i.e. images, which the page **does not display**. This is no error, but intended by the PDF creator. No exception will be raised in this case, but an infinite rectangle is returned. You can avoid this from happening by executing :meth:`Page.clean_contents` before this method.
-         2. The image's "transformation matrix" is defined as the matrix, for which the expression `bbox / transform == MuPDFRect(0, 0, 1, 1)` is true, lookup details here: :ref:`ImageTransformation`.
+         1. Be aware that :meth:`Page.GetImages` may contain "dead" entries i.e. images, which the page **does not display**. This is no error, but intended by the PDF creator. No exception will be raised in this case, but an infinite rectangle is returned. You can avoid this from happening by executing :meth:`Page.CleanContents` before this method.
+         2. The image's "transformation matrix" is defined as the matrix, for which the expression `bbox / transform == Rect(0, 0, 1, 1)` is true, lookup details here: :ref:`ImageTransformation`.
 
 
    .. index::
       pair: matrix; GetSvgImage
 
-   .. method:: GetSvgImage(Matrix matrix=MuPDFIdentity, int text_as_path=1)
+   .. method:: GetSvgImage(Matrix matrix: Identity, int textAsPath: 1)
 
      Create an SVG image from the page. Only full page images are currently supported.
 
-     :arg matrix_like matrix: a matrix, default is :ref:`Identity`.
-     :arg bool text_as_path: -- controls how text is represented. *true* outputs each character as a series of elementary draw commands, which leads to a more precise text display in browsers, but a **very much larger** output for text-oriented pages. Display quality for *false* relies on the presence of the referenced fonts on the current system. For missing fonts, the internet browser will fall back to some default -- leading to unpleasant appearances. Choose *false* if you want to parse the text of the SVG.
+     :arg Matrix matrix: a matrix, default is :ref:`Identity`.
+     :arg bool textAsPath: -- controls how text is represented. *true* outputs each character as a series of elementary draw commands, which leads to a more precise text display in browsers, but a **very much larger** output for text-oriented pages. Display quality for *false* relies on the presence of the referenced fonts on the current system. For missing fonts, the internet browser will fall back to some default -- leading to unpleasant appearances. Choose *false* if you want to parse the text of the SVG.
 
      :returns: a UTF-8 encoded string that contains the image. Because SVG has XML syntax it can be saved in a text file, the standard extension is `.svg`.
 
@@ -1429,17 +1432,17 @@ In a nutshell, this is what you can do with PyMuPDF:
       pair: matrix; GetPixmap
       pair: dpi; GetPixmap
 
-   .. method:: GetPixmap(Matrix matrix=MuPDFIdentity, int dpi=0, string colorSpace="RGB", Rect clip=null, bool alpha=false, bool annots=true)
+   .. method:: GetPixmap(Matrix matrix: Identity, int dpi: 0, string colorSpace: "RGB", Rect clip: null, bool alpha: false, bool annots: true)
 
      Create a pixmap from the page. This is probably the most often used method to create a :ref:`Pixmap`.
 
      All parameters are *keyword-only.*
 
-     :arg matrix_like matrix: default is :ref:`Identity`.
+     :arg Matrix matrix: default is :ref:`Identity`.
      :arg int dpi: desired resolution in x and y direction. If not `null`, the `"matrix"` parameter is ignored.
-     :arg colorspace: The desired colorspace, one of "GRAY", "RGB" or "CMYK" (case insensitive). Or specify a :ref:`Colorspace`, ie. one of the predefined ones: :data:`csGRAY`, :data:`csRGB` or :data:`csCMYK`.
-     :type colorspace: str or :ref:`Colorspace`
-     :arg irect_like clip: restrict rendering to the intersection of this area with the page's rectangle.
+     :arg colorspace: The desired colorspace, one of "GRAY", "RGB" or "CMYK" (case insensitive). Or specify a :ref:`ColorSpace`, ie. one of the predefined ones: :data:`csGRAY`, :data:`csRGB` or :data:`csCMYK`.
+     :type colorspace: string or :ref:`ColorSpace`
+     :arg IRect clip: restrict rendering to the intersection of this area with the page's rectangle.
      :arg bool alpha: whether to add an alpha channel. Always accept the default *false* if you do not really need transparency. This will save a lot of memory (25% in case of RGB ... and pixmaps are typically **large**!), and also processing time. Also note an **important difference** in how the image will be rendered: with *true* the pixmap's samples area will be pre-cleared with *0x00*. This results in **transparent** areas where the page is empty. With *false* the pixmap's samples will be pre-cleared with *0xff*. This results in **white** where the page has nothing to show.
 
 
@@ -1450,7 +1453,7 @@ In a nutshell, this is what you can do with PyMuPDF:
 
      .. note::
 
-         * The pixmap will have *"premultiplied"* pixels if `alpha=true`. To learn about some background, e.g. look for "Premultiplied alpha" `here <https://en.wikipedia.org/wiki/Glossary_of_computer_graphics#P>`_.
+         * The pixmap will have *"premultiplied"* pixels if `alpha: true`. To learn about some background, e.g. look for "Premultiplied alpha" `here <https://en.wikipedia.org/wiki/Glossary_of_computer_graphics#P>`_.
 
 
 
@@ -1458,20 +1461,20 @@ In a nutshell, this is what you can do with PyMuPDF:
 
       PDF only: return a list of the names of annotations, widgets and links. Technically, these are the */NM* values of every PDF object found in the page's */Annots*  array.
 
-      :rtype: list
+      :rtype: list of string
 
    .. method:: GetAnnotXrefs()
 
       PDF only: return a list of the :data`xref` numbers of annotations, widgets and links -- technically of all entries found in the page's */Annots*  array.
 
-      :rtype: list
+      :rtype: list of AnnotXref
       :returns: a list of items *(xref, type)* where type is the annotation type. Use the type to tell apart links, fields and annotations, see :ref:`AnnotationTypes`.
 
-   .. method:: LoadAnnot(ident)
+   .. method:: LoadAnnot(int xref)
 
-      PDF only: return the annotation identified by *ident*. This may be its unique name (PDF `/NM` key), or its :data:`xref`.
+      PDF only: return the annotation identified by *xref*. This may be its unique name (PDF `/NM` key), or its :data:`xref`.
 
-      :arg str,int ident: the annotation name or xref.
+      :arg int xref: the annotation name or xref.
 
       :rtype: :ref:`Annot`
       :returns: the annotation or *null*.
@@ -1520,15 +1523,11 @@ In a nutshell, this is what you can do with PyMuPDF:
       pair: overlay; ShowPdfPage
       pair: rotate; ShowPdfPage
 
-   .. method:: ShowPdfPage(Rect rect, Document docsrc, int pno=0, bool keepProportion=true, bool overlay=true, int oc=0, int rotate=0, Rect clip=null)
+   .. method:: ShowPdfPage(Rect rect, Document docsrc, int pno: 0, bool keepProportion: true, bool overlay: true, int oc: 0, int rotate: 0, Rect clip: null)
 
       PDF only: Display a page of another PDF as a **vector image** (otherwise similar to :meth:`Page.InsertImage`). This is a multi-purpose method. For example, you can use it to
 
-      * create "n-up" versions of existing PDF files, combining several input pages into **one output page** (see example `combine.py <https://github.com/pymupdf/PyMuPDF-Utilities/blob/master/examples/combine-pages/combine.py>`_),
-      * create "posterized" PDF files, i.e. every input page is split up in parts which each create a separate output page (see `posterize.py <https://github.com/pymupdf/PyMuPDF-Utilities/blob/master/examples/posterize-document/posterize.py>`_),
-      * include PDF-based vector images like company logos, watermarks, etc., see `svg-logo.py <https://github.com/pymupdf/PyMuPDF-Utilities/tree/master/examples/svg-logo.py>`_, which puts an SVG-based logo on each page (requires additional packages to deal with SVG-to-PDF conversions).
-
-      :arg rect_like rect: where to place the image on current page. Must be finite and its intersection with the page must not be empty.
+      :arg Rect rect: where to place the image on current page. Must be finite and its intersection with the page must not be empty.
       :arg docsrc: source PDF document containing the page. Must be a different document object, but may be the same file.
       :type docsrc: :ref:`Document`
 
@@ -1541,7 +1540,7 @@ In a nutshell, this is what you can do with PyMuPDF:
       :arg int oc: (:data:`xref`) make visibility dependent on this :data:`OCG` / :data:`OCMD` (which must be defined in the target PDF) [#f9]_.
       :arg float rotate: show the source rectangle rotated by some angle. Any angle is supported.
 
-      :arg rect_like clip: choose which part of the source page to show. Default is the full page, else must be finite and its intersection with the source page must not be empty.
+      :arg Rect clip: choose which part of the source page to show. Default is the full page, else must be finite and its intersection with the source page must not be empty.
 
       .. note:: In contrast to method :meth:`Document.InsertPdf`, this method does not copy annotations, widgets or links, so these are not included in the target [#f6]_. But all its **other resources (text, images, fonts, etc.)** will be imported into the current PDF. They will therefore appear in text extractions and in :meth:`GetFonts` and :meth:`GetImages` lists -- even if they are not contained in the visible area given by *clip*.
 
@@ -1558,7 +1557,7 @@ In a nutshell, this is what you can do with PyMuPDF:
          // lower half page
          Rect r2 = r1 + new Rect(0, page.rect.height/2, 0, page.rect.height/2)
 
-         Document src = new Document("PyMuPDF.pdf")  // show page 0 of this
+         Document src = new Document("MuPDF.pdf")  // show page 0 of this
 
          page.ShowPdfPage(r1, src, 0, rotate=90)
          page.ShowPdfPage(r2, src, 0, rotate=-90)
@@ -1582,12 +1581,12 @@ In a nutshell, this is what you can do with PyMuPDF:
       pair: clip; SearchFor
       pair: textpage; SearchFor
 
-   .. method:: SearchFor(string needle, Rect clip=None, bool quads=false, int flags=TEXT_DEHYPHENATE | TEXT_PRESERVE_WHITESPACE | TEXT_PRESERVE_LIGATURES | TEXT_MEDIABOX_CLIP, MuPDFTextPage textpage=None)
+   .. method:: SearchFor(string needle, Rect clip: null, bool quads: false, int flags: TEXT_DEHYPHENATE | TEXT_PRESERVE_WHITESPACE | TEXT_PRESERVE_LIGATURES | TEXT_MEDIABOX_CLIP, TextPage textpage: None)
 
       Search for *needle* on a page. Wrapper for :meth:`TextPage.Search`.
 
-      :arg str needle: Text to search for. May contain spaces. Upper / lower case is ignored, but only works for ASCII characters: For example, "COMPÉTENCES" will not be found if needle is "compétences" -- "compÉtences" however will. Similar is true for German umlauts and the like.
-      :arg rect_like clip: only search within this area.
+      :arg string needle: Text to search for. May contain spaces. Upper / lower case is ignored, but only works for ASCII characters: For example, "COMPÉTENCES" will not be found if needle is "compétences" -- "compÉtences" however will. Similar is true for German umlauts and the like.
+      :arg Rect clip: only search within this area.
       :arg bool quads: Return object type :ref:`Quad` instead of :ref:`Rect`.
       :arg int flags: Control the data extracted by the underlying :ref:`TextPage`. By default, ligatures and white spaces are kept, and hyphenation [#f8]_ is detected.
       :arg textpage: use a previously created :ref:`TextPage`. This reduces execution time **significantly.** If specified, the 'flags' and 'clip' arguments are ignored. If omitted, a temporary textpage will be created.
@@ -1611,27 +1610,27 @@ In a nutshell, this is what you can do with PyMuPDF:
 
       PDF only: Change the physical page dimension by setting :data:`mediabox` in the page's object definition.
 
-      :arg rect-like r: the new :data:`mediabox` value.
+      :arg Rect r: the new :data:`mediabox` value.
 
       .. note:: This method also removes the page's other (optional) rectangles (:data:`cropbox`, ArtBox, TrimBox and Bleedbox) to prevent inconsistent situations. This will cause those to assume their default values.
 
       .. caution:: For non-empty pages this may have undesired effects, because the location of all content depends on this value and will therefore change position or even disappear.
 
 
-   .. method:: SetCropBox(r)
+   .. method:: SetCropBox(Rect rect)
 
       PDF only: change the visible part of the page.
 
-      :arg rect_like r: the new visible area of the page. Note that this **must** be specified in **unrotated coordinates**, not empty, nor infinite and be completely contained in the :attr:`Page.mediabox`.
+      :arg Rect r: the new visible area of the page. Note that this **must** be specified in **unrotated coordinates**, not empty, nor infinite and be completely contained in the :attr:`Page.mediabox`.
 
       After execution **(if the page is not rotated)**, :attr:`Page.rect` will equal this rectangle, but be shifted to the top-left position (0, 0) if necessary.
 
       
-   .. method:: SetArtBox(Rect r)
+   .. method:: SetArtBox(Rect rect)
 
-   .. method:: SetBleedBox(Rect r)
+   .. method:: SetBleedBox(Rect rect)
 
-   .. method:: SetTrimBox(Rect r)
+   .. method:: SetTrimBox(Rect rect)
 
       PDF only: Set the resp. rectangle in the page object. For the meaning of these objects see :ref:`AdobeManual`, page 77. Parameter and restrictions are the same as for :meth:`Page.SetCropBox`.
 
@@ -1672,7 +1671,7 @@ In a nutshell, this is what you can do with PyMuPDF:
 
    .. attribute:: MediaBoxSize
 
-      Contains the width and height of the page's :attr:`Page.mediabox` for a PDF, otherwise the bottom-right coordinates of :attr:`Page.rect`.
+      Contains the width and height of the page's :attr:`Page.MediaBox` for a PDF, otherwise the bottom-right coordinates of :attr:`Page.Rect`.
 
       :type: :ref:`Point`
 
@@ -1682,11 +1681,11 @@ In a nutshell, this is what you can do with PyMuPDF:
 
       :type: :ref:`Rect`
 
-      .. note:: For most PDF documents and for **all other document types**, `page.Rect == page.CropBox == page.MediaBox` is true. However, for some PDFs the visible page is a true subset of :data:`mediabox`. Also, if the page is rotated, its `Page.rect` may not equal `Page.cropbox`. In these cases the above attributes help to correctly locate page elements.
+      .. note:: For most PDF documents and for **all other document types**, `page.Rect == page.CropBox == page.MediaBox` is true. However, for some PDFs the visible page is a true subset of :data:`mediabox`. Also, if the page is rotated, its `Page.rect` may not equal `Page.CropBox`. In these cases the above attributes help to correctly locate page elements.
 
    .. attribute:: TransformationMatrix
 
-      This matrix translates coordinates from the PDF space to the MuPDF space. For example, in PDF `/Rect [x0 y0 x1 y1]` the pair (x0, y0) specifies the **bottom-left** point of the rectangle -- in contrast to MuPDF's system, where (x0, y0) specify top-left. Multiplying the PDF coordinates with this matrix will deliver the (Py-) MuPDF rectangle version. Obviously, the inverse matrix will again yield the PDF rectangle.
+      This matrix translates coordinates from the PDF space to the MuPDF space. For example, in PDF `/Rect [x0 y0 x1 y1]` the pair (x0, y0) specifies the **bottom-left** point of the rectangle -- in contrast to MuPDF's system, where (x0, y0) specify top-left. Multiplying the PDF coordinates with this matrix will deliver the MuPDF rectangle version. Obviously, the inverse matrix will again yield the PDF rectangle.
 
       :type: :ref:`Matrix`
 
@@ -1738,7 +1737,7 @@ In a nutshell, this is what you can do with PyMuPDF:
 
    .. attribute:: Rect
 
-      Contains the rectangle of the page. Same as result of :meth:`Page.bound()`.
+      Contains the rectangle of the page. Same as result of :meth:`Page.GetBound`.
 
       :type: :ref:`Rect`
 
@@ -1784,9 +1783,9 @@ If an indirect destination is given, then this is indicated by *page = -1*, and 
 Writing
 ~~~~~~~~~
 
-PyMuPDF writes (updates, inserts) links by constructing and writing the appropriate PDF object **source**. This makes it possible to specify indirect destinations for *LINK_GOTOR* **and** *LINK_GOTO* link kinds (pre *PDF 1.2* file formats are **not supported**).
+MuPDF.NET writes (updates, inserts) links by constructing and writing the appropriate PDF object **source**. This makes it possible to specify indirect destinations for *LINK_GOTOR* **and** *LINK_GOTO* link kinds (pre *PDF 1.2* file formats are **not supported**).
 
-.. warning:: If a *LINK_GOTO* indirect destination specifies an undefined name, this link can later on not be found / read again with MuPDF / PyMuPDF. Other readers however **will** detect it, but flag it as erroneous.
+.. warning:: If a *LINK_GOTO* indirect destination specifies an undefined name, this link can later on not be found / read again with MuPDF / MuPDF.NET. Other readers however **will** detect it, but flag it as erroneous.
 
 Indirect *LINK_GOTOR* destinations can in general of course not be checked for validity and are therefore **always accepted**.
 
@@ -1796,7 +1795,7 @@ Indirect *LINK_GOTOR* destinations can in general of course not be checked for v
 
 2. Determine the target page number ("pno", 0-based) and a :ref:`Point` on it, where the link should be directed to.
 
-3. Create a dictionary `d = {"kind": MuPDFLINK_GOTO, "page": pno, "from": bbox, "to": point}`.
+3. Create a dictionary `d = {"kind": LINK_GOTO, "page": pno, "from": bbox, "to": point}`.
 
 4. Execute `page.InsertLink(d)`.
 
@@ -1825,8 +1824,6 @@ The page number "pno" is a 0-based integer `-∞ < pno < PageCount`.
 
 .. rubric:: Footnotes
 
-.. [#f1] If your existing code already uses the installed base name as a font reference (as it was supported by PyMuPDF versions earlier than 1.14), this will continue to work.
-
 .. [#f2] Not all PDF reader software (including internet browsers and office software) display all of these fonts. And if they do, the difference between the **serifed** and the **non-serifed** version may hardly be noticeable. But serifed and non-serifed versions lead to different installed base fonts, thus providing an option to be displayable with your specific PDF viewer.
 
 .. [#f3] Not all PDF readers display these fonts at all. Some others do, but use a wrong character spacing, etc.
@@ -1837,7 +1834,7 @@ The page number "pno" is a 0-based integer `-∞ < pno < PageCount`.
 
 .. [#f6] If you need to also see annotations or fields in the target page, you can convert the source PDF using :meth:`Document.Bake`. The underlying MuPDF function of that method will convert these objects to normal page content. Then use :meth:`Page.ShowPdfPage` with the converted PDF page.
 
-.. [#f7] In PDF, an area enclosed by some lines or curves can have a property called "orientation". This is significant for switching on or off the fill color of that area when there exist multiple area overlaps - see discussion in method :meth:`Shape.finish` using the "non-zero winding number" rule. While orientation of curves, quads, triangles and other shapes enclosed by lines always was detectable, this has been impossible for "re" (rectangle) items in the past. Adding the orientation parameter now delivers the missing information.
+.. [#f7] In PDF, an area enclosed by some lines or curves can have a property called "orientation". This is significant for switching on or off the fill color of that area when there exist multiple area overlaps - see discussion in method :meth:`Shape.Finish` using the "non-zero winding number" rule. While orientation of curves, quads, triangles and other shapes enclosed by lines always was detectable, this has been impossible for "re" (rectangle) items in the past. Adding the orientation parameter now delivers the missing information.
 
 .. [#f8] Hyphenation detection simply means that if the last character of a line is "-", it will be assumed to be a continuation character. That character will not be found by text searching with its default flag setting. Please take note, that a MuPDF *line* may not always be what you expect: words separated by overly large gaps (e.g. caused by text justification) may constitute separate MuPDF lines. If then any of these words ends with a hyphen, it will only be found by text searching if hyphenation is switched off.
 

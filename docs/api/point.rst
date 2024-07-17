@@ -11,7 +11,7 @@ Point
 ============================ ============================================
 **Attribute / Method**       **Description**
 ============================ ============================================
-:meth:`Point.distance_to`    calculate distance to point or rect
+:meth:`Point.DistanceTo`     calculate distance to point or rect
 :meth:`Point.Transform`      transform point with a matrix
 :attr:`Point.Abs`            same as unit, but positive coordinates
 :attr:`Point.Unit`           point coordinates divided by *abs(point)*
@@ -41,17 +41,17 @@ Point
 
      :arg float y: y coordinate of the point
 
-   .. method:: DistanceTo(Point x [, string unit])
-   .. method:: DistanceTo(Rect x [, string unit])
+   .. method:: DistanceTo(Point x, string unit)
+   .. method:: DistanceTo(Rect x, string unit)
 
-      Calculate the distance to *x*, which may be :data:`point_like` or :data:`rect_like`. The distance is given in units of either pixels (default), inches, centimeters or millimeters.
+      Calculate the distance to *x*, which may be :data:`Point` or :data:`Rect`. The distance is given in units of either pixels (default), inches, centimeters or millimeters.
 
-     :arg point_like,rect_like x: to which to compute the distance.
+     :arg Point, Rect x: to which to compute the distance.
 
-     :arg str unit: the unit to be measured in. One of "px", "in", "cm", "mm".
+     :arg string unit: the unit to be measured in. One of "px", "in", "cm", "mm".
 
      :rtype: float
-     :returns: the distance to *x*. If this is :data:`rect_like`, then the distance
+     :returns: the distance to *x*. If this is :data:`Rect`, then the distance
 
          * is the length of the shortest line connecting to one of the rectangle sides
          * is calculated to the **finite version** of it

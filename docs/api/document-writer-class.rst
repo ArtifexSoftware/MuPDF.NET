@@ -27,15 +27,15 @@ Using DocumentWriter_ also for other document types might happen in the future.
 
 .. class:: DocumentWriter
 
-   .. method:: DocumentWriter(string path, string options=null)
+   .. method:: DocumentWriter(string path, string options: null)
 
-      Create a document writer object, passing a Python file pointer or a file path. Options to use when saving the file may also be passed.
+      Create a document writer object, passing file path. Options to use when saving the file may also be passed.
 
-      This class can also be used as a Python context manager.
+      This class can also be used as a context manager.
 
-      :arg path: the output file. This may be a string file name, or any Python file pointer.
+      :arg path: the output file. This may be a string file name.
       
-      :arg str options: specify saving options for the output PDF. Typical are "compress" or "clean". More possible values may be taken from help output of the `mutool convert` CLI utility.
+      :arg string options: specify saving options for the output PDF. Typical are "compress" or "clean". More possible values may be taken from help output of the `mutool convert` CLI utility.
 
    .. method:: BeginPage(Rect mediabox)
 
