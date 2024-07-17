@@ -32,8 +32,8 @@ This class represents a document. It can be constructed from a file or from memo
 :meth:`Document.GetEmbfileInfo`                 PDF only: metadata of an embedded file
 :meth:`Document.GetEmbfileNames`                PDF only: list of embedded files
 :meth:`Document.GetEmbfileUpd`                  PDF only: change an embedded file
-:meth:`Document.GetNewXref`                     make new xref.
-:meth:`Document.GetXrefLength`                  get length of xref table.
+:meth:`Document.GetNewXref`                     make new xref
+:meth:`Document.GetXrefLength`                  get length of xref table
 :meth:`Document.ExtractFont`                    PDF only: extract a font by `xref`
 :meth:`Document.ExtractImage`                   PDF only: extract an embedded image by `xref`       
 :meth:`Document.FindBookmark`                   retrieve page location after laid out document
@@ -43,7 +43,7 @@ This class represents a document. It can be constructed from a file or from memo
 :meth:`Document.GetOC`                          PDF only: get OCG / OCMD `xref` of image / form xobject
 :meth:`Document.GetOcgs`                        PDF only: info on all optional content groups
 :meth:`Document.GetOCMD`                        PDF only: retrieve definition of an `OCMD`
-:meth:`Document.GetOutlineXrefs`                get list of outline xref numbers.
+:meth:`Document.GetOutlineXrefs`                get list of outline xref numbers
 :meth:`Document.GetPageFonts`                   PDF only: list of fonts referenced by a page
 :meth:`Document.GetPageImages`                  PDF only: list of images referenced by a page
 :meth:`Document.GetPageLabels`                  PDF only: list of page label definitions
@@ -54,7 +54,7 @@ This class represents a document. It can be constructed from a file or from memo
 :meth:`Document.GetSigFlags`                    PDF only: determine signature state
 :meth:`Document.GetToc`                         extract the table of contents
 :meth:`Document.GetXmlMetadata`                 PDF only: read the XML metadata
-:meth:`Document.DeleteXmlMetadata`              delete XML metadata.
+:meth:`Document.DeleteXmlMetadata`              delete XML metadata
 :meth:`Document.HasAnnots`                      PDF only: check if PDF contains any annots
 :meth:`Document.HasLinks`                       PDF only: check if PDF contains any links
 :meth:`Document.InsertPage`                     PDF only: insert a new page
@@ -62,7 +62,7 @@ This class represents a document. It can be constructed from a file or from memo
 :meth:`Document.InsertFile`                     PDF only: insert pages from arbitrary document
 :meth:`Document.JournalCanDo`                   PDF only: which journal actions are possible
 :meth:`Document.JournalEnable`                  PDF only: enables journalling for the document
-:meth:`Document.IsEnabledJournal`               check if journalling is enabled.
+:meth:`Document.IsEnabledJournal`               check if journalling is enabled
 :meth:`Document.JournalLoad`                    PDF only: enables journalling for the document
 :meth:`Document.JournalOpName`                  PDF only: return name of a journalling step
 :meth:`Document.JournalPosition`                PDF only: return journalling status
@@ -86,15 +86,15 @@ This class represents a document. It can be constructed from a file or from memo
 :meth:`Document.GetPdfCatelog`                  PDF only: xref of catalog (root)
 :meth:`Document.GetPdfTrailer`                  PDF only: trailer source
 :meth:`Document.PrevLocation`                   return (chapter, pno) of preceding page
-:meth:`Document.GetLocationFromPageNumber`      convert pno to (chapter, page).
-:meth:`Document.GetPageNumberFromLocation`      convert (chapter, pno) to page number.
+:meth:`Document.GetLocationFromPageNumber`      convert pno to (chapter, page)
+:meth:`Document.GetPageNumberFromLocation`      convert (chapter, pno) to page number
 :meth:`Document.GetMetadata`                    get metadata
-:meth:`Document.GetPageXref`                    get xref of page number.
-:meth:`Document.LoadOutline`                    load first outline.
+:meth:`Document.GetPageXref`                    get xref of page number
+:meth:`Document.LoadOutline`                    load first outline
 :meth:`Document.ReloadPage`                     PDF only: provide a new copy of a page
-:meth:`Document.ForgetPage`                     remove a page from document page dict.
+:meth:`Document.ForgetPage`                     remove a page from document page dict
 :meth:`Document.ResolveNames`                   PDF only: Convert destination names into a Dictionary 
-:meth:`Document.ExtendTocItems`                 add color info to all items of an extended TOC list.
+:meth:`Document.ExtendTocItems`                 add color info to all items of an extended TOC list
 :meth:`Document.Save`                           PDF only: save the document
 :meth:`Document.SaveIncremental`                PDF only: save the document incrementally
 :meth:`Document.Scrub`                          PDF only: remove sensitive data
@@ -110,7 +110,7 @@ This class represents a document. It can be constructed from a file or from memo
 :meth:`Document.SetPageMode`                    PDF only: set the PageMode
 :meth:`Document.SetPageLayout`                  PDF only: set the PageLayout
 :meth:`Document.SetToc`                         PDF only: set the table of contents (TOC)
-:meth:`Document.SetTocItem`                     update TOC item by index.
+:meth:`Document.SetTocItem`                     update TOC item by index
 :meth:`Document.SetXmlMetaData`                 PDF only: create or update document XML metadata
 :meth:`Document.SubsetFonts`                    PDF only: create font subsets
 :meth:`Document.SwitchLayer`                    PDF only: activate OC configuration
@@ -119,12 +119,12 @@ This class represents a document. It can be constructed from a file or from memo
 :meth:`Document.GetKeyXref`                     PDF only: get the value of a dictionary key
 :meth:`Document.GetKeysXref`                    PDF only: list the keys of object at `xref`
 :meth:`Document.GetXrefObject`                  PDF only: get the definition source of `xref`
-:meth:`Document.XrefIsFont`                     check if xref is a font object.
-:meth:`Document.XrefIsImage`                    check if xref is a image object.
-:meth:`Document.XrefIsStream`                   check if xref is a stream object.
-:meth:`Document.XrefIsXObject`                  check if xref is a form xobject.
+:meth:`Document.XrefIsFont`                     check if xref is a font object
+:meth:`Document.XrefIsImage`                    check if xref is a image object
+:meth:`Document.XrefIsStream`                   check if xref is a stream object
+:meth:`Document.XrefIsXObject`                  check if xref is a form xobject
 :meth:`Document.SetKeyXRef`                     PDF only: set the value of a dictionary key
-:meth:`Document.GetXrefStream`                  get decompressed xref stream.
+:meth:`Document.GetXrefStream`                  get decompressed xref stream
 :meth:`Document.GetXrefStreamRaw`               PDF only: raw stream source at xref
 :meth:`Document.XrefXmlMetaData`                PDF only: xref of XML metadata
 :attr:`Document.ChapterCount`                   number of chapters

@@ -70,7 +70,7 @@ A Font object also contains useful general information, like the font bbox, the 
          fontFile?   Create font from file, exception if failure.
          fontBuffer? Create font from buffer, exception if failure.
          ordering>=0 Create universal font, always succeeds.
-         fontName?   Create a Base-14 font, universal font, or font
+         fontName?   Create a Base-14 font, universal font.
          =========== ============================================================
 
       .. note::
