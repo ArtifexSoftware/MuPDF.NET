@@ -3,17 +3,11 @@
 ===============================
 Constants and Enumerations
 ===============================
-Constants and enumerations of :title:`MuPDF` as implemented by |PyMuPDF|. Each of the following variables is accessible as *pymupdf.variable*.
+Constants and enumerations of :title:`MuPDF` as implemented by |MuPDF.NET|. Each of the following variables is accessible.
 
 
 Constants
 ---------
-
-.. py:data:: Base14_Fonts
-
-    Predefined Python list of valid :ref:`Base-14-Fonts`.
-
-    :type: list
 
 .. py:data:: csRGB
 
@@ -152,17 +146,17 @@ Text Alignment
 
 Text Extraction Flags
 ---------------------
-Option bits controlling the amount of data, that are parsed into a :ref:`TextPage` -- this class is mainly used only internally in PyMuPDF.
+Option bits controlling the amount of data, that are parsed into a :ref:`TextPage` -- this class is mainly used only internally in MuPDF.NET.
 
-For the PyMuPDF programmer, some combination (using Python's `|` operator, or simply use `+`) of these values are aggregated in the `flags` integer, a parameter of all text search and text extraction methods. Depending on the individual method, different default combinations of the values are used. Please use a value that meets your situation. Especially make sure to switch off image extraction unless you really need them. The impact on performance and memory is significant!
+For the MuPDF.NET programmer, some combination (using C# 's `|` operator, or simply use `+`) of these values are aggregated in the `flags` integer, a parameter of all text search and text extraction methods. Depending on the individual method, different default combinations of the values are used. Please use a value that meets your situation. Especially make sure to switch off image extraction unless you really need them. The impact on performance and memory is significant!
 
 .. py:data:: TEXT_PRESERVE_LIGATURES
 
-    1 -- If set, ligatures are passed through to the application in their original form. Otherwise ligatures are expanded into their constituent parts, e.g. the ligature "ffi" is expanded into three  eparate characters f, f and i. Default is "on" in PyMuPDF. MuPDF supports the following 7 ligatures: "ff", "fi", "fl", "ffi", "ffl", , "ft", "st".
+    1 -- If set, ligatures are passed through to the application in their original form. Otherwise ligatures are expanded into their constituent parts, e.g. the ligature "ffi" is expanded into three  eparate characters f, f and i. Default is "on" in MuPDF.NET. MuPDF supports the following 7 ligatures: "ff", "fi", "fl", "ffi", "ffl", , "ft", "st".
 
 .. py:data:: TEXT_PRESERVE_WHITESPACE
 
-    2 -- If set, whitespace is passed through. Otherwise any type of horizontal whitespace (including horizontal tabs) will be replaced with space characters of variable width. Default is "on" in PyMuPDF.
+    2 -- If set, whitespace is passed through. Otherwise any type of horizontal whitespace (including horizontal tabs) will be replaced with space characters of variable width. Default is "on" in MuPDF.NET.
 
 .. py:data:: TEXT_PRESERVE_IMAGES
 
@@ -170,7 +164,7 @@ For the PyMuPDF programmer, some combination (using Python's `|` operator, or si
 
 .. py:data:: TEXT_INHIBIT_SPACES
 
-    8 -- If set, Mupdf will not try to add missing space characters where there are large gaps between characters. In PDF, the creator often does not insert spaces to point to the next character's position, but will provide the direct location address. The default in PyMuPDF is "off" -- so spaces **will be generated**.
+    8 -- If set, Mupdf will not try to add missing space characters where there are large gaps between characters. In PDF, the creator often does not insert spaces to point to the next character's position, but will provide the direct location address. The default in MuPDF.NET is "off" -- so spaces **will be generated**.
 
 .. py:data:: TEXT_DEHYPHENATE
 
@@ -178,15 +172,15 @@ For the PyMuPDF programmer, some combination (using Python's `|` operator, or si
 
 .. py:data:: TEXT_PRESERVE_SPANS
 
-    32 -- Generate a new line for every span. Not used ("off") in PyMuPDF, but available for your use. Every line in "dict", "json", "rawdict", "rawjson" will contain exactly one span.
+    32 -- Generate a new line for every span. Not used ("off") in MuPDF.NET, but available for your use. Every line in "dict", "json", "rawdict", "rawjson" will contain exactly one span.
 
 .. py:data:: TEXT_MEDIABOX_CLIP
 
-    64 -- If set, characters entirely outside a page's **mediabox** will be ignored. This is default in PyMuPDF.
+    64 -- If set, characters entirely outside a page's **mediabox** will be ignored. This is default in MuPDF.NET.
 
 .. py:data:: TEXT_CID_FOR_UNKNOWN_UNICODE
 
-    128 -- If set, use raw character codes instead of U+FFFD. This is the default for **text extraction** in PyMuPDF. If you **want to detect** when encoding information is missing or uncertain, toggle this flag and scan for the presence of U+FFFD (= `chr(0xfffd)`) code points in the resulting text.
+    128 -- If set, use raw character codes instead of U+FFFD. This is the default for **text extraction** in MuPDF.NET. If you **want to detect** when encoding information is missing or uncertain, toggle this flag and scan for the presence of U+FFFD (= `chr(0xfffd)`) code points in the resulting text.
 
 
 The following constants represent the default combinations of the above for text extraction and searching:
@@ -250,7 +244,7 @@ Possible values of :attr:`linkDest.kind` (link destination kind).
 
     2 -- Points to a URI -- typically a resource specified with internet syntax.
     
-    * PyMuPDF treats any external link that contains a colon and does not start
+    * MuPDF.NET treats any external link that contains a colon and does not start
       with `file:`, as `LINK_URI`.
 
     :type: int
@@ -259,7 +253,7 @@ Possible values of :attr:`linkDest.kind` (link destination kind).
 
     3 -- Launch (open) another file (of any "executable" type).
     
-    * |PyMuPDF| treats any external link that starts with `file:` or doesn't
+    * |MuPDF.NET| treats any external link that starts with `file:` or doesn't
       contain a colon, as `LINK_LAUNCH`.
 
     :type: int
@@ -334,12 +328,12 @@ See chapter 8.4.5, pp. 615 of the :ref:`AdobeManual` for details.
 
 Annotation Types
 ~~~~~~~~~~~~~~~~~
-These identifiers also cover **links** and **widgets**: the PDF specification technically handles them all in the same way, whereas **MuPDF** (and PyMuPDF) treats them as three basically different types of objects.
+These identifiers also cover **links** and **widgets**: the PDF specification technically handles them all in the same way, whereas **MuPDF** (and MuPDF.NET) treats them as three basically different types of objects.
 
 ::
 
     PDF_ANNOT_TEXT 0
-    PDF_ANNOT_LINK 1  # <=== Link object in PyMuPDF
+    PDF_ANNOT_LINK 1  # <=== Link object in MuPDF.NET
     PDF_ANNOT_FREE_TEXT 2
     PDF_ANNOT_LINE 3
     PDF_ANNOT_SQUARE 4
@@ -359,7 +353,7 @@ These identifiers also cover **links** and **widgets**: the PDF specification te
     PDF_ANNOT_SOUND 18
     PDF_ANNOT_MOVIE 19
     PDF_ANNOT_RICH_MEDIA 20
-    PDF_ANNOT_WIDGET 21  # <=== Widget object in PyMuPDF
+    PDF_ANNOT_WIDGET 21  # <=== Widget object in MuPDF.NET
     PDF_ANNOT_SCREEN 22
     PDF_ANNOT_PRINTER_MARK 23
     PDF_ANNOT_TRAP_NET 24

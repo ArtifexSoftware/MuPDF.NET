@@ -1205,7 +1205,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
       :arg string language: the expected language(s). Use "+"-separated values if multiple languages are expected, "eng+spa" for English and Spanish.
       :arg int dpi: the desired resolution in dots per inch. Influences recognition quality (and execution time).
       :arg bool full: whether to OCR the full page, or just the displayed images.
-      :arg string tessdata: The name of Tesseract's language support folder `tessdata`. If omitted, this information must be present as environment variable `TESSDATA_PREFIX`. Can be determined by function :meth:`get_tessdata`.
+      :arg string tessdata: The name of Tesseract's language support folder `tessdata`. If omitted, this information must be present as environment variable `TESSDATA_PREFIX`.
 
       .. note:: This method does **not** support a clip parameter -- OCR will always happen for the complete page rectangle.
 

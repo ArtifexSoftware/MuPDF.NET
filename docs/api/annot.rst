@@ -83,7 +83,7 @@ There is a parent-child relationship between an annotation and its page. If the 
 
       :arg int dpi: desired resolution in dots per inch. If not `null`, the matrix parameter is ignored.
 
-      :arg colorSpace: a colorspace to be used for image creation. Default is *fitz.csRGB*.
+      :arg colorSpace: a colorspace to be used for image creation. Default is *Utils.csRGB*.
       :type ColorSpace: :ref:`ColorSpace`
 
       :arg bool alpha: whether to include transparency information. Default is *False*.
@@ -190,7 +190,7 @@ There is a parent-child relationship between an annotation and its page. If the 
 
       :arg string name: the new name.
 
-      .. caution:: If you set the name of a 'Stamp' annotation, then this will **not change** the rectangle, nor will the text be layouted in any way. If you choose a standard text from :ref:`StampIcons` (the **exact** name piece after `"STAMP_"`), you should receive the original layout. An **arbitrary text** will not be changed to upper case, but be written in font "Times-Bold" as is, horizontally centered in **one line** and be shortened to fit. To get your text fully displayed, its length using :data:`fontsize` 20 must not exceed 190 points. So please make sure that the following inequality is true: `fitz.get_text_length(text, fontname="tibo", fontsize=20) <= 190`.
+      .. caution:: If you set the name of a 'Stamp' annotation, then this will **not change** the rectangle, nor will the text be layouted in any way. If you choose a standard text from :ref:`StampIcons` (the **exact** name piece after `"STAMP_"`), you should receive the original layout. An **arbitrary text** will not be changed to upper case, but be written in font "Times-Bold" as is, horizontally centered in **one line** and be shortened to fit. To get your text fully displayed, its length using :data:`fontsize` 20 must not exceed 190 points. So please make sure that the following inequality is true: `Utils.GetTextLength(text, fontName: "tibo", fontSize: 20) <= 190`.
 
    .. method:: SetRect(Rect rect)
 

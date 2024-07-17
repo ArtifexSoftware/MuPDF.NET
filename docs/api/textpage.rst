@@ -13,7 +13,7 @@ The usual ways to create a textpage are :meth:`DisplayList.GetTextPage` and :met
 For a description of what this class is all about, see Appendix 2.
 
 ==========================    ===================================== ==============================
-**Method**                    **Description**                       page get_text or search method
+**Method**                    **Description**                       page GetText or Search method
 ==========================    ===================================== ==============================
 :meth:`~.ExtractText`         extract plain text                    "text"
 :meth:`~.ExtractText`         synonym of previous                   "text"
@@ -315,7 +315,7 @@ This image shows the relationship between a character's bbox and its quad: |text
 
 .. rubric:: Footnotes
 
-.. [#f1] Image specifications for a PDF page are done in a page's (sub-) :data:`dictionary`, called `/Resources`. Resource dictionaries can be **inherited** from any of the page's parent objects (usually the :data:`catalog` -- the top-level parent). The PDF creator may e.g. define one `/Resources` on file level, naming all images and / or all fonts ever used by any page. In these cases, :meth:`Page.get_images` and :meth:`Page.get_fonts` will consequently return the same lists for all pages. If desired, this situation can be reverted using :meth:`Page.clean_contents`. After execution, the page's object definition will show fonts and images that are actually used.
+.. [#f1] Image specifications for a PDF page are done in a page's (sub-) :data:`dictionary`, called `/Resources`. Resource dictionaries can be **inherited** from any of the page's parent objects (usually the :data:`catalog` -- the top-level parent). The PDF creator may e.g. define one `/Resources` on file level, naming all images and / or all fonts ever used by any page. In these cases, :meth:`Page.GetImages` and :meth:`Page.get_fonts` will consequently return the same lists for all pages. If desired, this situation can be reverted using :meth:`Page.clean_contents`. After execution, the page's object definition will show fonts and images that are actually used.
 
 .. [#f2] The coordinate systems of MuPDF and PDF are different in that MuPDF uses the page's top-left point as `(0, 0)`. In PDF, this is the bottom-left point. Therefore, the positive direction for MuPDF's y-axis is **from top to bottom**. This causes the sign change for the sine value here: a **negative** value indicates anti-clockwise rotation of the text.
 

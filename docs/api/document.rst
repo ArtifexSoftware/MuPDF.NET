@@ -22,29 +22,28 @@ This class represents a document. It can be constructed from a file or from memo
 :meth:`Document.Convert2Pdf`                    write a PDF version to memory
 :meth:`Document.CopyPage`                       PDF only: copy a page reference
 :meth:`Document.DeleteTocItem`                  PDF only: remove a single TOC item
-:meth:`Document.UpdateTocItem`                  
+:meth:`Document.UpdateTocItem`                  update bookmark by letting it point to nowhere
 :meth:`Document.DeletePage`                     PDF only: delete a page
 :meth:`Document.DeletePages`                    PDF only: delete multiple pages
 :meth:`Document.AddEmbfile`                     PDF only: add a new embedded file from buffer
-:meth:`Document.GetEmbfileCount`                PDF only: add a new embedded file from buffer
+:meth:`Document.GetEmbfileCount`                PDF only: get an embedded file from buffer
 :meth:`Document.DeleteEmbfile`                  PDF only: delete an embedded file entry
 :meth:`Document.GetEmbfile`                     PDF only: extract an embedded file buffer
 :meth:`Document.GetEmbfileInfo`                 PDF only: metadata of an embedded file
 :meth:`Document.GetEmbfileNames`                PDF only: list of embedded files
 :meth:`Document.GetEmbfileUpd`                  PDF only: change an embedded file
-:meth:`Document.GetNewXref`            
-:meth:`Document.GetXrefLength`            
+:meth:`Document.GetNewXref`                     make new xref.
+:meth:`Document.GetXrefLength`                  get length of xref table.
 :meth:`Document.ExtractFont`                    PDF only: extract a font by `xref`
-:meth:`Document.ExtractImage`                   PDF only: extract an embedded image by xref        
+:meth:`Document.ExtractImage`                   PDF only: extract an embedded image by `xref`       
 :meth:`Document.FindBookmark`                   retrieve page location after laid out document
 :meth:`Document.CopyFullPage`                   PDF only: duplicate a page
 :meth:`Document.GetLayer`                       PDF only: lists of OCGs in ON, OFF, RBGroups
 :meth:`Document.GetLayers`                      PDF only: list of optional content configurations
-:meth:`Document.GetOC`                          PDF only: get OCG / OCMD xref of image / form xobject
+:meth:`Document.GetOC`                          PDF only: get OCG / OCMD `xref` of image / form xobject
 :meth:`Document.GetOcgs`                        PDF only: info on all optional content groups
 :meth:`Document.GetOCMD`                        PDF only: retrieve definition of an `OCMD`
-:meth:`Document.GetOutlineXrefs`         
-:meth:`Document.GetPageCount`         
+:meth:`Document.GetOutlineXrefs`                get list of outline xref numbers.
 :meth:`Document.GetPageFonts`                   PDF only: list of fonts referenced by a page
 :meth:`Document.GetPageImages`                  PDF only: list of images referenced by a page
 :meth:`Document.GetPageLabels`                  PDF only: list of page label definitions
@@ -55,7 +54,7 @@ This class represents a document. It can be constructed from a file or from memo
 :meth:`Document.GetSigFlags`                    PDF only: determine signature state
 :meth:`Document.GetToc`                         extract the table of contents
 :meth:`Document.GetXmlMetadata`                 PDF only: read the XML metadata
-:meth:`Document.DeleteXmlMetadata`       
+:meth:`Document.DeleteXmlMetadata`              delete XML metadata.
 :meth:`Document.HasAnnots`                      PDF only: check if PDF contains any annots
 :meth:`Document.HasLinks`                       PDF only: check if PDF contains any links
 :meth:`Document.InsertPage`                     PDF only: insert a new page
@@ -63,7 +62,7 @@ This class represents a document. It can be constructed from a file or from memo
 :meth:`Document.InsertFile`                     PDF only: insert pages from arbitrary document
 :meth:`Document.JournalCanDo`                   PDF only: which journal actions are possible
 :meth:`Document.JournalEnable`                  PDF only: enables journalling for the document
-:meth:`Document.IsEnabledJournal`         
+:meth:`Document.IsEnabledJournal`               check if journalling is enabled.
 :meth:`Document.JournalLoad`                    PDF only: enables journalling for the document
 :meth:`Document.JournalOpName`                  PDF only: return name of a journalling step
 :meth:`Document.JournalPosition`                PDF only: return journalling status
@@ -74,9 +73,8 @@ This class represents a document. It can be constructed from a file or from memo
 :meth:`Document.JournalUndo`                    PDF only: undo current operation
 :meth:`Document.LayerUIConfigs`                 PDF only: list of optional content intents
 :meth:`Document.SetLayout`                      re-paginate the document (if supported)
-:meth:`Document.SetLanguage`                 
-:meth:`Document.GetPage`              
-:meth:`Document.LoadPage`                       read a page
+:meth:`Document.SetLanguage`                    set language       
+:meth:`Document.LoadPage`                       load a page
 :meth:`Document.MakeBookmark`                   create a page pointer in reflowable documents
 :meth:`Document.MovePage`                       PDF only: move a page to different location in doc
 :meth:`Document.NeedAppearances`                PDF only: get/set /NeedAppearances property
@@ -88,16 +86,15 @@ This class represents a document. It can be constructed from a file or from memo
 :meth:`Document.GetPdfCatelog`                  PDF only: xref of catalog (root)
 :meth:`Document.GetPdfTrailer`                  PDF only: trailer source
 :meth:`Document.PrevLocation`                   return (chapter, pno) of preceding page
-:meth:`Document.GetPage`            
-:meth:`Document.GetLocationFromPageNumber`
-:meth:`Document.GetPageNumberFromLocation`            
-:meth:`Document.GetMetadata`            
-:meth:`Document.GetPageXref`            
-:meth:`Document.LoadOutline`            
+:meth:`Document.GetLocationFromPageNumber`      convert pno to (chapter, page).
+:meth:`Document.GetPageNumberFromLocation`      convert (chapter, pno) to page number.
+:meth:`Document.GetMetadata`                    get metadata
+:meth:`Document.GetPageXref`                    get xref of page number.
+:meth:`Document.LoadOutline`                    load first outline.
 :meth:`Document.ReloadPage`                     PDF only: provide a new copy of a page
-:meth:`Document.ForgetPage`            
-:meth:`Document.ResolveNames`                   PDF only: Convert destination names into a Python dict
-:meth:`Document.ExtendTocItems`          
+:meth:`Document.ForgetPage`                     remove a page from document page dict.
+:meth:`Document.ResolveNames`                   PDF only: Convert destination names into a Dictionary 
+:meth:`Document.ExtendTocItems`                 add color info to all items of an extended TOC list.
 :meth:`Document.Save`                           PDF only: save the document
 :meth:`Document.SaveIncremental`                PDF only: save the document incrementally
 :meth:`Document.Scrub`                          PDF only: remove sensitive data
@@ -113,21 +110,21 @@ This class represents a document. It can be constructed from a file or from memo
 :meth:`Document.SetPageMode`                    PDF only: set the PageMode
 :meth:`Document.SetPageLayout`                  PDF only: set the PageLayout
 :meth:`Document.SetToc`                         PDF only: set the table of contents (TOC)
-:meth:`Document.SetTocItem`                
+:meth:`Document.SetTocItem`                     update TOC item by index.
 :meth:`Document.SetXmlMetaData`                 PDF only: create or update document XML metadata
 :meth:`Document.SubsetFonts`                    PDF only: create font subsets
 :meth:`Document.SwitchLayer`                    PDF only: activate OC configuration
-:meth:`Document.Write`                
-:meth:`Document.CopyXref`                       PDF only: copy a PDF dictionary to another xref
+:meth:`Document.Write`                          write document
+:meth:`Document.CopyXref`                       PDF only: copy a PDF dictionary to another `xref`
 :meth:`Document.GetKeyXref`                     PDF only: get the value of a dictionary key
 :meth:`Document.GetKeysXref`                    PDF only: list the keys of object at `xref`
-:meth:`Document.GetXrefObject`                  PDF only: get the definition source of xref
-:meth:`Document.XrefIsFont`            
-:meth:`Document.XrefIsImage`            
-:meth:`Document.XrefIsStream`            
-:meth:`Document.XrefIsXObject`            
+:meth:`Document.GetXrefObject`                  PDF only: get the definition source of `xref`
+:meth:`Document.XrefIsFont`                     check if xref is a font object.
+:meth:`Document.XrefIsImage`                    check if xref is a image object.
+:meth:`Document.XrefIsStream`                   check if xref is a stream object.
+:meth:`Document.XrefIsXObject`                  check if xref is a form xobject.
 :meth:`Document.SetKeyXRef`                     PDF only: set the value of a dictionary key
-:meth:`Document.GetXrefStream`        
+:meth:`Document.GetXrefStream`                  get decompressed xref stream.
 :meth:`Document.GetXrefStreamRaw`               PDF only: raw stream source at xref
 :meth:`Document.XrefXmlMetaData`                PDF only: xref of XML metadata
 :attr:`Document.ChapterCount`                   number of chapters
@@ -235,7 +232,7 @@ This class represents a document. It can be constructed from a file or from memo
 
     If `xref` represents an image or form XObject, set or remove the cross reference number `oc` of an optional contents object.
 
-    :arg int xref: the :data:`xref` of an image or form xobject [#f5]_. Valid such cross reference numbers are returned by :meth:`Document.get_page_images`, resp. :meth:`Document.GetPageXobjects`. For invalid numbers, an exception is raised.
+    :arg int xref: the :data:`xref` of an image or form xobject [#f5]_. Valid such cross reference numbers are returned by :meth:`Document.GetPageImages`, resp. :meth:`Document.GetPageXobjects`. For invalid numbers, an exception is raised.
     :arg int ocxref: the :data:`xref` number of an :data:`OCG` / :data:`OCMD`. If not zero, an invalid reference raises an exception. If zero, any OC reference is removed.
 
 
@@ -318,7 +315,7 @@ This class represents a document. It can be constructed from a file or from memo
         - `SetOCMD(ve=["or", 4, ["not", 5], ["and", 6, 7]])`. This delivers ON if the following is true: **"4 is ON, or 5 is OFF, or 6 and 7 are both ON"**.
         - `SetOCMD(ve=["not", xref])`. This has the same effect as the OCMD example created under 1.
 
-        For more details and examples see page 224 of :ref:`AdobeManual`. Also do have a look at example scripts `here <https://github.com/pymupdf/PyMuPDF-Utilities/tree/master/optional-content>`_.
+        For more details and examples see page 224 of :ref:`AdobeManual`.
 
         Visibility expressions, `/VE`, are part of PDF specification version 1.6. So not all PDF viewers / readers may already support this feature and hence will react in some standard way for those cases.
 
@@ -399,7 +396,7 @@ This class represents a document. It can be constructed from a file or from memo
 
       .. note::
 
-        The document may be protected by an owner, but **not** by a user password. Detect this situation via `doc.Authenticate("") == 2`. This allows opening and reading the document without authentication, but, depending on the :attr:`Document.permissions` value, other actions may be prohibited. PyMuPDF (like MuPDF) in this case **ignores those restrictions**. So, -- in contrast to any PDF viewers -- you can for example extract text and add or modify content, even if the respective permission flags `PDF_PERM_COPY`, `PDF_PERM_MODIFY`, `PDF_PERM_ANNOTATE`, etc. are set off! It is your responsibility building a legally compliant application where applicable.
+        The document may be protected by an owner, but **not** by a user password. Detect this situation via `doc.Authenticate("") == 2`. This allows opening and reading the document without authentication, but, depending on the :attr:`Document.Permissions` value, other actions may be prohibited. MuPDF.NET (like MuPDF) in this case **ignores those restrictions**. So, -- in contrast to any PDF viewers -- you can for example extract text and add or modify content, even if the respective permission flags `PDF_PERM_COPY`, `PDF_PERM_MODIFY`, `PDF_PERM_ANNOTATE`, etc. are set off! It is your responsibility building a legally compliant application where applicable.
 
   .. method:: GetPageNumbers(string label, bool onlyOne: false)
 
@@ -1053,7 +1050,7 @@ This class represents a document. It can be constructed from a file or from memo
 
      2. If `fromPage > toPage`, pages will be **copied in reverse order**. If `0 <= fromPage == toPage`, then one page will be copied.
 
-     3. `docsrc` TOC entries **will not be copied**. It is easy however, to recover a table of contents for the resulting document. Look at the examples below and at program `join.py <https://github.com/pymupdf/PyMuPDF-Utilities/blob/master/examples/join-documents/join.py>`_ in the *examples* directory: it can join PDF documents and at the same time piece together respective parts of the tables of contents.
+     3. `docsrc` TOC entries **will not be copied**. It is easy however, to recover a table of contents for the resulting document. Look at the examples below and at program `https://github.com/ArtifexSoftware/MuPDF.NET/tree/main/Examples/JoinDoc`_ in the *examples* directory: it can join PDF documents and at the same time piece together respective parts of the tables of contents.
 
 
   .. index::
@@ -1239,7 +1236,7 @@ This class represents a document. It can be constructed from a file or from memo
 
     :arg int/str item: index or name of entry.
 
-    .. warning:: When specifying an entry name, this function will only **delete the first item** with that name. Be aware that PDFs not created with PyMuPDF may contain duplicate names. So you may want to take appropriate precautions.
+    .. warning:: When specifying an entry name, this function will only **delete the first item** with that name. Be aware that PDFs not created with MuPDF.NET may contain duplicate names. So you may want to take appropriate precautions.
 
   .. method:: GetEmbfileInfo(dynamic item)
 
@@ -1377,7 +1374,7 @@ This class represents a document. It can be constructed from a file or from memo
         * Both xref numbers must represent existing dictionaries.
         * Before data is copied from *source*, all *target* dictionary keys are deleted. You can specify exceptions from this in the *keep* list. If *source* however has a same-named key, its value will still replace the target.
         * If *source* is a :data:`stream` object, then these data will also be copied over, and *target* will be converted to a stream object.
-        * A typical use case is to replace or remove an existing image without using redaction annotations. Example scripts can be seen `here <https://github.com/pymupdf/PyMuPDF-Utilities/tree/master/examples/replace-image>`_.
+        * A typical use case is to replace or remove an existing image without using redaction annotations. Example scripts can be seen `https://github.com/ArtifexSoftware/MuPDF.NET/tree/main/Examples/ReplaceImage`.
 
   .. method:: Document.ExtractImage(int xref)
 
@@ -1621,7 +1618,7 @@ This class represents a document. It can be constructed from a file or from memo
 
   .. attribute:: Permissions
 
-    Contains the permissions to access the document. This is an integer containing bool values in respective bit positions. For example, if *doc.Permissions & fitz.PDF_PERM_MODIFY > 0*, you may change the document. See :ref:`PermissionCodes` for details.
+    Contains the permissions to access the document. This is an integer containing bool values in respective bit positions. For example, if *doc.Permissions & mupdf.mupdf.PDF_PERM_MODIFY > 0*, you may change the document. See :ref:`PermissionCodes` for details.
 
     :type: int
 

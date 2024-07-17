@@ -107,7 +107,7 @@ Story
       :arg float em: the default text font size.
       :arg archive: an :ref:`Archive` from which to load resources for rendering. Currently supported resource types are images and text fonts. If omitted, the story will not try to look up any such data and may thus produce incomplete output.
       
-         .. note:: Instead of an actual archive, valid arguments for **creating** an :ref:`Archive` can also be provided -- in which case an archive will temporarily be constructed. So, instead of `story = fitz.Story(archive=fitz.Archive("myfolder"))`, one can also shorter write `story = fitz.Story(archive="myfolder")`.
+         .. note:: Instead of an actual archive, valid arguments for **creating** an :ref:`Archive` can also be provided -- in which case an archive will temporarily be constructed. So, instead of `story = new Story(archive: new Archive("myfolder"))`.
 
    .. method:: Place(Rect where)
 
@@ -256,7 +256,7 @@ Story
         
         :arg fn:
             A callable taking a floating point `parameter` and returning a
-            `fitz.Rect()`. If the rect is empty, we assume the story will
+            `Rect()`. If the rect is empty, we assume the story will
             not fit and do not call `self.Place()`.
 
             Must guarantee that `self.Place()` behaves monotonically when
@@ -375,22 +375,22 @@ Exactly one parameter must be passed to the function provided by :meth:`Story.El
 
 The parameter passed to the `recorder` function is an object with the following attributes:
 
-* `elpos.depth` (int) -- depth of this element in the box structure.
+* `elpos.Depth` (int) -- depth of this element in the box structure.
 
-* `elpos.heading` (int) -- the header level, 0 if no header, 1-6 for :htmlTag:`h1` - :htmlTag:`h6`.
+* `elpos.Heading` (int) -- the header level, 0 if no header, 1-6 for :htmlTag:`h1` - :htmlTag:`h6`.
 
-* `elpos.href` (str) -- value of the `href` attribute, or null if not defined.
+* `elpos.Href` (str) -- value of the `href` attribute, or null if not defined.
 
-* `elpos.id` (str) -- value of the `id` attribute, or null if not defined.
+* `elpos.Id` (str) -- value of the `id` attribute, or null if not defined.
 
-* `elpos.rect` (tuple) -- element position on page.
+* `elpos.Rect` (tuple) -- element position on page.
 
-* `elpos.text` (str) -- immediate text of the element.
+* `elpos.Text` (str) -- immediate text of the element.
 
-* `elpos.open_close` (int bit field) -- bit 0 set: opens element, bit 1 set: closes element. Relevant for elements that may contain other elements and thus may not immediately be closed after being created / opened.
+* `elpos.OpenClose` (int bit field) -- bit 0 set: opens element, bit 1 set: closes element. Relevant for elements that may contain other elements and thus may not immediately be closed after being created / opened.
 
-* `elpos.rect_num` (int) -- count of rectangles filled by the story so far.
+* `elpos.RectNum` (int) -- count of rectangles filled by the story so far.
 
-* `elpos.page_num` (int) -- page number; only present when using `Story.Write*()` functions.
+* `elpos.PageNum` (int) -- page number; only present when using `Story.Write*()` functions.
 
 .. include:: ../footer.rst

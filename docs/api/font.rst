@@ -55,7 +55,7 @@ A Font object also contains useful general information, like the font bbox, the 
       :arg string fontName: one of the :ref:`Base-14-Fonts` or CJK fontNames, Custom font name and file path. Also possible are a select few other names like (watch the correct spelling): "Arial", "Times", "Times Roman".
       :arg string fontFile: the filename of a fontFile somewhere on your system [#f1]_.
       :arg byte[] fontBuffer: a fontFile loaded in memory [#f1]_.
-      :arg int script: the number of a UCDN script. Currently supported in PyMuPDF are numbers 24, and 32 through 35.
+      :arg int script: the number of a UCDN script. Currently supported in MuPDF.NET are numbers 24, and 32 through 35.
       :arg string language: one of the values "zh-Hant" (traditional Chinese), "zh-Hans" (simplified Chinese), "ja" (Japanese) and "ko" (Korean). Otherwise, all ISO 639 codes from the subsets 1, 2, 3 and 5 are also possible, but are currently documentary only.
       :arg int ordering: an alternative selector for one of the CJK fonts.
       :arg int isBold: look for a bold font.
@@ -71,7 +71,6 @@ A Font object also contains useful general information, like the font bbox, the 
          fontBuffer? Create font from buffer, exception if failure.
          ordering>=0 Create universal font, always succeeds.
          fontName?   Create a Base-14 font, universal font, or font
-                     provided by `pymupdf-fonts <https://pypi.org/project/pymupdf-fonts/>`_. See table below.
          =========== ============================================================
 
       .. note::
@@ -227,7 +226,7 @@ A Font object also contains useful general information, like the font bbox, the 
       :returns: the lengths in points of the characters of a string when stored in the PDF. It works like :meth:`Font.TextLength` broken down to single characters. This is a high speed method, used e.g. in :meth:`TextWriter.FillTextbox`. The following is true (allowing rounding errors): `font.TextLength(text) == sum(font.GetCharLengths(text))`.
 
          Font font = new Font("helv", "../helv.ttf");
-         string text = "PyMuPDF";
+         string text = "MuPDF.NET";
          font.TextLength(text);
          Utils.GetTextLength(text, fontName="helv");
          Math.Sum(font.GetCharLengths(text));

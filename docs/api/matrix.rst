@@ -68,7 +68,7 @@ Please note:
 
       A "rect" must be any Rect object.
 
-      *fitz.Matrix(1, 1)* and *fitz.Matrix(fitz.Identity)* create modifiable versions of the :ref:`Identity` matrix, which looks like *[1, 0, 0, 1, 0, 0]*.
+      *Matrix(1, 1)* and *Matrix(IdentityMatrix)* create modifiable versions of the :ref:`Identity` matrix, which looks like *[1, 0, 0, 1, 0, 0]*.
 
    .. method:: Norm()
 

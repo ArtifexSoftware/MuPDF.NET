@@ -30,7 +30,7 @@ There is a parent-child relationship between a link and its page. If the page ob
 
 .. class:: Link
 
-   .. method:: SetBorder(Border border: null, float width=0, string style=null, int[] dashes=null)
+   .. method:: SetBorder(Border border: null, float width: 0, string style: null, int[] dashes: null)
 
       PDF only: Change border width and dashing properties.
 

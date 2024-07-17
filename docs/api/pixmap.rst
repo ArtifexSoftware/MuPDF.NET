@@ -547,7 +547,7 @@ psd        gray, rgb, cmyk yes       .psd           Adobe Photoshop Document
 
 .. note::
     * Not all image file types are supported (or at least common) on all OS platforms. E.g. PAM and the Portable Anymap formats are rare or even unknown on Windows.
-    * Especially pertaining to CMYK colorspaces, you can always convert a CMYK pixmap to an RGB pixmap with *rgb_pix = fitz.Pixmap(fitz.csRGB, cmyk_pix)* and then save that in the desired format.
+    * Especially pertaining to CMYK colorspaces, you can always convert a CMYK pixmap to an RGB pixmap with *rgbPix = new Pixmap(Utils.csRGB, cmyk_pix)* and then save that in the desired format.
     * As can be seen, MuPDF's image support range is different for input and output. Among those supported both ways, PNG and JPEG are probably the most popular.
     * We also recommend using "ppm" formats as input to tkinter's *PhotoImage* method like this: *tkimg = tkinter.PhotoImage(data=pix.ToBytes("ppm"))* (also see the tutorial). This is **very** fast (**60 times** faster than PNG).
 

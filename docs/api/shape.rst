@@ -52,7 +52,7 @@ Several draw methods can be executed in a row and each one of them will contribu
 
    .. method:: Shape(Page page)
 
-      Create a new drawing. During importing PyMuPDF, the *fitz.Page* object is being given the convenience method *NewShape()* to construct a *Shape* object. During instantiation, a check will be made whether we do have a PDF page. An exception is otherwise raised.
+      Create a new drawing. the *Page* object is being given the convenience method *NewShape()* to construct a *Shape* object. During instantiation, a check will be made whether we do have a PDF page. An exception is otherwise raised.
 
       :arg page: an existing page of a PDF document.
       :type page: :ref:`Page`
@@ -90,7 +90,7 @@ Several draw methods can be executed in a row and each one of them will contribu
 
       .. image:: ../images/img-squiggly.*
 
-      .. note:: Waves drawn are **not** trigonometric (sine / cosine). If you need that, have a look at `draw.py <https://github.com/pymupdf/PyMuPDF-Utilities/blob/master/examples/draw-sines/draw.py>`_.
+      .. note:: Waves drawn are **not** trigonometric (sine / cosine). If you need that, have a look at `https://github.com/ArtifexSoftware/MuPDF.NET/tree/main/Examples/DrawPolygon`_.
 
    .. index::
       pair: breadth; DrawZigzag
