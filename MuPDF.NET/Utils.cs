@@ -3310,13 +3310,13 @@ namespace MuPDF.NET
                 tp;
             if (fromPage < 0)
                 fp = 0;
-            else if (fromPage >= doc2.GetPageCount())
-                fp = doc2.GetPageCount() - 1;
+            else if (fromPage >= doc2.PageCount)
+                fp = doc2.PageCount - 1;
             else
                 fp = fromPage;
 
-            if (toPage < 0 || toPage >= doc2.GetPageCount())
-                tp = doc2.GetPageCount() - 1;
+            if (toPage < 0 || toPage >= doc2.PageCount)
+                tp = doc2.PageCount - 1;
             else
                 tp = toPage;
 
@@ -6177,6 +6177,9 @@ namespace MuPDF.NET
 
         public static void InitApp()
         {
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                return;
+
             if (Utils.IsInitialized)
                 return;
             

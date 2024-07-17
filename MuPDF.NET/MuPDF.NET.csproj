@@ -56,12 +56,12 @@
 	  <PackageReference Update="Microsoft.Maui.Controls.Compatibility" Version="8.0.14" />
 	</ItemGroup>
 
-	<ItemGroup>
+	<ItemGroup Condition="'$(OS)' == 'Windows_NT'">
 		<EmbeddedResource Include="mupdfcsharp.dll">
 			<LogicalName>mupdfcsharp.dll</LogicalName>
 		</EmbeddedResource>
 	</ItemGroup>
-	<ItemGroup>
+	<ItemGroup Condition="'$(OS)' == 'Windows_NT'">
 		<EmbeddedResource Include="mupdfcpp64.dll">
 			<LogicalName>mupdfcpp64.dll</LogicalName>
 		</EmbeddedResource>

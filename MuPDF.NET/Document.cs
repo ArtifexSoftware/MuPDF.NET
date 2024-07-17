@@ -107,7 +107,12 @@ namespace MuPDF.NET
         /// </summary>
         public int PageCount
         {
-            get { return GetPageCount(); }
+            get
+            {
+                if (IsClosed)
+                    throw new Exception("document closed");
+                return _nativeDocument.fz_count_pages();
+            }
         }
 
         public bool IsDirty
@@ -652,23 +657,6 @@ namespace MuPDF.NET
             return ret;
         }
 
-        /// <summary>
-        /// Number of pages.
-        /// </summary>
-        /// <returns></returns>
-        /// <exception cref="Exception"></exception>
-        public int GetPageCount()
-        {
-            if (IsClosed)
-                throw new Exception("document closed");
-            return _nativeDocument.fz_count_pages();
-        }
-
-        public FzPage GetPage(int index)
-        {
-            return _nativeDocument.fz_load_page(index);
-        }
-
         public FzDocument ToFzDocument()
         {
             return _nativeDocument;
@@ -1156,7 +1144,7 @@ namespace MuPDF.NET
             int np;
             if (pageId < 0)
             {
-                np = GetPageCount();
+                np = PageCount;
                 while (pageId < 0)
                     pageId += np;
             }
@@ -1807,7 +1795,7 @@ namespace MuPDF.NET
                 throw new Exception("source and target cannot be same object");
             int sa = startAt;
             if (sa < 0)
-                sa = GetPageCount();
+                sa = PageCount;
             if (docSrc.PageCount > showProgress && showProgress > 0)
             {
                 string inname = Path.GetFileName(docSrc.Name);
@@ -2231,7 +2219,7 @@ namespace MuPDF.NET
         {
             if (IsClosed)
                 throw new Exception("document closed");
-            int pageCount = GetPageCount();
+            int pageCount = PageCount;
             if (pno >= pageCount || (to < -1 && to >= pageCount))
                 throw new Exception("bad page numbers(s)");
             bool before = true;
@@ -2442,7 +2430,7 @@ namespace MuPDF.NET
         /// <returns>chapter and pno</returns>
         public int GetPageNumberFromLocation(int pageId)
         {
-            int pageN = GetPageCount();
+            int pageN = PageCount;
             while (pageId < 0)
                 pageId += pageN;
             (int, int) _pageId = (0, pageId);
@@ -2462,7 +2450,7 @@ namespace MuPDF.NET
         /// <returns>chapter and pno</returns>
         public int GetPageNumberFromLocation(int chapter, int pno)
         {
-            int pageN = GetPageCount();
+            int pageN = PageCount;
             while (pno < 0)
                 pno += pageN;
             FzLocation loc = mupdf.mupdf.fz_make_location(chapter, pno);
@@ -2503,10 +2491,10 @@ namespace MuPDF.NET
         public List<Page> GetPages(int start, int stop, int step)
         {
             while (start < 0)
-                start += GetPageCount();
-            if (!(GetPageCount() > start && start >= 0))
+                start += PageCount;
+            if (!(PageCount > start && start >= 0))
                 throw new Exception("bad start page number");
-            stop = (stop <= GetPageCount()) ? stop : GetPageCount();
+            stop = (stop <= PageCount) ? stop : PageCount;
             if (step == 0)
                 throw new Exception("arg 3 must not be zero");
 

@@ -2323,7 +2323,7 @@ namespace MuPDF.NET
                 throw new Exception("rect must be finite and not empty");
 
             while (pno < 0)
-                pno += src.GetPageCount();
+                pno += src.PageCount;
 
             Page srcPage = src[pno];
             if (srcPage.GetContents().Count == 0)
