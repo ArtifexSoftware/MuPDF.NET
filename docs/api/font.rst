@@ -153,7 +153,7 @@ A Font object also contains useful general information, like the font bbox, the 
 
       The other parameters are not in use currently.
 
-      :returns: a float representing the glyph's width relative to **fontsize 1**.
+      :returns: a float representing the glyph's width relative to **fontSize 1**.
 
    .. method:: GlyphName2Unicode(string name)
 
@@ -192,7 +192,7 @@ A Font object also contains useful general information, like the font bbox, the 
       pair: TextLength, wmode
       pair: TextLength, smallCaps
 
-   .. method:: TextLength(string text, float fontsize: 11, string language: null, int wmode: 0, int script: 0, int smallCaps: 0)
+   .. method:: TextLength(string text, float fontSize: 11, string language: null, int wmode: 0, int script: 0, int smallCaps: 0)
 
       Calculate the length in points of a unicode string.
 
@@ -200,7 +200,7 @@ A Font object also contains useful general information, like the font bbox, the 
 
       :arg str text: a text string, UTF-8 encoded.
 
-      :arg float fontsize: the :data:`fontSize`.
+      :arg float fontSize: the :data:`fontSize`.
 
       :rtype: float
 

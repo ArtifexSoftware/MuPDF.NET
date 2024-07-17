@@ -20,7 +20,7 @@ Story
 :meth:`Story.WriteStabilized`               iterative layout of html content to a DocumentWriter
 :meth:`Story.WriteWithLinks`                like `Write()` but also creates PDF links
 :meth:`Story.WriteStabilizedWithLinks`      like `WriteStabilized()` but also creates PDF links
-:meth:`Story.Fit`                           Finds optimal rect that contains the story `this`.
+:meth:`Story.Fit`                           Finds optimal rect that contains the story `this`
 :meth:`Story.FitScale`                     
 :meth:`Story.FitHeight`
 :meth:`Story.FitWidth`

@@ -83,7 +83,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
 :meth:`Page.GetFonts`              PDF only: get list of referenced fonts
 :meth:`Page.GetImageBbox`          PDF only: get bbox and matrix of embedded image
 :meth:`Page.GetImageInfo`          get list of meta information for all used images
-:meth:`Page.GetImageRects`         PDF only: improved version of :meth:`Page.get_image_bbox`
+:meth:`Page.GetImageRects`         PDF only: improved version of :meth:`Page.GetImageBbox`
 :meth:`Page.GetImages`             PDF only: get list of referenced images
 :meth:`Page.GetLabel`              PDF only: return the label of the page
 :meth:`Page.GetLinks`              get all links
@@ -191,7 +191,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
       :arg Rect rect: the rectangle into which the text should be inserted. Text is automatically wrapped to a new line at box width. Lines not fitting into the box will be invisible.
 
       :arg string text: the text. May contain any mixture of Latin, Greek, Cyrillic, Chinese, Japanese and Korean characters. The respective required font is automatically determined.
-      :arg float fontSize: the :data:`fontsize`. Default is 12.
+      :arg float fontSize: the :data:`fontSize`. Default is 12.
       :arg str fontName: the font name.
         Accepted alternatives are "Cour", "TiRo", "ZaDb" and "Symb".
         The name may be abbreviated to the first two characters, like "Co" for "Cour".
@@ -949,9 +949,9 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
       :arg string fontName: The name by which this font shall be referenced when outputting text on this page. In general, you have a "free" choice here (but consult the :ref:`AdobeManual`, page 16, section 7.3.5 for a formal description of building legal PDF names). However, if it matches one of the :data:`Base14_Fonts` or one of the CJK fonts, *fontFile* and *fontBuffer* **are ignored**.
 
-        In other words, you cannot insert a font via *fontfile* / *fontbuffer* and also give it a reserved *fontname*.
+        In other words, you cannot insert a font via *fontFile* / *fontBuffer* and also give it a reserved *fontName*.
 
-        .. note:: A reserved fontname can be specified in any mixture of upper or lower case and still match the right built-in font definition: fontnames "helv", "Helv", "HELV", "Helvetica", etc. all lead to the same font definition "Helvetica". But from a :ref:`Page` perspective, these are **different references**. You can exploit this fact when using different *encoding* variants (Latin, Greek, Cyrillic) of the same font on a page.
+        .. note:: A reserved fontName can be specified in any mixture of upper or lower case and still match the right built-in font definition: fontnames "helv", "Helv", "HELV", "Helvetica", etc. all lead to the same font definition "Helvetica". But from a :ref:`Page` perspective, these are **different references**. You can exploit this fact when using different *encoding* variants (Latin, Greek, Cyrillic) of the same font on a page.
 
       :arg string fontFile: a path to a font file. If used, *fontName* must be **different from all reserved names**.
 

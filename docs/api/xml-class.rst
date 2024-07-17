@@ -16,60 +16,60 @@ There is no need to ever directly construct an :ref:`Xml` object: after creating
 ================================ ===========================================================================================
 **Method / Attribute**             **Description**
 ================================ ===========================================================================================
-:meth:`~.AddBulletList`          Add a :htmlTag:`ul` tag - bulleted list, context manager.
-:meth:`~.AddCodeBlock`           Add a :htmlTag:`pre` tag, context manager.
-:meth:`~.AddDescriptionList`     Add a :htmlTag:`dl` tag, context manager.
-:meth:`~.AddDivision`            add a :htmlTag:`div` tag (renamed from “section”), context manager.
-:meth:`~.AddHeader`              Add a header tag (one of :htmlTag:`h1` to :htmlTag:`h6`), context manager.
-:meth:`~.AddHorizontalLine`      Add a :htmlTag:`hr` tag.
-:meth:`~.AddImage`               Add a :htmlTag:`img` tag.
-:meth:`~.AddLink`                Add a :htmlTag:`a` tag.
-:meth:`~.AddNumberList`          Add a :htmlTag:`ol` tag, context manager.
-:meth:`~.AddParagraph`           Add a :htmlTag:`p` tag.
-:meth:`~.AddSpan`                Add a :htmlTag:`span` tag, context manager.
-:meth:`~.AddSubscript`           Add subscript text(:htmlTag:`sub` tag) - inline element, treated like text.
-:meth:`~.AddSuperscript`         Add subscript text (:htmlTag:`sup` tag) - inline element, treated like text.
-:meth:`~.AddCode`                Add code text (:htmlTag:`code` tag) - inline element, treated like text.
-:meth:`~.AddVar`                 Add code text (:htmlTag:`code` tag) - inline element, treated like text.
-:meth:`~.AddSamp`                Add code text (:htmlTag:`code` tag) - inline element, treated like text.
-:meth:`~.AddKbd`                 Add code text (:htmlTag:`code` tag) - inline element, treated like text.
-:meth:`~.AddText`                Add a text string. Line breaks `\n` are honored as :htmlTag:`br` tags.
-:meth:`~.AppendChild`            Append a child node.
-:meth:`~.Clone`                  Make a copy if this node.
-:meth:`~.CreateElement`          Make a new node with a given tag name.
-:meth:`~.CreateTextNode`         Create direct text for the current node.
-:meth:`~.Find`                   Find a sub-node with given properties.
-:meth:`~.FindNext`               Repeat previous "find" with the same criteria.
-:meth:`~.InsertAfter`            Insert an element after current node.
-:meth:`~.InsertBefore`           Insert an element before current node.
-:meth:`~.Remove`                 Remove this node.
-:meth:`~.SetAlign`               Set the alignment using a CSS style spec. Only works for block-level tags.
-:meth:`~.SetAttribute`           Set an arbitrary key to some value (which may be empty).
-:meth:`~.SetBgColor`             Set the background color. Only works for block-level tags.
-:meth:`~.SetBold`                Set bold on or off or to some string value.
-:meth:`~.SetColor`               Set text color.
-:meth:`~.SetColumns`             Set the number of columns. Argument may be any valid number or string.
-:meth:`~.SetFont`                Set the font-family, e.g. “sans-serif”.
-:meth:`~.SetFontSize`            Set the font size. Either a float or a valid HTML/CSS string.
-:meth:`~.SetId`                  Set a :htmlTag:`id`. A check for uniqueness is performed.
-:meth:`~.SetItalic`              Set italic on or off or to some string value.
-:meth:`~.SetLeading`             Set inter-block text distance (`-mupdf-leading`), only works on block-level nodes.
-:meth:`~.SetLineHeight`          Set height of a line. Float like 1.5, which sets to `1.5 * fontsize`.
-:meth:`~.SetMargins`             Set the margin(s), float or string with up to 4 values.
-:meth:`~.SetPageBreakAfter`      Insert a page break after this node.
-:meth:`~.SetPageBreakBefore`     Insert a page break before this node.
-:meth:`~.SetProperties`          Set any or all desired properties in one call.
-:meth:`~.AddStyle`               Set (add) a “style” that is not supported by its own `set_` method.
-:meth:`~.AddClass`               Set (add) a “class” attribute.
-:meth:`~.SetTextIndent`          Set indentation for first textblock line. Only works for block-level nodes.
-:attr:`~.TagName`                Either the HTML tag name like :htmlTag:`p` or `null` if a text node.
-:attr:`~.Text`                   Either the node's text or `null` if a tag node.
-:attr:`~.IsText`                 Check if the node is a text.
-:attr:`~.FirstChild`             Contains the first node one level below this one (or `null`).
-:attr:`~.LastChild`              Contains the last node one level below this one (or `null`).
-:attr:`~.Next`                   The next node at the same level (or `null`).
-:attr:`~.Previous`               The previous node at the same level.
-:attr:`~.Root`                   The top node of the DOM, which hence has the tagname :htmlTag:`html`.
+:meth:`~.AddBulletList`          Add a :htmlTag:`ul` tag - bulleted list, context manager
+:meth:`~.AddCodeBlock`           Add a :htmlTag:`pre` tag, context manager
+:meth:`~.AddDescriptionList`     Add a :htmlTag:`dl` tag, context manager
+:meth:`~.AddDivision`            add a :htmlTag:`div` tag (renamed from “section”), context manager
+:meth:`~.AddHeader`              Add a header tag (one of :htmlTag:`h1` to :htmlTag:`h6`), context manager
+:meth:`~.AddHorizontalLine`      Add a :htmlTag:`hr` tag
+:meth:`~.AddImage`               Add a :htmlTag:`img` tag
+:meth:`~.AddLink`                Add a :htmlTag:`a` tag
+:meth:`~.AddNumberList`          Add a :htmlTag:`ol` tag, context manager
+:meth:`~.AddParagraph`           Add a :htmlTag:`p` tag
+:meth:`~.AddSpan`                Add a :htmlTag:`span` tag, context manager
+:meth:`~.AddSubscript`           Add subscript text(:htmlTag:`sub` tag) - inline element, treated like text
+:meth:`~.AddSuperscript`         Add subscript text (:htmlTag:`sup` tag) - inline element, treated like text
+:meth:`~.AddCode`                Add code text (:htmlTag:`code` tag) - inline element, treated like text
+:meth:`~.AddVar`                 Add code text (:htmlTag:`code` tag) - inline element, treated like text
+:meth:`~.AddSamp`                Add code text (:htmlTag:`code` tag) - inline element, treated like text
+:meth:`~.AddKbd`                 Add code text (:htmlTag:`code` tag) - inline element, treated like text
+:meth:`~.AddText`                Add a text string. Line breaks `\n` are honored as :htmlTag:`br` tags
+:meth:`~.AppendChild`            Append a child node
+:meth:`~.Clone`                  Make a copy if this node
+:meth:`~.CreateElement`          Make a new node with a given tag name
+:meth:`~.CreateTextNode`         Create direct text for the current node
+:meth:`~.Find`                   Find a sub-node with given properties
+:meth:`~.FindNext`               Repeat previous "find" with the same criteria
+:meth:`~.InsertAfter`            Insert an element after current node
+:meth:`~.InsertBefore`           Insert an element before current node
+:meth:`~.Remove`                 Remove this node
+:meth:`~.SetAlign`               Set the alignment using a CSS style spec. Only works for block-level tags
+:meth:`~.SetAttribute`           Set an arbitrary key to some value (which may be empty)
+:meth:`~.SetBgColor`             Set the background color. Only works for block-level tags
+:meth:`~.SetBold`                Set bold on or off or to some string value
+:meth:`~.SetColor`               Set text color
+:meth:`~.SetColumns`             Set the number of columns. Argument may be any valid number or string
+:meth:`~.SetFont`                Set the font-family, e.g. “sans-serif”
+:meth:`~.SetFontSize`            Set the font size. Either a float or a valid HTML/CSS string
+:meth:`~.SetId`                  Set a :htmlTag:`id`. A check for uniqueness is performed
+:meth:`~.SetItalic`              Set italic on or off or to some string value
+:meth:`~.SetLeading`             Set inter-block text distance (`-mupdf-leading`), only works on block-level nodes
+:meth:`~.SetLineHeight`          Set height of a line. Float like 1.5, which sets to `1.5 * fontSize`
+:meth:`~.SetMargins`             Set the margin(s), float or string with up to 4 values
+:meth:`~.SetPageBreakAfter`      Insert a page break after this node
+:meth:`~.SetPageBreakBefore`     Insert a page break before this node
+:meth:`~.SetProperties`          Set any or all desired properties in one call
+:meth:`~.AddStyle`               Set (add) a “style” that is not supported by its own `set_` method
+:meth:`~.AddClass`               Set (add) a “class” attribute
+:meth:`~.SetTextIndent`          Set indentation for first textblock line. Only works for block-level nodes
+:attr:`~.TagName`                Either the HTML tag name like :htmlTag:`p` or `null` if a text node
+:attr:`~.Text`                   Either the node's text or `null` if a tag node
+:attr:`~.IsText`                 Check if the node is a text
+:attr:`~.FirstChild`             Contains the first node one level below this one (or `null`)
+:attr:`~.LastChild`              Contains the last node one level below this one (or `null`)
+:attr:`~.Next`                   The next node at the same level (or `null`)
+:attr:`~.Previous`               The previous node at the same level
+:attr:`~.Root`                   The top node of the DOM, which hence has the tagname :htmlTag:`html`
 ================================ ===========================================================================================
 
 

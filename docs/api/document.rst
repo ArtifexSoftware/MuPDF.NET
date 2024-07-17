@@ -162,15 +162,15 @@ This class represents a document. It can be constructed from a file or from memo
     pair: rect; open
     pair: width; open
     pair: height; open
-    pair: fontsize; open
+    pair: fontSize; open
     pair: open; Document
     pair: filename; Document
     pair: stream; Document
     pair: filetype; Document
     pair: rect; Document
-    pair: fontsize; Document
+    pair: fontSize; Document
 
-  .. method:: Document(string filename = null, byte[] stream = null, filetype = null, rect = null, width = 0, height = 0, fontsize = 11)
+  .. method:: Document(string filename: null, byte[] stream: null, filetype: null, rect: null, width: 0, height: 0, fontSize: 11)
 
     Creates a *Document* object.
 
@@ -184,7 +184,7 @@ This class represents a document. It can be constructed from a file or from memo
 
     :arg str filetype: A string specifying the type of document. This may be anything looking like a filename (e.g. "x.pdf"), in which case MuPDF uses the extension to determine the type, or a mime type like *application/pdf*. Just using strings like "pdf"  or ".pdf" will also work. May be omitted for PDF documents, otherwise must match :ref:`a supported document type<Supported_File_Types>`.
 
-    :arg rect_like rect: a rectangle specifying the desired page size. This parameter is only meaningful for documents with a variable page layout ("reflowable" documents), like e-books or HTML, and ignored otherwise. If specified, it must be a non-empty, finite rectangle with top-left coordinates (0, 0). Together with parameter *fontsize*, each page will be accordingly laid out and hence also determine the number of pages.
+    :arg rect_like rect: a rectangle specifying the desired page size. This parameter is only meaningful for documents with a variable page layout ("reflowable" documents), like e-books or HTML, and ignored otherwise. If specified, it must be a non-empty, finite rectangle with top-left coordinates (0, 0). Together with parameter *fontSize*, each page will be accordingly laid out and hence also determine the number of pages.
 
     :arg float width: may used together with *height* as an alternative to *rect* to specify layout information.
 
@@ -387,7 +387,7 @@ This class represents a document. It can be constructed from a file or from memo
     :arg string password: owner or user password.
 
     :rtype: int
-    :returns: a positive value if successful, zero otherwise (the string does not match either password). If positive, the indicator :attr:`Document.IsEncrypted` is set to *False*. **Positive** return codes carry the following information detail:
+    :returns: a positive value if successful, zero otherwise (the string does not match either password). If positive, the indicator :attr:`Document.IsEncrypted` is set to *false*. **Positive** return codes carry the following information detail:
 
       * 1 => authenticated, but the PDF has neither owner nor user passwords.
       * 2 => authenticated with the **user** password.
@@ -584,7 +584,7 @@ This class represents a document. It can be constructed from a file or from memo
     :arg int rotate: rotation angle. Default is 0 (no rotation). Should be *n * 90* with an integer n (not checked).
 
     :rtype: bytes
-    :returns: a Python *bytes* object containing a PDF file image. It is created by internally using `ToBytes(garbage: 4, deflate: True)`. See :meth:`ToBytes`. You can output it directly to disk or open it as a PDF.
+    :returns: a Python *bytes* object containing a PDF file image. It is created by internally using `ToBytes(garbage: 4, deflate: true)`. See :meth:`ToBytes`. You can output it directly to disk or open it as a PDF.
 
     .. note:: The method uses the same logic as the *mutool convert* CLI. This works very well in most cases -- however, beware of the following limitations.
 
@@ -606,7 +606,7 @@ This class represents a document. It can be constructed from a file or from memo
       * *lvl* -- hierarchy level (positive *int*). The first entry is always 1. Entries in a row are either **equal**, **increase** by 1, or **decrease** by any number.
       * *title* -- title (*string*)
       * *page* -- 1-based source page number (*int*). `-1` if no destination or outside document.
-      * *dest* -- (*dict*) included only if *simple=False*. Contains details of the TOC item as follows:
+      * *dest* -- (*dict*) included only if *simple=false*. Contains details of the TOC item as follows:
 
         - kind: destination kind, see :ref:`LinkDest Kinds`.
         - file: filename if kind is :data:`LINK_GOTOR` or :data:`LINK_LAUNCH`.
@@ -731,7 +731,7 @@ This class represents a document. It can be constructed from a file or from memo
     PDF only: Return a list of all fonts (directly or indirectly) referenced by the page. *Please note that this does not mean, that the text on the page actually uses all of these fonts.*
 
     :arg int pno: page number, 0-based, `-∞ < pno < PageCount`.
-    :arg bool full: whether to also include the referencer's :data:`xref`. If *True*, the returned items are one entry longer. Use this option if you need to know, whether the page directly references the font. In this case the last entry is 0. If the font is referenced by an `/XObject` of the page, you will find its :data:`xref` here.
+    :arg bool full: whether to also include the referencer's :data:`xref`. If *true*, the returned items are one entry longer. Use this option if you need to know, whether the page directly references the font. In this case the last entry is 0. If the font is referenced by an `/XObject` of the page, you will find its :data:`xref` here.
 
     :rtype: List<Entry>
 
@@ -770,12 +770,12 @@ This class represents a document. It can be constructed from a file or from memo
 
   .. method:: SetLayout(Rect rect: null, float width: 0, float height: 0, int fontSize: 11)
     
-    Re-paginate ("reflow") the document based on the given page dimension and fontsize. This only affects some document types like e-books and HTML. Ignored if not supported. Supported documents have *True* in property :attr:`is_reflowable`.
+    Re-paginate ("reflow") the document based on the given page dimension and fontSize. This only affects some document types like e-books and HTML. Ignored if not supported. Supported documents have *true* in property :attr:`is_reflowable`.
 
     :arg Rect rect: desired page size. Must be finite, not empty and start at point (0, 0).
     :arg float width: use it together with *height* as alternative to *rect*.
     :arg float height: use it together with *width* as alternative to *rect*.
-    :arg float fontSize: the desired default fontsize.
+    :arg float fontSize: the desired default fontSize.
 
   .. method:: Select(List<int> list)
 
@@ -832,7 +832,7 @@ This class represents a document. It can be constructed from a file or from memo
 
     PDF only: Set the `/MarkInfo` values.
 
-    :arg Dictionary<string, bool> value: a dictionary like this one: `{"Marked": False, "UserProperties": False, "Suspects": False}`. This dictionary contains information about the usage of Tagged PDF conventions. For details please see the `PDF specifications <https://opensource.adobe.com/dc-acrobat-sdk-docs/standards/pdfstandards/pdf/PDF32000_2008.pdf>`_.
+    :arg Dictionary<string, bool> value: a dictionary like this one: `{"Marked": false, "UserProperties": false, "Suspects": false}`. This dictionary contains information about the usage of Tagged PDF conventions. For details please see the `PDF specifications <https://opensource.adobe.com/dc-acrobat-sdk-docs/standards/pdfstandards/pdf/PDF32000_2008.pdf>`_.
 
 
   .. method:: SetToc(List<Toc> tocs, int collapse: 1)
@@ -919,7 +919,7 @@ This class represents a document. It can be constructed from a file or from memo
     PDF only: Remove potentially sensitive data from the PDF. This function is inspired by the similar "Sanitize" function in Adobe Acrobat products. The process is configurable by a number of options.
 
     :arg bool attachedFiles: Search for 'FileAttachment' annotations and remove the file content.
-    :arg bool cleanPages: Remove any comments from page painting sources. If this option is set to *False*, then this is also done for *hidden_text* and *redactions*.
+    :arg bool cleanPages: Remove any comments from page painting sources. If this option is set to *false*, then this is also done for *hidden_text* and *redactions*.
     :arg bool embeddedFiles: Remove embedded files.
     :arg bool hiddenText: Remove OCRed text and invisible text [#f7]_.
     :arg bool javascript: Remove JavaScript sources.
@@ -933,7 +933,7 @@ This class represents a document. It can be constructed from a file or from memo
     :arg bool xmlMetadata: Remove XML metadata.
 
 
-  .. method:: Save(string filename, int garbage: 0, int clean: 0, int deflate: 0, int deflateImages: 0, int deflateFonts: False, int incremental: 0, int ascii: 0, int expand: 0, int linear: 0, int pretty: 0, int noNewId: 0, int encryption: PDF_ENCRYPT_NONE, int permissions: -1, string ownerPW: null, string userPW: null, int useObjstms: 0)
+  .. method:: Save(string filename, int garbage: 0, int clean: 0, int deflate: 0, int deflateImages: 0, int deflateFonts: false, int incremental: 0, int ascii: 0, int expand: 0, int linear: 0, int pretty: 0, int noNewId: 0, int encryption: PDF_ENCRYPT_NONE, int permissions: -1, string ownerPW: null, string userPW: null, int useObjstms: 0)
 
     PDF only: Saves the document in its **current state**.
 
@@ -951,7 +951,7 @@ This class represents a document. It can be constructed from a file or from memo
 
     :arg int deflate: Deflate (compress) uncompressed streams.
     :arg int deflateImages: Deflate (compress) uncompressed image streams [#f4]_.
-    :arg int deflateFonts: Deflate (compress) uncompressed fontfile streams [#f4]_.
+    :arg int deflateFonts: Deflate (compress) uncompressed fontFile streams [#f4]_.
 
     :arg int incremental: Only save changes to the PDF. Excludes "garbage" and "linear". Can only be used if *outfile* is a string or a `pathlib.Path` and equal to :attr:`Document.name`. Cannot be used for files that are decrypted or repaired and also in some other cases. To be sure, check :meth:`Document.can_save_incrementally`. If this is false, saving to a new file is required.
 
@@ -968,7 +968,7 @@ This class represents a document. It can be constructed from a file or from memo
 
     :arg int pretty: Prettify the document source for better readability. PDF objects will be reformatted to look like the default output of :meth:`Document.xref_object`.
 
-    :arg int noNewId: Suppress the update of the file's `/ID` field. If the file happens to have no such field at all, also suppress creation of a new one. Default is `False`, so every save will lead to an updated file identification.
+    :arg int noNewId: Suppress the update of the file's `/ID` field. If the file happens to have no such field at all, also suppress creation of a new one. Default is `false`, so every save will lead to an updated file identification.
 
     :arg int permissions: Set the desired permission levels. See :ref:`PermissionCodes` for possible values. Default is granting all.
 
@@ -1042,7 +1042,7 @@ This class represents a document. It can be constructed from a file or from memo
     :arg bool links: Choose whether (internal and external) links should be included in the copy. Default is `true`. *Named* links (:data:`LINK_NAMED`) and internal links to outside the copied page range are **always excluded**. 
     :arg bool annots: Choose whether annotations should be included in the copy. Form **fields can never be copied** -- see below.
     :arg int showProgress: Specify an interval size greater zero to see progress messages on `sys.stdout`. After each interval, a message like `Inserted 30 of 47 pages.` will be printed.
-    :arg int final: Controls whether the list of already copied objects should be **dropped** after this method, default *True*. Set it to 0 except for the last one of multiple insertions from the same source PDF. This saves target file size and speeds up execution considerably.
+    :arg int final: Controls whether the list of already copied objects should be **dropped** after this method, default *true*. Set it to 0 except for the last one of multiple insertions from the same source PDF. This saves target file size and speeds up execution considerably.
 
   .. note::
 
@@ -1186,7 +1186,7 @@ This class represents a document. It can be constructed from a file or from memo
     :rtype: bool
     :returns:
        * None: not a Form PDF, or property not defined.
-       * True / False: the value of the property (either just set or existing for inquiries). Has no effect if no Form PDF.
+       * true / false: the value of the property (either just set or existing for inquiries). Has no effect if no Form PDF.
 
   .. method:: GetSigFlags()
 
@@ -1356,7 +1356,7 @@ This class represents a document. It can be constructed from a file or from memo
 
     The method is primarily (but not exclusively) intended to manipulate streams containing PDF operator syntax (see pp. 643 of the :ref:`AdobeManual`) as it is the case for e.g. page content streams.
 
-    If you update a contents stream, consider using save parameter *clean=True* to ensure consistency between PDF operator source and the object structure.
+    If you update a contents stream, consider using save parameter *clean=true* to ensure consistency between PDF operator source and the object structure.
 
     Example: Let us assume that you no longer want a certain image appear on a page. This can be achieved by deleting the respective reference in its contents source(s) -- and indeed: the image will be gone after reloading the page. But the page's :data:`resources` object would still show the image as being referenced by the page. This save option will clean up any such mismatches.
 
@@ -1437,7 +1437,7 @@ This class represents a document. It can be constructed from a file or from memo
 
     .. note::
        * The returned *basename* in general is **not** the original file name, but it probably has some similarity.
-       * If parameter `named == True`, a dictionary with the following keys is returned: `{'name': 'T1', 'ext': 'n/a', 'type': 'Type3', 'content': b''}`.
+       * If parameter `named == true`, a dictionary with the following keys is returned: `{'name': 'T1', 'ext': 'n/a', 'type': 'Type3', 'content': b''}`.
 
 
   .. method:: XrefXmlMetaData()
@@ -1451,7 +1451,7 @@ This class represents a document. It can be constructed from a file or from memo
 
     PDF only: Check whether there are links, resp. annotations anywhere in the document.
 
-    :returns: *true* / *false*. As opposed to fields, which are also stored in a central place of a PDF document, the existence of links / annotations can only be detected by parsing each page. These methods are tuned to do this efficiently and will immediately return, if the answer is *True* for a page. For PDFs with many thousand pages however, an answer may take some time [#f6]_ if no link, resp. no annotation is found.
+    :returns: *true* / *false*. As opposed to fields, which are also stored in a central place of a PDF document, the existence of links / annotations can only be detected by parsing each page. These methods are tuned to do this efficiently and will immediately return, if the answer is *true* for a page. For PDFs with many thousand pages however, an answer may take some time [#f6]_ if no link, resp. no annotation is found.
 
 
   .. method:: SubsetFonts()
@@ -1550,7 +1550,7 @@ This class represents a document. It can be constructed from a file or from memo
 
   .. attribute:: IsPDF
 
-    *True* if this is a PDF document, else *False*.
+    *true* if this is a PDF document, else *false*.
 
     :type: bool
 
@@ -1570,7 +1570,7 @@ This class represents a document. It can be constructed from a file or from memo
 
   .. attribute:: IsRepaired
 
-    *true* if PDF has been repaired during open (because of major structure issues). Always *False* for non-PDF documents. If true, :meth:`Document.CanSaveIncrementally` will return *false*.
+    *true* if PDF has been repaired during open (because of major structure issues). Always *false* for non-PDF documents. If true, :meth:`Document.CanSaveIncrementally` will return *false*.
 
     :type: bool
 
@@ -1612,7 +1612,7 @@ This class represents a document. It can be constructed from a file or from memo
 
   .. attribute:: IsEncrypted
 
-    This indicator initially equals :attr:`Document.NeedsPass`. After successful authentication, it is set to *False* to reflect the situation.
+    This indicator initially equals :attr:`Document.NeedsPass`. After successful authentication, it is set to *false* to reflect the situation.
 
     :type: bool
 
@@ -1624,13 +1624,13 @@ This class represents a document. It can be constructed from a file or from memo
 
   .. attribute:: MetaData
 
-    Contains the document's meta data as a dictionary or `null` (if *IsEncrypted=True* and *NeedPass=True*). Keys are *format*, *encryption*, *title*, *author*, *subject*, *keywords*, *creator*, *producer*, *creationDate*, *modDate*, *trapped*. All item values are strings or `null`.
+    Contains the document's meta data as a dictionary or `null` (if *IsEncrypted=true* and *NeedPass=true*). Keys are *format*, *encryption*, *title*, *author*, *subject*, *keywords*, *creator*, *producer*, *creationDate*, *modDate*, *trapped*. All item values are strings or `null`.
 
     Except *format* and *encryption*, for PDF documents, the key names correspond in an obvious way to the PDF keys */Creator*, */Producer*, */CreationDate*, */ModDate*, */Title*, */Author*, */Subject*, */Trapped* and */Keywords* respectively.
 
     - *format* contains the document format (e.g. 'PDF-1.6', 'XPS', 'EPUB').
 
-    - *encryption* either contains `null` (no encryption), or a string naming an encryption method (e.g. *'Standard V4 R4 128-bit RC4'*). Note that an encryption method may be specified **even if** *needs_pass=False*. In such cases not all permissions will probably have been granted. Check :attr:`Document.Permissions` for details.
+    - *encryption* either contains `null` (no encryption), or a string naming an encryption method (e.g. *'Standard V4 R4 128-bit RC4'*). Note that an encryption method may be specified **even if** *needs_pass=false*. In such cases not all permissions will probably have been granted. Check :attr:`Document.Permissions` for details.
 
     - If the date fields contain valid data (which need not be the case at all!), they are strings in the PDF-specific timestamp format "D:<TS><TZ>", where
 
@@ -1723,7 +1723,7 @@ Other Examples
 
 .. [#f5] Examples for "Form XObjects" are created by :meth:`Page.ShowPDFPage`.
 
-.. [#f6] For a *False* the **complete document** must be scanned. Both methods **do not load pages,** but only scan object definitions. This makes them at least 10 times faster than application-level loops (where total response time roughly equals the time for loading all pages). For the :ref:`AdobeManual` (756 pages) and the Pandas documentation (over 3070 pages) -- both have no annotations -- the method needs about 11 ms for the answer *False*. So response times will probably become significant only well beyond this order of magnitude.
+.. [#f6] For a *false* the **complete document** must be scanned. Both methods **do not load pages,** but only scan object definitions. This makes them at least 10 times faster than application-level loops (where total response time roughly equals the time for loading all pages). For the :ref:`AdobeManual` (756 pages) and the Pandas documentation (over 3070 pages) -- both have no annotations -- the method needs about 11 ms for the answer *false*. So response times will probably become significant only well beyond this order of magnitude.
 
 .. [#f7] This only works under certain conditions. For example, if there is normal text covered by some image on top of it, then this is undetectable and the respective text is **not** removed. Similar is true for white text on white background, and so on.
 

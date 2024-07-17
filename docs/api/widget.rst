@@ -12,7 +12,7 @@ This class represents a PDF Form field, also called a "widget". Throughout this 
 
 Like annotations, widgets live on PDF pages. Similar to annotations, the first widget on a page is accessible via :attr:`Page.FirstWidget` and subsequent widgets can be accessed via the :attr:`Widget.Next` property.
 
-MuPDF no longer treats widgets as a subset of general annotations. Consequently, :attr:`Page.FirstAnnot` and :meth:`Annot.Next` will deliver **non-widget annotations exclusively**, and be *None* if only form fields exist on a page. Vice versa, :attr:`Page.first_widget` and :meth:`Widget.next` will only show widgets. This design decision is purely internal to MuPDF; technically, links, annotations and fields have a lot in common and also continue to share the better part of their code within (Py-) MuPDF.
+MuPDF no longer treats widgets as a subset of general annotations. Consequently, :attr:`Page.FirstAnnot` and :meth:`Annot.Next` will deliver **non-widget annotations exclusively**, and be *None* if only form fields exist on a page. Vice versa, :attr:`Page.FirstWidget` and :meth:`Widget.Next` will only show widgets. This design decision is purely internal to MuPDF; technically, links, annotations and fields have a lot in common and also continue to share the better part of their code within MuPDF.
 
 
 **Class API**

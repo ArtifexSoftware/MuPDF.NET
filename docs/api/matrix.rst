@@ -116,7 +116,7 @@ Please note:
       :arg m2: Second (right) matrix.
       :type m2: :ref:`Matrix`
 
-   .. method:: Invert(Matrix src: null)
+   .. method:: Invert(Matrix m: null)
 
       Calculate the matrix inverse of *m* and store the result in the current matrix. Returns *1* if *m* is not invertible ("degenerate"). In this case the current matrix **will not change**. Returns *0* if *m* is invertible, and the current matrix is replaced with the inverted *m*.
 
