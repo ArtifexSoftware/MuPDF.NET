@@ -42,11 +42,7 @@ Welcome to |MuPDF.NET|
 
 |MuPDF.NET| is hosted on `GitHub <https://github.com/ArtifexSoftware/MuPDF.NET>`_ and is registered on `NuGet <https://www.nuget.org/packages/MuPDF.NET/>`_.
 
-|MuPDF.NET| has been derived from `PyMuPDF <https://github.com/pymupdf/PyMuPDF>`_ and it closely follows its structure. So for most of |PyMuPDF|'s classes, features and functions you will find a respective |MuPDF.NET| object doing the same sort of thing.
-
-Pease note that there are deviations as per how objects are named. We will publish a table in due time that maps |MuPDF.NET| and |PyMuPDF| names.
-
-The following is a list of the most important features:
+Features:
 
 - Fast rendering of **PDF** files
 - Extract text and search **PDF** files
@@ -54,6 +50,14 @@ The following is a list of the most important features:
 - Get **PDF** metadata information
 - Manage **PDF** passwords
 - And more!
+
+|MuPDF.NET| has been derived from `PyMuPDF <https://github.com/pymupdf/PyMuPDF>`_ and it closely follows its structure. So for most of |PyMuPDF|'s classes, features and functions you will find a respective |MuPDF.NET| object doing the same sort of thing.
+
+.. note::
+
+    Please note that there are deviations as per how objects are named. We will publish a table in due time that maps |MuPDF.NET| and |PyMuPDF| names.
+
+
 
 
 Developer documentation to help you get started 

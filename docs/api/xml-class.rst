@@ -10,66 +10,66 @@ Xml
 
 This represents an HTML or an XML node. It is a helper class intended to access the DOM (Document Object Model) content of a :ref:`Story` object.
 
-There is no need to ever directly construct an :ref:`Xml` object: after creating a :ref:`Story`, simply take :attr:`Story.body` -- which is an Xml node -- and use it to navigate your way through the story's DOM.
+There is no need to ever directly construct an :ref:`Xml` object: after creating a :ref:`Story`, simply take :attr:`Story.Body` -- which is an Xml node -- and use it to navigate your way through the story's DOM.
 
 
 ================================ ===========================================================================================
 **Method / Attribute**             **Description**
 ================================ ===========================================================================================
-:meth:`~.AddBulletList`          Add a :htmlTag:`ul` tag - bulleted list, context manager.
-:meth:`~.AddCodeBlock`           Add a :htmlTag:`pre` tag, context manager.
-:meth:`~.AddDescriptionList`     Add a :htmlTag:`dl` tag, context manager.
-:meth:`~.AddDivision`            add a :htmlTag:`div` tag (renamed from “section”), context manager.
-:meth:`~.AddHeader`              Add a header tag (one of :htmlTag:`h1` to :htmlTag:`h6`), context manager.
-:meth:`~.AddHorizontalLine`      Add a :htmlTag:`hr` tag.
-:meth:`~.AddImage`               Add a :htmlTag:`img` tag.
-:meth:`~.AddLink`                Add a :htmlTag:`a` tag.
-:meth:`~.addnumberlist`          Add a :htmlTag:`ol` tag, context manager.
-:meth:`~.AddParagraph`           Add a :htmlTag:`p` tag.
-:meth:`~.AddSpan`                Add a :htmlTag:`span` tag, context manager.
-:meth:`~.AddSubscript`           Add subscript text(:htmlTag:`sub` tag) - inline element, treated like text.
-:meth:`~.AddSuperscript`         Add subscript text (:htmlTag:`sup` tag) - inline element, treated like text.
-:meth:`~.AddCode`                Add code text (:htmlTag:`code` tag) - inline element, treated like text.
-:meth:`~.AddVar`                 Add code text (:htmlTag:`code` tag) - inline element, treated like text.
-:meth:`~.AddSamp`                Add code text (:htmlTag:`code` tag) - inline element, treated like text.
-:meth:`~.AddKbd`                 Add code text (:htmlTag:`code` tag) - inline element, treated like text.
-:meth:`~.AddText`                Add a text string. Line breaks `\n` are honored as :htmlTag:`br` tags.
-:meth:`~.AppendChild`            Append a child node.
-:meth:`~.Clone`                  Make a copy if this node.
-:meth:`~.CreateElement`          Make a new node with a given tag name.
-:meth:`~.CreateTextNode`         Create direct text for the current node.
-:meth:`~.Find`                   Find a sub-node with given properties.
-:meth:`~.FindNext`               Repeat previous "find" with the same criteria.
-:meth:`~.InsertAfter`            Insert an element after current node.
-:meth:`~.InsertBefore`           Insert an element before current node.
-:meth:`~.Remove`                 Remove this node.
-:meth:`~.SetAlign`               Set the alignment using a CSS style spec. Only works for block-level tags.
-:meth:`~.SetAttribute`           Set an arbitrary key to some value (which may be empty).
-:meth:`~.SetBgColor`             Set the background color. Only works for block-level tags.
-:meth:`~.SetBold`                Set bold on or off or to some string value.
-:meth:`~.SetColor`               Set text color.
-:meth:`~.SetColumns`             Set the number of columns. Argument may be any valid number or string.
-:meth:`~.SetFont`                Set the font-family, e.g. “sans-serif”.
-:meth:`~.SetFontSize`            Set the font size. Either a float or a valid HTML/CSS string.
-:meth:`~.SetId`                  Set a :htmlTag:`id`. A check for uniqueness is performed.
-:meth:`~.SetItalic`              Set italic on or off or to some string value.
-:meth:`~.SetLeading`             Set inter-block text distance (`-mupdf-leading`), only works on block-level nodes.
-:meth:`~.SetLineHeight`          Set height of a line. Float like 1.5, which sets to `1.5 * fontsize`.
-:meth:`~.SetMargins`             Set the margin(s), float or string with up to 4 values.
-:meth:`~.SetPageBreakAfter`      Insert a page break after this node.
-:meth:`~.SetPageBreakBefore`     Insert a page break before this node.
-:meth:`~.SetProperties`          Set any or all desired properties in one call.
-:meth:`~.AddStyle`               Set (add) a “style” that is not supported by its own `set_` method.
-:meth:`~.AddClass`               Set (add) a “class” attribute.
-:meth:`~.SetTextIndent`          Set indentation for first textblock line. Only works for block-level nodes.
-:attr:`~.TagName`                Either the HTML tag name like :htmlTag:`p` or `null` if a text node.
-:attr:`~.Text`                   Either the node's text or `null` if a tag node.
-:attr:`~.IsText`                 Check if the node is a text.
-:attr:`~.FirstChild`             Contains the first node one level below this one (or `null`).
-:attr:`~.LastChild`              Contains the last node one level below this one (or `null`).
-:attr:`~.Next`                   The next node at the same level (or `null`).
-:attr:`~.Previous`               The previous node at the same level.
-:attr:`~.Root`                   The top node of the DOM, which hence has the tagname :htmlTag:`html`.
+:meth:`~.AddBulletList`          Add a :htmlTag:`ul` tag - bulleted list, context manager
+:meth:`~.AddCodeBlock`           Add a :htmlTag:`pre` tag, context manager
+:meth:`~.AddDescriptionList`     Add a :htmlTag:`dl` tag, context manager
+:meth:`~.AddDivision`            add a :htmlTag:`div` tag (renamed from “section”), context manager
+:meth:`~.AddHeader`              Add a header tag (one of :htmlTag:`h1` to :htmlTag:`h6`), context manager
+:meth:`~.AddHorizontalLine`      Add a :htmlTag:`hr` tag
+:meth:`~.AddImage`               Add a :htmlTag:`img` tag
+:meth:`~.AddLink`                Add a :htmlTag:`a` tag
+:meth:`~.AddNumberList`          Add a :htmlTag:`ol` tag, context manager
+:meth:`~.AddParagraph`           Add a :htmlTag:`p` tag
+:meth:`~.AddSpan`                Add a :htmlTag:`span` tag, context manager
+:meth:`~.AddSubscript`           Add subscript text(:htmlTag:`sub` tag) - inline element, treated like text
+:meth:`~.AddSuperscript`         Add subscript text (:htmlTag:`sup` tag) - inline element, treated like text
+:meth:`~.AddCode`                Add code text (:htmlTag:`code` tag) - inline element, treated like text
+:meth:`~.AddVar`                 Add code text (:htmlTag:`code` tag) - inline element, treated like text
+:meth:`~.AddSamp`                Add code text (:htmlTag:`code` tag) - inline element, treated like text
+:meth:`~.AddKbd`                 Add code text (:htmlTag:`code` tag) - inline element, treated like text
+:meth:`~.AddText`                Add a text string. Line breaks `\n` are honored as :htmlTag:`br` tags
+:meth:`~.AppendChild`            Append a child node
+:meth:`~.Clone`                  Make a copy if this node
+:meth:`~.CreateElement`          Make a new node with a given tag name
+:meth:`~.CreateTextNode`         Create direct text for the current node
+:meth:`~.Find`                   Find a sub-node with given properties
+:meth:`~.FindNext`               Repeat previous "find" with the same criteria
+:meth:`~.InsertAfter`            Insert an element after current node
+:meth:`~.InsertBefore`           Insert an element before current node
+:meth:`~.Remove`                 Remove this node
+:meth:`~.SetAlign`               Set the alignment using a CSS style spec. Only works for block-level tags
+:meth:`~.SetAttribute`           Set an arbitrary key to some value (which may be empty)
+:meth:`~.SetBgColor`             Set the background color. Only works for block-level tags
+:meth:`~.SetBold`                Set bold on or off or to some string value
+:meth:`~.SetColor`               Set text color
+:meth:`~.SetColumns`             Set the number of columns. Argument may be any valid number or string
+:meth:`~.SetFont`                Set the font-family, e.g. “sans-serif”
+:meth:`~.SetFontSize`            Set the font size. Either a float or a valid HTML/CSS string
+:meth:`~.SetId`                  Set a :htmlTag:`id`. A check for uniqueness is performed
+:meth:`~.SetItalic`              Set italic on or off or to some string value
+:meth:`~.SetLeading`             Set inter-block text distance (`-mupdf-leading`), only works on block-level nodes
+:meth:`~.SetLineHeight`          Set height of a line. Float like 1.5, which sets to `1.5 * fontSize`
+:meth:`~.SetMargins`             Set the margin(s), float or string with up to 4 values
+:meth:`~.SetPageBreakAfter`      Insert a page break after this node
+:meth:`~.SetPageBreakBefore`     Insert a page break before this node
+:meth:`~.SetProperties`          Set any or all desired properties in one call
+:meth:`~.AddStyle`               Set (add) a “style” that is not supported by its own `set_` method
+:meth:`~.AddClass`               Set (add) a “class” attribute
+:meth:`~.SetTextIndent`          Set indentation for first textblock line. Only works for block-level nodes
+:attr:`~.TagName`                Either the HTML tag name like :htmlTag:`p` or `null` if a text node
+:attr:`~.Text`                   Either the node's text or `null` if a tag node
+:attr:`~.IsText`                 Check if the node is a text
+:attr:`~.FirstChild`             Contains the first node one level below this one (or `null`)
+:attr:`~.LastChild`              Contains the last node one level below this one (or `null`)
+:attr:`~.Next`                   The next node at the same level (or `null`)
+:attr:`~.Previous`               The previous node at the same level
+:attr:`~.Root`                   The top node of the DOM, which hence has the tagname :htmlTag:`html`
 ================================ ===========================================================================================
 
 
@@ -94,7 +94,7 @@ There is no need to ever directly construct an :ref:`Xml` object: after creating
 
        Add a :htmlTag:`div` tag, context manager. See `div <https://developer.mozilla.org/en-US/docs/Web/HTML/Element/div>`_.
 
-    .. method:: AddHeader(int level = 1)
+    .. method:: AddHeader(int level: 1)
 
        Add a header tag (one of :htmlTag:`h1` to :htmlTag:`h6`), context manager. See `headings <https://developer.mozilla.org/en-US/docs/Web/HTML/Element/Heading_Elements>`_.
 
@@ -104,20 +104,20 @@ There is no need to ever directly construct an :ref:`Xml` object: after creating
 
        Add a :htmlTag:`hr` tag. See `hr <https://developer.mozilla.org/en-US/docs/Web/HTML/Element/hr>`_.
 
-    .. method:: AddImage(string name, string width=null, string height=null, string imgFloat = null, string align = null)
+    .. method:: AddImage(string name, string width: null, string height: null, string imgFloat: null, string align: null)
 
        Add an :htmlTag:`img` tag. This causes the inclusion of the named image in the DOM.
 
-       :arg str name: the filename of the image. This **must be the member name** of some entry of the :ref:`Archive` parameter of the :ref:`Story` constructor.
-       :arg width: if provided, either an absolute (int) value, or a percentage string like "30%". A percentage value refers to the width of the specified `where` rectangle in :meth:`Story.place`. If this value is provided and `height` is omitted, the image will be included keeping its aspect ratio.
-       :arg height: if provided, either an absolute (int) value, or a percentage string like "30%". A percentage value refers to the height of the specified `where` rectangle in :meth:`Story.place`. If this value is provided and `width` is omitted, the image's aspect ratio will be honored.
+       :arg string name: the filename of the image. This **must be the member name** of some entry of the :ref:`Archive` parameter of the :ref:`Story` constructor.
+       :arg string width: if provided, either an absolute (int) value, or a percentage string like "30%". A percentage value refers to the width of the specified `where` rectangle in :meth:`Story.Place`. If this value is provided and `height` is omitted, the image will be included keeping its aspect ratio.
+       :arg string height: if provided, either an absolute (int) value, or a percentage string like "30%". A percentage value refers to the height of the specified `where` rectangle in :meth:`Story.Place`. If this value is provided and `width` is omitted, the image's aspect ratio will be honored.
 
-    .. method:: AddLink(string href, string text=null)
+    .. method:: AddLink(string href, string text: null)
 
        Add an :htmlTag:`a` tag - inline element, treated like text.
 
-       :arg str href: the URL target.
-       :arg str text: the text to display. If omitted, the `href` text is shown instead.
+       :arg string href: the URL target.
+       :arg string text: the text to display. If omitted, the `href` text is shown instead.
 
     .. method:: AddNumberList
 
@@ -169,8 +169,8 @@ There is no need to ever directly construct an :ref:`Xml` object: after creating
 
        Set an arbitrary key to some value (which may be empty).
 
-       :arg str key: the name of the attribute.
-       :arg str value: the (optional) value of the attribute.
+       :arg string key: the name of the attribute.
+       :arg string value: the (optional) value of the attribute.
 
     .. method:: GetAttributes()
 
@@ -182,7 +182,7 @@ There is no need to ever directly construct an :ref:`Xml` object: after creating
 
        Get the attribute value of `key`.
 
-       :arg str key: the name of the attribute.
+       :arg string key: the name of the attribute.
 
        :returns: a string with the value of `key`.
 
@@ -190,7 +190,7 @@ There is no need to ever directly construct an :ref:`Xml` object: after creating
 
        Remove the attribute `key` from the node.
 
-       :arg str key: the name of the attribute.
+       :arg string key: the name of the attribute.
 
     .. method:: SetBgColor(int value)
     .. method:: SetBgColor(float[] value)
@@ -212,37 +212,37 @@ There is no need to ever directly construct an :ref:`Xml` object: after creating
 
        :arg value: either an RGB value like (255, 0, 0) (for "red") or a valid `color <https://developer.mozilla.org/en-US/docs/Web/CSS/color_value>`_ value.
 
-    .. method:: SetColumns(value)
+    .. method:: SetColumns(int cols)
 
        Set the number of columns.
 
-       :arg value: a valid `columns <https://developer.mozilla.org/en-US/docs/Web/CSS/columns>`_ value.
+       :arg int cols: a valid `columns <https://developer.mozilla.org/en-US/docs/Web/CSS/columns>`_ value.
 
        .. note:: Currently ignored - supported in a future MuPDF version.
 
-    .. method:: SetFont(int value)
+    .. method:: SetFont(string font)
 
        Set the font-family.
 
-       :arg str value: e.g. "sans-serif".
+       :arg string value: e.g. "sans-serif".
 
-    .. method:: SetFontSize(float value)
+    .. method:: SetFontSize(float fontSize)
 
        Set the font size for text following.
 
-       :arg value: a float or a valid `font-size <https://developer.mozilla.org/en-US/docs/Web/CSS/font-size>`_ value.
+       :arg float fontSize: a float or a valid `font-size <https://developer.mozilla.org/en-US/docs/Web/CSS/font-size>`_ value.
 
-    .. method:: SetId(string unqid)
+    .. method:: SetId(string unique)
 
        Set a :htmlTag:`id`. This serves as a unique identification of the node within the DOM. Use it to easily locate the node to inspect or modify it. A check for uniqueness is performed.
 
-       :arg str unqid: id string of the node.
+       :arg string unique: id string of the node.
 
-    .. method:: SetItalic(bool value)
+    .. method:: SetItalic(bool isItalic)
 
        Set italic on or off or to some string value for the text following it.
 
-       :arg value: `true`, `false` or some valid `font-style <https://developer.mozilla.org/en-US/docs/Web/CSS/font-style>`_ value.
+       :arg bool isItalic: `true`, `false` or some valid `font-style <https://developer.mozilla.org/en-US/docs/Web/CSS/font-style>`_ value.
 
     .. method:: SetLeading(string leading)
 
@@ -250,17 +250,17 @@ There is no need to ever directly construct an :ref:`Xml` object: after creating
 
        :arg float leading: the distance in points to the previous block.
 
-    .. method:: SetLineHeight(string value)
+    .. method:: SetLineHeight(string lineHeight)
 
        Set height of a line.
 
-       :arg value:  a float like 1.5 (which sets to `1.5 * fontsize`), or some valid `line-height <https://developer.mozilla.org/en-US/docs/Web/CSS/line-height>`_ value.
+       :arg string lineHeight:  a float like 1.5 (which sets to `1.5 * fontSize`), or some valid `line-height <https://developer.mozilla.org/en-US/docs/Web/CSS/line-height>`_ value.
 
-    .. method:: SetMargins(string value)
+    .. method:: SetMargins(string val)
 
        Set the margin(s).
 
-       :arg value: float or string with up to 4 values. See `CSS documentation <https://developer.mozilla.org/en-US/docs/Web/CSS/margin>`_.
+       :arg string val: float or string with up to 4 values. See `CSS documentation <https://developer.mozilla.org/en-US/docs/Web/CSS/margin>`_.
 
     .. method:: SetPageBreakAfter
 
@@ -270,23 +270,23 @@ There is no need to ever directly construct an :ref:`Xml` object: after creating
 
        Insert a page break before this node.
 
-    .. method:: SetProperties(string align=null, string bgcolor=null, bool bold=false, string color=null, int columns=0, string font=null, int fontsize=10, string indent=null, bool italic=false, string leading=null, string lineheight=null, string margins=null, string pageBreakAfter=false, string pageBreakBefore=false, string wordSpacing = null, string unqid=null, string cls=null)
+    .. method:: SetProperties(string align: null, string bgcolor: null, bool bold: false, string color: null, int columns: 0, string font: null, int fontSize: 10, string indent: null, bool italic: false, string leading: null, string lineHeight: null, string margins: null, string pageBreakAfter: false, string pageBreakBefore: false, string wordSpacing: null, string unqid: null, string cls: null)
 
        Set any or all desired properties in one call. The meaning of argument values equal the values of the corresponding `set_` methods.
 
        .. note:: The properties set by this method are directly attached to the node, whereas every `set_` method generates a new :htmlTag:`span` below the current node that has the respective property. So to e.g. "globally" set some property for the :htmlTag:`body`, this method must be used.
 
-    .. method:: AddStyle(string value)
+    .. method:: AddStyle(string text)
 
        Set (add) some style attribute not supported by its own `set_` method.
 
-       :arg str value: any valid CSS style value.
+       :arg string value: any valid CSS style value.
 
-    .. method:: AddClass(string value)
+    .. method:: AddClass(string text)
 
        Set (add) some "class" attribute.
 
-       :arg str value: the name of the class. Must have been defined in either the HTML or the CSS source of the DOM.
+       :arg string value: the name of the class. Must have been defined in either the HTML or the CSS source of the DOM.
 
     .. method:: SetTextIndent(string value)
 
@@ -295,11 +295,11 @@ There is no need to ever directly construct an :ref:`Xml` object: after creating
        :arg value: a valid `text-indent <https://developer.mozilla.org/en-US/docs/Web/CSS/text-indent>`_ value. Please note that negative values do not work.
 
 
-    .. method:: AppendChild(MuPDFXml node)
+    .. method:: AppendChild(Xml child)
 
        Append a child node. This is a low-level method used by other methods like :meth:`Xml.AddParagraph`.
 
-       :arg node: the :ref:`Xml` node to append.
+       :arg child: the :ref:`Xml` node to append.
 
     .. method:: CreateTextNode(string text)
 
@@ -319,17 +319,17 @@ There is no need to ever directly construct an :ref:`Xml` object: after creating
        :rtype: :ref:`Xml`
        :returns: the created element. To actually bind it to the DOM, use :meth:`Xml.AppendChild`.
 
-    .. method:: InsertBefore(MuPDFXml elem)
+    .. method:: InsertBefore(Xml node)
 
        Insert the given element `elem` before this node.
 
-       :arg elem: some :ref:`Xml` element.
+       :arg node: some :ref:`Xml` element.
 
-    .. method:: InsertAfter(MuPDFXml elem)
+    .. method:: InsertAfter(Xml node)
 
        Insert the given element `elem` after this node.
 
-       :arg elem: some :ref:`Xml` element.
+       :arg node: some :ref:`Xml` element.
 
     .. method:: Clone()
 
@@ -424,8 +424,6 @@ The standard way to add nodes to a DOM is this:
    para.add_txt("this is bold and italic");
    para.SetItalic(false).SetBold(false);  // all following text will be regular
    para.AddText("regular text");
-
-
 
 Methods that are flagged as "context managers" can conveniently be used in this way:
 
