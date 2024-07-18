@@ -94,8 +94,8 @@ namespace MuPDF.NET
             if (smallCaps == 0)
                 trm = _nativeText.fz_show_string(font.ToFzFont(), trm, text, wmode, right2left, (fz_bidi_direction)markupDir, lang);
             else
-                trm = Utils.ShowStringCS(_nativeText, font, trm, text, wmode, (fz_bidi_direction)right2left, markupDir, lang);
-
+                trm = Utils.ShowStringCS(_nativeText, font, trm, text, wmode, right2left, (fz_bidi_direction)markupDir, lang);
+            Console.WriteLine(trm.ToString());
             LastPoint = new Point(trm.e, trm.f) * Ctm;
             TextRect = Bbox * Ctm;
             (Rect, Point) ret = (TextRect, LastPoint);
@@ -254,7 +254,7 @@ namespace MuPDF.NET
             if (morph != null)
             {
                 Point p = morph.P * ICtm;
-                Matrix matrixDelta = (new Matrix(1, 1)).Pretranslate(p.X, p.Y);
+                Matrix matrixDelta = (new Matrix(1f, 1f)).Pretranslate(p.X, p.Y);
                 matrix_ = ~matrixDelta * morph.M * matrixDelta;
             }
 

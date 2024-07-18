@@ -3576,11 +3576,12 @@ namespace MuPDF.NET
             FzMatrix trm,
             string s,
             int wmode,
-            fz_bidi_direction bidi_level,
-            int markupDir,
+            int bidi_level,
+            fz_bidi_direction markupDir,
             fz_text_language langauge
         )
         {
+            Console.WriteLine("hello");
             int i = 0;
             while (i < s.Length)
             {
@@ -3602,12 +3603,13 @@ namespace MuPDF.NET
                     trm,
                     gid,
                     outparams.rune,
-                    (int)bidi_level,
                     wmode,
-                    (fz_bidi_direction)markupDir,
+                    bidi_level,
+                    markupDir,
                     langauge
                 );
                 float adv = mupdf.mupdf.fz_advance_glyph(font, gid, wmode);
+                
                 if (wmode == 0)
                     trm = trm.fz_pre_translate(adv, 0);
                 else
