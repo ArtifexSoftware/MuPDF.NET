@@ -1,4 +1,4 @@
-.. include:: header.rst
+.. include:: ../header.rst
 
 ===============================
 Constants and Enumerations
@@ -507,4 +507,4 @@ MuPDF has defined the following icons for **rubber stamp** annotations::
     STAMP_TopSecret 12
     STAMP_Draft 13
 
-.. include:: footer.rst
+.. include:: ../footer.rst

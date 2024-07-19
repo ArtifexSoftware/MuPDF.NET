@@ -31,7 +31,7 @@ How to use **MuPDF.NET**
 ----------------------------------
 
 - You need `mupdfcpp64.dll` and `mupdfcsharp.dll`.
-- You have to select MuPDF.NET.dll as a reference and use with `using MuPDF.NET;`. For this, you have to copy these files in same level as your **MuPDF.NET** project.
+- You have to select `MuPDF.NET.dll` as a reference and use with `using MuPDF.NET;`. For this, you have to copy these files in same level as your **MuPDF.NET** project.
 
 
 

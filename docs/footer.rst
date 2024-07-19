@@ -105,7 +105,7 @@
          const footerItemEnd = document.getElementsByClassName("footer-items__end");
          for (var i=0;i<footerItemEnd.length;i++) {
             const endItem = footerItemEnd[i];
-            endItem.innerHTML = "<a href='https://discord.gg/zpyAHM7XtF' target='new'>Support</a>";
+            endItem.innerHTML = "<a href='https://discord.gg/DQ8GBG6V4g' target='new'>Support</a>";
          }
 
 
@@ -124,6 +124,19 @@
 
 
    </script>
+
+
+
+.. note - this ensures that the Sphinx build system will pull in the image (as it is referenced in an RST file) to _images,
+   we don't want to display it via rst markup due to limitations (hence width:0), however we do want it available for our raw HTML
+   which we use in header.rst.
+
+.. image:: images/discord-mark-blue.svg
+          :alt:
+          :width: 0
+          :height: 0
+          :target: https://discord.gg/DQ8GBG6V4g
+
 
 
 .. external links
