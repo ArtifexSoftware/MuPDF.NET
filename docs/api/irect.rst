@@ -66,7 +66,7 @@ IRect
 
       The intersection (common rectangular area) of the current rectangle and *ir* is calculated and replaces the current rectangle. If either rectangle is empty, the result is also empty. If either rectangle is infinite, the other one is taken as the result -- and hence also infinite if both rectangles were infinite.
 
-      :arg rect_like ir: Second rectangle.
+      :arg Rect ir: Second rectangle.
 
    .. method:: Contains(x)
 

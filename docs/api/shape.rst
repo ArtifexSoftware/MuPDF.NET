@@ -138,7 +138,7 @@ Several draw methods can be executed in a row and each one of them will contribu
 
       The drawing starts and ends at the middle point of the line `BottomLeft -> TopLeft` corners in an anti-clockwise movement.
 
-      :arg rect_like,quad_like tetra: :data:`Rect` or :data:`Quad`.
+      :arg Rect,quad_like tetra: :data:`Rect` or :data:`Quad`.
 
       :rtype: :ref:`Point`
       :returns: the middle point of line `rect.BottomLeft -> rect.TopLeft`, or resp. `quad.LowLeft -> quad.UpperLeft`. Look at just a few examples here.
