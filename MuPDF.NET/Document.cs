@@ -496,22 +496,18 @@ namespace MuPDF.NET
                                 {
                                     try
                                     {
-/*                                        if (
-                                            Utils.MUPDF_VERSION.Item1 == 1
-                                            && Utils.MUPDF_VERSION.Item2 >= 24
-                                        )*/
-                                        {
-                                            FzStream _stream = new FzStream(fileName);
-                                            FzStream accel = new FzStream();
-                                            FzArchive archive = new FzArchive();
+                                        FzStream _stream = new FzStream(fileName);
+                                        FzStream accel = new FzStream();
+                                        FzArchive archive = new FzArchive();
+                                        // mupdf version greater than 1.25.0
+                                        /*{ 
                                             doc = new FzDocument(
-                                                mupdf.mupdf.ll_fz_document_handler_open(handler, _stream.m_internal, accel.m_internal, archive.m_internal)       
+                                                mupdf.mupdf.ll_fz_document_handler_open(handler, _stream.m_internal, accel.m_internal, archive.m_internal, null)       
                                             );
-                                        }
-                                        /*else
-                                        {
-                                            doc = new FzDocument(mupdf.mupdf.ll_fz_document_open_fn_call(handler.open, filename));
                                         }*/
+                                        {
+                                            doc = new FzDocument(mupdf.mupdf.ll_fz_document_handler_open(handler, _stream.m_internal, accel.m_internal, archive.m_internal, null));
+                                        }
                                     }
                                     catch (Exception)
                                     {

@@ -95,7 +95,6 @@ namespace MuPDF.NET
                 trm = _nativeText.fz_show_string(font.ToFzFont(), trm, text, wmode, right2left, (fz_bidi_direction)markupDir, lang);
             else
                 trm = Utils.ShowStringCS(_nativeText, font, trm, text, wmode, right2left, (fz_bidi_direction)markupDir, lang);
-            Console.WriteLine(trm.ToString());
             LastPoint = new Point(trm.e, trm.f) * Ctm;
             TextRect = Bbox * Ctm;
             (Rect, Point) ret = (TextRect, LastPoint);

@@ -3581,7 +3581,6 @@ namespace MuPDF.NET
             fz_text_language langauge
         )
         {
-            Console.WriteLine("hello");
             int i = 0;
             while (i < s.Length)
             {
