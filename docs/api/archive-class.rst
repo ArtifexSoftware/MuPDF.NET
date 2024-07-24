@@ -16,14 +16,14 @@ Archives are currently only used by :ref:`Story` objects to specify where to loo
 :meth:`Archive.Add`              add new data to the archive
 :meth:`Archive.HasEntry`         check if given name is a member
 :meth:`Archive.ReadEntry`        read the data given by the name
-:attr:`Archive.EntryList`        list[dict] of archive items
+:attr:`Archive.EntryList`        list of SubArchive items
 ================================ ===================================================
 
 **Class API**
 
 .. class:: Archive
 
-   .. method:: Archive(string content [, string path = ""])
+   .. method:: Archive(string content, string path: "")
 
       Creates a new archive. Without parameters, an empty archive is created.
 
@@ -50,11 +50,11 @@ Archives are currently only used by :ref:`Story` objects to specify where to loo
 
       .. note:: If duplicate entry names exist in the archive, always the last entry with that name will be found / retrieved. During archive creation, or appending more data to an archive (see :meth:`Archive.add`) no check for duplicates will be made. Use the `path` parameter to prevent this from happening.
 
-   .. method:: Add(string content [, string path])
-   .. method:: Add(ZipArchive content [, string path])
-   .. method:: Add(TarReader content [, string path])
-   .. method:: Add(FzArchive content [, string path])
-   .. method:: Add(byte[] content [, string path])
+   .. method:: Add(string content, string path)
+   .. method:: Add(ZipArchive content, string path)
+   .. method:: Add(TarReader content, string path)
+   .. method:: Add(FzArchive content, string path)
+   .. method:: Add(byte[] content, string path)
 
       Append a sub-archive. The meaning of the parameters are exactly the same as explained above. Of course, parameter `content` is not optional here.
 
