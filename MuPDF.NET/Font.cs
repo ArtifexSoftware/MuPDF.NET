@@ -127,24 +127,28 @@ namespace MuPDF.NET
             int embed = 1
         )
         {
-            string fNameLower = fontName.ToLower();
-            if (
-                fNameLower.IndexOf("/") != -1
-                || fNameLower.IndexOf("\\") != -1
-                || fNameLower.IndexOf(".") != -1
-            )
-                Console.WriteLine("Warning: did you mean a fontfile?");
-            if ((new List<string>() { "cjk", "china-t", "china-ts" }).Contains(fNameLower))
-                ordering = 0;
-            else if (fNameLower.StartsWith("china-s"))
-                ordering = 1;
-            else if (fNameLower.StartsWith("korea"))
-                ordering = 3;
-            else if (fNameLower.StartsWith("japan"))
-                ordering = 2;
-            // else if (fNameLower)
-            else if (ordering < 0)
-                fontName = Utils.Base14_fontdict.GetValueOrDefault(fontName, fontName);
+            if (fontName != null)
+            {
+                string fNameLower = fontName.ToLower();
+                if (
+                    fNameLower.IndexOf("/") != -1
+                    || fNameLower.IndexOf("\\") != -1
+                    || fNameLower.IndexOf(".") != -1
+                )
+                    Console.WriteLine("Warning: did you mean a fontfile?");
+                if ((new List<string>() { "cjk", "china-t", "china-ts" }).Contains(fNameLower))
+                    ordering = 0;
+                else if (fNameLower.StartsWith("china-s"))
+                    ordering = 1;
+                else if (fNameLower.StartsWith("korea"))
+                    ordering = 3;
+                else if (fNameLower.StartsWith("japan"))
+                    ordering = 2;
+                // else if (fNameLower)
+                else if (ordering < 0)
+                    fontName = Utils.Base14_fontdict.GetValueOrDefault(fontName, fontName);
+            }
+            
             fz_text_language lang = mupdf.mupdf.fz_text_language_from_string(language);
             _nativeFont = Utils.GetFont(
                 fontName,

@@ -271,18 +271,19 @@ namespace MuPDF.NET
 
         public Quad Transform(Matrix m)
         {
-            UpperLeft *= m;
-            UpperRight *= m;
-            LowerLeft *= m;
-            LowerRight *= m;
+            UpperLeft = UpperLeft * m;
+            UpperRight = UpperRight * m;
+            LowerLeft = LowerLeft * m;
+            LowerRight = LowerRight * m;
 
             return this;
         }
 
         public static Quad operator *(Quad op1, Matrix op2)
         {
-            op1.Transform(op2);
-            return op1;
+            Quad op = new Quad(op1);
+            op = op.Transform(op2);
+            return op;
         }
 
         public Quad Morph(Point p, Matrix m)
@@ -292,6 +293,9 @@ namespace MuPDF.NET
                 return Utils.INFINITE_RECT().Quad;
             }
             Matrix delta = (new Matrix(1f, 1f)).Pretranslate(p.X, p.Y);
+            Console.WriteLine("------------------");
+            Console.WriteLine((this).ToString());
+            Console.WriteLine((this * ~delta).ToString());
             return this * ~delta * m * delta;
         }
 

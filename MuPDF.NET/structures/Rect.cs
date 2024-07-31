@@ -224,7 +224,10 @@ namespace MuPDF.NET
 
         public static Rect operator &(Rect op1, Rect op2)
         {
-            return op1.Intersect(op2);  // Assuming you have implemented the Intersect method
+            Rect t1 = new Rect(op1);
+            Rect t2 = new Rect(op2);
+
+            return t1.Intersect(t2);  // Assuming you have implemented the Intersect method
         }
 
         public bool Contains(float op)
