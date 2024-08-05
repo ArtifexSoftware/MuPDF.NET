@@ -5194,6 +5194,26 @@ namespace MuPDF.NET
         public static void FillWidget(Annot annot, Widget widget)
         {
             Utils.GetWidgetProperties(annot, widget);
+
+            widget.Rect = annot.Rect;
+            widget.Xref = annot.Xref;
+            widget.Parent = annot.Parent;
+            widget._annot = annot._nativeAnnotion;
+
+            if (string.IsNullOrEmpty(widget.Script))
+                widget.Script = null;
+            if (string.IsNullOrEmpty(widget.ScriptStroke))
+                widget.ScriptStroke = null;
+            if (string.IsNullOrEmpty(widget.ScriptFormat))
+                widget.ScriptFormat = null;
+            if (string.IsNullOrEmpty(widget.ScriptChange))
+                widget.ScriptChange = null;
+            if (string.IsNullOrEmpty(widget.ScriptCalc))
+                widget.ScriptCalc = null;
+            if (string.IsNullOrEmpty(widget.ScriptBlur))
+                widget.ScriptBlur = null;
+            if (string.IsNullOrEmpty(widget.ScriptFocus))
+                widget.ScriptFocus = null;
         }
 
         public static string GetFieldTypeText(int wtype)
