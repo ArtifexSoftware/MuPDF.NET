@@ -120,6 +120,7 @@ namespace MuPDF.NET
                     if (!sample.SequenceEqual(sample0))
                         return false;
                 }
+            
                 return true;
             }
         }
@@ -140,6 +141,7 @@ namespace MuPDF.NET
                     return null;
 
                 Memory<byte> ret = new Memory<byte>(SAMPLES);
+                
                 return ret;
             }
         }
@@ -231,6 +233,7 @@ namespace MuPDF.NET
             {
                 ret.Add(Convert.ToByte(_nativePixmap.fz_samples_get(offset + i)));
             }
+            
             return ret;
         }
 
@@ -483,6 +486,7 @@ namespace MuPDF.NET
                     break;
                 y -= 1;
             }
+            
             return 1;
         }
 
@@ -515,6 +519,7 @@ namespace MuPDF.NET
                 throw new Exception(Utils.ErrorMessages["MSG_COLOR_COUNT_FAILED"]);
             if (!colors)
                 return rc.Count;
+            
             return rc;
         }
 
@@ -545,6 +550,7 @@ namespace MuPDF.NET
 
             if (allPixels == 0)
                 return (1, Enumerable.Repeat((byte)255, N).ToArray());
+            
             return (count / (float)allPixels, maxPixel.Split(',').Select(b => byte.Parse(b)).ToArray());
         }
 
@@ -617,6 +623,7 @@ namespace MuPDF.NET
                 if (y == 0)
                     break;
             }
+            
             return 1;
         }
 
@@ -636,6 +643,7 @@ namespace MuPDF.NET
             FzIrect r = bbox.ToFzIrect();
             if (r.fz_is_infinite_irect() != 0)
                 r = pm.fz_pixmap_bbox();
+            
             return Convert.ToBoolean(InvertPixmapRect(pm, r));
         }
 
@@ -716,6 +724,7 @@ namespace MuPDF.NET
             int i = stride * y + n * x;
 
             byte[] pixel = SAMPLES.Skip(i).Take(n).ToArray();
+            
             return pixel;
         }
 
@@ -771,6 +780,7 @@ namespace MuPDF.NET
         {
             int x = a * b + 128;
             x += x / 256;
+            
             return x / 256;
         }
 
@@ -930,6 +940,7 @@ namespace MuPDF.NET
 
             if (idx == 7)
                 SetDpi(Xres, Yres);
+            
             return ToBytes(idx, jpgQuality);
         }
 
@@ -1004,8 +1015,8 @@ namespace MuPDF.NET
 
                 if (y == 0) break;
             }
+            
             return 1;
-
         }
 
         /// <summary>

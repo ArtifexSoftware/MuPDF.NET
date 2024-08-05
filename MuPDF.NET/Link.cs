@@ -99,6 +99,7 @@ namespace MuPDF.NET
                     || string.IsNullOrEmpty(_nativeLink.m_internal.uri)
                 )
                     return false;
+                
                 return mupdf.mupdf.fz_is_external_link(_nativeLink.m_internal.uri) != 0;
             }
         }
@@ -161,6 +162,7 @@ namespace MuPDF.NET
             {
                 if (_nativeLink == null || _nativeLink.m_internal == null)
                     throw new Exception("FzLink.m_internal not available");
+                
                 return new Rect(new FzRect(_nativeLink.rect()));
             }
         }
@@ -180,6 +182,7 @@ namespace MuPDF.NET
                 return null;
 
             Border b = Utils.GetAnnotBorder(linkObj);
+            
             return b;
         }
 

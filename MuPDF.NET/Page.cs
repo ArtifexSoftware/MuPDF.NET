@@ -302,7 +302,7 @@ namespace MuPDF.NET
             {
                 /*int annot = 0;*/
                 PdfPage page = _pdfPage;
-                if (page == null)
+                if (page.m_internal == null)
                     return null;
                 PdfAnnot annot = page.pdf_first_widget();
                 if (annot.m_internal == null)
@@ -3130,9 +3130,9 @@ namespace MuPDF.NET
                 clip: clip
             );
 
-            dl = null;
             if (dpi != 0)
                 pix.SetDpi(dpi, dpi);
+
             return pix;
         }
 
@@ -3257,6 +3257,7 @@ namespace MuPDF.NET
                 oc: oc
             );
             img.Commit(overlay);
+            
             return ret;
         }
 
@@ -3843,6 +3844,7 @@ namespace MuPDF.NET
                 item.Xref = xref;
                 imgInfo[i] = item;
             }
+            
             return imgInfo;
         }
 
@@ -3927,6 +3929,7 @@ namespace MuPDF.NET
             if (labels.Count == 0)
                 return "";
             labels.Sort();
+            
             return Utils.GetPageLabel(Number, labels);
         }
 
@@ -4105,6 +4108,7 @@ namespace MuPDF.NET
                     return FullOcr(this, dpi, language, flags);
                 }
             }
+            
             return tp;
         }
 
@@ -4179,6 +4183,7 @@ namespace MuPDF.NET
             );
             if (ret >= 0)
                 img.Commit(overlay);
+            
             return ret;
         }
 
@@ -4202,6 +4207,7 @@ namespace MuPDF.NET
             PdfPage page = _pdfPage;
             if (page.m_internal == null)
                 return;
+            
             PdfFilterOptions filter = Utils.MakePdfFilterOptions(recurse: 1, sanitize: sanitize);
             page.doc().pdf_filter_page_contents(page, filter);
         }
@@ -4300,6 +4306,7 @@ namespace MuPDF.NET
                 widget.Rect = r;
                 widget.Update();
             }
+            
             return iMat;
         }
 
@@ -4445,6 +4452,7 @@ namespace MuPDF.NET
                 pRects = pRects.OrderBy(p => p.Y1).ThenBy(p => p.X0).ToList();
             }
             newRects = newRects.OrderBy(p => p.Y1).ThenBy(p => p.X0).ToList();
+         
             return newRects.Where(r => r.Width > deltaX && r.Height > deltaY).ToList();
         }
 
@@ -4471,6 +4479,7 @@ namespace MuPDF.NET
             mupdf.mupdf.fz_close_device(dev);
             output.fz_close_output();
             string text = Utils.EscapeStrFromBuffer(res);
+            
             return text;
         }
     }
@@ -4844,6 +4853,7 @@ namespace MuPDF.NET
             LineartPath(ctx, path);
             if (PathDict == null)
                 return;
+            
             PathDict.Type = "s";
             PathDict.StrokeOpacity = alpha;
             PathDict.Color = LineartColor(cs, color);

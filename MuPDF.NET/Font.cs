@@ -204,6 +204,7 @@ namespace MuPDF.NET
                     );
                 rc.Add(fontSize * font.fz_advance_glyph(gid, wmode));
             }
+            
             return rc;
         }
 
@@ -235,6 +236,7 @@ namespace MuPDF.NET
             }
             else
                 (gid, font) = _nativeFont.fz_encode_character_with_fallback(chr, script, (int)lang);
+            
             return font.fz_advance_glyph(gid, wmode);
         }
 
@@ -259,6 +261,7 @@ namespace MuPDF.NET
             }
             else
                 (gid, font) = _nativeFont.fz_encode_character_with_fallback(chr, script, (int)lang);
+            
             return new Rect(font.fz_bound_glyph(gid, new FzMatrix()));
         }
 

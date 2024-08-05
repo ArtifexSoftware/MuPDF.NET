@@ -34,6 +34,7 @@ namespace MuPDF.NET
         public TextWriter(Rect pageRect, float opacity = 1, float[] color = null)
         {
             _nativeText = mupdf.mupdf.fz_new_text();
+
             Opacity = opacity;
             Rect = pageRect;
             Ctm = new Matrix(1, 0, 0, -1, 0, Rect.Height);
@@ -50,8 +51,7 @@ namespace MuPDF.NET
         {
             get
             {
-                Rect val = new Rect(mupdf.mupdf.fz_bound_text(_nativeText, new FzStrokeState(), new FzMatrix()));
-                return val;
+                return new Rect(mupdf.mupdf.fz_bound_text(_nativeText, new FzStrokeState(0), new FzMatrix())) + new Rect(10, 10, -10, -10);
             }
         }
 
@@ -70,9 +70,12 @@ namespace MuPDF.NET
         public (Rect, Point) Append(Point pos, string text, Font font, float fontSize = 11.0f, string language = null, int right2left = 0, int smallCaps = 0)
         {
             pos = pos * ICtm;
-            if (font == null)
+            int markupDir = 0;
+            int wmode = 0;
+
+            if (font == null || font.IsNull)
             {
-                font = new Font("helv");
+                throw new ArgumentNullException("Invalid font");
             }
 
             if (!font.IsWriteable)
@@ -89,12 +92,12 @@ namespace MuPDF.NET
 
             fz_text_language lang = mupdf.mupdf.fz_text_language_from_string(language);
             FzMatrix trm = mupdf.mupdf.fz_make_matrix(fontSize, 0, 0, fontSize, pos.X, pos.Y);
-            int markupDir = 0;
-            int wmode = 0;
+            
             if (smallCaps == 0)
                 trm = _nativeText.fz_show_string(font.ToFzFont(), trm, text, wmode, right2left, (fz_bidi_direction)markupDir, lang);
             else
                 trm = Utils.ShowStringCS(_nativeText, font, trm, text, wmode, right2left, (fz_bidi_direction)markupDir, lang);
+
             LastPoint = new Point(trm.e, trm.f) * Ctm;
             TextRect = Bbox * Ctm;
             (Rect, Point) ret = (TextRect, LastPoint);
@@ -106,10 +109,13 @@ namespace MuPDF.NET
 
         public string CleanRtl(string text)
         {
+            List<int> idx = new List<int>();
+            List<int> idx2 = new List<int>();
+
             if (string.IsNullOrEmpty(text))
                 return null;
+
             string[] words = text.Split(" ");
-            List<int> idx = new List<int>();
             for (int i = 0; i < words.Length; i++)
             {
                 string w = words[i];
@@ -121,7 +127,7 @@ namespace MuPDF.NET
                 }
             }
 
-            List<int> idx2 = new List<int>();
+            
             for (int j = 0; j < idx.Count ; j ++)
             {
                 if (idx2.Count == 0)
@@ -161,6 +167,7 @@ namespace MuPDF.NET
                 Append(pos, c.ToString(), font: font, fontSize: fontSiz, language: language, smallCaps: smallCaps ? 1 : 0);
                 pos.Y += lheight;
             }
+
             return (TextRect, LastPoint);
         }
 
@@ -237,6 +244,7 @@ namespace MuPDF.NET
                 bdc = $"/OC /{optCont} BDC";
                 emc = "EMC";
             }
+
             List<string> newContLines = new List<string>() { "q" };
             if (!string.IsNullOrEmpty(bdc))
                 newContLines.Add(bdc);
@@ -245,6 +253,7 @@ namespace MuPDF.NET
             float delta = 0;
             if (page.Rotation == 90 || page.Rotation == 270)
                 delta = page.Rect.Height - page.Rect.Width;
+
             Rect mb = page.MediaBox;
             if (!cb.IsZero()  || mb.Y0 != 0 || delta != 0)
                 newContLines.Add($"1 0 0 1 {cb.X} {cb.Y + mb.Y0 - delta} cm");
@@ -298,6 +307,7 @@ namespace MuPDF.NET
             if (!string.IsNullOrEmpty(emc))
                 newContLines.Add(emc);
             newContLines.Add("Q\n");
+
             byte[] content = Encoding.UTF8.GetBytes(string.Join("\n", newContLines));
             Utils.InsertContents(page, content, overlay);
             foreach (Font font in UsedFonts)
@@ -360,6 +370,7 @@ namespace MuPDF.NET
             {
                 List<string> nwords = new List<string>();
                 List<float> wordLengths = new List<float>();
+
                 foreach (string word in words)
                 {
                     List<float> charLengths = CharLengths(word);
@@ -387,6 +398,7 @@ namespace MuPDF.NET
                             n -= 1;
                     }
                 }
+
                 return (nwords, wordLengths);
             }
 
@@ -437,6 +449,7 @@ namespace MuPDF.NET
                 factor = 0.5f;
             else if (align == Utils.TEXT_ALIGN_RIGHT)
                 factor = 1.0f;
+
             string[] textLines = text.Split("\n");
             int maxLines = Convert.ToInt32((rect.Y1 - pos.Y) / LineHeight) + 1;
 
@@ -462,6 +475,7 @@ namespace MuPDF.NET
                 string line_ = line;
                 if (rtl)
                     line_ = CleanRtl(line_);
+
                 float tl = TextLen(line_);
                 if (tl <= width)
                 {
@@ -494,6 +508,7 @@ namespace MuPDF.NET
                     }
                 }
             }
+
             int nLines = newLines.Count;
             if (nLines > maxLines)
             {
@@ -518,10 +533,13 @@ namespace MuPDF.NET
                 {
                     break;
                 }
+
                 if (rtl)
                     line = string.Join("", line.Reverse().ToArray());
+
                 if (i == 0)
                     start = pos;
+
                 if (align == Utils.TEXT_ALIGN_JUSTIFY && !noJustify.Contains(i) && tl < stdWidth)
                 {
                     OutputJustify(start, line);
@@ -529,6 +547,7 @@ namespace MuPDF.NET
                     start.Y += LineHeight;
                     continue;
                 }
+
                 if (i > 0 || pos.X == stdStart)
                     start.X += (width - tl) * factor;
 
@@ -536,6 +555,7 @@ namespace MuPDF.NET
                 start.X = stdStart;
                 start.Y += LineHeight;
             }
+
             return newLines;
         }
     }
