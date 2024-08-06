@@ -5160,20 +5160,20 @@ namespace MuPDF.NET
 
         public static int GetBorderStyle(string style)
         {
-            int val = mupdf.mupdf.PDF_ENUM_NAME_S;
+            int val = new PdfObj("S").pdf_to_num();
             if (string.IsNullOrEmpty(style))
                 return val;
             string s = style;
             if (s.StartsWith("b") || s.StartsWith("B"))
-                val = mupdf.mupdf.PDF_ENUM_NAME_B;
+                val = new PdfObj("B").pdf_to_num();
             else if (s.StartsWith("d") || s.StartsWith("D"))
-                val = mupdf.mupdf.PDF_ENUM_NAME_D;
+                val = new PdfObj("D").pdf_to_num();
             else if (s.StartsWith("i") || s.StartsWith("I"))
-                val = mupdf.mupdf.PDF_ENUM_NAME_I;
+                val = new PdfObj("I").pdf_to_num();
             else if (s.StartsWith("u") || s.StartsWith("U"))
-                val = mupdf.mupdf.PDF_ENUM_NAME_U;
+                val = new PdfObj("U").pdf_to_num();
             else if (s.StartsWith("s") || s.StartsWith("S"))
-                val = mupdf.mupdf.PDF_ENUM_NAME_S;
+                val = new PdfObj("S").pdf_to_num();
             return val;
         }
 
