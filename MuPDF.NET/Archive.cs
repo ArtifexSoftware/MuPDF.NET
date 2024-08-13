@@ -155,6 +155,7 @@ namespace MuPDF.NET
             string fmt = "tar";
             if (!File.Exists(path))
                 throw new Exception("Need name for zip file");
+
             string filename = Path.GetFileName(path);
             List<string> entries = new List<string>();
             TarEntry entry;
@@ -194,8 +195,8 @@ namespace MuPDF.NET
         public void Add(string content, string path = "")
         {
             string fmt = null;
-            List<string> entries = new List<string>();
             string mount = null;
+            List<string> entries = new List<string>();
 
             if (Directory.Exists(content))
             {
@@ -238,6 +239,7 @@ namespace MuPDF.NET
         public byte[] ReadEntry(string name)
         {
             FzBuffer buf = _nativeArchive.fz_read_archive_entry(name);
+            
             return Utils.BinFromBuffer(buf);
         }
     }

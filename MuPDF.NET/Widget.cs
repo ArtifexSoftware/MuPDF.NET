@@ -307,7 +307,7 @@ namespace MuPDF.NET
         {
             get
             {
-                return (new Annot(_annot)).Next;
+                return (new Annot(_annot, Parent)).Next;
             }
         }
 

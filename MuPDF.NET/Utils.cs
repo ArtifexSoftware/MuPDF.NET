@@ -13,6 +13,8 @@ namespace MuPDF.NET
 {
     public static class Utils
     {
+        public static (string, string) VERSION = ("1.25.0", "2.0.12-alpha");
+
         public static int FZ_MIN_INF_RECT = (int)(-0x80000000);
 
         public static int FZ_MAX_INF_RECT = (int)0x7fffff80;
@@ -794,11 +796,7 @@ namespace MuPDF.NET
             obj.pdf_dict_put(new PdfObj(key), val);
         }
 
-/*        public static (int, int, int) MUPDF_VERSION = (
-            mupdf.mupdf.FZ_VERSION_MAJOR,
-            mupdf.mupdf.FZ_VERSION_MINOR,
-            mupdf.mupdf.FZ_VERSION_PATCH
-        );*/
+        public static (int, int, int) MUPDF_VERSION = (1, 25, 0);
 
         public static Dictionary<string, string> ErrorMessages = new Dictionary<string, string>()
         {
@@ -1544,26 +1542,26 @@ namespace MuPDF.NET
 
         public static void SetFieldType(PdfDocument doc, PdfObj annotObj, PdfWidgetType type)
         {
-            PdfFieldType setBits = 0;
-            PdfFieldType clearBits = 0;
+            PdfFieldFlags setBits = 0;
+            PdfFieldFlags clearBits = 0;
             PdfObj typeName = null;
 
             if (type == PdfWidgetType.PDF_WIDGET_TYPE_BUTTON)
             {
                 typeName = new PdfObj("Btn");
-                setBits = PdfFieldType.PDF_BTN_FIELD_IS_PUSHBUTTON;
+                setBits = PdfFieldFlags.PDF_BTN_FIELD_IS_PUSHBUTTON;
             }
             else if (type == PdfWidgetType.PDF_WIDGET_TYPE_RADIOBUTTON)
             {
                 typeName = new PdfObj("Btn");
-                clearBits = PdfFieldType.PDF_BTN_FIELD_IS_PUSHBUTTON;
-                setBits = PdfFieldType.PDF_BTN_FIELD_IS_RADIO;
+                clearBits = PdfFieldFlags.PDF_BTN_FIELD_IS_PUSHBUTTON;
+                setBits = PdfFieldFlags.PDF_BTN_FIELD_IS_RADIO;
             }
             else if (type == PdfWidgetType.PDF_WIDGET_TYPE_CHECKBOX)
             {
                 typeName = new PdfObj("Btn");
                 clearBits = (
-                    PdfFieldType.PDF_BTN_FIELD_IS_PUSHBUTTON | PdfFieldType.PDF_BTN_FIELD_IS_RADIO
+                    PdfFieldFlags.PDF_BTN_FIELD_IS_PUSHBUTTON | PdfFieldFlags.PDF_BTN_FIELD_IS_RADIO
                 );
             }
             else if (type == PdfWidgetType.PDF_WIDGET_TYPE_TEXT)
@@ -1573,12 +1571,12 @@ namespace MuPDF.NET
             else if (type == PdfWidgetType.PDF_WIDGET_TYPE_LISTBOX)
             {
                 typeName = new PdfObj("Ch");
-                clearBits = PdfFieldType.PDF_CH_FIELD_IS_COMBO;
+                clearBits = PdfFieldFlags.PDF_CH_FIELD_IS_COMBO;
             }
             else if (type == PdfWidgetType.PDF_WIDGET_TYPE_COMBOBOX)
             {
                 typeName = new PdfObj("Ch");
-                setBits = PdfFieldType.PDF_CH_FIELD_IS_COMBO;
+                setBits = PdfFieldFlags.PDF_CH_FIELD_IS_COMBO;
             }
             else if (type == PdfWidgetType.PDF_WIDGET_TYPE_SIGNATURE)
             {
@@ -3312,13 +3310,13 @@ namespace MuPDF.NET
                 tp;
             if (fromPage < 0)
                 fp = 0;
-            else if (fromPage >= doc2.GetPageCount())
-                fp = doc2.GetPageCount() - 1;
+            else if (fromPage >= doc2.PageCount)
+                fp = doc2.PageCount - 1;
             else
                 fp = fromPage;
 
-            if (toPage < 0 || toPage >= doc2.GetPageCount())
-                tp = doc2.GetPageCount() - 1;
+            if (toPage < 0 || toPage >= doc2.PageCount)
+                tp = doc2.PageCount - 1;
             else
                 tp = toPage;
 
@@ -3578,8 +3576,8 @@ namespace MuPDF.NET
             FzMatrix trm,
             string s,
             int wmode,
-            fz_bidi_direction bidi_level,
-            int markupDir,
+            int bidi_level,
+            fz_bidi_direction markupDir,
             fz_text_language langauge
         )
         {
@@ -3604,12 +3602,13 @@ namespace MuPDF.NET
                     trm,
                     gid,
                     outparams.rune,
-                    (int)bidi_level,
                     wmode,
-                    (fz_bidi_direction)markupDir,
+                    bidi_level,
+                    markupDir,
                     langauge
                 );
                 float adv = mupdf.mupdf.fz_advance_glyph(font, gid, wmode);
+                
                 if (wmode == 0)
                     trm = trm.fz_pre_translate(adv, 0);
                 else
@@ -4956,7 +4955,7 @@ namespace MuPDF.NET
             Utils.pdf_dict_putl(
                 annotObj,
                 mupdf.mupdf.pdf_new_real(borderWidth),
-                new string[] { "BS", "S" }
+                new string[] { "BS", "W" }
             );
 
             string da = widget.TextDa;
@@ -4968,11 +4967,11 @@ namespace MuPDF.NET
             if (fieldFlags != 0)
             {
                 if (fieldType == (int)PdfWidgetType.PDF_WIDGET_TYPE_COMBOBOX)
-                    fieldFlags |= mupdf.mupdf.PDF_CH_FIELD_IS_COMBO;
+                    fieldFlags |= (int)PdfFieldFlags.PDF_CH_FIELD_IS_COMBO;
                 else if (fieldType == (int)PdfWidgetType.PDF_WIDGET_TYPE_RADIOBUTTON)
-                    fieldType |= mupdf.mupdf.PDF_BTN_FIELD_IS_RADIO;
+                    fieldType |= (int)PdfFieldFlags.PDF_BTN_FIELD_IS_RADIO;
                 else if (fieldType == (int)PdfWidgetType.PDF_WIDGET_TYPE_BUTTON)
-                    fieldType |= mupdf.mupdf.PDF_BTN_FIELD_IS_PUSHBUTTON;
+                    fieldType |= (int)PdfFieldFlags.PDF_BTN_FIELD_IS_PUSHBUTTON;
                 annotObj.pdf_dict_put_int(new PdfObj("Ff"), fieldFlags);
             }
 
@@ -5161,20 +5160,20 @@ namespace MuPDF.NET
 
         public static int GetBorderStyle(string style)
         {
-            int val = mupdf.mupdf.PDF_ENUM_NAME_S;
+            int val = new PdfObj("S").pdf_to_num();
             if (string.IsNullOrEmpty(style))
                 return val;
             string s = style;
             if (s.StartsWith("b") || s.StartsWith("B"))
-                val = mupdf.mupdf.PDF_ENUM_NAME_B;
+                val = new PdfObj("B").pdf_to_num();
             else if (s.StartsWith("d") || s.StartsWith("D"))
-                val = mupdf.mupdf.PDF_ENUM_NAME_D;
+                val = new PdfObj("D").pdf_to_num();
             else if (s.StartsWith("i") || s.StartsWith("I"))
-                val = mupdf.mupdf.PDF_ENUM_NAME_I;
+                val = new PdfObj("I").pdf_to_num();
             else if (s.StartsWith("u") || s.StartsWith("U"))
-                val = mupdf.mupdf.PDF_ENUM_NAME_U;
+                val = new PdfObj("U").pdf_to_num();
             else if (s.StartsWith("s") || s.StartsWith("S"))
-                val = mupdf.mupdf.PDF_ENUM_NAME_S;
+                val = new PdfObj("S").pdf_to_num();
             return val;
         }
 
@@ -5195,6 +5194,26 @@ namespace MuPDF.NET
         public static void FillWidget(Annot annot, Widget widget)
         {
             Utils.GetWidgetProperties(annot, widget);
+
+            widget.Rect = annot.Rect;
+            widget.Xref = annot.Xref;
+            widget.Parent = annot.Parent;
+            widget._annot = annot._nativeAnnotion;
+
+            if (string.IsNullOrEmpty(widget.Script))
+                widget.Script = null;
+            if (string.IsNullOrEmpty(widget.ScriptStroke))
+                widget.ScriptStroke = null;
+            if (string.IsNullOrEmpty(widget.ScriptFormat))
+                widget.ScriptFormat = null;
+            if (string.IsNullOrEmpty(widget.ScriptChange))
+                widget.ScriptChange = null;
+            if (string.IsNullOrEmpty(widget.ScriptCalc))
+                widget.ScriptCalc = null;
+            if (string.IsNullOrEmpty(widget.ScriptBlur))
+                widget.ScriptBlur = null;
+            if (string.IsNullOrEmpty(widget.ScriptFocus))
+                widget.ScriptFocus = null;
         }
 
         public static string GetFieldTypeText(int wtype)
@@ -6179,6 +6198,9 @@ namespace MuPDF.NET
 
         public static void InitApp()
         {
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                return;
+
             if (Utils.IsInitialized)
                 return;
             
@@ -6187,6 +6209,19 @@ namespace MuPDF.NET
                 Utils.LoadEmbeddedDll();
 
             Utils.IsInitialized = true;
+        }
+
+        public static float GetArea(Rect rect, string unit = "px")
+        {
+            Dictionary<string, (float, float)> u = new Dictionary<string, (float, float)>()
+            {
+                {"px", (1f, 1f) },
+                {"in", (1f, 72.0f) },
+                {"cm", (2.54f, 72.0f) },
+                {"mm", (25.4f, 72f) }
+            };
+            float f = (float)Math.Pow(u[unit].Item1 / u[unit].Item2, 2);
+            return f * rect.Width * rect.Height;
         }
     }
 }

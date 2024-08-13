@@ -366,19 +366,19 @@ namespace MuPDF.NET
             return Fit(WidthFn, rect, widthMin, widthMax, delta, verbose);
         }
 
-        public Document WriteWithLinks(RectFunction rectFn = null, Action<Position> positionfn = null, Action<int, Rect, DeviceWrapper, bool> pageFn = null)
+        public Document WriteWithLinks(RectFunction rectFn = null, Action<Position> positionFn = null, Action<int, Rect, DeviceWrapper, bool> pageFn = null)
         {
             MemoryStream stream = new MemoryStream(100);
             DocumentWriter writer = new DocumentWriter(stream);
             List<Position> positions = new List<Position>();
 
-            Action<Position> positionfn2 = position =>
+            Action<Position> positionFn2 = position =>
             {
                 positions.Add(position);
-                positionfn(position);
+                positionFn(position);
             };
 
-            Write(writer, rectFn, positionFn: positionfn2, pageFn);
+            Write(writer, rectFn, positionFn: positionFn2, pageFn);
             writer.Close();
             stream.Seek(0, (SeekOrigin)1);
             return Story.AddPdfLinks(stream, positions);
@@ -456,7 +456,7 @@ namespace MuPDF.NET
             RectFunction rectfn,
             string userCss = null,
             int em = 12,
-            Action<Position> positionfn = null,
+            Action<Position> positionFn = null,
             Action<int, Rect, DeviceWrapper, bool> pagefn = null,
             Archive archive = null,
             bool addHeaderIds = true
@@ -466,13 +466,13 @@ namespace MuPDF.NET
             DocumentWriter writer = new DocumentWriter(stream);
             List<Position> positions = new List<Position>();
 
-            Action<Position> positionfn2 = position =>
+            Action<Position> positionFn2 = position =>
             {
                 positions.Add(position);
-                positionfn(position);
+                positionFn(position);
             };
 
-            Story.WriteStabilized(writer, contentfn, rectfn, userCss, em, positionfn2, pagefn, archive, addHeaderIds);
+            Story.WriteStabilized(writer, contentfn, rectfn, userCss, em, positionFn2, pagefn, archive, addHeaderIds);
             writer.Close();
             stream.Seek(0, (SeekOrigin)1);
             return Story.AddPdfLinks(stream, positions);
@@ -513,7 +513,7 @@ namespace MuPDF.NET
             RectFunction rectfn,
             string userCss = null,
             int em = 12,
-            Action<Position> positionfn = null,
+            Action<Position> positionFn = null,
             Action<int, Rect, DeviceWrapper, bool> pageFn = null,
             Archive archive = null, // Assuming Archive is a defined class
             bool addHeaderIds = true
@@ -538,18 +538,18 @@ namespace MuPDF.NET
                     story.AddHeaderIds(); // Assuming AddHeaderIds is a method of Story
                 }
                 positions.Clear();
-                void Positionfn2(Position position)
+                void PositionFn2(Position position)
                 {
                     positions.Add(position);
-                    if (stable && positionfn != null)
+                    if (stable && positionFn != null)
                     {
-                        positionfn(position);
+                        positionFn(position);
                     }
                 }
                 story.Write(
                     stable ? writer : null,
                     rectfn,
-                    Positionfn2,
+                    PositionFn2,
                     pageFn
                 );
                 if (stable)

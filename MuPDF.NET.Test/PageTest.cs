@@ -9,7 +9,7 @@ public class PageTest : PdfTestBase
     public void Setup()
     {
         doc = new Document("../../../resources/toc.pdf");
-        page = new Page(doc.GetPage(0), doc);
+        page = doc[0];
     }
 
     [Test]

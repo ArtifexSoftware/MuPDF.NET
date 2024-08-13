@@ -345,7 +345,7 @@ namespace MuPDF.NET
         /// <returns></returns>
         public PageInfo ExtractRAWDict(Rect cropbox, bool sort = false)
         {
-            PageInfo pageDict = TextPage2Dict(false);
+            PageInfo pageDict = TextPage2Dict(true);
             if (cropbox != null)
             {
                 pageDict.Width = cropbox.Width;
@@ -1222,7 +1222,7 @@ namespace MuPDF.NET
                                 charDict.Bbox = r;
                                 charDict.C = (char)ch.c;
 
-                                if (charList != null)
+                                if (charList == null)
                                     charList = new List<Char>();
                                 charList.Add(charDict);
                             }
@@ -1315,10 +1315,10 @@ namespace MuPDF.NET
             float fontSize = ch.m_internal.size;
             float asc_desc = asc - desc + (float)Utils.FLT_EPSILON;
 
-            /*if (asc_desc >= 1)
+            if (asc_desc >= 1)
             {
                 return new FzQuad(ch.m_internal.quad);
-            }*/
+            }
 
             FzRect bbox = mupdf.mupdf.fz_font_bbox(font);
             float fontWidth = bbox.y1 - bbox.y0;

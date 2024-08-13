@@ -48,7 +48,7 @@ namespace MuPDF.NET.Test
             w.FieldLabel = "a simple check box button";
             w.FieldType = (int)PdfWidgetType.PDF_WIDGET_TYPE_CHECKBOX;
             w.FillColor = new float[] { 0, 1, 1 };
-            w.Rect = new Rect(50, 72, 60, 77);
+            w.Rect = new Rect(50, 72, 100, 77);
             w.TextColor = new float[] { 0, 0, 1 };
             w.TextFont = "ZaDb";
             w.FieldValue = "true";
@@ -59,6 +59,7 @@ namespace MuPDF.NET.Test
 
             w.FieldFlags |= (int)FormFlags.PDF_FIELD_IS_READ_ONLY;
             w.Update();
+            doc.Save("output.pdf");
             Assert.Pass();
         }
     }

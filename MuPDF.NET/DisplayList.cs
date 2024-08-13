@@ -71,6 +71,7 @@ namespace MuPDF.NET
 
             Pixmap val = Utils.GetPixmapFromDisplaylist(_nativeDisplayList, matrix, _colorSpace, alpha, clip, null);
             ThisOwn = true;
+
             return val;
         }
 
