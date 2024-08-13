@@ -154,6 +154,7 @@ namespace MuPDF.NET
                 else
                     ret[item] = null;
             }
+        
             return ret;
         }
     }

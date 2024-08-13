@@ -125,7 +125,7 @@ namespace MuPDF.NET.Test
             Document doc = new Document("../../../resources/symbol-list.pdf");
             Page page = doc[0];
             List<PathInfo> arts = page.GetDrawings();
-            page.AddRedactAnnot(page.Rect);
+            page.AddRedactAnnot(page.Rect.Quad);
             page.ApplyRedactions(graphics: 0);
 
             Assert.That(page.GetText("words").Count, Is.Zero);

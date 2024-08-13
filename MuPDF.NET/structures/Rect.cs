@@ -54,6 +54,14 @@ namespace MuPDF.NET
             this.X1 = X1; this.Y1 = Y1;
         }
 
+        public Rect(Point tl, float x1, float y1)
+        {
+            this.X0 = tl.X;
+            this.Y0 = tl.Y;
+            X1 = x1;
+            Y1 = y1;
+        }
+
         public Rect(Rect r)
         {
             X0 = r[0]; Y0 = r[1];
@@ -216,7 +224,10 @@ namespace MuPDF.NET
 
         public static Rect operator &(Rect op1, Rect op2)
         {
-            return op1.Intersect(op2);  // Assuming you have implemented the Intersect method
+            Rect t1 = new Rect(op1);
+            Rect t2 = new Rect(op2);
+
+            return t1.Intersect(t2);  // Assuming you have implemented the Intersect method
         }
 
         public bool Contains(float op)
@@ -284,7 +295,7 @@ namespace MuPDF.NET
 
         public Rect IncludeRect(Rect r)
         {
-            if (r.IsInfinite || this.IsEmpty)
+            if (r.IsInfinite || this.IsInfinite)
             {
                 this.X0 = Utils.FZ_MIN_INF_RECT;
                 this.Y0 = Utils.FZ_MIN_INF_RECT;

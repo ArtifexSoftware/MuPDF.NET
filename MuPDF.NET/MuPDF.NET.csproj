@@ -16,7 +16,7 @@
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'tizen'">6.5</SupportedOSPlatformVersion>
 		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
 		<Title>MuPDF.NET</Title>
-		<Version>2.0.12-alpha</Version>
+		<Version>2.1.0</Version>
 		<Authors>Chris Palman</Authors>
 		<Company>Artifex</Company>
 		<Description>A C# binding for MuPDF</Description>
@@ -56,12 +56,12 @@
 	  <PackageReference Update="Microsoft.Maui.Controls.Compatibility" Version="8.0.14" />
 	</ItemGroup>
 
-	<ItemGroup>
+	<ItemGroup Condition="'$(OS)' == 'Windows_NT'">
 		<EmbeddedResource Include="mupdfcsharp.dll">
 			<LogicalName>mupdfcsharp.dll</LogicalName>
 		</EmbeddedResource>
 	</ItemGroup>
-	<ItemGroup>
+	<ItemGroup Condition="'$(OS)' == 'Windows_NT'">
 		<EmbeddedResource Include="mupdfcpp64.dll">
 			<LogicalName>mupdfcpp64.dll</LogicalName>
 		</EmbeddedResource>

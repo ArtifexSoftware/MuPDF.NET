@@ -98,7 +98,8 @@ namespace MuPDF.NET
 
         public static Point operator *(Point op1, Matrix m)
         {
-            return op1.Transform(m);
+            Point op = new Point(op1);
+            return op.Transform(m);
         }
 
         public static Point operator /(Point p, float m)
@@ -159,7 +160,7 @@ namespace MuPDF.NET
         public Point Transform(Matrix m)
         {
             FzPoint p = mupdf.mupdf.fz_transform_point(ToFzPoint(), m.ToFzMatrix());
-            return new Point(p.x < 1e-3 ? 0 : p.x, p.y < 1e-3 ? 0 : p.y);
+            return new Point(p);
         }
 
         public float DistanceTo(Point p, string unit = "px")

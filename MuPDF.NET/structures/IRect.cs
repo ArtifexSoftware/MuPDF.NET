@@ -248,7 +248,7 @@ namespace MuPDF.NET
 
         public override string ToString()
         {
-            return "IRect";
+            return $"IRect({X0}, {Y0}, {X1}, {Y1})";
         }
 
         public static IRect operator -(IRect left, IRect right)
@@ -320,6 +320,11 @@ namespace MuPDF.NET
         public Rect Trnasform(Matrix m)
         {
             return new Rect(this).Transform(m);
+        }
+
+        public float GetArea(Rect rect, string unit = "px")
+        {
+            return Utils.GetArea(rect, unit);
         }
     }
 }
