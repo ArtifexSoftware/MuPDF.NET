@@ -1035,7 +1035,7 @@ namespace MuPDF.NET
             FontInfo fontInfo = Utils.CheckFontInfo(Doc, xref);
             
             if (fontInfo == null)
-                throw new Exception("no found font info");
+                throw new Exception("not found font info");
             
             int ordering = fontInfo.Ordering;
             bool simple = fontInfo.Simple;
