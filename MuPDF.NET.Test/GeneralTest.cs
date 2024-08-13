@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MuPDF.NET.enums;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -290,13 +291,13 @@ namespace MuPDF.NET.Test
         public void Encryption()
         {
             string text = "some secret information";
-            int perm = (int)(mupdf.mupdf.PDF_PERM_ACCESSIBILITY
-                | mupdf.mupdf.PDF_PERM_PRINT
-                | mupdf.mupdf.PDF_PERM_COPY
-                | mupdf.mupdf.PDF_PERM_ANNOTATE);
+            int perm = (int)(PdfAccess.PDF_PERM_ACCESSIBILITY
+                | PdfAccess.PDF_PERM_PRINT
+                | PdfAccess.PDF_PERM_COPY
+                | PdfAccess.PDF_PERM_ANNOTATE);
             string ownerPass = "owner";
             string userPass = "user";
-            int encryptMeth = mupdf.mupdf.PDF_ENCRYPT_AES_256;
+            int encryptMeth = (int)PdfCrypt.PDF_ENCRYPT_AES_256;
 
             Document doc = new Document();
             Page page = doc.NewPage();
