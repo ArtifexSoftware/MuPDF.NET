@@ -7,6 +7,41 @@
 The Basics
 ==============================
 
+
+.. _Supported_File_Types:
+
+Supported File Types
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+|MuPDF.NET| can open files other than just |PDF|.
+
+The following file types are supported:
+
+Document Formats
+""""""""""""""""""
+
+- PDF
+- XPS
+- EPUB
+- MOBI
+- FB2
+- CBZ
+- SVG
+- TXT
+
+
+Image Formats
+""""""""""""""""""
+
+**Input formats**
+JPG/JPEG, PNG, BMP, GIF, TIFF, PNM, PGM, PBM, PPM, PAM, JXR, JPX/JP2, PSD
+
+**Output formats**
+JPG/JPEG, PNG, PNM, PGM, PBM, PPM, PAM, PSD, PS
+
+
+
 .. _The_Basics_Opening_Files:
 
 Opening a File
@@ -15,7 +50,7 @@ Opening a File
 
 To open a file, do the following:
 
-.. code-block:: c#
+.. code-block:: csharp
 
     using MuPDF.NET;
 
@@ -82,11 +117,11 @@ Extract images from a |PDF|
 
 To extract all the images from a |PDF| file, do the following:
 
-.. code-block:: python
+.. code-block:: csharp
 
     using MuPDF.NET;
 
-    Document doc = new Document("test.pdf"); # open a document
+    Document doc = new Document("test.pdf"); // open a document
 
     for (int i = 0; i < doc.PageCount; i++)
     {
@@ -109,10 +144,6 @@ To extract all the images from a |PDF| file, do the following:
 
 
 .. note::
-
-    **Taking it further**
-
-    There are many more examples which explain how to extract text from specific areas or how to extract tables from documents. Please refer to the :ref:`How to Guide for Text<RecipesText>`.
 
     **API reference**
 
@@ -139,10 +170,6 @@ To extract all the vector graphics from a document page, do the following:
 This will return a dictionary of paths for any vector drawings found on the page.
 
 .. note::
-
-    **Taking it further**
-
-    Please refer to: :ref:`How to Extract Drawings<RecipesDrawingAndGraphics_Extract_Drawings>`.
 
     **API reference**
 
@@ -175,7 +202,7 @@ To merge |PDF| files, do the following:
 Merging |PDF| files with other types of file
 """""""""""""""""""""""""""""""""""""""""""""""""""""
 
-With :meth:`Document.insert_file` you can invoke the method to merge :ref:`supported files<Supported_File_Types>` with |PDF|. For example:
+With :meth:`Document.InsertFile` you can invoke the method to merge :ref:`supported files<Supported_File_Types>` with |PDF|. For example:
 
 .. code-block:: csharp
 
@@ -193,11 +220,6 @@ With :meth:`Document.insert_file` you can invoke the method to merge :ref:`suppo
     **Taking it further**
 
     It is easy to join PDFs with :meth:`Document.InsertPdf` & :meth:`Document.InsertFile`. Given open |PDF| documents, you can copy page ranges from one to the other. You can select the point where the copied pages should be placed, you can revert the page sequence and also change page rotation. This Wiki `article <https://github.com/pymupdf/PyMuPDF/wiki/Inserting-Pages-from-other-PDFs>`_ contains a full description.
-
-    The GUI script `join.py <https://github.com/pymupdf/PyMuPDF-Utilities/blob/master/examples/join-documents/join.py>`_ uses this method to join a list of files while also joining the respective table of contents segments. It looks like this:
-
-    .. image:: images/img-pdfjoiner.*
-       :scale: 60
 
     **API reference**
 
@@ -224,7 +246,7 @@ Adding a watermark to a |PDF|
 
 To add a watermark to a |PDF| file, do the following:
 
-.. code-block:: python
+.. code-block:: csharp
 
     using MuPDF.NET;
 
@@ -235,7 +257,7 @@ To add a watermark to a |PDF| file, do the following:
         Page page = doc[page_index]; // get the page
 
         // insert an image watermark from a file name to fit the page bounds
-        page.insert_image(page.bound(), filename: "watermark.png", overlay: false)
+        page.InsertImage(page.bound(), filename: "watermark.png", overlay: false)
     }
     doc.Save("watermarked-document.pdf"); // save the document with a new filename
 
@@ -245,11 +267,11 @@ To add a watermark to a |PDF| file, do the following:
 
     Adding watermarks is essentially as simple as adding an image at the base of each |PDF| page. You should ensure that the image has the required opacity and aspect ratio to make it look the way you need it to.
 
-    In the example above a new image is created from each file reference, but to be more performant (by saving memory and file size) this image data should be referenced only once - see the code example and explanation on :meth:`Page.insert_image` for the implementation.
+    In the example above a new image is created from each file reference, but to be more performant (by saving memory and file size) this image data should be referenced only once.
 
     **API reference**
 
-    - :meth:`Page.bound`
+    - :meth:`Page.GetBound`
     - :meth:`Page.InsertImage`
 
 
@@ -283,7 +305,7 @@ To add an image to a |PDF| file, for example a logo, do the following:
 
     **Taking it further**
 
-    As with the watermark example you should ensure to be more performant by only referencing the image once if possible - see the code example and explanation on :meth:`Page.insert_image`.
+    As with the watermark example you should ensure to be more performant by only referencing the image once if possible - see the code example and explanation on :meth:`Page.InsertImage`.
 
     **API reference**
 
@@ -314,7 +336,7 @@ To add a rotation to a page, do the following:
 
     **API reference**
 
-    - :meth:`Page.set_rotation`
+    - :meth:`Page.SetRotation`
 
 
 ----------
@@ -347,7 +369,7 @@ To crop a page to a defined :ref:`Rect<Rect>`, do the following:
 
 .. _The_Basics_Attaching_Files:
 
-:index:`Attaching Files <triple: attach;embed;file>`
+Attaching Files
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To attach another file to a page, do the following:
@@ -360,8 +382,8 @@ To attach another file to a page, do the following:
     Document attachment = new Document("my-attachment.pdf"); // open document you want to attach
 
     Page page = doc[0]; // get the 1st page of the document
-    Point point = new Point(100, 100); # create the point where you want to add the attachment
-    byte[] attachment_data = attachment.Write(); # get the document byte data as a buffer
+    Point point = new Point(100, 100); // create the point where you want to add the attachment
+    byte[] attachment_data = attachment.Write(); // get the document byte data as a buffer
     
     // add the file annotation with the point, data and the file name
     Annot file_annotation = page.AddFileAnnot(point, attachment_data, "attachment.pdf");
@@ -549,9 +571,9 @@ To select pages, do the following:
 
     **Taking it further**
 
-    With |PyMuPDF| you have all options to copy, move, delete or re-arrange the pages of a |PDF|. Intuitive methods exist that allow you to do this on a page-by-page level, like the :meth:`Document.CopyPage` method.
+    With |MuPDF.NET| you have all options to copy, move, delete or re-arrange the pages of a |PDF|. Intuitive methods exist that allow you to do this on a page-by-page level, like the :meth:`Document.CopyPage` method.
 
-    Or you alternatively prepare a complete new page layout in form of a list, that contains the page numbers you want, in the sequence you want, and as many times as you want each page. The following may illustrate what can be done with :meth:`Document.select`
+    Or you alternatively prepare a complete new page layout in form of a list, that contains the page numbers you want, in the sequence you want, and as many times as you want each page. The following may illustrate what can be done with :meth:`Document.Select`
 
     .. code-block:: csharp
 
@@ -651,7 +673,7 @@ To add a blank page, do the following:
     **API reference**
 
     - :meth:`Document.NewPage`
-    - :attr:`paperSizes`
+    - :meth:`Utils.PageSize`
 
 
 ----------
@@ -711,16 +733,16 @@ This deals with splitting up pages of a |PDF| in arbitrary pieces. For example, 
     using MuPDF.NET;
 
     Document src = pymupdf.open("test.pdf");
-    Document doc = pymupdf.open();  // empty output PDF
+    Document doc = pymupdf.open(); // empty output PDF
 
     for (int i = 0; i < src.PageCount; i ++) // for each page in input
         Page spage = doc[i];
         r = spage.rect;  // input page rectangle
         d = new Rect(spage.CropboxPosition,  // CropBox displacement if not
                       spage.CropboxPosition)  // starting at (0, 0)
-        #--------------------------------------------------------------------------
-        # example: cut input page into 2 x 2 parts
-        #--------------------------------------------------------------------------
+        //--------------------------------------------------------------------------
+        // example: cut input page into 2 x 2 parts
+        //--------------------------------------------------------------------------
         r1 = r / 2;  // top left rect
         r2 = r1 + (r1.width, 0, r1.width, 0);  // top right rect
         r3 = r1 + (0, r1.height, 0, r1.height);  // bottom left rect
@@ -750,7 +772,7 @@ This deals with splitting up pages of a |PDF| in arbitrary pieces. For example, 
 
 Example:
 
-.. image:: images/img-posterize.png
+.. image:: ../images/img-posterize.png
 
 .. note::
 
@@ -810,7 +832,7 @@ This deals with joining |PDF| pages to form a new |PDF| with pages each combinin
 
 Example:
 
-.. image:: images/img-4up.png
+.. image:: ../images/img-4up.png
 
 
 .. note::
@@ -841,12 +863,12 @@ Starting with version 1.16.0, |PDF| decryption and encryption (using passwords) 
     - set the encryption method
     - set permission details
 
-.. note:: A PDF document may have two different passwords:
+.. note:: A |PDF| document may have two different passwords:
 
    * The **owner password** provides full access rights, including changing passwords, encryption method, or permission detail.
    * The **user password** provides access to document content according to the established permission details. If present, opening the |PDF| in a viewer will require providing it.
 
-   Method :meth:`Document.authenticate` will automatically establish access rights according to the password used.
+   Method :meth:`Document.Authenticate` will automatically establish access rights according to the password used.
 
 The following snippet creates a new |PDF| and encrypts it with separate user and owner passwords. Permissions are granted to print, copy and annotate, but no changes are allowed to someone authenticating with the user password.
 
@@ -883,7 +905,7 @@ The following snippet creates a new |PDF| and encrypts it with separate user and
 
     Opening this document with some viewer (Nitro Reader 5) reflects these settings:
 
-    .. image:: images/img-encrypting.*
+    .. image:: ../images/img-encrypting.*
 
     **Decrypting** will automatically happen on save as before when no encryption parameters are provided.
 
@@ -898,12 +920,6 @@ The following snippet creates a new |PDF| and encrypts it with separate user and
 --------------------------
 
 
-.. important::
-
-    There is also the `pdf2docx extract tables method`_ which is capable of table extraction if you prefer.
-
-
---------------------------
 
 
 .. _The_Basics_Get_Page_Links:
@@ -945,7 +961,7 @@ Links can be extracted from a :ref:`Page` to return :ref:`Link` objects.
 Getting All Annotations from a Document
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Annotations (:ref:`Annot`) on pages can be retrieved with the `page.GetAnnots()` method.
+Annotations (:ref:`Annot`) on pages can be retrieved with the `Page.GetAnnots()` method.
 
 .. code-block:: csharp
 
@@ -954,8 +970,14 @@ Annotations (:ref:`Annot`) on pages can be retrieved with the `page.GetAnnots()`
     for (int i = 0; i < doc.PageCount; i ++)
     { 
         Page page = doc[i];
-        for (Annot annot in page.GetAnnots())
-            print(f'Annotation on page: {page.Number} with type: {annot.Type} and rect: {annot.Rect}')
+
+        List<Entry> annots = page.GetAnnots();
+
+        for (int j = 0; j < annots.Count; j++)
+        {
+            Console.WriteLine("Annotation on page:"+annots[j]);
+        }
+
     }
 
 
@@ -979,33 +1001,33 @@ Redactions are special types of annotations which can be marked onto a document 
 
 For example if we wanted to redact all instances of the name "Jane Doe" from a document we could do the following:
 
+
 .. code-block:: csharp
 
     using MuPDF.NET;
 
-    // Open the PDF document
-    Document doc = new Document('test.pdf');
+    Document doc = new Document("test.pdf"); // open a document
 
     // Iterate over each page of the document
     for (int i = 0; i < doc.PageCount; i ++)
     {
         Page page = doc[0]
+
         // Find all instances of "Jane Doe" on the current page
-        instances = page.SearchFor("Jane Doe");
+        List<Entry> instances = page.SearchFor("Jane Doe");
 
         // Redact each instance of "Jane Doe" on the current page
-        foreach(Quad inst in instances)
-            page.AddRedactAnnot(inst);
+        for (int j = 0; j < instances.Count; j ++) {
+            page.AddRedactAnnot(instances[j]);
+        }
 
         // Apply the redactions to the current page
         page.ApplyRedactions();
     }
-    // Save the modified document
-    doc.Save('redacted_document.pdf');
 
-    // Close the document
-    doc.close()
+    doc.Save("redacted_document.pdf");
 
+    doc.Close();
 
 Another example could be redacting an area of a page, but not to redact any line art (i.e. vector graphics) within the defined area, by setting a parameter flag as follows:
 
@@ -1014,8 +1036,7 @@ Another example could be redacting an area of a page, but not to redact any line
 
     using MuPDF.NET;
 
-    // Open the PDF document
-    Document doc = new Document('test.pdf');
+    Document doc = new Document("test.pdf"); // open a document
 
     // Get the first page
     Page page = doc[0];
@@ -1030,7 +1051,7 @@ Another example could be redacting an area of a page, but not to redact any line
     page.ApplyRedactions(graphics: 0);
 
     // Save the modified document
-    doc.Save('redactied_document.pdf');
+    doc.Save("redacted_document.pdf");
 
     // Close the document
     doc.Close();
