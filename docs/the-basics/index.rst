@@ -1,4 +1,4 @@
-.. include:: header.rst
+.. include:: ../header.rst
 
 .. _TheBasics:
 
@@ -21,12 +21,6 @@ To open a file, do the following:
 
     Document doc = new Document("a.pdf"); // open a document
 
-
-.. note::
-
-    **Taking it further**
-
-    See the :ref:`list of supported file types<Supported_File_Types>` and :ref:`The How to Guide on Opening Files <HowToOpenAFile>` for more advanced options.
 
 
 ----------
@@ -62,16 +56,13 @@ Of course it is not just |PDF| which can have text extracted - all the :ref:`sup
 
     **Taking it further**
 
-    If your document contains image based text content the use OCR on the page for subsequent text extraction:
+    If your document contains image based text content then use OCR on the page for subsequent text extraction:
 
     .. code-block:: csharp
 
         TextPage tp = page.GetTextPageOcr();
         string text = page.GetText(textpage: tp);
 
-    There are many more examples which explain how to extract text from specific areas or how to extract tables from documents. Please refer to the :ref:`How to Guide for Text<RecipesText>`.
-
-    You can now also :ref:`extract text in Markdown format<rag_outputting_as_md>`.
 
     **API reference**
 
@@ -1067,14 +1058,9 @@ Another example could be redacting an area of a page, but not to redact any line
 
 
 
-.. _The Basics_Coverting_PDF_Documents:
-
-Converting PDF Documents
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-We recommend the pdf2docx_ library which uses **PyMuPDF** and the **python-docx** library to provide simple document conversion from **PDF** to **DOCX** format.
 
 
 
 
-.. include:: footer.rst
+
+.. include:: ../footer.rst
