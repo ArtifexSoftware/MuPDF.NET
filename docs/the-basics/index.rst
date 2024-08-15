@@ -219,7 +219,7 @@ With :meth:`Document.InsertFile` you can invoke the method to merge :ref:`suppor
 
     **Taking it further**
 
-    It is easy to join PDFs with :meth:`Document.InsertPdf` & :meth:`Document.InsertFile`. Given open |PDF| documents, you can copy page ranges from one to the other. You can select the point where the copied pages should be placed, you can revert the page sequence and also change page rotation. This Wiki `article <https://github.com/pymupdf/PyMuPDF/wiki/Inserting-Pages-from-other-PDFs>`_ contains a full description.
+    It is easy to join PDFs with :meth:`Document.InsertPdf` & :meth:`Document.InsertFile`. Given open |PDF| documents, you can copy page ranges from one to the other. You can select the point where the copied pages should be placed, you can revert the page sequence and also change page rotation.
 
     **API reference**
 
@@ -230,14 +230,6 @@ With :meth:`Document.InsertFile` you can invoke the method to merge :ref:`suppor
 ----------
 
 
-Working with Coordinates
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-There is one *mathematical term* that you should feel comfortable with when using **PyMuPDF** -  **"coordinates"**. Please have a quick look at the :ref:`Coordinates` section to understand the coordinate system to help you with positioning objects and understand your document space.
-
-
-
-----------
 
 .. _The_Basics_Watermarks:
 

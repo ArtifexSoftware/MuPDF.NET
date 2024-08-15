@@ -24,7 +24,7 @@ API
    pixmap.rst
    point.rst
    quad.rst
-   .. rect.rst
+   rect.rst
    shape.rst
    story-class.rst
    textpage.rst

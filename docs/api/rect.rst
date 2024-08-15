@@ -1,4 +1,4 @@
-.. include:: header.rst
+.. include:: ../header.rst
 
 .. _Rect:
 
@@ -10,7 +10,7 @@ Rect
 
 The following remarks are also valid for :ref:`IRect` objects:
 
-* A rectangle in the sense of (Py-) MuPDF **(and PDF)** always has **borders parallel to the x- resp. y-axis**. A general orthogonal tetragon **is not a rectangle** -- in contrast to the mathematical definition.
+* A rectangle in the sense of MuPDF **(and PDF)** always has **borders parallel to the x- resp. y-axis**. A general orthogonal tetragon **is not a rectangle** -- in contrast to the mathematical definition.
 * The constructing points can be (almost! -- see below) anywhere in the plane -- they need not even be different, and e.g. "top left" need not be the geometrical "north-western" point.
 * Units are in points, where 72 points is 1 inch.
 * For any given quadruple of numbers, the geometrically "same" rectangle can be defined in four different ways:
@@ -31,7 +31,7 @@ The following remarks are also valid for :ref:`IRect` objects:
 
 * **Rectangles are (semi-) open:** The right and the bottom edges (including the resp. corners) are not considered part of the rectangle. This implies, that only the top-left corner `(x0, y0)` can ever belong to the rectangle - the other three corners never do. An empty rectangle contains no corners at all.
 
-   .. image:: images/img-rect-contains.*
+   .. image:: ../images/img-rect-contains.*
       :scale: 30
       :align: center
 
@@ -62,7 +62,7 @@ The following remarks are also valid for :ref:`IRect` objects:
 :meth:`Rect.Morph`            transform with a point and a matrix
 :meth:`Rect.ToRect`           the matrix that transforms to another rectangle
 :meth:`Rect.Norm`             the Euclidean norm
-:meth:`Rect.normalize`        makes a rectangle valid
+:meth:`Rect.Normalize`        makes a rectangle valid
 :meth:`Rect.Round`            create smallest :ref:`IRect` containing rectangle
 :meth:`Rect.Transform`        transform rectangle with a matrix
 :attr:`Rect.BottomLeft`       bottom left point, synonym *bl*
@@ -136,7 +136,7 @@ The following remarks are also valid for :ref:`IRect` objects:
 
    .. method:: IncludePoint(Point p)
 
-      The smallest rectangle containing the current one and point *p* is calculated and **replaces the current** one. **The infinite rectangle remains unchanged.** To create a rectangle containing a series of points, start with (the empty) *pymupdf.Rect(p1, p1)* and successively include the remaining points.
+      The smallest rectangle containing the current one and point *p* is calculated and **replaces the current** one. **The infinite rectangle remains unchanged.** To create a rectangle containing a series of points, start with (the empty) `Rect(p1, p1)` and successively include the remaining points.
 
       :arg p: Point to include.
       :type p: :ref:`Point`
@@ -278,8 +278,5 @@ The following remarks are also valid for :ref:`IRect` objects:
 
       :type: bool
 
-.. note::
 
-   * Rectangles can be used with arithmetic operators -- see chapter :ref:`Algebra`.
-
-.. include:: footer.rst
+.. include:: ../footer.rst
