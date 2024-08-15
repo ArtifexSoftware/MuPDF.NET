@@ -52,7 +52,7 @@ A Font object also contains useful general information, like the font bbox, the 
 
       Font constructor. The large number of parameters are used to locate font, which most closely resembles the requirements. Not all parameters are ever required -- see the below pseudo code explaining the logic how the parameters are evaluated.
 
-      :arg string fontName: one of the :ref:`Base-14-Fonts` or CJK fontNames, Custom font name and file path. Also possible are a select few other names like (watch the correct spelling): "Arial", "Times", "Times Roman".
+      :arg string fontName: Custom font name and file path. Also possible are a select few other names like (watch the correct spelling): "Arial", "Times", "Times Roman".
       :arg string fontFile: the filename of a fontFile somewhere on your system [#f1]_.
       :arg byte[] fontBuffer: a fontFile loaded in memory [#f1]_.
       :arg int script: the number of a UCDN script. Currently supported in MuPDF.NET are numbers 24, and 32 through 35.
@@ -172,7 +172,7 @@ A Font object also contains useful general information, like the font bbox, the 
 
       The glyph rectangle relative to :data:`fontSize` 1.
 
-      :arg int chr: *ord()* of the character.
+      :arg int chr: *Convert.Int32()* of the character.
 
       :returns: a :ref:`Rect`.
 
@@ -181,7 +181,7 @@ A Font object also contains useful general information, like the font bbox, the 
 
       Show the name of the character's glyph.
 
-      :arg int ch: the unicode number of the character. Use *ord()*, not the character itself.
+      :arg int ch: the unicode number of the character. Use *Convert.Int32()*, not the character itself.
 
       :returns: a string representing the glyph's name. For an invalid code ".notfound" is returned.
       

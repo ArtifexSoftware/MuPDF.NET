@@ -256,7 +256,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
       PDF only: Add a rectangle, resp. circle annotation.
 
-      :arg rect_like rect: the rectangle in which the circle or rectangle is drawn, must be finite and not empty. If the rectangle is not equal-sided, an ellipse is drawn.
+      :arg Rect rect: the rectangle in which the circle or rectangle is drawn, must be finite and not empty. If the rectangle is not equal-sided, an ellipse is drawn.
 
       :rtype: :ref:`Annot`
       :returns: the created annotation. It is drawn with line (stroke) color red = (1, 0, 0), line width 1, fill color is supported.
@@ -321,7 +321,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
          * For option `images=PDF_REDACT_IMAGE_PIXELS` a new image of format PNG is created, which the page will use in place of the original one. The original image is not deleted or replaced as part of this process, so other pages may still show the original. In addition, the new, modified PNG image currently is **stored uncompressed**. Do keep these aspects in mind when choosing the right garbage collection method and compression options during save.
 
-         * **Text removal** is done by character: A character is removed if its bbox has a **non-empty overlap** with a redaction rectangle. Depending on the font properties and / or the chosen line height, deletion may occur for undesired text parts. Using :meth:`Tools.set_small_glyph_heights` with a *true* argument before text search may help to prevent this.
+         * **Text removal** is done by character: A character is removed if its bbox has a **non-empty overlap** with a redaction rectangle. Depending on the font properties and / or the chosen line height, deletion may occur for undesired text parts.
 
          * Redactions are a simple way to replace single words in a PDF, or to just physically remove them. Locate the word "secret" using some text extraction or search method and insert a redaction using "xxxxxx" as replacement text for each occurrence.
 
@@ -404,7 +404,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
          Find tables on the page and return an object with related information. Typically, the default values of the many parameters will be sufficient. Adjustments should ever only be needed in corner case situations.
 
-         :arg rect_like clip: specify a region to consider within the page rectangle and ignore the rest. Default is the full page.
+         :arg Rect clip: specify a region to consider within the page rectangle and ignore the rest. Default is the full page.
 
          :arg str strategy: Request a **table detection** strategy. Valid values are "lines", "lines_strict" and "text".
 
@@ -440,7 +440,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
          :returns: a `TableFinder` object that has the following significant attributes:
 
-            * `cells`: a list of **all bboxes** on the page, that have been identified as table cells (across all tables). Each cell is a :data:`rect_like` tuple `(x0, y0, x1, y1)` of coordinates or `null`.
+            * `cells`: a list of **all bboxes** on the page, that have been identified as table cells (across all tables). Each cell is a :data:`Rect` tuple `(x0, y0, x1, y1)` of coordinates or `null`.
             * `tables`: a list of `Table` objects. This is `[]` if the page has no tables. Single tables can be found as items of this list. But the `TableFinder` object itself is also a sequence of its tables. This means that if `tabs` is a `TableFinder` object, then table "n" is delivered by `tabs.tables[n]` as well as by the shorter `tabs[n]`.
 
 
@@ -591,7 +591,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
 
 
-   .. method:: WriteText(Rect rect: null, List<MuPDFTextWriter> writers: null, bool overlay: true, float[] color: null, float opacity: -1, bool keepProportion: true, int rotate: 0, int oc: 0)
+   .. method:: WriteText(Rect rect: null, List<TextWriter> writers: null, bool overlay: true, float[] color: null, float opacity: -1, bool keepProportion: true, int rotate: 0, int oc: 0)
 
       PDF only: Write the text of one or more :ref:`TextWriter` objects to the page.
 
@@ -1350,7 +1350,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
          **Key**             **Value**
          =============== ===============================================================
          number          block number *(int)*
-         bbox            image bbox on page, :data:`rect_like`
+         bbox            image bbox on page, :data:`Rect`
          width           original image width *(int)*
          height          original image height *(int)*
          cs-name         colorspace name *(str)*

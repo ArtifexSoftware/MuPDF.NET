@@ -178,13 +178,13 @@ This class represents a document. It can be constructed from a file or from memo
     * If *stream* is given, then the document is created from memory and, if not a PDF, either *filename* or *filetype* must indicate its type.
     * If *stream* is `null`, then a document is created from the file given by *filename*. Its type is inferred from the extension. This can be overruled by *filetype.*
 
-    :arg str,pathlib filename: A UTF-8 string or *pathlib* object containing a file path. The document type is inferred from the filename extension. If not present or not matching :ref:`a supported type<Supported_File_Types>`, a PDF document is assumed. For memory documents, this argument may be used instead of `filetype`, see below.
+    :arg string filename: A UTF-8 string containing a file path. The document type is inferred from the filename extension. If not present or not matching :ref:`a supported type<Supported_File_Types>`, a PDF document is assumed. For memory documents, this argument may be used instead of `filetype`, see below.
 
-    :arg bytes,bytearray,BytesIO stream: A memory area containing a supported document. If not a PDF, its type **must** be specified by either `filename` or `filetype`.
+    :arg byte[] stream: A memory area containing a supported document. If not a PDF, its type **must** be specified by either `filename` or `filetype`.
 
-    :arg str filetype: A string specifying the type of document. This may be anything looking like a filename (e.g. "x.pdf"), in which case MuPDF uses the extension to determine the type, or a mime type like *application/pdf*. Just using strings like "pdf"  or ".pdf" will also work. May be omitted for PDF documents, otherwise must match :ref:`a supported document type<Supported_File_Types>`.
+    :arg string filetype: A string specifying the type of document. This may be anything looking like a filename (e.g. "x.pdf"), in which case MuPDF uses the extension to determine the type, or a mime type like *application/pdf*. Just using strings like "pdf"  or ".pdf" will also work. May be omitted for PDF documents, otherwise must match :ref:`a supported document type<Supported_File_Types>`.
 
-    :arg rect_like rect: a rectangle specifying the desired page size. This parameter is only meaningful for documents with a variable page layout ("reflowable" documents), like e-books or HTML, and ignored otherwise. If specified, it must be a non-empty, finite rectangle with top-left coordinates (0, 0). Together with parameter *fontSize*, each page will be accordingly laid out and hence also determine the number of pages.
+    :arg Rect rect: a rectangle specifying the desired page size. This parameter is only meaningful for documents with a variable page layout ("reflowable" documents), like e-books or HTML, and ignored otherwise. If specified, it must be a non-empty, finite rectangle with top-left coordinates (0, 0). Together with parameter *fontSize*, each page will be accordingly laid out and hence also determine the number of pages.
 
     :arg float width: may used together with *height* as an alternative to *rect* to specify layout information.
 
@@ -228,7 +228,7 @@ This class represents a document. It can be constructed from a file or from memo
     :rtype: int
     :returns: the cross reference number of an optional contents object or zero if there is none.
 
-  .. method:: SetOC(xref, ocxref)
+  .. method:: SetOC(int xref, int ocxref)
 
     If `xref` represents an image or form XObject, set or remove the cross reference number `oc` of an optional contents object.
 
@@ -240,7 +240,7 @@ This class represents a document. It can be constructed from a file or from memo
 
     Show optional layer configurations. There always is a standard one, which is not included in the response.
 
-  .. method:: AddLayer(string name, string creator = null, on = null)
+  .. method:: AddLayer(string name, string creator: null, OCLayerConfig on: null)
 
     Add an optional content configuration. Layers serve as a collection of ON / OFF states for optional content groups and allow fast visibility switches between different views on the same document.
 
@@ -253,8 +253,8 @@ This class represents a document. It can be constructed from a file or from memo
 
     Switch to a document view as defined by the optional layer's configuration number. This is temporary, except if established as default.
 
-    :arg int number: config number as returned by :meth:`Document.layer_configs`.
-    :arg bool as_default: make this the default configuration.
+    :arg int number: config number as returned by :meth:`Document.LayerUIConfigs`.
+    :arg int asDefault: make this the default configuration.
 
     Activates the ON / OFF states of OCGs as defined in the identified layer. If *asDefault=1*, then additionally all layers, including the standard one, are merged and the result is written back to the standard layer, and **all optional layers are deleted**.
 
@@ -280,8 +280,8 @@ This class represents a document. It can be constructed from a file or from memo
 
     :arg OCMD ocmd: :data:`OCMD`
     :arg int xref: :data:`xref` of the OCMD to be updated, or 0 for a new OCMD.
-    :arg list ocgs: a sequence of :data:`xref` numbers of existing :data:`OCG` PDF objects.
-    :arg str policy: one of "AnyOn" (default), "AnyOff", "AllOn", "AllOff" (mixed or lower case).
+    :arg int[] ocgs: a sequence of :data:`xref` numbers of existing :data:`OCG` PDF objects.
+    :arg string policy: one of "AnyOn" (default), "AnyOff", "AllOn", "AllOff" (mixed or lower case).
     :arg dynamic[] ve: a "visibility expression". This is a list of arbitrarily nested other lists -- see explanation below. Use as an alternative to the combination *ocgs* / *policy* if you need to formulate more complex conditions.
 
     :rtype: int
@@ -302,7 +302,7 @@ This class represents a document. It can be constructed from a file or from memo
 
         Suppose you want two PDF objects be displayed exactly one at a time (if one is ON, then the other one must be OFF):
 
-        Solution: use an **OCG** for object 1 and an **OCMD** for object 2. Create the OCMD via `set_ocmd(ocgs=[xref], policy="AllOff")`, with the :data:`xref` of the OCG.
+        Solution: use an **OCG** for object 1 and an **OCMD** for object 2. Create the OCMD via `SetOmd(ocgs: [xref], policy: "AllOff")`, with the :data:`xref` of the OCG.
 
       2. Use the **visibility expression** *ve*: This is a list of two or more items. The **first item** is a logical keyword: one of the strings **"and"**, **"or"**, or **"not"**. The **second** and all subsequent items must either be an integer or another list. An integer must be the :data:`xref` number of an OCG. A list must again have at least two items starting with one of the boolean keywords. This syntax is a bit awkward, but quite powerful:
 
@@ -376,7 +376,7 @@ This class represents a document. It can be constructed from a file or from memo
 
       To make **permanent** changes, use :meth:`Document.SetLayer`.
 
-    :arg int number: either the sequence number of the item in list :meth:`Document.layer_configs` or the "text" of one of these items.
+    :arg int/string number: either the sequence number of the item in list :meth:`Document.LayerUIConfigs` or the "text" of one of these items.
     :arg int action: `PDF_OC_ON` = set on (default), `PDF_OC_TOGGLE` = toggle on/off, `PDF_OC_OFF` = set off.
 
 
@@ -406,7 +406,7 @@ This class represents a document. It can be constructed from a file or from memo
 
      :arg string label: the label to look for, e.g. "vii" (Roman number 7).
      :arg bool onlyOne: stop after first hit. Useful e.g. if labelling is known to be unique, or there are many pages, etc. The default will check every page number.
-     :rtype: list
+     :rtype: list of int
      :returns: list of page numbers that have this label. Empty if none found, no labels defined, etc.
 
 
@@ -423,8 +423,8 @@ This class represents a document. It can be constructed from a file or from memo
      :arg List<Label> labels: a list of `Label`. Each dictionary defines a label building rule and a 0-based "start" page number. That start page is the first for which the label definition is valid. Each dictionary has up to 4 items and looks like `{'startpage': int, 'prefix': str, 'style': str, 'firstpagenum': int}` and has the following items.
 
         - `startpage`: (int) the first page number (0-based) to apply the label rule. This key **must be present**. The rule is applied to all subsequent pages until either end of document or superseded by the rule with the next larger page number.
-        - `prefix`: (str) an arbitrary string to start the label with, e.g. "A-". Default is "".
-        - `style`: (str) the numbering style. Available are "D" (decimal), "r"/"R" (Roman numbers, lower / upper case), and "a"/"A" (lower / upper case alphabetical numbering: "a" through "z", then "aa" through "zz", etc.). Default is "". If "", no numbering will take place and the pages in that range will receive the same label consisting of the `prefix` value. If prefix is also omitted, then the label will be "".
+        - `prefix`: (string) an arbitrary string to start the label with, e.g. "A-". Default is "".
+        - `style`: (string) the numbering style. Available are "D" (decimal), "r"/"R" (Roman numbers, lower / upper case), and "a"/"A" (lower / upper case alphabetical numbering: "a" through "z", then "aa" through "zz", etc.). Default is "". If "", no numbering will take place and the pages in that range will receive the same label consisting of the `prefix` value. If prefix is also omitted, then the label will be "".
         - `firstpagenum`: (int) start numbering with this value. Default is 1, smaller values are ignored.
 
      For example::
@@ -528,7 +528,7 @@ This class represents a document. It can be constructed from a file or from memo
             * "to": (x, y) target point on page. Currently in PDF coordinates,
               i.e. point (0,0) is the bottom-left of the page.
             * "zoom": (float) the zoom factor.
-            * "dest": (str) only present if the target location on the page has
+            * "dest": (string) only present if the target location on the page has
               not been provided as "/XYZ" or if no page number was found.
 
     All names found in the catalog under keys "/Dests" and "/Names/Dests" are
@@ -635,7 +635,7 @@ This class represents a document. It can be constructed from a file or from memo
 
     :arg int xref: the :data:`xref`. Use `-1` to access the special dictionary "PDF trailer".
 
-    :arg str key: the desired PDF key. Must **exactly** match (case-sensitive) one of the keys contained in :meth:`Document.GetKeysXref`.
+    :arg string key: the desired PDF key. Must **exactly** match (case-sensitive) one of the keys contained in :meth:`Document.GetKeysXref`.
 
     :rtype: Tuple
 
@@ -710,7 +710,7 @@ This class represents a document. It can be constructed from a file or from memo
 
     :returns: a list of images **referenced** by this page object definition. Each item looks like
 
-        `(Xref, Smask, Width, height, Bpc, colorspace, alt. colorspace, name, filter, referencer)`
+        `(Xref, Smask, Width, Height, Bpc, colorspace, alt. colorspace, name, filter, referencer)`
 
         Where
 
@@ -851,7 +851,7 @@ This class represents a document. It can be constructed from a file or from memo
 
           - **Level** is the hierarchy level (int > 0) of the item, which **must be 1** for the first item and at most 1 larger than the previous one.
 
-          - **Title** (str) is the title to be displayed. It is assumed to be UTF-8-encoded (relevant for multibyte code points only).
+          - **Title** (string) is the title to be displayed. It is assumed to be UTF-8-encoded (relevant for multibyte code points only).
 
           - **Page** (int) is the target page number **(attention: 1-based)**. Must be in valid range if positive. Set it to -1 if there is no target, or the target is external.
 
@@ -966,7 +966,7 @@ This class represents a document. It can be constructed from a file or from memo
 
     :arg int linear: Save a linearised version of the document. This option creates a file format for improved performance for Internet access. Excludes "incremental".
 
-    :arg int pretty: Prettify the document source for better readability. PDF objects will be reformatted to look like the default output of :meth:`Document.xref_object`.
+    :arg int pretty: Prettify the document source for better readability. PDF objects will be reformatted to look like the default output of :meth:`Document.GetXrefObject`.
 
     :arg int noNewId: Suppress the update of the file's `/ID` field. If the file happens to have no such field at all, also suppress creation of a new one. Default is `false`, so every save will lead to an updated file identification.
 
@@ -1207,12 +1207,12 @@ This class represents a document. It can be constructed from a file or from memo
 
     PDF only: Embed a new file. All string parameters except the name may be unicode (in previous versions, only ASCII worked correctly). File contents will be compressed (where beneficial).
 
-    :arg str name: entry identifier, **must not already exist**.
+    :arg string name: entry identifier, **must not already exist**.
     :arg byte[]: file contents.
 
-    :arg str filename: optional filename. Documentation only, will be set to *name* if `null`.
-    :arg str ufilename: optional unicode filename. Documentation only, will be set to *filename* if `null`.
-    :arg str desc: optional description. Documentation only, will be set to *name* if `null`.
+    :arg string filename: optional filename. Documentation only, will be set to *name* if `null`.
+    :arg string ufilename: optional unicode filename. Documentation only, will be set to *filename* if `null`.
+    :arg string desc: optional description. Documentation only, will be set to *name* if `null`.
 
     :rtype: int
     :returns: The method now returns the :data:`xref` of the inserted file. In addition, the file object now will be automatically given the PDF keys `/CreationDate` and `/ModDate` based on the current date-time.
@@ -1226,7 +1226,7 @@ This class represents a document. It can be constructed from a file or from memo
 
     PDF only: Retrieve the content of embedded file by its entry number or name. If the document is not a PDF, or entry cannot be found, an exception is raised.
 
-    :arg int,str item: index or name of entry. An integer must be in `range(GetEmbfileCount())`.
+    :arg int item: index or name of entry. An integer must be in `range(GetEmbfileCount())`.
 
     :rtype: bytes
 
@@ -1234,7 +1234,7 @@ This class represents a document. It can be constructed from a file or from memo
 
     PDF only: Remove an entry from `/EmbeddedFiles`. As always, physical deletion of the embedded file content (and file space regain) will occur only when the document is saved to a new file with a suitable garbage option.
 
-    :arg int/str item: index or name of entry.
+    :arg string item: index or name of entry.
 
     .. warning:: When specifying an entry name, this function will only **delete the first item** with that name. Be aware that PDFs not created with MuPDF.NET may contain duplicate names. So you may want to take appropriate precautions.
 
@@ -1242,7 +1242,7 @@ This class represents a document. It can be constructed from a file or from memo
 
     PDF only: Retrieve information of an embedded file given by its number or by its name.
 
-    :arg int/str item: index or name of entry. An integer must be in `Enumerable.Range(GetEmbfileCount())`.
+    :arg int/string item: index or name of entry. An integer must be in `Enumerable.Range(GetEmbfileCount())`.
 
     :rtype: dict
     :returns: a dictionary with the following keys:
@@ -1273,7 +1273,7 @@ This class represents a document. It can be constructed from a file or from memo
 
     PDF only: Change an embedded file given its entry number or name. All parameters are optional. Letting them default leads to a no-operation.
 
-    :arg int/str item: index or name of entry. An integer must be in `Enumerable.Range(GetEmbfileCount())`.
+    :arg int/string item: index or name of entry. An integer must be in `Enumerable.Range(GetEmbfileCount())`.
     :arg byte[] buffer: the new file content.
 
     :arg string filename: the new filename.
@@ -1349,7 +1349,7 @@ This class represents a document. It can be constructed from a file or from memo
 
     :arg byte[] stream: the new content of the stream.
 
-    :arg int new: *deprecated* and ignored. Will be removed some time.
+    :arg int _new: *deprecated* and ignored. Will be removed some time.
     :arg int compress: whether to compress the inserted stream. If `1` (default), the stream will be inserted using `/FlateDecode` compression (if beneficial), otherwise the stream will inserted as is.
 
     :raises ValueError: if `xref` does not represent a PDF :data:`dict`. An empty dictionary ``<<>>`` is accepted. So if you just created the `xref` and want to give it a stream, first execute `doc.UpdateObject(xref, "<<>>")`, and then insert the stream data with this method.
@@ -1423,11 +1423,11 @@ This class represents a document. It can be constructed from a file or from memo
     PDF Only: Return an embedded font file's data and appropriate file extension. This can be used to store the font as an external file. The method does not throw exceptions (other than via checking for PDF and valid :data:`xref`).
 
     :arg int xref: PDF object number of the font to extract.
-    :arg bool info_only: only return font information, not the buffer. To be used for information-only purposes, avoids allocation of large buffer areas.
+    :arg bool infoOnly: only return font information, not the buffer. To be used for information-only purposes, avoids allocation of large buffer areas.
     :arg bool named: If true, a dictionary with the following keys is returned: 'name' (font base name), 'ext' (font file extension), 'type' (font type), 'content' (font file content).
 
     :rtype: FontInfo
-    :returns: a tuple `(basename, ext, type, content)`, where *ext* is a 3-byte suggested file extension (*str*), *basename* is the font's name (*str*), *type* is the font's type (e.g. "Type1") and *content* is a bytes object containing the font file's content (or *b""*). For possible extension values and their meaning see :ref:`FontExtensions`. Return details on error:
+    :returns: a tuple `(basename, ext, type, content)`, where *ext* is a 3-byte suggested file extension (*string*), *basename* is the font's name (*string*), *type* is the font's type (e.g. "Type1") and *content* is a bytes object containing the font file's content (or *b""*). For possible extension values and their meaning see :ref:`FontExtensions`. Return details on error:
 
           * `("", "", "", b"")` -- invalid `xref` or `xref` is not a (valid) font object.
           * `(basename, "n/a", "Type1", b"")` -- *basename* is not embedded and thus cannot be extracted. This is the case for e.g. the :ref:`Base-14-Fonts` and Type 3 fonts.
@@ -1513,14 +1513,14 @@ This class represents a document. It can be constructed from a file or from memo
 
     PDF only: Save the journal to a file.
 
-    :arg string filename: either a filename as string or a file object opened as "wb" (or an `io.BytesIO()` object).
+    :arg string filename: either a filename as string.
 
 
   .. method:: JournalLoad(string filename)
 
     PDF only: Load journal from a file. Enables journalling for the document. If journalling is already enabled, an exception is raised.
 
-    :arg string filename: the filename (str) of the journal or a file object opened as "rb" (or an `io.BytesIO()` object).
+    :arg string filename: the filename (string) of the journal.
 
 
   .. method:: SaveSnapshot(string filename)
@@ -1584,19 +1584,19 @@ This class represents a document. It can be constructed from a file or from memo
 
     A `Dictionary<string, bool>` indicating the `/MarkInfo` value. If not specified, the empty dictionary is returned. If not a PDF, `None` is returned.
 
-    :type: dict
+    :type: Dictionary
 
   .. attribute:: PageMode
 
     A string containing the `/PageMode` value. If not specified, the default "UseNone" is returned. If not a PDF, `null` is returned.
 
-    :type: str
+    :type: string
 
   .. attribute:: PageLayout
 
     A string containing the `/PageLayout` value. If not specified, the default "SinglePage" is returned. If not a PDF, `null` is returned.
 
-    :type: str
+    :type: string
 
   .. attribute:: VersionCount
 

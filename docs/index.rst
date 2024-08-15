@@ -38,6 +38,7 @@ Developer documentation to help you get started
     :maxdepth: 2
 
     getting-started/index.rst
+    the-basics/index.rst
     api/index.rst
 
 

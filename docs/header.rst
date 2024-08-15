@@ -24,6 +24,10 @@
 
     <cite>PyMuPDF</cite>
 
+.. |PDF| raw:: html
+
+    <cite>PDF</cite>
+
 .. |pdf_only_class| raw:: html
 
     <div style="width:100%; text-align:right"><b>This class is for PDF only.</b></div>
