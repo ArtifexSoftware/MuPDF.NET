@@ -384,6 +384,19 @@ namespace MuPDF.NET
             return new IRect(ToFzRect().fz_round_rect());
         }
 
+        /// <summary>
+        /// Return matrix that converts to target rect.
+        /// </summary>
+        /// <param name="rect"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        public Matrix ToRect(Rect rect)
+        {
+            if (IsInfinite || IsEmpty || rect.IsInfinite || rect.IsEmpty)
+                throw new Exception("rectangles must be finite and not empty.");
+            return new Matrix(1, 0, 0, 1, -X0, -Y0) * new Matrix(rect.Width / Width, rect.Height / Height) * new Matrix(1, 0, 0, 1, rect.X0, rect.Y0);
+        }
+
         public Rect Transform(Matrix matrix)
         {
             FzRect r = mupdf.mupdf.fz_transform_rect(ToFzRect(), matrix.ToFzMatrix());
