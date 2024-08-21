@@ -387,7 +387,7 @@ namespace MuPDF.NET
         /// <param name="format"></param>
         /// <param name="jpgQuality"></param>
         /// <returns></returns>
-        public byte[] ToBytes(int format, int jpgQuality)
+        internal byte[] ToBytes(int format, int jpgQuality)
         {
             FzPixmap pixmap = _nativePixmap;
             int size = pixmap.fz_pixmap_stride() * pixmap.h();
