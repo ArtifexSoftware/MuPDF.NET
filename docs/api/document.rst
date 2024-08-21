@@ -22,7 +22,6 @@ This class represents a document. It can be constructed from a file or from memo
 :meth:`Document.Convert2Pdf`                    write a PDF version to memory
 :meth:`Document.CopyPage`                       PDF only: copy a page reference
 :meth:`Document.DeleteTocItem`                  PDF only: remove a single TOC item
-:meth:`Document.UpdateTocItem`                  update bookmark by letting it point to nowhere
 :meth:`Document.DeletePage`                     PDF only: delete a page
 :meth:`Document.DeletePages`                    PDF only: delete multiple pages
 :meth:`Document.AddEmbfile`                     PDF only: add a new embedded file from buffer
@@ -34,6 +33,7 @@ This class represents a document. It can be constructed from a file or from memo
 :meth:`Document.GetEmbfileUpd`                  PDF only: change an embedded file
 :meth:`Document.GetNewXref`                     make new `xref`
 :meth:`Document.GetXrefLength`                  get length of `xref` table
+:meth:`Document.GetCharWidths`                  PDF only: return a list of glyph widths of a font
 :meth:`Document.ExtractFont`                    PDF only: extract a font by `xref`
 :meth:`Document.ExtractImage`                   PDF only: extract an embedded image by `xref`       
 :meth:`Document.FindBookmark`                   retrieve page location after laid out document
@@ -54,7 +54,7 @@ This class represents a document. It can be constructed from a file or from memo
 :meth:`Document.GetSigFlags`                    PDF only: determine signature state
 :meth:`Document.GetToc`                         extract the table of contents
 :meth:`Document.GetXmlMetadata`                 PDF only: read the XML metadata
-:meth:`Document.DeleteXmlMetadata`              delete XML metadata
+:meth:`Document.DeleteXmlMetadata`              PDF only: remove XML metadata
 :meth:`Document.HasAnnots`                      PDF only: check if PDF contains any annots
 :meth:`Document.HasLinks`                       PDF only: check if PDF contains any links
 :meth:`Document.InsertPage`                     PDF only: insert a new page
@@ -81,7 +81,7 @@ This class represents a document. It can be constructed from a file or from memo
 :meth:`Document.NewPage`                        PDF only: insert a new empty page
 :meth:`Document.NextLocation`                   return (chapter, pno) of following page
 :meth:`Document.PageCropBox`                    PDF only: the unrotated page rectangle
-:meth:`Document.Pagexref`                       PDF only: `xref` of a page number
+:meth:`Document.PageXref`                       PDF only: `xref` of a page number
 :meth:`Document.GetPages`                       iterator over a page range
 :meth:`Document.GetPdfCatelog`                  PDF only: `xref` of catalog (root)
 :meth:`Document.GetPdfTrailer`                  PDF only: trailer source
@@ -127,6 +127,9 @@ This class represents a document. It can be constructed from a file or from memo
 :meth:`Document.GetXrefStream`                  get decompressed `xref` stream
 :meth:`Document.GetXrefStreamRaw`               PDF only: raw stream source at `xref`
 :meth:`Document.XrefXmlMetaData`                PDF only: `xref` of XML metadata
+:meth:`Document.UpdateTocItem`                  update bookmark by letting it point to nowhere
+:meth:`Document.UpdateObject`                   PDF only: Replace object definition of :data:`xref` with the provided string
+:meth:`Document.UpdateStream`                   Replace the stream of an object identified by *xref*, which must be a PDF dictionary.
 :attr:`Document.ChapterCount`                   number of chapters
 :attr:`Document.FormFonts`                      number of chapters
 :attr:`Document.IsClosed`                       has document been closed?
@@ -648,6 +651,13 @@ This class represents a document. It can be constructed from a file or from memo
     * A "bool", resp. "null" always equal either "true", "false", resp. "null".
     * "float" and "int" are represented by their string format -- and are thus not always distinguishable.
     * A "string" is converted to UTF-8 and may therefore deviate from what is stored in the PDF. For example, the PDF key "Author" may have a value of "<FEFF004A006F0072006A00200058002E0020004D0063004B00690065>" in the file, but the method will return `('string', 'Jorj X. McKie')`.
+  
+  .. method:: XrefIsXObject(int xref)
+
+    Check if xref is a form xobject.
+    :arg int xref: the :data:`xref`.
+
+    :rtype: `bool`
 
   .. method:: SetKeyXRef(int xref, string key, string value)
 
@@ -1283,6 +1293,24 @@ This class represents a document. It can be constructed from a file or from memo
     :rtype: int
     :returns: `xref` of the file object. Automatically, its `/ModDate` PDF key will be updated with the current date-time.
 
+  .. method:: GetXrefLength()
+
+    Get length of xref table.
+
+  .. method:: GetNewXref()
+
+    :returns: new `xref``
+
+  .. method:: GetCharWidths(int xref, int limit: 256, int idx: 0, FontInfo fontDict: null)
+
+    Return a list of character glyphs and their widths for a font that is present in the document. A font must be specified by its PDF cross reference number :data:`xref`. This function is called automatically from :meth:`Page.InsertText` and :meth:`Page.InsertTextbox`. So you should rarely need to do this yourself.
+
+    :arg int xref: cross reference number of a font embedded in the PDF. To find a font :data:`xref`, use e.g. *doc.GetPageFonts(pno)* of page number *pno* and take the first entry of one of the returned list entries.
+
+    :arg int limit: limits the number of returned entries. The default of 256 is enforced for all fonts that only support 1-byte characters, so-called "simple fonts" (checked by this method).
+
+    :rtype: List<(int, double)>
+    :returns: a list of (int, double). Each character *c* has an entry  *(g, w)* in this list with an index of *Convert.Int32(c)*. Entry *g* (integer) of the tuple is the glyph id of the character, and float *w* is its normalized width. The actual width for some :data:`fontsize` can be calculated as *w * fontsize*. For simple fonts, the *g* entry can always be safely ignored. In all other cases *g* is the basis for graphically representing *c*.
 
   .. method:: Close()
 
@@ -1317,7 +1345,7 @@ This class represents a document. It can be constructed from a file or from memo
 
     :rtype: byte[]
     :returns: the (decompressed) stream of the object.
-
+update" bookmark by letting it point to nowhere
   .. method:: GetXrefStreamRaw(int xref)
 
     PDF only: Return the **unmodified** (esp. **not decompressed**) contents of the :data:`xref` stream object. Otherwise equal to :meth:`Document.GetXrefStream`.
@@ -1339,6 +1367,13 @@ This class represents a document. It can be constructed from a file or from memo
     :rtype: int
     :returns: zero if successful, otherwise an exception will be raised.
 
+  .. method:: UpdateTocItem(int xref, string action: null, string title: null, int flags: 0, bool collapse: false, float[] color: null)
+
+    Update bookmark by letting it point to nowhere
+
+    :arg int xref: :data:`xref` number
+
+    :arg string action: 
 
   .. method:: UpdateStream(int xref, byte[] stream: null, int _new: 1, int compress: 1)
 
