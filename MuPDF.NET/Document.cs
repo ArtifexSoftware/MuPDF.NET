@@ -1328,7 +1328,131 @@ namespace MuPDF.NET
             }
         }
 
-        public List<(int, double)> _GetCharWidths(
+        /// <summary>
+        /// Get list of glyph information of a font.
+        /// </summary>
+        /// <param name="doc"></param>
+        /// <param name="xref"></param>
+        /// <param name="limit"></param>
+        /// <param name="idx"></param>
+        /// <param name="fontDict"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        public List<(int, double)> GetCharWidths(
+            int xref,
+            int limit = 256,
+            int idx = 0,
+            FontInfo fontDict = null
+        )
+        {
+            FontInfo fontStruct = Utils.CheckFontInfo(this, xref);
+            string name = "";
+            string ext = "";
+            string stype = "";
+            float asc = 0.0f;
+            float dsc = 0.0f;
+            bool simple = false;
+            int ordering = 0;
+            List<(int, double)> glyphs = null;
+
+            if (fontStruct == null)
+            {
+                if (fontDict == null)
+                {
+                    (name, ext, stype, asc, dsc) = Utils.GetFontProperties(this, xref);
+                    fontStruct.Name = name;
+                    fontStruct.Ext = ext;
+                    fontStruct.Type = stype;
+                    fontStruct.Ascender = asc;
+                    fontStruct.Descender = dsc;
+                }
+                else
+                {
+                    name = fontDict.Name;
+                    ext = fontDict.Ext;
+                    stype = fontDict.Type;
+                    ordering = fontDict.Ordering;
+                    simple = fontDict.Simple;
+                }
+
+                if (string.IsNullOrEmpty(ext))
+                    throw new Exception("xref is not a font");
+
+                if (stype == "Type1" || stype == "MMType1" || stype == "TrueType")
+                    simple = true;
+                else
+                    simple = false;
+
+                if (name == "Fangti" || name == "Ming")
+                    ordering = 0;
+                else if (name == "Heiti" || name == "Song")
+                    ordering = 1;
+                else if (name == "Gothic" || name == "Mincho")
+                    ordering = 2;
+                else if (name == "Dotum" || name == "Batang")
+                    ordering = 3;
+                else
+                    ordering = -1;
+
+                fontDict.Simple = simple;
+
+                if (name == "ZapfDingbats")
+                    glyphs = new List<(int, double)>(Utils.zapf_glyphs);
+                else if (name == "Symbol")
+                    glyphs = new List<(int, double)>(Utils.symbol_glyphs);
+                else
+                    glyphs = null;
+
+                fontDict.Glyphs = glyphs;
+                fontDict.Ordering = ordering;
+                fontDict.Xref = xref;
+                FontInfos.Add(fontDict);
+            }
+            else
+            {
+                fontDict = fontStruct;
+                glyphs = new List<(int, double)>(fontDict.Glyphs);
+                simple = fontDict.Simple;
+                ordering = fontDict.Ordering;
+            }
+
+            int oldLimit = 0;
+            if (glyphs != null)
+                oldLimit = glyphs.Count;
+            int myLimit = Math.Max(256, limit);
+            if (myLimit <= oldLimit)
+                return glyphs;
+
+            if (ordering < 0)
+                glyphs = _GetCharWidths(
+                    xref,
+                    fontDict.Name,
+                    fontDict.Ext,
+                    fontDict.Ordering,
+                    myLimit,
+                    idx
+                );
+            else
+                glyphs = null;
+
+            fontDict.Glyphs = glyphs;
+            Utils.UpdateFontInfo(this, fontDict);
+
+            return glyphs;
+        }
+
+        /// <summary>
+        /// Return a list of character glyphs and their widths for a font that is present in the document.
+        /// </summary>
+        /// <param name="xref">cross reference number of a font embedded in the PDF</param>
+        /// <param name="bfName"></param>
+        /// <param name="ext"></param>
+        /// <param name="ordering"></param>
+        /// <param name="limit">limits the number of returned entries</param>
+        /// <param name="idx"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        internal List<(int, double)> _GetCharWidths(
             int xref,
             string bfName,
             string ext,
@@ -3606,6 +3730,8 @@ namespace MuPDF.NET
                 Xres = xres,
                 Yres = yres,
                 CsName = csName,
+                Orientation = img.fz_image_orientation(),
+                Matrix = new Matrix(img.fz_image_orientation_matrix()),
                 Image = Utils.BinFromBuffer(res)
             };
 
@@ -5575,6 +5701,16 @@ namespace MuPDF.NET
             FzLocation prevLoc = _nativeDocument.fz_previous_page(loc);
             
             return (prevLoc.chapter, prevLoc.page);
+        }
+
+        /// <summary>
+        /// Check if xref is a stream object.
+        /// </summary>
+        /// <param name="xref"></param>
+        /// <returns></returns>
+        public bool IsStream(int xref = 0)
+        {
+            return XrefIsStream(xref);
         }
     }
 }

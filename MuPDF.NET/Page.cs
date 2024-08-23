@@ -2528,7 +2528,7 @@ namespace MuPDF.NET
                 if (Utils.CheckFontInfo(doc, xref) != null)
                     return xref;
 
-                Utils.GetCharWidths(doc, xref);
+                doc.GetCharWidths(xref);
                 return xref;
             }
 
@@ -2586,7 +2586,7 @@ namespace MuPDF.NET
                 return -1;
 
             FontInfo fontDict = val;
-            var _ = Utils.GetCharWidths(doc, xref: fontDict.Xref, fontDict: fontDict);
+            var _ = doc.GetCharWidths(xref: fontDict.Xref, fontDict: fontDict);
             return fontDict.Xref;
         }
 

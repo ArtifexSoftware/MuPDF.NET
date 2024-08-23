@@ -21,5 +21,9 @@
         public string CsName { get; set; }
 
         public byte[] Image { get; set; }
+
+        public byte Orientation { get; set; }
+
+        public Matrix Matrix { get; set; }
     }
 }
