@@ -126,10 +126,11 @@ This class represents a document. It can be constructed from a file or from memo
 :meth:`Document.SetKeyXRef`                     PDF only: set the value of a dictionary key
 :meth:`Document.GetXrefStream`                  get decompressed `xref` stream
 :meth:`Document.GetXrefStreamRaw`               PDF only: raw stream source at `xref`
-:meth:`Document.XrefXmlMetaData`                PDF only: `xref` of XML metadata
+:meth:`Document.XrefXmlMetaData`                PDF only: return XML metadata :data:`xref` number
 :meth:`Document.UpdateTocItem`                  update bookmark by letting it point to nowhere
 :meth:`Document.UpdateObject`                   PDF only: Replace object definition of :data:`xref` with the provided string
 :meth:`Document.UpdateStream`                   Replace the stream of an object identified by *xref*, which must be a PDF dictionary.
+:meth:`Document.IsStream`                       PDF only: check whether an :data:`xref` is a stream object
 :attr:`Document.ChapterCount`                   number of chapters
 :attr:`Document.FormFonts`                      number of chapters
 :attr:`Document.IsClosed`                       has document been closed?
@@ -1564,6 +1565,13 @@ update" bookmark by letting it point to nowhere
 
     This is a normal PDF document with no usage restrictions whatsoever. If it is not being changed in any way, it can be used together with its journal to undo / redo operations or continue updating.
 
+  .. method:: IsStream
+
+    PDF only: Check whether the object represented by :data:`xref` is a :data:`stream` type. Return is *False* if not a PDF or if the number is outside the valid xref range.
+
+    :arg int xref: :data:`xref` number.
+
+    :returns: *true* if the object definition is followed by data wrapped in keyword pair *stream*, *endstream*.
 
   .. attribute:: Outline
 

@@ -13,45 +13,29 @@ Yet others are handy, general-purpose utilities.
 ==================================== ==============================================================
 **Function**                         **Short Description**
 ==================================== ==============================================================
-:meth:`adobe_glyph_names`            list of glyph names defined in **Adobe Glyph List**
 :meth:`adobe_glyph_unicodes`         list of unicodes defined in **Adobe Glyph List**
-:meth:`Annot.set_apn_bbox`           PDF only: set the bbox of the appearance object
-:meth:`Annot.set_apn_matrix`         PDF only: set the matrix of the appearance object
 :meth:`ConversionHeader`             return header string for *get_text* methods
 :meth:`ConversionTrailer`            return trailer string for *get_text* methods
-:meth:`Document.get_char_widths`     PDF only: return a list of glyph widths of a font
-:meth:`Document.get_new_xref`        PDF only: create and return a new :data:`xref` entry
-:meth:`Document.is_stream`           PDF only: check whether an :data:`xref` is a stream object
-:meth:`Document.xml_metadata_xref`   PDF only: return XML metadata :data:`xref` number
-:meth:`Document.xref_length`         PDF only: return length of :data:`xref` table
 :meth:`EMPTY_IRECT`                  return the (standard) empty / invalid rectangle
 :meth:`EMPTY_QUAD`                   return the (standard) empty / invalid quad
 :meth:`EMPTY_RECT`                   return the (standard) empty / invalid rectangle
-:meth:`get_pdf_now`                  return the current timestamp in PDF format
-:meth:`get_pdf_str`                  return PDF-compatible string
-:meth:`get_text_length`              return string length for a given font & :data:`fontsize`
-:meth:`glyph_name_to_unicode`        return unicode from a glyph name
-:meth:`image_profile`                return a dictionary of basic image properties
-:meth:`INFINITE_IRECT`               return the (only existing) infinite rectangle
-:meth:`INFINITE_QUAD`                return the (only existing) infinite quad
+:meth:`GetPdfNow`                    return the current timestamp in PDF format
+:meth:`GetPdfString`                 return PDF-compatible string
+:meth:`GetTextLength`                return string length for a given font & :data:`fontsize`
+:meth:`GlyphName2Unicode`            return unicode from a glyph name
+:meth:`GetImageProfile`              return a dictionary of basic image properties
 :meth:`INFINITE_RECT`                return the (only existing) infinite rectangle
-:meth:`make_table`                   split rectangle in sub-rectangles
 :meth:`css_for_pymupdf_font`         create CSS source for a font in package pymupdf_fonts
-:meth:`paper_rect`                   return rectangle for a known paper format
-:meth:`paper_size`                   return width, height for a known paper format
-:meth:`paper_sizes`                  dictionary of pre-defined paper formats
-:meth:`planish_line`                 matrix to map a line to the x-axis
-:meth:`recover_char_quad`            compute the quad of a char ("rawdict")
-:meth:`recover_line_quad`            compute the quad of a subset of line spans
-:meth:`recover_quad`                 compute the quad of a span ("dict", "rawdict")
-:meth:`recover_span_quad`            compute the quad of a subset of span characters
-:meth:`sRGB_to_pdf`                  return PDF RGB color tuple from an sRGB integer
-:meth:`sRGB_to_rgb`                  return (R, G, B) color tuple from an sRGB integer
-:meth:`unicode_to_glyph_name`        return glyph name from a unicode
-:meth:`get_tessdata`                 locates the language support of the Tesseract-OCR installation
-:attr:`fitz_fontdescriptors`         dictionary of available supplement fonts
+:meth:`PaperRect`                    return rectangle for a known paper format
+:meth:`PaperSize`                    return width, height for a known paper format
+:meth:`PaperSizes`                   dictionary of pre-defined paper formats
+:meth:`PlanishLine`                  matrix to map a line to the x-axis
+:meth:`RecoverCharQuad`              compute the quad of a char ("rawdict")
+:meth:`RecoverLineQuad`              compute the quad of a subset of line spans
+:meth:`RecoverQuad`                  compute the quad of a span ("dict", "rawdict")
+:meth:`RecoverSpanQuad`              compute the quad of a subset of span characters
+:meth:`Unicode2GlyphName`            return glyph name from a unicode
 :attr:`TESSDATA_PREFIX`              a copy of `os.environ["TESSDATA_PREFIX"]`
-:attr:`pdfcolor`                     dictionary of almost 500 RGB colors in PDF format.
 ==================================== ==============================================================
 
    .. method:: paper_size(s)

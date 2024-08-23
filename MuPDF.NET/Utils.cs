@@ -28,6 +28,8 @@ namespace MuPDF.NET
         public static int SigFlag_SignaturesExist = 1;
         public static int SigFlag_AppendOnly = 2;
 
+        public static bool SmallGlyphHeights = false;
+
         public static int UNIQUE_ID = 0;
 
         public static int TEXT_ALIGN_LEFT = 0;
@@ -70,7 +72,7 @@ namespace MuPDF.NET
 
         public static List<string> MUPDF_WARNINGS_STORE = new List<string>();
 
-        private static Dictionary<string, (int, int)> PageSizes = new Dictionary<
+        private static Dictionary<string, (int, int)> PaperSizes = new Dictionary<
             string,
             (int, int)
         >()
@@ -5156,13 +5158,13 @@ namespace MuPDF.NET
             return Utils.RotatePageMatrix(pdfpage);
         }
 
-        public static Rect PageRect(string size)
+        public static Rect PaperRect(string size)
         {
-            (int width, int height) = Utils.PageSize(size);
+            (int width, int height) = Utils.PaperSize(size);
             return new Rect(0, 0, width, height);
         }
 
-        public static (int, int) PageSize(string size)
+        public static (int, int) PaperSize(string size)
         {
             string s = size.ToLower();
             string f = "p";
@@ -5176,7 +5178,7 @@ namespace MuPDF.NET
                 s = s.Substring(0, s.Length - 2);
             }
 
-            (int, int) ret = Utils.PageSizes.GetValueOrDefault(s, (-1, -1));
+            (int, int) ret = Utils.PaperSizes.GetValueOrDefault(s, (-1, -1));
             if (f == "p")
                 return ret;
             return (ret.Item2, ret.Item1);
@@ -5328,6 +5330,63 @@ namespace MuPDF.NET
 
             return new Quad(ul, ur, ll, lr);
         }
+
+        public static bool SetSmallGlyphHeights(bool on = false)
+        {
+            if (on)
+                SmallGlyphHeights = true;
+            return SmallGlyphHeights;
+        }
+
+        /// <summary>
+        /// Recover the quadrilateral of a text character.
+        /// </summary>
+        /// <param name="lineDir">Line Dir</param>
+        /// <param name="span"></param>
+        /// <param name="ch"></param>
+        /// <returns></returns>
+        public static Quad RecoverCharQuad((float, float) lineDir, Span span, Char ch)
+        {
+            Rect bbox = new Rect(ch.Bbox);
+            return RecoverBboxQuad(lineDir, span, bbox);
+        }
+
+        /// <summary>
+        /// Calculate the span quad for 'dict' / 'rawdict' text extractions.
+        /// </summary>
+        /// <param name="lineDir"></param>
+        /// <param name="span"></param>
+        /// <param name="chars"></param>
+        /// <returns></returns>
+        public static Quad RecoverSpanQuad((float, float) lineDir, Span span, Char[] chars)
+        {
+            if (chars == null)
+                return RecoverQuad(lineDir, span);
+
+            Quad q0 = RecoverCharQuad(lineDir, span, chars[0]);
+            Quad q1;
+            if (chars.Length > 1)
+                q1 = RecoverCharQuad(lineDir, span, chars[chars.Length - 1]);
+            else
+                q1 = q0;
+
+            Point spanll = q0.LowerLeft;
+            Point spanlr = q1.LowerRight;
+            Matrix mat0 = PlanishLine(spanll, spanlr);
+            Point xlr = spanlr * mat0;
+
+            bool small = SetSmallGlyphHeights();
+            float h = 0;
+
+            h = span.Size * (small ? 1 : (span.Asc - span.Desc));
+            Rect spanRect = new Rect(0, -h, xlr.X, 0);
+            Quad spanQuad = spanRect.Quad;
+            spanQuad = spanQuad * ~mat0;
+
+            return spanQuad;
+        }
+
+
 
         /// <summary>
         /// Recover the quadrilateral of a text span.
@@ -6107,6 +6166,12 @@ namespace MuPDF.NET
             Utils.IsInitialized = true;
         }
 
+        /// <summary>
+        /// Calculate area of rectangle. parameter is one of 'px' (default), 'in', 'cm', or 'mm'.
+        /// </summary>
+        /// <param name="rect"></param>
+        /// <param name="unit"></param>
+        /// <returns></returns>
         public static float GetArea(Rect rect, string unit = "px")
         {
             Dictionary<string, (float, float)> u = new Dictionary<string, (float, float)>()
@@ -6119,5 +6184,144 @@ namespace MuPDF.NET
             float f = (float)Math.Pow(u[unit].Item1 / u[unit].Item2, 2);
             return f * rect.Width * rect.Height;
         }
+
+        /// <summary>
+        /// Return basic properties of an image.
+        /// </summary>
+        /// <param name="image">bytes array opened</param>
+        /// <param name="keepImage"></param>
+        /// <returns></returns>
+        public static ImageInfo GetImageProfile(byte[] image, int keepImage = 0)
+        {
+            if (image == null) return null;
+
+            int len = image.Length;
+            if (len < 8)
+            {
+                Console.WriteLine("bad image data");
+                return null;
+            }
+
+            nint swigImage = Marshal.AllocHGlobal(len);
+            Marshal.Copy(image, 0, swigImage, len);
+            SWIGTYPE_p_unsigned_char c = new SWIGTYPE_p_unsigned_char(swigImage, true);
+            int type = mupdf.mupdf.fz_recognize_image_format(c);
+            if (type == (int)ImageType.FZ_IMAGE_UNKNOWN)
+                return null;
+
+            // get properties for imageinfo
+            FzBuffer res = null;
+            if (keepImage != 0)
+                res = mupdf.mupdf.fz_new_buffer_from_copied_data(c, (uint)len);
+            else
+                res = mupdf.mupdf.fz_new_buffer_from_shared_data(c, (uint)len);
+            FzImage img = mupdf.mupdf.fz_new_image_from_buffer(res);
+            FzMatrix ctm = mupdf.mupdf.fz_image_orientation_matrix(img);
+            (int xres, int yres) = img.fz_image_resolution();
+            byte orientation = img.fz_image_orientation();
+            string csName = img.colorspace().fz_colorspace_name();
+
+            // create imageinfo to return
+            ImageInfo ret = new ImageInfo()
+            {
+                Width = img.w(),
+                Height = img.h(),
+                Orientation = orientation,
+                Matrix = new Matrix(ctm),
+                Xres = xres,
+                Yres = yres,
+                ColorSpace = img.n(),
+                Bpc = img.bpc(),
+                Ext = GetImageExtention(type),
+                CsName = csName
+            };
+
+            if (keepImage != 0)
+                ret.Image = BinFromBuffer(res);
+            return ret;
+        }
+
+        public static string ConversionHeader(string i, string filename = "unknown")
+        {
+            string t = i.ToLower();
+            string html = @"
+                <!DOCTYPE html>
+                <html>
+                <head>
+                <style>
+                body{background-color:gray}
+                div{position:relative;background-color:white;margin:1em auto}
+                p{position:absolute;margin:0}
+                img{position:absolute}
+                </style>
+                </head>
+                <body>
+                ";
+
+            string xml = $@"
+                <?xml version='1.0'?>
+                <document name='{filename}'>
+                ";
+
+            string xhtml = @"
+                <?xml version='1.0'?>
+                <!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Strict//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd'>
+                <html xmlns='http://www.w3.org/1999/xhtml'>
+                <head>
+                <style>
+                body{background-color:gray}
+                div{background-color:white;margin:1em;padding:1em}
+                p{white-space:pre-wrap}
+                </style>
+                </head>
+                <body>
+                ";
+
+            string r = "";
+            string json = $"{{\"document\": \"{filename}\", \"pages\": [\n";
+            if (t == "html")
+                r = html;
+            else if (t == "json")
+                r = json;
+            else if (t == "xml")
+                r = xml;
+            else if (t == "xhtml")
+                r = xhtml;
+            else
+                r = "";
+
+            return r;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="i"></param>
+        /// <returns></returns>
+        public static string ConversionTailer(string i)
+        {
+            string t = i.ToLower();
+            string text = "";
+            string json = "]\n}";
+            string html = "</body>\n</html>\n";
+            string xml = "</document>\n";
+            string xhtml = html;
+            string r = "";
+
+            if (t == "html")
+                r = html;
+            else if (t == "json")
+                r = json;
+            else if (t == "xml")
+                r = xml;
+            else if (t == "xhtml")
+                r = xhtml;
+            else
+                r = text;
+
+            return r;
+        }
+
+
     }
 }
