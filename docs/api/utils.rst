@@ -15,6 +15,7 @@ Yet others are handy, general-purpose utilities.
 ==================================== ==============================================================
 :meth:`adobe_glyph_unicodes`         list of unicodes defined in **Adobe Glyph List**
 :meth:`ConversionHeader`             return header string for *get_text* methods
+:meth:`sRGB2rgb`                     Convenience function returning a color (red, green, blue) for a given *sRGB* color integer.
 :meth:`ConversionTrailer`            return trailer string for *get_text* methods
 :meth:`EMPTY_IRECT`                  return the (standard) empty / invalid rectangle
 :meth:`EMPTY_QUAD`                   return the (standard) empty / invalid quad
@@ -25,7 +26,6 @@ Yet others are handy, general-purpose utilities.
 :meth:`GlyphName2Unicode`            return unicode from a glyph name
 :meth:`GetImageProfile`              return a dictionary of basic image properties
 :meth:`INFINITE_RECT`                return the (only existing) infinite rectangle
-:meth:`css_for_pymupdf_font`         create CSS source for a font in package pymupdf_fonts
 :meth:`PaperRect`                    return rectangle for a known paper format
 :meth:`PaperSize`                    return width, height for a known paper format
 :meth:`PaperSizes`                   dictionary of pre-defined paper formats
@@ -35,6 +35,14 @@ Yet others are handy, general-purpose utilities.
 :meth:`RecoverQuad`                  compute the quad of a span ("dict", "rawdict")
 :meth:`RecoverSpanQuad`              compute the quad of a subset of span characters
 :meth:`Unicode2GlyphName`            return glyph name from a unicode
+:meth:`MakeAnnotDA`                  Passing color, fontname, fontsize into the annot.
+:meth:`AddAnnotId`                   Add a unique /NM key to an annotation or widget.
+:meth:`AddOcObject`                  Add OC object reference to a dictionary
+:meth:`ColorCount`                   Return count of each color.
+:meth:`BinFromBuffer`                Turn FzBuffer into a byte[]
+:meth:`BufferFromBytes`              Make FzBuffer from a byte[] object.
+:meth:`CalcImageMatrix`              Compute image insertion matrix
+:meth:`CompressBuffer`               Compress FzBuffer into a new buffer
 :attr:`TESSDATA_PREFIX`              a copy of `os.environ["TESSDATA_PREFIX"]`
 ==================================== ==============================================================
 
@@ -69,57 +77,45 @@ Yet others are handy, general-purpose utilities.
 
 -----
 
-   .. method:: sRGB_to_pdf(srgb)
+   .. method:: sRGB2Pdf(int srgb)
 
-      *New in v1.17.4*
-
-      Convenience function returning a PDF color triple (red, green, blue) for a given sRGB color integer as it occurs in :meth:`Page.get_text` dictionaries "dict" and "rawdict".
+      Convenience function returning a PDF color triple (red, green, blue) for a given sRGB color integer as it occurs in :meth:`Page.GetText` dictionaries "dict" and "rawdict".
 
       :arg int srgb: an integer of format RRGGBB, where each color component is an integer in range(255).
 
-      :returns: a tuple (red, green, blue) with float items in interval *0 <= item <= 1* representing the same color. Example `sRGB_to_pdf(0xff0000) = (1, 0, 0)` (red).
+      :returns: a tuple (red, green, blue) with float items in interval *0 <= item <= 1* representing the same color. Example `sRGB2Pdf(0xff0000) = (1, 0, 0)` (red).
 
 -----
 
-   .. method:: sRGB_to_rgb(srgb)
-
-      *New in v1.17.4*
+   .. method:: sRGB2Rgb(int srgb)
 
       Convenience function returning a color (red, green, blue) for a given *sRGB* color integer.
 
       :arg int srgb: an integer of format RRGGBB, where each color component is an integer in range(255).
 
-      :returns: a tuple (red, green, blue) with integer items in `range(256)` representing the same color. Example `sRGB_to_pdf(0xff0000) = (255, 0, 0)` (red).
+      :returns: a tuple (red, green, blue) with integer items in `range(256)` representing the same color. Example `sRGB2Pdf(0xff0000) = (255, 0, 0)` (red).
 
 -----
 
-   .. method:: glyph_name_to_unicode(name)
-
-      *New in v1.18.0*
+   .. method:: GlyphName2Unicode(string name)
 
       Return the unicode number of a glyph name based on the **Adobe Glyph List**.
 
-      :arg str name: the name of some glyph. The function is based on the `Adobe Glyph List <https://github.com/adobe-type-tools/agl-aglfn/blob/master/glyphlist.txt>`_.
+      :arg string name: the name of some glyph. The function is based on the `Adobe Glyph List <https://github.com/adobe-type-tools/agl-aglfn/blob/master/glyphlist.txt>`_.
 
       :rtype: int
       :returns: the unicode. Invalid *name* entries return `0xfffd (65533)`.
 
-      .. note:: A similar functionality is provided by package `fontTools <https://pypi.org/project/fonttools/>`_ in its *agl* sub-package.
-
 -----
 
-   .. method:: unicode_to_glyph_name(ch)
-
-      *New in v1.18.0*
+   .. method:: Unicode2GlyphName(int ch)
 
       Return the glyph name of a unicode number, based on the **Adobe Glyph List**.
 
       :arg int ch: the unicode given by e.g. `ord("ß")`. The function is based on the `Adobe Glyph List <https://github.com/adobe-type-tools/agl-aglfn/blob/master/glyphlist.txt>`_.
 
-      :rtype: str
-      :returns: the glyph name. E.g. `pymupdf.unicode_to_glyph_name(ord("Ä"))` returns `'Adieresis'`.
-
-      .. note:: A similar functionality is provided by package `fontTools <https://pypi.org/project/fonttools/>`_: in its *agl* sub-package.
+      :rtype: string
+      :returns: the glyph name. E.g. `Utils.Unicode2GlyphName(Convert.Int32("Ä"))` returns `'Adieresis'`.
 
 -----
 
@@ -193,50 +189,15 @@ Yet others are handy, general-purpose utilities.
 
 -----
 
-.. _Functions_make_table:
-
-   .. method:: make_table(rect, cols=1, rows=1)
-
-      *New in v1.17.4*
-
-      Convenience function to split a rectangle into sub-rectangles of equal size. Returns a list of `rows` lists, each containing `cols` :ref:`Rect` items. Each sub-rectangle can then be addressed by its row and column index.
-
-      :arg rect_like rect: the rectangle to split.
-      :arg int cols: the desired number of columns.
-      :arg int rows: the desired number of rows.
-      :returns: a list of :ref:`Rect` objects of equal size, whose union equals *rect*. Here is the layout of a 3x4 table created by `cell = pymupdf.make_table(rect, cols=4, rows=3)`:
-
-      .. image:: images/img-make-table.*
-         :scale: 60
-
-
------
-
-   .. method:: planish_line(p1, p2)
-
-      * New in version 1.16.2)*
+   .. method:: PlanishLine(Point p1, Point p2)
 
       Return a matrix which maps the line from p1 to p2 to the x-axis such that p1 will become (0,0) and p2 a point with the same distance to (0,0).
 
-      :arg point_like p1: starting point of the line.
-      :arg point_like p2: end point of the line.
+      :arg Point p1: starting point of the line.
+      :arg Point p2: end point of the line.
 
       :rtype: :ref:`Matrix`
       :returns: a matrix which combines a rotation and a translation::
-
-            >>> p1 = pymupdf.Point(1, 1)
-            >>> p2 = pymupdf.Point(4, 5)
-            >>> abs(p2 - p1)  # distance of points
-            5.0
-            >>> m = pymupdf.planish_line(p1, p2)
-            >>> p1 * m
-            Point(0.0, 0.0)
-            >>> p2 * m
-            Point(5.0, -5.960464477539063e-08)
-            >>> # distance of the resulting points
-            >>> abs(p2 * m - p1 * m)
-            5.0
-
 
          .. image:: images/img-planish.png
             :scale: 40
@@ -244,35 +205,9 @@ Yet others are handy, general-purpose utilities.
 
 -----
 
-   .. method:: paper_sizes
+   .. method:: PaperSize
 
-      A dictionary of pre-defines paper formats. Used as basis for :meth:`paper_size`.
-
------
-
-   .. attribute:: fitz_fontdescriptors
-
-      * New in v1.17.5
-
-      A dictionary of usable fonts from repository `pymupdf-fonts <https://pypi.org/project/pymupdf-fonts/>`_. Items are keyed by their reserved fontname and provide information like this::
-
-         In [2]: pymupdf.fitz_fontdescriptors.keys()
-         Out[2]: dict_keys(['figbo', 'figo', 'figbi', 'figit', 'fimbo', 'fimo',
-         'spacembo', 'spacembi', 'spacemit', 'spacemo', 'math', 'music', 'symbol1',
-         'symbol2'])
-         In [3]: pymupdf.fitz_fontdescriptors["fimo"]
-         Out[3]:
-         {'name': 'Fira Mono Regular',
-         'size': 125712,
-         'mono': True,
-         'bold': False,
-         'italic': False,
-         'serif': True,
-         'glyphs': 1485}
-
-      If `pymupdf-fonts` is not installed, the dictionary is empty.
-
-      The dictionary keys can be used to define a :ref:`Font` via e.g. `font = pymupdf.Font("fimo")` -- just like you can do it with the builtin fonts "Helvetica" and friends.
+      A dictionary of pre-defines paper formats. Used as basis for :meth:`PaperSize`.
 
 -----
 
@@ -302,73 +237,54 @@ Yet others are handy, general-purpose utilities.
 
 -----
 
-   .. method:: get_pdf_now()
+   .. method:: GetPdfNow()
 
       Convenience function to return the current local timestamp in PDF compatible format, e.g. *D:20170501121525-04'00'* for local datetime May 1, 2017, 12:15:25 in a timezone 4 hours westward of the UTC meridian.
 
-      :rtype: str
+      :rtype: string
       :returns: current local PDF timestamp.
 
 -----
 
-   .. method:: get_text_length(text, fontname="helv", fontsize=11, encoding=TEXT_ENCODING_LATIN)
+   .. method:: GetTextLength(string text, string fontName: "helv", float fontSize: 11, int encoding: 0)
 
-      * New in version 1.14.7
-
-      Calculate the length of text on output with a given **builtin** font, :data:`fontsize` and encoding.
+      Calculate the length of text on output with a given **builtin** font, :data:`fontSize` and encoding.
 
       :arg str text: the text string.
-      :arg str fontname: the fontname. Must be one of either the :ref:`Base-14-Fonts` or the CJK fonts, identified by their "reserved" fontnames (see table in :meth:`Page.insert_font`).
-      :arg float fontsize: the :data:`fontsize`.
+      :arg str fontName: the fontName. Must be one of either the :ref:`Base-14-Fonts` or the CJK fonts, identified by their "reserved" fontnames (see table in :meth:`Page.InsertFont`).
+      :arg float fontSize: the :data:`fontSize`.
       :arg int encoding: the encoding to use. Besides 0 = Latin, 1 = Greek and 2 = Cyrillic (Russian) are available. Relevant for Base-14 fonts "Helvetica", "Courier" and "Times" and their variants only. Make sure to use the same value as in the corresponding text insertion.
       :rtype: float
-      :returns: the length in points the string will have (e.g. when used in :meth:`Page.insert_text`).
+      :returns: the length in points the string will have (e.g. when used in :meth:`Page.InsertText`).
 
       .. note:: This function will only do the calculation -- it won't insert font nor text.
 
       .. note:: The :ref:`Font` class offers a similar method, :meth:`Font.text_length`, which supports Base-14 fonts and any font with a character map (CMap, Type 0 fonts).
 
-      .. warning:: If you use this function to determine the required rectangle width for the (:ref:`Page` or :ref:`Shape`) *insert_textbox* methods, be aware that they calculate on a **by-character level**. Because of rounding effects, this will mostly lead to a slightly larger number: *sum([pymupdf.get_text_length(c) for c in text]) > pymupdf.get_text_length(text)*. So either (1) do the same, or (2) use something like *pymupdf.get_text_length(text + "'")* for your calculation.
+      .. warning:: If you use this function to determine the required rectangle width for the (:ref:`Page` or :ref:`Shape`) *InsertTextbox* methods, be aware that they calculate on a **by-character level**.
 
 -----
 
-   .. method:: get_pdf_str(text)
+   .. method:: GetPdfString(string text)
 
       Make a PDF-compatible string: if the text contains code points *ord(c) > 255*, then it will be converted to UTF-16BE with BOM as a hexadecimal character string enclosed in "<>" brackets like *<feff...>*. Otherwise, it will return the string enclosed in (round) brackets, replacing any characters outside the ASCII range with some special code. Also, every "(", ")" or backslash is escaped with a backslash.
 
       :arg str text: the object to convert
 
-      :rtype: str
+      :rtype: string
       :returns: PDF-compatible string enclosed in either *()* or *<>*.
 
 -----
 
-   .. method:: image_profile(stream)
-
-      * New in v1.16.7
-      * Changed in v1.19.5: also return natural image orientation extracted from EXIF data if present.
-      * Changed in v1.22.5: always return `None` in error cases instead of an empty dictionary.
+   .. method:: GetImageProfile(byte[] stream)
 
       Show important properties of an image provided as a memory area. Its main purpose is to avoid using other Python packages just to determine them.
 
-      :arg bytes|bytearray|BytesIO|file stream: either an image in memory or an **opened** file. An image in memory may be any of the formats `bytes`, `bytearray` or `io.BytesIO`.
+      :arg bytes stream: either an image in memory or an **opened** file. An image in memory may be any of the formats `bytes`.
 
-      :rtype: dict
+      :rtype: ImageInfo
       :returns:
          No exception is ever raised. In case of an error, `None` is returned. Otherwise, there are the following items::
-
-            In [2]: pymupdf.image_profile(open("nur-ruhig.jpg", "rb").read())
-            Out[2]:
-            {'width': 439,
-            'height': 501,
-            'orientation': 0,  # natural orientation (from EXIF)
-            'transform': (1.0, 0.0, 0.0, 1.0, 0.0, 0.0),  # orientation matrix
-            'xres': 96,
-            'yres': 96,
-            'colorspace': 3,
-            'bpc': 8,
-            'ext': 'jpeg',
-            'cs-name': 'DeviceRGB'}
 
          There is the following relation to **Exif** information encoded in `orientation`, and correspondingly in the `transform` matrix-like (quoted from MuPDF documentation, *ccw* = counter-clockwise):
 
@@ -385,372 +301,84 @@ Yet others are handy, general-purpose utilities.
 
          .. note::
 
-            * For some "exotic" images (FAX encodings, RAW formats and the like), this method will not work. You can however still work with such images in PyMuPDF, e.g. by using :meth:`Document.extract_image` or create pixmaps via `Pixmap(doc, xref)`. These methods will automatically convert exotic images to the PNG format before returning results.
-            * You can also get the properties of images embedded in a PDF, via their :data:`xref`. In this case make sure to extract the raw stream: `pymupdf.image_profile(doc.xref_stream_raw(xref))`.
-            * Images as returned by the image blocks of :meth:`Page.get_text` using "dict" or "rawdict" options are also supported.
+            * For some "exotic" images (FAX encodings, RAW formats and the like), this method will not work. You can however still work with such images in PyMuPDF, e.g. by using :meth:`Document.ExtractImage` or create pixmaps via `Pixmap(doc, xref)`. These methods will automatically convert exotic images to the PNG format before returning results.
+            * You can also get the properties of images embedded in a PDF, via their :data:`xref`. In this case make sure to extract the raw stream: `pymupdf.GetImageProfile(doc.GetXrefStreamRaw(xref))`.
+            * Images as returned by the image blocks of :meth:`Page.GetText` using "dict" or "rawdict" options are also supported.
 
 
 -----
 
-   .. method:: ConversionHeader("text", filename="UNKNOWN")
+   .. method:: ConversionHeader(string i: "text", string filename: "UNKNOWN")
 
       Return the header string required to make a valid document out of page text outputs.
 
-      :arg str output: type of document. Use the same as the output parameter of *get_text()*.
+      :arg string i: type of document. Use the same as the output parameter of *GetText()*.
 
-      :arg str filename: optional arbitrary name to use in output types "json" and "xml".
+      :arg string filename: optional arbitrary name to use in output types "json" and "xml".
 
-      :rtype: str
-
------
-
-   .. method:: ConversionTrailer(output)
-
-      Return the trailer string required to make a valid document out of page text outputs. See :meth:`Page.get_text` for an example.
-
-      :arg str output: type of document. Use the same as the output parameter of *get_text()*.
-
-      :rtype: str
+      :rtype: string
 
 -----
 
-   .. method:: Document.del_xml_metadata()
+   .. method:: ConversionTrailer(string i)
 
-      Delete an object containing XML-based metadata from the PDF. (Py-) MuPDF does not support XML-based metadata. Use this if you want to make sure that the conventional metadata dictionary will be used exclusively. Many thirdparty PDF programs insert their own metadata in XML format and thus may override what you store in the conventional dictionary. This method deletes any such reference, and the corresponding PDF object will be deleted during next garbage collection of the file.
+      Return the trailer string required to make a valid document out of page text outputs. See :meth:`Page.GetText` for an example.
 
------
+      :arg string i: type of document. Use the same as the output parameter of *GetText()*.
 
-   .. method:: Document.xml_metadata_xref()
-
-      Return the XML-based metadata :data:`xref` of the PDF if present -- also refer to :meth:`Document.del_xml_metadata`. You can use it to retrieve the content via :meth:`Document.xref_stream` and then work with it using some XML software.
-
-      :rtype: int
-      :returns: :data:`xref` of PDF file level XML metadata -- or 0 if none exists.
+      :rtype: string
 
 -----
 
-   .. method:: Page.run(dev, transform)
+   .. method:: RecoverQuad((float, float) lineDir, Span span)
 
-      Run a page through a device.
+      Compute the quadrilateral of a text span extracted via options "dict" or "rawdict" of :meth:`Page.GetText`.
 
-      :arg dev: Device, obtained from one of the :ref:`Device` constructors.
-      :type dev: :ref:`Device`
-
-      :arg transform: Transformation to apply to the page. Set it to :ref:`Identity` if no transformation is desired.
-      :type transform: :ref:`Matrix`
-
------
-
-   .. method:: Page.get_bboxlog(layers=False)
-
-      * New in v1.19.0
-      * Changed in v1.22.0: optionally also return the OCG name applicable to the boundary box.
-
-      :returns: a list of rectangles that envelop text, image or drawing objects. Each item is a tuple `(type, (x0, y0, x1, y1))` where the second tuple consists of rectangle coordinates, and *type* is one of the following values. If `layers=True`, there is a third item containing the OCG name or `None`: `(type, (x0, y0, x1, y1), None)`.
-
-         * `"fill-text"` -- normal text (painted without character borders)
-         * `"stroke-text"` -- text showing character borders only
-         * `"ignore-text"` -- text that should not be displayed (e.g. as used by OCR text layers)
-         * `"fill-path"` -- drawing with fill color (and no border)
-         * `"stroke-path"` -- drawing with border (and no fill color)
-         * `"fill-image"` -- displays an image
-         * `"fill-shade"` -- display a shading
-
-         The item sequence represents the **sequence in which these commands are executed** to build the page's appearance. Therefore, if an item's bbox intersects or contains that of a previous item, then the previous item may be (partially) covered / hidden.
-
-
-         So this list can be used to detect such situations. An item's index in this list equals the value of a `"seqno"` in dictionaries as returned by :meth:`Page.get_drawings` and :meth:`Page.get_texttrace`.
-
-
------
-
-   .. method:: Page.get_texttrace()
-
-      * New in v1.18.16
-      * Changed in v1.19.0: added key "seqno".
-      * Changed in v1.19.1: stroke and fill colors now always are either RGB or GRAY
-      * Changed in v1.19.3: span and character bboxes are now also correct if `dir != (1, 0)`.
-      * Changed in v1.22.0: add new dictionary key "layer".
-
-
-      Return low-level text information of the page. The method is available for **all** document types. The result is a list of Python dictionaries with the following content::
-
-         {
-            'ascender': 0.83251953125,          # font ascender (1)
-            'bbox': (458.14019775390625,        # span bbox x0 (7)
-                     749.4671630859375,         # span bbox y0
-                     467.76458740234375,        # span bbox x1
-                     757.5071411132812),        # span bbox y1
-            'bidi': 0,                          # bidirectional level (1)
-            'chars': (                          # char information, tuple[tuple]
-                        (45,                    # unicode (4)
-                        16,                     # glyph id (font dependent)
-                        (458.14019775390625,    # origin.x (1)
-                        755.3758544921875),     # origin.y (1)
-                        (458.14019775390625,    # char bbox x0 (6)
-                        749.4671630859375,      # char bbox y0
-                        462.9649963378906,      # char bbox x1
-                        757.5071411132812)),    # char bbox y1
-                        ( ... ),                # more characters
-                     ),
-            'color': (0.0,),                    # text color, tuple[float] (1)
-            'colorspace': 1,                    # number of colorspace components (1)
-            'descender': -0.30029296875,        # font descender (1)
-            'dir': (1.0, 0.0),                  # writing direction (1)
-            'flags': 12,                        # font flags (1)
-            'font': 'CourierNewPSMT',           # font name (1)
-            'linewidth': 0.4019999980926514,    # current line width value (3)
-            'opacity': 1.0,                     # alpha value of the text (5)
-            'layer': None,                      # name of Optional Content Group (9)
-            'seqno': 246,                       # sequence number (8)
-            'size': 8.039999961853027,          # font size (1)
-            'spacewidth': 4.824785133358091,    # width of space char
-            'type': 0,                          # span type (2)
-            'wmode': 0                          # writing mode (1)
-         }
-
-      Details:
-
-      1. Information above tagged with "(1)" has the same meaning and value as explained in :ref:`TextPage`.
-
-         - Please note that the font `flags` value will never contain a *superscript* flag bit: the detection of superscripts is done within MuPDF :ref:`TextPage` code -- it is not a property of any font.
-         - Also note, that the text *color* is encoded as the usual tuple of floats 0 <= f <= 1 -- not in sRGB format. Depending on `span["type"]`, interpret this as fill color or stroke color.
-
-      2. There are 3 text span types:
-
-         - 0: Filled text -- equivalent to PDF text rendering mode 0 (`0 Tr`, the default in PDF), only each character's "inside" is shown.
-         - 1: Stroked text -- equivalent to `1 Tr`, only the character borders are shown.
-         - 3: Ignored text -- equivalent to `3 Tr` (hidden text).
-
-      3. Line width in this context is important only for processing `span["type"] != 0`: it determines the thickness of the character's border line. This value may not be provided at all with the text data. In this case, a value of 5% of the :data:`fontsize` (`span["size"] * 0,05`) is generated. Often, an "artificial" bold text in PDF is created by `2 Tr`. There is no equivalent span type for this case. Instead, respective text is represented by two consecutive spans -- which are identical in every aspect, except for their types, which are 0, resp 1. It is your responsibility to handle this type of situation - in :meth:`Page.get_text`, MuPDF is doing this for you.
-      4. For data compactness, the character's unicode is provided here. Use built-in function `chr()` for the character itself.
-      5. The alpha / opacity value of the span's text, `0 <= opacity <= 1`, 0 is invisible text, 1 (100%) is intransparent. Depending on `span["type"]`, interpret this value as *fill* opacity or, resp. *stroke* opacity.
-      6. *(Changed in v1.19.0)* This value is equal or close to `char["bbox"]` of "rawdict". In particular, the bbox **height** value is always computed as if **"small glyph heights"** had been requested.
-      7. *(New in v1.19.0)* This is the union of all character bboxes.
-      8. *(New in v1.19.0)* Enumerates the commands that build up the page's appearance. Can be used to find out whether text is effectively hidden by objects, which are painted "later", or *over* some object. So if there is a drawing or image with a higher sequence number, whose bbox overlaps (parts of) this text span, one may assume that such an object hides the resp. text. Different text spans have identical sequence numbers if they were created in one go.
-      9. *(New in v1.22.0)* The name of the Optional Content Group (OCG) if applicable or `None`.
-
-      Here is a list of similarities and differences of `page.get_texttrace()` compared to `page.get_text("rawdict")`:
-
-      * The method is up to **twice as fast,** compared to "rawdict" extraction. Depends on the amount of text.
-      * The returned data is very **much smaller in size** -- although it provides more information.
-      * Additional types of text **invisibility can be detected**: opacity = 0 or type > 1 or overlapping bbox of an object with a higher sequence number.
-      * If MuPDF returns unicode 0xFFFD (65533) for unrecognized characters, you may still be able to deduct desired information from the glyph id.
-      * The `span["chars"]` **contains no spaces**, **except** the document creator has explicitly coded them. They **will never be generated** like it happens in :meth:`Page.get_text` methods. To provide some help for doing your own computations here, the width of a space character is given. This value is derived from the font where possible. Otherwise the value of a fallback font is taken.
-      * There is no effort to organize text like it happens for a :ref:`TextPage` (the hierarchy of blocks, lines, spans, and characters). Characters are simply extracted in sequence, one by one, and put in a span. Whenever any of the span's characteristics changes, a new span is started. So you may find characters with different `origin.y` values in the same span (which means they would appear in different lines). You cannot assume, that span characters are sorted in any particular order -- you must make sense of the info yourself, taking `span["dir"]`, `span["wmode"]`, etc. into account.
-      * Ligatures are represented like this:
-         - MuPDF handles the following ligatures: "fi", "ff", "fl", "ft", "st", "ffi", and "ffl" (only the first 3 are mostly ever used). If the page contains e.g. ligature "fi", you will find the following two character items subsequent to each other::
-
-            (102, glyph, (x, y), (x0, y0, x1, y1))  # 102 = ord("f")
-            (105, -1, (x, y), (x0, y0, x0, y1))     # 105 = ord("i"), empty bbox!
-
-         - This means that the bbox of the first ligature character is the area containing the complete, compound glyph. Subsequent ligature components are recognizable by their glyph value -1 and a bbox of width zero.
-         - You may want to replace those 2 or 3 char tuples by one, that represents the ligature itself. Use the following mapping of ligatures to unicodes:
-
-            + `"ff" -> 0xFB00`
-            + `"fi" -> 0xFB01`
-            + `"fl" -> 0xFB02`
-            + `"ffi" -> 0xFB03`
-            + `"ffl" -> 0xFB04`
-            + `"ft" -> 0xFB05`
-            + `"st" -> 0xFB06`
-
-            So you may want to replace the two example tuples above by the following single one: `(0xFB01, glyph, (x, y), (x0, y0, x1, y1))` (there is usually no need to lookup the correct glyph id for 0xFB01 in the resp. font, but you may execute `font.has_glyph(0xFB01)` and use its return value).
-
-      * **Changed in v1.19.3:** Similar to other text extraction methods, the character and span bboxes envelop the character quads. To recover the quads, follow the same methods :meth:`recover_quad`, :meth:`recover_char_quad` or :meth:`recover_span_quad` as explained in :ref:`textpagedict`. Use either `None` or `span["dir"]` for the writing direction.
-
-      * **Changed in v1.21.1:** If applicable, the name of the OCG is shown in `"layer"`.
-
------
-
-   .. method:: Page.wrap_contents()
-
-      Ensures that the page's so-called graphics state is balanced and new content can be inserted correctly.
-      
-      In versions 1.24.1+ of PyMuPDF the method was improved and is being executed automatically as required, so you should no longer need to concern yourself with it.
-
-      This method obsoletes the use of :meth:`Page.clean_contents` in most cases.      
-      The advantage this method is a small footprint in terms of processing time and a low impact on the data size of incremental saves.
-
------
-
-   .. attribute:: Page.is_wrapped
-
-      Indicate whether the page's so-called graphic state is balanced. If `False`, :meth:`Page.wrap_contents` should be executed if new content is inserted (only relevant in `overlay=True` mode). In newer versions (1.24.1+), this check and corresponding adjustments are automatically executed -- you therefore should not be concerned about this anymore.
-
-      :rtype: bool
-
------
-
-   .. method:: Page.get_text_blocks(flags=None)
-
-      Deprecated wrapper for :meth:`TextPage.extractBLOCKS`.  Use :meth:`Page.get_text` with the "blocks" option instead.
-
-      :rtype: list[tuple]
-
------
-
-   .. method:: Page.get_text_words(flags=None, delimiters=None)
-
-      Deprecated wrapper for :meth:`TextPage.extractWORDS`. Use :meth:`Page.get_text` with the "words" option instead.
-
-      :rtype: list[tuple]
-
------
-
-   .. method:: Page.get_displaylist()
-
-      Run a page through a list device and return its display list.
-
-      :rtype: :ref:`DisplayList`
-      :returns: the display list of the page.
-
------
-
-   .. method:: Page.get_contents()
-
-      PDF only: Retrieve a list of :data:`xref` of :data:`contents` objects of a page. May be empty or contain multiple integers. If the page is cleaned (:meth:`Page.clean_contents`), it will be one entry at most. The "source" of each `/Contents` object can be individually read by :meth:`Document.xref_stream` using an item of this list. Method :meth:`Page.read_contents` in contrast walks through this list and concatenates the corresponding sources into one `bytes` object.
-
-      :rtype: list[int]
-
------
-
-   .. method:: Page.set_contents(xref)
-
-      PDF only: Let the page's `/Contents` key point to this xref. Any previously used contents objects will be ignored and can be removed via garbage collection.
-
------
-
-   .. method:: Page.clean_contents(sanitize=True)
-
-      * Changed in v1.17.6
-
-      PDF only: Clean and concatenate all :data:`contents` objects associated with this page. "Cleaning" includes syntactical corrections, standardizations and "pretty printing" of the contents stream. Discrepancies between :data:`contents` and :data:`resources` objects will also be corrected if sanitize is true. See :meth:`Page.get_contents` for more details.
-
-      Changed in version 1.16.0 Annotations are no longer implicitly cleaned by this method. Use :meth:`Annot.clean_contents` separately.
-
-      :arg bool sanitize: *(new in v1.17.6)* if true, synchronization between resources and their actual use in the contents object is snychronized. For example, if a font is not actually used for any text of the page, then it will be deleted from the `/Resources/Font` object.
-
-      .. warning:: This is a complex function which may generate large amounts of new data and render old data unused. It is **not recommended** using it together with the **incremental save** option. Also note that the resulting singleton new */Contents* object is **uncompressed**. So you should save to a **new file** using options *"deflate=True, garbage=3"*.
-
------
-
-   .. method:: Page.read_contents()
-
-      *New in version 1.17.0.*
-      Return the concatenation of all :data:`contents` objects associated with the page -- without cleaning or otherwise modifying them. Use this method whenever you need to parse this source in its entirety without having to bother how many separate contents objects exist.
-
-      :rtype: bytes
-
------
-
-   .. method:: Annot.clean_contents(sanitize=True)
-
-      Clean the :data:`contents` streams associated with the annotation. This is the same type of action which :meth:`Page.clean_contents` performs -- just restricted to this annotation.
-
-
------
-
-   .. method:: Document.get_char_widths(xref=0, limit=256)
-
-      Return a list of character glyphs and their widths for a font that is present in the document. A font must be specified by its PDF cross reference number :data:`xref`. This function is called automatically from :meth:`Page.insert_text` and :meth:`Page.insert_textbox`. So you should rarely need to do this yourself.
-
-      :arg int xref: cross reference number of a font embedded in the PDF. To find a font :data:`xref`, use e.g. *doc.get_page_fonts(pno)* of page number *pno* and take the first entry of one of the returned list entries.
-
-      :arg int limit: limits the number of returned entries. The default of 256 is enforced for all fonts that only support 1-byte characters, so-called "simple fonts" (checked by this method). All :ref:`Base-14-Fonts` are simple fonts.
-
-      :rtype: list
-      :returns: a list of *limit* tuples. Each character *c* has an entry  *(g, w)* in this list with an index of *ord(c)*. Entry *g* (integer) of the tuple is the glyph id of the character, and float *w* is its normalized width. The actual width for some :data:`fontsize` can be calculated as *w * fontsize*. For simple fonts, the *g* entry can always be safely ignored. In all other cases *g* is the basis for graphically representing *c*.
-
-      This function calculates the pixel width of a string called *text*::
-
-       def pixlen(text, widthlist, fontsize):
-           try:
-               return sum([widthlist[ord(c)] for c in text]) * fontsize
-           except IndexError:
-               raise ValueError:("max. code point found: %i, increase limit" % ord(max(text)))
-
------
-
-   .. method:: Document.is_stream(xref)
-
-      * New in version 1.14.14
-
-      PDF only: Check whether the object represented by :data:`xref` is a :data:`stream` type. Return is *False* if not a PDF or if the number is outside the valid xref range.
-
-      :arg int xref: :data:`xref` number.
-
-      :returns: *True* if the object definition is followed by data wrapped in keyword pair *stream*, *endstream*.
-
------
-
-   .. method:: Document.get_new_xref()
-
-      Increase the :data:`xref` by one entry and return that number. This can then be used to insert a new object.
-
-      :rtype: int
-            :returns: the number of the new :data:`xref` entry. Please note, that only a new entry in the PDF's cross reference table is created. At this point, there will not yet exist a PDF object associated with it. To create an (empty) object with this number use `doc.update_xref(xref, "<<>>")`.
-
------
-
-   .. method:: Document.xref_length()
-
-      Return length of :data:`xref` table.
-
-      :rtype: int
-      :returns: the number of entries in the :data:`xref` table.
-
------
-
-   .. method:: recover_quad(line_dir, span)
-
-      Compute the quadrilateral of a text span extracted via options "dict" or "rawdict" of :meth:`Page.get_text`.
-
-      :arg tuple line_dir: `line["dir"]` of the owning line.  Use `None` for a span from :meth:`Page.get_texttrace`.
-      :arg dict span: the span.
+      :arg (float, float) lineDir: `line["dir"]` of the owning line.  Use `None` for a span from :meth:`Page.GetTextTrace`.
+      :arg Span span: the span.
       :returns: the :ref:`Quad` of the span, usable for text marker annotations ('Highlight', etc.).
 
 -----
 
-   .. method:: recover_char_quad(line_dir, span, char)
+   .. method:: RecoverCharQuad((float, float) lineDir, Span span, Char char)
 
-      Compute the quadrilateral of a text character extracted via option "rawdict" of :meth:`Page.get_text`.
+      Compute the quadrilateral of a text character extracted via option "rawdict" of :meth:`Page.GetText`.
 
-      :arg tuple line_dir: `line["dir"]` of the owning line. Use `None` for a span from :meth:`Page.get_texttrace`.
-      :arg dict span: the span.
-      :arg dict char: the character.
+      :arg (float, float) lineDir: `line["dir"]` of the owning line. Use `None` for a span from :meth:`Page.GetTextTrace`.
+      :arg Span span: the span.
+      :arg Char char: the character.
       :returns: the :ref:`Quad` of the character, usable for text marker annotations ('Highlight', etc.).
 
 -----
 
-   .. method:: recover_span_quad(line_dir, span, chars=None)
+   .. method:: RecoverSpanQuad((float, float) lineDir, Span span, Char[] chars: None)
 
-      Compute the quadrilateral of a subset of characters of a span extracted via option "rawdict" of :meth:`Page.get_text`.
+      Compute the quadrilateral of a subset of characters of a span extracted via option "rawdict" of :meth:`Page.GetText`.
 
-      :arg tuple line_dir: `line["dir"]` of the owning line. Use `None` for a span from :meth:`Page.get_texttrace`.
-      :arg dict span: the span.
-      :arg list chars: the characters to consider. If given, the selected extraction option must be "rawdict".
+      :arg (float, float) lineDir: `line["dir"]` of the owning line. Use `None` for a span from :meth:`Page.GetTextTrace`.
+      :arg Span span: the span.
+      :arg Char[] chars: the characters to consider. If given, the selected extraction option must be "rawdict".
       :returns: the :ref:`Quad` of the selected characters, usable for text marker annotations ('Highlight', etc.).
 
 -----
 
-   .. method:: recover_line_quad(line, spans=None)
+   .. method:: RecoverLineQuad(Line line, List<Span> spans: None)
 
-      Compute the quadrilateral of a subset of spans of a text line extracted via options "dict" or "rawdict" of :meth:`Page.get_text`.
+      Compute the quadrilateral of a subset of spans of a text line extracted via options "dict" or "rawdict" of :meth:`Page.GetText`.
 
-      :arg dict line: the line.
-      :arg list spans: a sub-list of `line["spans"]`. If omitted, the full line quad will be returned.
+      :arg Line line: the line.
+      :arg Span[] spans: a sub-list of `line.Spans`. If omitted, the full line quad will be returned.
       :returns: the :ref:`Quad` of the selected line spans, usable for text marker annotations ('Highlight', etc.).
 
 -----
 
-   .. method:: get_tessdata()
+   .. attr:: TESSDATA_PREFIX
 
       Return the name of Tesseract's language support folder. Use this function if the environment variable `TESSDATA_PREFIX` has not been set.
 
-      :returns: `os.getenv("TESSDATA_PREFIX")` if not `None`. Otherwise, if Tesseract-OCR is installed, locate the name of `tessdata`. If no installation is found, return `False`.
+      :returns: `os.getenv("TESSDATA_PREFIX")` if not `None`. Otherwise, if Tesseract-OCR is installed, locate the name of `tessdata`. If no installation is found, return `false`.
 
-         The folder name can be used as parameter `tessdata` in methods :meth:`Page.get_textpage_ocr`, :meth:`Pixmap.pdfocr_save` and :meth:`Pixmap.pdfocr_tobytes`.
+         The folder name can be used as parameter `tessdata` in methods :meth:`Page.GetTextPageOcr`, :meth:`Pixmap.SavePdfOCR` and :meth:`Pixmap.PdfOCR2Bytes`.
 
 -----
 
@@ -771,5 +399,82 @@ Yet others are handy, general-purpose utilities.
    .. method:: EMPTY_IRECT()
 
       Return the "standard" empty and invalid rectangle `Rect(2147483520.0, 2147483520.0, -2147483648.0, -2147483648.0)` resp. quad. Its top-left and bottom-right point values are reversed compared to the infinite rectangle. It will e.g. be used to indicate empty bboxes in `page.get_text("dict")` dictionaries. There are however infinitely many empty or invalid rectangles.
+
+-----
+
+   .. method:: MakeAnnotDA(PdfAnnot annot, int nCol, float[] col, string font)
+
+      Passing color, fontname, fontsize into the annot.
+
+-----
+
+   .. method:: AddAnnotId(PdfAnnot annot, string stem)
+
+      Add a unique /NM key to an annotation or widget. Append a number to 'stem' such that the result is a unique name.
+
+-----
+
+   .. method:: AddOcObject(PdfDocument pdf, PdfObj ref, int xref)
+
+      Add OC object reference to a dictionary
+
+      :arg PdfDocument pdf: PdfDocument object to add OC-controlled
+      :arg PdfObj ref: PdfObj to be added into pdf
+
+-----
+
+   .. method:: BinFromBuffer(FzBuffer buffer)
+
+      Turn FzBuffer into a byte[]
+
+      :arg FzBuffer buffer: FzBuffer used to convert to bytes
+      :return: byte[] converted from FzBuffer
+
+-----
+
+   .. method:: BufferFromBytes(byte[] bytes)
+
+      Make FzBuffer from a byte[] object.
+
+      :return: FzBuffer from byte[]
+
+-----
+
+   .. method:: CalcImageMatrix(int width, int height, Rect tr, float rotate, bool keep)
+
+      Compute image insertion matrix
+
+      :arg int width: image width
+      :arg int height: image height
+      :arg Rect tr: rect of target image
+      :arg float rotate: rotate to be set for target image
+      :arg bool keep: calc size of target image keeping origin image's ratio
+      
+      :return: Matrix mat
+
+-----
+
+   .. method:: ColorCount(FzPixmap pm, dynamic clip)
+
+      Return count of each color.
+
+      :arg FzPixmap pm: source pixmap
+      :arg Rect clip: count colors in clip area of source pixmaps.
+
+      :return: return count of each color.
+
+-----
+
+   .. method:: CompressBuffer(FzBuffer buffer)
+
+      Compress FzBuffer into a new buffer
+
+      :arg FzBuffer buffer: input FzBuffer
+
+      :return: output compressed FzBuffer object
+
+-----
+
+   .. method:: Construct
 
 .. include:: footer.rst

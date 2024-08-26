@@ -2803,12 +2803,28 @@ namespace MuPDF.NET
             return names;
         }
 
-        public static (int, int, int) sRGB2rgb(int srgb)
+        /// <summary>
+        /// Convert sRGB color code to an RGB color triple.
+        /// </summary>
+        /// <param name="srgb">srgb: (int) RRGGBB (red, green, blue), each color in range(255).</param>
+        /// <returns>Tuple (red, green, blue) each item in interval 0 <= item <= 255.</returns>
+        public static (int, int, int) sRGB2Rgb(int srgb)
         {
             int r = srgb >> 16;
             int g = (srgb - (r << 16) >> 8);
             int b = srgb - (r << 16) - (g << 8);
             return (r, g, b);
+        }
+
+        /// <summary>
+        /// Convert sRGB color code to a PDF color triple.
+        /// </summary>
+        /// <param name="srgb">(int) RRGGBB (red, green, blue), each color in range(255).</param>
+        /// <returns>Tuple (red, green, blue) each item in interval 0 <= item <= 1.</returns>
+        public static (float, float, float) sRGB2Pdf(int srgb)
+        {
+            (int, int, int) t = sRGB2Rgb(srgb);
+            return (t.Item1 / 255.0f, t.Item2 / 255.0f, t.Item3 / 255.0f);
         }
 
         public static string GetLinkText(Page page, LinkInfo link)
@@ -6298,7 +6314,7 @@ namespace MuPDF.NET
         /// </summary>
         /// <param name="i"></param>
         /// <returns></returns>
-        public static string ConversionTailer(string i)
+        public static string ConversionTrailer(string i)
         {
             string t = i.ToLower();
             string text = "";
