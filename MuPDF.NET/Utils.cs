@@ -763,7 +763,7 @@ namespace MuPDF.NET
             return mupdf.mupdf.fz_transform_point(c.ToFzPoint(), m1).fz_normalize_vector().y;
         }
 
-        public static PdfObj pdf_dict_getl(PdfObj obj, string[] keys)
+        internal static PdfObj pdf_dict_getl(PdfObj obj, string[] keys)
         {
             foreach (string key in keys)
             {
@@ -774,7 +774,7 @@ namespace MuPDF.NET
             return obj;
         }
 
-        public static void pdf_dict_putl(PdfObj obj, PdfObj val, string[] keys)
+        internal static void pdf_dict_putl(PdfObj obj, PdfObj val, string[] keys)
         {
             if (obj.pdf_is_indirect() != 0)
                 obj = obj.pdf_resolve_indirect_chain();
@@ -847,20 +847,22 @@ namespace MuPDF.NET
             return buffer.fz_buffer_extract();
         }
 
-        public static FzBuffer BufferFromBytes(byte[] bytes)
+        internal static FzBuffer BufferFromBytes(byte[] bytes)
         {
             if (bytes == null)
                 return new FzBuffer();
             return Utils.fz_new_buffer_from_data(bytes);
         }
 
-        public static FzBuffer CompressBuffer(FzBuffer buffer)
+        internal static FzBuffer CompressBuffer(FzBuffer buffer)
         {
-            ll_fz_new_deflated_data_from_buffer_outparams outparams = new ll_fz_new_deflated_data_from_buffer_outparams();
-            SWIGTYPE_p_unsigned_char data = mupdf.mupdf.ll_fz_new_deflated_data_from_buffer_outparams_fn(
-                buffer.m_internal,
-                fz_deflate_level.FZ_DEFLATE_BEST,
-                outparams
+            ll_fz_new_deflated_data_from_buffer_outparams outparams =
+                new ll_fz_new_deflated_data_from_buffer_outparams();
+            SWIGTYPE_p_unsigned_char data =
+                mupdf.mupdf.ll_fz_new_deflated_data_from_buffer_outparams_fn(
+                    buffer.m_internal,
+                    fz_deflate_level.FZ_DEFLATE_BEST,
+                    outparams
                 );
 
             if (data == null || outparams.compressed_length == 0)
@@ -873,7 +875,12 @@ namespace MuPDF.NET
             return buf;
         }
 
-        public static void UpdateStream(PdfDocument doc, PdfObj obj, FzBuffer buffer, int compress)
+        internal static void UpdateStream(
+            PdfDocument doc,
+            PdfObj obj,
+            FzBuffer buffer,
+            int compress
+        )
         {
             uint len = buffer.fz_buffer_storage(new SWIGTYPE_p_p_unsigned_char(IntPtr.Zero, false));
             uint nlen = len;
@@ -902,7 +909,7 @@ namespace MuPDF.NET
             return low <= v && v <= high;
         }
 
-        public static Matrix RotatePageMatrix(PdfPage page)
+        internal static Matrix RotatePageMatrix(PdfPage page)
         {
             if (page.m_internal == null)
                 return new Matrix(new FzMatrix());
@@ -925,7 +932,7 @@ namespace MuPDF.NET
             return new Matrix(m);
         }
 
-        public static Point GetCropBoxSize(PdfObj pageObj)
+        internal static Point GetCropBoxSize(PdfObj pageObj)
         {
             FzRect rect = GetCropBox(pageObj).ToFzRect();
             float width = Math.Abs(rect.x1 - rect.x0);
@@ -935,7 +942,7 @@ namespace MuPDF.NET
             return new Point(size);
         }
 
-        public static Rect GetCropBox(PdfObj pageObj)
+        internal static Rect GetCropBox(PdfObj pageObj)
         {
             FzRect mediabox = Utils.GetMediaBox(pageObj).ToFzRect();
             FzRect cropBox = pageObj.pdf_dict_get_inheritable(new PdfObj("CropBox")).pdf_to_rect();
@@ -949,7 +956,7 @@ namespace MuPDF.NET
             return new Rect(cropBox);
         }
 
-        public static Rect GetMediaBox(PdfObj pageObj)
+        internal static Rect GetMediaBox(PdfObj pageObj)
         {
             FzRect pageMediaBox = new FzRect(FzRect.Fixed.Fixed_UNIT);
             FzRect mediaBox = pageObj
@@ -976,13 +983,13 @@ namespace MuPDF.NET
             return new Rect(pageMediaBox);
         }
 
-        public static FzMatrix DerotatePageMatrix(PdfPage page)
+        internal static FzMatrix DerotatePageMatrix(PdfPage page)
         {
             Matrix mp = RotatePageMatrix(page);
             return mp.ToFzMatrix().fz_invert_matrix();
         }
 
-        public static int PageRotation(PdfPage page)
+        internal static int PageRotation(PdfPage page)
         {
             int rotate;
 
@@ -1009,7 +1016,7 @@ namespace MuPDF.NET
             return rotate;
         }
 
-        public static FzRect RectFromObj(dynamic r)
+        internal static FzRect RectFromObj(dynamic r)
         {
             if (r is FzRect)
                 return r;
@@ -1039,7 +1046,7 @@ namespace MuPDF.NET
             return mupdf.mupdf.fz_make_rect(r[0], r[1], r[2], r[3]);
         }
 
-        public static string ReadSamples(FzPixmap pixmap, int offset, int n)
+        internal static string ReadSamples(FzPixmap pixmap, int offset, int n)
         {
             List<byte> ret = new List<byte>();
             for (int i = 0; i < n; i++)
@@ -1052,7 +1059,7 @@ namespace MuPDF.NET
             return string.Join(',', bytes.Select(b => $"{b}"));
         }
 
-        public static Dictionary<string, int> ColorCount(FzPixmap pm, dynamic clip)
+        internal static Dictionary<string, int> ColorCount(FzPixmap pm, dynamic clip)
         {
             Dictionary<string, int> ret = new Dictionary<string, int>();
             int count = 0;
@@ -1226,7 +1233,7 @@ namespace MuPDF.NET
             );
         }
 
-        public static List<dynamic> GetChoiceOptions(PdfAnnot annot)
+        internal static List<dynamic> GetChoiceOptions(PdfAnnot annot)
         {
             PdfObj annotObj = annot.pdf_annot_obj();
             vectors opts = mupdf.mupdf.pdf_choice_widget_options2(annot, 0);
@@ -1258,7 +1265,7 @@ namespace MuPDF.NET
             return ret;
         }
 
-        public static void AddAnnotId(PdfAnnot annot, string stem)
+        internal static void AddAnnotId(PdfAnnot annot, string stem)
         {
             PdfPage page = annot.pdf_annot_page();
             PdfObj annotObj = annot.pdf_annot_obj();
@@ -1277,7 +1284,7 @@ namespace MuPDF.NET
             page.doc().m_internal.resynth_required = 0;
         }
 
-        public static List<string> GetAnnotIDList(PdfPage page)
+        internal static List<string> GetAnnotIDList(PdfPage page)
         {
             List<string> ids = new List<string>();
             PdfObj annots = page.obj().pdf_dict_get(new PdfObj("Annots"));
@@ -1299,11 +1306,11 @@ namespace MuPDF.NET
             return utf8.GetBytes(s);
         }
 
-        public static PdfObj EmbedFile(
+        internal static PdfObj EmbedFile(
             PdfDocument pdf,
             FzBuffer buf,
-            string filename,
-            string ufilename,
+            string fileName,
+            string uFilename,
             string desc,
             int compress
         )
@@ -1312,8 +1319,8 @@ namespace MuPDF.NET
             PdfObj val = pdf.pdf_new_dict(6);
             val.pdf_dict_put_dict(new PdfObj("CI"), 4);
             PdfObj ef = val.pdf_dict_put_dict(new PdfObj("EF"), 4);
-            val.pdf_dict_put_text_string(new PdfObj("F"), filename);
-            val.pdf_dict_put_text_string(new PdfObj("UF"), ufilename);
+            val.pdf_dict_put_text_string(new PdfObj("F"), fileName);
+            val.pdf_dict_put_text_string(new PdfObj("UF"), uFilename);
             val.pdf_dict_put_text_string(new PdfObj("Desc"), desc);
             val.pdf_dict_put(new PdfObj("Type"), new PdfObj("Filespec"));
             byte[] bs = Utils.ToByte("  ");
@@ -1331,7 +1338,7 @@ namespace MuPDF.NET
             return val;
         }
 
-        public static void MakeAnnotDA(
+        internal static void MakeAnnotDA(
             PdfAnnot annot,
             int nCol,
             float[] col,
@@ -1542,7 +1549,7 @@ namespace MuPDF.NET
             return t;
         }
 
-        public static void SetFieldType(PdfDocument doc, PdfObj annotObj, PdfWidgetType type)
+        internal static void SetFieldType(PdfDocument doc, PdfObj annotObj, PdfWidgetType type)
         {
             PdfFieldFlags setBits = 0;
             PdfFieldFlags clearBits = 0;
@@ -1598,7 +1605,7 @@ namespace MuPDF.NET
             }
         }
 
-        public static PdfAnnot CreateWidget(
+        internal static PdfAnnot CreateWidget(
             PdfDocument doc,
             PdfPage page,
             PdfWidgetType type,
@@ -1655,7 +1662,7 @@ namespace MuPDF.NET
             return annot;
         }
 
-        public static List<(string, int)> GetResourceProperties(PdfObj refer)
+        internal static List<(string, int)> GetResourceProperties(PdfObj refer)
         {
             PdfObj properties = Utils.pdf_dict_getl(
                 refer,
@@ -1682,7 +1689,7 @@ namespace MuPDF.NET
             return rc;
         }
 
-        public static void SetResourceProperty(PdfObj refer, string name, int xref)
+        internal static void SetResourceProperty(PdfObj refer, string name, int xref)
         {
             PdfDocument pdf = refer.pdf_get_bound_document();
             PdfObj ind = pdf.pdf_new_indirect(xref, 0);
@@ -1707,7 +1714,7 @@ namespace MuPDF.NET
             return UNIQUE_ID;
         }
 
-        public static void EmbeddedClean(PdfDocument pdf)
+        internal static void EmbeddedClean(PdfDocument pdf)
         {
             PdfObj root = pdf.pdf_trailer().pdf_dict_get(new PdfObj("Root"));
             PdfObj coll = root.pdf_dict_get(new PdfObj("Collection"));
@@ -1726,10 +1733,7 @@ namespace MuPDF.NET
 
         public static string EnsureIdentity(Document pdf)
         {
-            PdfObj id = Document
-                .AsPdfDocument(pdf)
-                .pdf_trailer()
-                .pdf_dict_get(new PdfObj("ID"));
+            PdfObj id = Document.AsPdfDocument(pdf).pdf_trailer().pdf_dict_get(new PdfObj("ID"));
             if (id == null)
             {
                 IntPtr p_block = Marshal.AllocHGlobal(16);
@@ -1783,7 +1787,7 @@ namespace MuPDF.NET
             return null;
         }
 
-        public static void ScanResources(
+        internal static void ScanResources(
             PdfDocument pdf,
             PdfObj rsrc,
             List<Entry> liste,
@@ -1847,7 +1851,7 @@ namespace MuPDF.NET
             }
         }
 
-        public static int GatherFonts(
+        internal static int GatherFonts(
             PdfDocument pdf,
             PdfObj dict,
             List<Entry> fontList,
@@ -1901,7 +1905,7 @@ namespace MuPDF.NET
             return rc;
         }
 
-        public static string GetFontExtension(PdfDocument doc, int xref)
+        internal static string GetFontExtension(PdfDocument doc, int xref)
         {
             if (xref < 1)
                 return "n/a";
@@ -1960,7 +1964,7 @@ namespace MuPDF.NET
             return ret;
         }
 
-        public static int GatherForms(
+        internal static int GatherForms(
             PdfDocument doc,
             PdfObj dict,
             List<Entry> imageList,
@@ -2020,7 +2024,7 @@ namespace MuPDF.NET
         /// <param name="imageList"></param>
         /// <param name="streamXRef"></param>
         /// <returns></returns>
-        public static int GatherIamges(
+        internal static int GatherIamges(
             PdfDocument doc,
             PdfObj dict,
             List<Entry> imageList,
@@ -2105,7 +2109,7 @@ namespace MuPDF.NET
             return xref;
         }
 
-        public static int InsertContents(
+        internal static int InsertContents(
             PdfDocument pdf,
             PdfObj pageRef,
             FzBuffer newcont,
@@ -2198,7 +2202,7 @@ namespace MuPDF.NET
             return (res.Name, res.Ext, res.Type, asc, dsc);
         }
 
-        public static FzBuffer GetFontBuffer(PdfDocument doc, int xref)
+        internal static FzBuffer GetFontBuffer(PdfDocument doc, int xref)
         {
             if (xref < 1)
                 return null;
@@ -2293,7 +2297,7 @@ namespace MuPDF.NET
                 doc.FontInfos.Add(info);
         }
 
-        public static FontInfo InsertFont(
+        internal static FontInfo InsertFont(
             PdfDocument pdf,
             string bfName,
             string fontFile,
@@ -2335,7 +2339,8 @@ namespace MuPDF.NET
             }
             else
             {
-                ll_fz_lookup_base14_font_outparams outparams = new ll_fz_lookup_base14_font_outparams();
+                ll_fz_lookup_base14_font_outparams outparams =
+                    new ll_fz_lookup_base14_font_outparams();
                 if (!string.IsNullOrEmpty(bfName))
                 {
                     data = mupdf.mupdf.ll_fz_lookup_base14_font_outparams_fn(bfName, outparams);
@@ -2351,7 +2356,7 @@ namespace MuPDF.NET
                 {
                     if (!string.IsNullOrEmpty(fontFile))
                     {
-                         font = mupdf.mupdf.fz_new_font_from_file(null, fontFile, idx, 0);
+                        font = mupdf.mupdf.fz_new_font_from_file(null, fontFile, idx, 0);
                     }
                     else
                     {
@@ -2493,7 +2498,7 @@ namespace MuPDF.NET
             return s + (f == "c" ? "G " : "g ");
         }
 
-        public static string EscapeStrFromBuffer(FzBuffer buf)
+        internal static string EscapeStrFromBuffer(FzBuffer buf)
         {
             if (buf.m_internal == null)
                 return "";
@@ -2516,13 +2521,13 @@ namespace MuPDF.NET
         /// </summary>
         /// <param name="s"></param>
         /// <returns></returns>
-        public static string DecodeRawUnicodeEscape(FzBuffer s)
+        internal static string DecodeRawUnicodeEscape(FzBuffer s)
         {
             string ret = s.fz_string_from_buffer();
             return DecodeRawUnicodeEscape(ret);
         }
 
-        public static FzBuffer Object2Buffer(PdfObj what, int compress, int ascii)
+        internal static FzBuffer Object2Buffer(PdfObj what, int compress, int ascii)
         {
             FzBuffer res = mupdf.mupdf.fz_new_buffer(512);
             FzOutput output = new FzOutput(res);
@@ -2532,7 +2537,7 @@ namespace MuPDF.NET
             return res;
         }
 
-        public static string UnicodeFromBuffer(FzBuffer buf)
+        internal static string UnicodeFromBuffer(FzBuffer buf)
         {
             byte[] bufBytes = buf.fz_buffer_extract();
             string val = Encoding.UTF8.GetString(bufBytes);
@@ -2543,7 +2548,7 @@ namespace MuPDF.NET
             return val;
         }
 
-        public static void Recurse(
+        internal static void Recurse(
             Document doc,
             Outline olItem,
             List<dynamic> liste,
@@ -2592,7 +2597,7 @@ namespace MuPDF.NET
             return Utils._GetLinkDict(ol.Dest, null, doc);
         }
 
-        public static LinkInfo _GetLinkDict(LinkDest dest, Rect r, Document document)
+        internal static LinkInfo _GetLinkDict(LinkDest dest, Rect r, Document document)
         {
             LinkInfo nl = new LinkInfo();
             nl.Kind = dest.Kind;
@@ -2653,7 +2658,7 @@ namespace MuPDF.NET
             return nl;
         }
 
-        public static Border GetAnnotBorder(PdfObj annotObj)
+        internal static Border GetAnnotBorder(PdfObj annotObj)
         {
             List<int> dash = new List<int>();
             float width = -1;
@@ -2707,7 +2712,7 @@ namespace MuPDF.NET
             return res;
         }
 
-        public static Color GetAnnotColors(PdfObj annotObj)
+        internal static Color GetAnnotColors(PdfObj annotObj)
         {
             Color res = new Color();
             List<float> bc = new List<float>();
@@ -2740,7 +2745,7 @@ namespace MuPDF.NET
             return res;
         }
 
-        public static void SetAnnotBorder(Border border, PdfDocument pdf, PdfObj linkObj)
+        internal static void SetAnnotBorder(Border border, PdfDocument pdf, PdfObj linkObj)
         {
             PdfObj obj = null;
             int dashLen = 0;
@@ -2752,7 +2757,7 @@ namespace MuPDF.NET
             // get old border properties
         }
 
-        public static List<string> GetAnnotIdList(PdfPage page)
+        internal static List<string> GetAnnotIdList(PdfPage page)
         {
             List<string> names = new List<string>();
             PdfObj annots = page.obj().pdf_dict_get(new PdfObj("Annots"));
@@ -2771,7 +2776,7 @@ namespace MuPDF.NET
             return names;
         }
 
-        public static List<AnnotXref> GetAnnotXrefList(PdfObj pageObj)
+        internal static List<AnnotXref> GetAnnotXrefList(PdfObj pageObj)
         {
             List<AnnotXref> names = new List<AnnotXref>();
             PdfObj annots = pageObj.pdf_dict_get(new PdfObj("Annots"));
@@ -2962,7 +2967,7 @@ namespace MuPDF.NET
             return annot;
         }
 
-        public static PdfAnnot GetAnnotByXref(Page page, int xref)
+        internal static PdfAnnot GetAnnotByXref(Page page, int xref)
         {
             bool found = false;
             PdfAnnot annot = page.GetPdfPage().pdf_first_annot();
@@ -2982,7 +2987,7 @@ namespace MuPDF.NET
             return annot;
         }
 
-        public static void StoreShrink(int percent)
+        internal static void StoreShrink(int percent)
         {
             if (percent >= 100)
             {
@@ -2993,7 +2998,7 @@ namespace MuPDF.NET
                 mupdf.mupdf.fz_shrink_store((uint)(100 - percent));
         }
 
-        public static void RefreshLinks(PdfPage page)
+        internal static void RefreshLinks(PdfPage page)
         {
             if (page == null)
                 return;
@@ -3021,9 +3026,9 @@ namespace MuPDF.NET
             GraftMap graftmap
         )
         {
-                PdfDocument pdfDes = Document.AsPdfDocument(docDes);
-                PdfDocument pdfSrc = Document.AsPdfDocument(docSrc);
-                List<PdfObj> knownPageObjs = new List<PdfObj>()
+            PdfDocument pdfDes = Document.AsPdfDocument(docDes);
+            PdfDocument pdfSrc = Document.AsPdfDocument(docSrc);
+            List<PdfObj> knownPageObjs = new List<PdfObj>()
             {
                 new PdfObj("Contents"),
                 new PdfObj("Resources"),
@@ -3036,60 +3041,60 @@ namespace MuPDF.NET
                 new PdfObj("UserUnit")
             };
 
-                PdfObj pageRef = pdfSrc.pdf_lookup_page_obj(pageFrom);
-                PdfObj pageDict = pdfDes.pdf_new_dict(4);
-                pageDict.pdf_dict_put(new PdfObj("Type"), new PdfObj("Page"));
+            PdfObj pageRef = pdfSrc.pdf_lookup_page_obj(pageFrom);
+            PdfObj pageDict = pdfDes.pdf_new_dict(4);
+            pageDict.pdf_dict_put(new PdfObj("Type"), new PdfObj("Page"));
 
-                foreach (PdfObj e in knownPageObjs)
+            foreach (PdfObj e in knownPageObjs)
+            {
+                PdfObj obj = pageRef.pdf_dict_get_inheritable(e);
+                if (obj.m_internal != null)
                 {
-                    PdfObj obj = pageRef.pdf_dict_get_inheritable(e);
-                    if (obj.m_internal != null)
-                    {
-                        pageDict.pdf_dict_put(
-                            e,
-                            mupdf.mupdf.pdf_graft_mapped_object(graftmap.ToPdfGraftMap(), obj)
-                        );
-                    }
+                    pageDict.pdf_dict_put(
+                        e,
+                        mupdf.mupdf.pdf_graft_mapped_object(graftmap.ToPdfGraftMap(), obj)
+                    );
                 }
-
-                if (copyAnnots)
-                {
-                    PdfObj oldAnnots = pageRef.pdf_dict_get(new PdfObj("Annots"));
-                    int n = oldAnnots.pdf_array_len();
-                    if (n > 0)
-                    {
-                        PdfObj newAnnots = pageDict.pdf_dict_put_array(new PdfObj("Annots"), n);
-                        for (int i = 0; i < n; i++)
-                        {
-                            PdfObj o = oldAnnots.pdf_array_get(i);
-                            if (o.m_internal == null || o.pdf_is_dict() == 0)
-                                continue;
-                            if (o.pdf_dict_gets("IRT").m_internal != null)
-                                continue;
-                            PdfObj subtype = o.pdf_dict_get(new PdfObj("Subtype"));
-                            if (subtype.pdf_name_eq(new PdfObj("Link")) != 0)
-                                continue;
-                            if (subtype.pdf_name_eq(new PdfObj("Popup")) != 0)
-                                continue;
-                            if (subtype.pdf_name_eq(new PdfObj("Widget")) != 0)
-                            {
-                                mupdf.mupdf.fz_warn("skipping widget annotation");
-                                continue;
-                            }
-
-                            o.pdf_dict_del(new PdfObj("Popup"));
-                            o.pdf_dict_del(new PdfObj("P"));
-                            PdfObj copyO = graftmap.ToPdfGraftMap().pdf_graft_mapped_object(o);
-                            PdfObj annot = pdfDes.pdf_new_indirect(copyO.pdf_to_num(), 0);
-                            newAnnots.pdf_array_push(annot);
-                        }
-                    }
-                }
-                if (rotate != -1)
-                    pageDict.pdf_dict_put_int(new PdfObj("Rotate"), rotate);
-                PdfObj ref_ = pdfDes.pdf_add_object(pageDict);
-                pdfDes.pdf_insert_page(pageTo, ref_);
             }
+
+            if (copyAnnots)
+            {
+                PdfObj oldAnnots = pageRef.pdf_dict_get(new PdfObj("Annots"));
+                int n = oldAnnots.pdf_array_len();
+                if (n > 0)
+                {
+                    PdfObj newAnnots = pageDict.pdf_dict_put_array(new PdfObj("Annots"), n);
+                    for (int i = 0; i < n; i++)
+                    {
+                        PdfObj o = oldAnnots.pdf_array_get(i);
+                        if (o.m_internal == null || o.pdf_is_dict() == 0)
+                            continue;
+                        if (o.pdf_dict_gets("IRT").m_internal != null)
+                            continue;
+                        PdfObj subtype = o.pdf_dict_get(new PdfObj("Subtype"));
+                        if (subtype.pdf_name_eq(new PdfObj("Link")) != 0)
+                            continue;
+                        if (subtype.pdf_name_eq(new PdfObj("Popup")) != 0)
+                            continue;
+                        if (subtype.pdf_name_eq(new PdfObj("Widget")) != 0)
+                        {
+                            mupdf.mupdf.fz_warn("skipping widget annotation");
+                            continue;
+                        }
+
+                        o.pdf_dict_del(new PdfObj("Popup"));
+                        o.pdf_dict_del(new PdfObj("P"));
+                        PdfObj copyO = graftmap.ToPdfGraftMap().pdf_graft_mapped_object(o);
+                        PdfObj annot = pdfDes.pdf_new_indirect(copyO.pdf_to_num(), 0);
+                        newAnnots.pdf_array_push(annot);
+                    }
+                }
+            }
+            if (rotate != -1)
+                pageDict.pdf_dict_put_int(new PdfObj("Rotate"), rotate);
+            PdfObj ref_ = pdfDes.pdf_add_object(pageDict);
+            pdfDes.pdf_insert_page(pageTo, ref_);
+        }
 
         public static void MergeRange(
             Document docDes,
@@ -3158,6 +3163,15 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// Insert links contained in copied page range into destination PDF.
+        /// </summary>
+        /// <param name="doc1"></param>
+        /// <param name="doc2"></param>
+        /// <param name="fromPage"></param>
+        /// <param name="toPage"></param>
+        /// <param name="startAt"></param>
+        /// <exception cref="Exception"></exception>
         public static void DoLinks(
             Document doc1,
             Document doc2,
@@ -3296,7 +3310,7 @@ namespace MuPDF.NET
             return ((c1 - 'a' + 1) + ((c2 - 'a' + 1) * 27) + ((c3 - 'a' + 1) * 27 * 27));
         }
 
-        public static Pixmap GetPixmapFromDisplaylist(
+        internal static Pixmap GetPixmapFromDisplaylist(
             FzDisplayList list,
             Matrix ctm,
             FzColorspace cs,
@@ -3342,7 +3356,7 @@ namespace MuPDF.NET
             return new Pixmap("raw", new Pixmap(pix));
         }
 
-        public static FzFont GetFont(
+        internal static FzFont GetFont(
             string fontName,
             string fontFile,
             byte[] fontBuffer,
@@ -3368,7 +3382,7 @@ namespace MuPDF.NET
             FzFont font = null;
             if (fontFile != null)
             {
-                font = mupdf.mupdf.fz_new_font_from_file(null, fontFile, index, 0);                
+                font = mupdf.mupdf.fz_new_font_from_file(null, fontFile, index, 0);
                 return Fertig(font);
             }
 
@@ -3484,7 +3498,7 @@ namespace MuPDF.NET
             return AdobeGlyphs.GetValueOrDefault(ch, ".notdef");
         }
 
-        public static FzMatrix ShowStringCS(
+        internal static FzMatrix ShowStringCS(
             FzText text,
             Font userFont,
             FzMatrix trm,
@@ -3522,7 +3536,7 @@ namespace MuPDF.NET
                     langauge
                 );
                 float adv = mupdf.mupdf.fz_advance_glyph(font, gid, wmode);
-                
+
                 if (wmode == 0)
                     trm = trm.fz_pre_translate(adv, 0);
                 else
@@ -3532,7 +3546,7 @@ namespace MuPDF.NET
             return trm;
         }
 
-        public static int CheckQuad(LineartDevice dev)
+        internal static int CheckQuad(LineartDevice dev)
         {
             List<Item> items = dev.PathDict.Items;
             int len = items.Count;
@@ -3561,7 +3575,7 @@ namespace MuPDF.NET
             return 1;
         }
 
-        public static int CheckRect(LineartDevice dev)
+        internal static int CheckRect(LineartDevice dev)
         {
             dev.LineCount = 0;
             int orientation = 0;
@@ -3607,7 +3621,7 @@ namespace MuPDF.NET
             return 1;
         }
 
-        public static FzRect ComputerScissor(LineartDevice dev)
+        internal static FzRect ComputerScissor(LineartDevice dev)
         {
             if (dev.Scissors == null)
                 dev.Scissors = new List<FzRect>();
@@ -3628,7 +3642,7 @@ namespace MuPDF.NET
             return scissor;
         }
 
-        public static List<int> GetOutlineXrefs(PdfObj obj, List<int> xrefs)
+        internal static List<int> GetOutlineXrefs(PdfObj obj, List<int> xrefs)
         {
             if (obj.m_internal == null)
                 return xrefs;
@@ -3656,7 +3670,7 @@ namespace MuPDF.NET
             return xrefs;
         }
 
-        public static void GetPageLabels(List<(int, string)> list, PdfObj nums)
+        internal static void GetPageLabels(List<(int, string)> list, PdfObj nums)
         {
             int n = nums.pdf_array_len();
             for (int i = 0; i < n; i += 2)
@@ -3672,7 +3686,7 @@ namespace MuPDF.NET
             }
         }
 
-        public static void RemoveDestRange(PdfDocument pdf, List<int> numbers)
+        internal static void RemoveDestRange(PdfDocument pdf, List<int> numbers)
         {
             int pageCount = pdf.pdf_count_pages();
             for (int i = 0; i < pageCount; i++)
@@ -3745,7 +3759,7 @@ namespace MuPDF.NET
             return null;
         }
 
-        public static PdfObj PdfObjFromStr(PdfDocument doc, string src)
+        internal static PdfObj PdfObjFromStr(PdfDocument doc, string src)
         {
             byte[] bSrc = Encoding.UTF8.GetBytes(src);
 
@@ -3814,7 +3828,7 @@ namespace MuPDF.NET
             return -1; // if not found
         }
 
-        public static void EnsureOperations(PdfDocument pdf)
+        internal static void EnsureOperations(PdfDocument pdf)
         {
             if (!HaveOperations(pdf))
                 throw new Exception("No journalling operation started");
@@ -3825,14 +3839,14 @@ namespace MuPDF.NET
         /// </summary>
         /// <param name="pdf"></param>
         /// <returns></returns>
-        public static bool HaveOperations(PdfDocument pdf)
+        internal static bool HaveOperations(PdfDocument pdf)
         {
             if (pdf.m_internal.journal != null && string.IsNullOrEmpty(pdf.pdf_undoredo_step(0)))
                 return false;
             return true;
         }
 
-        public static PdfObj GetXObjectFromPage(
+        internal static PdfObj GetXObjectFromPage(
             PdfDocument pdfOut,
             PdfPage pdfPage,
             int xref,
@@ -3874,7 +3888,7 @@ namespace MuPDF.NET
         /// </summary>
         /// <param name="pageRef"></param>
         /// <returns></returns>
-        public static FzBuffer ReadContents(PdfObj pageRef)
+        internal static FzBuffer ReadContents(PdfObj pageRef)
         {
             PdfObj contents = pageRef.pdf_dict_get(new PdfObj("Contents"));
             FzBuffer res = null;
@@ -3906,7 +3920,7 @@ namespace MuPDF.NET
         /// <param name="_ref"></param>
         /// <param name="xref"></param>
         /// <exception cref="Exception"></exception>
-        public static void AddOcObject(PdfDocument pdf, PdfObj _ref, int xref)
+        internal static void AddOcObject(PdfDocument pdf, PdfObj _ref, int xref)
         {
             PdfObj indObj = pdf.pdf_new_indirect(xref, 0);
             if (indObj.pdf_is_dict() == 0)
@@ -3920,12 +3934,12 @@ namespace MuPDF.NET
                 throw new Exception(ErrorMessages["MSG_BAD_OC_REF"]);
         }
 
-        public static bool IsJbig2Image(PdfObj obj)
+        internal static bool IsJbig2Image(PdfObj obj)
         {
             return false;
         }
 
-        public static List<int> GetOcgArraysImp(PdfObj arr)
+        internal static List<int> GetOcgArraysImp(PdfObj arr)
         {
             List<int> list = new List<int>();
             if (arr.pdf_is_array() != 0)
@@ -3942,7 +3956,7 @@ namespace MuPDF.NET
             return list;
         }
 
-        public static void SetOcgArraysImp(PdfObj arr, List<int> list)
+        internal static void SetOcgArraysImp(PdfObj arr, List<int> list)
         {
             PdfDocument pdf = mupdf.mupdf.pdf_get_bound_document(arr);
             foreach (int xref in list)
@@ -4075,7 +4089,8 @@ namespace MuPDF.NET
                 {
                     int x = Convert.ToInt32(s.Substring(2));
                     ret.FirstPageNum = x;
-                };
+                }
+                ;
             }
             return ret;
         }
@@ -4237,7 +4252,7 @@ namespace MuPDF.NET
             tpage = null;
         }
 
-        public static (int, int) MergeResources(PdfPage page, PdfObj res)
+        public internal (int, int) MergeResources(PdfPage page, PdfObj res)
         {
             PdfObj resources = page.obj().pdf_dict_get(new PdfObj("Resources"));
             PdfObj mainExtg = page.obj().pdf_dict_get(new PdfObj("ExtGState"));
@@ -4451,7 +4466,7 @@ namespace MuPDF.NET
             };
         }
 
-        public class VEConverter : JsonConverter
+        internal class VEConverter : JsonConverter
         {
             public override bool CanConvert(Type objectType)
             {
@@ -4505,11 +4520,7 @@ namespace MuPDF.NET
         /// <param name="label">label</param>
         /// <param name="onlyOne">(bool) stop searching after first hit</param>
         /// <returns></returns>
-        public static List<int> GetPageNumbers(
-            Document doc,
-            string label,
-            bool onlyOne = false
-        )
+        public static List<int> GetPageNumbers(Document doc, string label, bool onlyOne = false)
         {
             List<int> numbers = new List<int>();
             if (string.IsNullOrEmpty(label))
@@ -4623,7 +4634,7 @@ namespace MuPDF.NET
             return Utils.BinFromBuffer(res);
         }
 
-        public static PdfFilterOptions MakePdfFilterOptions(
+        internal static PdfFilterOptions MakePdfFilterOptions(
             int recurse = 0,
             int instanceForms = 0,
             int ascii = 0,
@@ -4733,7 +4744,7 @@ namespace MuPDF.NET
             return "";
         }
 
-        public static void ResetWidget(PdfAnnot annot)
+        internal static void ResetWidget(PdfAnnot annot)
         {
             PdfAnnot thisAnnot = annot;
             PdfObj thisAnnotObj = mupdf.mupdf.pdf_annot_obj(thisAnnot);
@@ -4745,7 +4756,7 @@ namespace MuPDF.NET
         /// Ensure that widgets with /AA/C JavaScript are in array AcroForm/CO
         /// </summary>
         /// <param name="annot"></param>
-        public static void EnsureWidgetCalc(PdfAnnot annot)
+        internal static void EnsureWidgetCalc(PdfAnnot annot)
         {
             PdfObj annotObj = annot.pdf_annot_obj();
             PdfDocument pdf = annotObj.pdf_get_bound_document();
@@ -4774,7 +4785,7 @@ namespace MuPDF.NET
                 co.pdf_array_push(pdf.pdf_new_indirect(xref, 0));
         }
 
-        public static void SaveWidget(PdfAnnot annot, Widget widget)
+        internal static void SaveWidget(PdfAnnot annot, Widget widget)
         {
             PdfPage page = annot.pdf_annot_page();
             PdfObj annotObj = annot.pdf_annot_obj();
@@ -4968,7 +4979,7 @@ namespace MuPDF.NET
             annot.pdf_update_annot();
         }
 
-        public static void PutScript(PdfObj annotObj, PdfObj key1, PdfObj key2, string value)
+        internal static void PutScript(PdfObj annotObj, PdfObj key1, PdfObj key2, string value)
         {
             PdfObj key1Obj = annotObj.pdf_dict_get(key1);
             PdfDocument pdf = annotObj.pdf_get_bound_document();
@@ -5002,7 +5013,7 @@ namespace MuPDF.NET
             }
         }
 
-        public static PdfObj NewJavaScript(PdfDocument pdf, string value)
+        internal static PdfObj NewJavaScript(PdfDocument pdf, string value)
         {
             if (value == null)
                 return null;
@@ -5015,7 +5026,7 @@ namespace MuPDF.NET
             return newAction;
         }
 
-        public static string GetScript(PdfObj key)
+        internal static string GetScript(PdfObj key)
         {
             if (key.m_internal == null)
                 return null;
@@ -5047,7 +5058,7 @@ namespace MuPDF.NET
             return null;
         }
 
-        public static void SetChoiceOptions(PdfAnnot annot, List<dynamic> list)
+        internal static void SetChoiceOptions(PdfAnnot annot, List<dynamic> list)
         {
             if (list == null)
                 return;
@@ -5091,7 +5102,7 @@ namespace MuPDF.NET
             return val;
         }
 
-        public static FzBuffer fz_new_buffer_from_data(byte[] data)
+        internal static FzBuffer fz_new_buffer_from_data(byte[] data)
         {
             IntPtr pData = Marshal.AllocHGlobal(data.Length);
             Marshal.Copy(data, 0, pData, data.Length);
@@ -5147,7 +5158,7 @@ namespace MuPDF.NET
             return "unknown";
         }
 
-        public static PdfAnnot GetWidgetByXref(PdfPage page, int xref)
+        internal static PdfAnnot GetWidgetByXref(PdfPage page, int xref)
         {
             bool found = false;
             PdfAnnot annot = page.pdf_first_annot();
@@ -5261,13 +5272,19 @@ namespace MuPDF.NET
 
         public static float MeasureString(
             string text,
+            string fontFile,
             string fontName,
-            float fontSize,
-            int encoding
+            float fontSize = 11.0f,
+            int encoding = 0
         )
         {
-            //FzFont fon = mupdf.mupdf.fz_new_base14_font(fontname);
-            FzFont font = new FzFont("Kenpixel", "e://res/kenpixel.ttf", 0, 0);
+            if (string.IsNullOrEmpty(fontFile))
+            {
+                throw new Exception("should specify font file.");
+                return -1f;
+            }
+
+            FzFont font = new FzFont(fontName, fontFile, 0, 0);
             float w = 0;
             int pos = 0;
             while (pos < text.Length)
@@ -5401,8 +5418,6 @@ namespace MuPDF.NET
 
             return spanQuad;
         }
-
-
 
         /// <summary>
         /// Recover the quadrilateral of a text span.
@@ -6112,7 +6127,12 @@ namespace MuPDF.NET
             tempFile.Dispose();
         }
 
-        internal static void AddLayerConfig(PdfDocument pdf, string name, string creator, OCLayerConfig on)
+        internal static void AddLayerConfig(
+            PdfDocument pdf,
+            string name,
+            string creator,
+            OCLayerConfig on
+        )
         {
             try
             {
@@ -6126,10 +6146,7 @@ namespace MuPDF.NET
                     d.pdf_dict_put_text_string(new PdfObj("Creator"), creator);
                 d.pdf_dict_put(new PdfObj("BaseState"), new PdfObj("OFF"));
                 PdfObj onarray = d.pdf_dict_put_array(new PdfObj("ON"), 5);
-                if (on == null)
-                {
-
-                }
+                if (on == null) { }
                 else
                 {
                     PdfObj ocgs = ocp.pdf_dict_get(new PdfObj("OCGs"));
@@ -6174,7 +6191,7 @@ namespace MuPDF.NET
 
             if (Utils.IsInitialized)
                 return;
-            
+
             Utils.SetDotCultureForNumber();
             if (!File.Exists("mupdfcsharp.dll"))
                 Utils.LoadEmbeddedDll();
@@ -6192,10 +6209,10 @@ namespace MuPDF.NET
         {
             Dictionary<string, (float, float)> u = new Dictionary<string, (float, float)>()
             {
-                {"px", (1f, 1f) },
-                {"in", (1f, 72.0f) },
-                {"cm", (2.54f, 72.0f) },
-                {"mm", (25.4f, 72f) }
+                { "px", (1f, 1f) },
+                { "in", (1f, 72.0f) },
+                { "cm", (2.54f, 72.0f) },
+                { "mm", (25.4f, 72f) }
             };
             float f = (float)Math.Pow(u[unit].Item1 / u[unit].Item2, 2);
             return f * rect.Width * rect.Height;
@@ -6209,7 +6226,8 @@ namespace MuPDF.NET
         /// <returns></returns>
         public static ImageInfo GetImageProfile(byte[] image, int keepImage = 0)
         {
-            if (image == null) return null;
+            if (image == null)
+                return null;
 
             int len = image.Length;
             if (len < 8)
@@ -6260,7 +6278,8 @@ namespace MuPDF.NET
         public static string ConversionHeader(string i, string filename = "unknown")
         {
             string t = i.ToLower();
-            string html = @"
+            string html =
+                @"
                 <!DOCTYPE html>
                 <html>
                 <head>
@@ -6274,12 +6293,14 @@ namespace MuPDF.NET
                 <body>
                 ";
 
-            string xml = $@"
+            string xml =
+                $@"
                 <?xml version='1.0'?>
                 <document name='{filename}'>
                 ";
 
-            string xhtml = @"
+            string xhtml =
+                @"
                 <?xml version='1.0'?>
                 <!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Strict//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd'>
                 <html xmlns='http://www.w3.org/1999/xhtml'>
@@ -6310,7 +6331,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <param name="i"></param>
         /// <returns></returns>
@@ -6337,7 +6358,5 @@ namespace MuPDF.NET
 
             return r;
         }
-
-
     }
 }
