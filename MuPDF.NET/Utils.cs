@@ -4252,7 +4252,7 @@ namespace MuPDF.NET
             tpage = null;
         }
 
-        public internal (int, int) MergeResources(PdfPage page, PdfObj res)
+        internal static (int, int) MergeResources(PdfPage page, PdfObj res)
         {
             PdfObj resources = page.obj().pdf_dict_get(new PdfObj("Resources"));
             PdfObj mainExtg = page.obj().pdf_dict_get(new PdfObj("ExtGState"));
@@ -5222,6 +5222,7 @@ namespace MuPDF.NET
         /// <exception cref="Exception"></exception>
         public static float GetTextLength(
             string text,
+            string fontFile,
             string fontName = "helv",
             float fontSize = 11,
             int encoding = 0
@@ -5250,7 +5251,7 @@ namespace MuPDF.NET
 
             //if (Utils.Base14_fontdict.Keys.Contains(fontname))
             if (true)
-                return Utils.MeasureString(text, fontName, fontSize, encoding);
+                return Utils.MeasureString(text, fontFile, fontName, fontSize, encoding);
             if (
                 (
                     new string[]
