@@ -402,44 +402,6 @@ Yet others are handy, general-purpose utilities.
 
 -----
 
-   .. method:: MakeAnnotDA(PdfAnnot annot, int nCol, float[] col, string font)
-
-      Passing color, fontname, fontsize into the annot.
-
------
-
-   .. method:: AddAnnotId(PdfAnnot annot, string stem)
-
-      Add a unique /NM key to an annotation or widget. Append a number to 'stem' such that the result is a unique name.
-
------
-
-   .. method:: AddOcObject(PdfDocument pdf, PdfObj ref, int xref)
-
-      Add OC object reference to a dictionary
-
-      :arg PdfDocument pdf: PdfDocument object to add OC-controlled
-      :arg PdfObj ref: PdfObj to be added into pdf
-
------
-
-   .. method:: BinFromBuffer(FzBuffer buffer)
-
-      Turn FzBuffer into a byte[]
-
-      :arg FzBuffer buffer: FzBuffer used to convert to bytes
-      :return: byte[] converted from FzBuffer
-
------
-
-   .. method:: BufferFromBytes(byte[] bytes)
-
-      Make FzBuffer from a byte[] object.
-
-      :return: FzBuffer from byte[]
-
------
-
    .. method:: CalcImageMatrix(int width, int height, Rect tr, float rotate, bool keep)
 
       Compute image insertion matrix
@@ -450,7 +412,7 @@ Yet others are handy, general-purpose utilities.
       :arg float rotate: rotate to be set for target image
       :arg bool keep: calc size of target image keeping origin image's ratio
       
-      :return: Matrix mat
+      :returns: Matrix mat
 
 -----
 
@@ -461,20 +423,51 @@ Yet others are handy, general-purpose utilities.
       :arg FzPixmap pm: source pixmap
       :arg Rect clip: count colors in clip area of source pixmaps.
 
-      :return: return count of each color.
+      :returns: return count of each color.
 
 -----
 
-   .. method:: CompressBuffer(FzBuffer buffer)
+   .. method:: ConstructLabel(string style, string prefix, int pno)
 
-      Compress FzBuffer into a new buffer
+      Construct a label based on style, prefix and page number.
 
-      :arg FzBuffer buffer: input FzBuffer
+      :arg string style: type of style for label. that includes `D`, `r`, `R`, `a`, `A`.
+      :arg string prefix: added prefix to label
+      :arg int pno: translate pno to letter according to the style
 
-      :return: output compressed FzBuffer object
+      :rtype: string
+      :returns: styled label
 
 -----
 
-   .. method:: Construct
+   .. method:: DecodeRawUnicodeEscape(FzBuffer s)
+   .. method:: DecodeRawUnicodeEscape(string s)
+
+      Decode raw unicode
+
+-----
+
+   .. method:: DoLinks(Document doc1, Document doc2, int fromPage: -1, int toPage: -1, int startAt: -1)
+
+      Insert links contained in copied page range into destination PDF.
+
+-----
+
+   .. method:: EnsureIdentity(Document pdf)
+
+      Store ID in PDF trailer
+
+-----
+
+   .. method:: ExpandFontName(string fontname)
+
+      Make /DA string of annotation
+
+      :returns: expand font name. For example, if fontname starts with `co` or `Co`, returns `Cour`
+
+-----
+
+   .. method:: FillWidget(Annot annot, Widget widget)
+
 
 .. include:: footer.rst
