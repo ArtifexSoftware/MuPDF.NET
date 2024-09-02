@@ -13,13 +13,15 @@ Yet others are handy, general-purpose utilities.
 ==================================== ==============================================================
 **Function**                         **Short Description**
 ==================================== ==============================================================
-:meth:`adobe_glyph_unicodes`         list of unicodes defined in **Adobe Glyph List**
 :meth:`ConversionHeader`             return header string for *get_text* methods
-:meth:`sRGB2rgb`                     Convenience function returning a color (red, green, blue) for a given *sRGB* color integer.
+:meth:`sRGB2rgb`                     Convenience function returning a color (red, green, blue) for a given *sRGB* color integer
 :meth:`ConversionTrailer`            return trailer string for *get_text* methods
 :meth:`EMPTY_IRECT`                  return the (standard) empty / invalid rectangle
 :meth:`EMPTY_QUAD`                   return the (standard) empty / invalid quad
 :meth:`EMPTY_RECT`                   return the (standard) empty / invalid rectangle
+:meth:`INFINITE_IRECT`               return the (only existing) infinite rectangle
+:meth:`INFINITE_QUAD`                return the (only existing) infinite quad
+:meth:`INFINITE_RECT`                return the (only existing) infinite rectangle
 :meth:`GetPdfNow`                    return the current timestamp in PDF format
 :meth:`GetPdfString`                 return PDF-compatible string
 :meth:`GetTextLength`                return string length for a given font & :data:`fontsize`
@@ -35,18 +37,46 @@ Yet others are handy, general-purpose utilities.
 :meth:`RecoverQuad`                  compute the quad of a span ("dict", "rawdict")
 :meth:`RecoverSpanQuad`              compute the quad of a subset of span characters
 :meth:`Unicode2GlyphName`            return glyph name from a unicode
-:meth:`MakeAnnotDA`                  Passing color, fontname, fontsize into the annot.
-:meth:`AddAnnotId`                   Add a unique /NM key to an annotation or widget.
+:meth:`MakeAnnotDA`                  Passing color, fontname, fontsize into the annot
+:meth:`AddAnnotId`                   Add a unique /NM key to an annotation or widget
 :meth:`AddOcObject`                  Add OC object reference to a dictionary
 :meth:`ColorCount`                   Return count of each color.
 :meth:`BinFromBuffer`                Turn FzBuffer into a byte[]
-:meth:`BufferFromBytes`              Make FzBuffer from a byte[] object.
+:meth:`BufferFromBytes`              Make FzBuffer from a byte[] object
 :meth:`CalcImageMatrix`              Compute image insertion matrix
 :meth:`CompressBuffer`               Compress FzBuffer into a new buffer
+:meth:`GetPdfString`                 Make a PDF-compatible string
+:meth:`ConstructLabel`               Construct a label based on style, prefix and page number
+:meth:`DecodeRawUnicodeEscape`       Decode raw unicode
+:meth:`DoLinks`                      Insert links contained in copied page range into destination PDF
+:meth:`EnsureIdentity`               Store ID in PDF trailer
+:meth:`ExpandFontName`               Make /DA string of annotation
+:meth:`GetId`                        Count numbers and return unique id on one process
+:meth:`GetAllContents`               All /Contents streams concatenated to one bytes object.
+:meth:`GetAnnotByName`               Retrieve annot by name (/NM key)
+:meth:`GetArea`                      Calculate area of rectangle
+:meth:`GetBorderStyle`               Return int meaning PdfObj "border style" from string type
+:meth:`GetColors`                    Retrieve the red, green, blue triple of a color name
+:meth:`GetColorHSV`                  Retrieve the hue, saturation, value triple of a color name
+:meth:`GetColorInfoList`             Returns Tuples containing of color name, red, green, blue color values
+:meth:`GetDestString`                Calculate the PDF action string
+:meth:`GetFieldTypeText`             Returns field type string from int type
+:meth:`GetFontProperties`            Returns properties of the font having xref in PDF
+:meth:`GetGlyphText`                 Adobe Glyph List function
+:meth:`GetImageExtension`            Return extension for MuPDF image type
+:meth:`GetLinkText`                  Define skeletons for /Annots object texts
+:meth:`GetWidgetProperties`          Populate a Widget object with the values from a PDF form field
+:meth:`InsertContents`               Insert a buffer as a new separate /Contents object of a page
+:meth:`Integer2Letter`               Return letter sequence string for integer i
+:meth:`Integer2Roman`                Return roman numeral for integer i
+:meth:`MeasureString`                Calculate the width of the text
+:meth:`MergeRange`                   Copy a range of pages (spage, epage) from a source PDF to a specified location (apage) of the target PDF
+:meth:`NormalizeRotation`            Return normalized /Rotate value:one of 0, 90, 180, 270
+:meth:`RuleDict`                     Make a Label from a PDF page label rule
 :attr:`TESSDATA_PREFIX`              a copy of `os.environ["TESSDATA_PREFIX"]`
 ==================================== ==============================================================
 
-   .. method:: paper_size(s)
+   .. method:: PaperSize
 
       Convenience function to return width and height of a known paper format code. These values are given in pixels for the standard resolution 72 pixels = 1 inch.
 
@@ -54,26 +84,21 @@ Yet others are handy, general-purpose utilities.
 
       A format name must be supplied as a string (case **in** \sensitive), optionally suffixed with "-L" (landscape) or "-P" (portrait). No suffix defaults to portrait.
 
-      :arg str s: any format name from above in upper or lower case, like *"A4"* or *"letter-l"*.
+      :arg  s: any format name from above in upper or lower case, like *"A4"* or *"letter-l"*.
 
-      :rtype: tuple
-      :returns: *(width, height)* of the paper format. For an unknown format *(-1, -1)* is returned. Examples: *pymupdf.paper_size("A4")* returns *(595, 842)* and *pymupdf.paper_size("letter-l")* delivers *(792, 612)*.
+      :rtype: Tuple
+      :returns: *(width, height)* of the paper format. For an unknown format *(-1, -1)* is returned. Examples: *PaperSize("A4")* returns *(595, 842)* and *PaperSize("letter-l")* delivers *(792, 612)*.
 
 -----
 
-   .. method:: paper_rect(s)
+   .. method:: PaperRect
 
       Convenience function to return a :ref:`Rect` for a known paper format.
 
-      :arg str s: any format name supported by :meth:`paper_size`.
+      :arg string size: any format name supported by :meth:`PaperSize`.
 
       :rtype: :ref:`Rect`
-      :returns: *pymupdf.Rect(0, 0, width, height)* with *width, height=pymupdf.paper_size(s)*.
-
-      >>> import pymupdf
-      >>> pymupdf.paper_rect("letter-l")
-      pymupdf.Rect(0.0, 0.0, 792.0, 612.0)
-      >>>
+      :returns: *Rect(0, 0, width, height)* with *width, height = Utils.PaperSize(size)*.
 
 -----
 
@@ -119,76 +144,6 @@ Yet others are handy, general-purpose utilities.
 
 -----
 
-   .. method:: adobe_glyph_names()
-
-      *New in v1.18.0*
-
-      Return a list of glyph names defined in the **Adobe Glyph List**.
-
-      :rtype: list
-      :returns: list of strings.
-
-      .. note:: A similar functionality is provided by package `fontTools <https://pypi.org/project/fonttools/>`_ in its *agl* sub-package.
-
------
-
-   .. method:: adobe_glyph_unicodes()
-
-      *New in v1.18.0*
-
-      Return a list of unicodes for there exists a glyph name in the **Adobe Glyph List**.
-
-      :rtype: list
-      :returns: list of integers.
-
-      .. note:: A similar functionality is provided by package `fontTools <https://pypi.org/project/fonttools/>`_ in its *agl* sub-package.
-
------
-
-   .. method:: css_for_pymupdf_font(fontcode, *, CSS=None, archive=None, name=None)
-
-      *New in v1.21.0*
-
-      **Utility function for use with "Story" applications.**
-
-      Create CSS `@font-face` items for the given fontcode in pymupdf-fonts. Creates a CSS font-family for all fonts starting with string "fontcode".
-
-      The font naming convention in package pymupdf-fonts is "fontcode<sf>", where the suffix "sf" is one of "" (empty), "it"/"i", "bo"/"b" or "bi". These suffixes thus represent the regular, italic, bold or bold-italic variants of that font.
-
-      For example, font code "notos" refers to fonts
-
-      *  "notos" - "Noto Sans Regular"
-      *  "notosit" - "Noto Sans Italic"
-      *  "notosbo" - "Noto Sans Bold"
-      *  "notosbi" - "Noto Sans Bold Italic"
-
-      The function creates (up to) four CSS `@font-face` definitions and collectively assigns the `font-family` name "notos" to them (or the "name" value if provided). Associated font buffers are placed / added to the provided archive.
-
-      To use the font in the Python API for :ref:`Story`, execute `.set_font(fontcode)` (or "name" if given). The correct font weight or style will automatically be selected as required.
-
-      For example to replace the "sans-serif" HTML standard (i.e. Helvetica) with the above "notos", execute the following. Whenever "sans-serif" is used (whether explicitly or implicitly), the Noto Sans fonts will be selected.
-
-      `CSS = pymupdf.css_for_pymupdf_font("notos", name="sans-serif", archive=...)`
-
-      Expects and returns the CSS source, with the new CSS definitions appended.
-
-      :arg str fontcode: one of the font codes present in package `pymupdf-fonts <https://pypi.org/project/pymupdf-fonts/>`_ (usually) representing the regular version of the font family.
-      :arg str CSS: any already existing CSS source, or `None`. The function will append its new definitions to this. This is the string that **must be used** as `user_css` when creating the :ref:`Story`.
-      :arg archive: :ref:`Archive`, **mandatory**. All font binaries (i.e. up to four) found for "fontcode" will be added to the archive. This is the archive that **must be used** as `archive` when creating the :ref:`Story`.
-      :arg str name: the name under which the "fontcode" fonts should be found. If omitted, "fontcode" will be used.
-
-      :rtype: str
-      :returns: Modified CSS, with appended `@font-face` statements for each font variant of fontcode. Fontbuffers associated with "fontcode" will have been added to 'archive'. The function will automatically find up to 4 font variants. All pymupdf-fonts (that are no special purpose like math or music, etc.) have regular, bold, italic and bold-italic variants. To see currently available font codes check `pymupdf.fitz_fontdescriptors.keys()`. This will show something like `dict_keys(['cascadia', 'cascadiai', 'cascadiab', 'cascadiabi', 'figbo', 'figo', 'figbi', 'figit', 'fimbo', 'fimo', 'spacembo', 'spacembi', 'spacemit', 'spacemo', 'math', 'music', 'symbol1', 'symbol2', 'notosbo', 'notosbi', 'notosit', 'notos', 'ubuntu', 'ubuntubo', 'ubuntubi', 'ubuntuit', 'ubuntm', 'ubuntmbo', 'ubuntmbi', 'ubuntmit'])`.
-
-      Here is a complete snippet for using the "Noto Sans" font instead of "Helvetica"::
-
-         arch = pymupdf.Archive()
-         CSS = pymupdf.css_for_pymupdf_font("notos", name="sans-serif", archive=arch)
-         story = pymupdf.Story(user_css=CSS, archive=arch)
-
-
------
-
    .. method:: PlanishLine(Point p1, Point p2)
 
       Return a matrix which maps the line from p1 to p2 to the x-axis such that p1 will become (0,0) and p2 a point with the same distance to (0,0).
@@ -202,10 +157,9 @@ Yet others are handy, general-purpose utilities.
          .. image:: images/img-planish.png
             :scale: 40
 
-
 -----
 
-   .. method:: PaperSize
+   .. attribute:: PaperSizes
 
       A dictionary of pre-defines paper formats. Used as basis for :meth:`PaperSize`.
 
@@ -223,20 +177,6 @@ Yet others are handy, general-purpose utilities.
 
 -----
 
-   .. attribute:: pdfcolor
-
-      * New in v1.19.6
-
-      Contains about 500 RGB colors in PDF format with the color name as key. To see what is there, you can obviously look at `pymupdf.pdfcolor.keys()`.
-
-      Examples:
-
-        * `pymupdf.pdfcolor["red"] = (1.0, 0.0, 0.0)`
-        * `pymupdf.pdfcolor["skyblue"] = (0.5294117647058824, 0.807843137254902, 0.9215686274509803)`
-        * `pymupdf.pdfcolor["wheat"] = (0.9607843137254902, 0.8705882352941177, 0.7019607843137254)`
-
------
-
    .. method:: GetPdfNow()
 
       Convenience function to return the current local timestamp in PDF compatible format, e.g. *D:20170501121525-04'00'* for local datetime May 1, 2017, 12:15:25 in a timezone 4 hours westward of the UTC meridian.
@@ -250,8 +190,8 @@ Yet others are handy, general-purpose utilities.
 
       Calculate the length of text on output with a given **builtin** font, :data:`fontSize` and encoding.
 
-      :arg str text: the text string.
-      :arg str fontName: the fontName. Must be one of either the :ref:`Base-14-Fonts` or the CJK fonts, identified by their "reserved" fontnames (see table in :meth:`Page.InsertFont`).
+      :arg string text: the text string.
+      :arg string fontName: the fontName. Must be one of either the :ref:`Base-14-Fonts` or the CJK fonts, identified by their "reserved" fontnames (see table in :meth:`Page.InsertFont`).
       :arg float fontSize: the :data:`fontSize`.
       :arg int encoding: the encoding to use. Besides 0 = Latin, 1 = Greek and 2 = Cyrillic (Russian) are available. Relevant for Base-14 fonts "Helvetica", "Courier" and "Times" and their variants only. Make sure to use the same value as in the corresponding text insertion.
       :rtype: float
@@ -267,9 +207,9 @@ Yet others are handy, general-purpose utilities.
 
    .. method:: GetPdfString(string text)
 
-      Make a PDF-compatible string: if the text contains code points *ord(c) > 255*, then it will be converted to UTF-16BE with BOM as a hexadecimal character string enclosed in "<>" brackets like *<feff...>*. Otherwise, it will return the string enclosed in (round) brackets, replacing any characters outside the ASCII range with some special code. Also, every "(", ")" or backslash is escaped with a backslash.
+      Make a PDF-compatible string: if the text contains code points *Convert.ToInt32(c) > 255*, then it will be converted to UTF-16BE with BOM as a hexadecimal character string enclosed in "<>" brackets like *<feff...>*. Otherwise, it will return the string enclosed in (round) brackets, replacing any characters outside the ASCII range with some special code. Also, every "(", ")" or backslash is escaped with a backslash.
 
-      :arg str text: the object to convert
+      :arg string text: the object to convert
 
       :rtype: string
       :returns: PDF-compatible string enclosed in either *()* or *<>*.
@@ -467,7 +407,198 @@ Yet others are handy, general-purpose utilities.
 
 -----
 
-   .. method:: FillWidget(Annot annot, Widget widget)
+   .. method:: GetId()
 
+      Count numbers and return unique id on one process
 
+      :rtype: int
+      :returns: unique number
+
+-----
+
+   .. method:: GetAllContents(Page page)
+
+      All /Contents streams concatenated to one bytes object.
+
+      :arg Page page: Page object to get all streams
+
+      :rtype: bytre[]
+
+-----
+
+   .. method:: GetAnnotByName(Page page, string name)
+
+      Retrieve annot by name (/NM key)
+
+      :arg Page page: Page object containing annots.
+      :arg string name: annot name. Looping annots in page, that find the annot which has name as ID.
+
+      :rtype: PdfAnnot
+      :returns: PdfAnnot object that has the name.
+
+-----
+
+   .. method:: GetArea(Rect rect, string unit: "px")
+
+      Calculate area of rectangle.\nparameter is one of 'px' (default), 'in', 'cm', or 'mm'.
+
+      :arg Rect rect: rectangle calculated area
+      :arg string unit: unit used in rect. default is `px`, there are other units like `cm`, `mm`.
+
+      :rtype: float
+      :returns: area of rectangle
+
+-----
+
+   .. method:: GetBorderStyle(string style)
+
+      Return int meaning PdfObj "border style" from string type.
+
+      :arg string style: border type in format of style. style can be one of 'B', 'D', 'I', 'U', 'S' or lowercases.
+      :returns: return int from border pdfobj.
+
+-----
+
+   .. method:: GetColors(string name)
+
+      Retrieve the red, green, blue triple of a color name.
+
+      :arg string name: color name
+      :rtype: float[]
+      :returns: return float array equal to color name. If invalid color name, return (1, 1, 1) - `white`.
+
+-----
+
+   .. method:: GetColorHSV(string name)
+
+      Retrieve the hue, saturation, value triple of a color name.
+
+      :returns: a triple (degree, percent, percent). If not found (-1, -1, -1) is returned.
+
+-----
+
+   .. method:: GetColorInfoList()
+
+      Return Tuples containing of color name, red, green, blue color values.
+
+-----
+
+   .. method:: GetDestString(int xref, int dDict)
+   .. method:: GetDestString(int xref, float dDict)
+   .. method:: GetDestString(int xref, LinkInfo dDict)
+
+      Calculate the PDF action string.
+
+      :arg int xref: the :data:`xref` of the link pdfobj.
+      :arg int dDict: one parameter of coordinate positioned in PDF
+      :arg float dDict: one parameter of coordinate positioned in PDF
+      :arg LinkInfo dDict: link info contains 'Kind', 'From', 'To', 'Page', 'Xref', ...
+
+      :returns: string of PDF action
+
+-----
+
+   .. method:: GetFieldTypeText(int wtype)
+
+      Return field type string from int type.
+
+-----
+
+   .. method:: GetFontProperties(Document doc, int xref)
+
+      Return properties of the font having xref in PDF. Properties are 'Name', 'Extension', 'Type', 'Asc', 'Desc'.
+
+      :arg int xref: the :data:`xref` of the font
+      :arg Document doc: source PDF that has the font.
+
+      :rtype: Tuple(string, string, string, float, float)
+      :returns: properties of the font.
+
+-----
+
+   .. method:: GetGlyphText()
+
+      Adobe Glyph List function
+
+-----
+
+   .. method:: GetImageExtension(int type)
+
+      Return extension for MuPDF image type.
+
+-----
+   
+   .. method:: GetLinkText(Page page, LinkInfo link)
+
+      Define skeletons for /Annots object texts
+
+      :returns: annot string.
+
+-----
+
+   .. method:: GetWidgetProperties(Annot annot, Widget widget)
+
+      Populate a Widget object with the values from a PDF form field.
+      
+      :returns: Widget object.
+
+-----
+
+   .. method:: InsertContents(Page page, byte[] newCont, int overlay: 1)
+
+      Insert a buffer as a new separate /Contents object of a page.
+
+      1. Create a new stream object from buffer 'newcont'
+      2. If /Contents already is an array, then just prepend or append this object
+      3. Else, create new array and put old content obj and this object into it.
+         If the page had no /Contents before, just create a 1-item array.
+
+      :returns: xref of the content.
+
+-----
+
+   .. method:: Integer2Letter(int i)
+
+      Return letter sequence string for integer i.
+
+-----
+
+   .. method:: Integer2Roman(int i)
+
+      Return roman numeral for integer i.
+
+-----
+
+   .. method:: MeasureString(string text, string fontFile, string fontName, float fontSize: 11.0f, int encoding: 0)
+
+      Calculate the width of the text.
+
+      :arg string text: target text.
+      :arg string fontFile: must pass font file to calculate the width. MuPDF.NET doesn't support inner font resource, so must specify external font path.
+      :arg string fontName: must specify with font file together.
+      :arg float fontSize: font size. default is 11.0f.
+      :arg int encoding: encoding type.
+
+-----
+
+   .. method:: MergeRange(Document docDes, Document docSrc, int spage, int epage, int apage, int rotate, bool links, bool annots, int showProgress, GraftMap graftmap)
+
+      Copy a range of pages (spage, epage) from a source PDF to a specified location (apage) of the target PDF. If spage > epage, the sequence of source pages is reversed.
+      
+-----
+
+   .. method:: NormalizeRotation(int rotate)
+
+      Return normalized /Rotate value:one of 0, 90, 180, 270.
+
+-----
+
+   .. method:: RuleDict((int, string) item)
+
+      Make a Label from a PDF page label rule.
+
+      :arg Tuple(int, string) item: a tuple (pno, rule) with the start page number and the rule string like <</S/D...>>.
+      :returns: a label struct :data:`Label`
+      
+-----
 .. include:: footer.rst
