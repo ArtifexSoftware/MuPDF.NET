@@ -32,11 +32,6 @@ namespace MuPDF.NET
 
         public static int UNIQUE_ID = 0;
 
-        public static int TEXT_ALIGN_LEFT = 0;
-        public static int TEXT_ALIGN_CENTER = 1;
-        public static int TEXT_ALIGN_RIGHT = 2;
-        public static int TEXT_ALIGN_JUSTIFY = 3;
-
         public static Dictionary<string, int> AdobeUnicodes = new Dictionary<string, int>();
 
         public static Dictionary<int, string> AdobeGlyphs = new Dictionary<int, string>();
@@ -643,7 +638,7 @@ namespace MuPDF.NET
             (183, 0.46),
         };
 
-        public static string GetImageExtention(int type)
+        public static string GetImageExtension(int type)
         {
             if (type == (int)ImageType.FZ_IMAGE_FAX)
                 return "fax";
@@ -2481,7 +2476,7 @@ namespace MuPDF.NET
             return s + (f == "c" ? "K " : "k ");
         }
 
-        public static string GetColorCode(float c, string f)
+        internal static string GetColorCode(float c, string f)
         {
             float[] color = { c, };
             Utils.CheckColor(color);
@@ -2579,12 +2574,12 @@ namespace MuPDF.NET
             }
         }
 
-        public static LinkInfo GetLinkDict(Link ln, Document doc = null)
+        internal static LinkInfo GetLinkDict(Link ln, Document doc = null)
         {
             return Utils._GetLinkDict(ln.Dest, ln.Rect, doc);
         }
 
-        public static LinkInfo GetLinkDict(Outline ol, Document doc = null)
+        internal static LinkInfo GetLinkDict(Outline ol, Document doc = null)
         {
             return Utils._GetLinkDict(ol.Dest, null, doc);
         }
@@ -2925,7 +2920,7 @@ namespace MuPDF.NET
             return annot;
         }
 
-        public static string SetAnnotStem(string stem = null)
+        internal static string SetAnnotStem(string stem = null)
         {
             if (stem == null)
                 return Utils.ANNOT_ID_STEM;
@@ -2938,13 +2933,14 @@ namespace MuPDF.NET
 
         public static PdfAnnot GetAnnotByName(Page page, string name)
         {
-            if (name == null)
+            if (string.IsNullOrEmpty(name))
                 return null;
+
             PdfAnnot annot = mupdf.mupdf.pdf_first_annot(page.GetPdfPage());
             bool found = false;
             while (true)
             {
-                if (annot == null)
+                if (annot.m_internal == null)
                     break;
                 (string res, ulong len) = annot.pdf_annot_obj().pdf_to_string();
                 if (name == res)
@@ -3007,7 +3003,7 @@ namespace MuPDF.NET
             }
         }
 
-        public static void PageMerge(
+        internal static void PageMerge(
             Document docDes,
             Document docSrc,
             int pageFrom,
@@ -4369,7 +4365,7 @@ namespace MuPDF.NET
             return "<" + BitConverter.ToString(resBytes).Replace("-", string.Empty) + ">";
         }
 
-        public static int Find(byte[] haystack, byte[] needle)
+        internal static int Find(byte[] haystack, byte[] needle)
         {
             for (var i = 0; i < haystack.Length - needle.Length + 1; i++)
             {
@@ -4653,8 +4649,8 @@ namespace MuPDF.NET
                     int x = Convert.ToInt32(s.Substring(2));
                     ret.FirstPageNum = x;
                 }
-                ;
             }
+
             return ret;
         }
 
@@ -5116,7 +5112,7 @@ namespace MuPDF.NET
         /// <param name="alpha">include alpha channel</param>
         /// <param name="annots">also render annotations</param>
         /// <returns></returns>
-        public static Pixmap GetPagePixmap(
+        internal static Pixmap GetPagePixmap(
             Document doc,
             int pno,
             IdentityMatrix matrix = null,
@@ -5651,6 +5647,7 @@ namespace MuPDF.NET
             int val = new PdfObj("S").pdf_to_num();
             if (string.IsNullOrEmpty(style))
                 return val;
+
             string s = style;
             if (s.StartsWith("b") || s.StartsWith("B"))
                 val = new PdfObj("B").pdf_to_num();
@@ -5662,6 +5659,7 @@ namespace MuPDF.NET
                 val = new PdfObj("U").pdf_to_num();
             else if (s.StartsWith("s") || s.StartsWith("S"))
                 val = new PdfObj("S").pdf_to_num();
+
             return val;
         }
 
@@ -5679,7 +5677,7 @@ namespace MuPDF.NET
             return ret;
         }
 
-        public static void FillWidget(Annot annot, Widget widget)
+        internal static void FillWidget(Annot annot, Widget widget)
         {
             Utils.GetWidgetProperties(annot, widget);
 
@@ -5740,7 +5738,7 @@ namespace MuPDF.NET
             return annot;
         }
 
-        public static Matrix GetRotateMatrix(Page page)
+        internal static Matrix GetRotateMatrix(Page page)
         {
             PdfPage pdfpage = page.GetPdfPage();
             if (pdfpage.m_internal == null)
@@ -6738,7 +6736,7 @@ namespace MuPDF.NET
             return utf8Ptr;
         }
 
-        public static void SetDotCultureForNumber()
+        internal static void SetDotCultureForNumber()
         {
             CultureInfo culture = new CultureInfo("en-US"); // or any specific culture you want
             culture.NumberFormat.NumberDecimalSeparator = ".";
@@ -6779,6 +6777,7 @@ namespace MuPDF.NET
                 { "mm", (25.4f, 72f) }
             };
             float f = (float)Math.Pow(u[unit].Item1 / u[unit].Item2, 2);
+
             return f * rect.Width * rect.Height;
         }
 
@@ -6830,7 +6829,7 @@ namespace MuPDF.NET
                 Yres = yres,
                 ColorSpace = img.n(),
                 Bpc = img.bpc(),
-                Ext = GetImageExtention(type),
+                Ext = GetImageExtension(type),
                 CsName = csName
             };
 

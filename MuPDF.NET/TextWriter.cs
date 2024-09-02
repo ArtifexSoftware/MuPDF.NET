@@ -445,9 +445,9 @@ namespace MuPDF.NET
                 throw new Exception("Text must start in rectangle");
 
             float factor = 0;
-            if (align == Utils.TEXT_ALIGN_CENTER)
+            if (align == (int)TextAlign.TEXT_ALIGN_CENTER)
                 factor = 0.5f;
-            else if (align == Utils.TEXT_ALIGN_RIGHT)
+            else if (align == (int)TextAlign.TEXT_ALIGN_RIGHT)
                 factor = 1.0f;
 
             string[] textLines = text.Split("\n");
@@ -540,7 +540,7 @@ namespace MuPDF.NET
                 if (i == 0)
                     start = pos;
 
-                if (align == Utils.TEXT_ALIGN_JUSTIFY && !noJustify.Contains(i) && tl < stdWidth)
+                if (align == (int)TextAlign.TEXT_ALIGN_JUSTIFY && !noJustify.Contains(i) && tl < stdWidth)
                 {
                     OutputJustify(start, line);
                     start.X = stdStart;

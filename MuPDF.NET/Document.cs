@@ -3672,7 +3672,7 @@ namespace MuPDF.NET
                 ll_fz_buffer_storage_outparams outparams = new ll_fz_buffer_storage_outparams();
                 uint len = mupdf.mupdf.ll_fz_buffer_storage_outparams_fn(res.m_internal, outparams);
                 imgType = mupdf.mupdf.fz_recognize_image_format(outparams.datap);
-                ext = Utils.GetImageExtention(imgType);
+                ext = Utils.GetImageExtension(imgType);
             }
             if (imgType == (int)ImageType.FZ_IMAGE_UNKNOWN)
             {
@@ -3693,7 +3693,7 @@ namespace MuPDF.NET
                 )
                 {
                     imgType = llCbuf.params_.type;
-                    ext = Utils.GetImageExtention(imgType);
+                    ext = Utils.GetImageExtension(imgType);
                     res = new FzBuffer(mupdf.mupdf.ll_fz_keep_buffer(llCbuf.buffer));
                 }
                 else
