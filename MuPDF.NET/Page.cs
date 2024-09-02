@@ -2528,7 +2528,7 @@ namespace MuPDF.NET
                 if (Utils.CheckFontInfo(doc, xref) != null)
                     return xref;
 
-                Utils.GetCharWidths(doc, xref);
+                doc.GetCharWidths(xref);
                 return xref;
             }
 
@@ -2586,7 +2586,7 @@ namespace MuPDF.NET
                 return -1;
 
             FontInfo fontDict = val;
-            var _ = Utils.GetCharWidths(doc, xref: fontDict.Xref, fontDict: fontDict);
+            var _ = doc.GetCharWidths(xref: fontDict.Xref, fontDict: fontDict);
             return fontDict.Xref;
         }
 
@@ -3984,6 +3984,16 @@ namespace MuPDF.NET
         }
 
         /// <summary>
+        /// Run page through a device.
+        /// </summary>
+        /// <param name="dw"></param>
+        /// <param name="m">Transformation to apply to the page.</param>
+        public void Run(DeviceWrapper dw, Matrix m)
+        {
+            _nativePage.fz_run_page(dw._nativeDevice, m.ToFzMatrix(), new FzCookie());
+        }
+
+        /// <summary>
         /// Return text selected between p1 and p2
         /// </summary>
         /// <param name="p1"></param>
@@ -4225,7 +4235,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// New in version 1.17.0. Return the concatenation of all contents objects associated with the page – without cleaning or otherwise modifying them.
+        /// Return the concatenation of all contents objects associated with the page – without cleaning or otherwise modifying them.
         /// </summary>
         /// <returns></returns>
         public byte[] ReadContents()

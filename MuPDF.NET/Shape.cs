@@ -220,7 +220,7 @@ namespace MuPDF.NET
             
             List<(int, double)> glyphs = new List<(int, double)>();
             if (maxCode > 255)
-                glyphs = Utils.GetCharWidths(Doc, xref: xref, limit: maxCode + 1);
+                glyphs = Doc.GetCharWidths(xref: xref, limit: maxCode + 1);
             else
                 glyphs = fontInfo.Glyphs;
 

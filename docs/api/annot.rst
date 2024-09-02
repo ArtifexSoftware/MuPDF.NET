@@ -16,6 +16,7 @@ There is a parent-child relationship between an annotation and its page. If the 
 ================================== ==============================================================
 **Attribute**                      **Short Description**
 ================================== ==============================================================
+:meth:`Annot.CleanContents`        PDF only: clean the annot's :data:`contents` object
 :meth:`Annot.DeleteResponses`      delete all responding annotions
 :meth:`Annot.GetFile`              get attached file content
 :meth:`Annot.GetOC`                get :data:`xref` of an :data:`OCG` / :data:`OCMD`
@@ -68,6 +69,10 @@ There is a parent-child relationship between an annotation and its page. If the 
 **Class API**
 
 .. class:: Annot
+
+   .. method:: CleanContents(int sanitize: 1)
+
+      Clean the :data:`contents` streams associated with the annotation. This is the same type of action which :meth:`Page.CleanContents` performs -- just restricted to this annotation.
 
    .. index::
       pair: matrix; Annot.GetPixmap
