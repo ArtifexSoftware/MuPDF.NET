@@ -4468,6 +4468,8 @@ namespace MuPDF.NET
             }
             else if (contents.m_internal != null)
                 res = contents.pdf_load_stream();
+            else
+                res = null;
 
             return res;
         }
