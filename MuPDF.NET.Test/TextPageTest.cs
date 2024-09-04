@@ -107,5 +107,18 @@ namespace MuPDF.NET.Test
                 page.AddHighlightAnnot(matches);
             }
         }
+
+        [Test]
+        public void GetText()
+        {
+            Document doc = new Document("../../../resources/test_3650.pdf");
+            List<TextBlock> blocks = doc[0].GetText("blocks");
+
+            string t = "";
+            foreach (TextBlock bt in blocks)
+                t += bt.Text;
+
+            Assert.That(t.Equals("RECUEIL DES ACTES ADMINISTRATIFSn° 78 du 28 avril 2023<image: DeviceRGB, width: 3086, height: 3060, bpc: 8>"));
+        }
     }
 }

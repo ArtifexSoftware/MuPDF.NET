@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -10,7 +11,7 @@ namespace MuPDF.NET.Test
     {
         [Test]
         public void Draw()
-        { 
+        {
             string html = "<html><head></head><body><h1>Header level 1</h1><h2>Header level 2</h2></body><p>Hello MuPDF</p></html>";
 
             Rect box = Utils.PaperRect("letter");
@@ -55,6 +56,23 @@ namespace MuPDF.NET.Test
 
             Assert.That(doc1.PageCount, Is.EqualTo(2));
             Assert.That(doc2.PageCount, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void GetPixmap()
+        {
+            Document pdf = new Document("../../../resources/test_3450.pdf");
+            Page page = pdf[0];
+            Stopwatch stopwatch = Stopwatch.StartNew(); // Start timing
+
+            // Assuming GetPixmap is a method that retrieves a pixel map from the page
+            var pix = page.GetPixmap(alpha: false, dpi: 150); // Replace with your actual method to get the pixel map
+
+            stopwatch.Stop(); // Stop timing
+
+            TimeSpan timeTaken = stopwatch.Elapsed; // Get elapsed time
+
+            Console.WriteLine(timeTaken.ToString());
         }
     }
 }

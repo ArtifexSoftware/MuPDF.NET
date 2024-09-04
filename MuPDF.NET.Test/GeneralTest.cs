@@ -396,5 +396,13 @@ namespace MuPDF.NET.Test
             Console.WriteLine(doc.PageLayout);
             Assert.Pass();
         }
+
+        [Test]
+        public void GetPixmap()
+        {
+            Document doc = new Document("../../../resources/test_3727.pdf");
+            for (int i = 0; i < doc.PageCount; i ++)
+                doc[i].GetPixmap(matrix: new Matrix(2, 2));
+        }
     }
 }
