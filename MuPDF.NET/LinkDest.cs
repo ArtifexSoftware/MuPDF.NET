@@ -142,6 +142,27 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// Unescape '%AB' substrings to chr(0xAB).
+        /// </summary>
+        /// <param name="name"></param>
+        /// <returns></returns>
+        public string Unescape(string name)
+        {
+            string split = name.Replace("%%", "%25");
+            string[] splits = split.Split("%");
+            string newName = splits[0];
+
+            foreach (string item in splits.Take(1))
+            {
+                string piece = item.Substring(2);
+                newName += (char)Convert.ToInt32(piece, 16);
+                newName += item.Substring(2);
+            }
+
+            return newName;
+        }
+
         public static Dictionary<string, dynamic> Uri2Dict(string uri)
         {
             List<string> items = new List<string>(uri.Substring(1).Split('&'));
