@@ -1776,9 +1776,7 @@ namespace MuPDF.NET
             if (array.StartsWith("/XYZ"))
             {
                 template.Dest = "";
-                string[] arr_t = array.Split();
-                string[] arr = new string[5];
-                Array.Copy(arr_t, arr, arr_t.Length - 1);
+                string[] arr_t = array.Replace("null", "0").Split().Take(1).ToArray();
                 float x = float.Parse(arr_t[0]);
                 float y = float.Parse(arr_t[1]);
                 float z = float.Parse(arr_t[2]);
@@ -4871,11 +4869,14 @@ namespace MuPDF.NET
 
                 if (redactions && foundRedacts)
                     page.ApplyRedactions(redactImages);
+
                 if (!(cleanPages || hiddenText))
                     continue;
+
                 page.CleanContetns();
                 if (page.GetContents().Count == 0)
                     continue;
+
                 if (hiddenText)
                 {
                     int xref = page.GetContents()[0];

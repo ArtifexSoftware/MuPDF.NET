@@ -5812,8 +5812,8 @@ namespace MuPDF.NET
                 return w * fontSize;
             }
 
-            //if (Utils.Base14_fontdict.Keys.Contains(fontname))
-            if (true)
+            if (Utils.Base14_fontdict.Keys.Contains(fontName))
+            //if (true)
                 return Utils.MeasureString(text, fontFile, fontName, fontSize, encoding);
             if (
                 (
