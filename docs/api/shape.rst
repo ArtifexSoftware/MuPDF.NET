@@ -20,30 +20,30 @@ Several draw methods can be executed in a row and each one of them will contribu
 ================================ =====================================================
 **Method / Attribute**             **Description**
 ================================ =====================================================
-:meth:`Shape.Commit`             update the page's contents
-:meth:`Shape.DrawBezier`         draw a cubic Bezier curve
-:meth:`Shape.DrawCircle`         draw a circle around a point
-:meth:`Shape.DrawCurve`          draw a cubic Bezier using one helper point
-:meth:`Shape.DrawLine`           draw a line
-:meth:`Shape.DrawOval`           draw an ellipse
-:meth:`Shape.DrawPolyline`       connect a sequence of points
-:meth:`Shape.DrawQuad`           draw a quadrilateral
-:meth:`Shape.DrawRect`           draw a rectangle
-:meth:`Shape.DrawSector`         draw a circular sector or piece of pie
-:meth:`Shape.DrawSquiggle`       draw a squiggly line
-:meth:`Shape.DrawZigzag`         draw a zigzag line
-:meth:`Shape.Finish`             finish a set of draw commands
-:meth:`Shape.InsertText`         insert text lines
-:meth:`Shape.InsertTextbox`      fit text into a rectangle
-:attr:`Shape.Doc`                stores the page's document
-:attr:`Shape.DrawCont`           draw commands since last :meth:`Shape.Finish`
-:attr:`Shape.Height`             stores the page's height
-:attr:`Shape.LastPoint`          stores the current point
-:attr:`Shape.Page`               stores the owning page
-:attr:`Shape.Rect`               rectangle surrounding drawings
-:attr:`Shape.TextCont`           accumulated text insertions
-:attr:`Shape.TotalCont`          accumulated string to be stored in :data:`contents`
-:attr:`Shape.Width`              stores the page's width
+:meth:`Shape.Commit`             Update the page's contents
+:meth:`Shape.DrawBezier`         Draw a cubic Bezier curve
+:meth:`Shape.DrawCircle`         Draw a circle around a point
+:meth:`Shape.DrawCurve`          Draw a cubic Bezier using one helper point
+:meth:`Shape.DrawLine`           Draw a line
+:meth:`Shape.DrawOval`           Draw an ellipse
+:meth:`Shape.DrawPolyline`       Connect a sequence of points
+:meth:`Shape.DrawQuad`           Draw a quadrilateral
+:meth:`Shape.DrawRect`           Draw a rectangle
+:meth:`Shape.DrawSector`         Draw a circular sector or piece of pie
+:meth:`Shape.DrawSquiggle`       Draw a squiggly line
+:meth:`Shape.DrawZigzag`         Draw a zigzag line
+:meth:`Shape.Finish`             Finish a set of draw commands
+:meth:`Shape.InsertText`         Insert text lines
+:meth:`Shape.InsertTextbox`      Fit text into a rectangle
+:attr:`Shape.Doc`                Stores the page's document
+:attr:`Shape.DrawCont`           Draw commands since last :meth:`Shape.Finish`
+:attr:`Shape.Height`             Stores the page's height
+:attr:`Shape.LastPoint`          Stores the current point
+:attr:`Shape.Page`               Stores the owning page
+:attr:`Shape.Rect`               Rectangle surrounding drawings
+:attr:`Shape.TextCont`           Accumulated text insertions
+:attr:`Shape.TotalCont`          Accumulated string to be stored in :data:`contents`
+:attr:`Shape.Width`              Stores the page's width
 ================================ =====================================================
 
 **Class API**

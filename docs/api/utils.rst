@@ -13,30 +13,30 @@ Yet others are handy, general-purpose utilities.
 ==================================== ==============================================================
 **Function**                         **Short Description**
 ==================================== ==============================================================
-:meth:`ConversionHeader`             return header string for *get_text* methods
+:meth:`ConversionHeader`             Return header string for *get_text* methods
 :meth:`sRGB2rgb`                     Convenience function returning a color (red, green, blue) for a given *sRGB* color integer
-:meth:`ConversionTrailer`            return trailer string for *get_text* methods
-:meth:`EMPTY_IRECT`                  return the (standard) empty / invalid rectangle
-:meth:`EMPTY_QUAD`                   return the (standard) empty / invalid quad
-:meth:`EMPTY_RECT`                   return the (standard) empty / invalid rectangle
-:meth:`INFINITE_IRECT`               return the (only existing) infinite rectangle
-:meth:`INFINITE_QUAD`                return the (only existing) infinite quad
-:meth:`INFINITE_RECT`                return the (only existing) infinite rectangle
-:meth:`GetPdfNow`                    return the current timestamp in PDF format
-:meth:`GetPdfString`                 return PDF-compatible string
-:meth:`GetTextLength`                return string length for a given font & :data:`fontsize`
-:meth:`GlyphName2Unicode`            return unicode from a glyph name
-:meth:`GetImageProfile`              return a dictionary of basic image properties
-:meth:`INFINITE_RECT`                return the (only existing) infinite rectangle
-:meth:`PaperRect`                    return rectangle for a known paper format
-:meth:`PaperSize`                    return width, height for a known paper format
-:meth:`PaperSizes`                   dictionary of pre-defined paper formats
-:meth:`PlanishLine`                  matrix to map a line to the x-axis
-:meth:`RecoverCharQuad`              compute the quad of a char ("rawdict")
-:meth:`RecoverLineQuad`              compute the quad of a subset of line spans
-:meth:`RecoverQuad`                  compute the quad of a span ("dict", "rawdict")
-:meth:`RecoverSpanQuad`              compute the quad of a subset of span characters
-:meth:`Unicode2GlyphName`            return glyph name from a unicode
+:meth:`ConversionTrailer`            Return trailer string for *get_text* methods
+:meth:`EMPTY_IRECT`                  Return the (standard) empty / invalid rectangle
+:meth:`EMPTY_QUAD`                   Return the (standard) empty / invalid quad
+:meth:`EMPTY_RECT`                   Return the (standard) empty / invalid rectangle
+:meth:`INFINITE_IRECT`               Return the (only existing) infinite rectangle
+:meth:`INFINITE_QUAD`                Return the (only existing) infinite quad
+:meth:`INFINITE_RECT`                Return the (only existing) infinite rectangle
+:meth:`GetPdfNow`                    Return the current timestamp in PDF format
+:meth:`GetPdfString`                 Return PDF-compatible string
+:meth:`GetTextLength`                Return string length for a given font & :data:`fontsize`
+:meth:`GlyphName2Unicode`            Return unicode from a glyph name
+:meth:`GetImageProfile`              Return a dictionary of basic image properties
+:meth:`INFINITE_RECT`                Return the (only existing) infinite rectangle
+:meth:`PaperRect`                    Return rectangle for a known paper format
+:meth:`PaperSize`                    Return width, height for a known paper format
+:meth:`PaperSizes`                   Dictionary of pre-defined paper formats
+:meth:`PlanishLine`                  Matrix to map a line to the x-axis
+:meth:`RecoverCharQuad`              Compute the quad of a char ("rawdict")
+:meth:`RecoverLineQuad`              Compute the quad of a subset of line spans
+:meth:`RecoverQuad`                  Compute the quad of a span ("dict", "rawdict")
+:meth:`RecoverSpanQuad`              Compute the quad of a subset of span characters
+:meth:`Unicode2GlyphName`            Return glyph name from a unicode
 :meth:`MakeAnnotDA`                  Passing color, fontname, fontsize into the annot
 :meth:`AddAnnotId`                   Add a unique /NM key to an annotation or widget
 :meth:`AddOcObject`                  Add OC object reference to a dictionary
@@ -73,7 +73,7 @@ Yet others are handy, general-purpose utilities.
 :meth:`MergeRange`                   Copy a range of pages (spage, epage) from a source PDF to a specified location (apage) of the target PDF
 :meth:`NormalizeRotation`            Return normalized /Rotate value:one of 0, 90, 180, 270
 :meth:`RuleDict`                     Make a Label from a PDF page label rule
-:attr:`TESSDATA_PREFIX`              a copy of `os.environ["TESSDATA_PREFIX"]`
+:attr:`TESSDATA_PREFIX`              A copy of `os.environ["TESSDATA_PREFIX"]`
 ==================================== ==============================================================
 
    .. method:: PaperSize

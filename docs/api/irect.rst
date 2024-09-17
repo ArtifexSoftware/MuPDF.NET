@@ -11,28 +11,28 @@ IRect
 ============================== ==============================================
 **Attribute / Method**          **Short Description**
 ============================== ==============================================
-:meth:`IRect.Contains`         checks containment of another object
-:meth:`IRect.GetArea`          calculate rectangle area
-:meth:`IRect.Intersect`        common part with another rectangle
-:meth:`IRect.Intersects`       checks for non-empty intersection
-:meth:`IRect.Morph`            transform with a point and a matrix
-:meth:`IRect.ToRect`           matrix that transforms to another rectangle
-:meth:`IRect.Norm`             the Euclidean norm
-:meth:`IRect.Normalize`        makes a rectangle finite
-:attr:`IRect.BottomLeft`       bottom left point, synonym *bl*
-:attr:`IRect.BottomRight`      bottom right point, synonym *br*
-:attr:`IRect.Height`           height of the rectangle
-:attr:`IRect.IsEmpty`          whether rectangle is empty
-:attr:`IRect.IsInfinite`       whether rectangle is infinite
-:attr:`IRect.Rect`             the :ref:`Rect` equivalent
-:attr:`IRect.TopLeft`          top left point, synonym *tl*
-:attr:`IRect.TopRight`         top_right point, synonym *tr*
+:meth:`IRect.Contains`         Checks containment of another object
+:meth:`IRect.GetArea`          Calculate rectangle area
+:meth:`IRect.Intersect`        Common part with another rectangle
+:meth:`IRect.Intersects`       Checks for non-empty intersection
+:meth:`IRect.Morph`            Transform with a point and a matrix
+:meth:`IRect.ToRect`           Matrix that transforms to another rectangle
+:meth:`IRect.Norm`             The Euclidean norm
+:meth:`IRect.Normalize`        Makes a rectangle finite
+:attr:`IRect.BottomLeft`       Bottom left point, synonym *bl*
+:attr:`IRect.BottomRight`      Bottom right point, synonym *br*
+:attr:`IRect.Height`           Height of the rectangle
+:attr:`IRect.IsEmpty`          Whether rectangle is empty
+:attr:`IRect.IsInfinite`       Whether rectangle is infinite
+:attr:`IRect.Rect`             The :ref:`Rect` equivalent
+:attr:`IRect.TopLeft`          Top left point, synonym *tl*
+:attr:`IRect.TopRight`         Top right point, synonym *tr*
 :attr:`IRect.Quad`             :ref:`Quad` made from rectangle corners
-:attr:`IRect.Width`            width of the rectangle
-:attr:`IRect.X0`               X-coordinate of the top left corner
-:attr:`IRect.X1`               X-coordinate of the bottom right corner
-:attr:`IRect.Y0`               Y-coordinate of the top left corner
-:attr:`IRect.Y1`               Y-coordinate of the bottom right corner
+:attr:`IRect.Width`            Width of the rectangle
+:attr:`IRect.X0`               X coordinate of the top left corner
+:attr:`IRect.X1`               X coordinate of the bottom right corner
+:attr:`IRect.Y0`               Y coordinate of the top left corner
+:attr:`IRect.Y1`               Y coordinate of the bottom right corner
 ============================== ==============================================
 
 **Class API**
@@ -58,7 +58,7 @@ IRect
 
       Calculates the area of the rectangle and, with no parameter, equals `abs(IRect)`. Like an empty rectangle, the area of an infinite rectangle is also zero.
 
-      :arg str unit: Specify required unit: respective squares of "px" (pixels, default), "in" (inches), "cm" (centimeters), or "mm" (millimeters).
+      :arg string unit: Specify required unit: respective squares of "px" (pixels, default), "in" (inches), "cm" (centimeters), or "mm" (millimeters).
 
       :rtype: float
 
@@ -90,6 +90,7 @@ IRect
       Compute the matrix which transforms this rectangle to a given one. See :meth:`MuPDFRect.ToRect`.
 
       :arg Rect rect: the target rectangle. Must not be empty or infinite.
+      
       :rtype: :ref:`Matrix`
       :returns: a matrix `mat` such that `self * mat = rect`. Can for example be used to transform between the page and the pixmap coordinates.
 

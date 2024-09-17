@@ -15,17 +15,17 @@ For a description of what this class is all about, see Appendix 2.
 ==========================    ===================================== ==============================
 **Method**                    **Description**                       page GetText or Search method
 ==========================    ===================================== ==============================
-:meth:`~.ExtractText`         extract plain text                    "text"
-:meth:`~.ExtractText`         synonym of previous                   "text"
-:meth:`~.ExtractBlocks`       plain text grouped in blocks          "blocks"
-:meth:`~.ExtractWords`        all words with their bbox             "words"
-:meth:`~.ExtractHtml`         page content in HTML format           "html"
-:meth:`~.ExtractXHtml`        page content in XHTML format          "xhtml"
-:meth:`~.ExtractXML`          page text in XML format               "xml"
-:meth:`~.ExtractDict`         page content in PageInfo format       "dict"
-:meth:`~.ExtractJSON`         page content in JSON format           "json"
-:meth:`~.ExtractRAWDict`      page content in PageInfo format       "rawdict"
-:meth:`~.ExtractRawJSON`      page content in JSON format           "rawjson"
+:meth:`~.ExtractText`         Extract plain text                    "text"
+:meth:`~.ExtractText`         Synonym of previous                   "text"
+:meth:`~.ExtractBlocks`       Plain text grouped in blocks          "blocks"
+:meth:`~.ExtractWords`        All words with their bbox             "words"
+:meth:`~.ExtractHtml`         Page content in HTML format           "html"
+:meth:`~.ExtractXHtml`        Page content in XHTML format          "xhtml"
+:meth:`~.ExtractXML`          Page text in XML format               "xml"
+:meth:`~.ExtractDict`         Page content in PageInfo format       "dict"
+:meth:`~.ExtractJSON`         Page content in JSON format           "json"
+:meth:`~.ExtractRAWDict`      Page content in PageInfo format       "rawdict"
+:meth:`~.ExtractRawJSON`      Page content in JSON format           "rawjson"
 :meth:`~.Search`              Search for a string in the page       :meth:`Page.SearchFor`
 :meth:`~.ExtractSelection`    Extract selection in format of string  
 ==========================    ===================================== ==============================

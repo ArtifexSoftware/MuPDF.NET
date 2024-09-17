@@ -255,7 +255,7 @@ public class PageTest : PdfTestBase
         List<BoxLog> bboxlog = page.GetBboxlog();
         Assert.That(bboxlog.Count, Is.EqualTo(1));
 
-        Assert.That(bboxlog[0].Code, Is.EqualTo("fill-image"));
+        Assert.That(bboxlog[0].Type, Is.EqualTo("fill-image"));
     }
 
     [Test]

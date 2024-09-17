@@ -62,8 +62,8 @@ In a nutshell, this is what you can do with MuPDF.NET:
 :meth:`Page.GetAnnotXrefs`         PDF only: a list of annotation (and widget) xrefs
 :meth:`Page.GetAnnots`             Return a generator over the annots on the page
 :meth:`Page.ApplyRedactions`       PDF only: process the redactions of the page
-:meth:`Page.GetBound`              rectangle of the page
-:meth:`Page.GetBboxlog`            list of rectangles that envelop text, drawing or image objects
+:meth:`Page.GetBound`              Rectangle of the page
+:meth:`Page.GetBboxlog`            List of rectangles that envelop text, drawing or image objects
 :meth:`Page.GetContents`           PDF only: return a list of content :data:`xref` numbers
 :meth:`Page.GetDisplayList`        Create the page's display list
 :meth:`Page.GetTextBlocks`         Extract text blocks as a list
@@ -85,20 +85,20 @@ In a nutshell, this is what you can do with MuPDF.NET:
 :meth:`Page.DrawSector`            PDF only: draw a circular sector
 :meth:`Page.DrawSquiggle`          PDF only: draw a squiggly line
 :meth:`Page.DrawZigzag`            PDF only: draw a zig-zagged line
-:meth:`Page.GetDrawings`           get vector graphics on page
+:meth:`Page.GetDrawings`           Get vector graphics on page
 :meth:`Page.GetFonts`              PDF only: get list of referenced fonts
 :meth:`Page.GetImageBbox`          PDF only: get bbox and matrix of embedded image
-:meth:`Page.GetImageInfo`          get list of meta information for all used images
+:meth:`Page.GetImageInfo`          Get list of meta information for all used images
 :meth:`Page.GetImageRects`         PDF only: improved version of :meth:`Page.GetImageBbox`
 :meth:`Page.GetImages`             PDF only: get list of referenced images
 :meth:`Page.GetLabel`              PDF only: return the label of the page
-:meth:`Page.GetLinks`              get all links
-:meth:`Page.GetPixmap`             create a page image in raster format
-:meth:`Page.GetSvgImage`           create a page image in SVG format
-:meth:`Page.GetText`               extract the page's text
-:meth:`Page.GetTextbox`            extract text contained in a rectangle
-:meth:`Page.GetTextPageOcr`        create a TextPage with OCR for the page
-:meth:`Page.GetTextPage`           create a TextPage for the page
+:meth:`Page.GetLinks`              Get all links
+:meth:`Page.GetPixmap`             Create a page image in raster format
+:meth:`Page.GetSvgImage`           Create a page image in SVG format
+:meth:`Page.GetText`               Extract the page's text
+:meth:`Page.GetTextbox`            Extract text contained in a rectangle
+:meth:`Page.GetTextPageOcr`        Create a TextPage with OCR for the page
+:meth:`Page.GetTextPage`           Create a TextPage for the page
 :meth:`Page.GetXObjects`           PDF only: get list of referenced xobjects
 :meth:`Page.InsertFont`            PDF only: insert a font for use by the page
 :meth:`Page.InsertImage`           PDF only: insert an image
@@ -106,18 +106,18 @@ In a nutshell, this is what you can do with MuPDF.NET:
 :meth:`Page.InsertText`            PDF only: insert text
 :meth:`Page.InsertHtmlBox`         PDF only: insert html text in a rectangle
 :meth:`Page.InsertTextbox`         PDF only: insert a text box
-:meth:`Page.GetLinks`              return a generator of the links on the page
+:meth:`Page.GetLinks`              Return a generator of the links on the page
 :meth:`Page.LoadAnnot`             PDF only: load a specific annotation
 :meth:`Page.LoadWidget`            PDF only: load a specific field
-:meth:`Page.LoadLinks`             return the first link on a page
+:meth:`Page.LoadLinks`             Return the first link on a page
 :meth:`Page.NewShape`              PDF only: create a new :ref:`Shape`
 :meth:`Page.RemoveRotation`        PDF only: set page rotation to 0
 :meth:`Page.ReplaceImage`          PDF only: replace an image
 :meth:`Page.ReadContents`          PDF only: get complete, concatenated /Contents source
-:meth:`Page.Run`                   run a page through a device
-:meth:`Page.SearchFor`             search for a string
+:meth:`Page.Run`                   Run a page through a device
+:meth:`Page.SearchFor`             Search for a string
 :meth:`Page.SetArtbox`             PDF only: modify `/ArtBox`
-:meth:`Page.SetBleedbox`           DF only: modify `/BleedBox`
+:meth:`Page.SetBleedbox`           PDF only: modify `/BleedBox`
 :meth:`Page.SetCropBox`            PDF only: modify the :data:`cropbox` (visible page)
 :meth:`Page.SetMediaBox`           PDF only: modify `/MediaBox`
 :meth:`Page.SetRotation`           PDF only: set page rotation
@@ -125,23 +125,23 @@ In a nutshell, this is what you can do with MuPDF.NET:
 :meth:`Page.ShowPdfPage`           PDF only: display PDF page image
 :meth:`Page.SetContents`           PDF only: set page's :data:`contents` to some :data:`xref`
 :meth:`Page.UpdateLink`            PDF only: modify a link
-:meth:`Page.GetWidgets`            return a generator over the fields on the page
-:meth:`Page.WriteText`             write one or more :ref:`Textwriter` objects
-:meth:`Page.WrapContents`          wrap contents with stacking commands
-:attr:`Page.CropBoxPosition`       displacement of the :data:`cropbox`
-:attr:`Page.CropBox`               the page's :data:`cropbox`
-:attr:`Page.ArtBox`                the page's `/ArtBox`
-:attr:`Page.BleedBox`              the page's `/BleedBox`
-:attr:`Page.TrimBox`               the page's `/TrimBox`
+:meth:`Page.GetWidgets`            Return a generator over the fields on the page
+:meth:`Page.WriteText`             Write one or more :ref:`Textwriter` objects
+:meth:`Page.WrapContents`          Wrap contents with stacking commands
+:attr:`Page.CropBoxPosition`       Displacement of the :data:`cropbox`
+:attr:`Page.CropBox`               The page's :data:`cropbox`
+:attr:`Page.ArtBox`                The page's `/ArtBox`
+:attr:`Page.BleedBox`              The page's `/BleedBox`
+:attr:`Page.TrimBox`               The page's `/TrimBox`
 :attr:`Page.DerotationMatrix`      PDF only: get coordinates in unrotated page space
-:attr:`Page.FirstAnnot`            first :ref:`Annot` on the page
-:attr:`Page.FirstLink`             first :ref:`Link` on the page
-:attr:`Page.FirstWidget`           first widget (form field) on the page
-:attr:`Page.MediaBoxSize`          bottom-right point of :data:`mediabox`
-:attr:`Page.MediaBox`              the page's :data:`mediabox`
-:attr:`Page.Number`                page number
-:attr:`Page.Parent`                owning document object
-:attr:`Page.Rect`                  rectangle of the page
+:attr:`Page.FirstAnnot`            First :ref:`Annot` on the page
+:attr:`Page.FirstLink`             First :ref:`Link` on the page
+:attr:`Page.FirstWidget`           First widget (form field) on the page
+:attr:`Page.MediaBoxSize`          Bottom-right point of :data:`mediabox`
+:attr:`Page.MediaBox`              The page's :data:`mediabox`
+:attr:`Page.Number`                Page number
+:attr:`Page.Parent`                Owning document object
+:attr:`Page.Rect`                  Rectangle of the page
 :attr:`Page.RotationMatrix`        PDF only: get coordinates in rotated page space
 :attr:`Page.Rotation`              PDF only: page rotation
 :attr:`Page.TransformationMatrix`  PDF only: translate between PDF and MuPDF space
@@ -528,14 +528,14 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
    .. method:: GetBboxlog(bool layer: false)
 
-      :returns: a list of BoxLog that envelop text, image or drawing objects. Each item is a tuple `(type, (x0, y0, x1, y1))` where the second tuple consists of rectangle coordinates, and *type* is one of the following values. If `layers = true`, there is a third item containing the OCG name or `null`: `(type, (x0, y0, x1, y1), null)`.
+      :returns: a list of :ref:`BoxLog` that envelop text, image or drawing objects. Each item is a BoxLog `(type, (x0, y0, x1, y1), layername)` where the second tuple consists of rectangle coordinates, and *type* is one of the following values. If `layers = true`, there is a third item containing the OCG name or `null`: `(type, (x0, y0, x1, y1), null)`.
 
          * `"fill-text"` -- normal text (painted without character borders)
          * `"stroke-text"` -- text showing character borders only
          * `"ignore-text"` -- text that should not be displayed (e.g. as used by OCR text layers)
          * `"fill-path"` -- drawing with fill color (and no border)
          * `"stroke-path"` -- drawing with border (and no fill color)
-         * `"fill-image"` -- displays an image
+         * `"fill-image"` -- display an image
          * `"fill-shade"` -- display a shading
 
          The item sequence represents the **sequence in which these commands are executed** to build the page's appearance. Therefore, if an item's bbox intersects or contains that of a previous item, then the previous item may be (partially) covered / hidden.

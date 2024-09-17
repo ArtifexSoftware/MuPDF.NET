@@ -11,12 +11,12 @@ Point
 ============================ ============================================
 **Attribute / Method**       **Description**
 ============================ ============================================
-:meth:`Point.DistanceTo`     calculate distance to point or rect
-:meth:`Point.Transform`      transform point with a matrix
-:attr:`Point.Abs`            same as unit, but positive coordinates
-:attr:`Point.Unit`           point coordinates divided by *abs(point)*
-:attr:`Point.X`              the X-coordinate
-:attr:`Point.Y`              the Y-coordinate
+:meth:`Point.DistanceTo`     Calculate distance to point or rect
+:meth:`Point.Transform`      Transform point with a matrix
+:attr:`Point.Abs`            Same as unit, but positive coordinates
+:attr:`Point.Unit`           Point coordinates divided by *abs(point)*
+:attr:`Point.X`              The X-coordinate
+:attr:`Point.Y`              The Y-coordinate
 ============================ ============================================
 
 **Class API**

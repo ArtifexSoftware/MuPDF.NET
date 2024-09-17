@@ -22,18 +22,18 @@ Quads can **be obtained** as results of text search methods (:meth:`Page.SearchF
 ============================= =======================================================
 **Methods / Attributes**      **Short Description**
 ============================= =======================================================
-:meth:`Quad.Transform`        transform with a matrix
-:meth:`Quad.Morph`            transform with a point and matrix
-:attr:`Quad.UpperLeft`        upper left point
-:attr:`Quad.UpperRight`       upper right point
-:attr:`Quad.LowerLeft`        lower left point
-:attr:`Quad.LowerRight`       lower right point
-:attr:`Quad.IsConvex`         true if quad is a convex set
-:attr:`Quad.IsEmpty`          true if quad is an empty set
-:attr:`Quad.IsRectangular`    true if quad is congruent to a rectangle
-:attr:`Quad.Rect`             smallest containing :ref:`Rect`
-:attr:`Quad.Width`            the longest width value
-:attr:`Quad.Height`           the longest height value
+:meth:`Quad.Transform`        Transform with a matrix
+:meth:`Quad.Morph`            Transform with a point and matrix
+:attr:`Quad.UpperLeft`        Upper left point
+:attr:`Quad.UpperRight`       Upper right point
+:attr:`Quad.LowerLeft`        Lower left point
+:attr:`Quad.LowerRight`       Lower right point
+:attr:`Quad.IsConvex`         True if quad is a convex set
+:attr:`Quad.IsEmpty`          True if quad is an empty set
+:attr:`Quad.IsRectangular`    True if quad is congruent to a rectangle
+:attr:`Quad.Rect`             Smallest containing :ref:`Rect`
+:attr:`Quad.Width`            The longest width value
+:attr:`Quad.Height`           The longest height value
 ============================= =======================================================
 
 **Class API**
