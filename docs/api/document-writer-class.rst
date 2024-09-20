@@ -18,9 +18,9 @@ Using DocumentWriter_ also for other document types might happen in the future.
 ====================================== ===================================================
 **Method / Attribute**                 **Short Description**
 ====================================== ===================================================
-:meth:`DocumentWriter.BeginPage`       start a new output page
-:meth:`DocumentWriter.EndPage`         finish the current output page
-:meth:`DocumentWriter.Close`           flush pending output and close the file
+:meth:`DocumentWriter.BeginPage`       Start a new output page
+:meth:`DocumentWriter.EndPage`         Finish the current output page
+:meth:`DocumentWriter.Close`           Flush pending output and close the file
 ====================================== ===================================================
 
 **Class API**

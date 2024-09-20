@@ -13,10 +13,10 @@ Archives are currently only used by :ref:`Story` objects to specify where to loo
 ================================ ===================================================
 **Method / Attribute**           **Short Description**
 ================================ ===================================================
-:meth:`Archive.Add`              add new data to the archive
-:meth:`Archive.HasEntry`         check if given name is a member
-:meth:`Archive.ReadEntry`        read the data given by the name
-:attr:`Archive.EntryList`        list of SubArchive items
+:meth:`Archive.Add`              Add new data to the archive
+:meth:`Archive.HasEntry`         Check if given name is a member
+:meth:`Archive.ReadEntry`        Read the data given by the name
+:attr:`Archive.EntryList`        List of SubArchive items
 ================================ ===================================================
 
 **Class API**

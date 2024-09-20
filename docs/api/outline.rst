@@ -11,14 +11,14 @@ Outline
 ================================== ==================================================
 **Method / Attribute**             **Short Description**
 ================================== ==================================================
-:attr:`Matrix.Down`                next item downwards
-:attr:`Matrix.Next`                next item same level
-:attr:`Matrix.Page`                page number (0-based)
-:attr:`Matrix.Title`               title
-:attr:`Matrix.Uri`                 string further specifying outline target
-:attr:`Matrix.IsExternal`          target outside document
-:attr:`Matrix.IsOpen`              whether sub-outlines are open or collapsed
-:attr:`Matrix.Dest`                points to destination details object
+:attr:`Matrix.Down`                Next item downwards
+:attr:`Matrix.Next`                Next item same level
+:attr:`Matrix.Page`                Page number (0-based)
+:attr:`Matrix.Title`               Title
+:attr:`Matrix.Uri`                 String further specifying outline target
+:attr:`Matrix.IsExternal`          Target outside document
+:attr:`Matrix.IsOpen`              Whether sub-outlines are open or collapsed
+:attr:`Matrix.Dest`                Points to destination details object
 ================================== ==================================================
 
 **Class API**

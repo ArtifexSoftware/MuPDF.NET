@@ -12,22 +12,22 @@ There is a parent-child relationship between a link and its page. If the page ob
 ============================= ============================================
 **Method / Attribute**                 **Short Description**
 ============================= ============================================
-:meth:`Link.SetBorder`        modify border properties
-:meth:`Link.SetColors`        modify color properties
-:meth:`Link.SetFlags`         modify link flags
-:attr:`Link.Border`           border characteristics
-:attr:`Link.Colors`           border line color
-:attr:`Link.Dest`             points to destination details
-:attr:`Link.IsExternal`       checks if the link is an external destination
-:attr:`Link.Flags`            link annotation flags
-:attr:`Link.Next`             points to next link
-:attr:`Link.Rect`             clickable area in untransformed coordinates
-:attr:`Link.Uri`              link destination
-:attr:`Link.Xref`             :data:`xref` number of the entry
-============================= ============================================
-
-**Class API**
-
+:meth:`Link.SetBorder`        Modify border properties
+:meth:`Link.SetColors`        Modify color properties
+:meth:`Link.SetFlags`         Modify link flags
+:attr:`Link.Border`           Border characteristics
+:attr:`Link.Colors`           Border line color
+:attr:`Link.Dest`             Points to destination details
+:attr:`Link.IsExternal`       Checks if the link is an external destination
+:attr:`Link.Flags`            Link annotation flags
+:attr:`Link.Next`             Points to next link
+:attr:`Link.Rect`             Clickable area in untransformed coordinates                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
+:attr:`Link.Uri`              Link destination                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
+:attr:`Link.Xref`             :data:`xref` number of the entry                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
+============================= ============================================                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 
+**Class API**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 
 .. class:: Link
 
    .. method:: SetBorder(Border border: null, float width: 0, string style: null, int[] dashes: null)
@@ -121,7 +121,7 @@ There is a parent-child relationship between a link and its page. If the page ob
 
       The next link or *null*.
 
-      :type: *Link*
+      :type: :ref:`Link`
 
    .. attribute:: Dest
 

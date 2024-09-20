@@ -22,20 +22,20 @@ Please note:
 ================================ ==============================================
 **Method / Attribute**             **Description**
 ================================ ==============================================
-:meth:`Matrix.Prerotate`         perform a rotation
-:meth:`Matrix.Prescale`          perform a scaling
-:meth:`Matrix.Preshear`          perform a shearing (skewing)
-:meth:`Matrix.Pretranslate`      perform a translation (shifting)
-:meth:`Matrix.Concat`            perform a matrix multiplication
-:meth:`Matrix.Invert`            calculate the inverted matrix
-:meth:`Matrix.Norm`              the Euclidean norm
-:attr:`Matrix.A`                 zoom factor X direction
-:attr:`Matrix.B`                 shearing effect Y direction
-:attr:`Matrix.C`                 shearing effect X direction
-:attr:`Matrix.D`                 zoom factor Y direction
-:attr:`Matrix.E`                 horizontal shift
-:attr:`Matrix.F`                 vertical shift
-:attr:`Matrix.IsRectilinear`     true if rect corners will remain rect corners
+:meth:`Matrix.Prerotate`         Perform a rotation
+:meth:`Matrix.Prescale`          Perform a scaling
+:meth:`Matrix.Preshear`          Perform a shearing (skewing)
+:meth:`Matrix.Pretranslate`      Perform a translation (shifting)
+:meth:`Matrix.Concat`            Perform a matrix multiplication
+:meth:`Matrix.Invert`            Calculate the inverted matrix
+:meth:`Matrix.Norm`              The Euclidean norm
+:attr:`Matrix.A`                 Zoom factor X direction
+:attr:`Matrix.B`                 Shearing effect Y direction
+:attr:`Matrix.C`                 Shearing effect X direction
+:attr:`Matrix.D`                 Zoom factor Y direction
+:attr:`Matrix.E`                 Horizontal shift
+:attr:`Matrix.F`                 Vertical shift
+:attr:`Matrix.IsRectilinear`     True if rect corners will remain rect corners
 ================================ ==============================================
 
 **Class API**

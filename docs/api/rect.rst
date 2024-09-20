@@ -53,32 +53,32 @@ The following remarks are also valid for :ref:`IRect` objects:
 ============================= =======================================================
 **Methods / Attributes**      **Short Description**
 ============================= =======================================================
-:meth:`Rect.Contains`         checks containment of point_likes and rect_likes
-:meth:`Rect.GetArea`          calculate rectangle area
-:meth:`Rect.IncludePoint`     enlarge rectangle to also contain a point
-:meth:`Rect.IncludeRect`      enlarge rectangle to also contain another one
-:meth:`Rect.Intersect`        common part with another rectangle
-:meth:`Rect.Intersects`       checks for non-empty intersections
-:meth:`Rect.Morph`            transform with a point and a matrix
-:meth:`Rect.ToRect`           the matrix that transforms to another rectangle
-:meth:`Rect.Norm`             the Euclidean norm
-:meth:`Rect.Normalize`        makes a rectangle valid
-:meth:`Rect.Round`            create smallest :ref:`IRect` containing rectangle
-:meth:`Rect.Transform`        transform rectangle with a matrix
-:attr:`Rect.BottomLeft`       bottom left point, synonym *bl*
-:attr:`Rect.BottomRight`      bottom right point, synonym *br*
-:attr:`Rect.Height`           rectangle height
-:attr:`Rect.IsEmpty`          whether rectangle is empty
-:attr:`Rect.IsValid`          whether rectangle is valid
-:attr:`Rect.IsInfinite`       whether rectangle is infinite
-:attr:`Rect.TopLeft`          top left point, synonym *tl*
-:attr:`Rect.TopRight`         top_right point, synonym *tr*
+:meth:`Rect.Contains`         Checks containment of point_likes and rect_likes
+:meth:`Rect.GetArea`          Calculate rectangle area
+:meth:`Rect.IncludePoint`     Enlarge rectangle to also contain a point
+:meth:`Rect.IncludeRect`      Enlarge rectangle to also contain another one
+:meth:`Rect.Intersect`        Common part with another rectangle
+:meth:`Rect.Intersects`       Checks for non-empty intersections
+:meth:`Rect.Morph`            Transform with a point and a matrix
+:meth:`Rect.ToRect`           The matrix that transforms to another rectangle
+:meth:`Rect.Norm`             The Euclidean norm
+:meth:`Rect.Normalize`        Makes a rectangle valid
+:meth:`Rect.Round`            Create smallest :ref:`IRect` containing rectangle
+:meth:`Rect.Transform`        Transform rectangle with a matrix
+:attr:`Rect.BottomLeft`       Bottom left point, synonym *bl*
+:attr:`Rect.BottomRight`      Bottom right point, synonym *br*
+:attr:`Rect.Height`           Rectangle height
+:attr:`Rect.IsEmpty`          Whether rectangle is empty
+:attr:`Rect.IsValid`          Whether rectangle is valid
+:attr:`Rect.IsInfinite`       Whether rectangle is infinite
+:attr:`Rect.TopLeft`          Top left point, synonym *tl*
+:attr:`Rect.TopRight`         Top_right point, synonym *tr*
 :attr:`Rect.Quad`             :ref:`Quad` made from rectangle corners
-:attr:`Rect.Width`            rectangle width
-:attr:`Rect.X0`               left corners' x coordinate
-:attr:`Rect.X1`               right corners' x -coordinate
-:attr:`Rect.Y0`               top corners' y coordinate
-:attr:`Rect.Y1`               bottom corners' y coordinate
+:attr:`Rect.Width`            Rectangle width
+:attr:`Rect.X0`               Left corners' x coordinate
+:attr:`Rect.X1`               Right corners' x -coordinate
+:attr:`Rect.Y0`               Top corners' y coordinate
+:attr:`Rect.Y1`               Bottom corners' y coordinate
 ============================= =======================================================
 
 **Class API**

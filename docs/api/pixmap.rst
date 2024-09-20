@@ -25,44 +25,44 @@ Have a look at the :ref:`FAQ` section to see some pixmap usage "at work".
 ================================ ===================================================
 **Method / Attribute**           **Short Description**
 ================================ ===================================================
-:meth:`Pixmap.ClearWith`         clear parts of the pixmap
-:meth:`Pixmap.ColorCount`        determine used colors
-:meth:`Pixmap.ColorTopUsage`     determine share of most used color
-:meth:`Pixmap.Copy`              copy parts of another pixmap
-:meth:`Pixmap.GammaWith`         apply a gamma factor to the pixmap
-:meth:`Pixmap.InvertIrect`       invert the pixels of a given area
-:meth:`Pixmap.SavePdfOCR`        save the pixmap as an OCRed 1-page PDF
-:meth:`Pixmap.PdfOCR2Bytes`      save the pixmap as an OCRed 1-page PDF
-:meth:`Pixmap.GetPixel`          return the value of a pixel
-:meth:`Pixmap.Save`              save the pixmap in a variety of formats
-:meth:`Pixmap.SetAlpha`          set alpha values
-:meth:`Pixmap.SetDpi`            set the image resolution
-:meth:`Pixmap.SetOrigin`         set pixmap x,y values
-:meth:`Pixmap.SetPixel`          set color and alpha of a pixel
-:meth:`Pixmap.SetRect`           set color and alpha of all pixels in a rectangle
-:meth:`Pixmap.Shrink`            reduce size keeping proportions
-:meth:`Pixmap.TintWith`          tint the pixmap
-:meth:`Pixmap.ToBytes`           return a memory area in a variety of formats
-:meth:`Pixmap.Warp`              return a pixmap made from a quad inside
-:attr:`Pixmap.Alpha`             transparency indicator
-:attr:`Pixmap.ColorSpace`        pixmap's :ref:`Colorspace`
+:meth:`Pixmap.ClearWith`         Clear parts of the pixmap
+:meth:`Pixmap.ColorCount`        Determine used colors
+:meth:`Pixmap.ColorTopUsage`     Determine share of most used color
+:meth:`Pixmap.Copy`              Copy parts of another pixmap
+:meth:`Pixmap.GammaWith`         Apply a gamma factor to the pixmap
+:meth:`Pixmap.InvertIrect`       Invert the pixels of a given area
+:meth:`Pixmap.SavePdfOCR`        Save the pixmap as an OCRed 1-page PDF
+:meth:`Pixmap.PdfOCR2Bytes`      Save the pixmap as an OCRed 1-page PDF
+:meth:`Pixmap.GetPixel`          Return the value of a pixel
+:meth:`Pixmap.Save`              Save the pixmap in a variety of formats
+:meth:`Pixmap.SetAlpha`          Set alpha values
+:meth:`Pixmap.SetDpi`            Set the image resolution
+:meth:`Pixmap.SetOrigin`         Set pixmap x,y values
+:meth:`Pixmap.SetPixel`          Set color and alpha of a pixel
+:meth:`Pixmap.SetRect`           Set color and alpha of all pixels in a rectangle
+:meth:`Pixmap.Shrink`            Reduce size keeping proportions
+:meth:`Pixmap.TintWith`          Tint the pixmap
+:meth:`Pixmap.ToBytes`           Return a memory area in a variety of formats
+:meth:`Pixmap.Warp`              Return a pixmap made from a quad inside
+:attr:`Pixmap.Alpha`             Transparency indicator
+:attr:`Pixmap.ColorSpace`        Pixmap's :ref:`Colorspace`
 :attr:`Pixmap.Digest`            MD5 hashcode of the pixmap
-:attr:`Pixmap.Height`            pixmap height
-:attr:`Pixmap.interpolate`       interpolation method indicator
-:attr:`Pixmap.IsMonoChrome`      check if only black and white occur
-:attr:`Pixmap.IsUniColor`        check if only one color occurs
+:attr:`Pixmap.Height`            Pixmap height
+:attr:`Pixmap.interpolate`       Interpolation method indicator
+:attr:`Pixmap.IsMonoChrome`      Check if only black and white occur
+:attr:`Pixmap.IsUniColor`        Check if only one color occurs
 :attr:`Pixmap.IRect`             :ref:`IRect` of the pixmap
-:attr:`Pixmap.N`                 bytes per pixel
+:attr:`Pixmap.N`                 Bytes per pixel
 :attr:`Pixmap.SAMPLES_MV`        `memoryview` of pixel area
-:attr:`Pixmap.SamplesPtr`        pointer to pixel area
+:attr:`Pixmap.SamplesPtr`        Pointer to pixel area
 :attr:`Pixmap.SAMPLES`           `bytes` copy of pixel area
-:attr:`Pixmap.Size`              pixmap's total length
-:attr:`Pixmap.Stride`            size of one image row
-:attr:`Pixmap.Width`             pixmap width
+:attr:`Pixmap.Size`              Pixmap's total length
+:attr:`Pixmap.Stride`            Size of one image row
+:attr:`Pixmap.Width`             Pixmap width
 :attr:`Pixmap.X`                 X-coordinate of top-left corner
-:attr:`Pixmap.Xres`              resolution in X-direction
+:attr:`Pixmap.Xres`              Resolution in X-direction
 :attr:`Pixmap.Y`                 Y-coordinate of top-left corner
-:attr:`Pixmap.Yres`              resolution in Y-direction
+:attr:`Pixmap.Yres`              Resolution in Y-direction
 ================================ ===================================================
 
 **Class API**
@@ -311,7 +311,7 @@ Have a look at the :ref:`FAQ` section to see some pixmap usage "at work".
       :arg int jpgQuality: The desired image quality, default 95. Only applies to JPEG images, else ignored. This parameter trades quality against file size. A value of 98 is close to lossless. Higher values should not lead to better quality.
 
       :raises ValueError: For unsupported image formats.
-      :rtype: bytes
+      :rtype: byte[]
 
       :arg str output: The requested image format. The default is "png". For other possible values see :ref:`PixmapOutput`.
 
@@ -398,7 +398,7 @@ Have a look at the :ref:`FAQ` section to see some pixmap usage "at work".
 
       The MD5 hashcode (16 bytes) of the pixmap. This is a technical value used for unique identifications.
 
-      :type: bytes
+      :type: byte[]
 
    .. attribute:: ColorSpace
 
@@ -529,7 +529,7 @@ The following file types are supported as **input** to construct pixmaps: **BMP,
 
 Supported Output Image Formats
 ---------------------------------------------------------------------------
-A number of image **output** formats are supported. You have the option to either write an image directly to a file (:meth:`Pixmap.Save`), or to generate a bytes object (:meth:`Pixmap.ToBytes`). Both methods accept a string identifying the desired format (**Format** column below). Please note that not all combinations of pixmap colorspace, transparency support (alpha) and image format are possible.
+A number of image **output** formats are supported. You have the option to either write an image directly to a file (:meth:`Pixmap.Save`), or to generate a byte[] object (:meth:`Pixmap.ToBytes`). Both methods accept a string identifying the desired format (**Format** column below). Please note that not all combinations of pixmap colorspace, transparency support (alpha) and image format are possible.
 
 ========== =============== ========= ============== =================================
 **Format** **Colorspaces** **alpha** **Extensions** **Description**
