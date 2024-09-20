@@ -37,10 +37,10 @@ Yet others are handy, general-purpose utilities.
 :meth:`RecoverQuad`                  Compute the quad of a span ("dict", "rawdict")
 :meth:`RecoverSpanQuad`              Compute the quad of a subset of span characters
 :meth:`Unicode2GlyphName`            Return glyph name from a unicode
-:meth:`MakeAnnotDA`                  Passing color, fontname, fontsize into the annot
+:meth:`MakeAnnotDA`                  Passing color, fontname, fontsize into the annotation
 :meth:`AddAnnotId`                   Add a unique /NM key to an annotation or widget
 :meth:`AddOcObject`                  Add OC object reference to a dictionary
-:meth:`ColorCount`                   Return count of each color.
+:meth:`ColorCount`                   Return count of each color
 :meth:`BinFromBuffer`                Turn FzBuffer into a byte[]
 :meth:`BufferFromBytes`              Make FzBuffer from a byte[] object
 :meth:`CalcImageMatrix`              Compute image insertion matrix
@@ -52,23 +52,23 @@ Yet others are handy, general-purpose utilities.
 :meth:`EnsureIdentity`               Store ID in PDF trailer
 :meth:`ExpandFontName`               Make /DA string of annotation
 :meth:`GetId`                        Count numbers and return unique id on one process
-:meth:`GetAllContents`               All /Contents streams concatenated to one bytes object.
-:meth:`GetAnnotByName`               Retrieve annot by name (/NM key)
+:meth:`GetAllContents`               All /Contents streams concatenated to one bytes object
+:meth:`GetAnnotByName`               Retrieve annotation by name (/NM key)
 :meth:`GetArea`                      Calculate area of rectangle
-:meth:`GetBorderStyle`               Return int meaning PdfObj "border style" from string type
+:meth:`GetBorderStyle`               Return `int` meaning PdfObj "border style" from string type
 :meth:`GetColors`                    Retrieve the red, green, blue triple of a color name
 :meth:`GetColorHSV`                  Retrieve the hue, saturation, value triple of a color name
-:meth:`GetColorInfoList`             Returns Tuples containing of color name, red, green, blue color values
+:meth:`GetColorInfoList`             Returns Tuples containing color name, red, green, blue color values
 :meth:`GetDestString`                Calculate the PDF action string
-:meth:`GetFieldTypeText`             Returns field type string from int type
+:meth:`GetFieldTypeText`             Returns field type string from `int` type
 :meth:`GetFontProperties`            Returns properties of the font having xref in PDF
 :meth:`GetGlyphText`                 Adobe Glyph List function
 :meth:`GetImageExtension`            Return extension for MuPDF image type
-:meth:`GetLinkText`                  Define skeletons for /Annots object texts
+:meth:`GetLinkText`                  Define skeletons for `/Annots` object texts
 :meth:`GetWidgetProperties`          Populate a Widget object with the values from a PDF form field
-:meth:`InsertContents`               Insert a buffer as a new separate /Contents object of a page
-:meth:`Integer2Letter`               Return letter sequence string for integer i
-:meth:`Integer2Roman`                Return roman numeral for integer i
+:meth:`InsertContents`               Insert a buffer as a new separate `/Contents` object of a page
+:meth:`Integer2Letter`               Return letter sequence string for integer `i`
+:meth:`Integer2Roman`                Return roman numeral for integer `i`
 :meth:`MeasureString`                Calculate the width of the text
 :meth:`MergeRange`                   Copy a range of pages (spage, epage) from a source PDF to a specified location (apage) of the target PDF
 :meth:`NormalizeRotation`            Return normalized /Rotate value:one of 0, 90, 180, 270
@@ -84,7 +84,7 @@ Yet others are handy, general-purpose utilities.
 
       A format name must be supplied as a string (case **in** \sensitive), optionally suffixed with "-L" (landscape) or "-P" (portrait). No suffix defaults to portrait.
 
-      :arg  s: any format name from above in upper or lower case, like *"A4"* or *"letter-l"*.
+      :arg s: any format name from above in upper or lower case, like *"A4"* or *"letter-l"*.
 
       :rtype: Tuple
       :returns: *(width, height)* of the paper format. For an unknown format *(-1, -1)* is returned. Examples: *PaperSize("A4")* returns *(595, 842)* and *PaperSize("letter-l")* delivers *(792, 612)*.
@@ -128,7 +128,7 @@ Yet others are handy, general-purpose utilities.
 
       :arg string name: the name of some glyph. The function is based on the `Adobe Glyph List <https://github.com/adobe-type-tools/agl-aglfn/blob/master/glyphlist.txt>`_.
 
-      :rtype: int
+      :rtype: `int`
       :returns: the unicode. Invalid *name* entries return `0xfffd (65533)`.
 
 -----
@@ -139,20 +139,20 @@ Yet others are handy, general-purpose utilities.
 
       :arg int ch: the unicode given by e.g. `ord("ß")`. The function is based on the `Adobe Glyph List <https://github.com/adobe-type-tools/agl-aglfn/blob/master/glyphlist.txt>`_.
 
-      :rtype: string
+      :rtype: `string`
       :returns: the glyph name. E.g. `Utils.Unicode2GlyphName(Convert.Int32("Ä"))` returns `'Adieresis'`.
 
 -----
 
    .. method:: PlanishLine(Point p1, Point p2)
 
-      Return a matrix which maps the line from p1 to p2 to the x-axis such that p1 will become (0,0) and p2 a point with the same distance to (0,0).
+      Return a matrix which maps the line from `p1` to `p2` to the x-axis such that `p1` will become (0,0) and `p2` a point with the same distance to (0,0).
 
       :arg Point p1: starting point of the line.
       :arg Point p2: end point of the line.
 
       :rtype: :ref:`Matrix`
-      :returns: a matrix which combines a rotation and a translation::
+      :returns: a matrix which combines a rotation and a translation
 
          .. image:: images/img-planish.png
             :scale: 40
@@ -167,8 +167,6 @@ Yet others are handy, general-purpose utilities.
 
    .. attribute:: TESSDATA_PREFIX
 
-      * New in v1.19.4
-
       Copy of `os.environ["TESSDATA_PREFIX"]` for convenient checking whether there is integrated Tesseract OCR support.
 
       If this attribute is `None`, Tesseract-OCR is either not installed, or the environment variable is not set to point to Tesseract's language support folder.
@@ -181,20 +179,20 @@ Yet others are handy, general-purpose utilities.
 
       Convenience function to return the current local timestamp in PDF compatible format, e.g. *D:20170501121525-04'00'* for local datetime May 1, 2017, 12:15:25 in a timezone 4 hours westward of the UTC meridian.
 
-      :rtype: string
+      :rtype: `string`
       :returns: current local PDF timestamp.
 
 -----
 
    .. method:: GetTextLength(string text, string fontName: "helv", float fontSize: 11, int encoding: 0)
 
-      Calculate the length of text on output with a given **builtin** font, :data:`fontSize` and encoding.
+      Calculate the length of text on output with a given **built in** font, :data:`fontSize` and encoding.
 
       :arg string text: the text string.
       :arg string fontName: the fontName. Must be one of either the :ref:`Base-14-Fonts` or the CJK fonts, identified by their "reserved" fontnames (see table in :meth:`Page.InsertFont`).
       :arg float fontSize: the :data:`fontSize`.
       :arg int encoding: the encoding to use. Besides 0 = Latin, 1 = Greek and 2 = Cyrillic (Russian) are available. Relevant for Base-14 fonts "Helvetica", "Courier" and "Times" and their variants only. Make sure to use the same value as in the corresponding text insertion.
-      :rtype: float
+      :rtype: `float`
       :returns: the length in points the string will have (e.g. when used in :meth:`Page.InsertText`).
 
       .. note:: This function will only do the calculation -- it won't insert font nor text.
@@ -211,18 +209,18 @@ Yet others are handy, general-purpose utilities.
 
       :arg string text: the object to convert
 
-      :rtype: string
+      :rtype: `string`
       :returns: PDF-compatible string enclosed in either *()* or *<>*.
 
 -----
 
    .. method:: GetImageProfile(byte[] stream)
 
-      Show important properties of an image provided as a memory area. Its main purpose is to avoid using other Python packages just to determine them.
+      Show important properties of an image provided as a memory area. Its main purpose is to avoid using other libraries just to determine them.
 
-      :arg bytes stream: either an image in memory or an **opened** file. An image in memory may be any of the formats `bytes`.
+      :arg byte[] stream: either an image in memory or an **opened** file. An image in memory may be any of the formats `bytes`.
 
-      :rtype: ImageInfo
+      :rtype: `ImageInfo`
       :returns:
          No exception is ever raised. In case of an error, `None` is returned. Otherwise, there are the following items::
 
@@ -233,16 +231,16 @@ Yet others are handy, general-purpose utilities.
             2. 90 degree ccw rotation. (Exif = 8)
             3. 180 degree ccw rotation. (Exif = 3)
             4. 270 degree ccw rotation. (Exif = 6)
-            5. flip on X. (Exif = 2)
-            6. flip on X, then rotate ccw by 90 degrees. (Exif = 5)
-            7. flip on X, then rotate ccw by 180 degrees. (Exif = 4)
-            8. flip on X, then rotate ccw by 270 degrees. (Exif = 7)
+            5. Flip on X. (Exif = 2)
+            6. Flip on X, then rotate ccw by 90 degrees. (Exif = 5)
+            7. Flip on X, then rotate ccw by 180 degrees. (Exif = 4)
+            8. Flip on X, then rotate ccw by 270 degrees. (Exif = 7)
 
 
          .. note::
 
-            * For some "exotic" images (FAX encodings, RAW formats and the like), this method will not work. You can however still work with such images in PyMuPDF, e.g. by using :meth:`Document.ExtractImage` or create pixmaps via `Pixmap(doc, xref)`. These methods will automatically convert exotic images to the PNG format before returning results.
-            * You can also get the properties of images embedded in a PDF, via their :data:`xref`. In this case make sure to extract the raw stream: `pymupdf.GetImageProfile(doc.GetXrefStreamRaw(xref))`.
+            * For some "exotic" images (FAX encodings, RAW formats and the like), this method will not work. You can however still work with such images in MupDF.NET, e.g. by using :meth:`Document.ExtractImage` or create pixmaps via `Pixmap(doc, xref)`. These methods will automatically convert exotic images to the PNG format before returning results.
+            * You can also get the properties of images embedded in a PDF, via their :data:`xref`. In this case make sure to extract the raw stream: `Utils.GetImageProfile(doc.GetXrefStreamRaw(xref))`.
             * Images as returned by the image blocks of :meth:`Page.GetText` using "dict" or "rawdict" options are also supported.
 
 
@@ -256,7 +254,7 @@ Yet others are handy, general-purpose utilities.
 
       :arg string filename: optional arbitrary name to use in output types "json" and "xml".
 
-      :rtype: string
+      :rtype: `string`
 
 -----
 
@@ -266,7 +264,7 @@ Yet others are handy, general-purpose utilities.
 
       :arg string i: type of document. Use the same as the output parameter of *GetText()*.
 
-      :rtype: string
+      :rtype: `string`
 
 -----
 
@@ -352,7 +350,7 @@ Yet others are handy, general-purpose utilities.
       :arg float rotate: rotate to be set for target image
       :arg bool keep: calc size of target image keeping origin image's ratio
       
-      :returns: Matrix mat
+      :returns: `Matrix`
 
 -----
 
@@ -371,11 +369,11 @@ Yet others are handy, general-purpose utilities.
 
       Construct a label based on style, prefix and page number.
 
-      :arg string style: type of style for label. that includes `D`, `r`, `R`, `a`, `A`.
+      :arg string style: type of style for label. That includes `D`, `r`, `R`, `a`, `A`.
       :arg string prefix: added prefix to label
-      :arg int pno: translate pno to letter according to the style
+      :arg int pno: translate `pno` to letter according to the style
 
-      :rtype: string
+      :rtype: `string`
       :returns: styled label
 
 -----
@@ -401,9 +399,9 @@ Yet others are handy, general-purpose utilities.
 
    .. method:: ExpandFontName(string fontname)
 
-      Make /DA string of annotation
+      Make `/DA` string of annotation
 
-      :returns: expand font name. For example, if fontname starts with `co` or `Co`, returns `Cour`
+      :returns: expand font name. For example, if `fontname` starts with `co` or `Co`, returns `Cour`
 
 -----
 
@@ -411,48 +409,48 @@ Yet others are handy, general-purpose utilities.
 
       Count numbers and return unique id on one process
 
-      :rtype: int
+      :rtype: `int`
       :returns: unique number
 
 -----
 
    .. method:: GetAllContents(Page page)
 
-      All /Contents streams concatenated to one bytes object.
+      All `/Contents` streams concatenated to one bytes object.
 
       :arg Page page: Page object to get all streams
 
-      :rtype: bytre[]
+      :rtype: `byte[]`
 
 -----
 
    .. method:: GetAnnotByName(Page page, string name)
 
-      Retrieve annot by name (/NM key)
+      Retrieve annotation by name (/NM key)
 
-      :arg Page page: Page object containing annots.
-      :arg string name: annot name. Looping annots in page, that find the annot which has name as ID.
+      :arg Page page: Page object containing annotations.
+      :arg string name: annotation name. Looping annotations in page, that find the annotation which has name as `ID`.
 
-      :rtype: PdfAnnot
+      :rtype: `PdfAnnot`
       :returns: PdfAnnot object that has the name.
 
 -----
 
    .. method:: GetArea(Rect rect, string unit: "px")
 
-      Calculate area of rectangle.\nparameter is one of 'px' (default), 'in', 'cm', or 'mm'.
+      Calculate area of rectangle. Parameter is one of 'px' (default), 'in', 'cm', or 'mm'.
 
       :arg Rect rect: rectangle calculated area
       :arg string unit: unit used in rect. default is `px`, there are other units like `cm`, `mm`.
 
-      :rtype: float
+      :rtype: `float`
       :returns: area of rectangle
 
 -----
 
    .. method:: GetBorderStyle(string style)
 
-      Return int meaning PdfObj "border style" from string type.
+      Return int meaning `PdfObj` "border style" from string type.
 
       :arg string style: border type in format of style. style can be one of 'B', 'D', 'I', 'U', 'S' or lowercases.
       :returns: return int from border pdfobj.

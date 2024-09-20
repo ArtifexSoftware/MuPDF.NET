@@ -25,8 +25,8 @@ There is a parent-child relationship between an annotation and its page. If the 
 :meth:`Annot.GetText`              Extract annotation text
 :meth:`Annot.GetTextbox`           Extract annotation text
 :meth:`Annot.GetTextPage`          Extract text page 
-:meth:`Annot.SetApnBbox`           Set annotation appearance bbox.
-:meth:`Annot.SetApnMatrix`         Set annotation appearance matrix.
+:meth:`Annot.SetApnBbox`           Set annotation appearance bbox
+:meth:`Annot.SetApnMatrix`         Set annotation appearance matrix
 :meth:`Annot.SetBorder`            Set annotation's border properties
 :meth:`Annot.SetBlendMode`         Set annotation's blend mode
 :meth:`Annot.SetColors`            Set annotation's colors
@@ -62,7 +62,7 @@ There is a parent-child relationship between an annotation and its page. If the 
 :attr:`Annot.RectDelta`            Annotation delta values to rectangle
 :attr:`Annot.Rotation`             Annotation rotation
 :attr:`Annot.Type`                 Type of the annotation
-:attr:`Annot.Vertices`             Point coordinates of Polygons, PolyLines, etc.
+:attr:`Annot.Vertices`             Point coordinates of Polygons, PolyLines, etc
 :attr:`Annot.Xref`                 The PDF :data:`xref` number
 ================================== ==============================================================
 
@@ -492,6 +492,67 @@ This is a list of icons referenceable by name for annotation types 'Text' and 'F
 
 .. image:: ../images/mupdf-icons.*
 
+Output Structures
+--------------------------------
+
+AnnotInfo Structure
+~~~~~~~~~~~~~~~~~~~
+
+=============== ====================================================================
+**Key**         **Value**
+=============== ====================================================================
+Content         a string containing the text for type Text and FreeText annotations
+Name            name of annot's icon *string*
+Title           a string containing the title of the annotation pop-up window.
+CreationDate    creation timestamp
+ModDate         last modified timestamp
+Subject         subject *string*
+Id              a unique identification of the annotation *string*
+=============== =====================================================================
+
+AnnotXref Structure
+~~~~~~~~~~~~~~~~~
+=============== ===================================================
+**Key**         **Value**
+=============== ===================================================
+Id              a unique identification of the annotation *string*
+Xref            annot's xref *int*
+AnnotType       annotation type. see :ref:`AnnotationTypes`
+=============== ====================================================
+
+Border Structure
+~~~~~~~~~~~~~~~~~
+
+========= ===============================================================
+**Key**         **Value**
+========= ===============================================================
+Width     a *float* indicating the border thickness in points
+Style     1-byte border style: `S`, others include `B`, `U`, `I` and `D`.
+Dashes    a sequence of *int* specifying a line dashing pattern
+Clouds    an integer indicating a "cloudy" border
+========= ===============================================================
+
+Color Structure
+~~~~~~~~~~~~~~~~~
+
+======== ======================================================================
+**Key**  **Value**
+======== ======================================================================
+Fill     a *list* of float storing the fill color, each item is between 0 and 1
+Stroke   a *list* of float storing the stroke color
+======== ======================================================================
+
+FileInfo Structure
+~~~~~~~~~~~~~~~
+
+========= =================================
+**Key**  **Value**
+========= =================================
+FileName  *string* file name
+Desc      *string* description of the file
+Length    *int* compressed length
+Size      *int* uncompressed file size
+========= =================================
 
 .. rubric:: Footnotes
 

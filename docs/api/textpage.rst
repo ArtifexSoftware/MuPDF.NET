@@ -150,11 +150,11 @@ For a description of what this class is all about, see Appendix 2.
 
 .. _textpagedict:
 
-Structure of Dictionary Outputs
+Structure of Outputs
 --------------------------------
 Methods :meth:`TextPage.ExtractDict`, :meth:`TextPage.ExtractJSON`, :meth:`TextPage.ExtractRAWDict`, and :meth:`TextPage.ExtractRawJSON` return dictionaries, containing the page's text and image content. The dictionary structures of all four methods are almost equal. They strive to map the text page's information hierarchy of blocks, lines, spans and characters as precisely as possible, by representing each of these by its own sub-dictionary:
 
-* A **page** consists of a list of **block dictionaries**.
+* A **page** consists of a list of **blocks**.
 * A (text) **block** consists of a list of **line dictionaries**.
 * A **line** consists of a list of **span dictionaries**.
 * A **span** either consists of the text itself or, for the RAW variants, a list of **character dictionaries**.
@@ -171,18 +171,18 @@ As mentioned, using these functions is ever only needed, if the text is **not wr
 
 
 
-Page Dictionary
-~~~~~~~~~~~~~~~~~
+PageInfo Structure
+~~~~~~~~~~~~~~~~~~
 
 =============== ============================================
 **Key**         **Value**
 =============== ============================================
 Width           width of the `clip` rectangle *(float)*
 Height          height of the `clip` rectangle *(float)*
-Blocks          *list* of block dictionaries
+Blocks          *list* of Block structure
 =============== ============================================
 
-Block Dictionaries
+Block Structure
 ~~~~~~~~~~~~~~~~~~
 Block dictionaries come in two different formats for **image blocks** and for **text blocks**.
 
@@ -194,7 +194,7 @@ Block dictionaries come in two different formats for **image blocks** and for **
 Type            1 = image *(int)*
 Bbox            image bbox on page (:data:`Rect`)
 Number          block count *(int)*
-Ext             image type *(str)*, as file extension, see below
+Ext             image type *(string)*, as file extension
 Width           original image width *(int)*
 Height          original image height *(int)*
 ColorSpace      colorspace component count *(int)*
@@ -203,7 +203,7 @@ Yres            resolution in y-direction *(int)*
 Bpc             bits per component *(int)*
 Transform       matrix transforming image rect to bbox (:data:`Matrix`)
 Size            size of the image in bytes *(int)*
-Image           image content *(bytes)*
+Image           image content *byte[]*
 =============== ===============================================================
 
 Possible values of the "ext" key are "bmp", "gif", "jpeg", "jpx" (JPEG 2000), "jxr" (JPEG XR), "png", "pnm", and "tiff".
@@ -217,7 +217,7 @@ Possible values of the "ext" key are "bmp", "gif", "jpeg", "jpx" (JPEG 2000), "j
    3. The image's "transformation matrix" is defined as the matrix, for which the expression `bbox / transform == Rect(0, 0, 1, 1)` is true, lookup details here: :ref:`ImageTransformation`.
 
 
-**Text block:**
+**Text Block:**
 
 =============== ====================================================
 **Key**             **Value**
@@ -225,10 +225,10 @@ Possible values of the "ext" key are "bmp", "gif", "jpeg", "jpx" (JPEG 2000), "j
 Type            0 = text *(int)*
 Bbox            block rectangle, :data:`Rect`
 Number          block count *(int)*
-Lines           *list* of text line dictionaries
+Lines           *list* of text line structure
 =============== ====================================================
 
-Line Dictionary
+Line Structure
 ~~~~~~~~~~~~~~~~~
 
 =============== =====================================================
@@ -245,7 +245,7 @@ The value of key *"dir"* is the **unit vector** `dir = (cosine, -sine)` of the a
 .. image:: ../images/img-line-dir.*
    :scale: 100
 
-Span Dictionary
+Span Structure
 ~~~~~~~~~~~~~~~~~
 
 Spans contain the actual text. A line contains **more than one span only**, if it contains text with different font properties.
@@ -254,8 +254,8 @@ Spans contain the actual text. A line contains **more than one span only**, if i
 **Key**             **Value**
 =============== =====================================================================
 Bbox            span rectangle, :data:`Rect`
-Origin          the first character's origin, :data:`point_like`
-font            font name *(string)*
+Origin          the first character's origin, :data:`Point`
+Font            font name *(string)*
 Asc             ascender of the font *(float)*
 Desc            descender of the font *(float)*
 Size            font size *(float)*
@@ -295,7 +295,7 @@ The following shows the original span rectangle in red and the rectangle with re
 
 Bits 1 thru 4 are font properties, i.e. encoded in the font program. Please note, that this information is not necessarily correct or complete: fonts quite often contain wrong data here.
 
-Character Dictionary for :meth:`ExtractRAWDict`
+Character Structure for :meth:`ExtractRAWDict`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 =============== ===========================================================
@@ -311,7 +311,6 @@ This image shows the relationship between a character's bbox and its quad: |text
 .. |textpagechar| image:: images/img-textpage-char.*
    :align: top
    :scale: 66
-
 
 .. rubric:: Footnotes
 

@@ -311,7 +311,7 @@ Have a look at the :ref:`FAQ` section to see some pixmap usage "at work".
       :arg int jpgQuality: The desired image quality, default 95. Only applies to JPEG images, else ignored. This parameter trades quality against file size. A value of 98 is close to lossless. Higher values should not lead to better quality.
 
       :raises ValueError: For unsupported image formats.
-      :rtype: bytes
+      :rtype: byte[]
 
       :arg str output: The requested image format. The default is "png". For other possible values see :ref:`PixmapOutput`.
 
@@ -398,7 +398,7 @@ Have a look at the :ref:`FAQ` section to see some pixmap usage "at work".
 
       The MD5 hashcode (16 bytes) of the pixmap. This is a technical value used for unique identifications.
 
-      :type: bytes
+      :type: byte[]
 
    .. attribute:: ColorSpace
 
@@ -529,7 +529,7 @@ The following file types are supported as **input** to construct pixmaps: **BMP,
 
 Supported Output Image Formats
 ---------------------------------------------------------------------------
-A number of image **output** formats are supported. You have the option to either write an image directly to a file (:meth:`Pixmap.Save`), or to generate a bytes object (:meth:`Pixmap.ToBytes`). Both methods accept a string identifying the desired format (**Format** column below). Please note that not all combinations of pixmap colorspace, transparency support (alpha) and image format are possible.
+A number of image **output** formats are supported. You have the option to either write an image directly to a file (:meth:`Pixmap.Save`), or to generate a byte[] object (:meth:`Pixmap.ToBytes`). Both methods accept a string identifying the desired format (**Format** column below). Please note that not all combinations of pixmap colorspace, transparency support (alpha) and image format are possible.
 
 ========== =============== ========= ============== =================================
 **Format** **Colorspaces** **alpha** **Extensions** **Description**

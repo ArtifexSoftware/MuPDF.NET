@@ -504,8 +504,8 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
       Retrieves **all** links of a page.
 
-      :rtype: List<LinkInfo>
-      :returns: A list of dictionaries. For a description of the dictionary entries, see :ref:`link_dict_description`. Always use this or the :meth:`Page.GetLinks` method if you intend to make changes to the links of a page.
+      :rtype: List
+      :returns: A list of `LinkInfo`. For a description of the dictionary entries, see :ref:`link_dict_description`. Always use this or the :meth:`Page.GetLinks` method if you intend to make changes to the links of a page.
 
    .. method:: GetLinks()
 
@@ -523,7 +523,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
       :arg List<PdfAnnotType> types: a sequence of integers to down-select to one or more annotation types. Default is all annotations. Example: `types=(PDF_ANNOT_FREETEXT, PDF_ANNOT_TEXT)` will only return 'FreeText' and 'Text' annotations.
 
-      :rtype: IEnumerable<Annot>
+      :rtype: IEnumerable
       :returns: an :ref:`Annot` for each iteration.
 
    .. method:: GetBboxlog(bool layer: false)
@@ -546,8 +546,8 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
       PDF only: Retrieve a list of :data:`xref` of :data:`contents` objects of a page. May be empty or contain multiple integers. If the page is cleaned (:meth:`Page.CleanContents`), it will be one entry at most. The "source" of each `/Contents` object can be individually read by :meth:`Document.GetXrefStream` using an item of this list. Method :meth:`Page.ReadContents` in contrast walks through this list and concatenates the corresponding sources into one `bytes` object.
 
-      :rtype: List<int>
-      :return: a list of content's xref
+      :rtype: List
+      :return: a list of `int`, content's xref
 
    .. method:: GetDisplayList(int annots: 1)
 
@@ -560,25 +560,28 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
       Deprecated wrapper for :meth:`TextPage.ExtractBlocks`.  Use :meth:`Page.GetText` with the "blocks" option instead.
 
-      :rtype: List<TextBlock>
+      :rtype: List
+      :return: a list of `TextBlock`
 
    .. method:: GetTextWords(Rect clip: null, int flags: 0, TextPage textPage: null, bool sort: false, char[] delimiters: null)
 
       Deprecated wrapper for :meth:`TextPage.ExtractWords`. Use :meth:`Page.GetText` with the "words" option instead.
 
-      :rtype: List<WordBlock>
+      :rtype: List
+      :return: a list of `WordBlock`
 
    .. method:: GetTextTrace()
 
       Return low-level text information of the page. The method is available for **all** document types. The result is a list of SpanInfo.
 
-      :rtype: List<SpanInfo>
+      :rtype: List
+      :return: a list of `SpanInfo`
 
    .. method:: ReadContents()
 
       Return the concatenation of all :data:`contents` objects associated with the page -- without cleaning or otherwise modifying them. Use this method whenever you need to parse this source in its entirety without having to bother how many separate contents objects exist.
 
-      :rtype: bytes
+      :rtype: byte[]
 
    .. method:: Run()
 
@@ -1104,12 +1107,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
       This is a **global replacement:** the image will disappear wherever the old one has been displayed throughout the file.
    
-      If you inspect / extract a page's images by methods like :meth:`Page.GetImages`,
-      :meth:`Page.GetImageInfo` or :meth:`Page.GetText`,
-      the replacing "dummy" image will be detected like so
-      `(45, 47, 1, 1, 8, 'DeviceGray', '', 'Im1', 'FlateDecode')`
-      and also seem to "cover" the same boundary box on the page.
-
+      If you inspect / extract a page's images by methods like :meth:`Page.GetImages`, :meth:`Page.GetImageInfo` or :meth:`Page.GetText`, the replacing "dummy" image will be detected like so `(45, 47, 1, 1, 8, 'DeviceGray', '', 'Im1', 'FlateDecode')` and also seem to "cover" the same boundary box on the page.
    
    .. index::
       pair: blocks; Page.GetText
@@ -1351,8 +1349,8 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
       :arg bool xrefs: **PDF only.** Try to find the :data:`xref` for each image. Implies `hashes=true`. Adds the `"xref"` key to the dictionary. If not found, the value is 0, which means, the image is either "inline" or otherwise undetectable. Please note that this option has an extended response time, because the MD5 hashcode will be computed at least two times for each image with an xref.
 
-      :rtype: list of Block
-      :returns: A list of dictionaries. This includes information for **exactly those** images, that are shown on the page -- including *"inline images"*. In contrast to images included in :meth:`Page.GetText`, image **binary content** is not loaded, which drastically reduces memory usage. The dictionary layout is similar to that of image blocks in `page.GetText("dict")`.
+      :rtype: list of ImageInfo
+      :returns: A list of ImageInfo. This includes information for **exactly those** images, that are shown on the page -- including *"inline images"*. In contrast to images included in :meth:`Page.GetText`, image **binary content** is not loaded, which drastically reduces memory usage. The dictionary layout is similar to that of image blocks in `page.GetText("dict")`.
 
          =============== ===============================================================
          **Key**             **Value**
@@ -1394,7 +1392,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
       :arg string item: an item of the list :meth:`Page.GetImages`, or the reference **name** entry of such an item (item[7]), or the image :data:`xref`.
       :arg bool transform: also return the matrix used to transform the image rectangle to the bbox on the page. If true, then tuples `(bbox, matrix)` are returned.
 
-      :rtype: list
+      :rtype: List
       :returns: Boundary boxes and respective transformation matrices for each image occurrence on the page. If the item is not on the page, an empty list `[]` is returned.
 
 
@@ -1828,15 +1826,15 @@ Homologous Methods of :ref:`Document` and :ref:`Page`
 --------------------------------------------------------
 This is an overview of homologous methods on the :ref:`Document` and on the :ref:`Page` level.
 
-========================================= =====================================
+========================================= =======================
 **Document Level**                        **Page Level**
-========================================= =====================================
+========================================= =======================
 *Document.GetPageFonts(pno)*              :meth:`Page.GetFonts`
 *Document.GetPageImages(pno)*             :meth:`Page.GetImages`
 *Document.GetPagePixmap(pno, ...)*        :meth:`Page.GetPixmap`
 *Document.GetPageText(pno, ...)*          :meth:`Page.GetText`
 *Document.SearchPageFor(pno, ...)*        :meth:`Page.SearchFor`
-========================================= =====================================
+========================================= =======================
 
 The page number "pno" is a 0-based integer `-∞ < pno < PageCount`.
 
@@ -1845,6 +1843,54 @@ The page number "pno" is a 0-based integer `-∞ < pno < PageCount`.
    Most document methods (left column) exist for convenience reasons, and are just wrappers for: *Document[pno].<page method>*. So they **load and discard the page** on each execution.
 
    However, the first two methods work differently. They only need a page's object definition statement - the page itself will **not** be loaded. So e.g. :meth:`Page.GetFonts` is a wrapper the other way round and defined as follows: *page.GetFonts == page.parent.GetPageFonts(page.number)*.
+
+
+Output Structures
+--------------------------------
+
+Box Structure
+~~~~~~~~~~~~~~
+
+=============== ================================================
+**Key**         **Value**
+=============== ================================================
+Rect            boundary box, :ref:`Rect`
+Matrix          respective transformation matricx, :ref:`Matrix`
+=============== ================================================
+
+BoxLog Structure
+~~~~~~~~~~~~~~~~
+
+=============== ===================================
+**Key**         **Value**
+=============== ===================================
+Type            a type of rectangle, *string*
+Box             rectangle coordinates, :ref:`Rect`
+LayerName       optional. layer name, *string*
+=============== ===================================
+
+LinkInfo Structure
+~~~~~~~~~~~~~~~~~~
+
+========= ====================================================================================================
+**Key**         **Value**
+========= ====================================================================================================
+Kind      (*required*) an integer indicating the kind of link.
+From      (*required*) a :ref:`Rect` describing the "hot spot" location on the page's visible representation.
+To        either a point, specifiying the destination location on the provided page, default is (0, 0). 
+Page      *int* indicate page number
+Name      
+Uri       a string specifying the destination internet resource. 
+Zoom      if flag is `LINK_FLAG_R_IS_ZOOM`, indicate *float* zoom value.
+File      a string specifying the destination file.
+Id
+Xref      :data:`xref` of the item (0 if no PDF).
+Italic    true if italic item text, or omitted. PDF only.
+Bold      true if bold item text or omitted. PDF only.
+Collapse  true if sub-items are folded, or omitted in toc. PDF only.
+Color     item color in PDF RGB format `(red, green, blue)`, or omitted (always omitted if no PDF).
+========= ====================================================================================================
+
 
 .. rubric:: Footnotes
 
