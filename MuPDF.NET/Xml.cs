@@ -534,7 +534,7 @@ namespace MuPDF.NET
                 return color;
             if (color is int)
             {
-                (int, int, int) rgb = Utils.sRGB2rgb(color);
+                (int, int, int) rgb = Utils.sRGB2Rgb(color);
                 return $"rgb({rgb.Item1},{rgb.Item2},{rgb.Item3})";
             }
             if ((color is float[] && color.Length == 3))
@@ -634,13 +634,13 @@ namespace MuPDF.NET
             string text = "text-align: ";
             if (align is string)
                 text += align;
-            else if (align == Utils.TEXT_ALIGN_LEFT)
+            else if (align == TextAlign.TEXT_ALIGN_LEFT)
                 text += "left";
-            else if (align == Utils.TEXT_ALIGN_CENTER)
+            else if (align == TextAlign.TEXT_ALIGN_CENTER)
                 text += "center";
-            else if (align == Utils.TEXT_ALIGN_RIGHT)
+            else if (align == TextAlign.TEXT_ALIGN_RIGHT)
                 text += "right";
-            else if (align == Utils.TEXT_ALIGN_JUSTIFY)
+            else if (align == TextAlign.TEXT_ALIGN_JUSTIFY)
                 text += "justify";
             else
                 throw new Exception($"Unrecognised {align}");

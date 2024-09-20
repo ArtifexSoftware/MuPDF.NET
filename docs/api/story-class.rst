@@ -12,16 +12,16 @@ Story
 **Method / Attribute**                      **Short Description**
 =========================================== =============================================================
 :meth:`Story.Reset`                         "rewind" story output to its beginning
-:meth:`Story.Place`                         compute story content to fit in provided rectangle
-:meth:`Story.Draw`                          write the computed content to current page
-:meth:`Story.ElementPositions`              callback function logging currently processed story content
-:attr:`Story.Body`                          the story's underlying :htmlTag:`Body`
-:meth:`Story.Write`                         places and draws Story to a DocumentWriter
-:meth:`Story.WriteStabilized`               iterative layout of html content to a DocumentWriter
-:meth:`Story.WriteWithLinks`                like `Write()` but also creates PDF links
-:meth:`Story.WriteStabilizedWithLinks`      like `WriteStabilized()` but also creates PDF links
+:meth:`Story.Place`                         Compute story content to fit in provided rectangle
+:meth:`Story.Draw`                          Write the computed content to current page
+:meth:`Story.ElementPositions`              Callback function logging currently processed story content
+:attr:`Story.Body`                          The story's underlying :htmlTag:`Body`
+:meth:`Story.Write`                         Places and draws Story to a DocumentWriter
+:meth:`Story.WriteStabilized`               Iterative layout of html content to a DocumentWriter
+:meth:`Story.WriteWithLinks`                Like `Write()` but also creates PDF links
+:meth:`Story.WriteStabilizedWithLinks`      Like `WriteStabilized()` but also creates PDF links
 :meth:`Story.Fit`                           Finds optimal rect that contains the story `this`
-:meth:`Story.FitScale`                     
+:meth:`Story.FitScale`                      
 :meth:`Story.FitHeight`
 :meth:`Story.FitWidth`
 =========================================== =============================================================

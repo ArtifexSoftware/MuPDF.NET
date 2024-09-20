@@ -25,7 +25,7 @@ namespace MuPDF.NET.Test
         {
             Utils.GetPdfNow();
             Utils.GetPdfString("Beijing, chinesisch 北京");
-            Utils.GetTextLength("Beijing, chinesisch 北京", fontName: "china-s");
+            Utils.GetTextLength("Beijing, chinesisch 北京", "null", fontName: "china-s");
             Utils.GetPdfString("Latin characters êßöäü");
         }
 

@@ -28,12 +28,9 @@ namespace MuPDF.NET
         public static int SigFlag_SignaturesExist = 1;
         public static int SigFlag_AppendOnly = 2;
 
-        public static int UNIQUE_ID = 0;
+        public static bool SmallGlyphHeights = false;
 
-        public static int TEXT_ALIGN_LEFT = 0;
-        public static int TEXT_ALIGN_CENTER = 1;
-        public static int TEXT_ALIGN_RIGHT = 2;
-        public static int TEXT_ALIGN_JUSTIFY = 3;
+        public static int UNIQUE_ID = 0;
 
         public static Dictionary<string, int> AdobeUnicodes = new Dictionary<string, int>();
 
@@ -70,7 +67,7 @@ namespace MuPDF.NET
 
         public static List<string> MUPDF_WARNINGS_STORE = new List<string>();
 
-        private static Dictionary<string, (int, int)> PageSizes = new Dictionary<
+        private static Dictionary<string, (int, int)> PaperSizes = new Dictionary<
             string,
             (int, int)
         >()
@@ -641,7 +638,7 @@ namespace MuPDF.NET
             (183, 0.46),
         };
 
-        public static string GetImageExtention(int type)
+        public static string GetImageExtension(int type)
         {
             if (type == (int)ImageType.FZ_IMAGE_FAX)
                 return "fax";
@@ -761,7 +758,7 @@ namespace MuPDF.NET
             return mupdf.mupdf.fz_transform_point(c.ToFzPoint(), m1).fz_normalize_vector().y;
         }
 
-        public static PdfObj pdf_dict_getl(PdfObj obj, string[] keys)
+        internal static PdfObj pdf_dict_getl(PdfObj obj, string[] keys)
         {
             foreach (string key in keys)
             {
@@ -772,7 +769,7 @@ namespace MuPDF.NET
             return obj;
         }
 
-        public static void pdf_dict_putl(PdfObj obj, PdfObj val, string[] keys)
+        internal static void pdf_dict_putl(PdfObj obj, PdfObj val, string[] keys)
         {
             if (obj.pdf_is_indirect() != 0)
                 obj = obj.pdf_resolve_indirect_chain();
@@ -845,20 +842,22 @@ namespace MuPDF.NET
             return buffer.fz_buffer_extract();
         }
 
-        public static FzBuffer BufferFromBytes(byte[] bytes)
+        internal static FzBuffer BufferFromBytes(byte[] bytes)
         {
             if (bytes == null)
                 return new FzBuffer();
             return Utils.fz_new_buffer_from_data(bytes);
         }
 
-        public static FzBuffer CompressBuffer(FzBuffer buffer)
+        internal static FzBuffer CompressBuffer(FzBuffer buffer)
         {
-            ll_fz_new_deflated_data_from_buffer_outparams outparams = new ll_fz_new_deflated_data_from_buffer_outparams();
-            SWIGTYPE_p_unsigned_char data = mupdf.mupdf.ll_fz_new_deflated_data_from_buffer_outparams_fn(
-                buffer.m_internal,
-                fz_deflate_level.FZ_DEFLATE_BEST,
-                outparams
+            ll_fz_new_deflated_data_from_buffer_outparams outparams =
+                new ll_fz_new_deflated_data_from_buffer_outparams();
+            SWIGTYPE_p_unsigned_char data =
+                mupdf.mupdf.ll_fz_new_deflated_data_from_buffer_outparams_fn(
+                    buffer.m_internal,
+                    fz_deflate_level.FZ_DEFLATE_BEST,
+                    outparams
                 );
 
             if (data == null || outparams.compressed_length == 0)
@@ -871,7 +870,12 @@ namespace MuPDF.NET
             return buf;
         }
 
-        public static void UpdateStream(PdfDocument doc, PdfObj obj, FzBuffer buffer, int compress)
+        internal static void UpdateStream(
+            PdfDocument doc,
+            PdfObj obj,
+            FzBuffer buffer,
+            int compress
+        )
         {
             uint len = buffer.fz_buffer_storage(new SWIGTYPE_p_p_unsigned_char(IntPtr.Zero, false));
             uint nlen = len;
@@ -900,7 +904,7 @@ namespace MuPDF.NET
             return low <= v && v <= high;
         }
 
-        public static Matrix RotatePageMatrix(PdfPage page)
+        internal static Matrix RotatePageMatrix(PdfPage page)
         {
             if (page.m_internal == null)
                 return new Matrix(new FzMatrix());
@@ -923,7 +927,7 @@ namespace MuPDF.NET
             return new Matrix(m);
         }
 
-        public static Point GetCropBoxSize(PdfObj pageObj)
+        internal static Point GetCropBoxSize(PdfObj pageObj)
         {
             FzRect rect = GetCropBox(pageObj).ToFzRect();
             float width = Math.Abs(rect.x1 - rect.x0);
@@ -933,7 +937,7 @@ namespace MuPDF.NET
             return new Point(size);
         }
 
-        public static Rect GetCropBox(PdfObj pageObj)
+        internal static Rect GetCropBox(PdfObj pageObj)
         {
             FzRect mediabox = Utils.GetMediaBox(pageObj).ToFzRect();
             FzRect cropBox = pageObj.pdf_dict_get_inheritable(new PdfObj("CropBox")).pdf_to_rect();
@@ -947,7 +951,7 @@ namespace MuPDF.NET
             return new Rect(cropBox);
         }
 
-        public static Rect GetMediaBox(PdfObj pageObj)
+        internal static Rect GetMediaBox(PdfObj pageObj)
         {
             FzRect pageMediaBox = new FzRect(FzRect.Fixed.Fixed_UNIT);
             FzRect mediaBox = pageObj
@@ -974,13 +978,13 @@ namespace MuPDF.NET
             return new Rect(pageMediaBox);
         }
 
-        public static FzMatrix DerotatePageMatrix(PdfPage page)
+        internal static FzMatrix DerotatePageMatrix(PdfPage page)
         {
             Matrix mp = RotatePageMatrix(page);
             return mp.ToFzMatrix().fz_invert_matrix();
         }
 
-        public static int PageRotation(PdfPage page)
+        internal static int PageRotation(PdfPage page)
         {
             int rotate;
 
@@ -1007,7 +1011,7 @@ namespace MuPDF.NET
             return rotate;
         }
 
-        public static FzRect RectFromObj(dynamic r)
+        internal static FzRect RectFromObj(dynamic r)
         {
             if (r is FzRect)
                 return r;
@@ -1037,7 +1041,7 @@ namespace MuPDF.NET
             return mupdf.mupdf.fz_make_rect(r[0], r[1], r[2], r[3]);
         }
 
-        public static string ReadSamples(FzPixmap pixmap, int offset, int n)
+        internal static string ReadSamples(FzPixmap pixmap, int offset, int n)
         {
             List<byte> ret = new List<byte>();
             for (int i = 0; i < n; i++)
@@ -1050,7 +1054,7 @@ namespace MuPDF.NET
             return string.Join(',', bytes.Select(b => $"{b}"));
         }
 
-        public static Dictionary<string, int> ColorCount(FzPixmap pm, dynamic clip)
+        internal static Dictionary<string, int> ColorCount(FzPixmap pm, dynamic clip)
         {
             Dictionary<string, int> ret = new Dictionary<string, int>();
             int count = 0;
@@ -1224,7 +1228,7 @@ namespace MuPDF.NET
             );
         }
 
-        public static List<dynamic> GetChoiceOptions(PdfAnnot annot)
+        internal static List<dynamic> GetChoiceOptions(PdfAnnot annot)
         {
             PdfObj annotObj = annot.pdf_annot_obj();
             vectors opts = mupdf.mupdf.pdf_choice_widget_options2(annot, 0);
@@ -1256,7 +1260,7 @@ namespace MuPDF.NET
             return ret;
         }
 
-        public static void AddAnnotId(PdfAnnot annot, string stem)
+        internal static void AddAnnotId(PdfAnnot annot, string stem)
         {
             PdfPage page = annot.pdf_annot_page();
             PdfObj annotObj = annot.pdf_annot_obj();
@@ -1275,7 +1279,7 @@ namespace MuPDF.NET
             page.doc().m_internal.resynth_required = 0;
         }
 
-        public static List<string> GetAnnotIDList(PdfPage page)
+        internal static List<string> GetAnnotIDList(PdfPage page)
         {
             List<string> ids = new List<string>();
             PdfObj annots = page.obj().pdf_dict_get(new PdfObj("Annots"));
@@ -1297,11 +1301,11 @@ namespace MuPDF.NET
             return utf8.GetBytes(s);
         }
 
-        public static PdfObj EmbedFile(
+        internal static PdfObj EmbedFile(
             PdfDocument pdf,
             FzBuffer buf,
-            string filename,
-            string ufilename,
+            string fileName,
+            string uFilename,
             string desc,
             int compress
         )
@@ -1310,8 +1314,8 @@ namespace MuPDF.NET
             PdfObj val = pdf.pdf_new_dict(6);
             val.pdf_dict_put_dict(new PdfObj("CI"), 4);
             PdfObj ef = val.pdf_dict_put_dict(new PdfObj("EF"), 4);
-            val.pdf_dict_put_text_string(new PdfObj("F"), filename);
-            val.pdf_dict_put_text_string(new PdfObj("UF"), ufilename);
+            val.pdf_dict_put_text_string(new PdfObj("F"), fileName);
+            val.pdf_dict_put_text_string(new PdfObj("UF"), uFilename);
             val.pdf_dict_put_text_string(new PdfObj("Desc"), desc);
             val.pdf_dict_put(new PdfObj("Type"), new PdfObj("Filespec"));
             byte[] bs = Utils.ToByte("  ");
@@ -1329,7 +1333,7 @@ namespace MuPDF.NET
             return val;
         }
 
-        public static void MakeAnnotDA(
+        internal static void MakeAnnotDA(
             PdfAnnot annot,
             int nCol,
             float[] col,
@@ -1352,25 +1356,25 @@ namespace MuPDF.NET
             annot.pdf_annot_obj().pdf_dict_put_text_string(new PdfObj("DA"), buf);
         }
 
-        public static string ExpandFontName(string filename)
+        public static string ExpandFontName(string fontname)
         {
-            if (filename == null)
+            if (fontname == null)
                 return "Helv";
-            if (filename.StartsWith("Co"))
+            if (fontname.StartsWith("Co"))
                 return "Cour";
-            if (filename.StartsWith("co"))
+            if (fontname.StartsWith("co"))
                 return "Cour";
-            if (filename.StartsWith("Ti"))
+            if (fontname.StartsWith("Ti"))
                 return "TiRo";
-            if (filename.StartsWith("ti"))
+            if (fontname.StartsWith("ti"))
                 return "TiRo";
-            if (filename.StartsWith("Sy"))
+            if (fontname.StartsWith("Sy"))
                 return "Symb";
-            if (filename.StartsWith("sy"))
+            if (fontname.StartsWith("sy"))
                 return "Symb";
-            if (filename.StartsWith("Za"))
+            if (fontname.StartsWith("Za"))
                 return "ZaDb";
-            if (filename.StartsWith("za"))
+            if (fontname.StartsWith("za"))
                 return "ZaDb";
             return "Helv";
         }
@@ -1540,7 +1544,7 @@ namespace MuPDF.NET
             return t;
         }
 
-        public static void SetFieldType(PdfDocument doc, PdfObj annotObj, PdfWidgetType type)
+        internal static void SetFieldType(PdfDocument doc, PdfObj annotObj, PdfWidgetType type)
         {
             PdfFieldFlags setBits = 0;
             PdfFieldFlags clearBits = 0;
@@ -1596,7 +1600,7 @@ namespace MuPDF.NET
             }
         }
 
-        public static PdfAnnot CreateWidget(
+        internal static PdfAnnot CreateWidget(
             PdfDocument doc,
             PdfPage page,
             PdfWidgetType type,
@@ -1653,7 +1657,7 @@ namespace MuPDF.NET
             return annot;
         }
 
-        public static List<(string, int)> GetResourceProperties(PdfObj refer)
+        internal static List<(string, int)> GetResourceProperties(PdfObj refer)
         {
             PdfObj properties = Utils.pdf_dict_getl(
                 refer,
@@ -1680,7 +1684,7 @@ namespace MuPDF.NET
             return rc;
         }
 
-        public static void SetResourceProperty(PdfObj refer, string name, int xref)
+        internal static void SetResourceProperty(PdfObj refer, string name, int xref)
         {
             PdfDocument pdf = refer.pdf_get_bound_document();
             PdfObj ind = pdf.pdf_new_indirect(xref, 0);
@@ -1705,7 +1709,7 @@ namespace MuPDF.NET
             return UNIQUE_ID;
         }
 
-        public static void EmbeddedClean(PdfDocument pdf)
+        internal static void EmbeddedClean(PdfDocument pdf)
         {
             PdfObj root = pdf.pdf_trailer().pdf_dict_get(new PdfObj("Root"));
             PdfObj coll = root.pdf_dict_get(new PdfObj("Collection"));
@@ -1722,32 +1726,21 @@ namespace MuPDF.NET
                 root.pdf_dict_put_name(new PdfObj("PageMode"), "UseAttachments");
         }
 
-        public static string EnsureIdentity(Document pdf)
+        public static void EnsureIdentity(Document pdf)
         {
-            PdfObj id = Document
-                .AsPdfDocument(pdf)
-                .pdf_trailer()
-                .pdf_dict_get(new PdfObj("ID"));
-            if (id == null)
+            PdfObj id = Document.AsPdfDocument(pdf).pdf_trailer().pdf_dict_get(new PdfObj("ID"));
+            if (id.m_internal == null)
             {
                 IntPtr p_block = Marshal.AllocHGlobal(16);
                 SWIGTYPE_p_unsigned_char swigBlock = new SWIGTYPE_p_unsigned_char(p_block, true);
                 mupdf.mupdf.fz_memrnd(swigBlock, 16);
-                string rnd = Marshal.PtrToStringUTF8(p_block);
+                string rnd0 = Marshal.PtrToStringUTF8(p_block);
                 Marshal.FreeHGlobal(p_block);
 
-                id = mupdf.mupdf.pdf_dict_put_array(
-                    Document.AsPdfDocument(pdf).pdf_trailer(),
-                    new PdfObj("ID"),
-                    2
-                );
-                id.pdf_array_push(mupdf.mupdf.pdf_new_string(rnd, 16));
-                id.pdf_array_push(mupdf.mupdf.pdf_new_string(rnd, 16));
-
-                return rnd;
+                id = Document.AsPdfDocument(pdf).pdf_trailer().pdf_dict_put_array(new PdfObj("ID"), 2);
+                id.pdf_array_push(mupdf.mupdf.pdf_new_string(rnd0, (uint)rnd0.Length));
+                id.pdf_array_push(mupdf.mupdf.pdf_new_string(rnd0, (uint)rnd0.Length));
             }
-
-            return "";
         }
 
         public static FontInfo CheckFont(Page page, string fontName)
@@ -1781,7 +1774,7 @@ namespace MuPDF.NET
             return null;
         }
 
-        public static void ScanResources(
+        internal static void ScanResources(
             PdfDocument pdf,
             PdfObj rsrc,
             List<Entry> liste,
@@ -1845,7 +1838,7 @@ namespace MuPDF.NET
             }
         }
 
-        public static int GatherFonts(
+        internal static int GatherFonts(
             PdfDocument pdf,
             PdfObj dict,
             List<Entry> fontList,
@@ -1899,7 +1892,7 @@ namespace MuPDF.NET
             return rc;
         }
 
-        public static string GetFontExtension(PdfDocument doc, int xref)
+        internal static string GetFontExtension(PdfDocument doc, int xref)
         {
             if (xref < 1)
                 return "n/a";
@@ -1944,7 +1937,7 @@ namespace MuPDF.NET
             return "n/a";
         }
 
-        public static string EscapeStrFromStr(string c)
+        internal static string EscapeStrFromStr(string c)
         {
             if (c == null)
                 return "";
@@ -1958,7 +1951,7 @@ namespace MuPDF.NET
             return ret;
         }
 
-        public static int GatherForms(
+        internal static int GatherForms(
             PdfDocument doc,
             PdfObj dict,
             List<Entry> imageList,
@@ -2018,7 +2011,7 @@ namespace MuPDF.NET
         /// <param name="imageList"></param>
         /// <param name="streamXRef"></param>
         /// <returns></returns>
-        public static int GatherIamges(
+        internal static int GatherIamges(
             PdfDocument doc,
             PdfObj dict,
             List<Entry> imageList,
@@ -2103,7 +2096,7 @@ namespace MuPDF.NET
             return xref;
         }
 
-        public static int InsertContents(
+        internal static int InsertContents(
             PdfDocument pdf,
             PdfObj pageRef,
             FzBuffer newcont,
@@ -2196,7 +2189,7 @@ namespace MuPDF.NET
             return (res.Name, res.Ext, res.Type, asc, dsc);
         }
 
-        public static FzBuffer GetFontBuffer(PdfDocument doc, int xref)
+        internal static FzBuffer GetFontBuffer(PdfDocument doc, int xref)
         {
             if (xref < 1)
                 return null;
@@ -2291,111 +2284,7 @@ namespace MuPDF.NET
                 doc.FontInfos.Add(info);
         }
 
-        public static List<(int, double)> GetCharWidths(
-            Document doc,
-            int xref,
-            int limit = 256,
-            int idx = 0,
-            FontInfo fontDict = null
-        )
-        {
-            FontInfo fontStruct = Utils.CheckFontInfo(doc, xref);
-            string name = "";
-            string ext = "";
-            string stype = "";
-            float asc = 0.0f;
-            float dsc = 0.0f;
-            bool simple = false;
-            int ordering = 0;
-            List<(int, double)> glyphs = null;
-
-            if (fontStruct == null)
-            {
-                if (fontDict == null)
-                {
-                    (name, ext, stype, asc, dsc) = Utils.GetFontProperties(doc, xref);
-                    fontStruct.Name = name;
-                    fontStruct.Ext = ext;
-                    fontStruct.Type = stype;
-                    fontStruct.Ascender = asc;
-                    fontStruct.Descender = dsc;
-                }
-                else
-                {
-                    name = fontDict.Name;
-                    ext = fontDict.Ext;
-                    stype = fontDict.Type;
-                    ordering = fontDict.Ordering;
-                    simple = fontDict.Simple;
-                }
-
-                if (string.IsNullOrEmpty(ext))
-                    throw new Exception("xref is not a font");
-
-                if (stype == "Type1" || stype == "MMType1" || stype == "TrueType")
-                    simple = true;
-                else
-                    simple = false;
-
-                if (name == "Fangti" || name == "Ming")
-                    ordering = 0;
-                else if (name == "Heiti" || name == "Song")
-                    ordering = 1;
-                else if (name == "Gothic" || name == "Mincho")
-                    ordering = 2;
-                else if (name == "Dotum" || name == "Batang")
-                    ordering = 3;
-                else
-                    ordering = -1;
-
-                fontDict.Simple = simple;
-
-                if (name == "ZapfDingbats")
-                    glyphs = new List<(int, double)>(Utils.zapf_glyphs);
-                else if (name == "Symbol")
-                    glyphs = new List<(int, double)>(Utils.symbol_glyphs);
-                else
-                    glyphs = null;
-
-                fontDict.Glyphs = glyphs;
-                fontDict.Ordering = ordering;
-                fontDict.Xref = xref;
-                doc.FontInfos.Add(fontDict);
-            }
-            else
-            {
-                fontDict = fontStruct;
-                glyphs = new List<(int, double)>(fontDict.Glyphs);
-                simple = fontDict.Simple;
-                ordering = fontDict.Ordering;
-            }
-
-            int oldLimit = 0;
-            if (glyphs != null)
-                oldLimit = glyphs.Count;
-            int myLimit = Math.Max(256, limit);
-            if (myLimit <= oldLimit)
-                return glyphs;
-
-            if (ordering < 0)
-                glyphs = doc._GetCharWidths(
-                    xref,
-                    fontDict.Name,
-                    fontDict.Ext,
-                    fontDict.Ordering,
-                    myLimit,
-                    idx
-                );
-            else
-                glyphs = null;
-
-            fontDict.Glyphs = glyphs;
-            Utils.UpdateFontInfo(doc, fontDict);
-
-            return glyphs;
-        }
-
-        public static FontInfo InsertFont(
+        internal static FontInfo InsertFont(
             PdfDocument pdf,
             string bfName,
             string fontFile,
@@ -2437,7 +2326,8 @@ namespace MuPDF.NET
             }
             else
             {
-                ll_fz_lookup_base14_font_outparams outparams = new ll_fz_lookup_base14_font_outparams();
+                ll_fz_lookup_base14_font_outparams outparams =
+                    new ll_fz_lookup_base14_font_outparams();
                 if (!string.IsNullOrEmpty(bfName))
                 {
                     data = mupdf.mupdf.ll_fz_lookup_base14_font_outparams_fn(bfName, outparams);
@@ -2453,7 +2343,7 @@ namespace MuPDF.NET
                 {
                     if (!string.IsNullOrEmpty(fontFile))
                     {
-                         font = mupdf.mupdf.fz_new_font_from_file(null, fontFile, idx, 0);
+                        font = mupdf.mupdf.fz_new_font_from_file(null, fontFile, idx, 0);
                     }
                     else
                     {
@@ -2586,7 +2476,7 @@ namespace MuPDF.NET
             return s + (f == "c" ? "K " : "k ");
         }
 
-        public static string GetColorCode(float c, string f)
+        internal static string GetColorCode(float c, string f)
         {
             float[] color = { c, };
             Utils.CheckColor(color);
@@ -2595,7 +2485,7 @@ namespace MuPDF.NET
             return s + (f == "c" ? "G " : "g ");
         }
 
-        public static string EscapeStrFromBuffer(FzBuffer buf)
+        internal static string EscapeStrFromBuffer(FzBuffer buf)
         {
             if (buf.m_internal == null)
                 return "";
@@ -2618,13 +2508,13 @@ namespace MuPDF.NET
         /// </summary>
         /// <param name="s"></param>
         /// <returns></returns>
-        public static string DecodeRawUnicodeEscape(FzBuffer s)
+        internal static string DecodeRawUnicodeEscape(FzBuffer s)
         {
             string ret = s.fz_string_from_buffer();
             return DecodeRawUnicodeEscape(ret);
         }
 
-        public static FzBuffer Object2Buffer(PdfObj what, int compress, int ascii)
+        internal static FzBuffer Object2Buffer(PdfObj what, int compress, int ascii)
         {
             FzBuffer res = mupdf.mupdf.fz_new_buffer(512);
             FzOutput output = new FzOutput(res);
@@ -2634,7 +2524,7 @@ namespace MuPDF.NET
             return res;
         }
 
-        public static string UnicodeFromBuffer(FzBuffer buf)
+        internal static string UnicodeFromBuffer(FzBuffer buf)
         {
             byte[] bufBytes = buf.fz_buffer_extract();
             string val = Encoding.UTF8.GetString(bufBytes);
@@ -2645,7 +2535,7 @@ namespace MuPDF.NET
             return val;
         }
 
-        public static void Recurse(
+        internal static void Recurse(
             Document doc,
             Outline olItem,
             List<dynamic> liste,
@@ -2684,17 +2574,17 @@ namespace MuPDF.NET
             }
         }
 
-        public static LinkInfo GetLinkDict(Link ln, Document doc = null)
+        internal static LinkInfo GetLinkDict(Link ln, Document doc = null)
         {
             return Utils._GetLinkDict(ln.Dest, ln.Rect, doc);
         }
 
-        public static LinkInfo GetLinkDict(Outline ol, Document doc = null)
+        internal static LinkInfo GetLinkDict(Outline ol, Document doc = null)
         {
             return Utils._GetLinkDict(ol.Dest, null, doc);
         }
 
-        public static LinkInfo _GetLinkDict(LinkDest dest, Rect r, Document document)
+        internal static LinkInfo _GetLinkDict(LinkDest dest, Rect r, Document document)
         {
             LinkInfo nl = new LinkInfo();
             nl.Kind = dest.Kind;
@@ -2755,7 +2645,7 @@ namespace MuPDF.NET
             return nl;
         }
 
-        public static Border GetAnnotBorder(PdfObj annotObj)
+        internal static Border GetAnnotBorder(PdfObj annotObj)
         {
             List<int> dash = new List<int>();
             float width = -1;
@@ -2809,7 +2699,7 @@ namespace MuPDF.NET
             return res;
         }
 
-        public static Color GetAnnotColors(PdfObj annotObj)
+        internal static Color GetAnnotColors(PdfObj annotObj)
         {
             Color res = new Color();
             List<float> bc = new List<float>();
@@ -2842,7 +2732,7 @@ namespace MuPDF.NET
             return res;
         }
 
-        public static void SetAnnotBorder(Border border, PdfDocument pdf, PdfObj linkObj)
+        internal static void SetAnnotBorder(Border border, PdfDocument pdf, PdfObj linkObj)
         {
             PdfObj obj = null;
             int dashLen = 0;
@@ -2854,7 +2744,7 @@ namespace MuPDF.NET
             // get old border properties
         }
 
-        public static List<string> GetAnnotIdList(PdfPage page)
+        internal static List<string> GetAnnotIdList(PdfPage page)
         {
             List<string> names = new List<string>();
             PdfObj annots = page.obj().pdf_dict_get(new PdfObj("Annots"));
@@ -2873,7 +2763,7 @@ namespace MuPDF.NET
             return names;
         }
 
-        public static List<AnnotXref> GetAnnotXrefList(PdfObj pageObj)
+        internal static List<AnnotXref> GetAnnotXrefList(PdfObj pageObj)
         {
             List<AnnotXref> names = new List<AnnotXref>();
             PdfObj annots = pageObj.pdf_dict_get(new PdfObj("Annots"));
@@ -2905,12 +2795,28 @@ namespace MuPDF.NET
             return names;
         }
 
-        public static (int, int, int) sRGB2rgb(int srgb)
+        /// <summary>
+        /// Convert sRGB color code to an RGB color triple.
+        /// </summary>
+        /// <param name="srgb">srgb: (int) RRGGBB (red, green, blue), each color in range(255).</param>
+        /// <returns>Tuple (red, green, blue) each item in interval 0 <= item <= 255.</returns>
+        public static (int, int, int) sRGB2Rgb(int srgb)
         {
             int r = srgb >> 16;
             int g = (srgb - (r << 16) >> 8);
             int b = srgb - (r << 16) - (g << 8);
             return (r, g, b);
+        }
+
+        /// <summary>
+        /// Convert sRGB color code to a PDF color triple.
+        /// </summary>
+        /// <param name="srgb">(int) RRGGBB (red, green, blue), each color in range(255).</param>
+        /// <returns>Tuple (red, green, blue) each item in interval 0 <= item <= 1.</returns>
+        public static (float, float, float) sRGB2Pdf(int srgb)
+        {
+            (int, int, int) t = sRGB2Rgb(srgb);
+            return (t.Item1 / 255.0f, t.Item2 / 255.0f, t.Item3 / 255.0f);
         }
 
         public static string GetLinkText(Page page, LinkInfo link)
@@ -3014,7 +2920,7 @@ namespace MuPDF.NET
             return annot;
         }
 
-        public static string SetAnnotStem(string stem = null)
+        internal static string SetAnnotStem(string stem = null)
         {
             if (stem == null)
                 return Utils.ANNOT_ID_STEM;
@@ -3027,13 +2933,14 @@ namespace MuPDF.NET
 
         public static PdfAnnot GetAnnotByName(Page page, string name)
         {
-            if (name == null)
+            if (string.IsNullOrEmpty(name))
                 return null;
+
             PdfAnnot annot = mupdf.mupdf.pdf_first_annot(page.GetPdfPage());
             bool found = false;
             while (true)
             {
-                if (annot == null)
+                if (annot.m_internal == null)
                     break;
                 (string res, ulong len) = annot.pdf_annot_obj().pdf_to_string();
                 if (name == res)
@@ -3048,7 +2955,7 @@ namespace MuPDF.NET
             return annot;
         }
 
-        public static PdfAnnot GetAnnotByXref(Page page, int xref)
+        internal static PdfAnnot GetAnnotByXref(Page page, int xref)
         {
             bool found = false;
             PdfAnnot annot = page.GetPdfPage().pdf_first_annot();
@@ -3068,7 +2975,7 @@ namespace MuPDF.NET
             return annot;
         }
 
-        public static void StoreShrink(int percent)
+        internal static void StoreShrink(int percent)
         {
             if (percent >= 100)
             {
@@ -3079,7 +2986,7 @@ namespace MuPDF.NET
                 mupdf.mupdf.fz_shrink_store((uint)(100 - percent));
         }
 
-        public static void RefreshLinks(PdfPage page)
+        internal static void RefreshLinks(PdfPage page)
         {
             if (page == null)
                 return;
@@ -3096,7 +3003,7 @@ namespace MuPDF.NET
             }
         }
 
-        public static void PageMerge(
+        internal static void PageMerge(
             Document docDes,
             Document docSrc,
             int pageFrom,
@@ -3107,9 +3014,9 @@ namespace MuPDF.NET
             GraftMap graftmap
         )
         {
-                PdfDocument pdfDes = Document.AsPdfDocument(docDes);
-                PdfDocument pdfSrc = Document.AsPdfDocument(docSrc);
-                List<PdfObj> knownPageObjs = new List<PdfObj>()
+            PdfDocument pdfDes = Document.AsPdfDocument(docDes);
+            PdfDocument pdfSrc = Document.AsPdfDocument(docSrc);
+            List<PdfObj> knownPageObjs = new List<PdfObj>()
             {
                 new PdfObj("Contents"),
                 new PdfObj("Resources"),
@@ -3122,60 +3029,60 @@ namespace MuPDF.NET
                 new PdfObj("UserUnit")
             };
 
-                PdfObj pageRef = pdfSrc.pdf_lookup_page_obj(pageFrom);
-                PdfObj pageDict = pdfDes.pdf_new_dict(4);
-                pageDict.pdf_dict_put(new PdfObj("Type"), new PdfObj("Page"));
+            PdfObj pageRef = pdfSrc.pdf_lookup_page_obj(pageFrom);
+            PdfObj pageDict = pdfDes.pdf_new_dict(4);
+            pageDict.pdf_dict_put(new PdfObj("Type"), new PdfObj("Page"));
 
-                foreach (PdfObj e in knownPageObjs)
+            foreach (PdfObj e in knownPageObjs)
+            {
+                PdfObj obj = pageRef.pdf_dict_get_inheritable(e);
+                if (obj.m_internal != null)
                 {
-                    PdfObj obj = pageRef.pdf_dict_get_inheritable(e);
-                    if (obj.m_internal != null)
-                    {
-                        pageDict.pdf_dict_put(
-                            e,
-                            mupdf.mupdf.pdf_graft_mapped_object(graftmap.ToPdfGraftMap(), obj)
-                        );
-                    }
+                    pageDict.pdf_dict_put(
+                        e,
+                        mupdf.mupdf.pdf_graft_mapped_object(graftmap.ToPdfGraftMap(), obj)
+                    );
                 }
-
-                if (copyAnnots)
-                {
-                    PdfObj oldAnnots = pageRef.pdf_dict_get(new PdfObj("Annots"));
-                    int n = oldAnnots.pdf_array_len();
-                    if (n > 0)
-                    {
-                        PdfObj newAnnots = pageDict.pdf_dict_put_array(new PdfObj("Annots"), n);
-                        for (int i = 0; i < n; i++)
-                        {
-                            PdfObj o = oldAnnots.pdf_array_get(i);
-                            if (o.m_internal == null || o.pdf_is_dict() == 0)
-                                continue;
-                            if (o.pdf_dict_gets("IRT").m_internal != null)
-                                continue;
-                            PdfObj subtype = o.pdf_dict_get(new PdfObj("Subtype"));
-                            if (subtype.pdf_name_eq(new PdfObj("Link")) != 0)
-                                continue;
-                            if (subtype.pdf_name_eq(new PdfObj("Popup")) != 0)
-                                continue;
-                            if (subtype.pdf_name_eq(new PdfObj("Widget")) != 0)
-                            {
-                                mupdf.mupdf.fz_warn("skipping widget annotation");
-                                continue;
-                            }
-
-                            o.pdf_dict_del(new PdfObj("Popup"));
-                            o.pdf_dict_del(new PdfObj("P"));
-                            PdfObj copyO = graftmap.ToPdfGraftMap().pdf_graft_mapped_object(o);
-                            PdfObj annot = pdfDes.pdf_new_indirect(copyO.pdf_to_num(), 0);
-                            newAnnots.pdf_array_push(annot);
-                        }
-                    }
-                }
-                if (rotate != -1)
-                    pageDict.pdf_dict_put_int(new PdfObj("Rotate"), rotate);
-                PdfObj ref_ = pdfDes.pdf_add_object(pageDict);
-                pdfDes.pdf_insert_page(pageTo, ref_);
             }
+
+            if (copyAnnots)
+            {
+                PdfObj oldAnnots = pageRef.pdf_dict_get(new PdfObj("Annots"));
+                int n = oldAnnots.pdf_array_len();
+                if (n > 0)
+                {
+                    PdfObj newAnnots = pageDict.pdf_dict_put_array(new PdfObj("Annots"), n);
+                    for (int i = 0; i < n; i++)
+                    {
+                        PdfObj o = oldAnnots.pdf_array_get(i);
+                        if (o.m_internal == null || o.pdf_is_dict() == 0)
+                            continue;
+                        if (o.pdf_dict_gets("IRT").m_internal != null)
+                            continue;
+                        PdfObj subtype = o.pdf_dict_get(new PdfObj("Subtype"));
+                        if (subtype.pdf_name_eq(new PdfObj("Link")) != 0)
+                            continue;
+                        if (subtype.pdf_name_eq(new PdfObj("Popup")) != 0)
+                            continue;
+                        if (subtype.pdf_name_eq(new PdfObj("Widget")) != 0)
+                        {
+                            mupdf.mupdf.fz_warn("skipping widget annotation");
+                            continue;
+                        }
+
+                        o.pdf_dict_del(new PdfObj("Popup"));
+                        o.pdf_dict_del(new PdfObj("P"));
+                        PdfObj copyO = graftmap.ToPdfGraftMap().pdf_graft_mapped_object(o);
+                        PdfObj annot = pdfDes.pdf_new_indirect(copyO.pdf_to_num(), 0);
+                        newAnnots.pdf_array_push(annot);
+                    }
+                }
+            }
+            if (rotate != -1)
+                pageDict.pdf_dict_put_int(new PdfObj("Rotate"), rotate);
+            PdfObj ref_ = pdfDes.pdf_add_object(pageDict);
+            pdfDes.pdf_insert_page(pageTo, ref_);
+        }
 
         public static void MergeRange(
             Document docDes,
@@ -3244,6 +3151,15 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// Insert links contained in copied page range into destination PDF.
+        /// </summary>
+        /// <param name="doc1"></param>
+        /// <param name="doc2"></param>
+        /// <param name="fromPage"></param>
+        /// <param name="toPage"></param>
+        /// <param name="startAt"></param>
+        /// <exception cref="Exception"></exception>
         public static void DoLinks(
             Document doc1,
             Document doc2,
@@ -3382,7 +3298,7 @@ namespace MuPDF.NET
             return ((c1 - 'a' + 1) + ((c2 - 'a' + 1) * 27) + ((c3 - 'a' + 1) * 27 * 27));
         }
 
-        public static Pixmap GetPixmapFromDisplaylist(
+        internal static Pixmap GetPixmapFromDisplaylist(
             FzDisplayList list,
             Matrix ctm,
             FzColorspace cs,
@@ -3428,7 +3344,7 @@ namespace MuPDF.NET
             return new Pixmap("raw", new Pixmap(pix));
         }
 
-        public static FzFont GetFont(
+        internal static FzFont GetFont(
             string fontName,
             string fontFile,
             byte[] fontBuffer,
@@ -3454,7 +3370,7 @@ namespace MuPDF.NET
             FzFont font = null;
             if (fontFile != null)
             {
-                font = mupdf.mupdf.fz_new_font_from_file(null, fontFile, index, 0);                
+                font = mupdf.mupdf.fz_new_font_from_file(null, fontFile, index, 0);
                 return Fertig(font);
             }
 
@@ -3521,7 +3437,578 @@ namespace MuPDF.NET
         public static string[] GetGlyphText()
         {
             string base64String =
-                "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";
+                "H4sIABmRaF8C/7W9SZfjRpI1useviPP15utzqroJgBjYWhEkKGWVl" +
+                "KnOoapVO0YQEYSCJEIcMhT569+9Ppibg8xevHdeSpmEXfPBfDZ3N3" +
+                "f/t7u//r//k/zb3WJ4eTv2T9vzXTaZZH/NJunsbr4Z7ru7/7s9n1" +
+                "/+6z//8/X19T/WRP7jYdj/57//R/Jv8Pax2/Sn87G/v5z74XC3Pm" +
+                "zuLqfurj/cnYbL8aEzyH1/WB/f7h6H4/70l7vX/ry9G47wzK/hcr" +
+                "7bD5v+sX9YM4i/3K2P3d1Ld9z353O3uXs5Dl/7DT7O2/UZ/3Tw9z" +
+                "jsdsNrf3i6exgOm57eTsbbvjv/1w2xTnfDo5fnYdjA3eV0vjt25z" +
+                "XkRJB36/vhKwN+kEw4DOf+ofsLuP3pboewGISO7bAxPkUU+EaUD7" +
+                "t1v++O/3FTCESmcsILgQRuLhDs/w857lz6NsPDZd8dzmtfSP85HO" +
+                "8GcI53+/W5O/br3QkeJa9NERmPKgE2Ue+73vgj97Ded5TH1pPDEF" +
+                "CT4/35RFFtAMORMezXb3dwiioCsYe77rABjjCOjHs/nLs7mx3wuY" +
+                "FYX+HsEQyTfHg/DY/nVxa0rzmnl+6BVQfeegTyemSlOdjqczqJ0J" +
+                "9/evfp7tOH1ed/zj+2d/j+9eOHf7xbtsu75jcw27vFh19/+/jux5" +
+                "8+3/304edl+/HT3fz9kq3iw/vPH981Xz5/APR/5p/g9/+Qhb+/3b" +
+                "X/8+vH9tOnuw8f79798uvP7xAcwv84f//5XfvpL/D97v3i5y/Ld+" +
+                "9//Msdgrh7/+Hz3c/vfnn3GQ4/f/iLifja492HFbz+0n5c/ARg3r" +
+                "z7+d3n30ycq3ef3zO+FSKc3/06//j53eLLz/OPd79++fjrh0/tHR" +
+                "IHr8t3nxY/z9/90i7/AxIg1rv2H+37z3effpr//PPN1CIF47Q2LU" +
+                "SdNz+3NjakdvnuY7v4/BcEGb4WyEPI+DMT++nXdvEOn8iWFomaf/z" +
+                "tL8wZhPqp/e8vcAbm3XL+y/xHpPH/xlnDejXKHJTQ4svH9hdK/mF1" +
+                "9+lL8+nzu89fPrd3P374sDSZ/qn9+I93i/bTD/D+8wcWxOruy6f2L" +
+                "4jl89xEjkCQaZ9+4Hfz5dM7k33v3n9uP3788uvndx/e/zu8/vThn8" +
+                "ggSDqH56XJ6Q/vTZKRVx8+/sZgmRemIP5y98+fWuAo8vc+z+bMjE/" +
+                "Iu8Vn7RBxIis/q7TevW9//Pndj+37RWuz/AND+ue7T+2/o+zefaKT" +
+                "dzbqf84R7xeTdJYYJLOf7z4xq11N/osp2bt3q7v58h/vKLxzjtrw6" +
+                "Z2rOSbzFj+5rEd7+P84ULxH8/6vO/lj2/6Pu7eX7d3P6C3Y2tb3u+" +
+                "7ua3dkA/yvu+w/JqyV6GeUt0/dy7nb36MjySZ/MUMO3Hz5+LNycsd" +
+                "x54SB5wmN/XJvRh0z/vz1/PaCf4Zhd/rP9dPur/j7eDDtfIV+dX3+r" +
+                "7vz63B36vb9w7AbDn/ddLseown7kr7bbU4YIhD6/03//e7JiM0O669" +
+                "/vbyg1/hPdKLd8WGNPmnXoSs52h5200OGk/WW/fvdl0NvhpHTw3q3P" +
+                "t59Xe8uCOARA8ydCcX433Z/rjfonfbrnfhP5j9MJtM0mbf4XZT4XT9" +
+                "czt0Pk3S1ALFfPxyHA6g2A3WCz90Pq6qFO+dsskjdtzAB3B+7rwwDe" +
+                "Wi/reu0nbcOeMBostv1Dz9MpsuJwzbD+b5DcuGuKR32dFx/pcfGO9o" +
+                "Ow7MZlAj64M/9bmOAaTJ/WFuJF0t898eHXfdDNmV4JC77x133J8XON" +
+                "CDiTTWq5JkvNMMLNY9C1ZLNa82RrIki9ULP50AZ/6pczOyn92DSE3I" +
+                "qRSZs7nc2+gmqKMi+O3an/sQkTQOpszcLsBTnsg2gSEf/KskTQ4YaA" +
+                "NrFPFn4b/ELIEo/Iu2jQkbg/QEtEJXe1Y6MtWP3sl3/MMlnqf08D4c" +
+                "Baclr5KzEzHTuyXhZPyCXVhkcD0/DoXsmEwEfoWVQqsJ+Sg2eW9qniO" +
+                "GQFqHh3n+XCNMWCMLJ3bc4BPB2vz5CYenXkKjI06Rhu8mSJlSxKmmQX" +
+                "+uHB6g1jC0ztEQ+TRqdISmC6A46TLiH/sfMwBczE0mo4WrXHzoJpUyaK" +
+                "CvglLnpJC1XiEWSBN55eIHcDChLFpQ4TxZrHWkL2mUXwl6YtoN6OLefE" +
+                "myRLHy7mizwDT1yt1szryqhfCOa1AJJBtKVZFRtCd8WU3pATvFrbr5cH" +
+                "lo6DometzoF0xmAbn3/vF2fgKgcbhbkKCCrCKBYETp0uZt+2siJ5pSGc" +
+                "92+kOVgbLVIOREE/rw+jcJfNGSxGWBysYMmOzxrCU3qelSBOUV1VQCf4" +
+                "56kXEGaqB4gykGJUKTJQupBnixZ9NNk+S+2ihS/0kkCjOoD6ccjhCO3n" +
+                "iVLKfYW367Y0xY90TIU6MwSVkRfVdMM6HFYsxzpPGobc0NLrV4ky6htQI" +
+                "oOA9rLmWTeIupuh6aRZaij5vPp2LH15zO49PmEMH1niBrcCCWd60KgH00" +
+                "/BmgpkM8t9NzL/mm930scS/j7XYuHlr2MGiXkiwoDQvnESoFVyfKEarx1" +
+                "uSGFA7ehkULobywiRPBNiqgAcbOCo9MFRwtGp1GVn6wSDuzTImllwJ65b" +
+                "2mcAPyAjZxvfcTpHN+2xC0bZboApKt6joBDPZhbIgyyEeD7B7Sx9kZ1qT" +
+                "WqKgeUkvZ66MUI1N4eejGytzeG3kgUP/QumFyVWyD1+EpSja9NICVYYqb" +
+                "rSkvzJV2Xo0WhQfIedV+EsGU0rd23hAogyuUKtNZ7kBjOxTEPBT9LS/Cv" +
+                "BlfE32OqDgVzo+JFfWt3uqkhATv4OEhYCFtGXrRhR/jCY7Is4kuCVWavQ" +
+                "0QdiVoDqoiutekS9K0eFjpDy3E8nc75EdVjKGbtgVmg+1KkWtQAVp/hpa" +
+                "PQM1SNl1O/YwryWeEJUS3gUkebwTnzDLP+DdtgG0jtClLrXh86SHu6mQo" +
+                "Ib1r5HM1KWjmksEN7xQ9VsjVpEQ1ezvA7gUqMD+97RcpruAv3Le0G8V2O" +
+                "ww/ZBDpq+40xQxPBh2/G6D1BqRSiKq7YJ5TJKjTdJlnpDjptk1U0phVwr" +
+                "bvkabJy/S5Ut1UPnyELqgwIovM1Cm6jCoGgMDERdp6sJJ/K5EeKViU/Nq" +
+                "c/Lutj90OeYwD8UVS6Kb7RNzMrc/sZhqsZmYenfh3EnCc/StfWJj9KniA" +
+                "e0WFSKFE/hpxYWEK0k5TAwIh806Z72+hRd37UjZ50NJBBxu16o3UD+N1i" +
+                "HrjZ7LpRfab42+5KJ5gZH5eX8+WomxFq+Y++BBALJnWqVgGIRywArlFjJ" +
+                "gefUXkgf/142NpPKQ84le/KfdtYs1kD2gjLDJ0mP7Hg6uSntEb8P2TFYm" +
+                "W+p/xGo+B3kfK7SX7CQF4ZPE1++lUKGh3sT+tbAx3G5J/WN5WyDIzj5tQ" +
+                "/aecZYrMDKqraT6b8fWshK2gxGcINBb+0hBQ8uuifpPuHY4SlmwhqwU+q" +
+                "g6frKFcRttbIphPQR9WCwJesxfcF85bjZb9bX84siFWEiBYBh98kv1AF3" +
+                "jHTZ8k7PUvMVsm7v0F+TCjefdF4m7wTJWDpvmXIAeBbSrZI3on2gcBCFr" +
+                "WWCAN8BEhYRFXlK5N3elStQapRdRVIP8hQ0huaNirZu6sBmN5NW8wn5kv" +
+                "aoqNFjZgn77qrpQeIFrXXInn3eFw/o62hZ8IU7Z2M0Qv3LREDiNQOJKvX" +
+                "QZEej8mQoT9th+NZO0TxyYCL+ukInW4UZFS14AO1SrX3Jnk36ByH4DIyM" +
+                "jMHO/jMzJfqMEsDhNLI0VCJyIAEUiopfEt7xzj2zk2XU9T0d9GQxPrzbd" +
+                "ufT9GgMPWgrwuaWSZ/Y02eJ3+L5nZp8rdQ+VaWkPaJucrfok6uTv42mog" +
+                "1yd+ijEP4kpx58ndG2SR/V0NNkfz976E/WiZ/X99DZ3/uoxF+AtjV1Nx8" +
+                "q8JEqDd7qhkZYwUmB/byYoqG7OuuvwX63cnibJH8XQa0Gt8yoOUlKJ9v0" +
+                "JT/Ho9fZKuWgX7i7/FYPwUQLU2skr9vdTKh0/19q9UBhOgHI0gSjz0QU8" +
+                "+WUGx/jwoFJTAgF5SXemIhmYEhH066cZUEfEE2yc8syEXyM3s9aIU//4y" +
+                "uEtXlZ6815DN87+83Jqfh3OdavsR3yDVyJNdSS8STlByRjPISnlz/szJf" +
+                "gWNp8VoGUoZiqH8/969RViOG35kMcOJsRBqibJwnP0fZCI9+gol2Y79l3" +
+                "IBnya9F8gvza5n8oip+mfxihVqVUD7tt0yJVwRchW+TX0ImZckvekjEGP" +
+                "eLSjJ0nV+iejSdJr9EMkMGEQvfVHGMioqq/cuFhbVI3lPWNnlvynaevPd" +
+                "lOs2T974coS++D+WIye77IGJuibgc0dG8j8uRnqKkTA0tHsrkPSv4rnuk" +
+                "69kyeY+yEBW2Tt6bQmvwGxUa4tGFBv3ofZQBSNjwqnMI8UiOgOmXJJep+" +
+                "5Y5AQCTQ8vkA3NolXzARD8tMvxKqc+TD37AX+buWwIAACXpGM1y0I048N" +
+                "bwi+C8ioAS+eBzH7J9YK7Bw8aPCTPIE8pgaglRG5YR4KsW6t2HmysAy1o" +
+                "z/LxzmWlUD8Vx8JLgCPXzKWgAH3T/jXRhfPKVrJgYUlSXBcigutDvrXxS" +
+                "sEROTCkjCMiMz1JUDQCnajBhkaqxAhD1zwXoPeodVNIPkQ7Skj6yUDBIm" +
+                "U/J3LmllRBtZiHJ0IWlo6x0IfrsahmsVlVtHvWMEcFdKTzwLroNeugP8W" +
+                "ICa2u8mMDA9t3T2iWOn7rbd1w/LmCKbejjcDnoalzNLX7uzzutF1ULh3v" +
+                "1BrV031vx8pkQwqZz3VrhQjV6CCNKFtuGJcJ+CXy7FQn0rh9c3zxhZTbf" +
+                "MqVtHSDFTRe+D0CUduDXzrX6WJH2vUThvn0GM8sNoOYxU+9B4iuSX+EZW" +
+                "f+rFMw0+TU0X/B111iUya+R0rwCHaldcwA3p7hzeLXr2/ywCsMccRkI8f" +
+                "evR13P8+RXnf9Qtn49Gac1P3QmkOOSg+//ZnLS5L9DEsrkv6OQwBT3afK" +
+                "R7rPkY6R7LkD7bmCafPS9XVHjW8Ya5MXHEEsFIhpVyFb9RzoBqXOyNrRv" +
+                "kMU8kKIiFJAj1s4QiJqjgL0dmCdIRtjbKlcLknFrTJFEPRoVbfIxyhXwJ" +
+                "Vf8tw8E/ut0hJ0uLx2tXMBryuQTczFPPq24YzeZYHqP/hJU5qh0Sir31I" +
+                "TU1FM1qcJRufFXOiozVOV5JpTa+zO8mXdJnoncxM4YUpElI+VdlimozLs" +
+                "sycu8SxQaKC81OltQXuqS6cu81IUJxUtdVKS81MWSlJe6oJyZl7poQOXi" +
+                "siUlLlekxOWclJe6YPqmIvWMlJe6pNRTL3XJtE+91IWhvNQlZZl6qUtKP" +
+                "fWylCyHqZelNPF5WUrmxFRkYeyFl6Wgv0JykPlZSA4yzwrJQaa9EFmQPm" +
+                "ll/ls3EYqw3r/0vsvHAPTJN8XSf0ceSgdKS0BBqAaLzH7YvvITvb/51Os" +
+                "BtYVubaNDutDSa0vIXJTlGzX9jDU6kmtiaN/2WOU8GTmDt7gzhfjR+jzS" +
+                "F2+AVgT05AxBbB9iCIUVzdcQ+zZy0SB5236vlk6Rov7JrLTOUYD9nyIAq" +
+                "kHUa4A7PJ7Ha3DwLn0JXJwZlszn5slndhbT5POaSiyGgM92wQ6p+yzFCz" +
+                "QUHDLsc8j/mSVirR49/+e4/6WnKHfnhpZCWCSfow1iOL+5+Tunw1AEiL0" +
+                "7n6KNW8i6dbv3NT7d0LbgJ/WxCRQp8ymDLmlkh4SJqNWgXJIfzwyh4n/W" +
+                "vTemB5+jcoAIesERk97PUEgee6OwNwtDnXrW1npqiPPrQCGr5POxg47h1" +
+                "WhiCDtKH5Sxz6d4Z7EB4gsY4b12O7XkD+brIFSafGFxF8kXmY7M3bfkBw" +
+                "A/uUCxfJHJRY5vKfa5JcJEotGA1INSoxID3aoUIWCl6aPufNEj9RSk0vQ" +
+                "XgfQ+llXAJOYsYJKCmcKU2cAkwC7WlMm5NtUpAihpoTxKk4e0MnuYuW9x" +
+                "C0Cr9JiefPGThJX99Gofpn9fRpMEiqknCVB0v4wnCegqvkSThBZ0PElg9" +
+                "mpIZwTy7EpTgYxab6wgmGQIGvGX6zXS1oNK1a3oUjcRZKWo7Cwr2SacF5" +
+                "5I2T8Jy+QM03p6298PO+nAcnEgi6lN6jG9ntqMwRuBTb2bwIuEkPkI0mh" +
+                "NnVI0/i/jheQJMd8ikR7MG9bcJdb9WBvga+MTlJGfv2MY+hLNJCoPSFWf" +
+                "Jv9goy6Tf4T22ST/UHUHU5N/RBOFDHS02gEHrsdpwIuKCuFG2yd18g9JH" +
+                "Hi+rmFK90+KUSX/9KLWWfLPINLCEjJSQ+5/qipSk1QjBKZq/1RJqOvkn7" +
+                "7q15Pkn5GIiFNEqpL/oRh18j8h6mXyPzqmBUgd0zz5n2ikz+Ges5tZm/x" +
+                "PFA8ClXjq5DfGM0t+k6506b6lwRPQpY6x5bcgVWuJkCFl8luosSljuOpu" +
+                "VsC06K2hpY+YJr9hHqA714bI5Va3h+B9hqLl/+aLP7efvktZQSi9wzEtQ" +
+                "Ou6XoGOhkfonL9FuYYsklzDt68wFOByuu+fdAbNHXbLYGJB3q4/n3e6Lk" +
+                "NREfiWrzr5F8tpnvwrMq8qQfsRZ5aIGVa1dN8y/K8ASJE5whVZ2s4myb/" +
+                "sonPVmC9ReBztS2aWJf+KWmAF+ub2RE3GDa23BW7VGoi+7XRa5gTGO2qL" +
+                "lKiO0vi7Gafl3Ih0kfxLazqzafKvqGgRsxQtv/2uVFMktEmEvrFe33cYb" +
+                "XZoTzM06bVvLC1Zm+4rnM0mxJ8uv6+P6zPczWtLH/eXZ65RzA1/v0Z3qc" +
+                "C8BXi8yML5JAf9dYD2QwU4RNq0Gncx5hGooqbre2Zlb87D7NfHZ121VxF" +
+                "XBYhhVScUyb8fXob98Dj8kNN+ay2G2Ln7FkvnlQN0vqcO03ZLlcPEENs7" +
+                "igySfPBipgJRZAsZiZO6vJxYQlQ4TEXWNwyxC41qq+SlZoghdqXRyBB5p" +
+                "jlict0kvkZAczefJoKH/T2qelpZyFKT1FFDRLoSKJx3LtkMXCRBYzUABm" +
+                "0XwJQ+Qi7nyAG9pgzuZrN+VnWsIuTqKPJB6aFQ9G7OTfMAB70RguiMSw0" +
+                "ZlidBmxaBWh4WF5G73fNw7FDvcq7srrvgAZE89v2EO/g/QOzCkvVsmtL4" +
+                "aGrIdII+yFqqe7K2xs6enFlFwJHZxFrJeDK11p+ezOyevCdzu7ftyantX" +
+                "jxZ2A7Ok6XdhPdkZbfaPVnbzVpPzqwpnCPzibVj82RqzdY8mdmNAk/mdg" +
+                "3Uk1NrU+bJwhqLebK000xPVnYm4snaWgZ6cma3Wh05ndiJmCdTa9Lsycx" +
+                "O/T2Z22m/J6fWLsaThR2kPVnaGbsnK2vw5snaGo94cmZtTBxZTKwxkidT" +
+                "ayDrycxaH3kyt1aWnpxao1VPFtZaxJOlHeg9Wdk9fk/WdlPUkzO73ebIc" +
+                "mKnqJ5M7Ua0JzOrLnsyp8WNSFVOSYpUZeEarSMpVS4FWlKqXNJbUqpc0l" +
+                "tSqlxCrihVLiFXlKqQoCpKlUvyK+ZVLsmvmFe5JL8yUknyKyOVJL8yUkn" +
+                "yKyOVJL8yUkn51kYqyY2aUuVSvjWlmkrya0o1FZlrSjWV5NeUairJrynV" +
+                "VJJfU6qpJL+mVFNJb02pppLeGaWaSnpnlGoq6Z0ZqSS9MyOVpHdmpJL0z" +
+                "oxUkt6ZkUrSOzNSSXpnlGomCZxRqsInEADJXEhTglMhKVVRCEmpilJISl" +
+                "VUQlKqohaSUhUzISlVMReSUhWNkEYqn8A0NVL5FKWmdU9WQpZ2DuDJypp" +
+                "oerK2xjmORMai8ovMJmMLCcpkbCnJNxlbBZIRVT75NbpNBFUJaUL26a2N" +
+                "VEub3gy5nE1cg8y5MDxx4mO4JWHLrqhyVs6ynAsJ4UvXrkGyVpTlRMicZ" +
+                "CrklGQmZEEyF7IkORWyIlkIyYjKUsgZycqRU9aKsqyFNELOhKQYbnAhyZ" +
+                "DdeEGSQWVeyCmLsswyIRlUlgvJBGZTIRlyVgjJBGalkExgJkKmTGAmQnK" +
+                "YLjMRksN0mc2FNFKJzJmRaiGkkWoppJGqFdJIJQnkMF3mEyEpVS7p5TBd" +
+                "5pJeDtNlLunlMF3mkl4O02Uu6eUwXeaSXg7TZS7p5TBd5pJeDtNlLunNj" +
+                "VSSXo6t5VSE5NhaTkVIjq3lVITk2FpORUiOreVUhGTrK6ciJOt5ORUh2d" +
+                "zKqUjFwbScilSFEUOkKowYUgqFEUNKoTBiSCkURgwphcKIIaXAwbQsJIE" +
+                "cTMtCEsjBtCwkgZURw+dkwZ6qnE+FZFBVKySDqkshGdSsFpIJnHsxClOf" +
+                "q5mQTFEtjk19nqVCMkXNXEgGtfRCFqYElz6fUQ+ohXrHJUuhaLyQJRNYL" +
+                "HyRoZ2DXE6EpONlKmRJMhOyIhn8MqjlVMgZSRGDWVcsSyFTkpWQGclayJ" +
+                "zkTEgjlSShMlI1QhqpFkIaqZZCGqkkvZWRymd7ySG+aCW97EWLVtLLIb5" +
+                "oJb0c4otW0sshvmglvRzii1bSyyG+aCW9HOKLVtLL/rloJb0c4otW0jsz" +
+                "Ukl60T+vmiyQBUmf/Ap97KqZBpJc6UUrdm7FaiIkxVilQlKMlU9ghQ5q1" +
+                "Ug3UnGYKJqpkExvE7imIpVCMqJGxOAwUTS1kIyoqYRkehsvVc1homgyIV" +
+                "kKTSokS6HJhaRUi+CYUi2CYyPGTEgjhq8bdW7i9XWjnpqIVkIyooWXasZ" +
+                "ONXN+yzRDB5WlTicHiSLLUjdBK9McXVCWujlXmRY04p9kCyGnJJdCFiRb" +
+                "R7LRYSh3jvO0NCOsczydcSqUUWa/kcHqqldniiRanAG57Y/rp/Vh/UPOk" +
+                "7jraNoPifuwMsL5Sa+XRiBU76bYnKrGR5URdK9iNp5V1MbDeF2IXTpvUl" +
+                "nfMwwz0PSHRyA7h61ogQ4M/517jTZE990mAhcER7ZUTNKNlSaqVP14pWk" +
+                "agSoxdP28PuOvybd5Fsjtevf42m/O2x9WKy5ByDoAR5Fd9+i6THxJMqld" +
+                "gN6sn7rT1iwGvrJpWVdx6uvWgNv1/tvalFIIJB9xRh6ngW0WM4LHYsQZe" +
+                "awt24olwu/WyGyR1aVtzzWYkVjZiDMK3bOfT5fjWnxxLA9w7GU10bxxRV" +
+                "jlmjuqECubCS8oqpDPmc3SP7hIeQqoSdHLFg2Vfdxu1/1xWe9+yDJqDu6" +
+                "4PXsdfdx+DlY4bg+mXm6lHrR/6Y6n9WHzAxdWAqmdTRTuV2eN22BPjyw7" +
+                "qFbIHD48aWBK4Hm7PjxvL+ftGhWWRlHAuHaYcVWFn/fH9cNzdza2uJgt1" +
+                "FeoN5lHxnEiq7jmCiN6ml3DytfUxWSiyPLMuba+QRuZuOxsrDDRgg/DGY" +
+                "575m2NNnG4bNbns1/Eo2J1uJy+sjTDYm0A/VpfQHS/BzRcdoACfVmj2ML" +
+                "684TIsTv8kPFAwPploFgv0Uo9s1Bwu0rJ/v7lBbm6qlcrfh6H9cO2OyGX" +
+                "qSSS/lPqTa2B4Yi+74nFwWQZnJ1ht3sT9xDyuO7UQiLbPpEAoJ8/PiAn" +
+                "uRJocpWdj9nbTNvZnJi50YF6RnSjQ2NpOXmNqnk8Dq/3w5n1fTa15GZ9" +
+                "2m6GV9oeUI/xkC1NXmQhkCtRXm8i2OWFgAt5c79zgS+ngriwl7kgLujlR" +
+                "BAf8jITyAS89AHbMGZ5IF0gs1mAfChUqD32uu2RGRDRuUNZb4i79ecioA" +
+                "zQoVlATZgOzgN8eXGYS+cWJf2t+xM1hPocES/fJJBIlUq2Q9x+TMYrWAR" +
+                "HB3r0qeH6gsclNQ6TFGeKjgJdKQYE//r2Q1bNWgUyKierT4zBJSqXmWfe" +
+                "CmSrxFQQqREuH02hzVJPbEyhFYG8PzHIeS0ISuJ+PQJ9zpUaGB5dHVhIc" +
+                "JL4yiMis0OMTmAKBWGdHvrebm5wr7HVQLRf5jjeTLjStHZogzj2LzRg4+" +
+                "zQEv5Yhmnx9gio0rxSh2mtYoxp1YLLJife8HZ65mgyF2q9456JjKRUDT3" +
+                "nBoY+B60yS0No0WAUgnVjUcuFIAuh0zYKo5ivrkq2pdPb/uU8mCFAdWZo" +
+                "IWcesEAV9/nHPuUcGYaTKfGgjwo5Bs5F6aFTkmrAI9vroeRptdPSQe0kv" +
+                "UNQ5y33B0OgnF5ervRRdPCXW9pihHttMQK1tgjGV2rkWz9Icdk4ugqH2f" +
+                "rWH9wM8o0KD4sxqCMTg4oWBlf33KPFjxoNoYDcYyT2RvKFIqOaTNxJkvF" +
+                "byTq3tOSA4auKWk1In51aAb3gXivCS3KPbBz0doxaBRBVZhiD78N2Zprc" +
+                "Rxeb5IaW8QluO+pyp/7PcwcnWyoKGGXLEoF2D+sLO4ospzO9RYhQaRriN" +
+                "dGaZKxLohMGNtYhZ8ajSvOM9EiXRM9qwG4/8r6YrYRzGnYY1DfCmhgZDs" +
+                "MQT2oWaJH3nc5HxqjtMljQ3dmur9xbU4LGQOuRFRQTdLYzCc4h0kCGiYU" +
+                "Bg0JvSGjZobahJt9vdb1akvY1xhC6yjgg1BkC9nh7gZLsdVaS1gklvUMu" +
+                "rHcPKDVzIh551B82eq4Ine6+V+YCTMEONdtXIJ6SNwBKCHVuQ6R0CAaHl" +
+                "6E/nKHvQEF1SjBn+YbNEcSzzW93pOfpNVd5xqzfscF5uKAYY106/d/4Wq" +
+                "tuvuPO69dp+r850CH55PCWO8aipEU/G3jGo2ZmlnnsHs4em7vAjNvrzGn" +
+                "mN9g6a13Om57cFZm5u8Ch/Q7uH9kpZKXPgeDMZd3pjG4kK9nySZrb98bp" +
+                "mireVbqCRyehEUeLOR270EyTLYdn9E0Zs09fU1SBHlBTswJT4/toigdfw" +
+                "z1XNXrXP6ZI9aCrP7J20NUftMw70Gr+CLM8RIuy7oyWgnmrIey5yUnVBP" +
+                "L+TH4egH2/IZIpRPfCyqsfajV2fqHnNAC6klUWtrUTYiwVbeVoFeIE0Y4" +
+                "iSTRDRFko0MqiES1MnehGh8Gu0YAVZ6Ihq++tNBQNipF/E3fbJlGDRCTL" +
+                "CLGxNBFmC2weYVE8cRA2keju3frUsk7CVRvW8iVrLeQMaUpLycKWcriKW" +
+                "c4OJ43RzXCBwm55JXn95imKbu6wGzHk5GECcbCj/ByyiNlYjdzWuiCchi" +
+                "u5UEEvuh3A40W3A9KY/p251Jm5bxM/R3au9VtoQPCYtx+pss4MdureTJf" +
+                "cJg/Uh/LkQVsKloDVOIY58YPc01fh2yuNxLXSaOmgNJLehWPeNcjDhoP3" +
+                "YaP00jrVuMv9icb8GkXkUC9TkPFysv0Lj0M+IMbh0a4lO0uwbFHZT11mC" +
+                "wu5KmIo9GZP3bGjEg3/DfzrpVskQe6kW+JbriLEFOlhfBXhDJDoapklwr" +
+                "2D5F6OO472iMRdQdiYr3AFIenQucGdRNjUnnBpgQDGE5dV+dU/cXGHeZB" +
+                "b+vDoK9lyZRDdvtqJgYbd5nR+49JM5YLRdRNuotM/0PAetMIza0j72mEI" +
+                "XT0cEOoHAZ27U9C3b1NckvPwzLkHJtxpbsjAn1YE/vfLFVeRE82xnm+YC" +
+                "xdkaCvpykR8+3LFBVnfv1yRWUUDa1bDbd9deEbKVA6/LpVVgWMGN2Gkwh" +
+                "j5KGeeEZbL5x6Kw2B12w4ImlM4M8hO5h7xQG2BPjhxnobOA0yku/EQrhn" +
+                "PVSpKh4/S4OBxClwoQX4HjKR36GUUKMQRXbZx3/vL7ty/7N7Q2c0qh6Fx" +
+                "gZo56mV34VrjrPD0AL1pZ+pWjs7dobxTnWMalw+MysMedaKYsnQo3DTRT" +
+                "TxblMnofJBrqkuFu74HjW3XUXkzDZk6/Xr3tcM8iOPAIrPQhnfW7whMLM" +
+                "Bp0tEiqUXkMBUx1Nbd5Z4TPvt1uvRnJ6yG3DIPbUoe9g/omUOXM0eTjHQ" +
+                "1+HJr6soRpNHHJdgdD+ZoywQjn/nc88TX+vjGbfJUIAk2dc64AqCciH5T" +
+                "WNqqmlTome12xXCZjnkOp1DmsjbuEdqTedxIceNLriBTkA4vEn2Ib1Uuv" +
+                "EM/H574wNQS99JCqodtUwtFy0LOp78NT4szjVlundyFK9ngkqS75MxCds" +
+                "1HhxgxXHgNsRd0XZxDUJrD0/HCdJp1c75NMFyOnLA8Hc36E1Qo82DBAIL" +
+                "G5o6YL3h5ETQqRzct78ChZuBoHsZmk7XkYs5rVNJA88Q7R09LLhcp2Wmg" +
+                "M9JZoHPSeaCnpKdCm9irldA/89JRKhCWbnnhDNQeT77nAf1JIfQHngadS" +
+                "HDtJ15VzKHJ0Z952XJaBZpnbUJmrHidoSlaSzLtqZA/GlLS+pOJS2T52f" +
+                "ide/L9nPmaimgfjWcpg0+8b20i6fzEq1cmgWvTIdn2ycop2frpi0mHRPb" +
+                "pN1MqUohfTGQS+j9MaMwF9/QGFYtZIE/rw4m6voZQKR+pXRBDrRtN700e" +
+                "jeBoaTa75utdsTRmy2ba8gYehZvfcKADNvG+DEd7vsF3aqZCBdWL5Q9Pz" +
+                "08BQtbJJBTFcLx863p7FyZChALQnalWcGkGnqHpvXELM6ONvqGMOk4F/H" +
+                "JEIA9vzGDUwrejuVOb+ZiSWrEvX9H0CMS9ZxmHj45VJNwaLafJJlLiSav" +
+                "FqBLkJtgIGNItTZnveImvaYmNl/igRAEd2wtMErdyZsxAomUzjzxxDWSS" +
+                "Tdy32bmZZClJtSJWGjosiJFW05+S3tX0x0S8CyuVFG5nl/ty+xlW9CIgr" +
+                "Ok5eItA7f628XxnLGVGnLDyd8U/dU88Nek46Zgz8un5AXVAf+z/EFdTBY" +
+                "4C8CxoB3sBZwocuXesOH2VAkfuHctu7Qtaa3Tkw/Mu9xflo9HoyIfjxTl" +
+                "XKnDk3rO2pso6cKLAkXvHYqfUCVgocOTesOImMJ8D00P/dGUBbQbisfP6" +
+                "MNpCmi4CJ8IOvApuZprn8SnIPa8sYPrFCMRM4+XQcZdFjvKYQX5aQ+r7n" +
+                "b8/lfWIy2/XRgrzWwy9KrQcO5DetbnJ0X5b4+LIecP10or1rvZv0XN5RG" +
+                "1Sc1vb54tJ05NPUymUU5RXBLSOsiCAGLnayKNBlaLd8ovJGLMxGzATzsu" +
+                "x33ujBJNJPmFcf8k4OiqMnpWGNWHC1c4MWtl9GBzQImShAFGpy+vR/MOq" +
+                "QG6J0W3kRP3l9XAedeOG9h23IXQP6oDQhRog9JGYtW3GFb2pIfpmIxP3A" +
+                "jm6ifYxskSxM0vpWD0SoiWid6YaQ8tiMOqbfQrm1L2szdJU2GVtrni06z" +
+                "FjmmOqvSrUpo6bOFwQQZPvtn1oOktDh9EDFUPfQoJS0XtHC7LROYjZTeN" +
+                "osbspCdg9pKn9lCsDa8Z1GPbIVsiLn8sJXcHhsrfrbiErV8j/jvdkZxjr" +
+                "40yuEpXHhtBZ7ICQwwTcZhE+MR6/nblD5E/rFyPMnQacJrLXwxMFjogmg" +
+                "Si6cOZvXifx1RNoklUS3TzhWvpUUNc8gk9pzAGK5NSFxNh1qZA+nwc3OY" +
+                "faven5JhtEW1Xum3P5zDL4wpLdxs0y6NGb6D7EAmE9n7ZmUayYwUO0P4H" +
+                "qEJYqobFtwj30aEPRHBhJPchmBgguomzWfokE3cKAmuW3MsjXCURb01sZ" +
+                "C9I7M82fMA/Nt55I5g6LZpLeoVquE89iCuBD1tNFOjo8UUdF9R7U3iBrd" +
+                "1h4zJazQLryrBLfgl2J5wEYFKISt2IkGGxOvDgtzVNP/c4rUluh7GKZq8" +
+                "0mQ8/OwGJRkOCavCzzoHMyK/Fvw8YqNMYSO8ZEvzOc1wMS8qyP2LaCurU" +
+                "CRCOqPLzoHEMSzuveLNMii8LSPOTQS/MctvTSPCU3r2kgT75ZzYCNnpQc" +
+                "TS5J2CXgOZ3ffmcjJUdXYzqNVj+LVcIGARE6OWo+w/eReciTJJ1abIdbv" +
+                "eS6SDq5ox7+7fq6X29fekCvtQt4ZchRXHG0NYfhuhbV4Hv0uAeD1UutTM" +
+                "3D9i2+Z6GuAMrgObVEOM0914C8+LHSqIyxM43q2zErzZAXP1KNRtde5po" +
+                "jb3tQelVCEFUfuwbX5zGk02eskTPuSY8q6aInPSwtR+Mhf6f3+hFOd2WH" +
+                "Az/63Q/0XJ1YuNf4VsUK/1H2w2u0No/y0YZX8B2dwYfckY07gnOrBnltP" +
+                "8MI74BQKdvWIlK0jD0AbkeLSw52jSGrZql14HKxdAF0mEj7MKpUMN+2Md" +
+                "oIxAa+YXufWUzlhRdH5aSPYIs+4yohXFT/th0uyJfMQzS1sdY3HFMbi2K" +
+                "wGpD/L9verRzkWeZSKl1+NqldGNECqcNUh+/z1SeucpFIyuqVAE59Wjkv" +
+                "/m6sykUu/V02qZwTbwBNcnwWgL5u3DqCzNVmeHUgI+N+1MHn4YBc1JcOG" +
+                "NCf/AehX4nJkbBdt7frlFArOvNkTKgrc4dIRrQekDLOHCIJp59d/8JGl9" +
+                "Go3FMyscky1oKgA+SekLdoKo/IWzTIAP0WTY6+db8xygiXK+23njmhgkZ" +
+                "6Bf2/cAA4je/gaMg5v506kwVwF1myQzY9YmA21x18vLn71vFmxG5dNEfH" +
+                "5g2chh86CkY5ehSH0PhOeRTOwSbHPGHZhRdy0MqGUMKIyN5OmzFp/HzYD" +
+                "Se7WDa3QHgzBoN+DInboo0ZXiFGBvjKMJ/g21+0hVl+F99qhUmCNbZEP+" +
+                "U+o2bnMNGpSkerBrMg1H/FvP3AdGclivWo8w5+dC5PIZFOXB1I7Qox671" +
+                "IjuK3n/xBBnLpLatzfjh9oi5JDEffQUIrtfTVoG0cegF2w/DCq9nmBKkb" +
+                "npWk7D2vDHArh+mWP8ai1VgGfTZG+xseX6BcSttCZtoZVsUPNRzVpKXU4" +
+                "Ms8VbRCXsqtL0v3LUM8cuaM2M/rxwH9jEwMOXYoPFpvCbwb0LVLP/9bIu" +
+                "6LVG/WAHkVqbtlB1sp2BeExrTeBPzPB7PSxwVT+637hoXD7JpqLiTNuyf" +
+                "cSgu03KnvwWhS4UE5P0MAUzXaDpgeEbMvO3dlf6reeFoZyla8mXGjH3ya" +
+                "EbAqdNrMk0dqqmXyKKsNLb7VUGBoBHDYdj1XhyYz0OetWoVrLRCtwjksW" +
+                "mtrkke9PlMnj0F1LJLH6MWpVfKobF7R2B4jbQjN6XFsBLvMiI1XyJc50d" +
+                "EKOTTVR730gNgxdlASHvt+fMRMZcLfnh8I4HHHD3gyAITpHyPVBtqIg0S" +
+                "zyQSRQQ8y0xq080MBnex2GMeHP63JoCVpw2jNF036nteP9iCwp8Ia+hgL" +
+                "y+iBE5ZVAxYWkud2sThmKC8xWxZ753ZFN8JHvhx33+3tyWRPBWcOO1wO9" +
+                "nSyp4ILh7109giyI4LxuIP4ikxvzyEHOrgiejydzRVMqB7diToTpvmPPe" +
+                "S2Vlck4kfLGLRRy/PCfAUd09JKV24MEOrCVNE3NOW6NXyvKFvfVkeF7pM" +
+                "WSwNo7bdxSFB+LRLrvoXDguprkVs6rhVRq7jWbTTUWkgruBYRta62pKi3" +
+                "C0977da6Fx3PxqqHauvAq7agTDtDu+DBMvMmEb4jlQxtKBwhxFThcXgUe" +
+                "xl2GsOjX/eBqvAIXXAv7CnZR3alvM474XPYLN+p+Qr5aGlVvnMDhPLNFX" +
+                "2rfJeG78vX+tbF6ZFQnBaJi3PqsFCcFrlVnFYiXZzWbVScFrq1BFoZji5" +
+                "o61YK2joIBd142he0dS8FbeXRBW0dxH3mUjDpNNMASa9ZWMzVERfQdtSa" +
+                "IZEomAjkuH7g3jFP9kxJHR449ucJTxFiKvukTeRI+gOFBb69tRzxcLZ5v" +
+                "iIZL9NjaH3iod5owGlmU6LxgNPMGLI2vasMHSzvSGs1bgFaq3Ck7UuHTW" +
+                "4/dwjJKRCYMDlQ3cHfTgDF7x82iZ5DTJYg/VITkifqA2RRzyEi5DBMl5Y" +
+                "IzyEijNFziHDvnkNMzVfggI72CuBSL2EUGWiV5ob0sOcOV3QIq2A4x45v" +
+                "ZjDkoAAuHC7IKnfI/vLHRu3CzpbEUVl5kpCXpq5II8A33nkeB9oGVggXR" +
+                "Qzt162BY0r3FBld1qT1M49VZhBXsQxb1wUHhMpgAH1/wNwCoxsEWote3S" +
+                "GwsvhY50F9+N5bkwVZ10+KMWE33ppE/m/D5tTcUFphJGInfiXjVE8UIkC" +
+                "9uQAt8UlvLsxJa12a1brfdzt7A4v5DNpPBATVx8FBiwAQbzsg0N1wxvRB" +
+                "Xq6QK0NbzzqdOfHK2JgDoF6/gDKnGO6s7ERjaqLG/L1mOE/pLZ5ux5EIX" +
+                "tRsnl7DKso5Uh3e+ITbaBRFC9d7IOhVn/QeSANautOM38G0EI3syOsl7e" +
+                "JPlfjlSxY1P/WyfpnojWLnwN+c6UhfjXJLhpszWwtEcjs/6jZNIh2NLjm" +
+                "Ut57wXQWUIo0MR25vAF82Ho+GSPE/HGUJgcms8sBwIVSVQF9VfILKAgUk" +
+                "kEO0mIc+hUdSwdEbFgWScuEEYD/4syDzJkDe5qux2Kk/PLlz5pN8FiC3O" +
+                "Uo7zye9/dEw9ON6HzaY2Mu8hf3xWcL5O6b129uPrs7IiA0qUHV1v9fQyU" +
+                "177jwJJ0bpSN91a+lwoy5pddhxSXJkBpIRG/d689ygYf9nRXrUB86nAPu" +
+                "z2mWbJ9vIgmmlaL1MUtPhDrqkXs2ncLymRKRNLRBbqWTpnTFLCSw9K7bc" +
+                "heXGE2vLahXr2mNjudFFKKlgz+vTcRQeqlnEvQ7Spep0eb6MWAVznja9Z" +
+                "qJ65MoKM/Tqyd0pM+v4MgzmEoP79fHenJtvFh62p448vqBIoSbSs7L+aj" +
+                "JFm5udIiTLr5DHMRJs3zR6cJcd3OJRGLTi20zUie6KI3NqU9sFSO+voKy" +
+                "+gvLpFRQiiOCx0BHzSuqIG4vtWN7eq0kVbS7MipBsOkbyyRgJYWt0LLDm" +
+                "XcmrmbG44LhHnKtEb4NN0K7iN53RItSbzuhOgvZaWSK86VwkW/2mM/jRm" +
+                "865oSVkuO7sbW+8UOXMfaTCfkZ2/AoTGw6I3wXNZSpUUFuIbW90sHoVrC" +
+                "Ipeo3xYbtG7W3VzCvNOb8O0v9h7rkdL5tZ7Dv3LTXzIuaOj4I3cyOG741" +
+                "HgtSaJxE2Bg2H6Iwr11OPApgplvhHNwI5OhRc6DUqBqpP4tWKjjryJRmX" +
+                "c3Rve14CPIjWyvw7XtQwwVHJ2rGSpSxFQXpPpf3Ur6Ch+Prucn2uqHH46" +
+                "PCMg8cncpYWDidyWguMTuTQmc5V9EvRCXVNRxnCaK2hK/Q+85lOFZGlmt" +
+                "goIrROB4zbuoOvmrnD4xYOMLrmH/kZ6X4oUH2mpcKgAR32xS0MsNlHJ5R" +
+                "J6+RrOko+ctPZ7VIX4Wc6U0RWKiLPFBFEd8A4+Q6+Sr7D4+QTPAzP24s3" +
+                "VMoomNvQ9zrzzEAPmnjhQgAUsG+xnWdqmHL4SLMysoJd/ZS0fop+ZuhvA" +
+                "482ObPLgpA7lclqOpxPL7x5ydxdwYIxN1fw0NRW5g3oPHVbQHHJPSjsIq" +
+                "NjtKT7Xl1klcN3dLC2UHRUfOgMoseFsuUyQlxmQeivXE9EOG8vW+508mp" +
+                "C+62tuzw/2ojxDkWpzz2gdspKh/EdrYzHXXrq07OkFxOgJb+VlrRK1KWE" +
+                "dZVoe42MpFucgaC9vB+FcMOAVid9bHDTJvpdlKJMem3lAmH86qExRnIB5" +
+                "Vm9CpzH/tgFRpOoBUea3GJW0PmFx3yluWQLZx5xkCsqUIwpmsnNY5oSlh" +
+                "FqjorlPC8zRs2sZ7WC6hlxuO1/vuzMoRERo4rdHLm3EuTINdfkiCypRik" +
+                "zzxmjwp9CypcR/8+Hbse5ogQ9i/iP3GHFbNL7xqxVczHgHh54c4j4Lm/y" +
+                "JfIR+yhiZVFxbddfg8BZxIH+HbIhysieBxj9syMsgKiwduiOjkHO+oon8" +
+                "cUsFFmILyoU9kvCiRLGYf+B9uHCnsXsc8gSdJaaNYQqkEU18bDehyyJ0u" +
+                "0WnHOaSWiYx+9CgqNoMPI+SI2Z5jHrBVolaoRENovZJ24hBFHicJXpFVI" +
+                "d5eSpe+A5JhFoFjN3jyJPlIzT8NB35zeJLxLW9nN8kjNGu6jSRfXgdB4e" +
+                "noWVxqzLJkQUVcjTJbTMOC72o191+1po9itXVKRAY9YwbIQTNbpv3XFgo" +
+                "lRtM1Um9G0q01ljAkNVGVaYkNuqxiAtAVeJMbKGoJSwFDUwjKzWFIQSKo" +
+                "vDVSC9bVOmMG2KyjJRlpLI7KsnmKCiRvfZshw7jo9jpdTjI6XUwWOltLJ" +
+                "wUEodMFJKgYp9I7JC2zeSpcwlQeqVYeR0ZNSJeq4HS7QJPdCxt5Hs5LeO" +
+                "yNIhJtJXhpkowSuzOmRnP35Wj+345r27E417E5II1DYkYPxOC2y0Q73+P" +
+                "U1uqujQ5ftgzAI/5ua5bIkc3V3ewgEL0GIgx6Hg+l3EPDH3dQ7Hm3d1Fo" +
+                "Y9euIKVS/Sw5EBB/RB3vwPXfbB7IHxfH+KJnXQL7WVkEIdDQrU/cBDBDz" +
+                "FkQbsHNP2CppCaC7Jw8EkAIo+ome0e35ZRhHPfbgVlUF89Rez8BYWkGLA" +
+                "vqTrr7zPqQu3OfX6ofgCIonhHJviYE2iZuZLve+4mEeIt45i9wDYbNhR+" +
+                "7X+xHYKAYrSjApw1JWVJX9l4pU7TNecMRaZeCHBp9N2rfd8IalsJRi+0m" +
+                "TRNXklQEU7U7A+UkDYvRPJjI8svtgjRzccwsFFq8CoL7eeS1slV20p15h" +
+                "eQAb+bdufT5H5RuFBOaymmFXyO1XzefJ7dHdKClrt4i1A+i07fusdO0uH" +
+                "DTvQ2tZ6kvzu9fUVv0Vfn1lCFqDQGf+OJno6df5MA3L5d3cMQ8qnWCXxB" +
+                "lYNutuHtdmFoUdXArYGvLoTcGXg8bo4pFQLTTNGsB2dSWuS36NdziVpn0" +
+                "GG0DnkgJBFBOKrWxAgWk3Oo/6/Rz0MCkYaBDJIzyKzhNeEolfByLA+bZ/" +
+                "7yPIyJRwkLEC6ATQnS3fjc9A3nyFsDMOmigE82mcXnpUtABpgZIbVJDcs" +
+                "sAw4MlBjpMogyzi5slcz6HjvdkEwvttwCUjneGHokOGkda/BcMfmwVNgu" +
+                "hdpFB0NQCUYLy+m15vbz/i+RlRzoG/dcDnsoQfsZbSqUmG8cNXqJaxj1d" +
+                "PAIif4qYVxOq2hU8TcGbjH4dirDp55cdr2mzUm/EMop4mGUcF69kz2Cun" +
+                "Yzag3XTHvwjVZlFPvoxST5GrrxBTH9Q76KmGwLAYMtztjjnR8jnKWYX33" +
+                "kiI0o2e92N0mz9EFXjPSzmqD32K1gYnvc+h2UGSxkQbZSnGEGvIcm1dOC" +
+                "ai9SZRiZJqh6Sg5kCK+8BM5cGWQvEJ1Ys057NaHDROaQoF7jnqXkrQeKQ" +
+                "oCvmEarq78Dgi13wBqH7E19Ggj0Tq62kmsDDzuIimhthmlq2AFMTOUtoI" +
+                "ggor7fL38WwtnpGsLY6xtzz0j6NuNh0YaN50Oz1u5uhHTWQMMcqtUYYHL" +
+                "2p8pmeQWeQ2epkT2Fzl1wtjsNVMzpgv647O+uYoZqcw8UDsiZR61OFJzN" +
+                "R3VHuRpfxzGG9WFQfddd9YHJFnEgAMNmXt0Gs/j/C5bzxhllcfH7icOl8" +
+                "zm6GGQUQDe4akfTsExcjMertF565VtDPrP6mQrCn18xxNSFg2IyP3rO55" +
+                "QrpENR05aPa8A4ZBkKdHUkKEF54qOygAVaECXE/IV2TSgw1cpqhkYk3s6" +
+                "85KA48Y9U466vSJnOPhDxxwqZSwv+R0SgIhOehLHruIc5CflF4yhzDzrB" +
+                "eMpmHp5eK7pKDXI3a8SZgPqNVBtwmMm5SLZaSuGDKSzB4SWsBPDBeJa77" +
+                "R0mCeRfjat4m09eJPTIuHhgKvnT1YLj3/vnZNVfe1ivPfWrqrI0Y1XT1b" +
+                "zaxfXwcy8o2tW41nfe/kEffmVi+tgbD7IYDkleb8x+kTjvsUwZmYQljsf" +
+                "uDKfQdeKgKBtOTjoVh7wV7Is7L0rAZQbchzrztyMM+arAG+6GvPJGil9L" +
+                "bHrYWaxMEVzpf6tiN7Q3BcLE/jzrZBMhhlptuOsX65YL8f6fjuxYHdDsG" +
+                "Vde+ZVRAvPuTW1WK7uEPL0zkwnnLtb46tyx5iOT2I7X7RIvd3mnyF3UFu" +
+                "N1RRi1UoQSK/05MhcpfSQI0pPY4n4lHG+BBqrQvBk7VWhCu60vaqjxWsV" +
+                "SLGsy1Eo3aO9clpf9jY38PiYO5JL67EJDwXxS8zGpoEcjt6gLcuWc4NHN" +
+                "mrW59hALXNo8AuV3UDaOs1CsovFWM3xIYyQvDTRXaCAGKK9QzpAtqH3tS" +
+                "877+Ij4CwermWxfsbjHgC+Xo+RaBe60ZyE7kcJ6NER5aacI7rd1wFKb/+" +
+                "gTPLTgHo7ewXdWFFo8xts7xU8axbr1jEyzC+jU4dTJDGMrEukZ3jYcqvJ" +
+                "7dSCPTxRgbcXimWVpw+DMeNbKFpsNDPeqetwc/VYhuox7MJlnxk6zYF7r" +
+                "JMUw6q/QMfsRZmrdVbttE3ie3UyT/OIEeKAE5Tc8A35YM65oD7JaAwh3Q" +
+                "ML6RT+/NXlPFm706tBiOMsl3Qgl/1TTBlq01XJsPLEBTMJyK1yyZLvFgt" +
+                "Yf4ZMzxMeuENF3Os7WtrEL3hSB7Df+p7n1GFuF3jqyGBlunRIdPVuTtAt" +
+                "HDBUfwkMY9N3wFg6XAFDmkq9Ots4nwoW3yNlcLUFTr/cskOn8UrjPNN/M" +
+                "KdXNab2Me8oB8LBnGqm1zsaDYZb550Xpq/vnuNYUHQe1eHXjYV9yLUlx2" +
+                "HWc+LQfrh+oPGpwv1rGyyV/rzuMQnRTmcB9rFVBsJQG4u6CnAka+tw733" +
+                "m6Ctpl4aBrirO6CzAUR6nDvfhzh19lbMTMt7W+0HyqwSiDRlaRUeGDEyT" +
+                "PYFIKQ6nN22jwXz4Q60dNQzmePKu0fO7WU+oYAwvrBSgyPUYivDC3VhLl" +
+                "FEYN1ENRtMRVD9tFjdNDe07bKj4e70aCZ13f7UaiXZ+Q6FoW+t3rJ1MHX" +
+                "qtgSzTwBo/SsKqOZojovfb63WMmt77b7HlGLJSr220qaJ1CbF22NOM9LE" +
+                "POqkig0ZqwKAektSjZsU0cikoFFjhkOfuEWNLwMsIj3sRz4tRhOSs0iok" +
+                "Rs/MkQQz0qlrgaKdgsLwzajVoI5wKe9q+SJz+GjxwsHjyfQ0iRcEWXsIv" +
+                "KCK62lzNfF4NMV23uMlQOgrBo0CwPRxHxnAkdYtT9NRuTLmg7mB2iQCn9" +
+                "pcynF9A6FxhgHcTUWVpdwV1hg8SdLoE17xfezvI0tDdh0AA40uiqP8rnu" +
+                "S2S6zQi0QIL5xi0QskX6Can61QDBDevUCQZ2RVgsEKAi9IsAmenNFgMPF" +
+                "EORZQp5hL7oPQ6FGE4SrIkRJjfYp2of5DiwMMiEEqIR7rYEgIcF0DMSFt" +
+                "RM19ZL6D9XRIRWXh23Qg6HLEXDHNkpk/+UxuEZnd/Fr2I0hAg+Zqtccap" +
+                "SKXnNoNR3lF7LkosqPArob0CcT1peLOsFK6Q7KQp1FSyBu0ARPToE09sR" +
+                "zDZiLBkqTUGCP6BXttd18IM1A3Pt78RgzUOU180utkKBwL2qJBFnydd89" +
+                "hfzFFHevnCM1rzEfwSv/y4SqGdrrQWttNUlM2cwBooNfbZlO8e1VLTrRq" +
+                "palg6pFWp/2mCeH6ByHpqNhtgBDnr9krDMAodDTRN/kMmlA2lYGBXOSHP" +
+                "zEE2PNIUw8MciHc63LpSXiiSc0skM88aSnaFgtDC0ekDPRbYkINroeUdN" +
+                "RCiFa9wr1/w+rTtuH0A+q0kOU6ATsjLRfWjeEXlp3QFhaJ4Aey+toLEK9" +
+                "TZwn5hYae4SJo8VhPJus4ITGIlcLtSuHj8YAB8fvEuSFR+MwUgvHJtN5a" +
+                "dEATC0wHoXK2uORBC7Q2GllwXP/3F3OAWZUutyQ29EFipqOyo0ezXqJ1p" +
+                "+Z/Q71GiUKntO/Cc998SucGbe0ml2tDBCOXNeKvnWJV2b4fgJmfeuj6x4" +
+                "JR9ctEh9dnzksHF23yK2j61YifXTduo3WPCykD6hbRA6oLywpZ8YnnvYH" +
+                "1K17OaBuY9UH1K2D+L6yTDA5oF4GSCKbW8ztlCAgsxoCkeLVEDjTW2B5I" +
+                "KPBA6ULXcDMPqgXcCkMvadeIWGPFY3+4KsRBfFEnW1O2nerhtD9qgNCx0" +
+                "oguEdU0WWZiCq6LFPTUWWmxwOGr/UzzcRVD8prWP0NDTlJ34+wlIdB7ai" +
+                "WydUDg21rwaftBUKK02au0NEZ/ZVh3TqGUt2ZsyRkX/MMfGsZdpkF1tUM" +
+                "pDG88XSmduiNwIrAugqsNbzrRxahmGDU57MA6/5ApWbCRJzVlWwzRfPVJ" +
+                "Y/4dUAWw1mpSCtFHwZZL8TkIcL90VcTWL8xj/nZAJknZ69itZ7QQZkoeX" +
+                "3wbtcZU7DSAEdeO2kujK2Ni9Pl3t6pVk8tidERKiSB1AJs1NYF8+5VT6k" +
+                "QpOiXkFEpOfCrGzvS619vXYF1ofKHTI2uD0WeRteHajqq6RUZZ72DtLCI" +
+                "X8J0pF7zFChsHxHa37PHejKHE3JFR4cRNEMeIlkl9mIPax3lFFrMMRVq3" +
+                "k0UVmFZAxf8kG/mDh5otPiQee1UkcHsxIDhch2QSh1EqEr5Q2t403pGS9" +
+                "rrGYbQeoYDgp7RJgN1x1Uy+BMU6DSHsOucLZPhfn082jlT4Qlt7jjz4C3" +
+                "j2QbMIByC1iZcZLrjF1NIEF3DmqYe0PILeGUFOrviaFNQw3WHOzJ8ix7Z" +
+                "WkIOd6ymGvALlMtUo0qBXM40w9+JuMw1qk1s0RcN1/emYr6iTSFzCMXr4" +
+                "p3KXqSGlAMmKBGfR4hHGTWvykDqMkDo2oAZ/k2w8Kyun5wn3vqSB/ftt5" +
+                "uc18ng7YtXyDxdHggjMmlB8vQOMgKNDIxXpI8shXlqPyWHG0srQdvcQpK" +
+                "rS0tH+elC9DnZMtjoqJLJPl7EjFF4uLI+hne9wz1Pbm/XI1khp5CdegkQ" +
+                "gos9MNTGIb4wk7kcX5hJefbeomWCb8zsaNY6s58pH+Yt7bfet08tZOxb5" +
+                "SrIqrLocUAfoq0vG4ufoebqmlUtHe7MYqFaDHtVnkvK09vEcJbpCHG+AK" +
+                "KVIriwSnKaRO+IG1KpyBXpoCFPAnnrbqc52V4/Nl5RKzpobOgbzIMqU2L" +
+                "2Ni9e5tWQfOx5YzbvW1+Q1Ap1ZYGgTxsgVqdTC+14UR+GqSFWrQ33lmZt" +
+                "UqIVa+My0qsNcutGKJMKrW8bl6JuG3a4Dqp2pFe2jWN36pEym1SL7m3kC" +
+                "jadk2ZGwKvPqSX6Iy+jZA0Vw2v215aQOt0uCakhg+6vTPvpz91tCsFFQ0" +
+                "BRAhWrcGiWNO2iAXmeoVEdN49GXzOViI6Pm/369HDZWaQhct5SIKPgpKh" +
+                "v+n7PNHP01WgAj/5h81XtvuUCKoYyNveeOUz3BmMsWsRFgq0xRRRsWFBb" +
+                "oQj0mQboQ4PoQ4X79r0E+w0DqIPybFyRWTdKzT3mwXXPVqh4t3KexE9+T" +
+                "AoBwn7lLGD3u9f11zeCCwE90hjk9DAcO7v3N9w6lNEo2Oe/xvQ43CQvfL" +
+                "Zskrys1/uXoDzWBuFZrmATlcGxnmPNQfpetcC3nz4Rf+rMzZ9ZigGBlLn" +
+                "yAoP7SzQPMy7VNIy0XsxOQfdva0wH/CZUxuD0+jaduLPAxkh/9DTNlOzh" +
+                "YRvZQS+YuNFCPMNFxOxOWNHLRKvtTN2xO7gLajD+Chkf3V/mbWCZ94XRW" +
+                "AWwbxgvAqD7KeUuUnxVXKL3zhSmFHwVhH0BuQmAvnjZpcbfrZPNFD1Oz0" +
+                "rx7IPJtULsWZVKITpJrcKjNOkIJVFzDapU6VDse8ulQnS6DM6Z5qZ/NPO" +
+                "/DMCpCyf2Tbmfolt1KUpYkCfl7l+p7GeaamKjiGytiLBF6YDxqXgHX52K" +
+                "d3h8Kp7gN+UKutmLXp9FQoPCjBLSC6rQhuzNoaj50Qk4uAuXcUynQoVJD" +
+                "rHuW9ilyVF/rN3b2GUORjAzZhHFhxzmib6wlOGOzlUYKceLE01RGzS0fx" +
+                "PO6FJB1v7ozgs6unnB25yRxMcHKOnRPVDMVm2JoHXMPRTVV3EoRkTGHRU" +
+                "BBNO6b612zxxmhwKqhtxZtFg0aqUO1KfxvcNIBh+LtJfMA2rPqDbYCTUF" +
+                "kphZrzNINY4x8G/6B75NisYxN4milcDJ2O9gYAJw4r3XGe/OflFL50ht9" +
+                "EZQQ9r39obQnboDQq9OwLw5XPLD6NNF4s5FXO2zzoUz2mkVxnjte5GMz1" +
+                "hg9HbQaEXbOPUn0qqa1OEsdhe5iSI+4mEktTbgc/P5El4qxlzdABeZnKe" +
+                "MYDiteX++N8eASvpiUs9fyHSV4tzho/Q6OF7/r0qPxnlQWHhkwV1lSbyF" +
+                "PHXAKFucbzMgjkKYKpaEosDRPkDlgjoz+8+hRDAvsvjIOROpGzxD1m2b9" +
+                "KhAmAOvR93YEAj3odEUG/OljQ9XBgnb2IWh7c73hCc6DGk3tUtHqFZnA5" +
+                "Rmn1lSjU6oMtoD5o8vymYONSy6ngX1cuAhzcNTD83sT6pI/rIkSqp5HLS" +
+                "Ft4h5ZuQTZhszLy/CYXQ6N0m/iAFfisTpJ6ehvAf60R6OZ+WVuQPch5VL" +
+                "phyasbnkz8wfUgqiHrKbWSpY/vFS6ZfjsLk8mOXaFYnfeXz1q7lFxTC5+" +
+                "N9t/G7BgtBLtzOWgjQkNeQxLJdmgoQF0txgmIPYY7F5pWg7aUE2nEyLrP" +
+                "mhpwQpgV3/nWcOUT/U6ipyJrrNBfFEd7eAVmuEqMhqjXCe/EGtO03+kKM" +
+                "0Nb/3ygCGgDp9l5EcGVmXxK4MjSui46N0DM1f1ea/00lErSPqQVNZFVEz" +
+                "TeW5pjidClRQaTwy1os8/gfPlX0H/l/9XGlUETfWq4T1PT/Xzo+Hjtc6K" +
+                "I1xlfyhl0xRhqKLtZPkD2eCNMdn1DHA3cBTlRjd8REUMUUGNcWA0X2AbW" +
+                "Vfe43woGKNuP5+O4unMT7yZbkBM6S7Gsu6mAo08moZ7rCBhWYCjdwaRpy" +
+                "aSqCRW8OQ+mqxOmAj15bj33y1WBOwkWvDifOnFGjk1jLc9f8Wmgg0cmsY" +
+                "/p1XCxUCjdyCIZ3qInG10Ru5IKN8Wiis+U5rTWWFpvJUU6H2emTcejx+1" +
+                "Qg8I24ERHmRj7E2xiTCU9IzpRoL74G0gronQJpVhPjnPRQs2zTBb7RwF1" +
+                "x6z0YeZwuE4T8T6n59Mq+wtoK4W2PThSDRQB+8mlGLw2EbQzKQ5XxJ3bP" +
+                "8zbMe8tHUgVQjYNpY+BbkA5op+mBNdQxgLrr16ZorjEtBWaWBKGVVwvVG" +
+                "qILH6Nz/ArTavZuA9NsbRSKbPjnxjdvwRKyOsCsZxt3IDK4dYcoQbkVWI" +
+                "JcJp2asYqtETdIcrfcNJ0l8NwdpbaI2A61N1DQdWRkgK9ZmQxBjo1nCVI" +
+                "u/KXjOSvSayRj3J7tTQuNOcx8ElYsy0W8spSD9rhamqcdgK4X5bnhLoUV" +
+                "csVUU2WpHCYPKMZrTzwzt92GKJpByJqdAfnaYQ/L5J6PQQd9qCKGwgsJU" +
+                "ChIUJsTdPfGBHTtPZRE6mpsALOg6IGZLYFVi0n1UKwB5asmgk08IjA4eM" +
+                "2BdbgvSb52x49UH5fL0btWucvxTt3fm3NwxMlVeKDoqXwplTrcZiU/b8b" +
+                "Bq0Xhcre3IGTNCfz1my8hR27EzZoz8OXYALe0H19qOoYKNfDuOH15rO4o" +
+                "KNnJtOXGyqoCNXFtOGGJrO5AGcOTesWSQre1QGsCRe8uKM6sM2Mi14/iB" +
+                "trbjqWAj15YjQ21tR1TBRq7JsZ2tXezPeIsdoF6pdJUFaBS7VuVlcXWoy" +
+                "RxeOvIFHW9o3gZSXUNfoQfTCyaYeB3DoXkSA6cfKT9sOEv7GYyhGw3ou0" +
+                "AKMkbXUJiAzv0Dfbi5LATDfHt3tdiQOny02ODg8bJCbuHRTawTi46Pi88" +
+                "1HBsNzhxL3DogNpJnf0X0yjxx4fFo1cIJN178gU5g8WjlI18oNA7dxRof" +
+                "Z19acLyOkbt8HZs/urQj5cd+ZIVZMiiurJuh2uyZ2bXs0THJmYOPvXfJg" +
+                "VCvjtSMRXeEmo46QjTXnlZ0PEvJL23ZXxjE7UVZNv06y1UTZ0C0RjeLOF" +
+                "r0RcQJa57ZMheO223ImjaG9Lm1WczSAWVkxbYCKQM/RydfMMs6aqPBAql" +
+                "x5wzYqBZChYaGHIjmaYgoOj+A0ovOC2g6ynNUI4giJwQgnOj48KOVreWC" +
+                "tNewUhL6Cg1y9bVEqaFH9xIxyOsTopOA+u16BekteAXf2kKc3mD7rcRbP" +
+                "L2lCL7edoX4Z3/KdoZoQ9bPPKH7N/iOzh8gW6PzB5qO8h+hIRij+yjNLb" +
+                "NonLxVTrTnq90l+2Y53InIrw93NskoTycB0TfuBfRWjubJdzP0BkvnZ55" +
+                "wqbLCj1bY6+QkCnvjvrXOWBYAN0GnMqSrcvS7iZWzZk5svJbUMOTNaC2p" +
+                "WQDU+nlt6KCfk9Z3dDBqfQmHpiOrHsYGfRn/b4cLYnzbdq9rA+3DyX4Ku" +
+                "u+ejZaTuu+wnBIjQfXzeNAOiGBK5Btsnlna22RMHb/f8/+dXCmC6h/wS3" +
+                "hmLbfw3gfnaE9ODCmBW7Lv9enM0mHeS2Fp7cRB3oUVRc592hRcuk57qT3" +
+                "oPVUO0I485t1YUWRfxIUh9Cw56VkPSD/rKVP3HVVFBK+mQitQ29c1LVNm" +
+                "9lNf3OmgG2Zzy8ay/PO6qAhhSpVZQu6Yg5Z1iuZYGcWMpEoN7YcK6DpCR" +
+                "s7grUP13u30SIUm0D0Mdt8sd9+jx9nmib+bccL9tFPXqaetckOPmmBmwK" +
+                "s2aN2OGyHK3j9iUdrPNNfEoyKyB0WEebYDxgtEDr5aH3K43j3PkhuPVtB" +
+                "dtBu8JKD6A5RjdK2WpqP+oAVj3z8MO7v41AQyrD4pMFosUrhsmU4N9nXo" +
+                "URs5TjgBZosbeDS2oMp2+m7NLEtGpjEspK/mgnU2MH6GTWUHqHF6aZFgg" +
+                "Fdq4NYZlYl14Ed1F4B6QLO1iB7jlx4KhnYOik3tKg8G+zoH3bKwc6JqQw" +
+                "/nOsp/h2lzOgeJQd3c0WJS1wrgjeqcFzGjc5HrHTjnJD7EMgmgnGKZKky" +
+                "OsdQOdIZ4COzxLHflQ3E7baNVs4qAGoVL0vrCtpoAbwSSa/NSh+jnkVaL" +
+                "MoLDnXqrBUvScPSzSPAw0bC+hK9wTyJZtr60D74yDUfRrBK538I64ikMo" +
+                "6TlltzZFUlef2Fo9kCXvXJvlQmTBVodcEDQBwyww1R+px4RMbHoUQRj2/" +
+                "Yhzkx0vduo25xaYNRvlha96jgri497ThaRvtKOgvDYoD0yaL+dmB4x6xL" +
+                "NxH5CVE1pIss00SkidI8OGPe6Dr7qdR0ed7EEo6xiH7rlzceSKlbd3pxv" +
+                "mJmvoCJpOihIGjVfwxlwtriGxU/MFC/LKzT4cLwh1INFaqCgl1lBlAhzD" +
+                "YSgHCzOGkUHV0StvlCj1vZP5jFRqtT8pCnKwsGmTil6dzmsz91ooYU8PZ" +
+                "KhhukJeaPpaCRDTvW7i3o7ZmmB6MCzAfe9tc+hijHKKcY+nK6WdKYWHq3" +
+                "oWHRkPdI6MF7lKZNblh/zJDb6KAwdHyilxt6zz48WZmx4o/tLl8ktcxEmk" +
+                "qc82Ef0f4YhyZBqwDTuwnBZBPKWvfqKbD9UGq96WHRAGBQNEA+JpYXCgG" +
+                "iAW8OhEUUPhsZlNBQaRA+EBpBhcGYoGQSXjvRDoHEsA6CJTg9/hh0/Mbw" +
+                "S6HLkfsDbBuPwHvU7NnefeWcyQuaCyPhYGciNjojL2XBnK/sZ7TQRs4c3" +
+                "K/epFekZ6oq+bhz1K1p4QeTcDT6pVrIwWDwec0d19O4eyi+6E5KudKvUd" +
+                "NQqIeWw6zcXI6uxtV6/OQW/9ixjzh7zkCdcdBKTZGQk2l+4GIt+T35WNm" +
+                "lIhXUhJNudC80m9lPXPAduzE6w+4yeWVOYPLM2TU6y1IQWbnRSPVlpHPb" +
+                "wwAswpp7a89zs0lF+08vcyw394mHL1w4x2M9nzkV4HslzfEjPTzQSXHnK" +
+                "hNsK9bB+6eGJUXtwd6BxVOqpgf6XmSP3JjTvFDWGzMKTJvCFp5zs3E70o" +
+                "YXzCddJKZ2bcIHRYLYDzWqjd1RpR3ZJ1rqiB++odo68+bHHvZymbF5RQ8" +
+                "zcw5Ueb7Q4HYN1GMolWtKpSHu1yhBarTIAn6TQPTqHbaLxkjPXCYjGj1X" +
+                "UE4uO1+0zC8c9e+mCGNkP5haNR4bSgqO+nU1IrwMiGnsqgs+RMyccFd1B" +
+                "hlI0ZziuG2TpODfaI0RVFmH2Wx38recOCwdz2UmHQ7YcxS4PW6rVNEwjp" +
+                "bsTZHH0pqymo+5kmcSvhxYUhtq9tURLkbgLLyPh0B4ZrHlKC90IqsRGHQ" +
+                "g2ZUsE8zZcXtfRvU6LhLbNUAr04dw5yYdneyQjc5Q1VeB7UHJqNyNH2/J" +
+                "aOpjyklbbvhXJ0fvcGbGr17nz5BytCa5IjzTzBUPvmaYoRcvkHC0frhQd" +
+                "nUmegHF+7bqdvuf8vOZBZxP0V6qXc34Y5ZRab6C2IzJoxgYM+ilIe1kn5" +
+                "s1nbZUPhiyDFfjG6Mu3DdBXnMPqV4mMeNDPW6IqGiBe30eVNOjYQp7F+3" +
+                "D1OGTDPLLw1Wl7eDEXjybnsFiWWyK+q6VKgUZWCZRVnX+CLnCOVsYaQ8s" +
+                "CGmTQBw6mqAjdrccG5nSoLimfkxw941ASu3Hp6zzzjPHFAZMFOVcPP1QG" +
+                "DQfcTcC3bjjAAOI5V0E3ZO35cO9ZvSs8U+hI/KlhxbV7VlvwRtRT4VxF3" +
+                "ZJ1fRtChaKJ7sUpFR01CjrcdS9bngvNeGZNSK9TmDh2PSft3WbQd7BNPO" +
+                "OPjksHgcGkK4XTkLeUY8MQRXdpKFEtKUpY2aFTqpZ8KO1sXx1lhp3DhXO" +
+                "KDBfOGTBcOGfIk66GDZpi97UPM+pZY4Fo6kUwOuJQkPa9oiF0t+iA0C8a" +
+                "IPQ7+cTQI/uXBUEuNT1jpBndwViPeNFFjJVm+tX+KLSrKxlRH3QvkzWGH" +
+                "lXTuQGv2ox1O66+jA99Qfdnfzqb+zdyCzzyMGLGd+VA2ieCavtpTnqk9n" +
+                "tkxE/U7KxfzWZnwhlNaIUxnr42yXiX3uSNgUYzU+P0GM+WFoLJPGgSIKm" +
+                "tTB60SqOvhLs2UybEHQ9Z8vPFnCYRdkaMVmOTVZtYb+r8SOUgASYWGMKB" +
+                "ktoi6ogJS9Ye2tF302eCnsx7cpzrhens4gY3TDENGyXDeXhuP4NXB6i5+" +
+                "MwiIQczDdyaj7vw/YzcBaAWr50DPUufeSjM0x0Uz9RzD4a5uoNudUhOVD" +
+                "1fd66jGbvDbh0SLy1LT+eda+nnnJMwpZ8L4Cf1zotb7TNHUdoY4t2aJ7N" +
+                "B7RjSU7o06MPkLjg/Tyeprr9E1Y3u5kKdje7m0nQ0dhgGmtFVI514xqiN" +
+                "enzcRLNkPDmoHDJqoHQoz7yFR7Wcoj+xkLNdyR01RORmuNzvnJPSeeARE" +
+                "RajXVazUDSDmFrQz+Yciozv9506PEShedIxDBulQ+LBxKAv0YtmlERd/e" +
+                "BOlFDm6FrxCsqtNmApQUerJJBUvwfNNhFdVYX+IrqqStNR2TIgxIPs//N" +
+                "Mc9qnrbUca4uIIXdGs0FaXLktPRac1R7a9xsHVQZ67M29Ms3SUGbZjxNV" +
+                "Enw8GB2o8WrutbDShd01hkAzRn+/8ATZwmlgj45m22GCfUSf0Jkb5GieP" +
+                "f0uV7YCl991ok8Uz266sqZMOR+I/i5bImq/70bHhC4CqrWMGwjZHWv3o0" +
+                "uTnGWRB6mn/ZA1803ZqXnSW+zOFeRNdhGC3Efo18SR5cd+/bRBsHziwRC" +
+                "7R16aPrXEkTtAzdwSPMRPa1jagPLZWr4013NO5D7DRCoCwlTKwWEyRSCa" +
+                "NBjAGHZSceNnmmlCc7J7RYRVdAeMN1gcfLXB4vB4g4XgNrrIDrmnVzPQc" +
+                "vUEe7Yi7W/BMIS+lccB4coOAvoE9czQ8RyQ88vrKU3DJn41u2jYEcQa7M" +
+                "QAXoW1lNZhPRKUWCLeOKtG5NHNYKgP0c1gmo46FlSPy/g2D47Sl/F1Hos" +
+                "rMDoZjSx67XZflZ7ROEQGWu8kaGm5Q2SwNH4O57ewNZw7RDSGIp9OHSYa" +
+                "YOUBCZkB8WauPONH0D8MqbSjmnSQOQ3kLc3IhOr1IuN1dLNO4bDvIboPm" +
+                "ZCjdajaAkGDMkCsP2UWCtqTAW7pTiYpWnMyLiO9ySC3tCYjtNaZjEspSM" +
+                "MO+tLMkV5bMo6lSI0c8m5OY7JQK0PGtVeFHNEfN0bRnCa8RhnxXeR2tXl" +
+                "yMes5GaK9KLM/UuqylxqkuxqtXCYXubwMIYaFFUeEy8saDchKS5VEz4Hm" +
+                "yWWzDt1HkYIOt41VlpSzIZDd2yFCRH3b2CKQ3jMmxIJJ9HnAJBlzhQXRV" +
+                "mmAnQDpUkUjdxItS4DqpjAIKTeUQUptJmnI8C4xSH3tD8LR14lBd7i4C8" +
+                "qaif30V860M0uraCmuvqCsbSwdhbi0mFxQtgIdX1DGHNeQzhDk3ZUdMmT" +
+                "UtxSVye3lYXjVt1Ogz7+EO8yQqZKZ6Ogu148YrzyoluQq43J08xOkj1RG" +
+                "lAVX4PytQcVK0eYS7QlTIJD2m2u3uqvJFe4vJ6Jb9xTxnJ/s7cyy9QQlJ" +
+                "xdaMRt8u2eRvsgLPCTQiqMtbzQonsg2158tCk/ox4ebMeh1SBO44fgLHz" +
+                "APc4jcn4bK8DI2xPeYO0kBEaL8ZQKsdT0v37+Mn8qGwnc1/E2L5Gr0m4+" +
+                "xaPBD3UAPtzZW8GrldBXgq1czG5S7f5KY/qP7rCoPSCeA6HVvh6yRboXf" +
+                "usVaOjRZ0le1LgN4y+45wr3FcwRqW2cwbgWSJtdhaEwHkSZf2cWXyVfZS" +
+                "yvwrbfSLB0MlEjrW4or0NwsWJIRtgdyRZbFCAhLkgYMS5KWNKe4oAE3Qg" +
+                "Wt2GDaz2pC5G0IL7uhZ/sahhkEqXo9qEHRS88YW78q3XI+JTlSLRtiV5r" +
+                "lguhYsVwC1JkzA23ejeDuiu8TzAg6qRYCcBKrngabLCOOPo8yizjhjaI4" +
+                "LAfWAKPbb9vkq5/LIE16WWMFt2iC+uEkNHcL+TrkaV1/iJ3WR31XPObpD" +
+                "vNNRADdTgBGHS+qoJ6rVxDImJjefGe8HTN1UjxTG602yf9isEoPOoB58l" +
+                "U6XVQlP/hVSGxQ+ZHjeiyeoeLogW01TV5ZyFXy6rsVJPl1re4snYHUhzd" +
+                "WoPXhDU1H8i7IkGBqUOM+tG49qAMkeFZ2uAWF+2ou1uMEncF+fbs9hCE1" +
+                "69ewU8g4R89ImtBfw0uUYTV9GjNib3WZvKpnhpbJa2i5pSXETB3d8Ksaz" +
+                "2uSaosN85BX1dKhO73q3axZChq+OSbwFuo0RSqixkoHIV+Rnk7dmwrJvK" +
+                "ZUwyFNFvTFkAaQRwox0CrAzWWAL2cOh07VHeOFmEn7HZ4qB2i/1278Cst" +
+                "k9T2mDmFqHaHb2huT/GJRRYi7NJzn4LjlZSqRclw7x8PrwV+kY5yEk3g8" +
+                "kn7lRrOXls2kfS+IRX7tRrNTz+b94ryja7SmVX6HL4tRLs2G/m46Zjcca" +
+                "b4LxPjzb+PxRl2H9jTYCAZcFhVnLgmnMw0Yy4mTWG0/lr48/7fFu/r7Ti" +
+                "StLhnQF7+X0GLsQjNRFHpBfDYBrVuNoaWZQOaoW0ce6SXXWQZa+9Z0pNQ" +
+                "hQwbzMMmMH5HdC1noSf1GUIY4pL9GeEbfTLmF/KrPysFV6L1RB98OZqK0" +
+                "Sjj3xHDzpxqB82Xypza3zpJgT4lZ1p+6F4LTqBdqkj+jEx3QCf7kBUpNm" +
+                "0SWjui4xawRmfynkrXNEz4EBD30bb3ehA572ib6tnRouG8yM18mcnF6Rl" +
+                "z1ZFkSXaNuvOmlLNJ68JiC1uOGpqOByDAkmhTUfs3h1e+6UtyroSn3oI7" +
+                "iCozqwgJcrdqXcB7Ko7ZEGCaq5E3P9JG8qIAsLdPgInlTCuB0TtLcCB+G" +
+                "sGUWwFg3ZF6Od4pXxvWtkbCMGaORcB5zxzvNqFgRf7TlDIXk7Xp7GlPwt" +
+                "6vdaegmb7eNKzD+vn3HuALV9e2WccXMBGa3LIezXTcJGYc6oSoi029MU5" +
+                "nncZsmokZbQ16dDq8ZwHG9RRN4Q9sMJhbzCI8fxjI8fXHZlBl5vLmCgwY" +
+                "HKDYETAUbH7VnVXasGGcFOPdhijKDDF55YIm4bYpmaj/9agumUm+91oGR" +
+                "C1rwgvxgdIhY+sMb+mmMFWzD8eYYhYi6G6RtMA9mm48wT1NkmJYZMEzLDB" +
+                "lNsTKH6PsyVk0KMaID4ag0QxC5Zji62deKjnqWkgypDSiwqzuvoe29XV16" +
+                "3V6BUT+C/sg8VmLPJ6AgBt1PGmFVh2ZieJNttIxJfgtv72KWJkvgLMmX4a" +
+                "lDIe9ZAryXaR5D+oJRlCtt4uZIpR+skDN6sIIoftrBShkGLiQhOvGNIC4q" +
+                "g9EJRAfAS0VHGVyQIVVpAup03z/pPrZxWD+c+8c+ejQDQxp4u/4MPUTDVY" +
+                "Bv+ZqRPS7GwoNa7CswKkbGrroVdowX3XuwJ9Xj5HJF2i8Yr5JvHFvnyTd9" +
+                "WA36xjdZRCbPO2/wrS8cIK2MOmuSI6NOBnVt1FkZNBh1Gldjo04G16szXJ" +
+                "mhR0e4JgC1jSdD+qN7xIRbHVhFCRs0visQvfW39fEPtSnPGN/M2adlaT9D" +
+                "1xABoXNwcOgeAGhtCSn1S+VVi28ZqWeWcCM1an0KwBp+8tO+sV4tzJcYVj" +
+                "raj9ezPPkWLeAgtpuWk2hS37pbJ6NRAaITtgg/OmFL+mh2rybmK2z/WFrt" +
+                "X5UG8FtSltJ7Sh4Jm0oWiXeVbLB6s8gi0W6RhfSukEXUzo8F9HkXi/jtHU" +
+                "uZZvT7wLfOqAusAngYDg7PJpNFwK0MwFD3ndEakhGdR0ShbDvdnOYEzKK/" +
+                "vko+I6oLj+HcLr3KcG4U3zL5Fh0rQwWOjpWRPgzqPnBUQW0lwoYRDYwQNT" +
+                "oRA/fRiRjQ0s/D79gsABOib2GDDQmK7OEReGQPP0/+7a59v0z+H+SUGTTsMAEA";
+
             byte[] compressedBytes = Convert.FromBase64String(base64String);
             byte[] decompressedBytes = DecompressGzip(compressedBytes);
             string decompressedString = Encoding.UTF8.GetString(decompressedBytes);
@@ -3570,7 +4057,7 @@ namespace MuPDF.NET
             return AdobeGlyphs.GetValueOrDefault(ch, ".notdef");
         }
 
-        public static FzMatrix ShowStringCS(
+        internal static FzMatrix ShowStringCS(
             FzText text,
             Font userFont,
             FzMatrix trm,
@@ -3608,7 +4095,7 @@ namespace MuPDF.NET
                     langauge
                 );
                 float adv = mupdf.mupdf.fz_advance_glyph(font, gid, wmode);
-                
+
                 if (wmode == 0)
                     trm = trm.fz_pre_translate(adv, 0);
                 else
@@ -3618,7 +4105,7 @@ namespace MuPDF.NET
             return trm;
         }
 
-        public static int CheckQuad(LineartDevice dev)
+        internal static int CheckQuad(LineartDevice dev)
         {
             List<Item> items = dev.PathDict.Items;
             int len = items.Count;
@@ -3647,7 +4134,7 @@ namespace MuPDF.NET
             return 1;
         }
 
-        public static int CheckRect(LineartDevice dev)
+        internal static int CheckRect(LineartDevice dev)
         {
             dev.LineCount = 0;
             int orientation = 0;
@@ -3693,7 +4180,7 @@ namespace MuPDF.NET
             return 1;
         }
 
-        public static FzRect ComputerScissor(LineartDevice dev)
+        internal static FzRect ComputerScissor(LineartDevice dev)
         {
             if (dev.Scissors == null)
                 dev.Scissors = new List<FzRect>();
@@ -3714,7 +4201,7 @@ namespace MuPDF.NET
             return scissor;
         }
 
-        public static List<int> GetOutlineXrefs(PdfObj obj, List<int> xrefs)
+        internal static List<int> GetOutlineXrefs(PdfObj obj, List<int> xrefs)
         {
             if (obj.m_internal == null)
                 return xrefs;
@@ -3742,7 +4229,7 @@ namespace MuPDF.NET
             return xrefs;
         }
 
-        public static void GetPageLabels(List<(int, string)> list, PdfObj nums)
+        internal static void GetPageLabels(List<(int, string)> list, PdfObj nums)
         {
             int n = nums.pdf_array_len();
             for (int i = 0; i < n; i += 2)
@@ -3758,7 +4245,7 @@ namespace MuPDF.NET
             }
         }
 
-        public static void RemoveDestRange(PdfDocument pdf, List<int> numbers)
+        internal static void RemoveDestRange(PdfDocument pdf, List<int> numbers)
         {
             int pageCount = pdf.pdf_count_pages();
             for (int i = 0; i < pageCount; i++)
@@ -3831,7 +4318,7 @@ namespace MuPDF.NET
             return null;
         }
 
-        public static PdfObj PdfObjFromStr(PdfDocument doc, string src)
+        internal static PdfObj PdfObjFromStr(PdfDocument doc, string src)
         {
             byte[] bSrc = Encoding.UTF8.GetBytes(src);
 
@@ -3878,7 +4365,7 @@ namespace MuPDF.NET
             return "<" + BitConverter.ToString(resBytes).Replace("-", string.Empty) + ">";
         }
 
-        public static int Find(byte[] haystack, byte[] needle)
+        internal static int Find(byte[] haystack, byte[] needle)
         {
             for (var i = 0; i < haystack.Length - needle.Length + 1; i++)
             {
@@ -3900,7 +4387,7 @@ namespace MuPDF.NET
             return -1; // if not found
         }
 
-        public static void EnsureOperations(PdfDocument pdf)
+        internal static void EnsureOperations(PdfDocument pdf)
         {
             if (!HaveOperations(pdf))
                 throw new Exception("No journalling operation started");
@@ -3911,14 +4398,14 @@ namespace MuPDF.NET
         /// </summary>
         /// <param name="pdf"></param>
         /// <returns></returns>
-        public static bool HaveOperations(PdfDocument pdf)
+        internal static bool HaveOperations(PdfDocument pdf)
         {
             if (pdf.m_internal.journal != null && string.IsNullOrEmpty(pdf.pdf_undoredo_step(0)))
                 return false;
             return true;
         }
 
-        public static PdfObj GetXObjectFromPage(
+        internal static PdfObj GetXObjectFromPage(
             PdfDocument pdfOut,
             PdfPage pdfPage,
             int xref,
@@ -3960,7 +4447,7 @@ namespace MuPDF.NET
         /// </summary>
         /// <param name="pageRef"></param>
         /// <returns></returns>
-        public static FzBuffer ReadContents(PdfObj pageRef)
+        internal static FzBuffer ReadContents(PdfObj pageRef)
         {
             PdfObj contents = pageRef.pdf_dict_get(new PdfObj("Contents"));
             FzBuffer res = null;
@@ -3981,6 +4468,8 @@ namespace MuPDF.NET
             }
             else if (contents.m_internal != null)
                 res = contents.pdf_load_stream();
+            else
+                res = null;
 
             return res;
         }
@@ -3992,7 +4481,7 @@ namespace MuPDF.NET
         /// <param name="_ref"></param>
         /// <param name="xref"></param>
         /// <exception cref="Exception"></exception>
-        public static void AddOcObject(PdfDocument pdf, PdfObj _ref, int xref)
+        internal static void AddOcObject(PdfDocument pdf, PdfObj _ref, int xref)
         {
             PdfObj indObj = pdf.pdf_new_indirect(xref, 0);
             if (indObj.pdf_is_dict() == 0)
@@ -4006,12 +4495,12 @@ namespace MuPDF.NET
                 throw new Exception(ErrorMessages["MSG_BAD_OC_REF"]);
         }
 
-        public static bool IsJbig2Image(PdfObj obj)
+        internal static bool IsJbig2Image(PdfObj obj)
         {
             return false;
         }
 
-        public static List<int> GetOcgArraysImp(PdfObj arr)
+        internal static List<int> GetOcgArraysImp(PdfObj arr)
         {
             List<int> list = new List<int>();
             if (arr.pdf_is_array() != 0)
@@ -4028,7 +4517,7 @@ namespace MuPDF.NET
             return list;
         }
 
-        public static void SetOcgArraysImp(PdfObj arr, List<int> list)
+        internal static void SetOcgArraysImp(PdfObj arr, List<int> list)
         {
             PdfDocument pdf = mupdf.mupdf.pdf_get_bound_document(arr);
             foreach (int xref in list)
@@ -4161,8 +4650,9 @@ namespace MuPDF.NET
                 {
                     int x = Convert.ToInt32(s.Substring(2));
                     ret.FirstPageNum = x;
-                };
+                }
             }
+
             return ret;
         }
 
@@ -4323,7 +4813,7 @@ namespace MuPDF.NET
             tpage = null;
         }
 
-        public static (int, int) MergeResources(PdfPage page, PdfObj res)
+        internal static (int, int) MergeResources(PdfPage page, PdfObj res)
         {
             PdfObj resources = page.obj().pdf_dict_get(new PdfObj("Resources"));
             PdfObj mainExtg = page.obj().pdf_dict_get(new PdfObj("ExtGState"));
@@ -4537,7 +5027,7 @@ namespace MuPDF.NET
             };
         }
 
-        public class VEConverter : JsonConverter
+        internal class VEConverter : JsonConverter
         {
             public override bool CanConvert(Type objectType)
             {
@@ -4591,11 +5081,7 @@ namespace MuPDF.NET
         /// <param name="label">label</param>
         /// <param name="onlyOne">(bool) stop searching after first hit</param>
         /// <returns></returns>
-        public static List<int> GetPageNumbers(
-            Document doc,
-            string label,
-            bool onlyOne = false
-        )
+        public static List<int> GetPageNumbers(Document doc, string label, bool onlyOne = false)
         {
             List<int> numbers = new List<int>();
             if (string.IsNullOrEmpty(label))
@@ -4628,7 +5114,7 @@ namespace MuPDF.NET
         /// <param name="alpha">include alpha channel</param>
         /// <param name="annots">also render annotations</param>
         /// <returns></returns>
-        public static Pixmap GetPagePixmap(
+        internal static Pixmap GetPagePixmap(
             Document doc,
             int pno,
             IdentityMatrix matrix = null,
@@ -4709,7 +5195,7 @@ namespace MuPDF.NET
             return Utils.BinFromBuffer(res);
         }
 
-        public static PdfFilterOptions MakePdfFilterOptions(
+        internal static PdfFilterOptions MakePdfFilterOptions(
             int recurse = 0,
             int instanceForms = 0,
             int ascii = 0,
@@ -4819,7 +5305,7 @@ namespace MuPDF.NET
             return "";
         }
 
-        public static void ResetWidget(PdfAnnot annot)
+        internal static void ResetWidget(PdfAnnot annot)
         {
             PdfAnnot thisAnnot = annot;
             PdfObj thisAnnotObj = mupdf.mupdf.pdf_annot_obj(thisAnnot);
@@ -4831,7 +5317,7 @@ namespace MuPDF.NET
         /// Ensure that widgets with /AA/C JavaScript are in array AcroForm/CO
         /// </summary>
         /// <param name="annot"></param>
-        public static void EnsureWidgetCalc(PdfAnnot annot)
+        internal static void EnsureWidgetCalc(PdfAnnot annot)
         {
             PdfObj annotObj = annot.pdf_annot_obj();
             PdfDocument pdf = annotObj.pdf_get_bound_document();
@@ -4860,7 +5346,7 @@ namespace MuPDF.NET
                 co.pdf_array_push(pdf.pdf_new_indirect(xref, 0));
         }
 
-        public static void SaveWidget(PdfAnnot annot, Widget widget)
+        internal static void SaveWidget(PdfAnnot annot, Widget widget)
         {
             PdfPage page = annot.pdf_annot_page();
             PdfObj annotObj = annot.pdf_annot_obj();
@@ -5054,7 +5540,7 @@ namespace MuPDF.NET
             annot.pdf_update_annot();
         }
 
-        public static void PutScript(PdfObj annotObj, PdfObj key1, PdfObj key2, string value)
+        internal static void PutScript(PdfObj annotObj, PdfObj key1, PdfObj key2, string value)
         {
             PdfObj key1Obj = annotObj.pdf_dict_get(key1);
             PdfDocument pdf = annotObj.pdf_get_bound_document();
@@ -5088,7 +5574,7 @@ namespace MuPDF.NET
             }
         }
 
-        public static PdfObj NewJavaScript(PdfDocument pdf, string value)
+        internal static PdfObj NewJavaScript(PdfDocument pdf, string value)
         {
             if (value == null)
                 return null;
@@ -5101,7 +5587,7 @@ namespace MuPDF.NET
             return newAction;
         }
 
-        public static string GetScript(PdfObj key)
+        internal static string GetScript(PdfObj key)
         {
             if (key.m_internal == null)
                 return null;
@@ -5133,7 +5619,7 @@ namespace MuPDF.NET
             return null;
         }
 
-        public static void SetChoiceOptions(PdfAnnot annot, List<dynamic> list)
+        internal static void SetChoiceOptions(PdfAnnot annot, List<dynamic> list)
         {
             if (list == null)
                 return;
@@ -5163,6 +5649,7 @@ namespace MuPDF.NET
             int val = new PdfObj("S").pdf_to_num();
             if (string.IsNullOrEmpty(style))
                 return val;
+
             string s = style;
             if (s.StartsWith("b") || s.StartsWith("B"))
                 val = new PdfObj("B").pdf_to_num();
@@ -5174,10 +5661,11 @@ namespace MuPDF.NET
                 val = new PdfObj("U").pdf_to_num();
             else if (s.StartsWith("s") || s.StartsWith("S"))
                 val = new PdfObj("S").pdf_to_num();
+
             return val;
         }
 
-        public static FzBuffer fz_new_buffer_from_data(byte[] data)
+        internal static FzBuffer fz_new_buffer_from_data(byte[] data)
         {
             IntPtr pData = Marshal.AllocHGlobal(data.Length);
             Marshal.Copy(data, 0, pData, data.Length);
@@ -5191,7 +5679,7 @@ namespace MuPDF.NET
             return ret;
         }
 
-        public static void FillWidget(Annot annot, Widget widget)
+        internal static void FillWidget(Annot annot, Widget widget)
         {
             Utils.GetWidgetProperties(annot, widget);
 
@@ -5233,7 +5721,7 @@ namespace MuPDF.NET
             return "unknown";
         }
 
-        public static PdfAnnot GetWidgetByXref(PdfPage page, int xref)
+        internal static PdfAnnot GetWidgetByXref(PdfPage page, int xref)
         {
             bool found = false;
             PdfAnnot annot = page.pdf_first_annot();
@@ -5252,7 +5740,7 @@ namespace MuPDF.NET
             return annot;
         }
 
-        public static Matrix GetRotateMatrix(Page page)
+        internal static Matrix GetRotateMatrix(Page page)
         {
             PdfPage pdfpage = page.GetPdfPage();
             if (pdfpage.m_internal == null)
@@ -5260,13 +5748,13 @@ namespace MuPDF.NET
             return Utils.RotatePageMatrix(pdfpage);
         }
 
-        public static Rect PageRect(string size)
+        public static Rect PaperRect(string size)
         {
-            (int width, int height) = Utils.PageSize(size);
+            (int width, int height) = Utils.PaperSize(size);
             return new Rect(0, 0, width, height);
         }
 
-        public static (int, int) PageSize(string size)
+        public static (int, int) PaperSize(string size)
         {
             string s = size.ToLower();
             string f = "p";
@@ -5280,7 +5768,7 @@ namespace MuPDF.NET
                 s = s.Substring(0, s.Length - 2);
             }
 
-            (int, int) ret = Utils.PageSizes.GetValueOrDefault(s, (-1, -1));
+            (int, int) ret = Utils.PaperSizes.GetValueOrDefault(s, (-1, -1));
             if (f == "p")
                 return ret;
             return (ret.Item2, ret.Item1);
@@ -5297,6 +5785,7 @@ namespace MuPDF.NET
         /// <exception cref="Exception"></exception>
         public static float GetTextLength(
             string text,
+            string fontFile,
             string fontName = "helv",
             float fontSize = 11,
             int encoding = 0
@@ -5323,9 +5812,9 @@ namespace MuPDF.NET
                 return w * fontSize;
             }
 
-            //if (Utils.Base14_fontdict.Keys.Contains(fontname))
-            if (true)
-                return Utils.MeasureString(text, fontName, fontSize, encoding);
+            if (Utils.Base14_fontdict.Keys.Contains(fontName))
+            //if (true)
+                return Utils.MeasureString(text, fontFile, fontName, fontSize, encoding);
             if (
                 (
                     new string[]
@@ -5347,13 +5836,19 @@ namespace MuPDF.NET
 
         public static float MeasureString(
             string text,
+            string fontFile,
             string fontName,
-            float fontSize,
-            int encoding
+            float fontSize = 11.0f,
+            int encoding = 0
         )
         {
-            //FzFont fon = mupdf.mupdf.fz_new_base14_font(fontname);
-            FzFont font = new FzFont("Kenpixel", "e://res/kenpixel.ttf", 0, 0);
+            if (string.IsNullOrEmpty(fontFile))
+            {
+                throw new Exception("should specify font file.");
+                return -1f;
+            }
+
+            FzFont font = new FzFont(fontName, fontFile, 0, 0);
             float w = 0;
             int pos = 0;
             while (pos < text.Length)
@@ -5431,6 +5926,61 @@ namespace MuPDF.NET
             }
 
             return new Quad(ul, ur, ll, lr);
+        }
+
+        public static bool SetSmallGlyphHeights(bool on = false)
+        {
+            if (on)
+                SmallGlyphHeights = true;
+            return SmallGlyphHeights;
+        }
+
+        /// <summary>
+        /// Recover the quadrilateral of a text character.
+        /// </summary>
+        /// <param name="lineDir">Line Dir</param>
+        /// <param name="span"></param>
+        /// <param name="ch"></param>
+        /// <returns></returns>
+        public static Quad RecoverCharQuad((float, float) lineDir, Span span, Char ch)
+        {
+            Rect bbox = new Rect(ch.Bbox);
+            return RecoverBboxQuad(lineDir, span, bbox);
+        }
+
+        /// <summary>
+        /// Calculate the span quad for 'dict' / 'rawdict' text extractions.
+        /// </summary>
+        /// <param name="lineDir"></param>
+        /// <param name="span"></param>
+        /// <param name="chars"></param>
+        /// <returns></returns>
+        public static Quad RecoverSpanQuad((float, float) lineDir, Span span, Char[] chars)
+        {
+            if (chars == null)
+                return RecoverQuad(lineDir, span);
+
+            Quad q0 = RecoverCharQuad(lineDir, span, chars[0]);
+            Quad q1;
+            if (chars.Length > 1)
+                q1 = RecoverCharQuad(lineDir, span, chars[chars.Length - 1]);
+            else
+                q1 = q0;
+
+            Point spanll = q0.LowerLeft;
+            Point spanlr = q1.LowerRight;
+            Matrix mat0 = PlanishLine(spanll, spanlr);
+            Point xlr = spanlr * mat0;
+
+            bool small = SetSmallGlyphHeights();
+            float h = 0;
+
+            h = span.Size * (small ? 1 : (span.Asc - span.Desc));
+            Rect spanRect = new Rect(0, -h, xlr.X, 0);
+            Quad spanQuad = spanRect.Quad;
+            spanQuad = spanQuad * ~mat0;
+
+            return spanQuad;
         }
 
         /// <summary>
@@ -6096,7 +6646,7 @@ namespace MuPDF.NET
             return new float[] { H, S, V };
         }
 
-        public static PdfObj EnsureOCProperties(PdfDocument pdf)
+        internal static PdfObj EnsureOCProperties(PdfDocument pdf)
         {
             PdfObj ocp = pdf.pdf_trailer()
                 .pdf_dict_get(new PdfObj("Root"))
@@ -6141,7 +6691,12 @@ namespace MuPDF.NET
             tempFile.Dispose();
         }
 
-        internal static void AddLayerConfig(PdfDocument pdf, string name, string creator, OCLayerConfig on)
+        internal static void AddLayerConfig(
+            PdfDocument pdf,
+            string name,
+            string creator,
+            OCLayerConfig on
+        )
         {
             try
             {
@@ -6155,10 +6710,7 @@ namespace MuPDF.NET
                     d.pdf_dict_put_text_string(new PdfObj("Creator"), creator);
                 d.pdf_dict_put(new PdfObj("BaseState"), new PdfObj("OFF"));
                 PdfObj onarray = d.pdf_dict_put_array(new PdfObj("ON"), 5);
-                if (on == null)
-                {
-
-                }
+                if (on == null) { }
                 else
                 {
                     PdfObj ocgs = ocp.pdf_dict_get(new PdfObj("OCGs"));
@@ -6186,7 +6738,7 @@ namespace MuPDF.NET
             return utf8Ptr;
         }
 
-        public static void SetDotCultureForNumber()
+        internal static void SetDotCultureForNumber()
         {
             CultureInfo culture = new CultureInfo("en-US"); // or any specific culture you want
             culture.NumberFormat.NumberDecimalSeparator = ".";
@@ -6203,7 +6755,7 @@ namespace MuPDF.NET
 
             if (Utils.IsInitialized)
                 return;
-            
+
             Utils.SetDotCultureForNumber();
             if (!File.Exists("mupdfcsharp.dll"))
                 Utils.LoadEmbeddedDll();
@@ -6211,17 +6763,165 @@ namespace MuPDF.NET
             Utils.IsInitialized = true;
         }
 
+        /// <summary>
+        /// Calculate area of rectangle. parameter is one of 'px' (default), 'in', 'cm', or 'mm'.
+        /// </summary>
+        /// <param name="rect"></param>
+        /// <param name="unit"></param>
+        /// <returns></returns>
         public static float GetArea(Rect rect, string unit = "px")
         {
             Dictionary<string, (float, float)> u = new Dictionary<string, (float, float)>()
             {
-                {"px", (1f, 1f) },
-                {"in", (1f, 72.0f) },
-                {"cm", (2.54f, 72.0f) },
-                {"mm", (25.4f, 72f) }
+                { "px", (1f, 1f) },
+                { "in", (1f, 72.0f) },
+                { "cm", (2.54f, 72.0f) },
+                { "mm", (25.4f, 72f) }
             };
             float f = (float)Math.Pow(u[unit].Item1 / u[unit].Item2, 2);
+
             return f * rect.Width * rect.Height;
+        }
+
+        /// <summary>
+        /// Return basic properties of an image.
+        /// </summary>
+        /// <param name="image">bytes array opened</param>
+        /// <param name="keepImage"></param>
+        /// <returns></returns>
+        public static ImageInfo GetImageProfile(byte[] image, int keepImage = 0)
+        {
+            if (image == null)
+                return null;
+
+            int len = image.Length;
+            if (len < 8)
+            {
+                Console.WriteLine("bad image data");
+                return null;
+            }
+
+            nint swigImage = Marshal.AllocHGlobal(len);
+            Marshal.Copy(image, 0, swigImage, len);
+            SWIGTYPE_p_unsigned_char c = new SWIGTYPE_p_unsigned_char(swigImage, true);
+            int type = mupdf.mupdf.fz_recognize_image_format(c);
+            if (type == (int)ImageType.FZ_IMAGE_UNKNOWN)
+                return null;
+
+            // get properties for imageinfo
+            FzBuffer res = null;
+            if (keepImage != 0)
+                res = mupdf.mupdf.fz_new_buffer_from_copied_data(c, (uint)len);
+            else
+                res = mupdf.mupdf.fz_new_buffer_from_shared_data(c, (uint)len);
+            FzImage img = mupdf.mupdf.fz_new_image_from_buffer(res);
+            FzMatrix ctm = mupdf.mupdf.fz_image_orientation_matrix(img);
+            (int xres, int yres) = img.fz_image_resolution();
+            byte orientation = img.fz_image_orientation();
+            string csName = img.colorspace().fz_colorspace_name();
+
+            // create imageinfo to return
+            ImageInfo ret = new ImageInfo()
+            {
+                Width = img.w(),
+                Height = img.h(),
+                Orientation = orientation,
+                Matrix = new Matrix(ctm),
+                Xres = xres,
+                Yres = yres,
+                ColorSpace = img.n(),
+                Bpc = img.bpc(),
+                Ext = GetImageExtension(type),
+                CsName = csName
+            };
+
+            if (keepImage != 0)
+                ret.Image = BinFromBuffer(res);
+            return ret;
+        }
+
+        public static string ConversionHeader(string i, string filename = "unknown")
+        {
+            string t = i.ToLower();
+            string html =
+                @"
+                <!DOCTYPE html>
+                <html>
+                <head>
+                <style>
+                body{background-color:gray}
+                div{position:relative;background-color:white;margin:1em auto}
+                p{position:absolute;margin:0}
+                img{position:absolute}
+                </style>
+                </head>
+                <body>
+                ";
+
+            string xml =
+                $@"
+                <?xml version='1.0'?>
+                <document name='{filename}'>
+                ";
+
+            string xhtml =
+                @"
+                <?xml version='1.0'?>
+                <!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Strict//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd'>
+                <html xmlns='http://www.w3.org/1999/xhtml'>
+                <head>
+                <style>
+                body{background-color:gray}
+                div{background-color:white;margin:1em;padding:1em}
+                p{white-space:pre-wrap}
+                </style>
+                </head>
+                <body>
+                ";
+
+            string r = "";
+            string json = $"{{\"document\": \"{filename}\", \"pages\": [\n";
+            if (t == "html")
+                r = html;
+            else if (t == "json")
+                r = json;
+            else if (t == "xml")
+                r = xml;
+            else if (t == "xhtml")
+                r = xhtml;
+            else
+                r = "";
+
+            return r;
+        }
+
+        /// <summary>
+        ///
+        /// </summary>
+        /// <param name="i"></param>
+        /// <returns></returns>
+        public static string ConversionTrailer(string i)
+        {
+            string t = i.ToLower();
+            string text = "";
+            string json = "]\n}";
+            string html = "</body>\n</html>\n";
+            string xml = "</document>\n";
+            string xhtml = html;
+            string r = "";
+
+            if (t == "html")
+                r = html;
+            else if (t == "json")
+                r = json;
+            else if (t == "xml")
+                r = xml;
+            else if (t == "xhtml")
+                r = xhtml;
+            else
+                r = text;
+
+            return r;
         }
     }
 }

@@ -220,7 +220,7 @@ namespace MuPDF.NET
             
             List<(int, double)> glyphs = new List<(int, double)>();
             if (maxCode > 255)
-                glyphs = Utils.GetCharWidths(Doc, xref: xref, limit: maxCode + 1);
+                glyphs = Doc.GetCharWidths(xref: xref, limit: maxCode + 1);
             else
                 glyphs = fontInfo.Glyphs;
 
@@ -889,8 +889,8 @@ namespace MuPDF.NET
         public float InsertTextbox(
             Rect rect,
             List<string> buffer,
-            string fontName,
             string fontFile,
+            string fontName,
             float fontSize = 11,
             float lineHeight = 0,
             bool setSimple = false,
@@ -938,10 +938,10 @@ namespace MuPDF.NET
         public float InsertTextbox(
             Rect rect,
             string buffer,
+            string fontFile,
+            string fontName,
             float fontSize = 11,
             float lineHeight = 0,
-            string fontName = "helv",
-            string fontFile = null,
             bool setSimple = false,
             int encoding = 0,
             float[] color = null,
@@ -1062,7 +1062,7 @@ namespace MuPDF.NET
                     t1 += Convert.ToInt32(c) < 256 ? c : '?';
 
             string[] t2 = string.IsNullOrEmpty(t1) ? t0.Split("\n") : t1.Split("\n");
-            glyphs = Utils.GetCharWidths(Doc, xref, maxCode + 1);
+            glyphs = Doc.GetCharWidths(xref, maxCode + 1);
 
             List<(int, double)> tj_glyphs;
             if (simple && !(bfName == "Symbol" || bfName == "ZapfDingbats"))

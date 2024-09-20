@@ -14,15 +14,14 @@ This class represents a document. It can be constructed from a file or from memo
 =============================================== ==========================================================
 :meth:`Document.AddLayer`                       PDF only: make new optional content configuration
 :meth:`Document.AddOcg`                         PDF only: add new optional content group
-:meth:`Document.Authenticate`                   gain access to an encrypted document
+:meth:`Document.Authenticate`                   Gain access to an encrypted document
 :meth:`Document.Bake`                           PDF only: make annotations / fields permanent content
-:meth:`Document.CanSaveIncrementally`           check if incremental save is possible
-:meth:`Document.GetChapterPageCount`            number of pages in chapter
-:meth:`Document.Close`                          close the document
-:meth:`Document.Convert2Pdf`                    write a PDF version to memory
+:meth:`Document.CanSaveIncrementally`           Check if incremental save is possible
+:meth:`Document.GetChapterPageCount`            Number of pages in chapter
+:meth:`Document.Close`                          Close the document
+:meth:`Document.Convert2Pdf`                    Write a PDF version to memory
 :meth:`Document.CopyPage`                       PDF only: copy a page reference
 :meth:`Document.DeleteTocItem`                  PDF only: remove a single TOC item
-:meth:`Document.UpdateTocItem`                  update bookmark by letting it point to nowhere
 :meth:`Document.DeletePage`                     PDF only: delete a page
 :meth:`Document.DeletePages`                    PDF only: delete multiple pages
 :meth:`Document.AddEmbfile`                     PDF only: add a new embedded file from buffer
@@ -32,29 +31,30 @@ This class represents a document. It can be constructed from a file or from memo
 :meth:`Document.GetEmbfileInfo`                 PDF only: metadata of an embedded file
 :meth:`Document.GetEmbfileNames`                PDF only: list of embedded files
 :meth:`Document.GetEmbfileUpd`                  PDF only: change an embedded file
-:meth:`Document.GetNewXref`                     make new `xref`
-:meth:`Document.GetXrefLength`                  get length of `xref` table
+:meth:`Document.GetNewXref`                     Make new `xref`
+:meth:`Document.GetXrefLength`                  Get length of `xref` table
+:meth:`Document.GetCharWidths`                  PDF only: return a list of glyph widths of a font
 :meth:`Document.ExtractFont`                    PDF only: extract a font by `xref`
 :meth:`Document.ExtractImage`                   PDF only: extract an embedded image by `xref`       
-:meth:`Document.FindBookmark`                   retrieve page location after laid out document
+:meth:`Document.FindBookmark`                   Retrieve page location after laid out document
 :meth:`Document.CopyFullPage`                   PDF only: duplicate a page
 :meth:`Document.GetLayer`                       PDF only: lists of OCGs in ON, OFF, RBGroups
 :meth:`Document.GetLayers`                      PDF only: list of optional content configurations
 :meth:`Document.GetOC`                          PDF only: get OCG / OCMD `xref` of image / form xobject
 :meth:`Document.GetOcgs`                        PDF only: info on all optional content groups
 :meth:`Document.GetOCMD`                        PDF only: retrieve definition of an `OCMD`
-:meth:`Document.GetOutlineXrefs`                get list of outline xref numbers
+:meth:`Document.GetOutlineXrefs`                Get list of outline xref numbers
 :meth:`Document.GetPageFonts`                   PDF only: list of fonts referenced by a page
 :meth:`Document.GetPageImages`                  PDF only: list of images referenced by a page
 :meth:`Document.GetPageLabels`                  PDF only: list of page label definitions
 :meth:`Document.GetPageNumbers`                 PDF only: get page numbers having a given label
-:meth:`Document.GetPagePixmap`                  create a pixmap of a page by page number
-:meth:`Document.GetPageText`                    extract the text of a page by page number
+:meth:`Document.GetPagePixmap`                  Create a pixmap of a page by page number
+:meth:`Document.GetPageText`                    Extract the text of a page by page number
 :meth:`Document.GetPageXObjects`                PDF only: list of XObjects referenced by a page
 :meth:`Document.GetSigFlags`                    PDF only: determine signature state
-:meth:`Document.GetToc`                         extract the table of contents
+:meth:`Document.GetToc`                         Extract the table of contents
 :meth:`Document.GetXmlMetadata`                 PDF only: read the XML metadata
-:meth:`Document.DeleteXmlMetadata`              delete XML metadata
+:meth:`Document.DeleteXmlMetadata`              PDF only: remove XML metadata
 :meth:`Document.HasAnnots`                      PDF only: check if PDF contains any annots
 :meth:`Document.HasLinks`                       PDF only: check if PDF contains any links
 :meth:`Document.InsertPage`                     PDF only: insert a new page
@@ -62,7 +62,7 @@ This class represents a document. It can be constructed from a file or from memo
 :meth:`Document.InsertFile`                     PDF only: insert pages from arbitrary document
 :meth:`Document.JournalCanDo`                   PDF only: which journal actions are possible
 :meth:`Document.JournalEnable`                  PDF only: enables journalling for the document
-:meth:`Document.IsEnabledJournal`               check if journalling is enabled
+:meth:`Document.IsEnabledJournal`               Check if journalling is enabled
 :meth:`Document.JournalLoad`                    PDF only: enables journalling for the document
 :meth:`Document.JournalOpName`                  PDF only: return name of a journalling step
 :meth:`Document.JournalPosition`                PDF only: return journalling status
@@ -72,33 +72,33 @@ This class represents a document. It can be constructed from a file or from memo
 :meth:`Document.JournalStopOp`                  PDF only: end current operation
 :meth:`Document.JournalUndo`                    PDF only: undo current operation
 :meth:`Document.LayerUIConfigs`                 PDF only: list of optional content intents
-:meth:`Document.SetLayout`                      re-paginate the document (if supported)
-:meth:`Document.SetLanguage`                    set language       
-:meth:`Document.LoadPage`                       load a page
-:meth:`Document.MakeBookmark`                   create a page pointer in reflowable documents
+:meth:`Document.SetLayout`                      Re-paginate the document (if supported)
+:meth:`Document.SetLanguage`                    Set language       
+:meth:`Document.LoadPage`                       Load a page
+:meth:`Document.MakeBookmark`                   Create a page pointer in reflowable documents
 :meth:`Document.MovePage`                       PDF only: move a page to different location in doc
 :meth:`Document.NeedAppearances`                PDF only: get/set /NeedAppearances property
 :meth:`Document.NewPage`                        PDF only: insert a new empty page
-:meth:`Document.NextLocation`                   return (chapter, pno) of following page
+:meth:`Document.NextLocation`                   Return (chapter, pno) of following page
 :meth:`Document.PageCropBox`                    PDF only: the unrotated page rectangle
-:meth:`Document.Pagexref`                       PDF only: `xref` of a page number
-:meth:`Document.GetPages`                       iterator over a page range
+:meth:`Document.PageXref`                       PDF only: `xref` of a page number
+:meth:`Document.GetPages`                       Iterator over a page range
 :meth:`Document.GetPdfCatelog`                  PDF only: `xref` of catalog (root)
 :meth:`Document.GetPdfTrailer`                  PDF only: trailer source
-:meth:`Document.PrevLocation`                   return (chapter, pno) of preceding page
-:meth:`Document.GetLocationFromPageNumber`      convert pno to (chapter, page)
-:meth:`Document.GetPageNumberFromLocation`      convert (chapter, pno) to page number
-:meth:`Document.GetMetadata`                    get metadata
-:meth:`Document.GetPageXref`                    get `xref` of page number
-:meth:`Document.LoadOutline`                    load first outline
+:meth:`Document.PrevLocation`                   Return (chapter, pno) of preceding page
+:meth:`Document.GetLocationFromPageNumber`      Convert pno to (chapter, page)
+:meth:`Document.GetPageNumberFromLocation`      Convert (chapter, pno) to page number
+:meth:`Document.GetMetadata`                    Get metadata
+:meth:`Document.GetPageXref`                    Get `xref` of page number
+:meth:`Document.LoadOutline`                    Load first outline
 :meth:`Document.ReloadPage`                     PDF only: provide a new copy of a page
-:meth:`Document.ForgetPage`                     remove a page from document page dict
+:meth:`Document.ForgetPage`                     Remove a page from document page dict
 :meth:`Document.ResolveNames`                   PDF only: Convert destination names into a Dictionary 
-:meth:`Document.ExtendTocItems`                 add color info to all items of an extended TOC list
+:meth:`Document.ExtendTocItems`                 Add color info to all items of an extended TOC list
 :meth:`Document.Save`                           PDF only: save the document
 :meth:`Document.SaveIncremental`                PDF only: save the document incrementally
 :meth:`Document.Scrub`                          PDF only: remove sensitive data
-:meth:`Document.SearchPageFor`                  search for a string on a page
+:meth:`Document.SearchPageFor`                  Search for a string on a page
 :meth:`Document.Select`                         PDF only: select a subset of pages
 :meth:`Document.SetLayerUIConfig`               PDF only: set OCG visibility temporarily
 :meth:`Document.SetLayer`                       PDF only: mass changing OCG states
@@ -110,42 +110,46 @@ This class represents a document. It can be constructed from a file or from memo
 :meth:`Document.SetPageMode`                    PDF only: set the PageMode
 :meth:`Document.SetPageLayout`                  PDF only: set the PageLayout
 :meth:`Document.SetToc`                         PDF only: set the table of contents (TOC)
-:meth:`Document.SetTocItem`                     update TOC item by index
+:meth:`Document.SetTocItem`                     Update TOC item by index
 :meth:`Document.SetXmlMetaData`                 PDF only: create or update document XML metadata
 :meth:`Document.SubsetFonts`                    PDF only: create font subsets
 :meth:`Document.SwitchLayer`                    PDF only: activate OC configuration
-:meth:`Document.Write`                          write document
+:meth:`Document.Write`                          Write document
 :meth:`Document.CopyXref`                       PDF only: copy a PDF dictionary to another `xref`
 :meth:`Document.GetKeyXref`                     PDF only: get the value of a dictionary key
 :meth:`Document.GetKeysXref`                    PDF only: list the keys of object at `xref`
 :meth:`Document.GetXrefObject`                  PDF only: get the definition source of `xref`
-:meth:`Document.XrefIsFont`                     check if `xref` is a font object
-:meth:`Document.XrefIsImage`                    check if `xref` is a image object
-:meth:`Document.XrefIsStream`                   check if `xref` is a stream object
-:meth:`Document.XrefIsXObject`                  check if `xref` is a form xobject
+:meth:`Document.XrefIsFont`                     Check if `xref` is a font object
+:meth:`Document.XrefIsImage`                    Check if `xref` is a image object
+:meth:`Document.XrefIsStream`                   Check if `xref` is a stream object
+:meth:`Document.XrefIsXObject`                  Check if `xref` is a form xobject
 :meth:`Document.SetKeyXRef`                     PDF only: set the value of a dictionary key
-:meth:`Document.GetXrefStream`                  get decompressed `xref` stream
+:meth:`Document.GetXrefStream`                  Get decompressed `xref` stream
 :meth:`Document.GetXrefStreamRaw`               PDF only: raw stream source at `xref`
-:meth:`Document.XrefXmlMetaData`                PDF only: `xref` of XML metadata
-:attr:`Document.ChapterCount`                   number of chapters
-:attr:`Document.FormFonts`                      number of chapters
-:attr:`Document.IsClosed`                       has document been closed?
+:meth:`Document.XrefXmlMetaData`                PDF only: return XML metadata :data:`xref` number
+:meth:`Document.UpdateTocItem`                  Update bookmark by letting it point to nowhere
+:meth:`Document.UpdateObject`                   PDF only: Replace object definition of :data:`xref` with the provided string
+:meth:`Document.UpdateStream`                   Replace the stream of an object identified by *xref*, which must be a PDF dictionary
+:meth:`Document.IsStream`                       PDF only: check whether an :data:`xref` is a stream object
+:attr:`Document.ChapterCount`                   Number of chapters
+:attr:`Document.FormFonts`                      Number of chapters
+:attr:`Document.IsClosed`                       Has document been closed?
 :attr:`Document.IsDirty`                        PDF only: has document been changed yet?
-:attr:`Document.IsEncrypted`                    document (still) encrypted?
-:attr:`Document.IsFastWebaccess`                is PDF linearized?
-:attr:`Document.IsFormPDF`                      is this a Form PDF?
-:attr:`Document.IsPDF`                          is this a PDF?
-:attr:`Document.IsReflowable`                   is this a reflowable document?
+:attr:`Document.IsEncrypted`                    Document (still) encrypted?
+:attr:`Document.IsFastWebaccess`                Is PDF linearized?
+:attr:`Document.IsFormPDF`                      Is this a Form PDF?
+:attr:`Document.IsPDF`                          Is this a PDF?
+:attr:`Document.IsReflowable`                   Is this a reflowable document?
 :attr:`Document.IsRepaired`                     PDF only: has this PDF been repaired during open?
 :attr:`Document.Language`                       Document language
 :attr:`Document.LastLocation`                   (chapter, pno) of last page
-:attr:`Document.MetaData`                       metadata
+:attr:`Document.MetaData`                       Metadata
 :attr:`Document.MarkInfo`                       PDF MarkInfo value
-:attr:`Document.Name`                           filename of document
-:attr:`Document.NeedsPass`                      require password to access data?
-:attr:`Document.Outline`                        first Outline item
-:attr:`Document.PageCount`                      number of pages
-:attr:`Document.Permissions`                    permissions to access the document
+:attr:`Document.Name`                           Filename of document
+:attr:`Document.NeedsPass`                      Require password to access data?
+:attr:`Document.Outline`                        First Outline item
+:attr:`Document.PageCount`                      Number of pages
+:attr:`Document.Permissions`                    Permissions to access the document
 :attr:`Document.PageMode`                       PDF PageMode value
 :attr:`Document.PageLayout`                     PDF PageMode value
 :attr:`Document.VersionCount`                   PDF count of versions
@@ -360,13 +364,13 @@ This class represents a document. It can be constructed from a file or from memo
 
         * Only reports items contained in the currently selected layer configuration.
 
-        * The meaning of the dictionary keys is as follows:
-           - *depth:* item's nesting level in the `/Order` array
-           - *locked:* true if cannot be changed via user interfaces
-           - *number:* running sequence number
-           - *on:* item state
-           - *text:* text string or name field of the originating OCG
-           - *type:* one of "label" (set by a text string), "checkbox" (set by a single OCG) or "radiobox" (set by a set of connected OCGs)
+        * The meaning of the `LayerConfigUI` keys is as follows:
+           - *Depth:* item's nesting level in the `/Order` array
+           - *IsLocked:* true if cannot be changed via user interfaces
+           - *Number:* running sequence number
+           - *On:* item state
+           - *Text:* text string or name field of the originating OCG
+           - *Type:* one of "label" (set by a text string), "checkbox" (set by a single OCG) or "radiobox" (set by a set of connected OCGs)
 
   .. method:: SetLayerUIConfig(dynamic number, int action: 0)
 
@@ -414,7 +418,7 @@ This class represents a document. It can be constructed from a file or from memo
 
      PDF only: Extract the list of page label definitions. Typically used for modifications before feeding it into :meth:`Document.SetPageLabels`.
 
-     :returns: a list of dictionaries as defined in :meth:`Document.SetPageLabels`.
+     :returns: a list of Label as defined in :meth:`Document.SetPageLabels`.
 
   .. method:: SetPageLabels(string labels)
 
@@ -422,15 +426,15 @@ This class represents a document. It can be constructed from a file or from memo
 
      :arg List<Label> labels: a list of `Label`. Each dictionary defines a label building rule and a 0-based "start" page number. That start page is the first for which the label definition is valid. Each dictionary has up to 4 items and looks like `{'startpage': int, 'prefix': str, 'style': str, 'firstpagenum': int}` and has the following items.
 
-        - `startpage`: (int) the first page number (0-based) to apply the label rule. This key **must be present**. The rule is applied to all subsequent pages until either end of document or superseded by the rule with the next larger page number.
-        - `prefix`: (string) an arbitrary string to start the label with, e.g. "A-". Default is "".
-        - `style`: (string) the numbering style. Available are "D" (decimal), "r"/"R" (Roman numbers, lower / upper case), and "a"/"A" (lower / upper case alphabetical numbering: "a" through "z", then "aa" through "zz", etc.). Default is "". If "", no numbering will take place and the pages in that range will receive the same label consisting of the `prefix` value. If prefix is also omitted, then the label will be "".
-        - `firstpagenum`: (int) start numbering with this value. Default is 1, smaller values are ignored.
+        - `StartPage`: (int) the first page number (0-based) to apply the label rule. This key **must be present**. The rule is applied to all subsequent pages until either end of document or superseded by the rule with the next larger page number.
+        - `Prefix`: (string) an arbitrary string to start the label with, e.g. "A-". Default is "".
+        - `Style`: (string) the numbering style. Available are "D" (decimal), "r"/"R" (Roman numbers, lower / upper case), and "a"/"A" (lower / upper case alphabetical numbering: "a" through "z", then "aa" through "zz", etc.). Default is "". If "", no numbering will take place and the pages in that range will receive the same label consisting of the `prefix` value. If prefix is also omitted, then the label will be "".
+        - `FirstPageNum`: (int) start numbering with this value. Default is 1, smaller values are ignored.
 
      For example::
 
-      [{'startpage': 6, 'prefix': 'A-', 'style': 'D', 'firstpagenum': 10},
-       {'startpage': 10, 'prefix': '', 'style': 'D', 'firstpagenum': 1}]
+      [{'StartPage': 6, 'Prefix': 'A-', 'Style': 'D', 'FirstPageNum': 10},
+       {'StartPage': 10, 'Prefix': '', 'Style': 'D', 'FirstPageNum': 1}]
 
      will generate the labels "A-10", "A-11", "A-12", "A-13", "1", "2", "3", ... for pages 6, 7 and so on until end of document. Pages 0 through 5 will have the label "".
 
@@ -583,8 +587,8 @@ This class represents a document. It can be constructed from a file or from memo
 
     :arg int rotate: rotation angle. Default is 0 (no rotation). Should be *n * 90* with an integer n (not checked).
 
-    :rtype: bytes
-    :returns: a Python *bytes* object containing a PDF file image. It is created by internally using `ToBytes(garbage: 4, deflate: true)`. See :meth:`ToBytes`. You can output it directly to disk or open it as a PDF.
+    :rtype: byte[]
+    :returns: a *byte[]* object containing a PDF file image. It is created by internally using `ToBytes(garbage: 4, deflate: true)`. See :meth:`ToBytes`. You can output it directly to disk or open it as a PDF.
 
     .. note:: The method uses the same logic as the *mutool convert* CLI. This works very well in most cases -- however, beware of the following limitations.
 
@@ -648,6 +652,13 @@ This class represents a document. It can be constructed from a file or from memo
     * A "bool", resp. "null" always equal either "true", "false", resp. "null".
     * "float" and "int" are represented by their string format -- and are thus not always distinguishable.
     * A "string" is converted to UTF-8 and may therefore deviate from what is stored in the PDF. For example, the PDF key "Author" may have a value of "<FEFF004A006F0072006A00200058002E0020004D0063004B00690065>" in the file, but the method will return `('string', 'Jorj X. McKie')`.
+  
+  .. method:: XrefIsXObject(int xref)
+
+    Check if xref is a form xobject.
+    :arg int xref: the :data:`xref`.
+
+    :rtype: `bool`
 
   .. method:: SetKeyXRef(int xref, string key, string value)
 
@@ -690,7 +701,7 @@ This class represents a document. It can be constructed from a file or from memo
 
     :arg int pno: page number, 0-based, `-∞ < pno < PageCount`.
 
-    :rtype: List<Entry>
+    :rtype: List
     :returns: a list of Entry. These objects typically represent pages *embedded* (not copied) from other PDFs. For example, :meth:`Page.ShowPdfPage` will create this type of object. An item of this list has the following layout: `(xref, name, invoker, bbox)`, where
 
       * **xref** (*int*) is the XObject's :data:`xref`.
@@ -701,12 +712,12 @@ This class represents a document. It can be constructed from a file or from memo
 
   .. method:: GetPageImages(int pno, bool full: false)
 
-    PDF only: Return a list of all images (directly or indirectly) referenced by the page object definition. *Please note that this does not mean, that the page actually displays any of these images.*
+    PDF only: Return a list of Entry containing images (directly or indirectly) referenced by the page object definition. *Please note that this does not mean, that the page actually displays any of these images.*
 
     :arg int pno: page number, 0-based, `-∞ < pno < PageCount`.
     :arg bool full: whether to also include the referencer's :data:`xref` (which is zero if this is the page).
 
-    :rtype: List<Entry>
+    :rtype: List
 
     :returns: a list of images **referenced** by this page object definition. Each item looks like
 
@@ -733,7 +744,7 @@ This class represents a document. It can be constructed from a file or from memo
     :arg int pno: page number, 0-based, `-∞ < pno < PageCount`.
     :arg bool full: whether to also include the referencer's :data:`xref`. If *true*, the returned items are one entry longer. Use this option if you need to know, whether the page directly references the font. In this case the last entry is 0. If the font is referenced by an `/XObject` of the page, you will find its :data:`xref` here.
 
-    :rtype: List<Entry>
+    :rtype: List
 
     :returns: a list of fonts referenced by this page. Each entry looks like
 
@@ -760,7 +771,7 @@ This class represents a document. It can be constructed from a file or from memo
 
     For other parameter refer to the page method.
 
-    :rtype: string
+    :rtype: `string`
 
   .. index::
      pair: fontSize; Document.SetLayout
@@ -847,7 +858,7 @@ This class represents a document. It can be constructed from a file or from memo
 
         A list / tuple with **all bookmark entries** that should form the new table of contents. Output variants of :meth:`GetToc` are acceptable. To completely remove the table of contents specify an empty sequence or None. Each item must be a list with the following format.
 
-        * [Level, title, page [, dest]] where
+        * [Level, Title, Page [, Dest]] where
 
           - **Level** is the hierarchy level (int > 0) of the item, which **must be 1** for the first item and at most 1 larger than the previous one.
 
@@ -953,7 +964,7 @@ This class represents a document. It can be constructed from a file or from memo
     :arg int deflateImages: Deflate (compress) uncompressed image streams [#f4]_.
     :arg int deflateFonts: Deflate (compress) uncompressed fontFile streams [#f4]_.
 
-    :arg int incremental: Only save changes to the PDF. Excludes "garbage" and "linear". Can only be used if *outfile* is a string or a `pathlib.Path` and equal to :attr:`Document.name`. Cannot be used for files that are decrypted or repaired and also in some other cases. To be sure, check :meth:`Document.can_save_incrementally`. If this is false, saving to a new file is required.
+    :arg int incremental: Only save changes to the PDF. Excludes "garbage" and "linear". Can only be used if *outfile* is a string or a `pathlib.Path` and equal to :attr:`Document.name`. Cannot be used for files that are decrypted or repaired and also in some other cases. To be sure, check :meth:`Document.CanSaveIncrementally`. If this is false, saving to a new file is required.
 
     :arg int ascii: convert binary data to ASCII.
 
@@ -1228,7 +1239,7 @@ This class represents a document. It can be constructed from a file or from memo
 
     :arg int item: index or name of entry. An integer must be in `range(GetEmbfileCount())`.
 
-    :rtype: bytes
+    :rtype: byte[]
 
   .. method:: DeleteEmbfile(string item)
 
@@ -1244,19 +1255,19 @@ This class represents a document. It can be constructed from a file or from memo
 
     :arg int/string item: index or name of entry. An integer must be in `Enumerable.Range(GetEmbfileCount())`.
 
-    :rtype: dict
-    :returns: a dictionary with the following keys:
+    :rtype: EmbfileInfo
+    :returns: `EmbfileInfo` with the following keys:
 
-        * *name* -- (*string*) name under which this entry is stored
-        * *filename* -- (*string*) filename
-        * *ufilename* -- (*unicode*) filename
-        * *desc* -- (*string*) description
-        * *size* -- (*int*) original file size
-        * *length* -- (*int*) compressed file length
-        * *creationDate* -- (*string*) date-time of item creation in PDF format
-        * *modDate* -- (*string*) date-time of last change in PDF format
-        * *collection* -- (*int*) :data:`xref` of the associated PDF portfolio item if any, else zero.
-        * *checksum* -- (*string*) a hashcode of the stored file content as a hexadecimal string. Should be MD5 according to PDF specifications, but be prepared to see other hashing algorithms.
+        * *Name* -- (*string*) name under which this entry is stored
+        * *FileName* -- (*string*) filename
+        * *UFileName* -- (*unicode*) filename
+        * *Desc* -- (*string*) description
+        * *Size* -- (*int*) original file size
+        * *Length* -- (*int*) compressed file length
+        * *CreationDate* -- (*string*) date-time of item creation in PDF format
+        * *ModDate* -- (*string*) date-time of last change in PDF format
+        * *Collection* -- (*int*) :data:`xref` of the associated PDF portfolio item if any, else zero.
+        * *Checksum* -- (*string*) a hashcode of the stored file content as a hexadecimal string. Should be MD5 according to PDF specifications, but be prepared to see other hashing algorithms.
 
   .. method:: GetEmbfileNames()
 
@@ -1283,6 +1294,24 @@ This class represents a document. It can be constructed from a file or from memo
     :rtype: int
     :returns: `xref` of the file object. Automatically, its `/ModDate` PDF key will be updated with the current date-time.
 
+  .. method:: GetXrefLength()
+
+    Get length of xref table.
+
+  .. method:: GetNewXref()
+
+    :returns: new `xref`
+
+  .. method:: GetCharWidths(int xref, int limit: 256, int idx: 0, FontInfo fontDict: null)
+
+    Return a list of character glyphs and their widths for a font that is present in the document. A font must be specified by its PDF cross reference number :data:`xref`. This function is called automatically from :meth:`Page.InsertText` and :meth:`Page.InsertTextbox`. So you should rarely need to do this yourself.
+
+    :arg int xref: cross reference number of a font embedded in the PDF. To find a font :data:`xref`, use e.g. *doc.GetPageFonts(pno)* of page number *pno* and take the first entry of one of the returned list entries.
+
+    :arg int limit: limits the number of returned entries. The default of 256 is enforced for all fonts that only support 1-byte characters, so-called "simple fonts" (checked by this method).
+
+    :rtype: List
+    :returns: a list of (int, double). Each character *c* has an entry  *(g, w)* in this list with an index of *Convert.Int32(c)*. Entry *g* (integer) of the tuple is the glyph id of the character, and float *w* is its normalized width. The actual width for some :data:`fontsize` can be calculated as *w * fontsize*. For simple fonts, the *g* entry can always be safely ignored. In all other cases *g* is the basis for graphically representing *c*.
 
   .. method:: Close()
 
@@ -1339,9 +1368,13 @@ This class represents a document. It can be constructed from a file or from memo
     :rtype: int
     :returns: zero if successful, otherwise an exception will be raised.
 
+  .. method:: UpdateTocItem(int xref, string action: null, string title: null, int flags: 0, bool collapse: false, float[] color: null)
+
+    Update bookmark by letting it point to nowhere
+
+    :arg int xref: :data:`xref` number
 
   .. method:: UpdateStream(int xref, byte[] stream: null, int _new: 1, int compress: 1)
-
 
     Replace the stream of an object identified by *xref*, which must be a PDF dictionary. If the object is no :data:`stream`, it will be turned into one. The function automatically performs a compress operation ("deflate") where beneficial.
 
@@ -1529,6 +1562,13 @@ This class represents a document. It can be constructed from a file or from memo
 
     This is a normal PDF document with no usage restrictions whatsoever. If it is not being changed in any way, it can be used together with its journal to undo / redo operations or continue updating.
 
+  .. method:: IsStream
+
+    PDF only: Check whether the object represented by :data:`xref` is a :data:`stream` type. Return is *False* if not a PDF or if the number is outside the valid xref range.
+
+    :arg int xref: :data:`xref` number.
+
+    :returns: *true* if the object definition is followed by data wrapped in keyword pair *stream*, *endstream*.
 
   .. attribute:: Outline
 
@@ -1674,6 +1714,80 @@ This class represents a document. It can be constructed from a file or from memo
 
 .. NOTE:: For methods that change the structure of a PDF (:meth:`InsertPdf`, :meth:`Select`, :meth:`CopyPage`, :meth:`DeletePage` and others), be aware that objects or properties in your program may have been invalidated or orphaned. Examples are :ref:`Page` objects and their children (links, annotations, widgets), variables holding old page counts, tables of content and the like. Remember to keep such variables up to date or delete orphaned objects. Also refer to :ref:`ReferenialIntegrity`.
 
+
+Output structures
+------------------
+
+Entry structure
+~~~~~~~~~~~~~~~
+Entry structure includes Image info, font info and form info.
+
+========== ===================================================================================================
+**Key**    **Value**
+========== ===================================================================================================
+Xref       *int* is the image, font and form object number
+Name       *string* name under which this entry is stored or basefont name of font entry
+Ext        *string* font file extension. (e.g. "ttf")
+Smask      *int* is the object number of its soft-mask image
+Width      *int* the image dimension
+Height     *int* the image dimension
+Bpc        *int* denotes the number of bits per componenet, normally 8
+CsName     *string* a string naming the colorspace like `DeviceRGB`
+AltCsName  *string* is any alternate colorspace depending on the value of colorspace
+Filter     *string* is the decode filter of the image.
+Type       *string* is the font type like "Type1" or "TrueType" etc.
+RefName    *string* string referencer
+Encoding   *string* the font's character encoding if different from its built-in encoding (:ref:`AdobeManual`)
+StreamXref *int* stream number, normally 0
+Bbox       the area of images or forms. :ref:`Rect`
+========== ===================================================================================================
+
+Location structure
+~~~~~~~~~~~~~~~~~~
+
+========== ==========================
+**Key**    **Value**
+========== ==========================
+Chapter    number of pages in chapter
+Page       number of page
+========== ==========================
+
+OCGroup structure
+~~~~~~~~~~~~~~~~~
+
+========== =============================================================
+**Key**    **Value**
+========== =============================================================
+Name       text string or name field of the originating OCG
+Intents    a string or list of strings declaring the visibility intents.
+On         item state
+Usage      another influencer for OCG visibility.
+========== =============================================================
+
+OCLayer structure
+~~~~~~~~~~~~~~~~~
+
+========== =============================================================
+**Key**    **Value**
+========== =============================================================
+On         list of :data:`xref` of OCGs to set ON.
+Off        list of :data:`xref` of OCGs to set OFF.
+Locked     a list of OCG xref number that cannot be changed by the user interface.
+RBGroups   a list of lists. Replaces previous values.
+BaseState  state of OCGs that are not mentioned in *on* or *off*.
+========== =============================================================
+
+Toc structure
+~~~~~~~~~~~~~
+
+======== =============================================================
+**Key**    **Value**
+======== =============================================================
+Level    
+Title
+Page
+Link
+======== =============================================================
 
 Other Examples
 ----------------

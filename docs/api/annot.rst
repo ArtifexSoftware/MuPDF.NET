@@ -16,58 +16,63 @@ There is a parent-child relationship between an annotation and its page. If the 
 ================================== ==============================================================
 **Attribute**                      **Short Description**
 ================================== ==============================================================
-:meth:`Annot.DeleteResponses`      delete all responding annotions
-:meth:`Annot.GetFile`              get attached file content
-:meth:`Annot.GetOC`                get :data:`xref` of an :data:`OCG` / :data:`OCMD`
-:meth:`Annot.GetPixmap`            image of the annotation as a pixmap
-:meth:`Annot.GetSound`             get the sound of an audio annotation
-:meth:`Annot.GetText`              extract annotation text
-:meth:`Annot.GetTextbox`           extract annotation text
-:meth:`Annot.GetTextPage`          extract text page 
-:meth:`Annot.SetApnBbox`           set annotation appearance bbox.
-:meth:`Annot.SetApnMatrix`         set annotation appearance matrix.
-:meth:`Annot.SetBorder`            set annotation's border properties
-:meth:`Annot.SetBlendMode`         set annotation's blend mode
-:meth:`Annot.SetColors`            set annotation's colors
-:meth:`Annot.SetFlags`             set annotation's flags field
-:meth:`Annot.SetIrtXRef`           define the annotation to being "In Response To"
-:meth:`Annot.SetName`              set annotation's name field
-:meth:`Annot.SetOC`                set :data:`xref` to an :data:`OCG` / :data:`OCMD`
-:meth:`Annot.SetOpacity`           change transparency
-:meth:`Annot.SetOpen`              open / close annotation or its Popup
-:meth:`Annot.SetPopup`             create a Popup for the annotation
-:meth:`Annot.SetRect`              change annotation rectangle
-:meth:`Annot.SetRotation`          change rotation
-:meth:`Annot.UpdateFile`           update attached file content
-:meth:`Annot.Update`               apply accumulated annot changes
-:attr:`Annot.ApnBbox`              annotation appearance bbox
-:attr:`Annot.ApnMatrix`            annotation appearance matrix
-:attr:`Annot.BlendMode`            annotation BlendMode
-:attr:`Annot.Border`               border details
-:attr:`Annot.Colors`               border / background and fill colors
-:attr:`Annot.FileInfo`             get attached file information
-:attr:`Annot.Flags`                annotation flags
-:attr:`Annot.HasPopup`             whether annotation has a Popup
-:attr:`Annot.IrtXref`              annotation to which this one responds
-:attr:`Annot.Info`                 various information
-:attr:`Annot.IsOpen`               whether annotation or its Popup is open
-:attr:`Annot.LineEnds`             start / end appearance of line-type annotations
-:attr:`Annot.Next`                 link to the next annotation
-:attr:`Annot.Opacity`              the annot's transparency
-:attr:`Annot.Parent`               page object of the annotation
-:attr:`Annot.PopupRect`            rectangle of the annotation's Popup
-:attr:`Annot.PopupXref`            the PDF :data:`xref` number of the annotation's Popup
-:attr:`Annot.Rect`                 rectangle containing the annotation
-:attr:`Annot.RectDelta`            annotation delta values to rectangle
-:attr:`Annot.Rotation`             annotation rotation
-:attr:`Annot.Type`                 type of the annotation
-:attr:`Annot.Vertices`             point coordinates of Polygons, PolyLines, etc.
-:attr:`Annot.Xref`                 the PDF :data:`xref` number
+:meth:`Annot.CleanContents`        PDF only: clean the annot's :data:`contents` object
+:meth:`Annot.DeleteResponses`      Delete all responding annotions
+:meth:`Annot.GetFile`              Get attached file content
+:meth:`Annot.GetOC`                Get :data:`xref` of an :data:`OCG` / :data:`OCMD`
+:meth:`Annot.GetPixmap`            Image of the annotation as a pixmap
+:meth:`Annot.GetSound`             Get the sound of an audio annotation
+:meth:`Annot.GetText`              Extract annotation text
+:meth:`Annot.GetTextbox`           Extract annotation text
+:meth:`Annot.GetTextPage`          Extract text page 
+:meth:`Annot.SetApnBbox`           Set annotation appearance bbox
+:meth:`Annot.SetApnMatrix`         Set annotation appearance matrix
+:meth:`Annot.SetBorder`            Set annotation's border properties
+:meth:`Annot.SetBlendMode`         Set annotation's blend mode
+:meth:`Annot.SetColors`            Set annotation's colors
+:meth:`Annot.SetFlags`             Set annotation's flags field
+:meth:`Annot.SetIrtXRef`           Define the annotation to being "In Response To"
+:meth:`Annot.SetName`              Set annotation's name field
+:meth:`Annot.SetOC`                Set :data:`xref` to an :data:`OCG` / :data:`OCMD`
+:meth:`Annot.SetOpacity`           Change transparency
+:meth:`Annot.SetOpen`              Open / close annotation or its Popup
+:meth:`Annot.SetPopup`             Create a Popup for the annotation
+:meth:`Annot.SetRect`              Change annotation rectangle
+:meth:`Annot.SetRotation`          Change rotation
+:meth:`Annot.UpdateFile`           Update attached file content
+:meth:`Annot.Update`               Apply accumulated annot changes
+:attr:`Annot.ApnBbox`              Annotation appearance bbox
+:attr:`Annot.ApnMatrix`            Annotation appearance matrix
+:attr:`Annot.BlendMode`            Annotation BlendMode
+:attr:`Annot.Border`               Border details
+:attr:`Annot.Colors`               Border / background and fill colors
+:attr:`Annot.FileInfo`             Get attached file information
+:attr:`Annot.Flags`                Annotation flags
+:attr:`Annot.HasPopup`             Whether annotation has a Popup
+:attr:`Annot.IrtXref`              Annotation to which this one responds
+:attr:`Annot.Info`                 Various information
+:attr:`Annot.IsOpen`               Whether annotation or its Popup is open
+:attr:`Annot.LineEnds`             Start / end appearance of line-type annotations
+:attr:`Annot.Next`                 Link to the next annotation
+:attr:`Annot.Opacity`              The annot's transparency
+:attr:`Annot.Parent`               Page object of the annotation
+:attr:`Annot.PopupRect`            Rectangle of the annotation's Popup
+:attr:`Annot.PopupXref`            The PDF :data:`xref` number of the annotation's Popup
+:attr:`Annot.Rect`                 Rectangle containing the annotation
+:attr:`Annot.RectDelta`            Annotation delta values to rectangle
+:attr:`Annot.Rotation`             Annotation rotation
+:attr:`Annot.Type`                 Type of the annotation
+:attr:`Annot.Vertices`             Point coordinates of Polygons, PolyLines, etc
+:attr:`Annot.Xref`                 The PDF :data:`xref` number
 ================================== ==============================================================
 
 **Class API**
 
 .. class:: Annot
+
+   .. method:: CleanContents(int sanitize: 1)
+
+      Clean the :data:`contents` streams associated with the annotation. This is the same type of action which :meth:`Page.CleanContents` performs -- just restricted to this annotation.
 
    .. index::
       pair: matrix; Annot.GetPixmap
@@ -487,6 +492,67 @@ This is a list of icons referenceable by name for annotation types 'Text' and 'F
 
 .. image:: ../images/mupdf-icons.*
 
+Output Structures
+--------------------------------
+
+AnnotInfo Structure
+~~~~~~~~~~~~~~~~~~~
+
+=============== ====================================================================
+**Key**         **Value**
+=============== ====================================================================
+Content         a string containing the text for type Text and FreeText annotations
+Name            name of annot's icon *string*
+Title           a string containing the title of the annotation pop-up window.
+CreationDate    creation timestamp
+ModDate         last modified timestamp
+Subject         subject *string*
+Id              a unique identification of the annotation *string*
+=============== =====================================================================
+
+AnnotXref Structure
+~~~~~~~~~~~~~~~~~
+=============== ===================================================
+**Key**         **Value**
+=============== ===================================================
+Id              a unique identification of the annotation *string*
+Xref            annot's xref *int*
+AnnotType       annotation type. see :ref:`AnnotationTypes`
+=============== ====================================================
+
+Border Structure
+~~~~~~~~~~~~~~~~~
+
+========= ===============================================================
+**Key**         **Value**
+========= ===============================================================
+Width     a *float* indicating the border thickness in points
+Style     1-byte border style: `S`, others include `B`, `U`, `I` and `D`.
+Dashes    a sequence of *int* specifying a line dashing pattern
+Clouds    an integer indicating a "cloudy" border
+========= ===============================================================
+
+Color Structure
+~~~~~~~~~~~~~~~~~
+
+======== ======================================================================
+**Key**  **Value**
+======== ======================================================================
+Fill     a *list* of float storing the fill color, each item is between 0 and 1
+Stroke   a *list* of float storing the stroke color
+======== ======================================================================
+
+FileInfo Structure
+~~~~~~~~~~~~~~~
+
+========= =================================
+**Key**  **Value**
+========= =================================
+FileName  *string* file name
+Desc      *string* description of the file
+Length    *int* compressed length
+Size      *int* uncompressed file size
+========= =================================
 
 .. rubric:: Footnotes
 

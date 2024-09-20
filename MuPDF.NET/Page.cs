@@ -2,6 +2,7 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
+using Microsoft.Maui;
 using mupdf;
 using static System.Net.Mime.MediaTypeNames;
 
@@ -1629,16 +1630,17 @@ namespace MuPDF.NET
         /// </param>
         /// <returns></returns>
         /// <exception cref="Exception"></exception>
-        public bool ApplyRedactions(int images = 2, int graphics = 1, int text = 0)
+        public bool ApplyRedactions(int images = 2, int graphics = 1, int text = 0, string fontFile = null)
         {
-            Rect CenterRect(Rect annotRect, string newText, string fname, float fsize)
+            Rect CenterRect(Rect annotRect, string newText, string fontfile, string fname, float fsize)
             {
                 if (string.IsNullOrEmpty(newText) || annotRect.Width <= Utils.FLT_EPSILON)
                     return annotRect;
+
                 float textWidth = 0f;
                 try
                 {
-                    textWidth = Utils.GetTextLength(newText, fname, fsize);
+                    textWidth = Utils.GetTextLength(newText, fontfile, fname, fsize);
                 }
                 catch (Exception)
                 {
@@ -1654,12 +1656,14 @@ namespace MuPDF.NET
                 Rect r = annotRect;
                 float y = (annotRect.TopLeft.Y + annotRect.BottomLeft.Y) * 0.5f;
                 r.Y0 = y;
+
                 return r;
             }
 
             Document doc = Parent;
             if (doc.IsEncrypted || doc.IsClosed)
                 throw new Exception("document is closed or encrypted");
+
             if (!doc.IsPDF)
                 throw new Exception("is no PDF");
 
@@ -1672,6 +1676,7 @@ namespace MuPDF.NET
                 redactAnnots.Add(annot.GetRedactValues());
             if (redactAnnots.Count == 0)
                 return false;
+
             int res = _ApplyRedactions(text, images, graphics);
             if (res == 0)
                 throw new Exception("Error applying redactions");
@@ -1694,7 +1699,7 @@ namespace MuPDF.NET
                     string fname = redact.FontName;
                     float fsize = redact.FontSize;
                     float[] color = redact.TextColor;
-                    Rect trect = CenterRect(annotRect, newText, fname, fsize);
+                    Rect trect = CenterRect(annotRect, newText, fontFile, fname, fsize);
 
                     float ret = -1f;
                     while (ret < 0 && fsize >= 4)
@@ -1702,6 +1707,7 @@ namespace MuPDF.NET
                         ret = shape.InsertTextbox(
                             trect,
                             newText,
+                            fontFile: fontFile,
                             fontName: fname,
                             fontSize: fsize,
                             color: color,
@@ -2528,7 +2534,7 @@ namespace MuPDF.NET
                 if (Utils.CheckFontInfo(doc, xref) != null)
                     return xref;
 
-                Utils.GetCharWidths(doc, xref);
+                doc.GetCharWidths(xref);
                 return xref;
             }
 
@@ -2586,7 +2592,7 @@ namespace MuPDF.NET
                 return -1;
 
             FontInfo fontDict = val;
-            var _ = Utils.GetCharWidths(doc, xref: fontDict.Xref, fontDict: fontDict);
+            var _ = doc.GetCharWidths(xref: fontDict.Xref, fontDict: fontDict);
             return fontDict.Xref;
         }
 
@@ -3091,7 +3097,7 @@ namespace MuPDF.NET
         /// <returns>Pixmap of the page.</returns>
         /// <exception cref="Exception"></exception>
         public Pixmap GetPixmap(
-            IdentityMatrix matrix = null,
+            Matrix matrix = null,
             int dpi = 0,
             string colorSpace = null,
             Rect clip = null,
@@ -3100,13 +3106,13 @@ namespace MuPDF.NET
         )
         {
             if (matrix == null)
-                matrix = new IdentityMatrix();
+                matrix = new Matrix();
 
             float zoom;
             if (dpi != 0)
             {
                 zoom = dpi / 72f;
-                matrix = new IdentityMatrix(zoom, zoom);
+                matrix = new Matrix(zoom, zoom);
             }
 
             ColorSpace _colorSpace;
@@ -3984,6 +3990,16 @@ namespace MuPDF.NET
         }
 
         /// <summary>
+        /// Run page through a device.
+        /// </summary>
+        /// <param name="dw"></param>
+        /// <param name="m">Transformation to apply to the page.</param>
+        public void Run(DeviceWrapper dw, Matrix m)
+        {
+            _nativePage.fz_run_page(dw._nativeDevice, m.ToFzMatrix(), new FzCookie());
+        }
+
+        /// <summary>
         /// Return text selected between p1 and p2
         /// </summary>
         /// <param name="p1"></param>
@@ -4163,10 +4179,10 @@ namespace MuPDF.NET
             float ret = img.InsertTextbox(
                 rect,
                 text,
+                fontFile,
+                fontName,
                 fontSize,
                 lineHeight,
-                fontName,
-                fontFile,
                 setSimple != 0,
                 encoding,
                 color,
@@ -4225,7 +4241,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// New in version 1.17.0. Return the concatenation of all contents objects associated with the page – without cleaning or otherwise modifying them.
+        /// Return the concatenation of all contents objects associated with the page – without cleaning or otherwise modifying them.
         /// </summary>
         /// <returns></returns>
         public byte[] ReadContents()

@@ -19,10 +19,10 @@ A display list is populated with objects from a page, usually by executing :meth
 ==================================== ============================================
 **Method**                           **Short Description**
 ==================================== ============================================
-:meth:`DisplayList.Run`              run a display list through a device
-:meth:`DisplayList.GetPixmap`        generate a pixmap
-:meth:`DisplayList.GetTextPage`      generate a text page
-:attr:`DisplayList.Rect`             mediabox of the display list
+:meth:`DisplayList.Run`              Run a display list through a device
+:meth:`DisplayList.GetPixmap`        Generate a pixmap
+:meth:`DisplayList.GetTextPage`      Generate a text page
+:attr:`DisplayList.Rect`             Mediabox of the display list
 ==================================== ============================================
 
 

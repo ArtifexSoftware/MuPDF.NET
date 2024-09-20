@@ -1086,7 +1086,7 @@ namespace MuPDF.NET
                         buf = new FzBuffer(
                             mupdf.mupdf.ll_fz_keep_buffer(compressedBuffer.m_internal.buffer)
                         );
-                        ext = Utils.GetImageExtention(type);
+                        ext = Utils.GetImageExtension(type);
                     }
                     else
                     {
