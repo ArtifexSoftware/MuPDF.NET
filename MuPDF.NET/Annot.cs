@@ -583,7 +583,7 @@ namespace MuPDF.NET
             IsOwner = false;
         }
 
-        public AnnotValues GetRedactValues()
+        internal AnnotValues GetRedactValues()
         {
             PdfAnnot annot = _nativeAnnotion;
 

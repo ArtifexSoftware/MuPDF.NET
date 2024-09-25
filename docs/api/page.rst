@@ -1235,22 +1235,22 @@ In a nutshell, this is what you can do with MuPDF.NET:
       ============== ============================================================================
       Key            Value
       ============== ============================================================================
-      closePath      Same as the parameter in :ref:`Shape`.
-      color          Stroke color (see :ref:`Shape`).
-      dashes         Dashed line specification (see :ref:`Shape`).
-      even_odd       Fill colors of area overlaps -- same as the parameter in :ref:`Shape`.
-      fill           Fill color  (see :ref:`Shape`).
-      items          List of draw commands: lines, rectangles, quads or curves.
-      lineCap        Number 3-tuple, use its max value on output with :ref:`Shape`.
-      lineJoin       Same as the parameter in :ref:`Shape`.
-      fillOpacity    fill color transparency (see :ref:`Shape`).
-      strokeOpacity  stroke color transparency  (see :ref:`Shape`).
-      rect           Page area covered by this path. Information only.
-      layer          name of applicable Optional Content Group.
-      level          the hierarchy level if `extended=true`.
-      seqno          command number when building page appearance.
-      type           type of this path.
-      width          Stroke line width. (see :ref:`Shape`).
+      ClosePath      Same as the parameter in :ref:`Shape`.
+      Color          Stroke color (see :ref:`Shape`).
+      Dashes         Dashed line specification (see :ref:`Shape`).
+      EvenOdd        Fill colors of area overlaps -- same as the parameter in :ref:`Shape`.
+      Fill           Fill color  (see :ref:`Shape`).
+      Items          List of draw commands: lines, rectangles, quads or curves.
+      LineCap        Number 3-tuple, use its max value on output with :ref:`Shape`.
+      LineJoin       Same as the parameter in :ref:`Shape`.
+      FillOpacity    fill color transparency (see :ref:`Shape`).
+      StrokeOpacity  stroke color transparency  (see :ref:`Shape`).
+      Rect           Page area covered by this path. Information only.
+      Layer          name of applicable Optional Content Group.
+      Level          the hierarchy level if `extended=true`.
+      SeqNo          command number when building page appearance.
+      Type           type of this path.
+      Width          Stroke line width. (see :ref:`Shape`).
       ============== ============================================================================
 
       Key `"opacity"` has been replaced by the new keys `"fillOpacity"` and `"strokeOpacity"`. This is now compatible with the corresponding parameters of :meth:`Shape.finish`.
@@ -1880,7 +1880,7 @@ From      (*required*) a :ref:`Rect` describing the "hot spot" location on the p
 To        either a point, specifiying the destination location on the provided page, default is (0, 0). 
 Page      *int* indicate page number
 Name      
-Uri       a string specifying the destination internet resource. 
+Uri       a string specifying the destination internet resource.
 Zoom      if flag is `LINK_FLAG_R_IS_ZOOM`, indicate *float* zoom value.
 File      a string specifying the destination file.
 Id

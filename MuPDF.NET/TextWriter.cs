@@ -13,22 +13,37 @@ namespace MuPDF.NET
 
         private FzText _nativeText;
 
+        /// <summary>
+        /// Text opacity
+        /// </summary>
         public float Opacity { get; set; }
 
+        /// <summary>
+        /// Page rectangle used by this TextWriter
+        /// </summary>
         public Rect Rect { get; set; }
 
         public Matrix Ctm { get; set; }
 
         public Matrix ICtm { get; set; }
 
+        /// <summary>
+        /// Last written to a PDF page
+        /// </summary>
         public Point LastPoint { get; set; }
 
+        /// <summary>
+        /// Area occupied so far
+        /// </summary>
         public Rect TextRect { get; set; }
 
         public List<Font> UsedFonts { get; set; }
 
         public bool ThisOwn { get; set; }
 
+        /// <summary>
+        /// text color
+        /// </summary>
         public float[] Color { get; set; } = { 0, 0, 0 };
 
         public TextWriter(Rect pageRect, float opacity = 1, float[] color = null)
@@ -107,6 +122,11 @@ namespace MuPDF.NET
             return ret;
         }
 
+        /// <summary>
+        /// Revert the sequence of Latin text parts
+        /// </summary>
+        /// <param name="text">target string to be reverted</param>
+        /// <returns>reverted string</returns>
         public string CleanRtl(string text)
         {
             List<int> idx = new List<int>();

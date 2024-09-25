@@ -11,11 +11,17 @@ namespace MuPDF.NET
 
         private FzFont _nativeFont = null;
 
+        /// <summary>
+        /// The ascender value of the font
+        /// </summary>
         public float Ascender
         {
             get { return _nativeFont.fz_font_ascender(); }
         }
 
+        /// <summary>
+        /// Copy of the binary font file content
+        /// </summary>
         public byte[] Buffer
         {
             get
@@ -27,31 +33,47 @@ namespace MuPDF.NET
             }
         }
 
+        
         public bool IsNull
         {
             get { return _nativeFont == null || _nativeFont.m_internal == null; }
         }
 
+        /// <summary>
+        /// The descender value of the font
+        /// </summary>
         public float Descender
         {
             get { return _nativeFont.fz_font_descender(); }
         }
 
+        /// <summary>
+        /// Name of the font
+        /// </summary>
         public string Name
         {
             get { return _nativeFont.fz_font_name(); }
         }
 
+        /// <summary>
+        /// The font bbox
+        /// </summary>
         public Rect Bbox
         {
             get { return new Rect(_nativeFont.fz_font_bbox()); }
         }
 
+        /// <summary>
+        /// True if font is bold
+        /// </summary>
         public int IsBold
         {
             get { return _nativeFont.fz_font_is_bold(); }
         }
 
+        /// <summary>
+        /// True if font is italic
+        /// </summary>
         public int IsItalic
         {
             get { return _nativeFont.fz_font_is_italic(); }
@@ -67,6 +89,9 @@ namespace MuPDF.NET
             get { return _nativeFont.fz_font_is_serif(); }
         }
 
+        /// <summary>
+        /// Indicates whether this font can be used with TextWriter
+        /// </summary>
         public bool IsWriteable
         {
             get { return true; }
@@ -104,6 +129,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// Return an array of unicodes supported by this font
+        /// </summary>
         public int GlyphCount
         {
             get { return _nativeFont.m_internal.glyph_count; }

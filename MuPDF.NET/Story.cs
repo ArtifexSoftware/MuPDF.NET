@@ -98,6 +98,15 @@ namespace MuPDF.NET
             return new Rect(rect.X0, rect.Y0, rect.X0 + scale * rect.Width, scale * rect.Height);
         }
 
+        /// <summary>
+        /// Finds smallest value scale from scale_min to scale_max where scale * rect is large enough to contain the story
+        /// </summary>
+        /// <param name="rect"></param>
+        /// <param name="scaleMin">Minimum scale to consider; must be >= 0</param>
+        /// <param name="scaleMax">Maximum scale to consider, must be >= scale_min or None for infinite</param>
+        /// <param name="delta">Maximum error in returned scale</param>
+        /// <param name="verbose">If true we output diagnostics</param>
+        /// <returns></returns>
         public FitResult FitScale(Rect rect, float scaleMin = 0, float scaleMax = 0, float delta = 0.001f, bool verbose = false)
         {
             return Fit(ScaleFn, rect, scaleMin, scaleMax, delta, verbose);
@@ -260,6 +269,13 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// Adds links to PDF document
+        /// </summary>
+        /// <param name="stream">A PDF Document or raw PDF content, for example an io.BytesIO instance</param>
+        /// <param name="positions">List of Position's for stream</param>
+        /// <returns>Document if a `Document` instance, otherwise a new `Document` instance</returns>
+        /// <exception cref="Exception"></exception>
         public static Document AddPdfLinks(MemoryStream stream, List<Position> positions)
         {
             Document document = new Document("pdf", stream.ToArray());
@@ -366,6 +382,13 @@ namespace MuPDF.NET
             return Fit(WidthFn, rect, widthMin, widthMax, delta, verbose);
         }
 
+        /// <summary>
+        /// Similar to Write() except that we don’t have a writer arg and we return a PDF Document in which links have been created for each internal html link
+        /// </summary>
+        /// <param name="rectFn"></param>
+        /// <param name="positionFn"></param>
+        /// <param name="pageFn"></param>
+        /// <returns>a Document</returns>
         public Document WriteWithLinks(RectFunction rectFn = null, Action<Position> positionFn = null, Action<int, Rect, DeviceWrapper, bool> pageFn = null)
         {
             MemoryStream stream = new MemoryStream(100);
@@ -451,6 +474,18 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// Similar to WriteStabilized() except that we don’t have a writer arg and instead return a PDF Document in which links have been created for each internal html link
+        /// </summary>
+        /// <param name="contentfn"></param>
+        /// <param name="rectfn"></param>
+        /// <param name="userCss"></param>
+        /// <param name="em"></param>
+        /// <param name="positionFn"></param>
+        /// <param name="pagefn"></param>
+        /// <param name="archive"></param>
+        /// <param name="addHeaderIds"></param>
+        /// <returns></returns>
         public static Document WriteStabilizedWithLinks(
             ContentFunction contentfn,
             RectFunction rectfn,
@@ -507,6 +542,18 @@ namespace MuPDF.NET
 
         }
 
+        /// <summary>
+        /// Static method that does iterative layout of html content to a DocumentWriter
+        /// </summary>
+        /// <param name="writer">A DocumentWriter</param>
+        /// <param name="contentfn">A function taking a list of ElementPositions and returning a string containing html</param>
+        /// <param name="rectfn">A callable taking (RectNum: int, Filled: Rect) and returning (Mediabox, Rect, Ctm)</param>
+        /// <param name="userCss"></param>
+        /// <param name="em"></param>
+        /// <param name="positionFn"></param>
+        /// <param name="pageFn"> None, or a callable taking (page_num, medibox, dev, after)</param>
+        /// <param name="archive"></param>
+        /// <param name="addHeaderIds">If true, we add unique ids to all header tags that don't already have an id</param>
         public static void WriteStabilized(
             DocumentWriter writer, // Assuming Writer is a defined class
             ContentFunction contentfn,
@@ -597,16 +644,34 @@ namespace MuPDF.NET
 
     public class FitResult
     {
+        /// <summary>
+        /// True if the fit succeeded
+        /// </summary>
         public bool BigEnough { get; set; }
 
+        /// <summary>
+        /// From the last call to Story.place()
+        /// </summary>
         public dynamic Filled { get; set; }
 
+        /// <summary>
+        /// False if the fit succeeded
+        /// </summary>
         public bool More { get; set; }
 
+        /// <summary>
+        /// Number of calls made to self.place()
+        /// </summary>
         public int NumCalls { get; set; }
 
+        /// <summary>
+        /// The successful parameter value, or the largest failing value
+        /// </summary>
         public float Parameter { get; set; }
 
+        /// <summary>
+        /// The rect created from parameter
+        /// </summary>
         public Rect Rect { get; set; }
 
         public FitResult(bool bigEnough = false, dynamic filled = null, bool more = false, int numcalls = 0, float parameter = 0, Rect rect = null)

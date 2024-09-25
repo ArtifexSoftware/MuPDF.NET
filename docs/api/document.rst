@@ -1767,27 +1767,27 @@ Usage      another influencer for OCG visibility.
 OCLayer structure
 ~~~~~~~~~~~~~~~~~
 
-========== =============================================================
+========== =====================================================================
 **Key**    **Value**
-========== =============================================================
+========== =====================================================================
 On         list of :data:`xref` of OCGs to set ON.
 Off        list of :data:`xref` of OCGs to set OFF.
 Locked     a list of OCG xref number that cannot be changed by the user interface.
 RBGroups   a list of lists. Replaces previous values.
 BaseState  state of OCGs that are not mentioned in *on* or *off*.
-========== =============================================================
+========== =====================================================================
 
 Toc structure
 ~~~~~~~~~~~~~
 
-======== =============================================================
+======== ============================================
 **Key**    **Value**
-======== =============================================================
-Level    
-Title
-Page
-Link
-======== =============================================================
+======== ============================================
+Level    hierarchy level (positive *int*)
+Title    title (*string*)
+Page     1-based source page number (*int*)
+Link     included only if *simple=False* (*dynamic*)
+======== ============================================
 
 Other Examples
 ----------------
