@@ -10,9 +10,24 @@ namespace MuPDF.NET
             Utils.InitApp();
         }
 
+        /// <summary>
+        /// Left corners' x coordinate
+        /// </summary>
         public float X0 { get; set; }
+
+        /// <summary>
+        /// Top corners' y coordinate
+        /// </summary>
         public float Y0 { get; set; }
+
+        /// <summary>
+        /// Right corners' x -coordinate
+        /// </summary>
         public float X1 { get; set; }
+
+        /// <summary>
+        /// Bottom corners' y coordinate
+        /// </summary>
         public float Y1 { get; set; }
         public int Length { get; set; } = 4;
 
@@ -91,6 +106,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// Whether rectangle is empty
+        /// </summary>
         public bool IsEmpty
         {
             get
@@ -98,6 +116,10 @@ namespace MuPDF.NET
                 return X0 >= X1 || Y0 >= Y1;
             }
         }
+
+        /// <summary>
+        /// Quad made from rectangle corners
+        /// </summary>
         public Quad Quad
         {
             get
@@ -106,6 +128,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// Rectangle height
+        /// </summary>
         public float Height
         {
             get
@@ -114,6 +139,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// Rectangle width
+        /// </summary>
         public float Width
         {
             get
@@ -121,12 +149,14 @@ namespace MuPDF.NET
                 return Math.Abs(X1 - X0);
             }
         }
+
         public float Abs()
         {
             if (IsEmpty || IsInfinite)
                 return 0.0f;
             return (X1 - X0) * (Y1 - Y0);
         }
+
         public Rect(FzRect rect)
         {
             X0 = rect.x0;
@@ -293,6 +323,11 @@ namespace MuPDF.NET
             return new Rect(op1.X0 - op2.X0, op1.Y0 - op2.Y0, op1.X1 - op2.Y1, op1.Y1 - op2.Y1);
         }
 
+        /// <summary>
+        /// Enlarge rectangle to also contain another one
+        /// </summary>
+        /// <param name="r"></param>
+        /// <returns></returns>
         public Rect IncludeRect(Rect r)
         {
             if (r.IsInfinite || this.IsInfinite)
@@ -324,6 +359,10 @@ namespace MuPDF.NET
             return this;
         }
 
+        /// <summary>
+        /// Whether rectangle is valid
+        /// </summary>
+        /// <returns></returns>
         public bool IsValid()
         {
             return X0 <= X1 && Y0 <= Y1;
@@ -365,6 +404,11 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// Enlarge rectangle to also contain a point
+        /// </summary>
+        /// <param name="p"></param>
+        /// <returns></returns>
         public Rect IncludePoint(Point p)
         {
             return new Rect(ToFzRect().fz_include_point_in_rect(p.ToFzPoint()));
@@ -379,6 +423,10 @@ namespace MuPDF.NET
             return true;
         }
 
+        /// <summary>
+        /// Create smallest IRect containing rectangle
+        /// </summary>
+        /// <returns></returns>
         public IRect Round()
         {
             return new IRect(ToFzRect().fz_round_rect());

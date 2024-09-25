@@ -15,6 +15,9 @@ namespace MuPDF.NET
 
         public Page Parent { get; set; }
 
+        /// <summary>
+        /// An integer specifying the PDF
+        /// </summary>
         public int Xref { get; set; }
 
         public int Page { get; set; }
@@ -50,7 +53,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// The link destination details object.
+        /// The link destination details object
         /// </summary>
         public LinkDest Dest
         {
@@ -104,6 +107,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// The next link or Null
+        /// </summary>
         public Link Next
         {
             get

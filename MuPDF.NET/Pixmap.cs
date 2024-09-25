@@ -53,6 +53,9 @@ namespace MuPDF.NET
             _nativePixmap = pm;
         }
 
+        /// <summary>
+        /// Contains the IRect of the pixmap
+        /// </summary>
         public IRect IRect
         {
             get
@@ -62,6 +65,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// transparency indicator
+        /// </summary>
         public int Alpha
         {
             get
@@ -70,6 +76,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// pixmap's Colorspace
+        /// </summary>
         public ColorSpace ColorSpace
         {
             get
@@ -78,6 +87,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// MD5 hashcode of the pixmap
+        /// </summary>
         public byte[] Digest
         {
             get
@@ -89,6 +101,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// pixmap height
+        /// </summary>
         public int H
         {
             get
@@ -97,6 +112,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// True for a gray pixmap which only has the colors black and white
+        /// </summary>
         public bool IsMonoChrome
         {
             get
@@ -105,6 +123,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// True if all pixels are identical (any colorspace)
+        /// </summary>
         public bool IsUniColor
         {
             get
@@ -125,6 +146,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// bytes per pixel
+        /// </summary>
         public int N
         {
             get
@@ -133,6 +157,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// Memory of pixel area
+        /// </summary>
         public Memory<byte> SAMPLES_MV
         {
             get
@@ -146,6 +173,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// bytes copy of pixel area
+        /// </summary>
         public byte[] SAMPLES
         {
             get
@@ -162,6 +192,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// pointer to pixel area
+        /// </summary>
         public long SamplesPtr
         {
             get
@@ -170,6 +203,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// pixmap's total length
+        /// </summary>
         public int Size
         {
             get
@@ -178,6 +214,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// size of one image row
+        /// </summary>
         public int Stride
         {
             get
@@ -186,6 +225,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// pixmap width
+        /// </summary>
         public int W
         {
             get
@@ -194,6 +236,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// X-coordinate of top-left corner
+        /// </summary>
         public int X
         {
             get
@@ -202,6 +247,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// resolution in X-direction
+        /// </summary>
         public int Xres
         {
             get
@@ -210,6 +258,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// Y-coordinate of top-left corner
+        /// </summary>
         public int Y
         {
             get
@@ -218,6 +269,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// resolution in Y-direction
+        /// </summary>
         public int Yres
         {
             get
@@ -630,7 +684,7 @@ namespace MuPDF.NET
         /// <summary>
         /// Invert the colors inside a bbox.
         /// </summary>
-        /// <param name="bbox"></param>
+        /// <param name="bbox">The area to be inverted</param>
         /// <returns></returns>
         public bool InvertIrect(IRect bbox = null)
         {
@@ -951,10 +1005,10 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// 
+        /// Set the x and y values of the pixmap’s top-left point
         /// </summary>
-        /// <param name="x"></param>
-        /// <param name="y"></param>
+        /// <param name="x">x coordinate</param>
+        /// <param name="y">y coordinate</param>
         public void SetOrigin(int x, int y)
         {
             _nativePixmap.m_internal.x = x;

@@ -8,8 +8,14 @@ namespace MuPDF.NET
 {
     public class Box
     {
+        /// <summary>
+        /// boundary box
+        /// </summary>
         public Rect Rect { get; set; }
 
+        /// <summary>
+        /// respective transformation matricx
+        /// </summary>
         public Matrix Matrix { get; set; }
 
         public dynamic this[int index]

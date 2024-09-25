@@ -9,14 +9,29 @@ namespace MuPDF.NET
             Utils.InitApp();
         }
 
+        /// <summary>
+        /// X-coordinate of the left corners.
+        /// </summary>
         public float X0 { get; set; }
 
+        /// <summary>
+        /// Y-coordinate of the top corners.
+        /// </summary>
         public float Y0 { get; set; }
 
+        /// <summary>
+        /// X-coordinate of the right corners.
+        /// </summary>
         public float X1 { get; set; }
 
+        /// <summary>
+        /// Y-coordinate of the bottom corners.
+        /// </summary>
         public float Y1 { get; set; }
 
+        /// <summary>
+        /// Contains the height of the bounding box. Equals abs(y1 - y0).
+        /// </summary>
         public float Height
         {
             get
@@ -25,6 +40,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// Contains the width of the bounding box. Equals abs(x1 - x0).
+        /// </summary>
         public float Width
         {
             get
@@ -33,6 +51,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// Equals Point(x0, y1).
+        /// </summary>
         public Point BottomLeft
         {
             get
@@ -41,6 +62,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// Equals Point(x1, y1).
+        /// </summary>
         public Point BottomRight
         {
             get
@@ -49,6 +73,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// Equals Point(x0, y0).
+        /// </summary>
         public Point TopLeft
         {
             get
@@ -57,6 +84,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// Equals Point(x1, y0).
+        /// </summary>
         public Point TopRight
         {
             get
@@ -64,6 +94,7 @@ namespace MuPDF.NET
                 return new Point(X1, Y0);
             }
         }
+
 
         public int Length
         {
@@ -91,6 +122,9 @@ namespace MuPDF.NET
             Y1 = br.Y;
         }
 
+        /// <summary>
+        /// True if rectangle is infinite.
+        /// </summary>
         public bool IsInfinite
         {
             get
@@ -99,6 +133,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// True if rectangle is valid.
+        /// </summary>
         public bool IsValid
         {
             get
@@ -107,6 +144,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// True if rectangle area is empty.
+        /// </summary>
         public bool IsEmpty
         {
             get
@@ -192,6 +232,12 @@ namespace MuPDF.NET
             return new IRect(left_rect & right_rect);
         }
 
+        /// <summary>
+        /// Checks whether x is contained in the rectangle.
+        /// </summary>
+        /// <param name="left">the object to check.</param>
+        /// <param name="right">the object to check.</param>
+        /// <returns></returns>
         public static bool Contains(IRect left, IRect right)
         {
             Rect left_rect = new Rect(left);
@@ -266,16 +312,32 @@ namespace MuPDF.NET
             return new IRect(new Rect(this).IncludeRect(r));
         }
 
+        /// <summary>
+        /// The intersection (common rectangular area) of the current rectangle and ir is calculated and replaces the current rectangle.
+        /// </summary>
+        /// <param name="r"></param>
+        /// <returns></returns>
         public Rect Intersect(Rect r)
         {
             return ToRect().Intersect(r);
         }
 
+        /// <summary>
+        /// Checks whether the rectangle and the rect_like “r” contain a common non-empty IRect.
+        /// </summary>
+        /// <param name="r"></param>
+        /// <returns></returns>
         public bool Intersects(Rect r)
         {
             return ToRect().Intersects(r);
         }
 
+        /// <summary>
+        /// Return a new quad after applying a matrix to it using a fixed point.
+        /// </summary>
+        /// <param name="p"></param>
+        /// <param name="m"></param>
+        /// <returns></returns>
         public Quad Morph(Point p, Matrix m)
         {
             if (IsInfinite)
@@ -283,6 +345,10 @@ namespace MuPDF.NET
             return Quad.Morph(p, m);
         }
 
+        /// <summary>
+        /// Return the Euclidean norm of the rectangle treated as a vector of four numbers.
+        /// </summary>
+        /// <returns></returns>
         public float Norm()
         {
             float ret = 0.0f;
@@ -294,6 +360,9 @@ namespace MuPDF.NET
             return (float)Math.Sqrt(ret);
         }
 
+        /// <summary>
+        /// Make the rectangle finite.
+        /// </summary>
         public void Normalize()
         {
             if (X1 < X0)
@@ -310,6 +379,12 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// Compute the matrix which transforms this rectangle to a given one.
+        /// </summary>
+        /// <param name="r"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
         public Matrix ToRect(Rect r)
         {
             if (IsInfinite || IsEmpty || r.IsInfinite || r.IsEmpty)
@@ -317,11 +392,22 @@ namespace MuPDF.NET
             return new Matrix(1, 0, 0, 1, -X0, Y0) * new Matrix(r.Width / Width, r.Height / Height) * new Matrix(1, 0, 0, 1, r.X0, r.Y0);
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="m"></param>
+        /// <returns></returns>
         public Rect Trnasform(Matrix m)
         {
             return new Rect(this).Transform(m);
         }
 
+        /// <summary>
+        /// Calculates the area of the rectangle and, with no parameter, equals abs(IRect).
+        /// </summary>
+        /// <param name="rect">the area to be calculated</param>
+        /// <param name="unit">Specify required unit</param>
+        /// <returns></returns>
         public float GetArea(Rect rect, string unit = "px")
         {
             return Utils.GetArea(rect, unit);

@@ -1543,7 +1543,7 @@ namespace MuPDF.NET
         /// <summary>
         /// PDF only: Return a list of all XObjects referenced by a page.
         /// </summary>
-        /// <param name="pno">page number, 0-based, -∞ < pno < page_count.</param>
+        /// <param name="pno">page number, 0-based, -∞ < pno < PageCount</param>
         /// <returns>a list of (non-image) XObjects. These objects typically represent pages embedded (not copied) from other PDFs.</returns>
         /// <exception cref="Exception"></exception>
         public List<Entry> GetPageXObjects(int pno)
@@ -1562,7 +1562,7 @@ namespace MuPDF.NET
         /// <summary>
         /// Retrieve a list of images used on a page.
         /// </summary>
-        /// <param name="pno"> page number, 0-based, -∞ < pno < page_count.</param>
+        /// <param name="pno"> page number, 0-based, -∞ < pno < PageCount</param>
         /// <param name="full"> whether to also include the referencer’s xref (which is zero if this is the page).</param>
         /// <returns>a list of images referenced by this page.</returns>
         /// <exception cref="Exception"></exception>

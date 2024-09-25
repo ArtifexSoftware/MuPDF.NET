@@ -97,6 +97,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// Contains the first node one level below this one (or null)
+        /// </summary>
         public Xml FirstChild
         {
             get
@@ -111,6 +114,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// Contains the last node one level below this one (or null)
+        /// </summary>
         public Xml LastChild
         {
             get
@@ -209,7 +215,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Set (add) some “class” attribute.
+        /// Set (add) some "class" attribute.
         /// </summary>
         /// <param name="text">the name of the class. Must have been defined in either the HTML or the CSS source of the DOM.</param>
         /// <returns></returns>
@@ -228,7 +234,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Add “code” text (code tag) - inline element, treated like text.
+        /// Add "class" text (code tag) - inline element, treated like text.
         /// </summary>
         /// <param name="text"></param>
         /// <returns></returns>
@@ -243,16 +249,31 @@ namespace MuPDF.NET
             return this;
         }
 
+        /// <summary>
+        /// Add "variable" text (var tag) - inline element, treated like text
+        /// </summary>
+        /// <param name="text"></param>
+        /// <returns></returns>
         public Xml AddVar(string text = null)
         {
             return AddCode(text);
         }
 
+        /// <summary>
+        /// Add “sample output” text (samp tag) - inline element, treated like text
+        /// </summary>
+        /// <param name="text"></param>
+        /// <returns></returns>
         public Xml AddSamp(string text = null)
         {
             return AddCode(text);
         }
 
+        /// <summary>
+        /// Add “keyboard input” text (kbd tag) - inline element, treated like text
+        /// </summary>
+        /// <param name="text"></param>
+        /// <returns></returns>
         public Xml AddKbd(string text = null)
         {
             return AddCode(text);
@@ -523,11 +544,20 @@ namespace MuPDF.NET
             return prev;
         }
 
+        /// <summary>
+        /// Make a copy if this node
+        /// </summary>
+        /// <returns></returns>
         public Xml Clone()
         {
             return new Xml(_nativeXml.fz_dom_clone());
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="color"></param>
+        /// <returns></returns>
         public static string ColorText(dynamic color)
         {
             if (color is string)
@@ -618,6 +648,9 @@ namespace MuPDF.NET
             return this;
         }
 
+        /// <summary>
+        /// Remove this node
+        /// </summary>
         public void Remove()
         {
             _nativeXml.fz_dom_remove();
@@ -1007,6 +1040,11 @@ namespace MuPDF.NET
             return this;
         }
 
+        /// <summary>
+        /// Set underline for the text
+        /// </summary>
+        /// <param name="val">string "underline"</param>
+        /// <returns></returns>
         public Xml SetUnderline(string val = "underline")
         {
             string text = $"text-decoration: {val}";
@@ -1014,6 +1052,11 @@ namespace MuPDF.NET
             return this;
         }
 
+        /// <summary>
+        /// Set word-spacing for the text
+        /// </summary>
+        /// <param name="spacing"></param>
+        /// <returns></returns>
         public Xml SetWordSpacing(string spacing)
         {
             string text = $"text-spacing: {spacing}";
@@ -1021,6 +1064,10 @@ namespace MuPDF.NET
             return this;
         }
 
+        /// <summary>
+        /// Retrieve all attributes of the current nodes as a dictionary
+        /// </summary>
+        /// <returns>a dictionary with the attributes and their values of the node</returns>
         public Dictionary<string, string> GetAttributes()
         {
             if (!IsText)
@@ -1038,26 +1085,48 @@ namespace MuPDF.NET
             return ret;
         }
 
+        /// <summary>
+        /// Returns body tag from xml
+        /// </summary>
+        /// <returns>Xml object</returns>
         public Xml GetBodyTag()
         {
             return new Xml(_nativeXml.fz_dom_body());
         }
 
+        /// <summary>
+        /// Get the attribute value of key
+        /// </summary>
+        /// <param name="attr">the name of the attribute</param>
+        /// <returns>a string with the value of key</returns>
         public string GetAttributeValue(string attr)
         {
             return _nativeXml.fz_dom_attribute(attr);
         }
 
+        /// <summary>
+        /// Remove the attribute key from the node
+        /// </summary>
+        /// <param name="attr">the name of attribute</param>
         public void RemoveAttribute(string attr)
         {
             _nativeXml.fz_dom_remove_attribute(attr);
         }
 
+        /// <summary>
+        /// Set an arbitrary key to some value
+        /// </summary>
+        /// <param name="attr">the name of the attribute</param>
+        /// <param name="value">the value of the attribute</param>
         public void SetAttribute(string attr, string value)
         {
             _nativeXml.fz_dom_add_attribute(attr, value);
         }
 
+        /// <summary>
+        /// Find deepest level in stacked spans
+        /// </summary>
+        /// <returns>spans in the bottom</returns>
         public Xml SpanBottom()
         {
             Xml parent = this;

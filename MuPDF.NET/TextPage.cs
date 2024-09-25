@@ -1270,9 +1270,16 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// Make flags according to font style or type
+        /// </summary>
+        /// <param name="font">source font</param>
+        /// <param name="line">target line</param>
+        /// <param name="ch">target char</param>
+        /// <returns></returns>
         internal float CharFontFlags(FzFont font, FzStextLine line, FzStextChar ch)
         {
-            float flags = DetectSuperScript(line, ch);
+            float flags = DetectSuperScript(line, ch); // detect super string
             flags += font.fz_font_is_italic() * (int)FontStyle.TEXT_FONT_ITALIC;
             flags += font.fz_font_is_serif() * (int)FontStyle.TEXT_FONT_SERIFED;
             flags += font.fz_font_is_monospaced() * (int)FontStyle.TEXT_FONT_MONOSPACED;
@@ -1280,6 +1287,12 @@ namespace MuPDF.NET
             return flags;
         }
 
+        /// <summary>
+        /// Detect super string
+        /// </summary>
+        /// <param name="line">target line</param>
+        /// <param name="ch">target char</param>
+        /// <returns></returns>
         internal float DetectSuperScript(FzStextLine line, FzStextChar ch)
         {
             if (
@@ -1296,6 +1309,11 @@ namespace MuPDF.NET
             return 0.0f;
         }
 
+        /// <summary>
+        /// Get the font name from FzFont object
+        /// </summary>
+        /// <param name="font"></param>
+        /// <returns></returns>
         internal string GetFontName(FzFont font)
         {
             string name = font.fz_font_name();

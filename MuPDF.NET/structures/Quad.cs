@@ -9,21 +9,45 @@ namespace MuPDF.NET
             Utils.InitApp();
         }
 
+        /// <summary>
+        /// Upper left point
+        /// </summary>
         public Point UpperLeft { get; set; }
+
+        /// <summary>
+        /// Upper right point
+        /// </summary>
         public Point UpperRight { get; set; }
+
+        /// <summary>
+        /// Lower left point
+        /// </summary>
         public Point LowerLeft { get; set; }
+
+        /// <summary>
+        /// Lower right point
+        /// </summary>
         public Point LowerRight { get; set; }
 
+        /// <summary>
+        /// The longest width value
+        /// </summary>
         public float Width
         {
             get { return Math.Max((UpperLeft - UpperRight).Abs(), (LowerLeft - LowerRight).Abs()); }
         }
 
+        /// <summary>
+        /// The longest height value
+        /// </summary>
         public float Height
         {
             get { return Math.Max((UpperLeft - LowerLeft).Abs(), (UpperRight - LowerRight).Abs()); }
         }
 
+        /// <summary>
+        /// Smallest containing Rect
+        /// </summary>
         public Rect Rect
         {
             get
@@ -50,6 +74,9 @@ namespace MuPDF.NET
         }
         public int Length { get; set; } = 4;
 
+        /// <summary>
+        /// True if quad is a convex set
+        /// </summary>
         public bool IsConvex
         {
             get
@@ -69,6 +96,9 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// True if quad is congruent to a rectangle
+        /// </summary>
         public bool IsRectangular
         {
             get
@@ -94,6 +124,9 @@ namespace MuPDF.NET
             UpperLeft = UpperRight = LowerLeft = LowerRight = new Point(0.0f, 0.0f);
         }
 
+        /// <summary>
+        /// True if quad is an empty set
+        /// </summary>
         public bool IsEmpty
         {
             get { return (Width < float.Epsilon) || (Height < float.Epsilon); }

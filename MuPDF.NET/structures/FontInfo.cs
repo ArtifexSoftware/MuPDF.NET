@@ -2,6 +2,7 @@
 {
     public class FontInfo
     {
+
         public int Xref { get; set; }
 
         public string Ext { get; set; }

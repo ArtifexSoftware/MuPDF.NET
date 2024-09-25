@@ -158,6 +158,12 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// Multiplication operator
+        /// </summary>
+        /// <param name="op1">first operand / matrix</param>
+        /// <param name="op2">second operand / matrix</param>
+        /// <returns></returns>
         public static Matrix operator *(Matrix op1, float op2)
         {
             return new Matrix(op1.A * op2, op1.B * op2, op1.C * op2, op1.D * op2, op1.E * op2, op1.F * op2);
