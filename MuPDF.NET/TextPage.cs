@@ -570,7 +570,7 @@ namespace MuPDF.NET
         public static List<Quad> Search(
             TextPage stPage,
             string needle,
-            int hitMax = 0,
+            int hitMax = 10000,
             bool quad = true
         )
         {
@@ -579,7 +579,7 @@ namespace MuPDF.NET
             if (string.IsNullOrEmpty(needle))
                 return quads;
 
-            Hits hits = new Hits();
+            /*Hits hits = new Hits();
 
             hits.Len = 0;
             hits.Quads = quads;
@@ -591,10 +591,9 @@ namespace MuPDF.NET
 
             int hayStack = 0;
             int begin = 0;
-            int end = 0;
+            int end = 0;*/
 
-
-            vectorq ret = stPage._nativeTextPage.search_stext_page(needle, null, 0); // use MuPDF api for search function
+            vectorq ret = stPage._nativeTextPage.search_stext_page(needle, null, hitMax); // use MuPDF api for search function
             
             foreach (FzQuad q in ret)
                 quads.Add(new Quad(q));

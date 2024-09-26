@@ -5,11 +5,36 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 
 namespace MuPDF.NET.Test
 {
     internal class GeneralTest
     {
+
+        [Test]
+        public void SearchText()
+        {
+            Document doc = new Document("../../../resources/test_2533.pdf");
+            Page page = doc[0];
+            string needle = "民";
+            int iNeedle = Convert.ToInt32(needle[0]);
+            Rect bbox = new Rect();
+            foreach (SpanInfo span in page.GetTextTrace())
+            {
+                foreach (Char ch in span.Chars)
+                {
+                    if (ch.UCS == iNeedle)
+                        bbox = new Rect(ch.Bbox);
+                }
+            }
+
+            Rect bbox1 = page.SearchFor("民")[0].Rect;
+            Assert.That(bbox.EqualTo(bbox1));
+
+            Assert.That(page.SearchFor("偿力很务").Count == 0);
+        }
+
         [Test]
         public void Test_Opacity()
         {

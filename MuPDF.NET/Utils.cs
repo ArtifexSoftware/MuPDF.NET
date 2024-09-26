@@ -1379,42 +1379,98 @@ namespace MuPDF.NET
             return "Helv";
         }
 
+        /// <summary>
+        /// Return the text words as a list with the bbox for each word
+        /// </summary>
+        /// <param name="page"></param>
+        /// <param name="clip">area on page to consider</param>
+        /// <param name="flags">control the amount of data parsed into the textpage</param>
+        /// <param name="stPage">either passed-in or null</param>
+        /// <param name="sort">sort the words in reading sequence</param>
+        /// <param name="delimiters">characters to use as word delimiters</param>
+        /// <param name="tolerance">consider words to be part of the same line</param>
+        /// <returns>Word Tuples (x0, y0, x1, y1, "word", bno, lno, wno)</returns>
+        /// <exception cref="Exception"></exception>
         public static List<WordBlock> GetTextWords(
             Page page,
             Rect clip = null,
             int flags = 0,
             TextPage stPage = null,
             bool sort = false,
-            char[] delimiters = null
+            char[] delimiters = null,
+            int tolerance = 3
         )
         {
+            List<WordBlock> SortWords(List<WordBlock> words )
+            {
+                words.Sort((w1, w2) =>
+                {
+                    if (w1.Y1 == w2.Y1)
+                    {
+                        return w1.X0.CompareTo(w2.X0);
+                    }
+                    else
+                    {
+                        return w1.Y1.CompareTo(w2.Y1);
+                    }
+                });
+
+                List<WordBlock> nWords = new List<WordBlock>();
+                List<WordBlock> line = new List<WordBlock>() { words[0] };
+                Rect lrect = new Rect(words[0].X0, words[0].Y0, words[0].X1, words[0].Y1);
+
+                foreach (WordBlock w in words.Skip(0))
+                {
+                    Rect wrect = new Rect(w.X0, w.Y0, w.X1, w.Y1);
+                    if (Math.Abs(wrect.Y0 - lrect.Y0) <= tolerance || Math.Abs(wrect.Y1 - lrect.Y1) <= tolerance)
+                    {
+                        line.Add(w);
+                        lrect |= wrect;
+                    }
+                    else
+                    {
+                        line.Sort((w1, w2) => { return w1.X0.CompareTo(w2.X0); });
+                        nWords.AddRange(line);
+                        line = new List<WordBlock> { w };
+                        lrect = wrect;
+                    }
+                }
+                line.Sort((w1, w2) => { return w1.X0.CompareTo(w2.X0); });
+                nWords.AddRange(line);
+
+                return nWords;
+            }
             if (flags == 0)
-                flags = flags = (int)(
-                    TextFlags.TEXT_PRESERVE_WHITESPACE
+                flags = (int)(0
+                    | TextFlags.TEXT_PRESERVE_WHITESPACE
                     | TextFlags.TEXT_PRESERVE_LIGATURES
                     | TextFlags.TEXT_MEDIABOX_CLIP
+                    | TextFlags.TEXT_CID_FOR_UNKNOWN_UNICODE
                 );
+
             TextPage tp = stPage;
+
             if (tp == null)
                 tp = page.GetTextPage(clip, flags);
             else if (tp.Parent != page)
                 throw new Exception("not a textpage of this page");
 
             List<WordBlock> words = tp.ExtractWords(delimiters);
+            if (stPage != null)
+            {
+                words = words.Where(w =>
+                {
+                    Rect wRect = new Rect(w.X0, w.Y0, w.X1, w.Y1);
+                    return (clip & wRect).Abs() >= (0.5f * wRect.Abs());
+                }).ToList();
+            }
+
             if (stPage is null)
                 tp = null;
-            if (sort)
-                words.Sort(
-                    (WordBlock w1, WordBlock w2) =>
-                    {
-                        var result = w1.Y1.CompareTo(w2.Y1);
-                        if (result == 0)
-                        {
-                            result = w1.X0.CompareTo(w2.X0);
-                        }
-                        return result;
-                    }
-                );
+
+            if (words.Count > 0 && sort)
+                words = SortWords(words);
+
             return words;
         }
 
