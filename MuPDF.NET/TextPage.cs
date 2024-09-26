@@ -593,7 +593,15 @@ namespace MuPDF.NET
             int begin = 0;
             int end = 0;
 
-            int inside = 0;
+
+            vectorq ret = stPage._nativeTextPage.search_stext_page(needle, null, 0); // use MuPDF api for search function
+            
+            foreach (FzQuad q in ret)
+                quads.Add(new Quad(q));
+
+            return quads;
+
+            /* int inside = 0;
 
             foreach (FzStextBlock block in stPage.Blocks)
             {
@@ -701,6 +709,7 @@ namespace MuPDF.NET
             }
 
             return quads;
+            */
         }
 
         internal void OnHighlightChar(Hits hits, FzStextLine line, FzStextChar ch)
@@ -806,6 +815,7 @@ namespace MuPDF.NET
             for (int index = 0; index < s.Length - needle.Length; index++)
             {
                 int end = MatchString(s.Substring(index), needle);
+                
                 if (end != -1)
                 {
                     end += index;
@@ -864,7 +874,7 @@ namespace MuPDF.NET
                 }
             }
 
-            return n <= n0.Length ? -1 : e;
+            return nc.Item2 != 0 ? -1 : e;
         }
 
         public static int Canon(int c)
