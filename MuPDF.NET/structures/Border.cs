@@ -20,7 +20,7 @@
         /// <summary>
         /// an integer indicating a "cloudy" border
         /// </summary>
-        public float Clouds { get; set; }
+        public float Clouds { get; set; } = -1;
 
     }
 }
