@@ -113,6 +113,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
 :meth:`Page.NewShape`              PDF only: create a new :ref:`Shape`
 :meth:`Page.RemoveRotation`        PDF only: set page rotation to 0
 :meth:`Page.ReplaceImage`          PDF only: replace an image
+:meth:`Page.Recolor`               PDF only: recolor page
 :meth:`Page.ReadContents`          PDF only: get complete, concatenated /Contents source
 :meth:`Page.Run`                   Run a page through a device
 :meth:`Page.SearchFor`             Search for a string
@@ -1095,7 +1096,17 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
       This method mainly exists for technical purposes. Typical uses include replacing large images by smaller versions, like a lower resolution, graylevel instead of colored, etc., or changing transparency.
 
-   
+   .. index::
+      pair: pageNum; Recolor
+      pair: colorSpaceName; Recolor 
+
+   .. method:: Recolor(int colorNum)
+   .. method:: Recolor(string colorSpaceName)
+      Recolor specific page of PDF with specific color mode.
+
+      :arg int colorNum: the number of colorspace, which means bytes of pixel. gray = 1, rgb = 3, cmyk = 4.
+      :arg string colorSpaceName: the name of the colorspace, "gray", "rgb", "cmyk"
+
    .. index::
       pair: xref; DeleteImage
 

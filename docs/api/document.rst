@@ -518,6 +518,13 @@ This class represents a document. It can be constructed from a file or from memo
 
       .. note:: In a typical use case, a page :ref:`Pixmap` should be taken after annotations / widgets have been added or changed. To force all those changes being reflected in the page structure, this method re-instates a fresh copy while keeping the object hierarchy "document -> page -> annotations/widgets" intact.
 
+   .. method:: Recolor(int pageNum, int colorNum)
+   .. method:: Recolor(int pageNum, string colorSpaceName)
+      Recolor specific page of PDF with specific color mode.
+
+      :arg int pageNum: the number of specific page between 0 and PageCount.
+      :arg int colorNum: the number of colorspace, which means bytes of pixel. gray = 1, rgb = 3, cmyk = 4.
+      :arg string colorSpaceName: the name of the colorspace, "gray", "rgb", "cmyk".
 
   .. method:: ResolveNames()
 
