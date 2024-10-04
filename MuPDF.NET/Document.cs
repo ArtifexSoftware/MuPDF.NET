@@ -5723,19 +5723,19 @@ namespace MuPDF.NET
         /// <summary>
         /// Re-color pages of PDF
         /// </summary>
-        /// <param name="pageNum">the number of page, recolor all pages if invalid page number, otherwise convert specific page.</param>
+        /// <param name="pageNum">the number of page</param>
         /// <param name="compNum">the number of colorspace, which means bytes of colorspace, Gray = 1, RGB = 3 and CMYK = 4.</param>
         /// <exception cref="Exception"></exception>
-        public void Recolor(int pageNum, int compNum)
+        public void Recolor(int pageNum, int colorNum)
         {
-            this[pageNum].Recolor(compNum);
+            this[pageNum].Recolor(colorNum);
         }
 
         /// <summary>
         /// Re-color pages of PDF
         /// </summary>
         /// <param name="pageNum">the number of page, recolor all pages if invalid page number, otherwise convert specific page.</param>
-        /// <param name="compNum">the number of colorspace, which means bytes of colorspace, Gray = 1, RGB = 3 and CMYK = 4.</param>
+        /// <param name="colorSpaceName">the name of colorspace, which can be Gray, RGB, CMYK.</param>
         public void Recolor(int pageNum, string colorSpaceName)
         {
             this[pageNum].Recolor(colorSpaceName);

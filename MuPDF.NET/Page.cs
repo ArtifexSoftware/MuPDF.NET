@@ -4506,8 +4506,8 @@ namespace MuPDF.NET
         /// <exception cref="Exception"></exception>
         public void Recolor(int colorNum)
         {
-            /*if (!(colorNum == 1 || colorNum == 3 || colorNum == 4))
-                throw new Exception("invalid number of colospace");*/
+            if (!(colorNum == 1 || colorNum == 3 || colorNum == 4))
+                throw new Exception("invalid number of colospace");
 
             pdf_recolor_options options = new pdf_recolor_options();
             options.num_comp = colorNum;
