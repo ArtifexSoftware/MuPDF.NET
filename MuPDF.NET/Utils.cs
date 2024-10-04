@@ -6979,5 +6979,94 @@ namespace MuPDF.NET
 
             return r;
         }
+
+        public static Rect EMPTY_RECT()
+        {
+            return new Rect(Utils.FZ_MAX_INF_RECT, Utils.FZ_MAX_INF_RECT, Utils.FZ_MIN_INF_RECT, Utils.FZ_MIN_INF_RECT);
+        }
+
+        public static Quad EMPTY_QUAD()
+        {
+            return Utils.EMPTY_RECT().Quad;
+        }
+
+        public static string GetSortedText(Page page, Rect clip = null, int flags = 0, TextPage textpage = null, int tolerance = 3)
+        {
+            string LineText(Rect clip, List<(Rect, string)> line)
+            {
+                line.Sort((l1, l2) =>
+                {
+                    return (int)((l1.Item1.X0 - l2.Item1.X0) * 10);
+                });
+                string ltext = "";
+                float x1 = clip.X0;
+                Rect lrect = Utils.EMPTY_RECT();
+
+                foreach ((Rect r, string t) in line)
+                {
+                    lrect = lrect | r; // update line bbox
+                    int dist = Math.Max((int)(Math.Round((r.X0 - x1) / r.Width * t.Length)), x1 == clip.X0 ? 0 : 1); // number of space chars
+                    ltext += new string(' ', dist) + t;
+                    x1 = r.X1;
+                }
+
+                return ltext;
+            }
+
+            List<WordBlock> wordblocks = Utils.GetTextWords(page, clip, flags, textpage, sort: true, tolerance: tolerance);
+
+            List<(Rect, string)> words = new List<(Rect, string)>();
+            foreach (WordBlock block in wordblocks)
+                words.Add((new Rect(block.X0, block.Y0, block.X1, block.Y1), block.Text));
+
+            if (words.Count == 0 || words == null)
+                return "";
+            Rect totalBox = Utils.EMPTY_RECT();
+            foreach ((Rect wr, string text) in words)
+                totalBox = totalBox | wr;
+
+            List<(Rect, string)> lines = new List<(Rect, string)>();
+            List<(Rect, string)> line = new List<(Rect, string)>() { words[0] };
+            Rect lrect = words[0].Item1;
+            string ltext = "";
+
+            foreach ((Rect wr, string text) in words.Skip(1))
+            {
+                (Rect w0r, string _) = line[-1];
+
+                if (Math.Abs(lrect.Y0 - wr.Y0) < tolerance || Math.Abs(lrect.Y1 - wr.Y1) <= tolerance)
+                {
+                    line.Add((lrect, text));
+                    lrect |= wr;
+                }
+                else
+                {
+                    ltext = LineText(totalBox, line);
+                    lines.Add((lrect, text));
+                    line = new List<(Rect, string)>() { (wr, text) };
+                    lrect = wr;
+                }
+            }
+
+            ltext = LineText(totalBox, line);
+            lines.Add((lrect, ltext));
+
+            lines.Sort((l1, l2) => { return (int)((l1.Item1.Y1 - l2.Item1.Y1) * 10); });
+
+            string ret = lines[0].Item2;
+            float y1 = lines[0].Item1.Y1;
+
+            foreach ((Rect lr, string lt) in lines.Skip(1))
+            {
+                int distance = Math.Min((int)(Math.Round((lr.Y0 - y1) / lr.Height)), 5);
+                string breaks = new String('\n', distance + 1);
+                ret += breaks + lt;
+                y1 = lr.Y1;
+            }
+
+            return ret;
+        }
     }
+
+    
 }
