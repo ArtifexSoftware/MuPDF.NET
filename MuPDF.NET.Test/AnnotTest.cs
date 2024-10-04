@@ -133,20 +133,6 @@ namespace MuPDF.NET.Test
         }
 
         [Test]
-        public void AddRedactAnnot()
-        {
-            /*byte[] content = File.ReadAllBytes("resources/mupdf_explored.pdf");
-            MuPDFDocument doc = new MuPDFDocument(stream: content);
-
-            MuPDFPage page = doc[0];
-            string jsondata = page.GetText("json");
-            PageInfo pagedata = (PageInfo)JsonConvert.DeserializeObject(jsondata);
-            Span span = pagedata.Blocks[0].Lines[0].Spans[0];
-            page.AddRedactAnnot(span.Bbox, text: "");
-            page.ApplyRedactions();*/
-        }
-
-        [Test]
         public void FirstAnnot()
         {
             Document doc = new Document("../../../resources/annots.pdf");

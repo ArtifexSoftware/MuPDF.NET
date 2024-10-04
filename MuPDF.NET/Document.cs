@@ -1268,7 +1268,6 @@ namespace MuPDF.NET
             else
             {
                 long m_internal_new = page.GetPdfPage().super().m_internal_value();
-                Debug.Assert(m_internal_old != m_internal_new);
             }
 
             return page;

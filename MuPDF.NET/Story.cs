@@ -647,7 +647,7 @@ namespace MuPDF.NET
         /// <summary>
         /// True if the fit succeeded
         /// </summary>
-        public bool BigEnough { get; set; }
+        public bool BigEnough { get; set; } = false;
 
         /// <summary>
         /// From the last call to Story.place()
