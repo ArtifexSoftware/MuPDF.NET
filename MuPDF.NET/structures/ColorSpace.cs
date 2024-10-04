@@ -63,7 +63,7 @@ namespace MuPDF.NET
 
         public override string ToString()
         {
-            string x = (new List<string>() { "", "GRAY", "RGB", "CMYK" })[N];
+            string x = (new List<string>() { "", "GRAY", "", "RGB", "CMYK" })[N];
             return $"ColorSpace(CS_{x}) - {Name}";
         }
     }

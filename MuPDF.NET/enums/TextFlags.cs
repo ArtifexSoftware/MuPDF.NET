@@ -16,7 +16,11 @@
 
         TEXT_MEDIABOX_CLIP = 64,
 
-        TEXT_CID_FOR_UNKNOWN_UNICODE = 128
+        TEXT_CID_FOR_UNKNOWN_UNICODE = 128,
+
+        TEXT_COLLECT_STRUCTURE = 256,
+        
+        TEXT_ACCURATE_BBOXES = 512
     }
 
     public enum TextFlagsExtension
