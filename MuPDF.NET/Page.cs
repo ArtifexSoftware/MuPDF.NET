@@ -4498,6 +4498,37 @@ namespace MuPDF.NET
             
             return text;
         }
+
+        /// <summary>
+        /// Re-color page of PDF
+        /// </summary>
+        /// <param name="colorNum">the number of colorspace, which means bytes of colorspace, Gray = 1, RGB = 3 and CMYK = 4.</param>
+        /// <exception cref="Exception"></exception>
+        public void Recolor(int colorNum)
+        {
+            /*if (!(colorNum == 1 || colorNum == 3 || colorNum == 4))
+                throw new Exception("invalid number of colospace");*/
+
+            pdf_recolor_options options = new pdf_recolor_options();
+            options.num_comp = colorNum;
+
+            Document.AsPdfDocument(Parent).pdf_recolor_page(Number, new PdfRecolorOptions(options));
+        }
+
+        /// <summary>
+        /// Re-color page of PDF
+        /// </summary>
+        /// <param name="colorSpaceName">the name of colorspace, "Gray", "RGB" and "CMYK"</param>
+        /// <exception cref="Exception"></exception>
+        public void Recolor(string colorSpaceName)
+        {
+            int colorNum = (new List<string>() { "", "GRAY", "", "RGB", "CMYK" }).IndexOf(colorSpaceName.ToUpper());
+            if (colorNum == -1 || colorNum == 0 || colorNum == 2)
+                throw new Exception("invalid name of colospace");
+
+            Recolor(colorNum);
+        }
+
     }
 
     public class BoxDevice : FzDevice2
