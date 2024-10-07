@@ -2,38 +2,83 @@
 {
     public class PathInfo
     {
+        /// <summary>
+        /// List of draw commands: lines, rectangles, quads or curves
+        /// </summary>
         public List<Item> Items { get; set; }
 
+        /// <summary>
+        /// Type of this path
+        /// </summary>
         public string Type { get; set; }
 
+        /// <summary>
+        /// Fill colors of area overlaps
+        /// </summary>
         public bool EvenOdd { get; set; }
 
+        /// <summary>
+        /// Fill color transparency
+        /// </summary>
         public float FillOpacity { get; set; }
 
+        /// <summary>
+        /// Fill color
+        /// </summary>
         public float[] Fill { get; set; }
 
+        /// <summary>
+        /// Page area covered by this path
+        /// </summary>
         public Rect Rect { get; set; }
 
+        /// <summary>
+        /// Command number when building page appearance
+        /// </summary>
         public int SeqNo { get; set; }
 
+        /// <summary>
+        /// Name of applicable Optional Content Group
+        /// </summary>
         public string Layer { get; set; }
 
+        /// <summary>
+        /// Stroke line width
+        /// </summary>
         public float Width { get; set; }
 
+        /// <summary>
+        /// Stroke color transparency
+        /// </summary>
         public float StrokeOpacity { get; set; }
 
         public float LineJoin { get; set; }
 
+        /// <summary>
+        /// Same as the parameter
+        /// </summary>
         public bool ClosePath { get; set; }
 
+        /// <summary>
+        /// Dashed line specification
+        /// </summary>
         public string Dashes { get; set; }
 
+        /// <summary>
+        /// Stroke color
+        /// </summary>
         public float[] Color { get; set; }
 
+        /// <summary>
+        /// Number 3-tuple, use its max value on output with Shape
+        /// </summary>
         public List<LineCapType> LineCap { get; set; }
 
         public Rect Scissor { get; set; }
 
+        /// <summary>
+        /// the hierarchy level
+        /// </summary>
         public int Level { get; set; }
 
         public bool Isolated { get; set; }

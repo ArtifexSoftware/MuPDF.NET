@@ -379,13 +379,13 @@ The parameter passed to the `recorder` function is an object with the following 
 
 * `elpos.Heading` (int) -- the header level, 0 if no header, 1-6 for :htmlTag:`h1` - :htmlTag:`h6`.
 
-* `elpos.Href` (str) -- value of the `href` attribute, or null if not defined.
+* `elpos.Href` (string) -- value of the `href` attribute, or null if not defined.
 
-* `elpos.Id` (str) -- value of the `id` attribute, or null if not defined.
+* `elpos.Id` (string) -- value of the `id` attribute, or null if not defined.
 
-* `elpos.Rect` (tuple) -- element position on page.
+* `elpos.Rect` (Rect) -- element position on page.
 
-* `elpos.Text` (str) -- immediate text of the element.
+* `elpos.Text` (string) -- immediate text of the element.
 
 * `elpos.OpenClose` (int bit field) -- bit 0 set: opens element, bit 1 set: closes element. Relevant for elements that may contain other elements and thus may not immediately be closed after being created / opened.
 

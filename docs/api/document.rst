@@ -92,6 +92,7 @@ This class represents a document. It can be constructed from a file or from memo
 :meth:`Document.GetPageXref`                    Get `xref` of page number
 :meth:`Document.LoadOutline`                    Load first outline
 :meth:`Document.ReloadPage`                     PDF only: provide a new copy of a page
+:meth:`Document.Recolor`                        PDF only: recolor pages of document
 :meth:`Document.ForgetPage`                     Remove a page from document page dict
 :meth:`Document.ResolveNames`                   PDF only: Convert destination names into a Dictionary 
 :meth:`Document.ExtendTocItems`                 Add color info to all items of an extended TOC list
@@ -518,6 +519,14 @@ This class represents a document. It can be constructed from a file or from memo
 
       .. note:: In a typical use case, a page :ref:`Pixmap` should be taken after annotations / widgets have been added or changed. To force all those changes being reflected in the page structure, this method re-instates a fresh copy while keeping the object hierarchy "document -> page -> annotations/widgets" intact.
 
+   .. method:: Recolor(int pageNum, int colorNum)
+   .. method:: Recolor(int pageNum, string colorSpaceName)
+    
+      Recolor specific page of PDF with specific color mode.
+
+      :arg int pageNum: the number of specific page between 0 and PageCount.
+      :arg int colorNum: the number of colorspace, which means bytes of pixel. "GRAY" = `1`, "RGB" = `3`, "CMYK" = `4`.
+      :arg string colorSpaceName: the name of the colorspace, "GRAY", "RGB", "CMYK".
 
   .. method:: ResolveNames()
 
@@ -1767,27 +1776,27 @@ Usage      another influencer for OCG visibility.
 OCLayer structure
 ~~~~~~~~~~~~~~~~~
 
-========== =============================================================
+========== =====================================================================
 **Key**    **Value**
-========== =============================================================
+========== =====================================================================
 On         list of :data:`xref` of OCGs to set ON.
 Off        list of :data:`xref` of OCGs to set OFF.
 Locked     a list of OCG xref number that cannot be changed by the user interface.
 RBGroups   a list of lists. Replaces previous values.
 BaseState  state of OCGs that are not mentioned in *on* or *off*.
-========== =============================================================
+========== =====================================================================
 
 Toc structure
 ~~~~~~~~~~~~~
 
-======== =============================================================
+======== ============================================
 **Key**    **Value**
-======== =============================================================
-Level    
-Title
-Page
-Link
-======== =============================================================
+======== ============================================
+Level    hierarchy level (positive *int*)
+Title    title (*string*)
+Page     1-based source page number (*int*)
+Link     included only if *simple=False* (*dynamic*)
+======== ============================================
 
 Other Examples
 ----------------

@@ -45,6 +45,10 @@ namespace MuPDF.NET
             _nativeDisplayList = displayList;
         }
 
+        /// <summary>
+        /// Returns native object
+        /// </summary>
+        /// <returns>FzDisplayList</returns>
         public FzDisplayList ToFzDisplayList()
         {
             return _nativeDisplayList;

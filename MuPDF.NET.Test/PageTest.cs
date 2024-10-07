@@ -438,4 +438,15 @@ public class PageTest : PdfTestBase
         foreach (PathInfo p in paths)
             Assert.That(p.Width, Is.EqualTo(15));
     }
+
+    [Test]
+    public void TestInsertHtml()
+    {
+        Document doc = new Document();
+        Rect rect = new Rect(100, 100, 101, 101);
+        Page page = doc.NewPage();
+        (float sh, float scale) = page.InsertHtmlBox(rect, "hello world", scaleLow: 0.5f);
+
+        Assert.That(sh.Equals(-1f));
+    }
 }

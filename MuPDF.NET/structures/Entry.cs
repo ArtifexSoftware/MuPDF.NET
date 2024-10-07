@@ -21,11 +21,16 @@
         public string Filter { get; set; }
 
         // font struct
-
+        /// <summary>
+        /// the image, font and form object number
+        /// </summary>
         public int Xref { get; set; }
 
         public string Type { get; set; }
 
+        /// <summary>
+        /// name under which this entry is stored or basefont name of font entry
+        /// </summary>
         public string Name { get; set; }
 
         public string RefName { get; set; }

@@ -9,66 +9,150 @@ namespace MuPDF.NET
             Utils.InitApp();
         }
 
+        /// <summary>
+        /// A list of up to 4 floats defining the field’s border color
+        /// </summary>
         public float[] BorderColor { get; set; }
 
+        /// <summary>
+        /// A string defining the line style of the field’s border
+        /// </summary>
         public string BorderStyle { get; set; }
 
+        /// <summary>
+        /// A float defining the width of the border line
+        /// </summary>
         public float BorderWidth { get; set; }
 
+        /// <summary>
+        /// A list/tuple of integers defining the dash properties of the border line
+        /// </summary>
         public int[] BorderDashes { get; set; }
 
+        /// <summary>
+        /// A sequence of strings defining the valid choices of list boxes and combo boxes
+        /// </summary>
         public List<dynamic> ChoiceValues { get; set; }
 
         public int RbParent { get; set; }
 
+        /// <summary>
+        /// A mandatory string defining the field’s name
+        /// </summary>
         public string FieldName { get; set; }
 
+        /// <summary>
+        /// An optional string containing an “alternate” field name
+        /// </summary>
         public string FieldLabel { get; set; }
 
+        /// <summary>
+        /// The value of the field
+        /// </summary>
         public string FieldValue { get; set; }
 
+        /// <summary>
+        /// An integer defining a large amount of properties of a field
+        /// </summary>
         public int FieldFlags { get; set; }
 
+        /// <summary>
+        /// A mandatory integer defining the field type
+        /// </summary>
         public int FieldType { get; set; }
 
+        /// <summary>
+        /// 
+        /// </summary>
         public int FieldDisplay { get; set; }
 
+        /// <summary>
+        /// A string describing (and derived from) the field type
+        /// </summary>
         public string FieldTypeString { get; set; }
 
+        /// <summary>
+        /// A list of up to 4 floats defining the field’s background color
+        /// </summary>
         public float[] FillColor { get; set; }
 
+        /// <summary>
+        /// The caption string of a button-type field
+        /// </summary>
         public string ButtonCaption { get; set; }
 
+        /// <summary>
+        /// A bool indicating the signing status of a signature field, else false
+        /// </summary>
         public bool IsSigned { get; set; }
 
+        /// <summary>
+        /// A list of 1, 3 or 4 floats defining the text color
+        /// </summary>
         public float[] TextColor { get; set; }
 
+        /// <summary>
+        /// A string defining the font to be used
+        /// </summary>
         public string TextFont { get; set; }
 
+        /// <summary>
+        /// A float defining the text fontsize
+        /// </summary>
         public float TextFontSize { get; set; }
 
+        /// <summary>
+        /// An integer defining the maximum number of text characters
+        /// </summary>
         public int TextMaxLen { get; set; }
 
         public int TextFormat { get; set; }
 
         public string TextDa { get; set; }
 
+        /// <summary>
+        /// JavaScript text (unicode) for an action associated with the widget, or null
+        /// </summary>
         public string Script { get; set; }
 
+        /// <summary>
+        /// JavaScript text (unicode) to be performed when the user types a key-stroke into a text field or combo box or modifies the selection in a scrollable list box
+        /// </summary>
         public string ScriptStroke { get; set; }
 
+        /// <summary>
+        /// JavaScript text (unicode) to be performed before the field is formatted to display its current value
+        /// </summary>
         public string ScriptFormat { get; set; }
 
+        /// <summary>
+        /// JavaScript text (unicode) to be performed when the field’s value is changed
+        /// </summary>
         public string ScriptChange { get; set; }
 
+        /// <summary>
+        /// JavaScript text (unicode) to be performed to recalculate the value of this field when that of another field changes
+        /// </summary>
         public string ScriptCalc { get; set; }
 
+        /// <summary>
+        /// JavaScript text (unicode) to be performed on focusing this field
+        /// </summary>
         public string ScriptBlur { get; set; }
 
+        /// <summary>
+        /// JavaScript text (unicode) to be performed on focusing this field
+        /// </summary>
         public string ScriptFocus { get; set; }
 
+        /// <summary>
+        /// The PDF xref of the widget
+        /// </summary>
         public int Xref { get; set; }
 
+        /// <summary>
+        /// The rectangle containing the field
+        /// </summary>
         public Rect Rect { get; set; }
 
         public Page Parent { get; set; }
@@ -303,6 +387,9 @@ namespace MuPDF.NET
             return states;
         }
 
+        /// <summary>
+        /// Point to the next form field on the page.
+        /// </summary>
         public Annot Next
         {
             get

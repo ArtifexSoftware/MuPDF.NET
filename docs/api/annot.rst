@@ -502,13 +502,13 @@ AnnotInfo Structure
 **Key**         **Value**
 =============== ====================================================================
 Content         a string containing the text for type Text and FreeText annotations
-Name            name of annot's icon *string*
+Name            name of annotation's icon *string*
 Title           a string containing the title of the annotation pop-up window.
 CreationDate    creation timestamp
 ModDate         last modified timestamp
 Subject         subject *string*
 Id              a unique identification of the annotation *string*
-=============== =====================================================================
+=============== ====================================================================
 
 AnnotXref Structure
 ~~~~~~~~~~~~~~~~~
@@ -518,7 +518,7 @@ AnnotXref Structure
 Id              a unique identification of the annotation *string*
 Xref            annot's xref *int*
 AnnotType       annotation type. see :ref:`AnnotationTypes`
-=============== ====================================================
+=============== ===================================================
 
 Border Structure
 ~~~~~~~~~~~~~~~~~

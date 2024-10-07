@@ -10,12 +10,24 @@ namespace MuPDF.NET
             Utils.InitApp();
         }
 
+        /// <summary>
+        /// the owning page
+        /// </summary>
         public Page Page { get; set; }
 
+        /// <summary>
+        /// the page's document
+        /// </summary>
         public Document Doc { get; set; }
 
+        /// <summary>
+        /// The page's height
+        /// </summary>
         public float Height { get; set; }
 
+        /// <summary>
+        /// The page's width
+        /// </summary>
         public float Width { get; set; }
 
         public float X { get; set; }
@@ -26,14 +38,29 @@ namespace MuPDF.NET
 
         public Matrix IPctm { get; set; }
 
+        /// <summary>
+        /// Accumulated command buffer for draw methods since last finish
+        /// </summary>
         public string DrawCont { get; set; }
 
+        /// <summary>
+        /// Accumulated text buffer. All text insertions go here
+        /// </summary>
         public string TextCont { get; set; }
 
+        /// <summary>
+        /// Total accumulated command buffer for draws and text insertions
+        /// </summary>
         public string TotalCont { get; set; }
 
+        /// <summary>
+        /// For reference only: the current point of the drawing path
+        /// </summary>
         public Point LastPoint { get; set; }
 
+        /// <summary>
+        /// Rectangle surrounding drawings
+        /// </summary>
         public Rect Rect { get; set; }
 
         public Shape(Page page)
@@ -346,6 +373,10 @@ namespace MuPDF.NET
             return nLines;
         }
 
+        /// <summary>
+        /// Update the page's contents with the accumulated drawings, followed by any text insertions
+        /// </summary>
+        /// <param name="overlay">determine whether to put content in foreground (default) or background</param>
         public void Commit(bool overlay = true)
         {
             TotalCont += this.TextCont;
@@ -399,8 +430,8 @@ namespace MuPDF.NET
         /// <summary>
         /// Draw a circle given its center and radius.
         /// </summary>
-        /// <param name="center"></param>
-        /// <param name="radius"></param>
+        /// <param name="center">the center of the circle</param>
+        /// <param name="radius">the radius of the circle. Must be positive</param>
         /// <returns></returns>
         /// <exception cref="Exception"></exception>
         public Point DrawCircle(Point center, float radius)
@@ -414,11 +445,11 @@ namespace MuPDF.NET
         /// <summary>
         /// Draw a circle sector.
         /// </summary>
-        /// <param name="center"></param>
-        /// <param name="point"></param>
-        /// <param name="beta"></param>
-        /// <param name="fullSector"></param>
-        /// <returns></returns>
+        /// <param name="center">the center of the circle</param>
+        /// <param name="point">one of the two end points of the pie’s arc segment. The other one is calculated from the angle</param>
+        /// <param name="beta">the angle of the sector in degrees</param>
+        /// <param name="fullSector">whether to draw connecting lines from the ends of the arc to the circle center</param>
+        /// <returns>the other end point of the arc</returns>
         /// <exception cref="Exception"></exception>
         public Point DrawSector(Point center, Point point, float beta, bool fullSector = true)
         {
@@ -563,8 +594,8 @@ namespace MuPDF.NET
         /// <summary>
         /// Draw a line between two points.
         /// </summary>
-        /// <param name="p1"></param>
-        /// <param name="p2"></param>
+        /// <param name="p1">starting point</param>
+        /// <param name="p2">end point</param>
         /// <returns></returns>
         public Point DrawLine(Point p1, Point p2)
         {
@@ -623,6 +654,11 @@ namespace MuPDF.NET
             LastPoint = ml;
         }
 
+        /// <summary>
+        /// Draw several connected lines between points contained in the sequence points
+        /// </summary>
+        /// <param name="points">a sequence of Point objects</param>
+        /// <returns></returns>
         public Point DrawPolyline(Point[] points)
         {
             for (int i = 0; i < points.Length; i++)
@@ -719,6 +755,14 @@ namespace MuPDF.NET
             return p2;
         }
 
+        /// <summary>
+        /// Draw a zigzag line from Point objects p1 to p2
+        /// </summary>
+        /// <param name="p1">starting point</param>
+        /// <param name="p2">end point</param>
+        /// <param name="breadth">the amplitude of the movement</param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
         public Point DrawZigzag(Point p1, Point p2, float breadth = 2.0f)
         {
             Point s = p2 - p1;

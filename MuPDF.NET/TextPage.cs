@@ -570,7 +570,7 @@ namespace MuPDF.NET
         public static List<Quad> Search(
             TextPage stPage,
             string needle,
-            int hitMax = 0,
+            int hitMax = 10000,
             bool quad = true
         )
         {
@@ -579,7 +579,7 @@ namespace MuPDF.NET
             if (string.IsNullOrEmpty(needle))
                 return quads;
 
-            Hits hits = new Hits();
+            /*Hits hits = new Hits();
 
             hits.Len = 0;
             hits.Quads = quads;
@@ -591,9 +591,16 @@ namespace MuPDF.NET
 
             int hayStack = 0;
             int begin = 0;
-            int end = 0;
+            int end = 0;*/
 
-            int inside = 0;
+            vectorq ret = stPage._nativeTextPage.search_stext_page(needle, null, hitMax); // use MuPDF api for search function
+            
+            foreach (FzQuad q in ret)
+                quads.Add(new Quad(q));
+
+            return quads;
+
+            /* int inside = 0;
 
             foreach (FzStextBlock block in stPage.Blocks)
             {
@@ -701,6 +708,7 @@ namespace MuPDF.NET
             }
 
             return quads;
+            */
         }
 
         internal void OnHighlightChar(Hits hits, FzStextLine line, FzStextChar ch)
@@ -806,6 +814,7 @@ namespace MuPDF.NET
             for (int index = 0; index < s.Length - needle.Length; index++)
             {
                 int end = MatchString(s.Substring(index), needle);
+                
                 if (end != -1)
                 {
                     end += index;
@@ -864,7 +873,7 @@ namespace MuPDF.NET
                 }
             }
 
-            return n <= n0.Length ? -1 : e;
+            return nc.Item2 != 0 ? -1 : e;
         }
 
         public static int Canon(int c)
@@ -1270,9 +1279,16 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// Make flags according to font style or type
+        /// </summary>
+        /// <param name="font">source font</param>
+        /// <param name="line">target line</param>
+        /// <param name="ch">target char</param>
+        /// <returns></returns>
         internal float CharFontFlags(FzFont font, FzStextLine line, FzStextChar ch)
         {
-            float flags = DetectSuperScript(line, ch);
+            float flags = DetectSuperScript(line, ch); // detect super string
             flags += font.fz_font_is_italic() * (int)FontStyle.TEXT_FONT_ITALIC;
             flags += font.fz_font_is_serif() * (int)FontStyle.TEXT_FONT_SERIFED;
             flags += font.fz_font_is_monospaced() * (int)FontStyle.TEXT_FONT_MONOSPACED;
@@ -1280,6 +1296,12 @@ namespace MuPDF.NET
             return flags;
         }
 
+        /// <summary>
+        /// Detect super string
+        /// </summary>
+        /// <param name="line">target line</param>
+        /// <param name="ch">target char</param>
+        /// <returns></returns>
         internal float DetectSuperScript(FzStextLine line, FzStextChar ch)
         {
             if (
@@ -1296,6 +1318,11 @@ namespace MuPDF.NET
             return 0.0f;
         }
 
+        /// <summary>
+        /// Get the font name from FzFont object
+        /// </summary>
+        /// <param name="font"></param>
+        /// <returns></returns>
         internal string GetFontName(FzFont font)
         {
             string name = font.fz_font_name();

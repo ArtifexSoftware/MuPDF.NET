@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Linq.Expressions;
 using System.Runtime.InteropServices;
 using System.Text;
 using mupdf;
@@ -487,8 +488,14 @@ namespace MuPDF.NET
                     string magic = fileName;
                     if (magic == null)
                         magic = fileType;
-
-                    doc = mupdf.mupdf.fz_open_document_with_stream(magic, data);
+                    try
+                    {
+                        doc = mupdf.mupdf.fz_open_document_with_stream(magic, data);
+                    }
+                    catch(Exception e)
+                    {
+                        throw new Exception("Failed to open stream");
+                    }
                 }
                 else
                 {
@@ -1261,7 +1268,6 @@ namespace MuPDF.NET
             else
             {
                 long m_internal_new = page.GetPdfPage().super().m_internal_value();
-                Debug.Assert(m_internal_old != m_internal_new);
             }
 
             return page;
@@ -1543,7 +1549,7 @@ namespace MuPDF.NET
         /// <summary>
         /// PDF only: Return a list of all XObjects referenced by a page.
         /// </summary>
-        /// <param name="pno">page number, 0-based, -∞ < pno < page_count.</param>
+        /// <param name="pno">page number, 0-based, -∞ < pno < PageCount</param>
         /// <returns>a list of (non-image) XObjects. These objects typically represent pages embedded (not copied) from other PDFs.</returns>
         /// <exception cref="Exception"></exception>
         public List<Entry> GetPageXObjects(int pno)
@@ -1562,7 +1568,7 @@ namespace MuPDF.NET
         /// <summary>
         /// Retrieve a list of images used on a page.
         /// </summary>
-        /// <param name="pno"> page number, 0-based, -∞ < pno < page_count.</param>
+        /// <param name="pno"> page number, 0-based, -∞ < pno < PageCount</param>
         /// <param name="full"> whether to also include the referencer’s xref (which is zero if this is the page).</param>
         /// <returns>a list of images referenced by this page.</returns>
         /// <exception cref="Exception"></exception>
@@ -5712,6 +5718,27 @@ namespace MuPDF.NET
         public bool IsStream(int xref = 0)
         {
             return XrefIsStream(xref);
+        }
+
+        /// <summary>
+        /// Re-color pages of PDF
+        /// </summary>
+        /// <param name="pageNum">the number of page</param>
+        /// <param name="colorNum">the number of colorspace, which means bytes of colorspace, Gray = 1, RGB = 3 and CMYK = 4.</param>
+        /// <exception cref="Exception"></exception>
+        public void Recolor(int pageNum, int colorNum)
+        {
+            this[pageNum].Recolor(colorNum);
+        }
+
+        /// <summary>
+        /// Re-color pages of PDF
+        /// </summary>
+        /// <param name="pageNum">the number of page, recolor all pages if invalid page number, otherwise convert specific page.</param>
+        /// <param name="colorSpaceName">the name of colorspace, which can be Gray, RGB, CMYK.</param>
+        public void Recolor(int pageNum, string colorSpaceName)
+        {
+            this[pageNum].Recolor(colorSpaceName);
         }
     }
 }
