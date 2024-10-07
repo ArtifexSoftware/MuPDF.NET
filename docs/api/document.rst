@@ -92,6 +92,7 @@ This class represents a document. It can be constructed from a file or from memo
 :meth:`Document.GetPageXref`                    Get `xref` of page number
 :meth:`Document.LoadOutline`                    Load first outline
 :meth:`Document.ReloadPage`                     PDF only: provide a new copy of a page
+:meth:`Document.Recolor`                        PDF only: recolor pages of document
 :meth:`Document.ForgetPage`                     Remove a page from document page dict
 :meth:`Document.ResolveNames`                   PDF only: Convert destination names into a Dictionary 
 :meth:`Document.ExtendTocItems`                 Add color info to all items of an extended TOC list
