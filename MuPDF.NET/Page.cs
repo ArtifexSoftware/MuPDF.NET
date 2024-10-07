@@ -124,7 +124,7 @@ namespace MuPDF.NET
             }
         }
 
-        public Dictionary<int, dynamic> AnnotRefs { get;  set; } = new Dictionary<int, dynamic>();
+        public Dictionary<int, dynamic> AnnotRefs { get; set; } = new Dictionary<int, dynamic>();
 
         /// <summary>
         /// Determine the rectangle of the page. Same as property Page.rect. For PDF documents this usually also coincides with mediabox and cropbox, but not always.
@@ -143,8 +143,8 @@ namespace MuPDF.NET
                 val = new Rect(0, 0, w, h);
             }
             return val;
-
         }
+
         public static (Rect, Rect, Matrix) RectFunction(int rectN, Rect filled)
         {
             return (fit.Rect, fit.Rect, new IdentityMatrix());
@@ -588,10 +588,7 @@ namespace MuPDF.NET
                     ap = Annot.MergeByte(
                         Annot.MergeByte(
                             Annot.MergeByte(
-                                Annot.MergeByte(
-                                    Annot.MergeByte(bWidth, fillBytes),
-                                    strokeBytes
-                                ),
+                                Annot.MergeByte(Annot.MergeByte(bWidth, fillBytes), strokeBytes),
                                 re
                             ),
                             Utils.ToByte("\n")
@@ -662,11 +659,19 @@ namespace MuPDF.NET
 
             Rect mb = MediaBox;
             Rect rect_ = new Rect(rect.X0, mb.Y1 - rect.Y1, rect.X1, mb.Y1 - rect.Y0);
-            if (!((mb.X0 <= rect_.X0 && rect_.X0 < rect_.X1 && rect_.X1 <= mb.X1)
-                && (mb.Y0 <= rect_.Y0 && rect_.Y0 < rect_.Y1 && rect_.Y1 <= mb.Y1)))
+            if (
+                !(
+                    (mb.X0 <= rect_.X0 && rect_.X0 < rect_.X1 && rect_.X1 <= mb.X1)
+                    && (mb.Y0 <= rect_.Y0 && rect_.Y0 < rect_.Y1 && rect_.Y1 <= mb.Y1)
+                )
+            )
                 throw new Exception(boxtype + " not in Mediabox");
 
-            doc.SetKeyXRef(Xref, boxtype, $"[{Format(new float[] { rect_.X0, rect_.Y0, rect_.X1, rect_.Y1 })}]");
+            doc.SetKeyXRef(
+                Xref,
+                boxtype,
+                $"[{Format(new float[] { rect_.X0, rect_.Y0, rect_.X1, rect_.Y1 })}]"
+            );
         }
 
         public string Format(float[] value)
@@ -827,7 +832,8 @@ namespace MuPDF.NET
                     textColor = new float[3] { 0, 0, 0 };
                 if (textColor.Length > 3)
                     textColor = new float[3] { textColor[0], textColor[1], textColor[2] };
-                dataStr = $"{textColor[0]} {textColor[1]} {textColor[2]} rg /{fontName} {fontSize} Tf";
+                dataStr =
+                    $"{textColor[0]} {textColor[1]} {textColor[2]} rg /{fontName} {fontSize} Tf";
                 if (fill == null)
                     fill = new float[3] { 1, 1, 1 };
             }
@@ -891,7 +897,7 @@ namespace MuPDF.NET
                 nTabs.Add(tabStrArr[0]);
                 nTabs.Add(tabStrArr[3]);
                 nTabs.Add("S");
- 
+
                 ret.SetAP(Encoding.UTF8.GetBytes(string.Join("\n", nTabs)));
             }
 
@@ -929,7 +935,8 @@ namespace MuPDF.NET
                     textColor = new float[3] { 0, 0, 0 };
                 if (textColor.Length > 3)
                     textColor = new float[3] { textColor[0], textColor[1], textColor[2] };
-                dataStr = $"{textColor[0]} {textColor[1]} {textColor[2]} rg /{fontName} {fontSize} Tf";
+                dataStr =
+                    $"{textColor[0]} {textColor[1]} {textColor[2]} rg /{fontName} {fontSize} Tf";
                 if (fill == null)
                     fill = new float[3] { 1, 1, 1 };
                 else
@@ -1542,8 +1549,16 @@ namespace MuPDF.NET
         /// <param name="rotate">arbitrary rotation angle.</param>
         /// <param name="oc">the xref of an optional content object</param>
         /// <exception cref="Exception"></exception>
-        public void WriteText(Rect rect = null, List<TextWriter> writers = null, bool overlay = true,
-            float[] color = null, float opacity = -1, bool keepProportion = true, int rotate = 0, int oc = 0)
+        public void WriteText(
+            Rect rect = null,
+            List<TextWriter> writers = null,
+            bool overlay = true,
+            float[] color = null,
+            float opacity = -1,
+            bool keepProportion = true,
+            int rotate = 0,
+            int oc = 0
+        )
         {
             if (writers == null || writers.Count == 0)
                 throw new Exception("need at least one pymupdf.TextWriter");
@@ -1565,7 +1580,8 @@ namespace MuPDF.NET
                 keepProportion: keepProportion,
                 rotate: rotate,
                 clip: clip,
-                oc: oc);
+                oc: oc
+            );
             textDoc = null;
             page = null;
         }
@@ -1630,9 +1646,20 @@ namespace MuPDF.NET
         /// </param>
         /// <returns></returns>
         /// <exception cref="Exception"></exception>
-        public bool ApplyRedactions(int images = 2, int graphics = 1, int text = 0, string fontFile = null)
+        public bool ApplyRedactions(
+            int images = 2,
+            int graphics = 1,
+            int text = 0,
+            string fontFile = null
+        )
         {
-            Rect CenterRect(Rect annotRect, string newText, string fontfile, string fname, float fsize)
+            Rect CenterRect(
+                Rect annotRect,
+                string newText,
+                string fontfile,
+                string fname,
+                float fsize
+            )
             {
                 if (string.IsNullOrEmpty(newText) || annotRect.Width <= Utils.FLT_EPSILON)
                     return annotRect;
@@ -1669,9 +1696,7 @@ namespace MuPDF.NET
 
             List<AnnotValues> redactAnnots = new List<AnnotValues>();
             foreach (
-                Annot annot in GetAnnots(
-                    new List<PdfAnnotType>() { PdfAnnotType.PDF_ANNOT_REDACT }
-                )
+                Annot annot in GetAnnots(new List<PdfAnnotType>() { PdfAnnotType.PDF_ANNOT_REDACT })
             )
                 redactAnnots.Add(annot.GetRedactValues());
             if (redactAnnots.Count == 0)
@@ -3066,7 +3091,7 @@ namespace MuPDF.NET
             dev.Ptm = new FzMatrix(1, 0, 0, -1, 0, prect.y1);
             page.fz_run_page(dev, new FzMatrix(), new FzCookie());
             dev.fz_close_device();
-            
+
             if (oldRotation != 0)
                 SetRotation(oldRotation);
             return rc;
@@ -3145,7 +3170,9 @@ namespace MuPDF.NET
         public DisplayList GetDisplayList(int annots = 1)
         {
             if (annots != 0)
-                return new DisplayList(mupdf.mupdf.fz_new_display_list_from_page(new FzPage(_pdfPage)));
+                return new DisplayList(
+                    mupdf.mupdf.fz_new_display_list_from_page(new FzPage(_pdfPage))
+                );
             else
                 return new DisplayList(
                     mupdf.mupdf.fz_new_display_list_from_page_contents(new FzPage(_pdfPage))
@@ -3263,7 +3290,7 @@ namespace MuPDF.NET
                 oc: oc
             );
             img.Commit(overlay);
-            
+
             return ret;
         }
 
@@ -3850,7 +3877,7 @@ namespace MuPDF.NET
                 item.Xref = xref;
                 imgInfo[i] = item;
             }
-            
+
             return imgInfo;
         }
 
@@ -3935,7 +3962,7 @@ namespace MuPDF.NET
             if (labels.Count == 0)
                 return "";
             labels.Sort();
-            
+
             return Utils.GetPageLabel(Number, labels);
         }
 
@@ -4067,10 +4094,7 @@ namespace MuPDF.NET
                 float zoom = dpi / 72.0f;
                 Matrix mat = new Matrix(zoom, zoom);
                 Pixmap pix = page.GetPixmap(matrix: (IdentityMatrix)mat);
-                Document ocrPdf = new Document(
-                    "pdf",
-                    pix.PdfOCR2Bytes(true, language, tessdata)
-                );
+                Document ocrPdf = new Document("pdf", pix.PdfOCR2Bytes(true, language, tessdata));
 
                 Page ocrPage = ocrPdf.LoadPage(0);
                 float unZoom = page.Rect.Width / ocrPage.Rect.Width;
@@ -4124,7 +4148,7 @@ namespace MuPDF.NET
                     return FullOcr(this, dpi, language, flags);
                 }
             }
-            
+
             return tp;
         }
 
@@ -4199,7 +4223,7 @@ namespace MuPDF.NET
             );
             if (ret >= 0)
                 img.Commit(overlay);
-            
+
             return ret;
         }
 
@@ -4223,7 +4247,7 @@ namespace MuPDF.NET
             PdfPage page = _pdfPage;
             if (page.m_internal == null)
                 return;
-            
+
             PdfFilterOptions filter = Utils.MakePdfFilterOptions(recurse: 1, sanitize: sanitize);
             page.doc().pdf_filter_page_contents(page, filter);
         }
@@ -4310,11 +4334,7 @@ namespace MuPDF.NET
                 {
                     InsertLink(link);
                 }
-                catch(Exception)
-                {
-
-                }
-                
+                catch (Exception) { }
             }
             foreach (Widget widget in GetWidgets())
             {
@@ -4322,7 +4342,7 @@ namespace MuPDF.NET
                 widget.Rect = r;
                 widget.Update();
             }
-            
+
             return iMat;
         }
 
@@ -4468,7 +4488,7 @@ namespace MuPDF.NET
                 pRects = pRects.OrderBy(p => p.Y1).ThenBy(p => p.X0).ToList();
             }
             newRects = newRects.OrderBy(p => p.Y1).ThenBy(p => p.X0).ToList();
-         
+
             return newRects.Where(r => r.Width > deltaX && r.Height > deltaY).ToList();
         }
 
@@ -4481,7 +4501,8 @@ namespace MuPDF.NET
         {
             FzRect mediabox = _nativePage.fz_bound_page();
             FzMatrix ctm = matrix == null ? new FzMatrix() : matrix.ToFzMatrix();
-            SvgText textOpt = (textAsPath == 1) ? SvgText.FZ_SVG_TEXT_AS_PATH : SvgText.FZ_SVG_TEXT_AS_TEXT;
+            SvgText textOpt =
+                (textAsPath == 1) ? SvgText.FZ_SVG_TEXT_AS_PATH : SvgText.FZ_SVG_TEXT_AS_TEXT;
             FzRect bounds = mediabox.fz_transform_rect(ctm);
 
             FzBuffer res = mupdf.mupdf.fz_new_buffer(1024);
@@ -4490,12 +4511,13 @@ namespace MuPDF.NET
                 bounds.x1 - bounds.x0,
                 bounds.y1 - bounds.y0,
                 (int)textOpt,
-                1);
+                1
+            );
             _nativePage.fz_run_page(dev, ctm, new FzCookie());
             mupdf.mupdf.fz_close_device(dev);
             output.fz_close_output();
             string text = Utils.EscapeStrFromBuffer(res);
-            
+
             return text;
         }
 
@@ -4507,7 +4529,7 @@ namespace MuPDF.NET
         public void Recolor(int colorNum)
         {
             if (!(colorNum == 1 || colorNum == 3 || colorNum == 4))
-                throw new Exception("invalid number of colospace");
+                throw new Exception("invalid number of colorspace");
 
             pdf_recolor_options options = new pdf_recolor_options();
             options.num_comp = colorNum;
@@ -4522,13 +4544,14 @@ namespace MuPDF.NET
         /// <exception cref="Exception"></exception>
         public void Recolor(string colorSpaceName)
         {
-            int colorNum = (new List<string>() { "", "GRAY", "", "RGB", "CMYK" }).IndexOf(colorSpaceName.ToUpper());
+            int colorNum = (new List<string>() { "", "GRAY", "", "RGB", "CMYK" }).IndexOf(
+                colorSpaceName.ToUpper()
+            );
             if (colorNum == -1 || colorNum == 0 || colorNum == 2)
-                throw new Exception("invalid name of colospace");
+                throw new Exception("invalid name of colorspace");
 
             Recolor(colorNum);
         }
-
     }
 
     public class BoxDevice : FzDevice2
@@ -4900,7 +4923,7 @@ namespace MuPDF.NET
             LineartPath(ctx, path);
             if (PathDict == null)
                 return;
-            
+
             PathDict.Type = "s";
             PathDict.StrokeOpacity = alpha;
             PathDict.Color = LineartColor(cs, color);
@@ -5271,7 +5294,7 @@ namespace MuPDF.NET
             }
             else
             {
-                for (int i = 0; i < prevItems.Count; i ++)
+                for (int i = 0; i < prevItems.Count; i++)
                 {
                     if (!prevItems[i].Equal(thisItems[i]))
                     {
@@ -5574,14 +5597,9 @@ namespace MuPDF.NET
             float fflags = 0;
             int mono = mupdf.mupdf.fz_font_is_monospaced(fzSpan.font());
             fflags += mono * (int)TextType.TEXT_FONT_MONOSPACED;
-            fflags +=
-                mupdf.mupdf.fz_font_is_italic(fzSpan.font())
-                * (int)TextType.TEXT_FONT_ITALIC;
-            fflags +=
-                mupdf.mupdf.fz_font_is_serif(fzSpan.font())
-                * (int)TextType.TEXT_FONT_SERIFED;
-            fflags +=
-                mupdf.mupdf.fz_font_is_bold(fzSpan.font()) * (int)TextType.TEXT_FONT_BOLD;
+            fflags += mupdf.mupdf.fz_font_is_italic(fzSpan.font()) * (int)TextType.TEXT_FONT_ITALIC;
+            fflags += mupdf.mupdf.fz_font_is_serif(fzSpan.font()) * (int)TextType.TEXT_FONT_SERIFED;
+            fflags += mupdf.mupdf.fz_font_is_bold(fzSpan.font()) * (int)TextType.TEXT_FONT_BOLD;
 
             float lastAdv = 0;
             FzRect spanBbox = new FzRect();
@@ -5613,7 +5631,8 @@ namespace MuPDF.NET
                 float x0 = charOrig.x;
                 float x1 = x0 + adv;
 
-                float y0, y1;
+                float y0,
+                    y1;
                 if ((mat.d > 0) && (dir.x == 1 || dir.x == -1) || (mat.b != 0 && mat.b == -mat.c))
                 {
                     y0 = charOrig.y + dscSize;
@@ -5693,7 +5712,7 @@ namespace MuPDF.NET
 
                 float[] ret = new float[4];
                 Marshal.Copy(SWIGTYPE_p_float.getCPtr(swigDV).Handle, ret, 0, 4);
-                
+
                 rgb = ret.Take(3).ToArray();
             }
             else
@@ -5754,7 +5773,15 @@ namespace MuPDF.NET
             SeqNo += 1;
         }
 
-        public override void fill_image_mask(fz_context arg_0, fz_image arg_2, fz_matrix arg_3, fz_colorspace arg_4, SWIGTYPE_p_float arg_5, float arg_6, fz_color_params arg_7)
+        public override void fill_image_mask(
+            fz_context arg_0,
+            fz_image arg_2,
+            fz_matrix arg_3,
+            fz_colorspace arg_4,
+            SWIGTYPE_p_float arg_5,
+            float arg_6,
+            fz_color_params arg_7
+        )
         {
             SeqNo += 1;
         }

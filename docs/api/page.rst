@@ -1106,7 +1106,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
       Recolor specific page of PDF with specific color mode.
 
       :arg int colorNum: the number of colorspace, which means bytes of pixel. "GRAY" = `1`, "RGB" = `3`, "CMYK" = `4`.
-      :arg string colorSpaceName: the name of the colorspace, ""GRAY", "RGB", "CMYK".
+      :arg string colorSpaceName: the name of the colorspace, "GRAY", "RGB", "CMYK".
 
    .. index::
       pair: xref; DeleteImage
