@@ -429,5 +429,15 @@ namespace MuPDF.NET.Test
             for (int i = 0; i < doc.PageCount; i ++)
                 doc[i].GetPixmap(matrix: new Matrix(2, 2));
         }
+
+        [Test]
+        public void Recolor()
+        {
+            Document doc = new Document("../../../resources/image-file1.pdf");
+            doc.LoadPage(0).Recolor(4);
+
+            List<Entry> images = doc.GetPageImages(0);
+            Assert.That(images[0].CsName.Equals("DeviceCMYK"));
+        }
     }
 }

@@ -5724,7 +5724,7 @@ namespace MuPDF.NET
         /// Re-color pages of PDF
         /// </summary>
         /// <param name="pageNum">the number of page</param>
-        /// <param name="compNum">the number of colorspace, which means bytes of colorspace, Gray = 1, RGB = 3 and CMYK = 4.</param>
+        /// <param name="colorNum">the number of colorspace, which means bytes of colorspace, Gray = 1, RGB = 3 and CMYK = 4.</param>
         /// <exception cref="Exception"></exception>
         public void Recolor(int pageNum, int colorNum)
         {
