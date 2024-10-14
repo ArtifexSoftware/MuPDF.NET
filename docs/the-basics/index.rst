@@ -866,6 +866,7 @@ The following snippet creates a new |PDF| and encrypts it with separate user and
 
 
 .. code-block:: csharp
+
     using MuPDF.NET;
 
     string text = "some secret information"; // keep this data secret

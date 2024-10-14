@@ -14,7 +14,7 @@
             <textarea id="maths-test-answer" rows="1" cols="5"></textarea>
          </div>
 
-         <form method="post" target="feedback_print_popup" action="https://artifex.com/contributor/mupdfjs-process-feedback.php" onsubmit="submitFeedback();">
+         <form method="post" target="feedback_print_popup" action="https://artifex.com/contributor/mupdfnet-process-feedback.php" onsubmit="submitFeedback();">
              <input type="hidden" name="url" id="feedback-doc-url-page">
              <input type="hidden" name="page" id="feedback-page-ref">
              <input type="hidden" name="helpful" id="feedback-helpful">
@@ -125,17 +125,6 @@
 
    </script>
 
-
-
-.. note - this ensures that the Sphinx build system will pull in the image (as it is referenced in an RST file) to _images,
-   we don't want to display it via rst markup due to limitations (hence width:0), however we do want it available for our raw HTML
-   which we use in header.rst.
-
-.. image:: images/discord-mark-blue.svg
-          :alt:
-          :width: 0
-          :height: 0
-          :target: https://discord.gg/DQ8GBG6V4g
 
 
 
