@@ -13,7 +13,7 @@ Identity is a constant, an "immutable" object. So, all of its matrix properties 
 If you need a **mutable** identity matrix as a starting point, use one of the following statements.
 
 
-.. code-block:: c
+.. code-block:: cs
 
     Matrix m = new Matrix(1, 0, 0, 1, 0, 0);  // specify the values
     Matrix m = new Matrix(1, 1);              // use scaling by factor 1

@@ -20,6 +20,18 @@
 
     <cite>MuPDF.NET</cite>
 
+.. |MuPDF| raw:: html
+
+    <cite>MuPDF</cite>
+
+.. |ByteScout SDK| raw:: html
+
+    <cite>ByteScout SDK</cite>
+
+.. |ByteScout| raw:: html
+
+    <cite>ByteScout</cite>
+
 .. |PyMuPDF| raw:: html
 
     <cite>PyMuPDF</cite>
@@ -27,6 +39,10 @@
 .. |PDF| raw:: html
 
     <cite>PDF</cite>
+
+.. |TODO| raw:: html
+
+    <div style="width:100%; text-align:center; color:red;"><b>TODO</b></div>
 
 .. |pdf_only_class| raw:: html
 

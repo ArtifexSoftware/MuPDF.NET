@@ -15,9 +15,9 @@ Within `docs` update the associated restructured text (`.rst`) files. These file
 
 ## Building HTML documentation
 
-- Ensure you have the `pydata` theme installed:
+- Ensure you have the `furo` theme installed:
 
-`pip install pydata-sphinx-theme`
+`pip install furo`
 
 - Ensure you have `Sphinx design` installed:
 
@@ -26,6 +26,10 @@ Within `docs` update the associated restructured text (`.rst`) files. These file
 - Ensure you have `Sphinx Copy Button` installed:
 
 `pip install sphinx-copybutton`
+
+- Ensure you have `Sphinx Not Found` component installed:
+
+`pip install sphinx-notfound-page`
 
 - From the "docs" location run:
 

@@ -344,7 +344,7 @@ The callback function can be used to log information about story output. The fun
 
 A typical loop for executing a story with using this method would look like this:
 
-.. code-block:: c
+.. code-block:: cs
 
     string html = "<html><head></head><body><h1>Header level 1</h1><h2>Header level 2</h2></body><p>Hello MuPDF</p></html>";
 

@@ -1,8 +1,10 @@
 .. include:: ../header.rst
 
-============
-API
-============
+.. _Classes:
+
+
+Classes
+===================
 
 .. toctree::
    :maxdepth: 2

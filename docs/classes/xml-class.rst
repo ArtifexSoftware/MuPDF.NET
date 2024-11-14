@@ -414,7 +414,7 @@ Context Manager support
 The standard way to add nodes to a DOM is this:
 
 
-.. code-block:: c
+.. code-block:: cs
 
    Xml body = story.Body;
    Xml para = body.AddParagraph();  // add a paragraph
@@ -427,7 +427,7 @@ The standard way to add nodes to a DOM is this:
 
 Methods that are flagged as "context managers" can conveniently be used in this way:
 
-.. code-block:: c
+.. code-block:: cs
 
    Xml body = story.Body;
    Xml para = body.AddParagraph();

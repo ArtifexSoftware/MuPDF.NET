@@ -206,7 +206,7 @@ This class represents a document. It can be constructed from a file or from memo
 
     Overview of possible forms, note: `open` is a synonym of `Document`:
 
-    .. code-block:: c
+    .. code-block:: cs
 
         // from a file
         Document doc = new Document("some.pdf");
@@ -1437,7 +1437,7 @@ This class represents a document. It can be constructed from a file or from memo
       * *Yres* (*int*) resolution in y direction. Please also see :data:`resolution`.
       * *Image* (*byte[]*) image data, usable as image file content
 
-    .. code-block:: c
+    .. code-block:: cs
 
       ImageInfo d = doc.ExtractImage(1373)
       Console.WriteLine(d)
@@ -1802,7 +1802,7 @@ Other Examples
 ----------------
 **Extract all page-referenced images of a PDF into separate PNG files**:
 
-.. code-block:: c
+.. code-block:: cs
 
   MuPDFDocument doc = new MuPDFDocument("input.pdf");
 
@@ -1827,7 +1827,7 @@ Other Examples
 
 **Rotate all pages of a PDF:**
 
-.. code-block:: c
+.. code-block:: cs
 
   for (int i = 0; i < doc.PageCount; i ++)
   {

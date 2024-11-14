@@ -39,7 +39,16 @@ Developer documentation to help you get started
 
     getting-started/index.rst
     the-basics/index.rst
-    api/index.rst
+
+
+.. toctree::
+    :caption: API REFERENCE
+    :maxdepth: 2
+
+    classes/index.rst
+    migration/bytescout/index.rst
+
+
 
 
 
@@ -56,8 +65,7 @@ Find us
 
     |MuPDF.NET| has been derived from `PyMuPDF <https://github.com/pymupdf/PyMuPDF>`_ and it closely follows its structure. So for most of |PyMuPDF|'s classes, features and functions you will find a respective |MuPDF.NET| object doing the same sort of thing.
 
-
-    Please note that there are deviations as per how objects are named. We will publish a table in due time that maps |MuPDF.NET| and |PyMuPDF| names.
+    Please note that there are deviations as per how objects are named.
 
 
 

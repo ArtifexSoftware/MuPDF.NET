@@ -1564,7 +1564,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
       Example: Show the same source page, rotated by 90 and by -90 degrees:
 
-      .. code-block:: c
+      .. code-block:: cs
 
          Document doc = new Document()  // new empty PDF
          Page page=doc.NewPage()  // new page in A4 format

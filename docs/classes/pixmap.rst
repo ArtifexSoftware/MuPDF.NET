@@ -280,7 +280,7 @@ Have a look at the :ref:`FAQ` section to see some pixmap usage "at work".
 
       .. note:: Example: Suppose you have two pixmaps, `pix1` and `pix2` and you want to copy the lower right quarter of `pix2` to `pix1` such that it starts at the top-left point of `pix1`. Use the following snippet:
 
-      .. code-block:: c
+      .. code-block:: cs
 
          // safeguard: set top-left of pix1 and pix2 to (0, 0)
          pix1.SetOrigin(0, 0)
@@ -336,7 +336,7 @@ Have a look at the :ref:`FAQ` section to see some pixmap usage "at work".
          
             Another possible use is insertion into some pdf. The following snippet reads the images of a folder and stores them as pages in a new PDF that contain an OCR text layer:
 
-         .. code-block:: c
+         .. code-block:: cs
 
             Document doc = new Document();
             foreach (string imgfile in Directory.GetFiles(folder))

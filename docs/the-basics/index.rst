@@ -50,7 +50,7 @@ Opening a File
 
 To open a file, do the following:
 
-.. code-block:: csharp
+.. code-block:: cs
 
     using MuPDF.NET;
 
@@ -68,7 +68,7 @@ Extract text from a |PDF|
 
 To extract all the text from a |PDF| file, do the following:
 
-.. code-block:: csharp
+.. code-block:: cs
 
     using MuPDF.NET;
 
@@ -93,7 +93,7 @@ Of course it is not just |PDF| which can have text extracted - all the :ref:`sup
 
     If your document contains image based text content then use OCR on the page for subsequent text extraction:
 
-    .. code-block:: csharp
+    .. code-block:: cs
 
         TextPage tp = page.GetTextPageOcr();
         string text = page.GetText(textpage: tp);
@@ -117,7 +117,7 @@ Extract images from a |PDF|
 
 To extract all the images from a |PDF| file, do the following:
 
-.. code-block:: csharp
+.. code-block:: cs
 
     using MuPDF.NET;
 
@@ -160,7 +160,7 @@ Extract vector graphics
 To extract all the vector graphics from a document page, do the following:
 
 
-.. code-block:: csharp
+.. code-block:: cs
 
     Document doc = new Document("some.file");
     Page page = doc[0];
@@ -188,7 +188,7 @@ Merging |PDF| files
 
 To merge |PDF| files, do the following:
 
-.. code-block:: csharp
+.. code-block:: cs
 
     using MuPDF.NET;
 
@@ -204,7 +204,7 @@ Merging |PDF| files with other types of file
 
 With :meth:`Document.InsertFile` you can invoke the method to merge :ref:`supported files<Supported_File_Types>` with |PDF|. For example:
 
-.. code-block:: csharp
+.. code-block:: cs
 
     using MuPDF.NET;
 
@@ -238,7 +238,7 @@ Adding a watermark to a |PDF|
 
 To add a watermark to a |PDF| file, do the following:
 
-.. code-block:: csharp
+.. code-block:: cs
 
     using MuPDF.NET;
 
@@ -277,7 +277,7 @@ Adding an image to a |PDF|
 
 To add an image to a |PDF| file, for example a logo, do the following:
 
-.. code-block:: csharp
+.. code-block:: cs
 
     using MuPDF.NET;
 
@@ -315,7 +315,7 @@ Rotating a |PDF|
 
 To add a rotation to a page, do the following:
 
-.. code-block:: csharp
+.. code-block:: cs
 
     using MuPDF.NET;
 
@@ -340,7 +340,7 @@ Cropping a |PDF|
 
 To crop a page to a defined :ref:`Rect<Rect>`, do the following:
 
-.. code-block:: csharp
+.. code-block:: cs
 
     using MuPDF.NET;
 
@@ -366,7 +366,7 @@ Attaching Files
 
 To attach another file to a page, do the following:
 
-.. code-block:: csharp
+.. code-block:: cs
 
     using MuPDF.NET;
 
@@ -408,7 +408,7 @@ To attach another file to a page, do the following:
 
 To embed a file to a document, do the following:
 
-.. code-block:: csharp
+.. code-block:: cs
 
     using MuPDF.NET;
 
@@ -445,7 +445,7 @@ Deleting Pages
 
 To delete a page from a document, do the following:
 
-.. code-block:: csharp
+.. code-block:: cs
 
     using MuPDF.NET;
 
@@ -457,7 +457,7 @@ To delete a multiple pages from a document, do the following:
 
 .. raw:: html
 
-.. code-block:: csharp
+.. code-block:: cs
 
     using MuPDF.NET;
 
@@ -497,7 +497,7 @@ Re-Arranging Pages
 
 To change the sequence of pages, i.e. re-arrange pages, do the following:
 
-.. code-block:: csharp
+.. code-block:: cs
 
     using MuPDF.NET;
 
@@ -525,7 +525,7 @@ Copying Pages
 To copy pages, do the following:
 
 
-.. code-block:: csharp
+.. code-block:: cs
 
     using MuPDF.NET;
 
@@ -550,7 +550,7 @@ Selecting Pages
 
 To select pages, do the following:
 
-.. code-block:: csharp
+.. code-block:: cs
 
     using MuPDF.NET;
 
@@ -567,7 +567,7 @@ To select pages, do the following:
 
     Or you alternatively prepare a complete new page layout in form of a list, that contains the page numbers you want, in the sequence you want, and as many times as you want each page. The following may illustrate what can be done with :meth:`Document.Select`
 
-    .. code-block:: csharp
+    .. code-block:: cs
 
         doc.Select(new List<int>([1, 1, 1, 5, 4, 9, 9, 9, 0, 2, 2, 2]))
 
@@ -578,7 +578,7 @@ To select pages, do the following:
 
     This snippet creates the respective sub documents which can then be used to print the document:
 
-    .. code-block:: csharp
+    .. code-block:: cs
 
         doc.Select(p_even) // only the even pages left over
         doc.Save("even.pdf") // save the "even" PDF
@@ -593,7 +593,7 @@ To select pages, do the following:
 
     The following example will reverse the order of all pages (**extremely fast:** sub-second time for the 756 pages of the :ref:`AdobeManual`):
 
-    .. code-block:: csharp
+    .. code-block:: cs
 
         int lastPage = doc.PageCount - 1;
         for(int i = 0; i < lastPage; i ++)
@@ -603,7 +603,7 @@ To select pages, do the following:
 
     This snippet duplicates the PDF with itself so that it will contain the pages *0, 1, ..., n, 0, 1, ..., n* **(extremely fast and without noticeably increasing the file size!)**:
 
-    .. code-block:: csharp
+    .. code-block:: cs
 
         int pageCount = doc.PageCount;
         for(int i = 0; i < pageCount; i ++)
@@ -628,7 +628,7 @@ Adding Blank Pages
 
 To add a blank page, do the following:
 
-.. code-block:: csharp
+.. code-block:: cs
 
     using MuPDF.NET;
 
@@ -645,7 +645,7 @@ To add a blank page, do the following:
 
     Use this to create the page with another pre-defined paper format:
 
-    .. code-block:: csharp
+    .. code-block:: cs
 
         (int w, int h) = Utils.PageSize("letter-l"); // 'Letter' landscape
         Page page = doc.NewPage(width: w, height: h);
@@ -655,7 +655,7 @@ To add a blank page, do the following:
 
     Here is a 3-liner that creates a |PDF|: with one empty page. Its file size is 460 bytes:
 
-    .. code-block:: csharp
+    .. code-block:: cs
 
         doc = new Document();
         doc.NewPage();
@@ -678,7 +678,7 @@ Inserting Pages with Text Content
 
 Using the :meth:`Document.InsertPage` method also inserts a new page and accepts the same `width` and `height` parameters. But it lets you also insert arbitrary text into the new page and returns the number of inserted lines.
 
-.. code-block:: csharp
+.. code-block:: cs
 
     using MuPDF.NET;
 
@@ -720,7 +720,7 @@ This deals with splitting up pages of a |PDF| in arbitrary pieces. For example, 
 
 
 
-.. code-block:: csharp
+.. code-block:: cs
 
     using MuPDF.NET;
 
@@ -786,7 +786,7 @@ Combining Single Pages
 This deals with joining |PDF| pages to form a new |PDF| with pages each combining two or four original ones (also called "2-up", "4-up", etc.). This could be used to create booklets or thumbnail-like overviews.
 
 
-.. code-block:: csharp
+.. code-block:: cs
 
     using MuPDF.NET;
 
@@ -865,7 +865,7 @@ Starting with version 1.16.0, |PDF| decryption and encryption (using passwords) 
 The following snippet creates a new |PDF| and encrypts it with separate user and owner passwords. Permissions are granted to print, copy and annotate, but no changes are allowed to someone authenticating with the user password.
 
 
-.. code-block:: csharp
+.. code-block:: cs
 
     using MuPDF.NET;
 
@@ -923,7 +923,7 @@ Getting Page Links
 Links can be extracted from a :ref:`Page` to return :ref:`Link` objects.
 
 
-.. code-block:: csharp
+.. code-block:: cs
 
     using MuPDF.NET;
 
@@ -956,7 +956,7 @@ Getting All Annotations from a Document
 
 Annotations (:ref:`Annot`) on pages can be retrieved with the `Page.GetAnnots()` method.
 
-.. code-block:: csharp
+.. code-block:: cs
 
     using MuPDF.NET;
 
@@ -995,7 +995,7 @@ Redactions are special types of annotations which can be marked onto a document 
 For example if we wanted to redact all instances of the name "Jane Doe" from a document we could do the following:
 
 
-.. code-block:: csharp
+.. code-block:: cs
 
     using MuPDF.NET;
 
@@ -1025,7 +1025,7 @@ For example if we wanted to redact all instances of the name "Jane Doe" from a d
 Another example could be redacting an area of a page, but not to redact any line art (i.e. vector graphics) within the defined area, by setting a parameter flag as follows:
 
 
-.. code-block:: csharp
+.. code-block:: cs
 
     using MuPDF.NET;
 
