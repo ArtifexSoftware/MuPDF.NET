@@ -3131,7 +3131,7 @@ namespace MuPDF.NET
         )
         {
             if (matrix == null)
-                matrix = new Matrix();
+                matrix = new Matrix(1.0f, 1.0f);
 
             float zoom;
             if (dpi != 0)
