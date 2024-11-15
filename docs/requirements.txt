@@ -7,3 +7,4 @@ readthedocs-sphinx-search==0.3.2
 sphinx_copybutton
 sphinx-notfound-page
 sphinxcontrib-googleanalytics
+sphinx-tabs
