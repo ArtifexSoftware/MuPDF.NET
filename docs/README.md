@@ -27,9 +27,17 @@ Within `docs` update the associated restructured text (`.rst`) files. These file
 
 `pip install sphinx-copybutton`
 
+- Ensure you have `Sphinx Tabs` installed:
+
+`pip install sphinx-tabs`
+
 - Ensure you have `Sphinx Not Found` component installed:
 
 `pip install sphinx-notfound-page`
+
+- Ensure you have `Google Analytics` component installed:
+
+`pip install sphinxcontrib-googleanalytics`
 
 - From the "docs" location run:
 
@@ -46,7 +54,17 @@ This then creates the HTML documentation within `build/html`.
 
 This will ensure that the documentation runs in a localhost and will also hot-reload changes.
 
+## Windows
 
+On Windows you may need to trigger Sphinx builds with more dedicated, direct commands, for example:
+
+Check Sphinx is installed & version:
+
+python -m sphinx sphinx-build --version
+
+Build the docs:
+
+python -m sphinx -a -b html . build/html
 
 
 ---
