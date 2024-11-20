@@ -16,7 +16,6 @@ For a description of what this class is all about, see Appendix 2.
 **Method**                    **Description**                       page GetText or Search method
 ==========================    ===================================== ==============================
 :meth:`~.ExtractText`         Extract plain text                    "text"
-:meth:`~.ExtractText`         Synonym of previous                   "text"
 :meth:`~.ExtractBlocks`       Plain text grouped in blocks          "blocks"
 :meth:`~.ExtractWords`        All words with their bbox             "words"
 :meth:`~.ExtractHtml`         Page content in HTML format           "html"
@@ -33,8 +32,6 @@ For a description of what this class is all about, see Appendix 2.
 **Class API**
 
 .. class:: TextPage
-
-   .. method:: ExtractText(bool sort: false)
 
    .. method:: ExtractText(bool sort: false)
 
