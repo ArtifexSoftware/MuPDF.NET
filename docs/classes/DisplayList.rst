@@ -6,6 +6,7 @@
 DisplayList
 ================
 
+
 DisplayList is a list containing drawing commands (text, images, etc.). The intent is two-fold:
 
 1. as a caching-mechanism to reduce parsing of a page

@@ -6,6 +6,7 @@
 ColorSpace
 ================
 
+
 Represents the color space of a :ref:`Pixmap`.
 
 

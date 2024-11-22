@@ -1,8 +1,9 @@
 .. include:: header.rst
 
 ============
-Functions
+Utils
 ============
+
 The following are miscellaneous functions and attributes on a fairly low-level technical detail.
 
 Some functions provide detail access to PDF structures. Others are stripped-down, high performance versions of other functions which provide more information.

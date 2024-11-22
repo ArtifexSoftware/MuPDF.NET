@@ -6,6 +6,7 @@
 Rect
 ==========
 
+
 *Rect* represents a rectangle defined by four floating point numbers x0, y0, x1, y1. They are treated as being coordinates of two diagonally opposite points. The first two numbers are regarded as the "top left" corner P\ :sub:`(x0,y0)` and P\ :sub:`(x1,y1)` as the "bottom right" one. However, these two properties need not coincide with their intuitive meanings -- read on.
 
 The following remarks are also valid for :ref:`IRect` objects:

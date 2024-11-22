@@ -6,6 +6,7 @@
 Widget
 ================
 
+
 |pdf_only_class|
 
 This class represents a PDF Form field, also called a "widget". Throughout this documentation, we are using these terms synonymously. Fields technically are a special case of PDF annotations, which allow users with limited permissions to enter information in a PDF. This is primarily used for filling out forms.

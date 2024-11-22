@@ -5,6 +5,8 @@
 ================
 Link
 ================
+
+
 Represents a pointer to somewhere (this document, other documents, the internet). Links exist per document page, and they are forward-chained to each other, starting from an initial link which is accessible by the :attr:`MuPDFPage.FirstLink` property.
 
 There is a parent-child relationship between a link and its page. If the page object becomes unusable (closed document, any document structure change, etc.), then so does every of its existing link objects -- an exception is raised saying that the object is "orphaned", whenever a link property or method is accessed.
@@ -16,14 +18,14 @@ There is a parent-child relationship between a link and its page. If the page ob
 :meth:`Link.SetColors`        Modify color properties
 :meth:`Link.SetFlags`         Modify link flags
 :attr:`Link.Border`           Border characteristics
-:attr:`Link.Colors`           Border line color
+:attr:`Link.Color`            Border stroke and interior color
 :attr:`Link.Dest`             Points to destination details
 :attr:`Link.IsExternal`       Checks if the link is an external destination
 :attr:`Link.Flags`            Link annotation flags
 :attr:`Link.Next`             Points to next link
-:attr:`Link.Rect`             Clickable area in untransformed coordinates                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
-:attr:`Link.Uri`              Link destination                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
-:attr:`Link.Xref`             :data:`xref` number of the entry                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
+:attr:`Link.Rect`             Clickable area in untransformed coordinates
+:attr:`Link.Uri`              Link destination
+:attr:`Link.Xref`             :data:`xref` number of the entry
 ============================= ============================================                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
 **Class API**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
@@ -64,7 +66,7 @@ There is a parent-child relationship between a link and its page. If the page ob
 
       Meaningful for PDF only: A dictionary of two tuples of floats in range `0 <= float <= 1` specifying the *stroke* and the interior (*fill*) colors. If not a PDF, *null* is returned. As mentioned above, the fill color is always `null` for links. The stroke color is used for the border of the link rectangle. The length of the tuple implicitly determines the colorspace: 1 = GRAY, 3 = RGB, 4 = CMYK. So `(1.0, 0.0, 0.0)` stands for RGB color red. The value of each float *f* is mapped to the integer value *i* in range 0 to 255 via the computation *f = i / 255*.
 
-      :rtype: Color
+      :rtype: dict
 
    .. attribute:: Border
 

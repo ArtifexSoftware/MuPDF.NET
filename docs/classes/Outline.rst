@@ -6,24 +6,25 @@
 Outline
 ================
 
-`Outline` (or "bookmark"), is a property of :ref:`Document`. If not `null`, it stands for the first outline item of the document. Its properties in turn define the characteristics of this item and also point to other outline items in "horizontal" or downward direction. The full tree of all outline items for e.g. a conventional table of contents (TOC) can be recovered by following these "pointers".
+
+`Outline` (or "bookmark"), is a property of :doc:`Document`. If not `null`, it stands for the first outline item of the document. Its properties in turn define the characteristics of this item and also point to other outline items in "horizontal" or downward direction. The full tree of all outline items for e.g. a conventional table of contents (TOC) can be recovered by following these "pointers".
 
 ================================== ==================================================
 **Method / Attribute**             **Short Description**
 ================================== ==================================================
-:attr:`Matrix.Down`                Next item downwards
-:attr:`Matrix.Next`                Next item same level
-:attr:`Matrix.Page`                Page number (0-based)
-:attr:`Matrix.Title`               Title
-:attr:`Matrix.Uri`                 String further specifying outline target
-:attr:`Matrix.IsExternal`          Target outside document
-:attr:`Matrix.IsOpen`              Whether sub-outlines are open or collapsed
-:attr:`Matrix.Dest`                Points to destination details object
+:attr:`Outline.Down`                Next item downwards
+:attr:`Outline.Next`                Next item same level
+:attr:`Outline.Page`                Page number (0-based)
+:attr:`Outline.Title`               Title
+:attr:`Outline.Uri`                 String further specifying outline target
+:attr:`Outline.IsExternal`          Target outside document
+:attr:`Outline.IsOpen`              Whether sub-outlines are open or collapsed
+:attr:`Outline.Dest`                Points to destination details object
 ================================== ==================================================
 
 **Class API**
 
-.. class:: Matrix
+.. class:: Outline
 
    .. method:: Destination
 

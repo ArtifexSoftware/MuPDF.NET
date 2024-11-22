@@ -6,6 +6,8 @@
 Document
 ================
 
+
+
 This class represents a document. It can be constructed from a file or from memory.
 
 
@@ -206,7 +208,7 @@ This class represents a document. It can be constructed from a file or from memo
 
     Overview of possible forms, note: `open` is a synonym of `Document`:
 
-    .. code-block:: c
+    .. code-block:: cs
 
         // from a file
         Document doc = new Document("some.pdf");
@@ -252,6 +254,13 @@ This class represents a document. It can be constructed from a file or from memo
     :arg string name: arbitrary name.
     :arg string creator: (optional) creating software.
     :arg OCLayerConfig on: a sequence of OCG :data:`xref` numbers which should be set to ON when this layer gets activated. All OCGs not listed here will be set to OFF.
+
+
+  .. method:: Write()
+
+    Writes the document to a bytes array.
+
+    :rtype: byte[]
 
 
   .. method:: SwitchLayer(int config, int asDefault: 0)
@@ -324,6 +333,11 @@ This class represents a document. It can be constructed from a file or from memo
 
         Visibility expressions, `/VE`, are part of PDF specification version 1.6. So not all PDF viewers / readers may already support this feature and hence will react in some standard way for those cases.
 
+  .. method:: GetOutlineXrefs()
+
+    Return the `xref` of the outline item. Mainly used for internal purposes.
+
+    :rtype: `List<int>`
 
   .. method:: GetOCMD(int xref)
 
@@ -490,6 +504,19 @@ This class represents a document. It can be constructed from a file or from memo
     :returns: The tuple of the preceding page, i.e. either *(chapter, pno - 1)* or the last page of the preceding chapter, **or** the empty tuple *()* if the argument was the first page. Relevant only for document types with chapter support (EPUB currently).
 
 
+  .. method:: GetPageNumberFromLocation(int chapter, int pno)
+
+    Gets the page number from the supplied `chapter` and `pno`.
+
+    :arg int chapter:
+    :arg int pno:
+
+    :rtype: int
+
+
+
+
+
   .. method:: LoadPage(int pageId)
 
 
@@ -519,6 +546,14 @@ This class represents a document. It can be constructed from a file or from memo
 
       .. note:: In a typical use case, a page :ref:`Pixmap` should be taken after annotations / widgets have been added or changed. To force all those changes being reflected in the page structure, this method re-instates a fresh copy while keeping the object hierarchy "document -> page -> annotations/widgets" intact.
 
+
+  .. method:: ForgetPage(Page page)
+
+    Remove a page from a document page dictionary.
+
+    :arg page: page object.
+
+
    .. method:: Recolor(int pageNum, int colorNum)
    .. method:: Recolor(int pageNum, string colorSpaceName)
     
@@ -527,6 +562,14 @@ This class represents a document. It can be constructed from a file or from memo
       :arg int pageNum: the number of specific page between 0 and PageCount.
       :arg int colorNum: the number of colorspace, which means bytes of pixel. "GRAY" = `1`, "RGB" = `3`, "CMYK" = `4`.
       :arg string colorSpaceName: the name of the colorspace, "GRAY", "RGB", "CMYK".
+
+
+  .. method:: ExtendTocItems(List<Toc> items)
+
+    Add info the TOC list.
+
+    :arg List<Toc> items): A list of TOC items.
+
 
   .. method:: ResolveNames()
 
@@ -563,6 +606,19 @@ This class represents a document. It can be constructed from a file or from memo
     :arg int pno: 0-based page number.
 
     :returns: :data:`xref` of the page like :attr:`Page.Xref`.
+
+  .. method:: GetPageXref(int pno)
+
+    :arg int pno: 0-based page number.
+
+    :returns: :data:`xref` of the page like :attr:`Page.Xref`.
+
+
+  .. method:: LoadOutline()
+
+    Loads the document outline.
+
+    :returns: :doc:`Outline` instance.
 
   .. method:: GetPages(int start, int stop, int step)
 
@@ -797,6 +853,13 @@ This class represents a document. It can be constructed from a file or from memo
     :arg float height: use it together with *width* as alternative to *rect*.
     :arg float fontSize: the desired default fontSize.
 
+  .. method:: SetLanguage(string language)
+
+    Sets the document language.
+
+    :arg string language: the language locale you want to set.
+
+
   .. method:: Select(List<int> list)
 
     PDF only: Keeps only those pages of the document whose numbers occur in the list. Empty sequences or elements outside `range(doc.PageCount)` will cause a *ValueError*. For more details see remarks at the bottom or this chapter.
@@ -819,6 +882,16 @@ This class represents a document. It can be constructed from a file or from memo
     :arg Dictionary<string, string> m: A dictionary with the same keys as *metadata* (see below). All keys are optional. A PDF's format and encryption method cannot be set or changed and will be ignored. If any value should not contain data, do not specify its key or set the value to `None`. If you use an empty dictionary all metadata information will be cleared to the string *"none"*. If you want to selectively change only some values, modify a copy of *doc.metadata* and use it as the argument. Arbitrary unicode values are possible if specified as UTF-8-encoded.
 
     Empty values or "none" are not written, but completely omitted.
+
+  .. method:: GetMetadata(string key)
+
+    Returns the metadata for the supplied `key`.
+
+    :rtype: string
+
+  .. method:: DeleteXmlMetadata()
+
+    Deletes the XML metadata on a document.
 
   .. method:: GetXmlMetadata()
 
@@ -1346,8 +1419,35 @@ This class represents a document. It can be constructed from a file or from memo
 
     PDF only: Return the trailer source of the PDF,  which is usually located at the PDF file's end. This is :meth:`Document.GetXrefObject` with an *xref* argument of -1.
 
+  .. method:: XrefIsFont(int xref)
+
+    Check if the `xref` is a font or not.
+
+    :arg int xref: :data:`xref` number.
+
+    :rtype: `bool`
+    :returns: `true` if the xref is a font.
+
+  .. method:: XrefIsImage(int xref)
+
+    Check if the `xref` is an image or not.
+
+    :arg int xref: :data:`xref` number.
+
+    :rtype: `bool`
+    :returns: `true` if the xref is a image.
 
   .. method:: XrefIsStream(int xref: 0)
+
+    Returns if the `xref` is a stream or not.
+
+    :arg int xref: :data:`xref` number.
+
+    :rtype: `bool`
+    :returns: `true`if the xref is a stream.
+
+
+  .. method:: GetXrefStream(int xref)
 
     PDF only: Return the **decompressed** contents of the :data:`xref` stream object.
 
@@ -1359,6 +1459,8 @@ This class represents a document. It can be constructed from a file or from memo
   .. method:: GetXrefStreamRaw(int xref)
 
     PDF only: Return the **unmodified** (esp. **not decompressed**) contents of the :data:`xref` stream object. Otherwise equal to :meth:`Document.GetXrefStream`.
+
+    :arg int xref: :data:`xref` number.
 
     :rtype: byte[]
     :returns: the (original, unmodified) stream of the object.
@@ -1437,7 +1539,7 @@ This class represents a document. It can be constructed from a file or from memo
       * *Yres* (*int*) resolution in y direction. Please also see :data:`resolution`.
       * *Image* (*byte[]*) image data, usable as image file content
 
-    .. code-block:: c
+    .. code-block:: cs
 
       ImageInfo d = doc.ExtractImage(1373)
       Console.WriteLine(d)
@@ -1507,6 +1609,14 @@ This class represents a document. It can be constructed from a file or from memo
     In all these cases, the set of actually used unicodes mostly is very small compared to the number of glyphs available in the used fonts. Using this method can easily reduce the embedded font binaries by two orders of magnitude -- from several megabytes down to a low two-digit kilobyte amount.
 
     Creating font subsets leaves behind a large number of large, now unused PDF objects ("ghosts"). Therefore, make sure to compress and garbage-collect when saving the file. We recommend to use garbage option 3 or 4 and deflate.
+
+
+  .. method:: IsEnabledJournal()
+
+    Check if journlling is enabled.
+
+    :rtype: `bool`
+
 
   .. method:: JournalEnable()
 
@@ -1578,6 +1688,19 @@ This class represents a document. It can be constructed from a file or from memo
     :arg int xref: :data:`xref` number.
 
     :returns: *true* if the object definition is followed by data wrapped in keyword pair *stream*, *endstream*.
+
+
+  .. attribute:: PageCount
+
+      Gets the page count of the document.
+
+      :rtype: int
+
+  .. attribute:: Language
+
+      The language of the document.
+
+      :rtype: string
 
   .. attribute:: Outline
 
@@ -1802,7 +1925,7 @@ Other Examples
 ----------------
 **Extract all page-referenced images of a PDF into separate PNG files**:
 
-.. code-block:: c
+.. code-block:: cs
 
   MuPDFDocument doc = new MuPDFDocument("input.pdf");
 
@@ -1827,7 +1950,7 @@ Other Examples
 
 **Rotate all pages of a PDF:**
 
-.. code-block:: c
+.. code-block:: cs
 
   for (int i = 0; i < doc.PageCount; i ++)
   {

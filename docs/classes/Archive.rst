@@ -6,6 +6,7 @@
 Archive
 ================
 
+
 This class represents a generalization of file folders and container files like ZIP and TAR archives. Archives allow accessing arbitrary collections of file folders, ZIP / TAR files and single binary data elements as if they all were part of one hierarchical tree of folders.
 
 Archives are currently only used by :ref:`Story` objects to specify where to look for fonts, images and other resources.

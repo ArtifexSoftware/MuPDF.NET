@@ -6,6 +6,7 @@
 Font
 ================
 
+
 This class represents a font as defined in MuPDF (*fz_font_s* structure). It is required for the new class :ref:`TextWriter` and the new :meth:`Page.WriteText`. Currently, it has no connection to how fonts are used in methods :meth:`Page.InsertText` or :meth:`Page.InsertTextbox`, respectively.
 
 A Font object also contains useful general information, like the font bbox, the number of defined glyphs, glyph names or the bbox of a single glyph.
@@ -274,7 +275,7 @@ A Font object also contains useful general information, like the font bbox, the 
 
       :rtype: float
 
-   .. attribute:: IsWritable
+   .. attribute:: IsWriteable
 
       Indicates whether this font can be used with :ref:`TextWriter`.
 

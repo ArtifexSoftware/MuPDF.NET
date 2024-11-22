@@ -6,6 +6,7 @@
 Pixmap
 ================
 
+
 Pixmaps ("pixel maps") are objects at the heart of MuPDF's rendering capabilities. They represent plane rectangular sets of pixels. Each pixel is described by a number of bytes ("components") defining its color, plus an optional alpha byte defining its transparency.
 
 There exist several ways to create a pixmap. Except the first one, all of them are available as overloaded constructors. A pixmap can be created ...
@@ -47,8 +48,6 @@ Have a look at the :ref:`FAQ` section to see some pixmap usage "at work".
 :attr:`Pixmap.Alpha`             Transparency indicator
 :attr:`Pixmap.ColorSpace`        Pixmap's :ref:`Colorspace`
 :attr:`Pixmap.Digest`            MD5 hashcode of the pixmap
-:attr:`Pixmap.Height`            Pixmap height
-:attr:`Pixmap.interpolate`       Interpolation method indicator
 :attr:`Pixmap.IsMonoChrome`      Check if only black and white occur
 :attr:`Pixmap.IsUniColor`        Check if only one color occurs
 :attr:`Pixmap.IRect`             :ref:`IRect` of the pixmap
@@ -58,7 +57,8 @@ Have a look at the :ref:`FAQ` section to see some pixmap usage "at work".
 :attr:`Pixmap.SAMPLES`           `bytes` copy of pixel area
 :attr:`Pixmap.Size`              Pixmap's total length
 :attr:`Pixmap.Stride`            Size of one image row
-:attr:`Pixmap.Width`             Pixmap width
+:attr:`Pixmap.W`                 Pixmap width
+:attr:`Pixmap.H`                 Pixmap height
 :attr:`Pixmap.X`                 X-coordinate of top-left corner
 :attr:`Pixmap.Xres`              Resolution in X-direction
 :attr:`Pixmap.Y`                 Y-coordinate of top-left corner
@@ -280,7 +280,7 @@ Have a look at the :ref:`FAQ` section to see some pixmap usage "at work".
 
       .. note:: Example: Suppose you have two pixmaps, `pix1` and `pix2` and you want to copy the lower right quarter of `pix2` to `pix1` such that it starts at the top-left point of `pix1`. Use the following snippet:
 
-      .. code-block:: c
+      .. code-block:: cs
 
          // safeguard: set top-left of pix1 and pix2 to (0, 0)
          pix1.SetOrigin(0, 0)
@@ -336,7 +336,7 @@ Have a look at the :ref:`FAQ` section to see some pixmap usage "at work".
          
             Another possible use is insertion into some pdf. The following snippet reads the images of a folder and stores them as pages in a new PDF that contain an OCR text layer:
 
-         .. code-block:: c
+         .. code-block:: cs
 
             Document doc = new Document();
             foreach (string imgfile in Directory.GetFiles(folder))

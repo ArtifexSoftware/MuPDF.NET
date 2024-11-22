@@ -6,6 +6,7 @@
 Xml
 ================
 
+
 .. role:: htmlTag(emphasis)
 
 This represents an HTML or an XML node. It is a helper class intended to access the DOM (Document Object Model) content of a :ref:`Story` object.
@@ -414,7 +415,7 @@ Context Manager support
 The standard way to add nodes to a DOM is this:
 
 
-.. code-block:: c
+.. code-block:: cs
 
    Xml body = story.Body;
    Xml para = body.AddParagraph();  // add a paragraph
@@ -427,7 +428,7 @@ The standard way to add nodes to a DOM is this:
 
 Methods that are flagged as "context managers" can conveniently be used in this way:
 
-.. code-block:: c
+.. code-block:: cs
 
    Xml body = story.Body;
    Xml para = body.AddParagraph();
