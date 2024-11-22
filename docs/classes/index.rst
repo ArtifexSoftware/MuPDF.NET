@@ -16,7 +16,7 @@ Classes
    document.rst
    document-writer-class.rst
    font.rst
-   identity.rst
+   IdentityMatrix.rst
    irect.rst
    link.rst
    .. linkdest.rst
