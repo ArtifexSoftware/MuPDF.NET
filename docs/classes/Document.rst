@@ -256,6 +256,13 @@ This class represents a document. It can be constructed from a file or from memo
     :arg OCLayerConfig on: a sequence of OCG :data:`xref` numbers which should be set to ON when this layer gets activated. All OCGs not listed here will be set to OFF.
 
 
+  .. method:: Write()
+
+    Writes the document to a bytes array.
+
+    :rtype: byte[]
+
+
   .. method:: SwitchLayer(int config, int asDefault: 0)
 
     Switch to a document view as defined by the optional layer's configuration number. This is temporary, except if established as default.
@@ -497,6 +504,19 @@ This class represents a document. It can be constructed from a file or from memo
     :returns: The tuple of the preceding page, i.e. either *(chapter, pno - 1)* or the last page of the preceding chapter, **or** the empty tuple *()* if the argument was the first page. Relevant only for document types with chapter support (EPUB currently).
 
 
+  .. method:: GetPageNumberFromLocation(int chapter, int pno)
+
+    Gets the page number from the supplied `chapter` and `pno`.
+
+    :arg int chapter:
+    :arg int pno:
+
+    :rtype: int
+
+
+
+
+
   .. method:: LoadPage(int pageId)
 
 
@@ -526,6 +546,14 @@ This class represents a document. It can be constructed from a file or from memo
 
       .. note:: In a typical use case, a page :ref:`Pixmap` should be taken after annotations / widgets have been added or changed. To force all those changes being reflected in the page structure, this method re-instates a fresh copy while keeping the object hierarchy "document -> page -> annotations/widgets" intact.
 
+
+  .. method:: ForgetPage(Page page)
+
+    Remove a page from a document page dictionary.
+
+    :arg page: page object.
+
+
    .. method:: Recolor(int pageNum, int colorNum)
    .. method:: Recolor(int pageNum, string colorSpaceName)
     
@@ -534,6 +562,14 @@ This class represents a document. It can be constructed from a file or from memo
       :arg int pageNum: the number of specific page between 0 and PageCount.
       :arg int colorNum: the number of colorspace, which means bytes of pixel. "GRAY" = `1`, "RGB" = `3`, "CMYK" = `4`.
       :arg string colorSpaceName: the name of the colorspace, "GRAY", "RGB", "CMYK".
+
+
+  .. method:: ExtendTocItems(List<Toc> items)
+
+    Add info the TOC list.
+
+    :arg List<Toc> items): A list of TOC items.
+
 
   .. method:: ResolveNames()
 
@@ -570,6 +606,19 @@ This class represents a document. It can be constructed from a file or from memo
     :arg int pno: 0-based page number.
 
     :returns: :data:`xref` of the page like :attr:`Page.Xref`.
+
+  .. method:: GetPageXref(int pno)
+
+    :arg int pno: 0-based page number.
+
+    :returns: :data:`xref` of the page like :attr:`Page.Xref`.
+
+
+  .. method:: LoadOutline()
+
+    Loads the document outline.
+
+    :returns: :doc:`Outline` instance.
 
   .. method:: GetPages(int start, int stop, int step)
 
@@ -833,6 +882,12 @@ This class represents a document. It can be constructed from a file or from memo
     :arg Dictionary<string, string> m: A dictionary with the same keys as *metadata* (see below). All keys are optional. A PDF's format and encryption method cannot be set or changed and will be ignored. If any value should not contain data, do not specify its key or set the value to `None`. If you use an empty dictionary all metadata information will be cleared to the string *"none"*. If you want to selectively change only some values, modify a copy of *doc.metadata* and use it as the argument. Arbitrary unicode values are possible if specified as UTF-8-encoded.
 
     Empty values or "none" are not written, but completely omitted.
+
+  .. method:: GetMetadata(string key)
+
+    Returns the metadata for the supplied `key`.
+
+    :rtype: string
 
   .. method:: DeleteXmlMetadata()
 
@@ -1364,8 +1419,16 @@ This class represents a document. It can be constructed from a file or from memo
 
     PDF only: Return the trailer source of the PDF,  which is usually located at the PDF file's end. This is :meth:`Document.GetXrefObject` with an *xref* argument of -1.
 
+  .. method:: XrefIsFont(int xref)
 
-  .. method:: XrefIsImage(int xref: 0)
+    Check if the `xref` is a font or not.
+
+    :arg int xref: :data:`xref` number.
+
+    :rtype: `bool`
+    :returns: `true` if the xref is a font.
+
+  .. method:: XrefIsImage(int xref)
 
     Check if the `xref` is an image or not.
 
