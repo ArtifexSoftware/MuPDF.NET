@@ -6,6 +6,8 @@
 Document
 ================
 
+
+
 This class represents a document. It can be constructed from a file or from memory.
 
 
@@ -324,6 +326,11 @@ This class represents a document. It can be constructed from a file or from memo
 
         Visibility expressions, `/VE`, are part of PDF specification version 1.6. So not all PDF viewers / readers may already support this feature and hence will react in some standard way for those cases.
 
+  .. method:: GetOutlineXrefs()
+
+    Return the `xref` of the outline item. Mainly used for internal purposes.
+
+    :rtype: `List<int>`
 
   .. method:: GetOCMD(int xref)
 
@@ -797,6 +804,13 @@ This class represents a document. It can be constructed from a file or from memo
     :arg float height: use it together with *width* as alternative to *rect*.
     :arg float fontSize: the desired default fontSize.
 
+  .. method:: SetLanguage(string language)
+
+    Sets the document language.
+
+    :arg string language: the language locale you want to set.
+
+
   .. method:: Select(List<int> list)
 
     PDF only: Keeps only those pages of the document whose numbers occur in the list. Empty sequences or elements outside `range(doc.PageCount)` will cause a *ValueError*. For more details see remarks at the bottom or this chapter.
@@ -819,6 +833,10 @@ This class represents a document. It can be constructed from a file or from memo
     :arg Dictionary<string, string> m: A dictionary with the same keys as *metadata* (see below). All keys are optional. A PDF's format and encryption method cannot be set or changed and will be ignored. If any value should not contain data, do not specify its key or set the value to `None`. If you use an empty dictionary all metadata information will be cleared to the string *"none"*. If you want to selectively change only some values, modify a copy of *doc.metadata* and use it as the argument. Arbitrary unicode values are possible if specified as UTF-8-encoded.
 
     Empty values or "none" are not written, but completely omitted.
+
+  .. method:: DeleteXmlMetadata()
+
+    Deletes the XML metadata on a document.
 
   .. method:: GetXmlMetadata()
 
@@ -1347,7 +1365,26 @@ This class represents a document. It can be constructed from a file or from memo
     PDF only: Return the trailer source of the PDF,  which is usually located at the PDF file's end. This is :meth:`Document.GetXrefObject` with an *xref* argument of -1.
 
 
+  .. method:: XrefIsImage(int xref: 0)
+
+    Check if the `xref` is an image or not.
+
+    :arg int xref: :data:`xref` number.
+
+    :rtype: `bool`
+    :returns: `true` if the xref is a image.
+
   .. method:: XrefIsStream(int xref: 0)
+
+    Returns if the `xref` is a stream or not.
+
+    :arg int xref: :data:`xref` number.
+
+    :rtype: `bool`
+    :returns: `true`if the xref is a stream.
+
+
+  .. method:: GetXrefStream(int xref)
 
     PDF only: Return the **decompressed** contents of the :data:`xref` stream object.
 
@@ -1359,6 +1396,8 @@ This class represents a document. It can be constructed from a file or from memo
   .. method:: GetXrefStreamRaw(int xref)
 
     PDF only: Return the **unmodified** (esp. **not decompressed**) contents of the :data:`xref` stream object. Otherwise equal to :meth:`Document.GetXrefStream`.
+
+    :arg int xref: :data:`xref` number.
 
     :rtype: byte[]
     :returns: the (original, unmodified) stream of the object.
@@ -1508,6 +1547,14 @@ This class represents a document. It can be constructed from a file or from memo
 
     Creating font subsets leaves behind a large number of large, now unused PDF objects ("ghosts"). Therefore, make sure to compress and garbage-collect when saving the file. We recommend to use garbage option 3 or 4 and deflate.
 
+
+  .. method:: IsEnabledJournal()
+
+    Check if journlling is enabled.
+
+    :rtype: `bool`
+
+
   .. method:: JournalEnable()
 
     PDF only: Enable journalling. Use this before you start logging operations.
@@ -1578,6 +1625,19 @@ This class represents a document. It can be constructed from a file or from memo
     :arg int xref: :data:`xref` number.
 
     :returns: *true* if the object definition is followed by data wrapped in keyword pair *stream*, *endstream*.
+
+
+  .. attribute:: PageCount
+
+      Gets the page count of the document.
+
+      :rtype: int
+
+  .. attribute:: Language
+
+      The language of the document.
+
+      :rtype: string
 
   .. attribute:: Outline
 

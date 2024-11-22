@@ -6,6 +6,7 @@
 TextPage
 ================
 
+
 This class represents text and images shown on a document page. All :ref:`MuPDF document types<Supported_File_Types>` are supported.
 
 The usual ways to create a textpage are :meth:`DisplayList.GetTextPage` and :meth:`Page.GetTextPage`. Because there is a limited set of methods in this class, there exist wrappers in :ref:`Page` which are handier to use. The last column of this table shows these corresponding :ref:`Page` methods.
@@ -138,6 +139,16 @@ For a description of what this class is all about, see Appendix 2.
       Example Quad versus Rect: when searching for needle "pymupdf", then the corresponding entry will either be the blue rectangle, or, if *quads* was specified, the quad *Quad(ul, ur, ll, lr)*.
 
       .. image:: ../images/img-quads.*
+
+
+   .. method:: ExtractSelection(Point a, Point b)
+
+      Extract selection from the bounds contained by two points.
+
+      :arg Point a: Start point.
+      :arg Point b: End point.
+
+      :rtype: string
 
    .. attribute:: Rect
 

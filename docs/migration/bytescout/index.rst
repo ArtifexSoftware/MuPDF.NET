@@ -11,13 +11,6 @@ This guide is designed to help you transition your application from |ByteScout S
 
 
 
-Key differences between |ByteScout| and |MuPDF.NET|
--------------------------------------------------------
-
-
-
-|TODO|
-
 
 
 Setting Up the Environment
@@ -138,12 +131,6 @@ Converting a PDF Page to an Image
         pixmap.Save("sample.png", "PNG");
 
 
-Testing and Validation
---------------------------------------------------------------------------
-
-After migrating, thoroughly test the application:
-
-|TODO|
 
 
 

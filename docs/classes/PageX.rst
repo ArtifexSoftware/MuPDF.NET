@@ -6,6 +6,7 @@
 Page
 ================
 
+
 Class representing a document page. A page object is created by :meth:`Document.LoadPage` or, equivalently, via indexing the document like `doc[n]` - it has no independent constructor.
 
 There is a parent-child relationship between a document and its pages. If the document is closed or deleted, all page objects (and their respective children, too) in existence will become unusable ("orphaned"): If a page property or method is being used, an exception is raised.
@@ -117,12 +118,12 @@ In a nutshell, this is what you can do with MuPDF.NET:
 :meth:`Page.ReadContents`          PDF only: get complete, concatenated /Contents source
 :meth:`Page.Run`                   Run a page through a device
 :meth:`Page.SearchFor`             Search for a string
-:meth:`Page.SetArtbox`             PDF only: modify `/ArtBox`
-:meth:`Page.SetBleedbox`           PDF only: modify `/BleedBox`
-:meth:`Page.SetCropBox`            PDF only: modify the :data:`cropbox` (visible page)
+:meth:`Page.SetCropBox`            PDF only: modify the `/Cropbox` (visible page)
+:meth:`Page.SetArtBox`             PDF only: modify `/ArtBox`
+:meth:`Page.SetBleedBox`           PDF only: modify `/BleedBox`
 :meth:`Page.SetMediaBox`           PDF only: modify `/MediaBox`
+:meth:`Page.SetTrimBox`            PDF only: modify `/TrimBox`
 :meth:`Page.SetRotation`           PDF only: set page rotation
-:meth:`Page.SetTrimbox`            PDF only: modify `/TrimBox`
 :meth:`Page.ShowPdfPage`           PDF only: display PDF page image
 :meth:`Page.SetContents`           PDF only: set page's :data:`contents` to some :data:`xref`
 :meth:`Page.UpdateLink`            PDF only: modify a link
@@ -1645,7 +1646,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
       .. caution:: For non-empty pages this may have undesired effects, because the location of all content depends on this value and will therefore change position or even disappear.
 
 
-   .. method:: SetCropBox(Rect rect)
+   .. method:: SetCropBox(Rect r)
 
       PDF only: change the visible part of the page.
 
@@ -1654,13 +1655,24 @@ In a nutshell, this is what you can do with MuPDF.NET:
       After execution **(if the page is not rotated)**, :attr:`Page.rect` will equal this rectangle, but be shifted to the top-left position (0, 0) if necessary.
 
       
-   .. method:: SetArtBox(Rect rect)
+   .. method:: SetArtBox(Rect r)
 
-   .. method:: SetBleedBox(Rect rect)
+      PDF only: sets the art box for the page.
 
-   .. method:: SetTrimBox(Rect rect)
+      :arg Rect r:
 
-      PDF only: Set the resp. rectangle in the page object. For the meaning of these objects see :ref:`AdobeManual`, page 77. Parameter and restrictions are the same as for :meth:`Page.SetCropBox`.
+
+   .. method:: SetBleedBox(Rect r)
+
+      PDF only: sets the bleed box for the page.
+
+      :arg Rect r:
+
+   .. method:: SetTrimBox(Rect r)
+
+      PDF only: sets the trim box for the page.
+
+      :arg Rect r:
 
 
    .. attribute:: Rotation

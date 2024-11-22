@@ -3,6 +3,7 @@
 ===============================
 Constants and Enumerations
 ===============================
+
 Constants and enumerations of :title:`MuPDF` as implemented by |MuPDF.NET|. Each of the following variables is accessible.
 
 

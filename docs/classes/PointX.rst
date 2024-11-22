@@ -6,6 +6,7 @@
 Point
 ================
 
+
 *Point* represents a point in the plane, defined by its x and y coordinates.
 
 ============================ ============================================

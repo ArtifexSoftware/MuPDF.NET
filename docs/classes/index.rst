@@ -9,30 +9,31 @@ Classes
 .. toctree::
    :maxdepth: 2
 
-   annot.rst
-   archive-class.rst
-   colorspace.rst
-   displaylist.rst
-   document.rst
-   document-writer-class.rst
-   font.rst
+   Annot.rst
+   Archive.rst
+   ColorSpace.rst
+   DisplayList.rst
+   Document.rst
+   DocumentWriter.rst
+   Font.rst
    IdentityMatrix.rst
-   irect.rst
-   link.rst
+   IRect.rst
+   Link.rst
    .. linkdest.rst
-   matrix.rst
-   outline.rst
-   page.rst
-   pixmap.rst
-   point.rst
-   quad.rst
-   rect.rst
-   shape.rst
-   story-class.rst
-   textpage.rst
-   textwriter.rst
+   Matrix.rst
+   Outline.rst
+   Page.rst
+   Pixmap.rst
+   Point.rst
+   Quad.rst
+   Rect.rst
+   Shape.rst
+   Story.rst
+   TextPage.rst
+   TextWriter.rst
    .. tools.rst
-   widget.rst
-   xml-class.rst
+   Widget.rst
+   Xml.rst
 
 .. include:: ../footer.rst
+

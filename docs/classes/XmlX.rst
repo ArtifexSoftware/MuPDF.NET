@@ -6,6 +6,7 @@
 Xml
 ================
 
+
 .. role:: htmlTag(emphasis)
 
 This represents an HTML or an XML node. It is a helper class intended to access the DOM (Document Object Model) content of a :ref:`Story` object.
