@@ -4093,7 +4093,7 @@ namespace MuPDF.NET
             {
                 float zoom = dpi / 72.0f;
                 Matrix mat = new Matrix(zoom, zoom);
-                Pixmap pix = page.GetPixmap(matrix: (IdentityMatrix)mat);
+                Pixmap pix = page.GetPixmap(matrix: mat);
                 Document ocrPdf = new Document("pdf", pix.PdfOCR2Bytes(true, language, tessdata));
 
                 Page ocrPage = ocrPdf.LoadPage(0);
