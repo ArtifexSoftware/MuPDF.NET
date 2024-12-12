@@ -8,7 +8,7 @@ MuPDF.NET adds C# bindings and abstractions to MuPDF, a lightweight PDF, XPS, an
 While being portable to other platforms, this documentation is targeted to the Windows operating system and Visual Studio only.
 
 - Visual Studio Community version 2019 or version 2022
-- .Net v7 or later
+- .NET v8 or later
 
 ## Generating MuPDF.NET
 This is only required if you want to create a local version of the package. For creating an application that **uses** MuPDF.NET, please skip to the next section.
@@ -38,4 +38,4 @@ This is only required if you want to create a local version of the package. For 
 
 
 ## License and Copyright
-MuPDF.NET is available under open-source [AGPL](https://github.com/ArtifexSoftware/MuPDF.NET/blob/main/LICENSE) (included in this repository as `LICENSE` file) and commercial license agreements. If you determine you cannot meet the requirements of the AGPL, please contact [Artifex](https://artifex.com/contact/) for more information regarding a commercial license.
+MuPDF.NET is available under the [Artifex Community License](https://github.com/ArtifexSoftware/MuPDF.NET/blob/main/LICENSE.md) (included in this repository as `LICENSE.md` file) and commercial license agreements. If you determine you cannot meet the requirements of the [Artifex Community License](https://github.com/ArtifexSoftware/MuPDF.NET/blob/main/LICENSE.md), please [contact Artifex](https://artifex.com/contact/mupdf-net-inquiry.php) for more information regarding a commercial license.

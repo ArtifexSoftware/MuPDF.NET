@@ -16,8 +16,8 @@
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'tizen'">6.5</SupportedOSPlatformVersion>
 		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
 		<Title>MuPDF.NET</Title>
-		<Version>2.1.2</Version>
-		<Authors>Jamie Lemon;Chris Palman</Authors>
+		<Version>3.0.0</Version>
+		<Authors>Maksym Tkachuk, Jamie Lemon, Chris Palman</Authors>
 		<Company>Artifex</Company>
 		<Description>A C# binding for MuPDF</Description>
 		<Copyright>Artifex</Copyright>
@@ -26,11 +26,11 @@
 		<PackageReadmeFile>Description.md</PackageReadmeFile>
 		<RepositoryUrl>https://github.com/ArtifexSoftware/MuPDF.NET</RepositoryUrl>
 		<PackageTags>C#;F#;VB.Net;MuPDF;DotNet;PDF</PackageTags>
-		<PackageLicenseFile>LICENSE</PackageLicenseFile>
+		<PackageLicenseFile>LICENSE.md</PackageLicenseFile>
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <None Include="..\LICENSE">
+	  <None Include="..\LICENSE.md">
 	    <Pack>True</Pack>
 	    <PackagePath>\</PackagePath>
 	  </None>
