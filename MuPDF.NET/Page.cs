@@ -5365,10 +5365,10 @@ namespace MuPDF.NET
                 Item curve = new Item()
                 {
                     Type = "c",
-                    LastPoint = new Point(Dev.LastPoint),
-                    P1 = new Point(p1),
-                    P2 = new Point(p2),
-                    P3 = new Point(p3)
+                    P1 = new Point(Dev.LastPoint),
+                    P2 = new Point(p1),
+                    P3 = new Point(p2),
+                    LastPoint = new Point(p3)
                 };
 
                 Dev.LastPoint = p3;
@@ -5392,8 +5392,8 @@ namespace MuPDF.NET
                 Item line = new Item()
                 {
                     Type = "l",
-                    LastPoint = new Point(Dev.LastPoint),
-                    P1 = new Point(p1)
+                    P1 = new Point(Dev.LastPoint),
+                    LastPoint = new Point(p1)
                 };
 
                 Dev.LastPoint = p1;
