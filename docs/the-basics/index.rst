@@ -179,6 +179,8 @@ This will return a dictionary of paths for any vector drawings found on the page
 
 ----------
 
+
+
 .. _The_Basics_Merging_PDF:
 .. _merge PDF:
 .. _join PDF:
@@ -306,6 +308,78 @@ To add an image to a |PDF| file, for example a logo, do the following:
 
 
 ----------
+
+.. _The_Basics_Extracting_and_Drawing_Vector_Graphics:
+
+Extracting & Drawing vector graphics
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The following example shows how to extract drawings from a page in a |PDF| and then recreate them in a new |PDF|.
+
+Essentially the process is:
+
+- Load the |PDF| with the drawing information you want to extract.
+- Extract drawing info from the page as a list of path information by using :meth:`Page.GetDrawings`.
+- Create a blank document for the output.
+- Add a :doc:`../classes/Shape` to the page to hold the drawing info.
+- Iterate the path information and look for lines, bezier, rectangle or quad objects.
+- Draw the required paths onto the new :doc:`../classes/Shape`.
+- Decorate the shape with the required styling.
+- Commit the shape.
+- Save the output document.
+
+
+
+.. code-block:: cs
+
+    using MuPDF.NET;
+
+    Document doc = new Document("pdf-with-vector-drawings-on-page-one.pdf");
+    Page page = doc[0];
+    List<PathInfo> paths = page.GetDrawings();
+
+    var outpdf = new Document();
+    var outpage = outpdf.NewPage(width: page.Rect.Width, height: page.Rect.Height);
+    var shape = outpage.NewShape();
+
+    foreach(PathInfo path in paths)
+    {
+        foreach (Item item in path.Items)
+        {
+            if (item.Type == "l")
+                shape.DrawLine(item.P1, item.LastPoint);
+            else if (item.Type == "c")
+                shape.DrawBezier(item.P1, item.P2, item.P3, item.LastPoint);
+            else if (item.Type == "re")
+                shape.DrawRect(item.Rect, item.Orientation);
+            else if (item.Type == "qu")
+                shape.DrawQuad(item.Quad);
+            else
+                throw new Exception("unhandled drawing");
+        }
+        shape.Finish(
+            fill: path.Fill,
+            color: path.Color,
+            dashes: path.Dashes,
+            evenOdd: path.EvenOdd,
+            closePath: path.ClosePath,
+            lineJoin: (int)path.LineJoin,
+            lineCap: ((int)path.LineCap.ElementAt(0)),
+            width: path.Width,
+            strokeOpacity: path.StrokeOpacity,
+            fillOpacity: path.FillOpacity
+            );
+    }
+
+    shape.Commit();
+    outpdf.Save("graphics-redrawn.pdf");
+
+
+
+----------
+
+
+
 
 
 .. _The_Basics_Rotating:

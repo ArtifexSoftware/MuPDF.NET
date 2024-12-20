@@ -1284,7 +1284,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
       .. note::, quads and rectangles are more reliably recognized as such.
 
-      Using class :ref:`Shape`, you should be able to recreate the original drawings on a separate (PDF) page with high fidelity under normal, not too sophisticated circumstances. Please see the following comments on restrictions. A coding draft can be found in section "Extractings Drawings" of chapter :ref:`FAQ`.
+      Using class :ref:`Shape`, you should be able to recreate the original drawings on a separate (PDF) page with high fidelity under normal, not too sophisticated circumstances. A basic example can be found in :ref:`Extracting & Drawing vector graphics <The_Basics_Extracting_and_Drawing_Vector_Graphics>`.
 
       Specifying `extended=true` significantly alters the output. Most importantly, new dictionary types are present: "clip" and "group". All paths will now be organized in a hierarchic structure which is encoded by the new integer key "level", the hierarchy level. Each group or clip establishes a new hierarchy, which applies to all subsequent paths having a *larger* level value.
 
