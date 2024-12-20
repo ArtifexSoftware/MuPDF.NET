@@ -4171,10 +4171,10 @@ namespace MuPDF.NET
             for (int i = 0; i < 4; i++)
             {
                 Item line = items[len - 4 + i];
-                Point tmp = line.LastPoint;
+                Point tmp = line.P1;
                 f[i * 2] = tmp.X;
                 f[i * 2 + 1] = tmp.Y;
-                lp = line.P1;
+                lp = line.LastPoint;
             }
 
             if (lp.X != f[0] || lp.Y != f[1])
@@ -4198,12 +4198,12 @@ namespace MuPDF.NET
             int len = items.Count;
 
             Item line0 = items[len - 3];
-            Point ll = line0.LastPoint;
-            Point lr = line0.P1;
+            Point ll = line0.P1;
+            Point lr = line0.LastPoint;
 
             Item line2 = items[len - 1];
-            Point ur = line2.LastPoint;
-            Point ul = line2.P1;
+            Point ur = line2.P1;
+            Point ul = line2.LastPoint;
 
             if (ll.Y != lr.Y || ll.X != ul.X || ur.Y != ul.Y || ur.X != lr.X)
                 return 0;
@@ -4228,9 +4228,9 @@ namespace MuPDF.NET
             };
 
             items[len - 3] = rect;
-            for (int i = 0; i < len - 1; i++)
+            for (int i = len - 2; i < len; i++)
             {
-                items.RemoveAt(1);
+                items.RemoveAt(len - 2);
             }
 
             return 1;
