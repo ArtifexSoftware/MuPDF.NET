@@ -8,6 +8,7 @@ using System.Text;
 using Microsoft.Maui.Storage;
 using mupdf;
 using Newtonsoft.Json;
+using static MuPDF.NET.Global;
 
 namespace MuPDF.NET
 {
@@ -1513,6 +1514,68 @@ namespace MuPDF.NET
                     }
                 );
             return blocks;
+        }
+
+        public static List<Table> GetTables(
+            Page page,
+            Rect clip = null,
+            string vertical_strategy = "lines",
+            string horizontal_strategy = "lines",
+            List<Edge> vertical_lines = null,
+            List<Edge> horizontal_lines = null,
+            float snap_tolerance = TableFlags.TABLE_DEFAULT_SNAP_TOLERANCE,
+            float snap_x_tolerance = 0.0f,
+            float snap_y_tolerance = 0.0f,
+            float join_tolerance = TableFlags.TABLE_DEFAULT_JOIN_TOLERANCE,
+            float join_x_tolerance = 0.0f,
+            float join_y_tolerance = 0.0f,
+            float edge_min_length = 3.0f,
+            float min_words_vertical = TableFlags.TABLE_DEFAULT_MIN_WORDS_VERTICAL,
+            float min_words_horizontal = TableFlags.TABLE_DEFAULT_MIN_WORDS_HORIZONTAL,
+            float intersection_tolerance = 3.0f,
+            float intersection_x_tolerance = 0.0f,
+            float intersection_y_tolerance = 0.0f,
+            float text_tolerance = 3.0f,
+            float text_x_tolerance = 3.0f,
+            float text_y_tolerance = 3.0f,
+            string strategy = null,  // offer abbreviation
+            List<Line> add_lines = null
+        )
+        {
+            if (strategy != null)
+            {
+                vertical_strategy = strategy;
+                horizontal_strategy = strategy;
+            }
+
+            Dictionary<string, object> settings = new Dictionary<string, object>
+            {
+                { "vertical_strategy", vertical_strategy },
+                { "horizontal_strategy", horizontal_strategy },
+                { "explicit_vertical_lines", vertical_lines },
+                { "explicit_horizontal_lines", horizontal_lines },
+                { "snap_tolerance", snap_tolerance },
+                { "snap_x_tolerance", snap_x_tolerance },
+                { "snap_y_tolerance", snap_y_tolerance },
+                { "join_tolerance", join_tolerance },
+                { "join_x_tolerance", join_x_tolerance },
+                { "join_y_tolerance", join_y_tolerance },
+                { "edge_min_length", edge_min_length },
+                { "min_words_vertical", min_words_vertical },
+                { "min_words_horizontal", min_words_horizontal },
+                { "intersection_tolerance", intersection_tolerance },
+                { "intersection_x_tolerance", intersection_x_tolerance },
+                { "intersection_y_tolerance", intersection_y_tolerance },
+                { "text_tolerance", text_tolerance },
+                { "text_x_tolerance", text_x_tolerance },
+                { "text_y_tolerance", text_y_tolerance }
+            };
+
+            // Resolve settings
+            TableSettings tset = TableSettings.resolve(settings);
+
+            List<Table> tables = TableFinder.find_tables(page, clip, tset);
+            return null;
         }
 
         public static dynamic GetText(
