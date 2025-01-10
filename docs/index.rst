@@ -46,8 +46,10 @@ Developer documentation to help you get started
     :maxdepth: 2
 
     classes/index.rst
+    glossary/Utils.rst
     glossary/vars.rst
     migration/bytescout/index.rst
+
 
 
 
