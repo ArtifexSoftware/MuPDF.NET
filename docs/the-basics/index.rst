@@ -721,11 +721,11 @@ To add a blank page, do the following:
 
     .. code-block:: cs
 
-        (int w, int h) = Utils.PageSize("letter-l"); // 'Letter' landscape
+        (int w, int h) = Utils.PaperSize("letter-l"); // 'Letter' landscape
         Page page = doc.NewPage(width: w, height: h);
 
 
-    The convenience function :meth:`PageSize` knows over 40 industry standard paper formats to choose from. To see them, inspect dictionary :attr:`paperSizes`. Pass the desired dictionary key to :meth:`PageSize` to retrieve the paper dimensions. Upper and lower case is supported. If you append "-L" to the format name, the landscape version is returned.
+    The convenience function :meth:`PaperSize` knows over 40 industry standard paper formats to choose from. To see them, inspect dictionary :attr:`paperSizes`. Pass the desired dictionary key to :meth:`PageSize` to retrieve the paper dimensions. Upper and lower case is supported. If you append "-L" to the format name, the landscape version is returned.
 
     Here is a 3-liner that creates a |PDF|: with one empty page. Its file size is 460 bytes:
 
@@ -739,7 +739,7 @@ To add a blank page, do the following:
     **API reference**
 
     - :meth:`Document.NewPage`
-    - :meth:`Utils.PageSize`
+    - :ref:`PaperSize`
 
 
 ----------
@@ -790,62 +790,55 @@ Using the :meth:`Document.InsertPage` method also inserts a new page and accepts
 Splitting Single Pages
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-This deals with splitting up pages of a |PDF| in arbitrary pieces. For example, you may have a |PDF| with *Letter* format pages which you want to print with a magnification factor of four: each page is split up in 4 pieces which each going to a separate |PDF| page in *Letter* format again.
+Splitting considers creating new |PDF| documents from an existing input file. To split we need to find the pages we are interested in and insert them into a new |PDF| document.
 
 
+Example #1 - Split document by each page
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
 .. code-block:: cs
 
     using MuPDF.NET;
 
-    Document src = pymupdf.open("test.pdf");
-    Document doc = pymupdf.open(); // empty output PDF
+    Document src = new Document("test.pdf"); // open a document
 
     for (int i = 0; i < src.PageCount; i ++) // for each page in input
-        Page spage = doc[i];
-        r = spage.rect;  // input page rectangle
-        d = new Rect(spage.CropboxPosition,  // CropBox displacement if not
-                      spage.CropboxPosition)  // starting at (0, 0)
-        //--------------------------------------------------------------------------
-        // example: cut input page into 2 x 2 parts
-        //--------------------------------------------------------------------------
-        r1 = r / 2;  // top left rect
-        r2 = r1 + (r1.width, 0, r1.width, 0);  // top right rect
-        r3 = r1 + (0, r1.height, 0, r1.height);  // bottom left rect
-        r4 = new Rect(r1.br, r.br);  // bottom right rect
-        List<Rect> rect_list = new List<Rect>([r1, r2, r3, r4]);  // put them in a list
-
-        for(Rect rx in rect_list)  // run thru rect list
-        {
-            rx += d;  // add the CropBox displacement
-            page = doc.NewPage(-1,  // new output page with rx dimensions
-                               width: rx.width,
-                               height: rx.height);
-            page.ShowPdfPage(
-                    page.Rect,  // fill all new page with the image
-                    src,  // input document
-                    spage.Number,  // input page number
-                    clip: rx,  // which part to use of input page
-                );
-        }
-
-    // that's it, save output file
-    doc.Save("poster-" + src.Name,
-             garbage: 3,  // eliminate duplicate objects
-             deflate: true,  // compress stuff where possible
-    );
+    {
+        Page page = src[i];
+        Document splitDocument = new Document();
+        splitDocument.InsertPdf(src, fromPage: i, toPage: i);
+        splitDocument.Save("test-"+i+ ".pdf");
+    }
 
 
-Example:
 
-.. image:: ../images/img-posterize.png
+Example #2 - Split document pages by bookmark
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+.. code-block:: cs
+
+    using MuPDF.NET;
+
+    Document src = new Document("test.pdf"); // open a document
+    var toc = src.GetToc();
+
+    foreach (var item in toc)
+    {
+        Console.WriteLine("title=" + item.Title);
+        Console.WriteLine("item=" + item.Page);
+        Document splitDocument = new Document();
+        splitDocument.InsertPdf(src, fromPage: item.Page, toPage: item.Page);
+        splitDocument.Save("test-"+item.Title+ ".pdf");
+    }
+
+
 
 .. note::
 
     **API reference**
 
-    - :meth:`Page.CropboxPosition`
-    - :meth:`Page.ShowPdfPage`
+    - :meth:`Document.InsertPdf`
+
 
 
 --------------------------
@@ -864,36 +857,42 @@ This deals with joining |PDF| pages to form a new |PDF| with pages each combinin
 
     using MuPDF.NET;
 
-    Document src = new Document("test.pdf");
+    Document src = new Document("example.pdf");
     Document doc = new Document();  // empty output PDF
-
-    (int width, int height) = pymupdf.PageSize("a4");  // A4 portrait output page format
+    (int width, int height) = Utils.PaperSize("a4");
     Rect r = new Rect(0, 0, width, height);
 
     // define the 4 rectangles per page
-    Rect r1 = r / 2;  // top left rect
-    Rect r2 = r1 + (r1.width, 0, r1.width, 0);  // top right
-    Rect r3 = r1 + (0, r1.height, 0, r1.height);  // bottom left
-    Rect r4 = pymupdf.Rect(r1.br, r.br);  // bottom right
+    Rect r1 = new Rect(0, 0, r.Width / 2, r.Height / 2);  // top left rect
+    Rect r2 = new Rect(r.Width / 2, 0, r.Width, r.Height / 2);  // top right
+    Rect r3 = new Rect(0, r.Height / 2, r.Width / 2, r.Height);  // bottom left
+    Rect r4 = new Rect(r.Width / 2, r.Height / 2, r.Width, r.Height);  // bottom right
 
     // put them in a list
-    Rect[] r_tab = new Rect[]{ r1, r2, r3, r4 };
+    Rect[] r_tab = new Rect[] { r1, r2, r3, r4 };
+    Page? page = null;
 
     // now copy input pages to output
     for (int i = 0; i < src.PageCount; i++)
     {
-        Page spage = doc[i]
-        if (spage.Number % 4 == 0)  // create new output page
+        if (i % 4 == 0)  // create new output page
+        {
             page = doc.NewPage(-1,
                           width: width,
-                          height: height)
+                          height: height);
+        }
+
         // insert input page into the correct rectangle
-        page.ShowPdfPage(r_tab[spage.Number % 4],  // select output rect
-                         src,  // input document
-                         spage.Number)  // input page number
+        if (page != null)
+        {
+            page.ShowPdfPage(r_tab[i % 4],  // select output rect
+                             src,  // input document
+                             i); // input page number
+        }
     }
+
     // by all means, save new file using garbage collection and compression
-    doc.Save("4up.pdf", garbage: 3, deflate: true)
+    doc.Save("4up.pdf", garbage: 3, deflate: 1);
 
 
 Example:
