@@ -612,23 +612,41 @@ namespace MuPDF.NET
             float join_x_tolerance,
             float join_y_tolerance)
         {
+            static (string, float) get_group(Edge edge)
+            {
+                if (edge.orientation == "h")
+                    return ("h", edge.top);
+                else
+                    return ("v", edge.x0);
+            }
+
             // Snap edges if tolerance values are greater than 0
             if (snap_x_tolerance > 0 || snap_y_tolerance > 0)
             {
                 edges = snap_edges(edges, snap_x_tolerance, snap_y_tolerance);
             }
-
+/*
             // Group edges by orientation
             var edgeGroups = edges
                 .OrderBy(e => e.orientation == "h" ? e.top : e.x0)
                 .GroupBy(e => e.orientation == "h" ? "h" : "v");
+*/
+            // Sort edges by group (orientation + position)
+            var _sorted = edges.OrderBy(e => e.orientation)
+                                   .ThenBy(e => e.orientation == "h" ? e.top : e.x0)
+                                   .ToList();
+
+            // Group edges by the same group key
+            var edgeGroups = _sorted
+                .GroupBy(get_group)
+                .ToList();
 
             // Join edges by their groups
             var joinedEdges = new List<Edge>();
             foreach (var group in edgeGroups)
             {
-                float tolerance = group.Key == "h" ? join_x_tolerance : join_y_tolerance;
-                joinedEdges.AddRange(join_edge_group(group.ToList(), group.Key, tolerance));
+                float tolerance = group.Key.Item1 == "h" ? join_x_tolerance : join_y_tolerance;
+                joinedEdges.AddRange(join_edge_group(group.ToList(), group.Key.Item1, tolerance));
             }
 
             return joinedEdges;
@@ -893,7 +911,7 @@ namespace MuPDF.NET
         // to the edges that touch the intersection.
         public static List<BBox> intersections_to_cells(Dictionary<Point, Intersection> intersections)
         {
-            var points = intersections.Keys.OrderBy(p => p).ToList();
+            var points = intersections.Keys.OrderBy(p => p.X).ToList();
             int nPoints = points.Count;
 
             bool edge_connects(Point p1, Point p2)
@@ -905,13 +923,47 @@ namespace MuPDF.NET
 
                 if (p1.X == p2.X)
                 {
-                    var common = edges_to_set(intersections[p1].VerticalEdges).Intersect(edges_to_set(intersections[p2].VerticalEdges)).ToList();
+                    var key1 = new Point(-1,-1);
+                    var key2 = new Point(-1,-1);
+                    foreach (var ikey in intersections.Keys)
+                    {
+                        if (ikey.EqualTo(p1))
+                        {
+                            key1 = ikey;
+                        }
+                        if (ikey.EqualTo(p2))
+                        {
+                            key2 = ikey;
+                        }
+                    }
+                    if (key1.X < 0 || key2.X < 0)
+                    {
+                        return false;
+                    }
+                    var common = edges_to_set(intersections[key1].VerticalEdges).Intersect(edges_to_set(intersections[key2].VerticalEdges)).ToList();
                     if (common.Any()) return true;
                 }
 
                 if (p1.Y == p2.Y)
                 {
-                    var common = edges_to_set(intersections[p1].HorizontalEdges).Intersect(edges_to_set(intersections[p2].HorizontalEdges)).ToList();
+                    var key1 = new Point(-1, -1);
+                    var key2 = new Point(-1, -1);
+                    foreach (var ikey in intersections.Keys)
+                    {
+                        if (ikey.EqualTo(p1))
+                        {
+                            key1 = ikey;
+                        }
+                        if (ikey.EqualTo(p2))
+                        {
+                            key2 = ikey;
+                        }
+                    }
+                    if (key1.X < 0 || key2.X < 0)
+                    {
+                        return false;
+                    }
+                    var common = edges_to_set(intersections[key1].HorizontalEdges).Intersect(edges_to_set(intersections[key2].HorizontalEdges)).ToList();
                     if (common.Any()) return true;
                 }
 
@@ -939,7 +991,7 @@ namespace MuPDF.NET
 
                         Point bottomRight = new Point(rightPt.X, belowPt.Y);
 
-                        if (intersections.ContainsKey(bottomRight)
+                        if (intersections.Keys.Any(p => p.EqualTo(rightPt))
                             && edge_connects(bottomRight, rightPt)
                             && edge_connects(bottomRight, belowPt))
                         {
@@ -1009,7 +1061,7 @@ namespace MuPDF.NET
                     else
                     {
                         // How many corners does this table share with the current group?
-                        int cornerCount = cellCorners.Count(corner => currentCorners.Contains(corner));
+                        int cornerCount = cellCorners.Count(corner => currentCorners.Any(cc => cc.EqualTo(corner)));
 
                         // If touching on at least one corner...
                         if (cornerCount > 0)
@@ -1878,8 +1930,8 @@ namespace MuPDF.NET
         {
             this.Page = page;
             this.Cells = cells;
-            this.Header = _get_header();
             this.Chars = chars;
+            this.Header = _get_header();
         }
 
         public BBox Bbox
@@ -1952,6 +2004,10 @@ namespace MuPDF.NET
                         var cellChars = rowChars.Where(c => char_in_bbox(c, cell)).ToList();
                         if (cellChars.Any())
                         {
+                            if (kwargs == null)
+                            {
+                                kwargs = new Dictionary<string, object>();
+                            }
                             kwargs["x_shift"] = cell.x0;
                             kwargs["y_shift"] = cell.top;
 
@@ -2493,11 +2549,14 @@ namespace MuPDF.NET
         private readonly List<BBox> cells;
         private readonly List<Table> tables;
 
+        private TextPage TEXTPAGE;
         private List<Edge> EDGES;
         private List<Character> CHARS;
 
         public TableFinder(Page page, Rect clip, TableSettings settings = null)
         {
+            TEXTPAGE = page.GetTextPage(clip, flags: (int)TextFlagsExtension.TEXTFLAGS_TEXT);
+            TEXTPAGE.Parent = page;
             EDGES = new List<Edge>();
             CHARS = new List<Character>();
             make_chars(page, clip);
@@ -2692,8 +2751,9 @@ namespace MuPDF.NET
             float page_height = page.Rect.Height;
             Matrix ctm = page.TransformationMatrix;
             float doctop_base = page_height * page.Number;
+            List<Block> blocks = page.GetText("rawdict", textpage: TEXTPAGE).Blocks;
 
-            List<Block> blocks = (page.GetText("rawdict", clip, flags: (int)TextFlagsExtension.TEXTFLAGS_TEXT) as PageInfo).Blocks;
+            //List<Block> blocks = (page.GetText("rawdict", clip, flags: (int)TextFlagsExtension.TEXTFLAGS_TEXT) as PageInfo).Blocks;
 
             foreach (var block in blocks)
             {
@@ -2761,7 +2821,6 @@ namespace MuPDF.NET
             float snap_x = tset.snap_x_tolerance;
             float snap_y = tset.snap_y_tolerance;
             float min_length = tset.edge_min_length;
-            TextPage textPage = page.GetTextPage(clip);
 
             bool linesStrict = tset.vertical_strategy == "lines_strict" || tset.horizontal_strategy == "lines_strict";
 
@@ -2875,7 +2934,7 @@ namespace MuPDF.NET
                     }
 
                     // Move rect 0 over to the result list if there is some text in it.
-                    if (!string.IsNullOrWhiteSpace(page.GetTextbox(prect0)))
+                    if (!string.IsNullOrWhiteSpace(page.GetTextbox(prect0, textPage:TEXTPAGE)))
                     {
                         // Contains text, so accept it as a table bbox candidate.
                         newRects.Add(prect0);
@@ -3114,7 +3173,7 @@ namespace MuPDF.NET
                 page = page_rotation_set0(page);
             }
 
-            TableFinder tableFinder = new TableFinder(page, clip, tset);
+            TableFinder tableFinder = new TableFinder(paramPage, clip, tset);
 
             return tableFinder.tables;
         }

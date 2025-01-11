@@ -18,9 +18,8 @@ namespace Demo
             */
 
             // test for table
-            Document doc = new Document(@"e:\test.pdf");
-            Page page = doc[0];
-            List<Table> tables = page.GetTables();
+            Document doc = new Document(@"e:\__test.pdf");
+            List<Table> tables = doc[0].GetTables();
         }
     }
 }
