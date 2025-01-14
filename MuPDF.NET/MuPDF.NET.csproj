@@ -45,6 +45,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <PackageReference Include="mupdf.net.runtime.win-x64-rn" Version="1.0.0" />
 	  <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
 	</ItemGroup>
 
