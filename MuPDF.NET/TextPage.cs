@@ -1166,7 +1166,7 @@ namespace MuPDF.NET
                             style.Font = GetFontName(
                                 new FzFont(mupdf.mupdf.ll_fz_keep_font(ch.font))
                             );
-                            style.Color = ch.c;
+                            style.Color = unchecked((int)ch.argb);
                             style.Asc = (
                                 new FzFont(mupdf.mupdf.ll_fz_keep_font(ch.font))
                             ).fz_font_ascender();
