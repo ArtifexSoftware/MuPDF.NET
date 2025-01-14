@@ -1574,8 +1574,8 @@ namespace MuPDF.NET
             // Resolve settings
             TableSettings tset = TableSettings.resolve(settings);
 
-            List<Table> tables = TableFinder.find_tables(page, clip, tset);
-            return null;
+            List<Table> tables = TableFinder.FindTables(page, clip, tset);
+            return tables;
         }
 
         public static dynamic GetText(

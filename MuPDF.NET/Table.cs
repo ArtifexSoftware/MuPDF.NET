@@ -680,12 +680,19 @@ namespace MuPDF.NET
         // that contains them all.
         public static BBox merge_bboxes(List<BBox> bboxes)
         {
-            var x0 = bboxes.Select(b => b.x0).Min();
-            var top = bboxes.Select(b => b.top).Min();
-            var x1 = bboxes.Select(b => b.x1).Max();
-            var bottom = bboxes.Select(b => b.bottom).Max();
+            if (bboxes.Count > 0)
+            {
+                var x0 = bboxes.Select(b => b.x0).Min();
+                var top = bboxes.Select(b => b.top).Min();
+                var x1 = bboxes.Select(b => b.x1).Max();
+                var bottom = bboxes.Select(b => b.bottom).Max();
 
-            return new BBox(x0, top, x1, bottom);
+                return new BBox(x0, top, x1, bottom);
+            }
+            else
+            {
+                return new BBox(0, 0, 0, 0);
+            }
         }
 
         // Given an iterable of objects, return the smallest bounding box that
@@ -1848,7 +1855,10 @@ namespace MuPDF.NET
                 foreach (var wordChars in iter_chars_to_words(charGroup))
                 {
                     // Yield the word (merged characters and the list of characters)
-                    yield return new Tuple<Character, List<Character>>(merge_chars(wordChars), wordChars);
+                    if (wordChars.Count > 0)
+                    {
+                        yield return new Tuple<Character, List<Character>>(merge_chars(wordChars), wordChars);
+                    }
                 }
             }
         }
@@ -1970,7 +1980,7 @@ namespace MuPDF.NET
         public int RowCount => Rows.Count;
         public int ColCount => Rows.Max(row => row.Cells.Count);
 
-        public List<List<string>> extract(Dictionary<string, object> kwargs = null)
+        public List<List<string>> Extract(Dictionary<string, object> kwargs = null)
         {
             var chars = Chars;  // Placeholder for actual char extraction logic
             var tableArr = new List<List<string>>();
@@ -2035,7 +2045,7 @@ namespace MuPDF.NET
 
         // Output table content as a string in Github-markdown format.
         // If clean is true, markdown syntax is removed from cell content.
-        public string to_markdown(bool clean = true)
+        public string ToMarkdown(bool clean = true)
         {
             StringBuilder output = new StringBuilder("|");
 
@@ -2071,7 +2081,7 @@ namespace MuPDF.NET
             int j = (Header.External ? 0 : 1);
 
             // Iterate over detail rows
-            var rows = extract();  // Assuming Extract() is a method that returns a List<List<string>>
+            var rows = Extract();  // Assuming Extract() is a method that returns a List<List<string>>
             foreach (var row in rows.GetRange(j, rows.Count - j))
             {
                 string line = "|";
@@ -2145,7 +2155,7 @@ namespace MuPDF.NET
             var cells = row.Cells;
             var bbox = new BBox(row.Bbox.x0, row.Bbox.top, row.Bbox.x1, row.Bbox.bottom);
 
-            TableHeader headerTopRow = new TableHeader(bbox, cells, extract()[0], false);
+            TableHeader headerTopRow = new TableHeader(bbox, cells, Extract()[0], false);
 
             // One-line tables have no extra header
             if (Rows.Count < 2)
@@ -2176,7 +2186,7 @@ namespace MuPDF.NET
             clip.bottom = bbox.top; // End at the top of the table
 
             var spans = new List<Span>();
-            List<Block> clipBlocks = Page.GetText("dist", clip:new Rect(clip.x0, clip.top, clip.x1, clip.bottom), flags: (int)TextFlagsExtension.TEXTFLAGS_TEXT).Blocks;
+            List<Block> clipBlocks = Page.GetText("dict", clip:new Rect(clip.x0, clip.top, clip.x1, clip.bottom), flags: (int)TextFlagsExtension.TEXTFLAGS_TEXT).Blocks;
             foreach (Block block in clipBlocks)
             {
                 foreach (Line line in block.Lines)
@@ -3160,7 +3170,7 @@ namespace MuPDF.NET
             return;
         }
 
-        public static List<Table> find_tables(
+        public static List<Table> FindTables(
                 Page paramPage,
                 Rect clip,
                 TableSettings tset
