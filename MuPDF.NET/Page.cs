@@ -4132,7 +4132,7 @@ namespace MuPDF.NET
             {
                 float zoom = dpi / 72.0f;
                 Matrix mat = new Matrix(zoom, zoom);
-                Pixmap pix = page.GetPixmap(matrix: (IdentityMatrix)mat);
+                Pixmap pix = page.GetPixmap(matrix: mat);
                 Document ocrPdf = new Document("pdf", pix.PdfOCR2Bytes(true, language, tessdata));
 
                 Page ocrPage = ocrPdf.LoadPage(0);
@@ -5404,10 +5404,10 @@ namespace MuPDF.NET
                 Item curve = new Item()
                 {
                     Type = "c",
-                    LastPoint = new Point(Dev.LastPoint),
-                    P1 = new Point(p1),
-                    P2 = new Point(p2),
-                    P3 = new Point(p3)
+                    P1 = new Point(Dev.LastPoint),
+                    P2 = new Point(p1),
+                    P3 = new Point(p2),
+                    LastPoint = new Point(p3)
                 };
 
                 Dev.LastPoint = p3;
@@ -5431,8 +5431,8 @@ namespace MuPDF.NET
                 Item line = new Item()
                 {
                     Type = "l",
-                    LastPoint = new Point(Dev.LastPoint),
-                    P1 = new Point(p1)
+                    P1 = new Point(Dev.LastPoint),
+                    LastPoint = new Point(p1)
                 };
 
                 Dev.LastPoint = p1;

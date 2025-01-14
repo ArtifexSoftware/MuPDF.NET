@@ -9,7 +9,7 @@ Prerequisites
 -----------------
 
 - Visual Studio 2019, 2022
-- .NET v7 or later
+- .NET 8.0 or later
 - Windows OS
 
 
@@ -48,7 +48,7 @@ Adobe PDF References
 License and Copyright
 ----------------------------------
 
-**MuPDF.NET** is available under open-source AGPL and commercial license agreements. If you determine that you cannot meet the requirements of the AGPL, please `contact Artifex`_ for more information regarding a commercial license.
+**MuPDF.NET** is available under the `Artifex Community License`_ and commercial license agreements. If you determine you cannot meet the requirements of the `Artifex Community License`_, please `contact Artifex`_ for more information regarding a commercial license.
 
 
 
