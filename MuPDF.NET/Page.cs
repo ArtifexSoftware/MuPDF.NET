@@ -10,11 +10,6 @@ namespace MuPDF.NET
 {
     public class Page
     {
-        static Page()
-        {
-            Utils.InitApp();
-        }
-
         private FzPage _nativePage;
 
         private PdfPage _pdfPage;

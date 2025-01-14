@@ -4,11 +4,6 @@ namespace MuPDF.NET
 {
     public class Link
     {
-        static Link()
-        {
-            Utils.InitApp();
-        }
-
         public bool ThisOwn { get; set; }
 
         private FzLink _nativeLink;

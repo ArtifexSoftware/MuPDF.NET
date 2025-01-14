@@ -5,11 +5,6 @@ namespace MuPDF.NET
 {
     public class Story
     {
-        static Story()
-        {
-            Utils.InitApp();
-        }
-
         private FzStory _nativeStory;
 
         public delegate string ContentFunction(List<Position> positions);

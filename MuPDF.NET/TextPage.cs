@@ -6,11 +6,6 @@ namespace MuPDF.NET
 {
     public class TextPage
     {
-        static TextPage()
-        {
-            Utils.InitApp();
-        }
-
         internal FzStextPage _nativeTextPage;
 
         public bool ThisOwn { get; set; }
@@ -1171,7 +1166,7 @@ namespace MuPDF.NET
                             style.Font = GetFontName(
                                 new FzFont(mupdf.mupdf.ll_fz_keep_font(ch.font))
                             );
-                            style.Color = ch.color;
+                            style.Color = ch.c;
                             style.Asc = (
                                 new FzFont(mupdf.mupdf.ll_fz_keep_font(ch.font))
                             ).fz_font_ascender();

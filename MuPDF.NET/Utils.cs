@@ -21,8 +21,6 @@ namespace MuPDF.NET
 
         public static double FLT_EPSILON = 1e-5;
 
-        public static bool IsInitialized = false;
-
         public static string ANNOT_ID_STEM = "fitz";
 
         public static int SigFlag_SignaturesExist = 1;
@@ -6802,21 +6800,6 @@ namespace MuPDF.NET
 
             CultureInfo.CurrentCulture = culture;
             CultureInfo.CurrentUICulture = culture;
-        }
-
-        public static void InitApp()
-        {
-            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                return;
-
-            if (Utils.IsInitialized)
-                return;
-
-            Utils.SetDotCultureForNumber();
-            if (!File.Exists("mupdfcsharp.dll"))
-                Utils.LoadEmbeddedDll();
-
-            Utils.IsInitialized = true;
         }
 
         /// <summary>

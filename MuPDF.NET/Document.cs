@@ -8,11 +8,6 @@ namespace MuPDF.NET
 {
     public class Document
     {
-        static Document()
-        {
-            Utils.InitApp();
-        }
-
         /// <summary>
         /// False if document is still open. If closed, most other attributes and methods will have been deleted / disabled.
         /// </summary>

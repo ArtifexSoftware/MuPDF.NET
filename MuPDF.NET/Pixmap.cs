@@ -5,11 +5,6 @@ namespace MuPDF.NET
 {
     public class Pixmap
     {
-        static Pixmap()
-        {
-            Utils.InitApp();
-        }
-
         private FzPixmap _nativePixmap;
 
         public Pixmap(ColorSpace cs, IRect irect, int alpha = 0)

@@ -4,11 +4,6 @@ namespace MuPDF.NET
 {
     public class IRect
     {
-        static IRect()
-        {
-            Utils.InitApp();
-        }
-
         /// <summary>
         /// X-coordinate of the left corners.
         /// </summary>

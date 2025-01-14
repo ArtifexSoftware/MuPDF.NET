@@ -4,12 +4,6 @@ namespace MuPDF.NET
 {
     public class DisplayList
     {
-
-        static DisplayList()
-        {
-            Utils.InitApp();
-        }
-
         private FzDisplayList _nativeDisplayList;
 
         /// <summary>

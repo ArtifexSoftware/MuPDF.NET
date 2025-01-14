@@ -6,11 +6,6 @@ namespace MuPDF.NET
 {
     public class Archive
     {
-        static Archive()
-        {
-            Utils.InitApp();
-        }
-
         private FzArchive _nativeArchive;
 
         private List<SubArchive> _subArchives;
