@@ -13,10 +13,11 @@ namespace MuPDF.NET.Test
         public void BorderedTable()
         {
             Document doc = new Document("../../../resources/bordered-table.pdf");
+            Rect clip = new Rect(20, 100, 580, 300);
             Page page = doc[0];
             int cellCount = 0;
 
-            List<Table> tables = page.GetTables();
+            List<Table> tables = page.GetTables(clip:clip);
             foreach (var table in tables)
             {
                 List<List<string>> text = table.Extract();
@@ -31,7 +32,7 @@ namespace MuPDF.NET.Test
 
             doc.Close();
 
-            Assert.That(cellCount, Is.EqualTo(186));
+            Assert.That(cellCount, Is.EqualTo(18));
         }
 
         [Test]
