@@ -11,9 +11,9 @@ namespace Demo
             Page page = doc.NewPage();
 
             MuPDF.NET.TextWriter writer = new MuPDF.NET.TextWriter(page.Rect);
-            writer.FillTextbox(page.Rect, "text field I like you from Poland", new Font(fontName: "Kenpixel", fontFile: "kenpixel.ttf"), rtl: true);
+            writer.FillTextbox(page.Rect, "Hello World!", new Font(fontName: "helv"), rtl: true);
             writer.WriteText(page);
-            doc.Save("e:/res/test.pdf", pretty: 1);
+            doc.Save("test.pdf", pretty: 1);
         }
     }
 }
