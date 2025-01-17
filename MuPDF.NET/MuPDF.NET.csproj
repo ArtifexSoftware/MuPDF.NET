@@ -45,7 +45,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <PackageReference Include="mupdf.net.runtime.win-x64-rn" Version="1.0.0" />
 	  <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
 	</ItemGroup>
 
@@ -54,16 +53,14 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <PackageReference Update="Microsoft.Maui.Controls.Compatibility" Version="8.0.14" />
+	  <PackageReference Update="Microsoft.Maui.Controls.Compatibility" Version="8.0.82" />
 	</ItemGroup>
 
 	<ItemGroup Condition="'$(OS)' == 'Windows_NT'">
-	  <Compile Include="mupdf/win/mupdf.cs" />
 	  <Compile Remove="mupdf/unix/mupdf.cs" />
 	</ItemGroup>
 
 	<ItemGroup Condition="'$(OS)' != 'Windows_NT'">
-	  <Compile Include="mupdf/unix/mupdf.cs" />
 	  <Compile Remove="mupdf/win/mupdf.cs" />
 	</ItemGroup>
 	
