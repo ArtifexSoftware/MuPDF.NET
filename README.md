@@ -9,11 +9,14 @@ While being portable to other platforms, this documentation is targeted to the W
 
 - Visual Studio Community version 2019 or version 2022
 - .NET v8 or later
+- Support for Windows and Linux
 
 ## Generating MuPDF.NET
 This is only required if you want to create a local version of the package. For creating an application that **uses** MuPDF.NET, please skip to the next section.
 
 - Clone this repository.
+
+#### on Windows
 
 - Expand folder `MuPDF.NET` and double-click on file `MuPDF.NET.sln`. This will start your Visual Studio application.
 
@@ -25,6 +28,15 @@ This is only required if you want to create a local version of the package. For 
 - Folder `MuPDF.NET` will now contain some DLL files of which you need `mupdfcpp64.dll` and `mupdfcsharp.dll` for all your future mupdf.net applications. DLL `mupdfcpp64.dll` contains the C library MuPDF wrapped with a C++ binding, and `mupdfcsharp.dll` contains the C# bindings for MuPDF.
 
 - Your system administration may determine to put these DLLs in a system folder or provide access to it via a `path` environment variable. If neither of this is the case, both files must be present in the project `bin` folder of your applications.
+
+#### on Linux
+
+- Use the following command to build the project in Release mode:
+```sh
+dotnet build MuPDF.NET.csproj -c Release
+```
+
+- Ensure that you have the native libraries required for the C# bindings. These libraries should be placed in the `bin` folder for Linux support, similar to how they are organized on Windows.
 
 ## Creating a MuPDF.NET Application
 
