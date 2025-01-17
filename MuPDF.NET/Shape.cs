@@ -5,11 +5,6 @@ namespace MuPDF.NET
 {
     public class Shape
     {
-        static Shape()
-        {
-            Utils.InitApp();
-        }
-
         /// <summary>
         /// the owning page
         /// </summary>

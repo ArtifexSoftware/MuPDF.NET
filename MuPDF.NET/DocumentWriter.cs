@@ -4,11 +4,6 @@ namespace MuPDF.NET
 {
     public class DocumentWriter
     {
-        static DocumentWriter()
-        {
-            Utils.InitApp();
-        }
-
         private FzDocumentWriter _nativeDocumentWriter;
 
         public DocumentWriter(string path, string options = "")

@@ -6,11 +6,6 @@ namespace MuPDF.NET
 {
     public class Xml
     {
-        static Xml()
-        {
-            Utils.InitApp();
-        }
-
         private FzXml _nativeXml;
 
         public FzXml ToFzXml()

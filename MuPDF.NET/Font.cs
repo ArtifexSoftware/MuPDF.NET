@@ -4,11 +4,6 @@ namespace MuPDF.NET
 {
     public class Font
     {
-        static Font()
-        {
-            Utils.InitApp();
-        }
-
         private FzFont _nativeFont = null;
 
         /// <summary>

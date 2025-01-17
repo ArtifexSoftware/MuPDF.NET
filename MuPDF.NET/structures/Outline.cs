@@ -5,11 +5,6 @@ namespace MuPDF.NET
 {
     public class Outline
     {
-        static Outline()
-        {
-            Utils.InitApp();
-        }
-
         private FzOutline _nativeOutline;
 
         /// <summary>

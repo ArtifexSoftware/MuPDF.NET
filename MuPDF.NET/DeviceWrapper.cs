@@ -4,11 +4,6 @@ namespace MuPDF.NET
 {
     public class DeviceWrapper
     {
-        static DeviceWrapper()
-        {
-            Utils.InitApp();
-        }
-
         internal FzDevice _nativeDevice;
 
         public DeviceWrapper(FzDevice device)

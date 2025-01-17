@@ -5,11 +5,7 @@ namespace MuPDF.NET
 {
     public class Rect
     {
-        static Rect()
-        {
-            Utils.InitApp();
-        }
-
+       
         /// <summary>
         /// Left corners' x coordinate
         /// </summary>
