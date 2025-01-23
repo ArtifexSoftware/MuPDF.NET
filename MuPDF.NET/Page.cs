@@ -5,6 +5,7 @@ using System.Text;
 using Microsoft.Maui;
 using mupdf;
 using static System.Net.Mime.MediaTypeNames;
+using static MuPDF.NET.Global;
 
 namespace MuPDF.NET
 {
@@ -4009,6 +4010,44 @@ namespace MuPDF.NET
         )
         {
             return Utils.GetTextBlocks(this, clip, flags, textPage, sort);
+        }
+
+        /// <summary>
+        /// Return the tables on a page
+        /// </summary>
+        /// <returns> A list of the tables. Each item contains the containing list of rows constructing with cell text</returns>
+        public List<Table> GetTables(
+            Rect clip = null,
+            string vertical_strategy = "lines",
+            string horizontal_strategy = "lines",
+            List<Edge> vertical_lines = null,
+            List<Edge> horizontal_lines = null,
+            float snap_tolerance = TableFlags.TABLE_DEFAULT_SNAP_TOLERANCE,
+            float snap_x_tolerance = 0.0f,
+            float snap_y_tolerance = 0.0f,
+            float join_tolerance = TableFlags.TABLE_DEFAULT_JOIN_TOLERANCE,
+            float join_x_tolerance = 0.0f,
+            float join_y_tolerance = 0.0f,
+            float edge_min_length = 3.0f,
+            float min_words_vertical = TableFlags.TABLE_DEFAULT_MIN_WORDS_VERTICAL,
+            float min_words_horizontal = TableFlags.TABLE_DEFAULT_MIN_WORDS_HORIZONTAL,
+            float intersection_tolerance = 3.0f,
+            float intersection_x_tolerance = 0.0f,
+            float intersection_y_tolerance = 0.0f,
+            float text_tolerance = 3.0f,
+            float text_x_tolerance = 3.0f,
+            float text_y_tolerance = 3.0f,
+            string strategy = null,  // offer abbreviation
+            List<Line> add_lines = null
+        )
+        {
+            return Utils.GetTables(this, clip,
+                vertical_strategy, horizontal_strategy, vertical_lines, horizontal_lines,
+                snap_tolerance, snap_x_tolerance, snap_y_tolerance,
+                join_tolerance, join_x_tolerance, join_y_tolerance,
+                edge_min_length, min_words_vertical, min_words_horizontal,
+                intersection_tolerance, intersection_x_tolerance, intersection_y_tolerance,
+                text_tolerance, text_x_tolerance, text_y_tolerance, strategy, add_lines);
         }
 
         /// <summary>

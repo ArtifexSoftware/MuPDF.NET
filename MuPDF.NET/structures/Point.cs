@@ -248,5 +248,10 @@ namespace MuPDF.NET
                 throw new NullReferenceException("is null object.");
             return X == obj.X && Y == obj.Y;
         }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(X, Y);
+        }
     }
 }
