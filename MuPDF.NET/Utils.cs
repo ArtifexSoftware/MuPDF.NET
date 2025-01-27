@@ -5,7 +5,6 @@ using System.IO.Compression;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
-using Microsoft.Maui.Storage;
 using mupdf;
 using Newtonsoft.Json;
 using static MuPDF.NET.Global;
