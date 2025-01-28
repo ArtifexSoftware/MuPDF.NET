@@ -46,6 +46,13 @@
 
 	<ItemGroup>
 	  <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+	  <PackageReference Include="System.Drawing.Common" Version="9.0.1" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Reference Include="zxing">
+	    <HintPath>zxing.dll</HintPath>
+	  </Reference>
 	</ItemGroup>
 
 	<ItemGroup>
@@ -57,14 +64,31 @@
 	</ItemGroup>
 
 	<ItemGroup Condition="'$(OS)' == 'Windows_NT'">
-		<EmbeddedResource Include="mupdfcsharp.dll">
+		<EmbeddedResource Include="libs\mupdf\windows\mupdfcsharp.dll">
 			<LogicalName>mupdfcsharp.dll</LogicalName>
 		</EmbeddedResource>
 	</ItemGroup>
 	<ItemGroup Condition="'$(OS)' == 'Windows_NT'">
-		<EmbeddedResource Include="mupdfcpp64.dll">
+		<EmbeddedResource Include="libs\mupdf\windows\mupdfcpp64.dll">
 			<LogicalName>mupdfcpp64.dll</LogicalName>
 		</EmbeddedResource>
+	</ItemGroup>
+	<ItemGroup Condition="'$(OS)' == 'Windows_NT'">
+		<Compile Remove="libs\mupdf\linux\**" />
+	</ItemGroup>
+	
+	<ItemGroup Condition="'$(OS)' == 'Linux'">
+		<EmbeddedResource Include="libs\mupdf\linux\mupdfcsharp.so">
+			<LogicalName>mupdfcsharp.so</LogicalName>
+		</EmbeddedResource>
+	</ItemGroup>
+	<ItemGroup Condition="'$(OS)' == 'Linux'">
+		<EmbeddedResource Include="libs\mupdf\linux\libmupdfcpp.so">
+			<LogicalName>libmupdfcpp.so</LogicalName>
+		</EmbeddedResource>
+	</ItemGroup>
+	<ItemGroup Condition="'$(OS)' == 'Linux'">
+		<Compile Remove="libs\mupdf\windows\**" />
 	</ItemGroup>
 	
 </Project>

@@ -6791,7 +6791,7 @@ namespace MuPDF.NET
             return name.Substring(s + 1, name.Length - s - 1);
         }
 
-        internal static void LoadEmbeddedDll()
+        internal static void LoadEmbeddedDllForWindows()
         {
             var assembly = Assembly.GetExecutingAssembly();
             var resourceStream = assembly.GetManifestResourceStream("mupdfcpp64.dll");
@@ -6807,6 +6807,31 @@ namespace MuPDF.NET
             resourceStream?.CopyTo(tempFile);
             resourceStream?.Dispose();
             tempFile.Dispose();
+        }
+
+        internal static void LoadEmbeddedDllForLinux()
+        {
+            var assembly = Assembly.GetExecutingAssembly();
+
+            // Load the first shared library
+            var resourceStream = assembly.GetManifestResourceStream("libmupdfcpp.so");
+            if (resourceStream != null)
+            {
+                var tempFile = File.Create("libmupdfcpp.so");
+                resourceStream.CopyTo(tempFile);
+                resourceStream.Dispose();
+                tempFile.Dispose();
+            }
+
+            // Load the second shared library
+            resourceStream = assembly.GetManifestResourceStream("mupdfcsharp.so");
+            if (resourceStream != null)
+            {
+                var tempFile = File.Create("mupdfcsharp.so");
+                resourceStream.CopyTo(tempFile);
+                resourceStream.Dispose();
+                tempFile.Dispose();
+            }
         }
 
         internal static void AddLayerConfig(
@@ -6868,15 +6893,28 @@ namespace MuPDF.NET
 
         public static void InitApp()
         {
-            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                return;
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                if (Utils.IsInitialized)
+                    return;
 
-            if (Utils.IsInitialized)
-                return;
+                Utils.SetDotCultureForNumber();
+                if (!File.Exists("mupdfcsharp.dll"))
+                    Utils.LoadEmbeddedDllForWindows();
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                if (Utils.IsInitialized)
+                    return;
 
-            Utils.SetDotCultureForNumber();
-            if (!File.Exists("mupdfcsharp.dll"))
-                Utils.LoadEmbeddedDll();
+                Utils.SetDotCultureForNumber();
+                if (!File.Exists("mupdfcsharp.so"))
+                    Utils.LoadEmbeddedDllForLinux();
+            }
+            else
+            {
+                return;
+            }
 
             Utils.IsInitialized = true;
         }

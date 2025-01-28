@@ -1,4 +1,5 @@
 ﻿using mupdf;
+using System.Runtime.InteropServices;
 
 namespace MuPDF.NET
 {
@@ -6,8 +7,16 @@ namespace MuPDF.NET
     {
         static ColorSpace()
         {
-            if (!File.Exists("mupdfcsharp.dll"))
-                Utils.LoadEmbeddedDll();
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                if (!File.Exists("mupdfcsharp.dll"))
+                    Utils.LoadEmbeddedDllForWindows();
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                if (!File.Exists("mupdfcsharp.so"))
+                    Utils.LoadEmbeddedDllForLinux();
+            }
         }
 
         private readonly FzColorspace _nativeColorSpace;
