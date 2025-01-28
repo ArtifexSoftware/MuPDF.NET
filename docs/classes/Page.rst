@@ -67,6 +67,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
 :meth:`Page.GetBboxlog`            List of rectangles that envelop text, drawing or image objects
 :meth:`Page.GetContents`           PDF only: return a list of content :data:`xref` numbers
 :meth:`Page.GetDisplayList`        Create the page's display list
+:meth:`Page.GetTables`             Extract the page's tables as a list
 :meth:`Page.GetTextBlocks`         Extract text blocks as a list
 :meth:`Page.GetTextWords`          Extract text words as a list
 :meth:`Page.ClusterDrawings`       PDF only: bounding boxes of vector graphics
@@ -557,6 +558,41 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
       :rtype: :ref:`DisplayList`
       :returns: the display list of the page.
+
+   .. method:: GetTables(Rect clip: null,  string strategy: null, string vertical_strategy: "lines", string horizontal_strategy: "lines", List<Line> add_lines: null, List<Edge> vertical_lines: null, List<Edge> horizontal_lines: null, float snap_tolerance: TableFlags.TABLE_DEFAULT_SNAP_TOLERANCE, float snap_x_tolerance: 0.0f, float snap_y_tolerance: 0.0f, float join_tolerance: TableFlags.TABLE_DEFAULT_JOIN_TOLERANCE, float join_x_tolerance: 0.0f, float join_y_tolerance: 0.0f, float edge_min_length: 3.0f, float min_words_vertical: TableFlags.TABLE_DEFAULT_MIN_WORDS_VERTICAL, float min_words_horizontal: TableFlags.TABLE_DEFAULT_MIN_WORDS_HORIZONTAL, float intersection_tolerance: 3.0f, float intersection_x_tolerance: 0.0f, float intersection_y_tolerance: 0.0f, float text_tolerance: 3.0f, float text_x_tolerance: 3.0f, float text_y_tolerance: 3.0f)
+
+      Find tables on the page and return a list with related information. Typically, the default values of the many parameters will be sufficient. Adjustments should ever only be needed in corner case situations.
+
+      :arg Rect clip: specify a region to consider within the page rectangle and ignore the rest. Default `null` is the full page.
+
+      :arg str strategy: Request a **table detection** strategy. Valid values are "lines", "lines_strict" and "text".
+
+         Default is **"lines"** which uses all vector graphics on the page to detect grid lines.
+
+         Strategy **"lines_strict"** ignores borderless rectangle vector graphics. Sometimes single text pieces have background colors which may lead to false columns or lines. This strategy ignores them and can thus increase detection precision.
+
+         If **"text"** is specified, text positions are used to generate "virtual" column and / or row boundaries. Use `min_words_*` to request the number of words for considering their coordinates.
+
+         Use parameters `vertical_strategy` and `horizontal_strategy` **instead** for a more fine-grained treatment of the dimensions.
+
+      :arg List<Line> add_lines: Specify a list of "lines" (i.e. pairs of `Line` objects) as **additional**, "virtual" vector graphics. These lines may help with table and / or cell detection and will not otherwise influence the detection strategy. Especially, in contrast to parameters `horizontal_lines` and `vertical_lines`, they will not prevent detecting rows or columns in other ways. These lines will be treated exactly like "real" vector graphics in terms of joining, snapping, intersectiing, minimum length and containment in the `clip` rectangle. Similarly, lines not parallel to any of the coordinate axes will be ignored.
+
+      :arg float snap_tolerance: Any two horizontal lines whose y-values differ by no more than this value will be **snapped** into one. Accordingly for vertical lines. Default is 3. Separate values can be specified instead for the dimensions, using `snap_x_tolerance` and `snap_y_tolerance`.
+
+      :arg float join_tolerance: Any two lines will be **joined** to one if the end and the start points differ by no more than this value (in points). Default is 3. Instead of this value, separate values can be specified for the dimensions using `join_x_tolerance` and `join_y_tolerance`.
+
+      :arg float edge_min_length: Ignore a line if its length does not exceed this value (points). Default is 3.
+
+      :arg int min_words_vertical: relevant for vertical strategy option "text": at least this many words must coincide to establish a **virtual column** boundary.
+
+      :arg int min_words_horizontal: relevant for horizontal strategy option "text": at least this many words must coincide to establish a **virtual row** boundary.
+
+      :arg float intersection_tolerance: When combining lines into cell borders, orthogonal lines must be within this value (points) to be considered intersecting. Default is 3. Instead of this value, separate values can be specified for the dimensions using `intersection_x_tolerance` and `intersection_y_tolerance`.
+
+      :arg float text_tolerance: Characters will be combined into words only if their distance is no larger than this value (points). Default is 3. Instead of this value, separate values can be specified for the dimensions using `text_x_tolerance` and `text_y_tolerance`.
+
+      :rtype: List
+      :return: a list of `Table`
    
    .. method:: GetTextBlocks(Rect clip: null, int flags: 0, TextPage textPage: null, bool sort: false)
 
