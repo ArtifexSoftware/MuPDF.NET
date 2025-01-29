@@ -30,6 +30,14 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+	  <Compile Remove="libs\**" />
+	  <EmbeddedResource Remove="libs\**" />
+	  <MauiCss Remove="libs\**" />
+	  <MauiXaml Remove="libs\**" />
+	  <None Remove="libs\**" />
+	</ItemGroup>
+
+	<ItemGroup>
 	  <None Include="..\LICENSE.md">
 	    <Pack>True</Pack>
 	    <PackagePath>\</PackagePath>
@@ -50,12 +58,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <Reference Include="zxing">
-	    <HintPath>zxing.dll</HintPath>
-	  </Reference>
-	</ItemGroup>
-
-	<ItemGroup>
 	  <PackageReference Update="Microsoft.Maui.Controls" Version="8.0.14" />
 	</ItemGroup>
 
@@ -63,32 +65,13 @@
 	  <PackageReference Update="Microsoft.Maui.Controls.Compatibility" Version="8.0.14" />
 	</ItemGroup>
 
-	<ItemGroup Condition="'$(OS)' == 'Windows_NT'">
-		<EmbeddedResource Include="libs\mupdf\windows\mupdfcsharp.dll">
+	<ItemGroup>
+		<EmbeddedResource Include="mupdfcsharp.dll">
 			<LogicalName>mupdfcsharp.dll</LogicalName>
 		</EmbeddedResource>
-	</ItemGroup>
-	<ItemGroup Condition="'$(OS)' == 'Windows_NT'">
-		<EmbeddedResource Include="libs\mupdf\windows\mupdfcpp64.dll">
+		<EmbeddedResource Include="mupdfcpp64.dll">
 			<LogicalName>mupdfcpp64.dll</LogicalName>
 		</EmbeddedResource>
 	</ItemGroup>
-	<ItemGroup Condition="'$(OS)' == 'Windows_NT'">
-		<Compile Remove="libs\mupdf\linux\**" />
-	</ItemGroup>
-	
-	<ItemGroup Condition="'$(OS)' == 'Linux'">
-		<EmbeddedResource Include="libs\mupdf\linux\mupdfcsharp.so">
-			<LogicalName>mupdfcsharp.so</LogicalName>
-		</EmbeddedResource>
-	</ItemGroup>
-	<ItemGroup Condition="'$(OS)' == 'Linux'">
-		<EmbeddedResource Include="libs\mupdf\linux\libmupdfcpp.so">
-			<LogicalName>libmupdfcpp.so</LogicalName>
-		</EmbeddedResource>
-	</ItemGroup>
-	<ItemGroup Condition="'$(OS)' == 'Linux'">
-		<Compile Remove="libs\mupdf\windows\**" />
-	</ItemGroup>
-	
+
 </Project>
