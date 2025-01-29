@@ -6915,7 +6915,6 @@ namespace MuPDF.NET
             {
                 return;
             }
-
             Utils.IsInitialized = true;
         }
 

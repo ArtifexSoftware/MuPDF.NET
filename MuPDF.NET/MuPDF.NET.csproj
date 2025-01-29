@@ -29,12 +29,20 @@
 		<PackageLicenseFile>LICENSE.md</PackageLicenseFile>
 	</PropertyGroup>
 
-	<ItemGroup>
-	  <Compile Remove="libs\**" />
-	  <EmbeddedResource Remove="libs\**" />
-	  <MauiCss Remove="libs\**" />
-	  <MauiXaml Remove="libs\**" />
-	  <None Remove="libs\**" />
+	<PropertyGroup Condition="'$(OS)' == 'Windows_NT'">
+	  <DefineConstants>$(DefineConstants);WINDOWS</DefineConstants>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(OS)' == 'Windows_NT'">
+	  <DefineConstants>$(DefineConstants);WINDOWS</DefineConstants>
+	</PropertyGroup>
+
+	<ItemGroup Condition="'$(OS)' == 'Windows_NT'">
+	  <Compile Remove="libs\mupdf\linux\mupdf.cs" />
+	</ItemGroup>
+	
+	<ItemGroup Condition="'$(OS)' != 'Windows_NT'">
+	  <Compile Remove="libs\mupdf\windows\mupdf.cs" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -66,10 +74,19 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<EmbeddedResource Include="mupdfcsharp.dll">
+		<EmbeddedResource Include="libs\mupdf\linux\libmupdf.so">
+			<LogicalName>libmupdf.so</LogicalName>
+		</EmbeddedResource>
+		<EmbeddedResource Include="libs\mupdf\linux\libmupdfcpp.so">
+			<LogicalName>libmupdfcpp.so</LogicalName>
+		</EmbeddedResource>
+		<EmbeddedResource Include="libs\mupdf\linux\mupdfcsharp.so">
+			<LogicalName>mupdfcsharp.so</LogicalName>
+		</EmbeddedResource>
+		<EmbeddedResource Include="libs\mupdf\windows\mupdfcsharp.dll">
 			<LogicalName>mupdfcsharp.dll</LogicalName>
 		</EmbeddedResource>
-		<EmbeddedResource Include="mupdfcpp64.dll">
+		<EmbeddedResource Include="libs\mupdf\windows\mupdfcpp64.dll">
 			<LogicalName>mupdfcpp64.dll</LogicalName>
 		</EmbeddedResource>
 	</ItemGroup>
