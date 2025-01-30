@@ -6,11 +6,6 @@ namespace MuPDF.NET
 {
     public class TextWriter
     {
-        static TextWriter()
-        {
-            Utils.InitApp();
-        }
-
         private FzText _nativeText;
 
         /// <summary>

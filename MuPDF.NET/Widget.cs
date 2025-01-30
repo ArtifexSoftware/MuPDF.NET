@@ -4,11 +4,6 @@ namespace MuPDF.NET
 {
     public class Widget
     {
-        static Widget()
-        {
-            Utils.InitApp();
-        }
-
         /// <summary>
         /// A list of up to 4 floats defining the field’s border color
         /// </summary>

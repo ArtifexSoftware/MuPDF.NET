@@ -9,11 +9,14 @@ While being portable to other platforms, this documentation is targeted to the W
 
 - Visual Studio Community version 2019 or version 2022
 - .NET v8 or later
+- Support for Windows and Linux
 
 ## Generating MuPDF.NET
 This is only required if you want to create a local version of the package. For creating an application that **uses** MuPDF.NET, please skip to the next section.
 
 - Clone this repository.
+
+#### on Windows
 
 - Expand folder `MuPDF.NET` and double-click on file `MuPDF.NET.sln`. This will start your Visual Studio application.
 
@@ -22,9 +25,20 @@ This is only required if you want to create a local version of the package. For 
 
 - Again select `Build|Solution` and make sure the generation is successful.
 
-- Folder `MuPDF.NET` will now contain some DLL files of which you need `mupdfcpp64.dll` and `mupdfcsharp.dll` for all your future mupdf.net applications. DLL `mupdfcpp64.dll` contains the C library MuPDF wrapped with a C++ binding, and `mupdfcsharp.dll` contains the C# bindings for MuPDF.
+- To execute your project, you should adhere to the [C# binding](https://mupdf.readthedocs.io/en/latest/language-bindings.html#id1) instructions to obtain the native DLL files - `mupdfcpp64.dll` and `mupdfcsharp.dll`, and then copy them into the `bin` folder.
+
+- You will need `mupdfcpp64.dll` and `mupdfcsharp.dll` for all your future mupdf.net applications. DLL `mupdfcpp64.dll` contains the C library MuPDF wrapped with a C++ binding, and `mupdfcsharp.dll` contains the C# bindings for MuPDF.
 
 - Your system administration may determine to put these DLLs in a system folder or provide access to it via a `path` environment variable. If neither of this is the case, both files must be present in the project `bin` folder of your applications.
+
+#### on Linux
+
+- Use the following command to build the project in Release mode:
+```sh
+dotnet build MuPDF.NET.csproj -c Release
+```
+
+- Make sure you have the necessary native libraries - `libmupdf.so.26.0`, `libmupdfcpp.so.26.0`, `mupdfcsharp.so` - required for the C# binding. For Linux support, these libraries should be placed in the `bin` folder, in a manner similar to their organization on Windows.
 
 ## Creating a MuPDF.NET Application
 

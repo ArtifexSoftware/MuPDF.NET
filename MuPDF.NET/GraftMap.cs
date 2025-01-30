@@ -4,11 +4,6 @@ namespace MuPDF.NET
 {
     public class GraftMap
     {
-        static GraftMap()
-        {
-            Utils.InitApp();
-        }
-
         private PdfGraftMap _nativeGraftMap;
 
         public bool ThisOwn { get; set; }

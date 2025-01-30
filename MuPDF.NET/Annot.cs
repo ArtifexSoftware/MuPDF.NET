@@ -6,11 +6,6 @@ namespace MuPDF.NET
 {
     public class Annot
     {
-        static Annot()
-        {
-            Utils.InitApp();
-        }
-
         internal PdfAnnot _nativeAnnotion;
 
         public bool IsOwner { get; set; }

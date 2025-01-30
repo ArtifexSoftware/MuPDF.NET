@@ -4,11 +4,6 @@ namespace MuPDF.NET
 {
     public class Quad
     {
-        static Quad()
-        {
-            Utils.InitApp();
-        }
-
         /// <summary>
         /// Upper left point
         /// </summary>
