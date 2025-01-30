@@ -44,7 +44,7 @@
 	<ItemGroup Condition="'$(OS)' != 'Windows_NT'">
 	  <Compile Remove="libs\mupdf\windows\mupdf.cs" />
 	</ItemGroup>
-
+	
 	<ItemGroup>
 	  <None Include="..\LICENSE.md">
 	    <Pack>True</Pack>
@@ -74,8 +74,14 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<EmbeddedResource Include="libs\mupdf\linux\libmupdf.so">
+			<LogicalName>libmupdf.so</LogicalName>
+		</EmbeddedResource>
 		<EmbeddedResource Include="libs\mupdf\linux\libmupdf.so.26.0">
 			<LogicalName>libmupdf.so.26.0</LogicalName>
+		</EmbeddedResource>
+		<EmbeddedResource Include="libs\mupdf\linux\libmupdfcpp.so">
+			<LogicalName>libmupdfcpp.so</LogicalName>
 		</EmbeddedResource>
 		<EmbeddedResource Include="libs\mupdf\linux\libmupdfcpp.so.26.0">
 			<LogicalName>libmupdfcpp.so.26.0</LogicalName>

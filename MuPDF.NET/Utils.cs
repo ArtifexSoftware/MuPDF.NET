@@ -6814,7 +6814,15 @@ namespace MuPDF.NET
             var assembly = Assembly.GetExecutingAssembly();
 
             // Load the shared library : libmupdf.so.26.0
-            var resourceStream = assembly.GetManifestResourceStream("libmupdf.so.26.0");
+            var resourceStream = assembly.GetManifestResourceStream("libmupdf.so");
+            if (resourceStream != null)
+            {
+                var tempFile = File.Create("libmupdf.so");
+                resourceStream.CopyTo(tempFile);
+                resourceStream.Dispose();
+                tempFile.Dispose();
+            }
+            resourceStream = assembly.GetManifestResourceStream("libmupdf.so.26.0");
             if (resourceStream != null)
             {
                 var tempFile = File.Create("libmupdf.so.26.0");
@@ -6824,6 +6832,14 @@ namespace MuPDF.NET
             }
 
             // Load the shared library : libmupdfcpp.so.26.0
+            resourceStream = assembly.GetManifestResourceStream("libmupdfcpp.so");
+            if (resourceStream != null)
+            {
+                var tempFile = File.Create("libmupdfcpp.so");
+                resourceStream.CopyTo(tempFile);
+                resourceStream.Dispose();
+                tempFile.Dispose();
+            }
             resourceStream = assembly.GetManifestResourceStream("libmupdfcpp.so.26.0");
             if (resourceStream != null)
             {
