@@ -11,13 +11,10 @@ namespace Demo
             Document doc = new();
             Page page = doc.NewPage();
 
-            Console.WriteLine("Page width: " + page.Rect.Width.ToString(CultureInfo.InvariantCulture));
-            /*
             MuPDF.NET.TextWriter writer = new MuPDF.NET.TextWriter(page.Rect);
             writer.FillTextbox(page.Rect, "Hello World!", new Font(fontName: "helv"), rtl: true);
             writer.WriteText(page);
             doc.Save("test.pdf", pretty: 1);
-            */
         }
     }
 }
