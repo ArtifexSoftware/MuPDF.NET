@@ -720,6 +720,7 @@ namespace MuPDF.NET
             Dictionary<string, string> values = new Dictionary<string, string>()
             {
                 { "format", "format" },
+#if WINDOWS
                 { "title", "info:Title" },
                 { "author", "info:Author" },
                 { "subject", "info:Subject" },
@@ -729,6 +730,7 @@ namespace MuPDF.NET
                 { "creationDate", "info:CreationDate" },
                 { "modDate", "info:ModDate" },
                 { "trapped", "info:Trapped" }
+#endif
             };
 
             foreach ((string key, string value) in values)
@@ -4029,11 +4031,7 @@ namespace MuPDF.NET
             Marshal.Copy(list.ToArray(), 0, pNumbers, list.Count);
             SWIGTYPE_p_int swigNumbers = new SWIGTYPE_p_int(pNumbers, true);
 
-#if WINDOWS
-            pdf.pdf_rearrange_pages(list.Count, swigNumbers);
-#else
             pdf.pdf_rearrange_pages(list.Count, swigNumbers, pdf_clean_options_structure.PDF_CLEAN_STRUCTURE_DROP);
-#endif
 
             ResetPageRefs();
         }

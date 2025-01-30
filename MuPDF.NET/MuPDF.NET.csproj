@@ -74,11 +74,11 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<EmbeddedResource Include="libs\mupdf\linux\libmupdf.so">
-			<LogicalName>libmupdf.so</LogicalName>
+		<EmbeddedResource Include="libs\mupdf\linux\libmupdf.so.26.0">
+			<LogicalName>libmupdf.so.26.0</LogicalName>
 		</EmbeddedResource>
-		<EmbeddedResource Include="libs\mupdf\linux\libmupdfcpp.so">
-			<LogicalName>libmupdfcpp.so</LogicalName>
+		<EmbeddedResource Include="libs\mupdf\linux\libmupdfcpp.so.26.0">
+			<LogicalName>libmupdfcpp.so.26.0</LogicalName>
 		</EmbeddedResource>
 		<EmbeddedResource Include="libs\mupdf\linux\mupdfcsharp.so">
 			<LogicalName>mupdfcsharp.so</LogicalName>
