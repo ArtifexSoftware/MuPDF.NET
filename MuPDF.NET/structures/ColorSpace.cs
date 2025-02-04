@@ -14,7 +14,7 @@ namespace MuPDF.NET
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
-                if (!File.Exists("mupdfcsharp.so"))
+                if (!File.Exists("mupdfcsharp.dll"))
                     Utils.LoadEmbeddedDllForLinux();
             }
         }

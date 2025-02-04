@@ -3,6 +3,7 @@ using System.Linq.Expressions;
 using System.Runtime.InteropServices;
 using System.Text;
 using mupdf;
+using Newtonsoft.Json.Linq;
 
 namespace MuPDF.NET
 {
@@ -720,18 +721,20 @@ namespace MuPDF.NET
             Dictionary<string, string> values = new Dictionary<string, string>()
             {
                 { "format", "format" },
-#if WINDOWS
-                { "title", "info:Title" },
-                { "author", "info:Author" },
-                { "subject", "info:Subject" },
-                { "keywords", "info:Keywords" },
-                { "creator", "info:Creator" },
-                { "producer", "info:Producer" },
-                { "creationDate", "info:CreationDate" },
-                { "modDate", "info:ModDate" },
-                { "trapped", "info:Trapped" }
-#endif
             };
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                values.Add("title", "info:Title");
+                values.Add("author", "info:Author");
+                values.Add("subject", "info:Subject");
+                values.Add("keywords", "info:Keywords");
+                values.Add("creator", "info:Creator");
+                values.Add("producer", "info:Producer");
+                values.Add("creationDate", "info:CreationDate");
+                values.Add("modDate", "info:ModDate");
+                values.Add("trapped", "info:Trapped");
+            }
 
             foreach ((string key, string value) in values)
             {

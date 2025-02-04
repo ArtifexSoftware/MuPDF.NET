@@ -16,7 +16,7 @@
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'tizen'">6.5</SupportedOSPlatformVersion>
 		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
 		<Title>MuPDF.NET</Title>
-		<Version>3.0.0</Version>
+		<Version>3.1.2-beta</Version>
 		<Authors>Maksym Tkachuk, Jamie Lemon, Chris Palman</Authors>
 		<Company>Artifex</Company>
 		<Description>A C# binding for MuPDF</Description>
@@ -33,15 +33,11 @@
 	  <DefineConstants>$(DefineConstants);WINDOWS</DefineConstants>
 	</PropertyGroup>
 
-	<PropertyGroup Condition="'$(OS)' == 'Windows_NT'">
-	  <DefineConstants>$(DefineConstants);WINDOWS</DefineConstants>
-	</PropertyGroup>
-
-	<ItemGroup Condition="'$(OS)' == 'Windows_NT'">
+	<ItemGroup>
 	  <Compile Remove="libs\mupdf\linux\mupdf.cs" />
 	</ItemGroup>
 	
-	<ItemGroup Condition="'$(OS)' != 'Windows_NT'">
+	<ItemGroup>
 	  <Compile Remove="libs\mupdf\windows\mupdf.cs" />
 	</ItemGroup>
 	
@@ -62,7 +58,6 @@
 
 	<ItemGroup>
 	  <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-	  <PackageReference Include="System.Drawing.Common" Version="9.0.1" />
 	</ItemGroup>
 
 	<ItemGroup>

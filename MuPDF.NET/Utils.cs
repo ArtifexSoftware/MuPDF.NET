@@ -6853,7 +6853,7 @@ namespace MuPDF.NET
             resourceStream = assembly.GetManifestResourceStream("mupdfcsharp.so");
             if (resourceStream != null)
             {
-                var tempFile = File.Create("mupdfcsharp.so");
+                var tempFile = File.Create("mupdfcsharp.dll");
                 resourceStream.CopyTo(tempFile);
                 resourceStream.Dispose();
                 tempFile.Dispose();
