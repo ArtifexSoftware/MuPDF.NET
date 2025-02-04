@@ -6857,26 +6857,26 @@ namespace MuPDF.NET
                 }
             }
 
-            if (!File.Exists("libmupdfcpp.so"))
+            if (!File.Exists("libmupdfcpp.so.26.0"))
             {
                 var assembly = Assembly.GetExecutingAssembly();
-                var resourceStream = assembly.GetManifestResourceStream("libmupdfcpp.so");
+                var resourceStream = assembly.GetManifestResourceStream("libmupdfcpp.so.26.0");
                 if (resourceStream != null)
                 {
-                    var tempFile = File.Create("libmupdfcpp.so");
+                    var tempFile = File.Create("libmupdfcpp.so.26.0");
                     resourceStream.CopyTo(tempFile);
                     resourceStream.Dispose();
                     tempFile.Dispose();
                 }
             }
 
-            if (!File.Exists("libmupdfcpp.dll"))
+            if (!File.Exists("mupdfcsharp.dll"))
             {
                 var assembly = Assembly.GetExecutingAssembly();
-                var resourceStream = assembly.GetManifestResourceStream("libmupdfcpp.so");
+                var resourceStream = assembly.GetManifestResourceStream("mupdfcsharp.so");
                 if (resourceStream != null)
                 {
-                    var tempFile = File.Create("libmupdfcpp.dll");
+                    var tempFile = File.Create("mupdfcsharp.dll");
                     resourceStream.CopyTo(tempFile);
                     resourceStream.Dispose();
                     tempFile.Dispose();
