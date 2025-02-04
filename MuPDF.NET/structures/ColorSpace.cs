@@ -9,13 +9,11 @@ namespace MuPDF.NET
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                if (!File.Exists("mupdfcsharp.dll"))
-                    Utils.LoadEmbeddedDllForWindows();
+                Utils.LoadEmbeddedDllForWindows();
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
-                if (!File.Exists("mupdfcsharp.dll"))
-                    Utils.LoadEmbeddedDllForLinux();
+                Utils.LoadEmbeddedDllForLinux();
             }
         }
 

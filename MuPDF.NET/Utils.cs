@@ -6793,70 +6793,94 @@ namespace MuPDF.NET
 
         internal static void LoadEmbeddedDllForWindows()
         {
-            var assembly = Assembly.GetExecutingAssembly();
-            var resourceStream = assembly.GetManifestResourceStream("mupdfcpp64.dll");
-            var tempFile = File.Create("mupdfcpp64.dll");
+            if (!File.Exists("mupdfcpp64.dll"))
+            {
+                var assembly = Assembly.GetExecutingAssembly();
+                var resourceStream = assembly.GetManifestResourceStream("mupdfcpp64.dll");
+                var tempFile = File.Create("mupdfcpp64.dll");
 
-            resourceStream?.CopyTo(tempFile);
-            resourceStream?.Dispose();
-            tempFile.Dispose();
+                resourceStream?.CopyTo(tempFile);
+                resourceStream?.Dispose();
+                tempFile.Dispose();
+            }
 
-            resourceStream = assembly.GetManifestResourceStream("mupdfcsharp.dll");
-            tempFile = File.Create("mupdfcsharp.dll");
+            if (!File.Exists("mupdfcsharp.dll"))
+            {
+                var assembly = Assembly.GetExecutingAssembly();
+                var resourceStream = assembly.GetManifestResourceStream("mupdfcsharp.dll");
+                var tempFile = File.Create("mupdfcsharp.dll");
 
-            resourceStream?.CopyTo(tempFile);
-            resourceStream?.Dispose();
-            tempFile.Dispose();
+                resourceStream?.CopyTo(tempFile);
+                resourceStream?.Dispose();
+                tempFile.Dispose();
+            }                
         }
 
         internal static void LoadEmbeddedDllForLinux()
         {
-            var assembly = Assembly.GetExecutingAssembly();
-
-            // Load the shared library : libmupdf.so.26.0
-            var resourceStream = assembly.GetManifestResourceStream("libmupdf.so");
-            if (resourceStream != null)
+            if (!File.Exists("libmupdf.so"))
             {
-                var tempFile = File.Create("libmupdf.so");
-                resourceStream.CopyTo(tempFile);
-                resourceStream.Dispose();
-                tempFile.Dispose();
-            }
-            resourceStream = assembly.GetManifestResourceStream("libmupdf.so.26.0");
-            if (resourceStream != null)
-            {
-                var tempFile = File.Create("libmupdf.so.26.0");
-                resourceStream.CopyTo(tempFile);
-                resourceStream.Dispose();
-                tempFile.Dispose();
+                var assembly = Assembly.GetExecutingAssembly();
+                var resourceStream = assembly.GetManifestResourceStream("libmupdf.so");
+                if (resourceStream != null)
+                {
+                    var tempFile = File.Create("libmupdf.so");
+                    resourceStream.CopyTo(tempFile);
+                    resourceStream.Dispose();
+                    tempFile.Dispose();
+                }
             }
 
-            // Load the shared library : libmupdfcpp.so.26.0
-            resourceStream = assembly.GetManifestResourceStream("libmupdfcpp.so");
-            if (resourceStream != null)
+            if (!File.Exists("libmupdf.so.26.0"))
             {
-                var tempFile = File.Create("libmupdfcpp.so");
-                resourceStream.CopyTo(tempFile);
-                resourceStream.Dispose();
-                tempFile.Dispose();
-            }
-            resourceStream = assembly.GetManifestResourceStream("libmupdfcpp.so.26.0");
-            if (resourceStream != null)
-            {
-                var tempFile = File.Create("libmupdfcpp.so.26.0");
-                resourceStream.CopyTo(tempFile);
-                resourceStream.Dispose();
-                tempFile.Dispose();
+                var assembly = Assembly.GetExecutingAssembly();
+                var resourceStream = assembly.GetManifestResourceStream("libmupdf.so.26.0");
+                if (resourceStream != null)
+                {
+                    var tempFile = File.Create("libmupdf.so.26.0");
+                    resourceStream.CopyTo(tempFile);
+                    resourceStream.Dispose();
+                    tempFile.Dispose();
+                }
             }
 
-            // Load the shared library : mupdfcsharp.so
-            resourceStream = assembly.GetManifestResourceStream("mupdfcsharp.so");
-            if (resourceStream != null)
+            if (!File.Exists("libmupdfcpp.so"))
             {
-                var tempFile = File.Create("mupdfcsharp.dll");
-                resourceStream.CopyTo(tempFile);
-                resourceStream.Dispose();
-                tempFile.Dispose();
+                var assembly = Assembly.GetExecutingAssembly();
+                var resourceStream = assembly.GetManifestResourceStream("libmupdfcpp.so");
+                if (resourceStream != null)
+                {
+                    var tempFile = File.Create("libmupdfcpp.so");
+                    resourceStream.CopyTo(tempFile);
+                    resourceStream.Dispose();
+                    tempFile.Dispose();
+                }
+            }
+
+            if (!File.Exists("libmupdfcpp.so"))
+            {
+                var assembly = Assembly.GetExecutingAssembly();
+                var resourceStream = assembly.GetManifestResourceStream("libmupdfcpp.so");
+                if (resourceStream != null)
+                {
+                    var tempFile = File.Create("libmupdfcpp.so");
+                    resourceStream.CopyTo(tempFile);
+                    resourceStream.Dispose();
+                    tempFile.Dispose();
+                }
+            }
+
+            if (!File.Exists("libmupdfcpp.dll"))
+            {
+                var assembly = Assembly.GetExecutingAssembly();
+                var resourceStream = assembly.GetManifestResourceStream("libmupdfcpp.so");
+                if (resourceStream != null)
+                {
+                    var tempFile = File.Create("libmupdfcpp.dll");
+                    resourceStream.CopyTo(tempFile);
+                    resourceStream.Dispose();
+                    tempFile.Dispose();
+                }
             }
         }
 
@@ -6925,8 +6949,7 @@ namespace MuPDF.NET
                     return;
 
                 Utils.SetDotCultureForNumber();
-                if (!File.Exists("mupdfcsharp.dll"))
-                    Utils.LoadEmbeddedDllForWindows();
+                Utils.LoadEmbeddedDllForWindows();
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
@@ -6934,8 +6957,7 @@ namespace MuPDF.NET
                     return;
 
                 Utils.SetDotCultureForNumber();
-                if (!File.Exists("mupdfcsharp.so"))
-                    Utils.LoadEmbeddedDllForLinux();
+                Utils.LoadEmbeddedDllForLinux();
             }
             else
             {
