@@ -2,11 +2,13 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.IO.Compression;
+using System.Net.NetworkInformation;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using mupdf;
 using Newtonsoft.Json;
+using ZXing;
 using static MuPDF.NET.Global;
 
 namespace MuPDF.NET
@@ -1575,6 +1577,221 @@ namespace MuPDF.NET
 
             List<Table> tables = TableFinder.FindTables(page, clip, tset);
             return tables;
+        }
+
+        // Manually turn on all formats, even those not yet considered production quality.
+        private static IDictionary<DecodeHintType, object> buildHints(Config config)
+        {
+            var hints = new Dictionary<DecodeHintType, Object>();
+            var vector = new List<ZXing.BarcodeFormat>
+            {
+                ZXing.BarcodeFormat.AZTEC,
+                ZXing.BarcodeFormat.CODABAR,
+                ZXing.BarcodeFormat.CODE_39,
+                ZXing.BarcodeFormat.CODE_93,
+                ZXing.BarcodeFormat.CODE_128,
+                ZXing.BarcodeFormat.DATA_MATRIX,
+                ZXing.BarcodeFormat.EAN_8,
+                ZXing.BarcodeFormat.EAN_13,
+                ZXing.BarcodeFormat.ITF,
+                ZXing.BarcodeFormat.MAXICODE,
+                ZXing.BarcodeFormat.PDF_417,
+                ZXing.BarcodeFormat.QR_CODE,
+                ZXing.BarcodeFormat.RSS_14,
+                ZXing.BarcodeFormat.RSS_EXPANDED,
+                ZXing.BarcodeFormat.UPC_A,
+                ZXing.BarcodeFormat.UPC_E,
+                ZXing.BarcodeFormat.UPC_EAN_EXTENSION,
+                ZXing.BarcodeFormat.MSI,
+                ZXing.BarcodeFormat.PLESSEY,
+                ZXing.BarcodeFormat.IMB,
+                ZXing.BarcodeFormat.PHARMA_CODE
+            };
+            hints[DecodeHintType.POSSIBLE_FORMATS] = vector;
+            if (config.TryHarder)
+            {
+                hints[DecodeHintType.TRY_HARDER] = true;
+            }
+            if (config.TryInverted)
+            {
+                hints[DecodeHintType.ALSO_INVERTED] = true;
+            }
+            if (config.PureBarcode)
+            {
+                hints[DecodeHintType.PURE_BARCODE] = true;
+            }
+            return hints;
+        }
+
+        public static List<Barcode> ReadBarcodes(
+            Page page,
+            Rect clip = null,
+            bool tryHarder = true,
+            bool tryInverted = false,
+            bool pureBarcode = false,
+            bool multi = true,
+            bool autoRotate = true
+            )
+        {
+            Config config = new Config();
+            Inputs inputs = new Inputs();
+
+            // Generate a highly unique file name
+            string imageFilePath = System.IO.Path.Combine(System.IO.Path.GetTempPath(),
+                DateTime.Now.ToString("yyyyMMddHHmmssfff") + "_" +
+                Guid.NewGuid().ToString() + "_" +
+                new Random().Next(1000, 9999) + ".jpg");
+
+            Pixmap pxmp = page.GetPixmap(dpi: 1600);
+            pxmp.Save(imageFilePath, jpgQuality: 800);
+
+            inputs.addInput(imageFilePath);
+
+            // set crop
+            if (clip != null)
+            {
+                int[] crop = new int[4];
+                // copy crop from clip
+                crop[0] = (int)clip.X0;
+                crop[1] = (int)clip.Y0;
+                crop[2] = (int)clip.Width;
+                crop[3] = (int)clip.Height;
+
+                config.Crop = crop;
+            }
+
+            config.TryHarder = tryHarder;
+            config.TryInverted = tryInverted;
+            config.PureBarcode = pureBarcode;
+            config.Multi = multi;
+            config.AutoRotate = autoRotate;
+
+            config.Hints = buildHints(config);
+
+            var threads = new Dictionary<Thread, DecodeThread>(Math.Min(config.Threads, inputs.getInputCount()));
+            var decodeObjects = new List<DecodeThread>();
+            for (int x = 0; x < config.Threads; x++)
+            {
+                var decodeThread = new DecodeThread(config, inputs);
+                decodeObjects.Add(decodeThread);
+                var thread = new Thread(decodeThread.run);
+                threads.Add(thread, decodeThread);
+                thread.Start();
+            }
+
+            int successful = 0;
+            List<Barcode> barcodes = new List<Barcode>();
+            foreach (var thread in threads.Keys)
+            {
+                thread.Join();
+                successful += threads[thread].getSuccessful();
+                List<Result> results = threads[thread].getResults();
+                foreach (var result in results)
+                {
+                    BarcodePoint[] points = new BarcodePoint[result.ResultPoints.Length];
+                    for (int i = 0; i < result.ResultPoints.Length; i++)
+                    {
+                        points[i] = new BarcodePoint(result.ResultPoints[i].X, result.ResultPoints[i].Y);
+                    }
+
+                    Barcode barcode = new Barcode(
+                        result.Text,
+                        result.RawBytes,
+                        result.NumBits,
+                        points,
+                        (BarcodeFormat)result.BarcodeFormat,
+                        result.Timestamp
+                    );
+                    foreach (var metadata in result.ResultMetadata)
+                    {
+                        barcode.putMetadata((BarcodeMetadataType)metadata.Key, metadata.Value);
+                    }
+                    barcodes.Add(barcode);
+                }
+            }
+
+            return barcodes;
+        }
+
+        public static List<Barcode> ReadBarcodes(
+            string imageFile,
+            Rect clip = null,
+            bool tryHarder = true,
+            bool tryInverted = false,
+            bool pureBarcode = false,
+            bool multi = true,
+            bool autoRotate = true
+            )
+        {
+            Config config = new Config();
+            Inputs inputs = new Inputs();
+
+            inputs.addInput(imageFile);
+
+            // set crop
+            if (clip != null)
+            {
+                int[] crop = new int[4];
+                // copy crop from clip
+                crop[0] = (int)clip.X0;
+                crop[1] = (int)clip.Y0;
+                crop[2] = (int)clip.Width;
+                crop[3] = (int)clip.Height;
+
+                config.Crop = crop;
+            }
+
+            config.TryHarder = tryHarder;
+            config.TryInverted = tryInverted;
+            config.PureBarcode = pureBarcode;
+            config.Multi = multi;
+            config.AutoRotate = autoRotate;
+
+            config.Hints = buildHints(config);
+
+            var threads = new Dictionary<Thread, DecodeThread>(Math.Min(config.Threads, inputs.getInputCount()));
+            var decodeObjects = new List<DecodeThread>();
+            for (int x = 0; x < config.Threads; x++)
+            {
+                var decodeThread = new DecodeThread(config, inputs);
+                decodeObjects.Add(decodeThread);
+                var thread = new Thread(decodeThread.run);
+                threads.Add(thread, decodeThread);
+                thread.Start();
+            }
+
+            int successful = 0;
+            List<Barcode> barcodes = new List<Barcode>();
+            foreach (var thread in threads.Keys)
+            {
+                thread.Join();
+                successful += threads[thread].getSuccessful();
+                List<Result> results = threads[thread].getResults();
+                foreach (var result in results)
+                {
+                    BarcodePoint[] points = new BarcodePoint[result.ResultPoints.Length];
+                    for (int i = 0; i < result.ResultPoints.Length; i++)
+                    {
+                        points[i] = new BarcodePoint(result.ResultPoints[i].X, result.ResultPoints[i].Y);
+                    }
+
+                    Barcode barcode = new Barcode(
+                        result.Text,
+                        result.RawBytes,
+                        result.NumBits,
+                        points,
+                        (BarcodeFormat)result.BarcodeFormat,
+                        result.Timestamp
+                    );
+                    foreach (var metadata in result.ResultMetadata)
+                    {
+                        barcode.putMetadata((BarcodeMetadataType)metadata.Key, metadata.Value);
+                    }
+                    barcodes.Add(barcode);
+                }
+            }
+
+            return barcodes;
         }
 
         public static dynamic GetText(
@@ -6814,7 +7031,20 @@ namespace MuPDF.NET
                 resourceStream?.CopyTo(tempFile);
                 resourceStream?.Dispose();
                 tempFile.Dispose();
-            }                
+            }
+
+            if (!File.Exists(binaryDir + "zxing.dll"))
+            {
+                var assembly = Assembly.GetExecutingAssembly();
+                var resourceStream = assembly.GetManifestResourceStream("zxing.dll");
+                if (resourceStream != null)
+                {
+                    var tempFile = File.Create(binaryDir + "zxing.dll");
+                    resourceStream.CopyTo(tempFile);
+                    resourceStream.Dispose();
+                    tempFile.Dispose();
+                }
+            }
         }
 
         internal static void LoadEmbeddedDllForLinux()
@@ -6879,6 +7109,19 @@ namespace MuPDF.NET
                 if (resourceStream != null)
                 {
                     var tempFile = File.Create(binaryDir + "mupdfcsharp.dll");
+                    resourceStream.CopyTo(tempFile);
+                    resourceStream.Dispose();
+                    tempFile.Dispose();
+                }
+            }
+
+            if (!File.Exists(binaryDir + "zxing.dll"))
+            {
+                var assembly = Assembly.GetExecutingAssembly();
+                var resourceStream = assembly.GetManifestResourceStream("zxing.dll");
+                if (resourceStream != null)
+                {
+                    var tempFile = File.Create(binaryDir + "zxing.dll");
                     resourceStream.CopyTo(tempFile);
                     resourceStream.Dispose();
                     tempFile.Dispose();

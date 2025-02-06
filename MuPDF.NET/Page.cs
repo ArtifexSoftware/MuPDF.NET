@@ -4055,6 +4055,28 @@ namespace MuPDF.NET
         }
 
         /// <summary>
+        /// Read barcodes from page.
+        /// </summary>
+        /// <param name="clip"></param>
+        /// <param name="tryHarder">Transformation to apply to the page.</param>
+        /// <param name="tryInverted">Transformation to apply to the page.</param>
+        /// <param name="pureBarcode">Transformation to apply to the page.</param>
+        /// <param name="multi">Transformation to apply to the page.</param>
+        /// <param name="autoRotate">Transformation to apply to the page.</param>
+        public List<Barcode> ReadBarcodes(
+            Rect clip = null,
+            bool tryHarder = true,
+            bool tryInverted = false,
+            bool pureBarcode = false,
+            bool multi = true,
+            bool autoRotate = true
+            )
+        {
+            return Utils.ReadBarcodes(this, clip,
+                tryHarder, tryInverted, pureBarcode, multi, autoRotate);
+        }
+
+        /// <summary>
         /// Run page through a device.
         /// </summary>
         /// <param name="dw"></param>

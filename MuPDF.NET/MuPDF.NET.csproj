@@ -50,6 +50,13 @@
 
 	<ItemGroup>
 	  <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+	  <PackageReference Include="System.Drawing.Common" Version="9.0.1" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Reference Include="zxing">
+			<HintPath>libs\zxing\zxing.dll</HintPath>
+		</Reference>
 	</ItemGroup>
 
 	<ItemGroup>
@@ -81,6 +88,9 @@
 		</EmbeddedResource>
 		<EmbeddedResource Include="libs\mupdf\windows\mupdfcpp64.dll">
 			<LogicalName>mupdfcpp64.dll</LogicalName>
+		</EmbeddedResource>
+		<EmbeddedResource Include="libs\zxing\zxing.dll">
+			<LogicalName>zxing.dll</LogicalName>
 		</EmbeddedResource>
 	</ItemGroup>
 
