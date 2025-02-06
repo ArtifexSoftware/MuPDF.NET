@@ -2,7 +2,6 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
-using Microsoft.Maui;
 using mupdf;
 using static System.Net.Mime.MediaTypeNames;
 using static MuPDF.NET.Global;
