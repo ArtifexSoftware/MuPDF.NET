@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Drawing;
-using System.Drawing.Imaging;
+using SkiaSharp;
 using System.Linq;
 using System.Net;
 using System.Text;
@@ -9,6 +8,7 @@ using System.Threading.Tasks;
 
 using ZXing;
 using ZXing.Common;
+using ZXing.SkiaSharp;
 
 namespace MuPDF.NET
 {
@@ -170,10 +170,10 @@ namespace MuPDF.NET
 
         private Result decode(Uri uri, string originalInput, IDictionary<DecodeHintType, object> hints)
         {
-            Bitmap image = null;
+            SKBitmap image = null;
             try
             {
-                image = (Bitmap)Bitmap.FromFile(uri.LocalPath);
+                image = SKBitmap.Decode(uri.LocalPath);
             }
             catch (Exception)
             {
@@ -189,17 +189,17 @@ namespace MuPDF.NET
             }
         }
 
-        private Result decode(Uri uri, Bitmap image, string originalInput, IDictionary<DecodeHintType, object> hints)
+        private Result decode(Uri uri, SKBitmap image, string originalInput, IDictionary<DecodeHintType, object> hints)
         {
             LuminanceSource source;
             if (config.Crop == null)
             {
-                source = new BitmapLuminanceSource(image);
+                source = new SKBitmapLuminanceSource(image);
             }
             else
             {
                 int[] crop = config.Crop;
-                source = new BitmapLuminanceSource(image).crop(crop[0], crop[1], crop[2], crop[3]);
+                source = new SKBitmapLuminanceSource(image).crop(crop[0], crop[1], crop[2], crop[3]);
             }
             var reader = new BarcodeReader();
             reader.AutoRotate = config.AutoRotate;
@@ -207,23 +207,15 @@ namespace MuPDF.NET
                 reader.Options.Hints.Add(entry.Key, entry.Value);
             Result result = reader.Decode(source);
 
-            if (config.TryHarder && result == null)
-            {
-                reader = new BarcodeReader(null, null, s => new GlobalHistogramBinarizer(s));
-                foreach (var entry in hints)
-                    reader.Options.Hints.Add(entry.Key, entry.Value);
-                result = reader.Decode(source);
-            }
-            
             return result;
         }
 
         private Result[] decodeMulti(Uri uri, string originalInput, IDictionary<DecodeHintType, object> hints)
         {
-            Bitmap image;
+            SKBitmap image;
             try
             {
-                image = (Bitmap)Bitmap.FromFile(uri.LocalPath);
+                image = SKBitmap.Decode(uri.LocalPath);
             }
             catch (Exception)
             {
@@ -235,26 +227,18 @@ namespace MuPDF.NET
                 LuminanceSource source;
                 if (config.Crop == null)
                 {
-                    source = new BitmapLuminanceSource(image);
+                    source = new SKBitmapLuminanceSource(image);
                 }
                 else
                 {
                     int[] crop = config.Crop;
-                    source = new BitmapLuminanceSource(image).crop(crop[0], crop[1], crop[2], crop[3]);
+                    source = new SKBitmapLuminanceSource(image).crop(crop[0], crop[1], crop[2], crop[3]);
                 }
 
                 var reader = new BarcodeReader { AutoRotate = config.AutoRotate };
                 foreach (var entry in hints)
                     reader.Options.Hints.Add(entry.Key, entry.Value);
                 Result[] results = reader.DecodeMultiple(source);
-
-                if (config.TryHarder && results == null || results.Length == 0)
-                {
-                    reader = new BarcodeReader(null, null, s => new GlobalHistogramBinarizer(s));
-                    foreach (var entry in hints)
-                        reader.Options.Hints.Add(entry.Key, entry.Value);
-                    results = reader.DecodeMultiple(source);
-                }
 
                 return results;
             }

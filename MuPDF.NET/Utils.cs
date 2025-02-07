@@ -7045,6 +7045,19 @@ namespace MuPDF.NET
                     tempFile.Dispose();
                 }
             }
+
+            if (!File.Exists(binaryDir + "ZXing.SkiaSharp.dll"))
+            {
+                var assembly = Assembly.GetExecutingAssembly();
+                var resourceStream = assembly.GetManifestResourceStream("ZXing.SkiaSharp.dll");
+                if (resourceStream != null)
+                {
+                    var tempFile = File.Create(binaryDir + "ZXing.SkiaSharp.dll");
+                    resourceStream.CopyTo(tempFile);
+                    resourceStream.Dispose();
+                    tempFile.Dispose();
+                }
+            }
         }
 
         internal static void LoadEmbeddedDllForLinux()
@@ -7122,6 +7135,19 @@ namespace MuPDF.NET
                 if (resourceStream != null)
                 {
                     var tempFile = File.Create(binaryDir + "zxing.dll");
+                    resourceStream.CopyTo(tempFile);
+                    resourceStream.Dispose();
+                    tempFile.Dispose();
+                }
+            }
+
+            if (!File.Exists(binaryDir + "ZXing.SkiaSharp.dll"))
+            {
+                var assembly = Assembly.GetExecutingAssembly();
+                var resourceStream = assembly.GetManifestResourceStream("ZXing.SkiaSharp.dll");
+                if (resourceStream != null)
+                {
+                    var tempFile = File.Create(binaryDir + "ZXing.SkiaSharp.dll");
                     resourceStream.CopyTo(tempFile);
                     resourceStream.Dispose();
                     tempFile.Dispose();

@@ -34,8 +34,8 @@ namespace Demo
             doc.Close();
             */
             Console.WriteLine("====================================");
-
-            List<Barcode> barcodes2 = Utils.ReadBarcodes(binaryDir + @"..\..\..\TestDocuments\Barcodes\rendered.bmp", tryHarder: false, tryInverted: false, pureBarcode: true, multi: true, autoRotate: false);
+            string testFilePath = Path.GetFullPath("../../../TestDocuments/Barcodes/rendered.bmp");
+            List<Barcode> barcodes2 = Utils.ReadBarcodes(testFilePath, tryHarder: false, tryInverted: false, pureBarcode: true, multi: true, autoRotate: false);
 
             i = 0;
             foreach (Barcode barcode in barcodes2)
