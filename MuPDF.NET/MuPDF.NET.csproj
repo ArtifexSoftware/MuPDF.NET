@@ -50,15 +50,15 @@
 
 	<ItemGroup>
 	  <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-	  <PackageReference Include="SkiaSharp" Version="3.116.1" />
+	  <PackageReference Include="SixLabors.ImageSharp" Version="3.1.6" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<Reference Include="zxing">
 			<HintPath>libs\zxing\zxing.dll</HintPath>
 		</Reference>
-		<Reference Include="ZXing.SkiaSharp">
-			<HintPath>libs\zxing\ZXing.SkiaSharp.dll</HintPath>
+		<Reference Include="libs\zxing\ZXing.ImageSharp.V3">
+			<HintPath>libs\zxing\ZXing.ImageSharp.V3.dll</HintPath>
 		</Reference>
 	</ItemGroup>
 
@@ -95,8 +95,8 @@
 		<EmbeddedResource Include="libs\zxing\zxing.dll">
 			<LogicalName>zxing.dll</LogicalName>
 		</EmbeddedResource>
-		<EmbeddedResource Include="libs\zxing\ZXing.SkiaSharp.dll">
-			<LogicalName>ZXing.SkiaSharp.dll</LogicalName>
+		<EmbeddedResource Include="libs\zxing\ZXing.ImageSharp.V3.dll">
+			<LogicalName>ZXing.ImageSharp.V3.dll</LogicalName>
 		</EmbeddedResource>
 	</ItemGroup>
 

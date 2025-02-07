@@ -7046,10 +7046,10 @@ namespace MuPDF.NET
                 }
             }
 
-            if (!File.Exists(binaryDir + "ZXing.SkiaSharp.dll"))
+            if (!File.Exists(binaryDir + "ZXing.ImageSharp.V3.dll"))
             {
                 var assembly = Assembly.GetExecutingAssembly();
-                var resourceStream = assembly.GetManifestResourceStream("ZXing.SkiaSharp.dll");
+                var resourceStream = assembly.GetManifestResourceStream("ZXing.ImageSharp.V3.dll");
                 if (resourceStream != null)
                 {
                     var tempFile = File.Create(binaryDir + "ZXing.SkiaSharp.dll");
@@ -7141,10 +7141,10 @@ namespace MuPDF.NET
                 }
             }
 
-            if (!File.Exists(binaryDir + "ZXing.SkiaSharp.dll"))
+            if (!File.Exists(binaryDir + "ZXing.ImageSharp.V3.dll"))
             {
                 var assembly = Assembly.GetExecutingAssembly();
-                var resourceStream = assembly.GetManifestResourceStream("ZXing.SkiaSharp.dll");
+                var resourceStream = assembly.GetManifestResourceStream("ZXing.ImageSharp.V3.dll");
                 if (resourceStream != null)
                 {
                     var tempFile = File.Create(binaryDir + "ZXing.SkiaSharp.dll");
