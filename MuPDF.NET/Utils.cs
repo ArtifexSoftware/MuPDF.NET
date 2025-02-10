@@ -5,7 +5,6 @@ using System.IO.Compression;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
-using Microsoft.Maui.Storage;
 using mupdf;
 using Newtonsoft.Json;
 using static MuPDF.NET.Global;
@@ -6792,22 +6791,99 @@ namespace MuPDF.NET
             return name.Substring(s + 1, name.Length - s - 1);
         }
 
-        internal static void LoadEmbeddedDll()
+        internal static void LoadEmbeddedDllForWindows()
         {
-            var assembly = Assembly.GetExecutingAssembly();
-            var resourceStream = assembly.GetManifestResourceStream("mupdfcpp64.dll");
-            var tempFile = File.Create("mupdfcpp64.dll");
+            string binaryDir = AppContext.BaseDirectory;
+            if (!File.Exists(binaryDir + "mupdfcpp64.dll"))
+            {
+                var assembly = Assembly.GetExecutingAssembly();
+                var resourceStream = assembly.GetManifestResourceStream("mupdfcpp64.dll");
+                var tempFile = File.Create(binaryDir + "mupdfcpp64.dll");
 
-            resourceStream?.CopyTo(tempFile);
-            resourceStream?.Dispose();
-            tempFile.Dispose();
+                resourceStream?.CopyTo(tempFile);
+                resourceStream?.Dispose();
+                tempFile.Dispose();
+            }
 
-            resourceStream = assembly.GetManifestResourceStream("mupdfcsharp.dll");
-            tempFile = File.Create("mupdfcsharp.dll");
+            if (!File.Exists(binaryDir + "mupdfcsharp.dll"))
+            {
+                var assembly = Assembly.GetExecutingAssembly();
+                var resourceStream = assembly.GetManifestResourceStream("mupdfcsharp.dll");
+                var tempFile = File.Create(binaryDir + "mupdfcsharp.dll");
 
-            resourceStream?.CopyTo(tempFile);
-            resourceStream?.Dispose();
-            tempFile.Dispose();
+                resourceStream?.CopyTo(tempFile);
+                resourceStream?.Dispose();
+                tempFile.Dispose();
+            }                
+        }
+
+        internal static void LoadEmbeddedDllForLinux()
+        {
+            string binaryDir = AppContext.BaseDirectory;
+            if (!File.Exists(binaryDir + "libmupdf.so"))
+            {
+                var assembly = Assembly.GetExecutingAssembly();
+                var resourceStream = assembly.GetManifestResourceStream("libmupdf.so");
+                if (resourceStream != null)
+                {
+                    var tempFile = File.Create(binaryDir + "libmupdf.so");
+                    resourceStream.CopyTo(tempFile);
+                    resourceStream.Dispose();
+                    tempFile.Dispose();
+                }
+            }
+
+            if (!File.Exists(binaryDir + "libmupdf.so.26.0"))
+            {
+                var assembly = Assembly.GetExecutingAssembly();
+                var resourceStream = assembly.GetManifestResourceStream("libmupdf.so.26.0");
+                if (resourceStream != null)
+                {
+                    var tempFile = File.Create(binaryDir + "libmupdf.so.26.0");
+                    resourceStream.CopyTo(tempFile);
+                    resourceStream.Dispose();
+                    tempFile.Dispose();
+                }
+            }
+
+            if (!File.Exists(binaryDir + "libmupdfcpp.so"))
+            {
+                var assembly = Assembly.GetExecutingAssembly();
+                var resourceStream = assembly.GetManifestResourceStream("libmupdfcpp.so");
+                if (resourceStream != null)
+                {
+                    var tempFile = File.Create(binaryDir + "libmupdfcpp.so");
+                    resourceStream.CopyTo(tempFile);
+                    resourceStream.Dispose();
+                    tempFile.Dispose();
+                }
+            }
+
+            if (!File.Exists(binaryDir + "libmupdfcpp.so.26.0"))
+            {
+                var assembly = Assembly.GetExecutingAssembly();
+                var resourceStream = assembly.GetManifestResourceStream("libmupdfcpp.so.26.0");
+                if (resourceStream != null)
+                {
+                    var tempFile = File.Create(binaryDir + "libmupdfcpp.so.26.0");
+                    resourceStream.CopyTo(tempFile);
+                    resourceStream.Dispose();
+                    tempFile.Dispose();
+                }
+            }
+
+            if (!File.Exists(binaryDir + "mupdfcsharp.dll"))
+            {
+                var assembly = Assembly.GetExecutingAssembly();
+                var resourceStream = assembly.GetManifestResourceStream("mupdfcsharp.so");
+                if (resourceStream != null)
+                {
+                    var tempFile = File.Create(binaryDir + "mupdfcsharp.dll");
+                    resourceStream.CopyTo(tempFile);
+                    resourceStream.Dispose();
+                    tempFile.Dispose();
+                }
+            }
         }
 
         internal static void AddLayerConfig(
@@ -6869,16 +6945,26 @@ namespace MuPDF.NET
 
         public static void InitApp()
         {
-            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                if (Utils.IsInitialized)
+                    return;
+
+                Utils.SetDotCultureForNumber();
+                Utils.LoadEmbeddedDllForWindows();
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                if (Utils.IsInitialized)
+                    return;
+
+                Utils.SetDotCultureForNumber();
+                Utils.LoadEmbeddedDllForLinux();
+            }
+            else
+            {
                 return;
-
-            if (Utils.IsInitialized)
-                return;
-
-            Utils.SetDotCultureForNumber();
-            if (!File.Exists("mupdfcsharp.dll"))
-                Utils.LoadEmbeddedDll();
-
+            }
             Utils.IsInitialized = true;
         }
 
