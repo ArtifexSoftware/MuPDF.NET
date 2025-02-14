@@ -51,6 +51,7 @@
 	<ItemGroup>
 	  <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
 	  <PackageReference Include="MuPDF.NativeAssets" Version="1.0.0" />
+	  <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.116.1" />
 	  <PackageReference Include="ZXing.Net.Bindings.SkiaSharp" Version="0.16.21" />
 	</ItemGroup>
 
