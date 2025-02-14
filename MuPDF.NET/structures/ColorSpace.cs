@@ -7,6 +7,7 @@ namespace MuPDF.NET
     {
         static ColorSpace()
         {
+            /*
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 Utils.LoadEmbeddedDllForWindows();
@@ -15,6 +16,7 @@ namespace MuPDF.NET
             {
                 Utils.LoadEmbeddedDllForLinux();
             }
+            */
         }
 
         private readonly FzColorspace _nativeColorSpace;

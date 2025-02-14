@@ -16,7 +16,7 @@
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'tizen'">6.5</SupportedOSPlatformVersion>
 		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
 		<Title>MuPDF.NET</Title>
-		<Version>3.1.2-rc.1</Version>
+		<Version>3.2.1</Version>
 		<Authors>Maksym Tkachuk, Jamie Lemon, Chris Palman</Authors>
 		<Company>Artifex</Company>
 		<Description>A C# binding for MuPDF</Description>
@@ -47,57 +47,16 @@
 	    <PackagePath>\</PackagePath>
 	  </None>
 	</ItemGroup>
-
+	
 	<ItemGroup>
 	  <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-	  <PackageReference Include="SixLabors.ImageSharp" Version="3.1.6" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<Reference Include="zxing">
-			<HintPath>libs\zxing\zxing.dll</HintPath>
-		</Reference>
-		<Reference Include="libs\zxing\ZXing.ImageSharp.V3">
-			<HintPath>libs\zxing\ZXing.ImageSharp.V3.dll</HintPath>
-		</Reference>
+	  <PackageReference Include="MuPDF.NativeAssets" Version="1.0.0" />
+	  <PackageReference Include="ZXing.Net.Bindings.SkiaSharp" Version="0.16.21" />
 	</ItemGroup>
 
 	<ItemGroup>
 	  <PackageReference Update="Microsoft.Maui.Controls" Version="8.0.14" />
-	</ItemGroup>
-
-	<ItemGroup>
 	  <PackageReference Update="Microsoft.Maui.Controls.Compatibility" Version="8.0.14" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<EmbeddedResource Include="libs\mupdf\linux\libmupdf.so">
-			<LogicalName>libmupdf.so</LogicalName>
-		</EmbeddedResource>
-		<EmbeddedResource Include="libs\mupdf\linux\libmupdf.so.26.0">
-			<LogicalName>libmupdf.so.26.0</LogicalName>
-		</EmbeddedResource>
-		<EmbeddedResource Include="libs\mupdf\linux\libmupdfcpp.so">
-			<LogicalName>libmupdfcpp.so</LogicalName>
-		</EmbeddedResource>
-		<EmbeddedResource Include="libs\mupdf\linux\libmupdfcpp.so.26.0">
-			<LogicalName>libmupdfcpp.so.26.0</LogicalName>
-		</EmbeddedResource>
-		<EmbeddedResource Include="libs\mupdf\linux\mupdfcsharp.so">
-			<LogicalName>mupdfcsharp.so</LogicalName>
-		</EmbeddedResource>
-		<EmbeddedResource Include="libs\mupdf\windows\mupdfcsharp.dll">
-			<LogicalName>mupdfcsharp.dll</LogicalName>
-		</EmbeddedResource>
-		<EmbeddedResource Include="libs\mupdf\windows\mupdfcpp64.dll">
-			<LogicalName>mupdfcpp64.dll</LogicalName>
-		</EmbeddedResource>
-		<EmbeddedResource Include="libs\zxing\zxing.dll">
-			<LogicalName>zxing.dll</LogicalName>
-		</EmbeddedResource>
-		<EmbeddedResource Include="libs\zxing\ZXing.ImageSharp.V3.dll">
-			<LogicalName>ZXing.ImageSharp.V3.dll</LogicalName>
-		</EmbeddedResource>
 	</ItemGroup>
 
 </Project>

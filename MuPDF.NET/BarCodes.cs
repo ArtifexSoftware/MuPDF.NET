@@ -5,9 +5,10 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
+using SkiaSharp;
 using ZXing;
-using ZXing.ImageSharp;
-using SelectedPixelFormat = SixLabors.ImageSharp.PixelFormats.Argb32;
+using ZXing.SkiaSharp;
+using ZXing.Common;
 
 namespace MuPDF.NET
 {
@@ -169,14 +170,15 @@ namespace MuPDF.NET
 
         private Result decode(Uri uri, string originalInput, IDictionary<DecodeHintType, object> hints)
         {
-            SixLabors.ImageSharp.Image<SelectedPixelFormat> image = null;
+            SKBitmap image = null;
             try
             {
-                image = SixLabors.ImageSharp.Image.Load<SelectedPixelFormat>(uri.LocalPath);
+                image = SKBitmap.Decode(uri.LocalPath);
             }
             catch (Exception e)
             {
-                throw new FileNotFoundException("Resource not found: " + uri + "(" + e.Message + ")");
+                //throw new FileNotFoundException("Resource not found: " + uri + "(" + e.Message + ")");
+                return null;
             }
 
             if (image == null)
@@ -188,19 +190,19 @@ namespace MuPDF.NET
             }
         }
 
-        private Result decode(Uri uri, SixLabors.ImageSharp.Image<SelectedPixelFormat> image, string originalInput, IDictionary<DecodeHintType, object> hints)
+        private Result decode(Uri uri, SKBitmap image, string originalInput, IDictionary<DecodeHintType, object> hints)
         {
             LuminanceSource source;
             if (config.Crop == null)
             {
-                source = new ImageSharpLuminanceSource<SelectedPixelFormat>(image);
+                source = new SKBitmapLuminanceSource(image);
             }
             else
             {
                 int[] crop = config.Crop;
-                source = new ImageSharpLuminanceSource<SelectedPixelFormat>(image).crop(crop[0], crop[1], crop[2], crop[3]);
+                source = new SKBitmapLuminanceSource(image).crop(crop[0], crop[1], crop[2], crop[3]);
             }
-            var reader = new ZXing.ImageSharp.BarcodeReader<SelectedPixelFormat>();
+            var reader = new BarcodeReader();
             reader.AutoRotate = config.AutoRotate;
             foreach (var entry in hints)
                 reader.Options.Hints.Add(entry.Key, entry.Value);
@@ -211,14 +213,15 @@ namespace MuPDF.NET
 
         private Result[] decodeMulti(Uri uri, string originalInput, IDictionary<DecodeHintType, object> hints)
         {
-            SixLabors.ImageSharp.Image<SelectedPixelFormat> image;
+            SKBitmap image;
             try
             {
-                image = SixLabors.ImageSharp.Image.Load<SelectedPixelFormat>(uri.LocalPath);
+                image = SKBitmap.Decode(uri.LocalPath);
             }
             catch (Exception e)
             {
-                throw new FileNotFoundException("Resource not found: " + uri + "(" + e.Message + ")");
+                //throw new FileNotFoundException("Resource not found: " + uri + "(" + e.Message + ")");
+                return null;
             }
 
             using (image)
@@ -226,15 +229,16 @@ namespace MuPDF.NET
                 LuminanceSource source;
                 if (config.Crop == null)
                 {
-                    source = new ImageSharpLuminanceSource<SelectedPixelFormat>(image);
+                    source = new SKBitmapLuminanceSource(image);
                 }
                 else
                 {
                     int[] crop = config.Crop;
-                    source = new ImageSharpLuminanceSource<SelectedPixelFormat>(image).crop(crop[0], crop[1], crop[2], crop[3]);
+                    source = new SKBitmapLuminanceSource(image).crop(crop[0], crop[1], crop[2], crop[3]);
                 }
 
-                var reader = new ZXing.ImageSharp.BarcodeReader<SelectedPixelFormat> { AutoRotate = config.AutoRotate };
+                var reader = new BarcodeReader();
+                reader.AutoRotate = config.AutoRotate;
                 foreach (var entry in hints)
                     reader.Options.Hints.Add(entry.Key, entry.Value);
                 Result[] results = reader.DecodeMultiple(source);

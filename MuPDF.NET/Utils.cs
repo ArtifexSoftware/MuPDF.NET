@@ -1605,7 +1605,7 @@ namespace MuPDF.NET
                 ZXing.BarcodeFormat.MSI,
                 ZXing.BarcodeFormat.PLESSEY,
                 ZXing.BarcodeFormat.IMB,
-                ZXing.BarcodeFormat.PHARMA_CODE
+                //ZXing.BarcodeFormat.PHARMA_CODE
             };
             hints[DecodeHintType.POSSIBLE_FORMATS] = vector;
             if (config.TryHarder)
@@ -1642,8 +1642,16 @@ namespace MuPDF.NET
                 Guid.NewGuid().ToString() + "_" +
                 new Random().Next(1000, 9999) + ".jpg");
 
-            Pixmap pxmp = page.GetPixmap(dpi: 1600);
+            Pixmap pxmp = page.GetPixmap(dpi: 800);
             pxmp.Save(imageFilePath, jpgQuality: 800);
+
+            // Calculate Rect ratio between PDF page and image.
+            float imageWidth = pxmp.IRect.Width;
+            float imageHeight = pxmp.IRect.Height + 0.01f;
+            float pageWidth = page.Rect.Width;
+            float pageHeight = page.Rect.Height + 0.01f;
+            float widthRatio = imageWidth / pageWidth;
+            float heightRatio = imageHeight / pageHeight;
 
             inputs.addInput(imageFilePath);
 
@@ -1652,20 +1660,20 @@ namespace MuPDF.NET
             {
                 int[] crop = new int[4];
                 // copy crop from clip
-                crop[0] = (int)clip.X0;
-                crop[1] = (int)clip.Y0;
-                crop[2] = (int)clip.Width;
-                crop[3] = (int)clip.Height;
+                crop[0] = (int)(clip.X0 * widthRatio);
+                crop[1] = (int)(clip.Y0 * heightRatio);
+                crop[2] = (int)(clip.Width * widthRatio);
+                crop[3] = (int)(clip.Height * heightRatio);
 
                 config.Crop = crop;
             }
 
+            // set config options
             config.TryHarder = tryHarder;
             config.TryInverted = tryInverted;
             config.PureBarcode = pureBarcode;
             config.Multi = multi;
             config.AutoRotate = autoRotate;
-
             config.Hints = buildHints(config);
 
             var threads = new Dictionary<Thread, DecodeThread>(Math.Min(config.Threads, inputs.getInputCount()));
@@ -1691,7 +1699,8 @@ namespace MuPDF.NET
                     BarcodePoint[] points = new BarcodePoint[result.ResultPoints.Length];
                     for (int i = 0; i < result.ResultPoints.Length; i++)
                     {
-                        points[i] = new BarcodePoint(result.ResultPoints[i].X, result.ResultPoints[i].Y);
+                        // revert the original pdf page ratio
+                        points[i] = new BarcodePoint(result.ResultPoints[i].X / widthRatio, result.ResultPoints[i].Y / heightRatio);
                     }
 
                     Barcode barcode = new Barcode(
@@ -1706,9 +1715,13 @@ namespace MuPDF.NET
                     {
                         barcode.putMetadata((BarcodeMetadataType)metadata.Key, metadata.Value);
                     }
+
                     barcodes.Add(barcode);
                 }
             }
+
+            // delete temp image file
+            File.Delete(imageFilePath);
 
             return barcodes;
         }
@@ -7032,32 +7045,6 @@ namespace MuPDF.NET
                 resourceStream?.Dispose();
                 tempFile.Dispose();
             }
-
-            if (!File.Exists(binaryDir + "zxing.dll"))
-            {
-                var assembly = Assembly.GetExecutingAssembly();
-                var resourceStream = assembly.GetManifestResourceStream("zxing.dll");
-                if (resourceStream != null)
-                {
-                    var tempFile = File.Create(binaryDir + "zxing.dll");
-                    resourceStream.CopyTo(tempFile);
-                    resourceStream.Dispose();
-                    tempFile.Dispose();
-                }
-            }
-
-            if (!File.Exists(binaryDir + "ZXing.ImageSharp.V3.dll"))
-            {
-                var assembly = Assembly.GetExecutingAssembly();
-                var resourceStream = assembly.GetManifestResourceStream("ZXing.ImageSharp.V3.dll");
-                if (resourceStream != null)
-                {
-                    var tempFile = File.Create(binaryDir + "ZXing.SkiaSharp.dll");
-                    resourceStream.CopyTo(tempFile);
-                    resourceStream.Dispose();
-                    tempFile.Dispose();
-                }
-            }
         }
 
         internal static void LoadEmbeddedDllForLinux()
@@ -7122,32 +7109,6 @@ namespace MuPDF.NET
                 if (resourceStream != null)
                 {
                     var tempFile = File.Create(binaryDir + "mupdfcsharp.dll");
-                    resourceStream.CopyTo(tempFile);
-                    resourceStream.Dispose();
-                    tempFile.Dispose();
-                }
-            }
-
-            if (!File.Exists(binaryDir + "zxing.dll"))
-            {
-                var assembly = Assembly.GetExecutingAssembly();
-                var resourceStream = assembly.GetManifestResourceStream("zxing.dll");
-                if (resourceStream != null)
-                {
-                    var tempFile = File.Create(binaryDir + "zxing.dll");
-                    resourceStream.CopyTo(tempFile);
-                    resourceStream.Dispose();
-                    tempFile.Dispose();
-                }
-            }
-
-            if (!File.Exists(binaryDir + "ZXing.ImageSharp.V3.dll"))
-            {
-                var assembly = Assembly.GetExecutingAssembly();
-                var resourceStream = assembly.GetManifestResourceStream("ZXing.ImageSharp.V3.dll");
-                if (resourceStream != null)
-                {
-                    var tempFile = File.Create(binaryDir + "ZXing.SkiaSharp.dll");
                     resourceStream.CopyTo(tempFile);
                     resourceStream.Dispose();
                     tempFile.Dispose();
@@ -7220,7 +7181,7 @@ namespace MuPDF.NET
                     return;
 
                 Utils.SetDotCultureForNumber();
-                Utils.LoadEmbeddedDllForWindows();
+                //Utils.LoadEmbeddedDllForWindows();
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
@@ -7228,7 +7189,7 @@ namespace MuPDF.NET
                     return;
 
                 Utils.SetDotCultureForNumber();
-                Utils.LoadEmbeddedDllForLinux();
+                //Utils.LoadEmbeddedDllForLinux();
             }
             else
             {

@@ -5,7 +5,13 @@ namespace Demo
 {
     class Program
     {
-        static void Main_(string[] args)
+        static void Main(string[] args)
+        {
+            //TestHelloWorld(args);
+            TestBarcode(args);
+        }
+
+        static void TestHelloWorld(string[] args)
         {
             Console.WriteLine("Hello World!");
             Document doc = new();
@@ -17,30 +23,38 @@ namespace Demo
             doc.Save("test.pdf", pretty: 1);
         }
 
-        static void Main(string[] args)
+        static void TestBarcode(string[] args)
         {
             string binaryDir = AppContext.BaseDirectory;
             int i = 0;
-            /*
-            Document doc = new(binaryDir + @"..\..\..\TestDocuments\Barcodes\Sample1.pdf");
+
+            Console.WriteLine("=== From pdf file =======================");
+
+            string testFilePath = Path.GetFullPath("../../../TestDocuments/Barcodes/Sample1.pdf");
+            Document doc = new(testFilePath);
 
             Page page = doc[0];
-            List<Barcode> barcodes = page.ReadBarcodes(tryHarder: true, tryInverted: true, pureBarcode: true, multi: true, autoRotate: true);
+            Rect rect = new Rect(290, 590, 420, 660);
+            List<Barcode> barcodes = page.ReadBarcodes(rect);
 
             foreach (Barcode barcode in barcodes)
             {
-                Console.WriteLine($"Page {i++} - Type: {barcode.BarcodeFormat} - Value: {barcode.Text} - Rect: {barcode.addResultPoints}");
+                BarcodePoint[] points = barcode.ResultPoints;
+                Console.WriteLine($"Page {i++} - Type: {barcode.BarcodeFormat} - Value: {barcode.Text} - Rect: [{points[0]},{points[1]}]");
             }
             doc.Close();
-            */
-            Console.WriteLine("====================================");
-            string testFilePath = Path.GetFullPath("../../../TestDocuments/Barcodes/rendered.bmp");
-            List<Barcode> barcodes2 = Utils.ReadBarcodes(testFilePath, tryHarder: false, tryInverted: false, pureBarcode: true, multi: true, autoRotate: false);
+
+            Console.WriteLine("=== From image file =====================");
+            testFilePath = Path.GetFullPath("../../../TestDocuments/Barcodes/rendered.bmp");
+
+            rect = new Rect(1260, 390, 1720, 580);
+            List<Barcode> barcodes2 = Utils.ReadBarcodes(testFilePath, rect);
 
             i = 0;
             foreach (Barcode barcode in barcodes2)
             {
-                Console.WriteLine($"Page {i++} - Type: {barcode.BarcodeFormat} - Value: {barcode.Text} - Rect: {barcode.addResultPoints}");
+                BarcodePoint[] points = barcode.ResultPoints;
+                Console.WriteLine($"Page {i++} - Type: {barcode.BarcodeFormat} - Value: {barcode.Text} - Rect: [{points[0]},{points[1]}]");
             }
         }
     }
