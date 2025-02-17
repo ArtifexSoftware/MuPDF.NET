@@ -1623,6 +1623,16 @@ namespace MuPDF.NET
             return hints;
         }
 
+        /// <summary>
+        /// Read barcodes from page.
+        /// </summary>
+        /// <param name="clip"></param>
+        /// <param name="tryHarder">Spend more time to try to find a barcode; optimize for accuracy, not speed.</param>
+        /// <param name="tryInverted">Try to decode as inverted image.</param>
+        /// <param name="pureBarcode">Image is a pure monochrome image of a barcode.</param>
+        /// <param name="multi">Try to read multi barcodes on page.</param>
+        /// <param name="autoRotate">Indicate whether the image should be automatically rotated.
+        ///                          Rotation is supported for 90, 180 and 270 degrees.</param>
         public static List<Barcode> ReadBarcodes(
             Page page,
             Rect clip = null,
@@ -1726,6 +1736,16 @@ namespace MuPDF.NET
             return barcodes;
         }
 
+        /// <summary>
+        /// Read barcodes from image file.
+        /// </summary>
+        /// <param name="clip"></param>
+        /// <param name="tryHarder">Spend more time to try to find a barcode; optimize for accuracy, not speed.</param>
+        /// <param name="tryInverted">Try to decode as inverted image.</param>
+        /// <param name="pureBarcode">Image is a pure monochrome image of a barcode.</param>
+        /// <param name="multi">Try to read multi barcodes on page.</param>
+        /// <param name="autoRotate">Indicate whether the image should be automatically rotated.
+        ///                          Rotation is supported for 90, 180 and 270 degrees.</param>
         public static List<Barcode> ReadBarcodes(
             string imageFile,
             Rect clip = null,
