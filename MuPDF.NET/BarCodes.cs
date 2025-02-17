@@ -177,8 +177,7 @@ namespace MuPDF.NET
             }
             catch (Exception e)
             {
-                //throw new FileNotFoundException("Resource not found: " + uri + "(" + e.Message + ")");
-                return null;
+                throw new FileNotFoundException("Resource not found: " + uri + "(" + e.Message + ")");
             }
 
             if (image == null)
@@ -220,8 +219,7 @@ namespace MuPDF.NET
             }
             catch (Exception e)
             {
-                //throw new FileNotFoundException("Resource not found: " + uri + "(" + e.Message + ")");
-                return null;
+                throw new FileNotFoundException("Resource not found: " + uri + "(" + e.Message + ")");
             }
 
             using (image)
