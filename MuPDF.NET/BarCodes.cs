@@ -245,4 +245,43 @@ namespace MuPDF.NET
             }
         }
     }
+
+    internal sealed class Encode
+    {
+        public SKBitmap encode(
+            string contents,
+            BarcodeFormat barcodeFormat,
+            SKEncodedImageFormat imageFormat = SKEncodedImageFormat.Png,
+            int width = 300,
+            int height = 300,
+            string characterSet = null,
+            bool disableEci = false
+            )
+        {
+            if (contents == null)
+            {
+                return null;
+            }
+
+            var barcodeWriter = new BarcodeWriter
+            {
+                Format = (ZXing.BarcodeFormat)barcodeFormat,
+                Options = new EncodingOptions
+                {
+                    Height = height,
+                    Width = width
+                }
+            };
+            if (characterSet != null)
+            {
+                barcodeWriter.Options.Hints[EncodeHintType.CHARACTER_SET] = characterSet;
+            }
+            if (disableEci)
+            {
+                barcodeWriter.Options.Hints[EncodeHintType.DISABLE_ECI] = true;
+            }
+
+            return barcodeWriter.Write(contents);
+        }
+    }
 }

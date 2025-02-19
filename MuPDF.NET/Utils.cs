@@ -8,6 +8,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using mupdf;
 using Newtonsoft.Json;
+using SkiaSharp;
 using ZXing;
 using static MuPDF.NET.Global;
 
@@ -1647,13 +1648,13 @@ namespace MuPDF.NET
             Inputs inputs = new Inputs();
 
             // Generate a highly unique file name
-            string imageFilePath = System.IO.Path.Combine(System.IO.Path.GetTempPath(),
+            string tmpImageFilePath = System.IO.Path.Combine(System.IO.Path.GetTempPath(),
                 DateTime.Now.ToString("yyyyMMddHHmmssfff") + "_" +
-                Guid.NewGuid().ToString() + "_" +
+                Guid.NewGuid().ToString() + "_decode_" +
                 new Random().Next(1000, 9999) + ".jpg");
 
             Pixmap pxmp = page.GetPixmap(dpi: 800);
-            pxmp.Save(imageFilePath, jpgQuality: 800);
+            pxmp.Save(tmpImageFilePath, jpgQuality: 800);
 
             // Calculate Rect ratio between PDF page and image.
             float imageWidth = pxmp.IRect.Width;
@@ -1663,7 +1664,7 @@ namespace MuPDF.NET
             float widthRatio = imageWidth / pageWidth;
             float heightRatio = imageHeight / pageHeight;
 
-            inputs.addInput(imageFilePath);
+            inputs.addInput(tmpImageFilePath);
 
             // set crop
             if (clip != null)
@@ -1731,7 +1732,7 @@ namespace MuPDF.NET
             }
 
             // delete temp image file
-            File.Delete(imageFilePath);
+            File.Delete(tmpImageFilePath);
 
             return barcodes;
         }
@@ -1825,6 +1826,155 @@ namespace MuPDF.NET
             }
 
             return barcodes;
+        }
+
+        /// <summary>
+        /// Write barcode to pdf page.
+        /// </summary>
+        /// <param name="clip">Rect area on page to write</param>
+        /// <param name="text">Contents to write</param>
+        /// <param name="barcodeFormat">Format to encode; Supported formats: QR_CODE, EAN_8, EAN_13, UPC_A, CODE_39, CODE_128, ITF, PDF_417, CODABAR</param>
+        /// <param name="characterSet">Use a specific character set for binary encoding (if supported by the selected barcode format)</param>
+        /// <param name="disableEci">don't generate ECI segment if non-default character set is used</param>
+        public static void WriteBarcode(
+            Page page,
+            Rect clip,
+            string text,
+            BarcodeFormat barcodeFormat,
+            string characterSet = null,
+            bool disableEci = false
+            )
+        {
+            if (clip == null)
+            {
+                throw new Exception("Rect is required");
+            }
+            if (text == null)
+            {
+                throw new Exception("Text is required");
+            }
+
+            int width = (int)clip.Width;
+            int height = (int)clip.Height;
+
+            // get image format from file extension
+            SKEncodedImageFormat imageFormat = SKEncodedImageFormat.Png;
+
+            var encodeObject = new Encode();
+
+            // create barcode image
+            SKBitmap bitmap = encodeObject.encode(text,
+                barcodeFormat,
+                imageFormat,
+                width,
+                height,
+                characterSet,
+                disableEci);
+
+            if (bitmap == null)
+            {
+                throw new Exception("Failed to create barcode image");
+            }
+
+            // Generate a highly unique file name
+            string tmpImageFilePath = System.IO.Path.Combine(System.IO.Path.GetTempPath(),
+                DateTime.Now.ToString("yyyyMMddHHmmssfff") + "_" +
+                Guid.NewGuid().ToString() + "_encode_" +
+                new Random().Next(1000, 9999) + ".jpg");
+
+            // save image to file
+            using (var image = SKImage.FromBitmap(bitmap))
+            {
+                using (var data = image.Encode(imageFormat, 200))
+                {
+                    using (var stream = File.OpenWrite(tmpImageFilePath))
+                    {
+                        data.SaveTo(stream);
+                    }
+                }
+            }
+
+            page.InsertImage(clip, tmpImageFilePath);
+
+            File.Delete(tmpImageFilePath);
+        }
+
+        /// <summary>
+        /// Write barcode to image file.
+        /// </summary>
+        /// <param name="imageFile">Full path of being created barcode image file</param>
+        /// <param name="text">Contents to write</param>
+        /// <param name="barcodeFormat">Format to encode; Supported formats: QR_CODE, EAN_8, EAN_13, UPC_A, CODE_39, CODE_128, ITF, PDF_417, CODABAR</param>
+        /// <param name="width">width of image</param>
+        /// <param name="height">height of image</param>
+        /// <param name="characterSet">Use a specific character set for binary encoding (if supported by the selected barcode format)</param>
+        /// <param name="disableEci">don't generate ECI segment if non-default character set is used</param>
+        public static void WriteBarcode(
+            string imageFile,
+            string text,
+            BarcodeFormat barcodeFormat,
+            int width = 300,
+            int height = 300,
+            string characterSet = null,
+            bool disableEci = false
+            )
+        {
+            // get image format from file extension
+            SKEncodedImageFormat imageFormat = SKEncodedImageFormat.Png;
+            string extension = System.IO.Path.GetExtension(imageFile).ToLower();
+            switch (extension)
+            {
+                case ".bmp":
+                    imageFormat = SKEncodedImageFormat.Bmp;
+                    break;
+                case ".gif":
+                    imageFormat = SKEncodedImageFormat.Gif;
+                    break;
+                case ".ico":
+                case ".icon":
+                    imageFormat = SKEncodedImageFormat.Ico;
+                    break;
+                case ".jpeg":
+                case ".jpg":
+                    imageFormat = SKEncodedImageFormat.Jpeg;
+                    break;
+                case ".png":
+                    imageFormat = SKEncodedImageFormat.Png;
+                    break;
+                case ".webp":
+                    imageFormat = SKEncodedImageFormat.Webp;
+                    break;
+                default:
+                    throw new Exception("Unsupported image format");
+            }
+
+            var encodeObject = new Encode();
+
+            // create barcode image
+            SKBitmap bitmap = encodeObject.encode(text,
+                barcodeFormat,
+                imageFormat,
+                width,
+                height,
+                characterSet,
+                disableEci);
+
+            if (bitmap == null)
+            {
+                throw new Exception("Failed to create barcode image");
+            }
+
+            // save image to file
+            using (var image = SKImage.FromBitmap(bitmap))
+            {
+                using (var data = image.Encode(imageFormat, 200))
+                {
+                    using (var stream = File.OpenWrite(imageFile))
+                    {
+                        data.SaveTo(stream);
+                    }
+                }
+            }
         }
 
         public static dynamic GetText(
@@ -2477,15 +2627,27 @@ namespace MuPDF.NET
             if (contents.pdf_is_array() != 0)
             {
                 if (overlay != 0)
+                {
+                    PdfObj qConts = pdf.pdf_add_stream(Utils.BufferFromBytes(Encoding.UTF8.GetBytes("q\n")), new PdfObj(), 0);
+                    PdfObj QConts = pdf.pdf_add_stream(Utils.BufferFromBytes(Encoding.UTF8.GetBytes("\nQ")), new PdfObj(), 0);
+                    contents.pdf_array_insert(qConts, 0);
+                    contents.pdf_array_push(QConts);
                     contents.pdf_array_push(newconts);
+                }
                 else
+                {
                     contents.pdf_array_insert(newconts, 0);
+                }
             }
             else
             {
                 PdfObj carr = pdf.pdf_new_array(5);
                 if (overlay != 0)
                 {
+                    PdfObj qConts = pdf.pdf_add_stream(Utils.BufferFromBytes(Encoding.UTF8.GetBytes("q\n")), new PdfObj(), 0);
+                    PdfObj QConts = pdf.pdf_add_stream(Utils.BufferFromBytes(Encoding.UTF8.GetBytes("\nQ")), new PdfObj(), 0);
+                    contents.pdf_array_insert(qConts, 0);
+                    contents.pdf_array_push(QConts);
                     if (contents.m_internal != null)
                         carr.pdf_array_push(contents);
                     carr.pdf_array_push(newconts);

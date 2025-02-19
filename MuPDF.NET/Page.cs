@@ -4078,6 +4078,26 @@ namespace MuPDF.NET
         }
 
         /// <summary>
+        /// Write barcode to page.
+        /// </summary>
+        /// <param name="clip">Rect area on page to write</param>
+        /// <param name="text">Contents to write</param>
+        /// <param name="barcodeFormat">Format to encode; Supported formats: QR_CODE, EAN_8, EAN_13, UPC_A, CODE_39, CODE_128, ITF, PDF_417, CODABAR</param>
+        /// <param name="characterSet">Use a specific character set for binary encoding (if supported by the selected barcode format)</param>
+        /// <param name="disableEci">don't generate ECI segment if non-default character set is used</param>
+        public void WriteBarcode(
+            Rect clip,
+            string text,
+            BarcodeFormat barcodeFormat,
+            string characterSet = null,
+            bool disableEci = false
+            )
+        {
+            Utils.WriteBarcode(this, clip,
+                text, barcodeFormat, characterSet, disableEci);
+        }
+
+        /// <summary>
         /// Run page through a device.
         /// </summary>
         /// <param name="dw"></param>
