@@ -6,6 +6,7 @@ using System.Net.NetworkInformation;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
+using Microsoft.VisualBasic;
 using mupdf;
 using Newtonsoft.Json;
 using SkiaSharp;
@@ -1645,16 +1646,15 @@ namespace MuPDF.NET
             )
         {
             Config config = new Config();
-            Inputs inputs = new Inputs();
-
+            
             // Generate a highly unique file name
             string tmpImageFilePath = System.IO.Path.Combine(System.IO.Path.GetTempPath(),
                 DateTime.Now.ToString("yyyyMMddHHmmssfff") + "_" +
                 Guid.NewGuid().ToString() + "_decode_" +
-                new Random().Next(1000, 9999) + ".jpg");
+                new Random().Next(1000, 9999) + ".png");
 
             Pixmap pxmp = page.GetPixmap(dpi: 800);
-            pxmp.Save(tmpImageFilePath, jpgQuality: 800);
+            pxmp.Save(tmpImageFilePath);
 
             // Calculate Rect ratio between PDF page and image.
             float imageWidth = pxmp.IRect.Width;
@@ -1663,8 +1663,6 @@ namespace MuPDF.NET
             float pageHeight = page.Rect.Height + 0.01f;
             float widthRatio = imageWidth / pageWidth;
             float heightRatio = imageHeight / pageHeight;
-
-            inputs.addInput(tmpImageFilePath);
 
             // set crop
             if (clip != null)
@@ -1687,48 +1685,32 @@ namespace MuPDF.NET
             config.AutoRotate = autoRotate;
             config.Hints = buildHints(config);
 
-            var threads = new Dictionary<Thread, DecodeThread>(Math.Min(config.Threads, inputs.getInputCount()));
-            var decodeObjects = new List<DecodeThread>();
-            for (int x = 0; x < config.Threads; x++)
-            {
-                var decodeThread = new DecodeThread(config, inputs);
-                decodeObjects.Add(decodeThread);
-                var thread = new Thread(decodeThread.run);
-                threads.Add(thread, decodeThread);
-                thread.Start();
-            }
-
-            int successful = 0;
             List<Barcode> barcodes = new List<Barcode>();
-            foreach (var thread in threads.Keys)
+
+            var decodeObject = new Decode();
+            Result[] results = decodeObject.decodeMulti(tmpImageFilePath, config);
+            foreach (var result in results)
             {
-                thread.Join();
-                successful += threads[thread].getSuccessful();
-                List<Result> results = threads[thread].getResults();
-                foreach (var result in results)
+                BarcodePoint[] points = new BarcodePoint[result.ResultPoints.Length];
+                for (int i = 0; i < result.ResultPoints.Length; i++)
                 {
-                    BarcodePoint[] points = new BarcodePoint[result.ResultPoints.Length];
-                    for (int i = 0; i < result.ResultPoints.Length; i++)
-                    {
-                        // revert the original pdf page ratio
-                        points[i] = new BarcodePoint(result.ResultPoints[i].X / widthRatio, result.ResultPoints[i].Y / heightRatio);
-                    }
-
-                    Barcode barcode = new Barcode(
-                        result.Text,
-                        result.RawBytes,
-                        result.NumBits,
-                        points,
-                        (BarcodeFormat)result.BarcodeFormat,
-                        result.Timestamp
-                    );
-                    foreach (var metadata in result.ResultMetadata)
-                    {
-                        barcode.putMetadata((BarcodeMetadataType)metadata.Key, metadata.Value);
-                    }
-
-                    barcodes.Add(barcode);
+                    // revert the original pdf page ratio
+                    points[i] = new BarcodePoint(result.ResultPoints[i].X / widthRatio, result.ResultPoints[i].Y / heightRatio);
                 }
+
+                Barcode barcode = new Barcode(
+                    result.Text,
+                    result.RawBytes,
+                    result.NumBits,
+                    points,
+                    (BarcodeFormat)result.BarcodeFormat,
+                    result.Timestamp
+                );
+                foreach (var metadata in result.ResultMetadata)
+                {
+                    barcode.putMetadata((BarcodeMetadataType)metadata.Key, metadata.Value);
+                }
+                barcodes.Add(barcode);
             }
 
             // delete temp image file
@@ -1758,9 +1740,6 @@ namespace MuPDF.NET
             )
         {
             Config config = new Config();
-            Inputs inputs = new Inputs();
-
-            inputs.addInput(imageFile);
 
             // set crop
             if (clip != null)
@@ -1783,46 +1762,32 @@ namespace MuPDF.NET
 
             config.Hints = buildHints(config);
 
-            var threads = new Dictionary<Thread, DecodeThread>(Math.Min(config.Threads, inputs.getInputCount()));
-            var decodeObjects = new List<DecodeThread>();
-            for (int x = 0; x < config.Threads; x++)
-            {
-                var decodeThread = new DecodeThread(config, inputs);
-                decodeObjects.Add(decodeThread);
-                var thread = new Thread(decodeThread.run);
-                threads.Add(thread, decodeThread);
-                thread.Start();
-            }
-
-            int successful = 0;
             List<Barcode> barcodes = new List<Barcode>();
-            foreach (var thread in threads.Keys)
-            {
-                thread.Join();
-                successful += threads[thread].getSuccessful();
-                List<Result> results = threads[thread].getResults();
-                foreach (var result in results)
-                {
-                    BarcodePoint[] points = new BarcodePoint[result.ResultPoints.Length];
-                    for (int i = 0; i < result.ResultPoints.Length; i++)
-                    {
-                        points[i] = new BarcodePoint(result.ResultPoints[i].X, result.ResultPoints[i].Y);
-                    }
+            
+            var decodeObject = new Decode();
+            Result[] results = decodeObject.decodeMulti(imageFile, config);
 
-                    Barcode barcode = new Barcode(
-                        result.Text,
-                        result.RawBytes,
-                        result.NumBits,
-                        points,
-                        (BarcodeFormat)result.BarcodeFormat,
-                        result.Timestamp
-                    );
-                    foreach (var metadata in result.ResultMetadata)
-                    {
-                        barcode.putMetadata((BarcodeMetadataType)metadata.Key, metadata.Value);
-                    }
-                    barcodes.Add(barcode);
+            foreach (var result in results)
+            {
+                BarcodePoint[] points = new BarcodePoint[result.ResultPoints.Length];
+                for (int i = 0; i < result.ResultPoints.Length; i++)
+                {
+                    points[i] = new BarcodePoint(result.ResultPoints[i].X, result.ResultPoints[i].Y);
                 }
+
+                Barcode barcode = new Barcode(
+                    result.Text,
+                    result.RawBytes,
+                    result.NumBits,
+                    points,
+                    (BarcodeFormat)result.BarcodeFormat,
+                    result.Timestamp
+                );
+                foreach (var metadata in result.ResultMetadata)
+                {
+                    barcode.putMetadata((BarcodeMetadataType)metadata.Key, metadata.Value);
+                }
+                barcodes.Add(barcode);
             }
 
             return barcodes;
@@ -2609,6 +2574,18 @@ namespace MuPDF.NET
         public static int InsertContents(Page page, byte[] newCont, int overlay = 1)
         {
             PdfPage pdfpage = page.GetPdfPage();
+            if (overlay != 0)
+            {
+                if (!page.IsWrapped)
+                {
+                    PdfObj qConts = pdfpage.doc().pdf_add_stream(Utils.BufferFromBytes(Encoding.UTF8.GetBytes("q\n")), new PdfObj(), 0);
+                    PdfObj QConts = pdfpage.doc().pdf_add_stream(Utils.BufferFromBytes(Encoding.UTF8.GetBytes("\nQ")), new PdfObj(), 0);
+                    PdfObj contents = pdfpage.obj().pdf_dict_get(new PdfObj("Contents"));
+                    contents.pdf_array_insert(qConts, 0);
+                    contents.pdf_array_push(QConts);
+                    page.WasWrapped = true;
+                }
+            }
             FzBuffer contbuf = Utils.BufferFromBytes(newCont);
             int xref = Utils.InsertContents(pdfpage.doc(), pdfpage.obj(), contbuf, overlay);
             return xref;
@@ -2628,10 +2605,6 @@ namespace MuPDF.NET
             {
                 if (overlay != 0)
                 {
-                    PdfObj qConts = pdf.pdf_add_stream(Utils.BufferFromBytes(Encoding.UTF8.GetBytes("q\n")), new PdfObj(), 0);
-                    PdfObj QConts = pdf.pdf_add_stream(Utils.BufferFromBytes(Encoding.UTF8.GetBytes("\nQ")), new PdfObj(), 0);
-                    contents.pdf_array_insert(qConts, 0);
-                    contents.pdf_array_push(QConts);
                     contents.pdf_array_push(newconts);
                 }
                 else
@@ -2644,10 +2617,6 @@ namespace MuPDF.NET
                 PdfObj carr = pdf.pdf_new_array(5);
                 if (overlay != 0)
                 {
-                    PdfObj qConts = pdf.pdf_add_stream(Utils.BufferFromBytes(Encoding.UTF8.GetBytes("q\n")), new PdfObj(), 0);
-                    PdfObj QConts = pdf.pdf_add_stream(Utils.BufferFromBytes(Encoding.UTF8.GetBytes("\nQ")), new PdfObj(), 0);
-                    contents.pdf_array_insert(qConts, 0);
-                    contents.pdf_array_push(QConts);
                     if (contents.m_internal != null)
                         carr.pdf_array_push(contents);
                     carr.pdf_array_push(newconts);

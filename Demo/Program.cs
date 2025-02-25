@@ -7,7 +7,7 @@ namespace Demo
     {
         static void Main(string[] args)
         {
-            //TestHelloWorld(args);
+            TestHelloWorld(args);
             TestReadBarcode(args);
             TestWriteBarcode(args);
         }
@@ -19,10 +19,16 @@ namespace Demo
 
             Page page = doc[0];
 
+            page.DrawRect(new Rect(100, 100, 200, 200));
+
             MuPDF.NET.TextWriter writer = new MuPDF.NET.TextWriter(page.Rect);
-            writer.FillTextbox(page.Rect, "Hello World!", new Font(fontName: "helv"), rtl: true);
+            Font font = new Font("kenpixel", "../../../kenpixel.ttf", isBold: 1);
+            writer.FillTextbox(page.Rect, "Hello World!", font, rtl: true);
             writer.WriteText(page);
+
             doc.Save("text.pdf", pretty: 1);
+
+            doc.Close();
         }
 
         static void TestReadBarcode(string[] args)
@@ -45,11 +51,11 @@ namespace Demo
             }
             doc.Close();
 
-            Console.WriteLine("=== Read from image file =====================");
-            testFilePath = Path.GetFullPath("../../../TestDocuments/Barcodes/rendered.bmp");
+            //Console.WriteLine("=== Read from image file =====================");
+            string testFilePath1 = Path.GetFullPath("../../../TestDocuments/Barcodes/rendered.bmp");
 
-            rect = new Rect(1260, 390, 1720, 580);
-            List<Barcode> barcodes2 = Utils.ReadBarcodes(testFilePath, rect);
+            Rect rect1 = new Rect(1260, 390, 1720, 580);
+            List<Barcode> barcodes2 = Utils.ReadBarcodes(testFilePath1, rect1);
 
             i = 0;
             foreach (Barcode barcode in barcodes2)
@@ -66,75 +72,52 @@ namespace Demo
             Document doc = new(testFilePath);
             Page page = doc[0];
 
-            // QR_CODE
-            Rect rect = new Rect(0, 0, 90, 20);
             MuPDF.NET.TextWriter writer = new MuPDF.NET.TextWriter(page.Rect);
-            writer.FillTextbox(rect, "QR_CODE", new Font(fontName: "helv"));
+            Font font = new Font("kenpixel", "../../../kenpixel.ttf", isBold: 1);
+            writer.FillTextbox(page.Rect, "QR_CODE", font, pos: new Point(0, 10));
+            writer.FillTextbox(page.Rect, "EAN_8", font, pos: new Point(0, 110));
+            writer.FillTextbox(page.Rect, "EAN_13", font, pos: new Point(0, 165));
+            writer.FillTextbox(page.Rect, "UPC_A", font, pos: new Point(0, 220));
+            writer.FillTextbox(page.Rect, "CODE_39", font, pos: new Point(0, 275));
+            writer.FillTextbox(page.Rect, "CODE_128", font, pos: new Point(0, 330));
+            writer.FillTextbox(page.Rect, "ITF", font, pos: new Point(0, 385));
+            writer.FillTextbox(page.Rect, "PDF_417", font, pos: new Point(0, 440));
+            writer.FillTextbox(page.Rect, "CODABAR", font, pos: new Point(0, 520));
             writer.WriteText(page);
-            rect = new Rect(100, 0, 190, 90);
+
+            // QR_CODE
+            Rect rect = new Rect(100, 0, 190, 90);
             page.WriteBarcode(rect, "Hello World!", BarcodeFormat.QR_CODE);
 
             // EAN_8
-            rect = new Rect(0, 100, 90, 120);
-            writer = new MuPDF.NET.TextWriter(page.Rect);
-            writer.FillTextbox(rect, "EAN_8", new Font(fontName: "helv"));
-            writer.WriteText(page);
             rect = new Rect(100, 100, 190, 145);
             page.WriteBarcode(rect, "1234567", BarcodeFormat.EAN_8);
 
             // EAN_13
-            rect = new Rect(0, 155, 90, 175);
-            writer = new MuPDF.NET.TextWriter(page.Rect);
-            writer.FillTextbox(rect, "EAN_13", new Font(fontName: "helv"));
-            writer.WriteText(page);
             rect = new Rect(100, 155, 220, 200);
             page.WriteBarcode(rect, "123456789012", BarcodeFormat.EAN_13);
 
             // UPC_A
-            rect = new Rect(0, 210, 90, 230);
-            writer = new MuPDF.NET.TextWriter(page.Rect);
-            writer.FillTextbox(rect, "UPC_A", new Font(fontName: "helv"));
-            writer.WriteText(page);
             rect = new Rect(100, 210, 220, 255);
             page.WriteBarcode(rect, "123456789012", BarcodeFormat.UPC_A);
 
             // CODE_39
-            rect = new Rect(0, 265, 90, 285);
-            writer = new MuPDF.NET.TextWriter(page.Rect);
-            writer.FillTextbox(rect, "CODE_39", new Font(fontName: "helv"));
-            writer.WriteText(page);
             rect = new Rect(100, 265, 300, 310);
             page.WriteBarcode(rect, "Hello World!", BarcodeFormat.CODE_39);
 
             // CODE_128
-            rect = new Rect(0, 320, 90, 340);
-            writer = new MuPDF.NET.TextWriter(page.Rect);
-            writer.FillTextbox(rect, "CODE_128", new Font(fontName: "helv"));
-            writer.WriteText(page);
             rect = new Rect(100, 320, 220, 365);
             page.WriteBarcode(rect, "Hello World!", BarcodeFormat.CODE_128);
 
             // ITF
-            rect = new Rect(0, 375, 90, 395);
-            writer = new MuPDF.NET.TextWriter(page.Rect);
-            writer.FillTextbox(rect, "ITF", new Font(fontName: "helv"));
-            writer.WriteText(page);
             rect = new Rect(100, 375, 220, 420);
             page.WriteBarcode(rect, "12345678901234567890", BarcodeFormat.ITF);
 
             // PDF_417
-            rect = new Rect(0, 430, 90, 450);
-            writer = new MuPDF.NET.TextWriter(page.Rect);
-            writer.FillTextbox(rect, "PDF_417", new Font(fontName: "helv"));
-            writer.WriteText(page);
             rect = new Rect(100, 430, 310, 500);
             page.WriteBarcode(rect, "Hello World!", BarcodeFormat.PDF_417);
 
             // CODABAR
-            rect = new Rect(0, 510, 90, 530);
-            writer = new MuPDF.NET.TextWriter(page.Rect);
-            writer.FillTextbox(rect, "CODABAR", new Font(fontName: "helv"));
-            writer.WriteText(page);
             rect = new Rect(100, 510, 310, 600);
             page.WriteBarcode(rect, "12345678901234567890", BarcodeFormat.CODABAR);
 
