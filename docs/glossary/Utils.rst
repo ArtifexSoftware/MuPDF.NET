@@ -75,6 +75,7 @@ Yet others are handy, general-purpose utilities.
 :meth:`MergeRange`                   Copy a range of pages (spage, epage) from a source PDF to a specified location (apage) of the target PDF
 :meth:`NormalizeRotation`            Return normalized /Rotate value:one of 0, 90, 180, 270
 :meth:`RuleDict`                     Make a Label from a PDF page label rule
+:meth:`WriteBarcode`                 Writes a barcode to an image file
 :attr:`TESSDATA_PREFIX`              A copy of `os.environ["TESSDATA_PREFIX"]`
 ==================================== ==============================================================
 
@@ -638,6 +639,39 @@ Yet others are handy, general-purpose utilities.
 
       :arg Tuple(int, string) item: a tuple (pno, rule) with the start page number and the rule string like <</S/D...>>.
       :returns: a label struct :data:`Label`
+
+
+-----
+
+   .. method:: WriteBarcode(Page page, Rect clip, string text, BarcodeFormat barcodeFormat, string characterSet = null, bool disableEci = false)
+
+      Creates a barcode at the supplied rectangle `clip` on the supplied `page`.
+
+      :arg Page page: The page save the barcode image to.
+      :arg Rect clip: The area to create the barcode on the page.
+      :arg string text: Contents to write.
+      :arg BarcodeFormat barcodeFormat: Format to encode; Supported formats: `QR_CODE`, `EAN_8`, `EAN_13`, `UPC_A`, `CODE_39`, `CODE_128`, `ITF`, `PDF_417`, `CODABAR`.
+      :arg string characterSet: Use a specific character set for binary encoding (if supported by the selected barcode format).
+      :arg bool disableEci: Don't generate ECI segment if non-default character set is used.
+
+
+
+-----
+
+.. _Utils_WriteBarcode:
+
+   .. method:: WriteBarcode(string imageFile, string text, BarcodeFormat barcodeFormat, int width = 300, int height = 300, string characterSet = null, bool disableEci = false)
+
+      Creates a barcode at the supplied rectangle `clip` on the page.
+
+      :arg string imageFile: The image file to save the barcode image to.
+      :arg string text: Contents to write.
+      :arg BarcodeFormat barcodeFormat: Format to encode; Supported formats: `QR_CODE`, `EAN_8`, `EAN_13`, `UPC_A`, `CODE_39`, `CODE_128`, `ITF`, `PDF_417`, `CODABAR`.
+      :arg int width: Width of image file.
+      :arg int height: Width of image file.
+      :arg string characterSet: Use a specific character set for binary encoding (if supported by the selected barcode format).
+      :arg bool disableEci: Don't generate ECI segment if non-default character set is used.
+
       
 -----
 .. include:: footer.rst

@@ -11,6 +11,7 @@ Classes
 
    Annot.rst
    Archive.rst
+   Barcode.rst
    ColorSpace.rst
    DisplayList.rst
    Document.rst

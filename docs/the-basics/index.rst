@@ -1147,7 +1147,79 @@ Another example could be redacting an area of a page, but not to redact any line
 
 
 
+.. _The_Basics_Working_With_Barcodes:
+
+Working with Barcodes
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
+|MuPDF.NET| supports reading and writing of barcodes.
+
+
+Reading Barcodes
+~~~~~~~~~~~~~~~~~~~~~~~
+
+To read barcodes from a page define the area you wish to check for and use the `ReadBarcodes` menthod as follows:
+
+.. code-block:: cs
+
+    using MuPDF.NET;
+
+    Document doc = new Document("document_with_barcodes.pdf"); // open a document
+
+    // Get the first page
+    Page page = doc[0];
+
+    // Define an area where you want to check for barcodes
+    Rect rect = new Rect(290, 590, 420, 660);
+
+    // Search the area for barcode data
+    List<Barcode> barcodes = page.ReadBarcodes(rect);
+
+    // List any barcode data
+    foreach (Barcode barcode in barcodes)
+    {
+        BarcodePoint[] points = barcode.ResultPoints;
+        Console.WriteLine($"Page {i++} - Type: {barcode.BarcodeFormat} - Value: {barcode.Text} - Rect: [{points[0]},{points[1]}]");
+    }
+
+.. note::
+
+    If the `rect` parameter is ommitted then the whole page will be searched for barcodes, however this is a slower operation.
+
+
+Writing Barcodes
+~~~~~~~~~~~~~~~~~~~~~~~
+
+To write barcodes you can either add them directly to pages with :meth:`Page.WriteBarcode` or create images directly with :ref:`Utils.WriteBarcode() <Utils_WriteBarcode>`.
+
+
+**Example: adding a barcode to a page**
+
+.. code-block:: cs
+
+    using MuPDF.NET;
+
+    Document doc = new Document("document_with_barcodes.pdf"); // open a document
+
+    // Get the first page
+    Page page = doc[0];
+
+    Rect rect = new Rect(100, 0, 190, 90);
+    page.WriteBarcode(rect, "Hello World!", BarcodeFormat.QR_CODE);
+
+
+**Example: create a barcode as an image file**
+
+.. code-block:: cs
+
+    using MuPDF.NET;
+
+    Utils.WriteBarcode("QR_CODE.png", "Hello World!", BarcodeFormat.QR_CODE, width: 300, height: 300);
+
+
+.. note::
+
+    See :ref:`BarcodeFormat <Barcode_BarcodeFormat>` for available barcodes.
 
 .. include:: ../footer.rst
