@@ -113,6 +113,8 @@ In a nutshell, this is what you can do with MuPDF.NET:
 :meth:`Page.LoadWidget`            PDF only: load a specific field
 :meth:`Page.LoadLinks`             Return the first link on a page
 :meth:`Page.NewShape`              PDF only: create a new :ref:`Shape`
+:meth:`Page.ReadBarcodes`          Reads the barcodes from a supplied :ref:`Rect`
+:meth:`Page.WriteBarcode`          Creates a barcode from the supplied parameters
 :meth:`Page.RemoveRotation`        PDF only: set page rotation to 0
 :meth:`Page.ReplaceImage`          PDF only: replace an image
 :meth:`Page.Recolor`               PDF only: recolor page
@@ -1628,6 +1630,33 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
       :rtype: :ref:`Shape`
       :returns: a new :ref:`Shape` to use for compound drawings. See description there.
+
+   .. method:: ReadBarcodes(Rect clip=null, bool tryHarder = true, bool tryInverted = false, bool pureBarcode = false, bool multi = true, bool autoRotate = true)
+
+      Retrieves any barcode information contained within the supplied rectangle.
+
+      :arg Rect clip: The area to scan for barcodes. If `null` the whole page will be scanned.
+      :arg bool tryHarder: Spend more time to try to find a barcode; optimize for accuracy, not speed.
+      :arg bool tryInverted: Try to decode as inverted image.
+      :arg bool pureBarcode: Image is a pure monochrome image of a barcode.
+      :arg bool multi: Try to read multi barcodes on page.
+      :arg bool autoRotate: Indicate whether the image should be automatically rotated. Rotation is supported for 90, 180 and 270 degrees.
+
+      :rtype: `List<Barcode>`
+      :returns: a list of :doc:`Barcode` objects.
+
+
+   .. method:: WriteBarcode(Rect clip, string text, BarcodeFormat barcodeFormat, string characterSet = null, bool disableEci = false)
+
+      Creates a barcode at the supplied rectangle `clip` on the page.
+
+      :arg Rect clip: The area to create the barcode on the page.
+      :arg string text: Contents to write.
+      :arg BarcodeFormat barcodeFormat: Format to encode; For supported formats see :ref:`BarcodeFormat <Barcode_BarcodeFormat>`.
+      :arg string characterSet: Use a specific character set for binary encoding (if supported by the selected barcode format).
+      :arg bool disableEci: Don't generate ECI segment if non-default character set is used.
+
+
 
    .. method:: SetContents(int xref)
 
