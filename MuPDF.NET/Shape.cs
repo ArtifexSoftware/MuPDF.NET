@@ -1,4 +1,7 @@
 ﻿using mupdf;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace MuPDF.NET
@@ -1001,7 +1004,7 @@ namespace MuPDF.NET
             int oc = 0
             )
         {
-            string[] list = buffer.Split("\n");
+            string[] list = buffer.Split('\n');
             return _InsertTextbox(rect, new List<string>(list), fontName, fontFile, fontSize, lineHeight, setSimple, encoding,
                 color, fill, expandTabs, align, renderMode, borderWidth, rotate, morph, strokeOpacity, fillOpacity, oc);
         }
@@ -1095,7 +1098,7 @@ namespace MuPDF.NET
             else
                 lheightFactor = asc - des;
             float lheight = fontSize * lheightFactor;
-            string t0 = string.Join('\n', buffer);
+            string t0 = string.Join("\n", buffer);
             int maxCode = 0;
             foreach (char c in t0)
                 maxCode = maxCode < Convert.ToInt32(c) ? Convert.ToInt32(c) : maxCode;
@@ -1105,7 +1108,7 @@ namespace MuPDF.NET
                 foreach (char c in t0)
                     t1 += Convert.ToInt32(c) < 256 ? c : '?';
 
-            string[] t2 = string.IsNullOrEmpty(t1) ? t0.Split("\n") : t1.Split("\n");
+            string[] t2 = string.IsNullOrEmpty(t1) ? t0.Split('\n') : t1.Split('\n');
             glyphs = Doc.GetCharWidths(xref, maxCode + 1);
 
             List<(int, double)> tj_glyphs;
@@ -1184,7 +1187,7 @@ namespace MuPDF.NET
             List<bool> justTab = new List<bool>();
             for (int i = 0; i < t2.Length; i++)
             {
-                string[] line_t = t2[i].Replace("\t", new string(' ', expandTabs)).Split(" ");
+                string[] line_t = t2[i].Replace("\t", new string(' ', expandTabs)).Split(' ');
                 string lbuff = "";
                 float rest = maxWidth;
 
@@ -1255,7 +1258,7 @@ namespace MuPDF.NET
 
             string nres = $"\nq\n{bdc}{alpha}BT\n" + cm;
             string template = "1 0 0 1 {0} {1} Tm /{2} {3} Tf ";
-            string[] text_t = text.Split("\n");
+            string[] text_t = text.Split('\n');
 
             justTab[justTab.Count - 1] = false;
             

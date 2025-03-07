@@ -1,4 +1,8 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -317,7 +321,7 @@ namespace MuPDF.NET
                 
                 if (rc.Item1 == "xref")
                 {
-                    xref = Convert.ToInt32(rc.Item2.Split(" ")[0]);
+                    xref = Convert.ToInt32(rc.Item2.Split(' ')[0]);
                     val = GetXrefObject(xref, compressed: 1);
                 }
                 else if (rc.Item1 == "dict")
@@ -334,10 +338,10 @@ namespace MuPDF.NET
                     { "Suspects", false }
                 };
 
-                string[] valArray = val.Substring(2, -2).Split("/").Skip(1).ToArray();
+                string[] valArray = val.Substring(2, -2).Split('/').Skip(1).ToArray();
                 foreach (string v in valArray)
                 {
-                    string[] kv = v.Split(" ");
+                    string[] kv = v.Split(' ');
                     if (kv.Length == 2 && kv[1] == "true")
                         valid.Add(kv[0], true);
                 }
@@ -495,7 +499,7 @@ namespace MuPDF.NET
                     }
                     catch(Exception e)
                     {
-                        throw new Exception("Failed to open stream");
+                        throw new Exception("Failed to open stream : " + e.Message);
                     }
                 }
                 else
@@ -675,6 +679,7 @@ namespace MuPDF.NET
             FzOutput output = new FzOutput(res);
             pdfout.pdf_write_document(output, opts);
             output.fz_close_output();
+            output.Dispose();
 
             byte[] ret = Utils.BinFromBuffer(res);
             int len1 = Utils.MUPDF_WARNINGS_STORE.Count;
@@ -736,9 +741,9 @@ namespace MuPDF.NET
                 values.Add("trapped", "info:Trapped");
             }
 
-            foreach ((string key, string value) in values)
+            foreach (var value in values)
             {
-                MetaData.Add(key, GetMetadata(value));
+                MetaData.Add(value.Key, GetMetadata(value.Value));
             }
             string enc = GetMetadata("encryption");
             MetaData.Add("encryption", enc == "None" ? null : enc);
@@ -843,6 +848,8 @@ namespace MuPDF.NET
             FzBuffer ret = new FzBuffer(512);
             FzOutput output = new FzOutput(ret);
             output.pdf_print_obj(what, compress, ascii);
+            output.fz_close_output();
+            output.Dispose();
             ret.fz_terminate_buffer();
 
             return ret;
@@ -1035,7 +1042,6 @@ namespace MuPDF.NET
             opts.do_use_objstms = useObjstms;
             opts.compression_effort = compressionEffort;
 
-            FzOutput output = null;
             pdf.m_internal.resynth_required = 0;
             Utils.EmbeddedClean(pdf);
 
@@ -1045,9 +1051,13 @@ namespace MuPDF.NET
             }
             else
             {
-                output = new FilePtrOutput(filename);
+                FzOutput output = new FilePtrOutput(filename);
                 pdf.pdf_write_document(output, opts);
+                output.fz_close_output();
+                output.Dispose();
             }
+            opts.Dispose();
+            pdf.Dispose();
         }
 
         public int InsertPage(
@@ -1248,8 +1258,8 @@ namespace MuPDF.NET
         {
             Dictionary<int, dynamic> oldAnnots = new Dictionary<int, dynamic>();
             int pno = page.Number;
-            foreach ((int k, dynamic v) in page.AnnotRefs)
-                oldAnnots.Add(k, v);
+            foreach (var annot in page.AnnotRefs)
+                oldAnnots.Add(annot.Key, annot.Value);
 
             int old_ref = page.GetPdfPage().super().m_internal.refs;
             long m_internal_old = page.GetPdfPage().super().m_internal_value();
@@ -1260,10 +1270,10 @@ namespace MuPDF.NET
 
             page = LoadPage(pno);
 
-            foreach ((int k, dynamic v) in oldAnnots)
+            foreach (var oldAnnot in oldAnnots)
             {
-                dynamic annot = oldAnnots[k];
-                page.AnnotRefs[k] = annot;
+                dynamic annot = oldAnnots[oldAnnot.Key];
+                page.AnnotRefs[oldAnnot.Key] = annot;
             }
 
             if (old_ref == 1)
@@ -1616,26 +1626,26 @@ namespace MuPDF.NET
         /// <exception cref="Exception"></exception>
         public List<Toc> GetToc(bool simple = true)
         {
-            List<Toc> Recurse(Outline olItem, List<Toc> list, int lvl)
+            List<Toc> Recurse(Outline _olItem, List<Toc> list, int _lvl)
             {
-                while (olItem != null && olItem.ToFzOutline().m_internal != null)
+                while (_olItem != null && _olItem.ToFzOutline().m_internal != null)
                 {
                     string title = "";
                     int page = -1;
-                    if (olItem.Title != null)
-                        title = olItem.Title;
+                    if (_olItem.Title != null)
+                        title = _olItem.Title;
 
-                    if (!olItem.IsExternal)
+                    if (!_olItem.IsExternal)
                     {
-                        if (olItem.Uri != null)
+                        if (_olItem.Uri != null)
                         {
-                            if (olItem.Page == -1)
+                            if (_olItem.Page == -1)
                             {
-                                (List<int>, float, float) resolve = ResolveLink(olItem.Uri);
+                                (List<int>, float, float) resolve = ResolveLink(_olItem.Uri);
                                 page = resolve.Item1[0] + 1;
                             }
                             else
-                                page = olItem.Page + 1;
+                                page = _olItem.Page + 1;
                         }
                         else
                             page = -1;
@@ -1645,11 +1655,11 @@ namespace MuPDF.NET
 
                     if (!simple)
                     {
-                        LinkInfo link = Utils.GetLinkDict(olItem, this);
+                        LinkInfo link = Utils.GetLinkDict(_olItem, this);
                         list.Add(
                             new Toc()
                             {
-                                Level = lvl,
+                                Level = _lvl,
                                 Title = title,
                                 Page = page,
                                 Link = link
@@ -1660,15 +1670,15 @@ namespace MuPDF.NET
                         list.Add(
                             new Toc()
                             {
-                                Level = lvl,
+                                Level = _lvl,
                                 Title = title,
                                 Page = page
                             }
                         );
 
-                    if (olItem.Down != null)
-                        list = Recurse(olItem.Down, list, lvl + 1);
-                    olItem = olItem.Next;
+                    if (_olItem.Down != null)
+                        list = Recurse(_olItem.Down, list, _lvl + 1);
+                    _olItem = _olItem.Next;
                 }
 
                 return list;
@@ -1745,7 +1755,9 @@ namespace MuPDF.NET
             FzBuffer buffer = mupdf.mupdf.fz_new_buffer(512);
             FzOutput output = new FzOutput(buffer);
             output.pdf_print_obj(obj, 1, 0);
-            
+            output.fz_close_output();
+            output.Dispose();
+
             return Utils.UnicodeFromBuffer(buffer);
         }
 
@@ -1858,8 +1870,8 @@ namespace MuPDF.NET
                 FillDict(destDict, tree, page_refs);
 
             Dictionary<string, dynamic> ret = new Dictionary<string, dynamic>();
-            foreach ((string k, DestName v) in destDict)
-                ret.Add(k, v);
+            foreach (var dict in destDict)
+                ret.Add(dict.Key, dict.Value);
 
             return ret;
         }
@@ -1996,7 +2008,11 @@ namespace MuPDF.NET
             int isrt = docSrc.GraftID;
             Dictionary<string, string> t = new Dictionary<string, string>();
 
-            gmap = GraftMaps.GetValueOrDefault(isrt, null);
+            //gmap = GraftMaps.GetValueOrDefault(isrt, null);
+            if (!GraftMaps.TryGetValue(isrt, out gmap))
+            {
+                gmap = null; // Default value if the key is missing
+            }
             if (gmap == null)
             {
                 gmap = new GraftMap(this);
@@ -2789,10 +2805,10 @@ namespace MuPDF.NET
                 throw new Exception("document closed");
             
             PdfDocument pdf = AsPdfDocument(this);
-            string zoom = "zoom";
-            string bold = "bold";
-            string italic = "italic";
-            string collapse = "collapse";
+            //string zoom = "zoom";
+            //string bold = "bold";
+            //string italic = "italic";
+            //string collapse = "collapse";
             float[] color = null;
             float z = 0;
 
@@ -3052,13 +3068,13 @@ namespace MuPDF.NET
                 return s;
             }
 
-            string CreateNums(List<Label> labels)
+            string CreateNums(List<Label> _labels)
             {
-                labels.Sort((a, b) =>
+                _labels.Sort((a, b) =>
                 {
                     return a.StartPage - b.StartPage;
                 });
-                string s = string.Join("", labels.Select(label => CreateLabelStr(label)).ToArray());
+                string s = string.Join("", _labels.Select(label => CreateLabelStr(label)).ToArray());
             
                 return s;
             }
@@ -3572,7 +3588,10 @@ namespace MuPDF.NET
             (string t, string date) = GetKeyXref(xref, "Params/CreationDate");
             if (t != "null")
                 infoDict.ModDate = date;
-            (t, string md5) = GetKeyXref(xref, "Params/ModDate");
+            //(t, string md5) = GetKeyXref(xref, "Params/ModDate");
+            var result = GetKeyXref(xref, "Params/ModDate"); // Get the tuple first
+            t = result.Item1;
+            string md5 = result.Item2;
             if (t != "null")
             {
                 byte[] textBytes = Encoding.UTF8.GetBytes(md5);
@@ -4204,12 +4223,12 @@ namespace MuPDF.NET
             if (valid.Keys.Except(markInfo.Keys).Count() <= 0)
                 throw new Exception("bad MarkInfo key(s)");
             string pdfDict = "<<";
-            foreach ((string k, bool v) in valid)
+            foreach (var entry in valid)
             {
-                string vStr = v.ToString().ToLower();
+                string vStr = entry.Value.ToString().ToLower();
                 if (vStr != "true" || vStr != "false")
-                    throw new Exception($"bad key value {k} : {v}");
-                pdfDict += $"/{k} {v}";
+                    throw new Exception($"bad key value {entry.Key} : {entry.Value}");
+                pdfDict += $"/{entry.Key} {entry.Value}";
             }
             pdfDict += ">>";
             SetKeyXRef(xref, "MarkInfo", pdfDict);
@@ -4894,7 +4913,7 @@ namespace MuPDF.NET
                     int xref = page.GetContents()[0];
                     byte[] cont = GetXrefStream(xref);
                     List<string> contLines = RemoveHidden(
-                        Encoding.UTF8.GetString(cont).Split("\n")
+                        Encoding.UTF8.GetString(cont).Split('\n')
                     );
                     if (contLines.Count != 0)
                     {
@@ -5003,7 +5022,8 @@ namespace MuPDF.NET
 
             foreach (string k in metadata.Keys)
             {
-                if (keymap.GetValueOrDefault(k, null) != null)
+                //if (keymap.GetValueOrDefault(k, null) != null)
+                if (keymap.TryGetValue(k, out string value) && value != null)
                 {
                     string pdfKey = keymap[k];
                     string val = metadata[k];
@@ -5336,10 +5356,15 @@ namespace MuPDF.NET
                     txt += "/Title" + ol["title"];
                 }
                 catch (Exception) { }
-                if (ol.GetValueOrDefault("count", 0) != 0 && ol.GetValueOrDefault("color", null) != null)
+                //if (ol.GetValueOrDefault("count", 0) != 0 && ol.GetValueOrDefault("color", null) != null)
+                dynamic countVal = 0;
+                dynamic colorVal = null;
+                if (ol.TryGetValue("count", out countVal) && countVal != 0 &&
+                    ol.TryGetValue("color", out colorVal) && colorVal != null)
                     if (ol["color"].Length == 3)
                         txt += $"/C[ {ol["color"][0]} {ol["color"][1]} {ol["color"][2]}]";
-                if (ol.GetValueOrDefault("flags", 0) > 0)
+                //if (ol.GetValueOrDefault("flags", 0) > 0)
+                if (ol.TryGetValue("flags", out dynamic flagsVal) && flagsVal > 0)
                     txt += $"/F {ol["flags"]}";
                 if (index == 0)
                     txt += "/Type/Outlines";

@@ -1,4 +1,7 @@
-﻿namespace MuPDF.NET
+﻿using System;
+using System.Collections.Generic;
+
+namespace MuPDF.NET
 {
     public class PathInfo
     {

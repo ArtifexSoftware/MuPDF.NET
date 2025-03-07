@@ -1,4 +1,6 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using mupdf;
 using Newtonsoft.Json;
 
@@ -105,6 +107,9 @@ namespace MuPDF.NET
             }
 
             string ret = buffer.fz_string_from_buffer();
+
+            output.fz_close_output();
+            output.Dispose();
 
             return ret;
         }

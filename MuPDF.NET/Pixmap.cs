@@ -1,4 +1,8 @@
 ﻿using mupdf;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 
 namespace MuPDF.NET
@@ -457,6 +461,9 @@ namespace MuPDF.NET
             else mupdf.mupdf.fz_write_pixmap_as_png(output, pixmap);
 
             byte[] barray = Utils.BinFromBuffer(res);
+            output.fz_close_output();
+            output.Dispose();
+            res.Dispose();
             return barray;
         }
 
@@ -982,7 +989,12 @@ namespace MuPDF.NET
                 {"jpeg", 7 }
             };
 
-            int idx = validFormats.GetValueOrDefault(output.ToLower(), 0);
+            //int idx = validFormats.GetValueOrDefault(output.ToLower(), 0);
+            int idx;
+            if (!validFormats.TryGetValue(output.ToLower(), out idx))
+            {
+                idx = 0;  // Default value if key does not exist
+            }
             if (idx == 0)
             {
                 throw new Exception($"Image format {output} not in {string.Join(", ", validFormats.Keys)}");

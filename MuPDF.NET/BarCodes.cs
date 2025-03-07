@@ -2,7 +2,9 @@
 using ZXing;
 using ZXing.SkiaSharp;
 using ZXing.Common;
-using static ZXing.RGBLuminanceSource;
+using System.Collections.Generic;
+using System;
+using System.IO;
 
 namespace MuPDF.NET
 {
@@ -52,7 +54,38 @@ namespace MuPDF.NET
                 int[] crop = config.Crop;
                 source = new SKBitmapLuminanceSource(image).crop(crop[0], crop[1], crop[2], crop[3]);
             }
-            var reader = new BarcodeReader();
+            var reader = new BarcodeReaderGeneric();
+            reader.AutoRotate = config.AutoRotate;
+            foreach (var entry in config.Hints)
+                reader.Options.Hints.Add(entry.Key, entry.Value);
+            Result result = reader.Decode(source);
+
+            return result;
+        }
+
+        public Result decode(byte[] imageBuf, Config config)
+        {
+            SKBitmap image;
+            try
+            {
+                image = SKBitmap.Decode(imageBuf);
+            }
+            catch (Exception e)
+            {
+                throw new FileNotFoundException("Resource not valid: " + "(" + e.Message + ")");
+            }
+
+            LuminanceSource source;
+            if (config.Crop == null)
+            {
+                source = new SKBitmapLuminanceSource(image);
+            }
+            else
+            {
+                int[] crop = config.Crop;
+                source = new SKBitmapLuminanceSource(image).crop(crop[0], crop[1], crop[2], crop[3]);
+            }
+            var reader = new BarcodeReaderGeneric();
             reader.AutoRotate = config.AutoRotate;
             foreach (var entry in config.Hints)
                 reader.Options.Hints.Add(entry.Key, entry.Value);
@@ -84,7 +117,40 @@ namespace MuPDF.NET
                 source = new SKBitmapLuminanceSource(image).crop(crop[0], crop[1], crop[2], crop[3]);
             }
 
-            var reader = new BarcodeReader();
+            var reader = new BarcodeReaderGeneric();
+            reader.AutoRotate = config.AutoRotate;
+            foreach (var entry in config.Hints)
+                reader.Options.Hints.Add(entry.Key, entry.Value);
+
+            Result[] results = reader.DecodeMultiple(source);
+
+            return results;
+        }
+
+        public Result[] decodeMulti(byte[] imageBuf, Config config)
+        {
+            SKBitmap image;
+            try
+            {
+                image = SKBitmap.Decode(imageBuf);
+            }
+            catch (Exception e)
+            {
+                throw new FileNotFoundException("Resource invalid: " + "(" + e.Message + ")");
+            }
+
+            LuminanceSource source;
+            if (config.Crop == null)
+            {
+                source = new SKBitmapLuminanceSource(image);
+            }
+            else
+            {
+                int[] crop = config.Crop;
+                source = new SKBitmapLuminanceSource(image).crop(crop[0], crop[1], crop[2], crop[3]);
+            }
+
+            var reader = new BarcodeReaderGeneric();
             reader.AutoRotate = config.AutoRotate;
             foreach (var entry in config.Hints)
                 reader.Options.Hints.Add(entry.Key, entry.Value);
@@ -112,7 +178,7 @@ namespace MuPDF.NET
                 return null;
             }
 
-            var barcodeWriter = new BarcodeWriter
+            var barcodeWriter = new ZXing.SkiaSharp.BarcodeWriter
             {
                 Format = (ZXing.BarcodeFormat)barcodeFormat,
                 Options = new EncodingOptions

@@ -1,5 +1,7 @@
 ﻿using FzRect = mupdf.FzRect;
 using mupdf;
+using System;
+using System.Collections.Generic;
 
 namespace MuPDF.NET
 {
@@ -273,7 +275,7 @@ namespace MuPDF.NET
             {
                 r = new Rect(op);
             }
-            catch (Exception ex)
+            catch// (Exception ex)
             {
                 r = (new Quad(op)).Rect;
             }
