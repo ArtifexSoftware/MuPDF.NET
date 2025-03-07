@@ -1,13 +1,19 @@
-﻿using System.Data;
+﻿using System;
+using System.Collections.Generic;
+using System.Data;
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Net.NetworkInformation;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using Microsoft.VisualBasic;
 using mupdf;
+using MuPDF.NET;
 using Newtonsoft.Json;
 using SkiaSharp;
 using ZXing;
@@ -1055,7 +1061,8 @@ namespace MuPDF.NET
 
         public static string Bytes2Str(List<byte> bytes)
         {
-            return string.Join(',', bytes.Select(b => $"{b}"));
+            //return string.Join(',', bytes.Select(b => $"{b}"));
+            return string.Join(",", bytes.Select(b => $"{b}"));
         }
 
         internal static Dictionary<string, int> ColorCount(FzPixmap pm, dynamic clip)
@@ -1086,7 +1093,9 @@ namespace MuPDF.NET
                     if (!newPix.SequenceEqual(oldPix))
                     {
                         pixel = oldPix;
-                        c = ret.GetValueOrDefault(pixel, 0);
+                        //c = ret.GetValueOrDefault(pixel, 0);
+                        c = 0;
+                        ret.TryGetValue(pixel, out c);
                         if (c != 0)
                         {
                             count += c;
@@ -1101,7 +1110,9 @@ namespace MuPDF.NET
                 s += stride;
             }
             pixel = oldPix;
-            c = ret.GetValueOrDefault(pixel, 0);
+            //c = ret.GetValueOrDefault(pixel, 0);
+            c = 0;
+            ret.TryGetValue(pixel, out c);
             if (c != 0)
             {
                 count += c;
@@ -1405,9 +1416,9 @@ namespace MuPDF.NET
             int tolerance = 3
         )
         {
-            List<WordBlock> SortWords(List<WordBlock> words )
+            List<WordBlock> SortWords(List<WordBlock> _words)
             {
-                words.Sort((w1, w2) =>
+                _words.Sort((w1, w2) =>
                 {
                     if (w1.Y1 == w2.Y1)
                     {
@@ -1420,10 +1431,10 @@ namespace MuPDF.NET
                 });
 
                 List<WordBlock> nWords = new List<WordBlock>();
-                List<WordBlock> line = new List<WordBlock>() { words[0] };
-                Rect lrect = new Rect(words[0].X0, words[0].Y0, words[0].X1, words[0].Y1);
+                List<WordBlock> line = new List<WordBlock>() { _words[0] };
+                Rect lrect = new Rect(_words[0].X0, _words[0].Y0, _words[0].X1, _words[0].Y1);
 
-                foreach (WordBlock w in words.Skip(0))
+                foreach (WordBlock w in _words.Skip(0))
                 {
                     Rect wrect = new Rect(w.X0, w.Y0, w.X1, w.Y1);
                     if (Math.Abs(wrect.Y0 - lrect.Y0) <= tolerance || Math.Abs(wrect.Y1 - lrect.Y1) <= tolerance)
@@ -1646,15 +1657,9 @@ namespace MuPDF.NET
             )
         {
             Config config = new Config();
-            
-            // Generate a highly unique file name
-            string tmpImageFilePath = System.IO.Path.Combine(System.IO.Path.GetTempPath(),
-                DateTime.Now.ToString("yyyyMMddHHmmssfff") + "_" +
-                Guid.NewGuid().ToString() + "_decode_" +
-                new Random().Next(1000, 9999) + ".png");
 
             Pixmap pxmp = page.GetPixmap(dpi: 800);
-            pxmp.Save(tmpImageFilePath);
+            byte[] pmBuf = pxmp.ToBytes();
 
             // Calculate Rect ratio between PDF page and image.
             float imageWidth = pxmp.IRect.Width;
@@ -1688,7 +1693,7 @@ namespace MuPDF.NET
             List<Barcode> barcodes = new List<Barcode>();
 
             var decodeObject = new Decode();
-            Result[] results = decodeObject.decodeMulti(tmpImageFilePath, config);
+            Result[] results = decodeObject.decodeMulti(pmBuf, config);
             foreach (var result in results)
             {
                 BarcodePoint[] points = new BarcodePoint[result.ResultPoints.Length];
@@ -1712,9 +1717,6 @@ namespace MuPDF.NET
                 }
                 barcodes.Add(barcode);
             }
-
-            // delete temp image file
-            File.Delete(tmpImageFilePath);
 
             return barcodes;
         }
@@ -1763,7 +1765,7 @@ namespace MuPDF.NET
             config.Hints = buildHints(config);
 
             List<Barcode> barcodes = new List<Barcode>();
-            
+
             var decodeObject = new Decode();
             Result[] results = decodeObject.decodeMulti(imageFile, config);
 
@@ -2217,7 +2219,12 @@ namespace MuPDF.NET
                 IntPtr p_block = Marshal.AllocHGlobal(16);
                 SWIGTYPE_p_unsigned_char swigBlock = new SWIGTYPE_p_unsigned_char(p_block, true);
                 mupdf.mupdf.fz_memrnd(swigBlock, 16);
-                string rnd0 = Marshal.PtrToStringUTF8(p_block);
+
+                //string rnd0 = Marshal.PtrToStringUTF8(p_block);
+                byte[] byteArray = new byte[16];
+                Marshal.Copy(p_block, byteArray, 0, byteArray.Length);
+                string rnd0 = System.Text.Encoding.UTF8.GetString(byteArray);
+
                 Marshal.FreeHGlobal(p_block);
 
                 id = Document.AsPdfDocument(pdf).pdf_trailer().pdf_dict_put_array(new PdfObj("ID"), 2);
@@ -3018,6 +3025,8 @@ namespace MuPDF.NET
             FzBuffer res = mupdf.mupdf.fz_new_buffer(512);
             FzOutput output = new FzOutput(res);
             output.pdf_print_obj(what, compress, ascii);
+            output.fz_close_output();
+            output.Dispose();
             res.fz_terminate_buffer();
 
             return res;
@@ -3667,7 +3676,7 @@ namespace MuPDF.NET
             int startAt = -1
         )
         {
-            string CreateAnnot(LinkInfo link, List<int> xrefDest, List<int> pnoSrc, Matrix ctm)
+            string CreateAnnot(LinkInfo link, List<int> xrefDest, List<int> _pnoSrc, Matrix ctm)
             {
                 Rect r = link.From * ctm;
                 string rStr = string.Format("{0} {1} {2} {3}", r[0], r[1], r[2], r[3]);
@@ -3675,7 +3684,7 @@ namespace MuPDF.NET
                 if (link.Kind == LinkType.LINK_GOTO)
                 {
                     string txt = Utils.AnnotSkel["goto1"];
-                    int idx = pnoSrc.IndexOf(link.Page);
+                    int idx = _pnoSrc.IndexOf(link.Page);
                     Point p = link.To * ctm;
                     annot = string.Format(txt, xrefDest[idx], p.X, p.Y, link.Zoom, rStr);
                 }
@@ -3856,13 +3865,13 @@ namespace MuPDF.NET
             int embed
         )
         {
-            FzFont Fertig(FzFont font)
+            FzFont Fertig(FzFont _font)
             {
-                if (font.m_internal == null)
+                if (_font.m_internal == null)
                     throw new Exception(Utils.ErrorMessages["MSG_FONT_FAILED"]);
-                if (font.m_internal.flags.never_embed == 0)
-                    font.fz_set_font_embedding(embed);
-                return font;
+                if (_font.m_internal.flags.never_embed == 0)
+                    _font.fz_set_font_embedding(embed);
+                return _font;
             }
 
             int index = 0;
@@ -3923,14 +3932,20 @@ namespace MuPDF.NET
                 {
                     if (line.StartsWith("#"))
                         continue;
-                    string[] items = line.Split(";");
+                    string[] items = line.Split(';');
                     if (items.Length != 2)
                         continue;
                     int c = Convert.ToInt32(items[1].Substring(0, 4), 16);
                     AdobeUnicodes[items[0]] = c;
                 }
             }
-            return AdobeUnicodes.GetValueOrDefault(name, 65533);
+            //return AdobeUnicodes.GetValueOrDefault(name, 65533);
+            int value;
+            if (!AdobeUnicodes.TryGetValue(name, out value))
+            {
+                value = 65533; // Default value if key doesn't exist
+            }
+            return value;
         }
 
         public static string[] GetGlyphText()
@@ -4511,7 +4526,8 @@ namespace MuPDF.NET
             byte[] compressedBytes = Convert.FromBase64String(base64String);
             byte[] decompressedBytes = DecompressGzip(compressedBytes);
             string decompressedString = Encoding.UTF8.GetString(decompressedBytes);
-            string[] lines = decompressedString.Split(Environment.NewLine);
+            //string[] lines = decompressedString.Split(Environment.NewLine);
+            string[] lines = decompressedString.Split(new string[] { Environment.NewLine }, StringSplitOptions.None);
 
             return lines;
         }
@@ -4545,7 +4561,7 @@ namespace MuPDF.NET
                 {
                     if (line.StartsWith("#"))
                         continue;
-                    string[] items = line.Split(";");
+                    string[] items = line.Split(';');
                     if (items.Length != 2)
                         continue;
 
@@ -4553,7 +4569,8 @@ namespace MuPDF.NET
                     AdobeGlyphs.Add(c, items[0]);
                 }
             }
-            return AdobeGlyphs.GetValueOrDefault(ch, ".notdef");
+            //return AdobeGlyphs.GetValueOrDefault(ch, ".notdef");
+            return AdobeGlyphs.ContainsKey(ch) ? AdobeGlyphs[ch] : ".notdef";
         }
 
         internal static FzMatrix ShowStringCS(
@@ -4573,27 +4590,44 @@ namespace MuPDF.NET
                 ll_fz_chartorune_outparams outparams = new ll_fz_chartorune_outparams();
                 int l = mupdf.mupdf.ll_fz_chartorune_outparams_fn(s.Substring(i), outparams);
                 i += l;
+                float adv;
                 FzFont font;
                 int gid = mupdf.mupdf.fz_encode_character_sc(userFont.ToFzFont(), outparams.rune);
                 if (gid == 0)
+                {
                     (gid, font) = userFont
                         .ToFzFont()
                         .fz_encode_character_with_fallback(outparams.rune, 0, (int)langauge);
+                    mupdf.mupdf.fz_show_glyph(
+                        text,
+                        font,
+                        trm,
+                        gid,
+                        outparams.rune,
+                        wmode,
+                        bidi_level,
+                        markupDir,
+                        langauge
+                    );
+                    adv = mupdf.mupdf.fz_advance_glyph(font, gid, wmode);
+                    font.Dispose();
+                }
                 else
+                {
                     font = userFont.ToFzFont();
-
-                mupdf.mupdf.fz_show_glyph(
-                    text,
-                    font,
-                    trm,
-                    gid,
-                    outparams.rune,
-                    wmode,
-                    bidi_level,
-                    markupDir,
-                    langauge
-                );
-                float adv = mupdf.mupdf.fz_advance_glyph(font, gid, wmode);
+                    mupdf.mupdf.fz_show_glyph(
+                        text,
+                        font,
+                        trm,
+                        gid,
+                        outparams.rune,
+                        wmode,
+                        bidi_level,
+                        markupDir,
+                        langauge
+                    );
+                    adv = mupdf.mupdf.fz_advance_glyph(font, gid, wmode);
+                }
 
                 if (wmode == 0)
                     trm = trm.fz_pre_translate(adv, 0);
@@ -5115,7 +5149,7 @@ namespace MuPDF.NET
         public static Label RuleDict((int, string) item)
         {
             string rule = item.Item2;
-            string[] rules = rule.Substring(2, rule.Length - 2 - 2).Split("/").Skip(1).ToArray();
+            string[] rules = rule.Substring(2, rule.Length - 2 - 2).Split('/').Skip(1).ToArray();
             Label ret = new Label()
             {
                 StartPage = item.Item1,
@@ -5211,14 +5245,17 @@ namespace MuPDF.NET
                 { 1, "I" },
             };
 
-            IEnumerable<string> RomanNum(int num)
+            IEnumerable<string> RomanNum(int _num)
             {
-                foreach ((int r, string ltr) in roman)
+                //foreach ((int r, string ltr) in roman)
+                foreach (var pair in roman)
                 {
-                    int x = num / r;
+                    int r = pair.Key;
+                    string ltr = pair.Value;
+                    int x = _num / r;
                     yield return string.Concat(Enumerable.Repeat(ltr, x));
-                    num -= r * x;
-                    if (num <= 0)
+                    _num -= r * x;
+                    if (_num <= 0)
                         break;
                 }
             }
@@ -5437,7 +5474,8 @@ namespace MuPDF.NET
             (string t, string name) = doc.GetKeyXref(xref, "Subtype");
             if (t != "name" || !(name == "/Image" || name == "/Form"))
                 throw new Exception($"bad object type at xref {xref}");
-            (t, string oc) = doc.GetKeyXref(xref, "OC");
+            (string _t, string oc) = doc.GetKeyXref(xref, "OC");
+            t = _t;
             if (t != "xref")
                 return 0;
             return Convert.ToInt32(oc.Replace("0 R", ""));
@@ -5462,7 +5500,7 @@ namespace MuPDF.NET
             {
                 ocgs = text.Substring(p0 + 6, p1 - p0 - 6)
                     .Replace("0 R", " ")
-                    .Split(" ")
+                    .Split(' ')
                     .Select(x => int.Parse(x))
                     .ToArray();
             }
@@ -5644,13 +5682,13 @@ namespace MuPDF.NET
         {
             if (string.IsNullOrEmpty(s))
                 return "()";
-            string MakeUtf16be(string s)
+            string MakeUtf16be(string _s)
             {
-                byte[] r = Annot.MergeByte(
+                byte[] _r = Annot.MergeByte(
                     new byte[] { 254, 255 },
-                    Encoding.BigEndianUnicode.GetBytes(s)
+                    Encoding.BigEndianUnicode.GetBytes(_s)
                 );
-                return "<" + BitConverter.ToString(r).Replace("-", string.Empty) + ">";
+                return "<" + BitConverter.ToString(_r).Replace("-", string.Empty) + ">";
             }
 
             string r = "";
@@ -6267,7 +6305,12 @@ namespace MuPDF.NET
                 s = s.Substring(0, s.Length - 2);
             }
 
-            (int, int) ret = Utils.PaperSizes.GetValueOrDefault(s, (-1, -1));
+            //(int, int) ret = Utils.PaperSizes.GetValueOrDefault(s, (-1, -1));
+            (int, int) ret;
+            if (!Utils.PaperSizes.TryGetValue(s, out ret))
+            {
+                ret = (-1, -1);  // Default value if key not found
+            }
             if (f == "p")
                 return ret;
             return (ret.Item2, ret.Item1);
@@ -6291,7 +6334,12 @@ namespace MuPDF.NET
         )
         {
             fontName = fontName.ToLower();
-            string basename = Utils.Base14_fontdict.GetValueOrDefault(fontName, null);
+            //string basename = Utils.Base14_fontdict.GetValueOrDefault(fontName, null);
+            string basename;
+            if (!Utils.Base14_fontdict.TryGetValue(fontName, out basename))
+            {
+                basename = null;  // Default value if key not found
+            }
 
             List<(int, double)> glyphs = new List<(int, double)>();
             if (basename == "Symbol")
@@ -7099,7 +7147,7 @@ namespace MuPDF.NET
                 ];
                 return new float[] { c.Item2 / 255.0f, c.Item3 / 255.0f, c.Item4 / 255.0f };
             }
-            catch (Exception e)
+            catch //(Exception e)
             {
                 return new float[] { 1, 1, 1 };
             }
@@ -7112,7 +7160,7 @@ namespace MuPDF.NET
             {
                 x = GetColorInfoList()[GetColorList().IndexOf(name.ToUpper())];
             }
-            catch (Exception e)
+            catch// (Exception e)
             {
                 return new float[] { -1, -1, -1 };
             }
@@ -7297,7 +7345,7 @@ namespace MuPDF.NET
                 }
                 configs.pdf_array_push(d);
             }
-            catch (Exception e)
+            catch// (Exception e)
             {
                 throw;
             }
@@ -7387,7 +7435,8 @@ namespace MuPDF.NET
                 return null;
             }
 
-            nint swigImage = Marshal.AllocHGlobal(len);
+            //nint swigImage = Marshal.AllocHGlobal(len);
+            IntPtr swigImage = Marshal.AllocHGlobal(len);
             Marshal.Copy(image, 0, swigImage, len);
             SWIGTYPE_p_unsigned_char c = new SWIGTYPE_p_unsigned_char(swigImage, true);
             int type = mupdf.mupdf.fz_recognize_image_format(c);
@@ -7522,25 +7571,25 @@ namespace MuPDF.NET
 
         public static string GetSortedText(Page page, Rect clip = null, int flags = 0, TextPage textpage = null, int tolerance = 3)
         {
-            string LineText(Rect clip, List<(Rect, string)> line)
+            string LineText(Rect _clip, List<(Rect, string)> _line)
             {
-                line.Sort((l1, l2) =>
+                _line.Sort((l1, l2) =>
                 {
                     return (int)((l1.Item1.X0 - l2.Item1.X0) * 10);
                 });
-                string ltext = "";
-                float x1 = clip.X0;
-                Rect lrect = Utils.EMPTY_RECT();
+                string _ltext = "";
+                float x1 = _clip.X0;
+                Rect _lrect = Utils.EMPTY_RECT();
 
-                foreach ((Rect r, string t) in line)
+                foreach ((Rect r, string t) in _line)
                 {
-                    lrect = lrect | r; // update line bbox
-                    int dist = Math.Max((int)(Math.Round((r.X0 - x1) / r.Width * t.Length)), x1 == clip.X0 ? 0 : 1); // number of space chars
-                    ltext += new string(' ', dist) + t;
+                    _lrect = _lrect | r; // update _line bbox
+                    int dist = Math.Max((int)(Math.Round((r.X0 - x1) / r.Width * t.Length)), x1 == _clip.X0 ? 0 : 1); // number of space chars
+                    _ltext += new string(' ', dist) + t;
                     x1 = r.X1;
                 }
 
-                return ltext;
+                return _ltext;
             }
 
             List<WordBlock> wordblocks = Utils.GetTextWords(page, clip, flags, textpage, sort: true, tolerance: tolerance);

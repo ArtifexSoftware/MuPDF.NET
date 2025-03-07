@@ -1,4 +1,7 @@
 ﻿using mupdf;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace MuPDF.NET
 {
@@ -233,7 +236,8 @@ namespace MuPDF.NET
                 (string kidsType, string kidsValue) = doc.GetKeyXref(Xref, "Parent/Kids");
                 if (kidsType == "array")
                 {
-                    List<int> xrefs = kidsValue.Substring(1, kidsValue.Length - 2).Replace("0 R", "").Split("").Select(x => int.Parse(x)).ToList();
+                    //List<int> xrefs = kidsValue.Substring(1, kidsValue.Length - 2).Replace("0 R", "").Split("").Select(x => int.Parse(x)).ToList();
+                    List<int> xrefs = kidsValue.Substring(1, kidsValue.Length - 2).Replace("0 R", " ").Split(' ').Select(x => int.Parse(x)).ToList();
                     foreach (int xref in xrefs)
                     {
                         if (xref != Xref)
@@ -250,7 +254,7 @@ namespace MuPDF.NET
             string font = "Helv";
             float fontSize = 0;
             float[] col = { 0, 0, 0 };
-            string[] dat = TextDa.Split("");
+            string[] dat = TextDa.Split(' ');
             int i = 0;
             foreach (string item in dat)
             {
@@ -349,7 +353,7 @@ namespace MuPDF.NET
             {
                 List<string> nstates = new List<string>();
                 string t = apn.Item2.Substring(2, apn.Item2.Length - 2 - 2);
-                string[] apnt = t.Split("/").Skip(1).ToArray();
+                string[] apnt = t.Split('/').Skip(1).ToArray();
                 foreach (string x in apnt)
                     nstates.Add(x.Split()[0]);
                 states["normal"] = nstates;
@@ -357,9 +361,9 @@ namespace MuPDF.NET
             if (apn.Item1 == "xref")
             {
                 List<string> nstates = new List<string>();
-                int nxref = int.Parse(apn.Item2.Split(" ")[0]);
+                int nxref = int.Parse(apn.Item2.Split(' ')[0]);
                 string t = doc.GetXrefObject(nxref);
-                string[] apnt = t.Split("/").Skip(1).ToArray();
+                string[] apnt = t.Split('/').Skip(1).ToArray();
                 foreach (string x in apnt)
                     nstates.Add(x.Split()[0]);
                 states["normal"] = nstates;
@@ -369,7 +373,7 @@ namespace MuPDF.NET
             {
                 List<string> dstates = new List<string>();
                 string t = apd.Item2.Substring(2, apd.Item2.Length - 2 - 2);
-                string[] apdt = t.Split("/").Skip(1).ToArray();
+                string[] apdt = t.Split('/').Skip(1).ToArray();
                 foreach (string x in apdt)
                     dstates.Add(x.Split()[0]);
                 states["down"] = dstates;
@@ -377,9 +381,9 @@ namespace MuPDF.NET
             if (apd.Item1 == "xref")
             {
                 List<string> dstates = new List<string>();
-                int dxref = int.Parse(apd.Item2.Split(" ")[0]);
+                int dxref = int.Parse(apd.Item2.Split(' ')[0]);
                 string t = doc.GetXrefObject(dxref);
-                string[] apdt = t.Split("/").Skip(1).ToArray();
+                string[] apdt = t.Split('/').Skip(1).ToArray();
                 foreach (string x in apdt)
                     dstates.Add(x.Split()[0]);
                 states["down"] = dstates;

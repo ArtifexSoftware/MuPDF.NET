@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace MuPDF.NET
@@ -123,7 +125,7 @@ namespace MuPDF.NET
                     IsUri = false;
                     Uri = "";
                     Kind = LinkType.LINK_LAUNCH;
-                    string[] ftab = FileSpec.Split("#");
+                    string[] ftab = FileSpec.Split('#');
                     if (ftab.Length == 2)
                     {
                         if (ftab[1].StartsWith("page="))
@@ -150,7 +152,7 @@ namespace MuPDF.NET
         public string Unescape(string name)
         {
             string split = name.Replace("%%", "%25");
-            string[] splits = split.Split("%");
+            string[] splits = split.Split('%');
             string newName = splits[0];
 
             foreach (string item in splits.Take(1))

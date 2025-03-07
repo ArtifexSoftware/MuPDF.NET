@@ -1,4 +1,6 @@
 ﻿using mupdf;
+using System;
+using System.Collections.Generic;
 
 namespace MuPDF.NET
 {
@@ -174,7 +176,13 @@ namespace MuPDF.NET
                     ordering = 2;
                 // else if (fNameLower)
                 else if (ordering < 0)
-                    fontName = Utils.Base14_fontdict.GetValueOrDefault(fontName, fontName);
+                {
+                    //fontName = Utils.Base14_fontdict.GetValueOrDefault(fontName, fontName);
+                    if (!Utils.Base14_fontdict.TryGetValue(fontName, out fontName))
+                    {
+                        // If the key is not found, fontName remains unchanged (or can be assigned a default value)
+                    }
+                }
             }
             
             fz_text_language lang = mupdf.mupdf.fz_text_language_from_string(language);
@@ -223,14 +231,18 @@ namespace MuPDF.NET
                     gid = _nativeFont.fz_encode_character_sc(c);
                     if (gid >= 0)
                         font = _nativeFont;
+                    rc.Add(fontSize * font.fz_advance_glyph(gid, wmode));
                 }
                 else
+                {
                     (gid, font) = _nativeFont.fz_encode_character_with_fallback(
                         c,
                         script,
                         (int)lang
                     );
-                rc.Add(fontSize * font.fz_advance_glyph(gid, wmode));
+                    rc.Add(fontSize * font.fz_advance_glyph(gid, wmode));
+                    font.Dispose();
+                }
             }
             
             return rc;
@@ -261,11 +273,13 @@ namespace MuPDF.NET
                 gid = _nativeFont.fz_encode_character_sc(chr);
                 if (gid >= 0)
                     font = _nativeFont;
+                return font.fz_advance_glyph(gid, wmode);
             }
-            else
-                (gid, font) = _nativeFont.fz_encode_character_with_fallback(chr, script, (int)lang);
             
-            return font.fz_advance_glyph(gid, wmode);
+            (gid, font) = _nativeFont.fz_encode_character_with_fallback(chr, script, (int)lang);
+            float ret = font.fz_advance_glyph(gid, wmode);
+            font.Dispose();
+            return ret;
         }
 
         /// <summary>
@@ -286,11 +300,13 @@ namespace MuPDF.NET
                 gid = _nativeFont.fz_encode_character_sc(chr);
                 if (gid >= 0)
                     font = _nativeFont;
+                return new Rect(font.fz_bound_glyph(gid, new FzMatrix()));
             }
-            else
-                (gid, font) = _nativeFont.fz_encode_character_with_fallback(chr, script, (int)lang);
             
-            return new Rect(font.fz_bound_glyph(gid, new FzMatrix()));
+            (gid, font) = _nativeFont.fz_encode_character_with_fallback(chr, script, (int)lang);
+            Rect rect = new Rect(font.fz_bound_glyph(gid, new FzMatrix()));
+            font.Dispose();
+            return rect;
         }
 
         /// <summary>
@@ -324,11 +340,13 @@ namespace MuPDF.NET
             if (fallback != 0)
             {
                 fz_text_language lang = mupdf.mupdf.fz_text_language_from_string(language);
-                (gid, FzFont font) = _nativeFont.fz_encode_character_with_fallback(
+                (int _gid, FzFont font) = _nativeFont.fz_encode_character_with_fallback(
                     chr,
                     script,
                     (int)lang
                 );
+                font.Dispose();
+                gid = _gid;
             }
             else
             {
@@ -363,21 +381,26 @@ namespace MuPDF.NET
             FzFont thisfont = _nativeFont;
             int lang = (int)mupdf.mupdf.fz_text_language_from_string(language);
             float rc = 0;
-
+            
             foreach (char ch in text)
             {
                 int c = Convert.ToInt32(ch);
                 int gid;
-                FzFont font = new FzFont();
-                if (smallCaps != 0)
+                //if (smallCaps != 0)
                 {
+                    FzFont font = new FzFont();
                     gid = thisfont.fz_encode_character_sc(c);
                     if (gid >= 0)
+                    {
                         font = thisfont;
+                    }
+                    rc += font.fz_advance_glyph(gid, wmode);
                 }
-                else
-                    (gid, font) = thisfont.fz_encode_character_with_fallback(c, script, lang);
-                rc += font.fz_advance_glyph(gid, wmode);
+                //else
+                //{
+                //    (int _gid, FzFont _font) = thisfont.fz_encode_character_with_fallback(c, script, lang);
+                //    rc += _font.fz_advance_glyph(_gid, wmode);
+                //}
             }
             rc *= fontSize;
 

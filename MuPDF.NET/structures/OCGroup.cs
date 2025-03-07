@@ -1,4 +1,6 @@
-﻿namespace MuPDF.NET
+﻿using System.Collections.Generic;
+
+namespace MuPDF.NET
 {
     public class OCGroup
     {

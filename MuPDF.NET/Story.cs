@@ -1,4 +1,7 @@
 ﻿using mupdf;
+using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Text;
 
 namespace MuPDF.NET
@@ -47,7 +50,7 @@ namespace MuPDF.NET
             while (x != null)
             {
                 string name = x.TagName;
-                if (name.Length == 2 && name[0] == 'h' && "123456".Contains(name[1]))
+                if (name.Length == 2 && name[0] == 'h' && "123456".Contains(name[1].ToString()))
                 {
                     string attr = x.GetAttributeValue("id");
                     if (attr == null)
@@ -138,33 +141,33 @@ namespace MuPDF.NET
 
             Reset();
 
-            FitResult Ret(Rect rect, State state)
+            FitResult Ret(Rect _rect, State _state)
             {
                 bool bigEnough = false;
                 FitResult result = null;
-                if (state.Pmax != 0)
+                if (_state.Pmax != 0)
                 {
-                    if (state.LastP != state.Pmax)
+                    if (_state.LastP != _state.Pmax)
                     {
                         if (verbose)
                             Log($"Calling update() with pmax, because was overwritten by later calls.");
-                        bigEnough = Update(rect, state.Pmax);
+                        bigEnough = Update(_rect, _state.Pmax);
                     }
-                    result = state.PmaxResult;
+                    result = _state.PmaxResult;
                 }
                 else
                 {
-                    result = state.PminResult != null ? state.PminResult : new FitResult(numcalls: state.Numcalls);
+                    result = _state.PminResult != null ? _state.PminResult : new FitResult(numcalls: _state.Numcalls);
                 }
 
                 if (verbose)
-                    Log($"finished. {state.Pmin0} {state.Pmax0} {state.Pmax}: returning {result}");
+                    Log($"finished. {_state.Pmin0} {_state.Pmax0} {_state.Pmax}: returning {result}");
                 return result;
             }
 
-            bool Update(Rect rect, float parameter)
+            bool Update(Rect _rect, float parameter)
             {
-                Rect r = fn(rect, parameter);
+                Rect r = fn(_rect, parameter);
                 bool bigEnough;
                 FitResult result;
                 if (r.IsEmpty)
@@ -172,11 +175,11 @@ namespace MuPDF.NET
                     bigEnough = false;
                     result = new FitResult(parameter: parameter, numcalls: state.Numcalls);
                     if (verbose)
-                        Log("update(): not calling self.place() because rect is empty.");
+                        Log("update(): not calling self.place() because _rect is empty.");
                 }
                 else
                 {
-                    (bool more, Rect filled) = Place(rect);
+                    (bool more, Rect filled) = Place(_rect);
                     state.Numcalls += 1;
                     bigEnough = !more;
 
@@ -185,11 +188,11 @@ namespace MuPDF.NET
                         more: more,
                         numcalls: state.Numcalls,
                         parameter: parameter,
-                        rect: rect,
+                        rect: _rect,
                         bigEnough: bigEnough
                         );
                     if (verbose)
-                        Log($"Update(): called self.place(): {state.Numcalls}: {more} {parameter} {rect}.");
+                        Log($"Update(): called self.place(): {state.Numcalls}: {more} {parameter} {_rect}.");
                 }
 
                 if (bigEnough)
@@ -284,7 +287,7 @@ namespace MuPDF.NET
             {
                 if ((position.OpenClose & true) && position.Id != null)
                 {
-                    if (id2Position.Keys.Contains(position.Id))
+                    if (id2Position.ContainsKey(position.Id))
                     {
                         // pass
                     }
@@ -303,11 +306,7 @@ namespace MuPDF.NET
                     if (positionFrom.Href.StartsWith("#"))
                     {
                         string targetId = positionFrom.Href.Substring(1);
-                        try
-                        {
-                            positionTo = id2Position.GetValueOrDefault(targetId);
-                        }
-                        catch (Exception)
+                        if (!id2Position.TryGetValue(targetId, out positionTo))
                         {
                             throw new Exception($"No destination with id={targetId}, required by position_from: {positionFrom}");
                         }
@@ -426,7 +425,8 @@ namespace MuPDF.NET
                 rectNum += 1;
                 if (mediabox != null)
                     pageNum += 1;
-                (bool more, filled) = Place(rect);
+                (bool more, Rect _filled) = Place(rect);
+                filled = _filled;
                 if (positionFn != null) // if (positionFn)
                 {
                     Action<Position> positionFn2 = position =>

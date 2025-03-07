@@ -1,4 +1,5 @@
 ﻿using mupdf;
+using System.Collections.Generic;
 
 namespace MuPDF.NET
 {

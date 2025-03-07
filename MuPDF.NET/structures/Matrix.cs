@@ -1,4 +1,6 @@
 ﻿using mupdf;
+using System;
+using System.Collections.Generic;
 using static System.Net.Mime.MediaTypeNames;
 
 namespace MuPDF.NET

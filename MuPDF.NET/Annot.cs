@@ -1,4 +1,7 @@
-﻿using System.Runtime.InteropServices;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using mupdf;
 
@@ -325,7 +328,7 @@ namespace MuPDF.NET
                 }
                 catch(Exception e)
                 {
-                    throw;
+                    throw new Exception(e.Message);
                 }
             }
         }
@@ -651,6 +654,7 @@ namespace MuPDF.NET
             }
             catch (Exception e)
             {
+                Console.WriteLine($"Error: {e.Message}");  // Example logging
                 da_string = "";
             }
 
@@ -775,7 +779,7 @@ namespace MuPDF.NET
 
         public static float[] ColorFromSequence(float[] seq)
         {
-            if (!(seq is List<float> || seq is float[]) || seq == null)
+            if (!(seq is float[]) || seq == null)
                 return null;
 
             if (!(new List<int>() { 0, 1, 3, 4 }).Contains(seq.Length))

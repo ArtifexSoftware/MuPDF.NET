@@ -1,4 +1,7 @@
 ﻿using mupdf;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -135,7 +138,7 @@ namespace MuPDF.NET
             if (string.IsNullOrEmpty(text))
                 return null;
 
-            string[] words = text.Split(" ");
+            string[] words = text.Split(' ');
             for (int i = 0; i < words.Length; i++)
             {
                 string w = words[i];
@@ -302,12 +305,12 @@ namespace MuPDF.NET
                 }
                 if (line_.EndsWith(" gs"))
                 {
-                    int alp = Convert.ToInt32(line_.Split(" ")[0].Substring(4)) + maxAlp;
+                    int alp = Convert.ToInt32(line_.Split(' ')[0].Substring(4)) + maxAlp;
                     line_ = $"/Alp{alp} gs";
                 }
                 else if (line_.EndsWith(" Tf"))
                 {
-                    string[] temp = line_.Split(" ");
+                    string[] temp = line_.Split(' ');
                     float fSize = (float)Convert.ToDouble(temp[1]);
                     float w = 1f;
                     if (renderMode != 0)
@@ -365,7 +368,7 @@ namespace MuPDF.NET
                 throw new Exception("fill rect must not empty");
             if (font.IsNull)
                 throw new Exception("font must not empty");
-
+            
             float TextLen(string x)
             {
                 return font.TextLength(x, fontSize: fontSize, smallCaps: smallCaps ? 1 : 0);
@@ -376,9 +379,9 @@ namespace MuPDF.NET
                 return font.GetCharLengths(x, fontSize: fontSize, smallCaps: smallCaps ? 1 : 0);
             }
 
-            (Rect, Point) AppendThis(Point pos, string text)
+            (Rect, Point) AppendThis(Point _pos, string _text)
             {
-                return Append(pos, text, font: font, fontSize: fontSize, smallCaps: smallCaps ? 1 : 0);
+                return Append(_pos, _text, font: font, fontSize: fontSize, smallCaps: smallCaps ? 1 : 0);
             }
 
             float tolerance = fontSize * 0.2f;
@@ -386,7 +389,7 @@ namespace MuPDF.NET
             float stdWidth = rect.Width - tolerance;
             float stdStart = rect.X0 + tolerance;
 
-            (List<string>, List<float>) NormWords(float width, List<string> words)
+            (List<string>, List<float>) NormWords(float _width, List<string> words)
             {
                 List<string> nwords = new List<string>();
                 List<float> wordLengths = new List<float>();
@@ -395,7 +398,7 @@ namespace MuPDF.NET
                 {
                     List<float> charLengths = CharLengths(word);
                     float wl = charLengths.Sum(x => x);
-                    if (wl <= width)
+                    if (wl <= _width)
                     {
                         nwords.Add(word);
                         wordLengths.Add(wl);
@@ -406,7 +409,7 @@ namespace MuPDF.NET
                     while (n > 0)
                     {
                         wl = charLengths.Take(n).Sum(x => x);
-                        if (wl <= width)
+                        if (wl <= _width)
                         {
                             nwords.Add(word.Substring(0, n));
                             wordLengths.Add(wl);
@@ -422,7 +425,7 @@ namespace MuPDF.NET
                 return (nwords, wordLengths);
             }
 
-            void OutputJustify(Point start, string line)
+            void OutputJustify(Point _start, string line)
             {
                 string[] words = line.Split(' ').Where(x => x != "").ToArray();
                 int nwords = words.Length;
@@ -430,7 +433,7 @@ namespace MuPDF.NET
                     return;
                 if (nwords == 1)
                 {
-                    AppendThis(start, words[0]);
+                    AppendThis(_start, words[0]);
                     return;
                 }
                 float tl = words.Sum(x => TextLen(x));
@@ -438,11 +441,11 @@ namespace MuPDF.NET
                 float gapl = (stdWidth - tl) / gaps;
                 foreach (string w in words)
                 {
-                    (Rect _, Point lp) = AppendThis(start, w);
-                    start.X = lp.X + gapl;
+                    (Rect _, Point lp) = AppendThis(_start, w);
+                    _start.X = lp.X + gapl;
                 }
             }
-
+            
             float asc = font.Ascender;
             float dsc = font.Descender;
             float lheight = 0;
@@ -470,7 +473,7 @@ namespace MuPDF.NET
             else if (align == (int)TextAlign.TEXT_ALIGN_RIGHT)
                 factor = 1.0f;
 
-            string[] textLines = text.Split("\n");
+            string[] textLines = text.Split('\n');
             int maxLines = Convert.ToInt32((rect.Y1 - pos.Y) / LineHeight) + 1;
 
             List<(string, float)> newLines = new List<(string, float)>();
@@ -504,7 +507,7 @@ namespace MuPDF.NET
                     continue;
                 }
 
-                string[] words = line.Split(" ");
+                string[] words = line.Split(' ');
                 (List<string> words_, List<float> wordLengths_) = NormWords(stdWidth, new List<string>(words));
 
                 int n = words_.Count;

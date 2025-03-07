@@ -1,8 +1,13 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using mupdf;
+using ZXing;
 using static System.Net.Mime.MediaTypeNames;
 using static MuPDF.NET.Global;
 
@@ -59,19 +64,27 @@ namespace MuPDF.NET
         {
             get
             {
-                if (WasWrapped)
-                    return true;
+                try
+                {
+                    if (WasWrapped)
+                        return true;
 
-                byte[] cont = ReadContents();
-                if (cont.Length == 0)
+                    byte[] cont = ReadContents();
+                    if (cont.Length == 0)
+                    {
+                        WasWrapped = true;
+                        return true;
+                    }
+                    if (cont[0] != Convert.ToByte('q') || cont.Last() != Convert.ToByte('Q'))
+                        return false;
+                    WasWrapped = true;
+                    return true;
+                }
+                catch (Exception)
                 {
                     WasWrapped = true;
                     return true;
                 }
-                if (cont[0] != Convert.ToByte('q') || cont.Last() != Convert.ToByte('Q'))
-                    return false;
-                WasWrapped = true;
-                return true;
             }
         }
 
@@ -886,7 +899,7 @@ namespace MuPDF.NET
             if (crossOut)
             {
                 string apStr = Encoding.UTF8.GetString(ret.GetAP());
-                string[] tabStrArr = apStr.Split("\n");
+                string[] tabStrArr = apStr.Split('\n');
 
                 tabStrArr = tabStrArr.Take(tabStrArr.Length - 2).ToArray();
                 List<string> nTabs = new List<string>(tabStrArr);
@@ -991,7 +1004,7 @@ namespace MuPDF.NET
             if (crossOut)
             {
                 string apStr = Encoding.UTF8.GetString(ret.GetAP());
-                string[] tabStrArr = apStr.Split("\n");
+                string[] tabStrArr = apStr.Split('\n');
 
                 tabStrArr = tabStrArr.Take(tabStrArr.Length - 2).ToArray();
                 List<string> nTabs = new List<string>(tabStrArr);
@@ -1951,7 +1964,12 @@ namespace MuPDF.NET
                 h = argPix.h();
                 vectoruc digest = argPix.fz_md5_pixmap2();
                 md5 = digest.ToArray();
-                int temp = digests.GetValueOrDefault(Encoding.UTF8.GetString(md5), -1);
+                //int temp = digests.GetValueOrDefault(Encoding.UTF8.GetString(md5), -1);
+                int temp;
+                if (!digests.TryGetValue(Encoding.UTF8.GetString(md5), out temp))
+                {
+                    temp = -1; // Default value if key is not found
+                }
                 if (temp != -1)
                 {
                     imgXRef = temp;
@@ -1995,7 +2013,12 @@ namespace MuPDF.NET
                 }
                 vectoruc digest = state.fz_md5_final2();
                 md5 = digest.ToArray();
-                int tmp = digests.GetValueOrDefault(Encoding.UTF8.GetString(md5), -1);
+                //int tmp = digests.GetValueOrDefault(Encoding.UTF8.GetString(md5), -1);
+                int tmp;
+                if (!digests.TryGetValue(Encoding.UTF8.GetString(md5), out tmp))
+                {
+                    tmp = -1; // Default value if key is not found
+                }
                 if (tmp != -1)
                 {
                     imgXRef = tmp;
@@ -2401,14 +2424,24 @@ namespace MuPDF.NET
             if (doc.GraftID == isrc)
                 throw new Exception("source document must not equal target");
 
-            GraftMap gmap = doc.GraftMaps.GetValueOrDefault(isrc, null);
+            //GraftMap gmap = doc.GraftMaps.GetValueOrDefault(isrc, null);
+            GraftMap gmap;
+            if (!doc.GraftMaps.TryGetValue(isrc, out gmap))
+            {
+                gmap = null; // Default value if key is not found
+            }
             if (gmap == null)
             {
                 gmap = new GraftMap(doc);
                 doc.GraftMaps[isrc] = gmap;
             }
 
-            int xref = doc.ShownPages.GetValueOrDefault((isrc, pno), 0);
+            //int xref = doc.ShownPages.GetValueOrDefault((isrc, pno), 0);
+            int xref;
+            if (!doc.ShownPages.TryGetValue((isrc, pno), out xref))
+            {
+                xref = 0; // Default value if key is not found
+            }
             xref = ShowPdfPage(
                 srcPage,
                 overlay,
@@ -2566,7 +2599,11 @@ namespace MuPDF.NET
             string bfName;
             try
             {
-                bfName = Utils.Base14_fontdict.GetValueOrDefault(fontName.ToLower(), null);
+                //bfName = Utils.Base14_fontdict.GetValueOrDefault(fontName.ToLower(), null);
+                if (!Utils.Base14_fontdict.TryGetValue(fontName.ToLower(), out bfName))
+                {
+                    bfName = null; // Default value if key is not found
+                }
             }
             catch
             {
@@ -3870,10 +3907,16 @@ namespace MuPDF.NET
             for (int i = 0; i < imgInfo.Count; i++)
             {
                 Block item = imgInfo[i];
-                int xref = digests.GetValueOrDefault(
-                    Encoding.UTF8.GetString(item.Digest.ToArray()),
-                    0
-                );
+                //int xref = digests.GetValueOrDefault(
+                //    Encoding.UTF8.GetString(item.Digest.ToArray()),
+                //    0
+                //);
+                string key = Encoding.UTF8.GetString(item.Digest.ToArray());
+                int xref;
+                if (!digests.TryGetValue(key, out xref))
+                {
+                    xref = 0; // Default value if key is not found
+                }
                 item.Xref = xref;
                 imgInfo[i] = item;
             }
@@ -4170,22 +4213,22 @@ namespace MuPDF.NET
             if (string.IsNullOrEmpty(Utils.TESSDATA_PREFIX) && string.IsNullOrEmpty(tessdata))
                 throw new Exception("No OCR support: TESSDATA_PREFIX not set");
 
-            TextPage FullOcr(Page page, int dpi, string language, int flags)
+            TextPage FullOcr(Page page, int _dpi, string _language, int _flags)
             {
-                float zoom = dpi / 72.0f;
+                float zoom = _dpi / 72.0f;
                 Matrix mat = new Matrix(zoom, zoom);
                 Pixmap pix = page.GetPixmap(matrix: mat);
-                Document ocrPdf = new Document("pdf", pix.PdfOCR2Bytes(true, language, tessdata));
+                Document ocrPdf = new Document("pdf", pix.PdfOCR2Bytes(true, _language, tessdata));
 
                 Page ocrPage = ocrPdf.LoadPage(0);
                 float unZoom = page.Rect.Width / ocrPage.Rect.Width;
                 Matrix ctm = new Matrix(unZoom, unZoom) * page.DerotationMatrix;
-                TextPage tp = ocrPage.GetTextPage(flags: flags, matrix: ctm);
+                TextPage _tp = ocrPage.GetTextPage(flags: _flags, matrix: ctm);
                 ocrPdf.Close();
 
                 pix = null;
-                tp.Parent = this;
-                return tp;
+                _tp.Parent = this;
+                return _tp;
             }
 
             if (full)
@@ -4597,6 +4640,7 @@ namespace MuPDF.NET
             _nativePage.fz_run_page(dev, ctm, new FzCookie());
             mupdf.mupdf.fz_close_device(dev);
             output.fz_close_output();
+            output.Dispose();
             string text = Utils.EscapeStrFromBuffer(res);
 
             return text;
@@ -5075,7 +5119,7 @@ namespace MuPDF.NET
                 AppendMerge();
                 SeqNo += 1;
             }
-            catch (Exception e)
+            catch// (Exception e)
             {
                 throw;
             }
@@ -5329,7 +5373,7 @@ namespace MuPDF.NET
                 if (PathDict.Items.Count == 0)
                     PathDict = null;
             }
-            catch (Exception e)
+            catch// (Exception e)
             {
                 throw;
             }
@@ -5455,7 +5499,7 @@ namespace MuPDF.NET
                 Dev.LastPoint = p3;
                 Dev.PathDict.Items.Add(curve);
             }
-            catch (Exception ex)
+            catch// (Exception ex)
             {
                 throw new Exception("curveto exception");
             }
@@ -5797,7 +5841,7 @@ namespace MuPDF.NET
                 rgb = ret.Take(3).ToArray();
             }
             else
-                rgb = [0, 0, 0];
+                rgb = new float[] { 0, 0, 0 };
 
             float lineWidth = 0;
             if (LineWidth > 0)

@@ -1,4 +1,7 @@
-﻿using System.Data;
+﻿using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Text;
@@ -120,9 +123,24 @@ namespace MuPDF.NET
                        bottom == bbox.bottom;
             }
 
+            public static int CombineHashCodes(float x0, float top, float x1, float bottom)
+            {
+                // Start with a prime number to mix in the values.
+                int hash = 17;
+
+                // Combine each hash code using XOR and a prime number multiplier.
+                hash = hash * 31 + x0.GetHashCode();
+                hash = hash * 31 + top.GetHashCode();
+                hash = hash * 31 + x1.GetHashCode();
+                hash = hash * 31 + bottom.GetHashCode();
+
+                return hash;
+            }
+
             public override int GetHashCode()
             {
-                return HashCode.Combine(x0, top, x1, bottom);
+                //return HashCode.Combine(x0, top, x1, bottom);
+                return CombineHashCodes(x0, top, x1, bottom);
             }
 
             public static BBox RectToBBox(Rect rect)
@@ -420,14 +438,28 @@ namespace MuPDF.NET
         public static List<Edge> snap_objects(List<Edge> objs, string attr, float tolerance)
         {
             // Mapping the attribute to the axis (horizontal or vertical)
-            string axis = attr switch
+            //string axis = attr switch
+            //{
+            //    "x0" => "h",
+            //    "x1" => "h",
+            //    "top" => "v",
+            //    "bottom" => "v",
+            //    _ => throw new ArgumentException("Invalid attribute", nameof(attr))
+            //};
+            string axis;
+            switch (attr)
             {
-                "x0" => "h",
-                "x1" => "h",
-                "top" => "v",
-                "bottom" => "v",
-                _ => throw new ArgumentException("Invalid attribute", nameof(attr))
-            };
+                case "x0":
+                case "x1":
+                    axis = "h";
+                    break;
+                case "top":
+                case "bottom":
+                    axis = "v";
+                    break;
+                default:
+                    throw new ArgumentException("Invalid attribute", nameof(attr));
+            }
 
             List<List<Edge>> clusters = new List<List<Edge>>();
             List<float> avgs = new List<float>();
@@ -612,7 +644,7 @@ namespace MuPDF.NET
             float join_x_tolerance,
             float join_y_tolerance)
         {
-            static (string, float) get_group(Edge edge)
+            (string, float) get_group(Edge edge)
             {
                 if (edge.orientation == "h")
                     return ("h", edge.top);
@@ -2126,9 +2158,9 @@ namespace MuPDF.NET
             // these lines as header.
             // bbox is the(potentially repaired) row 0 bbox.
             // Returns True or False
-            bool top_row_is_bold(BBox bbox)
+            bool top_row_is_bold(BBox _bbox)
             {
-                List<Block> blocks = Page.GetText("dict", clip: new Rect(bbox.x0, bbox.top, bbox.x1, bbox.bottom),
+                List<Block> blocks = Page.GetText("dict", clip: new Rect(_bbox.x0, _bbox.top, _bbox.x1, _bbox.bottom),
                     flags: (int)TextFlagsExtension.TEXTFLAGS_TEXT).Blocks;
                 foreach (Block block in blocks)
                 {
@@ -2880,7 +2912,7 @@ namespace MuPDF.NET
             (List<Rect>, List<PathInfo>) clean_graphics()
             {
                 // Detect and join rectangles of "connected" vector graphics.
-                List<PathInfo> paths = new List<PathInfo>();
+                List<PathInfo> _paths = new List<PathInfo>();
 
                 foreach (var p in page.GetDrawings())
                 {
@@ -2890,23 +2922,23 @@ namespace MuPDF.NET
                     {
                         continue;
                     }
-                    paths.Add(p);
+                    _paths.Add(p);
                 }
 
                 // start with all vector graphics rectangles
-                List<Rect> prects = paths.Select(p => p.Rect)
+                List<Rect> prects = _paths.Select(p => p.Rect)
                                          .Distinct()
                                          .OrderBy(r => (r.Y1, r.X0))
                                          .ToList();
 
-                List<BBox> bboxes = new List<BBox>();
+                List<BBox> _bboxes = new List<BBox>();
                 foreach (var p in prects)
                 {
-                    bboxes.Add(BBox.RectToBBox(p));
+                    _bboxes.Add(BBox.RectToBBox(p));
                 }
-                bboxes = bboxes.Distinct().ToList();
+                _bboxes = _bboxes.Distinct().ToList();
                 prects.Clear();
-                foreach (var b in bboxes)
+                foreach (var b in _bboxes)
                 {
                     prects.Add(BBox.BBoxToRect(b));
                 }
@@ -2944,7 +2976,7 @@ namespace MuPDF.NET
                     }
 
                     // Move rect 0 over to the result list if there is some text in it.
-                    if (!string.IsNullOrWhiteSpace(page.GetTextbox(prect0, textPage:TEXTPAGE)))
+                    if (!string.IsNullOrWhiteSpace(page.GetTextbox(prect0, textPage: TEXTPAGE)))
                     {
                         // Contains text, so accept it as a table bbox candidate.
                         newRects.Add(prect0);
@@ -2953,7 +2985,7 @@ namespace MuPDF.NET
                     prects.RemoveAt(0); // Remove from rect list.
                 }
 
-                return (newRects, paths);
+                return (newRects, _paths);
             }
 
             (List<Rect> bboxes, List<PathInfo> paths) = clean_graphics();
@@ -2973,7 +3005,7 @@ namespace MuPDF.NET
             }
 
             // Given 2 points, make a line dictionary for table detection.
-            Edge make_line(PathInfo p, Point p1, Point p2, Rect clip)
+            Edge make_line(PathInfo p, Point p1, Point p2, Rect _clip)
             {
                 if (!IsParallel(p1, p2))  // only accepting axis-parallel lines
                 {
@@ -2986,16 +3018,16 @@ namespace MuPDF.NET
                 float y0 = Math.Min(p1.Y, p2.Y);
                 float y1 = Math.Max(p1.Y, p2.Y);
 
-                // Check for outside clip
-                if (x0 > clip.X1 || x1 < clip.X0 || y0 > clip.Y1 || y1 < clip.Y0)
+                // Check for outside _clip
+                if (x0 > _clip.X1 || x1 < _clip.X0 || y0 > _clip.Y1 || y1 < _clip.Y0)
                 {
                     return null;
                 }
 
-                if (x0 < clip.X0) x0 = clip.X0;  // Adjust to clip boundary
-                if (x1 > clip.X1) x1 = clip.X1;  // Adjust to clip boundary
-                if (y0 < clip.Y0) y0 = clip.Y0;  // Adjust to clip boundary
-                if (y1 > clip.Y1) y1 = clip.Y1;  // Adjust to clip boundary
+                if (x0 < _clip.X0) x0 = _clip.X0;  // Adjust to _clip boundary
+                if (x1 > _clip.X1) x1 = _clip.X1;  // Adjust to _clip boundary
+                if (y0 < _clip.Y0) y0 = _clip.Y0;  // Adjust to _clip boundary
+                if (y1 > _clip.Y1) y1 = _clip.Y1;  // Adjust to _clip boundary
 
                 float width = x1 - x0;  // From adjusted values
                 float height = y1 - y0;  // From adjusted values

@@ -1,5 +1,8 @@
 ﻿using MuPDF.NET;
+using System;
+using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 
 namespace Demo
 {
@@ -7,26 +10,54 @@ namespace Demo
     {
         static void Main(string[] args)
         {
-            TestHelloWorld(args);
+            TestHelloWorldToNewDocument(args);
             TestReadBarcode(args);
             TestWriteBarcode(args);
+            TestHelloWorldToExistingDocument(args);
         }
 
-        static void TestHelloWorld(string[] args)
+        static void TestHelloWorldToNewDocument(string[] args)
+        {
+            Document doc = new Document();
+            Page page = doc.NewPage();
+
+            //{ "helv", "Helvetica" },
+            //{ "heit", "Helvetica-Oblique" },
+            //{ "hebo", "Helvetica-Bold" },
+            //{ "hebi", "Helvetica-BoldOblique" },
+            //{ "cour", "Courier" },
+            //{ "coit", "Courier-Obliqu" },
+            //{ "cobo", "Courier-Bold" },
+            //{ "cobi", "Courier-BoldOblique" },
+            //{ "tiro", "Times-Roman" },
+            //{ "tibo", "Times-Bold" },
+            //{ "tiit", "Times-Italic" },
+            //{ "tibi", "Times-BoldItalic" },
+            //{ "symb", "Symbol" },
+            //{ "zadb", "ZapfDingbats" }
+            MuPDF.NET.TextWriter writer = new MuPDF.NET.TextWriter(page.Rect);
+            writer.FillTextbox(page.Rect, "Hello World!", new Font(fontName: "helv"), rtl: true);
+            writer.WriteText(page);
+            doc.Save("text.pdf", pretty: 1);
+        }
+
+        static void TestHelloWorldToExistingDocument(string[] args)
         {
             string testFilePath = Path.GetFullPath("../../../TestDocuments/Barcodes/Blank.pdf");
-            Document doc = new(testFilePath);
-
+            Document doc = new Document(testFilePath);
+            
             Page page = doc[0];
-
-            page.DrawRect(new Rect(100, 100, 200, 200));
-
+            
+            Rect rect = new Rect(100, 100, 200, 200);
+            page.DrawRect(rect);
+            
             MuPDF.NET.TextWriter writer = new MuPDF.NET.TextWriter(page.Rect);
-            Font font = new Font("kenpixel", "../../../kenpixel.ttf", isBold: 1);
-            writer.FillTextbox(page.Rect, "Hello World!", font, rtl: true);
+            //Font font = new Font("kenpixel", "../../../kenpixel.ttf", isBold: 1);
+            Font font = new Font("tiro", isBold: 0);
+            writer.FillTextbox(rect, "Hello World!", font, rtl: false);
             writer.WriteText(page);
-
-            doc.Save("text.pdf", pretty: 1);
+            
+            doc.Save("text1.pdf", pretty: 1);
 
             doc.Close();
         }
@@ -35,23 +66,7 @@ namespace Demo
         {
             int i = 0;
 
-            Console.WriteLine("=== Read from pdf file =======================");
-
-            string testFilePath = Path.GetFullPath("../../../TestDocuments/Barcodes/Sample1.pdf");
-            Document doc = new(testFilePath);
-
-            Page page = doc[0];
-            Rect rect = new Rect(290, 590, 420, 660);
-            List<Barcode> barcodes = page.ReadBarcodes(rect);
-
-            foreach (Barcode barcode in barcodes)
-            {
-                BarcodePoint[] points = barcode.ResultPoints;
-                Console.WriteLine($"Page {i++} - Type: {barcode.BarcodeFormat} - Value: {barcode.Text} - Rect: [{points[0]},{points[1]}]");
-            }
-            doc.Close();
-
-            //Console.WriteLine("=== Read from image file =====================");
+            Console.WriteLine("=== Read from image file =====================");
             string testFilePath1 = Path.GetFullPath("../../../TestDocuments/Barcodes/rendered.bmp");
 
             Rect rect1 = new Rect(1260, 390, 1720, 580);
@@ -63,17 +78,33 @@ namespace Demo
                 BarcodePoint[] points = barcode.ResultPoints;
                 Console.WriteLine($"Page {i++} - Type: {barcode.BarcodeFormat} - Value: {barcode.Text} - Rect: [{points[0]},{points[1]}]");
             }
+            
+            Console.WriteLine("=== Read from pdf file =======================");
+
+            string testFilePath = Path.GetFullPath("../../../TestDocuments/Barcodes/Sample1.pdf");
+            Document doc = new Document(testFilePath);
+
+            Page page = doc[0];
+            Rect rect = new Rect(290, 590, 420, 660);
+            List<Barcode> barcodes = page.ReadBarcodes(rect);
+
+            foreach (Barcode barcode in barcodes)
+            {
+                BarcodePoint[] points = barcode.ResultPoints;
+                Console.WriteLine($"Page {i++} - Type: {barcode.BarcodeFormat} - Value: {barcode.Text} - Rect: [{points[0]},{points[1]}]");
+            }
+            doc.Close();
         }
 
         static void TestWriteBarcode(string[] args)
         {
             Console.WriteLine("=== Write to pdf file =====================");
             string testFilePath = Path.GetFullPath("../../../TestDocuments/Barcodes/Blank.pdf");
-            Document doc = new(testFilePath);
+            Document doc = new Document(testFilePath);
             Page page = doc[0];
 
             MuPDF.NET.TextWriter writer = new MuPDF.NET.TextWriter(page.Rect);
-            Font font = new Font("kenpixel", "../../../kenpixel.ttf", isBold: 1);
+            Font font = new Font("cour", isBold: 1);
             writer.FillTextbox(page.Rect, "QR_CODE", font, pos: new Point(0, 10));
             writer.FillTextbox(page.Rect, "EAN_8", font, pos: new Point(0, 110));
             writer.FillTextbox(page.Rect, "EAN_13", font, pos: new Point(0, 165));
