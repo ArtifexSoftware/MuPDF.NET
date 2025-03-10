@@ -1,6 +1,9 @@
 ﻿using mupdf;
-using System.Formats.Tar;
-using System.IO.Compression;
+using ICSharpCode.SharpZipLib.Zip;
+using ICSharpCode.SharpZipLib.Tar;
+using System.Collections.Generic;
+using System.IO;
+using System;
 
 namespace MuPDF.NET
 {
@@ -127,16 +130,16 @@ namespace MuPDF.NET
         /// </summary>
         /// <param name="content">The fully qualified name of the entry.</param>
         /// <param name="path"></param>
-        public void Add(ZipArchive content, string path = null)
+        public void Add(ZipFile content, string path = null)
         {
             string fmt = "zip";
             if (!File.Exists(path))
                 throw new Exception("Need name for zip file");
             string filename = Path.GetFileName(path);
             List<string> entries = new List<string>();
-            foreach (ZipArchiveEntry e in content.Entries)
+            foreach (ZipEntry e in content)
             {
-                entries.Add(e.FullName);
+                entries.Add(e.Name);
             }
 
             if (string.IsNullOrEmpty(filename))
@@ -150,7 +153,7 @@ namespace MuPDF.NET
             MakeSubArch(fmt, entries, path);
         }
 
-        public void Add(TarReader content, string path = null)
+        public void Add(TarInputStream content, string path = null)
         {
             string fmt = "tar";
             if (!File.Exists(path))
@@ -159,7 +162,7 @@ namespace MuPDF.NET
             string filename = Path.GetFileName(path);
             List<string> entries = new List<string>();
             TarEntry entry;
-            while ((entry = content.GetNextEntry(true)) != null)
+            while ((entry = content.GetNextEntry()) != null)
             {
                 entries.Add(entry.Name);
             }

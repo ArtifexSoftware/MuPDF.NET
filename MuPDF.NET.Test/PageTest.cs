@@ -1,6 +1,7 @@
 namespace MuPDF.NET.Test;
 using MuPDF.NET;
-using System.IO.Compression;
+using ICSharpCode.SharpZipLib.Zip;
+using ICSharpCode.SharpZipLib.Tar;
 using static System.Net.Mime.MediaTypeNames;
 
 public class PageTest : PdfTestBase
@@ -185,7 +186,7 @@ public class PageTest : PdfTestBase
 
         Archive archive = new Archive();
         FileStream st = new FileStream("../../../resources/kenpixel.zip", FileMode.Open);
-        ZipArchive css = new ZipArchive(st, ZipArchiveMode.Read);
+        ZipFile css = new ZipFile(st);
         archive.Add(css, "../../../resources/kenpixel.zip");
 
         page.InsertHtmlBox(new Rect(100, 100, 300, 300), "<h1 style=\"font-family:kenpixel\">hello</h1>", css: "@font-face {font-family: kenpixel; src: url(./kenpixel.ttf)}", scaleLow: 1, archive: archive);

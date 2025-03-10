@@ -1,4 +1,6 @@
 ﻿using mupdf;
+using System;
+using System.Collections.Generic;
 using static System.Net.Mime.MediaTypeNames;
 
 namespace MuPDF.NET
@@ -255,9 +257,18 @@ namespace MuPDF.NET
             return X == obj.X && Y == obj.Y;
         }
 
+        public static int CombineHashes(int hash1, int hash2)
+        {
+            int hash = 17; // A prime number as seed
+            hash = hash * 31 + hash1; // Multiply by prime and add first hash
+            hash = hash * 31 + hash2; // Multiply by prime and add second hash
+            return hash;
+        }
+
         public override int GetHashCode()
         {
-            return HashCode.Combine(X, Y);
+            //return HashCode.Combine(X, Y);
+            return CombineHashes(X.GetHashCode(), Y.GetHashCode());
         }
     }
 }

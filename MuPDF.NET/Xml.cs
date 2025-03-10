@@ -1,4 +1,6 @@
-﻿using System.Runtime.InteropServices;
+﻿using System;
+using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using System.Text;
 using mupdf;
 
@@ -152,8 +154,8 @@ namespace MuPDF.NET
                     continue;
                 }
                 items.Add((shift, $"\"{node.TagName}\""));
-                foreach ((string k, string v) in node.GetAttributes())
-                    items.Add((shift, $"={k} \"{v}\""));
+                foreach (var attr in node.GetAttributes())
+                    items.Add((shift, $"={attr.Key} \"{attr.Value}\""));
                 Xml child = node.FirstChild;
                 if (child != null)
                 {
@@ -325,7 +327,8 @@ namespace MuPDF.NET
             string tagName = TagName;
             string newTag = $"h{level}";
             Xml child = CreateElement(newTag);
-            if (!(new[] { "h1", "h2", "h3", "h4", "h5", "h6" }).Contains(tagName))
+            //if (!(new[] { "h1", "h2", "h3", "h4", "h5", "h6" }).Contains(tagName))
+            if (!(new List<string> { "h1", "h2", "h3", "h4", "h5", "h6" }).Contains(tagName))
             {
                 AppendChild(child);
                 return child;
@@ -510,7 +513,7 @@ namespace MuPDF.NET
         /// <returns></returns>
         public Xml AddText(string text)
         {
-            string[] lines = text.Split("\n");
+            string[] lines = text.Split('\n');
             int lineCount = lines.Length;
             Xml prev = SpanBottom();
             if (prev == null)
@@ -636,7 +639,7 @@ namespace MuPDF.NET
 
         public Xml InsertText(string text)
         {
-            string[] lines = text.Split("\n");
+            string[] lines = text.Split('\n');
             int lineCount = lines.Length;
 
             for (int i = 0; i < lineCount; i++)

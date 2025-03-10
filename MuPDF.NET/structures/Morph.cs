@@ -1,4 +1,6 @@
-﻿namespace MuPDF.NET
+﻿using System;
+
+namespace MuPDF.NET
 {
     public class Morph
     {
