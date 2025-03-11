@@ -2588,8 +2588,20 @@ namespace MuPDF.NET
                     PdfObj qConts = pdfpage.doc().pdf_add_stream(Utils.BufferFromBytes(Encoding.UTF8.GetBytes("q\n")), new PdfObj(), 0);
                     PdfObj QConts = pdfpage.doc().pdf_add_stream(Utils.BufferFromBytes(Encoding.UTF8.GetBytes("\nQ")), new PdfObj(), 0);
                     PdfObj contents = pdfpage.obj().pdf_dict_get(new PdfObj("Contents"));
-                    contents.pdf_array_insert(qConts, 0);
-                    contents.pdf_array_push(QConts);
+                    if (contents.pdf_is_array() != 0)
+                    {
+                        contents.pdf_array_insert(qConts, 0);
+                        contents.pdf_array_push(QConts);
+                    }
+                    else
+                    {
+                        PdfObj carr = pdfpage.doc().pdf_new_array(5);
+                        if (contents.m_internal != null)
+                            carr.pdf_array_push(contents);
+                        carr.pdf_array_insert(qConts, 0);
+                        carr.pdf_array_push(QConts);
+                        pdfpage.obj().pdf_dict_put(new PdfObj("Contents"), carr);
+                    }
                     page.WasWrapped = true;
                 }
             }
