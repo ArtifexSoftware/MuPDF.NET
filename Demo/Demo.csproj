@@ -8,9 +8,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="Program.cs~RF12e10cb.TMP" />
+    <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
-
+  
   <ItemGroup>
     <ProjectReference Include="..\MuPDF.NET\MuPDF.NET.csproj" />
   </ItemGroup>

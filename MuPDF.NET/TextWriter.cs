@@ -360,7 +360,7 @@ namespace MuPDF.NET
             float fontSize = 11,
             float lineHeight = 0,
             int align = 0,
-            bool warn = false,
+            bool warn = true,
             bool rtl = false,
             bool smallCaps = false)
         {
@@ -389,12 +389,12 @@ namespace MuPDF.NET
             float stdWidth = rect.Width - tolerance;
             float stdStart = rect.X0 + tolerance;
 
-            (List<string>, List<float>) NormWords(float _width, List<string> words)
+            (List<string>, List<float>) NormWords(float _width, List<string> _words)
             {
                 List<string> nwords = new List<string>();
                 List<float> wordLengths = new List<float>();
 
-                foreach (string word in words)
+                foreach (string word in _words)
                 {
                     List<float> charLengths = CharLengths(word);
                     float wl = charLengths.Sum(x => x);
@@ -406,14 +406,15 @@ namespace MuPDF.NET
                     }
 
                     int n = charLengths.Count;
+                    string word_ = word;
                     while (n > 0)
                     {
                         wl = charLengths.Take(n).Sum(x => x);
                         if (wl <= _width)
                         {
-                            nwords.Add(word.Substring(0, n));
+                            nwords.Add(word_.Substring(0, n));
                             wordLengths.Add(wl);
-                            string word_ = word.Substring(n);
+                            word_ = word_.Substring(n);
                             charLengths = charLengths.Skip(n).ToList();
                             n = charLengths.Count;
                         }
@@ -465,7 +466,11 @@ namespace MuPDF.NET
             if (pos == null)
                 pos = rect.TopLeft + new Point(tolerance, fontSize * asc);
             if (!(rect.IncludePoint(pos).EqualTo(rect)))
-                throw new Exception("Text must start in rectangle");
+            {
+                List<(string, float)> retLines = new List<(string, float)>();
+                retLines.Add((text, TextLen(text)));
+                return retLines;
+            }
 
             float factor = 0;
             if (align == (int)TextAlign.TEXT_ALIGN_CENTER)
@@ -474,7 +479,7 @@ namespace MuPDF.NET
                 factor = 1.0f;
 
             string[] textLines = text.Split('\n');
-            int maxLines = Convert.ToInt32((rect.Y1 - pos.Y) / LineHeight) + 1;
+            int maxLines = (int)((rect.Y1 - pos.Y) / LineHeight) + 1;
 
             List<(string, float)> newLines = new List<(string, float)>();
             List<int> noJustify = new List<int>();
@@ -511,19 +516,24 @@ namespace MuPDF.NET
                 (List<string> words_, List<float> wordLengths_) = NormWords(stdWidth, new List<string>(words));
 
                 int n = words_.Count;
-                while (true)
+                while (n > 0)
                 {
                     string line0 = string.Join(" ", words_.Take(n).ToArray());
-                    float wl = wordLengths_.Take(n).Sum() + spaceLen * (wordLengths_.Count - 1);
+                    float wl = wordLengths_.Take(n).Sum() + spaceLen * (n - 1);
                     if (wl <= width)
                     {
                         newLines.Add((line0, wl));
-                        words_ = words_.Take(n).ToList();
-                        wordLengths_ = wordLengths_.Take(n).ToList();
+                        //words_ = words_.Take(n).ToList();
+                        words_.RemoveRange(0, n);
+                        //wordLengths_ = wordLengths_.Take(n).ToList();
+                        wordLengths_.RemoveRange(0, n);
                         n = words_.Count;
                         line0 = null;
                     }
-                    else n -= 1;
+                    else
+                    {
+                        n -= 1;
+                    }
 
                     if (words_.Count == 0)
                     {
