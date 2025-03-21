@@ -17,6 +17,7 @@ using MuPDF.NET;
 using Newtonsoft.Json;
 using SkiaSharp;
 using ZXing;
+using static System.Net.Mime.MediaTypeNames;
 using static MuPDF.NET.Global;
 
 namespace MuPDF.NET
@@ -1802,14 +1803,20 @@ namespace MuPDF.NET
         /// <param name="text">Contents to write</param>
         /// <param name="barcodeFormat">Format to encode; Supported formats: QR_CODE, EAN_8, EAN_13, UPC_A, CODE_39, CODE_128, ITF, PDF_417, CODABAR</param>
         /// <param name="characterSet">Use a specific character set for binary encoding (if supported by the selected barcode format)</param>
-        /// <param name="disableEci">don't generate ECI segment if non-default character set is used</param>
+        /// <param name="disableEci">Don't generate ECI segment if non-default character set is used</param>
+        /// <param name="forceFitToRect">Resize output barcode image width/height into clip region</param>
+        /// <param name="pureBarcode">Don't put the content string into the output image</param>
+        /// <param name="margin">Specifies margin, in pixels, to use when generating the barcode</param>
         public static void WriteBarcode(
             Page page,
             Rect clip,
             string text,
             BarcodeFormat barcodeFormat,
             string characterSet = null,
-            bool disableEci = false
+            bool disableEci = false,
+            bool forceFitToRect = false,
+            bool pureBarcode = false,
+            int margin = 1
             )
         {
             if (clip == null)
@@ -1830,40 +1837,41 @@ namespace MuPDF.NET
             var encodeObject = new Encode();
 
             // create barcode image
-            SKBitmap bitmap = encodeObject.encode(text,
+            SKBitmap encodedImage = encodeObject.encode(text,
                 barcodeFormat,
                 imageFormat,
                 width,
                 height,
                 characterSet,
-                disableEci);
+                disableEci,
+                pureBarcode,
+                margin);
 
-            if (bitmap == null)
+            if (encodedImage == null)
             {
                 throw new Exception("Failed to create barcode image");
             }
 
-            // Generate a highly unique file name
-            string tmpImageFilePath = System.IO.Path.Combine(System.IO.Path.GetTempPath(),
-                DateTime.Now.ToString("yyyyMMddHHmmssfff") + "_" +
-                Guid.NewGuid().ToString() + "_encode_" +
-                new Random().Next(1000, 9999) + ".jpg");
-
-            // save image to file
-            using (var image = SKImage.FromBitmap(bitmap))
+            // resize image to fit into clip region
+            if (forceFitToRect)
             {
-                using (var data = image.Encode(imageFormat, 200))
+                SKBitmap resizedBitmap = new SKBitmap(width, height);
+                using (SKCanvas canvas = new SKCanvas(resizedBitmap))
                 {
-                    using (var stream = File.OpenWrite(tmpImageFilePath))
-                    {
-                        data.SaveTo(stream);
-                    }
+                    canvas.DrawBitmap(encodedImage, new SKRect(0, 0, width, height));
                 }
+                encodedImage = resizedBitmap;
             }
+            
+            Rect rect = new Rect(clip.X0, clip.Y0, clip.X0 + encodedImage.Width + 1, clip.Y0 + encodedImage.Height+1);
 
-            page.InsertImage(clip, tmpImageFilePath);
-
-            File.Delete(tmpImageFilePath);
+            MemoryStream ms = new MemoryStream();
+            using (SKData data = encodedImage.Encode(SKEncodedImageFormat.Png, 300))
+            {
+                data.SaveTo(ms);
+                ms.Position = 0; // Reset stream position
+                page.InsertImage(rect, stream: ms.ToArray());
+            }
         }
 
         /// <summary>
@@ -1876,6 +1884,9 @@ namespace MuPDF.NET
         /// <param name="height">height of image</param>
         /// <param name="characterSet">Use a specific character set for binary encoding (if supported by the selected barcode format)</param>
         /// <param name="disableEci">don't generate ECI segment if non-default character set is used</param>
+        /// <param name="forceFitToRect">Resize output barcode image width/height with params</param>
+        /// <param name="pureBarcode">Don't put the content string into the output image</param>
+        /// <param name="margin">Specifies margin, in pixels, to use when generating the barcode</param>
         public static void WriteBarcode(
             string imageFile,
             string text,
@@ -1883,7 +1894,10 @@ namespace MuPDF.NET
             int width = 300,
             int height = 300,
             string characterSet = null,
-            bool disableEci = false
+            bool disableEci = false,
+            bool forceFitToRect = false,
+            bool pureBarcode = false,
+            int margin = 1
             )
         {
             // get image format from file extension
@@ -1918,23 +1932,37 @@ namespace MuPDF.NET
             var encodeObject = new Encode();
 
             // create barcode image
-            SKBitmap bitmap = encodeObject.encode(text,
+            SKBitmap encodedImage = encodeObject.encode(text,
                 barcodeFormat,
                 imageFormat,
                 width,
                 height,
                 characterSet,
-                disableEci);
+                disableEci,
+                pureBarcode,
+                margin
+                );
 
-            if (bitmap == null)
+            if (encodedImage == null)
             {
                 throw new Exception("Failed to create barcode image");
             }
 
-            // save image to file
-            using (var image = SKImage.FromBitmap(bitmap))
+            // resize image to fit into clip region
+            if (forceFitToRect)
             {
-                using (var data = image.Encode(imageFormat, 200))
+                SKBitmap resizedBitmap = new SKBitmap(width, height);
+                using (SKCanvas canvas = new SKCanvas(resizedBitmap))
+                {
+                    canvas.DrawBitmap(encodedImage, new SKRect(0, 0, width, height));
+                }
+                encodedImage = resizedBitmap;
+            }
+
+            // save image to file
+            using (var image = SKImage.FromBitmap(encodedImage))
+            {
+                using (var data = image.Encode(imageFormat, 300))
                 {
                     using (var stream = File.OpenWrite(imageFile))
                     {
@@ -2023,6 +2051,8 @@ namespace MuPDF.NET
                 t = tp.ExtractXML();
             else if (option == "xhtml")
                 t = tp.ExtractText(sort);
+            else
+                t = tp.ExtractText();
 
             if (stPage == null)
                 tp = null;
@@ -4607,6 +4637,23 @@ namespace MuPDF.NET
                 int gid = mupdf.mupdf.fz_encode_character_sc(userFont.ToFzFont(), outparams.rune);
                 if (gid == 0)
                 {
+                    using (FzFont _font = new FzFont())
+                    {
+                        int _gid = userFont.ToFzFont().fz_encode_character_with_fallback(outparams.rune, 0, (int)langauge, _font);
+                        mupdf.mupdf.fz_show_glyph(
+                            text,
+                            _font,
+                            trm,
+                            _gid,
+                            outparams.rune,
+                            wmode,
+                            bidi_level,
+                            markupDir,
+                            langauge
+                        );
+                        adv = mupdf.mupdf.fz_advance_glyph(_font, _gid, wmode);
+                    }
+                    /*
                     (gid, font) = userFont
                         .ToFzFont()
                         .fz_encode_character_with_fallback(outparams.rune, 0, (int)langauge);
@@ -4622,7 +4669,7 @@ namespace MuPDF.NET
                         langauge
                     );
                     adv = mupdf.mupdf.fz_advance_glyph(font, gid, wmode);
-                    font.Dispose();
+                    */
                 }
                 else
                 {
@@ -5741,6 +5788,8 @@ namespace MuPDF.NET
         public static byte[] GetAllContents(Page page)
         {
             FzBuffer res = Utils.ReadContents(page.GetPdfPage().obj());
+            if (res == null)
+                return null;
             return Utils.BinFromBuffer(res);
         }
 

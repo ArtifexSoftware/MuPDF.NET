@@ -5,6 +5,7 @@ using ZXing.Common;
 using System.Collections.Generic;
 using System;
 using System.IO;
+using ZXing.Datamatrix.Encoder;
 
 namespace MuPDF.NET
 {
@@ -170,7 +171,9 @@ namespace MuPDF.NET
             int width = 300,
             int height = 300,
             string characterSet = null,
-            bool disableEci = false
+            bool disableEci = false,
+            bool pureBarcode = false,
+            int margin = 1
             )
         {
             if (contents == null)
@@ -180,13 +183,21 @@ namespace MuPDF.NET
 
             var barcodeWriter = new ZXing.SkiaSharp.BarcodeWriter
             {
-                Format = (ZXing.BarcodeFormat)barcodeFormat,
-                Options = new EncodingOptions
-                {
-                    Height = height,
-                    Width = width
-                }
+                Format = (ZXing.BarcodeFormat)barcodeFormat
             };
+            barcodeWriter.Options.Hints[EncodeHintType.WIDTH] = width;
+            barcodeWriter.Options.Hints[EncodeHintType.HEIGHT] = height;
+            barcodeWriter.Options.Hints[EncodeHintType.MARGIN] = margin;
+            barcodeWriter.Options.Hints[EncodeHintType.NO_PADDING] = true;
+            barcodeWriter.Options.Hints[EncodeHintType.PURE_BARCODE] = pureBarcode;
+            if (barcodeFormat == BarcodeFormat.DATA_MATRIX)
+            {
+                if (width == height)
+                {
+                    barcodeWriter.Options.Hints[EncodeHintType.DATA_MATRIX_SHAPE] = SymbolShapeHint.FORCE_SQUARE;
+                }
+            }
+            
             if (characterSet != null)
             {
                 barcodeWriter.Options.Hints[EncodeHintType.CHARACTER_SET] = characterSet;

@@ -70,7 +70,7 @@ namespace MuPDF.NET
                         return true;
 
                     byte[] cont = ReadContents();
-                    if (cont.Length == 0)
+                    if (cont == null || cont.Length == 0)
                     {
                         WasWrapped = true;
                         return true;
@@ -4128,16 +4128,22 @@ namespace MuPDF.NET
         /// <param name="barcodeFormat">Format to encode; Supported formats: QR_CODE, EAN_8, EAN_13, UPC_A, CODE_39, CODE_128, ITF, PDF_417, CODABAR</param>
         /// <param name="characterSet">Use a specific character set for binary encoding (if supported by the selected barcode format)</param>
         /// <param name="disableEci">don't generate ECI segment if non-default character set is used</param>
+        /// <param name="forceFitToRect">Resize output barcode image width/height with params</param>
+        /// <param name="pureBarcode">Don't put the content string into the output image</param>
+        /// <param name="margin">Specifies margin, in pixels, to use when generating the barcode</param>
         public void WriteBarcode(
             Rect clip,
             string text,
             BarcodeFormat barcodeFormat,
             string characterSet = null,
-            bool disableEci = false
+            bool disableEci = false,
+            bool forceFitToRect = false,
+            bool pureBarcode = false,
+            int margin = 1
             )
         {
             Utils.WriteBarcode(this, clip,
-                text, barcodeFormat, characterSet, disableEci);
+                text, barcodeFormat, characterSet, disableEci, forceFitToRect, pureBarcode, margin);
         }
 
         /// <summary>
