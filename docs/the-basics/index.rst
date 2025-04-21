@@ -1159,7 +1159,7 @@ Working with Barcodes
 Reading Barcodes
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-To read barcodes from a page define the area you wish to check for and use the `ReadBarcodes` menthod as follows:
+To read barcodes from a page define the area you wish to check for and use the `ReadBarcodes` method as follows:
 
 .. code-block:: cs
 
