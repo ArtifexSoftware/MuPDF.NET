@@ -4066,13 +4066,13 @@ namespace MuPDF.NET
         /// <param name="flags">indicator bits to control whether to include images or how text should be handled with respect to white spaces and ligatures.</param>
         /// <param name="tolerance">neighborhood threshold.</param>
         /// <returns></returns>
-        public string GetStructuredText(
+        public string GetTextWithLayout(
             Rect clip = null, 
             int flags = 0, 
             int tolerance = 5
         )
         {
-            return Utils.GetStructuredText(this, clip, flags, tolerance);
+            return Utils.GetTextWithLayout(this, clip, flags, tolerance);
         }
 
         /// <summary>

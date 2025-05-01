@@ -7753,7 +7753,7 @@ namespace MuPDF.NET
             return false;
         }
 
-        public static string GetStructuredText(Page page, Rect clip = null, int flags = 0, int tolerance = 5)
+        public static string GetTextWithLayout(Page page, Rect clip = null, int flags = 0, int tolerance = 5)
         {
             string LineText(Rect _clip, List<(Rect, string)> _line, int _tolerance)
             {
