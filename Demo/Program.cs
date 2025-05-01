@@ -17,6 +17,7 @@ namespace Demo
             TestReadBarcode(args);
             TestWriteBarcode(args);
             TestHelloWorldToExistingDocument(args);
+            TestExtractStructureText(args);
         }
 
         static void TestHelloWorldToNewDocument(string[] args)
@@ -197,6 +198,32 @@ namespace Demo
             Utils.WriteBarcode("DATA_MATRIX.png", "01100000110419257000", BarcodeFormat.DATA_MATRIX, width: 300, height: 300, forceFitToRect: false, pureBarcode: true, margin: 1);
 
             Console.WriteLine("Done");
+        }
+
+        static void TestExtractStructureText(string[] args)
+        {
+            Console.WriteLine("=== Extract structure text =====================");
+            string testFilePath = Path.GetFullPath("../../../TestDocuments/columns.pdf");
+            Document doc = new Document(testFilePath);
+
+            FileStream wstream = File.Create("columns.txt");
+
+            for (int i = 0; i < 1/*doc.PageCount*/; i++)
+            {
+                Page page = doc[i];
+                string structuredText = page.GetStructuredText(tolerance: 3);
+                if (!string.IsNullOrEmpty(structuredText))
+                {
+                    byte[] bytes = Encoding.UTF8.GetBytes(structuredText);
+                    wstream.Write(bytes, 0, bytes.Length);
+                }
+            }
+
+            wstream.Close();
+
+            doc.Close();
+
+            Console.WriteLine("Created columns.txt file");
         }
     }
 }

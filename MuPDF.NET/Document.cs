@@ -3706,9 +3706,10 @@ namespace MuPDF.NET
             {
                 res = null;
                 img = pdf.pdf_load_image(obj);
-                fz_compressed_buffer llCbuf = mupdf.mupdf.ll_fz_compressed_image_buffer(
-                    img.m_internal
-                );
+                //fz_compressed_buffer llCbuf = mupdf.mupdf.ll_fz_compressed_image_buffer(
+                //    img.m_internal
+                //);
+                fz_compressed_buffer llCbuf = img.fz_compressed_image_buffer().m_internal;
                 if (
                     llCbuf != null
                     && !(
