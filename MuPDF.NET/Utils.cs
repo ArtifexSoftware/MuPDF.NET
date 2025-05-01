@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
+using System.Drawing;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
@@ -10,6 +11,7 @@ using System.Net.NetworkInformation;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using Microsoft.VisualBasic;
 using mupdf;
@@ -1435,7 +1437,7 @@ namespace MuPDF.NET
                 List<WordBlock> line = new List<WordBlock>() { _words[0] };
                 Rect lrect = new Rect(_words[0].X0, _words[0].Y0, _words[0].X1, _words[0].Y1);
 
-                foreach (WordBlock w in _words.Skip(0))
+                foreach (WordBlock w in _words.Skip(1))
                 {
                     Rect wrect = new Rect(w.X0, w.Y0, w.X1, w.Y1);
                     if (Math.Abs(wrect.Y0 - lrect.Y0) <= tolerance || Math.Abs(wrect.Y1 - lrect.Y1) <= tolerance)
@@ -2005,6 +2007,13 @@ namespace MuPDF.NET
                     TextFlags.TEXT_PRESERVE_WHITESPACE
                     | TextFlags.TEXT_PRESERVE_LIGATURES
                     | TextFlags.TEXT_MEDIABOX_CLIP
+                    | TextFlags.TEXT_PRESERVE_IMAGES
+                    | TextFlags.TEXT_INHIBIT_SPACES
+                    | TextFlags.TEXT_DEHYPHENATE
+                    | TextFlags.TEXT_PRESERVE_SPANS
+                    | TextFlags.TEXT_CID_FOR_UNKNOWN_UNICODE
+                    | TextFlags.TEXT_COLLECT_STRUCTURE
+                    | TextFlags.TEXT_ACCURATE_BBOXES
                 );
                 if (formats[option] == 1)
                     flags = flags | (int)TextFlags.TEXT_PRESERVE_IMAGES;
@@ -3048,7 +3057,14 @@ namespace MuPDF.NET
         /// <returns></returns>
         public static string DecodeRawUnicodeEscape(string s)
         {
-            return System.Text.RegularExpressions.Regex.Unescape(s);
+            try
+            {
+                return System.Text.RegularExpressions.Regex.Unescape(s);
+            }
+            catch (Exception)
+            {
+                return s;
+            }
         }
 
         /// <summary>
@@ -7672,7 +7688,7 @@ namespace MuPDF.NET
 
             foreach ((Rect wr, string text) in words.Skip(1))
             {
-                (Rect w0r, string _) = line[-1];
+                (Rect w0r, string _) = line[line.Count-1];
 
                 if (Math.Abs(lrect.Y0 - wr.Y0) < tolerance || Math.Abs(lrect.Y1 - wr.Y1) <= tolerance)
                 {
@@ -7705,6 +7721,314 @@ namespace MuPDF.NET
             }
 
             return ret;
+        }
+
+        static bool IsRtl(string text)
+        {
+            foreach (char c in text)
+            {
+                if (char.IsWhiteSpace(c) || char.IsPunctuation(c))
+                    continue;
+
+                var direction = CharUnicodeInfo.GetUnicodeCategory(c);
+                if (direction == UnicodeCategory.OtherLetter || 
+                    direction == UnicodeCategory.LetterNumber || 
+                    direction == UnicodeCategory.LowercaseLetter || 
+                    direction == UnicodeCategory.UppercaseLetter)
+                {
+                    // Check if it's Hebrew, Arabic, or other RTL scripts
+                    if ((c >= '\u0590' && c <= '\u08FF') || // Hebrew, Arabic ranges
+                        (c >= '\uFB1D' && c <= '\uFEFC'))   // Hebrew presentation forms, Arabic presentation forms
+                    {
+                        return true; // RTL
+                    }
+                    else
+                    {
+                        return false; // LTR
+                    }
+                }
+            }
+
+            // Default: assume LTR if no strong character found
+            return false;
+        }
+
+        public static string GetTextWithLayout(Page page, Rect clip = null, int flags = 0, int tolerance = 5)
+        {
+            string LineText(Rect _clip, List<(Rect, string)> _line, int _tolerance)
+            {
+                _line.Sort((l1, l2) =>
+                {
+                    return (int)((l1.Item1.X0 - l2.Item1.X0) * 10);
+                });
+                string _ltext = "";
+                Rect _prevRect = Utils.EMPTY_RECT();
+
+                string LRM = "\u200E"; // Left-to-Right Mark
+                string RLM = "\u200F"; // Right-to-Left Mark
+                bool prevIsRLM = false;
+
+                foreach ((Rect r, string t) in _line)
+                {
+                    int spaceCount = 0;
+                    if (_prevRect.IsEmpty == true)
+                        spaceCount = (int)Math.Max(0, (r.X0) / _tolerance);
+                    else
+                    {
+                        float dist = r.X0 - _prevRect.X1;
+                        spaceCount = (int)Math.Max(0, dist / _tolerance);
+                        if (spaceCount > 1)
+                            spaceCount = (int)(r.X0) / _tolerance - _ltext.Length;
+                        else if (dist > 1)
+                            spaceCount = 1;
+                    }
+                    if (spaceCount < 0)
+                    {
+                        spaceCount = 0;
+                    }
+                    _prevRect = r;
+                    _ltext += new string(' ', spaceCount);
+                    if (Utils.IsRtl(t))
+                    {
+                        if (!prevIsRLM)
+                            _ltext += RLM;
+                        else
+                            _ltext += LRM;
+                        prevIsRLM = true;
+                    }
+                    else
+                    {
+                        if (prevIsRLM)
+                            _ltext += LRM;
+                        prevIsRLM = false;
+                    }
+
+
+                    // Replace all groups of 1 or more spaces with a thin space
+                    string t1 = t.Replace("     ", " ");
+                    _ltext += t1;
+                }
+
+                return _ltext;
+            }
+
+            // check parameters
+            if (flags == 0)
+            {
+                flags = (int)(
+                    TextFlags.TEXT_PRESERVE_WHITESPACE
+                    | TextFlags.TEXT_PRESERVE_LIGATURES
+                    | TextFlags.TEXT_MEDIABOX_CLIP
+                    //| TextFlags.TEXT_PRESERVE_IMAGES
+                    | TextFlags.TEXT_INHIBIT_SPACES
+                    //| TextFlags.TEXT_DEHYPHENATE
+                    | TextFlags.TEXT_PRESERVE_SPANS
+                    | TextFlags.TEXT_CID_FOR_UNKNOWN_UNICODE
+                    | TextFlags.TEXT_ACCURATE_BBOXES
+                );
+            }
+            if (clip == null)
+                clip = page.Rect;
+            if (tolerance <= 0)
+                tolerance = 5;
+
+            List<(Rect, string)>[] words = new List<(Rect, string)>[2];
+            words[0] = new List<(Rect, string)>();
+            words[1] = new List<(Rect, string)>();
+
+            foreach (Block block in page.GetText("dict", clip:clip, flags: flags, sort:true).Blocks)
+            {
+                if (block.Lines != null)
+                {
+                    foreach (Line _line in block.Lines)
+                    {
+                        if (_line == null)
+                            continue;
+                        foreach (Span span in _line.Spans)
+                        {
+                            // horizontal
+                            Rect spanRect = new Rect(span.Bbox.X0, span.Bbox.Y0, span.Bbox.X1, span.Bbox.Y1);
+                            if (page.Rotation != 0)
+                                spanRect = spanRect.Transform(page.RotationMatrix);
+                            if (_line.Dir.Y == 0)
+                                words[0].Add((spanRect, span.Text));
+                            else
+                                words[1].Add((spanRect, span.Text));
+                        }
+                    }
+                }
+            }
+
+            // sort again.
+            words[0].Sort((w1, w2) =>
+            {
+                if (Utils.IsSameLine(w1.Item1, w2.Item1))
+                {
+                    return w1.Item1.X0.CompareTo(w2.Item1.X0);
+                }
+                else
+                {
+                    float center1 = (w1.Item1.Y0 + w1.Item1.Y1) / 2;
+                    float center2 = (w2.Item1.Y0 + w2.Item1.Y1) / 2;
+
+                    return center1.CompareTo(center2);
+                }
+            });
+            words[1].Sort((w1, w2) =>
+            {
+                if (Utils.IsSameLine(w1.Item1, w2.Item1))
+                {
+                    return w1.Item1.X0.CompareTo(w2.Item1.X0);
+                }
+                else
+                {
+                    float center1 = (w1.Item1.Y0 + w1.Item1.Y1) / 2;
+                    float center2 = (w2.Item1.Y0 + w2.Item1.Y1) / 2;
+
+                    return center1.CompareTo(center2);
+                }
+            });
+
+            string ret = "";
+            for (int i = 0; i < 2; i++)
+            {
+                ret += "\n";
+                if (words[i].Count == 0)
+                {
+                    continue;
+                }
+                Rect totalBox = Utils.EMPTY_RECT();
+                foreach ((Rect wr, string text) in words[i])
+                    totalBox = totalBox | wr;
+
+                List<(Rect, string)> lines = new List<(Rect, string)>();
+                List<(Rect, string)> line = new List<(Rect, string)>() { words[i][0] };
+                Rect lrect = new Rect(words[i][0].Item1);
+                string ltext = "";
+
+                foreach ((Rect wr, string text) in words[i].Skip(1))
+                {
+                    (Rect w0r, string _) = line[line.Count - 1];
+
+                    if (w0r.EqualTo(wr))
+                    {
+                        continue;
+                    }
+
+                    if (w0r.X0 < wr.X0 && Utils.IsSameLine(w0r, wr))
+                    {
+                        line.Add((wr, text));
+                        lrect |= wr;
+                    }
+                    else
+                    {
+                        ltext = LineText(totalBox, line, tolerance);
+                        lines.Add((lrect, ltext));
+                        line = new List<(Rect, string)>() { (wr, text) };
+                        lrect = new Rect(wr);
+                    }
+                }
+
+                ltext = LineText(totalBox, line, tolerance);
+                lines.Add((lrect, ltext));
+
+                lines.Sort((l1, l2) => { return (int)((l1.Item1.Y1 - l2.Item1.Y1) * 10); });
+
+                ret += lines[0].Item2;
+                float x0 = lines[0].Item1.X0;
+                float y1 = lines[0].Item1.Y1;
+
+                foreach ((Rect lr, string lt) in lines.Skip(1))
+                {
+                    int distance = Math.Min((int)(Math.Round((lr.Y0 - y1) / lr.Height)), tolerance);
+                    if (distance < 0)
+                    {
+                        distance = 0;
+                    }
+                    string breaks = new String('\n', distance + 1);
+                    ret += breaks + lt;
+                    x0 = lr.X0;
+                    y1 = lr.Y1;
+                }
+            }
+
+            return ret;
+        }
+
+        public static bool IsSameLine(Rect rect0, Rect rect1, float tolerance = 5.0f)
+        {
+            if (rect0.IsEmpty || rect1.IsEmpty)
+                return false;
+
+            if (rect0.Y0 <= rect1.Y0)
+            {
+                if (rect0.Y1 <= rect1.Y0)
+                {
+                    return false;
+                }
+                else
+                {
+                    if (rect0.Y1 >= rect1.Y1)
+                        return true;
+                    else
+                    {
+                        float overlappedHeight = rect0.Y1 - rect1.Y0;
+                        if (overlappedHeight < rect1.Height / 2)
+                            return false;
+                        else
+                            return true;
+                    }
+                }
+            }
+            else
+            {
+                if (rect1.Y1 <= rect0.Y0)
+                {
+                    return false;
+                }
+                else
+                {
+                    if (rect1.Y1 >= rect0.Y1)
+                        return true;
+                    else
+                    {
+                        float overlappedHeight = rect1.Y1 - rect0.Y0;
+                        if (overlappedHeight < rect1.Height / 2)
+                            return false;
+                        else
+                            return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        public static int GetBlankLines(Rect rect0, Rect rect1)
+        {
+            float distanceBetweenRect = 0f;
+            float minLineHeight = Math.Min(rect0.Height, rect1.Height);
+
+            if (rect0.Y1 < rect1.Y0)
+                distanceBetweenRect = rect1.Y0 - rect0.Y1;
+            else if (rect1.Y1 < rect0.Y0)
+                distanceBetweenRect = rect0.Y0 - rect1.Y1;
+
+            if (minLineHeight > 0f)
+                return (int)(distanceBetweenRect/minLineHeight);
+
+            return 0;
+        }
+
+        public static bool IsHorizontalNeighbors(Rect rect0, Rect rect1, float yTolerance = 5.0f, float xGapTolerance = 10.0f)
+        {
+            // Check if they're on the same line (vertically aligned)
+            bool sameLine = IsSameLine(rect0, rect1, yTolerance);
+
+            // Check if they are next to each other (b is to the right of a, or vice versa)
+            bool aBeforeB = rect0.X1 <= rect1.X0 && (rect1.X0 - rect0.X1) < xGapTolerance;
+            bool bBeforeA = rect1.X1 <= rect0.X0 && (rect0.X0 - rect1.X1) < xGapTolerance;
+
+            return sameLine && (aBeforeB || bBeforeA);
         }
     }
 

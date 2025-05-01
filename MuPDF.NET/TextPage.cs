@@ -1079,12 +1079,19 @@ namespace MuPDF.NET
                     int h = image.h();
                     int type = (int)ImageType.FZ_IMAGE_UNKNOWN;
 
+                    FzCompressedBuffer compressedBuffer = image.fz_compressed_image_buffer();
+                    /* // this caused a crash
                     FzCompressedBuffer compressedBuffer = new FzCompressedBuffer(
                         mupdf.mupdf.ll_fz_compressed_image_buffer(image.m_internal)
                     );
-                    if (compressedBuffer != null)
+                    */
+                    if (compressedBuffer != null && compressedBuffer.m_internal != null)
                     {
                         type = compressedBuffer.m_internal.params_.type;
+                    }
+                    else
+                    {
+                        continue;
                     }
 
                     if (type < (int)ImageType.FZ_IMAGE_BMP || type == (int)ImageType.FZ_IMAGE_JBIG2)

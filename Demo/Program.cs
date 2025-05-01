@@ -17,6 +17,7 @@ namespace Demo
             TestReadBarcode(args);
             TestWriteBarcode(args);
             TestHelloWorldToExistingDocument(args);
+            TestExtractTextWithLayout(args);
         }
 
         static void TestHelloWorldToNewDocument(string[] args)
@@ -197,6 +198,32 @@ namespace Demo
             Utils.WriteBarcode("DATA_MATRIX.png", "01100000110419257000", BarcodeFormat.DATA_MATRIX, width: 300, height: 300, forceFitToRect: false, pureBarcode: true, margin: 1);
 
             Console.WriteLine("Done");
+        }
+
+        static void TestExtractTextWithLayout(string[] args)
+        {
+            Console.WriteLine("=== Extract text with layout =====================");
+            string testFilePath = Path.GetFullPath("../../../TestDocuments/columns.pdf");
+            Document doc = new Document(testFilePath);
+
+            FileStream wstream = File.Create("columns.txt");
+
+            for (int i = 0; i < 1/*doc.PageCount*/; i++)
+            {
+                Page page = doc[i];
+                string textWithLayout = page.GetTextWithLayout(tolerance: 3);
+                if (!string.IsNullOrEmpty(textWithLayout))
+                {
+                    byte[] bytes = Encoding.UTF8.GetBytes(textWithLayout);
+                    wstream.Write(bytes, 0, bytes.Length);
+                }
+            }
+
+            wstream.Close();
+
+            doc.Close();
+
+            Console.WriteLine("Created columns.txt file");
         }
     }
 }
