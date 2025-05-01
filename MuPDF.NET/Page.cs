@@ -4060,13 +4060,12 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Retrieves the content of a page that retain layout. Positioning of text is adusted by spaces.
+        /// Retrieves the text content of a page that retain layout. Positioning of text is adjusted by spaces.
         /// </summary>
         /// <param name="clip">restrict extracted text to this rectangle. If None, the full page is taken. </param>
         /// <param name="flags">indicator bits to control whether to include images or how text should be handled with respect to white spaces and ligatures.</param>
         /// <param name="tolerance">neighborhood threshold.</param>
-        /// <returns>return value depends on option type.
-        /// if option is "text", </returns>
+        /// <returns></returns>
         public string GetStructuredText(
             Rect clip = null, 
             int flags = 0, 
