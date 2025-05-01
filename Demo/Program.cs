@@ -17,7 +17,7 @@ namespace Demo
             TestReadBarcode(args);
             TestWriteBarcode(args);
             TestHelloWorldToExistingDocument(args);
-            TestExtractStructureText(args);
+            TestExtractTextWithLayout(args);
         }
 
         static void TestHelloWorldToNewDocument(string[] args)
@@ -200,9 +200,9 @@ namespace Demo
             Console.WriteLine("Done");
         }
 
-        static void TestExtractStructureText(string[] args)
+        static void TestExtractTextWithLayout(string[] args)
         {
-            Console.WriteLine("=== Extract structure text =====================");
+            Console.WriteLine("=== Extract text with layout =====================");
             string testFilePath = Path.GetFullPath("../../../TestDocuments/columns.pdf");
             Document doc = new Document(testFilePath);
 
@@ -211,10 +211,10 @@ namespace Demo
             for (int i = 0; i < 1/*doc.PageCount*/; i++)
             {
                 Page page = doc[i];
-                string structuredText = page.GetStructuredText(tolerance: 3);
-                if (!string.IsNullOrEmpty(structuredText))
+                string textWithLayout = page.GetTextWithLayout(tolerance: 3);
+                if (!string.IsNullOrEmpty(textWithLayout))
                 {
-                    byte[] bytes = Encoding.UTF8.GetBytes(structuredText);
+                    byte[] bytes = Encoding.UTF8.GetBytes(textWithLayout);
                     wstream.Write(bytes, 0, bytes.Length);
                 }
             }
