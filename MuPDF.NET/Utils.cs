@@ -1165,7 +1165,7 @@ namespace MuPDF.NET
                 if (obj.m_internal != null)
                     fVal = obj.pdf_to_name();
             }
-            if (!string.IsNullOrEmpty(fVal))
+            if (string.IsNullOrEmpty(fVal))
             {
                 fVal = annotObj.pdf_field_value();
             }
@@ -6338,7 +6338,7 @@ namespace MuPDF.NET
         internal static PdfAnnot GetWidgetByXref(PdfPage page, int xref)
         {
             bool found = false;
-            PdfAnnot annot = page.pdf_first_annot();
+            PdfAnnot annot = page.pdf_first_widget();
             while (annot.m_internal != null)
             {
                 PdfObj annotObj = annot.pdf_annot_obj();

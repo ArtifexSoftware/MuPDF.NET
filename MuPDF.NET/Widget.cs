@@ -255,9 +255,9 @@ namespace MuPDF.NET
             float fontSize = 0;
             float[] col = { 0, 0, 0 };
             string[] dat = TextDa.Split(' ');
-            int i = 0;
-            foreach (string item in dat)
+            for (int i = 0; i < dat.Length; i++)
             {
+                string item = dat[i];
                 if (item == "Tf")
                 {
                     font = dat[i - 2].Substring(1);
@@ -394,7 +394,7 @@ namespace MuPDF.NET
         /// <summary>
         /// Point to the next form field on the page.
         /// </summary>
-        public Annot Next
+        public dynamic Next
         {
             get
             {

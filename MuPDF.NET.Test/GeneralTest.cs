@@ -434,7 +434,7 @@ namespace MuPDF.NET.Test
         public void Recolor()
         {
             Document doc = new Document("../../../resources/image-file1.pdf");
-            doc.LoadPage(0).Recolor(4);
+            doc.LoadPage(0).Recolor(1);
 
             List<Entry> images = doc.GetPageImages(0);
             Assert.That(images[0].CsName.Equals("DeviceCMYK"));
