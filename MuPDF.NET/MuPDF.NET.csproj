@@ -17,7 +17,7 @@
 		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
 		<Title>MuPDF.NET</Title>
 		<Version>3.2.7</Version>
-		<Authors>Maksym Tkachuk, Jamie Lemon, Chris Palman</Authors>
+		<Authors>Artifex Software Inc.</Authors>
 		<Company>Artifex</Company>
 		<Description>A C# binding for MuPDF</Description>
 		<Copyright>Artifex</Copyright>
@@ -27,6 +27,7 @@
 		<RepositoryUrl>https://github.com/ArtifexSoftware/MuPDF.NET</RepositoryUrl>
 		<PackageTags>C#;F#;VB.Net;MuPDF;DotNet;PDF</PackageTags>
 		<PackageLicenseFile>LICENSE.md</PackageLicenseFile>
+		<PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(OS)' == 'Windows_NT'">
