@@ -18,6 +18,7 @@ namespace Demo
             TestWriteBarcode(args);
             TestHelloWorldToExistingDocument(args);
             TestExtractTextWithLayout(args);
+            TestWidget(args);
         }
 
         static void TestHelloWorldToNewDocument(string[] args)
@@ -224,6 +225,48 @@ namespace Demo
             doc.Close();
 
             Console.WriteLine("Created columns.txt file");
+        }
+
+        static void TestWidget(string[] args)
+        {
+            string testFilePath = Path.GetFullPath("../../../TestDocuments/Widget.pdf");
+            Document doc = new Document(testFilePath);
+            for (int i = 0; i < 1; i++)
+            {
+                var page = doc[i];
+
+                List<Entry> entries = page.GetXObjects();
+
+                Widget fWidget = page.FirstWidget;
+                while (fWidget != null)
+                {
+                    Console.WriteLine($"Widget: {fWidget}");
+                    Console.WriteLine($"FieldName: {fWidget.FieldName}");
+                    Console.WriteLine($"FieldType: {fWidget.FieldType}");
+                    Console.WriteLine($"FieldValue: {fWidget.FieldValue}");
+                    Console.WriteLine($"FieldFlags: {fWidget.FieldFlags}");
+                    Console.WriteLine($"FieldLabel: {fWidget.FieldLabel}");
+                    Console.WriteLine($"TextFont: {fWidget.TextFont}");
+                    Console.WriteLine($"TextFontSize: {fWidget.TextFontSize}");
+                    Console.WriteLine($"TextColor: {string.Join(",", fWidget.TextColor)}");
+                    fWidget = (Widget)fWidget.Next;
+                }
+
+                foreach (var widget in page.GetWidgets())
+                {
+                    Console.WriteLine($"Widget: {widget}");
+                    Console.WriteLine($"FieldName: {widget.FieldName}");
+                    Console.WriteLine($"FieldType: {widget.FieldType}");
+                    Console.WriteLine($"FieldValue: {widget.FieldValue}");
+                    Console.WriteLine($"FieldFlags: {widget.FieldFlags}");
+                    Console.WriteLine($"FieldLabel: {widget.FieldLabel}");
+                    Console.WriteLine($"TextFont: {widget.TextFont}");
+                    Console.WriteLine($"TextFontSize: {widget.TextFontSize}");
+                    Console.WriteLine($"TextColor: {string.Join(",", widget.TextColor)}");
+
+                }
+            }
+            doc.Close();
         }
     }
 }

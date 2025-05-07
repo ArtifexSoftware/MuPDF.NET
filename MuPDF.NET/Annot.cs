@@ -323,8 +323,12 @@ namespace MuPDF.NET
                         Utils.FillWidget(val, widget);
                         return widget;
                     }
-                    
-                    return val;
+                    else if (val.Type.Item1 == PdfAnnotType.PDF_ANNOT_UNKNOWN)
+                    {
+                        return null;
+                    }
+
+                        return val;
                 }
                 catch(Exception e)
                 {

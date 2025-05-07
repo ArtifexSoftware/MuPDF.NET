@@ -706,6 +706,10 @@ namespace MuPDF.NET
         {
             PdfPage page = _nativePage.pdf_page_from_fz_page();
             PdfAnnot annot = Utils.GetWidgetByXref(page, xref);
+            if (annot == null)
+            {
+                return null;
+            }
             Annot val = new Annot(annot, this);
 
             val.ThisOwn = true;
@@ -724,6 +728,7 @@ namespace MuPDF.NET
         /// <returns></returns>
         public IEnumerable<Widget> GetWidgets(int[] types = null)
         {
+            PdfPage page = _pdfPage;
             List<AnnotXref> refs = GetAnnotXrefs();
             List<int> xrefs = refs.Where(a => a.AnnotType == PdfAnnotType.PDF_ANNOT_WIDGET)
                 .Select(a => a.Xref)
@@ -731,6 +736,10 @@ namespace MuPDF.NET
             foreach (int xref in xrefs)
             {
                 Widget widget = LoadWidget(xref);
+                if (widget == null)
+                {
+                    continue;
+                }
                 if (types == null || types.Contains(widget.FieldType))
                     yield return widget;
             }

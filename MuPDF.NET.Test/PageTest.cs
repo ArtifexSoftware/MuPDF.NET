@@ -228,7 +228,8 @@ public class PageTest : PdfTestBase
 
         int nXref = page.InsertImage(page.Rect, pixmap: pix);
 
-        doc.Save("output.pdf");
+        doc.Save("InsertImage1.pdf");
+        Assert.Pass();
     }
 
     [Test]
