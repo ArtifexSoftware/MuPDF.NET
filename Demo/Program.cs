@@ -19,6 +19,11 @@ namespace Demo
             TestHelloWorldToExistingDocument(args);
             TestExtractTextWithLayout(args);
             TestWidget(args);
+            TestColor(args);
+            TestReplaceImage(args);
+            TestInsertImage(args);
+            TestGetImageInfo(args);
+            TestGetTextPageOcr(args);
         }
 
         static void TestHelloWorldToNewDocument(string[] args)
@@ -47,7 +52,7 @@ namespace Demo
 
         static void TestHelloWorldToExistingDocument(string[] args)
         {
-            string testFilePath = Path.GetFullPath("../../../TestDocuments/Barcodes/Blank.pdf");
+            string testFilePath = Path.GetFullPath("../../../TestDocuments/Blank.pdf");
             Document doc = new Document(testFilePath);
             
             Page page = doc[0];
@@ -103,7 +108,7 @@ namespace Demo
         static void TestWriteBarcode(string[] args)
         {
             Console.WriteLine("=== Write to pdf file =====================");
-            string testFilePath = Path.GetFullPath("../../../TestDocuments/Barcodes/Blank.pdf");
+            string testFilePath = Path.GetFullPath("../../../TestDocuments/Blank.pdf");
             Document doc = new Document(testFilePath);
             Page page = doc[0];
 
@@ -266,6 +271,114 @@ namespace Demo
 
                 }
             }
+
+            doc.Close();
+        }
+
+        static void TestColor(string[] args)
+        {
+            string testFilePath = Path.GetFullPath("../../../TestDocuments/Color.pdf");
+            Document doc = new Document(testFilePath);
+            List<Entry> images = doc.GetPageImages(0);
+            Console.WriteLine($"CaName: {images[0].CsName}");
+            doc.Recolor(0, 4);
+            images = doc.GetPageImages(0);
+            Console.WriteLine($"CaName: {images[0].AltCsName}");
+            doc.Save("../../../TestDocuments/ReColor.pdf");
+            doc.Close();
+        }
+
+        static void TestReplaceImage(string[] args)
+        {
+            string testFilePath = Path.GetFullPath("../../../TestDocuments/Color.pdf");
+            Document doc = new Document(testFilePath);
+            Page page = doc[0];
+            List<Entry> images = page.GetImages(true);
+            List<Box> imgs = page.GetImageRects(images[0].Xref);
+
+            List<Block> infos = page.GetImageInfo(xrefs: true);
+
+            page.ReplaceImage(images[0].Xref, "../../../TestDocuments/Sample.png");
+            page.ReplaceImage(images[0].Xref, "../../../TestDocuments/Sample.jpg");
+
+            infos = page.GetImageInfo(xrefs: true);
+            //page.DeleteImage(images[0].Xref);
+
+            //int newXref = page.InsertImage(imgs[0].Rect, "../../../TestDocuments/Sample.png");
+
+            //images = page.GetImages(true);
+            //imgs = page.GetImageRects(images[0].Xref);
+
+            //page.ReplaceImage(infos[0].Xref, "../../../TestDocuments/Sample.png");
+            //page.DeleteImage(images[0].Xref);
+
+            //page.InsertImage(imgs[0].Rect, "../../../TestDocuments/Sample.jpg");
+
+            doc.Save("../../../TestDocuments/ReplaceImage.pdf");
+            doc.Close();
+        }
+
+        static void TestInsertImage(string[] args)
+        {
+            string testFilePath = Path.GetFullPath("../../../TestDocuments/Image/test.pdf");
+            Document doc = new Document(testFilePath);
+            Page page = doc[0];
+
+            var pixmap1 = new Pixmap("../../../TestDocuments/Image/_apple.png");
+            //var pixmap1 = new Pixmap("../../../TestDocuments/Image/30mb.jpg");
+            var pixmap2 = new Pixmap("../../../TestDocuments/Image/_bb-logo.png");
+            var imageRect1 = new Rect(0, 0, 100, 100);
+            var imageRect2 = new Rect(100, 100, 200, 200);
+            var imageRect3 = new Rect(100, 200, 200, 300);
+            var imageRect4 = new Rect(100, 300, 200, 400);
+            var imageRect5 = new Rect(100, 400, 200, 500);
+            var imageRect6 = new Rect(100, 500, 200, 600);
+
+            var img_xref = page.InsertImage(imageRect1, pixmap: pixmap1);
+            Console.WriteLine(img_xref);
+
+            //img_xref = page.InsertImage(imageRect2, "../../../TestDocuments/Image/_apple.png");
+            img_xref = page.InsertImage(imageRect2, pixmap: pixmap1);
+            Console.WriteLine(img_xref);
+            img_xref = page.InsertImage(imageRect3, pixmap: pixmap2);
+            Console.WriteLine(img_xref);
+            img_xref = page.InsertImage(imageRect4, "../../../TestDocuments/Image/_bb-logo.png");
+            Console.WriteLine(img_xref);
+            page.InsertImage(imageRect5, xref: img_xref);
+            Console.WriteLine(img_xref);
+            page.InsertImage(imageRect6, xref: img_xref);
+
+            doc.Save("../../../TestDocuments/Image/TestInsertImage.pdf");
+            doc.Close();
+        }
+
+        static void TestGetImageInfo(string[] args)
+        {
+            string testFilePath = Path.GetFullPath("../../../TestDocuments/Image/TestInsertImage.pdf");
+            Document doc = new Document(testFilePath);
+            Page page = doc[0];
+
+            List<Block> infos = page.GetImageInfo(xrefs: true);
+
+            doc.Close();
+        }
+
+        static void TestGetTextPageOcr(string[] args)
+        {
+            string testFilePath = Path.GetFullPath(@"E:\MuPDF.NET\Tmp\squashed\test.pdf");
+            Document doc = new Document(testFilePath);
+            Page page = doc[0];
+
+            List<Block> blocks = page.GetText("dict", flags: (int)TextFlags.TEXT_PRESERVE_IMAGES)?.Blocks;
+            foreach (Block block in blocks)
+            {
+                Console.WriteLine(block.Image.Length);
+            }
+
+            TextPage tp = page.GetTextPageOcr((int)TextFlags.TEXT_PRESERVE_SPANS, full: true);
+            string txt = tp.ExtractText();
+            Console.WriteLine(txt);
+
             doc.Close();
         }
     }

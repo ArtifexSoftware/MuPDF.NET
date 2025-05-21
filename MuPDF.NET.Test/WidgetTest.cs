@@ -22,8 +22,7 @@ namespace MuPDF.NET.Test
             w.BorderDashes = new int[] { 2, 3 };
             w.FieldName = "Textfield-1";
             w.FieldLabel = "arbitray text - e.g. to help filling the field";
-            w.FieldType = (int)PdfWidgetType.PDF_WIDGET_TYPE_SIGNATURE;
-            //w.FieldType = (int)PdfWidgetType.PDF_WIDGET_TYPE_TEXT;
+            w.FieldType = (int)PdfWidgetType.PDF_WIDGET_TYPE_TEXT;
             w.FillColor = new float[] { 1, 1, 0 };
             w.Rect = new Rect(50, 72, 400, 200);
             w.TextColor = new float[] { 0, 0, 1 };
@@ -33,8 +32,6 @@ namespace MuPDF.NET.Test
             w.FieldValue = "Times-Roman";
             page.AddWidget(w);
             Widget first = page.FirstWidget;
-
-            doc.Save(@"e:\signature.pdf");
 
             Assert.That(first.FieldTypeString, Is.EqualTo("Text"));
         }

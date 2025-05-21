@@ -852,7 +852,20 @@ namespace MuPDF.NET
 
         public static byte[] BinFromBuffer(FzBuffer buffer)
         {
-            return buffer.fz_buffer_extract();
+            //return buffer.fz_buffer_extract();
+            var outparams = new mupdf.ll_fz_buffer_storage_outparams();
+            uint n = mupdf.mupdf.ll_fz_buffer_storage_outparams_fn(buffer.m_internal, outparams);
+            var raw1 = mupdf.SWIGTYPE_p_unsigned_char.getCPtr(outparams.datap);
+            System.IntPtr raw2 = System.Runtime.InteropServices.HandleRef.ToIntPtr(raw1);
+            byte[] ret = new byte[n];
+            // Marshal.Copy() raises exception if <raw2> is null even if <n> is zero.
+            if (n > 0)
+            {
+                System.Runtime.InteropServices.Marshal.Copy(raw2, ret, 0, (int)n);
+                outparams.Dispose();
+            }
+            
+            return ret;
         }
 
         internal static FzBuffer BufferFromBytes(byte[] bytes)
@@ -890,21 +903,26 @@ namespace MuPDF.NET
             int compress
         )
         {
-            uint len = buffer.fz_buffer_storage(new SWIGTYPE_p_p_unsigned_char(IntPtr.Zero, false));
-            uint nlen = len;
-            FzBuffer res = null;
-            if (len > 30)
+            if (compress != 0)
             {
-                res = Utils.CompressBuffer(buffer);
-                nlen = res.fz_buffer_storage(new SWIGTYPE_p_p_unsigned_char(IntPtr.Zero, false));
+                uint len = buffer.fz_buffer_storage(new SWIGTYPE_p_p_unsigned_char(IntPtr.Zero, false));
+                if (len > 30)
+                {
+                    FzBuffer res = Utils.CompressBuffer(buffer);
+                    if (res != null)
+                    {
+                        uint nlen = res.fz_buffer_storage(new SWIGTYPE_p_p_unsigned_char(IntPtr.Zero, false));
+                        if (nlen < len)
+                        {
+                            obj.pdf_dict_put(new PdfObj("Filter"), new PdfObj("FlateDecode"));
+                            doc.pdf_update_stream(obj, res, 1);
+                            return;
+                        }
+                    }
+                }
             }
-            if ((nlen < len && res != null) && compress == 1)
-            {
-                obj.pdf_dict_put(new PdfObj("Filter"), new PdfObj("FlateDecode"));
-                doc.pdf_update_stream(obj, res, 1);
-            }
-            else
-                doc.pdf_update_stream(obj, buffer, 0);
+
+            doc.pdf_update_stream(obj, buffer, 0);
         }
 
         public static bool INRANGE(int v, int low, int high)
@@ -3092,7 +3110,8 @@ namespace MuPDF.NET
 
         internal static string UnicodeFromBuffer(FzBuffer buf)
         {
-            byte[] bufBytes = buf.fz_buffer_extract();
+            //byte[] bufBytes = buf.fz_buffer_extract();
+            byte[] bufBytes = Utils.BinFromBuffer(buf);
             string val = Encoding.UTF8.GetString(bufBytes);
             int z = val.IndexOf((char)0);
 
@@ -4846,7 +4865,8 @@ namespace MuPDF.NET
                 int pno = key.pdf_to_int();
                 PdfObj val = nums.pdf_array_get(i + 1).pdf_resolve_indirect();
                 FzBuffer res = Utils.Object2Buffer(val, 1, 0);
-                byte[] c = res.fz_buffer_extract();
+                //byte[] c = res.fz_buffer_extract();
+                byte[] c = Utils.BinFromBuffer(res);
 
                 string cStr = Encoding.UTF8.GetString(c);
                 list.Add((pno, cStr));

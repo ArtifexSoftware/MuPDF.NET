@@ -857,7 +857,7 @@ namespace MuPDF.NET
             if (lineJoin != 0)
                 DrawCont = $"{lineJoin} j\n" + DrawCont;
 
-            if (!string.IsNullOrEmpty(dashes) || dashes != "[] 0")
+            if ((string.IsNullOrEmpty(dashes) == false) && (dashes != "[] 0"))
                 DrawCont = $"{dashes} d\n" + DrawCont;
 
             if (closePath)

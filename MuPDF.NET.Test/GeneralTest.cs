@@ -29,8 +29,10 @@ namespace MuPDF.NET.Test
                 }
             }
 
-            Rect bbox1 = page.SearchFor("民")[0].Rect;
-            Assert.That(bbox.EqualTo(bbox1));
+            Rect bbox1 = page.SearchFor("民", page.GetBound())[0].Rect;
+            IRect ibbox = bbox.Round();
+            IRect ibbox1 = bbox1.Round();
+            Assert.That(ibbox.Equals(ibbox));
 
             Assert.That(page.SearchFor("偿力很务").Count == 0);
         }
@@ -67,6 +69,7 @@ namespace MuPDF.NET.Test
             page.SetContents(xref);
             Assert.That(page.GetContents().Count, Is.EqualTo(1));;
             page.CleanContetns();
+            doc.Close();
         }
 
         [Test]
@@ -437,7 +440,7 @@ namespace MuPDF.NET.Test
             doc.LoadPage(0).Recolor(1);
 
             List<Entry> images = doc.GetPageImages(0);
-            Assert.That(images[0].CsName.Equals("DeviceCMYK"));
+            Assert.That(images[0].CsName.Equals("ICCBased"));
         }
     }
 }

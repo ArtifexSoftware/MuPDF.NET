@@ -31,7 +31,8 @@ namespace MuPDF.NET
                 FzBuffer buf = new FzBuffer(
                     mupdf.mupdf.ll_fz_keep_buffer(_nativeFont.m_internal.buffer)
                 );
-                return buf.fz_buffer_extract();
+                //return buf.fz_buffer_extract();
+                return Utils.BinFromBuffer( buf );
             }
         }
 
