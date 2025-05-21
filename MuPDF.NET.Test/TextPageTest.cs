@@ -94,18 +94,20 @@ namespace MuPDF.NET.Test
         [Test]
         public void SearchTest()
         {
-            Document doc = new Document("input.pdf");
+            //Document doc = new Document("input.pdf");
 
             Page page = doc[0];
 
-            TextPage tpage = page.GetTextPage();
+            TextPage tpage = page.GetTextPage(page.Rect);
 
-            List<Quad> matches = TextPage.Search(tpage, "pixmap");
+            List<Quad> matches = TextPage.Search(textPage, "2018");
 
             if (matches.Count > 0)
             {
                 page.AddHighlightAnnot(matches);
             }
+
+            Assert.That(page.FirstAnnot.Type.Item1, Is.EqualTo(PdfAnnotType.PDF_ANNOT_HIGHLIGHT));
         }
 
         [Test]

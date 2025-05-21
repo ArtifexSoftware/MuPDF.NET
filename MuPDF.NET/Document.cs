@@ -4586,29 +4586,29 @@ namespace MuPDF.NET
         /// <summary>
         /// Copy a PDF dictionary object to another one given their xref numbers.
         /// </summary>
-        /// <param name="newXref"></param>
+        /// <param name="source"></param>
         /// <param name="xref"></param>
-        public void CopyXref(int newXref, int xref, List<string> keep = null)
+        public void CopyXref(int source, int target, List<string> keep = null)
         {
-            if (XrefIsStream(newXref))
+            if (XrefIsStream(source))
             {
-                byte[] stream = GetXrefStreamRaw(newXref);
-                UpdateStream(xref, stream, 0);
+                byte[] stream = GetXrefStreamRaw(source);
+                UpdateStream(target, stream, 1, 0);
             }
 
             if (keep == null)
                 keep = new List<string>();
-            foreach (string key in GetKeysXref(xref))
+            foreach (string key in GetKeysXref(target))
             {
                 if (keep.Contains(key))
                     continue;
-                SetKeyXRef(xref, key, "null");
+                SetKeyXRef(target, key, "null");
             }
             
-            foreach (string key in GetKeysXref(newXref))
+            foreach (string key in GetKeysXref(source))
             {
-                (string, string) item = GetKeyXref(newXref, key);
-                SetKeyXRef(xref, key, item.Item2);
+                (string, string) item = GetKeyXref(source, key);
+                SetKeyXRef(target, key, item.Item2);
             }
         }
 

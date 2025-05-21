@@ -1935,9 +1935,9 @@ namespace MuPDF.NET
 
             if (xref > 0)
             {
-                PdfObj refer = pdf.pdf_new_indirect(xref, 0);
-                w = refer.pdf_dict_geta(new PdfObj("Width"), new PdfObj("W")).pdf_to_int();
-                h = refer.pdf_dict_geta(new PdfObj("Height"), new PdfObj("H")).pdf_to_int();
+                ref_ = pdf.pdf_new_indirect(xref, 0);
+                w = ref_.pdf_dict_geta(new PdfObj("Width"), new PdfObj("W")).pdf_to_int();
+                h = ref_.pdf_dict_geta(new PdfObj("Height"), new PdfObj("H")).pdf_to_int();
 
                 if (w + h == 0)
                 {
@@ -1982,7 +1982,7 @@ namespace MuPDF.NET
                 if (temp != -1)
                 {
                     imgXRef = temp;
-                    PdfObj refer = page.doc().pdf_new_indirect(imgXRef, 0);
+                    ref_ = page.doc().pdf_new_indirect(imgXRef, 0);
                     do_process_stream = 0;
                     do_have_imask = 0;
                     do_have_image = 0;
@@ -3910,14 +3910,19 @@ namespace MuPDF.NET
             {
                 int xref = entry.Xref;
                 Pixmap pix = new Pixmap(Document.AsPdfDocument(Parent), xref);
-                digests.Add(Encoding.UTF8.GetString(pix.Digest), xref);
+                string digestKey = Encoding.UTF8.GetString(pix.Digest);
+                if (digests.ContainsKey(digestKey))
+                {
+                    digests.Remove(digestKey);
+                }
+                digests.Add(digestKey, xref);
                 pix = null;
             }
             for (int i = 0; i < imgInfo.Count; i++)
             {
                 Block item = imgInfo[i];
                 //int xref = digests.GetValueOrDefault(
-                //    Encoding.UTF8.GetString(item.Digest.ToArray()),
+                //    Encoding.UTF8.GetString(item.Digest.ToArray()),^
                 //    0
                 //);
                 string key = Encoding.UTF8.GetString(item.Digest.ToArray());

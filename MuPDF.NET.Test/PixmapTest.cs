@@ -121,6 +121,5 @@ namespace MuPDF.NET.Test
             pix.InvertIrect(new IRect(rect));
             Assert.Pass();
         }
-
     }
 }
