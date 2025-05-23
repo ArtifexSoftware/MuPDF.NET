@@ -316,7 +316,7 @@ To add an image to a |PDF| file, for example a logo, do the following:
 Converting a |PDF| page to an image
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Pages can be converted to image data with the :meth:`page.GetPixmap` method.
+Pages can be converted to image data with the :meth:`Page.GetPixmap` method.
 
 It is then possible to save these images as files, for example this would save all the document pages as individual image files:
 
