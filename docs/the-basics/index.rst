@@ -309,6 +309,65 @@ To add an image to a |PDF| file, for example a logo, do the following:
 
 ----------
 
+
+.. _The_Basics_Converting_to_Image:
+
+
+Converting a |PDF| page to an image
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Pages can be converted to image data with the :meth:`page.GetPixmap` method.
+
+It is then possible to save these images as files, for example this would save all the document pages as individual image files:
+
+
+.. code-block:: cs
+
+    using MuPDF.NET;
+
+    Document doc = new Document("document.pdf") // open a document
+
+    for (int page_index; page_index < doc.PageCount; page_index ++) // iterate over pdf pages
+    {
+        Page page = doc[page_index]; // get the page
+        Pixmap pixmap = page.GetPixmap(); // get as Pixmap
+        string filename = $("file{page_index}.png");
+        pixmap.Save(filename);
+    }
+
+    doc.Close();
+
+
+----------
+
+
+.. _The_Basics_Converting_from_Image:
+
+
+Converting from an image to a |PDF|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This would involve creating a blank PDF, with a blank page, then adding the image to the page and setting the page dimensions to match the image.
+
+For example:
+
+
+.. code-block:: cs
+
+    using MuPDF.NET;
+
+    Pixmap pxmp = new Pixmap("image.png");
+    Document doc = new Document();
+    Page page = doc.NewPage(width:pxmp.W, height:pxmp.H); // create a blank document page with the same dimensions as the image
+
+    page.InsertImage(page.Rect, pixmap: pxmp); // inset the image on the page
+    doc.Save("output.pdf", pretty: 1);
+    doc.Close();
+
+
+----------
+
+
 .. _The_Basics_Extracting_and_Drawing_Vector_Graphics:
 
 Extracting & Drawing vector graphics
