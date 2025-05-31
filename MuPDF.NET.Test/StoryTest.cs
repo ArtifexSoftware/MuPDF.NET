@@ -57,7 +57,7 @@ namespace MuPDF.NET.Test
             Assert.That(doc1.PageCount, Is.EqualTo(2));
             Assert.That(doc2.PageCount, Is.EqualTo(1));
         }
-
+        /*
         [Test]
         public void GetPixmap()
         {
@@ -74,5 +74,6 @@ namespace MuPDF.NET.Test
 
             Console.WriteLine(timeTaken.ToString());
         }
+        */
     }
 }

@@ -146,7 +146,13 @@ namespace MuPDF.NET
             LowerRight = lr;
         }
 
-        public Quad(Rect rect) { }
+        public Quad(Rect rect) 
+        {
+            UpperLeft = new Point(new FzPoint(rect.X0, rect.Y0));
+            UpperRight = new Point(new FzPoint(rect.X1, rect.Y0));
+            LowerLeft = new Point(new FzPoint(rect.X0, rect.Y1));
+            LowerRight = new Point(new FzPoint(rect.X1, rect.Y1));
+        }
 
         public Quad(Quad quad)
         {

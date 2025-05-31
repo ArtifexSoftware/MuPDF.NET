@@ -347,6 +347,7 @@ namespace MuPDF.NET
             pix.m_internal.xres = xres;
             pix.m_internal.yres = yres;
             _nativePixmap = pix;
+            img.Dispose();
         }
 
         public Pixmap(byte[] image)
@@ -1172,6 +1173,15 @@ namespace MuPDF.NET
             SavePdfOCR(byteStream, compress ? 1 : 0, language, tessdata);
 
             return byteStream.ToArray();
+        }
+
+        public void Dispose()
+        {
+            if (_nativePixmap != null)
+            {
+                _nativePixmap.Dispose();
+                _nativePixmap = null;
+            }
         }
     }
 

@@ -66,7 +66,7 @@ namespace MuPDF.NET.Test
         public void GetXrefLen()
         {
             doc.GetXrefLength();
-            Assert.Pass();
+            //Assert.Pass();
         }
 
         [Test]
@@ -78,7 +78,7 @@ namespace MuPDF.NET.Test
 
             n = doc.ExtractImage(doc.GetPageImages(0)[0].Xref).Image.Length;
 
-            Assert.Pass();
+            //Assert.Pass();
         }
 
         [Test]

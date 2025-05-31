@@ -1,9 +1,10 @@
-﻿using System;
+﻿using mupdf;
+using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
-using mupdf;
 
 namespace MuPDF.NET
 {
@@ -648,6 +649,8 @@ namespace MuPDF.NET
             string da_string = "";
             try
             {
+                da_string = obj.pdf_dict_get_inheritable(new PdfObj("DA")).pdf_to_text_string();
+                /*
                 PdfObj da = obj.pdf_dict_get_inheritable(new PdfObj("DA"));
                 if (da.m_internal != null)
                 {
@@ -655,6 +658,7 @@ namespace MuPDF.NET
                     da = Utils.pdf_dict_getl(tailer, new string[] { "Root", "AcroForm", "DA" });
                     da_string = da.pdf_to_text_string();
                 }
+                */
             }
             catch (Exception e)
             {
@@ -675,7 +679,7 @@ namespace MuPDF.NET
             for (int i = 0; i < dat.Length; i++)
             {
                 string item = dat[i];
-                if (item == "TF")
+                if (item == "Tf")
                 {
                     font = dat[i - 2].Substring(1);
                     fsize = float.Parse(dat[i - 1]);
@@ -870,10 +874,7 @@ namespace MuPDF.NET
                     annotObj.pdf_dict_put_int(new PdfObj("Rotate"), (long)rotate);
                 }
 
-                _nativeAnnotion.pdf_dirty_annot();
-                _nativeAnnotion.pdf_update_annot();
-                doc.m_internal.resynth_required = 0;
-
+                // insert fill color
                 if ((PdfAnnotType)type == PdfAnnotType.PDF_ANNOT_FREE_TEXT)
                 {
                     if (nCols > 0)
@@ -890,15 +891,21 @@ namespace MuPDF.NET
                     }
                     annotObj.pdf_dict_put(new PdfObj("IC"), col);
                 }
+                _nativeAnnotion.pdf_dirty_annot();
+                _nativeAnnotion.pdf_update_annot();
+                doc.m_internal.resynth_required = 0;
             }
-            catch (Exception) { }
+            catch (Exception e) 
+            {
+                throw new Exception("cannot update annot:" + e.Message);
+            }
 
-            if ((opacity < 0 || opacity > 1) && blendMode == null)
+            if ((opacity < 0 || opacity >= 1) && blendMode == null) // no opacity, no blend_mode
             {
                 return true;
             }
 
-            try
+            try // create or update /ExtGState
             {
                 PdfObj ap = Utils.pdf_dict_getl(
                     _nativeAnnotion.pdf_annot_obj(),
@@ -906,6 +913,7 @@ namespace MuPDF.NET
                 );
                 if (ap.m_internal == null)
                 {
+                    // should never happen
                     throw new Exception("bad or missing annot AP/N");
                 }
 
@@ -928,7 +936,7 @@ namespace MuPDF.NET
                 }
 
                 PdfObj extg = resources.pdf_dict_get(new PdfObj("ExtGState"));
-                if (extg.m_internal == null)
+                if (extg.m_internal == null) // no ExtGState yet: make one
                     extg = resources.pdf_dict_put_dict(new PdfObj("ExtGState"), 2);
 
                 extg.pdf_dict_put(new PdfObj("H"), alp0);
@@ -1431,6 +1439,11 @@ namespace MuPDF.NET
 
         public void SetColors(Color colors = null, float[] stroke = null, float[] fill = null)
         {
+            pdf_annot_type type = _nativeAnnotion.pdf_annot_type();
+            if (type == pdf_annot_type.PDF_ANNOT_FREE_TEXT)
+            {
+                throw new Exception("cannot be used for FreeText annotations");
+            }
             Document doc = Parent.Parent;
 
             Color colors_ = new Color();
@@ -1439,11 +1452,9 @@ namespace MuPDF.NET
                 colors_.Fill = fill;
                 colors_.Stroke = stroke;
             }
-            else
-            {
-                fill = colors?.Fill;
-                stroke = colors?.Stroke;
-            }
+            
+            fill = colors_.Fill;
+            stroke = colors_.Stroke;
 
             List<PdfAnnotType> fillAnnots = new List<PdfAnnotType>()
             {
@@ -1455,11 +1466,11 @@ namespace MuPDF.NET
                 PdfAnnotType.PDF_ANNOT_REDACT
             };
 
-            if (stroke.Length == 0)
+            if (stroke != null && stroke.Length == 0)
             {
                 doc.SetKeyXRef(this.Xref, "C", "[]");
             }
-            else
+            else if (stroke != null)
             {
                 string s = "";
                 if (stroke.Length == 1)
@@ -1488,7 +1499,7 @@ namespace MuPDF.NET
                 return;
             }
 
-            if (fill.Length == 0)
+            if (fill != null && fill.Length == 0)
                 doc.SetKeyXRef(this.Xref, "IC", "[]");
             else if (fill != null)
             {
@@ -1755,9 +1766,25 @@ namespace MuPDF.NET
             annotObj.pdf_dict_put_int(new PdfObj("Rotate"), rot);
         }
 
+        /// <summary>
+        /// Update annot appearance.
+        /// Depending on the annot type, some parameters make no sense,
+        /// while others are only available in this method to achieve the
+        /// desired result.This is especially true for 'FreeText' annots.
+        /// </summary>
+        /// <param name="blendMode">set the blend mode, all annotations.</param>
+        /// <param name="opacity">set the opacity, all annotations.</param>
+        /// <param name="fontSize">set fontsize, 'FreeText' only.</param>
+        /// <param name="fontName">set the font, 'FreeText' only.</param>
+        /// <param name="textColor">set text color, 'FreeText' only.</param>
+        /// <param name="borderColor">set border color, 'FreeText' only.</param>
+        /// <param name="fillColor">set fill color, all annotations.</param>
+        /// <param name="crossOut">draw diagonal lines, 'Redact' only.</param>
+        /// <param name="rotate">set rotation, 'FreeText' and some others.</param>
+        /// <return></return>
         public void Update(
             string blendMode = null,
-            float opacity = 0.0f,
+            float opacity = float.MaxValue,
             float fontSize = 0.0f,
             string fontName = null,
             float[] textColor = null,
@@ -1767,11 +1794,21 @@ namespace MuPDF.NET
             int rotate = -1
         )
         {
-            PdfAnnotType type = Type.Item1;
-            int[] dashes = Border.Dashes;
+            PdfAnnot annot = _nativeAnnotion;
+            PdfObj annotObj = annot.pdf_annot_obj();
+
+            if (borderColor != null)
+            {
+                PdfObj isRichText = annotObj.pdf_dict_get(new PdfObj("RC"));
+                if (isRichText != null)
+                    throw new Exception("cannot set border_color if rich_text is False");
+            }
+            
+            PdfAnnotType annotType = Type.Item1;
+
+            int[] dt = Border.Dashes;
             float borderWidth = Border.Width;
             float[] stroke = Colors.Stroke;
-
             List<float> fill = null;
             if (fillColor != null)
                 fill = new List<float>(fillColor);
@@ -1786,23 +1823,26 @@ namespace MuPDF.NET
                     rotate += 360;
                 while (rotate >= 360)
                     rotate -= 360;
-                if (type == PdfAnnotType.PDF_ANNOT_FREE_TEXT && rotate % 90 != 0)
+                if (annotType == PdfAnnotType.PDF_ANNOT_FREE_TEXT && rotate % 90 != 0)
                     rotate = 0;
             }
 
+            // handle opacity and blend mode
             if (string.IsNullOrEmpty(blendMode))
                 blendMode = BlendMode;
-            if (opacity == 0.0f)
+            if (opacity == float.MaxValue)
                 opacity = Opacity;
 
             string opaCode = "";
-            if ((opacity >= 0 && opacity < 1) || (blendMode != null))
+            if ((opacity >= 0 && opacity < 1) || !string.IsNullOrEmpty(blendMode))
                 opaCode = "/H gs\n";
             else
                 opaCode = "";
 
-            if (type == PdfAnnotType.PDF_ANNOT_FREE_TEXT)
+            if (annotType == PdfAnnotType.PDF_ANNOT_FREE_TEXT)
             {
+                Utils.CheckColor(textColor);
+                Utils.CheckColor(fillColor);
                 (List<float> tcol, string fname, float fsize) = ParseData(this);
 
                 bool updateDefaultAppearance = false;
@@ -1832,33 +1872,11 @@ namespace MuPDF.NET
 
                 if (updateDefaultAppearance)
                 {
-                    string dataStr = "";
-                    if (tcol.Count == 3)
-                    {
-                        string fmt = "{0:g} {1:g} {2:g} rg /{3:s} {4:g} Tf";
-                        dataStr = string.Format(fmt, tcol[0], tcol[1], tcol[2], fname, fsize);
-                    }
-                    else if (tcol.Count == 1)
-                    {
-                        string fmt = "{0:g} g /{1:s} {2:g} Tf";
-                        dataStr = string.Format(fmt, tcol[0], fname, fsize);
-                    }
-                    else if (tcol.Count == 4)
-                    {
-                        string fmt = "{0:g} {1:g} {2:g} {3:g} k /{4:s} {5:g} Tf";
-                        dataStr = string.Format(
-                            fmt,
-                            tcol[0],
-                            tcol[1],
-                            tcol[2],
-                            tcol[3],
-                            fname,
-                            fsize
-                        );
-                    }
-                    UpdateData(_nativeAnnotion, dataStr);
+                    Utils.MakeAnnotDA(annot, tcol == null ? -1 : tcol.Count, tcol.ToArray(), fname, fsize);
+                    blendMode = null; // not supported for free text annotations!
                 }
 
+                // now invoke MuPDF to update the annot appearance
                 bool res = UpdateAppearance(
                     opacity: opacity,
                     blendMode: blendMode,
@@ -1868,33 +1886,46 @@ namespace MuPDF.NET
                 if (!res)
                     throw new Exception("Error updating annotation");
 
+                if (annotType == PdfAnnotType.PDF_ANNOT_FREE_TEXT)
+                {
+                    // in absence of previous opacity, we may need to modify the AP
+                    string apStr = Encoding.UTF8.GetString(this.GetAP());
+                    if (opacity >= 0 && opacity < 1 && !apStr.StartsWith("/H gs"))
+                        this.SetAP(Encoding.UTF8.GetBytes("/H gs\n" + apStr));
+                    return;
+                }
+
                 byte[] bFill = ColorString(fill, "f");
                 byte[] bStroke = ColorString(stroke, "f");
 
                 Matrix pCTM = Parent.TransformationMatrix;
-                Matrix iMat = ~pCTM;
+                Matrix iMat = ~pCTM; // inverse page transf. matrix
+
                 string dashStr = "";
                 List<byte> bDash = new List<byte>();
                 UTF8Encoding utf8 = new UTF8Encoding();
+                if (dt != null && dt.Length > 0)
+                {
+                    string[] dashes = new string[dt.Length];
+                    for (int i = 0; i < dt.Length; i++)
+                    {
+                        dashes[i] = Convert.ToString(dt[i]);
+                    }
+                    dashStr = "[" + string.Join(" ", dashes) + "] 0 d \n";
+                    bDash.AddRange(utf8.GetBytes(dashStr));
+                }
+                else
+                    bDash = null;
+                
                 PdfLineEnding line_end_le = LineEnds.Item1;
                 PdfLineEnding line_end_ri = LineEnds.Item2;
 
-                if (dashes != null)
-                {
-                    string[] dashesStr = new string[dashes.Length];
-                    for (int i = 0; i < dashes.Length; i++)
-                    {
-                        dashesStr[i] = Convert.ToString(dashes[i]);
-                    }
-                    dashStr = "[" + string.Join(" ", dashesStr) + "] 0 d \n";
-                    bDash.AddRange(utf8.GetBytes(dashStr));
-                }
-
+                // read contents as created by MuPDF
                 byte[] ap = GetAP();
                 List<string> apTab = new List<string>(Encoding.UTF8.GetString(ap).Split('\n'));
                 bool apUpdated = false;
 
-                if (type == PdfAnnotType.PDF_ANNOT_REDACT)
+                if (annotType == PdfAnnotType.PDF_ANNOT_REDACT)
                 {
                     if (crossOut)
                     {
@@ -1905,11 +1936,12 @@ namespace MuPDF.NET
                         string lr = apTab[2];
                         string ur = apTab[3];
                         string ul = apTab[4];
-                        apTab[0] = lr;
-                        apTab[1] = ll;
-                        apTab[2] = ur;
-                        apTab[3] = ul;
-                        apTab[4] = "S";
+                        apTab.Add(lr);
+                        apTab.Add(ll);
+                        apTab.Add(ur);
+                        apTab.Add(ll);
+                        apTab.Add(ul);
+                        apTab.Add("S");
                     }
 
                     List<string> nTab = new List<string>();
@@ -1934,97 +1966,39 @@ namespace MuPDF.NET
                     ap = utf8.GetBytes(string.Join("\n", apTab.ToArray()));
                 }
 
-                if (type == PdfAnnotType.PDF_ANNOT_FREE_TEXT)
-                {
-                    string apStr = utf8.GetString(ap);
-                    int bt = apStr.IndexOf("BT");
-                    int et = apStr.IndexOf("ET") + 2;
-                    apStr = apStr.Substring(bt, et - bt);
-                    float w = this.Rect.Width;
-                    float h = this.Rect.Height;
-
-                    if (
-                        rotate == 90
-                        || rotate == 270
-                        || !((apnMat.B == apnMat.C) && (apnMat.B == 0))
-                    )
-                    {
-                        float t = w;
-                        w = h;
-                        h = t;
-                    }
-
-                    byte[] re = utf8.GetBytes(string.Format("0 0 {0} {1} re", w, h));
-                    ap = MergeByte(MergeByte(re, Utils.ToByte("\nW\nn\n")), ap);
-                    byte[] ope = null;
-                    byte[] fillStr = ColorString(fill, "f");
-                    if (fillStr != null)
-                        ope = utf8.GetBytes("f");
-
-                    byte[] strokeStr = ColorString(borderColor, "c");
-                    byte[] borderStr = null;
-                    if (strokeStr != null && borderWidth > 0)
-                    {
-                        ope = utf8.GetBytes("S");
-                        borderStr = utf8.GetBytes(string.Format("{0} w\n", borderWidth));
-                    }
-                    else
-                    {
-                        borderStr = strokeStr = utf8.GetBytes("");
-                    }
-
-                    if (borderStr != null && strokeStr != null)
-                        ope = utf8.GetBytes("B");
-
-                    if (ope != null)
-                        ap = MergeByte(
-                            MergeByte(
-                                MergeByte(MergeByte(MergeByte(borderStr, fillStr), strokeStr), re),
-                                Utils.ToByte("\n")
-                            ),
-                            MergeByte(MergeByte(ope, Utils.ToByte("\n")), ap)
-                        );
-
-                    if (dashes != null)
-                    {
-                        ap = MergeByte(MergeByte(bDash.ToArray(), Utils.ToByte("\n")), ap);
-                        bDash = null;
-                    }
-
-                    apUpdated = true;
-                }
-
                 if (
-                    type == PdfAnnotType.PDF_ANNOT_POLYGON
-                    || type == PdfAnnotType.PDF_ANNOT_POLY_LINE
+                    annotType == PdfAnnotType.PDF_ANNOT_POLYGON
+                    || annotType == PdfAnnotType.PDF_ANNOT_POLY_LINE
                 )
                 {
+                    List<string> newApTab = apTab;
+                    newApTab.RemoveAt(newApTab.Count - 1);
                     ap = MergeByte(
-                        Utils.ToByte(string.Join("\n", apTab.ToArray())),
+                        Utils.ToByte(string.Join("\n", newApTab.ToArray())),
                         Utils.ToByte("\n")
                     );
-
                     apUpdated = true;
-                    if (bFill != null)
+                    if (bFill != null && bFill.Length > 0)
                     {
-                        if (type == PdfAnnotType.PDF_ANNOT_POLYGON)
+                        if (annotType == PdfAnnotType.PDF_ANNOT_POLYGON)
                             ap = MergeByte(MergeByte(ap, bFill), Utils.ToByte("b"));
-                        else if (type == PdfAnnotType.PDF_ANNOT_POLY_LINE)
+                        else if (annotType == PdfAnnotType.PDF_ANNOT_POLY_LINE)
                             ap = MergeByte(ap, Utils.ToByte("S"));
                     }
                     else
                     {
-                        if (type == PdfAnnotType.PDF_ANNOT_POLYGON)
+                        if (annotType == PdfAnnotType.PDF_ANNOT_POLYGON)
                             ap = MergeByte(ap, Utils.ToByte("s"));
-                        else if (type == PdfAnnotType.PDF_ANNOT_POLY_LINE)
+                        else if (annotType == PdfAnnotType.PDF_ANNOT_POLY_LINE)
                             ap = MergeByte(ap, Utils.ToByte("S"));
                     }
                 }
-
+                                
                 if (bDash != null)
                 {
                     ap = MergeByte(bDash.ToArray(), ap);
-                    ap = utf8.GetBytes(utf8.GetString(ap).Replace("\nS\n", "\nS\n[] 0 d\n"));
+                    // reset dashing -only applies for LINE annots with line ends given
+                    ap = Utils.ReplaceBytes(ap, utf8.GetBytes("\nS\n"), utf8.GetBytes("\nS\n[] 0 d\n"), 1);
                     apUpdated = true;
                 }
 
@@ -2036,11 +2010,12 @@ namespace MuPDF.NET
 
                 ap = MergeByte(MergeByte(Utils.ToByte("q\n"), ap), Utils.ToByte("\nQ\n"));
 
+                // the following handles line end symbols for 'Polygon' and 'Polyline'
                 if (
                     ((int)line_end_le + (int)line_end_ri) > 0
                     && (
-                        type == PdfAnnotType.PDF_ANNOT_POLYGON
-                        || type == PdfAnnotType.PDF_ANNOT_POLY_LINE
+                        annotType == PdfAnnotType.PDF_ANNOT_POLYGON
+                        || annotType == PdfAnnotType.PDF_ANNOT_POLY_LINE
                     )
                 )
                 {
@@ -2093,7 +2068,8 @@ namespace MuPDF.NET
                         SetAP(ap, 0);
                 }
 
-                if (
+                // handle annotation rotations
+                if (    // only these types are supported
                     !(
                         new List<PdfAnnotType>()
                         {
@@ -2108,14 +2084,14 @@ namespace MuPDF.NET
                             PdfAnnotType.PDF_ANNOT_STAMP,
                             PdfAnnotType.PDF_ANNOT_TEXT
                         }
-                    ).Contains((PdfAnnotType)type)
+                    ).Contains((PdfAnnotType)annotType)
                 )
                 {
                     return;
                 }
 
-                int rot = Rotation;
-                if (rot == -1)
+                int rot = Rotation; // get value from annot object
+                if (rot == -1) // nothing to change
                     return;
                 Point M = (this.Rect.TopLeft + this.Rect.BottomRight) / 2.0f;
                 Quad quad = null;

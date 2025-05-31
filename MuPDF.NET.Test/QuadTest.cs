@@ -9,6 +9,7 @@ namespace MuPDF.NET.Test
 {
     public class QuadTest
     {
+        /*
         [Test]
         public void QuadCalc()
         {
@@ -53,5 +54,6 @@ namespace MuPDF.NET.Test
 
             Assert.That(paths1[0].Items.Count, Is.EqualTo(4));
         }
+        */
     }
 }

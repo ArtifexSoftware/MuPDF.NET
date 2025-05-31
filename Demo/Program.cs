@@ -13,6 +13,8 @@ namespace Demo
     {
         static void Main(string[] args)
         {
+            AnnotationsFreeText1.Run(args);
+            AnnotationsFreeText2.Run(args);
             TestHelloWorldToNewDocument(args);
             TestReadBarcode(args);
             TestWriteBarcode(args);
@@ -24,6 +26,9 @@ namespace Demo
             TestInsertImage(args);
             TestGetImageInfo(args);
             TestGetTextPageOcr(args);
+            TestCreateImagePage(args);
+            TestJoinPdfPages(args);
+            TestFreeTextAnnot(args);
         }
 
         static void TestHelloWorldToNewDocument(string[] args)
@@ -284,7 +289,7 @@ namespace Demo
             doc.Recolor(0, 4);
             images = doc.GetPageImages(0);
             Console.WriteLine($"CaName: {images[0].AltCsName}");
-            doc.Save("../../../TestDocuments/ReColor.pdf");
+            doc.Save("ReColor.pdf");
             doc.Close();
         }
 
@@ -298,8 +303,8 @@ namespace Demo
 
             List<Block> infos = page.GetImageInfo(xrefs: true);
 
-            page.ReplaceImage(images[0].Xref, "../../../TestDocuments/Sample.png");
-            page.ReplaceImage(images[0].Xref, "../../../TestDocuments/Sample.jpg");
+            page.ReplaceImage(images[0].Xref, "../../../TestDocuments/Image/_apple.png");
+            page.ReplaceImage(images[0].Xref, "../../../TestDocuments/Image/_bb-logo.png");
 
             infos = page.GetImageInfo(xrefs: true);
             //page.DeleteImage(images[0].Xref);
@@ -314,7 +319,7 @@ namespace Demo
 
             //page.InsertImage(imgs[0].Rect, "../../../TestDocuments/Sample.jpg");
 
-            doc.Save("../../../TestDocuments/ReplaceImage.pdf");
+            doc.Save("ReplaceImage.pdf");
             doc.Close();
         }
 
@@ -348,7 +353,7 @@ namespace Demo
             Console.WriteLine(img_xref);
             page.InsertImage(imageRect6, xref: img_xref);
 
-            doc.Save("../../../TestDocuments/Image/TestInsertImage.pdf");
+            doc.Save("TestInsertImage.pdf");
             doc.Close();
         }
 
@@ -365,7 +370,7 @@ namespace Demo
 
         static void TestGetTextPageOcr(string[] args)
         {
-            string testFilePath = Path.GetFullPath(@"E:\MuPDF.NET\Tmp\squashed\test.pdf");
+            string testFilePath = Path.GetFullPath(@"../../../TestDocuments/Ocr.pdf");
             Document doc = new Document(testFilePath);
             Page page = doc[0];
 
@@ -378,6 +383,70 @@ namespace Demo
             TextPage tp = page.GetTextPageOcr((int)TextFlags.TEXT_PRESERVE_SPANS, full: true);
             string txt = tp.ExtractText();
             Console.WriteLine(txt);
+
+            doc.Close();
+        }
+
+        static void TestCreateImagePage(string[] args)
+        {
+            Pixmap pxmp = new Pixmap("../../../TestDocuments/Image/_bb-logo.png");
+
+            Document doc = new Document();
+            Page page = doc.NewPage(width:pxmp.W, height:pxmp.H);
+            
+            page.InsertImage(page.Rect, pixmap: pxmp);
+
+            pxmp.Dispose();
+
+            doc.Save("_bb-logo.pdf", pretty: 1);
+            doc.Close();
+        }
+
+        static void TestJoinPdfPages(string[] args)
+        {
+            string testFilePath1 = Path.GetFullPath(@"../../../TestDocuments/Widget.pdf");
+            Document doc1 = new Document(testFilePath1);
+            string testFilePath2 = Path.GetFullPath(@"../../../TestDocuments/Color.pdf");
+            Document doc2 = new Document(testFilePath2);
+
+            doc1.InsertPdf(doc2, 0, 0, 2);
+
+            doc1.Save("Joined.pdf", pretty: 1);
+
+            doc2.Close();
+            doc1.Close();
+        }
+
+        static void TestFreeTextAnnot(string[] args)
+        {
+            Rect r = new Rect(72, 72, 220, 100);
+            string t1 = "têxt üsès Lätiñ charß,\nEUR: €, mu: µ, super scripts: ²³!";
+            Rect rect = new Rect(100,100,200,200);
+            float[] red = new float[] { 1, 0, 0 };
+            float[] blue = new float[] { 0, 0, 1 };
+            float[] gold = new float[] { 1, 1, 0 };
+            float[] green = new float[] { 0, 1, 0 };
+            float[] white = new float[] { 1, 1, 1 };
+
+            Document doc = new Document();
+            Page page = doc.NewPage();
+
+            Annot annot = page.AddFreeTextAnnot(
+                rect,
+                t1,
+                fontSize: 10,
+                rotate: 90,
+                textColor: red,
+                fillColor: gold,
+                align: (int)TextAlign.TEXT_ALIGN_CENTER,
+                dashes: new int[] { 2 }
+            );
+
+            annot.SetBorder(border: null, width: 0.3f, dashes: new int[] { 2 });
+            annot.Update(textColor: blue);
+            //annot.Update(textColor: red, fillColor: blue);
+
+            doc.Save("FreeTextAnnot.pdf");
 
             doc.Close();
         }

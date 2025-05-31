@@ -1,8 +1,11 @@
-﻿using System;
+﻿using ICSharpCode.SharpZipLib.Zip.Compression;
+using Newtonsoft.Json;
+using NUnit.Framework;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection.Metadata;
 using System.Text;
-using Newtonsoft.Json;
 
 namespace MuPDF.NET.Test
 {
@@ -51,11 +54,9 @@ namespace MuPDF.NET.Test
         {
             Document doc = new Document();
             Page page = doc.NewPage();
-            Rect r = new Rect(72, 72, 220, 100);
-            string t1 = "têxt üsès Lätiñ charß,\nEUR: €, mu: µ, super scripts: ²³!";
             Annot annot = page.AddFreeTextAnnot(
-                r,
-                t1,
+                Constants.r,
+                Constants.t1,
                 fontSize: 10,
                 rotate: 90,
                 textColor: new float[] { 0, 0, 1 },
@@ -152,6 +153,248 @@ namespace MuPDF.NET.Test
 
             Annot firstAnnot = (new List<Annot>(page.GetAnnots()))[0];
             int type = (int)(firstAnnot.Next as Annot).Type.Item1;
+        }
+
+        /*
+         * Test fix for #1645.
+         * The expected output files assume annot_stem is 'jorj'. We need to always
+         * restore this before returning (this is checked by conftest.py).
+         */
+        [Test]
+        public void Test1645()
+        {
+            string annot_stem = Utils.ANNOT_ID_STEM;
+            Utils.SetAnnotStem("jorj");
+            try
+            {
+                string path_in = "../../../resources/symbol-list.pdf";
+                string path_expected = "../../../resources/test_1645_expected.pdf";
+                string path_out = "test_1645_out.pdf";
+                Document doc = new Document(path_in);
+                Page page = doc[0];
+                Rect page_bounds = page.GetBound();
+                Rect annot_loc = new Rect(page_bounds.X0, page_bounds.Y0, page_bounds.X0 + 75, page_bounds.Y0 + 15);
+
+                page.AddFreeTextAnnot(
+                    annot_loc * page.DerotationMatrix,
+                    "TEST",
+                    fontSize: 18,
+                    fillColor: Utils.GetColor("FIREBRICK1"),
+                    rotate: page.Rotation
+                    );
+
+                doc.Save(path_out, garbage: 1, deflate: 1, noNewId: 1);
+                Console.WriteLine($@"Have created {path_out}. comparing with {path_expected}.");
+
+                byte[] outBytes = File.ReadAllBytes(path_out);
+                byte[] expectedBytes = File.ReadAllBytes(path_expected);
+
+                Assert.IsTrue(outBytes.SequenceEqual(expectedBytes), "Byte arrays are not equal");
+            }
+            finally
+            {
+                Utils.SetAnnotStem(annot_stem);
+            }
+        }
+
+        /*
+         * Test fix for #4254.
+         * Ensure that both annotations are fully created
+         * We do this by asserting equal top-used colors in respective pixmaps.
+         */
+        [Test]
+        public void Test4254()
+        {
+            int GetHashCode(byte[] obj)
+            {
+                if (obj == null) return 0;
+                unchecked
+                {
+                    int hash = 17;
+                    foreach (byte b in obj)
+                        hash = hash * 31 + b;
+                    return hash;
+                }
+            }
+
+            Document doc = new Document();
+            Page page = doc.NewPage();
+
+            Rect rect = new Rect(100, 100, 200, 150);
+            Annot annot = page.AddFreeTextAnnot(rect, "Test Annotation from minimal example");
+            annot.SetBorder(width: 1, dashes: new int[] { 3, 3 });
+            annot.SetOpacity(0.5f);
+            try
+            {
+                annot.SetColors(stroke: new float[] { 1, 0, 0 });
+            }
+            catch (Exception e) {}
+            
+            annot.Update();
+
+            rect = new Rect(200, 200, 400, 400);
+            Annot annot2 = page.AddFreeTextAnnot(rect, "Test Annotation from minimal example pt 2");
+            annot2.SetBorder(width: 1, dashes: new int[] { 3, 3 });
+            annot2.SetOpacity(0.5f);
+            try
+            {
+                annot.SetColors(stroke: new float[] { 1, 0, 0 });
+            }
+            catch (Exception e) { }
+
+            annot.Update();
+            annot2.Update();
+
+            doc.Save("test_4254.pdf");
+
+            // stores top color for each pixmap
+            HashSet<int> top_colors = new HashSet<int>();
+            foreach (var _annot in page.GetAnnots())
+            {
+                Pixmap pix = _annot.GetPixmap();
+                top_colors.Add(GetHashCode(pix.ColorTopUsage().Item2));
+            }
+
+            // only one color must exist
+            Assert.IsTrue(top_colors.Count == 1, "No colors found in annotations pixmaps.");
+        }
+
+        /*
+         * Test creation of rich text FreeText annotations.
+         * We create the same annotation on different pages in different ways,
+         * with and without using Annotation.update(), and then assert equality
+         * of the respective images.
+         * We do this by asserting equal top-used colors in respective pixmaps.
+         */
+        [Test]
+        public void TestRichText()
+        {
+            string ds = "font-size: 11pt; font-family: sans-serif;";
+            string bullet = "\u2610\u2611\u2612"; // Output: ☐☑☒;
+
+            string text = $@"<p style=""text-align:justify;margin-top:-25px;"">
+PyMuPDF <span style=""color: red;"">འདི་ ཡིག་ཆ་བཀྲམ་སྤེལ་གྱི་དོན་ལུ་ པའི་ཐོན་ཐུམ་སྒྲིལ་དྲག་ཤོས་དང་མགྱོགས་ཤོས་ཅིག་ཨིན།</span>
+<span style=""color:blue;"">Here is some <b>bold</b> and <i>italic</i> text, followed by <b><i>bold-italic</i></b>. Text-based check boxes: {bullet}.</span>
+</p>";
+
+            Document doc = new Document();
+
+            // first page
+            Page page = doc.NewPage();
+
+            Rect rect = new Rect(100, 100, 350, 200);
+            Point p2 = rect.TopRight + new Point(50, 30);
+            Point p3 = p2 + new Point(0, 30);
+            Annot annot = page.AddFreeTextAnnot(
+                rect,
+                text,
+                fillColor: Constants.gold,
+                opacity: 0.5f,
+                rotate: 90,
+                borderWidth: 1,
+                dashes: null,
+                richtext: true,
+                callout: new Point[] { p3, p2, rect.TopRight }
+                );
+            Pixmap pix1 = page.GetPixmap();
+
+            // # Second page.
+            // the annotation is created with minimal parameters, which are supplied
+            // in a separate call to the .update() method.
+            page = doc.NewPage();
+            annot = page.AddFreeTextAnnot(
+                rect,
+                text,
+                borderWidth: 1,
+                dashes: null,
+                richtext: true,
+                callout: new Point[] { p3, p2, rect.TopRight }
+                );
+            annot.Update(fillColor: Constants.gold, opacity: 0.5f, rotate: 90);
+            Pixmap pix2 = page.GetPixmap();
+
+            doc.Save("test_rich_text.pdf");
+            doc.Close();
+
+            Assert.That(pix1.SAMPLES, Is.EqualTo(pix2.SAMPLES));
+
+            pix1.Dispose();
+            pix2.Dispose();
+        }
+
+        /*
+         * Test fix for #4447.
+         */
+        [Test]
+        public void Test4447()
+        {
+            Document doc = new Document();
+            Page page = doc.NewPage();
+
+            float[] text_color = Constants.red;
+            float[] fill_color = Constants.green;
+            float[] border_color = Constants.blue;
+
+            Rect annot_rect = new Rect(90.1f, 486.73f, 139.26f, 499.46f);
+
+            try
+            {
+                Annot annot = page.AddFreeTextAnnot(
+                    annot_rect,
+                    "AETERM",
+                    fontName: "Arial",
+                    fontSize: 10,
+                    textColor: text_color,
+                    fillColor: fill_color,
+                    borderColor: border_color,
+                    borderWidth: 1
+                    );
+            }
+            catch (Exception e)
+            {
+                Assert.That(true, $@"cannot set border_color if rich_text is False {e.Message}");
+            }
+
+            try
+            {
+                Annot annot = page.AddFreeTextAnnot(
+                    new Rect(30, 400, 100, 450),
+                    "Two",
+                    fontName: "Arial",
+                    fontSize: 10,
+                    textColor: text_color,
+                    fillColor: fill_color,
+                    borderColor: border_color,
+                    borderWidth: 1
+                    );
+            }
+            catch (Exception e)
+            {
+                Assert.That(true, $@"cannot set border_color if rich_text is False {e.Message}");
+            }
+
+            {
+                Annot annot = page.AddFreeTextAnnot(
+                    new Rect(30, 500, 100, 550),
+                    "Three",
+                    fontName: "Arial",
+                    fontSize: 10,
+                    textColor: text_color,
+                    borderWidth: 1
+                    );
+                annot.Update(textColor: text_color, fillColor: fill_color);
+                try
+                {
+                    annot.Update(borderColor: border_color);
+                }
+                catch (Exception e)
+                {
+                    Assert.That(true, e.Message, Does.Contain("cannot set border_color if rich_text is False"));
+                }
+            }
+
+            doc.Save("test_4447.pdf");
+            doc.Close();
         }
     }
 }

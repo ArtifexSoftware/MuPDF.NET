@@ -26,7 +26,7 @@ namespace MuPDF.NET
 {
     public static class Utils
     {
-        public static (string, string) VERSION = ("1.25.0", "2.0.12-alpha");
+        public static (string, string) VERSION = ("1.26.1", "3.2.8-rc.6");
 
         public static int FZ_MIN_INF_RECT = (int)(-0x80000000);
 
@@ -806,7 +806,7 @@ namespace MuPDF.NET
             obj.pdf_dict_put(new PdfObj(key), val);
         }
 
-        public static (int, int, int) MUPDF_VERSION = (1, 25, 0);
+        public static (int, int, int) MUPDF_VERSION = (1, 26, 1);
 
         public static Dictionary<string, string> ErrorMessages = new Dictionary<string, string>()
         {
@@ -1335,6 +1335,37 @@ namespace MuPDF.NET
         {
             UTF8Encoding utf8 = new UTF8Encoding();
             return utf8.GetBytes(s);
+        }
+
+        public static byte[] ReplaceBytes(byte[] src, byte[] search, byte[] replace, int limit=1)
+        {
+            if (limit <= 0)
+                return src; // no replacement
+            using (var ms = new MemoryStream())
+            {
+                int matchCount = 0;
+                for (int i = 0; i < src.Length;)
+                {
+                    bool match = i + search.Length <= src.Length &&
+                                 src.Skip(i).Take(search.Length).SequenceEqual(search);
+                    if (match)
+                    {
+                        ms.Write(replace, 0, replace.Length);
+                        i += search.Length;
+                        matchCount++;
+                        if (matchCount >= limit)
+                        {
+                            break; // stop after limit replacements
+                        }
+                    }
+                    else
+                    {
+                        ms.WriteByte(src[i]);
+                        i++;
+                    }
+                }
+                return ms.ToArray();
+            }
         }
 
         internal static PdfObj EmbedFile(
@@ -3505,14 +3536,14 @@ namespace MuPDF.NET
             return annot;
         }
 
-        internal static string SetAnnotStem(string stem = null)
+        public static string SetAnnotStem(string stem = null)
         {
             if (stem == null)
                 return Utils.ANNOT_ID_STEM;
-            int len = stem.Length + 1;
+            int len = stem.Length;
             if (len > 50)
                 len = 50;
-            Utils.ANNOT_ID_STEM = stem.Substring(0, 50);
+            Utils.ANNOT_ID_STEM = stem.Substring(0, len);
             return Utils.ANNOT_ID_STEM;
         }
 
