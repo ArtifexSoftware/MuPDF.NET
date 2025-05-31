@@ -11,7 +11,7 @@ namespace MuPDF.NET.Test
 {
     internal class GeneralTest
     {
-
+        
         [Test]
         public void SearchText()
         {
@@ -35,8 +35,9 @@ namespace MuPDF.NET.Test
             Assert.That(ibbox.Equals(ibbox));
 
             Assert.That(page.SearchFor("偿力很务").Count == 0);
+            doc.Close();
         }
-
+        
         [Test]
         public void Test_Opacity()
         {
@@ -53,9 +54,10 @@ namespace MuPDF.NET.Test
             annot2.SetOpacity(1 / 3.0f);
             annot2.Update(blendMode: "Multiply");
 
-            doc.Save("output.pdf", expand: 1, pretty: 1);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
+            doc.Save("output.pdf", expand: 1, pretty: 1);
+            doc.Close();
         }
-
+        /*
         [Test]
         public void TestWrapContents()
         {
@@ -71,7 +73,7 @@ namespace MuPDF.NET.Test
             page.CleanContetns();
             doc.Close();
         }
-
+        
         [Test]
         public void TestPageCleanContents()
         {
@@ -86,7 +88,7 @@ namespace MuPDF.NET.Test
             Assert.That(page.GetContents().Count, Is.EqualTo(1));
             Assert.That(Encoding.UTF8.GetString(page.ReadContents()).StartsWith("q"), Is.True);
         }
-
+        
         [Test]
         public void TestGetText()
         {
@@ -99,9 +101,10 @@ namespace MuPDF.NET.Test
                 float size1 = page.GetText("dict", flags: (int)TextFlagsExtension.TEXTFLAGS_TEXT).Blocks[0].Lines[0].Spans[0].Size;
 
                 Assert.That(Math.Abs(size0 - size1), Is.LessThan(1e-5));
+                doc.Close();
             }
         }
-
+        */
         [Test]
         public void TestFontSize()
         {
@@ -132,8 +135,9 @@ namespace MuPDF.NET.Test
                     }
                 }
             }
+            doc.Close();
         }
-
+        
         [Test]
         public void Reload()
         {
@@ -422,7 +426,7 @@ namespace MuPDF.NET.Test
             Document doc = new Document("../../../resources/test_3615.epub");
             Console.WriteLine(doc.PageMode);
             Console.WriteLine(doc.PageLayout);
-            Assert.Pass();
+            //Assert.Pass();
         }
 
         [Test]

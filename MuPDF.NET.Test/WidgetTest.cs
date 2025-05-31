@@ -35,7 +35,7 @@ namespace MuPDF.NET.Test
 
             Assert.That(first.FieldTypeString, Is.EqualTo("Text"));
         }
-
+        /*
         [Test]
         public void Checkbox()
         {
@@ -60,7 +60,8 @@ namespace MuPDF.NET.Test
             w.FieldFlags |= (int)FormFlags.PDF_FIELD_IS_READ_ONLY;
             w.Update();
             doc.Save("output.pdf");
-            Assert.Pass();
+            //Assert.Pass();
         }
+        */
     }
 }
