@@ -71,7 +71,7 @@ namespace MuPDF.NET.Test
         public void TrueDivide()
         {
             Point t = op1.TrueDivide(3.0f);
-            Assert.Pass();
+            //Assert.Pass();
         }
     }
 }

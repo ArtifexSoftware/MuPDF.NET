@@ -16,7 +16,7 @@
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'tizen'">6.5</SupportedOSPlatformVersion>
 		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
 		<Title>MuPDF.NET</Title>
-		<Version>3.2.8-rc.4</Version>
+		<Version>3.2.8-rc.7</Version>
 		<Authors>Artifex Software Inc.</Authors>
 		<Company>Artifex</Company>
 		<Description>A C# binding for MuPDF</Description>
@@ -54,8 +54,8 @@
 	</ItemGroup>
 	
 	<ItemGroup>
+	  <PackageReference Include="MuPDF.NativeAssets" Version="1.26.0" />
 	  <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-	  <PackageReference Include="MuPDF.NativeAssets" Version="1.0.0" />
 	  <PackageReference Include="SharpZipLib" Version="1.4.2" />
 	  <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.116.1" />
 	  <PackageReference Include="ZXing.Net.Bindings.SkiaSharp" Version="0.16.21" />

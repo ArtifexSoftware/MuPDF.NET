@@ -13,7 +13,7 @@ namespace MuPDF.NET.Test
         {
             Font font = new Font("kenpixel", "../../../resources/kenpixel.ttf", isBold: 1);
 
-            Assert.Pass();
+            //Assert.Pass();
         }
 
         [Test]

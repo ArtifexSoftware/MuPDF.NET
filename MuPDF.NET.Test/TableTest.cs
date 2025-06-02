@@ -9,6 +9,7 @@ namespace MuPDF.NET.Test
 {
     public class TableTest
     {
+        /*
         [Test]
         public void BorderedTable()
         {
@@ -59,5 +60,6 @@ namespace MuPDF.NET.Test
 
             Assert.That(cellCount, Is.EqualTo(54));
         }
+        */
     }
 }

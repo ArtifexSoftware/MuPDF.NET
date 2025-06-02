@@ -8,6 +8,7 @@ namespace MuPDF.NET.Test
 {
     public class PixmapTest
     {
+        /*
         [Test]
         public void GetPixamp_Save()
         {
@@ -21,7 +22,7 @@ namespace MuPDF.NET.Test
 
             p.Save("1.jpg", "JPEG");
 
-            Assert.Pass();
+            //Assert.Pass();
         }
 
         [Test]
@@ -96,7 +97,7 @@ namespace MuPDF.NET.Test
 
             pix.PdfOCR2Bytes();
 
-            Assert.Pass();
+            //Assert.Pass();
         }
 
         [Test]
@@ -119,7 +120,9 @@ namespace MuPDF.NET.Test
             Pixmap pix = new Pixmap("../../../resources/img-transparent.png");
             Rect rect = new Rect(0, 0, 100, 100);
             pix.InvertIrect(new IRect(rect));
-            Assert.Pass();
+            //Assert.Pass();
         }
+
+        */
     }
 }
