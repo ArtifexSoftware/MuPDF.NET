@@ -15,6 +15,7 @@ namespace Demo
         {
             AnnotationsFreeText1.Run(args);
             AnnotationsFreeText2.Run(args);
+            NewAnnots.Run(args);
             TestHelloWorldToNewDocument(args);
             TestReadBarcode(args);
             TestWriteBarcode(args);
@@ -22,6 +23,8 @@ namespace Demo
             TestExtractTextWithLayout(args);
             TestWidget(args);
             TestColor(args);
+            TestCMYKRecolor(args);
+            TestSVGRecolor(args);
             TestReplaceImage(args);
             TestInsertImage(args);
             TestGetImageInfo(args);
@@ -290,6 +293,28 @@ namespace Demo
             images = doc.GetPageImages(0);
             Console.WriteLine($"CaName: {images[0].AltCsName}");
             doc.Save("ReColor.pdf");
+            doc.Close();
+        }
+
+        static void TestCMYKRecolor(string[] args)
+        {
+            string testFilePath = Path.GetFullPath("../../../TestDocuments/CMYK_Recolor.pdf");
+            Document doc = new Document(testFilePath);
+            //List<Entry> images = doc.GetPageImages(0);
+            //Console.WriteLine($"CaName: {images[0].CsName}");
+            doc.Recolor(0, "GRAY");
+            //images = doc.GetPageImages(0);
+            //Console.WriteLine($"CaName: {images[0].AltCsName}");
+            doc.Save("CMYKRecolor.pdf");
+            doc.Close();
+        }
+
+        static void TestSVGRecolor(string[] args)
+        {
+            string testFilePath = Path.GetFullPath("../../../TestDocuments/SvgTest.pdf");
+            Document doc = new Document(testFilePath);
+            doc.Recolor(0, "RGB");
+            doc.Save("SVGRecolor.pdf");
             doc.Close();
         }
 

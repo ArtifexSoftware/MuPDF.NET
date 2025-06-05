@@ -2,6 +2,7 @@
 using Newtonsoft.Json;
 using NUnit.Framework;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection.Metadata;
@@ -394,6 +395,51 @@ PyMuPDF <span style=""color: red;"">འདི་ ཡིག་ཆ་བཀྲམ�
             }
 
             doc.Save("test_4447.pdf");
+            doc.Close();
+        }
+
+        /*
+         * Test Stamp.
+         */
+        [Test]
+        public void TestStamp()
+        {
+            Document doc = new Document();
+            Page page = doc.NewPage();
+
+            Rect r = new Rect(72, 72, 220, 100);
+
+            Annot annot = page.AddStampAnnot(r, stamp: 0);
+            Assert.That(annot.Type.Item1, Is.EqualTo(PdfAnnotType.PDF_ANNOT_STAMP));
+            Assert.That(annot.Type.Item2, Is.EqualTo("Stamp"));
+            Assert.That(annot.Info.Content, Is.EqualTo("Approved"));
+            string annot_id = annot.Info.Id;
+            int annot_xref = annot.Xref;
+            Annot annot1 = page.LoadAnnot(annot_id);
+            Annot annot2 = page.LoadAnnot(annot_xref);
+            Assert.That(annot1.Xref, Is.EqualTo(annot2.Xref));
+            page = doc.ReloadPage(page);
+
+            doc.Save("test_stamp.pdf");
+            doc.Close();
+        }
+
+        /*
+         * Test Image Stamp.
+         */
+        [Test]
+        public void TestImageStamp()
+        {
+            Document doc = new Document();
+            Page page = doc.NewPage();
+
+            Rect r = new Rect(72, 72, 220, 100);
+
+            string filename = "../../../resources/nur-ruhig.jpg";
+            Annot annot = page.AddStampAnnot(r, stamp: filename);
+            Assert.That(annot.Info.Content, Is.EqualTo("Image Stamp"));
+
+            doc.Save("test_image_stamp.pdf");
             doc.Close();
         }
     }

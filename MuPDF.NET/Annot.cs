@@ -929,7 +929,7 @@ namespace MuPDF.NET
                     annotObj.pdf_dict_put_real(new PdfObj("CA"), opacity);
                 }
 
-                if (blendMode != null)
+                if (!string.IsNullOrEmpty(blendMode))
                 {
                     alp0.pdf_dict_put_name(new PdfObj("BM"), blendMode);
                     annotObj.pdf_dict_put_name(new PdfObj("BM"), blendMode);
@@ -1875,242 +1875,242 @@ namespace MuPDF.NET
                     Utils.MakeAnnotDA(annot, tcol == null ? -1 : tcol.Count, tcol.ToArray(), fname, fsize);
                     blendMode = null; // not supported for free text annotations!
                 }
+            }
 
-                // now invoke MuPDF to update the annot appearance
-                bool res = UpdateAppearance(
-                    opacity: opacity,
-                    blendMode: blendMode,
-                    fillColor: fill.ToArray(),
-                    rotate: rotate
-                );
-                if (!res)
-                    throw new Exception("Error updating annotation");
+            // now invoke MuPDF to update the annot appearance
+            bool res = UpdateAppearance(
+                opacity: opacity,
+                blendMode: blendMode,
+                fillColor: fill.ToArray(),
+                rotate: rotate
+            );
+            if (!res)
+                throw new Exception("Error updating annotation");
 
-                if (annotType == PdfAnnotType.PDF_ANNOT_FREE_TEXT)
+            if (annotType == PdfAnnotType.PDF_ANNOT_FREE_TEXT)
+            {
+                // in absence of previous opacity, we may need to modify the AP
+                string apStr = Encoding.UTF8.GetString(this.GetAP());
+                if (opacity >= 0 && opacity < 1 && !apStr.StartsWith("/H gs"))
+                    this.SetAP(Encoding.UTF8.GetBytes("/H gs\n" + apStr));
+                return;
+            }
+
+            byte[] bFill = ColorString(fill, "f");
+            byte[] bStroke = ColorString(stroke, "c");
+
+            Matrix pCTM = Parent.TransformationMatrix;
+            Matrix iMat = ~pCTM; // inverse page transf. matrix
+
+            string dashStr = "";
+            List<byte> bDash = new List<byte>();
+            UTF8Encoding utf8 = new UTF8Encoding();
+            if (dt != null && dt.Length > 0)
+            {
+                string[] dashes = new string[dt.Length];
+                for (int i = 0; i < dt.Length; i++)
                 {
-                    // in absence of previous opacity, we may need to modify the AP
-                    string apStr = Encoding.UTF8.GetString(this.GetAP());
-                    if (opacity >= 0 && opacity < 1 && !apStr.StartsWith("/H gs"))
-                        this.SetAP(Encoding.UTF8.GetBytes("/H gs\n" + apStr));
-                    return;
+                    dashes[i] = Convert.ToString(dt[i]);
+                }
+                dashStr = "[" + string.Join(" ", dashes) + "] 0 d \n";
+                bDash.AddRange(utf8.GetBytes(dashStr));
+            }
+            else
+                bDash = null;
+                
+            PdfLineEnding line_end_le = LineEnds.Item1;
+            PdfLineEnding line_end_ri = LineEnds.Item2;
+
+            // read contents as created by MuPDF
+            byte[] ap = GetAP();
+            List<string> apTab = new List<string>(Encoding.UTF8.GetString(ap).Split('\n'));
+            bool apUpdated = false;
+
+            if (annotType == PdfAnnotType.PDF_ANNOT_REDACT)
+            {
+                if (crossOut)
+                {
+                    apUpdated = true;
+                    apTab.RemoveAt(apTab.Count - 1);
+                    string t = apTab[0];
+                    string ll = apTab[1];
+                    string lr = apTab[2];
+                    string ur = apTab[3];
+                    string ul = apTab[4];
+                    apTab.Add(lr);
+                    apTab.Add(ll);
+                    apTab.Add(ur);
+                    apTab.Add(ll);
+                    apTab.Add(ul);
+                    apTab.Add("S");
                 }
 
-                byte[] bFill = ColorString(fill, "f");
-                byte[] bStroke = ColorString(stroke, "f");
-
-                Matrix pCTM = Parent.TransformationMatrix;
-                Matrix iMat = ~pCTM; // inverse page transf. matrix
-
-                string dashStr = "";
-                List<byte> bDash = new List<byte>();
-                UTF8Encoding utf8 = new UTF8Encoding();
-                if (dt != null && dt.Length > 0)
+                List<string> nTab = new List<string>();
+                if (borderWidth > 0 || bStroke != null)
                 {
-                    string[] dashes = new string[dt.Length];
-                    for (int i = 0; i < dt.Length; i++)
+                    apUpdated = true;
+                    nTab =
+                        borderWidth > 0
+                            ? new List<string>() { string.Format("{0} w", borderWidth) }
+                            : new List<string>();
+                    for (int i = 0; i < apTab.Count; i++)
                     {
-                        dashes[i] = Convert.ToString(dt[i]);
+                        string line = apTab[i];
+                        if (line.EndsWith("w"))
+                            continue;
+                        if (line.EndsWith("RG") && bStroke != null)
+                            line = bStroke.Take(bStroke.Length - 1).ToString();
+                        nTab.Add(line);
                     }
-                    dashStr = "[" + string.Join(" ", dashes) + "] 0 d \n";
-                    bDash.AddRange(utf8.GetBytes(dashStr));
+                    apTab = nTab;
+                }
+                ap = utf8.GetBytes(string.Join("\n", apTab.ToArray()));
+            }
+
+            if (
+                annotType == PdfAnnotType.PDF_ANNOT_POLYGON
+                || annotType == PdfAnnotType.PDF_ANNOT_POLY_LINE
+            )
+            {
+                List<string> newApTab = apTab;
+                newApTab.RemoveAt(newApTab.Count - 1);
+                ap = MergeByte(
+                    Utils.ToByte(string.Join("\n", newApTab.ToArray())),
+                    Utils.ToByte("\n")
+                );
+                apUpdated = true;
+                if (bFill != null && bFill.Length > 0)
+                {
+                    if (annotType == PdfAnnotType.PDF_ANNOT_POLYGON)
+                        ap = MergeByte(MergeByte(ap, bFill), Utils.ToByte("b"));
+                    else if (annotType == PdfAnnotType.PDF_ANNOT_POLY_LINE)
+                        ap = MergeByte(ap, Utils.ToByte("S"));
                 }
                 else
-                    bDash = null;
-                
-                PdfLineEnding line_end_le = LineEnds.Item1;
-                PdfLineEnding line_end_ri = LineEnds.Item2;
-
-                // read contents as created by MuPDF
-                byte[] ap = GetAP();
-                List<string> apTab = new List<string>(Encoding.UTF8.GetString(ap).Split('\n'));
-                bool apUpdated = false;
-
-                if (annotType == PdfAnnotType.PDF_ANNOT_REDACT)
                 {
-                    if (crossOut)
-                    {
-                        apUpdated = true;
-                        apTab.RemoveAt(apTab.Count - 1);
-                        string t = apTab[0];
-                        string ll = apTab[1];
-                        string lr = apTab[2];
-                        string ur = apTab[3];
-                        string ul = apTab[4];
-                        apTab.Add(lr);
-                        apTab.Add(ll);
-                        apTab.Add(ur);
-                        apTab.Add(ll);
-                        apTab.Add(ul);
-                        apTab.Add("S");
-                    }
-
-                    List<string> nTab = new List<string>();
-                    if (borderWidth > 0 || bStroke != null)
-                    {
-                        apUpdated = true;
-                        nTab =
-                            borderWidth > 0
-                                ? new List<string>() { string.Format("{0} w", borderWidth) }
-                                : new List<string>();
-                        for (int i = 0; i < apTab.Count; i++)
-                        {
-                            string line = apTab[i];
-                            if (line.EndsWith("w"))
-                                continue;
-                            if (line.EndsWith("RG") && bStroke != null)
-                                line = bStroke.Take(bStroke.Length - 1).ToString();
-                            nTab.Add(line);
-                        }
-                        apTab = nTab;
-                    }
-                    ap = utf8.GetBytes(string.Join("\n", apTab.ToArray()));
+                    if (annotType == PdfAnnotType.PDF_ANNOT_POLYGON)
+                        ap = MergeByte(ap, Utils.ToByte("s"));
+                    else if (annotType == PdfAnnotType.PDF_ANNOT_POLY_LINE)
+                        ap = MergeByte(ap, Utils.ToByte("S"));
                 }
+            }
+                                
+            if (bDash != null)
+            {
+                ap = MergeByte(bDash.ToArray(), ap);
+                // reset dashing -only applies for LINE annots with line ends given
+                ap = Utils.ReplaceBytes(ap, utf8.GetBytes("\nS\n"), utf8.GetBytes("\nS\n[] 0 d\n"), 1);
+                apUpdated = true;
+            }
 
-                if (
+            if (!string.IsNullOrEmpty(opaCode))
+            {
+                ap = MergeByte(utf8.GetBytes(opaCode), ap);
+                apUpdated = true;
+            }
+
+            ap = MergeByte(MergeByte(Utils.ToByte("q\n"), ap), Utils.ToByte("\nQ\n"));
+
+            // the following handles line end symbols for 'Polygon' and 'Polyline'
+            if (
+                ((int)line_end_le + (int)line_end_ri) > 0
+                && (
                     annotType == PdfAnnotType.PDF_ANNOT_POLYGON
                     || annotType == PdfAnnotType.PDF_ANNOT_POLY_LINE
                 )
+            )
+            {
+                List<LE_FUNCTION> leFuncs = new List<LE_FUNCTION>()
                 {
-                    List<string> newApTab = apTab;
-                    newApTab.RemoveAt(newApTab.Count - 1);
-                    ap = MergeByte(
-                        Utils.ToByte(string.Join("\n", newApTab.ToArray())),
-                        Utils.ToByte("\n")
-                    );
-                    apUpdated = true;
-                    if (bFill != null && bFill.Length > 0)
-                    {
-                        if (annotType == PdfAnnotType.PDF_ANNOT_POLYGON)
-                            ap = MergeByte(MergeByte(ap, bFill), Utils.ToByte("b"));
-                        else if (annotType == PdfAnnotType.PDF_ANNOT_POLY_LINE)
-                            ap = MergeByte(ap, Utils.ToByte("S"));
-                    }
-                    else
-                    {
-                        if (annotType == PdfAnnotType.PDF_ANNOT_POLYGON)
-                            ap = MergeByte(ap, Utils.ToByte("s"));
-                        else if (annotType == PdfAnnotType.PDF_ANNOT_POLY_LINE)
-                            ap = MergeByte(ap, Utils.ToByte("S"));
-                    }
-                }
-                                
-                if (bDash != null)
-                {
-                    ap = MergeByte(bDash.ToArray(), ap);
-                    // reset dashing -only applies for LINE annots with line ends given
-                    ap = Utils.ReplaceBytes(ap, utf8.GetBytes("\nS\n"), utf8.GetBytes("\nS\n[] 0 d\n"), 1);
-                    apUpdated = true;
-                }
+                    null,
+                    le_square,
+                    le_circle,
+                    le_diamond,
+                    le_openarrow,
+                    le_closedarrow,
+                    le_butt,
+                    le_ropenarrow,
+                    le_rclosedarrow,
+                    le_slash
+                };
 
-                if (!string.IsNullOrEmpty(opaCode))
+                float d = 2 * Math.Max(1, Border.Width);
+                rect = Rect + new Rect(-d, -d, d, d);
+                apUpdated = true;
+                List<Point> points = Vertices;
+                Point p1 = null;
+                Point p2 = null;
+
+                if ((int)line_end_le > 0 && (int)line_end_le < leFuncs.Count)
                 {
-                    ap = MergeByte(utf8.GetBytes(opaCode), ap);
-                    apUpdated = true;
+                    p1 = points[0] * iMat;
+                    p2 = points[1] * iMat;
+                    string left = leFuncs[(int)line_end_le](this, p1, p2, false, fillColor);
+                    ap = MergeByte(ap, Utils.ToByte(left));
                 }
 
-                ap = MergeByte(MergeByte(Utils.ToByte("q\n"), ap), Utils.ToByte("\nQ\n"));
-
-                // the following handles line end symbols for 'Polygon' and 'Polyline'
-                if (
-                    ((int)line_end_le + (int)line_end_ri) > 0
-                    && (
-                        annotType == PdfAnnotType.PDF_ANNOT_POLYGON
-                        || annotType == PdfAnnotType.PDF_ANNOT_POLY_LINE
-                    )
-                )
+                if ((int)line_end_ri > 0 && (int)line_end_ri < leFuncs.Count)
                 {
-                    List<LE_FUNCTION> leFuncs = new List<LE_FUNCTION>()
-                    {
-                        null,
-                        le_square,
-                        le_circle,
-                        le_diamond,
-                        le_openarrow,
-                        le_closedarrow,
-                        le_butt,
-                        le_ropenarrow,
-                        le_rclosedarrow,
-                        le_slash
-                    };
-
-                    float d = 2 * Math.Max(1, Border.Width);
-                    rect = Rect + new Rect(-d, -d, d, d);
-                    apUpdated = true;
-                    List<Point> points = Vertices;
-                    Point p1 = null;
-                    Point p2 = null;
-
-                    if ((int)line_end_le > 1 && (int)line_end_le < leFuncs.Count)
-                    {
-                        p1 = points[0] * iMat;
-                        p2 = points[1] * iMat;
-                        string left = leFuncs[(int)line_end_le](this, p1, p2, false, fillColor);
-                        ap = MergeByte(ap, Utils.ToByte(left));
-                    }
-
-                    if ((int)line_end_ri > 1 && (int)line_end_ri < leFuncs.Count)
-                    {
-                        p1 = points[-2] * iMat;
-                        p2 = points[-1] * iMat;
-                        string left = leFuncs[(int)line_end_ri](this, p1, p2, false, fillColor);
-                        ap = MergeByte(ap, Utils.ToByte(left));
-                    }
+                    p1 = points[points.Count-2] * iMat;
+                    p2 = points[points.Count-1] * iMat;
+                    string left = leFuncs[(int)line_end_ri](this, p1, p2, true, fillColor);
+                    ap = MergeByte(ap, Utils.ToByte(left));
                 }
-
-                if (apUpdated)
-                {
-                    if (rect != null)
-                    {
-                        SetRect(rect);
-                        SetAP(ap, 1);
-                    }
-                    else
-                        SetAP(ap, 0);
-                }
-
-                // handle annotation rotations
-                if (    // only these types are supported
-                    !(
-                        new List<PdfAnnotType>()
-                        {
-                            PdfAnnotType.PDF_ANNOT_CARET,
-                            PdfAnnotType.PDF_ANNOT_CIRCLE,
-                            PdfAnnotType.PDF_ANNOT_FILE_ATTACHMENT,
-                            PdfAnnotType.PDF_ANNOT_INK,
-                            PdfAnnotType.PDF_ANNOT_LINE,
-                            PdfAnnotType.PDF_ANNOT_POLY_LINE,
-                            PdfAnnotType.PDF_ANNOT_POLYGON,
-                            PdfAnnotType.PDF_ANNOT_SQUARE,
-                            PdfAnnotType.PDF_ANNOT_STAMP,
-                            PdfAnnotType.PDF_ANNOT_TEXT
-                        }
-                    ).Contains((PdfAnnotType)annotType)
-                )
-                {
-                    return;
-                }
-
-                int rot = Rotation; // get value from annot object
-                if (rot == -1) // nothing to change
-                    return;
-                Point M = (this.Rect.TopLeft + this.Rect.BottomRight) / 2.0f;
-                Quad quad = null;
-                if (rot == 0)
-                {
-                    if ((apnMat - new Matrix(1, 1)).Abs() < 1e-5)
-                        return;
-
-                    quad = this.Rect.Morph(M, ~apnMat);
-                    SetRect(quad.Rect);
-                    SetApnMatrix(new Matrix(1.0f, 1.0f));
-                    return;
-                }
-
-                Matrix mat = new Matrix(rot);
-                quad = this.Rect.Morph(M, mat);
-                SetRect(quad.Rect);
-                SetApnMatrix(apnMat * mat);
             }
+
+            if (apUpdated)
+            {
+                if (rect != null)
+                {
+                    SetRect(rect);
+                    SetAP(ap, 1);
+                }
+                else
+                    SetAP(ap, 0);
+            }
+
+            // handle annotation rotations
+            if (    // only these types are supported
+                !(
+                    new List<PdfAnnotType>()
+                    {
+                        PdfAnnotType.PDF_ANNOT_CARET,
+                        PdfAnnotType.PDF_ANNOT_CIRCLE,
+                        PdfAnnotType.PDF_ANNOT_FILE_ATTACHMENT,
+                        PdfAnnotType.PDF_ANNOT_INK,
+                        PdfAnnotType.PDF_ANNOT_LINE,
+                        PdfAnnotType.PDF_ANNOT_POLY_LINE,
+                        PdfAnnotType.PDF_ANNOT_POLYGON,
+                        PdfAnnotType.PDF_ANNOT_SQUARE,
+                        PdfAnnotType.PDF_ANNOT_STAMP,
+                        PdfAnnotType.PDF_ANNOT_TEXT
+                    }
+                ).Contains((PdfAnnotType)annotType)
+            )
+            {
+                return;
+            }
+
+            int rot = Rotation; // get value from annot object
+            if (rot == -1) // nothing to change
+                return;
+            Point M = (this.Rect.TopLeft + this.Rect.BottomRight) / 2.0f;
+            Quad quad = null;
+            if (rot == 0)
+            {
+                if ((apnMat - new Matrix(1, 1)).Abs() < 1e-5)
+                    return;
+
+                quad = this.Rect.Morph(M, ~apnMat);
+                SetRect(quad.Rect);
+                SetApnMatrix(new Matrix(1.0f, 1.0f));
+                return;
+            }
+
+            Matrix mat = new Matrix(rot);
+            quad = this.Rect.Morph(M, mat);
+            SetRect(quad.Rect);
+            SetApnMatrix(apnMat * mat);
         }
 
         internal static string le_square(
@@ -2131,16 +2131,22 @@ namespace MuPDF.NET
                 string fcol,
                 string opacity
             ) = le_annot_parms(annot, p1, p2, fillColor);
-            float rw = (float)(1.1547 * Math.Max(1.0f, w) * 1.0);
-            Point M = lr ? L : R;
+            float shift = 2.5f; // 2*shift*width = length of square edge
+            float d = shift * Math.Max(1, w);
+            Point M = lr ? R - new Point(d / 2.0f, 0) : L + new Point(d / 2.0f, 0);
 
-            Rect r = new Rect(M.X - rw, M.Y - 2 * w, M.X + rw, M.Y + 2 * w);
-            Point top = r.TopLeft * im;
-            Point bot = r.BottomRight * im;
-            string ap = string.Format("\nq\n{0}{1} {2} m\n", opacity, top.X, top.Y);
-            ap += string.Format("{0} {1} l\n", bot.X, bot.Y);
+            Rect r = new Rect(M, M) + new Rect(-d, -d, d, d); // the square
+            // the square makes line longer by (2*shift - 1)*width
+            Point p = r.TopLeft * im;
+            string ap = string.Format("q\n{0}{1} {2} m\n", opacity, p.X, p.Y);
+            p = r.TopRight * im;
+            ap += string.Format("{0} {1} l\n", p.X, p.Y);
+            p = r.BottomRight * im;
+            ap += string.Format("{0} {1} l\n", p.X, p.Y);
+            p = r.BottomLeft * im;
+            ap += string.Format("{0} {1} l\n", p.X, p.Y);
             ap += string.Format("{0} w\n", w);
-            ap += scol + "s\nQ\n";
+            ap += scol + fcol + "b\nQ\n";
             return ap;
         }
 
@@ -2162,11 +2168,12 @@ namespace MuPDF.NET
                 string fcol,
                 string opacity
             ) = le_annot_parms(annot, p1, p2, fillColor);
-            float shift = 2.5f;
+            float shift = 2.5f; // 2*shift*width = length of square edge
             float d = shift * Math.Max(1, w);
-            Point M = lr ? L + new Point(d / 2.0f, 0) : R - new Point(d / 2.0f, 0);
+            Point M = lr ? R - new Point(d / 2.0f, 0) : L + new Point(d / 2.0f, 0);
 
-            Rect r = new Rect(M, M) + new Rect(-d, -d, d, d);
+            Rect r = new Rect(M, M) + new Rect(-d, -d, d, d); // the square
+            // the square makes line longer by(2 * shift - 1)*width
             Point p = (r.TopLeft + (r.BottomLeft - r.TopLeft) * 0.5f) * im;
             string ap = string.Format("q\n{0}{1} {2} m\n", opacity, p.X, p.Y);
             p = (r.TopLeft + (r.TopRight - r.TopLeft) * 0.5f) * im;
@@ -2176,7 +2183,7 @@ namespace MuPDF.NET
             p = (r.BottomRight + (r.BottomLeft - r.BottomRight) * 0.5f) * im;
             ap += string.Format("{0} {1} l\n", p.X, p.Y);
             ap += string.Format("{0} w\n", w);
-            ap += scol + fcol + "n\nQ\n";
+            ap += scol + fcol + "b\nQ\n";
             return ap;
         }
 
@@ -2404,7 +2411,7 @@ namespace MuPDF.NET
             ) = le_annot_parms(annot, p1, p2, fillColor);
             float shift = 2.5f;
             float d = shift * Math.Max(1, w);
-            Point M = lr ? L + new Point(d / 2.0f, 0) : R - new Point(d / 2.0f, 0);
+            Point M = lr ? R - new Point(d / 2.0f, 0) : L + new Point(d / 2.0f, 0);
 
             Rect r = (new Rect(M, M)) + new Rect(-d, -d, d, d);
             string ap =
@@ -2416,7 +2423,7 @@ namespace MuPDF.NET
                     r.BottomRight * im,
                     r.BottomLeft * im
                 );
-            ap += string.Format("{} w\n", w);
+            ap += string.Format("{0} w\n", w);
             ap += scol + fcol + "b\nQ\n";
             
             return ap;
@@ -2424,7 +2431,7 @@ namespace MuPDF.NET
 
         internal static string bezier(Point p, Point q, Point r)
         {
-            string f = "{0} {1} {2} {3} {4} {5} {6} c\n";
+            string f = "{0} {1} {2} {3} {4} {5} c\n";
             
             return string.Format(f, p.X, p.Y, q.X, q.Y, r.X, r.Y);
         }

@@ -1348,15 +1348,11 @@ namespace MuPDF.NET
                 {
                     bool match = i + search.Length <= src.Length &&
                                  src.Skip(i).Take(search.Length).SequenceEqual(search);
-                    if (match)
+                    if (match && matchCount < limit)
                     {
                         ms.Write(replace, 0, replace.Length);
                         i += search.Length;
                         matchCount++;
-                        if (matchCount >= limit)
-                        {
-                            break; // stop after limit replacements
-                        }
                     }
                     else
                     {
@@ -3558,7 +3554,7 @@ namespace MuPDF.NET
             {
                 if (annot.m_internal == null)
                     break;
-                (string res, ulong len) = annot.pdf_annot_obj().pdf_to_string();
+                (string res, ulong len) = annot.pdf_annot_obj().pdf_dict_gets("NM").pdf_to_string();
                 if (name == res)
                 {
                     found = true;

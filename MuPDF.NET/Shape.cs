@@ -128,7 +128,7 @@ namespace MuPDF.NET
             int oc = 0
             )
         {
-            if (string.IsNullOrEmpty(fontName) || string.IsNullOrEmpty(fontFile))
+            if (string.IsNullOrEmpty(fontName) && string.IsNullOrEmpty(fontFile))
                 throw new Exception("should include fontName and fontFile.");
 
             return _InsertText(point, buffer, fontSize, lineHeight, fontName, fontFile, setSimple, encoding,
@@ -177,8 +177,8 @@ namespace MuPDF.NET
             )
         {
             string[] list = buffer.Split('\n');
-            if (string.IsNullOrEmpty(fontName) || string.IsNullOrEmpty(fontFile))
-                throw new Exception("should include fontName and fontFile.");
+            if (string.IsNullOrEmpty(fontName) && string.IsNullOrEmpty(fontFile))
+                throw new Exception("should include fontName or fontFile.");
 
             return _InsertText(point, new List<string>(list), fontSize, lineHeight, fontName, fontFile, setSimple, encoding,
                 color, fill, renderMode, borderWidth, rotate, morph, strokeOpacity, fillOpacity, oc);
@@ -786,10 +786,10 @@ namespace MuPDF.NET
                 else if (i % 4 == 3)
                     p = (new Point(i, 1) * mb);
                 else continue;
-                points.Append(p * iMat);
+                points.Add(p * iMat);
             }
             points.Insert(0, p1);
-            points.Append(p2);
+            points.Add(p2);
             DrawPolyline(points.ToArray());
 
             return p2;
@@ -936,8 +936,8 @@ namespace MuPDF.NET
         public float InsertTextbox(
             Rect rect,
             List<string> buffer,
-            string fontFile,
-            string fontName,
+            string fontName = "helv",
+            string fontFile = null,
             float fontSize = 11,
             float lineHeight = 0,
             bool setSimple = false,
@@ -955,6 +955,8 @@ namespace MuPDF.NET
             int oc = 0
             )
         {
+            if (string.IsNullOrEmpty(fontName) && string.IsNullOrEmpty(fontFile))
+                throw new Exception("should include fontName and fontFile.");
             return _InsertTextbox(rect, buffer, fontName, fontFile, fontSize, lineHeight, setSimple, encoding,
                 color, fill, expandTabs, align, renderMode, borderWidth, rotate, morph, strokeOpacity, fillOpacity, oc);
         }
@@ -1004,6 +1006,8 @@ namespace MuPDF.NET
             int oc = 0
             )
         {
+            if (string.IsNullOrEmpty(fontName) && string.IsNullOrEmpty(fontFile))
+                throw new Exception("should include fontName and fontFile.");
             string[] list = buffer.Split('\n');
             return _InsertTextbox(rect, new List<string>(list), fontName, fontFile, fontSize, lineHeight, setSimple, encoding,
                 color, fill, expandTabs, align, renderMode, borderWidth, rotate, morph, strokeOpacity, fillOpacity, oc);
@@ -1012,8 +1016,8 @@ namespace MuPDF.NET
         internal float _InsertTextbox(
             Rect rect,
             List<string> buffer,
-            string fontName,
-            string fontFile,
+            string fontName = "helv",
+            string fontFile = null,
             float fontSize = 11,
             float lineHeight = 0,
             bool setSimple = true,
