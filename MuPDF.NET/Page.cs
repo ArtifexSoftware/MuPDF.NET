@@ -1062,55 +1062,125 @@ namespace MuPDF.NET
             PdfAnnot annot = page.pdf_create_annot((pdf_annot_type)annotType);
             annot.pdf_set_annot_rect(r);
             annot.pdf_update_annot();
+            Utils.AddAnnotId(annot, "A");
             return new Annot(annot, this);
         }
 
-        private Annot AddStampAnnot(Rect rect, int stamp = 0)
+        /// <summary>
+        /// PDF only: Add a ('rubber') 'Stamp' annotation.
+        /// </summary>
+        /// <param name="rect">the rectangle into which the text should be inserted.</param>
+        /// <param name="stamp">stamp object, can be as int, pixmap, filepath, byte[], MemoryStream.</param>
+        /// int : (0=Approved,1=AsIs,2=Confidential,3=Departmental,4=Experimental,5=Expired,6=Final,7=ForComment,8=ForPublicRelease,9=NotApproved,10=NotForPublicRelease,11=Sold,12=TopSecret,13=Draft
+        /// <returns>the created annotation.</returns>
+        public Annot AddStampAnnot(Rect rect, object stamp = null)
         {
-            PdfPage page = _pdfPage;
-            List<PdfObj> stampIds = new List<PdfObj>()
-            {
-                new PdfObj("Approved"),
-                new PdfObj("AsIs"),
-                new PdfObj("Confidential"),
-                new PdfObj("Departmental"),
-                new PdfObj("Experimental"),
-                new PdfObj("Expired"),
-                new PdfObj("Final"),
-                new PdfObj("ForComment"),
-                new PdfObj("ForPublicRelease"),
-                new PdfObj("NotApproved"),
-                new PdfObj("NotForPublicRelease"),
-                new PdfObj("Sold"),
-                new PdfObj("TopSecret"),
-                new PdfObj("Draft"),
-            };
-            int n = stampIds.Count;
-            PdfObj name = stampIds[0];
-            FzRect r = rect.ToFzRect();
-            if (r.fz_is_infinite_rect() != 0 || r.fz_is_empty_rect() != 0)
-            {
-                throw new Exception(Utils.ErrorMessages["MSG_BAD_RECT"]);
-            }
-            if (Utils.INRANGE(stamp, 0, n - 1))
-            {
-                name = stampIds[stamp];
-            }
-
-            PdfAnnot annot = page.pdf_create_annot(pdf_annot_type.PDF_ANNOT_STAMP);
-            annot.pdf_set_annot_rect(r);
+            int oldRotation = AnnotPreProcess(this);
+            Annot val = null;
             try
             {
-                annot.pdf_annot_obj().pdf_dict_put(new PdfObj("Name"), name);
-            }
-            catch (Exception) { }
+                FzRect r = rect.ToFzRect();
+                if (r.fz_is_infinite_rect() != 0 || r.fz_is_empty_rect() != 0)
+                {
+                    throw new Exception(Utils.ErrorMessages["MSG_BAD_RECT"]);
+                }
+                PdfPage page = _pdfPage;
+                List<PdfObj> stampIds = new List<PdfObj>()
+                {
+                    new PdfObj("Approved"),
+                    new PdfObj("AsIs"),
+                    new PdfObj("Confidential"),
+                    new PdfObj("Departmental"),
+                    new PdfObj("Experimental"),
+                    new PdfObj("Expired"),
+                    new PdfObj("Final"),
+                    new PdfObj("ForComment"),
+                    new PdfObj("ForPublicRelease"),
+                    new PdfObj("NotApproved"),
+                    new PdfObj("NotForPublicRelease"),
+                    new PdfObj("Sold"),
+                    new PdfObj("TopSecret"),
+                    new PdfObj("Draft"),
+                };
+                
+                int n = stampIds.Count;
+                byte[] buf = null;
+                PdfObj name = stampIds[0];
 
-            annot.pdf_set_annot_contents(
-                annot.pdf_annot_obj().pdf_dict_get_name(new PdfObj("Name"))
-            );
-            annot.pdf_update_annot();
-            Utils.AddAnnotId(annot, "A");
-            return new Annot(annot, this);
+                if (stamp is int index && index >= 0 && index < n)
+                {
+                    name = stampIds[index];
+                }
+                else if (stamp is Pixmap pix)
+                {
+                    buf = pix.ToBytes();
+                }
+                else if (stamp is string filePath && File.Exists(filePath))
+                {
+                    buf = File.ReadAllBytes(filePath);
+                }
+                else if (stamp is byte[] b)
+                {
+                    buf = b;
+                }
+                else if (stamp is MemoryStream ms)
+                {
+                    buf = ms.ToArray();
+                }
+                else
+                {
+                    name = stampIds[0];
+                }
+
+                PdfAnnot annot = page.pdf_create_annot(pdf_annot_type.PDF_ANNOT_STAMP);
+                if (buf != null) // image stamp
+                {
+                    FzBuffer fzbuff = Utils.fz_new_buffer_from_data(buf);
+                    FzImage img = fzbuff.fz_new_image_from_buffer();
+
+                    // compute image boundary box on page
+                    int w = img.w();
+                    int h = img.h();
+                    float scale = Math.Min(rect.Width / w, rect.Height / h);
+                    float width = w * scale; // bbox width
+                    float height = h * scale; // bbox height
+
+                    // center of "rect"
+                    Point center = (rect.TopLeft + rect.BottomRight) / 2.0f;
+                    float x0 = center.X - width / 2.0f;
+                    float y0 = center.Y - height / 2.0f;
+                    float x1 = x0 + width;
+                    float y1 = y0 + height;
+                    r = new FzRect(x0, y0, x1, y1);
+                    annot.pdf_set_annot_rect(r);
+                    annot.pdf_set_annot_stamp_image(img);
+                    annot.pdf_annot_obj().pdf_dict_put(new PdfObj("Name"), mupdf.mupdf.pdf_new_name("ImageStamp"));
+                    annot.pdf_set_annot_contents("Image Stamp");
+                }
+                else
+                {
+                    annot.pdf_set_annot_rect(r);
+                    annot.pdf_annot_obj().pdf_dict_put(new PdfObj("Name"), name);
+                    annot.pdf_set_annot_contents(name.pdf_to_name());
+                }
+                
+                annot.pdf_update_annot();
+                Utils.AddAnnotId(annot, "A");
+                val = new Annot(annot, this);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error in AddStampAnnot: " + ex.Message);
+                val = null;
+            }
+            finally
+            {
+                if (oldRotation != 0)
+                    SetRotation(oldRotation);
+            }
+            AnnotPostProcess(this, val);
+
+            return val;
         }
 
         /// <summary>
@@ -1122,23 +1192,42 @@ namespace MuPDF.NET
         /// <returns></returns>
         public Annot AddTextAnnot(Point point, string text, string icon = "Note")
         {
-            PdfPage page = _pdfPage;
-            PdfAnnot annot = page.pdf_create_annot(pdf_annot_type.PDF_ANNOT_TEXT);
-            FzRect r = annot.pdf_annot_rect();
-            r = mupdf.mupdf.fz_make_rect(
-                point.X,
-                point.Y,
-                point.X + r.x1 - r.x0,
-                point.Y + r.y1 - r.y0
-            );
-            annot.pdf_set_annot_rect(r);
-            annot.pdf_set_annot_contents(text);
-            if (!string.IsNullOrEmpty(icon))
-                annot.pdf_set_annot_icon_name(icon);
+            int oldRotation = AnnotPreProcess(this);
+            Annot val = null;
+            try
+            {
+                PdfPage page = _pdfPage;
+                FzPoint p = point.ToFzPoint();
+                PdfAnnot annot = page.pdf_create_annot(pdf_annot_type.PDF_ANNOT_TEXT);
+                FzRect r = annot.pdf_annot_rect();
+                r = mupdf.mupdf.fz_make_rect(
+                    p.x,
+                    p.y,
+                    p.x + r.x1 - r.x0,
+                    p.y + r.y1 - r.y0
+                );
+                annot.pdf_set_annot_rect(r);
+                annot.pdf_set_annot_contents(text);
+                if (!string.IsNullOrEmpty(icon))
+                    annot.pdf_set_annot_icon_name(icon);
 
-            annot.pdf_update_annot();
-            Utils.AddAnnotId(annot, "A");
-            return new Annot(annot, this);
+                annot.pdf_update_annot();
+                Utils.AddAnnotId(annot, "A");
+                val = new Annot(annot, this);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error in AddTextAnnot: " + ex.Message);
+                val = null;
+            }
+            finally
+            {
+                if (oldRotation != 0)
+                    SetRotation(oldRotation);
+            }
+            AnnotPostProcess(this, val);
+
+            return val;
         }
 
         private Annot AddTextMarker(List<Quad> quads, PdfAnnotType annotType)
@@ -1250,7 +1339,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        ///
+        /// Add a 'PolyLine' annotation.
         /// </summary>
         /// <param name="points"></param>
         /// <returns></returns>
@@ -4359,8 +4448,8 @@ namespace MuPDF.NET
         public float InsertTextbox(
             Rect rect,
             dynamic text,
-            string fontName,
-            string fontFile,
+            string fontName = "helv",
+            string fontFile = null,
             float fontSize = 11,
             float lineHeight = 0,
             int setSimple = 0,
@@ -4379,6 +4468,8 @@ namespace MuPDF.NET
             int oc = 0
         )
         {
+            if (string.IsNullOrEmpty(fontName) && string.IsNullOrEmpty(fontFile))
+                throw new Exception("should include fontName and fontFile.");
             Shape img = new Shape(this);
             float ret = img.InsertTextbox(
                 rect,

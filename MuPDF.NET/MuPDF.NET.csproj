@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFrameworks>net48;net8.0</TargetFrameworks>
+		<TargetFrameworks>net48;net8.0;net47;net471;net472</TargetFrameworks>
 		<!-- Uncomment to also build the tizen app. You will need to install tizen by following this: https://github.com/Samsung/Tizen.NET -->
 		<!-- <TargetFrameworks>$(TargetFrameworks);net7.0-tizen</TargetFrameworks> -->
 		<UseMaui>false</UseMaui>
@@ -16,7 +16,7 @@
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'tizen'">6.5</SupportedOSPlatformVersion>
 		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
 		<Title>MuPDF.NET</Title>
-		<Version>3.2.8-rc.7</Version>
+		<Version>3.2.8-rc.8</Version>
 		<Authors>Artifex Software Inc.</Authors>
 		<Company>Artifex</Company>
 		<Description>A C# binding for MuPDF</Description>

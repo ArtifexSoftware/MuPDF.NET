@@ -26,6 +26,10 @@ namespace Demo
 
         // string
         public static string t1 = "têxt üsès Lätiñ charß,\nEUR: €, mu: µ, super scripts: ²³!";
+        public static string highlight = "this text is highlighted";
+        public static string underline = "this text is underlined";
+        public static string strikeout = "this text is striked out";
+        public static string squiggled = "this text is zigzag-underlined";
 
         public static Func<string> FILENAME = () =>
         {
