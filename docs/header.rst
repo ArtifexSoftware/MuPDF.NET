@@ -1,3 +1,6 @@
+.. default-domain:: standard
+
+
 .. meta::
    :description: MuPDF.NET Developer documentation.
    :keywords: mupdf, .net, pdf, document, api, split, merge, extract, view
