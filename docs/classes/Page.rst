@@ -437,7 +437,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
       :arg Rect rect: rectangle where to place the annotation.
 
-      :arg int stamp: stamp object, can be as ``int``, ``pixmap``, ``filepath``, ``byte[]``, ``MemoryStream``.
+      :arg object stamp: stamp object, can be as ``int``, ``pixmap``, ``filepath``, ``byte[]``, ``MemoryStream``.
 
       .. note::
 
