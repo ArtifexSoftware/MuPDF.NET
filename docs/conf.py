@@ -27,6 +27,8 @@ if hasattr(os, "uname") and os.uname()[0] != "OpenBSD":
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
 
+html_baseurl = "http://mupdfnet.readthedocs.io/en/latest/"
+
 # The suffix of source filenames.
 source_suffix = ".rst"
 
