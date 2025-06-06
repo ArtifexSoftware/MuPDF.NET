@@ -1,5 +1,4 @@
-.. default-domain:: standard
-
+.. highlight:: c-sharp
 
 .. meta::
    :description: MuPDF.NET Developer documentation.

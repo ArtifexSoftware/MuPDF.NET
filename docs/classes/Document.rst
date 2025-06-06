@@ -1504,21 +1504,20 @@ This class represents a document. It can be constructed from a file or from memo
 
     Example: Let us assume that you no longer want a certain image appear on a page. This can be achieved by deleting the respective reference in its contents source(s) -- and indeed: the image will be gone after reloading the page. But the page's :data:`resources` object would still show the image as being referenced by the page. This save option will clean up any such mismatches.
 
-
-  .. method:: Document.CopyXref(int newXref, int xref, List<string> keep: null)
+  .. method:: Document.CopyXref(int source, int target, List<string> keep = null)
 
     PDF Only: Make *target* `xref` an exact copy of *source*. If *source* is a :data:`stream`, then these data are also copied.
 
     :arg int source: the source :data:`xref`. It must be an existing **dictionary** object.
     :arg int target: the target `xref`. Must be an existing **dictionary** object. If the `xref` has just been created, make sure to initialize it as a PDF dictionary with the minimum specification ``<<>>``.
-    :arg List<string> keep: an optional list of top-level keys in *target*, that should not be removed in preparation of the copy process.
+    :arg List<string> keep: an optional list of top-level keys in ``target``, that should not be removed in preparation of the copy process.
 
     .. note::
 
         * Both `xref` numbers must represent existing dictionaries.
-        * Before data is copied from *source*, all *target* dictionary keys are deleted. You can specify exceptions from this in the *keep* list. If *source* however has a same-named key, its value will still replace the target.
-        * If *source* is a :data:`stream` object, then these data will also be copied over, and *target* will be converted to a stream object.
-        * A typical use case is to replace or remove an existing image without using redaction annotations. Example scripts can be seen `https://github.com/ArtifexSoftware/MuPDF.NET/tree/main/Examples/ReplaceImage`.
+        * Before data is copied from ``source``, all ``target`` dictionary keys are deleted. You can specify exceptions from this in the ``keep`` list. If ``source`` however has a same-named key, its value will still replace the target.
+        * If ``source`` is a :data:`stream` object, then these data will also be copied over, and ``target`` will be converted to a stream object.
+        * A typical use case is to replace or remove an existing image without using redaction annotations. See: `example scripts for ReplaceImage <https://github.com/ArtifexSoftware/MuPDF.NET/tree/main/Examples/ReplaceImage>`_.
 
   .. method:: Document.ExtractImage(int xref)
 

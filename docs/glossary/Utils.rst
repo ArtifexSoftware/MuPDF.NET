@@ -66,6 +66,7 @@ Yet others are handy, general-purpose utilities.
 :meth:`GetGlyphText`                 Adobe Glyph List function
 :meth:`GetImageExtension`            Return extension for MuPDF image type
 :meth:`GetLinkText`                  Define skeletons for `/Annots` object texts
+:meth:`GetTextWithLayout`            Retrieves the text content of a page that retains layout.
 :meth:`GetTables`                    Return the tables detected from a `Page` instance
 :meth:`GetWidgetProperties`          Populate a Widget object with the values from a PDF form field
 :meth:`InsertContents`               Insert a buffer as a new separate `/Contents` object of a page
@@ -76,8 +77,10 @@ Yet others are handy, general-purpose utilities.
 :meth:`NormalizeRotation`            Return normalized /Rotate value:one of 0, 90, 180, 270
 :meth:`RuleDict`                     Make a Label from a PDF page label rule
 :meth:`WriteBarcode`                 Writes a barcode to an image file
+:meth:`ReplaceBytes`                 Replaces bytes froma source buffer
 :attr:`TESSDATA_PREFIX`              A copy of `os.environ["TESSDATA_PREFIX"]`
 ==================================== ==============================================================
+
 
    .. method:: PaperSize
 
@@ -537,6 +540,20 @@ Yet others are handy, general-purpose utilities.
 
 -----
 
+   .. method:: GetTextWithLayout(Page page, Rect clip: null, int flags: 0, int tolerance: 5)
+
+      Retrieves the text content of a page that retains layout. Positioning of text is adjusted by spaces.
+
+      :arg Page page: The page instance.
+      :arg Rect clip: Specify a region to consider within the page rectangle and ignore the rest. Default `null` is the full page.
+      :arg int flags: Indicator bits to control whether to include images or how text should be handled with respect to white spaces and ligatures.
+      :arg int tolerance: Neighborhood threshold.
+
+      :rtype: string
+      :return: a string containing the text with layout applied.
+
+-----
+
    .. method:: GetTables(Page page, Rect clip: null,  string strategy: null, string vertical_strategy: "lines", string horizontal_strategy: "lines", List<Line> add_lines: null, List<Edge> vertical_lines: null, List<Edge> horizontal_lines: null, float snap_tolerance: TableFlags.TABLE_DEFAULT_SNAP_TOLERANCE, float snap_x_tolerance: 0.0f, float snap_y_tolerance: 0.0f, float join_tolerance: TableFlags.TABLE_DEFAULT_JOIN_TOLERANCE, float join_x_tolerance: 0.0f, float join_y_tolerance: 0.0f, float edge_min_length: 3.0f, float min_words_vertical: TableFlags.TABLE_DEFAULT_MIN_WORDS_VERTICAL, float min_words_horizontal: TableFlags.TABLE_DEFAULT_MIN_WORDS_HORIZONTAL, float intersection_tolerance: 3.0f, float intersection_x_tolerance: 0.0f, float intersection_y_tolerance: 0.0f, float text_tolerance: 3.0f, float text_x_tolerance: 3.0f, float text_y_tolerance: 3.0f)
 
       Find tables on the page and return a list with related information. Typically, the default values of the many parameters will be sufficient. Adjustments should ever only be needed in corner case situations.
@@ -654,7 +671,17 @@ Yet others are handy, general-purpose utilities.
       :arg string characterSet: Use a specific character set for binary encoding (if supported by the selected barcode format).
       :arg bool disableEci: Don't generate ECI segment if non-default character set is used.
 
+-----
 
+
+   .. method:: ReplaceBytes(byte[] src, byte[] search, byte[] replace, int limit=1)
+
+      Replaces bytes in a source buffer against the supplied search and the replacement parameters.
+
+      :arg byte[] src: The source bytes buffer.
+      :arg byte[] search: The bytes buffer to search against.
+      :arg byte[] replace: The bytes buffer to replace with.
+      :arg int limit: The number of matches to make, defaults to 1.
 
 -----
 

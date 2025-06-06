@@ -70,6 +70,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
 :meth:`Page.GetTables`             Extract the page's tables as a list
 :meth:`Page.GetTextBlocks`         Extract text blocks as a list
 :meth:`Page.GetTextWords`          Extract text words as a list
+:meth:`Page.GetTextWithLayout`     Retrieves the text content of a page that retains layout.
 :meth:`Page.ClusterDrawings`       PDF only: bounding boxes of vector graphics
 :meth:`Page.CleanContents`         PDF only: clean the page's :data:`contents` objects
 :meth:`Page.DeleteAnnot`           PDF only: delete an annotation
@@ -200,14 +201,14 @@ In a nutshell, this is what you can do with MuPDF.NET:
       pair: borderColor; AddFreeTextAnnot
       pair: fillColor; AddFreeTextAnnot
 
-   .. method:: AddFreeTextAnnot(Rect rect, string text, string fontName, int fontSize: 12, float[] borderColor: null, float[] textColor: null, float[] fillColor: null, int rotate: 0, int align: TEXT_ALIGN_LEFT)
+   .. method:: AddFreeTextAnnot(Rect rect, string text, int fontSize = 11, string fontName = null, float[] textColor = null, float[] fillColor = null, float[] borderColor = null, float borderWidth = 0.0f, int[] dashes = null, Point[] callout = null, PdfLineEnding lineEnd = PdfLineEnding.PDF_ANNOT_LE_OPEN_ARROW, float opacity = 1.0f, int align = 0, int rotate = 0, bool richtext = false, string style = null)
 
       PDF only: Add text in a given rectangle.
 
       :arg Rect rect: the rectangle into which the text should be inserted. Text is automatically wrapped to a new line at box width. Lines not fitting into the box will be invisible.
 
       :arg string text: the text. May contain any mixture of Latin, Greek, Cyrillic, Chinese, Japanese and Korean characters. The respective required font is automatically determined.
-      :arg float fontSize: the :data:`fontSize`. Default is 12.
+      :arg float fontSize: the :data:`fontSize`. Default is 11.
       :arg str fontName: the font name.
         Accepted alternatives are "Cour", "TiRo", "ZaDb" and "Symb".
         The name may be abbreviated to the first two characters, like "Co" for "Cour".
@@ -222,9 +223,16 @@ In a nutshell, this is what you can do with MuPDF.NET:
       :arg float[] fillColor: the fill color. Default is white.
       :arg float[] textColor: the text color. Default is black.
       :arg float[] borderColor: the border color. Default is `null`. 
+      :arg float borderWidth: the border width. Default is `0.0f`, no border width.
+      :arg int[] dashes: the dash pattern for a border.
+      :arg Point[] callout: define end, knee, start points.
+      :arg PdfLineEnding lineEnd: symbol shown at point 3. (NONE, SQUARE, CIRCLE, DIAMOND, OPEN_ARROW, CLOSED_ARROW, BUTT, R_OPEN_ARROW, R_CLOSED_ARROW, SLASH)
+      :arg float opacity: the opacity. Default is `1.0f`.
       :arg int align: text alignment, one of TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER, TEXT_ALIGN_RIGHT - justify is **not supported**.
 
       :arg int rotate: the text orientation. Accepted values are 0, 90, 270, invalid entries are set to zero.
+      :arg bool richtext: if this is rich text or not.
+      :arg string style: customized style string.
 
       :rtype: :ref:`Annot`
       :returns: the created annotation. Color properties **can only be changed** using special parameters of :meth:`Annot.Update`. There, you can also set a border color different from the text color.
@@ -423,13 +431,13 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
       .. warning:: This is a complex function which may generate large amounts of new data and render old data unused. It is **not recommended** using it together with the **incremental save** option. Also note that the resulting singleton new */Contents* object is **uncompressed**. So you should save to a **new file** using options *"deflate=True, garbage=3"*.
    
-   .. method:: AddStampAnnot(Rect rect, int stamp: 0)
+   .. method:: AddStampAnnot(Rect rect, object stamp: null)
 
       PDF only: Add a "rubber stamp" like annotation to e.g. indicate the document's intended use ("DRAFT", "CONFIDENTIAL", etc.).
 
       :arg Rect rect: rectangle where to place the annotation.
 
-      :arg int stamp: id number of the stamp text. For available stamps see :ref:`StampIcons`.
+      :arg int stamp: stamp object, can be as ``int``, ``pixmap``, ``filepath``, ``byte[]``, ``MemoryStream``.
 
       .. note::
 
@@ -609,6 +617,17 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
       :rtype: List
       :return: a list of `WordBlock`
+
+   .. method:: GetTextWithLayout(Rect clip: null, int flags: 0, int tolerance: 5)
+
+      Retrieves the text content of a page that retains layout. Positioning of text is adjusted by spaces.
+
+      :arg Rect clip: Specify a region to consider within the page rectangle and ignore the rest. Default `null` is the full page.
+      :arg int flags: Indicator bits to control whether to include images or how text should be handled with respect to white spaces and ligatures.
+      :arg int tolerance: Neighborhood threshold.
+
+      :rtype: string
+      :return: a string containing the text with layout applied.
 
    .. method:: GetTextTrace()
 
