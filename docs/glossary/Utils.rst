@@ -77,7 +77,7 @@ Yet others are handy, general-purpose utilities.
 :meth:`NormalizeRotation`            Return normalized /Rotate value:one of 0, 90, 180, 270
 :meth:`RuleDict`                     Make a Label from a PDF page label rule
 :meth:`WriteBarcode`                 Writes a barcode to an image file
-:meth:`ReplaceBytes`                 Replaces bytes froma source buffer
+:meth:`ReplaceBytes`                 Replaces bytes from a source buffer
 :attr:`TESSDATA_PREFIX`              A copy of `os.environ["TESSDATA_PREFIX"]`
 ==================================== ==============================================================
 
