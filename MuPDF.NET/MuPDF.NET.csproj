@@ -16,7 +16,7 @@
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'tizen'">6.5</SupportedOSPlatformVersion>
 		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
 		<Title>MuPDF.NET</Title>
-		<Version>3.2.8-rc.10</Version>
+		<Version>3.2.8</Version>
 		<Authors>Artifex Software Inc.</Authors>
 		<Company>Artifex</Company>
 		<Description>A C# binding for MuPDF</Description>
