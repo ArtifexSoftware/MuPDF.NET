@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFrameworks>net48;net8.0;net47;net471;net472</TargetFrameworks>
+		<TargetFrameworks>net48;net8.0;net472;net471;net47</TargetFrameworks>
 		<!-- Uncomment to also build the tizen app. You will need to install tizen by following this: https://github.com/Samsung/Tizen.NET -->
 		<!-- <TargetFrameworks>$(TargetFrameworks);net7.0-tizen</TargetFrameworks> -->
 		<UseMaui>false</UseMaui>
@@ -16,7 +16,7 @@
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'tizen'">6.5</SupportedOSPlatformVersion>
 		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
 		<Title>MuPDF.NET</Title>
-		<Version>3.2.8-rc.8</Version>
+		<Version>3.2.8</Version>
 		<Authors>Artifex Software Inc.</Authors>
 		<Company>Artifex</Company>
 		<Description>A C# binding for MuPDF</Description>
@@ -54,7 +54,7 @@
 	</ItemGroup>
 	
 	<ItemGroup>
-	  <PackageReference Include="MuPDF.NativeAssets" Version="1.26.0" />
+	  <PackageReference Include="MuPDF.NativeAssets" Version="1.26.1.3" />
 	  <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
 	  <PackageReference Include="SharpZipLib" Version="1.4.2" />
 	  <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.116.1" />
