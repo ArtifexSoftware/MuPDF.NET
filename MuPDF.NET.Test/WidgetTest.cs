@@ -38,7 +38,7 @@ namespace MuPDF.NET.Test
         }
 
         [Test]
-        public void Text4505()
+        public void Test4505()
         {
             // Copy field flags to Parent widget and all of its kids.
             Document doc = new Document("../../../resources/test_4505.pdf");
