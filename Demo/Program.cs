@@ -13,9 +13,10 @@ namespace Demo
     {
         static void Main(string[] args)
         {
-            AnnotationsFreeText1.Run(args);
-            AnnotationsFreeText2.Run(args);
+            //AnnotationsFreeText1.Run(args);
+            //AnnotationsFreeText2.Run(args);
             NewAnnots.Run(args);
+            /*
             TestHelloWorldToNewDocument(args);
             TestReadBarcode(args);
             TestWriteBarcode(args);
@@ -32,6 +33,7 @@ namespace Demo
             TestCreateImagePage(args);
             TestJoinPdfPages(args);
             TestFreeTextAnnot(args);
+            */
         }
 
         static void TestHelloWorldToNewDocument(string[] args)

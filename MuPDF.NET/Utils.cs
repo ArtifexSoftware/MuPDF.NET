@@ -5982,12 +5982,12 @@ namespace MuPDF.NET
         {
             PdfObj annotObj = annot.pdf_annot_obj();
             PdfDocument pdf = annotObj.pdf_get_bound_document();
-            PdfObj coName = new PdfObj("CO");
+            PdfObj coName = new PdfObj("CO");   // = PDF_NAME(CO)
             PdfObj acro = Utils.pdf_dict_getl(
                 pdf.pdf_trailer(),
                 new string[] { "Root", "AcroForm" }
             );
-            PdfObj co = acro.pdf_dict_get(coName);
+            PdfObj co = acro.pdf_dict_get(coName);  // = AcroForm/CO
             if (co.m_internal == null)
                 co = acro.pdf_dict_put_array(coName, 2);
             int n = co.pdf_array_len();

@@ -1,7 +1,10 @@
 ﻿using mupdf;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
+using System.Security.Cryptography;
 
 namespace MuPDF.NET
 {
@@ -436,13 +439,66 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// After any changes to a widget, this method must be used to store them in the PDF 
+        /// Propagate the field flags.
+        /// If this widget has a "/Parent", set its field flags and that of all
+        /// its /Kids widgets to the value of the current widget.
+        /// Only possible for widgets existing in the PDF.
         /// </summary>
-        public void Update()
+        /// <returns>true/false</returns>
+        public bool SyncFlags()
+        {
+            if (Xref == 0)
+                return false;  // no xref: widget not in the PDF
+            Document doc = this.Parent.Parent; // the owning document
+            if (doc == null)
+                return false;
+            PdfDocument pdf = Document.AsPdfDocument(doc);
+            // load underlying PDF object
+            PdfObj pdf_widget = pdf.pdf_load_object(Xref);
+            PdfObj parent = pdf_widget.pdf_dict_get(new PdfObj("Parent"));
+            if (parent.pdf_is_dict() == 0)
+                return false;  // no /Parent: nothing to do
+
+            // put the field flags value into the parent field flags:
+            parent.pdf_dict_put_int(new PdfObj("Ff"), this.FieldFlags);
+
+            // also put that value into all kids of the Parent
+            PdfObj kids = parent.pdf_dict_get(new PdfObj("Kids"));
+            if (kids.pdf_is_array() == 0)
+            {
+                Console.WriteLine("warning: malformed PDF, Parent has no Kids array");
+                return false;  // no /Kids: should never happen!
+            }
+
+            for (int i = 0; i < kids.pdf_array_len(); i++)
+            {
+                // access kid widget, and do some precautionary checks
+                PdfObj kid = kids.pdf_array_get(i);
+                if (kid.pdf_is_dict() == 0)
+                    continue;  // not a dict: skip
+                int xref = kid.pdf_to_num();  // get xref of the kid
+                if (xref == this.Xref)  // skip self widget
+                    continue;
+                PdfObj subtype = kid.pdf_dict_get(new PdfObj("Subtype"));
+                if (subtype.pdf_to_name() != "Widget")
+                    continue;
+                // put the field flags value into the kid field flags:
+                kid.pdf_dict_put_int(new PdfObj("Ff"), this.FieldFlags);
+            }
+
+            return true;  // all done
+        }
+
+        /// <summary>
+        /// After any changes to a widget, this method must be used to store them in the PDF 
+        /// <param name="syncFlags">propagate field flags to parent and kids</param>
+        /// </summary>
+        public void Update(bool syncFlags = false)
         {
             Validate();
-            AdjustFont();
+            AdjustFont(); // ensure valid text_font name
 
+            // now create the /DA string
             TextDa = "";
             string fmt = "";
 
@@ -452,13 +508,22 @@ namespace MuPDF.NET
                 fmt = $"{TextColor[0]} g /" + "{0} {1} Tf" + TextDa;
             else if (TextColor.Length == 4)
                 fmt = $"{TextColor[0]} {TextColor[1]} {TextColor[2]} {TextColor[3]} k /" + "{0} {1} Tf" + TextDa;
-            
             TextDa = string.Format(fmt, TextFont, TextFontSize);
-            if (!string.IsNullOrEmpty(ScriptCalc))
+
+            // if widget has a '/AA/C' script, make sure it is in the '/CO'
+            // array of the '/AcroForm' dictionary.
+            if (!string.IsNullOrEmpty(ScriptCalc)) // there is a "calculation" script:
+            {
+                // make sure we are in the /CO array
                 Utils.EnsureWidgetCalc(_annot);
+            }
             
             Utils.SaveWidget(_annot, this);
             TextDa = "";
+
+            // finally update the widget
+            if (syncFlags)
+                SyncFlags();    // propagate field flags to parent and kids
         }
     }
 }

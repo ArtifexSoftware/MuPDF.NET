@@ -1,4 +1,5 @@
 ﻿using mupdf;
+using NUnit.Framework;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -34,6 +35,40 @@ namespace MuPDF.NET.Test
             Widget first = page.FirstWidget;
 
             Assert.That(first.FieldTypeString, Is.EqualTo("Text"));
+        }
+
+        [Test]
+        public void Text4505()
+        {
+            // Copy field flags to Parent widget and all of its kids.
+            Document doc = new Document("../../../resources/test_4505.pdf");
+            Page page = doc[0];
+
+            Dictionary<int, int> text1_flags_before = new Dictionary<int, int>();
+            Dictionary<int, int> text1_flags_after = new Dictionary<int, int>();
+
+            // extract all widgets having the same field name
+            foreach (Widget _w in page.GetWidgets())
+            {
+                if (_w.FieldName != "text_1")
+                    continue;
+
+                text1_flags_before[_w.Xref] = _w.FieldFlags;
+            }
+            Assert.That(text1_flags_before, Is.EqualTo(new Dictionary<int, int>{{ 8, 1 },{ 10, 0 },{ 33, 0 }}));
+
+            Widget w = page.LoadWidget(8);  // first of these widgets
+            // give all connected widgets that field flags value
+            w.Update(syncFlags: true);
+            // confirm that all connected widgets have the same field flags
+            foreach (Widget _w in page.GetWidgets())
+            {
+                if (_w.FieldName != "text_1")
+                    continue;
+
+                text1_flags_after[_w.Xref] = _w.FieldFlags;
+            }
+            Assert.That(text1_flags_after, Is.EqualTo(new Dictionary<int, int> { { 8, 1 }, { 10, 1 }, { 33, 1 } }));
         }
         /*
         [Test]
