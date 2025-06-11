@@ -1,5 +1,6 @@
 ﻿using mupdf;
 using System;
+using System.IO;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
@@ -141,6 +142,20 @@ namespace MuPDF.NET.Test
         {
             Document doc = new Document("../../../resources/你好.pdf");
             Assert.That(doc.PageCount, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void TestRewriteImages()
+        {
+            // Example for decreasing file size by more than 30%.
+            string filePath = "../../../resources/test-rewrite-images.pdf";
+            Document doc = new Document(filePath);
+            int size0 = File.ReadAllBytes(filePath).Length;
+            doc.RewriteImage(dpiThreshold: 100, dpiTarget: 72, quality: 33);
+            byte[] data = doc.Write(garbage: true, deflate: true);
+            int size1 = data.Length;
+
+            Assert.That((1-(size1/size0)) > 0.3);
         }
     }
 }

@@ -1,13 +1,14 @@
-﻿using System;
+﻿using mupdf;
+using Newtonsoft.Json.Linq;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using System.Text;
-using mupdf;
-using Newtonsoft.Json.Linq;
 
 namespace MuPDF.NET
 {
@@ -1743,6 +1744,135 @@ namespace MuPDF.NET
             int pno = _nativeDocument.fz_page_number_from_location(new FzLocation(loc));
             
             return (new List<int>() { pno }, xp, yp);
+        }
+
+        /// <summary>
+        /// Rewrite images in a PDF document.
+        /// The typical use case is to reduce the size of the PDF by recompressing
+        /// images.Default parameters will convert all images to JPEG where
+        /// possible, using the specified resolutions and quality.Exclude
+        /// undesired images by setting parameters to False.
+        /// </summary>
+        /// <param name="dpiThreshold">look at images with a larger DPI only.</param>
+        /// <param name="dpiTarget">change eligible images to this DPI.</param>
+        /// <param name="quality">Quality of the recompressed images (0-100).</param>
+        /// <param name="lossy">process lossy image types (e.g. JPEG).</param>
+        /// <param name="lossless">process lossless image types (e.g. PNG).</param>
+        /// <param name="bitonal">process black-and-white images (e.g. FAX)</param>
+        /// <param name="color">process colored images.</param>
+        /// <param name="gray">process gray images.</param>
+        /// <param name="setToGray">whether to change the PDF to gray at process start.</param>
+        /// <param name="options">Custom options for image rewriting(optional). 
+        ///     Expert use only.If provided, other parameters are ignored, except set_to_gray.</param>
+        /// <returns></returns>
+        public void RewriteImage(
+            int dpiThreshold = -1,
+            int dpiTarget = 0,
+            int quality = 0,
+            bool lossy = true,
+            bool lossless = true,
+            bool bitonal = true,
+            bool color = true,
+            bool gray = true,
+            bool setToGray = false,
+            PdfImageRewriterOptions options = null
+            )
+        {
+            string qualityStr = quality.ToString();
+            if (dpiTarget < 0)
+            {
+                dpiThreshold = 0;
+                dpiTarget = 0;
+            }
+            if (dpiTarget > 0 && dpiTarget >= dpiThreshold)
+            {
+                throw new Exception($"dpi_target={dpiTarget} must be less than dpi_threshold={dpiThreshold}");
+            }
+
+            var templateOpts = new PdfImageRewriterOptions();
+            HashSet<string> dir1 = new HashSet<string>(templateOpts.GetType().GetMembers().Select(m => m.Name));
+            
+            PdfImageRewriterOptions opts;
+            if (options == null)
+            {
+                opts = new PdfImageRewriterOptions();
+                if (bitonal == true)
+                {
+                    opts.bitonal_image_recompress_method = mupdf.mupdf.FZ_RECOMPRESS_FAX;
+                    opts.bitonal_image_subsample_method = mupdf.mupdf.FZ_SUBSAMPLE_AVERAGE;
+                    opts.bitonal_image_subsample_to = dpiTarget;
+                    opts.bitonal_image_recompress_quality = qualityStr;
+                    opts.bitonal_image_subsample_threshold = dpiThreshold;
+                }
+                if (color == true)
+                {
+                    if (lossless == true)
+                    {
+                        opts.color_lossless_image_recompress_method = mupdf.mupdf.FZ_RECOMPRESS_JPEG;
+                        opts.color_lossless_image_subsample_method = mupdf.mupdf.FZ_SUBSAMPLE_AVERAGE;
+                        opts.color_lossless_image_subsample_to = dpiTarget;
+                        opts.color_lossless_image_subsample_threshold = dpiThreshold;
+                        opts.color_lossless_image_recompress_quality = qualityStr;
+                    }
+                    if (lossy == true)
+                    {
+                        opts.color_lossy_image_recompress_method = mupdf.mupdf.FZ_RECOMPRESS_JPEG;
+                        opts.color_lossy_image_subsample_method = mupdf.mupdf.FZ_SUBSAMPLE_AVERAGE;
+                        opts.color_lossy_image_subsample_threshold = dpiThreshold;
+                        opts.color_lossy_image_subsample_to = dpiTarget;
+                        opts.color_lossy_image_recompress_quality = qualityStr;
+                    }
+                }
+                if (gray == true)
+                {
+                    if (lossless == true)
+                    {
+                        opts.gray_lossless_image_recompress_method = mupdf.mupdf.FZ_RECOMPRESS_JPEG;
+                        opts.gray_lossless_image_subsample_method = mupdf.mupdf.FZ_SUBSAMPLE_AVERAGE;
+                        opts.gray_lossless_image_subsample_to = dpiTarget;
+                        opts.gray_lossless_image_subsample_threshold = dpiThreshold;
+                        opts.gray_lossless_image_recompress_quality = qualityStr;
+                    }
+                    if (lossy == true)
+                    {
+                        opts.gray_lossy_image_recompress_method = mupdf.mupdf.FZ_RECOMPRESS_JPEG;
+                        opts.gray_lossy_image_subsample_method = mupdf.mupdf.FZ_SUBSAMPLE_AVERAGE;
+                        opts.gray_lossy_image_subsample_threshold = dpiThreshold;
+                        opts.gray_lossy_image_subsample_to = dpiTarget;
+                        opts.gray_lossy_image_recompress_quality = qualityStr;
+                    }
+                }
+            }
+            else
+                opts = options;
+
+            var dir2 = new HashSet<string>(opts.GetType().GetMembers().Select(m => m.Name));
+            var invalidOptions = dir2.Except(dir1).ToList();
+            if (invalidOptions.Any())
+            {
+                throw new ArgumentException($"Invalid options: {string.Join(", ", invalidOptions)}");
+            }
+
+            if (setToGray == true)
+                this.Recolor(1);
+
+            PdfDocument pdf = Document.AsPdfDocument(_nativeDocument);
+            mupdf.mupdf.pdf_rewrite_images(pdf, opts);
+        }
+
+        /// <summary>
+        /// Change the color component count on all pages.
+        /// </summary>
+        /// <param name="components">(int) desired color component count, one of 1, 3, 4.</param>
+        /// <returns></returns>
+        public void Recolor(int components=1)
+        {
+            if (!IsPDF)
+                throw new ArgumentException("is no PDF");
+            for (int i = 0; i < this.PageCount; i++)
+            {
+                this.LoadPage(i).Recolor(components);
+            }
         }
 
         /// <summary>
