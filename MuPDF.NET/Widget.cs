@@ -4,7 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
-using System.Security.Cryptography;
 
 namespace MuPDF.NET
 {
@@ -210,6 +209,10 @@ namespace MuPDF.NET
             return $"Widget:(field_type={FieldTypeString}) script={Script}";
         }
 
+        /// <summary>
+        /// Ensure text_font is from our list and correctly spelled.
+        /// </summary>
+        /// <returns></returns>
         public void AdjustFont()
         {
             if (string.IsNullOrEmpty(TextFont))
@@ -228,6 +231,10 @@ namespace MuPDF.NET
             return;
         }
 
+        /// <summary>
+        /// Any widget type checks.
+        /// </summary>
+        /// <returns></returns>
         public void Checker()
         {
             if (!(FieldType >= 1 && FieldType < 8))
@@ -250,6 +257,11 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// Extract font name, size and color from default appearance string (/DA object).
+        /// Equivalent to 'pdf_parse_default_appearance' function in MuPDF's 'pdf-annot.c'.
+        /// </summary>
+        /// <returns></returns>
         public void ParseDa()
         {
             if (string.IsNullOrEmpty(TextDa))
@@ -257,7 +269,7 @@ namespace MuPDF.NET
             string font = "Helv";
             float fontSize = 0;
             float[] col = { 0, 0, 0 };
-            string[] dat = TextDa.Split(' ');
+            string[] dat = TextDa.Split(' ');    // split on any whitespace
             for (int i = 0; i < dat.Length; i++)
             {
                 string item = dat[i];
@@ -289,6 +301,10 @@ namespace MuPDF.NET
             TextDa = "";
         }
 
+        /// <summary>
+        /// Validate the class entries.
+        /// </summary>
+        /// <returns></returns>
         public void Validate()
         {
             if (Rect.IsInfinite || Rect.IsEmpty)
@@ -310,6 +326,7 @@ namespace MuPDF.NET
 
             BorderStyle = BorderStyle.ToUpper().Substring(0, 1);
 
+            // standardize content of JavaScript entries
             bool btnType = (new List<PdfWidgetType> {
                 PdfWidgetType.PDF_WIDGET_TYPE_BUTTON,
                 PdfWidgetType.PDF_WIDGET_TYPE_CHECKBOX,
@@ -317,8 +334,12 @@ namespace MuPDF.NET
             if (string.IsNullOrEmpty(Script))
                 Script = null;
 
+            // buttons cannot have the following script actions
             if (btnType || string.IsNullOrEmpty(ScriptCalc))
                 ScriptCalc = null;
+
+            if (btnType || string.IsNullOrEmpty(ScriptChange))
+                ScriptChange = null;
 
             if (btnType || string.IsNullOrEmpty(ScriptFormat))
                 ScriptFormat = null;
@@ -332,18 +353,72 @@ namespace MuPDF.NET
             if (btnType || string.IsNullOrEmpty(ScriptFocus))
                 ScriptFocus = null;
 
-            Checker();
+            Checker(); // any field_type specific checks
+        }
+
+        /// <summary>
+        /// Propagate the field flags.
+        /// If this widget has a "/Parent", set its field flags and that of all
+        /// its /Kids widgets to the value of the current widget.
+        /// Only possible for widgets existing in the PDF.
+        /// </summary>
+        /// <returns>true/false</returns>
+        public bool SyncFlags()
+        {
+            if (Xref == 0)
+                return false;  // no xref: widget not in the PDF
+            Document doc = this.Parent.Parent; // the owning document
+            if (doc == null)
+                return false;
+            PdfDocument pdf = Document.AsPdfDocument(doc);
+            // load underlying PDF object
+            PdfObj pdf_widget = pdf.pdf_load_object(Xref);
+            PdfObj parent = pdf_widget.pdf_dict_get(new PdfObj("Parent"));
+            if (parent.pdf_is_dict() == 0)
+                return false;  // no /Parent: nothing to do
+
+            // put the field flags value into the parent field flags:
+            parent.pdf_dict_put_int(new PdfObj("Ff"), this.FieldFlags);
+
+            // also put that value into all kids of the Parent
+            PdfObj kids = parent.pdf_dict_get(new PdfObj("Kids"));
+            if (kids.pdf_is_array() == 0)
+            {
+                Console.WriteLine("warning: malformed PDF, Parent has no Kids array");
+                return false;  // no /Kids: should never happen!
+            }
+
+            for (int i = 0; i < kids.pdf_array_len(); i++)
+            {
+                // access kid widget, and do some precautionary checks
+                PdfObj kid = kids.pdf_array_get(i);
+                if (kid.pdf_is_dict() == 0)
+                    continue;  // not a dict: skip
+                int xref = kid.pdf_to_num();  // get xref of the kid
+                if (xref == this.Xref)  // skip self widget
+                    continue;
+                PdfObj subtype = kid.pdf_dict_get(new PdfObj("Subtype"));
+                if (subtype.pdf_to_name() != "Widget")
+                    continue;
+                // put the field flags value into the kid field flags:
+                kid.pdf_dict_put_int(new PdfObj("Ff"), this.FieldFlags);
+            }
+
+            return true;  // all done
         }
 
         /// <summary>
         /// Return the names of On / Off (i.e. selected / clicked or not) states a button field may have. While the ‘Off’ state usually is also named like so, the ‘On’ state is often given a name relating to the functional context, for example ‘Yes’, ‘Female’, etc.
+        /// A button may have 'normal' or 'pressed down' appearances. While the 'Off'
+        /// state is usually called like this, the 'On' state is often given a name
+        /// relating to the functional context.
         /// </summary>
         /// <returns></returns>
         public Dictionary<string, List<string>> ButtonStates()
         {
             if (!(FieldType == 2 || FieldType == 5))
-                return null;
-            Document doc = this.Parent.Parent;
+                return null;    // no button type
+            Document doc = this.Parent.Parent;  // field already exists on page
             if (doc == null)
                 return null;
 
@@ -436,57 +511,6 @@ namespace MuPDF.NET
         public void Reset()
         {
             Utils.ResetWidget(_annot);
-        }
-
-        /// <summary>
-        /// Propagate the field flags.
-        /// If this widget has a "/Parent", set its field flags and that of all
-        /// its /Kids widgets to the value of the current widget.
-        /// Only possible for widgets existing in the PDF.
-        /// </summary>
-        /// <returns>true/false</returns>
-        public bool SyncFlags()
-        {
-            if (Xref == 0)
-                return false;  // no xref: widget not in the PDF
-            Document doc = this.Parent.Parent; // the owning document
-            if (doc == null)
-                return false;
-            PdfDocument pdf = Document.AsPdfDocument(doc);
-            // load underlying PDF object
-            PdfObj pdf_widget = pdf.pdf_load_object(Xref);
-            PdfObj parent = pdf_widget.pdf_dict_get(new PdfObj("Parent"));
-            if (parent.pdf_is_dict() == 0)
-                return false;  // no /Parent: nothing to do
-
-            // put the field flags value into the parent field flags:
-            parent.pdf_dict_put_int(new PdfObj("Ff"), this.FieldFlags);
-
-            // also put that value into all kids of the Parent
-            PdfObj kids = parent.pdf_dict_get(new PdfObj("Kids"));
-            if (kids.pdf_is_array() == 0)
-            {
-                Console.WriteLine("warning: malformed PDF, Parent has no Kids array");
-                return false;  // no /Kids: should never happen!
-            }
-
-            for (int i = 0; i < kids.pdf_array_len(); i++)
-            {
-                // access kid widget, and do some precautionary checks
-                PdfObj kid = kids.pdf_array_get(i);
-                if (kid.pdf_is_dict() == 0)
-                    continue;  // not a dict: skip
-                int xref = kid.pdf_to_num();  // get xref of the kid
-                if (xref == this.Xref)  // skip self widget
-                    continue;
-                PdfObj subtype = kid.pdf_dict_get(new PdfObj("Subtype"));
-                if (subtype.pdf_to_name() != "Widget")
-                    continue;
-                // put the field flags value into the kid field flags:
-                kid.pdf_dict_put_int(new PdfObj("Ff"), this.FieldFlags);
-            }
-
-            return true;  // all done
         }
 
         /// <summary>
