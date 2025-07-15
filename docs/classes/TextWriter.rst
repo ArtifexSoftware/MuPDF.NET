@@ -68,24 +68,29 @@ Using this object entails three steps:
 
       :arg Point pos: start position of the text, the bottom left point of the first character.
       :arg string text: a string of arbitrary length. It will be written starting at position "pos".
-      :arg font: a :ref:`Font`. If omitted, `new Font(fontName: ..., fontFile: ...)` will be used.
-      :arg float fontSize: the :data:`fontSize`, a positive number, default 11.
+      :arg font: a :ref:`Font`. If omitted, `new Font(fontName: ..., fontFile: ...)` will be used. See :ref:`the available in-built fonts<inbuilt_fonts>` which can be used here.
+      :arg float fontSize: the font size, a positive number, default `11`.
       :arg string language: the language to use, e.g. "en" for English. Meaningful values should be compliant with the ISO 639 standards 1, 2, 3 or 5. Reserved for future use: currently has no effect as far as we know.
       :arg bool right2left: whether the text should be written from right to left. Applicable for languages like Arabian or Hebrew. Default is *false*. If *true*, any Latin parts within the text will automatically converted. There are no other consequences, i.e. :attr:`TextWriter.LastPoint` will still be the rightmost character, and there neither is any alignment taking place. Hence you may want to use :meth:`TextWriter.FillTextbox` instead.
-      :arg bool smallCaps: look for the character's Small Capital version in the font. If present, take that value instead. Otherwise the original character (this font or the fallback font) will be taken. The fallback font will never return small caps. For example, this snippet::
+      :arg int smallCaps: look for the character's Small Capital version in the font. If present, take that value instead. Otherwise the original character (this font or the fallback font) will be taken. The fallback font will never return small caps. For example, this snippet:
+
+      .. code-block:: cs
 
          Document doc = new Document();
          Page page = doc.NewPage();
          string text = "MuPDF.NET: the C# bindings for MuPDF";
-         MuPDFFont font = new Font(fontName: "");                       // choose a font with small caps
-         TextWriter tw = new TextWriter(page.rect);
-         tw.Append((50, 100), text, font=font, small_caps=true);
+         // choose a font with small caps like Noto Serif Regular
+         MuPDF.NET.Font font = new MuPDF.NET.Font("");
+         MuPDF.NET.TextWriter tw = new MuPDF.NET.TextWriter(page.Rect);
+         tw.Append(new(50, 100), text, font, smallCaps:1);
          tw.WriteText(page);
-         doc.Save("x.pdf");
+         doc.Save("test.pdf");
 
-         will produce this PDF text:
+      will produce this PDF text:
 
-         .. image:: ../images/img-smallcaps.*
+      .. image:: ../images/img-smallcaps.png
+
+
 
 
       :returns: :attr:`TextRect` and :attr:`LastPoint`. Raises an exception for an unsupported font -- checked via :attr:`Font.IsWritable`.

@@ -271,6 +271,32 @@ To add a watermark to a |PDF| file, do the following:
 
 ----------
 
+.. _The_Basics_Adding_Text:
+
+
+Adding text to a |PDF|
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Using the :meth:`TextWriter.WriteText` method from the :class:`TextWriter` class is the simplest way to add text to a |PDF|. Using this method you can define many options for how your text looks and where it is positioned.
+
+.. code-block:: cs
+
+    Document doc = new Document();
+    Page page = doc.NewPage();
+    string text = "MuPDF.NET: the C# bindings for MuPDF"; // define some text!
+    MuPDF.NET.Font font = new MuPDF.NET.Font("helv"); // define a font to use, in this case Helvetica
+    MuPDF.NET.TextWriter tw = new MuPDF.NET.TextWriter(page.Rect); // define the rectangle for the text
+    tw.Append(new(50, 100), text); // define the point where you want to add the text
+    tw.WriteText(page); // use the TextWriter to write the text to the page
+    doc.Save("test.pdf"); // save the result!
+
+
+.. note::
+
+    See :ref:`Inbuilt Fonts <inbuilt_fonts>` for the available options which can be used for `font` without having to define an external font file on your system.
+
+
+
 
 .. _The_Basics_Images:
 
@@ -283,7 +309,7 @@ To add an image to a |PDF| file, for example a logo, do the following:
 
     using MuPDF.NET;
 
-    Document doc = new Document("document.pdf") // open a document
+    Document doc = new Document("document.pdf"); // open a document
 
     for (int page_index; page_index < doc.PageCount; page_index ++) // iterate over pdf pages
     {
@@ -325,17 +351,19 @@ It is then possible to save these images as files, for example this would save a
 
     using MuPDF.NET;
 
-    Document doc = new Document("document.pdf") // open a document
+    Document doc = new Document("document.pdf"); // open a document
 
     for (int page_index; page_index < doc.PageCount; page_index ++) // iterate over pdf pages
     {
         Page page = doc[page_index]; // get the page
         Pixmap pixmap = page.GetPixmap(); // get as Pixmap
-        string filename = $("file{page_index}.png");
+        string filename = $"file-{page_index}.png";
         pixmap.Save(filename);
     }
 
     doc.Close();
+
+
 
 
 ----------

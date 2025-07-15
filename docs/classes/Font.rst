@@ -54,8 +54,8 @@ A Font object also contains useful general information, like the font bbox, the 
       Font constructor. The large number of parameters are used to locate font, which most closely resembles the requirements. Not all parameters are ever required -- see the below pseudo code explaining the logic how the parameters are evaluated.
 
       :arg string fontName: Custom font name and file path. Also possible are a select few other names like (watch the correct spelling): "Arial", "Times", "Times Roman".
-      :arg string fontFile: the filename of a fontFile somewhere on your system [#f1]_.
-      :arg byte[] fontBuffer: a fontFile loaded in memory [#f1]_.
+      :arg string fontFile: the filename of a font file somewhere on your system [#f1]_.
+      :arg byte[] fontBuffer: a font file loaded in memory [#f1]_.
       :arg int script: the number of a UCDN script. Currently supported in MuPDF.NET are numbers 24, and 32 through 35.
       :arg string language: one of the values "zh-Hant" (traditional Chinese), "zh-Hans" (simplified Chinese), "ja" (Japanese) and "ko" (Korean). Otherwise, all ISO 639 codes from the subsets 1, 2, 3 and 5 are also possible, but are currently documentary only.
       :arg int ordering: an alternative selector for one of the CJK fonts.
@@ -74,6 +74,12 @@ A Font object also contains useful general information, like the font bbox, the 
          fontName?   Create a Base-14 font, universal font.
          =========== ============================================================
 
+
+      .. note::
+
+         See :ref:`Inbuilt Fonts <inbuilt_fonts>` for the available fonts which can be used for `fontFile` without having to define an external font file on your system.
+
+
       .. note::
 
         With the usual reserved names "helv", "tiro", etc., you will create fonts with the expected names "Helvetica", "Times-Roman" and so on. **However**, and in contrast to :meth:`Page.InsertFont` and friends,
@@ -88,6 +94,10 @@ A Font object also contains useful general information, like the font bbox, the 
         If you **know** you have a mixture of CJK and Latin text, consider just using `Font("cjk")` because this supports everything and also significantly (by a factor of up to three) speeds up execution: MuPDF will always find any character in this single font and never needs to check fallbacks.
 
         But if you do use some other font, you will still automatically be able to also write CJK characters: MuPDF detects this situation and silently falls back to the universal font (which will then of course also be embedded in your PDF).
+
+
+
+
 
    .. index::
       pair: Font.HasGlyph, language
@@ -111,6 +121,8 @@ A Font object also contains useful general information, like the font bbox, the 
       Return an array of unicodes supported by this font.
 
       :returns: an *array.array* [#f2]_ of length at most :attr:`Font.GlyphCount`. I.e. *chr()* of every item in this array has a glyph in the font without using fallbacks. This is an example display of the supported glyphs:
+
+      .. code-block:: cs
 
          Font font =  new Font("math")
          List<int> vuc = font.GetValidCodePoints()
@@ -137,6 +149,7 @@ A Font object also contains useful general information, like the font bbox, the 
          221E ∞ (infinity)
          ...
 
+
       .. note:: This method only returns meaningful data for fonts having a CMAP (character map, charmap, the `/ToUnicode` PDF key). Otherwise, this array will have length 1 and contain zero only.
 
    .. index::
@@ -162,7 +175,7 @@ A Font object also contains useful general information, like the font bbox, the 
 
       :arg string name: The name of the glyph.
 
-      :returns: The unicode integer, or 65533 = 0xFFFD if the name is unknown. Examples: `font.GlyphName2Unicode("Sigma") = 931`, `font.GlyphName2Unicode("sigma") = 963`. Refer to the `Adobe Glyph List <https://github.com/adobe-type-tools/agl-aglfn/blob/master/glyphlist.txt>`_ publication for a list of glyph names and their unicode numbers.
+      :returns: The unicode integer, or `65533` = `0xFFFD` if the name is unknown. Examples: `font.GlyphName2Unicode("Sigma") = 931`, `font.GlyphName2Unicode("sigma") = 963`. Refer to the `Adobe Glyph List <https://github.com/adobe-type-tools/agl-aglfn/blob/master/glyphlist.txt>`_ publication for a list of glyph names and their unicode numbers.
 
    .. index::
       pair: Font.GlyphBbox, language
@@ -283,7 +296,7 @@ A Font object also contains useful general information, like the font bbox, the 
 
 .. rubric:: Footnotes
 
-.. [#f1] MuPDF does not support all fontfiles with this feature and will raise exceptions like *"mupdf: FT_New_Memory_Face((null)): unknown file format"*, if it encounters issues. The :ref:`TextWriter` methods check :attr:`Font.IsWritable`.
+.. [#f1] MuPDF does not support all font files with this feature and will raise exceptions like *"mupdf: FT_New_Memory_Face((null)): unknown file format"*, if it encounters issues. The :ref:`TextWriter` methods check :attr:`Font.IsWritable`.
 
 .. [#f2] The built-in module *array* has been chosen for its speed and its compact representation of values.
 
