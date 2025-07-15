@@ -110,7 +110,7 @@ PDF_ENCRYPT_UNKNOWN unknown
 
 Font File Extensions
 -----------------------
-The table show file extensions you should use when saving fontFile buffers extracted from a PDF. This string is returned by :meth:`Document.GetPageFonts`, :meth:`Page.GetFonts` and :meth:`Document.ExtractFont`.
+The table show file extensions you should use when saving font file buffers extracted from a PDF. This string is returned by :meth:`Document.GetPageFonts`, :meth:`Page.GetFonts` and :meth:`Document.ExtractFont`.
 
 ==== ============================================================================
 Ext  Description
@@ -122,6 +122,59 @@ cid  character identifier font (postscript format)
 otf  OpenType font
 n/a  not extractable, e.g. :ref:`Base-14-Fonts`, Type 3 fonts and others
 ==== ============================================================================
+
+
+
+.. _inbuilt_fonts:
+
+Inbuilt Fonts
+-------------------------
+
+The following fonts are in-built to |MuPDF.NET| and can be used when creating fonts without having to reference an external font file:
+
+.. list-table::
+   :header-rows: 1
+
+   * - Reference
+     - Font name
+   * - *empty*
+     - Noto Serif Regular (default)
+   * - `helv`
+     - Helvetica
+   * - `heit`
+     - Helvetica-Oblique
+   * - `hebo`
+     - Helvetica-Bold
+   * - `hebi`
+     - Helvetica-BoldOblique
+   * - `cour`
+     - Courier
+   * - `coit`
+     - Courier-Obliqu
+   * - `cobo`
+     - Courier-Bold
+   * - `cobi`
+     - Courier-BoldOblique
+   * - `tiro`
+     - Times-Roman
+   * - `tibo`
+     - Times-Bold
+   * - `tiit`
+     - Times-Italic
+   * - `tibi`
+     - Times-BoldItalic
+   * - `symb`
+     - Symbol
+   * - `zadb`
+     - ZapfDingbats
+
+**Example**
+
+.. code-block:: cs
+
+    MuPDF.NET.Font fontA = new MuPDF.NET.Font(""); // choose the Noto Serif Regular font
+    MuPDF.NET.Font fontB = new MuPDF.NET.Font("helv"); // choose the Helvetica font
+
 
 .. _TextAlign:
 
