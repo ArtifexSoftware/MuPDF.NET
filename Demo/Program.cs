@@ -6,6 +6,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 
 namespace Demo
 {
@@ -13,13 +14,16 @@ namespace Demo
     {
         static void Main(string[] args)
         {
+            TestInsertHtmlbox();
+            TestLineAnnot();
             AnnotationsFreeText1.Run(args);
             AnnotationsFreeText2.Run(args);
             NewAnnots.Run(args);
             TestHelloWorldToNewDocument(args);
-            TestReadBarcode(args);
-            TestWriteBarcode(args);
             TestHelloWorldToExistingDocument(args);
+            TestReadBarcode(args);
+            TestReadDataMatrix();
+            TestWriteBarcode(args);
             TestExtractTextWithLayout(args);
             TestWidget(args);
             TestColor(args);
@@ -32,10 +36,237 @@ namespace Demo
             TestCreateImagePage(args);
             TestJoinPdfPages(args);
             TestFreeTextAnnot(args);
+            TestTextFont(args);
+            TestMemoryLeak();
+            TestDrawLine();
+
+            return;
+        }
+
+        static void TestReadDataMatrix()
+        {
+            int i = 0;
+
+            Console.WriteLine("\n=== TestReadDataMatrix =======================");
+
+            string testFilePath = Path.GetFullPath("../../../TestDocuments/Barcodes/datamatrix.pdf");
+            Document doc = new Document(testFilePath);
+
+            Page page = doc[0];
+
+            List<Barcode> barcodes = page.ReadBarcodes(decodeEmbeddedOnly: true);
+
+            foreach (Barcode barcode in barcodes)
+            {
+                BarcodePoint[] points = barcode.ResultPoints;
+                Console.WriteLine($"Page {i++} - Type: {barcode.BarcodeFormat} - Value: {barcode.Text} - Rect: [{points[0]},{points[1]}]");
+            }
+
+            List<Block> blocks = page.GetImageInfo();
+
+            foreach (Block block in blocks)
+            {
+                Rect blockRect = block.Bbox;
+                barcodes = page.ReadBarcodes(clip:blockRect);
+                foreach (Barcode barcode in barcodes)
+                {
+                    BarcodePoint[] points = barcode.ResultPoints;
+                    if (points.Length == 2)
+                    {
+                        Console.WriteLine($"Page {i++} - Type: {barcode.BarcodeFormat} - Value: {barcode.Text} - Rect: [{points[0]},{points[1]}]");
+                    }
+                    else if (points.Length == 4)
+                    {
+                        Console.WriteLine($"Page {i++} - Type: {barcode.BarcodeFormat} - Value: {barcode.Text} - Rect: [{points[0]},{points[2]}]");
+                    }
+                }
+            }
+
+            /*
+            List<Entry> imlist = page.GetImages();
+            foreach (Entry im in imlist) 
+            {
+                ImageInfo img = doc.ExtractImage(im.Xref);
+                File.WriteAllBytes(@"copy.png", img.Image);
+
+                List<Barcode> barcodes = Utils.ReadBarcodes(@"copy.png", new Rect(0,0,img.Width,img.Height));
+
+                foreach (Barcode barcode in barcodes)
+                {
+                    BarcodePoint[] points = barcode.ResultPoints;
+                    Console.WriteLine($"Page {i++} - Type: {barcode.BarcodeFormat} - Value: {barcode.Text} - Rect: [{points[0]},{points[1]}]");
+                }
+            }
+            */
+
+            page.Dispose();
+            doc.Close();
+        }
+
+        static void TestMemoryLeak()
+        {
+            Console.WriteLine("\n=== TestMemoryLeak =======================");
+            string testFilePath = Path.GetFullPath("../../../TestDocuments/Blank.pdf");
+
+            for (int i = 0; i < 100; i++)
+            {
+                Document doc = new Document(testFilePath);
+                Page page = doc.NewPage();
+                page.Dispose();
+                doc.Close();
+            }
+
+            Console.WriteLine("Memory leak test completed. No leaks should be detected.");
+        }
+
+        static void DrawLine(Page page, float startX, float startY, float endX, float endY, Color lineColor = null, float lineWidth = 1, bool dashed = false)
+        {
+            Console.WriteLine("\n=== DrawLine =======================");
+
+            if (lineColor == null)
+            {
+                lineColor = new Color(); // Default to black
+                lineColor.Stroke = new float[] { 0, 0, 0 }; // RGB black
+            }
+            Shape img = page.NewShape();
+            Point startPoint = new Point(startX, startY);
+            Point endPoint = new Point(endX, endY);
+
+            String dashString = "";
+            if (dashed == true)
+            {
+                dashString = "[2] 0"; // Example dash pattern
+            }
+
+            img.DrawLine(startPoint, endPoint);
+            img.Finish(width: lineWidth, color: lineColor.Stroke, dashes: dashString);
+            img.Commit();
+
+            Console.WriteLine($"Line drawn from ({startX}, {startY}) to ({endX}, {endY}) with color {lineColor.Stroke} and width {lineWidth}.");
+        }
+
+        static void TestDrawLine()
+        {
+            Console.WriteLine("\n=== TestDrawLine =======================");
+
+            Document doc = new Document();
+
+            Page page = doc.NewPage();
+
+            string fontDir = Environment.GetFolderPath(Environment.SpecialFolder.Fonts);
+
+            page.DrawLine(new Point(45, 50), new Point(80, 50), width: 0.5f, dashes: "[5] 0");
+            page.DrawLine(new Point(90, 50), new Point(150, 50), width: 0.5f, dashes: "[5] 0");
+            page.DrawLine(new Point(45, 80), new Point(180, 80), width: 0.5f, dashes: "[5] 0");
+            page.DrawLine(new Point(45, 100), new Point(180, 100), width: 0.5f, dashes: "[5] 0");
+
+            //DrawLine(page, 45, 50, 80, 50, lineWidth: 0.5f, dashed: true);
+            //DrawLine(page, 90, 60, 150, 60, lineWidth: 0.5f, dashed: true);
+            //DrawLine(page, 45, 80, 180, 80, lineWidth: 0.5f, dashed: true);
+            //DrawLine(page, 45, 100, 180, 100, lineWidth: 0.5f, dashed: true);
+
+            doc.Save(@"TestDrawLine.pdf");
+
+            page.Dispose();
+            doc.Close();
+
+            Console.WriteLine("Write to TestDrawLine.pdf");
+        }
+
+        static void TestTextFont(string[] args)
+        {
+            Console.WriteLine("\n=== TestTextFont =======================");
+            //for (int i = 0; i < 100; i++)
+            {
+                Document doc = new Document();
+
+                Page page0 = doc.NewPage();
+                Page page1 = doc.NewPage(pno: -1, width: 595, height: 842);
+
+                string fontDir = Environment.GetFolderPath(Environment.SpecialFolder.Fonts);
+
+                float[] blue = new float[] { 0.0f, 0.0f, 1.0f };
+                float[] red = new float[] { 1.0f, 0.0f, 0.0f };
+
+                Rect rect1 = new Rect(100, 100, 510, 200);
+                Rect rect2 = new Rect(100, 250, 300, 400);
+
+                MuPDF.NET.Font font1 = new MuPDF.NET.Font("asdfasdf");
+                //MuPDF.NET.Font font1 = new MuPDF.NET.Font("arial", fontDir+"\\arial_0.ttf");
+                MuPDF.NET.Font font2 = new MuPDF.NET.Font("times", fontDir + "\\times.ttf");
+
+                string text1 = "This is a test of the FillTextbox method with Arial font.";
+                string text2 = "This is another test with Times New Roman font.";
+
+                MuPDF.NET.TextWriter tw1 = new MuPDF.NET.TextWriter(page0.Rect);
+                tw1.FillTextbox(rect: rect1, text: text1, font: font1, fontSize:20);
+                font1.Dispose();
+                tw1.WriteText(page0);
+
+                MuPDF.NET.TextWriter tw2 = new MuPDF.NET.TextWriter(page0.Rect, color: red);
+                tw2.FillTextbox(rect: rect2, text: text2, font: font2, fontSize: 10, align: (int)TextAlign.TEXT_ALIGN_LEFT);
+                font2.Dispose();
+                tw2.WriteText(page0);
+
+                doc.Save(@"TestTextFont.pdf");
+
+                page0.Dispose();
+                doc.Close();
+
+                Console.WriteLine("Write to TestTextFont.pdf");
+            }
+
+        }
+
+        static void TestInsertHtmlbox()
+        {
+            Console.WriteLine("\n=== TestInsertHtmlbox =======================");
+
+            Rect rect = new Rect(100, 100, 550, 2250);
+            Document doc = new Document();
+            Page page = doc.NewPage();
+
+            string htmlString = "<html><body style=\"text-align:Left;font-family:Segoe UI;font-style:normal;font-weight:normal;font-size:12;color:#000000;\"><p><span>生产准备：</span></p><p><span>1. 每日生产进行维护保养，请参照并填写Philips 自动螺丝起点检表《WI-Screw assembly-Makita DF010&amp;Kilews </span></p><p><span>SKD-B512L-F01》</span></p><p><span>2 .扭力计UNIT选择‘lbf.in’，‘P-P’模式，每四小时检查一次，每次检查5组数据，只有合格才可以生产；并填写</span></p><p><span>力扭矩记录表，表单号 ： F-EN-34 。</span></p><p><span>1.电动起子力矩： 5&#177;1 in-lbs，电动螺丝起编号：5.0。</span></p><p><span>2.电动起子力矩：10&#177;1 in-lbs，电动螺丝起编号：10.0。</span></p><p><span>3.电动起子力矩：12&#177;1 in-lbs，电动螺丝起编号：12.0。</span></p><p><span /></p><p><span>Colten - line break</span></p><p><span /></p><p><span>生产准备：</span></p><p><span>1. 每日生产进行维护保养，请参照并填写Philips 自动螺丝起点检表《WI-Screw assembly-Makita DF010&amp;Kilews </span></p><p><span>SKD-B512L-F01》</span></p><p><span>2 .扭力计UNIT选择‘lbf.in’，‘P-P’模式，每四小时检查一次，每次检查5组数据，只有合格才可以生产；并填写</span></p><p><span>力扭矩记录表，表单号 ： F-EN-34 。</span></p><p><span>1.电动起子力矩： 5&#177;1 in-lbs，电动螺丝起编号：5.0。</span></p><p><span>2.电动起子力矩：10&#177;1 in-lbs，电动螺丝起编号：10.0。</span></p><p><span>3.电动起子力矩：12&#177;1 in-lbs，电动螺丝起编号：12.0。</span></p><p><span> </span></p><p><span>Colten - line break</span></p><p><span /></p><p><span>生产准备：</span></p><p><span>1. 每日生产进行维护保养，请参照并填写Philips 自动螺丝起点检表《WI-Screw assembly-Makita DF010&amp;Kilews </span></p><p><span>SKD-B512L-F01》</span></p><p><span>2 .扭力计UNIT选择‘lbf.in’，‘P-P’模式，每四小时检查一次，每次检查5组数据，只有合格才可以生产；并填写</span></p><p><span>力扭矩记录表，表单号 ： F-EN-34 。</span></p><p><span>1.电动起子力矩： 5&#177;1 in-lbs，电动螺丝起编号：5.0。</span></p><p><span>2.电动起子力矩：10&#177;1 in-lbs，电动螺丝起编号：10.0。</span></p><p><span>3.电动起子力矩：12&#177;1 in-lbs，电动螺丝起编号：12.0。</span></p><p><span /></p><p><span>Colten - line break</span></p><p><span /></p><p><span>生产准备：</span></p><p><span>1. 每日生产进行维护保养，请参照并填写Philips 自动螺丝起点检表《WI-Screw assembly-Makita DF010&amp;Kilews </span></p><p><span>SKD-B512L-F01》</span></p><p><span>2 .扭力计UNIT选择‘lbf.in’，‘P-P’模式，每四小时检查一次，每次检查5组数据，只有合格才可以生产；并填写</span></p><p><span>力扭矩记录表，表单号 ： F-EN-34 。</span></p><p><span>1.电动起子力矩： 5&#177;1 in-lbs，电动螺丝起编号：5.0。</span></p><p><span>2.电动起子力矩：10&#177;1 in-lbs，电动螺丝起编号：10.0。</span></p><p><span>3.电动起子力矩：12&#177;1 in-lbs，电动螺丝起编号：12.0。</span></p><p><span /></p></body></html>";
+            (float s, float scale) = page.InsertHtmlBox(rect, htmlString, scaleLow: 0f);
+            doc.Save(@"TestInsertHtmlbox.pdf");
+
+            page.Dispose();
+            doc.Close();
+
+            Console.WriteLine($"Inserted HTML box with scale: {scale} and size: {s}");
+        }
+
+        static void TestLineAnnot()
+        {
+            Console.WriteLine("\n=== TestLineAnnot =======================");
+            Document newDoc = new Document();
+            Page newPage = newDoc.NewPage();
+
+            newPage.AddLineAnnot(new Point(100, 100), new Point(300, 300));
+
+            newDoc.Save(@"TestLineAnnot1.pdf");
+            newDoc.Close();
+
+            Document doc = new Document(@"TestLineAnnot1.pdf"); // open a document
+            List<Annot> annotationsToUpdate = new List<Annot>();
+            Page page = doc[0];
+            // Fix: Correctly handle the IEnumerable<Annot> returned by GetAnnots()
+            IEnumerable<Annot> annots = page.GetAnnots();
+            foreach (Annot annot in annots)
+            {
+                Console.WriteLine("Annotation on page width before modified: " + annot.Border.Width);
+                annot.SetBorder(width: 8);
+                annot.Update();
+                Console.WriteLine("Annotation on page width after modified: " + annot.Border.Width);
+            }
+            annotationsToUpdate.Clear();
+            doc.Save(@"TestLineAnnot2.pdf"); // Save the modified document
+            doc.Close(); // Close the document
         }
 
         static void TestHelloWorldToNewDocument(string[] args)
         {
+            Console.WriteLine("\n=== TestHelloWorldToNewDocument =======================");
             Document doc = new Document();
             Page page = doc.NewPage();
 
@@ -56,10 +287,14 @@ namespace Demo
             var ret = writer.FillTextbox(page.Rect, "Hello World!", new Font(fontName: "helv"), rtl: true);
             writer.WriteText(page);
             doc.Save("text.pdf", pretty: 1);
+            doc.Close();
+
+            Console.WriteLine($"Text written to 'text.pdf' in: {page.Rect}");
         }
 
         static void TestHelloWorldToExistingDocument(string[] args)
         {
+            Console.WriteLine("\n=== TestHelloWorldToExistingDocument =======================");
             string testFilePath = Path.GetFullPath("../../../TestDocuments/Blank.pdf");
             Document doc = new Document(testFilePath);
             
@@ -77,13 +312,16 @@ namespace Demo
             doc.Save("text1.pdf", pretty: 1);
 
             doc.Close();
+
+            Console.WriteLine($"Text written to 'text1.pdf' in: {page.Rect}");
         }
 
         static void TestReadBarcode(string[] args)
         {
+            Console.WriteLine("\n=== TestReadBarcode =======================");
             int i = 0;
 
-            Console.WriteLine("=== Read from image file =====================");
+            Console.WriteLine("--- Read from image file ----------");
             string testFilePath1 = Path.GetFullPath("../../../TestDocuments/Barcodes/rendered.bmp");
 
             Rect rect1 = new Rect(1260, 390, 1720, 580);
@@ -96,14 +334,14 @@ namespace Demo
                 Console.WriteLine($"Page {i++} - Type: {barcode.BarcodeFormat} - Value: {barcode.Text} - Rect: [{points[0]},{points[1]}]");
             }
             
-            Console.WriteLine("=== Read from pdf file =======================");
+            Console.WriteLine("--- Read from pdf file ----------");
 
-            string testFilePath = Path.GetFullPath("../../../TestDocuments/Barcodes/Sample1.pdf");
+            string testFilePath = Path.GetFullPath("../../../TestDocuments/Barcodes/Samples.pdf");
             Document doc = new Document(testFilePath);
 
             Page page = doc[0];
-            Rect rect = new Rect(290, 590, 420, 660);
-            List<Barcode> barcodes = page.ReadBarcodes(rect);
+            //Rect rect = new Rect(290, 590, 420, 660);
+            List<Barcode> barcodes = page.ReadBarcodes();
 
             foreach (Barcode barcode in barcodes)
             {
@@ -113,9 +351,72 @@ namespace Demo
             doc.Close();
         }
 
+        static void TestReadQrCode(string[] args)
+        {
+            Console.WriteLine("\n=== TestReadQrCode =======================");
+            int i = 0;
+            /*
+            Console.WriteLine("=== Read from image file =====================");
+            string testFilePath1 = Path.GetFullPath("../../../TestDocuments/Barcodes/2.png");
+
+            List<Barcode> barcodes2 = Utils.ReadBarcodes(testFilePath1, autoRotate:true);
+
+            i = 0;
+            foreach (Barcode barcode in barcodes2)
+            {
+                BarcodePoint[] points = barcode.ResultPoints;
+                Console.WriteLine($"Page {i++} - Type: {barcode.BarcodeFormat} - Value: {barcode.Text} - Rect: [{points[0]},{points[1]}]");
+            }
+            */
+            ///*
+            Console.WriteLine("--- Read from pdf file ----------");
+
+            string testImagePath = @"test.png";
+            string testFilePath = Path.GetFullPath("../../../TestDocuments/Barcodes/input.pdf");
+            Document doc = new Document(testFilePath);
+
+            Page page = doc[0];
+            page.RemoveRotation(); // remove rotation to read barcodes correctly
+
+            // Apply 2x scale (both X and Y)
+            var matrix = new Matrix(3.0f, 3.0f);
+
+            // Render the page using the scaled matrix
+            var pixmap = page.GetPixmap(matrix);
+
+            pixmap.GammaWith(3.2f); // apply gamma correction to improve barcode detection
+
+            pixmap.Save(testImagePath);
+
+            /*
+            Rect rect = new Rect(400, 700, page.Rect.X1, page.Rect.Y1);
+            List<Barcode> barcodes = page.ReadBarcodes(rect);
+
+            foreach (Barcode barcode in barcodes)
+            {
+                BarcodePoint[] points = barcode.ResultPoints;
+                Console.WriteLine($"Page {i++} - Type: {barcode.BarcodeFormat} - Value: {barcode.Text} - Rect: [{points[0]},{points[1]}]");
+            }
+            */
+
+            pixmap.Dispose();
+            doc.Close();
+
+            List<Barcode> barcodes2 = Utils.ReadBarcodes(testImagePath, autoRotate: false);
+
+            i = 0;
+            foreach (Barcode barcode in barcodes2)
+            {
+                BarcodePoint[] points = barcode.ResultPoints;
+                Console.WriteLine($"Page {i++} - Type: {barcode.BarcodeFormat} - Value: {barcode.Text} - Rect: [{points[0]},{points[1]}]");
+            }
+            //*/
+        }
+
         static void TestWriteBarcode(string[] args)
         {
-            Console.WriteLine("=== Write to pdf file =====================");
+            Console.WriteLine("\n=== TestWriteBarcode =======================");
+            Console.WriteLine("--- Write to pdf file ----------");
             string testFilePath = Path.GetFullPath("../../../TestDocuments/Blank.pdf");
             Document doc = new Document(testFilePath);
             Page page = doc[0];
@@ -176,10 +477,10 @@ namespace Demo
 
             doc.Save("barcode.pdf");
 
-            Console.WriteLine("Done");
+            Console.WriteLine($"Barcodes written to 'barcode.pdf' in: {page.Rect}");
             doc.Close();
 
-            Console.WriteLine("=== Write to image file =====================");
+            Console.WriteLine("--- Write to image file ----------");
 
             // QR_CODE
             Utils.WriteBarcode("QR_CODE.png", "Hello World!", BarcodeFormat.QR_CODE, width: 400, height: 300, forceFitToRect: false, pureBarcode: true, margin: 3);
@@ -211,12 +512,12 @@ namespace Demo
             // DATA_MATRIX
             Utils.WriteBarcode("DATA_MATRIX.png", "01100000110419257000", BarcodeFormat.DATA_MATRIX, width: 300, height: 300, forceFitToRect: false, pureBarcode: true, margin: 1);
 
-            Console.WriteLine("Done");
+            Console.WriteLine("Barcodes written to image files in the current directory.");
         }
 
         static void TestExtractTextWithLayout(string[] args)
         {
-            Console.WriteLine("=== Extract text with layout =====================");
+            Console.WriteLine("\n=== TestExtractTextWithLayout =====================");
             string testFilePath = Path.GetFullPath("../../../TestDocuments/columns.pdf");
             Document doc = new Document(testFilePath);
 
@@ -242,6 +543,8 @@ namespace Demo
 
         static void TestWidget(string[] args)
         {
+            Console.WriteLine("\n=== TestWidget =====================");
+
             string testFilePath = Path.GetFullPath("../../../TestDocuments/Widget.pdf");
             Document doc = new Document(testFilePath);
             for (int i = 0; i < 1; i++)
@@ -281,10 +584,13 @@ namespace Demo
             }
 
             doc.Close();
+            Console.WriteLine("Widget test completed.");
         }
 
         static void TestColor(string[] args)
         {
+            Console.WriteLine("\n=== TestColor =====================");
+
             string testFilePath = Path.GetFullPath("../../../TestDocuments/Color.pdf");
             Document doc = new Document(testFilePath);
             List<Entry> images = doc.GetPageImages(0);
@@ -294,32 +600,44 @@ namespace Demo
             Console.WriteLine($"CaName: {images[0].AltCsName}");
             doc.Save("ReColor.pdf");
             doc.Close();
+
+            Console.WriteLine("Color test completed.");
         }
 
         static void TestCMYKRecolor(string[] args)
         {
+            Console.WriteLine("\n=== TestCMYKRecolor =====================");
+
             string testFilePath = Path.GetFullPath("../../../TestDocuments/CMYK_Recolor.pdf");
             Document doc = new Document(testFilePath);
             //List<Entry> images = doc.GetPageImages(0);
             //Console.WriteLine($"CaName: {images[0].CsName}");
-            doc.Recolor(0, "GRAY");
+            doc.Recolor(0, "CMYK");
             //images = doc.GetPageImages(0);
             //Console.WriteLine($"CaName: {images[0].AltCsName}");
             doc.Save("CMYKRecolor.pdf");
             doc.Close();
+
+            Console.WriteLine("CMYK Recolor test completed.");
         }
 
         static void TestSVGRecolor(string[] args)
         {
+            Console.WriteLine("\n=== TestSVGRecolor =====================");
+
             string testFilePath = Path.GetFullPath("../../../TestDocuments/SvgTest.pdf");
             Document doc = new Document(testFilePath);
             doc.Recolor(0, "RGB");
             doc.Save("SVGRecolor.pdf");
             doc.Close();
+
+            Console.WriteLine("SVG Recolor test completed.");
         }
 
         static void TestReplaceImage(string[] args)
         {
+            Console.WriteLine("\n=== TestReplaceImage =====================");
+
             string testFilePath = Path.GetFullPath("../../../TestDocuments/Color.pdf");
             Document doc = new Document(testFilePath);
             Page page = doc[0];
@@ -346,10 +664,14 @@ namespace Demo
 
             doc.Save("ReplaceImage.pdf");
             doc.Close();
+
+            Console.WriteLine("Image replacement test completed.");
         }
 
         static void TestInsertImage(string[] args)
         {
+            Console.WriteLine("\n=== TestInsertImage =====================");
+
             string testFilePath = Path.GetFullPath("../../../TestDocuments/Image/test.pdf");
             Document doc = new Document(testFilePath);
             Page page = doc[0];
@@ -380,10 +702,14 @@ namespace Demo
 
             doc.Save("TestInsertImage.pdf");
             doc.Close();
+
+            Console.WriteLine("Image insertion test completed.");
         }
 
         static void TestGetImageInfo(string[] args)
         {
+            Console.WriteLine("\n=== TestGetImageInfo =====================");
+
             string testFilePath = Path.GetFullPath("../../../TestDocuments/Image/TestInsertImage.pdf");
             Document doc = new Document(testFilePath);
             Page page = doc[0];
@@ -391,10 +717,14 @@ namespace Demo
             List<Block> infos = page.GetImageInfo(xrefs: true);
 
             doc.Close();
+
+            Console.WriteLine("Image info test completed.");
         }
 
         static void TestGetTextPageOcr(string[] args)
         {
+            Console.WriteLine("\n=== TestGetTextPageOcr =====================");
+
             string testFilePath = Path.GetFullPath(@"../../../TestDocuments/Ocr.pdf");
             Document doc = new Document(testFilePath);
             Page page = doc[0];
@@ -410,10 +740,14 @@ namespace Demo
             Console.WriteLine(txt);
 
             doc.Close();
+
+            Console.WriteLine("OCR text extraction test completed.");
         }
 
         static void TestCreateImagePage(string[] args)
         {
+            Console.WriteLine("\n=== TestCreateImagePage =====================");
+
             Pixmap pxmp = new Pixmap("../../../TestDocuments/Image/_bb-logo.png");
 
             Document doc = new Document();
@@ -425,10 +759,14 @@ namespace Demo
 
             doc.Save("_bb-logo.pdf", pretty: 1);
             doc.Close();
+
+            Console.WriteLine("Image page creation test completed.");
         }
 
         static void TestJoinPdfPages(string[] args)
         {
+            Console.WriteLine("\n=== TestJoinPdfPages =====================");
+
             string testFilePath1 = Path.GetFullPath(@"../../../TestDocuments/Widget.pdf");
             Document doc1 = new Document(testFilePath1);
             string testFilePath2 = Path.GetFullPath(@"../../../TestDocuments/Color.pdf");
@@ -440,10 +778,14 @@ namespace Demo
 
             doc2.Close();
             doc1.Close();
+
+            Console.WriteLine("PDF pages joined successfully into 'Joined.pdf'.");
         }
 
         static void TestFreeTextAnnot(string[] args)
         {
+            Console.WriteLine("\n=== TestFreeTextAnnot =====================");
+
             Rect r = new Rect(72, 72, 220, 100);
             string t1 = "têxt üsès Lätiñ charß,\nEUR: €, mu: µ, super scripts: ²³!";
             Rect rect = new Rect(100,100,200,200);
@@ -474,6 +816,8 @@ namespace Demo
             doc.Save("FreeTextAnnot.pdf");
 
             doc.Close();
+
+            Console.WriteLine("Free text annotation created and saved to 'FreeTextAnnot.pdf'.");
         }
     }
 }

@@ -156,7 +156,16 @@ namespace MuPDF.NET
             foreach (var entry in config.Hints)
                 reader.Options.Hints.Add(entry.Key, entry.Value);
 
-            Result[] results = reader.DecodeMultiple(source);
+            Result[] results = { };
+
+            try
+            {
+                results = reader.DecodeMultiple(source);
+            }
+            catch (Exception)
+            {
+                return new Result[] { };
+            }
 
             return results;
         }

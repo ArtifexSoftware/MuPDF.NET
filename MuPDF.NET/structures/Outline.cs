@@ -146,5 +146,14 @@ namespace MuPDF.NET
         {
             return _nativeOutline;
         }
+
+        public void Dispose()
+        {
+            if (_nativeOutline != null)
+            {
+                _nativeOutline.Dispose();
+                _nativeOutline = null;
+            }
+        }
     }
 }

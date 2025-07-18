@@ -86,6 +86,11 @@ namespace MuPDF.NET
                 ctm2 = new FzMatrix();
             FzDevice dev = device == null ? new FzDevice() : device.ToFzDevice();
             _nativeStory.fz_draw_story(dev, ctm2);
+            if (device == null)
+            {
+                dev.fz_close_device();
+                dev.Dispose();
+            }
         }
 
         /// <summary>
@@ -179,7 +184,7 @@ namespace MuPDF.NET
                 }
                 else
                 {
-                    (bool more, Rect filled) = Place(_rect);
+                    (bool more, Rect filled) = Place(r);
                     state.Numcalls += 1;
                     bigEnough = !more;
 
@@ -188,11 +193,11 @@ namespace MuPDF.NET
                         more: more,
                         numcalls: state.Numcalls,
                         parameter: parameter,
-                        rect: _rect,
+                        rect: r,
                         bigEnough: bigEnough
                         );
                     if (verbose)
-                        Log($"Update(): called self.place(): {state.Numcalls}: {more} {parameter} {_rect}.");
+                        Log($"Update(): called self.place(): {state.Numcalls}: {more} {parameter} {r}.");
                 }
 
                 if (bigEnough)
@@ -465,6 +470,7 @@ namespace MuPDF.NET
                         }
                         writer.EndPage();
                     }
+                    dev.Dispose();
                 }
                 else
                     Draw(null, ctm);

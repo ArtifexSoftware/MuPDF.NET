@@ -13,6 +13,7 @@ namespace Demo
     {
         public static void Run(string[] args)
         {
+            Console.WriteLine("\n=== AnnotationsFreeText1 =======================");
             Document doc = new Document();
             Page page = doc.NewPage();
 
@@ -34,6 +35,8 @@ namespace Demo
             doc.Save("a-freetext.pdf");
 
             doc.Close();
+
+            Console.WriteLine("Saved to a-freetext.pdf");
         }
     }
 }

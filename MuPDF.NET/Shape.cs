@@ -390,6 +390,7 @@ namespace MuPDF.NET
                 //Doc.UpdateStream(xref, bTotal);
                 PdfDocument doc = Document.AsPdfDocument(Doc);
                 doc.pdf_update_stream(doc.pdf_load_object(xref), Utils.BufferFromBytes(bTotal), 1);
+                doc.Dispose();
             }
 
             LastPoint = null;

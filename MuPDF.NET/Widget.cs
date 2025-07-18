@@ -375,7 +375,10 @@ namespace MuPDF.NET
             PdfObj pdf_widget = pdf.pdf_load_object(Xref);
             PdfObj parent = pdf_widget.pdf_dict_get(new PdfObj("Parent"));
             if (parent.pdf_is_dict() == 0)
+            {
+                pdf.Dispose();
                 return false;  // no /Parent: nothing to do
+            }
 
             // put the field flags value into the parent field flags:
             parent.pdf_dict_put_int(new PdfObj("Ff"), this.FieldFlags);
@@ -385,6 +388,7 @@ namespace MuPDF.NET
             if (kids.pdf_is_array() == 0)
             {
                 Console.WriteLine("warning: malformed PDF, Parent has no Kids array");
+                pdf.Dispose();
                 return false;  // no /Kids: should never happen!
             }
 
@@ -404,6 +408,7 @@ namespace MuPDF.NET
                 kid.pdf_dict_put_int(new PdfObj("Ff"), this.FieldFlags);
             }
 
+            pdf.Dispose();
             return true;  // all done
         }
 

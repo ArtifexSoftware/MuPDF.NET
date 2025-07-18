@@ -105,6 +105,8 @@ namespace MuPDF.NET
                 PdfDocument pdf = Document.AsPdfDocument(this);
                 if (pdf.m_internal != null)
                     pdf.pdf_count_versions();
+
+                pdf.Dispose();
                 
                 return 0;
             }
@@ -132,7 +134,8 @@ namespace MuPDF.NET
                 if (pdf.m_internal == null)
                     return false;
                 int r = pdf.pdf_has_unsaved_changes();
-                
+                pdf.Dispose();
+
                 return r != 0;
             }
         }
@@ -162,7 +165,11 @@ namespace MuPDF.NET
             {
                 PdfDocument pdf = Document.AsPdfDocument(_nativeDocument);
                 if (pdf.m_internal != null)
-                    return pdf.pdf_doc_was_linearized() != 0;
+                {
+                    bool ret = pdf.pdf_doc_was_linearized() != 0;
+                    pdf.Dispose();
+                    return ret;
+                }
                 
                 return false;
             }
@@ -191,9 +198,11 @@ namespace MuPDF.NET
                 }
                 catch (Exception)
                 {
+                    pdf.Dispose();
                     return -1;
                 }
 
+                pdf.Dispose();
                 if (count >= 0)
                     return count;
                 
@@ -225,7 +234,9 @@ namespace MuPDF.NET
                 PdfDocument pdf = Document.AsPdfDocument(_nativeDocument);
                 if (pdf.m_internal == null)
                     return false;
-                
+
+                pdf.Dispose();
+
                 return pdf.pdf_was_repaired() != 0;
             }
         }
@@ -239,6 +250,8 @@ namespace MuPDF.NET
                     return null;
                 
                 fz_text_language lang = mupdf.mupdf.pdf_document_language(pdf);
+                pdf.Dispose();
+
                 if (lang == fz_text_language.FZ_LANG_UNSET)
                     return null;
 
@@ -375,7 +388,9 @@ namespace MuPDF.NET
                         ret.Add(Utils.UnicodeFromStr(f.pdf_to_name()));
                     }
                 }
-                
+
+                pdf.Dispose();
+
                 return ret;
             }
         }
@@ -480,14 +495,13 @@ namespace MuPDF.NET
                     h = r.y1 - r.y0;
                 }
 
-                FzStream data;
                 FzDocument doc = null;
                 if (stream != null)
                 {
                     IntPtr dataPtr = Marshal.AllocHGlobal(stream.Length);
                     Marshal.Copy(stream, 0, dataPtr, stream.Length);
                     SWIGTYPE_p_unsigned_char swigData = new SWIGTYPE_p_unsigned_char(dataPtr, true);
-                    data = mupdf.mupdf.fz_open_memory(swigData, (uint)stream.Length);
+                    FzStream data = mupdf.mupdf.fz_open_memory(swigData, (uint)stream.Length);
                     if (string.IsNullOrEmpty(fileName) || string.IsNullOrEmpty(fileType))
                         fileName = "pdf";
                     
@@ -502,6 +516,7 @@ namespace MuPDF.NET
                     {
                         throw new Exception("Failed to open stream : " + e.Message);
                     }
+                    data.Dispose();
                 }
                 else
                 {
@@ -656,6 +671,7 @@ namespace MuPDF.NET
                 FzDevice dev = pdfout.pdf_page_write(mediabox, resources, contents);
                 page.fz_run_page(dev, new FzMatrix(), new FzCookie());
                 dev.fz_close_device();
+                dev.Dispose();
                 dev = null;
 
                 PdfObj pageObj = pdfout.pdf_add_page(mediabox, rot, resources, contents);
@@ -776,8 +792,13 @@ namespace MuPDF.NET
             PdfDocument pdf = AsPdfDocument(this);
             int xref = 0;
             if (n >= pageCount)
+            {
+                pdf.Dispose();
                 throw new Exception(Utils.ErrorMessages["MSG_BAD_PAGENO"]);
+            }
             xref = pdf.pdf_lookup_page_obj(n).pdf_to_num();
+
+            pdf.Dispose();
 
             return xref;
         }
@@ -886,6 +907,7 @@ namespace MuPDF.NET
             PdfObj obj = null;
             if (!Utils.INRANGE(xref, 1, xrefLen - 1) && xref != -1)
             {
+                pdf.Dispose();
                 throw new Exception(Utils.ErrorMessages["MSG_BAD_XREF"]);
             }
 
@@ -896,7 +918,10 @@ namespace MuPDF.NET
             
             PdfObj nObj = SetObjectValue(obj, key, value);
             if (nObj.m_internal == null)
+            {
+                pdf.Dispose();
                 return;
+            }
 
             if (xref != -1)
                 pdf.pdf_update_object(xref, nObj);
@@ -906,6 +931,8 @@ namespace MuPDF.NET
                 for (int i = 0; i < n; i++)
                     obj.pdf_dict_put(nObj.pdf_dict_get_key(i), nObj.pdf_dict_get_val(i));
             }
+
+            pdf.Dispose();
         }
 
         public (string, string) GetKeyXref(int xref, string key)
@@ -916,16 +943,22 @@ namespace MuPDF.NET
             PdfDocument pdf = AsPdfDocument(this);
             int xrefLen = pdf.pdf_xref_len();
             if (!Utils.INRANGE(xref, 1, xrefLen - 1) && xref != -1)
+            {
+                pdf.Dispose();
                 throw new Exception(Utils.ErrorMessages["MSG_BAD_XREF"]);
+            }
 
             PdfObj obj = null;
             if (xref > 0)
                 obj = pdf.pdf_load_object(xref);
             else
                 obj = pdf.pdf_trailer();
-            
+
             if (obj == null)
+            {
+                pdf.Dispose();
                 return ("null", "null");
+            }
 
             PdfObj subObj = obj.pdf_dict_getp(key);
             if (subObj == null)
@@ -980,6 +1013,7 @@ namespace MuPDF.NET
                 text = Utils.UnicodeFromBuffer(res);
             }
 
+            pdf.Dispose();
             return (type, text);
         }
 
@@ -1130,6 +1164,8 @@ namespace MuPDF.NET
                 PdfObj resources = pdf.pdf_add_new_dict(1);
                 PdfObj pageObj = pdf.pdf_add_page(mediaBox, 0, resources, contents);
                 pdf.pdf_insert_page(pno, pageObj);
+
+                pdf.Dispose();
             }
 
             ResetPageRefs();
@@ -1178,7 +1214,10 @@ namespace MuPDF.NET
             while (n < 0)
                 n += pageCount;
             if (n >= pageCount)
+            {
+                pdf.Dispose();
                 throw new Exception(Utils.ErrorMessages["MSG_BAD_PAGENO"]);
+            }
 
             PdfObj pageRef = pdf.pdf_lookup_page_obj(n);
             PdfObj rsrc = pageRef.pdf_dict_get_inheritable(new PdfObj("Resources"));
@@ -1188,7 +1227,8 @@ namespace MuPDF.NET
 
             if (rsrc.m_internal != null)
                 Utils.ScanResources(pdf, rsrc, liste, what, 0, tracer);
-            
+
+            pdf.Dispose();
             return liste;
         }
 
@@ -1330,6 +1370,10 @@ namespace MuPDF.NET
                 else
                     bytes = Encoding.UTF8.GetBytes("");
 
+                subType.Dispose();
+                type.Dispose();
+                obj.Dispose();
+                pdf.Dispose();
                 return new FontInfo()
                 {
                     Name = Utils.EscapeStrFromStr(bName.pdf_to_name()),
@@ -1340,6 +1384,10 @@ namespace MuPDF.NET
             }
             else
             {
+                subType.Dispose();
+                type.Dispose();
+                obj.Dispose();
+                pdf.Dispose();
                 return new FontInfo()
                 {
                     Name = "",
@@ -1515,6 +1563,7 @@ namespace MuPDF.NET
                     if (buf == null)
                         throw new Exception($"font at xref {xref} is not supported");
                     font = mupdf.mupdf.fz_new_font_from_buffer(null, buf, idx, 0);
+                    buf.Dispose();
                 }
             }
             List<(int, double)> wList = new List<(int, double)>();
@@ -1530,6 +1579,9 @@ namespace MuPDF.NET
                     wList.Add((glyph, 0.0f));
             }
 
+            if (font != null)
+                font.Dispose();
+            pdf.Dispose();
             return wList;
         }
 
@@ -1550,7 +1602,10 @@ namespace MuPDF.NET
             PdfObj obj = null;
 
             if (!Utils.INRANGE(xref, 1, xrefLen - 1) && xref != -1)
+            {
+                pdf.Dispose();
                 throw new Exception(Utils.ErrorMessages["MSG_BAD_XREF"]);
+            }
             if (xref > 0)
                 obj = pdf.pdf_load_object(xref);
             else
@@ -1558,6 +1613,10 @@ namespace MuPDF.NET
 
             FzBuffer res = Utils.Object2Buffer(obj.pdf_resolve_indirect(), compressed, ascii);
             string text = Utils.EscapeStrFromBuffer(res);
+
+            res.Dispose();
+            obj.Dispose();
+            pdf.Dispose();
 
             return text;
         }
@@ -1617,6 +1676,7 @@ namespace MuPDF.NET
             pdf.pdf_delete_page(pno);
             if (pdf.m_internal.rev_page_map != null)
                 mupdf.mupdf.ll_pdf_drop_page_tree(pdf.m_internal);
+            pdf.Dispose();
         }
 
         /// <summary>
@@ -1858,6 +1918,7 @@ namespace MuPDF.NET
 
             PdfDocument pdf = Document.AsPdfDocument(_nativeDocument);
             mupdf.mupdf.pdf_rewrite_images(pdf, opts);
+            pdf.Dispose();
         }
 
         /// <summary>
@@ -2003,6 +2064,8 @@ namespace MuPDF.NET
             foreach (var dict in destDict)
                 ret.Add(dict.Key, dict.Value);
 
+            pdf.Dispose();
+
             return ret;
         }
 
@@ -2022,7 +2085,9 @@ namespace MuPDF.NET
             int sigflag = -1;
             if (sigflags != null)
                 sigflag = sigflags.pdf_to_int();
-            
+
+            pdf.Dispose();
+
             return sigflag;
         }
 
@@ -2045,6 +2110,8 @@ namespace MuPDF.NET
                 FzBuffer buff = xml.pdf_load_stream();
                 rc = Utils.UnicodeFromBuffer(buff);
             }
+
+            pdf.Dispose();
 
             return rc;
         }
@@ -2192,6 +2259,9 @@ namespace MuPDF.NET
 
             if (final == 1)
                 GraftMaps[isrt] = null;
+
+            pdfout.Dispose();
+            pdfsrc.Dispose();
         }
 
         /// <summary>
@@ -2209,7 +2279,9 @@ namespace MuPDF.NET
             PdfDocument pdf = Document.AsPdfDocument(_nativeDocument);
             undo = pdf.pdf_can_undo();
             redo = pdf.pdf_can_redo();
-            
+
+            pdf.Dispose();
+
             return (undo != 0, redo != 0);
         }
 
@@ -2224,6 +2296,7 @@ namespace MuPDF.NET
             
             PdfDocument pdf = Document.AsPdfDocument(_nativeDocument);
             pdf.pdf_enable_journal();
+            pdf.Dispose();
         }
 
         /// <summary>
@@ -2238,7 +2311,9 @@ namespace MuPDF.NET
             
             PdfDocument pdf = Document.AsPdfDocument(this);
             pdf.pdf_redo();
-            
+
+            pdf.Dispose();
+
             return true;
         }
 
@@ -2254,7 +2329,9 @@ namespace MuPDF.NET
             
             PdfDocument pdf = Document.AsPdfDocument(_nativeDocument);
             bool enabled = (pdf != null) && (pdf.m_internal.journal != null);
-            
+
+            pdf.Dispose();
+
             return enabled;
         }
 
@@ -2282,6 +2359,8 @@ namespace MuPDF.NET
             
             if (pdf.m_internal.journal == null)
                 throw new Exception("Journal and document do not match");
+
+            pdf.Dispose();
         }
 
         /// <summary>
@@ -2301,6 +2380,8 @@ namespace MuPDF.NET
 
             if (pdf.m_internal.journal == null)
                 throw new Exception("Journal and document do not match");
+
+            pdf.Dispose();
         }
 
         /// <summary>
@@ -2317,6 +2398,8 @@ namespace MuPDF.NET
             PdfDocument pdf = Document.AsPdfDocument(_nativeDocument);
             string name = pdf.pdf_undoredo_step(step);
 
+            pdf.Dispose();
+
             return name;
         }
 
@@ -2331,6 +2414,8 @@ namespace MuPDF.NET
             
             PdfDocument pdf = Document.AsPdfDocument(_nativeDocument);
             (int, int) rc = pdf.pdf_undoredo_state();
+
+            pdf.Dispose();
 
             return rc;
         }
@@ -2348,6 +2433,7 @@ namespace MuPDF.NET
             PdfDocument pdf = Document.AsPdfDocument(_nativeDocument);
             IntPtr utf8Ptr = Utils.Utf16_Utf8Ptr(filename);
             pdf.pdf_save_journal(filename);
+            pdf.Dispose();
         }
 
         /// <summary>
@@ -2364,6 +2450,7 @@ namespace MuPDF.NET
             MemoryStream memoryStream = new MemoryStream(journal);
             FilePtrOutput output = new FilePtrOutput(memoryStream);
             pdf.pdf_write_journal(output);
+            pdf.Dispose();
         }
 
         /// <summary>
@@ -2384,6 +2471,8 @@ namespace MuPDF.NET
                 pdf.pdf_begin_operation(name);
             else
                 pdf.pdf_begin_implicit_operation();
+
+            pdf.Dispose();
         }
 
         /// <summary>
@@ -2396,6 +2485,7 @@ namespace MuPDF.NET
 
             PdfDocument pdf = AsPdfDocument(_nativeDocument);
             pdf.pdf_end_operation();
+            pdf.Dispose();
         }
 
         /// <summary>
@@ -2410,7 +2500,8 @@ namespace MuPDF.NET
             
             PdfDocument pdf = AsPdfDocument(_nativeDocument);
             pdf.pdf_undo();
-            
+
+            pdf.Dispose();
             return true;
         }
 
@@ -2453,7 +2544,8 @@ namespace MuPDF.NET
                 };
                 rc.Add(item);
             }
-            
+
+            pdf.Dispose();
             return rc;
         }
 
@@ -2556,6 +2648,7 @@ namespace MuPDF.NET
             PdfObj root = pdf.pdf_trailer().pdf_dict_get(new PdfObj("Root"));
             xref = root.pdf_to_num();
 
+            pdf.Dispose();
             return xref;
         }
 
@@ -2663,6 +2756,8 @@ namespace MuPDF.NET
                 mupdf.mupdf.ll_pdf_drop_page_tree(pdf.m_internal);
             
             ResetPageRefs();
+
+            pdf.Dispose();
         }
 
         /// <summary>
@@ -2674,24 +2769,26 @@ namespace MuPDF.NET
         {
             if (IsFormPDF == 0)
                 return 0;
-            
-            PdfDocument pdf = Document.AsPdfDocument(_nativeDocument);
-            int oldVal = -1;
-            string appkey = "NeedAppearances";
 
-            PdfObj form = Utils.pdf_dict_getl(pdf.pdf_trailer(), new string[] { "Root/AcroForm" });
-            PdfObj app = form.pdf_dict_gets(appkey);
-            if (app.pdf_is_bool() == 1)
-                oldVal = app.pdf_to_bool();
-            if (value != 0)
-                form.pdf_dict_puts(appkey, new PdfObj(mupdf.mupdf.PDF_ENUM_TRUE));
-            else
-                form.pdf_dict_puts(appkey, new PdfObj(mupdf.mupdf.PDF_ENUM_FALSE));
-            
-            if (value == 0)
-                return Convert.ToInt32(oldVal >= 0);
-            
-            return value;
+            using (PdfDocument pdf = Document.AsPdfDocument(_nativeDocument))
+            {
+                int oldVal = -1;
+                string appkey = "NeedAppearances";
+
+                PdfObj form = Utils.pdf_dict_getl(pdf.pdf_trailer(), new string[] { "Root/AcroForm" });
+                PdfObj app = form.pdf_dict_gets(appkey);
+                if (app.pdf_is_bool() == 1)
+                    oldVal = app.pdf_to_bool();
+                if (value != 0)
+                    form.pdf_dict_puts(appkey, new PdfObj(mupdf.mupdf.PDF_ENUM_TRUE));
+                else
+                    form.pdf_dict_puts(appkey, new PdfObj(mupdf.mupdf.PDF_ENUM_FALSE));
+
+                if (value == 0)
+                    return Convert.ToInt32(oldVal >= 0);
+
+                return value;
+            }
         }
 
         /// <summary>
@@ -2720,7 +2817,8 @@ namespace MuPDF.NET
             int pno = val;
             FzLocation loc = mupdf.mupdf.fz_make_location(chapter, pno);
             FzLocation nextLoc = mupdf.mupdf.fz_next_page(_nativeDocument, loc);
-            
+
+            pdf.Dispose();
             return (nextLoc.chapter, nextLoc.page);
         }
 
@@ -2746,7 +2844,8 @@ namespace MuPDF.NET
             int pno = val;
             FzLocation loc = mupdf.mupdf.fz_make_location(chapter, pno);
             FzLocation nextLoc = mupdf.mupdf.fz_next_page(_nativeDocument, loc);
-            
+
+            pdf.Dispose();
             return (nextLoc.chapter, nextLoc.page);
         }
 
@@ -2758,18 +2857,20 @@ namespace MuPDF.NET
         /// <exception cref="Exception"></exception>
         public List<AnnotXref> PageAnnotXrefs(int n)
         {
-            PdfDocument pdf = AsPdfDocument(_nativeDocument);
-            int pageCount = pdf.pdf_count_pages();
-            while (n < 0)
+            using (PdfDocument pdf = AsPdfDocument(_nativeDocument))
             {
-                n += pageCount;
-            }
+                int pageCount = pdf.pdf_count_pages();
+                while (n < 0)
+                {
+                    n += pageCount;
+                }
 
-            if (n > pageCount)
-                throw new Exception(Utils.ErrorMessages["MSG_BAD_PAGENO"]);
-            PdfObj pageObj = pdf.pdf_lookup_page_obj(n);
-            
-            return Utils.GetAnnotXrefList(pageObj);
+                if (n > pageCount)
+                    throw new Exception(Utils.ErrorMessages["MSG_BAD_PAGENO"]);
+                PdfObj pageObj = pdf.pdf_lookup_page_obj(n);
+
+                return Utils.GetAnnotXrefList(pageObj);
+            }
         }
 
         /// <summary>
@@ -2796,6 +2897,7 @@ namespace MuPDF.NET
             PdfObj pageRef = pdf.pdf_lookup_page_obj(n);
             Rect cropbox = Utils.GetCropBox(pageRef);
 
+            pdf.Dispose();
             return cropbox;
         }
 
@@ -2860,7 +2962,9 @@ namespace MuPDF.NET
                 throw new Exception(Utils.ErrorMessages["MSG_BAD_PAGENO"]);
             
             xref = pdf.pdf_lookup_page_obj(n).pdf_to_num();
-            
+
+            pdf.Dispose();
+
             return xref;
         }
 
@@ -2907,21 +3011,23 @@ namespace MuPDF.NET
             if (IsClosed || IsEncrypted)
                 throw new Exception("document closed or encrypted");
 
-            PdfDocument pdf = AsPdfDocument(this);
-            if (pdf.m_internal == null)
-                return;
+            using (PdfDocument pdf = AsPdfDocument(this))
+            {
+                if (pdf.m_internal == null)
+                    return;
 
-            PdfObj fonts = Utils.pdf_dict_getl(
-                pdf.pdf_trailer(),
-                new string[] { "Root", "AcroFrom", "DR", "Font" }
-            );
+                PdfObj fonts = Utils.pdf_dict_getl(
+                    pdf.pdf_trailer(),
+                    new string[] { "Root", "AcroFrom", "DR", "Font" }
+                );
 
-            if (fonts.m_internal == null || fonts.pdf_is_dict() == 0)
-                throw new Exception("PDF has no form fonts yet");
-            
-            PdfObj k = mupdf.mupdf.pdf_new_name(name);
-            PdfObj v = Utils.PdfObjFromStr(pdf, font);
-            fonts.pdf_dict_put(k, v);
+                if (fonts.m_internal == null || fonts.pdf_is_dict() == 0)
+                    throw new Exception("PDF has no form fonts yet");
+
+                PdfObj k = mupdf.mupdf.pdf_new_name(name);
+                PdfObj v = Utils.PdfObjFromStr(pdf, font);
+                fonts.pdf_dict_put(k, v);
+            }
         }
 
         /// <summary>
@@ -2933,90 +3039,92 @@ namespace MuPDF.NET
         {
             if (IsClosed)
                 throw new Exception("document closed");
-            
-            PdfDocument pdf = AsPdfDocument(this);
-            //string zoom = "zoom";
-            //string bold = "bold";
-            //string italic = "italic";
-            //string collapse = "collapse";
-            float[] color = null;
-            float z = 0;
 
-            PdfObj root = pdf.pdf_trailer().pdf_dict_get(new PdfObj("Root"));
-            if (root.m_internal == null)
-                return;
-
-            PdfObj olRoot = root.pdf_dict_get(new PdfObj("Outlines"));
-            if (olRoot.m_internal == null)
-                return;
-
-            PdfObj first = olRoot.pdf_dict_get(new PdfObj("First"));
-            if (first.m_internal == null)
-                return;
-
-            List<int> xrefs = new List<int>();
-            xrefs = Utils.GetOutlineXrefs(first, xrefs);
-            int n = xrefs.Count;
-            int m = items.Count;
-
-            if (n == 0)
-                return;
-            if (n != m)
-                throw new Exception("internal error finding outline xrefs");
-
-            for (int i = 0; i < n; i++)
+            using (PdfDocument pdf = AsPdfDocument(this))
             {
-                int xref = xrefs[i];
-                Toc item = items[i];
-                LinkInfo link;
-                if (item.Link != null)
-                    link = item.Link;
-                else
-                    throw new Exception("need non-simple TOC format");
+                //string zoom = "zoom";
+                //string bold = "bold";
+                //string italic = "italic";
+                //string collapse = "collapse";
+                float[] color = null;
+                float z = 0;
 
-                link.Xref = xrefs[i];
-                PdfObj bm = pdf.pdf_load_object(xref);
-                int flags = bm.pdf_dict_get(new PdfObj("F")).pdf_to_int();
-                if (flags == 1)
-                    link.Italic = true;
-                else if (flags == 2)
-                    link.Bold = true;
-                else if (flags == 3)
+                PdfObj root = pdf.pdf_trailer().pdf_dict_get(new PdfObj("Root"));
+                if (root.m_internal == null)
+                    return;
+
+                PdfObj olRoot = root.pdf_dict_get(new PdfObj("Outlines"));
+                if (olRoot.m_internal == null)
+                    return;
+
+                PdfObj first = olRoot.pdf_dict_get(new PdfObj("First"));
+                if (first.m_internal == null)
+                    return;
+
+                List<int> xrefs = new List<int>();
+                xrefs = Utils.GetOutlineXrefs(first, xrefs);
+                int n = xrefs.Count;
+                int m = items.Count;
+
+                if (n == 0)
+                    return;
+                if (n != m)
+                    throw new Exception("internal error finding outline xrefs");
+
+                for (int i = 0; i < n; i++)
                 {
-                    link.Italic = true;
-                    link.Bold = true;
-                }
-                int count = bm.pdf_dict_get(new PdfObj("F")).pdf_to_int();
-                if (count < 0)
-                    link.Collapse = true;
-                else if (count > 0)
-                    link.Collapse = false;
-                PdfObj col = bm.pdf_dict_get(new PdfObj("C"));
-                if (col.pdf_is_array() != 0 && col.pdf_array_len() == 3)
-                {
-                    color = new float[3]
+                    int xref = xrefs[i];
+                    Toc item = items[i];
+                    LinkInfo link;
+                    if (item.Link != null)
+                        link = item.Link;
+                    else
+                        throw new Exception("need non-simple TOC format");
+
+                    link.Xref = xrefs[i];
+                    PdfObj bm = pdf.pdf_load_object(xref);
+                    int flags = bm.pdf_dict_get(new PdfObj("F")).pdf_to_int();
+                    if (flags == 1)
+                        link.Italic = true;
+                    else if (flags == 2)
+                        link.Bold = true;
+                    else if (flags == 3)
                     {
+                        link.Italic = true;
+                        link.Bold = true;
+                    }
+                    int count = bm.pdf_dict_get(new PdfObj("F")).pdf_to_int();
+                    if (count < 0)
+                        link.Collapse = true;
+                    else if (count > 0)
+                        link.Collapse = false;
+                    PdfObj col = bm.pdf_dict_get(new PdfObj("C"));
+                    if (col.pdf_is_array() != 0 && col.pdf_array_len() == 3)
+                    {
+                        color = new float[3]
+                        {
                         col.pdf_array_get(0).pdf_to_real(),
                         col.pdf_array_get(1).pdf_to_real(),
                         col.pdf_array_get(2).pdf_to_real(),
-                    };
-                    link.Color = color;
-                }
+                        };
+                        link.Color = color;
+                    }
 
-                PdfObj obj = bm.pdf_dict_get(new PdfObj("Dest"));
-                if (obj.m_internal == null || obj.pdf_is_array() == 0)
-                {
-                    obj = Utils.pdf_dict_getl(bm, new string[] { "A", "D" });
-                }
+                    PdfObj obj = bm.pdf_dict_get(new PdfObj("Dest"));
+                    if (obj.m_internal == null || obj.pdf_is_array() == 0)
+                    {
+                        obj = Utils.pdf_dict_getl(bm, new string[] { "A", "D" });
+                    }
 
-                if (obj.pdf_is_array() != 0 && obj.pdf_array_len() == 5)
-                {
-                    z = obj.pdf_array_get(4).pdf_to_real();
-                }
+                    if (obj.pdf_is_array() != 0 && obj.pdf_array_len() == 5)
+                    {
+                        z = obj.pdf_array_get(4).pdf_to_real();
+                    }
 
-                link.Zoom = z;
-                item.Link = link;
-                items[i] = item;
+                    link.Zoom = z;
+                    item.Link = link;
+                    items[i] = item;
+                }
             }
         }
 
@@ -3035,46 +3143,48 @@ namespace MuPDF.NET
 
         internal List<(int, string)> _getPageLabels()
         {
-            PdfDocument pdf = AsPdfDocument(this);
-            List<(int, string)> rc = new List<(int, string)>();
-
-            PdfObj obj = Utils.pdf_dict_getl(
-                pdf.pdf_trailer(),
-                new string[] { "Root", "PageLabels" }
-            );
-            if (obj.m_internal == null)
-                return rc;
-
-            PdfObj nums = obj.pdf_dict_get(new PdfObj("Nums")).pdf_resolve_indirect();
-            if (nums.m_internal != null)
+            using (PdfDocument pdf = AsPdfDocument(this))
             {
-                Utils.GetPageLabels(rc, nums);
+                List<(int, string)> rc = new List<(int, string)>();
+
+                PdfObj obj = Utils.pdf_dict_getl(
+                    pdf.pdf_trailer(),
+                    new string[] { "Root", "PageLabels" }
+                );
+                if (obj.m_internal == null)
+                    return rc;
+
+                PdfObj nums = obj.pdf_dict_get(new PdfObj("Nums")).pdf_resolve_indirect();
+                if (nums.m_internal != null)
+                {
+                    Utils.GetPageLabels(rc, nums);
+                    return rc;
+                }
+
+                nums = Utils.pdf_dict_getl(obj, new string[] { "Kids", "Nums" }).pdf_resolve_indirect();
+                if (nums.m_internal != null)
+                {
+                    Utils.GetPageLabels(rc, nums);
+                    return rc;
+                }
+
+                PdfObj kids = obj.pdf_dict_get(new PdfObj("Kids")).pdf_resolve_indirect();
+                if (kids.m_internal == null || kids.pdf_is_array() == 0)
+                {
+                    return rc;
+                }
+
+                int n = kids.pdf_array_len();
+                for (int i = 0; i < n; i++)
+                {
+                    nums = kids.pdf_array_get(i)
+                        .pdf_dict_get(new PdfObj("Nums"))
+                        .pdf_resolve_indirect();
+                    Utils.GetPageLabels(rc, nums);
+                }
+
                 return rc;
             }
-
-            nums = Utils.pdf_dict_getl(obj, new string[] { "Kids", "Nums" }).pdf_resolve_indirect();
-            if (nums.m_internal != null)
-            {
-                Utils.GetPageLabels(rc, nums);
-                return rc;
-            }
-
-            PdfObj kids = obj.pdf_dict_get(new PdfObj("Kids")).pdf_resolve_indirect();
-            if (kids.m_internal == null || kids.pdf_is_array() == 0)
-            {
-                return rc;
-            }
-
-            int n = kids.pdf_array_len();
-            for (int i = 0; i < n; i++)
-            {
-                nums = kids.pdf_array_get(i)
-                    .pdf_dict_get(new PdfObj("Nums"))
-                    .pdf_resolve_indirect();
-                Utils.GetPageLabels(rc, nums);
-            }
-            
-            return rc;
         }
 
         /// <summary>
@@ -3114,6 +3224,7 @@ namespace MuPDF.NET
                 olRoot = root.pdf_dict_get(new PdfObj("Outlines"));
             }
 
+            pdf.Dispose();
             return olRoot.pdf_to_num();
         }
 
@@ -3143,7 +3254,8 @@ namespace MuPDF.NET
                     idList.Add(hex);
                 }
             }
-            
+
+            pdf.Dispose();
             return idList;
         }
 
@@ -3161,6 +3273,7 @@ namespace MuPDF.NET
         {
             PdfDocument pdf = AsPdfDocument(this);
             Utils.RemoveDestRange(pdf, numbers);
+            pdf.Dispose();
         }
 
         /// <summary>
@@ -3177,6 +3290,8 @@ namespace MuPDF.NET
             for (int i = 0; i < 3; i++)
                 color.pdf_array_push_real(0.8f);
             item.pdf_dict_put(new PdfObj("C"), color);
+
+            pdf.Dispose();
         }
 
         /// <summary>
@@ -3222,6 +3337,8 @@ namespace MuPDF.NET
             string text = GetXrefObject(xref, compressed: 1);
             text = text.Replace("/Nums[]", $"/Nums[{CreateNums(labels)}]");
             UpdateObject(xref, text);
+
+            pdf.Dispose();
         }
 
         /// <summary>
@@ -3236,18 +3353,20 @@ namespace MuPDF.NET
         {
             if (IsClosed || IsEncrypted)
                 throw new Exception("document closed or encrypted");
-            PdfDocument pdf = AsPdfDocument(this);
-            int xrefLen = pdf.pdf_xref_len();
-            if (xref < 1 || xref > xrefLen)
-                throw new Exception(Utils.ErrorMessages["MSG_BAD_XREF"]);
-            PdfObj obj = pdf.pdf_new_indirect(xref, 0);
-            if (obj.pdf_is_dict() == 0)
-                throw new Exception(Utils.ErrorMessages["MSG_IS_NO_DICT"]);
-            FzBuffer res = Utils.BufferFromBytes(stream);
-            if (res == null)
-                throw new Exception(Utils.ErrorMessages["MSG_BAD_BUFFER"]);
-            Utils.UpdateStream(pdf, obj, res, compress);
-            // pdfdocument does not have `dirty` property
+            using (PdfDocument pdf = AsPdfDocument(this))
+            {
+                int xrefLen = pdf.pdf_xref_len();
+                if (xref < 1 || xref > xrefLen)
+                    throw new Exception(Utils.ErrorMessages["MSG_BAD_XREF"]);
+                PdfObj obj = pdf.pdf_new_indirect(xref, 0);
+                if (obj.pdf_is_dict() == 0)
+                    throw new Exception(Utils.ErrorMessages["MSG_IS_NO_DICT"]);
+                FzBuffer res = Utils.BufferFromBytes(stream);
+                if (res == null)
+                    throw new Exception(Utils.ErrorMessages["MSG_BAD_BUFFER"]);
+                Utils.UpdateStream(pdf, obj, res, compress);
+                // pdfdocument does not have `dirty` property
+            }
         }
 
         /// <summary>
@@ -3269,6 +3388,8 @@ namespace MuPDF.NET
             pdf.pdf_update_object(xref, newObj);
 
             Utils.RefreshLinks(page);
+
+            pdf.Dispose();
         }
 
         /// <summary>
@@ -3309,6 +3430,8 @@ namespace MuPDF.NET
             PdfObj root = pdf.pdf_trailer().pdf_dict_get(new PdfObj("Root"));
             if (root.m_internal != null)
                 root.pdf_dict_del(new PdfObj("Metadata"));
+
+            pdf.Dispose();
         }
 
         /// <summary>
@@ -3466,24 +3589,26 @@ namespace MuPDF.NET
         public List<int> GetOutlineXrefs()
         {
             List<int> xrefs = new List<int>();
-            PdfDocument pdf = AsPdfDocument(this);
-            if (pdf.m_internal == null)
-                return xrefs;
-            
-            PdfObj root = pdf.pdf_trailer().pdf_dict_get(new PdfObj("Root"));
-            if (root.m_internal == null)
-                return xrefs;
+            using (PdfDocument pdf = AsPdfDocument(this))
+            {
+                if (pdf.m_internal == null)
+                    return xrefs;
 
-            PdfObj olRoot = root.pdf_dict_get(new PdfObj("Outlines"));
-            if (olRoot.m_internal == null)
-                return xrefs;
+                PdfObj root = pdf.pdf_trailer().pdf_dict_get(new PdfObj("Root"));
+                if (root.m_internal == null)
+                    return xrefs;
 
-            PdfObj first = olRoot.pdf_dict_get(new PdfObj("First"));
-            if (first.m_internal == null)
-                return xrefs;
+                PdfObj olRoot = root.pdf_dict_get(new PdfObj("Outlines"));
+                if (olRoot.m_internal == null)
+                    return xrefs;
 
-            xrefs = Utils.GetOutlineXrefs(first, xrefs);
-            return xrefs;
+                PdfObj first = olRoot.pdf_dict_get(new PdfObj("First"));
+                if (first.m_internal == null)
+                    return xrefs;
+
+                xrefs = Utils.GetOutlineXrefs(first, xrefs);
+                return xrefs;
+            }
         }
 
         /// <summary>
@@ -3557,6 +3682,7 @@ namespace MuPDF.NET
             names.pdf_array_push(mupdf.mupdf.pdf_new_text_string(name));
             names.pdf_array_push(fileEntry);
 
+            pdf.Dispose();
             return xref;
         }
 
@@ -3590,6 +3716,7 @@ namespace MuPDF.NET
                     filenames.Add(val);
                 }
             }
+            pdf.Dispose();
         }
 
         public int GetEmbfileCount()
@@ -3626,6 +3753,7 @@ namespace MuPDF.NET
             );
             names.pdf_array_delete(idx + 1);
             names.pdf_array_delete(idx);
+            pdf.Dispose();
         }
 
         public int EmbeddedfileIndex(dynamic item)
@@ -3655,6 +3783,7 @@ namespace MuPDF.NET
             FzBuffer buf = fileSpec.pdf_load_stream();
             byte[] cont = Utils.BinFromBuffer(buf);
 
+            pdf.Dispose();
             return cont;
         }
 
@@ -3728,6 +3857,7 @@ namespace MuPDF.NET
                 string hexString = BitConverter.ToString(textBytes).Replace("-", "").ToLower();
                 infoDict.CheckSum = hexString;
             }
+            pdf.Dispose();
             return infoDict;
         }
 
@@ -3780,7 +3910,8 @@ namespace MuPDF.NET
 
             string date = Utils.GetPdfNow();
             SetKeyXRef(xref, "Params/ModDate", Utils.GetPdfString(date));
-            
+
+            pdf.Dispose();
             return xref;
         }
 
@@ -3894,6 +4025,7 @@ namespace MuPDF.NET
                 Image = Utils.BinFromBuffer(res)
             };
 
+            pdf.Dispose();
             return ret;
         }
 
@@ -3964,6 +4096,7 @@ namespace MuPDF.NET
             finally
             {
                 mupdf.mupdf.ll_pdf_drop_page_tree(pdf.m_internal);
+                pdf.Dispose();
             }
         }
 
@@ -3984,7 +4117,10 @@ namespace MuPDF.NET
                 o;
 
             if (ocp.m_internal == null)
+            {
+                pdf.Dispose();
                 return null;
+            }
             if (config == -1)
                 obj = ocp.pdf_dict_get(new PdfObj("D"));
             else
@@ -4028,7 +4164,8 @@ namespace MuPDF.NET
             o = obj.pdf_dict_get(new PdfObj("BaseState"));
             if (o.m_internal != null)
                 ret.BaseState = o.pdf_to_name();
-            
+
+            pdf.Dispose();
             return ret;
         }
 
@@ -4056,7 +4193,8 @@ namespace MuPDF.NET
                 pdf.pdf_layer_config_info(i, info);
                 ret.Add(new OCLayerConfig(i, info.name, info.creator));
             }
-            
+
+            pdf.Dispose();
             return ret;
         }
 
@@ -4073,7 +4211,8 @@ namespace MuPDF.NET
             int xref = 0;
             Utils.EnsureOperations(pdf);
             xref = pdf.pdf_create_object();
-            
+
+            pdf.Dispose();
             return xref;
         }
 
@@ -4092,7 +4231,10 @@ namespace MuPDF.NET
 
             Dictionary<int, OCGroup> ret = new Dictionary<int, OCGroup>();
             if (ocgs.pdf_is_array() == 0)
+            {
+                pdf.Dispose();
                 return ret;
+            }
             
             int n = ocgs.pdf_array_len();
             for (int i = 0; i < n; i++)
@@ -4136,7 +4278,8 @@ namespace MuPDF.NET
                 };
                 ret[xref] = item;
             }
-            
+
+            pdf.Dispose();
             return ret;
         }
 
@@ -4154,6 +4297,7 @@ namespace MuPDF.NET
             
             PdfDocument pdf = AsPdfDocument(this);
             pdf.pdf_save_snapshot(filename);
+            pdf.Dispose();
         }
 
         /// <summary>
@@ -4187,6 +4331,7 @@ namespace MuPDF.NET
             pdf.pdf_rearrange_pages(list.Count, swigNumbers, pdf_clean_options_structure.PDF_CLEAN_STRUCTURE_DROP);
 
             ResetPageRefs();
+            pdf.Dispose();
         }
 
         public bool SetLanguage(string language)
@@ -4198,7 +4343,8 @@ namespace MuPDF.NET
             else
                 lang = mupdf.mupdf.fz_text_language_from_string(language);
             pdf.pdf_set_document_language(lang);
-            
+
+            pdf.Dispose();
             return true;
         }
 
@@ -4254,7 +4400,10 @@ namespace MuPDF.NET
                 new string[] { "Root", "OCProperties" }
             );
             if (ocp.m_internal == null)
+            {
+                pdf.Dispose();
                 return;
+            }
             if (config == -1)
                 obj = ocp.pdf_dict_get(new PdfObj("D"));
             else
@@ -4295,6 +4444,7 @@ namespace MuPDF.NET
                     Utils.SetOcgArraysImp(o, item);
                 }
             }
+            pdf.Dispose();
         }
 
         /// <summary>
@@ -4329,6 +4479,7 @@ namespace MuPDF.NET
                 pdf.pdf_deselect_layer_config_ui(num);
             else
                 pdf.pdf_select_layer_config_ui(num);
+            pdf.Dispose();
         }
 
         /// <summary>
@@ -4460,6 +4611,7 @@ namespace MuPDF.NET
                 xml.pdf_dict_put(new PdfObj("Subtype"), new PdfObj("XML"));
                 root.pdf_dict_put(new PdfObj("Metadata"), xml);
             }
+            pdf.Dispose();
         }
 
         /// <summary>
@@ -4478,17 +4630,24 @@ namespace MuPDF.NET
             if (cfgs.pdf_is_array() == 0 || cfgs.pdf_array_len() == 0)
             {
                 if (config < 1)
+                {
+                    pdf.Dispose();
                     return;
+                }
                 throw new Exception(Utils.ErrorMessages["MSG_BAD_OC_LAYER"]);
             }
             if (config < 0)
+            {
+                pdf.Dispose();
                 return;
+            }
             pdf.pdf_select_layer_config(config);
             if (asDefault != 0)
             {
                 pdf.pdf_set_layer_config_as_default();
                 mupdf.mupdf.ll_pdf_read_ocg(pdf.m_internal);
             }
+            pdf.Dispose();
         }
 
         public byte[] Write(
@@ -4554,14 +4713,18 @@ namespace MuPDF.NET
             int n = obj.pdf_dict_len();
             List<string> ret = new List<string>();
             if (n == 0)
+            {
+                pdf.Dispose();
                 return ret;
+            }
             
             for (int i = 0; i < n; i++)
             {
                 string key = obj.pdf_dict_get_key(i).pdf_to_name();
                 ret.Add(key);
             }
-            
+
+            pdf.Dispose();
             return ret;
         }
 
@@ -4588,11 +4751,14 @@ namespace MuPDF.NET
         /// <returns></returns>
         public bool XrefIsStream(int xref = 0)
         {
+            bool ret;
             PdfDocument pdf = AsPdfDocument(this);
             if (pdf.m_internal == null)
                 return false;
             
-            return pdf.pdf_obj_num_is_stream(xref) != 0;
+            ret = pdf.pdf_obj_num_is_stream(xref) != 0;
+            pdf.Dispose();
+            return ret;
         }
 
         /// <summary>
@@ -4616,10 +4782,13 @@ namespace MuPDF.NET
         /// <returns></returns>
         public int GetXrefLength()
         {
+            int ret = 0;
             PdfDocument pdf = AsPdfDocument(this);
             if (pdf != null)
-                return pdf.pdf_xref_len();
-            return 0;
+                ret = pdf.pdf_xref_len();
+
+            pdf.Dispose();
+            return ret;
         }
 
         public byte[] GetXrefStream(int xref)
@@ -4643,7 +4812,8 @@ namespace MuPDF.NET
                 FzBuffer res = pdf.pdf_load_stream_number(xref);
                 r = Utils.BinFromBuffer(res);
             }
-            
+
+            pdf.Dispose();
             return r;
         }
 
@@ -4673,7 +4843,8 @@ namespace MuPDF.NET
                 FzBuffer res = pdf.pdf_load_raw_stream_number(xref);
                 r = Utils.BinFromBuffer(res);
             }
-            
+
+            pdf.Dispose();
             return r;
         }
 
@@ -4693,7 +4864,9 @@ namespace MuPDF.NET
             int xref = 0;
             if (xml.m_internal != null)
                 xref = xml.pdf_to_num();
-            
+
+            pdf.Dispose();
+
             return xref;
         }
 
@@ -5524,7 +5697,10 @@ namespace MuPDF.NET
             PdfObj root = pdf.pdf_trailer().pdf_dict_get(new PdfObj("Root"));
             PdfObj olRoot = root.pdf_dict_get(new PdfObj("Outlines"));
             if (olRoot.m_internal == null)
+            {
+                pdf.Dispose();
                 return xrefs;
+            }
 
             PdfObj first = olRoot.pdf_dict_get(new PdfObj("First"));
             xrefs = Utils.GetOutlineXrefs(first, xrefs);
@@ -5542,6 +5718,7 @@ namespace MuPDF.NET
             xrefs.Add(olRootXref);
             InitDocument();
 
+            pdf.Dispose();
             return xrefs;
         }
 
@@ -5650,6 +5827,7 @@ namespace MuPDF.NET
                     item.pdf_dict_put_int(new PdfObj("Count"), i);
                 }
             }
+            pdf.Dispose();
         }
 
         /// <summary>
@@ -5707,15 +5885,20 @@ namespace MuPDF.NET
                 throw new Exception("not a PDF");
             
             pdf.pdf_bake_document(annots ? 1 : 0, widgets ? 1 : 0);
+
+            pdf.Dispose();
         }
 
         public void Close()
         {
             if (IsClosed)
                 throw new Exception("document closed");
-            
+
             if (Outline != null)
+            {
+                Outline.Dispose();
                 Outline = null;
+            }
             ResetPageRefs();
             IsClosed = true;
             GraftMaps = new Dictionary<int, GraftMap>();
@@ -5803,7 +5986,9 @@ namespace MuPDF.NET
             mupdf.mupdf.ll_pdf_read_ocg(pdf.m_internal);
 
             xref = indOcg.pdf_to_num();
-            
+
+            pdf.Dispose();
+
             return xref;
         }
 
@@ -5817,7 +6002,9 @@ namespace MuPDF.NET
             if (pdf.m_internal != null)
                 return false;
             
-            return pdf.pdf_can_be_saved_incrementally() != 0;
+            bool ret = pdf.pdf_can_be_saved_incrementally() != 0;
+            pdf.Dispose();
+            return ret;
         }
 
         /// <summary>
@@ -5831,6 +6018,7 @@ namespace MuPDF.NET
             PdfDocument pdf = Document.AsPdfDocument(this);
             Utils.AddLayerConfig(pdf, name, creator, on);
             mupdf.mupdf.ll_pdf_read_ocg(pdf.m_internal);
+            pdf.Dispose();
         }
 
         /// <summary>

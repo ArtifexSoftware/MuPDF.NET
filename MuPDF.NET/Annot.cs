@@ -1708,6 +1708,10 @@ namespace MuPDF.NET
             {
                 //Console.WriteLine(string.Format("cannot set rect: {0}", e));
             }
+            finally
+            {
+                r.Dispose();
+            }
         }
 
         public Page GetParent()

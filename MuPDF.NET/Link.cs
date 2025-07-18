@@ -190,7 +190,9 @@ namespace MuPDF.NET
                 return null;
 
             Border b = Utils.GetAnnotBorder(linkObj);
-            
+
+            pdf.Dispose();
+
             return b;
         }
 
@@ -203,6 +205,7 @@ namespace MuPDF.NET
             if (linkObj == null)
                 throw new Exception(Utils.ErrorMessages["MSG_BAD_XREF"]);
 
+            pdf.Dispose();
             return Utils.GetAnnotColors(linkObj);
         }
 
@@ -225,6 +228,8 @@ namespace MuPDF.NET
                 return;
 
             Annot.SetBorderAnnot(border, pdf, linkObj);
+
+            pdf.Dispose();
         }
 
         /// <summary>

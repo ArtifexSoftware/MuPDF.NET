@@ -1,8 +1,10 @@
 ﻿using MuPDF.NET.enums;
+using NUnit.Framework;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
@@ -445,6 +447,53 @@ namespace MuPDF.NET.Test
 
             List<Entry> images = doc.GetPageImages(0);
             Assert.That(images[0].CsName.Equals("ICCBased"));
+        }
+
+        // Text extraction should fail because of PDF structure cycle.
+        // Old MuPDF version did not detect the loop.
+        [Test]
+        public void Test2548()
+        {
+            int len0 = Utils.MUPDF_WARNINGS_STORE.Count;
+            Document doc = new Document("../../../resources/test_2548.pdf");
+            bool e = false;
+            for (int i = 0; i < doc.PageCount; i++)
+            {
+                Page page = doc[i];
+                try
+                {
+                    var text = page.GetText();
+                    Console.WriteLine($"test_2548: text = {text}");
+                }
+                catch (Exception ee)
+                {
+                    Console.WriteLine($"test_2548: ee = {ee}");
+                    /*
+                    if hasattr(pymupdf, 'mupdf'):
+                        # Rebased.
+                        expected = "RuntimeError('code=2: cycle in structure tree')"
+                    else:
+                        # Classic.
+                        expected = "RuntimeError('cycle in structure tree')"
+                    assert repr(ee) == expected, f'Expected {expected=} but got {repr(ee)=}.'
+                    */
+                    e = true;
+                }
+            }
+            int len1 = Utils.MUPDF_WARNINGS_STORE.Count;
+
+            for (int i=len0; i<len1; i++)
+            {
+                Console.WriteLine($"test_2548(): {Utils.MUPDF_WARNINGS_STORE[i]}");
+            }
+
+            // This checks that PyMuPDF 1.23.7 fixes this bug, and also that earlier
+            // versions with updated MuPDF also fix the bug.
+            //rebased = hasattr(pymupdf, 'mupdf')
+            //expected = 'format error: cycle in structure tree\nstructure tree broken, assume tree is missing'
+            //if rebased:
+            //    assert wt == expected, f'expected:\n    {expected!r}\nwt:\n    {wt!r}\n'
+            //assert not e
         }
     }
 }

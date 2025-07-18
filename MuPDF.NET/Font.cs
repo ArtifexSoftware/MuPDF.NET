@@ -454,5 +454,14 @@ namespace MuPDF.NET
         {
             return $"Font('{Name}')";
         }
+
+        public void Dispose()
+        {
+            if (_nativeFont != null)
+            {
+                _nativeFont.Dispose();
+                _nativeFont = null;
+            }
+        }
     }
 }

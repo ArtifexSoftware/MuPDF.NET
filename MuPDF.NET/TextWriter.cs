@@ -91,9 +91,12 @@ namespace MuPDF.NET
             int markupDir = 0;
             int wmode = 0;
 
+            bool newFontFlag = false;
+
             if (font == null || font.IsNull)
             {
-                throw new ArgumentNullException("Invalid font");
+                font = new Font("helv");
+                newFontFlag = true;
             }
 
             if (!font.IsWriteable)
@@ -122,6 +125,11 @@ namespace MuPDF.NET
             if (font.Flags["mono"] == 1)
                 UsedFonts.Add(font);
 
+            if (newFontFlag)
+            {
+                font.Dispose();
+            }
+            
             return ret;
         }
 
@@ -253,6 +261,7 @@ namespace MuPDF.NET
 
             dev.fz_fill_text(_nativeText, new FzMatrix(), colorSpace, swigDevColor, alpha, new FzColorParams(mupdf.mupdf.fz_default_color_params));
             dev.fz_close_device();
+            dev.Dispose();
 
             (int, int) maxNums = Utils.MergeResources(pdfPage, resources);
             string cont = Utils.EscapeStrFromBuffer(contents);
@@ -367,13 +376,15 @@ namespace MuPDF.NET
             if (rect.IsEmpty)
                 throw new Exception("fill rect must not empty");
             if (font.IsNull)
-                throw new Exception("font must not empty");
-            
+                font = new Font("helv");
+
+            // Return length of a string.
             float TextLen(string x)
             {
                 return font.TextLength(x, fontSize: fontSize, smallCaps: smallCaps ? 1 : 0);
             }
 
+            // Return list of single character lengths for a string.
             List<float> CharLengths(string x)
             {
                 return font.GetCharLengths(x, fontSize: fontSize, smallCaps: smallCaps ? 1 : 0);
@@ -384,11 +395,12 @@ namespace MuPDF.NET
                 return Append(_pos, _text, font: font, fontSize: fontSize, smallCaps: smallCaps ? 1 : 0);
             }
 
-            float tolerance = fontSize * 0.2f;
+            float tolerance = fontSize * 0.2f; // extra distance to left border
             float spaceLen = TextLen(" ");
             float stdWidth = rect.Width - tolerance;
             float stdStart = rect.X0 + tolerance;
 
+            // Cut any word in pieces no longer than 'width'.
             (List<string>, List<float>) NormWords(float _width, List<string> _words)
             {
                 List<string> nwords = new List<string>();
@@ -398,13 +410,14 @@ namespace MuPDF.NET
                 {
                     List<float> charLengths = CharLengths(word);
                     float wl = charLengths.Sum(x => x);
-                    if (wl <= _width)
+                    if (wl <= _width) // nothing to do - copy over
                     {
                         nwords.Add(word);
                         wordLengths.Add(wl);
                         continue;
                     }
 
+                    // word longer than rect width - split it in parts
                     int n = charLengths.Count;
                     string word_ = word;
                     while (n > 0)
@@ -426,24 +439,26 @@ namespace MuPDF.NET
                 return (nwords, wordLengths);
             }
 
+            // Justified output of a line.
             void OutputJustify(Point _start, string line)
             {
+                // ignore leading / trailing / multiple spaces
                 string[] words = line.Split(' ').Where(x => x != "").ToArray();
                 int nwords = words.Length;
                 if (nwords == 0)
                     return;
-                if (nwords == 1)
+                if (nwords == 1) // single word cannot be justified
                 {
                     AppendThis(_start, words[0]);
                     return;
                 }
-                float tl = words.Sum(x => TextLen(x));
-                int gaps = nwords - 1;
-                float gapl = (stdWidth - tl) / gaps;
+                float tl = words.Sum(x => TextLen(x)); // total word lengths
+                int gaps = nwords - 1; // number of word gaps
+                float gapl = (stdWidth - tl) / gaps; // width of each gap
                 foreach (string w in words)
                 {
-                    (Rect _, Point lp) = AppendThis(_start, w);
-                    _start.X = lp.X + gapl;
+                    (Rect _, Point lp) = AppendThis(_start, w); // output one word
+                    _start.X = lp.X + gapl; // next start at word end plus gap
                 }
             }
             
@@ -460,9 +475,10 @@ namespace MuPDF.NET
             else
                 lheight = lineHeight;
 
-            float LineHeight = fontSize * lheight;
-            float width = stdWidth;
+            float LineHeight = fontSize * lheight; // effective line height
+            float width = stdWidth; // available horizontal space
 
+            // starting point of text
             if (pos == null)
                 pos = rect.TopLeft + new Point(tolerance, fontSize * asc);
             if (!(rect.IncludePoint(pos).EqualTo(rect)))
@@ -478,6 +494,7 @@ namespace MuPDF.NET
             else if (align == (int)TextAlign.TEXT_ALIGN_RIGHT)
                 factor = 1.0f;
 
+            // split in lines if just a string was given
             string[] textLines = text.Split('\n');
             int maxLines = (int)((rect.Y1 - pos.Y) / LineHeight) + 1;
 
@@ -542,6 +559,9 @@ namespace MuPDF.NET
                 }
             }
 
+            // List of lines created. Each item is (text, tl), where 'tl' is the PDF
+            // output length (float) and 'text' is the text. Except for justified text,
+            // this is output-ready.
             int nLines = newLines.Count;
             if (nLines > maxLines)
             {
@@ -552,7 +572,7 @@ namespace MuPDF.NET
             }
 
             Point start = new Point();
-            noJustify.Add(newLines.Count - 1);
+            noJustify.Add(newLines.Count - 1); // no justifying of last line
             for (i = 0; i < maxLines; i++)
             {
                 string line;
@@ -567,10 +587,10 @@ namespace MuPDF.NET
                     break;
                 }
 
-                if (rtl)
+                if (rtl) // Arabic, Hebrew
                     line = string.Join("", line.Reverse().ToArray());
 
-                if (i == 0)
+                if (i == 0) // may have different start for first line
                     start = pos;
 
                 if (align == (int)TextAlign.TEXT_ALIGN_JUSTIFY && !noJustify.Contains(i) && tl < stdWidth)
@@ -581,7 +601,7 @@ namespace MuPDF.NET
                     continue;
                 }
 
-                if (i > 0 || pos.X == stdStart)
+                if (i > 0 || pos.X == stdStart) // left, center, right alignments
                     start.X += (width - tl) * factor;
 
                 AppendThis(start, line);
@@ -589,7 +609,7 @@ namespace MuPDF.NET
                 start.Y += LineHeight;
             }
 
-            return newLines;
+            return newLines; // return non-written lines
         }
     }
 }
