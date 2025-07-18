@@ -5897,6 +5897,7 @@ namespace MuPDF.NET
             if (Outline != null)
             {
                 Outline.Dispose();
+                Outline = null;
             }
             ResetPageRefs();
             IsClosed = true;

@@ -9,7 +9,6 @@ using System.IO.Compression;
 using System.Linq;
 using System.Net.NetworkInformation;
 using System.Reflection;
-using System.Resources;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -6608,7 +6607,6 @@ namespace MuPDF.NET
             if (string.IsNullOrEmpty(fontFile))
             {
                 //throw new Exception("should specify font file.");
-                Console.WriteLine("should specify font file.");
                 return -1f;
             }
 

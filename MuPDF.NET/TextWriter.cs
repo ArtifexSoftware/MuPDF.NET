@@ -91,8 +91,13 @@ namespace MuPDF.NET
             int markupDir = 0;
             int wmode = 0;
 
+            bool newFontFlag = false;
+
             if (font == null || font.IsNull)
+            {
                 font = new Font("helv");
+                newFontFlag = true;
+            }
 
             if (!font.IsWriteable)
             {
@@ -120,6 +125,11 @@ namespace MuPDF.NET
             if (font.Flags["mono"] == 1)
                 UsedFonts.Add(font);
 
+            if (newFontFlag)
+            {
+                font.Dispose();
+            }
+            
             return ret;
         }
 
