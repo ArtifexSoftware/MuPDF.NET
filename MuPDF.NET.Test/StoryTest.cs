@@ -29,6 +29,7 @@ namespace MuPDF.NET.Test
                 (more, filled) = story.Place(where);
                 story.ElementPositions(null, new Position() { PageNum = pno });
                 story.Draw(dev);
+                dev.Dispose();
                 writer.EndPage();
                 pno += 1;
             }

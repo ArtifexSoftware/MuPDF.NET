@@ -9,6 +9,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Net.NetworkInformation;
 using System.Reflection;
+using System.Resources;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -846,9 +847,9 @@ namespace MuPDF.NET
         public static int CS_GRAY = 2;
         public static int CS_CMYK = 3;
 
-        public static ColorSpace csRGB = new ColorSpace(Utils.CS_RGB);
-        public static ColorSpace csGRAY = new ColorSpace(Utils.CS_GRAY);
-        public static ColorSpace csCMYK = new ColorSpace(Utils.CS_CMYK);
+        //public static ColorSpace csRGB = new ColorSpace(Utils.CS_RGB);
+        //public static ColorSpace csGRAY = new ColorSpace(Utils.CS_GRAY);
+        //public static ColorSpace csCMYK = new ColorSpace(Utils.CS_CMYK);
 
         public static byte[] BinFromBuffer(FzBuffer buffer)
         {
@@ -1688,6 +1689,7 @@ namespace MuPDF.NET
         /// Read barcodes from page.
         /// </summary>
         /// <param name="clip"></param>
+        /// <param name="decodeEmbeddedOnly">Decode barcodes only from embedded images in the PDF resources.</param>
         /// <param name="tryHarder">Spend more time to try to find a barcode; optimize for accuracy, not speed.</param>
         /// <param name="tryInverted">Try to decode as inverted image.</param>
         /// <param name="pureBarcode">Image is a pure monochrome image of a barcode.</param>
@@ -1697,6 +1699,7 @@ namespace MuPDF.NET
         public static List<Barcode> ReadBarcodes(
             Page page,
             Rect clip = null,
+            bool decodeEmbeddedOnly = false,
             bool tryHarder = true,
             bool tryInverted = false,
             bool pureBarcode = false,
@@ -1704,66 +1707,98 @@ namespace MuPDF.NET
             bool autoRotate = true
             )
         {
-            Config config = new Config();
-
-            Pixmap pxmp = page.GetPixmap(dpi: 800);
-            byte[] pmBuf = pxmp.ToBytes();
-
-            // Calculate Rect ratio between PDF page and image.
-            float imageWidth = pxmp.IRect.Width;
-            float imageHeight = pxmp.IRect.Height + 0.01f;
-            float pageWidth = page.Rect.Width;
-            float pageHeight = page.Rect.Height + 0.01f;
-            float widthRatio = imageWidth / pageWidth;
-            float heightRatio = imageHeight / pageHeight;
-
-            // set crop
-            if (clip != null)
+            // if clip is null, use the whole page rect
+            if (clip == null)
             {
-                int[] crop = new int[4];
-                // copy crop from clip
-                crop[0] = (int)(clip.X0 * widthRatio);
-                crop[1] = (int)(clip.Y0 * heightRatio);
-                crop[2] = (int)(clip.Width * widthRatio);
-                crop[3] = (int)(clip.Height * heightRatio);
-
-                config.Crop = crop;
+                clip = new Rect(0, 0, page.Rect.Width, page.Rect.Height);
             }
-
-            // set config options
-            config.TryHarder = tryHarder;
-            config.TryInverted = tryInverted;
-            config.PureBarcode = pureBarcode;
-            config.Multi = multi;
-            config.AutoRotate = autoRotate;
-            config.Hints = buildHints(config);
 
             List<Barcode> barcodes = new List<Barcode>();
 
-            var decodeObject = new Decode();
-            Result[] results = decodeObject.decodeMulti(pmBuf, config);
-            foreach (var result in results)
+            List<Rect> blockRects = new List<Rect>();
+
+            if (!decodeEmbeddedOnly)
             {
-                BarcodePoint[] points = new BarcodePoint[result.ResultPoints.Length];
-                for (int i = 0; i < result.ResultPoints.Length; i++)
+                blockRects.Add(clip); // add the clip rect to the list
+            }
+            else
+            {
+                foreach (Block block in page.GetImageInfo())
                 {
-                    // revert the original pdf page ratio
-                    points[i] = new BarcodePoint(result.ResultPoints[i].X / widthRatio, result.ResultPoints[i].Y / heightRatio);
+                    Rect blockRectItem = block.Bbox;
+                    if (clip.Contains(blockRectItem))
+                    {
+                        blockRects.Add(blockRectItem);
+                    }
+                }
+            }
+
+            foreach (Rect blockRect in blockRects)
+            {
+                Rect newRect = blockRect;
+                // make space around of clip
+                if (blockRect.X0 > 5 && blockRect.Y0 > 5 &&
+                    blockRect.X1 < page.Rect.Width - 5 && blockRect.Y1 < page.Rect.Height - 5)
+                {
+                    newRect = new Rect(blockRect.X0 - 5, blockRect.Y0 - 5, blockRect.X1 + 5, blockRect.Y1 + 5);
                 }
 
-                Barcode barcode = new Barcode(
-                    result.Text,
-                    result.RawBytes,
-                    result.NumBits,
-                    points,
-                    (BarcodeFormat)result.BarcodeFormat,
-                    result.Timestamp
-                );
-                foreach (var metadata in result.ResultMetadata)
+                // save the start x and y of the clip
+                float startX = newRect.X0;
+                float startY = newRect.Y0;
+
+                Config config = new Config();
+
+                Pixmap pxmp = page.GetPixmap(dpi: 100, clip: newRect);
+                byte[] pmBuf = pxmp.ToBytes();
+
+                // Calculate Rect ratio between PDF page and image.
+                float imageWidth = pxmp.IRect.Width;
+                float imageHeight = pxmp.IRect.Height + 0.01f;
+                float pageWidth = newRect.Width;
+                float pageHeight = newRect.Height + 0.01f;
+                float widthRatio = imageWidth / pageWidth;
+                float heightRatio = imageHeight / pageHeight;
+
+                pxmp.Dispose(); // free pixmap memory
+
+                // set config options
+                config.TryHarder = tryHarder;
+                config.TryInverted = tryInverted;
+                config.PureBarcode = pureBarcode;
+                config.Multi = multi;
+                config.AutoRotate = autoRotate;
+                config.Hints = buildHints(config);
+
+                var decodeObject = new Decode();
+                Result[] results = decodeObject.decodeMulti(pmBuf, config);
+                if (results == null || results.Length == 0)
                 {
-                    barcode.putMetadata((BarcodeMetadataType)metadata.Key, metadata.Value);
+                    continue; // no barcodes found
                 }
-                barcodes.Add(barcode);
+                foreach (var result in results)
+                {
+                    BarcodePoint[] points = new BarcodePoint[result.ResultPoints.Length];
+                    for (int i = 0; i < result.ResultPoints.Length; i++)
+                    {
+                        // revert the original pdf page ratio
+                        points[i] = new BarcodePoint(startX + result.ResultPoints[i].X / widthRatio, startY + result.ResultPoints[i].Y / heightRatio);
+                    }
+
+                    Barcode barcode = new Barcode(
+                        result.Text,
+                        result.RawBytes,
+                        result.NumBits,
+                        points,
+                        (BarcodeFormat)result.BarcodeFormat,
+                        result.Timestamp
+                    );
+                    foreach (var metadata in result.ResultMetadata)
+                    {
+                        barcode.putMetadata((BarcodeMetadataType)metadata.Key, metadata.Value);
+                    }
+                    barcodes.Add(barcode);
+                }
             }
 
             return barcodes;
@@ -1816,6 +1851,10 @@ namespace MuPDF.NET
 
             var decodeObject = new Decode();
             Result[] results = decodeObject.decodeMulti(imageFile, config);
+            if (results == null || results.Length == 0)
+            {
+                return barcodes; // no barcodes found
+            }
 
             foreach (var result in results)
             {
@@ -2315,6 +2354,7 @@ namespace MuPDF.NET
                 id.pdf_array_push(mupdf.mupdf.pdf_new_string(rnd0, (uint)rnd0.Length));
                 id.pdf_array_push(mupdf.mupdf.pdf_new_string(rnd0, (uint)rnd0.Length));
             }
+            id.Dispose();
         }
 
         public static FontInfo CheckFont(Page page, string fontName)
@@ -3346,13 +3386,14 @@ namespace MuPDF.NET
 
         internal static void SetAnnotBorder(Border border, PdfDocument pdf, PdfObj linkObj)
         {
+            /*
             PdfObj obj = null;
             int dashLen = 0;
             float nWidth = border.Width;
             int[] nDashes = border.Dashes;
             string nStyle = border.Style;
             float nClouds = border.Clouds;
-
+            */
             // get old border properties
         }
 
@@ -3587,7 +3628,7 @@ namespace MuPDF.NET
             return annot;
         }
 
-        internal static void StoreShrink(int percent)
+        public static void StoreShrink(int percent)
         {
             if (percent >= 100)
             {
@@ -3596,6 +3637,11 @@ namespace MuPDF.NET
             }
             if (percent > 0)
                 mupdf.mupdf.fz_shrink_store((uint)(100 - percent));
+        }
+
+        public static void GlyphCacheEmpty()
+        {
+            mupdf.mupdf.fz_purge_glyph_cache();
         }
 
         internal static void RefreshLinks(PdfPage page)
@@ -3694,6 +3740,9 @@ namespace MuPDF.NET
                 pageDict.pdf_dict_put_int(new PdfObj("Rotate"), rotate);
             PdfObj ref_ = pdfDes.pdf_add_object(pageDict);
             pdfDes.pdf_insert_page(pageTo, ref_);
+
+            pdfSrc.Dispose();
+            pdfDes.Dispose();
         }
 
         public static void MergeRange(
@@ -3919,41 +3968,65 @@ namespace MuPDF.NET
             FzSeparations seps = null
         )
         {
-            if (seps == null)
-                seps = new FzSeparations();
+            var disposables = new List<IDisposable>();
 
-            FzRect rect = mupdf.mupdf.fz_bound_display_list(list);
-            FzMatrix matrix = new FzMatrix(ctm.A, ctm.B, ctm.C, ctm.D, ctm.E, ctm.F);
-            FzRect rclip = clip == null ? new FzRect(FzRect.Fixed.Fixed_INFINITE) : clip.ToFzRect();
-            rect = FzRect.fz_intersect_rect(rect, rclip);
-
-            rect = rect.fz_transform_rect(matrix);
-            FzIrect irect = rect.fz_round_rect();
-            FzPixmap pix = mupdf.mupdf.fz_new_pixmap_with_bbox(cs, irect, seps, alpha);
-            if (alpha != 0)
-                pix.fz_clear_pixmap();
-            else
-                pix.fz_clear_pixmap_with_value(0xFF);
-
-            FzDevice dev;
-            if (rclip.fz_is_infinite_rect() == 0)
+            try
             {
-                dev = mupdf.mupdf.fz_new_draw_device_with_bbox(matrix, pix, irect);
-                list.fz_run_display_list(dev, new FzMatrix(), rclip, new FzCookie());
-            }
-            else
-            {
-                dev = mupdf.mupdf.fz_new_draw_device(matrix, pix);
-                list.fz_run_display_list(
-                    dev,
-                    new FzMatrix(),
-                    new FzRect(FzRect.Fixed.Fixed_INFINITE),
-                    new FzCookie()
-                );
-            }
+                if (seps == null)
+                {
+                    seps = new FzSeparations();
+                    disposables.Add(seps);
+                }
 
-            mupdf.mupdf.fz_close_device(dev);
-            return new Pixmap("raw", new Pixmap(pix));
+                FzRect rect = mupdf.mupdf.fz_bound_display_list(list);
+                //disposables.Add(rect);
+
+                FzMatrix matrix = new FzMatrix(ctm.A, ctm.B, ctm.C, ctm.D, ctm.E, ctm.F);
+                //disposables.Add(matrix);
+
+                FzRect rclip = clip == null ? new FzRect(FzRect.Fixed.Fixed_INFINITE) : clip.ToFzRect();
+                //disposables.Add(rclip);
+                rect = FzRect.fz_intersect_rect(rect, rclip);
+
+                rect = rect.fz_transform_rect(matrix);
+                FzIrect irect = rect.fz_round_rect();
+                //disposables.Add(irect);
+
+                FzPixmap pix = mupdf.mupdf.fz_new_pixmap_with_bbox(cs, irect, seps, alpha);
+                if (alpha != 0)
+                    pix.fz_clear_pixmap();
+                else
+                    pix.fz_clear_pixmap_with_value(0xFF);
+
+                FzDevice dev;
+                if (rclip.fz_is_infinite_rect() == 0)
+                {
+                    dev = mupdf.mupdf.fz_new_draw_device_with_bbox(matrix, pix, irect);
+                    list.fz_run_display_list(dev, new FzMatrix(), rclip, new FzCookie());
+                }
+                else
+                {
+                    dev = mupdf.mupdf.fz_new_draw_device(matrix, pix);
+                    list.fz_run_display_list(
+                        dev,
+                        new FzMatrix(),
+                        new FzRect(FzRect.Fixed.Fixed_INFINITE),
+                        new FzCookie()
+                    );
+                }
+                disposables.Add(dev);
+
+                dev.fz_close_device();
+
+                return new Pixmap("raw", new Pixmap(pix));
+            }
+            finally
+            {
+                foreach (var disposable in disposables)
+                {
+                    disposable.Dispose();
+                }
+            }            
         }
 
         internal static FzFont GetFont(
@@ -5471,25 +5544,42 @@ namespace MuPDF.NET
             tpage = null;
         }
 
+        /// <summary>
+        /// Merge the /Resources object created by a text pdf device into the page.
+        /// The device may have created multiple /ExtGState/Alp? and /Font/F? objects.
+        /// These need to be renamed (renumbered) to not overwrite existing page
+        /// objects from previous executions.
+        /// </summary>
+        /// <param name="pageRef"></param>
+        /// <returns>the next available numbers n, m for objects /Alp<n>, /F<m></returns>
         internal static (int, int) MergeResources(PdfPage page, PdfObj res)
         {
+            // page objects /Resources, /Resources/ExtGState, /Resources/Font
             PdfObj resources = page.obj().pdf_dict_get(new PdfObj("Resources"));
-            PdfObj mainExtg = page.obj().pdf_dict_get(new PdfObj("ExtGState"));
-            PdfObj mainFonts = page.obj().pdf_dict_get(new PdfObj("Font"));
+            if (resources.m_internal == null)
+            {
+                resources = mupdf.mupdf.pdf_dict_put_dict(page.obj(), new PdfObj("Resources"), 5);
+            }
+            PdfObj mainExtg = resources.pdf_dict_get(new PdfObj("ExtGState"));
+            PdfObj mainFonts = resources.pdf_dict_get(new PdfObj("Font"));
 
+            // text pdf device objects /ExtGState, /Font
             PdfObj tmpExtg = res.pdf_dict_get(new PdfObj("ExtGState"));
             PdfObj tmpFonts = res.pdf_dict_get(new PdfObj("Font"));
+
             int maxAlp = -1;
             int maxFonts = -1;
             int n = 0;
 
-            if (tmpExtg.pdf_is_dict() != 0)
+            // Handle /Alp objects
+            if (tmpExtg.pdf_is_dict() != 0) // any created at all?
             {
-                n = tmpExtg.pdf_dict_len();
+                n = tmpExtg.pdf_dict_len(); // does page have /ExtGState yet?
                 if (mainExtg.pdf_is_dict() != 0)
                 {
                     for (int i = 0; i < mainExtg.pdf_dict_len(); i++)
                     {
+                        // get highest number of objects named /Alpxxx
                         string alp = mainExtg.pdf_dict_get_key(i).pdf_to_name();
                         if (!alp.StartsWith("Alp"))
                             continue;
@@ -5498,11 +5588,11 @@ namespace MuPDF.NET
                             maxAlp = j;
                     }
                 }
-                else
+                else // create a /ExtGState for the page
                     mainExtg = resources.pdf_dict_put_dict(new PdfObj("ExtGState"), n);
 
                 maxAlp += 1;
-                for (int i = 0; i < n; i++)
+                for (int i = 0; i < n; i++) // copy over renumbered /Alp objects
                 {
                     string alp = tmpExtg.pdf_dict_get_key(i).pdf_to_name();
                     int j = mupdf.mupdf.fz_atoi(alp.Substring(3)) + maxAlp;
@@ -5511,9 +5601,9 @@ namespace MuPDF.NET
                     mainExtg.pdf_dict_puts(text, val);
                 }
             }
-            if (mainFonts.pdf_is_dict() != 0)
+            if (mainFonts.pdf_is_dict() != 0) // has page any fonts yet?
             {
-                for (int i = 0; i < mainFonts.pdf_dict_len(); i++)
+                for (int i = 0; i < mainFonts.pdf_dict_len(); i++) // get max font number
                 {
                     string font = mainFonts.pdf_dict_get_key(i).pdf_to_name();
                     if (!font.StartsWith("F"))
@@ -5523,11 +5613,11 @@ namespace MuPDF.NET
                         maxFonts = j;
                 }
             }
-            else
+            else // create a Resources/Font for the page
                 mainFonts = resources.pdf_dict_put_dict(new PdfObj("Font"), 2);
 
             maxFonts += 1;
-            for (int i = 0; i < tmpFonts.pdf_dict_len(); i++)
+            for (int i = 0; i < tmpFonts.pdf_dict_len(); i++) // copy renumbered fonts
             {
                 string font = tmpFonts.pdf_dict_get_key(i).pdf_to_name();
                 int j = mupdf.mupdf.fz_atoi(font.Substring(1)) + maxFonts;
@@ -5586,6 +5676,8 @@ namespace MuPDF.NET
                     dFont.pdf_dict_put(new PdfObj("W"), wArray);
                 }
             }
+            font.Dispose();
+            pdf.Dispose();
             return true;
         }
 
@@ -6515,7 +6607,8 @@ namespace MuPDF.NET
         {
             if (string.IsNullOrEmpty(fontFile))
             {
-                throw new Exception("should specify font file.");
+                //throw new Exception("should specify font file.");
+                Console.WriteLine("should specify font file.");
                 return -1f;
             }
 

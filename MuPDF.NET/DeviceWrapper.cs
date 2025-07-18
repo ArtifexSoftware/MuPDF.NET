@@ -44,5 +44,15 @@ namespace MuPDF.NET
         {
             return _nativeDevice;
         }
+
+        public void Dispose()
+        {
+            if (_nativeDevice != null)
+            {
+                _nativeDevice.fz_close_device();
+                _nativeDevice.Dispose();
+                _nativeDevice = null;
+            }
+        }
     }
 }

@@ -1706,7 +1706,11 @@ namespace MuPDF.NET
             }
             catch (Exception e)
             {
-                //Console.WriteLine(string.Format("cannot set rect: {0}", e));
+                Console.WriteLine(string.Format("cannot set rect: {0}", e));
+            }
+            finally
+            {
+                r.Dispose();
             }
         }
 

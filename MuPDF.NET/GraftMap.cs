@@ -24,6 +24,7 @@ namespace MuPDF.NET
             PdfGraftMap map = pdf.pdf_new_graft_map();
             _nativeGraftMap = map;
             ThisOwn = true;
+            pdf.Dispose();
         }
 
         public void Dispose()

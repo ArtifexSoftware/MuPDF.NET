@@ -17,6 +17,7 @@ namespace Demo
         // Use rich text for FreeText annotations
         public static void Run(string[] args)
         {
+            Console.WriteLine("\n=== AnnotationsFreeText2 =======================");
             // define an overall styling
             string ds = "font-size: 11pt; font-family: sans-serif;";
             // some special characters
@@ -57,6 +58,8 @@ PyMuPDF <span style=""color: red;"">འདི་ ཡིག་ཆ་བཀྲམ�
             doc.Save(typeof(AnnotationsFreeText2).Name + ".pdf", pretty:1);
 
             doc.Close();
+
+            Console.WriteLine("Saved to " + typeof(AnnotationsFreeText2).Name + ".pdf");
         }
     }
 }

@@ -26,7 +26,10 @@ namespace MuPDF.NET
             PdfDocument pdf = Document.AsPdfDocument(doc);
             int xrefLen = pdf.pdf_xref_len();
             if (!Utils.INRANGE(xref, 1, xrefLen - 1))
+            {
+                pdf.Dispose();
                 throw new Exception(Utils.ErrorMessages["MSG_BAD_XREF"]);
+            }
 
             PdfObj r = pdf.pdf_new_indirect(xref, 0);
             PdfObj type = r.pdf_dict_get(new PdfObj("Subtype"));
@@ -41,6 +44,8 @@ namespace MuPDF.NET
                 null
                 );
             _nativePixmap = pix;
+
+            pdf.Dispose();
         }
 
         public Pixmap(Pixmap spix, float w, float h)
@@ -1048,7 +1053,7 @@ namespace MuPDF.NET
             for (int j = 0; j < n; j++)
             {
                 byte t = color[j];
-                if (Utils.INRANGE(t, 0, 255))
+                if (!Utils.INRANGE(t, 0, 255))
                     throw new Exception(Utils.ErrorMessages["MSG_BAD_COLOR_SEQ"]);
                 c.Add(Convert.ToInt32(t));
             }
@@ -1161,8 +1166,9 @@ namespace MuPDF.NET
                 quad.UpperLeft.ToFzPoint()
             };
 
-            // mupdf.mupdf.ll_fz_warp_pixmap()
-            return null;
+            FzPixmap fpxmp = mupdf.mupdf.fz_warp_pixmap(_nativePixmap, quad.ToFzQuad(), (int)width, (int)height);
+            
+            return new Pixmap(fpxmp);
         }
 
         public byte[] PdfOCR2Bytes(bool compress = true, string language = "eng", string tessdata = null)

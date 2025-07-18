@@ -45,6 +45,16 @@ namespace MuPDF.NET
             _nativeDisplayList = displayList;
         }
 
+        public void Dispose()
+        {
+            if (_nativeDisplayList != null)
+            {
+                _nativeDisplayList.Dispose();
+                _nativeDisplayList = null;
+                ThisOwn = false;
+            }
+        }
+
         /// <summary>
         /// Returns native object
         /// </summary>

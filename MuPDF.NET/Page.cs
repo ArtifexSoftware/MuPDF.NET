@@ -21,7 +21,7 @@ namespace MuPDF.NET
             Utils.InitApp();
         }
 
-        private FzPage _nativePage;
+        private FzPage _nativePage = null;
 
         private PdfPage _pdfPage;
 
@@ -411,6 +411,20 @@ namespace MuPDF.NET
                 Number = _pdfPage.m_internal.super.number;
         }
 
+        public void Dispose()
+        {
+            if (_pdfPage != null)
+            {
+                _pdfPage.Dispose();
+                _pdfPage = null;
+            }
+            if (_nativePage != null)
+            {
+                _nativePage.Dispose();
+                _nativePage = null;
+            }
+        }
+
         /// <summary>
         /// PDF only: Add a caret icon. A caret annotation is a visual symbol normally used to indicate the presence of text edits on the page.
         /// </summary>
@@ -438,6 +452,16 @@ namespace MuPDF.NET
             }
 
             return new Annot(annot, this);
+        }
+
+        public void SetClipPage(Rect rect)
+        {
+            if (rect == null)
+                throw new Exception(Utils.ErrorMessages["MSG_BAD_ARG_RECT"]);
+            if (rect.IsInfinite || rect.IsEmpty)
+                throw new Exception(Utils.ErrorMessages["MSG_BAD_RECT"]);
+            FzRect fzRect = rect.ToFzRect();
+            _pdfPage.pdf_clip_page(fzRect);
         }
 
         /// <summary>
@@ -2382,6 +2406,8 @@ namespace MuPDF.NET
                 t.From *= mat;
                 InsertLink(t);
             }
+
+            doc.Close();
             return (spareHeight, scale);
         }
 
@@ -3204,7 +3230,8 @@ namespace MuPDF.NET
 
             FzDevice dev = new FzDevice(tp, options);
             mupdf.mupdf.fz_run_page(page.super(), dev, m.ToFzMatrix(), new FzCookie());
-            mupdf.mupdf.fz_close_device(dev);
+            dev.fz_close_device();
+            dev.Dispose();
         }
 
         public List<BoxLog> GetBboxlog(bool layers = false)
@@ -3315,6 +3342,7 @@ namespace MuPDF.NET
                 alpha: alpha ? 1 : 0,
                 clip: clip
             );
+            dl.Dispose();
 
             if (dpi != 0)
                 pix.SetDpi(dpi, dpi);
@@ -4240,6 +4268,7 @@ namespace MuPDF.NET
         /// Read barcodes from page.
         /// </summary>
         /// <param name="clip"></param>
+        /// <param name="decodeEmbeddedOnly">Decode barcodes only from embedded images in the PDF resources.</param>
         /// <param name="tryHarder">Spend more time to try to find a barcode; optimize for accuracy, not speed.</param>
         /// <param name="tryInverted">Try to decode as inverted image.</param>
         /// <param name="pureBarcode">Image is a pure monochrome image of a barcode.</param>
@@ -4248,6 +4277,7 @@ namespace MuPDF.NET
         ///                          Rotation is supported for 90, 180 and 270 degrees.</param>
         public List<Barcode> ReadBarcodes(
             Rect clip = null,
+            bool decodeEmbeddedOnly = false,
             bool tryHarder = true,
             bool tryInverted = false,
             bool pureBarcode = false,
@@ -4255,7 +4285,7 @@ namespace MuPDF.NET
             bool autoRotate = true
             )
         {
-            return Utils.ReadBarcodes(this, clip,
+            return Utils.ReadBarcodes(this, clip, decodeEmbeddedOnly,
                 tryHarder, tryInverted, pureBarcode, multi, autoRotate);
         }
 
@@ -4785,7 +4815,8 @@ namespace MuPDF.NET
                 1
             );
             _nativePage.fz_run_page(dev, ctm, new FzCookie());
-            mupdf.mupdf.fz_close_device(dev);
+            dev.fz_close_device();
+            dev.Dispose();
             output.fz_close_output();
             output.Dispose();
             string text = Utils.EscapeStrFromBuffer(res);

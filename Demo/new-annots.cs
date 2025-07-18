@@ -13,6 +13,7 @@
 */
 
 using MuPDF.NET;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -31,6 +32,7 @@ namespace Demo
         // Use rich text for FreeText annotations
         public static void Run(string[] args)
         {
+            Console.WriteLine("\n=== NewAnnots =======================");
             Rect r = Constants.r;  // use the rectangle defined in Constants.cs
 
             Document doc = new Document();
@@ -155,6 +157,8 @@ namespace Demo
             doc.Save(typeof(NewAnnots).Name + ".pdf", deflate:1);
 
             doc.Close();
+
+            Console.WriteLine("Saved to " + typeof(NewAnnots).Name + ".pdf");
         }
     }
 }

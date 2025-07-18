@@ -44,6 +44,14 @@ namespace MuPDF.NET
         }
 
         /// <summary>
+        /// Dispose
+        /// </summary>
+        public void Dispose()
+        {
+            _nativeDocumentWriter.Dispose();
+        }
+
+        /// <summary>
         /// Finish a page. This flushes any pending data and appends the page to the output document.
         /// </summary>
         public void EndPage()

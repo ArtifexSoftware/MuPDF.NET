@@ -8,7 +8,6 @@ namespace MuPDF.NET.Test
 {
     public class PixmapTest
     {
-        /*
         [Test]
         public void GetPixamp_Save()
         {
@@ -123,6 +122,5 @@ namespace MuPDF.NET.Test
             //Assert.Pass();
         }
 
-        */
     }
 }
