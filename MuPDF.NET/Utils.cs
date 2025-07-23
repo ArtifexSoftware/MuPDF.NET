@@ -1748,8 +1748,10 @@ namespace MuPDF.NET
 
                 Config config = new Config();
 
-                Pixmap pxmp = page.GetPixmap(dpi: 100, clip: newRect);
+                Pixmap pxmp = page.GetPixmap(dpi: 200, clip: newRect);
                 byte[] pmBuf = pxmp.ToBytes();
+
+                pxmp.Save(@"e:\1.png"); // for debugging purposes, save the pixmap to a file
 
                 // Calculate Rect ratio between PDF page and image.
                 float imageWidth = pxmp.IRect.Width;

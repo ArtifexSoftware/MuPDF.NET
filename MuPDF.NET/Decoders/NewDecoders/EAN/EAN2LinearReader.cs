@@ -1,0 +1,136 @@
+using System;
+using System.Drawing;
+using System.Drawing.Drawing2D;
+using BarcodeReader.Core.Common;
+
+namespace BarcodeReader.Core.EAN
+{
+    /// <summary>
+    /// EAN2 reader.
+    /// </summary>
+#if CORE_DEV
+    public
+#else
+    internal
+#endif
+    class EAN2LinearReader : LinearReader
+    {
+        private static int[][] _startPatterns = { new int[] { 1, 1, 2 } };
+        private static int[][] _stopPatterns = { new int[] {} };
+        private static int[][] _separator = { new int[] { 1, 1 } };
+
+        // Odd parity patterns for left-hand encoding
+        private static int[][] _leftOddPatterns =
+        {
+            new int[] {3, 2, 1, 1}, // 0
+            new int[] {2, 2, 2, 1}, // 1
+            new int[] {2, 1, 2, 2}, // 2
+            new int[] {1, 4, 1, 1}, // 3
+            new int[] {1, 1, 3, 2}, // 4
+            new int[] {1, 2, 3, 1}, // 5
+            new int[] {1, 1, 1, 4}, // 6
+            new int[] {1, 3, 1, 2}, // 7
+            new int[] {1, 2, 1, 3}, // 8
+            new int[] {3, 1, 1, 2}  // 9
+        };
+
+        // All left-hand encoding patterns (odd parity and even parity)
+        private static int[][] _leftPatterns =
+        {
+            // odd parity
+            _leftOddPatterns[0], _leftOddPatterns[1],
+            _leftOddPatterns[2], _leftOddPatterns[3],
+            _leftOddPatterns[4], _leftOddPatterns[5],
+            _leftOddPatterns[6], _leftOddPatterns[7],
+            _leftOddPatterns[8], _leftOddPatterns[9],
+
+            // even parity
+            new int[] {1, 1, 2, 3}, // 0
+            new int[] {1, 2, 2, 2}, // 1
+            new int[] {2, 2, 1, 2}, // 2
+            new int[] {1, 1, 4, 1}, // 3
+            new int[] {2, 3, 1, 1}, // 4
+            new int[] {1, 3, 2, 1}, // 5
+            new int[] {4, 1, 1, 1}, // 6
+            new int[] {2, 1, 3, 1}, // 7
+            new int[] {3, 1, 2, 1}, // 8
+            new int[] {2, 1, 1, 3}  // 9
+        };
+
+        private static int[][][] _patterns = new int[][][]
+        {
+            _startPatterns,
+            _leftPatterns,
+            _separator
+        };
+
+        static int[] nBars        = { 3, 4, 2, 4 };
+        static int[] nLength      = { 4, 7, 2, 7 };
+        static int[] tableIndexes = { 0, 1, 2, 1 };
+
+        public EAN2LinearReader()
+        {
+            //incerase MaxSkewAngle because EAN can be on curved surface
+            MaxSkewAngle = 30 * (float)Math.PI / 180;
+        }
+
+        internal override void GetParams(out int[] startPattern, out int[] stopPattern, out int minModulesPerBarcode, out int maxModulesPerBarcode)
+        {
+            startPattern = _startPatterns[0];
+            stopPattern = _stopPatterns[0];
+            maxModulesPerBarcode = minModulesPerBarcode = 20;
+            if (MinQuietZone > 3)
+                MinQuietZone = 3;//decrease quiet zone because between EAN13 and EAN2 can be small interval
+
+            if (Reader == null)
+            {
+                Reader = new BarSymbolReader(Scan, nBars, nLength, tableIndexes, false, true, 1, _patterns, UseE, null);
+            }
+        }
+
+        public override SymbologyType GetBarCodeType()
+        {
+            return SymbologyType.EAN2;
+        }
+
+        internal override bool Decode(BarCodeRegion reg, int[] row)
+        {
+            if (row.Length < 4) return false;
+
+            var digit = CalcDigit(row);
+            if (digit < 0)
+                return false;
+
+            //decode
+            byte[] data = new byte[2];
+
+            for (int i = 1, j = 0; i < 4; i+=2, j++)
+            {
+                if (row[i] < 0) return false;
+                data[j] = (byte)(row[i] % 10);
+            }
+
+            if (!VerifyCheckSum(data, digit)) return false;
+
+            reg.Data = new ABarCodeData[] { new NumericBarCodeData(data) };
+
+            return true;
+        }
+
+        internal virtual bool VerifyCheckSum(byte[] data, int digit)
+        {
+            int sum = ((data[0] % 10) * 10 + data[1] % 10) % 4;
+            
+            return sum == digit;
+        }
+
+        private int CalcDigit(int[] row)
+        {
+            var res = 0;
+            if (row[1] >= 10) res += 2;
+            if (row[3] >= 10) res += 1;
+
+            return res;
+        }
+    }
+}

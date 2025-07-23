@@ -14,6 +14,7 @@ namespace Demo
     {
         static void Main(string[] args)
         {
+            /*
             TestInsertHtmlbox();
             TestLineAnnot();
             AnnotationsFreeText1.Run(args);
@@ -39,8 +40,42 @@ namespace Demo
             TestTextFont(args);
             TestMemoryLeak();
             TestDrawLine();
+            */
+            TestReadBarcode1();
 
             return;
+        }
+
+        static void TestReadBarcode1()
+        {
+            ///*
+            string testFilePath = @"E:\1.png";
+            
+            Console.WriteLine("\n=== TestReadBarcode1 =======================");
+
+            List<Barcode> barcodes = Utils.ReadBarcodes(testFilePath, tryHarder: true);//, clip:new Rect(0, 0, 500, 100));
+
+            foreach (Barcode barcode in barcodes)
+            {
+                BarcodePoint[] points = barcode.ResultPoints;
+                Console.WriteLine($"Type: {barcode.BarcodeFormat} - Value: {barcode.Text} - Rect: [{points[0]},{points[1]}]");
+            }
+            //*/
+            /*
+            string testFilePath = @"E:\MuPDF.NET\Tmp\Barcodes\DDT_CEVA_110725.PDF";
+            Document doc = new Document(testFilePath);
+
+            int i = 0;
+            Page page = doc[0];
+
+            List<Barcode> barcodes = page.ReadBarcodes(decodeEmbeddedOnly: false);
+
+            foreach (Barcode barcode in barcodes)
+            {
+                BarcodePoint[] points = barcode.ResultPoints;
+                Console.WriteLine($"{i++} - Type: {barcode.BarcodeFormat} - Value: {barcode.Text} - Rect: [{points[0]},{points[1]}]");
+            }
+            */
         }
 
         static void TestReadDataMatrix()

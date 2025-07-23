@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System;
 using System.IO;
 using ZXing.Datamatrix.Encoder;
+using System.Linq;
 
 namespace MuPDF.NET
 {
