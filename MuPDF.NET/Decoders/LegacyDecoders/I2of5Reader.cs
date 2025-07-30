@@ -511,13 +511,13 @@ namespace BarcodeReader.Core.LegacyDecoders
             result.Confidence = fConfidence;
 
             if (SubMode == I2OF5SubMode.ITF14) //(this is ITF14Reader)
-                result.BarcodeType = SymbologyType.ITF14;
+                result.BarcodeFormat = SymbologyType.ITF14;
             else if (SubMode == I2OF5SubMode.GTIN14) // (this is GTIN14Reader)
-                result.BarcodeType = SymbologyType.GTIN14;
+                result.BarcodeFormat = SymbologyType.GTIN14;
             else if (SubMode == I2OF5SubMode.Circular)
-                result.BarcodeType = SymbologyType.CircularI2of5;
+                result.BarcodeFormat = SymbologyType.CircularI2of5;
             else
-                result.BarcodeType = SymbologyType.I2of5;
+                result.BarcodeFormat = SymbologyType.I2of5;
 
             result.Rect = new Rectangle(startOffset, rowNumber, offset - startOffset, 1);
             result.RawData = rawdata;

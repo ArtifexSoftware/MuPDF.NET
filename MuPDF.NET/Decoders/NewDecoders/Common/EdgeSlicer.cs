@@ -151,9 +151,9 @@ namespace BarcodeReader.Core.Common
             return true;
         }
 
-        public SKPoint[] GetBBox()
+        public SKPointI[] GetBBox()
         {
-            return new SKPoint[] { new SKPoint(xIn - 1, yIn), new SKPoint(xEnd - 1, yEnd)};
+            return new SKPointI[] { new SKPointI(xIn - 1, yIn), new SKPointI(xEnd - 1, yEnd)};
         }
 
 
@@ -200,14 +200,14 @@ namespace BarcodeReader.Core.Common
             return angle;
         } }
         public float Perpendicular { get { float p = Angle + PI / 2F; if (p > PI) p -= PI; return p; } }
-        public SKPoint Center { get { return new SKPoint((xIn + xEnd) / 2, (yIn + yEnd) / 2); } }
-        public SKPoint In { get { return new SKPoint(xIn, yIn); } }
-        public SKPoint End { get { return new SKPoint(xEnd, yEnd); } }
+        public SKPointI Center { get { return new SKPointI((xIn + xEnd) / 2, (yIn + yEnd) / 2); } }
+        public SKPointI In { get { return new SKPointI(xIn, yIn); } }
+        public SKPointI End { get { return new SKPointI(xEnd, yEnd); } }
 
         public float Dist(Edge p)
         {
-            SKPoint b = p.Center;
-            SKPoint a = this.Center;
+            SKPointI b = p.Center;
+            SKPointI a = this.Center;
             return (float)(Math.Sqrt((a.X - b.X) * (a.X - b.X) + (a.Y - b.Y) * (a.Y - b.Y)));
         }
 

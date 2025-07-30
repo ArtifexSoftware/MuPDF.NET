@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Collections;
 using System.Drawing;
-using System.Drawing.Imaging;
+using SkiaSharp;
 using System.Runtime.InteropServices;
 using BarcodeReader.Core.Common;
-using SkiaSharp;
 
 namespace BarcodeReader.Core.MICR
 {
@@ -202,7 +201,7 @@ namespace BarcodeReader.Core.MICR
             if (iEnd - iIn > minDigitCount) //decode
             {
                 string micr = null;
-                SKPoint[] rect = null;
+                SKPointI[] rect = null;
                 Segment a = group[iIn];
                 Segment b = group[iEnd];
 
@@ -212,7 +211,7 @@ namespace BarcodeReader.Core.MICR
                     for (int i = iIn, j = 0; i <= iEnd; i++, j++) parts[j] = group[i];
                     if (ocr) micr = simpleReader.Read(BWImage, parts, d);
                     else micr = "";
-                    rect = new SKPoint[] { a.LU, a.LD, b.RD, b.RU, a.LU};
+                    rect = new SKPointI[] { a.LU, a.LD, b.RD, b.RU, a.LU};
                 }
                 else
                 {
@@ -261,38 +260,36 @@ namespace BarcodeReader.Core.MICR
                         
 						using (SKBitmap rotated = new SKBitmap(r.Width, r.Height, SKColorType.Rgb888x, SKAlphaType.Opaque))
 						{
-                            // Lock SKBitmap pixels
-                            var pixmap = rotated.PeekPixels();
-                            IntPtr ptr = pixmap.GetPixels();
-                            int stride = pixmap.RowBytes; // Number of bytes per row
-                            int width = r.Width;
-                            int height = r.Height;
-
-                            // Work buffer (optional, you could write directly via pointer)
-                            byte[] scanBytes = new byte[stride];
-
-                            unsafe
+                            /*
+							BitmapData data = rotated.LockBits(new Rectangle(0, 0, r.Width, r.Height), ImageLockMode.ReadWrite, PixelFormat.Format24bppRgb);
+							int stride = data.Stride;
+							byte[] scanBytes = new byte[stride];
+							IntPtr ptr = data.Scan0;
+							for (int y = 0; y < r.Height; y++)
+							{
+								for (int x = 0, xx = 0; x < r.Width; x++)
+								{
+									MyPointF p = bbox.GetPoint(x, y);
+									int gray = scan.isBlack(p) ? 0 : 255; //sample a point using 1 pixel. Seems to be enough (and faster).
+									//int gray = (int)(scan.getSample(p) * 255F); //sample a point using 4 pixel neighbours
+									if (gray > 255) gray = 255;
+									scanBytes[xx++] = scanBytes[xx++] = scanBytes[xx++] = (byte)gray;
+								}
+								Marshal.Copy(scanBytes, 0, ptr, stride);
+								ptr = new IntPtr(ptr.ToInt64() + stride);
+							}
+							rotated.UnlockBits(data);
+                            */
+                            for (int y = 0; y < r.Height; y++)
                             {
-                                byte* basePtr = (byte*)ptr;
-
-                                for (int y = 0; y < height; y++)
+                                for (int x = 0; x < r.Width; x++)
                                 {
-                                    int xx = 0;
-                                    for (int x = 0; x < width; x++)
-                                    {
-                                        MyPointF p = bbox.GetPoint(x, y);
+                                    MyPointF p = bbox.GetPoint(x, y);
+                                    int gray = scan.isBlack(p) ? 0 : 255; // or use scan.getSample(p) * 255F for interpolated sample
+                                    if (gray > 255) gray = 255;
 
-                                        // Sample intensity
-                                        byte gray = scan.isBlack(p) ? (byte)0 : (byte)255;
-
-                                        // Set BGR
-                                        scanBytes[xx++] = gray; // Blue
-                                        scanBytes[xx++] = gray; // Green
-                                        scanBytes[xx++] = gray; // Red
-                                    }
-
-                                    // Copy row to bitmap
-                                    Marshal.Copy(scanBytes, 0, new IntPtr(basePtr + y * stride), stride);
+                                    // Write RGB triplet
+                                    rotated.SetPixel(x, y, new SKColor((byte)gray, (byte)gray, (byte)gray));
                                 }
                             }
 #if DEBUG_IMAGE
@@ -322,13 +319,13 @@ namespace BarcodeReader.Core.MICR
                         for (int i = iIn; i <= iEnd; i++) group[i].Scaned = true;
                     }
                     FoundBarcode foundBarcode = new FoundBarcode();
-					foundBarcode.BarcodeType = SymbologyType.MICR;
+					foundBarcode.BarcodeFormat = SymbologyType.MICR;
 					foundBarcode.Value = micr;
                     
 					foundBarcode.Polygon = rect; 
                     foundBarcode.Color = Color.Blue;
 
-					foundBarcode.Rect = new Rectangle((int)rect[0].X, (int)rect[0].Y, (int)(rect[3].X - rect[0].X), (int)(rect[1].Y - rect[0].Y));
+					foundBarcode.Rect = new Rectangle(rect[0].X, rect[0].Y, rect[3].X - rect[0].X, rect[1].Y - rect[0].Y);
 
 					result.Add(foundBarcode);
                 }
@@ -346,7 +343,7 @@ namespace BarcodeReader.Core.MICR
                     Rectangle r = p.GetRectangle();
                     if (ocr) data = micrOcr.GetChar(BWImage, ref r);
                     FoundBarcode foundBarcode = new FoundBarcode();
-					foundBarcode.BarcodeType = SymbologyType.MICR;
+					foundBarcode.BarcodeFormat = SymbologyType.MICR;
                     if (data != null)
                     {
                         p.SetRectangle(r);
@@ -359,8 +356,8 @@ namespace BarcodeReader.Core.MICR
                     }
 					foundBarcode.Value = data;
                     foundBarcode.Polygon = p.GetBBox();
-                    SKPoint[] bBox = p.GetBBox();
-                    foundBarcode.Rect = new Rectangle((int)bBox[0].X, (int)bBox[0].Y, (int)(bBox[3].X - bBox[0].X), (int)(bBox[1].Y - bBox[0].Y));
+                    SKPointI[] bBox = p.GetBBox();
+                    foundBarcode.Rect = new Rectangle(bBox[0].X, bBox[0].Y, bBox[3].X - bBox[0].X, bBox[1].Y - bBox[0].Y);
                     result.Add(foundBarcode);
                 }
             return (FoundBarcode[])result.ToArray(typeof(FoundBarcode));

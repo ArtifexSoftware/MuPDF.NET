@@ -254,7 +254,7 @@ namespace BarcodeReader.Core.LegacyDecoders
                 return null;
 
             FoundBarcode result = new FoundBarcode();
-			result.BarcodeType = SymbologyType.Codabar;
+			result.BarcodeFormat = SymbologyType.Codabar;
             result.Rect = new Rectangle(startOffset, rowNumber, offset - startOffset, 1);
             result.RawData = AsIntArray(symbols);
             

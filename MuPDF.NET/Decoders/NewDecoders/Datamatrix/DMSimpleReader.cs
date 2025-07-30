@@ -1,11 +1,9 @@
-﻿using BarcodeReader.Core.Common;
-using SkiaSharp;
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Drawing;
-using System.Drawing.Drawing2D;
-using System.IO;
+using SkiaSharp;
+using BarcodeReader.Core.Common;
 
 namespace BarcodeReader.Core.Datamatrix
 {
@@ -106,12 +104,9 @@ namespace BarcodeReader.Core.Datamatrix
         {
             CreateLists();
 #if DEBUG
-            using (var image = SKImage.FromBitmap(bwSourceImage.GetAsBitmap()))
-            using (var data = image.Encode(SKEncodedImageFormat.Png, 100))
-            using (var stream = File.OpenWrite(@"out.png"))
-            {
-                data.SaveTo(stream);
-            }
+            var temp = bwSourceImage.GetAsBitmap();
+            //temp.Save(@"out.png");
+            Utils.SaveSKBitmap(temp, @"out.png");
 #endif
 
             //main loop to scan horizontal lines
@@ -172,8 +167,13 @@ namespace BarcodeReader.Core.Datamatrix
                 if (MaxNumberOfBarcodes > 0 && candidates.Count >= MaxNumberOfBarcodes)
                     break;
 
-
                 int currentLength = lengths[i];
+
+                if (currentLength >= ledges.Count)
+                {
+                    continue; // skip too long edges
+                }
+
                 foreach (Edge A in ledges[currentLength])
                 {
                     processedEdges++;
@@ -191,7 +191,7 @@ namespace BarcodeReader.Core.Datamatrix
                             //check lengths ratio
                             int length = lengths[j];
                             float ratio = (float)length / (float)currentLength;
-                            if (ratio < dmMinAspectRatio || ratio > dmMaxAspectRatio)
+                            if (ratio < dmMinAspectRatio || ratio > dmMaxAspectRatio || length >= ledges.Count)
                             {
                                 continue; // break; //from sqare to max rectangular ratio
                             }
@@ -288,7 +288,7 @@ namespace BarcodeReader.Core.Datamatrix
                 foreach (BarCodeRegion b in candidates)
                 {
                     FoundBarcode foundBarcode = new FoundBarcode();
-					foundBarcode.BarcodeType = SymbologyType.DataMatrix;
+					foundBarcode.BarcodeFormat = SymbologyType.DataMatrix;
 
 					String data = "";
 					if (b.Data != null) 
@@ -297,27 +297,11 @@ namespace BarcodeReader.Core.Datamatrix
 					foundBarcode.Value = data;
                     foundBarcode.Color = Color.Blue;
 
-                    foundBarcode.Polygon = new SKPoint[5] { b.A, b.B, b.D, b.C, b.A };
-
-                    // Create an SKPath from the polygon
-                    var path = new SKPath();
-                    path.MoveTo(foundBarcode.Polygon[0]);
-
-                    for (int i = 1; i < foundBarcode.Polygon.Length; i++)
-                        path.LineTo(foundBarcode.Polygon[i]);
-
-                    path.Close();
-
-                    // Calculate bounds
-                    SKRect bounds = path.Bounds;
-
-                    // Assign rectangle (convert SKRect to System.Drawing.Rectangle if needed)
-                    foundBarcode.Rect = new System.Drawing.Rectangle(
-                        (int)Math.Floor(bounds.Left),
-                        (int)Math.Floor(bounds.Top),
-                        (int)Math.Ceiling(bounds.Width),
-                        (int)Math.Ceiling(bounds.Height)
-                    );
+                    foundBarcode.Polygon = new SKPointI[5] { b.A, b.B, b.D, b.C, b.A };
+					//byte[] pointTypes = new byte[5] { (byte) PathPointType.Start, (byte) PathPointType.Line, (byte) PathPointType.Line, (byte) PathPointType.Line, (byte) PathPointType.Line };
+					//GraphicsPath path = new GraphicsPath(foundBarcode.Polygon, pointTypes);
+					//foundBarcode.Rect = Rectangle.Round(path.GetBounds());
+                    foundBarcode.Rect = Utils.DrawPath(foundBarcode.Polygon);
 
                     foundBarcode.Confidence = b.Confidence;
 

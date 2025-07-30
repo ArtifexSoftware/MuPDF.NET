@@ -2,10 +2,8 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Drawing;
-using System.Drawing.Drawing2D;
-using BarcodeReader.Core.Common;
-using MuPDF.NET;
 using SkiaSharp;
+using BarcodeReader.Core.Common;
 
 namespace BarcodeReader.Core.FormOMR
 {
@@ -23,7 +21,7 @@ namespace BarcodeReader.Core.FormOMR
         protected int maxRad = 5000; //max long of accepted lines
         protected int distToJoin = 20; //min dist to join segments that are aligned
 
-        protected virtual bool checkRatio(SKPoint[] pp) { return true; }
+        protected virtual bool checkRatio(SKPointI[] pp) { return true; }
         public bool QuiteZoneRequired = true; // quite zone requirement
 
         public FormOMRLPattern()
@@ -76,31 +74,18 @@ namespace BarcodeReader.Core.FormOMR
                         bool isCorner = Calc.Around(sinDiff, 1f, 0.1f);
                         if (isCorner)
                         {
-                            SKPoint[] points = checkShape(edge, e);
+                            SKPointI[] points = checkShape(edge, e);
                             if (points != null)
                             {
                                 //detect if box is empty or checked
                                 FoundBarcode f = new FoundBarcode();
-								f.BarcodeType = SymbologyType.Checkbox;
+								f.BarcodeFormat = SymbologyType.Checkbox;
                                 f.Polygon = points;
 
-								byte[] pointTypes = new byte[5] { (byte) 0, (byte) 1, (byte) 1, (byte) 1, (byte) 1 };
-                                SKPath path = new SKPath();
-                                SKPoint[] skPoints = f.Polygon;
-
-                                if (skPoints.Length > 0)
-                                {
-                                    path.MoveTo(skPoints[0]);
-                                    for (int i = 1; i < skPoints.Length; i++)
-                                    {
-                                        path.LineTo(skPoints[i]);
-                                    }
-                                    path.Close(); // Close the polygon if needed
-
-                                    SKRect bounds;
-                                    path.GetBounds(out bounds);
-                                    f.Rect = new Rectangle((int)bounds.Left, (int)bounds.Top, (int)bounds.Width, (int)bounds.Height);
-                                }
+								//byte[] pointTypes = new byte[5] { (byte) PathPointType.Start, (byte) PathPointType.Line, (byte) PathPointType.Line, (byte) PathPointType.Line, (byte) PathPointType.Line };
+								//GraphicsPath path = new GraphicsPath(f.Polygon, pointTypes);
+								//f.Rect = Rectangle.Round(path.GetBounds());
+                                f.Rect = Utils.DrawPath(f.Polygon);
 
                                 BoundingBox bb = new BoundingBox(f);
                                 bool done = false;
@@ -117,7 +102,7 @@ namespace BarcodeReader.Core.FormOMR
         }
 
         protected virtual bool checkRatio(EdgeVar a, EdgeVar b) { return false; }
-        protected virtual SKPoint[] checkShape(EdgeVar a, EdgeVar b) { return null; }
+        protected virtual SKPointI[] checkShape(EdgeVar a, EdgeVar b) { return null; }
 
 
         //looks for a parallel segment from p to p+vdX (with length l) in the vdY direction, scaning from "from" to "to"
@@ -145,7 +130,7 @@ namespace BarcodeReader.Core.FormOMR
             return false;
         }
 
-        protected bool boxEmpty(SKPoint[] points) //MyPoint p, float l, MyVectorF vdX, MyVectorF vdY)
+        protected bool boxEmpty(SKPointI[] points) //MyPoint p, float l, MyVectorF vdX, MyVectorF vdY)
         {
             MyPoint p = (MyPoint)points[0];
             MyPoint q = (MyPoint)points[3];
@@ -193,7 +178,7 @@ namespace BarcodeReader.Core.FormOMR
             return nBlackLines <= 2;//;nLines / 4;
         }
 
-        protected SKPoint[] box(MyPointF aIn, MyPointF aEnd, MyPointF AIn, MyPointF AEnd,
+        protected SKPointI[] box(MyPointF aIn, MyPointF aEnd, MyPointF AIn, MyPointF AEnd,
             MyPointF bIn, MyPointF bEnd, MyPointF BIn, MyPointF BEnd)
         {
             RegressionLine La = new RegressionLine(aIn, aEnd);
@@ -209,13 +194,13 @@ namespace BarcodeReader.Core.FormOMR
             if (QuiteZoneRequired)
             {
                 if (checkQuietZone(new MyPointF[] { Q1, Q2, Q3, Q4 }))
-                    return new SKPoint[] { Q1, Q2, Q3, Q4, Q1 };
+                    return new SKPointI[] { Q1, Q2, Q3, Q4, Q1 };
                 else
                     return null;
             }
             else
             {
-                return new SKPoint[] { Q1, Q2, Q3, Q4, Q1 };
+                return new SKPointI[] { Q1, Q2, Q3, Q4, Q1 };
             }
         }
 
@@ -268,9 +253,9 @@ namespace BarcodeReader.Core.FormOMR
                 if (x >= 0 && x <= W && y >= 0 && y <= H) cells[x][y].Add(e);
             }
 
-            public ArrayList get(SKPoint p)
+            public ArrayList get(SKPointI p)
             {
-                return cells[(int)(p.X / K)][(int)(p.Y / K)];
+                return cells[p.X / K][p.Y / K];
             }
 
             private void _add(EdgeVar e)
@@ -313,7 +298,7 @@ namespace BarcodeReader.Core.FormOMR
             return Calc.Around(a.Length, b.Length, b.Length / 7);
         }
 
-        protected override SKPoint[] checkShape(EdgeVar a, EdgeVar b)
+        protected override SKPointI[] checkShape(EdgeVar a, EdgeVar b)
         {
             float la = a.Length;
             float lb = b.Length;
@@ -354,7 +339,7 @@ namespace BarcodeReader.Core.FormOMR
         protected virtual bool checkRectangleOrientation(EdgeVar A, EdgeVar B) { return false; }
 
 
-        protected override SKPoint[] checkShape(EdgeVar a, EdgeVar b)
+        protected override SKPointI[] checkShape(EdgeVar a, EdgeVar b)
         {
             float la = a.Length;
             float lb = b.Length;

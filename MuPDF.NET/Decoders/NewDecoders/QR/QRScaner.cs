@@ -3,10 +3,9 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
-using System.Drawing.Drawing2D;
+using SkiaSharp;
 using System.Text;
 using BarcodeReader.Core.Common;
-using SkiaSharp;
 
 namespace BarcodeReader.Core.QR
 {
@@ -97,7 +96,7 @@ namespace BarcodeReader.Core.QR
                     continue;
 
                 FoundBarcode foundBarcode = new FoundBarcode();
-				foundBarcode.BarcodeType = SymbologyType.QRCode;
+				foundBarcode.BarcodeFormat = SymbologyType.QRCode;
                 
                 StringBuilder data = new StringBuilder();
                 if (c.Data!=null)
@@ -115,23 +114,11 @@ namespace BarcodeReader.Core.QR
                 }
                 foundBarcode.Value = data.ToString();
                 foundBarcode.Color = Color.Blue;
-                foundBarcode.Polygon = new SKPoint[5] { c.A, c.B, c.D, c.C, c.A };
-                SKPoint[] points = foundBarcode.Polygon; // assuming SKPoint[]
-
-                SKPath path = new SKPath();
-
-                if (points.Length > 0)
-                {
-                    path.MoveTo(points[0]); // equivalent to PathPointType.Start
-
-                    for (int i = 1; i < points.Length; i++)
-                    {
-                        path.LineTo(points[i]); // equivalent to PathPointType.Line
-                    }
-
-                    path.Close(); // optional, if the shape is closed (polygon)
-                }
-                foundBarcode.Rect = new Rectangle((int)path.Bounds.Left, (int)path.Bounds.Top, (int)path.Bounds.Width, (int)path.Bounds.Height);
+                foundBarcode.Polygon = new SKPointI[5] { c.A, c.B, c.D, c.C, c.A };
+				//byte[] pointTypes = new byte[5] { (byte) PathPointType.Start, (byte) PathPointType.Line, (byte) PathPointType.Line, (byte) PathPointType.Line, (byte) PathPointType.Line };
+				//GraphicsPath path = new GraphicsPath(foundBarcode.Polygon, pointTypes);
+				//foundBarcode.Rect = Rectangle.Round(path.GetBounds());
+                foundBarcode.Rect = Utils.DrawPath(foundBarcode.Polygon);
                 foundBarcode.Confidence = c.Confidence;
                 result.Add(foundBarcode);
             }
@@ -185,7 +172,7 @@ namespace BarcodeReader.Core.QR
                             this.updateMinMaxPolygon(f.Polygon, ref minX, ref minY, ref maxX, ref maxY);
                             m.Confidence *= f.Confidence;
                         }
-                        m.Polygon = new SKPoint[5] { new SKPoint(minX, minY), new SKPoint(maxX, minY), new SKPoint(maxX, maxY), new SKPoint(minX, maxY), new SKPoint(minX, minY) };
+                        m.Polygon = new SKPointI[5] { new SKPointI(minX, minY), new SKPointI(maxX, minY), new SKPointI(maxX, maxY), new SKPointI(minX, maxY), new SKPointI(minX, minY) };
                         m.Color = Color.Blue;
                         mergedResults.Add(m);
                     }
@@ -253,14 +240,14 @@ namespace BarcodeReader.Core.QR
             return p;
         }
 
-        void updateMinMaxPolygon(SKPoint[] p, ref int minX, ref int minY, ref int maxX, ref int maxY)
+        void updateMinMaxPolygon(SKPointI[] p, ref int minX, ref int minY, ref int maxX, ref int maxY)
         {
-            foreach (SKPoint q in p)
+            foreach (SKPointI q in p)
             {
-                if (minX > q.X) minX = (int)q.X;
-                if (minY > q.Y) minY = (int)q.Y;
-                if (maxX < q.X) maxX = (int)q.X;
-                if (maxY < q.Y) maxY = (int)q.Y;
+                if (minX > q.X) minX = q.X;
+                if (minY > q.Y) minY = q.Y;
+                if (maxX < q.X) maxX = q.X;
+                if (maxY < q.Y) maxY = q.Y;
             }
         }
 

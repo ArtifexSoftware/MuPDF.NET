@@ -103,11 +103,11 @@ namespace BarcodeReader.Core.MICR
         public string SorroundingChar(Segment p, float d, float w, out bool isWhite)
         {
             isWhite = true;
-            SKPoint center = p.Center;
+            SKPointI center = p.Center;
             foreach (int off in offsets)
             {
-                int xIn = (int)center.X + off + (int)d;
-                Rectangle r = new Rectangle(xIn, (int)p.LU.Y, (int)(w - 1), p.Height);
+                int xIn = center.X + off + (int)d;
+                Rectangle r = new Rectangle(xIn, p.LU.Y, (int)(w - 1), p.Height);
                 Crop(ref r);
                 string ch = micrOcr.GetChar(img, ref r);
                 if (ch != null) return ch;

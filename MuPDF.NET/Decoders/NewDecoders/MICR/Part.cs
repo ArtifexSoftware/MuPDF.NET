@@ -41,9 +41,9 @@ namespace BarcodeReader.Core.MICR
             if (yEnd < p.yEnd) yEnd = p.yEnd;
         }
 
-        public SKPoint[] GetBBox()
+        public SKPointI[] GetBBox()
         {
-            return new SKPoint[] { new SKPoint(xIn - 1, yIn - 1), new SKPoint(xEnd + 1, yIn - 1), new SKPoint(xEnd + 1, yEnd + 1), new SKPoint(xIn - 1, yEnd + 1), new SKPoint(xIn - 1, yIn - 1) };
+            return new SKPointI[] { new SKPointI(xIn - 1, yIn - 1), new SKPointI(xEnd + 1, yIn - 1), new SKPointI(xEnd + 1, yEnd + 1), new SKPointI(xIn - 1, yEnd + 1), new SKPointI(xIn - 1, yIn - 1) };
         }
 
         public Rectangle GetRectangle()
@@ -69,16 +69,16 @@ namespace BarcodeReader.Core.MICR
         public string Char { get { return ch; } set { ch = value; scaned = true; } }
         public bool Scaned { get { return scaned; } }
 
-        public SKPoint Center { get { return new SKPoint((xIn + xEnd) / 2, (yIn + yEnd) / 2); } }
-        public SKPoint LU { get { return new SKPoint(xIn, yIn); } }
-        public SKPoint LD { get { return new SKPoint(xIn, yEnd); } }
-        public SKPoint RU { get { return new SKPoint(xEnd, yIn); } }
-        public SKPoint RD { get { return new SKPoint(xEnd, yEnd); } }
+        public SKPointI Center { get { return new SKPointI((xIn + xEnd) / 2, (yIn + yEnd) / 2); } }
+        public SKPointI LU { get { return new SKPointI(xIn, yIn); } }
+        public SKPointI LD { get { return new SKPointI(xIn, yEnd); } }
+        public SKPointI RU { get { return new SKPointI(xEnd, yIn); } }
+        public SKPointI RD { get { return new SKPointI(xEnd, yEnd); } }
 
         public float Dist(Part p)
         {
-            SKPoint b = p.Center;
-            SKPoint a = this.Center;
+            SKPointI b = p.Center;
+            SKPointI a = this.Center;
             return (float)(Math.Sqrt((a.X - b.X) * (a.X - b.X) + (a.Y - b.Y) * (a.Y - b.Y)));
         }       
     }

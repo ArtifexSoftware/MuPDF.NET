@@ -1,11 +1,10 @@
-﻿using BarcodeReader.Core.Common;
-using BarcodeReader.Core.PDF417;
-using SkiaSharp;
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Drawing;
-using System.Drawing.Drawing2D;
+using SkiaSharp;
+using BarcodeReader.Core.Common;
+using BarcodeReader.Core.PDF417;
 
 namespace BarcodeReader.Core.MicroPDF
 {
@@ -61,28 +60,13 @@ namespace BarcodeReader.Core.MicroPDF
             foreach (BarCodeRegion b in candidates)
             {
                 FoundBarcode foundBarcode = new FoundBarcode();
-                foundBarcode.BarcodeType = SymbologyType.MicroPDF;
-                foundBarcode.Polygon = new SKPoint[5] { b.A, b.B, b.D, b.C, b.A };
+                foundBarcode.BarcodeFormat = SymbologyType.MicroPDF;
+                foundBarcode.Polygon = new SKPointI[5] { b.A, b.B, b.D, b.C, b.A };
                 foundBarcode.Color = Color.Blue;
-                // Build the SKPath from the SKPoint[] polygon
-                var path = new SKPath();
-                path.MoveTo(foundBarcode.Polygon[0]);
-
-                for (int i = 1; i < foundBarcode.Polygon.Length; i++)
-                    path.LineTo(foundBarcode.Polygon[i]);
-
-                path.Close(); // Close the path to form a complete shape
-
-                // Get the bounding rectangle
-                SKRect bounds = path.Bounds;
-
-                // Convert to integer rectangle if needed
-                foundBarcode.Rect = new System.Drawing.Rectangle(
-                    (int)Math.Floor(bounds.Left),
-                    (int)Math.Floor(bounds.Top),
-                    (int)Math.Ceiling(bounds.Width),
-                    (int)Math.Ceiling(bounds.Height)
-                );
+                //byte[] pointTypes = new byte[5] { (byte) PathPointType.Start, (byte) PathPointType.Line, (byte) PathPointType.Line, (byte) PathPointType.Line, (byte) PathPointType.Line };
+				//GraphicsPath path = new GraphicsPath(foundBarcode.Polygon, pointTypes);
+                //foundBarcode.Rect = Rectangle.Round(path.GetBounds());
+                foundBarcode.Rect = Utils.DrawPath(foundBarcode.Polygon);
                 String data = "";
                 if (b.Data != null) foreach (ABarCodeData d in b.Data) data += d.ToString();
                 foundBarcode.Value = data;
@@ -105,7 +89,7 @@ namespace BarcodeReader.Core.MicroPDF
         bool ProcessEdge(Edge e)
         {
             //Calculate main directions
-            MyVectorF vdY = new MyPoint((int)(e.In.X), (int)(e.In.Y)) - new MyPoint((int)(e.End.X), (int)(e.End.Y));
+            MyVectorF vdY = new MyPoint(e.In.X, e.In.Y) - new MyPoint(e.End.X, e.End.Y);
             vdY = vdY.Normalized;
             MyVectorF vdX = new MyVectorF(-vdY.Y, vdY.X);
 

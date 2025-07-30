@@ -1,6 +1,6 @@
 using System;
 using System.Drawing;
-using System.Drawing.Imaging;
+using SkiaSharp;
 using System.Runtime.InteropServices;
 
 namespace BarcodeReader.Core
@@ -102,7 +102,7 @@ namespace BarcodeReader.Core
 	            graphics.TranslateTransform((float)_originalWidth / 2, (float)_originalHeight / 2);
 	            graphics.RotateTransform(-degAngle);
 	            graphics.TranslateTransform(-(float)bitmap.Width / 2, -(float)bitmap.Height / 2);
-	            graphics.DrawImage(bitmap, new SKPoint(0, 0));
+	            graphics.DrawImage(bitmap, new SKPointI(0, 0));
             }
 
             _bitmap = newBitmap;

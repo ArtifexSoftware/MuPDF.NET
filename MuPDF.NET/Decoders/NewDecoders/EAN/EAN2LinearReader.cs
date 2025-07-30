@@ -1,6 +1,6 @@
 using System;
 using System.Drawing;
-using System.Drawing.Drawing2D;
+using SkiaSharp;
 using BarcodeReader.Core.Common;
 
 namespace BarcodeReader.Core.EAN

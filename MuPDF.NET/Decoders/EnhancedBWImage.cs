@@ -1,6 +1,6 @@
-﻿using SkiaSharp;
-using System;
+﻿using System;
 using System.Drawing;
+using SkiaSharp;
 using System.Runtime.InteropServices;
 
 namespace BarcodeReader.Core
@@ -71,47 +71,64 @@ namespace BarcodeReader.Core
 
         public byte[][] Process(SKBitmap bitmap)
         {
-            SKBitmap = bitmap;
             Width = bitmap.Width;
             Height = bitmap.Height;
 
-            using (var tmpBitmap = bitmap.Copy())
+            // Clone input
+            SKBitmap tmpBitmap = bitmap.Copy();
+
+            // Convert SKBitmap to byte[] in RGB format
+            int bytesPerPixel = 3;
+            int nChannels = bytesPerPixel;
+            int stride = Width * bytesPerPixel;
+            byte[] imageBytes = new byte[Height * stride];
+
+            for (int y = 0; y < Height; y++)
             {
-                int bytesPerPixel = 3; // for SKColorType.Rgb888x, otherwise 4 for Bgra8888
-                int stride = tmpBitmap.RowBytes; // bytes per row
-                int size = stride * Height;
+                for (int x = 0; x < Width; x++)
+                {
+                    SKColor color = tmpBitmap.GetPixel(x, y);
+                    int index = y * stride + x * bytesPerPixel;
+                    imageBytes[index] = color.Red;
+                    imageBytes[index + 1] = color.Green;
+                    imageBytes[index + 2] = color.Blue;
+                }
+            }
 
-                byte[] imageBytes = new byte[size];
+            // Apply image processing steps
+            imageBytes = Sharpen(imageBytes, Height, Width, nChannels, bytesPerPixel, stride);
 
-                // Copy pixel data from SKBitmap into managed array
-                IntPtr pixelsPtr = tmpBitmap.GetPixels();
-                Marshal.Copy(pixelsPtr, imageBytes, 0, size);
+            for (int f = 0; f < nBilateralFilter; f++)
+                imageBytes = EdgePreservedSmoothing(imageBytes, Height, Width, nChannels, bytesPerPixel, stride);
 
-                // Process imageBytes buffer with your existing functions
-                imageBytes = Sharpen(imageBytes, Height, Width, 3, bytesPerPixel, stride);
+            int thresholdValue = OtsuThreshold.GetOtsuThreshold(imageBytes, Height, Width, stride);
+            imageBytes = threshold(imageBytes, Height, Width, nChannels, bytesPerPixel, stride, thresholdValue);
 
-                for (int f = 0; f < nBilateralFilter; f++)
-                    imageBytes = EdgePreservedSmoothing(imageBytes, Height, Width, 3, bytesPerPixel, stride);
+            // Write back to SKBitmap
+            for (int y = 0; y < Height; y++)
+            {
+                for (int x = 0; x < Width; x++)
+                {
+                    int index = y * stride + x * bytesPerPixel;
+                    byte r = imageBytes[index];
+                    byte g = imageBytes[index + 1];
+                    byte b = imageBytes[index + 2];
 
-                int thr = OtsuThreshold.GetOtsuThreshold(imageBytes, Height, Width, stride);
-                imageBytes = threshold(imageBytes, Height, Width, 3, bytesPerPixel, stride, thr);
-
-                // Copy processed bytes back into the bitmap
-                Marshal.Copy(imageBytes, 0, pixelsPtr, size);
+                    tmpBitmap.SetPixel(x, y, new SKColor(r, g, b));
+                }
+            }
 
 #if DEBUG_IMAGE
-        using (var image = SKImage.FromBitmap(tmpBitmap))
-        using (var data = image.Encode(SKEncodedImageFormat.Png, 100))
-        {
-            File.WriteAllBytes("EnhancedBWImage.png", data.ToArray());
-        }
+			using var image = SKImage.FromBitmap(tmpBitmap);
+			using var data = image.Encode(SKEncodedImageFormat.Png, 100);
+			using var stream = File.OpenWrite("EnhancedBWImage.png");
+			data.SaveTo(stream);
 #endif
 
-                return ConstructSamples(imageBytes, stride);
-            }
+            return ConstructSamples(imageBytes, stride);
         }
 
-        private byte[][] ConstructSamples(byte[] bytes, int stride)
+		private byte[][] ConstructSamples(byte[] bytes, int stride)
 		{
 			byte[][] samples = new byte[Height][];
 

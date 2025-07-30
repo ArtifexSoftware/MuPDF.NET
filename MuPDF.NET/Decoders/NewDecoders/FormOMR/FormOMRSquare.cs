@@ -87,10 +87,10 @@ namespace BarcodeReader.Core.FormOMR
         {
             int offset=p.Height/10;
             int n = 0;
-            for (int y = (int)p.LU.Y + offset; y < p.LD.Y - offset; y++)
+            for (int y = p.LU.Y + offset; y < p.LD.Y - offset; y++)
             {
                 int cc = 0;
-                for (int x = (int)p.LU.X + offset; x < p.RU.X - offset; x++)
+                for (int x = p.LU.X + offset; x < p.RU.X - offset; x++)
                     if (scan.isBlack(x, y)) cc++;
                 if (Calc.Around(cc, p.Width-2*offset, p.Width/4)) n++;
             }
@@ -101,10 +101,10 @@ namespace BarcodeReader.Core.FormOMR
         {
             int offset = p.Width / 10;
             int n = 0;
-            for (int x = (int)p.LU.X + offset; x < p.RU.X - offset; x++)
+            for (int x = p.LU.X + offset; x < p.RU.X - offset; x++)
             {
                 int cc = 0;
-                for (int y = (int)p.LU.Y + offset; y < p.LD.Y - offset; y++)
+                for (int y = p.LU.Y + offset; y < p.LD.Y - offset; y++)
                     if (scan.isBlack(x, y)) cc++;
                 if (Calc.Around(cc, p.Height-2*offset, p.Height/4)) n++;
             }

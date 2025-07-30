@@ -1640,55 +1640,12 @@ namespace MuPDF.NET
             return tables;
         }
 
-        // Manually turn on all formats, even those not yet considered production quality.
-        private static IDictionary<DecodeHintType, object> buildHints(Config config)
-        {
-            var hints = new Dictionary<DecodeHintType, Object>();
-            var vector = new List<ZXing.BarcodeFormat>
-            {
-                ZXing.BarcodeFormat.AZTEC,
-                ZXing.BarcodeFormat.CODABAR,
-                ZXing.BarcodeFormat.CODE_39,
-                ZXing.BarcodeFormat.CODE_93,
-                ZXing.BarcodeFormat.CODE_128,
-                ZXing.BarcodeFormat.DATA_MATRIX,
-                ZXing.BarcodeFormat.EAN_8,
-                ZXing.BarcodeFormat.EAN_13,
-                ZXing.BarcodeFormat.ITF,
-                ZXing.BarcodeFormat.MAXICODE,
-                ZXing.BarcodeFormat.PDF_417,
-                ZXing.BarcodeFormat.QR_CODE,
-                ZXing.BarcodeFormat.RSS_14,
-                ZXing.BarcodeFormat.RSS_EXPANDED,
-                ZXing.BarcodeFormat.UPC_A,
-                ZXing.BarcodeFormat.UPC_E,
-                ZXing.BarcodeFormat.UPC_EAN_EXTENSION,
-                ZXing.BarcodeFormat.MSI,
-                ZXing.BarcodeFormat.PLESSEY,
-                ZXing.BarcodeFormat.IMB,
-                //ZXing.BarcodeFormat.PHARMA_CODE
-            };
-            hints[DecodeHintType.POSSIBLE_FORMATS] = vector;
-            if (config.TryHarder)
-            {
-                hints[DecodeHintType.TRY_HARDER] = true;
-            }
-            if (config.TryInverted)
-            {
-                hints[DecodeHintType.ALSO_INVERTED] = true;
-            }
-            if (config.PureBarcode)
-            {
-                hints[DecodeHintType.PURE_BARCODE] = true;
-            }
-            return hints;
-        }
-
         /// <summary>
         /// Read barcodes from page.
         /// </summary>
         /// <param name="clip"></param>
         /// <param name="decodeEmbeddedOnly">Decode barcodes only from embedded images in the PDF resources.</param>
+        /// <param name="type">Barcode type to decode.</param>
         /// <param name="tryHarder">Spend more time to try to find a barcode; optimize for accuracy, not speed.</param>
         /// <param name="tryInverted">Try to decode as inverted image.</param>
         /// <param name="pureBarcode">Image is a pure monochrome image of a barcode.</param>
@@ -1699,6 +1656,7 @@ namespace MuPDF.NET
             Page page,
             Rect clip = null,
             bool decodeEmbeddedOnly = false,
+            BarcodeFormat type = BarcodeFormat.ALL,
             bool tryHarder = true,
             bool tryInverted = false,
             bool pureBarcode = false,
@@ -1751,8 +1709,6 @@ namespace MuPDF.NET
                 Pixmap pxmp = page.GetPixmap(dpi: 200, clip: newRect);
                 byte[] pmBuf = pxmp.ToBytes();
 
-                pxmp.Save(@"e:\1.png"); // for debugging purposes, save the pixmap to a file
-
                 // Calculate Rect ratio between PDF page and image.
                 float imageWidth = pxmp.IRect.Width;
                 float imageHeight = pxmp.IRect.Height + 0.01f;
@@ -1763,21 +1719,21 @@ namespace MuPDF.NET
 
                 pxmp.Dispose(); // free pixmap memory
 
-                // set config options
-                config.TryHarder = tryHarder;
-                config.TryInverted = tryInverted;
-                config.PureBarcode = pureBarcode;
-                config.Multi = multi;
-                config.AutoRotate = autoRotate;
-                config.Hints = buildHints(config);
-
-                var decodeObject = new Decode();
-                Result[] results = decodeObject.decodeMulti(pmBuf, config);
-                if (results == null || results.Length == 0)
+                SKBitmap bitmap;
+                try
                 {
-                    continue; // no barcodes found
+                    bitmap = SKBitmap.Decode(pmBuf);
                 }
-                foreach (var result in results)
+                catch (Exception e)
+                {
+                    throw new FileNotFoundException("Resource invalid: " + "(" + e.Message + ")");
+                }
+
+                List<Barcode> barcodes2 = ReadBarcodes2(bitmap, type);
+
+                bitmap.Dispose(); // free bitmap memory
+
+                foreach (var result in barcodes2)
                 {
                     BarcodePoint[] points = new BarcodePoint[result.ResultPoints.Length];
                     for (int i = 0; i < result.ResultPoints.Length; i++)
@@ -1786,7 +1742,7 @@ namespace MuPDF.NET
                         points[i] = new BarcodePoint(startX + result.ResultPoints[i].X / widthRatio, startY + result.ResultPoints[i].Y / heightRatio);
                     }
 
-                    Barcode barcode = new Barcode(
+                    Barcode newBarcode = new Barcode(
                         result.Text,
                         result.RawBytes,
                         result.NumBits,
@@ -1794,21 +1750,37 @@ namespace MuPDF.NET
                         (BarcodeFormat)result.BarcodeFormat,
                         result.Timestamp
                     );
-                    foreach (var metadata in result.ResultMetadata)
-                    {
-                        barcode.putMetadata((BarcodeMetadataType)metadata.Key, metadata.Value);
-                    }
-                    barcodes.Add(barcode);
+                    barcodes.Add(newBarcode);
                 }
             }
 
             return barcodes;
         }
 
+        public static bool Intersect(ref SKRectI rect1, SKRectI rect2)
+        {
+            int left = Math.Max(rect1.Left, rect2.Left);
+            int top = Math.Max(rect1.Top, rect2.Top);
+            int right = Math.Min(rect1.Right, rect2.Right);
+            int bottom = Math.Min(rect1.Bottom, rect2.Bottom);
+
+            if (left < right && top < bottom)
+            {
+                rect1 = new SKRectI(left, top, right, bottom);
+                return true;
+            }
+            else
+            {
+                rect1 = new SKRectI(); // Empty rectangle
+                return false;
+            }
+        }
+
         /// <summary>
         /// Read barcodes from image file.
         /// </summary>
         /// <param name="clip"></param>
+        /// <param name="type">Barcode format to decode.</param>
         /// <param name="tryHarder">Spend more time to try to find a barcode; optimize for accuracy, not speed.</param>
         /// <param name="tryInverted">Try to decode as inverted image.</param>
         /// <param name="pureBarcode">Image is a pure monochrome image of a barcode.</param>
@@ -1816,8 +1788,9 @@ namespace MuPDF.NET
         /// <param name="autoRotate">Indicate whether the image should be automatically rotated.
         ///                          Rotation is supported for 90, 180 and 270 degrees.</param>
         public static List<Barcode> ReadBarcodes(
-            string imageFile,
+            string imageFile, 
             Rect clip = null,
+            BarcodeFormat type = BarcodeFormat.ALL,
             bool tryHarder = true,
             bool tryInverted = false,
             bool pureBarcode = false,
@@ -1825,70 +1798,183 @@ namespace MuPDF.NET
             bool autoRotate = true
             )
         {
-            Config config = new Config();
+            SKBitmap bitmap = SKBitmap.Decode(imageFile);
 
-            // set crop
             if (clip != null)
             {
-                int[] crop = new int[4];
-                // copy crop from clip
-                crop[0] = (int)clip.X0;
-                crop[1] = (int)clip.Y0;
-                crop[2] = (int)clip.Width;
-                crop[3] = (int)clip.Height;
+                // Define the region you want to crop (x, y, width, height)
+                SKRectI cropRect = new SKRectI((int)clip.X0, (int)clip.Y0, (int)clip.X1, (int)clip.Y1);
 
-                config.Crop = crop;
-            }
+                // Ensure cropRect is within bounds
+                bool didIntersect = Intersect(ref cropRect, new SKRectI(0, 0, bitmap.Width, bitmap.Height));
 
-            config.TryHarder = tryHarder;
-            config.TryInverted = tryInverted;
-            config.PureBarcode = pureBarcode;
-            config.Multi = multi;
-            config.AutoRotate = autoRotate;
+                // Create a new bitmap to hold the clipped region
+                var clippedBitmap = new SKBitmap(cropRect.Width, cropRect.Height);
 
-            config.Hints = buildHints(config);
-
-            List<Barcode> barcodes = new List<Barcode>();
-
-            var decodeObject = new Decode();
-            Result[] results = decodeObject.decodeMulti(imageFile, config);
-            if (results == null || results.Length == 0)
-            {
-                return barcodes; // no barcodes found
-            }
-
-            foreach (var result in results)
-            {
-                BarcodePoint[] points = new BarcodePoint[result.ResultPoints.Length];
-                for (int i = 0; i < result.ResultPoints.Length; i++)
+                // Copy the subset into the new bitmap
+                if (bitmap.ExtractSubset(clippedBitmap, cropRect))
                 {
-                    points[i] = new BarcodePoint(result.ResultPoints[i].X, result.ResultPoints[i].Y);
+                    List<Barcode> clippedResult = ReadBarcodes2(clippedBitmap, type);
+                    clippedBitmap.Dispose(); // Dispose of the clipped bitmap
+                    bitmap.Dispose(); // Dispose of the original bitmap
+                    return clippedResult;
                 }
-
-                Barcode barcode = new Barcode(
-                    result.Text,
-                    result.RawBytes,
-                    result.NumBits,
-                    points,
-                    (BarcodeFormat)result.BarcodeFormat,
-                    result.Timestamp
-                );
-                foreach (var metadata in result.ResultMetadata)
-                {
-                    barcode.putMetadata((BarcodeMetadataType)metadata.Key, metadata.Value);
-                }
-                barcodes.Add(barcode);
             }
+
+            List<Barcode> barcodes = ReadBarcodes2(bitmap, type);
+
+            bitmap.Dispose();
 
             return barcodes;
         }
 
+        public static List<Barcode> ReadBarcodes2(SKBitmap bitmap, BarcodeFormat type = BarcodeFormat.ALL)
+        {
+            List<string> barcodeTypeList = new List<string>();
+            string barcodeType = null;
+
+            switch (type)
+            {
+                case BarcodeFormat.AZTEC: barcodeType = "AZTEC"; break;
+                case BarcodeFormat.BOXES: barcodeType = "BOXES"; break;
+                case BarcodeFormat.CODABAR: barcodeType = "CODABAR"; break;
+                case BarcodeFormat.CODABLOCKF: barcodeType = "CODABLOCKF"; break;
+                case BarcodeFormat.CODE128: barcodeType = "CODE128"; break;
+                case BarcodeFormat.CODE16K: barcodeType = "CODE16K"; break;
+                case BarcodeFormat.CODE39: barcodeType = "CODE39"; break;
+                case BarcodeFormat.CODE39_LINEARREADER: barcodeType = "CODE39_LINEARREADER"; break;
+                case BarcodeFormat.CODE39_EX: barcodeType = "CODE39_EX"; break;
+                case BarcodeFormat.CODE39_NOISE1: barcodeType = "CODE39_NOISE1"; break;
+                case BarcodeFormat.CODE93: barcodeType = "CODE93"; break;
+                case BarcodeFormat.DM: barcodeType = "DM"; break;
+                case BarcodeFormat.DM_DPM: barcodeType = "DM_DPM"; break;
+                case BarcodeFormat.EAN13: barcodeType = "EAN13"; break;
+                case BarcodeFormat.EAN2: barcodeType = "EAN2"; break;
+                case BarcodeFormat.EAN5: barcodeType = "EAN5"; break;
+                case BarcodeFormat.EAN8: barcodeType = "EAN8"; break;
+                case BarcodeFormat.EAN_UPC_OLD: barcodeType = "EAN_UPC_OLD"; break;
+                case BarcodeFormat.GS1DATABAREXP: barcodeType = "GS1DATABAREXP"; break;
+                case BarcodeFormat.GS1DATABAREXPSTACKED: barcodeType = "GS1DATABAREXPSTACKED"; break;
+                case BarcodeFormat.GS1DATABAROMNI: barcodeType = "GS1DATABAROMNI"; break;
+                case BarcodeFormat.GS1DATABARSTACKED: barcodeType = "GS1DATABARSTACKED"; break;
+                case BarcodeFormat.GS1DATABARSTACKEDOMNI: barcodeType = "GS1DATABARSTACKEDOMNI"; break;
+                case BarcodeFormat.GS1DATABARLIMITED: barcodeType = "GS1DATABARLIMITED"; break;
+                case BarcodeFormat.HORIZONTALLINES: barcodeType = "HORIZONTALLINES"; break;
+                case BarcodeFormat.I2OF5: barcodeType = "I2OF5"; break;
+                case BarcodeFormat.IM: barcodeType = "IM"; break;
+                case BarcodeFormat.KIX: barcodeType = "KIX"; break;
+                case BarcodeFormat.LINETABLES: barcodeType = "LINETABLES"; break;
+                case BarcodeFormat.MAXICODE: barcodeType = "MAXICODE"; break;
+                case BarcodeFormat.MICR: barcodeType = "MICR"; break;
+                case BarcodeFormat.MICROPDF: barcodeType = "MICROPDF"; break;
+                case BarcodeFormat.MSI: barcodeType = "MSI"; break;
+                case BarcodeFormat.OMRCIRCLE: barcodeType = "OMRCIRCLE"; break;
+                case BarcodeFormat.OMRCIRCLE_EXT: barcodeType = "OMRCIRCLE_EXT"; break;
+                case BarcodeFormat.OMROVAL: barcodeType = "OMROVAL"; break;
+                case BarcodeFormat.OMROVAL_EXT: barcodeType = "OMROVAL_EXT"; break;
+                case BarcodeFormat.OMRSQUARE: barcodeType = "OMRSQUARE"; break;
+                case BarcodeFormat.OMRSQUARE_EXT: barcodeType = "OMRSQUARE_EXT"; break;
+                case BarcodeFormat.OMRSQUARELPATTERN: barcodeType = "OMRSQUARELPATTERN"; break;
+                case BarcodeFormat.OMRRECTANGLE: barcodeType = "OMRRECTANGLE"; break;
+                case BarcodeFormat.OMRRECTANGLE_EXT: barcodeType = "OMRRECTANGLE_EXT"; break;
+                case BarcodeFormat.OMRRECTANGLELPATTERNVERT: barcodeType = "OMRRECTANGLELPATTERNVERT"; break;
+                case BarcodeFormat.OMRRECTANGLELPATTERNHORIZ: barcodeType = "OMRRECTANGLELPATTERNHORIZ"; break;
+                case BarcodeFormat.PATCH: barcodeType = "PATCH"; break;
+                case BarcodeFormat.PHARMA: barcodeType = "PHARMA"; break;
+                case BarcodeFormat.PDF417: barcodeType = "PDF417"; break;
+                case BarcodeFormat.POSTCODE: barcodeType = "POSTCODE"; break;
+                case BarcodeFormat.POSTNET: barcodeType = "POSTNET"; break;
+                case BarcodeFormat.QR: barcodeType = "QR"; break;
+                case BarcodeFormat.RAWOMR: barcodeType = "RAWOMR"; break;
+                case BarcodeFormat.RM: barcodeType = "RM"; break;
+                case BarcodeFormat.VERTICALLINES: barcodeType = "VERTICALLINES"; break;
+                case BarcodeFormat.UPC_A: barcodeType = "UPC_A"; break;
+                case BarcodeFormat.UPC_E: barcodeType = "UPC_E"; break;
+                case BarcodeFormat.TRIOPTIC: barcodeType = "TRIOPTIC"; break;
+                case BarcodeFormat.ALL: barcodeType = ""; break;
+                default:
+                    throw new NotSupportedException($"Barcode format {type} is not supported.");
+            }
+
+            if (string.IsNullOrEmpty(barcodeType))
+            {
+                // Add all supported formats when ALL is selected
+                foreach (BarcodeFormat val in Enum.GetValues(typeof(BarcodeFormat)))
+                {
+                    if (val != BarcodeFormat.ALL &&
+                        val != BarcodeFormat.BOXES &&
+                        val != BarcodeFormat.RAWOMR &&
+                        val != BarcodeFormat.HORIZONTALLINES &&
+                        val != BarcodeFormat.VERTICALLINES)
+                        barcodeTypeList.Add(val.ToString());
+                }
+            }
+            else
+            {
+                barcodeTypeList.Add(barcodeType);
+            }
+
+            List<Barcode> barcodes = new List<Barcode>();
+
+            foreach (string barcodetype in barcodeTypeList)
+            {
+                BarCodeConverterClass reader = new BarCodeConverterClass(barcodetype, null);
+
+                try
+                {
+                    string[] foundBarcodes = null;
+                    Rectangle[] foundBarcodesRectangles = null;
+
+                    // string with all barcode results for this image
+                    // 2nd and further barcodes are added separated by the new line
+                    StringBuilder decodingResults = new StringBuilder();
+
+                    bool decoderSuccess = reader.Decode(bitmap);
+
+                    foundBarcodes = reader.GetFoundBarcodesAsStrings();
+                    foundBarcodesRectangles = reader.GetFoundBarcodesAsRectangles();
+
+                    if (decoderSuccess && foundBarcodes != null && foundBarcodes.Length > 0)
+                    {
+                        for (int i = 0; i < foundBarcodes.Length; i++)
+                        {
+                            string text = foundBarcodes[i];
+                            byte[] rawBytes = Encoding.UTF8.GetBytes(text);
+                            Rectangle rect = foundBarcodesRectangles[i];
+                            BarcodePoint[] resultPoints = new BarcodePoint[]
+                                {
+                                new BarcodePoint(rect.X, rect.Y),
+                                new BarcodePoint(rect.X + rect.Width, rect.Y),
+                                new BarcodePoint(rect.X + rect.Width, rect.Y + rect.Height),
+                                new BarcodePoint(rect.X, rect.Y + rect.Height)
+                                };
+
+                            BarcodeFormat resultFormat = (BarcodeFormat)Enum.Parse(typeof(BarcodeFormat), barcodetype);
+                            Barcode barcode = new Barcode(text, rawBytes, resultPoints, resultFormat);
+
+                            barcodes.Add(barcode);
+                        }
+                    }
+                    else
+                    {
+                        decodingResults.AppendLine("No barcodes found or decoding failed.");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    //Console.WriteLine("Error decoding barcode: " + ex.Message);
+                }
+            }
+
+            return barcodes;
+        }
+        
         /// <summary>
         /// Write barcode to pdf page.
         /// </summary>
         /// <param name="clip">Rect area on page to write</param>
         /// <param name="text">Contents to write</param>
-        /// <param name="barcodeFormat">Format to encode; Supported formats: QR_CODE, EAN_8, EAN_13, UPC_A, CODE_39, CODE_128, ITF, PDF_417, CODABAR</param>
+        /// <param name="type">Type to encode; Supported types: QR_CODE, EAN_8, EAN_13, UPC_A, CODE_39, CODE_128, ITF, PDF_417, CODABAR</param>
         /// <param name="characterSet">Use a specific character set for binary encoding (if supported by the selected barcode format)</param>
         /// <param name="disableEci">Don't generate ECI segment if non-default character set is used</param>
         /// <param name="forceFitToRect">Resize output barcode image width/height into clip region</param>
@@ -1898,7 +1984,7 @@ namespace MuPDF.NET
             Page page,
             Rect clip,
             string text,
-            BarcodeFormat barcodeFormat,
+            BarcodeFormat type,
             string characterSet = null,
             bool disableEci = false,
             bool forceFitToRect = false,
@@ -1925,7 +2011,7 @@ namespace MuPDF.NET
 
             // create barcode image
             SKBitmap encodedImage = encodeObject.encode(text,
-                barcodeFormat,
+                type,
                 imageFormat,
                 width,
                 height,
@@ -1977,7 +2063,7 @@ namespace MuPDF.NET
         public static void WriteBarcode(
             string imageFile,
             string text,
-            BarcodeFormat barcodeFormat,
+            BarcodeFormat type,
             int width = 300,
             int height = 300,
             string characterSet = null,
@@ -2020,7 +2106,7 @@ namespace MuPDF.NET
 
             // create barcode image
             SKBitmap encodedImage = encodeObject.encode(text,
-                barcodeFormat,
+                type,
                 imageFormat,
                 width,
                 height,

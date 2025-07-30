@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.Drawing.Drawing2D;
+using SkiaSharp;
 using System.IO;
 using BarcodeReader.Core.Code39;
 using BarcodeReader.Core.Code93;

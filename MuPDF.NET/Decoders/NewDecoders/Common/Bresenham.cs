@@ -47,18 +47,18 @@ namespace BarcodeReader.Core.Common
             int incY = b.Y - a.Y;
             if (incX >= 0)
                 if (incY > 0)
-                    if (incX >= incY) { k = new SKPoint(1, 1); swapXY = false; steps = incX; }
-                    else { k = new SKPoint(1, 1); swapXY = true; steps = incY; }
+                    if (incX >= incY) { k = new SKPointI(1, 1); swapXY = false; steps = incX; }
+                    else { k = new SKPointI(1, 1); swapXY = true; steps = incY; }
                 else
-                    if (incX >= -incY) { k = new SKPoint(1, -1); swapXY = false; steps = incX; }
-                    else { k = new SKPoint(1, -1); swapXY = true; steps = -incY; }
+                    if (incX >= -incY) { k = new SKPointI(1, -1); swapXY = false; steps = incX; }
+                    else { k = new SKPointI(1, -1); swapXY = true; steps = -incY; }
             else
                 if (incY > 0)
-                    if (-incX >= incY) { k = new SKPoint(-1, 1); swapXY = false; steps = -incX; }
-                    else { k = new SKPoint(-1, 1); swapXY = true; steps = incY; }
+                    if (-incX >= incY) { k = new SKPointI(-1, 1); swapXY = false; steps = -incX; }
+                    else { k = new SKPointI(-1, 1); swapXY = true; steps = incY; }
                 else
-                    if (-incX >= -incY) { k = new SKPoint(-1, -1); swapXY = false; steps = -incX; }
-                    else { k = new SKPoint(-1, -1); swapXY = true; steps = -incY; }
+                    if (-incX >= -incY) { k = new SKPointI(-1, -1); swapXY = false; steps = -incX; }
+                    else { k = new SKPointI(-1, -1); swapXY = true; steps = -incY; }
             p = a;
             error = 0.0F;
             incError = (swapXY ? (float)incX * k.X / incY * k.Y : (float)incY * k.Y / incX * k.X);
@@ -69,18 +69,18 @@ namespace BarcodeReader.Core.Common
             this.vd = vd;
             if (vd.X >= 0F)
                 if (vd.Y > 0F)
-                    if (vd.X >= vd.Y) { k = new SKPoint(1, 1); swapXY = false; }
-                    else { k = new SKPoint(1, 1); swapXY = true; }
+                    if (vd.X >= vd.Y) { k = new SKPointI(1, 1); swapXY = false; }
+                    else { k = new SKPointI(1, 1); swapXY = true; }
                 else
-                    if (vd.X >= -vd.Y) { k = new SKPoint(1, -1); swapXY = false; }
-                    else { k = new SKPoint(1, -1); swapXY = true;}
+                    if (vd.X >= -vd.Y) { k = new SKPointI(1, -1); swapXY = false; }
+                    else { k = new SKPointI(1, -1); swapXY = true;}
             else
                 if (vd.Y > 0F)
-                    if (-vd.X >= vd.Y) { k = new SKPoint(-1, 1); swapXY = false; }
-                    else { k = new SKPoint(-1, 1); swapXY = true; }
+                    if (-vd.X >= vd.Y) { k = new SKPointI(-1, 1); swapXY = false; }
+                    else { k = new SKPointI(-1, 1); swapXY = true; }
                 else
-                    if (-vd.X >= -vd.Y) { k = new SKPoint(-1, -1); swapXY = false; }
-                    else { k = new SKPoint(-1, -1); swapXY = true; }
+                    if (-vd.X >= -vd.Y) { k = new SKPointI(-1, -1); swapXY = false; }
+                    else { k = new SKPointI(-1, -1); swapXY = true; }
             p = p0.Truncate();
             if (!swapXY) {
                 float alfa=((float)p.X - p0.X + 0.5F) / vd.X;

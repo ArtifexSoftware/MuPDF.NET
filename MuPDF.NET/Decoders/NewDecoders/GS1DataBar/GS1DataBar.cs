@@ -122,7 +122,7 @@ namespace BarcodeReader.Core.GS1DataBar
                             {
                                 if (IsAllowedConfidenceForGS1Databar(result))
                                 {
-									result.BarcodeType = GetBarCodeType();
+									result.BarcodeFormat = GetBarCodeType();
                                     return new FoundBarcode[] { result };
                                 }
                             }

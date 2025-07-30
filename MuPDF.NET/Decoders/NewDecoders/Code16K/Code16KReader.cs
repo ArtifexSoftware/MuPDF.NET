@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.Drawing.Drawing2D;
-using BarcodeReader.Core.Common;
 using SkiaSharp;
+using BarcodeReader.Core.Common;
 
 namespace BarcodeReader.Core.Code16K
 {
@@ -119,28 +118,13 @@ namespace BarcodeReader.Core.Code16K
             foreach (BarCodeRegion r in candidates)
             {
                 FoundBarcode f = new FoundBarcode();
-				f.BarcodeType = SymbologyType.Code16K;
-                f.Polygon = new SKPoint[] { r.A, r.B, r.C, r.D, r.A };
+				f.BarcodeFormat = SymbologyType.Code16K;
+                f.Polygon = new SKPointI[] { r.A, r.B, r.C, r.D, r.A };
                 f.Color = Color.Blue;
-				// Create an SKPath from the polygon
-                var path = new SKPath();
-                path.MoveTo(f.Polygon[0]);
-
-                for (int i = 1; i < f.Polygon.Length; i++)
-                    path.LineTo(f.Polygon[i]);
-
-                path.Close();
-
-                // Calculate bounds
-                SKRect bounds = path.Bounds;
-
-                // Assign rectangle (convert SKRect to System.Drawing.Rectangle if needed)
-                f.Rect = new System.Drawing.Rectangle(
-                    (int)Math.Floor(bounds.Left),
-                    (int)Math.Floor(bounds.Top),
-                    (int)Math.Ceiling(bounds.Width),
-                    (int)Math.Ceiling(bounds.Height)
-                );
+				//byte[] pointTypes = new byte[5] { (byte) PathPointType.Start, (byte) PathPointType.Line, (byte) PathPointType.Line, (byte) PathPointType.Line, (byte) PathPointType.Line };
+				//GraphicsPath path = new GraphicsPath(f.Polygon, pointTypes);
+				//f.Rect = Rectangle.Round(path.GetBounds());
+                f.Rect = Utils.DrawPath(f.Polygon);
                 f.Value = (r.Data != null ? r.Data[0].ToString() : "?");
 				f.Confidence = r.Confidence;
                 results[nn++] = f;

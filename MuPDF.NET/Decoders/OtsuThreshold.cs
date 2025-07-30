@@ -1,7 +1,6 @@
 ﻿using SkiaSharp;
 using System;
 using System.Drawing;
-using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 
 namespace BarcodeReader.Core
@@ -58,7 +57,7 @@ namespace BarcodeReader.Core
 				}
 			}
 		}
-
+		/*
 		public int GetOtsuThreshold(SKBitmap bmp)
 		{
 			byte t = 0;
@@ -66,40 +65,76 @@ namespace BarcodeReader.Core
 			int[] hist = new int[256];
 			vet.Initialize();
 
-            // Prepare pixel data
-            int width = bmp.Width;
-            int height = bmp.Height;
-            int stride = bmp.RowBytes; // bytes per row in SKBitmap
-            int size = stride * height;
-            byte[] data = new byte[size];
+			float p1, p2, p12;
+			int k;
 
-            // Copy SKBitmap pixel data to byte array
-            IntPtr ptr = bmp.GetPixels();
-            Marshal.Copy(ptr, data, 0, size);
+			BitmapData bitmapData = bmp.LockBits(new Rectangle(0, 0, bmp.Width, bmp.Height), ImageLockMode.ReadOnly, PixelFormat.Format24bppRgb);
+			int size = bitmapData.Stride * bitmapData.Height;
+			byte[] data = new byte[size];
+			Marshal.Copy(bitmapData.Scan0, data, 0, size);
 
-            // Call your histogram logic
-            GetHistogram(data, width, height, stride, hist);
+			GetHistogram(data, bitmapData.Width, bitmapData.Height, bitmapData.Stride, hist);
 
-            // Otsu thresholding logic (maximizing between-class variance)
-            for (int k = 1; k < 255; k++)
-            {
-                float p1 = Px(0, k, hist);
-                float p2 = Px(k + 1, 255, hist);
-                float p12 = p1 * p2;
-                if (p12 == 0)
-                    p12 = 1;
+			// loop through all possible t values and maximize between class variance
+			for (k = 1; k != 255; k++)
+			{
+				p1 = Px(0, k, hist);
+				p2 = Px(k + 1, 255, hist);
+				p12 = p1 * p2;
+				if (p12 == 0)
+					p12 = 1;
+				float diff = (Mx(0, k, hist) * p2) - (Mx(k + 1, 255, hist) * p1);
+				vet[k] = (float) diff * diff / p12;
+			}
 
-                float diff = (Mx(0, k, hist) * p2) - (Mx(k + 1, 255, hist) * p1);
-                vet[k] = (float)(diff * diff / p12);
-            }
+			bmp.UnlockBits(bitmapData);
 
-            t = (byte) FindMax(vet, 256);
+			t = (byte) FindMax(vet, 256);
 
 			return t;
 		}
+		*/
+        public int GetOtsuThreshold(SKBitmap bmp)
+        {
+            int width = bmp.Width;
+            int height = bmp.Height;
+            int[] hist = new int[256];
+            float[] vet = new float[256];
 
-		// Threshold the image to binary using given threshold value
-		public static int GetOtsuThreshold(byte[] data, int height, int width, int stride)
+            // Step 1: Calculate grayscale histogram
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    SKColor color = bmp.GetPixel(x, y);
+
+                    // Convert to grayscale using luminance formula (ITU-R BT.601)
+                    int gray = (int)(color.Red * 0.299 + color.Green * 0.587 + color.Blue * 0.114);
+                    gray = Common.Utils.Clamp(gray, 0, 255);
+                    hist[gray]++;
+                }
+            }
+
+            // Step 2: Otsu's method
+            byte t = 0;
+            float p1, p2, p12;
+            for (int k = 1; k < 255; k++)
+            {
+                p1 = Px(0, k, hist);
+                p2 = Px(k + 1, 255, hist);
+                p12 = p1 * p2;
+                if (p12 == 0)
+                    p12 = 1;
+                float diff = (Mx(0, k, hist) * p2) - (Mx(k + 1, 255, hist) * p1);
+                vet[k] = diff * diff / p12;
+            }
+
+            t = (byte)FindMax(vet, 256);
+            return t;
+        }
+
+        // Threshold the image to binary using given threshold value
+        public static int GetOtsuThreshold(byte[] data, int height, int width, int stride)
 		{
 			byte t = 0;
 			float[] vet = new float[256];
@@ -128,84 +163,129 @@ namespace BarcodeReader.Core
 			return t;
 
 		}
-
+        /*
 		public void Convert2GrayScaleFast(SKBitmap bmp)
         {
 			int width = bmp.Width;
 			int height = bmp.Height;
 
-            int bytesPerPixel = 4; // Use 3 for Rgb888x if you used that format
-            int stride = bmp.RowBytes;
-            int size = stride * height;
+			BitmapData bitmapData = bmp.LockBits(new Rectangle(0, 0, width, height), ImageLockMode.ReadWrite, PixelFormat.Format24bppRgb);
+			int size = bitmapData.Stride * bitmapData.Height;
+			byte[] data = new byte[size];
+	        
+			Marshal.Copy(bitmapData.Scan0, data, 0, size);
 
-            byte[] data = new byte[size];
-            IntPtr ptr = bmp.GetPixels();
-            Marshal.Copy(ptr, data, 0, size);
+			for (int y = 0; y < height; y++)
+	        {
+		        for (int x = 0; x < width; x++)
+		        {
+					int i = bitmapData.Stride * y + x * 3;
+					data[i] = (byte) (.299 * data[i + 2] + .587 * data[i + 1] + .114 * data[i]);
+			        data[i + 1] = data[i];
+			        data[i + 2] = data[i];
+		        }
+	        }
 
-            // Convert to grayscale
-            for (int y = 0; y < height; y++)
-            {
-                for (int x = 0; x < width; x++)
-                {
-                    int i = y * stride + x * bytesPerPixel;
-
-                    byte b = data[i];
-                    byte g = data[i + 1];
-                    byte r = data[i + 2];
-
-                    byte gray = (byte)(0.299 * r + 0.587 * g + 0.114 * b);
-
-                    data[i] = gray;       // B
-                    data[i + 1] = gray;   // G
-                    data[i + 2] = gray;   // R
-
-                    // Optional: if using BGRA8888
-                    // data[i + 3] = 255; // Leave alpha alone or set to 255
-                }
-            }
-
-            // Copy back to SKBitmap
-            Marshal.Copy(data, 0, ptr, size);
+			Marshal.Copy(data, 0, bitmapData.Scan0, size);
+			bmp.UnlockBits(bitmapData);
         }
-
-		public void Threshold(SKBitmap bmp, int thresh)
-		{
-			int width = bmp.Width;
-			int height = bmp.Height;
-
-            // Access pixel data as IntPtr (unsafe) or copy to managed buffer
-            // Using unsafe code for better performance:
-            unsafe
+		*/
+        public void Convert2GrayScaleFast(SKBitmap bmp)
+        {
+            using (var pixmap = bmp.PeekPixels())
             {
-                IntPtr pixelsPtr = bmp.GetPixels();
-                int bytesPerPixel = 4; // for BGRA8888 format
+                int width = bmp.Width;
+                int height = bmp.Height;
+                int rowBytes = pixmap.RowBytes;
 
-                byte* ptr = (byte*)pixelsPtr;
+                IntPtr pixels = pixmap.GetPixels();
 
-                int rowBytes = bmp.RowBytes;
-
-                for (int y = 0; y < height; y++)
+                unsafe
                 {
-                    byte* row = ptr + y * rowBytes;
+                    byte* ptr = (byte*)pixels.ToPointer();
 
-                    for (int x = 0; x < width; x++)
+                    for (int y = 0; y < height; y++)
                     {
-                        int i = x * bytesPerPixel;
+                        byte* row = ptr + y * rowBytes;
 
-                        // BGRA order
-                        byte b = row[i + 0];
-                        byte g = row[i + 1];
-                        byte r = row[i + 2];
-                        // byte a = row[i + 3]; // alpha channel if needed
+                        for (int x = 0; x < width; x++)
+                        {
+                            byte* px = row + x * 4; // 4 bytes per pixel: B, G, R, A
 
-                        // Threshold each channel separately:
-                        row[i + 0] = (byte)(b > thresh ? 255 : 0);
-                        row[i + 1] = (byte)(g > thresh ? 255 : 0);
-                        row[i + 2] = (byte)(r > thresh ? 255 : 0);
+                            byte b = px[0];
+                            byte g = px[1];
+                            byte r = px[2];
+
+                            byte gray = (byte)(0.299 * r + 0.587 * g + 0.114 * b);
+
+                            px[0] = gray; // Blue
+                            px[1] = gray; // Green
+                            px[2] = gray; // Red
+                                          // Leave alpha (px[3]) unchanged
+                        }
                     }
                 }
             }
         }
-	}
+        /*
+        public void Threshold(SKBitmap bmp, int thresh)
+		{
+			int width = bmp.Width;
+			int height = bmp.Height;
+
+			BitmapData bitmapData = bmp.LockBits(new Rectangle(0, 0, width, height), ImageLockMode.ReadWrite, PixelFormat.Format24bppRgb);
+			int size = bitmapData.Stride * bitmapData.Height;
+			byte[] data = new byte[size];
+			
+			Marshal.Copy(bitmapData.Scan0, data, 0, size);
+
+			for (int y = 0; y < height; y++)
+			{
+				for (int x = 0; x < width; x++)
+				{
+					int i = bitmapData.Stride * y + x * 3;
+					data[i] = (byte) (data[i] > thresh ? 255 : 0);
+					data[i + 1] = (byte) (data[i + 1] > thresh ? 255 : 0);
+					data[i + 2] = (byte) (data[i + 2] > thresh ? 255 : 0);
+				}
+			}
+
+			Marshal.Copy(data, 0, bitmapData.Scan0, size);
+			bmp.UnlockBits(bitmapData);
+		}
+		*/
+        public void Threshold(SKBitmap bmp, int thresh)
+        {
+            int width = bmp.Width;
+            int height = bmp.Height;
+
+            using (var pixmap = bmp.PeekPixels())
+            {
+                int rowBytes = pixmap.RowBytes;
+                IntPtr pixels = pixmap.GetPixels();
+
+                unsafe
+                {
+                    byte* ptr = (byte*)pixels.ToPointer();
+
+                    for (int y = 0; y < height; y++)
+                    {
+                        byte* row = ptr + y * rowBytes;
+
+                        for (int x = 0; x < width; x++)
+                        {
+                            byte* px = row + x * 4; // BGRA
+
+                            // Apply threshold on each channel
+                            px[0] = (byte)(px[0] > thresh ? 255 : 0); // Blue
+                            px[1] = (byte)(px[1] > thresh ? 255 : 0); // Green
+                            px[2] = (byte)(px[2] > thresh ? 255 : 0); // Red
+                                                                      // Alpha (px[3]) stays unchanged
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 

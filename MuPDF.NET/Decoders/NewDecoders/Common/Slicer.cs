@@ -239,9 +239,9 @@ namespace BarcodeReader.Core.Common
             if (points != null && p.points != null) foreach (MyPoint pp in p.points) points.AddLast(pp);
         }
 
-        public SKPoint[] GetBBox()
+        public SKPointI[] GetBBox()
         {
-            return new SKPoint[] { new SKPoint(xIn - 1, yIn - 1), new SKPoint(xEnd + 1, yIn - 1), new SKPoint(xEnd + 1, yEnd + 1), new SKPoint(xIn - 1, yEnd + 1), new SKPoint(xIn - 1, yIn - 1) };
+            return new SKPointI[] { new SKPointI(xIn - 1, yIn - 1), new SKPointI(xEnd + 1, yIn - 1), new SKPointI(xEnd + 1, yEnd + 1), new SKPointI(xIn - 1, yEnd + 1), new SKPointI(xIn - 1, yIn - 1) };
         }
 
         //A simple measure of noise (or entropy). Simply count horizontal and vertical black-white intervals, 
@@ -308,18 +308,18 @@ namespace BarcodeReader.Core.Common
         public float X { get { return x; } set { x = value; } }
         public int BlackPixelCounter { get { return blackPixelsCounter; } }
 
-        public SKPoint Center { get { return new SKPoint((xIn + xEnd) / 2, (yIn + yEnd) / 2); } }
+        public SKPointI Center { get { return new SKPointI((xIn + xEnd) / 2, (yIn + yEnd) / 2); } }
         public MyPointF CenterF { get { return new MyPointF((float)(xIn + xEnd + 1) / 2f, (float)(yIn + yEnd + 1) / 2f); } }
-        public SKPoint LU { get { return new SKPoint(xIn, yIn); } }
-        public SKPoint LD { get { return new SKPoint(xIn, yEnd); } }
-        public SKPoint RU { get { return new SKPoint(xEnd, yIn); } }
-        public SKPoint RD { get { return new SKPoint(xEnd, yEnd); } }
+        public SKPointI LU { get { return new SKPointI(xIn, yIn); } }
+        public SKPointI LD { get { return new SKPointI(xIn, yEnd); } }
+        public SKPointI RU { get { return new SKPointI(xEnd, yIn); } }
+        public SKPointI RD { get { return new SKPointI(xEnd, yEnd); } }
         public LinkedList<MyPoint> Points { get { return points; } }
 
         public float Dist(Segment p)
         {
-            SKPoint b = p.Center;
-            SKPoint a = this.Center;
+            SKPointI b = p.Center;
+            SKPointI a = this.Center;
             return (float)(Math.Sqrt((a.X - b.X) * (a.X - b.X) + (a.Y - b.Y) * (a.Y - b.Y)));
         }
  
@@ -402,7 +402,7 @@ namespace BarcodeReader.Core.Common
         }
 
         //returns the corners of the bounding box
-        public SKPoint[] GetBBox()
+        public SKPointI[] GetBBox()
         {
             MyVectorF up = vdY * maxY;
             MyVectorF down = vdY * minY;
@@ -415,7 +415,7 @@ namespace BarcodeReader.Core.Common
             MyPointF ru = r + up;
             MyPointF rd = r + down;
 
-            return new SKPoint[] { (SKPoint)lu, (SKPoint)ld, (SKPoint)rd, (SKPoint)ru, (SKPoint)lu };
+            return new SKPointI[] { (SKPointI)lu, (SKPointI)ld, (SKPointI)rd, (SKPointI)ru, (SKPointI)lu };
         }
     }
 }

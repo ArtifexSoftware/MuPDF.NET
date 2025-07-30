@@ -43,7 +43,7 @@ namespace BarcodeReader.Core.FormOMR
             var whiteMask = new Dictionary<MyPoint, byte>();
             foreach (var p in template.Points)
             {
-                var pp = new MyPoint((int)(p.X - template.Center.X), (int)(p.Y - template.Center.Y));
+                var pp = new MyPoint(p.X - template.Center.X, p.Y - template.Center.Y);
                 blackMask[pp] = 1;
                 blackMask[new MyPoint(pp.X + 1, pp.Y)] = 1;
                 blackMask[new MyPoint(pp.X - 1, pp.Y)] = 1;
@@ -61,7 +61,7 @@ namespace BarcodeReader.Core.FormOMR
             {
                 var dx = p.X < template.Center.X ? -whiteD : whiteD;
                 var dy = p.Y < template.Center.Y ? -whiteD : whiteD;
-                var pp = new MyPoint((int)(p.X - template.Center.X + dx), (int)(p.Y - template.Center.Y + dy));
+                var pp = new MyPoint(p.X - template.Center.X + dx, p.Y - template.Center.Y + dy);
                 whiteMask[pp] = 1;
             }
 
@@ -90,7 +90,7 @@ namespace BarcodeReader.Core.FormOMR
                     //check black pixels
                     var blackCount = 0;
                     var whiteCount = template.BlackPixelCounter;
-                    var offset = new MyPoint((int)(dX - center.X), (int)(dY - center.Y));
+                    var offset = new MyPoint(dX - center.X, dY - center.Y);
                     foreach (var p in seg.Points)
                     {
                         var pp = new MyPoint(p.X + offset.X, p.Y + offset.Y);
@@ -119,7 +119,7 @@ namespace BarcodeReader.Core.FormOMR
 
 #if DEBUG
                 DebugHelper.DrawSquare(Color.Lime,
-                    new MyPoint((int)(center.X - (center.X + bestOffset.X)), (int)(center.Y - (center.Y + bestOffset.Y))));
+                    new MyPoint(center.X - (center.X + bestOffset.X), center.Y - (center.Y + bestOffset.Y)));
 #endif
                 lock (locker)
                     AddFoundBarcode(seg);

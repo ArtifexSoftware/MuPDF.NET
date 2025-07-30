@@ -1,7 +1,6 @@
-using BarcodeReader.Core.Common;
-using SkiaSharp;
 using System.Drawing;
-using System.Linq;
+using SkiaSharp;
+using BarcodeReader.Core.Common;
 
 namespace BarcodeReader.Core
 {
@@ -22,7 +21,7 @@ namespace BarcodeReader.Core
             RawData = source.RawData;
             Rect = source.Rect;
             Polygon = source.Polygon;
-            BarcodeType = source.BarcodeType;
+            BarcodeFormat = source.BarcodeFormat;
             Color = source.Color;
             Confidence = source.Confidence;
             ParentRegion = source.ParentRegion;
@@ -30,26 +29,13 @@ namespace BarcodeReader.Core
 
         public FoundBarcode(SymbologyType barcodeType, BarCodeRegion region)
         {
-            BarcodeType = barcodeType;
-            Polygon = new SKPoint[] { region.A, region.B, region.C, region.D, region.A };
+            BarcodeFormat = barcodeType;
+            Polygon = new SKPointI[] { region.A, region.B, region.C, region.D, region.A };
             Color = Color.Blue;
-            SKPoint[] skPoints = Polygon.Select(p => new SKPoint(p.X, p.Y)).ToArray();
-
-            var path = new SKPath();
-
-            if (skPoints.Length > 0)
-            {
-                path.MoveTo(skPoints[0]);
-                for (int i = 1; i < skPoints.Length; i++)
-                {
-                    path.LineTo(skPoints[i]);
-                }
-                path.Close(); // if the polygon is closed
-            }
-
-            SKRect skRect = path.Bounds;
-            Rect = Rectangle.Round(new RectangleF(skRect.Left, skRect.Top, skRect.Width, skRect.Height));
-
+            //byte[] pointTypes = new byte[5] { (byte)PathPointType.Start, (byte)PathPointType.Line, (byte)PathPointType.Line, (byte)PathPointType.Line, (byte)PathPointType.Line };
+            //using (GraphicsPath path = new GraphicsPath(Polygon, pointTypes))
+            //    Rect = Rectangle.Round(path.GetBounds());
+            Rect = Utils.DrawPath(Polygon);
             Value = (region.Data != null ? region.Data[0].ToString() : "?");
             Confidence = region.Confidence;
             ParentRegion = region;
@@ -61,9 +47,9 @@ namespace BarcodeReader.Core
 
         public Rectangle Rect { get; set; }
 
-        public SKPoint[] Polygon { get; set; }
+        public SKPointI[] Polygon { get; set; }
 
-        public SymbologyType BarcodeType { get; set; }
+        public SymbologyType BarcodeFormat { get; set; }
 
         public Color Color { get; set; }
 

@@ -1,13 +1,11 @@
-﻿using BarcodeReader.Core.AustraliaPostCode;
+﻿using System.Collections.Generic;
+using System.Drawing;
+using SkiaSharp;
+using BarcodeReader.Core.AustraliaPostCode;
 using BarcodeReader.Core.IntelligentMail;
 using BarcodeReader.Core.PostNet;
 using BarcodeReader.Core.RoyalMail;
 using BarcodeReader.Core.RoyalMailKIX;
-using SkiaSharp;
-using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Drawing.Drawing2D;
 
 namespace BarcodeReader.Core.Common
 {
@@ -96,37 +94,22 @@ namespace BarcodeReader.Core.Common
                 FoundBarcode f = new FoundBarcode();
 
 				if (this is PostCodeReader)
-					f.BarcodeType = SymbologyType.AustralianPostCode;
+					f.BarcodeFormat = SymbologyType.AustralianPostCode;
 				else if (this is KIXReader)
-					f.BarcodeType = SymbologyType.RoyalMailKIX;
+					f.BarcodeFormat = SymbologyType.RoyalMailKIX;
 				else if (this is RMReader)
-					f.BarcodeType = SymbologyType.RoyalMail;
+					f.BarcodeFormat = SymbologyType.RoyalMail;
 				else if (this is IMReader)
-					f.BarcodeType = SymbologyType.IntelligentMail;
+					f.BarcodeFormat = SymbologyType.IntelligentMail;
                 else if (this is PostNetReader)
-					f.BarcodeType = SymbologyType.PostNet;
+					f.BarcodeFormat = SymbologyType.PostNet;
 				
-                f.Polygon = new SKPoint[] { r.A, r.B, r.C, r.D, r.A };
+                f.Polygon = new SKPointI[] { r.A, r.B, r.C, r.D, r.A };
                 f.Color = Color.Blue;
-                // Create an SKPath from the polygon
-                var path = new SKPath();
-                path.MoveTo(f.Polygon[0]);
-
-                for (int i = 1; i < f.Polygon.Length; i++)
-                    path.LineTo(f.Polygon[i]);
-
-                path.Close();
-
-                // Calculate bounds
-                SKRect bounds = path.Bounds;
-
-                // Assign rectangle (convert SKRect to System.Drawing.Rectangle if needed)
-                f.Rect = new System.Drawing.Rectangle(
-                    (int)Math.Floor(bounds.Left),
-                    (int)Math.Floor(bounds.Top),
-                    (int)Math.Ceiling(bounds.Width),
-                    (int)Math.Ceiling(bounds.Height)
-                );
+				//byte[] pointTypes = new byte[5] { (byte) PathPointType.Start, (byte) PathPointType.Line, (byte) PathPointType.Line, (byte) PathPointType.Line, (byte) PathPointType.Line };
+				//GraphicsPath path = new GraphicsPath(f.Polygon, pointTypes);
+				//f.Rect = Rectangle.Round(path.GetBounds());
+                f.Rect = Utils.DrawPath(f.Polygon);
                 f.Value = (r.Data != null ? r.Data[0].ToString() : "?");
 				f.Confidence = r.Confidence;
                 results[nn++] = f;

@@ -427,14 +427,14 @@ namespace BarcodeReader.Core
             return new MyPointF(p.X, p.Y);
         }
 
-        public static implicit operator MyPointF(SKPoint p)
+        public static implicit operator MyPointF(SKPointI p)
         {
             return new MyPointF((float)p.X, (float)p.Y);
         }
 
-        public static implicit operator SKPoint(MyPointF p)
+        public static implicit operator SKPointI(MyPointF p)
         {
-            return new SKPoint((int)Math.Round(p.X), (int)Math.Round(p.Y));
+            return new SKPointI((int)Math.Round(p.X), (int)Math.Round(p.Y));
         }
 
         public override string ToString()
@@ -509,14 +509,14 @@ namespace BarcodeReader.Core
             return new MyPoint(a.X / d, a.Y / d);
         }
 
-        public static implicit operator MyPoint(SKPoint p)
+        public static implicit operator MyPoint(SKPointI p)
         {
-            return new MyPoint((int)p.X, (int)p.Y);
+            return new MyPoint(p.X, p.Y);
         }
 
-        public static implicit operator SKPoint(MyPoint p)
+        public static implicit operator SKPointI(MyPoint p)
         {
-            return new SKPoint(p.X, p.Y);
+            return new SKPointI(p.X, p.Y);
         }
 
         public static implicit operator MyPointF(MyPoint point)

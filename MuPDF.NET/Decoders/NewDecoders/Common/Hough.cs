@@ -57,25 +57,25 @@ namespace BarcodeReader.Core.Common
         }
 
         //Distance from p to the line that represents the cell.
-        public float Dist(HoughCell cell, SKPoint p)
+        public float Dist(HoughCell cell, SKPointI p)
         {
             return (float)p.X * cosO[cell.Angle] + (float)p.Y * sinO[cell.Angle];
         }
 
         //Distance from p to the origin of coordinates projected to the line that represents the cell.
         //Used to sort points in a cell, from left to right
-        public float XDist(HoughCell cell, SKPoint p)
+        public float XDist(HoughCell cell, SKPointI p)
         {
             return +(float)p.Y * cosO[cell.Angle] - (float)p.X * sinO[cell.Angle];
         }
 
         //Add a point to the cendidate cells
-        public void Add(SKPoint p, int inc, object o)
+        public void Add(SKPointI p, int inc, object o)
         {
             Add(p, inc, o, 0, hWidth);
         }
 
-        public void Add(SKPoint p, int inc, object o, int angleIn, int angleEnd)
+        public void Add(SKPointI p, int inc, object o, int angleIn, int angleEnd)
         {
             for (int i = angleIn; i < angleEnd; i++)
             {
@@ -93,7 +93,7 @@ namespace BarcodeReader.Core.Common
 
         //Add all points of an edge from which we know its angle
         const int ANGLE_INTERVAL = 3;
-        public void Add(SKPoint pIn, SKPoint pEnd, int inc, object o, int iAngle)
+        public void Add(SKPointI pIn, SKPointI pEnd, int inc, object o, int iAngle)
         {
             int angleIn = iAngle - ANGLE_INTERVAL; if (angleIn < 0) angleIn = 0;
             int angleEnd = iAngle + ANGLE_INTERVAL + 1; if (angleEnd > hWidth) angleEnd = hWidth;
@@ -125,7 +125,7 @@ namespace BarcodeReader.Core.Common
         }
 
         //Add a point to the candidate cells knowing its direction
-        public void Add(SKPoint pIn, SKPoint pEnd, float angle, int inc, object o)
+        public void Add(SKPointI pIn, SKPointI pEnd, float angle, int inc, object o)
         {
             if (angle<0F) angle+=(float)Math.PI;
             int iAngle = (int)Math.Floor(angle * (float)hWidth / (float)Math.PI);
@@ -136,63 +136,91 @@ namespace BarcodeReader.Core.Common
         public SKBitmap GetImage()
         {
             var bmp = new SKBitmap(hWidth, hHeight);
-            SKCanvas canvas = new SKCanvas(bmp);
-
-            // Fill background with black
-            canvas.Clear(SKColors.Black);
-
-            // Draw yellow center lines
-            var linePaint = new SKPaint
+            using (var canvas = new SKCanvas(bmp))
             {
-                Color = SKColors.Yellow,
-                StrokeWidth = 1,
-                IsAntialias = false
-            };
+                canvas.Clear(SKColors.Black);
 
-            canvas.DrawLine(0, hHeight / 2, hWidth, hHeight / 2, linePaint);
-            canvas.DrawLine(hWidth / 2, 0, hWidth / 2, hHeight, linePaint);
-
-            // Draw intensity grayscale pixels
-            int minAng = -1, minCount = hHeight;
-
-            for (int x = 0; x < hWidth; x++)
-            {
-                int count = 0;
-
-                for (int y = 0; y < hHeight; y++)
+                // Draw yellow cross lines
+                using (var yellowPaint = new SKPaint
                 {
-                    if (h[x][y] != null && h[x][y].Count > 0)
+                    Color = SKColors.Yellow,
+                    StrokeWidth = 1,
+                    IsAntialias = true
+                })
+                {
+                    canvas.DrawLine(new SKPoint(0, hHeight / 2), new SKPoint(hWidth, hHeight / 2), yellowPaint);
+                    canvas.DrawLine(new SKPoint(hWidth / 2, 0), new SKPoint(hWidth / 2, hHeight), yellowPaint);
+                }
+
+                int minAng = -1, minCount = hHeight;
+
+                for (int i = 0; i < hWidth; i++)
+                {
+                    int count = 0;
+                    for (int d = 0; d < hHeight; d++)
                     {
-                        count++;
-
-                        int g = h[x][y].Count * 255 / maxH;
-                        g = Math.Min(g * 4, 255); // Scale & clamp
-
-                        bmp.SetPixel(x, y, new SKColor((byte)g, (byte)g, (byte)g));
+                        if (h[i][d] != null && h[i][d].Count > 0)
+                        {
+                            count++;
+                            int g = h[i][d].Count * 255 / maxH;
+                            g *= 4;
+                            if (g > 255) g = 255;
+                            if (g > 0)
+                            {
+                                // Draw pixel in grayscale
+                                bmp.SetPixel(i, d, new SKColor((byte)g, (byte)g, (byte)g));
+                            }
+                        }
+                    }
+                    if (count < minCount)
+                    {
+                        minCount = count;
+                        minAng = i;
                     }
                 }
 
-                if (count < minCount)
+                // Draw the angle text
+                using (var textPaint = new SKPaint
                 {
-                    minCount = count;
-                    minAng = x;
+                    Color = SKColors.Blue,
+                    TextSize = 14,
+                    IsAntialias = true,
+                    Typeface = SKTypeface.FromFamilyName("Arial")
+                })
+                {
+                    string text = ((float)minAng * 180F / (float)hWidth).ToString("F2");
+                    canvas.DrawText(text, 10, 20, textPaint);
                 }
+
+                return bmp;
             }
-
-            // Draw angle text
-            string angleText = ((float)minAng * 180f / (float)hWidth).ToString("F2");
-
-
-            SKFont font = new SKFont(SKTypeface.FromFamilyName("Arial", SKFontStyle.Normal), 14);
-            SKPaint paint = new SKPaint()
-            {
-                Color = SKColors.Blue,
-                IsAntialias = true
-            };
-            canvas.DrawText(angleText, 10, 20, font, paint);
-
-            return bmp;
         }
+        /*
+        public SKBitmap GetImage()
+        {
+            SKBitmap bmp = new SKBitmap(hWidth, hHeight);
+            Graphics gc = Graphics.FromImage(bmp);
+            gc.FillRectangle(Brushes.Black, 0, 0, hWidth, hHeight);
+            gc.DrawLine(Pens.Yellow, new SKPointI(0, hHeight / 2), new SKPointI(hWidth, hHeight / 2));
+            gc.DrawLine(Pens.Yellow, new SKPointI(hWidth / 2, 0), new SKPointI(hWidth / 2, hHeight));
+            int minAng = -1, minCount = hHeight;
+            for (int i = 0; i < hWidth; i++)
+            {
+                int count = 0;
+                for (int d = 0; d < hHeight; d++) if (h[i][d] != null && h[i][d].Count > 0)
+                    {
+                        count++;
+                        int g = h[i][d].Count * 255 / maxH;
+                        g *= 4; if (g > 255) g = 255;
+                        if (g > 0) bmp.SetPixel(i, d, Color.FromArgb(g, g, g));
+                    }                
+                if (count<minCount) {minCount=count; minAng=i;}
+            }
+            gc.DrawString(Convert.ToString((float)minAng*180F/(float)hWidth),new Font("Arial",10),Brushes.Blue, new PointF(10,10));
+            gc.Dispose();
+            return bmp;            
+        }
+        */
 
         //Sort all cells in the hough space. This allows to process first cells 
         //with more candidates.
@@ -210,7 +238,7 @@ namespace BarcodeReader.Core.Common
         static readonly float PI_2 = (float)Math.PI / 2F;
         static readonly float PI = (float)Math.PI;
         //debug method to display the bounding box of a cell.
-        public SKPoint[] GetBBox(HoughCell c)
+        public SKPointI[] GetBBox(HoughCell c)
         {
             float a = (float)c.Angle * angleInc; //0..PI
             float d = (float)(c.Distance - hHeight/2)* distInc; //-diagonal..diagonal
@@ -284,7 +312,7 @@ namespace BarcodeReader.Core.Common
                         xEnd=(int)((d-(float)height*sin)/cos); yEnd=height;
                     }
             }
-            return new SKPoint[] { new SKPoint(xIn, yIn), new SKPoint(xIn, yIn + (int)distInc), new SKPoint(xEnd, yEnd + (int)distInc), new SKPoint(xEnd, yEnd), new SKPoint(xIn, yIn) };
+            return new SKPointI[] { new SKPointI(xIn, yIn), new SKPointI(xIn, yIn + (int)distInc), new SKPointI(xEnd, yEnd + (int)distInc), new SKPointI(xEnd, yEnd), new SKPointI(xIn, yIn) };
         }
 
     }

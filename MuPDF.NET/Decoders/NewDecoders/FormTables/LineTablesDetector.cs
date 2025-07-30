@@ -1,10 +1,8 @@
-﻿using BarcodeReader.Core.Common;
-using SkiaSharp;
-using System;
-using System.Collections;
+﻿using System.Collections;
 using System.Drawing;
-using System.Drawing.Drawing2D;
+using SkiaSharp;
 using System.Text;
+using BarcodeReader.Core.Common;
 
 namespace BarcodeReader.Core.FormTables
 {
@@ -135,31 +133,15 @@ namespace BarcodeReader.Core.FormTables
 
                                     FoundBarcode foundBarcode = new FoundBarcode();
                                     foundBarcode.Value = "table" + cellCounts;
-                                    foundBarcode.Polygon = new SKPoint[] { first.a, first.b, last.b, last.a, first.a };
+                                    foundBarcode.Polygon = new SKPointI[] { first.a, first.b, last.b, last.a, first.a };
                                     foundBarcode.Tag = tag;
                                     foundBarcode.Color = Color.Orange;
 
                                     // get bounding rectangle
-                                    
-                                    // Build the SKPath from the SKPoint[] polygon
-                                    var path = new SKPath();
-                                    path.MoveTo(foundBarcode.Polygon[0]);
-
-                                    for (int iii = 1; iii < foundBarcode.Polygon.Length; iii++)
-                                        path.LineTo(foundBarcode.Polygon[iii]);
-
-                                    path.Close(); // Close the path to form a complete shape
-
-                                    // Get the bounding rectangle
-                                    SKRect bounds = path.Bounds;
-
-                                    // Convert to integer rectangle if needed
-                                    foundBarcode.Rect = new System.Drawing.Rectangle(
-                                        (int)Math.Floor(bounds.Left),
-                                        (int)Math.Floor(bounds.Top),
-                                        (int)Math.Ceiling(bounds.Width),
-                                        (int)Math.Ceiling(bounds.Height)
-                                    );
+                                    //byte[] pointTypes = new byte[5] { (byte) PathPointType.Start, (byte) PathPointType.Line, (byte) PathPointType.Line, (byte) PathPointType.Line, (byte) PathPointType.Line };
+                                    //using (GraphicsPath path = new GraphicsPath(foundBarcode.Polygon, pointTypes))
+                                    //    foundBarcode.Rect = Rectangle.Round(path.GetBounds());
+                                    foundBarcode.Rect = Utils.DrawPath(foundBarcode.Polygon);
 
                                     result.Add(foundBarcode);
                                 }
@@ -310,7 +292,7 @@ namespace BarcodeReader.Core.FormTables
 
             if (clean)
             {
-                if (rowEdges.Count == 0) cells.Add(new SKPoint[] { start, start + up, end + up, end, start });
+                if (rowEdges.Count == 0) cells.Add(new SKPointI[] { start, start + up, end + up, end, start });
                 else SplitRows(new LineEdge(start, end, 0f), up, rowEdges, innerEdges, cells, usedEdges);
                 return true;
             }

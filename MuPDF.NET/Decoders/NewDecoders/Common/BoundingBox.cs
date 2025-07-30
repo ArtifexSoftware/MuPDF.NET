@@ -17,16 +17,16 @@ namespace BarcodeReader.Core.Common
             this.f = f;
             this.minX = this.minY = int.MaxValue;
             this.maxX = this.maxY = 0;
-            foreach (SKPoint p in f.Polygon)
+            foreach (SKPointI p in f.Polygon)
             {
-                if (p.X < this.minX) this.minX = (int)p.X;
-                if (p.X > this.maxX) this.maxX = (int)p.X;
-                if (p.Y < this.minY) this.minY = (int)p.Y;
-                if (p.Y > this.maxY) this.maxY = (int)p.Y;
+                if (p.X < this.minX) this.minX = p.X;
+                if (p.X > this.maxX) this.maxX = p.X;
+                if (p.Y < this.minY) this.minY = p.Y;
+                if (p.Y > this.maxY) this.maxY = p.Y;
             }
         }
 
-        public bool contains(SKPoint p)
+        public bool contains(SKPointI p)
         {
             return p.X >= this.minX && p.X <= this.maxX && p.Y >= this.minY && p.Y <= this.maxY;
         }
@@ -34,7 +34,7 @@ namespace BarcodeReader.Core.Common
         public bool contains(BoundingBox b)
         {
             int n = 0;
-            foreach (SKPoint p in b.f.Polygon)
+            foreach (SKPointI p in b.f.Polygon)
                 if (this.contains(p)) n++;
             return (n > 0);
         }

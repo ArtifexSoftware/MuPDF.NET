@@ -1,7 +1,7 @@
-using SkiaSharp;
 using System;
+using System.Drawing;
+using SkiaSharp;
 using System.Runtime.InteropServices;
-using System.Security.Permissions;
 
 namespace BarcodeReader.Core
 {
@@ -46,6 +46,7 @@ namespace BarcodeReader.Core
 	    }
 
         // Slow resampling of the bitmap with the given angle (slow because marshal copy can not be used).
+        /*
         public GrayscaleImage(SKBitmap bitmap, int scanStep, float degAngle)
         {
             //normalize [0..360]
@@ -57,21 +58,13 @@ namespace BarcodeReader.Core
             _scanStep = scanStep;
             BlackAndWhiteImage.CalculateRotatedBorders(bitmap.Width, bitmap.Height, degAngle, out _originalWidth, out _originalHeight, out p0, out vdX, out vdY);
 
-            SKBitmap newBitmap = new SKBitmap(_originalWidth, _originalHeight);
-            using (var canvas = new SKCanvas(newBitmap))
+            SKBitmap newBitmap = new SKBitmap(_originalWidth, _originalHeight, Graphics.FromImage(bitmap));
+            using (Graphics graphics = Graphics.FromImage(newBitmap))
             {
-                canvas.Clear(SKColors.Transparent);
-
-                // Move origin to center of the canvas
-                canvas.Translate(_originalWidth / 2f, _originalHeight / 2f);
-
-                // Rotate
-                canvas.RotateDegrees(-degAngle);
-
-                // Move origin back and draw the image
-                canvas.Translate(-bitmap.Width / 2f, -bitmap.Height / 2f);
-
-                canvas.DrawBitmap(bitmap, new SKPoint(0, 0));
+                graphics.TranslateTransform((float)_originalWidth / 2, (float)_originalHeight / 2);
+                graphics.RotateTransform(-degAngle);
+                graphics.TranslateTransform(-(float)bitmap.Width / 2, -(float)bitmap.Height / 2);
+                graphics.DrawImage(bitmap, new SKPointI(0, 0));
             }
 
             _bitmap = newBitmap;
@@ -84,6 +77,47 @@ namespace BarcodeReader.Core
                 GetPixelsViaMarshalCopy();
             else
                 GetPixelsViaGetPixels();
+        }
+        */
+
+        public GrayscaleImage(SKBitmap bitmap, int scanStep, float degAngle)
+        {
+            // Normalize angle to [0, 360)
+            while (degAngle >= 360f) degAngle -= 360f;
+            while (degAngle < 0f) degAngle += 360f;
+
+            _shouldDisposeBitmap = true;
+            UseMarshalCopy = IsFullyTrusted; // your custom trust check
+            _scanStep = scanStep;
+
+            // Calculate rotated borders
+            BlackAndWhiteImage.CalculateRotatedBorders(bitmap.Width, bitmap.Height, degAngle, out _originalWidth, out _originalHeight, out p0, out vdX, out vdY);
+
+            // Create target bitmap for the rotated image
+            SKBitmap newBitmap = new SKBitmap(_originalWidth, _originalHeight);
+            using (var canvas = new SKCanvas(newBitmap))
+            {
+                // Clear canvas (optional)
+                canvas.Clear(SKColors.White);
+
+                // Center transform
+                canvas.Translate(_originalWidth / 2f, _originalHeight / 2f);
+                canvas.RotateDegrees(-degAngle); // negative because Skia rotates clockwise
+                canvas.Translate(-bitmap.Width / 2f, -bitmap.Height / 2f);
+
+                // Draw the original bitmap into the rotated context
+                canvas.DrawBitmap(bitmap, 0, 0);
+            }
+
+            _bitmap = newBitmap;
+            Width = _originalWidth;
+            Height = _originalHeight / _scanStep;
+
+            // Get grayscale pixels
+            if (UseMarshalCopy)
+                GetPixelsViaMarshalCopy(); // you’ll need to update this to use `SKPixmap`
+            else
+                GetPixelsViaGetPixels();  // or modify it to use `SKBitmap.GetPixel`
         }
 
         /// <param name="simpleMode">Take to attention only Blue channel</param>
@@ -110,6 +144,7 @@ namespace BarcodeReader.Core
 		{
         }
 
+
         bool IsFullyTrusted
         {
             get
@@ -117,7 +152,6 @@ namespace BarcodeReader.Core
                 try
                 {
                     //new System.Security.Permissions.SecurityPermission(System.Security.Permissions.PermissionState.Unrestricted).Demand();
-                    Console.WriteLine("SecurityPermission check skipped — not supported in .NET 8.");
                     return true;
                 }
                 catch (Exception)
@@ -272,31 +306,56 @@ namespace BarcodeReader.Core
         private void GetPixelsViaMarshalCopy()
         {
             normalizeBitmapFormat();
-            // Make sure _bitmap is SKBitmap in a suitable pixel format (e.g. SKColorType.Bgra8888)
-            if (_bitmap.ColorType != SKColorType.Rgb888x && _bitmap.ColorType != SKColorType.Bgra8888)
+
+            // Get pixel info and pointer
+            using (SKPixmap pixmap = _bitmap.PeekPixels())
             {
-                throw new InvalidOperationException("Bitmap must be in Rgb888x or Bgra8888 format for pixel access.");
-            }
+                int stride = pixmap.RowBytes;
+                int totalBytes = stride * _originalHeight;
+                IntPtr pixelsPtr = pixmap.GetPixels();
 
-            IntPtr ptr = _bitmap.GetPixels();
-            int stride = _bitmap.RowBytes;
-            int totalSize = stride * _bitmap.Height;
+                // Allocate managed array
+                byte[] pixels = new byte[totalBytes];
 
-            byte[] pixels = new byte[totalSize];
-            Marshal.Copy(ptr, pixels, 0, totalSize);
+                // Copy unmanaged pixels into managed array
+                Marshal.Copy(pixelsPtr, pixels, 0, totalBytes);
 
-            _samples = new byte[_bitmap.Height][];
+                // Allocate _samples rows
+                _samples = new byte[Height][];
+
+                int start = 0;
+                int step = stride * _scanStep;
+
+                if (_simpleMode)
+                    ToGrayScaleSimple(start, step, pixels);
+                else
+                    ToGrayScale(start, step, pixels);
+            }                
+        }
+        /*
+        private void GetPixelsViaMarshalCopy()
+        {
+            normalizeBitmapFormat();
+
+            //get pixels
+            BitmapData imgData = _bitmap.LockBits(new Rectangle(0, 0, _originalWidth, _originalHeight), ImageLockMode.ReadOnly, PixelFormat.Format24bppRgb);
+            var pixels = new byte[imgData.Stride * _originalHeight];
+            Marshal.Copy(imgData.Scan0, pixels, 0, imgData.Stride * _originalHeight);
+
+            //copy pixels to byte array
+            _samples = new byte[Height][];
 
             var start = 0;
-            var step = stride * _scanStep;
+            var step = imgData.Stride * _scanStep;
 
             if (_simpleMode)
                 ToGrayScaleSimple(start, step, pixels);
             else
                 ToGrayScale(start, step, pixels);
-
-            // No need to unlock in SkiaSharp
+            
+            _bitmap.UnlockBits(imgData);
         }
+        */
 
         private void ToGrayScale(int start, int step, byte[] pixels)
         {
@@ -304,7 +363,7 @@ namespace BarcodeReader.Core
             {
                 var row = _samples[y] = new byte[Width];
                 var srcX = start;
-                for (int x = 0; x < row.Length; x++, srcX += 3)
+                for (int x = 0; x < row.Length; x++, srcX += 4)
                 {
                     row[x] = (byte) ((306 * pixels[srcX + R] + 601 * pixels[srcX + G] + 117 * pixels[srcX + B]) >> 10);
                 }
@@ -317,7 +376,7 @@ namespace BarcodeReader.Core
             {
                 var row = _samples[y] = new byte[Width];
                 var srcX = start;
-                for (int x = 0; x < row.Length; x++, srcX += 3)
+                for (int x = 0; x < row.Length; x++, srcX += 4)
                 {
                     row[x] = pixels[srcX];
                 }
@@ -345,14 +404,16 @@ namespace BarcodeReader.Core
 
         private void normalizeBitmapFormat()
         {
-            if (_bitmap.ColorType != SKColorType.Rgb888x)
+            // Ensure bitmap is in 24bpp equivalent format (RGB)
+            if (_bitmap.ColorType != SKColorType.Rgb888x || _bitmap.AlphaType != SKAlphaType.Opaque)
             {
-                SKBitmap temp = new SKBitmap(_bitmap.Width, _bitmap.Height, SKColorType.Rgb888x, SKAlphaType.Opaque);
+                // Create a new bitmap with desired format
+                var temp = new SKBitmap(_bitmap.Width, _bitmap.Height, SKColorType.Rgb888x, SKAlphaType.Opaque);
 
                 using (var canvas = new SKCanvas(temp))
                 {
                     canvas.Clear(SKColors.White);
-                    canvas.DrawBitmap(_bitmap, new SKRect(0, 0, _bitmap.Width, _bitmap.Height));
+                    canvas.DrawBitmap(_bitmap, new SKPoint(0, 0));
                 }
 
                 if (_shouldDisposeBitmap)
@@ -362,7 +423,26 @@ namespace BarcodeReader.Core
                 _shouldDisposeBitmap = true;
             }
         }
+        /*
+        private void normalizeBitmapFormat()
+        {
+            if (_bitmap.PixelFormat != PixelFormat.Format24bppRgb)
+            {
+                SKBitmap temp = new SKBitmap(_bitmap.Width, _bitmap.Height, PixelFormat.Format24bppRgb);
+                using (Graphics g = Graphics.FromImage(temp))
+                {
+	                g.Clear(Color.White);
+	                g.DrawImage(_bitmap, new Rectangle(0, 0, _bitmap.Width, _bitmap.Height), 0, 0, _bitmap.Width, _bitmap.Height, GraphicsUnit.Pixel);
+                }
 
+                if (_shouldDisposeBitmap)
+                    _bitmap.Dispose();
+
+                _bitmap = temp;
+                _shouldDisposeBitmap = true;
+            }
+        }
+        */
     }
 
 #endif // !OLD_GRAYSCALEIMAGE

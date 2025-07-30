@@ -413,7 +413,7 @@ namespace BarcodeReader.Core.Common
 
 
         //Percetage of fixels of onBlack color from point a to b, for continuous side
-        public float GetPercentOn(bool onBlack, SKPoint a, SKPoint b)
+        public float GetPercentOn(bool onBlack, SKPointI a, SKPointI b)
         {
             int total = 0, on = 0;
             Bresenham br = new Bresenham(a, b);

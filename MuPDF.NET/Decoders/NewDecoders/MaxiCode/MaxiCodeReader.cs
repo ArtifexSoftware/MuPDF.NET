@@ -1,10 +1,9 @@
-﻿using BarcodeReader.Core.Common;
-using SkiaSharp;
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Drawing;
-using System.Drawing.Drawing2D;
+using SkiaSharp;
+using BarcodeReader.Core.Common;
 
 namespace BarcodeReader.Core.MaxiCode
 {
@@ -88,35 +87,20 @@ namespace BarcodeReader.Core.MaxiCode
             foreach (BarCodeRegion c in candidates)
             {
                 FoundBarcode foundBarcode = new FoundBarcode();
-				foundBarcode.BarcodeType = SymbologyType.MaxiCode;
+				foundBarcode.BarcodeFormat = SymbologyType.MaxiCode;
                 
 				String data = "";
                 if (c.Data != null) foreach (ABarCodeData d in c.Data) data += d.ToString();
 
                 foundBarcode.Value = data;
                 
-				foundBarcode.Polygon = new SKPoint[5] { c.A, c.B, c.D, c.C, c.A };
+				foundBarcode.Polygon = new SKPointI[5] { c.A, c.B, c.D, c.C, c.A };
                 foundBarcode.Color = Color.Blue;
 
-                // Build the SKPath from the SKPoint[] polygon
-                var path = new SKPath();
-                path.MoveTo(foundBarcode.Polygon[0]);
-
-                for (int i = 1; i < foundBarcode.Polygon.Length; i++)
-                    path.LineTo(foundBarcode.Polygon[i]);
-
-                path.Close(); // Close the path to form a complete shape
-
-                // Get the bounding rectangle
-                SKRect bounds = path.Bounds;
-
-                // Convert to integer rectangle if needed
-                foundBarcode.Rect = new System.Drawing.Rectangle(
-                    (int)Math.Floor(bounds.Left),
-                    (int)Math.Floor(bounds.Top),
-                    (int)Math.Ceiling(bounds.Width),
-                    (int)Math.Ceiling(bounds.Height)
-                );
+				//byte[] pointTypes = new byte[5] { (byte) PathPointType.Start, (byte) PathPointType.Line, (byte) PathPointType.Line, (byte) PathPointType.Line, (byte) PathPointType.Line };
+				//GraphicsPath path = new GraphicsPath(foundBarcode.Polygon, pointTypes);
+				//foundBarcode.Rect = Rectangle.Round(path.GetBounds());
+                foundBarcode.Rect = Utils.DrawPath(foundBarcode.Polygon);
 
                 foundBarcode.Confidence = c.Confidence;
                 result.Add(foundBarcode);

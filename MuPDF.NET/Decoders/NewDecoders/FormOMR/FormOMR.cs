@@ -88,13 +88,13 @@ namespace BarcodeReader.Core.FormOMR
             FoundBarcode foundBarcode = new FoundBarcode();
 
             if (this is RawSlicer)
-                foundBarcode.BarcodeType = SymbologyType.Segment;
+                foundBarcode.BarcodeFormat = SymbologyType.Segment;
             else if (this is FormOMRCircle)
-                foundBarcode.BarcodeType = SymbologyType.Circle;
+                foundBarcode.BarcodeFormat = SymbologyType.Circle;
             else if (this is FormOMROval)
-                foundBarcode.BarcodeType = SymbologyType.Oval;
+                foundBarcode.BarcodeFormat = SymbologyType.Oval;
             else if (this is FormOMRSquare)
-                foundBarcode.BarcodeType = SymbologyType.Checkbox;
+                foundBarcode.BarcodeFormat = SymbologyType.Checkbox;
 
             foundBarcode.Color = Color.Orange;
             foundBarcode.Polygon = p.GetBBox();

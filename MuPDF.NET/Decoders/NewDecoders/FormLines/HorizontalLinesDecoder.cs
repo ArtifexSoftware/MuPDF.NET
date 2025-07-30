@@ -1,9 +1,7 @@
-﻿using BarcodeReader.Core.Common;
-using SkiaSharp;
-using System;
-using System.Collections;
+﻿using System.Collections;
 using System.Drawing;
-using System.Drawing.Drawing2D;
+using SkiaSharp;
+using BarcodeReader.Core.Common;
 
 namespace BarcodeReader.Core.FormLines
 {
@@ -74,28 +72,13 @@ namespace BarcodeReader.Core.FormLines
                 foreach (LineEdge edge in angle)
                 {
                     FoundBarcode b = new FoundBarcode();
-					b.BarcodeType = scanHorizonal ? SymbologyType.HorizontalLine : SymbologyType.VerticalLine;
-                    b.Polygon = new SKPoint[] { edge.a, edge.b, edge.a};
+					b.BarcodeFormat = scanHorizonal ? SymbologyType.HorizontalLine : SymbologyType.VerticalLine;
+                    b.Polygon = new SKPointI[] { edge.a, edge.b, edge.a};
                     b.Color = Color.Orange;
-                    // Create an SKPath from the polygon
-                    var path = new SKPath();
-                    path.MoveTo(b.Polygon[0]);
-
-                    for (int i = 1; i < b.Polygon.Length; i++)
-                        path.LineTo(b.Polygon[i]);
-
-                    path.Close();
-
-                    // Calculate bounds
-                    SKRect bounds = path.Bounds;
-
-                    // Assign rectangle (convert SKRect to System.Drawing.Rectangle if needed)
-                    b.Rect = new System.Drawing.Rectangle(
-                        (int)Math.Floor(bounds.Left),
-                        (int)Math.Floor(bounds.Top),
-                        (int)Math.Ceiling(bounds.Width),
-                        (int)Math.Ceiling(bounds.Height)
-                    );
+					//byte[] pointTypes = new byte[3] { (byte) PathPointType.Start, (byte) PathPointType.Line, (byte) PathPointType.Line };
+					//GraphicsPath path = new GraphicsPath(b.Polygon, pointTypes);
+					//b.Rect = Rectangle.Round(path.GetBounds());
+                    b.Rect = Utils.DrawPath(b.Polygon);
                     b.Rect = new Rectangle(b.Rect.Left, b.Rect.Top,
 						b.Rect.Width == 0 ? 1 : b.Rect.Width, 
 						b.Rect.Height == 0 ? 1 : b.Rect.Height);

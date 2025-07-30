@@ -1,6 +1,7 @@
-using SkiaSharp;
 using System;
+using System.Diagnostics;
 using System.Drawing;
+using SkiaSharp;
 using System.Runtime.InteropServices;
 
 namespace BarcodeReader.Core
@@ -96,6 +97,7 @@ namespace BarcodeReader.Core
 
 		//angle [0..360°] but actually only 0..89° are enough (combined with 90°)
 		//90° rotations are created just swaping rows by columns, thus much faster.
+        /*
         public BlackAndWhiteImage(BlackAndWhiteImage image, float degAngle)
         {
             //normalize [0..360]
@@ -161,8 +163,81 @@ namespace BarcodeReader.Core
                 vdY = new MyVectorF(0f, 1f);
             }
         }
+        */
+        public BlackAndWhiteImage(BlackAndWhiteImage image, float degAngle)
+        {
+            // Normalize angle to [0..360)
+            while (degAngle >= 360f) degAngle -= 360f;
+            while (degAngle < 0f) degAngle += 360f;
 
-	    public BlackAndWhiteImage Clone()
+            _thresholdLevelAdjustment = image._thresholdLevelAdjustment;
+            _scanStep = image._scanStep; // Keep same scanStep
+
+            if (_scanStep == 1)
+            {
+                _unrotated = image;
+
+                if (degAngle == 90f)
+                {
+                    _rotated90 = true;
+                }
+                else
+                {
+                    _rotated90 = false;
+
+                    CalculateRotatedBorders(image.Width, image.Height, degAngle,
+                        out _width, out _height, out p0, out vdX, out vdY);
+                }
+
+                _method = ThresholdFilterMethod.Rotated;
+                _rows = new XBitArray[_height];
+                _columns = new XBitArray[_width];
+            }
+            else
+            {
+                // ?? Replace System.Drawing.Bitmap with SKBitmap directly
+                _image = new GrayscaleImage(image._image.SKBitmap, image._scanStep, degAngle);
+                _width = _image.Width;
+                _height = _image.Height;
+
+                _method = image._method;
+
+                // Since rotated grayscale image is not thresholded, reset method
+                if (_method == ThresholdFilterMethod.Enhancing)
+                    _method = ThresholdFilterMethod.Block;
+
+                switch (_method)
+                {
+                    case ThresholdFilterMethod.Block:
+                        _filter = new BlackAndWhiteBlockFilter(_image, _thresholdLevelAdjustment);
+                        break;
+                    case ThresholdFilterMethod.Threshold:
+                        _filter = new BlackAndWhiteThresholdFilter(_image, 127);
+                        break;
+                    case ThresholdFilterMethod.BlockSmoothed:
+                        _filter = new BlackAndWhiteBlockSmoothedFilter(_image, _thresholdLevelAdjustment);
+                        break;
+                    case ThresholdFilterMethod.BlockMedian:
+                        _filter = new BlackAndWhiteBlockMedianFilter(_image, _thresholdLevelAdjustment);
+                        break;
+                    case ThresholdFilterMethod.BlockGrid:
+                        _filter = new BlackAndWhiteBlockGridFilter(_image, _thresholdLevelAdjustment);
+                        break;
+                    case ThresholdFilterMethod.BlockOld:
+                        _filter = new BlackAndWhiteBlockFilterLegacy(_image, _thresholdLevelAdjustment);
+                        break;
+                    default:
+                        _filter = new BlackAndWhiteFilter(_image);
+                        break;
+                }
+
+                // Identity transform vectors
+                vdX = new MyVectorF(1f, 0f);
+                vdY = new MyVectorF(0f, 1f);
+            }
+        }
+
+        public BlackAndWhiteImage Clone()
 	    {
 			BlackAndWhiteImage copy = new BlackAndWhiteImage();
 		    copy._width = _width;
@@ -261,7 +336,7 @@ namespace BarcodeReader.Core
             {
                 foreach (FoundBarcode b in barcodes)
                 {
-					SKPoint[] poly = b.Polygon;
+					SKPointI[] poly = b.Polygon;
                     for (int i = 0; i < poly.Length; i++) poly[i].Y *= _scanStep;
 				}
             }
@@ -299,25 +374,54 @@ namespace BarcodeReader.Core
 
         public SKBitmap GetAsBitmap()
         {
-            var output = new SKBitmap(Width, Height, SKColorType.Gray8, SKAlphaType.Opaque);
+            // Use 8-bit grayscale format
+            var imageInfo = new SKImageInfo(Width, Height, SKColorType.Gray8, SKAlphaType.Opaque);
+            SKBitmap output = new SKBitmap(imageInfo);
 
             for (int y = 0; y < Height; y++)
             {
-                XBitArray row = GetRow(y); // your method to get boolean row data
+                XBitArray row = GetRow(y);
 
-                unsafe
+                for (int x = 0; x < Width; x++)
                 {
-                    byte* ptr = (byte*)output.GetAddress(0, y); // pointer to start of row
-                    for (int x = 0; x < Width; x++)
-                    {
-                        // Set pixel: white for true, black for false (invert if needed)
-                        ptr[x] = row[x] ? (byte)255 : (byte)0;
-                    }
+                    // White = 255, Black = 0
+                    byte value = row[x] ? (byte)255 : (byte)0;
+                    output.SetPixel(x, y, new SKColor(value, value, value));
                 }
             }
 
             return output;
         }
+        /*
+        public SKBitmap GetAsBitmap() {
+
+            SKBitmap output = new SKBitmap(Width, Height, PixelFormat.Format1bppIndexed);
+            byte[] scan1bpp = null;
+
+            for (int y = 0; y < Height; y++)
+            {
+                Rectangle imgRect = new Rectangle(0, y, Width, 1);
+                BitmapData imgData = output.LockBits(imgRect, ImageLockMode.ReadOnly, PixelFormat.Format1bppIndexed);
+
+                if (scan1bpp == null)
+                    scan1bpp = new byte[imgData.Stride];
+
+                Array.Clear(scan1bpp, 0, scan1bpp.Length);
+				XBitArray row = GetRow(y);
+
+                for (int x = 0; x < Width; x++)
+                {
+                    if (!row[x])
+                        scan1bpp[x / 8] |= (byte)(0x80 >> (x % 8));
+                }
+
+                Marshal.Copy(scan1bpp, 0, imgData.Scan0, scan1bpp.Length);
+                output.UnlockBits(imgData);
+            }
+
+            return output;
+        }
+        */
 
         /// <summary>
         /// Gets the width of the image.
@@ -425,9 +529,9 @@ namespace BarcodeReader.Core
             return column;
         }
 
-        public SKPoint Unrotate(MyPointF p)
+        public SKPointI Unrotate(MyPointF p)
         {
-            SKPoint Q = new SKPoint();
+            SKPointI Q = new SKPointI();
             if (_rotated90)
                 Q = _unrotated.Unrotate(new MyPointF(Height -1 -p.Y, p.X));
             else  
@@ -435,17 +539,17 @@ namespace BarcodeReader.Core
             return Q;
         }
 
-        public SKPoint[] Unrotate(SKPoint[] ps)
+        public SKPointI[] Unrotate(SKPointI[] ps)
         {
-            SKPoint[] r = new SKPoint[ps.Length];
+            SKPointI[] r = new SKPointI[ps.Length];
             for (int i = 0; i < ps.Length; i++)
                 r[i] = Unrotate(ps[i]);
             return r;
         }
 
-        public SKPoint[] Unrotate(Rectangle rect)
+        public SKPointI[] Unrotate(Rectangle rect)
         {
-            SKPoint[] polygon = new SKPoint[5];
+            SKPointI[] polygon = new SKPointI[5];
             polygon[0] = Unrotate(new MyPoint(rect.X, rect.Y));
             polygon[1] = Unrotate(new MyPoint(rect.X+rect.Width, rect.Y));
             polygon[2] = Unrotate(new MyPoint(rect.X+rect.Width, rect.Y+rect.Height));

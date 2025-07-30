@@ -1,10 +1,10 @@
-using SkiaSharp;
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
+using System.Collections;
 using System.Drawing;
-using System.Drawing.Drawing2D;
+using SkiaSharp;
+using System.Diagnostics;
+using BarcodeReader.Core.Common;
 
 namespace BarcodeReader.Core
 {
@@ -177,27 +177,13 @@ namespace BarcodeReader.Core
         {
 			if (Math.Abs(rotationAngle) > float.Epsilon)
 			{
-				SKPoint[] unrotatedPoints = bwImage.Unrotate(barcodeRect);
+				SKPointI[] unrotatedPoints = bwImage.Unrotate(barcodeRect);
+				//byte[] pointTypes = new byte[5] { (byte) PathPointType.Start, (byte) PathPointType.Line, (byte) PathPointType.Line, (byte) PathPointType.Line, (byte) PathPointType.Line };
+				//GraphicsPath path = new GraphicsPath(unrotatedPoints, pointTypes);
 
-                // Build the SKPath from the SKPoint[] polygon
-                var path = new SKPath();
-                path.MoveTo(unrotatedPoints[0]);
+                Rectangle rect = Utils.DrawPath(unrotatedPoints);
 
-                for (int i = 1; i < unrotatedPoints.Length; i++)
-                    path.LineTo(unrotatedPoints[i]);
-
-                path.Close(); // Close the path to form a complete shape
-
-                // Get the bounding rectangle
-                SKRect bounds = path.Bounds;
-
-                // Convert to integer rectangle if needed
-                return new System.Drawing.Rectangle(
-                    (int)Math.Floor(bounds.Left),
-                    (int)Math.Floor(bounds.Top),
-                    (int)Math.Ceiling(bounds.Width),
-                    (int)Math.Ceiling(bounds.Height)
-                );
+                return rect;
 			}
 
 	        return barcodeRect;
@@ -330,7 +316,7 @@ namespace BarcodeReader.Core
 
                 if (
 		            (RawDataEquals(prevResult.RawData, rowResult.RawData) || Math.Abs(curRect.Y-prevResult.Rect.Y) < 5) &&
-                            prevResult.BarcodeType == rowResult.BarcodeType &&
+                            prevResult.BarcodeFormat == rowResult.BarcodeFormat &&
 		            Math.Abs(prevResult.Confidence - rowResult.Confidence) < 0.1f
 		        )
                 {

@@ -1,6 +1,9 @@
-﻿using System;
+﻿using SkiaSharp;
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Drawing;
+using System.IO;
 using System.Text;
 
 namespace BarcodeReader.Core.Common
@@ -156,6 +159,50 @@ namespace BarcodeReader.Core.Common
             T temp = v1;
             v1 = v2;
             v2 = temp;
+        }
+
+        public static Rectangle DrawPath(SKPointI[] polygon)
+        {
+            // Create a path from the points
+            using (var path = new SKPath())
+            {
+                path.MoveTo(polygon[0]);
+                for (int i = 1; i < polygon.Length; i++)
+                {
+                    path.LineTo(polygon[i]);
+                }
+                path.Close(); // optional: close the shape
+
+                // Get bounds
+                SKRect bounds = path.Bounds;
+
+                return new Rectangle(
+                    (int)bounds.Left,
+                    (int)bounds.Top,
+                    (int)bounds.Width,
+                    (int)bounds.Height
+                );
+            }
+        }
+
+        public static void SaveSKBitmap(SKBitmap bitmap, string filePath)
+        {
+            using (var image = SKImage.FromBitmap(bitmap))
+            using (var data = image.Encode(SKEncodedImageFormat.Png, 100))
+            using (var stream = File.OpenWrite(filePath))
+            {
+                data.SaveTo(stream);
+            }
+        }
+
+        public static int Clamp(int value, int min, int max)
+        {
+            return (value < min) ? min : (value > max) ? max : value;
+        }
+
+        public static float Clamp(float value, float min, float max)
+        {
+            return (value < min) ? min : (value > max) ? max : value;
         }
     }
 

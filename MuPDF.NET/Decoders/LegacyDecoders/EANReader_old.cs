@@ -212,7 +212,7 @@ namespace BarcodeReader.Core.LegacyDecoders
                     if (found != null)
                     {
 
-                        if (found.BarcodeType == SymbologyType.EAN13)
+                        if (found.BarcodeFormat == SymbologyType.EAN13)
                         {
                             _ean13found = true; // indicate that we found ean13                        
                             // save last ean13 rect
@@ -405,7 +405,7 @@ namespace BarcodeReader.Core.LegacyDecoders
                 return null;
 
             FoundBarcode result = new FoundBarcode();
-			result.BarcodeType = _currentSymbology;
+			result.BarcodeFormat = _currentSymbology;
 			result.Value = decodeRawData(rawData);
             result.Rect = new Rectangle((int)startSymbolOffset, rowNumber, _afterPatternOffset - startSymbolOffset, 1);
             result.RawData = rawData;
@@ -420,7 +420,7 @@ namespace BarcodeReader.Core.LegacyDecoders
                 {
                     // converting to UPC-A
 					result.Value = result.Value.Substring(1);
-					result.BarcodeType = SymbologyType.UPCA;
+					result.BarcodeFormat = SymbologyType.UPCA;
                 }
                 else
                 {

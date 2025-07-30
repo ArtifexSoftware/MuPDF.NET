@@ -198,10 +198,10 @@ namespace BarcodeReader.Core.Common
             }
         }
 
-        public SKPoint[] GetBBox()
+        public SKPointI[] GetBBox()
         {
-            return isHorizontal?new SKPoint[] { new SKPoint(xIn - 1, yIn), new SKPoint(xEnd - 1, yEnd)}:
-                new SKPoint[] { new SKPoint(yIn - 1, xIn), new SKPoint(yEnd - 1, xEnd) }; ;
+            return isHorizontal?new SKPointI[] { new SKPointI(xIn - 1, yIn), new SKPointI(xEnd - 1, yEnd)}:
+                new SKPointI[] { new SKPointI(yIn - 1, xIn), new SKPointI(yEnd - 1, xEnd) }; ;
         }
 
 
@@ -223,15 +223,15 @@ namespace BarcodeReader.Core.Common
 
         const float PI = (float)Math.PI;
         public bool WhiteToBlack { get {return whiteToBlack; } }
-        public SKPoint Center { get { 
-            return isHorizontal? new SKPoint((xIn + xEnd) / 2, (yIn + yEnd) / 2):
-                new SKPoint((yIn + yEnd) / 2, (xIn + xEnd) / 2);
+        public SKPointI Center { get { 
+            return isHorizontal? new SKPointI((xIn + xEnd) / 2, (yIn + yEnd) / 2):
+                new SKPointI((yIn + yEnd) / 2, (xIn + xEnd) / 2);
         }}
-        public SKPoint In { get { 
-            return isHorizontal? new SKPoint(xIn, yIn) : new SKPoint(yIn, xIn); 
+        public SKPointI In { get { 
+            return isHorizontal? new SKPointI(xIn, yIn) : new SKPointI(yIn, xIn); 
         } }
 
-        public SKPoint End { get { return isHorizontal?new SKPoint(xEnd, yEnd):new SKPoint(yEnd, xEnd); } }
+        public SKPointI End { get { return isHorizontal?new SKPointI(xEnd, yEnd):new SKPointI(yEnd, xEnd); } }
 
         public float Angle
         {
