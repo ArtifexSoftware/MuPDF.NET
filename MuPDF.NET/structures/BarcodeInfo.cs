@@ -117,32 +117,32 @@ namespace MuPDF.NET
             float num2 = pointB.y;
             return (pointC.x - num) * (pointA.y - num2) - (pointC.y - num2) * (pointA.x - num);
         }
-    }
+    }    
+
     public class Barcode
     {
         public string Text { get; private set; }
         public byte[] RawBytes { get; private set; }
         public BarcodePoint[] ResultPoints { get; private set; }
         public BarcodeFormat BarcodeFormat { get; private set; }
-        public IDictionary<BarcodeMetadataType, object> BarcodeMetadata { get; private set; }
         public long Timestamp { get; private set; }
         public int NumBits { get; private set; }
-        public Barcode(string text, byte[] rawBytes, BarcodePoint[] resultPoints, BarcodeFormat format)
-        : this(text, rawBytes, (rawBytes != null) ? (8 * rawBytes.Length) : 0, resultPoints, format, DateTime.Now.Ticks)
+        public Barcode(string text, byte[] rawBytes, BarcodePoint[] resultPoints, BarcodeFormat type)
+        : this(text, rawBytes, (rawBytes != null) ? (8 * rawBytes.Length) : 0, resultPoints, type, DateTime.Now.Ticks)
         {
         }
 
-        public Barcode(string text, byte[] rawBytes, int numBits, BarcodePoint[] resultPoints, BarcodeFormat format)
-            : this(text, rawBytes, numBits, resultPoints, format, DateTime.Now.Ticks)
+        public Barcode(string text, byte[] rawBytes, int numBits, BarcodePoint[] resultPoints, BarcodeFormat type)
+            : this(text, rawBytes, numBits, resultPoints, type, DateTime.Now.Ticks)
         {
         }
 
-        public Barcode(string text, byte[] rawBytes, BarcodePoint[] resultPoints, BarcodeFormat format, long timestamp)
-            : this(text, rawBytes, (rawBytes != null) ? (8 * rawBytes.Length) : 0, resultPoints, format, timestamp)
+        public Barcode(string text, byte[] rawBytes, BarcodePoint[] resultPoints, BarcodeFormat type, long timestamp)
+            : this(text, rawBytes, (rawBytes != null) ? (8 * rawBytes.Length) : 0, resultPoints, type, timestamp)
         {
         }
 
-        public Barcode(string text, byte[] rawBytes, int numBits, BarcodePoint[] resultPoints, BarcodeFormat format, long timestamp)
+        public Barcode(string text, byte[] rawBytes, int numBits, BarcodePoint[] resultPoints, BarcodeFormat type, long timestamp)
         {
             if (text == null && rawBytes == null)
             {
@@ -153,38 +153,8 @@ namespace MuPDF.NET
             RawBytes = rawBytes;
             NumBits = numBits;
             ResultPoints = resultPoints;
-            BarcodeFormat = format;
-            BarcodeMetadata = null;
+            BarcodeFormat = type;
             Timestamp = timestamp;
-        }
-
-        public void putMetadata(BarcodeMetadataType type, object value)
-        {
-            if (BarcodeMetadata == null)
-            {
-                BarcodeMetadata = new Dictionary<BarcodeMetadataType, object>();
-            }
-
-            BarcodeMetadata[type] = value;
-        }
-
-        public void putAllMetadata(IDictionary<BarcodeMetadataType, object> metadata)
-        {
-            if (metadata == null)
-            {
-                return;
-            }
-
-            if (BarcodeMetadata == null)
-            {
-                BarcodeMetadata = metadata;
-                return;
-            }
-
-            foreach (KeyValuePair<BarcodeMetadataType, object> metadatum in metadata)
-            {
-                BarcodeMetadata[metadatum.Key] = metadatum.Value;
-            }
         }
 
         public void addResultPoints(BarcodePoint[] newPoints)

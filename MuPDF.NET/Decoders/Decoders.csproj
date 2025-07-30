@@ -1,0 +1,248 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'DEBUG_IMAGE|AnyCPU'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\DEBUG_IMAGE\</OutputPath>
+    <DefineConstants>TRACE;DEBUG;CORE_DEV;NET40;DEBUG_IMAGE</DefineConstants>
+    <DebugType>full</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{EBD90B99-9CA8-4B33-97B0-52172542A0E8}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>BarcodeReader.Core</RootNamespace>
+    <AssemblyName>Decoders</AssemblyName>
+    <TargetFrameworkVersion>v2.0</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>TRACE;DEBUG;CORE_DEV;NET40</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE;CORE_DEV;</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core">
+      <HintPath>C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.0\System.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Data" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Management" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="BlackAndWhiteBlockFilterLegacy.cs" />
+    <Compile Include="BlackAndWhiteBlockFilter_old.cs" />
+    <Compile Include="BlackAndWhiteBlockFilter.cs" />
+    <Compile Include="BlackAndWhiteBlockGridFilter.cs" />
+    <Compile Include="BlackAndWhiteBlockMedianFilter.cs" />
+    <Compile Include="BlackAndWhiteBlockSmoothedFilter.cs" />
+    <Compile Include="BlackAndWhiteBypassFilter.cs" />
+    <Compile Include="BlackAndWhiteFilter.cs" />
+    <Compile Include="BlackAndWhiteImage.cs" />
+    <Compile Include="BlackAndWhiteThresholdFilter.cs" />
+    <Compile Include="EnhancedBWImage.cs" />
+    <Compile Include="FoundBarcode.cs" />
+    <Compile Include="GrayscaleImage_old.cs" />
+    <Compile Include="GrayscaleImage.cs" />
+    <Compile Include="IBarcodeConsumer.cs" />
+    <Compile Include="IBarcodeDecoder.cs" />
+    <Compile Include="IntegralBuilder.cs" />
+    <Compile Include="IParallelSupporting.cs" />
+    <Compile Include="IPreparedImage.cs" />
+    <Compile Include="LegacyDecoders\CodabarReader.cs" />
+    <Compile Include="LegacyDecoders\I2of5Reader.cs" />
+    <Compile Include="NewDecoders\Code128_LinearReader\Code128LinearReader.cs" />
+    <Compile Include="NewDecoders\Code39_LinearReader\Code39LinearReader_Ext.cs" />
+    <Compile Include="NewDecoders\Code39_LinearReader\Code39LinearReader.cs" />
+    <Compile Include="NewDecoders\Common\PatternFinderNoiseRowEx.cs" />
+    <Compile Include="NewDecoders\EAN\EAN13LinearReader.cs" />
+    <Compile Include="NewDecoders\EAN\EAN2LinearReader.cs" />
+    <Compile Include="NewDecoders\EAN\EAN5LinearReader.cs" />
+    <Compile Include="NewDecoders\EAN\UPCALinearReader.cs" />
+    <Compile Include="NewDecoders\EAN\UPCELinearReader.cs" />
+    <Compile Include="NewDecoders\FormOMR\FormOMR_Extended.cs" />
+    <Compile Include="NewDecoders\I2of5LinearReader\GTIN14LinearReader.cs" />
+    <Compile Include="NewDecoders\I2of5LinearReader\I2of5LinearReader.cs" />
+    <Compile Include="NewDecoders\I2of5LinearReader\ITF14LinearReader.cs" />
+    <Compile Include="NewDecoders\LinearReader\BarSymbolReaderNaive.cs" />
+    <Compile Include="NewDecoders\LinearReader\Candidate.cs" />
+    <Compile Include="NewDecoders\LinearReader\LinearReader_CandFilter.cs" />
+    <Compile Include="NewDecoders\LinearReader\LinearPatternFinder.cs" />
+    <Compile Include="NewDecoders\LinearReader\LinearReader.cs" />
+    <Compile Include="NewDecoders\Datamatrix\DM_DPM_Reader.cs" />
+    <Compile Include="NewDecoders\EAN\EAN8LinearReader.cs" />
+    <Compile Include="LegacyDecoders\EANReader_old.cs" />
+    <Compile Include="LegacyDecoders\TriopticCode39Reader.cs" />
+    <Compile Include="NewDecoders\Code39\Code39ExtendedReader.cs" />
+    <Compile Include="NewDecoders\Code39\Code39Mod43ExtendedReader.cs" />
+    <Compile Include="NewDecoders\Code39\Code39Mod43Reader.cs" />
+    <Compile Include="NewDecoders\Code39\PZNReader.cs" />
+    <Compile Include="NewDecoders\Code39\UPUReader.cs" />
+    <Compile Include="NewDecoders\Common\Bresenham.cs" />
+    <Compile Include="NewDecoders\Common\DebugHelper.cs" />
+    <Compile Include="NewDecoders\Common\MyPoints.cs" />
+    <Compile Include="NewDecoders\AustraliaPostCode\PostCodeDecoder.cs" />
+    <Compile Include="NewDecoders\AustraliaPostCode\PostCodeReader.cs" />
+    <Compile Include="NewDecoders\Aztec\AztecFinder.cs" />
+    <Compile Include="NewDecoders\Aztec\AztecOrientation.cs" />
+    <Compile Include="NewDecoders\Aztec\AztecReader.cs" />
+    <Compile Include="NewDecoders\Aztec\AztecScaner.cs" />
+    <Compile Include="NewDecoders\Aztec\AztecSymbol.cs" />
+    <Compile Include="NewDecoders\Aztec\AztecSymbolDecoder.cs" />
+    <Compile Include="NewDecoders\Aztec\AztecUtils.cs" />
+    <Compile Include="NewDecoders\CodaBlockF\CodaBlockFDecoder.cs" />
+    <Compile Include="NewDecoders\CodaBlockF\CodaBlockFReader.cs" />
+    <Compile Include="NewDecoders\Code128\Code128Reader.cs" />
+    <Compile Include="NewDecoders\Code16K\Code16KDecoder.cs" />
+    <Compile Include="NewDecoders\Code16K\Code16KReader.cs" />
+    <Compile Include="NewDecoders\Code39\Code39Reader.cs" />
+    <Compile Include="NewDecoders\Code93\Code93Reader.cs" />
+    <Compile Include="NewDecoders\Common\AdaptiveGrid.cs" />
+    <Compile Include="NewDecoders\Common\BarcodeData.cs" />
+    <Compile Include="NewDecoders\Common\BarSymbolReader.cs" />
+    <Compile Include="NewDecoders\Common\BarSymbolReaderLooseProjection.cs" />
+    <Compile Include="NewDecoders\Common\BoundingBox.cs" />
+    <Compile Include="NewDecoders\Common\BigInt.cs" />
+    <Compile Include="NewDecoders\Common\Calc.cs" />
+    <Compile Include="NewDecoders\Common\EdgeVarSlicer.cs" />
+    <Compile Include="NewDecoders\Common\FoundPattern.cs" />
+    <Compile Include="NewDecoders\Common\IDecoderAscDescBars.cs" />
+    <Compile Include="NewDecoders\Common\EdgeSlicer.cs" />
+    <Compile Include="NewDecoders\Common\EdgeTrack.cs" />
+    <Compile Include="NewDecoders\Common\Grid.cs" />
+    <Compile Include="NewDecoders\Common\Hough.cs" />
+    <Compile Include="NewDecoders\Common\ImageScaner.cs" />
+    <Compile Include="NewDecoders\Common\LineSlicer.cs" />
+    <Compile Include="NewDecoders\Common\NotUniformGrid.cs" />
+    <Compile Include="NewDecoders\Common\Parallel.cs" />
+    <Compile Include="NewDecoders\Common\PatternFinderNoise.cs" />
+    <Compile Include="NewDecoders\Common\PatternFinderNoiseRow.cs" />
+    <Compile Include="NewDecoders\Common\Reader2D.cs" />
+    <Compile Include="NewDecoders\Common\Reader2DNoise.cs" />
+    <Compile Include="NewDecoders\Common\EncodingUtils.cs" />
+    <Compile Include="NewDecoders\Common\TwoFourStateBarcodesReader.cs" />
+    <Compile Include="NewDecoders\Common\ReedSolomon.cs" />
+    <Compile Include="NewDecoders\Common\Region.cs" />
+    <Compile Include="NewDecoders\Common\Regression.cs" />
+    <Compile Include="NewDecoders\Common\RS.cs" />
+    <Compile Include="NewDecoders\Common\Slicer.cs" />
+    <Compile Include="NewDecoders\Common\SquareFinder.cs" />
+    <Compile Include="NewDecoders\Common\Utils.cs" />
+    <Compile Include="NewDecoders\Datamatrix\Configurations.cs" />
+    <Compile Include="NewDecoders\Datamatrix\ConvolutionCode.cs" />
+    <Compile Include="NewDecoders\Datamatrix\DMConnectReader.cs" />
+    <Compile Include="NewDecoders\Datamatrix\DMDecoder.cs" />
+    <Compile Include="NewDecoders\Datamatrix\DMEncoder.cs" />
+    <Compile Include="NewDecoders\Datamatrix\DMLPatternReader.cs" />
+    <Compile Include="NewDecoders\Datamatrix\DMReader.cs" />
+    <Compile Include="NewDecoders\Datamatrix\DMSimpleReader.cs" />
+    <Compile Include="NewDecoders\Datamatrix\ModulePlacement.cs" />
+    <Compile Include="NewDecoders\Datamatrix\SymbolDecoder.cs" />
+    <Compile Include="NewDecoders\FormLines\FieldsToFillDetector.cs" />
+    <Compile Include="NewDecoders\FormLines\HorizontalLinesDecoder.cs" />
+    <Compile Include="NewDecoders\FormOMR\FormOMRSquareLPattern.cs" />
+    <Compile Include="NewDecoders\FormOMR\FormOMRSquare.cs" />
+    <Compile Include="NewDecoders\FormOMR\RawSlicer.cs" />
+    <Compile Include="NewDecoders\FormOMR\FormOMROval.cs" />
+    <Compile Include="NewDecoders\FormOMR\FormOMRCircle.cs" />
+    <Compile Include="NewDecoders\FormOMR\FormOMR.cs" />
+    <Compile Include="NewDecoders\FormTables\LineTablesDetector.cs" />
+    <Compile Include="NewDecoders\GS1DataBar\Combination.cs" />
+    <Compile Include="NewDecoders\GS1DataBar\Decoder.cs" />
+    <Compile Include="NewDecoders\GS1DataBar\Encodation.cs" />
+    <Compile Include="NewDecoders\GS1DataBar\GS1DataBar.cs" />
+    <Compile Include="NewDecoders\GS1DataBar\GS1DataBarExpanded.cs" />
+    <Compile Include="NewDecoders\GS1DataBar\GS1DataBarExpandedStacked.cs" />
+    <Compile Include="NewDecoders\GS1DataBar\GS1DataBarGroup1.cs" />
+    <Compile Include="NewDecoders\GS1DataBar\GS1DataBarGroup3.cs" />
+    <Compile Include="NewDecoders\GS1DataBar\GS1DataBarLimited.cs" />
+    <Compile Include="NewDecoders\GS1DataBar\GS1DataBarOmnidirectional.cs" />
+    <Compile Include="NewDecoders\GS1DataBar\GS1DataBarStacked.cs" />
+    <Compile Include="NewDecoders\GS1DataBar\ProbabilisticCombination.cs" />
+    <Compile Include="NewDecoders\IntelligentMail\IMDecoder.cs" />
+    <Compile Include="NewDecoders\IntelligentMail\IMReader.cs" />
+    <Compile Include="NewDecoders\LinearReader\LineScanner.cs" />
+    <Compile Include="NewDecoders\LinearReader\PatternCluster.cs" />
+    <Compile Include="NewDecoders\MicroPDF\MicroPDFReader.cs" />
+    <Compile Include="NewDecoders\MICR\MICR.cs" />
+    <Compile Include="NewDecoders\MICR\MICRReader.cs" />
+    <Compile Include="NewDecoders\MICR\MICRSimpleReader.cs" />
+    <Compile Include="NewDecoders\MICR\Part.cs" />
+    <Compile Include="NewDecoders\MSI\MSI.cs" />
+    <Compile Include="NewDecoders\PatchCode\PatchCode.cs" />
+    <Compile Include="NewDecoders\PDF417\ModuleDecoder.cs" />
+    <Compile Include="NewDecoders\PDF417\PDF417Finder.cs" />
+    <Compile Include="NewDecoders\PDF417\PDF417Reader.cs" />
+    <Compile Include="NewDecoders\PDF417\PDF417Scaner.cs" />
+    <Compile Include="NewDecoders\PDF417\PDF417Decoder.cs" />
+    <Compile Include="NewDecoders\PDF417\ReedSolomon.cs" />
+    <Compile Include="NewDecoders\PDF417\SymbolDecoder.cs" />
+    <Compile Include="NewDecoders\PDF417\SymbolReader.cs" />
+    <Compile Include="NewDecoders\Pharmacode\PharmaReader.cs" />
+    <Compile Include="NewDecoders\PostNet\PostNetDecoder.cs" />
+    <Compile Include="NewDecoders\PostNet\PostNetReader.cs" />
+    <Compile Include="NewDecoders\QR\QRFinder.cs" />
+    <Compile Include="NewDecoders\QR\QRLocation.cs" />
+    <Compile Include="NewDecoders\QR\QRReader.cs" />
+    <Compile Include="NewDecoders\QR\QRReaderRow.cs" />
+    <Compile Include="NewDecoders\QR\QRScaner_old.cs" />
+    <Compile Include="NewDecoders\QR\QRScaner.cs" />
+    <Compile Include="NewDecoders\QR\QRSymbol.cs" />
+    <Compile Include="NewDecoders\QR\QRUtils.cs" />
+    <Compile Include="NewDecoders\QR\SymbolDecoder.cs" />
+    <Compile Include="NewDecoders\MaxiCode\MaxiCodeAlignedPatterns.cs" />
+    <Compile Include="NewDecoders\MaxiCode\MaxiCodeCharDecoder.cs" />
+    <Compile Include="NewDecoders\MaxiCode\MaxiCodeFinder.cs" />
+    <Compile Include="NewDecoders\MaxiCode\MaxiCodeReader.cs" />
+    <Compile Include="NewDecoders\MaxiCode\MaxiCodeSampler.cs" />
+    <Compile Include="NewDecoders\MaxiCode\MaxiCodeScaner.cs" />
+    <Compile Include="NewDecoders\RoyalMailKIX\KIXDecoder.cs" />
+    <Compile Include="NewDecoders\RoyalMailKIX\KIXReader.cs" />
+    <Compile Include="NewDecoders\RoyalMail\RMDecoder.cs" />
+    <Compile Include="NewDecoders\RoyalMail\RMReader.cs" />
+    <Compile Include="NewDecoders\TriOptic\TriOpticLinearReader.cs" />
+    <Compile Include="OtsuThreshold.cs" />
+    <Compile Include="SymbologyReader.cs" />
+    <Compile Include="SymbologyReader2D.cs" />
+    <Compile Include="SymbologyType.cs" />
+    <Compile Include="ThresholdFilterMethod.cs" />
+    <Compile Include="XBitArray.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="NewDecoders\PDF417\symbolmap.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="NewDecoders\Datamatrix\mpnonecc200.dat" />
+  </ItemGroup>
+  <ItemGroup />
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>
