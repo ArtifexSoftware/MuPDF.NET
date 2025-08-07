@@ -30,7 +30,7 @@ This is only required if you want to create a local version of the package. For 
 
 - Create a C# application using Visual Studio.
 
-- Download and add MuPDF.NET package from [NuGet](https://www.nuget.org/packages/MuPDF.NET/2.0.5-alpha). Refer to it via instruction `using MuPDF.NET;` in your C# source.
+- Download and add MuPDF.NET package from [NuGet](https://www.nuget.org/packages/MuPDF.NET). Refer to it via instruction `using MuPDF.NET;` in your C# source.
 
 - Code your program and build it using the VS menu items `Build|Solution`.
 
