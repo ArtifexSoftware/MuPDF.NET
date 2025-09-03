@@ -16,7 +16,7 @@
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'tizen'">6.5</SupportedOSPlatformVersion>
 		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
 		<Title>MuPDF.NET</Title>
-		<Version>3.2.9-rc.9</Version>
+		<Version>3.2.10-rc.1</Version>
 		<Authors>Artifex Software Inc.</Authors>
 		<Company>Artifex</Company>
 		<Description>A C# binding for MuPDF</Description>
@@ -34,6 +34,11 @@
 	<PropertyGroup Condition="'$(OS)' == 'Windows_NT'">
 	  <DefineConstants>$(DefineConstants);WINDOWS</DefineConstants>
 	</PropertyGroup>
+
+	<ItemGroup>
+	  <EmbeddedResource Include="Barcode\Decoders\NewDecoders\Datamatrix\mpnonecc200.dat" />
+	  <EmbeddedResource Include="Barcode\Decoders\NewDecoders\PDF417\symbolmap.txt" />
+	</ItemGroup>
 	
 	<ItemGroup>
 	  <Reference Include="Microsoft.CSharp" />
@@ -59,8 +64,8 @@
 	  <PackageReference Include="MuPDF.NativeAssets" Version="1.26.3.1" />
 	  <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
 	  <PackageReference Include="SharpZipLib" Version="1.4.2" />
+	  <PackageReference Include="SkiaSharp" Version="3.119.0" />
 	  <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.119.0" />
-	  <PackageReference Include="ZXing.Net.Bindings.SkiaSharp" Version="0.16.21" />
 	</ItemGroup>
 
 	<ItemGroup>

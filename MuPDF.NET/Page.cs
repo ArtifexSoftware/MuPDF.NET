@@ -8,7 +8,6 @@ using System.Net.Mime;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
-using ZXing;
 using static MuPDF.NET.Global;
 using static System.Net.Mime.MediaTypeNames;
 
@@ -1518,8 +1517,10 @@ namespace MuPDF.NET
             else
                 Debug.Assert(false, "Unrecognised type");
             _page.fz_run_page(dev, ctm, new FzCookie());
+            _page.Dispose();
             dev.fz_close_device();
             dev.Dispose();
+            options.Dispose();
 
             return new TextPage(stPage);
         }
@@ -3352,14 +3353,7 @@ namespace MuPDF.NET
 
         public DisplayList GetDisplayList(int annots = 1)
         {
-            if (annots != 0)
-                return new DisplayList(
-                    mupdf.mupdf.fz_new_display_list_from_page(new FzPage(_pdfPage))
-                );
-            else
-                return new DisplayList(
-                    mupdf.mupdf.fz_new_display_list_from_page_contents(new FzPage(_pdfPage))
-                );
+            return new DisplayList(_pdfPage, annots);
         }
 
         /// <summary>
@@ -4027,10 +4021,12 @@ namespace MuPDF.NET
             if (!doc.IsPDF)
                 xrefs = false;
             List<Block> imgInfo = _imageInfo;
+
             if (imgInfo.Count == 0)
             {
                 TextPage textpage = GetTextPage(flags: (int)TextFlags.TEXT_PRESERVE_IMAGES);
                 imgInfo = textpage.ExtractImageInfo(hashes ? 1 : 0);
+                textpage.Dispose();
                 textpage = null;
                 if (hashes)
                     _imageInfo = imgInfo;

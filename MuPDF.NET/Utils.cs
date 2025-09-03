@@ -18,7 +18,6 @@ using mupdf;
 using MuPDF.NET;
 using Newtonsoft.Json;
 using SkiaSharp;
-using ZXing;
 using static System.Net.Mime.MediaTypeNames;
 using static MuPDF.NET.Global;
 
@@ -1833,6 +1832,8 @@ namespace MuPDF.NET
             List<string> barcodeTypeList = new List<string>();
             string barcodeType = null;
 
+            List<Barcode> barcodes = new List<Barcode>();
+
             switch (type)
             {
                 case BarcodeFormat.AZTEC: barcodeType = "AZTEC"; break;
@@ -1914,11 +1915,9 @@ namespace MuPDF.NET
                 barcodeTypeList.Add(barcodeType);
             }
 
-            List<Barcode> barcodes = new List<Barcode>();
-
             foreach (string barcodetype in barcodeTypeList)
             {
-                BarCodeConverterClass reader = new BarCodeConverterClass(barcodetype, null);
+                BarcodeReader reader = new BarcodeReader(barcodetype, null);
 
                 try
                 {
@@ -2006,24 +2005,54 @@ namespace MuPDF.NET
 
             // get image format from file extension
             SKEncodedImageFormat imageFormat = SKEncodedImageFormat.Png;
+            
+            // barcode format
+            string barcodeType = null;
+            switch (type)
+            {
+                case BarcodeFormat.AZTEC: barcodeType = "AZTEC"; break;
+                case BarcodeFormat.CODABAR: barcodeType = "CODABAR"; break;
+                case BarcodeFormat.CODE128: barcodeType = "CODE128"; break;
+                case BarcodeFormat.CODE39: barcodeType = "CODE39"; break;
+                case BarcodeFormat.CODE93: barcodeType = "CODE93"; break;
+                case BarcodeFormat.DM: barcodeType = "DM"; break;
+                case BarcodeFormat.EAN2: barcodeType = "EAN2"; break;
+                case BarcodeFormat.EAN5: barcodeType = "EAN5"; break;
+                case BarcodeFormat.EAN8: barcodeType = "EAN8"; break;
+                case BarcodeFormat.EAN13: barcodeType = "EAN14"; break;
+                case BarcodeFormat.GS1DATABAREXP: barcodeType = "GS1DATABAREXP"; break;
+                case BarcodeFormat.GS1DATABAREXPSTACKED: barcodeType = "GS1DATABAREXPSTACKED"; break;
+                case BarcodeFormat.GS1DATABAROMNI: barcodeType = "GS1DATABAROMNI"; break;
+                case BarcodeFormat.GS1DATABARSTACKED: barcodeType = "GS1DATABARSTACKED"; break;
+                case BarcodeFormat.GS1DATABARSTACKEDOMNI: barcodeType = "GS1DATABARSTACKEDOMNI"; break;
+                case BarcodeFormat.GS1DATABARLIMITED: barcodeType = "GS1DATABARLIMITED"; break;
+                case BarcodeFormat.I2OF5: barcodeType = "I2OF5"; break;
+                case BarcodeFormat.IM: barcodeType = "IM"; break;
+                case BarcodeFormat.MAXICODE: barcodeType = "MAXICODE"; break;
+                case BarcodeFormat.MSI: barcodeType = "MSI"; break;
+                case BarcodeFormat.PHARMA: barcodeType = "PHARMA"; break;
+                case BarcodeFormat.PDF417: barcodeType = "PDF417"; break;
+                case BarcodeFormat.POSTNET: barcodeType = "POSTNET"; break;
+                case BarcodeFormat.QR: barcodeType = "QR"; break;
+                case BarcodeFormat.RM: barcodeType = "RM"; break;
+                case BarcodeFormat.UPC_A: barcodeType = "UPC_A"; break;
+                case BarcodeFormat.UPC_E: barcodeType = "UPC_E"; break;
+                default:
+                    throw new NotSupportedException($"Barcode format {type} is not supported.");
+            }
 
-            var encodeObject = new Encode();
+            BarcodeWriter barcodeWriter = new BarcodeWriter(barcodeType);
 
-            // create barcode image
-            SKBitmap encodedImage = encodeObject.encode(text,
-                type,
+            SKBitmap barcodeImage = barcodeWriter.Encode(
+                text,
                 imageFormat,
                 width,
                 height,
                 characterSet,
                 disableEci,
+                forceFitToRect,
                 pureBarcode,
-                margin);
-
-            if (encodedImage == null)
-            {
-                throw new Exception("Failed to create barcode image");
-            }
+                margin, margin, margin, margin, 0);
 
             // resize image to fit into clip region
             if (forceFitToRect)
@@ -2031,15 +2060,15 @@ namespace MuPDF.NET
                 SKBitmap resizedBitmap = new SKBitmap(width, height);
                 using (SKCanvas canvas = new SKCanvas(resizedBitmap))
                 {
-                    canvas.DrawBitmap(encodedImage, new SKRect(0, 0, width, height));
+                    canvas.DrawBitmap(barcodeImage, new SKRect(0, 0, width, height));
                 }
-                encodedImage = resizedBitmap;
+                barcodeImage = resizedBitmap;
             }
             
-            Rect rect = new Rect(clip.X0, clip.Y0, clip.X0 + encodedImage.Width + 1, clip.Y0 + encodedImage.Height+1);
+            Rect rect = new Rect(clip.X0, clip.Y0, clip.X0 + barcodeImage.Width + 1, clip.Y0 + barcodeImage.Height+1);
 
             MemoryStream ms = new MemoryStream();
-            using (SKData data = encodedImage.Encode(SKEncodedImageFormat.Png, 300))
+            using (SKData data = barcodeImage.Encode(SKEncodedImageFormat.Png, 300))
             {
                 data.SaveTo(ms);
                 ms.Position = 0; // Reset stream position
@@ -2102,47 +2131,54 @@ namespace MuPDF.NET
                     throw new Exception("Unsupported image format");
             }
 
-            var encodeObject = new Encode();
-
-            // create barcode image
-            SKBitmap encodedImage = encodeObject.encode(text,
-                type,
-                imageFormat,
-                width,
-                height,
-                characterSet,
-                disableEci,
-                pureBarcode,
-                margin
-                );
-
-            if (encodedImage == null)
+            // barcode format
+            string barcodeType = null;
+            switch (type)
             {
-                throw new Exception("Failed to create barcode image");
+                case BarcodeFormat.AZTEC: barcodeType = "AZTEC"; break;
+                case BarcodeFormat.CODABAR: barcodeType = "CODABAR"; break;
+                case BarcodeFormat.CODE128: barcodeType = "CODE128"; break;
+                case BarcodeFormat.CODE39: barcodeType = "CODE39"; break;
+                case BarcodeFormat.CODE93: barcodeType = "CODE93"; break;
+                case BarcodeFormat.DM: barcodeType = "DM"; break;
+                case BarcodeFormat.EAN2: barcodeType = "EAN2"; break;
+                case BarcodeFormat.EAN5: barcodeType = "EAN5"; break;
+                case BarcodeFormat.EAN8: barcodeType = "EAN8"; break;
+                case BarcodeFormat.EAN13: barcodeType = "EAN14"; break;
+                case BarcodeFormat.GS1DATABAREXP: barcodeType = "GS1DATABAREXP"; break;
+                case BarcodeFormat.GS1DATABAREXPSTACKED: barcodeType = "GS1DATABAREXPSTACKED"; break;
+                case BarcodeFormat.GS1DATABAROMNI: barcodeType = "GS1DATABAROMNI"; break;
+                case BarcodeFormat.GS1DATABARSTACKED: barcodeType = "GS1DATABARSTACKED"; break;
+                case BarcodeFormat.GS1DATABARSTACKEDOMNI: barcodeType = "GS1DATABARSTACKEDOMNI"; break;
+                case BarcodeFormat.GS1DATABARLIMITED: barcodeType = "GS1DATABARLIMITED"; break;
+                case BarcodeFormat.I2OF5: barcodeType = "I2OF5"; break;
+                case BarcodeFormat.IM: barcodeType = "IM"; break;
+                case BarcodeFormat.MAXICODE: barcodeType = "MAXICODE"; break;
+                case BarcodeFormat.MSI: barcodeType = "MSI"; break;
+                case BarcodeFormat.PHARMA: barcodeType = "PHARMA"; break;
+                case BarcodeFormat.PDF417: barcodeType = "PDF417"; break;
+                case BarcodeFormat.POSTNET: barcodeType = "POSTNET"; break;
+                case BarcodeFormat.QR: barcodeType = "QR"; break;
+                case BarcodeFormat.RM: barcodeType = "RM"; break;
+                case BarcodeFormat.UPC_A: barcodeType = "UPC_A"; break;
+                case BarcodeFormat.UPC_E: barcodeType = "UPC_E"; break;
+                default:
+                    throw new NotSupportedException($"Barcode format {type} is not supported.");
             }
 
-            // resize image to fit into clip region
-            if (forceFitToRect)
-            {
-                SKBitmap resizedBitmap = new SKBitmap(width, height);
-                using (SKCanvas canvas = new SKCanvas(resizedBitmap))
-                {
-                    canvas.DrawBitmap(encodedImage, new SKRect(0, 0, width, height));
-                }
-                encodedImage = resizedBitmap;
-            }
+            BarcodeWriter barcodeWriter = new BarcodeWriter(barcodeType);
 
-            // save image to file
-            using (var image = SKImage.FromBitmap(encodedImage))
-            {
-                using (var data = image.Encode(imageFormat, 300))
-                {
-                    using (var stream = File.OpenWrite(imageFile))
-                    {
-                        data.SaveTo(stream);
-                    }
-                }
-            }
+            barcodeWriter.Encode(
+                imageFile,
+                text, 
+                imageFormat, 
+                width, 
+                height, 
+                characterSet, 
+                disableEci, 
+                forceFitToRect, 
+                pureBarcode, 
+                margin, margin, margin, margin, 0);
         }
 
         public static dynamic GetText(
@@ -2792,33 +2828,37 @@ namespace MuPDF.NET
         public static int InsertContents(Page page, byte[] newCont, int overlay = 1)
         {
             PdfPage pdfpage = page.GetPdfPage();
-            if (overlay != 0)
+
+            using (PdfDocument pageDoc = pdfpage.doc())
             {
-                if (!page.IsWrapped)
+                if (overlay != 0)
                 {
-                    PdfObj qConts = pdfpage.doc().pdf_add_stream(Utils.BufferFromBytes(Encoding.UTF8.GetBytes("q\n")), new PdfObj(), 0);
-                    PdfObj QConts = pdfpage.doc().pdf_add_stream(Utils.BufferFromBytes(Encoding.UTF8.GetBytes("\nQ")), new PdfObj(), 0);
-                    PdfObj contents = pdfpage.obj().pdf_dict_get(new PdfObj("Contents"));
-                    if (contents.pdf_is_array() != 0)
+                    if (!page.IsWrapped)
                     {
-                        contents.pdf_array_insert(qConts, 0);
-                        contents.pdf_array_push(QConts);
+                        PdfObj qConts = pageDoc.pdf_add_stream(Utils.BufferFromBytes(Encoding.UTF8.GetBytes("q\n")), new PdfObj(), 0);
+                        PdfObj QConts = pageDoc.pdf_add_stream(Utils.BufferFromBytes(Encoding.UTF8.GetBytes("\nQ")), new PdfObj(), 0);
+                        PdfObj contents = pdfpage.obj().pdf_dict_get(new PdfObj("Contents"));
+                        if (contents.pdf_is_array() != 0)
+                        {
+                            contents.pdf_array_insert(qConts, 0);
+                            contents.pdf_array_push(QConts);
+                        }
+                        else
+                        {
+                            PdfObj carr = pageDoc.pdf_new_array(5);
+                            if (contents.m_internal != null)
+                                carr.pdf_array_push(contents);
+                            carr.pdf_array_insert(qConts, 0);
+                            carr.pdf_array_push(QConts);
+                            pdfpage.obj().pdf_dict_put(new PdfObj("Contents"), carr);
+                        }
+                        page.WasWrapped = true;
                     }
-                    else
-                    {
-                        PdfObj carr = pdfpage.doc().pdf_new_array(5);
-                        if (contents.m_internal != null)
-                            carr.pdf_array_push(contents);
-                        carr.pdf_array_insert(qConts, 0);
-                        carr.pdf_array_push(QConts);
-                        pdfpage.obj().pdf_dict_put(new PdfObj("Contents"), carr);
-                    }
-                    page.WasWrapped = true;
                 }
+                FzBuffer contbuf = Utils.BufferFromBytes(newCont);
+                int xref = Utils.InsertContents(pageDoc, pdfpage.obj(), contbuf, overlay);
+                return xref;
             }
-            FzBuffer contbuf = Utils.BufferFromBytes(newCont);
-            int xref = Utils.InsertContents(pdfpage.doc(), pdfpage.obj(), contbuf, overlay);
-            return xref;
         }
 
         internal static int InsertContents(

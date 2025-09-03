@@ -2,8 +2,6 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
-using ZXing;
-using ZXing.Common.Detector;
 
 namespace MuPDF.NET
 {
@@ -65,57 +63,6 @@ namespace MuPDF.NET
             }
 
             return toString;
-        }
-
-        public static void orderBestPatterns(BarcodePoint[] patterns)
-        {
-            float num = distance(patterns[0], patterns[1]);
-            float num2 = distance(patterns[1], patterns[2]);
-            float num3 = distance(patterns[0], patterns[2]);
-            BarcodePoint resultPoint;
-            BarcodePoint resultPoint2;
-            BarcodePoint resultPoint3;
-            if (num2 >= num && num2 >= num3)
-            {
-                resultPoint = patterns[0];
-                resultPoint2 = patterns[1];
-                resultPoint3 = patterns[2];
-            }
-            else if (num3 >= num2 && num3 >= num)
-            {
-                resultPoint = patterns[1];
-                resultPoint2 = patterns[0];
-                resultPoint3 = patterns[2];
-            }
-            else
-            {
-                resultPoint = patterns[2];
-                resultPoint2 = patterns[0];
-                resultPoint3 = patterns[1];
-            }
-
-            if (crossProductZ(resultPoint2, resultPoint, resultPoint3) < 0f)
-            {
-                BarcodePoint resultPoint4 = resultPoint2;
-                resultPoint2 = resultPoint3;
-                resultPoint3 = resultPoint4;
-            }
-
-            patterns[0] = resultPoint2;
-            patterns[1] = resultPoint;
-            patterns[2] = resultPoint3;
-        }
-
-        public static float distance(BarcodePoint pattern1, BarcodePoint pattern2)
-        {
-            return MathUtils.distance(pattern1.x, pattern1.y, pattern2.x, pattern2.y);
-        }
-
-        private static float crossProductZ(BarcodePoint pointA, BarcodePoint pointB, BarcodePoint pointC)
-        {
-            float num = pointB.x;
-            float num2 = pointB.y;
-            return (pointC.x - num) * (pointA.y - num2) - (pointC.y - num2) * (pointA.x - num);
         }
     }    
 

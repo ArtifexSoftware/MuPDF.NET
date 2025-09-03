@@ -11,6 +11,7 @@ namespace MuPDF.NET
         }
 
         private FzDisplayList _nativeDisplayList;
+        private FzPage _fzPage = null;
 
         /// <summary>
         /// Contains the display list's mediabox.
@@ -40,9 +41,13 @@ namespace MuPDF.NET
             _nativeDisplayList = displayList.ToFzDisplayList();
         }
 
-        public DisplayList(FzDisplayList displayList)
+        public DisplayList(PdfPage pdfPage, int annots = 1)
         {
-            _nativeDisplayList = displayList;
+            _fzPage = new FzPage(pdfPage);
+            if (annots != 0)
+                _nativeDisplayList = mupdf.mupdf.fz_new_display_list_from_page(_fzPage);
+            else
+                _nativeDisplayList = mupdf.mupdf.fz_new_display_list_from_page_contents(_fzPage);
         }
 
         public void Dispose()
@@ -51,6 +56,13 @@ namespace MuPDF.NET
             {
                 _nativeDisplayList.Dispose();
                 _nativeDisplayList = null;
+                ThisOwn = false;
+            }
+
+            if (_fzPage != null)
+            {
+                _fzPage.Dispose();
+                _fzPage = null;
                 ThisOwn = false;
             }
         }
