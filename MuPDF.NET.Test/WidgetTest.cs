@@ -98,5 +98,20 @@ namespace MuPDF.NET.Test
             //Assert.Pass();
         }
         */
+
+        [Test]
+        public void ShouldNotThrowOnGetWidgets()
+        {
+            Document doc = new Document("../../../resources/test_widget_parse.pdf");
+
+            var currentPage = 0;
+            while (currentPage < doc.PageCount)
+            {
+                var page = doc[currentPage];
+                var widgets = page.GetWidgets().ToList();
+                Assert.That(widgets.Count, Is.GreaterThanOrEqualTo(0));
+                currentPage++;
+            }
+        }
     }
 }
