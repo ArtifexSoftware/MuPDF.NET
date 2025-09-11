@@ -55,7 +55,7 @@ namespace MuPDF.NET.Test
 
                 text1_flags_before[_w.Xref] = _w.FieldFlags;
             }
-            Assert.That(text1_flags_before, Is.EqualTo(new Dictionary<int, int>{{ 8, 1 },{ 10, 0 },{ 33, 0 }}));
+            Assert.That(text1_flags_before, Is.EqualTo(new Dictionary<int, int> { { 8, 1 }, { 10, 0 }, { 33, 0 } }));
 
             Widget w = page.LoadWidget(8);  // first of these widgets
             // give all connected widgets that field flags value
@@ -98,5 +98,24 @@ namespace MuPDF.NET.Test
             //Assert.Pass();
         }
         */
+
+        [TestCase("/Cour  5 Tf 0 g", "Cour", 5)]
+        [TestCase("/Cour 6 Tf 0 g", "Cour", 6)]
+        [TestCase("/TiRo \t 8 \n \r \f \v Tf 0    g", "TiRo", 8)]
+        public void ShouldParseDa(string textDa, string expectedFont, float expectedFontSize)
+        {
+            var doc = new Document();
+            var page = doc.NewPage();
+
+            var widget = new Widget(page) { TextDa = textDa };
+
+            Assert.That(widget.TextFont, Is.EqualTo("Helv")); 
+            Assert.That(widget.TextFontSize, Is.EqualTo(0));
+
+            Assert.DoesNotThrow(() => widget.ParseDa());
+
+            Assert.That(widget.TextFont, Is.EqualTo(expectedFont));
+            Assert.That(widget.TextFontSize, Is.EqualTo(expectedFontSize));
+        }
     }
 }
