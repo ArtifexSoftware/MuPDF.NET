@@ -522,9 +522,6 @@ namespace MuPDF.NET
                     }
                 }
 
-                encoder.ResolutionX = 960;
-                encoder.ResolutionY = 960;
-
                 SKBitmap image = encoder.GetImage();
 
                 return image;

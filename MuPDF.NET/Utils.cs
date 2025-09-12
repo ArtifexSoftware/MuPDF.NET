@@ -2161,7 +2161,7 @@ namespace MuPDF.NET
             SKBitmap barcodeImage = barcodeWriter.Encode(
                 text,
                 imageFormat,
-                0,
+                width,
                 0,
                 characterSet,
                 disableEci,
@@ -2170,17 +2170,14 @@ namespace MuPDF.NET
                 margin, margin, margin, margin, 0, narrowBarWidth);
 
             // resize image to fit into clip region
-             if (true)
+            int newHeight = barcodeImage.Height * width / barcodeImage.Width;
+            SKBitmap resizedBitmap = new SKBitmap(width, newHeight);
+            using (SKCanvas canvas = new SKCanvas(resizedBitmap))
             {
-                int newHeigth = barcodeImage.Height * width / barcodeImage.Width;
-                SKBitmap resizedBitmap = new SKBitmap(width, newHeigth);
-                using (SKCanvas canvas = new SKCanvas(resizedBitmap))
-                {
-                    canvas.DrawBitmap(barcodeImage, new SKRect(0, 0, width, newHeigth));
-                }
-                barcodeImage.Dispose();
-                barcodeImage = resizedBitmap;
+                canvas.DrawBitmap(barcodeImage, new SKRect(0, 0, width, newHeight));
             }
+            barcodeImage.Dispose();
+            barcodeImage = resizedBitmap;
 
             Rect rect = new Rect(0, 0, barcodeImage.Width, barcodeImage.Height);
 
