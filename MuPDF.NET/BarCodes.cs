@@ -464,7 +464,8 @@ namespace MuPDF.NET
             int marginTop = 0,
             int marginRight = 0,
             int marginBottom = 0,
-            int barHeight = 0
+            int barHeight = 0, 
+            int narrowBarWidth = 0
             )
         {
             if (contents == null)
@@ -479,15 +480,50 @@ namespace MuPDF.NET
             using (BarcodeEncoder encoder = new BarcodeEncoder())
             {
                 encoder.Value = contents;
+                
                 encoder.Symbology = _symbologyType;
                 encoder.DrawCaption = !pureBarcode;
                 encoder.Margins = new Margins(0, 0, 0, marginBottom);
+
                 if (barHeight > 0)
                     encoder.BarHeight = barHeight;
-                if (forceFitToRect == true && width > 0 && height > 0)
-                    encoder.FitInto(width, height, UnitOfMeasure.Pixel);
                 else if (height > 0)
                     encoder.BarHeight = height;
+
+                if (forceFitToRect == true && width > 0 && height > 0)
+                {
+                    encoder.PreserveMinReadableSize = false;
+                    encoder.FitInto(width, height);
+                }
+
+                if (narrowBarWidth > 0)
+                {
+                    encoder.NarrowBarWidth = narrowBarWidth;
+                }
+                else
+                {
+                    switch (_symbologyType)
+                    {
+                        case SymbologyType.PDF417:
+                        case SymbologyType.PDF417Truncated:
+                        case SymbologyType.DataMatrix:
+                        case SymbologyType.QRCode:
+                        case SymbologyType.Aztec:
+                        case SymbologyType.MicroPDF417:
+                        case SymbologyType.MacroPDF417:
+                        case SymbologyType.GS1_DataMatrix:
+                        case SymbologyType.GS1_QRCode:
+                        case SymbologyType.MaxiCode:
+                            encoder.NarrowBarWidth = 3;
+                            break;
+                        default:
+                            encoder.NarrowBarWidth = 1;
+                            break;
+                    }
+                }
+
+                encoder.ResolutionX = 960;
+                encoder.ResolutionY = 960;
 
                 SKBitmap image = encoder.GetImage();
 
@@ -509,7 +545,8 @@ namespace MuPDF.NET
             int marginTop = 0,
             int marginRight = 0,
             int marginBottom = 0,
-            int barHeight = 0
+            int barHeight = 0,
+            int narrowBarWidth = 0
             )
         {
             if (contents == null)
@@ -527,14 +564,48 @@ namespace MuPDF.NET
                 encoder.Symbology = _symbologyType;
                 encoder.DrawCaption = !pureBarcode;
                 encoder.Margins = new Margins(0, 0, 0, marginBottom);
+
                 if (barHeight > 0)
                     encoder.BarHeight = barHeight;
-                if (forceFitToRect == true && width > 0 && height > 0)
-                    encoder.FitInto(width, height, UnitOfMeasure.Pixel);
                 else if (height > 0)
                     encoder.BarHeight = height;
 
-                encoder.SaveImage(imageFile, imageFormat);
+                if (forceFitToRect == true && width > 0 && height > 0)
+                {
+                    encoder.PreserveMinReadableSize = false;
+                    encoder.FitInto(width, height);
+                }
+
+                if (narrowBarWidth > 0)
+                {
+                    encoder.NarrowBarWidth = narrowBarWidth;
+                }
+                else
+                {
+                    switch (_symbologyType)
+                    {
+                        case SymbologyType.PDF417:
+                        case SymbologyType.PDF417Truncated:
+                        case SymbologyType.DataMatrix:
+                        case SymbologyType.QRCode:
+                        case SymbologyType.Aztec:
+                        case SymbologyType.MicroPDF417:
+                        case SymbologyType.MacroPDF417:
+                        case SymbologyType.GS1_DataMatrix:
+                        case SymbologyType.GS1_QRCode:
+                        case SymbologyType.MaxiCode:
+                            encoder.NarrowBarWidth = 3;
+                            break;
+                        default:
+                            encoder.NarrowBarWidth = 1;
+                            break;
+                    }
+                }
+
+                if (forceFitToRect == false)
+                    encoder.SaveImage(imageFile, imageFormat);
+                else
+                    encoder.SaveImage(imageFile, imageFormat, new Size(width, height), 0, 0);
             }
         }
     }

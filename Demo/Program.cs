@@ -6,9 +6,25 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using static System.Net.WebRequestMethods;
+using File = System.IO.File;
 
 namespace Demo
 {
+    public static class Units
+    {
+        // Constants
+        public const float InchesPerMm = 1.0f / 25.4f;
+        public const float PointsPerInch = 72.0f;
+
+        // --- mm <-> points (PostScript points: 1 pt = 1/72 in) ---
+        public static float MmToPoints(float mm) => mm * InchesPerMm * PointsPerInch;          // = mm * 72 / 25.4
+        public static float PointsToMm(float points) => points / PointsPerInch / InchesPerMm;  // = points * 25.4 / 72
+
+        // --- mm <-> pixels (requires device DPI) ---
+        public static float MmToPixels(float mm, float dpi) => mm * InchesPerMm * dpi;
+        public static float PixelsToMm(float px, float dpi) => px / dpi / InchesPerMm;
+    }
     class Program
     {
         static void Main(string[] args)
@@ -39,8 +55,85 @@ namespace Demo
             TestMemoryLeak();
             TestDrawLine();
             TestReadBarcode1();
+            TestWriteBarcode1();
+            TestCMYKRecolor1(args);
 
             return;
+        }
+
+        static void TestCMYKRecolor1(string[] args)
+        {
+            Console.WriteLine("\n=== TestCMYKRecolor =====================");
+
+            string testFilePath = "../../../TestDocuments/CMYK_Recolor1.pdf";
+            Document doc = new Document(testFilePath);
+            //List<Entry> images = doc.GetPageImages(0);
+            //Console.WriteLine($"CaName: {images[0].CsName}");
+            doc.Recolor(0, "CMYK");
+            //images = doc.GetPageImages(0);
+            //Console.WriteLine($"CaName: {images[0].AltCsName}");
+            doc.Save(@"CMYKRecolor.pdf");
+            doc.Close();
+
+            Console.WriteLine("CMYK Recolor test completed.");
+        }
+
+        static void TestWriteBarcode1()
+        {
+            string testFilePath = Path.GetFullPath("../../../TestDocuments/Blank.pdf");
+            Document doc = new Document(testFilePath);
+
+            Page page = doc[0];
+            /*
+            // CODE39
+            Rect rect = new Rect(
+                X0: Units.MmToPoints(50),
+                X1: Units.MmToPoints(80), 
+                Y0: Units.MmToPoints(70), 
+                Y1: Units.MmToPoints(85));
+
+            page.WriteBarcode(rect, "JJBEA6500", BarcodeFormat.CODE39, forceFitToRect: true, pureBarcode: true, narrowBarWidth:1);
+
+            rect = new Rect(
+                X0: Units.MmToPoints(50),
+                X1: Units.MmToPoints(160),
+                Y0: Units.MmToPoints(100),
+                Y1: Units.MmToPoints(105));
+
+            page.WriteBarcode(rect, "JJBEA6500", BarcodeFormat.CODE39, forceFitToRect: true, pureBarcode: true, narrowBarWidth: 2);
+            */
+
+            // CODE128
+            Rect rect1 = new Rect(
+                X0: Units.MmToPoints(50),
+                X1: Units.MmToPoints(100),
+                Y0: Units.MmToPoints(50),
+                Y1: Units.MmToPoints(60));
+
+            page.WriteBarcode(rect1, "JJBEA6500063000000177922", BarcodeFormat.CODE128, forceFitToRect: false, pureBarcode: true, narrowBarWidth: 1);
+
+            rect1 = new Rect(
+                X0: Units.MmToPoints(50),
+                X1: Units.MmToPoints(100),
+                Y0: Units.MmToPoints(80),
+                Y1: Units.MmToPoints(90));
+
+            page.WriteBarcode(rect1, "JJBEA6500063000000177922", BarcodeFormat.CODE128, forceFitToRect: true, pureBarcode: true, narrowBarWidth: 1);
+
+            /*
+            Rect rect2 = new Rect(
+                X0: Units.MmToPoints(100),
+                X1: Units.MmToPoints(140),
+                Y0: Units.MmToPoints(40),
+                Y1: Units.MmToPoints(80));
+
+            page.WriteBarcode(rect2, "01030000110444408000", BarcodeFormat.DM, forceFitToRect: false, pureBarcode: true, narrowBarWidth: 3);
+            */
+
+            Pixmap pxmp = Utils.GetBarcodePixmap(rect1, "JJBEA6500063000000177922", BarcodeFormat.CODE128, forceFitToRect: false, pureBarcode: true, narrowBarWidth: 1);
+            pxmp.Save(@"PxmpBarcode.png");
+
+            doc.Save(@"TestWriteBarcode1.pdf");
         }
 
         static void TestReadBarcode1()
@@ -462,22 +555,22 @@ namespace Demo
 
             // EAN_13
             rect = new Rect(100, 155, 300, 200);
-            page.WriteBarcode(rect, "123456789012", BarcodeFormat.EAN13, forceFitToRect: true, pureBarcode: true, margin: 0);
+            page.WriteBarcode(rect, "123456789012", BarcodeFormat.EAN13, forceFitToRect: false, pureBarcode: true, margin: 0);
 
             // UPC_A
             rect = new Rect(100, 210, 300, 255);
             page.WriteBarcode(rect, "123456789012", BarcodeFormat.UPC_A, forceFitToRect: false, pureBarcode: true, margin: 0);
 
             // CODE_39
-            rect = new Rect(100, 265, 300, 310);
+            rect = new Rect(100, 265, 600, 285);
             page.WriteBarcode(rect, "Hello World!", BarcodeFormat.CODE39, forceFitToRect: true, pureBarcode: false, margin: 0);
 
             // CODE_128
-            rect = new Rect(100, 320, 300, 365);
+            rect = new Rect(100, 320, 400, 355);
             page.WriteBarcode(rect, "Hello World!", BarcodeFormat.CODE128, forceFitToRect: true, pureBarcode: true, margin: 0);
 
             // ITF
-            rect = new Rect(100, 375, 300, 420);
+            rect = new Rect(100, 385, 300, 420);
             page.WriteBarcode(rect, "12345678901234567890", BarcodeFormat.I2OF5, forceFitToRect: false, pureBarcode: false, margin: 0);
 
             // PDF_417
@@ -485,7 +578,7 @@ namespace Demo
             page.WriteBarcode(rect, "Hello World!", BarcodeFormat.PDF417, forceFitToRect: false, pureBarcode: true, margin: 0);
 
             // CODABAR
-            rect = new Rect(100, 540, 300, 600);
+            rect = new Rect(100, 540, 400, 580);
             page.WriteBarcode(rect, "12345678901234567890", BarcodeFormat.CODABAR, forceFitToRect: true, pureBarcode: true, margin: 0);
             
             // DATA_MATRIX

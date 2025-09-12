@@ -1967,7 +1967,7 @@ namespace MuPDF.NET
 
             return barcodes;
         }
-        
+
         /// <summary>
         /// Write barcode to pdf page.
         /// </summary>
@@ -1979,6 +1979,7 @@ namespace MuPDF.NET
         /// <param name="forceFitToRect">Resize output barcode image width/height into clip region</param>
         /// <param name="pureBarcode">Don't put the content string into the output image</param>
         /// <param name="margin">Specifies margin, in pixels, to use when generating the barcode</param>
+        /// <param name="narrowBarWidth">The width of the narrow bar in pixels</param>
         public static void WriteBarcode(
             Page page,
             Rect clip,
@@ -1988,7 +1989,8 @@ namespace MuPDF.NET
             bool disableEci = false,
             bool forceFitToRect = false,
             bool pureBarcode = false,
-            int margin = 1
+            int margin = 1,
+            int narrowBarWidth = 0
             )
         {
             if (clip == null)
@@ -2050,22 +2052,24 @@ namespace MuPDF.NET
                 height,
                 characterSet,
                 disableEci,
-                forceFitToRect,
+                false,
                 pureBarcode,
-                margin, margin, margin, margin, 0);
+                margin, margin, margin, margin, 0, narrowBarWidth);
 
             // resize image to fit into clip region
             if (forceFitToRect)
             {
-                SKBitmap resizedBitmap = new SKBitmap(width, height);
+                int newHeigth = barcodeImage.Height * width / barcodeImage.Width;
+                SKBitmap resizedBitmap = new SKBitmap(width, newHeigth);
                 using (SKCanvas canvas = new SKCanvas(resizedBitmap))
                 {
-                    canvas.DrawBitmap(barcodeImage, new SKRect(0, 0, width, height));
+                    canvas.DrawBitmap(barcodeImage, new SKRect(0, 0, width, newHeigth));
                 }
+                barcodeImage.Dispose();
                 barcodeImage = resizedBitmap;
             }
-            
-            Rect rect = new Rect(clip.X0, clip.Y0, clip.X0 + barcodeImage.Width + 1, clip.Y0 + barcodeImage.Height+1);
+
+            Rect rect = new Rect(clip.X0, clip.Y0, clip.X0 + barcodeImage.Width, clip.Y0 + barcodeImage.Height);
 
             MemoryStream ms = new MemoryStream();
             using (SKData data = barcodeImage.Encode(SKEncodedImageFormat.Png, 300))
@@ -2074,6 +2078,126 @@ namespace MuPDF.NET
                 ms.Position = 0; // Reset stream position
                 page.InsertImage(rect, stream: ms.ToArray());
             }
+
+            barcodeImage.Dispose();
+        }
+
+        /// <summary>
+        /// Return pixmap of barcode image.
+        /// </summary>
+        /// <param name="clip">Rect area on page to write</param>
+        /// <param name="text">Contents to write</param>
+        /// <param name="type">Type to encode; Supported types: QR_CODE, EAN_8, EAN_13, UPC_A, CODE_39, CODE_128, ITF, PDF_417, CODABAR</param>
+        /// <param name="characterSet">Use a specific character set for binary encoding (if supported by the selected barcode format)</param>
+        /// <param name="disableEci">Don't generate ECI segment if non-default character set is used</param>
+        /// <param name="pureBarcode">Don't put the content string into the output image</param>
+        /// <param name="margin">Specifies margin, in pixels, to use when generating the barcode</param>
+        /// <param name="narrowBarWidth">The width of the narrow bar in pixels</param>
+        public static Pixmap GetBarcodePixmap(
+            Rect clip,
+            string text,
+            BarcodeFormat type,
+            string characterSet = null,
+            bool disableEci = false,
+            bool forceFitToRect = false,
+            bool pureBarcode = false,
+            int margin = 1,
+            int narrowBarWidth = 0
+            )
+        {
+            if (clip == null)
+            {
+                throw new Exception("Rect is required");
+            }
+            if (text == null)
+            {
+                throw new Exception("Text is required");
+            }
+
+            int width = (int)clip.Width;
+            int height = (int)clip.Height;
+
+            // get image format from file extension
+            SKEncodedImageFormat imageFormat = SKEncodedImageFormat.Png;
+
+            // barcode format
+            string barcodeType = null;
+            switch (type)
+            {
+                case BarcodeFormat.AZTEC: barcodeType = "AZTEC"; break;
+                case BarcodeFormat.CODABAR: barcodeType = "CODABAR"; break;
+                case BarcodeFormat.CODE128: barcodeType = "CODE128"; break;
+                case BarcodeFormat.CODE39: barcodeType = "CODE39"; break;
+                case BarcodeFormat.CODE93: barcodeType = "CODE93"; break;
+                case BarcodeFormat.DM: barcodeType = "DM"; break;
+                case BarcodeFormat.EAN2: barcodeType = "EAN2"; break;
+                case BarcodeFormat.EAN5: barcodeType = "EAN5"; break;
+                case BarcodeFormat.EAN8: barcodeType = "EAN8"; break;
+                case BarcodeFormat.EAN13: barcodeType = "EAN14"; break;
+                case BarcodeFormat.GS1DATABAREXP: barcodeType = "GS1DATABAREXP"; break;
+                case BarcodeFormat.GS1DATABAREXPSTACKED: barcodeType = "GS1DATABAREXPSTACKED"; break;
+                case BarcodeFormat.GS1DATABAROMNI: barcodeType = "GS1DATABAROMNI"; break;
+                case BarcodeFormat.GS1DATABARSTACKED: barcodeType = "GS1DATABARSTACKED"; break;
+                case BarcodeFormat.GS1DATABARSTACKEDOMNI: barcodeType = "GS1DATABARSTACKEDOMNI"; break;
+                case BarcodeFormat.GS1DATABARLIMITED: barcodeType = "GS1DATABARLIMITED"; break;
+                case BarcodeFormat.I2OF5: barcodeType = "I2OF5"; break;
+                case BarcodeFormat.IM: barcodeType = "IM"; break;
+                case BarcodeFormat.MAXICODE: barcodeType = "MAXICODE"; break;
+                case BarcodeFormat.MSI: barcodeType = "MSI"; break;
+                case BarcodeFormat.PHARMA: barcodeType = "PHARMA"; break;
+                case BarcodeFormat.PDF417: barcodeType = "PDF417"; break;
+                case BarcodeFormat.POSTNET: barcodeType = "POSTNET"; break;
+                case BarcodeFormat.QR: barcodeType = "QR"; break;
+                case BarcodeFormat.RM: barcodeType = "RM"; break;
+                case BarcodeFormat.UPC_A: barcodeType = "UPC_A"; break;
+                case BarcodeFormat.UPC_E: barcodeType = "UPC_E"; break;
+                default:
+                    throw new NotSupportedException($"Barcode format {type} is not supported.");
+            }
+
+            BarcodeWriter barcodeWriter = new BarcodeWriter(barcodeType);
+
+            SKBitmap barcodeImage = barcodeWriter.Encode(
+                text,
+                imageFormat,
+                width,
+                height,
+                characterSet,
+                disableEci,
+                false,
+                pureBarcode,
+                margin, margin, margin, margin, 0, narrowBarWidth);
+
+            // resize image to fit into clip region
+            if (forceFitToRect)
+            {
+                int newHeigth = barcodeImage.Height * width / barcodeImage.Width;
+                SKBitmap resizedBitmap = new SKBitmap(width, newHeigth);
+                using (SKCanvas canvas = new SKCanvas(resizedBitmap))
+                {
+                    canvas.DrawBitmap(barcodeImage, new SKRect(0, 0, width, newHeigth));
+                }
+                barcodeImage.Dispose();
+                barcodeImage = resizedBitmap;
+            }
+
+            Rect rect = new Rect(clip.X0, clip.Y0, clip.X0 + barcodeImage.Width, clip.Y0 + barcodeImage.Height);
+
+            MemoryStream ms = new MemoryStream();
+            using (SKData data = barcodeImage.Encode(SKEncodedImageFormat.Png, 300))
+            {
+                data.SaveTo(ms);
+            }
+
+            // Reset position if you want to read from stream
+            ms.Position = 0;
+
+            // Example: convert to byte[]
+            byte[] bytes = ms.ToArray();
+
+            Pixmap pixmap = new Pixmap(bytes);
+
+            return pixmap;
         }
 
         /// <summary>
@@ -2089,6 +2213,7 @@ namespace MuPDF.NET
         /// <param name="forceFitToRect">Resize output barcode image width/height with params</param>
         /// <param name="pureBarcode">Don't put the content string into the output image</param>
         /// <param name="margin">Specifies margin, in pixels, to use when generating the barcode</param>
+        /// <param name="narrowBarWidth">The width of the narrow bar in pixels</param>
         public static void WriteBarcode(
             string imageFile,
             string text,
@@ -2099,7 +2224,8 @@ namespace MuPDF.NET
             bool disableEci = false,
             bool forceFitToRect = false,
             bool pureBarcode = false,
-            int margin = 1
+            int margin = 1,
+            int narrowBarWidth = 0
             )
         {
             // get image format from file extension
@@ -2178,7 +2304,7 @@ namespace MuPDF.NET
                 disableEci, 
                 forceFitToRect, 
                 pureBarcode, 
-                margin, margin, margin, margin, 0);
+                margin, margin, margin, margin, 0, narrowBarWidth);
         }
 
         public static dynamic GetText(

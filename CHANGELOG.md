@@ -1,5 +1,12 @@
 # Changelog
 
+### [3.2.10-rc.3] - 2025-09-12
+- Upgrade MuPDF.NativeAssets to 1.26.8.
+- Added a new method "Utils.GetBarcodePixmap" into barcode write module.
+
+### [3.2.10-rc.2] - 2025-09-11
+- Added a new parameter "narrowBarWidth" into barcode write module.
+
 ### [3.2.10-rc.1] - 2025-09-03
 - Added a new barcode rendering engine.
 - Removed all dependencies on ZXing.

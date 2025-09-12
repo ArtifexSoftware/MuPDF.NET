@@ -1,10 +1,4 @@
-﻿/**************************************************
- Bytescout BarCode SDK
- Copyright (c) 2008 - 2014 Bytescout
- All rights reserved
- www.bytescout.com
-**************************************************/
-
+﻿
 namespace BarcodeWriter.Core
 {
     /// <summary>
