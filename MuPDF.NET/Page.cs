@@ -8,7 +8,6 @@ using System.Net.Mime;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
-using ZXing;
 using static MuPDF.NET.Global;
 using static System.Net.Mime.MediaTypeNames;
 
@@ -1518,8 +1517,10 @@ namespace MuPDF.NET
             else
                 Debug.Assert(false, "Unrecognised type");
             _page.fz_run_page(dev, ctm, new FzCookie());
+            _page.Dispose();
             dev.fz_close_device();
             dev.Dispose();
+            options.Dispose();
 
             return new TextPage(stPage);
         }
@@ -3352,14 +3353,7 @@ namespace MuPDF.NET
 
         public DisplayList GetDisplayList(int annots = 1)
         {
-            if (annots != 0)
-                return new DisplayList(
-                    mupdf.mupdf.fz_new_display_list_from_page(new FzPage(_pdfPage))
-                );
-            else
-                return new DisplayList(
-                    mupdf.mupdf.fz_new_display_list_from_page_contents(new FzPage(_pdfPage))
-                );
+            return new DisplayList(_pdfPage, annots);
         }
 
         /// <summary>
@@ -4027,10 +4021,12 @@ namespace MuPDF.NET
             if (!doc.IsPDF)
                 xrefs = false;
             List<Block> imgInfo = _imageInfo;
+
             if (imgInfo.Count == 0)
             {
                 TextPage textpage = GetTextPage(flags: (int)TextFlags.TEXT_PRESERVE_IMAGES);
                 imgInfo = textpage.ExtractImageInfo(hashes ? 1 : 0);
+                textpage.Dispose();
                 textpage = null;
                 if (hashes)
                     _imageInfo = imgInfo;
@@ -4269,6 +4265,7 @@ namespace MuPDF.NET
         /// </summary>
         /// <param name="clip"></param>
         /// <param name="decodeEmbeddedOnly">Decode barcodes only from embedded images in the PDF resources.</param>
+        /// <param name="format">Barcode format to decode.</param>
         /// <param name="tryHarder">Spend more time to try to find a barcode; optimize for accuracy, not speed.</param>
         /// <param name="tryInverted">Try to decode as inverted image.</param>
         /// <param name="pureBarcode">Image is a pure monochrome image of a barcode.</param>
@@ -4278,6 +4275,7 @@ namespace MuPDF.NET
         public List<Barcode> ReadBarcodes(
             Rect clip = null,
             bool decodeEmbeddedOnly = false,
+            BarcodeFormat type = BarcodeFormat.ALL,
             bool tryHarder = true,
             bool tryInverted = false,
             bool pureBarcode = false,
@@ -4285,8 +4283,7 @@ namespace MuPDF.NET
             bool autoRotate = true
             )
         {
-            return Utils.ReadBarcodes(this, clip, decodeEmbeddedOnly,
-                tryHarder, tryInverted, pureBarcode, multi, autoRotate);
+            return Utils.ReadBarcodes(this, clip, decodeEmbeddedOnly, type, tryHarder, tryInverted, pureBarcode, multi, autoRotate);
         }
 
         /// <summary>
@@ -4297,7 +4294,7 @@ namespace MuPDF.NET
         /// <param name="barcodeFormat">Format to encode; Supported formats: QR_CODE, EAN_8, EAN_13, UPC_A, CODE_39, CODE_128, ITF, PDF_417, CODABAR</param>
         /// <param name="characterSet">Use a specific character set for binary encoding (if supported by the selected barcode format)</param>
         /// <param name="disableEci">don't generate ECI segment if non-default character set is used</param>
-        /// <param name="forceFitToRect">Resize output barcode image width/height with params</param>
+        /// <param name="forceFitToRect">Resize output barcode image width/height with params, Avoid enabling this parameter, as it can reduce barcode recognition accuracy.</param>
         /// <param name="pureBarcode">Don't put the content string into the output image</param>
         /// <param name="margin">Specifies margin, in pixels, to use when generating the barcode</param>
         public void WriteBarcode(
@@ -4308,11 +4305,12 @@ namespace MuPDF.NET
             bool disableEci = false,
             bool forceFitToRect = false,
             bool pureBarcode = false,
-            int margin = 1
+            int margin = 1,
+            int narrowBarWidth = 0
             )
         {
             Utils.WriteBarcode(this, clip,
-                text, barcodeFormat, characterSet, disableEci, forceFitToRect, pureBarcode, margin);
+                text, barcodeFormat, characterSet, disableEci, forceFitToRect, pureBarcode, margin, narrowBarWidth);
         }
 
         /// <summary>
