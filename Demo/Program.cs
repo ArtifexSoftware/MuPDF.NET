@@ -1,4 +1,5 @@
 ﻿using MuPDF.NET;
+using SkiaSharp;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -6,8 +7,10 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using static System.Net.Mime.MediaTypeNames;
 using static System.Net.WebRequestMethods;
 using File = System.IO.File;
+using Font = MuPDF.NET.Font;
 
 namespace Demo
 {
@@ -114,9 +117,9 @@ namespace Demo
 
             rect1 = new Rect(
                 X0: Units.MmToPoints(50),
-                X1: Units.MmToPoints(100),
+                X1: Units.MmToPoints(200),
                 Y0: Units.MmToPoints(80),
-                Y1: Units.MmToPoints(90));
+                Y1: Units.MmToPoints(120));
 
             page.WriteBarcode(rect1, "JJBEA6500063000000177922", BarcodeFormat.CODE128, forceFitToRect: true, pureBarcode: true, narrowBarWidth: 1);
 
@@ -130,8 +133,20 @@ namespace Demo
             page.WriteBarcode(rect2, "01030000110444408000", BarcodeFormat.DM, forceFitToRect: false, pureBarcode: true, narrowBarWidth: 3);
             */
 
-            Pixmap pxmp = Utils.GetBarcodePixmap(rect1, "JJBEA6500063000000177922", BarcodeFormat.CODE128, forceFitToRect: false, pureBarcode: true, narrowBarWidth: 1);
+            Pixmap pxmp = Utils.GetBarcodePixmap("JJBEA6500063000000177922", BarcodeFormat.CODE128, width: 1000, pureBarcode: true, narrowBarWidth: 1);
+            
             pxmp.Save(@"PxmpBarcode.png");
+            
+            byte[] imageBytes = pxmp.ToBytes();
+
+            using var stream = new SKMemoryStream(imageBytes);
+            using var codec = SKCodec.Create(stream);
+            var info = codec.Info;
+            var bitmap = SKBitmap.Decode(codec);
+
+            using var data = bitmap.Encode(SKEncodedImageFormat.Png, 100); // 100 = quality
+            using var stream1 = File.OpenWrite(@"output.png");
+            data.SaveTo(stream1);
 
             doc.Save(@"TestWriteBarcode1.pdf");
         }
@@ -394,7 +409,7 @@ namespace Demo
             //{ "symb", "Symbol" },
             //{ "zadb", "ZapfDingbats" }
             MuPDF.NET.TextWriter writer = new MuPDF.NET.TextWriter(page.Rect);
-            var ret = writer.FillTextbox(page.Rect, "Hello World!", new Font(fontName: "helv"), rtl: true);
+            var ret = writer.FillTextbox(page.Rect, "Hello World!", new MuPDF.NET.Font(fontName: "helv"), rtl: true);
             writer.WriteText(page);
             doc.Save("text.pdf", pretty: 1);
             doc.Close();

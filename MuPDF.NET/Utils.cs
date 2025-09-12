@@ -2005,6 +2005,11 @@ namespace MuPDF.NET
             int width = (int)clip.Width;
             int height = (int)clip.Height;
 
+            if (width <= 0 || height <= 0)
+            {
+                throw new Exception("Invalid width");
+            }
+
             // get image format from file extension
             SKEncodedImageFormat imageFormat = SKEncodedImageFormat.Png;
             
@@ -2072,7 +2077,7 @@ namespace MuPDF.NET
             Rect rect = new Rect(clip.X0, clip.Y0, clip.X0 + barcodeImage.Width, clip.Y0 + barcodeImage.Height);
 
             MemoryStream ms = new MemoryStream();
-            using (SKData data = barcodeImage.Encode(SKEncodedImageFormat.Png, 300))
+            using (SKData data = barcodeImage.Encode(SKEncodedImageFormat.Png, 100))
             {
                 data.SaveTo(ms);
                 ms.Position = 0; // Reset stream position
@@ -2085,37 +2090,33 @@ namespace MuPDF.NET
         /// <summary>
         /// Return pixmap of barcode image.
         /// </summary>
-        /// <param name="clip">Rect area on page to write</param>
         /// <param name="text">Contents to write</param>
         /// <param name="type">Type to encode; Supported types: QR_CODE, EAN_8, EAN_13, UPC_A, CODE_39, CODE_128, ITF, PDF_417, CODABAR</param>
+        /// <param name="width">Width of barcode</param>
         /// <param name="characterSet">Use a specific character set for binary encoding (if supported by the selected barcode format)</param>
         /// <param name="disableEci">Don't generate ECI segment if non-default character set is used</param>
         /// <param name="pureBarcode">Don't put the content string into the output image</param>
         /// <param name="margin">Specifies margin, in pixels, to use when generating the barcode</param>
         /// <param name="narrowBarWidth">The width of the narrow bar in pixels</param>
         public static Pixmap GetBarcodePixmap(
-            Rect clip,
             string text,
             BarcodeFormat type,
+            int width = 1000,
             string characterSet = null,
             bool disableEci = false,
-            bool forceFitToRect = false,
             bool pureBarcode = false,
             int margin = 1,
             int narrowBarWidth = 0
             )
         {
-            if (clip == null)
+            if (width <= 0)
             {
-                throw new Exception("Rect is required");
+                throw new Exception("Invalid width");
             }
             if (text == null)
             {
                 throw new Exception("Text is required");
             }
-
-            int width = (int)clip.Width;
-            int height = (int)clip.Height;
 
             // get image format from file extension
             SKEncodedImageFormat imageFormat = SKEncodedImageFormat.Png;
@@ -2160,8 +2161,8 @@ namespace MuPDF.NET
             SKBitmap barcodeImage = barcodeWriter.Encode(
                 text,
                 imageFormat,
-                width,
-                height,
+                0,
+                0,
                 characterSet,
                 disableEci,
                 false,
@@ -2169,7 +2170,7 @@ namespace MuPDF.NET
                 margin, margin, margin, margin, 0, narrowBarWidth);
 
             // resize image to fit into clip region
-            if (forceFitToRect)
+             if (true)
             {
                 int newHeigth = barcodeImage.Height * width / barcodeImage.Width;
                 SKBitmap resizedBitmap = new SKBitmap(width, newHeigth);
@@ -2181,10 +2182,10 @@ namespace MuPDF.NET
                 barcodeImage = resizedBitmap;
             }
 
-            Rect rect = new Rect(clip.X0, clip.Y0, clip.X0 + barcodeImage.Width, clip.Y0 + barcodeImage.Height);
+            Rect rect = new Rect(0, 0, barcodeImage.Width, barcodeImage.Height);
 
             MemoryStream ms = new MemoryStream();
-            using (SKData data = barcodeImage.Encode(SKEncodedImageFormat.Png, 300))
+            using (SKData data = barcodeImage.Encode(SKEncodedImageFormat.Png, 100))
             {
                 data.SaveTo(ms);
             }
@@ -2228,6 +2229,15 @@ namespace MuPDF.NET
             int narrowBarWidth = 0
             )
         {
+            if (width <= 0 || height <= 0)
+            {
+                throw new Exception("Invalid width");
+            }
+            if (text == null)
+            {
+                throw new Exception("Text is required");
+            }
+
             // get image format from file extension
             SKEncodedImageFormat imageFormat = SKEncodedImageFormat.Png;
             string extension = System.IO.Path.GetExtension(imageFile).ToLower();
