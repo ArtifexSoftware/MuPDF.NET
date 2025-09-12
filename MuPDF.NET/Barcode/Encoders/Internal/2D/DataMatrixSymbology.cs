@@ -1,8 +1,8 @@
 /**************************************************
- Bytescout BarCode SDK
- Copyright (c) 2008 - 2010 Bytescout
- All rights reserved
- www.bytescout.com
+ *
+ *
+ *
+ *
 **************************************************/
 
 /*

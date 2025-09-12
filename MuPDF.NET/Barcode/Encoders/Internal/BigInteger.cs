@@ -2,7 +2,7 @@
 // BigInteger Class Version 1.03
 //
 // Copyright (c) 2002 Chew Keong TAN
-// All rights reserved.
+// *.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
 // copy of this software and associated documentation files (the

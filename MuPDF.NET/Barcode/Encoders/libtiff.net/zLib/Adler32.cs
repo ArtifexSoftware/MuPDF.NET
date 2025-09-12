@@ -2,7 +2,7 @@
 
 // Copyright (c) 2006, ComponentAce
 // http://www.componentace.com
-// All rights reserved.
+// *.
 
 // Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
 
@@ -14,7 +14,7 @@
 
 
 /*
-Copyright (c) 2000,2001,2002,2003 ymnk, JCraft,Inc. All rights reserved.
+Copyright (c) 2000,2001,2002,2003 ymnk, JCraft,Inc. *.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:

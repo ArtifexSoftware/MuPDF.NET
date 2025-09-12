@@ -1088,7 +1088,7 @@ namespace BitMiracle.LibTiff.Classic.Internal
 
 /*
  * Copyright (c) 1985, 1986 The Regents of the University of California.
- * All rights reserved.
+ * *.
  *
  * This code is derived from software contributed to Berkeley by
  * James A. Woods, derived from original work by Spencer Thomas
