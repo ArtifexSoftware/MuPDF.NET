@@ -62,7 +62,7 @@ namespace BarcodeReader.Core.MicroPDF
                 FoundBarcode foundBarcode = new FoundBarcode();
                 foundBarcode.BarcodeFormat = SymbologyType.MicroPDF;
                 foundBarcode.Polygon = new SKPointI[5] { b.A, b.B, b.D, b.C, b.A };
-                foundBarcode.Color = Color.Blue;
+                foundBarcode.Color = SKColors.Blue;
                 //byte[] pointTypes = new byte[5] { (byte) PathPointType.Start, (byte) PathPointType.Line, (byte) PathPointType.Line, (byte) PathPointType.Line, (byte) PathPointType.Line };
 				//GraphicsPath path = new GraphicsPath(foundBarcode.Polygon, pointTypes);
                 //foundBarcode.Rect = Rectangle.Round(path.GetBounds());
@@ -89,15 +89,15 @@ namespace BarcodeReader.Core.MicroPDF
         bool ProcessEdge(Edge e)
         {
             //Calculate main directions
-            MyVectorF vdY = new MyPoint(e.In.X, e.In.Y) - new MyPoint(e.End.X, e.End.Y);
+            MyVectorF vdY = new MyPoint((int)e.In.X, (int)e.In.Y) - new MyPoint((int)e.End.X, (int)e.End.Y);
             vdY = vdY.Normalized;
             MyVectorF vdX = new MyVectorF(-vdY.Y, vdY.X);
 
-            MyPoint mid = e.Center + vdX * 5;
+            MyPoint mid = new MyPoint((int)(e.Center.X + (vdX * 5).X), (int)(e.Center.Y + (vdX * 5).Y));
             foreach (BarCodeRegion c in candidates)
                 if (c.In(mid)) return false;
 
-            MyPoint center = e.Center;
+            MyPoint center = new MyPoint((int)e.Center.X, (int)e.Center.Y);
             Bresenham brR = new Bresenham(center, vdX);
             MyPoint start=brR.Current;
             LRowFinder.NewSearch(brR, false, -1);
@@ -168,8 +168,10 @@ namespace BarcodeReader.Core.MicroPDF
                         float lIn = e.Length;
                         float lEnd = (et.Up() - et.Down()).Length;
                         if (Calc.Around(lIn, lEnd, lIn * maxRatioStartStopLength))
-                            if (ScanBarcode(e.In, e.End, et.Up(), et.Down(), c.nCols)) return true;
-                        if (ScanBarcode(e.In, e.End, e.In + vdX * l, e.End + vdX * l, c.nCols)) return true;
+                            if (ScanBarcode(new MyPointF(e.In.X, e.In.Y), new MyPointF(e.End.X, e.End.Y), et.Up(), et.Down(), c.nCols)) return true;
+                        MyPointF tempInF = new MyPointF(e.In.X + (vdX * l).X, e.In.Y + (vdX * l).Y);
+                        MyPointF tempEndF = new MyPointF(e.In.X + (vdX * l).X, e.In.Y + (vdX * l).Y);
+                        if (ScanBarcode(new MyPointF(e.In.X, e.In.Y), new MyPointF(e.End.X, e.End.Y), tempInF, tempEndF, c.nCols)) return true;
                     }
 
                 }

@@ -46,17 +46,17 @@ namespace BarcodeReader.Core.MICR
             return new SKPointI[] { new SKPointI(xIn - 1, yIn - 1), new SKPointI(xEnd + 1, yIn - 1), new SKPointI(xEnd + 1, yEnd + 1), new SKPointI(xIn - 1, yEnd + 1), new SKPointI(xIn - 1, yIn - 1) };
         }
 
-        public Rectangle GetRectangle()
+        public SKRect GetRectangle()
         {
-            return new Rectangle(xIn, yIn, xEnd - xIn + 1, yEnd - yIn + 1);
+            return new SKRect(xIn, yIn, xEnd + 1, yEnd + 1);
         }
 
-        public void SetRectangle(Rectangle r)
+        public void SetRectangle(SKRect r)
         {
-            this.xIn = r.X;
-            this.yIn = r.Y;
-            this.xEnd = r.X + r.Width - 1;
-            this.YEnd = r.Y + r.Height - 1;
+            this.xIn = (int)r.Left;
+            this.yIn = (int)r.Top;
+            this.xEnd = (int)r.Right - 1;
+            this.YEnd = (int)r.Bottom - 1;
         }
 
         public int XIn { get { return xIn; } set { xIn = value; } }
@@ -69,11 +69,11 @@ namespace BarcodeReader.Core.MICR
         public string Char { get { return ch; } set { ch = value; scaned = true; } }
         public bool Scaned { get { return scaned; } }
 
-        public SKPointI Center { get { return new SKPointI((xIn + xEnd) / 2, (yIn + yEnd) / 2); } }
-        public SKPointI LU { get { return new SKPointI(xIn, yIn); } }
-        public SKPointI LD { get { return new SKPointI(xIn, yEnd); } }
-        public SKPointI RU { get { return new SKPointI(xEnd, yIn); } }
-        public SKPointI RD { get { return new SKPointI(xEnd, yEnd); } }
+        public SKPointI Center { get { return new SKPointI((int)((xIn + xEnd) / 2), (int)((yIn + yEnd) / 2)); } }
+        public SKPointI LU { get { return new SKPointI((int)xIn, (int)yIn); } }
+        public SKPointI LD { get { return new SKPointI((int)xIn, (int)yEnd); } }
+        public SKPointI RU { get { return new SKPointI((int)xEnd, (int)yIn); } }
+        public SKPointI RD { get { return new SKPointI((int)xEnd, (int)yEnd); } }
 
         public float Dist(Part p)
         {

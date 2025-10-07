@@ -137,7 +137,7 @@ namespace BarcodeReader.Core.FormLines
 						foundBarcode.BarcodeFormat = SymbologyType.UnderlinedField;
 						foundBarcode.Value = "box";
                         foundBarcode.Polygon = new SKPointI[] { polygon[0], polygon[1], polygon[2], polygon[3], polygon[0] };
-                        foundBarcode.Color = Color.Blue;
+                        foundBarcode.Color = SKColors.Blue;
 						//byte[] pointTypes = new byte[5] { (byte) PathPointType.Start, (byte) PathPointType.Line, (byte) PathPointType.Line, (byte) PathPointType.Line, (byte) PathPointType.Line };
 						//GraphicsPath path = new GraphicsPath(foundBarcode.Polygon, pointTypes);
 						//foundBarcode.Rect = Rectangle.Round(path.GetBounds());

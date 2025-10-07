@@ -1,7 +1,7 @@
 using System;
 using System.Text;
-using System.Drawing;
 using System.Collections;
+using SkiaSharp;
 
 namespace BarcodeReader.Core.LegacyDecoders
 {
@@ -255,7 +255,7 @@ namespace BarcodeReader.Core.LegacyDecoders
 
             FoundBarcode result = new FoundBarcode();
 			result.BarcodeFormat = SymbologyType.Codabar;
-            result.Rect = new Rectangle(startOffset, rowNumber, offset - startOffset, 1);
+            result.Rect = new SKRect(startOffset, rowNumber, offset, rowNumber+1);
             result.RawData = AsIntArray(symbols);
             
             StringBuilder sb = new StringBuilder();

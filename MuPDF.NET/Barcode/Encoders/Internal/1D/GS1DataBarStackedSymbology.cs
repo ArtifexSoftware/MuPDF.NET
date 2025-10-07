@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Text;
-using System.Drawing;
-using System.Drawing.Drawing2D;
 using SkiaSharp;
 
 namespace BarcodeWriter.Core.Internal
@@ -80,7 +78,7 @@ namespace BarcodeWriter.Core.Internal
             }
         }
 
-        protected override Size buildBars(SKCanvas canvas, SKFont font)
+        protected override SKSize buildBars(SKCanvas canvas, SKFont font)
         {
             string sValue = GetEncodedValue(false);
             createSegments(sValue);
@@ -148,18 +146,18 @@ namespace BarcodeWriter.Core.Internal
             }
             separatorLine.Add(counter);
 
-            Size drawingSize = new Size();
+            SKSize drawingSize = new SKSize();
             int x = 0;
             int y = 0;
 
             int width = NarrowBarWidth;
-            Size captionSize = calculateCaptionSize(canvas, font);
+            SKSize captionSize = calculateCaptionSize(canvas, font);
 
             int height = 5 * width;
             for (int i = 0; i < upperLine.Count; i++)
             {
                 if (i % 2 != 0)
-                    m_rects.Add(new Rectangle(x, y, width * upperLine[i], height));
+                    m_rects.Add(new SKRect(x, y, width * upperLine[i]+x, height+y));
                 x += width * upperLine[i];
             }
             x = 3 * width; // where separator template starts and ends is not described in the specification
@@ -168,7 +166,7 @@ namespace BarcodeWriter.Core.Internal
             for (int i = 0; i < separatorLine.Count; i++)
             {
                 if (i % 2 != 0)
-                    m_rects.Add(new Rectangle(x, y, width * separatorLine[i], height));
+                    m_rects.Add(new SKRect(x, y, width * separatorLine[i]+x, height+y));
                 x += width * separatorLine[i];
             }
             x = 0;
@@ -177,7 +175,7 @@ namespace BarcodeWriter.Core.Internal
             for (int i = 0; i < lowerLine.Count; i++)
             {
                 if (i % 2 == 0)
-                    m_rects.Add(new Rectangle(x, y, width * lowerLine[i], height));
+                    m_rects.Add(new SKRect(x, y, width * lowerLine[i]+x, height+y));
                 x += width * lowerLine[i];
             }
 

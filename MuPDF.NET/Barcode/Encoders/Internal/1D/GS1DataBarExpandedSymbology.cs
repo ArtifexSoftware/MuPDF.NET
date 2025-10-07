@@ -7,8 +7,6 @@
 
 using System;
 using System.Text;
-using System.Drawing;
-using System.Drawing.Drawing2D;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using SkiaSharp;
@@ -888,7 +886,7 @@ namespace BarcodeWriter.Core.Internal
             return sum % 211;
         }
 
-        protected override Size buildBars(SKCanvas canvas, SKFont font)
+        protected override SKSize buildBars(SKCanvas canvas, SKFont font)
         {
             int maxSignNumber = 21;
             string sValue = GetEncodedValue(false);
@@ -945,20 +943,20 @@ namespace BarcodeWriter.Core.Internal
             }
             GS1Utils.addArray(symbol, m_guardPattern, false);
 
-            Size drawingSize = new Size();
+            SKSize drawingSize = new SKSize();
             int x = 0;
             int y = 0;
 
             int height = BarHeight;
             int width = NarrowBarWidth;
 
-            Size captionSize = calculateCaptionSize(canvas, font);
-            int guardHeight = height + captionSize.Height / 2;
+            SKSize captionSize = calculateCaptionSize(canvas, font);
+            float guardHeight = height + captionSize.Height / 2;
 
             for (int i = 0; i < symbol.Count; i++)
             {
                 if (i % 2 != 0)
-                    m_rects.Add(new Rectangle(x, y, width * symbol[i], guardHeight));
+                    m_rects.Add(new SKRect(x, y, width * symbol[i]+x, guardHeight+y));
                 x += width * symbol[i];
             }
 

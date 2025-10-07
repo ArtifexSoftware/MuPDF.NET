@@ -161,7 +161,7 @@ namespace BarcodeReader.Core.Common
             v2 = temp;
         }
 
-        public static Rectangle DrawPath(SKPointI[] polygon)
+        public static SKRect DrawPath(SKPointI[] polygon)
         {
             // Create a path from the points
             using (var path = new SKPath())
@@ -176,12 +176,7 @@ namespace BarcodeReader.Core.Common
                 // Get bounds
                 SKRect bounds = path.Bounds;
 
-                return new Rectangle(
-                    (int)bounds.Left,
-                    (int)bounds.Top,
-                    (int)bounds.Width,
-                    (int)bounds.Height
-                );
+                return bounds;
             }
         }
 

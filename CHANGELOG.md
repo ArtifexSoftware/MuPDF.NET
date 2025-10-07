@@ -1,5 +1,14 @@
 # Changelog
 
+### [3.2.10] - 2025-10-07
+- Replaced all Windows System.Drawing dependencies with SkiaSharp.
+- Added support for 32-bit .NET projects in Visual Studio 2019.
+- Fixed issues with Unicode file names.
+
+### [3.2.10-rc.5] - 2025-09-16
+- Removed margin parameter in write barcode.
+- Added new marginLeft,marginTop,marginRight,marginBottom parameters to barcode creation.
+
 ### [3.2.10-rc.3] - 2025-09-12
 - Upgrade MuPDF.NativeAssets to 1.26.8.
 - Added a new method "Utils.GetBarcodePixmap" into barcode write module.

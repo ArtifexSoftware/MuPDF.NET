@@ -11,6 +11,7 @@ using static System.Net.Mime.MediaTypeNames;
 using static System.Net.WebRequestMethods;
 using File = System.IO.File;
 using Font = MuPDF.NET.Font;
+using TextWriter = MuPDF.NET.TextWriter;
 
 namespace Demo
 {
@@ -60,8 +61,53 @@ namespace Demo
             TestReadBarcode1();
             TestWriteBarcode1();
             TestCMYKRecolor1(args);
+            TestUnicodeDocument();
+            TestMorph();
 
             return;
+        }
+
+        static void TestMorph()
+        {
+            Console.WriteLine("\n=== TestMorph =====================");
+
+            string testFilePath = @"../../../TestDocuments/Morph.pdf";
+
+            Document doc = new Document(testFilePath);
+            Page page = doc[0];
+            Rect printrect = new Rect(180, 30, 650, 60);
+            int pagerot = page.Rotation;
+            TextWriter pw = new TextWriter(page.TrimBox);
+            string txt = "Origin 100.100";
+            pw.Append(new Point(100, 100), txt, new Font("tiro"), fontSize: 24);
+            pw.WriteText(page);
+
+            txt = "rotated 270 - 100.100";
+            Matrix matrix = new IdentityMatrix();
+            matrix.Prerotate(270);
+            Morph mo = new Morph(new Point(100, 100), matrix);
+            pw = new TextWriter(page.TrimBox);
+            pw.Append(new Point(100, 100), txt, new Font("tiro"), fontSize: 24);
+            pw.WriteText(page, morph:mo);
+            page.SetRotation(270);
+
+            page.Dispose();
+            doc.Save(@"morph.pdf");
+            doc.Close();
+        }
+
+        static void TestUnicodeDocument()
+        {
+            Console.WriteLine("\n=== TestUnicodeDocument =====================");
+
+            string testFilePath = @"../../../TestDocuments/你好.pdf";
+
+            Document doc = new Document(testFilePath);
+
+            doc.Save(@"你好_.pdf");
+            doc.Close();
+
+            Console.WriteLine("TestDocument completed.");
         }
 
         static void TestCMYKRecolor1(string[] args)
@@ -105,7 +151,7 @@ namespace Demo
 
             page.WriteBarcode(rect, "JJBEA6500", BarcodeFormat.CODE39, forceFitToRect: true, pureBarcode: true, narrowBarWidth: 2);
             */
-
+            /*
             // CODE128
             Rect rect1 = new Rect(
                 X0: Units.MmToPoints(50),
@@ -122,7 +168,7 @@ namespace Demo
                 Y1: Units.MmToPoints(120));
 
             page.WriteBarcode(rect1, "JJBEA6500063000000177922", BarcodeFormat.CODE128, forceFitToRect: true, pureBarcode: true, narrowBarWidth: 1);
-
+            */
             /*
             Rect rect2 = new Rect(
                 X0: Units.MmToPoints(100),
@@ -133,10 +179,11 @@ namespace Demo
             page.WriteBarcode(rect2, "01030000110444408000", BarcodeFormat.DM, forceFitToRect: false, pureBarcode: true, narrowBarWidth: 3);
             */
 
-            Pixmap pxmp = Utils.GetBarcodePixmap("JJBEA6500063000000177922", BarcodeFormat.CODE128, width: 1000, pureBarcode: true, narrowBarWidth: 1);
+            Pixmap pxmp = Utils.GetBarcodePixmap("JJBEA6500063000000177922", BarcodeFormat.CODE128, width: 500, pureBarcode: true, marginLeft:0, marginTop:0, marginRight:0, marginBottom:0, narrowBarWidth: 1);
             
-            pxmp.Save(@"PxmpBarcode.png");
-            
+            pxmp.Save(@"e:\PxmpBarcode3.png");
+
+            /*
             byte[] imageBytes = pxmp.ToBytes();
 
             using var stream = new SKMemoryStream(imageBytes);
@@ -149,6 +196,10 @@ namespace Demo
             data.SaveTo(stream1);
 
             doc.Save(@"TestWriteBarcode1.pdf");
+            */
+
+            page.Dispose();
+            doc.Close();
         }
 
         static void TestReadBarcode1()
@@ -443,8 +494,9 @@ namespace Demo
 
         static void TestReadBarcode(string[] args)
         {
-            Console.WriteLine("\n=== TestReadBarcode =======================");
             int i = 0;
+
+            Console.WriteLine("\n=== TestReadBarcode =======================");
 
             Console.WriteLine("--- Read from image file ----------");
             string testFilePath1 = Path.GetFullPath("../../../TestDocuments/Barcodes/rendered.bmp");
@@ -458,7 +510,7 @@ namespace Demo
                 BarcodePoint[] points = barcode.ResultPoints;
                 Console.WriteLine($"Page {i++} - Type: {barcode.BarcodeFormat} - Value: {barcode.Text} - Rect: [{points[0]},{points[1]}]");
             }
-            
+
             Console.WriteLine("--- Read from pdf file ----------");
 
             string testFilePath = Path.GetFullPath("../../../TestDocuments/Barcodes/Samples.pdf");
@@ -562,43 +614,43 @@ namespace Demo
 
             // QR_CODE
             Rect rect = new Rect(100, 20, 300, 80);
-            page.WriteBarcode(rect, "Hello World!", BarcodeFormat.QR, forceFitToRect:false, pureBarcode:false, margin:0);
+            page.WriteBarcode(rect, "Hello World!", BarcodeFormat.QR, forceFitToRect:false, pureBarcode:false, marginLeft:0);
 
             // EAN_8
             rect = new Rect(100, 100, 300, 120);
-            page.WriteBarcode(rect, "1234567", BarcodeFormat.EAN8, forceFitToRect: false, pureBarcode: false, margin: 20);
+            page.WriteBarcode(rect, "1234567", BarcodeFormat.EAN8, forceFitToRect: false, pureBarcode: false, marginBottom: 20);
 
             // EAN_13
             rect = new Rect(100, 155, 300, 200);
-            page.WriteBarcode(rect, "123456789012", BarcodeFormat.EAN13, forceFitToRect: false, pureBarcode: true, margin: 0);
+            page.WriteBarcode(rect, "123456789012", BarcodeFormat.EAN13, forceFitToRect: false, pureBarcode: true, marginBottom: 0);
 
             // UPC_A
             rect = new Rect(100, 210, 300, 255);
-            page.WriteBarcode(rect, "123456789012", BarcodeFormat.UPC_A, forceFitToRect: false, pureBarcode: true, margin: 0);
+            page.WriteBarcode(rect, "123456789012", BarcodeFormat.UPC_A, forceFitToRect: false, pureBarcode: true, marginBottom: 0);
 
             // CODE_39
             rect = new Rect(100, 265, 600, 285);
-            page.WriteBarcode(rect, "Hello World!", BarcodeFormat.CODE39, forceFitToRect: true, pureBarcode: false, margin: 0);
+            page.WriteBarcode(rect, "Hello World!", BarcodeFormat.CODE39, forceFitToRect: true, pureBarcode: false, marginBottom: 0);
 
             // CODE_128
             rect = new Rect(100, 320, 400, 355);
-            page.WriteBarcode(rect, "Hello World!", BarcodeFormat.CODE128, forceFitToRect: true, pureBarcode: true, margin: 0);
+            page.WriteBarcode(rect, "Hello World!", BarcodeFormat.CODE128, forceFitToRect: true, pureBarcode: true, marginBottom: 0);
 
             // ITF
             rect = new Rect(100, 385, 300, 420);
-            page.WriteBarcode(rect, "12345678901234567890", BarcodeFormat.I2OF5, forceFitToRect: false, pureBarcode: false, margin: 0);
+            page.WriteBarcode(rect, "12345678901234567890", BarcodeFormat.I2OF5, forceFitToRect: false, pureBarcode: false, marginBottom: 0);
 
             // PDF_417
             rect = new Rect(100, 430, 400, 435);
-            page.WriteBarcode(rect, "Hello World!", BarcodeFormat.PDF417, forceFitToRect: false, pureBarcode: true, margin: 0);
+            page.WriteBarcode(rect, "Hello World!", BarcodeFormat.PDF417, forceFitToRect: false, pureBarcode: true, marginBottom: 0);
 
             // CODABAR
             rect = new Rect(100, 540, 400, 580);
-            page.WriteBarcode(rect, "12345678901234567890", BarcodeFormat.CODABAR, forceFitToRect: true, pureBarcode: true, margin: 0);
+            page.WriteBarcode(rect, "12345678901234567890", BarcodeFormat.CODABAR, forceFitToRect: true, pureBarcode: true, marginBottom: 0);
             
             // DATA_MATRIX
             rect = new Rect(100, 620, 140, 660);
-            page.WriteBarcode(rect, "01100000110419257000", BarcodeFormat.DM, forceFitToRect: false, pureBarcode: false, margin: 0);
+            page.WriteBarcode(rect, "01100000110419257000", BarcodeFormat.DM, forceFitToRect: false, pureBarcode: false, marginBottom: 0);
 
             doc.Save("barcode.pdf");
 
@@ -608,34 +660,34 @@ namespace Demo
             Console.WriteLine("--- Write to image file ----------");
 
             // QR_CODE
-            Utils.WriteBarcode("QR_CODE.png", "Hello World!", BarcodeFormat.QR, width: 600, height: 600, forceFitToRect: true, pureBarcode: false, margin: 0);
+            Utils.WriteBarcode("QR_CODE.png", "Hello World!", BarcodeFormat.QR, width: 600, height: 600, forceFitToRect: true, pureBarcode: false, marginBottom: 0);
 
             // EAN_8
-            Utils.WriteBarcode("EAN_8.png", "1234567", BarcodeFormat.EAN8, width: 300, height: 20, forceFitToRect: false, pureBarcode: false, margin: 4);
+            Utils.WriteBarcode("EAN_8.png", "1234567", BarcodeFormat.EAN8, width: 300, height: 20, forceFitToRect: false, pureBarcode: false, marginBottom: 4);
 
             // EAN_13
-            Utils.WriteBarcode("EAN_13.png", "123456789012", BarcodeFormat.EAN13, width: 300, height: 0, forceFitToRect: false, pureBarcode: false, margin: 10);
+            Utils.WriteBarcode("EAN_13.png", "123456789012", BarcodeFormat.EAN13, width: 300, height: 0, forceFitToRect: false, pureBarcode: false, marginBottom: 10);
 
             // UPC_A
-            Utils.WriteBarcode("UPC_A.png", "123456789012", BarcodeFormat.UPC_A, width: 300, height: 20, forceFitToRect: false, pureBarcode: false, margin: 10);
+            Utils.WriteBarcode("UPC_A.png", "123456789012", BarcodeFormat.UPC_A, width: 300, height: 20, forceFitToRect: false, pureBarcode: false, marginBottom: 10);
 
             // CODE_39
-            Utils.WriteBarcode("CODE_39.png", "Hello World!", BarcodeFormat.CODE39, width: 300, height: 70, forceFitToRect: false, pureBarcode: false, margin: 20);
+            Utils.WriteBarcode("CODE_39.png", "Hello World!", BarcodeFormat.CODE39, width: 300, height: 70, forceFitToRect: false, pureBarcode: false, marginBottom: 20);
 
             // CODE_128
-            Utils.WriteBarcode("CODE_128.png", "Hello World!", BarcodeFormat.CODE128, width: 300, height: 150, forceFitToRect: false, pureBarcode: false, margin: 20);
+            Utils.WriteBarcode("CODE_128.png", "Hello World!", BarcodeFormat.CODE128, width: 300, height: 150, forceFitToRect: false, pureBarcode: false, marginBottom: 20);
 
             // ITF
-            Utils.WriteBarcode("ITF.png", "12345678901234567890", BarcodeFormat.I2OF5, width: 300, height: 120, forceFitToRect: false, pureBarcode: false, margin: 20);
+            Utils.WriteBarcode("ITF.png", "12345678901234567890", BarcodeFormat.I2OF5, width: 300, height: 120, forceFitToRect: false, pureBarcode: false, marginBottom: 20);
 
             // PDF_417
-            Utils.WriteBarcode("PDF_417.png", "Hello World!", BarcodeFormat.PDF417, width: 300, height: 10, forceFitToRect: false, pureBarcode: false, margin: 0);
+            Utils.WriteBarcode("PDF_417.png", "Hello World!", BarcodeFormat.PDF417, width: 300, height: 10, forceFitToRect: false, pureBarcode: false, marginBottom: 0);
 
             // CODABAR
-            Utils.WriteBarcode("CODABAR.png", "12345678901234567890", BarcodeFormat.CODABAR, width: 300, height: 150, forceFitToRect: false, pureBarcode: false, margin: 20);
+            Utils.WriteBarcode("CODABAR.png", "12345678901234567890", BarcodeFormat.CODABAR, width: 300, height: 150, forceFitToRect: false, pureBarcode: false, marginBottom: 20);
 
             // DATA_MATRIX
-            Utils.WriteBarcode("DATA_MATRIX.png", "01100000110419257000", BarcodeFormat.DM, width: 300, height: 300, forceFitToRect: false, pureBarcode: true, margin: 1);
+            Utils.WriteBarcode("DATA_MATRIX.png", "01100000110419257000", BarcodeFormat.DM, width: 300, height: 300, forceFitToRect: false, pureBarcode: true, marginBottom: 1);
 
             Console.WriteLine("Barcodes written to image files in the current directory.");
         }

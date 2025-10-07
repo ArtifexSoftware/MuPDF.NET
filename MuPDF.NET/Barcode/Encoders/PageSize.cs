@@ -1,4 +1,5 @@
-﻿using System;
+﻿using SkiaSharp;
+using System;
 using System.Drawing;
 using System.Text;
 
@@ -221,116 +222,116 @@ namespace BarcodeWriter.Core
 
     internal static class PageSizeUtils
     {
-        internal static SizeF GetPageSize(PageSize pageSize)
+        internal static SKSize GetPageSize(PageSize pageSize)
         {
             switch (pageSize)
             {
                 case PageSize.LETTER:
-                    return new SizeF(612, 792);
+                    return new SKSize(612, 792);
                 case PageSize.NOTE:
-                    return new SizeF(540, 720);
+                    return new SKSize(540, 720);
                 case PageSize.LEGAL:
-                    return new SizeF(612, 1008);
+                    return new SKSize(612, 1008);
                 case PageSize.TABLOID:
-                    return new SizeF(792, 1224);
+                    return new SKSize(792, 1224);
                 case PageSize.EXECUTIVE:
-                    return new SizeF(522, 756);
+                    return new SKSize(522, 756);
                 case PageSize.POSTCARD:
-                    return new SizeF(283, 416);
+                    return new SKSize(283, 416);
                 case PageSize.A0:
-                    return new SizeF(2384, 3370);
+                    return new SKSize(2384, 3370);
                 case PageSize.A1:
-                    return new SizeF(1684, 2384);
+                    return new SKSize(1684, 2384);
                 case PageSize.A2:
-                    return new SizeF(1191, 1684);
+                    return new SKSize(1191, 1684);
                 case PageSize.A3:
-                    return new SizeF(842, 1191);
+                    return new SKSize(842, 1191);
                 case PageSize.A4:
-                    return new SizeF(595, 842);
+                    return new SKSize(595, 842);
                 case PageSize.A5:
-                    return new SizeF(420, 595);
+                    return new SKSize(420, 595);
                 case PageSize.A6:
-                    return new SizeF(297, 420);
+                    return new SKSize(297, 420);
                 case PageSize.A7:
-                    return new SizeF(210, 297);
+                    return new SKSize(210, 297);
                 case PageSize.A8:
-                    return new SizeF(148, 210);
+                    return new SKSize(148, 210);
                 case PageSize.A9:
-                    return new SizeF(105, 148);
+                    return new SKSize(105, 148);
                 case PageSize.A10:
-                    return new SizeF(73, 105);
+                    return new SKSize(73, 105);
                 case PageSize.B0:
-                    return new SizeF(2834, 4008);
+                    return new SKSize(2834, 4008);
                 case PageSize.B1:
-                    return new SizeF(2004, 2834);
+                    return new SKSize(2004, 2834);
                 case PageSize.B2:
-                    return new SizeF(1417, 2004);
+                    return new SKSize(1417, 2004);
                 case PageSize.B3:
-                    return new SizeF(1000, 1417);
+                    return new SKSize(1000, 1417);
                 case PageSize.B4:
-                    return new SizeF(708, 1000);
+                    return new SKSize(708, 1000);
                 case PageSize.B5:
-                    return new SizeF(498, 708);
+                    return new SKSize(498, 708);
                 case PageSize.B6:
-                    return new SizeF(354, 498);
+                    return new SKSize(354, 498);
                 case PageSize.B7:
-                    return new SizeF(249, 354);
+                    return new SKSize(249, 354);
                 case PageSize.B8:
-                    return new SizeF(175, 249);
+                    return new SKSize(175, 249);
                 case PageSize.B9:
-                    return new SizeF(124, 175);
+                    return new SKSize(124, 175);
                 case PageSize.B10:
-                    return new SizeF(87, 124);
+                    return new SKSize(87, 124);
                 case PageSize.ARCH_E:
-                    return new SizeF(2592, 3456);
+                    return new SKSize(2592, 3456);
                 case PageSize.ARCH_D:
-                    return new SizeF(1728, 2592);
+                    return new SKSize(1728, 2592);
                 case PageSize.ARCH_C:
-                    return new SizeF(1296, 1728);
+                    return new SKSize(1296, 1728);
                 case PageSize.ARCH_B:
-                    return new SizeF(864, 1296);
+                    return new SKSize(864, 1296);
                 case PageSize.ARCH_A:
-                    return new SizeF(648, 864);
+                    return new SKSize(648, 864);
                 case PageSize.FLSA:
-                    return new SizeF(612, 936);
+                    return new SKSize(612, 936);
                 case PageSize.FLSE:
-                    return new SizeF(648, 936);
+                    return new SKSize(648, 936);
                 case PageSize.HALFLETTER:
-                    return new SizeF(396, 612);
+                    return new SKSize(396, 612);
                 case PageSize._11X17:
-                    return new SizeF(792, 1224);
+                    return new SKSize(792, 1224);
                 case PageSize.ID_1:
-                    return new SizeF(242.65f, 153);
+                    return new SKSize(242.65f, 153);
                 case PageSize.ID_2:
-                    return new SizeF(297, 210);
+                    return new SKSize(297, 210);
                 case PageSize.ID_3:
-                    return new SizeF(354, 249);
+                    return new SKSize(354, 249);
                 case PageSize.LEDGER:
-                    return new SizeF(1224, 792);
+                    return new SKSize(1224, 792);
                 case PageSize.CROWN_QUARTO:
-                    return new SizeF(535, 697);
+                    return new SKSize(535, 697);
                 case PageSize.LARGE_CROWN_QUARTO:
-                    return new SizeF(569, 731);
+                    return new SKSize(569, 731);
                 case PageSize.DEMY_QUARTO:
-                    return new SizeF(620, 782);
+                    return new SKSize(620, 782);
                 case PageSize.ROYAL_QUARTO:
-                    return new SizeF(671, 884);
+                    return new SKSize(671, 884);
                 case PageSize.CROWN_OCTAVO:
-                    return new SizeF(348, 527);
+                    return new SKSize(348, 527);
                 case PageSize.LARGE_CROWN_OCTAVO:
-                    return new SizeF(365, 561);
+                    return new SKSize(365, 561);
                 case PageSize.DEMY_OCTAVO:
-                    return new SizeF(391, 612);
+                    return new SKSize(391, 612);
                 case PageSize.ROYAL_OCTAVO:
-                    return new SizeF(442, 663);
+                    return new SKSize(442, 663);
                 case PageSize.SMALL_PAPERBACK:
-                    return new SizeF(314, 504);
+                    return new SKSize(314, 504);
                 case PageSize.PENGUIN_SMALL_PAPERBACK:
-                    return new SizeF(314, 513);
+                    return new SKSize(314, 513);
                 case PageSize.PENGUIN_LARGE_PAPERBACK:
-                    return new SizeF(365, 561);
+                    return new SKSize(365, 561);
                 default:
-                    return SizeF.Empty;
+                    return SKSize.Empty;
             }
         }
     }

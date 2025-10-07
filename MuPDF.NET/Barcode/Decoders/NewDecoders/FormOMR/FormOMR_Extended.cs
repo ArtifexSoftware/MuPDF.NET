@@ -2,6 +2,7 @@ using System;
 using BarcodeReader.Core.Common;
 using System.Collections.Generic;
 using System.Drawing;
+using SkiaSharp;
 
 namespace BarcodeReader.Core.FormOMR
 {
@@ -118,7 +119,7 @@ namespace BarcodeReader.Core.FormOMR
                 if (bestCount == 0) goto next;
 
 #if DEBUG
-                DebugHelper.DrawSquare(Color.Lime,
+                DebugHelper.DrawSquare(SKColors.Lime,
                     new MyPoint(center.X - (center.X + bestOffset.X), center.Y - (center.Y + bestOffset.Y)));
 #endif
                 lock (locker)

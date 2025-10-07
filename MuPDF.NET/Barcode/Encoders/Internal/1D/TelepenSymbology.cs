@@ -172,9 +172,9 @@ namespace BarcodeWriter.Core.Internal
             throw new BarcodeException("Incorrect symbol for Telepen symbology");
         }
 
-        protected override Size buildBars(SKCanvas canvas, SKFont font)
+        protected override SKSize buildBars(SKCanvas canvas, SKFont font)
         {
-            Size drawingSize = new Size();
+            SKSize drawingSize = new SKSize();
             int x = 0;
             int y = 0;
 
@@ -182,7 +182,7 @@ namespace BarcodeWriter.Core.Internal
             foreach (char c in value)
             {
                 if (c == '1')
-                    m_rects.Add(new Rectangle(x, y, NarrowBarWidth, BarHeight));
+                    m_rects.Add(new SKRect(x, y, x+NarrowBarWidth, y+BarHeight));
 
                 x += NarrowBarWidth;
             }

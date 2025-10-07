@@ -177,9 +177,9 @@ namespace BarcodeWriter.Core.Internal
             return checksum_bin;
         }
 
-        protected override Size buildBars(SKCanvas canvas, SKFont font)
+        protected override SKSize buildBars(SKCanvas canvas, SKFont font)
         {
-            Size drawingSize = new Size();
+            SKSize drawingSize = new SKSize();
             int x = 0;
             int y = 0;
 
@@ -201,11 +201,11 @@ namespace BarcodeWriter.Core.Internal
                 int barWidth = width0;
                 if (value[i] == '1')
                     barWidth = width1;
-                m_rects.Add(new Rectangle(x, y, barWidth, height));
+                m_rects.Add(new SKRect(x, y, barWidth+x, height+y));
                 x += pitchWidth;
             }
             // Termination bar
-            m_rects.Add(new Rectangle(x, y, pitchWidth, height));
+            m_rects.Add(new SKRect(x, y, pitchWidth+x, height+y));
             x += pitchWidth;
             // Reverse start code
             for (int i = 0; i < m_reverseStartCode.Length; i++)
@@ -214,7 +214,7 @@ namespace BarcodeWriter.Core.Internal
                 if (m_reverseStartCode[i] == '1')
                     barWidth = width1;
                 x += pitchWidth;
-                m_rects.Add(new Rectangle(x - barWidth, y, barWidth, height));
+                m_rects.Add(new SKRect(x - barWidth, y, x, y+height));
             }
             // right margin
             x += width0;

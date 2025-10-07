@@ -1,5 +1,4 @@
 using System;
-using System.Drawing;
 using SkiaSharp;
 using System.Runtime.InteropServices;
 
@@ -231,7 +230,7 @@ namespace BarcodeReader.Core
 #if DEBUG_IMAGE
             SKBitmap output = new SKBitmap(Width, Height, PixelFormat.Format24bppRgb);
             byte[] scanBytes = null;
-            Rectangle imgRect = new Rectangle(0, 0, Width, 1);
+            SKRect imgRect = new SKRect(0, 0, Width, 1);
 
             for (int y = 0; y < Height; y++)
             {

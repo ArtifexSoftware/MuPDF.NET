@@ -1,4 +1,5 @@
-﻿using System;
+﻿using SkiaSharp;
+using System;
 using System.Drawing;
 
 namespace BarcodeReader.Core.MICR
@@ -39,17 +40,17 @@ namespace BarcodeReader.Core.MICR
         const float EPS = 0.2F;
         //To crop the image in the rectangle r, crop the 4 borders to fit the precalculated
         //level of gray.
-        Rectangle Crop(Borders b, Rectangle r)
+        SKRect Crop(Borders b, SKRect r)
         {
-            int h = r.Height;
+            int h = (int)r.Height;
             int w2 = (int)Math.Floor(r.Width / 4f) ; if (w2 < 2) w2 = 2;
             int h2 = (int)Math.Floor(h / 4f); if (h2 < 2) h2 = 2;
-            int xIn = MaxColFit(r.X, r.Y, r.Height, 1, w2, b.left);
-            int xEnd = MaxColFit(r.X + r.Width - 1, r.Y, r.Height, -1, w2, b.right);
+            int xIn = MaxColFit((int)r.Left, (int)r.Top, (int)r.Height, 1, w2, b.left);
+            int xEnd = MaxColFit((int)r.Right - 1, (int)r.Top, (int)r.Height, -1, w2, b.right);
             int w = xEnd - xIn + 1;
-            int yIn = MaxRowFit(xIn, r.Y, w, 1, h2, b.top);
-            int yEnd = MaxRowFit(xIn, r.Y + r.Height - 1, w, -1, h2, b.bottom);
-            return new Rectangle(xIn, yIn, xEnd - xIn + 1, yEnd - yIn + 1);
+            int yIn = MaxRowFit(xIn, (int)r.Top, w, 1, h2, b.top);
+            int yEnd = MaxRowFit(xIn, (int)r.Bottom - 1, w, -1, h2, b.bottom);
+            return new SKRect(xIn, yIn, xEnd - xIn + 1, yEnd - yIn + 1);
         }
 
         //Moves a vertical boder until the best gray level fit.
@@ -118,15 +119,15 @@ namespace BarcodeReader.Core.MICR
 
         //Main method to find the matching MICR symbol. Find the matching symbol
         //for a region r of the image img.
-        public string GetChar(BlackAndWhiteImage img, ref Rectangle r)
+        public string GetChar(BlackAndWhiteImage img, ref SKRect r)
         {
             this.img = img;
             float min = float.MaxValue;
             string minChar = "-";
-            Rectangle minRect = r;
+            SKRect minRect = r;
             for (int i = 0; i < chars.Length; i++)
             {
-                Rectangle rect = Crop(borders[i], r);
+                SKRect rect = Crop(borders[i], r);
                 float e = GetError(rect, chars[i]);
                 if (e < min)
                 {
@@ -146,7 +147,7 @@ namespace BarcodeReader.Core.MICR
         const float EPSILON = 5e-4F;
         //Key method to calculate the difference between a region of the image and a pattern.
         //The region can be bigger or smaller than the pattern, so a few maths are involved.
-        float GetError(Rectangle rect, int[][] c)
+        float GetError(SKRect rect, int[][] c)
         {
             int rows = c.Length;
             int cols = c[0].Length;
@@ -160,10 +161,10 @@ namespace BarcodeReader.Core.MICR
             for (int j = 0; j < rect.Height; j++, Y += h)
             {
                 float X = 0.0F;
-                XBitArray row = img.GetRow(rect.Y + j);
+                XBitArray row = img.GetRow((int)(rect.Top + j));
                 for (int i = 0; i < rect.Width; i++, X += w)
                 {
-                    bool isBlack = row[rect.X + i];
+                    bool isBlack = row[(int)rect.Left + i];
                     if (isBlack)
                     {
                         float y = Y;

@@ -178,11 +178,11 @@ namespace BarcodeWriter.Core.Internal
             return ":o]";
         }
 
-        protected override Size buildBars(SKCanvas canvas, SKFont font)
+        protected override SKSize buildBars(SKCanvas canvas, SKFont font)
         {
             InitSizes();
 
-            Size drawingSize = new Size();
+            SKSize drawingSize = new SKSize();
             int x = 0;
             int y = 0;
 
@@ -210,7 +210,7 @@ namespace BarcodeWriter.Core.Internal
                     }
 
                     if (drawBar)
-                        m_rects.Add(new Rectangle(x, y, width, height));
+                        m_rects.Add(new SKRect(x, y, width+x, height+y));
 
                     x += width;
                     drawBar = !drawBar;
@@ -274,7 +274,7 @@ namespace BarcodeWriter.Core.Internal
         {
             for (int i = 0; i < m_rects.Count; i++)
             {
-                var r = (Rectangle)m_rects[i];
+                var r = (SKRect)m_rects[i];
 
                 // Change color for last bar if PharmaCodeSupplementaryCode is enabled
                 if (i == m_rects.Count - 1 && Options.PharmaCodeSupplementaryCode)
@@ -284,10 +284,10 @@ namespace BarcodeWriter.Core.Internal
 
                 // Draw filled rectangle
                 SKRect rect = new SKRect(
-                    r.X + position.X,
-                    r.Y + position.Y,
-                    r.X + position.X + r.Width,
-                    r.Y + position.Y + r.Height
+                    r.Left + position.X,
+                    r.Top + position.Y,
+                    r.Right + position.X,
+                    r.Bottom + position.Y
                 );
 
                 canvas.DrawRect(rect, paint);

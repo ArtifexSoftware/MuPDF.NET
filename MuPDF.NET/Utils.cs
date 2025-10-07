@@ -1922,7 +1922,7 @@ namespace MuPDF.NET
                 try
                 {
                     string[] foundBarcodes = null;
-                    Rectangle[] foundBarcodesRectangles = null;
+                    SKRect[] foundBarcodesRectangles = null;
 
                     // string with all barcode results for this image
                     // 2nd and further barcodes are added separated by the new line
@@ -1939,13 +1939,13 @@ namespace MuPDF.NET
                         {
                             string text = foundBarcodes[i];
                             byte[] rawBytes = Encoding.UTF8.GetBytes(text);
-                            Rectangle rect = foundBarcodesRectangles[i];
+                            SKRect rect = foundBarcodesRectangles[i];
                             BarcodePoint[] resultPoints = new BarcodePoint[]
                                 {
-                                new BarcodePoint(rect.X, rect.Y),
-                                new BarcodePoint(rect.X + rect.Width, rect.Y),
-                                new BarcodePoint(rect.X + rect.Width, rect.Y + rect.Height),
-                                new BarcodePoint(rect.X, rect.Y + rect.Height)
+                                new BarcodePoint(rect.Left, rect.Left),
+                                new BarcodePoint(rect.Left + rect.Width, rect.Top),
+                                new BarcodePoint(rect.Left + rect.Width, rect.Top + rect.Height),
+                                new BarcodePoint(rect.Left, rect.Top + rect.Height)
                                 };
 
                             BarcodeFormat resultFormat = (BarcodeFormat)Enum.Parse(typeof(BarcodeFormat), barcodetype);
@@ -1961,7 +1961,7 @@ namespace MuPDF.NET
                 }
                 catch (Exception ex)
                 {
-                    //Console.WriteLine("Error decoding barcode: " + ex.Message);
+                    Console.WriteLine("Error decoding barcode: " + ex.Message);
                 }
             }
 
@@ -1978,7 +1978,10 @@ namespace MuPDF.NET
         /// <param name="disableEci">Don't generate ECI segment if non-default character set is used</param>
         /// <param name="forceFitToRect">Resize output barcode image width/height into clip region</param>
         /// <param name="pureBarcode">Don't put the content string into the output image</param>
-        /// <param name="margin">Specifies margin, in pixels, to use when generating the barcode</param>
+        /// <param name="marginLeft">Specifies margin left, in pixels, to use when generating the barcode</param>
+        /// <param name="marginTop">Specifies margin top, in pixels, to use when generating the barcode</param>
+        /// <param name="marginRight">Specifies margin right, in pixels, to use when generating the barcode</param>
+        /// <param name="marginBottom">Specifies margin bottom, in pixels, to use when generating the barcode</param>
         /// <param name="narrowBarWidth">The width of the narrow bar in pixels</param>
         public static void WriteBarcode(
             Page page,
@@ -1989,7 +1992,10 @@ namespace MuPDF.NET
             bool disableEci = false,
             bool forceFitToRect = false,
             bool pureBarcode = false,
-            int margin = 1,
+            int marginLeft = 0,
+            int marginTop = 0,
+            int marginRight = 0,
+            int marginBottom = 0,
             int narrowBarWidth = 0
             )
         {
@@ -2005,7 +2011,7 @@ namespace MuPDF.NET
             int width = (int)clip.Width;
             int height = (int)clip.Height;
 
-            if (width <= 0 || height <= 0)
+            if (width <= 0)
             {
                 throw new Exception("Invalid width");
             }
@@ -2059,7 +2065,7 @@ namespace MuPDF.NET
                 disableEci,
                 false,
                 pureBarcode,
-                margin, margin, margin, margin, 0, narrowBarWidth);
+                marginLeft, marginTop, marginRight, marginBottom, 0, narrowBarWidth);
 
             // resize image to fit into clip region
             if (forceFitToRect)
@@ -2096,23 +2102,25 @@ namespace MuPDF.NET
         /// <param name="characterSet">Use a specific character set for binary encoding (if supported by the selected barcode format)</param>
         /// <param name="disableEci">Don't generate ECI segment if non-default character set is used</param>
         /// <param name="pureBarcode">Don't put the content string into the output image</param>
-        /// <param name="margin">Specifies margin, in pixels, to use when generating the barcode</param>
+        /// <param name="marginLeft">Specifies margin left, in pixels, to use when generating the barcode</param>
+        /// <param name="marginTop">Specifies margin top, in pixels, to use when generating the barcode</param>
+        /// <param name="marginRight">Specifies margin right, in pixels, to use when generating the barcode</param>
+        /// <param name="marginBottom">Specifies margin bottom, in pixels, to use when generating the barcode</param>
         /// <param name="narrowBarWidth">The width of the narrow bar in pixels</param>
         public static Pixmap GetBarcodePixmap(
             string text,
             BarcodeFormat type,
-            int width = 1000,
+            int width = 0,
             string characterSet = null,
             bool disableEci = false,
             bool pureBarcode = false,
-            int margin = 1,
+            int marginLeft = 0,
+            int marginTop = 0,
+            int marginRight = 0,
+            int marginBottom = 0,
             int narrowBarWidth = 0
             )
         {
-            if (width <= 0)
-            {
-                throw new Exception("Invalid width");
-            }
             if (text == null)
             {
                 throw new Exception("Text is required");
@@ -2167,19 +2175,20 @@ namespace MuPDF.NET
                 disableEci,
                 false,
                 pureBarcode,
-                margin, margin, margin, margin, 0, narrowBarWidth);
+                marginLeft, marginTop, marginRight, marginBottom, 0, narrowBarWidth);
 
             // resize image to fit into clip region
-            int newHeight = barcodeImage.Height * width / barcodeImage.Width;
-            SKBitmap resizedBitmap = new SKBitmap(width, newHeight);
-            using (SKCanvas canvas = new SKCanvas(resizedBitmap))
+            if (width > 0)
             {
-                canvas.DrawBitmap(barcodeImage, new SKRect(0, 0, width, newHeight));
+                int newHeight = barcodeImage.Height * width / barcodeImage.Width;
+                SKBitmap resizedBitmap = new SKBitmap(width, newHeight);
+                using (SKCanvas canvas = new SKCanvas(resizedBitmap))
+                {
+                    canvas.DrawBitmap(barcodeImage, new SKRect(0, 0, width, newHeight));
+                }
+                barcodeImage.Dispose();
+                barcodeImage = resizedBitmap;
             }
-            barcodeImage.Dispose();
-            barcodeImage = resizedBitmap;
-
-            Rect rect = new Rect(0, 0, barcodeImage.Width, barcodeImage.Height);
 
             MemoryStream ms = new MemoryStream();
             using (SKData data = barcodeImage.Encode(SKEncodedImageFormat.Png, 100))
@@ -2194,6 +2203,8 @@ namespace MuPDF.NET
             byte[] bytes = ms.ToArray();
 
             Pixmap pixmap = new Pixmap(bytes);
+
+            barcodeImage.Dispose();
 
             return pixmap;
         }
@@ -2210,7 +2221,10 @@ namespace MuPDF.NET
         /// <param name="disableEci">don't generate ECI segment if non-default character set is used</param>
         /// <param name="forceFitToRect">Resize output barcode image width/height with params</param>
         /// <param name="pureBarcode">Don't put the content string into the output image</param>
-        /// <param name="margin">Specifies margin, in pixels, to use when generating the barcode</param>
+        /// <param name="marginLeft">Specifies margin left, in pixels, to use when generating the barcode</param>
+        /// <param name="marginTop">Specifies margin top, in pixels, to use when generating the barcode</param>
+        /// <param name="marginRight">Specifies margin right, in pixels, to use when generating the barcode</param>
+        /// <param name="marginBottom">Specifies margin bottom, in pixels, to use when generating the barcode</param>
         /// <param name="narrowBarWidth">The width of the narrow bar in pixels</param>
         public static void WriteBarcode(
             string imageFile,
@@ -2222,11 +2236,14 @@ namespace MuPDF.NET
             bool disableEci = false,
             bool forceFitToRect = false,
             bool pureBarcode = false,
-            int margin = 1,
+            int marginLeft = 0,
+            int marginTop = 0,
+            int marginRight = 0,
+            int marginBottom = 0,
             int narrowBarWidth = 0
             )
         {
-            if (width <= 0 || height <= 0)
+            if (width <= 0)
             {
                 throw new Exception("Invalid width");
             }
@@ -2310,8 +2327,8 @@ namespace MuPDF.NET
                 characterSet, 
                 disableEci, 
                 forceFitToRect, 
-                pureBarcode, 
-                margin, margin, margin, margin, 0, narrowBarWidth);
+                pureBarcode,
+                marginLeft, marginTop, marginRight, marginBottom, 0, narrowBarWidth);
         }
 
         public static dynamic GetText(

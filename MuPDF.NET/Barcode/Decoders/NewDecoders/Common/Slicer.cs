@@ -241,7 +241,7 @@ namespace BarcodeReader.Core.Common
 
         public SKPointI[] GetBBox()
         {
-            return new SKPointI[] { new SKPointI(xIn - 1, yIn - 1), new SKPointI(xEnd + 1, yIn - 1), new SKPointI(xEnd + 1, yEnd + 1), new SKPointI(xIn - 1, yEnd + 1), new SKPointI(xIn - 1, yIn - 1) };
+            return new SKPointI[] { new SKPointI((int)xIn - 1, (int)yIn - 1), new SKPointI((int)xEnd + 1, (int)yIn - 1), new SKPointI((int)xEnd + 1, (int)yEnd + 1), new SKPointI((int)xIn - 1, (int)yEnd + 1), new SKPointI((int)xIn - 1, (int)yIn - 1) };
         }
 
         //A simple measure of noise (or entropy). Simply count horizontal and vertical black-white intervals, 
@@ -284,17 +284,17 @@ namespace BarcodeReader.Core.Common
             return (hIntervals * 100 / (yEnd - yIn + 1) + vIntervals * 100 / (xEnd - xIn + 1)) / 2;
         }
 
-        public Rectangle GetRectangle()
+        public SKRect GetRectangle()
         {
-            return new Rectangle(xIn, yIn, xEnd - xIn + 1, yEnd - yIn + 1);
+            return new SKRect(xIn, yIn, xEnd + 1, yEnd + 1);
         }
 
-        public void SetRectangle(Rectangle r)
+        public void SetRectangle(SKRect r)
         {
-            this.xIn = r.X;
-            this.yIn = r.Y;
-            this.xEnd = r.X + r.Width - 1;
-            this.YEnd = r.Y + r.Height - 1;
+            this.xIn = (int)r.Left;
+            this.yIn = (int)r.Top;
+            this.xEnd = (int)r.Right - 1;
+            this.YEnd = (int)r.Bottom - 1;
         }
 
         public int XIn { get { return xIn; } set { xIn = value; } }
@@ -382,9 +382,9 @@ namespace BarcodeReader.Core.Common
             return (float)(maxX-minX+1)*(float)(maxY-minY+1);
         }
 
-        public Rectangle GetRectangle()
+        public SKRect GetRectangle()
         {
-            return new Rectangle(0, 0, (int)(maxX - minX + 4*d) + 1, (int)(maxY - minY) + 1);
+            return new SKRect(0, 0, (maxX - minX + 4*d) + 1, (maxY - minY) + 1);
         }
 
         bool axisDone = false;

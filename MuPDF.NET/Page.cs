@@ -4296,7 +4296,11 @@ namespace MuPDF.NET
         /// <param name="disableEci">don't generate ECI segment if non-default character set is used</param>
         /// <param name="forceFitToRect">Resize output barcode image width/height with params, Avoid enabling this parameter, as it can reduce barcode recognition accuracy.</param>
         /// <param name="pureBarcode">Don't put the content string into the output image</param>
-        /// <param name="margin">Specifies margin, in pixels, to use when generating the barcode</param>
+        /// <param name="marginLeft">Specifies margin left, in pixels, to use when generating the barcode</param>
+        /// <param name="marginTop">Specifies margin top, in pixels, to use when generating the barcode</param>
+        /// <param name="marginRight">Specifies margin right, in pixels, to use when generating the barcode</param>
+        /// <param name="marginBottom">Specifies margin bottom, in pixels, to use when generating the barcode</param>
+        /// <param name="narrowBarWidth">The width of the narrow bar in pixels</param>
         public void WriteBarcode(
             Rect clip,
             string text,
@@ -4305,12 +4309,15 @@ namespace MuPDF.NET
             bool disableEci = false,
             bool forceFitToRect = false,
             bool pureBarcode = false,
-            int margin = 1,
+            int marginLeft = 0,
+            int marginTop = 0,
+            int marginRight = 0,
+            int marginBottom = 0,
             int narrowBarWidth = 0
             )
         {
             Utils.WriteBarcode(this, clip,
-                text, barcodeFormat, characterSet, disableEci, forceFitToRect, pureBarcode, margin, narrowBarWidth);
+                text, barcodeFormat, characterSet, disableEci, forceFitToRect, pureBarcode, marginLeft, marginTop, marginRight, marginBottom, narrowBarWidth);
         }
 
         /// <summary>

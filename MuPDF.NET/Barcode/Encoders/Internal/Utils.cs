@@ -5,13 +5,9 @@
  *
 **************************************************/
 
-using BitMiracle.LibTiff.Classic;
 using SkiaSharp;
 using System;
-using System.Drawing;
-using System.Drawing.Imaging;
 using System.IO;
-using System.Runtime.InteropServices;
 
 namespace BarcodeWriter.Core.Internal
 {
@@ -45,8 +41,8 @@ namespace BarcodeWriter.Core.Internal
         /// <param name="top">The topmost draw position.</param>
         /// <param name="hAlign">The horizontal alignment.</param>
         /// <param name="vAlign">The vertical alignment.</param>
-        public static void CalculateDrawPosition(Size barcodeSize,
-            int totalWidth, int totalHeight, out int left, out int top,
+        public static void CalculateDrawPosition(SKSize barcodeSize,
+            float totalWidth, float totalHeight, out float left, out float top,
             BarcodeHorizontalAlignment hAlign, BarcodeVerticalAlignment vAlign)
         {
             left = 0;
@@ -281,7 +277,7 @@ namespace BarcodeWriter.Core.Internal
             }
         }
 
-        public static SizeF GetSizeInUnits(float dpiX, float dpiY, Size size, UnitOfMeasure unit)
+        public static SKSize GetSizeInUnits(float dpiX, float dpiY, SKSize size, UnitOfMeasure unit)
         {
             float width = (float)size.Width;
             float height = (float)size.Height;
@@ -319,7 +315,7 @@ namespace BarcodeWriter.Core.Internal
                     break;
             }
 
-            return new SizeF(width, height);
+            return new SKSize(width, height);
         }
 
         /// <summary>
@@ -329,12 +325,12 @@ namespace BarcodeWriter.Core.Internal
         /// <param name="size">The size in units.</param>
         /// <param name="unit">The unit of the size.</param>
         /// <returns></returns>
-        public static Size GetSizeInPixels(SKCanvas canvas, SizeF size, UnitOfMeasure unit)
+        public static SKSize GetSizeInPixels(SKCanvas canvas, SKSize size, UnitOfMeasure unit)
         {
             return GetSizeInPixels(96.0f, 96.0f, size, unit);
         }
 
-        public static Size GetSizeInPixels(float dpiX, float dpiY, SizeF size, UnitOfMeasure unit)
+        public static SKSize GetSizeInPixels(float dpiX, float dpiY, SKSize size, UnitOfMeasure unit)
         {
             int width = (int)size.Width;
             int height = (int)size.Height;
@@ -372,7 +368,7 @@ namespace BarcodeWriter.Core.Internal
                     break;
             }
 
-            return new Size(width, height);
+            return new SKSize(width, height);
         }
 		
 		public static int UnitsToPixels(float resolution, float value, UnitOfMeasure unit)
@@ -420,7 +416,7 @@ namespace BarcodeWriter.Core.Internal
         /// <param name="angle">The angle.</param>
         /// <param name="width">The width of drawing.</param>
         /// <param name="height">The height of drawing.</param>
-        public static void RotateGraphics(SKCanvas canvas, RotationAngle angle, int width, int height)
+        public static void RotateGraphics(SKCanvas canvas, RotationAngle angle, float width, float height)
         {
             switch (angle)
             {

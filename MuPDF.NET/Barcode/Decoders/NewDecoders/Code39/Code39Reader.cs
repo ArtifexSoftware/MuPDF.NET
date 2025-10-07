@@ -1,7 +1,7 @@
 ﻿using System;
-using System.Drawing;
 using System.Text;
 using BarcodeReader.Core.Common;
+using SkiaSharp;
 
 namespace BarcodeReader.Core.Code39
 {
@@ -124,7 +124,7 @@ namespace BarcodeReader.Core.Code39
         override protected BarCodeRegion FindBarcode(ImageScaner scan, int startPattern, BarCodeRegion r, FoundPattern foundPattern)
         {
 #if DEBUG
-            DebugHelper.DrawRegion(Color.Red, r);
+            DebugHelper.DrawRegion(SKColors.Red, r);
 #endif
             BarCodeRegion result = null;
             BarSymbolReader reader = new BarSymbolReader(scan, 10, 13, false, true, foundPattern.moduleLength, _patterns, -1, false, null);

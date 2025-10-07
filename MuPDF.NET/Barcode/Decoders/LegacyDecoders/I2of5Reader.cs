@@ -3,6 +3,7 @@ using System.Text;
 using System.Collections;
 using System.Drawing;
 using System.Collections.Generic;
+using SkiaSharp;
 
 namespace BarcodeReader.Core.LegacyDecoders
 {
@@ -519,7 +520,7 @@ namespace BarcodeReader.Core.LegacyDecoders
             else
                 result.BarcodeFormat = SymbologyType.I2of5;
 
-            result.Rect = new Rectangle(startOffset, rowNumber, offset - startOffset, 1);
+            result.Rect = new SKRect(startOffset, rowNumber, offset, rowNumber+1);
             result.RawData = rawdata;
 
 

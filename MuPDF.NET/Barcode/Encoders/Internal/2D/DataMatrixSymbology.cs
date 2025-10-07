@@ -12,8 +12,6 @@ http://invx.com/code/?code=A%C3%81BC%C4%8CD%C4%8EE%C3%89%C4%9AFGHChI%C3%8DJKLMN%
 
 using System;
 using System.Text;
-using System.Drawing;
-using System.Drawing.Imaging;
 using SkiaSharp;
 
 namespace BarcodeWriter.Core.Internal
@@ -222,7 +220,7 @@ namespace BarcodeWriter.Core.Internal
             return "";
         }
 
-        protected override Size buildBars(SKCanvas canvas, SKFont font)
+        protected override SKSize buildBars(SKCanvas canvas, SKFont font)
         {
             parseSize(Options.DataMatrixSize, out m_width, out m_height);
             if (Options.DataMatrixSize == DataMatrixSize.AutoSquareSize)
@@ -235,7 +233,7 @@ namespace BarcodeWriter.Core.Internal
             if (m_data.Length != 0)
                 encodeData();
 
-            Size drawingSize = new Size();
+            SKSize drawingSize = new SKSize();
             if (m_encodedData != null)
             {
                 int width = m_encodedData.GetLength(0);
@@ -250,7 +248,7 @@ namespace BarcodeWriter.Core.Internal
                     for (int y = 0; y < height; y++)
                     {
                         if (m_encodedData[x, height - y - 1] != 0)
-                            m_rects.Add(new Rectangle(x * cellWidth, y * cellWidth, cellWidth, cellWidth));
+                            m_rects.Add(new SKRect(x * cellWidth, y * cellWidth, x * cellWidth + cellWidth, y * cellWidth + cellWidth));
                     }
                 }
             }

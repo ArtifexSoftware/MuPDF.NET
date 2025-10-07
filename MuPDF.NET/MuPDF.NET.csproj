@@ -1,76 +1,61 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-	<PropertyGroup>
-		<TargetFrameworks>net48;net8.0;net472;net471;net47</TargetFrameworks>
-		<!-- Uncomment to also build the tizen app. You will need to install tizen by following this: https://github.com/Samsung/Tizen.NET -->
-		<!-- <TargetFrameworks>$(TargetFrameworks);net7.0-tizen</TargetFrameworks> -->
-		<UseMaui>false</UseMaui>
-		<SingleProject>true</SingleProject>
-		<ImplicitUsings>disable</ImplicitUsings>
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0;net461;net472;net48;net5.0;net6.0;net7.0;net8.0;net9.0</TargetFrameworks>
+    <Platforms>AnyCPU;x64;x86</Platforms>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <NuspecFile>$(ProjectDir)MuPDF.NET.nuspec</NuspecFile>
+    <NuspecProperties>Configuration=$(Configuration)</NuspecProperties>
+  </PropertyGroup>
+  
+  <PropertyGroup Condition="'$(OS)' == 'Windows_NT'">
+    <DefineConstants>WINDOWS</DefineConstants>
+  </PropertyGroup>
 
-		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">14.2</SupportedOSPlatformVersion>
-		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">14.0</SupportedOSPlatformVersion>
-		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">21.0</SupportedOSPlatformVersion>
-		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
-		<TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
-		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'tizen'">6.5</SupportedOSPlatformVersion>
-		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
-		<Title>MuPDF.NET</Title>
-		<Version>3.2.10-rc.3</Version>
-		<Authors>Artifex Software Inc.</Authors>
-		<Company>Artifex</Company>
-		<Description>A C# binding for MuPDF</Description>
-		<Copyright>Artifex</Copyright>
-		<PackageProjectUrl>https://github.com/ArtifexSoftware/MuPDF.NET</PackageProjectUrl>
-		<PackageIcon>logo.png</PackageIcon>
-		<PackageReadmeFile>Description.md</PackageReadmeFile>
-		<RepositoryUrl>https://github.com/ArtifexSoftware/MuPDF.NET</RepositoryUrl>
-		<PackageTags>C#;F#;VB.Net;MuPDF;DotNet;PDF</PackageTags>
-		<PackageLicenseFile>LICENSE.md</PackageLicenseFile>
-		<PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
-		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-	</PropertyGroup>
+  <PropertyGroup Condition="'$(OS)' != 'Windows_NT'">
+    <DefineConstants>LINUX</DefineConstants>
+  </PropertyGroup>
 
-	<PropertyGroup Condition="'$(OS)' == 'Windows_NT'">
-	  <DefineConstants>$(DefineConstants);WINDOWS</DefineConstants>
-	</PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
 
-	<ItemGroup>
-	  <EmbeddedResource Include="Barcode\Decoders\NewDecoders\Datamatrix\mpnonecc200.dat" />
-	  <EmbeddedResource Include="Barcode\Decoders\NewDecoders\PDF417\symbolmap.txt" />
-	</ItemGroup>
-	
-	<ItemGroup>
-	  <Reference Include="Microsoft.CSharp" />
-	  <Reference Include="System.Windows.Forms" />
-	</ItemGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x86'">
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
 
-	<ItemGroup>
-	  <None Include="..\LICENSE.md">
-	    <Pack>True</Pack>
-	    <PackagePath>\</PackagePath>
-	  </None>
-	  <None Include="..\logo.png">
-	    <Pack>True</Pack>
-	    <PackagePath>\</PackagePath>
-	  </None>
-	  <None Include="..\Description.md">
-	    <Pack>True</Pack>
-	    <PackagePath>\</PackagePath>
-	  </None>
-	</ItemGroup>
-	
-	<ItemGroup>
-	  <PackageReference Include="MuPDF.NativeAssets" Version="1.26.8" />
-	  <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-	  <PackageReference Include="SharpZipLib" Version="1.4.2" />
-	  <PackageReference Include="SkiaSharp" Version="3.119.0" />
-	  <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.119.0" />
-	</ItemGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
 
-	<ItemGroup>
-	  <PackageReference Update="Microsoft.Maui.Controls" Version="8.0.14" />
-	  <PackageReference Update="Microsoft.Maui.Controls.Compatibility" Version="8.0.14" />
-	</ItemGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x86'">
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="Barcode\Decoders\NewDecoders\Datamatrix\mpnonecc200.dat" />
+    <None Remove="Barcode\Decoders\NewDecoders\PDF417\symbolmap.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Barcode\Decoders\NewDecoders\Datamatrix\mpnonecc200.dat" />
+    <EmbeddedResource Include="Barcode\Decoders\NewDecoders\PDF417\symbolmap.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
+    <PackageReference Include="MuPDF.NativeAssets" Version="1.26.9" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+    <PackageReference Include="SharpZipLib" Version="1.4.2" />
+    <PackageReference Include="SkiaSharp" Version="3.119.1" />
+  </ItemGroup>
 
 </Project>

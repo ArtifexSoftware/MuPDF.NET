@@ -3,17 +3,12 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Drawing;
-using System.Drawing.Text;
-using System.Drawing.Drawing2D;
-using System.Drawing.Imaging;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using BarcodeWriter.Core.Internal;
 using Encoding = System.Text.Encoding;
-using Rectangle = System.Drawing.Rectangle;
 using Newtonsoft.Json;
 using SkiaSharp;
 using BarcodeWriter.Core;
@@ -35,7 +30,7 @@ namespace BarcodeWriter.Core
 
         private SymbologyDrawing _drawing = null;
         private float _zoomLevel = 1.0f;
-        private Size _outputSize = Size.Empty;
+        private SKSize _outputSize = SKSize.Empty;
         
         private MemoryStream _valueStream = new MemoryStream();
 
@@ -1115,9 +1110,9 @@ namespace BarcodeWriter.Core
         }
 
         /// <inheritdoc />
-        public Size GetMinimalSize()
+        public SKSize GetMinimalSize()
         {
-            if (OutputSize != Size.Empty)
+            if (OutputSize != SKSize.Empty)
                 return OutputSize;
 
             return getDrawingSize();
@@ -1168,52 +1163,52 @@ namespace BarcodeWriter.Core
         }
 
         /// <inheritdoc />
-        public void FitInto(Size size)
+        public void FitInto(SKSize size)
         {
-            FitInto(new SizeF(size.Width, size.Height), UnitOfMeasure.Pixel);
+            FitInto(new SKSize(size.Width, size.Height), UnitOfMeasure.Pixel);
         }
 
         /// <inheritdoc />
         public void FitInto(int width, int height)
         {
-            FitInto(new SizeF(width, height), UnitOfMeasure.Pixel);
+            FitInto(new SKSize(width, height), UnitOfMeasure.Pixel);
         }
 
         /// <inheritdoc />
         [ComVisible(false)]
-        public void FitInto(SizeF size, UnitOfMeasure unit)
+        public void FitInto(SKSize size, UnitOfMeasure unit)
         {
 #if COMMUNITY_EDITION && !BARCODESDK_EMBEDDED_SOURCES
             RegInfo.CommunityEditionDisclaimer();
             return;
 #endif    
-            Size sizePixels = Utils.GetSizeInPixels(_resolutionX, _resolutionY, size, unit);
+            SKSize sizePixels = Utils.GetSizeInPixels(_resolutionX, _resolutionY, size, unit);
             fitInto(sizePixels);
         }
 
         /// <inheritdoc />
         public void FitInto(float width, float height, UnitOfMeasure unit)
         {
-            FitInto(new SizeF(width, height), unit);
+            FitInto(new SKSize(width, height), unit);
         }
 
         /// <inheritdoc />
         public void RevertToNormalSize()
         {
             _zoomLevel = 1.0f;
-            _outputSize = Size.Empty;
+            _outputSize = SKSize.Empty;
         }
 
         /// <inheritdoc />
-        public void Draw(SKCanvas canvas, Point position)
+        public void Draw(SKCanvas canvas, SKPoint position)
         {
-            Size size = getDrawingSize(canvas);
-            Size barcodeSize = size;
+            SKSize size = getDrawingSize(canvas);
+            SKSize barcodeSize = size;
             
-            if (OutputSize != Size.Empty)
+            if (OutputSize != SKSize.Empty)
             {
-                int left = 0;
-                int top = 0;
+                float left = 0;
+                float top = 0;
                 Utils.CalculateDrawPosition(size, OutputSize.Width, OutputSize.Height, out left, out top,
                     BarcodeHorizontalAlignment.Center, BarcodeVerticalAlignment.Middle);
 
@@ -1242,12 +1237,12 @@ namespace BarcodeWriter.Core
         /// <inheritdoc />
         public SKBitmap GetImage()
         {
-            int left = 0;
-            int top = 0;
-            Size size = getDrawingSize();
-            Size barcodeSize = size;
+            float left = 0;
+            float top = 0;
+            SKSize size = getDrawingSize();
+            SKSize barcodeSize = size;
 
-            if (OutputSize != Size.Empty)
+            if (OutputSize != SKSize.Empty)
             {
                 Utils.CalculateDrawPosition(size, OutputSize.Width, OutputSize.Height, out left, out top,
                     BarcodeHorizontalAlignment.Center, BarcodeVerticalAlignment.Middle);
@@ -1258,7 +1253,7 @@ namespace BarcodeWriter.Core
 			if (!ProduceMonochromeImages)
 			{
                 // Create SkiaSharp bitmap
-                var image = new SKBitmap(size.Width, size.Height);
+                var image = new SKBitmap((int)size.Width, (int)size.Height);
 
                 using (var canvas = new SKCanvas(image))
                 {
@@ -1301,7 +1296,7 @@ namespace BarcodeWriter.Core
 
         /// <inheritdoc />
         [ComVisible(false)]
-        public void SaveImage(string fileName, SKEncodedImageFormat format, Size areaSize, int imageLeft, int imageTop)
+        public void SaveImage(string fileName, SKEncodedImageFormat format, SKSize areaSize, int imageLeft, int imageTop)
         {
             using (FileStream fs = new FileStream(fileName, FileMode.Create))
                 SaveImage(fs, format, areaSize, imageLeft, imageTop);
@@ -1318,22 +1313,22 @@ namespace BarcodeWriter.Core
         [ComVisible(false)]
         public void SaveImage(Stream stream, SKEncodedImageFormat format)
         {
-            int left = 0;
-            int top = 0;
-            if (OutputSize != Size.Empty)
+            float left = 0;
+            float top = 0;
+            if (OutputSize != SKSize.Empty)
             {
-                Size size = getDrawingSize();
+                SKSize size = getDrawingSize();
 
                 Utils.CalculateDrawPosition(size, OutputSize.Width, OutputSize.Height, out left, out top,
                     BarcodeHorizontalAlignment.Center, BarcodeVerticalAlignment.Middle);
             }
             
-            saveImage(stream, format, OutputSize, left, top);
+            saveImage(stream, format, OutputSize, (int)left, (int)top);
         }
 
         /// <inheritdoc />
         [ComVisible(false)]
-        public void SaveImage(Stream stream, SKEncodedImageFormat format, Size areaSize, int imageLeft, int imageTop)
+        public void SaveImage(Stream stream, SKEncodedImageFormat format, SKSize areaSize, int imageLeft, int imageTop)
         {
             saveImage(stream, format, areaSize, imageLeft, imageTop);
         }
@@ -1438,16 +1433,16 @@ namespace BarcodeWriter.Core
         /// <inheritdoc />
         public void SetMargins(float left, float top, float right, float bottom, UnitOfMeasure unit)
         {
-            Size sz1 = Utils.GetSizeInPixels(_resolutionX, _resolutionY, new SizeF(left, top), unit);
-            Size sz2 = Utils.GetSizeInPixels(_resolutionX, _resolutionY, new SizeF(right, bottom), unit);
-            Margins = new Margins(sz1.Width, sz1.Height, sz2.Width, sz2.Height);
+            SKSize sz1 = Utils.GetSizeInPixels(_resolutionX, _resolutionY, new SKSize(left, top), unit);
+            SKSize sz2 = Utils.GetSizeInPixels(_resolutionX, _resolutionY, new SKSize(right, bottom), unit);
+            Margins = new Margins((int)sz1.Width, (int)sz1.Height, (int)sz2.Width, (int)sz2.Height);
         }
 
         /// <inheritdoc />
         public void GetMargins(out float left, out float top, out float right, out float bottom, UnitOfMeasure unit)
         {
-            SizeF sz1 = Utils.GetSizeInUnits(_resolutionX, _resolutionY, new Size(Margins.Left, Margins.Top), unit);
-            SizeF sz2 = Utils.GetSizeInUnits(_resolutionX, _resolutionY, new Size(Margins.Left, Margins.Top), unit);
+            SKSize sz1 = Utils.GetSizeInUnits(_resolutionX, _resolutionY, new SKSize(Margins.Left, Margins.Top), unit);
+            SKSize sz2 = Utils.GetSizeInUnits(_resolutionX, _resolutionY, new SKSize(Margins.Left, Margins.Top), unit);
 
             left = sz1.Width;
             top = sz1.Height;
@@ -1502,58 +1497,58 @@ namespace BarcodeWriter.Core
         /// <inheritdoc />
         public void SetBarHeight(float height, UnitOfMeasure unit)
         {
-            Size size = Utils.GetSizeInPixels(_resolutionX, _resolutionY, new SizeF(0, height), unit);
-            BarHeight = Math.Max(size.Height, 1);
+            SKSize size = Utils.GetSizeInPixels(_resolutionX, _resolutionY, new SKSize(0, height), unit);
+            BarHeight = (int)Math.Max(size.Height, 1);
         }
 
         /// <inheritdoc />
         public float GetBarHeight(UnitOfMeasure unit)
         {
-            SizeF size = Utils.GetSizeInUnits(_resolutionX, _resolutionY, new Size(0, BarHeight), unit);
+            SKSize size = Utils.GetSizeInUnits(_resolutionX, _resolutionY, new SKSize(0, BarHeight), unit);
             return size.Height;
         }
 
         /// <inheritdoc />
         public void SetNarrowBarWidth(float width, UnitOfMeasure unit)
         {
-            Size size = Utils.GetSizeInPixels(_resolutionX, _resolutionY, new SizeF(width, 0), unit);
-            NarrowBarWidth = Math.Max(size.Width, 1);
+            SKSize size = Utils.GetSizeInPixels(_resolutionX, _resolutionY, new SKSize(width, 0), unit);
+            NarrowBarWidth = (int)Math.Max(size.Width, 1);
         }
 
         /// <inheritdoc />
         public float GetNarrowBarWidth(UnitOfMeasure unit)
         {
-            SizeF size = Utils.GetSizeInUnits(_resolutionX, _resolutionY, new Size(NarrowBarWidth, 0), unit);
+            SKSize size = Utils.GetSizeInUnits(_resolutionX, _resolutionY, new SKSize(NarrowBarWidth, 0), unit);
             return size.Width;
         }
 
         /// <inheritdoc />
-        public SizeF GetMinimalSize(UnitOfMeasure unit)
+        public SKSize GetMinimalSize(UnitOfMeasure unit)
         {
-            Size sz = GetMinimalSize();
-            SizeF res = Utils.GetSizeInUnits(_resolutionX, _resolutionY, sz, unit);
+            SKSize sz = GetMinimalSize();
+            SKSize res = Utils.GetSizeInUnits(_resolutionX, _resolutionY, sz, unit);
             return res;
         }
 
         /// <inheritdoc />
         public float GetMinimalWidth(UnitOfMeasure unit)
         {
-            SizeF size = GetMinimalSize(unit);
+            SKSize size = GetMinimalSize(unit);
             return size.Width;
         }
 
         /// <inheritdoc />
         public float GetMinimalHeight(UnitOfMeasure unit)
         {
-            SizeF size = GetMinimalSize(unit);
+            SKSize size = GetMinimalSize(unit);
             return size.Height;
         }
 
         /// <inheritdoc />
         public void Draw(SKCanvas canvas, float left, float top, UnitOfMeasure unit)
         {
-            Size size = Utils.GetSizeInPixels(canvas, new SizeF(left, top), unit);
-            Draw(canvas, new Point(size.Width, size.Height));
+            SKSize size = Utils.GetSizeInPixels(canvas, new SKSize(left, top), unit);
+            Draw(canvas, new SKPoint(size.Width, size.Height));
         }
 
         // Handles changes in barcode options.
@@ -1597,7 +1592,7 @@ namespace BarcodeWriter.Core
             }
 
             _zoomLevel = 1.0f;
-            _outputSize = Size.Empty;
+            _outputSize = SKSize.Empty;
             _cutUnusedSpace = false;
 
             if (!copyMode)
@@ -1673,11 +1668,11 @@ namespace BarcodeWriter.Core
         // Calling this method will change the barcode properties.
         // Properties will be recalculated so that resulting barcode
         // fit into specified size.
-        private void fitInto(Size size)
+        private void fitInto(SKSize size)
         {
             RevertToNormalSize();
 
-            Size drawingSize = getDrawingSize();
+            SKSize drawingSize = getDrawingSize();
             float widthRatio = (float)drawingSize.Width / (float)size.Width;
             float heightRatio = (float)drawingSize.Height / (float)size.Height;
 
@@ -1707,13 +1702,13 @@ namespace BarcodeWriter.Core
             _outputSize = size;
         }
 
-        private void transformGraphicsAndDraw(SKCanvas canvas, Size occupiedByBarcodeOnly, int imageLeft, int imageTop)
+        private void transformGraphicsAndDraw(SKCanvas canvas, SKSize occupiedByBarcodeOnly, float imageLeft, float imageTop)
         {
             // Move origin
             canvas.Translate(imageLeft, imageTop);
 
             // Rotate (same logic you had for GDI+)
-            Utils.RotateGraphics(canvas, _angle, (int)occupiedByBarcodeOnly.Width, (int)occupiedByBarcodeOnly.Height);
+            Utils.RotateGraphics(canvas, _angle, occupiedByBarcodeOnly.Width, occupiedByBarcodeOnly.Height);
 
             // Scale (zoom)
             canvas.Scale(_zoomLevel, _zoomLevel);
@@ -1731,7 +1726,7 @@ namespace BarcodeWriter.Core
             canvas.ResetMatrix();
         }
 
-        private Size getDrawingSize()
+        private SKSize getDrawingSize()
         {
             if (_graphicsForMeasures == null)
                 createGraphicsForMeasures();
@@ -1739,13 +1734,13 @@ namespace BarcodeWriter.Core
             return getDrawingSize(_graphicsForMeasures);
         }
 
-        private Size getDrawingSize(SKCanvas canvas)
+        private SKSize getDrawingSize(SKCanvas canvas)
         {
             return drawOnGraphics(canvas, true);
         }
 
         [Obsolete]
-        private Size drawOnGraphics(SKCanvas canvas, bool onlyCalculate)
+        private SKSize drawOnGraphics(SKCanvas canvas, bool onlyCalculate)
         {
 	        // Final barcode image is as follows:
 	        // 
@@ -1774,11 +1769,11 @@ namespace BarcodeWriter.Core
 	        //     NOT between start and end of barcode.
 	        //  4. Warning string starts right after margin (not where barcode starts)
 
-            _drawing.BarcodeResolution = new SizeF(_resolutionX, _resolutionY);
+            _drawing.BarcodeResolution = new SKSize(_resolutionX, _resolutionY);
 
-	        Size barcodeSize = _drawing.Draw(canvas, new SKPoint(0, 0), true);
+            SKSize barcodeSize = _drawing.Draw(canvas, new SKPoint(0, 0), true);
 
-	        Size supplementBarcodeSize = new Size();
+            SKSize supplementBarcodeSize = new SKSize();
 	        BarcodeEncoder supplement = getSupplementaryBarcode();
 	        if (supplement != null)
 	        {
@@ -1789,39 +1784,39 @@ namespace BarcodeWriter.Core
 
 	        string savedAdditionalCaption = setISBNCaption();
 
-	        Size additionalCaptionSize = new Size();
+            SKSize additionalCaptionSize = new SKSize();
 	        int additionalCaptionGap = 0;
 	        if (AdditionalCaption.Length != 0)
 	        {
                 SKRect sKRect = new SKRect();
                 float width = AdditionalCaptionFont.MeasureText(AdditionalCaption, out sKRect);
-                SizeF sizeF = new SizeF(sKRect.Width, sKRect.Height);
-		        additionalCaptionSize = new Size((int) (sizeF.Width + 1), (int) (sizeF.Height + 1));
+                SKSize sizeF = new SKSize(sKRect.Width, sKRect.Height);
+		        additionalCaptionSize = new SKSize((int) (sizeF.Width + 1), (int) (sizeF.Height + 1));
 		        additionalCaptionGap = Utils.CalculateCaptionGap(AdditionalCaptionFont);
 	        }
 
-	        // Main caption for left and right postions (SymbologyDrawing draws only standard top and bottom captions)
-	        Size sideCaptionSize = new Size();
+            // Main caption for left and right postions (SymbologyDrawing draws only standard top and bottom captions)
+            SKSize sideCaptionSize = new SKSize();
 	        int sideCaptionGap = 0;
 	        if (DrawCaption && (CaptionPosition == CaptionPosition.Before || CaptionPosition == CaptionPosition.After))
 	        {
                 SKRect sKRect = new SKRect();
                 float width = CaptionFont.MeasureText(_drawing.Caption, out sKRect);
-                SizeF sizeF = new SizeF(sKRect.Width, sKRect.Height);
-                sideCaptionSize = new Size((int) (sizeF.Width + 1), (int) (sizeF.Height + 1));
+                SKSize sizeF = new SKSize(sKRect.Width, sKRect.Height);
+                sideCaptionSize = new SKSize((int) (sizeF.Width + 1), (int) (sizeF.Height + 1));
 		        sideCaptionGap = Utils.CalculateCaptionGap(CaptionFont);
 	        }
 
-	        int widthOccupiedByBarcodes = QuietZoneWidth*2 + barcodeSize.Width + supplementBarcodeSize.Width;
+	        float widthOccupiedByBarcodes = QuietZoneWidth*2 + barcodeSize.Width + supplementBarcodeSize.Width;
 
-	        int additionalCaptionHeightAbove = 0;
-	        int additionalCaptionWidthAbove = 0;
-	        int additionalCaptionHeightBelow = 0;
-	        int additionalCaptionWidthBelow = 0;
-	        int additionalCaptionWidthBefore = 0;
-	        int additionalCaptionHeightBefore = 0;
-	        int additionalCaptionWidthAfter = 0;
-	        int additionalCaptionHeightAfter = 0;
+            float additionalCaptionHeightAbove = 0;
+            float additionalCaptionWidthAbove = 0;
+            float additionalCaptionHeightBelow = 0;
+            float additionalCaptionWidthBelow = 0;
+            float additionalCaptionWidthBefore = 0;
+            float additionalCaptionHeightBefore = 0;
+            float additionalCaptionWidthAfter = 0;
+            float additionalCaptionHeightAfter = 0;
 
 	        if (!additionalCaptionSize.IsEmpty)
 	        {
@@ -1847,10 +1842,10 @@ namespace BarcodeWriter.Core
 		        }
 	        }
 
-	        int sideCaptionWidthBefore = 0;
-	        int sideCaptionHeightBefore = 0;
-	        int sideCaptionWidthAfter = 0;
-	        int sideCaptionHeightAfter = 0;
+            float sideCaptionWidthBefore = 0;
+            float sideCaptionHeightBefore = 0;
+            float sideCaptionWidthAfter = 0;
+            float sideCaptionHeightAfter = 0;
 
 	        if (!sideCaptionSize.IsEmpty)
 	        {
@@ -2077,8 +2072,8 @@ namespace BarcodeWriter.Core
                         decorationImageHeight++;
 
                     // Center position
-                    int x = (int)barcodePosition.X + barcodeSize.Width / 2 - decorationImageWidth / 2;
-                    int y = (int)barcodePosition.Y + barcodeSize.Height / 2 - decorationImageHeight / 2;
+                    float x = barcodePosition.X + barcodeSize.Width / 2 - decorationImageWidth / 2;
+                    float y = barcodePosition.Y + barcodeSize.Height / 2 - decorationImageHeight / 2;
 
                     // Destination rectangle
                     var destRect = new SKRect(x, y, x + decorationImageWidth, y + decorationImageHeight);
@@ -2116,7 +2111,7 @@ namespace BarcodeWriter.Core
 	        imageWidth *= _zoomLevel;
 	        imageHeight *= _zoomLevel;
 
-	        Size imageSize = rotateSize(new Size((int) imageWidth, (int) imageHeight));
+            SKSize imageSize = rotateSize(new SKSize(imageWidth, imageHeight));
 	        imageSize.Width = Math.Max(imageSize.Width, 1);
 	        imageSize.Height = Math.Max(imageSize.Height, 1);
 
@@ -2187,12 +2182,12 @@ namespace BarcodeWriter.Core
             }
         }
 
-        private Size OutputSize
+        private SKSize OutputSize
         {
             get
             {
                 if (_cutUnusedSpace)
-                    return Size.Empty;
+                    return SKSize.Empty;
 
                 return _outputSize;
             }
@@ -2256,11 +2251,11 @@ namespace BarcodeWriter.Core
         }
 
         // Rotates the given size object if needed.
-        private Size rotateSize(Size size)
+        private SKSize rotateSize(SKSize size)
         {
             if (_angle == RotationAngle.Degrees270 || _angle == RotationAngle.Degrees90)
             {
-                int temp = size.Width;
+                float temp = size.Width;
                 size.Width = size.Height;
                 size.Height = temp;
             }
@@ -2269,17 +2264,17 @@ namespace BarcodeWriter.Core
         }
 
         // Saves the image with the barcode.
-        private void saveImage(Stream stream, SKEncodedImageFormat format, Size areaSize, int imageLeft, int imageTop)
+        private void saveImage(Stream stream, SKEncodedImageFormat format, SKSize areaSize, int imageLeft, int imageTop)
         {
             if (stream == null)
                 throw new BarcodeException("Stream should not be null.");
 
             Stream metafileStream = null;
 
-            Size size = getDrawingSize();
-            Size barcodeSize = size;
+            SKSize size = getDrawingSize();
+            SKSize barcodeSize = size;
 
-            if (areaSize != Size.Empty)
+            if (areaSize != SKSize.Empty)
             {
                 if (PreserveMinReadableSize)
                 {
@@ -2325,7 +2320,7 @@ namespace BarcodeWriter.Core
             else
             {
                 // Create a raster image
-                var info = new SKImageInfo(size.Width, size.Height, SKColorType.Rgba8888, SKAlphaType.Premul);
+                var info = new SKImageInfo((int)size.Width, (int)size.Height, SKColorType.Rgba8888, SKAlphaType.Premul);
                 using (var surface = SKSurface.Create(info))
                 {
                     var canvas = surface.Canvas;

@@ -235,9 +235,11 @@ namespace MuPDF.NET
                 if (pdf.m_internal == null)
                     return false;
 
+                bool ret = pdf.pdf_was_repaired() != 0;
+
                 pdf.Dispose();
 
-                return pdf.pdf_was_repaired() != 0;
+                return ret;
             }
         }
 
@@ -473,7 +475,7 @@ namespace MuPDF.NET
                         msg = $"No such file: {fileName}";
                         throw new FileNotFoundException(msg);
                     }
-                    /*_nativeDocument = mupdf.mupdf.fz_open_document(filename);*/
+                    //_nativeDocument = mupdf.mupdf.fz_open_document(fileName);
                 }
 
                 if (

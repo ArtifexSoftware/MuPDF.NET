@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Drawing;
 using SkiaSharp;
 using BarcodeReader.Core.Common;
 
@@ -67,7 +66,7 @@ namespace BarcodeReader.Core.Aztec
 				foundBarcode.Value = data;
 
                 foundBarcode.Polygon = new SKPointI[5] { c.A, c.B, c.D, c.C, c.A };
-                foundBarcode.Color = Color.Blue;
+                foundBarcode.Color = SKColors.Blue;
 				//byte[] pointTypes = new byte[5] { (byte) PathPointType.Start, (byte) PathPointType.Line, (byte) PathPointType.Line, (byte) PathPointType.Line, (byte) PathPointType.Line };
 				//GraphicsPath path = new GraphicsPath(foundBarcode.Polygon, pointTypes);
 				//foundBarcode.Rect = Rectangle.Round(path.GetBounds());

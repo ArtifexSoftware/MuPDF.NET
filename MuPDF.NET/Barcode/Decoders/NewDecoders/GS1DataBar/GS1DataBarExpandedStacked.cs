@@ -1,4 +1,5 @@
-﻿using System;
+﻿using SkiaSharp;
+using System;
 using System.Collections;
 using System.Drawing;
 
@@ -242,7 +243,7 @@ namespace BarcodeReader.Core.GS1DataBar
                             if (code == null) return null;
 
                             FoundBarcode result = new FoundBarcode();
-                            result.Rect = new Rectangle(xStart, yStart, xEnd - xStart, rowIndex-yStart);
+                            result.Rect = new SKRect(xStart, yStart, xEnd, rowIndex);
 							result.Value = code;
                             float tError = (float) (ps.Chars.Length * 7 + ps.Chars.Length / 2 * 4);
 							result.Confidence = (tError - error) / tError;

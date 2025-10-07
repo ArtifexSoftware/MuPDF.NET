@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Text;
 using BarcodeReader.Core.Common;
+using SkiaSharp;
 
 namespace BarcodeReader.Core.TriOptic
 {
@@ -128,7 +129,7 @@ namespace BarcodeReader.Core.TriOptic
             {
 #if DEBUG
                 DebugHelper.AddDebugItem(from.ToString(), line, from, to);
-                DebugHelper.DrawArrow(from.X, from.Y, to.X, to.Y, Color.Magenta);
+                DebugHelper.DrawArrow(from.X, from.Y, to.X, to.Y, SKColors.Magenta);
 #endif
             }
 

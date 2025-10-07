@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using SkiaSharp;
+using System.Collections;
 using System.Drawing;
 
 namespace BarcodeReader.Core.GS1DataBar
@@ -87,7 +88,7 @@ namespace BarcodeReader.Core.GS1DataBar
             offsetIn++; 
             getElements(row, ref offsetIn, 1, false, false);
             getElements(row, ref offsetOut, 1, true, true);
-            result.Rect = new Rectangle(offsetIn, rowIndex, offsetOut - offsetIn, 1);
+            result.Rect = new SKRect(offsetIn, rowIndex, offsetOut, rowIndex+1);
             result.Value = code;
             float tError = (float) (numChar * 7 + numFinder * 4);
             result.Confidence = (tError - error) / tError; 
