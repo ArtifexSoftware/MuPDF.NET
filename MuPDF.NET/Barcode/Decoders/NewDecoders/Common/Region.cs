@@ -1,4 +1,5 @@
-﻿using System;
+﻿using SkiaSharp;
+using System;
 using System.Drawing;
 
 namespace BarcodeReader.Core.Common
@@ -147,14 +148,14 @@ namespace BarcodeReader.Core.Common
             D.Y = Math.Max(r.D.Y, D.Y);
         }
 
-        public Rectangle GetBounds()
+        public SKRect GetBounds()
         {
             var x1 = Math.Min(A.X, D.X);
             var y1 = Math.Min(A.Y, B.Y);
             var x2 = Math.Max(B.X, C.X);
             var y2 = Math.Min(C.Y, D.Y);
 
-            return Rectangle.FromLTRB((int)x1, (int)y1, (int)x2, (int)y2);
+            return new SKRect(x1, y1, x2, y2);
         }
     }
 }

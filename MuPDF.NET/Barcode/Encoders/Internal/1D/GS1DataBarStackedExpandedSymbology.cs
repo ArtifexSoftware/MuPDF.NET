@@ -7,8 +7,6 @@
 
 using System;
 using System.Text;
-using System.Drawing;
-using System.Drawing.Drawing2D;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using SkiaSharp;
@@ -130,18 +128,18 @@ namespace BarcodeWriter.Core.Internal
                 for (int i = symbol.Count - 1; i >= 0; i--)
                 {
                     if (((symbol.Count - 1 - i) % 2 != 0) && firstSpace)
-                        m_rects.Add(new Rectangle(x, y, width * symbol[i], height));
+                        m_rects.Add(new SKRect(x, y, width * symbol[i]+x, height+y));
                     else if (((symbol.Count - 1 - i) % 2 == 0) && !firstSpace)
-                        m_rects.Add(new Rectangle(x, y, width * symbol[i], height));
+                        m_rects.Add(new SKRect(x, y, width * symbol[i]+x, height+y));
                     x += width * symbol[i];
                 }
             else
                 for (int i = 0; i < symbol.Count; i++)
                 {
                     if ((i % 2 != 0) && firstSpace)
-                        m_rects.Add(new Rectangle(x, y, width * symbol[i], height));
+                        m_rects.Add(new SKRect(x, y, width * symbol[i]+x, height+y));
                     else if ((i % 2 == 0) && !firstSpace)
-                        m_rects.Add(new Rectangle(x, y, width * symbol[i], height));
+                        m_rects.Add(new SKRect(x, y, width * symbol[i]+x, height+y));
                     x += width * symbol[i];
                 }
         }
@@ -152,14 +150,14 @@ namespace BarcodeWriter.Core.Internal
                 for (int i = symbol.Count - 1; i >= 0; i--)
                 {
                     if (symbol[i] == 1)
-                        m_rects.Add(new Rectangle(x, y, width, height));
+                        m_rects.Add(new SKRect(x, y, width+x, height+y));
                     x += width;
                 }
             else
                 for (int i = 0; i < symbol.Count; i++)
                 {
                     if (symbol[i] == 1)
-                        m_rects.Add(new Rectangle(x, y, width, height));
+                        m_rects.Add(new SKRect(x, y, width+x, height+y));
                     x += width;
                 }
         }
@@ -170,12 +168,12 @@ namespace BarcodeWriter.Core.Internal
             for (int i = 0; i < length; i++)
             {
                 if ((i % 2 != 0) && (i > 3) && (i < length - 4))
-                    m_rects.Add(new Rectangle(x, y, width, height));
+                    m_rects.Add(new SKRect(x, y, width+x, height+y));
                 x += width;
             }
         }
 
-        protected override Size buildBars(SKCanvas canvas, SKFont font)
+        protected override SKSize buildBars(SKCanvas canvas, SKFont font)
         {
             int maxSignNumber = 21;
             string sValue = GetEncodedValue(false);
@@ -217,12 +215,12 @@ namespace BarcodeWriter.Core.Internal
             int index = 0;
             bool inversion = (SegmentsNumber > 2) && ((SegmentsNumber / 2) % 2 == 0);
 
-            Size drawingSize = new Size();
+            SKSize drawingSize = new SKSize();
             int x = 0;
             int y = 0;
             int height = BarHeight;
             int width = NarrowBarWidth;
-            Size captionSize = calculateCaptionSize(canvas, font);
+            SKSize captionSize = calculateCaptionSize(canvas, font);
 
             for (int k = 0; k < rowCount; k++)
             {

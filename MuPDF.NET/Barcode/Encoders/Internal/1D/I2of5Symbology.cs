@@ -250,9 +250,9 @@ namespace BarcodeWriter.Core.Internal
             throw new BarcodeException(message);
         }
 
-        protected override Size buildBars(SKCanvas canvase, SKFont font)
+        protected override SKSize buildBars(SKCanvas canvase, SKFont font)
         {
-            Size drawingSize = new Size();
+            SKSize drawingSize = new SKSize();
             int x = 0;
             int y = 0;
 
@@ -281,7 +281,7 @@ namespace BarcodeWriter.Core.Internal
                     if (gapsPattern[patternPos] == 'w')
                         gapWidth = widthWide;
 
-                    m_rects.Add(new Rectangle(x, y, barWidth, height));
+                    m_rects.Add(new SKRect(x, y, barWidth+x, height+y));
 
                     x += barWidth;
                     x += gapWidth;
@@ -313,7 +313,7 @@ namespace BarcodeWriter.Core.Internal
 
             for (int i = 0; i < 2; i++)
             {
-                m_rects.Add(new Rectangle(x + widthOccupied, y, widthNarrow, height));
+                m_rects.Add(new SKRect(x + widthOccupied, y, widthNarrow+ x + widthOccupied, height+y));
                 widthOccupied += widthNarrow;
                 widthOccupied += widthNarrow;
             }
@@ -338,11 +338,11 @@ namespace BarcodeWriter.Core.Internal
             int height = BarHeight;
             int widthOccupied = 0;
 
-            m_rects.Add(new Rectangle(x + widthOccupied, y, widthWide, height));
+            m_rects.Add(new SKRect(x + widthOccupied, y, widthWide+ x + widthOccupied, height+y));
             widthOccupied += widthWide;
             widthOccupied += widthNarrow;
 
-            m_rects.Add(new Rectangle(x + widthOccupied, y, widthNarrow, height));
+            m_rects.Add(new SKRect(x + widthOccupied, y, widthNarrow + x + widthOccupied, height+y));
             widthOccupied += widthNarrow;
 
             return widthOccupied;

@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Drawing;
 using BarcodeReader.Core.Common;
+using SkiaSharp;
 
 namespace BarcodeReader.Core.FormOMR
 {
@@ -96,7 +97,7 @@ namespace BarcodeReader.Core.FormOMR
             else if (this is FormOMRSquare)
                 foundBarcode.BarcodeFormat = SymbologyType.Checkbox;
 
-            foundBarcode.Color = Color.Orange;
+            foundBarcode.Color = SKColors.Orange;
             foundBarcode.Polygon = p.GetBBox();
             foundBarcode.Rect = p.GetRectangle();
             foundBarcode.Value = IsFilled(p) ? "1" : "0";
@@ -140,9 +141,9 @@ namespace BarcodeReader.Core.FormOMR
 
 #if DEBUG
             foreach (var o in p.Points)
-                DebugHelper.DrawSquare(Color.Blue, o);
+                DebugHelper.DrawSquare(SKColors.Blue, o);
 
-            DebugHelper.DrawSquare(Color.Red, p.Center);
+            DebugHelper.DrawSquare(SKColors.Red, p.Center);
 #endif
 
             return CheckOutline(p, outline);

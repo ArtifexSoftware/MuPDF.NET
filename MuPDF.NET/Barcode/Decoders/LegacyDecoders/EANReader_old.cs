@@ -1,8 +1,8 @@
 using System;
 using System.Text;
-using System.Drawing;
 using System.Collections;
 using BarcodeReader.Core.Common;
+using SkiaSharp;
 
 namespace BarcodeReader.Core.LegacyDecoders
 {
@@ -121,7 +121,7 @@ namespace BarcodeReader.Core.LegacyDecoders
         /// Indicates if we have found EAN13 already so we should scan for EAN2 or EAN5 (if _findOrphanedSupplementals == true)
         /// </summary>
         private bool _ean13found = false;
-        private Rectangle _lastEan13Rectangle = new Rectangle();
+        private SKRect _lastEan13Rectangle = new SKRect();
 
         private int[] _moduleWidths = new int[4];
 
@@ -250,7 +250,7 @@ namespace BarcodeReader.Core.LegacyDecoders
                         // filter supplemented barcodes from main barcode
                         // first checking if rectangles intersects with last ean13
 
-                        Rectangle rectSupplemental = foundSupplement.Rect;
+                        SKRect rectSupplemental = foundSupplement.Rect;
                         bool allowThisSupplemental = !rectSupplemental.IntersectsWith(_lastEan13Rectangle);
 
                         // NOTE: supplemental EAN2/5 should be placed at the right (if aligned horizontally form left to right)
@@ -407,7 +407,7 @@ namespace BarcodeReader.Core.LegacyDecoders
             FoundBarcode result = new FoundBarcode();
 			result.BarcodeFormat = _currentSymbology;
 			result.Value = decodeRawData(rawData);
-            result.Rect = new Rectangle((int)startSymbolOffset, rowNumber, _afterPatternOffset - startSymbolOffset, 1);
+            result.Rect = new SKRect(startSymbolOffset, rowNumber, _afterPatternOffset, rowNumber+1);
             result.RawData = rawData;
 
             if (_currentSymbology == SymbologyType.EAN13)

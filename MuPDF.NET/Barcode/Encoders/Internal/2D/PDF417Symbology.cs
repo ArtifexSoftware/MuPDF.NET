@@ -148,9 +148,9 @@ namespace BarcodeWriter.Core.Internal
             return "";
         }
 
-        protected override Size buildBars(SKCanvas canvas, SKFont font)
+        protected override SKSize buildBars(SKCanvas canvas, SKFont font)
         {
-            Size drawingSize = new Size();
+            SKSize drawingSize = new SKSize();
 
             // a bit weird cycle goes here, but we need it,
             // or we can end up with 2-byte chars which is unsupported
@@ -217,7 +217,7 @@ namespace BarcodeWriter.Core.Internal
                 for (int y = 0; y < m_encodedData.Length; y++)
                 {
                     if (m_encodedData[y][x] == '1')
-                        m_rects.Add(new Rectangle(x * NarrowBarWidth, y * BarHeight, NarrowBarWidth, BarHeight));
+                        m_rects.Add(new SKRect(x * NarrowBarWidth, y * BarHeight, x * NarrowBarWidth+NarrowBarWidth, y * BarHeight+BarHeight));
                 }
             }
 

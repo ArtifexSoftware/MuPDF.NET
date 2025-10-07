@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Text;
-using System.Drawing;
-using System.Drawing.Drawing2D;
 using SkiaSharp;
 
 namespace BarcodeWriter.Core.Internal
@@ -78,7 +76,7 @@ namespace BarcodeWriter.Core.Internal
             }
         }
 
-        protected override Size buildBars(SKCanvas canvas, SKFont font)
+        protected override SKSize buildBars(SKCanvas canvas, SKFont font)
         {
             string sValue = GetEncodedValue(false);
             createSegments(sValue);
@@ -200,18 +198,18 @@ namespace BarcodeWriter.Core.Internal
             }
             lowerSeparatorLine.Add(counter);
 
-            Size drawingSize = new Size();
+            SKSize drawingSize = new SKSize();
             int x = 0;
             int y = 0;
 
             int width = NarrowBarWidth;
-            Size captionSize = calculateCaptionSize(canvas, font);
+            SKSize captionSize = calculateCaptionSize(canvas, font);
 
             int height = (int)Math.Round((BarHeight - NarrowBarWidth * 3) / 2.0);
             for (int i = 0; i < upperLine.Count; i++)
             {
                 if (i % 2 != 0)
-                    m_rects.Add(new Rectangle(x, y, width * upperLine[i], height));
+                    m_rects.Add(new SKRect(x, y, width * upperLine[i]+x, height+y));
                 x += width * upperLine[i];
             }
             x = 4 * width;
@@ -222,12 +220,12 @@ namespace BarcodeWriter.Core.Internal
                 if (upperSeparatorModules[0] == 1)
                 {
                     if (i % 2 == 0)
-                        m_rects.Add(new Rectangle(x, y, width * upperSeparatorLine[i], height));
+                        m_rects.Add(new SKRect(x, y, width * upperSeparatorLine[i]+x, height+y));
                 }
                 else
                 {
                     if (i % 2 != 0)
-                        m_rects.Add(new Rectangle(x, y, width * upperSeparatorLine[i], height));
+                        m_rects.Add(new SKRect(x, y, width * upperSeparatorLine[i]+x, height+y));
                 }
 
                 x += width * upperSeparatorLine[i];
@@ -238,7 +236,7 @@ namespace BarcodeWriter.Core.Internal
             {
                 // Middle row of the template - the separator lines consists of alternating light and dark modules
                 if (i % 2 != 0)
-                    m_rects.Add(new Rectangle(x, y, width , height));
+                    m_rects.Add(new SKRect(x, y, width+x, height+y));
                 x += width;
             }
             x = 4 * width;
@@ -248,12 +246,12 @@ namespace BarcodeWriter.Core.Internal
                 if (lowerSeparatorModules[0] == 1)
                 {
                     if (i % 2 == 0)
-                        m_rects.Add(new Rectangle(x, y, width * lowerSeparatorLine[i], height));
+                        m_rects.Add(new SKRect(x, y, width * lowerSeparatorLine[i]+x, height+y));
                 }
                 else
                 {
                     if (i % 2 != 0)
-                        m_rects.Add(new Rectangle(x, y, width * lowerSeparatorLine[i], height));
+                        m_rects.Add(new SKRect(x, y, width * lowerSeparatorLine[i]+x, height+y));
                 }
                 x += width * lowerSeparatorLine[i];
             }
@@ -263,7 +261,7 @@ namespace BarcodeWriter.Core.Internal
             for (int i = 0; i < lowerLine.Count; i++)
             {
                 if (i % 2 == 0)
-                    m_rects.Add(new Rectangle(x, y, width * lowerLine[i], height));
+                    m_rects.Add(new SKRect(x, y, width * lowerLine[i]+x, height+y));
                 x += width * lowerLine[i];
             }
 

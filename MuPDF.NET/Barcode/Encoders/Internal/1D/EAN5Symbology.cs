@@ -134,9 +134,9 @@ namespace BarcodeWriter.Core.Internal
             return null;
         }
 
-        protected override Size buildBars(SKCanvas canvas, SKFont font)
+        protected override SKSize buildBars(SKCanvas canvas, SKFont font)
         {
-            Size drawingSize = new Size();
+            SKSize drawingSize = new SKSize();
             int x = 0;
             int y = 0;
 
@@ -150,7 +150,7 @@ namespace BarcodeWriter.Core.Internal
                     drawBar = true;
 
                 if (drawBar)
-                    m_rects.Add(new Rectangle(x, y, NarrowBarWidth, BarHeight));
+                    m_rects.Add(new SKRect(x, y, NarrowBarWidth+x, BarHeight+y));
 
                 x += NarrowBarWidth;
             }

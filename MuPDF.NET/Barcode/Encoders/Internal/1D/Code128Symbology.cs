@@ -646,9 +646,9 @@ namespace BarcodeWriter.Core.Internal
             return m_patterns[value];
         }
 
-        protected override Size buildBars(SKCanvas canvas, SKFont font)
+        protected override SKSize buildBars(SKCanvas canvas, SKFont font)
         {
-            Size drawingSize = new Size();
+            SKSize drawingSize = new SKSize();
             int x = 0;
             int y = 0;
 
@@ -668,7 +668,7 @@ namespace BarcodeWriter.Core.Internal
             x = drawPattern(m_stopPattern, x, y, NarrowBarWidth, BarHeight);
 
             // draw termination bar
-            m_rects.Add(new Rectangle(x, y, NarrowBarWidth * 2, BarHeight));
+            m_rects.Add(new SKRect(x, y, NarrowBarWidth * 2+x, BarHeight+y));
 
             x += NarrowBarWidth * 2;
 
@@ -695,7 +695,7 @@ namespace BarcodeWriter.Core.Internal
             {
                 bool drawBar = (patternChar == '1');
                 if (drawBar)
-                    m_rects.Add(new Rectangle(x, y, width, height));
+                    m_rects.Add(new SKRect(x, y, width+x, height+y));
 
                 x += width;
             }

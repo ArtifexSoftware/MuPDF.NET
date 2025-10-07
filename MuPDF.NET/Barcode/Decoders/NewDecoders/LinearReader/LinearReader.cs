@@ -38,7 +38,7 @@ namespace BarcodeReader.Core.Common
         /// Reader finds barcodes only inside ROI.
         /// If empty - reads whole image.
         /// </summary>
-        public Rectangle ROI { get; set; } = Rectangle.Empty;
+        public SKRect ROI { get; set; } = SKRect.Empty;
 
         #region Parameters that affect on quality and speed of recognition
 
@@ -150,12 +150,12 @@ namespace BarcodeReader.Core.Common
             // Sort results by Y, then X
             result.Sort((x, y) =>
             {
-                int r = x.Rect.Top - y.Rect.Top;
+                float r = x.Rect.Top - y.Rect.Top;
 
                 if (Math.Abs(r) < 50)
                     r = x.Rect.Left - y.Rect.Left;
 
-                return r;
+                return (int)r;
             });
 
             return result.ToArray();
@@ -172,12 +172,12 @@ namespace BarcodeReader.Core.Common
             var fromY = 0;
             var toY = Scan.Height;
 
-            if (ROI != Rectangle.Empty)
+            if (ROI != SKRect.Empty)
             {
-                fromX = Math.Max(0, ROI.Left);
-                fromY = Math.Max(0, ROI.Top);
-                toX = Math.Min(toX, ROI.Right);
-                toY = Math.Min(toY, ROI.Bottom);
+                fromX = (int)Math.Max(0, ROI.Left);
+                fromY = (int)Math.Max(0, ROI.Top);
+                toX = (int)Math.Min(toX, ROI.Right);
+                toY = (int)Math.Min(toY, ROI.Bottom);
             }
 
             //line scanner
@@ -219,7 +219,7 @@ namespace BarcodeReader.Core.Common
                 {
                     CreateClusterForPattern(startClustersMap, startClusters, p);
                     #if DEBUG
-                    DebugHelper.DrawSquare(p.xIn, p.y, Color.MistyRose);
+                    DebugHelper.DrawSquare(p.xIn, p.y, SKColors.MistyRose);
                     #endif
                 }
 
@@ -228,7 +228,7 @@ namespace BarcodeReader.Core.Common
                 {
                     CreateClusterForPattern(stopClustersMap, stopClusters, p);
                     #if DEBUG
-                    DebugHelper.DrawSquare(p.xIn, p.y, Color.LightBlue);
+                    DebugHelper.DrawSquare(p.xIn, p.y, SKColors.LightBlue);
                     #endif
                 }
             }
@@ -356,7 +356,7 @@ namespace BarcodeReader.Core.Common
             //!!!!!
             var midFrom = start.GetMiddlePoint();
             var midTo = stop.GetMiddlePoint();
-            DebugHelper.DrawArrow(midFrom.X, midFrom.Y, midTo.X, midTo.Y, Color.MistyRose);
+            DebugHelper.DrawArrow(midFrom.X, midFrom.Y, midTo.X, midTo.Y, SKColors.MistyRose);
 #endif
 
             //scan different lines of region
@@ -444,7 +444,7 @@ namespace BarcodeReader.Core.Common
                     //!!!!
                     foreach (var p in cl)
                         DebugHelper.DrawSquare(isStopPattern ? p.xEnd : p.xIn, p.y,
-                            isStopPattern ? Color.Blue : Color.Red);
+                            isStopPattern ? SKColors.Blue : SKColors.Red);
                     //DebugHelper.DrawArrow(cl.A.X, cl.A.Y, cl.B.X, cl.B.Y, isStopPattern ? Color.Blue : Color.Red);
 #endif
                 }

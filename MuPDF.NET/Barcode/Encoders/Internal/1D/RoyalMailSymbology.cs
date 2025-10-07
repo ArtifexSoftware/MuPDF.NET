@@ -177,9 +177,9 @@ namespace BarcodeWriter.Core.Internal
             return (6 * row) + column;
         }
 
-        protected override Size buildBars(SKCanvas canvas, SKFont font)
+        protected override SKSize buildBars(SKCanvas canvas, SKFont font)
         {
-            Size drawingSize = new Size();
+            SKSize drawingSize = new SKSize();
             int x = 0;
             int y = 0;
 
@@ -201,13 +201,13 @@ namespace BarcodeWriter.Core.Internal
                 {
                     // 0 = Full, 1 = Ascender, 2 = Descender, 3 = Tracker
                     if (patternChar == '0')
-                        m_rects.Add(new Rectangle(x, y, width, fullHeight));
+                        m_rects.Add(new SKRect(x, y, width+x, fullHeight+y));
                     else if (patternChar == '1')
-                        m_rects.Add(new Rectangle(x, y, width, ascenderHeight));
+                        m_rects.Add(new SKRect(x, y, x+width, y+ascenderHeight));
                     else if (patternChar == '2')
-                        m_rects.Add(new Rectangle(x, y + ascenderHeight - trackerHeight, width, descenderHeight));
+                        m_rects.Add(new SKRect(x, y + ascenderHeight - trackerHeight, x+width, y + ascenderHeight - trackerHeight+descenderHeight));
                     else
-                        m_rects.Add(new Rectangle(x, y + ascenderHeight - trackerHeight, width, trackerHeight));
+                        m_rects.Add(new SKRect(x, y + ascenderHeight - trackerHeight, x + width, y + ascenderHeight));
 
                     x += width;
                     x += gapWidth;

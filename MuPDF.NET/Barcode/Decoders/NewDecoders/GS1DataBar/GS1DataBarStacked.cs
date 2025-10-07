@@ -1,4 +1,5 @@
-﻿using System;
+﻿using SkiaSharp;
+using System;
 using System.Collections;
 using System.Drawing;
 
@@ -94,7 +95,7 @@ namespace BarcodeReader.Core.GS1DataBar
                 offsetIn++;
                 getElements(row, ref offsetIn, 1, false, false);
                 getElements(row, ref offsetOut, 2, true, true);
-                result.Rect = new Rectangle(offsetIn, y, offsetOut - offsetIn, height);
+                result.Rect = new SKRect(offsetIn, y, offsetOut, y+height);
                 result.Value = fullGTIN14(Convert.ToString(symbol));
 				result.Confidence = (36.0F - error) / 36.0F;
                 result.RawData = getRawData(chars, indexs);

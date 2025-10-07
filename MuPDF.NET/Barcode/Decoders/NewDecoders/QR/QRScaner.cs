@@ -113,7 +113,7 @@ namespace BarcodeReader.Core.QR
                     }
                 }
                 foundBarcode.Value = data.ToString();
-                foundBarcode.Color = Color.Blue;
+                foundBarcode.Color = SKColors.Blue;
                 foundBarcode.Polygon = new SKPointI[5] { c.A, c.B, c.D, c.C, c.A };
 				//byte[] pointTypes = new byte[5] { (byte) PathPointType.Start, (byte) PathPointType.Line, (byte) PathPointType.Line, (byte) PathPointType.Line, (byte) PathPointType.Line };
 				//GraphicsPath path = new GraphicsPath(foundBarcode.Polygon, pointTypes);
@@ -173,7 +173,7 @@ namespace BarcodeReader.Core.QR
                             m.Confidence *= f.Confidence;
                         }
                         m.Polygon = new SKPointI[5] { new SKPointI(minX, minY), new SKPointI(maxX, minY), new SKPointI(maxX, maxY), new SKPointI(minX, maxY), new SKPointI(minX, minY) };
-                        m.Color = Color.Blue;
+                        m.Color = SKColors.Blue;
                         mergedResults.Add(m);
                     }
                     else

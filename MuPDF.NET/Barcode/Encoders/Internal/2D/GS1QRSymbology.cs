@@ -135,7 +135,7 @@ namespace BarcodeWriter.Core.Internal
             return bbytes;
         }
 
-        protected override Size buildBars(SKCanvas canvas, SKFont font)
+        protected override SKSize buildBars(SKCanvas canvas, SKFont font)
         {
             // a bit weird cycle goes here, but we need it,
             // or we can end up with 2-byte chars which is unsupported
@@ -146,7 +146,7 @@ namespace BarcodeWriter.Core.Internal
             for (int i = 0; i < bytes.Length; i++)
                 sb.Append((char)bytes[i]);
 
-            Size drawingSize = new Size();
+            SKSize drawingSize = new SKSize();
 
             QRSymbol symbol = QRSymbol.EncodeString(sb.ToString(), Options.QRVersion,
                 Options.QRErrorCorrectionLevel, Options.QREncodeHint, true, true);
@@ -160,7 +160,7 @@ namespace BarcodeWriter.Core.Internal
                 for (int j = 0; j < symbol.Width; j++)
                 {
                     if ((symbol[(i * symbol.Width) + j] & 0x01) != 0)
-                        m_rects.Add(new Rectangle(j * cellWidth, i * cellWidth, cellWidth, cellWidth));
+                        m_rects.Add(new SKRect(j * cellWidth, i * cellWidth, j * cellWidth+cellWidth, i * cellWidth+cellWidth));
                 }
             }
 

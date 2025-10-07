@@ -1,6 +1,4 @@
 using System;
-using System.Diagnostics;
-using System.Drawing;
 using SkiaSharp;
 using System.Runtime.InteropServices;
 
@@ -400,7 +398,7 @@ namespace BarcodeReader.Core
 
             for (int y = 0; y < Height; y++)
             {
-                Rectangle imgRect = new Rectangle(0, y, Width, 1);
+                SKRect imgRect = new SKRect(0, y, 0+Width, y+1);
                 BitmapData imgData = output.LockBits(imgRect, ImageLockMode.ReadOnly, PixelFormat.Format1bppIndexed);
 
                 if (scan1bpp == null)
@@ -547,13 +545,13 @@ namespace BarcodeReader.Core
             return r;
         }
 
-        public SKPointI[] Unrotate(Rectangle rect)
+        public SKPointI[] Unrotate(SKRect rect)
         {
             SKPointI[] polygon = new SKPointI[5];
-            polygon[0] = Unrotate(new MyPoint(rect.X, rect.Y));
-            polygon[1] = Unrotate(new MyPoint(rect.X+rect.Width, rect.Y));
-            polygon[2] = Unrotate(new MyPoint(rect.X+rect.Width, rect.Y+rect.Height));
-            polygon[3] = Unrotate(new MyPoint(rect.X, rect.Y+rect.Height));
+            polygon[0] = Unrotate(new MyPointF(rect.Left, rect.Top));
+            polygon[1] = Unrotate(new MyPointF(rect.Right, rect.Top));
+            polygon[2] = Unrotate(new MyPointF(rect.Right, rect.Bottom));
+            polygon[3] = Unrotate(new MyPointF(rect.Left, rect.Bottom));
             polygon[4] = polygon[0];
             return polygon;
         }

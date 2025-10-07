@@ -1,6 +1,5 @@
 ﻿using SkiaSharp;
 using System;
-using System.Drawing;
 
 namespace BarcodeReader.Core
 {

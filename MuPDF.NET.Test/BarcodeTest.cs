@@ -1,7 +1,5 @@
-﻿using mupdf;
-using MuPDF.NET;
-using System.ComponentModel;
-using static System.Runtime.InteropServices.JavaScript.JSType;
+﻿using NUnit.Framework;
+using mupdf;
 
 namespace MuPDF.NET.Test
 {

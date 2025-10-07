@@ -7,8 +7,6 @@
 
 using System;
 using System.Text;
-using System.Drawing;
-using System.Drawing.Drawing2D;
 using SkiaSharp;
 
 namespace BarcodeWriter.Core.Internal
@@ -303,34 +301,34 @@ namespace BarcodeWriter.Core.Internal
             return charPos;
         }
 
-        protected override Size buildBars(SKCanvas canvas, SKFont font)
+        protected override SKSize buildBars(SKCanvas canvas, SKFont font)
         {
-            Size drawingSize = new Size();
+            SKSize drawingSize = new SKSize();
             int x = 0;
             int y = 0;
 
             int height = BarHeight;
             int width = NarrowBarWidth;
 
-            Size captionSize = calculateCaptionSize(canvas, font);
-            int guardHeight = height + captionSize.Height / 2;
+            SKSize captionSize = calculateCaptionSize(canvas, font);
+            float guardHeight = height + captionSize.Height / 2;
 
             // left guard bars
-            x = drawPattern(m_leftGuardPattern, x, y, width, guardHeight);
+            x = (int)drawPattern(m_leftGuardPattern, x, y, width, guardHeight);
 
             m_leftLeft = x;
             x = drawLeftHandPart(x, y);
             m_leftRight = x;
 
             // center guard bars
-            x = drawPattern(m_centerGuardPattern, x, y, width, guardHeight);
+            x = (int)drawPattern(m_centerGuardPattern, x, y, width, guardHeight);
 
             m_rightLeft = x;
             x = drawRightHandPart(x, y);
             m_rightRight = x;
 
             // right guard bars
-            x = drawPattern(m_rightGuardPattern, x, y, width, guardHeight);
+            x = (int)drawPattern(m_rightGuardPattern, x, y, width, guardHeight);
 
             drawingSize.Width = x;
             drawingSize.Height = BarHeight + captionSize.Height / 2;
@@ -360,7 +358,7 @@ namespace BarcodeWriter.Core.Internal
                 else
                     pattern = getLeftEvenCharPattern(encoded[1 + i]);
 
-                x = drawPattern(pattern, x, y, NarrowBarWidth, BarHeight);
+                x = (int)drawPattern(pattern, x, y, NarrowBarWidth, BarHeight);
             }
 
             return x;
@@ -383,7 +381,7 @@ namespace BarcodeWriter.Core.Internal
             for (int i = 0; i < 6; i++)
             {
                 string pattern = getRightCharPattern(encoded[7 + i]);
-                x = drawPattern(pattern, x, y, NarrowBarWidth, BarHeight);
+                x = (int)drawPattern(pattern, x, y, NarrowBarWidth, BarHeight);
             }
 
             return x;
@@ -400,14 +398,14 @@ namespace BarcodeWriter.Core.Internal
         /// <returns>
         /// The next horizontal position to draw barcode part at.
         /// </returns>
-        protected int drawPattern(string pattern, int x, int y, int width, int height)
+        protected float drawPattern(string pattern, float x, float y, float width, float height)
         {
             foreach (char patternChar in pattern)
             {
 	            bool drawBar = patternChar == '1';
 
 	            if (drawBar)
-                    m_rects.Add(new Rectangle(x, y, width, height));
+                    m_rects.Add(new SKRect(x, y, width+x, height+y));
 
                 x += width;
             }
@@ -436,9 +434,9 @@ namespace BarcodeWriter.Core.Internal
 	        return 0;
         }
 
-        protected override Size occupiedByCaptionBelow(SKCanvas canvas, SKFont font)
+        protected override SKSize occupiedByCaptionBelow(SKCanvas canvas, SKFont font)
         {
-            Size captionSize = new Size();
+            SKSize captionSize = new SKSize();
 
             if (CaptionMayBeDrawn && CaptionPosition == CaptionPosition.Below)
             {

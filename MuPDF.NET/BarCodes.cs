@@ -34,7 +34,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Drawing;
 using System.Globalization;
 using System.IO;
 using System.Reflection;
@@ -146,7 +145,7 @@ namespace MuPDF.NET
         /// Output results in string[] form
         /// </summary>
         private List<string> listFoundBarcodesAsStrings = new List<string>();
-        private List<Rectangle> listFoundBarcodesAsRectangles = new List<Rectangle>();
+        private List<SKRect> listFoundBarcodesAsRectangles = new List<SKRect>();
 
         /// <summary>
         /// returns found barcodes as an array of strings
@@ -157,7 +156,7 @@ namespace MuPDF.NET
             return listFoundBarcodesAsStrings.ToArray();
         }
 
-        public Rectangle[] GetFoundBarcodesAsRectangles()
+        public SKRect[] GetFoundBarcodesAsRectangles()
         {
             return listFoundBarcodesAsRectangles.ToArray();
         }
@@ -224,12 +223,12 @@ namespace MuPDF.NET
                 // Sort results by Y, then X
                 Array.Sort(foundBarcodes, (x, y) =>
                 {
-                    int result = x.Rect.Top - y.Rect.Top;
+                    float result = x.Rect.Top - y.Rect.Top;
 
-                    if (result == 0)
+                    if (result == 0f)
                         result = x.Rect.Left - y.Rect.Left;
 
-                    return result;
+                    return (int)result;
                 });
 
                 if (foundBarcodes != null)
@@ -276,7 +275,7 @@ namespace MuPDF.NET
                             SKRect bounds = path.Bounds;
 
                             // Set barcode.Rect as a System.Drawing.Rectangle
-                            barcode.Rect = Rectangle.Round(new RectangleF(bounds.Left, bounds.Top, bounds.Width, bounds.Height));
+                            barcode.Rect = new SKRect(bounds.Left, bounds.Top, bounds.Left+bounds.Width, bounds.Top+bounds.Height);
                         }
 
                         listFoundBarcodesAsRectangles.Add(barcode.Rect);
@@ -483,7 +482,8 @@ namespace MuPDF.NET
                 
                 encoder.Symbology = _symbologyType;
                 encoder.DrawCaption = !pureBarcode;
-                encoder.Margins = new Margins(0, 0, 0, marginBottom);
+                encoder.Margins = new Margins(marginLeft, marginTop, marginRight, marginBottom);
+                encoder.DrawQuietZones = false;
 
                 if (barHeight > 0)
                     encoder.BarHeight = barHeight;
@@ -560,7 +560,8 @@ namespace MuPDF.NET
                 encoder.Value = contents;
                 encoder.Symbology = _symbologyType;
                 encoder.DrawCaption = !pureBarcode;
-                encoder.Margins = new Margins(0, 0, 0, marginBottom);
+                encoder.Margins = new Margins(marginLeft, marginTop, marginRight, marginBottom);
+                encoder.DrawQuietZones = false;
 
                 if (barHeight > 0)
                     encoder.BarHeight = barHeight;
@@ -602,7 +603,7 @@ namespace MuPDF.NET
                 if (forceFitToRect == false)
                     encoder.SaveImage(imageFile, imageFormat);
                 else
-                    encoder.SaveImage(imageFile, imageFormat, new Size(width, height), 0, 0);
+                    encoder.SaveImage(imageFile, imageFormat, new SKSize(width, height), 0, 0);
             }
         }
     }

@@ -2,8 +2,6 @@
 using SkiaSharp;
 using System;
 using System.Collections.Generic;
-using System.Drawing;
-using System.Drawing.Imaging;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.ComTypes;
@@ -21,9 +19,9 @@ namespace BarcodeWriter.Core
         private class ImageData
         {
             public SKImage Image { get; }
-            public PointF Position { get; }
+            public SKPoint Position { get; }
 
-            public ImageData(SKImage image, PointF position)
+            public ImageData(SKImage image, SKPoint position)
             {
                 Image = image;
                 Position = position;
@@ -89,7 +87,7 @@ namespace BarcodeWriter.Core
             using (SKData data = SKData.Create(fileName))
             {
                 var image = Rotate(SKImage.FromEncodedData(data), rotationAngle);
-                _imageDataList.Add(new ImageData(image, new PointF(positionX, positionY)));
+                _imageDataList.Add(new ImageData(image, new SKPoint(positionX, positionY)));
             }
         }
 
@@ -106,7 +104,7 @@ namespace BarcodeWriter.Core
             using (SKData data = SKData.Create(stream))
             {
                 var image = Rotate(SKImage.FromEncodedData(data), rotationAngle);
-                _imageDataList.Add(new ImageData(image, new PointF(positionX, positionY)));
+                _imageDataList.Add(new ImageData(image, new SKPoint(positionX, positionY)));
             }
         }
 
@@ -121,7 +119,7 @@ namespace BarcodeWriter.Core
         public void AddImage(SKImage image, int positionX = 0, int positionY = 0, int rotationAngle = 0)
         {
             var newImage = Rotate(image, rotationAngle);
-            _imageDataList.Add(new ImageData(newImage, new PointF(positionX, positionY)));
+            _imageDataList.Add(new ImageData(newImage, new SKPoint(positionX, positionY)));
         }
 
         /// <summary>
@@ -261,7 +259,7 @@ namespace BarcodeWriter.Core
 
         private void DrawAuto(SKCanvas canvas)
         {
-            PointF position = new PointF(Margins, Margins);
+            SKPoint position = new SKPoint(Margins, Margins);
             foreach (var imageData in _imageDataList)
             {
                 using (var skBitmap = SKBitmap.FromImage(imageData.Image))
@@ -274,7 +272,7 @@ namespace BarcodeWriter.Core
 
         // Updates position according to CompositionMode mode.
 
-        private void UpdatePositionAuto(ref PointF position, SKImage image)
+        private void UpdatePositionAuto(ref SKPoint position, SKImage image)
         {
             switch (CompositionMode)
             {
@@ -354,7 +352,7 @@ namespace BarcodeWriter.Core
 
         // Returns max bottom-right point for the output image.
 
-        private PointF MaxRightBottomCorner()
+        private SKPoint MaxRightBottomCorner()
         {
             /**  []
              *              []
@@ -362,7 +360,7 @@ namespace BarcodeWriter.Core
              * 
              *        []     X - this is the result
              */
-            var max = new PointF(0, 0);
+            var max = new SKPoint(0, 0);
 
             foreach (var imageData in _imageDataList)
             {

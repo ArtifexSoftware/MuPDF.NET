@@ -205,10 +205,10 @@ namespace BarcodeReader.Core.Common
         }
 
 
-        public Rectangle GetRectangle()
+        public SKRect GetRectangle()
         {
-            return isHorizontal? new Rectangle(xIn, yIn, xEnd - xIn + 1, yEnd - yIn + 1):
-                new Rectangle(yIn, xIn, yEnd - yIn + 1, xEnd - xIn + 1); ;
+            return isHorizontal? new SKRect(xIn, yIn, xEnd + 1, yEnd + 1):
+                new SKRect(yIn, xIn, yEnd + 1, xEnd + 1); ;
         }
 
         public float Length

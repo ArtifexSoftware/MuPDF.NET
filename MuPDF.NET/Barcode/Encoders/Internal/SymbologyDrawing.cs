@@ -9,9 +9,6 @@ using SkiaSharp;
 using System;
 using System.Collections;
 using System.ComponentModel;
-using System.Drawing;
-using System.Drawing.Drawing2D;
-using System.Drawing.Imaging;
 using static System.Net.Mime.MediaTypeNames;
 
 namespace BarcodeWriter.Core.Internal
@@ -22,7 +19,7 @@ namespace BarcodeWriter.Core.Internal
     abstract class SymbologyDrawing : IDisposable
     {
         protected ArrayList m_rects = new ArrayList();
-        protected Size m_drawingSize = new Size();
+        protected SKSize m_drawingSize = new SKSize();
         protected TrueSymbologyType m_type = TrueSymbologyType.Code39;
         private string m_value = "";
         private SKFont m_captionFont = new SKFont(SKTypeface.FromFamilyName(
@@ -226,7 +223,7 @@ namespace BarcodeWriter.Core.Internal
         /// <summary>
         /// Resultion of result image
         /// </summary>
-        internal SizeF BarcodeResolution { get; set; }
+        internal SKSize BarcodeResolution { get; set; }
 
         /// <summary>
         /// Gets or sets the height of the barcode bars in pixels.
@@ -298,7 +295,7 @@ namespace BarcodeWriter.Core.Internal
 		/// <returns>
 		/// The size of the smallest rectangle in pixels that can accommodate the barcode with caption.
 		/// </returns>
-		public virtual Size Draw(SKCanvas canvas, SKPoint position, bool onlyCalculate)
+		public virtual SKSize Draw(SKCanvas canvas, SKPoint position, bool onlyCalculate)
         {
             // There is two main barcode image types: rectangular and EAN-like
             //
@@ -342,8 +339,8 @@ namespace BarcodeWriter.Core.Internal
 
             // calculate size of areas occupied by different caption parts
             // of course, not all areas have non-zero size
-            Size captionAbove = occupiedByCaptionAbove(canvas, captionFontToUse);
-            Size captionBelow = occupiedByCaptionBelow(canvas, captionFontToUse);
+            SKSize captionAbove = occupiedByCaptionAbove(canvas, captionFontToUse);
+            SKSize captionBelow = occupiedByCaptionBelow(canvas, captionFontToUse);
             int captionBeforeWidth = occupiedByCaptionBefore(canvas, captionFontToUse);
             int captionAfterWidth = occupiedByCaptionAfter(canvas, captionFontToUse);
 
@@ -380,23 +377,23 @@ namespace BarcodeWriter.Core.Internal
             }
 
             // calculate total image width (image is an area occupied by bars and captions)
-            int width = captionBeforeWidth + Math.Max(captionAbove.Width, Math.Max(captionBelow.Width, m_drawingSize.Width)) + captionAfterWidth;
-            int height = captionAbove.Height + quietZone2D + m_drawingSize.Height + quietZone2D + captionBelow.Height;
-            return new Size(width, height);
+            float width = captionBeforeWidth + Math.Max(captionAbove.Width, Math.Max(captionBelow.Width, m_drawingSize.Width)) + captionAfterWidth;
+            float height = captionAbove.Height + quietZone2D + m_drawingSize.Height + quietZone2D + captionBelow.Height;
+            return new SKSize(width, height);
         }
 
-        private Size occupiedByCaptionAbove(SKCanvas canvas, SKFont font)
+        private SKSize occupiedByCaptionAbove(SKCanvas canvas, SKFont font)
         {
-            Size captionSize = new Size();
+            SKSize captionSize = new SKSize();
             if (CaptionMayBeDrawn && CaptionPosition == CaptionPosition.Above)
                 captionSize = calculateCaptionSize(canvas, font);
 
             return captionSize;
         }
 
-        protected virtual Size occupiedByCaptionBelow(SKCanvas canvas, SKFont font)
+        protected virtual SKSize occupiedByCaptionBelow(SKCanvas canvas, SKFont font)
         {
-            Size captionSize = new Size();
+            SKSize captionSize = new SKSize();
             if (CaptionMayBeDrawn && CaptionPosition == CaptionPosition.Below)
             {
                 captionSize = calculateCaptionSize(canvas, font);
@@ -420,9 +417,9 @@ namespace BarcodeWriter.Core.Internal
             return 0;
         }
 
-        protected virtual Size buildBars(SKCanvas canvas, SKFont font)
+        protected virtual SKSize buildBars(SKCanvas canvas, SKFont font)
         {
-            Size drawingSize = new Size();
+            SKSize drawingSize = new SKSize();
             int x = 0;
             int y = 0;
 
@@ -469,7 +466,7 @@ namespace BarcodeWriter.Core.Internal
                         width *= WideToNarrowRatio;
 
                     if (drawBar)
-                        m_rects.Add(new Rectangle(x, y, width, BarHeight));
+                        m_rects.Add(new SKRect(x, y, x+width, y+BarHeight));
 
                     x += width;
                     drawBar = !drawBar;
@@ -481,7 +478,7 @@ namespace BarcodeWriter.Core.Internal
             return drawingSize;
         }
 
-        private Size calculateOrDrawException(SKCanvas canvas, SKPoint position, string message, bool onlyCalculate)
+        private SKSize calculateOrDrawException(SKCanvas canvas, SKPoint position, string message, bool onlyCalculate)
         {
             string error = "Failed to encode: " + message;
 
@@ -501,7 +498,7 @@ namespace BarcodeWriter.Core.Internal
                     // Note: subtracting bounds.Top ensures proper baseline alignment
                 }
 
-                return new Size((int)bounds.Width + 1, (int)bounds.Height + 1);
+                return new SKSize(bounds.Width + 1, bounds.Height + 1);
             }
         }
 
@@ -513,9 +510,9 @@ namespace BarcodeWriter.Core.Internal
                  Symbology == SymbologyType.DataMatrix || Symbology == SymbologyType.GS1_DataMatrix ||
                  Symbology == SymbologyType.Aztec))
             {
-                foreach (Rectangle r in m_rects)
+                foreach (SKRect r in m_rects)
                 {
-                    RectangleF dotRect = new RectangleF(r.X + position.X, r.Y + position.Y, r.Width, r.Height);
+                    SKRect dotRect = new SKRect(r.Left + position.X, r.Top + position.Y, r.Width, r.Height);
 
                     if (RoundDotsScale != 100)
                     {
@@ -525,18 +522,18 @@ namespace BarcodeWriter.Core.Internal
                     }
 
                     // Draw ellipse (circle/dot)
-                    canvas.DrawOval(dotRect.X, dotRect.Y, dotRect.Right, dotRect.Bottom, paint);
+                    canvas.DrawOval(dotRect.Left, dotRect.Top, dotRect.Right, dotRect.Bottom, paint);
                 }
             }
             else
             {
-                foreach (Rectangle r in m_rects)
+                foreach (SKRect r in m_rects)
                 {
                     SKRect barRect = new SKRect(
-                        r.X + position.X,
-                        r.Y + position.Y,
-                        r.X + position.X + r.Width,
-                        r.Y + position.Y + r.Height
+                        r.Left + position.X,
+                        r.Top + position.Y,
+                        r.Right + position.X,
+                        r.Bottom + position.Y
                     );
 
                     canvas.DrawRect(barRect, paint);
@@ -552,8 +549,8 @@ namespace BarcodeWriter.Core.Internal
         protected virtual void drawCaption(SKCanvas canvas, SKPaint paint, SKFont font, SKPoint position)
         {
             // Measure caption size
-            Size size = calculateCaptionSize(canvas, font);
-            SKSizeI captionSize = new SKSizeI(size.Width, size.Height);
+            SKSize size = calculateCaptionSize(canvas, font);
+            SKSizeI captionSize = new SKSizeI((int)size.Width, (int)size.Height);
             SKRect captionRect = SKRect.Empty;
 
             // Resolve horizontal alignment
@@ -693,7 +690,7 @@ namespace BarcodeWriter.Core.Internal
         /// <param name="graphics">The Graphics object used to measure caption text string.</param>
         /// <param name="font">The font.</param>
         /// <returns>The size of the caption text string.</returns>
-        protected Size calculateCaptionSize(SKCanvas canvas, SKFont font)
+        protected SKSize calculateCaptionSize(SKCanvas canvas, SKFont font)
         {
             // Measure width directly from SKFont
             float width = font.MeasureText(Caption);
@@ -703,7 +700,7 @@ namespace BarcodeWriter.Core.Internal
             float height = metrics.Descent - metrics.Ascent + metrics.Leading;
 
             // +1 like in GDI+ version, return integer size
-            return new Size((int)(width + 1), (int)(height + 1));
+            return new SKSize((width + 1), (height + 1));
         }
         protected virtual SKFont getFontForCaption(SKCanvas canvas, CaptionPosition position)
         {

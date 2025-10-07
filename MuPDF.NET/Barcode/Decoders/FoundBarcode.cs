@@ -1,4 +1,3 @@
-using System.Drawing;
 using SkiaSharp;
 using BarcodeReader.Core.Common;
 
@@ -45,13 +44,13 @@ namespace BarcodeReader.Core
 
         public int[] RawData { get; set; }
 
-        public Rectangle Rect { get; set; }
+        public SKRect Rect { get; set; }
 
         public SKPointI[] Polygon { get; set; }
 
         public SymbologyType BarcodeFormat { get; set; }
 
-        public Color Color { get; set; }
+        public SKColor Color { get; set; }
 
         public float Confidence { get; set; } = 1f;
 

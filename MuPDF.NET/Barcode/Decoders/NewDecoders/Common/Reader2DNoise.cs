@@ -204,7 +204,7 @@ namespace BarcodeReader.Core.Common
                     f.BarcodeFormat = GetBarCodeType();
 
                 f.Polygon = new SKPointI[] { r.A, r.B, r.C, r.D, r.A };
-                f.Color = Color.Blue;
+                f.Color = SKColors.Blue;
 				//byte[] pointTypes = new byte[5] { (byte)PathPointType.Start, (byte)PathPointType.Line, (byte)PathPointType.Line, (byte)PathPointType.Line, (byte)PathPointType.Line };
 				//GraphicsPath path = new GraphicsPath(f.Polygon, pointTypes);
 				//f.Rect = Rectangle.Round(path.GetBounds());

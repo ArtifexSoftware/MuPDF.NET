@@ -148,7 +148,7 @@ namespace BarcodeWriter.Core.Internal
             for (int i = 0; i < 4; i++)
             {
                 string pattern = getLeftOddCharPattern(encoded[i]);
-                x = drawPattern(pattern, x, y, NarrowBarWidth, BarHeight);
+                x = (int)drawPattern(pattern, x, y, NarrowBarWidth, BarHeight);
             }
 
             return x;
@@ -170,7 +170,7 @@ namespace BarcodeWriter.Core.Internal
             for (int i = 0; i < 4; i++)
             {
                 string pattern = getRightCharPattern(encoded[4 + i]);
-                x = drawPattern(pattern, x, y, NarrowBarWidth, BarHeight);
+                x = (int)drawPattern(pattern, x, y, NarrowBarWidth, BarHeight);
             }
 
             return x;

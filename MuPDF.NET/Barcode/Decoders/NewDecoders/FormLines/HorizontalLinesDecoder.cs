@@ -74,14 +74,14 @@ namespace BarcodeReader.Core.FormLines
                     FoundBarcode b = new FoundBarcode();
 					b.BarcodeFormat = scanHorizonal ? SymbologyType.HorizontalLine : SymbologyType.VerticalLine;
                     b.Polygon = new SKPointI[] { edge.a, edge.b, edge.a};
-                    b.Color = Color.Orange;
+                    b.Color = SKColors.Orange;
 					//byte[] pointTypes = new byte[3] { (byte) PathPointType.Start, (byte) PathPointType.Line, (byte) PathPointType.Line };
 					//GraphicsPath path = new GraphicsPath(b.Polygon, pointTypes);
 					//b.Rect = Rectangle.Round(path.GetBounds());
                     b.Rect = Utils.DrawPath(b.Polygon);
-                    b.Rect = new Rectangle(b.Rect.Left, b.Rect.Top,
-						b.Rect.Width == 0 ? 1 : b.Rect.Width, 
-						b.Rect.Height == 0 ? 1 : b.Rect.Height);
+                    b.Rect = new SKRect(b.Rect.Left, b.Rect.Top,
+						b.Rect.Width == 0 ? b.Rect.Left+1 : b.Rect.Right, 
+						b.Rect.Height == 0 ? b.Rect.Top+1 : b.Rect.Bottom);
                     b.Value = "line";
                     result.Add(b);
                 }

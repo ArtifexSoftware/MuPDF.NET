@@ -173,7 +173,7 @@ namespace BarcodeReader.Core
 			return result.ToArray();
         }
 
-        private static Rectangle AdjustBarcodeRectangle(BlackAndWhiteImage bwImage, Rectangle barcodeRect, float rotationAngle)
+        private static SKRect AdjustBarcodeRectangle(BlackAndWhiteImage bwImage, SKRect barcodeRect, float rotationAngle)
         {
 			if (Math.Abs(rotationAngle) > float.Epsilon)
 			{
@@ -181,7 +181,7 @@ namespace BarcodeReader.Core
 				//byte[] pointTypes = new byte[5] { (byte) PathPointType.Start, (byte) PathPointType.Line, (byte) PathPointType.Line, (byte) PathPointType.Line, (byte) PathPointType.Line };
 				//GraphicsPath path = new GraphicsPath(unrotatedPoints, pointTypes);
 
-                Rectangle rect = Utils.DrawPath(unrotatedPoints);
+                SKRect rect = Utils.DrawPath(unrotatedPoints);
 
                 return rect;
 			}
@@ -301,12 +301,12 @@ namespace BarcodeReader.Core
         private bool checkIfAlreadyFound(FoundBarcode rowResult, int pass, XBitArray row, List<FoundBarcode> result)
         {
             bool updated = false;
-            Rectangle curRect = rowResult.Rect;
+            SKRect curRect = rowResult.Rect;
 
             if (pass == 1)
             {
                 // we should reverse found barcode rect
-                curRect.X = row.Size - curRect.Right;
+                curRect.Left = row.Size - curRect.Right;
                 rowResult.Rect = curRect;
             }
 
@@ -315,19 +315,19 @@ namespace BarcodeReader.Core
                 FoundBarcode prevResult = result[i] as FoundBarcode;
 
                 if (
-		            (RawDataEquals(prevResult.RawData, rowResult.RawData) || Math.Abs(curRect.Y-prevResult.Rect.Y) < 5) &&
+		            (RawDataEquals(prevResult.RawData, rowResult.RawData) || Math.Abs(curRect.Top-prevResult.Rect.Top) < 5) &&
                             prevResult.BarcodeFormat == rowResult.BarcodeFormat &&
 		            Math.Abs(prevResult.Confidence - rowResult.Confidence) < 0.1f
 		        )
                 {
-                    Rectangle prevRect = prevResult.Rect;
+                    SKRect prevRect = prevResult.Rect;
 
                     if (Math.Abs(curRect.Left - prevRect.Left) < 0.2 * prevRect.Width)
                     {
                         updated = true;
 
                         //prevRect.Offset(0, -1);
-                        Rectangle newRect = Rectangle.FromLTRB(Math.Min(prevRect.Left, curRect.Left),
+                        SKRect newRect = new SKRect(Math.Min(prevRect.Left, curRect.Left),
                             Math.Min(prevRect.Top, curRect.Top),
                             Math.Max(prevRect.Right, curRect.Right),
                             Math.Max(prevRect.Bottom, curRect.Bottom));
@@ -634,7 +634,7 @@ namespace BarcodeReader.Core
         {
             public int Compare(FoundBarcode x, FoundBarcode y)
             {
-                return y.Rect.Height - x.Rect.Height;
+                return (int)(y.Rect.Height - x.Rect.Height);
             }
         }
     }

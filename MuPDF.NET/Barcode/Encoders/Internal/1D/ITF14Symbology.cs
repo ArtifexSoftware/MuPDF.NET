@@ -76,11 +76,11 @@ namespace BarcodeWriter.Core.Internal
             return Value;
         }
 
-        protected override Size buildBars(SKCanvas canvas, SKFont font)
+        protected override SKSize buildBars(SKCanvas canvas, SKFont font)
         {
             int BearerBarsWidth = 4 * NarrowBarWidth;
             int QuietZone = 10 * NarrowBarWidth;
-            Size drawingSize = new Size();
+            SKSize drawingSize = new SKSize();
             int x = BearerBarsWidth + QuietZone; // 0;
             int y = BearerBarsWidth; // 0;
 
@@ -109,7 +109,7 @@ namespace BarcodeWriter.Core.Internal
                     if (gapsPattern[patternPos] == 'w')
                         gapWidth = widthWide;
 
-                    m_rects.Add(new Rectangle(x, y, barWidth, height));
+                    m_rects.Add(new SKRect(x, y, barWidth+x, height+y));
 
                     x += barWidth;
                     x += gapWidth;
@@ -118,12 +118,12 @@ namespace BarcodeWriter.Core.Internal
 
             x += drawStopCode(x, y);
 
-            m_rects.Add(new Rectangle(BearerBarsWidth, 0, x + QuietZone - BearerBarsWidth, BearerBarsWidth));
-            m_rects.Add(new Rectangle(BearerBarsWidth, height + BearerBarsWidth, x + QuietZone - BearerBarsWidth, BearerBarsWidth));
+            m_rects.Add(new SKRect(BearerBarsWidth, 0, x + QuietZone, BearerBarsWidth));
+            m_rects.Add(new SKRect(BearerBarsWidth, height + BearerBarsWidth, x + QuietZone, BearerBarsWidth+ height + BearerBarsWidth));
             if (!Options.OnlyHorizontalBearerBar)
             {
-                m_rects.Add(new Rectangle(0, 0, BearerBarsWidth, height + BearerBarsWidth * 2));
-                m_rects.Add(new Rectangle(x + QuietZone, 0, BearerBarsWidth, height + BearerBarsWidth * 2));
+                m_rects.Add(new SKRect(0, 0, BearerBarsWidth, height + BearerBarsWidth * 2));
+                m_rects.Add(new SKRect(x + QuietZone, 0, BearerBarsWidth, height + BearerBarsWidth * 2));
             }
             drawingSize.Width = x + BearerBarsWidth + QuietZone;
             drawingSize.Height = BarHeight + BearerBarsWidth * 2;

@@ -295,7 +295,7 @@ namespace BarcodeReader.Core.Datamatrix
                         foreach (ABarCodeData d in b.Data) 
                             data += d.ToString();
 					foundBarcode.Value = data;
-                    foundBarcode.Color = Color.Blue;
+                    foundBarcode.Color = SKColors.Blue;
 
                     foundBarcode.Polygon = new SKPointI[5] { b.A, b.B, b.D, b.C, b.A };
 					//byte[] pointTypes = new byte[5] { (byte) PathPointType.Start, (byte) PathPointType.Line, (byte) PathPointType.Line, (byte) PathPointType.Line, (byte) PathPointType.Line };

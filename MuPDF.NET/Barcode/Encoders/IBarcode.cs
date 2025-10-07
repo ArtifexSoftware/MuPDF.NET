@@ -1,11 +1,7 @@
 using System;
 using System.Text;
 using System.Runtime.InteropServices;
-using System.Drawing;
-using System.Drawing.Text;
-using System.Drawing.Drawing2D;
 using System.IO;
-using System.Drawing.Imaging;
 using SkiaSharp;
 
 namespace BarcodeWriter.Core
@@ -17,7 +13,7 @@ namespace BarcodeWriter.Core
     /// <param name="images">Array of Image objects to draw on PDF page.</param>
     /// <param name="points">Array of upper-left points of images (in document units).</param>
     /// <param name="documentLayerName">Name for new PDF layer to place images on. If null or empty, no new layer will be created.</param>
-    public delegate void DrawImagesToPDFCallback(int pageIndex, out SKImage[] images, out Point[] points, out string documentLayerName);
+    public delegate void DrawImagesToPDFCallback(int pageIndex, out SKImage[] images, out SKPoint[] points, out string documentLayerName);
         
     /// <summary>
     /// Base interface for all barcode classes.
@@ -397,7 +393,7 @@ namespace BarcodeWriter.Core
         /// <param name="unit">The unit of measure for retrieved size.</param>
         /// <returns>The size in specified units of the smallest rectangle that
         /// can accommodate the barcode.</returns>
-        SizeF GetMinimalSize(UnitOfMeasure unit);
+        SKSize GetMinimalSize(UnitOfMeasure unit);
 
         /// <summary>
         /// Returns the width in specified units of the smallest rectangle that
@@ -429,7 +425,7 @@ namespace BarcodeWriter.Core
         /// of the area.
         /// </summary>
         /// <param name="size">The size of the area to fit the barcode into.</param>        
-        void FitInto(Size size);
+        void FitInto(SKSize size);
 
         /// <summary>
 	    /// IMPORTANT: Call this method AFTER setting the barcode value.
@@ -452,7 +448,7 @@ namespace BarcodeWriter.Core
         /// <param name="size">The size of the area to fit the barcode into.</param>
         /// <param name="unit">The unit of the size.</param>
         [ComVisible(false)]
-        void FitInto(SizeF size, UnitOfMeasure unit);
+        void FitInto(SKSize size, UnitOfMeasure unit);
 
         /// <summary>
 	    /// IMPORTANT: Call this method AFTER setting the barcode value.
@@ -476,7 +472,7 @@ namespace BarcodeWriter.Core
         /// can accommodate the barcode.
         /// </summary>
         /// <returns>The size of the smallest rectangle in pixels that can accommodate the barcode.</returns>
-        Size GetMinimalSize();
+        SKSize GetMinimalSize();
 
         /// <summary>
         /// Draws the barcode on <see cref="System.Drawing.Graphics"/> canvas object.
@@ -484,7 +480,7 @@ namespace BarcodeWriter.Core
         /// <param name="graphics">The <see cref="System.Drawing.Graphics"/> object to draw the barcode on.</param>
         /// <param name="position">The position in pixels of the top left point of the barcode.</param>
         [ComVisible(false)]
-        void Draw(SKCanvas canvas, Point position);
+        void Draw(SKCanvas canvas, SKPoint position);
         
         /// <summary>
         /// Draws the barcode.
@@ -525,7 +521,7 @@ namespace BarcodeWriter.Core
         /// <param name="imageLeft">The image leftmost position within area.</param>
         /// <param name="imageTop">The image topmost position within area.</param>
         [ComVisible(false)]
-        void SaveImage(string fileName, SKEncodedImageFormat format, Size areaSize, int imageLeft, int imageTop);
+        void SaveImage(string fileName, SKEncodedImageFormat format, SKSize areaSize, int imageLeft, int imageTop);
 
         /// <summary>
         /// Saves the barcode image to specified stream.
@@ -551,7 +547,7 @@ namespace BarcodeWriter.Core
         /// <param name="imageLeft">The image leftmost position within area.</param>
         /// <param name="imageTop">The image topmost position within area.</param>
         [ComVisible(false)]
-        void SaveImage(Stream stream, SKEncodedImageFormat format, Size areaSize, int imageLeft, int imageTop);
+        void SaveImage(Stream stream, SKEncodedImageFormat format, SKSize areaSize, int imageLeft, int imageTop);
 
         /// <summary>
         /// Returns the barcode image as byte array.

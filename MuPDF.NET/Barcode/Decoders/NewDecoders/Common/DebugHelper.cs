@@ -2,8 +2,6 @@ using SkiaSharp;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Drawing;
-using System.Drawing.Drawing2D;
 using System.IO;
 using System.Net;
 using System.Text;
@@ -127,48 +125,48 @@ namespace BarcodeReader.Core.Common
             gr_noScaled = new SKCanvas(NoScaledImage);
         }
 
-        public static void DrawSquare(float x, float y, Color color)
+        public static void DrawSquare(float x, float y, SKColor color)
         {
             if (OriginalImage == null) return;
 
-            fillPaint.Color = new SKColor(color.R, color.G, color.B, color.A);
+            fillPaint.Color = color;
             gr.DrawRect(x * scale, y * scale, scale, scale, fillPaint);
         }
 
-        public static void FillInNoScaled(Color color, params MyPoint[] points)
+        public static void FillInNoScaled(SKColor color, params MyPoint[] points)
         {
             if (OriginalImage == null) return;
 
-            fillPaint.Color = new SKColor(color.R, color.G, color.B, color.A);
+            fillPaint.Color = color;
 
             foreach (var p in points)
                 gr_noScaled.DrawRect(p.X, p.Y, 1, 1, fillPaint);
         }
 
-        public static void FillInNoScaled(Color color, int radius, params MyPoint[] points)
+        public static void FillInNoScaled(SKColor color, int radius, params MyPoint[] points)
         {
             if (OriginalImage == null) return;
 
-            fillPaint.Color = new SKColor(color.R, color.G, color.B, color.A);
+            fillPaint.Color = color;
 
             foreach (var p in points)
                 gr_noScaled.DrawRect(p.X - radius, p.Y - radius, 2 * radius + 1, 2 * radius + 1, fillPaint);
         }
 
-        public static void DrawSquare(Color color, params MyPoint[] points)
+        public static void DrawSquare(SKColor color, params MyPoint[] points)
         {
             if (OriginalImage == null) return;
 
-            fillPaint.Color = new SKColor(color.R, color.G, color.B, color.A);
+            fillPaint.Color = color;
             foreach (var p in points)
                 gr.DrawRect(p.X * scale, p.Y * scale, scale, scale, fillPaint);
         }
 
-        public static void DrawRegion(Color color, BarCodeRegion r)
+        public static void DrawRegion(SKColor color, BarCodeRegion r)
         {
             if (OriginalImage == null || gr == null) return;
 
-            strokePaint.Color = new SKColor(color.R, color.G, color.B, color.A);
+            strokePaint.Color = color;
 
             var path = new SKPath();
             path.MoveTo(r.A.X * scale, r.A.Y * scale);
@@ -180,11 +178,11 @@ namespace BarcodeReader.Core.Common
             gr.DrawPath(path, strokePaint);
         }
 
-        public static void DrawArrow(float x1, float y1, float x2, float y2, Color color)
+        public static void DrawArrow(float x1, float y1, float x2, float y2, SKColor color)
         {
             if (OriginalImage == null || gr == null) return;
 
-            strokePaint.Color = new SKColor(color.R, color.G, color.B, color.A);
+            strokePaint.Color = color;
             strokePaint.Style = SKPaintStyle.Stroke;
             strokePaint.StrokeWidth = 1;
 

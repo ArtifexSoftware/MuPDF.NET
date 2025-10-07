@@ -112,7 +112,7 @@ namespace BarcodeReader.Core.Common
     {
         bool scaned;
         float x, angle;
-        int xIn, xEnd, yIn, yEnd, min, max;
+        float xIn, xEnd, yIn, yEnd, min, max;
         bool whiteToBlack, isHorizontal;
 
         public Edge(int x, int y, bool whiteToBlack, bool isHorizontal)
@@ -153,27 +153,27 @@ namespace BarcodeReader.Core.Common
 
         public SKPointI[] GetBBox()
         {
-            return new SKPointI[] { new SKPointI(xIn - 1, yIn), new SKPointI(xEnd - 1, yEnd)};
+            return new SKPointI[] { new SKPointI((int)xIn - 1, (int)yIn), new SKPointI((int)xEnd - 1, (int)yEnd)};
         }
 
 
-        public Rectangle GetRectangle()
+        public SKRect GetRectangle()
         {
-            return new Rectangle(xIn, yIn, xEnd - xIn + 1, yEnd - yIn + 1);
+            return new SKRect(xIn, yIn, xEnd + 1, yEnd + 1);
         }
 
-        public void SetRectangle(Rectangle r)
+        public void SetRectangle(SKRect r)
         {
-            this.xIn = r.X;
-            this.yIn = r.Y;
-            this.xEnd = r.X + r.Width - 1;
-            this.YEnd = r.Y + r.Height - 1;
+            this.xIn = r.Left;
+            this.yIn = r.Top;
+            this.xEnd = r.Right - 1;
+            this.YEnd = r.Bottom - 1;
         }
 
-        public int XIn { get { return xIn; } set { xIn = value; } }
-        public int XEnd { get { return xEnd; } set { xEnd = value; } }
-        public int YIn { get { return yIn; } set { yIn = value; } }
-        public int YEnd { get { return yEnd; } set { yEnd = value; } }
+        public float XIn { get { return xIn; } set { xIn = value; } }
+        public float XEnd { get { return xEnd; } set { xEnd = value; } }
+        public float YIn { get { return yIn; } set { yIn = value; } }
+        public float YEnd { get { return yEnd; } set { yEnd = value; } }
         public float Length
         {
             get
@@ -185,8 +185,8 @@ namespace BarcodeReader.Core.Common
         }
 
         const float PI = (float)Math.PI;
-        public int Width { get { return xEnd - xIn + 1; } }
-        public int Height { get { return yEnd - yIn + 1; } }
+        public float Width { get { return xEnd - xIn + 1; } }
+        public float Height { get { return yEnd - yIn + 1; } }
         public bool WhiteToBlack { get {return whiteToBlack; } }
         public bool Scaned { get {return scaned; } set { scaned=value;} }
         public float X { get { return x; } set { x = value; } }
@@ -200,14 +200,14 @@ namespace BarcodeReader.Core.Common
             return angle;
         } }
         public float Perpendicular { get { float p = Angle + PI / 2F; if (p > PI) p -= PI; return p; } }
-        public SKPointI Center { get { return new SKPointI((xIn + xEnd) / 2, (yIn + yEnd) / 2); } }
-        public SKPointI In { get { return new SKPointI(xIn, yIn); } }
-        public SKPointI End { get { return new SKPointI(xEnd, yEnd); } }
+        public SKPoint Center { get { return new SKPoint((xIn + xEnd) / 2, (yIn + yEnd) / 2); } }
+        public SKPoint In { get { return new SKPoint(xIn, yIn); } }
+        public SKPoint End { get { return new SKPoint(xEnd, yEnd); } }
 
         public float Dist(Edge p)
         {
-            SKPointI b = p.Center;
-            SKPointI a = this.Center;
+            SKPoint b = p.Center;
+            SKPoint a = this.Center;
             return (float)(Math.Sqrt((a.X - b.X) * (a.X - b.X) + (a.Y - b.Y) * (a.Y - b.Y)));
         }
 

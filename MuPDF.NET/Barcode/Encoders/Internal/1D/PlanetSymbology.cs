@@ -81,9 +81,9 @@ namespace BarcodeWriter.Core.Internal
             return "The PLANET symbology allows only strings with 12 or 14 digits to be encoded.";
         }
 
-        protected override Size buildBars(SKCanvas canvas, SKFont font)
+        protected override SKSize buildBars(SKCanvas canvas, SKFont font)
         {
-            Size drawingSize = new Size();
+            SKSize drawingSize = new SKSize();
             int x = 0;
             int y = 0;
 
@@ -92,7 +92,7 @@ namespace BarcodeWriter.Core.Internal
             int gapWidth = Math.Max(NarrowBarWidth / 2, 1);
             int width = NarrowBarWidth;
 
-            m_rects.Add(new Rectangle(x, y, width, tallHeight));
+            m_rects.Add(new SKRect(x, y, width+x, tallHeight+y));
 
             x += width;
             x += gapWidth;
@@ -104,16 +104,16 @@ namespace BarcodeWriter.Core.Internal
                 foreach (char patternChar in pattern)
                 {
                     if (patternChar == '1')
-                        m_rects.Add(new Rectangle(x, y + tallHeight - shortHeight, width, shortHeight));
+                        m_rects.Add(new SKRect(x, y + tallHeight - shortHeight, width+x, shortHeight+y));
                     else
-                        m_rects.Add(new Rectangle(x, y, width, tallHeight));
+                        m_rects.Add(new SKRect(x, y, width+x, tallHeight+y));
 
                     x += width;
                     x += gapWidth;
                 }
             }
 
-            m_rects.Add(new Rectangle(x, y, width, tallHeight));
+            m_rects.Add(new SKRect(x, y, width+x, tallHeight+y));
             x += width;
 
             drawingSize.Width = x;

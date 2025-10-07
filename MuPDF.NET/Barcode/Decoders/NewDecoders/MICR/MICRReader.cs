@@ -4,6 +4,7 @@ using System.Drawing;
 using SkiaSharp;
 using System.Runtime.InteropServices;
 using BarcodeReader.Core.Common;
+using MuPDF.NET;
 
 namespace BarcodeReader.Core.MICR
 {
@@ -255,10 +256,10 @@ namespace BarcodeReader.Core.MICR
                     if (ocr)
                     {
                         //resample the bounding box to a horizontal rectangle
-                        Rectangle r = bbox.GetRectangle();
-                        if (r.Height < 8) r.Height = 8;
+                        SKRect r = bbox.GetRectangle();
+                        if (r.Height < 8) r.Bottom = r.Top+8;
                         
-						using (SKBitmap rotated = new SKBitmap(r.Width, r.Height, SKColorType.Rgb888x, SKAlphaType.Opaque))
+						using (SKBitmap rotated = new SKBitmap((int)r.Width, (int)r.Height, SKColorType.Rgb888x, SKAlphaType.Opaque))
 						{
                             /*
 							BitmapData data = rotated.LockBits(new Rectangle(0, 0, r.Width, r.Height), ImageLockMode.ReadWrite, PixelFormat.Format24bppRgb);
@@ -280,9 +281,9 @@ namespace BarcodeReader.Core.MICR
 							}
 							rotated.UnlockBits(data);
                             */
-                            for (int y = 0; y < r.Height; y++)
+                            for (int y = 0; y < (int)r.Height; y++)
                             {
-                                for (int x = 0; x < r.Width; x++)
+                                for (int x = 0; x < (int)r.Width; x++)
                                 {
                                     MyPointF p = bbox.GetPoint(x, y);
                                     int gray = scan.isBlack(p) ? 0 : 255; // or use scan.getSample(p) * 255F for interpolated sample
@@ -322,10 +323,10 @@ namespace BarcodeReader.Core.MICR
 					foundBarcode.BarcodeFormat = SymbologyType.MICR;
 					foundBarcode.Value = micr;
                     
-					foundBarcode.Polygon = rect; 
-                    foundBarcode.Color = Color.Blue;
+					foundBarcode.Polygon = rect;
+                    foundBarcode.Color = SKColors.Blue;
 
-					foundBarcode.Rect = new Rectangle(rect[0].X, rect[0].Y, rect[3].X - rect[0].X, rect[1].Y - rect[0].Y);
+                    foundBarcode.Rect = new SKRect(rect[0].X, rect[0].Y, rect[3].X, rect[1].Y);
 
 					result.Add(foundBarcode);
                 }
@@ -340,24 +341,24 @@ namespace BarcodeReader.Core.MICR
                     (p.Width < maxRad && p.Height < maxRad))
                 {
                     String data = "";
-                    Rectangle r = p.GetRectangle();
+                    SKRect r = p.GetRectangle();
                     if (ocr) data = micrOcr.GetChar(BWImage, ref r);
                     FoundBarcode foundBarcode = new FoundBarcode();
 					foundBarcode.BarcodeFormat = SymbologyType.MICR;
                     if (data != null)
                     {
                         p.SetRectangle(r);
-                        foundBarcode.Color = Color.Blue;
+                        foundBarcode.Color = SKColors.Blue;
                     }
                     else
                     {
                         data = "?";
-                        foundBarcode.Color = Color.Orange;
+                        foundBarcode.Color = SKColors.Orange;
                     }
 					foundBarcode.Value = data;
                     foundBarcode.Polygon = p.GetBBox();
                     SKPointI[] bBox = p.GetBBox();
-                    foundBarcode.Rect = new Rectangle(bBox[0].X, bBox[0].Y, bBox[3].X - bBox[0].X, bBox[1].Y - bBox[0].Y);
+                    foundBarcode.Rect = new SKRect(bBox[0].X, bBox[0].Y, bBox[3].X, bBox[1].Y);
                     result.Add(foundBarcode);
                 }
             return (FoundBarcode[])result.ToArray(typeof(FoundBarcode));

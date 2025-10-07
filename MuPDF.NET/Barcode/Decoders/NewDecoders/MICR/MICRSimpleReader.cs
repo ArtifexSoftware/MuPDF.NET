@@ -46,7 +46,7 @@ namespace BarcodeReader.Core.MICR
             ArrayList decoded = new ArrayList();
             for (int i = 0; i < sortedparts.Length; i++)
             {
-                Rectangle rr = sortedparts[i].GetRectangle();
+                SKRect rr = sortedparts[i].GetRectangle();
                 string ch = micrOcr.GetChar(img, ref rr);
                 chars[decoded.Count] = ch;
                 if (ch != null) decoded.Add(sortedparts[i]);
@@ -107,7 +107,7 @@ namespace BarcodeReader.Core.MICR
             foreach (int off in offsets)
             {
                 int xIn = center.X + off + (int)d;
-                Rectangle r = new Rectangle(xIn, p.LU.Y, (int)(w - 1), p.Height);
+                SKRect r = new SKRect(xIn, p.LU.Y, (int)(w - xIn - 1), p.Height- p.LU.Y);
                 Crop(ref r);
                 string ch = micrOcr.GetChar(img, ref r);
                 if (ch != null) return ch;
@@ -116,22 +116,22 @@ namespace BarcodeReader.Core.MICR
             return null;
         }
 
-        public void Crop(ref Rectangle r)
+        public void Crop(ref SKRect r)
         {
             //return;
-            int width = r.Width;
-            int height = r.Height;
-            int xIn = r.X, yIn = r.Y, xEnd = xIn + r.Width - 1, yEnd = yIn + r.Height - 1;
+            int width = (int)r.Width;
+            int height = (int)r.Height;
+            int xIn = (int)r.Left, yIn = (int)r.Top, xEnd = (int)r.Right - 1, yEnd = (int)r.Bottom - 1;
             for (int i = 0; i < width; i++, xIn++) if (!isWhiteV(xIn, yIn, height)) break;
             for (int i = 0; i < width; i++, xEnd--) if (!isWhiteV(xEnd, yIn, height)) break;
             width = xEnd - xIn + 1;
             for (int i = 0; i < height; i++, yIn++) if (!isWhiteH(xIn, yIn, width)) break;
             for (int i = 0; i < height; i++, yEnd--) if (!isWhiteH(xIn, yEnd, width)) break;
 
-            r.X = xIn;
-            r.Y = yIn;
-            r.Width = xEnd - xIn + 1;
-            r.Height = yEnd - yIn + 1;
+            r.Left = xIn;
+            r.Top = yIn;
+            r.Right = xEnd + 1;
+            r.Bottom = yEnd + 1;
         }
 
         bool isWhiteV(int x, int y, int h)

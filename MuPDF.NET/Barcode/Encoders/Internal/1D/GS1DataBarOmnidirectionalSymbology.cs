@@ -7,8 +7,6 @@
 
 using System;
 using System.Text;
-using System.Drawing;
-using System.Drawing.Drawing2D;
 using SkiaSharp;
 
 namespace BarcodeWriter.Core.Internal
@@ -100,7 +98,7 @@ namespace BarcodeWriter.Core.Internal
             }
         }
 
-        protected override Size buildBars(SKCanvas canvas, SKFont font)
+        protected override SKSize buildBars(SKCanvas canvas, SKFont font)
         {
             string sValue = GetEncodedValue(false);
             createSegments(sValue);
@@ -117,20 +115,20 @@ namespace BarcodeWriter.Core.Internal
             if (symbol.Count != 46)
                 throw new BarcodeException("GS1 DataBar Omnidirectional symbology error");
 
-            Size drawingSize = new Size();
+            SKSize drawingSize = new SKSize();
             int x = 0;
             int y = 0;
 
             int height = BarHeight;
             int width = NarrowBarWidth;
 
-            Size captionSize = calculateCaptionSize(canvas, font);
-            int guardHeight = height + captionSize.Height / 2;
+            SKSize captionSize = calculateCaptionSize(canvas, font);
+            float guardHeight = height + captionSize.Height / 2;
 
             for (int i = 0; i < symbol.Count; i++)
             {
                 if (i % 2 != 0)
-                    m_rects.Add(new Rectangle(x, y, width * symbol[i], guardHeight));
+                    m_rects.Add(new SKRect(x, y, width * symbol[i]+x, guardHeight+y));
                 x += width * symbol[i];
             }
 

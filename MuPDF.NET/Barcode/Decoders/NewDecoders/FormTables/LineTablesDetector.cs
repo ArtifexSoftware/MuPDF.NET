@@ -135,7 +135,7 @@ namespace BarcodeReader.Core.FormTables
                                     foundBarcode.Value = "table" + cellCounts;
                                     foundBarcode.Polygon = new SKPointI[] { first.a, first.b, last.b, last.a, first.a };
                                     foundBarcode.Tag = tag;
-                                    foundBarcode.Color = Color.Orange;
+                                    foundBarcode.Color = SKColors.Orange;
 
                                     // get bounding rectangle
                                     //byte[] pointTypes = new byte[5] { (byte) PathPointType.Start, (byte) PathPointType.Line, (byte) PathPointType.Line, (byte) PathPointType.Line, (byte) PathPointType.Line };

@@ -89,9 +89,9 @@ namespace BarcodeWriter.Core.Internal
             return "";
         }
 
-        protected override Size buildBars(SKCanvas canvas, SKFont font)
+        protected override SKSize buildBars(SKCanvas canvas, SKFont font)
         {
-            Size drawingSize = new Size();
+            SKSize drawingSize = new SKSize();
             
             encodeString(Value);
             if (m_encodedSymbolData == null)
@@ -106,7 +106,7 @@ namespace BarcodeWriter.Core.Internal
                 for (int x = 0; x < m_symbolWidth; x++)
                 {
                     if (m_encodedSymbolData[y][x] == '1')
-                        m_rects.Add(new Rectangle(x * cellWidth, y * cellWidth, cellWidth, cellWidth));
+                        m_rects.Add(new SKRect(x * cellWidth, y * cellWidth, x * cellWidth+cellWidth, y * cellWidth+cellWidth));
                 }
             }
 
