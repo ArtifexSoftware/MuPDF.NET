@@ -107,7 +107,7 @@ namespace BarcodeReader.Core.MICR
             foreach (int off in offsets)
             {
                 int xIn = center.X + off + (int)d;
-                SKRect r = new SKRect(xIn, p.LU.Y, (int)(w - xIn - 1), p.Height- p.LU.Y);
+                SKRect r = new SKRect(xIn, p.LU.Y, (int)(w-1+xIn), p.Height+p.LU.Y);
                 Crop(ref r);
                 string ch = micrOcr.GetChar(img, ref r);
                 if (ch != null) return ch;

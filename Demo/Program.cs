@@ -33,43 +33,45 @@ namespace Demo
     {
         static void Main(string[] args)
         {
-            //TestInsertHtmlbox();
-            //TestLineAnnot();
-            //AnnotationsFreeText1.Run(args);
-            //AnnotationsFreeText2.Run(args);
-            //NewAnnots.Run(args);
-            //TestHelloWorldToNewDocument(args);
-            //TestHelloWorldToExistingDocument(args);
-            //TestReadBarcode(args);
-            //TestReadDataMatrix();
-            //TestWriteBarcode(args);
-            //TestExtractTextWithLayout(args);
-            //TestWidget(args);
-            //TestColor(args);
-            //TestCMYKRecolor(args);
-            //TestSVGRecolor(args);
-            //TestReplaceImage(args);
-            //TestInsertImage(args);
-            //TestGetImageInfo(args);
-            //TestGetTextPageOcr(args);
-            //TestCreateImagePage(args);
-            //TestJoinPdfPages(args);
-            //TestFreeTextAnnot(args);
-            //TestTextFont(args);
-            //TestMemoryLeak();
-            //TestDrawLine();
-            //TestReadBarcode1();
-            //TestWriteBarcode1();
-            //TestCMYKRecolor1(args);
-            TestDocument();
-            //TestMerph();
+            TestInsertHtmlbox();
+            TestLineAnnot();
+            AnnotationsFreeText1.Run(args);
+            AnnotationsFreeText2.Run(args);
+            NewAnnots.Run(args);
+            TestHelloWorldToNewDocument(args);
+            TestHelloWorldToExistingDocument(args);
+            TestReadBarcode(args);
+            TestReadDataMatrix();
+            TestWriteBarcode(args);
+            TestExtractTextWithLayout(args);
+            TestWidget(args);
+            TestColor(args);
+            TestCMYKRecolor(args);
+            TestSVGRecolor(args);
+            TestReplaceImage(args);
+            TestInsertImage(args);
+            TestGetImageInfo(args);
+            TestGetTextPageOcr(args);
+            TestCreateImagePage(args);
+            TestJoinPdfPages(args);
+            TestFreeTextAnnot(args);
+            TestTextFont(args);
+            TestMemoryLeak();
+            TestDrawLine();
+            TestReadBarcode1();
+            TestWriteBarcode1();
+            TestCMYKRecolor1(args);
+            TestUnicodeDocument();
+            TestMorph();
 
             return;
         }
 
-        static void TestMerph()
+        static void TestMorph()
         {
-            string testFilePath = @"E:\MuPDF.NET\Tmp\Peter\morph\test.pdf";
+            Console.WriteLine("\n=== TestMorph =====================");
+
+            string testFilePath = @"../../../TestDocuments/Morph.pdf";
 
             Document doc = new Document(testFilePath);
             Page page = doc[0];
@@ -89,35 +91,20 @@ namespace Demo
             pw.WriteText(page, morph:mo);
             page.SetRotation(270);
 
-            /*
-            string text = "TextWriter:Rotate Me";
-            Font font = new Font("tiro");
-            TextWriter tw = new TextWriter(page.Rect);
-            tw.Append(new(200, 200), text, font);
-            Matrix matrix = new IdentityMatrix();
-            matrix.Prerotate(90);
-            Morph morph = new Morph(new(200, 200), matrix);
-            tw.WriteText(page, morph: morph);
-            */
-
             page.Dispose();
-            doc.Save(@"E:\MuPDF.NET\Tmp\Peter\morph\output.pdf");
+            doc.Save(@"morph.pdf");
             doc.Close();
         }
 
-        static void TestDocument()
+        static void TestUnicodeDocument()
         {
-            Console.WriteLine("\n=== TestDocument =====================");
+            Console.WriteLine("\n=== TestUnicodeDocument =====================");
 
-            string testFilePath = @"e:\你好.pdf";
+            string testFilePath = @"../../../TestDocuments/你好.pdf";
 
             Document doc = new Document(testFilePath);
-            //List<Entry> images = doc.GetPageImages(0);
-            //Console.WriteLine($"CaName: {images[0].CsName}");
-            //doc.Recolor(0, "CMYK");
-            //images = doc.GetPageImages(0);
-            //Console.WriteLine($"CaName: {images[0].AltCsName}");
-            doc.Save(@"e:\CMYKRecolor.pdf");
+
+            doc.Save(@"你好_.pdf");
             doc.Close();
 
             Console.WriteLine("TestDocument completed.");

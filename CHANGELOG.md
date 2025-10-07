@@ -7,7 +7,7 @@
 
 ### [3.2.10-rc.5] - 2025-09-16
 - Removed margin parameter in write barcode.
-- Added marginLeft,marginTop,marginRight,marginBottom parameters newly.
+- Added new marginLeft,marginTop,marginRight,marginBottom parameters to barcode creation.
 
 ### [3.2.10-rc.3] - 2025-09-12
 - Upgrade MuPDF.NativeAssets to 1.26.8.

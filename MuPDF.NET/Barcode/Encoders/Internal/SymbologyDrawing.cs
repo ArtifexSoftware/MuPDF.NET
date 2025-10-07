@@ -512,7 +512,7 @@ namespace BarcodeWriter.Core.Internal
             {
                 foreach (SKRect r in m_rects)
                 {
-                    SKRect dotRect = new SKRect(r.Left + position.X, r.Top + position.Y, r.Width, r.Height);
+                    SKRect dotRect = new SKRect(r.Left + position.X, r.Top + position.Y, r.Left + position.X+r.Width, r.Top + position.Y+r.Height);
 
                     if (RoundDotsScale != 100)
                     {
