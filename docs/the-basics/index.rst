@@ -1281,7 +1281,7 @@ Writing Barcodes
 To write barcodes you can either add them directly to pages with :meth:`Page.WriteBarcode` or create images directly with :ref:`Utils.WriteBarcode() <Utils_WriteBarcode>`.
 
 
-**Example: adding a barcode to a page**
+**Example #1: adding a barcode to a page**
 
 .. code-block:: cs
 
@@ -1296,7 +1296,7 @@ To write barcodes you can either add them directly to pages with :meth:`Page.Wri
     page.WriteBarcode(rect, "Hello World!", BarcodeFormat.QR_CODE);
 
 
-**Example: create a barcode as an image file**
+**Example #2: create a barcode as an image file**
 
 .. code-block:: cs
 
@@ -1305,8 +1305,25 @@ To write barcodes you can either add them directly to pages with :meth:`Page.Wri
     Utils.WriteBarcode("QR_CODE.png", "Hello World!", BarcodeFormat.QR_CODE, width: 300, height: 300);
 
 
+**Example #3: create a barcode as a `Pixmap`**
+
+.. code-block:: cs
+
+    using MuPDF.NET;
+
+    Pixmap pixmap = Utils.GetBarcodePixmap("Hello World!", BarcodeFormat.QR_CODE);
+
+
 .. note::
 
     See :ref:`BarcodeFormat <Barcode_BarcodeFormat>` for available barcodes.
+
+    See :ref:`Page.ReadBarcodes <Page_ReadBarcodes>`.
+
+    See :ref:`Page.WriteBarcode <Page_WriteBarcode>`.
+
+    See :ref:`Utils.ReadBarcodes <Utils_ReadBarcodes>`.
+
+    See :ref:`Utils.WriteBarcodes <Utils_WriteBarcode>`.
 
 .. include:: ../footer.rst
