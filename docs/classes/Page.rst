@@ -1674,13 +1674,13 @@ In a nutshell, this is what you can do with MuPDF.NET:
 .. _Page_WriteBarcode:
 
 
-   .. method:: WriteBarcode(Rect clip, string text, BarcodeFormat type, string characterSet = null, bool disableEci = false, bool forceFitToRect = false, bool pureBarcode = false, int marginLeft = 0, int marginTop = 0, int marginRight = 0, int marginBottom = 0, int narrowBarWidth = 0)
+   .. method:: WriteBarcode(Rect clip, string text, BarcodeFormat barcodeFormat, string characterSet = null, bool disableEci = false, bool forceFitToRect = false, bool pureBarcode = false, int marginLeft = 0, int marginTop = 0, int marginRight = 0, int marginBottom = 0, int narrowBarWidth = 0)
 
       Creates a barcode at the supplied rectangle `clip` on the page.
 
       :arg Rect clip: The area to create the barcode on the page.
       :arg string text: Contents to write.
-      :arg BarcodeFormat type: Format to encode; See: :ref:`BarcodeFormat <Barcode_BarcodeFormat>`.
+      :arg BarcodeFormat barcodeFormat: Format to encode; See: :ref:`BarcodeFormat <Barcode_BarcodeFormat>`.
       :arg string characterSet: Use a specific character set for binary encoding (if supported by the selected barcode format).
       :arg bool disableEci: Don't generate ECI segment if non-default character set is used.
       :arg bool forceFitToRect: Resize output barcode image width/height into `clip` region.
