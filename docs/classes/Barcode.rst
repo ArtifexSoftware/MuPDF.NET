@@ -28,6 +28,10 @@ Class representing a barcode object.
 
 
 
+.. note::
+
+   See :ref:`Working with Barcodes <The_Basics_Working_With_Barcodes>` for usage examples.
+
 **Class API**
 
 .. class:: Barcode
@@ -136,28 +140,63 @@ Barcode formats are available from the ``BarcodeFormat`` enumeration:
    :header-rows: 1
 
    * - Barcode type
+   * - ``ALL`` = 0
    * - ``AZTEC``
+   * - ``BOXES``
    * - ``CODABAR``
-   * - ``CODE_39``
-   * - ``CODE_93``
-   * - ``CODE_128``
-   * - ``DATA_MATRIX``
-   * - ``EAN_8``
-   * - ``EAN_13``
-   * - ``ITF``
+   * - ``CODABLOCKF``
+   * - ``CODE128``
+   * - ``CODE16K``
+   * - ``CODE39``
+   * - ``CODE39_LINEARREADER``
+   * - ``CODE39_EX``
+   * - ``CODE39_NOISE1``
+   * - ``CODE93``
+   * - ``DM``
+   * - ``DM_DPM``
+   * - ``EAN13``
+   * - ``EAN2``
+   * - ``EAN5``
+   * - ``EAN8``
+   * - ``EAN_UPC_OLD``
+   * - ``GS1DATABAREXP``
+   * - ``GS1DATABAREXPSTACKED``
+   * - ``GS1DATABAROMNI``
+   * - ``GS1DATABARSTACKED``
+   * - ``GS1DATABARSTACKEDOMNI``
+   * - ``GS1DATABARLIMITED``
+   * - ``HORIZONTALLINES``
+   * - ``I2OF5``
+   * - ``IM``
+   * - ``KIX``
+   * - ``LINETABLES``
    * - ``MAXICODE``
-   * - ``PDF_417``
-   * - ``QR_CODE``
-   * - ``RSS_14``
-   * - ``RSS_EXPANDED``
+   * - ``MICR``
+   * - ``MICROPDF``
+   * - ``MSI``
+   * - ``OMRCIRCLE``
+   * - ``OMRCIRCLE_EXT``
+   * - ``OMROVAL``
+   * - ``OMROVAL_EXT``
+   * - ``OMRSQUARE``
+   * - ``OMRSQUARE_EXT``
+   * - ``OMRSQUARELPATTERN``
+   * - ``OMRRECTANGLE``
+   * - ``OMRRECTANGLE_EXT``
+   * - ``OMRRECTANGLELPATTERNVERT``
+   * - ``OMRRECTANGLELPATTERNHORIZ``
+   * - ``PATCH``
+   * - ``PHARMA``
+   * - ``PDF417``
+   * - ``POSTCODE``
+   * - ``POSTNET``
+   * - ``QR``
+   * - ``RAWOMR``
+   * - ``RM``
+   * - ``VERTICALLINES``
    * - ``UPC_A``
    * - ``UPC_E``
-   * - ``UPC_EAN_EXTENSION``
-   * - ``MSI``
-   * - ``PLESSEY``
-   * - ``IMB``
-   * - ``PHARMA_CODE``
-   * - ``All_1D``
+   * - ``TRIOPTIC``
 
 
 

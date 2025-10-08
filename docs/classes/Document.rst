@@ -1819,7 +1819,7 @@ This class represents a document. It can be constructed from a file or from memo
 
     :type: string
 
-  .. Attribute:: Len
+  .. Attribute:: PageCount
 
     Contains the number of pages of the document. May return 0 for documents with no pages.
 

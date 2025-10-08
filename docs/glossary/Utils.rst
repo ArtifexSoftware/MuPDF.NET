@@ -76,7 +76,9 @@ Yet others are handy, general-purpose utilities.
 :meth:`MergeRange`                   Copy a range of pages (spage, epage) from a source PDF to a specified location (apage) of the target PDF
 :meth:`NormalizeRotation`            Return normalized /Rotate value:one of 0, 90, 180, 270
 :meth:`RuleDict`                     Make a Label from a PDF page label rule
+:meth:`ReadBarcodes`                 Reads bardcodes from a `Page` instance
 :meth:`WriteBarcode`                 Writes a barcode to an image file
+:meth:`GetBarcodePixmap`             Creates a barcode as a `Pixmap` object.
 :meth:`ReplaceBytes`                 Replaces bytes from a source buffer
 :attr:`TESSDATA_PREFIX`              A copy of `os.environ["TESSDATA_PREFIX"]`
 ==================================== ==============================================================
@@ -658,21 +660,126 @@ Yet others are handy, general-purpose utilities.
       :returns: a label struct :data:`Label`
 
 
+
+
+
 -----
 
-   .. method:: WriteBarcode(Page page, Rect clip, string text, BarcodeFormat barcodeFormat, string characterSet = null, bool disableEci = false)
+.. _Utils_ReadBarcodes:
+
+   .. method:: ReadBarcodes(Page page, Rect clip = null, bool decodeEmbeddedOnly = false, BarcodeFormat type = BarcodeFormat.ALL, bool tryHarder = true, bool tryInverted = false, bool pureBarcode = false, bool multi = true, bool autoRotate = true)
+
+      Read barcodes from page.
+
+      :arg Page page: The page to read barcodes from.
+      :arg Rect clip: The area to read from on the page. If `null` read the whole page.
+      :arg bool decodeEmbeddedOnly: Decode barcodes only from embedded images in the PDF resources.
+      :arg BarcodeFormat type: :ref:`Barcode type <Barcode_BarcodeFormat>` to decode. Default is ``ALL``.
+      :arg bool tryHarder: Spend more time to try to find a barcode; optimize for accuracy, not speed.
+      :arg bool tryInverted: Try to decode as inverted image.
+      :arg bool pureBarcode: Image is a pure monochrome image of a barcode.
+      :arg bool multi: Try to read multi barcodes on page.
+      :arg bool autoRotate: Indicate whether the image should be automatically rotated. Rotation is supported for 90, 180 and 270 degrees.
+
+      :rtype: `List<Barcode>`
+      :returns: a list of :doc:`../classes/Barcode` objects.
+
+
+-----
+
+   .. method:: ReadBarcodes(string imageFile, Rect clip = null, BarcodeFormat type = BarcodeFormat.ALL, bool tryHarder = true, bool tryInverted = false, bool pureBarcode = false, bool multi = true, bool autoRotate = true)
+
+      Read barcodes from an image file.
+
+      :arg Page page: The page to read barcodes from.
+      :arg Rect clip: The area to read from on the page. If `null` read the whole image.
+      :arg bool decodeEmbeddedOnly: Decode barcodes only from embedded images in the PDF resources.
+      :arg BarcodeFormat type: :ref:`Barcode type <Barcode_BarcodeFormat>` to decode. Default is ``ALL``.
+      :arg bool tryHarder: Spend more time to try to find a barcode; optimize for accuracy, not speed.
+      :arg bool tryInverted: Try to decode as inverted image.
+      :arg bool pureBarcode: Image is a pure monochrome image of a barcode.
+      :arg bool multi: Try to read multi barcodes on page.
+      :arg bool autoRotate: Indicate whether the image should be automatically rotated. Rotation is supported for 90, 180 and 270 degrees.
+
+      :rtype: `List<Barcode>`
+      :returns: a list of :doc:`../classes/Barcode` objects.
+
+
+-----
+
+.. _Utils_WriteBarcode:
+
+   .. method:: WriteBarcode(Page page, Rect clip, string text, BarcodeFormat type, string characterSet = null, bool disableEci = false, bool forceFitToRect = false, bool pureBarcode = false, int marginLeft = 0, int marginTop = 0, int marginRight = 0, int marginBottom = 0, int narrowBarWidth = 0)
+
+      Write a barcode to a PDF page.
 
       Creates a barcode at the supplied rectangle `clip` on the supplied `page`.
 
-      :arg Page page: The page save the barcode image to.
+      :arg Page page: The page to save the barcode image to.
       :arg Rect clip: The area to create the barcode on the page.
       :arg string text: Contents to write.
-      :arg BarcodeFormat barcodeFormat: Format to encode; Supported formats: `QR_CODE`, `EAN_8`, `EAN_13`, `UPC_A`, `CODE_39`, `CODE_128`, `ITF`, `PDF_417`, `CODABAR`.
+      :arg BarcodeFormat type: Format to encode; See: :ref:`BarcodeFormat <Barcode_BarcodeFormat>`.
       :arg string characterSet: Use a specific character set for binary encoding (if supported by the selected barcode format).
       :arg bool disableEci: Don't generate ECI segment if non-default character set is used.
+      :arg bool forceFitToRect: Resize output barcode image width/height into `clip` region.
+      :arg bool pureBarcode: Don't put the content string into the output image.
+      :arg int marginLeft: Specifies margin left in pixels.
+      :arg int marginTop: Specifies margin top in pixels.
+      :arg int marginRight: Specifies margin right in pixels.
+      :arg int marginBottom: Specifies margin bottom in pixels.
+      :arg int narrowBarWidth: The width of the narrow bar in pixels.
+
 
 -----
 
+
+
+   .. method:: WriteBarcode(string imageFile, string text, BarcodeFormat type, int width = 300, int height = 300, string characterSet = null, bool disableEci = false, bool forceFitToRect = false, bool pureBarcode = false, int marginLeft = 0, int marginTop = 0, int marginRight = 0, int marginBottom = 0, int narrowBarWidth = 0)
+
+      Write a barcode to an image file.
+
+      :arg string imageFile: The image file to save the barcode image to.
+      :arg string text: Contents to write.
+      :arg BarcodeFormat type: Format to encode; See: :ref:`BarcodeFormat <Barcode_BarcodeFormat>`.
+      :arg int width: Width of image file.
+      :arg int height: Height of image file.
+      :arg string characterSet: Use a specific character set for binary encoding (if supported by the selected barcode format).
+      :arg bool disableEci: Don't generate ECI segment if non-default character set is used.
+      :arg bool forceFitToRect: Resize output barcode image using `width`/`height` params.
+      :arg bool pureBarcode: Don't put the content string into the output image.
+      :arg int marginLeft: Specifies margin left in pixels.
+      :arg int marginTop: Specifies margin top in pixels.
+      :arg int marginRight: Specifies margin right in pixels.
+      :arg int marginBottom: Specifies margin bottom in pixels.
+      :arg int narrowBarWidth: The width of the narrow bar in pixels.
+
+-----
+
+
+   .. method:: GetBarcodePixmap(string text, BarcodeFormat type, int width = 0, string characterSet = null, bool disableEci = false, bool pureBarcode = false, int marginLeft = 0, int marginTop = 0, int marginRight = 0, int marginBottom = 0, int narrowBarWidth = 0)
+
+      Creates a barcode image as a `Pixmap`.
+
+      Note, image height is automatically calculated by maintaining aspect ratio set by the `width` parameter. A width of `0` returns the a full scale representation.
+
+      :arg string text: Contents to write.
+      :arg BarcodeFormat type: Format to encode; See: :ref:`BarcodeFormat <Barcode_BarcodeFormat>`.
+      :arg int width: Width of image file.
+      :arg string characterSet: Use a specific character set for binary encoding (if supported by the selected barcode format).
+      :arg bool disableEci: Don't generate ECI segment if non-default character set is used.
+      :arg bool pureBarcode: Don't put the content string into the output image.
+      :arg int marginLeft: Specifies margin left in pixels.
+      :arg int marginTop: Specifies margin top in pixels.
+      :arg int marginRight: Specifies margin right in pixels.
+      :arg int marginBottom: Specifies margin bottom in pixels.
+      :arg int narrowBarWidth: The width of the narrow bar in pixels.
+
+      :returns: `Pixmap`
+
+
+
+
+-----
 
    .. method:: ReplaceBytes(byte[] src, byte[] search, byte[] replace, int limit=1)
 
@@ -683,22 +790,7 @@ Yet others are handy, general-purpose utilities.
       :arg byte[] replace: The bytes buffer to replace with.
       :arg int limit: The number of matches to make, defaults to 1.
 
+
 -----
 
-.. _Utils_WriteBarcode:
-
-   .. method:: WriteBarcode(string imageFile, string text, BarcodeFormat barcodeFormat, int width = 300, int height = 300, string characterSet = null, bool disableEci = false)
-
-      Creates a barcode at the supplied rectangle `clip` on the page.
-
-      :arg string imageFile: The image file to save the barcode image to.
-      :arg string text: Contents to write.
-      :arg BarcodeFormat barcodeFormat: Format to encode; Supported formats: `QR_CODE`, `EAN_8`, `EAN_13`, `UPC_A`, `CODE_39`, `CODE_128`, `ITF`, `PDF_417`, `CODABAR`.
-      :arg int width: Width of image file.
-      :arg int height: Width of image file.
-      :arg string characterSet: Use a specific character set for binary encoding (if supported by the selected barcode format).
-      :arg bool disableEci: Don't generate ECI segment if non-default character set is used.
-
-      
------
 .. include:: footer.rst

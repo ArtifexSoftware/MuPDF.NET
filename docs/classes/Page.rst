@@ -1650,30 +1650,46 @@ In a nutshell, this is what you can do with MuPDF.NET:
       :rtype: :ref:`Shape`
       :returns: a new :ref:`Shape` to use for compound drawings. See description there.
 
-   .. method:: ReadBarcodes(Rect clip=null, bool tryHarder = true, bool tryInverted = false, bool pureBarcode = false, bool multi = true, bool autoRotate = true)
+
+.. _Page_ReadBarcodes:
+
+   .. method:: ReadBarcodes(Rect clip = null, bool decodeEmbeddedOnly = false, BarcodeFormat type = BarcodeFormat.ALL, bool tryHarder = true, bool tryInverted = false, bool pureBarcode = false, bool multi = true, bool autoRotate = true))
 
       Retrieves any barcode information contained within the supplied rectangle.
 
       :arg Rect clip: The area to scan for barcodes. If `null` the whole page will be scanned.
+      :arg bool decodeEmbeddedOnly: Decode barcodes only from embedded images in the PDF resources.
+      :arg BarcodeFormat type: :ref:`Barcode type <Barcode_BarcodeFormat>` to decode. Default is ``ALL``.
       :arg bool tryHarder: Spend more time to try to find a barcode; optimize for accuracy, not speed.
       :arg bool tryInverted: Try to decode as inverted image.
       :arg bool pureBarcode: Image is a pure monochrome image of a barcode.
       :arg bool multi: Try to read multi barcodes on page.
       :arg bool autoRotate: Indicate whether the image should be automatically rotated. Rotation is supported for 90, 180 and 270 degrees.
 
+
       :rtype: `List<Barcode>`
       :returns: a list of :doc:`Barcode` objects.
 
 
-   .. method:: WriteBarcode(Rect clip, string text, BarcodeFormat barcodeFormat, string characterSet = null, bool disableEci = false)
+.. _Page_WriteBarcode:
+
+
+   .. method:: WriteBarcode(Rect clip, string text, BarcodeFormat type, string characterSet = null, bool disableEci = false, bool forceFitToRect = false, bool pureBarcode = false, int marginLeft = 0, int marginTop = 0, int marginRight = 0, int marginBottom = 0, int narrowBarWidth = 0)
 
       Creates a barcode at the supplied rectangle `clip` on the page.
 
       :arg Rect clip: The area to create the barcode on the page.
       :arg string text: Contents to write.
-      :arg BarcodeFormat barcodeFormat: Format to encode; For supported formats see :ref:`BarcodeFormat <Barcode_BarcodeFormat>`.
+      :arg BarcodeFormat type: Format to encode; See: :ref:`BarcodeFormat <Barcode_BarcodeFormat>`.
       :arg string characterSet: Use a specific character set for binary encoding (if supported by the selected barcode format).
       :arg bool disableEci: Don't generate ECI segment if non-default character set is used.
+      :arg bool forceFitToRect: Resize output barcode image width/height into `clip` region.
+      :arg bool pureBarcode: Don't put the content string into the output image.
+      :arg int marginLeft: Specifies margin left in pixels.
+      :arg int marginTop: Specifies margin top in pixels.
+      :arg int marginRight: Specifies margin right in pixels.
+      :arg int marginBottom: Specifies margin bottom in pixels.
+      :arg int narrowBarWidth: The width of the narrow bar in pixels.
 
 
 
