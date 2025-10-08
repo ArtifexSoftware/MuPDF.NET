@@ -45,6 +45,7 @@ Have a look at the :ref:`FAQ` section to see some pixmap usage "at work".
 :meth:`Pixmap.TintWith`          Tint the pixmap
 :meth:`Pixmap.ToBytes`           Return a memory area in a variety of formats
 :meth:`Pixmap.Warp`              Return a pixmap made from a quad inside
+:meth:`Pixmap.Dispose`           Disposes of the pixmap
 :attr:`Pixmap.Alpha`             Transparency indicator
 :attr:`Pixmap.ColorSpace`        Pixmap's :ref:`Colorspace`
 :attr:`Pixmap.Digest`            MD5 hashcode of the pixmap
@@ -386,6 +387,10 @@ Have a look at the :ref:`FAQ` section to see some pixmap usage "at work".
       :arg Rect, Tuple clip: A rectangle inside :attr:`Pixmap.Rect`. If provided, only those pixels are considered. This allows inspecting sub-rectangles of a given pixmap directly -- instead of building sub-pixmaps.
       :rtype: Tuple(float, byte[])
       :returns: A Tuple `(ratio, pixel)` where `0 < ratio <= 1` and *pixel* is the pixel value of the color. Use this to decide if the image is "almost" unicolor: a response `(0.95, b"\x00\x00\x00")` means that 95% of all pixels are black.
+
+   .. method:: Dispose()
+
+      Disposes of the pixmap.
 
 
    .. attribute:: Alpha

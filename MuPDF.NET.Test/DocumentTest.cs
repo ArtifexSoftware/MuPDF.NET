@@ -6,46 +6,48 @@ using System.Data.Common;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using NUnit.Framework;
 
 namespace MuPDF.NET.Test
 {
     public class DocumentTest : PdfTestBase
     {
-        [SetUp]
-        public void Setup()
-        {
-            doc = new Document("../../../resources/toc.pdf");
-        }
-
         [Test]
         public void CopyFullPage()
         {
+            Document doc = new Document("../../../resources/toc.pdf");
             int oldLen = doc.PageCount;
             doc.CopyFullPage(0);
 
             Assert.AreEqual(doc.PageCount, oldLen + 1);
+            doc.Close();
         }
 
         [Test]
         public void CopyPage()
         {
+            Document doc = new Document("../../../resources/toc.pdf");
             int oldLen = doc.PageCount;
             doc.CopyPage(0);
 
             Assert.AreEqual(doc.PageCount, oldLen + 1);
+            doc.Close();
         }
 
         [Test]
         public void DeletePage()
         {
+            Document doc = new Document("../../../resources/toc.pdf");
             int oldLen = doc.PageCount;
             doc.DeletePage(0);
             Assert.AreEqual(doc.PageCount, oldLen - 1);
+            doc.Close();
         }
 
         [Test]
         public void DeletePages()
         {
+            Document doc = new Document("../../../resources/toc.pdf");
             int oldLen = doc.PageCount;
 
             doc.DeletePages(0); // delete one page
@@ -53,26 +55,32 @@ namespace MuPDF.NET.Test
             doc.DeletePages(new int[] { 0, }); // delete 2 pages
 
             Assert.AreEqual(doc.PageCount, oldLen - 1);
+            doc.Close();
         }
 
         [Test]
         public void XmlMetadata()
         {
+            Document doc = new Document("../../../resources/toc.pdf");
             doc.DeleteXmlMetadata();
 
             Assert.That(doc.GetXmlMetadata(), Is.EqualTo(""));
+            doc.Close();
         }
 
         [Test]
         public void GetXrefLen()
         {
+            Document doc = new Document("../../../resources/toc.pdf");
             doc.GetXrefLength();
             //Assert.Pass();
+            doc.Close();
         }
 
         [Test]
         public void GetPageImage_ExtractImage()
         {
+            Document doc = new Document("../../../resources/toc.pdf");
             int n = doc.GetPageImages(0).Count;
 
             Assert.That(n, Is.EqualTo(15)); // in case of current input pdf, if other file, real count should be fixed
@@ -80,6 +88,7 @@ namespace MuPDF.NET.Test
             n = doc.ExtractImage(doc.GetPageImages(0)[0].Xref).Image.Length;
 
             //Assert.Pass();
+            doc.Close();
         }
 
         [Test]
@@ -92,8 +101,10 @@ namespace MuPDF.NET.Test
         [Test]
         public void EraseToc()
         {
+            Document doc = new Document("../../../resources/toc.pdf");
             doc.SetToc(null);
             Assert.That(doc.GetToc().Count, Is.EqualTo(0));
+            doc.Close();
         }
 
         [Test]
@@ -140,8 +151,9 @@ namespace MuPDF.NET.Test
         [Test]
         public void OpenDocument()
         {
-            Document doc = new Document("../../../resources/你好.pdf");
+            Document doc = new Document("e:\\你好.pdf");
             Assert.That(doc.PageCount, Is.EqualTo(1));
+            doc.Close();
         }
 
         [Test]

@@ -1,0 +1,37 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!-- Default platform flags -->
+  <PropertyGroup>
+    <IsX64>false</IsX64>
+    <IsX86>false</IsX86>
+    <IsAnyCPU>false</IsAnyCPU>
+    <IsPrefer32Bit>false</IsPrefer32Bit>
+  </PropertyGroup>
+  
+  <!-- Detect platform -->
+  <PropertyGroup>
+    <IsX64 Condition="'$(PlatformTarget)' == 'x64' or '$(Platform)' == 'x64'">true</IsX64>
+    <IsX86 Condition="'$(PlatformTarget)' == 'x86' or '$(Platform)' == 'x86'">true</IsX86>
+    <IsAnyCPU Condition="'$(PlatformTarget)' == 'AnyCPU' or '$(Platform)' == 'AnyCPU'">true</IsAnyCPU>
+    <IsPrefer32Bit Condition="'$(Prefer32Bit)' == 'true'">true</IsPrefer32Bit>
+  </PropertyGroup>
+
+  <!-- Windows: x64 (including AnyCPU without Prefer32Bit on a 64-bit OS) -->
+  <ItemGroup Condition="'$(OS)' == 'Windows_NT' and 
+                        ( '$(IsX64)' == 'true' or 
+                          ('$(IsAnyCPU)' == 'true' and '$(IsPrefer32Bit)' != 'true'))">
+    <None Include="$(UserProfile)\.nuget\packages\mupdf.nativeassets\1.26.9-rc.4\native\win-x64\mupdfcpp64.dll"
+          CopyToOutputDirectory="PreserveNewest" />
+    <None Include="$(UserProfile)\.nuget\packages\mupdf.nativeassets\1.26.9-rc.4\native\win-x64\mupdfcsharp.dll"
+          CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  
+  <!-- Windows: x86 (32-bit or AnyCPU with Prefer32Bit) -->
+  <ItemGroup Condition="'$(OS)' == 'Windows_NT' and 
+                        ( '$(IsX86)' == 'true' or 
+                          ('$(IsAnyCPU)' == 'true' and '$(IsPrefer32Bit)' == 'true'))">
+    <None Include="$(UserProfile)\.nuget\packages\mupdf.nativeassets\1.26.9-rc.4\native\win-x86\mupdfcpp.dll"
+          CopyToOutputDirectory="PreserveNewest" />
+    <None Include="$(UserProfile)\.nuget\packages\mupdf.nativeassets\1.26.9-rc.4\native\win-x86\mupdfcsharp.dll"
+          CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

@@ -78,6 +78,15 @@ namespace MuPDF.NET
             _nativeTextPage = new FzStextPage(page, new FzStextOptions());
         }
 
+        public void Dispose()
+        {    
+            if (_nativeTextPage != null)
+            {
+                _nativeTextPage.Dispose();
+                _nativeTextPage = null;
+            }
+        }
+
         /// <summary>
         /// Extract Stext Page
         /// </summary>

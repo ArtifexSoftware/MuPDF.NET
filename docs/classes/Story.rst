@@ -349,7 +349,7 @@ A typical loop for executing a story with using this method would look like this
 
     string html = "<html><head></head><body><h1>Header level 1</h1><h2>Header level 2</h2></body><p>Hello MuPDF</p></html>";
 
-    Rect box = Utils.PageRect("letter");
+    Rect box = Utils.PaperRect("letter");
     Rect where = box + new Rect(36, 36, -36, -36);
     Story story = new Story(html: html);
     DocumentWriter writer = new DocumentWriter("output.pdf");
