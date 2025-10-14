@@ -52,7 +52,7 @@ namespace MuPDF.NET.Test
         }
 
         [Test]
-        public void TestFreeTest1()
+        public void TestFreeText1()
         {
             Document doc = new Document();
             Page page = doc.NewPage();
@@ -72,12 +72,12 @@ namespace MuPDF.NET.Test
             Assert.That(annot.Type.Item2, Is.EqualTo("FreeText"));
 
             page.Dispose();
-            doc.Save(@"TestFreeTest.pdf");
+            doc.Save(@"TestFreeText1.pdf");
             doc.Close();
         }
 
         [Test]
-        public void TestFreeTest2()
+        public void TestFreeText2()
         {
             string ds = "font-size: 11pt; font-family: sans-serif;";
             // some special characters
@@ -118,7 +118,7 @@ MuPDF.NET <span style=""color: red;"">འདི་ ཡིག་ཆ་བཀྲ�
             Assert.That(annot.GetText(page).Length, Is.EqualTo(206));
 
             page.Dispose();
-            doc.Save(@"TestFreeTest2.pdf");
+            doc.Save(@"TestFreeText2.pdf");
             doc.Close();
         }
 
@@ -195,7 +195,7 @@ MuPDF.NET <span style=""color: red;"">འདི་ ཡིག་ཆ་བཀྲ�
         }
 
         [Test]
-         public void AddLineAnnot()
+        public void AddLineAnnot()
         {
             Document doc = new Document();
             Page page = doc.NewPage();
