@@ -4265,7 +4265,7 @@ namespace MuPDF.NET
         /// </summary>
         /// <param name="clip"></param>
         /// <param name="decodeEmbeddedOnly">Decode barcodes only from embedded images in the PDF resources.</param>
-        /// <param name="format">Barcode format to decode.</param>
+        /// <param name="barcodeFormat">Barcode format to decode.</param>
         /// <param name="tryHarder">Spend more time to try to find a barcode; optimize for accuracy, not speed.</param>
         /// <param name="tryInverted">Try to decode as inverted image.</param>
         /// <param name="pureBarcode">Image is a pure monochrome image of a barcode.</param>
@@ -4275,7 +4275,7 @@ namespace MuPDF.NET
         public List<Barcode> ReadBarcodes(
             Rect clip = null,
             bool decodeEmbeddedOnly = false,
-            BarcodeFormat type = BarcodeFormat.ALL,
+            BarcodeFormat barcodeFormat = BarcodeFormat.ALL,
             bool tryHarder = true,
             bool tryInverted = false,
             bool pureBarcode = false,
@@ -4283,7 +4283,7 @@ namespace MuPDF.NET
             bool autoRotate = true
             )
         {
-            return Utils.ReadBarcodes(this, clip, decodeEmbeddedOnly, type, tryHarder, tryInverted, pureBarcode, multi, autoRotate);
+            return Utils.ReadBarcodes(this, clip, decodeEmbeddedOnly, barcodeFormat, tryHarder, tryInverted, pureBarcode, multi, autoRotate);
         }
 
         /// <summary>

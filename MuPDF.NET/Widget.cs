@@ -269,7 +269,7 @@ namespace MuPDF.NET
             string font = "Helv";
             float fontSize = 0;
             float[] col = { 0, 0, 0 };
-            string[] dat = TextDa.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);    // split on any whitespace and remove empty entries
+            string[] dat = TextDa.Split(null as char[], StringSplitOptions.RemoveEmptyEntries);    // split on any whitespace and remove empty entries
             for (int i = 0; i < dat.Length; i++)
             {
                 string item = dat[i];
