@@ -1,12 +1,13 @@
-using MuPDF.NET;
-using ICSharpCode.SharpZipLib.Zip;
 using ICSharpCode.SharpZipLib.Tar;
-using static System.Net.Mime.MediaTypeNames;
+using ICSharpCode.SharpZipLib.Zip;
+using MuPDF.NET;
 using NUnit.Framework;
+using System;
 using System.Collections.Generic;
 using System.IO;
-using System;
 using System.Linq;
+using static System.Formats.Asn1.AsnWriter;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace MuPDF.NET.Test
 {
@@ -20,83 +21,74 @@ namespace MuPDF.NET.Test
         }
 
         [Test]
-        public void InsertText()// passed but text was never drawn
+        public void InsertPageAnnot()// passed but text was never drawn
         {
+            Document doc = new Document();
             Page page = doc.NewPage();
+
+            // insert text
             int res = page.InsertText(new Point(100, 100), "hello", fontFile: "../../../resources/kenpixel.ttf", fontName: "kenpixel");
+            
+            // insert text box
+            page.InsertTextbox(new Rect(300, 100, 400, 300), "hello", fontName: "kenpixel", fontFile: "../../../resources/kenpixel.ttf");
 
-            //Assert.Pass();
-        }
+            // add react annot
+            page.AddRectAnnot(new Rect(80, 80, 150, 120));
+            // add underline annot
+            page.AddUnderlineAnnot((new Rect(80, 80, 150, 120)).Quad);
+            // insert circle annot
+            page.AddCircleAnnot(new Rect(100, 150, 500, 550));
 
-        [Test]
-        public void AddCircleAnnot()
-        {
-            page.AddCircleAnnot(new Rect(0, 0, 400, 400));
-
-            //Assert.Pass();
-        }
-
-        [Test]
-        public void AddFreeTextAnnot()
-        {
-            Rect r = new Rect(20, 30, 100, 100);
+            // insert free text annot
+            Rect r = new Rect(150, 650, 200, 700);
             page.AddFreeTextAnnot(r, "Hello World");
-            //Assert.Pass();
-        }
+            // add highlight annot
+            page.AddHighlightAnnot(new Quad(new Rect(120, 630, 200, 700)));
+            // add strike annot
+            page.AddStrikeoutAnnot((new Rect(120, 630, 200, 700).Quad), new Point(120, 630), new Point(200, 650));
 
-        [Test]
-        public void AddPolygonAnnot()
-        {
+            // add polygon annot
             List<Point> points = new List<Point>();
-            points.Add(new Point(0, 0));
-            points.Add(new Point(20, 0));
-            points.Add(new Point(30, 0));
-            page.AddPolygonAnnot(points);
-            //Assert.Pass();
-        }
+            points.Add(new Point(200, 200));
+            points.Add(new Point(400, 200));
+            points.Add(new Point(500, 350));
+            points.Add(new Point(400, 500));
+            points.Add(new Point(200, 500));
+            points.Add(new Point(100, 350));
+            points.Add(new Point(200, 200));
+            Annot annot = page.AddPolygonAnnot(points);
+            annot.SetBorder(width: 0.3f, dashes: new int[] { 2 });
+            annot.SetColors(stroke: Constants.blue, fill: Constants.gold);
+            annot.SetLineEnds(PdfLineEnding.PDF_ANNOT_LE_DIAMOND, PdfLineEnding.PDF_ANNOT_LE_CIRCLE);
+            annot.Update();
 
-        [Test]
-        public void AddPolylineAnnot()
-        {
-            List<Point> points = new List<Point>();
-            points.Add(new Point(0, 0));
-            points.Add(new Point(20, 0));
-            points.Add(new Point(30, 0));
-            page.AddPolylineAnnot(points);
-            //Assert.Pass();
-        }
+            // draw line
+            Point p1 = new Point(100, 600);
+            Point p2 = new Point(300, 600);
 
-        [Test]
-        public void AddHighlightAnnot()
-        {
-            page.AddHighlightAnnot(new Quad(new Rect(0, 0, 100, 100)));
-            //Assert.Pass();
-        }
+            float[] color = { 0, 0, 1 };
+            page.DrawLine(p1, p2, color: color, width: 9, strokeOpacity: 0.5f);
 
-        [Test]
-        public void AddRectAnnot()
-        {
-            page.AddRectAnnot(new Rect(0, 0, 100, 100));
-            //Assert.Pass();
-        }
+            List<AnnotXref> annots =  doc.PageAnnotXrefs(0);
+            Assert.That(annots.Count, Is.EqualTo(7));
 
-        [Test]
-        public void AddUnderlineAnnot()
-        {
-            page.AddUnderlineAnnot((new Rect(0, 0, 100, 100)).Quad);
-            //Assert.Pass();
-        }
+            List<string> names = page.GetAnnotNames();
+            Assert.That(names.Count, Is.EqualTo(7));
 
-        [Test]
-        public void AddStrikeAnnot()
-        {
-            Annot annot = page.AddStrikeoutAnnot((new Rect(100, 100, 300, 300).Quad), new Point(120, 120), new Point(250, 250));
-            Assert.IsNotNull(annot);
+            string ret = page.SetOpacity("hello", CA: 0.5f, ca: 0.8f);
+            Assert.That(ret, Is.EqualTo("fitzca5080"));
+
+            List<PathInfo> pageInfos = page.GetDrawings();
+            Assert.That(pageInfos.Count, Is.EqualTo(9));
+
+            doc.Save("InsertPageAnnot.pdf");
+            doc.Close();
         }
 
         [Test]
         public void ShowPdfPage()
         {
+            Document doc = new Document("../../../resources/toc.pdf");
             Document output = new Document();
             Page page = output.NewPage();
 
@@ -105,73 +97,63 @@ namespace MuPDF.NET.Test
 
             page.ShowPdfPage(r1, doc, 0, rotate: 90);
             page.ShowPdfPage(r2, doc, 0, rotate: -90);
-            output.Save("output.pdf");
+            output.Save("ShowPdfPage.pdf");
 
-            //Assert.Pass();
+            Assert.That(page.GetImages().Count, Is.EqualTo(15));
+
+            output.Close();
+            doc.Close();
         }
 
-        [Test]
-        public void SetOpacity()
-        {
-            string ret = page.SetOpacity("hello", CA: 0.5f, ca: 0.8f);
-            Assert.That(ret, Is.EqualTo("fitzca5080"));
-        }
-
-        [Test]
-        public void GetAnnotNames()
-        {
-            page.AddTextAnnot(new Point(100, 100), "Hello world");
-            List<string> names = page.GetAnnotNames();
-            Assert.That(names.Count, Is.EqualTo(2));
-        }
-
-        [Test]
-        public void InsertFont()
-        {
-            int ret = page.InsertFont("kenpixel", "../../../resources/kenpixel.ttf");
-            Assert.NotZero(ret);
-        }
 
         [Test]
         public void InsertHtml()
         {
+            Document doc = new Document();
+            Page page = doc.NewPage();
+
+            // insert html
             page.InsertHtmlBox(new Rect(0, 0, 100, 100), "<h2>Hello world</h2>");
-            //Assert.Pass();
-        }
 
-        [Test]
-        public void GetDrawings()
-        {
-            Page page = doc[0];
-
-            page.GetDrawings();
-            //Assert.Pass();
-        }
-
-        [Test]
-        public void InsertLink()
-        {
+            // insert link
             LinkInfo link = new LinkInfo();
             link.Name = "Here is the link.";
             link.Page = 0;
-            link.From = new Rect(0, 0, 100, 100);
+            link.From = new Rect(200, 200, 400, 300);
 
             link.Kind = LinkType.LINK_GOTO;
             page.InsertLink(link);
-            //Assert.Pass();
+
+            doc.Save("InsertHtml.pdf");
+
+            Assert.That(page.Xref, Is.EqualTo(4));
+
+            page.Dispose();
+            doc.Close();
         }
 
         [Test]
-        public void DrawLine()
+        public void Htmlbox1()
         {
+            Rect rect = new Rect(100, 100, 200, 200);
             Document doc = new Document();
             Page page = doc.NewPage();
-            Point p1 = new Point(100, 100);
-            Point p2 = new Point(300, 300);
+            (float s, float scale) = page.InsertHtmlBox(rect, "hello world", scaleLow: 1, rotate: 90);
+            Assert.That(scale, Is.EqualTo(1));
+        }
 
-            float[] color = { 0, 0, 1 };
-            page.DrawLine(p1, p2, color: color, width: 9, strokeOpacity: 0.5f);
-            doc.Save("output.pdf");
+        [Test]
+        public void Htmlbox2()
+        {
+            Rect rect = new Rect(100, 250, 300, 350);
+            string text = "<span style=\"color: red; font - size:20px \">Just some text.</span>";
+            Document doc = new Document();
+            Page page = doc.NewPage();
+
+            (float s, float scale) = page.InsertHtmlBox(rect, text, opacity: 0.5f);
+            Assert.That(s, Is.EqualTo(83.6f));
+
+            //Span span = page.GetText
         }
         /*
         [Test]
@@ -204,28 +186,6 @@ namespace MuPDF.NET.Test
         }
 
         [Test]
-        public void InsertTextBox()
-        {
-            Document doc = new Document();
-            Page page = doc.NewPage();
-            page.InsertTextbox(new Rect(100, 100, 300, 300), "hello", fontName: "kenpixel", fontFile: "../../../resources/kenpixel.ttf");
-
-            doc.Save("output.pdf");
-            //Assert.Pass();
-        }
-
-        [Test]
-        public void ApplyRedactions()
-        {
-            for (int i = 0; i < doc.PageCount; i++)
-            {
-                if (doc[i].ApplyRedactions())
-                    Console.WriteLine(i);
-            }
-            //Assert.Pass();
-        }
-        /*
-        [Test]
         public void InsertImage1()
         {
             Document doc1 = new Document("../../../resources/toc.pdf");
@@ -240,9 +200,10 @@ namespace MuPDF.NET.Test
 
             doc1.Save("InsertImage1.pdf");
             doc1.Close();
-            //Assert.Pass();
+
+            Assert.That(nXref, Is.EqualTo(201));
         }
-        */
+
         [Test]
         public void GetImageRects()
         {
@@ -252,7 +213,7 @@ namespace MuPDF.NET.Test
 
             Assert.That(imgs.Count, Is.EqualTo(2));
         }
-        /*
+
         [Test]
         public void Bbox()
         {
@@ -270,7 +231,7 @@ namespace MuPDF.NET.Test
 
             Assert.That(bboxlog[0].Type, Is.EqualTo("fill-image"));
         }
-        */
+
         [Test]
         public void GetDrawings1()
         {
@@ -335,17 +296,17 @@ namespace MuPDF.NET.Test
         public void NamedLink()
         {
             Dictionary<string, LinkType> text = new Dictionary<string, LinkType>()
-        {
-            { "https://www.google.de", LinkType.LINK_URI },
-            { "http://www.google.de", LinkType.LINK_URI },
-            { "mailto:jorj.x.mckie@outlook.de", LinkType.LINK_URI },
-            { "www.wikipedia.de", LinkType.LINK_LAUNCH },
-            { "awkward:resource", LinkType.LINK_URI },
-            { "ftp://www.google.de", LinkType.LINK_URI },
-            { "some.program", LinkType.LINK_LAUNCH },
-            { "file://some.program", LinkType.LINK_LAUNCH },
-            { "another.exe", LinkType.LINK_LAUNCH }
-        };
+            {
+                { "https://www.google.de", LinkType.LINK_URI },
+                { "http://www.google.de", LinkType.LINK_URI },
+                { "mailto:jorj.x.mckie@outlook.de", LinkType.LINK_URI },
+                { "www.wikipedia.de", LinkType.LINK_LAUNCH },
+                { "awkward:resource", LinkType.LINK_URI },
+                { "ftp://www.google.de", LinkType.LINK_URI },
+                { "some.program", LinkType.LINK_LAUNCH },
+                { "file://some.program", LinkType.LINK_LAUNCH },
+                { "another.exe", LinkType.LINK_LAUNCH }
+            };
 
             Rect r = new Rect(0, 0, 50, 20);
             List<Rect> rs = new List<Rect>();
@@ -422,28 +383,6 @@ namespace MuPDF.NET.Test
             doc1.Close();
         }
         */
-        [Test]
-        public void Htmlbox1()
-        {
-            Rect rect = new Rect(100, 100, 200, 200);
-            Document doc = new Document();
-            Page page = doc.NewPage();
-            (float s, float scale) = page.InsertHtmlBox(rect, "hello world", scaleLow: 1, rotate: 90);
-            Assert.That(scale, Is.EqualTo(1));
-        }
-
-        [Test]
-        public void Htmlbox2()
-        {
-            Rect rect = new Rect(100, 250, 300, 350);
-            string text = "<span style=\"color: red; font - size:20px \">Just some text.</span>";
-            Document doc = new Document();
-            Page page = doc.NewPage();
-
-            page.InsertHtmlBox(rect, text, opacity: 0.5f);
-
-            //Span span = page.GetText
-        }
 
         [Test]
         public void GetDrawings2()
@@ -464,6 +403,42 @@ namespace MuPDF.NET.Test
             (float sh, float scale) = page.InsertHtmlBox(rect, "hello world", scaleLow: 0.5f);
 
             Assert.That(sh.Equals(-1f));
+        }
+
+        [Test]
+        public void TestReplaceImage()
+        {
+            Document doc = new Document("../../../resources/PageTest/Color.pdf");
+            Page page = doc[0];
+
+            List<Entry> images = page.GetImages(true);
+
+            page.ReplaceImage(images[0].Xref, "../../../resources/PageTest/_apple.png");
+
+            List<Block> infos = page.GetImageInfo(xrefs: true);
+
+            Assert.IsTrue(infos.Count == 1);
+            Assert.IsTrue(infos[0].Width == 400);
+            Assert.IsTrue(infos[0].Height == 400);
+
+            page.Dispose();
+            doc.Close();
+        }
+
+        [Test]
+        public void TestGetTextPageOcr()
+        {
+            Document doc = new Document("../../../resources/PageTest/Ocr.pdf");
+            Page page = doc[0];
+
+            TextPage tp = page.GetTextPageOcr((int)TextFlags.TEXT_PRESERVE_SPANS, dpi:100, full: true);
+            string txt = tp.ExtractText();
+
+            Assert.IsTrue(txt.Contains("Rebate"));
+            Assert.IsTrue(txt.Contains("Receipt"));
+
+            page.Dispose();
+            doc.Close();
         }
     }
 }

@@ -29,18 +29,18 @@
     </dependencies>
   </metadata>
   <files>
-    <file src="bin\Release\netstandard2.0\MuPDF.NET.dll" target="lib\netstandard2.0\" />
-	<file src="bin\Release\net461\MuPDF.NET.dll" target="lib\net461\" />
-	<file src="bin\Release\net472\MuPDF.NET.dll" target="lib\net472\" />
-	<file src="bin\Release\net48\MuPDF.NET.dll" target="lib\net48\" />
-	<file src="bin\Release\net5.0\MuPDF.NET.dll" target="lib\net5.0\" />
-	<file src="bin\Release\net6.0\MuPDF.NET.dll" target="lib\net6.0\" />
-	<file src="bin\Release\net7.0\MuPDF.NET.dll" target="lib\net7.0\" />
-	<file src="bin\Release\net8.0\MuPDF.NET.dll" target="lib\net8.0\" />
-	<file src="bin\Release\net9.0\MuPDF.NET.dll" target="lib\net9.0\" />
-	<file src="build\net4\MuPDF.NET.targets" target="build\net4\MuPDF.NET.targets" />
+    <file src="bin\$PlatformFolder$\$Configuration$\netstandard2.0\MuPDF.NET.dll" target="lib\netstandard2.0\" />
+	  <file src="bin\$PlatformFolder$\$Configuration$\net461\MuPDF.NET.dll" target="lib\net461\" />
+  	<file src="bin\$PlatformFolder$\$Configuration$\net472\MuPDF.NET.dll" target="lib\net472\" />
+	  <file src="bin\$PlatformFolder$\$Configuration$\net48\MuPDF.NET.dll" target="lib\net48\" />
+  	<file src="bin\$PlatformFolder$\$Configuration$\net5.0\MuPDF.NET.dll" target="lib\net5.0\" />
+	  <file src="bin\$PlatformFolder$\$Configuration$\net6.0\MuPDF.NET.dll" target="lib\net6.0\" />
+  	<file src="bin\$PlatformFolder$\$Configuration$\net7.0\MuPDF.NET.dll" target="lib\net7.0\" />
+  	<file src="bin\$PlatformFolder$\$Configuration$\net8.0\MuPDF.NET.dll" target="lib\net8.0\" />
+	  <file src="bin\$PlatformFolder$\$Configuration$\net9.0\MuPDF.NET.dll" target="lib\net9.0\" />
+  	<file src="build\net4\MuPDF.NET.targets" target="build\net4\MuPDF.NET.targets" />
     <file src="..\LICENSE.md" target="" />
-	<file src="..\Description.md" target="" />
+	  <file src="..\Description.md" target="" />
     <file src="..\logo.png" target="" />
   </files>
 </package>

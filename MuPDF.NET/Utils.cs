@@ -1644,7 +1644,7 @@ namespace MuPDF.NET
         /// </summary>
         /// <param name="clip"></param>
         /// <param name="decodeEmbeddedOnly">Decode barcodes only from embedded images in the PDF resources.</param>
-        /// <param name="type">Barcode type to decode.</param>
+        /// <param name="barcodeFormat">Barcode format to decode.</param>
         /// <param name="tryHarder">Spend more time to try to find a barcode; optimize for accuracy, not speed.</param>
         /// <param name="tryInverted">Try to decode as inverted image.</param>
         /// <param name="pureBarcode">Image is a pure monochrome image of a barcode.</param>
@@ -1655,7 +1655,7 @@ namespace MuPDF.NET
             Page page,
             Rect clip = null,
             bool decodeEmbeddedOnly = false,
-            BarcodeFormat type = BarcodeFormat.ALL,
+            BarcodeFormat barcodeFormat = BarcodeFormat.ALL,
             bool tryHarder = true,
             bool tryInverted = false,
             bool pureBarcode = false,
@@ -1728,7 +1728,7 @@ namespace MuPDF.NET
                     throw new FileNotFoundException("Resource invalid: " + "(" + e.Message + ")");
                 }
 
-                List<Barcode> barcodes2 = ReadBarcodes2(bitmap, type);
+                List<Barcode> barcodes2 = ReadBarcodes2(bitmap, barcodeFormat);
 
                 bitmap.Dispose(); // free bitmap memory
 
@@ -1779,7 +1779,7 @@ namespace MuPDF.NET
         /// Read barcodes from image file.
         /// </summary>
         /// <param name="clip"></param>
-        /// <param name="type">Barcode format to decode.</param>
+        /// <param name="barcodeFormat">Barcode format to decode.</param>
         /// <param name="tryHarder">Spend more time to try to find a barcode; optimize for accuracy, not speed.</param>
         /// <param name="tryInverted">Try to decode as inverted image.</param>
         /// <param name="pureBarcode">Image is a pure monochrome image of a barcode.</param>
@@ -1789,7 +1789,7 @@ namespace MuPDF.NET
         public static List<Barcode> ReadBarcodes(
             string imageFile, 
             Rect clip = null,
-            BarcodeFormat type = BarcodeFormat.ALL,
+            BarcodeFormat barcodeFormat = BarcodeFormat.ALL,
             bool tryHarder = true,
             bool tryInverted = false,
             bool pureBarcode = false,
@@ -1813,28 +1813,28 @@ namespace MuPDF.NET
                 // Copy the subset into the new bitmap
                 if (bitmap.ExtractSubset(clippedBitmap, cropRect))
                 {
-                    List<Barcode> clippedResult = ReadBarcodes2(clippedBitmap, type);
+                    List<Barcode> clippedResult = ReadBarcodes2(clippedBitmap, barcodeFormat);
                     clippedBitmap.Dispose(); // Dispose of the clipped bitmap
                     bitmap.Dispose(); // Dispose of the original bitmap
                     return clippedResult;
                 }
             }
 
-            List<Barcode> barcodes = ReadBarcodes2(bitmap, type);
+            List<Barcode> barcodes = ReadBarcodes2(bitmap, barcodeFormat);
 
             bitmap.Dispose();
 
             return barcodes;
         }
 
-        public static List<Barcode> ReadBarcodes2(SKBitmap bitmap, BarcodeFormat type = BarcodeFormat.ALL)
+        public static List<Barcode> ReadBarcodes2(SKBitmap bitmap, BarcodeFormat barcodeFormat = BarcodeFormat.ALL)
         {
             List<string> barcodeTypeList = new List<string>();
             string barcodeType = null;
 
             List<Barcode> barcodes = new List<Barcode>();
 
-            switch (type)
+            switch (barcodeFormat)
             {
                 case BarcodeFormat.AZTEC: barcodeType = "AZTEC"; break;
                 case BarcodeFormat.BOXES: barcodeType = "BOXES"; break;
@@ -1894,7 +1894,7 @@ namespace MuPDF.NET
                 case BarcodeFormat.TRIOPTIC: barcodeType = "TRIOPTIC"; break;
                 case BarcodeFormat.ALL: barcodeType = ""; break;
                 default:
-                    throw new NotSupportedException($"Barcode format {type} is not supported.");
+                    throw new NotSupportedException($"Barcode format {barcodeFormat} is not supported.");
             }
 
             if (string.IsNullOrEmpty(barcodeType))
@@ -1973,7 +1973,7 @@ namespace MuPDF.NET
         /// </summary>
         /// <param name="clip">Rect area on page to write</param>
         /// <param name="text">Contents to write</param>
-        /// <param name="type">Type to encode; Supported types: QR_CODE, EAN_8, EAN_13, UPC_A, CODE_39, CODE_128, ITF, PDF_417, CODABAR</param>
+        /// <param name="barcodeFormat">Barcode format to encode; Supported types: QR_CODE, EAN_8, EAN_13, UPC_A, CODE_39, CODE_128, ITF, PDF_417, CODABAR</param>
         /// <param name="characterSet">Use a specific character set for binary encoding (if supported by the selected barcode format)</param>
         /// <param name="disableEci">Don't generate ECI segment if non-default character set is used</param>
         /// <param name="forceFitToRect">Resize output barcode image width/height into clip region</param>
@@ -1987,7 +1987,7 @@ namespace MuPDF.NET
             Page page,
             Rect clip,
             string text,
-            BarcodeFormat type,
+            BarcodeFormat barcodeFormat,
             string characterSet = null,
             bool disableEci = false,
             bool forceFitToRect = false,
@@ -2021,7 +2021,7 @@ namespace MuPDF.NET
             
             // barcode format
             string barcodeType = null;
-            switch (type)
+            switch (barcodeFormat)
             {
                 case BarcodeFormat.AZTEC: barcodeType = "AZTEC"; break;
                 case BarcodeFormat.CODABAR: barcodeType = "CODABAR"; break;
@@ -2051,7 +2051,7 @@ namespace MuPDF.NET
                 case BarcodeFormat.UPC_A: barcodeType = "UPC_A"; break;
                 case BarcodeFormat.UPC_E: barcodeType = "UPC_E"; break;
                 default:
-                    throw new NotSupportedException($"Barcode format {type} is not supported.");
+                    throw new NotSupportedException($"Barcode format {barcodeFormat} is not supported.");
             }
 
             BarcodeWriter barcodeWriter = new BarcodeWriter(barcodeType);
@@ -2097,7 +2097,7 @@ namespace MuPDF.NET
         /// Return pixmap of barcode image.
         /// </summary>
         /// <param name="text">Contents to write</param>
-        /// <param name="type">Type to encode; Supported types: QR_CODE, EAN_8, EAN_13, UPC_A, CODE_39, CODE_128, ITF, PDF_417, CODABAR</param>
+        /// <param name="barcodeFormat">Barcode format to encode; Supported types: QR_CODE, EAN_8, EAN_13, UPC_A, CODE_39, CODE_128, ITF, PDF_417, CODABAR</param>
         /// <param name="width">Width of barcode</param>
         /// <param name="characterSet">Use a specific character set for binary encoding (if supported by the selected barcode format)</param>
         /// <param name="disableEci">Don't generate ECI segment if non-default character set is used</param>
@@ -2109,7 +2109,7 @@ namespace MuPDF.NET
         /// <param name="narrowBarWidth">The width of the narrow bar in pixels</param>
         public static Pixmap GetBarcodePixmap(
             string text,
-            BarcodeFormat type,
+            BarcodeFormat barcodeFormat,
             int width = 0,
             string characterSet = null,
             bool disableEci = false,
@@ -2131,7 +2131,7 @@ namespace MuPDF.NET
 
             // barcode format
             string barcodeType = null;
-            switch (type)
+            switch (barcodeFormat)
             {
                 case BarcodeFormat.AZTEC: barcodeType = "AZTEC"; break;
                 case BarcodeFormat.CODABAR: barcodeType = "CODABAR"; break;
@@ -2161,7 +2161,7 @@ namespace MuPDF.NET
                 case BarcodeFormat.UPC_A: barcodeType = "UPC_A"; break;
                 case BarcodeFormat.UPC_E: barcodeType = "UPC_E"; break;
                 default:
-                    throw new NotSupportedException($"Barcode format {type} is not supported.");
+                    throw new NotSupportedException($"Barcode format {barcodeFormat} is not supported.");
             }
 
             BarcodeWriter barcodeWriter = new BarcodeWriter(barcodeType);
@@ -2229,7 +2229,7 @@ namespace MuPDF.NET
         public static void WriteBarcode(
             string imageFile,
             string text,
-            BarcodeFormat type,
+            BarcodeFormat barcodeFormat,
             int width = 300,
             int height = 300,
             string characterSet = null,
@@ -2283,7 +2283,7 @@ namespace MuPDF.NET
 
             // barcode format
             string barcodeType = null;
-            switch (type)
+            switch (barcodeFormat)
             {
                 case BarcodeFormat.AZTEC: barcodeType = "AZTEC"; break;
                 case BarcodeFormat.CODABAR: barcodeType = "CODABAR"; break;
@@ -2313,7 +2313,7 @@ namespace MuPDF.NET
                 case BarcodeFormat.UPC_A: barcodeType = "UPC_A"; break;
                 case BarcodeFormat.UPC_E: barcodeType = "UPC_E"; break;
                 default:
-                    throw new NotSupportedException($"Barcode format {type} is not supported.");
+                    throw new NotSupportedException($"Barcode format {barcodeFormat} is not supported.");
             }
 
             BarcodeWriter barcodeWriter = new BarcodeWriter(barcodeType);

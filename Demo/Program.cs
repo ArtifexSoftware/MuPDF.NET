@@ -33,40 +33,53 @@ namespace Demo
     {
         static void Main(string[] args)
         {
-            TestInsertHtmlbox();
-            TestLineAnnot();
-            AnnotationsFreeText1.Run(args);
-            AnnotationsFreeText2.Run(args);
-            NewAnnots.Run(args);
-            TestHelloWorldToNewDocument(args);
-            TestHelloWorldToExistingDocument(args);
-            TestReadBarcode(args);
-            TestReadDataMatrix();
-            TestWriteBarcode(args);
-            TestExtractTextWithLayout(args);
-            TestWidget(args);
-            TestColor(args);
+            //TestInsertHtmlbox();
+            //TestLineAnnot();
+            //AnnotationsFreeText1.Run(args);
+            //AnnotationsFreeText2.Run(args);
+            //NewAnnots.Run(args);
+            //TestHelloWorldToNewDocument(args);
+            //TestHelloWorldToExistingDocument(args);
+            //TestReadBarcode(args);
+            //TestReadDataMatrix();
+            //TestWriteBarcode(args);
+            //TestExtractTextWithLayout(args);
+            //TestWidget(args);
+            //TestColor(args);
             TestCMYKRecolor(args);
             TestSVGRecolor(args);
-            TestReplaceImage(args);
-            TestInsertImage(args);
-            TestGetImageInfo(args);
-            TestGetTextPageOcr(args);
-            TestCreateImagePage(args);
-            TestJoinPdfPages(args);
-            TestFreeTextAnnot(args);
-            TestTextFont(args);
+            //TestReplaceImage(args);
+            //TestInsertImage(args);
+            //TestGetImageInfo(args);
+            //TestGetTextPageOcr(args);
+            //TestCreateImagePage(args);
+            //TestJoinPdfPages(args);
+            //TestFreeTextAnnot(args);
+            //TestTextFont(args);
             TestMemoryLeak();
-            TestDrawLine();
-            TestReadBarcode1();
-            TestWriteBarcode1();
-            TestCMYKRecolor1(args);
-            TestUnicodeDocument();
-            TestMorph();
+            //TestDrawLine();
+            //TestWriteBarcode1();
+            //TestCMYKRecolor1(args);
+            //TestUnicodeDocument();
+            //TestMorph();
+            TestWidget();
 
             return;
         }
+        static void TestWidget()
+        {
+            Console.WriteLine("\n=== TestWidget =====================");
 
+            Document doc = new Document("../../../TestDocuments/test_widget_parse.pdf");
+
+            var currentPage = 0;
+            while (currentPage < doc.PageCount)
+            {
+                var page = doc[currentPage];
+                var widgets = page.GetWidgets().ToList();
+                currentPage++;
+            }
+        }
         static void TestMorph()
         {
             Console.WriteLine("\n=== TestMorph =====================");
@@ -200,23 +213,6 @@ namespace Demo
 
             page.Dispose();
             doc.Close();
-        }
-
-        static void TestReadBarcode1()
-        {
-            string testFilePath = @"../../../TestDocuments/Barcodes/Low/read-test-with-barcodes.pdf";
-            Document doc = new Document(testFilePath);
-
-            int i = 0;
-            Page page = doc[0];
-
-            List<Barcode> barcodes = page.ReadBarcodes(type:BarcodeFormat.ALL);
-
-            foreach (Barcode barcode in barcodes)
-            {
-                BarcodePoint[] points = barcode.ResultPoints;
-                Console.WriteLine($"{ i++} - Type: {barcode.BarcodeFormat} - Value: {barcode.Text} - Rect: [{points[0]},{points[1]}]");
-            }
         }
 
         static void TestReadDataMatrix()
@@ -630,7 +626,7 @@ namespace Demo
 
             // CODE_39
             rect = new Rect(100, 265, 600, 285);
-            page.WriteBarcode(rect, "Hello World!", BarcodeFormat.CODE39, forceFitToRect: true, pureBarcode: false, marginBottom: 0);
+            page.WriteBarcode(rect, "Hello World!", BarcodeFormat.CODE39, forceFitToRect: false, pureBarcode: false, marginBottom: 0);
 
             // CODE_128
             rect = new Rect(100, 320, 400, 355);
@@ -646,7 +642,7 @@ namespace Demo
 
             // CODABAR
             rect = new Rect(100, 540, 400, 580);
-            page.WriteBarcode(rect, "12345678901234567890", BarcodeFormat.CODABAR, forceFitToRect: true, pureBarcode: true, marginBottom: 0);
+            page.WriteBarcode(rect, "12345678901234567890", BarcodeFormat.CODABAR, forceFitToRect: false, pureBarcode: true, marginBottom: 0);
             
             // DATA_MATRIX
             rect = new Rect(100, 620, 140, 660);

@@ -495,5 +495,19 @@ namespace MuPDF.NET.Test
             //    assert wt == expected, f'expected:\n    {expected!r}\nwt:\n    {wt!r}\n'
             //assert not e
         }
+
+        [Test]
+        public void TestExtractTextWithLayout()
+        {
+            Document doc = new Document("../../../resources/GeneralTest/columns.pdf");
+            Page page = doc[0];
+
+            string textWithLayout = page.GetTextWithLayout(tolerance: 3);
+
+            Assert.IsTrue(textWithLayout.Length == 7497);
+
+            page.Dispose();
+            doc.Close();
+        }
     }
 }

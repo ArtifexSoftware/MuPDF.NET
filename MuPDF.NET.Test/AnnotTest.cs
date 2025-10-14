@@ -52,7 +52,7 @@ namespace MuPDF.NET.Test
         }
 
         [Test]
-        public void TestFreeTest()
+        public void TestFreeTest1()
         {
             Document doc = new Document();
             Page page = doc.NewPage();
@@ -70,6 +70,56 @@ namespace MuPDF.NET.Test
 
             Assert.That((int)annot.Type.Item1, Is.EqualTo(2));
             Assert.That(annot.Type.Item2, Is.EqualTo("FreeText"));
+
+            page.Dispose();
+            doc.Save(@"TestFreeTest.pdf");
+            doc.Close();
+        }
+
+        [Test]
+        public void TestFreeTest2()
+        {
+            string ds = "font-size: 11pt; font-family: sans-serif;";
+            // some special characters
+            string bullet = "\u2610\u2611\u2612"; // Output: ☐☑☒
+
+            // the annotation text with HTML and styling syntax
+            string text = $@"<p style=""text-align:justify;margin-top:-25px;"">
+MuPDF.NET <span style=""color: red;"">འདི་ ཡིག་ཆ་བཀྲམ་སྤེལ་གྱི་དོན་ལུ་ པའི་ཐོན་ཐུམ་སྒྲིལ་དྲག་ཤོས་དང་མགྱོགས་ཤོས་ཅིག་ཨིན།</span>
+<span style=""color:blue;"">Here is some <b>bold</b> and <i>italic</i> text, followed by <b><i>bold-italic</i></b>. Text-based check boxes: {bullet}.</span>
+ </p>";
+
+            Document doc = new Document();
+            Page page = doc.NewPage();
+
+            // 3 rectangles, same size, above each other
+            Rect rect = new Rect(100, 100, 350, 200);
+
+            // define some points for callout lines
+            Point p2 = rect.TopRight + new Point(50, 30);
+            Point p3 = p2 + new Point(0, 30);
+
+            // define the annotation
+            Annot annot = page.AddFreeTextAnnot(
+                rect,
+                text,
+                fillColor: Constants.gold,  // fill color
+                opacity: 1,  // non-transparent
+                rotate: 0,  // no rotation
+                borderWidth: 1,  // border and callout line width
+                dashes: null,  // no dashing
+                richtext: true,  // this is rich text
+                style: ds,  // my styling default
+                callout: new Point[] { p3, p2, rect.TopRight },  // define end, knee, start points
+                lineEnd: PdfLineEnding.PDF_ANNOT_LE_OPEN_ARROW,  // symbol shown at p3
+                borderColor: Constants.green
+            );
+
+            Assert.That(annot.GetText(page).Length, Is.EqualTo(206));
+
+            page.Dispose();
+            doc.Save(@"TestFreeTest2.pdf");
+            doc.Close();
         }
 
         [Test]
@@ -145,16 +195,25 @@ namespace MuPDF.NET.Test
         }
 
         [Test]
-        public void AddLineAnnot()
+         public void AddLineAnnot()
         {
             Document doc = new Document();
             Page page = doc.NewPage();
 
-            page.AddLineAnnot(new Point(0, 0), new Point(1, 1));
-            page.AddLineAnnot(new Point(1, 0), new Point(0, 1));
+            page.AddLineAnnot(new Point(0, 0), new Point(100, 100));
+            page.AddLineAnnot(new Point(100, 0), new Point(0, 100));
 
-            Annot firstAnnot = (new List<Annot>(page.GetAnnots()))[0];
-            int type = (int)(firstAnnot.Next as Annot).Type.Item1;
+            IEnumerable<Annot> annots = page.GetAnnots();
+            foreach (Annot annot in annots)
+            {
+                annot.SetBorder(width: 8);
+                annot.Update();
+
+                Assert.That(annot.Type.Item1, Is.EqualTo(PdfAnnotType.PDF_ANNOT_LINE));
+            }
+            page.Dispose();
+            doc.Save(@"AddLineAnnot.pdf"); // Save the modified document
+            doc.Close();
         }
 
         /*
