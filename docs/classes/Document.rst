@@ -554,14 +554,14 @@ This class represents a document. It can be constructed from a file or from memo
     :arg page: page object.
 
 
-   .. method:: Recolor(int pageNum, int colorNum)
-   .. method:: Recolor(int pageNum, string colorSpaceName)
-    
-      Recolor specific page of PDF with specific color mode.
+  .. method:: Recolor(int pageNum, int colorNum)
+  .. method:: Recolor(int pageNum, string colorSpaceName)
 
-      :arg int pageNum: the number of specific page between 0 and PageCount.
-      :arg int colorNum: the number of colorspace, which means bytes of pixel. "GRAY" = `1`, "RGB" = `3`, "CMYK" = `4`.
-      :arg string colorSpaceName: the name of the colorspace, "GRAY", "RGB", "CMYK".
+    Recolor specific page of PDF with specific color mode.
+
+    :arg int pageNum: the number of specific page between 0 and PageCount.
+    :arg int colorNum: the number of colorspace, which means bytes of pixel. "GRAY" = `1`, "RGB" = `3`, "CMYK" = `4`.
+    :arg string colorSpaceName: the name of the colorspace, "GRAY", "RGB", "CMYK".
 
 
   .. method:: ExtendTocItems(List<Toc> items)
