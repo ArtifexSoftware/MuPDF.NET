@@ -1763,9 +1763,9 @@ namespace MuPDF.NET
         public Annot AddWidget(PdfWidgetType fieldType, string fieldName)
         {
             PdfPage page = _pdfPage;
-            PdfDocument pdf = page.doc();
-            PdfAnnot annot = Utils.CreateWidget(pdf, page, fieldType, fieldName);
-            pdf.Dispose();
+            PdfDocument pageDoc = page.doc();
+            PdfAnnot annot = Utils.CreateWidget(pageDoc, page, fieldType, fieldName);
+            pageDoc.Dispose();
 
             if (annot == null)
                 throw new Exception("cannot create widget");
@@ -2063,7 +2063,7 @@ namespace MuPDF.NET
 
             FzBuffer maskBuf = new FzBuffer();
             PdfPage page = _pdfPage;
-            PdfDocument pdf = page.doc();
+            PdfDocument pageDoc = page.doc();
             int w = width;
             int h = height;
             int imgXRef = xref;
@@ -2083,7 +2083,7 @@ namespace MuPDF.NET
 
             if (xref > 0)
             {
-                ref_ = pdf.pdf_new_indirect(xref, 0);
+                ref_ = pageDoc.pdf_new_indirect(xref, 0);
                 w = ref_.pdf_dict_geta(new PdfObj("Width"), new PdfObj("W")).pdf_to_int();
                 h = ref_.pdf_dict_geta(new PdfObj("Height"), new PdfObj("H")).pdf_to_int();
 
@@ -2130,7 +2130,7 @@ namespace MuPDF.NET
                 if (temp != -1)
                 {
                     imgXRef = temp;
-                    ref_ = pdf.pdf_new_indirect(imgXRef, 0);
+                    ref_ = pageDoc.pdf_new_indirect(imgXRef, 0);
                     do_process_stream = 0;
                     do_have_imask = 0;
                     do_have_image = 0;
@@ -2179,7 +2179,7 @@ namespace MuPDF.NET
                 if (tmp != -1)
                 {
                     imgXRef = tmp;
-                    ref_ = pdf.pdf_new_indirect(imgXRef, 0);
+                    ref_ = pageDoc.pdf_new_indirect(imgXRef, 0);
                     w = ref_.pdf_dict_geta(new PdfObj("Width"), new PdfObj("W")).pdf_to_int();
                     h = ref_.pdf_dict_geta(new PdfObj("Height"), new PdfObj("H")).pdf_to_int();
                     do_have_imask = 0;
@@ -2223,9 +2223,9 @@ namespace MuPDF.NET
 
             if (do_have_image != 0)
             {
-                ref_ = pdf.pdf_add_image(image);
+                ref_ = pageDoc.pdf_add_image(image);
                 if (oc != 0)
-                    Utils.AddOcObject(pdf, ref_, oc);
+                    Utils.AddOcObject(pageDoc, ref_, oc);
                 imgXRef = ref_.pdf_to_num();
                 digests.Add(Encoding.UTF8.GetString(md5), imgXRef);
                 rcDigest = 1;
@@ -2246,7 +2246,7 @@ namespace MuPDF.NET
                 nres.fz_append_string(
                     string.Format(template, mat.a, mat.b, mat.c, mat.d, mat.e, mat.f, imgName)
                 );
-                Utils.InsertContents(pdf, page.obj(), nres, overlay);
+                Utils.InsertContents(pageDoc, page.obj(), nres, overlay);
             }
 
             if (rcDigest != 0)
@@ -2254,7 +2254,7 @@ namespace MuPDF.NET
                 doc.InsertedImages = digests;
             }
 
-            pdf.Dispose();
+            pageDoc.Dispose();
 
             return imgXRef;
         }
@@ -2850,10 +2850,10 @@ namespace MuPDF.NET
         )
         {
             PdfPage page = GetPdfPage();
-            PdfDocument pdf = page.doc();
+            PdfDocument pageDoc = page.doc();
 
             FontInfo value = Utils.InsertFont(
-                pdf,
+                pageDoc,
                 bfName,
                 fontFile,
                 fontBuffer,
@@ -2870,18 +2870,18 @@ namespace MuPDF.NET
 
             if (fonts.m_internal == null)
             {
-                fonts = pdf.pdf_new_dict(5);
+                fonts = pageDoc.pdf_new_dict(5);
                 Utils.pdf_dict_putl(page.obj(), fonts, new string[2] { "Resources", "Font" });
             }
 
             if (value.Xref == 0)
                 throw new Exception("cannot insert font");
 
-            PdfObj fontObj = pdf.pdf_new_indirect(value.Xref, 0);
+            PdfObj fontObj = pageDoc.pdf_new_indirect(value.Xref, 0);
 
             fonts.pdf_dict_puts(fontName, fontObj);
 
-            pdf.Dispose();
+            pageDoc.Dispose();
 
             return value;
         }
@@ -4711,16 +4711,16 @@ namespace MuPDF.NET
 
             widget.Validate();
             PdfPage page = GetPdfPage();
-            PdfDocument pdf = page.doc();
+            PdfDocument pageDoc = page.doc();
             PdfAnnot annot = Utils.CreateWidget(
-                pdf,
+                pageDoc,
                 page,
                 (PdfWidgetType)widget.FieldType,
                 widget.FieldName
             );
             if (annot.m_internal == null)
             {
-                pdf.Dispose();
+                pageDoc.Dispose();
                 throw new Exception("cannot create widget");
             }
             Utils.AddAnnotId(annot, "W");
@@ -4734,7 +4734,7 @@ namespace MuPDF.NET
             widget._annot = new PdfAnnot(annot);
             widget.Update();
 
-            pdf.Dispose();
+            pageDoc.Dispose();
 
             return annot_;
         }

@@ -813,7 +813,7 @@ namespace MuPDF.NET
         {
             PdfObj annotObj = _nativeAnnotion.pdf_annot_obj();
             PdfPage page = _nativeAnnotion.pdf_annot_page();
-            PdfDocument doc = page.doc();
+            PdfDocument pageDoc = page.doc();
             pdf_annot_type type = _nativeAnnotion.pdf_annot_type();
             float[] cols = ColorFromSequence(fillColor);
             int nCols = cols.Length;
@@ -886,7 +886,7 @@ namespace MuPDF.NET
                 }
                 else if (nCols > 0)
                 {
-                    PdfObj col = doc.pdf_new_array(nCols);
+                    PdfObj col = pageDoc.pdf_new_array(nCols);
                     for (int i = 0; i < nCols; i++)
                     {
                         mupdf.mupdf.pdf_array_push_real(col, cols[i]);
@@ -895,17 +895,17 @@ namespace MuPDF.NET
                 }
                 _nativeAnnotion.pdf_dirty_annot();
                 _nativeAnnotion.pdf_update_annot();
-                doc.m_internal.resynth_required = 0;
+                pageDoc.m_internal.resynth_required = 0;
             }
             catch (Exception e) 
             {
-                doc.Dispose();
+                pageDoc.Dispose();
                 throw new Exception("cannot update annot:" + e.Message);
             }
 
             if ((opacity < 0 || opacity >= 1) && blendMode == null) // no opacity, no blend_mode
             {
-                doc.Dispose();
+                pageDoc.Dispose();
                 return true;
             }
 
@@ -918,7 +918,7 @@ namespace MuPDF.NET
                 if (ap.m_internal == null)
                 {
                     // should never happen
-                    doc.Dispose();
+                    pageDoc.Dispose();
                     throw new Exception("bad or missing annot AP/N");
                 }
 
@@ -926,7 +926,7 @@ namespace MuPDF.NET
                 if (resources.m_internal == null)
                     resources = ap.pdf_dict_put_dict(new PdfObj("Resources"), 2);
 
-                PdfObj alp0 = doc.pdf_new_dict(3);
+                PdfObj alp0 = pageDoc.pdf_new_dict(3);
                 if (opacity >= 0 && opacity < 1)
                 {
                     alp0.pdf_dict_put_real(new PdfObj("CA"), opacity);
@@ -951,7 +951,7 @@ namespace MuPDF.NET
                 Console.WriteLine("cannot set opacity or blend mode");
             }
 
-            doc.Dispose();
+            pageDoc.Dispose();
 
             return true;
         }

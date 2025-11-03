@@ -35,39 +35,77 @@ namespace Demo
     {
         static void Main(string[] args)
         {
-            //TestInsertHtmlbox();
-            //TestLineAnnot();
-            //AnnotationsFreeText1.Run(args);
-            //AnnotationsFreeText2.Run(args);
-            //NewAnnots.Run(args);
-            //TestHelloWorldToNewDocument(args);
-            //TestHelloWorldToExistingDocument(args);
-            //TestReadBarcode(args);
-            //TestReadDataMatrix();
-            //TestWriteBarcode(args);
-            //TestExtractTextWithLayout(args);
-            //TestWidget(args);
-            //TestColor(args);
-            //TestCMYKRecolor(args);
-            //TestSVGRecolor(args);
-            //TestReplaceImage(args);
-            //TestInsertImage(args);
-            //TestGetImageInfo(args);
-            //TestGetTextPageOcr(args);
-            //TestCreateImagePage(args);
-            //TestJoinPdfPages(args);
-            //TestFreeTextAnnot(args);
-            //TestTextFont(args);
-            //TestMemoryLeak();
-            //TestDrawLine();
-            //TestWriteBarcode1();
-            //TestUnicodeDocument();
-            //TestMorph();
-            //TestMetadata();
-            //TestTable();
+            TestInsertHtmlbox();
+            TestLineAnnot();
+            AnnotationsFreeText1.Run(args);
+            AnnotationsFreeText2.Run(args);
+            NewAnnots.Run(args);
+            TestHelloWorldToNewDocument(args);
+            TestHelloWorldToExistingDocument(args);
+            TestReadBarcode(args);
+            TestReadDataMatrix();
+            TestWriteBarcode(args);
+            TestExtractTextWithLayout(args);
+            TestWidget(args);
+            TestColor(args);
+            TestCMYKRecolor(args);
+            TestSVGRecolor(args);
+            TestReplaceImage(args);
+            TestInsertImage(args);
+            TestGetImageInfo(args);
+            TestGetTextPageOcr(args);
+            TestCreateImagePage(args);
+            TestJoinPdfPages(args);
+            TestFreeTextAnnot(args);
+            TestTextFont(args);
+            TestMemoryLeak();
+            TestDrawLine();
+            TestWriteBarcode1();
+            TestUnicodeDocument();
+            TestMorph();
+            TestMetadata();
+            TestTable();
             TestMoveFile();
+            TestOpenErrorAtAcrobat();
 
             return;
+        }
+
+        static void TestOpenErrorAtAcrobat()
+        {
+            Console.WriteLine("\n=== TestOpenErrorAtAcrobat =====================");
+
+            string testFilePath = @"E:\MuPDF.NET\Tmp\Peter\1101\test.pdf";
+            string outputFilePath = @"E:\MuPDF.NET\Tmp\Peter\1101\output.pdf";
+
+            Document doc = new Document(testFilePath);
+
+            Page page = doc[0];
+
+            page.DrawLine(new Point(45, 50), new Point(80, 50), width: 0.5f, dashes: "[5] 0");
+            page.DrawLine(new Point(90, 50), new Point(150, 50), width: 0.5f, dashes: "[5] 0");
+            page.DrawLine(new Point(45, 80), new Point(180, 80), width: 0.5f, dashes: "[5] 0");
+            page.DrawLine(new Point(45, 100), new Point(180, 100), width: 0.5f, dashes: "[5] 0");
+
+            Color lineColor = new Color(); // Default to black
+            lineColor.Stroke = new float[] { 0, 0, 0 }; // RGB black
+            
+            Shape img = page.NewShape();
+            Point startPoint = new Point(100, 100);
+            Point endPoint = new Point(200, 200);
+            
+            String dashString = "[2] 0"; // Example dash pattern
+            
+            img.DrawLine(startPoint, endPoint);
+            img.Finish(width: 2, color: lineColor.Stroke, dashes: dashString);
+            img.Commit();
+
+            page.Dispose();
+
+            doc.Save(outputFilePath);
+            doc.Close();
+
+            Console.WriteLine("TestOpenErrorAtAcrobat completed.");
         }
 
         static void TestMoveFile()

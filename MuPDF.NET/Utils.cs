@@ -1145,14 +1145,14 @@ namespace MuPDF.NET
         {
             PdfObj annotObj = mupdf.mupdf.pdf_annot_obj(annot.ToPdfAnnot());
             PdfPage page = mupdf.mupdf.pdf_annot_page(annot.ToPdfAnnot());
-            PdfDocument pdf = page.doc();
+            PdfDocument pageDoc = page.doc();
             PdfAnnot tw = annot.ToPdfAnnot();
 
             pdf_widget_type fieldType = tw.pdf_widget_type();
             widget.FieldType = (int)fieldType;
             if (fieldType == (pdf_widget_type)PdfWidgetType.PDF_WIDGET_TYPE_SIGNATURE)
             {
-                if (pdf.pdf_signature_is_signed(annotObj) != 0)
+                if (pageDoc.pdf_signature_is_signed(annotObj) != 0)
                     widget.IsSigned = true;
                 else
                     widget.IsSigned = false;
@@ -1262,7 +1262,7 @@ namespace MuPDF.NET
                 Utils.pdf_dict_getl(annotObj, new string[] { "AA", "Fo" })
             );
 
-            pdf.Dispose();
+            pageDoc.Dispose();
         }
 
         internal static List<dynamic> GetChoiceOptions(PdfAnnot annot)
@@ -3932,14 +3932,14 @@ namespace MuPDF.NET
             PdfObj obj = page.obj().pdf_dict_get(new PdfObj("Annots"));
             if (obj.m_internal != null)
             {
-                PdfDocument pdf = page.doc();
-                int number = pdf.pdf_lookup_page_number(page.obj());
+                PdfDocument pageDoc = page.doc();
+                int number = pageDoc.pdf_lookup_page_number(page.obj());
                 FzRect pageMediabox = new FzRect();
                 FzMatrix pageCtm = new FzMatrix();
                 page.pdf_page_transform(pageMediabox, pageCtm);
-                FzLink link = pdf.pdf_load_link_annots(page, obj, number, pageCtm);
+                FzLink link = pageDoc.pdf_load_link_annots(page, obj, number, pageCtm);
                 page.m_internal.links = mupdf.mupdf.ll_fz_keep_link(link.m_internal);
-                pdf.Dispose();
+                pageDoc.Dispose();
             }
         }
 
@@ -6385,7 +6385,7 @@ namespace MuPDF.NET
         {
             PdfPage page = annot.pdf_annot_page();
             PdfObj annotObj = annot.pdf_annot_obj();
-            PdfDocument pdf = page.doc();
+            PdfDocument pageDoc = page.doc();
 
             int value = widget.FieldType;
             int fieldType = value;
@@ -6399,7 +6399,7 @@ namespace MuPDF.NET
             if (color != null)
             {
                 int n = color.Length;
-                PdfObj fillCol = pdf.pdf_new_array(n);
+                PdfObj fillCol = pageDoc.pdf_new_array(n);
                 float col = 0;
                 for (int i = 0; i < n; i++)
                 {
@@ -6413,7 +6413,7 @@ namespace MuPDF.NET
             if (borderDashes != null)
             {
                 int n = borderDashes.Length;
-                PdfObj dashes = pdf.pdf_new_array(n);
+                PdfObj dashes = pageDoc.pdf_new_array(n);
                 for (int i = 0; i < n; i++)
                 {
                     dashes.pdf_array_push_int(borderDashes[i]);
@@ -6425,7 +6425,7 @@ namespace MuPDF.NET
             if (borderColor != null)
             {
                 int n = borderColor.Length;
-                PdfObj borderCol = pdf.pdf_new_array(n);
+                PdfObj borderCol = pageDoc.pdf_new_array(n);
                 float col = 0;
                 for (int i = 0; i < n; i++)
                 {
@@ -6526,7 +6526,7 @@ namespace MuPDF.NET
             {
                 if (string.IsNullOrEmpty(fieldVal))
                 {
-                    pdf.pdf_set_field_value(annotObj, "Off", 1);
+                    pageDoc.pdf_set_field_value(annotObj, "Off", 1);
                     annotObj.pdf_dict_put_name(new PdfObj("AS"), "Off");
                 }
                 else
@@ -6535,7 +6535,7 @@ namespace MuPDF.NET
                     if (onstate.m_internal != null)
                     {
                         string on = onstate.pdf_to_name();
-                        pdf.pdf_set_field_value(annotObj, on, 1);
+                        pageDoc.pdf_set_field_value(annotObj, on, 1);
                         annotObj.pdf_dict_put_name(new PdfObj("AS"), on);
                     }
                     else if (!string.IsNullOrEmpty(fieldVal))
@@ -6550,7 +6550,7 @@ namespace MuPDF.NET
                 {
                     PdfObj onstate = annotObj.pdf_button_field_on_state();
                     string on = onstate.pdf_to_name();
-                    pdf.pdf_set_field_value(annotObj, on, 1);
+                    pageDoc.pdf_set_field_value(annotObj, on, 1);
                     annotObj.pdf_dict_put_name(new PdfObj("AS"), "Yes");
                     annotObj.pdf_dict_put_name(new PdfObj("V"), "Yes");
                 }
@@ -6562,7 +6562,7 @@ namespace MuPDF.NET
             }
             else if (!string.IsNullOrEmpty(fieldVal))
             {
-                pdf.pdf_set_field_value(annotObj, fieldVal, 1);
+                pageDoc.pdf_set_field_value(annotObj, fieldVal, 1);
                 if (
                     fieldType == (int)PdfWidgetType.PDF_WIDGET_TYPE_COMBOBOX
                     || fieldType == (int)PdfWidgetType.PDF_WIDGET_TYPE_LISTBOX
@@ -6574,7 +6574,7 @@ namespace MuPDF.NET
             annot.pdf_set_annot_active(1);
             annot.pdf_update_annot();
 
-            pdf.Dispose();
+            pageDoc.Dispose();
         }
 
         internal static void PutScript(PdfObj annotObj, PdfObj key1, PdfObj key2, string value)
