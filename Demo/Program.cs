@@ -1,4 +1,5 @@
-﻿using MuPDF.NET;
+﻿using mupdf;
+using MuPDF.NET;
 using SkiaSharp;
 using System;
 using System.Collections.Generic;
@@ -7,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using static ICSharpCode.SharpZipLib.Zip.ExtendedUnixData;
 using static System.Net.Mime.MediaTypeNames;
 using static System.Net.WebRequestMethods;
 using File = System.IO.File;
@@ -46,8 +48,8 @@ namespace Demo
             //TestExtractTextWithLayout(args);
             //TestWidget(args);
             //TestColor(args);
-            TestCMYKRecolor(args);
-            TestSVGRecolor(args);
+            //TestCMYKRecolor(args);
+            //TestSVGRecolor(args);
             //TestReplaceImage(args);
             //TestInsertImage(args);
             //TestGetImageInfo(args);
@@ -56,30 +58,116 @@ namespace Demo
             //TestJoinPdfPages(args);
             //TestFreeTextAnnot(args);
             //TestTextFont(args);
-            TestMemoryLeak();
+            //TestMemoryLeak();
             //TestDrawLine();
             //TestWriteBarcode1();
-            //TestCMYKRecolor1(args);
             //TestUnicodeDocument();
             //TestMorph();
-            TestWidget();
+            //TestMetadata();
+            //TestTable();
+            TestMoveFile();
 
             return;
         }
-        static void TestWidget()
+
+        static void TestMoveFile()
         {
-            Console.WriteLine("\n=== TestWidget =====================");
+            string origfilename = @"E:\test.pdf";
 
-            Document doc = new Document("../../../TestDocuments/test_widget_parse.pdf");
+            Document d = new Document(origfilename);
 
-            var currentPage = 0;
-            while (currentPage < doc.PageCount)
-            {
-                var page = doc[currentPage];
-                var widgets = page.GetWidgets().ToList();
-                currentPage++;
-            }
+            Page page = d[0];
+            
+            Point tl = new Point(100, 120);
+            Point br = new Point(300, 150);
+
+            Rect rect = new Rect(tl, br);
+            
+            TextWriter pw = new TextWriter(page.TrimBox);
+            /*
+            Font font = new Font(fontName: "tiro");
+
+            List<(string, float)> ret = pw.FillTextbox(rect, "This is a test to overwrite the original file and move it", font, fontSize: 24);
+            */
+            pw.WriteText(page);
+            
+            page.Dispose();
+
+            MemoryStream tmp = new MemoryStream();
+
+            d.Save(tmp, garbage: 3, deflateFonts: 1, deflate: 1);
+
+            d.Close();
+
+            File.WriteAllBytes(origfilename, tmp.ToArray());
+
+            tmp.Dispose();
+
+            File.Move(origfilename, @"e:\new.pdf", true);
         }
+
+        public static float MmToPs(float mm)
+        {
+            return mm * 2.8346456693f;
+        }
+
+        static void TestTable()
+        {
+            Console.WriteLine("\n=== TestTable =====================");
+
+            string testFilePath = @"E:\MuPDF.NET\Tmp\Peter\Table\test.pdf";
+
+            Rect rect = new Rect(X0:MmToPs(110), X1:MmToPs(198), Y0: MmToPs(42), Y1: MmToPs(76));
+
+            Document doc = new Document(testFilePath);
+
+            FzStextOptions options = new FzStextOptions(0);
+            options.Dispose();
+
+            string text = "";
+
+            text = doc[0].GetText(clip: rect, flags: (int)TextFlags.TEXT_MEDIABOX_CLIP, sort: true);
+            Console.WriteLine(text);
+
+            /*
+            text = "";
+            List<TextBlock> textBlocks = doc[0].GetTextBlocks(rect);
+            foreach (TextBlock block in textBlocks)
+            {
+                text += block.Text;
+            }
+
+            Console.WriteLine(text);
+
+            text = doc[0].GetTextWithLayout(rect);
+
+            Console.WriteLine(text);
+            */
+            doc.Close();
+
+            Console.WriteLine("TestTable completed.");
+        }
+
+        static void TestMetadata()
+        {
+            Console.WriteLine("\n=== TestMetadata =====================");
+
+            string testFilePath = @"e:\Annot.pdf";
+
+            Document doc = new Document(testFilePath);
+
+            Dictionary<string, string>  metaDict = doc.MetaData;
+
+            foreach (string key in metaDict.Keys)
+            {
+                Console.WriteLine(key + ": " + metaDict[key]);
+            }
+
+            doc.Close();
+
+            Console.WriteLine("TestDocument completed.");
+        }
+
         static void TestMorph()
         {
             Console.WriteLine("\n=== TestMorph =====================");
@@ -121,23 +209,6 @@ namespace Demo
             doc.Close();
 
             Console.WriteLine("TestDocument completed.");
-        }
-
-        static void TestCMYKRecolor1(string[] args)
-        {
-            Console.WriteLine("\n=== TestCMYKRecolor =====================");
-
-            string testFilePath = "../../../TestDocuments/CMYK_Recolor1.pdf";
-            Document doc = new Document(testFilePath);
-            //List<Entry> images = doc.GetPageImages(0);
-            //Console.WriteLine($"CaName: {images[0].CsName}");
-            doc.Recolor(0, "CMYK");
-            //images = doc.GetPageImages(0);
-            //Console.WriteLine($"CaName: {images[0].AltCsName}");
-            doc.Save(@"CMYKRecolor.pdf");
-            doc.Close();
-
-            Console.WriteLine("CMYK Recolor test completed.");
         }
 
         static void TestWriteBarcode1()

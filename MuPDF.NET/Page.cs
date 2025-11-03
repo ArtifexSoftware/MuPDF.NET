@@ -510,13 +510,15 @@ namespace MuPDF.NET
                 annot.pdf_set_annot_icon_name(icon);
             }
 
-            PdfObj val = Utils.EmbedFile(page.doc(), fileBuf, filename, uf, d, 1);
+            PdfDocument pageDoc = page.doc();
+            PdfObj val = Utils.EmbedFile(pageDoc, fileBuf, filename, uf, d, 1);
             annot.pdf_annot_obj().pdf_dict_put(new PdfObj("FS"), val);
             annot.pdf_annot_obj().pdf_dict_put_text_string(new PdfObj("Contents"), filename);
             annot.pdf_update_annot();
             annot.pdf_set_annot_rect(r);
             annot.pdf_set_annot_flags(flags);
             Utils.AddAnnotId(annot, "A");
+            pageDoc.Dispose();
 
             return new Annot(annot, this);
         }
@@ -802,13 +804,14 @@ namespace MuPDF.NET
             PdfAnnot annot = page.pdf_create_annot(pdf_annot_type.PDF_ANNOT_INK);
             PdfObj annotObj = annot.pdf_annot_obj();
             int n0 = list.Count;
-            PdfObj inkList = page.doc().pdf_new_array(n0);
+            PdfDocument pageDoc = page.doc();
+            PdfObj inkList = pageDoc.pdf_new_array(n0);
 
             for (int j = 0; j < n0; j++)
             {
                 dynamic subList = list[j];
                 int n1 = subList.Count;
-                PdfObj stroke = page.doc().pdf_new_array(n1 * 2);
+                PdfObj stroke = pageDoc.pdf_new_array(n1 * 2);
 
                 for (int i = 0; i < n1; i++)
                 {
@@ -822,6 +825,8 @@ namespace MuPDF.NET
             annotObj.pdf_dict_put(new PdfObj("InkList"), inkList);
             annot.pdf_update_annot();
             Utils.AddAnnotId(annot, "A");
+
+            pageDoc.Dispose();
 
             return new Annot(annot, this);
         }
@@ -916,7 +921,9 @@ namespace MuPDF.NET
                 {
                     fCol = Annot.ColorFromSequence(fill);
                     nFCol = fCol.Length;
-                    PdfObj arr = page.doc().pdf_new_array(nFCol);
+                    PdfDocument pageDoc = page.doc();
+                    PdfObj arr = pageDoc.pdf_new_array(nFCol);
+                    pageDoc.Dispose();
                     for (int i = 0; i < nFCol; i++)
                     {
                         arr.pdf_array_push_real(fCol[i]);
@@ -1021,12 +1028,14 @@ namespace MuPDF.NET
                 {
                     float[] fCol = Annot.ColorFromSequence(fill);
                     int nFCol = fCol.Length;
-                    PdfObj arr = page.doc().pdf_new_array(nFCol);
+                    PdfDocument pageDoc = page.doc();
+                    PdfObj arr = pageDoc.pdf_new_array(nFCol);
                     for (int i = 0; i < nFCol; i++)
                     {
                         arr.pdf_array_push_real(fCol[i]);
                     }
                     annot.pdf_annot_obj().pdf_dict_put(new PdfObj("IC"), arr);
+                    pageDoc.Dispose();
                 }
                 if (!string.IsNullOrEmpty(text))
                 {
@@ -1682,9 +1691,11 @@ namespace MuPDF.NET
 
                 try
                 {
-                    PdfObj annot = page.doc().pdf_add_object(Utils.PdfObjFromStr(page.doc(), text));
-                    PdfObj indObj = page.doc().pdf_new_indirect(annot.pdf_to_num(), 0);
+                    PdfDocument pageDoc = page.doc();
+                    PdfObj annot = pageDoc.pdf_add_object(Utils.PdfObjFromStr(pageDoc, text));
+                    PdfObj indObj = pageDoc.pdf_new_indirect(annot.pdf_to_num(), 0);
                     annots.pdf_array_push(indObj);
+                    pageDoc.Dispose();
                 }
                 catch (Exception)
                 {
@@ -1754,6 +1765,7 @@ namespace MuPDF.NET
             PdfPage page = _pdfPage;
             PdfDocument pdf = page.doc();
             PdfAnnot annot = Utils.CreateWidget(pdf, page, fieldType, fieldName);
+            pdf.Dispose();
 
             if (annot == null)
                 throw new Exception("cannot create widget");
@@ -1777,7 +1789,9 @@ namespace MuPDF.NET
             opts.image_method = images;
             opts.line_art = graphics;
             opts.text = text;
-            int success = page.doc().pdf_redact_page(page, opts);
+            PdfDocument pageDoc = page.doc();
+            int success = pageDoc.pdf_redact_page(page, opts);
+            pageDoc.Dispose();
 
             return success;
         }
@@ -2116,7 +2130,7 @@ namespace MuPDF.NET
                 if (temp != -1)
                 {
                     imgXRef = temp;
-                    ref_ = page.doc().pdf_new_indirect(imgXRef, 0);
+                    ref_ = pdf.pdf_new_indirect(imgXRef, 0);
                     do_process_stream = 0;
                     do_have_imask = 0;
                     do_have_image = 0;
@@ -2165,7 +2179,7 @@ namespace MuPDF.NET
                 if (tmp != -1)
                 {
                     imgXRef = tmp;
-                    ref_ = page.doc().pdf_new_indirect(imgXRef, 0);
+                    ref_ = pdf.pdf_new_indirect(imgXRef, 0);
                     w = ref_.pdf_dict_geta(new PdfObj("Width"), new PdfObj("W")).pdf_to_int();
                     h = ref_.pdf_dict_geta(new PdfObj("Height"), new PdfObj("H")).pdf_to_int();
                     do_have_imask = 0;
@@ -2239,6 +2253,8 @@ namespace MuPDF.NET
             {
                 doc.InsertedImages = digests;
             }
+
+            pdf.Dispose();
 
             return imgXRef;
         }
@@ -2663,6 +2679,8 @@ namespace MuPDF.NET
             nres.fz_append_string(" Do Q ");
 
             Utils.InsertContents(pdfOut, tpageObj, nres, overlay ? 1 : 0);
+
+            pdfOut.Dispose();
             return rcXref;
         }
 
@@ -2862,6 +2880,9 @@ namespace MuPDF.NET
             PdfObj fontObj = pdf.pdf_new_indirect(value.Xref, 0);
 
             fonts.pdf_dict_puts(fontName, fontObj);
+
+            pdf.Dispose();
+
             return value;
         }
 
@@ -2944,10 +2965,12 @@ namespace MuPDF.NET
                     return gstate;
             }
 
-            PdfObj opa = _pdfPage.doc().pdf_new_dict(3);
+            PdfDocument pageDoc = _pdfPage.doc();
+            PdfObj opa = pageDoc.pdf_new_dict(3);
             opa.pdf_dict_put_real(new PdfObj("CA"), CA);
             opa.pdf_dict_put_real(new PdfObj("ca"), ca);
             extg.pdf_dict_puts(gstate, opa);
+            pageDoc.Dispose();
 
             return gstate;
         }
@@ -3209,8 +3232,10 @@ namespace MuPDF.NET
                 return;
             }
             annots.pdf_array_delete(i);
-            page.doc().pdf_delete_object(xref);
+            PdfDocument pageDoc = page.doc();
+            pageDoc.pdf_delete_object(xref);
             page.obj().pdf_dict_put(new PdfObj("Annots"), annots);
+            pageDoc.Dispose();
 
             Utils.RefreshLinks(page);
             Finished();
@@ -4555,7 +4580,9 @@ namespace MuPDF.NET
                 return;
 
             PdfFilterOptions filter = Utils.MakePdfFilterOptions(recurse: 1, sanitize: sanitize);
-            page.doc().pdf_filter_page_contents(page, filter);
+            PdfDocument pageDoc = page.doc();
+            pageDoc.pdf_filter_page_contents(page, filter);
+            pageDoc.Dispose();
         }
 
         /// <summary>
@@ -4692,7 +4719,10 @@ namespace MuPDF.NET
                 widget.FieldName
             );
             if (annot.m_internal == null)
+            {
+                pdf.Dispose();
                 throw new Exception("cannot create widget");
+            }
             Utils.AddAnnotId(annot, "W");
 
             Annot annot_ = new Annot(annot, this);
@@ -4703,6 +4733,8 @@ namespace MuPDF.NET
             widget.Parent = this;
             widget._annot = new PdfAnnot(annot);
             widget.Update();
+
+            pdf.Dispose();
 
             return annot_;
         }

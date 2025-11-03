@@ -251,9 +251,10 @@ namespace MuPDF.NET
             else
                 colorSpace = mupdf.mupdf.fz_device_gray();
 
-            PdfObj resources = pdfPage.doc().pdf_new_dict(5);
+            PdfDocument pdfDoc = pdfPage.doc();
+            PdfObj resources = pdfDoc.pdf_new_dict(5);
             FzBuffer contents = mupdf.mupdf.fz_new_buffer(1024);
-            FzDevice dev = mupdf.mupdf.pdf_new_pdf_device(pdfPage.doc(), new FzMatrix(), resources, contents);
+            FzDevice dev = mupdf.mupdf.pdf_new_pdf_device(pdfDoc, new FzMatrix(), resources, contents);
 
             IntPtr pDevColor = Marshal.AllocHGlobal(devColor.Length * sizeof(float));
             Marshal.Copy(devColor, 0, pDevColor, devColor.Length);
@@ -344,6 +345,8 @@ namespace MuPDF.NET
             Utils.InsertContents(page, content, overlay);
             foreach (Font font in UsedFonts)
                 Utils.RepairMonoFont(page, font);
+
+            pdfDoc.Dispose();
         }
 
         /// <summary>

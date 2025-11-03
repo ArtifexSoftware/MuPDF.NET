@@ -1261,6 +1261,8 @@ namespace MuPDF.NET
             widget.ScriptFocus = Utils.GetScript(
                 Utils.pdf_dict_getl(annotObj, new string[] { "AA", "Fo" })
             );
+
+            pdf.Dispose();
         }
 
         internal static List<dynamic> GetChoiceOptions(PdfAnnot annot)
@@ -1311,7 +1313,9 @@ namespace MuPDF.NET
             }
             PdfObj name = mupdf.mupdf.pdf_new_string(stemId, (uint)stemId.Length);
             annotObj.pdf_dict_puts("NM", name);
-            page.doc().m_internal.resynth_required = 0;
+            PdfDocument pageDoc = page.doc();
+            pageDoc.m_internal.resynth_required = 0;
+            pageDoc.Dispose();
         }
 
         internal static List<string> GetAnnotIDList(PdfPage page)
@@ -3935,6 +3939,7 @@ namespace MuPDF.NET
                 page.pdf_page_transform(pageMediabox, pageCtm);
                 FzLink link = pdf.pdf_load_link_annots(page, obj, number, pageCtm);
                 page.m_internal.links = mupdf.mupdf.ll_fz_keep_link(link.m_internal);
+                pdf.Dispose();
             }
         }
 
@@ -6568,6 +6573,8 @@ namespace MuPDF.NET
             annot.pdf_set_annot_hot(1);
             annot.pdf_set_annot_active(1);
             annot.pdf_update_annot();
+
+            pdf.Dispose();
         }
 
         internal static void PutScript(PdfObj annotObj, PdfObj key1, PdfObj key2, string value)
