@@ -286,7 +286,7 @@ Using the :meth:`TextWriter.WriteText` method from the :class:`TextWriter` class
     string text = "MuPDF.NET: the C# bindings for MuPDF"; // define some text!
     MuPDF.NET.Font font = new MuPDF.NET.Font("helv"); // define a font to use, in this case Helvetica
     MuPDF.NET.TextWriter tw = new MuPDF.NET.TextWriter(page.Rect); // define the rectangle for the text
-    tw.Append(new(50, 100), text); // define the point where you want to add the text
+    tw.Append(new(50, 100), text, font); // define the point where you want to add the text
     tw.WriteText(page); // use the TextWriter to write the text to the page
     doc.Save("test.pdf"); // save the result!
 

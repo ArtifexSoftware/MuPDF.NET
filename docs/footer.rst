@@ -51,5 +51,6 @@
 .. _the GitHub project: https://github.com/ArtifexSoftware/MuPDF.NET
 .. _Nuget:
 .. _MuPDF.NET package from NuGet: https://www.nuget.org/packages/MuPDF.NET/
+.. _MuPDF Blog: https://forum.mupdf.com
 .. _contact Artifex: https://artifex.com/contact/mupdf-net-inquiry.php
 .. _Artifex Community License: https://github.com/ArtifexSoftware/MuPDF.NET/blob/main/LICENSE.md
