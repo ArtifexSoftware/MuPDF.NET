@@ -747,7 +747,7 @@ namespace MuPDF.NET
                 { "format", "format" },
             };
 
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            //if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 values.Add("title", "info:Title");
                 values.Add("author", "info:Author");

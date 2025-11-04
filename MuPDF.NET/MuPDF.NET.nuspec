@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2012/06/nuspec.xsd">
   <metadata>
     <id>MuPDF.NET</id>
-    <version>3.2.10</version>
+    <version>3.2.12-rc.2</version>
     <authors>Artifex Software Inc.</authors>
     <requireLicenseAcceptance>true</requireLicenseAcceptance>
     <license type="file">LICENSE.md</license>

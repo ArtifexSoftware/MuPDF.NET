@@ -775,12 +775,14 @@ namespace MuPDF.NET
                 {
                     throw new Exception("bad type: 'buffer'");
                 }
-                Utils.UpdateStream(page.doc(), apObj, buf, 1);
+                PdfDocument pageDoc = page.doc();
+                Utils.UpdateStream(pageDoc, apObj, buf, 1);
                 if (rect != 0)
                 {
                     FzRect bbox = annotObj.pdf_dict_get_rect(new PdfObj("Rect"));
                     apObj.pdf_dict_put_rect(new PdfObj("Rect"), bbox);
                 }
+                pageDoc.Dispose();
             }
             catch (Exception) { }
         }
@@ -811,7 +813,7 @@ namespace MuPDF.NET
         {
             PdfObj annotObj = _nativeAnnotion.pdf_annot_obj();
             PdfPage page = _nativeAnnotion.pdf_annot_page();
-            PdfDocument doc = page.doc();
+            PdfDocument pageDoc = page.doc();
             pdf_annot_type type = _nativeAnnotion.pdf_annot_type();
             float[] cols = ColorFromSequence(fillColor);
             int nCols = cols.Length;
@@ -884,7 +886,7 @@ namespace MuPDF.NET
                 }
                 else if (nCols > 0)
                 {
-                    PdfObj col = doc.pdf_new_array(nCols);
+                    PdfObj col = pageDoc.pdf_new_array(nCols);
                     for (int i = 0; i < nCols; i++)
                     {
                         mupdf.mupdf.pdf_array_push_real(col, cols[i]);
@@ -893,15 +895,17 @@ namespace MuPDF.NET
                 }
                 _nativeAnnotion.pdf_dirty_annot();
                 _nativeAnnotion.pdf_update_annot();
-                doc.m_internal.resynth_required = 0;
+                pageDoc.m_internal.resynth_required = 0;
             }
             catch (Exception e) 
             {
+                pageDoc.Dispose();
                 throw new Exception("cannot update annot:" + e.Message);
             }
 
             if ((opacity < 0 || opacity >= 1) && blendMode == null) // no opacity, no blend_mode
             {
+                pageDoc.Dispose();
                 return true;
             }
 
@@ -914,6 +918,7 @@ namespace MuPDF.NET
                 if (ap.m_internal == null)
                 {
                     // should never happen
+                    pageDoc.Dispose();
                     throw new Exception("bad or missing annot AP/N");
                 }
 
@@ -921,7 +926,7 @@ namespace MuPDF.NET
                 if (resources.m_internal == null)
                     resources = ap.pdf_dict_put_dict(new PdfObj("Resources"), 2);
 
-                PdfObj alp0 = doc.pdf_new_dict(3);
+                PdfObj alp0 = pageDoc.pdf_new_dict(3);
                 if (opacity >= 0 && opacity < 1)
                 {
                     alp0.pdf_dict_put_real(new PdfObj("CA"), opacity);
@@ -945,6 +950,8 @@ namespace MuPDF.NET
             {
                 Console.WriteLine("cannot set opacity or blend mode");
             }
+
+            pageDoc.Dispose();
 
             return true;
         }
@@ -1584,10 +1591,11 @@ namespace MuPDF.NET
             PdfObj annotObj = annot.pdf_annot_obj();
             PdfPage page = annot.pdf_annot_page();
 
-            if (xref < 1 || xref >= page.doc().pdf_xref_len())
+            PdfDocument pageDoc = page.doc();
+            if (xref < 1 || xref >= pageDoc.pdf_xref_len())
                 throw new Exception(Utils.ErrorMessages["MSG_BAD_XREF"]);
 
-            PdfObj irt = page.doc().pdf_new_indirect(xref, 0);
+            PdfObj irt = pageDoc.pdf_new_indirect(xref, 0);
             PdfObj subt = irt.pdf_dict_get(new PdfObj("Subtype"));
             PdfAnnotType irtSubt = (PdfAnnotType)
                 mupdf.mupdf.pdf_annot_type_from_string(subt.pdf_to_name());
@@ -1595,6 +1603,8 @@ namespace MuPDF.NET
                 throw new Exception(Utils.ErrorMessages["MSG_IS_NO_ANNOT"]);
 
             annotObj.pdf_dict_put(new PdfObj("IRT"), irt);
+
+            pageDoc.Dispose();
         }
 
         public void SetLanguage(string language)
@@ -1722,7 +1732,9 @@ namespace MuPDF.NET
             else
             {
                 PdfPage page = _nativeAnnotion.pdf_annot_page();
-                Document doc = (page.m_internal == null) ? null : new Document(page.doc());
+                PdfDocument pageDoc = page.doc();
+                Document doc = (page.m_internal == null) ? null : new Document(pageDoc);
+                pageDoc.Dispose();
                 ret = new Page(page, doc);
 
                 Parent = ret;
