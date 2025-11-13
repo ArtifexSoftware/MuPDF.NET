@@ -41,7 +41,7 @@ namespace MuPDF.NET.Test
         public void Test4505()
         {
             // Copy field flags to Parent widget and all of its kids.
-            Document doc = new Document("../../../resources/test_4505.pdf");
+            Document doc = new Document("../../../resources/WidgetTest/test_4505.pdf");
             Page page = doc[0];
 
             Dictionary<int, int> text1_flags_before = new Dictionary<int, int>();
@@ -70,7 +70,19 @@ namespace MuPDF.NET.Test
             }
             Assert.That(text1_flags_after, Is.EqualTo(new Dictionary<int, int> { { 8, 1 }, { 10, 1 }, { 33, 1 } }));
         }
-        /*
+
+        [Test]
+        public void ShouldNotThrowOnGetWidgets()
+        {
+            Document doc = new Document("../../../resources/WidgetTest/test_widget_parse.pdf");
+
+            var widgets = doc[0].GetWidgets().ToList();
+            Assert.That(widgets.Count, Is.EqualTo(85));
+
+            widgets = doc[1].GetWidgets().ToList();
+            Assert.That(widgets.Count, Is.EqualTo(20));
+        }
+
         [Test]
         public void Checkbox()
         {
@@ -97,25 +109,26 @@ namespace MuPDF.NET.Test
             doc.Save("output.pdf");
             //Assert.Pass();
         }
-        */
 
-        [TestCase("/Cour  5 Tf 0 g", "Cour", 5)]
-        [TestCase("/Cour 6 Tf 0 g", "Cour", 6)]
-        [TestCase("/TiRo \t 8 \n \r \f \v Tf 0    g", "TiRo", 8)]
-        public void ShouldParseDa(string textDa, string expectedFont, float expectedFontSize)
+        [Test]
+        public void TestWidget()
         {
-            var doc = new Document();
-            var page = doc.NewPage();
+            string testFilePath = Path.GetFullPath("../../../resources/WidgetTest/Widget.pdf");
+            Document doc = new Document(testFilePath);
 
-            var widget = new Widget(page) { TextDa = textDa };
+            Page page = doc[0];
+            Widget fWidget = page.FirstWidget;
 
-            Assert.That(widget.TextFont, Is.EqualTo("Helv")); 
-            Assert.That(widget.TextFontSize, Is.EqualTo(0));
-
-            Assert.DoesNotThrow(() => widget.ParseDa());
-
-            Assert.That(widget.TextFont, Is.EqualTo(expectedFont));
-            Assert.That(widget.TextFontSize, Is.EqualTo(expectedFontSize));
+            Assert.IsTrue(fWidget.FieldName == "partlyDetail");
+            Assert.IsTrue(fWidget.FieldType == 7);
+            Assert.IsTrue(fWidget.FieldValue == "");
+            Assert.IsTrue(fWidget.FieldFlags == 8392704);
+            Assert.IsTrue(fWidget.FieldLabel == "undefined");
+            Assert.IsTrue(fWidget.TextFont == "SimSun");
+            Assert.IsTrue(fWidget.TextFontSize == 12);
+            
+            page.Dispose();
+            doc.Close();
         }
     }
 }

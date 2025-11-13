@@ -10,6 +10,7 @@ namespace MuPDF.NET
             Utils.InitApp();
         }
 
+        private FilePtrOutput _filePtr;
         private FzDocumentWriter _nativeDocumentWriter;
 
         public DocumentWriter(string path, string options = "")
@@ -19,8 +20,8 @@ namespace MuPDF.NET
 
         public DocumentWriter(MemoryStream memory, string options = "")
         {
-            FilePtrOutput filePtr = new FilePtrOutput(memory);
-            _nativeDocumentWriter = new FzDocumentWriter(filePtr, options, FzDocumentWriter.OutputType.OutputType_PDF);
+            _filePtr = new FilePtrOutput(memory);
+            _nativeDocumentWriter = new FzDocumentWriter(_filePtr, options, FzDocumentWriter.OutputType.OutputType_PDF);
         }
 
         /// <summary>
@@ -48,7 +49,8 @@ namespace MuPDF.NET
         /// </summary>
         public void Dispose()
         {
-            _nativeDocumentWriter.Dispose();
+            _nativeDocumentWriter?.Dispose();
+            _filePtr?.Dispose();
         }
 
         /// <summary>

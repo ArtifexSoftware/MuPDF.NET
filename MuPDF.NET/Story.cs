@@ -64,6 +64,15 @@ namespace MuPDF.NET
             }
         }
 
+        public void Dispose()
+        {
+            if (_nativeStory != null)
+            {
+                _nativeStory.Dispose();
+                _nativeStory = null;
+            }
+        }
+
         /// <summary>
         /// Get Document object
         /// </summary>

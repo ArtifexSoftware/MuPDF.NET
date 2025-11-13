@@ -1,9 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using MuPDF.NET;
+﻿using MuPDF.NET;
+using NUnit.Framework;
 
 namespace MuPDF.NET.Test
 {
