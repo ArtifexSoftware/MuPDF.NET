@@ -1,4 +1,5 @@
-﻿using MuPDF.NET;
+﻿using mupdf;
+using MuPDF.NET;
 using SkiaSharp;
 using System;
 using System.Collections.Generic;
@@ -7,10 +8,14 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using static ICSharpCode.SharpZipLib.Zip.ExtendedUnixData;
 using static System.Net.Mime.MediaTypeNames;
 using static System.Net.WebRequestMethods;
+using Box = MuPDF.NET.Box;
+using Encoding = System.Text.Encoding;
 using File = System.IO.File;
 using Font = MuPDF.NET.Font;
+using Morph = MuPDF.NET.Morph;
 using TextWriter = MuPDF.NET.TextWriter;
 
 namespace Demo
@@ -33,53 +38,131 @@ namespace Demo
     {
         static void Main(string[] args)
         {
-            //TestInsertHtmlbox();
-            //TestLineAnnot();
-            //AnnotationsFreeText1.Run(args);
-            //AnnotationsFreeText2.Run(args);
-            //NewAnnots.Run(args);
-            //TestHelloWorldToNewDocument(args);
-            //TestHelloWorldToExistingDocument(args);
-            //TestReadBarcode(args);
-            //TestReadDataMatrix();
-            //TestWriteBarcode(args);
-            //TestExtractTextWithLayout(args);
-            //TestWidget(args);
-            //TestColor(args);
+            TestInsertHtmlbox();
+            TestLineAnnot();
+            AnnotationsFreeText1.Run(args);
+            AnnotationsFreeText2.Run(args);
+            NewAnnots.Run(args);
+            TestHelloWorldToNewDocument(args);
+            TestHelloWorldToExistingDocument(args);
+            TestReadBarcode(args);
+            TestReadDataMatrix();
+            TestWriteBarcode(args);
+            TestExtractTextWithLayout(args);
+            TestWidget(args);
+            TestColor(args);
             TestCMYKRecolor(args);
             TestSVGRecolor(args);
-            //TestReplaceImage(args);
-            //TestInsertImage(args);
-            //TestGetImageInfo(args);
-            //TestGetTextPageOcr(args);
-            //TestCreateImagePage(args);
-            //TestJoinPdfPages(args);
-            //TestFreeTextAnnot(args);
-            //TestTextFont(args);
+            TestReplaceImage(args);
+            TestInsertImage(args);
+            TestGetImageInfo(args);
+            TestGetTextPageOcr(args);
+            TestCreateImagePage(args);
+            TestJoinPdfPages(args);
+            TestFreeTextAnnot(args);
+            TestTextFont(args);
             TestMemoryLeak();
-            //TestDrawLine();
-            //TestWriteBarcode1();
-            //TestCMYKRecolor1(args);
-            //TestUnicodeDocument();
-            //TestMorph();
-            TestWidget();
+            TestDrawLine();
+            TestWriteBarcode1();
+            TestUnicodeDocument();
+            TestMorph();
+            TestMetadata();
+            TestMoveFile();
+            TestImageFilter();
 
             return;
         }
-        static void TestWidget()
+
+        static void TestImageFilter()
         {
-            Console.WriteLine("\n=== TestWidget =====================");
+            const string inputPath = @"../../../TestDocuments/Image/boxedpage.jpg";
 
-            Document doc = new Document("../../../TestDocuments/test_widget_parse.pdf");
-
-            var currentPage = 0;
-            while (currentPage < doc.PageCount)
+            using (Pixmap pxmp = new Pixmap(inputPath))
             {
-                var page = doc[currentPage];
-                var widgets = page.GetWidgets().ToList();
-                currentPage++;
+                // build the pipeline
+                var pipeline = new ImageFilterPipeline();
+
+                // clear any defaults if you’re reusing the instance
+                pipeline.Clear();
+
+                // add filters one-by-one
+                //pipeline.AddDeskew(minAngle: 0.5);              // replaces any existing deskew step
+                //pipeline.AddRemoveHorizontalLines();            // also replaces existing horizontal-removal step
+                //pipeline.AddRemoveVerticalLines();
+                //pipeline.AddGrayscale();
+                //pipeline.AddMedian(blockSize: 2, replaceExisting: true);
+                pipeline.AddGamma(gamma: 1.2);                  // brighten slightly
+                //pipeline.AddContrast(contrast: 100);
+                //pipeline.AddScaleFit(100);
+                //pipeline.AddDilation();
+                pipeline.AddScale(scaleFactor: 1.75, quality: SKFilterQuality.High);
+                //pipeline.AddInvert();
+
+                string txt = pxmp.GetTextFromOcr(pipeline);
+                Console.WriteLine(txt);
             }
         }
+
+        static void TestMoveFile()
+        {
+            string origfilename = @"../../../TestDocuments/Blank.pdf";
+
+            string filePath = @"testmove.pdf";
+
+            File.Copy(origfilename, filePath, true);
+
+            Document d = new Document(filePath);
+
+            Page page = d[0];
+            
+            Point tl = new Point(100, 120);
+            Point br = new Point(300, 150);
+
+            Rect rect = new Rect(tl, br);
+            
+            TextWriter pw = new TextWriter(page.TrimBox);
+            /*
+            Font font = new Font(fontName: "tiro");
+
+            List<(string, float)> ret = pw.FillTextbox(rect, "This is a test to overwrite the original file and move it", font, fontSize: 24);
+            */
+            pw.WriteText(page);
+            
+            page.Dispose();
+
+            MemoryStream tmp = new MemoryStream();
+
+            d.Save(tmp, garbage: 3, deflateFonts: 1, deflate: 1);
+
+            d.Close();
+
+            File.WriteAllBytes(filePath, tmp.ToArray());
+
+            tmp.Dispose();
+
+            File.Move(filePath, @"moved.pdf", true);
+        }
+
+        static void TestMetadata()
+        {
+            Console.WriteLine("\n=== TestMetadata =====================");
+
+            string testFilePath = @"../../../TestDocuments/Annot.pdf";
+
+            Document doc = new Document(testFilePath);
+
+            Dictionary<string, string>  metaDict = doc.MetaData;
+
+            foreach (string key in metaDict.Keys)
+            {
+                Console.WriteLine(key + ": " + metaDict[key]);
+            }
+
+            doc.Close();
+
+            Console.WriteLine("TestMetadata completed.");
+        }
+
         static void TestMorph()
         {
             Console.WriteLine("\n=== TestMorph =====================");
@@ -120,33 +203,18 @@ namespace Demo
             doc.Save(@"你好_.pdf");
             doc.Close();
 
-            Console.WriteLine("TestDocument completed.");
-        }
-
-        static void TestCMYKRecolor1(string[] args)
-        {
-            Console.WriteLine("\n=== TestCMYKRecolor =====================");
-
-            string testFilePath = "../../../TestDocuments/CMYK_Recolor1.pdf";
-            Document doc = new Document(testFilePath);
-            //List<Entry> images = doc.GetPageImages(0);
-            //Console.WriteLine($"CaName: {images[0].CsName}");
-            doc.Recolor(0, "CMYK");
-            //images = doc.GetPageImages(0);
-            //Console.WriteLine($"CaName: {images[0].AltCsName}");
-            doc.Save(@"CMYKRecolor.pdf");
-            doc.Close();
-
-            Console.WriteLine("CMYK Recolor test completed.");
+            Console.WriteLine("TestUnicodeDocument completed.");
         }
 
         static void TestWriteBarcode1()
         {
+            Console.WriteLine("\n=== TestWriteBarcode1 =====================");
+
             string testFilePath = Path.GetFullPath("../../../TestDocuments/Blank.pdf");
             Document doc = new Document(testFilePath);
 
             Page page = doc[0];
-            /*
+
             // CODE39
             Rect rect = new Rect(
                 X0: Units.MmToPoints(50),
@@ -163,8 +231,7 @@ namespace Demo
                 Y1: Units.MmToPoints(105));
 
             page.WriteBarcode(rect, "JJBEA6500", BarcodeFormat.CODE39, forceFitToRect: true, pureBarcode: true, narrowBarWidth: 2);
-            */
-            /*
+
             // CODE128
             Rect rect1 = new Rect(
                 X0: Units.MmToPoints(50),
@@ -181,8 +248,7 @@ namespace Demo
                 Y1: Units.MmToPoints(120));
 
             page.WriteBarcode(rect1, "JJBEA6500063000000177922", BarcodeFormat.CODE128, forceFitToRect: true, pureBarcode: true, narrowBarWidth: 1);
-            */
-            /*
+
             Rect rect2 = new Rect(
                 X0: Units.MmToPoints(100),
                 X1: Units.MmToPoints(140),
@@ -190,13 +256,11 @@ namespace Demo
                 Y1: Units.MmToPoints(80));
 
             page.WriteBarcode(rect2, "01030000110444408000", BarcodeFormat.DM, forceFitToRect: false, pureBarcode: true, narrowBarWidth: 3);
-            */
 
             Pixmap pxmp = Utils.GetBarcodePixmap("JJBEA6500063000000177922", BarcodeFormat.CODE128, width: 500, pureBarcode: true, marginLeft:0, marginTop:0, marginRight:0, marginBottom:0, narrowBarWidth: 1);
             
-            pxmp.Save(@"e:\PxmpBarcode3.png");
+            pxmp.Save(@"PxmpBarcode3.png");
 
-            /*
             byte[] imageBytes = pxmp.ToBytes();
 
             using var stream = new SKMemoryStream(imageBytes);
@@ -209,10 +273,11 @@ namespace Demo
             data.SaveTo(stream1);
 
             doc.Save(@"TestWriteBarcode1.pdf");
-            */
 
             page.Dispose();
             doc.Close();
+
+            Console.WriteLine("TestWriteBarcode1 completed.");
         }
 
         static void TestReadDataMatrix()
@@ -902,13 +967,31 @@ namespace Demo
             Document doc = new Document(testFilePath);
             Page page = doc[0];
 
+            page.RemoveRotation();
+            Pixmap pixmap = page.GetPixmap();
+
             List<Block> blocks = page.GetText("dict", flags: (int)TextFlags.TEXT_PRESERVE_IMAGES)?.Blocks;
             foreach (Block block in blocks)
             {
                 Console.WriteLine(block.Image.Length);
             }
 
-            TextPage tp = page.GetTextPageOcr((int)TextFlags.TEXT_PRESERVE_SPANS, full: true);
+            // build the pipeline
+            var pipeline = new ImageFilterPipeline();
+            pipeline.Clear();
+            //pipeline.AddDeskew(minAngle: 0.5);              // replaces any existing deskew step
+            //pipeline.AddRemoveHorizontalLines();            // also replaces existing horizontal-removal step
+            //pipeline.AddRemoveVerticalLines();
+            //pipeline.AddGrayscale();
+            //pipeline.AddMedian(blockSize: 2, replaceExisting: true);
+            pipeline.AddGamma(gamma: 1.2);                  // brighten slightly
+            //pipeline.AddScaleFit(100);
+            pipeline.AddScale(scaleFactor: 3f, quality: SKFilterQuality.High);
+            //pipeline.AddContrast(contrast: 100);
+            //pipeline.AddDilation();
+            //pipeline.AddInvert();
+
+            TextPage tp = page.GetTextPageOcr((int)TextFlags.TEXT_PRESERVE_SPANS, full: true, imageFilters: pipeline);
             string txt = tp.ExtractText();
             Console.WriteLine(txt);
 

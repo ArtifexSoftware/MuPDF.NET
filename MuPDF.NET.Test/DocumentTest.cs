@@ -202,5 +202,44 @@ namespace MuPDF.NET.Test
             doc2.Close();
             doc1.Close();
         }
+
+        [Test]
+        public void TestMoveFile()
+        {
+            string testFilePath1 = Path.GetFullPath(@"../../../resources/DocumentTest/Widget.pdf");
+            string testFilePath2 = Path.GetFullPath(@"TestMoveOrig.pdf");
+            string testFilePath3 = Path.GetFullPath(@"TestMoveNew.pdf");
+
+            File.Copy(testFilePath1, testFilePath2, true);
+
+            Document doc = new Document(testFilePath2);
+            Page page = doc[0];
+
+            Point tl = new Point(100, 120);
+            Point br = new Point(300, 150);
+
+            Rect rect = new Rect(tl, br);
+            TextWriter pw = new TextWriter(page.TrimBox);
+            Font font = new Font(fontName: "tiro");
+            List<(string, float)> ret = pw.FillTextbox(rect, "This is a test to overwrite the original file and move it", font, fontSize: 24);
+
+            pw.WriteText(page);
+            page.Dispose();
+
+            MemoryStream tmp = new MemoryStream();
+
+            doc.Save(tmp, garbage: 3, deflateFonts: 1, deflate: 1);
+            doc.Close();
+
+            File.WriteAllBytes(testFilePath2, tmp.ToArray());
+
+            tmp.Dispose();
+
+            File.Move(testFilePath2, testFilePath3, true);
+
+            Document newDoc = new Document(testFilePath3);
+            Assert.IsTrue(newDoc.PageCount == 6);
+            newDoc.Close();
+        }
     }
 }

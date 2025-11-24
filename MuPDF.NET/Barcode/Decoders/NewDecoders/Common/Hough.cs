@@ -188,7 +188,7 @@ namespace BarcodeReader.Core.Common
                     Typeface = SKTypeface.FromFamilyName("Arial")
                 })
                 {
-                    string text = ((float)minAng * 180F / (float)hWidth).ToString("F2");
+                    string text = ((float)minAng * 180F / (float)hWidth).ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
                     canvas.DrawText(text, 10, 20, textPaint);
                 }
 

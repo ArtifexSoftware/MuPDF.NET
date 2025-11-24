@@ -313,7 +313,7 @@ namespace MuPDF.NET
         }
 
         override
-        public string ToString() => $"Rect({X0}, {Y0}, {X1}, {Y1})";
+        public string ToString() => $"Rect({Utils.FloatToString(X0)}, {Utils.FloatToString(Y0)}, {Utils.FloatToString(X1)}, {Utils.FloatToString(Y1)})";
 
         public static Rect operator -(Rect p, float op)
         {

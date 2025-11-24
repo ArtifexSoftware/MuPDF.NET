@@ -251,9 +251,10 @@ namespace MuPDF.NET
             else
                 colorSpace = mupdf.mupdf.fz_device_gray();
 
-            PdfObj resources = pdfPage.doc().pdf_new_dict(5);
+            PdfDocument pdfDoc = pdfPage.doc();
+            PdfObj resources = pdfDoc.pdf_new_dict(5);
             FzBuffer contents = mupdf.mupdf.fz_new_buffer(1024);
-            FzDevice dev = mupdf.mupdf.pdf_new_pdf_device(pdfPage.doc(), new FzMatrix(), resources, contents);
+            FzDevice dev = mupdf.mupdf.pdf_new_pdf_device(pdfDoc, new FzMatrix(), resources, contents);
 
             IntPtr pDevColor = Marshal.AllocHGlobal(devColor.Length * sizeof(float));
             Marshal.Copy(devColor, 0, pDevColor, devColor.Length);
@@ -288,7 +289,7 @@ namespace MuPDF.NET
 
             Rect mb = page.MediaBox;
             if (!cb.IsZero()  || mb.Y0 != 0 || delta != 0)
-                newContLines.Add($"1 0 0 1 {cb.X} {cb.Y + mb.Y0 - delta} cm");
+                newContLines.Add($"1 0 0 1 {Utils.FloatToString(cb.X)} {Utils.FloatToString(cb.Y + mb.Y0 - delta)} cm");
 
             Matrix matrix_ = new Matrix();
             if (morph != null)
@@ -299,7 +300,7 @@ namespace MuPDF.NET
             }
 
             if (morph != null || matrix != null)
-                newContLines.Add($"{matrix_.A} {matrix_.B} {matrix_.C} {matrix_.D} {matrix_.E} {matrix_.F} cm");
+                newContLines.Add($"{Utils.FloatToString(matrix_.A)} {Utils.FloatToString(matrix_.B)} {Utils.FloatToString(matrix_.C)} {Utils.FloatToString(matrix_.D)} {Utils.FloatToString(matrix_.E)} {Utils.FloatToString(matrix_.F)} cm");
 
             foreach (string line in oldLines)
             {
@@ -320,7 +321,7 @@ namespace MuPDF.NET
                 else if (line_.EndsWith(" Tf"))
                 {
                     string[] temp = line_.Split(' ');
-                    float fSize = (float)Convert.ToDouble(temp[1]);
+                    float fSize = (float)Convert.ToDouble(temp[1], System.Globalization.CultureInfo.InvariantCulture);
                     float w = 1f;
                     if (renderMode != 0)
                         w = fSize * 0.05f;
@@ -344,6 +345,8 @@ namespace MuPDF.NET
             Utils.InsertContents(page, content, overlay);
             foreach (Font font in UsedFonts)
                 Utils.RepairMonoFont(page, font);
+
+            pdfDoc.Dispose();
         }
 
         /// <summary>

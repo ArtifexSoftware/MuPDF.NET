@@ -83,7 +83,7 @@ namespace MuPDF.NET
                     if (m.Success)
                     {
                         Page = int.Parse(m.Groups[1].Value) - 1;
-                        TopLeft = new Point((float)Convert.ToDouble(m.Groups[3].Value), (float)Convert.ToDouble(m.Groups[4].Value));
+                        TopLeft = new Point((float)Convert.ToDouble(m.Groups[3].Value, System.Globalization.CultureInfo.InvariantCulture), (float)Convert.ToDouble(m.Groups[4].Value, System.Globalization.CultureInfo.InvariantCulture));
                         Flags = Flags | (int)LinkFlags.LINK_FLAG_L_VALID | (int)LinkFlags.LINK_FLAG_T_VALID;
                     }
                     else

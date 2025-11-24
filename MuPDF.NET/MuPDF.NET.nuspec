@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2012/06/nuspec.xsd">
   <metadata>
     <id>MuPDF.NET</id>
-    <version>3.2.10</version>
+    <version>3.2.12</version>
     <authors>Artifex Software Inc.</authors>
     <requireLicenseAcceptance>true</requireLicenseAcceptance>
     <license type="file">LICENSE.md</license>
@@ -14,14 +14,14 @@
     <dependencies>
       <group targetFramework=".NETStandard2.0">
         <dependency id="Microsoft.CSharp" version="4.7.0" exclude="Build,Analyzers" />
-        <dependency id="MuPDF.NativeAssets" version="1.26.9" exclude="Build,Analyzers" />
+        <dependency id="MuPDF.NativeAssets" version="1.26.11" exclude="Build,Analyzers" />
         <dependency id="Newtonsoft.Json" version="13.0.4" exclude="Build,Analyzers" />
         <dependency id="SharpZipLib" version="1.4.2" exclude="Build,Analyzers" />
         <dependency id="SkiaSharp" version="3.119.1" exclude="Build,Analyzers" />
       </group>
       <group targetFramework=".NETFramework4.0">
         <dependency id="Microsoft.CSharp" version="4.7.0" exclude="Build,Analyzers" />
-        <dependency id="MuPDF.NativeAssets" version="1.26.9" exclude="Build,Analyzers" />
+        <dependency id="MuPDF.NativeAssets" version="1.26.11" exclude="Build,Analyzers" />
         <dependency id="Newtonsoft.Json" version="13.0.4" exclude="Build,Analyzers" />
         <dependency id="SharpZipLib" version="1.4.2" exclude="Build,Analyzers" />
         <dependency id="SkiaSharp" version="3.119.1" exclude="Build,Analyzers" />
@@ -29,16 +29,17 @@
     </dependencies>
   </metadata>
   <files>
-    <file src="bin\$PlatformFolder$\$Configuration$\netstandard2.0\MuPDF.NET.dll" target="lib\netstandard2.0\" />
-	  <file src="bin\$PlatformFolder$\$Configuration$\net461\MuPDF.NET.dll" target="lib\net461\" />
-  	<file src="bin\$PlatformFolder$\$Configuration$\net472\MuPDF.NET.dll" target="lib\net472\" />
-	  <file src="bin\$PlatformFolder$\$Configuration$\net48\MuPDF.NET.dll" target="lib\net48\" />
-  	<file src="bin\$PlatformFolder$\$Configuration$\net5.0\MuPDF.NET.dll" target="lib\net5.0\" />
-	  <file src="bin\$PlatformFolder$\$Configuration$\net6.0\MuPDF.NET.dll" target="lib\net6.0\" />
-  	<file src="bin\$PlatformFolder$\$Configuration$\net7.0\MuPDF.NET.dll" target="lib\net7.0\" />
-  	<file src="bin\$PlatformFolder$\$Configuration$\net8.0\MuPDF.NET.dll" target="lib\net8.0\" />
-	  <file src="bin\$PlatformFolder$\$Configuration$\net9.0\MuPDF.NET.dll" target="lib\net9.0\" />
-  	<file src="build\net4\MuPDF.NET.targets" target="build\net4\MuPDF.NET.targets" />
+    <!-- Managed assemblies -->
+    <file src="bin\Release\netstandard2.0\MuPDF.NET.dll" target="lib\netstandard2.0\" />
+	<file src="bin\Release\net461\MuPDF.NET.dll" target="lib\net461\" />
+	<file src="bin\Release\net472\MuPDF.NET.dll" target="lib\net472\" />
+	<file src="bin\Release\net48\MuPDF.NET.dll" target="lib\net48\" />
+	<file src="bin\Release\net5.0\MuPDF.NET.dll" target="lib\net5.0\" />
+	<file src="bin\Release\net6.0\MuPDF.NET.dll" target="lib\net6.0\" />
+	<file src="bin\Release\net7.0\MuPDF.NET.dll" target="lib\net7.0\" />
+	<file src="bin\Release\net8.0\MuPDF.NET.dll" target="lib\net8.0\" />
+    <file src="build\net4\MuPDF.NET.targets" target="build\net4\MuPDF.NET.targets" />
+    <!-- Package metadata -->
     <file src="..\LICENSE.md" target="" />
 	  <file src="..\Description.md" target="" />
     <file src="..\logo.png" target="" />

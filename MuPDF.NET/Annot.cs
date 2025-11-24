@@ -682,14 +682,14 @@ namespace MuPDF.NET
                 if (item == "Tf")
                 {
                     font = dat[i - 2].Substring(1);
-                    fsize = float.Parse(dat[i - 1]);
+                    fsize = float.Parse(dat[i - 1], System.Globalization.CultureInfo.InvariantCulture);
                     dat[i] = dat[i - 1] = dat[i - 2] = "";
                     continue;
                 }
 
                 if (item == "g")
                 {
-                    col = new List<float>() { float.Parse(dat[i - 1]) };
+                    col = new List<float>() { float.Parse(dat[i - 1], System.Globalization.CultureInfo.InvariantCulture) };
                     dat[i] = dat[i - 1] = "";
                     continue;
                 }
@@ -699,7 +699,7 @@ namespace MuPDF.NET
                     col = new List<float>();
                     for (int j = i - 3; j < i; j++)
                     {
-                        col.Add(float.Parse(dat[j]));
+                        col.Add(float.Parse(dat[j], System.Globalization.CultureInfo.InvariantCulture));
                     }
                     dat[i] = dat[i - 1] = dat[i - 2] = dat[i - 3] = "";
                     continue;
@@ -710,7 +710,7 @@ namespace MuPDF.NET
                     col = new List<float>();
                     for (int j = i - 4; j < i; j++)
                     {
-                        col.Add(float.Parse(dat[j]));
+                        col.Add(float.Parse(dat[j], System.Globalization.CultureInfo.InvariantCulture));
                     }
 
                     dat[i] = dat[i - 1] = dat[i - 2] = dat[i - 3] = dat[i - 4] = "";
@@ -775,12 +775,14 @@ namespace MuPDF.NET
                 {
                     throw new Exception("bad type: 'buffer'");
                 }
-                Utils.UpdateStream(page.doc(), apObj, buf, 1);
+                PdfDocument pageDoc = page.doc();
+                Utils.UpdateStream(pageDoc, apObj, buf, 1);
                 if (rect != 0)
                 {
                     FzRect bbox = annotObj.pdf_dict_get_rect(new PdfObj("Rect"));
                     apObj.pdf_dict_put_rect(new PdfObj("Rect"), bbox);
                 }
+                pageDoc.Dispose();
             }
             catch (Exception) { }
         }
@@ -811,7 +813,7 @@ namespace MuPDF.NET
         {
             PdfObj annotObj = _nativeAnnotion.pdf_annot_obj();
             PdfPage page = _nativeAnnotion.pdf_annot_page();
-            PdfDocument doc = page.doc();
+            PdfDocument pageDoc = page.doc();
             pdf_annot_type type = _nativeAnnotion.pdf_annot_type();
             float[] cols = ColorFromSequence(fillColor);
             int nCols = cols.Length;
@@ -884,7 +886,7 @@ namespace MuPDF.NET
                 }
                 else if (nCols > 0)
                 {
-                    PdfObj col = doc.pdf_new_array(nCols);
+                    PdfObj col = pageDoc.pdf_new_array(nCols);
                     for (int i = 0; i < nCols; i++)
                     {
                         mupdf.mupdf.pdf_array_push_real(col, cols[i]);
@@ -893,15 +895,17 @@ namespace MuPDF.NET
                 }
                 _nativeAnnotion.pdf_dirty_annot();
                 _nativeAnnotion.pdf_update_annot();
-                doc.m_internal.resynth_required = 0;
+                pageDoc.m_internal.resynth_required = 0;
             }
             catch (Exception e) 
             {
+                pageDoc.Dispose();
                 throw new Exception("cannot update annot:" + e.Message);
             }
 
             if ((opacity < 0 || opacity >= 1) && blendMode == null) // no opacity, no blend_mode
             {
+                pageDoc.Dispose();
                 return true;
             }
 
@@ -914,6 +918,7 @@ namespace MuPDF.NET
                 if (ap.m_internal == null)
                 {
                     // should never happen
+                    pageDoc.Dispose();
                     throw new Exception("bad or missing annot AP/N");
                 }
 
@@ -921,7 +926,7 @@ namespace MuPDF.NET
                 if (resources.m_internal == null)
                     resources = ap.pdf_dict_put_dict(new PdfObj("Resources"), 2);
 
-                PdfObj alp0 = doc.pdf_new_dict(3);
+                PdfObj alp0 = pageDoc.pdf_new_dict(3);
                 if (opacity >= 0 && opacity < 1)
                 {
                     alp0.pdf_dict_put_real(new PdfObj("CA"), opacity);
@@ -945,6 +950,8 @@ namespace MuPDF.NET
             {
                 Console.WriteLine("cannot set opacity or blend mode");
             }
+
+            pageDoc.Dispose();
 
             return true;
         }
@@ -1474,16 +1481,17 @@ namespace MuPDF.NET
             {
                 string s = "";
                 if (stroke.Length == 1)
-                    s = string.Format("[{0}]", stroke[0]);
+                    s = string.Format(System.Globalization.CultureInfo.InvariantCulture, "[{0}]", Utils.FloatToString(stroke[0]));
                 if (stroke.Length == 3)
-                    s = string.Format("[{0} {1} {2}]", stroke[0], stroke[1], stroke[2]);
+                    s = string.Format(System.Globalization.CultureInfo.InvariantCulture, "[{0} {1} {2}]", Utils.FloatToString(stroke[0]), Utils.FloatToString(stroke[1]), Utils.FloatToString(stroke[2]));
                 else
                     s = string.Format(
+                        System.Globalization.CultureInfo.InvariantCulture,
                         "[{0} {1} {2} {3}]",
-                        stroke[0],
-                        stroke[1],
-                        stroke[2],
-                        stroke[3]
+                        Utils.FloatToString(stroke[0]),
+                        Utils.FloatToString(stroke[1]),
+                        Utils.FloatToString(stroke[2]),
+                        Utils.FloatToString(stroke[3])
                     );
                 doc.SetKeyXRef(this.Xref, "C", s);
             }
@@ -1506,15 +1514,15 @@ namespace MuPDF.NET
                 string s = "";
                 if (fill.Length == 1)
                 {
-                    s = string.Format("[{0}]", fill[0]);
+                    s = string.Format(System.Globalization.CultureInfo.InvariantCulture, "[{0}]", Utils.FloatToString(fill[0]));
                 }
                 else if (fill.Length == 3)
                 {
-                    s = string.Format("[{0} {1} {2}]", fill[0], fill[1], fill[2]);
+                    s = string.Format(System.Globalization.CultureInfo.InvariantCulture, "[{0} {1} {2}]", Utils.FloatToString(fill[0]), Utils.FloatToString(fill[1]), Utils.FloatToString(fill[2]));
                 }
                 else
                 {
-                    s = string.Format("[{0} {1} {2} {3}]", fill[0], fill[1], fill[2], fill[3]);
+                    s = string.Format(System.Globalization.CultureInfo.InvariantCulture, "[{0} {1} {2} {3}]", Utils.FloatToString(fill[0]), Utils.FloatToString(fill[1]), Utils.FloatToString(fill[2]), Utils.FloatToString(fill[3]));
                 }
                 doc.SetKeyXRef(this.Xref, "IC", s);
             }
@@ -1584,10 +1592,11 @@ namespace MuPDF.NET
             PdfObj annotObj = annot.pdf_annot_obj();
             PdfPage page = annot.pdf_annot_page();
 
-            if (xref < 1 || xref >= page.doc().pdf_xref_len())
+            PdfDocument pageDoc = page.doc();
+            if (xref < 1 || xref >= pageDoc.pdf_xref_len())
                 throw new Exception(Utils.ErrorMessages["MSG_BAD_XREF"]);
 
-            PdfObj irt = page.doc().pdf_new_indirect(xref, 0);
+            PdfObj irt = pageDoc.pdf_new_indirect(xref, 0);
             PdfObj subt = irt.pdf_dict_get(new PdfObj("Subtype"));
             PdfAnnotType irtSubt = (PdfAnnotType)
                 mupdf.mupdf.pdf_annot_type_from_string(subt.pdf_to_name());
@@ -1595,6 +1604,8 @@ namespace MuPDF.NET
                 throw new Exception(Utils.ErrorMessages["MSG_IS_NO_ANNOT"]);
 
             annotObj.pdf_dict_put(new PdfObj("IRT"), irt);
+
+            pageDoc.Dispose();
         }
 
         public void SetLanguage(string language)
@@ -1722,7 +1733,9 @@ namespace MuPDF.NET
             else
             {
                 PdfPage page = _nativeAnnotion.pdf_annot_page();
-                Document doc = (page.m_internal == null) ? null : new Document(page.doc());
+                PdfDocument pageDoc = page.doc();
+                Document doc = (page.m_internal == null) ? null : new Document(pageDoc);
+                pageDoc.Dispose();
                 ret = new Page(page, doc);
 
                 Parent = ret;
@@ -1955,7 +1968,7 @@ namespace MuPDF.NET
                     apUpdated = true;
                     nTab =
                         borderWidth > 0
-                            ? new List<string>() { string.Format("{0} w", borderWidth) }
+                            ? new List<string>() { string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0} w", borderWidth) }
                             : new List<string>();
                     for (int i = 0; i < apTab.Count; i++)
                     {
@@ -2142,14 +2155,14 @@ namespace MuPDF.NET
             Rect r = new Rect(M, M) + new Rect(-d, -d, d, d); // the square
             // the square makes line longer by (2*shift - 1)*width
             Point p = r.TopLeft * im;
-            string ap = string.Format("q\n{0}{1} {2} m\n", opacity, p.X, p.Y);
+            string ap = string.Format(System.Globalization.CultureInfo.InvariantCulture, "q\n{0}{1} {2} m\n", opacity, Utils.FloatToString(p.X), Utils.FloatToString(p.Y));
             p = r.TopRight * im;
-            ap += string.Format("{0} {1} l\n", p.X, p.Y);
+            ap += string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0} {1} l\n", Utils.FloatToString(p.X), Utils.FloatToString(p.Y));
             p = r.BottomRight * im;
-            ap += string.Format("{0} {1} l\n", p.X, p.Y);
+            ap += string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0} {1} l\n", Utils.FloatToString(p.X), Utils.FloatToString(p.Y));
             p = r.BottomLeft * im;
-            ap += string.Format("{0} {1} l\n", p.X, p.Y);
-            ap += string.Format("{0} w\n", w);
+            ap += string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0} {1} l\n", Utils.FloatToString(p.X), Utils.FloatToString(p.Y));
+            ap += string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0} w\n", Utils.FloatToString(w));
             ap += scol + fcol + "b\nQ\n";
             return ap;
         }
@@ -2179,14 +2192,14 @@ namespace MuPDF.NET
             Rect r = new Rect(M, M) + new Rect(-d, -d, d, d); // the square
             // the square makes line longer by(2 * shift - 1)*width
             Point p = (r.TopLeft + (r.BottomLeft - r.TopLeft) * 0.5f) * im;
-            string ap = string.Format("q\n{0}{1} {2} m\n", opacity, p.X, p.Y);
+            string ap = string.Format(System.Globalization.CultureInfo.InvariantCulture, "q\n{0}{1} {2} m\n", opacity, Utils.FloatToString(p.X), Utils.FloatToString(p.Y));
             p = (r.TopLeft + (r.TopRight - r.TopLeft) * 0.5f) * im;
-            ap += string.Format("{0} {1} l\n", p.X, p.Y);
+            ap += string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0} {1} l\n", Utils.FloatToString(p.X), Utils.FloatToString(p.Y));
             p = (r.TopRight + (r.BottomLeft - r.BottomRight) * 0.5f) * im;
-            ap += string.Format("{0} {1} l\n", p.X, p.Y);
+            ap += string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0} {1} l\n", Utils.FloatToString(p.X), Utils.FloatToString(p.Y));
             p = (r.BottomRight + (r.BottomLeft - r.BottomRight) * 0.5f) * im;
-            ap += string.Format("{0} {1} l\n", p.X, p.Y);
-            ap += string.Format("{0} w\n", w);
+            ap += string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0} {1} l\n", Utils.FloatToString(p.X), Utils.FloatToString(p.Y));
+            ap += string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0} w\n", Utils.FloatToString(w));
             ap += scol + fcol + "b\nQ\n";
             return ap;
         }
@@ -2220,10 +2233,10 @@ namespace MuPDF.NET
             p1 *= im;
             p2 *= im;
             p3 *= im;
-            string ap = "\nq\n" + opacity + p1.X.ToString() + " " + p1.Y.ToString() + " m\n";
-            ap += p2.X.ToString() + " " + p2.Y.ToString() + " l\n";
-            ap += p3.X.ToString() + " " + p3.Y.ToString() + " l\n";
-            ap += w.ToString() + " w\n";
+            string ap = "\nq\n" + opacity + Utils.FloatToString(p1.X) + " " + Utils.FloatToString(p1.Y) + " m\n";
+            ap += Utils.FloatToString(p2.X) + " " + Utils.FloatToString(p2.Y) + " l\n";
+            ap += Utils.FloatToString(p3.X) + " " + Utils.FloatToString(p3.Y) + " l\n";
+            ap += Utils.FloatToString(w) + " w\n";
             ap += scol + "S\nQ\n";
             return ap;
         }
@@ -2254,10 +2267,10 @@ namespace MuPDF.NET
             p1 *= im;
             p2 *= im;
             p3 *= im;
-            string ap = $"\nq\n{opacity}{p1.X} {p1.Y} m\n";
-            ap += $"{p2.X} {p2.Y} l\n";
-            ap += $"{p3.X} {p3.Y} l\n";
-            ap += $"{w} w\n";
+            string ap = $"\nq\n{opacity}{Utils.FloatToString(p1.X)} {Utils.FloatToString(p1.Y)} m\n";
+            ap += $"{Utils.FloatToString(p2.X)} {Utils.FloatToString(p2.Y)} l\n";
+            ap += $"{Utils.FloatToString(p3.X)} {Utils.FloatToString(p3.Y)} l\n";
+            ap += $"{Utils.FloatToString(w)} w\n";
             ap += $"{scol}{fcol}b\nQ\n";
             return ap;
         }
@@ -2285,9 +2298,9 @@ namespace MuPDF.NET
             var M = lr ? R : L;
             var top = new Point(M.X, M.Y - d / 2.0f) * im;
             var bot = new Point(M.X, M.Y + d / 2.0f) * im;
-            var ap = $"\nq\n{opacity}{top.X} {top.Y} m\n";
-            ap += $"{bot.X} {bot.Y} l\n";
-            ap += $"{w} w\n";
+            var ap = $"\nq\n{opacity}{Utils.FloatToString(top.X)} {Utils.FloatToString(top.Y)} m\n";
+            ap += $"{Utils.FloatToString(bot.X)} {Utils.FloatToString(bot.Y)} l\n";
+            ap += $"{Utils.FloatToString(w)} w\n";
             ap += $"{scol}s\nQ\n";
             return ap;
         }
@@ -2320,10 +2333,10 @@ namespace MuPDF.NET
             p1 *= im;
             p2 *= im;
             p3 *= im;
-            string ap = "\nq\n" + opacity + p1.X.ToString() + " " + p1.Y.ToString() + " m\n";
-            ap += p2.X.ToString() + " " + p2.Y.ToString() + " l\n";
-            ap += p3.X.ToString() + " " + p3.Y.ToString() + " l\n";
-            ap += w.ToString() + " w\n";
+            string ap = "\nq\n" + opacity + Utils.FloatToString(p1.X) + " " + Utils.FloatToString(p1.Y) + " m\n";
+            ap += Utils.FloatToString(p2.X) + " " + Utils.FloatToString(p2.Y) + " l\n";
+            ap += Utils.FloatToString(p3.X) + " " + Utils.FloatToString(p3.Y) + " l\n";
+            ap += Utils.FloatToString(w) + " w\n";
             ap += scol + fcol + "S\nQ\n";
 
             return ap;
@@ -2355,10 +2368,10 @@ namespace MuPDF.NET
             p1 *= im;
             p2 *= im;
             p3 *= im;
-            string ap = "\nq\n" + opacity + p1.X + " " + p1.Y + " m\n";
-            ap += p2.X + " " + p2.Y + " l\n";
-            ap += p3.X + " " + p3.Y + " l\n";
-            ap += w + " w\n";
+            string ap = "\nq\n" + opacity + Utils.FloatToString(p1.X) + " " + Utils.FloatToString(p1.Y) + " m\n";
+            ap += Utils.FloatToString(p2.X) + " " + Utils.FloatToString(p2.Y) + " l\n";
+            ap += Utils.FloatToString(p3.X) + " " + Utils.FloatToString(p3.Y) + " l\n";
+            ap += Utils.FloatToString(w) + " w\n";
             ap += scol + fcol + "b\nQ\n";
             
             return ap;
@@ -2387,9 +2400,9 @@ namespace MuPDF.NET
             Rect r = new Rect(M.X - rw, M.Y - 2 * w, M.X + rw, M.Y + 2 * w);
             Point top = r.TopLeft * im;
             Point bot = r.BottomRight * im;
-            string ap = "\nq\n" + opacity + top.X + " " + top.Y + " m\n";
-            ap += bot.X + " " + bot.Y + " l\n";
-            ap += w + " w\n";
+            string ap = "\nq\n" + opacity + Utils.FloatToString(top.X) + " " + Utils.FloatToString(top.Y) + " m\n";
+            ap += Utils.FloatToString(bot.X) + " " + Utils.FloatToString(bot.Y) + " l\n";
+            ap += Utils.FloatToString(w) + " w\n";
             ap += scol + "b\nQ\n";
             
             return ap;
@@ -2427,7 +2440,7 @@ namespace MuPDF.NET
                     r.BottomRight * im,
                     r.BottomLeft * im
                 );
-            ap += string.Format("{0} w\n", w);
+            ap += string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0} w\n", Utils.FloatToString(w));
             ap += scol + fcol + "b\nQ\n";
             
             return ap;
@@ -2437,7 +2450,10 @@ namespace MuPDF.NET
         {
             string f = "{0} {1} {2} {3} {4} {5} c\n";
             
-            return string.Format(f, p.X, p.Y, q.X, q.Y, r.X, r.Y);
+            return string.Format(System.Globalization.CultureInfo.InvariantCulture, f, 
+                Utils.FloatToString(p.X), Utils.FloatToString(p.Y), 
+                Utils.FloatToString(q.X), Utils.FloatToString(q.Y), 
+                Utils.FloatToString(r.X), Utils.FloatToString(r.Y));
         }
 
         internal static string oval_string(Point p1, Point p2, Point p3, Point p4)
@@ -2456,7 +2472,7 @@ namespace MuPDF.NET
             Point ul1 = mu + (p4 - mu) * kappa;
             Point ul2 = ml + (p4 - ml) * kappa;
 
-            string ap = string.Format("{0} {1} m\n", ml.X, ml.Y);
+            string ap = string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0} {1} m\n", Utils.FloatToString(ml.X), Utils.FloatToString(ml.Y));
             ap += Annot.bezier(ol1, ol2, mo);
             ap += Annot.bezier(or1, or2, mr);
             ap += Annot.bezier(ur1, ur2, mu);
@@ -2484,7 +2500,7 @@ namespace MuPDF.NET
             string[] scStr = new string[sc.Length];
             for (int i = 0; i < sc.Length; i++)
             {
-                scStr[i] = sc[i].ToString();
+                scStr[i] = Utils.FloatToString(sc[i]);
             }
             
             string scol = string.Join(" ", scStr) + " RG\n";
@@ -2500,7 +2516,7 @@ namespace MuPDF.NET
             string[] fcolStr = new string[fc.Length];
             for (int i = 0; i < fc.Length; i++)
             {
-                fcolStr[i] = fc[i].ToString();
+                fcolStr[i] = Utils.FloatToString(fc[i]);
             }
             string fcol = string.Join(" ", fcolStr) + " rg\n";
 
@@ -2540,7 +2556,7 @@ namespace MuPDF.NET
         {
             string s = "";
 
-            s = string.Format("{0} ", cs);
+            s = string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0} ", cs);
             if (code == "c")
                 return s + "G ";
 
@@ -2556,7 +2572,7 @@ namespace MuPDF.NET
             Utils.CheckColor(cs);
             if (cs.Length == 1)
             {
-                s = string.Format("{0} ", cs[0]);
+                s = string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0} ", Utils.FloatToString(cs[0]));
                 if (code == "c")
                     return s + "G ";
                 return s + "g ";
@@ -2564,13 +2580,13 @@ namespace MuPDF.NET
 
             if (cs.Length == 3)
             {
-                s = string.Format("{0} {1} {2} ", cs[0], cs[1], cs[2]);
+                s = string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0} {1} {2} ", Utils.FloatToString(cs[0]), Utils.FloatToString(cs[1]), Utils.FloatToString(cs[2]));
                 if (code == "c")
                     return s + "RG ";
                 return s + "rg ";
             }
 
-            s = string.Format("{0} {1} {2} {3} ", cs[0], cs[1], cs[2], cs[3]);
+            s = string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0} {1} {2} {3} ", Utils.FloatToString(cs[0]), Utils.FloatToString(cs[1]), Utils.FloatToString(cs[2]), Utils.FloatToString(cs[3]));
             if (code == "c")
                 return s + "K ";
             

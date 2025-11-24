@@ -276,13 +276,13 @@ namespace MuPDF.NET
                 if (item == "Tf")
                 {
                     font = dat[i - 2].Substring(1);
-                    fontSize = float.Parse(dat[i - 1]);
+                    fontSize = float.Parse(dat[i - 1], System.Globalization.CultureInfo.InvariantCulture);
                     dat[i] = dat[i - 1] = dat[i - 2] = "";
                     continue;
                 }
                 if (item == "g")
                 {
-                    col = new float[] { float.Parse(dat[i - 1]) };
+                    col = new float[] { float.Parse(dat[i - 1], System.Globalization.CultureInfo.InvariantCulture) };
                     dat[i] = dat[i - 1] = "";
                     continue;
                 }
@@ -290,7 +290,7 @@ namespace MuPDF.NET
                 {
                     col = new float[3];
                     for (int j = i - 3; j < i; j++)
-                        col[j - i + 3] = float.Parse(dat[j]);
+                        col[j - i + 3] = float.Parse(dat[j], System.Globalization.CultureInfo.InvariantCulture);
                     dat[i] = dat[i - 1] = dat[i - 2] = dat[i - 3] = "";
                     continue;
                 }
@@ -532,12 +532,12 @@ namespace MuPDF.NET
             string fmt = "";
 
             if (TextColor != null && TextColor.Length == 3)
-                fmt = $"{TextColor[0]} {TextColor[1]} {TextColor[2]} rg /" + "{0} {1} Tf" + TextDa;
+                fmt = $"{Utils.FloatToString(TextColor[0])} {Utils.FloatToString(TextColor[1])} {Utils.FloatToString(TextColor[2])} rg /" + "{0} {1} Tf" + TextDa;
             else if (TextColor.Length == 1)
-                fmt = $"{TextColor[0]} g /" + "{0} {1} Tf" + TextDa;
+                fmt = $"{Utils.FloatToString(TextColor[0])} g /" + "{0} {1} Tf" + TextDa;
             else if (TextColor.Length == 4)
-                fmt = $"{TextColor[0]} {TextColor[1]} {TextColor[2]} {TextColor[3]} k /" + "{0} {1} Tf" + TextDa;
-            TextDa = string.Format(fmt, TextFont, TextFontSize);
+                fmt = $"{Utils.FloatToString(TextColor[0])} {Utils.FloatToString(TextColor[1])} {Utils.FloatToString(TextColor[2])} {Utils.FloatToString(TextColor[3])} k /" + "{0} {1} Tf" + TextDa;
+            TextDa = string.Format(System.Globalization.CultureInfo.InvariantCulture, fmt, TextFont, Utils.FloatToString(TextFontSize));
 
             // if widget has a '/AA/C' script, make sure it is in the '/CO'
             // array of the '/AcroForm' dictionary.

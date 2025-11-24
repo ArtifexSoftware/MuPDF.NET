@@ -1,13 +1,15 @@
 ﻿using mupdf;
+using SkiaSharp;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace MuPDF.NET
 {
-    public class Pixmap
+    public class Pixmap : IDisposable
     {
         static Pixmap()
         {
@@ -15,6 +17,7 @@ namespace MuPDF.NET
         }
 
         private FzPixmap _nativePixmap;
+        private bool _disposed;
 
         public Pixmap(ColorSpace cs, IRect irect, int alpha = 0)
         {
@@ -399,6 +402,142 @@ namespace MuPDF.NET
                 throw new Exception("arg0 must be `raw` or arg1 must be not null.");
         }
 
+        public static Pixmap ApplyImageFilters(Pixmap pixmap, ImageFilterPipeline pipeline)
+        {
+            if (pipeline == null || pixmap == null)
+                return pixmap;
+
+            var filters = pipeline.Filters;
+            if (filters == null || filters.Count == 0)
+                return pixmap;
+
+            byte[] sourceBytes = pixmap.ToBytes("png", 95);
+            if (sourceBytes == null || sourceBytes.Length == 0)
+                return pixmap;
+
+            SKBitmap workingBitmap = SKBitmap.Decode(sourceBytes);
+            if (workingBitmap == null)
+                return pixmap;
+
+            try
+            {
+                pipeline.Apply(ref workingBitmap);
+                ImageFilter.EnsureColorType(ref workingBitmap, SKColorType.Rgb888x, SKAlphaType.Opaque);
+
+                using (var image = SKImage.FromBitmap(workingBitmap))
+                using (var data = image.Encode(SKEncodedImageFormat.Png, 100))
+                {
+                    var bytes = data.ToArray();
+                    if (bytes == null || bytes.Length == 0)
+                        return pixmap;
+
+                    pixmap.Dispose();
+                    return new Pixmap(bytes);
+                }
+            }
+            finally
+            {
+                workingBitmap.Dispose();
+            }
+        }
+
+        /// <summary>
+        /// Extract text from this Pixmap using OCR (Optical Character Recognition) with optional image preprocessing filters.
+        /// </summary>
+        /// <param name="imageFilters">Optional image preprocessing filters to apply before OCR. If null, no filters are applied.</param>
+        /// <param name="language">OCR language code (e.g., "eng" for English). Default is "eng".</param>
+        /// <param name="tessdata">Path to Tesseract tessdata directory. If null, uses TESSDATA_PREFIX environment variable.</param>
+        /// <param name="compress">Whether to compress the intermediate OCR PDF. Default is true.</param>
+        /// <param name="flags">Text extraction flags. Default is 0 (no flags).</param>
+        /// <returns>The extracted text as a string.</returns>
+        /// <exception cref="Exception">Thrown if OCR support is not available or if OCR processing fails.</exception>
+        /// <example>
+        /// <code>
+        /// // Extract text with image filters
+        /// var pipeline = new ImageFilterPipeline();
+        /// pipeline.AddGrayscale();
+        /// pipeline.AddDeskew();
+        /// string text = pixmap.GetTextFromOcr(pipeline, language: "eng");
+        /// 
+        /// // Extract text without filters
+        /// string text = pixmap.GetTextFromOcr();
+        /// </code>
+        /// </example>
+        public string GetTextFromOcr(
+            ImageFilterPipeline imageFilters = null,
+            string language = "eng",
+            string tessdata = null,
+            bool compress = true,
+            int flags = 0
+        )
+        {
+            if (string.IsNullOrEmpty(Utils.TESSDATA_PREFIX) && string.IsNullOrEmpty(tessdata))
+                throw new Exception("No OCR support: TESSDATA_PREFIX not set");
+
+            // Create a working copy to avoid modifying/disposing the original pixmap
+            Pixmap processedPixmap = new Pixmap(this.ToBytes("png", 95));
+            bool disposeProcessedPixmap = true;
+
+            try
+            {
+                // Apply image filters if provided
+                if (imageFilters != null)
+                {
+                    var filtered = ApplyImageFilters(processedPixmap, imageFilters);
+                    // ApplyImageFilters already disposes the input, so processedPixmap is already disposed
+                    processedPixmap = filtered;
+                }
+
+                // Ensure pixmap is in RGB format for OCR
+                if (processedPixmap.N - processedPixmap.Alpha != 3)
+                {
+                    var tempPixmap = processedPixmap;
+                    processedPixmap = new Pixmap(new ColorSpace(Utils.CS_RGB), processedPixmap);
+                    tempPixmap.Dispose();
+                }
+
+                // Remove alpha channel if present
+                if (processedPixmap.Alpha != 0)
+                {
+                    var tempPixmap = processedPixmap;
+                    processedPixmap = new Pixmap(processedPixmap, 0);
+                    tempPixmap.Dispose();
+                }
+
+                // Perform OCR
+                byte[] ocrPdfBytes = processedPixmap.PdfOCR2Bytes(compress, language, tessdata);
+                if (ocrPdfBytes == null || ocrPdfBytes.Length == 0)
+                    throw new Exception("Failed to generate OCR PDF");
+
+                // Create document from OCR PDF bytes
+                Document ocrDoc = null;
+                Page ocrPage = null;
+                TextPage textPage = null;
+
+                try
+                {
+                    ocrDoc = new Document("pdf", ocrPdfBytes);
+                    ocrPage = ocrDoc.LoadPage(0);
+                    textPage = ocrPage.GetTextPage(flags: flags);
+                    return textPage.ExtractText();
+                }
+                finally
+                {
+                    textPage?.Dispose();
+                    ocrPage?.Dispose();
+                    ocrDoc?.Close();
+                }
+            }
+            finally
+            {
+                // Dispose processed pixmap if we created it
+                if (disposeProcessedPixmap && processedPixmap != null)
+                {
+                    processedPixmap.Dispose();
+                }
+            }
+        }
+
         public Pixmap(PdfDocument doc, int xref)
         {
             int xrefLen = doc.pdf_xref_len();
@@ -767,8 +906,17 @@ namespace MuPDF.NET
                 opts.datadir_set2(tessdata);
             }
 
-            FilePtrOutput output = new FilePtrOutput(filename);
-            output.fz_write_pixmap_as_pdfocr(pix, opts);
+            FilePtrOutput output = null;
+            try
+            {
+                output = new FilePtrOutput(filename);
+                output.fz_write_pixmap_as_pdfocr(pix, opts);
+                output.fz_close_output();
+            }
+            finally
+            {
+                output?.Dispose();
+            }
         }
 
         /// <summary>
@@ -1181,13 +1329,29 @@ namespace MuPDF.NET
             return byteStream.ToArray();
         }
 
+        ~Pixmap()
+        {
+            Dispose(false);
+        }
+
         public void Dispose()
         {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (_disposed)
+                return;
+
             if (_nativePixmap != null)
             {
                 _nativePixmap.Dispose();
                 _nativePixmap = null;
             }
+
+            _disposed = true;
         }
     }
 

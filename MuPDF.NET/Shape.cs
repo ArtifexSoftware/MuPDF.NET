@@ -295,7 +295,7 @@ namespace MuPDF.NET
             {
                 Matrix m1 = new Matrix(1, 0, 0, 1, morph.P.X + X, height - morph.P.Y - Y);
                 Matrix mat = ~m1 * morph.M * m1;
-                cm = $"{mat.A} {mat.B} {mat.C} {mat.D} {mat.E} {mat.F} cm\n";
+                cm = $"{Utils.FloatToString(mat.A)} {Utils.FloatToString(mat.B)} {Utils.FloatToString(mat.C)} {Utils.FloatToString(mat.D)} {Utils.FloatToString(mat.E)} {Utils.FloatToString(mat.F)} cm\n";
             }
             else cm = "";
 
@@ -340,11 +340,11 @@ namespace MuPDF.NET
             else
                 alpha = $"/{alpha} gs\n";
 
-            string nres = $"\nq\n{bdc}{alpha}BT\n{cm}1 0 0 1 {left} {top} Tm\n/{fName} {fontSize} Tf ";
+            string nres = $"\nq\n{bdc}{alpha}BT\n{cm}1 0 0 1 {Utils.FloatToString(left)} {Utils.FloatToString(top)} Tm\n/{fName} {Utils.FloatToString(fontSize)} Tf ";
             if (renderMode > 0)
                 nres += $"{renderMode} Tr ";
             if (borderWidth != 1)
-                nres += $"{borderWidth} w ";
+                nres += $"{Utils.FloatToString(borderWidth)} w ";
             if (color != null)
                 nres += colorStr;
             if (fill != null)
@@ -355,7 +355,7 @@ namespace MuPDF.NET
             int nLines = 1;
             string template = "TJ\n0 -{0} TD\n";
             if (text.Count > 1)
-                nres += string.Format(template, lheight);
+                nres += string.Format(System.Globalization.CultureInfo.InvariantCulture, template, Utils.FloatToString(lheight));
             else nres += "TJ";
 
             for (int i = 1; i < text.Count; i++)
@@ -415,13 +415,13 @@ namespace MuPDF.NET
             if (LastPoint == null || !LastPoint.EqualTo(p1))
             {
                 Point t = p1 * IPctm;
-                DrawCont += $"{t.X} {t.Y} m\n";
+                DrawCont += $"{Utils.FloatToString(t.X)} {Utils.FloatToString(t.Y)} m\n";
             }
 
             Point t2 = p2 * IPctm;
             Point t3 = p3 * IPctm;
             Point t4 = p4 * IPctm;
-            DrawCont += $"{t2.X} {t2.Y} {t3.X} {t3.Y} {t4.X} {t4.Y} c\n";
+            DrawCont += $"{Utils.FloatToString(t2.X)} {Utils.FloatToString(t2.Y)} {Utils.FloatToString(t3.X)} {Utils.FloatToString(t3.Y)} {Utils.FloatToString(t4.X)} {Utils.FloatToString(t4.Y)} c\n";
 
             UpdateRect(p1);
             UpdateRect(p2);
@@ -470,7 +470,7 @@ namespace MuPDF.NET
             if (LastPoint == null || !LastPoint.EqualTo(point))
             {
                 Point t = point * IPctm;
-                DrawCont += string.Format(l3, t.X, t.Y);
+                DrawCont += string.Format(System.Globalization.CultureInfo.InvariantCulture, l3, Utils.FloatToString(t.X), Utils.FloatToString(t.Y));
                 LastPoint = point;
             }
 
@@ -501,7 +501,7 @@ namespace MuPDF.NET
                 Point t1 = cp1 * IPctm;
                 Point t2 = cp2 * IPctm;
                 Point t3 = q * IPctm;                                                                                                        
-                DrawCont += string.Format(l4, t1.X, t1.Y, t2.X, t2.Y, t3.X, t3.Y);
+                DrawCont += string.Format(System.Globalization.CultureInfo.InvariantCulture, l4, Utils.FloatToString(t1.X), Utils.FloatToString(t1.Y), Utils.FloatToString(t2.X), Utils.FloatToString(t2.Y), Utils.FloatToString(t3.X), Utils.FloatToString(t3.Y));
                 betar -= w90;
                 alfa += w90;
                 p = q;
@@ -525,17 +525,17 @@ namespace MuPDF.NET
                 Point t1 = cp1 * IPctm;
                 Point t2 = cp2 * IPctm;
                 Point t3 = q * IPctm;
-                DrawCont += string.Format(l4, t1.X, t1.Y, t2.X, t2.Y, t3.X, t3.Y);
+                DrawCont += string.Format(System.Globalization.CultureInfo.InvariantCulture, l4, Utils.FloatToString(t1.X), Utils.FloatToString(t1.Y), Utils.FloatToString(t2.X), Utils.FloatToString(t2.Y), Utils.FloatToString(t3.X), Utils.FloatToString(t3.Y));
             }
             
             if (fullSector)
             {
                 Point t = point * IPctm;
-                DrawCont += string.Format(l3, t.X, t.Y);
+                DrawCont += string.Format(System.Globalization.CultureInfo.InvariantCulture, l3, Utils.FloatToString(t.X), Utils.FloatToString(t.Y));
                 t = center * IPctm;
-                DrawCont += string.Format(l5, t.X, t.Y);
+                DrawCont += string.Format(System.Globalization.CultureInfo.InvariantCulture, l5, Utils.FloatToString(t.X), Utils.FloatToString(t.Y));
                 t = q * IPctm;
-                DrawCont += string.Format(l5, t.X, t.Y);
+                DrawCont += string.Format(System.Globalization.CultureInfo.InvariantCulture, l5, Utils.FloatToString(t.X), Utils.FloatToString(t.Y));
             }
 
             LastPoint = q;
@@ -607,13 +607,13 @@ namespace MuPDF.NET
             if (LastPoint == null || !LastPoint.EqualTo(p1))
             {
                 t = p1 * IPctm;
-                DrawCont += $"{t.X} {t.Y} m\n";
+                DrawCont += $"{Utils.FloatToString(t.X)} {Utils.FloatToString(t.Y)} m\n";
                 LastPoint = p1;
                 UpdateRect(p1);
             }
 
             t = p2 * IPctm;
-            DrawCont += $"{t.X} {t.Y} l\n";
+            DrawCont += $"{Utils.FloatToString(t.X)} {Utils.FloatToString(t.Y)} l\n";
             UpdateRect(p2);
             LastPoint = p2;
             return LastPoint;
@@ -646,7 +646,7 @@ namespace MuPDF.NET
             if (LastPoint == null || !LastPoint.EqualTo(ml))
             {
                 Point t = ml * IPctm;
-                DrawCont += $"{t.X} {t.Y} m\n";
+                DrawCont += $"{Utils.FloatToString(t.X)} {Utils.FloatToString(t.Y)} m\n";
                 LastPoint = ml;
             }
 
@@ -672,14 +672,14 @@ namespace MuPDF.NET
                     if (LastPoint == null || !LastPoint.EqualTo(points[i]))
                     {
                         Point t = points[i] * IPctm;
-                        DrawCont += $"{t.X} {t.Y} m\n";
+                        DrawCont += $"{Utils.FloatToString(t.X)} {Utils.FloatToString(t.Y)} m\n";
                         LastPoint = points[i];
                     }
                 }
                 else
                 {
                     Point t = points[i] * IPctm;
-                    DrawCont += $"{t.X} {t.Y} l\n";
+                    DrawCont += $"{Utils.FloatToString(t.X)} {Utils.FloatToString(t.Y)} l\n";
                 }
                 UpdateRect(points[i]);
             }
@@ -706,7 +706,7 @@ namespace MuPDF.NET
         public Point DrawRect(Rect rect, float radius)
         {
             Point t = rect.BottomLeft * IPctm;
-            DrawCont += $"{t.X} {t.Y} {rect.Width} {rect.Height} re\n";
+            DrawCont += $"{Utils.FloatToString(t.X)} {Utils.FloatToString(t.Y)} {Utils.FloatToString(rect.Width)} {Utils.FloatToString(rect.Height)} re\n";
             UpdateRect(rect);
             LastPoint = rect.TopLeft;
             return LastPoint;
@@ -851,7 +851,7 @@ namespace MuPDF.NET
             if (!string.IsNullOrEmpty(alpha))
                 DrawCont = $"/{alpha} gs\n" + DrawCont;
             if (width != 1 && width != 0)
-                DrawCont += $"{width} w\n";
+                DrawCont += $"{Utils.FloatToString(width)} w\n";
 
             if (lineCap != 0)
                 DrawCont = $"{lineCap} J\n" + DrawCont;
@@ -902,7 +902,7 @@ namespace MuPDF.NET
             {
                 Matrix m1 = new Matrix(1, 0, 0, 1, morph.P.X + X, Height - morph.P.Y - Y);
                 Matrix mat = ~m1 * morph.M * m1;
-                DrawCont = $"{mat.A} {mat.B} {mat.C} {mat.D} {mat.E} {mat.F} cm\n" + DrawCont;
+                DrawCont = $"{Utils.FloatToString(mat.A)} {Utils.FloatToString(mat.B)} {Utils.FloatToString(mat.C)} {Utils.FloatToString(mat.D)} {Utils.FloatToString(mat.E)} {Utils.FloatToString(mat.F)} cm\n" + DrawCont;
             }
 
             TotalCont += "\nq\n" + DrawCont + "Q\n";
@@ -1149,7 +1149,7 @@ namespace MuPDF.NET
             {
                 Matrix m1 = new Matrix(1, 0, 0, 1, morph.P.X + X, Height - morph.P.Y - Y);
                 Matrix mat = ~m1 * morph.M * m1;
-                cm = $"{mat.A} {mat.B} {mat.C} {mat.D} {mat.E} {mat.F} cm\n";
+                cm = $"{Utils.FloatToString(mat.A)} {Utils.FloatToString(mat.B)} {Utils.FloatToString(mat.C)} {Utils.FloatToString(mat.D)} {Utils.FloatToString(mat.E)} {Utils.FloatToString(mat.F)} cm\n";
             }
 
             int progr = 1;
@@ -1310,18 +1310,18 @@ namespace MuPDF.NET
                     top = -height + pnt.Y + Y;
                 }
 
-                nres += string.Format(template, left, top, fname, fontSize);
+                nres += string.Format(System.Globalization.CultureInfo.InvariantCulture, template, Utils.FloatToString(left), Utils.FloatToString(top), fname, Utils.FloatToString(fontSize));
                 if (renderMode > 0)
                     nres += $"{renderMode} Tr ";
                 if (align == 3)
-                    nres += $"{spacing} Tw ";
+                    nres += $"{Utils.FloatToString(spacing)} Tw ";
 
                 if (color != null)
                     nres += colorStr;
                 if (fill != null)
                     nres += fillStr;
                 if (borderWidth != 1)
-                    nres += $"{borderWidth} w ";
+                    nres += $"{Utils.FloatToString(borderWidth)} w ";
                 nres += $"{Utils.GetTJstr(text_t[i], tj_glyphs, simple, ordering)}TJ\n";
             }
             nres += $"ET\n{emc}Q\n";
