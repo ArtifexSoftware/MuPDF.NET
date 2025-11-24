@@ -1411,14 +1411,14 @@ namespace MuPDF.NET
             if (nCol < 1)
                 buf += "0 g ";
             else if (nCol == 1)
-                buf += $"{col[0]:g} g ";
+                buf += $"{FloatToString(col[0])} g ";
             else if (nCol == 2)
                 Debug.Assert(false);
             else if (nCol == 3)
-                buf += $"{col[0]:g} {col[1]:g} {col[2]:g} rg ";
+                buf += $"{FloatToString(col[0])} {FloatToString(col[1])} {FloatToString(col[2])} rg ";
             else
-                buf += $"{col[0]:g} {col[1]:g} {col[2]:g} {col[3]:g} k ";
-            buf += $"/{ExpandFontName(fontName)} {fontSize} Tf";
+                buf += $"{FloatToString(col[0])} {FloatToString(col[1])} {FloatToString(col[2])} {FloatToString(col[3])} k ";
+            buf += $"/{ExpandFontName(fontName)} {FloatToString(fontSize)} Tf";
             annot.pdf_annot_obj().pdf_dict_put_text_string(new PdfObj("DA"), buf);
         }
 
@@ -3385,17 +3385,17 @@ namespace MuPDF.NET
             string s = "";
             if (c.Length == 1)
             {
-                s = $"{c[0]} ";
+                s = $"{FloatToString(c[0])} ";
                 return s + (f == "c" ? "G " : "g ");
             }
 
             if (c.Length == 3)
             {
-                s = $"{c[0]} {c[1]} {c[2]} ";
+                s = $"{FloatToString(c[0])} {FloatToString(c[1])} {FloatToString(c[2])} ";
                 return s + (f == "c" ? "RG " : "rg ");
             }
 
-            s = $"{c[0]} {c[1]} {c[2]} {c[3]} ";
+            s = $"{FloatToString(c[0])} {FloatToString(c[1])} {FloatToString(c[2])} {FloatToString(c[3])} ";
             return s + (f == "c" ? "K " : "k ");
         }
 
@@ -3404,7 +3404,7 @@ namespace MuPDF.NET
             float[] color = { c, };
             Utils.CheckColor(color);
             string s = "";
-            s = $"{color[0]} ";
+            s = $"{FloatToString(color[0])} ";
             return s + (f == "c" ? "G " : "g ");
         }
 
@@ -3761,7 +3761,7 @@ namespace MuPDF.NET
                 throw new Exception("should contain 'From' in Link");
 
             Rect r = link.From * ictm;
-            string rectStr = $"{r.X0} {r.Y0} {r.X1} {r.Y1}";
+            string rectStr = $"{Utils.FloatToString(r.X0)} {Utils.FloatToString(r.Y0)} {Utils.FloatToString(r.X1)} {Utils.FloatToString(r.Y1)}";
             string txt;
 
             string annot = "";
@@ -3776,12 +3776,12 @@ namespace MuPDF.NET
                     Matrix destCtm = destPage.TransformationMatrix;
                     Matrix destIctm = ~destCtm;
                     Point ipnt = pnt * destIctm;
-                    annot = string.Format(txt, xref, ipnt.X, ipnt.Y, link.Zoom, rectStr);
+                    annot = string.Format(System.Globalization.CultureInfo.InvariantCulture, txt, xref, Utils.FloatToString(ipnt.X), Utils.FloatToString(ipnt.Y), Utils.FloatToString(link.Zoom), rectStr);
                 }
                 else
                 {
                     txt = Utils.AnnotSkel["goto2"];
-                    annot = string.Format(txt, Utils.GetPdfString(link.ToStr), rectStr);
+                    annot = string.Format(System.Globalization.CultureInfo.InvariantCulture, txt, Utils.GetPdfString(link.ToStr), rectStr);
                 }
             else if (link.Kind == LinkType.LINK_GOTOR)
             {
@@ -3790,11 +3790,12 @@ namespace MuPDF.NET
                     txt = Utils.AnnotSkel["gotor1"];
                     Point pnt = link.To;
                     annot = string.Format(
+                        System.Globalization.CultureInfo.InvariantCulture,
                         txt,
                         link.Page,
-                        pnt.X,
-                        pnt.Y,
-                        link.Zoom,
+                        Utils.FloatToString(pnt.X),
+                        Utils.FloatToString(pnt.Y),
+                        Utils.FloatToString(link.Zoom),
                         link.File,
                         link.File,
                         rectStr
@@ -3803,23 +3804,23 @@ namespace MuPDF.NET
                 else
                 {
                     txt = Utils.AnnotSkel["gotor2"];
-                    annot = string.Format(txt, Utils.GetPdfString(link.ToStr), link.File, rectStr);
+                    annot = string.Format(System.Globalization.CultureInfo.InvariantCulture, txt, Utils.GetPdfString(link.ToStr), link.File, rectStr);
                 }
             }
             else if (link.Kind == LinkType.LINK_LAUNCH)
             {
                 txt = Utils.AnnotSkel["launch"];
-                annot = string.Format(txt, link.File, link.File, rectStr);
+                annot = string.Format(System.Globalization.CultureInfo.InvariantCulture, txt, link.File, link.File, rectStr);
             }
             else if (link.Kind == LinkType.LINK_URI)
             {
                 txt = Utils.AnnotSkel["uri"];
-                annot = string.Format(txt, link.Uri, rectStr);
+                annot = string.Format(System.Globalization.CultureInfo.InvariantCulture, txt, link.Uri, rectStr);
             }
             else if (link.Kind == LinkType.LINK_NAMED)
             {
                 txt = Utils.AnnotSkel["named"];
-                annot = string.Format(txt, link.Name, rectStr);
+                annot = string.Format(System.Globalization.CultureInfo.InvariantCulture, txt, link.Name, rectStr);
             }
             if (annot == null)
                 return annot;
@@ -4114,14 +4115,14 @@ namespace MuPDF.NET
             string CreateAnnot(LinkInfo link, List<int> xrefDest, List<int> _pnoSrc, Matrix ctm)
             {
                 Rect r = link.From * ctm;
-                string rStr = string.Format("{0} {1} {2} {3}", r[0], r[1], r[2], r[3]);
+                string rStr = string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0} {1} {2} {3}", Utils.FloatToString(r[0]), Utils.FloatToString(r[1]), Utils.FloatToString(r[2]), Utils.FloatToString(r[3]));
                 string annot = "";
                 if (link.Kind == LinkType.LINK_GOTO)
                 {
                     string txt = Utils.AnnotSkel["goto1"];
                     int idx = _pnoSrc.IndexOf(link.Page);
                     Point p = link.To * ctm;
-                    annot = string.Format(txt, xrefDest[idx], p.X, p.Y, link.Zoom, rStr);
+                    annot = string.Format(System.Globalization.CultureInfo.InvariantCulture, txt, xrefDest[idx], Utils.FloatToString(p.X), Utils.FloatToString(p.Y), Utils.FloatToString(link.Zoom), rStr);
                 }
                 else if (link.Kind == LinkType.LINK_GOTOR)
                 {
@@ -4130,11 +4131,12 @@ namespace MuPDF.NET
                         string txt = Utils.AnnotSkel["gotor1"];
                         Point pnt = link.To == null ? new Point(0, 0) : link.To;
                         annot = string.Format(
+                            System.Globalization.CultureInfo.InvariantCulture,
                             txt,
                             link.Page,
-                            pnt.X,
-                            pnt.Y,
-                            link.Zoom,
+                            Utils.FloatToString(pnt.X),
+                            Utils.FloatToString(pnt.Y),
+                            Utils.FloatToString(link.Zoom),
                             link.File,
                             link.File,
                             rStr
@@ -4146,18 +4148,18 @@ namespace MuPDF.NET
                         string to = Utils.GetPdfString(link.ToStr);
                         to = to.Substring(1, -1);
                         string f = link.File;
-                        annot = string.Format(txt, to, f, rStr);
+                        annot = string.Format(System.Globalization.CultureInfo.InvariantCulture, txt, to, f, rStr);
                     }
                 }
                 else if (link.Kind == LinkType.LINK_LAUNCH)
                 {
                     string txt = Utils.AnnotSkel["launch"];
-                    annot = string.Format(txt, link.File, link.File, rStr);
+                    annot = string.Format(System.Globalization.CultureInfo.InvariantCulture, txt, link.File, link.File, rStr);
                 }
                 else if (link.Kind == LinkType.LINK_URI)
                 {
                     string txt = Utils.AnnotSkel["uri"];
-                    annot = string.Format(txt, link.Uri, rStr);
+                    annot = string.Format(System.Globalization.CultureInfo.InvariantCulture, txt, link.Uri, rStr);
                 }
                 else
                     annot = "";
@@ -6278,7 +6280,7 @@ namespace MuPDF.NET
         {
             string goto_ = "/A<</S/GoTo/D[{0} 0 R/XYZ {1} {2} {3}]>>";
 
-            return string.Format(goto_, xref, 0, dDict, 0);
+            return string.Format(System.Globalization.CultureInfo.InvariantCulture, goto_, xref, 0, dDict, 0);
         }
 
         /// <summary>
@@ -6303,7 +6305,7 @@ namespace MuPDF.NET
                 Point to = dDict.To;
                 float left = to.X;
                 float top = to.Y;
-                return string.Format(goto_, xref, left, top, zoom);
+                return string.Format(System.Globalization.CultureInfo.InvariantCulture, goto_, xref, left, top, zoom);
             }
 
             if (dDict.Kind == LinkType.LINK_URI)
@@ -6327,6 +6329,7 @@ namespace MuPDF.NET
             {
                 string fSpec = Utils.GetPdfString(dDict.File);
                 return string.Format(
+                    System.Globalization.CultureInfo.InvariantCulture,
                     gotor1,
                     dDict.Page,
                     dDict.To.X,
@@ -7868,8 +7871,147 @@ namespace MuPDF.NET
             culture.NumberFormat.NumberDecimalSeparator = ".";
             culture.NumberFormat.CurrencyDecimalSeparator = ".";
 
+            // Set for current thread
             CultureInfo.CurrentCulture = culture;
             CultureInfo.CurrentUICulture = culture;
+            
+            // Set as default for all new threads (.NET Core 2.0+)
+            CultureInfo.DefaultThreadCurrentCulture = culture;
+            CultureInfo.DefaultThreadCurrentUICulture = culture;
+        }
+
+        /// <summary>
+        /// Converts a float to string with dot as decimal separator, regardless of culture
+        /// </summary>
+        internal static string FloatToString(float value)
+        {
+            return value.ToString(CultureInfo.InvariantCulture);
+        }
+
+        /// <summary>
+        /// Converts a double to string with dot as decimal separator, regardless of culture
+        /// </summary>
+        internal static string DoubleToString(double value)
+        {
+            return value.ToString(CultureInfo.InvariantCulture);
+        }
+
+        /// <summary>
+        /// Loads embedded DLL from resources and saves to disk
+        /// </summary>
+        private static void LoadEmbeddedDll(string resourceName, string fileName)
+        {
+            var assembly = typeof(Utils).Assembly;
+            
+            // Try to extract to the same directory as the executing assembly first
+            string targetPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, fileName);
+            
+            // If we can't write there (permissions), use temp directory
+            if (!TryExtractResource(resourceName, targetPath, assembly))
+            {
+                targetPath = Path.Combine(Path.GetTempPath(), "MuPDF.NET", 
+                    assembly.GetName().Version.ToString(), fileName);
+                
+                Directory.CreateDirectory(Path.GetDirectoryName(targetPath));
+                
+                if (!TryExtractResource(resourceName, targetPath, assembly))
+                {
+                    throw new Exception($"Failed to extract embedded DLL: {resourceName}");
+                }
+            }
+
+            // Load the DLL
+            var handle = LoadLibrary(targetPath);
+            if (handle == IntPtr.Zero)
+            {
+                var errorCode = Marshal.GetLastWin32Error();
+                throw new Exception($"Failed to load DLL: {targetPath}. Error code: {errorCode}");
+            }
+        }
+
+        private static bool TryExtractResource(string resourceName, string targetPath, System.Reflection.Assembly assembly)
+        {
+            try
+            {
+                // Check if file already exists with same size
+                if (File.Exists(targetPath))
+                {
+                    using (var stream = assembly.GetManifestResourceStream(resourceName))
+                    {
+                        if (stream != null)
+                        {
+                            var fileInfo = new System.IO.FileInfo(targetPath);
+                            if (fileInfo.Length == stream.Length)
+                            {
+                                return true; // File already exists with correct size
+                            }
+                        }
+                    }
+                }
+
+                // Extract the resource
+                using (var stream = assembly.GetManifestResourceStream(resourceName))
+                {
+                    if (stream == null) return false;
+                    
+                    using (var fileStream = File.Create(targetPath))
+                    {
+                        stream.CopyTo(fileStream);
+                    }
+                }
+                
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern IntPtr LoadLibrary(string lpFileName);
+
+        [DllImport("libdl.so.2", EntryPoint = "dlopen")]
+        private static extern IntPtr DlOpen(string fileName, int flags);
+
+        private const int RTLD_NOW = 2;
+
+        /// <summary>
+        /// Loads Leptonica DLL from embedded resources
+        /// </summary>
+        private static void LoadEmbeddedLeptonicaDll()
+        {
+            try
+            {
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    string resourceName;
+                    string dllName = "leptonica-1.77.0.dll";
+
+                    if (Environment.Is64BitProcess)
+                    {
+                        resourceName = "MuPDF.NET.Resources.leptonica-1.77.0.x64.dll";
+                    }
+                    else
+                    {
+                        resourceName = "MuPDF.NET.Resources.leptonica-1.77.0.x86.dll";
+                    }
+
+                    LoadEmbeddedDll(resourceName, dllName);
+                }
+                else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                {
+                    // For Linux, you would need to embed and extract .so files
+                    // This is a placeholder for Linux support
+                    // string resourceName = "MuPDF.NET.Resources.libleptonica.so.5";
+                    // LoadEmbeddedDll(resourceName, "libleptonica.so.5");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to load embedded Leptonica DLL: {ex.Message}");
+                // Don't throw - allow fallback to system-installed DLLs
+            }
         }
 
         public static void InitApp()
@@ -7880,7 +8022,7 @@ namespace MuPDF.NET
                     return;
 
                 Utils.SetDotCultureForNumber();
-                //Utils.LoadEmbeddedDllForWindows();
+                //Utils.LoadEmbeddedLeptonicaDll();
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
@@ -7888,7 +8030,7 @@ namespace MuPDF.NET
                     return;
 
                 Utils.SetDotCultureForNumber();
-                //Utils.LoadEmbeddedDllForLinux();
+                //Utils.LoadEmbeddedLeptonicaDll();
             }
             else
             {

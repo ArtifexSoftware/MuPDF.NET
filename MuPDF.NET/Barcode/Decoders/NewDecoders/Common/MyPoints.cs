@@ -319,7 +319,7 @@ namespace BarcodeReader.Core
 
         public override string ToString()
         {
-            return string.Format("({0}:{1})", X.ToString("F2"), Y.ToString("F2"));
+            return string.Format("({0}:{1})", X.ToString("F2", System.Globalization.CultureInfo.InvariantCulture), Y.ToString("F2", System.Globalization.CultureInfo.InvariantCulture));
         }
     }
 
@@ -438,7 +438,7 @@ namespace BarcodeReader.Core
 
         public override string ToString()
         {
-            return string.Format("({0}:{1})", X.ToString("F2"), Y.ToString("F2"));
+            return string.Format("({0}:{1})", X.ToString("F2", System.Globalization.CultureInfo.InvariantCulture), Y.ToString("F2", System.Globalization.CultureInfo.InvariantCulture));
         }
     }
 

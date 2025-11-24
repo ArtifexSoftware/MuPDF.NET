@@ -282,11 +282,11 @@ namespace MuPDF.NET
             Utils.CheckColor(stroke);
             string s = "";
             if (stroke.Length == 1)
-                s = $"[{stroke[0]}]";
+                s = $"[{Utils.FloatToString(stroke[0])}]";
             else if (stroke.Length == 3)
-                s = $"[{stroke[0]} {stroke[1]} {stroke[2]}]";
+                s = $"[{Utils.FloatToString(stroke[0])} {Utils.FloatToString(stroke[1])} {Utils.FloatToString(stroke[2])}]";
             else
-                s = $"[{stroke[0]} {stroke[1]} {stroke[2]} {stroke[3]}]";
+                s = $"[{Utils.FloatToString(stroke[0])} {Utils.FloatToString(stroke[1])} {Utils.FloatToString(stroke[2])} {Utils.FloatToString(stroke[3])}]";
 
             doc.SetKeyXRef(Xref, "C", s);
         }

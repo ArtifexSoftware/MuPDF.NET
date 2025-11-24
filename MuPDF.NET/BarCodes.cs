@@ -67,6 +67,10 @@ namespace MuPDF.NET
         private readonly string _configFile = null;
         private readonly object _reader = null;
 
+        static BarcodeReader()
+        {
+            Utils.InitApp();
+        }
 
         public BarcodeReader(string barcodeType, string configFile)
         {
@@ -387,6 +391,10 @@ namespace MuPDF.NET
         private readonly SymbologyType _symbologyType = SymbologyType.Unknown;
         private readonly object _encoder = null;
 
+        static BarcodeWriter()
+        {
+            Utils.InitApp();
+        }
         public BarcodeWriter(string barcodeType)
         {
             switch (barcodeType)

@@ -1176,9 +1176,9 @@ namespace MuPDF.NET
                 switch (key)
                 {
                     case "x_tolerance":
-                        x_tolerance = float.Parse(kwargs[key].ToString()); break;
+                        x_tolerance = float.Parse(kwargs[key].ToString(), System.Globalization.CultureInfo.InvariantCulture); break;
                     case "y_tolerance":
-                        y_tolerance = float.Parse(kwargs[key].ToString()); break;
+                        y_tolerance = float.Parse(kwargs[key].ToString(), System.Globalization.CultureInfo.InvariantCulture); break;
                     case "keep_blank_chars":
                         keep_blank_chars = bool.Parse(kwargs[key].ToString()); break;
                     case "use_text_flow":

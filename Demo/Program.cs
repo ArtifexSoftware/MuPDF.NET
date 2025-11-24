@@ -11,8 +11,11 @@ using System.Threading;
 using static ICSharpCode.SharpZipLib.Zip.ExtendedUnixData;
 using static System.Net.Mime.MediaTypeNames;
 using static System.Net.WebRequestMethods;
+using Box = MuPDF.NET.Box;
+using Encoding = System.Text.Encoding;
 using File = System.IO.File;
 using Font = MuPDF.NET.Font;
+using Morph = MuPDF.NET.Morph;
 using TextWriter = MuPDF.NET.TextWriter;
 
 namespace Demo
@@ -64,55 +67,51 @@ namespace Demo
             TestUnicodeDocument();
             TestMorph();
             TestMetadata();
-            TestTable();
             TestMoveFile();
-            TestOpenErrorAtAcrobat();
+            TestImageFilter();
 
             return;
         }
 
-        static void TestOpenErrorAtAcrobat()
+        static void TestImageFilter()
         {
-            Console.WriteLine("\n=== TestOpenErrorAtAcrobat =====================");
+            const string inputPath = @"../../../TestDocuments/Image/boxedpage.jpg";
 
-            string testFilePath = @"E:\MuPDF.NET\Tmp\Peter\1101\test.pdf";
-            string outputFilePath = @"E:\MuPDF.NET\Tmp\Peter\1101\output.pdf";
+            using (Pixmap pxmp = new Pixmap(inputPath))
+            {
+                // build the pipeline
+                var pipeline = new ImageFilterPipeline();
 
-            Document doc = new Document(testFilePath);
+                // clear any defaults if you’re reusing the instance
+                pipeline.Clear();
 
-            Page page = doc[0];
+                // add filters one-by-one
+                //pipeline.AddDeskew(minAngle: 0.5);              // replaces any existing deskew step
+                //pipeline.AddRemoveHorizontalLines();            // also replaces existing horizontal-removal step
+                //pipeline.AddRemoveVerticalLines();
+                //pipeline.AddGrayscale();
+                //pipeline.AddMedian(blockSize: 2, replaceExisting: true);
+                pipeline.AddGamma(gamma: 1.2);                  // brighten slightly
+                //pipeline.AddContrast(contrast: 100);
+                //pipeline.AddScaleFit(100);
+                //pipeline.AddDilation();
+                pipeline.AddScale(scaleFactor: 1.75, quality: SKFilterQuality.High);
+                //pipeline.AddInvert();
 
-            page.DrawLine(new Point(45, 50), new Point(80, 50), width: 0.5f, dashes: "[5] 0");
-            page.DrawLine(new Point(90, 50), new Point(150, 50), width: 0.5f, dashes: "[5] 0");
-            page.DrawLine(new Point(45, 80), new Point(180, 80), width: 0.5f, dashes: "[5] 0");
-            page.DrawLine(new Point(45, 100), new Point(180, 100), width: 0.5f, dashes: "[5] 0");
-
-            Color lineColor = new Color(); // Default to black
-            lineColor.Stroke = new float[] { 0, 0, 0 }; // RGB black
-            
-            Shape img = page.NewShape();
-            Point startPoint = new Point(100, 100);
-            Point endPoint = new Point(200, 200);
-            
-            String dashString = "[2] 0"; // Example dash pattern
-            
-            img.DrawLine(startPoint, endPoint);
-            img.Finish(width: 2, color: lineColor.Stroke, dashes: dashString);
-            img.Commit();
-
-            page.Dispose();
-
-            doc.Save(outputFilePath);
-            doc.Close();
-
-            Console.WriteLine("TestOpenErrorAtAcrobat completed.");
+                string txt = pxmp.GetTextFromOcr(pipeline);
+                Console.WriteLine(txt);
+            }
         }
 
         static void TestMoveFile()
         {
-            string origfilename = @"E:\test.pdf";
+            string origfilename = @"../../../TestDocuments/Blank.pdf";
 
-            Document d = new Document(origfilename);
+            string filePath = @"testmove.pdf";
+
+            File.Copy(origfilename, filePath, true);
+
+            Document d = new Document(filePath);
 
             Page page = d[0];
             
@@ -137,60 +136,18 @@ namespace Demo
 
             d.Close();
 
-            File.WriteAllBytes(origfilename, tmp.ToArray());
+            File.WriteAllBytes(filePath, tmp.ToArray());
 
             tmp.Dispose();
 
-            File.Move(origfilename, @"e:\new.pdf", true);
-        }
-
-        public static float MmToPs(float mm)
-        {
-            return mm * 2.8346456693f;
-        }
-
-        static void TestTable()
-        {
-            Console.WriteLine("\n=== TestTable =====================");
-
-            string testFilePath = @"E:\MuPDF.NET\Tmp\Peter\Table\test.pdf";
-
-            Rect rect = new Rect(X0:MmToPs(110), X1:MmToPs(198), Y0: MmToPs(42), Y1: MmToPs(76));
-
-            Document doc = new Document(testFilePath);
-
-            FzStextOptions options = new FzStextOptions(0);
-            options.Dispose();
-
-            string text = "";
-
-            text = doc[0].GetText(clip: rect, flags: (int)TextFlags.TEXT_MEDIABOX_CLIP, sort: true);
-            Console.WriteLine(text);
-
-            /*
-            text = "";
-            List<TextBlock> textBlocks = doc[0].GetTextBlocks(rect);
-            foreach (TextBlock block in textBlocks)
-            {
-                text += block.Text;
-            }
-
-            Console.WriteLine(text);
-
-            text = doc[0].GetTextWithLayout(rect);
-
-            Console.WriteLine(text);
-            */
-            doc.Close();
-
-            Console.WriteLine("TestTable completed.");
+            File.Move(filePath, @"moved.pdf", true);
         }
 
         static void TestMetadata()
         {
             Console.WriteLine("\n=== TestMetadata =====================");
 
-            string testFilePath = @"e:\Annot.pdf";
+            string testFilePath = @"../../../TestDocuments/Annot.pdf";
 
             Document doc = new Document(testFilePath);
 
@@ -203,7 +160,7 @@ namespace Demo
 
             doc.Close();
 
-            Console.WriteLine("TestDocument completed.");
+            Console.WriteLine("TestMetadata completed.");
         }
 
         static void TestMorph()
@@ -246,16 +203,18 @@ namespace Demo
             doc.Save(@"你好_.pdf");
             doc.Close();
 
-            Console.WriteLine("TestDocument completed.");
+            Console.WriteLine("TestUnicodeDocument completed.");
         }
 
         static void TestWriteBarcode1()
         {
+            Console.WriteLine("\n=== TestWriteBarcode1 =====================");
+
             string testFilePath = Path.GetFullPath("../../../TestDocuments/Blank.pdf");
             Document doc = new Document(testFilePath);
 
             Page page = doc[0];
-            /*
+
             // CODE39
             Rect rect = new Rect(
                 X0: Units.MmToPoints(50),
@@ -272,8 +231,7 @@ namespace Demo
                 Y1: Units.MmToPoints(105));
 
             page.WriteBarcode(rect, "JJBEA6500", BarcodeFormat.CODE39, forceFitToRect: true, pureBarcode: true, narrowBarWidth: 2);
-            */
-            /*
+
             // CODE128
             Rect rect1 = new Rect(
                 X0: Units.MmToPoints(50),
@@ -290,8 +248,7 @@ namespace Demo
                 Y1: Units.MmToPoints(120));
 
             page.WriteBarcode(rect1, "JJBEA6500063000000177922", BarcodeFormat.CODE128, forceFitToRect: true, pureBarcode: true, narrowBarWidth: 1);
-            */
-            /*
+
             Rect rect2 = new Rect(
                 X0: Units.MmToPoints(100),
                 X1: Units.MmToPoints(140),
@@ -299,13 +256,11 @@ namespace Demo
                 Y1: Units.MmToPoints(80));
 
             page.WriteBarcode(rect2, "01030000110444408000", BarcodeFormat.DM, forceFitToRect: false, pureBarcode: true, narrowBarWidth: 3);
-            */
 
             Pixmap pxmp = Utils.GetBarcodePixmap("JJBEA6500063000000177922", BarcodeFormat.CODE128, width: 500, pureBarcode: true, marginLeft:0, marginTop:0, marginRight:0, marginBottom:0, narrowBarWidth: 1);
             
-            pxmp.Save(@"e:\PxmpBarcode3.png");
+            pxmp.Save(@"PxmpBarcode3.png");
 
-            /*
             byte[] imageBytes = pxmp.ToBytes();
 
             using var stream = new SKMemoryStream(imageBytes);
@@ -318,10 +273,11 @@ namespace Demo
             data.SaveTo(stream1);
 
             doc.Save(@"TestWriteBarcode1.pdf");
-            */
 
             page.Dispose();
             doc.Close();
+
+            Console.WriteLine("TestWriteBarcode1 completed.");
         }
 
         static void TestReadDataMatrix()
@@ -1011,13 +967,31 @@ namespace Demo
             Document doc = new Document(testFilePath);
             Page page = doc[0];
 
+            page.RemoveRotation();
+            Pixmap pixmap = page.GetPixmap();
+
             List<Block> blocks = page.GetText("dict", flags: (int)TextFlags.TEXT_PRESERVE_IMAGES)?.Blocks;
             foreach (Block block in blocks)
             {
                 Console.WriteLine(block.Image.Length);
             }
 
-            TextPage tp = page.GetTextPageOcr((int)TextFlags.TEXT_PRESERVE_SPANS, full: true);
+            // build the pipeline
+            var pipeline = new ImageFilterPipeline();
+            pipeline.Clear();
+            //pipeline.AddDeskew(minAngle: 0.5);              // replaces any existing deskew step
+            //pipeline.AddRemoveHorizontalLines();            // also replaces existing horizontal-removal step
+            //pipeline.AddRemoveVerticalLines();
+            //pipeline.AddGrayscale();
+            //pipeline.AddMedian(blockSize: 2, replaceExisting: true);
+            pipeline.AddGamma(gamma: 1.2);                  // brighten slightly
+            //pipeline.AddScaleFit(100);
+            pipeline.AddScale(scaleFactor: 3f, quality: SKFilterQuality.High);
+            //pipeline.AddContrast(contrast: 100);
+            //pipeline.AddDilation();
+            //pipeline.AddInvert();
+
+            TextPage tp = page.GetTextPageOcr((int)TextFlags.TEXT_PRESERVE_SPANS, full: true, imageFilters: pipeline);
             string txt = tp.ExtractText();
             Console.WriteLine(txt);
 

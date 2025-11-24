@@ -1,4 +1,5 @@
 ﻿using mupdf;
+using SkiaSharp;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -736,7 +737,7 @@ namespace MuPDF.NET
             string ret = "";
             foreach (float v in value)
             {
-                ret += v + " ";
+                ret += Utils.FloatToString(v) + " ";
             }
             return ret;
         }
@@ -902,7 +903,7 @@ namespace MuPDF.NET
                 if (textColor.Length > 3)
                     textColor = new float[3] { textColor[0], textColor[1], textColor[2] };
                 dataStr =
-                    $"{textColor[0]} {textColor[1]} {textColor[2]} rg /{fontName} {fontSize} Tf";
+                    $"{Utils.FloatToString(textColor[0])} {Utils.FloatToString(textColor[1])} {Utils.FloatToString(textColor[2])} rg /{fontName} {Utils.FloatToString(fontSize)} Tf";
                 if (fill == null)
                     fill = new float[3] { 1, 1, 1 };
             }
@@ -1007,7 +1008,7 @@ namespace MuPDF.NET
                 if (textColor.Length > 3)
                     textColor = new float[3] { textColor[0], textColor[1], textColor[2] };
                 dataStr =
-                    $"{textColor[0]} {textColor[1]} {textColor[2]} rg /{fontName} {fontSize} Tf";
+                    $"{Utils.FloatToString(textColor[0])} {Utils.FloatToString(textColor[1])} {Utils.FloatToString(textColor[2])} rg /{fontName} {Utils.FloatToString(fontSize)} Tf";
                 if (fill == null)
                     fill = new float[3] { 1, 1, 1 };
                 else
@@ -2244,7 +2245,7 @@ namespace MuPDF.NET
                 xobject.pdf_dict_puts(imgName, ref_);
                 FzBuffer nres = mupdf.mupdf.fz_new_buffer(50);
                 nres.fz_append_string(
-                    string.Format(template, mat.a, mat.b, mat.c, mat.d, mat.e, mat.f, imgName)
+                    string.Format(System.Globalization.CultureInfo.InvariantCulture, template, mat.a, mat.b, mat.c, mat.d, mat.e, mat.f, imgName)
                 );
                 Utils.InsertContents(pageDoc, page.obj(), nres, overlay);
             }
@@ -4406,23 +4407,27 @@ namespace MuPDF.NET
         /// <param name="dpi">resolution in dpi, default 72</param>
         /// <param name="full">whether to OCR the full page image, or only its images (default)</param>
         /// <param name="tessdata"></param>
+        /// <param name="imageFilters">Optional preprocessing filters applied to raster images before OCR.</param>
         /// <returns></returns>
         public TextPage GetTextPageOcr(
             int flags = 0,
             string language = "eng",
             int dpi = 72,
             bool full = false,
-            string tessdata = null
+            string tessdata = null,
+            ImageFilterPipeline imageFilters = null
         )
         {
             if (string.IsNullOrEmpty(Utils.TESSDATA_PREFIX) && string.IsNullOrEmpty(tessdata))
                 throw new Exception("No OCR support: TESSDATA_PREFIX not set");
 
-            TextPage FullOcr(Page page, int _dpi, string _language, int _flags)
+            TextPage FullOcr(Page page, int _dpi, string _language, int _flags, ImageFilterPipeline filters)
             {
                 float zoom = _dpi / 72.0f;
                 Matrix mat = new Matrix(zoom, zoom);
                 Pixmap pix = page.GetPixmap(matrix: mat);
+                if (filters != null)
+                    pix = Pixmap.ApplyImageFilters(pix, filters);
                 Document ocrPdf = new Document("pdf", pix.PdfOCR2Bytes(true, _language, tessdata));
 
                 Page ocrPage = ocrPdf.LoadPage(0);
@@ -4431,13 +4436,13 @@ namespace MuPDF.NET
                 TextPage _tp = ocrPage.GetTextPage(flags: _flags, matrix: ctm);
                 ocrPdf.Close();
 
-                pix = null;
+                pix.Dispose();
                 _tp.Parent = this;
                 return _tp;
             }
 
             if (full)
-                return FullOcr(this, dpi, language, flags);
+                return FullOcr(this, dpi, language, flags, imageFilters);
             TextPage tp = GetTextPage(flags: flags);
             foreach (
                 Block block in (
@@ -4453,6 +4458,8 @@ namespace MuPDF.NET
                 try
                 {
                     Pixmap pix = new Pixmap(block.Image);
+                    if (imageFilters != null)
+                        pix = Pixmap.ApplyImageFilters(pix, imageFilters);
                     if (pix.N - pix.Alpha != 3)
                         pix = new Pixmap(new ColorSpace(Utils.CS_RGB), pix);
                     if (pix.Alpha != 0)
@@ -4474,7 +4481,7 @@ namespace MuPDF.NET
                 {
                     tp = null;
                     Console.WriteLine("Falling back to full page OCR");
-                    return FullOcr(this, dpi, language, flags);
+                    return FullOcr(this, dpi, language, flags, imageFilters);
                 }
             }
 
@@ -4635,7 +4642,7 @@ namespace MuPDF.NET
                 mat0 = new Matrix(1, 0, 0, 1, -2 * mb.X0, -2 * mb.Y0);
 
             Matrix mat = mat0 * DerotationMatrix;
-            string cmd = $"{mat.A} {mat.B} {mat.C} {mat.D} {mat.E} {mat.F} cm ";
+            string cmd = $"{Utils.FloatToString(mat.A)} {Utils.FloatToString(mat.B)} {Utils.FloatToString(mat.C)} {Utils.FloatToString(mat.D)} {Utils.FloatToString(mat.E)} {Utils.FloatToString(mat.F)} cm ";
             Utils.InsertContents(this, Encoding.UTF8.GetBytes(cmd), 0);
 
             if (rot == 90 || rot == 270)
@@ -5285,9 +5292,9 @@ namespace MuPDF.NET
                 for (int i = 0; i < stroke.dash_len; i++)
                 {
                     float value = mupdf.mupdf.floats_getitem(stroke.dash_list, (uint)i);
-                    buff.fz_append_string($"{PathFactor * value} ");
+                    buff.fz_append_string($"{Utils.FloatToString(PathFactor * value)} ");
                 }
-                buff.fz_append_string($"] {PathFactor * stroke.dash_phase}");
+                buff.fz_append_string($"] {Utils.FloatToString(PathFactor * stroke.dash_phase)}");
                 PathDict.Dashes = Encoding.UTF8.GetString(Utils.BinFromBuffer(buff));
             }
             else

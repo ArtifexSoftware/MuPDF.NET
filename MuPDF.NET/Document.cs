@@ -1993,9 +1993,9 @@ namespace MuPDF.NET
             {
                 template.Dest = "";
                 string[] arr_t = array.Replace("null", "0").Split().Take(1).ToArray();
-                float x = float.Parse(arr_t[0]);
-                float y = float.Parse(arr_t[1]);
-                float z = float.Parse(arr_t[2]);
+                float x = float.Parse(arr_t[0], System.Globalization.CultureInfo.InvariantCulture);
+                float y = float.Parse(arr_t[1], System.Globalization.CultureInfo.InvariantCulture);
+                float z = float.Parse(arr_t[2], System.Globalization.CultureInfo.InvariantCulture);
                 template.To = new Point(x, y);
                 template.Zoom = z;
             }
@@ -4270,7 +4270,7 @@ namespace MuPDF.NET
                         }
                     }
                 }
-                int hidden = pdf.pdf_is_ocg_hidden(new PdfObj(), usage, ocg);
+                int hidden = pdf.pdf_is_ocg_hidden(new PdfResourceStack(), usage, ocg);
                 OCGroup item = new OCGroup()
                 {
                     Name = name,
@@ -5668,7 +5668,7 @@ namespace MuPDF.NET
                 if (ol.TryGetValue("count", out countVal) && countVal != 0 &&
                     ol.TryGetValue("color", out colorVal) && colorVal != null)
                     if (ol["color"].Length == 3)
-                        txt += $"/C[ {ol["color"][0]} {ol["color"][1]} {ol["color"][2]}]";
+                        txt += $"/C[ {Utils.FloatToString(ol["color"][0])} {Utils.FloatToString(ol["color"][1])} {Utils.FloatToString(ol["color"][2])}]";
                 //if (ol.GetValueOrDefault("flags", 0) > 0)
                 if (ol.TryGetValue("flags", out dynamic flagsVal) && flagsVal > 0)
                     txt += $"/F {ol["flags"]}";
