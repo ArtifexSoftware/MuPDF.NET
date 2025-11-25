@@ -1326,4 +1326,37 @@ To write barcodes you can either add them directly to pages with :meth:`Page.Wri
 
     See :ref:`Utils.WriteBarcodes <Utils_WriteBarcode>`.
 
+
+Using Image Filters
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+|MuPDF.NET| supports applying image filters to images when pre-processing OCR images for better recognition.
+
+The following example shows how to apply a gamma correction and scaling filter to the images used for OCR when extracting text from a page.
+
+.. code-block:: cs
+
+    using MuPDF.NET;
+
+    string testFilePath = Path.GetFullPath(@"E:\Ocr.pdf");
+    Document doc = new Document(testFilePath);
+    Page page = doc[0];
+
+    // build the pipeline
+    var pipeline = new ImageFilterPipeline();
+    pipeline.Clear();
+    pipeline.AddGamma(gamma: 1.5f);
+    pipeline.AddScale(scaleFactor: 3f, quality: SKFilterQuality.High);
+
+    TextPage tp = page.GetTextPageOcr((int)TextFlags.TEXT_PRESERVE_SPANS, full: true, imageFilters: pipeline);
+    string txt = tp.ExtractText();
+    Console.WriteLine(txt);
+
+    doc.Close();
+
+.. note::
+
+    See :ref:`ImageFilterPipeline <ImageFilterPipeline>` for available image filter pipeline methods.
+
+
 .. include:: ../footer.rst
