@@ -1,5 +1,9 @@
 # Changelog
 
+### [3.2.12] - 2025-11-25
+- Added `ImageFilterPipeline` with SkiaSharp-based filters and integrated it into OCR.
+- Improved `Pixmap` disposal, OCR helpers, and image filter application.
+
 ### [3.2.10] - 2025-10-07
 - Replaced all Windows System.Drawing dependencies with SkiaSharp.
 - Added support for 32-bit .NET projects in Visual Studio 2019.
