@@ -18,6 +18,8 @@ Classes
    DocumentWriter.rst
    Font.rst
    IdentityMatrix.rst
+   ImageFilter.rst
+   ImageFilterPipeline.rst
    IRect.rst
    Link.rst
    .. linkdest.rst
