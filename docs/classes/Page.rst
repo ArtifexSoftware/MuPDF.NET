@@ -1264,14 +1264,8 @@ In a nutshell, this is what you can do with MuPDF.NET:
       :returns: :ref:`TextPage`
 
 
-   .. index::
-      pair: flags; GetTextPageOcr
-      pair: language; GetTextPageOcr
-      pair: dpi; GetTextPageOcr
-      pair: full; GetTextPageOcr
-      pair: tessdata; GetTextPageOcr
 
-   .. method:: GetTextPageOcr(int flags: 3, string language: "eng", int dpi: 72, bool full: false, string tessdata: null)
+   .. method:: GetTextPageOcr(int flags: 3, string language: "eng", int dpi: 72, bool full: false, string tessdata: null, ImageFilterPipeline imageFilters = null)
 
       **Optical Character Recognition** (**OCR**) technology can be used to extract text data for documents where text is in a raster image format throughout the page. Use this method to **OCR** a page for text extraction.
 
@@ -1282,6 +1276,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
       :arg int dpi: the desired resolution in dots per inch. Influences recognition quality (and execution time).
       :arg bool full: whether to OCR the full page, or just the displayed images.
       :arg string tessdata: The name of Tesseract's language support folder `tessdata`. If omitted, this information must be present as environment variable `TESSDATA_PREFIX`.
+      :arg ImageFilterPipeline imageFilters: An optional image filter pipeline to be applied to the raster image before OCR processing. See :class:`ImageFilterPipeline`.
 
       .. note:: This method does **not** support a clip parameter -- OCR will always happen for the complete page rectangle.
 
