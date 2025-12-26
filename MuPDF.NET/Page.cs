@@ -1,6 +1,7 @@
 ﻿using mupdf;
 using SkiaSharp;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -5164,6 +5165,7 @@ namespace MuPDF.NET
 
         public FzPoint LastPoint { get; set; }
         public FzPoint FirstPoint { get; set; }
+        public int HaveMove { get; set; }
         public FzRect PathRect { get; set; }
         public float PathFactor { get; set; }
         public int LineCount { get; set; }
@@ -5213,6 +5215,7 @@ namespace MuPDF.NET
             Rot = new FzMatrix();
             LastPoint = new FzPoint();
             FirstPoint = new FzPoint();
+            HaveMove = 0;
             PathRect = new FzRect();
             PathFactor = 0;
             LineCount = 0;
@@ -5603,30 +5606,36 @@ namespace MuPDF.NET
 
         public void AppendMerge()
         {
+            // Append current path to list or merge into last path of the list.
+            // (1) Append if first path, different item lists or not a 'stroke' version
+            // of previous path
+            // (2) If new path has the same items, merge its content into previous path
+            // and change path["type"] to "fs".
+            // (3) If "out" is callable, skip the previous and pass dictionary to it.
             void Append()
             {
                 this.Out.Add(PathDict); // copy key & value
                 PathDict = null;
             }
 
-            int len = Out.Count;
-            if (len == 0)
+            int len = Out.Count; // len of output list so far
+            if (len == 0)   // always append first path
             {
                 Append();
                 return;
             }
 
             string type = PathDict.Type;
-            if (type != "s")
+            if (type != "s")    // if not stroke, then append
             {
                 Append();
                 return;
             }
 
-            PathInfo prev = Out[Out.Count - 1];
+            PathInfo prev = Out[len - 1];   // get prev path
             string prevType = prev.Type;
 
-            if (prevType != "f")
+            if (prevType != "f") // if previous not fill, append
             {
                 Append();
                 return;
@@ -5639,22 +5648,57 @@ namespace MuPDF.NET
                 Append();
                 return;
             }
-            else
+
+            for (int i = 0; i < prevItems.Count; i++)
             {
-                for (int i = 0; i < prevItems.Count; i++)
+                if (!prevItems[i].Equal(thisItems[i]))
                 {
-                    if (!prevItems[i].Equal(thisItems[i]))
-                    {
-                        Append();
-                        return;
-                    }
+                    Append();
+                    return;
                 }
             }
 
-            prev = new PathInfo(PathDict);
+            if (!string.IsNullOrEmpty(PathDict.Type))
+                prev.Type = PathDict.Type;
+            if (PathDict.EvenOdd == true)
+                prev.EvenOdd = PathDict.EvenOdd;
+            if (PathDict.FillOpacity > 0f)
+                prev.FillOpacity = PathDict.FillOpacity;
+            if (PathDict.Fill != null)
+                prev.Fill = PathDict.Fill;
+            if (PathDict.Rect != null)
+                prev.Rect = PathDict.Rect;
+            if (prev.SeqNo > 0)
+                prev.SeqNo = prev.SeqNo;
+            if (!string.IsNullOrEmpty(PathDict.Layer))
+                prev.Layer = PathDict.Layer;
+            if (PathDict.Width > 0f)
+                prev.Width = PathDict.Width;
+            if (PathDict.StrokeOpacity > 0f)
+                prev.StrokeOpacity = PathDict.StrokeOpacity;
+            if (PathDict.LineJoin > 0f)
+                prev.LineJoin = PathDict.LineJoin;
+            if (PathDict.ClosePath == true)
+                prev.ClosePath = PathDict.ClosePath;
+            if (!string.IsNullOrEmpty(PathDict.Dashes))
+                prev.Dashes = PathDict.Dashes;
+            if (PathDict.Color != null)
+                prev.Color = PathDict.Color;
+            if (PathDict.LineCap != null)
+                prev.LineCap = PathDict.LineCap;
+            if (PathDict.Scissor != null)
+                prev.Scissor = PathDict.Scissor;
+            if (PathDict.Level > 0)
+                prev.Level = PathDict.Level;
+            if (PathDict.Isolated == true)
+                prev.Isolated = PathDict.Isolated;
+            if (PathDict.Knockout == true)
+                prev.Knockout = PathDict.Knockout;
+            if (!string.IsNullOrEmpty(PathDict.BlendMode))
+                prev.BlendMode = PathDict.BlendMode;
+            if (PathDict.Opacity > 0f)
+                prev.Opacity = PathDict.Opacity;
             prev.Type = "fs";
-            Out[Out.Count - 1] = prev;
-
             PathDict = null;
         }
     }
@@ -5673,21 +5717,41 @@ namespace MuPDF.NET
             this.Dev = dev;
         }
 
-        public override void closepath(fz_context arg_0)
+        public override void closepath(fz_context ctx)
         {
             try
             {
                 if (Dev.LineCount == 3)
                     if (Utils.CheckRect(Dev) != 0)
                         return;
-                Dev.PathDict.ClosePath = true;
                 Dev.LineCount = 0;
+
+                if (Dev.HaveMove == 1)
+                {
+                    if (Dev.LastPoint != Dev.FirstPoint)
+                    {
+                        Item line = new Item()
+                        {
+                            Type = "l",
+                            P1 = new Point(Dev.LastPoint),
+                            LastPoint = new Point(Dev.FirstPoint)
+                        };
+                        
+                        Dev.PathDict.Items.Add(line);
+                        Dev.LastPoint = Dev.FirstPoint;
+                    }
+                }
+                else
+                {
+                    Dev.PathDict.ClosePath = true;
+                }
+                Dev.HaveMove = 0;
             }
             catch (Exception) { }
         }
 
         public override void curveto(
-            fz_context arg_0,
+            fz_context ctx,
             float x1,
             float y1,
             float x2,
@@ -5772,6 +5836,8 @@ namespace MuPDF.NET
                         Dev.LastPoint.x,
                         Dev.LastPoint.y
                     );
+                Dev.FirstPoint = Dev.LastPoint;
+                Dev.HaveMove = 1;
                 Dev.LineCount = 0;
             }
             catch (Exception)

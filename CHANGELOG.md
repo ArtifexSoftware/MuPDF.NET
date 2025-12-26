@@ -1,5 +1,9 @@
 # Changelog
 
+### [3.2.13-rc.6] - 2025-12-26
+- Fixed the issues in `ResolveNames` method.
+- Fixed the issues in `DrawShape`
+
 ### [3.2.12] - 2025-11-25
 - Added `ImageFilterPipeline` with SkiaSharp-based filters and integrated it into OCR.
 - Improved `Pixmap` disposal, OCR helpers, and image filter application.

@@ -9,5 +9,7 @@
         public float Zoom { get; set; }
 
         public string Dest { get; set; }
+
+        public Rect Rect { get; set; }
     }
 }

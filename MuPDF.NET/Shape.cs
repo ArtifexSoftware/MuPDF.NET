@@ -847,9 +847,6 @@ namespace MuPDF.NET
                 emc = "EMC\n";
             }
 
-            string alpha = Page.SetOpacity(CA: strokeOpacity, ca: fillOpacity);
-            if (!string.IsNullOrEmpty(alpha))
-                DrawCont = $"/{alpha} gs\n" + DrawCont;
             if (width != 1 && width != 0)
                 DrawCont += $"{Utils.FloatToString(width)} w\n";
 
@@ -860,6 +857,10 @@ namespace MuPDF.NET
 
             if ((string.IsNullOrEmpty(dashes) == false) && (dashes != "[] 0"))
                 DrawCont = $"{dashes} d\n" + DrawCont;
+
+            string alpha = Page.SetOpacity(CA: strokeOpacity, ca: fillOpacity);
+            if (!string.IsNullOrEmpty(alpha))
+                DrawCont = $"/{alpha} gs\n" + DrawCont;
 
             if (closePath)
             {
