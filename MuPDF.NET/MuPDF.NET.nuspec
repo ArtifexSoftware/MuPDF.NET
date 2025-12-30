@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2012/06/nuspec.xsd">
   <metadata>
     <id>MuPDF.NET</id>
-    <version>3.2.12</version>
+    <version>3.2.13-rc.6</version>
     <authors>Artifex Software Inc.</authors>
     <requireLicenseAcceptance>true</requireLicenseAcceptance>
     <license type="file">LICENSE.md</license>
@@ -14,14 +14,14 @@
     <dependencies>
       <group targetFramework=".NETStandard2.0">
         <dependency id="Microsoft.CSharp" version="4.7.0" exclude="Build,Analyzers" />
-        <dependency id="MuPDF.NativeAssets" version="1.26.11" exclude="Build,Analyzers" />
+        <dependency id="MuPDF.NativeAssets" version="1.27.0-rc.2" exclude="Build,Analyzers" />
         <dependency id="Newtonsoft.Json" version="13.0.4" exclude="Build,Analyzers" />
         <dependency id="SharpZipLib" version="1.4.2" exclude="Build,Analyzers" />
         <dependency id="SkiaSharp" version="3.119.1" exclude="Build,Analyzers" />
       </group>
       <group targetFramework=".NETFramework4.0">
         <dependency id="Microsoft.CSharp" version="4.7.0" exclude="Build,Analyzers" />
-        <dependency id="MuPDF.NativeAssets" version="1.26.11" exclude="Build,Analyzers" />
+        <dependency id="MuPDF.NativeAssets" version="1.27.0-rc.2" exclude="Build,Analyzers" />
         <dependency id="Newtonsoft.Json" version="13.0.4" exclude="Build,Analyzers" />
         <dependency id="SharpZipLib" version="1.4.2" exclude="Build,Analyzers" />
         <dependency id="SkiaSharp" version="3.119.1" exclude="Build,Analyzers" />

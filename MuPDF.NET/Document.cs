@@ -1975,7 +1975,9 @@ namespace MuPDF.NET
                 return template;
 
             // replace PDF "null" by zero, omit the square brackets
-            array = array.Replace("null", "0").Substring(1, -1);
+            array = array.Replace("null", "0");
+            if (array.Length >= 2 && array[0] == '[' && array[array.Length - 1] == ']')
+                array = array.Substring(1, array.Length - 2);
 
             // find stuff before first /
             int idx = array.IndexOf("/");
@@ -1989,22 +1991,74 @@ namespace MuPDF.NET
             array = array.Substring(idx);
             template.Dest = array;
 
-            if (array.StartsWith("/XYZ"))
+            // Parse destination type and parameters
+            string[] arr_t = array.Replace("null", "0").Split(new char[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+            if (arr_t.Length == 0)
+                return template;
+
+            string destType = arr_t[0];
+            string[] params_t = arr_t.Skip(1).ToArray();
+
+            if (destType == "/XYZ")
             {
-                template.Dest = "";
-                string[] arr_t = array.Replace("null", "0").Split().Take(1).ToArray();
-                float x = float.Parse(arr_t[0], System.Globalization.CultureInfo.InvariantCulture);
-                float y = float.Parse(arr_t[1], System.Globalization.CultureInfo.InvariantCulture);
-                float z = float.Parse(arr_t[2], System.Globalization.CultureInfo.InvariantCulture);
-                template.To = new Point(x, y);
-                template.Zoom = z;
+                template.Dest = destType;
+                if (params_t.Length >= 3)
+                {
+                    float x = float.Parse(params_t[0], System.Globalization.CultureInfo.InvariantCulture);
+                    float y = float.Parse(params_t[1], System.Globalization.CultureInfo.InvariantCulture);
+                    float z = float.Parse(params_t[2], System.Globalization.CultureInfo.InvariantCulture);
+                    template.To = new Point(x, y);
+                    template.Zoom = z;
+                }
+            }
+            else if (destType == "/FitH" || destType == "/FitBH")
+            {
+                template.Dest = destType;
+                if (params_t.Length >= 1)
+                {
+                    float top = float.Parse(params_t[0], System.Globalization.CultureInfo.InvariantCulture);
+                    template.To = new Point(0, top);
+                }
+            }
+            else if (destType == "/FitV" || destType == "/FitBV")
+            {
+                template.Dest = destType;
+                if (params_t.Length >= 1)
+                {
+                    float left = float.Parse(params_t[0], System.Globalization.CultureInfo.InvariantCulture);
+                    template.To = new Point(left, 0);
+                }
+            }
+            else if (destType == "/FitR")
+            {
+                template.Dest = destType;
+                if (params_t.Length >= 4)
+                {
+                    float left = float.Parse(params_t[0], System.Globalization.CultureInfo.InvariantCulture);
+                    float bottom = float.Parse(params_t[1], System.Globalization.CultureInfo.InvariantCulture);
+                    float right = float.Parse(params_t[2], System.Globalization.CultureInfo.InvariantCulture);
+                    float top = float.Parse(params_t[3], System.Globalization.CultureInfo.InvariantCulture);
+                    template.Rect = new Rect(left, top, right, bottom);
+                }
+            }
+            else if (destType == "/Fit" || destType == "/FitB")
+            {
+                // Fit and FitB have no parameters
+                template.Dest = destType;
             }
 
             // extract page number
-            if (subval.Contains("0 R"))
-                template.Page = page_refs[int.Parse(subval.Split()[0])];
+            if (subval.Contains(" R"))
+            {
+                string[] parts = subval.Split(new char[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length > 0 && int.TryParse(parts[0], out int pageRef))
+                    template.Page = page_refs.ContainsKey(pageRef) ? page_refs[pageRef] : -1;
+            }
             else
-                template.Page = int.Parse(subval);
+            {
+                if (int.TryParse(subval.Trim(), out int pageNum))
+                    template.Page = pageNum;
+            }
 
             return template;
         }
@@ -2032,20 +2086,20 @@ namespace MuPDF.NET
 
                 if (dictKey != null)
                 {
-                    destDict.Add(dictKey, GetArray(val, page_refs));
+                    destDict[dictKey] = GetArray(val, page_refs);
                 }
             }
         }
 
         /// <summary>
-        /// PDF only: Convert destination names into a Python dict.
+        /// PDF only: Convert destination names into a dict.
         /// </summary>
-        /// <returns>PDF only: Convert destination names into a Python dict.</returns>
+        /// <returns>PDF only: Convert destination names into a dict.</returns>
         public Dictionary<string, dynamic> ResolveNames()
         {
             Dictionary<int, int> page_refs = new Dictionary<int, int>();
             for (int i = 0; i < PageCount; i++)
-                page_refs.Add(GetPageXref(i), i);
+                page_refs[GetPageXref(i)] = i;
 
             PdfDocument pdf = Document.AsPdfDocument(this);
 
@@ -2054,17 +2108,22 @@ namespace MuPDF.NET
             Dictionary<string, DestName> destDict = new Dictionary<string, DestName>();
             PdfObj dests = mupdf.mupdf.pdf_new_name("Dests");
 
-            PdfObj oldDests = catalog.pdf_dict_get(dests);
-            if (oldDests.pdf_is_dict() != 0)
-                FillDict(destDict, oldDests, page_refs);
+            if (catalog.m_internal != null)
+            {
+                PdfObj oldDests = catalog.pdf_dict_get(dests);
+                if (oldDests.m_internal != null && oldDests.pdf_is_dict() != 0)
+                    FillDict(destDict, oldDests, page_refs);
+            }
 
             PdfObj tree = pdf.pdf_load_name_tree(dests);
-            if (tree.pdf_is_dict() != 0)
+            if (tree.m_internal != null && tree.pdf_is_dict() != 0)
                 FillDict(destDict, tree, page_refs);
+
+            dests.Dispose();
 
             Dictionary<string, dynamic> ret = new Dictionary<string, dynamic>();
             foreach (var dict in destDict)
-                ret.Add(dict.Key, dict.Value);
+                ret[dict.Key] = dict.Value;
 
             pdf.Dispose();
 

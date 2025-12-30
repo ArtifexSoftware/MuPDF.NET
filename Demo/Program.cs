@@ -3,6 +3,7 @@ using MuPDF.NET;
 using SkiaSharp;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -69,8 +70,152 @@ namespace Demo
             TestMetadata();
             TestMoveFile();
             TestImageFilter();
+            CreateAnnotDocument();
+            TestDrawShape();
+            TestResolveNames();
 
             return;
+        }
+
+        static void TestResolveNames()
+        {
+            Console.WriteLine("\n=== TestResolveNames =======================");
+
+            Document doc = new Document(@"e:\test.pdf");
+            
+            var resolvedNames =  doc.ResolveNames();
+
+            foreach (var item in resolvedNames)
+            {
+                Console.WriteLine($"{item.Key}, {item.Value.Dest}");
+            }
+
+            doc.Close();
+        }
+
+        static void CreateAnnotDocument()
+        {
+            Console.WriteLine("\n=== CreateAnnotDocument =======================");
+            Rect r = Constants.r;  // use the rectangle defined in Constants.cs
+
+            Document doc = new Document();
+            Page page = doc.NewPage();
+
+            page.SetRotation(0);  // no rotation
+
+            TextWriter pw = new TextWriter(page.TrimBox);
+            string txt = "Origin 100.100";
+            pw.Append(new Point(100, 500), txt, new Font("tiro"), fontSize: 24);
+            pw.WriteText(page, new float[]{0,0.4f,1}, oc: 0);
+
+
+
+            Annot annot = page.AddRectAnnot(r);  // 'Square'
+            annot.SetBorder(width: 1f, dashes: new int[] { 1, 2 });
+            annot.SetColors(stroke: Constants.blue, fill: Constants.gold);
+            annot.Update(opacity: 0.5f);
+
+            doc.Save(@"CreateAnnotDocument.pdf");
+
+            doc.Close();
+        }
+
+        static void TestDrawShape()
+        {
+            string origfilename = @"../../../TestDocuments/NewAnnots.pdf";
+            string outfilename = @"../../../TestDocuments/Blank.pdf";
+            float newWidth = 0.5f;
+
+            Document inputDoc = new Document(origfilename);
+            Document outputDoc = new Document(outfilename);
+
+            //string filePath = @"D:\\Vectorlab\\Jobs\\2025\\PACE\\pdf_fix\\assets\\exported_paths_net.txt";
+            //StreamWriter writer = new StreamWriter(filePath);
+
+            if (inputDoc.PageCount != outputDoc.PageCount)
+            {
+                return;
+            }
+
+            for (int pagNum = 0; pagNum < inputDoc.PageCount; pagNum++)
+            {
+                Page page = inputDoc.LoadPage(pagNum);
+                Page outPage = outputDoc.LoadPage(pagNum);
+                List<PathInfo> paths = page.GetDrawings(extended: false);
+                int totalPaths = paths.Count;
+
+                int i = 0;
+                foreach (PathInfo pathInfo in paths)
+                {
+                    Shape shape = outPage.NewShape();
+                    foreach (Item item in pathInfo.Items)
+                    {
+                        if (item != null)
+                        {
+                            if (item.Type == "l")
+                            {
+                                shape.DrawLine(item.P1, item.LastPoint);
+                                //writer.Write($"{i:000}\\] line: {item.Type} >>> {item.P1}, {item.LastPoint}\\n");
+                            }
+                            else if (item.Type == "re")
+                            {
+                                shape.DrawRect(item.Rect, item.Orientation);
+                                //writer.Write($"{i:000}\\] rect: {item.Type} >>> {item.Rect}, {item.Orientation}\\n");
+                            }
+                            else if (item.Type == "qu")
+                            {
+                                shape.DrawQuad(item.Quad);
+                                //writer.Write($"{i:000}\\] quad: {item.Type} >>> {item.Quad}\\n");
+                            }
+                            else if (item.Type == "c")
+                            {
+                                shape.DrawBezier(item.P1, item.P2, item.P3, item.LastPoint);
+                                //writer.Write($"{i:000}\\] curve: {item.Type} >>> {item.P1},  {item.P2}, {item.P3}, {item.LastPoint}\\n");
+                            }
+                            else
+                            {
+                                throw new Exception("unhandled drawing. Aborting...");
+                            }
+                        }
+                    }
+
+                    //pathInfo.Items.get
+                    float newLineWidth = pathInfo.Width;
+                    if (pathInfo.Width <= newWidth)
+                    {
+                        newLineWidth = newWidth;
+                    }
+
+                    int lineCap = 0;
+                    if (pathInfo.LineCap != null && pathInfo.LineCap.Count > 0)
+                        lineCap = (int)pathInfo.LineCap[0];
+                    shape.Finish(
+                        fill: pathInfo.Fill,
+                        color: pathInfo.Color, //this.\_m_DEFAULT_COLOR,
+                        evenOdd: pathInfo.EvenOdd,
+                        closePath: pathInfo.ClosePath,
+                        lineJoin: (int)pathInfo.LineJoin,
+                        lineCap: lineCap,
+                        width: newLineWidth,
+                        strokeOpacity: pathInfo.StrokeOpacity,
+                        fillOpacity: pathInfo.FillOpacity,
+                        dashes: pathInfo.Dashes
+                     );
+
+                    // file_export.write(f'Path {i:03}\] width: {lwidth}, dashes: {path\["dashes"\]}, closePath: {path\["closePath"\]}\\n')
+                    //writer.Write($"Path {i:000}\\] with: {newLineWidth}, dashes: {pathInfo.Dashes}, closePath: {pathInfo.ClosePath}\\n");
+
+                    i++;
+                    shape.Commit();
+                }
+            }
+
+            inputDoc.Close();
+
+            outputDoc.Save(@"TestDrawShape.pdf");
+            outputDoc.Close();
+
+            //writer.Close();
         }
 
         static void TestImageFilter()

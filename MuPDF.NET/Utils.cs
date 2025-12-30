@@ -5118,11 +5118,17 @@ namespace MuPDF.NET
 
         internal static int CheckQuad(LineartDevice dev)
         {
-            List<Item> items = dev.PathDict.Items;
+            // Check whether the last 4 lines represent a quad.
+            // Because of how we count, the lines are a polyline already, i.e.last point
+            // of a line equals 1st point of next line.
+            // So we check for a polygon (last line's end point equals start point).
+            // If not true we return 0.
+            List <Item> items = dev.PathDict.Items;
             int len = items.Count;
-            float[] f = new float[8] { 0, 0, 0, 0, 0, 0, 0, 0 };
-            Point lp = new Point();
+            float[] f = new float[8] { 0, 0, 0, 0, 0, 0, 0, 0 }; // coordinates of the 4 corners
 
+            // fill the 8 floats in f, start from items[-4:]
+            Point lp = new Point();
             for (int i = 0; i < 4; i++)
             {
                 Item line = items[len - 4 + i];
@@ -5133,8 +5139,12 @@ namespace MuPDF.NET
             }
 
             if (lp.X != f[0] || lp.Y != f[1])
+            {
+                // not a polygon!
                 return 0;
+            }
 
+            // we have detected a quad
             dev.LineCount = 0;
             FzQuad q = mupdf.mupdf.fz_make_quad(f[0], f[1], f[6], f[7], f[2], f[3], f[4], f[5]);
             Item rect = new Item() { Type = "qu", Quad = new Quad(q) };
