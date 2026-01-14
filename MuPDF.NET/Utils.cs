@@ -1071,6 +1071,16 @@ namespace MuPDF.NET
             return mupdf.mupdf.fz_make_rect(r[0], r[1], r[2], r[3]);
         }
 
+        internal static string ReadSamples(byte[] buff, int offset, int n)
+        {
+            if ((offset + n) > buff.Length)
+                return null;
+            List<byte> ret = new List<byte>();
+            for (int i = 0; i < n; i++)
+                ret.Add((byte)buff[offset + i]);
+            return Utils.Bytes2Str(ret);
+        }
+
         internal static string ReadSamples(FzPixmap pixmap, int offset, int n)
         {
             List<byte> ret = new List<byte>();
@@ -1085,31 +1095,37 @@ namespace MuPDF.NET
             return string.Join(",", bytes.Select(b => $"{b}"));
         }
 
-        internal static Dictionary<string, int> ColorCount(FzPixmap pm, dynamic clip)
+        internal static Dictionary<string, int> ColorCount(FzPixmap pm, IRect iRect, int iStride, int iN, int iX, int iY, byte[] samples, dynamic clip)
         {
             Dictionary<string, int> ret = new Dictionary<string, int>();
             int count = 0;
-            FzIrect irect = pm.fz_pixmap_bbox();
+            if (iRect == null)
+                throw new ArgumentNullException(nameof(iRect));
+            if (samples == null)
+                throw new ArgumentNullException(nameof(samples));
+            FzIrect irect = iRect.ToFzIrect();
             irect = irect.fz_intersect_irect(new FzIrect(RectFromObj(clip)));
-            int stride = pm.fz_pixmap_stride();
+            int stride = iStride;
             int width = irect.x1 - irect.x0;
             int height = irect.y1 - irect.y0;
-            int n = pm.n();
+            int n = iN;
 
             int substride = width * n;
-            int s = stride * (irect.y0 - pm.y()) + (irect.x0 - pm.x()) * n;
-            string oldPix = Utils.ReadSamples(pm, s, n);
+            int s = stride * (irect.y0 - iY) + (irect.x0 - iX) * n;
+
+            string oldPix = Utils.ReadSamples(samples, s, n);
 
             count = 0;
             if (irect.fz_is_empty_irect() != 0)
                 return ret;
+
             string pixel = null;
             int c = 0;
             for (int i = 0; i < height; i++)
             {
                 for (int j = 0; j < substride; j += n)
                 {
-                    string newPix = Utils.ReadSamples(pm, s + j, n);
+                    string newPix = Utils.ReadSamples(samples, s + j, n);
                     if (!newPix.SequenceEqual(oldPix))
                     {
                         pixel = oldPix;

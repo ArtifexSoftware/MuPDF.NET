@@ -2,6 +2,7 @@
 using SkiaSharp;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -68,12 +69,19 @@ namespace MuPDF.NET
         /// <summary>
         /// Contains the IRect of the pixmap
         /// </summary>
+        private IRect _irect = null;
         public IRect IRect
         {
             get
             {
+                if (_irect != null)
+                {
+                    return _irect;
+                }
                 FzIrect val = _nativePixmap.fz_pixmap_bbox();
-                return new IRect(val);
+                _irect = new IRect(val);
+
+                return _irect;
             }
         }
 
@@ -91,11 +99,16 @@ namespace MuPDF.NET
         /// <summary>
         /// pixmap's Colorspace
         /// </summary>
+        private ColorSpace _colorSpace = null;
         public ColorSpace ColorSpace
         {
             get
             {
-                return new ColorSpace(_nativePixmap.fz_pixmap_colorspace());
+                if (_colorSpace == null)
+                {
+                    _colorSpace = new ColorSpace(_nativePixmap.fz_pixmap_colorspace());
+                }
+                return _colorSpace;
             }
         }
 
@@ -161,11 +174,15 @@ namespace MuPDF.NET
         /// <summary>
         /// bytes per pixel
         /// </summary>
+        private int _n = -1;
         public int N
         {
             get
             {
-                return _nativePixmap.fz_pixmap_components();
+                if (_n < 0)
+                    _n =  _nativePixmap.fz_pixmap_components();
+
+                return _n;
             }
         }
 
@@ -188,19 +205,23 @@ namespace MuPDF.NET
         /// <summary>
         /// bytes copy of pixel area
         /// </summary>
+        private byte[] _samples = null;
         public byte[] SAMPLES
         {
             get
             {
-                if (_nativePixmap.m_internal == null)
-                    return null;
+                if (_samples != null)
+                    return _samples;
+
+                //if (_nativePixmap.m_internal == null)
+                //    return null;
 
                 int size = (ColorSpace.N + Alpha) * _nativePixmap.w() * _nativePixmap.h();
-                byte[] data = new byte[size];
+                _samples = new byte[size];
                 SWIGTYPE_p_unsigned_char pData = _nativePixmap.samples();
-                Marshal.Copy(SWIGTYPE_p_unsigned_char.getCPtr(pData).Handle, data, 0, size);
+                Marshal.Copy(SWIGTYPE_p_unsigned_char.getCPtr(pData).Handle, _samples, 0, size);
 
-                return data;
+                return _samples;
             }
         }
 
@@ -229,11 +250,14 @@ namespace MuPDF.NET
         /// <summary>
         /// size of one image row
         /// </summary>
+        private int _stride = -1;
         public int Stride
         {
             get
             {
-                return _nativePixmap.fz_pixmap_stride();
+                if (_stride < 0)
+                    _stride = _nativePixmap.fz_pixmap_stride();
+                return _stride;
             }
         }
 
@@ -251,11 +275,16 @@ namespace MuPDF.NET
         /// <summary>
         /// X-coordinate of top-left corner
         /// </summary>
+        private int _x = -1;
         public int X
         {
             get
             {
-                return _nativePixmap.fz_pixmap_x();
+                if (_x < 0)
+                {
+                    _x = _nativePixmap.fz_pixmap_x();
+                }
+                return _x;
             }
         }
 
@@ -273,11 +302,14 @@ namespace MuPDF.NET
         /// <summary>
         /// Y-coordinate of top-left corner
         /// </summary>
+        private int _y = -1;
         public int Y
         {
             get
             {
-                return _nativePixmap.fz_pixmap_y();
+                if (_y < 0)
+                    _y = _nativePixmap.fz_pixmap_y();
+                return _y;
             }
         }
 
@@ -397,6 +429,13 @@ namespace MuPDF.NET
             if (arg0 == "raw" && arg1 != null)
             {
                 _nativePixmap = arg1.ToFzPixmap();
+                int n = N;
+                byte[] samples = SAMPLES;
+                ColorSpace colorSpace = ColorSpace;
+                IRect irect = IRect;
+                int stride = Stride;
+                int x = X;
+                int y = Y;
             }
             else
                 throw new Exception("arg0 must be `raw` or arg1 must be not null.");
@@ -719,14 +758,32 @@ namespace MuPDF.NET
         /// <exception cref="Exception"></exception>
         public dynamic ColorCount(bool colors = false, dynamic clip = null)
         {
-            FzPixmap pm = _nativePixmap;
-            Dictionary<string, int> rc = Utils.ColorCount(pm, clip);
-            if (rc == null)
-                throw new Exception(Utils.ErrorMessages["MSG_COLOR_COUNT_FAILED"]);
-            if (!colors)
-                return rc.Count;
+            if (_disposed || _nativePixmap == null)
+                throw new ObjectDisposedException("Pixmap has been disposed.");
             
-            return rc;
+            try
+            {
+                FzPixmap pm = _nativePixmap;
+                IRect irect = IRect;
+                int stride = Stride;
+                int n = N;
+                int x = X;
+                int y = Y;
+                byte[] samples = SAMPLES;
+                
+                Dictionary<string, int> rc = Utils.ColorCount(pm, irect, stride, n, x, y, samples, clip);
+                if (rc == null)
+                    throw new Exception(Utils.ErrorMessages["MSG_COLOR_COUNT_FAILED"]);
+                if (!colors)
+                    return rc.Count;
+                
+                return rc;
+            }
+            catch (AccessViolationException)
+            {
+                _disposed = true;
+                throw new ObjectDisposedException("Pixmap has been disposed.");
+            }
         }
 
         /// <summary>

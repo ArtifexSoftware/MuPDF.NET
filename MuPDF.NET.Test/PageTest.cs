@@ -182,7 +182,7 @@ namespace MuPDF.NET.Test
             page.InsertHtmlBox(new Rect(100, 100, 300, 300), "<h1 style=\"font-family:kenpixel\">hello</h1>", css: "@font-face {font-family: kenpixel; src: url(./kenpixel.ttf)}", scaleLow: 1, archive: archive);
 
             doc.Save("output.pdf");
-            //Assert.Pass();
+            Assert.Pass();
         }
 
         [Test]

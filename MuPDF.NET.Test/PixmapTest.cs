@@ -62,9 +62,15 @@ namespace MuPDF.NET.Test
 
             (float f, byte[] max) = pix.ColorTopUsage();
 
+            pix.Dispose();
+            page.Dispose();
+            doc.Close();
+
             Assert.That(max[0], Is.EqualTo(255));
             Assert.That(max[1], Is.EqualTo(255));
             Assert.That(max[2], Is.EqualTo(255));
+
+
         }
 
         [Test]
