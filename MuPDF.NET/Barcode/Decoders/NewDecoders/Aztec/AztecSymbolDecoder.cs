@@ -53,7 +53,12 @@ namespace BarcodeReader.Core.Aztec
             for (int i = 0; i <= bitStream.Length - sliceSize; )
             {
                 int code = AztecUtils.BitSliceValue(bitStream, ref i, sliceSize);
-                int value = TextSet[code + TextPageLength * latch];
+                int textSetIndex = code + TextPageLength * latch;
+                if (textSetIndex < 0 || textSetIndex >= TextSet.Length)
+                {
+                    break;
+                }
+                int value = TextSet[textSetIndex];
                 if (value == 0)
                 {
                     if (chars.Length > 0)
@@ -149,7 +154,16 @@ namespace BarcodeReader.Core.Aztec
                                 for (int i = 0; i < flag; ++i)
                                 {
                                     int code = AztecUtils.BitSliceValue(bitStream, ref index, 4);
-                                    int digit = TextSet[4 * TextPageLength + code] - 48;
+                                    int textSetIndex = 4 * TextPageLength + code;
+                                    if (textSetIndex < 0 || textSetIndex >= TextSet.Length)
+                                    {
+                                        return new ABarCodeData[0];
+                                    }
+                                    int digit = TextSet[textSetIndex] - 48;
+                                    if (digit < 0 || digit > 9)
+                                    {
+                                        return new ABarCodeData[0];
+                                    }
                                     eci = eci * 10 + digit;
                                 }
                                 return new ABarCodeData[] { new ECISwitchSymbol(eci) };

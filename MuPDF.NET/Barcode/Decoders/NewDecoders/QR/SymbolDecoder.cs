@@ -80,9 +80,25 @@ namespace BarcodeReader.Core.QR
 
         public static ABarCodeData DecodeECI(int version, BitArray dataStream, Encoding textEncoding, ref int index)
         {
+            if (index >= dataStream.Count)
+            {
+                return null;
+            }
+
             int countOnes = 0;
-            while (dataStream[index] == true) { index++; countOnes++; }
+            while (index < dataStream.Count && dataStream[index] == true) { index++; countOnes++; }
+
+            if (index >= dataStream.Count)
+            {
+                return null;
+            }
+
             index++; //skip first 0
+            if (countOnes > 2)
+            {
+                return null;
+            }
+
             int[] lengths=new int[]{7,14,21};
             int ECIAssignment= QRUtils.BitSliceValue(dataStream, ref index, lengths[countOnes]);
             string assignment = "000000" + ECIAssignment;
@@ -110,6 +126,11 @@ namespace BarcodeReader.Core.QR
 
         public static ABarCodeData DecodeNumeric(int version, BitArray dataStream, Encoding textEncoding, ref int index)
         {
+            if (version < 1 || version - 1 >= QRCountBitsNumeric.Length)
+            {
+                return null;
+            }
+
             int countBits = QRCountBitsNumeric[version - 1];
             int dataLength = QRUtils.BitSliceValue(dataStream, ref index, countBits);
             int remainderLength = dataLength%3;
@@ -144,6 +165,11 @@ namespace BarcodeReader.Core.QR
 
         public static ABarCodeData DecodeAlpha(int version, BitArray dataStream, Encoding textEncoding, ref int index)
         {
+            if (version < 1 || version - 1 >= QRCountBitsAlpha.Length)
+            {
+                return null;
+            }
+
             int countBits = QRCountBitsAlpha[version - 1];
             int dataLength = QRUtils.BitSliceValue(dataStream, ref index, countBits);
             int remainderLength = dataLength%2;
@@ -155,13 +181,23 @@ namespace BarcodeReader.Core.QR
                 int pairValue = QRUtils.BitSliceValue(dataStream, ref index, 11);
                 int first = (pairValue/45)%45; //TODO %45 added to avoid crash
                 int second = pairValue%45;
+                if (first >= AlphaSet.Length || second >= AlphaSet.Length)
+                {
+                    return null;
+                }
+
                 data[dataIndex++] = AlphaSet[first];
                 data[dataIndex++] = AlphaSet[second];
             }
 
             if (remainderLength > 0)
             {
-                data[dataIndex] = AlphaSet[QRUtils.BitSliceValue(dataStream, ref index, 6)];
+                int remainderValue = QRUtils.BitSliceValue(dataStream, ref index, 6);
+                if (remainderValue >= AlphaSet.Length)
+                {
+                    return null;
+                }
+                data[dataIndex] = AlphaSet[remainderValue];
             }
 
             return new StringBarCodeData(new string(data));
@@ -169,6 +205,11 @@ namespace BarcodeReader.Core.QR
 
         public static ABarCodeData DecodeByte(int version, BitArray dataStream, Encoding textEncoding, ref int index)
         {
+            if (version < 1 || version - 1 >= QRCountBitsByte.Length)
+            {
+                return null;
+            }
+
             int countBits = QRCountBitsByte[version - 1];
             int dataLength = QRUtils.BitSliceValue(dataStream, ref index, countBits);
             byte[] data = new byte[dataLength];
@@ -189,6 +230,11 @@ namespace BarcodeReader.Core.QR
 
         public static ABarCodeData DecodeKanji(int version, BitArray dataStream, Encoding textEncoding, ref int index)
         {
+            if (version < 1 || version - 1 >= QRCountBitsKanji.Length)
+            {
+                return null;
+            }
+
             int countBits = QRCountBitsKanji[version - 1];
             int dataLength = QRUtils.BitSliceValue(dataStream, ref index, countBits);
             byte[] data = new byte[dataLength*2];

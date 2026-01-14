@@ -70,27 +70,140 @@ namespace Demo
             TestMetadata();
             TestMoveFile();
             TestImageFilter();
+            TestImageFilterOcr();
             CreateAnnotDocument();
             TestDrawShape();
-            TestResolveNames();
+            TestIssue213();
+            TestIssue1880();
 
             return;
         }
 
-        static void TestResolveNames()
+        static void TestIssue1880()
         {
-            Console.WriteLine("\n=== TestResolveNames =======================");
+            Console.WriteLine("\n=== TestIssue1880 =======================");
 
-            Document doc = new Document(@"e:\test.pdf");
-            
-            var resolvedNames =  doc.ResolveNames();
+            string testFilePath = Path.GetFullPath(@"../../../TestDocuments/issue_1880.pdf");
 
-            foreach (var item in resolvedNames)
+            Document doc = new Document(testFilePath);
+
+            for (int i = 0; i < doc.PageCount; i++)
             {
-                Console.WriteLine($"{item.Key}, {item.Value.Dest}");
+                Page page = doc[i];
+
+                List<Barcode> barcodes = page.ReadBarcodes(barcodeFormat: BarcodeFormat.DM, pureBarcode:true);
+                foreach (Barcode barcode in barcodes)
+                {
+                    BarcodePoint[] points = barcode.ResultPoints;
+                    Console.WriteLine($"Page {i++} - Type: {barcode.BarcodeFormat} - Value: {barcode.Text} - Rect: [{points[0]},{points[1]}]");
+                }
+
+                page.Dispose();
             }
 
             doc.Close();
+        }
+
+        static void TestIssue213()
+        {
+            Console.WriteLine("\n=== TestIssue213 =======================");
+
+            string origfilename = @"../../../TestDocuments/issue_213.pdf";
+            string outfilename = @"../../../TestDocuments/Blank.pdf";
+            float newWidth = 0.5f;
+
+            Document inputDoc = new Document(origfilename);
+            Document outputDoc = new Document(outfilename);
+
+            if (inputDoc.PageCount != outputDoc.PageCount)
+            {
+                return;
+            }
+
+            for (int pagNum = 0; pagNum < inputDoc.PageCount; pagNum++)
+            {
+                Page page = inputDoc.LoadPage(pagNum);
+
+                Pixmap pxmp = page.GetPixmap();
+                pxmp.Save(@"output.png");
+                pxmp.Dispose();
+
+                Page outPage = outputDoc.LoadPage(pagNum);
+                List<PathInfo> paths = page.GetDrawings(extended: false);
+                int totalPaths = paths.Count;
+
+                int i = 0;
+                foreach (PathInfo pathInfo in paths)
+                {
+                    Shape shape = outPage.NewShape();
+                    foreach (Item item in pathInfo.Items)
+                    {
+                        if (item != null)
+                        {
+                            if (item.Type == "l")
+                            {
+                                shape.DrawLine(item.P1, item.LastPoint);
+                                //writer.Write($"{i:000}\\] line: {item.Type} >>> {item.P1}, {item.LastPoint}\\n");
+                            }
+                            else if (item.Type == "re")
+                            {
+                                shape.DrawRect(item.Rect, item.Orientation);
+                                //writer.Write($"{i:000}\\] rect: {item.Type} >>> {item.Rect}, {item.Orientation}\\n");
+                            }
+                            else if (item.Type == "qu")
+                            {
+                                shape.DrawQuad(item.Quad);
+                                //writer.Write($"{i:000}\\] quad: {item.Type} >>> {item.Quad}\\n");
+                            }
+                            else if (item.Type == "c")
+                            {
+                                shape.DrawBezier(item.P1, item.P2, item.P3, item.LastPoint);
+                                //writer.Write($"{i:000}\\] curve: {item.Type} >>> {item.P1},  {item.P2}, {item.P3}, {item.LastPoint}\\n");
+                            }
+                            else
+                            {
+                                throw new Exception("unhandled drawing. Aborting...");
+                            }
+                        }
+                    }
+
+                    //pathInfo.Items.get
+                    float newLineWidth = pathInfo.Width;
+                    if (pathInfo.Width <= newWidth)
+                    {
+                        newLineWidth = newWidth;
+                    }
+
+                    int lineCap = 0;
+                    if (pathInfo.LineCap != null && pathInfo.LineCap.Count > 0)
+                        lineCap = (int)pathInfo.LineCap[0];
+                    shape.Finish(
+                        fill: pathInfo.Fill,
+                        color: pathInfo.Color, //this.\_m_DEFAULT_COLOR,
+                        evenOdd: pathInfo.EvenOdd,
+                        closePath: pathInfo.ClosePath,
+                        lineJoin: (int)pathInfo.LineJoin,
+                        lineCap: lineCap,
+                        width: newLineWidth,
+                        strokeOpacity: pathInfo.StrokeOpacity,
+                        fillOpacity: pathInfo.FillOpacity,
+                        dashes: pathInfo.Dashes
+                     );
+
+                    // file_export.write(f'Path {i:03}\] width: {lwidth}, dashes: {path\["dashes"\]}, closePath: {path\["closePath"\]}\\n')
+                    //writer.Write($"Path {i:000}\\] with: {newLineWidth}, dashes: {pathInfo.Dashes}, closePath: {pathInfo.ClosePath}\\n");
+
+                    i++;
+                    shape.Commit();
+                }
+            }
+
+            inputDoc.Close();
+
+            outputDoc.Save(@"output.pdf");
+            outputDoc.Close();
+
+            //writer.Close();
         }
 
         static void CreateAnnotDocument()
@@ -219,6 +332,56 @@ namespace Demo
         }
 
         static void TestImageFilter()
+        {
+            const string inputPath = @"../../../TestDocuments/Image/table.jpg";
+            const string outputPath = @"output.png";
+
+            // Load the image file into SKBitmap
+            using (var bitmap = SKBitmap.Decode(inputPath))
+            {
+                if (bitmap == null)
+                {
+                    Console.WriteLine("Failed to load image.");
+                    return;
+                }
+
+                SKBitmap inputBitmap = bitmap.Copy();
+
+                // build the pipeline
+                var pipeline = new ImageFilterPipeline();
+
+                // clear any defaults if you’re reusing the instance
+                pipeline.Clear();
+
+                // add filters one-by-one
+                pipeline.AddDeskew(minAngle: 0.5);              // replaces any existing deskew step
+                pipeline.AddRemoveHorizontalLines();            // also replaces existing horizontal-removal step
+                pipeline.AddRemoveVerticalLines();
+                pipeline.AddGrayscale();
+                //pipeline.AddMedian(blockSize: 2, replaceExisting: true);
+                //pipeline.AddGamma(gamma: 1.2);                  // brighten slightly
+                //pipeline.AddContrast(contrast: 100);
+                //pipeline.AddFit(100);
+                //pipeline.AddDilation();
+                //pipeline.AddScale(scaleFactor: 1.75, quality: SKFilterQuality.Medium);
+                pipeline.AddInvert();
+
+                // apply the pipeline (bitmap is modified in place)
+                pipeline.Apply(ref inputBitmap);
+
+                using (var data = inputBitmap.Encode(SKEncodedImageFormat.Png, 100)) // 100 = quality
+                {
+                    using (var stream = File.OpenWrite(outputPath))
+                    {
+                        data.SaveTo(stream);
+                    }
+                }
+
+                Console.WriteLine($"Loaded image: {bitmap.Width}x{bitmap.Height} pixels");
+            }
+        }
+
+        static void TestImageFilterOcr()
         {
             const string inputPath = @"../../../TestDocuments/Image/boxedpage.jpg";
 

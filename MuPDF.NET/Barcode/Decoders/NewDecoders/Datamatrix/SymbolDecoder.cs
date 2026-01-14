@@ -171,6 +171,11 @@ namespace BarcodeReader.Core.Datamatrix
 
         public static ABarCodeData[] DecodeBase256(int[] symbols, ref int index, System.Text.Encoding encoding)
         {
+            if (index >= symbols.Length)
+            {
+                return null;
+            }
+
             int sequenceEnd;
             byte d1 = UnRandomise256(symbols[index], index + 1);
             if (d1 == 0)
@@ -186,6 +191,10 @@ namespace BarcodeReader.Core.Datamatrix
             }
             else
             {
+                if (index + 1 >= symbols.Length)
+                {
+                    return null;
+                }
                 int d2 = UnRandomise256(symbols[index + 1], index + 2);
                 index += 2;
                 sequenceEnd = index + (d1 - 249)*250 + d2;
@@ -301,16 +310,31 @@ namespace BarcodeReader.Core.Datamatrix
         // decodes and ECI switch sequence
         public static ABarCodeData DecodeECI(int[] symbols, ref int index)
         {
+            if (index >= symbols.Length)
+            {
+                return null;
+            }
+
             int c1 = symbols[index++];
             if (c1 < 128)
             {
                 return new ECISwitchSymbol(c1 - 1);
             }
 
+            if (index >= symbols.Length)
+            {
+                return null;
+            }
+
             int c2 = symbols[index++];
             if (c1 < 192)
             {
                 return new ECISwitchSymbol((c1 - 128)*254 + c2 + 126);
+            }
+
+            if (index >= symbols.Length)
+            {
+                return null;
             }
 
             int c3 = symbols[index++];
@@ -320,8 +344,17 @@ namespace BarcodeReader.Core.Datamatrix
         // decodes a structured append sequence
         public static ABarCodeData DecodeStructuredAppend(int[] symbols, ref int index)
         {
+            if (index + 2 >= symbols.Length)
+            {
+                return null;
+            }
+
+            int val1 = symbols[index];
+            int val2 = symbols[index + 1];
+            int val3 = symbols[index + 2];
+
             index += 3;
-            return new StructuredAppendSymbol(symbols[index - 3], symbols[index - 2], symbols[index - 1]);
+            return new StructuredAppendSymbol(val1, val2, val3);
         }
 
         // decodes Base<X> coded data. Used in ECC000-140
@@ -367,9 +400,16 @@ namespace BarcodeReader.Core.Datamatrix
                 c40Length += 2;
 
             int[] c40Data = new int[c40Length / 2 * 3];
-            for (int i = 0,  c = 0; i < c40Length; i+=2, index+=2)
+            int originalIndex = index;
+            for (int i = 0, c = 0; i < c40Length; i += 2)
             {
-                int word = symbols[index]*256 + symbols[index + 1] - 1;
+                int currentIndex = originalIndex + i;
+                if (currentIndex + 1 >= symbols.Length)
+                {
+                    break;
+                }
+
+                int word = symbols[currentIndex] * 256 + symbols[currentIndex + 1] - 1;
                 byte c1 = (byte) (word/1600);
                 word %= 1600;
                 byte c2 = (byte) (word/40);
@@ -378,6 +418,7 @@ namespace BarcodeReader.Core.Datamatrix
                 c40Data[c++] = c2;
                 c40Data[c++] = c3;
             }
+            index = originalIndex + c40Length;
             if (index<symbols.Length && symbols[index] == 254) ++index;
             return c40Data;
         }

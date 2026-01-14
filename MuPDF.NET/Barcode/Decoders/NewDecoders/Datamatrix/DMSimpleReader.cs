@@ -292,9 +292,10 @@ namespace BarcodeReader.Core.Datamatrix
 
 					String data = "";
 					if (b.Data != null) 
-                        foreach (ABarCodeData d in b.Data) 
-                            data += d.ToString();
-					foundBarcode.Value = data;
+                        foreach (ABarCodeData d in b.Data)
+                            if (d != null)
+                                data += d.ToString();
+                    foundBarcode.Value = data;
                     foundBarcode.Color = SKColors.Blue;
 
                     foundBarcode.Polygon = new SKPointI[5] { b.A, b.B, b.D, b.C, b.A };

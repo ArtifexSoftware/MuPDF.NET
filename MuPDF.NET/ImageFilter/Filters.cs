@@ -2240,28 +2240,35 @@ namespace MuPDF.NET
     /// <summary>
     /// Invert filter.
     /// </summary>
-    internal class Invert
+    internal unsafe class Invert
     {
         public static void Process(ref SKBitmap bitmap)
         {
-            // Work on a copy if you want to keep original unchanged
-            var bmp = bitmap.Copy();
-
-            for (int y = 0; y < bmp.Height; y++)
+            using (var pixmap = bitmap.PeekPixels())
             {
-                for (int x = 0; x < bmp.Width; x++)
+                int width = bitmap.Width;
+                int height = bitmap.Height;
+                int rowBytes = pixmap.RowBytes;
+                IntPtr pixels = pixmap.GetPixels();
+
+                byte* ptr = (byte*)pixels.ToPointer();
+
+                for (int y = 0; y < height; y++)
                 {
-                    SKColor c = bmp.GetPixel(x, y);
-                    SKColor inv = new SKColor((byte)(255 - c.Red),
-                                              (byte)(255 - c.Green),
-                                              (byte)(255 - c.Blue),
-                                              c.Alpha);
-                    bmp.SetPixel(x, y, inv);
+                    byte* row = ptr + y * rowBytes;
+
+                    for (int x = 0; x < width; x++)
+                    {
+                        byte* px = row + x * 4; // 4 bytes per pixel: B, G, R, A
+
+                        // Invert RGB channels, keep alpha unchanged
+                        px[0] = (byte)(255 - px[0]); // Blue
+                        px[1] = (byte)(255 - px[1]); // Green
+                        px[2] = (byte)(255 - px[2]); // Red
+                        // px[3] stays unchanged (Alpha)
+                    }
                 }
             }
-
-            bitmap.Dispose();
-            bitmap = bmp;
         }
     }
 }
