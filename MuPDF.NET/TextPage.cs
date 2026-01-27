@@ -22,28 +22,40 @@ namespace MuPDF.NET
         /// <summary>
         /// Rect of Stext Page
         /// </summary>
+        private FzRect _mediaBox = null;
         private FzRect MediaBox
         {
-            get { return new FzRect(_nativeTextPage.m_internal.mediabox); }
+            get { 
+                if (_mediaBox == null)
+                {
+                    _mediaBox = new FzRect(_nativeTextPage.m_internal.mediabox);
+                }
+                return _mediaBox;
+            }
         }
 
         /// <summary>
         /// Block List of Text
         /// </summary>
+        private List<FzStextBlock> _blocks = null;
         public List<FzStextBlock> Blocks
         {
             get
             {
-                List<FzStextBlock> blocks = new List<FzStextBlock>();
-                for (
-                    fz_stext_block block = _nativeTextPage.m_internal.first_block;
-                    block != null;
-                    block = block.next
-                )
+                if (_blocks == null)
                 {
-                    blocks.Add(new FzStextBlock(block));
+                    List<FzStextBlock> blocks = new List<FzStextBlock>();
+                    for (
+                        fz_stext_block block = _nativeTextPage.m_internal.first_block;
+                        block != null;
+                        block = block.next
+                    )
+                    {
+                        blocks.Add(new FzStextBlock(block));
+                    }
+                    _blocks = blocks;
                 }
-                return blocks;
+                return _blocks;
             }
         }
 
@@ -1138,7 +1150,7 @@ namespace MuPDF.NET
                     blockDict.Size = mupdf.mupdf.fz_image_size(image);
                     blockDict.Image = Utils.BinFromBuffer(buf);
                 }
-                else
+                else if (block.m_internal.type == (int)STextBlockType.FZ_STEXT_BLOCK_TEXT)
                 {
                     List<Line> lineList = new List<Line>();
 

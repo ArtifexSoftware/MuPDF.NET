@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
@@ -19,7 +19,6 @@ using MuPDF.NET;
 using Newtonsoft.Json;
 using SkiaSharp;
 using static System.Net.Mime.MediaTypeNames;
-using static MuPDF.NET.Global;
 
 namespace MuPDF.NET
 {
@@ -1623,40 +1622,47 @@ namespace MuPDF.NET
             List<Line> add_lines = null
         )
         {
-            if (strategy != null)
-            {
-                vertical_strategy = strategy;
-                horizontal_strategy = strategy;
-            }
+            // Convert List<Edge> to List<object> for FindTables
+            List<object> verticalLinesObj = vertical_lines?.Cast<object>().ToList();
+            List<object> horizontalLinesObj = horizontal_lines?.Cast<object>().ToList();
 
-            Dictionary<string, object> settings = new Dictionary<string, object>
-            {
-                { "vertical_strategy", vertical_strategy },
-                { "horizontal_strategy", horizontal_strategy },
-                { "explicit_vertical_lines", vertical_lines },
-                { "explicit_horizontal_lines", horizontal_lines },
-                { "snap_tolerance", snap_tolerance },
-                { "snap_x_tolerance", snap_x_tolerance },
-                { "snap_y_tolerance", snap_y_tolerance },
-                { "join_tolerance", join_tolerance },
-                { "join_x_tolerance", join_x_tolerance },
-                { "join_y_tolerance", join_y_tolerance },
-                { "edge_min_length", edge_min_length },
-                { "min_words_vertical", min_words_vertical },
-                { "min_words_horizontal", min_words_horizontal },
-                { "intersection_tolerance", intersection_tolerance },
-                { "intersection_x_tolerance", intersection_x_tolerance },
-                { "intersection_y_tolerance", intersection_y_tolerance },
-                { "text_tolerance", text_tolerance },
-                { "text_x_tolerance", text_x_tolerance },
-                { "text_y_tolerance", text_y_tolerance }
-            };
+            // Note: add_lines parameter in GetTables is List<Line> (text lines), but FindTables expects
+            // List<Tuple<Point, Point>> (geometric line segments). Since Line is a text line structure
+            // and not a geometric line, we cannot properly convert it. Pass null for now.
+            // If geometric line segments are needed, they should be passed directly to FindTables.
+            List<Tuple<Point, Point>> addLinesTuple = null;
 
-            // Resolve settings
-            TableSettings tset = TableSettings.resolve(settings);
+            // Call FindTables with nullable tolerances (0.0f means use default, null means UNSET)
+            var finder = TableFinderHelper.FindTables(
+                page: page,
+                clip: clip,
+                vertical_strategy: vertical_strategy,
+                horizontal_strategy: horizontal_strategy,
+                vertical_lines: verticalLinesObj,
+                horizontal_lines: horizontalLinesObj,
+                snap_tolerance: snap_tolerance,
+                snap_x_tolerance: snap_x_tolerance == 0.0f ? (float?)null : snap_x_tolerance,
+                snap_y_tolerance: snap_y_tolerance == 0.0f ? (float?)null : snap_y_tolerance,
+                join_tolerance: join_tolerance,
+                join_x_tolerance: join_x_tolerance == 0.0f ? (float?)null : join_x_tolerance,
+                join_y_tolerance: join_y_tolerance == 0.0f ? (float?)null : join_y_tolerance,
+                edge_min_length: edge_min_length,
+                min_words_vertical: min_words_vertical,
+                min_words_horizontal: min_words_horizontal,
+                intersection_tolerance: intersection_tolerance,
+                intersection_x_tolerance: intersection_x_tolerance == 0.0f ? (float?)null : intersection_x_tolerance,
+                intersection_y_tolerance: intersection_y_tolerance == 0.0f ? (float?)null : intersection_y_tolerance,
+                text_tolerance: text_tolerance,
+                text_x_tolerance: text_x_tolerance,
+                text_y_tolerance: text_y_tolerance,
+                strategy: strategy,
+                add_lines: addLinesTuple
+            );
 
-            List<Table> tables = TableFinder.FindTables(page, clip, tset);
-            return tables;
+            if (finder == null)
+                return new List<Table>();
+
+            return finder.tables;
         }
 
         /// <summary>

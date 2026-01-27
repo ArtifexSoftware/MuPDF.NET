@@ -1685,7 +1685,7 @@ namespace MuPDF.NET
         /// Create a table of contents.
         /// </summary>
         /// <param name="simple">a bool to control output.</param>
-        /// <returns>Returns a list, where each entry consists of outline level, title, page number and link destination (if simple = False). For details see PyMuPDF's documentation.</returns>
+        /// <returns>Returns a list, where each entry consists of outline level, title, page number and link destination (if simple = False). For details see MuPDF's documentation.</returns>
         /// <exception cref="Exception"></exception>
         public List<Toc> GetToc(bool simple = true)
         {
@@ -5950,6 +5950,23 @@ namespace MuPDF.NET
             pdf.Dispose();
         }
 
+        public void Dispose()
+        {
+            if (IsClosed)
+                throw new Exception("document closed");
+
+            if (Outline != null)
+            {
+                Outline.Dispose();
+                Outline = null;
+            }
+            ResetPageRefs();
+            IsClosed = true;
+            GraftMaps = new Dictionary<int, GraftMap>();
+            _nativeDocument.Dispose();
+            _nativeDocument = null;
+        }
+
         public void Close()
         {
             if (IsClosed)
@@ -6000,7 +6017,7 @@ namespace MuPDF.NET
             PdfObj useFor = ocg.pdf_dict_put_dict(new PdfObj("Usage"), 3);
             PdfObj ciName = mupdf.mupdf.pdf_new_name("CreatorInfo");
             PdfObj creInfo = useFor.pdf_dict_put_dict(ciName, 2);
-            creInfo.pdf_dict_put_text_string(new PdfObj("Creator"), "PyMuPDF");
+            creInfo.pdf_dict_put_text_string(new PdfObj("Creator"), "MuPDF");
 
             if (!string.IsNullOrEmpty(usage))
                 creInfo.pdf_dict_put_name(new PdfObj("Subtype"), usage);

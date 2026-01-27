@@ -1,4 +1,4 @@
-﻿using mupdf;
+using mupdf;
 using SkiaSharp;
 using System;
 using System.Collections;
@@ -10,7 +10,6 @@ using System.Net.Mime;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
-using static MuPDF.NET.Global;
 using static System.Net.Mime.MediaTypeNames;
 
 namespace MuPDF.NET
