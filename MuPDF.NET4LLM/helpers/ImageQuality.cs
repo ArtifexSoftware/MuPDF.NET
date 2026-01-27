@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 
-namespace MuPDF.NET.LLM.Helpers
+namespace MuPDF.NET4LLM.Helpers
 {
     /// <summary>
     /// Image quality analysis utilities.

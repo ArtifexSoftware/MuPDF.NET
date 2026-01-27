@@ -1,7 +1,7 @@
-namespace MuPDF.NET.LLM
+namespace MuPDF.NET4LLM
 {
     /// <summary>
-    /// Version information for MuPDF.NET.LLM
+    /// Version information for MuPDF.NET4LLM
     /// Generated file - do not edit.
     /// </summary>
     public static class VersionInfo

@@ -1,8 +1,8 @@
 using System.Collections.Generic;
 using MuPDF.NET;
-using MuPDF.NET.LLM.Helpers;
+using MuPDF.NET4LLM.Helpers;
 
-namespace MuPDF.NET.LLM.Test
+namespace MuPDF.NET4LLM.Test
 {
     [TestFixture]
     public class IdentifyHeadersTest : LLMTestBase

@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using MuPDF.NET;
 using mupdf;
+using Char = MuPDF.NET.Char;
 
-namespace MuPDF.NET.LLM.Helpers
+namespace MuPDF.NET4LLM.Helpers
 {
     /// <summary>
     /// OCR decision and repair utilities.

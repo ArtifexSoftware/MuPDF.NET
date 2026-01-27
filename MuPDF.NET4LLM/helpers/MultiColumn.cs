@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using MuPDF.NET;
 
-namespace MuPDF.NET.LLM.Helpers
+namespace MuPDF.NET4LLM.Helpers
 {
     /// <summary>
     /// Multi-column page detection utilities.

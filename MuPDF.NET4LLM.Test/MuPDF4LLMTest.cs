@@ -1,18 +1,18 @@
 using System;
 using System.Collections.Generic;
 using MuPDF.NET;
-using MuPDF.NET.LLM;
-using MuPDF.NET.LLM.Llama;
+using MuPDF.NET4LLM;
+using MuPDF.NET4LLM.Llama;
 
-namespace MuPDF.NET.LLM.Test
+namespace MuPDF.NET4LLM.Test
 {
     [TestFixture]
-    public class MuPDFLLMTest : LLMTestBase
+    public class MuPDF4LLMTest : LLMTestBase
     {
         [Test]
         public void Version_ReturnsValidVersion()
         {
-            string version = MuPDFLLM.Version;
+            string version = MuPDF4LLM.Version;
             Assert.That(version, Is.Not.Null);
             Assert.That(version, Is.Not.Empty);
             Assert.That(version.Split('.').Length, Is.GreaterThanOrEqualTo(2));
@@ -21,7 +21,7 @@ namespace MuPDF.NET.LLM.Test
         [Test]
         public void VersionTuple_ReturnsValidTuple()
         {
-            var (major, minor, patch) = MuPDFLLM.VersionTuple;
+            var (major, minor, patch) = MuPDF4LLM.VersionTuple;
             Assert.That(major, Is.GreaterThanOrEqualTo(0));
             Assert.That(minor, Is.GreaterThanOrEqualTo(0));
             Assert.That(patch, Is.GreaterThanOrEqualTo(0));
@@ -30,7 +30,7 @@ namespace MuPDF.NET.LLM.Test
         [Test]
         public void LlamaMarkdownReader_ReturnsReader()
         {
-            var reader = MuPDFLLM.LlamaMarkdownReader();
+            var reader = MuPDF4LLM.LlamaMarkdownReader();
             Assert.That(reader, Is.Not.Null);
             Assert.That(reader, Is.InstanceOf<PDFMarkdownReader>());
         }
@@ -41,7 +41,7 @@ namespace MuPDF.NET.LLM.Test
             Func<Dictionary<string, object>, Dictionary<string, object>> filter = 
                 (meta) => { meta["custom"] = "value"; return meta; };
             
-            var reader = MuPDFLLM.LlamaMarkdownReader(filter);
+            var reader = MuPDF4LLM.LlamaMarkdownReader(filter);
             Assert.That(reader, Is.Not.Null);
             Assert.That(reader.MetaFilter, Is.EqualTo(filter));
         }
@@ -52,7 +52,7 @@ namespace MuPDF.NET.LLM.Test
             var doc = OpenTestDocument("Magazine.pdf");
             try
             {
-                string markdown = MuPDFLLM.ToMarkdown(
+                string markdown = MuPDF4LLM.ToMarkdown(
                     doc,
                     header: false,
                     footer: false,
@@ -75,7 +75,7 @@ namespace MuPDF.NET.LLM.Test
             var doc = OpenTestDocument("Magazine.pdf");
             try
             {
-                string markdown = MuPDFLLM.ToMarkdown(
+                string markdown = MuPDF4LLM.ToMarkdown(
                     doc,
                     pages: new List<int> { 0 },
                     header: false,
@@ -100,7 +100,7 @@ namespace MuPDF.NET.LLM.Test
             {
                 Assert.Throws<ArgumentException>(() =>
                 {
-                    MuPDFLLM.ToMarkdown(
+                    MuPDF4LLM.ToMarkdown(
                         doc,
                         writeImages: true,
                         embedImages: true,
@@ -121,7 +121,7 @@ namespace MuPDF.NET.LLM.Test
             var doc = OpenTestDocument("columns.pdf");
             try
             {
-                string json = MuPDFLLM.ToJson(
+                string json = MuPDF4LLM.ToJson(
                     doc,
                     showProgress: false,
                     useOcr: false
@@ -143,7 +143,7 @@ namespace MuPDF.NET.LLM.Test
             var doc = OpenTestDocument("columns.pdf");
             try
             {
-                string text = MuPDFLLM.ToText(
+                string text = MuPDF4LLM.ToText(
                     doc,
                     header: false,
                     footer: false,
@@ -166,7 +166,7 @@ namespace MuPDF.NET.LLM.Test
             var doc = OpenTestDocument("columns.pdf");
             try
             {
-                var parsedDoc = MuPDFLLM.ParseDocument(
+                var parsedDoc = MuPDF4LLM.ParseDocument(
                     doc,
                     showProgress: false,
                     useOcr: false
@@ -186,7 +186,7 @@ namespace MuPDF.NET.LLM.Test
             var doc = OpenTestDocument("Magazine.pdf");
             try
             {
-                var keyValues = MuPDFLLM.GetKeyValues(doc);
+                var keyValues = MuPDF4LLM.GetKeyValues(doc);
                 Assert.That(keyValues, Is.Not.Null);
                 Assert.That(keyValues, Is.Empty);
             }

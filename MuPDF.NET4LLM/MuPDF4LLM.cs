@@ -2,16 +2,16 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using MuPDF.NET;
-using MuPDF.NET.LLM.Helpers;
-using MuPDF.NET.LLM.Llama;
+using MuPDF.NET4LLM.Helpers;
+using MuPDF.NET4LLM.Llama;
 
-namespace MuPDF.NET.LLM
+namespace MuPDF.NET4LLM
 {
     /// <summary>
-    /// Main entry point for MuPDF.NET.LLM functionality.
+    /// Main entry point for MuPDF.NET4LLM functionality.
     /// Provides a C# facade over the helpers ported from the Python pymupdf4llm package.
     /// </summary>
-    public static class MuPDFLLM
+    public static class MuPDF4LLM
     {
         public static string Version => VersionInfo.Version;
 

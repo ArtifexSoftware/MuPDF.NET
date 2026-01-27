@@ -1,6 +1,6 @@
-# MuPDF.NET.LLM.Test
+# MuPDF.NET4LLM.Test
 
-Unit tests for the MuPDF.NET.LLM project.
+Unit tests for the MuPDF.NET4LLM project.
 
 ## Test Structure
 
@@ -8,7 +8,7 @@ The test project follows the same structure as `MuPDF.NET.Test` and uses NUnit a
 
 ## Test Classes
 
-- **MuPDFLLMTest**: Tests for the main `MuPDFLLM` static class
+- **MuPDF4LLMTest**: Tests for the main `MuPDF4LLM` static class
   - Version information
   - Document conversion methods (ToMarkdown, ToJson, ToText)
   - LlamaIndex reader creation

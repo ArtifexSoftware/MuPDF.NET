@@ -5,7 +5,7 @@ using System.Text;
 using MuPDF.NET;
 using Newtonsoft.Json;
 
-namespace MuPDF.NET.LLM.Helpers
+namespace MuPDF.NET4LLM.Helpers
 {
     /// <summary>
     /// Layout box representing a content region on a page

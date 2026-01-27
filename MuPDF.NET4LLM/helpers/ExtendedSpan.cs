@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using MuPDF.NET;
 
-namespace MuPDF.NET.LLM.Helpers
+namespace MuPDF.NET4LLM.Helpers
 {
     /// <summary>
     /// Extended span information for text line extraction.

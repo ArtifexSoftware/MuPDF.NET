@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using MuPDF.NET;
-using MuPDF.NET.LLM.Helpers;
+using MuPDF.NET4LLM.Helpers;
 using NUnit.Framework;
 
-namespace MuPDF.NET.LLM.Test
+namespace MuPDF.NET4LLM.Test
 {
     [TestFixture]
     public class MuPdfRagTest : LLMTestBase

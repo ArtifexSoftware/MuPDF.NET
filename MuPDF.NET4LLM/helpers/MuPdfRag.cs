@@ -6,7 +6,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using MuPDF.NET;
 
-namespace MuPDF.NET.LLM.Helpers
+namespace MuPDF.NET4LLM.Helpers
 {
     /// <summary>
     /// Header identification based on font sizes

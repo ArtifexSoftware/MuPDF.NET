@@ -1,6 +1,6 @@
-using MuPDF.NET.LLM;
+using MuPDF.NET4LLM;
 
-namespace MuPDF.NET.LLM.Test
+namespace MuPDF.NET4LLM.Test
 {
     [TestFixture]
     public class VersionInfoTest

@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.IO;
 using MuPDF.NET;
 
-namespace MuPDF.NET.LLM.Llama
+namespace MuPDF.NET4LLM.Llama
 {
     /// <summary>
-    /// LlamaIndex-compatible PDF reader using MuPDF.NET.LLM.
+    /// LlamaIndex-compatible PDF reader using MuPDF.NET4LLM.
     /// Ported and adapted from the Python module llama/pdf_markdown_reader.py.
     /// Note: This is a C# implementation that provides similar functionality
     /// to the original Python `PDFMarkdownReader`.

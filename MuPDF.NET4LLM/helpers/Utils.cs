@@ -6,7 +6,7 @@ using System.Text;
 using MuPDF.NET;
 using mupdf;
 
-namespace MuPDF.NET.LLM.Helpers
+namespace MuPDF.NET4LLM.Helpers
 {
     /// <summary>
     /// Utility functions for PDF processing and layout analysis.

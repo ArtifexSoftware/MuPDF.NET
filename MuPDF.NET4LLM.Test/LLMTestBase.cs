@@ -1,10 +1,10 @@
 using System.IO;
 using MuPDF.NET;
 
-namespace MuPDF.NET.LLM.Test
+namespace MuPDF.NET4LLM.Test
 {
     /// <summary>
-    /// Base class for MuPDF.NET.LLM tests
+    /// Base class for MuPDF.NET4LLM tests
     /// </summary>
     public class LLMTestBase
     {

@@ -1,7 +1,7 @@
 using mupdf;
 using MuPDF.NET;
-using MuPDF.NET.LLM;
-using MuPDF.NET.LLM.Helpers;
+using MuPDF.NET4LLM;
+using MuPDF.NET4LLM.Helpers;
 using SkiaSharp;
 using System;
 using System.Collections.Generic;
@@ -435,8 +435,8 @@ namespace Demo
             try
             {
                 // Display version information
-                Console.WriteLine($"MuPDF.NET.LLM Version: {MuPDFLLM.Version}");
-                var versionTuple = MuPDFLLM.VersionTuple;
+                Console.WriteLine($"MuPDF.NET4LLM Version: {MuPDF4LLM.Version}");
+                var versionTuple = MuPDF4LLM.VersionTuple;
                 Console.WriteLine($"Version Tuple: ({versionTuple.major}, {versionTuple.minor}, {versionTuple.patch})");
 
                 // Test with a sample PDF file

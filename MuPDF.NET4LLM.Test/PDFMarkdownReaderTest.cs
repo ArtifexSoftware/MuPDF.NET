@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using MuPDF.NET;
-using MuPDF.NET.LLM.Llama;
+using MuPDF.NET4LLM.Llama;
 
-namespace MuPDF.NET.LLM.Test
+namespace MuPDF.NET4LLM.Test
 {
     [TestFixture]
     public class PDFMarkdownReaderTest : LLMTestBase
