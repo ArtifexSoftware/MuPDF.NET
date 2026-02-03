@@ -93,8 +93,8 @@ namespace MuPDF.NET4LLM.Helpers
             {
                 Rect bbox = new Rect(b.Bbox); // Bbox of the block
 
-                // Ignore text written upon images
-                if (noImageText && Utils.BboxInBbox(bbox, Utils.JoinRects(imgBboxes)))
+                // Ignore text written upon images (bbox contained in any image bbox)
+                if (noImageText && Utils.BboxInAnyBbox(bbox, imgBboxes))
                     continue;
 
                 // Confirm first line to be horizontal
@@ -108,7 +108,7 @@ namespace MuPDF.NET4LLM.Helpers
                     continue;
                 }
 
-                Rect srect = new Rect();
+                Rect srect = Utils.EmptyRect();
                 foreach (var line in b.Lines)
                 {
                     Rect lbbox = new Rect(line.Bbox);
@@ -142,12 +142,18 @@ namespace MuPDF.NET4LLM.Helpers
             for (int i = 0; i < bboxes.Count; i++) // Iterate old bboxes
             {
                 Rect bb = bboxes[i];
+                // Skip if already processed (Python sets bboxes[i] = None)
+                if (bb == null)
+                    continue;
+
                 bool check = false; // Indicates unwanted joins
+                int j = -1;
+                Rect temp = null;
 
                 // Check if bb can extend one of the new blocks
-                for (int j = 0; j < nblocks.Count; j++)
+                for (int jj = 0; jj < nblocks.Count; jj++)
                 {
-                    Rect nbb = nblocks[j]; // A new block
+                    Rect nbb = nblocks[jj]; // A new block
 
                     // Never join across columns
                     if (nbb.X1 < bb.X0 || bb.X1 < nbb.X0)
@@ -157,10 +163,11 @@ namespace MuPDF.NET4LLM.Helpers
                     if (InBboxUsingCache(nbb, pathRects, cache) != InBboxUsingCache(bb, pathRects, cache))
                         continue;
 
-                    Rect temp = Utils.JoinRects(new List<Rect> { bb, nbb }); // Temporary extension of new block
+                    temp = Utils.JoinRects(new List<Rect> { bb, nbb }); // Temporary extension of new block
                     check = CanExtend(temp, nbb, nblocks, vertBboxes);
-                    if (check is true)
+                    if (check)
                     {
+                        j = jj;
                         break;
                     }
                 }
@@ -168,21 +175,17 @@ namespace MuPDF.NET4LLM.Helpers
                 if (!check) // Bb cannot be used to extend any of the new bboxes
                 {
                     nblocks.Add(bb); // So add it to the list
-                    int j = nblocks.Count - 1; // Index of it
-                    Rect temp = nblocks[j]; // New bbox added
-
-                    // Check if some remaining bbox is contained in temp
-                    check = CanExtend(temp, bb, bboxes, vertBboxes);
-                    if (check is false)
-                    {
-                        nblocks.Add(bb);
-                    }
-                    else
-                    {
-                        nblocks[j] = temp;
-                    }
-                    bboxes[i] = null;
+                    j = nblocks.Count - 1; // Index of it
+                    temp = nblocks[j]; // New bbox added
                 }
+
+                // Check if some remaining bbox is contained in temp (Python always runs this)
+                check = CanExtend(temp, bb, bboxes, vertBboxes);
+                if (!check)
+                    nblocks.Add(bb);
+                else
+                    nblocks[j] = temp;
+                bboxes[i] = null;
             }
 
             // Do some elementary cleaning
@@ -349,7 +352,7 @@ namespace MuPDF.NET4LLM.Helpers
                 while (repeat)
                 {
                     repeat = false;
-                    for (int i = prects.Count - 1; i > 0; i--)
+                    for (int i = prects.Count - 1; i >= 0; i--)
                     {
                         Rect prect1 = prects[i];
                         // Do not join across columns
@@ -361,8 +364,17 @@ namespace MuPDF.NET4LLM.Helpers
                             continue;
 
                         Rect temp = Utils.JoinRects(new List<Rect> { prect0, prect1 });
-                        var intersecting = prects.Concat(newRects).Where(b => b.Intersects(temp)).ToList();
-                        if (intersecting.Count == 2 && intersecting.Contains(prect0) && intersecting.Contains(prect1))
+                        // Python: test = set(tuple(b) for b in prects+new_rects if b.intersects(temp))
+                        //        if test == set((tuple(prect0), tuple(prect1))): join
+                        var intersecting = prects.Concat(newRects).Where(b => b != null && b.Intersects(temp)).ToList();
+                        var intersectingCoords = new HashSet<(float, float, float, float)>(
+                            intersecting.Select(b => (b.X0, b.Y0, b.X1, b.Y1)));
+                        var needCoords = new HashSet<(float, float, float, float)>
+                        {
+                            (prect0.X0, prect0.Y0, prect0.X1, prect0.Y1),
+                            (prect1.X0, prect1.Y0, prect1.X1, prect1.Y1)
+                        };
+                        if (intersectingCoords.Count == 2 && intersectingCoords.SetEquals(needCoords))
                         {
                             prect0 = temp;
                             prects[0] = prect0;

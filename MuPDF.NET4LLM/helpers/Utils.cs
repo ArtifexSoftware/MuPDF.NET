@@ -168,6 +168,16 @@ namespace MuPDF.NET4LLM.Helpers
         }
 
         /// <summary>
+        /// Return the (standard) empty / invalid rectangle, matching pymupdf.EMPTY_RECT():
+        /// Rect(2147483520, 2147483520, -2147483648, -2147483648).
+        /// Joining this with another rect yields that rect; used as neutral element for union.
+        /// </summary>
+        public static Rect EmptyRect()
+        {
+            return MuPDF.NET.Utils.EMPTY_RECT();
+        }
+
+        /// <summary>
         /// Check if bounding box is empty
         /// </summary>
         public static bool BboxIsEmpty(Rect bbox)
@@ -183,7 +193,7 @@ namespace MuPDF.NET4LLM.Helpers
         public static Rect IntersectRects(Rect r1, Rect r2, bool bboxOnly = false)
         {
             if (r1 == null || r2 == null)
-                return new Rect();
+                return EmptyRect();
             
             float x0 = Math.Max(r1.X0, r2.X0);
             float y0 = Math.Max(r1.Y0, r2.Y0);
@@ -191,7 +201,7 @@ namespace MuPDF.NET4LLM.Helpers
             float y1 = Math.Min(r1.Y1, r2.Y1);
             
             if (x0 >= x1 || y0 >= y1)
-                return new Rect();
+                return EmptyRect();
             
             return new Rect(x0, y0, x1, y1);
         }
@@ -202,7 +212,7 @@ namespace MuPDF.NET4LLM.Helpers
         public static Rect JoinRects(List<Rect> rects, bool bboxOnly = false)
         {
             if (rects == null || rects.Count == 0)
-                return new Rect();
+                return EmptyRect();
             
             float x0 = rects.Min(r => r.X0);
             float y0 = rects.Min(r => r.Y0);
@@ -564,9 +574,9 @@ namespace MuPDF.NET4LLM.Helpers
                 textPage.Dispose();
             }
             
-            Rect imgRect = new Rect();
-            Rect txtRect = new Rect();
-            Rect vecRect = new Rect();
+            Rect imgRect = EmptyRect();
+            Rect txtRect = EmptyRect();
+            Rect vecRect = EmptyRect();
             float imgArea = 0;
             float txtArea = 0;
             float vecArea = 0;

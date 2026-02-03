@@ -650,9 +650,10 @@ namespace MuPDF.NET4LLM.Helpers
                     }
 
                     string safeFilename = Path.GetFileName(filename ?? "document").Replace(" ", "-");
+                    string indexPart = imageIndex >= 0 ? imageIndex.ToString() : "full";
                     string imageFilename = string.IsNullOrEmpty(imagePath)
-                        ? $"{safeFilename}-{page.Number}-{imageIndex}.{imageFormat}"
-                        : Path.Combine(imagePath, $"{safeFilename}-{page.Number}-{imageIndex}.{imageFormat}");
+                        ? $"{safeFilename}-{page.Number}-{indexPart}.{imageFormat}"
+                        : Path.Combine(imagePath, $"{safeFilename}-{page.Number}-{indexPart}.{imageFormat}");
                     pix.Save(imageFilename);
                     return imageFilename.Replace("\\", "/");
                 }
@@ -1365,22 +1366,44 @@ namespace MuPDF.NET4LLM.Helpers
                 {
                     List<Block> imgInfo = page.GetImageInfo();
 
-                    // Filter and process images
+                    // Filter and process images (use clip with margins, not full page rect)
                     var validImages = imgInfo
                         .Where(img => img.Bbox != null)
                         .Select(img => new { Bbox = new Rect(img.Bbox), Block = img })
-                        .Where(img => 
-                            img.Bbox.Width >= imageSizeLimit * page.Rect.Width &&
-                            img.Bbox.Height >= imageSizeLimit * page.Rect.Height &&
-                            img.Bbox.Intersects(page.Rect) &&
+                        .Where(img =>
+                            img.Bbox.Width >= imageSizeLimit * parms.Clip.Width &&
+                            img.Bbox.Height >= imageSizeLimit * parms.Clip.Height &&
+                            img.Bbox.Intersects(parms.Clip) &&
                             img.Bbox.Width > 3 &&
                             img.Bbox.Height > 3)
                         .OrderByDescending(img => Math.Abs(img.Bbox.Width * img.Bbox.Height))
-                        .Take(30) // Limit to 30 largest images
                         .ToList();
 
-                    // Remove images contained in larger images
-                    for (int i = validImages.Count - 1; i > 0; i--)
+                    // Subset of images truly inside the clip (exclude near-full-page images; then output full page image)
+                    if (validImages.Count > 0)
+                    {
+                        float imgMaxSize = parms.Clip.Width * parms.Clip.Height * 0.9f;
+                        var sane = validImages
+                            .Where(img =>
+                            {
+                                Rect inter = Utils.IntersectRects(img.Bbox, parms.Clip);
+                                return inter.Width * inter.Height < imgMaxSize;
+                            })
+                            .ToList();
+                        if (sane.Count < validImages.Count)
+                        {
+                            validImages = sane;
+                            string pathname = SaveImage(parms.Page, parms.Clip, -1, writeImages, embedImages,
+                                imagePath, imageFormat, filename, dpi, imageSizeLimit);
+                            if (!string.IsNullOrEmpty(pathname))
+                                parms.MdString += string.Format(GRAPHICS_TEXT, pathname);
+                        }
+                    }
+
+                    validImages = validImages.Take(30).ToList(); // Only accept the largest up to 30 images
+
+                    // Remove images contained in larger images (run from back to front = small to large)
+                    for (int i = validImages.Count - 1; i >= 0; i--)
                     {
                         Rect r = validImages[i].Bbox;
                         if (r.IsEmpty)

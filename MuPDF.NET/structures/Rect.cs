@@ -1,4 +1,4 @@
-﻿using FzRect = mupdf.FzRect;
+using FzRect = mupdf.FzRect;
 using mupdf;
 using System;
 using System.Collections.Generic;
@@ -416,13 +416,14 @@ namespace MuPDF.NET
             return new Rect(ToFzRect().fz_include_point_in_rect(p.ToFzPoint()));
         }
 
+        /// <summary>
+        /// Returns true if this rectangle and <paramref name="r"/> overlap (without mutating either).
+        /// </summary>
         public bool Intersects(Rect r)
         {
             if (IsEmpty || IsInfinite || r.IsEmpty || r.IsInfinite)
                 return false;
-            if (Intersect(r).IsEmpty)
-                return false;
-            return true;
+            return (X0 < r.X1 && r.X0 < X1) && (Y0 < r.Y1 && r.Y0 < Y1);
         }
 
         /// <summary>

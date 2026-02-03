@@ -42,45 +42,45 @@ namespace Demo
     {
         static void Main(string[] args)
         {
-            //TestInsertHtmlbox();
-            //TestLineAnnot();
-            //AnnotationsFreeText1.Run(args);
-            //AnnotationsFreeText2.Run(args);
-            //NewAnnots.Run(args);
-            //TestHelloWorldToNewDocument(args);
-            //TestHelloWorldToExistingDocument(args);
-            //TestReadBarcode(args);
-            //TestReadDataMatrix();
-            //TestWriteBarcode(args);
-            //TestExtractTextWithLayout(args);
-            //TestWidget(args);
-            //TestColor(args);
-            //TestCMYKRecolor(args);
-            //TestSVGRecolor(args);
-            //TestReplaceImage(args);
-            //TestInsertImage(args);
-            //TestGetImageInfo(args);
-            //TestGetTextPageOcr(args);
-            //TestCreateImagePage(args);
-            //TestJoinPdfPages(args);
-            //TestFreeTextAnnot(args);
-            //TestTextFont(args);
-            //TestMemoryLeak();
-            //TestDrawLine();
-            //TestWriteBarcode1();
-            //TestUnicodeDocument();
-            //TestMorph();
-            //TestMetadata();
-            //TestMoveFile();
-            //TestImageFilter();
-            //TestImageFilterOcr();
-            //CreateAnnotDocument();
-            //TestDrawShape();
-            //TestIssue213();
-            //TestIssue1880();
-            //TestLLM();
-            TestPyMuPdfRagToMarkdown(); // Uncomment to test PyMuPdfRag.ToMarkdown() directly
-            //TestTable();
+            TestInsertHtmlbox();
+            TestLineAnnot();
+            AnnotationsFreeText1.Run(args);
+            AnnotationsFreeText2.Run(args);
+            NewAnnots.Run(args);
+            TestHelloWorldToNewDocument(args);
+            TestHelloWorldToExistingDocument(args);
+            TestReadBarcode(args);
+            TestReadDataMatrix();
+            TestWriteBarcode(args);
+            TestExtractTextWithLayout(args);
+            TestWidget(args);
+            TestColor(args);
+            TestCMYKRecolor(args);
+            TestSVGRecolor(args);
+            TestReplaceImage(args);
+            TestInsertImage(args);
+            TestGetImageInfo(args);
+            TestGetTextPageOcr(args);
+            TestCreateImagePage(args);
+            TestJoinPdfPages(args);
+            TestFreeTextAnnot(args);
+            TestTextFont(args);
+            TestMemoryLeak();
+            TestDrawLine();
+            TestWriteBarcode1();
+            TestUnicodeDocument();
+            TestMorph();
+            TestMetadata();
+            TestMoveFile();
+            TestImageFilter();
+            TestImageFilterOcr();
+            CreateAnnotDocument();
+            TestDrawShape();
+            TestIssue213();
+            TestIssue1880();
+            TestLLM();
+            TestPyMuPdfRagToMarkdown();
+            TestTable();
 
             return;
         }
@@ -254,7 +254,8 @@ namespace Demo
             try
             {
                 // Find a test PDF file
-                string testFilePath = Path.GetFullPath("../../../TestDocuments/national-capitals.pdf");
+                //string testFilePath = Path.GetFullPath("../../../TestDocuments/national-capitals.pdf");
+                string testFilePath = Path.GetFullPath("../../../TestDocuments/Magazine.pdf");
 
                 Document doc = new Document(testFilePath);
                 Console.WriteLine($"Document loaded: {doc.PageCount} page(s)");
@@ -264,9 +265,11 @@ namespace Demo
                 Console.WriteLine("\n--- Test 1: Basic ToMarkdown (default settings) ---");
                 try
                 {
+                    List<int> pages = new List<int>();
+                    pages.Add(0);
                     string markdown = MuPdfRag.ToMarkdown(
                         doc,
-                        pages: null, // All pages
+                        pages: pages, // All pages
                         hdrInfo: null, // Auto-detect headers
                         writeImages: false,
                         embedImages: false,
@@ -308,7 +311,7 @@ namespace Demo
                 {
                     Console.WriteLine($"Error in basic ToMarkdown: {ex.Message}");
                 }
-
+                /*
                 // Test 2: ToMarkdown with IdentifyHeaders
                 Console.WriteLine("\n--- Test 2: ToMarkdown with IdentifyHeaders ---");
                 try
@@ -416,7 +419,7 @@ namespace Demo
                 {
                     Console.WriteLine($"Error in ToMarkdown with progress: {ex.Message}");
                 }
-
+                */
                 doc.Close();
             }
             catch (Exception ex)
@@ -440,7 +443,8 @@ namespace Demo
                 Console.WriteLine($"Version Tuple: ({versionTuple.major}, {versionTuple.minor}, {versionTuple.patch})");
 
                 // Test with a sample PDF file
-                string testFilePath = Path.GetFullPath("../../../TestDocuments/national-capitals.pdf");
+                //string testFilePath = Path.GetFullPath("../../../TestDocuments/national-capitals.pdf");
+                string testFilePath = Path.GetFullPath("../../../TestDocuments/Magazine.pdf");
 
                 // Try to find a PDF with actual content if Blank.pdf doesn't work well
                 if (!File.Exists(testFilePath))
@@ -459,7 +463,12 @@ namespace Demo
                 Document doc = new Document(testFilePath);
                 Console.WriteLine($"Document loaded: {doc.PageCount} page(s)");
 
+                string markdownStr = MuPDF4LLM.ToMarkdown(doc);
+
                 doc.Close();
+
+                string markdownFile = "TestLLM.md";
+                File.WriteAllText(markdownFile, markdownStr, Encoding.UTF8);
                 Console.WriteLine("\nLLM test completed successfully.");
             }
             catch (Exception ex)

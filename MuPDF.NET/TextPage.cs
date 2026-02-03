@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using mupdf;
@@ -389,7 +389,7 @@ namespace MuPDF.NET
                         }
                         else
                         {
-                            return b1.Bbox.X0.CompareTo(b2.Bbox.X0);
+                            return b1.Bbox.Y1.CompareTo(b2.Bbox.Y1);
                         }
                     }
                 );
@@ -525,9 +525,10 @@ namespace MuPDF.NET
                     for (fz_stext_char ch = line.first_char; ch != null; ch = ch.next)
                     {
                         FzRect cbBox = GetCharBbox(new FzStextLine(line), new FzStextChar(ch));
+                        // Python extractWORDS: if (not JM_rects_overlap(tp_rect, cbbox) and not mupdf.fz_is_infinite_rect(tp_rect)): continue
                         if (
                             !IsRectsOverlap(stPageRect, cbBox)
-                            && stPageRect.fz_is_empty_rect() == 0
+                            && stPageRect.fz_is_infinite_rect() == 0
                         )
                             continue;
 
@@ -1012,8 +1013,9 @@ namespace MuPDF.NET
         /// <summary>
         /// Make Block List of Stext Page
         /// </summary>
-        /// <param name="pageDict">PageStruct including BlockList</param>
+        /// <param name="pageDict">PageStruct including BlockList (width/height set by caller; blocks are filled here).</param>
         /// <param name="raw"></param>
+        /// <remarks>Originated from PyMuPDF TextPage._getNewBlockList(self, page_dict, raw) which calls JM_make_textpage_dict.</remarks>
         internal void GetNewBlockList(PageInfo pageDict, bool raw)
         {
             MakeTextPage2Dict(pageDict, raw);
@@ -1079,13 +1081,18 @@ namespace MuPDF.NET
                 )
                     continue;
 
-                if (
-                    stPageRect.fz_is_infinite_rect() != 0
-                    && (
-                        FzRect.fz_intersect_rect(stPageRect, new FzRect(block.m_internal.bbox))
-                    ).fz_is_empty_rect() != 0
-                )
-                    continue;
+                // Python: if (not mupdf.fz_is_infinite_rect(tp_rect) and mupdf.fz_is_empty_rect(mupdf.fz_intersect_rect(...))): continue
+                // Intersection-empty check in managed code to avoid native fz_intersect_rect mutating stPageRect.
+                if (stPageRect.fz_is_infinite_rect() == 0)
+                {
+                    FzRect blockBbox = new FzRect(block.m_internal.bbox);
+                    float ix0 = Math.Max(stPageRect.x0, blockBbox.x0);
+                    float iy0 = Math.Max(stPageRect.y0, blockBbox.y0);
+                    float ix1 = Math.Min(stPageRect.x1, blockBbox.x1);
+                    float iy1 = Math.Min(stPageRect.y1, blockBbox.y1);
+                    if (ix0 >= ix1 || iy0 >= iy1)
+                        continue;
+                }
 
                 Block blockDict = new Block();
 
@@ -1162,13 +1169,18 @@ namespace MuPDF.NET
                         line = line.next
                     )
                     {
-                        if (
-                            FzRect
-                                .fz_intersect_rect(stPageRect, new FzRect(line.bbox))
-                                .fz_is_empty_rect() != 0
-                            && stPageRect.fz_is_infinite_rect() == 0
-                        )
-                            continue;
+                        // Intersection-empty check in managed code to avoid native fz_intersect_rect
+                        // mutating stPageRect (MediaBox), which can cause memory write errors.
+                        {
+                            FzRect lineBbox = new FzRect(line.bbox);
+                            float ix0 = Math.Max(stPageRect.x0, lineBbox.x0);
+                            float iy0 = Math.Max(stPageRect.y0, lineBbox.y0);
+                            float ix1 = Math.Min(stPageRect.x1, lineBbox.x1);
+                            float iy1 = Math.Min(stPageRect.y1, lineBbox.y1);
+                            bool intersectionEmpty = (ix0 >= ix1 || iy0 >= iy1);
+                            if (intersectionEmpty && stPageRect.fz_is_infinite_rect() == 0)
+                                continue;
+                        }
 
                         Line lineDict = new Line();
 
@@ -1187,90 +1199,97 @@ namespace MuPDF.NET
 
                         for (fz_stext_char ch = line.first_char; ch != null; ch = ch.next)
                         {
-                            FzRect r = GetCharBbox(new FzStextLine(line), new FzStextChar(ch));
-                            if (
-                                !IsRectsOverlap(stPageRect, r)
-                                && stPageRect.fz_is_infinite_rect() != 0
-                            )
-                                continue;
-                            float flags = CharFontFlags(
-                                new FzFont(mupdf.mupdf.ll_fz_keep_font(ch.font)),
-                                new FzStextLine(line),
-                                new FzStextChar(ch)
-                            );
-                            FzPoint origin = new FzPoint(ch.origin);
-                            style.Size = ch.size;
-                            style.Flags = flags;
-                            style.Font = GetFontName(
-                                new FzFont(mupdf.mupdf.ll_fz_keep_font(ch.font))
-                            );
-                            style.Color = (int)ch.argb;
-                            style.Asc = (
-                                new FzFont(mupdf.mupdf.ll_fz_keep_font(ch.font))
-                            ).fz_font_ascender();
-                            style.Desc = (
-                                new FzFont(mupdf.mupdf.ll_fz_keep_font(ch.font))
-                            ).fz_font_descender();
-                            if (
-                                style.Size != oldStyle.Size
-                                || style.Flags != oldStyle.Flags
-                                || style.Color != oldStyle.Color
-                                || style.Font != oldStyle.Font
-                            )
+                            try
                             {
-                                if (oldStyle.Size >= 0)
+                                FzRect r = GetCharBbox(new FzStextLine(line), new FzStextChar(ch));
+                                if (
+                                    !IsRectsOverlap(stPageRect, r)
+                                    && stPageRect.fz_is_infinite_rect() != 0
+                                )
+                                    continue;
+                                float flags = CharFontFlags(
+                                    new FzFont(mupdf.mupdf.ll_fz_keep_font(ch.font)),
+                                    new FzStextLine(line),
+                                    new FzStextChar(ch)
+                                );
+                                FzPoint origin = new FzPoint(ch.origin);
+                                style.Size = ch.size;
+                                style.Flags = flags;
+                                style.Font = GetFontName(
+                                    new FzFont(mupdf.mupdf.ll_fz_keep_font(ch.font))
+                                );
+                                style.Color = (int)ch.argb;
+                                style.Asc = (
+                                    new FzFont(mupdf.mupdf.ll_fz_keep_font(ch.font))
+                                ).fz_font_ascender();
+                                style.Desc = (
+                                    new FzFont(mupdf.mupdf.ll_fz_keep_font(ch.font))
+                                ).fz_font_descender();
+                                if (
+                                    style.Size != oldStyle.Size
+                                    || style.Flags != oldStyle.Flags
+                                    || style.Color != oldStyle.Color
+                                    || style.Font != oldStyle.Font
+                                )
                                 {
-                                    if (raw)
+                                    if (oldStyle.Size >= 0)
                                     {
-                                        span.Chars = charList;
-                                        charList = null;
+                                        if (raw)
+                                        {
+                                            span.Chars = charList;
+                                            charList = null;
+                                        }
+                                        else
+                                        {
+                                            span.Text = Utils.EscapeStrFromBuffer(textBuffer);
+                                            mupdf.mupdf.fz_clear_buffer(textBuffer);
+                                        }
+                                        span.Origin = new Point(spanOrigin);
+                                        span.Bbox = new Rect(spanRect);
+                                        lineRect = FzRect.fz_union_rect(lineRect, spanRect);
+                                        spanList.Add(span);
                                     }
-                                    else
+                                    span = new Span();
+                                    float asc = style.Asc;
+                                    float desc = style.Desc;
+                                    if (style.Asc < 1e-3)
                                     {
-                                        span.Text = Utils.EscapeStrFromBuffer(textBuffer);
-                                        mupdf.mupdf.fz_clear_buffer(textBuffer);
+                                        asc = 0.9f;
+                                        desc = -0.1f;
                                     }
-                                    span.Origin = new Point(spanOrigin);
-                                    span.Bbox = new Rect(spanRect);
-                                    lineRect = FzRect.fz_union_rect(lineRect, spanRect);
-                                    spanList.Add(span);
+
+                                    span.Size = style.Size;
+                                    span.Flags = style.Flags;
+                                    span.Font = style.Font;
+                                    span.Color = style.Color;
+                                    span.Asc = asc;
+                                    span.Desc = desc;
+
+                                    oldStyle = new MuPDFCharStyle(style);
+                                    spanRect = r;
+                                    spanOrigin = origin;
                                 }
-                                span = new Span();
-                                float asc = style.Asc;
-                                float desc = style.Desc;
-                                if (style.Asc < 1e-3)
+                                spanRect = FzRect.fz_union_rect(spanRect, r);
+
+                                if (raw)
                                 {
-                                    asc = 0.9f;
-                                    desc = -0.1f;
+                                    Char charDict = new Char();
+                                    charDict.Origin = new FzPoint(ch.origin);
+                                    charDict.Bbox = r;
+                                    charDict.C = (char)ch.c;
+
+                                    if (charList == null)
+                                        charList = new List<Char>();
+                                    charList.Add(charDict);
                                 }
-
-                                span.Size = style.Size;
-                                span.Flags = style.Flags;
-                                span.Font = style.Font;
-                                span.Color = style.Color;
-                                span.Asc = asc;
-                                span.Desc = desc;
-
-                                oldStyle = new MuPDFCharStyle(style);
-                                spanRect = r;
-                                spanOrigin = origin;
+                                else
+                                {
+                                    textBuffer.fz_append_rune(ch.c);
+                                }
                             }
-                            spanRect = FzRect.fz_union_rect(spanRect, r);
-
-                            if (raw)
+                            catch (Exception)
                             {
-                                Char charDict = new Char();
-                                charDict.Origin = new FzPoint(ch.origin);
-                                charDict.Bbox = r;
-                                charDict.C = (char)ch.c;
-
-                                if (charList == null)
-                                    charList = new List<Char>();
-                                charList.Add(charDict);
-                            }
-                            else
-                            {
-                                textBuffer.fz_append_rune(ch.c);
+                                continue; // Skip char when font/char access fails (e.g. invalid font pointer)
                             }
                         }
 
@@ -1463,14 +1482,22 @@ namespace MuPDF.NET
 
         public FzRect GetCharBbox(FzStextLine line, FzStextChar ch)
         {
-            FzQuad q = GetCharQuad(line, ch);
-            FzRect r = q.fz_rect_from_quad();
-            if (line.m_internal.wmode != 0)
+            try
+            {
+                FzQuad q = GetCharQuad(line, ch);
+                FzRect r = q.fz_rect_from_quad();
+                if (line.m_internal.wmode != 0)
+                    return r;
+                if (r.y1 < r.y0 + ch.m_internal.size)
+                    r.y0 = r.y1 - ch.m_internal.size;
                 return r;
-            if (r.y1 < r.y0 + ch.m_internal.size)
-                r.y0 = r.y1 - ch.m_internal.size;
-
-            return r;
+            }
+            catch (Exception)
+            {
+                // Fallback when font/char access fails (e.g. null or invalid font pointer)
+                FzQuad q = new FzQuad(ch.m_internal.quad);
+                return q.fz_rect_from_quad();
+            }
         }
 
         public bool IsRectsOverlap(FzRect a, FzRect b)
