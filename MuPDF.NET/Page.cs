@@ -1530,7 +1530,7 @@ namespace MuPDF.NET
             _page.Dispose();
             dev.fz_close_device();
             dev.Dispose();
-            options.Dispose();
+            //options.Dispose();
 
             return new TextPage(stPage);
         }
@@ -1546,9 +1546,6 @@ namespace MuPDF.NET
         {
             if (matrix == null)
                 matrix = new Matrix(1, 1);
-
-            if (clip == null)
-                clip = new Rect(new FzRect(FzRect.Fixed.Fixed_INFINITE));
 
             int oldRotation = Rotation;
             if (oldRotation != 0)

@@ -2,6 +2,7 @@ using mupdf;
 using MuPDF.NET;
 using MuPDF.NET4LLM;
 using MuPDF.NET4LLM.Helpers;
+using MuPDF.NET4LLM.Llama;
 using SkiaSharp;
 using System;
 using System.Collections.Generic;
@@ -81,8 +82,48 @@ namespace Demo
             TestLLM();
             TestPyMuPdfRagToMarkdown();
             TestTable();
+            TestGetText();
+            TestMarkdownReader();
 
             return;
+        }
+
+        static void TestMarkdownReader()
+        {
+            Console.WriteLine("\n=== TestMarkdownReader =======================");
+
+            var reader = new PDFMarkdownReader();
+            string testFilePath = Path.GetFullPath("../../../TestDocuments/columns.pdf");
+
+            var docs = reader.LoadData(testFilePath);
+
+            foreach (var doc in docs)
+            {
+                Console.WriteLine(doc.Text);
+            }
+        }
+
+        static void TestGetText()
+        {
+            Console.WriteLine("\n=== TestGetText =======================");
+
+            var reader = new PDFMarkdownReader();
+            string testFilePath = Path.GetFullPath("../../../TestDocuments/columns.pdf");
+
+            Document doc = new Document(testFilePath);
+
+            for (int i = 0; i < doc.PageCount; i++)
+            {
+                Page page = doc[i];
+
+                var text = Utils.GetText(page, option: "dict");
+
+                Console.WriteLine(text);
+
+                page.Dispose();
+            }
+
+            doc.Close();
         }
 
         static void TestTable()

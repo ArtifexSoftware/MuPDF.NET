@@ -1541,12 +1541,13 @@ namespace MuPDF.NET4LLM.Helpers
             {
                 try
                 {
+                    TextPage tPage = new TextPage(parms.TextPage);
                     textRects = MultiColumn.ColumnBoxes(
                         page,
                         footerMargin: bottom,
                         headerMargin: top,
                         noImageText: !forceText,
-                        textpage: parms.TextPage,
+                        textpage: tPage,
                         paths: parms.ActualPaths,
                         avoid: parms.TabRects0.Concat(parms.VgClusters0).ToList(),
                         ignoreImages: ignoreImages);

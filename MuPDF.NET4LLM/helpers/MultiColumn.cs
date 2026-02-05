@@ -201,8 +201,8 @@ namespace MuPDF.NET4LLM.Helpers
 
             // Return identified text bboxes
 
-            if (textpage != null && textpage != page.GetTextPage())
-                textpage.Dispose();
+            //if (textpage != null && textpage != page.GetTextPage())
+            //    textpage.Dispose();
 
             return nblocks;
         }
