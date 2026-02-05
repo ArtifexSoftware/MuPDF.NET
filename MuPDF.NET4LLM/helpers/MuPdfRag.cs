@@ -41,7 +41,7 @@ namespace MuPDF.NET4LLM.Helpers
             foreach (int pno in pages)
             {
                 Page page = mydoc.LoadPage(pno);
-                // Use TEXTFLAGS_TEXT for proper text extraction (matches Python TEXTFLAGS_TEXT)
+                // Use TEXTFLAGS_TEXT for proper text extraction
                 int textFlags = (int)TextFlagsExtension.TEXTFLAGS_TEXT;
                 TextPage textPage = page.GetTextPage(flags: textFlags);
                 PageInfo pageInfo = textPage.ExtractDict(null, false);
@@ -179,7 +179,7 @@ namespace MuPDF.NET4LLM.Helpers
     }
 
     /// <summary>
-    /// Parameters class to store page-specific information (matches Python dataclass)
+    /// Parameters class to store page-specific information.
     /// </summary>
     public class Parameters
     {
@@ -210,7 +210,7 @@ namespace MuPDF.NET4LLM.Helpers
 
     /// <summary>
     /// Main markdown conversion utilities.
-    /// Ported and adapted from the Python module helpers/pymupdf_rag.py in pymupdf4llm.
+    /// Ported and adapted from LLM helpers.
     /// </summary>
     public static class MuPdfRag
     {
@@ -218,7 +218,7 @@ namespace MuPDF.NET4LLM.Helpers
 
         /// <summary>
         /// Convert a document to Markdown, closely following the behavior of
-        /// <c>pymupdf4llm.helpers.pymupdf_rag.ToMarkdown</c>.
+        /// ToMarkdown equivalent.
         /// </summary>
         /// <param name="doc">Input <see cref="Document"/> to convert.</param>
         /// <param name="pages">
@@ -283,11 +283,11 @@ namespace MuPDF.NET4LLM.Helpers
         /// </param>
         /// <param name="tableStrategy">
         /// Table detection strategy passed to <c>Page.GetTables</c>, e.g. <c>&quot;lines_strict&quot;</c>
-        /// to mimic the Python default.
+        /// to mimic the default behavior.
         /// </param>
         /// <param name="graphicsLimit">
         /// Optional upper bound on the number of path objects before graphics are ignored
-        /// for layout analysis (similar to <c>graphics_limit</c> in Python).
+        /// for layout analysis.
         /// </param>
         /// <param name="fontsizeLimit">
         /// Minimum font size considered as “normal” text when computing some heuristics.
@@ -297,7 +297,7 @@ namespace MuPDF.NET4LLM.Helpers
         /// </param>
         /// <param name="extractWords">
         /// When <c>true</c>, the return value is a JSON description of page “chunks” with
-        /// word positions, matching the Python <c>extract_words</c> mode.
+        /// word positions (extract_words mode).
         /// </param>
         /// <param name="showProgress">
         /// When <c>true</c>, prints a simple progress bar while processing pages.
@@ -457,7 +457,7 @@ namespace MuPDF.NET4LLM.Helpers
                 textFlags |= (int)mupdf.mupdf.FZ_STEXT_USE_GID_FOR_UNKNOWN_UNICODE;
             }
 
-            // Note: Table FLAGS would be set here if we had access to pymupdf.table.FLAGS
+            // Note: Table FLAGS would be set here if we had access to table FLAGS
             // In C#, this would need to be handled differently if table extraction uses flags
 
             var progressBar = showProgress && pages.Count > 5
@@ -545,7 +545,7 @@ namespace MuPDF.NET4LLM.Helpers
         }
 
         /// <summary>
-        /// Get maximum header ID from spans (matches Python max_header_id)
+        /// Get maximum header ID from spans.
         /// </summary>
         private static string MaxHeaderId(
             List<ExtendedSpan> spans,
@@ -696,7 +696,7 @@ namespace MuPDF.NET4LLM.Helpers
         }
 
         /// <summary>
-        /// Get metadata for a page (matches Python get_metadata)
+        /// Get metadata for a page.
         /// </summary>
         private static Dictionary<string, object> GetMetadata(Document doc, int pno, string filename)
         {
@@ -753,7 +753,7 @@ namespace MuPDF.NET4LLM.Helpers
         }
 
         /// <summary>
-        /// Output tables above given text rectangle (matches Python output_tables)
+        /// Output tables above given text rectangle.
         /// </summary>
         private static string OutputTables(Parameters parms, Rect textRect, bool extractWords)
         {
@@ -848,7 +848,7 @@ namespace MuPDF.NET4LLM.Helpers
         }
 
         /// <summary>
-        /// Output images and graphics above text rectangle (matches Python output_images)
+        /// Output images and graphics above text rectangle.
         /// </summary>
         private static string OutputImages(Parameters parms, Rect textRect, bool forceText, 
             bool writeImages, bool embedImages, string imagePath, string imageFormat, 
@@ -1541,13 +1541,13 @@ namespace MuPDF.NET4LLM.Helpers
             {
                 try
                 {
-                    TextPage tPage = new TextPage(parms.TextPage);
+                    TextPage txtPage = new TextPage(parms.TextPage);
                     textRects = MultiColumn.ColumnBoxes(
                         page,
                         footerMargin: bottom,
                         headerMargin: top,
                         noImageText: !forceText,
-                        textpage: tPage,
+                        textpage: txtPage,
                         paths: parms.ActualPaths,
                         avoid: parms.TabRects0.Concat(parms.VgClusters0).ToList(),
                         ignoreImages: ignoreImages);

@@ -1766,7 +1766,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Convert the PDF's destination names into a Python dict.
+        /// Convert the PDF's destination names into a dict.
         /// </summary>
         /// <param name="uri"></param>
         /// <param name="chapters"></param>
@@ -5331,7 +5331,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// PDF only: Sets or updates the metadata of the document as specified in m, a Python dictionary.
+        /// PDF only: Sets or updates the metadata of the document as specified in m, a dictionary.
         /// </summary>
         /// <param name="metadata">A dictionary with the same keys as metadata (see below). All keys are optional. A PDF’s format and encryption method cannot be set or changed and will be ignored. If any value should not contain data, do not specify its key or set the value to None. If you use {} all metadata information will be cleared to the string “none”. If you want to selectively change only some values, modify a copy of doc.metadata and use it as the argument. Arbitrary unicode values are possible if specified as UTF-8-encoded.</param>
         /// <exception cref="Exception"></exception>

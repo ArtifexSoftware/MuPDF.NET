@@ -7,9 +7,9 @@ namespace MuPDF.NET4LLM.Llama
 {
     /// <summary>
     /// LlamaIndex-compatible PDF reader using MuPDF.NET4LLM.
-    /// Ported and adapted from the Python module llama/pdf_markdown_reader.py.
+    /// Ported and adapted from llama/pdf_markdown_reader.
     /// Note: This is a C# implementation that provides similar functionality
-    /// to the original Python `PDFMarkdownReader`.
+    /// to the original PDFMarkdownReader.
     /// </summary>
     public class PDFMarkdownReader
     {

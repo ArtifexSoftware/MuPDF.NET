@@ -5,7 +5,7 @@ namespace MuPDF.NET4LLM.Helpers
 {
     /// <summary>
     /// Extended span information for text line extraction.
-    /// Mirrors the span dictionaries produced by pymupdf4llm in the Python helpers.
+    /// Mirrors the span dictionaries produced by LLM helpers.
     /// </summary>
     public class ExtendedSpan
     {

@@ -10,7 +10,7 @@ namespace MuPDF.NET4LLM.Helpers
 {
     /// <summary>
     /// Utility functions for PDF processing and layout analysis.
-    /// Ported and adapted from the Python module helpers/utils.py in pymupdf4llm.
+    /// Ported and adapted from LLM helpers.
     /// </summary>
     public static class Utils
     {
@@ -168,7 +168,7 @@ namespace MuPDF.NET4LLM.Helpers
         }
 
         /// <summary>
-        /// Return the (standard) empty / invalid rectangle, matching pymupdf.EMPTY_RECT():
+        /// Return the (standard) empty / invalid rectangle (EMPTY_RECT semantics).
         /// Rect(2147483520, 2147483520, -2147483648, -2147483648).
         /// Joining this with another rect yields that rect; used as neutral element for union.
         /// </summary>

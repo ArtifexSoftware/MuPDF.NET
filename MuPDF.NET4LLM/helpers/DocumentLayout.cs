@@ -52,7 +52,7 @@ namespace MuPDF.NET4LLM.Helpers
 
     /// <summary>
     /// Parsed document structure and layout serialization helpers.
-    /// Ported and adapted from the Python module helpers/document_layout.py in pymupdf4llm.
+    /// Ported and adapted from LLM helpers.
     /// </summary>
     public class ParsedDocument
     {
@@ -73,7 +73,7 @@ namespace MuPDF.NET4LLM.Helpers
 
         /// <summary>
         /// Serialize the parsed document into Markdown text, closely following
-        /// <c>ParsedDocument.to_markdown</c> in the original Python implementation.
+        /// ParsedDocument.to_markdown equivalent.
         /// </summary>
         public string ToMarkdown(
             bool header = true,
@@ -176,7 +176,7 @@ namespace MuPDF.NET4LLM.Helpers
 
         /// <summary>
         /// Serialize the parsed document into a JSON string, mirroring the behavior
-        /// of the Python <c>ParsedDocument.to_json</c> helper.
+        /// ParsedDocument.to_json equivalent.
         /// </summary>
         public string ToJson()
         {
@@ -196,7 +196,7 @@ namespace MuPDF.NET4LLM.Helpers
 
         /// <summary>
         /// Serialize the parsed document to plain text.
-        /// This follows the logic of <c>ParsedDocument.to_text</c> in the Python code,
+        /// ParsedDocument.to_text equivalent.
         /// including optional suppression of headers / footers and simple table rendering.
         /// </summary>
         public string ToText(
@@ -478,7 +478,7 @@ namespace MuPDF.NET4LLM.Helpers
         /// This post-layout heuristic walks contiguous segments of <c>list-item</c>
         /// boxes and assigns increasing levels when the left coordinate moves
         /// sufficiently to the right, mirroring
-        /// <c>create_list_item_levels</c> in the Python implementation.
+        /// create_list_item_levels equivalent.
         /// </summary>
         /// <param name="boxes">The list of layout boxes for the page.</param>
         /// <returns>
@@ -556,7 +556,7 @@ namespace MuPDF.NET4LLM.Helpers
 
         /// <summary>
         /// Document layout parsing utilities.
-        /// Provides a C# equivalent of <c>pymupdf4llm.helpers.document_layout.parse_document</c>.
+        /// Equivalent of parse_document helper.
         /// </summary>
     public static class DocumentLayout
     {

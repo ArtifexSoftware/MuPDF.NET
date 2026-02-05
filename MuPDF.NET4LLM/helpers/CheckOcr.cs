@@ -9,7 +9,7 @@ namespace MuPDF.NET4LLM.Helpers
 {
     /// <summary>
     /// OCR decision and repair utilities.
-    /// Ported and adapted from the Python module helpers/check_ocr.py in pymupdf4llm.
+    /// Ported and adapted from LLM helpers.
     /// </summary>
     public static class CheckOcr
     {

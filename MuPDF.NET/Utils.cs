@@ -2917,7 +2917,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Store info of an image in Python list
+        /// Store info of an image in list
         /// </summary>
         /// <param name="doc"></param>
         /// <param name="dict"></param>

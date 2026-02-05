@@ -1,4 +1,4 @@
-﻿using MuPDF.NET.enums;
+using MuPDF.NET.enums;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
@@ -468,15 +468,7 @@ namespace MuPDF.NET.Test
                 catch (Exception ee)
                 {
                     Console.WriteLine($"test_2548: ee = {ee}");
-                    /*
-                    if hasattr(pymupdf, 'mupdf'):
-                        # Rebased.
-                        expected = "RuntimeError('code=2: cycle in structure tree')"
-                    else:
-                        # Classic.
-                        expected = "RuntimeError('cycle in structure tree')"
-                    assert repr(ee) == expected, f'Expected {expected=} but got {repr(ee)=}.'
-                    */
+                    // Expected: RuntimeError (cycle in structure tree)
                     e = true;
                 }
             }

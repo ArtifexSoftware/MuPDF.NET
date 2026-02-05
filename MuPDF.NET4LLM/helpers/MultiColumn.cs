@@ -7,7 +7,7 @@ namespace MuPDF.NET4LLM.Helpers
 {
     /// <summary>
     /// Multi-column page detection utilities.
-    /// Ported and adapted from the Python module helpers/multi_column.py in pymupdf4llm.
+    /// Ported and adapted from LLM helpers.
     /// </summary>
     public static class MultiColumn
     {
@@ -142,7 +142,7 @@ namespace MuPDF.NET4LLM.Helpers
             for (int i = 0; i < bboxes.Count; i++) // Iterate old bboxes
             {
                 Rect bb = bboxes[i];
-                // Skip if already processed (Python sets bboxes[i] = None)
+                // Skip if already processed
                 if (bb == null)
                     continue;
 
@@ -179,7 +179,7 @@ namespace MuPDF.NET4LLM.Helpers
                     temp = nblocks[j]; // New bbox added
                 }
 
-                // Check if some remaining bbox is contained in temp (Python always runs this)
+                // Check if some remaining bbox is contained in temp
                 check = CanExtend(temp, bb, bboxes, vertBboxes);
                 if (!check)
                     nblocks.Add(bb);
@@ -364,7 +364,7 @@ namespace MuPDF.NET4LLM.Helpers
                             continue;
 
                         Rect temp = Utils.JoinRects(new List<Rect> { prect0, prect1 });
-                        // Python: test = set(tuple(b) for b in prects+new_rects if b.intersects(temp))
+                        // Test: rects that intersect temp
                         //        if test == set((tuple(prect0), tuple(prect1))): join
                         var intersecting = prects.Concat(newRects).Where(b => b != null && b.Intersects(temp)).ToList();
                         var intersectingCoords = new HashSet<(float, float, float, float)>(

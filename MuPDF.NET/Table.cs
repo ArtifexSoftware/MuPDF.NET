@@ -89,17 +89,17 @@ namespace MuPDF.NET
         internal static List<CharDict> CHARS = new List<CharDict>();  // text characters from MuPDF
         internal static TextPage TEXTPAGE = null;  // textpage for cell text extraction
         
-        // Constants matching Python implementation from __init__.py
+        // Constants
         internal static readonly HashSet<char> WHITE_SPACES = new HashSet<char> { ' ', '\t', '\n', '\r', '\f', '\v' };
-        // From __init__.py: TEXT_FONT_BOLD = 16, but for char flags use FZ_STEXT_BOLD
+        // TEXT_FONT_BOLD = 16, but for char flags use FZ_STEXT_BOLD
         internal static readonly int TEXT_BOLD = (int)mupdf.mupdf.FZ_STEXT_BOLD;
-        // From __init__.py: TEXT_STRIKEOUT = mupdf.FZ_STEXT_STRIKEOUT
+        // TEXT_STRIKEOUT = mupdf.FZ_STEXT_STRIKEOUT
         internal static readonly int TEXT_STRIKEOUT = (int)mupdf.mupdf.FZ_STEXT_STRIKEOUT;
-        // From __init__.py: TEXT_COLLECT_STYLES = mupdf.FZ_STEXT_COLLECT_STYLES
+        // TEXT_COLLECT_STYLES = mupdf.FZ_STEXT_COLLECT_STYLES
         internal static readonly int TEXT_COLLECT_STYLES = (int)mupdf.mupdf.FZ_STEXT_COLLECT_STYLES;
-        // From __init__.py: TEXT_COLLECT_VECTORS = mupdf.FZ_STEXT_COLLECT_VECTORS
+        // TEXT_COLLECT_VECTORS = mupdf.FZ_STEXT_COLLECT_VECTORS
         internal static readonly int TEXT_COLLECT_VECTORS = (int)mupdf.mupdf.FZ_STEXT_COLLECT_VECTORS;
-        // From __init__.py: TEXT_SEGMENT = mupdf.FZ_STEXT_SEGMENT
+        // TEXT_SEGMENT = mupdf.FZ_STEXT_SEGMENT
         internal static readonly int TEXT_SEGMENT = (int)mupdf.mupdf.FZ_STEXT_SEGMENT;
         // From table.py FLAGS: TEXTFLAGS_TEXT | TEXT_COLLECT_STYLES | TEXT_ACCURATE_BBOXES | TEXT_MEDIABOX_CLIP
         internal static readonly int FLAGS = 
@@ -137,7 +137,7 @@ namespace MuPDF.NET
         };
     }
 
-    // Character dictionary structure matching Python implementation
+    // Character dictionary structure
     internal class CharDict
     {
         public float adv { get; set; }
@@ -221,7 +221,6 @@ namespace MuPDF.NET
 
         // get_table_dict_from_rect - Extract MuPDF table structure information
         // Note: This requires native MuPDF interop to call fz_find_table_within_bounds
-        // The Python version calls: pymupdf.extra.make_table_dict(textpage.this.m_internal, table_dict, rect)
         // This would need to be implemented via P/Invoke or native wrapper
         internal static Dictionary<string, object> GetTableDictFromRect(TextPage textpage, Rect rect)
         {
@@ -1622,7 +1621,7 @@ namespace MuPDF.NET
             if (snapXTolerance > 0 || snapYTolerance > 0)
                 edges = SnapEdges(edges, snapXTolerance, snapYTolerance);
 
-            // Use Tuple for grouping key (matching Python's get_group function)
+            // Use Tuple for grouping key
             var sorted = edges.OrderBy(e => Tuple.Create(e.orientation, e.orientation == "h" ? e.top : e.x0)).ToList();
             var edgeGroups = sorted.GroupBy(e => Tuple.Create(e.orientation, e.orientation == "h" ? e.top : e.x0));
 
@@ -1644,7 +1643,7 @@ namespace MuPDF.NET
             float joinXTolerance,
             float joinYTolerance)
         {
-            // Local grouping key (equivalent to Python get_group)
+            // Local grouping key
             (string, float) GetGroupKey(Edge edge)
             {
                 return edge.orientation == "h"
@@ -2370,7 +2369,7 @@ namespace MuPDF.NET
         public string ToMarkdown(bool clean = false, bool fillEmpty = true)
         {
             var output = new StringBuilder();
-            output.Append("|");  // Start with "|" as in Python line 1604
+            output.Append("|");
             int rows = row_count;
             int cols = col_count;
 
@@ -2427,7 +2426,6 @@ namespace MuPDF.NET
             }
 
             // generate header string and MD separator
-            // Note: Python assumes self.header always exists, so we do the same
             for (int i = 0; i < header.names.Count; i++)
             {
                 string name = header.names[i];
@@ -2474,7 +2472,6 @@ namespace MuPDF.NET
         // For C#, users can convert the Extract() result to their preferred data structure
         public object ToPandas(Dictionary<string, object> kwargs = null)
         {
-            // In Python: returns pandas.DataFrame
             // In C#: Could return DataTable, or users can use Extract() and convert manually
             throw new NotImplementedException("ToPandas is not implemented in C#. Use Extract() and convert to your preferred data structure (e.g., DataTable).");
         }
@@ -2904,11 +2901,10 @@ namespace MuPDF.NET
             {
                 oldMediabox = page.MediaBox;
                 page.SetRotation(0);
-                // Note: In Python, page_rotation_set0 also handles xref and mediabox changes
                 // For now, we'll just reset rotation - full implementation may require more complex handling
             }
 
-            // Handle UNSET values (None in Python becomes null in C#, use TABLE_UNSET)
+            // Handle UNSET values (use TABLE_UNSET)
             float snapX = snap_x_tolerance ?? TableFlags.TABLE_UNSET;
             float snapY = snap_y_tolerance ?? TableFlags.TABLE_UNSET;
             float joinX = join_x_tolerance ?? TableFlags.TABLE_UNSET;
@@ -2953,7 +2949,7 @@ namespace MuPDF.NET
                 try
                 {
                     // Try to get layout information - this may not be available in all MuPDF.NET versions
-                    // In Python: page.get_layout() and page.layout_information
+                    // page.get_layout() and page.layout_information
                     // For now, we'll skip this and proceed with table detection
                 }
                 catch
@@ -3023,7 +3019,7 @@ namespace MuPDF.NET
             }
             catch (Exception ex)
             {
-                // Log exception (equivalent to pymupdf.message in Python)
+                // Log exception
                 System.Diagnostics.Debug.WriteLine($"find_tables: exception occurred: {ex.Message}");
                 return null;
             }
@@ -3133,7 +3129,7 @@ namespace MuPDF.NET
                     }
                     else if (desc is Dictionary<string, object> dict)
                     {
-                        // Convert dictionary to Edge (similar to obj_to_edges in Python)
+                        // Convert dictionary to Edge
                         var convertedEdges = EdgeProcessing.ObjToEdges(dict);
                         foreach (var e in convertedEdges)
                         {
@@ -3185,7 +3181,7 @@ namespace MuPDF.NET
                     }
                     else if (desc is Dictionary<string, object> dict)
                     {
-                        // Convert dictionary to Edge (similar to obj_to_edges in Python)
+                        // Convert dictionary to Edge
                         var convertedEdges = EdgeProcessing.ObjToEdges(dict);
                         foreach (var e in convertedEdges)
                         {

@@ -1703,10 +1703,10 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Write the text of one or more pymupdf.TextWriter objects.
+        /// Write the text of one or more TextWriter objects.
         /// </summary>
         /// <param name="rect">target rectangle. If None, the union of the text writers is used.</param>
-        /// <param name="writers">one or more pymupdf.TextWriter objects.</param>
+        /// <param name="writers">One or more TextWriter objects.</param>
         /// <param name="overlay">put in foreground or background.</param>
         /// <param name="color"></param>
         /// <param name="opacity"></param>
@@ -1726,7 +1726,7 @@ namespace MuPDF.NET
         )
         {
             if (writers == null || writers.Count == 0)
-                throw new Exception("need at least one pymupdf.TextWriter");
+                throw new Exception("need at least one TextWriter");
             Rect clip = writers[0].TextRect;
             Document textDoc = new Document();
             Page page = textDoc.NewPage(width: Rect.Width, height: Rect.Height);

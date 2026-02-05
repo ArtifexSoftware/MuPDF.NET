@@ -9,7 +9,7 @@ namespace MuPDF.NET4LLM
 {
     /// <summary>
     /// Main entry point for MuPDF.NET4LLM functionality.
-    /// Provides a C# facade over the helpers ported from the Python pymupdf4llm package.
+    /// Provides a C# facade over the LLM helpers.
     /// </summary>
     public static class MuPDF4LLM
     {
@@ -219,7 +219,7 @@ namespace MuPDF.NET4LLM
         /// <summary>
         /// Parse the logical layout of a <see cref="Document"/> into a
         /// <see cref="Helpers.ParsedDocument"/> object, exposing pages, layout boxes,
-        /// tables, images and metadata. This is the C# equivalent of the Python
+        /// tables, images and metadata.
         /// <c>parse_document</c> helper and is the common basis for Markdown / JSON / text output.
         /// </summary>
         /// <param name="doc">Input <see cref="Document"/> to convert.</param>
@@ -268,7 +268,7 @@ namespace MuPDF.NET4LLM
 
         /// <summary>
         /// Extract key / value information from interactive form fields, including
-        /// the pages each field appears on, similar to the Python
+        /// the pages each field appears on.
         /// <c>utils.extract_form_fields_with_pages</c> helper.
         /// Traverse /AcroForm/Fields hierarchy and return a dict:
         /// fully qualified field name -> {"value": ..., "pages": [...]}

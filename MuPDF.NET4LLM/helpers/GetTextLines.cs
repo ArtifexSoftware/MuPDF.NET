@@ -16,7 +16,7 @@ namespace MuPDF.NET4LLM.Helpers
 
     /// <summary>
     /// Text line extraction utilities.
-    /// Ported and adapted from the Python module helpers/get_text_lines.py in pymupdf4llm.
+    /// Ported and adapted from LLM helpers.
     /// </summary>
     public static class GetTextLines
     {
@@ -27,7 +27,7 @@ namespace MuPDF.NET4LLM.Helpers
         /// <c>get_raw_lines()</c> in <c>helpers/get_text_lines.py</c>.
         /// </summary>
         /// <remarks>
-        /// This is a C# port of <c>pymupdf4llm.helpers.get_text_lines.get_raw_lines</c>.
+        /// C# port of get_raw_lines helper.
         /// It compensates for MuPDF’s tendency to create multiple short lines when spans
         /// are separated by small gaps, by joining adjacent spans into longer lines.
         ///
@@ -55,7 +55,7 @@ namespace MuPDF.NET4LLM.Helpers
         /// </param>
         /// <param name="ignoreInvisible">
         /// When <c>true</c>, spans with zero alpha (invisible text) are skipped, except
-        /// for Type 3 fonts (which are always kept), matching the Python logic.
+        /// for Type 3 fonts (which are always kept).
         /// </param>
         /// <param name="onlyHorizontal">
         /// When <c>true</c>, only spans with approximately horizontal direction
@@ -281,7 +281,7 @@ namespace MuPDF.NET4LLM.Helpers
         ///
         /// When <paramref name="ocr"/> is <c>true</c>, a simplified table recognition
         /// is applied to the OCR output: lines are grouped into columns based on
-        /// x‑coordinates and emitted as a Markdown table, analogous to the Python
+        /// x‑coordinates and emitted as a Markdown table.
         /// implementation.
         /// </remarks>
         /// <param name="page">The source <see cref="Page"/> to extract text from.</param>
@@ -295,7 +295,7 @@ namespace MuPDF.NET4LLM.Helpers
         /// </param>
         /// <param name="sep">
         /// Separator string used when joining multiple MuPDF lines that are merged
-        /// into a single logical line (default: tab, matching the Python version).
+        /// into a single logical line (default: tab).
         /// </param>
         /// <param name="tolerance">
         /// Vertical tolerance passed through to <see cref="GetRawLines"/>.

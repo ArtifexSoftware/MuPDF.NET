@@ -7,12 +7,12 @@ namespace MuPDF.NET4LLM.Helpers
 {
     /// <summary>
     /// Image quality analysis utilities.
-    /// Ported and adapted from the Python module helpers/image_quality.py in pymupdf4llm.
+    /// Ported and adapted from LLM helpers.
     /// </summary>
     public static class ImageQuality
     {
         /// <summary>
-        /// Bilinear resize (similar to OpenCV INTER_LINEAR), vectorized implementation in Python.
+        /// Bilinear resize (similar to OpenCV INTER_LINEAR).
         /// </summary>
         /// <param name="img">Input image (2D byte array).</param>
         /// <param name="newH">New height.</param>
@@ -78,7 +78,7 @@ namespace MuPDF.NET4LLM.Helpers
 
         /// <summary>
         /// 2D convolution (Cross-Correlation) with reflect padding.
-        /// Vectorized over kernel in Python.
+        /// Vectorized over kernel.
         /// </summary>
         /// <param name="img">Input image.</param>
         /// <param name="kernel">Convolution kernel.</param>

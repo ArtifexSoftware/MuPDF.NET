@@ -525,7 +525,6 @@ namespace MuPDF.NET
                     for (fz_stext_char ch = line.first_char; ch != null; ch = ch.next)
                     {
                         FzRect cbBox = GetCharBbox(new FzStextLine(line), new FzStextChar(ch));
-                        // Python extractWORDS: if (not JM_rects_overlap(tp_rect, cbbox) and not mupdf.fz_is_infinite_rect(tp_rect)): continue
                         if (
                             !IsRectsOverlap(stPageRect, cbBox)
                             && stPageRect.fz_is_infinite_rect() == 0
@@ -1015,7 +1014,6 @@ namespace MuPDF.NET
         /// </summary>
         /// <param name="pageDict">PageStruct including BlockList (width/height set by caller; blocks are filled here).</param>
         /// <param name="raw"></param>
-        /// <remarks>Originated from PyMuPDF TextPage._getNewBlockList(self, page_dict, raw) which calls JM_make_textpage_dict.</remarks>
         internal void GetNewBlockList(PageInfo pageDict, bool raw)
         {
             MakeTextPage2Dict(pageDict, raw);
@@ -1081,7 +1079,6 @@ namespace MuPDF.NET
                 )
                     continue;
 
-                // Python: if (not mupdf.fz_is_infinite_rect(tp_rect) and mupdf.fz_is_empty_rect(mupdf.fz_intersect_rect(...))): continue
                 // Intersection-empty check in managed code to avoid native fz_intersect_rect mutating stPageRect.
                 if (stPageRect.fz_is_infinite_rect() == 0)
                 {
@@ -1184,7 +1181,7 @@ namespace MuPDF.NET
 
                         Line lineDict = new Line();
 
-                        ///JM_make_spanlist
+                        // Make span list
                         List<Char> charList = new List<Char>();
                         List<Span> spanList = new List<Span>();
                         mupdf.mupdf.fz_clear_buffer(textBuffer);

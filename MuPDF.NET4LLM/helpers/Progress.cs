@@ -8,7 +8,7 @@ namespace MuPDF.NET4LLM.Helpers
     /// <summary>
     /// Text-based progress bar to allow watching the advancement
     /// of Markdown conversion of document pages.
-    /// Ported and adapted from the Python helpers/progress.py in pymupdf4llm.
+    /// Ported and adapted from LLM helpers.
     /// 
     /// Copyright and License
     /// Copyright 2024 Artifex Software, Inc.
