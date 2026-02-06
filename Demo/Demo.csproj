@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\MuPDF.NET\MuPDF.NET.csproj" />
+    <ProjectReference Include="..\MuPDF.NET4LLM\MuPDF.NET4LLM.csproj" />
   </ItemGroup>
 
 </Project>

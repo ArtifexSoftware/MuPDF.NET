@@ -1,4 +1,4 @@
-﻿using mupdf;
+using mupdf;
 using SkiaSharp;
 using System;
 using System.Collections;
@@ -10,7 +10,6 @@ using System.Net.Mime;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
-using static MuPDF.NET.Global;
 using static System.Net.Mime.MediaTypeNames;
 
 namespace MuPDF.NET
@@ -1531,7 +1530,7 @@ namespace MuPDF.NET
             _page.Dispose();
             dev.fz_close_device();
             dev.Dispose();
-            options.Dispose();
+            //options.Dispose();
 
             return new TextPage(stPage);
         }
@@ -1547,9 +1546,6 @@ namespace MuPDF.NET
         {
             if (matrix == null)
                 matrix = new Matrix(1, 1);
-
-            if (clip == null)
-                clip = new Rect(new FzRect(FzRect.Fixed.Fixed_INFINITE));
 
             int oldRotation = Rotation;
             if (oldRotation != 0)
@@ -1707,10 +1703,10 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Write the text of one or more pymupdf.TextWriter objects.
+        /// Write the text of one or more TextWriter objects.
         /// </summary>
         /// <param name="rect">target rectangle. If None, the union of the text writers is used.</param>
-        /// <param name="writers">one or more pymupdf.TextWriter objects.</param>
+        /// <param name="writers">One or more TextWriter objects.</param>
         /// <param name="overlay">put in foreground or background.</param>
         /// <param name="color"></param>
         /// <param name="opacity"></param>
@@ -1730,7 +1726,7 @@ namespace MuPDF.NET
         )
         {
             if (writers == null || writers.Count == 0)
-                throw new Exception("need at least one pymupdf.TextWriter");
+                throw new Exception("need at least one TextWriter");
             Rect clip = writers[0].TextRect;
             Document textDoc = new Document();
             Page page = textDoc.NewPage(width: Rect.Width, height: Rect.Height);
