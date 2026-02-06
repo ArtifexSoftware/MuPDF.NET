@@ -484,8 +484,8 @@ namespace Demo
                 Console.WriteLine($"Version Tuple: ({versionTuple.major}, {versionTuple.minor}, {versionTuple.patch})");
 
                 // Test with a sample PDF file
-                //string testFilePath = Path.GetFullPath("../../../TestDocuments/national-capitals.pdf");
-                string testFilePath = Path.GetFullPath("../../../TestDocuments/Magazine.pdf");
+                string testFilePath = Path.GetFullPath("../../../TestDocuments/national-capitals.pdf");
+                //string testFilePath = Path.GetFullPath("../../../TestDocuments/Magazine.pdf");
 
                 // Try to find a PDF with actual content if Blank.pdf doesn't work well
                 if (!File.Exists(testFilePath))

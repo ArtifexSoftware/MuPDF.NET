@@ -20,9 +20,9 @@
                         ( '$(IsX64)' == 'true' or 
                           ('$(IsAnyCPU)' == 'true' and '$(IsPrefer32Bit)' != 'true'))">
     <!-- MuPDF Native Libraries -->
-    <None Include="$(UserProfile)\.nuget\packages\mupdf.nativeassets\1.27.0-rc.2\native\win-x64\mupdfcpp64.dll"
+    <None Include="$(UserProfile)\.nuget\packages\mupdf.nativeassets\1.27.0\native\win-x64\mupdfcpp64.dll"
           CopyToOutputDirectory="PreserveNewest" />
-    <None Include="$(UserProfile)\.nuget\packages\mupdf.nativeassets\1.27.0-rc.2\native\win-x64\mupdfcsharp.dll"
+    <None Include="$(UserProfile)\.nuget\packages\mupdf.nativeassets\1.27.0\native\win-x64\mupdfcsharp.dll"
           CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   
@@ -31,9 +31,9 @@
                         ( '$(IsX86)' == 'true' or 
                           ('$(IsAnyCPU)' == 'true' and '$(IsPrefer32Bit)' == 'true'))">
     <!-- MuPDF Native Libraries -->
-    <None Include="$(UserProfile)\.nuget\packages\mupdf.nativeassets\1.27.0-rc.2\native\win-x86\mupdfcpp.dll"
+    <None Include="$(UserProfile)\.nuget\packages\mupdf.nativeassets\1.27.0\native\win-x86\mupdfcpp.dll"
           CopyToOutputDirectory="PreserveNewest" />
-    <None Include="$(UserProfile)\.nuget\packages\mupdf.nativeassets\1.27.0-rc.2\native\win-x86\mupdfcsharp.dll"
+    <None Include="$(UserProfile)\.nuget\packages\mupdf.nativeassets\1.27.0\native\win-x86\mupdfcsharp.dll"
           CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   
