@@ -2556,7 +2556,7 @@ namespace MuPDF.NET
 
             // Get text blocks above table
             dynamic pageInfo = page.GetText("dict", clip: clip, flags: (int)TextFlagsExtension.TEXTFLAGS_TEXT);
-            List<Block> blocks = pageInfo?.BLOCKS ?? new List<Block>();
+            List<Block> blocks = pageInfo?.Blocks ?? new List<Block>();
 
             // Non-empty, non-superscript spans above table, sorted descending by y1
             var spans = new List<Dictionary<string, object>>();
@@ -2601,7 +2601,7 @@ namespace MuPDF.NET
 
                 float y1 = Convert.ToSingle(sbbox[3]);
                 float h = y1 - Convert.ToSingle(sbbox[1]);
-                bool bold = ((int)s["flags"] & (int)FontStyle.TEXT_FONT_BOLD) != 0;
+                bool bold = (Convert.ToInt32(s["flags"]) & (int)FontStyle.TEXT_FONT_BOLD) != 0;
 
                 if (i == 0)
                 {
@@ -3145,18 +3145,26 @@ namespace MuPDF.NET
                 }
             }
 
-            List<Edge> vBase = new List<Edge>();
+            List<Edge> vBase;
             if (vStrat == "lines")
             {
-                vBase = TableGlobals.EDGES.Where(e => e.orientation == "v").ToList();
+                vBase = EdgeProcessing.FilterEdges(TableGlobals.EDGES, "v");
             }
             else if (vStrat == "lines_strict")
             {
-                vBase = TableGlobals.EDGES.Where(e => e.orientation == "v" && e.object_type == "line").ToList();
+                vBase = EdgeProcessing.FilterEdges(TableGlobals.EDGES, "v", "line");
             }
             else if (vStrat == "text")
             {
                 vBase = EdgeProcessing.WordsToEdgesV(words, (int)settings.min_words_vertical);
+            }
+            else if (vStrat == "explicit")
+            {
+                vBase = new List<Edge>();
+            }
+            else
+            {
+                vBase = new List<Edge>();
             }
 
             var v = vBase.Concat(vExplicit).ToList();
@@ -3197,18 +3205,26 @@ namespace MuPDF.NET
                 }
             }
 
-            List<Edge> hBase = new List<Edge>();
+            List<Edge> hBase;
             if (hStrat == "lines")
             {
-                hBase = TableGlobals.EDGES.Where(e => e.orientation == "h").ToList();
+                hBase = EdgeProcessing.FilterEdges(TableGlobals.EDGES, "h");
             }
             else if (hStrat == "lines_strict")
             {
-                hBase = TableGlobals.EDGES.Where(e => e.orientation == "h" && e.object_type == "line").ToList();
+                hBase = EdgeProcessing.FilterEdges(TableGlobals.EDGES, "h", "line");
             }
             else if (hStrat == "text")
             {
                 hBase = EdgeProcessing.WordsToEdgesH(words, (int)settings.min_words_horizontal);
+            }
+            else if (hStrat == "explicit")
+            {
+                hBase = new List<Edge>();
+            }
+            else
+            {
+                hBase = new List<Edge>();
             }
 
             var h = hBase.Concat(hExplicit).ToList();

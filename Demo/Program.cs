@@ -132,7 +132,7 @@ namespace Demo
 
             try
             {
-                string testFilePath = Path.GetFullPath("../../../TestDocuments/national-capitals.pdf");
+                string testFilePath = Path.GetFullPath("../../../TestDocuments/err_table.pdf");
                 
                 if (!File.Exists(testFilePath))
                 {
