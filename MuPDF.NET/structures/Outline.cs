@@ -1,9 +1,10 @@
-﻿using mupdf;
+using mupdf;
+using System;
 using static System.Net.Mime.MediaTypeNames;
 
 namespace MuPDF.NET
 {
-    public class Outline
+    public class Outline : IDisposable
     {
         static Outline()
         {

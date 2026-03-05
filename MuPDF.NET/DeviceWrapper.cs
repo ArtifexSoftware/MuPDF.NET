@@ -1,8 +1,9 @@
-﻿using mupdf;
+using mupdf;
+using System;
 
 namespace MuPDF.NET
 {
-    public class DeviceWrapper
+    public class DeviceWrapper : IDisposable
     {
         static DeviceWrapper()
         {
