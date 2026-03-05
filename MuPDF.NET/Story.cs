@@ -1,4 +1,4 @@
-﻿using mupdf;
+using mupdf;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -6,7 +6,7 @@ using System.Text;
 
 namespace MuPDF.NET
 {
-    public class Story
+    public class Story : IDisposable
     {
         static Story()
         {

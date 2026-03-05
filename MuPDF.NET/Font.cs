@@ -1,10 +1,10 @@
-﻿using mupdf;
+using mupdf;
 using System;
 using System.Collections.Generic;
 
 namespace MuPDF.NET
 {
-    public class Font
+    public class Font : IDisposable
     {
         static Font()
         {

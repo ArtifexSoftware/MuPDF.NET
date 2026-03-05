@@ -1,4 +1,4 @@
-﻿using mupdf;
+using mupdf;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -12,7 +12,7 @@ using System.Text;
 
 namespace MuPDF.NET
 {
-    public class Document
+    public class Document : IDisposable
     {
         static Document()
         {
@@ -632,7 +632,7 @@ namespace MuPDF.NET
         {
             if (IsClosed || IsEncrypted)
                 throw new Exception("document closed or encrypted");
-            
+
             FzDocument doc = _nativeDocument;
             int fp = from;
             int tp = to;
@@ -646,69 +646,131 @@ namespace MuPDF.NET
                 tp = srcCount - 1;
             if (tp > srcCount - 1)
                 tp = srcCount - 1;
-            
+
             int len0 = Utils.MUPDF_WARNINGS_STORE.Count;
             PdfDocument pdfout = new PdfDocument();
-            int incr = 1;
-            if (fp > tp)
-            {
-                incr = -1;
-                int t = tp;
-                tp = fp;
-                fp = t;
-            }
-            
-            int rot = Utils.NormalizeRotation(rotate);
-            int i = fp;
-
-            while (true)
-            {
-                if (!Utils.INRANGE(i, fp, tp))
-                    break;
-            
-                FzPage page = doc.fz_load_page(i);
-                FzRect mediabox = page.fz_bound_page();
-                PdfObj resources = new PdfObj();
-                FzBuffer contents = new FzBuffer();
-                FzDevice dev = pdfout.pdf_page_write(mediabox, resources, contents);
-                page.fz_run_page(dev, new FzMatrix(), new FzCookie());
-                dev.fz_close_device();
-                dev.Dispose();
-                dev = null;
-
-                PdfObj pageObj = pdfout.pdf_add_page(mediabox, rot, resources, contents);
-                pdfout.pdf_insert_page(-1, pageObj);
-                i += incr;
-            }
-
             PdfWriteOptions opts = new PdfWriteOptions();
-            opts.do_garbage = 4;
-            opts.do_compress = 1;
-            opts.do_compress_images = 1;
-            opts.do_compress_fonts = 1;
-            opts.do_sanitize = 1;
-            opts.do_incremental = 0;
-            opts.do_ascii = 0;
-            opts.do_decompress = 0;
-            opts.do_linear = 0;
-            opts.do_clean = 1;
-            opts.do_pretty = 0;
+            FzBuffer res = null;
+            FzOutput output = null;
 
-            FzBuffer res = mupdf.mupdf.fz_new_buffer(8192);
-            FzOutput output = new FzOutput(res);
-            pdfout.pdf_write_document(output, opts);
-            output.fz_close_output();
-            output.Dispose();
-
-            byte[] ret = Utils.BinFromBuffer(res);
-            int len1 = Utils.MUPDF_WARNINGS_STORE.Count;
-
-            for (i = len0; i < len1; i++)
+            try
             {
-                Console.WriteLine($"{Utils.MUPDF_WARNINGS_STORE[i]}");
+                int incr = 1;
+                if (fp > tp)
+                {
+                    incr = -1;
+                    int t = tp;
+                    tp = fp;
+                    fp = t;
+                }
+
+                int rot = Utils.NormalizeRotation(rotate);
+                int i = fp;
+
+                while (true)
+                {
+                    if (!Utils.INRANGE(i, fp, tp))
+                        break;
+
+                    FzPage page = null;
+                    PdfObj resources = null;
+                    FzBuffer contents = null;
+                    FzDevice dev = null;
+
+                    try
+                    {
+                        page = doc.fz_load_page(i);
+                        FzRect mediabox = page.fz_bound_page();
+                        resources = new PdfObj();
+                        contents = new FzBuffer();
+                        dev = pdfout.pdf_page_write(mediabox, resources, contents);
+                        page.fz_run_page(dev, new FzMatrix(), new FzCookie());
+
+                        PdfObj pageObj = pdfout.pdf_add_page(mediabox, rot, resources, contents);
+                        pdfout.pdf_insert_page(-1, pageObj);
+                    }
+                    finally
+                    {
+                        if (dev != null)
+                        {
+                            dev.fz_close_device();
+                            dev.Dispose();
+                            dev = null;
+                        }
+
+                        if (contents != null)
+                        {
+                            contents.Dispose();
+                            contents = null;
+                        }
+
+                        if (resources != null)
+                        {
+                            resources.Dispose();
+                            resources = null;
+                        }
+
+                        if (page != null)
+                        {
+                            page.Dispose();
+                            page = null;
+                        }
+                    }
+
+                    i += incr;
+                }
+
+                opts.do_garbage = 4;
+                opts.do_compress = 1;
+                opts.do_compress_images = 1;
+                opts.do_compress_fonts = 1;
+                opts.do_sanitize = 1;
+                opts.do_incremental = 0;
+                opts.do_ascii = 0;
+                opts.do_decompress = 0;
+                opts.do_linear = 0;
+                opts.do_clean = 1;
+                opts.do_pretty = 0;
+
+                res = mupdf.mupdf.fz_new_buffer(8192);
+                output = new FzOutput(res);
+                pdfout.pdf_write_document(output, opts);
+                output.fz_close_output();
+
+                byte[] ret = Utils.BinFromBuffer(res);
+                int len1 = Utils.MUPDF_WARNINGS_STORE.Count;
+
+                for (int j = len0; j < len1; j++)
+                {
+                    Console.WriteLine($"{Utils.MUPDF_WARNINGS_STORE[j]}");
+                }
+
+                return ret;
             }
-            
-            return ret;
+            finally
+            {
+                if (output != null)
+                {
+                    output.Dispose();
+                    output = null;
+                }
+
+                if (res != null)
+                {
+                    res.Dispose();
+                    res = null;
+                }
+
+                if (opts != null)
+                {
+                    opts.Dispose();
+                }
+
+                if (pdfout != null)
+                {
+                    pdfout.Dispose();
+                }
+            }
         }
 
         public FzDocument ToFzDocument()
@@ -5952,8 +6014,9 @@ namespace MuPDF.NET
 
         public void Dispose()
         {
+            // Make Dispose idempotent: safe to call multiple times.
             if (IsClosed)
-                throw new Exception("document closed");
+                return;
 
             if (Outline != null)
             {
@@ -5969,19 +6032,12 @@ namespace MuPDF.NET
 
         public void Close()
         {
+            // Preserve existing Close() behavior (throws if already closed),
+            // but delegate the actual cleanup to Dispose().
             if (IsClosed)
                 throw new Exception("document closed");
 
-            if (Outline != null)
-            {
-                Outline.Dispose();
-                Outline = null;
-            }
-            ResetPageRefs();
-            IsClosed = true;
-            GraftMaps = new Dictionary<int, GraftMap>();
-            _nativeDocument.Dispose();
-            _nativeDocument = null;
+            Dispose();
         }
 
         /// <summary>

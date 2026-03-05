@@ -6,7 +6,7 @@ using Newtonsoft.Json;
 
 namespace MuPDF.NET
 {
-    public class TextPage
+    public class TextPage : IDisposable
     {
         static TextPage()
         {

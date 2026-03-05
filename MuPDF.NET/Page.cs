@@ -14,7 +14,7 @@ using static System.Net.Mime.MediaTypeNames;
 
 namespace MuPDF.NET
 {
-    public class Page
+    public class Page : IDisposable
     {
         static Page()
         {

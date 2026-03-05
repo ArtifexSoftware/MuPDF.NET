@@ -1,5 +1,10 @@
 # Changelog
 
+### [3.2.13-rc.14] - 2026-02-11
+- Upgraded `MuPDF.NativeAssets` to 1.27.2 and refreshed generated MuPDF bindings for Windows and Linux.
+- Implemented `IDisposable` on core types (`Document`, `Page`, `TextPage`, `Story`, `DocumentWriter`, `DisplayList`, `Font`, `GraftMap`, `DeviceWrapper`, `Outline`) and made `Document.Dispose()` idempotent.
+- Hardened native resource handling (e.g. `Document.Convert2Pdf`, `Pixmap.InvertIrect`) to be exception-safe, fixed `Pixmap.InvertIrect` null/stencil handling, and added tests for table extraction and disposal patterns.
+
 ### [3.2.13-rc.6] - 2025-12-26
 - Fixed the issues in `ResolveNames` method.
 - Fixed the issues in `DrawShape`

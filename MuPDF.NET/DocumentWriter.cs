@@ -1,9 +1,10 @@
-﻿using mupdf;
+using mupdf;
+using System;
 using System.IO;
 
 namespace MuPDF.NET
 {
-    public class DocumentWriter
+    public class DocumentWriter : IDisposable
     {
         static DocumentWriter()
         {
