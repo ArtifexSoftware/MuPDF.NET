@@ -1,4 +1,4 @@
-﻿using mupdf;
+using mupdf;
 using SkiaSharp;
 using System;
 using System.Collections.Generic;
@@ -900,12 +900,19 @@ namespace MuPDF.NET
             FzPixmap pm = _nativePixmap;
             if (_nativePixmap.fz_pixmap_colorspace() == null)
             {
-                Console.WriteLine("ignored for stencil pixmap");
                 return false;
             }
-            FzIrect r = bbox.ToFzIrect();
-            if (r.fz_is_infinite_irect() != 0)
+            FzIrect r;
+            if (bbox is null)
+            {
                 r = pm.fz_pixmap_bbox();
+            }
+            else
+            {
+                r = bbox.ToFzIrect();
+                if (r.fz_is_infinite_irect() != 0)
+                    r = pm.fz_pixmap_bbox();
+            }
             
             return Convert.ToBoolean(InvertPixmapRect(pm, r));
         }

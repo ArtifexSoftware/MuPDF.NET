@@ -84,8 +84,28 @@ namespace Demo
             TestTable();
             TestGetText();
             TestMarkdownReader();
+            TestRecompressJBIG2();
 
             return;
+        }
+
+        static void TestRecompressJBIG2()
+        {
+            Console.WriteLine("\n=== TestJBIG2 =======================");
+
+            string testFilePath = Path.GetFullPath("../../../TestDocuments/Jbig2.pdf");
+
+            Document doc = new Document(testFilePath);
+
+            PdfImageRewriterOptions opts = new PdfImageRewriterOptions();
+
+            opts.bitonal_image_recompress_method = mupdf.mupdf.FZ_RECOMPRESS_FAX;
+            opts.recompress_when = mupdf.mupdf.FZ_RECOMPRESS_WHEN_ALWAYS;
+
+            doc.RewriteImage(options: opts);
+
+            doc.Save(@"e:\TestRecompressJBIG2.pdf");
+            doc.Close();
         }
 
         static void TestMarkdownReader()
