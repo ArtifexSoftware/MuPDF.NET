@@ -3,9 +3,25 @@
   <PropertyGroup>
     <TargetFrameworks>netstandard2.0;net461;net472;net48;net5.0;net6.0;net7.0;net8.0</TargetFrameworks>
     <Platforms>AnyCPU;x64;x86</Platforms>
-    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <PlatformFolder>$(Platform)</PlatformFolder>
     <PlatformFolder Condition="'$(PlatformFolder)' == 'AnyCPU'">.</PlatformFolder>
+    <PackageId>MuPDF.NET4LLM</PackageId>
+    <Version>0.2.9-rc.1</Version>
+    <Authors>Artifex Software Inc.</Authors>
+    <Company>Artifex Software Inc.</Company>
+    <Product>MuPDF.NET4LLM</Product>
+    <Description>LLM/RAG helpers for MuPDF.NET: PDF-to-Markdown conversion, layout parsing, document structure analysis. Designed for use with LlamaIndex and similar RAG pipelines.</Description>
+    <PackageTags>MuPDF;PDF;LLM;RAG;Markdown;LlamaIndex;document-processing;PDF-to-text</PackageTags>
+    <PackageProjectUrl>https://github.com/ArtifexSoftware/MuPDF.NET</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/ArtifexSoftware/MuPDF.NET</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
+    <PackageReleaseNotes>LLM/RAG helpers for PDF processing: Markdown conversion, layout analysis, multi-column detection.</PackageReleaseNotes>
+    <IncludeSymbols>false</IncludeSymbols>
+    <NuspecFile>$(ProjectDir)MuPDF.NET4LLM.nuspec</NuspecFile>
+    <NuspecProperties>version=$(Version)</NuspecProperties>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
   </PropertyGroup>
   
   <PropertyGroup Condition="'$(OS)' == 'Windows_NT'">
@@ -17,11 +33,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\MuPDF.NET\MuPDF.NET.csproj" />
+    <PackageReference Include="MuPDF.NET" Version="[3.2.13,)" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+    <None Include="..\LICENSE.md" Pack="true" PackagePath="LICENSE.md" Visible="false" />
   </ItemGroup>
 
 </Project>

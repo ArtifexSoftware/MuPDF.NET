@@ -3470,12 +3470,22 @@ namespace MuPDF.NET
         {
             FzBuffer res = mupdf.mupdf.fz_new_buffer(512);
             FzOutput output = new FzOutput(res);
-            output.pdf_print_obj(what, compress, ascii);
-            output.fz_close_output();
-            output.Dispose();
-            res.fz_terminate_buffer();
-
-            return res;
+            try
+            {
+                output.pdf_print_obj(what, compress, ascii);
+                output.fz_close_output();
+                res.fz_terminate_buffer();
+                return res;
+            }
+            catch
+            {
+                res.Dispose();
+                throw;
+            }
+            finally
+            {
+                output.Dispose();
+            }
         }
 
         internal static string UnicodeFromBuffer(FzBuffer buf)

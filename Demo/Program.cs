@@ -122,7 +122,7 @@ namespace Demo
                 Console.WriteLine(doc.Text);
             }
         }
-
+        
         static void TestGetText()
         {
             Console.WriteLine("\n=== TestGetText =======================");
@@ -372,115 +372,6 @@ namespace Demo
                 {
                     Console.WriteLine($"Error in basic ToMarkdown: {ex.Message}");
                 }
-                /*
-                // Test 2: ToMarkdown with IdentifyHeaders
-                Console.WriteLine("\n--- Test 2: ToMarkdown with IdentifyHeaders ---");
-                try
-                {
-                    var identifyHeaders = new IdentifyHeaders(doc, pages: null, bodyLimit: 12.0f, maxLevels: 6);
-                    string markdown = MuPdfRag.ToMarkdown(
-                        doc,
-                        pages: new List<int> { 0 }, // First page only
-                        hdrInfo: identifyHeaders,
-                        writeImages: false,
-                        embedImages: false,
-                        ignoreImages: false,
-                        filename: testFilePath,
-                        forceText: true,
-                        showProgress: false
-                    );
-
-                    string markdownFile = "TestPyMuPdfRag_WithHeaders.md";
-                    File.WriteAllText(markdownFile, markdown, Encoding.UTF8);
-                    Console.WriteLine($"Markdown with headers saved to: {markdownFile}");
-                    Console.WriteLine($"Markdown length: {markdown.Length} characters");
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Error in ToMarkdown with IdentifyHeaders: {ex.Message}");
-                }
-
-                // Test 3: ToMarkdown with TocHeaders
-                Console.WriteLine("\n--- Test 3: ToMarkdown with TocHeaders ---");
-                try
-                {
-                    var tocHeaders = new TocHeaders(doc);
-                    string markdown = MuPdfRag.ToMarkdown(
-                        doc,
-                        pages: new List<int> { 0 }, // First page only
-                        hdrInfo: tocHeaders,
-                        writeImages: false,
-                        embedImages: false,
-                        ignoreImages: false,
-                        filename: testFilePath,
-                        forceText: true,
-                        showProgress: false
-                    );
-
-                    string markdownFile = "TestPyMuPdfRag_WithToc.md";
-                    File.WriteAllText(markdownFile, markdown, Encoding.UTF8);
-                    Console.WriteLine($"Markdown with TOC headers saved to: {markdownFile}");
-                    Console.WriteLine($"Markdown length: {markdown.Length} characters");
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Error in ToMarkdown with TocHeaders: {ex.Message}");
-                }
-
-                // Test 4: ToMarkdown with page separators
-                Console.WriteLine("\n--- Test 4: ToMarkdown with page separators ---");
-                try
-                {
-                    string markdown = MuPdfRag.ToMarkdown(
-                        doc,
-                        pages: null, // All pages
-                        hdrInfo: null,
-                        writeImages: false,
-                        embedImages: false,
-                        ignoreImages: false,
-                        filename: testFilePath,
-                        forceText: true,
-                        pageSeparators: true, // Add page separators
-                        showProgress: false
-                    );
-
-                    string markdownFile = "TestPyMuPdfRag_WithSeparators.md";
-                    File.WriteAllText(markdownFile, markdown, Encoding.UTF8);
-                    Console.WriteLine($"Markdown with page separators saved to: {markdownFile}");
-                    Console.WriteLine($"Markdown length: {markdown.Length} characters");
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Error in ToMarkdown with page separators: {ex.Message}");
-                }
-
-                // Test 5: ToMarkdown with progress bar
-                Console.WriteLine("\n--- Test 5: ToMarkdown with progress bar ---");
-                try
-                {
-                    string markdown = MuPdfRag.ToMarkdown(
-                        doc,
-                        pages: null, // All pages
-                        hdrInfo: null,
-                        writeImages: false,
-                        embedImages: false,
-                        ignoreImages: false,
-                        filename: testFilePath,
-                        forceText: true,
-                        showProgress: true, // Show progress bar
-                        pageSeparators: false
-                    );
-
-                    string markdownFile = "TestPyMuPdfRag_WithProgress.md";
-                    File.WriteAllText(markdownFile, markdown, Encoding.UTF8);
-                    Console.WriteLine($"\nMarkdown with progress saved to: {markdownFile}");
-                    Console.WriteLine($"Markdown length: {markdown.Length} characters");
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Error in ToMarkdown with progress: {ex.Message}");
-                }
-                */
                 doc.Close();
             }
             catch (Exception ex)
