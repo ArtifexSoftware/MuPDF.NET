@@ -1,6 +1,6 @@
 ## About
 
-**MuPDF.NET4LLM** provides LLM/RAG helpers for [MuPDF.NET](https://www.nuget.org/packages/MuPDF.NET): PDF-to-Markdown conversion, layout parsing, and document structure analysis. It is designed for use with RAG (Retrieval-Augmented Generation) pipelines and integration with LLMs..
+**MuPDF.NET4LLM** provides LLM/RAG helpers for [MuPDF.NET](https://www.nuget.org/packages/MuPDF.NET): PDF-to-Markdown conversion, layout parsing, and document structure analysis. It is designed for use with RAG (Retrieval-Augmented Generation) pipelines and integration with LLMs.
 
 This package extends MuPDF.NET with:
 
