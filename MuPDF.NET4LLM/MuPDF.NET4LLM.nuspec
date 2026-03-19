@@ -9,7 +9,7 @@
     <icon>logo.png</icon>
     <readme>Description.md</readme>
     <projectUrl>https://github.com/ArtifexSoftware/MuPDF.NET</projectUrl>
-    <description>LLM/RAG helpers for MuPDF.NET: PDF-to-Markdown conversion, layout parsing, document structure analysis. Designed for use with LlamaIndex and similar RAG pipelines.</description>
+    <description>LLM/RAG helpers for MuPDF.NET: PDF-to-Markdown conversion, layout parsing, document structure analysis. Designed for use with RAG pipelines and integration with LLMs.</description>
     <releaseNotes>LLM/RAG helpers for PDF processing: Markdown conversion, layout analysis, multi-column detection.</releaseNotes>
     <tags>MuPDF PDF LLM RAG Markdown LlamaIndex document-processing PDF-to-text</tags>
     <repository type="git" url="https://github.com/ArtifexSoftware/MuPDF.NET" />

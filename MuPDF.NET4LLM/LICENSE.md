@@ -2,7 +2,7 @@
 
 **Version 1, 11th December 2024**
 
-This **Artifex Community License** ("License") governs the use, reproduction, and distribution of **MuPDF.NET** ("Software") for non-commercial use. By using, modifying, or distributing this Software, you accept the terms of this License.
+This **Artifex Community License** ("License") governs the use, reproduction, and distribution of **MuPDF.NET4LLM** ("Software") for non-commercial use. By using, modifying, or distributing this Software, you accept the terms of this License.
 
 You may not use the software without an appropriate license, so if you cannot abide by all the terms of this license, you must [contact the Licensor](https://artifex.com/contact) to discuss obtaining a **Commercial Use License**.
 

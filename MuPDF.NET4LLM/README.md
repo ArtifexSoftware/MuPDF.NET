@@ -1,6 +1,6 @@
 # MuPDF.NET4LLM
 
-LLM/RAG helpers for [MuPDF.NET](https://www.nuget.org/packages/MuPDF.NET): PDF-to-Markdown conversion, layout parsing, document structure analysis. Designed for use with LlamaIndex and similar RAG (Retrieval-Augmented Generation) pipelines.
+LLM/RAG helpers for [MuPDF.NET](https://www.nuget.org/packages/MuPDF.NET): PDF-to-Markdown conversion, layout parsing, document structure analysis. Designed for use with RAG pipelines and integration with LLMs.
 
 ## Installation
 
@@ -92,4 +92,4 @@ var keyValues = MuPDF4LLM.GetKeyValues(doc);
 
 ## License
 
-MuPDF.NET4LLM is part of MuPDF.NET and is available under the [Artifex Community License](https://github.com/ArtifexSoftware/MuPDF.NET/blob/main/LICENSE.md) and commercial license agreements. For commercial use, please [contact Artifex](https://artifex.com/contact/mupdf-net-inquiry.php).
+MuPDF.NET4LLM is part of MuPDF.NET and is available under the [Artifex Community License](https://github.com/ArtifexSoftware/MuPDF.NET/blob/main/LICENSE.md) and commercial license agreements. For commercial use, please [contact Artifex](https://artifex.com/contact/mupdf-net).

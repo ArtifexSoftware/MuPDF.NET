@@ -11,8 +11,8 @@
     <Authors>Artifex Software Inc.</Authors>
     <Company>Artifex Software Inc.</Company>
     <Product>MuPDF.NET4LLM</Product>
-    <Description>LLM/RAG helpers for MuPDF.NET: PDF-to-Markdown conversion, layout parsing, document structure analysis. Designed for use with LlamaIndex and similar RAG pipelines.</Description>
-    <PackageTags>MuPDF;PDF;LLM;RAG;Markdown;LlamaIndex;document-processing;PDF-to-text</PackageTags>
+    <Description>LLM/RAG helpers for MuPDF.NET: PDF-to-Markdown conversion, layout parsing, document structure analysis. Designed for use with RAG pipelines and integration with LLMs.</Description>
+    <PackageTags>MuPDF;PDF;LLM;RAG;Markdown;document-processing;PDF-to-text</PackageTags>
     <PackageProjectUrl>https://github.com/ArtifexSoftware/MuPDF.NET</PackageProjectUrl>
     <RepositoryUrl>https://github.com/ArtifexSoftware/MuPDF.NET</RepositoryUrl>
     <RepositoryType>git</RepositoryType>

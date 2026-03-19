@@ -3,7 +3,7 @@
 ## About
 MuPDF.NET adds C# bindings and abstractions to MuPDF, a lightweight PDF, XPS, and eBook viewer, renderer, and toolkit. Both MuPDF.NET and MuPDF are maintained and developed by Artifex Software, Inc.
 
-**MuPDF.NET4LLM** extends MuPDF.NET with LLM/RAG helpers: PDF-to-Markdown conversion, layout parsing, and document structure analysis. It is designed for use with LlamaIndex and similar RAG pipelines. MuPDF.NET4LLM is included in the main MuPDF.NET package, or you can install it as a separate package: [MuPDF.NET4LLM on NuGet](https://www.nuget.org/packages/MuPDF.NET4LLM). See [MuPDF.NET4LLM/README.md](MuPDF.NET4LLM/README.md) for details.
+**MuPDF.NET4LLM** extends MuPDF.NET with LLM/RAG helpers: PDF-to-Markdown conversion, layout parsing, and document structure analysis. It is designed for use with RAG (Retrieval-Augmented Generation) pipelines and integration with LLMs. MuPDF.NET4LLM is included in the main MuPDF.NET package, or you can install it as a separate package: [MuPDF.NET4LLM on NuGet](https://www.nuget.org/packages/MuPDF.NET4LLM). See [MuPDF.NET4LLM/README.md](MuPDF.NET4LLM/README.md) for details.
 
 ## Prerequisites
 
