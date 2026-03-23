@@ -4849,20 +4849,26 @@ namespace MuPDF.NET
 
             FzBuffer res = mupdf.mupdf.fz_new_buffer(1024);
             FzOutput output = new FzOutput(res);
-            FzDevice dev = output.fz_new_svg_device(
-                bounds.x1 - bounds.x0,
-                bounds.y1 - bounds.y0,
-                (int)textOpt,
-                1
-            );
-            _nativePage.fz_run_page(dev, ctm, new FzCookie());
-            dev.fz_close_device();
-            dev.Dispose();
-            output.fz_close_output();
-            output.Dispose();
-            string text = Utils.EscapeStrFromBuffer(res);
-
-            return text;
+            FzDevice dev = null;
+            try
+            {
+                dev = output.fz_new_svg_device(
+                    bounds.x1 - bounds.x0,
+                    bounds.y1 - bounds.y0,
+                    (int)textOpt,
+                    1
+                );
+                _nativePage.fz_run_page(dev, ctm, new FzCookie());
+                dev.fz_close_device();
+                output.fz_close_output();
+                return Utils.EscapeStrFromBuffer(res);
+            }
+            finally
+            {
+                dev?.Dispose();
+                output.Dispose();
+                res.Dispose();
+            }
         }
 
         /// <summary>

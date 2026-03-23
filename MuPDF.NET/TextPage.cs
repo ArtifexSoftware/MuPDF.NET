@@ -109,30 +109,33 @@ namespace MuPDF.NET
             FzStextPage stPage = _nativeTextPage;
             FzBuffer buffer = new FzBuffer(1024);
             FzOutput output = new mupdf.FzOutput(buffer);
-
-            if (format == ExtractFormat.HTML)
+            try
             {
-                output.fz_print_stext_page_as_html(stPage, 0);
-            }
-            else if (format == ExtractFormat.XML)
-            {
-                output.fz_print_stext_page_as_xml(stPage, 0);
-            }
-            else if (format == ExtractFormat.XHTML)
-            {
-                output.fz_print_stext_page_as_xhtml(stPage, 0);
-            }
-            else
-            {
-                output.fz_print_stext_page_as_text(stPage);
-            }
+                if (format == ExtractFormat.HTML)
+                {
+                    output.fz_print_stext_page_as_html(stPage, 0);
+                }
+                else if (format == ExtractFormat.XML)
+                {
+                    output.fz_print_stext_page_as_xml(stPage, 0);
+                }
+                else if (format == ExtractFormat.XHTML)
+                {
+                    output.fz_print_stext_page_as_xhtml(stPage, 0);
+                }
+                else
+                {
+                    output.fz_print_stext_page_as_text(stPage);
+                }
 
-            string ret = buffer.fz_string_from_buffer();
-
-            output.fz_close_output();
-            output.Dispose();
-
-            return ret;
+                output.fz_close_output();
+                return buffer.fz_string_from_buffer();
+            }
+            finally
+            {
+                output.Dispose();
+                buffer.Dispose();
+            }
         }
 
         /// <summary>

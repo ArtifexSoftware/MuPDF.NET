@@ -8,6 +8,7 @@
     <PlatformFolder Condition="'$(PlatformFolder)' == 'AnyCPU'">.</PlatformFolder>
     <NuspecFile>$(ProjectDir)MuPDF.NET.nuspec</NuspecFile>
     <NuspecProperties>Configuration=$(Configuration);PlatformFolder=$(PlatformFolder)</NuspecProperties>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
   </PropertyGroup>
   
   <PropertyGroup Condition="'$(OS)' == 'Windows_NT'">
