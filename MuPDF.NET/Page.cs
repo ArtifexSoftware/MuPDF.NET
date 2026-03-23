@@ -2242,7 +2242,15 @@ namespace MuPDF.NET
                 xobject.pdf_dict_puts(imgName, ref_);
                 FzBuffer nres = mupdf.mupdf.fz_new_buffer(50);
                 nres.fz_append_string(
-                    string.Format(System.Globalization.CultureInfo.InvariantCulture, template, mat.a, mat.b, mat.c, mat.d, mat.e, mat.f, imgName)
+                    string.Format(System.Globalization.CultureInfo.InvariantCulture,
+                    template,
+                    Utils.FloatToString(mat.a),
+                    Utils.FloatToString(mat.b),
+                    Utils.FloatToString(mat.c),
+                    Utils.FloatToString(mat.d),
+                    Utils.FloatToString(mat.e),
+                    Utils.FloatToString(mat.f),
+                    imgName)
                 );
                 Utils.InsertContents(pageDoc, page.obj(), nres, overlay);
             }

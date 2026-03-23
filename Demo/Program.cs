@@ -85,8 +85,25 @@ namespace Demo
             TestGetText();
             TestMarkdownReader();
             TestRecompressJBIG2();
+            TestIssue234();
 
             return;
+        }
+
+        static void TestIssue234()
+        {
+            Console.WriteLine("\n=== TestIssue234 =======================");
+
+            var pix = new Pixmap("../../../TestDocuments/Image/boxedpage.jpg"); // 629x1000 image
+            var scaled = new Pixmap(pix, 943, 1500, null); // scale up
+            byte[] jpeg = scaled.ToBytes("jpg", 65);
+
+            using var doc = new Document();
+            Page page = doc.NewPage(0, 943, 1500);
+            page.InsertImage(page.Rect, stream: jpeg);
+            page.Dispose();
+            doc.Save("issue_234.pdf");
+            doc.Close();
         }
 
         static void TestRecompressJBIG2()
