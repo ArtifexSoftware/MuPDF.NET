@@ -20,11 +20,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\MuPDF.NET\MuPDF.NET.csproj" />
+    <PackageReference Include="MuPDF.NET" Version="[3.2.13,)" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+    <None Include="..\LICENSE.md" Pack="true" PackagePath="LICENSE.md" Visible="false" />
   </ItemGroup>
 
 </Project>

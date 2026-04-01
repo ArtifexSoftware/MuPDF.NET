@@ -1,5 +1,11 @@
 # Changelog
 
+### [3.2.13] - 2026-03-18
+- Added **MuPDF.NET4LLM** as a separate NuGet package: LLM/RAG helpers for PDF-to-Markdown conversion, layout parsing, document structure analysis, and LlamaIndex integration. Install via `dotnet add package MuPDF.NET4LLM`; depends on MuPDF.NET.
+- Fixed `DocumentWriter` leak in `Story.WriteWithLinks` and `Story.WriteStabilizedWithLinks` (dispose via `using`).
+- Made `DocumentWriter.Dispose()` idempotent; added `ObjectDisposedException` for `BeginPage`/`EndPage` after dispose.
+- Hardened exception safety: added try/finally for `Document.Save`, `Document.Object2Buffer`, `Document.ObjString`, `Document.JournalSave`, `Pixmap.ToBytes`, `TextPage.ExtractText`, `Page.GetSvgImage`, and `Utils.Object2Buffer` so native resources are released on exception.
+
 ### [3.2.13-rc.14] - 2026-02-11
 - Upgraded `MuPDF.NativeAssets` to 1.27.2 and refreshed generated MuPDF bindings for Windows and Linux.
 - Implemented `IDisposable` on core types (`Document`, `Page`, `TextPage`, `Story`, `DocumentWriter`, `DisplayList`, `Font`, `GraftMap`, `DeviceWrapper`, `Outline`) and made `Document.Dispose()` idempotent.

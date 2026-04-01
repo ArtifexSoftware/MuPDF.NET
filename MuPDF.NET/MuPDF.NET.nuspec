@@ -2,14 +2,14 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2012/06/nuspec.xsd">
   <metadata>
     <id>MuPDF.NET</id>
-    <version>3.2.13-rc.14</version>
+    <version>3.2.13</version>
     <authors>Artifex Software Inc.</authors>
     <requireLicenseAcceptance>true</requireLicenseAcceptance>
     <license type="file">LICENSE.md</license>
     <icon>logo.png</icon>
     <readme>Description.md</readme>
     <projectUrl>https://github.com/ArtifexSoftware/MuPDF.NET</projectUrl>
-    <description>A C# binding for MuPDF. Includes MuPDF.NET4LLM (LLM/RAG helpers: PDF-to-Markdown, layout parsing, document structure).</description>
+    <description>A C# binding for MuPDF. For LLM/RAG helpers (PDF-to-Markdown, layout parsing), add the separate MuPDF.NET4LLM package.</description>
     <repository url="https://github.com/ArtifexSoftware/MuPDF.NET" />
     <dependencies>
       <group targetFramework=".NETStandard2.0">
