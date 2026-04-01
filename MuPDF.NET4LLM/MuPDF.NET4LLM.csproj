@@ -3,9 +3,12 @@
   <PropertyGroup>
     <TargetFrameworks>netstandard2.0;net461;net472;net48;net5.0;net6.0;net7.0;net8.0</TargetFrameworks>
     <Platforms>AnyCPU;x64;x86</Platforms>
-    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <PlatformFolder>$(Platform)</PlatformFolder>
     <PlatformFolder Condition="'$(PlatformFolder)' == 'AnyCPU'">.</PlatformFolder>
+    <Version>0.3.4-rc.1</Version>
+    <NuspecFile>$(MSBuildProjectDirectory)\MuPDF.NET4LLM.nuspec</NuspecFile>
+    <NuspecProperties>Configuration=$(Configuration);version=$(Version);PlatformFolder=$(PlatformFolder)</NuspecProperties>
   </PropertyGroup>
   
   <PropertyGroup Condition="'$(OS)' == 'Windows_NT'">

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using MuPDF.NET;
+using MuPDF.NET4LLM.Ocr;
 using Newtonsoft.Json;
 
 namespace MuPDF.NET4LLM.Helpers
