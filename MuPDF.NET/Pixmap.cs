@@ -2,7 +2,6 @@ using mupdf;
 using SkiaSharp;
 using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -635,24 +634,20 @@ namespace MuPDF.NET
             int size = pixmap.fz_pixmap_stride() * pixmap.h();
             FzBuffer res = new FzBuffer((uint)size);
             FzOutput output = new FzOutput(res);
-            try
-            {
-                if (format == 1) mupdf.mupdf.fz_write_pixmap_as_png(output, pixmap);
-                else if (format == 2) mupdf.mupdf.fz_write_pixmap_as_pnm(output, pixmap);
-                else if (format == 3) mupdf.mupdf.fz_write_pixmap_as_pam(output, pixmap);
-                else if (format == 5) mupdf.mupdf.fz_write_pixmap_as_psd(output, pixmap);
-                else if (format == 6) mupdf.mupdf.fz_write_pixmap_as_ps(output, pixmap);
-                else if (format == 7) output.fz_write_pixmap_as_jpeg(pixmap, jpgQuality, 0); // v1.24 later
-                else mupdf.mupdf.fz_write_pixmap_as_png(output, pixmap);
 
-                output.fz_close_output();
-                return Utils.BinFromBuffer(res);
-            }
-            finally
-            {
-                output.Dispose();
-                res.Dispose();
-            }
+            if (format == 1) mupdf.mupdf.fz_write_pixmap_as_png(output, pixmap);
+            else if (format == 2) mupdf.mupdf.fz_write_pixmap_as_pnm(output, pixmap);
+            else if (format == 3) mupdf.mupdf.fz_write_pixmap_as_pam(output, pixmap);
+            else if (format == 5) mupdf.mupdf.fz_write_pixmap_as_psd(output, pixmap);
+            else if (format == 6) mupdf.mupdf.fz_write_pixmap_as_ps(output, pixmap);
+            else if (format == 7) output.fz_write_pixmap_as_jpeg(pixmap, jpgQuality, 0); // v1.24 later
+            else mupdf.mupdf.fz_write_pixmap_as_png(output, pixmap);
+
+            byte[] barray = Utils.BinFromBuffer(res);
+            output.fz_close_output();
+            output.Dispose();
+            res.Dispose();
+            return barray;
         }
 
         private void WriteImage(string filename, int format, int jpgQuality)

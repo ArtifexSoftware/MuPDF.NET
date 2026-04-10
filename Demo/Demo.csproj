@@ -1,5 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <!-- Demo: Support/, Samples/&lt;area&gt;/; MuPDF.NET4LLM fixtures in Samples/Llm/Program.Llm.*.Fixtures.cs. -->
+  <!-- Demo: Support/, Samples/&lt;area&gt;/; PDF4LLM fixtures in Samples/Llm/Program.Llm.*.Fixtures.cs. -->
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\MuPDF.NET4LLM\MuPDF.NET4LLM.csproj" />
+    <ProjectReference Include="..\PDF4LLM\PDF4LLM.csproj" />
     <ProjectReference Include="..\MuPDF.NET\MuPDF.NET.csproj" />
   </ItemGroup>
 

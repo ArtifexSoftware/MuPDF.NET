@@ -1,7 +1,7 @@
 namespace Demo
 {
     /// <summary>
-    /// <see cref="PDFMarkdownReader"/> demos aligned with MuPDF.NET4LLM / repository reader tests.
+    /// <see cref="PDFMarkdownReader"/> demos aligned with PDF4LLM / repository reader tests.
     /// </summary>
     internal partial class Program
     {

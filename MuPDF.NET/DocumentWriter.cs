@@ -13,7 +13,6 @@ namespace MuPDF.NET
 
         private FilePtrOutput _filePtr;
         private FzDocumentWriter _nativeDocumentWriter;
-        private bool _disposed;
 
         public DocumentWriter(string path, string options = "")
         {
@@ -33,8 +32,6 @@ namespace MuPDF.NET
         /// <returns></returns>
         public DeviceWrapper BeginPage(Rect mediabox)
         {
-            if (_disposed)
-                throw new ObjectDisposedException(GetType().Name);
             FzDevice device = _nativeDocumentWriter.fz_begin_page(mediabox.ToFzRect());
             DeviceWrapper deviceWrapper = new DeviceWrapper(device);
             return deviceWrapper;
@@ -45,8 +42,6 @@ namespace MuPDF.NET
         /// </summary>
         public void Close()
         {
-            if (_disposed)
-                return;
             _nativeDocumentWriter.fz_close_document_writer();
         }
 
@@ -55,13 +50,8 @@ namespace MuPDF.NET
         /// </summary>
         public void Dispose()
         {
-            if (_disposed)
-                return;
             _nativeDocumentWriter?.Dispose();
-            _nativeDocumentWriter = null;
             _filePtr?.Dispose();
-            _filePtr = null;
-            _disposed = true;
         }
 
         /// <summary>
@@ -69,8 +59,6 @@ namespace MuPDF.NET
         /// </summary>
         public void EndPage()
         {
-            if (_disposed)
-                throw new ObjectDisposedException(GetType().Name);
             _nativeDocumentWriter.fz_end_page();
         }
     }

@@ -75,7 +75,6 @@ This is implemented as new class TableHeader with the properties:
 using mupdf;
 using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
