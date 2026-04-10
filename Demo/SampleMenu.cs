@@ -1,7 +1,7 @@
 namespace Demo
 {
     /// <summary>
-    /// Demo samples grouped by MuPDF.NET / MuPDF.NET4LLM feature areas. With no arguments, runs every sample.
+    /// Demo samples grouped by MuPDF.NET / PDF4LLM feature areas. With no arguments, runs every sample.
     /// Use <c>dotnet run -- help</c> for the list, or <c>dotnet run -- &lt;name&gt;</c> for one sample.
     /// </summary>
     public static class SampleMenu
@@ -9,7 +9,7 @@ namespace Demo
         /// <summary>Library-facing group (matches folders under <c>Samples/</c> and major API surfaces).</summary>
         private sealed record Sample(string Category, string Name, string Description, Action<string[]> Run);
 
-        /// <summary>Order matches <c>Samples/</c> layout; MuPDF.NET4LLM extras live in <c>Samples/Llm/Program.Llm.*.Fixtures.cs</c>.</summary>
+        /// <summary>Order matches <c>Samples/</c> layout; PDF4LLM extras live in <c>Samples/Llm/Program.Llm.*.Fixtures.cs</c>.</summary>
         private static readonly Sample[] Samples =
         {
             // —— Document & I/O (MuPDF.NET Document, open/save, streams) —— Samples/Document
@@ -60,17 +60,16 @@ namespace Demo
             new("Barcodes", "write-barcode", "Write many barcode types to PDF and PNG", a => Program.TestWriteBarcode(a)),
             new("Barcodes", "write-barcode1", "Write CODE39/CODE128/DM with Units rects", _ => Program.TestWriteBarcode1()),
 
-            // —— MuPDF.NET4LLM —— Samples/Llm
-            new("MuPDF.NET4LLM", "llm", "MuPDF4LLM.ToMarkdown quick test", _ => Program.TestLLM()),
-            new("MuPDF.NET4LLM", "rag-markdown", "MuPdfRag.ToMarkdown (Magazine.pdf)", _ => Program.TestPyMuPdfRagToMarkdown()),
-            new("MuPDF.NET4LLM", "table", "Detect tables and export markdown", _ => Program.TestTable()),
-            new("MuPDF.NET4LLM", "markdown-reader", "LlamaIndex PDFMarkdownReader", _ => Program.TestMarkdownReader()),
-            new("MuPDF.NET4LLM", "llm-to-markdown-fixture-370", "ToMarkdown vs tests/test_370_expected.md (needs tests/test_370.pdf)", a => Program.Test4LlmToMarkdownCompareExpected370(a)),
-            new("MuPDF.NET4LLM", "llm-to-markdown-ocr-1", "ToMarkdown + U+FFFD fixture (tests/test_ocr_loremipsum_FFFD.pdf)", a => Program.Test4LlmToMarkdownOcrFixture1(a)),
-            new("MuPDF.NET4LLM", "llm-to-markdown-ocr-2", "ToMarkdown useOcr=false on FFFD fixture", a => Program.Test4LlmToMarkdownOcrFixture2(a)),
-            new("MuPDF.NET4LLM", "llm-to-markdown-ocr-3", "ToMarkdown OCR on/off on SVG fixture", a => Program.Test4LlmToMarkdownOcrFixture3(a)),
-            new("MuPDF.NET4LLM", "llm-pdf-reader-empty", "PDFMarkdownReader: new PDF, one blank page", a => Program.Test4LlmPdfMarkdownReaderEmptyPage(a)),
-            new("MuPDF.NET4LLM", "llm-pdf-reader-missing-file", "PDFMarkdownReader: missing path → FileNotFoundException", a => Program.Test4LlmPdfMarkdownReaderMissingFile(a)),
+            // —— PDF4LLM —— Samples/Llm
+            new("PDF4LLM", "rag-markdown", "Legacy RAG: PDF4LLM.ToMarkdown with UseLayout=false (Magazine.pdf)", _ => Program.TestMuPdfRagToMarkdown()),
+            new("PDF4LLM", "table", "Detect tables and export markdown", _ => Program.TestTable()),
+            new("PDF4LLM", "markdown-reader", "LlamaIndex PDFMarkdownReader", _ => Program.TestMarkdownReader()),
+            new("PDF4LLM", "llm-to-markdown-fixture-370", "ToMarkdown vs tests/test_370_expected.md (needs tests/test_370.pdf)", a => Program.Test4LlmToMarkdownCompareExpected370(a)),
+            new("PDF4LLM", "llm-to-markdown-ocr-1", "ToMarkdown + U+FFFD fixture (tests/test_ocr_loremipsum_FFFD.pdf)", a => Program.Test4LlmToMarkdownOcrFixture1(a)),
+            new("PDF4LLM", "llm-to-markdown-ocr-2", "ToMarkdown useOcr=false on FFFD fixture", a => Program.Test4LlmToMarkdownOcrFixture2(a)),
+            new("PDF4LLM", "llm-to-markdown-ocr-3", "ToMarkdown OCR on/off on SVG fixture", a => Program.Test4LlmToMarkdownOcrFixture3(a)),
+            new("PDF4LLM", "llm-pdf-reader-empty", "PDFMarkdownReader: new PDF, one blank page", a => Program.Test4LlmPdfMarkdownReaderEmptyPage(a)),
+            new("PDF4LLM", "llm-pdf-reader-missing-file", "PDFMarkdownReader: missing path → FileNotFoundException", a => Program.Test4LlmPdfMarkdownReaderMissingFile(a)),
 
             // —— Regression & diagnostics —— Samples/Regression
             new("Regression & diagnostics", "issue-213", "Repro: drawing paths / line width", _ => Program.TestIssue213()),

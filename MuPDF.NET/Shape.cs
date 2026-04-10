@@ -699,16 +699,72 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Draw a rectangle.
+        /// Draw a rectangle. Matches MuPdf <see href="https://MuPdf.readthedocs.io/en/latest/shape.html#Shape.draw_rect">Shape.draw_rect</see>.
         /// </summary>
-        /// <param name="rect"></param>
-        /// <returns></returns>
-        public Point DrawRect(Rect rect, float radius)
+        /// <param name="rect">Rectangle in page coordinates.</param>
+        /// <param name="radius">
+        /// If null, zero, or negative: draws a plain PDF rectangle (<c>re</c>), same as MuPdf <c>radius=None</c>.
+        /// If positive: corner radius as a fraction of the shorter side; must satisfy <c>0 &lt; radius ≤ 0.5</c>.
+        /// Use <see cref="DrawRect(Rect,float,float)"/> for separate horizontal/vertical fractions (MuPdf 2-tuple form).
+        /// </param>
+        /// <returns>Last point (top-left for plain rectangle; end of path for rounded).</returns>
+        public Point DrawRect(Rect rect, float? radius = null)
+        {
+            if (!radius.HasValue || radius.Value <= 0f)
+                return DrawRectPlain(rect);
+
+            float rv = radius.Value;
+            if (rv > 0.5f)
+                throw new ArgumentOutOfRangeException(nameof(radius), radius, "Radius must be greater than 0 and at most 0.5 (MuPdf draw_rect).");
+
+            float d = Math.Min(rect.Width, rect.Height) * rv;
+            Point px = new Point(d, 0);
+            Point py = new Point(0, d);
+            return DrawRectRoundedCorners(rect, px, py);
+        }
+
+        /// <summary>
+        /// Draw a rectangle with rounded corners: horizontal radius <paramref name="radiusX"/> × width and vertical <paramref name="radiusY"/> × height (MuPdf <c>radius=(rx, ry)</c>).
+        /// Each fraction must satisfy <c>0 &lt; value ≤ 0.5</c>. A pair <c>(0.5, 0.5)</c> yields an ellipse-like shape.
+        /// </summary>
+        public Point DrawRect(Rect rect, float radiusX, float radiusY)
+        {
+            if (radiusX <= 0f || radiusY <= 0f || radiusX > 0.5f || radiusY > 0.5f)
+                throw new ArgumentOutOfRangeException(
+                    $"{nameof(radiusX)}/{nameof(radiusY)}",
+                    "Each radius fraction must be greater than 0 and at most 0.5 (MuPdf draw_rect).");
+
+            Point px = new Point(radiusX * rect.Width, 0);
+            Point py = new Point(0, radiusY * rect.Height);
+            return DrawRectRoundedCorners(rect, px, py);
+        }
+
+        private Point DrawRectPlain(Rect rect)
         {
             Point t = rect.BottomLeft * IPctm;
             DrawCont += $"{Utils.FloatToString(t.X)} {Utils.FloatToString(t.Y)} {Utils.FloatToString(rect.Width)} {Utils.FloatToString(rect.Height)} re\n";
             UpdateRect(rect);
             LastPoint = rect.TopLeft;
+            return LastPoint;
+        }
+
+        private Point DrawRectRoundedCorners(Rect r, Point px, Point py)
+        {
+            Point lp;
+
+            lp = DrawLine(r.TopLeft + py, r.BottomLeft - py);
+            lp = DrawCurve(lp, r.BottomLeft, r.BottomLeft + px);
+
+            lp = DrawLine(lp, r.BottomRight - px);
+            lp = DrawCurve(lp, r.BottomRight, r.BottomRight - py);
+
+            lp = DrawLine(lp, r.TopRight + py);
+            lp = DrawCurve(lp, r.TopRight, r.TopRight - px);
+
+            lp = DrawLine(lp, r.TopLeft + px);
+            LastPoint = DrawCurve(lp, r.TopLeft, r.TopLeft + py);
+
+            UpdateRect(r);
             return LastPoint;
         }
 

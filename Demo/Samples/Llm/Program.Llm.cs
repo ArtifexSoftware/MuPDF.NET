@@ -202,9 +202,9 @@ namespace Demo
             }
         }
 
-        internal static void TestPyMuPdfRagToMarkdown()
+        internal static void TestMuPdfRagToMarkdown()
         {
-            Console.WriteLine("\n=== TestPyMuPdfRagToMarkdown =======================");
+            Console.WriteLine("\n=== TestMuPdfRagToMarkdown (legacy RAG via PDF4LLM.UseLayout=false) =======================");
 
             try
             {
@@ -216,43 +216,40 @@ namespace Demo
                 Console.WriteLine($"Document loaded: {doc.PageCount} page(s)");
                 Console.WriteLine($"Document name: {doc.Name}");
 
-                // Test 1: Basic ToMarkdown with default settings
-                Console.WriteLine("\n--- Test 1: Basic ToMarkdown (default settings) ---");
+                // Test 1: legacy MuPdf_rag-style path (MuPdfRag is internal; use public API only)
+                Console.WriteLine("\n--- Test 1: PDF4LLM.ToMarkdown with UseLayout=false (same stack as internal MuPdfRag) ---");
                 try
                 {
                     List<int> pages = new List<int>();
                     pages.Add(0);
-                    string markdown = MuPdfRag.ToMarkdown(
-                        doc,
-                        pages: pages, // All pages
-                        hdrInfo: null, // Auto-detect headers
-                        writeImages: false,
-                        embedImages: false,
-                        ignoreImages: false,
-                        ignoreGraphics: false,
-                        detectBgColor: true,
-                        imagePath: "",
-                        imageFormat: "png",
-                        imageSizeLimit: 0.05f,
-                        filename: testFilePath,
-                        forceText: true,
-                        pageChunks: false,
-                        pageSeparators: false,
-                        margins: null,
-                        dpi: 150,
-                        pageWidth: 612,
-                        pageHeight: null,
-                        tableStrategy: "lines_strict",
-                        graphicsLimit: null,
-                        fontsizeLimit: 3.0f,
-                        ignoreCode: false,
-                        extractWords: false,
-                        showProgress: false,
-                        useGlyphs: false,
-                        ignoreAlpha: false
-                    );
+                    bool prev = UseLayout;
+                    string markdown;
+                    try
+                    {
+                        UseLayout = false;
+                        markdown = ToMarkdown(
+                            doc,
+                            pages: pages,
+                            writeImages: false,
+                            embedImages: false,
+                            imagePath: "",
+                            imageFormat: "png",
+                            filename: testFilePath,
+                            forceText: true,
+                            pageChunks: false,
+                            pageSeparators: false,
+                            dpi: 150,
+                            pageWidth: 612,
+                            pageHeight: null,
+                            ignoreCode: false,
+                            showProgress: false);
+                    }
+                    finally
+                    {
+                        UseLayout = prev;
+                    }
 
-                    string markdownFile = "TestPyMuPdfRag_Output.md";
+                    string markdownFile = "TestMuPdfRag_Output.md";
                     File.WriteAllText(markdownFile, markdown, Encoding.UTF8);
                     Console.WriteLine($"Markdown output saved to: {markdownFile}");
                     Console.WriteLine($"Markdown length: {markdown.Length} characters");
@@ -284,7 +281,7 @@ namespace Demo
                         showProgress: false
                     );
 
-                    string markdownFile = "TestPyMuPdfRag_WithHeaders.md";
+                    string markdownFile = "TestMuPdfRag_WithHeaders.md";
                     File.WriteAllText(markdownFile, markdown, Encoding.UTF8);
                     Console.WriteLine($"Markdown with headers saved to: {markdownFile}");
                     Console.WriteLine($"Markdown length: {markdown.Length} characters");
@@ -311,7 +308,7 @@ namespace Demo
                         showProgress: false
                     );
 
-                    string markdownFile = "TestPyMuPdfRag_WithToc.md";
+                    string markdownFile = "TestMuPdfRag_WithToc.md";
                     File.WriteAllText(markdownFile, markdown, Encoding.UTF8);
                     Console.WriteLine($"Markdown with TOC headers saved to: {markdownFile}");
                     Console.WriteLine($"Markdown length: {markdown.Length} characters");
@@ -338,7 +335,7 @@ namespace Demo
                         showProgress: false
                     );
 
-                    string markdownFile = "TestPyMuPdfRag_WithSeparators.md";
+                    string markdownFile = "TestMuPdfRag_WithSeparators.md";
                     File.WriteAllText(markdownFile, markdown, Encoding.UTF8);
                     Console.WriteLine($"Markdown with page separators saved to: {markdownFile}");
                     Console.WriteLine($"Markdown length: {markdown.Length} characters");
@@ -365,7 +362,7 @@ namespace Demo
                         pageSeparators: false
                     );
 
-                    string markdownFile = "TestPyMuPdfRag_WithProgress.md";
+                    string markdownFile = "TestMuPdfRag_WithProgress.md";
                     File.WriteAllText(markdownFile, markdown, Encoding.UTF8);
                     Console.WriteLine($"\nMarkdown with progress saved to: {markdownFile}");
                     Console.WriteLine($"Markdown length: {markdown.Length} characters");
@@ -379,58 +376,11 @@ namespace Demo
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"An unexpected error occurred during PyMuPdfRag test: {ex.Message}");
+                Console.WriteLine($"An unexpected error occurred during MuPdfRag test: {ex.Message}");
                 Console.WriteLine($"Stack trace: {ex.StackTrace}");
             }
 
-            Console.WriteLine("\n=== TestPyMuPdfRagToMarkdown Completed =======================");
-        }
-
-        internal static void TestLLM()
-        {
-            Console.WriteLine("\n=== TestLLM =======================");
-
-            try
-            {
-                // Display version information
-                Console.WriteLine($"MuPDF.NET4LLM Version: {MuPDF4LLM.Version}");
-                var versionTuple = MuPDF4LLM.VersionTuple;
-                Console.WriteLine($"Version Tuple: ({versionTuple.major}, {versionTuple.minor}, {versionTuple.patch})");
-
-                // Test with a sample PDF file
-                string testFilePath = Path.GetFullPath("../../../TestDocuments/national-capitals.pdf");
-                //string testFilePath = Path.GetFullPath("../../../TestDocuments/Magazine.pdf");
-
-                // Try to find a PDF with actual content if Blank.pdf doesn't work well
-                if (!File.Exists(testFilePath))
-                {
-                    testFilePath = Path.GetFullPath("../../../TestDocuments/Widget.pdf");
-                }
-
-                if (!File.Exists(testFilePath))
-                {
-                    Console.WriteLine($"Test PDF file not found. Skipping LLM test.");
-                    return;
-                }
-
-                Console.WriteLine($"\nTesting with PDF: {testFilePath}");
-
-                Document doc = new Document(testFilePath);
-                Console.WriteLine($"Document loaded: {doc.PageCount} page(s)");
-
-                string markdownStr = MuPDF4LLM.ToMarkdown(doc);
-
-                doc.Close();
-
-                string markdownFile = "TestLLM.md";
-                File.WriteAllText(markdownFile, markdownStr, Encoding.UTF8);
-                Console.WriteLine("\nLLM test completed successfully.");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error in TestLLM: {ex.Message}");
-                Console.WriteLine($"Stack trace: {ex.StackTrace}");
-            }
+            Console.WriteLine("\n=== TestMuPdfRagToMarkdown Completed =======================");
         }
 
     }

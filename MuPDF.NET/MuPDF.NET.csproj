@@ -8,7 +8,6 @@
     <PlatformFolder Condition="'$(PlatformFolder)' == 'AnyCPU'">.</PlatformFolder>
     <NuspecFile>$(ProjectDir)MuPDF.NET.nuspec</NuspecFile>
     <NuspecProperties>Configuration=$(Configuration);PlatformFolder=$(PlatformFolder)</NuspecProperties>
-    <IncludeBuildOutput>false</IncludeBuildOutput>
   </PropertyGroup>
   
   <PropertyGroup Condition="'$(OS)' == 'Windows_NT'">
@@ -60,14 +59,4 @@
     <PackageReference Include="SharpZipLib" Version="1.4.2" />
     <PackageReference Include="SkiaSharp" Version="3.119.1" />
   </ItemGroup>
-
-  <!-- MuPDF.NET.nuspec bundles MuPDF.NET4LLM.dll; ensure sibling project is built before Pack. -->
-  <!-- GeneratePackageOnBuild=false avoids nested Pack when 4LLM rebuilds MuPDF.NET. -->
-  <Target Name="BuildMuPDFNET4LLMForPack" BeforeTargets="Pack">
-    <MSBuild
-      Projects="$(MSBuildThisFileDirectory)..\MuPDF.NET4LLM\MuPDF.NET4LLM.csproj"
-      Targets="Build"
-      Properties="Configuration=$(Configuration);Platform=$(Platform);GeneratePackageOnBuild=false" />
-  </Target>
-
 </Project>

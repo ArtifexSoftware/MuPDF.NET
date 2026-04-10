@@ -1,7 +1,7 @@
 namespace Demo
 {
     /// <summary>
-    /// MuPDF.NET4LLM <see cref="MuPDF4LLM.ToMarkdown"/> demos aligned with repository <c>tests/</c> fixtures (golden markdown, OCR behavior).
+    /// PDF4LLM <see cref="PDF4LLM.Pdf4LLM.ToMarkdown"/> demos aligned with repository <c>tests/</c> fixtures (golden markdown, OCR behavior).
     /// PDFs live under repo <c>tests/</c>; samples skip if files are missing.
     /// </summary>
     internal partial class Program
@@ -19,7 +19,7 @@ namespace Demo
         internal static void Test4LlmToMarkdownCompareExpected370(string[] args)
         {
             _ = args;
-            Console.WriteLine("\n=== Test4LlmToMarkdownCompareExpected370 (MuPDF.NET4LLM) =======================");
+            Console.WriteLine("\n=== Test4LlmToMarkdownCompareExpected370 (PDF4LLM) =======================");
 
             string testsDir = LlmRepositoryTestsDirectory();
             string pdfPath = Path.Combine(testsDir, "test_370.pdf");
@@ -34,7 +34,7 @@ namespace Demo
             Document document = new Document(pdfPath);
             try
             {
-                string actual = MuPDF4LLM.ToMarkdown(
+                string actual = ToMarkdown(
                     document,
                     header: false,
                     footer: false,
@@ -82,7 +82,7 @@ namespace Demo
             string md;
             try
             {
-                md = MuPDF4LLM.ToMarkdown(doc);
+                md = ToMarkdown(doc);
             }
             finally
             {
@@ -92,7 +92,7 @@ namespace Demo
             File.WriteAllText(Path.Combine(AppContext.BaseDirectory, "llm_ocr_fixture_1.md"), md, Encoding.UTF8);
             bool ocr = LlmOcrEnvironmentLikelyAvailable();
             Console.WriteLine($"TESSDATA_PREFIX set: {ocr}");
-            bool hasReplacement = md.Contains(MuPDF.NET4LLM.Ocr.TesseractApi.ReplacementUnicode);
+            bool hasReplacement = md.Contains(TesseractApi.ReplacementUnicode);
             if (ocr && hasReplacement)
                 Console.WriteLine("Note: U+FFFD still present—check tessdata / language / PDF.");
             else if (ocr && !hasReplacement)
@@ -120,7 +120,7 @@ namespace Demo
             string md;
             try
             {
-                md = MuPDF4LLM.ToMarkdown(doc, useOcr: false);
+                md = ToMarkdown(doc, useOcr: false);
             }
             finally
             {
@@ -128,7 +128,7 @@ namespace Demo
             }
 
             File.WriteAllText(Path.Combine(AppContext.BaseDirectory, "llm_ocr_fixture_2.md"), md, Encoding.UTF8);
-            bool hasReplacement = md.Contains(MuPDF.NET4LLM.Ocr.TesseractApi.ReplacementUnicode);
+            bool hasReplacement = md.Contains(TesseractApi.ReplacementUnicode);
             Console.WriteLine(hasReplacement
                 ? "OK: U+FFFD present with useOcr=false."
                 : "Note: no U+FFFD with OCR off—fixture-dependent.");
@@ -152,8 +152,8 @@ namespace Demo
             string mdNoOcr;
             try
             {
-                md = MuPDF4LLM.ToMarkdown(doc);
-                mdNoOcr = MuPDF4LLM.ToMarkdown(doc, useOcr: false);
+                md = ToMarkdown(doc);
+                mdNoOcr = ToMarkdown(doc, useOcr: false);
             }
             finally
             {

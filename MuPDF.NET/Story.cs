@@ -405,21 +405,19 @@ namespace MuPDF.NET
         public Document WriteWithLinks(RectFunction rectFn = null, Action<Position> positionFn = null, Action<int, Rect, DeviceWrapper, bool> pageFn = null)
         {
             MemoryStream stream = new MemoryStream(100);
-            using (DocumentWriter writer = new DocumentWriter(stream))
+            DocumentWriter writer = new DocumentWriter(stream);
+            List<Position> positions = new List<Position>();
+
+            Action<Position> positionFn2 = position =>
             {
-                List<Position> positions = new List<Position>();
+                positions.Add(position);
+                positionFn(position);
+            };
 
-                Action<Position> positionFn2 = position =>
-                {
-                    positions.Add(position);
-                    positionFn(position);
-                };
-
-                Write(writer, rectFn, positionFn: positionFn2, pageFn);
-                writer.Close();
-                stream.Seek(0, (SeekOrigin)1);
-                return Story.AddPdfLinks(stream, positions);
-            }
+            Write(writer, rectFn, positionFn: positionFn2, pageFn);
+            writer.Close();
+            stream.Seek(0, (SeekOrigin)1);
+            return Story.AddPdfLinks(stream, positions);
         }
 
         /// <summary>
@@ -515,21 +513,19 @@ namespace MuPDF.NET
             )
         {
             MemoryStream stream = new MemoryStream();
-            using (DocumentWriter writer = new DocumentWriter(stream))
+            DocumentWriter writer = new DocumentWriter(stream);
+            List<Position> positions = new List<Position>();
+
+            Action<Position> positionFn2 = position =>
             {
-                List<Position> positions = new List<Position>();
+                positions.Add(position);
+                positionFn(position);
+            };
 
-                Action<Position> positionFn2 = position =>
-                {
-                    positions.Add(position);
-                    positionFn(position);
-                };
-
-                Story.WriteStabilized(writer, contentfn, rectfn, userCss, em, positionFn2, pagefn, archive, addHeaderIds);
-                writer.Close();
-                stream.Seek(0, (SeekOrigin)1);
-                return Story.AddPdfLinks(stream, positions);
-            }
+            Story.WriteStabilized(writer, contentfn, rectfn, userCss, em, positionFn2, pagefn, archive, addHeaderIds);
+            writer.Close();
+            stream.Seek(0, (SeekOrigin)1);
+            return Story.AddPdfLinks(stream, positions);
         }
 
         /// <summary>

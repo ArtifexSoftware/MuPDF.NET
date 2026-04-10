@@ -933,22 +933,12 @@ namespace MuPDF.NET
         {
             FzBuffer ret = new FzBuffer(512);
             FzOutput output = new FzOutput(ret);
-            try
-            {
-                output.pdf_print_obj(what, compress, ascii);
-                output.fz_close_output();
-                ret.fz_terminate_buffer();
-                return ret;
-            }
-            catch
-            {
-                ret.Dispose();
-                throw;
-            }
-            finally
-            {
-                output.Dispose();
-            }
+            output.pdf_print_obj(what, compress, ascii);
+            output.fz_close_output();
+            output.Dispose();
+            ret.fz_terminate_buffer();
+
+            return ret;
         }
 
         public void SetKeyXRef(int xref, string key, string value)
@@ -1154,31 +1144,19 @@ namespace MuPDF.NET
             pdf.m_internal.resynth_required = 0;
             Utils.EmbeddedClean(pdf);
 
-            try
+            if (filename is string)
             {
-                if (filename is string)
-                {
-                    pdf.pdf_save_document(filename, opts);
-                }
-                else
-                {
-                    FzOutput output = new FilePtrOutput(filename);
-                    try
-                    {
-                        pdf.pdf_write_document(output, opts);
-                        output.fz_close_output();
-                    }
-                    finally
-                    {
-                        output.Dispose();
-                    }
-                }
+                pdf.pdf_save_document(filename, opts);
             }
-            finally
+            else
             {
-                opts.Dispose();
-                pdf.Dispose();
+                FzOutput output = new FilePtrOutput(filename);
+                pdf.pdf_write_document(output, opts);
+                output.fz_close_output();
+                output.Dispose();
             }
+            opts.Dispose();
+            pdf.Dispose();
         }
 
         public int InsertPage(
@@ -2031,17 +2009,11 @@ namespace MuPDF.NET
         {
             FzBuffer buffer = mupdf.mupdf.fz_new_buffer(512);
             FzOutput output = new FzOutput(buffer);
-            try
-            {
-                output.pdf_print_obj(obj, 1, 0);
-                output.fz_close_output();
-                return Utils.UnicodeFromBuffer(buffer);
-            }
-            finally
-            {
-                output.Dispose();
-                buffer.Dispose();
-            }
+            output.pdf_print_obj(obj, 1, 0);
+            output.fz_close_output();
+            output.Dispose();
+
+            return Utils.UnicodeFromBuffer(buffer);
         }
 
         /// <summary>
@@ -2600,15 +2572,8 @@ namespace MuPDF.NET
             PdfDocument pdf = Document.AsPdfDocument(_nativeDocument);
             MemoryStream memoryStream = new MemoryStream(journal);
             FilePtrOutput output = new FilePtrOutput(memoryStream);
-            try
-            {
-                pdf.pdf_write_journal(output);
-            }
-            finally
-            {
-                output.Dispose();
-                pdf.Dispose();
-            }
+            pdf.pdf_write_journal(output);
+            pdf.Dispose();
         }
 
         /// <summary>
