@@ -7923,19 +7923,19 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Converts a float to string with dot as decimal separator, regardless of culture
+        /// Converts a float to string with dot as decimal separator, without scientific notation.
         /// </summary>
-        internal static string FloatToString(float value)
+        public static string FloatToString(float value)
         {
-            return value.ToString(CultureInfo.InvariantCulture);
+            return value.ToString("0.#######", CultureInfo.InvariantCulture);
         }
 
         /// <summary>
-        /// Converts a double to string with dot as decimal separator, regardless of culture
+        /// Converts a double to string with dot as decimal separator, without scientific notation.
         /// </summary>
-        internal static string DoubleToString(double value)
+        public static string DoubleToString(double value)
         {
-            return value.ToString(CultureInfo.InvariantCulture);
+            return value.ToString("0.#################", CultureInfo.InvariantCulture);
         }
 
         /// <summary>

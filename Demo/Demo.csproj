@@ -1,4 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
+  <!-- Demo: Support/, Samples/&lt;area&gt;/; MuPDF.NET4LLM fixtures in Samples/Llm/Program.Llm.*.Fixtures.cs. -->
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>

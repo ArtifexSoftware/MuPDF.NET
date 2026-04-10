@@ -5,11 +5,39 @@ using MuPDF.NET;
 using mupdf;
 using Char = MuPDF.NET.Char;
 
-namespace MuPDF.NET4LLM.Helpers
+namespace MuPDF.NET4LLM.Ocr
 {
     /// <summary>
-    /// OCR decision and repair utilities.
-    /// Ported and adapted from LLM helpers.
+    /// Tesseract-oriented OCR API and page/span helpers, aligned with mupdf4llm.ocr.tesseract_api.
+    /// </summary>
+    public static class TesseractApi
+    {
+        public const char ReplacementUnicode = '\uFFFD';
+
+        /// <summary>
+        /// Mirrors mupdf4llm.ocr.tesseract_api.ocr_text(span).
+        /// </summary>
+        public static bool OcrText(Span span)
+        {
+            int flags = span?.Chars != null && span.Chars.Count > 0
+                ? (int)(span.Flags)
+                : (int)(span?.Flags ?? 0);
+            return (flags & 32) == 0 && (flags & 16) == 0;
+        }
+
+        /// <summary>
+        /// Full-page OCR callback from mupdf4llm (redaction + pdfocr_tobytes pipeline).
+        /// Not ported; use <see cref="CheckOcr"/> for span repair and OCR decisions.
+        /// </summary>
+        public static void ExecOcr(Page page, int dpi = 300, Pixmap pixmap = null, string language = "eng", bool keepOcrText = false)
+        {
+            throw new NotImplementedException(
+                "TesseractApi.ExecOcr (mupdf4llm.ocr.tesseract_api.exec_ocr) is not implemented for MuPDF.NET; use CheckOcr for span-level repair.");
+        }
+    }
+
+    /// <summary>
+    /// OCR decision and repair utilities used by the layout pipeline (MuPDF.NET / Tesseract).
     /// </summary>
     public static class CheckOcr
     {
@@ -18,46 +46,32 @@ namespace MuPDF.NET4LLM.Helpers
             mupdf.mupdf.FZ_STEXT_COLLECT_VECTORS |
             (int)TextFlags.TEXT_PRESERVE_IMAGES |
             (int)TextFlags.TEXT_ACCURATE_BBOXES
-            // | mupdf.mupdf.FZ_STEXT_MEDIABOX_CLIP
         );
 
-        /// <summary>
-        /// Return OCR'd span text using Tesseract.
-        /// </summary>
-        /// <param name="page">MuPDF Page</param>
-        /// <param name="bbox">MuPDF Rect or its sequence</param>
-        /// <param name="dpi">Resolution for OCR image</param>
-        /// <returns>The OCR-ed text of the bbox.</returns>
         public static string GetSpanOcr(Page page, Rect bbox, int dpi = 300)
         {
-            // Step 1: Make a high-resolution image of the bbox.
             Pixmap pix = page.GetPixmap(dpi: dpi, clip: bbox);
             byte[] ocrPdfBytes = pix.PdfOCR2Bytes(true);
-            
+
             Document ocrPdf = new Document("pdf", ocrPdfBytes);
             Page ocrPage = ocrPdf.LoadPage(0);
             string text = ocrPage.GetText();
-            text = text.Replace("\n", " ").Trim(); // Get rid of line breaks
-            
+            text = text.Replace("\n", " ").Trim();
+
             ocrPage.Dispose();
             ocrPdf.Close();
             pix.Dispose();
-            
+
             return text;
         }
 
-        /// <summary>
-        /// Repair text blocks with missing glyphs using OCR.
-        /// 
-        /// TODO: Support non-linear block structure.
-        /// </summary>
         public static List<Block> RepairBlocks(List<Block> inputBlocks, Page page, int dpi = 300)
         {
             List<Block> repairedBlocks = new List<Block>();
-            
+
             foreach (var block in inputBlocks)
             {
-                if (block.Type != 0) // Accept non-text blocks as is
+                if (block.Type != 0)
                 {
                     repairedBlocks.Add(block);
                     continue;
@@ -81,7 +95,7 @@ namespace MuPDF.NET4LLM.Helpers
                                     spanText = span.Text ?? "";
                                 }
 
-                                if (!spanText.Contains(Utils.REPLACEMENT_CHARACTER))
+                                if (!spanText.Contains(MuPDF.NET4LLM.Helpers.Utils.REPLACEMENT_CHARACTER))
                                     continue;
 
                                 int spanTextLen = spanText.Length;
@@ -91,7 +105,6 @@ namespace MuPDF.NET4LLM.Helpers
 
                                 if (span.Chars != null && span.Chars.Count > 0)
                                 {
-                                    // Rebuild chars array
                                     List<Char> newChars = new List<Char>();
                                     int minLen = Math.Min(newText.Length, span.Chars.Count);
                                     for (int i = 0; i < minLen; i++)
@@ -102,7 +115,6 @@ namespace MuPDF.NET4LLM.Helpers
                                             C = newText[i],
                                             Origin = oldChar.Origin,
                                             Bbox = oldChar.Bbox,
-                                            // Copy other properties as needed
                                         };
                                         newChars.Add(newChar);
                                     }
@@ -118,42 +130,25 @@ namespace MuPDF.NET4LLM.Helpers
                 }
                 repairedBlocks.Add(block);
             }
-            
+
             return repairedBlocks;
         }
 
-        /// <summary>
-        /// Determine whether the page contains text worthwhile to OCR.
-        /// </summary>
-        /// <param name="page">MuPDF.NET Page object</param>
-        /// <param name="dpi">DPI used for rasterization *if* we decide to OCR</param>
-        /// <param name="covered">Area to consider for text presence</param>
-        /// <returns>
-        /// The full-page transformation matrix, the full-page pixmap and a
-        /// boolean indicating whether the page is photo-like (True) or
-        /// text-like (False).
-        /// </returns>
         public static (Matrix matrix, Pixmap pix, bool photo) GetPageImage(
-            Page page, 
-            int dpi = 150, 
+            Page page,
+            int dpi = 150,
             Rect covered = null)
         {
             if (covered == null)
                 covered = page.Rect;
 
-            IRect irect = new IRect((int)covered.X0, (int)covered.Y0, 
-                                   (int)covered.X1, (int)covered.Y1);
-            
-            // Make a gray pixmap of the covered area
             Rect clipRect = new Rect(covered);
             Pixmap pixCovered = page.GetPixmap(colorSpace: "gray", clip: clipRect);
-            
-            // Convert to byte array for image quality analysis (convert to numpy array)
+
             int width = pixCovered.W;
             int height = pixCovered.H;
             byte[] samples = pixCovered.SAMPLES;
-            
-            // Create 2D array for image quality analysis
+
             byte[,] gray = new byte[height, width];
             int sampleIndex = 0;
             for (int y = 0; y < height; y++)
@@ -164,19 +159,17 @@ namespace MuPDF.NET4LLM.Helpers
                 }
             }
 
-            // Run photo checks
-            var scores = ImageQuality.AnalyzeImage(gray);
+            var scores = MuPDF.NET4LLM.Helpers.ImageQuality.AnalyzeImage(gray);
             double score = scores.ContainsKey("score") ? scores["score"].value : 0;
-            
+
             if (score >= 3)
             {
                 pixCovered.Dispose();
-                return (new Matrix(1, 0, 0, 1, 0, 0), null, true); // Identity matrix
+                return (new Matrix(1, 0, 0, 1, 0, 0), null, true);
             }
             else
             {
                 Pixmap pix = page.GetPixmap(dpi: dpi);
-                IRect pixRect = new IRect(0, 0, pix.W, pix.H);
                 Matrix matrix = new Matrix(
                     page.Rect.Width / pix.W,
                     0,
@@ -190,16 +183,6 @@ namespace MuPDF.NET4LLM.Helpers
             }
         }
 
-        /// <summary>
-        /// Decide whether a MuPDF.NET page should be OCR'd.
-        /// </summary>
-        /// <param name="page">MuPDF.NET page object</param>
-        /// <param name="dpi">DPI used for rasterization</param>
-        /// <param name="vectorThresh">Minimum number of vector paths to suggest glyph simulation</param>
-        /// <param name="imageCoverageThresh">Fraction of page area covered by images to trigger OCR</param>
-        /// <param name="textReadabilityThresh">Fraction of readable characters to skip OCR</param>
-        /// <param name="blocks">Output of page.get_text("dict") if already available</param>
-        /// <returns>Dictionary with decision and diagnostic flags</returns>
         public static Dictionary<string, object> ShouldOcrPage(
             Page page,
             int dpi = 150,
@@ -216,25 +199,19 @@ namespace MuPDF.NET4LLM.Helpers
                 ["readable_text"] = false,
                 ["image_covers_page"] = false,
                 ["has_vector_chars"] = false,
-                ["transform"] = new Matrix(1, 0, 0, 1, 0, 0), // Identity matrix
+                ["transform"] = new Matrix(1, 0, 0, 1, 0, 0),
                 ["pixmap"] = null,
             };
 
-            Rect pageRect = page.Rect;
-            float pageArea = Math.Abs(pageRect.Width * pageRect.Height);
+            var analysis = MuPDF.NET4LLM.Helpers.Utils.AnalyzePage(page, blocks);
 
-            // Analyze the page
-            var analysis = Utils.AnalyzePage(page, blocks);
-
-            // Return if page is completely blank
             Rect covered = analysis["covered"] as Rect;
-            if (Utils.BboxIsEmpty(covered))
+            if (MuPDF.NET4LLM.Helpers.Utils.BboxIsEmpty(covered))
             {
                 decision["should_ocr"] = false;
                 return decision;
             }
 
-            // Return if page has been OCR'd already
             int ocrSpans = (int)analysis["ocr_spans"];
             if (ocrSpans > 0)
             {
@@ -250,8 +227,6 @@ namespace MuPDF.NET4LLM.Helpers
             float imgArea = (float)analysis["img_area"];
             int charsBad = (int)analysis["chars_bad"];
 
-            // Preset OCR if very little text area exists
-            // Less than 5% text area in covered area
             if (txtArea < 0.05f && charsTotal < 200 && txtJoins < 0.3f)
             {
                 if (vecArea >= vectorThresh)
@@ -287,15 +262,12 @@ namespace MuPDF.NET4LLM.Helpers
             if (!(bool)decision["readable_text"] && (bool)decision["has_text"])
                 return decision;
 
-            // We need OCR and do a final check for potential text presence
             if (!(bool)decision["has_text"])
             {
-                // Rasterize and check for photo versus text-heaviness
                 var (matrix, pix, photo) = GetPageImage(page, dpi, covered);
 
                 if (photo)
                 {
-                    // This seems to be a non-text picture page
                     decision["should_ocr"] = false;
                     decision["pixmap"] = null;
                 }

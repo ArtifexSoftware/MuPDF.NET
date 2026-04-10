@@ -29,14 +29,24 @@
     </dependencies>
   </metadata>
   <files>
-    <!-- MuPDF.NET assemblies only; MuPDF.NET4LLM is a separate package -->
-    <file src="bin\Release\net461\MuPDF.NET.dll" target="lib\net461\" />
-    <file src="bin\Release\net472\MuPDF.NET.dll" target="lib\net472\" />
-    <file src="bin\Release\net48\MuPDF.NET.dll" target="lib\net48\" />
-    <file src="bin\Release\net5.0\MuPDF.NET.dll" target="lib\net5.0\" />
-    <file src="bin\Release\net6.0\MuPDF.NET.dll" target="lib\net6.0\" />
-    <file src="bin\Release\net7.0\MuPDF.NET.dll" target="lib\net7.0\" />
-    <file src="bin\Release\net8.0\MuPDF.NET.dll" target="lib\net8.0\" />
+    <!-- MuPDF.NET assemblies ($Configuration$ from NuspecProperties: Debug or Release) -->
+    <file src="bin\$Configuration$\netstandard2.0\MuPDF.NET.dll" target="lib\netstandard2.0\" />
+    <file src="bin\$Configuration$\net461\MuPDF.NET.dll" target="lib\net461\" />
+    <file src="bin\$Configuration$\net472\MuPDF.NET.dll" target="lib\net472\" />
+    <file src="bin\$Configuration$\net48\MuPDF.NET.dll" target="lib\net48\" />
+    <file src="bin\$Configuration$\net5.0\MuPDF.NET.dll" target="lib\net5.0\" />
+    <file src="bin\$Configuration$\net6.0\MuPDF.NET.dll" target="lib\net6.0\" />
+    <file src="bin\$Configuration$\net7.0\MuPDF.NET.dll" target="lib\net7.0\" />
+    <file src="bin\$Configuration$\net8.0\MuPDF.NET.dll" target="lib\net8.0\" />
+    <!-- MuPDF.NET4LLM assemblies (included in this package) -->
+    <file src="..\MuPDF.NET4LLM\bin\$Configuration$\netstandard2.0\MuPDF.NET4LLM.dll" target="lib\netstandard2.0\" />
+    <file src="..\MuPDF.NET4LLM\bin\$Configuration$\net461\MuPDF.NET4LLM.dll" target="lib\net461\" />
+    <file src="..\MuPDF.NET4LLM\bin\$Configuration$\net472\MuPDF.NET4LLM.dll" target="lib\net472\" />
+    <file src="..\MuPDF.NET4LLM\bin\$Configuration$\net48\MuPDF.NET4LLM.dll" target="lib\net48\" />
+    <file src="..\MuPDF.NET4LLM\bin\$Configuration$\net5.0\MuPDF.NET4LLM.dll" target="lib\net5.0\" />
+    <file src="..\MuPDF.NET4LLM\bin\$Configuration$\net6.0\MuPDF.NET4LLM.dll" target="lib\net6.0\" />
+    <file src="..\MuPDF.NET4LLM\bin\$Configuration$\net7.0\MuPDF.NET4LLM.dll" target="lib\net7.0\" />
+    <file src="..\MuPDF.NET4LLM\bin\$Configuration$\net8.0\MuPDF.NET4LLM.dll" target="lib\net8.0\" />
     <file src="build\net4\MuPDF.NET.targets" target="build\net4\MuPDF.NET.targets" />
     <!-- Package metadata -->
     <file src="..\LICENSE.md" target="" />

@@ -6,22 +6,9 @@
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <PlatformFolder>$(Platform)</PlatformFolder>
     <PlatformFolder Condition="'$(PlatformFolder)' == 'AnyCPU'">.</PlatformFolder>
-    <PackageId>MuPDF.NET4LLM</PackageId>
-    <Version>0.2.9-rc.1</Version>
-    <Authors>Artifex Software Inc.</Authors>
-    <Company>Artifex Software Inc.</Company>
-    <Product>MuPDF.NET4LLM</Product>
-    <Description>LLM/RAG helpers for MuPDF.NET: PDF-to-Markdown conversion, layout parsing, document structure analysis. Designed for use with RAG pipelines and integration with LLMs.</Description>
-    <PackageTags>MuPDF;PDF;LLM;RAG;Markdown;document-processing;PDF-to-text</PackageTags>
-    <PackageProjectUrl>https://github.com/ArtifexSoftware/MuPDF.NET</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/ArtifexSoftware/MuPDF.NET</RepositoryUrl>
-    <RepositoryType>git</RepositoryType>
-    <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
-    <PackageReleaseNotes>LLM/RAG helpers for PDF processing: Markdown conversion, layout analysis, multi-column detection.</PackageReleaseNotes>
-    <IncludeSymbols>false</IncludeSymbols>
-    <NuspecFile>$(ProjectDir)MuPDF.NET4LLM.nuspec</NuspecFile>
-    <NuspecProperties>version=$(Version)</NuspecProperties>
-    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <Version>0.3.4-rc.1</Version>
+    <NuspecFile>$(MSBuildProjectDirectory)\MuPDF.NET4LLM.nuspec</NuspecFile>
+    <NuspecProperties>Configuration=$(Configuration);version=$(Version);PlatformFolder=$(PlatformFolder)</NuspecProperties>
   </PropertyGroup>
   
   <PropertyGroup Condition="'$(OS)' == 'Windows_NT'">

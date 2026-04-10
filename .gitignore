@@ -395,5 +395,8 @@ FodyWeavers.xsd
 *.msm
 *.msp
 
+# Local clone of https://github.com/pymupdf/pymupdf4llm for porting / diff (optional)
+pymupdf4llm/
+
 # JetBrains Rider
 *.sln.iml
