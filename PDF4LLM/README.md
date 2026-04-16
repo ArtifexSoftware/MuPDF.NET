@@ -21,7 +21,7 @@ PDF4LLM depends on [MuPDF.NET](https://www.nuget.org/packages/MuPDF.NET); it is 
 
 ## Quick Start
 
-API types live in the **`PDF4LLM`** namespace (including **`PDF4LLM.Helpers`**, **`PDF4LLM.Llama`**, **`PDF4LLM.Ocr`**). The static entry type is **`Pdf4LLM`**. Add `using PDF4LLM;` and call **`Pdf4LLM.ToMarkdown(...)`**, **`Pdf4LLM.ToJson(...)`**, etc.
+API types live in the **`PDF4LLM`** namespace (including **`PDF4LLM.Helpers`**, **`PDF4LLM.Llama`**, **`PDF4LLM.Ocr`**). The static entry type is **`PdfExtractor`**. Add `using PDF4LLM;` and call **`PdfExtractor.ToMarkdown(...)`**, **`PdfExtractor.ToJson(...)`**, etc.
 
 ### Convert PDF to Markdown
 
@@ -30,26 +30,26 @@ using MuPDF.NET;
 using PDF4LLM;
 
 Document doc = new Document("document.pdf");
-string markdown = Pdf4LLM.ToMarkdown(doc);
+string markdown = PdfExtractor.ToMarkdown(doc);
 doc.Close();
 ```
 
 ### Convert to plain text
 
 ```csharp
-string text = Pdf4LLM.ToText(doc);
+string text = PdfExtractor.ToText(doc);
 ```
 
 ### Get layout as JSON
 
 ```csharp
-string json = Pdf4LLM.ToJson(doc);
+string json = PdfExtractor.ToJson(doc);
 ```
 
 ### Use with LlamaIndex-style loading
 
 ```csharp
-var reader = Pdf4LLM.LlamaMarkdownReader();
+var reader = PdfExtractor.LlamaMarkdownReader();
 var docs = reader.LoadData("document.pdf", extraInfo: new Dictionary<string, object>());
 foreach (var d in docs)
 {
@@ -60,7 +60,7 @@ foreach (var d in docs)
 ### Extract form field values
 
 ```csharp
-var keyValues = Pdf4LLM.GetKeyValues(doc);
+var keyValues = PdfExtractor.GetKeyValues(doc);
 ```
 
 ## API Overview

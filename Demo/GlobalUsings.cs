@@ -7,7 +7,7 @@ global using System.Threading;
 global using mupdf;
 global using MuPDF.NET;
 global using PDF4LLM;
-global using static global::PDF4LLM.Pdf4LLM;
+global using static global::PDF4LLM.PdfExtractor;
 global using PDF4LLM.Helpers;
 global using PDF4LLM.Llama;
 global using PDF4LLM.Ocr;

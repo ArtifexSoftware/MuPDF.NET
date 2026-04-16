@@ -10,7 +10,7 @@ namespace PDF4LLM
     /// <summary>
     /// Main entry point for PDF4LLM, aligned with pdf4llm package API (to_markdown / to_json / to_text / parse_document / get_key_values / use_layout).
     /// </summary>
-    public static class Pdf4LLM
+    public static class PdfExtractor
     {
         /// <summary>Package version string (Python: <c>__version__</c> / <c>version</c>).</summary>
         public static string Version => VersionInfo.Version;
@@ -154,7 +154,7 @@ namespace PDF4LLM
         {
             if (!UseLayout)
                 throw new NotSupportedException(
-                    "Pdf4LLM.ToJson with UseLayout=false is not supported; the legacy MuPdf_rag path only implements ToMarkdown in this port. Set Pdf4LLM.UseLayout = true.");
+                    "PdfExtractor.ToJson with UseLayout=false is not supported; the legacy MuPdf_rag path only implements ToMarkdown in this port. Set PdfExtractor.UseLayout = true.");
 
             var parsedDoc = DocumentLayout.ParseDocument(
                 doc,
@@ -198,7 +198,7 @@ namespace PDF4LLM
         {
             if (!UseLayout)
                 throw new NotSupportedException(
-                    "Pdf4LLM.ToText with UseLayout=false is not supported; set Pdf4LLM.UseLayout = true.");
+                    "PdfExtractor.ToText with UseLayout=false is not supported; set PdfExtractor.UseLayout = true.");
 
             var parsedDoc = DocumentLayout.ParseDocument(
                 doc,
@@ -246,7 +246,7 @@ namespace PDF4LLM
         {
             if (!UseLayout)
                 throw new NotSupportedException(
-                    "Pdf4LLM.ParseDocument requires UseLayout=true (legacy rag path has no ParsedDocument).");
+                    "PdfExtractor.ParseDocument requires UseLayout=true (legacy rag path has no ParsedDocument).");
 
             return DocumentLayout.ParseDocument(
                 doc,

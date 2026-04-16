@@ -12,7 +12,7 @@ namespace PDF4LLM.Test
         [Test]
         public void Version_ReturnsValidVersion()
         {
-            string version = Pdf4LLM.Version;
+            string version = PdfExtractor.Version;
             Assert.That(version, Is.Not.Null);
             Assert.That(version, Is.Not.Empty);
             Assert.That(version.Split('.').Length, Is.GreaterThanOrEqualTo(2));
@@ -21,7 +21,7 @@ namespace PDF4LLM.Test
         [Test]
         public void VersionTuple_ReturnsValidTuple()
         {
-            var (major, minor, patch) = Pdf4LLM.VersionTuple;
+            var (major, minor, patch) = PdfExtractor.VersionTuple;
             Assert.That(major, Is.GreaterThanOrEqualTo(0));
             Assert.That(minor, Is.GreaterThanOrEqualTo(0));
             Assert.That(patch, Is.GreaterThanOrEqualTo(0));
@@ -30,7 +30,7 @@ namespace PDF4LLM.Test
         [Test]
         public void LlamaMarkdownReader_ReturnsReader()
         {
-            var reader = Pdf4LLM.LlamaMarkdownReader();
+            var reader = PdfExtractor.LlamaMarkdownReader();
             Assert.That(reader, Is.Not.Null);
             Assert.That(reader, Is.InstanceOf<PDFMarkdownReader>());
         }
@@ -41,7 +41,7 @@ namespace PDF4LLM.Test
             Func<Dictionary<string, object>, Dictionary<string, object>> filter = 
                 (meta) => { meta["custom"] = "value"; return meta; };
             
-            var reader = Pdf4LLM.LlamaMarkdownReader(filter);
+            var reader = PdfExtractor.LlamaMarkdownReader(filter);
             Assert.That(reader, Is.Not.Null);
             Assert.That(reader.MetaFilter, Is.EqualTo(filter));
         }
@@ -52,7 +52,7 @@ namespace PDF4LLM.Test
             var doc = OpenTestDocument("Magazine.pdf");
             try
             {
-                string markdown = Pdf4LLM.ToMarkdown(
+                string markdown = PdfExtractor.ToMarkdown(
                     doc,
                     header: false,
                     footer: false,
@@ -75,7 +75,7 @@ namespace PDF4LLM.Test
             var doc = OpenTestDocument("Magazine.pdf");
             try
             {
-                string markdown = Pdf4LLM.ToMarkdown(
+                string markdown = PdfExtractor.ToMarkdown(
                     doc,
                     pages: new List<int> { 0 },
                     header: false,
@@ -100,7 +100,7 @@ namespace PDF4LLM.Test
             {
                 Assert.Throws<ArgumentException>(() =>
                 {
-                    Pdf4LLM.ToMarkdown(
+                    PdfExtractor.ToMarkdown(
                         doc,
                         writeImages: true,
                         embedImages: true,
@@ -121,7 +121,7 @@ namespace PDF4LLM.Test
             var doc = OpenTestDocument("columns.pdf");
             try
             {
-                string json = Pdf4LLM.ToJson(
+                string json = PdfExtractor.ToJson(
                     doc,
                     showProgress: false,
                     useOcr: false
@@ -143,7 +143,7 @@ namespace PDF4LLM.Test
             var doc = OpenTestDocument("columns.pdf");
             try
             {
-                string text = Pdf4LLM.ToText(
+                string text = PdfExtractor.ToText(
                     doc,
                     header: false,
                     footer: false,
@@ -166,7 +166,7 @@ namespace PDF4LLM.Test
             var doc = OpenTestDocument("columns.pdf");
             try
             {
-                var parsedDoc = Pdf4LLM.ParseDocument(
+                var parsedDoc = PdfExtractor.ParseDocument(
                     doc,
                     showProgress: false,
                     useOcr: false
@@ -186,7 +186,7 @@ namespace PDF4LLM.Test
             var doc = OpenTestDocument("Magazine.pdf");
             try
             {
-                var keyValues = Pdf4LLM.GetKeyValues(doc);
+                var keyValues = PdfExtractor.GetKeyValues(doc);
                 Assert.That(keyValues, Is.Not.Null);
                 Assert.That(keyValues, Is.Empty);
             }

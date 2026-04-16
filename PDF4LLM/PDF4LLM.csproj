@@ -7,7 +7,7 @@
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <PlatformFolder>$(Platform)</PlatformFolder>
     <PlatformFolder Condition="'$(PlatformFolder)' == 'AnyCPU'">.</PlatformFolder>
-    <Version>3.27.2.2-rc.5</Version>
+    <Version>1.27.2.2</Version>
     <NuspecFile>$(MSBuildProjectDirectory)\PDF4LLM.nuspec</NuspecFile>
     <NuspecProperties>Configuration=$(Configuration);version=$(Version);PlatformFolder=$(PlatformFolder)</NuspecProperties>
   </PropertyGroup>

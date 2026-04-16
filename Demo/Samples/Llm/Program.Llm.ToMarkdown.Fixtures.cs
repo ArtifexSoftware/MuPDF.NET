@@ -1,7 +1,7 @@
 namespace Demo
 {
     /// <summary>
-    /// PDF4LLM <see cref="PDF4LLM.Pdf4LLM.ToMarkdown"/> demos aligned with repository <c>tests/</c> fixtures (golden markdown, OCR behavior).
+    /// PDF4LLM <see cref="PDF4LLM.PdfExtractor.ToMarkdown"/> demos aligned with repository <c>tests/</c> fixtures (golden markdown, OCR behavior).
     /// PDFs live under repo <c>tests/</c>; samples skip if files are missing.
     /// </summary>
     internal partial class Program
