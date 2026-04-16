@@ -19,6 +19,11 @@ namespace MuPDF.NET
         /// </summary>
         public char C { get; set; }
 
+        /// <summary>
+        /// true if MuPDF set <c>FZ_STEXT_SYNTHETIC</c> on this glyph (raw dict mode).
+        /// </summary>
+        public bool Synthetic { get; set; }
+
         public int UCS { get; set; }
 
         public int GID { get; set; }

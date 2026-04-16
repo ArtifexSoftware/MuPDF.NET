@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
-using System.Drawing;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
@@ -769,7 +768,8 @@ namespace MuPDF.NET
             return mupdf.mupdf.fz_transform_point(c.ToFzPoint(), m1).fz_normalize_vector().y;
         }
 
-        internal static PdfObj pdf_dict_getl(PdfObj obj, string[] keys)
+        /// <summary>Follow a chain of dictionary keys (e.g. Root → AcroForm → Fields).</summary>
+        public static PdfObj pdf_dict_getl(PdfObj obj, string[] keys)
         {
             foreach (string key in keys)
             {
@@ -3470,22 +3470,12 @@ namespace MuPDF.NET
         {
             FzBuffer res = mupdf.mupdf.fz_new_buffer(512);
             FzOutput output = new FzOutput(res);
-            try
-            {
-                output.pdf_print_obj(what, compress, ascii);
-                output.fz_close_output();
-                res.fz_terminate_buffer();
-                return res;
-            }
-            catch
-            {
-                res.Dispose();
-                throw;
-            }
-            finally
-            {
-                output.Dispose();
-            }
+            output.pdf_print_obj(what, compress, ascii);
+            output.fz_close_output();
+            output.Dispose();
+            res.fz_terminate_buffer();
+
+            return res;
         }
 
         internal static string UnicodeFromBuffer(FzBuffer buf)

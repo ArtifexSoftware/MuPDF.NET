@@ -72,6 +72,11 @@ namespace MuPDF.NET
         /// </summary>
         public byte[] Image { get; set; }
 
+        /// <summary>
+        /// optional image mask as PNG bytes (same idea as MuPdf <c>mask</c>)
+        /// </summary>
+        public byte[] Mask { get; set; }
+
         public string CsName { get; set; }
 
         public vectoruc Digest { get; set; }

@@ -3891,6 +3891,7 @@ namespace MuPDF.NET
         /// <param name="strokeOpacity"></param>
         /// <param name="fillOpacity"></param>
         /// <param name="oc"></param>
+        /// <param name="radius">0: plain rectangle. Otherwise passed to <see cref="Shape.DrawRect(Rect, float?)"/> (0 &lt; value ≤ 0.5 for rounded corners).</param>
         /// <returns></returns>
         public Point DrawRect(
             Rect rect,
@@ -4857,26 +4858,20 @@ namespace MuPDF.NET
 
             FzBuffer res = mupdf.mupdf.fz_new_buffer(1024);
             FzOutput output = new FzOutput(res);
-            FzDevice dev = null;
-            try
-            {
-                dev = output.fz_new_svg_device(
-                    bounds.x1 - bounds.x0,
-                    bounds.y1 - bounds.y0,
-                    (int)textOpt,
-                    1
-                );
-                _nativePage.fz_run_page(dev, ctm, new FzCookie());
-                dev.fz_close_device();
-                output.fz_close_output();
-                return Utils.EscapeStrFromBuffer(res);
-            }
-            finally
-            {
-                dev?.Dispose();
-                output.Dispose();
-                res.Dispose();
-            }
+            FzDevice dev = output.fz_new_svg_device(
+                bounds.x1 - bounds.x0,
+                bounds.y1 - bounds.y0,
+                (int)textOpt,
+                1
+            );
+            _nativePage.fz_run_page(dev, ctm, new FzCookie());
+            dev.fz_close_device();
+            dev.Dispose();
+            output.fz_close_output();
+            output.Dispose();
+            string text = Utils.EscapeStrFromBuffer(res);
+
+            return text;
         }
 
         /// <summary>
