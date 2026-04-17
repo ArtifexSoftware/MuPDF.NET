@@ -7,7 +7,7 @@ namespace PDF4LLM.Helpers
     /// <summary>
     /// Extended span information for text line extraction.
     /// Mirrors the span dictionaries produced by LLM helpers.
-    /// JSON names follow <c>pdf4llm.helpers.document_layout</c> / rawdict-style keys.
+    /// JSON names follow the layout document model / rawdict-style keys.
     /// </summary>
     public class ExtendedSpan
     {

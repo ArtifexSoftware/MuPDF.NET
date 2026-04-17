@@ -53,9 +53,9 @@ SOFTWARE.
 Also see here: https://github.com/jsvine/pdfplumber/blob/stable/LICENSE.txt
 ---------------------------------------------------------------------
 
-The porting mainly pertains to files "table.py" and relevant parts of
-"utils/text.py" within pdfplumber's repository on Github.
-With respect to "text.py", we have removed functions or features that are not
+The porting mainly pertains to the upstream table module and relevant parts of
+the text utilities within pdfplumber's repository on GitHub.
+With respect to those text utilities, we have removed functions or features that are not
 used by table processing. Examples are:
 
 * the text search function
@@ -100,13 +100,13 @@ namespace MuPDF.NET
         internal static readonly int TEXT_COLLECT_VECTORS = (int)mupdf.mupdf.FZ_STEXT_COLLECT_VECTORS;
         // TEXT_SEGMENT = mupdf.FZ_STEXT_SEGMENT
         internal static readonly int TEXT_SEGMENT = (int)mupdf.mupdf.FZ_STEXT_SEGMENT;
-        // From table.py FLAGS: TEXTFLAGS_TEXT | TEXT_COLLECT_STYLES | TEXT_ACCURATE_BBOXES | TEXT_MEDIABOX_CLIP
+        // Upstream table FLAGS: TEXTFLAGS_TEXT | TEXT_COLLECT_STYLES | TEXT_ACCURATE_BBOXES | TEXT_MEDIABOX_CLIP
         internal static readonly int FLAGS = 
             (int)TextFlagsExtension.TEXTFLAGS_TEXT |
             TEXT_COLLECT_STYLES |
             (int)TextFlags.TEXT_ACCURATE_BBOXES |
             (int)TextFlags.TEXT_MEDIABOX_CLIP;
-        // From table.py TABLE_DETECTOR_FLAGS: TEXT_ACCURATE_BBOXES | TEXT_SEGMENT | TEXT_COLLECT_VECTORS | TEXT_MEDIABOX_CLIP
+        // Upstream TABLE_DETECTOR_FLAGS: TEXT_ACCURATE_BBOXES | TEXT_SEGMENT | TEXT_COLLECT_VECTORS | TEXT_MEDIABOX_CLIP
         internal static readonly int TABLE_DETECTOR_FLAGS =
             (int)TextFlags.TEXT_ACCURATE_BBOXES |
             TEXT_SEGMENT |
@@ -2466,8 +2466,8 @@ namespace MuPDF.NET
             return output.ToString() + "\n";
         }
 
-        // to_pandas - Return a pandas DataFrame version of the table
-        // Note: This would require the pandas.NET library or similar
+        // to_pandas - Return a tabular dataframe-style view of the table
+        // Note: This would require a suitable dataframe binding or similar
         // For C#, users can convert the Extract() result to their preferred data structure
         public object ToPandas(Dictionary<string, object> kwargs = null)
         {
@@ -2851,12 +2851,12 @@ namespace MuPDF.NET
         }
     }
 
-    // FindTables function - C# port of find_tables from table.py
+    // FindTables function - C# port of upstream find_tables
     public static class TableFinderHelper
     {
         /// <summary>
         /// Find tables on a page and return a TableFinder object.
-        /// This is the C# port of the find_tables function from table.py.
+        /// This is the C# port of the upstream find_tables function.
         /// </summary>
         public static TableFinder FindTables(
             Page page,

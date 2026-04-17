@@ -209,7 +209,7 @@ namespace PDF4LLM.Helpers
     }
 
     /// <summary>
-    /// Main markdown conversion utilities (legacy RAG path, Python <c>MuPdf_rag</c>).
+    /// Main markdown conversion utilities (legacy RAG path).
     /// <see cref="PDF4LLM"/> delegates here when <c>UseLayout</c> is false.
     /// Kept <c>internal</c> until a supported public surface is defined; not part of the public API contract.
     /// </summary>
