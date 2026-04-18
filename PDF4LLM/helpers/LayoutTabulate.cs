@@ -7,12 +7,11 @@ using System.Text;
 namespace PDF4LLM.Helpers
 {
     /// <summary>
-    /// Plain-text table formatting aligned with Python <c>tabulate</c> as used by
-    /// <c>pdf4llm.helpers.document_layout</c> (<c>wrap_table_for_tabulate</c>, <c>to_text</c>).
+    /// Plain-text table formatting aligned with the <c>tabulate</c>-style layouts used for document text export.
     /// </summary>
     internal static class LayoutTabulate
     {
-        /// <summary>Python <c>tabulate.tabulate_formats</c> (tabulate 0.9.x).</summary>
+        /// <summary>Known <c>tabulate</c> table format names (0.9.x set).</summary>
         internal static readonly HashSet<string> TabulateFormatNames = new HashSet<string>(
             StringComparer.OrdinalIgnoreCase)
         {
@@ -23,7 +22,7 @@ namespace PDF4LLM.Helpers
             "simple_grid", "simple_outline", "textile", "tsv", "unsafehtml", "youtrack"
         };
 
-        /// <summary>Python: invalid <paramref name="tableFormat"/> ? warning and <c>grid</c>.</summary>
+        /// <summary>Invalid <paramref name="tableFormat"/> yields a warning and <c>grid</c>.</summary>
         internal static string NormalizeTableFormat(string tableFormat)
         {
             if (string.IsNullOrWhiteSpace(tableFormat))
@@ -38,7 +37,7 @@ namespace PDF4LLM.Helpers
             return f;
         }
 
-        /// <summary>Python <c>wrap_table_for_tabulate</c>.</summary>
+        /// <summary>Pre-wrap table cells to column width budgets.</summary>
         internal static List<List<string>> WrapTableForTabulate(
             List<List<string>> table,
             int maxWidth = 100,
@@ -71,7 +70,7 @@ namespace PDF4LLM.Helpers
             return wrappedTable;
         }
 
-        /// <summary>Python <c>textwrap.wrap</c> for a single cell (word-based).</summary>
+        /// <summary>Word-wrap a single cell to a maximum width.</summary>
         private static List<string> WrapCellToWidth(string cell, int width)
         {
             if (cell == null)
@@ -118,8 +117,8 @@ namespace PDF4LLM.Helpers
         }
 
         /// <summary>
-        /// Format a rectangular table; <paramref name="uniformMaxColWidth"/> matches Python
-        /// <c>tabulate(..., maxcolwidths=int)</c> for fallback tables.
+        /// Format a rectangular table; <paramref name="uniformMaxColWidth"/> applies a uniform
+        /// <c>maxcolwidths</c>-style cap for fallback tables.
         /// </summary>
         internal static string Tabulate(
             List<List<string>> table,

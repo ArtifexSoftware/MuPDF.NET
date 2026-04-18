@@ -10,18 +10,18 @@ using Newtonsoft.Json;
 namespace PDF4LLM.Helpers
 {
     /// <summary>
-    /// Optional hook for per-page OCR, aligned with pdf4llm <c>ocr_function(page, dpi=..., language=..., keep_ocr_text=...)</c>.
+    /// Optional hook for per-page OCR (<c>ocr_function</c>-style signature: page, dpi, language, keep OCR text).
     /// When supplied and OCR runs, the callback is invoked and text is re-extracted from the page.
     /// </summary>
     /// <param name="page">Page to OCR.</param>
-    /// <param name="ocrDpi">Resolution hint (same role as Python <c>ocr_dpi</c>).</param>
+    /// <param name="ocrDpi">Resolution hint (same role as <c>ocr_dpi</c> in the reference API).</param>
     /// <param name="ocrLanguage">Tesseract / engine language code.</param>
-    /// <param name="keepOcrText">When <c>true</c>, preserve existing OCR text (Python <c>keep_ocr_text</c>).</param>
+    /// <param name="keepOcrText">When <c>true</c>, preserve existing OCR text (<c>keep_ocr_text</c> flag).</param>
     public delegate void OcrPageFunction(Page page, int ocrDpi, string ocrLanguage, bool keepOcrText);
 
     /// <summary>
     /// Layout box representing a content region on a page
-    /// (<c>LayoutBox</c> in <c>pdf4llm.helpers.document_layout</c>).
+    /// (<c>LayoutBox</c> in the layout document model).
     /// </summary>
     [JsonConverter(typeof(LayoutBoxJsonConverter))]
     public class LayoutBox
@@ -33,7 +33,7 @@ namespace PDF4LLM.Helpers
         public string BoxClass { get; set; } // e.g. 'text', 'picture', 'table', etc.
         // If boxclass == 'picture' or 'formula', store image bytes
         public byte[] Image { get; set; }
-        /// <summary>When <see cref="ParsedDocument.WriteImages"/> is used, Markdown-safe path for <c>![](...)</c> (Python: str in <c>layoutbox.image</c>).</summary>
+        /// <summary>When <see cref="ParsedDocument.WriteImages"/> is used, Markdown-safe path for <c>![](...)</c> (string stored in <c>layoutbox.image</c> JSON).</summary>
         public string ImageMarkdownRef { get; set; }
         // If boxclass == 'table'
         public Dictionary<string, object> Table { get; set; }
@@ -104,7 +104,7 @@ namespace PDF4LLM.Helpers
         [JsonProperty("image_path")]
         public string ImagePath { get; set; } = ""; // Path to save images
         [JsonIgnore]
-        public bool UseOcr { get; set; } = true; // If beneficial invoke OCR (Python: implied by use_ocr OCRMode)
+        public bool UseOcr { get; set; } = true; // If beneficial invoke OCR (implied by use_ocr / OCRMode)
         [JsonProperty("force_text")]
         public bool ForceText { get; set; }
         [JsonProperty("embed_images")]
@@ -112,7 +112,7 @@ namespace PDF4LLM.Helpers
         [JsonProperty("write_images")]
         public bool WriteImages { get; set; }
 
-        /// <summary>Effective OCR policy after <c>parse_document</c> resolution (Python <c>use_ocr</c>: <c>OCRMode</c>).</summary>
+        /// <summary>Effective OCR policy after <c>parse_document</c> resolution (<c>use_ocr</c> as <c>OCRMode</c>).</summary>
         [JsonProperty("use_ocr")]
         public OcrMode OcrMode { get; set; } = OcrMode.Never;
 
@@ -121,7 +121,7 @@ namespace PDF4LLM.Helpers
 
         /// <summary>
         /// Serialize the parsed document into Markdown text, closely following
-        /// ParsedDocument.to_markdown equivalent.
+        /// <c>ParsedDocument.to_markdown</c> equivalent.
         /// When <paramref name="pageChunks"/> is true, returns JSON (array of page chunk dicts), matching MuPdfRag layout output style.
         /// </summary>
         public string ToMarkdown(
@@ -285,7 +285,7 @@ namespace PDF4LLM.Helpers
             return JsonConvert.SerializeObject(documentOutput, Formatting.Indented);
         }
 
-        /// <summary>Python <c>make_page_chunk</c> equivalent.</summary>
+        /// <summary><c>make_page_chunk</c> equivalent.</summary>
         private static Dictionary<string, object> MakePageChunk(
             ParsedDocument doc,
             PageLayout page,
@@ -351,11 +351,10 @@ namespace PDF4LLM.Helpers
         }
 
         /// <summary>
-        /// Serialize the parsed document into JSON (Python <c>ParsedDocument.to_json</c> in
-        /// <c>pdf4llm/helpers/document_layout.py</c>: compact <c>json.dumps</c>,
+        /// Serialize the parsed document into JSON (<c>ParsedDocument.to_json</c> behavior: compact serialization,
         /// <c>ensure_ascii=False</c>, <c>LayoutEncoder</c> rules).
         /// </summary>
-        /// <param name="showProgress">Python parameter (currently unused there); reserved for parity.</param>
+        /// <param name="showProgress">Reserved for progress reporting (currently unused).</param>
         public string ToJson(bool showProgress = false)
         {
             _ = showProgress;
@@ -372,8 +371,7 @@ namespace PDF4LLM.Helpers
         }
 
         /// <summary>
-        /// Serialize the parsed document to plain text (Python <c>ParsedDocument.to_text</c> in
-        /// <c>pdf4llm/helpers/document_layout.py</c>).
+        /// Serialize the parsed document to plain text (<c>ParsedDocument.to_text</c> behavior).
         /// </summary>
         public string ToText(
             bool header = true,
@@ -512,7 +510,7 @@ namespace PDF4LLM.Helpers
             return ex as List<List<string>>;
         }
 
-        // --- Markdown / text helpers (aligned with pdf4llm document_layout.py) ---
+        // --- Markdown / text helpers (document layout pipeline) ---
 
         private static List<ExtendedSpan> CollectSpans(List<TextLineInfo> textLines)
         {
@@ -736,7 +734,7 @@ namespace PDF4LLM.Helpers
             return sb.Append("\n\n").ToString();
         }
 
-        /// <summary>Python <c>picture_text_to_text</c> (parameters match signature; <c>ignore_code</c> unused).</summary>
+        /// <summary><c>picture_text_to_text</c> (parameters match signature; <c>ignore_code</c> unused).</summary>
         private static string PictureTextToText(List<TextLineInfo> textLines, bool ignoreCode = false, Rect clip = null)
         {
             _ = ignoreCode;
@@ -754,7 +752,7 @@ namespace PDF4LLM.Helpers
             return sb.ToString() + "\n";
         }
 
-        /// <summary>Python <c>fallback_text_to_text</c> (<c>tabulate</c> grid + <c>maxcolwidths</c>).</summary>
+        /// <summary><c>fallback_text_to_text</c> (<c>tabulate</c> grid + <c>maxcolwidths</c>).</summary>
         private static string FallbackTextToText(List<TextLineInfo> textLines, Rect clip, int tableMaxWidth = 100)
         {
             if (textLines == null || textLines.Count == 0)
@@ -787,7 +785,7 @@ namespace PDF4LLM.Helpers
             return LayoutTabulate.Tabulate(lines, "grid", uniformMaxColWidth: maxCol) + "\n\n";
         }
 
-        /// <summary><c>title</c> layout box → level-1 heading (pdf4llm <c>title_to_md</c>).</summary>
+        /// <summary><c>title</c> layout box → level-1 heading (<c>title_to_md</c>).</summary>
         private static string TitleToMd(List<TextLineInfo> textLines)
         {
             var spans = CollectSpans(textLines);
@@ -797,7 +795,7 @@ namespace PDF4LLM.Helpers
             return $"# {output}\n\n";
         }
 
-        /// <summary><c>section-header</c> layout box → level-2 heading (pdf4llm <c>section_hdr_to_md</c>).</summary>
+        /// <summary><c>section-header</c> layout box → level-2 heading (<c>section_hdr_to_md</c>).</summary>
         private static string SectionHdrToMd(List<TextLineInfo> textLines)
         {
             var spans = CollectSpans(textLines);
@@ -1088,7 +1086,7 @@ namespace PDF4LLM.Helpers
     public static class DocumentLayout
     {
         /// <summary>
-        /// Normalizes page indices like pdf4llm <c>parse_document</c>: dedupe, sort, negative indices, bounds check.
+        /// Normalizes page indices like <c>parse_document</c>: dedupe, sort, negative indices, bounds check.
         /// </summary>
         public static List<int> NormalizePageIndices(int pageCount, List<int> pages)
         {
@@ -1115,13 +1113,13 @@ namespace PDF4LLM.Helpers
         }
 
         /// <summary>
-        /// Parse document into <see cref="ParsedDocument"/> (pdf4llm <c>parse_document</c>).
+        /// Parse document into <see cref="ParsedDocument"/> (<c>parse_document</c> pipeline).
         /// Pipeline: optional PDF <c>StructTreeRoot</c> removal, <c>OCRMode</c> + optional <see cref="OcrPageFunction"/>,
         /// <c>extractDICT</c>, synthetic layout (stext blocks + <see cref="TableFinder"/>), <c>clean_pictures</c> /
         /// <c>add_image_orphans</c> / <c>clean_tables</c>, <c>find_reading_order</c>, <c>find_tables</c>, then box materialization.
         /// </summary>
         /// <remarks>
-        /// <c>MuPdf.layout</c> is not available in .NET; layout regions are derived from stext blocks plus table detection.
+        /// The native layout API is not available in this .NET port; layout regions are derived from stext blocks plus table detection.
         /// <c>complete_table_structure</c> virtual lines are not generated yet (empty <c>add_lines</c>).
         /// </remarks>
         public static ParsedDocument ParseDocument(
@@ -1532,7 +1530,7 @@ namespace PDF4LLM.Helpers
     }
 
     /// <summary>
-    /// Python <c>LayoutBox</c> JSON: <c>image</c> is base64 bytes or a path string (see <c>LayoutEncoder</c>).
+    /// <c>LayoutBox</c> JSON: <c>image</c> is base64 bytes or a path string (see <c>LayoutEncoder</c>).
     /// </summary>
     public class LayoutBoxJsonConverter : JsonConverter<LayoutBox>
     {
@@ -1587,7 +1585,7 @@ namespace PDF4LLM.Helpers
     }
 
     /// <summary>
-    /// Custom JSON converter for MuPDF geometry and raw bytes, matching Python <c>LayoutEncoder</c>.
+    /// Custom JSON converter for MuPDF geometry and raw bytes, matching <c>LayoutEncoder</c> rules.
     /// </summary>
     public class LayoutJsonConverter : JsonConverter
     {

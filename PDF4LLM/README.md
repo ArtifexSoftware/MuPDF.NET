@@ -32,6 +32,9 @@ using PDF4LLM;
 Document doc = new Document("document.pdf");
 string markdown = PdfExtractor.ToMarkdown(doc);
 doc.Close();
+
+// Or pass a path (file is opened only for the call)
+string markdown2 = PdfExtractor.ToMarkdown(@"C:\path\to\document.pdf");
 ```
 
 ### Convert to plain text

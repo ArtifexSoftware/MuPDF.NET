@@ -79,7 +79,7 @@ namespace PDF4LLM.Helpers
         /// Traverse /AcroForm/Fields hierarchy and return a dict:
         /// fully qualified field name -> {"value": ..., "pages": [...]}
         /// Optionally, the xref of the field is included.
-        /// Port of <c>pdf4llm.helpers.utils.extract_form_fields_with_pages</c>.
+        /// Extract form fields with page references (interactive PDFs).
         /// </summary>
         public static Dictionary<string, Dictionary<string, object>> ExtractFormFieldsWithPages(Document doc, bool xrefs = false)
         {

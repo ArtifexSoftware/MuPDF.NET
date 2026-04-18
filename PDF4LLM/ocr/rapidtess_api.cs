@@ -4,7 +4,7 @@ namespace PDF4LLM.Ocr
 {
     /// <summary>
     /// RapidOCR + Tesseract pipeline, aligned with PDF4LLM.ocr.rapidtess_api.
-    /// Requires rapidocr_onnxruntime in Python; not implemented for .NET.
+    /// Requires rapidocr_onnxruntime in the reference stack; not implemented for .NET.
     /// </summary>
     public static class RapidTessApi
     {

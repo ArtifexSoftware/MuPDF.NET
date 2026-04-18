@@ -70,6 +70,40 @@ namespace PDF4LLM.Test
         }
 
         [Test]
+        public void ToMarkdown_WithPath_MatchesDocumentOverload()
+        {
+            string path = GetResourcePath("Magazine.pdf");
+            string fromPath = PdfExtractor.ToMarkdown(
+                path,
+                header: false,
+                footer: false,
+                showProgress: false,
+                useOcr: false);
+
+            var doc = OpenTestDocument("Magazine.pdf");
+            try
+            {
+                string fromDoc = PdfExtractor.ToMarkdown(
+                    doc,
+                    header: false,
+                    footer: false,
+                    showProgress: false,
+                    useOcr: false);
+                Assert.That(fromPath, Is.EqualTo(fromDoc));
+            }
+            finally
+            {
+                doc.Close();
+            }
+        }
+
+        [Test]
+        public void ToMarkdown_WithWhitespacePath_ThrowsArgumentException()
+        {
+            Assert.Throws<ArgumentException>(() => PdfExtractor.ToMarkdown("   ", useOcr: false));
+        }
+
+        [Test]
         public void ToMarkdown_WithSpecificPages_ReturnsMarkdown()
         {
             var doc = OpenTestDocument("Magazine.pdf");
@@ -138,6 +172,24 @@ namespace PDF4LLM.Test
         }
 
         [Test]
+        public void ToJson_WithPath_MatchesDocumentOverload()
+        {
+            string path = GetResourcePath("columns.pdf");
+            string fromPath = PdfExtractor.ToJson(path, showProgress: false, useOcr: false);
+
+            var doc = OpenTestDocument("columns.pdf");
+            try
+            {
+                string fromDoc = PdfExtractor.ToJson(doc, showProgress: false, useOcr: false);
+                Assert.That(fromPath, Is.EqualTo(fromDoc));
+            }
+            finally
+            {
+                doc.Close();
+            }
+        }
+
+        [Test]
         public void ToText_WithValidDocument_ReturnsText()
         {
             var doc = OpenTestDocument("columns.pdf");
@@ -153,6 +205,34 @@ namespace PDF4LLM.Test
 
                 Assert.That(text, Is.Not.Null);
                 Assert.That(text, Is.Not.Empty);
+            }
+            finally
+            {
+                doc.Close();
+            }
+        }
+
+        [Test]
+        public void ToText_WithPath_MatchesDocumentOverload()
+        {
+            string path = GetResourcePath("columns.pdf");
+            string fromPath = PdfExtractor.ToText(
+                path,
+                header: false,
+                footer: false,
+                showProgress: false,
+                useOcr: false);
+
+            var doc = OpenTestDocument("columns.pdf");
+            try
+            {
+                string fromDoc = PdfExtractor.ToText(
+                    doc,
+                    header: false,
+                    footer: false,
+                    showProgress: false,
+                    useOcr: false);
+                Assert.That(fromPath, Is.EqualTo(fromDoc));
             }
             finally
             {

@@ -6,7 +6,7 @@ using mupdf;
 namespace PDF4LLM.Helpers
 {
     /// <summary>
-    /// Layout tuples like Python <c>(x0, y0, x1, y1, "class")</c>, mutable during <c>clean_*</c> passes.
+    /// Layout tuples <c>(x0, y0, x1, y1, "class")</c>, mutable during <c>clean_*</c> passes.
     /// </summary>
     public sealed class LayoutInfoEntry
     {
@@ -15,7 +15,7 @@ namespace PDF4LLM.Helpers
     }
 
     /// <summary>
-    /// Helpers aligned with pdf4llm <c>document_layout.parse_document</c> and <c>utils</c> layout passes.
+    /// Helpers for document layout parsing and layout cleanup passes.
     /// </summary>
     public static class LayoutParseHelpers
     {
@@ -43,7 +43,7 @@ namespace PDF4LLM.Helpers
         /// <summary>Same role as MuPdf <c>table._iou</c> for matching layout clips to detected tables.</summary>
         public static float IntersectionOverUnion(Rect a, Rect b) => IoU(a, b);
 
-        /// <summary>Python <c>parse_document</c> page filter: <c>None</c>, <c>int</c> (with negative wrap), or sequence (sorted unique, strict bounds).</summary>
+        /// <summary>Page filter: null (all pages), a single <c>int</c> (with negative wrap), or a sequence (sorted unique, strict bounds).</summary>
         public static List<int> ResolvePageFilter(int pageCount, object pages)
         {
             if (pageCount < 0)
@@ -69,7 +69,7 @@ namespace PDF4LLM.Helpers
                     return new List<int>();
                 if (set.Min < 0 || set.Max >= pageCount)
                     throw new ArgumentOutOfRangeException(nameof(pages),
-                        $"'pages' must contain indices in [0, {pageCount}) (Python does not wrap negatives in lists).");
+                        $"'pages' must contain indices in [0, {pageCount}) (negative indices are not wrapped inside lists).");
                 return set.ToList();
             }
 
@@ -90,11 +90,11 @@ namespace PDF4LLM.Helpers
             }
             catch
             {
-                /* same intent as Python: best-effort */
+                /* best-effort: ignore failures */
             }
         }
 
-        /// <summary>Default OCR backend selection: Python installs Tesseract/RapidOCR; PDF4LLM leaves full-page OCR to <see cref="OcrPageFunction"/>.</summary>
+        /// <summary>Default OCR backend selection: full-page OCR is supplied via <see cref="OcrPageFunction"/> when configured.</summary>
         public static OcrPageFunction SelectOcrFunction()
         {
             return null;
@@ -641,7 +641,7 @@ namespace PDF4LLM.Helpers
             return columns.Count > 1;
         }
 
-        /// <summary>Python <c>complete_table_structure</c> extras � virtual lines not ported; returns empty lists.</summary>
+        /// <summary><c>complete_table_structure</c> extras: virtual lines not ported; returns empty lists.</summary>
         public static (List<Tuple<Point, Point>> lines, List<Rect> boxes) CompleteTableStructure(Page page, List<LayoutInfoEntry> layout)
         {
             return (new List<Tuple<Point, Point>>(), new List<Rect>());

@@ -4,14 +4,14 @@ using MuPDF.NET;
 namespace PDF4LLM.Ocr
 {
     /// <summary>
-    /// RapidOCR-only pipeline, aligned with pdf4llm ocr.rapidocr_api.
+    /// RapidOCR-only pipeline (reference OCR module contract).
     /// </summary>
     public static class RapidOcrApi
     {
         public const char ReplacementUnicode = '\uFFFD';
 
         /// <summary>
-        /// Keyword arguments passed to RapidOCR in Python (<c>KWARGS</c>).
+        /// Keyword arguments passed to RapidOCR (<c>KWARGS</c>).
         /// </summary>
         public static readonly Dictionary<string, object> Kwargs = new Dictionary<string, object>();
 
