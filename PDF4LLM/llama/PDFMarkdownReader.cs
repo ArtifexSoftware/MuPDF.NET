@@ -69,8 +69,9 @@ namespace PDF4LLM.Llama
             {
                 for (int i = 0; i < doc.PageCount; i++)
                 {
+                    var pageExtraInfo = new Dictionary<string, object>(extraInfo);
                     docs.Add(ProcessDocPage(
-                        doc, extraInfo, filePathStr, i, hdrInfo, loadKwargs));
+                        doc, pageExtraInfo, filePathStr, i, hdrInfo, loadKwargs));
                 }
             }
             finally
