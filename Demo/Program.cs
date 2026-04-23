@@ -1,7 +1,4 @@
-﻿using System.Text.Json;
-using System.Text.Json.Serialization;
-
-namespace Demo
+﻿namespace Demo
 {
     /// <summary>
     /// GitHub samples entry point. With no arguments, all samples run; see <see cref="SampleMenu"/>.

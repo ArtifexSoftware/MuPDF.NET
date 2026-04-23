@@ -56,13 +56,18 @@ namespace Demo
             // —— Barcodes —— Samples/Barcodes
             new("Barcodes", "read-barcode", "Read barcodes from image and PDF", a => Program.TestReadBarcode(a)),
             new("Barcodes", "read-datamatrix", "Read Data Matrix from PDF", _ => Program.TestReadDataMatrix()),
-            new("Barcodes", "read-qrcode", "Render PDF page and read QR from PNG", a => Program.TestReadQrCode(a)),
+            //new("Barcodes", "read-qrcode", "Render PDF page and read QR from PNG", a => Program.TestReadQrCode(a)),
             new("Barcodes", "write-barcode", "Write many barcode types to PDF and PNG", a => Program.TestWriteBarcode(a)),
             new("Barcodes", "write-barcode1", "Write CODE39/CODE128/DM with Units rects", _ => Program.TestWriteBarcode1()),
 
             // —— PDF4LLM —— Samples/Llm
             new("PDF4LLM", "rag-markdown", "Legacy RAG: PDF4LLM.ToMarkdown with UseLayout=false (Magazine.pdf)", _ => Program.TestMuPdfRagToMarkdown()),
             new("PDF4LLM", "table", "Detect tables and export markdown", _ => Program.TestTable()),
+            new("PDF4LLM", "table-extract-1", "Dump detected tables by page to console", _ => Program.TestTableExtract1()),
+            new("PDF4LLM", "table-extract-2", "Export detected tables to tables.csv", _ => Program.TestTableExtract2()),
+            new("PDF4LLM", "table-extract-3", "Merge continued table pages by column count", _ => Program.TestTableExtract3()),
+            new("PDF4LLM", "table-ocr", "Extract OCR text from Ocr.pdf", _ => Program.TestOcr()),
+            new("PDF4LLM", "llm-reader-save-pages", "Load markdown chunks and save per-page .md files", _ => Program.TestLLM2()),
             new("PDF4LLM", "markdown-reader", "LlamaIndex PDFMarkdownReader", _ => Program.TestMarkdownReader()),
             new("PDF4LLM", "llm-to-markdown-fixture-370", "ToMarkdown vs tests/test_370_expected.md (needs tests/test_370.pdf)", a => Program.Test4LlmToMarkdownCompareExpected370(a)),
             new("PDF4LLM", "llm-to-markdown-ocr-1", "ToMarkdown + U+FFFD fixture (tests/test_ocr_loremipsum_FFFD.pdf)", a => Program.Test4LlmToMarkdownOcrFixture1(a)),
