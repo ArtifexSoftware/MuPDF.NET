@@ -56,7 +56,7 @@ namespace Demo
             // —— Barcodes —— Samples/Barcodes
             new("Barcodes", "read-barcode", "Read barcodes from image and PDF", a => Program.TestReadBarcode(a)),
             new("Barcodes", "read-datamatrix", "Read Data Matrix from PDF", _ => Program.TestReadDataMatrix()),
-            new("Barcodes", "read-qrcode", "Render PDF page and read QR from PNG", a => Program.TestReadQrCode(a)),
+            //new("Barcodes", "read-qrcode", "Render PDF page and read QR from PNG", a => Program.TestReadQrCode(a)),
             new("Barcodes", "write-barcode", "Write many barcode types to PDF and PNG", a => Program.TestWriteBarcode(a)),
             new("Barcodes", "write-barcode1", "Write CODE39/CODE128/DM with Units rects", _ => Program.TestWriteBarcode1()),
 
