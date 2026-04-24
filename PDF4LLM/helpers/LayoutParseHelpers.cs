@@ -94,10 +94,11 @@ namespace PDF4LLM.Helpers
             }
         }
 
-        /// <summary>Default OCR backend selection: full-page OCR is supplied via <see cref="OcrPageFunction"/> when configured.</summary>
+        /// <summary>Default OCR backend selection.</summary>
         public static OcrPageFunction SelectOcrFunction()
         {
-            return null;
+            // Tesseract is the default OCR backend for this .NET port.
+            return global::PDF4LLM.Ocr.TesseractApi.ExecOcr;
         }
 
         /// <summary>Build layout from stext blocks, then merge <see cref="TableFinder"/> regions as <c>table</c> (approximates MuPdf.layout + table hints).</summary>
