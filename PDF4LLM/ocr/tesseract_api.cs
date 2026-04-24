@@ -28,12 +28,20 @@ namespace PDF4LLM.Ocr
 
         /// <summary>
         /// Full-page OCR callback from PDF4LLM (redaction + pdfocr_tobytes pipeline).
-        /// Not ported; use <see cref="CheckOcr"/> for span repair and OCR decisions.
+        /// Executes Tesseract OCR through MuPDF.NET and returns the OCR text page.
         /// </summary>
-        public static void ExecOcr(Page page, int dpi = 300, Pixmap pixmap = null, string language = "eng", bool keepOcrText = false)
+        public static TextPage ExecOcr(Page page, int dpi, string language, bool keepOcrText)
         {
-            throw new NotImplementedException(
-                "TesseractApi.ExecOcr (PDF4LLM.ocr.tesseract_api.exec_ocr) is not implemented for MuPDF.NET; use CheckOcr for span-level repair.");
+            return ExecOcr(page, dpi: dpi, pixmap: null, language: language, keepOcrText: keepOcrText);
+        }
+
+        /// <summary>
+        /// Compatibility overload retained for existing OCR helper call sites.
+        /// </summary>
+        public static TextPage ExecOcr(Page page, int dpi = 300, Pixmap pixmap = null, string language = "eng", bool keepOcrText = false)
+        {
+            // keepOcrText is currently not configurable through GetTextPageOcr.
+            return page.GetTextPageOcr(flags: CheckOcr.FLAGS, dpi: dpi, language: language, full: true);
         }
     }
 

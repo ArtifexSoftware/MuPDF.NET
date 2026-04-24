@@ -4414,6 +4414,10 @@ namespace MuPDF.NET
         /// <param name="full">whether to OCR the full page image, or only its images (default)</param>
         /// <param name="tessdata"></param>
         /// <param name="imageFilters">Optional preprocessing filters applied to raster images before OCR.</param>
+        /// <param name="maxOcrPixmapBytes">
+        /// Maximum size of the full-page pixmap sample buffer before OCR is split vertically into strips.
+        /// Default 120,000,000 bytes (~114 MiB). Set lower on machines with limited RAM.
+        /// </param>
         /// <returns></returns>
         public TextPage GetTextPageOcr(
             int flags = 0,
@@ -4421,30 +4425,79 @@ namespace MuPDF.NET
             int dpi = 72,
             bool full = false,
             string tessdata = null,
-            ImageFilterPipeline imageFilters = null
+            ImageFilterPipeline imageFilters = null,
+            long maxOcrPixmapBytes = 3000000
         )
         {
             if (string.IsNullOrEmpty(Utils.TESSDATA_PREFIX) && string.IsNullOrEmpty(tessdata))
                 throw new Exception("No OCR support: TESSDATA_PREFIX not set");
+            if (maxOcrPixmapBytes <= 0)
+                throw new ArgumentOutOfRangeException(nameof(maxOcrPixmapBytes), "maxOcrPixmapBytes must be greater than zero.");
 
             TextPage FullOcr(Page page, int _dpi, string _language, int _flags, ImageFilterPipeline filters)
             {
-                float zoom = _dpi / 72.0f;
+                if (_dpi <= 0)
+                    throw new ArgumentOutOfRangeException(nameof(_dpi), "dpi must be greater than zero.");
+
+                long GetPixmapBytes(Pixmap p)
+                {
+                    byte[] samples = p.SAMPLES;
+                    if (samples != null && samples.Length > 0)
+                        return samples.Length;
+                    return (long)p.Stride * p.H;
+                }
+
+                int effectiveDpi = _dpi;
+                for (int i = 0; i < 3; i++)
+                {
+                    float probeZoom = effectiveDpi / 72.0f;
+                    using (Pixmap probe = page.GetPixmap(matrix: new Matrix(probeZoom, probeZoom)))
+                    {
+                        long probeBytes = GetPixmapBytes(probe);
+                        if (probeBytes <= maxOcrPixmapBytes)
+                            break;
+
+                        double scale = Math.Sqrt((double)maxOcrPixmapBytes / probeBytes);
+                        int nextDpi = Math.Max(1, (int)Math.Floor(effectiveDpi * scale));
+                        if (nextDpi >= effectiveDpi)
+                            nextDpi = effectiveDpi - 1;
+                        if (nextDpi < 1)
+                            nextDpi = 1;
+                        effectiveDpi = nextDpi;
+                    }
+                }
+
+                float zoom = effectiveDpi / 72.0f;
                 Matrix mat = new Matrix(zoom, zoom);
-                Pixmap pix = page.GetPixmap(matrix: mat);
-                if (filters != null)
-                    pix = Pixmap.ApplyImageFilters(pix, filters);
-                Document ocrPdf = new Document("pdf", pix.PdfOCR2Bytes(true, _language, tessdata));
+                using (Pixmap basePix = page.GetPixmap(matrix: mat))
+                {
+                    Pixmap workingPix = basePix;
+                    Pixmap filteredPix = null;
+                    try
+                    {
+                        if (filters != null)
+                        {
+                            filteredPix = Pixmap.ApplyImageFilters(basePix, filters);
+                            if (filteredPix != null)
+                                workingPix = filteredPix;
+                        }
 
-                Page ocrPage = ocrPdf.LoadPage(0);
-                float unZoom = page.Rect.Width / ocrPage.Rect.Width;
-                Matrix ctm = new Matrix(unZoom, unZoom) * page.DerotationMatrix;
-                TextPage _tp = ocrPage.GetTextPage(flags: _flags, matrix: ctm);
-                ocrPdf.Close();
-
-                pix.Dispose();
-                _tp.Parent = this;
-                return _tp;
+                        using (Document ocrPdf = new Document("pdf", workingPix.PdfOCR2Bytes(true, _language, tessdata)))
+                        using (Page ocrPage = ocrPdf.LoadPage(0))
+                        {
+                            float unZoom = page.Rect.Width / ocrPage.Rect.Width;
+                            Matrix ctm = new Matrix(unZoom, unZoom) * page.DerotationMatrix;
+                            TextPage ocrTp = ocrPage.GetTextPage(flags: _flags, matrix: ctm);
+                            ocrTp.Parent = this;
+                            return ocrTp;
+                        }
+                    }
+                    finally
+                    {
+                        if (filteredPix != null && !object.ReferenceEquals(filteredPix, basePix))
+                            filteredPix.Dispose();
+                    }
+                }
             }
 
             if (full)
