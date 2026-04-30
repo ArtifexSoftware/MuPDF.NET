@@ -7,6 +7,6 @@ namespace PDF4LLM
     public static class VersionInfo
     {
         public static readonly (int Major, int Minor, int Patch) MinimumMuPDFVersion = (1, 27, 0);
-        public const string Version = "1.27.2.8";
+        public const string Version = "1.27.2.9";
     }
 }

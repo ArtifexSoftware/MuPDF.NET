@@ -389,33 +389,42 @@ namespace MuPDF.NET
 
         public Page(PdfPage pdfPage, Document parent)
         {
-            _pdfPage = pdfPage;
-            _nativePage = pdfPage.super();
-            Parent = parent;
+            lock (Utils.MuPDFLock)
+            {
+                _pdfPage = pdfPage;
+                _nativePage = pdfPage.super();
+                Parent = parent;
 
-            if (_pdfPage.m_internal == null)
-                Number = 0;
-            else
-                Number = _pdfPage.m_internal.super.number;
+                if (_pdfPage.m_internal == null)
+                    Number = 0;
+                else
+                    Number = _pdfPage.m_internal.super.number;
+            }
         }
 
         public Page(FzPage fzPage, Document parent)
         {
-            _pdfPage = fzPage.pdf_page_from_fz_page();
-            _nativePage = fzPage;
-            Parent = parent;
+            lock (Utils.MuPDFLock)
+            {
+                _pdfPage = fzPage.pdf_page_from_fz_page();
+                _nativePage = fzPage;
+                Parent = parent;
 
-            if (_pdfPage.m_internal == null)
-                Number = 0;
-            else
-                Number = _pdfPage.m_internal.super.number;
+                if (_pdfPage.m_internal == null)
+                    Number = 0;
+                else
+                    Number = _pdfPage.m_internal.super.number;
+            }
         }
 
         public void Dispose()
         {
             if (_pdfPage != null)
             {
-                _pdfPage.Dispose();
+                lock (Utils.MuPDFLock)
+                {
+                    _pdfPage.Dispose();
+                }
                 _pdfPage = null;
             }
             if (_nativePage != null)
@@ -3344,42 +3353,45 @@ namespace MuPDF.NET
             bool annots = true
         )
         {
-            if (matrix == null)
-                matrix = new Matrix(1.0f, 1.0f);
-
-            float zoom;
-            if (dpi != 0)
+            lock (Utils.MuPDFLock)
             {
-                zoom = dpi / 72f;
-                matrix = new Matrix(zoom, zoom);
+                if (matrix == null)
+                    matrix = new Matrix(1.0f, 1.0f);
+
+                float zoom;
+                if (dpi != 0)
+                {
+                    zoom = dpi / 72f;
+                    matrix = new Matrix(zoom, zoom);
+                }
+
+                ColorSpace _colorSpace;
+                if (string.IsNullOrEmpty(colorSpace))
+                    _colorSpace = new ColorSpace(Utils.CS_RGB);
+                else if (colorSpace.ToUpper() == "GRAY")
+                    _colorSpace = new ColorSpace(Utils.CS_GRAY);
+                else if (colorSpace.ToUpper() == "CMYK")
+                    _colorSpace = new ColorSpace(Utils.CS_CMYK);
+                else
+                    _colorSpace = new ColorSpace(Utils.CS_RGB);
+
+                if (!(new List<int>() { 1, 3, 4 }).Contains(_colorSpace.N))
+                    throw new Exception("unsupported colorspace");
+
+                DisplayList dl = GetDisplayList(annots ? 1 : 0);
+                Pixmap pix = dl.GetPixmap(
+                    matrix,
+                    colorSpace: _colorSpace,
+                    alpha: alpha ? 1 : 0,
+                    clip: clip
+                );
+                dl.Dispose();
+
+                if (dpi != 0)
+                    pix.SetDpi(dpi, dpi);
+
+                return pix;
             }
-
-            ColorSpace _colorSpace;
-            if (string.IsNullOrEmpty(colorSpace))
-                _colorSpace = new ColorSpace(Utils.CS_RGB);
-            else if (colorSpace.ToUpper() == "GRAY")
-                _colorSpace = new ColorSpace(Utils.CS_GRAY);
-            else if (colorSpace.ToUpper() == "CMYK")
-                _colorSpace = new ColorSpace(Utils.CS_CMYK);
-            else
-                _colorSpace = new ColorSpace(Utils.CS_RGB);
-
-            if (!(new List<int>() { 1, 3, 4 }).Contains(_colorSpace.N))
-                throw new Exception("unsupported colorspace");
-
-            DisplayList dl = GetDisplayList(annots ? 1 : 0);
-            Pixmap pix = dl.GetPixmap(
-                matrix,
-                colorSpace: _colorSpace,
-                alpha: alpha ? 1 : 0,
-                clip: clip
-            );
-            dl.Dispose();
-
-            if (dpi != 0)
-                pix.SetDpi(dpi, dpi);
-
-            return pix;
         }
 
         public DisplayList GetDisplayList(int annots = 1)

@@ -33,6 +33,12 @@ namespace MuPDF.NET
 
         public static bool IsInitialized = false;
 
+        /// <summary>
+        /// Global lock for thread-safe access to native MuPDF library.
+        /// MuPDF is not thread-safe, so all P/Invoke calls must be synchronized with this lock.
+        /// </summary>
+        public static readonly object MuPDFLock = new object();
+
         public static string ANNOT_ID_STEM = "fitz";
 
         public static int SigFlag_SignaturesExist = 1;
@@ -4278,53 +4284,56 @@ namespace MuPDF.NET
 
             try
             {
-                if (seps == null)
+                lock (Utils.MuPDFLock)
                 {
-                    seps = new FzSeparations();
-                    disposables.Add(seps);
+                    if (seps == null)
+                    {
+                        seps = new FzSeparations();
+                        disposables.Add(seps);
+                    }
+
+                    FzRect rect = mupdf.mupdf.fz_bound_display_list(list);
+                    //disposables.Add(rect);
+
+                    FzMatrix matrix = new FzMatrix(ctm.A, ctm.B, ctm.C, ctm.D, ctm.E, ctm.F);
+                    //disposables.Add(matrix);
+
+                    FzRect rclip = clip == null ? new FzRect(FzRect.Fixed.Fixed_INFINITE) : clip.ToFzRect();
+                    //disposables.Add(rclip);
+                    rect = FzRect.fz_intersect_rect(rect, rclip);
+
+                    rect = rect.fz_transform_rect(matrix);
+                    FzIrect irect = rect.fz_round_rect();
+                    //disposables.Add(irect);
+
+                    FzPixmap pix = mupdf.mupdf.fz_new_pixmap_with_bbox(cs, irect, seps, alpha);
+                    if (alpha != 0)
+                        pix.fz_clear_pixmap();
+                    else
+                        pix.fz_clear_pixmap_with_value(0xFF);
+
+                    FzDevice dev;
+                    if (rclip.fz_is_infinite_rect() == 0)
+                    {
+                        dev = mupdf.mupdf.fz_new_draw_device_with_bbox(matrix, pix, irect);
+                        list.fz_run_display_list(dev, new FzMatrix(), rclip, new FzCookie());
+                    }
+                    else
+                    {
+                        dev = mupdf.mupdf.fz_new_draw_device(matrix, pix);
+                        list.fz_run_display_list(
+                            dev,
+                            new FzMatrix(),
+                            new FzRect(FzRect.Fixed.Fixed_INFINITE),
+                            new FzCookie()
+                        );
+                    }
+                    disposables.Add(dev);
+
+                    dev.fz_close_device();
+
+                    return new Pixmap(pix);
                 }
-
-                FzRect rect = mupdf.mupdf.fz_bound_display_list(list);
-                //disposables.Add(rect);
-
-                FzMatrix matrix = new FzMatrix(ctm.A, ctm.B, ctm.C, ctm.D, ctm.E, ctm.F);
-                //disposables.Add(matrix);
-
-                FzRect rclip = clip == null ? new FzRect(FzRect.Fixed.Fixed_INFINITE) : clip.ToFzRect();
-                //disposables.Add(rclip);
-                rect = FzRect.fz_intersect_rect(rect, rclip);
-
-                rect = rect.fz_transform_rect(matrix);
-                FzIrect irect = rect.fz_round_rect();
-                //disposables.Add(irect);
-
-                FzPixmap pix = mupdf.mupdf.fz_new_pixmap_with_bbox(cs, irect, seps, alpha);
-                if (alpha != 0)
-                    pix.fz_clear_pixmap();
-                else
-                    pix.fz_clear_pixmap_with_value(0xFF);
-
-                FzDevice dev;
-                if (rclip.fz_is_infinite_rect() == 0)
-                {
-                    dev = mupdf.mupdf.fz_new_draw_device_with_bbox(matrix, pix, irect);
-                    list.fz_run_display_list(dev, new FzMatrix(), rclip, new FzCookie());
-                }
-                else
-                {
-                    dev = mupdf.mupdf.fz_new_draw_device(matrix, pix);
-                    list.fz_run_display_list(
-                        dev,
-                        new FzMatrix(),
-                        new FzRect(FzRect.Fixed.Fixed_INFINITE),
-                        new FzCookie()
-                    );
-                }
-                disposables.Add(dev);
-
-                dev.fz_close_device();
-
-                return new Pixmap("raw", new Pixmap(pix));
             }
             finally
             {
@@ -8048,27 +8057,28 @@ namespace MuPDF.NET
 
         public static void InitApp()
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            lock (MuPDFLock)
             {
                 if (Utils.IsInitialized)
                     return;
 
-                Utils.SetDotCultureForNumber();
-                //Utils.LoadEmbeddedLeptonicaDll();
-            }
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-            {
-                if (Utils.IsInitialized)
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    Utils.SetDotCultureForNumber();
+                    //Utils.LoadEmbeddedLeptonicaDll();
+                }
+                else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                {
+                    Utils.SetDotCultureForNumber();
+                    //Utils.LoadEmbeddedLeptonicaDll();
+                }
+                else
+                {
                     return;
+                }
 
-                Utils.SetDotCultureForNumber();
-                //Utils.LoadEmbeddedLeptonicaDll();
+                Utils.IsInitialized = true;
             }
-            else
-            {
-                return;
-            }
-            Utils.IsInitialized = true;
         }
 
         /// <summary>

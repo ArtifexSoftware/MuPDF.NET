@@ -124,5 +124,65 @@ namespace MuPDF.NET.Test
             //Assert.Pass();
         }
 
+        [Test]
+        public void TestPixmapToBytes()
+        {
+            // Test single pixmap creation and PNG conversion with matrix scaling
+            Document doc = new Document("../../../resources/cython.pdf");
+            Page page = doc[0];
+            Pixmap pixmap = page.GetPixmap(new Matrix(2, 2));
+
+            byte[] png = pixmap.ToBytes("png");
+
+            // Verify PNG bytes are generated and valid
+            Assert.That(png.Length, Is.GreaterThan(0));
+            // PNG magic bytes: 137, 80, 78, 71
+            Assert.That(png[0], Is.EqualTo(137));
+            Assert.That(png[1], Is.EqualTo(80));
+            Assert.That(png[2], Is.EqualTo(78));
+            Assert.That(png[3], Is.EqualTo(71));
+
+            pixmap.Dispose();
+            page.Dispose();
+            doc.Close();
+        }
+
+        [Test]
+        public void TestPixmapParallel()
+        {
+            // Test parallel pixmap rendering with PNG conversion (simulating TestPixmap())
+            const int iterations = 50;  // Reduced from 500 for unit test performance
+            const int degreeOfParallelism = 4;  // Reduced from 10 for unit test performance
+
+            using (var document = new Document("../../../resources/cython.pdf"))
+            {
+                var renderResults = new System.Collections.Concurrent.ConcurrentBag<int>();
+                var errors = new System.Collections.Concurrent.ConcurrentBag<Exception>();
+
+                Parallel.ForEach(
+                    Enumerable.Range(0, iterations),
+                    new ParallelOptions { MaxDegreeOfParallelism = degreeOfParallelism },
+                    iteration =>
+                    {
+                        try
+                        {
+                            using var page = document[0];
+                            using var pixmap = page.GetPixmap(new Matrix(2, 2));
+                            var png = pixmap.ToBytes("png");
+                            renderResults.Add(png.Length);
+                        }
+                        catch (Exception ex)
+                        {
+                            errors.Add(ex);
+                        }
+                    });
+
+                // Verify all iterations completed successfully
+                Assert.That(errors.Count, Is.EqualTo(0), $"Parallel rendering encountered errors: {string.Join(", ", errors.Select(e => e.Message))}");
+                Assert.That(renderResults.Count, Is.EqualTo(iterations), "Not all iterations completed");
+                Assert.That(renderResults.All(size => size > 0), Is.True, "All PNG bytes should be valid");
+            }
+        }
+
     }
 }

@@ -33,38 +33,52 @@ namespace MuPDF.NET
         /// <param name="rect">The page's rectangle.</param>
         public DisplayList(Rect rect)
         {
-            _nativeDisplayList = new FzDisplayList(rect.ToFzRect());
+            lock (Utils.MuPDFLock)
+            {
+                _nativeDisplayList = new FzDisplayList(rect.ToFzRect());
+            }
             ThisOwn = true;
         }
 
         public DisplayList(DisplayList displayList)
         {
-            _nativeDisplayList = displayList.ToFzDisplayList();
+            lock (Utils.MuPDFLock)
+            {
+                _nativeDisplayList = displayList.ToFzDisplayList();
+            }
         }
 
         public DisplayList(PdfPage pdfPage, int annots = 1)
         {
-            _fzPage = new FzPage(pdfPage);
-            if (annots != 0)
-                _nativeDisplayList = mupdf.mupdf.fz_new_display_list_from_page(_fzPage);
-            else
-                _nativeDisplayList = mupdf.mupdf.fz_new_display_list_from_page_contents(_fzPage);
+            lock (Utils.MuPDFLock)
+            {
+                _fzPage = new FzPage(pdfPage);
+                if (annots != 0)
+                    _nativeDisplayList = mupdf.mupdf.fz_new_display_list_from_page(_fzPage);
+                else
+                    _nativeDisplayList = mupdf.mupdf.fz_new_display_list_from_page_contents(_fzPage);
+            }
         }
 
         public void Dispose()
         {
             if (_nativeDisplayList != null)
             {
-                _nativeDisplayList.Dispose();
+                lock (Utils.MuPDFLock)
+                {
+                    _nativeDisplayList.Dispose();
+                }
                 _nativeDisplayList = null;
                 ThisOwn = false;
             }
 
             if (_fzPage != null)
             {
-                _fzPage.Dispose();
+                lock (Utils.MuPDFLock)
+                {
+                    _fzPage.Dispose();
+                }
                 _fzPage = null;
-                ThisOwn = false;
             }
         }
 
