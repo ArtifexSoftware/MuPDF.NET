@@ -21,48 +21,57 @@ namespace MuPDF.NET
 
         public Pixmap(ColorSpace cs, IRect irect, int alpha = 0)
         {
-            _nativePixmap = mupdf.mupdf.fz_new_pixmap_with_bbox(cs.ToFzColorspace(), irect.ToFzIrect(), new FzSeparations(0), alpha);
+            lock (Utils.MuPDFLock)
+            {
+                _nativePixmap = mupdf.mupdf.fz_new_pixmap_with_bbox(cs.ToFzColorspace(), irect.ToFzIrect(), new FzSeparations(0), alpha);
+            }
         }
 
         public Pixmap(Document doc, int xref)
         {
-            PdfDocument pdf = Document.AsPdfDocument(doc);
-            int xrefLen = pdf.pdf_xref_len();
-            if (!Utils.INRANGE(xref, 1, xrefLen - 1))
+            lock (Utils.MuPDFLock)
             {
+                PdfDocument pdf = Document.AsPdfDocument(doc);
+                int xrefLen = pdf.pdf_xref_len();
+                if (!Utils.INRANGE(xref, 1, xrefLen - 1))
+                {
+                    pdf.Dispose();
+                    throw new Exception(Utils.ErrorMessages["MSG_BAD_XREF"]);
+                }
+
+                PdfObj r = pdf.pdf_new_indirect(xref, 0);
+                PdfObj type = r.pdf_dict_get(new PdfObj("Subtype"));
+                if (type.pdf_name_eq(new PdfObj("Image")) == 0 &&
+                    type.pdf_name_eq(new PdfObj("Alpha")) == 0 &&
+                    type.pdf_name_eq(new PdfObj("Luminosity")) == 0)
+                    throw new Exception(Utils.ErrorMessages["MSG_IS_NO_IMAGE"]);
+                FzImage img = pdf.pdf_load_image(r);
+                FzPixmap pix = img.fz_get_pixmap_from_image(new FzIrect(Utils.FZ_MIN_INF_RECT, Utils.FZ_MIN_INF_RECT, Utils.FZ_MAX_INF_RECT, Utils.FZ_MAX_INF_RECT),
+                    new FzMatrix(img.w(), 0, 0, img.h(), 0, 0),
+                    null,
+                    null
+                    );
+                _nativePixmap = pix;
+
                 pdf.Dispose();
-                throw new Exception(Utils.ErrorMessages["MSG_BAD_XREF"]);
             }
-
-            PdfObj r = pdf.pdf_new_indirect(xref, 0);
-            PdfObj type = r.pdf_dict_get(new PdfObj("Subtype"));
-            if (type.pdf_name_eq(new PdfObj("Image")) == 0 &&
-                type.pdf_name_eq(new PdfObj("Alpha")) == 0 &&
-                type.pdf_name_eq(new PdfObj("Luminosity")) == 0)
-                throw new Exception(Utils.ErrorMessages["MSG_IS_NO_IMAGE"]);
-            FzImage img = pdf.pdf_load_image(r);
-            FzPixmap pix = img.fz_get_pixmap_from_image(new FzIrect(Utils.FZ_MIN_INF_RECT, Utils.FZ_MIN_INF_RECT, Utils.FZ_MAX_INF_RECT, Utils.FZ_MAX_INF_RECT),
-                new FzMatrix(img.w(), 0, 0, img.h(), 0, 0),
-                null,
-                null
-                );
-            _nativePixmap = pix;
-
-            pdf.Dispose();
         }
 
         public Pixmap(Pixmap spix, float w, float h)
         {
-            FzIrect bbox = new FzIrect(mupdf.mupdf.fz_infinite_irect);
-            if (spix == null)
-                throw new Exception("bad pixmap");
-            FzPixmap srcPix = spix.ToFzPixmap();
-            FzPixmap pm = null;
-            if (bbox.fz_is_infinite_irect() == 0)
-                pm = srcPix.fz_scale_pixmap(srcPix.x(), srcPix.y(), w, h, bbox);
-            else
-                pm = srcPix.fz_scale_pixmap(srcPix.x(), srcPix.y(), w, h, new FzIrect(mupdf.mupdf.fz_infinite_irect));
-            _nativePixmap = pm;
+            lock (Utils.MuPDFLock)
+            {
+                FzIrect bbox = new FzIrect(mupdf.mupdf.fz_infinite_irect);
+                if (spix == null)
+                    throw new Exception("bad pixmap");
+                FzPixmap srcPix = spix.ToFzPixmap();
+                FzPixmap pm = null;
+                if (bbox.fz_is_infinite_irect() == 0)
+                    pm = srcPix.fz_scale_pixmap(srcPix.x(), srcPix.y(), w, h, bbox);
+                else
+                    pm = srcPix.fz_scale_pixmap(srcPix.x(), srcPix.y(), w, h, new FzIrect(mupdf.mupdf.fz_infinite_irect));
+                _nativePixmap = pm;
+            }
         }
 
         /// <summary>
@@ -77,8 +86,11 @@ namespace MuPDF.NET
                 {
                     return _irect;
                 }
-                FzIrect val = _nativePixmap.fz_pixmap_bbox();
-                _irect = new IRect(val);
+                lock (Utils.MuPDFLock)
+                {
+                    FzIrect val = _nativePixmap.fz_pixmap_bbox();
+                    _irect = new IRect(val);
+                }
 
                 return _irect;
             }
@@ -91,7 +103,10 @@ namespace MuPDF.NET
         {
             get
             {
-                return _nativePixmap.alpha();
+                lock (Utils.MuPDFLock)
+                {
+                    return _nativePixmap.alpha();
+                }
             }
         }
 
@@ -105,7 +120,13 @@ namespace MuPDF.NET
             {
                 if (_colorSpace == null)
                 {
-                    _colorSpace = new ColorSpace(_nativePixmap.fz_pixmap_colorspace());
+                    lock (Utils.MuPDFLock)
+                    {
+                        if (_colorSpace == null)  // Double-check after acquiring lock
+                        {
+                            _colorSpace = new ColorSpace(_nativePixmap.fz_pixmap_colorspace());
+                        }
+                    }
                 }
                 return _colorSpace;
             }
@@ -118,10 +139,13 @@ namespace MuPDF.NET
         {
             get
             {
-                vectoruc res = _nativePixmap.fz_md5_pixmap2();
-                byte[] ret = new byte[res.Count];
-                res.CopyTo(ret, 0);
-                return ret;
+                lock (Utils.MuPDFLock)
+                {
+                    vectoruc res = _nativePixmap.fz_md5_pixmap2();
+                    byte[] ret = new byte[res.Count];
+                    res.CopyTo(ret, 0);
+                    return ret;
+                }
             }
         }
 
@@ -132,7 +156,10 @@ namespace MuPDF.NET
         {
             get
             {
-                return _nativePixmap.fz_pixmap_height();
+                lock (Utils.MuPDFLock)
+                {
+                    return _nativePixmap.fz_pixmap_height();
+                }
             }
         }
 
@@ -143,7 +170,10 @@ namespace MuPDF.NET
         {
             get
             {
-                return Convert.ToBoolean(_nativePixmap.fz_is_pixmap_monochrome());
+                lock (Utils.MuPDFLock)
+                {
+                    return Convert.ToBoolean(_nativePixmap.fz_is_pixmap_monochrome());
+                }
             }
         }
 
@@ -154,19 +184,22 @@ namespace MuPDF.NET
         {
             get
             {
-                FzPixmap pm = _nativePixmap;
-                byte n = pm.n();
-                int count = pm.w() * pm.h();
-                List<byte> sample0 = PixmapReadSamples(0, n);
-                List<byte> sample = null;
-                for (int i = n; i < count; i += n)
+                lock (Utils.MuPDFLock)
                 {
-                    sample = PixmapReadSamples(i, n);
-                    if (!sample.SequenceEqual(sample0))
-                        return false;
+                    FzPixmap pm = _nativePixmap;
+                    byte n = pm.n();
+                    int count = pm.w() * pm.h();
+                    List<byte> sample0 = PixmapReadSamples(0, n);
+                    List<byte> sample = null;
+                    for (int i = n; i < count; i += n)
+                    {
+                        sample = PixmapReadSamples(i, n);
+                        if (!sample.SequenceEqual(sample0))
+                            return false;
+                    }
+                
+                    return true;
                 }
-            
-                return true;
             }
         }
 
@@ -179,7 +212,13 @@ namespace MuPDF.NET
             get
             {
                 if (_n < 0)
-                    _n =  _nativePixmap.fz_pixmap_components();
+                {
+                    lock (Utils.MuPDFLock)
+                    {
+                        if (_n < 0)  // Double-check after acquiring lock
+                            _n = _nativePixmap.fz_pixmap_components();
+                    }
+                }
 
                 return _n;
             }
@@ -231,7 +270,10 @@ namespace MuPDF.NET
         {
             get
             {
-                return _nativePixmap.fz_pixmap_samples_int();
+                lock (Utils.MuPDFLock)
+                {
+                    return _nativePixmap.fz_pixmap_samples_int();
+                }
             }
         }
 
@@ -242,7 +284,10 @@ namespace MuPDF.NET
         {
             get
             {
-                return _nativePixmap.n() * _nativePixmap.w() * _nativePixmap.h();
+                lock (Utils.MuPDFLock)
+                {
+                    return _nativePixmap.n() * _nativePixmap.w() * _nativePixmap.h();
+                }
             }
         }
 
@@ -255,7 +300,13 @@ namespace MuPDF.NET
             get
             {
                 if (_stride < 0)
-                    _stride = _nativePixmap.fz_pixmap_stride();
+                {
+                    lock (Utils.MuPDFLock)
+                    {
+                        if (_stride < 0)  // Double-check after acquiring lock
+                            _stride = _nativePixmap.fz_pixmap_stride();
+                    }
+                }
                 return _stride;
             }
         }
@@ -267,7 +318,10 @@ namespace MuPDF.NET
         {
             get
             {
-                return _nativePixmap.fz_pixmap_width();
+                lock (Utils.MuPDFLock)
+                {
+                    return _nativePixmap.fz_pixmap_width();
+                }
             }
         }
 
@@ -281,7 +335,13 @@ namespace MuPDF.NET
             {
                 if (_x < 0)
                 {
-                    _x = _nativePixmap.fz_pixmap_x();
+                    lock (Utils.MuPDFLock)
+                    {
+                        if (_x < 0)  // Double-check after acquiring lock
+                        {
+                            _x = _nativePixmap.fz_pixmap_x();
+                        }
+                    }
                 }
                 return _x;
             }
@@ -294,7 +354,10 @@ namespace MuPDF.NET
         {
             get
             {
-                return _nativePixmap.xres();
+                lock (Utils.MuPDFLock)
+                {
+                    return _nativePixmap.xres();
+                }
             }
         }
 
@@ -307,7 +370,13 @@ namespace MuPDF.NET
             get
             {
                 if (_y < 0)
-                    _y = _nativePixmap.fz_pixmap_y();
+                {
+                    lock (Utils.MuPDFLock)
+                    {
+                        if (_y < 0)  // Double-check after acquiring lock
+                            _y = _nativePixmap.fz_pixmap_y();
+                    }
+                }
                 return _y;
             }
         }
@@ -319,7 +388,10 @@ namespace MuPDF.NET
         {
             get
             {
-                return _nativePixmap.yres();
+                lock (Utils.MuPDFLock)
+                {
+                    return _nativePixmap.yres();
+                }
             }
         }
 
@@ -428,13 +500,17 @@ namespace MuPDF.NET
             if (arg0 == "raw" && arg1 != null)
             {
                 _nativePixmap = arg1.ToFzPixmap();
-                int n = N;
-                byte[] samples = SAMPLES;
-                ColorSpace colorSpace = ColorSpace;
-                IRect irect = IRect;
-                int stride = Stride;
-                int x = X;
-                int y = Y;
+                GC.SuppressFinalize(arg1);
+                lock (Utils.MuPDFLock)
+                {
+                    int n = N;
+                    byte[] samples = SAMPLES;
+                    ColorSpace colorSpace = ColorSpace;
+                    IRect irect = IRect;
+                    int stride = Stride;
+                    int x = X;
+                    int y = Y;
+                }
             }
             else
                 throw new Exception("arg0 must be `raw` or arg1 must be not null.");
@@ -630,37 +706,43 @@ namespace MuPDF.NET
         /// <returns></returns>
         internal byte[] ToBytes(int format, int jpgQuality)
         {
-            FzPixmap pixmap = _nativePixmap;
-            int size = pixmap.fz_pixmap_stride() * pixmap.h();
-            FzBuffer res = new FzBuffer((uint)size);
-            FzOutput output = new FzOutput(res);
+            lock (Utils.MuPDFLock)
+            {
+                FzPixmap pixmap = _nativePixmap;
+                int size = pixmap.fz_pixmap_stride() * pixmap.h();
+                FzBuffer res = new FzBuffer((uint)size);
+                FzOutput output = new FzOutput(res);
 
-            if (format == 1) mupdf.mupdf.fz_write_pixmap_as_png(output, pixmap);
-            else if (format == 2) mupdf.mupdf.fz_write_pixmap_as_pnm(output, pixmap);
-            else if (format == 3) mupdf.mupdf.fz_write_pixmap_as_pam(output, pixmap);
-            else if (format == 5) mupdf.mupdf.fz_write_pixmap_as_psd(output, pixmap);
-            else if (format == 6) mupdf.mupdf.fz_write_pixmap_as_ps(output, pixmap);
-            else if (format == 7) output.fz_write_pixmap_as_jpeg(pixmap, jpgQuality, 0); // v1.24 later
-            else mupdf.mupdf.fz_write_pixmap_as_png(output, pixmap);
+                if (format == 1) mupdf.mupdf.fz_write_pixmap_as_png(output, pixmap);
+                else if (format == 2) mupdf.mupdf.fz_write_pixmap_as_pnm(output, pixmap);
+                else if (format == 3) mupdf.mupdf.fz_write_pixmap_as_pam(output, pixmap);
+                else if (format == 5) mupdf.mupdf.fz_write_pixmap_as_psd(output, pixmap);
+                else if (format == 6) mupdf.mupdf.fz_write_pixmap_as_ps(output, pixmap);
+                else if (format == 7) output.fz_write_pixmap_as_jpeg(pixmap, jpgQuality, 0); // v1.24 later
+                else mupdf.mupdf.fz_write_pixmap_as_png(output, pixmap);
 
-            byte[] barray = Utils.BinFromBuffer(res);
-            output.fz_close_output();
-            output.Dispose();
-            res.Dispose();
-            return barray;
+                byte[] barray = Utils.BinFromBuffer(res);
+                output.fz_close_output();
+                output.Dispose();
+                res.Dispose();
+                return barray;
+            }
         }
 
         private void WriteImage(string filename, int format, int jpgQuality)
         {
-            FzPixmap pixmap = _nativePixmap;
+            lock (Utils.MuPDFLock)
+            {
+                FzPixmap pixmap = _nativePixmap;
 
-            if (format == 1) mupdf.mupdf.fz_save_pixmap_as_png(pixmap, filename);
-            else if (format == 2) mupdf.mupdf.fz_save_pixmap_as_pnm(pixmap, filename);
-            else if (format == 3) mupdf.mupdf.fz_save_pixmap_as_pam(pixmap, filename);
-            else if (format == 5) mupdf.mupdf.fz_save_pixmap_as_psd(pixmap, filename);
-            else if (format == 6) mupdf.mupdf.fz_save_pixmap_as_ps(pixmap, filename, 0);
-            else if (format == 7) mupdf.mupdf.fz_save_pixmap_as_jpeg(pixmap, filename, jpgQuality);
-            else mupdf.mupdf.fz_save_pixmap_as_png(pixmap, filename);
+                if (format == 1) mupdf.mupdf.fz_save_pixmap_as_png(pixmap, filename);
+                else if (format == 2) mupdf.mupdf.fz_save_pixmap_as_pnm(pixmap, filename);
+                else if (format == 3) mupdf.mupdf.fz_save_pixmap_as_pam(pixmap, filename);
+                else if (format == 5) mupdf.mupdf.fz_save_pixmap_as_psd(pixmap, filename);
+                else if (format == 6) mupdf.mupdf.fz_save_pixmap_as_ps(pixmap, filename, 0);
+                else if (format == 7) mupdf.mupdf.fz_save_pixmap_as_jpeg(pixmap, filename, jpgQuality);
+                else mupdf.mupdf.fz_save_pixmap_as_png(pixmap, filename);
+            }
         }
 
         public static int ClearPixmap_RectWithValue(Pixmap pixmap, int v = 0, FzIrect bbox = null)
@@ -1223,7 +1305,7 @@ namespace MuPDF.NET
 
             if (idx == 7)
                 SetDpi(Xres, Yres);
-            
+
             return ToBytes(idx, jpgQuality);
         }
 

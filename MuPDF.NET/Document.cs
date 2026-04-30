@@ -122,7 +122,10 @@ namespace MuPDF.NET
                 if (IsClosed)
                     throw new Exception("document closed");
                 
-                return _nativeDocument.fz_count_pages();
+                lock (Utils.MuPDFLock)
+                {
+                    return _nativeDocument.fz_count_pages();
+                }
             }
         }
 
@@ -152,7 +155,10 @@ namespace MuPDF.NET
                 if (IsClosed)
                     throw new Exception("document closed");
                 
-                return _nativeDocument.fz_count_chapters();
+                lock (Utils.MuPDFLock)
+                {
+                    return _nativeDocument.fz_count_chapters();
+                }
             }
         }
 
@@ -498,103 +504,106 @@ namespace MuPDF.NET
                 }
 
                 FzDocument doc = null;
-                if (stream != null)
+                lock (Utils.MuPDFLock)
                 {
-                    IntPtr dataPtr = Marshal.AllocHGlobal(stream.Length);
-                    Marshal.Copy(stream, 0, dataPtr, stream.Length);
-                    SWIGTYPE_p_unsigned_char swigData = new SWIGTYPE_p_unsigned_char(dataPtr, true);
-                    FzStream data = mupdf.mupdf.fz_open_memory(swigData, (uint)stream.Length);
-                    if (string.IsNullOrEmpty(fileName) || string.IsNullOrEmpty(fileType))
-                        fileName = "pdf";
-                    
-                    string magic = fileName;
-                    if (magic == null)
-                        magic = fileType;
-                    try
+                    if (stream != null)
                     {
-                        doc = mupdf.mupdf.fz_open_document_with_stream(magic, data);
-                    }
-                    catch(Exception e)
-                    {
-                        throw new Exception("Failed to open stream : " + e.Message);
-                    }
-                    data.Dispose();
-                }
-                else
-                {
-                    if (!string.IsNullOrEmpty(fileName))
-                    {
-                        if (string.IsNullOrEmpty(fileType))
+                        IntPtr dataPtr = Marshal.AllocHGlobal(stream.Length);
+                        Marshal.Copy(stream, 0, dataPtr, stream.Length);
+                        SWIGTYPE_p_unsigned_char swigData = new SWIGTYPE_p_unsigned_char(dataPtr, true);
+                        FzStream data = mupdf.mupdf.fz_open_memory(swigData, (uint)stream.Length);
+                        if (string.IsNullOrEmpty(fileName) || string.IsNullOrEmpty(fileType))
+                            fileName = "pdf";
+                        
+                        string magic = fileName;
+                        if (magic == null)
+                            magic = fileType;
+                        try
                         {
-
-                            try
-                            {
-                                doc = mupdf.mupdf.fz_open_document(fileName);
-                            }
-                            catch(Exception)
-                            {
-                                throw new Exception("Failed to open document");
-                            }
+                            doc = mupdf.mupdf.fz_open_document_with_stream(magic, data);
                         }
-                        else
+                        catch(Exception e)
                         {
-                            fz_document_handler handler = mupdf.mupdf.ll_fz_recognize_document(
-                                fileType
-                            );
-                            if (handler != null)
+                            throw new Exception("Failed to open stream : " + e.Message);
+                        }
+                        data.Dispose();
+                    }
+                    else
+                    {
+                        if (!string.IsNullOrEmpty(fileName))
+                        {
+                            if (string.IsNullOrEmpty(fileType))
                             {
-                                if (handler.open != null)
+
+                                try
                                 {
-                                    try
-                                    {
-                                        FzStream _stream = new FzStream(fileName);
-                                        FzStream accel = new FzStream();
-                                        FzArchive archive = new FzArchive();
-                                        // mupdf version greater than 1.25.0
-                                        /*{ 
-                                            doc = new FzDocument(
-                                                mupdf.mupdf.ll_fz_document_handler_open(handler, _stream.m_internal, accel.m_internal, archive.m_internal, null)       
-                                            );
-                                        }*/
-                                        {
-                                            doc = new FzDocument(mupdf.mupdf.ll_fz_document_handler_open(handler, _stream.m_internal, accel.m_internal, archive.m_internal, null));
-                                        }
-                                    }
-                                    catch (Exception)
-                                    {
-                                        throw new Exception(
-                                            Utils.ErrorMessages["MSG_BAD_DOCUMENT"]
-                                        );
-                                    }
+                                    doc = mupdf.mupdf.fz_open_document(fileName);
                                 }
-                                else if (
-                                    mupdf.mupdf.FZ_VERSION_MAJOR >= 1
-                                    && mupdf.mupdf.FZ_VERSION_MINOR >= 24
-                                )
+                                catch(Exception)
                                 {
-                                    Debug.Assert(false);
-                                    ///////////////////////// in less than version 1.24
-                                    /*data = mupdf.mupdf.fz_open_file(filename);
-                                    doc.m_internal = mupdf.mupdf.ll_fz_document_open_with_stream_fn_call(handler.open_with_stream, data.m_internal);*/
+                                    throw new Exception("Failed to open document");
                                 }
                             }
                             else
                             {
-                                throw new Exception(Utils.ErrorMessages["MSG_BAD_FILETYPE"]);
+                                fz_document_handler handler = mupdf.mupdf.ll_fz_recognize_document(
+                                    fileType
+                                );
+                                if (handler != null)
+                                {
+                                    if (handler.open != null)
+                                    {
+                                        try
+                                        {
+                                            FzStream _stream = new FzStream(fileName);
+                                            FzStream accel = new FzStream();
+                                            FzArchive archive = new FzArchive();
+                                            // mupdf version greater than 1.25.0
+                                            /*{ 
+                                                doc = new FzDocument(
+                                                    mupdf.mupdf.ll_fz_document_handler_open(handler, _stream.m_internal, accel.m_internal, archive.m_internal, null)       
+                                                );
+                                            }*/
+                                            {
+                                                doc = new FzDocument(mupdf.mupdf.ll_fz_document_handler_open(handler, _stream.m_internal, accel.m_internal, archive.m_internal, null));
+                                            }
+                                        }
+                                        catch (Exception)
+                                        {
+                                            throw new Exception(
+                                                Utils.ErrorMessages["MSG_BAD_DOCUMENT"]
+                                            );
+                                        }
+                                    }
+                                    else if (
+                                        mupdf.mupdf.FZ_VERSION_MAJOR >= 1
+                                        && mupdf.mupdf.FZ_VERSION_MINOR >= 24
+                                    )
+                                    {
+                                        Debug.Assert(false);
+                                        ///////////////////////// in less than version 1.24
+                                        /*data = mupdf.mupdf.fz_open_file(filename);
+                                        doc.m_internal = mupdf.mupdf.ll_fz_document_open_with_stream_fn_call(handler.open_with_stream, data.m_internal);*/
+                                    }
+                                }
+                                else
+                                {
+                                    throw new Exception(Utils.ErrorMessages["MSG_BAD_FILETYPE"]);
+                                }
                             }
                         }
+                        else
+                        {
+                            PdfDocument pdf = new PdfDocument();
+                            doc = new FzDocument(pdf);
+                        }
                     }
-                    else
-                    {
-                        PdfDocument pdf = new PdfDocument();
-                        doc = new FzDocument(pdf);
-                    }
+                    if (w > 0 && h > 0)
+                        doc.fz_layout_document(w, h, fontSize);
+                    else if (doc.fz_is_document_reflowable() != 0)
+                        doc.fz_layout_document(400, 600, 11);
+                    _nativeDocument = doc;
                 }
-                if (w > 0 && h > 0)
-                    doc.fz_layout_document(w, h, fontSize);
-                else if (doc.fz_is_document_reflowable() != 0)
-                    doc.fz_layout_document(400, 600, 11);
-                _nativeDocument = doc;
 
                 ThisOwn = true;
 
@@ -1318,7 +1327,11 @@ namespace MuPDF.NET
             if (Utils.INRANGE(pageId, 0, PageCount - 1) == false)
                 throw new Exception("document page count is not enough");
 
-            FzPage page = _nativeDocument.fz_load_page(pageId);
+            FzPage page;
+            lock (Utils.MuPDFLock)
+            {
+                page = _nativeDocument.fz_load_page(pageId);
+            }
             Page val = new Page(page, this);
 
             val.ThisOwn = true;
@@ -1342,7 +1355,11 @@ namespace MuPDF.NET
             if (IsClosed || IsEncrypted)
                 throw new Exception("document closed or encrypted");
 
-            FzPage page = _nativeDocument.fz_load_chapter_page(chapter, pagenum);
+            FzPage page;
+            lock (Utils.MuPDFLock)
+            {
+                page = _nativeDocument.fz_load_chapter_page(chapter, pagenum);
+            }
             Page val = new Page(page, this);
 
             val.ThisOwn = true;
@@ -6026,7 +6043,10 @@ namespace MuPDF.NET
             ResetPageRefs();
             IsClosed = true;
             GraftMaps = new Dictionary<int, GraftMap>();
-            _nativeDocument.Dispose();
+            lock (Utils.MuPDFLock)
+            {
+                _nativeDocument.Dispose();
+            }
             _nativeDocument = null;
         }
 

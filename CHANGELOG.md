@@ -1,5 +1,20 @@
 # Changelog
 
+### [3.2.16] - 2026-04-24
+- Added global `Utils.MuPDFLock` and synchronized MuPDF native calls for improved thread safety.
+- Improved Tesseract OCR stability in the `PDF4LLM` OCR pipeline and hardened OCR helper behavior.
+- Fixed a regression in Llama `LoadData` and added a new `TableExtract` demo sample.
+- Updated `PDF4LLM` package metadata and NuGet project files.
+
+### [3.2.15] - 2026-04-17
+- Migrated the helper package from `MuPDF.NET4LLM` to `PDF4LLM` and refreshed the package layout, demos, and documentation.
+- Added file-path overloads for `ToMarkdown`, `ToJson`, and `ToText` helpers.
+- Updated `PDF4LLM` package support for the latest MuPDF bindings and metadata.
+
+### [3.2.14] - 2026-03-23
+- Fixed issue #234 in page/text utilities and added a regression test in `UtilsTest`.
+- Minor `PDF4LLM` documentation and comment updates.
+
 ### [3.2.13] - 2026-03-18
 - Added **MuPDF.NET4LLM** as a separate NuGet package: LLM/RAG helpers for PDF-to-Markdown conversion, layout parsing, document structure analysis, and LlamaIndex integration. Install via `dotnet add package MuPDF.NET4LLM`; depends on MuPDF.NET.
 - Fixed `DocumentWriter` leak in `Story.WriteWithLinks` and `Story.WriteStabilizedWithLinks` (dispose via `using`).

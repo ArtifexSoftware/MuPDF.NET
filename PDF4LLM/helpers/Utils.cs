@@ -680,8 +680,47 @@ namespace PDF4LLM.Helpers
         /// <summary>
         /// Analyze the page for OCR decision
         /// </summary>
+        private static (float variance, float edgeEnergy) GetPixmapStats(Page sourcePage, Rect clip, int dpi = 72)
+        {
+            using (Pixmap pix = sourcePage.GetPixmap(clip: clip, dpi: dpi))
+            {
+                if (pix == null || pix.N < 1 || pix.W * pix.H == 0)
+                    return (0f, 0f);
+
+                byte[] samples = pix.SAMPLES;
+                if (samples == null || samples.Length == 0)
+                    return (0f, 0f);
+
+                int n = samples.Length;
+                double sum = 0;
+                for (int i = 0; i < n; i++)
+                    sum += samples[i];
+                double mean = sum / n;
+
+                double varAcc = 0;
+                for (int i = 0; i < n; i++)
+                {
+                    double d = samples[i] - mean;
+                    varAcc += d * d;
+                }
+                double variance = varAcc / n;
+
+                double edgeAcc = 0;
+                for (int i = 1; i < n; i++)
+                    edgeAcc += Math.Abs(samples[i] - samples[i - 1]);
+                double edge = edgeAcc / n;
+
+                return ((float)variance, (float)edge);
+            }
+        }
+
         public static Dictionary<string, object> AnalyzePage(Page page, List<Block> blocks = null)
         {
+            const float BAD_CHAR_THRESHOLD = 0.1f;
+            const float VEC_AREA_THRESHOLD = 0.05f;
+            const float IMG_VAR_THRESHOLD_HIGH = 50.0f;
+            const float IMG_EDGE_THRESHOLD_HIGH = 20.0f;
+
             int charsTotal = 0;
             int charsBad = 0;
             
@@ -703,6 +742,9 @@ namespace PDF4LLM.Helpers
             float txtArea = 0;
             float vecArea = 0;
             int ocrSpans = 0;
+            int vecSuspicious = 0;
+            float imgVarWeighted = 0;
+            float imgEdgeWeighted = 0;
             
             foreach (var b in blocks)
             {
@@ -718,6 +760,9 @@ namespace PDF4LLM.Helpers
                 {
                     imgRect = JoinRects(new List<Rect> { imgRect, bbox });
                     imgArea += area;
+                    var (varScore, edgeScore) = GetPixmapStats(page, bbox, dpi: 72);
+                    imgVarWeighted += varScore * area;
+                    imgEdgeWeighted += edgeScore * area;
                 }
                 else if (b.Type == 0) // Text block
                 {
@@ -744,7 +789,7 @@ namespace PDF4LLM.Helpers
                                         continue;
                                     
                                     if (span.Font == "GlyphLessFont"
-                                        || ((span.CharFlags & 8U) == 0 && (span.CharFlags & 16U) == 0))
+                                        || global::PDF4LLM.Ocr.TesseractApi.OcrText(span))
                                     {
                                         ocrSpans++;
                                         continue;
@@ -765,13 +810,12 @@ namespace PDF4LLM.Helpers
                 else if (
                     true
                     && b.Type == 3 // Vector block
-                    // && b.Stroked  // Note: Stroked and IsRect may not be available
-                    && 2 < bbox.Width && bbox.Width <= 20 // Width limit for typical characters
-                    && 2 < bbox.Height && bbox.Height <= 20 // Height limit for typical characters
-                    // && !b.IsRect  // Contains curves
+                    && 3 <= bbox.Width && bbox.Width <= 20 // Width limit for typical characters
+                    && 3 <= bbox.Height && bbox.Height <= 20 // Height limit for typical characters
                 )
                 {
                     // Potential character-like vector block
+                    vecSuspicious += 1;
                     vecRect = JoinRects(new List<Rect> { vecRect, bbox });
                     vecArea += area;
                 }
@@ -779,16 +823,33 @@ namespace PDF4LLM.Helpers
             
             // The rectangle on page covered by some content
             Rect covered = JoinRects(new List<Rect> { imgRect, txtRect, vecRect });
-            float coverArea = Math.Abs(covered.Width * covered.Height);
+            if (BboxIsEmpty(covered))
+            {
+                return new Dictionary<string, object>
+                {
+                    ["covered"] = covered,
+                    ["img_joins"] = 0f,
+                    ["img_area"] = 0f,
+                    ["txt_joins"] = 0f,
+                    ["txt_area"] = 0f,
+                    ["vec_joins"] = 0f,
+                    ["vec_area"] = 0f,
+                    ["chars_total"] = 0,
+                    ["chars_bad"] = 0,
+                    ["ocr_spans"] = 0,
+                    ["img_var"] = 0f,
+                    ["img_edges"] = 0f,
+                    ["vec_suspicious"] = 0,
+                    ["needs_ocr"] = false,
+                    ["reason"] = null,
+                };
+            }
 
-            bool needsOcr = false;
-            if (charsTotal > 0 && (float)charsBad / charsTotal > 0.1f)
-                needsOcr = true;
-            else if (ocrSpans > 0)
-                needsOcr = true;
+            float coverArea = Math.Abs((covered.X1 - covered.X0) * (covered.Y1 - covered.Y0));
+            float imgVar = (imgArea > 0 && coverArea > 0) ? (imgVarWeighted / imgArea) : 0f;
+            float imgEdges = (imgArea > 0 && coverArea > 0) ? (imgEdgeWeighted / imgArea) : 0f;
 
-            // The area-related float values are computed as fractions of the total covered area.
-            return new Dictionary<string, object>
+            var analysis = new Dictionary<string, object>
             {
                 ["covered"] = covered, // Page area covered by content
                 ["img_joins"] = coverArea > 0 ? Math.Abs(imgRect.Width * imgRect.Height) / coverArea : 0, // Fraction of area of the joined images
@@ -800,8 +861,24 @@ namespace PDF4LLM.Helpers
                 ["chars_total"] = charsTotal, // Count of visible characters
                 ["chars_bad"] = charsBad, // Count of Replacement Unicode characters
                 ["ocr_spans"] = ocrSpans, // Count: text spans with ignored text (render mode 3)
-                ["needs_ocr"] = needsOcr,
+                ["img_var"] = imgVar,
+                ["img_edges"] = imgEdges,
+                ["vec_suspicious"] = vecSuspicious,
             };
+
+            if (charsTotal > 0 && (float)charsBad / charsTotal > BAD_CHAR_THRESHOLD)
+                return new Dictionary<string, object>(analysis) { ["needs_ocr"] = true, ["reason"] = "chars_bad" };
+
+            if (ocrSpans > 0)
+                return new Dictionary<string, object>(analysis) { ["needs_ocr"] = true, ["reason"] = "ocr_spans" };
+
+            if (vecSuspicious > 3 && coverArea > 0 && (vecArea / coverArea) >= VEC_AREA_THRESHOLD)
+                return new Dictionary<string, object>(analysis) { ["needs_ocr"] = true, ["reason"] = "vec_text" };
+
+            if (imgArea > 0 && (imgVar > IMG_VAR_THRESHOLD_HIGH || imgEdges > IMG_EDGE_THRESHOLD_HIGH))
+                return new Dictionary<string, object>(analysis) { ["needs_ocr"] = true, ["reason"] = "img_text" };
+
+            return new Dictionary<string, object>(analysis) { ["needs_ocr"] = false, ["reason"] = null };
         }
     }
 }

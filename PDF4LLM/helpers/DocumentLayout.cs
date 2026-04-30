@@ -11,13 +11,13 @@ namespace PDF4LLM.Helpers
 {
     /// <summary>
     /// Optional hook for per-page OCR (<c>ocr_function</c>-style signature: page, dpi, language, keep OCR text).
-    /// When supplied and OCR runs, the callback is invoked and text is re-extracted from the page.
+    /// When supplied and OCR runs, the callback returns an OCR-generated <see cref="TextPage"/>.
     /// </summary>
     /// <param name="page">Page to OCR.</param>
     /// <param name="ocrDpi">Resolution hint (same role as <c>ocr_dpi</c> in the reference API).</param>
     /// <param name="ocrLanguage">Tesseract / engine language code.</param>
     /// <param name="keepOcrText">When <c>true</c>, preserve existing OCR text (<c>keep_ocr_text</c> flag).</param>
-    public delegate void OcrPageFunction(Page page, int ocrDpi, string ocrLanguage, bool keepOcrText);
+    public delegate TextPage OcrPageFunction(Page page, int ocrDpi, string ocrLanguage, bool keepOcrText);
 
     /// <summary>
     /// Layout box representing a content region on a page
@@ -1134,7 +1134,7 @@ namespace PDF4LLM.Helpers
             bool embedImages = false,
             bool showProgress = false,
             bool forceText = false,
-            bool useOcr = true,
+            bool useOcr = false,
             string ocrLanguage = "eng",
             bool forceOcr = false,
             bool keepOcrText = false,
@@ -1209,7 +1209,7 @@ namespace PDF4LLM.Helpers
                     try
                     {
                         page.RemoveRotation();
-
+                        
                         bool pageFullOcred = false;
                         bool pageTextOcred = false;
 
@@ -1238,17 +1238,23 @@ namespace PDF4LLM.Helpers
                             && pageAnalysis.TryGetValue("needs_ocr", out object n) && n is bool nb && nb)
                             runOcr = true;
 
-                        if (runOcr && ocrImpl != null)
+                        if (runOcr)
                         {
-                            ocrImpl(page, ocrDpi, ocrLanguage, keepOcrText: keepOcrTextRun);
                             textPage.Dispose();
-                            textPage = page.GetTextPage(
-                                clip: new Rect(float.NegativeInfinity, float.NegativeInfinity,
-                                    float.PositiveInfinity, float.PositiveInfinity),
-                                flags: Utils.FLAGS);
-                            pageInfo = textPage.ExtractDict(null, false);
-                            blocks = pageInfo.Blocks ?? new List<Block>();
-                            pageFullOcred = true;
+                            textPage = null;
+
+                            if (ocrImpl != null)
+                            {
+                                //TextPage tp = page.GetTextPageOcr((int)TextFlags.TEXT_PRESERVE_SPANS, dpi: ocrDpi, language: ocrLanguage, full: true);
+                                textPage = ocrImpl(page, ocrDpi, ocrLanguage, keepOcrText: keepOcrTextRun);
+                            }
+
+                            if (textPage != null)
+                            {
+                                pageInfo = textPage.ExtractDict(null, false);
+                                blocks = pageInfo.Blocks ?? new List<Block>();
+                                pageFullOcred = true;
+                            }
                         }
 
                         List<Block> fulltext = blocks.Where(b => b.Type == 0).ToList();

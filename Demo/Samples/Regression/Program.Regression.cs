@@ -1,3 +1,5 @@
+using System.Threading.Tasks;
+
 namespace Demo
 {
     internal partial class Program
@@ -16,6 +18,8 @@ namespace Demo
             page.Dispose();
             doc.Save("issue_234.pdf");
             doc.Close();
+
+            Console.WriteLine("Saved issue_234.pdf");
         }
 
         internal static void TestRecompressJBIG2()
@@ -35,6 +39,8 @@ namespace Demo
 
             doc.Save(@"e:\TestRecompressJBIG2.pdf");
             doc.Close();
+
+            Console.WriteLine("Saved e:\\TestRecompressJBIG2.pdf");
         }
 
         internal static void TestIssue1880()
@@ -164,5 +170,34 @@ namespace Demo
             //writer.Close();
         }
 
+        internal static void TestPixmapParallel()
+        {
+            const int iterations = 300;
+            const int degreeOfParallelism = 10;
+
+            var pdfPath = Path.Combine(@"..\..\..\TestDocuments\TestPdf1.pdf");
+            var pdf = File.ReadAllBytes(pdfPath);
+
+            Console.WriteLine($"MuPDF.NET parallel Pixmap.ToBytes repro");
+            Console.WriteLine($"PDF: {pdfPath}");
+            Console.WriteLine($"Iterations: {iterations}");
+            Console.WriteLine($"Degree of parallelism: {degreeOfParallelism}");
+            Console.WriteLine();
+
+            Parallel.ForEach(
+                Enumerable.Range(0, iterations),
+                new ParallelOptions { MaxDegreeOfParallelism = degreeOfParallelism },
+                iteration =>
+                {
+                    using var document = new Document(stream: pdf, fileType: "pdf");
+                    using var page = document[0];
+                    using var pixmap = page.GetPixmap(new Matrix(2, 2));
+
+                    var png = pixmap.ToBytes("png");
+                    Console.WriteLine($"Iteration {iteration + 1}: rendered {png.Length} bytes");
+                });
+
+            Console.WriteLine("Completed without crashing.");
+        }
     }
 }

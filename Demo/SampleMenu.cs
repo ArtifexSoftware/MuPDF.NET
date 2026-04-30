@@ -80,6 +80,7 @@ namespace Demo
             new("Regression & diagnostics", "issue-213", "Repro: drawing paths / line width", _ => Program.TestIssue213()),
             new("Regression & diagnostics", "issue-1880", "Repro: read Data Matrix barcodes", _ => Program.TestIssue1880()),
             new("Regression & diagnostics", "issue-234", "Repro: pixmap scale + insert image", _ => Program.TestIssue234()),
+            new("Regression & diagnostics", "pixmap-parallel", "Repro: parallel Pixmap.ToBytes rendering", _ => Program.TestPixmapParallel()),
             new("Regression & diagnostics", "jbig2", "Rewrite images with FAX recompression", _ => Program.TestRecompressJBIG2()),
         };
 

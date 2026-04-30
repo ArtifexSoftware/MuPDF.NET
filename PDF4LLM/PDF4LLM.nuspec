@@ -16,28 +16,28 @@
     <repository type="git" url="https://github.com/ArtifexSoftware/MuPDF.NET" />
     <dependencies>
       <group targetFramework=".NETFramework4.6.1">
-        <dependency id="MuPDF.NET" version="[3.2.14,)" exclude="Build,Analyzers" />
+        <dependency id="MuPDF.NET" version="[3.2.16,)" exclude="Build,Analyzers" />
       </group>
       <group targetFramework=".NETFramework4.7.2">
-        <dependency id="MuPDF.NET" version="[3.2.14,)" exclude="Build,Analyzers" />
+        <dependency id="MuPDF.NET" version="[3.2.16,)" exclude="Build,Analyzers" />
       </group>
       <group targetFramework=".NETFramework4.8">
-        <dependency id="MuPDF.NET" version="[3.2.14,)" exclude="Build,Analyzers" />
+        <dependency id="MuPDF.NET" version="[3.2.16,)" exclude="Build,Analyzers" />
       </group>
       <group targetFramework="net5.0">
-        <dependency id="MuPDF.NET" version="[3.2.14,)" exclude="Build,Analyzers" />
+        <dependency id="MuPDF.NET" version="[3.2.16,)" exclude="Build,Analyzers" />
       </group>
       <group targetFramework="net6.0">
-        <dependency id="MuPDF.NET" version="[3.2.14,)" exclude="Build,Analyzers" />
+        <dependency id="MuPDF.NET" version="[3.2.16,)" exclude="Build,Analyzers" />
       </group>
       <group targetFramework="net7.0">
-        <dependency id="MuPDF.NET" version="[3.2.14,)" exclude="Build,Analyzers" />
+        <dependency id="MuPDF.NET" version="[3.2.16,)" exclude="Build,Analyzers" />
       </group>
       <group targetFramework="net8.0">
-        <dependency id="MuPDF.NET" version="[3.2.14,)" exclude="Build,Analyzers" />
+        <dependency id="MuPDF.NET" version="[3.2.16,)" exclude="Build,Analyzers" />
       </group>
       <group targetFramework=".NETStandard2.0">
-        <dependency id="MuPDF.NET" version="[3.2.14,)" exclude="Build,Analyzers" />
+        <dependency id="MuPDF.NET" version="[3.2.16,)" exclude="Build,Analyzers" />
       </group>
     </dependencies>
   </metadata>

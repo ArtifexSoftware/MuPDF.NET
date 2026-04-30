@@ -1,4 +1,6 @@
-﻿namespace Demo
+﻿using System.Threading.Tasks;
+
+namespace Demo
 {
     /// <summary>
     /// GitHub samples entry point. With no arguments, all samples run; see <see cref="SampleMenu"/>.
