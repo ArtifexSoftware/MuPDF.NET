@@ -1,0 +1,84 @@
+# MuPDF.NET
+
+> MuPDF.NET is a high-performance C# library for data extraction, analysis, conversion & manipulation of PDF (and other) documents. It is the official .NET binding for MuPDF from Artifex Software, derived from PyMuPDF and closely following its structure.
+
+MuPDF.NET is available under the Artifex Community License and commercial license agreements.
+
+- NuGet: https://www.nuget.org/packages/MuPDF.NET/
+- GitHub: https://github.com/ArtifexSoftware/MuPDF.NET
+- Discord: https://artifex.com/discord/artifex
+- Forum: https://forum.mupdf.com
+
+## Documentation
+
+### Getting Started
+
+- [Getting Started](https://mupdfnet.readthedocs.io/en/latest/getting-started/index.html): Prerequisites, installation via NuGet, building from source, Adobe PDF References, license info
+
+### The Basics
+
+- [The Basics](https://mupdfnet.readthedocs.io/en/latest/the-basics/index.html): Practical how-to guide covering:
+  - Supported File Types
+  - Opening a File
+  - Extract text from a PDF
+  - Extract images from a PDF
+  - Extract vector graphics
+  - Merging PDF files
+  - Adding a watermark to a PDF
+  - Adding text to a PDF
+  - Adding an image to a PDF
+  - Converting a PDF page to an image
+  - Converting from an image to a PDF
+  - Extracting & Drawing vector graphics
+  - Rotating a PDF
+  - Cropping a PDF
+  - Attaching Files / Embedding Files
+  - Deleting, Re-Arranging, Copying, Selecting Pages
+  - Adding Blank Pages
+  - Inserting Pages with Text Content
+  - Splitting / Combining Single Pages
+  - PDF Encryption & Decryption
+  - Getting Page Links
+  - Getting All Annotations from a Document
+  - Redacting content from a PDF
+  - Working with Barcodes (Reading & Writing)
+  - Using Image Filters
+
+### API Reference — Classes
+
+- [Classes index](https://mupdfnet.readthedocs.io/en/latest/classes/index.html)
+- [Annot](https://mupdfnet.readthedocs.io/en/latest/classes/Annot.html): PDF annotations — create, modify, delete, set colours/icons/quads/contents
+- [Archive](https://mupdfnet.readthedocs.io/en/latest/classes/Archive.html): Archive (zip/tar) access
+- [Barcode](https://mupdfnet.readthedocs.io/en/latest/classes/Barcode.html): Barcode creation and reading; BarcodeFormat enum
+- [ColorSpace](https://mupdfnet.readthedocs.io/en/latest/classes/ColorSpace.html): Colour space objects (RGB, GRAY, CMYK)
+- [DisplayList](https://mupdfnet.readthedocs.io/en/latest/classes/DisplayList.html): Pre-rendered page display list for efficient re-use
+- [Document](https://mupdfnet.readthedocs.io/en/latest/classes/Document.html): Core class — open, save, encrypt, manipulate pages, TOC, metadata, embedded files, optional content, journalling
+- [DocumentWriter](https://mupdfnet.readthedocs.io/en/latest/classes/DocumentWriter.html): Write pages to new documents (PDF, SVG, etc.)
+- [Font](https://mupdfnet.readthedocs.io/en/latest/classes/Font.html): Font objects for TextWriter; glyph info, font bbox
+- [IdentityMatrix](https://mupdfnet.readthedocs.io/en/latest/classes/IdentityMatrix.html): The identity transformation matrix
+- [ImageFilter](https://mupdfnet.readthedocs.io/en/latest/classes/ImageFilter.html): Apply filters to images
+- [ImageFilterPipeline](https://mupdfnet.readthedocs.io/en/latest/classes/ImageFilterPipeline.html): Chain multiple image filters
+- [IRect](https://mupdfnet.readthedocs.io/en/latest/classes/IRect.html): Integer rectangle
+- [Link](https://mupdfnet.readthedocs.io/en/latest/classes/Link.html): Page link objects (internal/external)
+- [Matrix](https://mupdfnet.readthedocs.io/en/latest/classes/Matrix.html): Transformation matrix for rotation, scaling, translation
+- [Outline](https://mupdfnet.readthedocs.io/en/latest/classes/Outline.html): Table of contents / bookmark tree node
+- [Page](https://mupdfnet.readthedocs.io/en/latest/classes/Page.html): Page class — render, extract text, annotations, links, widgets, drawing
+- [Pixmap](https://mupdfnet.readthedocs.io/en/latest/classes/Pixmap.html): Raster image data; supported input/output image formats
+- [Point](https://mupdfnet.readthedocs.io/en/latest/classes/Point.html): 2D point (x, y)
+- [Quad](https://mupdfnet.readthedocs.io/en/latest/classes/Quad.html): Quadrilateral (4 Points) for text highlighting
+- [Rect](https://mupdfnet.readthedocs.io/en/latest/classes/Rect.html): Rectangle defined by (x0, y0, x1, y1)
+- [Shape](https://mupdfnet.readthedocs.io/en/latest/classes/Shape.html): PDF-only — interconnected graphical elements on a page
+- [Story](https://mupdfnet.readthedocs.io/en/latest/classes/Story.html): HTML/CSS-based content layout engine; element positioning callback
+- [TextPage](https://mupdfnet.readthedocs.io/en/latest/classes/TextPage.html): Internal text extraction structure; structured output formats
+- [TextWriter](https://mupdfnet.readthedocs.io/en/latest/classes/TextWriter.html): Write text to a PDF page with a Font object
+- [Widget](https://mupdfnet.readthedocs.io/en/latest/classes/Widget.html): PDF form fields; standard fonts; supported widget types
+- [Xml](https://mupdfnet.readthedocs.io/en/latest/classes/Xml.html): DOM helper for Story objects; text properties; context manager support
+
+### API Reference — Other
+
+- [Utils](https://mupdfnet.readthedocs.io/en/latest/glossary/Utils.html): Miscellaneous utility functions — PaperSize, PaperRect, colour conversion, glyph utilities, GetTables, ReadBarcodes, WriteBarcode, and more
+- [Constants and Enumerations](https://mupdfnet.readthedocs.io/en/latest/glossary/vars.html): ColorSpace constants, Document Permissions, PDF Optional Content codes, encryption methods, font file extensions, inbuilt fonts, text alignment, text extraction flags, link destination kinds/flags, annotation constants, widget constants, blend modes, stamp annotation icons
+
+### Migration
+
+- [Migrating from ByteScout SDK](https://mupdfnet.readthedocs.io/en/latest/migration/bytescout/index.html): Side-by-side equivalents for setup, loading documents, extracting text, converting pages to images

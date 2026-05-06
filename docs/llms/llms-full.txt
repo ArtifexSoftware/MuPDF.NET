@@ -1,0 +1,872 @@
+# MuPDF.NET
+
+> MuPDF.NET is a high-performance C# library for data extraction, analysis, conversion & manipulation of PDF (and other) documents. It is the official .NET binding for MuPDF from Artifex Software, derived from PyMuPDF and closely following its structure.
+
+MuPDF.NET is available under the Artifex Community License and commercial license agreements.
+
+- NuGet: https://www.nuget.org/packages/MuPDF.NET/
+- GitHub: https://github.com/ArtifexSoftware/MuPDF.NET
+- Discord: https://artifex.com/discord/artifex
+- Forum: https://forum.mupdf.com
+
+> **Note:** MuPDF.NET is derived from PyMuPDF and closely follows its structure. For most PyMuPDF classes, features and functions you will find a respective MuPDF.NET object doing the same thing. Note that object names differ between the two libraries.
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- Microsoft Visual Studio 2019 or later
+- .NET (Windows)
+
+### Installation via NuGet
+
+Add the MuPDF.NET package from NuGet to your project. Then reference it in your C# source:
+
+```csharp
+using MuPDF.NET;
+```
+
+### Hello World Example
+
+```csharp
+using MuPDF.NET;
+
+Document doc = new Document();
+Page page = doc.NewPage();
+string text = "Made with MuPDF.NET";
+
+MuPDF.NET.Font font = new MuPDF.NET.Font("helv"); // Helvetica
+MuPDF.NET.TextWriter tw = new MuPDF.NET.TextWriter(page.Rect);
+tw.Append(new(50, 100), text, font);
+tw.WriteText(page);
+doc.Save("hello_world.pdf");
+```
+
+### Building from Source
+
+1. Clone the GitHub project: https://github.com/ArtifexSoftware/MuPDF.NET
+2. Open `MuPDF.NET.sln` in Visual Studio
+3. Set: Release, x64, Build
+4. Results: `MuPDF.NET.dll` and `Demo.exe`
+5. Required DLLs: `mupdfcpp64.dll` and `mupdfcsharp.dll` (must be in same folder as your project)
+
+### Adobe PDF Reference
+
+The Adobe PDF Reference manual is frequently cited throughout the documentation. Available at: https://opensource.adobe.com/dc-acrobat-sdk-docs/standards/pdfstandards/pdf/PDF32000_2008.pdf
+
+---
+
+## The Basics — Common Tasks
+
+### Supported File Types
+
+MuPDF.NET supports PDF, XPS, EPUB, FB2, CBZ, SVG, and common raster image formats (PNG, JPEG, BMP, GIF, TIFF, etc.).
+
+### Opening a File
+
+```csharp
+// From file
+Document doc = new Document("sample.pdf");
+
+// From memory
+byte[] data = File.ReadAllBytes("sample.pdf");
+Document doc = new Document(stream: data, filetype: "pdf");
+
+// New empty PDF
+Document doc = new Document();
+```
+
+### Extract Text from a PDF
+
+```csharp
+Document doc = new Document("sample.pdf");
+Page page = doc[0];
+string text = page.GetText("text");
+Console.WriteLine(text);
+
+// As blocks
+foreach (var block in page.GetTextBlocks())
+    Console.WriteLine(block.Text);
+```
+
+### Extract Images from a PDF
+
+```csharp
+Document doc = new Document("sample.pdf");
+var images = doc.GetPageImages(0);
+foreach (var img in images)
+{
+    var extracted = doc.ExtractImage(img.Xref);
+    File.WriteAllBytes($"image.{extracted["ext"]}", (byte[])extracted["image"]);
+}
+```
+
+### Extract Vector Graphics
+
+```csharp
+Page page = doc[0];
+var paths = page.GetDrawings();
+```
+
+### Merging PDF Files
+
+```csharp
+Document target = new Document();
+Document src1 = new Document("file1.pdf");
+Document src2 = new Document("file2.pdf");
+target.InsertPdf(src1);
+target.InsertPdf(src2);
+target.Save("merged.pdf");
+```
+
+### Adding a Watermark to a PDF
+
+```csharp
+Document doc = new Document("input.pdf");
+for (int i = 0; i < doc.PageCount; i++)
+{
+    Page page = doc[i];
+    // Use page.InsertText() or page.InsertImage() to add watermark content
+}
+doc.Save("watermarked.pdf");
+```
+
+### Adding Text to a PDF
+
+```csharp
+Document doc = new Document("input.pdf");
+Page page = doc[0];
+MuPDF.NET.Font font = new MuPDF.NET.Font("helv");
+TextWriter tw = new TextWriter(page.Rect);
+tw.Append(new Point(50, 100), "Hello!", font);
+tw.WriteText(page);
+doc.Save("output.pdf");
+```
+
+### Adding an Image to a PDF
+
+```csharp
+Page page = doc[0];
+Rect rect = new Rect(100, 100, 300, 300);
+page.InsertImage(rect, filename: "image.png");
+doc.Save("output.pdf");
+```
+
+### Converting a PDF Page to an Image
+
+```csharp
+Document doc = new Document("sample.pdf");
+Page page = doc[0];
+Matrix mat = new Matrix(2, 2); // 2x zoom = 144 DPI
+Pixmap pix = page.GetPixmap(matrix: mat);
+pix.Save("page.png");
+```
+
+### Converting from an Image to a PDF
+
+```csharp
+Document doc = new Document();
+doc.InsertFile("photo.jpg"); // Appends image as a full page
+doc.Save("output.pdf");
+```
+
+### Rotating a PDF
+
+```csharp
+Page page = doc[0];
+page.SetRotation(90); // 90, 180, 270
+doc.Save("rotated.pdf");
+```
+
+### Cropping a PDF
+
+```csharp
+Page page = doc[0];
+Rect cropRect = new Rect(50, 50, 400, 600);
+page.SetCropBox(cropRect);
+doc.Save("cropped.pdf");
+```
+
+### Attaching and Embedding Files
+
+```csharp
+// Attach file to whole document
+doc.AddEmbfile("attachment.txt", File.ReadAllBytes("attachment.txt"),
+    filename: "attachment.txt", desc: "My attached file");
+
+// Retrieve embedded files
+int count = doc.GetEmbfileCount();
+byte[] content = doc.GetEmbfile(0);
+```
+
+### Deleting Pages
+
+```csharp
+doc.DeletePage(0);               // Delete page 0
+doc.DeletePages(2, 5);           // Delete pages 2 through 5
+doc.DeletePages(new List<int>{ 1, 3, 7 }); // Delete specific pages
+```
+
+### Re-Arranging and Copying Pages
+
+```csharp
+doc.MovePage(3, to: 0);          // Move page 3 to front
+doc.CopyPage(0, to: -1);         // Copy page 0 to end
+doc.CopyFullPage(0, to: 1);      // Full duplicate of page 0 inserted at position 1
+```
+
+### Selecting a Subset of Pages
+
+```csharp
+// Keep only pages 0, 2, 4 (even pages)
+doc.Select(new List<int> { 0, 2, 4 });
+doc.Save("even_pages.pdf");
+```
+
+### Adding Blank Pages
+
+```csharp
+Page page = doc.NewPage(-1, width: 595, height: 842); // A4
+```
+
+### Inserting Pages with Text Content
+
+```csharp
+doc.InsertPage(0, text: "Cover page", fontName: "helv", fontFile: null, fontSize: 24);
+```
+
+### Splitting Single Pages
+
+```csharp
+// Split page 0 into left and right halves
+Page page = doc[0];
+Rect full = page.Rect;
+Rect left = new Rect(full.X0, full.Y0, full.X1 / 2, full.Y1);
+Rect right = new Rect(full.X1 / 2, full.Y0, full.X1, full.Y1);
+// Use SetCropBox on copies for each half
+```
+
+### PDF Encryption & Decryption
+
+```csharp
+// Save with encryption
+doc.Save("secure.pdf",
+    encryption: PDF_ENCRYPT_AES_256,
+    ownerPW: "ownerpass",
+    userPW: "userpass",
+    permissions: PDF_PERM_PRINT | PDF_PERM_COPY);
+
+// Authenticate an encrypted document
+Document doc = new Document("secure.pdf");
+if (doc.NeedsPass)
+    doc.Authenticate("userpass");
+```
+
+### Getting Page Links
+
+```csharp
+Page page = doc[0];
+List<Link> links = page.GetLinks();
+foreach (var link in links)
+    Console.WriteLine(link.Uri);
+```
+
+### Getting All Annotations from a Document
+
+```csharp
+for (int i = 0; i < doc.PageCount; i++)
+{
+    Page page = doc[i];
+    foreach (var annot in page.GetAnnots())
+        Console.WriteLine($"Page {i}: {annot.Type} - {annot.Info["content"]}");
+}
+```
+
+### Redacting Content from a PDF
+
+```csharp
+Page page = doc[0];
+Rect redactRect = new Rect(100, 200, 300, 220);
+page.AddRedactAnnot(redactRect);
+page.ApplyRedactions(); // Permanently removes content
+doc.Save("redacted.pdf");
+```
+
+### Working with Barcodes
+
+```csharp
+// Reading barcodes
+Page page = doc[0];
+var barcodes = Utils.ReadBarcodes(page);
+foreach (var bc in barcodes)
+    Console.WriteLine($"{bc.Format}: {bc.Value}");
+
+// Writing a barcode
+Pixmap barcodePixmap = Utils.GetBarcodePixmap("Hello World", BarcodeFormat.QR_CODE, 200, 200);
+page.InsertImage(new Rect(50, 50, 250, 250), pixmap: barcodePixmap);
+```
+
+### Using Image Filters
+
+```csharp
+ImageFilter filter = new ImageFilter(ImageFilter.GRAYSCALE);
+ImageFilterPipeline pipeline = new ImageFilterPipeline();
+pipeline.Add(filter);
+// Apply to pixmaps
+```
+
+---
+
+## API Reference
+
+### Document Class
+
+`Document` is the core class. It can be constructed from a file or from memory.
+
+```csharp
+// From file
+Document doc = new Document("some.pdf");
+
+// Handle wrong extension
+doc = new Document("some.file", filetype: "xps");
+
+// From memory (filetype required if not PDF)
+doc = new Document(stream: memArea, filetype: "xps");
+
+// New empty PDF
+doc = new Document();
+```
+
+**Constructor parameters:**
+- `filename` (string): file path; document type inferred from extension
+- `stream` (byte[]): memory area with document content
+- `filetype` (string): e.g. "pdf", "xps", "application/pdf"
+- `rect` (Rect): page size for reflowable documents (EPUB, HTML)
+- `width`/`height` (float): alternative to rect for reflowable layout
+- `fontSize` (float): default font size for reflowable documents
+
+#### Key Document Methods
+
+| Method | Description |
+|---|---|
+| `Document.LoadPage(int pageId)` | Load a Page object (0-based, or negative to count from end) |
+| `Document.NewPage(int pno, float width, float height)` | Insert a new empty page |
+| `Document.InsertPage(int pno, string text, ...)` | Insert page with text content |
+| `Document.DeletePage(int pno)` | Delete a page |
+| `Document.DeletePages(...)` | Delete multiple pages |
+| `Document.CopyPage(int pno, int to)` | Copy a page reference |
+| `Document.CopyFullPage(int pno, int to)` | Duplicate a page (new xref) |
+| `Document.MovePage(int pno, int to)` | Move a page |
+| `Document.Select(List<int> list)` | Keep only listed page numbers |
+| `Document.InsertPdf(Document docsrc, ...)` | Insert pages from another PDF |
+| `Document.InsertFile(string infile, ...)` | Insert pages from any supported document |
+| `Document.Save(string filename, ...)` | Save the PDF to file |
+| `Document.SaveIncremental()` | Save changes incrementally |
+| `Document.ToBytes(...)` | Write to byte array |
+| `Document.Write()` | Write to byte array (alias) |
+| `Document.Convert2Pdf(...)` | Convert any document to PDF in memory |
+| `Document.Authenticate(string password)` | Decrypt with password |
+| `Document.GetToc(bool simple)` | Get table of contents list |
+| `Document.SetToc(List<Toc> tocs, int collapse)` | Replace full TOC |
+| `Document.SetTocItem(int idx, ...)` | Update a single TOC entry |
+| `Document.DeleteTocItem(int idx)` | Remove a TOC item |
+| `Document.GetMetadata(string key)` | Get metadata value |
+| `Document.SetMetadata(Dictionary m)` | Set metadata |
+| `Document.GetXmlMetadata()` | Get XML metadata |
+| `Document.SetXmlMetaData(string metadata)` | Set XML metadata |
+| `Document.DeleteXmlMetadata()` | Delete XML metadata |
+| `Document.GetPageText(int pno, ...)` | Extract page text by page number |
+| `Document.GetPagePixmap(int pno, ...)` | Get page pixmap by page number |
+| `Document.GetPageImages(int pno, ...)` | List images referenced by a page |
+| `Document.GetPageFonts(int pno, ...)` | List fonts referenced by a page |
+| `Document.GetPageXObjects(int pno)` | List XObjects referenced by a page |
+| `Document.SearchPageFor(int pno, string text, ...)` | Search for text on a page |
+| `Document.AddEmbfile(string name, byte[] buffer, ...)` | Embed a new file |
+| `Document.GetEmbfile(int item)` | Retrieve embedded file content |
+| `Document.GetEmbfileInfo(dynamic item)` | Metadata of embedded file |
+| `Document.GetEmbfileCount()` | Count of embedded files |
+| `Document.GetEmbfileNames()` | List of embedded file names |
+| `Document.DeleteEmbfile(string item)` | Remove embedded file |
+| `Document.Scrub(...)` | Remove sensitive data |
+| `Document.Bake(bool annots, bool widgets)` | Convert annotations/widgets to page content |
+| `Document.SetPageMode(string value)` | Set PDF PageMode |
+| `Document.SetPageLayout(string value)` | Set PDF PageLayout |
+| `Document.SetMarkInfo(Dictionary value)` | Set MarkInfo (tagged PDF) |
+| `Document.SetPageLabels(string labels)` | Add/update page label definitions |
+| `Document.GetPageLabels()` | Get page label definitions |
+| `Document.GetPageNumbers(string label, ...)` | Get page numbers matching a label |
+| `Document.ResolveNames()` | Convert destination names to dict |
+| `Document.ExtractFont(...)` | Extract a font by xref |
+| `Document.ExtractImage(...)` | Extract an embedded image by xref |
+| `Document.Recolor(int pageNum, ...)` | Recolor a page (GRAY/RGB/CMYK) |
+| `Document.GetPages(int start, int stop, int step)` | Iterator over page range |
+| `Document.AddOcg(...)` | Add optional content group |
+| `Document.AddLayer(...)` | Add optional content layer config |
+| `Document.SetLayer(...)` | Permanently set OCG states |
+| `Document.SetLayerUIConfig(...)` | Temporarily change OCG visibility |
+| `Document.SetOCMD(...)` | Create/update Optional Content Membership Dictionary |
+| `Document.JournalEnable()` | Enable journalling |
+| `Document.JournalStartOp(...)` | Start a journalled operation |
+| `Document.JournalStopOp()` | End a journalled operation |
+| `Document.JournalUndo()` | Undo last operation |
+| `Document.JournalRedo()` | Redo last undone operation |
+| `Document.SubsetFonts()` | Create font subsets |
+| `Document.CanSaveIncrementally()` | Check if incremental save is possible |
+
+#### Key Document Attributes
+
+| Attribute | Description |
+|---|---|
+| `Document.PageCount` | Number of pages |
+| `Document.IsClosed` | Whether document is closed |
+| `Document.IsDirty` | Whether document has unsaved changes |
+| `Document.IsEncrypted` | Whether document is still encrypted |
+| `Document.IsPDF` | Whether this is a PDF |
+| `Document.IsFormPDF` | Whether this is a Form PDF |
+| `Document.IsReflowable` | Whether this is reflowable (EPUB, HTML) |
+| `Document.IsRepaired` | Whether this PDF was repaired on open |
+| `Document.NeedsPass` | Whether a password is required |
+| `Document.MetaData` | Document metadata dictionary |
+| `Document.Name` | Document filename |
+| `Document.Outline` | First Outline item |
+| `Document.Permissions` | Access permissions |
+| `Document.PageMode` | PDF PageMode value |
+| `Document.PageLayout` | PDF PageLayout value |
+
+#### Document.Save() Options
+
+- `garbage` (0–4): remove unreferenced objects, compact xref, merge duplicates, deduplicate streams
+- `clean`: sanitise content streams
+- `deflate`: compress streams
+- `incremental`: only save changes (incompatible with garbage/linear)
+- `linear`: linearise for web access
+- `pretty`: prettify source for readability
+- `encryption`: `PDF_ENCRYPT_NONE`, `PDF_ENCRYPT_RC4_40`, `PDF_ENCRYPT_RC4_128`, `PDF_ENCRYPT_AES_128`, `PDF_ENCRYPT_AES_256`
+- `ownerPW` / `userPW`: password strings (max 40 chars)
+- `useObjstms`: compress eligible objects into streams (significant size reduction)
+
+#### Document.Authenticate() Return Codes
+
+- `1`: authenticated, no owner/user passwords in PDF
+- `2`: authenticated with user password
+- `4`: authenticated with owner password
+- `6`: authenticated, both passwords are equal
+
+#### Document.Scrub() Parameters
+
+All are `bool` and default to `true` unless noted:
+- `attachedFiles`: remove FileAttachment annotation content
+- `cleanPages`: remove comments from page painting sources
+- `embeddedFiles`: remove embedded files
+- `hiddenText`: remove OCR'd and invisible text
+- `javascript`: remove JavaScript
+- `metadata`: remove standard PDF metadata
+- `redactions`: apply redaction annotations
+- `redactImages` (int, default 0): 0=ignore, 1=blank overlap, 2=remove
+- `removeLinks`: remove all links
+- `resetFields`: reset form fields to defaults
+- `resetResponses`: remove annotation responses
+- `thumbnails`: remove thumbnail images
+- `xmlMetadata`: remove XML metadata
+
+---
+
+### Page Class
+
+`Page` objects are created by `Document.LoadPage()` or `doc[n]`. There is a parent-child relationship: if the document is closed, all Page objects become orphaned.
+
+**Key Page Methods** (see https://mupdfnet.readthedocs.io/en/latest/classes/Page.html for full reference):
+
+| Method | Description |
+|---|---|
+| `Page.GetPixmap(Matrix matrix, ...)` | Render page to a Pixmap |
+| `Page.GetText(string option, ...)` | Extract text ("text", "blocks", "words", "dict", "rawdict", "html", "xhtml", "xml", "json") |
+| `Page.GetTextBlocks(...)` | Extract text as list of blocks |
+| `Page.GetTextWords(...)` | Extract text as list of words |
+| `Page.SearchFor(string text, ...)` | Search for text, returns list of Quads/Rects |
+| `Page.GetLinks()` | Get list of links |
+| `Page.InsertLink(Link lnk)` | Insert a new link |
+| `Page.UpdateLink(Link lnk)` | Update a link |
+| `Page.DeleteLink(Link lnk)` | Delete a link |
+| `Page.GetAnnots(string annotType)` | Get annotations |
+| `Page.AddHighlightAnnot(...)` | Add highlight annotation |
+| `Page.AddUnderlineAnnot(...)` | Add underline annotation |
+| `Page.AddStrikeoutAnnot(...)` | Add strikeout annotation |
+| `Page.AddSquigglyAnnot(...)` | Add squiggly underline |
+| `Page.AddTextAnnot(...)` | Add text (sticky note) annotation |
+| `Page.AddFreeTextAnnot(...)` | Add free text annotation |
+| `Page.AddRectAnnot(...)` | Add rectangle annotation |
+| `Page.AddLineAnnot(...)` | Add line annotation |
+| `Page.AddPolylineAnnot(...)` | Add polyline annotation |
+| `Page.AddPolygonAnnot(...)` | Add polygon annotation |
+| `Page.AddInkAnnot(...)` | Add ink annotation |
+| `Page.AddStampAnnot(...)` | Add stamp annotation |
+| `Page.AddRedactAnnot(...)` | Add redaction annotation |
+| `Page.AddFileAnnot(...)` | Add file attachment annotation |
+| `Page.ApplyRedactions()` | Apply all redaction annotations |
+| `Page.InsertText(...)` | Insert text at a point |
+| `Page.InsertTextbox(...)` | Insert text into a rectangle |
+| `Page.InsertImage(Rect rect, ...)` | Insert an image |
+| `Page.InsertFont(...)` | Insert a font resource |
+| `Page.DrawLine(...)` | Draw a line |
+| `Page.DrawRect(...)` | Draw a rectangle |
+| `Page.DrawCircle(...)` | Draw a circle |
+| `Page.DrawBezier(...)` | Draw a Bezier curve |
+| `Page.DrawOval(...)` | Draw an oval |
+| `Page.ShowPdfPage(...)` | Display another PDF page on this one |
+| `Page.GetDisplayList(...)` | Create a DisplayList |
+| `Page.GetDrawings()` | Get vector graphics paths |
+| `Page.GetFonts(...)` | List fonts used on this page |
+| `Page.GetImageBbox(...)` | Get bounding box of an image |
+| `Page.GetImageInfo(...)` | Get info on images actually displayed |
+| `Page.GetWidgets()` | Get form fields on this page |
+| `Page.SetRotation(int rotate)` | Set page rotation |
+| `Page.SetCropBox(Rect rect)` | Set crop box |
+| `Page.SetMediaBox(Rect rect)` | Set media box |
+| `Page.SetBleedBox(Rect rect)` | Set bleed box |
+| `Page.SetTrimBox(Rect rect)` | Set trim box |
+| `Page.SetArtBox(Rect rect)` | Set art box |
+| `Page.WriteText(...)` | Write TextWriter content to page |
+
+**Key Page Properties:**
+
+| Property | Description |
+|---|---|
+| `Page.Rect` | Page rectangle |
+| `Page.MediaBox` | Media box |
+| `Page.CropBox` | Crop box |
+| `Page.Rotation` | Page rotation (0, 90, 180, 270) |
+| `Page.Number` | Page number (0-based) |
+| `Page.TransformationMatrix` | Transformation matrix for coordinate conversion |
+
+---
+
+### Pixmap Class
+
+Pixmap objects contain raster image data.
+
+**Supported input image formats:** PNG, JPEG, BMP, GIF, TIFF, PNM, PGM, PBM, PPM, PAM, JBIG2, JXR, JPX, and more.
+
+**Supported output image formats:** PNG, JPEG, PNM, PGM, PBM, PPM, PAM, PSD, PS, PDF (single page).
+
+Key methods:
+- `Pixmap.Save(string filename)` — save to file
+- `Pixmap.ToBitmap()` — convert to .NET Bitmap
+- `Pixmap.Samples` — raw pixel data as byte array
+- `Pixmap.Width`, `Pixmap.Height` — dimensions
+- `Pixmap.N` — number of components per pixel
+- `Pixmap.Colorspace` — ColorSpace of the pixmap
+
+---
+
+### Rect Class
+
+Rectangle defined by `(x0, y0, x1, y1)` as two diagonally opposite points. `(x0, y0)` is the "top-left" and `(x1, y1)` is the "bottom-right" — but these may not match intuitive meanings in all coordinate systems.
+
+---
+
+### Shape Class
+
+PDF only. Allows creating interconnected graphical elements on a PDF page. Methods mirror the corresponding `Page` drawing methods but are committed together on `Shape.Commit()`.
+
+Usage pattern:
+```csharp
+Shape shape = page.NewShape();
+shape.DrawRect(new Rect(10, 10, 100, 100));
+shape.Finish(color: new float[]{1,0,0}, fill: new float[]{0,1,0}, width: 2);
+shape.Commit();
+```
+
+---
+
+### TextWriter Class
+
+Used to write text content to a PDF page using a `Font` object.
+
+```csharp
+TextWriter tw = new TextWriter(page.Rect, opacity: 1.0f, color: new float[]{0,0,0});
+tw.Append(new Point(50, 100), "Hello World", font, fontSize: 12);
+tw.WriteText(page);
+```
+
+---
+
+### Font Class
+
+Represents a font for use with `TextWriter` and `Page.WriteText()`. Not connected to how fonts are used in `Page.InsertText()` or `Page.InsertTextbox()`.
+
+```csharp
+MuPDF.NET.Font font = new MuPDF.NET.Font("helv"); // Helvetica
+MuPDF.NET.Font font = new MuPDF.NET.Font("");     // Noto Serif Regular (default)
+```
+
+Provides: font bbox, glyph count, glyph names, glyph bbox.
+
+---
+
+### Story Class
+
+HTML/CSS-based content layout engine. Used to lay out text and images into a document.
+
+- Access the DOM via `Story.Body` (an Xml node)
+- Element positioning via a callback function
+- See: https://mupdfnet.readthedocs.io/en/latest/classes/Story.html
+
+---
+
+### Barcode Class
+
+```csharp
+// Class-based access
+Barcode bc = new Barcode();
+
+// Utility functions (also available via Utils)
+var barcodes = Utils.ReadBarcodes(page);
+Pixmap barcodePixmap = Utils.GetBarcodePixmap("content", BarcodeFormat.QR_CODE, 200, 200);
+```
+
+**BarcodeFormat** enum includes: QR_CODE, CODE_128, CODE_39, EAN_13, EAN_8, PDF_417, DATA_MATRIX, AZTEC, and others.
+
+---
+
+### Matrix Class
+
+A transformation matrix for geometric operations.
+
+```csharp
+Matrix identity = new IdentityMatrix();       // No transformation
+Matrix scaled = new Matrix(2, 2);             // 2x scale (144 DPI from 72 DPI base)
+Matrix rotated = new Matrix(45);              // 45° rotation
+Matrix translated = new Matrix(1, 0, 0, 1, 10, 20); // Translate by (10, 20)
+```
+
+---
+
+### ImageFilter and ImageFilterPipeline Classes
+
+Apply transformations to images:
+- `ImageFilter.GRAYSCALE` — convert to grayscale
+- `ImageFilter.ROTATE_90`, `ROTATE_180`, `ROTATE_270`
+- Chain filters: `ImageFilterPipeline.Add(filter)`
+
+---
+
+## Constants and Enumerations
+
+### ColorSpace Constants
+
+```csharp
+ColorSpace csRGB  = ColorSpace(Utils.CS_RGB);   // CS_RGB = 1
+ColorSpace csGRAY = ColorSpace(Utils.CS_GRAY);  // CS_GRAY = 2
+ColorSpace csCMYK = ColorSpace(Utils.CS_CMYK);  // CS_CMYK = 3
+```
+
+### Version
+
+```csharp
+// VERSION: (mupdfnet_version, mupdf_version, timestamp)
+// MUPDF_VERSION: (major, minor, patch)
+```
+
+### Document Permissions
+
+| Code | Permitted Action |
+|---|---|
+| `PDF_PERM_PRINT` | Print the document |
+| `PDF_PERM_MODIFY` | Modify the document's contents |
+| `PDF_PERM_COPY` | Copy or otherwise extract text and graphics |
+| `PDF_PERM_ANNOTATE` | Add or modify text annotations and interactive form fields |
+| `PDF_PERM_FORM` | Fill in forms and sign the document |
+| `PDF_PERM_ACCESSIBILITY` | Obsolete, always permitted |
+| `PDF_PERM_ASSEMBLE` | Insert, rotate, or delete pages, bookmarks, thumbnail images |
+| `PDF_PERM_PRINT_HQ` | High quality printing |
+
+### PDF Optional Content Codes
+
+| Code | Meaning |
+|---|---|
+| `PDF_OC_ON` | Set an OCG to ON temporarily |
+| `PDF_OC_TOGGLE` | Toggle OCG status temporarily |
+| `PDF_OC_OFF` | Set an OCG to OFF temporarily |
+
+### PDF Encryption Method Codes
+
+| Code | Meaning |
+|---|---|
+| `PDF_ENCRYPT_KEEP` | Do not change |
+| `PDF_ENCRYPT_NONE` | Remove any encryption |
+| `PDF_ENCRYPT_RC4_40` | RC4 40 bit |
+| `PDF_ENCRYPT_RC4_128` | RC4 128 bit |
+| `PDF_ENCRYPT_AES_128` | AES 128 bit |
+| `PDF_ENCRYPT_AES_256` | AES 256 bit |
+| `PDF_ENCRYPT_UNKNOWN` | Unknown |
+
+### Inbuilt Fonts
+
+| Reference | Font Name |
+|---|---|
+| `""` (empty) | Noto Serif Regular (default) |
+| `"helv"` | Helvetica |
+| `"heit"` | Helvetica-Oblique |
+| `"hebo"` | Helvetica-Bold |
+| `"hebi"` | Helvetica-BoldOblique |
+| `"cour"` | Courier |
+| `"coit"` | Courier-Oblique |
+| `"cobo"` | Courier-Bold |
+| `"cobi"` | Courier-BoldOblique |
+| `"tiro"` | Times-Roman |
+| `"tibo"` | Times-Bold |
+| `"tiit"` | Times-Italic |
+| `"tibi"` | Times-BoldItalic |
+| `"symb"` | Symbol |
+| `"zadb"` | ZapfDingbats |
+
+### Text Alignment
+
+| Constant | Value | Meaning |
+|---|---|---|
+| `TEXT_ALIGN_LEFT` | 0 | Left |
+| `TEXT_ALIGN_CENTER` | 1 | Center |
+| `TEXT_ALIGN_RIGHT` | 2 | Right |
+| `TEXT_ALIGN_JUSTIFY` | 3 | Justify |
+
+### Text Extraction Flags
+
+| Flag | Value | Description |
+|---|---|---|
+| `TEXT_PRESERVE_LIGATURES` | 1 | Pass ligatures through as-is (default: on) |
+| `TEXT_PRESERVE_WHITESPACE` | 2 | Preserve whitespace characters (default: on) |
+| `TEXT_PRESERVE_IMAGES` | 4 | Include images in TextPage (default: on for dict/html/etc.) |
+| `TEXT_INHIBIT_SPACES` | 8 | Do not generate missing spaces (default: off) |
+| `TEXT_DEHYPHENATE` | 16 | Join hyphenated line ends (used in search) |
+| `TEXT_PRESERVE_SPANS` | 32 | One line per span |
+| `TEXT_MEDIABOX_CLIP` | 64 | Ignore chars outside mediabox (default: on) |
+| `TEXT_CID_FOR_UNKNOWN_UNICODE` | 128 | Use raw codes instead of U+FFFD (default: on) |
+
+**Predefined flag combinations:**
+- `TEXTFLAGS_TEXT` — for plain text extraction
+- `TEXTFLAGS_WORDS` — for word-level extraction
+- `TEXTFLAGS_BLOCKS` — for block-level extraction
+- `TEXTFLAGS_DICT` / `TEXTFLAGS_RAWDICT` — includes images
+- `TEXTFLAGS_HTML` / `TEXTFLAGS_XHTML` — includes images
+- `TEXTFLAGS_XML` — no images
+- `TEXTFLAGS_SEARCH` — includes dehyphenation
+
+### Link Destination Kinds
+
+| Code | Value | Description |
+|---|---|---|
+| `LINK_NONE` | 0 | No destination (dummy link) |
+| `LINK_GOTO` | 1 | Points to a place in this document |
+| `LINK_URI` | 2 | Points to a URI |
+| `LINK_LAUNCH` | 3 | Launch/open another file |
+| `LINK_NAMED` | 4 | Points to a named location |
+| `LINK_GOTOR` | 5 | Points to a place in another PDF |
+
+### Font File Extensions
+
+| Ext | Description |
+|---|---|
+| `ttf` | TrueType font |
+| `pfa` | Postscript for ASCII font |
+| `cff` | Type1C font (compressed Type1) |
+| `cid` | Character identifier font (PostScript) |
+| `otf` | OpenType font |
+| `n/a` | Not extractable (Base-14, Type 3, etc.) |
+
+---
+
+## Utility Functions (Utils)
+
+All accessible as static methods on the `Utils` class:
+
+| Function | Description |
+|---|---|
+| `PaperSize(string name)` | Returns (width, height) of named paper size |
+| `PaperRect(string name)` | Returns Rect for named paper size |
+| `sRGB2Pdf(int srgb)` | Convert sRGB integer to PDF colour triple |
+| `sRGB2Rgb(int srgb)` | Convert sRGB integer to RGB triple |
+| `GlyphName2Unicode(string name)` | Glyph name to Unicode code point |
+| `Unicode2GlyphName(int ch)` | Unicode code point to glyph name |
+| `PlanishLine(Point p1, Point p2)` | Matrix mapping line to x-axis |
+| `PaperSizes` | Dictionary of all known paper sizes |
+| `GetPdfNow()` | Current date-time in PDF format |
+| `GetTextLength(string text, string fontName, float fontSize)` | Text length in points |
+| `GetPdfString(string s)` | Properly encoded PDF string |
+| `GetImageProfile(byte[] stream)` | Image metadata from stream |
+| `ConversionHeader(...)` / `ConversionTrailer(...)` | Text conversion helpers |
+| `RecoverQuad(...)` / `RecoverCharQuad(...)` / `RecoverSpanQuad(...)` / `RecoverLineQuad(...)` | Recover quadrilaterals from text data |
+| `INFINITE_QUAD()` / `INFINITE_RECT()` / `INFINITE_IRECT()` | Infinite geometry objects |
+| `EMPTY_QUAD()` / `EMPTY_RECT()` / `EMPTY_IRECT()` | Empty geometry objects |
+| `CalcImageMatrix(...)` | Compute image display matrix |
+| `ColorCount(Pixmap pix, ...)` | Count distinct colours in pixmap |
+| `GetTables(Page page, ...)` | Extract tables from a page |
+| `GetTextWithLayout(Page page, ...)` | Extract text preserving layout |
+| `GetWidgetProperties(Widget w)` | Get widget/form field properties |
+| `ReadBarcodes(Page page)` | Read barcodes from a page |
+| `WriteBarcode(...)` | Write barcode to page |
+| `GetBarcodePixmap(string content, BarcodeFormat format, ...)` | Generate barcode as Pixmap |
+| `ReplaceBytes(byte[] src, byte[] find, byte[] replace)` | Replace bytes in byte array |
+| `MeasureString(string text, ...)` | Measure string dimensions |
+| `GetAllContents(Page page)` | Get all content streams of a page |
+| `InsertContents(Page page, byte[] data, int xref)` | Insert content stream |
+| `GetFontProperties(...)` | Get font properties |
+| `GetColors(...)` | Named colour lookup |
+| `GetColorInfoList()` | List of all named colours |
+
+---
+
+## Migration from ByteScout SDK
+
+### Setting Up
+
+```csharp
+// ByteScout
+using Bytescout.PDFExtractor;
+
+// MuPDF.NET
+using MuPDF.NET;
+```
+
+### Loading a Document
+
+```csharp
+// ByteScout
+TextExtractor textExtractor = new TextExtractor();
+textExtractor.LoadDocumentFromFile("sample.pdf");
+
+// MuPDF.NET
+Document doc = new Document("sample.pdf");
+```
+
+### Extracting Text
+
+```csharp
+// ByteScout
+string extractedText = textExtractor.GetText();
+Console.WriteLine(extractedText);
+
+// MuPDF.NET
+Document doc = new Document("sample.pdf");
+Page page = doc[0];
+foreach (var textBlock in page.GetTextBlocks())
+    Console.WriteLine(textBlock.Text);
+```
+
+### Converting a Page to an Image
+
+```csharp
+// ByteScout
+RasterRenderer renderer = new RasterRenderer();
+renderer.LoadDocumentFromFile("sample.pdf");
+renderer.Save("sample.png", RasterImageFormat.PNG, 0, 75);
+
+// MuPDF.NET
+Document doc = new Document("sample.pdf");
+Page page = doc[0];
+Matrix mat = new Matrix(2, 2); // Adjust scale as needed
+Pixmap pix = page.GetPixmap(matrix: mat);
+pix.Save("sample.png");
+```
