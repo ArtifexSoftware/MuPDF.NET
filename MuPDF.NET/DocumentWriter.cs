@@ -1,65 +1,112 @@
-using mupdf;
 using System;
-using System.IO;
 
 namespace MuPDF.NET
 {
+    /// <summary>
+    /// Writes pages to an output file.
+    /// </summary>
     public class DocumentWriter : IDisposable
     {
-        static DocumentWriter()
+        private mupdf.FzDocumentWriter _nativeWriter;
+        private mupdf.FzBuffer _outputBuffer;
+        private bool _disposed;
+
+        internal mupdf.FzDocumentWriter NativeWriter
         {
-            Utils.InitApp();
+            get
+            {
+                if (_disposed) throw new ObjectDisposedException(nameof(DocumentWriter));
+                return _nativeWriter;
+            }
         }
 
-        private FilePtrOutput _filePtr;
-        private FzDocumentWriter _nativeDocumentWriter;
-
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DocumentWriter"/> class writing to a file path.
+        /// </summary>
         public DocumentWriter(string path, string options = "")
         {
-            _nativeDocumentWriter = new FzDocumentWriter(path, options, FzDocumentWriter.PathType.PathType_PDF);
-        }
-
-        public DocumentWriter(MemoryStream memory, string options = "")
-        {
-            _filePtr = new FilePtrOutput(memory);
-            _nativeDocumentWriter = new FzDocumentWriter(_filePtr, options, FzDocumentWriter.OutputType.OutputType_PDF);
+            _nativeWriter = new mupdf.FzDocumentWriter(path, options ?? "", mupdf.FzDocumentWriter.PathType.PathType_PDF);
         }
 
         /// <summary>
-        /// Start a new output page of a given dimension.
+        /// Initializes a new instance of the <see cref="DocumentWriter"/> class writing to a buffer.
         /// </summary>
-        /// <param name="mediabox">a rectangle specifying the page size.</param>
-        /// <returns></returns>
-        public DeviceWrapper BeginPage(Rect mediabox)
+        public DocumentWriter(mupdf.FzBuffer buffer, string format = "pdf", string options = "")
         {
-            FzDevice device = _nativeDocumentWriter.fz_begin_page(mediabox.ToFzRect());
-            DeviceWrapper deviceWrapper = new DeviceWrapper(device);
-            return deviceWrapper;
+            _outputBuffer = buffer;
+            _nativeWriter = new mupdf.FzDocumentWriter(buffer, format, options ?? "");
         }
 
         /// <summary>
-        /// Close the output file. This method is required for writing any pending data.
+        /// Initializes a new instance writing PDF to an internal buffer.
+        /// Used by Story for in-memory PDF generation.
         /// </summary>
-        public void Close()
+        public DocumentWriter(Rect mediabox)
         {
-            _nativeDocumentWriter.fz_close_document_writer();
+            _outputBuffer = mupdf.mupdf.fz_new_buffer(1024);
+            _nativeWriter = new mupdf.FzDocumentWriter(_outputBuffer, "pdf", "");
+        }
+
+        internal DocumentWriter(mupdf.FzDocumentWriter writer)
+        {
+            _nativeWriter = writer;
         }
 
         /// <summary>
-        /// Dispose
+        /// Start a new output page with given MediaBox.
+        ///
+        /// Returns a Device to receive drawing commands.
         /// </summary>
-        public void Dispose()
+        public mupdf.FzDevice BeginPage(Rect mediabox)
         {
-            _nativeDocumentWriter?.Dispose();
-            _filePtr?.Dispose();
+            return mupdf.mupdf.fz_begin_page(NativeWriter, mediabox.ToFzRect());
         }
 
         /// <summary>
-        /// Finish a page. This flushes any pending data and appends the page to the output document.
+        /// Finish the current output page.
         /// </summary>
         public void EndPage()
         {
-            _nativeDocumentWriter.fz_end_page();
+            mupdf.mupdf.fz_end_page(NativeWriter);
         }
+
+        /// <summary>
+        /// Flush pending output and close the writer. Returns the PDF bytes if using a buffer-based writer.
+        /// </summary>
+        public byte[] Close()
+        {
+            if (!_disposed)
+            {
+                NativeWriter.fz_close_document_writer();
+            }
+            if (_outputBuffer != null)
+                return _outputBuffer.fz_buffer_extract();
+            return null;
+        }
+
+        // ─── IDisposable ────────────────────────────────────────────────
+
+        /// <summary>
+        /// Releases all resources used by the <see cref="DocumentWriter"/>.
+        /// </summary>
+        public void Dispose()
+        {
+            if (!_disposed)
+            {
+                try { NativeWriter.fz_close_document_writer(); } catch { }
+                _nativeWriter?.Dispose();
+                _nativeWriter = null;
+                _outputBuffer = null;
+                _disposed = true;
+            }
+            GC.SuppressFinalize(this);
+        }
+
+        ~DocumentWriter() { Dispose(); }
+
+        /// <summary>
+        /// Returns a string that represents the current document writer.
+        /// </summary>
+        public override string ToString() => "DocumentWriter()";
     }
 }

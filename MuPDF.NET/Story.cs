@@ -1,707 +1,731 @@
-using mupdf;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Text;
 
 namespace MuPDF.NET
 {
+    public class StoryElementPositionInfo
+    {
+        public int depth { get; set; }
+        public int heading { get; set; }
+        public string id { get; set; }
+        public Rect rect { get; set; }
+        public string text { get; set; }
+        public int open_close { get; set; }
+        public int rect_num { get; set; }
+        public string href { get; set; }
+        public int page_num { get; set; }
+    }
+
+    /// <summary>
+    /// Represents a Story for rich-content layout driven by HTML and CSS.
+    /// </summary>
     public class Story : IDisposable
     {
-        static Story()
-        {
-            Utils.InitApp();
-        }
+        private mupdf.FzStory _nativeStory;
+        private bool _disposed;
 
-        private FzStory _nativeStory;
-
-        public delegate string ContentFunction(List<Position> positions);
-        public delegate (Rect, Rect, Matrix) RectFunction(int rectN, Rect filled); // Define the delegate signature according to actual use
-
-        /// <summary>
-        /// the story's underlying Body
-        /// </summary>
-        public Xml Body
+        internal mupdf.FzStory NativeStory
         {
             get
             {
-                Xml dom = GetDocument();
-                return dom.GetBodyTag();
+                if (_disposed) throw new ObjectDisposedException(nameof(Story));
+                return _nativeStory;
             }
         }
 
-        public Story(string html = "", string userCss = null, float em = 12, Archive archive = null)
-        {
-            byte[] bytes = Encoding.UTF8.GetBytes(html);
-            FzBuffer buf = Utils.fz_new_buffer_from_data(bytes);
-
-            FzArchive arch = archive != null ? archive.ToFzArchive() : new FzArchive();
-            _nativeStory = new FzStory(buf, userCss, em, arch);
-        }
-
         /// <summary>
-        /// Look for `<h1..6>` items in `self` and adds unique `id` attributes if not already present.
+        /// Initializes a new instance of the <see cref="Story"/> class.
         /// </summary>
-        public void AddHeaderIds()
+        public Story(string html = "", string userCss = "", float em = 12, Archive archive = null)
         {
-            Xml dom = Body;
-            int i = 0;
-            Xml x = dom.Find(null, null, null);
-            while (x != null)
-            {
-                string name = x.TagName;
-                if (name.Length == 2 && name[0] == 'h' && "123456".Contains(name[1].ToString()))
-                {
-                    string attr = x.GetAttributeValue("id");
-                    if (attr == null)
-                    {
-                        string id_ = $"h_id_{i}";
-                        x.SetAttribute("id", id_);
-                        i += 1;
-                    }
-                }
-                x = x.FindNext(null, null, null);
-            }
+            var buf = Helpers.BufferFromBytes(Encoding.UTF8.GetBytes(html ?? ""));
+            _nativeStory = new mupdf.FzStory(buf, userCss ?? "", em,
+                archive?.NativeArchive ?? new mupdf.FzArchive());
         }
 
-        public void Dispose()
+        internal Story(mupdf.FzStory story)
         {
-            if (_nativeStory != null)
-            {
-                _nativeStory.Dispose();
-                _nativeStory = null;
-            }
+            _nativeStory = story;
         }
+
+        public delegate (Rect mediabox, Rect rect, Matrix ctm) StoryRectFn(int rectNum, Rect filled);
 
         /// <summary>
-        /// Get Document object
+        /// Compute layout into a given rectangle.
+        ///
+        /// Returns (more, filledRect) where more indicates unplaced content remains.
         /// </summary>
-        /// <returns></returns>
-        public Xml GetDocument()
+        public (bool more, Rect filledRect) Place(Rect where)
         {
-            FzXml dom = _nativeStory.fz_story_document();
-            return new Xml(dom);
+            var fzRect = where.ToFzRect();
+            var filled = new mupdf.FzRect();
+            int more = NativeStory.fz_place_story(fzRect, filled);
+            return (more != 0, new Rect(filled.x0, filled.y0, filled.x1, filled.y1));
         }
 
         /// <summary>
-        /// Write the content part prepared by Story.place() to the page.
+        /// Wrapper for fz_place_story_flags().
         /// </summary>
-        /// <param name="device">the Device created by dev = writer.begin_page(mediabox). The device knows how to call all MuPDF functions needed to write the content.</param>
-        /// <param name="matrix">a matrix for transforming content when writing to the page. An example may be writing rotated text. The default means no transformation (i.e. the Identity matrix).</param>
-        public void Draw(DeviceWrapper device, Matrix matrix = null)
+        public (bool more, Rect filledRect) Place(Rect where, int flags)
         {
-            FzMatrix ctm2 = (matrix != null) ? matrix.ToFzMatrix() : new FzMatrix();
-            if (ctm2 == null)
-                ctm2 = new FzMatrix();
-            FzDevice dev = device == null ? new FzDevice() : device.ToFzDevice();
-            _nativeStory.fz_draw_story(dev, ctm2);
-            if (device == null)
-            {
-                dev.fz_close_device();
-                dev.Dispose();
-            }
+            var fzRect = where.ToFzRect();
+            var filled = new mupdf.FzRect();
+            int more = NativeStory.fz_place_story_flags(fzRect, filled, flags);
+            return (more != 0, new Rect(filled.x0, filled.y0, filled.x1, filled.y1));
         }
 
         /// <summary>
-        /// Rewind the story’s document to the beginning for starting over its output.
+        /// Draw the placed content to a device.
+        /// </summary>
+        public void Draw(mupdf.FzDevice dev, Matrix ctm = null)
+        {
+            NativeStory.fz_draw_story(dev, (ctm ?? Matrix.Identity).ToFzMatrix());
+        }
+
+        /// <summary>
+        /// Reset the story to allow re-placement.
         /// </summary>
         public void Reset()
         {
-            _nativeStory.fz_reset_story();
-        }
-
-        public Rect ScaleFn(Rect rect, float scale)
-        {
-            return new Rect(rect.X0, rect.Y0, rect.X0 + scale * rect.Width, scale * rect.Height);
+            NativeStory.fz_reset_story();
         }
 
         /// <summary>
-        /// Finds smallest value scale from scale_min to scale_max where scale * rect is large enough to contain the story
+        /// Get the story's DOM body text.
         /// </summary>
-        /// <param name="rect"></param>
-        /// <param name="scaleMin">Minimum scale to consider; must be >= 0</param>
-        /// <param name="scaleMax">Maximum scale to consider, must be >= scale_min or None for infinite</param>
-        /// <param name="delta">Maximum error in returned scale</param>
-        /// <param name="verbose">If true we output diagnostics</param>
-        /// <returns></returns>
-        public FitResult FitScale(Rect rect, float scaleMin = 0, float scaleMax = 0, float delta = 0.001f, bool verbose = false)
+        public string Body
         {
-            return Fit(ScaleFn, rect, scaleMin, scaleMax, delta, verbose);
-        }
-
-        /// <summary>
-        /// Finds optimal rect that contains the story
-        /// </summary>
-        /// <param name="fn">A callable taking a floating point `parameter` and returning a `fitz.Rect()`.
-        /// <br/> If the rect is empty, we assume the story will not fit and do not call `self.place()`.
-        /// </param>
-        /// <param name="rect"></param>
-        /// <param name="pmin">Minimum parameter to consider</param>
-        /// <param name="pmax">Maximum parameter to consider</param>
-        /// <param name="delta">Maximum error in returned parameter.</param>
-        /// <param name="verbose">If true we output diagnostics.</param>
-        /// <returns>Returns a `Story.FitResult` instance.</returns>
-        public FitResult Fit(Func<Rect, float, Rect> fn, Rect rect, float pmin, float pmax, float delta = 0.001f, bool verbose = false)
-        {
-            void Log(string text)
+            get
             {
-                Console.WriteLine($"Fit(): {text}");
-            }
-
-            State state = new State(pmin, pmax, verbose);
-
-            if (verbose)
-                Log($"starting. {state.Pmin} {state.Pmax}.");
-
-            Reset();
-
-            FitResult Ret(Rect _rect, State _state)
-            {
-                bool bigEnough = false;
-                FitResult result = null;
-                if (_state.Pmax != 0)
+                try
                 {
-                    if (_state.LastP != _state.Pmax)
+                    var dom = NativeStory.fz_story_document();
+                    if (dom.m_internal == null) return "";
+                    var body = dom.fz_dom_body();
+                    if (body.m_internal == null) return "";
+                    return body.fz_xml_text() ?? "";
+                }
+                catch
+                {
+                    return "";
+                }
+            }
+        }
+
+        /// <summary>
+        /// Set an attribute on an element found by id.
+        /// </summary>
+        public void ElementSetAttribute(string id, string att, string value)
+        {
+            var dom = NativeStory.fz_story_document();
+            var body = dom.fz_dom_body();
+            var el = body.fz_dom_find(null, "id", id);
+            if (el.m_internal != null)
+                el.fz_dom_add_attribute(att, value);
+        }
+
+        /// <summary>
+        /// Look for h1..h6 items and add unique id attributes if absent.
+        /// </summary>
+        public void AddHeaderIds()
+        {
+            var dom = NativeStory.fz_story_document();
+            var body = dom.fz_dom_body();
+            int i = 0;
+            var x = body.fz_dom_find(null, null, null);
+            while (x != null && x.m_internal != null)
+            {
+                var name = x.fz_xml_tag();
+                if (!string.IsNullOrEmpty(name) && name.Length == 2 && name[0] == 'h' && "123456".IndexOf(name[1]) >= 0)
+                {
+                    var attr = x.fz_dom_attribute("id");
+                    if (string.IsNullOrEmpty(attr))
                     {
-                        if (verbose)
-                            Log($"Calling update() with pmax, because was overwritten by later calls.");
-                        bigEnough = Update(_rect, _state.Pmax);
+                        string id = $"h_id_{i}";
+                        x.fz_dom_add_attribute("id", id);
+                        i++;
                     }
-                    result = _state.PmaxResult;
                 }
-                else
-                {
-                    result = _state.PminResult != null ? _state.PminResult : new FitResult(numcalls: _state.Numcalls);
-                }
-
-                if (verbose)
-                    Log($"finished. {_state.Pmin0} {_state.Pmax0} {_state.Pmax}: returning {result}");
-                return result;
+                x = x.fz_dom_find_next(null, null, null);
             }
+        }
 
-            bool Update(Rect _rect, float parameter)
-            {
-                Rect r = fn(_rect, parameter);
-                bool bigEnough;
-                FitResult result;
-                if (r.IsEmpty)
-                {
-                    bigEnough = false;
-                    result = new FitResult(parameter: parameter, numcalls: state.Numcalls);
-                    if (verbose)
-                        Log("update(): not calling self.place() because _rect is empty.");
-                }
-                else
-                {
-                    (bool more, Rect filled) = Place(r);
-                    state.Numcalls += 1;
-                    bigEnough = !more;
+        /// <summary>
+        /// Trigger a callback function to record where items have been placed.
+        /// </summary>
+        public void ElementPositions(Action<StoryElementPositionInfo> function, Dictionary<string, object> args = null)
+        {
+            if (function == null)
+                throw new ArgumentException("callback 'function' must be a callable with exactly one argument");
 
-                    result = new FitResult(
-                        filled: filled,
-                        more: more,
-                        numcalls: state.Numcalls,
-                        parameter: parameter,
-                        rect: r,
-                        bigEnough: bigEnough
-                        );
-                    if (verbose)
-                        Log($"Update(): called self.place(): {state.Numcalls}: {more} {parameter} {r}.");
-                }
+            var cb = new StoryPositionCollector(function, args);
+            mupdf.mupdf.ll_fz_story_positions_director(NativeStory.m_internal, cb);
+        }
 
-                if (bigEnough)
-                {
-                    state.Pmax = parameter;
-                    state.PmaxResult = result;
-                }
-                else
-                {
-                    state.Pmin = parameter;
-                    state.PminResult = result;
-                }
-                state.LastP = parameter;
-                return bigEnough;
-            }
+        /// <summary>
+        /// Python-compatible story writing loop.
+        /// </summary>
+        public void Write(DocumentWriter writer, StoryRectFn rectfn, Action<StoryElementPositionInfo> positionfn = null, Action<int, Rect, mupdf.FzDevice, int> pagefn = null)
+        {
+            mupdf.FzDevice dev = null;
+            int page_num = 0;
+            int rect_num = 0;
+            var filled = new Rect(0, 0, 0, 0);
 
-            float Opposite(float p, int direction)
-            {
-                if (p == 0)
-                    return direction;
-                if (direction * p > 0)
-                    return 2 * p;
-                return -p;
-            }
-
-            if (state.Pmin == 0)
-            {
-                if (verbose) Log("finding Pmin.");
-                float parameter = Opposite(state.Pmax, -1);
-                while (true)
-                {
-                    if (!Update(rect, parameter))
-                        break;
-                    parameter *= 2;
-                }
-            }
-            else
-            {
-                if (Update(rect, state.Pmin))
-                {
-                    if (verbose) Log($"{state.Pmin} is big enough.");
-                    FitResult ret = Ret(rect, state);
-                    return ret;
-                }
-            }
-
-            if (state.Pmax == 0)
-            {
-                if (verbose) Log("Finding Pmax");
-                float parameter = Opposite(state.Pmin, 1);
-                while (true)
-                {
-                    if (Update(rect, parameter))
-                        break;
-                    parameter *= 2;
-                }
-            }
-            else
-            {
-                if (!Update(rect, state.Pmax))
-                {
-                    state.Pmax = 0;
-                    if (verbose) Log($"No solution possible {state.Pmax}.");
-                    FitResult ret = Ret(rect, state);
-                    return ret;
-                }
-            }
-
-            if (verbose)
-                Log($"doing binary search with {state.Pmin} {state.Pmax}.");
             while (true)
             {
-                if (state.Pmax - state.Pmin < delta)
-                    return Ret(rect, state);
-                float parameter = (state.Pmin + state.Pmax) / 2;
-                Update(rect, parameter);
-            }
-        }
+                var (mediabox, rect, ctm) = rectfn(rect_num, filled);
+                rect_num += 1;
+                bool newPage = mediabox != null && !mediabox.IsEmpty;
+                if (newPage)
+                    page_num += 1;
 
-        /// <summary>
-        /// Adds links to PDF document
-        /// </summary>
-        /// <param name="stream">A PDF Document or raw PDF content, for example an io.BytesIO instance</param>
-        /// <param name="positions">List of Position's for stream</param>
-        /// <returns>Document if a `Document` instance, otherwise a new `Document` instance</returns>
-        /// <exception cref="Exception"></exception>
-        public static Document AddPdfLinks(MemoryStream stream, List<Position> positions)
-        {
-            Document document = new Document("pdf", stream.ToArray());
-            Dictionary<string, Position> id2Position = new Dictionary<string, Position>();
-            foreach (Position position in positions)
-            {
-                if ((position.OpenClose & true) && position.Id != null)
+                var placed = Place(rect);
+                bool more = placed.more;
+                filled = placed.filledRect;
+
+                if (positionfn != null)
                 {
-                    if (id2Position.ContainsKey(position.Id))
+                    ElementPositions(position =>
                     {
-                        // pass
-                    }
-                    else
-                        id2Position.Add(position.Id, position);
-                }
-            }
-
-            foreach (Position positionFrom in positions)
-            {
-                if ((positionFrom.OpenClose & true) && positionFrom.Href != null)
-                {
-                    LinkInfo link = new LinkInfo();
-                    link.From = new Rect(positionFrom.Rect);
-                    Position positionTo;
-                    if (positionFrom.Href.StartsWith("#"))
-                    {
-                        string targetId = positionFrom.Href.Substring(1);
-                        if (!id2Position.TryGetValue(targetId, out positionTo))
-                        {
-                            throw new Exception($"No destination with id={targetId}, required by position_from: {positionFrom}");
-                        }
-
-                        link.Kind = LinkType.LINK_GOTO;
-                        link.To = new Point(positionTo.Rect.X0, positionTo.Rect.Y0);
-                        link.Page = positionTo.PageNum - 1;
-                    }
-                    else
-                    {
-                        if (positionFrom.Href.StartsWith("name:"))
-                        {
-                            link.Kind = LinkType.LINK_NAMED;
-                            link.Name = positionFrom.Href.Substring(5);
-                        }
-                        else
-                        {
-                            link.Kind = LinkType.LINK_URI;
-                            link.Uri = positionFrom.Href;
-                        }
-                    }
-                    document[positionFrom.PageNum - 1].InsertLink(link);
-                }
-            }
-
-            return document;
-        }
-
-        /// <summary>
-        /// Calculate that part of the story’s content, that will fit in the provided rectangle. The method maintains a pointer which part of the story’s content has already been written and upon the next invocation resumes from that pointer’s position.
-        /// </summary>
-        /// <param name="where">layout the current part of the content to fit into this rectangle. This must be a sub-rectangle of the page’s MediaBox.</param>
-        /// <returns>a bool (int) more and a rectangle filled. If more == 0, all content of the story has been written, otherwise more is waiting to be written to subsequent rectangles / pages. Rectangle filled is the part of where that has actually been filled.</returns>
-        public (bool, Rect) Place(Rect where)
-        {
-            FzRect filled = new FzRect();
-            bool more = _nativeStory.fz_place_story(where.ToFzRect(), filled) != 0;
-            return (more, new Rect(filled));
-        }
-
-        public Rect HeightFn(Rect rect, float height)
-        {
-            return new Rect(rect.X0, rect.Y0, rect.X1, rect.Y0 + height);
-        }
-
-        /// <summary>
-        /// Finds smallest height in range `height_min..height_max` where a rect with size `(width, height)` is large enough to contain the story
-        /// </summary>
-        /// <param name="width">width of rect</param>
-        /// <param name="heightMin">Minimum height to consider; must be >= 0.</param>
-        /// <param name="heightMax">Maximum height to consider, must be >= height_min or `None` for infinite.</param>
-        /// <param name="origin">point of rect.</param>
-        /// <param name="delta">Maximum error in returned height.</param>
-        /// <param name="verbose">If true we output diagnostics.</param>
-        /// <returns>Returns a `Story.FitResult` instance.</returns>
-        public FitResult FitHeight(float width, float heightMin = 0, float heightMax = 0, Point origin = null, float delta = 0.001f, bool verbose = false)
-        {
-            if (origin != null)
-                origin = new Point(0, 0);
-            Rect rect = new Rect(origin.X, origin.Y, origin.X + width, 0);
-            return Fit(HeightFn, rect, heightMin, heightMax, delta, verbose);
-        }
-
-        public Rect WidthFn(Rect rect, float width)
-        {
-            return new Rect(rect.X0, rect.Y0, rect.X0 + width, rect.Y1);
-        }
-
-        public FitResult FitWidth(float height, float widthMin = 0, float widthMax = 0, Point origin = null, float delta = 0.001f, bool verbose = false)
-        {
-            Rect rect = new Rect(origin.X, origin.Y, 0, origin.Y + height);
-            return Fit(WidthFn, rect, widthMin, widthMax, delta, verbose);
-        }
-
-        /// <summary>
-        /// Similar to Write() except that we don’t have a writer arg and we return a PDF Document in which links have been created for each internal html link
-        /// </summary>
-        /// <param name="rectFn"></param>
-        /// <param name="positionFn"></param>
-        /// <param name="pageFn"></param>
-        /// <returns>a Document</returns>
-        public Document WriteWithLinks(RectFunction rectFn = null, Action<Position> positionFn = null, Action<int, Rect, DeviceWrapper, bool> pageFn = null)
-        {
-            MemoryStream stream = new MemoryStream(100);
-            DocumentWriter writer = new DocumentWriter(stream);
-            List<Position> positions = new List<Position>();
-
-            Action<Position> positionFn2 = position =>
-            {
-                positions.Add(position);
-                positionFn(position);
-            };
-
-            Write(writer, rectFn, positionFn: positionFn2, pageFn);
-            writer.Close();
-            stream.Seek(0, (SeekOrigin)1);
-            return Story.AddPdfLinks(stream, positions);
-        }
-
-        /// <summary>
-        /// Places and draws Story to a DocumentWriter. Avoids the need for calling code to implement a loop that calls Story.place() and Story.draw() etc,
-        /// </summary>
-        /// <param name="writer"></param>
-        /// <param name="rectFn"></param>
-        /// <param name="positionFn"></param>
-        /// <param name="pageFn"></param>
-        public void Write(DocumentWriter writer, RectFunction rectFn, Action<Position> positionFn, Action<int, Rect, DeviceWrapper, bool> pageFn)
-        {
-            DeviceWrapper dev = null;
-            int pageNum = 0;
-            int rectNum = 0;
-            Rect filled = new Rect(0, 0, 0, 0);
-            while (true)
-            {
-                (Rect mediabox, Rect rect, Matrix ctm) = rectFn(rectNum, filled);
-                rectNum += 1;
-                if (mediabox != null)
-                    pageNum += 1;
-                (bool more, Rect _filled) = Place(rect);
-                filled = _filled;
-                if (positionFn != null) // if (positionFn)
-                {
-                    Action<Position> positionFn2 = position =>
-                    {
-                        position.PageNum = pageNum;
-                        positionFn(position);
-                    };
-
-                    ElementPositions(positionFn);
+                        position.page_num = page_num;
+                        positionfn(position);
+                    });
                 }
 
                 if (writer != null)
                 {
-                    if (mediabox != null)
+                    if (newPage)
                     {
                         if (dev != null)
                         {
-                            if (pageFn != null)
-                            {
-                                pageFn(pageNum, mediabox, dev, true);
-                            }
+                            pagefn?.Invoke(page_num, mediabox, dev, 1);
                             writer.EndPage();
                         }
                         dev = writer.BeginPage(mediabox);
-                        if (pageFn != null)
-                        {
-                            pageFn(pageNum, mediabox, dev, false);
-                        }
+                        pagefn?.Invoke(page_num, mediabox, dev, 0);
                     }
-                    Draw(dev, ctm);
+                    if (dev != null)
+                        Draw(dev, ctm);
                     if (!more)
                     {
-                        if (pageFn != null)
-                        {
-                            pageFn(pageNum, mediabox, dev, true);
-                        }
+                        pagefn?.Invoke(page_num, mediabox, dev, 1);
                         writer.EndPage();
                     }
-                    dev.Dispose();
                 }
                 else
-                    Draw(null, ctm);
-
+                {
+                    if (dev != null)
+                        Draw(dev, ctm);
+                }
                 if (!more)
                     break;
             }
         }
 
         /// <summary>
-        /// Similar to WriteStabilized() except that we don’t have a writer arg and instead return a PDF Document in which links have been created for each internal html link
+        /// Write stabilized multi-page output. Iterates until the content function
+        /// returns the same HTML, then produces the final document.
         /// </summary>
-        /// <param name="contentfn"></param>
-        /// <param name="rectfn"></param>
-        /// <param name="userCss"></param>
-        /// <param name="em"></param>
-        /// <param name="positionFn"></param>
-        /// <param name="pagefn"></param>
-        /// <param name="archive"></param>
-        /// <param name="addHeaderIds"></param>
-        /// <returns></returns>
-        public static Document WriteStabilizedWithLinks(
-            ContentFunction contentfn,
-            RectFunction rectfn,
-            string userCss = null,
-            int em = 12,
-            Action<Position> positionFn = null,
-            Action<int, Rect, DeviceWrapper, bool> pagefn = null,
-            Archive archive = null,
-            bool addHeaderIds = true
-            )
+        public static byte[] WriteStabilized(Func<int, string> contentfn, string userCss = "", float em = 12,
+            string mediabox = "letter", Archive archive = null, Action<Story> addHeaderCb = null,
+            Action<Story> addFooterCb = null)
         {
-            MemoryStream stream = new MemoryStream();
-            DocumentWriter writer = new DocumentWriter(stream);
-            List<Position> positions = new List<Position>();
+            var paperRect = Helpers.PaperRect(mediabox);
+            byte[] result = null;
+            string previousHtml = null;
 
-            Action<Position> positionFn2 = position =>
+            for (int iteration = 0; ; iteration++)
             {
-                positions.Add(position);
-                positionFn(position);
-            };
+                string html = contentfn(iteration);
+                bool stable = (html == previousHtml);
+                previousHtml = html;
 
-            Story.WriteStabilized(writer, contentfn, rectfn, userCss, em, positionFn2, pagefn, archive, addHeaderIds);
-            writer.Close();
-            stream.Seek(0, (SeekOrigin)1);
-            return Story.AddPdfLinks(stream, positions);
-        }
+                var story = new Story(html, userCss, em, archive);
+                var writer = stable ? new DocumentWriter(paperRect) : null;
 
-        /// <summary>
-        /// Trigger a callback function to record where items have been placed.
-        /// </summary>
-        /// <param name="function"></param>
-        /// <param name="args"></param>
-        public void ElementPositions(Action<Position> function, Position arg = null)
-        {
-            Action<Position> function2 = position =>
-            {
-                Position position2 = new Position
+                bool more = true;
+                int pageNum = 0;
+                while (more)
                 {
-                    Depth = position.Depth,
-                    Heading = position.Heading,
-                    Id = position.Id,
-                    Rect = position.Rect,
-                    Text = position.Text,
-                    OpenClose = position.OpenClose,
-                    RectNum = position.RectNum,
-                    Href = position.Href
-                };
-                if (arg != null)
-                {
-                    position2 = new Position(arg); // copy position
-                }
-                function(position2);
-            };
+                    var contentRect = new Rect(paperRect.X0 + 36, paperRect.Y0 + 36,
+                                               paperRect.X1 - 36, paperRect.Y1 - 36);
+                    (more, _) = story.Place(contentRect);
 
-        }
-
-        /// <summary>
-        /// Static method that does iterative layout of html content to a DocumentWriter
-        /// </summary>
-        /// <param name="writer">A DocumentWriter</param>
-        /// <param name="contentfn">A function taking a list of ElementPositions and returning a string containing html</param>
-        /// <param name="rectfn">A callable taking (RectNum: int, Filled: Rect) and returning (Mediabox, Rect, Ctm)</param>
-        /// <param name="userCss"></param>
-        /// <param name="em"></param>
-        /// <param name="positionFn"></param>
-        /// <param name="pageFn"> None, or a callable taking (page_num, medibox, dev, after)</param>
-        /// <param name="archive"></param>
-        /// <param name="addHeaderIds">If true, we add unique ids to all header tags that don't already have an id</param>
-        public static void WriteStabilized(
-            DocumentWriter writer, // Assuming Writer is a defined class
-            ContentFunction contentfn,
-            RectFunction rectfn,
-            string userCss = null,
-            int em = 12,
-            Action<Position> positionFn = null,
-            Action<int, Rect, DeviceWrapper, bool> pageFn = null,
-            Archive archive = null, // Assuming Archive is a defined class
-            bool addHeaderIds = true
-            )
-        {
-            List<Position> positions = new List<Position>();
-            string content = null;
-
-            while (true)
-            {
-                string contentPrev = content;
-                content = contentfn(positions);
-                bool stable = false;
-                if (content == contentPrev)
-                {
-                    stable = true;
-                }
-                string content2 = content;
-                Story story = new Story(content2, userCss, em, archive); // Assuming Story is a defined class
-                if (addHeaderIds)
-                {
-                    story.AddHeaderIds(); // Assuming AddHeaderIds is a method of Story
-                }
-                positions.Clear();
-                void PositionFn2(Position position)
-                {
-                    positions.Add(position);
-                    if (stable && positionFn != null)
+                    if (writer != null)
                     {
-                        positionFn(position);
+                        var dev = writer.BeginPage(paperRect);
+                        story.Draw(dev);
+                        addHeaderCb?.Invoke(story);
+                        addFooterCb?.Invoke(story);
+                        writer.EndPage();
+                    }
+                    pageNum++;
+                }
+
+                if (writer != null)
+                    result = writer.Close();
+
+                story.Dispose();
+
+                if (stable)
+                    break;
+            }
+
+            return result ?? Array.Empty<byte>();
+        }
+
+        /// <summary>
+        /// Write multi-page output with links preserved.
+        /// </summary>
+        public static byte[] WriteWithLinks(Func<int, string> contentfn, string userCss = "", float em = 12,
+            string mediabox = "letter")
+        {
+            return WriteStabilized(contentfn, userCss, em, mediabox);
+        }
+
+        /// <summary>
+        /// Adds links to a PDF document from collected story element positions.
+        /// </summary>
+        public static Document AddPdfLinks(Document document, List<StoryElementPositionInfo> positions)
+        {
+            if (document == null) throw new ArgumentNullException(nameof(document));
+            if (positions == null) return document;
+
+            var id_to_position = new Dictionary<string, StoryElementPositionInfo>();
+            foreach (var position in positions)
+            {
+                if ((position.open_close & 1) != 0 && !string.IsNullOrEmpty(position.id) && !id_to_position.ContainsKey(position.id))
+                    id_to_position[position.id] = position;
+            }
+
+            foreach (var position_from in positions)
+            {
+                if ((position_from.open_close & 1) == 0 || string.IsNullOrEmpty(position_from.href))
+                    continue;
+
+                var link = new Dictionary<string, object>
+                {
+                    ["from"] = new Rect(position_from.rect),
+                };
+
+                if (position_from.href.StartsWith("#", StringComparison.Ordinal))
+                {
+                    string target_id = position_from.href.Substring(1);
+                    if (!id_to_position.TryGetValue(target_id, out var position_to))
+                        throw new InvalidOperationException($"No destination with id={target_id}, required by position_from");
+                    link["kind"] = Constants.LINK_GOTO;
+                    link["to"] = new Point(position_to.rect.X0, position_to.rect.Y0);
+                    link["page"] = position_to.page_num - 1;
+                }
+                else
+                {
+                    if (position_from.href.StartsWith("name:", StringComparison.Ordinal))
+                    {
+                        link["kind"] = Constants.LINK_NAMED;
+                        link["name"] = position_from.href.Substring(5);
+                    }
+                    else
+                    {
+                        link["kind"] = Constants.LINK_URI;
+                        link["uri"] = position_from.href;
                     }
                 }
+
+                document[position_from.page_num - 1].InsertLinkVoid(link);
+            }
+
+            return document;
+        }
+
+        /// <summary>
+        /// Static stabilized writer loop matching Python's write_stabilized.
+        /// </summary>
+        public static void WriteStabilized(
+            DocumentWriter writer,
+            Func<List<StoryElementPositionInfo>, string> contentfn,
+            StoryRectFn rectfn,
+            string user_css = null,
+            float em = 12,
+            Action<StoryElementPositionInfo> positionfn = null,
+            Action<int, Rect, mupdf.FzDevice, int> pagefn = null,
+            Archive archive = null,
+            bool add_header_ids = true)
+        {
+            var positions = new List<StoryElementPositionInfo>();
+            string content = null;
+            while (true)
+            {
+                string content_prev = content;
+                content = contentfn(positions);
+                bool stable = content == content_prev;
+
+                var story = new Story(content, user_css, em, archive);
+                if (add_header_ids)
+                    story.AddHeaderIds();
+
+                positions = new List<StoryElementPositionInfo>();
                 story.Write(
                     stable ? writer : null,
                     rectfn,
-                    PositionFn2,
-                    pageFn
+                    position =>
+                    {
+                        positions.Add(position);
+                        if (stable && positionfn != null)
+                            positionfn(position);
+                    },
+                    pagefn
                 );
+                story.Dispose();
+
                 if (stable)
-                {
                     break;
+            }
+        }
+
+        /// <summary>
+        /// Static stabilized writer + link insertion matching Python write_stabilized_with_links.
+        /// </summary>
+        public static Document WriteStabilizedWithLinks(
+            Func<List<StoryElementPositionInfo>, string> contentfn,
+            StoryRectFn rectfn,
+            string user_css = null,
+            float em = 12,
+            Action<StoryElementPositionInfo> positionfn = null,
+            Action<int, Rect, mupdf.FzDevice, int> pagefn = null,
+            Archive archive = null,
+            bool add_header_ids = true)
+        {
+            var writer = new DocumentWriter(new Rect(0, 0, 595, 842));
+            var positions = new List<StoryElementPositionInfo>();
+            WriteStabilized(
+                writer,
+                contentfn,
+                rectfn,
+                user_css,
+                em,
+                position =>
+                {
+                    positions.Add(position);
+                    positionfn?.Invoke(position);
+                },
+                pagefn,
+                archive,
+                add_header_ids
+            );
+            byte[] pdf = writer.Close();
+            writer.Dispose();
+
+            var document = new Document(pdf, "pdf");
+            return AddPdfLinks(document, positions);
+        }
+
+        /// <summary>
+        /// Instance writer + link insertion matching Python write_with_links.
+        /// </summary>
+        public Document WriteWithLinks(StoryRectFn rectfn, Action<StoryElementPositionInfo> positionfn = null, Action<int, Rect, mupdf.FzDevice, int> pagefn = null)
+        {
+            var writer = new DocumentWriter(new Rect(0, 0, 595, 842));
+            var positions = new List<StoryElementPositionInfo>();
+            Write(
+                writer,
+                rectfn,
+                position =>
+                {
+                    positions.Add(position);
+                    positionfn?.Invoke(position);
+                },
+                pagefn
+            );
+            byte[] pdf = writer.Close();
+            writer.Dispose();
+
+            var document = new Document(pdf, "pdf");
+            return AddPdfLinks(document, positions);
+        }
+
+        /// <summary>
+        /// The result from a Story fit* method.
+        /// </summary>
+        public class FitResult
+        {
+            public bool? big_enough { get; set; }
+            public Rect filled { get; set; }
+            public bool? more { get; set; }
+            public int? numcalls { get; set; }
+            public double? parameter { get; set; }
+            public Rect rect { get; set; }
+
+            public override string ToString()
+            {
+                return $" big_enough={big_enough} filled={filled} more={more} numcalls={numcalls} parameter={parameter} rect={rect}";
+            }
+        }
+
+        /// <summary>
+        /// Finds optimal rect that contains this story.
+        /// </summary>
+        public FitResult Fit(Func<double, Rect> fn, double? pmin = null, double? pmax = null, double delta = 0.001, bool verbose = false, int flags = 0)
+        {
+            if (fn == null) throw new ArgumentNullException(nameof(fn));
+
+            double? statePmin = pmin;
+            double? statePmax = pmax;
+            FitResult statePminResult = null;
+            FitResult statePmaxResult = null;
+            int numcalls = 0;
+            double? lastParameter = null;
+
+            void Log(string text)
+            {
+                if (verbose) System.Diagnostics.Debug.WriteLine($"fit(): {text}");
+            }
+
+            Reset();
+
+            FitResult Ret()
+            {
+                if (statePmax.HasValue)
+                {
+                    if (!lastParameter.HasValue || lastParameter.Value != statePmax.Value)
+                    {
+                        Log("Calling update() with pmax, because was overwritten by later calls.");
+                        bool bigEnough = Update(statePmax.Value);
+                        if (!bigEnough)
+                            throw new InvalidOperationException("fit(): internal state error: expected pmax to be big enough.");
+                    }
+                    return statePmaxResult;
+                }
+                return statePminResult ?? new FitResult { numcalls = numcalls };
+            }
+
+            bool Update(double parameter)
+            {
+                var rect = fn(parameter);
+                if (rect == null) throw new InvalidOperationException("fit(): fn(parameter) returned null.");
+
+                bool bigEnough;
+                FitResult result;
+
+                if (rect.IsEmpty)
+                {
+                    bigEnough = false;
+                    result = new FitResult
+                    {
+                        parameter = parameter,
+                        numcalls = numcalls
+                    };
+                    Log("update(): not calling self.place() because rect is empty.");
+                }
+                else
+                {
+                    var placed = Place(rect, flags);
+                    numcalls += 1;
+                    bigEnough = !placed.more;
+                    result = new FitResult
+                    {
+                        filled = placed.filledRect,
+                        more = placed.more,
+                        numcalls = numcalls,
+                        parameter = parameter,
+                        rect = rect,
+                        big_enough = bigEnough
+                    };
+                    Log($"update(): called self.place(): {numcalls}: more={placed.more} parameter={parameter} rect={rect}.");
+                }
+
+                if (bigEnough)
+                {
+                    statePmax = parameter;
+                    statePmaxResult = result;
+                }
+                else
+                {
+                    statePmin = parameter;
+                    statePminResult = result;
+                }
+
+                lastParameter = parameter;
+                return bigEnough;
+            }
+
+            double Opposite(double? p, int direction)
+            {
+                if (!p.HasValue || p.Value == 0)
+                    return direction;
+                if (direction * p.Value > 0)
+                    return 2 * p.Value;
+                return -p.Value;
+            }
+
+            if (!statePmin.HasValue)
+            {
+                Log("finding pmin.");
+                double parameter = Opposite(statePmax, -1);
+                while (true)
+                {
+                    if (!Update(parameter))
+                        break;
+                    parameter *= 2;
                 }
             }
-        }
-    }
-
-    internal class State
-    {
-        public float Pmin { get; set; }
-
-        public float Pmax { get; set; }
-
-        public FitResult PminResult { get; set; }
-
-        public FitResult PmaxResult { get; set; }
-
-        public int Result { get; set; }
-
-        public int Numcalls { get; set; }
-
-        public float Pmin0 { get; set; }
-
-        public float Pmax0 { get; set; }
-
-        public float LastP { get; set; }
-        public State(float pmin, float pmax, bool verbose)
-        {
-            Pmin = pmin;
-            Pmax = pmax;
-            PminResult = null;
-            PmaxResult = null;
-            Result = 0;
-            Numcalls = 0;
-            if (verbose)
+            else
             {
-                Pmin0 = pmin;
-                Pmax0 = pmax;
+                if (Update(statePmin.Value))
+                {
+                    Log($"statePmin={statePmin} is big enough.");
+                    return Ret();
+                }
+            }
+
+            if (!statePmax.HasValue)
+            {
+                Log("finding pmax.");
+                double parameter = Opposite(statePmin, +1);
+                while (true)
+                {
+                    if (Update(parameter))
+                        break;
+                    parameter *= 2;
+                }
+            }
+            else
+            {
+                if (!Update(statePmax.Value))
+                {
+                    statePmax = null;
+                    Log("No solution possible statePmax=null.");
+                    return Ret();
+                }
+            }
+
+            Log($"doing binary search with statePmin={statePmin} statePmax={statePmax}.");
+            while (true)
+            {
+                if (!statePmax.HasValue || !statePmin.HasValue || statePmax.Value - statePmin.Value < delta)
+                    return Ret();
+                double parameter = (statePmin.Value + statePmax.Value) / 2;
+                Update(parameter);
             }
         }
-    }
-
-    public class FitResult
-    {
-        /// <summary>
-        /// True if the fit succeeded
-        /// </summary>
-        public bool BigEnough { get; set; } = false;
 
         /// <summary>
-        /// From the last call to Story.place()
+        /// Finds smallest scale where scale*rect contains this story.
         /// </summary>
-        public dynamic Filled { get; set; }
-
-        /// <summary>
-        /// False if the fit succeeded
-        /// </summary>
-        public bool More { get; set; }
-
-        /// <summary>
-        /// Number of calls made to self.place()
-        /// </summary>
-        public int NumCalls { get; set; }
-
-        /// <summary>
-        /// The successful parameter value, or the largest failing value
-        /// </summary>
-        public float Parameter { get; set; }
-
-        /// <summary>
-        /// The rect created from parameter
-        /// </summary>
-        public Rect Rect { get; set; }
-
-        public FitResult(bool bigEnough = false, dynamic filled = null, bool more = false, int numcalls = 0, float parameter = 0, Rect rect = null)
+        public FitResult FitScale(Rect rect, double scale_min = 0, double? scale_max = null, double delta = 0.001, bool verbose = false, int flags = 0)
         {
-            BigEnough = bigEnough;
-            Filled = filled;
-            More = more;
-            NumCalls = numcalls;
-            Parameter = parameter;
-            Rect = rect;
+            double x0 = rect.X0;
+            double y0 = rect.Y0;
+            double width = rect.Width;
+            double height = rect.Height;
+            Rect Fn(double scale) => new Rect(x0, y0, x0 + scale * width, y0 + scale * height);
+            return Fit(Fn, scale_min, scale_max, delta, verbose, flags);
         }
 
-        public override string ToString()
+        /// <summary>
+        /// Finds smallest height where width x height contains this story.
+        /// </summary>
+        public FitResult FitHeight(double width, double height_min = 0, double? height_max = null, Point origin = null, double delta = 0.001, bool verbose = false)
         {
-            return $"BigEnough={BigEnough}, Filled={Filled}, More={More}, NumCalls={NumCalls}, Parameter={Parameter}, Rect={Rect}";
+            origin ??= new Point(0, 0);
+            double x0 = origin.X;
+            double y0 = origin.Y;
+            double x1 = x0 + width;
+            Rect Fn(double height) => new Rect(x0, y0, x1, y0 + height);
+            return Fit(Fn, height_min, height_max, delta, verbose, 0);
         }
+
+        /// <summary>
+        /// Finds smallest width where width x height contains this story.
+        /// </summary>
+        public FitResult FitWidth(double height, double width_min = 0, double? width_max = null, Point origin = null, double delta = 0.001, bool verbose = false)
+        {
+            origin ??= new Point(0, 0);
+            double x0 = origin.X;
+            double y0 = origin.Y;
+            double y1 = y0 + height;
+            Rect Fn(double width) => new Rect(x0, y0, x0 + width, y1);
+            return Fit(Fn, width_min, width_max, delta, verbose, 0);
+        }
+
+        // Python naming wrappers
+        public void add_header_ids() => AddHeaderIds();
+        public (bool more, Rect filledRect) place(Rect where, int flags = 0) => Place(where, flags);
+        public void element_positions(Action<StoryElementPositionInfo> function, Dictionary<string, object> args = null) => ElementPositions(function, args);
+        public void write(DocumentWriter writer, StoryRectFn rectfn, Action<StoryElementPositionInfo> positionfn = null, Action<int, Rect, mupdf.FzDevice, int> pagefn = null)
+            => Write(writer, rectfn, positionfn, pagefn);
+        public static Document add_pdf_links(Document document, List<StoryElementPositionInfo> positions) => AddPdfLinks(document, positions);
+        public static void write_stabilized(DocumentWriter writer, Func<List<StoryElementPositionInfo>, string> contentfn, StoryRectFn rectfn, string user_css = null, float em = 12, Action<StoryElementPositionInfo> positionfn = null, Action<int, Rect, mupdf.FzDevice, int> pagefn = null, Archive archive = null, bool add_header_ids = true)
+            => WriteStabilized(writer, contentfn, rectfn, user_css, em, positionfn, pagefn, archive, add_header_ids);
+        public static Document write_stabilized_with_links(Func<List<StoryElementPositionInfo>, string> contentfn, StoryRectFn rectfn, string user_css = null, float em = 12, Action<StoryElementPositionInfo> positionfn = null, Action<int, Rect, mupdf.FzDevice, int> pagefn = null, Archive archive = null, bool add_header_ids = true)
+            => WriteStabilizedWithLinks(contentfn, rectfn, user_css, em, positionfn, pagefn, archive, add_header_ids);
+        public Document write_with_links(StoryRectFn rectfn, Action<StoryElementPositionInfo> positionfn = null, Action<int, Rect, mupdf.FzDevice, int> pagefn = null)
+            => WriteWithLinks(rectfn, positionfn, pagefn);
+        public FitResult fit(Func<double, Rect> fn, double? pmin = null, double? pmax = null, double delta = 0.001, bool verbose = false, int flags = 0)
+            => Fit(fn, pmin, pmax, delta, verbose, flags);
+        public FitResult fit_scale(Rect rect, double scale_min = 0, double? scale_max = null, double delta = 0.001, bool verbose = false, int flags = 0)
+            => FitScale(rect, scale_min, scale_max, delta, verbose, flags);
+        public FitResult fit_height(double width, double height_min = 0, double? height_max = null, Point origin = null, double delta = 0.001, bool verbose = false)
+            => FitHeight(width, height_min, height_max, origin, delta, verbose);
+        public FitResult fit_width(double height, double width_min = 0, double? width_max = null, Point origin = null, double delta = 0.001, bool verbose = false)
+            => FitWidth(height, width_min, width_max, origin, delta, verbose);
+
+        private sealed class StoryPositionCollector : mupdf.StoryPositionsCallback
+        {
+            private readonly Action<StoryElementPositionInfo> _callback;
+            private readonly Dictionary<string, object> _args;
+
+            internal StoryPositionCollector(Action<StoryElementPositionInfo> callback, Dictionary<string, object> args)
+            {
+                _callback = callback;
+                _args = args;
+            }
+
+            public override void call(mupdf.fz_story_element_position position)
+            {
+                var p = new StoryElementPositionInfo
+                {
+                    depth = position.depth,
+                    heading = position.heading,
+                    id = position.id,
+                    rect = new Rect(position.rect.x0, position.rect.y0, position.rect.x1, position.rect.y1),
+                    text = position.text,
+                    open_close = position.open_close,
+                    rect_num = position.rectangle_num,
+                    href = position.href,
+                };
+                if (_args != null)
+                {
+                    // Keep Python behavior "args injection" best-effort by copying known keys.
+                    if (_args.TryGetValue("page_num", out var pageNumObj) && pageNumObj is int pg)
+                        p.page_num = pg;
+                }
+                _callback(p);
+            }
+        }
+
+        // ─── IDisposable ────────────────────────────────────────────────
+
+        /// <summary>
+        /// Releases all resources used by the <see cref="Story"/>.
+        /// </summary>
+        public void Dispose()
+        {
+            if (!_disposed)
+            {
+                _nativeStory?.Dispose();
+                _nativeStory = null;
+                _disposed = true;
+            }
+            GC.SuppressFinalize(this);
+        }
+
+        ~Story() { Dispose(); }
+
+        /// <summary>
+        /// Returns a string that represents the current story.
+        /// </summary>
+        public override string ToString() => "Story()";
     }
 }

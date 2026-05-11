@@ -1,558 +1,354 @@
-﻿using mupdf;
-using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
-using System.Data;
-using System.Linq;
 
 namespace MuPDF.NET
 {
-    public class Widget
+    /// <summary>
+    /// Class describing a PDF form field ('widget').
+    /// </summary>
+    public class Widget : IDisposable
     {
-        static Widget()
+        private mupdf.PdfAnnot _nativeWidget;
+        private bool _disposed;
+        internal Page Parent { get; }
+
+        internal Widget(mupdf.PdfAnnot widget, Page page)
         {
-            Utils.InitApp();
-        }
-
-        /// <summary>
-        /// A list of up to 4 floats defining the field’s border color
-        /// </summary>
-        public float[] BorderColor { get; set; }
-
-        /// <summary>
-        /// A string defining the line style of the field’s border
-        /// </summary>
-        public string BorderStyle { get; set; }
-
-        /// <summary>
-        /// A float defining the width of the border line
-        /// </summary>
-        public float BorderWidth { get; set; }
-
-        /// <summary>
-        /// A list/tuple of integers defining the dash properties of the border line
-        /// </summary>
-        public int[] BorderDashes { get; set; }
-
-        /// <summary>
-        /// A sequence of strings defining the valid choices of list boxes and combo boxes
-        /// </summary>
-        public List<dynamic> ChoiceValues { get; set; }
-
-        public int RbParent { get; set; }
-
-        /// <summary>
-        /// A mandatory string defining the field’s name
-        /// </summary>
-        public string FieldName { get; set; }
-
-        /// <summary>
-        /// An optional string containing an “alternate” field name
-        /// </summary>
-        public string FieldLabel { get; set; }
-
-        /// <summary>
-        /// The value of the field
-        /// </summary>
-        public string FieldValue { get; set; }
-
-        /// <summary>
-        /// An integer defining a large amount of properties of a field
-        /// </summary>
-        public int FieldFlags { get; set; }
-
-        /// <summary>
-        /// A mandatory integer defining the field type
-        /// </summary>
-        public int FieldType { get; set; }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        public int FieldDisplay { get; set; }
-
-        /// <summary>
-        /// A string describing (and derived from) the field type
-        /// </summary>
-        public string FieldTypeString { get; set; }
-
-        /// <summary>
-        /// A list of up to 4 floats defining the field’s background color
-        /// </summary>
-        public float[] FillColor { get; set; }
-
-        /// <summary>
-        /// The caption string of a button-type field
-        /// </summary>
-        public string ButtonCaption { get; set; }
-
-        /// <summary>
-        /// A bool indicating the signing status of a signature field, else false
-        /// </summary>
-        public bool IsSigned { get; set; }
-
-        /// <summary>
-        /// A list of 1, 3 or 4 floats defining the text color
-        /// </summary>
-        public float[] TextColor { get; set; }
-
-        /// <summary>
-        /// A string defining the font to be used
-        /// </summary>
-        public string TextFont { get; set; }
-
-        /// <summary>
-        /// A float defining the text fontsize
-        /// </summary>
-        public float TextFontSize { get; set; }
-
-        /// <summary>
-        /// An integer defining the maximum number of text characters
-        /// </summary>
-        public int TextMaxLen { get; set; }
-
-        public int TextFormat { get; set; }
-
-        public string TextDa { get; set; }
-
-        /// <summary>
-        /// JavaScript text (unicode) for an action associated with the widget, or null
-        /// </summary>
-        public string Script { get; set; }
-
-        /// <summary>
-        /// JavaScript text (unicode) to be performed when the user types a key-stroke into a text field or combo box or modifies the selection in a scrollable list box
-        /// </summary>
-        public string ScriptStroke { get; set; }
-
-        /// <summary>
-        /// JavaScript text (unicode) to be performed before the field is formatted to display its current value
-        /// </summary>
-        public string ScriptFormat { get; set; }
-
-        /// <summary>
-        /// JavaScript text (unicode) to be performed when the field’s value is changed
-        /// </summary>
-        public string ScriptChange { get; set; }
-
-        /// <summary>
-        /// JavaScript text (unicode) to be performed to recalculate the value of this field when that of another field changes
-        /// </summary>
-        public string ScriptCalc { get; set; }
-
-        /// <summary>
-        /// JavaScript text (unicode) to be performed on focusing this field
-        /// </summary>
-        public string ScriptBlur { get; set; }
-
-        /// <summary>
-        /// JavaScript text (unicode) to be performed on focusing this field
-        /// </summary>
-        public string ScriptFocus { get; set; }
-
-        /// <summary>
-        /// The PDF xref of the widget
-        /// </summary>
-        public int Xref { get; set; }
-
-        /// <summary>
-        /// The rectangle containing the field
-        /// </summary>
-        public Rect Rect { get; set; }
-
-        public Page Parent { get; set; }
-
-        public PdfAnnot _annot { get; set; }
-
-        public Widget(Page page)
-        {
+            _nativeWidget = widget;
             Parent = page;
-            BorderColor = null;
-            BorderStyle = "S";
-            BorderWidth = 0;
-            BorderDashes = null;
-            ChoiceValues = null;
-            RbParent = 0;
-
-            FieldName = null;
-            FieldLabel = null;
-            FieldValue = null;
-            FieldFlags = 0;
-            FieldType = 0;
-            FieldDisplay = 0;
-            FieldTypeString = null;
-
-            FillColor = null;
-            ButtonCaption = null;
-            IsSigned = false;
-            TextColor = new float[] { 0, 0, 0 };
-            TextFont = "Helv";
-            TextFontSize = 0;
-            TextMaxLen = 0;
-            TextFormat = 0;
-            TextDa = "";
-
-            Script = null;
-            ScriptStroke = null;
-            ScriptFormat = null;
-            ScriptCalc = null;
-            ScriptChange = null;
-            ScriptBlur = null;
-            ScriptFocus = null;
-
-            Rect = null;
-            Xref = 0;
         }
 
-        public override string ToString()
-        {
-            return $"Widget:(field_type={FieldTypeString}) script={Script}";
-        }
+        // ─── Properties ─────────────────────────────────────────────────
 
         /// <summary>
-        /// Ensure text_font is from our list and correctly spelled.
+        /// Field type as enum.
         /// </summary>
-        /// <returns></returns>
-        public void AdjustFont()
-        {
-            if (string.IsNullOrEmpty(TextFont))
-            {
-                TextFont = "Helv";
-                return;
-            }
-            List<string> validFonts = new List<string>() { "Cour", "TiRo", "Helv", "ZaDb" };
-            foreach (string f in validFonts)
-                if (TextFont.ToLower() == f.ToLower())
-                {
-                    TextFont = f;
-                    return;
-                }
-            TextFont = "Helv";
-            return;
-        }
-
-        /// <summary>
-        /// Any widget type checks.
-        /// </summary>
-        /// <returns></returns>
-        public void Checker()
-        {
-            if (!(FieldType >= 1 && FieldType < 8))
-                throw new Exception("bad field type");
-
-            if (FieldType == (int)PdfWidgetType.PDF_WIDGET_TYPE_RADIOBUTTON)
-            {
-                Document doc = Parent.Parent;
-                (string kidsType, string kidsValue) = doc.GetKeyXref(Xref, "Parent/Kids");
-                if (kidsType == "array")
-                {
-                    //List<int> xrefs = kidsValue.Substring(1, kidsValue.Length - 2).Replace("0 R", "").Split("").Select(x => int.Parse(x)).ToList();
-                    List<int> xrefs = kidsValue.Substring(1, kidsValue.Length - 2).Replace("0 R", " ").Split(' ').Select(x => int.Parse(x)).ToList();
-                    foreach (int xref in xrefs)
-                    {
-                        if (xref != Xref)
-                            doc.SetKeyXRef(xref, "AS", "/Off");
-                    }
-                }
-            }
-        }
-
-        /// <summary>
-        /// Extract font name, size and color from default appearance string (/DA object).
-        /// Equivalent to 'pdf_parse_default_appearance' function in MuPDF's 'pdf-annot.c'.
-        /// </summary>
-        /// <returns></returns>
-        public void ParseDa()
-        {
-            if (string.IsNullOrEmpty(TextDa))
-                return;
-            string font = "Helv";
-            float fontSize = 0;
-            float[] col = { 0, 0, 0 };
-            string[] dat = TextDa.Split(null as char[], StringSplitOptions.RemoveEmptyEntries);    // split on any whitespace and remove empty entries
-            for (int i = 0; i < dat.Length; i++)
-            {
-                string item = dat[i];
-                if (item == "Tf")
-                {
-                    font = dat[i - 2].Substring(1);
-                    fontSize = float.Parse(dat[i - 1], System.Globalization.CultureInfo.InvariantCulture);
-                    dat[i] = dat[i - 1] = dat[i - 2] = "";
-                    continue;
-                }
-                if (item == "g")
-                {
-                    col = new float[] { float.Parse(dat[i - 1], System.Globalization.CultureInfo.InvariantCulture) };
-                    dat[i] = dat[i - 1] = "";
-                    continue;
-                }
-                if (item == "rg")
-                {
-                    col = new float[3];
-                    for (int j = i - 3; j < i; j++)
-                        col[j - i + 3] = float.Parse(dat[j], System.Globalization.CultureInfo.InvariantCulture);
-                    dat[i] = dat[i - 1] = dat[i - 2] = dat[i - 3] = "";
-                    continue;
-                }
-            }
-            TextFont = font;
-            TextFontSize = fontSize;
-            TextColor = col;
-            TextDa = "";
-        }
-
-        /// <summary>
-        /// Validate the class entries.
-        /// </summary>
-        /// <returns></returns>
-        public void Validate()
-        {
-            if (Rect.IsInfinite || Rect.IsEmpty)
-                throw new Exception("bad rect");
-            if (string.IsNullOrEmpty(FieldName))
-                throw new Exception("field name missing");
-            if (FieldLabel == "Unnamed")
-                FieldLabel = null;
-            Utils.CheckColor(BorderColor);
-            Utils.CheckColor(FillColor);
-            if (TextColor == null)
-                TextColor = new float[] { 0, 0, 0 };
-            Utils.CheckColor(TextColor);
-
-            if (BorderWidth == 0)
-                BorderWidth = 0;
-            if (TextFontSize == 0)
-                TextFontSize = 0;
-
-            BorderStyle = BorderStyle.ToUpper().Substring(0, 1);
-
-            // standardize content of JavaScript entries
-            bool btnType = (new List<PdfWidgetType> {
-                PdfWidgetType.PDF_WIDGET_TYPE_BUTTON,
-                PdfWidgetType.PDF_WIDGET_TYPE_CHECKBOX,
-                PdfWidgetType.PDF_WIDGET_TYPE_RADIOBUTTON}).Contains((PdfWidgetType)FieldType);
-            if (string.IsNullOrEmpty(Script))
-                Script = null;
-
-            // buttons cannot have the following script actions
-            if (btnType || string.IsNullOrEmpty(ScriptCalc))
-                ScriptCalc = null;
-
-            if (btnType || string.IsNullOrEmpty(ScriptChange))
-                ScriptChange = null;
-
-            if (btnType || string.IsNullOrEmpty(ScriptFormat))
-                ScriptFormat = null;
-
-            if (btnType || string.IsNullOrEmpty(ScriptStroke))
-                ScriptStroke = null;
-
-            if (btnType || string.IsNullOrEmpty(ScriptBlur))
-                ScriptBlur = null;
-
-            if (btnType || string.IsNullOrEmpty(ScriptFocus))
-                ScriptFocus = null;
-
-            Checker(); // any field_type specific checks
-        }
-
-        /// <summary>
-        /// Propagate the field flags.
-        /// If this widget has a "/Parent", set its field flags and that of all
-        /// its /Kids widgets to the value of the current widget.
-        /// Only possible for widgets existing in the PDF.
-        /// </summary>
-        /// <returns>true/false</returns>
-        public bool SyncFlags()
-        {
-            if (Xref == 0)
-                return false;  // no xref: widget not in the PDF
-            Document doc = this.Parent.Parent; // the owning document
-            if (doc == null)
-                return false;
-            PdfDocument pdf = Document.AsPdfDocument(doc);
-            // load underlying PDF object
-            PdfObj pdf_widget = pdf.pdf_load_object(Xref);
-            PdfObj parent = pdf_widget.pdf_dict_get(new PdfObj("Parent"));
-            if (parent.pdf_is_dict() == 0)
-            {
-                pdf.Dispose();
-                return false;  // no /Parent: nothing to do
-            }
-
-            // put the field flags value into the parent field flags:
-            parent.pdf_dict_put_int(new PdfObj("Ff"), this.FieldFlags);
-
-            // also put that value into all kids of the Parent
-            PdfObj kids = parent.pdf_dict_get(new PdfObj("Kids"));
-            if (kids.pdf_is_array() == 0)
-            {
-                Console.WriteLine("warning: malformed PDF, Parent has no Kids array");
-                pdf.Dispose();
-                return false;  // no /Kids: should never happen!
-            }
-
-            for (int i = 0; i < kids.pdf_array_len(); i++)
-            {
-                // access kid widget, and do some precautionary checks
-                PdfObj kid = kids.pdf_array_get(i);
-                if (kid.pdf_is_dict() == 0)
-                    continue;  // not a dict: skip
-                int xref = kid.pdf_to_num();  // get xref of the kid
-                if (xref == this.Xref)  // skip self widget
-                    continue;
-                PdfObj subtype = kid.pdf_dict_get(new PdfObj("Subtype"));
-                if (subtype.pdf_to_name() != "Widget")
-                    continue;
-                // put the field flags value into the kid field flags:
-                kid.pdf_dict_put_int(new PdfObj("Ff"), this.FieldFlags);
-            }
-
-            pdf.Dispose();
-            return true;  // all done
-        }
-
-        /// <summary>
-        /// Return the names of On / Off (i.e. selected / clicked or not) states a button field may have. While the ‘Off’ state usually is also named like so, the ‘On’ state is often given a name relating to the functional context, for example ‘Yes’, ‘Female’, etc.
-        /// A button may have 'normal' or 'pressed down' appearances. While the 'Off'
-        /// state is usually called like this, the 'On' state is often given a name
-        /// relating to the functional context.
-        /// </summary>
-        /// <returns></returns>
-        public Dictionary<string, List<string>> ButtonStates()
-        {
-            if (!(FieldType == 2 || FieldType == 5))
-                return null;    // no button type
-            Document doc = this.Parent.Parent;  // field already exists on page
-            if (doc == null)
-                return null;
-
-            int xref = Xref;
-            Dictionary<string, List<string>> states = new Dictionary<string, List<string>>();
-            states.Add("normal", null);
-            states.Add("down", null);
-            (string, string) apn = doc.GetKeyXref(xref, "AP/N");
-            if (apn.Item1 == "dict")
-            {
-                List<string> nstates = new List<string>();
-                string t = apn.Item2.Substring(2, apn.Item2.Length - 2 - 2);
-                string[] apnt = t.Split('/').Skip(1).ToArray();
-                foreach (string x in apnt)
-                    nstates.Add(x.Split()[0]);
-                states["normal"] = nstates;
-            }
-            if (apn.Item1 == "xref")
-            {
-                List<string> nstates = new List<string>();
-                int nxref = int.Parse(apn.Item2.Split(' ')[0]);
-                string t = doc.GetXrefObject(nxref);
-                string[] apnt = t.Split('/').Skip(1).ToArray();
-                foreach (string x in apnt)
-                    nstates.Add(x.Split()[0]);
-                states["normal"] = nstates;
-            }
-            (string, string) apd = doc.GetKeyXref(xref, "AP/D");
-            if (apd.Item1 == "dict")
-            {
-                List<string> dstates = new List<string>();
-                string t = apd.Item2.Substring(2, apd.Item2.Length - 2 - 2);
-                string[] apdt = t.Split('/').Skip(1).ToArray();
-                foreach (string x in apdt)
-                    dstates.Add(x.Split()[0]);
-                states["down"] = dstates;
-            }
-            if (apd.Item1 == "xref")
-            {
-                List<string> dstates = new List<string>();
-                int dxref = int.Parse(apd.Item2.Split(' ')[0]);
-                string t = doc.GetXrefObject(dxref);
-                string[] apdt = t.Split('/').Skip(1).ToArray();
-                foreach (string x in apdt)
-                    dstates.Add(x.Split()[0]);
-                states["down"] = dstates;
-            }
-            return states;
-        }
-
-        /// <summary>
-        /// Point to the next form field on the page.
-        /// </summary>
-        public dynamic Next
+        public WidgetType FieldType
         {
             get
             {
-                return (new Annot(_annot, Parent)).Next;
+                var t = mupdf.mupdf.pdf_widget_type(_nativeWidget);
+                return (WidgetType)(int)t;
             }
         }
 
         /// <summary>
-        /// Return the value of the “ON” state of check boxes and radio buttons. For check boxes this is always the value “Yes”. For radio buttons, this is the value to select / activate the button.
+        /// Field type as string.
         /// </summary>
-        /// <returns></returns>
-        public string OnState()
+        public string FieldTypeString
         {
-            if (!(FieldType == 2 || FieldType == 5))
-                return null;
-            if (FieldType == 2)
-                return "Yes";
-            Dictionary<string, List<string>> bstate = ButtonStates();
-            if (bstate == null)
-                bstate = new Dictionary<string, List<string>>();
-            foreach (string k in bstate.Keys)
+            get
             {
-                foreach (string v in bstate[k])
+                return FieldType switch
                 {
-                    if (v != "Off")
-                        return v;
-                }
+                    WidgetType.Button => "Button",
+                    WidgetType.Text => "Text",
+                    WidgetType.ComboBox => "Choice",
+                    WidgetType.ListBox => "Choice",
+                    WidgetType.Signature => "Signature",
+                    _ => "Unknown"
+                };
             }
-            Console.WriteLine("warning: radio button has no 'On' value");
-            return "";
         }
 
         /// <summary>
-        /// Reset the field’s value to its default – if defined – or remove it. Do not forget to issue update() afterwards.
+        /// Field name.
+        /// </summary>
+        public string FieldName
+        {
+            get
+            {
+                var name = mupdf.mupdf.pdf_load_field_name(mupdf.mupdf.pdf_annot_obj(_nativeWidget));
+                return name ?? "";
+            }
+        }
+
+        /// <summary>
+        /// Field label (tooltip).
+        /// </summary>
+        public string FieldLabel
+        {
+            get
+            {
+                var label = mupdf.mupdf.pdf_dict_get_text_string(mupdf.mupdf.pdf_annot_obj(_nativeWidget),
+                    mupdf.mupdf.pdf_new_name("TU"));
+                return label ?? "";
+            }
+        }
+
+        /// <summary>
+        /// Field value.
+        /// </summary>
+        public string FieldValue
+        {
+            get => mupdf.mupdf.pdf_field_value(mupdf.mupdf.pdf_annot_obj(_nativeWidget)) ?? "";
+            set
+            {
+                mupdf.mupdf.pdf_set_field_value(Parent.Parent.NativePdfDocument,
+                    mupdf.mupdf.pdf_annot_obj(_nativeWidget), value, 0);
+                mupdf.mupdf.pdf_update_annot(_nativeWidget);
+            }
+        }
+
+        /// <summary>
+        /// Field default value.
+        /// </summary>
+        public string FieldDefault
+        {
+            get
+            {
+                var dv = mupdf.mupdf.pdf_dict_get_text_string(mupdf.mupdf.pdf_annot_obj(_nativeWidget),
+                    mupdf.mupdf.pdf_new_name("DV"));
+                return dv ?? "";
+            }
+        }
+
+        /// <summary>
+        /// Field flags.
+        /// </summary>
+        public int FieldFlags => mupdf.mupdf.pdf_field_flags(mupdf.mupdf.pdf_annot_obj(_nativeWidget));
+
+        /// <summary>
+        /// Widget rectangle.
+        /// </summary>
+        public Rect Rect
+        {
+            get
+            {
+                var r = mupdf.mupdf.pdf_bound_annot(_nativeWidget);
+                return new Rect(r.x0, r.y0, r.x1, r.y1);
+            }
+        }
+
+        /// <summary>
+        /// Widget xref number.
+        /// </summary>
+        public int Xref => mupdf.mupdf.pdf_to_num(mupdf.mupdf.pdf_annot_obj(_nativeWidget));
+
+        /// <summary>
+        /// Check if field is read only.
+        /// </summary>
+        public bool IsReadOnly
+        {
+            get
+            {
+                int flags = FieldFlags;
+                return (flags & 1) != 0; // PDF_FIELD_IS_READ_ONLY
+            }
+        }
+
+        /// <summary>
+        /// Check if field is required.
+        /// </summary>
+        public bool IsRequired
+        {
+            get
+            {
+                int flags = FieldFlags;
+                return (flags & 2) != 0;
+            }
+        }
+
+        /// <summary>
+        /// Maximum text length.
+        /// </summary>
+        public int MaxLen
+        {
+            get
+            {
+                var ml = mupdf.mupdf.pdf_dict_get_int(mupdf.mupdf.pdf_annot_obj(_nativeWidget),
+                    mupdf.mupdf.pdf_new_name("MaxLen"));
+                return ml;
+            }
+        }
+
+        /// <summary>
+        /// Check if text field is multi-line.
+        /// </summary>
+        public bool IsMultiline
+        {
+            get
+            {
+                int flags = FieldFlags;
+                return (flags & (1 << 12)) != 0;
+            }
+        }
+
+        /// <summary>
+        /// Check if text field is a comb field.
+        /// </summary>
+        public bool IsComb
+        {
+            get
+            {
+                int flags = FieldFlags;
+                return (flags & (1 << 24)) != 0;
+            }
+        }
+
+        /// <summary>
+        /// Next form field.
+        /// </summary>
+        public Widget Next
+        {
+            get
+            {
+                var next = mupdf.mupdf.pdf_next_widget(_nativeWidget);
+                return next.m_internal != null ? new Widget(next, Parent) : null;
+            }
+        }
+
+        /// <summary>
+        /// Choice field option values.
+        /// </summary>
+        public List<string> ChoiceValues
+        {
+            get
+            {
+                var result = new List<string>();
+                var obj = mupdf.mupdf.pdf_annot_obj(_nativeWidget);
+                var opt = mupdf.mupdf.pdf_dict_get(obj, mupdf.mupdf.pdf_new_name("Opt"));
+                if (opt.m_internal == null) return result;
+                int n = mupdf.mupdf.pdf_array_len(opt);
+                for (int i = 0; i < n; i++)
+                {
+                    var item = mupdf.mupdf.pdf_array_get(opt, i);
+                    if (mupdf.mupdf.pdf_is_array(item) != 0)
+                        result.Add(mupdf.mupdf.pdf_to_text_string(mupdf.mupdf.pdf_array_get(item, 1)));
+                    else
+                        result.Add(mupdf.mupdf.pdf_to_text_string(item));
+                }
+                return result;
+            }
+        }
+
+        /// <summary>
+        /// Calculate script (C) from the additional-actions dictionary.
+        /// </summary>
+        public string ScriptCalc => GetScript("C");
+        /// <summary>
+        /// Format script (F) from the additional-actions dictionary.
+        /// </summary>
+        public string ScriptFormat => GetScript("F");
+        /// <summary>
+        /// Keystroke script (K) from the additional-actions dictionary.
+        /// </summary>
+        public string ScriptKeystroke => GetScript("K");
+        /// <summary>
+        /// Validation script (V) from the additional-actions dictionary.
+        /// </summary>
+        public string ScriptValidation => GetScript("V");
+        /// <summary>
+        /// Blur script (Bl) from the additional-actions dictionary.
+        /// </summary>
+        public string ScriptBlur => GetScript("Bl");
+        /// <summary>
+        /// Focus script (Fo) from the additional-actions dictionary.
+        /// </summary>
+        public string ScriptFocus => GetScript("Fo");
+
+        // ─── Methods ────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Set the field value.
+        /// </summary>
+        public void SetValue(string value) => FieldValue = value;
+
+        /// <summary>
+        /// Set widget rectangle.
+        /// </summary>
+        public void SetRect(Rect rect)
+        {
+            mupdf.mupdf.pdf_set_annot_rect(_nativeWidget, rect.ToFzRect());
+            mupdf.mupdf.pdf_update_annot(_nativeWidget);
+        }
+
+        /// <summary>
+        /// Set choice field option values.
+        /// </summary>
+        public void SetChoiceValues(List<string> values)
+        {
+            if (values == null || values.Count == 0) return;
+            var obj = mupdf.mupdf.pdf_annot_obj(_nativeWidget);
+            var pdf = Parent.Parent.NativePdfDocument;
+            var optArr = mupdf.mupdf.pdf_new_array(pdf, values.Count);
+            foreach (var val in values)
+                mupdf.mupdf.pdf_array_push(optArr, mupdf.mupdf.pdf_new_text_string(val));
+            mupdf.mupdf.pdf_dict_puts(obj, "Opt", optArr);
+            mupdf.mupdf.pdf_update_annot(_nativeWidget);
+        }
+
+        /// <summary>
+        /// Update widget appearance.
+        /// </summary>
+        public void Update()
+        {
+            mupdf.mupdf.pdf_update_annot(_nativeWidget);
+        }
+
+        /// <summary>
+        /// Button widget on/checked state from the toggle flag.
+        /// </summary>
+        public bool OnState => mupdf.mupdf.pdf_toggle_widget(_nativeWidget) != 0;
+
+        /// <summary>
+        /// Reset field to its default value.
         /// </summary>
         public void Reset()
         {
-            Utils.ResetWidget(_annot);
+            var obj = mupdf.mupdf.pdf_annot_obj(_nativeWidget);
+            var dv = mupdf.mupdf.pdf_dict_get(obj, mupdf.mupdf.pdf_new_name("DV"));
+            if (dv.m_internal != null)
+                mupdf.mupdf.pdf_dict_put(obj, mupdf.mupdf.pdf_new_name("V"), dv);
+            else
+                mupdf.mupdf.pdf_dict_del(obj, mupdf.mupdf.pdf_new_name("V"));
+            mupdf.mupdf.pdf_update_annot(_nativeWidget);
         }
 
         /// <summary>
-        /// After any changes to a widget, this method must be used to store them in the PDF 
-        /// <param name="syncFlags">propagate field flags to parent and kids</param>
+        /// Widget Pixmap.
         /// </summary>
-        public void Update(bool syncFlags = false)
+        public Pixmap GetPixmap(Matrix matrix = null, Colorspace cs = null, bool alpha = false)
         {
-            Validate();
-            AdjustFont(); // ensure valid text_font name
-
-            // now create the /DA string
-            TextDa = "";
-            string fmt = "";
-
-            if (TextColor != null && TextColor.Length == 3)
-                fmt = $"{Utils.FloatToString(TextColor[0])} {Utils.FloatToString(TextColor[1])} {Utils.FloatToString(TextColor[2])} rg /" + "{0} {1} Tf" + TextDa;
-            else if (TextColor.Length == 1)
-                fmt = $"{Utils.FloatToString(TextColor[0])} g /" + "{0} {1} Tf" + TextDa;
-            else if (TextColor.Length == 4)
-                fmt = $"{Utils.FloatToString(TextColor[0])} {Utils.FloatToString(TextColor[1])} {Utils.FloatToString(TextColor[2])} {Utils.FloatToString(TextColor[3])} k /" + "{0} {1} Tf" + TextDa;
-            TextDa = string.Format(System.Globalization.CultureInfo.InvariantCulture, fmt, TextFont, Utils.FloatToString(TextFontSize));
-
-            // if widget has a '/AA/C' script, make sure it is in the '/CO'
-            // array of the '/AcroForm' dictionary.
-            if (!string.IsNullOrEmpty(ScriptCalc)) // there is a "calculation" script:
-            {
-                // make sure we are in the /CO array
-                Utils.EnsureWidgetCalc(_annot);
-            }
-            
-            Utils.SaveWidget(_annot, this);
-            TextDa = "";
-
-            // finally update the widget
-            if (syncFlags)
-                SyncFlags();    // propagate field flags to parent and kids
+            var ctm = (matrix ?? Matrix.Identity).ToFzMatrix();
+            var colorspace = (cs ?? Colorspace.CsRGB).ToFzColorspace();
+            var pix = mupdf.mupdf.pdf_new_pixmap_from_annot(_nativeWidget, ctm, colorspace, new mupdf.FzSeparations(), alpha ? 1 : 0);
+            return new Pixmap(pix);
         }
+
+        private string GetScript(string trigger)
+        {
+            var obj = mupdf.mupdf.pdf_annot_obj(_nativeWidget);
+            var aa = mupdf.mupdf.pdf_dict_get(obj, mupdf.mupdf.pdf_new_name("AA"));
+            if (aa.m_internal == null) return null;
+            var action = mupdf.mupdf.pdf_dict_gets(aa, trigger);
+            if (action.m_internal == null) return null;
+            var js = mupdf.mupdf.pdf_dict_get(action, mupdf.mupdf.pdf_new_name("JS"));
+            if (js.m_internal == null) return null;
+            if (mupdf.mupdf.pdf_is_stream(js) != 0)
+            {
+                var buf = mupdf.mupdf.pdf_load_stream(js);
+                return System.Text.Encoding.UTF8.GetString(buf.fz_buffer_extract());
+            }
+            return mupdf.mupdf.pdf_to_text_string(js);
+        }
+
+        // ─── IDisposable ────────────────────────────────────────────────
+
+        /// <summary>
+        /// Releases resources used by this widget wrapper.
+        /// </summary>
+        public void Dispose()
+        {
+            if (!_disposed) { _disposed = true; }
+            GC.SuppressFinalize(this);
+        }
+
+        ~Widget() { Dispose(); }
+
+        /// <summary>
+        /// Returns a string representation of this widget.
+        /// </summary>
+        public override string ToString() => $"Widget('{FieldTypeString}', '{FieldName}')";
     }
 }

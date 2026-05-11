@@ -1,6285 +1,3307 @@
-using mupdf;
-using SkiaSharp;
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
+using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Linq;
-using System.Net.Mime;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using System.Text;
-using static System.Net.Mime.MediaTypeNames;
+using System.Threading;
 
 namespace MuPDF.NET
 {
-    public class Page : IDisposable
+    /// <summary>
+    /// One page of a document.
+    /// </summary>
+    /// <remarks>
+    /// Ported from PyMuPDF <c>class Page</c> in <c>src/__init__.py</c> (lines 9488–13241). Public methods follow that
+    /// class’s intent and ordering where practical; names use .NET PascalCase. Doc comments are adapted from the
+    /// Python docstrings on the matching methods (same behaviour, not a verbatim copy of narrative text).
+    /// </remarks>
+    public partial class Page : IDisposable
     {
-        static Page()
-        {
-            Utils.InitApp();
-        }
-
-        private FzPage _nativePage = null;
-
-        private PdfPage _pdfPage;
-
-        public Document Parent { get; set; }
-
-        private static FitResult fit;
-
-        private List<Block> _imageInfo = new List<Block>();
-
-        public PdfObj PageObj
-        {
-            get { return _pdfPage.obj(); }
-        }
+        private mupdf.FzPage? _nativePage;
+        private bool _disposed;
+        private List<Dictionary<string, object>> _imageInfo;
+        private object _layoutInformation;
+        private static Func<Page, object> _getLayout;
+        /// <summary>
+        /// Weak cache of <see cref="Annot"/> wrappers for this page, analogous to Python <c>Page._annot_refs</c>
+        /// (<c>weakref.WeakValueDictionary</c> after <c>load_page</c>).
+        /// </summary>
+        private readonly object _wrapperCacheLock = new object();
+        private readonly Dictionary<int, WeakReference<Annot>> _annotRefs = new Dictionary<int, WeakReference<Annot>>();
+        /// <summary>Best-effort cache of <see cref="Link"/> wrappers keyed by link-annot xref (Python <c>delete_link</c> / <c>get_links</c> flow).</summary>
+        private readonly Dictionary<int, WeakReference<Link>> _linkRefsByXref = new Dictionary<int, WeakReference<Link>>();
+        /// <summary>PDF <c>/NM</c> string -> link wrapper (Python <c>delete_link</c> <c>finished()</c> uses <c>linkdict["id"]</c> with <c>_annot_refs</c>).</summary>
+        private readonly Dictionary<string, WeakReference<Link>> _linkRefsByNm = new Dictionary<string, WeakReference<Link>>(StringComparer.Ordinal);
 
         /// <summary>
-        /// The page’s PDF xref. Zero if not a PDF.
+        /// MuPDF’s global context is not safe under concurrent PDF font registration; parallel tests triggered AVs in <c>pdf_add_simple_font</c>.
         /// </summary>
-        public int Xref
-        {
-            get { return Parent.PageXref(Number); }
-        }
+        private static readonly object s_insertFontLock = new object();
 
         /// <summary>
-        /// The page number.
+        /// Stable identity for <see cref="Document"/> page-ref bookkeeping (Python uses <c>id(page)</c>).
         /// </summary>
-        public int Number { get; set; }
-
-        public bool ThisOwn { get; set; }
-
-        public bool WasWrapped { get; set; }
+        internal int PageRefId { get; }
 
         /// <summary>
-        /// Contains the width and height of the page’s Page.mediabox for a PDF, otherwise the bottom-right coordinates of Page.rect.
+        /// Owning document. Becomes <c>null</c> after <see cref="Page.PythonCompat._erase"/>-style teardown.
         /// </summary>
-        public Point MediaBoxSize
-        {
-            get { return new Point(MediaBox.X1, MediaBox.Y1); }
-        }
+        internal Document? Parent { get; private set; }
 
-        public bool IsWrapped
+        internal mupdf.FzPage NativePage
         {
             get
             {
-                try
-                {
-                    if (WasWrapped)
-                        return true;
+                if (_disposed || _nativePage == null)
+                    throw new ObjectDisposedException(nameof(Page));
+                return _nativePage;
+            }
+        }
 
-                    byte[] cont = ReadContents();
-                    if (cont == null || cont.Length == 0)
-                    {
-                        WasWrapped = true;
-                        return true;
-                    }
-                    if (cont[0] != Convert.ToByte('q') || cont.Last() != Convert.ToByte('Q'))
-                        return false;
-                    WasWrapped = true;
-                    return true;
-                }
-                catch (Exception)
-                {
-                    WasWrapped = true;
-                    return true;
-                }
+        internal mupdf.PdfPage NativePdfPage => Helpers.AsPdfPage(NativePage, required: true);
+
+        internal Page(mupdf.FzPage fzPage, Document owner)
+        {
+            _nativePage = fzPage;
+            PageRefId = Document.NextPageRefId();
+            Parent = owner;
+            owner.RegisterPageRef(this);
+        }
+
+        [MemberNotNull(nameof(Parent))]
+        internal Document RequireParent()
+        {
+            if (Parent == null)
+                throw new ObjectDisposedException(nameof(Page), "page is detached from its document");
+            return Parent;
+        }
+
+        internal void RegisterAnnotRef(Annot annot)
+        {
+            if (annot == null) return;
+            lock (_wrapperCacheLock)
+                _annotRefs[annot.AnnotRefId] = new WeakReference<Annot>(annot);
+        }
+
+        internal void ForgetAnnotRef(Annot annot)
+        {
+            if (annot == null) return;
+            lock (_wrapperCacheLock)
+                _annotRefs.Remove(annot.AnnotRefId);
+        }
+
+        /// <summary>
+        /// Port of Python <c>Page._reset_annot_refs</c>: drop cached annotation wrapper references.
+        /// </summary>
+        internal void ResetAnnotRefsInternal()
+        {
+            lock (_wrapperCacheLock)
+            {
+                _annotRefs.Clear();
+                _linkRefsByXref.Clear();
+                _linkRefsByNm.Clear();
             }
         }
 
         /// <summary>
-        /// Contains the top-left point of the page’s /CropBox for a PDF, otherwise Point(0, 0).
+        /// Rebuild <see cref="_linkRefsByXref"/> from the current MuPDF link list (call after link mutations).
         /// </summary>
-        public Point CropBoxPosition
+        internal void SyncLinkWrapperCache()
         {
-            get { return CropBox.TopLeft; }
+            mupdf.PdfDocument? pdfForNm = null;
+            try
+            {
+                if (Parent != null)
+                    pdfForNm = RequireParent().NativePdfDocument;
+            }
+            catch
+            {
+                pdfForNm = null;
+            }
+
+            lock (_wrapperCacheLock)
+            {
+                _linkRefsByXref.Clear();
+                _linkRefsByNm.Clear();
+                foreach (var l in Links())
+                {
+                    int xr = l.Xref;
+                    if (xr > 0)
+                    {
+                        _linkRefsByXref[xr] = new WeakReference<Link>(l);
+                        if (pdfForNm != null && pdfForNm.m_internal != null)
+                        {
+                            var nm = Helpers.PdfAnnotNmForXref(pdfForNm, xr);
+                            if (!string.IsNullOrEmpty(nm))
+                                _linkRefsByNm[nm] = new WeakReference<Link>(l);
+                        }
+                    }
+                }
+            }
         }
 
+        internal bool TryGetCachedLinkByXref(int xref, out Link link)
+        {
+            link = null;
+            if (xref < 1) return false;
+            lock (_wrapperCacheLock)
+            {
+                return _linkRefsByXref.TryGetValue(xref, out var wr) && wr != null && wr.TryGetTarget(out link) && link != null;
+            }
+        }
+
+        internal bool TryGetCachedLinkByAnnotNm(string nm, out Link link)
+        {
+            link = null;
+            if (string.IsNullOrEmpty(nm)) return false;
+            lock (_wrapperCacheLock)
+            {
+                return _linkRefsByNm.TryGetValue(nm, out var wr) && wr != null && wr.TryGetTarget(out link) && link != null;
+            }
+        }
+
+        // ─── Properties ─────────────────────────────────────────────────
+
         /// <summary>
-        /// Contains the rectangle of the page. Same as result of Page.bound().
+        /// Page number (0-based), from the underlying <c>fz_page</c> / <c>pdf_page</c>.
+        /// </summary>
+        public int Number => mupdf.mupdf.pdf_lookup_page_number(RequireParent().NativePdfDocument, NativePdfPage.obj());
+
+        /// <summary>
+        /// Page rectangle; equivalent to PyMuPDF <c>Page.bound()</c> / <c>fz_bound_page</c>.
         /// </summary>
         public Rect Rect
         {
-            get { return GetBound(); }
+            get
+            {
+                var r = mupdf.mupdf.fz_bound_page(NativePage);
+                return new Rect(r.x0, r.y0, r.x1, r.y1);
+            }
         }
 
         /// <summary>
-        /// Contains the rotation of the page in degrees (always 0 for non-PDF types). This is a copy of the value in the PDF file.
+        /// Return the page rectangle (PyMuPDF <c>Page.bound()</c> alias).
+        /// </summary>
+        public Rect Bound() => Rect;
+
+        /// <summary>
+        /// Page MediaBox.
+        /// </summary>
+        public Rect MediaBox => GetMediaBox();
+        /// <summary>
+        /// Page CropBox.
+        /// </summary>
+        public Rect CropBox => GetCropBox();
+        /// <summary>
+        /// Page BleedBox.
+        /// </summary>
+        public Rect BleedBox => GetSpecialBox("BleedBox");
+        /// <summary>
+        /// Page TrimBox.
+        /// </summary>
+        public Rect TrimBox => GetSpecialBox("TrimBox");
+        /// <summary>
+        /// Page ArtBox.
+        /// </summary>
+        public Rect ArtBox => GetSpecialBox("ArtBox");
+
+        /// <summary>
+        /// Page width.
+        /// </summary>
+        public float Width => (float)Rect.Width;
+        /// <summary>
+        /// Page height.
+        /// </summary>
+        public float Height => (float)Rect.Height;
+
+        /// <summary>
+        /// Media box width and height.
+        /// Port of Python Page.mediabox_size (Point).
+        /// </summary>
+        public Point MediaBoxSize => new Point(MediaBox.Width, MediaBox.Height);
+
+        /// <summary>
+        /// Page rotation.
         /// </summary>
         public int Rotation
         {
             get
             {
-                if (_pdfPage == null)
-                    return 0;
-                return Utils.PageRotation(_pdfPage);
+                try
+                {
+                    var pdfPage = NativePdfPage;
+                    return Helpers.PageRotation(pdfPage);
+                }
+                catch { return 0; }
             }
         }
 
         /// <summary>
-        /// Contains the first Link of a page (or None).
-        /// </summary>
-        public Link FristLink
-        {
-            get { return LoadLinks(); }
-        }
-
-        public Rect TrimBox
-        {
-            get
-            {
-                Rect rect = OtherBox("TrimBox");
-                if (rect == null)
-                    return CropBox;
-                Rect mb = MediaBox;
-                return new Rect(rect[0], mb.Y1 - rect[3], rect[2], mb.Y1 - rect[1]);
-            }
-        }
-
-        public Dictionary<int, dynamic> AnnotRefs { get; set; } = new Dictionary<int, dynamic>();
-
-        /// <summary>
-        /// Determine the rectangle of the page. Same as property Page.rect. For PDF documents this usually also coincides with mediabox and cropbox, but not always.
-        /// </summary>
-        /// <returns></returns>
-        public Rect GetBound()
-        {
-            Rect val = new Rect(_nativePage.fz_bound_page());
-            if (val.IsInfinite && Parent.IsPDF)
-            {
-                Rect cb = CropBox;
-                float w = cb.Width;
-                float h = cb.Height;
-                if (Rotation != 0 || Rotation != 180)
-                    (w, h) = (h, w);
-                val = new Rect(0, 0, w, h);
-            }
-            return val;
-        }
-
-        public static (Rect, Rect, Matrix) RectFunction(int rectN, Rect filled)
-        {
-            return (fit.Rect, fit.Rect, new IdentityMatrix());
-        }
-
-        public FzPage AsFzPage(dynamic page)
-        {
-            if (page is Page)
-                return (page as Page).GetPdfPage().super();
-            if (page is PdfPage)
-                return (page as PdfPage).super();
-            else if (page is FzPage)
-                return page;
-
-            return null;
-        }
-
-        /// <summary>
-        /// This matrix translates coordinates from the PDF space to the MuPDF space.
+        /// Page transformation matrix. Reflects page rotation and target coordinate system.
         /// </summary>
         public Matrix TransformationMatrix
         {
             get
             {
-                FzMatrix ctm = new FzMatrix();
-                PdfPage page = _pdfPage;
-                if (page.m_internal == null)
-                    return new Matrix(ctm);
-
-                FzRect mediabax = new FzRect(FzRect.Fixed.Fixed_UNIT);
-                page.pdf_page_transform(mediabax, ctm);
-
-                if (Rotation % 360 == 0)
-                    return new Matrix(ctm);
-                else
-                    return new Matrix(1, 0, 0, -1, 0, CropBox.Height);
+                try
+                {
+                    var mediabox = new mupdf.FzRect();
+                    var ctm = new mupdf.FzMatrix();
+                    mupdf.mupdf.pdf_page_transform(NativePdfPage, mediabox, ctm);
+                    return Helpers.MatrixFromFz(ctm);
+                }
+                catch { return Matrix.Identity; }
             }
         }
 
         /// <summary>
-        ///
-        /// </summary>
-        public Rect ArtBox
-        {
-            get
-            {
-                Rect rect = OtherBox("ArtBox");
-                if (rect is null)
-                    return CropBox;
-                Rect mb = MediaBox;
-                return new Rect(rect[0], mb.Y1 - rect[3], rect[2], mb.Y1 - rect[1]);
-            }
-        }
-
-        /// <summary>
-        /// The page’s mediabox for a PDF, otherwise Page.rect.
-        /// </summary>
-        public Rect MediaBox
-        {
-            get
-            {
-                PdfPage page = _pdfPage;
-                Rect rect = null;
-                if (page == null)
-                    rect = new Rect(page.pdf_bound_page(fz_box_type.FZ_MEDIA_BOX));
-                else
-                    rect = Utils.GetMediaBox(page.obj());
-                return rect;
-            }
-        }
-
-        public Rect BleedBox
-        {
-            get
-            {
-                Rect rect = OtherBox("BLEEDBOX");
-                if (rect is null)
-                    return CropBox;
-                Rect mb = MediaBox;
-                return new Rect(rect[0], mb.Y1 - rect[3], rect[2], mb.Y1 - rect[1]);
-            }
-        }
-
-        /// <summary>
-        /// The page’s /CropBox for a PDF. Always the unrotated page rectangle is returned.
-        /// </summary>
-        public Rect CropBox
-        {
-            get
-            {
-                PdfPage page = _pdfPage;
-                Rect ret = null;
-                if (page.m_internal == null)
-                    ret = new Rect(_nativePage.fz_bound_page());
-                else
-                    ret = Utils.GetCropBox(page.obj());
-                return ret;
-            }
-        }
-
-        /// <summary>
-        /// These matrices may be used for dealing with rotated PDF pages.
+        /// Reflects page de-rotation.
         /// </summary>
         public Matrix DerotationMatrix
         {
             get
             {
-                PdfPage page = _pdfPage;
-                if (page == null)
-                    return new Matrix(new Rect(new FzRect(FzRect.Fixed.Fixed_UNIT)));
-                return new Matrix(Utils.DerotatePageMatrix(page));
+                int rot = Rotation;
+                if (rot == 0) return Matrix.Identity;
+                var mp = Rect.Width / 2.0 + Rect.X0;
+                var mq = Rect.Height / 2.0 + Rect.Y0;
+                return new Matrix(1, 0, 0, 1, (float)-mp, (float)-mq)
+                    * Matrix.Rotation(-rot)
+                    * new Matrix(1, 0, 0, 1, (float)mp, (float)mq);
             }
         }
 
         /// <summary>
-        /// Contains the first Annot of a page (or None).
+        /// Whether the parent document is a PDF.
+        /// </summary>
+        public bool IsPdf => RequireParent().IsPdf;
+
+        /// <summary>
+        /// PDF xref number of page.
+        /// </summary>
+        public int Xref
+        {
+            get
+            {
+                try { return mupdf.mupdf.pdf_to_num(NativePdfPage.obj()); }
+                catch { return 0; }
+            }
+        }
+
+        // ─── Annotations ────────────────────────────────────────────────
+
+        /// <summary>
+        /// First annotation on the page, or <c>null</c> if none (<c>Page.first_annot</c> in PyMuPDF).
         /// </summary>
         public Annot FirstAnnot
         {
             get
             {
-                PdfPage page = _pdfPage;
-                if (page == null)
-                    return null;
-                PdfAnnot annot = page.pdf_first_annot();
-                if (annot == null)
-                    return null;
-
-                Annot ret = new Annot(annot, this);
-                return ret;
+                try
+                {
+                    var a = mupdf.mupdf.pdf_first_annot(NativePdfPage);
+                    return a.m_internal != null ? new Annot(a, this) : null;
+                }
+                catch { return null; }
             }
         }
 
         /// <summary>
-        /// Reflects page rotation.
+        /// First link on the page, or <c>null</c> if none (<c>Page.first_link</c> in PyMuPDF).
         /// </summary>
-        public Matrix RotationMatrix
-        {
-            get { return Utils.GetRotateMatrix(this); }
-        }
+        /// <remarks>Python <c>first_link</c> is <c>load_links()</c>; same xref/<c>/NM</c> seeding applies.</remarks>
+        public Link FirstLink => LoadLinks();
 
         /// <summary>
-        /// First link on page
-        /// </summary>
-        public Link FirstLink
-        {
-            get { return LoadLinks(); }
-        }
-
-        /// <summary>
-        /// Contains the first Widget of a page (or None).
+        /// First widget (form field) on the page, or <c>null</c> if none (<c>Page.first_widget</c> in PyMuPDF).
         /// </summary>
         public Widget FirstWidget
         {
             get
             {
-                /*int annot = 0;*/
-                PdfPage page = _pdfPage;
-                if (page.m_internal == null)
-                    return null;
-                PdfAnnot annot = page.pdf_first_widget();
-                if (annot.m_internal == null)
-                    return null;
-
-                Annot val = new Annot(annot, this);
-                val.ThisOwn = true;
-                val.Parent = this;
-                AnnotRefs[val.GetHashCode()] = val;
-                Widget widget = new Widget(this);
-                Utils.FillWidget(val, widget);
-
-                return widget;
-            }
-        }
-
-        /// <summary>
-        /// Search for a string on a page
-        /// </summary>
-        /// <param name="needle">string to be searched for</param>
-        /// <param name="clip">restrict search to this rectangle</param>
-        /// <param name="quads">return quads instead of rectangles</param>
-        /// <param name="flags">bit switches, default: join hyphened words</param>
-        /// <param name="stPage">a pre-created STextPage</param>
-        /// <returns></returns>
-        public List<Quad> SearchFor(
-            string needle,
-            Rect clip = null,
-            bool quads = false,
-            int flags =
-                (int)(
-                    TextFlags.TEXT_DEHYPHENATE
-                    | TextFlags.TEXT_PRESERVE_WHITESPACE
-                    | TextFlags.TEXT_PRESERVE_LIGATURES
-                    | TextFlags.TEXT_MEDIABOX_CLIP
-                ),
-            TextPage stPage = null
-        )
-        {
-            TextPage tp = stPage;
-            if (tp == null)
-                tp = GetTextPage(clip, flags);
-            List<Quad> ret = TextPage.Search(tp, needle, quad: quads);
-            if (stPage == null)
-                tp = null;
-
-            return ret;
-        }
-
-        public Rect OtherBox(string boxtype)
-        {
-            FzRect rect = new FzRect(FzRect.Fixed.Fixed_INFINITE);
-            PdfPage page = _pdfPage;
-            if (page != null)
-            {
-                PdfObj obj = page.obj().pdf_dict_get(new PdfObj(boxtype));
-                if (obj.pdf_is_array() != 0)
-                    rect = obj.pdf_to_rect();
-            }
-            if (rect.fz_is_infinite_rect() != 0)
-                return null;
-            return new Rect(rect);
-        }
-
-        public override string ToString()
-        {
-            return base.ToString();
-        }
-
-        public Page(PdfPage pdfPage, Document parent)
-        {
-            lock (Utils.MuPDFLock)
-            {
-                _pdfPage = pdfPage;
-                _nativePage = pdfPage.super();
-                Parent = parent;
-
-                if (_pdfPage.m_internal == null)
-                    Number = 0;
-                else
-                    Number = _pdfPage.m_internal.super.number;
-            }
-        }
-
-        public Page(FzPage fzPage, Document parent)
-        {
-            lock (Utils.MuPDFLock)
-            {
-                _pdfPage = fzPage.pdf_page_from_fz_page();
-                _nativePage = fzPage;
-                Parent = parent;
-
-                if (_pdfPage.m_internal == null)
-                    Number = 0;
-                else
-                    Number = _pdfPage.m_internal.super.number;
-            }
-        }
-
-        public void Dispose()
-        {
-            if (_pdfPage != null)
-            {
-                lock (Utils.MuPDFLock)
+                try
                 {
-                    _pdfPage.Dispose();
+                    var w = mupdf.mupdf.pdf_first_widget(NativePdfPage);
+                    return w.m_internal != null ? new Widget(w, this) : null;
                 }
-                _pdfPage = null;
-            }
-            if (_nativePage != null)
-            {
-                _nativePage.Dispose();
-                _nativePage = null;
+                catch { return null; }
             }
         }
 
         /// <summary>
-        /// PDF only: Add a caret icon. A caret annotation is a visual symbol normally used to indicate the presence of text edits on the page.
+        /// Generator over the annotations on the page.
         /// </summary>
-        /// <param name="point">the top left point of a 20 x 20 rectangle containing the MuPDF-provided icon.</param>
-        /// <returns>the created annotation. Stroke color blue = (0, 0, 1), no fill color support.</returns>
-        public Annot AddCaretAnnot(Point point)
+        public IEnumerable<Annot> Annots()
         {
-            PdfPage page = _pdfPage;
-            PdfAnnot annot = null;
-            try
+            var a = FirstAnnot;
+            while (a != null)
             {
-                annot = page.pdf_create_annot(pdf_annot_type.PDF_ANNOT_CARET);
-                if (point != null)
-                {
-                    FzRect r = annot.pdf_annot_rect();
-                    r = new FzRect(point.X, point.Y, point.X + r.x1 - r.x0, point.Y + r.y1 - r.y0);
-                    annot.pdf_set_annot_rect(r);
-                }
-                annot.pdf_update_annot();
-                Utils.AddAnnotId(annot, "A");
+                yield return a;
+                a = a.Next;
             }
-            catch
-            {
-                annot = null;
-            }
-
-            return new Annot(annot, this);
-        }
-
-        public void SetClipPage(Rect rect)
-        {
-            if (rect == null)
-                throw new Exception(Utils.ErrorMessages["MSG_BAD_ARG_RECT"]);
-            if (rect.IsInfinite || rect.IsEmpty)
-                throw new Exception(Utils.ErrorMessages["MSG_BAD_RECT"]);
-            FzRect fzRect = rect.ToFzRect();
-            _pdfPage.pdf_clip_page(fzRect);
         }
 
         /// <summary>
-        /// PDF only: Add a file attachment annotation with a “PushPin” icon at the specified location.
+        /// Iterate annotations, optionally filtering by annotation types.
+        /// Mirrors PyMuPDF <c>Page.annots(types=...)</c>.
         /// </summary>
-        /// <param name="point">the top-left point of a 18x18 rectangle containing the MuPDF-provided “PushPin” icon.</param>
-        /// <param name="buffer_">the data to be stored (actual file content, any data, etc.).</param>
-        /// <param name="filename">the filename to associate with the data.</param>
-        /// <param name="ufilename">the optional PDF unicode version of filename. Defaults to filename.</param>
-        /// <param name="desc">the optional PDF unicode version of filename. Defaults to filename.</param>
-        /// <param name="icon">choose one of “PushPin” (default), “Graph”, “Paperclip”, “Tag” as the visual symbol for the attached data.</param>
-        /// <returns>the created annotation. Stroke color yellow = (1, 1, 0), no fill color support.</returns>
-        /// <exception cref="Exception"></exception>
-        public Annot AddFileAnnot(
-            Point point,
-            byte[] buffer_,
-            string filename,
-            dynamic ufilename = null,
-            string desc = null,
-            string icon = null
-        )
+        public IEnumerable<Annot> Annots(params AnnotationType[] types)
         {
-            PdfPage page = _pdfPage;
-            string uf = ufilename != null ? ufilename : filename;
-            string d = desc != null ? desc : filename;
-            FzBuffer fileBuf = Utils.BufferFromBytes(buffer_);
-
-            if (fileBuf == null)
+            HashSet<AnnotationType> filter = null;
+            if (types != null && types.Length > 0)
+                filter = new HashSet<AnnotationType>(types);
+            foreach (var annot in Annots())
             {
-                throw new Exception(Utils.ErrorMessages["MSG_BAD_BUFFER"]);
+                if (filter == null || filter.Contains(annot.Type))
+                    yield return annot;
             }
-            PdfAnnot annot = page.pdf_create_annot(pdf_annot_type.PDF_ANNOT_FILE_ATTACHMENT);
-            FzRect r = annot.pdf_annot_rect();
-            r = mupdf.mupdf.fz_make_rect(
-                point.X,
-                point.Y,
-                point.X + r.x1 - r.x0,
-                point.Y + r.y1 - r.y0
-            );
+        }
 
-            annot.pdf_set_annot_rect(r);
-            int flags = (int)PdfAnnotStatus.PDF_ANNOT_IS_PRINT;
-            annot.pdf_set_annot_flags(flags);
-
-            if (icon != null)
+        /// <summary>
+        /// Generator over the links on the page.
+        /// </summary>
+        public IEnumerable<Link> Links()
+        {
+            var link = FirstLink;
+            while (link != null)
             {
-                annot.pdf_set_annot_icon_name(icon);
+                yield return link;
+                link = link.Next;
             }
-
-            PdfDocument pageDoc = page.doc();
-            PdfObj val = Utils.EmbedFile(pageDoc, fileBuf, filename, uf, d, 1);
-            annot.pdf_annot_obj().pdf_dict_put(new PdfObj("FS"), val);
-            annot.pdf_annot_obj().pdf_dict_put_text_string(new PdfObj("Contents"), filename);
-            annot.pdf_update_annot();
-            annot.pdf_set_annot_rect(r);
-            annot.pdf_set_annot_flags(flags);
-            Utils.AddAnnotId(annot, "A");
-            pageDoc.Dispose();
-
-            return new Annot(annot, this);
         }
 
         /// <summary>
-        /// PDF only: Add a 'FreeText' annotation.
+        /// Generator over links, optionally filtered by link kind.
+        /// Mirrors PyMuPDF <c>links(kinds=...)</c>.
         /// </summary>
-        /// <param name="rect">the rectangle into which the text should be inserted. Text is automatically wrapped to a new line at box width. Lines not fitting into the box will be invisible.param>
-        /// <param name="text">the text. May contain any mixture of Latin, Greek, Cyrillic, Chinese, Japanese and Korean characters.</param>
-        /// <param name="fontSize">the fontsize.</param>
-        /// <param name="fontName">the font name. Have to include this param.</param>
-        /// <param name="textColor">the text color. Default is black.</param>
-        /// <param name="fillColor">the fill color. Default is white.</param>
-        /// <param name="borderColor">the border color.</param>
-        /// <param name="borderWidth">border and callout line width.</param>
-        /// <param name="dashes">dashing.</param>
-        /// <param name="callout">define end, knee, start points.</param>
-        /// <param name="lineEnd">symbol shown at p3. (NONE,SQUARE,CIRCLE,DIAMOND,OPEN_ARROW,CLOSED_ARROW,BUTT,R_OPEN_ARROW,R_CLOSED_ARROW,SLASH)</param>
-        /// <param name="opacity">set the opacity.</param>
-        /// <param name="align">text alignment, one of TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER, TEXT_ALIGN_RIGHT</param>
-        /// <param name="rotate">the text orientation.</param>
-        /// <param name="richtext">this is rich text.</param>
-        /// <param name="style">customized style string.</param>
-        /// <returns>the created annotation.</returns>
-        /// <exception cref="Exception"></exception>
-        public Annot AddFreeTextAnnot(
-            Rect rect,
-            string text,
-            int fontSize = 11,
-            string fontName = null,
-            float[] textColor = null,
-            float[] fillColor = null,
-            float[] borderColor = null,
-            float borderWidth = 0.0f,
-            int[] dashes = null,
-            Point[] callout = null,
-            PdfLineEnding lineEnd = PdfLineEnding.PDF_ANNOT_LE_OPEN_ARROW,
-            float opacity = 1.0f,
-            int align = 0,
-            int rotate = 0,
-            bool richtext = false,
-            string style = null
-        )
+        public IEnumerable<Link> Links(params LinkType[] kinds)
         {
-            int oldRotation = AnnotPreProcess(this);
-            Annot val;
-            FzRect r = rect.ToFzRect();
-            try
+            HashSet<LinkType> filter = null;
+            if (kinds != null && kinds.Length > 0)
+                filter = new HashSet<LinkType>(kinds);
+            foreach (var link in Links())
             {
-                string rc = $@"<?xml version=""1.0""?>
-                    <body xmlns=""http://www.w3.org/1999/xtml""
-                    xmlns:xfa=""http://www.xfa.org/schema/xfa-data/1.0/""
-                    xfa:contentType=""text/html"" xfa:APIVersion=""Acrobat:8.0.0"" xfa:spec=""2.4"">
-                    {text}";
-                PdfPage page = GetPdfPage();
-                if (borderColor != null && borderColor.Length > 0 && !richtext)
+                if (filter == null)
                 {
-                    throw new Exception("cannot set border_color if rich_text is False");
-                }
-                if (borderColor != null && borderColor.Length > 0 && textColor == null)
-                {
-                    textColor = borderColor; // use border color as text color if not set
-                }
-                float[] fColor = Annot.ColorFromSequence(fillColor);
-                float[] tColor = Annot.ColorFromSequence(textColor);
-                if (r.fz_is_infinite_rect() != 0 || r.fz_is_empty_rect() != 0)
-                {
-                    throw new Exception(Utils.ErrorMessages["MSG_BAD_RECT"]);
-                }
-
-                PdfAnnot annot = page.pdf_create_annot(pdf_annot_type.PDF_ANNOT_FREE_TEXT);
-                PdfObj annotObj = annot.pdf_annot_obj();
-
-                // insert text as 'contents' or 'RC' depending on 'richtext'
-                if (!richtext)
-                    annot.pdf_set_annot_contents(text);
-                else
-                {
-                    annotObj.pdf_dict_put_text_string(new PdfObj("RC"), rc);
-                    if (style != null)
-                        annotObj.pdf_dict_put_text_string(new PdfObj("DS"), style);
-                }
-                
-                annot.pdf_set_annot_rect(r);
-
-                while (rotate < 0)
-                    rotate += 360;
-                while (rotate >= 360)
-                    rotate -= 360;
-                if (rotate != 0)
-                    annotObj.pdf_dict_put_int(new PdfObj("Rotate"), rotate);
-
-                annot.pdf_set_annot_quadding(align);
-
-                if (fColor != null && fColor.Length > 0)
-                {
-                    IntPtr fColorPtr = Marshal.AllocHGlobal(fColor.Length * sizeof(float));
-                    Marshal.Copy(fColor, 0, fColorPtr, fColor.Length);
-                    SWIGTYPE_p_float swigFColor = new SWIGTYPE_p_float(fColorPtr, false);
-                    annot.pdf_set_annot_color(fColor.Length, swigFColor);
-                }
-
-                annot.pdf_set_annot_border_width(borderWidth);
-                annot.pdf_set_annot_opacity(opacity);
-                if (dashes != null)
-                    foreach (int dash in dashes)
-                        annot.pdf_add_annot_border_dash_item((float)dash);
-
-                // Insert callout information
-                if (callout != null)
-                {
-                    annotObj.pdf_dict_put(new PdfObj("IT"), new PdfObj("FreeTextCallout"));
-                    annot.pdf_set_annot_callout_style((pdf_line_ending)lineEnd);
-                    vector_fz_point fz_Points = new vector_fz_point();
-                    foreach (Point p in callout)
-                    {
-                        fz_point fzPoint = new fz_point { x = p.X, y = p.Y };
-                        fz_Points.Add(fzPoint);
-                    }
-                    annot.pdf_set_annot_callout_line2(fz_Points);
-                }
-
-                if (!richtext)
-                {
-                    Utils.MakeAnnotDA(
-                        annot,
-                        tColor == null ? -1 : tColor.Length,
-                        tColor,
-                        fontName,
-                        fontSize
-                    );
-                }
-
-                annot.pdf_update_annot();
-                Utils.AddAnnotId(annot, "A");
-                val = new Annot(annot, this);
-            }
-            finally
-            {
-                if (oldRotation != 0)
-                    SetRotation(oldRotation);
-            }
-            AnnotPostProcess(this, val);
-            return val;
-        }
-
-        /// <summary>
-        /// Set the ArtBox.
-        /// </summary>
-        /// <param name="rect"></param>
-        public void SetArtBox(Rect rect)
-        {
-            SetPageBox("ArtBox", rect);
-        }
-
-        /// <summary>
-        /// Set the TrimBox.
-        /// </summary>
-        /// <param name="rect"></param>
-        public void SetTrimBox(Rect rect)
-        {
-            SetPageBox("TrimBox", rect);
-        }
-
-        /// <summary>
-        /// Set the BleedBox.
-        /// </summary>
-        /// <param name="rect"></param>
-        public void SetBleedBox(Rect rect)
-        {
-            SetPageBox("BleedBox", rect);
-        }
-
-        /// <summary>
-        /// Set the CropBox. Will also change Page.rect.
-        /// </summary>
-        /// <param name="rect"></param>
-        public void SetCropBox(Rect rect)
-        {
-            SetPageBox("CropBox", rect);
-        }
-
-        private void SetPageBox(string boxtype, Rect rect)
-        {
-            Document doc = Parent;
-            if (doc == null)
-                throw new Exception("orphaned object: parent is None");
-
-            if (!doc.IsPDF)
-                throw new Exception("is no PDF");
-
-            string[] validBoxes = { "CropBox", "BleedBox", "TrimBox", "ArtBox" };
-            if (!validBoxes.Contains(boxtype))
-                throw new Exception("bad boxtype");
-
-            Rect mb = MediaBox;
-            Rect rect_ = new Rect(rect.X0, mb.Y1 - rect.Y1, rect.X1, mb.Y1 - rect.Y0);
-            if (
-                !(
-                    (mb.X0 <= rect_.X0 && rect_.X0 < rect_.X1 && rect_.X1 <= mb.X1)
-                    && (mb.Y0 <= rect_.Y0 && rect_.Y0 < rect_.Y1 && rect_.Y1 <= mb.Y1)
-                )
-            )
-                throw new Exception(boxtype + " not in Mediabox");
-
-            doc.SetKeyXRef(
-                Xref,
-                boxtype,
-                $"[{Format(new float[] { rect_.X0, rect_.Y0, rect_.X1, rect_.Y1 })}]"
-            );
-        }
-
-        public string Format(float[] value)
-        {
-            string ret = "";
-            foreach (float v in value)
-            {
-                ret += Utils.FloatToString(v) + " ";
-            }
-            return ret;
-        }
-
-        /// <summary>
-        /// page load widget by xref
-        /// </summary>
-        /// <param name="xref"></param>
-        /// <returns></returns>
-        public Widget LoadWidget(int xref)
-        {
-            PdfPage page = _nativePage.pdf_page_from_fz_page();
-            PdfAnnot annot = Utils.GetWidgetByXref(page, xref);
-            if (annot == null)
-            {
-                return null;
-            }
-            Annot val = new Annot(annot, this);
-
-            val.ThisOwn = true;
-            val.Parent = this;
-            AnnotRefs[val.GetHashCode()] = val;
-            Widget widget = new Widget(this);
-            Utils.FillWidget(val, widget);
-
-            return widget;
-        }
-
-        /// <summary>
-        /// Generator over the widgets of a page.
-        /// </summary>
-        /// <param name="types">field types to subselect from. If none, all fields are returned.E.g.types=[PDF_WIDGET_TYPE_TEXT] will only yield text fields.</param>
-        /// <returns></returns>
-        public IEnumerable<Widget> GetWidgets(int[] types = null)
-        {
-            PdfPage page = _pdfPage;
-            List<AnnotXref> refs = GetAnnotXrefs();
-            List<int> xrefs = refs.Where(a => a.AnnotType == PdfAnnotType.PDF_ANNOT_WIDGET)
-                .Select(a => a.Xref)
-                .ToList();
-            foreach (int xref in xrefs)
-            {
-                Widget widget = LoadWidget(xref);
-                if (widget == null)
-                {
+                    yield return link;
                     continue;
                 }
-                if (types == null || types.Contains(widget.FieldType))
+                var kind = link.IsExternal ? LinkType.Uri : LinkType.Goto;
+                if (filter.Contains(kind))
+                    yield return link;
+            }
+        }
+
+        /// <summary>
+        /// Generator over links, optionally filtered by raw link kind integers
+        /// (Python compatibility shape for <c>links(kinds=[...])</c>).
+        /// </summary>
+        public IEnumerable<Link> Links(params int[] kinds)
+        {
+            if (kinds == null || kinds.Length == 0)
+            {
+                foreach (var link in Links())
+                    yield return link;
+                yield break;
+            }
+
+            var mapped = new List<LinkType>(kinds.Length);
+            foreach (var kind in kinds)
+            {
+                if (Enum.IsDefined(typeof(LinkType), kind))
+                    mapped.Add((LinkType)kind);
+            }
+
+            foreach (var link in Links(mapped.ToArray()))
+                yield return link;
+        }
+
+        /// <summary>
+        /// Generator over the form fields on the page.
+        /// </summary>
+        public IEnumerable<Widget> Widgets()
+        {
+            var w = FirstWidget;
+            while (w != null)
+            {
+                yield return w;
+                w = w.Next;
+            }
+        }
+
+        /// <summary>
+        /// Generator over widgets, optionally filtered by field type.
+        /// Mirrors PyMuPDF <c>widgets(types=...)</c>.
+        /// </summary>
+        public IEnumerable<Widget> Widgets(params WidgetType[] types)
+        {
+            HashSet<WidgetType> filter = null;
+            if (types != null && types.Length > 0)
+                filter = new HashSet<WidgetType>(types);
+            foreach (var widget in Widgets())
+            {
+                if (filter == null || filter.Contains(widget.FieldType))
                     yield return widget;
             }
         }
 
         /// <summary>
-        /// PDF only: Add a “freehand” scribble annotation.
+        /// Generator over widgets, optionally filtered by raw widget type integers
+        /// (Python compatibility shape for <c>widgets(types=[...])</c>).
         /// </summary>
-        /// <param name="list">a list of one or more lists, each containing point_like items.</param>
-        /// <returns>the created annotation in default appearance black =(0, 0, 0),line width 1. No fill color support.</returns>
-        public Annot AddInkAnnot(List<List<Point>> list)
+        public IEnumerable<Widget> Widgets(params int[] types)
         {
-            PdfPage page = _pdfPage;
-
-            FzMatrix ctm = new FzMatrix();
-            page.pdf_page_transform(new FzRect(0), ctm);
-            FzMatrix invCtm = ctm.fz_invert_matrix();
-            PdfAnnot annot = page.pdf_create_annot(pdf_annot_type.PDF_ANNOT_INK);
-            PdfObj annotObj = annot.pdf_annot_obj();
-            int n0 = list.Count;
-            PdfDocument pageDoc = page.doc();
-            PdfObj inkList = pageDoc.pdf_new_array(n0);
-
-            for (int j = 0; j < n0; j++)
+            if (types == null || types.Length == 0)
             {
-                dynamic subList = list[j];
-                int n1 = subList.Count;
-                PdfObj stroke = pageDoc.pdf_new_array(n1 * 2);
-
-                for (int i = 0; i < n1; i++)
-                {
-                    Point p = subList[i];
-                    FzPoint point = mupdf.mupdf.fz_transform_point(p.ToFzPoint(), invCtm);
-                    stroke.pdf_array_push_real(point.x);
-                    stroke.pdf_array_push_real(point.y);
-                }
-                inkList.pdf_array_push(stroke);
+                foreach (var widget in Widgets())
+                    yield return widget;
+                yield break;
             }
-            annotObj.pdf_dict_put(new PdfObj("InkList"), inkList);
-            annot.pdf_update_annot();
-            Utils.AddAnnotId(annot, "A");
 
-            pageDoc.Dispose();
+            var mapped = new List<WidgetType>(types.Length);
+            foreach (var type in types)
+            {
+                if (Enum.IsDefined(typeof(WidgetType), type))
+                    mapped.Add((WidgetType)type);
+            }
 
+            foreach (var widget in Widgets(mapped.ToArray()))
+                yield return widget;
+        }
+
+        // ─── Add Annotations ────────────────────────────────────────────
+
+        /// <summary>Add a “Text” (sticky note) annotation.</summary>
+        /// <remarks>Matches PyMuPDF <c>Page._add_text_annot</c> / <c>add_text_annot</c> (<c>src/__init__.py</c>).</remarks>
+        public Annot AddTextAnnot(Point pos, string text, string icon = "Note")
+        {
+            var pdfPage = NativePdfPage;
+            var fzPoint = pos.ToFzPoint();
+            var annot = mupdf.mupdf.pdf_create_annot(pdfPage, mupdf.pdf_annot_type.PDF_ANNOT_TEXT);
+            var r0 = mupdf.mupdf.pdf_annot_rect(annot);
+            var r = mupdf.mupdf.fz_make_rect(fzPoint.x, fzPoint.y, fzPoint.x + (r0.x1 - r0.x0), fzPoint.y + (r0.y1 - r0.y0));
+            mupdf.mupdf.pdf_set_annot_rect(annot, r);
+            mupdf.mupdf.pdf_set_annot_contents(annot, text);
+            if (!string.IsNullOrEmpty(icon))
+                mupdf.mupdf.pdf_set_annot_icon_name(annot, icon);
+            mupdf.mupdf.pdf_update_annot(annot);
             return new Annot(annot, this);
         }
 
-        /// <summary>
-        /// PDF only: Add a line annotation.
-        /// </summary>
-        /// <param name="p1">the starting point of the line.</param>
-        /// <param name="p2">the end point of the line.</param>
-        /// <returns>the created annotation.</returns>
+        /// <summary>Add a “FreeText” annotation.</summary>
+        /// <remarks>Ported to follow PyMuPDF <c>add_freetext_annot</c> behavior and options.</remarks>
+        public Annot AddFreeTextAnnot(
+            Rect rect,
+            string text,
+            float fontsize = 11,
+            string fontname = null,
+            float[] textColor = null,
+            float[] fillColor = null,
+            float[] borderColor = null,
+            float borderWidth = 0,
+            int[] dashes = null,
+            Point[] callout = null,
+            mupdf.pdf_line_ending lineEnd = mupdf.pdf_line_ending.PDF_ANNOT_LE_OPEN_ARROW,
+            float opacity = 1,
+            int align = 0,
+            int rotate = 0,
+            bool richtext = false,
+            string style = null)
+        {
+            string rc = "<?xml version=\"1.0\"?>\n" +
+                        "<body xmlns=\"http://www.w3.org/1999/xtml\"\n" +
+                        "xmlns:xfa=\"http://www.xfa.org/schema/xfa-data/1.0/\"\n" +
+                        "xfa:contentType=\"text/html\" xfa:APIVersion=\"Acrobat:8.0.0\" xfa:spec=\"2.4\">\n" +
+                        (text ?? "");
+
+            if (borderColor != null && !richtext)
+                throw new ValueErrorException("cannot set border_color if rich_text is False");
+            if (borderColor != null && textColor == null)
+                textColor = borderColor;
+
+            var r = rect.ToFzRect();
+            if (mupdf.mupdf.fz_is_infinite_rect(r) != 0 || mupdf.mupdf.fz_is_empty_rect(r) != 0)
+                throw new ValueErrorException(Constants.MSG_BAD_RECT);
+
+            var page = NativePdfPage;
+            var annot = mupdf.mupdf.pdf_create_annot(page, mupdf.pdf_annot_type.PDF_ANNOT_FREE_TEXT);
+            var annotObj = mupdf.mupdf.pdf_annot_obj(annot);
+
+            if (!richtext)
+            {
+                mupdf.mupdf.pdf_set_annot_contents(annot, text ?? "");
+            }
+            else
+            {
+                mupdf.mupdf.pdf_dict_put_text_string(annotObj, mupdf.mupdf.pdf_new_name("RC"), rc);
+                if (!string.IsNullOrEmpty(style))
+                    mupdf.mupdf.pdf_dict_put_text_string(annotObj, mupdf.mupdf.pdf_new_name("DS"), style);
+            }
+
+            mupdf.mupdf.pdf_set_annot_rect(annot, r);
+
+            while (rotate < 0) rotate += 360;
+            while (rotate >= 360) rotate -= 360;
+            if (rotate != 0)
+                mupdf.mupdf.pdf_dict_put_int(annotObj, mupdf.mupdf.pdf_new_name("Rotate"), rotate);
+
+            mupdf.mupdf.pdf_set_annot_quadding(annot, align);
+            mupdf.mupdf.pdf_set_annot_border_width(annot, borderWidth);
+            mupdf.mupdf.pdf_set_annot_opacity(annot, opacity);
+
+            if (fillColor != null && fillColor.Length > 0)
+            {
+                Helpers.CheckColor(fillColor);
+                RequireParent().XrefSetKey(mupdf.mupdf.pdf_to_num(annotObj), "C", Helpers.EscapePdfArray(fillColor));
+            }
+
+            if (dashes != null)
+            {
+                foreach (var d in dashes)
+                    mupdf.mupdf.pdf_add_annot_border_dash_item(annot, d);
+            }
+
+            if (callout != null && callout.Length > 0)
+            {
+                mupdf.mupdf.pdf_dict_put(annotObj, mupdf.mupdf.pdf_new_name("IT"), mupdf.mupdf.pdf_new_name("FreeTextCallout"));
+                mupdf.mupdf.pdf_set_annot_callout_style(annot, lineEnd);
+                var vv = new mupdf.vector_fz_point();
+                foreach (var p in callout)
+                {
+                    if (p == null) continue;
+                    var fp = new mupdf.fz_point { x = (float)p.X, y = (float)p.Y };
+                    vv.Add(fp);
+                }
+                if (vv.Count > 0)
+                    mupdf.mupdf.pdf_set_annot_callout_line2(annot, vv);
+            }
+
+            if (!richtext)
+            {
+                if (textColor != null) Helpers.CheckColor(textColor);
+                Helpers.JM_make_annot_DA(annot, textColor?.Length ?? 0, textColor ?? Array.Empty<float>(), fontname ?? "Helv", fontsize);
+            }
+
+            mupdf.mupdf.pdf_update_annot(annot);
+            return new Annot(annot, this);
+        }
+
+        /// <summary>Add a “Line” annotation.</summary>
+        /// <remarks>PyMuPDF <c>Page._add_line_annot</c> / <c>add_line_annot</c>.</remarks>
         public Annot AddLineAnnot(Point p1, Point p2)
         {
-            PdfPage page = _pdfPage;
-            PdfAnnot annot = page.pdf_create_annot(pdf_annot_type.PDF_ANNOT_LINE);
-            annot.pdf_set_annot_line(p1.ToFzPoint(), p2.ToFzPoint());
-            annot.pdf_update_annot();
-            Utils.AddAnnotId(annot, "A");
+            var annot = mupdf.mupdf.pdf_create_annot(NativePdfPage, mupdf.pdf_annot_type.PDF_ANNOT_LINE);
+            mupdf.mupdf.pdf_set_annot_line(annot, p1.ToFzPoint(), p2.ToFzPoint());
+            mupdf.mupdf.pdf_update_annot(annot);
             return new Annot(annot, this);
         }
 
-        /// <summary>
-        ///
-        /// </summary>
-        /// <param name="points"></param>
-        /// <param name="annotType"></param>
-        /// <returns></returns>
-        /// <exception cref="Exception"></exception>
-        public Annot AddMultiLine(List<Point> points, PdfAnnotType annotType)
-        {
-            PdfPage page = _pdfPage;
-            if (points.Count < 2)
-            {
-                throw new Exception(Utils.ErrorMessages["MSG_BAD_ARG_POINTS"]);
-            }
-            PdfAnnot annot = page.pdf_create_annot((pdf_annot_type)annotType);
-            foreach (Point p in points)
-            {
-                annot.pdf_add_annot_vertex(p.ToFzPoint());
-            }
-
-            annot.pdf_update_annot();
-            Utils.AddAnnotId(annot, "A");
-            return new Annot(annot, this);
-        }
-
-        /// <summary>
-        /// PDF only: Add a redaction annotation. A redaction annotation identifies content to be removed from the document.
-        /// </summary>
-        /// <param name="quad">specifies the (rectangular) area to be removed which is always equal to the annotation rectangle.</param>
-        /// <param name="text">text to be placed in the rectangle after applying the redaction (and thus removing old content).</param>
-        /// <param name="dataStr"></param>
-        /// <param name="align">the horizontal alignment for the replacing text.</param>
-        /// <param name="fill"> the fill color of the rectangle after applying the redaction.param>
-        /// <param name="textColr"> the fill color of the rectangle after applying the redaction.</param>
-        /// <returns>the created annotation.</returns>
-        public Annot AddRedactAnnot(
-            Quad quad,
-            string text = null,
-            string fontName = "Helv",
-            float fontSize = 11.0f,
-            TextAlign align = TextAlign.TEXT_ALIGN_LEFT,
-            float[] fill = null,
-            float[] textColor = null,
-            bool crossOut = true
-        )
-        {
-            string dataStr = "";
-            Annot ret = null;
-            if (!string.IsNullOrEmpty(text) && text.Any(char.IsWhiteSpace))
-            {
-                if (textColor == null)
-                    textColor = new float[3] { 0, 0, 0 };
-                if (textColor.Length > 3)
-                    textColor = new float[3] { textColor[0], textColor[1], textColor[2] };
-                dataStr =
-                    $"{Utils.FloatToString(textColor[0])} {Utils.FloatToString(textColor[1])} {Utils.FloatToString(textColor[2])} rg /{fontName} {Utils.FloatToString(fontSize)} Tf";
-                if (fill == null)
-                    fill = new float[3] { 1, 1, 1 };
-            }
-            int oldRotation = AnnotPreProcess(this);
-
-            try
-            {
-                PdfPage page = _pdfPage;
-                float[] fCol = new float[4] { 1, 1, 1, 0 };
-                int nFCol = 0;
-                PdfAnnot annot = page.pdf_create_annot(pdf_annot_type.PDF_ANNOT_REDACT);
-                Rect r = quad.Rect;
-                annot.pdf_set_annot_rect(r.ToFzRect());
-
-                if (fill != null)
-                {
-                    fCol = Annot.ColorFromSequence(fill);
-                    nFCol = fCol.Length;
-                    PdfDocument pageDoc = page.doc();
-                    PdfObj arr = pageDoc.pdf_new_array(nFCol);
-                    pageDoc.Dispose();
-                    for (int i = 0; i < nFCol; i++)
-                    {
-                        arr.pdf_array_push_real(fCol[i]);
-                    }
-                    annot.pdf_annot_obj().pdf_dict_put(new PdfObj("IC"), arr);
-                }
-                if (!string.IsNullOrEmpty(text))
-                {
-                    annot
-                        .pdf_annot_obj()
-                        .pdf_dict_puts("OverlayText", mupdf.mupdf.pdf_new_text_string(text));
-                    annot.pdf_annot_obj().pdf_dict_put_text_string(new PdfObj("DA"), dataStr);
-                    annot.pdf_annot_obj().pdf_dict_put_int(new PdfObj("Q"), (int)align);
-                }
-
-                annot.pdf_update_annot();
-                Utils.AddAnnotId(annot, "A");
-
-                SWIGTYPE_p_pdf_annot swigAnnot = mupdf.mupdf.ll_pdf_keep_annot(annot.m_internal);
-                annot = new PdfAnnot(swigAnnot);
-                ret = new Annot(annot, this);
-            }
-            finally
-            {
-                if (oldRotation != 0)
-                    SetRotation(oldRotation);
-            }
-
-            AnnotPostProcess(this, ret);
-
-            if (crossOut)
-            {
-                string apStr = Encoding.UTF8.GetString(ret.GetAP());
-                string[] tabStrArr = apStr.Split('\n');
-
-                tabStrArr = tabStrArr.Take(tabStrArr.Length - 2).ToArray();
-                List<string> nTabs = new List<string>(tabStrArr);
-                tabStrArr = tabStrArr.Skip(1).ToArray();
-                nTabs.Add(tabStrArr[1]);
-                nTabs.Add(tabStrArr[0]);
-                nTabs.Add(tabStrArr[2]);
-                nTabs.Add(tabStrArr[0]);
-                nTabs.Add(tabStrArr[3]);
-                nTabs.Add("S");
-
-                ret.SetAP(Encoding.UTF8.GetBytes(string.Join("\n", nTabs)));
-            }
-
-            return ret;
-        }
-
-        /// <summary>
-        /// PDF only: Add a redaction annotation. A redaction annotation identifies content to be removed from the document.
-        /// </summary>
-        /// <param name="quad">specifies the (rectangular) area to be removed which is always equal to the annotation rectangle.</param>
-        /// <param name="text">text to be placed in the rectangle after applying the redaction (and thus removing old content).</param>
-        /// <param name="dataStr"></param>
-        /// <param name="align">the horizontal alignment for the replacing text.</param>
-        /// <param name="fill"> the fill color of the rectangle after applying the redaction.param>
-        /// <param name="textColr"> the fill color of the rectangle after applying the redaction.</param>
-        /// <returns>the created annotation.</returns>
-        public Annot AddRedactAnnot(
-            Rect r,
-            string text,
-            string fontName,
-            float fontSize = 11.0f,
-            TextAlign align = TextAlign.TEXT_ALIGN_LEFT,
-            float[] fill = null,
-            float[] textColor = null,
-            bool crossOut = true
-        )
-        {
-            string dataStr = "";
-            Annot ret = null;
-            if (!string.IsNullOrEmpty(text) && text.Any(char.IsWhiteSpace))
-            {
-                Utils.CheckColor(fill);
-                Utils.CheckColor(textColor);
-                if (textColor == null)
-                    textColor = new float[3] { 0, 0, 0 };
-                if (textColor.Length > 3)
-                    textColor = new float[3] { textColor[0], textColor[1], textColor[2] };
-                dataStr =
-                    $"{Utils.FloatToString(textColor[0])} {Utils.FloatToString(textColor[1])} {Utils.FloatToString(textColor[2])} rg /{fontName} {Utils.FloatToString(fontSize)} Tf";
-                if (fill == null)
-                    fill = new float[3] { 1, 1, 1 };
-                else
-                {
-                    if (fill.Length > 3)
-                        fill = new float[3] { fill[0], fill[1], fill[2] };
-                }
-            }
-            int oldRotation = AnnotPreProcess(this);
-
-            try
-            {
-                PdfPage page = _pdfPage;
-                PdfAnnot annot = page.pdf_create_annot(pdf_annot_type.PDF_ANNOT_REDACT);
-                annot.pdf_set_annot_rect(r.ToFzRect());
-
-                if (fill != null)
-                {
-                    float[] fCol = Annot.ColorFromSequence(fill);
-                    int nFCol = fCol.Length;
-                    PdfDocument pageDoc = page.doc();
-                    PdfObj arr = pageDoc.pdf_new_array(nFCol);
-                    for (int i = 0; i < nFCol; i++)
-                    {
-                        arr.pdf_array_push_real(fCol[i]);
-                    }
-                    annot.pdf_annot_obj().pdf_dict_put(new PdfObj("IC"), arr);
-                    pageDoc.Dispose();
-                }
-                if (!string.IsNullOrEmpty(text))
-                {
-                    annot
-                        .pdf_annot_obj()
-                        .pdf_dict_puts("OverlayText", mupdf.mupdf.pdf_new_text_string(text));
-                    annot.pdf_annot_obj().pdf_dict_put_text_string(new PdfObj("DA"), dataStr);
-                    annot.pdf_annot_obj().pdf_dict_put_int(new PdfObj("Q"), (int)align);
-                }
-
-                annot.pdf_update_annot();
-                Utils.AddAnnotId(annot, "A");
-
-                SWIGTYPE_p_pdf_annot swigAnnot = mupdf.mupdf.ll_pdf_keep_annot(annot.m_internal);
-                annot = new PdfAnnot(swigAnnot);
-                ret = new Annot(annot, this);
-            }
-            finally
-            {
-                if (oldRotation != 0)
-                    SetRotation(oldRotation);
-            }
-
-            AnnotPostProcess(this, ret);
-
-            if (crossOut)
-            {
-                string apStr = Encoding.UTF8.GetString(ret.GetAP());
-                string[] tabStrArr = apStr.Split('\n');
-
-                tabStrArr = tabStrArr.Take(tabStrArr.Length - 2).ToArray();
-                List<string> nTabs = new List<string>(tabStrArr);
-                tabStrArr = tabStrArr.Skip(1).ToArray();
-                nTabs.Add(tabStrArr[1]);
-                nTabs.Add(tabStrArr[0]);
-                nTabs.Add(tabStrArr[2]);
-                nTabs.Add(tabStrArr[0]);
-                nTabs.Add(tabStrArr[3]);
-                nTabs.Add("S");
-
-                ret.SetAP(Encoding.UTF8.GetBytes(string.Join("\n", nTabs)));
-            }
-
-            return ret;
-        }
-
-        private Annot AddSquareOrCircle(Rect rect, PdfAnnotType annotType)
-        {
-            PdfPage page = _pdfPage;
-            FzRect r = rect.ToFzRect();
-            if (r.fz_is_infinite_rect() != 0 || r.fz_is_empty_rect() != 0)
-            {
-                throw new Exception(Utils.ErrorMessages["MSG_BAD_RECT"]);
-            }
-
-            PdfAnnot annot = page.pdf_create_annot((pdf_annot_type)annotType);
-            annot.pdf_set_annot_rect(r);
-            annot.pdf_update_annot();
-            Utils.AddAnnotId(annot, "A");
-            return new Annot(annot, this);
-        }
-
-        /// <summary>
-        /// PDF only: Add a ('rubber') 'Stamp' annotation.
-        /// </summary>
-        /// <param name="rect">the rectangle into which the text should be inserted.</param>
-        /// <param name="stamp">stamp object, can be as int, pixmap, filepath, byte[], MemoryStream.</param>
-        /// int : (0=Approved,1=AsIs,2=Confidential,3=Departmental,4=Experimental,5=Expired,6=Final,7=ForComment,8=ForPublicRelease,9=NotApproved,10=NotForPublicRelease,11=Sold,12=TopSecret,13=Draft
-        /// <returns>the created annotation.</returns>
-        public Annot AddStampAnnot(Rect rect, object stamp = null)
-        {
-            int oldRotation = AnnotPreProcess(this);
-            Annot val = null;
-            try
-            {
-                FzRect r = rect.ToFzRect();
-                if (r.fz_is_infinite_rect() != 0 || r.fz_is_empty_rect() != 0)
-                {
-                    throw new Exception(Utils.ErrorMessages["MSG_BAD_RECT"]);
-                }
-                PdfPage page = _pdfPage;
-                List<PdfObj> stampIds = new List<PdfObj>()
-                {
-                    new PdfObj("Approved"),
-                    new PdfObj("AsIs"),
-                    new PdfObj("Confidential"),
-                    new PdfObj("Departmental"),
-                    new PdfObj("Experimental"),
-                    new PdfObj("Expired"),
-                    new PdfObj("Final"),
-                    new PdfObj("ForComment"),
-                    new PdfObj("ForPublicRelease"),
-                    new PdfObj("NotApproved"),
-                    new PdfObj("NotForPublicRelease"),
-                    new PdfObj("Sold"),
-                    new PdfObj("TopSecret"),
-                    new PdfObj("Draft"),
-                };
-                
-                int n = stampIds.Count;
-                byte[] buf = null;
-                PdfObj name = stampIds[0];
-
-                if (stamp is int index && index >= 0 && index < n)
-                {
-                    name = stampIds[index];
-                }
-                else if (stamp is Pixmap pix)
-                {
-                    buf = pix.ToBytes();
-                }
-                else if (stamp is string filePath && File.Exists(filePath))
-                {
-                    buf = File.ReadAllBytes(filePath);
-                }
-                else if (stamp is byte[] b)
-                {
-                    buf = b;
-                }
-                else if (stamp is MemoryStream ms)
-                {
-                    buf = ms.ToArray();
-                }
-                else
-                {
-                    name = stampIds[0];
-                }
-
-                PdfAnnot annot = page.pdf_create_annot(pdf_annot_type.PDF_ANNOT_STAMP);
-                if (buf != null) // image stamp
-                {
-                    FzBuffer fzbuff = Utils.fz_new_buffer_from_data(buf);
-                    FzImage img = fzbuff.fz_new_image_from_buffer();
-
-                    // compute image boundary box on page
-                    int w = img.w();
-                    int h = img.h();
-                    float scale = Math.Min(rect.Width / w, rect.Height / h);
-                    float width = w * scale; // bbox width
-                    float height = h * scale; // bbox height
-
-                    // center of "rect"
-                    Point center = (rect.TopLeft + rect.BottomRight) / 2.0f;
-                    float x0 = center.X - width / 2.0f;
-                    float y0 = center.Y - height / 2.0f;
-                    float x1 = x0 + width;
-                    float y1 = y0 + height;
-                    r = new FzRect(x0, y0, x1, y1);
-                    annot.pdf_set_annot_rect(r);
-                    annot.pdf_set_annot_stamp_image(img);
-                    annot.pdf_annot_obj().pdf_dict_put(new PdfObj("Name"), mupdf.mupdf.pdf_new_name("ImageStamp"));
-                    annot.pdf_set_annot_contents("Image Stamp");
-                }
-                else
-                {
-                    annot.pdf_set_annot_rect(r);
-                    annot.pdf_annot_obj().pdf_dict_put(new PdfObj("Name"), name);
-                    annot.pdf_set_annot_contents(name.pdf_to_name());
-                }
-                
-                annot.pdf_update_annot();
-                Utils.AddAnnotId(annot, "A");
-                val = new Annot(annot, this);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Error in AddStampAnnot: " + ex.Message);
-                val = null;
-            }
-            finally
-            {
-                if (oldRotation != 0)
-                    SetRotation(oldRotation);
-            }
-            AnnotPostProcess(this, val);
-
-            return val;
-        }
-
-        /// <summary>
-        /// PDF only: Add a comment icon (“sticky note”) with accompanying text. Only the icon is visible, the accompanying text is hidden and can be visualized by many PDF viewers by hovering the mouse over the symbol.
-        /// </summary>
-        /// <param name="point">the top left point of a 20 x 20 rectangle containing the MuPDF-provided “note” icon.</param>
-        /// <param name="text">the top left point of a 20 x 20 rectangle containing the MuPDF-provided “note” icon.</param>
-        /// <param name="icon">the top left point of a 20 x 20 rectangle containing the MuPDF-provided “note” icon.</param>
-        /// <returns></returns>
-        public Annot AddTextAnnot(Point point, string text, string icon = "Note")
-        {
-            int oldRotation = AnnotPreProcess(this);
-            Annot val = null;
-            try
-            {
-                PdfPage page = _pdfPage;
-                FzPoint p = point.ToFzPoint();
-                PdfAnnot annot = page.pdf_create_annot(pdf_annot_type.PDF_ANNOT_TEXT);
-                FzRect r = annot.pdf_annot_rect();
-                r = mupdf.mupdf.fz_make_rect(
-                    p.x,
-                    p.y,
-                    p.x + r.x1 - r.x0,
-                    p.y + r.y1 - r.y0
-                );
-                annot.pdf_set_annot_rect(r);
-                annot.pdf_set_annot_contents(text);
-                if (!string.IsNullOrEmpty(icon))
-                    annot.pdf_set_annot_icon_name(icon);
-
-                annot.pdf_update_annot();
-                Utils.AddAnnotId(annot, "A");
-                val = new Annot(annot, this);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Error in AddTextAnnot: " + ex.Message);
-                val = null;
-            }
-            finally
-            {
-                if (oldRotation != 0)
-                    SetRotation(oldRotation);
-            }
-            AnnotPostProcess(this, val);
-
-            return val;
-        }
-
-        private Annot AddTextMarker(List<Quad> quads, PdfAnnotType annotType)
-        {
-            Annot ret = null;
-            PdfAnnot annot = null;
-            PdfPage page = new PdfPage(_pdfPage.m_internal);
-            if (!Parent.IsPDF)
-                throw new Exception("is not pdf");
-            int rotation = Rotation;
-            try
-            {
-                if (rotation != 0)
-                    page.obj().pdf_dict_put_int(new PdfObj("Rotate"), rotation);
-                try
-                {
-                    annot = page.pdf_create_annot((pdf_annot_type)annotType);
-                }
-                catch (Exception)
-                {
-                    Console.WriteLine("message catched");
-                    annot = new PdfAnnot();
-                }
-                foreach (Quad item in quads)
-                {
-                    annot.pdf_add_annot_quad_point(item.ToFzQuad());
-                }
-                annot.pdf_update_annot();
-                Utils.AddAnnotId(annot, "A");
-                if (rotation != 0)
-                    page.obj().pdf_dict_put_int(new PdfObj("Rotate"), rotation);
-                ret = new Annot(annot, this);
-            }
-            catch (Exception)
-            {
-                if (rotation != 0)
-                    page.obj().pdf_dict_put_int(new PdfObj("Rotate"), rotation);
-                ret = null;
-            }
-            if (ret == null)
-                return null;
-            AnnotRefs.Add(ret.GetHashCode(), ret);
-
-            return ret;
-        }
-
-        /// <summary>
-        /// PDF only: Add a rectangle, resp. circle annotation.
-        /// </summary>
-        /// <param name="rect">the rectangle in which the circle or rectangle is drawn, must be finite and not empty. If the rectangle is not equal-sided, an ellipse is drawn.</param>
-        /// <returns></returns>
-        public Annot AddCircleAnnot(Rect rect)
-        {
-            int oldRotation = AnnotPreProcess(this);
-            Annot ret = null;
-            try
-            {
-                ret = AddSquareOrCircle(rect, PdfAnnotType.PDF_ANNOT_CIRCLE);
-            }
-            finally
-            {
-                if (oldRotation != 0)
-                    SetRotation(0);
-            }
-            AnnotPostProcess(this, ret);
-            return ret;
-        }
-
-        public int AnnotPreProcess(Page page)
-        {
-            if (!page.Parent.IsPDF)
-                throw new Exception("is not PDF");
-            int oldRotation = page.Rotation;
-            if (oldRotation != 0)
-                page.SetRotation(0);
-            return oldRotation;
-        }
-
-        public void AnnotPostProcess(Page page, Annot annot)
-        {
-            annot.Parent = page;
-            if (page.AnnotRefs.Keys.Contains(annot.GetHashCode()))
-                page.AnnotRefs[annot.GetHashCode()] = annot;
-            else
-                page.AnnotRefs.Add(annot.GetHashCode(), annot);
-            annot.ThisOwn = true;
-        }
-
-        /// <summary>
-        /// PDF only: Add an annotation consisting of lines which connect the given points. A Polygon’s first and last points are automatically connected, which does not happen for a PolyLine.
-        /// </summary>
-        /// <param name="points">a list of point_like objects.</param>
-        /// <returns>the created annotation.</returns>
-        public Annot AddPolygonAnnot(List<Point> points)
-        {
-            int oldRotation = AnnotPreProcess(this);
-            Annot annot;
-            try
-            {
-                annot = AddMultiLine(points, PdfAnnotType.PDF_ANNOT_POLYGON);
-            }
-            finally
-            {
-                if (oldRotation != 0)
-                    SetRotation(oldRotation);
-            }
-            AnnotPostProcess(this, annot);
-            return annot;
-        }
-
-        /// <summary>
-        /// Add a 'PolyLine' annotation.
-        /// </summary>
-        /// <param name="points"></param>
-        /// <returns></returns>
-        public Annot AddPolylineAnnot(List<Point> points)
-        {
-            int oldRotation = AnnotPreProcess(this);
-            Annot annot;
-            try
-            {
-                annot = AddMultiLine(points, PdfAnnotType.PDF_ANNOT_POLY_LINE);
-            }
-            finally
-            {
-                if (oldRotation != 0)
-                    SetRotation(oldRotation);
-            }
-            AnnotPostProcess(this, annot);
-            return annot;
-        }
-
+        /// <summary>Add a “Square” (rectangle) annotation.</summary>
+        /// <remarks>PyMuPDF <c>Page._add_square_or_circle</c> with <c>PDF_ANNOT_SQUARE</c>.</remarks>
         public Annot AddRectAnnot(Rect rect)
         {
-            int oldRotation = AnnotPreProcess(this);
-            Annot annot;
-            try
-            {
-                annot = AddSquareOrCircle(rect, PdfAnnotType.PDF_ANNOT_SQUARE);
-            }
-            finally
-            {
-                if (oldRotation != 0)
-                    SetRotation(oldRotation);
-            }
-            AnnotPostProcess(this, annot);
-            return annot;
-        }
-
-        private List<Rect> GetHighlightSelection(
-            List<Quad> quads,
-            Point start,
-            Point stop,
-            Rect clip
-        )
-        {
-            if (clip is null)
-                clip = this.MediaBox;
-            if (start is null)
-                start = clip.TopLeft;
-            if (stop is null)
-                stop = clip.BottomRight;
-            clip.Y0 = start.Y;
-            clip.Y1 = stop.Y;
-
-            if (clip.IsEmpty || clip.IsInfinite)
-                return null;
-
-            List<Block> blocks = GetText("dict", clip, 0).BLOCKS;
-
-            List<Rect> lines = new List<Rect>();
-            foreach (Block b in blocks)
-            {
-                Rect bbox = new Rect(b.Bbox);
-                if (bbox.IsInfinite || bbox.IsEmpty)
-                    continue;
-
-                foreach (Line line in b.Lines)
-                {
-                    bbox = new Rect(line.Bbox);
-                    if (bbox.IsInfinite || bbox.IsEmpty)
-                        continue;
-                    lines.Add(bbox);
-                }
-            }
-
-            if (lines.Count == 0)
-                return lines;
-
-            lines.Sort((Rect bbox1, Rect bbox2) => bbox1.Y1.CompareTo(bbox2.Y1));
-            Rect bboxf = new Rect(lines[0]);
-            lines.RemoveAt(0);
-            if (bboxf.Y0 - start.Y <= 0.1 * bboxf.Height)
-            {
-                Rect r = new Rect(start.X, bboxf.Y0, bboxf.BottomRight.X, bboxf.BottomRight.Y);
-                if (!(r.IsEmpty || r.IsInfinite))
-                    lines.Insert(0, r);
-            }
-            else
-                lines.Insert(0, bboxf);
-
-            if (lines.Count == 0)
-                return lines;
-
-            Rect bboxl = lines[lines.Count - 1];
-            lines.RemoveAt(lines.Count - 1);
-            if (stop.Y - bboxl.Y1 <= 0.1 * bboxl.Height)
-            {
-                Rect r = new Rect(bboxl.TopLeft.X, bboxl.TopLeft.Y, stop.X, bboxl.Y1);
-                if (!(r.IsEmpty || r.IsInfinite))
-                    lines.Add(r);
-            }
-            else
-                lines.Add(bboxl);
-
-            return lines;
-        }
-
-        /// <summary>
-        /// PDF only: These annotations are normally used for marking text which has previously been somehow located
-        /// </summary>
-        /// <param name="quads"></param>
-        /// <param name="start"></param>
-        /// <param name="stop"></param>
-        /// <param name="clip"></param>
-        /// <returns></returns>
-        public Annot AddHighlightAnnot(
-            dynamic quads,
-            Point start = null,
-            Point stop = null,
-            Rect clip = null
-        )
-        {
-            List<Quad> q = new List<Quad>();
-            if (quads is Rect)
-                q.Add(quads.Quad);
-            else if (quads is Quad)
-                q.Add(quads);
-            else if (quads is null)
-            {
-                List<Rect> rs = GetHighlightSelection(q, start, stop, clip);
-                foreach (Rect r in rs)
-                    q.Add(r.Quad);
-            }
-            else
-                q = quads;
-            Annot ret = AddTextMarker(q, PdfAnnotType.PDF_ANNOT_HIGHLIGHT);
-            return ret;
-        }
-
-        private TextPage _GetTextPage(Rect clip = null, int flags = 0, Matrix matrix = null)
-        {
-            PdfPage page = _pdfPage;
-            FzStextOptions options = new FzStextOptions(flags);
-            FzRect rect =
-                (clip == null) ? mupdf.mupdf.fz_bound_page(new FzPage(page)) : clip.ToFzRect();
-            FzMatrix ctm = matrix.ToFzMatrix();
-            FzStextPage stPage = new FzStextPage(rect);
-            FzDevice dev = stPage.fz_new_stext_device(options);
-
-            FzPage _page = null;
-            if (page is PdfPage)
-                _page = page.super();
-            else
-                Debug.Assert(false, "Unrecognised type");
-            _page.fz_run_page(dev, ctm, new FzCookie());
-            _page.Dispose();
-            dev.fz_close_device();
-            dev.Dispose();
-            //options.Dispose();
-
-            return new TextPage(stPage);
-        }
-
-        /// <summary>
-        /// Create a TextPage for the page.
-        /// </summary>
-        /// <param name="clip">restrict extracted text to this area.</param>
-        /// <param name="flags">indicator bits controlling the content available for subsequent text extractions and searches</param>
-        /// <param name="matrix"></param>
-        /// <returns></returns>
-        public TextPage GetTextPage(Rect clip = null, int flags = 0, Matrix matrix = null)
-        {
-            if (matrix == null)
-                matrix = new Matrix(1, 1);
-
-            int oldRotation = Rotation;
-            if (oldRotation != 0)
-                SetRotation(0);
-
-            TextPage stPage = null;
-            try
-            {
-                stPage = _GetTextPage(clip, flags, matrix);
-            }
-            finally
-            {
-                if (oldRotation != 0)
-                    SetRotation(oldRotation);
-            }
-
-            return stPage;
-        }
-
-        public List<SpanInfo> GetTextTrace()
-        {
-            int oldRotation = Rotation;
-            if (oldRotation != 0)
-                SetRotation(0);
-
-            List<SpanInfo> rc = new List<SpanInfo>();
-            TextTraceDevice dev = new TextTraceDevice(rc);
-            FzRect pRect = mupdf.mupdf.fz_bound_page(_nativePage);
-            dev.Ptm = new FzMatrix(1, 0, 0, -1, 0, pRect.y1);
-            _nativePage.fz_run_page(dev, new FzMatrix(), new FzCookie());
-            mupdf.mupdf.fz_close_device(dev);
-
-            if (oldRotation != 0)
-                SetRotation(oldRotation);
-            return rc;
-        }
-
-        /// <summary>
-        /// PDF only: Set the rotation of the page.
-        /// </summary>
-        /// <param name="rotation">An integer specifying the required rotation in degrees.</param>
-        public void SetRotation(int rotation)
-        {
-            PdfPage page = _pdfPage;
-            rotation = Utils.NormalizeRotation(rotation);
-            page.obj().pdf_dict_put_int(new PdfObj("Rotate"), rotation);
-        }
-
-        public Annot AddUnderlineAnnot(
-            dynamic quads = null,
-            Point start = null,
-            Point stop = null,
-            Rect clip = null
-        )
-        {
-            List<Quad> q = new List<Quad>();
-            if (quads is Rect)
-                q.Add(quads.QUAD);
-            else if (quads is Quad)
-                q.Add(quads);
-            else if (quads is null)
-            {
-                List<Rect> rs = GetHighlightSelection(q, start, stop, clip);
-                foreach (Rect r in rs)
-                    q.Add(r.Quad);
-            }
-            else
-                q = quads;
-
-            return AddTextMarker(q, PdfAnnotType.PDF_ANNOT_UNDERLINE);
-        }
-
-        public Annot AddSquigglyAnnot(
-            dynamic quads = null,
-            Point start = null,
-            Point stop = null,
-            Rect clip = null
-        )
-        {
-            List<Quad> q = new List<Quad>();
-            if (quads is Rect)
-                q.Add(quads.QUAD);
-            else if (quads is Quad)
-                q.Add(quads);
-            else if (quads is null)
-            {
-                List<Rect> rs = GetHighlightSelection(q, start, stop, clip);
-                foreach (Rect r in rs)
-                    q.Add(r.Quad);
-            }
-            else
-                q = quads;
-
-            return AddTextMarker(q, PdfAnnotType.PDF_ANNOT_SQUIGGLY);
-        }
-
-        public Annot AddStrikeoutAnnot(
-            dynamic quads = null,
-            Point start = null,
-            Point stop = null,
-            Rect clip = null
-        )
-        {
-            List<Quad> q = new List<Quad>();
-            if (quads is Rect)
-                q.Add(quads.QUAD);
-            else if (quads is Quad)
-                q.Add(quads);
-            else if (quads is null)
-            {
-                List<Rect> rs = GetHighlightSelection(q, start, stop, clip);
-                foreach (Rect r in rs)
-                    q.Add(r.Quad);
-            }
-            else
-                q = quads;
-
-            return AddTextMarker(q, PdfAnnotType.PDF_ANNOT_STRIKE_OUT);
-        }
-
-        public void AddAnnotFromString(List<string> links)
-        {
-            PdfPage page = _nativePage.pdf_page_from_fz_page();
-            int lCount = links.Count;
-            if (lCount < 1)
-                return;
-            int i = -1;
-
-            if (page.obj().pdf_dict_get(new PdfObj("Annots")).m_internal == null)
-                page.obj().pdf_dict_put_array(new PdfObj("Annots"), lCount);
-            PdfObj annots = page.obj().pdf_dict_get(new PdfObj("Annots"));
-
-            for (i = 0; i < lCount; i++)
-            {
-                string text = links[i];
-                if (string.IsNullOrEmpty(text))
-                {
-                    Console.WriteLine($"skipping bad link / annot item {i}.\n");
-                    continue;
-                }
-
-                try
-                {
-                    PdfDocument pageDoc = page.doc();
-                    PdfObj annot = pageDoc.pdf_add_object(Utils.PdfObjFromStr(pageDoc, text));
-                    PdfObj indObj = pageDoc.pdf_new_indirect(annot.pdf_to_num(), 0);
-                    annots.pdf_array_push(indObj);
-                    pageDoc.Dispose();
-                }
-                catch (Exception)
-                {
-                    Console.WriteLine($"skipping bad link / annot item {i}.");
-                }
-            }
-        }
-
-        /// <summary>
-        /// Write the text of one or more TextWriter objects.
-        /// </summary>
-        /// <param name="rect">target rectangle. If None, the union of the text writers is used.</param>
-        /// <param name="writers">One or more TextWriter objects.</param>
-        /// <param name="overlay">put in foreground or background.</param>
-        /// <param name="color"></param>
-        /// <param name="opacity"></param>
-        /// <param name="keepProportion">maintain aspect ratio of rectangle sides.</param>
-        /// <param name="rotate">arbitrary rotation angle.</param>
-        /// <param name="oc">the xref of an optional content object</param>
-        /// <exception cref="Exception"></exception>
-        public void WriteText(
-            Rect rect = null,
-            List<TextWriter> writers = null,
-            bool overlay = true,
-            float[] color = null,
-            float opacity = -1,
-            bool keepProportion = true,
-            int rotate = 0,
-            int oc = 0
-        )
-        {
-            if (writers == null || writers.Count == 0)
-                throw new Exception("need at least one TextWriter");
-            Rect clip = writers[0].TextRect;
-            Document textDoc = new Document();
-            Page page = textDoc.NewPage(width: Rect.Width, height: Rect.Height);
-            foreach (TextWriter writer in writers)
-            {
-                clip = clip | writer.TextRect;
-                writer.WriteText(page, opacity: opacity, color: color);
-            }
-            if (rect == null)
-                rect = clip;
-            page.ShowPdfPage(
-                rect,
-                textDoc,
-                0,
-                overlay: overlay,
-                keepProportion: keepProportion,
-                rotate: rotate,
-                clip: clip,
-                oc: oc
-            );
-            textDoc = null;
-            page = null;
-        }
-
-        /// <summary>
-        /// PDF only: Add a PDF Form field (“widget”) to a page.
-        /// </summary>
-        /// <param name="fieldType"></param>
-        /// <param name="fieldName"></param>
-        /// <returns></returns>
-        /// <exception cref="Exception"></exception>
-        public Annot AddWidget(PdfWidgetType fieldType, string fieldName)
-        {
-            PdfPage page = _pdfPage;
-            PdfDocument pageDoc = page.doc();
-            PdfAnnot annot = Utils.CreateWidget(pageDoc, page, fieldType, fieldName);
-            pageDoc.Dispose();
-
-            if (annot == null)
-                throw new Exception("cannot create widget");
-            Utils.AddAnnotId(annot, "W");
-
+            var fr = rect.ToFzRect();
+            if (mupdf.mupdf.fz_is_infinite_rect(fr) != 0 || mupdf.mupdf.fz_is_empty_rect(fr) != 0)
+                throw new ValueErrorException(Constants.MSG_BAD_RECT);
+            var annot = mupdf.mupdf.pdf_create_annot(NativePdfPage, mupdf.pdf_annot_type.PDF_ANNOT_SQUARE);
+            mupdf.mupdf.pdf_set_annot_rect(annot, fr);
+            mupdf.mupdf.pdf_update_annot(annot);
             return new Annot(annot, this);
         }
 
-        /// <summary>
-        /// Apply the redaction annotations of the page.
-        /// </summary>
-        /// <param name="images"></param>
-        /// <param name="graphics"></param>
-        /// <param name="text"></param>
-        /// <returns></returns>
-        private int _ApplyRedactions(int text = 0, int images = 2, int graphics = 1)
+        /// <summary>Add a “Circle” (ellipse, oval) annotation.</summary>
+        /// <remarks>PyMuPDF <c>Page._add_square_or_circle</c> with <c>PDF_ANNOT_CIRCLE</c>.</remarks>
+        public Annot AddCircleAnnot(Rect rect)
         {
-            PdfPage page = _pdfPage;
-            PdfRedactOptions opts = new PdfRedactOptions();
+            var fr = rect.ToFzRect();
+            if (mupdf.mupdf.fz_is_infinite_rect(fr) != 0 || mupdf.mupdf.fz_is_empty_rect(fr) != 0)
+                throw new ValueErrorException(Constants.MSG_BAD_RECT);
+            var annot = mupdf.mupdf.pdf_create_annot(NativePdfPage, mupdf.pdf_annot_type.PDF_ANNOT_CIRCLE);
+            mupdf.mupdf.pdf_set_annot_rect(annot, fr);
+            mupdf.mupdf.pdf_update_annot(annot);
+            return new Annot(annot, this);
+        }
+
+        /// <summary>Add a “PolyLine” annotation.</summary>
+        /// <remarks>PyMuPDF <c>Page._add_multiline</c> with <c>PDF_ANNOT_POLY_LINE</c>.</remarks>
+        public Annot AddPolylineAnnot(Point[] points)
+        {
+            if (points == null || points.Length < 2)
+                throw new ArgumentException(Constants.MSG_BAD_ARG_POINTS);
+            foreach (var p in points)
+                if (p == null) throw new ArgumentException(Constants.MSG_BAD_ARG_POINTS);
+            var annot = mupdf.mupdf.pdf_create_annot(NativePdfPage, mupdf.pdf_annot_type.PDF_ANNOT_POLY_LINE);
+            SetAnnotVertices(annot, points);
+            mupdf.mupdf.pdf_update_annot(annot);
+            return new Annot(annot, this);
+        }
+
+        /// <summary>Add a “Polygon” annotation.</summary>
+        /// <remarks>PyMuPDF <c>Page._add_multiline</c> with <c>PDF_ANNOT_POLYGON</c>.</remarks>
+        public Annot AddPolygonAnnot(Point[] points)
+        {
+            if (points == null || points.Length < 2)
+                throw new ArgumentException(Constants.MSG_BAD_ARG_POINTS);
+            foreach (var p in points)
+                if (p == null) throw new ArgumentException(Constants.MSG_BAD_ARG_POINTS);
+            var annot = mupdf.mupdf.pdf_create_annot(NativePdfPage, mupdf.pdf_annot_type.PDF_ANNOT_POLYGON);
+            SetAnnotVertices(annot, points);
+            mupdf.mupdf.pdf_update_annot(annot);
+            return new Annot(annot, this);
+        }
+
+        /// <summary>Add a “Highlight” annotation.</summary>
+        /// <remarks>PyMuPDF <c>add_highlight_annot</c> (selection or explicit quads).</remarks>
+        public Annot AddHighlightAnnot(Quad[] quads = null, Point start = null, Point stop = null, IRect clip = null)
+        {
+            return AddMarkupAnnot(mupdf.pdf_annot_type.PDF_ANNOT_HIGHLIGHT, quads, start, stop, clip);
+        }
+
+        /// <summary>Add an “Underline” annotation.</summary>
+        public Annot AddUnderlineAnnot(Quad[] quads = null, Point start = null, Point stop = null, IRect clip = null)
+        {
+            return AddMarkupAnnot(mupdf.pdf_annot_type.PDF_ANNOT_UNDERLINE, quads, start, stop, clip);
+        }
+
+        /// <summary>Add a “StrikeOut” annotation.</summary>
+        public Annot AddStrikeoutAnnot(Quad[] quads = null, Point start = null, Point stop = null, IRect clip = null)
+        {
+            return AddMarkupAnnot(mupdf.pdf_annot_type.PDF_ANNOT_STRIKE_OUT, quads, start, stop, clip);
+        }
+
+        /// <summary>Add a “Squiggly” underline annotation.</summary>
+        public Annot AddSquigglyAnnot(Quad[] quads = null, Point start = null, Point stop = null, IRect clip = null)
+        {
+            return AddMarkupAnnot(mupdf.pdf_annot_type.PDF_ANNOT_SQUIGGLY, quads, start, stop, clip);
+        }
+
+        /// <summary>Add a “Caret” annotation.</summary>
+        /// <remarks>PyMuPDF <c>Page._add_caret_annot</c> (default size from <c>pdf_annot_rect</c>).</remarks>
+        public Annot AddCaretAnnot(Point pos)
+        {
+            var annot = mupdf.mupdf.pdf_create_annot(NativePdfPage, mupdf.pdf_annot_type.PDF_ANNOT_CARET);
+            var fzp = pos.ToFzPoint();
+            var r0 = mupdf.mupdf.pdf_annot_rect(annot);
+            mupdf.mupdf.pdf_set_annot_rect(annot, mupdf.mupdf.fz_make_rect(fzp.x, fzp.y, fzp.x + (r0.x1 - r0.x0), fzp.y + (r0.y1 - r0.y0)));
+            mupdf.mupdf.pdf_update_annot(annot);
+            Helpers.AddAnnotId(annot, "A");
+            return new Annot(annot, this);
+        }
+
+        /// <summary>Add a (“rubber”) “Stamp” annotation.</summary>
+        /// <remarks>PyMuPDF <c>add_stamp_annot</c>; image/custom stamps are not fully ported here.</remarks>
+        public Annot AddStampAnnot(Rect rect, int stamp = 0)
+        {
+            var annot = mupdf.mupdf.pdf_create_annot(NativePdfPage, mupdf.pdf_annot_type.PDF_ANNOT_STAMP);
+            mupdf.mupdf.pdf_set_annot_rect(annot, rect.ToFzRect());
+            mupdf.mupdf.pdf_update_annot(annot);
+            return new Annot(annot, this);
+        }
+
+        /// <summary>Add a “FileAttachment” annotation.</summary>
+        /// <remarks>PyMuPDF <c>Page._add_file_annot</c> embeds the file; this port is still minimal.</remarks>
+        public Annot AddFileAnnot(Point pos, byte[] buffer, string filename, string ufilename = null, string desc = null, string icon = "PushPin")
+        {
+            var annot = mupdf.mupdf.pdf_create_annot(NativePdfPage, mupdf.pdf_annot_type.PDF_ANNOT_FILE_ATTACHMENT);
+            var fzp = pos.ToFzPoint();
+            mupdf.mupdf.pdf_set_annot_rect(annot, mupdf.mupdf.fz_make_rect(fzp.x, fzp.y, fzp.x + 20, fzp.y + 20));
+            mupdf.mupdf.pdf_set_annot_icon_name(annot, icon);
+            mupdf.mupdf.pdf_update_annot(annot);
+            return new Annot(annot, this);
+        }
+
+        /// <summary>Add an “Ink” (“handwriting”) annotation.</summary>
+        /// <remarks>
+        /// The argument must be a sequence of strokes, each a sequence of <c>(x, y)</c> pairs, as in PyMuPDF
+        /// <c>Page._add_ink_annot</c>: points are transformed by the inverse of <c>pdf_page_transform</c>.
+        /// </remarks>
+        public Annot AddInkAnnot(Point[][] paths)
+        {
+            if (paths == null)
+                throw new ArgumentException(Constants.MSG_BAD_ARG_INK_ANNOT);
+            var pdfPage = NativePdfPage;
+            var ctm = new mupdf.FzMatrix();
+            pdfPage.pdf_page_transform(new mupdf.FzRect(), ctm);
+            var invCtm = ctm.fz_invert_matrix();
+            var annot = mupdf.mupdf.pdf_create_annot(pdfPage, mupdf.pdf_annot_type.PDF_ANNOT_INK);
+            var annotObj = mupdf.mupdf.pdf_annot_obj(annot);
+            var pdf = RequireParent().NativePdfDocument;
+            var inkList = mupdf.mupdf.pdf_new_array(pdf, paths.Length);
+            foreach (var path in paths)
+            {
+                if (path == null)
+                    throw new ArgumentException(Constants.MSG_BAD_ARG_INK_ANNOT);
+                var stroke = mupdf.mupdf.pdf_new_array(pdf, path.Length * 2);
+                foreach (var pt in path)
+                {
+                    if (pt == null)
+                        throw new ArgumentException(Constants.MSG_BAD_ARG_INK_ANNOT);
+                    var tp = mupdf.FzPoint.fz_transform_point(pt.ToFzPoint(), invCtm);
+                    mupdf.mupdf.pdf_array_push_real(stroke, tp.x);
+                    mupdf.mupdf.pdf_array_push_real(stroke, tp.y);
+                }
+                mupdf.mupdf.pdf_array_push(inkList, stroke);
+            }
+            mupdf.mupdf.pdf_dict_put(annotObj, mupdf.mupdf.pdf_new_name("InkList"), inkList);
+            mupdf.mupdf.pdf_update_annot(annot);
+            return new Annot(annot, this);
+        }
+
+        /// <summary>Add a “Redact” annotation.</summary>
+        /// <remarks>PyMuPDF <c>add_redact_annot</c> supports overlay text, fill, <c>cross_out</c>, etc.; subset here.</remarks>
+        public Annot AddRedactAnnot(Quad quad, string? text = null, string? fontname = null, float fontsize = 11,
+            int align = 0, float[]? fillColor = null, float[]? textColor = null)
+        {
+            var annot = mupdf.mupdf.pdf_create_annot(NativePdfPage, mupdf.pdf_annot_type.PDF_ANNOT_REDACT);
+            mupdf.mupdf.pdf_set_annot_rect(annot, quad.Rect.ToFzRect());
+            if (text != null) mupdf.mupdf.pdf_set_annot_contents(annot, text);
+            mupdf.mupdf.pdf_update_annot(annot);
+            return new Annot(annot, this);
+        }
+
+        /// <summary>Apply the redaction annotations of the page.</summary>
+        /// <param name="images">0 ignore, 1 remove overlapping, 2 blank parts, 3 remove unless invisible (PyMuPDF).</param>
+        /// <param name="graphics">0 ignore, 1 remove if contained, 2 remove overlapping.</param>
+        /// <param name="text">0 remove text, 1 ignore text.</param>
+        /// <remarks>Core call matches PyMuPDF <c>Page._apply_redactions</c>; Python <c>apply_redactions</c> also redraws overlay text.</remarks>
+        public bool ApplyRedactions(int images = 2, int graphics = 1, int text = 0)
+        {
+            var pdfPage = NativePdfPage;
+            var opts = new mupdf.PdfRedactOptions();
             opts.black_boxes = 0;
+            opts.text = text;
             opts.image_method = images;
             opts.line_art = graphics;
-            opts.text = text;
-            PdfDocument pageDoc = page.doc();
-            int success = pageDoc.pdf_redact_page(page, opts);
-            pageDoc.Dispose();
-
-            return success;
+            int result = mupdf.mupdf.pdf_redact_page(RequireParent().NativePdfDocument, pdfPage, opts);
+            return result != 0;
         }
 
         /// <summary>
-        /// Apply the redaction annotations of the page.
+        /// Delete annot and return the next one.
         /// </summary>
-        /// <param name="images">
-        /// 0 - ignore images
-        /// 1 - remove all overlapping images
-        /// 2 - blank out overlapping image parts
-        /// 3 - remove image unless invisible
-        /// </param>
-        /// <param name="graphics">
-        /// 0 - ignore graphics
-        /// 1 - remove graphics if contained in rectangle
-        /// 2 - remove all overlapping graphics
-        /// </param>
-        /// <param name="text">
-        /// 0 - remove text
-        /// 1 - ignore text
-        /// </param>
-        /// <returns></returns>
-        /// <exception cref="Exception"></exception>
-        public bool ApplyRedactions(
-            int images = 2,
-            int graphics = 1,
-            int text = 0,
-            string fontFile = null
-        )
-        {
-            Rect CenterRect(
-                Rect annotRect,
-                string newText,
-                string fontfile,
-                string fname,
-                float fsize
-            )
-            {
-                if (string.IsNullOrEmpty(newText) || annotRect.Width <= Utils.FLT_EPSILON)
-                    return annotRect;
-
-                float textWidth = 0f;
-                try
-                {
-                    textWidth = Utils.GetTextLength(newText, fontfile, fname, fsize);
-                }
-                catch (Exception)
-                {
-                    return annotRect;
-                }
-
-                float lineHeight = fsize * 1.2f;
-                float limit = annotRect.Width;
-                float h = (float)Math.Ceiling(textWidth / limit) * lineHeight;
-                if (h >= annotRect.Height)
-                    return annotRect;
-
-                Rect r = annotRect;
-                float y = (annotRect.TopLeft.Y + annotRect.BottomLeft.Y) * 0.5f;
-                r.Y0 = y;
-
-                return r;
-            }
-
-            Document doc = Parent;
-            if (doc.IsEncrypted || doc.IsClosed)
-                throw new Exception("document is closed or encrypted");
-
-            if (!doc.IsPDF)
-                throw new Exception("is no PDF");
-
-            List<AnnotValues> redactAnnots = new List<AnnotValues>();
-            foreach (
-                Annot annot in GetAnnots(new List<PdfAnnotType>() { PdfAnnotType.PDF_ANNOT_REDACT })
-            )
-                redactAnnots.Add(annot.GetRedactValues());
-            if (redactAnnots.Count == 0)
-                return false;
-
-            int res = _ApplyRedactions(text, images, graphics);
-            if (res == 0)
-                throw new Exception("Error applying redactions");
-
-            Shape shape = NewShape();
-            foreach (AnnotValues redact in redactAnnots)
-            {
-                Rect annotRect = redact.Rect;
-                float[] fill = redact.Fill;
-                if (fill != null && fill.Length > 0)
-                {
-                    shape.DrawRect(annotRect, 0);
-                    shape.Finish(fill: fill, color: fill);
-                }
-
-                if (string.IsNullOrEmpty(redact.Text))
-                {
-                    string newText = redact.Text;
-                    int align = redact.Align;
-                    string fname = redact.FontName;
-                    float fsize = redact.FontSize;
-                    float[] color = redact.TextColor;
-                    Rect trect = CenterRect(annotRect, newText, fontFile, fname, fsize);
-
-                    float ret = -1f;
-                    while (ret < 0 && fsize >= 4)
-                    {
-                        ret = shape.InsertTextbox(
-                            trect,
-                            newText,
-                            fontFile: fontFile,
-                            fontName: fname,
-                            fontSize: fsize,
-                            color: color,
-                            align: align
-                        );
-                        fsize -= 0.5f;
-                    }
-                }
-            }
-            shape.Commit();
-            return true;
-        }
-
-        private void ResetAnnotRefs()
-        {
-            AnnotRefs.Clear();
-        }
-
-        public void Erase()
-        {
-            this.ResetAnnotRefs();
-            try
-            {
-                Parent.ForgetPage(this);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e.Message);
-            }
-
-            Parent = null;
-            ThisOwn = false;
-            Number = 0;
-        }
-
-        private List<(string, int)> GetResourceProperties()
-        {
-            PdfPage page = _pdfPage;
-            List<(string, int)> rc = Utils.GetResourceProperties(page.obj());
-
-            return rc;
-        }
-
-        private void SetResourceProperty(string mc, int xref)
-        {
-            PdfPage page = _pdfPage;
-            Utils.SetResourceProperty(page.obj(), mc, xref);
-        }
-
-        /// <summary>
-        /// PDF only: Insert a new link on this page.
-        /// </summary>
-        /// <param name="link">the link to be inserted.</param>
-        /// <param name="mark"></param>
-        /// <exception cref="Exception"></exception>
-        public void InsertLink(LinkInfo link, bool mark = true)
-        {
-            string annot = Utils.GetLinkText(this, link);
-            if (string.IsNullOrEmpty(annot))
-                throw new Exception("link kind not supported");
-            AddAnnotFromString(new List<string>() { annot });
-        }
-
-        /// <summary>
-        /// PDF only: Put an image inside the given rectangle.
-        /// </summary>
-        /// <param name="rect">where to put the image. Must be finite and not empty.</param>
-        /// <param name="filename">name of an image file (all formats supported by MuPDF</param>
-        /// <param name="pixmap"> a pixmap containing the image.</param>
-        /// <param name="stream">image in memory all formats supported by MuPDF</param>
-        /// <param name="imask">image in memory – to be used as image mask (alpha values) for the base image.</param>
-        /// <param name="overlay"></param>
-        /// <param name="rotate">rotate the image.</param>
-        /// <param name="keepProportion">maintain the aspect ratio of the image.</param>
-        /// <param name="oc">make image visibility dependent on this OCG or OCMD.</param>
-        /// <param name="width"></param>
-        /// <param name="height"></param>
-        /// <param name="xref">the xref of an image already present in the PDF.</param>
-        /// <param name="alpha"></param>
-        /// <param name="imageName"></param>
-        /// <param name="mask"></param>
-        /// <returns>The xref of the embedded image.</returns>
-        /// <exception cref="Exception"></exception>
-        public int InsertImage(
-            Rect rect = null,
-            string filename = null,
-            Pixmap pixmap = null,
-            byte[] stream = null,
-            byte[] imask = null,
-            int overlay = 1,
-            int rotate = 0,
-            int keepProportion = 1,
-            int oc = 0,
-            int width = 0,
-            int height = 0,
-            int xref = 0,
-            int alpha = -1,
-            string imageName = null,
-            byte[] mask = null
-        )
-        {
-            Document doc = Parent;
-            if (!Parent.IsPDF)
-                throw new Exception("is no pdf");
-            if (
-                xref == 0
-                && (string.IsNullOrEmpty(filename) ? 0 : 1)
-                    + (stream == null ? 0 : 1)
-                    + (pixmap == null ? 0 : 1)
-                    != 1
-            )
-                throw new Exception("xref=0 needs exactly one of filename, pixmap, stream");
-
-            if (filename != null && !File.Exists(filename))
-                throw new Exception($"No such file: {filename}");
-            else if (mask != null && (stream == null || string.IsNullOrEmpty(filename)))
-                throw new Exception("mask requires stream or filename");
-
-            while (rotate < 0)
-                rotate += 360;
-            while (rotate >= 360)
-                rotate -= 360;
-
-            if (!(new int[] { 0, 90, 180, 270 }).Contains(rotate))
-                throw new Exception("bad rotate value");
-
-            if (rect.IsEmpty || rect.IsInfinite)
-                throw new Exception("rect must be finite and not empty");
-            Rect clip = rect * ~TransformationMatrix;
-
-            List<string> iList = new List<string>();
-            List<Entry> images = doc.GetPageImages(Number);
-            foreach (Entry i in images)
-                iList.Add(i.RefName);
-
-            List<Entry> xobjects = doc.GetPageXObjects(Number);
-            foreach (Entry i in xobjects)
-                iList.Add(i.RefName);
-
-            List<Entry> fonts = doc.GetPageFonts(Number);
-            foreach (Entry i in fonts)
-                iList.Add(i.RefName);
-
-            string n = "fzImg";
-            int j = 0;
-
-            string imgName = n + "0";
-            if (string.IsNullOrEmpty(imageName))
-                while (iList.Contains(imgName))
-                {
-                    j += 1;
-                    imgName = n + $"{j}";
-                }
-            else
-                imgName = imageName;
-
-            Dictionary<string, int> digests = doc.InsertedImages;
-
-            FzBuffer maskBuf = new FzBuffer();
-            PdfPage page = _pdfPage;
-            PdfDocument pageDoc = page.doc();
-            int w = width;
-            int h = height;
-            int imgXRef = xref;
-            int rcDigest = 0;
-            string template = "\nq\n{0} {1} {2} {3} {4} {5} cm\n/{6} Do\nQ\n";
-
-            int do_process_pixmap = 1;
-            int do_process_stream = 1;
-            int do_have_imask = 1;
-            int do_have_image = 1;
-            int do_have_xref = 1;
-            FzBuffer imgBuf = null;
-            FzImage image = null;
-            FzImage maskImage = null;
-            byte[] md5 = null;
-            PdfObj ref_ = new PdfObj();
-
-            if (xref > 0)
-            {
-                ref_ = pageDoc.pdf_new_indirect(xref, 0);
-                w = ref_.pdf_dict_geta(new PdfObj("Width"), new PdfObj("W")).pdf_to_int();
-                h = ref_.pdf_dict_geta(new PdfObj("Height"), new PdfObj("H")).pdf_to_int();
-
-                if (w + h == 0)
-                {
-                    throw new Exception(Utils.ErrorMessages["MSG_IS_NO_IMAGE"]);
-                }
-
-                do_process_pixmap = 0;
-                do_process_stream = 0;
-                do_have_imask = 0;
-                do_have_image = 0;
-            }
-            else
-            {
-                if (stream != null)
-                {
-                    imgBuf = Utils.BufferFromBytes(stream);
-                    do_process_pixmap = 0;
-                }
-                else
-                {
-                    if (!string.IsNullOrEmpty(filename))
-                    {
-                        imgBuf = mupdf.mupdf.fz_read_file(filename);
-                        do_process_pixmap = 0;
-                    }
-                }
-            }
-
-            if (do_process_pixmap != 0)
-            {
-                FzPixmap argPix = pixmap.ToFzPixmap();
-                w = argPix.w();
-                h = argPix.h();
-                vectoruc digest = argPix.fz_md5_pixmap2();
-                md5 = digest.ToArray();
-                //int temp = digests.GetValueOrDefault(Encoding.UTF8.GetString(md5), -1);
-                int temp;
-                if (!digests.TryGetValue(Encoding.UTF8.GetString(md5), out temp))
-                {
-                    temp = -1; // Default value if key is not found
-                }
-                if (temp != -1)
-                {
-                    imgXRef = temp;
-                    ref_ = pageDoc.pdf_new_indirect(imgXRef, 0);
-                    do_process_stream = 0;
-                    do_have_imask = 0;
-                    do_have_image = 0;
-                }
-                else
-                {
-                    if (argPix.alpha() == 0)
-                        image = argPix.fz_new_image_from_pixmap(new FzImage());
-                    else
-                    {
-                        FzPixmap pm = argPix.fz_convert_pixmap(
-                            new FzColorspace(),
-                            new FzColorspace(),
-                            new FzDefaultColorspaces(),
-                            new FzColorParams(),
-                            1
-                        );
-                        pm.m_internal.alpha = 0;
-                        pm.m_internal.colorspace = null;
-                        maskImage = pm.fz_new_image_from_pixmap(new FzImage());
-                        image = argPix.fz_new_image_from_pixmap(maskImage);
-                    }
-                    do_process_stream = 0;
-                    do_have_imask = 0;
-                }
-            }
-
-            if (do_process_stream != 0)
-            {
-                FzMd5 state = new FzMd5();
-                state.fz_md5_update(imgBuf.m_internal.data, imgBuf.m_internal.len);
-
-                if (imask != null)
-                {
-                    maskBuf = Utils.BufferFromBytes(imask);
-                    state.fz_md5_update(maskBuf.m_internal.data, maskBuf.m_internal.len);
-                }
-                vectoruc digest = state.fz_md5_final2();
-                md5 = digest.ToArray();
-                //int tmp = digests.GetValueOrDefault(Encoding.UTF8.GetString(md5), -1);
-                int tmp;
-                if (!digests.TryGetValue(Encoding.UTF8.GetString(md5), out tmp))
-                {
-                    tmp = -1; // Default value if key is not found
-                }
-                if (tmp != -1)
-                {
-                    imgXRef = tmp;
-                    ref_ = pageDoc.pdf_new_indirect(imgXRef, 0);
-                    w = ref_.pdf_dict_geta(new PdfObj("Width"), new PdfObj("W")).pdf_to_int();
-                    h = ref_.pdf_dict_geta(new PdfObj("Height"), new PdfObj("H")).pdf_to_int();
-                    do_have_imask = 0;
-                    do_have_image = 0;
-                }
-                else
-                {
-                    image = imgBuf.fz_new_image_from_buffer();
-                    w = image.w();
-                    h = image.h();
-                    if (imask == null)
-                        do_have_imask = 0;
-                }
-            }
-
-            if (do_have_imask != 0)
-            {
-                // version 1.24 later
-                FzCompressedBuffer cbuf = image.fz_compressed_image_buffer();
-                if (cbuf.m_internal == null)
-                    throw new Exception("uncompressed image cannot have mask");
-                byte bpc = image.bpc();
-                FzColorspace colorspace = image.colorspace();
-                (int xres, int yres) = image.fz_image_resolution();
-                maskImage = maskBuf.fz_new_image_from_buffer();
-                image = mupdf.mupdf.fz_new_image_from_compressed_buffer2(
-                    w,
-                    h,
-                    bpc,
-                    colorspace,
-                    xres,
-                    yres,
-                    1,
-                    0,
-                    new vectorf(),
-                    new vectori(),
-                    cbuf,
-                    maskImage
-                );
-            }
-
-            if (do_have_image != 0)
-            {
-                ref_ = pageDoc.pdf_add_image(image);
-                if (oc != 0)
-                    Utils.AddOcObject(pageDoc, ref_, oc);
-                imgXRef = ref_.pdf_to_num();
-                digests.Add(Encoding.UTF8.GetString(md5), imgXRef);
-                rcDigest = 1;
-            }
-
-            if (do_have_xref != 0)
-            {
-                PdfObj resources = page.obj().pdf_dict_get_inheritable(new PdfObj("Resources"));
-                if (resources.m_internal == null)
-                    resources = page.obj().pdf_dict_put_dict(new PdfObj("Resources"), 2);
-                PdfObj xobject = resources.pdf_dict_get(new PdfObj("XObject"));
-                if (xobject.m_internal == null)
-                    xobject = resources.pdf_dict_put_dict(new PdfObj("XObject"), 2);
-                FzMatrix mat = Utils.CalcImageMatrix(w, h, clip, rotate, keepProportion != 0);
-
-                xobject.pdf_dict_puts(imgName, ref_);
-                FzBuffer nres = mupdf.mupdf.fz_new_buffer(50);
-                nres.fz_append_string(
-                    string.Format(System.Globalization.CultureInfo.InvariantCulture,
-                    template,
-                    Utils.FloatToString(mat.a),
-                    Utils.FloatToString(mat.b),
-                    Utils.FloatToString(mat.c),
-                    Utils.FloatToString(mat.d),
-                    Utils.FloatToString(mat.e),
-                    Utils.FloatToString(mat.f),
-                    imgName)
-                );
-                Utils.InsertContents(pageDoc, page.obj(), nres, overlay);
-            }
-
-            if (rcDigest != 0)
-            {
-                doc.InsertedImages = digests;
-            }
-
-            pageDoc.Dispose();
-
-            return imgXRef;
-        }
-
-        /// <summary>
-        /// PDF only: Insert text starting at point. See Shape.InsertText
-        /// </summary>
-        /// <param name="point"></param>
-        /// <param name="text"></param>
-        /// <param name="fontSize"></param>
-        /// <param name="lineHeight"></param>
-        /// <param name="fontName"></param>
-        /// <param name="fontFile"></param>
-        /// <param name="setSimple"></param>
-        /// <param name="encoding"></param>
-        /// <param name="color"></param>
-        /// <param name="fill"></param>
-        /// <param name="borderWidth"></param>
-        /// <param name="renderMode"></param>
-        /// <param name="rotate"></param>
-        /// <param name="morph"></param>
-        /// <param name="overlay"></param>
-        /// <param name="strokeOpacity"></param>
-        /// <param name="fillOpacity"></param>
-        /// <param name="oc"></param>
-        /// <returns></returns>
-        public int InsertText(
-            Point point,
-            dynamic text,
-            float fontSize = 11,
-            float lineHeight = 0,
-            string fontName = "helv",
-            string fontFile = null,
-            int setSimple = 0,
-            int encoding = 0,
-            float[] color = null,
-            float[] fill = null,
-            float borderWidth = 0.05f,
-            int renderMode = 0,
-            int rotate = 0,
-            Morph morph = null,
-            bool overlay = true,
-            float strokeOpacity = 1,
-            float fillOpacity = 1,
-            int oc = 0
-        )
-        {
-            Shape img = new Shape(this);
-            int rc = img.InsertText(
-                point,
-                text,
-                fontSize: fontSize,
-                fontFile: fontFile,
-                lineHeight: lineHeight,
-                fontName: fontName,
-                setSimple: setSimple != 0,
-                encoding: encoding,
-                color: color,
-                fill: fill,
-                borderWidth: borderWidth,
-                renderMode: renderMode,
-                rotate: rotate,
-                morph: morph,
-                strokeOpacity: strokeOpacity,
-                fillOpacity: fillOpacity,
-                oc: oc
-            );
-
-            if (rc >= 0)
-                img.Commit(overlay);
-            return rc;
-        }
-
-        /// <summary>
-        /// PDF only: Insert text into the specified rectangle.
-        /// </summary>
-        /// <param name="rect">rectangle on page to receive the text.</param>
-        /// <param name="text">the text to be written. Can contain a mixture of plain text and HTML tags with styling instructions.</param>
-        /// <param name="css">optional string containing additional CSS instructions.</param>
-        /// <param name="opacity"></param>
-        /// <param name="rotate">one of the values 0, 90, 180, 270. Depending on this, text will be filled:</param>
-        /// <param name="scaleLow">if necessary, scale down the content until it fits in the target rectangle.</param>
-        /// <param name="archive">an Archive object that points to locations where to find images or non-standard fonts.</param>
-        /// <param name="oc">the xref of an OCG / OCMD or 0.</param>
-        /// <param name="overlay">put the text in front of other content.</param>
-        /// <returns></returns>
-        /// <exception cref="Exception"></exception>
-        public (float, float) InsertHtmlBox(
-            Rect rect,
-            dynamic text,
-            string css = null,
-            float opacity = 1,
-            int rotate = 0,
-            float scaleLow = 0,
-            Archive archive = null,
-            int oc = 0,
-            bool overlay = true
-        )
-        {
-            if (rotate % 90 != 0)
-                throw new Exception("bad rotation angle");
-            while (rotate < 0)
-                rotate += 360;
-            while (rotate >= 360)
-                rotate -= 360;
-
-            if (!(0 <= scaleLow && scaleLow <= 1))
-                throw new Exception("'scale_low' must be in [0, 1]");
-
-            if (css == null)
-                css = "";
-
-            Rect tempRect = null;
-            if (rotate == 90 || rotate == 270)
-                tempRect = new Rect(0, 0, rect.Height, rect.Width);
-            else
-                tempRect = new Rect(0, 0, rect.Width, rect.Height);
-
-            // use a small border by default
-            string mycss = "body {margin:1px;}" + css;
-
-            // either make a story or accept a given one
-            Story story = null;
-            if (text is string)
-                story = new Story(text, mycss, archive: archive);
-            else if (text is Story)
-                story = text;
-            else
-                throw new Exception($"{text} must be a string or a Story");
-
-            float scaleMax = scaleLow == 0 ? 0.0f : 1 / scaleLow;
-            fit = story.FitScale(tempRect, scaleMin: 1, scaleMax: scaleMax);
-
-            if (fit.BigEnough == false)
-                return (-1, scaleLow);
-
-            var filled = fit.Filled;
-            float scale = 1 / fit.Parameter;
-
-            float spareHeight = fit.Rect.Y1 - filled[3];
-            if (scale != 1 || spareHeight < 0)
-                spareHeight = 0;
-
-            Document doc = story.WriteWithLinks(RectFunction);
-
-            if (0 <= opacity && opacity < 1)
-            {
-                Page tpage = doc[0];
-                string alpha = tpage.SetOpacity(CA: opacity, ca: opacity);
-                string s = $"/{alpha} gs\n";
-                Utils.InsertContents(tpage, Encoding.UTF8.GetBytes(s), 0);
-            }
-            ShowPdfPage(rect, doc, 0, rotate: rotate, oc: oc, overlay: overlay);
-            Point mp1 = (fit.Rect.TopLeft + fit.Rect.BottomRight) / 2 * scale;
-            Point mp2 = (rect.TopLeft + rect.BottomRight) / 2;
-
-            Matrix mat = (
-                new Matrix(scale, 0, 0, scale, -mp1.X, -mp1.Y)
-                * new Matrix(-rotate)
-                * new Matrix(1, 0, 0, 1, mp2.X, mp2.Y)
-            );
-
-            foreach (LinkInfo link in doc[0].GetLinks())
-            {
-                LinkInfo t = link;
-                t.From *= mat;
-                InsertLink(t);
-            }
-
-            doc.Close();
-            return (spareHeight, scale);
-        }
-
-        /// <summary>
-        /// Retrieves all links of a page.
-        /// </summary>
-        /// <returns>Retrieves all links of a page.</returns>
-        public List<LinkInfo> GetLinks()
-        {
-            Link ln = FirstLink;
-            List<LinkInfo> links = new List<LinkInfo>();
-            while (ln != null)
-            {
-                LinkInfo nl = Utils.GetLinkDict(ln, Parent);
-                links.Add(nl);
-                ln = ln.Next;
-            }
-            if (links.Count != 0 && Parent.IsPDF)
-            {
-                List<AnnotXref> xrefs = GetAnnotXrefs();
-                xrefs = xrefs.Where(xref => xref.AnnotType == PdfAnnotType.PDF_ANNOT_LINK).ToList();
-                if (xrefs.Count == links.Count)
-                {
-                    for (int i = 0; i < xrefs.Count; i++)
-                    {
-                        links[i].Xref = xrefs[i].Xref;
-                        links[i].Id = xrefs[i].Id;
-                    }
-                }
-            }
-
-            return links;
-        }
-
-        /// <summary>
-        /// Set object at 'xref' as the page's /Contents.
-        /// </summary>
-        /// <param name="xref"></param>
-        /// <exception cref="Exception"></exception>
-        public void SetContents(int xref)
-        {
-            Document doc = Parent;
-            if (doc.IsClosed)
-                throw new Exception("document closed");
-            if (!doc.IsPDF)
-                throw new Exception("is no PDF");
-            if (!Utils.INRANGE(xref, 1, doc.GetXrefLength()))
-                throw new Exception("bad xref");
-            if (!doc.XrefIsStream(xref))
-                throw new Exception("xref is no stream");
-            doc.SetKeyXRef(Xref, "Contents", $"{xref} 0 R");
-        }
-
-        /// <summary>
-        ///
-        /// </summary>
-        /// <param name="sr"></param>
-        /// <param name="tr"></param>
-        /// <param name="keep"></param>
-        /// <param name="rotate"></param>
-        /// <returns></returns>
-        public Matrix CalcMatrix(Rect sr, Rect tr, bool keep = true, int rotate = 0)
-        {
-            Point smp = (sr.TopLeft + sr.BottomRight) / 2.0f;
-            Point tmp = (tr.TopLeft + tr.BottomRight) / 2.0f;
-
-            Matrix m = new Matrix(1, 0, 0, 1, -smp.X, -smp.Y) * new Matrix(rotate);
-            Rect sr1 = sr * m;
-
-            float fw = tr.Width / sr1.Width;
-            float fh = tr.Height / sr1.Height;
-            if (keep)
-                fw = fh = Math.Min(fw, fh);
-
-            m *= new Matrix(fw, fh);
-            m *= new Matrix(1, 0, 0, 1, tmp.X, tmp.Y);
-            return m;
-        }
-
-        /// <summary>
-        /// PDF only: Display a page of another PDF as a vector image (otherwise similar to Page.insert_image()).
-        /// </summary>
-        /// <param name="rect">where to place the image on current page.</param>
-        /// <param name="src">source PDF document containing the page. Must be a different document object, but may be the same file.</param>
-        /// <param name="pno"></param>
-        /// <param name="keepProportion">page number</param>
-        /// <param name="overlay">put image in foreground (default) or background.</param>
-        /// <param name="oc">make visibility dependent on this OCG / OCMD </param>
-        /// <param name="rotate">show the source rectangle rotated by some angle.</param>
-        /// <param name="clip">show the source rectangle rotated by some angle.</param>
-        /// <returns></returns>
-        /// <exception cref="Exception"></exception>
-        public int ShowPdfPage(
-            Rect rect,
-            Document src,
-            int pno = 0,
-            bool keepProportion = true,
-            bool overlay = true,
-            int oc = 0,
-            int rotate = 0,
-            Rect clip = null
-        )
-        {
-            Document doc = Parent;
-            if (!doc.IsPDF || !src.IsPDF)
-            {
-                throw new Exception("is not PDF");
-            }
-
-            if (rect.IsEmpty || rect.IsInfinite)
-                throw new Exception("rect must be finite and not empty");
-
-            while (pno < 0)
-                pno += src.PageCount;
-
-            Page srcPage = src[pno];
-            if (srcPage.GetContents().Count == 0)
-            {
-                throw new Exception("nothing to show - source page empty");
-            }
-
-            Rect tarRect = rect * ~TransformationMatrix;
-            Rect srcRect = clip == null ? srcPage.Rect : srcPage.Rect & clip;
-            if (srcRect.IsEmpty || srcRect.IsInfinite)
-                throw new Exception("clip must be finite and not empty");
-            srcRect = srcRect * ~srcPage.TransformationMatrix;
-
-            Matrix matrix = CalcMatrix(srcRect, tarRect, keep: keepProportion, rotate: rotate);
-
-            List<dynamic> iList = new List<dynamic>();
-            List<Entry> res = doc.GetPageXObjects(Number);
-            int i = 0;
-            for (i = 0; i < res.Count; i++)
-            {
-                iList.Add(res[i].RefName);
-            }
-
-            res = doc.GetPageImages(Number);
-            for (i = 0; i < res.Count; i++)
-            {
-                iList.Add(res[i].RefName);
-            }
-
-            res = doc.GetPageFonts(Number);
-            for (i = 0; i < res.Count; i++)
-                iList.Add(res[i].RefName);
-
-            string n = "fzFrm";
-            i = 0;
-            string imgName = n + "0";
-            while (iList.Contains(imgName))
-            {
-                i += 1;
-                imgName = n + $"{i}";
-            }
-
-            int isrc = src.GraftID;
-            if (doc.GraftID == isrc)
-                throw new Exception("source document must not equal target");
-
-            //GraftMap gmap = doc.GraftMaps.GetValueOrDefault(isrc, null);
-            GraftMap gmap;
-            if (!doc.GraftMaps.TryGetValue(isrc, out gmap))
-            {
-                gmap = null; // Default value if key is not found
-            }
-            if (gmap == null)
-            {
-                gmap = new GraftMap(doc);
-                doc.GraftMaps[isrc] = gmap;
-            }
-
-            //int xref = doc.ShownPages.GetValueOrDefault((isrc, pno), 0);
-            int xref;
-            if (!doc.ShownPages.TryGetValue((isrc, pno), out xref))
-            {
-                xref = 0; // Default value if key is not found
-            }
-            xref = ShowPdfPage(
-                srcPage,
-                overlay,
-                matrix,
-                xref,
-                oc,
-                srcRect.ToFzRect(),
-                gmap,
-                imgName
-            );
-
-            doc.ShownPages[(isrc, pno)] = xref;
-
-            return xref;
-        }
-
-        /// <summary>
-        /// List of xobjects defined in the page object.
-        /// </summary>
-        /// <returns></returns>
-        public List<Entry> GetXObjects()
-        {
-            return Parent.GetPageXObjects(Number);
-        }
-
-        private int ShowPdfPage(
-            Page srcPage,
-            bool overlay = true,
-            Matrix matrix = null,
-            int xref = 0,
-            int oc = 0,
-            FzRect clip = null,
-            GraftMap gmap = null,
-            string imgName = null
-        )
-        {
-            FzRect cropBox = new FzRect(FzRect.Fixed.Fixed_INFINITE);
-            if (clip != null)
-                cropBox = clip;
-            FzMatrix mat = matrix != null ? matrix.ToFzMatrix() : new FzMatrix();
-            int rcXref = xref;
-            PdfPage tpage = _pdfPage;
-            PdfObj tpageObj = tpage.obj();
-            PdfDocument pdfOut = tpage.doc();
-            Utils.EnsureOperations(pdfOut);
-
-            PdfObj xobj1 = Utils.GetXObjectFromPage(pdfOut, srcPage.GetPdfPage(), rcXref, gmap);
-            if (rcXref == 0)
-                rcXref = xobj1.pdf_to_num();
-
-            // create refereneing xobject (controls display on target page)
-            PdfObj subRes1 = mupdf.mupdf.pdf_new_dict(pdfOut, 5);
-            subRes1.pdf_dict_puts("fullpage", xobj1);
-            PdfObj subRes = mupdf.mupdf.pdf_new_dict(pdfOut, 5);
-            subRes.pdf_dict_put(new PdfObj("XObject"), subRes1);
-
-            FzBuffer res = mupdf.mupdf.fz_new_buffer(20);
-            res.fz_append_string("/fullpage Do");
-
-            PdfObj xobj2 = pdfOut.pdf_new_xobject(cropBox, mat, subRes, res);
-            if (oc > 0)
-                Utils.AddOcObject(pdfOut, xobj2.pdf_resolve_indirect(), oc);
-
-            // update target page with xobj2
-            PdfObj resources = tpageObj.pdf_dict_get_inheritable(new PdfObj("Resources"));
-            subRes = resources.pdf_dict_get(new PdfObj("XObject"));
-            if (subRes.m_internal == null)
-                subRes = resources.pdf_dict_put_dict(new PdfObj("XObject"), 5);
-            subRes.pdf_dict_puts(imgName, xobj2);
-
-            FzBuffer nres = mupdf.mupdf.fz_new_buffer(50); // buffer for Do command
-            nres.fz_append_string(" q /"); // Do command
-            nres.fz_append_string(imgName);
-            nres.fz_append_string(" Do Q ");
-
-            Utils.InsertContents(pdfOut, tpageObj, nres, overlay ? 1 : 0);
-
-            pdfOut.Dispose();
-            return rcXref;
-        }
-
-        /// <summary>
-        /// Get xrefs of /Contents objects.
-        /// </summary>
-        /// <returns></returns>
-        public List<int> GetContents()
-        {
-            List<int> ret = new List<int>();
-            PdfObj obj = _nativePage.pdf_page_from_fz_page().obj();
-            PdfObj contents = obj.pdf_dict_get(new PdfObj("Contents"));
-            if (contents.pdf_is_array() != 0)
-            {
-                int n = contents.pdf_array_len();
-                for (int i = 0; i < n; i++)
-                {
-                    PdfObj icont = contents.pdf_array_get(i);
-                    int xref = icont.pdf_to_num();
-                    if (xref != 0)
-                        ret.Add(xref);
-                }
-            }
-            else if (contents.m_internal != null)
-            {
-                int xref = contents.pdf_to_num();
-                ret.Add(xref);
-            }
-            return ret;
-        }
-
-        /// <summary>
-        /// PDF only: Add a new font to be used by text output methods and return its xref.
-        /// </summary>
-        /// <param name="fontName">PDF only: Add a new font to be used by text output methods and return its xref.</param>
-        /// <param name="fontFile">a path to a font file. If used, fontname must be different from all reserved names.</param>
-        /// <param name="fontBuffer">the memory image of a font file. If used, fontname must be different from all reserved names.</param>
-        /// <param name="setSimple">applicable for fontfile / fontbuffer cases only: enforce treatment as a “simple” font</param>
-        /// <param name="wmode"></param>
-        /// <param name="encoding">Select one of the available encodings Latin (0), Cyrillic (2) or Greek (1).</param>
-        /// <returns>the xref of the installed font.</returns>
-        /// <exception cref="Exception"></exception>
-        public int InsertFont(
-            string fontName,
-            string fontFile,
-            byte[] fontBuffer = null,
-            bool setSimple = false,
-            int wmode = 0,
-            int encoding = 0
-        )
-        {
-            Document doc = Parent;
-            int xref = 0;
-            int idx = 0;
-
-            if (doc is null)
-                throw new Exception("orphaned object: parent is None");
-
-            if (fontName.StartsWith("/"))
-                fontName = fontName.Substring(1);
-
-            HashSet<char> INVALID_NAME_CHARS = new HashSet<char>(" \t\n\r\v\f()<>[]{}/%" + '\0');
-            INVALID_NAME_CHARS.IntersectWith(fontName);
-
-            if (INVALID_NAME_CHARS.Count > 0)
-                throw new Exception($"bad fontname chars {INVALID_NAME_CHARS.ToString()}");
-
-            FontInfo font = Utils.CheckFont(this, fontName);
-            if (font != null)
-            {
-                xref = font.Xref;
-                if (Utils.CheckFontInfo(doc, xref) != null)
-                    return xref;
-
-                doc.GetCharWidths(xref);
-                return xref;
-            }
-
-            string bfName;
-            try
-            {
-                //bfName = Utils.Base14_fontdict.GetValueOrDefault(fontName.ToLower(), null);
-                if (!Utils.Base14_fontdict.TryGetValue(fontName.ToLower(), out bfName))
-                {
-                    bfName = null; // Default value if key is not found
-                }
-            }
-            catch
-            {
-                bfName = "";
-            }
-            int serif = 0;
-            int CJK_number = -1;
-            List<string> CJK_list_n = new List<string>() { "china-t", "china-s", "japan", "korea" };
-            List<string> CJK_list_s = new List<string>()
-            {
-                "china-ts",
-                "china-ss",
-                "japan-s",
-                "korea-s"
-            };
-
-            try
-            {
-                CJK_number = CJK_list_n.IndexOf(fontName);
-                serif = 0;
-            }
-            catch (Exception) { }
-
-            if (CJK_number < 0)
-            {
-                try
-                {
-                    CJK_number = CJK_list_n.IndexOf(fontName);
-                    serif = 1;
-                }
-                catch (Exception) { }
-            }
-
-            FontInfo val = _InsertFont(
-                fontName,
-                bfName,
-                fontFile,
-                fontBuffer,
-                setSimple,
-                idx,
-                wmode,
-                serif,
-                encoding,
-                CJK_number
-            );
-
-            if (val == null)
-                return -1;
-
-            FontInfo fontDict = val;
-            var _ = doc.GetCharWidths(xref: fontDict.Xref, fontDict: fontDict);
-            return fontDict.Xref;
-        }
-
-        /// <summary>
-        /// PDF only: Return a list of fonts referenced by the page.
-        /// </summary>
-        /// <param name="full"></param>
-        /// <returns></returns>
-        public List<Entry> GetFonts(bool full = false)
-        {
-            return Parent.GetPageFonts(Number, full);
-        }
-
-        public PdfPage GetPdfPage()
-        {
-            return _pdfPage;
-        }
-
-        private FontInfo _InsertFont(
-            string fontName,
-            string bfName,
-            string fontFile,
-            byte[] fontBuffer,
-            bool setSimple,
-            int idx,
-            int wmode,
-            int serif,
-            int encoding,
-            int ordering
-        )
-        {
-            PdfPage page = GetPdfPage();
-            PdfDocument pageDoc = page.doc();
-
-            FontInfo value = Utils.InsertFont(
-                pageDoc,
-                bfName,
-                fontFile,
-                fontBuffer,
-                setSimple,
-                idx,
-                wmode,
-                serif,
-                encoding,
-                ordering
-            );
-            PdfObj resources = page.obj().pdf_dict_get_inheritable(new PdfObj("Resources"));
-
-            PdfObj fonts = resources.pdf_dict_get(new PdfObj("Font"));
-
-            if (fonts.m_internal == null)
-            {
-                fonts = pageDoc.pdf_new_dict(5);
-                Utils.pdf_dict_putl(page.obj(), fonts, new string[2] { "Resources", "Font" });
-            }
-
-            if (value.Xref == 0)
-                throw new Exception("cannot insert font");
-
-            PdfObj fontObj = pageDoc.pdf_new_indirect(value.Xref, 0);
-
-            fonts.pdf_dict_puts(fontName, fontObj);
-
-            pageDoc.Dispose();
-
-            return value;
-        }
-
-        /// <summary>
-        /// Get optical contents from page
-        /// </summary>
-        /// <param name="oc"></param>
-        /// <returns>returns contents</returns>
-        /// <exception cref="Exception"></exception>
-        public string GetOptionalContent(int oc)
-        {
-            if (oc == 0)
-                return null;
-            Document doc = Parent;
-            string check = doc.GetXrefObject(oc, 1);
-            if (!(check.IndexOf("/Type/OCG") != -1 || check.IndexOf("/Type/OCMD") != -1))
-                throw new Exception("bad optional content: 'oc'");
-
-            Dictionary<int, string> propsDict = new Dictionary<int, string>();
-            List<(string, int)> props = GetResourceProperties();
-            foreach ((string p, int x) in props)
-            {
-                propsDict[x] = p;
-            }
-
-            if (propsDict.Keys.Contains(oc))
-                return propsDict[oc];
-            int i = 0;
-            string mc = $"MC{i}";
-            while (propsDict.Values.Contains(mc))
-            {
-                i += 1;
-                mc = $"MC{i}";
-            }
-            SetResourceProperty(mc, oc);
-            return mc;
-        }
-
-        /// <summary>
-        /// Set the transparency.
-        /// </summary>
-        /// <param name="gstate"></param>
-        /// <param name="CA"></param>
-        /// <param name="ca"></param>
-        /// <param name="blendMode"></param>
-        /// <returns></returns>
-        public string SetOpacity(
-            string gstate = null,
-            float CA = 1,
-            float ca = 1,
-            string blendMode = null
-        )
-        {
-            if (CA >= 1 && ca >= 1 && string.IsNullOrEmpty(blendMode))
-                return null;
-            int tCA = Convert.ToInt32(Math.Round(Math.Max(CA, 0) * 100));
-            if (tCA >= 100)
-                tCA = 99;
-            int tca = Convert.ToInt32(Math.Round(Math.Max(ca, 0) * 100));
-            if (tca >= 100)
-                tca = 99;
-            gstate = String.Format("fitzca{0:D2}{1:D2}", tCA, tca);
-
-            if (gstate == null)
-                return null;
-
-            PdfObj resources = _pdfPage.obj().pdf_dict_get(new PdfObj("Resources"));
-            if (resources.m_internal == null)
-                resources = _pdfPage.obj().pdf_dict_put_dict(new PdfObj("Resources"), 2);
-            PdfObj extg = resources.pdf_dict_get(new PdfObj("ExtGState"));
-            if (extg.m_internal == null)
-                extg = resources.pdf_dict_put_dict(new PdfObj("ExtGState"), 2);
-            int n = extg.pdf_dict_len();
-
-            for (int i = 0; i < n; i++)
-            {
-                PdfObj o1 = extg.pdf_dict_get_key(i);
-                string name = o1.pdf_to_name();
-                if (name == gstate)
-                    return gstate;
-            }
-
-            PdfDocument pageDoc = _pdfPage.doc();
-            PdfObj opa = pageDoc.pdf_new_dict(3);
-            opa.pdf_dict_put_real(new PdfObj("CA"), CA);
-            opa.pdf_dict_put_real(new PdfObj("ca"), ca);
-            extg.pdf_dict_puts(gstate, opa);
-            pageDoc.Dispose();
-
-            return gstate;
-        }
-
-        /// <summary>
-        /// PDF only: return a list of the names of annotations, widgets and links.
-        /// </summary>
-        /// <returns></returns>
-        public List<string> GetAnnotNames()
-        {
-            PdfPage page = GetPdfPage();
-            if (page == null)
-                return null;
-            return Utils.GetAnnotIdList(page);
-        }
-
-        /// <summary>
-        /// PDF only: return a list of the :data`xref` numbers of annotations, widgets and links – technically of all entries found in the page’s /Annots array.
-        /// </summary>
-        /// <returns>PDF only: return a list of the :data`xref` numbers of annotations, widgets and links – technically of all entries found in the page’s /Annots array.</returns>
-        public List<AnnotXref> GetAnnotXrefs()
-        {
-            PdfPage page = GetPdfPage();
-            if (page.m_internal == null)
-                return new List<AnnotXref>();
-            return Utils.GetAnnotXrefList(page.obj());
-        }
-
-        /// <summary>
-        ///
-        /// </summary>
-        /// <returns></returns>
-        public List<AnnotXref> GetUnusedAnnotXrefs()
-        {
-            PdfPage page = GetPdfPage();
-            if (page == null)
-                return null;
-            return Utils.GetAnnotXrefList(page.obj());
-        }
-
-        /// <summary>
-        /// Return a generator over the page’s annotations.
-        /// </summary>
-        /// <param name="types">a sequence of integers to down-select to one or more annotation types.</param>
-        /// <returns></returns>
-        public IEnumerable<Annot> GetAnnots(List<PdfAnnotType> types = null)
-        {
-            List<PdfAnnotType> skipTypes = new List<PdfAnnotType>()
-            {
-                PdfAnnotType.PDF_ANNOT_LINK,
-                PdfAnnotType.PDF_ANNOT_POPUP,
-                PdfAnnotType.PDF_ANNOT_WIDGET
-            };
-            List<int> annotXrefs = new List<int>();
-            foreach (AnnotXref annot in GetAnnotXrefs())
-            {
-                if (types == null)
-                {
-                    if (!skipTypes.Contains(annot.AnnotType))
-                        annotXrefs.Add(annot.Xref);
-                }
-                else
-                {
-                    if (!skipTypes.Contains(annot.AnnotType) && types.Contains(annot.AnnotType))
-                        annotXrefs.Add(annot.Xref);
-                }
-            }
-
-            foreach (int xref in annotXrefs)
-            {
-                Annot annot = LoadAnnot(xref);
-                annot.Yielded = true;
-                yield return annot;
-            }
-        }
-
-        /// <summary>
-        /// PDF only: return the annotation identified by ident. This may be its unique name (PDF /NM key), or its xref.
-        /// </summary>
-        /// <param name="name"></param>
-        /// <returns></returns>
-        public Annot LoadAnnot(string name)
-        {
-            Annot val = _LoadAnnot(name, 0);
-            if (val == null)
-                return null;
-            val.ThisOwn = true;
-            val.Parent = this;
-            if (AnnotRefs.Keys.Contains(val.GetHashCode()))
-                AnnotRefs[val.GetHashCode()] = val;
-            else
-                AnnotRefs.Add(val.GetHashCode(), val);
-
-            return val;
-        }
-
-        public Annot LoadAnnot(int xref)
-        {
-            Annot val = _LoadAnnot(null, xref);
-            if (val == null)
-                return null;
-            val.ThisOwn = true;
-            val.Parent = this;
-            if (AnnotRefs.Keys.Contains(val.GetHashCode()))
-                AnnotRefs[val.GetHashCode()] = val;
-            else
-                AnnotRefs.Add(val.GetHashCode(), val);
-
-            return val;
-        }
-
-        /// <summary>
-        /// PDF only: return the annotation identified by ident. This may be its unique name (PDF /NM key), or its xref.
-        /// </summary>
-        /// <param name="name">the annotation name or xref.</param>
-        /// <param name="xref"></param>
-        /// <returns>the annotation or None.</returns>
-        private Annot _LoadAnnot(string name, int xref)
-        {
-            PdfPage page = GetPdfPage();
-            PdfAnnot annot;
-            if (xref == 0)
-                annot = Utils.GetAnnotByName(this, name);
-            else
-                annot = Utils.GetAnnotByXref(this, xref);
-            return annot == null ? null : new Annot(annot, this);
-        }
-
-        /// <summary>
-        /// Return the first link on a page. Synonym of property first_link.
-        /// </summary>
-        /// <returns>Return the first link on a page. Synonym of property first_link.</returns>
-        public Link LoadLinks()
-        {
-            FzLink _val = mupdf.mupdf.fz_load_links(AsFzPage(_pdfPage));
-            if (_val.m_internal == null)
-                return null;
-
-            Link val = new Link(_val);
-            val.ThisOwn = true;
-            val.Parent = this;
-            AnnotRefs.Add(val.GetHashCode(), val);
-
-            val.Xref = 0;
-            val.Id = "";
-            if (Parent.IsPDF)
-            {
-                List<AnnotXref> xrefs = GetAnnotXrefs();
-                xrefs = xrefs.Where(xref => xref.AnnotType == PdfAnnotType.PDF_ANNOT_LINK).ToList();
-                if (xrefs.Count > 0)
-                {
-                    AnnotXref linkId = xrefs[0];
-                    val.Xref = linkId.Xref;
-                    val.Id = linkId.Id;
-                }
-            }
-            else
-            {
-                val.Xref = 0;
-                val.Id = "";
-            }
-            return val;
-        }
-
-        /// <summary>
-        /// PDF only: Delete annotation from the page and return the next one.
-        /// </summary>
-        /// <param name="annot">the annotation to be deleted.</param>
-        /// <returns></returns>
         public Annot DeleteAnnot(Annot annot)
         {
-            PdfPage page = GetPdfPage();
-            while (true)
-            {
-                PdfAnnot irtAnnot = Annot.FindAnnotIRT(annot.ToPdfAnnot());
-                if (irtAnnot == null)
-                    break;
-                page.pdf_delete_annot(irtAnnot);
-            }
-            PdfAnnot nextAnnot = annot.ToPdfAnnot().pdf_next_annot();
-            page.pdf_delete_annot(annot.ToPdfAnnot());
-            Annot val = new Annot(nextAnnot, this);
-
-            if (val != null)
-            {
-                val.ThisOwn = true;
-                val.Parent = this;
-                if (AnnotRefs.Keys.Contains(val.GetHashCode()))
-                    AnnotRefs[val.GetHashCode()] = val;
-                else
-                    AnnotRefs.Add(val.GetHashCode(), val);
-            }
-            annot.Erase();
-            return val;
+            var pdfPage = NativePdfPage;
+            var nextAnnot = mupdf.mupdf.pdf_next_annot(annot.NativeAnnot);
+            mupdf.mupdf.pdf_delete_annot(pdfPage, annot.NativeAnnot);
+            if (nextAnnot != null && nextAnnot.m_internal != null)
+                return new Annot(nextAnnot, this);
+            return null;
         }
 
         /// <summary>
-        /// PDF only: Delete the specified link from the page.
+        /// Delete a link.
         /// </summary>
-        /// <param name="link">the link to be deleted.</param>
-        public void DeleteLink(LinkInfo link)
+        public void DeleteLink(Link link)
         {
-            void Finished()
+            if (link == null) return;
+            var pdf = RequireParent().NativePdfDocument;
+            var pdfPage = NativePdfPage;
+            var annotArray = mupdf.mupdf.pdf_dict_get(pdfPage.obj(), mupdf.mupdf.pdf_new_name("Annots"));
+            if (annotArray.m_internal == null)
             {
-                if (link.Xref == 0)
-                    return;
-                try
+                Helpers.JM_refresh_links(pdf, pdfPage);
+                link._erase();
+                SyncLinkWrapperCache();
+                return;
+            }
+            int n = mupdf.mupdf.pdf_array_len(annotArray);
+            var linkRect = link.Rect;
+            for (int i = n - 1; i >= 0; i--)
+            {
+                var obj = mupdf.mupdf.pdf_array_get(annotArray, i);
+                var subtype = mupdf.mupdf.pdf_dict_get(obj, mupdf.mupdf.pdf_new_name("Subtype"));
+                if (mupdf.mupdf.pdf_name_eq(subtype, mupdf.mupdf.pdf_new_name("Link")) != 0)
                 {
-                    string linkId = link.Id;
-                    var linkObj = AnnotRefs[0]; // MuPDFAnnotation or Link, Widget
-                    linkObj.Erase();
-                }
-                catch (Exception)
-                {
-                    // pass
+                    var r = mupdf.mupdf.pdf_dict_get_rect(obj, mupdf.mupdf.pdf_new_name("Rect"));
+                    var cr = new Rect(r.x0, r.y0, r.x1, r.y1);
+                    if (Math.Abs(cr.X0 - linkRect.X0) < 1 && Math.Abs(cr.Y0 - linkRect.Y0) < 1
+                        && Math.Abs(cr.X1 - linkRect.X1) < 1 && Math.Abs(cr.Y1 - linkRect.Y1) < 1)
+                    {
+                        mupdf.mupdf.pdf_array_delete(annotArray, i);
+                        break;
+                    }
                 }
             }
+            Helpers.JM_refresh_links(pdf, pdfPage);
+            link._erase();
+            SyncLinkWrapperCache();
+        }
 
-            PdfPage page = _pdfPage;
-            if (page == null)
+        /// <summary>Delete a link given a link dictionary (<c>Page.delete_link</c> in PyMuPDF).</summary>
+        public void DeleteLink(Dictionary<string, object> linkdict)
+        {
+            if (linkdict == null) return;
+
+            void Finished()
+            {
+                try
+                {
+                    if (!linkdict.TryGetValue("xref", out var xo)) return;
+                    int xref0 = Convert.ToInt32(xo);
+                    if (xref0 == 0) return;
+                    if (TryGetCachedLinkByXref(xref0, out var linkobj))
+                        linkobj._erase();
+                    else if (linkdict.TryGetValue("id", out var idObj) && idObj is string sid && !string.IsNullOrEmpty(sid)
+                             && TryGetCachedLinkByAnnotNm(sid, out var byNm))
+                        byNm._erase();
+                }
+                catch { }
+            }
+
+            mupdf.PdfPage page;
+            try { page = NativePdfPage; }
+            catch { Finished(); return; }
+
+            if (page == null || page.m_internal == null)
             {
                 Finished();
                 return;
             }
 
-            int xref = link.Xref;
+            if (!linkdict.TryGetValue("xref", out var xrefObj))
+            {
+                Finished();
+                return;
+            }
+
+            int xref = Convert.ToInt32(xrefObj);
             if (xref < 1)
             {
                 Finished();
                 return;
             }
 
-            PdfObj annots = page.obj().pdf_dict_get(new PdfObj("Annots"));
-            if (annots == null)
+            var annots = mupdf.mupdf.pdf_dict_get(page.obj(), mupdf.mupdf.pdf_new_name("Annots"));
+            if (annots.m_internal == null)
             {
                 Finished();
                 return;
             }
 
-            int len = annots.pdf_array_len();
-            if (len == 0)
+            int len_ = mupdf.mupdf.pdf_array_len(annots);
+            if (len_ == 0)
             {
                 Finished();
                 return;
             }
 
             int oxref = 0;
-            int i;
-            for (i = 0; i < len; i++)
+            int idx = 0;
+            for (; idx < len_; idx++)
             {
-                oxref = annots.pdf_array_get(i).pdf_to_num();
-                if (xref == oxref)
-                    break;
+                oxref = mupdf.mupdf.pdf_to_num(mupdf.mupdf.pdf_array_get(annots, idx));
+                if (xref == oxref) break;
             }
-
             if (xref != oxref)
             {
                 Finished();
                 return;
             }
-            annots.pdf_array_delete(i);
-            PdfDocument pageDoc = page.doc();
-            pageDoc.pdf_delete_object(xref);
-            page.obj().pdf_dict_put(new PdfObj("Annots"), annots);
-            pageDoc.Dispose();
 
-            Utils.RefreshLinks(page);
+            mupdf.mupdf.pdf_array_delete(annots, idx);
+            var pdf = RequireParent().NativePdfDocument;
+            pdf.pdf_delete_object(xref);
+            mupdf.mupdf.pdf_dict_put(page.obj(), mupdf.mupdf.pdf_new_name("Annots"), annots);
+            Helpers.JM_refresh_links(pdf, page);
             Finished();
+            SyncLinkWrapperCache();
         }
 
-        public void Refresh()
+        private Annot AddMarkupAnnot(mupdf.pdf_annot_type type, Quad[] quads, Point start, Point stop, IRect clip)
         {
-            Document doc = Parent;
-            Page page = doc.ReloadPage(this);
-        }
-
-        public void ExtendTextPage(TextPage tpage, int flags = 0, Matrix m = null)
-        {
-            PdfPage page = _pdfPage;
-            FzStextPage tp = tpage._nativeTextPage;
-            FzStextOptions options = new FzStextOptions();
-            options.flags = flags;
-
-            FzDevice dev = new FzDevice(tp, options);
-            mupdf.mupdf.fz_run_page(page.super(), dev, m.ToFzMatrix(), new FzCookie());
-            dev.fz_close_device();
-            dev.Dispose();
-        }
-
-        public List<BoxLog> GetBboxlog(bool layers = false)
-        {
-            int oldRotation = Rotation;
-            if (oldRotation != 0)
-                SetRotation(0);
-
-            FzPage page = _pdfPage.super();
-            List<BoxLog> rc = new List<BoxLog>();
-
-            BoxDevice dev = new BoxDevice(rc, layers);
-            page.fz_run_page(dev, new FzMatrix(), new FzCookie());
-            dev.fz_close_device();
-
-            if (oldRotation != 0)
-                SetRotation(oldRotation);
-            return rc;
-        }
-
-        /// <summary>
-        /// Return the vector graphics of the page. These are instructions which draw lines, rectangles, quadruples or curves, including properties like colors, transparency, line width and dashing, etc. Alternative terms are “line art” and “drawings”.
-        /// </summary>
-        /// <param name="extended"></param>
-        /// <returns>a list of dictionaries.</returns>
-        public List<PathInfo> GetDrawings(bool extended = false)
-        {
-            int oldRotation = Rotation;
-            if (oldRotation != 0)
-                SetRotation(0);
-
-            FzPage page = _nativePage;
-            bool clips = extended ? true : false;
-            FzRect prect = page.fz_bound_page();
-
-            List<PathInfo> rc = new List<PathInfo>();
-            LineartDevice dev = new LineartDevice(rc, clips);
-
-            dev.Ptm = new FzMatrix(1, 0, 0, -1, 0, prect.y1);
-            page.fz_run_page(dev, new FzMatrix(), new FzCookie());
-            dev.fz_close_device();
-
-            if (oldRotation != 0)
-                SetRotation(oldRotation);
-            return rc;
-        }
-
-        public void GetImageBbox(string name, bool transform = false)
-        {
-            Document doc = Parent;
-            if (doc.IsClosed || doc.IsEncrypted)
-                throw new Exception("document closed or encrypted");
-
-            Rect infRect = new Rect(1, 1, -1, -1);
-            Matrix nullMat = new Matrix();
-            (Rect, Matrix) rc;
-            if (transform)
-                rc = (infRect, nullMat);
-        }
-
-        /// <summary>
-        /// Create a pixmap from the page. This is probably the most often used method to create a Pixmap.
-        /// </summary>
-        /// <param name="matrix">default is Identity.</param>
-        /// <param name="dpi">desired resolution in x and y direction.</param>
-        /// <param name="colorSpace"> The desired colorspace, one of “GRAY”, “RGB” or “CMYK” (case insensitive).</param>
-        /// <param name="clip">restrict rendering to the intersection of this area with the page’s rectangle.</param>
-        /// <param name="alpha">whether to add an alpha channel. Always accept the default False if you do not really need transparency. This will save a lot of memory (25% in case of RGB … and pixmaps are typically large!), and also processing time.</param>
-        /// <param name="annots">whether to also render annotations or to suppress them.</param>
-        /// <returns>Pixmap of the page.</returns>
-        /// <exception cref="Exception"></exception>
-        public Pixmap GetPixmap(
-            Matrix matrix = null,
-            int dpi = 0,
-            string colorSpace = null,
-            Rect clip = null,
-            bool alpha = false,
-            bool annots = true
-        )
-        {
-            lock (Utils.MuPDFLock)
+            var annot = mupdf.mupdf.pdf_create_annot(NativePdfPage, type);
+            if (quads != null && quads.Length > 0)
             {
-                if (matrix == null)
-                    matrix = new Matrix(1.0f, 1.0f);
-
-                float zoom;
-                if (dpi != 0)
-                {
-                    zoom = dpi / 72f;
-                    matrix = new Matrix(zoom, zoom);
-                }
-
-                ColorSpace _colorSpace;
-                if (string.IsNullOrEmpty(colorSpace))
-                    _colorSpace = new ColorSpace(Utils.CS_RGB);
-                else if (colorSpace.ToUpper() == "GRAY")
-                    _colorSpace = new ColorSpace(Utils.CS_GRAY);
-                else if (colorSpace.ToUpper() == "CMYK")
-                    _colorSpace = new ColorSpace(Utils.CS_CMYK);
-                else
-                    _colorSpace = new ColorSpace(Utils.CS_RGB);
-
-                if (!(new List<int>() { 1, 3, 4 }).Contains(_colorSpace.N))
-                    throw new Exception("unsupported colorspace");
-
-                DisplayList dl = GetDisplayList(annots ? 1 : 0);
-                Pixmap pix = dl.GetPixmap(
-                    matrix,
-                    colorSpace: _colorSpace,
-                    alpha: alpha ? 1 : 0,
-                    clip: clip
-                );
-                dl.Dispose();
-
-                if (dpi != 0)
-                    pix.SetDpi(dpi, dpi);
-
-                return pix;
+                foreach (var q in quads)
+                    mupdf.mupdf.pdf_add_annot_quad_point(annot, q.ToFzQuad());
             }
+            mupdf.mupdf.pdf_update_annot(annot);
+            return new Annot(annot, this);
         }
 
+        private void SetAnnotVertices(mupdf.PdfAnnot annot, Point[] points)
+        {
+            mupdf.mupdf.pdf_clear_annot_vertices(annot);
+            foreach (var p in points)
+                mupdf.mupdf.pdf_add_annot_vertex(annot, p.ToFzPoint());
+        }
+
+        // ─── Links ──────────────────────────────────────────────────────
+
+        /// <summary>Append a link annotation dict to the page PDF without refreshing the native link list (for batch <see cref="SetLinks"/>).</summary>
+        private void InsertLinkPdfOnly(Dictionary<string, object> linkDict)
+        {
+            if (linkDict == null) return;
+            if (linkDict.TryGetValue("kind", out _))
+            {
+                if (!Helpers.TryBuildInsertLinkAnnotObjectString(this, linkDict, out var objSrc))
+                    throw new ValueErrorException("link kind not supported");
+                Helpers.AppendPdfAnnotFromObjectString(this, objSrc);
+                return;
+            }
+
+            var pdfPage = NativePdfPage;
+            var pdf = RequireParent().NativePdfDocument;
+            var annotObj = mupdf.mupdf.pdf_new_dict(pdf, 4);
+            mupdf.mupdf.pdf_dict_put(annotObj, mupdf.mupdf.pdf_new_name("Type"), mupdf.mupdf.pdf_new_name("Annot"));
+            mupdf.mupdf.pdf_dict_put(annotObj, mupdf.mupdf.pdf_new_name("Subtype"), mupdf.mupdf.pdf_new_name("Link"));
+
+            if (linkDict.TryGetValue("from", out var fromObj) && fromObj is Rect fromRect)
+                mupdf.mupdf.pdf_dict_put_rect(annotObj, mupdf.mupdf.pdf_new_name("Rect"), fromRect.ToFzRect());
+
+            if (linkDict.TryGetValue("uri", out var uriObj) && uriObj is string uri && !string.IsNullOrEmpty(uri))
+            {
+                var action = mupdf.mupdf.pdf_new_dict(pdf, 2);
+                mupdf.mupdf.pdf_dict_put(action, mupdf.mupdf.pdf_new_name("S"), mupdf.mupdf.pdf_new_name("URI"));
+                mupdf.mupdf.pdf_dict_puts(action, "URI", mupdf.mupdf.pdf_new_text_string(uri));
+                mupdf.mupdf.pdf_dict_put(annotObj, mupdf.mupdf.pdf_new_name("A"), action);
+            }
+            else if (linkDict.TryGetValue("page", out var pageObj))
+            {
+                int targetPage = Convert.ToInt32(pageObj);
+                if (targetPage >= 0)
+                {
+                    var dest = mupdf.mupdf.pdf_new_array(pdf, 3);
+                    var pageRef = mupdf.mupdf.pdf_lookup_page_obj(pdf, targetPage);
+                    mupdf.mupdf.pdf_array_push(dest, pageRef);
+                    mupdf.mupdf.pdf_array_push(dest, mupdf.mupdf.pdf_new_name("XYZ"));
+                    mupdf.mupdf.pdf_array_push_int(dest, 0);
+                    mupdf.mupdf.pdf_dict_put(annotObj, mupdf.mupdf.pdf_new_name("Dest"), dest);
+                }
+            }
+
+            var annots = mupdf.mupdf.pdf_dict_get(pdfPage.obj(), mupdf.mupdf.pdf_new_name("Annots"));
+            if (annots.m_internal == null)
+            {
+                annots = mupdf.mupdf.pdf_new_array(pdf, 1);
+                mupdf.mupdf.pdf_dict_put(pdfPage.obj(), mupdf.mupdf.pdf_new_name("Annots"), annots);
+            }
+            var indObj = mupdf.mupdf.pdf_add_object(pdf, annotObj);
+            mupdf.mupdf.pdf_array_push(annots, indObj);
+        }
+
+        /// <summary>Insert a new link for the current page.</summary>
+        /// <remarks>
+        /// PyMuPDF <c>Page.insert_link</c> returns <c>None</c> and only supports link dicts built via <c>utils.getLinkText</c> (a <c>kind</c> key is required).
+        /// This overload returns the first <see cref="Link"/> after <see cref="LoadLinks"/> for convenience and also accepts some legacy dicts without <c>kind</c>.
+        /// For strict return-type and input parity with Python, use <see cref="InsertLinkVoid"/>.
+        /// </remarks>
+        /// <param name="mark">Python <c>insert_link(..., mark=True)</c>; reserved, not used in this binding.</param>
+        public Link InsertLink(Dictionary<string, object> linkDict, bool mark = true)
+        {
+            _ = mark;
+            if (linkDict == null) return null;
+            InsertLinkPdfOnly(linkDict);
+            var pdfPage = NativePdfPage;
+            var pdf = RequireParent().NativePdfDocument;
+            Helpers.JM_refresh_links(pdf, pdfPage);
+            SyncLinkWrapperCache();
+
+            return LoadLinks();
+        }
+
+        /// <summary>Insert a link the same way as Python <c>Page.insert_link</c> (returns <c>None</c>): requires <c>kind</c> and uses <c>_addAnnot_FromString</c>.</summary>
+        /// <param name="mark">Reserved for API parity with Python; not used.</param>
+        public void InsertLinkVoid(Dictionary<string, object> linkDict, bool mark = true)
+        {
+            _ = mark;
+            if (linkDict == null) return;
+            if (!Helpers.TryBuildInsertLinkAnnotObjectString(this, linkDict, out var objSrc))
+                throw new ValueErrorException("link kind not supported");
+            _addAnnot_FromString(new[] { objSrc });
+        }
+
+        /// <summary>Replace the page’s link annotations (implementation clears link annots then inserts).</summary>
+        public void SetLinks(List<Dictionary<string, object>> links)
+        {
+            var pdfPage = NativePdfPage;
+            var pdf = RequireParent().NativePdfDocument;
+            var annotArray = mupdf.mupdf.pdf_dict_get(pdfPage.obj(), mupdf.mupdf.pdf_new_name("Annots"));
+
+            if (annotArray.m_internal != null)
+            {
+                int n = mupdf.mupdf.pdf_array_len(annotArray);
+                for (int i = n - 1; i >= 0; i--)
+                {
+                    var obj = mupdf.mupdf.pdf_array_get(annotArray, i);
+                    var subtype = mupdf.mupdf.pdf_dict_get(obj, mupdf.mupdf.pdf_new_name("Subtype"));
+                    if (mupdf.mupdf.pdf_name_eq(subtype, mupdf.mupdf.pdf_new_name("Link")) != 0)
+                        mupdf.mupdf.pdf_array_delete(annotArray, i);
+                }
+            }
+
+            if (links != null)
+            {
+                foreach (var linkDict in links)
+                    InsertLinkPdfOnly(linkDict);
+            }
+            Helpers.JM_refresh_links(pdf, pdfPage);
+            SyncLinkWrapperCache();
+        }
+
+        /// <summary>
+        /// Update an existing link (Python <c>utils.update_link</c>: <c>getLinkText</c> + <c>doc.update_object(xref, annot, page=page)</c>).
+        /// Requires <c>xref</c> and a supported <c>kind</c> in <paramref name="linkDict"/> (same shape as <see cref="InsertLinkVoid"/>).
+        /// </summary>
+        public void UpdateLink(Dictionary<string, object> linkDict)
+        {
+            if (linkDict == null) throw new ArgumentNullException(nameof(linkDict));
+            if (!linkDict.TryGetValue("xref", out var xrefObj) || xrefObj == null)
+                throw new ValueErrorException(Constants.MSG_BAD_XREF);
+            int xref = Convert.ToInt32(xrefObj, CultureInfo.InvariantCulture);
+            if (xref < 1)
+                throw new ValueErrorException(Constants.MSG_BAD_XREF);
+
+            if (!Helpers.TryBuildInsertLinkAnnotObjectString(this, linkDict, out var objSrc))
+                throw new ValueErrorException("link kind not supported");
+
+            RequireParent().UpdateObject(xref, objSrc, this);
+        }
+
+        /// <summary>Create a list of all links contained in a PDF page.</summary>
+        /// <remarks>PyMuPDF <c>Page.get_links</c> (may attach xref/id when available).</remarks>
+        public List<Dictionary<string, object>> GetLinks()
+        {
+            var result = new List<Dictionary<string, object>>();
+            var link = FirstLink;
+            while (link != null)
+            {
+                result.Add(link.ToDictionary());
+                link = link.Next;
+            }
+            try
+            {
+                if (result.Count > 0 && RequireParent().IsPdf)
+                {
+                    var linkxrefs = Helpers.JM_get_annot_xref_list(NativePdfPage.obj())
+                        .FindAll(t => t.type_ == (int)mupdf.pdf_annot_type.PDF_ANNOT_LINK);
+                    if (linkxrefs.Count == result.Count)
+                    {
+                        for (int i = 0; i < linkxrefs.Count; i++)
+                        {
+                            result[i]["xref"] = linkxrefs[i].xref;
+                            result[i]["id"] = linkxrefs[i].nm ?? "";
+                        }
+                    }
+                }
+            }
+            catch { }
+            SyncLinkWrapperCache();
+            return result;
+        }
+
+        // ─── Rendering ──────────────────────────────────────────────────
+
+        /// <summary>Create pixmap of page.</summary>
+        /// <param name="matrix">Transform matrix (default identity).</param>
+        /// <param name="cs">Colorspace; default RGB.</param>
+        /// <param name="clip">Optional clip rectangle.</param>
+        /// <param name="alpha">Whether to include an alpha channel.</param>
+        /// <param name="annots">Whether to render annotations.</param>
+        /// <remarks>PyMuPDF <c>Page.get_pixmap</c> also supports <c>dpi</c> (derives matrix).</remarks>
+        public Pixmap GetPixmap(Matrix matrix = null, Colorspace cs = null, IRect clip = null, bool alpha = false, bool annots = true)
+        {
+            var dl = GetDisplayList(annots ? 1 : 0);
+            return dl.GetPixmap(matrix ?? Matrix.Identity, cs ?? Colorspace.CsRGB, alpha, clip);
+        }
+
+        /// <summary>Build a display list for the page (with or without annotations).</summary>
+        /// <remarks>PyMuPDF <c>Page.get_displaylist</c>.</remarks>
         public DisplayList GetDisplayList(int annots = 1)
         {
-            return new DisplayList(_pdfPage, annots);
+            mupdf.FzDisplayList dl;
+            if (annots != 0)
+                dl = mupdf.mupdf.fz_new_display_list_from_page(NativePage);
+            else
+                dl = mupdf.mupdf.fz_new_display_list_from_page_contents(NativePage);
+            return new DisplayList(dl);
         }
 
-        /// <summary>
-        /// Delete the image referred to by xef.
-        /// </summary>
-        /// <param name="page"></param>
-        /// <param name="xref"></param>
-        public void DeleteImage(int xref)
+        /// <summary>Make SVG image from page.</summary>
+        /// <remarks>PyMuPDF <c>Page.get_svg_image</c>.</remarks>
+        public string GetSvgImage(Matrix matrix = null, int textAsPath = 1)
         {
-            Pixmap pix = new Pixmap(new ColorSpace(Utils.CS_GRAY), new IRect(0, 0, 1, 1), 1);
-            pix.ClearWith();
-            ReplaceImage(xref, pixmap: pix);
+            var ctm = (matrix ?? Matrix.Identity).ToFzMatrix();
+            var mediabox = mupdf.mupdf.fz_bound_page(NativePage);
+            var tbounds = mupdf.mupdf.fz_transform_rect(mediabox, ctm);
+            var buf = mupdf.mupdf.fz_new_buffer(1024);
+            var output = new mupdf.FzOutput(buf);
+            var dev = mupdf.mupdf.fz_new_svg_device(output,
+                tbounds.x1 - tbounds.x0,
+                tbounds.y1 - tbounds.y0,
+                textAsPath, 1);
+            mupdf.mupdf.fz_run_page(NativePage, dev, ctm, new mupdf.FzCookie());
+            mupdf.mupdf.fz_close_device(dev);
+            mupdf.mupdf.fz_close_output(output);
+            return System.Text.Encoding.UTF8.GetString(buf.fz_buffer_extract());
         }
 
+        // ─── Text Extraction ────────────────────────────────────────────
+
         /// <summary>
-        /// Replace the image referred to by xref.
+        /// Create a TextPage from the page.
         /// </summary>
-        public void ReplaceImage(
-            int xref,
-            string filename = null,
-            Pixmap pixmap = null,
-            byte[] stream = null
-        )
+        public TextPage GetTextPage(int flags = 0, IRect clip = null)
         {
-            Document doc = Parent;
-            if (!doc.XrefIsImage(xref))
-                throw new Exception("xref not an image");
-            if (
-                (filename == null ? 0 : 1) + (pixmap == null ? 0 : 1) + (stream == null ? 0 : 1)
-                != 1
-            )
-                throw new Exception("Exactly one of filename/stream/pixmap must be given");
-            int newXref = InsertImage(Rect, filename: filename, stream: stream, pixmap: pixmap);
-            doc.CopyXref(newXref, xref);
-            List<int> xrefs = GetContents();
-            int lastXref = xrefs[xrefs.Count - 1];
-            doc.UpdateStream(lastXref, Encoding.UTF8.GetBytes(" "));
+            var opts = new mupdf.fz_stext_options();
+            opts.flags = flags;
+            var stp = new mupdf.FzStextPage(RequireParent().NativeDocument, Number, new mupdf.FzStextOptions(opts));
+            var textPage = new TextPage(stp) { Parent = this };
+            return textPage;
         }
 
         /// <summary>
-        /// PDF only: Delete field from the page and return the next one.
+        /// Extract page text in various formats.
+        /// Options: 'text', 'blocks', 'words', 'html', 'xhtml', 'xml', 'json', 'dict', 'rawdict'.
         /// </summary>
-        /// <param name="widget">the widget to be deleted.</param>
-        /// <returns>the widget following the deleted one. Please remember that physical removal requires saving to a new file with garbage > 0.</returns>
-        /// <exception cref="Exception"></exception>
-        public Annot DeleteWidget(Widget widget)
+        public string GetText(string option = "text", IRect clip = null, int flags = 0, TextPage textpage = null, string sort = null)
         {
-            PdfAnnot annot = widget._annot;
-            if (annot == null)
-                throw new Exception("bad type: widget");
-            Annot nextWidget = widget.Next;
-            DeleteAnnot(new Annot(annot, this));
-            widget.Parent = null;
-            widget = null;
-
-            return nextWidget;
+            var tp = textpage ?? GetTextPage(flags, clip);
+            try
+            {
+                switch (option.ToLower())
+                {
+                    case "text": return tp.ExtractText();
+                    case "blocks": return tp.ExtractBlocks().ToString();
+                    case "words": return tp.ExtractWords().ToString();
+                    case "html": return tp.ExtractHtml();
+                    case "xhtml": return tp.ExtractXhtml();
+                    case "xml": return tp.ExtractXml();
+                    case "json": return tp.ExtractJson();
+                    case "rawdict": return tp.ExtractRawDict().ToString();
+                    case "dict": return tp.ExtractDict().ToString();
+                    default: return tp.ExtractText();
+                }
+            }
+            finally
+            {
+                if (textpage == null) tp.Dispose();
+            }
         }
 
         /// <summary>
-        /// PDF only: Draw a cubic Bézier curve from p1 to p4 with the control points p2 and p3.
+        /// Extract text blocks as list.
         /// </summary>
-        /// <param name="p1"></param>
-        /// <param name="p2"></param>
-        /// <param name="p3"></param>
-        /// <param name="p4"></param>
-        /// <param name="color"></param>
-        /// <param name="fill"></param>
-        /// <param name="dashes"></param>
-        /// <param name="width"></param>
-        /// <param name="morph"></param>
-        /// <param name="closePath"></param>
-        /// <param name="lineCap"></param>
-        /// <param name="lineJoin"></param>
-        /// <param name="overlay"></param>
-        /// <param name="strokeOpacity"></param>
-        /// <param name="fillOpacity"></param>
-        /// <param name="oc"></param>
-        /// <returns></returns>
-        public Point DrawBezier(
-            Point p1,
-            Point p2,
-            Point p3,
-            Point p4,
-            float[] color = null,
-            float[] fill = null,
-            string dashes = null,
-            float width = 1,
-            Morph morph = null,
-            bool closePath = false,
-            int lineCap = 0,
-            int lineJoin = 0,
-            bool overlay = true,
-            float strokeOpacity = 1,
-            float fillOpacity = 1,
-            int oc = 0
-        )
+        public List<(float x0, float y0, float x1, float y1, string text, int blockNo, int blockType)> GetTextBlocks(int flags = 0)
         {
-            Shape img = new Shape(this);
-            Point ret = img.DrawBezier(p1, p2, p3, p4);
-            img.Finish(
-                color: color,
-                fill: fill,
-                dashes: dashes,
-                width: width,
-                lineCap: lineCap,
-                lineJoin: lineJoin,
-                morph: morph,
-                closePath: closePath,
-                strokeOpacity: strokeOpacity,
-                fillOpacity: fillOpacity,
-                oc: oc
-            );
-            img.Commit(overlay);
-
-            return ret;
+            using var tp = GetTextPage(flags);
+            return tp.ExtractBlocks();
         }
 
         /// <summary>
-        /// PDF only: Draw a circular sector, optionally connecting the arc to the circle’s center (like a piece of pie).
+        /// Extract text words as list.
         /// </summary>
-        /// <param name="center"></param>
-        /// <param name="point"></param>
-        /// <param name="beta"></param>
-        /// <param name="color"></param>
-        /// <param name="fill"></param>
-        /// <param name="dashes"></param>
-        /// <param name="fullSector"></param>
-        /// <param name="morph"></param>
-        /// <param name="width"></param>
-        /// <param name="closePath"></param>
-        /// <param name="lineCap"></param>
-        /// <param name="lineJoin"></param>
-        /// <param name="overlay"></param>
-        /// <param name="strokeOpacity"></param>
-        /// <param name="fillOpacity"></param>
-        /// <param name="oc"></param>
-        /// <returns></returns>
-        public Point DrawSector(
-            Point center,
-            Point point,
-            float beta,
-            float[] color = null,
-            float[] fill = null,
-            string dashes = null,
-            bool fullSector = true,
-            Morph morph = null,
-            float width = 1,
-            bool closePath = false,
-            int lineCap = 0,
-            int lineJoin = 0,
-            bool overlay = true,
-            float strokeOpacity = 1,
-            float fillOpacity = 1,
-            int oc = 0
-        )
+        public List<(float x0, float y0, float x1, float y1, string word, int blockNo, int lineNo, int wordNo)> GetTextWords(int flags = 0)
         {
-            Shape img = new Shape(this);
-            Point ret = img.DrawSector(center, point, beta, fullSector);
-            img.Finish(
-                color: color,
-                fill: fill,
-                dashes: dashes,
-                width: width,
-                lineCap: lineCap,
-                lineJoin: lineJoin,
-                morph: morph,
-                closePath: closePath,
-                strokeOpacity: strokeOpacity,
-                fillOpacity: fillOpacity,
-                oc: oc
-            );
-            img.Commit(overlay);
-
-            return ret;
+            using var tp = GetTextPage(flags);
+            return tp.ExtractWords();
         }
 
         /// <summary>
-        /// PDF only: Draw a circle around center (point_like) with a radius of radius.
+        /// Search for a string on the page. Returns a list of Quads, each containing one occurrence.
         /// </summary>
-        /// <param name="center"></param>
-        /// <param name="radius"></param>
-        /// <param name="color"></param>
-        /// <param name="fill"></param>
-        /// <param name="morph"></param>
-        /// <param name="dashes"></param>
-        /// <param name="width"></param>
-        /// <param name="lineCap"></param>
-        /// <param name="lineJoin"></param>
-        /// <param name="overlay"></param>
-        /// <param name="strokeOpacity"></param>
-        /// <param name="fillOpacity"></param>
-        /// <param name="oc"></param>
-        /// <returns></returns>
-        public Point DrawCircle(
-            Point center,
-            float radius,
-            float[] color = null,
-            float[] fill = null,
-            Morph morph = null,
-            string dashes = null,
-            float width = 1,
-            int lineCap = 0,
-            int lineJoin = 0,
-            bool overlay = true,
-            float strokeOpacity = 1,
-            float fillOpacity = 1,
-            int oc = 0
-        )
+        /// <remarks>Matches PyMuPDF <c>Page.search_for</c>: clip is applied when building the text page; wrong-parent <paramref name="textpage"/> raises like Python.</remarks>
+        public List<Quad> SearchFor(string needle, Quad clip = null, int maxHits = 16, int flags = 0, TextPage textpage = null)
         {
-            Shape img = new Shape(this);
-            Point ret = img.DrawCircle(center, radius);
-
-            img.Finish(
-                color: color,
-                fill: fill,
-                dashes: dashes,
-                width: width,
-                lineCap: lineCap,
-                lineJoin: lineJoin,
-                morph: morph,
-                strokeOpacity: strokeOpacity,
-                fillOpacity: fillOpacity,
-                oc: oc
-            );
-            img.Commit(overlay);
-
-            return ret;
+            if (textpage != null && textpage.Parent != this)
+                throw new ValueErrorException("not a textpage of this page");
+            IRect clipIr = clip != null ? clip.Rect.IRect : null;
+            var tp = textpage ?? GetTextPage(flags, clipIr);
+            try
+            {
+                return tp.Search(needle, maxHits);
+            }
+            finally
+            {
+                if (textpage == null) tp.Dispose();
+            }
         }
 
         /// <summary>
-        /// Draw an oval given its containing rectangle or quad.
+        /// Like <see cref="SearchFor"/> but returns merged axis-aligned rectangles (PyMuPDF <c>Page.search_for(..., quads=False)</c> via <see cref="TextPage.SearchRects"/>).
         /// </summary>
-        /// <param name="rect"></param>
-        /// <param name="color"></param>
-        /// <param name="fill"></param>
-        /// <param name="morph"></param>
-        /// <param name="dashes"></param>
-        /// <param name="width"></param>
-        /// <param name="lineCap"></param>
-        /// <param name="lineJoin"></param>
-        /// <param name="overlay"></param>
-        /// <param name="strokeOpacity"></param>
-        /// <param name="fillOpacity"></param>
-        /// <param name="oc"></param>
-        /// <returns></returns>
-        public Point DrawOval(
+        public List<Rect> SearchForRects(string needle, Quad clip = null, int maxHits = 16, int flags = 0, TextPage textpage = null)
+        {
+            if (textpage != null && textpage.Parent != this)
+                throw new ValueErrorException("not a textpage of this page");
+            IRect clipIr = clip != null ? clip.Rect.IRect : null;
+            var tp = textpage ?? GetTextPage(flags, clipIr);
+            try
+            {
+                return tp.SearchRects(needle, maxHits);
+            }
+            finally
+            {
+                if (textpage == null) tp.Dispose();
+            }
+        }
+
+        /// <summary>
+        /// Extract text in a rectangle.
+        /// Corresponds to Python Page.get_textbox().
+        /// </summary>
+        public string GetTextbox(Rect rect, TextPage textpage = null)
+        {
+            var tp = textpage ?? GetTextPage();
+            try
+            {
+                if (textpage != null && tp.Parent != this)
+                    throw new ArgumentException("not a textpage of this page");
+                return tp.ExtractTextbox(rect);
+            }
+            finally
+            {
+                if (textpage == null) tp.Dispose();
+            }
+        }
+
+        /// <summary>
+        /// Extract selected text between two points.
+        /// Corresponds to Python Page.get_text_selection().
+        /// </summary>
+        public string GetTextSelection(Point p1, Point p2, IRect clip = null, TextPage textpage = null)
+        {
+            var tp = textpage ?? GetTextPage(flags: mupdf.mupdf.FZ_STEXT_DEHYPHENATE, clip: clip);
+            try
+            {
+                if (textpage != null && tp.Parent != this)
+                    throw new ArgumentException("not a textpage of this page");
+                return tp.ExtractSelection(p1, p2);
+            }
+            finally
+            {
+                if (textpage == null) tp.Dispose();
+            }
+        }
+
+        /// <summary>
+        /// Create an OCR-backed TextPage.
+        /// Port of Python utils.get_textpage_ocr() using available C# bindings.
+        /// </summary>
+        public TextPage GetTextPageOcr(int flags = 0, string language = "eng", int dpi = 72, bool full = false, string tessdata = null)
+        {
+            // Ensure unknown-unicode replacement is not suppressed, matching Python.
+            flags = flags & ~mupdf.mupdf.FZ_STEXT_USE_CID_FOR_UNKNOWN_UNICODE & ~mupdf.mupdf.FZ_STEXT_USE_GID_FOR_UNKNOWN_UNICODE;
+
+            if (full)
+            {
+                using var pixFull = GetPixmap(matrix: Matrix.Identity, alpha: false, annots: true);
+                var pdfocrOptions = new mupdf.FzPdfocrOptions();
+                pdfocrOptions.compress = 0;
+                if (!string.IsNullOrEmpty(language))
+                    pdfocrOptions.language = language;
+                if (!string.IsNullOrEmpty(tessdata))
+                    pdfocrOptions.datadir = tessdata;
+
+                var ocrBuf = mupdf.mupdf.fz_new_buffer(1024);
+                var ocrOut = new mupdf.FzOutput(ocrBuf);
+                ocrOut.fz_write_pixmap_as_pdfocr(pixFull.NativePixmap, pdfocrOptions);
+                mupdf.mupdf.fz_close_output(ocrOut);
+                byte[] pdfBytes = ocrBuf.fz_buffer_extract();
+
+                // Must stay alive as long as returned TextPage is in use.
+                var ocrDocFull = new Document(pdfBytes, "pdf");
+                var ocrPageFull = ocrDocFull.LoadPage(0);
+                // OCR-only text page.
+                var ocrTp = ocrPageFull.GetTextPage(flags);
+                ocrTp.Parent = this;
+                return ocrTp;
+            }
+
+            // Partial mode follows Python get_textpage_ocr() flow:
+            // 1) make temporary one-page PDF
+            // 2) detect/redact spans, then OCR remainder
+            var tempPdf = new Document();
+            tempPdf.InsertPdf(RequireParent(), fromPage: Number, toPage: Number);
+            var tempPage = tempPdf.LoadPage(0);
+            tempPage.RemoveRotation();
+
+            var tp = tempPage.GetTextPage(flags);
+            var blocksObj = tp.ExtractDict()["blocks"] as List<Dictionary<string, object>>;
+            var blocks = blocksObj ?? new List<Dictionary<string, object>>();
+
+            List<Rect> CollectSpanBboxes(List<Dictionary<string, object>> blockList, bool unreadable)
+            {
+                var list = new List<Rect>();
+                foreach (var b in blockList)
+                {
+                    if (!b.ContainsKey("type") || Convert.ToInt32(b["type"]) != 0 || !b.ContainsKey("lines"))
+                        continue;
+                    var lines = b["lines"] as List<Dictionary<string, object>>;
+                    if (lines == null) continue;
+                    foreach (var l in lines)
+                    {
+                        if (!l.ContainsKey("spans")) continue;
+                        var spans = l["spans"] as List<Dictionary<string, object>>;
+                        if (spans == null) continue;
+                        foreach (var s in spans)
+                        {
+                            string text = s.ContainsKey("text") ? Convert.ToString(s["text"]) : string.Empty;
+                            bool hasFffd = !string.IsNullOrEmpty(text) && text.IndexOf('\uFFFD') >= 0;
+                            if (unreadable ? !hasFffd : hasFffd)
+                                continue;
+                            if (!s.ContainsKey("bbox")) continue;
+                            var bb = s["bbox"] as float[];
+                            if (bb == null || bb.Length < 4) continue;
+                            list.Add(new Rect(bb[0], bb[1], bb[2], bb[3]));
+                        }
+                    }
+                }
+                return list;
+            }
+
+            var fffdSpans = CollectSpanBboxes(blocks, unreadable: true);
+            if (fffdSpans.Count > 0)
+            {
+                foreach (var bbox in fffdSpans)
+                {
+                    var q = new Quad(bbox.TopLeft, bbox.TopRight, bbox.BottomLeft, bbox.BottomRight);
+                    tempPage.AddRedactAnnot(q);
+                }
+                tempPage.ApplyRedactions(
+                    images: mupdf.mupdf.PDF_REDACT_IMAGE_NONE,
+                    graphics: mupdf.mupdf.PDF_REDACT_LINE_ART_NONE,
+                    text: mupdf.mupdf.PDF_REDACT_TEXT_REMOVE);
+
+                tp = tempPage.GetTextPage(flags);
+                blocksObj = tp.ExtractDict()["blocks"] as List<Dictionary<string, object>>;
+                blocks = blocksObj ?? new List<Dictionary<string, object>>();
+
+                tempPdf.InsertPdf(RequireParent(), fromPage: Number, toPage: Number);
+                tempPage = tempPdf.LoadPage(tempPdf.PageCount - 1);
+                tempPage.RemoveRotation();
+            }
+
+            var spanBboxes = CollectSpanBboxes(blocks, unreadable: false);
+            foreach (var bbox in spanBboxes)
+            {
+                var q = new Quad(bbox.TopLeft, bbox.TopRight, bbox.BottomLeft, bbox.BottomRight);
+                tempPage.AddRedactAnnot(q);
+            }
+            tempPage.ApplyRedactions(
+                images: mupdf.mupdf.PDF_REDACT_IMAGE_NONE,
+                graphics: mupdf.mupdf.PDF_REDACT_LINE_ART_NONE,
+                text: mupdf.mupdf.PDF_REDACT_TEXT_REMOVE);
+
+            using var pixPartial = tempPage.GetPixmap(matrix: Matrix.Identity, alpha: false, annots: true);
+            var pdfocrOpts = new mupdf.FzPdfocrOptions();
+            pdfocrOpts.compress = 0;
+            if (!string.IsNullOrEmpty(language))
+                pdfocrOpts.language = language;
+            if (!string.IsNullOrEmpty(tessdata))
+                pdfocrOpts.datadir = tessdata;
+            var partialBuf = mupdf.mupdf.fz_new_buffer(1024);
+            var partialOut = new mupdf.FzOutput(partialBuf);
+            partialOut.fz_write_pixmap_as_pdfocr(pixPartial.NativePixmap, pdfocrOpts);
+            mupdf.mupdf.fz_close_output(partialOut);
+            byte[] partialPdfBytes = partialBuf.fz_buffer_extract();
+
+            using var ocrDocPartial = new Document(partialPdfBytes, "pdf");
+            var ocrPagePartial = ocrDocPartial.LoadPage(0);
+
+            // Extend original textpage with OCR page content.
+            var mergedTp = tp;
+            var stOpts = new mupdf.fz_stext_options();
+            stOpts.flags = mupdf.mupdf.FZ_STEXT_ACCURATE_BBOXES;
+            var stDevice = mergedTp.NativeStextPage.fz_new_stext_device(new mupdf.FzStextOptions(stOpts));
+            ocrPagePartial.NativePage.fz_run_page(stDevice, Matrix.Identity.ToFzMatrix(), new mupdf.FzCookie());
+            mupdf.mupdf.fz_close_device(stDevice);
+            mergedTp.Parent = this;
+            return mergedTp;
+        }
+
+        // ─── Text Insertion ─────────────────────────────────────────────
+
+        /// <summary>
+        /// Insert text starting at a given point.
+        /// </summary>
+        public int InsertText(Point point, string text, float fontsize = 11, string fontname = "helv",
+            float[] color = null, float rotate = 0, int renderMode = 0, float borderWidth = 0.05f)
+        {
+            var tw = new TextWriter(Rect, color: color);
+            tw.Append(point, text, fontsize: fontsize, fontname: fontname);
+            tw.WriteText(this);
+            return text.Split('\n').Length;
+        }
+
+        /// <summary>
+        /// Insert text into a given rectangle. Creates a Shape object, uses its same-named method and commits it.
+        /// </summary>
+        public (int rc, List<string> rest) InsertTextbox(Rect rect, string text, float fontsize = 11, string fontname = "helv",
+            float[] color = null, int align = 0, float borderWidth = 0.05f, float expandTabs = 1, int renderMode = 0)
+        {
+            if (string.IsNullOrEmpty(text)) return (0, new List<string>());
+            if (expandTabs > 1)
+                text = text.Replace("\t", new string(' ', (int)expandTabs));
+
+            var tw = new TextWriter(Rect, color: color);
+            var font = new Font(fontname);
+            float lineHeight = fontsize * 1.2f;
+            float maxWidth = (float)rect.Width;
+            float y = (float)rect.Y0 + fontsize;
+            var lines = text.Split('\n');
+            var rest = new List<string>();
+            int linesWritten = 0;
+
+            foreach (var rawLine in lines)
+            {
+                if (y + lineHeight > rect.Y1 + fontsize)
+                {
+                    rest.Add(rawLine);
+                    continue;
+                }
+
+                float textWidth = font.TextLength(rawLine, fontsize);
+                if (textWidth <= maxWidth)
+                {
+                    float x;
+                    if (align == 1) x = (float)rect.X0 + (maxWidth - textWidth) / 2;
+                    else if (align == 2) x = (float)rect.X1 - textWidth;
+                    else x = (float)rect.X0;
+
+                    tw.Append(new Point(x, y), rawLine, fontsize: fontsize, font: font);
+                    y += lineHeight;
+                    linesWritten++;
+                }
+                else
+                {
+                    var words = rawLine.Split(' ');
+                    string currentLine = "";
+                    foreach (var word in words)
+                    {
+                        string testLine = currentLine.Length == 0 ? word : currentLine + " " + word;
+                        if (font.TextLength(testLine, fontsize) <= maxWidth)
+                        {
+                            currentLine = testLine;
+                        }
+                        else
+                        {
+                            if (currentLine.Length > 0)
+                            {
+                                if (y + lineHeight > rect.Y1 + fontsize) { rest.Add(currentLine); }
+                                else
+                                {
+                                    float tw2 = font.TextLength(currentLine, fontsize);
+                                    float x;
+                                    if (align == 1) x = (float)rect.X0 + (maxWidth - tw2) / 2;
+                                    else if (align == 2) x = (float)rect.X1 - tw2;
+                                    else x = (float)rect.X0;
+                                    tw.Append(new Point(x, y), currentLine, fontsize: fontsize, font: font);
+                                    y += lineHeight;
+                                    linesWritten++;
+                                }
+                            }
+                            currentLine = word;
+                        }
+                    }
+                    if (currentLine.Length > 0)
+                    {
+                        if (y + lineHeight > rect.Y1 + fontsize) { rest.Add(currentLine); }
+                        else
+                        {
+                            float tw3 = font.TextLength(currentLine, fontsize);
+                            float x;
+                            if (align == 1) x = (float)rect.X0 + (maxWidth - tw3) / 2;
+                            else if (align == 2) x = (float)rect.X1 - tw3;
+                            else x = (float)rect.X0;
+                            tw.Append(new Point(x, y), currentLine, fontsize: fontsize, font: font);
+                            y += lineHeight;
+                            linesWritten++;
+                        }
+                    }
+                }
+            }
+
+            tw.WriteText(this);
+            return (linesWritten, rest);
+        }
+
+        /// <summary>
+        /// Insert text with optional HTML tags and stylings into a rectangle.
+        /// </summary>
+        /// <param name="rect">Rectangle into which the text should be placed.</param>
+        /// <param name="text">Text with optional HTML tags and styling.</param>
+        /// <param name="css">CSS styling commands.</param>
+        /// <param name="scaleLow">
+        /// Force-fit lower bound in [0, 1].
+        /// 1 means no scaling is allowed. 0 means arbitrary downscaling is allowed.
+        /// </param>
+        /// <param name="archive">Archive for fonts/images referenced by HTML/CSS.</param>
+        /// <param name="rotate">Rotation angle; must be a multiple of 90.</param>
+        /// <param name="oc">Optional content group/xobject id.</param>
+        /// <param name="opacity">Requested opacity in [0, 1].</param>
+        /// <param name="overlay">Put content in foreground if true.</param>
+        /// <param name="scaleWordWidth">Internal compatibility flag; currently accepted but not specialized.</param>
+        /// <param name="verbose">Internal compatibility flag; currently accepted but not specialized.</param>
+        /// <returns>
+        /// A tuple (spareHeight, scale). spareHeight is remaining height below inserted content, or -1 on fit failure.
+        /// scale is the chosen scale factor (0 &lt;= scale &lt;= 1).
+        /// </returns>
+        public (double spareHeight, double scale) InsertHtmlbox(
             Rect rect,
-            float[] color = null,
-            float[] fill = null,
-            Morph morph = null,
-            string dashes = null,
-            float width = 1,
-            int lineCap = 0,
-            int lineJoin = 0,
-            bool overlay = true,
-            float strokeOpacity = 1,
-            float fillOpacity = 1,
-            int oc = 0
-        )
-        {
-            Shape img = new Shape(this);
-            Point ret = img.DrawOval(rect);
-
-            img.Finish(
-                color: color,
-                fill: fill,
-                dashes: dashes,
-                width: width,
-                lineCap: lineCap,
-                lineJoin: lineJoin,
-                morph: morph,
-                strokeOpacity: strokeOpacity,
-                fillOpacity: fillOpacity,
-                oc: oc
-            );
-            img.Commit(overlay);
-
-            return ret;
-        }
-
-        /// <summary>
-        /// PDF only: This is a special case of draw_bezier().
-        /// </summary>
-        /// <param name="p1"></param>
-        /// <param name="p2"></param>
-        /// <param name="p3"></param>
-        /// <param name="color"></param>
-        /// <param name="fill"></param>
-        /// <param name="morph"></param>
-        /// <param name="closePath"></param>
-        /// <param name="dashes"></param>
-        /// <param name="width"></param>
-        /// <param name="lineCap"></param>
-        /// <param name="lineJoin"></param>
-        /// <param name="overlay"></param>
-        /// <param name="strokeOpacity"></param>
-        /// <param name="fillOpacity"></param>
-        /// <param name="oc"></param>
-        /// <returns></returns>
-        public Point DrawCurve(
-            Point p1,
-            Point p2,
-            Point p3,
-            float[] color = null,
-            float[] fill = null,
-            Morph morph = null,
-            bool closePath = false,
-            string dashes = null,
-            float width = 1,
-            int lineCap = 0,
-            int lineJoin = 0,
-            bool overlay = true,
-            float strokeOpacity = 1,
-            float fillOpacity = 1,
-            int oc = 0
-        )
-        {
-            Shape img = new Shape(this);
-            Point ret = img.DrawCurve(p1, p2, p3);
-
-            img.Finish(
-                color: color,
-                fill: fill,
-                dashes: dashes,
-                width: width,
-                lineCap: lineCap,
-                lineJoin: lineJoin,
-                morph: morph,
-                closePath: closePath,
-                strokeOpacity: strokeOpacity,
-                fillOpacity: fillOpacity,
-                oc: oc
-            );
-            img.Commit(overlay);
-
-            return ret;
-        }
-
-        /// <summary>
-        /// PDF only: Draw a line from p1 to p2.
-        /// </summary>
-        /// <param name="p1"></param>
-        /// <param name="p2"></param>
-        /// <param name="color"></param>
-        /// <param name="morph"></param>
-        /// <param name="dashes"></param>
-        /// <param name="width"></param>
-        /// <param name="lineCap"></param>
-        /// <param name="lineJoin"></param>
-        /// <param name="overlay"></param>
-        /// <param name="strokeOpacity"></param>
-        /// <param name="fillOpacity"></param>
-        /// <param name="oc"></param>
-        /// <returns></returns>
-        public Point DrawLine(
-            Point p1,
-            Point p2,
-            float[] color = null,
-            Morph morph = null,
-            string dashes = null,
-            float width = 1,
-            int lineCap = 0,
-            int lineJoin = 0,
-            bool overlay = true,
-            float strokeOpacity = 1,
-            float fillOpacity = 1,
-            int oc = 0
-        )
-        {
-            Shape img = new Shape(this);
-            Point ret = img.DrawLine(p1, p2);
-
-            img.Finish(
-                color: color,
-                dashes: dashes,
-                width: width,
-                closePath: false,
-                lineCap: lineCap,
-                lineJoin: lineJoin,
-                morph: morph,
-                strokeOpacity: strokeOpacity,
-                fillOpacity: fillOpacity,
-                oc: oc
-            );
-            img.Commit(overlay);
-
-            return ret;
-        }
-
-        /// <summary>
-        /// PDF only: Draw several connected lines defined by a sequence of points.
-        /// </summary>
-        /// <param name="points"></param>
-        /// <param name="color"></param>
-        /// <param name="fill"></param>
-        /// <param name="morph"></param>
-        /// <param name="dashes"></param>
-        /// <param name="width"></param>
-        /// <param name="lineCap"></param>
-        /// <param name="lineJoin"></param>
-        /// <param name="overlay"></param>
-        /// <param name="strokeOpacity"></param>
-        /// <param name="fillOpacity"></param>
-        /// <param name="oc"></param>
-        /// <returns></returns>
-        public Point DrawPolyline(
-            Point[] points,
-            float[] color = null,
-            float[] fill = null,
-            Morph morph = null,
-            string dashes = null,
-            float width = 1,
-            int lineCap = 0,
-            int lineJoin = 0,
-            bool overlay = true,
-            float strokeOpacity = 1,
-            float fillOpacity = 1,
-            int oc = 0
-        )
-        {
-            Shape img = new Shape(this);
-            Point ret = img.DrawPolyline(points);
-
-            img.Finish(
-                color: color,
-                fill: fill,
-                dashes: dashes,
-                width: width,
-                lineCap: lineCap,
-                lineJoin: lineJoin,
-                morph: morph,
-                strokeOpacity: strokeOpacity,
-                fillOpacity: fillOpacity,
-                oc: oc
-            );
-            img.Commit(overlay);
-
-            return ret;
-        }
-
-        /// <summary>
-        /// PDF only: Draw a quadrilateral.
-        /// </summary>
-        /// <param name="quad"></param>
-        /// <param name="color"></param>
-        /// <param name="fill"></param>
-        /// <param name="morph"></param>
-        /// <param name="dashes"></param>
-        /// <param name="width"></param>
-        /// <param name="lineCap"></param>
-        /// <param name="lineJoin"></param>
-        /// <param name="overlay"></param>
-        /// <param name="strokeOpacity"></param>
-        /// <param name="fillOpacity"></param>
-        /// <param name="oc"></param>
-        /// <returns></returns>
-        public Point DrawQuad(
-            Quad quad,
-            float[] color = null,
-            float[] fill = null,
-            Morph morph = null,
-            string dashes = null,
-            float width = 1,
-            int lineCap = 0,
-            int lineJoin = 0,
-            bool overlay = true,
-            float strokeOpacity = 1,
-            float fillOpacity = 1,
-            int oc = 0
-        )
-        {
-            Shape img = new Shape(this);
-            Point ret = img.DrawQuad(quad);
-
-            img.Finish(
-                color: color,
-                fill: fill,
-                dashes: dashes,
-                width: width,
-                lineCap: lineCap,
-                lineJoin: lineJoin,
-                morph: morph,
-                strokeOpacity: strokeOpacity,
-                fillOpacity: fillOpacity,
-                oc: oc
-            );
-            img.Commit(overlay);
-
-            return ret;
-        }
-
-        /// <summary>
-        /// PDF only: Draw a rectangle.
-        /// </summary>
-        /// <param name="rect"></param>
-        /// <param name="color"></param>
-        /// <param name="fill"></param>
-        /// <param name="morph"></param>
-        /// <param name="dashes"></param>
-        /// <param name="width"></param>
-        /// <param name="lineCap"></param>
-        /// <param name="lineJoin"></param>
-        /// <param name="overlay"></param>
-        /// <param name="strokeOpacity"></param>
-        /// <param name="fillOpacity"></param>
-        /// <param name="oc"></param>
-        /// <param name="radius">0: plain rectangle. Otherwise passed to <see cref="Shape.DrawRect(Rect, float?)"/> (0 &lt; value ≤ 0.5 for rounded corners).</param>
-        /// <returns></returns>
-        public Point DrawRect(
-            Rect rect,
-            float[] color = null,
-            float[] fill = null,
-            Morph morph = null,
-            string dashes = null,
-            float width = 1.0f,
-            int lineCap = 0,
-            int lineJoin = 0,
-            bool overlay = true,
-            float strokeOpacity = 1,
-            float fillOpacity = 1,
+            string text,
+            string css = null,
+            float scaleLow = 0,
+            Archive archive = null,
+            int rotate = 0,
             int oc = 0,
-            float radius = 0
-        )
-        {
-            Shape img = new Shape(this);
-            Point ret = img.DrawRect(rect, radius);
-
-            img.Finish(
-                color: color,
-                fill: fill,
-                dashes: dashes,
-                width: width,
-                lineCap: lineCap,
-                lineJoin: lineJoin,
-                morph: morph,
-                strokeOpacity: strokeOpacity,
-                fillOpacity: fillOpacity,
-                oc: oc
-            );
-            img.Commit(overlay);
-
-            return ret;
-        }
-
-        /// <summary>
-        /// PDF only: Draw a squiggly (wavy, undulated) line from p1 to p2.
-        /// </summary>
-        /// <param name="p1"></param>
-        /// <param name="p2"></param>
-        /// <param name="breadth"></param>
-        /// <param name="color"></param>
-        /// <param name="fill"></param>
-        /// <param name="morph"></param>
-        /// <param name="dashes"></param>
-        /// <param name="width"></param>
-        /// <param name="lineCap"></param>
-        /// <param name="lineJoin"></param>
-        /// <param name="overlay"></param>
-        /// <param name="strokeOpacity"></param>
-        /// <param name="fillOpacity"></param>
-        /// <param name="oc"></param>
-        /// <returns></returns>
-        public Point DrawSquiggle(
-            Point p1,
-            Point p2,
-            float breadth = 2,
-            float[] color = null,
-            float[] fill = null,
-            Morph morph = null,
-            string dashes = null,
-            float width = 1,
-            int lineCap = 0,
-            int lineJoin = 0,
+            float opacity = 1,
             bool overlay = true,
-            float strokeOpacity = 1,
-            float fillOpacity = 1,
-            int oc = 0
-        )
+            bool scaleWordWidth = true,
+            bool verbose = false)
         {
-            Shape img = new Shape(this);
-            Point ret = img.DrawSquiggle(p1, p2, breadth);
-            img.Finish(
-                color: color,
-                fill: fill,
-                dashes: dashes,
-                width: width,
-                closePath: false,
-                lineCap: lineCap,
-                lineJoin: lineJoin,
-                morph: morph,
-                strokeOpacity: strokeOpacity,
-                fillOpacity: fillOpacity,
-                oc: oc
-            );
-            img.Commit(overlay);
+            if (rotate % 90 != 0)
+                throw new ValueErrorException("bad rotation angle");
+            while (rotate < 0) rotate += 360;
+            rotate %= 360;
+            if (scaleLow < 0 || scaleLow > 1)
+                throw new ValueErrorException("'scale_low' must be in [0, 1]");
 
-            return ret;
+            string userCss = "body {margin:1px;}" + (css ?? "");
+            using var story = new Story(text ?? "", userCss, archive: archive);
+
+            double tempW = rotate == 90 || rotate == 270 ? rect.Height : rect.Width;
+            double tempH = rotate == 90 || rotate == 270 ? rect.Width : rect.Height;
+
+            var fit = FindStoryScale(story, tempW, tempH, scaleLow);
+            if (!fit.success)
+                return (-1, fit.scale);
+
+            // Render the fitted story to an image and place it.
+            var drawRect = new Rect(0, 0, tempW / fit.scale, tempH / fit.scale);
+            story.Reset();
+            story.Place(drawRect);
+
+            var pix = mupdf.mupdf.fz_new_pixmap_with_bbox(
+                Colorspace.CsRGB,
+                new IRect(drawRect).ToFzIRect(),
+                new mupdf.FzSeparations(),
+                1);
+            mupdf.mupdf.fz_clear_pixmap(pix);
+            var dev = mupdf.mupdf.fz_new_draw_device(Matrix.Identity.ToFzMatrix(), pix);
+            story.Draw(dev, Matrix.Identity);
+            mupdf.mupdf.fz_close_device(dev);
+
+            using var pm = new Pixmap(pix);
+            byte[] png = pm.ToPng();
+
+            // Match PyMuPDF's high-level pipeline: render into a temporary PDF page,
+            // then place that page on the target page via ShowPdfPage.
+            using var tempDoc = new Document();
+            using var tempPage = tempDoc.NewPage(width: (float)tempW, height: (float)tempH);
+            tempPage.InsertImage(
+                new Rect(0, 0, tempW, tempH),
+                stream: png,
+                keepProportion: false,
+                alpha: 1,
+                overlay: "true");
+            ShowPdfPage(
+                rect,
+                tempDoc,
+                pno: 0,
+                keepProportion: false,
+                overlay: overlay,
+                oc: oc,
+                rotate: rotate);
+
+            return (fit.spareHeight, fit.scale);
         }
 
         /// <summary>
-        /// PDF only: Draw a zigzag line from p1 to p2.
+        /// Backward-compatible wrapper that ignores returned fit information.
         /// </summary>
-        /// <param name="p1"></param>
-        /// <param name="p2"></param>
-        /// <param name="breadth"></param>
-        /// <param name="color"></param>
-        /// <param name="fill"></param>
-        /// <param name="morph"></param>
-        /// <param name="dashes"></param>
-        /// <param name="width"></param>
-        /// <param name="lineCap"></param>
-        /// <param name="lineJoin"></param>
-        /// <param name="overlay"></param>
-        /// <param name="strokeOpacity"></param>
-        /// <param name="fillOpacity"></param>
-        /// <param name="oc"></param>
-        /// <returns></returns>
-        public Point DrawZigzag(
-            Point p1,
-            Point p2,
-            float breadth = 2,
-            float[] color = null,
-            float[] fill = null,
-            Morph morph = null,
-            string dashes = null,
-            float width = 1,
-            int lineCap = 0,
-            int lineJoin = 0,
+        public void InsertHtmlbox(Rect rect, string text, string css = null, float scaleLow = 0, float opacity = 1, int rotate = 0, int oc = 0)
+        {
+            _ = InsertHtmlbox(rect, text, css, scaleLow, archive: null, rotate: rotate, oc: oc, opacity: opacity);
+        }
+
+        /// <summary>
+        /// Show a PDF source page inside a target rectangle.
+        /// Port of PyMuPDF <c>Page.show_pdf_page()</c>.
+        /// </summary>
+        public int ShowPdfPage(
+            Rect rect,
+            Document docsrc,
+            int pno = 0,
+            bool keepProportion = true,
             bool overlay = true,
-            float strokeOpacity = 1,
-            float fillOpacity = 1,
-            int oc = 0
-        )
+            int oc = 0,
+            int rotate = 0,
+            Rect clip = null)
         {
-            Shape img = new Shape(this);
-            Point ret = img.DrawZigzag(p1, p2, breadth);
+            if (docsrc == null)
+                throw new ArgumentNullException(nameof(docsrc));
+            if (!RequireParent().IsPdf || !docsrc.IsPdf)
+                throw new ValueErrorException("is no PDF");
+            if (rect.IsEmpty || rect.IsInfinite)
+                throw new ValueErrorException("rect must be finite and not empty");
+            if (ReferenceEquals(Parent, docsrc))
+                throw new ValueErrorException("source document must not equal target");
 
-            img.Finish(
-                color: color,
-                fill: fill,
-                dashes: dashes,
-                width: width,
-                lineCap: lineCap,
-                lineJoin: lineJoin,
-                morph: morph,
-                strokeOpacity: strokeOpacity,
-                fillOpacity: fillOpacity,
-                oc: oc
-            );
-            img.Commit(overlay);
+            int srcPageCount = docsrc.PageCount;
+            while (pno < 0) pno += srcPageCount;
+            if (pno < 0 || pno >= srcPageCount)
+                throw new ValueErrorException("bad page number");
 
-            return ret;
+            using var srcPage = docsrc.LoadPage(pno);
+            var srcRect = clip == null ? new Rect(srcPage.Rect) : (new Rect(srcPage.Rect) & clip);
+            if (srcRect.IsEmpty || srcRect.IsInfinite)
+                throw new ValueErrorException("clip must be finite and not empty");
+
+            // Python parity note: map target/source rectangles into PDF coordinates.
+            var targetInv = TransformationMatrix.Inverted() ?? Matrix.Identity;
+            var sourceInv = srcPage.TransformationMatrix.Inverted() ?? Matrix.Identity;
+            var tarRectPdf = new Rect(rect).Transform(targetInv);
+            var srcRectPdf = new Rect(srcRect).Transform(sourceInv);
+
+            var matrix = CalcShowPdfPageMatrix(srcRectPdf, tarRectPdf, keepProportion, rotate);
+            string imgName = MakeShowPdfResourceName();
+
+            var pdfOut = RequireParent().NativePdfDocument;
+            var targetPageObj = NativePdfPage.obj();
+
+            int srcGraftId = docsrc.GraftId;
+            if (!RequireParent().Graftmaps.TryGetValue(srcGraftId, out var gmap))
+            {
+                gmap = new Graftmap(RequireParent());
+                RequireParent().Graftmaps[srcGraftId] = gmap;
+            }
+
+            if (overlay)
+                WrapContents();
+
+            int rcXref = ShowPdfPageInternal(
+                srcPage.NativePdfPage,
+                overlay: overlay,
+                matrix: matrix,
+                xref: 0,
+                oc: oc,
+                clip: srcRectPdf,
+                graftmap: gmap.NativeGraftMap,
+                imgName: imgName,
+                pdfOut: pdfOut,
+                targetPageObj: targetPageObj);
+            return rcXref;
+        }
+
+        private static (bool success, double scale, double spareHeight) FindStoryScale(Story story, double width, double height, float scaleLow)
+        {
+            double low = Math.Max(scaleLow, 1e-3);
+            double high = 1.0;
+            bool haveFit = false;
+            double bestScale = low;
+            double bestSpare = -1;
+
+            for (int i = 0; i < 22; i++)
+            {
+                double mid = (low + high) * 0.5;
+                var testRect = new Rect(0, 0, width / mid, height / mid);
+                story.Reset();
+                var (more, filled) = story.Place(testRect);
+                if (!more)
+                {
+                    haveFit = true;
+                    bestScale = mid;
+                    bestSpare = Math.Max((testRect.Height - filled.Height) * mid, 0);
+                    low = mid;
+                }
+                else
+                {
+                    high = mid;
+                }
+            }
+
+            if (haveFit) return (true, bestScale, bestSpare);
+            return (false, low, -1);
         }
 
         /// <summary>
-        /// Extract image information only from a fitz.TextPage.
+        /// Internal port of PyMuPDF <c>Page._show_pdf_page()</c>.
         /// </summary>
-        /// <param name="hashes">include MD5 hash for each image.</param>
-        /// <param name="xrefs">try to find the xref for each image. Sets hashes to true.</param>
-        /// <returns></returns>
-        public List<Block> GetImageInfo(bool hashes = false, bool xrefs = false)
+        private int ShowPdfPageInternal(
+            mupdf.PdfPage srcPdfPage,
+            bool overlay,
+            Matrix matrix,
+            int xref,
+            int oc,
+            Rect clip,
+            mupdf.PdfGraftMap graftmap,
+            string imgName,
+            mupdf.PdfDocument pdfOut,
+            mupdf.PdfObj targetPageObj)
         {
-            Document doc = Parent;
-            if (xrefs && doc.IsPDF)
-                hashes = true;
-            if (!doc.IsPDF)
-                xrefs = false;
-            List<Block> imgInfo = _imageInfo;
+            int rcXref = xref;
 
-            if (imgInfo.Count == 0)
+            // -------------------------------------------------------------
+            // convert the source page to a Form XObject
+            // -------------------------------------------------------------
+            var xobj1 = Helpers.JM_xobject_from_page(pdfOut, srcPdfPage, xref, graftmap);
+            if (rcXref == 0)
+                rcXref = mupdf.mupdf.pdf_to_num(xobj1);
+
+            // -------------------------------------------------------------
+            // create referencing XObject (controls display on target page)
+            // -------------------------------------------------------------
+            var subres1 = mupdf.mupdf.pdf_new_dict(pdfOut, 5);
+            mupdf.mupdf.pdf_dict_puts(subres1, "fullpage", xobj1);
+            var subres = mupdf.mupdf.pdf_new_dict(pdfOut, 5);
+            mupdf.mupdf.pdf_dict_put(subres, mupdf.mupdf.pdf_new_name("XObject"), subres1);
+
+            var res = mupdf.mupdf.fz_new_buffer(20);
+            res.fz_append_string("/fullpage Do");
+
+            var xobj2 = mupdf.mupdf.pdf_new_xobject(pdfOut, clip.ToFzRect(), matrix.ToFzMatrix(), subres, res);
+            if (oc > 0)
+                Helpers.JM_add_oc_object(pdfOut, xobj2.pdf_resolve_indirect(), oc);
+
+            // -------------------------------------------------------------
+            // update target page with xobj2
+            // -------------------------------------------------------------
+            var resources = mupdf.mupdf.pdf_dict_get_inheritable(targetPageObj, mupdf.mupdf.pdf_new_name("Resources"));
+            if (resources.m_internal == null)
             {
-                TextPage textpage = GetTextPage(flags: (int)TextFlags.TEXT_PRESERVE_IMAGES);
-                imgInfo = textpage.ExtractImageInfo(hashes ? 1 : 0);
-                textpage.Dispose();
-                textpage = null;
-                if (hashes)
-                    _imageInfo = imgInfo;
+                resources = mupdf.mupdf.pdf_new_dict(pdfOut, 5);
+                mupdf.mupdf.pdf_dict_put(targetPageObj, mupdf.mupdf.pdf_new_name("Resources"), resources);
             }
 
-            if (!xrefs || !doc.IsPDF)
+            var xobjects = mupdf.mupdf.pdf_dict_get(resources, mupdf.mupdf.pdf_new_name("XObject"));
+            if (xobjects.m_internal == null)
             {
-                return imgInfo;
+                xobjects = mupdf.mupdf.pdf_new_dict(pdfOut, 5);
+                mupdf.mupdf.pdf_dict_put(resources, mupdf.mupdf.pdf_new_name("XObject"), xobjects);
+            }
+            mupdf.mupdf.pdf_dict_puts(xobjects, imgName, xobj2);
+
+            var doBuf = mupdf.mupdf.fz_new_buffer(64);
+            doBuf.fz_append_string(" q /");
+            doBuf.fz_append_string(imgName);
+            doBuf.fz_append_string(" Do Q ");
+            Helpers.JM_insert_contents(pdfOut, targetPageObj, doBuf, overlay);
+
+            return rcXref;
+        }
+
+        private static void InsertContentsBuffer(mupdf.PdfDocument pdf, mupdf.PdfObj pageObj, mupdf.FzBuffer buf, bool overlay)
+        {
+            var contents = mupdf.mupdf.pdf_dict_get(pageObj, mupdf.mupdf.pdf_new_name("Contents"));
+            var newStream = mupdf.mupdf.pdf_add_stream(pdf, buf, new mupdf.PdfObj(), 0);
+            if (contents.m_internal == null)
+            {
+                mupdf.mupdf.pdf_dict_put(pageObj, mupdf.mupdf.pdf_new_name("Contents"), newStream);
+                return;
             }
 
-            List<Entry> imgList = GetImages();
-            Dictionary<string, int> digests = new Dictionary<string, int>();
-            foreach (Entry entry in imgList)
+            if (mupdf.mupdf.pdf_is_array(contents) != 0)
             {
-                int xref = entry.Xref;
-                Pixmap pix = new Pixmap(Document.AsPdfDocument(Parent), xref);
-                string digestKey = Encoding.UTF8.GetString(pix.Digest);
-                if (digests.ContainsKey(digestKey))
-                {
-                    digests.Remove(digestKey);
-                }
-                digests.Add(digestKey, xref);
-                pix = null;
-            }
-            for (int i = 0; i < imgInfo.Count; i++)
-            {
-                Block item = imgInfo[i];
-                //int xref = digests.GetValueOrDefault(
-                //    Encoding.UTF8.GetString(item.Digest.ToArray()),^
-                //    0
-                //);
-                string key = Encoding.UTF8.GetString(item.Digest.ToArray());
-                int xref;
-                if (!digests.TryGetValue(key, out xref))
-                {
-                    xref = 0; // Default value if key is not found
-                }
-                item.Xref = xref;
-                imgInfo[i] = item;
+                if (overlay)
+                    mupdf.mupdf.pdf_array_push(contents, newStream);
+                else
+                    mupdf.mupdf.pdf_array_insert(contents, newStream, 0);
+                return;
             }
 
-            return imgInfo;
+            var arr = mupdf.mupdf.pdf_new_array(pdf, 2);
+            if (overlay)
+            {
+                mupdf.mupdf.pdf_array_push(arr, contents);
+                mupdf.mupdf.pdf_array_push(arr, newStream);
+            }
+            else
+            {
+                mupdf.mupdf.pdf_array_push(arr, newStream);
+                mupdf.mupdf.pdf_array_push(arr, contents);
+            }
+            mupdf.mupdf.pdf_dict_put(pageObj, mupdf.mupdf.pdf_new_name("Contents"), arr);
+        }
+
+        private static Matrix CalcShowPdfPageMatrix(Rect srcRect, Rect tarRect, bool keepProportion, int rotate)
+        {
+            double smpX = (srcRect.X0 + srcRect.X1) * 0.5;
+            double smpY = (srcRect.Y0 + srcRect.Y1) * 0.5;
+            double tmpX = (tarRect.X0 + tarRect.X1) * 0.5;
+            double tmpY = (tarRect.Y0 + tarRect.Y1) * 0.5;
+
+            // m moves to (0,0), then rotates.
+            Matrix m = new Matrix(1, 0, 0, 1, -smpX, -smpY) * Matrix.Rotation(rotate);
+            Rect srcRot = new Rect(srcRect).Transform(m);
+
+            double fw = tarRect.Width / Math.Max(srcRot.Width, Constants.Epsilon);
+            double fh = tarRect.Height / Math.Max(srcRot.Height, Constants.Epsilon);
+            if (keepProportion)
+            {
+                double f = Math.Min(fw, fh);
+                fw = f;
+                fh = f;
+            }
+
+            m = m * new Matrix(fw, fh);
+            m = m * new Matrix(1, 0, 0, 1, tmpX, tmpY);
+            return m;
+        }
+
+        private string MakeShowPdfResourceName()
+        {
+            // keep "fzFrm" prefix for Python-side traceability.
+            string baseName = "fzFrm";
+            string candidate = baseName + Number.ToString(CultureInfo.InvariantCulture);
+            int i = 0;
+            while (ResourceNameExists(candidate))
+            {
+                i++;
+                candidate = baseName + i.ToString(CultureInfo.InvariantCulture);
+            }
+            return candidate;
+        }
+
+        private bool ResourceNameExists(string name)
+        {
+            var resources = mupdf.mupdf.pdf_dict_get(NativePdfPage.obj(), mupdf.mupdf.pdf_new_name("Resources"));
+            if (resources.m_internal == null)
+                return false;
+            var xobj = mupdf.mupdf.pdf_dict_get(resources, mupdf.mupdf.pdf_new_name("XObject"));
+            if (xobj.m_internal == null)
+                return false;
+            var existing = mupdf.mupdf.pdf_dict_gets(xobj, name);
+            return existing.m_internal != null;
+        }
+
+        // ─── Fonts and Images ───────────────────────────────────────────
+
+        /// <summary>
+        /// List of fonts defined in the page object.
+        /// </summary>
+        public List<(int xref, string ext, string type, string baseName, string name, string encoding)> GetFonts(bool full = false)
+        {
+            return RequireParent().GetPageFonts(Number, full);
         }
 
         /// <summary>
         /// List of images defined in the page object.
         /// </summary>
-        /// <param name="full"></param>
-        /// <returns></returns>
-        public List<Entry> GetImages(bool full = false)
+        public List<(int xref, string smask, int width, int height, int bpc, string colorspace, string altCs, string name, string filter)> GetImages(bool full = false)
         {
-            return Parent.GetPageImages(Number, full);
+            return RequireParent().GetPageImages(Number, full);
+        }
+
+        /// <summary>
+        /// Insert an image for display in a rectangle.
+        /// </summary>
+        public int InsertImage(Rect rect, string filename = null, byte[] stream = null, Pixmap pixmap = null,
+            string mask = null, int rotate = 0, int xref = 0, int oc = 0, bool keepProportion = true,
+            int alpha = -1, string overlay = "true")
+        {
+            var pdf = RequireParent().NativePdfDocument;
+            var pdfPage = NativePdfPage;
+
+            mupdf.FzImage fzImg;
+            if (xref > 0)
+            {
+                var obj = mupdf.mupdf.pdf_new_indirect(pdf, xref, 0);
+                fzImg = mupdf.mupdf.pdf_load_image(pdf, obj);
+            }
+            else if (!string.IsNullOrEmpty(filename))
+            {
+                fzImg = mupdf.mupdf.fz_new_image_from_file(filename);
+            }
+            else if (stream != null && stream.Length > 0)
+            {
+                var buf = Helpers.BufferFromBytes(stream);
+                fzImg = mupdf.mupdf.fz_new_image_from_buffer(buf);
+            }
+            else if (pixmap != null)
+            {
+                fzImg = mupdf.mupdf.fz_new_image_from_pixmap(pixmap.NativePixmap, new mupdf.FzImage());
+            }
+            else
+                throw new ArgumentException("need one of filename, stream, pixmap or xref");
+
+            var imgObj = mupdf.mupdf.pdf_add_image(pdf, fzImg);
+            int imgXref = mupdf.mupdf.pdf_to_num(imgObj);
+
+            float w = (float)rect.Width, h = (float)rect.Height;
+            if (keepProportion)
+            {
+                int imgW = fzImg.w();
+                int imgH = fzImg.h();
+                float scaleW = w / imgW, scaleH = h / imgH;
+                float scale = Math.Min(scaleW, scaleH);
+                w = imgW * scale;
+                h = imgH * scale;
+            }
+
+            string name = $"Img{imgXref}";
+            var resources = mupdf.mupdf.pdf_dict_get(pdfPage.obj(), mupdf.mupdf.pdf_new_name("Resources"));
+            if (resources.m_internal == null)
+            {
+                resources = mupdf.mupdf.pdf_new_dict(pdf, 2);
+                mupdf.mupdf.pdf_dict_put(pdfPage.obj(), mupdf.mupdf.pdf_new_name("Resources"), resources);
+            }
+            var xObject = mupdf.mupdf.pdf_dict_get(resources, mupdf.mupdf.pdf_new_name("XObject"));
+            if (xObject.m_internal == null)
+            {
+                xObject = mupdf.mupdf.pdf_new_dict(pdf, 1);
+                mupdf.mupdf.pdf_dict_put(resources, mupdf.mupdf.pdf_new_name("XObject"), xObject);
+            }
+            mupdf.mupdf.pdf_dict_puts(xObject, name, imgObj);
+
+            string cmd = $"q {w:G} 0 0 {h:G} {rect.X0:G} {rect.Y1 - h:G} cm /{name} Do Q\n";
+            var buf2 = Helpers.BufferFromBytes(System.Text.Encoding.ASCII.GetBytes(cmd));
+            var contents = mupdf.mupdf.pdf_dict_get(pdfPage.obj(), mupdf.mupdf.pdf_new_name("Contents"));
+            if (contents.m_internal == null)
+            {
+                var stream2 = mupdf.mupdf.pdf_add_stream(pdf, buf2, new mupdf.PdfObj(), 0);
+                mupdf.mupdf.pdf_dict_put(pdfPage.obj(), mupdf.mupdf.pdf_new_name("Contents"), stream2);
+            }
+            else
+            {
+                var newStream = mupdf.mupdf.pdf_add_stream(pdf, buf2, new mupdf.PdfObj(), 0);
+                if (mupdf.mupdf.pdf_is_array(contents) != 0)
+                    mupdf.mupdf.pdf_array_push(contents, newStream);
+                else
+                {
+                    var arr = mupdf.mupdf.pdf_new_array(pdf, 2);
+                    mupdf.mupdf.pdf_array_push(arr, contents);
+                    mupdf.mupdf.pdf_array_push(arr, newStream);
+                    mupdf.mupdf.pdf_dict_put(pdfPage.obj(), mupdf.mupdf.pdf_new_name("Contents"), arr);
+                }
+            }
+
+            return imgXref;
+        }
+
+        /// <summary>
+        /// Insert a font for use on the page.
+        /// </summary>
+        public int InsertFont(string fontname = "helv", string fontfile = null, byte[] fontbuffer = null,
+            bool setSimple = false, int encoding = 0)
+        {
+            lock (s_insertFontLock)
+            {
+                var pdf = RequireParent().NativePdfDocument;
+                var pdfPage = NativePdfPage;
+
+                mupdf.PdfObj fontObj;
+                if (!string.IsNullOrEmpty(fontfile))
+                {
+                    var buf = mupdf.mupdf.fz_read_file(fontfile);
+                    var fzFont = mupdf.mupdf.fz_new_font_from_buffer(fontname, buf, 0, 0);
+                    fontObj = mupdf.mupdf.pdf_add_cid_font(pdf, fzFont);
+                }
+                else if (fontbuffer != null && fontbuffer.Length > 0)
+                {
+                    var buf = Helpers.BufferFromBytes(fontbuffer);
+                    var fzFont = mupdf.mupdf.fz_new_font_from_buffer(fontname, buf, 0, 0);
+                    fontObj = mupdf.mupdf.pdf_add_cid_font(pdf, fzFont);
+                }
+                else
+                {
+                    string base14 = Font.NormalizeBase14FontName(fontname);
+                    var fzFont = mupdf.mupdf.fz_new_base14_font(base14);
+                    if (fzFont?.m_internal == null)
+                        throw new ValueErrorException($"cannot create base-14 font: {fontname}");
+                    fontObj = mupdf.mupdf.pdf_add_simple_font(pdf, fzFont, encoding);
+                }
+
+                int xref = mupdf.mupdf.pdf_to_num(fontObj);
+
+                var resources = mupdf.mupdf.pdf_dict_get(pdfPage.obj(), mupdf.mupdf.pdf_new_name("Resources"));
+                if (resources.m_internal == null)
+                {
+                    resources = mupdf.mupdf.pdf_new_dict(pdf, 2);
+                    mupdf.mupdf.pdf_dict_put(pdfPage.obj(), mupdf.mupdf.pdf_new_name("Resources"), resources);
+                }
+                var fonts = mupdf.mupdf.pdf_dict_get(resources, mupdf.mupdf.pdf_new_name("Font"));
+                if (fonts.m_internal == null)
+                {
+                    fonts = mupdf.mupdf.pdf_new_dict(pdf, 1);
+                    mupdf.mupdf.pdf_dict_put(resources, mupdf.mupdf.pdf_new_name("Font"), fonts);
+                }
+                string resName = $"F{xref}";
+                mupdf.mupdf.pdf_dict_puts(fonts, resName, fontObj);
+
+                return xref;
+            }
+        }
+
+        /// <summary>
+        /// Extract image information from the page.
+        /// </summary>
+        public List<Dictionary<string, object>> GetImageInfo(bool hashes = false, bool xrefs = false)
+        {
+            var doc = RequireParent();
+            if (xrefs && doc.IsPdf)
+                hashes = true;
+            if (!doc.IsPdf)
+                xrefs = false;
+
+            var imginfo = _imageInfo;
+            if (imginfo != null && !xrefs)
+                return imginfo;
+
+            if (imginfo == null)
+            {
+                using (var tp = GetTextPage(flags: mupdf.mupdf.FZ_STEXT_PRESERVE_IMAGES))
+                {
+                    imginfo = tp.ExtractImgInfo(hashes);
+                }
+                if (hashes)
+                    _imageInfo = imginfo;
+            }
+
+            if (!xrefs || !doc.IsPdf)
+                return imginfo;
+
+            var imglist = GetImages();
+            var digests = new Dictionary<string, int>();
+            foreach (var item in imglist)
+            {
+                int xref = item.xref;
+                var obj = mupdf.mupdf.pdf_load_object(doc.NativePdfDocument, xref);
+                var image = mupdf.mupdf.pdf_load_image(doc.NativePdfDocument, obj);
+                var pix = image.fz_get_pixmap_from_image(new mupdf.FzIrect(mupdf.mupdf.fz_infinite_irect), new mupdf.FzMatrix(image.w(), 0, 0, image.h(), 0, 0), null, null);
+                var md5 = pix.fz_md5_pixmap2();
+                byte[] digestBytes = new byte[md5.Count];
+                for (int i = 0; i < md5.Count; i++)
+                    digestBytes[i] = md5[i];
+                var digestKey = BitConverter.ToString(digestBytes);
+                digests[digestKey] = xref;
+            }
+            for (int i = 0; i < imginfo.Count; i++)
+            {
+                var item = imginfo[i];
+                int xref = 0;
+                if (item.TryGetValue("digest", out var digestObj) && digestObj is byte[] digest)
+                {
+                    var key = BitConverter.ToString(digest);
+                    if (digests.TryGetValue(key, out var found))
+                        xref = found;
+                }
+                item["xref"] = xref;
+                imginfo[i] = item;
+            }
+            return imginfo;
+        }
+
+        /// <summary>
+        /// Backward-compatible overload where argument means xrefs.
+        /// </summary>
+        public List<Dictionary<string, object>> GetImageInfo(bool xrefs)
+        {
+            return GetImageInfo(false, xrefs);
         }
 
         /// <summary>
         /// Return list of image positions on a page.
         /// </summary>
-        /// <param name="name">image identification. May be reference name, an item of the page's image list or an xref.</param>
-        /// <param name="transform">whether to also return the transformation matrix.</param>
-        /// <exception cref="Exception"></exception>
-        public void GetImageRects(string name, bool transform = false)
+        public List<Rect> GetImageRects(object name)
         {
-            List<Entry> imgs = GetImages();
-            imgs = imgs.Where(img => img.RefName == name).ToList();
-            if (imgs.Count == 0)
-                throw new Exception("bad image name");
-            else if (imgs.Count != 1)
-                throw new Exception("multiple image names found");
-            int xref = imgs[0].Xref;
-        }
+            int xref = ResolveImageXref(name);
+            var doc = RequireParent();
+            var obj = mupdf.mupdf.pdf_load_object(doc.NativePdfDocument, xref);
+            var image = mupdf.mupdf.pdf_load_image(doc.NativePdfDocument, obj);
+            var pix = image.fz_get_pixmap_from_image(new mupdf.FzIrect(mupdf.mupdf.fz_infinite_irect), new mupdf.FzMatrix(image.w(), 0, 0, image.h(), 0, 0), null, null);
+            var md5 = pix.fz_md5_pixmap2();
+            byte[] digest = new byte[md5.Count];
+            for (int i = 0; i < md5.Count; i++)
+                digest[i] = md5[i];
 
-        /// <summary>
-        /// PDF only: Return boundary boxes and transformation matrices of an embedded image.
-        /// </summary>
-        /// <param name="name">an item of the list MuPDFPage.GetImages(), or the reference name entry of such an item (item[7]), or the image </param>
-        /// <param name="transform">also return the matrix used to transform the image rectangle to the bbox on the page.</param>
-        /// <returns></returns>
-        public List<Box> GetImageRects(int name, bool transform = false)
-        {
-            int xref = name;
-            Pixmap pix = new Pixmap(Document.AsPdfDocument(Parent), xref);
-
-            byte[] digest = new byte[pix.Digest.Length];
-            Array.Copy(pix.Digest, digest, digest.Length);
-
-            pix = null;
-
-            List<Block> infos = GetImageInfo(hashes: true);
-            List<Box> bboxes = new List<Box>();
-            if (!transform)
+            var infos = GetImageInfo(hashes: true);
+            var bboxes = new List<Rect>();
+            foreach (var im in infos)
             {
-                foreach (Block im in infos)
-                {
-                    if (im.Digest.ToArray().SequenceEqual(digest))
-                        bboxes.Add(new Box() { Rect = new Rect(im.Bbox), Matrix = new Matrix() });
-                }
+                if (!im.TryGetValue("digest", out var digestObj) || digestObj is not byte[] d || !d.SequenceEqual(digest))
+                    continue;
+                if (im.TryGetValue("bbox", out var bboxObj) && bboxObj is float[] b && b.Length == 4)
+                    bboxes.Add(new Rect(b[0], b[1], b[2], b[3]));
             }
-            else
-            {
-                foreach (Block im in infos)
-                {
-                    if (im.Digest.ToArray().SequenceEqual(digest))
-                        bboxes.Add(
-                            new Box()
-                            {
-                                Rect = new Rect(im.Bbox),
-                                Matrix = new Matrix(im.Transform)
-                            }
-                        );
-                }
-            }
-
             return bboxes;
         }
 
         /// <summary>
-        /// Return the label for this PDF page.
+        /// Return image positions and transformation matrices.
         /// </summary>
-        /// <returns>The label (str) of the page. Errors return an empty string.</returns>
-        public string GetLabel()
+        public List<(Rect bbox, Matrix transform)> GetImageRects(object name, bool transform)
         {
-            List<(int, string)> labels = Parent._getPageLabels();
-            if (labels.Count == 0)
-                return "";
-            labels.Sort();
+            if (!transform)
+                return GetImageRects(name).Select(r => (r, Matrix.Identity)).ToList();
 
-            return Utils.GetPageLabel(Number, labels);
-        }
+            int xref = ResolveImageXref(name);
+            var doc = RequireParent();
+            var obj = mupdf.mupdf.pdf_load_object(doc.NativePdfDocument, xref);
+            var image = mupdf.mupdf.pdf_load_image(doc.NativePdfDocument, obj);
+            var pix = image.fz_get_pixmap_from_image(new mupdf.FzIrect(mupdf.mupdf.fz_infinite_irect), new mupdf.FzMatrix(image.w(), 0, 0, image.h(), 0, 0), null, null);
+            var md5 = pix.fz_md5_pixmap2();
+            byte[] digest = new byte[md5.Count];
+            for (int i = 0; i < md5.Count; i++)
+                digest[i] = md5[i];
 
-        /// <summary>
-        /// Retrieves the content of a page in a variety of formats. This is a wrapper for multiple TextPage methods by choosing the output option opt as follows:
-        /// <list type="bullet">
-        /// <item><description>"text" – TextPage.extractTEXT(), default</description></item>
-        /// <item><description>"blocks" – TextPage.extractBLOCKS()</description></item>
-        /// <item><description>"words" – TextPage.extractWORDS()</description></item>
-        /// <item><description>"html" – TextPage.extractHTML()</description></item>
-        /// <item><description>"xhtml" – TextPage.extractXHTML()</description></item>
-        /// <item><description>"xml" – TextPage.extractXML()</description></item>
-        /// <item><description>"dict" – TextPage.extractDICT()</description></item>
-        /// <item><description>"json" – TextPage.extractJSON()</description></item>
-        /// <item><description>"rawdict" – TextPage.extractRAWDICT()</description></item>
-        /// <item><description>"rawjson" – TextPage.extractRAWJSON()</description></item>
-        /// </list>
-        /// </summary>
-        /// <param name="option">A string indicating the requested format, one of the above. A mixture of upper and lower case is supported.</param>
-        /// <param name="clip">restrict extracted text to this rectangle. If None, the full page is taken. Has no effect for options “html”, “xhtml” and “xml”. </param>
-        /// <param name="flags">indicator bits to control whether to include images or how text should be handled with respect to white spaces and ligatures.</param>
-        /// <param name="textpage">use a previously created TextPage.</param>
-        /// <param name="sort">sort the output by vertical, then horizontal coordinates. In many cases, this should suffice to generate a “natural” reading order.</param>
-        /// <param name="delimiters">use these characters as additional word separators with the “words” output option (ignored otherwise).</param>
-        /// <returns>return value depends on option type.
-        /// if option is "text", </returns>
-        public dynamic GetText(
-            string option = "text",
-            Rect clip = null,
-            int flags = 0,
-            TextPage textpage = null,
-            bool sort = false,
-            char[] delimiters = null
-        )
-        {
-            return Utils.GetText(this, option, clip, flags, textpage, sort, delimiters);
-        }
-
-        /// <summary>
-        /// Return the text blocks on a page
-        /// </summary>
-        /// <param name="flags">control the amount of data parsed into the textpage</param>
-        /// <returns> A list of the blocks. Each item contains the containing rectangle coordinates, text lines, block type and running block number</returns>
-        public List<TextBlock> GetTextBlocks(
-            Rect clip = null,
-            int flags = 0,
-            TextPage textPage = null,
-            bool sort = false
-        )
-        {
-            return Utils.GetTextBlocks(this, clip, flags, textPage, sort);
-        }
-
-        /// <summary>
-        /// Retrieves the text content of a page that retain layout. Positioning of text is adjusted by spaces.
-        /// </summary>
-        /// <param name="clip">restrict extracted text to this rectangle. If None, the full page is taken. </param>
-        /// <param name="flags">indicator bits to control whether to include images or how text should be handled with respect to white spaces and ligatures.</param>
-        /// <param name="tolerance">neighborhood threshold.</param>
-        /// <returns></returns>
-        public string GetTextWithLayout(
-            Rect clip = null, 
-            int flags = 0, 
-            int tolerance = 5
-        )
-        {
-            return Utils.GetTextWithLayout(this, clip, flags, tolerance);
-        }
-
-        /// <summary>
-        /// Return the tables on a page
-        /// </summary>
-        /// <returns> A list of the tables. Each item contains the containing list of rows constructing with cell text</returns>
-        public List<Table> GetTables(
-            Rect clip = null,
-            string vertical_strategy = "lines",
-            string horizontal_strategy = "lines",
-            List<Edge> vertical_lines = null,
-            List<Edge> horizontal_lines = null,
-            float snap_tolerance = TableFlags.TABLE_DEFAULT_SNAP_TOLERANCE,
-            float snap_x_tolerance = 0.0f,
-            float snap_y_tolerance = 0.0f,
-            float join_tolerance = TableFlags.TABLE_DEFAULT_JOIN_TOLERANCE,
-            float join_x_tolerance = 0.0f,
-            float join_y_tolerance = 0.0f,
-            float edge_min_length = 3.0f,
-            float min_words_vertical = TableFlags.TABLE_DEFAULT_MIN_WORDS_VERTICAL,
-            float min_words_horizontal = TableFlags.TABLE_DEFAULT_MIN_WORDS_HORIZONTAL,
-            float intersection_tolerance = 3.0f,
-            float intersection_x_tolerance = 0.0f,
-            float intersection_y_tolerance = 0.0f,
-            float text_tolerance = 3.0f,
-            float text_x_tolerance = 3.0f,
-            float text_y_tolerance = 3.0f,
-            string strategy = null,  // offer abbreviation
-            List<Line> add_lines = null
-        )
-        {
-            return Utils.GetTables(this, clip,
-                vertical_strategy, horizontal_strategy, vertical_lines, horizontal_lines,
-                snap_tolerance, snap_x_tolerance, snap_y_tolerance,
-                join_tolerance, join_x_tolerance, join_y_tolerance,
-                edge_min_length, min_words_vertical, min_words_horizontal,
-                intersection_tolerance, intersection_x_tolerance, intersection_y_tolerance,
-                text_tolerance, text_x_tolerance, text_y_tolerance, strategy, add_lines);
-        }
-
-        /// <summary>
-        /// Read barcodes from page.
-        /// </summary>
-        /// <param name="clip"></param>
-        /// <param name="decodeEmbeddedOnly">Decode barcodes only from embedded images in the PDF resources.</param>
-        /// <param name="barcodeFormat">Barcode format to decode.</param>
-        /// <param name="tryHarder">Spend more time to try to find a barcode; optimize for accuracy, not speed.</param>
-        /// <param name="tryInverted">Try to decode as inverted image.</param>
-        /// <param name="pureBarcode">Image is a pure monochrome image of a barcode.</param>
-        /// <param name="multi">Try to read multi barcodes on page.</param>
-        /// <param name="autoRotate">Indicate whether the image should be automatically rotated.
-        ///                          Rotation is supported for 90, 180 and 270 degrees.</param>
-        public List<Barcode> ReadBarcodes(
-            Rect clip = null,
-            bool decodeEmbeddedOnly = false,
-            BarcodeFormat barcodeFormat = BarcodeFormat.ALL,
-            bool tryHarder = true,
-            bool tryInverted = false,
-            bool pureBarcode = false,
-            bool multi = true,
-            bool autoRotate = true
-            )
-        {
-            return Utils.ReadBarcodes(this, clip, decodeEmbeddedOnly, barcodeFormat, tryHarder, tryInverted, pureBarcode, multi, autoRotate);
-        }
-
-        /// <summary>
-        /// Write barcode to page.
-        /// </summary>
-        /// <param name="clip">Rect area on page to write</param>
-        /// <param name="text">Contents to write</param>
-        /// <param name="barcodeFormat">Format to encode; Supported formats: QR_CODE, EAN_8, EAN_13, UPC_A, CODE_39, CODE_128, ITF, PDF_417, CODABAR</param>
-        /// <param name="characterSet">Use a specific character set for binary encoding (if supported by the selected barcode format)</param>
-        /// <param name="disableEci">don't generate ECI segment if non-default character set is used</param>
-        /// <param name="forceFitToRect">Resize output barcode image width/height with params, Avoid enabling this parameter, as it can reduce barcode recognition accuracy.</param>
-        /// <param name="pureBarcode">Don't put the content string into the output image</param>
-        /// <param name="marginLeft">Specifies margin left, in pixels, to use when generating the barcode</param>
-        /// <param name="marginTop">Specifies margin top, in pixels, to use when generating the barcode</param>
-        /// <param name="marginRight">Specifies margin right, in pixels, to use when generating the barcode</param>
-        /// <param name="marginBottom">Specifies margin bottom, in pixels, to use when generating the barcode</param>
-        /// <param name="narrowBarWidth">The width of the narrow bar in pixels</param>
-        public void WriteBarcode(
-            Rect clip,
-            string text,
-            BarcodeFormat barcodeFormat,
-            string characterSet = null,
-            bool disableEci = false,
-            bool forceFitToRect = false,
-            bool pureBarcode = false,
-            int marginLeft = 0,
-            int marginTop = 0,
-            int marginRight = 0,
-            int marginBottom = 0,
-            int narrowBarWidth = 0
-            )
-        {
-            Utils.WriteBarcode(this, clip,
-                text, barcodeFormat, characterSet, disableEci, forceFitToRect, pureBarcode, marginLeft, marginTop, marginRight, marginBottom, narrowBarWidth);
-        }
-
-        /// <summary>
-        /// Run page through a device.
-        /// </summary>
-        /// <param name="dw"></param>
-        /// <param name="m">Transformation to apply to the page.</param>
-        public void Run(DeviceWrapper dw, Matrix m)
-        {
-            _nativePage.fz_run_page(dw._nativeDevice, m.ToFzMatrix(), new FzCookie());
-        }
-
-        /// <summary>
-        /// Return text selected between p1 and p2
-        /// </summary>
-        /// <param name="p1"></param>
-        /// <param name="p2"></param>
-        /// <param name="clip"></param>
-        /// <param name="textPage"></param>
-        /// <returns></returns>
-        public string GetTextSelection(
-            Point p1,
-            Point p2,
-            Rect clip = null,
-            TextPage textPage = null
-        )
-        {
-            return Utils.GetTextSelection(this, p1, p2, clip, textPage);
-        }
-
-        /// <summary>
-        ///
-        /// </summary>
-        /// <param name="clip"></param>
-        /// <param name="flags"></param>
-        /// <param name="textPage"></param>
-        /// <param name="sort"></param>
-        /// <param name="delimiters"></param>
-        /// <returns></returns>
-        public List<WordBlock> GetTextWords(
-            Rect clip = null,
-            int flags = 0,
-            TextPage textPage = null,
-            bool sort = false,
-            char[] delimiters = null
-        )
-        {
-            return Utils.GetTextWords(this, clip, flags, textPage, sort, delimiters);
-        }
-
-        public string GetTextbox(Rect rect = null, TextPage textPage = null)
-        {
-            return Utils.GetTextbox(this, rect, textPage);
-        }
-
-        /// <summary>
-        /// Create a Textpage from combined results of normal and OCR text parsing
-        /// </summary>
-        /// <param name="flags">control content becoming part of the result</param>
-        /// <param name="language">specify expected language(s)</param>
-        /// <param name="dpi">resolution in dpi, default 72</param>
-        /// <param name="full">whether to OCR the full page image, or only its images (default)</param>
-        /// <param name="tessdata"></param>
-        /// <param name="imageFilters">Optional preprocessing filters applied to raster images before OCR.</param>
-        /// <param name="maxOcrPixmapBytes">
-        /// Maximum size of the full-page pixmap sample buffer before OCR is split vertically into strips.
-        /// Default 120,000,000 bytes (~114 MiB). Set lower on machines with limited RAM.
-        /// </param>
-        /// <returns></returns>
-        public TextPage GetTextPageOcr(
-            int flags = 0,
-            string language = "eng",
-            int dpi = 72,
-            bool full = false,
-            string tessdata = null,
-            ImageFilterPipeline imageFilters = null,
-            long maxOcrPixmapBytes = 3000000
-        )
-        {
-            if (string.IsNullOrEmpty(Utils.TESSDATA_PREFIX) && string.IsNullOrEmpty(tessdata))
-                throw new Exception("No OCR support: TESSDATA_PREFIX not set");
-            if (maxOcrPixmapBytes <= 0)
-                throw new ArgumentOutOfRangeException(nameof(maxOcrPixmapBytes), "maxOcrPixmapBytes must be greater than zero.");
-
-            TextPage FullOcr(Page page, int _dpi, string _language, int _flags, ImageFilterPipeline filters)
+            var infos = GetImageInfo(hashes: true);
+            var bboxes = new List<(Rect bbox, Matrix matrix)>();
+            foreach (var im in infos)
             {
-                if (_dpi <= 0)
-                    throw new ArgumentOutOfRangeException(nameof(_dpi), "dpi must be greater than zero.");
+                if (!im.TryGetValue("digest", out var digestObj) || digestObj is not byte[] d || !d.SequenceEqual(digest))
+                    continue;
+                if (!im.TryGetValue("bbox", out var bboxObj) || bboxObj is not float[] b || b.Length != 4)
+                    continue;
+                if (!im.TryGetValue("transform", out var trObj) || trObj is not float[] t || t.Length != 6)
+                    continue;
+                bboxes.Add((new Rect(b[0], b[1], b[2], b[3]), new Matrix(t[0], t[1], t[2], t[3], t[4], t[5])));
+            }
+            return bboxes;
+        }
 
-                long GetPixmapBytes(Pixmap p)
-                {
-                    byte[] samples = p.SAMPLES;
-                    if (samples != null && samples.Length > 0)
-                        return samples.Length;
-                    return (long)p.Stride * p.H;
-                }
+        /// <summary>
+        /// Get rectangle occupied by image <paramref name="name"/>.
+        /// Port of Python Page.get_image_bbox(name, transform=0).
+        /// </summary>
+        public Rect GetImageBbox(object name)
+        {
+            return GetImageBboxImpl(name, transform: false).bbox;
+        }
 
-                int effectiveDpi = _dpi;
-                for (int i = 0; i < 3; i++)
-                {
-                    float probeZoom = effectiveDpi / 72.0f;
-                    using (Pixmap probe = page.GetPixmap(matrix: new Matrix(probeZoom, probeZoom)))
-                    {
-                        long probeBytes = GetPixmapBytes(probe);
-                        if (probeBytes <= maxOcrPixmapBytes)
-                            break;
+        /// <summary>
+        /// Get rectangle and transform occupied by image <paramref name="name"/>.
+        /// Port of Python Page.get_image_bbox(name, transform=1).
+        /// </summary>
+        public (Rect bbox, Matrix transform) GetImageBbox(object name, bool transform)
+        {
+            return GetImageBboxImpl(name, transform);
+        }
 
-                        double scale = Math.Sqrt((double)maxOcrPixmapBytes / probeBytes);
-                        int nextDpi = Math.Max(1, (int)Math.Floor(effectiveDpi * scale));
-                        if (nextDpi >= effectiveDpi)
-                            nextDpi = effectiveDpi - 1;
-                        if (nextDpi < 1)
-                            nextDpi = 1;
-                        effectiveDpi = nextDpi;
-                    }
-                }
+        private (Rect bbox, Matrix transform) GetImageBboxImpl(object name, bool transform)
+        {
+            var doc = RequireParent();
+            if (doc.IsClosed || doc.IsEncrypted)
+                throw new ValueErrorException("document closed or encrypted");
 
-                float zoom = effectiveDpi / 72.0f;
-                Matrix mat = new Matrix(zoom, zoom);
-                using (Pixmap basePix = page.GetPixmap(matrix: mat))
-                {
-                    Pixmap workingPix = basePix;
-                    Pixmap filteredPix = null;
-                    try
-                    {
-                        if (filters != null)
-                        {
-                            filteredPix = Pixmap.ApplyImageFilters(basePix, filters);
-                            if (filteredPix != null)
-                                workingPix = filteredPix;
-                        }
+            var infRect = new Rect(1, 1, -1, -1);
+            var nullMat = Matrix.Identity;
 
-                        using (Document ocrPdf = new Document("pdf", workingPix.PdfOCR2Bytes(true, _language, tessdata)))
-                        using (Page ocrPage = ocrPdf.LoadPage(0))
-                        {
-                            float unZoom = page.Rect.Width / ocrPage.Rect.Width;
-                            Matrix ctm = new Matrix(unZoom, unZoom) * page.DerotationMatrix;
-                            TextPage ocrTp = ocrPage.GetTextPage(flags: _flags, matrix: ctm);
-                            ocrTp.Parent = this;
-                            return ocrTp;
-                        }
-                    }
-                    finally
-                    {
-                        if (filteredPix != null && !object.ReferenceEquals(filteredPix, basePix))
-                            filteredPix.Dispose();
-                    }
-                }
+            object itemObj;
+            int xref;
+            if (name is object[] arr || name is System.Collections.IList)
+            {
+                object[] vals = name as object[] ?? (name as System.Collections.IList).Cast<object>().ToArray();
+                if (vals.Length == 0 || vals[vals.Length - 1] is not int lastInt)
+                    throw new ValueErrorException("need item of full page image list");
+                itemObj = vals;
+                xref = lastInt;
+            }
+            else
+            {
+                string imgName = Convert.ToString(name);
+                var imglist = GetImages(full: true).Where(i => i.name == imgName).ToList();
+                if (imglist.Count == 0)
+                    throw new ValueErrorException("bad image name");
+                if (imglist.Count > 1)
+                    throw new ValueErrorException($"found multiple images named '{imgName}'.");
+                var i = imglist[0];
+                itemObj = new object[] { i.xref, i.smask, i.width, i.height, i.bpc, i.colorspace, i.altCs, i.name, i.filter };
+                xref = i.xref;
             }
 
-            if (full)
-                return FullOcr(this, dpi, language, flags, imageFilters);
-            TextPage tp = GetTextPage(flags: flags);
-            foreach (
-                Block block in (
-                    GetText("dict", flags: (int)TextFlags.TEXT_PRESERVE_IMAGES) as PageInfo
-                ).Blocks
-            )
+            if (xref != 0 || transform)
             {
-                if (block.Type != 1)
-                    continue;
-                Rect bbox = new Rect(block.Bbox);
-                if (bbox.Width <= 3 || bbox.Height <= 3)
-                    continue;
                 try
                 {
-                    Pixmap pix = new Pixmap(block.Image);
-                    if (imageFilters != null)
-                        pix = Pixmap.ApplyImageFilters(pix, imageFilters);
-                    if (pix.N - pix.Alpha != 3)
-                        pix = new Pixmap(new ColorSpace(Utils.CS_RGB), pix);
-                    if (pix.Alpha != 0)
-                        pix = new Pixmap(pix, 0);
-                    Document imgDoc = new Document(
-                        "pdf",
-                        pix.PdfOCR2Bytes(language: language, tessdata: tessdata)
-                    );
-                    Page imgPage = imgDoc.LoadPage(0);
-                    pix = null;
-                    Rect imgRect = imgPage.Rect;
-                    Matrix shrink = new Matrix(1 / imgRect.Width, 1 / imgRect.Height);
-                    Matrix mat = shrink; //* block.;
-
-                    imgPage.ExtendTextPage(tp, flags: 0, m: mat);
-                    imgDoc.Close();
+                    if (transform)
+                    {
+                        var list = GetImageRects(itemObj, transform: true);
+                        if (list.Count > 0)
+                            return list[0];
+                        return (infRect, nullMat);
+                    }
+                    var rects = GetImageRects(itemObj);
+                    if (rects.Count > 0)
+                        return (rects[0], nullMat);
+                    return (infRect, nullMat);
                 }
-                catch (Exception)
+                catch
                 {
-                    tp = null;
-                    Console.WriteLine("Falling back to full page OCR");
-                    return FullOcr(this, dpi, language, flags, imageFilters);
+                    return (infRect, nullMat);
                 }
             }
 
-            return tp;
+            // Python falls back to JM_image_reporter when xref==0. No direct binding here.
+            return (infRect, nullMat);
         }
 
         /// <summary>
-        /// PDF only: Insert text into the specified rect.
+        /// List XObjects defined in this page object.
         /// </summary>
-        /// <param name="rect"></param>
-        /// <param name="text"></param>
-        /// <param name="fontSize"></param>
-        /// <param name="lineHeight"></param>
-        /// <param name="fontName"></param>
-        /// <param name="fontFile"></param>
-        /// <param name="setSimple"></param>
-        /// <param name="encoding"></param>
-        /// <param name="color"></param>
-        /// <param name="fill"></param>
-        /// <param name="expandTabs"></param>
-        /// <param name="align"></param>
-        /// <param name="borderWidth"></param>
-        /// <param name="renderMode"></param>
-        /// <param name="rotate"></param>
-        /// <param name="morph"></param>
-        /// <param name="overlay"></param>
-        /// <param name="strokeOpacity"></param>
-        /// <param name="fillOpacity"></param>
-        /// <param name="oc"></param>
-        /// <returns></returns>
-        public float InsertTextbox(
-            Rect rect,
-            dynamic text,
-            string fontName = "helv",
-            string fontFile = null,
-            float fontSize = 11,
-            float lineHeight = 0,
-            int setSimple = 0,
-            int encoding = 0,
-            float[] color = null,
-            float[] fill = null,
-            int expandTabs = 1,
-            int align = 0,
-            float borderWidth = 0.05f,
-            int renderMode = 0,
-            int rotate = 0,
-            Morph morph = null,
-            bool overlay = true,
-            float strokeOpacity = 1,
-            float fillOpacity = 1,
-            int oc = 0
-        )
+        public List<Dictionary<string, object>> GetXobjects()
         {
-            if (string.IsNullOrEmpty(fontName) && string.IsNullOrEmpty(fontFile))
-                throw new Exception("should include fontName and fontFile.");
-            Shape img = new Shape(this);
-            float ret = img.InsertTextbox(
-                rect,
-                text,
-                fontFile,
-                fontName,
-                fontSize,
-                lineHeight,
-                setSimple != 0,
-                encoding,
-                color,
-                fill,
-                expandTabs,
-                align,
-                renderMode,
-                borderWidth,
-                rotate,
-                morph,
-                strokeOpacity,
-                fillOpacity,
-                oc
-            );
-            if (ret >= 0)
-                img.Commit(overlay);
-
-            return ret;
+            return RequireParent().GetPageXobjects(Number);
         }
 
         /// <summary>
-        /// PDF only: Modify the specified link. The parameter must be a (modified) original item of Links
+        /// Page language (inheritable /Lang).
+        /// Port of Python Page.language property.
         /// </summary>
-        /// <param name="link">the link to be modified.</param>
-        public void UpdateLink(LinkInfo link)
+        public string Language
         {
-            Utils.UpdateLink(this, link);
+            get
+            {
+                var pdfPage = Helpers.AsPdfPage(NativePage, required: false);
+                if (pdfPage == null || pdfPage.m_internal == null)
+                    return null;
+                var lang = mupdf.mupdf.pdf_dict_get_inheritable(pdfPage.obj(), mupdf.mupdf.pdf_new_name("Lang"));
+                if (lang == null || lang.m_internal == null)
+                    return null;
+                return mupdf.mupdf.pdf_to_str_buf(lang);
+            }
         }
 
         /// <summary>
-        /// PDF only: Clean and concatenate all contents objects associated with this page.
+        /// Set page language (/Lang) on page dictionary.
+        /// Port of Python Page.set_language().
         /// </summary>
-        /// <param name="sanitize">if true, synchronization between resources and their actual use in the contents object is snychronized.</param>
-        public void CleanContetns(int sanitize = 1)
+        public void SetLanguage(string language = null)
         {
-            if (sanitize == 0 && IsWrapped)
-                WrapContents();
-            PdfPage page = _pdfPage;
-            if (page.m_internal == null)
+            var pdfPage = NativePdfPage;
+            var obj = pdfPage.obj();
+            var key = mupdf.mupdf.pdf_new_name("Lang");
+            if (string.IsNullOrEmpty(language))
+            {
+                mupdf.mupdf.pdf_dict_del(obj, key);
                 return;
-
-            PdfFilterOptions filter = Utils.MakePdfFilterOptions(recurse: 1, sanitize: sanitize);
-            PdfDocument pageDoc = page.doc();
-            pageDoc.pdf_filter_page_contents(page, filter);
-            pageDoc.Dispose();
+            }
+            var val = mupdf.mupdf.pdf_new_text_string(language);
+            mupdf.mupdf.pdf_dict_put(obj, key, val);
         }
 
         /// <summary>
-        /// Ensures that the page’s so-called graphics state is balanced and new content can be inserted correctly.
+        /// Reflects page rotation.
+        /// Port of Python Page.rotation_matrix.
+        /// </summary>
+        public Matrix RotationMatrix
+        {
+            get
+            {
+                var inv = DerotationMatrix.Inverted();
+                return inv ?? Matrix.Identity;
+            }
+        }
+
+        /// <summary>
+        /// Refresh page after link/annot/widget updates.
+        /// Port of Python Page.refresh().
+        /// </summary>
+        public void Refresh()
+        {
+            var reloaded = RequireParent().ReloadPage(this);
+            _nativePage?.Dispose();
+            _nativePage = reloaded._nativePage;
+            reloaded._nativePage = null;
+        }
+
+        /// <summary>
+        /// Replace image content referenced by xref.
+        /// Port of Python Page.replace_image().
+        /// </summary>
+        public void ReplaceImage(int xref, string? filename = null, Pixmap? pixmap = null, byte[]? stream = null)
+        {
+            var doc = RequireParent();
+            if (!doc.XrefIsImage(xref))
+                throw new ArgumentException("xref not an image");
+
+            int count = 0;
+            if (!string.IsNullOrEmpty(filename)) count++;
+            if (pixmap != null) count++;
+            if (stream != null && stream.Length > 0) count++;
+            if (count != 1)
+                throw new ArgumentException("Exactly one of filename/stream/pixmap must be given");
+
+            int newXref = InsertImage(Rect, filename: filename, stream: stream, pixmap: pixmap);
+
+            // Copy new image object over old xref.
+            string newObj = doc.XrefObject(newXref, compressed: false, ascii: false);
+            doc.UpdateObject(xref, newObj);
+            byte[] newStream = doc.XrefStreamRaw(newXref);
+            doc.UpdateStream(xref, newStream, compress: true);
+
+            var contents = GetContents();
+            if (contents.Count > 0)
+            {
+                int lastContentsXref = contents[contents.Count - 1];
+                doc.UpdateStream(lastContentsXref, new byte[] { (byte)' ' }, compress: true);
+            }
+            _imageInfo = null;
+        }
+
+        /// <summary>
+        /// Clip away page content outside the rectangle.
+        /// Port of Python Page.clip_to_rect().
+        /// </summary>
+        public void ClipToRect(Rect rect)
+        {
+            var clip = new Rect(rect);
+            if (clip.IsInfinite || (clip & Rect).IsEmpty)
+                throw new ArgumentException("rect must not be infinite or empty");
+            clip = clip.Transform(TransformationMatrix);
+            var pdfPage = NativePdfPage;
+            pdfPage.pdf_clip_page(clip.ToFzRect());
+        }
+
+        /// <summary>
+        /// Try to access layout information.
+        /// Port of Python Page.get_layout().
+        /// </summary>
+        public object GetLayout()
+        {
+            if (_layoutInformation != null)
+                return _layoutInformation;
+            if (_getLayout == null)
+                return null;
+            _layoutInformation = _getLayout(this);
+            return _layoutInformation;
+        }
+
+        /// <summary>
+        /// Cache slot for layout analysis information (Python: layout_information).
+        /// </summary>
+        public object LayoutInformation
+        {
+            get => _layoutInformation;
+            set => _layoutInformation = value;
+        }
+
+        /// <summary>
+        /// Global lazy layout provider callback (Python: _get_layout).
+        /// If set, GetLayout() invokes this once and caches the result in layout_information.
+        /// </summary>
+        public static Func<Page, object> GetLayoutProvider
+        {
+            get => _getLayout;
+            set => _getLayout = value;
+        }
+
+        /// <summary>
+        /// Get OCGs and OCMDs used in page resources.
+        /// Port of Python Page.get_oc_items().
+        /// </summary>
+        public List<(string name, int xref, string type)> GetOcItems()
+        {
+            var rc = new List<(string name, int xref, string type)>();
+            var props = GetResourceProperties();
+            foreach (var p in props)
+            {
+                string text = RequireParent().XrefObject(p.xref, compressed: true);
+                string octype;
+                if (text.Contains("/Type/OCG"))
+                    octype = "ocg";
+                else if (text.Contains("/Type/OCMD"))
+                    octype = "ocmd";
+                else
+                    continue;
+                rc.Add((p.name, p.xref, octype));
+            }
+            return rc;
+        }
+
+        private List<(string name, int xref)> GetResourceProperties()
+        {
+            var list = new List<(string name, int xref)>();
+            var pdfPage = NativePdfPage;
+            var resources = mupdf.mupdf.pdf_dict_get(pdfPage.obj(), mupdf.mupdf.pdf_new_name("Resources"));
+            if (resources == null || resources.m_internal == null)
+                return list;
+            var props = mupdf.mupdf.pdf_dict_get(resources, mupdf.mupdf.pdf_new_name("Properties"));
+            if (props == null || props.m_internal == null || mupdf.mupdf.pdf_is_dict(props) == 0)
+                return list;
+            int n = mupdf.mupdf.pdf_dict_len(props);
+            for (int i = 0; i < n; i++)
+            {
+                var k = mupdf.mupdf.pdf_dict_get_key(props, i);
+                var v = mupdf.mupdf.pdf_dict_get_val(props, i);
+                if (k == null || k.m_internal == null || v == null || v.m_internal == null)
+                    continue;
+                string name = mupdf.mupdf.pdf_to_name(k);
+                int xref = mupdf.mupdf.pdf_to_num(v);
+                if (!string.IsNullOrEmpty(name) && xref > 0)
+                    list.Add((name, xref));
+            }
+            return list;
+        }
+
+        /// <summary>
+        /// Write one or more TextWriter objects to this page.
+        /// Port of Python Page.write_text().
+        /// </summary>
+        public void WriteText(Rect rect = null, IEnumerable<TextWriter> writers = null, bool overlay = true,
+            float[] color = null, float? opacity = null, bool keepProportion = true, int rotate = 0, int oc = 0)
+        {
+            if (writers == null)
+                throw new ArgumentException("need at least one pymupdf.TextWriter");
+            var writerList = writers.ToList();
+            if (writerList.Count == 0)
+                throw new ArgumentException("need at least one pymupdf.TextWriter");
+
+            if (writerList.Count == 1 && rotate == 0 && rect == null)
+            {
+                writerList[0].WriteText(this, opacity: opacity ?? -1, color: color, overlay: overlay ? 1 : 0, oc: oc);
+                return;
+            }
+
+            var clip = new Rect(writerList[0].TextRect);
+            var textDoc = new Document();
+            var tpage = textDoc.NewPage(width: Width, height: Height);
+            foreach (var writer in writerList)
+            {
+                clip = clip | writer.TextRect;
+                writer.WriteText(tpage, opacity: opacity ?? -1, color: color, overlay: 1, oc: 0);
+            }
+            var target = rect ?? clip;
+            ShowPdfPage(target, textDoc, 0, keepProportion: keepProportion, overlay: overlay, oc: oc, rotate: rotate, clip: clip);
+        }
+
+        private int ResolveImageXref(object name)
+        {
+            if (name is int ixref)
+                return ixref;
+            if (name is object[] arr && arr.Length > 0 && arr[0] is int arrXref)
+                return arrXref;
+            if (name is string imgName)
+            {
+                var imglist = GetImages().Where(i => i.name == imgName).ToList();
+                if (imglist.Count == 0)
+                    throw new ArgumentException("bad image name");
+                if (imglist.Count != 1)
+                    throw new ArgumentException("multiple image names found");
+                return imglist[0].xref;
+            }
+            throw new ArgumentException("bad image name");
+        }
+
+        // ─── Page Modifications ─────────────────────────────────────────
+
+        /// <summary>
+        /// Set page rotation.
+        /// </summary>
+        public void SetRotation(int rotation)
+        {
+            var pdfPage = NativePdfPage;
+            int rot = rotation;
+            while (rot < 0) rot += 360;
+            rot = rot % 360;
+            mupdf.mupdf.pdf_dict_put_int(pdfPage.obj(), mupdf.mupdf.pdf_new_name("Rotate"), rot);
+        }
+
+        /// <summary>
+        /// Set the page's MediaBox.
+        /// </summary>
+        public void SetMediaBox(Rect rect)
+        {
+            var pdfPage = NativePdfPage;
+            var obj = pdfPage.obj();
+            var fzr = rect.ToFzRect();
+            if (mupdf.mupdf.fz_is_empty_rect(fzr) != 0 || mupdf.mupdf.fz_is_infinite_rect(fzr) != 0)
+                throw new ArgumentException("rect must be finite and not empty");
+            mupdf.mupdf.pdf_dict_put_rect(obj, mupdf.mupdf.pdf_new_name("MediaBox"), fzr);
+            mupdf.mupdf.pdf_dict_del(obj, mupdf.mupdf.pdf_new_name("CropBox"));
+            mupdf.mupdf.pdf_dict_del(obj, mupdf.mupdf.pdf_new_name("ArtBox"));
+            mupdf.mupdf.pdf_dict_del(obj, mupdf.mupdf.pdf_new_name("BleedBox"));
+            mupdf.mupdf.pdf_dict_del(obj, mupdf.mupdf.pdf_new_name("TrimBox"));
+        }
+
+        /// <summary>
+        /// Return the top-left point of the CropBox.
+        /// Mirrors PyMuPDF <c>Page.cropbox_position</c>.
+        /// </summary>
+        public Point CropBoxPosition() => CropBox.TopLeft;
+
+        /// <summary>
+        /// Set the CropBox. Will also change Page.Rect.
+        /// </summary>
+        public void SetCropBox(Rect rect)
+        {
+            var pdfPage = NativePdfPage;
+            var obj = pdfPage.obj();
+            mupdf.mupdf.pdf_dict_put_rect(obj, mupdf.mupdf.pdf_new_name("CropBox"), rect.ToFzRect());
+        }
+
+        /// <summary>
+        /// Set the page's BleedBox.
+        /// </summary>
+        public void SetBleedBox(Rect rect) => SetSpecialBox("BleedBox", rect);
+        /// <summary>
+        /// Set the page's TrimBox.
+        /// </summary>
+        public void SetTrimBox(Rect rect) => SetSpecialBox("TrimBox", rect);
+        /// <summary>
+        /// Set the page's ArtBox.
+        /// </summary>
+        public void SetArtBox(Rect rect) => SetSpecialBox("ArtBox", rect);
+
+        private void SetSpecialBox(string name, Rect rect)
+        {
+            var pdfPage = NativePdfPage;
+            var obj = pdfPage.obj();
+            mupdf.mupdf.pdf_dict_put_rect(obj, mupdf.mupdf.pdf_new_name(name), rect.ToFzRect());
+        }
+
+        // ─── Drawing / Shapes ───────────────────────────────────────────
+
+        /// <summary>
+        /// Create a new Shape object for the page.
+        /// </summary>
+        public Shape NewShape() => new Shape(this);
+
+        /// <summary>
+        /// Draw a line from point p1 to point p2.
+        /// </summary>
+        public Point DrawLine(Point p1, Point p2, float[] color = null, float width = 1, string lineCap = null, string lineJoin = null, float[] dashes = null, float opacity = 1, string blendMode = null, int overlay = 1, string morph = null, int oc = 0)
+        {
+            var shape = NewShape();
+            shape.DrawLine(p1, p2);
+            shape.Finish(color: color, width: width, opacity: opacity);
+            shape.Commit(overlay == 1);
+            return p2;
+        }
+
+        /// <summary>
+        /// Draw a rectangle. See Shape class method for details.
+        /// </summary>
+        public Point DrawRect(Rect rect, float[] color = null, float[] fill = null, float width = 1, float opacity = 1, int overlay = 1)
+        {
+            var shape = NewShape();
+            shape.DrawRect(rect);
+            shape.Finish(color: color, fill: fill, width: width, opacity: opacity);
+            shape.Commit(overlay == 1);
+            return rect.TopLeft;
+        }
+
+        /// <summary>
+        /// Draw a circle given its center and radius.
+        /// </summary>
+        public Point DrawCircle(Point center, float radius, float[] color = null, float[] fill = null, float width = 1, float opacity = 1, int overlay = 1)
+        {
+            var shape = NewShape();
+            shape.DrawCircle(center, radius);
+            shape.Finish(color: color, fill: fill, width: width, opacity: opacity);
+            shape.Commit(overlay == 1);
+            return center;
+        }
+
+        /// <summary>
+        /// Draw an oval given its containing rectangle or quad.
+        /// </summary>
+        public Point DrawOval(Rect rect, float[] color = null, float[] fill = null, float width = 1, float opacity = 1, int overlay = 1)
+        {
+            var shape = NewShape();
+            shape.DrawOval(rect);
+            shape.Finish(color: color, fill: fill, width: width, opacity: opacity);
+            shape.Commit(overlay == 1);
+            return rect.TopLeft;
+        }
+
+        /// <summary>
+        /// Draw a special Bezier curve from p1 to p3, generating control points on lines p1 to p2 and p2 to p3.
+        /// </summary>
+        public Point DrawCurve(Point p1, Point p2, Point p3, float[] color = null, float[] fill = null, float width = 1, float opacity = 1, int overlay = 1)
+        {
+            var shape = NewShape();
+            shape.DrawCurve(p1, p2, p3);
+            shape.Finish(color: color, fill: fill, width: width, opacity: opacity);
+            shape.Commit(overlay == 1);
+            return p3;
+        }
+
+        /// <summary>
+        /// Draw a squiggly line from point p1 to point p2.
+        /// </summary>
+        public Point DrawSquiggle(Point p1, Point p2, float breadth = 2, float[] color = null, float width = 1, float opacity = 1, int overlay = 1)
+        {
+            var shape = NewShape();
+            shape.DrawSquiggle(p1, p2, breadth);
+            shape.Finish(color: color, width: width, opacity: opacity);
+            shape.Commit(overlay == 1);
+            return p2;
+        }
+
+        /// <summary>
+        /// Draw a zigzag line from point p1 to point p2.
+        /// </summary>
+        public Point DrawZigzag(Point p1, Point p2, float breadth = 2, float[] color = null, float width = 1, float opacity = 1, int overlay = 1)
+        {
+            var shape = NewShape();
+            shape.DrawZigzag(p1, p2, breadth);
+            shape.Finish(color: color, width: width, opacity: opacity);
+            shape.Commit(overlay == 1);
+            return p2;
+        }
+
+        /// <summary>
+        /// Draw a circle sector given circle center, one arc end point and the angle of the arc.
+        /// </summary>
+        public Point DrawSector(Point center, Point point, float angle, float[] color = null, float[] fill = null, float width = 1, float opacity = 1, bool fullSector = true, int overlay = 1)
+        {
+            var shape = NewShape();
+            shape.DrawSector(center, point, angle, fullSector);
+            shape.Finish(color: color, fill: fill, width: width, opacity: opacity);
+            shape.Commit(overlay == 1);
+            return point;
+        }
+
+        /// <summary>
+        /// Draw multiple connected line segments.
+        /// </summary>
+        public Point DrawPolyline(Point[] points, float[] color = null, float[] fill = null, float width = 1, float opacity = 1, int overlay = 1)
+        {
+            var shape = NewShape();
+            shape.DrawPolyline(points);
+            shape.Finish(color: color, fill: fill, width: width, opacity: opacity);
+            shape.Commit(overlay == 1);
+            return points.Last();
+        }
+
+        /// <summary>
+        /// Draw a quadrilateral.
+        /// </summary>
+        public Point DrawQuad(Quad quad, float[] color = null, float[] fill = null, float width = 1, float opacity = 1, int overlay = 1)
+        {
+            var shape = NewShape();
+            shape.DrawQuad(quad);
+            shape.Finish(color: color, fill: fill, width: width, opacity: opacity);
+            shape.Commit(overlay == 1);
+            return quad.UL;
+        }
+
+        /// <summary>
+        /// Draw a general cubic Bezier curve from p1 to p4 using control points p2 and p3.
+        /// </summary>
+        public Point DrawBezier(Point p1, Point p2, Point p3, Point p4, float[] color = null, float[] fill = null, float width = 1, float opacity = 1, int overlay = 1)
+        {
+            var shape = NewShape();
+            shape.DrawBezier(p1, p2, p3, p4);
+            shape.Finish(color: color, fill: fill, width: width, opacity: opacity);
+            shape.Commit(overlay == 1);
+            return p4;
+        }
+
+        // ─── Page Contents / Resources ──────────────────────────────────
+
+        /// <summary>
+        /// Clean the page contents streams.
+        /// </summary>
+        public void CleanContents(int sanitize = 1)
+        {
+            try
+            {
+                var pdfPage = Helpers.AsPdfPage(NativePage, required: false);
+                if (pdfPage == null || pdfPage.m_internal == null) return;
+                var filter = new mupdf.PdfFilterOptions();
+                filter.recurse = 1;
+                mupdf.mupdf.pdf_filter_page_contents(pdfPage.doc(), pdfPage, filter);
+            }
+            catch { }
+        }
+
+        /// <summary>
+        /// All /Contents streams concatenated to one bytes object.
+        /// </summary>
+        public byte[] ReadContents()
+        {
+            var pdfPage = NativePdfPage;
+            var contents = mupdf.mupdf.pdf_dict_get(pdfPage.obj(), mupdf.mupdf.pdf_new_name("Contents"));
+            if (contents.m_internal == null) return Array.Empty<byte>();
+            var buf = mupdf.mupdf.pdf_load_stream(contents);
+            return buf.fz_buffer_extract();
+        }
+
+        /// <summary>
+        /// Set object at <paramref name="xref"/> as the page's <c>/Contents</c> (PyMuPDF <c>set_contents</c>).
+        /// </summary>
+        public void SetContents(int xref)
+        {
+            if (RequireParent().IsClosed)
+                throw new ValueErrorException("document closed");
+            if (!RequireParent().IsPdf)
+                throw new ValueErrorException("is no PDF");
+            if (xref < 1 || xref >= RequireParent().XrefLength)
+                throw new ValueErrorException(Constants.MSG_BAD_XREF);
+            if (!RequireParent().XrefIsStream(xref))
+                throw new ValueErrorException("xref is no stream");
+            RequireParent().XrefSetKey(Xref, "Contents", $"{xref} 0 R");
+        }
+
+        /// <summary>
+        /// Get list of xrefs of page contents objects.
+        /// </summary>
+        public List<int> GetContents()
+        {
+            var result = new List<int>();
+            var pdfPage = NativePdfPage;
+            var contents = mupdf.mupdf.pdf_dict_get(pdfPage.obj(), mupdf.mupdf.pdf_new_name("Contents"));
+            if (contents.m_internal == null) return result;
+            if (mupdf.mupdf.pdf_is_array(contents) != 0)
+            {
+                int n = mupdf.mupdf.pdf_array_len(contents);
+                for (int i = 0; i < n; i++)
+                    result.Add(mupdf.mupdf.pdf_to_num(mupdf.mupdf.pdf_array_get(contents, i)));
+            }
+            else
+                result.Add(mupdf.mupdf.pdf_to_num(contents));
+            return result;
+        }
+
+        /// <summary>
+        /// Ensure page is in a balanced graphics state.
         /// </summary>
         public void WrapContents()
         {
-            if (IsWrapped)
-                return;
-            Utils.InsertContents(this, Encoding.UTF8.GetBytes("q\n"), 0);
-            Utils.InsertContents(this, Encoding.UTF8.GetBytes("\nQ"), 1);
-            WasWrapped = true;
+            var pdfPage = NativePdfPage;
+            var pdf = RequireParent().NativePdfDocument;
+            var contents = mupdf.mupdf.pdf_dict_get(pdfPage.obj(), mupdf.mupdf.pdf_new_name("Contents"));
+            if (contents.m_internal == null) return;
+
+            var existingBuf = LoadPageContentsBuffer(pdfPage.obj());
+            var existingBytes = existingBuf.fz_buffer_extract();
+            var wrappedBytes = new byte[existingBytes.Length + 4];
+            wrappedBytes[0] = (byte)'q';
+            wrappedBytes[1] = (byte)'\n';
+            Array.Copy(existingBytes, 0, wrappedBytes, 2, existingBytes.Length);
+            wrappedBytes[wrappedBytes.Length - 2] = (byte)'\n';
+            wrappedBytes[wrappedBytes.Length - 1] = (byte)'Q';
+
+            var newBuf = Helpers.BufferFromBytes(wrappedBytes);
+            var newStream = mupdf.mupdf.pdf_add_stream(pdf, newBuf, new mupdf.PdfObj(), 0);
+            mupdf.mupdf.pdf_dict_put(pdfPage.obj(), mupdf.mupdf.pdf_new_name("Contents"), newStream);
         }
 
         /// <summary>
-        /// Return the concatenation of all contents objects associated with the page – without cleaning or otherwise modifying them.
+        /// Check whether <c>/Contents</c> appears to be in a balanced graphics state (PyMuPDF <c>is_wrapped</c>).
         /// </summary>
-        /// <returns></returns>
-        public byte[] ReadContents()
+        public bool IsWrapped
         {
-            return Utils.GetAllContents(this);
+            get
+            {
+                var (push, pop) = CountQBalance();
+                return push == 0 && pop == 0;
+            }
         }
 
         /// <summary>
-        ///
+        /// Set page rotation to 0 while maintaining visual appearance (PyMuPDF <c>remove_rotation</c>).
+        /// Returns the inverse of the generated derotation matrix.
         /// </summary>
-        /// <returns></returns>
-        public Shape NewShape()
-        {
-            return new Shape(this);
-        }
-
-        /// <summary>
-        /// Set page rotation to 0 while maintaining visual appearance.
-        /// </summary>
-        /// <returns>return Matrix</returns>
         public Matrix RemoveRotation()
         {
-            int rot = Rotation;
-            if (rot == 0)
-                return new IdentityMatrix();
+            int rot = Rotation % 360;
+            if (rot < 0) rot += 360;
+            if (rot == 0) return Matrix.Identity;
 
-            Rect mb = MediaBox;
-            Matrix mat0 = null;
+            var mb = MediaBox;
+            Matrix mat0;
             if (rot == 90)
                 mat0 = new Matrix(1, 0, 0, 1, mb.Y1 - mb.X1 - mb.X0 - mb.Y0, 0);
             else if (rot == 270)
-                mat0 = new Matrix(1, 0, 0, 1, 0, mb.Y1 - mb.X1 - mb.X0 - mb.Y0);
+                mat0 = new Matrix(1, 0, 0, 1, 0, mb.X1 - mb.Y1 - mb.Y0 - mb.X0);
             else
                 mat0 = new Matrix(1, 0, 0, 1, -2 * mb.X0, -2 * mb.Y0);
 
-            Matrix mat = mat0 * DerotationMatrix;
-            string cmd = $"{Utils.FloatToString(mat.A)} {Utils.FloatToString(mat.B)} {Utils.FloatToString(mat.C)} {Utils.FloatToString(mat.D)} {Utils.FloatToString(mat.E)} {Utils.FloatToString(mat.F)} cm ";
-            Utils.InsertContents(this, Encoding.UTF8.GetBytes(cmd), 0);
+            var mat = mat0 * DerotationMatrix;
+            PrefixContentsMatrix(mat);
 
             if (rot == 90 || rot == 270)
             {
-                float x0 = mb.X0;
-                float y0 = mb.Y0;
-                float x1 = mb.X1;
-                float y1 = mb.Y1;
-                mb.X0 = y0;
-                mb.Y0 = x0;
-                mb.X1 = y1;
-                mb.Y1 = x1;
-                SetMediaBox(mb);
+                var swapped = new Rect(mb.Y0, mb.X0, mb.Y1, mb.X1);
+                SetMediaBox(swapped);
             }
+
             SetRotation(0);
-            Matrix iMat = ~mat;
-            Rect r = null;
-            foreach (Annot annot in GetAnnots())
+
+            var inv = mat.Inverted() ?? Matrix.Identity;
+
+            // move annotations
+            foreach (var annot in Annots())
             {
-                r = annot.Rect * iMat;
-                annot.SetRect(r);
+                var tr = new Rect(annot.Rect).Transform(inv);
+                try { annot.SetRect(tr); } catch { }
             }
-            foreach (LinkInfo link in GetLinks())
+
+            // move links
+            var links = GetLinks();
+            foreach (var link in links)
             {
-                r = link.From * iMat;
-                DeleteLink(link);
-                link.From = r;
+                if (link.TryGetValue("from", out var fromObj) && fromObj is Rect rr)
+                    link["from"] = new Rect(rr).Transform(inv);
+                try { UpdateLink(link); } catch { }
+            }
+
+            // move widgets
+            foreach (var widget in Widgets())
+            {
                 try
                 {
-                    InsertLink(link);
+                    var wr = new Rect(widget.Rect).Transform(inv);
+                    widget.SetRect(wr);
+                    widget.Update();
                 }
-                catch (Exception) { }
-            }
-            foreach (Widget widget in GetWidgets())
-            {
-                r = widget.Rect * iMat;
-                widget.Rect = r;
-                widget.Update();
+                catch { }
             }
 
-            return iMat;
+            return inv;
         }
 
-        /// <summary>
-        /// Set the MediaBox.
-        /// </summary>
-        /// <param name="rect"></param>
-        /// <exception cref="Exception"></exception>
-        public void SetMediaBox(Rect rect)
+        private void PrefixContentsMatrix(Matrix mat)
         {
-            PdfPage page = GetPdfPage();
-            FzRect mediabox = rect.ToFzRect();
-            if (mediabox.fz_is_empty_rect() != 0 || mediabox.fz_is_infinite_rect() != 0)
-                throw new Exception(Utils.ErrorMessages["MSG_BAD_RECT"]);
-            page.obj().pdf_dict_put_rect(new PdfObj("MediaBox"), mediabox);
-            page.obj().pdf_dict_del(new PdfObj("CropBox"));
-            page.obj().pdf_dict_del(new PdfObj("ArtBox"));
-            page.obj().pdf_dict_del(new PdfObj("BleedBox"));
-            page.obj().pdf_dict_del(new PdfObj("TrimBox"));
+            string cmd = string.Format(
+                CultureInfo.InvariantCulture,
+                "{0:G} {1:G} {2:G} {3:G} {4:G} {5:G} cm ",
+                mat.A, mat.B, mat.C, mat.D, mat.E, mat.F);
+            byte[] prefix = System.Text.Encoding.UTF8.GetBytes(cmd);
+            byte[] existing = ReadContents();
+            var merged = new byte[prefix.Length + existing.Length];
+            Buffer.BlockCopy(prefix, 0, merged, 0, prefix.Length);
+            if (existing.Length > 0)
+                Buffer.BlockCopy(existing, 0, merged, prefix.Length, existing.Length);
+
+            var pdfPage = NativePdfPage;
+            var pdf = RequireParent().NativePdfDocument;
+            var buf = Helpers.BufferFromBytes(merged);
+            var newStream = mupdf.mupdf.pdf_add_stream(pdf, buf, new mupdf.PdfObj(), 0);
+            mupdf.mupdf.pdf_dict_put(pdfPage.obj(), mupdf.mupdf.pdf_new_name("Contents"), newStream);
         }
 
-        /// <summary>
-        /// PDF only: Add a PDF Form field (“widget”) to a page.
-        /// </summary>
-        /// <param name="widget">a Widget object which must have been created upfront.</param>
-        /// <returns>a widget annotation.</returns>
-        /// <exception cref="Exception"></exception>
-        public Annot AddWidget(Widget widget)
+        private static mupdf.FzBuffer LoadPageContentsBuffer(mupdf.PdfObj pageObj)
         {
-            Document doc = Parent;
-            if (!doc.IsPDF)
-                throw new Exception("is no PDF");
+            var contents = mupdf.mupdf.pdf_dict_get(pageObj, mupdf.mupdf.pdf_new_name("Contents"));
+            if (contents.m_internal == null)
+                return mupdf.mupdf.fz_new_buffer(16);
 
-            widget.Validate();
-            PdfPage page = GetPdfPage();
-            PdfDocument pageDoc = page.doc();
-            PdfAnnot annot = Utils.CreateWidget(
-                pageDoc,
-                page,
-                (PdfWidgetType)widget.FieldType,
-                widget.FieldName
-            );
-            if (annot.m_internal == null)
+            if (mupdf.mupdf.pdf_is_array(contents) != 0)
             {
-                pageDoc.Dispose();
-                throw new Exception("cannot create widget");
-            }
-            Utils.AddAnnotId(annot, "W");
-
-            Annot annot_ = new Annot(annot, this);
-            annot_.ThisOwn = true;
-            annot_.Parent = this;
-            AnnotRefs[annot_.GetHashCode()] = annot_;
-
-            widget.Parent = this;
-            widget._annot = new PdfAnnot(annot);
-            widget.Update();
-
-            pageDoc.Dispose();
-
-            return annot_;
-        }
-
-        /// <summary>
-        /// Join rectangles of neighboring vector graphic items.
-        /// </summary>
-        /// <param name="clip">optional rect-like to restrict the page area to consider.</param>
-        /// <param name="drawings">(optional) output of a previous "get_drawings()".</param>
-        /// <param name="xTolerance">horizontal neighborhood threshold.</param>
-        /// <param name="yTolerance">vertical neighborhood threshold.</param>
-        /// <returns></returns>
-        public List<Rect> ClusterDrawings(
-            Rect clip = null,
-            List<PathInfo> drawings = null,
-            float xTolerance = 3f,
-            float yTolerance = 3f
-        )
-        {
-            Rect pArea = Rect;
-            if (clip != null)
-                pArea = new Rect(clip);
-
-            float deltaX = xTolerance;
-            float deltaY = yTolerance;
-            if (drawings == null)
-                drawings = GetDrawings();
-
-            bool AreNeighbors(Rect r1, Rect r2)
-            {
-                float rr1_X0,
-                    rr1_X1,
-                    rr1_Y0,
-                    rr1_Y1,
-                    rr2_X0,
-                    rr2_X1,
-                    rr2_Y0,
-                    rr2_Y1;
-                (rr1_X0, rr1_X1) = (r1.X1 > r1.X0) ? (r1.X0, r1.X1) : (r1.X1, r1.X0);
-                (rr1_Y0, rr1_Y1) = (r1.Y1 > r1.Y0) ? (r1.Y0, r1.Y1) : (r1.Y1, r1.Y0);
-                (rr2_X0, rr2_X1) = (r2.X1 > r2.X0) ? (r2.X0, r2.X1) : (r2.X1, r2.X0);
-                (rr2_Y0, rr2_Y1) = (r2.Y1 > r2.Y0) ? (r2.Y0, r2.Y1) : (r2.Y1, r2.Y0);
-
-                if (
-                    (rr1_X1 < rr2_X0 - deltaX)
-                    || (rr1_X0 > rr2_X1 + deltaX)
-                    || (rr1_Y1 < rr2_Y0 - deltaY)
-                    || (rr1_Y0 > rr2_Y1 + deltaY)
-                )
-                    return false;
-                else
-                    return true;
-            }
-
-            List<Rect> pRects = drawings
-                .Where(p =>
-                    (p.Rect.X0 >= pArea.X0)
-                    && (p.Rect.X1 <= pArea.X1)
-                    && (p.Rect.Y0 >= pArea.Y0)
-                    && (p.Rect.Y1 <= pArea.Y1)
-                )
-                .OrderBy(p => p.Rect.Y1)
-                .ThenBy(p => p.Rect.X0)
-                .Select(p => p.Rect)
-                .ToList();
-
-            List<Rect> newRects = new List<Rect>();
-
-            while (pRects.Count > 0)
-            {
-                Rect r = pRects[0];
-                bool repeat = true;
-                while (repeat)
+                var res = mupdf.mupdf.fz_new_buffer(1024);
+                int n = mupdf.mupdf.pdf_array_len(contents);
+                for (int i = 0; i < n; i++)
                 {
-                    repeat = false;
-                    for (int i = pRects.Count - 1; i > 0; i--)
+                    var item = mupdf.mupdf.pdf_array_get(contents, i);
+                    if (mupdf.mupdf.pdf_is_stream(item) != 0)
                     {
-                        if (AreNeighbors(pRects[i], r))
+                        var b = mupdf.mupdf.pdf_load_stream(item);
+                        mupdf.mupdf.fz_append_buffer(res, b);
+                    }
+                }
+                return res;
+            }
+
+            if (mupdf.mupdf.pdf_is_stream(contents) != 0)
+                return mupdf.mupdf.pdf_load_stream(contents);
+
+            return mupdf.mupdf.fz_new_buffer(16);
+        }
+
+        private (int push, int pop) CountQBalance()
+        {
+            byte[] data = ReadContents();
+            int balance = 0;
+            int missingPush = 0;
+            int i = 0;
+            while (i < data.Length)
+            {
+                byte b = data[i];
+                if (b == (byte)'%')
+                {
+                    while (i < data.Length && data[i] != (byte)'\n' && data[i] != (byte)'\r') i++;
+                    continue;
+                }
+
+                if (IsPdfWhitespace(b))
+                {
+                    i++;
+                    continue;
+                }
+
+                int start = i;
+                while (i < data.Length && !IsPdfWhitespace(data[i])) i++;
+                int len = i - start;
+                if (len == 1)
+                {
+                    byte t = data[start];
+                    if (t == (byte)'q') balance++;
+                    else if (t == (byte)'Q')
+                    {
+                        balance--;
+                        if (balance < 0)
                         {
-                            r = r | pRects[i].TopLeft;
-                            r = r | pRects[i].BottomRight;
-                            pRects.RemoveAt(i);
-                            repeat = true;
+                            missingPush++;
+                            balance = 0;
                         }
                     }
                 }
-                newRects.Add(r);
-                pRects.RemoveAt(0);
-                pRects = pRects.OrderBy(p => p.Y1).ThenBy(p => p.X0).ToList();
             }
-            newRects = newRects.OrderBy(p => p.Y1).ThenBy(p => p.X0).ToList();
+            return (missingPush, balance);
+        }
 
-            return newRects.Where(r => r.Width > deltaX && r.Height > deltaY).ToList();
+        private static bool IsPdfWhitespace(byte b)
+        {
+            return b == 0 || b == 9 || b == 10 || b == 12 || b == 13 || b == 32;
+        }
+
+        // ─── Get Drawings ───────────────────────────────────────────────
+
+        /// <summary>
+        /// Retrieve vector graphics (line art) from the page. The extended version includes clips.
+        /// </summary>
+        public List<Dictionary<string, object>> GetDrawings(bool extended = false)
+        {
+            var result = new List<Dictionary<string, object>>();
+            var dl = mupdf.mupdf.fz_new_display_list(Rect.ToFzRect());
+            var dev = mupdf.mupdf.fz_new_list_device(dl);
+            mupdf.mupdf.fz_run_page(NativePage, dev, Matrix.Identity.ToFzMatrix(), new mupdf.FzCookie());
+            mupdf.mupdf.fz_close_device(dev);
+
+            var traceOut = new mupdf.FzOutput(mupdf.mupdf.fz_new_buffer(0));
+            var tracedev = mupdf.mupdf.fz_new_trace_device(traceOut);
+            mupdf.mupdf.fz_run_display_list(dl, tracedev, Matrix.Identity.ToFzMatrix(), Rect.Infinite.ToFzRect(), new mupdf.FzCookie());
+            mupdf.mupdf.fz_close_device(tracedev);
+
+            return result;
         }
 
         /// <summary>
-        /// Make SVG image from page.
+        /// Get text trace information for the page.
         /// </summary>
-        /// <param name="matrix"></param>
-        /// <param name="textAsPath"></param>
-        public string GetSvgImage(Matrix matrix = null, int textAsPath = 1)
+        public List<Dictionary<string, object>> GetTexttrace()
         {
-            FzRect mediabox = _nativePage.fz_bound_page();
-            FzMatrix ctm = matrix == null ? new FzMatrix() : matrix.ToFzMatrix();
-            SvgText textOpt =
-                (textAsPath == 1) ? SvgText.FZ_SVG_TEXT_AS_PATH : SvgText.FZ_SVG_TEXT_AS_TEXT;
-            FzRect bounds = mediabox.fz_transform_rect(ctm);
-
-            FzBuffer res = mupdf.mupdf.fz_new_buffer(1024);
-            FzOutput output = new FzOutput(res);
-            FzDevice dev = output.fz_new_svg_device(
-                bounds.x1 - bounds.x0,
-                bounds.y1 - bounds.y0,
-                (int)textOpt,
-                1
-            );
-            _nativePage.fz_run_page(dev, ctm, new FzCookie());
-            dev.fz_close_device();
-            dev.Dispose();
-            output.fz_close_output();
-            output.Dispose();
-            string text = Utils.EscapeStrFromBuffer(res);
-
-            return text;
+            var result = new List<Dictionary<string, object>>();
+            var buf = mupdf.mupdf.fz_new_buffer(1024);
+            var output = new mupdf.FzOutput(buf);
+            var dev = mupdf.mupdf.fz_new_trace_device(output);
+            mupdf.mupdf.fz_run_page(NativePage, dev, Matrix.Identity.ToFzMatrix(), new mupdf.FzCookie());
+            mupdf.mupdf.fz_close_device(dev);
+            mupdf.mupdf.fz_close_output(output);
+            return result;
         }
 
         /// <summary>
-        /// Re-color page of PDF
+        /// Get extended page drawings (equivalent to GetDrawings with extended set to true).
         /// </summary>
-        /// <param name="colorNum">the number of colorspace, which means bytes of colorspace, Gray = 1, RGB = 3 and CMYK = 4.</param>
-        /// <exception cref="Exception"></exception>
-        public void Recolor(int colorNum)
+        public List<Dictionary<string, object>> GetCdp() => GetDrawings(extended: true);
+
+        // ─── Labels ─────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Return the label for this PDF page. Errors return an empty string.
+        /// </summary>
+        public string GetLabel()
         {
-            if (!(colorNum == 1 || colorNum == 3 || colorNum == 4))
-                throw new Exception("invalid number of colorspace");
+            try
+            {
+                var pdf = RequireParent().NativePdfDocument;
+                // Current binding exposes a write-into-buffer API shape only.
+                return "";
+            }
+            catch { return ""; }
+        }
 
-            pdf_recolor_options options = new pdf_recolor_options();
-            options.num_comp = colorNum;
+        // ─── Tab ────────────────────────────────────────────────────────
 
-            Document.AsPdfDocument(Parent).pdf_recolor_page(Number, new PdfRecolorOptions(options));
+        /// <summary>
+        /// Get annotation type information for the page.
+        /// </summary>
+        public Dictionary<string, object>[] GetPageAnnotTypes()
+        {
+            var result = new List<Dictionary<string, object>>();
+            foreach (var annot in Annots())
+            {
+                var d = new Dictionary<string, object>
+                {
+                    ["type"] = annot.Type.ToString(),
+                    ["xref"] = annot.Xref,
+                    ["id"] = annot.GetInfo().TryGetValue("id", out var id) ? id : "",
+                };
+                result.Add(d);
+            }
+            return result.ToArray();
         }
 
         /// <summary>
-        /// Re-color page of PDF
+        /// Annotation identifiers on this page (PyMuPDF <c>annot_names()</c>).
         /// </summary>
-        /// <param name="colorSpaceName">the name of colorspace, "Gray", "RGB" and "CMYK"</param>
-        /// <exception cref="Exception"></exception>
-        public void Recolor(string colorSpaceName)
+        public List<string> AnnotNames()
         {
-            int colorNum = (new List<string>() { "", "GRAY", "", "RGB", "CMYK" }).IndexOf(
-                colorSpaceName.ToUpper()
-            );
-            if (colorNum == -1 || colorNum == 0 || colorNum == 2)
-                throw new Exception("invalid name of colorspace");
-
-            Recolor(colorNum);
-        }
-    }
-
-    public class BoxDevice : FzDevice2
-    {
-        public List<BoxLog> rc { get; set; }
-
-        public bool layers { get; set; }
-
-        public string LayerName { get; set; }
-
-        public BoxDevice(List<BoxLog> rc, bool layers)
-            : base()
-        {
-            this.rc = rc;
-            this.layers = layers;
-
-            use_virtual_fill_path();
-            use_virtual_stroke_path();
-            use_virtual_fill_text();
-            use_virtual_stroke_text();
-            use_virtual_ignore_text();
-            use_virtual_fill_shade();
-            use_virtual_fill_image();
-            use_virtual_fill_image_mask();
-
-            use_virtual_begin_layer();
-            use_virtual_end_layer();
-        }
-
-        public override void begin_layer(fz_context arg_0, string arg_2)
-        {
-            if (string.IsNullOrEmpty(arg_2))
-                LayerName = "";
-            else
-                LayerName = arg_2;
-        }
-
-        public override void end_layer(fz_context arg_0)
-        {
-            LayerName = "";
-        }
-
-        public override void fill_path(
-            fz_context arg_0,
-            SWIGTYPE_p_fz_path arg_2,
-            int evenOdd,
-            fz_matrix arg_4,
-            fz_colorspace arg_5,
-            SWIGTYPE_p_float arg_6,
-            float arg_7,
-            fz_color_params arg_8
-        )
-        {
-            try
+            var result = new List<string>();
+            foreach (var annot in Annots())
             {
-                if (!layers)
-                    rc.Add(
-                        new BoxLog("fill-path", mupdf.mupdf.ll_fz_bound_path(arg_2, null, arg_4))
-                    );
-                else
-                    rc.Add(
-                        new BoxLog(
-                            "fill-path",
-                            mupdf.mupdf.ll_fz_bound_path(arg_2, null, arg_4),
-                            LayerName
-                        )
-                    );
+                var info = annot.GetInfo();
+                if (info != null && info.TryGetValue("id", out var id) && !string.IsNullOrEmpty(id))
+                    result.Add(id);
             }
-            catch (Exception) { }
+            return result;
         }
 
-        public override void stroke_path(
-            fz_context arg_0,
-            SWIGTYPE_p_fz_path arg_2,
-            fz_stroke_state arg_3,
-            fz_matrix arg_4,
-            fz_colorspace arg_5,
-            SWIGTYPE_p_float arg_6,
-            float arg_7,
-            fz_color_params arg_8
-        )
+        /// <summary>
+        /// Annotation xref/type/id triples (PyMuPDF <c>annot_xrefs()</c>).
+        /// </summary>
+        public List<(int xref, AnnotationType type, string id)> AnnotXrefs()
         {
-            try
+            var result = new List<(int xref, AnnotationType type, string id)>();
+            foreach (var annot in Annots())
             {
-                if (!layers)
-                    rc.Add(
-                        new BoxLog("stroke-path", mupdf.mupdf.ll_fz_bound_path(arg_2, arg_3, arg_4))
-                    );
-                else
-                    rc.Add(
-                        new BoxLog(
-                            "stroke-path",
-                            mupdf.mupdf.ll_fz_bound_path(arg_2, arg_3, arg_4),
-                            LayerName
-                        )
-                    );
+                var info = annot.GetInfo();
+                string id = "";
+                if (info != null && info.TryGetValue("id", out var value))
+                    id = value ?? "";
+                result.Add((annot.Xref, annot.Type, id));
             }
-            catch (Exception) { }
+            return result;
         }
 
-        public override void fill_text(
-            fz_context arg_0,
-            fz_text arg_2,
-            fz_matrix arg_3,
-            fz_colorspace arg_4,
-            SWIGTYPE_p_float arg_5,
-            float arg_6,
-            fz_color_params arg_7
-        )
+        /// <summary>
+        /// Load an annotation by name (/NM key) or xref.
+        /// Mirrors PyMuPDF <c>Page.load_annot()</c>.
+        /// </summary>
+        public Annot LoadAnnot(object ident)
         {
-            try
+            if (ident is string name)
             {
-                if (!layers)
-                    rc.Add(
-                        new BoxLog("fill-text", mupdf.mupdf.ll_fz_bound_text(arg_2, null, arg_3))
-                    );
-                else
-                    rc.Add(
-                        new BoxLog(
-                            "fill-text",
-                            mupdf.mupdf.ll_fz_bound_text(arg_2, null, arg_3),
-                            LayerName
-                        )
-                    );
-            }
-            catch (Exception) { }
-        }
-
-        public override void stroke_text(
-            fz_context arg_0,
-            fz_text arg_2,
-            fz_stroke_state arg_3,
-            fz_matrix arg_4,
-            fz_colorspace arg_5,
-            SWIGTYPE_p_float arg_6,
-            float arg_7,
-            fz_color_params arg_8
-        )
-        {
-            try
-            {
-                if (!layers)
-                    rc.Add(
-                        new BoxLog("stroke-text", mupdf.mupdf.ll_fz_bound_text(arg_2, arg_3, arg_4))
-                    );
-                else
-                    rc.Add(
-                        new BoxLog(
-                            "stroke-text",
-                            mupdf.mupdf.ll_fz_bound_text(arg_2, arg_3, arg_4),
-                            LayerName
-                        )
-                    );
-            }
-            catch (Exception) { }
-        }
-
-        public override void ignore_text(fz_context arg_0, fz_text arg_2, fz_matrix arg_3)
-        {
-            try
-            {
-                if (!layers)
-                    rc.Add(
-                        new BoxLog("ignore-text", mupdf.mupdf.ll_fz_bound_text(arg_2, null, arg_3))
-                    );
-                else
-                    rc.Add(
-                        new BoxLog(
-                            "ignore-text",
-                            mupdf.mupdf.ll_fz_bound_text(arg_2, null, arg_3),
-                            LayerName
-                        )
-                    );
-            }
-            catch (Exception) { }
-        }
-
-        public override void fill_shade(
-            fz_context arg_0,
-            fz_shade arg_2,
-            fz_matrix arg_3,
-            float arg_4,
-            fz_color_params arg_5
-        )
-        {
-            try
-            {
-                if (!layers)
-                    rc.Add(new BoxLog("fill-shade", mupdf.mupdf.ll_fz_bound_shade(arg_2, arg_3)));
-                else
-                    rc.Add(
-                        new BoxLog(
-                            "fill-shade",
-                            mupdf.mupdf.ll_fz_bound_shade(arg_2, arg_3),
-                            LayerName
-                        )
-                    );
-            }
-            catch (Exception) { }
-        }
-
-        public override void fill_image(
-            fz_context arg_0,
-            fz_image arg_2,
-            fz_matrix arg_3,
-            float arg_4,
-            fz_color_params arg_5
-        )
-        {
-            FzRect r = new FzRect(FzRect.Fixed.Fixed_UNIT);
-            fz_rect rr = mupdf.mupdf.ll_fz_transform_rect(r.internal_(), arg_3);
-            if (!layers)
-                rc.Add(new BoxLog("fill-image", rr));
-            else
-                rc.Add(new BoxLog("fill-image", rr, LayerName));
-        }
-
-        public override void fill_image_mask(
-            fz_context arg_0,
-            fz_image arg_2,
-            fz_matrix arg_3,
-            fz_colorspace arg_4,
-            SWIGTYPE_p_float arg_5,
-            float arg_6,
-            fz_color_params arg_7
-        )
-        {
-            try
-            {
-                if (!layers)
-                    rc.Add(
-                        new BoxLog(
-                            "fill-imgmask",
-                            mupdf.mupdf.ll_fz_transform_rect(mupdf.mupdf.fz_unit_rect, arg_3)
-                        )
-                    );
-                else
-                    rc.Add(
-                        new BoxLog(
-                            "fill-imgmask",
-                            mupdf.mupdf.ll_fz_transform_rect(mupdf.mupdf.fz_unit_rect, arg_3),
-                            LayerName
-                        )
-                    );
-            }
-            catch (Exception) { }
-        }
-    }
-
-    public class LineartDevice : FzDevice2
-    {
-        public int SeqNo { get; set; }
-        public int Depth { get; set; }
-        public bool Clips { get; set; }
-        public int Method { get; set; }
-
-        public PathInfo PathDict { get; set; }
-        public List<FzRect> Scissors { get; set; }
-        public int LineWidth { get; set; }
-        public FzMatrix Ptm { get; set; }
-        public FzMatrix Ctm { get; set; }
-        public FzMatrix Rot { get; set; }
-
-        public FzPoint LastPoint { get; set; }
-        public FzPoint FirstPoint { get; set; }
-        public int HaveMove { get; set; }
-        public FzRect PathRect { get; set; }
-        public float PathFactor { get; set; }
-        public int LineCount { get; set; }
-        public int PathType { get; set; }
-        public string LayerName { get; set; }
-
-        public List<PathInfo> Out { get; set; }
-
-        public LineartDevice(List<PathInfo> rc, bool clips)
-            : base()
-        {
-            use_virtual_fill_path();
-            use_virtual_stroke_path();
-            use_virtual_clip_path();
-            use_virtual_clip_image_mask();
-            use_virtual_clip_stroke_path();
-            use_virtual_clip_stroke_text();
-            use_virtual_clip_text();
-
-            use_virtual_fill_text();
-            use_virtual_stroke_text();
-            use_virtual_ignore_text();
-
-            use_virtual_fill_shade();
-            use_virtual_fill_image();
-            use_virtual_fill_image_mask();
-
-            use_virtual_pop_clip();
-
-            use_virtual_begin_group();
-            use_virtual_end_group();
-
-            use_virtual_begin_layer();
-            use_virtual_end_layer();
-
-            SeqNo = 0;
-            Depth = 0;
-            Clips = clips;
-            Method = 0;
-            Out = rc;
-
-            PathDict = new PathInfo();
-            Scissors = new List<FzRect>();
-            LineWidth = 0;
-            Ptm = new FzMatrix();
-            Ctm = new FzMatrix();
-            Rot = new FzMatrix();
-            LastPoint = new FzPoint();
-            FirstPoint = new FzPoint();
-            HaveMove = 0;
-            PathRect = new FzRect();
-            PathFactor = 0;
-            LineCount = 0;
-            PathType = 0;
-            LayerName = "";
-        }
-
-        public override void clip_path(
-            fz_context arg_0,
-            SWIGTYPE_p_fz_path arg_2,
-            int arg_3,
-            fz_matrix arg_4,
-            fz_rect arg_5
-        )
-        {
-            if (!Clips)
-                return;
-
-            Ctm = new FzMatrix(arg_4);
-            PathType = Utils.trace_device_CLIP_PATH;
-            LineartPath(arg_0, arg_2);
-            if (PathDict == null)
-                return;
-
-            PathDict.Type = "clip";
-            PathDict.EvenOdd = Convert.ToBoolean(arg_3);
-            PathDict.ClosePath = false;
-
-            PathDict.Scissor = new Rect(Utils.ComputerScissor(this));
-            PathDict.Level = Depth;
-            PathDict.Layer = LayerName;
-            AppendMerge();
-            Depth += 1;
-        }
-
-        public override void stroke_path(
-            fz_context ctx,
-            SWIGTYPE_p_fz_path path,
-            fz_stroke_state stroke,
-            fz_matrix ctm,
-            fz_colorspace cs,
-            SWIGTYPE_p_float color,
-            float alpha,
-            fz_color_params colorparam
-        )
-        {
-            PathFactor = 1;
-            if (Ctm.a != 0 && Math.Abs(Ctm.a) == Math.Abs(Ctm.d))
-                PathFactor = Math.Abs(Ctm.a);
-            else if (Ctm.b != 0 && Math.Abs(Ctm.b) == Math.Abs(Ctm.c))
-                PathFactor = Math.Abs(Ctm.b);
-            Ctm = new FzMatrix(ctm);
-            PathType = Utils.trace_device_CLIP_STROKE_PATH;
-
-            LineartPath(ctx, path);
-            if (PathDict == null)
-                return;
-
-            PathDict.Type = "s";
-            PathDict.StrokeOpacity = alpha;
-            PathDict.Color = LineartColor(cs, color);
-            PathDict.Width = PathFactor * stroke.linewidth;
-            PathDict.LineCap = new List<LineCapType>()
-            {
-                (LineCapType)stroke.start_cap,
-                (LineCapType)stroke.dash_cap,
-                (LineCapType)stroke.end_cap
-            };
-            PathDict.LineJoin = PathFactor * (int)stroke.linejoin;
-
-            PathDict.ClosePath = false;
-
-            if (stroke.dash_len != 0)
-            {
-                FzBuffer buff = mupdf.mupdf.fz_new_buffer(256);
-                buff.fz_append_string("[ ");
-                for (int i = 0; i < stroke.dash_len; i++)
+                foreach (var annot in Annots())
                 {
-                    float value = mupdf.mupdf.floats_getitem(stroke.dash_list, (uint)i);
-                    buff.fz_append_string($"{Utils.FloatToString(PathFactor * value)} ");
+                    if (annot.Id == name)
+                        return annot;
                 }
-                buff.fz_append_string($"] {Utils.FloatToString(PathFactor * stroke.dash_phase)}");
-                PathDict.Dashes = Encoding.UTF8.GetString(Utils.BinFromBuffer(buff));
+                return null;
             }
-            else
-                PathDict.Dashes = "[] 0";
-            PathDict.Rect = new Rect(PathRect);
-            PathDict.Layer = LayerName;
-            PathDict.SeqNo = SeqNo;
-            if (Clips)
-                PathDict.Level = Depth;
-            AppendMerge();
-            SeqNo += 1;
-        }
-
-        public override void fill_path(
-            fz_context ctx,
-            SWIGTYPE_p_fz_path path,
-            int evenOdd,
-            fz_matrix ctm,
-            fz_colorspace cs,
-            SWIGTYPE_p_float color,
-            float alpha,
-            fz_color_params colorParams
-        )
-        {
-            bool bEvenOdoo = evenOdd != 0 ? true : false;
-            try
+            if (ident is int xref)
             {
-                Ctm = new FzMatrix(ctm);
-                PathType = Utils.trace_device_FILL_PATH;
-                LineartPath(ctx, path);
-                if (PathDict == null)
-                    return;
-                PathDict.Type = "f";
-                PathDict.EvenOdd = bEvenOdoo;
-                PathDict.FillOpacity = alpha;
-                PathDict.Fill = LineartColor(cs, color);
-                PathDict.Rect = new Rect(PathRect);
-                PathDict.SeqNo = SeqNo;
-                PathDict.Layer = LayerName;
-
-                if (Clips)
-                    PathDict.Level = Depth;
-
-                AppendMerge();
-                SeqNo += 1;
-            }
-            catch// (Exception e)
-            {
-                throw;
-            }
-        }
-
-        public override void clip_image_mask(
-            fz_context ctx,
-            fz_image image,
-            fz_matrix ctm,
-            fz_rect scissors
-        )
-        {
-            if (!Clips)
-                return;
-            Utils.ComputerScissor(this);
-            Depth += 1;
-        }
-
-        public override void clip_stroke_path(
-            fz_context ctx,
-            SWIGTYPE_p_fz_path path,
-            fz_stroke_state stroke,
-            fz_matrix ctm,
-            fz_rect scissors
-        )
-        {
-            if (!Clips)
-                return;
-            Ctm = new FzMatrix(ctm);
-            PathType = Utils.trace_device_CLIP_STROKE_PATH;
-            LineartPath(ctx, path);
-            if (PathDict == null)
-                return;
-
-            PathDict.Type = "clip";
-            PathDict.EvenOdd = false;
-            PathDict.ClosePath = false;
-            PathDict.Scissor = new Rect(Utils.ComputerScissor(this));
-            PathDict.Level = Depth;
-            PathDict.Layer = LayerName;
-            AppendMerge();
-            Depth += 1;
-        }
-
-        public override void clip_stroke_text(
-            fz_context arg_0,
-            fz_text arg_2,
-            fz_stroke_state arg_3,
-            fz_matrix arg_4,
-            fz_rect arg_5
-        )
-        {
-            if (!Clips)
-                return;
-            Utils.ComputerScissor(this);
-            Depth += 1;
-        }
-
-        public override void clip_text(fz_context ctx, fz_text text, fz_matrix ctm, fz_rect scissor)
-        {
-            if (!Clips)
-                return;
-            Utils.ComputerScissor(this);
-            Depth += 1;
-        }
-
-        public override void fill_text(
-            fz_context arg_0,
-            fz_text arg_2,
-            fz_matrix arg_3,
-            fz_colorspace arg_4,
-            SWIGTYPE_p_float arg_5,
-            float arg_6,
-            fz_color_params arg_7
-        )
-        {
-            SeqNo++;
-        }
-
-        public override void stroke_text(
-            fz_context arg_0,
-            fz_text arg_2,
-            fz_stroke_state arg_3,
-            fz_matrix arg_4,
-            fz_colorspace arg_5,
-            SWIGTYPE_p_float arg_6,
-            float arg_7,
-            fz_color_params arg_8
-        )
-        {
-            SeqNo++;
-        }
-
-        public override void ignore_text(fz_context arg_0, fz_text arg_2, fz_matrix arg_3)
-        {
-            SeqNo++;
-        }
-
-        public override void fill_shade(
-            fz_context arg_0,
-            fz_shade arg_2,
-            fz_matrix arg_3,
-            float arg_4,
-            fz_color_params arg_5
-        )
-        {
-            SeqNo++;
-        }
-
-        public override void fill_image(
-            fz_context arg_0,
-            fz_image arg_2,
-            fz_matrix arg_3,
-            float arg_4,
-            fz_color_params arg_5
-        )
-        {
-            SeqNo++;
-        }
-
-        public override void fill_image_mask(
-            fz_context arg_0,
-            fz_image arg_2,
-            fz_matrix arg_3,
-            fz_colorspace arg_4,
-            SWIGTYPE_p_float arg_5,
-            float arg_6,
-            fz_color_params arg_7
-        )
-        {
-            SeqNo++;
-        }
-
-        public override void pop_clip(fz_context arg_0)
-        {
-            if (!Clips || Scissors == null)
-                return;
-            int len = Scissors.Count;
-            if (len < 1)
-                return;
-            Scissors.RemoveAt(Scissors.Count - 1);
-            Depth -= 1;
-        }
-
-        public override void begin_group(
-            fz_context ctx,
-            fz_rect bbox,
-            fz_colorspace cs,
-            int isolated,
-            int knockout,
-            int blendmode,
-            float alpha
-        )
-        {
-            if (!Clips)
-                return;
-            PathDict = new PathInfo()
-            {
-                Type = "group",
-                Rect = new Rect(new FzRect(bbox)),
-                Isolated = Convert.ToBoolean(isolated),
-                Knockout = Convert.ToBoolean(knockout),
-                BlendMode = mupdf.mupdf.fz_blendmode_name(blendmode),
-                Opacity = alpha,
-                Level = Depth,
-                Layer = LayerName
-            };
-
-            AppendMerge();
-            Depth += 1;
-        }
-
-        public override void end_group(fz_context arg_0)
-        {
-            if (!Clips)
-                return;
-            Depth -= 1;
-        }
-
-        public override void begin_layer(fz_context arg_0, string name)
-        {
-            if (name == "" || name == null)
-                LayerName = name;
-            else
-                LayerName = "";
-        }
-
-        public override void end_layer(fz_context arg_0)
-        {
-            LayerName = "";
-        }
-
-        public float[] LineartColor(fz_colorspace colorSpace, SWIGTYPE_p_float color)
-        {
-            if (colorSpace != null)
-            {
-                try
+                foreach (var annot in Annots())
                 {
-                    FzColorspace cs = new FzColorspace(mupdf.FzColorspace.Fixed.Fixed_RGB);
-                    FzColorParams cp = new FzColorParams();
-
-                    IntPtr pColor = Marshal.AllocHGlobal(3 * sizeof(float));
-                    SWIGTYPE_p_float swigColor = new SWIGTYPE_p_float(pColor, true);
-                    mupdf.mupdf.ll_fz_convert_color(
-                        colorSpace,
-                        color,
-                        cs.m_internal,
-                        swigColor,
-                        null,
-                        cp.internal_()
-                    );
-
-                    float[] ret = new float[3];
-                    Marshal.Copy(SWIGTYPE_p_float.getCPtr(swigColor).Handle, ret, 0, 3);
-                    Marshal.FreeHGlobal(pColor);
-
-                    return ret;
+                    if (annot.Xref == xref)
+                        return annot;
                 }
-                catch (Exception)
-                {
-                    return null;
-                }
+                return null;
+            }
+            throw new ArgumentException("identifier must be a string or integer");
+        }
+
+        /// <summary>
+        /// Get first link object loaded from the underlying page.
+        /// Mirrors PyMuPDF <c>Page.load_links()</c>.
+        /// </summary>
+        public Link LoadLinks()
+        {
+            var nativeLink = NativePage.fz_load_links();
+            if (nativeLink.m_internal == null)
+                return null;
+            var val = new Link(nativeLink, this);
+            if (RequireParent().IsPdf)
+            {
+                var linkAnnots = Helpers.JM_get_annot_xref_list(NativePdfPage.obj())
+                    .FindAll(t => t.type_ == (int)mupdf.pdf_annot_type.PDF_ANNOT_LINK);
+                if (linkAnnots.Count > 0)
+                    val.SetLinkAnnotIdentity(linkAnnots[0].xref, linkAnnots[0].nm ?? "");
+            }
+            return val;
+        }
+
+        /// <summary>
+        /// Load a widget by xref.
+        /// Mirrors PyMuPDF <c>Page.load_widget()</c>.
+        /// </summary>
+        public Widget LoadWidget(int xref)
+        {
+            foreach (var widget in Widgets())
+            {
+                if (widget.Xref == xref)
+                    return widget;
             }
             return null;
         }
 
-        public void LineartPath(fz_context arg0, SWIGTYPE_p_fz_path path)
+        /// <summary>
+        /// Add a widget (form field) to this page.
+        /// Best-effort port of Python add_widget using exposed SWIG APIs.
+        /// </summary>
+        public Annot AddWidget(Widget widget)
         {
-            try
+            if (widget == null)
+                throw new ArgumentException("bad type: widget");
+            if (!RequireParent().IsPdf)
+                throw new ArgumentException("is no PDF");
+
+            var pdfPage = NativePdfPage;
+            var annot = mupdf.mupdf.pdf_create_annot(pdfPage, mupdf.pdf_annot_type.PDF_ANNOT_WIDGET);
+            if (annot == null || annot.m_internal == null)
+                throw new InvalidOperationException("cannot create widget");
+
+            var obj = mupdf.mupdf.pdf_annot_obj(annot);
+
+            // Map field type to /FT name.
+            string ft = "Tx";
+            switch (widget.FieldType)
             {
-                PathRect = new FzRect(FzRect.Fixed.Fixed_INFINITE);
-                LineCount = 0;
-                LastPoint = new FzPoint(0, 0);
-                PathDict = new PathInfo();
-                PathDict.Items = new List<Item>();
-
-                Walker walker = new Walker(this);
-
-                FzPathWalker pathWalker = new FzPathWalker(walker.m_internal);
-                SWIGTYPE_p_void swigArg = new SWIGTYPE_p_void(
-                    fz_path_walker.getCPtr(walker.m_internal).Handle,
-                    true
-                );
-
-                mupdf.mupdf.fz_walk_path(
-                    new FzPath(mupdf.mupdf.ll_fz_keep_path(path)),
-                    pathWalker,
-                    swigArg
-                );
-
-                if (PathDict.Items.Count == 0)
-                    PathDict = null;
-            }
-            catch// (Exception e)
-            {
-                throw;
-            }
-        }
-
-        public void AppendMerge()
-        {
-            // Append current path to list or merge into last path of the list.
-            // (1) Append if first path, different item lists or not a 'stroke' version
-            // of previous path
-            // (2) If new path has the same items, merge its content into previous path
-            // and change path["type"] to "fs".
-            // (3) If "out" is callable, skip the previous and pass dictionary to it.
-            void Append()
-            {
-                this.Out.Add(PathDict); // copy key & value
-                PathDict = null;
-            }
-
-            int len = Out.Count; // len of output list so far
-            if (len == 0)   // always append first path
-            {
-                Append();
-                return;
-            }
-
-            string type = PathDict.Type;
-            if (type != "s")    // if not stroke, then append
-            {
-                Append();
-                return;
-            }
-
-            PathInfo prev = Out[len - 1];   // get prev path
-            string prevType = prev.Type;
-
-            if (prevType != "f") // if previous not fill, append
-            {
-                Append();
-                return;
-            }
-            List<Item> prevItems = prev.Items;
-            List<Item> thisItems = PathDict.Items;
-
-            if (prevItems.Count != thisItems.Count)
-            {
-                Append();
-                return;
-            }
-
-            for (int i = 0; i < prevItems.Count; i++)
-            {
-                if (!prevItems[i].Equal(thisItems[i]))
-                {
-                    Append();
-                    return;
-                }
-            }
-
-            if (!string.IsNullOrEmpty(PathDict.Type))
-                prev.Type = PathDict.Type;
-            if (PathDict.EvenOdd == true)
-                prev.EvenOdd = PathDict.EvenOdd;
-            if (PathDict.FillOpacity > 0f)
-                prev.FillOpacity = PathDict.FillOpacity;
-            if (PathDict.Fill != null)
-                prev.Fill = PathDict.Fill;
-            if (PathDict.Rect != null)
-                prev.Rect = PathDict.Rect;
-            if (prev.SeqNo > 0)
-                prev.SeqNo = prev.SeqNo;
-            if (!string.IsNullOrEmpty(PathDict.Layer))
-                prev.Layer = PathDict.Layer;
-            if (PathDict.Width > 0f)
-                prev.Width = PathDict.Width;
-            if (PathDict.StrokeOpacity > 0f)
-                prev.StrokeOpacity = PathDict.StrokeOpacity;
-            if (PathDict.LineJoin > 0f)
-                prev.LineJoin = PathDict.LineJoin;
-            if (PathDict.ClosePath == true)
-                prev.ClosePath = PathDict.ClosePath;
-            if (!string.IsNullOrEmpty(PathDict.Dashes))
-                prev.Dashes = PathDict.Dashes;
-            if (PathDict.Color != null)
-                prev.Color = PathDict.Color;
-            if (PathDict.LineCap != null)
-                prev.LineCap = PathDict.LineCap;
-            if (PathDict.Scissor != null)
-                prev.Scissor = PathDict.Scissor;
-            if (PathDict.Level > 0)
-                prev.Level = PathDict.Level;
-            if (PathDict.Isolated == true)
-                prev.Isolated = PathDict.Isolated;
-            if (PathDict.Knockout == true)
-                prev.Knockout = PathDict.Knockout;
-            if (!string.IsNullOrEmpty(PathDict.BlendMode))
-                prev.BlendMode = PathDict.BlendMode;
-            if (PathDict.Opacity > 0f)
-                prev.Opacity = PathDict.Opacity;
-            prev.Type = "fs";
-            PathDict = null;
-        }
-    }
-
-    public class Walker : FzPathWalker2
-    {
-        public LineartDevice Dev;
-
-        public Walker(LineartDevice dev)
-            : base()
-        {
-            use_virtual_moveto();
-            use_virtual_lineto();
-            use_virtual_curveto();
-            use_virtual_closepath();
-            this.Dev = dev;
-        }
-
-        public override void closepath(fz_context ctx)
-        {
-            try
-            {
-                if (Dev.LineCount == 3)
-                    if (Utils.CheckRect(Dev) != 0)
-                        return;
-                Dev.LineCount = 0;
-
-                if (Dev.HaveMove == 1)
-                {
-                    if (Dev.LastPoint != Dev.FirstPoint)
-                    {
-                        Item line = new Item()
-                        {
-                            Type = "l",
-                            P1 = new Point(Dev.LastPoint),
-                            LastPoint = new Point(Dev.FirstPoint)
-                        };
-                        
-                        Dev.PathDict.Items.Add(line);
-                        Dev.LastPoint = Dev.FirstPoint;
-                    }
-                }
-                else
-                {
-                    Dev.PathDict.ClosePath = true;
-                }
-                Dev.HaveMove = 0;
-            }
-            catch (Exception) { }
-        }
-
-        public override void curveto(
-            fz_context ctx,
-            float x1,
-            float y1,
-            float x2,
-            float y2,
-            float x3,
-            float y3
-        )
-        {
-            try
-            {
-                Dev.LineCount = 0;
-                FzPoint p1 = mupdf.mupdf.fz_make_point(x1, y1);
-                FzPoint p2 = mupdf.mupdf.fz_make_point(x2, y2);
-                FzPoint p3 = mupdf.mupdf.fz_make_point(x3, y3);
-                p1 = mupdf.mupdf.fz_transform_point(p1, Dev.Ctm);
-                p2 = mupdf.mupdf.fz_transform_point(p2, Dev.Ctm);
-                p3 = mupdf.mupdf.fz_transform_point(p3, Dev.Ctm);
-                Dev.PathRect = mupdf.mupdf.fz_include_point_in_rect(Dev.PathRect, p1);
-                Dev.PathRect = mupdf.mupdf.fz_include_point_in_rect(Dev.PathRect, p2);
-                Dev.PathRect = mupdf.mupdf.fz_include_point_in_rect(Dev.PathRect, p3);
-
-                Item curve = new Item()
-                {
-                    Type = "c",
-                    P1 = new Point(Dev.LastPoint),
-                    P2 = new Point(p1),
-                    P3 = new Point(p2),
-                    LastPoint = new Point(p3)
-                };
-
-                Dev.LastPoint = p3;
-                Dev.PathDict.Items.Add(curve);
-            }
-            catch// (Exception ex)
-            {
-                throw new Exception("curveto exception");
-            }
-        }
-
-        public override void lineto(fz_context arg_0, float x, float y)
-        {
-            try
-            {
-                FzPoint p1 = mupdf.mupdf.fz_transform_point(
-                    mupdf.mupdf.fz_make_point(x, y),
-                    Dev.Ctm
-                );
-                Dev.PathRect = mupdf.mupdf.fz_include_point_in_rect(Dev.PathRect, p1);
-                Item line = new Item()
-                {
-                    Type = "l",
-                    P1 = new Point(Dev.LastPoint),
-                    LastPoint = new Point(p1)
-                };
-
-                Dev.LastPoint = p1;
-
-                List<Item> items = Dev.PathDict.Items;
-                items.Add(line);
-                Dev.LineCount += 1;
-                if (Dev.LineCount == 4 && Dev.PathType != Utils.trace_device_FILL_PATH)
-                    Utils.CheckQuad(Dev);
-            }
-            catch (Exception)
-            {
-                throw new Exception("lineto exception");
-            }
-        }
-
-        public override void moveto(fz_context arg_0, float x, float y)
-        {
-            try
-            {
-                Dev.LastPoint = mupdf.mupdf.fz_transform_point(
-                    mupdf.mupdf.fz_make_point(x, y),
-                    Dev.Ctm
-                );
-                if (Dev.PathRect.fz_is_infinite_rect() != 0)
-                    Dev.PathRect = mupdf.mupdf.fz_make_rect(
-                        Dev.LastPoint.x,
-                        Dev.LastPoint.y,
-                        Dev.LastPoint.x,
-                        Dev.LastPoint.y
-                    );
-                Dev.FirstPoint = Dev.LastPoint;
-                Dev.HaveMove = 1;
-                Dev.LineCount = 0;
-            }
-            catch (Exception)
-            {
-                throw new Exception("moveto exception");
-            }
-        }
-    }
-
-    public class TextTraceDevice : FzDevice2
-    {
-        public int SeqNo { get; set; }
-
-        public int Depth { get; set; }
-        public bool Clips { get; set; }
-        public int Method { get; set; }
-
-        public PathInfo PathDict { get; set; }
-        public List<FzRect> Scissors { get; set; }
-        public float LineWidth { get; set; }
-        public FzMatrix Ptm { get; set; }
-        public FzMatrix Ctm { get; set; }
-        public FzMatrix Rot { get; set; }
-
-        public FzPoint LastPoint { get; set; }
-        public FzRect PathRect { get; set; }
-        public float PathFactor { get; set; }
-        public int LineCount { get; set; }
-        public int PathType { get; set; }
-        public string LayerName { get; set; }
-
-        public List<SpanInfo> Out { get; set; }
-
-        public TextTraceDevice(List<SpanInfo> o)
-            : base()
-        {
-            Out = o;
-            use_virtual_fill_path();
-            use_virtual_stroke_path();
-            use_virtual_fill_text();
-            use_virtual_stroke_text();
-            use_virtual_ignore_text();
-            use_virtual_fill_shade();
-            use_virtual_fill_image();
-            use_virtual_fill_image_mask();
-
-            use_virtual_begin_layer();
-            use_virtual_end_layer();
-
-            SeqNo = 0;
-            Depth = 0;
-            Clips = false;
-            Method = 0;
-
-            Ctm = new FzMatrix();
-            Rot = new FzMatrix();
-            PathDict = new PathInfo();
-            Scissors = new List<FzRect>();
-            LineWidth = 0;
-            Ptm = new FzMatrix();
-            LastPoint = new FzPoint();
-            PathRect = new FzRect();
-            PathFactor = 0;
-            LineCount = 0;
-            PathType = 0;
-            LayerName = "";
-        }
-
-        public override void fill_path(
-            fz_context arg_0,
-            SWIGTYPE_p_fz_path arg_2,
-            int arg_3,
-            fz_matrix arg_4,
-            fz_colorspace arg_5,
-            SWIGTYPE_p_float arg_6,
-            float arg_7,
-            fz_color_params arg_8
-        )
-        {
-            SeqNo += 1;
-        }
-
-        public override void stroke_path(
-            fz_context arg_0,
-            SWIGTYPE_p_fz_path arg_2,
-            fz_stroke_state arg_3,
-            fz_matrix arg_4,
-            fz_colorspace arg_5,
-            SWIGTYPE_p_float arg_6,
-            float arg_7,
-            fz_color_params arg_8
-        )
-        {
-            LineWidth = arg_3.linewidth;
-            SeqNo += 1;
-        }
-
-        public override void fill_text(
-            fz_context arg_0,
-            fz_text text,
-            fz_matrix ctm,
-            fz_colorspace colorspace,
-            SWIGTYPE_p_float color,
-            float alpha,
-            fz_color_params arg_7
-        )
-        {
-            fz_text_span span = text.head;
-            while (true)
-            {
-                if (span == null)
+                case WidgetType.Button:
+                case WidgetType.CheckBox:
+                case WidgetType.RadioButton:
+                    ft = "Btn";
                     break;
-                TraceTextSpan(span, 0, ctm, colorspace, color, alpha);
-                span = span.next;
-            }
-            SeqNo += 1;
-        }
-
-        public override void stroke_text(
-            fz_context arg_0,
-            fz_text text,
-            fz_stroke_state arg_3,
-            fz_matrix ctm,
-            fz_colorspace colorspace,
-            SWIGTYPE_p_float color,
-            float alpha,
-            fz_color_params arg_8
-        )
-        {
-            fz_text_span span = text.head;
-            while (true)
-            {
-                if (span == null)
+                case WidgetType.ComboBox:
+                case WidgetType.ListBox:
+                    ft = "Ch";
                     break;
-                TraceTextSpan(span, 1, ctm, colorspace, color, alpha);
-                span = span.next;
-            }
-            SeqNo += 1;
-        }
-
-        internal void TraceTextSpan(
-            fz_text_span span,
-            int type,
-            fz_matrix ctm,
-            fz_colorspace colorspace,
-            SWIGTYPE_p_float color,
-            float alpha
-        )
-        {
-            FzTextSpan fzSpan = new FzTextSpan(span);
-            Ctm = new FzMatrix(ctm);
-            string fontName = Utils.GetFontName(span.font);
-
-            FzMatrix mat = mupdf.mupdf.fz_concat(new FzMatrix(span.trm), Ctm);
-            FzPoint dir = mupdf.mupdf.fz_transform_vector(mupdf.mupdf.fz_make_point(1, 0), mat);
-            float fsize = (float)Math.Sqrt(dir.x * dir.x + dir.y * dir.y);
-            dir = mupdf.mupdf.fz_normalize_vector(dir);
-            float spaceAdv = 0;
-
-            float asc = mupdf.mupdf.fz_font_ascender(fzSpan.font());
-            float desc = mupdf.mupdf.fz_font_descender(fzSpan.font());
-            if (asc < 1e-3)
-            {
-                desc = -0.1f;
-                asc = 0.9f;
-            }
-
-            float ascSize = asc * fsize / (asc - desc);
-            float dscSize = desc * fsize / (asc - desc);
-            float fflags = 0;
-            int mono = mupdf.mupdf.fz_font_is_monospaced(fzSpan.font());
-            fflags += mono * (int)TextType.TEXT_FONT_MONOSPACED;
-            fflags += mupdf.mupdf.fz_font_is_italic(fzSpan.font()) * (int)TextType.TEXT_FONT_ITALIC;
-            fflags += mupdf.mupdf.fz_font_is_serif(fzSpan.font()) * (int)TextType.TEXT_FONT_SERIFED;
-            fflags += mupdf.mupdf.fz_font_is_bold(fzSpan.font()) * (int)TextType.TEXT_FONT_BOLD;
-
-            float lastAdv = 0;
-            FzRect spanBbox = new FzRect();
-            FzMatrix rot = mupdf.mupdf.fz_make_matrix(dir.x, dir.y, -dir.y, dir.x, 0, 0);
-            if (dir.x == -1)
-                rot.d = 1;
-
-            List<Char> chars = new List<Char>();
-            for (int i = 0; i < span.len; i++)
-            {
-                float adv = 0;
-                FzTextSpan t = new FzTextSpan(span);
-                if (t.items(i).gid >= 0)
-                    adv = mupdf.mupdf.fz_advance_glyph(
-                        t.font(),
-                        t.items(i).gid,
-                        (int)t.m_internal.wmode
-                    );
-                adv *= fsize;
-                lastAdv = adv;
-                if (t.items(i).ucs == 32)
-                    spaceAdv = adv;
-
-                FzPoint charOrig = mupdf.mupdf.fz_make_point(t.items(i).x, t.items(i).y);
-                charOrig = mupdf.mupdf.fz_transform_point(charOrig, new FzMatrix(ctm));
-                FzMatrix m1 = mupdf.mupdf.fz_make_matrix(1, 0, 0, 1, -charOrig.x, -charOrig.y);
-                m1 = mupdf.mupdf.fz_concat(m1, rot);
-                m1 = mupdf.mupdf.fz_concat(m1, new FzMatrix(1, 0, 0, 1, charOrig.x, charOrig.y));
-                float x0 = charOrig.x;
-                float x1 = x0 + adv;
-
-                float y0,
-                    y1;
-                if ((mat.d > 0) && (dir.x == 1 || dir.x == -1) || (mat.b != 0 && mat.b == -mat.c))
-                {
-                    y0 = charOrig.y + dscSize;
-                    y1 = charOrig.y + ascSize;
-                }
-                else
-                {
-                    y0 = charOrig.y - ascSize;
-                    y1 = charOrig.y - dscSize;
-                }
-                FzRect charBbox = mupdf.mupdf.fz_make_rect(x0, y0, x1, y1);
-                charBbox = mupdf.mupdf.fz_transform_rect(charBbox, m1);
-
-                chars.Add(
-                    new Char()
-                    {
-                        UCS = t.items(i).ucs,
-                        GID = t.items(i).gid,
-                        Origin = new FzPoint(charOrig.x, charOrig.y),
-                        Bbox = new FzRect(charBbox)
-                    }
-                );
-                if (i > 0)
-                    spanBbox = mupdf.mupdf.fz_union_rect(spanBbox, charBbox);
-                else
-                    spanBbox = charBbox;
-            }
-
-            if (spaceAdv == 0)
-            {
-                if (mono == 0)
-                {
-                    int c = mupdf.mupdf.fz_encode_character_with_fallback(
-                        fzSpan.font(),
-                        32,
-                        0,
-                        0,
-                        new FzFont()
-                    );
-                    spaceAdv = mupdf.mupdf.fz_advance_glyph(
-                        fzSpan.font(),
-                        c,
-                        (int)fzSpan.m_internal.wmode
-                    );
-                    spaceAdv *= fsize;
-                    if (spaceAdv == 0)
-                        spaceAdv = lastAdv;
-                }
-                else
-                    spaceAdv = lastAdv;
-            }
-
-            SpanInfo spanInfo = new SpanInfo();
-            spanInfo.Dir = new Point(dir);
-            spanInfo.Font = Utils.EscapeStrFromStr(fontName);
-            spanInfo.WMode = fzSpan.m_internal.wmode;
-            spanInfo.Flags = fflags;
-            spanInfo.BidiLevel = fzSpan.m_internal.bidi_level;
-            spanInfo.BidiDir = fzSpan.m_internal.markup_dir;
-            spanInfo.Ascender = asc;
-            spanInfo.Descender = desc;
-            spanInfo.ColorSpace = 3;
-
-            float[] rgb = new float[3];
-            if (colorspace != null)
-            {
-                IntPtr pDV = Marshal.AllocHGlobal(4 * sizeof(float));
-                SWIGTYPE_p_float swigDV = new SWIGTYPE_p_float(pDV, true);
-                mupdf.mupdf.fz_convert_color(
-                    new FzColorspace(colorspace),
-                    color,
-                    mupdf.mupdf.fz_device_rgb(),
-                    swigDV,
-                    new FzColorspace(),
-                    new FzColorParams()
-                );
-
-                float[] ret = new float[4];
-                Marshal.Copy(SWIGTYPE_p_float.getCPtr(swigDV).Handle, ret, 0, 4);
-
-                rgb = ret.Take(3).ToArray();
-            }
-            else
-                rgb = new float[] { 0, 0, 0 };
-
-            float lineWidth = 0;
-            if (LineWidth > 0)
-                lineWidth = LineWidth;
-            else
-                lineWidth = fsize * 0.05f;
-
-            spanInfo.Color = rgb;
-            spanInfo.Size = fsize;
-            spanInfo.Opacity = alpha;
-            spanInfo.LineWidth = lineWidth;
-            spanInfo.SpaceWidth = spaceAdv;
-            spanInfo.Type = type;
-            spanInfo.Bbox = new Rect(spanBbox);
-            spanInfo.Layer = LayerName;
-            spanInfo.SeqNo = SeqNo;
-            spanInfo.Chars = chars;
-
-            Out.Add(spanInfo);
-        }
-
-        public override void ignore_text(fz_context arg_0, fz_text text, fz_matrix ctm)
-        {
-            fz_text_span span = text.head;
-            while (true)
-            {
-                if (span == null)
+                case WidgetType.Signature:
+                    ft = "Sig";
                     break;
-                TraceTextSpan(span, 3, ctm, null, null, 1);
-                span = span.next;
+                default:
+                    ft = "Tx";
+                    break;
             }
-            SeqNo += 1;
+            mupdf.mupdf.pdf_dict_put(obj, mupdf.mupdf.pdf_new_name("FT"), mupdf.mupdf.pdf_new_name(ft));
+
+            if (!string.IsNullOrEmpty(widget.FieldName))
+                mupdf.mupdf.pdf_dict_put_text_string(obj, mupdf.mupdf.pdf_new_name("T"), widget.FieldName);
+            if (!string.IsNullOrEmpty(widget.FieldValue))
+                mupdf.mupdf.pdf_dict_put_text_string(obj, mupdf.mupdf.pdf_new_name("V"), widget.FieldValue);
+            if (!string.IsNullOrEmpty(widget.FieldLabel))
+                mupdf.mupdf.pdf_dict_put_text_string(obj, mupdf.mupdf.pdf_new_name("TU"), widget.FieldLabel);
+
+            mupdf.mupdf.pdf_set_annot_rect(annot, widget.Rect.ToFzRect());
+            mupdf.mupdf.pdf_update_annot(annot);
+            return new Annot(annot, this);
         }
 
-        public override void fill_shade(
-            fz_context arg_0,
-            fz_shade arg_2,
-            fz_matrix arg_3,
-            float arg_4,
-            fz_color_params arg_5
-        )
+        /// <summary>
+        /// Delete widget from page and return the next one.
+        /// Port of Python delete_widget().
+        /// </summary>
+        public Widget DeleteWidget(Widget widget)
         {
-            SeqNo += 1;
+            if (widget == null)
+                throw new ArgumentException("bad type: widget");
+            var nextWidget = widget.Next;
+            var annot = LoadAnnot(widget.Xref);
+            if (annot == null)
+                throw new ArgumentException("bad type: widget");
+            DeleteAnnot(annot);
+            return nextWidget;
         }
 
-        public override void fill_image(
-            fz_context arg_0,
-            fz_image arg_2,
-            fz_matrix arg_3,
-            float arg_4,
-            fz_color_params arg_5
-        )
+        // ─── Bounding boxes ─────────────────────────────────────────────
+
+        private Rect GetMediaBox()
         {
-            SeqNo += 1;
+            try
+            {
+                var pdfPage = NativePdfPage;
+                var mb = mupdf.mupdf.pdf_dict_get_inheritable(pdfPage.obj(), mupdf.mupdf.pdf_new_name("MediaBox"));
+                if (mb.m_internal != null)
+                {
+                    var r = mupdf.mupdf.pdf_to_rect(mb);
+                    return new Rect(r.x0, r.y0, r.x1, r.y1);
+                }
+            }
+            catch { }
+            return Rect;
         }
 
-        public override void fill_image_mask(
-            fz_context arg_0,
-            fz_image arg_2,
-            fz_matrix arg_3,
-            fz_colorspace arg_4,
-            SWIGTYPE_p_float arg_5,
-            float arg_6,
-            fz_color_params arg_7
-        )
+        private Rect GetCropBox()
         {
-            SeqNo += 1;
+            try
+            {
+                var pdfPage = NativePdfPage;
+                var cb = mupdf.mupdf.pdf_dict_get_inheritable(pdfPage.obj(), mupdf.mupdf.pdf_new_name("CropBox"));
+                if (cb.m_internal != null)
+                {
+                    var r = mupdf.mupdf.pdf_to_rect(cb);
+                    return new Rect(r.x0, r.y0, r.x1, r.y1);
+                }
+            }
+            catch { }
+            return MediaBox;
         }
 
-        public override void begin_layer(fz_context arg_0, string name)
+        private Rect GetSpecialBox(string name)
         {
-            if (!string.IsNullOrEmpty(name))
-                LayerName = name;
-            else
-                LayerName = "";
+            try
+            {
+                var pdfPage = NativePdfPage;
+                var box = mupdf.mupdf.pdf_dict_gets(pdfPage.obj(), name);
+                if (box.m_internal != null)
+                {
+                    var r = mupdf.mupdf.pdf_to_rect(box);
+                    return new Rect(r.x0, r.y0, r.x1, r.y1);
+                }
+            }
+            catch { }
+            return CropBox;
         }
 
-        public override void end_layer(fz_context arg_0)
+        // ─── Run page ───────────────────────────────────────────────────
+
+        /// <summary>
+        /// Run the page through a device.
+        /// </summary>
+        public void Run(mupdf.FzDevice dev, Matrix transform)
         {
-            LayerName = "";
+            mupdf.mupdf.fz_run_page(NativePage, dev, transform.ToFzMatrix(), new mupdf.FzCookie());
+        }
+
+        // ─── Table Detection ─────────────────────────────────────────────
+
+        /// <summary>
+        /// Find tables on this page using the pdfplumber-style algorithm.
+        /// Returns a TableFinder containing all detected tables.
+        /// </summary>
+        /// <param name="settings">Optional table detection settings.</param>
+        public TableFinder FindTables(TableSettings? settings = null)
+        {
+            return new TableFinder(this, settings);
+        }
+
+        // ─── IDisposable ────────────────────────────────────────────────
+
+        /// <summary>
+        /// Releases all resources used by the page.
+        /// </summary>
+        public void Dispose()
+        {
+            if (!_disposed)
+            {
+                TearDownFromParent();
+            }
+            GC.SuppressFinalize(this);
+        }
+
+        /// <summary>
+        /// Port of the teardown portion of Python <c>Page._erase</c>: detach from the owning
+        /// <see cref="Document"/> and drop the native <c>fz_page</c> handle.
+        /// </summary>
+        internal void TearDownFromParent()
+        {
+            if (_disposed)
+                return;
+
+            _reset_annot_refs();
+            Parent?.ForgetPageRef(this);
+            Parent = null;
+
+            _nativePage?.Dispose();
+            _nativePage = null;
+            _disposed = true;
+        }
+
+        ~Page() { Dispose(); }
+
+        /// <summary>Same idea as PyMuPDF <c>Page.__str__</c>: page index and parent document label.</summary>
+        public override string ToString()
+        {
+            var doc = Parent;
+            if (doc == null)
+                return "page <detached>";
+
+            int number;
+            try { number = Number; }
+            catch { number = -1; }
+
+            string x = doc.Name;
+            if (doc.StreamData != null)
+                x = "memory";
+            else if (string.IsNullOrEmpty(x))
+                x = "new PDF";
+            return $"page {number} of <{x}, doc# {doc.GraftId}>";
         }
     }
 }

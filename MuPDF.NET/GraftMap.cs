@@ -1,37 +1,58 @@
-using mupdf;
 using System;
 
 namespace MuPDF.NET
 {
-    public class GraftMap : IDisposable
+    /// <summary>
+    /// Optimizes object copying between PDF documents, avoiding duplicate copies of shared resources.
+    /// </summary>
+    public class Graftmap : IDisposable
     {
-        static GraftMap()
+        private mupdf.PdfGraftMap _nativeGraftmap;
+        private bool _disposed;
+
+        internal mupdf.PdfGraftMap NativeGraftMap
         {
-            Utils.InitApp();
+            get
+            {
+                if (_disposed) throw new ObjectDisposedException(nameof(Graftmap));
+                return _nativeGraftmap;
+            }
         }
 
-        private PdfGraftMap _nativeGraftMap;
-
-        public bool ThisOwn { get; set; }
-
-        public PdfGraftMap ToPdfGraftMap()
+        /// <summary>
+        /// Initializes a new graft map for the specified document.
+        /// </summary>
+        public Graftmap(Document doc)
         {
-            return _nativeGraftMap;
+            _nativeGraftmap = mupdf.mupdf.pdf_new_graft_map(doc.NativePdfDocument);
         }
 
-        public GraftMap(Document doc)
+        internal Graftmap(mupdf.PdfGraftMap gm)
         {
-            PdfDocument pdf = Document.AsPdfDocument(doc);
-            PdfGraftMap map = pdf.pdf_new_graft_map();
-            _nativeGraftMap = map;
-            ThisOwn = true;
-            pdf.Dispose();
+            _nativeGraftmap = gm;
         }
 
+        // ─── IDisposable ────────────────────────────────────────────────
+
+        /// <summary>
+        /// Releases all resources used by the <see cref="Graftmap"/>.
+        /// </summary>
         public void Dispose()
         {
-            ThisOwn = false;
-            _nativeGraftMap.Dispose();
+            if (!_disposed)
+            {
+                _nativeGraftmap?.Dispose();
+                _nativeGraftmap = null;
+                _disposed = true;
+            }
+            GC.SuppressFinalize(this);
         }
+
+        ~Graftmap() { Dispose(); }
+
+        /// <summary>
+        /// Returns a string that represents the current graft map.
+        /// </summary>
+        public override string ToString() => "Graftmap()";
     }
 }

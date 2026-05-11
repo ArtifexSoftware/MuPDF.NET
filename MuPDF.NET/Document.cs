@@ -1,1097 +1,1632 @@
-using mupdf;
-using Newtonsoft.Json.Linq;
 using System;
+using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Linq.Expressions;
-using System.Runtime.InteropServices;
-using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 
 namespace MuPDF.NET
 {
-    public class Document : IDisposable
+    /// <summary>
+    /// Represents a document. Mirrors PyMuPDF's Document class.
+    /// </summary>
+    public partial class Document : IDisposable, IEnumerable<Page>
     {
-        static Document()
-        {
-            Utils.InitApp();
-        }
+        private mupdf.FzDocument? _nativeDoc;
+        private bool _disposed;
+        private int _graftId;
+        private static int _nextGraftId;
+        private static int _nextPageRefId;
+        private Dictionary<string, Dictionary<string, object>> _resolvedNames;
 
         /// <summary>
-        /// False if document is still open. If closed, most other attributes and methods will have been deleted / disabled.
+        /// Tracks live <see cref="Page"/> wrappers for this document, analogous to Python
+        /// <c>Document._page_refs</c> (<c>weakref.WeakValueDictionary</c> keyed by <c>id(page)</c>).
         /// </summary>
-        public bool IsClosed { get; set; }
+        private readonly Dictionary<int, WeakReference<Page>> _pageRefs = new Dictionary<int, WeakReference<Page>>();
+        private int _suppressPageRefReset;
 
         /// <summary>
-        /// True if this is a PDF document and contains unsaved changes, else False.
+        /// Indicate whether document has been closed.
         /// </summary>
-        public bool IsEncrypted { get; set; }
-
-        internal int GraftID { get; set; }
-
-        public Dictionary<string, string> MetaData { get; set; }
-
-        public List<FontInfo> FontInfos { get; set; }
-
-        public Dictionary<int, GraftMap> GraftMaps { get; set; } =
-            new Dictionary<int, GraftMap>();
-
-        public Dictionary<(int, int), int> ShownPages { get; set; } =
-            new Dictionary<(int, int), int>();
-
-        public Dictionary<string, int> InsertedImages { get; set; } = new Dictionary<string, int>();
-
-        public Dictionary<int, Page> PageRefs { get; set; }
+        public bool IsClosed { get; private set; }
 
         /// <summary>
-        /// Contains the filename or filetype value with which Document was created.
+        /// Indicate whether document is still encrypted.
         /// </summary>
-        public string Name { get; set; }
-
-        public List<byte> Stream { get; set; }
-
-        private bool _isPDF;
-
-        private FzDocument _nativeDocument;
+        public bool IsEncrypted { get; private set; }
 
         /// <summary>
-        /// Indicates whether the document is password-protected against access.
-        /// <br/>
-        /// This indicator remains unchanged – even after the document has been authenticated. Precludes incremental saves if true.
+        /// The filename or "&lt;memory&gt;" if created from data.
         /// </summary>
-        public bool NeedsPass
+        public string Name { get; private set; } = "";
+
+        /// <summary>
+        /// The binary document data if created from a byte array.
+        /// </summary>
+        public byte[] StreamData { get; private set; }
+
+        internal List<object[]> FontInfos { get; } = new List<object[]>();
+        internal Dictionary<int, Graftmap> Graftmaps { get; } = new Dictionary<int, Graftmap>();
+        internal Dictionary<int, Page> ShownPages { get; } = new Dictionary<int, Page>();
+        internal Dictionary<string, object> InsertedImages { get; } = new Dictionary<string, object>();
+
+        internal mupdf.FzDocument NativeDocument
         {
             get
             {
-                if (IsClosed)
-                    throw new Exception("Document closed");
-                FzDocument doc = _nativeDocument;
-                int ret = doc.fz_needs_password();
-                return ret != 0 ? true : false;
+                if (IsClosed || _nativeDoc == null)
+                    throw new ValueErrorException("document closed");
+                return _nativeDoc;
             }
         }
 
-        /// <summary>
-        /// True if this is a PDF document, else False.
-        /// </summary>
-        public Outline Outline { get; set; }
-
-        /// <summary>
-        /// True if this is a PDF document, else False.
-        /// </summary>
-        public bool IsPDF
+        internal mupdf.PdfDocument NativePdfDocument
         {
             get
             {
-                if (mupdf.mupdf.ll_pdf_specifics(_nativeDocument.m_internal) != null)
-                    return true;
+                var pdf = Helpers.AsPdfDocument(NativeDocument, required: true);
+                return pdf;
+            }
+        }
+
+        internal int GraftId => _graftId;
+
+        // ─── Constructors ───────────────────────────────────────────────
+
+        /// <summary>
+        /// Creates a document. Use 'open' as a synonym.
+        ///
+        /// Basic usages:
+        /// Document() - new PDF document
+        /// Document(filename) - open from file path.
+        /// Document(data, filetype) - open from byte array.
+        /// rect, width, height, fontsize: layout reflowable document on open (e.g. EPUB).
+        /// </summary>
+        public Document()
+        {
+            var pdf = new mupdf.PdfDocument();
+            _nativeDoc = new mupdf.FzDocument(pdf);
+            _graftId = _nextGraftId++;
+            Name = "";
+            InitDoc();
+        }
+
+        /// <summary>
+        /// Creates a document. Use 'open' as a synonym.
+        ///
+        /// Basic usages:
+        /// Document() - new PDF document
+        /// Document(filename) - open from file path.
+        /// Document(data, filetype) - open from byte array.
+        /// rect, width, height, fontsize: layout reflowable document on open (e.g. EPUB).
+        /// </summary>
+        public Document(string filename, string filetype = null, Rect rect = null, float width = 0, float height = 0, float fontsize = 11)
+        {
+            _graftId = _nextGraftId++;
+            if (!File.Exists(filename))
+                throw new FileNotFoundException($"no such file: '{filename}'");
+            if (Directory.Exists(filename))
+                throw new FileDataException($"'{filename}' is no file");
+            if (new FileInfo(filename).Length == 0)
+                throw new EmptyFileException($"Cannot open empty file: {filename}");
+
+            Name = filename;
+            float w = width, h = height;
+            if (rect != null)
+            {
+                var r = rect.ToFzRect();
+                if (mupdf.mupdf.fz_is_infinite_rect(r) == 0) { w = r.x1 - r.x0; h = r.y1 - r.y0; }
+            }
+
+            mupdf.FzDocument doc;
+            try
+            {
+                if (filetype != null)
+                {
+                    var stream = mupdf.mupdf.fz_open_file(filename);
+                    doc = mupdf.mupdf.fz_open_document_with_stream(filetype, stream);
+                }
                 else
-                    return false;
+                    doc = mupdf.mupdf.fz_open_document(filename);
             }
-            set { _isPDF = value; }
+            catch (Exception e)
+            {
+                throw new FileDataException($"Failed to open file '{filename}'.", e);
+            }
+
+            bool laidOut = LayoutDoc(doc, w, h, fontsize);
+            _nativeDoc = doc;
+            if (laidOut)
+                ResetPageRefsInternal();
+            FinishOpen(filename, filetype);
         }
 
-        public bool ThisOwn { get; set; }
+        /// <summary>
+        /// Creates a document. Use 'open' as a synonym.
+        ///
+        /// Basic usages:
+        /// Document() - new PDF document
+        /// Document(filename) - open from file path.
+        /// Document(data, filetype) - open from byte array.
+        /// rect, width, height, fontsize: layout reflowable document on open (e.g. EPUB).
+        /// </summary>
+        public Document(byte[] data, string filetype = null, Rect rect = null, float width = 0, float height = 0, float fontsize = 11)
+        {
+            _graftId = _nextGraftId++;
+            if (data == null || data.Length == 0)
+                throw new EmptyFileException("Cannot open empty stream.");
+
+            StreamData = data;
+            Name = "<memory>";
+            float w = width, h = height;
+            if (rect != null)
+            {
+                var r = rect.ToFzRect();
+                if (mupdf.mupdf.fz_is_infinite_rect(r) == 0) { w = r.x1 - r.x0; h = r.y1 - r.y0; }
+            }
+
+            mupdf.FzDocument doc;
+            try
+            {
+                var mem = Helpers.BufferFromBytes(data);
+                var stream = mupdf.mupdf.fz_open_buffer(mem);
+                doc = mupdf.mupdf.fz_open_document_with_stream(filetype ?? "", stream);
+            }
+            catch (Exception e)
+            {
+                throw new FileDataException("Failed to open stream", e);
+            }
+
+            bool laidOut = LayoutDoc(doc, w, h, fontsize);
+            _nativeDoc = doc;
+            if (laidOut)
+                ResetPageRefsInternal();
+            FinishOpen(null, filetype);
+        }
 
         /// <summary>
-        /// An integer counting the number of versions present in the document. Zero if not a PDF, otherwise the number of incremental saves plus one.
+        /// Open from a readable stream (Python <c>fitz.open(stream=buffer, filetype=type)</c>). Reads the stream to completion; when <see cref="Stream.CanSeek"/> is true, the position is reset to 0 first.
         /// </summary>
-        public int VersionCount
+        public Document(Stream stream, string filetype = null, Rect rect = null, float width = 0, float height = 0, float fontsize = 11)
+            : this(ReadStreamFully(stream), filetype, rect, width, height, fontsize)
+        {
+        }
+
+        // ─── Static factory (Python fitz.open) ───────────────────────────
+
+        /// <summary>Python <c>fitz.open()</c> — new empty PDF.</summary>
+        public static Document Open() => new Document();
+
+        /// <summary>Python <c>fitz.open(filename, ...)</c>.</summary>
+        public static Document Open(string filename, string filetype = null, Rect rect = null, float width = 0, float height = 0, float fontsize = 11)
+            => new Document(filename, filetype, rect, width, height, fontsize);
+
+        /// <summary>Python <c>fitz.open(stream=buffer, filetype=type, ...)</c>.</summary>
+        public static Document Open(byte[] data, string filetype = null, Rect rect = null, float width = 0, float height = 0, float fontsize = 11)
+            => new Document(data, filetype, rect, width, height, fontsize);
+
+        /// <summary>Python <c>fitz.open(stream=stream, filetype=type, ...)</c> for any readable <see cref="Stream"/>.</summary>
+        public static Document Open(Stream stream, string filetype = null, Rect rect = null, float width = 0, float height = 0, float fontsize = 11)
+            => new Document(stream, filetype, rect, width, height, fontsize);
+
+        private static byte[] ReadStreamFully(Stream stream)
+        {
+            if (stream == null) throw new ArgumentNullException(nameof(stream));
+            if (stream.CanSeek && stream.Position != 0)
+                stream.Position = 0;
+            if (stream is MemoryStream mem)
+                return mem.ToArray();
+            using (var buffer = new MemoryStream())
+            {
+                stream.CopyTo(buffer);
+                return buffer.ToArray();
+            }
+        }
+
+        private bool LayoutDoc(mupdf.FzDocument doc, float w, float h, float fontsize)
+        {
+            if (w > 0 && h > 0)
+            {
+                mupdf.mupdf.fz_layout_document(doc, w, h, fontsize);
+                return true;
+            }
+            if (mupdf.mupdf.fz_is_document_reflowable(doc) != 0)
+            {
+                mupdf.mupdf.fz_layout_document(doc, 400, 600, 11);
+                return true;
+            }
+            return false;
+        }
+
+        private void FinishOpen(string filename, string filetype)
+        {
+            if (NeedsPass)
+                IsEncrypted = true;
+            else
+                InitDoc();
+
+            if (filename != null && filename.ToLower().EndsWith("svg") || filetype != null && filetype.ToLower().Contains("svg"))
+            {
+                try { ConvertToPdf(); }
+                catch (Exception e) { throw new FileDataException("cannot open broken document", e); }
+            }
+        }
+
+        // ─── Properties ─────────────────────────────────────────────────
+
+        /// <summary>
+        /// Check for PDF.
+        /// </summary>
+        public bool IsPdf
         {
             get
             {
-                PdfDocument pdf = Document.AsPdfDocument(this);
-                if (pdf.m_internal != null)
-                    pdf.pdf_count_versions();
-
-                pdf.Dispose();
-                
-                return 0;
+                try { var p = new mupdf.PdfDocument(NativeDocument); return p.m_internal != null; }
+                catch { return false; }
             }
         }
 
         /// <summary>
         /// Number of pages.
         /// </summary>
-        public int PageCount
-        {
-            get
-            {
-                if (IsClosed)
-                    throw new Exception("document closed");
-                
-                lock (Utils.MuPDFLock)
-                {
-                    return _nativeDocument.fz_count_pages();
-                }
-            }
-        }
+        public int PageCount => mupdf.mupdf.fz_count_pages(NativeDocument);
+        /// <summary>
+        /// Number of chapters.
+        /// </summary>
+        public int ChapterCount => mupdf.mupdf.fz_count_chapters(NativeDocument);
+        /// <summary>
+        /// Indicate password required.
+        /// </summary>
+        public bool NeedsPass => mupdf.mupdf.fz_needs_password(NativeDocument) != 0;
+        /// <summary>
+        /// Check if document is layoutable.
+        /// </summary>
+        public bool IsReflowable => mupdf.mupdf.fz_is_document_reflowable(NativeDocument) != 0;
 
+        /// <summary>
+        /// Check if document has unsaved changes.
+        /// </summary>
         public bool IsDirty
         {
             get
             {
-                PdfDocument pdf = Document.AsPdfDocument(_nativeDocument);
-                if (pdf.m_internal == null)
-                    return false;
-                int r = pdf.pdf_has_unsaved_changes();
-                pdf.Dispose();
-
-                return r != 0;
+                if (!IsPdf) return false;
+                return mupdf.mupdf.pdf_has_unsaved_changes(NativePdfDocument) != 0;
             }
         }
 
         /// <summary>
-        /// Contains the number of chapters in the document. Always at least 1.
-        /// <br/>
-        /// Relevant only for document types with chapter support (EPUB currently). Other documents will return 1.
+        /// Either False or PDF field count.
         /// </summary>
-        public int ChapterCount
+        public bool IsFormPdf
         {
             get
             {
-                if (IsClosed)
-                    throw new Exception("document closed");
-                
-                lock (Utils.MuPDFLock)
-                {
-                    return _nativeDocument.fz_count_chapters();
-                }
-            }
-        }
-
-        /// <summary>
-        /// True if PDF is in linearized format. False for non-PDF documents.
-        /// </summary>
-        public bool IsFastWebaccess
-        {
-            get
-            {
-                PdfDocument pdf = Document.AsPdfDocument(_nativeDocument);
-                if (pdf.m_internal != null)
-                {
-                    bool ret = pdf.pdf_doc_was_linearized() != 0;
-                    pdf.Dispose();
-                    return ret;
-                }
-                
-                return false;
-            }
-        }
-
-        /// <summary>
-        /// False if this is not a PDF or has no form fields, otherwise the number of root form fields (fields with no ancestors).
-        /// </summary>
-        public int IsFormPDF // return -1 or fields count
-        {
-            get
-            {
-                PdfDocument pdf = Document.AsPdfDocument(_nativeDocument);
-                if (pdf.m_internal == null)
-                    return -1;
-
-                int count = -1;
+                if (!IsPdf) return false;
                 try
                 {
-                    PdfObj fields = Utils.pdf_dict_getl(
-                        pdf.pdf_trailer(),
-                        new string[] { "Root", "AcroForm", "Fields" }
-                    );
-                    if (fields.pdf_is_array() != 0)
-                        count = fields.pdf_array_len();
+                    var pdf = NativePdfDocument;
+                    var fields = Helpers.PdfDictGetl(
+                        mupdf.mupdf.pdf_trailer(pdf),
+                        mupdf.mupdf.pdf_new_name("Root"),
+                        mupdf.mupdf.pdf_new_name("AcroForm"),
+                        mupdf.mupdf.pdf_new_name("Fields"));
+                    return fields.m_internal != null && mupdf.mupdf.pdf_array_len(fields) > 0;
                 }
-                catch (Exception)
-                {
-                    pdf.Dispose();
-                    return -1;
-                }
-
-                pdf.Dispose();
-                if (count >= 0)
-                    return count;
-                
-                return -1;
+                catch { return false; }
             }
         }
 
         /// <summary>
-        /// True if document has a variable page layout (like e-books or HTML).
-        /// </summary>
-        public bool IsReflowable
-        {
-            get
-            {
-                if (IsClosed)
-                    throw new Exception("document is closed");
-                
-                return _nativeDocument.fz_is_document_reflowable() != 0;
-            }
-        }
-
-        /// <summary>
-        /// True if PDF has been repaired during open (because of major structure issues). Always False for non-PDF documents.
+        /// Check whether PDF was repaired.
         /// </summary>
         public bool IsRepaired
         {
             get
             {
-                PdfDocument pdf = Document.AsPdfDocument(_nativeDocument);
-                if (pdf.m_internal == null)
-                    return false;
-
-                bool ret = pdf.pdf_was_repaired() != 0;
-
-                pdf.Dispose();
-
-                return ret;
-            }
-        }
-
-        public string Language
-        {
-            get
-            {
-                PdfDocument pdf = AsPdfDocument(_nativeDocument);
-                if (pdf.m_internal == null)
-                    return null;
-                
-                fz_text_language lang = mupdf.mupdf.pdf_document_language(pdf);
-                pdf.Dispose();
-
-                if (lang == fz_text_language.FZ_LANG_UNSET)
-                    return null;
-
-                return mupdf.mupdf.fz_string_from_text_language2(lang);
+                if (!IsPdf) return false;
+                return mupdf.mupdf.pdf_was_repaired(NativePdfDocument) != 0;
             }
         }
 
         /// <summary>
-        /// Contains (chapter, pno) of the document’s last page.
-        /// <br/>
-        /// Relevant only for document types with chapter support (EPUB currently). Other documents will return (0, page_count - 1) and (0, -1) if it has no pages.
+        /// Check if PDF is linearized (fast web access).
         /// </summary>
-        public (int, int) LastLocation
+        public bool IsFastWebaccess
         {
             get
             {
-                if (IsClosed)
-                    throw new Exception("document closed");
-                
-                FzLocation lastLoc = _nativeDocument.fz_last_page();
-                
-                return (lastLoc.chapter, lastLoc.page);
+                try { return mupdf.mupdf.pdf_doc_was_linearized(NativePdfDocument) != 0; }
+                catch { return false; }
             }
         }
 
         /// <summary>
-        /// A string containing the /PageLayout value. If not specified, the default “SinglePage” is returned. If not a PDF, None is returned.
+        /// Count PDF document versions.
         /// </summary>
-        public string PageLayout
+        public int VersionCount
         {
             get
             {
-                int xref = GetPdfCatalog();
-                if (xref == 0)
-                    return null;
-                (string, string) rc = GetKeyXref(xref, "PageLayout");
-                if (rc.Item1 == "null")
-                    return "SinglePage";
-                if (rc.Item1 == "name")
-                    return rc.Item2.Substring(1);
-                
-                return "SinglePage";
+                try { return mupdf.mupdf.pdf_count_versions(NativePdfDocument); }
+                catch { return 0; }
             }
         }
 
         /// <summary>
-        /// A string containing the /PageMode value. If not specified, the default “UseNone” is returned. If not a PDF, None is returned.
+        /// Number of xref table entries.
         /// </summary>
-        public string PageMode
+        public int XrefLength
         {
             get
             {
-                int xref = GetPdfCatalog();
-                if (xref == 0)
-                    return null;
-                (string, string) rc = GetKeyXref(xref, "PageMode");
-                if (rc.Item1 == "null")
-                    return "UseNone";
-                if (rc.Item1 == "name")
-                    return rc.Item2.Substring(1);
-                
-                return "UseNone";
-            }
-        }
-
-        /// <summary>
-        /// A dictionary indicating the /MarkInfo value. If not specified, the empty dictionary is returned. If not a PDF, None is returned.
-        /// </summary>
-        public Dictionary<string, bool> MarkInfo
-        {
-            get
-            {
-                int xref = GetPdfCatalog();
-                string val;
-                if (xref == 0)
-                    return null;
-                
-                (string, string) rc = GetKeyXref(xref, "MarkInfo");
-                if (rc.Item1 == "null")
-                    return new Dictionary<string, bool>();
-                
-                if (rc.Item1 == "xref")
-                {
-                    xref = Convert.ToInt32(rc.Item2.Split(' ')[0]);
-                    val = GetXrefObject(xref, compressed: 1);
-                }
-                else if (rc.Item1 == "dict")
-                    val = rc.Item2;
-                else
-                    val = null;
-                
-                if (val == null || (val.Substring(0, 2) == "<<" && val.Substring(-2) == ">>"))
-                    return new Dictionary<string, bool>();
-                Dictionary<string, bool> valid = new Dictionary<string, bool>()
-                {
-                    { "Marked", false },
-                    { "UserProperties", false },
-                    { "Suspects", false }
-                };
-
-                string[] valArray = val.Substring(2, -2).Split('/').Skip(1).ToArray();
-                foreach (string v in valArray)
-                {
-                    string[] kv = v.Split(' ');
-                    if (kv.Length == 2 && kv[1] == "true")
-                        valid.Add(kv[0], true);
-                }
-                
-                return valid;
-            }
-        }
-
-        /// <summary>
-        /// Get list of field font resource names.
-        /// </summary>
-        public List<string> FormFonts
-        {
-            get
-            {
-                PdfDocument pdf = Document.AsPdfDocument(this);
-                if (pdf.m_internal == null)
-                    return null;
-                
-                PdfObj fonts = Utils.pdf_dict_getl(
-                    pdf.pdf_trailer(),
-                    new string[] { "Root", "AcroForm", "DR", "Font" });
-                List<string> ret = new List<string>();
-                if (fonts.m_internal != null && fonts.pdf_is_dict() != 0)
-                {
-                    int n = fonts.pdf_dict_len();
-                    for (int i = 0; i < n; i ++)
-                    {
-                        PdfObj f = fonts.pdf_dict_get_key(i);
-                        ret.Add(Utils.UnicodeFromStr(f.pdf_to_name()));
-                    }
-                }
-
-                pdf.Dispose();
-
-                return ret;
+                try { return mupdf.mupdf.pdf_xref_len(NativePdfDocument); }
+                catch { return 0; }
             }
         }
 
         /// <summary>
         /// Document permissions.
         /// </summary>
-        public uint Permissions
+        public int Permissions
         {
             get
             {
-                if (IsEncrypted)
-                    return 0;
-                FzDocument doc = _nativeDocument;
-                PdfDocument pdf = doc.pdf_document_from_fz_document();
-
-                if (pdf.m_internal != null)
-                    return (uint)pdf.pdf_document_permissions();
-
-                uint perm = 0xFFFFFFFC;
-                if (doc.fz_has_permission(fz_permission.FZ_PERMISSION_PRINT) == 0)
-                    perm = perm ^ (uint)mupdf.mupdf.PDF_PERM_PRINT;
-                if (doc.fz_has_permission(fz_permission.FZ_PERMISSION_EDIT) == 0)
-                    perm = perm ^ (uint)mupdf.mupdf.PDF_PERM_MODIFY;
-                if (doc.fz_has_permission(fz_permission.FZ_PERMISSION_COPY) == 0)
-                    perm = perm ^ (uint)mupdf.mupdf.PDF_PERM_COPY;
-                if (doc.fz_has_permission(fz_permission.FZ_PERMISSION_ANNOTATE) == 0)
-                    perm = perm ^ (uint)mupdf.mupdf.PDF_PERM_ANNOTATE;
-                
-                return perm;
+                try { return mupdf.mupdf.pdf_document_permissions(NativePdfDocument); }
+                catch { return 0; }
             }
         }
 
-        public Document(PdfDocument doc)
+        /// <summary>
+        /// Document language.
+        /// </summary>
+        public string Language
         {
-            _nativeDocument = doc.super();
-            IsPDF = true;
-        }
-
-        public Document(
-            string fileName = null,
-            byte[] stream = null,
-            string fileType = null,
-            Rect rect = null,
-            float width = 0,
-            float height = 0,
-            int fontSize = 11
-        )
-        {
-            try
+            get
             {
-                IsClosed = false;
-                IsEncrypted = false;
-                MetaData = null;
-                FontInfos = new List<FontInfo>();
-                PageRefs = new Dictionary<int, Page>();
-
-                if (stream != null)
-                    Stream = new List<byte>(stream);
-                else
-                    Stream = null;
-
-                bool fromFile;
-                if (!string.IsNullOrEmpty(fileName) && stream == null)
+                try
                 {
-                    fromFile = true;
-                    Name = fileName;
+                    var pdf = NativePdfDocument;
+                    var lang = Helpers.PdfDictGetl(
+                        mupdf.mupdf.pdf_trailer(pdf),
+                        mupdf.mupdf.pdf_new_name("Root"),
+                        mupdf.mupdf.pdf_new_name("Lang"));
+                    if (lang.m_internal != null) return mupdf.mupdf.pdf_to_text_string(lang);
                 }
-                else
-                {
-                    fromFile = false;
-                    Name = "";
-                }
-
-                string msg;
-                if (fromFile)
-                {
-                    if (!File.Exists(fileName))
-                    {
-                        msg = $"No such file: {fileName}";
-                        throw new FileNotFoundException(msg);
-                    }
-                    //_nativeDocument = mupdf.mupdf.fz_open_document(fileName);
-                }
-
-                if (
-                    fromFile
-                    && Stream != null
-                    && (new System.IO.FileInfo(fileName).Length == 0 || Stream.Count == 0)
-                )
-                {
-                    msg = $"cannot open empty document";
-                    throw new Exception(msg);
-                }
-
-                float w = width;
-                float h = height;
-                FzRect r = (rect == null) ? new FzRect(FzRect.Fixed.Fixed_INFINITE) : rect.ToFzRect();
-                if (r.fz_is_infinite_rect() != 0)
-                {
-                    w = r.x1 - r.x0;
-                    h = r.y1 - r.y0;
-                }
-
-                FzDocument doc = null;
-                lock (Utils.MuPDFLock)
-                {
-                    if (stream != null)
-                    {
-                        IntPtr dataPtr = Marshal.AllocHGlobal(stream.Length);
-                        Marshal.Copy(stream, 0, dataPtr, stream.Length);
-                        SWIGTYPE_p_unsigned_char swigData = new SWIGTYPE_p_unsigned_char(dataPtr, true);
-                        FzStream data = mupdf.mupdf.fz_open_memory(swigData, (uint)stream.Length);
-                        if (string.IsNullOrEmpty(fileName) || string.IsNullOrEmpty(fileType))
-                            fileName = "pdf";
-                        
-                        string magic = fileName;
-                        if (magic == null)
-                            magic = fileType;
-                        try
-                        {
-                            doc = mupdf.mupdf.fz_open_document_with_stream(magic, data);
-                        }
-                        catch(Exception e)
-                        {
-                            throw new Exception("Failed to open stream : " + e.Message);
-                        }
-                        data.Dispose();
-                    }
-                    else
-                    {
-                        if (!string.IsNullOrEmpty(fileName))
-                        {
-                            if (string.IsNullOrEmpty(fileType))
-                            {
-
-                                try
-                                {
-                                    doc = mupdf.mupdf.fz_open_document(fileName);
-                                }
-                                catch(Exception)
-                                {
-                                    throw new Exception("Failed to open document");
-                                }
-                            }
-                            else
-                            {
-                                fz_document_handler handler = mupdf.mupdf.ll_fz_recognize_document(
-                                    fileType
-                                );
-                                if (handler != null)
-                                {
-                                    if (handler.open != null)
-                                    {
-                                        try
-                                        {
-                                            FzStream _stream = new FzStream(fileName);
-                                            FzStream accel = new FzStream();
-                                            FzArchive archive = new FzArchive();
-                                            // mupdf version greater than 1.25.0
-                                            /*{ 
-                                                doc = new FzDocument(
-                                                    mupdf.mupdf.ll_fz_document_handler_open(handler, _stream.m_internal, accel.m_internal, archive.m_internal, null)       
-                                                );
-                                            }*/
-                                            {
-                                                doc = new FzDocument(mupdf.mupdf.ll_fz_document_handler_open(handler, _stream.m_internal, accel.m_internal, archive.m_internal, null));
-                                            }
-                                        }
-                                        catch (Exception)
-                                        {
-                                            throw new Exception(
-                                                Utils.ErrorMessages["MSG_BAD_DOCUMENT"]
-                                            );
-                                        }
-                                    }
-                                    else if (
-                                        mupdf.mupdf.FZ_VERSION_MAJOR >= 1
-                                        && mupdf.mupdf.FZ_VERSION_MINOR >= 24
-                                    )
-                                    {
-                                        Debug.Assert(false);
-                                        ///////////////////////// in less than version 1.24
-                                        /*data = mupdf.mupdf.fz_open_file(filename);
-                                        doc.m_internal = mupdf.mupdf.ll_fz_document_open_with_stream_fn_call(handler.open_with_stream, data.m_internal);*/
-                                    }
-                                }
-                                else
-                                {
-                                    throw new Exception(Utils.ErrorMessages["MSG_BAD_FILETYPE"]);
-                                }
-                            }
-                        }
-                        else
-                        {
-                            PdfDocument pdf = new PdfDocument();
-                            doc = new FzDocument(pdf);
-                        }
-                    }
-                    if (w > 0 && h > 0)
-                        doc.fz_layout_document(w, h, fontSize);
-                    else if (doc.fz_is_document_reflowable() != 0)
-                        doc.fz_layout_document(400, 600, 11);
-                    _nativeDocument = doc;
-                }
-
-                ThisOwn = true;
-
-                if (ThisOwn)
-                {
-                    GraftID = Utils.GenID();
-                    if (NeedsPass)
-                    {
-                        IsEncrypted = true;
-                    }
-                    else
-                        InitDocument();
-
-                    string filename_ = fileName;
-                    if (
-                        (fileName != null && filename_.ToLower().EndsWith("svg"))
-                        || (fileType != null && fileType.ToLower().Contains("svg"))
-                    )
-                    {
-                        try
-                        {
-                            byte[] _ = Convert2Pdf();
-                        }
-                        catch (Exception)
-                        {
-                            throw new Exception("cannot open broken document");
-                        }
-                    }
-                }
+                catch { }
+                return null;
             }
-            finally { }
         }
 
-        public byte[] Convert2Pdf(int from = 0, int to = -1, int rotate = 0)
+        /// <summary>
+        /// Id (chapter, page) of last page.
+        /// </summary>
+        public (int, int) LastLocation => (ChapterCount - 1, ChapterPageCount(ChapterCount - 1) - 1);
+
+        // ─── Core Methods ───────────────────────────────────────────────
+
+        /// <summary>
+        /// Decrypt document.
+        /// </summary>
+        public bool Authenticate(string password)
+        {
+            bool ok = mupdf.mupdf.fz_authenticate_password(NativeDocument, password) != 0;
+            if (ok) { IsEncrypted = false; InitDoc(); }
+            return ok;
+        }
+
+        /// <summary>
+        /// Load a page.
+        /// </summary>
+        public Page LoadPage(int pageNo)
         {
             if (IsClosed || IsEncrypted)
-                throw new Exception("document closed or encrypted");
-
-            FzDocument doc = _nativeDocument;
-            int fp = from;
-            int tp = to;
-            int srcCount = doc.fz_count_pages();
-
-            if (fp < 0)
-                fp = 0;
-            if (fp > srcCount - 1)
-                fp = srcCount - 1;
-            if (tp < 0)
-                tp = srcCount - 1;
-            if (tp > srcCount - 1)
-                tp = srcCount - 1;
-
-            int len0 = Utils.MUPDF_WARNINGS_STORE.Count;
-            PdfDocument pdfout = new PdfDocument();
-            PdfWriteOptions opts = new PdfWriteOptions();
-            FzBuffer res = null;
-            FzOutput output = null;
-
-            try
+                throw new ValueErrorException("document closed or encrypted");
+            int pc = PageCount;
+            // Python Document.__contains__(int): loc < page_count; load_page then wraps negatives.
+            if (!(pageNo < pc))
+                throw new ValueErrorException("page not in document");
+            int idx = pageNo;
+            if (idx < 0)
             {
-                int incr = 1;
-                if (fp > tp)
-                {
-                    incr = -1;
-                    int t = tp;
-                    tp = fp;
-                    fp = t;
-                }
-
-                int rot = Utils.NormalizeRotation(rotate);
-                int i = fp;
-
-                while (true)
-                {
-                    if (!Utils.INRANGE(i, fp, tp))
-                        break;
-
-                    FzPage page = null;
-                    PdfObj resources = null;
-                    FzBuffer contents = null;
-                    FzDevice dev = null;
-
-                    try
-                    {
-                        page = doc.fz_load_page(i);
-                        FzRect mediabox = page.fz_bound_page();
-                        resources = new PdfObj();
-                        contents = new FzBuffer();
-                        dev = pdfout.pdf_page_write(mediabox, resources, contents);
-                        page.fz_run_page(dev, new FzMatrix(), new FzCookie());
-
-                        PdfObj pageObj = pdfout.pdf_add_page(mediabox, rot, resources, contents);
-                        pdfout.pdf_insert_page(-1, pageObj);
-                    }
-                    finally
-                    {
-                        if (dev != null)
-                        {
-                            dev.fz_close_device();
-                            dev.Dispose();
-                            dev = null;
-                        }
-
-                        if (contents != null)
-                        {
-                            contents.Dispose();
-                            contents = null;
-                        }
-
-                        if (resources != null)
-                        {
-                            resources.Dispose();
-                            resources = null;
-                        }
-
-                        if (page != null)
-                        {
-                            page.Dispose();
-                            page = null;
-                        }
-                    }
-
-                    i += incr;
-                }
-
-                opts.do_garbage = 4;
-                opts.do_compress = 1;
-                opts.do_compress_images = 1;
-                opts.do_compress_fonts = 1;
-                opts.do_sanitize = 1;
-                opts.do_incremental = 0;
-                opts.do_ascii = 0;
-                opts.do_decompress = 0;
-                opts.do_linear = 0;
-                opts.do_clean = 1;
-                opts.do_pretty = 0;
-
-                res = mupdf.mupdf.fz_new_buffer(8192);
-                output = new FzOutput(res);
-                pdfout.pdf_write_document(output, opts);
-                output.fz_close_output();
-
-                byte[] ret = Utils.BinFromBuffer(res);
-                int len1 = Utils.MUPDF_WARNINGS_STORE.Count;
-
-                for (int j = len0; j < len1; j++)
-                {
-                    Console.WriteLine($"{Utils.MUPDF_WARNINGS_STORE[j]}");
-                }
-
-                return ret;
+                while (idx < 0)
+                    idx += pc;
             }
-            finally
+            if (idx < 0 || idx >= pc)
+                throw new ValueErrorException("page not in document");
+            var fzPage = mupdf.mupdf.fz_load_page(NativeDocument, idx);
+            return new Page(fzPage, this);
+        }
+
+        /// <summary>
+        /// Load a page.
+        /// </summary>
+        public Page LoadPage(int chapter, int pageInChapter)
+        {
+            if (IsClosed || IsEncrypted)
+                throw new ValueErrorException("document closed or encrypted");
+            if (!ContainsChapterPage(chapter, pageInChapter))
+                throw new ValueErrorException("page not in document");
+            var fzPage = mupdf.mupdf.fz_load_chapter_page(NativeDocument, chapter, pageInChapter);
+            return new Page(fzPage, this);
+        }
+
+        /// <summary>Python <c>Document.__getitem__(i)</c> for an <c>int</c>: <c>if i not in self: raise IndexError</c> then <c>load_page(i)</c>.</summary>
+        internal Page GetItemPageForIndexer(int pageNo)
+        {
+            int pc = PageCount;
+            if (!(pageNo < pc))
+                throw new IndexOutOfRangeException($"page {pageNo} not in document");
+            return LoadPage(pageNo);
+        }
+
+        /// <summary>Python <c>Document.__getitem__((chapter, pno))</c> membership then <c>load_page</c>.</summary>
+        internal Page GetItemPageForIndexer(int chapter, int pageInChapter)
+        {
+            _ = PageCount;
+            if (!ContainsChapterPage(chapter, pageInChapter))
+                throw new IndexOutOfRangeException($"page ({chapter}, {pageInChapter}) not in document");
+            return LoadPage(chapter, pageInChapter);
+        }
+
+        /// <summary>
+        /// Load a page (Python <c>doc[i]</c> / <c>__getitem__</c>).
+        /// </summary>
+        public Page this[int pageNo] => GetItemPageForIndexer(pageNo);
+
+        /// <summary>
+        /// Page count of chapter.
+        /// </summary>
+        public int ChapterPageCount(int chapter) => mupdf.mupdf.fz_count_chapter_pages(NativeDocument, chapter);
+
+        /// <summary>
+        /// Check if a page number is valid for this document.
+        /// </summary>
+        public bool ContainsPage(int pageNo) => pageNo >= 0 && pageNo < PageCount;
+
+        /// <summary>
+        /// Check if a chapter index and page-within-chapter index are valid (Python <c>(chapter, pno) in doc</c>).
+        /// </summary>
+        public bool ContainsChapterPage(int chapter, int pageInChapter)
+        {
+            if (chapter < 0 || chapter >= ChapterCount) return false;
+            if (pageInChapter < 0 || pageInChapter >= ChapterPageCount(chapter)) return false;
+            return true;
+        }
+
+        /// <summary>Same as <see cref="ContainsChapterPage(int, int)"/> using a <c>(chapter, page)</c> pair.</summary>
+        public bool ContainsLocation((int chapter, int page) loc) => ContainsChapterPage(loc.chapter, loc.page);
+
+        /// <summary>
+        /// Return a generator iterator over a page range.
+        /// </summary>
+        public IEnumerable<Page> Pages(int? start = null, int? stop = null, int? step = null)
+        {
+            int s = start ?? 0, e = stop ?? PageCount, st = step ?? 1;
+            for (int i = s; i < e; i += st)
+                yield return LoadPage(i);
+        }
+
+        /// <summary>
+        /// Get (chapter, page) of next page.
+        /// </summary>
+        public (int chapter, int pageInChapter) NextLocation((int chapter, int page) loc)
+        {
+            var fzLoc = new mupdf.fz_location();
+            fzLoc.chapter = loc.chapter;
+            fzLoc.page = loc.page;
+            var next = mupdf.mupdf.fz_next_page(NativeDocument, new mupdf.FzLocation(fzLoc));
+            return (next.chapter, next.page);
+        }
+
+        /// <summary>
+        /// Get (chapter, page) of previous page.
+        /// </summary>
+        public (int chapter, int pageInChapter) PrevLocation((int chapter, int page) loc)
+        {
+            var fzLoc = new mupdf.fz_location();
+            fzLoc.chapter = loc.chapter;
+            fzLoc.page = loc.page;
+            var prev = mupdf.mupdf.fz_previous_page(NativeDocument, new mupdf.FzLocation(fzLoc));
+            return (prev.chapter, prev.page);
+        }
+
+        /// <summary>
+        /// Convert page number to (chapter, page).
+        /// </summary>
+        public (int chapter, int page) LocationFromPageNumber(int pno)
+        {
+            var loc = mupdf.mupdf.fz_location_from_page_number(NativeDocument, pno);
+            return (loc.chapter, loc.page);
+        }
+
+        /// <summary>
+        /// Convert (chapter, pno) to page number.
+        /// </summary>
+        public int PageNumberFromLocation((int chapter, int page) loc)
+        {
+            var fzLoc = new mupdf.fz_location();
+            fzLoc.chapter = loc.chapter;
+            fzLoc.page = loc.page;
+            return mupdf.mupdf.fz_page_number_from_location(NativeDocument, new mupdf.FzLocation(fzLoc));
+        }
+
+        /// <summary>
+        /// Make a page pointer before layouting document.
+        /// </summary>
+        public ulong MakeBookmark((int chapter, int page) loc)
+        {
+            if (IsClosed || IsEncrypted)
+                throw new ValueErrorException("document closed or encrypted");
+            var fzLoc = new mupdf.FzLocation(loc.chapter, loc.page);
+            return mupdf.mupdf.ll_fz_make_bookmark2(NativeDocument.m_internal, fzLoc.internal_());
+        }
+
+        /// <summary>
+        /// Find new location after layouting a document.
+        /// </summary>
+        public (int chapter, int page) FindBookmark(ulong bm)
+        {
+            if (IsClosed || IsEncrypted)
+                throw new ValueErrorException("document closed or encrypted");
+            var location = mupdf.mupdf.fz_lookup_bookmark2(NativeDocument, bm);
+            return (location.chapter, location.page);
+        }
+
+        // ─── Metadata ───────────────────────────────────────────────────
+
+        /// <summary>
+        /// Get document metadata.
+        /// </summary>
+        public Dictionary<string, string> GetMetadata()
+        {
+            var result = new Dictionary<string, string>();
+            string[] keys = { "format", "encryption", "title", "author", "subject", "keywords", "creator", "producer", "creationDate", "modDate", "trapped" };
+            foreach (var key in keys)
             {
-                if (output != null)
+                try
                 {
-                    output.Dispose();
-                    output = null;
-                }
+                    if (IsPdf && key != "format" && key != "encryption")
+                    {
+                        var direct = TryGetMetadataFromPdfInfo(key);
+                        if (!string.IsNullOrEmpty(direct))
+                        {
+                            result[key] = direct;
+                            continue;
+                        }
+                    }
 
-                if (res != null)
-                {
-                    res.Dispose();
-                    res = null;
+                    string mkey = key == "format" || key == "encryption" ? key : $"info:{key}";
+                    result[key] = mupdf.mupdf.fz_lookup_metadata2(NativeDocument, mkey) ?? "";
                 }
-
-                if (opts != null)
-                {
-                    opts.Dispose();
-                }
-
-                if (pdfout != null)
-                {
-                    pdfout.Dispose();
-                }
+                catch { result[key] = ""; }
             }
+            return result;
         }
 
-        public FzDocument ToFzDocument()
-        {
-            return _nativeDocument;
-        }
-
-        public static PdfDocument AsPdfDocument(FzDocument document, bool required = true)
-        {
-            PdfDocument ret = new PdfDocument(document);
-            if (required)
-                if (ret.m_internal == null)
-                    throw new Exception("document is Null");
-            return ret;
-        }
-
-        public static PdfDocument AsPdfDocument(Document document)
-        {
-            if (document.IsClosed)
-                throw new Exception("document closed");
-            if (document == null)
-                throw new Exception("document is Null");
-            return document._nativeDocument.pdf_document_from_fz_document();
-        }
-
-        public void InitDocument()
-        {
-            if (IsEncrypted)
-                throw new Exception("cannot initialize - document still encrypted");
-
-            Outline = LoadOutline();
-            MetaData = new Dictionary<string, string>();
-
-            Dictionary<string, string> values = new Dictionary<string, string>()
+        private static string MetadataKeyToInfoPdfName(string key) =>
+            key switch
             {
-                { "format", "format" },
+                "title" => "Title",
+                "author" => "Author",
+                "subject" => "Subject",
+                "keywords" => "Keywords",
+                "creator" => "Creator",
+                "producer" => "Producer",
+                "creationDate" => "CreationDate",
+                "modDate" => "ModDate",
+                "trapped" => "Trapped",
+                _ => null,
             };
 
-            //if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                values.Add("title", "info:Title");
-                values.Add("author", "info:Author");
-                values.Add("subject", "info:Subject");
-                values.Add("keywords", "info:Keywords");
-                values.Add("creator", "info:Creator");
-                values.Add("producer", "info:Producer");
-                values.Add("creationDate", "info:CreationDate");
-                values.Add("modDate", "info:ModDate");
-                values.Add("trapped", "info:Trapped");
-            }
-
-            foreach (var value in values)
-            {
-                MetaData.Add(value.Key, GetMetadata(value.Value));
-            }
-            string enc = GetMetadata("encryption");
-            MetaData.Add("encryption", enc == "None" ? null : enc);
-        }
-
-        private string GetMetadata(string key)
+        /// <summary>
+        /// Read standard document info from the PDF <c>/Info</c> dictionary when
+        /// <see cref="mupdf.mupdf.fz_lookup_metadata2"/> has not yet observed in-memory updates.
+        /// </summary>
+        private string TryGetMetadataFromPdfInfo(string key)
         {
+            var pdfName = MetadataKeyToInfoPdfName(key);
+            if (pdfName == null)
+                return null;
             try
             {
-                return _nativeDocument.fz_lookup_metadata2(key);
-            }
-            catch (Exception)
-            {
-                return "None";
-            }
-        }
-
-        public int GetPageXref(int pno)
-        {
-            if (IsClosed)
-                throw new Exception("document closed");
-            
-            int pageCount = PageCount;
-            int n = pno;
-
-            while (n < 0)
-                n += pageCount;
-
-            PdfDocument pdf = AsPdfDocument(this);
-            int xref = 0;
-            if (n >= pageCount)
-            {
-                pdf.Dispose();
-                throw new Exception(Utils.ErrorMessages["MSG_BAD_PAGENO"]);
-            }
-            xref = pdf.pdf_lookup_page_obj(n).pdf_to_num();
-
-            pdf.Dispose();
-
-            return xref;
-        }
-
-        private Outline LoadOutline()
-        {
-            FzDocument doc = _nativeDocument;
-            FzOutline ol = null;
-            try
-            {
-                ol = doc.fz_load_outline();
-                if (ol.m_internal == null)
+                var pdf = NativePdfDocument;
+                var trailer = mupdf.mupdf.pdf_trailer(pdf);
+                var infoRef = mupdf.mupdf.pdf_dict_get(trailer, mupdf.mupdf.pdf_new_name("Info"));
+                if (infoRef.m_internal == null)
                     return null;
-            }
-            catch (Exception) { }
-            return new Outline(ol);
-        }
-
-        public static PdfObj SetObjectValue(PdfObj obj, string key, string value)
-        {
-            string eyecatcher = "fiz: replace me!";
-            PdfDocument pdf = obj.pdf_get_bound_document();
-
-            string[] list = key.Split('/');
-            int len = list.Length;
-            int i = len - 1;
-            string skey = list[i];
-
-            list = list.Take(len - 1).ToArray();
-            len = list.Length;
-            PdfObj testkey = obj.pdf_dict_getp(key);
-
-            if (testkey.m_internal == null)
-            {
-                while (len > 0)
+                mupdf.PdfObj infoDict;
+                if (mupdf.mupdf.pdf_is_indirect(infoRef) != 0)
                 {
-                    string t = string.Join("/", list);
-                    if (obj.pdf_dict_getp(t).pdf_is_indirect() != 0)
-                        throw new Exception(string.Format("path to '{0}' has indirects", skey));
-                    
-                    list = list.Take(len - 1).ToArray();
-                    len = list.Length;
+                    int xn = mupdf.mupdf.pdf_to_num(infoRef);
+                    infoDict = mupdf.mupdf.pdf_load_object(pdf, xn);
                 }
+                else
+                    infoDict = infoRef;
+                if (infoDict.m_internal == null)
+                    return null;
+                var val = infoDict.pdf_dict_get(mupdf.mupdf.pdf_new_name(pdfName));
+                if (val.m_internal == null)
+                    return null;
+                if (mupdf.mupdf.pdf_is_string(val) != 0)
+                    return mupdf.mupdf.pdf_to_text_string(val);
+                if (mupdf.mupdf.pdf_is_name(val) != 0)
+                    return mupdf.mupdf.pdf_to_name(val);
+                return null;
             }
-
-            obj.pdf_dict_putp(key, mupdf.mupdf.pdf_new_text_string(eyecatcher));
-            testkey = obj.pdf_dict_getp(key);
-            if (testkey.pdf_is_string() == 0)
-                throw new Exception(string.Format("cannot insert value for '{0}'", key));
-
-            string temp = mupdf.mupdf.pdf_to_text_string(testkey);
-            if (temp != eyecatcher)
-                throw new Exception(string.Format("cannot insert value for '{0}'", key));
-
-            FzBuffer res = Object2Buffer(obj, 1, 0);
-            string objStr = Utils.EscapeStrFromBuffer(res);
-
-            string nullVal = string.Format("{0}({1})", skey, eyecatcher);
-            string newVal = string.Format("{0} {1}", skey, value);
-            string newStr = objStr.Replace(nullVal, newVal);
-
-            PdfObj newObj = Utils.PdfObjFromStr(pdf, newStr);
-            
-            return newObj;
+            catch
+            {
+                return null;
+            }
         }
 
-        public static FzBuffer Object2Buffer(PdfObj what, int compress, int ascii)
+        /// <summary>
+        /// Set document metadata.
+        /// </summary>
+        public void SetMetadata(Dictionary<string, string> m)
         {
-            FzBuffer ret = new FzBuffer(512);
-            FzOutput output = new FzOutput(ret);
-            output.pdf_print_obj(what, compress, ascii);
-            output.fz_close_output();
-            output.Dispose();
-            ret.fz_terminate_buffer();
+            EnsurePdf();
 
-            return ret;
-        }
+            m ??= new Dictionary<string, string>();
 
-        public void SetKeyXRef(int xref, string key, string value)
-        {
-            if (IsClosed)
-                throw new Exception("Document closed");
-
-            HashSet<char> INVALID_NAME_CHARS = new HashSet<char>(
-                new char[] { ' ', '(', ')', '<', '>', '[', ']', '{', '}', '/', '%', '\0' }
-            );
-            var invalidChars = new HashSet<char>(INVALID_NAME_CHARS);
-            var intersection = invalidChars.Intersect(key.ToArray());
-
-            if (string.IsNullOrEmpty(key) || intersection.Count() != 0)
+            // Keys accepted by PyMuPDF Document.set_metadata (src/__init__.py).
+            var keymap = new Dictionary<string, string>
             {
-                if (intersection.Count() == 1 && intersection.First() != '/')
-                    throw new Exception("Bad Key");
-            }
-            if (
-                !(value is string)
-                || string.IsNullOrEmpty(value)
-                || (value[0] == '/' && INVALID_NAME_CHARS.Intersect(value.Substring(1)).Any())
-            )
-            {
-                throw new Exception("Bad Value");
-            }
+                ["author"] = "Author",
+                ["producer"] = "Producer",
+                ["creator"] = "Creator",
+                ["title"] = "Title",
+                ["format"] = null,
+                ["encryption"] = null,
+                ["creationDate"] = "CreationDate",
+                ["modDate"] = "ModDate",
+                ["subject"] = "Subject",
+                ["keywords"] = "Keywords",
+                ["trapped"] = "Trapped",
+            };
 
-            PdfDocument pdf = AsPdfDocument(this);
-            int xrefLen = pdf.pdf_xref_len();
-            PdfObj obj = null;
-            if (!Utils.INRANGE(xref, 1, xrefLen - 1) && xref != -1)
-            {
-                pdf.Dispose();
-                throw new Exception(Utils.ErrorMessages["MSG_BAD_XREF"]);
-            }
+            var invalidKeys = m.Keys.Where(k => !keymap.ContainsKey(k)).ToList();
+            if (invalidKeys.Count > 0)
+                throw new ValueErrorException($"bad dict key(s): {{{string.Join(", ", invalidKeys)}}}");
 
-            if (xref != -1)
-                obj = pdf.pdf_load_object(xref);
-            else
-                obj = pdf.pdf_trailer();
-            
-            PdfObj nObj = SetObjectValue(obj, key, value);
-            if (nObj.m_internal == null)
+            var pdf = NativePdfDocument;
+            var trailer = mupdf.mupdf.pdf_trailer(pdf);
+            var infoKey = mupdf.mupdf.pdf_new_name("Info");
+            var info = mupdf.mupdf.pdf_dict_get(trailer, infoKey);
+
+            if (m.Count == 0 && info.m_internal == null)
+                return;
+
+            if (m.Count == 0)
             {
-                pdf.Dispose();
+                trailer.pdf_dict_del(infoKey);
+                InitDoc();
                 return;
             }
 
-            if (xref != -1)
-                pdf.pdf_update_object(xref, nObj);
+            mupdf.PdfObj infoObj;
+            int infoXref = 0;
+            if (info.m_internal == null)
+            {
+                // fz_lookup_metadata reads /Info as an indirect object; mirror PyMuPDF xref + trailer ref.
+                infoXref = GetNewXref();
+                var emptyDict = mupdf.mupdf.pdf_new_dict(pdf, 4);
+                pdf.pdf_update_object(infoXref, emptyDict);
+                var ind = pdf.pdf_new_indirect(infoXref, 0);
+                trailer.pdf_dict_put(infoKey, ind);
+                info = mupdf.mupdf.pdf_dict_get(trailer, infoKey);
+            }
+
+            if (info.m_internal != null && mupdf.mupdf.pdf_is_indirect(info) != 0)
+            {
+                infoXref = mupdf.mupdf.pdf_to_num(info);
+                infoObj = mupdf.mupdf.pdf_load_object(pdf, infoXref);
+            }
             else
-            {
-                int n = nObj.pdf_dict_len();
-                for (int i = 0; i < n; i++)
-                    obj.pdf_dict_put(nObj.pdf_dict_get_key(i), nObj.pdf_dict_get_val(i));
-            }
+                infoObj = info;
 
-            pdf.Dispose();
-        }
-
-        public (string, string) GetKeyXref(int xref, string key)
-        {
-            if (IsClosed)
-                throw new Exception("document closed");
-
-            PdfDocument pdf = AsPdfDocument(this);
-            int xrefLen = pdf.pdf_xref_len();
-            if (!Utils.INRANGE(xref, 1, xrefLen - 1) && xref != -1)
+            foreach (var kv in m)
             {
-                pdf.Dispose();
-                throw new Exception(Utils.ErrorMessages["MSG_BAD_XREF"]);
-            }
+                if (!keymap.TryGetValue(kv.Key, out var pdfKey) || pdfKey == null)
+                    continue;
 
-            PdfObj obj = null;
-            if (xref > 0)
-                obj = pdf.pdf_load_object(xref);
-            else
-                obj = pdf.pdf_trailer();
-
-            if (obj == null)
-            {
-                pdf.Dispose();
-                return ("null", "null");
-            }
-
-            PdfObj subObj = obj.pdf_dict_getp(key);
-            if (subObj == null)
-                return ("null", "null");
-
-            string type = null;
-            string text = null;
-            if (subObj.pdf_is_indirect() != 0)
-            {
-                type = "xref";
-                text = $"{subObj.pdf_to_num()} 0 R";
-            }
-            else if (subObj.pdf_is_array() != 0)
-                type = "array";
-            else if (subObj.pdf_is_dict() != 0)
-                type = "dict";
-            else if (subObj.pdf_is_int() != 0)
-            {
-                type = "int";
-                text = $"{subObj.pdf_to_int()}";
-            }
-            else if (subObj.pdf_is_real() != 0)
-                type = "float";
-            else if (subObj.pdf_is_null() != 0)
-            {
-                type = "null";
-                text = "null";
-            }
-            else if (subObj.pdf_is_bool() != 0)
-            {
-                type = "bool";
-                if (subObj.pdf_to_bool() != 0)
-                    text = "true";
+                var nameObj = mupdf.mupdf.pdf_new_name(pdfKey);
+                if (string.IsNullOrEmpty(kv.Value) || string.Equals(kv.Value, "none", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(kv.Value, "null", StringComparison.OrdinalIgnoreCase))
+                    infoObj.pdf_dict_del(nameObj);
                 else
-                    text = "false";
-            }
-            else if (subObj.pdf_is_name() != 0)
-            {
-                type = "name";
-                text = $"/{subObj.pdf_to_name()}";
-            }
-            else if (subObj.pdf_is_string() != 0)
-            {
-                type = "string";
-                text = Utils.UnicodeFromStr(subObj.pdf_to_text_string());
-            }
-            else
-                type = "unknown";
-            if (text is null)
-            {
-                FzBuffer res = Utils.Object2Buffer(subObj, 1, 0);
-                text = Utils.UnicodeFromBuffer(res);
+                    infoObj.pdf_dict_put_text_string(nameObj, kv.Value);
             }
 
-            pdf.Dispose();
-            return (type, text);
+            if (infoXref > 0)
+                pdf.pdf_update_object(infoXref, infoObj);
+
+            InitDoc();
         }
 
-        public void Save(
-            dynamic filename,
+        // ─── TOC ────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Get table of contents.
+        /// </summary>
+        public List<(int level, string title, int page, Dictionary<string, object> link)> GetToc(bool simple = true)
+        {
+            var result = new List<(int, string, int, Dictionary<string, object>)>();
+            var ol = mupdf.mupdf.fz_load_outline(NativeDocument);
+            if (ol.m_internal == null) return result;
+            CollectToc(ol, result, 1, simple);
+            return result;
+        }
+
+        private List<int> DelTocInternal()
+        {
+            EnsureNotClosed();
+            if (IsEncrypted)
+                throw new ValueErrorException("document closed or encrypted");
+            var xrefs = new List<int>();
+            var pdf = Helpers.AsPdfDocument(NativeDocument, required: false);
+            if (pdf == null || pdf.m_internal == null)
+                return xrefs;
+
+            var root = mupdf.mupdf.pdf_dict_get(mupdf.mupdf.pdf_trailer(pdf), mupdf.mupdf.pdf_new_name("Root"));
+            var olroot = mupdf.mupdf.pdf_dict_get(root, mupdf.mupdf.pdf_new_name("Outlines"));
+            if (olroot.m_internal == null)
+                return xrefs;
+
+            var first = mupdf.mupdf.pdf_dict_get(olroot, mupdf.mupdf.pdf_new_name("First"));
+            void Collect(mupdf.PdfObj item)
+            {
+                if (item == null || item.m_internal == null)
+                    return;
+                xrefs.Add(mupdf.mupdf.pdf_to_num(item));
+                var down = mupdf.mupdf.pdf_dict_get(item, mupdf.mupdf.pdf_new_name("First"));
+                if (down.m_internal != null)
+                    Collect(down);
+                var next = mupdf.mupdf.pdf_dict_get(item, mupdf.mupdf.pdf_new_name("Next"));
+                if (next.m_internal != null)
+                    Collect(next);
+            }
+            Collect(first);
+
+            int olrootXref = mupdf.mupdf.pdf_to_num(olroot);
+            mupdf.mupdf.pdf_delete_object(pdf, olrootXref);
+            mupdf.mupdf.pdf_dict_del(root, mupdf.mupdf.pdf_new_name("Outlines"));
+            for (int i = 0; i < xrefs.Count; i++)
+                mupdf.mupdf.pdf_delete_object(pdf, xrefs[i]);
+            xrefs.Add(olrootXref);
+            InitDoc();
+            return xrefs;
+        }
+
+        private int GetOLRootNumber()
+        {
+            EnsureNotClosed();
+            if (IsEncrypted)
+                throw new ValueErrorException("document closed or encrypted");
+            var pdf = NativePdfDocument;
+            var root = mupdf.mupdf.pdf_dict_get(mupdf.mupdf.pdf_trailer(pdf), mupdf.mupdf.pdf_new_name("Root"));
+            var olroot = mupdf.mupdf.pdf_dict_get(root, mupdf.mupdf.pdf_new_name("Outlines"));
+            if (olroot.m_internal == null)
+            {
+                olroot = mupdf.mupdf.pdf_new_dict(pdf, 4);
+                mupdf.mupdf.pdf_dict_put(olroot, mupdf.mupdf.pdf_new_name("Type"), mupdf.mupdf.pdf_new_name("Outlines"));
+                var indObj = mupdf.mupdf.pdf_add_object(pdf, olroot);
+                mupdf.mupdf.pdf_dict_put(root, mupdf.mupdf.pdf_new_name("Outlines"), indObj);
+                olroot = mupdf.mupdf.pdf_dict_get(root, mupdf.mupdf.pdf_new_name("Outlines"));
+            }
+            return mupdf.mupdf.pdf_to_num(olroot);
+        }
+
+        private static string FormatNum(double v) => v.ToString("g", System.Globalization.CultureInfo.InvariantCulture);
+
+        private static string BuildDestAction(int xref, Dictionary<string, object> ddict)
+        {
+            if (ddict == null)
+                return "";
+            int kind = ddict.ContainsKey("kind") && ddict["kind"] is int ? (int)ddict["kind"] : Constants.LINK_NONE;
+            if (kind == Constants.LINK_NONE)
+                return "";
+
+            if (kind == Constants.LINK_GOTO)
+            {
+                double zoom = ddict.ContainsKey("zoom") ? Convert.ToDouble(ddict["zoom"], System.Globalization.CultureInfo.InvariantCulture) : 0.0;
+                Point to = ddict.ContainsKey("to") && ddict["to"] is Point ? new Point((Point)ddict["to"]) : new Point(0, 0);
+                return "/A<</S/GoTo/D[" + xref.ToString(System.Globalization.CultureInfo.InvariantCulture) + " 0 R/XYZ "
+                    + FormatNum(to.X) + " " + FormatNum(to.Y) + " " + FormatNum(zoom) + "]>>";
+            }
+            if (kind == Constants.LINK_URI)
+            {
+                string uri = ddict.ContainsKey("uri") ? ddict["uri"]?.ToString() ?? "" : "";
+                return "/A<</S/URI/URI" + Helpers.GetPdfStr(uri) + ">>";
+            }
+            if (kind == Constants.LINK_LAUNCH)
+            {
+                string file = ddict.ContainsKey("file") ? ddict["file"]?.ToString() ?? "" : "";
+                string fspec = Helpers.GetPdfStr(file);
+                return "/A<</S/Launch/F<</F" + fspec + "/UF" + fspec + "/Type/Filespec>>>>";
+            }
+            if (kind == Constants.LINK_GOTOR)
+            {
+                string file = ddict.ContainsKey("file") ? ddict["file"]?.ToString() ?? "" : "";
+                string fspec = Helpers.GetPdfStr(file);
+                int page = ddict.ContainsKey("page") ? Convert.ToInt32(ddict["page"], System.Globalization.CultureInfo.InvariantCulture) : -1;
+                if (page < 0)
+                {
+                    string to = ddict.ContainsKey("to") ? Helpers.GetPdfStr(ddict["to"]?.ToString() ?? "") : Helpers.GetPdfStr("");
+                    return "/A<</S/GoToR/D" + to + "/F<</F" + fspec + "/UF" + fspec + "/Type/Filespec>>>>";
+                }
+                Point p = ddict.ContainsKey("to") && ddict["to"] is Point ? new Point((Point)ddict["to"]) : new Point(0, 0);
+                double z = ddict.ContainsKey("zoom") ? Convert.ToDouble(ddict["zoom"], System.Globalization.CultureInfo.InvariantCulture) : 0.0;
+                return "/A<</S/GoToR/D[" + page.ToString(System.Globalization.CultureInfo.InvariantCulture) + " /XYZ "
+                    + FormatNum(p.X) + " " + FormatNum(p.Y) + " " + FormatNum(z) + "]/F<</F" + fspec + "/UF" + fspec + "/Type/Filespec>>>>";
+            }
+            return "";
+        }
+
+        private static List<object> TocRowToList(object row)
+        {
+            if (row is IList<object> lo) return new List<object>(lo);
+            if (row is object[] oa) return new List<object>(oa);
+            if (row is System.Collections.IList il)
+            {
+                var rc = new List<object>(il.Count);
+                for (int i = 0; i < il.Count; i++) rc.Add(il[i]);
+                return rc;
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Create new outline tree (table of contents, TOC).
+        ///
+        /// Args:
+        /// toc: (list, tuple) each entry must contain level, title, page and
+        /// optionally top margin on the page. None or '()' remove the TOC.
+        /// collapse: (int) collapses entries beyond this level. Zero or None
+        /// shows all entries unfolded.
+        /// Returns:
+        /// the number of inserted items, or the number of removed items respectively.
+        /// </summary>
+        public int SetToc(IList<object> toc, int collapse = 1)
+        {
+            if (IsClosed || IsEncrypted)
+                throw new ValueErrorException("document closed or encrypted");
+            if (!IsPdf)
+                throw new ValueErrorException(Constants.MSG_IS_NO_PDF);
+            // if not toc:  # remove all entries
+            if (toc == null || toc.Count == 0)
+                return DelTocInternal().Count;
+
+            int toclen = toc.Count;
+            int pageCount = PageCount;
+            var t0 = TocRowToList(toc[0]);
+            if (t0 == null || (t0.Count != 3 && t0.Count != 4))
+                throw new ValueErrorException("items must be sequences of 3 or 4 items");
+            if (Convert.ToInt32(t0[0], System.Globalization.CultureInfo.InvariantCulture) != 1)
+                throw new ValueErrorException("hierarchy level of item 0 must be 1");
+
+            for (int i = 0; i < toclen - 1; i++)
+            {
+                var t1 = TocRowToList(toc[i]);
+                var t2 = TocRowToList(toc[i + 1]);
+                int page = Convert.ToInt32(t1[2], System.Globalization.CultureInfo.InvariantCulture);
+                if (page < -1 || page > pageCount)
+                    throw new ValueErrorException("row " + i.ToString(System.Globalization.CultureInfo.InvariantCulture) + ": page number out of range");
+                if (t2 == null || (t2.Count != 3 && t2.Count != 4))
+                    throw new ValueErrorException("bad row " + (i + 1).ToString(System.Globalization.CultureInfo.InvariantCulture));
+                int level2 = Convert.ToInt32(t2[0], System.Globalization.CultureInfo.InvariantCulture);
+                if (level2 < 1)
+                    throw new ValueErrorException("bad hierarchy level in row " + (i + 1).ToString(System.Globalization.CultureInfo.InvariantCulture));
+                int level1 = Convert.ToInt32(t1[0], System.Globalization.CultureInfo.InvariantCulture);
+                if (level2 > level1 + 1)
+                    throw new ValueErrorException("bad hierarchy level in row " + (i + 1).ToString(System.Globalization.CultureInfo.InvariantCulture));
+            }
+
+            DelTocInternal();
+            var xref = new List<int>();
+            xref.Add(GetOLRootNumber());
+            for (int i = 0; i < toclen; i++)
+                xref.Add(GetNewXref());
+
+            var lvltab = new Dictionary<int, int> { [0] = 0 };
+            var olitems = new List<Dictionary<string, object>>
+            {
+                new Dictionary<string, object>
+                {
+                    ["count"] = 0, ["first"] = -1, ["last"] = -1, ["xref"] = xref[0]
+                }
+            };
+
+            for (int i = 0; i < toclen; i++)
+            {
+                var o = TocRowToList(toc[i]);
+                int lvl = Convert.ToInt32(o[0], System.Globalization.CultureInfo.InvariantCulture);
+                string title = Helpers.GetPdfStr(o[1]?.ToString() ?? "");
+                int pno = Math.Min(PageCount - 1, Math.Max(0, Convert.ToInt32(o[2], System.Globalization.CultureInfo.InvariantCulture) - 1));
+                int pageXref = PageXref(pno);
+                double pageHeight = PageCropBox(pno).Height;
+                Point top = new Point(72, pageHeight - 36);
+                var dest = new Dictionary<string, object> { ["to"] = top, ["kind"] = Constants.LINK_GOTO };
+                if (Convert.ToInt32(o[2], System.Globalization.CultureInfo.InvariantCulture) < 0)
+                    dest["kind"] = Constants.LINK_NONE;
+
+                if (o.Count > 3)
+                {
+                    object o3 = o[3];
+                    if (o3 is int || o3 is float || o3 is double || o3 is decimal)
+                    {
+                        double t = Convert.ToDouble(o3, System.Globalization.CultureInfo.InvariantCulture);
+                        dest["to"] = new Point(72, pageHeight - t);
+                    }
+                    else if (o3 is Dictionary<string, object> d)
+                    {
+                        // We make a copy of o[3] to avoid modifying our caller's data.
+                        dest = new Dictionary<string, object>(d);
+                        if (!dest.ContainsKey("to"))
+                            dest["to"] = top;
+                        else if (dest["to"] is Point)
+                        {
+                            var page = this[pno];
+                            var point = new Point((Point)dest["to"]);
+                            point.Y = page.CropBox.Height - point.Y;
+                            point.Transform(page.RotationMatrix);
+                            dest["to"] = point;
+                        }
+                    }
+                }
+
+                var dct = new Dictionary<string, object>
+                {
+                    ["first"] = -1,
+                    ["count"] = 0,
+                    ["last"] = -1,
+                    ["prev"] = -1,
+                    ["next"] = -1,
+                    ["dest"] = BuildDestAction(pageXref, dest),
+                    ["top"] = dest["to"],
+                    ["title"] = title,
+                    ["parent"] = lvltab[lvl - 1],
+                    ["xref"] = xref[i + 1],
+                    ["color"] = dest.ContainsKey("color") ? dest["color"] : null,
+                    ["flags"] = (dest.ContainsKey("italic") ? Convert.ToInt32(dest["italic"], System.Globalization.CultureInfo.InvariantCulture) : 0)
+                             + 2 * (dest.ContainsKey("bold") ? Convert.ToInt32(dest["bold"], System.Globalization.CultureInfo.InvariantCulture) : 0)
+                };
+                lvltab[lvl] = i + 1;
+                var parent = olitems[lvltab[lvl - 1]];
+                bool suppress = (dest.ContainsKey("collapse") && Convert.ToBoolean(dest["collapse"], System.Globalization.CultureInfo.InvariantCulture))
+                    || (collapse != 0 && lvl > collapse);
+                parent["count"] = Convert.ToInt32(parent["count"], System.Globalization.CultureInfo.InvariantCulture) + (suppress ? -1 : 1);
+                if (Convert.ToInt32(parent["first"], System.Globalization.CultureInfo.InvariantCulture) == -1)
+                {
+                    parent["first"] = i + 1;
+                    parent["last"] = i + 1;
+                }
+                else
+                {
+                    dct["prev"] = parent["last"];
+                    var prev = olitems[Convert.ToInt32(parent["last"], System.Globalization.CultureInfo.InvariantCulture)];
+                    prev["next"] = i + 1;
+                    parent["last"] = i + 1;
+                }
+                olitems.Add(dct);
+            }
+
+            int OlInt(Dictionary<string, object> d, string k, int def = -1) =>
+                d.TryGetValue(k, out var o) ? Convert.ToInt32(o, System.Globalization.CultureInfo.InvariantCulture) : def;
+
+            for (int i = 0; i < olitems.Count; i++)
+            {
+                var ol = olitems[i];
+                var txt = "<<";
+                if (OlInt(ol, "count", 0) != 0)
+                    txt += "/Count " + OlInt(ol, "count", 0).ToString(System.Globalization.CultureInfo.InvariantCulture);
+                if (ol.TryGetValue("dest", out var destVal) && destVal != null)
+                    txt += destVal.ToString() ?? "";
+                if (OlInt(ol, "first", -1) > -1)
+                    txt += "/First " + xref[OlInt(ol, "first", -1)].ToString(System.Globalization.CultureInfo.InvariantCulture) + " 0 R";
+                if (OlInt(ol, "last", -1) > -1)
+                    txt += "/Last " + xref[OlInt(ol, "last", -1)].ToString(System.Globalization.CultureInfo.InvariantCulture) + " 0 R";
+                if (OlInt(ol, "next", -1) > -1)
+                    txt += "/Next " + xref[OlInt(ol, "next", -1)].ToString(System.Globalization.CultureInfo.InvariantCulture) + " 0 R";
+                if (OlInt(ol, "parent", -1) > -1)
+                    txt += "/Parent " + xref[OlInt(ol, "parent", -1)].ToString(System.Globalization.CultureInfo.InvariantCulture) + " 0 R";
+                if (OlInt(ol, "prev", -1) > -1)
+                    txt += "/Prev " + xref[OlInt(ol, "prev", -1)].ToString(System.Globalization.CultureInfo.InvariantCulture) + " 0 R";
+                if (ol.TryGetValue("title", out var titleVal) && titleVal != null)
+                    txt += "/Title" + titleVal.ToString();
+
+                if (ol.TryGetValue("color", out var colorVal) && colorVal is float[] f3 && f3.Length == 3)
+                    txt += "/C[ " + Helpers.EscapePdfArray(f3).Trim('[', ']') + "]";
+                if (OlInt(ol, "flags", 0) > 0)
+                    txt += "/F " + OlInt(ol, "flags", 0).ToString(System.Globalization.CultureInfo.InvariantCulture);
+                if (i == 0)
+                    txt += "/Type/Outlines";
+                txt += ">>";
+                UpdateObject(xref[i], txt);
+            }
+
+            InitDoc();
+            return toclen;
+        }
+
+        private void RemoveTocItemByXref(int xref)
+        {
+            // "remove" bookmark by letting it point to nowhere
+            var pdf = NativePdfDocument;
+            var item = mupdf.mupdf.pdf_new_indirect(pdf, xref, 0);
+            mupdf.mupdf.pdf_dict_del(item, mupdf.mupdf.pdf_new_name("Dest"));
+            mupdf.mupdf.pdf_dict_del(item, mupdf.mupdf.pdf_new_name("A"));
+            var color = mupdf.mupdf.pdf_new_array(pdf, 3);
+            for (int i = 0; i < 3; i++)
+                mupdf.mupdf.pdf_array_push_real(color, 0.8f);
+            mupdf.mupdf.pdf_dict_put(item, mupdf.mupdf.pdf_new_name("C"), color);
+        }
+
+        private void UpdateTocItemByXref(int xref, string action = null, string title = null, int flags = 0, bool? collapse = null, float[] color = null)
+        {
+            // "update" bookmark by letting it point to nowhere
+            var pdf = NativePdfDocument;
+            var item = mupdf.mupdf.pdf_new_indirect(pdf, xref, 0);
+            if (!string.IsNullOrEmpty(title))
+                mupdf.mupdf.pdf_dict_put_text_string(item, mupdf.mupdf.pdf_new_name("Title"), title);
+            if (!string.IsNullOrEmpty(action))
+            {
+                mupdf.mupdf.pdf_dict_del(item, mupdf.mupdf.pdf_new_name("Dest"));
+                mupdf.mupdf.pdf_dict_put(item, mupdf.mupdf.pdf_new_name("A"), Helpers.JM_pdf_obj_from_str(pdf, action));
+            }
+            mupdf.mupdf.pdf_dict_put_int(item, mupdf.mupdf.pdf_new_name("F"), flags);
+            if (color != null && color.Length == 3)
+            {
+                var c = mupdf.mupdf.pdf_new_array(pdf, 3);
+                for (int i = 0; i < 3; i++)
+                    mupdf.mupdf.pdf_array_push_real(c, color[i]);
+                mupdf.mupdf.pdf_dict_put(item, mupdf.mupdf.pdf_new_name("C"), c);
+            }
+            else if (color != null)
+            {
+                mupdf.mupdf.pdf_dict_del(item, mupdf.mupdf.pdf_new_name("C"));
+            }
+
+            if (collapse.HasValue)
+            {
+                var countObj = mupdf.mupdf.pdf_dict_get(item, mupdf.mupdf.pdf_new_name("Count"));
+                if (countObj.m_internal != null)
+                {
+                    int i = mupdf.mupdf.pdf_dict_get_int(item, mupdf.mupdf.pdf_new_name("Count"));
+                    if ((i < 0 && collapse.Value == false) || (i > 0 && collapse.Value))
+                        mupdf.mupdf.pdf_dict_put_int(item, mupdf.mupdf.pdf_new_name("Count"), -i);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Delete TOC / bookmark item by index.
+        /// </summary>
+        public void DelTocItem(int idx)
+        {
+            int xref = GetOutlineXrefs()[idx];
+            RemoveTocItemByXref(xref);
+        }
+
+        /// <summary>
+        /// Update TOC item by index.
+        ///
+        /// It allows changing the item's title and link destination.
+        ///
+        /// Args:
+        /// idx:
+        /// (int) desired index of the TOC list, as created by get_toc.
+        /// dest_dict:
+        /// (dict) destination dictionary as created by get_toc(False).
+        /// Outrules all other parameters. If None, the remaining parameters
+        /// are used to make a dest dictionary.
+        /// kind:
+        /// (int) kind of link (pymupdf.LINK_GOTO, etc.). If None, then only
+        /// the title will be updated. If pymupdf.LINK_NONE, the TOC item will
+        /// be deleted.
+        /// pno:
+        /// (int) page number (1-based like in get_toc). Required if
+        /// pymupdf.LINK_GOTO.
+        /// uri:
+        /// (str) the URL, required if pymupdf.LINK_URI.
+        /// title:
+        /// (str) the new title. No change if None.
+        /// to:
+        /// (point-like) destination on the target page. If omitted, (72, 36)
+        /// will be used as target coordinates.
+        /// filename:
+        /// (str) destination filename, required for pymupdf.LINK_GOTOR and
+        /// pymupdf.LINK_LAUNCH.
+        /// name:
+        /// (str) a destination name for pymupdf.LINK_NAMED.
+        /// zoom:
+        /// (float) a zoom factor for the target location (pymupdf.LINK_GOTO).
+        /// </summary>
+        public void SetTocItem(int idx, Dictionary<string, object> destDict = null, int? kind = null, int? pno = null,
+            string uri = null, string title = null, Point to = null, string filename = null, float zoom = 0)
+        {
+            int xref = GetOutlineXrefs()[idx];
+            int pageXref = 0;
+
+            if (destDict != null)
+            {
+                if (destDict.ContainsKey("kind") && Convert.ToInt32(destDict["kind"], System.Globalization.CultureInfo.InvariantCulture) == Constants.LINK_GOTO)
+                {
+                    int dpno = Convert.ToInt32(destDict["page"], System.Globalization.CultureInfo.InvariantCulture);
+                    pageXref = PageXref(dpno);
+                    double pageHeight = PageCropBox(dpno).Height;
+                    Point p = destDict.ContainsKey("to") && destDict["to"] is Point ? new Point((Point)destDict["to"]) : new Point(72, 36);
+                    p.Y = pageHeight - p.Y;
+                    destDict["to"] = p;
+                }
+                string action = BuildDestAction(pageXref, destDict);
+                if (!action.StartsWith("/A", StringComparison.Ordinal))
+                    throw new ValueErrorException("bad bookmark dest");
+
+                float[] color = null;
+                if (destDict.ContainsKey("color") && destDict["color"] != null)
+                {
+                    if (destDict["color"] is float[] fc)
+                        color = fc;
+                    else if (destDict["color"] is double[] dc)
+                        color = new float[] { (float)dc[0], (float)dc[1], (float)dc[2] };
+                    else if (destDict["color"] is IList list && list.Count == 3)
+                        color = new float[] { Convert.ToSingle(list[0]), Convert.ToSingle(list[1]), Convert.ToSingle(list[2]) };
+                    if (color == null || color.Length != 3 || color[0] < 0 || color[1] < 0 || color[2] < 0 || color[0] > 1 || color[1] > 1 || color[2] > 1)
+                        throw new ValueErrorException("bad color value");
+                }
+                bool bold = destDict.ContainsKey("bold") && Convert.ToBoolean(destDict["bold"], System.Globalization.CultureInfo.InvariantCulture);
+                bool italic = destDict.ContainsKey("italic") && Convert.ToBoolean(destDict["italic"], System.Globalization.CultureInfo.InvariantCulture);
+                int flags = (italic ? 1 : 0) + (bold ? 2 : 0);
+                bool? collapseState = destDict.ContainsKey("collapse") ? (bool?)Convert.ToBoolean(destDict["collapse"], System.Globalization.CultureInfo.InvariantCulture) : null;
+
+                UpdateTocItemByXref(xref, action: action.Substring(2), title: title, color: color, flags: flags, collapse: collapseState);
+                return;
+            }
+
+            // if kind == LINK_NONE:  # delete bookmark item
+            if (kind.HasValue && kind.Value == Constants.LINK_NONE)
+            {
+                DelTocItem(idx);
+                return;
+            }
+            // if kind is None and title is None:  # treat as no-op
+            if (!kind.HasValue && title == null)
+                return;
+            // if kind is None:  # only update title text
+            if (!kind.HasValue)
+            {
+                UpdateTocItemByXref(xref, action: null, title: title);
+                return;
+            }
+
+            int k = kind.Value;
+            if (k == Constants.LINK_GOTO)
+            {
+                if (!pno.HasValue || pno.Value < 1 || pno.Value > PageCount)
+                    throw new ValueErrorException("bad page number");
+                pageXref = PageXref(pno.Value - 1);
+                double pageHeight = PageCropBox(pno.Value - 1).Height;
+                if (to == null)
+                    to = new Point(72, pageHeight - 36);
+                else
+                {
+                    to = new Point(to);
+                    to.Y = pageHeight - to.Y;
+                }
+            }
+
+            var ddict = new Dictionary<string, object>
+            {
+                ["kind"] = k,
+                ["to"] = to,
+                ["uri"] = uri,
+                ["page"] = pno.HasValue ? pno.Value : -1,
+                ["file"] = filename,
+                ["zoom"] = zoom
+            };
+            string action2 = BuildDestAction(pageXref, ddict);
+            if (action2 == "" || !action2.StartsWith("/A", StringComparison.Ordinal))
+                throw new ValueErrorException("bad bookmark dest");
+
+            UpdateTocItemByXref(xref, action: action2.Substring(2), title: title);
+        }
+
+        private void CollectToc(mupdf.FzOutline ol, List<(int, string, int, Dictionary<string, object>)> result, int level, bool simple)
+        {
+            while (ol.m_internal != null)
+            {
+                string title = ol.m_internal.title ?? "";
+                int page = ol.m_internal.page.page;
+                Dictionary<string, object> link = null;
+                if (!simple)
+                {
+                    link = new Dictionary<string, object> { ["kind"] = (int)LinkType.Goto, ["page"] = page, ["title"] = title };
+                }
+                result.Add((level, title, page, link));
+                var down = new mupdf.FzOutline(ol.m_internal.down);
+                if (down.m_internal != null) CollectToc(down, result, level + 1, simple);
+                ol = new mupdf.FzOutline(ol.m_internal.next);
+            }
+        }
+
+        /// <summary>
+        /// Load first outline.
+        /// </summary>
+        public Outline GetOutline()
+        {
+            var ol = mupdf.mupdf.fz_load_outline(NativeDocument);
+            if (ol.m_internal == null) return null;
+            return new Outline(ol);
+        }
+
+        /// <summary>
+        /// Get list of outline xref numbers.
+        /// </summary>
+        public List<int> GetOutlineXrefs()
+        {
+            var xrefs = new List<int>();
+            var pdf = Helpers.AsPdfDocument(NativeDocument, required: false);
+            if (pdf == null || pdf.m_internal == null)
+                return xrefs;
+            var root = mupdf.mupdf.pdf_dict_get(mupdf.mupdf.pdf_trailer(pdf), mupdf.mupdf.pdf_new_name("Root"));
+            if (root.m_internal == null)
+                return xrefs;
+            var olroot = mupdf.mupdf.pdf_dict_get(root, mupdf.mupdf.pdf_new_name("Outlines"));
+            if (olroot.m_internal == null)
+                return xrefs;
+            var first = mupdf.mupdf.pdf_dict_get(olroot, mupdf.mupdf.pdf_new_name("First"));
+            if (first.m_internal == null)
+                return xrefs;
+
+            void Walk(mupdf.PdfObj item)
+            {
+                if (item == null || item.m_internal == null)
+                    return;
+                xrefs.Add(mupdf.mupdf.pdf_to_num(item));
+                var down = mupdf.mupdf.pdf_dict_get(item, mupdf.mupdf.pdf_new_name("First"));
+                if (down.m_internal != null)
+                    Walk(down);
+                var next = mupdf.mupdf.pdf_dict_get(item, mupdf.mupdf.pdf_new_name("Next"));
+                if (next.m_internal != null)
+                    Walk(next);
+            }
+
+            Walk(first);
+            return xrefs;
+        }
+
+        // ─── Page Operations ────────────────────────────────────────────
+
+        /// <summary>
+        /// Create and return a new page object.
+        /// </summary>
+        public Page NewPage(int pageNo = -1, float width = 595, float height = 842)
+        {
+            EnsurePdf();
+            var pdf = NativePdfDocument;
+            if (pageNo < -1)
+                throw new ValueErrorException(Constants.MSG_BAD_PAGENO);
+            if (pageNo < 0 || pageNo > PageCount) pageNo = PageCount;
+            var mediabox = mupdf.mupdf.fz_make_rect(0, 0, width, height);
+            var newPage = mupdf.mupdf.pdf_add_page(pdf, mediabox, 0, new mupdf.PdfObj(), new mupdf.FzBuffer());
+            mupdf.mupdf.pdf_insert_page(pdf, pageNo, newPage);
+            ResetPageRefsInternal();
+            return LoadPage(pageNo);
+        }
+
+        /// <summary>
+        /// Delete one page from a PDF.
+        /// </summary>
+        public void DeletePage(int pno)
+        {
+            EnsurePdfOpenForDeletePages();
+            pno = Helpers.ResolvePageIndex(PageCount, pno);
+            var pdf = NativePdfDocument;
+            mupdf.mupdf.pdf_delete_page(pdf, pno);
+            if (pdf.m_internal.rev_page_map != null)
+                mupdf.mupdf.ll_pdf_drop_page_tree(pdf.m_internal);
+            if (_suppressPageRefReset == 0)
+                ResetPageRefsInternal();
+        }
+
+        /// <summary>
+        /// Delete pages from a PDF.
+        /// </summary>
+        public void DeletePages(params int[] pages)
+        {
+            var sorted = pages.OrderByDescending(x => x).ToArray();
+            _suppressPageRefReset++;
+            try
+            {
+                foreach (var p in sorted)
+                    DeletePage(p);
+            }
+            finally
+            {
+                _suppressPageRefReset--;
+            }
+            ResetPageRefsInternal();
+        }
+
+        /// <summary>
+        /// Delete pages from a PDF.
+        /// </summary>
+        public void DeletePages(int fromPage, int toPage)
+        {
+            _suppressPageRefReset++;
+            try
+            {
+                for (int i = toPage; i >= fromPage; i--)
+                    DeletePage(i);
+            }
+            finally
+            {
+                _suppressPageRefReset--;
+            }
+            ResetPageRefsInternal();
+        }
+
+        /// <summary>
+        /// Page indices for a half-open <c>[start, stop)</c> slice with <paramref name="step"/> (Python <c>range(start, stop, step)</c> semantics).
+        /// </summary>
+        private static List<int> GetSlicePageIndices(int start, int stop, int step, int pageCount)
+        {
+            if (step == 0)
+                throw new ValueErrorException(Constants.MSG_BAD_PAGENO);
+            int s = start;
+            int e = stop;
+            int pc = pageCount;
+            while (s < 0) s += pc;
+            if (s >= pc)
+                throw new ValueErrorException(Constants.MSG_BAD_PAGENO);
+            while (e < 0) e += pc;
+            if (e > pc)
+                throw new ValueErrorException(Constants.MSG_BAD_PAGENO);
+            var indices = new List<int>();
+            if (step > 0)
+            {
+                for (int i = s; i < e; i += step)
+                    indices.Add(i);
+            }
+            else
+            {
+                for (int i = s; i > e; i += step)
+                    indices.Add(i);
+            }
+            return indices;
+        }
+
+        /// <summary>
+        /// Delete pages in a half-open index interval <c>[start, stop)</c> with optional <paramref name="step"/> (Python <c>del doc[start:stop:step]</c>, PDF only).
+        /// </summary>
+        public void DeletePagesBySlice(int start, int stop, int step = 1)
+        {
+            EnsurePdfOpenForDeletePages();
+            var indices = GetSlicePageIndices(start, stop, step, PageCount);
+            if (indices.Count == 0) return;
+            DeletePages(indices.ToArray());
+        }
+
+        /// <summary>
+        /// Load each page in a slice (Python <c>doc[start:stop:step]</c> when the subscript is a <c>slice</c>).
+        /// </summary>
+        public List<Page> LoadPagesBySlice(int start, int stop, int step = 1)
+        {
+            EnsureNotClosed();
+            var indices = GetSlicePageIndices(start, stop, step, PageCount);
+            var list = new List<Page>(indices.Count);
+            foreach (int i in indices)
+                list.Add(LoadPage(i));
+            return list;
+        }
+
+        /// <summary>
+        /// Insert a new page with optional text.
+        /// </summary>
+        public Page InsertPage(int pno = -1, string text = null, float fontsize = 11, float width = 595, float height = 842, string fontname = "helv", float[] color = null)
+        {
+            var page = NewPage(pno, width, height);
+            if (!string.IsNullOrEmpty(text))
+            {
+                page.InsertText(new Point(72, 72), text, fontsize: fontsize, fontname: fontname, color: color);
+            }
+            return page;
+        }
+
+        /// <summary>
+        /// Copy a page within a PDF document.
+        ///
+        /// This will only create another reference of the same page object.
+        /// </summary>
+        public void CopyPage(int pno, int to = -1)
+        {
+            EnsurePdfOpenForDeletePages();
+            var pdf = NativePdfDocument;
+            int pc = PageCount;
+            pno = Helpers.ResolvePageIndex(pc, pno);
+            if (to < 0) to = pc;
+            var page = mupdf.mupdf.pdf_lookup_page_obj(pdf, pno);
+            var newPage = mupdf.mupdf.pdf_deep_copy_obj(page);
+            mupdf.mupdf.pdf_insert_page(pdf, to, newPage);
+            if (_suppressPageRefReset == 0)
+                ResetPageRefsInternal();
+        }
+
+        /// <summary>
+        /// Make a full page duplicate including annotations and content streams.
+        /// </summary>
+        public void FullcopyPage(int pno, int to = -1)
+        {
+            EnsurePdfOpenForDeletePages();
+            var pdf = NativePdfDocument;
+            int pc = mupdf.mupdf.pdf_count_pages(pdf);
+            pno = Helpers.ResolvePageIndex(pc, pno);
+            if (to < -1 || to >= pc) to = pc;
+
+            try
+            {
+                var page1 = mupdf.mupdf.pdf_resolve_indirect(mupdf.mupdf.pdf_lookup_page_obj(pdf, pno));
+                var page2 = mupdf.mupdf.pdf_deep_copy_obj(page1);
+
+                var oldAnnots = mupdf.mupdf.pdf_dict_get(page2, mupdf.mupdf.pdf_new_name("Annots"));
+                if (oldAnnots.m_internal != null)
+                {
+                    int n = mupdf.mupdf.pdf_array_len(oldAnnots);
+                    var newAnnots = mupdf.mupdf.pdf_new_array(pdf, n);
+                    for (int i = 0; i < n; i++)
+                    {
+                        var o = mupdf.mupdf.pdf_array_get(oldAnnots, i);
+                        var subtype = mupdf.mupdf.pdf_dict_get(o, mupdf.mupdf.pdf_new_name("Subtype"));
+                        if (mupdf.mupdf.pdf_name_eq(subtype, mupdf.mupdf.pdf_new_name("Popup")) != 0)
+                            continue;
+                        if (mupdf.mupdf.pdf_dict_gets(o, "IRT").m_internal != null)
+                            continue;
+                        var copyO = mupdf.mupdf.pdf_deep_copy_obj(mupdf.mupdf.pdf_resolve_indirect(o));
+                        int xref = mupdf.mupdf.pdf_create_object(pdf);
+                        mupdf.mupdf.pdf_update_object(pdf, xref, copyO);
+                        copyO = mupdf.mupdf.pdf_new_indirect(pdf, xref, 0);
+                        mupdf.mupdf.pdf_dict_del(copyO, mupdf.mupdf.pdf_new_name("Popup"));
+                        mupdf.mupdf.pdf_dict_del(copyO, mupdf.mupdf.pdf_new_name("P"));
+                        mupdf.mupdf.pdf_array_push(newAnnots, copyO);
+                    }
+                    mupdf.mupdf.pdf_dict_put(page2, mupdf.mupdf.pdf_new_name("Annots"), newAnnots);
+                }
+
+                var contentsObj = mupdf.mupdf.pdf_dict_get(page1, mupdf.mupdf.pdf_new_name("Contents"));
+                if (contentsObj.m_internal != null)
+                {
+                    mupdf.FzBuffer res;
+                    if (mupdf.mupdf.pdf_is_array(contentsObj) != 0)
+                    {
+                        res = mupdf.mupdf.fz_new_buffer(1024);
+                        int arrLen = mupdf.mupdf.pdf_array_len(contentsObj);
+                        for (int i = 0; i < arrLen; i++)
+                        {
+                            var item = mupdf.mupdf.pdf_array_get(contentsObj, i);
+                            if (mupdf.mupdf.pdf_is_stream(item) != 0)
+                            {
+                                var buf = mupdf.mupdf.pdf_load_stream(item);
+                                mupdf.mupdf.fz_append_buffer(res, buf);
+                            }
+                        }
+                    }
+                    else if (mupdf.mupdf.pdf_is_stream(contentsObj) != 0)
+                    {
+                        res = mupdf.mupdf.pdf_load_stream(contentsObj);
+                    }
+                    else
+                    {
+                        res = null;
+                    }
+
+                    if (res != null && res.m_internal != null)
+                    {
+                        var placeholder = Helpers.BufferFromBytes(System.Text.Encoding.UTF8.GetBytes(" "));
+                        var newContents = mupdf.mupdf.pdf_add_stream(pdf, placeholder, new mupdf.PdfObj(), 0);
+                        mupdf.mupdf.pdf_update_stream(pdf, newContents, res, 1);
+                        mupdf.mupdf.pdf_dict_put(page2, mupdf.mupdf.pdf_new_name("Contents"), newContents);
+                    }
+                }
+
+                int newXref = mupdf.mupdf.pdf_create_object(pdf);
+                mupdf.mupdf.pdf_update_object(pdf, newXref, page2);
+                page2 = mupdf.mupdf.pdf_new_indirect(pdf, newXref, 0);
+                mupdf.mupdf.pdf_insert_page(pdf, to, page2);
+            }
+            finally
+            {
+                mupdf.mupdf.ll_pdf_drop_page_tree(pdf.m_internal);
+            }
+            if (_suppressPageRefReset == 0)
+                ResetPageRefsInternal();
+        }
+
+        /// <summary>
+        /// Move a page within a PDF document.
+        /// </summary>
+        public void MovePage(int pno, int to = -1)
+        {
+            EnsurePdfOpenForDeletePages();
+            int pc = PageCount;
+            pno = Helpers.ResolvePageIndex(pc, pno);
+            if (to < 0) to = pc;
+            if (pno == to) return;
+            _suppressPageRefReset++;
+            try
+            {
+                CopyPage(pno, to);
+                if (pno < to) DeletePage(pno);
+                else DeletePage(pno + 1);
+            }
+            finally
+            {
+                _suppressPageRefReset--;
+            }
+            ResetPageRefsInternal();
+        }
+
+        /// <summary>
+        /// Build sub-pdf with page numbers in the list.
+        /// </summary>
+        public void Select(int[] pages)
+        {
+            if (pages == null)
+                throw new ValueErrorException("sequence required");
+            if (IsClosed || IsEncrypted)
+                throw new ValueErrorException("document closed or encrypted");
+            if (!IsPdf)
+                throw new ValueErrorException(Constants.MSG_IS_NO_PDF);
+            var pdf = NativePdfDocument;
+            int n = pages.Length;
+            int pc = PageCount;
+            if (n == 0 || pages.Min() < 0 || pages.Max() >= pc)
+                throw new ValueErrorException(Constants.MSG_BAD_PAGENO);
+
+            var pageList = new mupdf.vectori();
+            foreach (var p in pages) pageList.Add(p);
+            mupdf.mupdf.pdf_rearrange_pages2(pdf, pageList,
+                mupdf.pdf_clean_options_structure.PDF_CLEAN_STRUCTURE_KEEP);
+            ResetPageRefsInternal();
+        }
+
+        /// <summary>
+        /// Make a fresh copy of a page.
+        /// </summary>
+        public Page ReloadPage(Page page) => LoadPage(page.Number);
+
+        // ─── Save / Write ───────────────────────────────────────────────
+
+        /// <summary>
+        /// Save document to file.
+        /// </summary>
+        public void Save3(string filename, bool garbage = false, bool clean = false, bool deflate = false,
+            bool deflateImages = false, bool deflateFonts = false, bool incremental = false,
+            bool ascii = false, bool expand = false, bool linear = false, bool noNewId = false,
+            bool pretty = false, int encryption = 1, int permissions = 4095,
+            string ownerPw = null, string userPw = null, bool preserveMetadata = true,
+            int useObjstms = 0, int compressionEffort = 0)
+        {
+            var pdf = NativePdfDocument;
+            var opts = new mupdf.PdfWriteOptions();
+            if (garbage) opts.do_garbage = 1;
+            if (clean) opts.do_clean = 1;
+            if (deflate) opts.do_compress = 1;
+            if (deflateImages) opts.do_compress_images = 1;
+            if (deflateFonts) opts.do_compress_fonts = 1;
+            if (ascii) opts.do_ascii = 1;
+            if (linear) opts.do_linear = 1;
+            if (incremental) opts.do_incremental = 1;
+            if (pretty) opts.do_pretty = 1;
+            if (useObjstms > 0) opts.do_use_objstms = 1;
+            mupdf.mupdf.pdf_save_document(pdf, filename, opts);
+        }
+
+        public void Save1(
+            string filename,
+            Annot annot,
             int garbage = 0,
             int clean = 0,
             int deflate = 0,
@@ -1118,13 +1653,13 @@ namespace MuPDF.NET
 
             if (PageCount < 1)
                 throw new Exception("cannot save with zero pages");
-            
+
             if ((userPW != null && userPW.Length > 40) || (ownerPW != null && ownerPW.Length > 40))
                 throw new Exception("password length must not exceed 40");
 
-            PdfDocument pdf = AsPdfDocument(this);
-            PdfWriteOptions opts = new PdfWriteOptions();
-            opts.do_incremental = incremental;
+            var pdf = NativeDocument.pdf_document_from_fz_document();
+            var opts = new mupdf.PdfWriteOptions();
+            //opts.do_incremental = incremental;
             opts.do_ascii = ascii;
             opts.do_compress = deflate;
             opts.do_compress_images = deflateImages;
@@ -1151,1468 +1686,2032 @@ namespace MuPDF.NET
             opts.compression_effort = compressionEffort;
 
             pdf.m_internal.resynth_required = 0;
-            Utils.EmbeddedClean(pdf);
+            //Utils.EmbeddedClean(pdf);
 
-            if (filename is string)
-            {
-                pdf.pdf_save_document(filename, opts);
-            }
-            else
-            {
-                FzOutput output = new FilePtrOutput(filename);
-                pdf.pdf_write_document(output, opts);
-                output.fz_close_output();
-                output.Dispose();
-            }
+            pdf.pdf_save_document(filename, opts);
             opts.Dispose();
             pdf.Dispose();
         }
 
-        public int InsertPage(
-            int pno,
-            dynamic text = null,
-            float fontSize = 11.0f,
-            float width = 595,
-            float height = 842,
-            string fontName = "helv",
-            string fontFile = null,
-            float[] color = null
-        )
+        /// <summary>
+        /// Save document to file.
+        /// </summary>
+        /*
+        public void Save(Stream output, bool garbage = false, bool clean = false, bool deflate = false,
+            bool deflateImages = false, bool deflateFonts = false, bool incremental = false,
+            bool ascii = false, bool expand = false, bool linear = false, bool pretty = false,
+            int encryption = 1, int permissions = 4095, string ownerPw = null, string userPw = null,
+            bool preserveMetadata = true, int useObjstms = 0, int compressionEffort = 0)
         {
-            Page page = NewPage(pno, width, height);
-            if (text == null)
-                return 0;
+            var data = Write(garbage: garbage, clean: clean, deflate: deflate, deflateImages: deflateImages,
+                deflateFonts: deflateFonts, incremental: incremental, ascii: ascii, expand: expand,
+                linear: linear, pretty: pretty, encryption: encryption, permissions: permissions,
+                ownerPw: ownerPw, userPw: userPw, preserveMetadata: preserveMetadata,
+                useObjstms: useObjstms, compressionEffort: compressionEffort);
+            output.Write(data, 0, data.Length);
+        }
+        */
+
+        /// <summary>
+        /// Save document to file or stream.
+        /// </summary>
+        public void Save(
+            object filename, 
+            int garbage = 0, 
+            int clean = 0, 
+            int deflate = 0, 
+            int deflate_images = 0, 
+            int deflate_fonts = 0, 
+            int incremental = 0, 
+            int ascii = 0, 
+            int expand = 0, 
+            int linear = 0, 
+            int no_new_id = 0, 
+            int appearance = 0, 
+            int pretty = 0, 
+            int encryption = 1, 
+            int permissions = 4095, 
+            string owner_pw = null, 
+            string user_pw = null, 
+            int preserve_metadata = 1, 
+            int use_objstms = 0, 
+            int compression_effort = 0, 
+            bool raise_on_repair = false)
+        {
+            bool is_repaired_pre = IsRepaired;
+            if (IsClosed || IsEncrypted)
+                throw new ValueErrorException("document closed or encrypted");
+            string fname = null;
+            Stream stream = null;
+            if (filename is string s)
+                fname = s;
+            else if (filename is Stream st)
+                stream = st;
+            else
+                throw new ValueErrorException("filename must be str or Stream");
+            if (fname == Name && incremental == 0)
+                throw new ValueErrorException("save to original must be incremental");
+            if (linear != 0 && use_objstms != 0)
+                throw new ValueErrorException("'linear' and 'use_objstms' cannot both be requested");
+            if (PageCount < 1)
+                throw new ValueErrorException("cannot save with zero pages");
+            if (incremental != 0)
+            {
+                if (Name != fname || StreamData != null)
+                    throw new ValueErrorException("incremental needs original file");
+            }
+            if ((user_pw != null && user_pw.Length > 40) || (owner_pw != null && owner_pw.Length > 40))
+                throw new ValueErrorException("password length must not exceed 40");
             
-            int rc = page.InsertText(
-                new Point(50, 72),
-                text,
-                fontSize: fontSize,
-                fontName: fontName,
-                fontFile: fontFile,
-                color: color
-            );
-            
+            var pdf = NativePdfDocument;
+            var opts = new mupdf.PdfWriteOptions();
+            opts.do_incremental = incremental;
+            opts.do_ascii = ascii;
+            opts.do_compress = deflate;
+            opts.do_compress_images = deflate_images;
+            opts.do_compress_fonts = deflate_fonts;
+            opts.do_decompress = expand;
+            opts.do_garbage = garbage;
+            opts.do_pretty = pretty;
+            opts.do_linear = linear;
+            opts.do_clean = clean;
+            opts.do_sanitize = clean;
+            opts.dont_regenerate_id = no_new_id;
+            opts.do_appearance = appearance;
+            opts.do_encrypt = encryption;
+            opts.permissions = permissions;
+            if (owner_pw != null)
+                opts.opwd_utf8_set_value(owner_pw);
+            else if (user_pw != null)
+                opts.opwd_utf8_set_value(user_pw);
+            if (user_pw != null)
+                opts.upwd_utf8_set_value(user_pw);
+            opts.do_preserve_metadata = preserve_metadata;
+            opts.do_use_objstms = use_objstms;
+            opts.compression_effort = compression_effort;
+
+            mupdf.FzOutput fzOut = null;
+            pdf.m_internal.resynth_required = 0;
+            Helpers.JM_embedded_clean(pdf);
+            if (no_new_id == 0)
+            {
+                Helpers.JM_ensure_identity(pdf); // not implemented
+            }
+            if (fname != null)
+            {
+                mupdf.mupdf.pdf_save_document(pdf, fname, opts);
+            }
+            else if (stream != null)
+            {
+                var buf = mupdf.mupdf.fz_new_buffer(8192);
+                fzOut = new mupdf.FzOutput(buf);
+                mupdf.mupdf.pdf_write_document(pdf, fzOut, opts);
+                fzOut.fz_close_output();
+                var data = buf.fz_buffer_extract();
+                stream.Write(data, 0, data.Length);
+            }
+            if (raise_on_repair)
+            {
+                if (IsRepaired && !is_repaired_pre)
+                    throw new Exception("Document save did a repair");
+            }
+        }
+
+        /// <summary>
+        /// Write document to bytes.
+        /// </summary>
+        public byte[] Write(bool garbage = false, bool clean = false, bool deflate = false,
+            bool deflateImages = false, bool deflateFonts = false, bool incremental = false,
+            bool ascii = false, bool expand = false, bool linear = false, bool noNewId = false,
+            bool pretty = false, int encryption = 1, int permissions = 4095,
+            string ownerPw = null, string userPw = null, bool preserveMetadata = true,
+            int useObjstms = 0, int compressionEffort = 0)
+        {
+            var pdf = NativePdfDocument;
+            var opts = new mupdf.PdfWriteOptions();
+            if (garbage) opts.do_garbage = 1;
+            if (clean) opts.do_clean = 1;
+            if (deflate) opts.do_compress = 1;
+            if (deflateImages) opts.do_compress_images = 1;
+            if (deflateFonts) opts.do_compress_fonts = 1;
+            if (ascii) opts.do_ascii = 1;
+            if (linear) opts.do_linear = 1;
+            if (incremental) opts.do_incremental = 1;
+            if (pretty) opts.do_pretty = 1;
+            if (useObjstms > 0) opts.do_use_objstms = 1;
+            var buf = mupdf.mupdf.fz_new_buffer(8192);
+            var out_ = new mupdf.FzOutput(buf);
+            mupdf.mupdf.pdf_write_document(pdf, out_, opts);
+            out_.fz_close_output();
+            return buf.fz_buffer_extract();
+        }
+
+        /// <summary>
+        /// Convert document to bytes.
+        /// </summary>
+        public byte[] ToBytes(bool garbage = false, bool clean = false, bool deflate = false) =>
+            Write(garbage: garbage, clean: clean, deflate: deflate);
+
+        /// <summary>
+        /// Convert document to a PDF, selecting page range and optional rotation. Output bytes object.
+        /// </summary>
+        public byte[] ConvertToPdf(int fromPage = 0, int toPage = -1, int rotate = 0)
+        {
+            if (toPage < 0) toPage = PageCount - 1;
+            var buf = mupdf.mupdf.fz_new_buffer(8192);
+            var output = new mupdf.FzOutput(buf);
+            var writer = new mupdf.FzDocumentWriter(output, "pdf", "");
+            writer.fz_write_document(NativeDocument);
+            writer.fz_close_document_writer();
+            output.fz_close_output();
+            return buf.fz_buffer_extract();
+        }
+
+        /// <summary>
+        /// Save document incrementally.
+        /// </summary>
+        public void SaveIncr() => Save(Name, incremental: 1);
+
+        /// <summary>
+        /// Check whether incremental saves are possible.
+        /// </summary>
+        public bool CanSaveIncrementally()
+        {
+            try { return mupdf.mupdf.pdf_can_be_saved_incrementally(NativePdfDocument) != 0; }
+            catch { return false; }
+        }
+
+        /// <summary>
+        /// Save PDF using some different defaults.
+        /// </summary>
+        public void EzSave(string filename, int garbage = 1, int clean = 0, int deflate = 1,
+            int deflateImages = 1, int deflateFonts = 1, int pretty = 0, int linear = 0,
+            int ascii = 0, int encryption = 1, int noNewId = 1, int useObjstms = 1)
+        {
+            Save(filename, garbage: garbage, clean: clean, deflate: deflate, deflate_images: deflateImages,
+                deflate_fonts: deflateFonts, pretty: pretty, linear: linear, ascii: ascii, encryption: encryption,
+                no_new_id: noNewId, use_objstms: useObjstms);
+        }
+
+        // ─── Xref Operations ────────────────────────────────────────────
+
+        /// <summary>PyMuPDF <c>_INRANGE(xref, 1, pdf_xref_len - 1)</c> for indirect objects (not the trailer).</summary>
+        private void EnsureValidXrefPositiveIndirect(int xref)
+        {
+            var pdf = NativePdfDocument;
+            int len = mupdf.mupdf.pdf_xref_len(pdf);
+            if (xref < 1 || xref > len - 1)
+                throw new ValueErrorException(Constants.MSG_BAD_XREF);
+        }
+
+        /// <summary>
+        /// PyMuPDF allows <paramref name="xref"/> in <c>[1, pdf_xref_len - 1]</c> or <c>-1</c> (trailer).
+        /// Same rule as <c>xref_get_key</c>, <c>xref_object</c>, <c>xref_stream</c>, etc.
+        /// </summary>
+        private void EnsureValidXrefDict(int xref)
+        {
+            if (xref == -1) return;
+            EnsureValidXrefPositiveIndirect(xref);
+        }
+
+        /// <summary>PyMuPDF <c>update_stream</c>: <c>xref &lt; 1 or xref &gt; pdf_xref_len</c> is invalid.</summary>
+        private void EnsureValidXrefForUpdateStream(int xref)
+        {
+            var pdf = NativePdfDocument;
+            int len = mupdf.mupdf.pdf_xref_len(pdf);
+            if (xref < 1 || xref > len)
+                throw new ValueErrorException(Constants.MSG_BAD_XREF);
+        }
+
+        /// <summary>
+        /// Get xref of page number.
+        /// </summary>
+        public int PageXref(int pno)
+        {
+            pno = Helpers.ResolvePageIndex(PageCount, pno);
+            return mupdf.mupdf.pdf_to_num(mupdf.mupdf.pdf_lookup_page_obj(NativePdfDocument, pno));
+        }
+
+        /// <summary>
+        /// Get string representation of a PDF object (PyMuPDF <c>xref_object</c>: <c>pdf_print_obj</c> into a buffer).
+        /// </summary>
+        public string XrefObject(int xref, bool compressed = false, bool ascii = false)
+        {
+            EnsureNotClosed();
+            EnsureValidXrefDict(xref);
+            var pdf = NativePdfDocument;
+            var obj = xref > 0 ? mupdf.mupdf.pdf_load_object(pdf, xref) : mupdf.mupdf.pdf_trailer(pdf);
+            var resolved = mupdf.mupdf.pdf_resolve_indirect(obj);
+            return PdfObjPrintToString(resolved, compressed ? 1 : 0, ascii ? 1 : 0);
+        }
+
+        /// <summary>
+        /// Check if xref is a stream object.
+        /// </summary>
+        public bool XrefIsStream(int xref = 0)
+        {
+            try { return mupdf.mupdf.pdf_obj_num_is_stream(NativePdfDocument, xref) != 0; }
+            catch { return false; }
+        }
+
+        /// <summary>
+        /// Check if xref is a font.
+        /// </summary>
+        public bool XrefIsFont(int xref) => XrefGetKey(xref, "Type").value == "/Font";
+        /// <summary>
+        /// Check if xref is an image.
+        /// </summary>
+        public bool XrefIsImage(int xref) => XrefGetKey(xref, "Subtype").value == "/Image";
+        /// <summary>
+        /// Check if xref is a Form XObject.
+        /// </summary>
+        public bool XrefIsXobject(int xref) => XrefGetKey(xref, "Subtype").value == "/Form";
+
+        /// <summary>
+        /// Get decompressed stream of a PDF object.
+        /// </summary>
+        public byte[] XrefStream(int xref)
+        {
+            EnsureNotClosed();
+            if (IsEncrypted)
+                throw new ValueErrorException("document closed or encrypted");
+            EnsureValidXrefDict(xref);
+            var pdf = NativePdfDocument;
+            var obj = xref >= 0 ? mupdf.mupdf.pdf_new_indirect(pdf, xref, 0) : mupdf.mupdf.pdf_trailer(pdf);
+            if (mupdf.mupdf.pdf_is_stream(obj) != 0)
+            {
+                var res = mupdf.mupdf.pdf_load_stream_number(pdf, xref);
+                return res.fz_buffer_extract();
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Get raw (compressed) stream of a PDF object.
+        /// </summary>
+        public byte[] XrefStreamRaw(int xref)
+        {
+            EnsureNotClosed();
+            if (IsEncrypted)
+                throw new ValueErrorException("document closed or encrypted");
+            EnsureValidXrefDict(xref);
+            var pdf = NativePdfDocument;
+            var obj = xref >= 0 ? mupdf.mupdf.pdf_new_indirect(pdf, xref, 0) : mupdf.mupdf.pdf_trailer(pdf);
+            if (mupdf.mupdf.pdf_is_stream(obj) != 0)
+            {
+                var res = mupdf.mupdf.pdf_load_raw_stream_number(pdf, xref);
+                return res.fz_buffer_extract();
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Same as PyMuPDF <c>JM_object_to_buffer</c> + UTF-8 decode (Python uses raw-unicode-escape; PDF syntax is ASCII-safe here).
+        /// </summary>
+        private static string PdfObjPrintToString(mupdf.PdfObj obj, int compress, int ascii)
+        {
+            try
+            {
+                if (obj?.m_internal == null) return "";
+                using (var buf = mupdf.mupdf.fz_new_buffer(512))
+                using (var output = new mupdf.FzOutput(buf))
+                {
+                    output.pdf_print_obj(obj, compress, ascii);
+                    output.fz_close_output();
+                    buf.fz_terminate_buffer();
+                    return System.Text.Encoding.UTF8.GetString(Helpers.BufferToBytes(buf));
+                }
+            }
+            catch
+            {
+                return "";
+            }
+        }
+
+        /// <summary>
+        /// Serialize a <see cref="mupdf.PdfObj"/> for <see cref="XrefGetKey"/> when <c>pdf_to_str_buf</c> is empty
+        /// (observed for some arrays/dicts in the C# binding). Fallback matches PyMuPDF <c>JM_object_to_buffer(sub, 1, 0)</c>.
+        /// </summary>
+        private static string PdfObjToKeyValueString(mupdf.PdfObj sub)
+        {
+            try
+            {
+                if (sub?.m_internal == null) return "";
+                var s = sub.pdf_to_str_buf();
+                if (!string.IsNullOrEmpty(s))
+                    return s;
+                return PdfObjPrintToString(sub, 1, 0);
+            }
+            catch
+            {
+                return "";
+            }
+        }
+
+        /// <summary>
+        /// Get type and value of a PDF dictionary key.
+        /// </summary>
+        public (string type, string value) XrefGetKey(int xref, string key)
+        {
+            EnsureNotClosed();
+            EnsureValidXrefDict(xref);
+            var pdf = NativePdfDocument;
+            var obj = xref > 0 ? mupdf.mupdf.pdf_load_object(pdf, xref) : mupdf.mupdf.pdf_trailer(pdf);
+            if (obj.m_internal == null) return ("null", "null");
+            // Prefer path lookup; fall back to direct name (PyMuPDF often uses plain keys like "CropBox").
+            var sub = mupdf.mupdf.pdf_dict_getp(obj, key);
+            if (sub.m_internal == null && !string.IsNullOrEmpty(key) && key[0] != '/')
+                sub = mupdf.mupdf.pdf_dict_get(obj, mupdf.mupdf.pdf_new_name(key));
+            if (sub.m_internal == null) return ("null", "null");
+
+            if (mupdf.mupdf.pdf_is_indirect(sub) != 0) return ("xref", $"{mupdf.mupdf.pdf_to_num(sub)} 0 R");
+            if (mupdf.mupdf.pdf_is_int(sub) != 0) return ("int", $"{mupdf.mupdf.pdf_to_int(sub)}");
+            if (mupdf.mupdf.pdf_is_real(sub) != 0) return ("float", PdfObjToKeyValueString(sub));
+            if (mupdf.mupdf.pdf_is_null(sub) != 0) return ("null", "null");
+            if (mupdf.mupdf.pdf_is_bool(sub) != 0) return ("bool", mupdf.mupdf.pdf_to_bool(sub) != 0 ? "true" : "false");
+            if (mupdf.mupdf.pdf_is_name(sub) != 0) return ("name", $"/{mupdf.mupdf.pdf_to_name(sub)}");
+            if (mupdf.mupdf.pdf_is_string(sub) != 0) return ("string", mupdf.mupdf.pdf_to_text_string(sub));
+            if (mupdf.mupdf.pdf_is_array(sub) != 0) return ("array", PdfObjToKeyValueString(sub));
+            if (mupdf.mupdf.pdf_is_dict(sub) != 0) return ("dict", PdfObjToKeyValueString(sub));
+            return ("unknown", PdfObjToKeyValueString(sub));
+        }
+
+        /// <summary>
+        /// Get list of PDF dictionary keys.
+        /// </summary>
+        public List<string> XrefGetKeys(int xref)
+        {
+            EnsureNotClosed();
+            EnsureValidXrefDict(xref);
+            var pdf = NativePdfDocument;
+            var obj = xref > 0 ? mupdf.mupdf.pdf_load_object(pdf, xref) : mupdf.mupdf.pdf_trailer(pdf);
+            int n = mupdf.mupdf.pdf_dict_len(obj);
+            var rc = new List<string>(n);
+            for (int i = 0; i < n; i++)
+                rc.Add(mupdf.mupdf.pdf_to_name(mupdf.mupdf.pdf_dict_get_key(obj, i)));
             return rc;
         }
 
-        private void ResetPageRefs()
+        /// <summary>
+        /// Set a PDF dictionary key.
+        /// </summary>
+        public void XrefSetKey(int xref, string key, string value)
         {
-            if (IsClosed)
+            EnsureNotClosed();
+            EnsureValidXrefDict(xref);
+            var pdf = NativePdfDocument;
+            var obj = xref > 0 ? mupdf.mupdf.pdf_load_object(pdf, xref) : mupdf.mupdf.pdf_trailer(pdf);
+            // PyMuPDF xref_set_key(..., "null"): JM_pdf_obj_from_str("null") yields a real PDF null there; this binding's
+            // pdf_parse_stm_obj path can fall back to a text string. Remove the entry instead (xref_copy / scrubber intent).
+            if (value != null && string.Equals(value.Trim(), "null", StringComparison.Ordinal))
+            {
+                mupdf.mupdf.pdf_dict_dels(obj, key);
+                if (xref != -1) mupdf.mupdf.pdf_update_object(pdf, xref, obj);
                 return;
-            
-            if (PageRefs != null)
-                PageRefs.Clear();
+            }
+            var newObj = Helpers.JM_pdf_obj_from_str(pdf, value);
+            mupdf.mupdf.pdf_dict_puts(obj, key, newObj);
+            if (xref != -1) mupdf.mupdf.pdf_update_object(pdf, xref, obj);
         }
 
-        public Page this[int i]
+        /// <summary>
+        /// Get xref of XML metadata.
+        /// </summary>
+        public int XrefXmlMetadata
         {
             get
             {
-                return LoadPage(i);
+                try
+                {
+                    var pdf = NativePdfDocument;
+                    var root = mupdf.mupdf.pdf_dict_get(mupdf.mupdf.pdf_trailer(pdf), mupdf.mupdf.pdf_new_name("Root"));
+                    var xml = mupdf.mupdf.pdf_dict_gets(root, "Metadata");
+                    return xml.m_internal != null ? mupdf.mupdf.pdf_to_num(xml) : 0;
+                }
+                catch { return 0; }
             }
         }
 
         /// <summary>
-        /// PDF only: Insert an empty page.
+        /// Get document XML metadata.
         /// </summary>
-        /// <param name="pno">page number in front of which the new page should be inserted. Must be in 1 < pno <= page_count. Special values -1 and doc.page_count insert after the last page.</param>
-        /// <param name="width">page width.</param>
-        /// <param name="height">page height.</param>
-        /// <returns>the created page object.</returns>
-        /// <exception cref="Exception"></exception>
-        public Page NewPage(int pno = -1, float width = 595, float height = 842)
+        public string GetXmlMetadata()
         {
-            if (IsClosed || IsEncrypted)
-                throw new Exception("document closed or encrypted");
+            int xref = XrefXmlMetadata;
+            if (xref == 0) return "";
+            var data = XrefStream(xref);
+            return data != null ? System.Text.Encoding.UTF8.GetString(data) : "";
+        }
+
+        /// <summary>
+        /// Set document XML metadata.
+        /// </summary>
+        public void SetXmlMetadata(string metadata)
+        {
+            EnsurePdf();
+            var pdf = NativePdfDocument;
+            var root = mupdf.mupdf.pdf_dict_get(mupdf.mupdf.pdf_trailer(pdf), mupdf.mupdf.pdf_new_name("Root"));
+            var buf = Helpers.BufferFromBytes(System.Text.Encoding.UTF8.GetBytes(metadata));
+            var xml = mupdf.mupdf.pdf_dict_gets(root, "Metadata");
+            if (xml.m_internal != null)
+            {
+                mupdf.mupdf.pdf_update_stream(pdf, xml, buf, 0);
+            }
             else
             {
-                PdfDocument pdf = AsPdfDocument(this);
-                FzRect mediaBox = new FzRect(FzRect.Fixed.Fixed_UNIT);
-                mediaBox.x1 = width;
-                mediaBox.y1 = height;
-                FzBuffer contents = new FzBuffer();
-
-                if (pno < -1)
-                    throw new Exception(Utils.ErrorMessages["MSG_BAD_PAGENO"]);
-                PdfObj resources = pdf.pdf_add_new_dict(1);
-                PdfObj pageObj = pdf.pdf_add_page(mediaBox, 0, resources, contents);
-                pdf.pdf_insert_page(pno, pageObj);
-
-                pdf.Dispose();
+                xml = mupdf.mupdf.pdf_add_stream(pdf, buf, new mupdf.PdfObj(), 0);
+                mupdf.mupdf.pdf_dict_puts(xml, "Type", mupdf.mupdf.pdf_new_name("Metadata"));
+                mupdf.mupdf.pdf_dict_puts(xml, "Subtype", mupdf.mupdf.pdf_new_name("XML"));
+                mupdf.mupdf.pdf_dict_puts(root, "Metadata", xml);
             }
-
-            ResetPageRefs();
-            
-            return this[pno];
-        }
-
-        public List<Entry> GetPageFonts(int pno, bool full = false)
-        {
-            if (IsClosed || IsEncrypted)
-                throw new Exception("document closed or encrypted");
-            
-            if (!IsPDF)
-                return null;
-            
-            List<Entry> val = GetPageInfo(pno, 1);
-            List<Entry> ret = new List<Entry>();
-            if (full == false)
-            {
-                foreach (Entry v in val)
-                {
-                    v.StreamXref = 0;
-                    ret.Add(v);
-                }
-            }
-            
-            return ret;
         }
 
         /// <summary>
-        /// List fonts, images, XObjects used on a page.
+        /// Delete XML metadata.
         /// </summary>
-        /// <param name="pno"></param>
-        /// <param name="what"></param>
-        /// <returns></returns>
-        /// <exception cref="Exception"></exception>
-        private List<Entry> GetPageInfo(int pno, int what)
+        public void DelXmlMetadata()
         {
-            if (IsClosed || IsEncrypted)
-                throw new Exception("document closed or encrypted");
-            
-            PdfDocument pdf = AsPdfDocument(this);
-            int pageCount = mupdf.mupdf.fz_count_pages(_nativeDocument);
-            int n = pno;
+            EnsurePdf();
+            var pdf = NativePdfDocument;
+            var root = mupdf.mupdf.pdf_dict_get(mupdf.mupdf.pdf_trailer(pdf), mupdf.mupdf.pdf_new_name("Root"));
+            mupdf.mupdf.pdf_dict_dels(root, "Metadata");
+        }
 
+        /// <summary>
+        /// Update a PDF object.
+        /// </summary>
+        public void UpdateObject(int xref, string text)
+        {
+            EnsureNotClosed();
+            if (IsEncrypted)
+                throw new ValueErrorException("document closed or encrypted");
+            EnsureValidXrefPositiveIndirect(xref);
+            var pdf = NativePdfDocument;
+            var newObj = Helpers.JM_pdf_obj_from_str(pdf, text);
+            mupdf.mupdf.pdf_update_object(pdf, xref, newObj);
+        }
+
+        /// <summary>
+        /// Replace object definition source; when <paramref name="page"/> is not <c>null</c>, refresh that page's link list (Python <c>Document.update_object(xref, text, page=page)</c>).
+        /// </summary>
+        public void UpdateObject(int xref, string text, Page page)
+        {
+            UpdateObject(xref, text);
+            if (page == null) return;
+            var pdf = NativePdfDocument;
+            Helpers.JM_refresh_links(pdf, page.NativePdfPage);
+            page.SyncLinkWrapperCache();
+        }
+
+        /// <summary>
+        /// Update the stream of a PDF object.
+        /// </summary>
+        /// <remarks>PyMuPDF <c>Document.update_stream</c> rejects non-dictionary xrefs with <c>MSG_IS_NO_DICT</c>; the <c>new</c> parameter there is unused.</remarks>
+        public void UpdateStream(int xref, byte[] stream, bool compress = true)
+        {
+            EnsureNotClosed();
+            if (IsEncrypted)
+                throw new ValueErrorException("document closed or encrypted");
+            EnsureValidXrefForUpdateStream(xref);
+            var pdf = NativePdfDocument;
+            var obj = mupdf.mupdf.pdf_new_indirect(pdf, xref, 0);
+            if (mupdf.mupdf.pdf_is_dict(obj) == 0)
+                throw new ValueErrorException(Constants.MSG_IS_NO_DICT);
+            var buf = Helpers.BufferFromBytes(stream);
+            mupdf.mupdf.pdf_update_stream(pdf, obj, buf, compress ? 1 : 0);
+        }
+
+        /// <summary>
+        /// PyMuPDF <c>Document.xref_copy(doc, source, target, keep=...)</c> (staticmethod in Python).
+        /// </summary>
+        public static void XrefCopy(Document document, int source, int target, IReadOnlyCollection<string> keepKeys = null)
+        {
+            if (document == null) throw new ArgumentNullException(nameof(document));
+            document.XrefCopyImpl(source, target, keepKeys);
+        }
+
+        /// <summary>
+        /// Copy one PDF dictionary (and optionally raw stream bytes) from <paramref name="source"/> xref to <paramref name="target"/> xref.
+        /// </summary>
+        public void XrefCopy(int source, int target, IReadOnlyCollection<string> keepKeys = null)
+            => XrefCopyImpl(source, target, keepKeys);
+
+        private void XrefCopyImpl(int source, int target, IReadOnlyCollection<string> keepKeys)
+        {
+            EnsurePdf();
+            EnsureValidXrefPositiveIndirect(source);
+            EnsureValidXrefPositiveIndirect(target);
+
+            if (XrefIsStream(source))
+            {
+                var raw = XrefStreamRaw(source);
+                if (raw != null)
+                    UpdateStream(target, raw, compress: false);
+            }
+
+            var keep = keepKeys != null && keepKeys.Count > 0
+                ? new HashSet<string>(keepKeys, StringComparer.Ordinal)
+                : new HashSet<string>(StringComparer.Ordinal);
+
+            foreach (var key in new List<string>(XrefGetKeys(target)))
+            {
+                if (keep.Contains(key)) continue;
+                XrefSetKey(target, key, "null");
+            }
+
+            foreach (var key in XrefGetKeys(source))
+            {
+                var (_, value) = XrefGetKey(source, key);
+                XrefSetKey(target, key, value);
+            }
+        }
+
+        /// <summary>
+        /// Make new xref.
+        /// </summary>
+        public int GetNewXref()
+        {
+            var pdf = NativePdfDocument;
+            return mupdf.mupdf.pdf_create_object(pdf);
+        }
+
+        /// <summary>
+        /// Return optional content object xref for an image or form xobject.
+        /// </summary>
+        public int GetOc(int xref)
+        {
+            var subtype = XrefGetKey(xref, "Subtype");
+            if (subtype.type != "name" || (subtype.value != "/Image" && subtype.value != "/Form"))
+                throw new ValueErrorException($"bad object type at xref {xref}");
+
+            var oc = XrefGetKey(xref, "OC");
+            if (oc.type != "xref")
+                return 0;
+
+            return int.Parse(oc.value.Replace("0 R", "").Trim());
+        }
+
+        /// <summary>
+        /// Attach optional content object to image or form xobject.
+        /// </summary>
+        public void SetOc(int xref, int oc)
+        {
+            var subtype = XrefGetKey(xref, "Subtype");
+            if (subtype.type != "name" || (subtype.value != "/Image" && subtype.value != "/Form"))
+                throw new ValueErrorException($"bad object type at xref {xref}");
+
+            if (oc > 0)
+            {
+                var ocType = XrefGetKey(oc, "Type");
+                if (ocType.type != "name" || (ocType.value != "/OCG" && ocType.value != "/OCMD"))
+                    throw new ValueErrorException($"bad object type at xref {oc}");
+            }
+
+            if (oc == 0 && XrefGetKeys(xref).Contains("OC"))
+            {
+                XrefSetKey(xref, "OC", "null");
+                return;
+            }
+
+            XrefSetKey(xref, "OC", $"{oc} 0 R");
+        }
+
+        /// <summary>
+        /// Return the definition of an OCMD (optional content membership dictionary).
+        /// </summary>
+        public Dictionary<string, object> GetOcmd(int xref)
+        {
+            if (xref < 0 || xref >= XrefLength)
+                throw new ValueErrorException("bad xref");
+
+            string text = XrefObject(xref, compressed: true);
+            if (!text.Contains("/Type/OCMD"))
+                throw new ValueErrorException("bad object type");
+
+            int textlen = text.Length;
+
+            int p0 = text.IndexOf("/OCGs[", StringComparison.Ordinal);
+            int p1 = p0 >= 0 ? text.IndexOf("]", p0, StringComparison.Ordinal) : -1;
+            List<int> ocgs = null;
+            if (p0 >= 0 && p1 >= 0)
+            {
+                ocgs = new List<int>();
+                string[] parts = text.Substring(p0 + 6, p1 - (p0 + 6))
+                    .Replace("0 R", " ")
+                    .Split(new[] { ' ', '\t', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+                foreach (var part in parts)
+                    ocgs.Add(int.Parse(part));
+            }
+
+            p0 = text.IndexOf("/P/", StringComparison.Ordinal);
+            string policy = null;
+            if (p0 >= 0)
+            {
+                p1 = text.IndexOf("ff", p0, StringComparison.Ordinal);
+                if (p1 < 0) p1 = text.IndexOf("on", p0, StringComparison.Ordinal);
+                if (p1 < 0) throw new ValueErrorException("bad object at xref");
+                policy = text.Substring(p0 + 3, p1 + 2 - (p0 + 3));
+            }
+
+            p0 = text.IndexOf("/VE[", StringComparison.Ordinal);
+            object ve = null;
+            if (p0 >= 0)
+            {
+                int lp = 0, rp = 0;
+                p1 = p0;
+                while (lp < 1 || lp != rp)
+                {
+                    p1++;
+                    if (!(p1 < textlen))
+                        throw new ValueErrorException("bad object at xref");
+                    if (text[p1] == '[') lp++;
+                    if (text[p1] == ']') rp++;
+                }
+                string veText = text.Substring(p0 + 3, p1 + 1 - (p0 + 3));
+                veText = veText
+                    .Replace("/And", "\"and\",")
+                    .Replace("/Not", "\"not\",")
+                    .Replace("/Or", "\"or\",");
+                veText = veText.Replace(" 0 R]", "]").Replace(" 0 R", ",").Replace("][", "],[");
+                ve = System.Text.Json.JsonSerializer.Deserialize<object>(veText);
+            }
+
+            return new Dictionary<string, object>
+            {
+                ["xref"] = xref,
+                ["ocgs"] = ocgs,
+                ["policy"] = policy,
+                ["ve"] = ve
+            };
+        }
+
+        /// <summary>
+        /// Create or update an OCMD object in a PDF document.
+        /// </summary>
+        public int SetOcmd(int xref = 0, List<int> ocgs = null, string policy = null, object ve = null)
+        {
+            var allOcgs = new HashSet<int>(GetOcgs().Keys);
+
+            string VeMaker(object veObject)
+            {
+                if (!(veObject is IList list) || list.Count < 2)
+                    throw new ValueErrorException($"bad 've' format: {veObject}");
+
+                string op = list[0]?.ToString() ?? "";
+                string opLower = op.ToLowerInvariant();
+                if (opLower != "and" && opLower != "or" && opLower != "not")
+                    throw new ValueErrorException($"bad operand: {op}");
+                if (opLower == "not" && list.Count != 2)
+                    throw new ValueErrorException($"bad 've' format: {veObject}");
+
+                string item = $"[/{char.ToUpperInvariant(opLower[0])}{opLower.Substring(1)}";
+                for (int i = 1; i < list.Count; i++)
+                {
+                    object x = list[i];
+                    if (x is int xi)
+                    {
+                        if (!allOcgs.Contains(xi))
+                            throw new ValueErrorException($"bad OCG {xi}");
+                        item += $" {xi} 0 R";
+                    }
+                    else if (x is long xl)
+                    {
+                        int xli = (int)xl;
+                        if (!allOcgs.Contains(xli))
+                            throw new ValueErrorException($"bad OCG {xli}");
+                        item += $" {xli} 0 R";
+                    }
+                    else
+                    {
+                        item += $" {VeMaker(x)}";
+                    }
+                }
+                item += "]";
+                return item;
+            }
+
+            string text = "<</Type/OCMD";
+
+            if (ocgs != null && ocgs.Count > 0)
+            {
+                var bad = new HashSet<int>(ocgs);
+                bad.ExceptWith(allOcgs);
+                if (bad.Count != 0)
+                {
+                    string inner = string.Join(", ", bad.OrderBy(x => x).Select(x => x.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+                    throw new ValueErrorException($"bad OCGs: {{{inner}}}");
+                }
+                text += "/OCGs[" + string.Join(" ", ocgs.ConvertAll(x => $"{x} 0 R")) + "]";
+            }
+
+            if (!string.IsNullOrEmpty(policy))
+            {
+                string p = policy.ToLowerInvariant();
+                var pols = new Dictionary<string, string>
+                {
+                    ["anyon"] = "AnyOn",
+                    ["allon"] = "AllOn",
+                    ["anyoff"] = "AnyOff",
+                    ["alloff"] = "AllOff",
+                };
+                if (!pols.ContainsKey(p))
+                    throw new ValueErrorException($"bad policy: {policy}");
+                text += $"/P/{pols[p]}";
+            }
+
+            if (ve != null)
+                text += $"/VE{VeMaker(ve)}";
+
+            text += ">>";
+
+            if (xref == 0)
+                xref = GetNewXref();
+            else if (!XrefObject(xref, compressed: true).Contains("/Type/OCMD"))
+                throw new ValueErrorException("bad xref or not an OCMD");
+
+            UpdateObject(xref, text);
+            return xref;
+        }
+
+        /// <summary>
+        /// Convert the PDF's destination names into a dictionary.
+        /// </summary>
+        public Dictionary<string, Dictionary<string, object>> ResolveNames()
+        {
+            if (_resolvedNames != null)
+                return _resolvedNames;
+
+            var pageXrefs = new Dictionary<int, int>();
+            for (int i = 0; i < PageCount; i++)
+                pageXrefs[PageXref(i)] = i;
+
+            Dictionary<string, object> GetArray(mupdf.PdfObj val)
+            {
+                var templ = new Dictionary<string, object>
+                {
+                    ["page"] = -1,
+                    ["dest"] = ""
+                };
+
+                if (mupdf.mupdf.pdf_is_indirect(val) != 0)
+                    val = mupdf.mupdf.pdf_resolve_indirect(val);
+
+                string array;
+                if (mupdf.mupdf.pdf_is_array(val) != 0)
+                    array = mupdf.mupdf.pdf_to_str_buf(val);
+                else if (mupdf.mupdf.pdf_is_dict(val) != 0)
+                    array = mupdf.mupdf.pdf_to_str_buf(mupdf.mupdf.pdf_dict_gets(val, "D"));
+                else
+                    return templ;
+
+                array = array.Replace("null", "0");
+                if (array.Length >= 2 && array[0] == '[' && array[array.Length - 1] == ']')
+                    array = array.Substring(1, array.Length - 2);
+
+                int idx = array.IndexOf("/", StringComparison.Ordinal);
+                if (idx < 1)
+                {
+                    templ["dest"] = array;
+                    return templ;
+                }
+
+                string subval = array.Substring(0, idx).Trim();
+                array = array.Substring(idx);
+                templ["dest"] = array;
+
+                if (array.StartsWith("/XYZ", StringComparison.Ordinal))
+                {
+                    templ.Remove("dest");
+                    var arrayList = new List<string>(array.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries));
+                    if (arrayList.Count > 0)
+                        arrayList.RemoveAt(0); // omit /XYZ
+                    while (arrayList.Count < 3)
+                        arrayList.Add("0");
+                    float x = float.Parse(arrayList[0], System.Globalization.CultureInfo.InvariantCulture);
+                    float y = float.Parse(arrayList[1], System.Globalization.CultureInfo.InvariantCulture);
+                    float z = float.Parse(arrayList[2], System.Globalization.CultureInfo.InvariantCulture);
+                    templ["to"] = (x, y);
+                    templ["zoom"] = z;
+                }
+
+                if (subval.EndsWith("0 R", StringComparison.Ordinal))
+                {
+                    int px = int.Parse(subval.Split(' ')[0], System.Globalization.CultureInfo.InvariantCulture);
+                    templ["page"] = pageXrefs.ContainsKey(px) ? pageXrefs[px] : -1;
+                }
+                else
+                {
+                    templ["page"] = int.Parse(subval, System.Globalization.CultureInfo.InvariantCulture);
+                }
+                return templ;
+            }
+
+            void FillDict(Dictionary<string, Dictionary<string, object>> destDict, mupdf.PdfObj pdfDict)
+            {
+                int nameCount = mupdf.mupdf.pdf_dict_len(pdfDict);
+                for (int i = 0; i < nameCount; i++)
+                {
+                    var key = mupdf.mupdf.pdf_dict_get_key(pdfDict, i);
+                    var val = mupdf.mupdf.pdf_dict_get_val(pdfDict, i);
+                    string dictKey = null;
+                    if (mupdf.mupdf.pdf_is_name(key) != 0)
+                        dictKey = mupdf.mupdf.pdf_to_name(key);
+                    if (!string.IsNullOrEmpty(dictKey))
+                        destDict[dictKey] = GetArray(val);
+                }
+            }
+
+            var pdf = NativePdfDocument;
+            var catalog = mupdf.mupdf.pdf_dict_gets(mupdf.mupdf.pdf_trailer(pdf), "Root");
+
+            var destDictResult = new Dictionary<string, Dictionary<string, object>>();
+            var dests = mupdf.mupdf.pdf_new_name("Dests");
+
+            var oldDests = mupdf.mupdf.pdf_dict_get(catalog, dests);
+            if (mupdf.mupdf.pdf_is_dict(oldDests) != 0)
+                FillDict(destDictResult, oldDests);
+
+            var tree = mupdf.mupdf.pdf_load_name_tree(pdf, dests);
+            if (mupdf.mupdf.pdf_is_dict(tree) != 0)
+                FillDict(destDictResult, tree);
+
+            _resolvedNames = destDictResult;
+            return destDictResult;
+        }
+
+        /// <summary>
+        /// Get xref of PDF catalog.
+        /// </summary>
+        public int PdfCatalog
+        {
+            get
+            {
+                try
+                {
+                    var pdf = NativePdfDocument;
+                    var root = mupdf.mupdf.pdf_dict_get(mupdf.mupdf.pdf_trailer(pdf), mupdf.mupdf.pdf_new_name("Root"));
+                    return mupdf.mupdf.pdf_to_num(root);
+                }
+                catch { return 0; }
+            }
+        }
+
+        /// <summary>
+        /// Get PDF trailer as a string.
+        /// </summary>
+        public string PdfTrailer(bool compressed = false, bool ascii = false)
+        {
+            return XrefObject(-1, compressed, ascii);
+        }
+
+        // ─── Embedded Files ─────────────────────────────────────────────
+
+        /// <summary>
+        /// Get number of EmbeddedFiles.
+        /// </summary>
+        public int EmbfileCount
+        {
+            get
+            {
+                if (!IsPdf) return 0;
+                var names = GetEmbeddedFilesNamesArray();
+                return names.m_internal != null ? mupdf.mupdf.pdf_array_len(names) / 2 : 0;
+            }
+        }
+
+        /// <summary>
+        /// Get list of names of EmbeddedFiles.
+        /// </summary>
+        public List<string> EmbfileNames()
+        {
+            var result = new List<string>();
+            if (!IsPdf) return result;
+            var names = GetEmbeddedFilesNamesArray();
+            if (names.m_internal == null) return result;
+            int count = mupdf.mupdf.pdf_array_len(names) / 2;
+            for (int i = 0; i < count; i++)
+            {
+                var key = mupdf.mupdf.pdf_array_get(names, i * 2);
+                result.Add(key.m_internal != null ? mupdf.mupdf.pdf_to_text_string(key) ?? "" : "");
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// Get the content of an item in the EmbeddedFiles array by name.
+        /// </summary>
+        public byte[] EmbfileGet(string name)
+        {
+            int idx = EmbfileIndex(name);
+            return EmbfileGetByIndex(idx);
+        }
+
+        /// <summary>
+        /// Get the content of an item in the EmbeddedFiles array by index.
+        /// </summary>
+        public byte[] EmbfileGetByIndex(int idx)
+        {
+            var names = GetEmbeddedFilesNamesArray();
+            if (names.m_internal == null) throw new ValueErrorException($"'{idx}' not in EmbeddedFiles array.");
+            int count = mupdf.mupdf.pdf_array_len(names) / 2;
+            if (idx < 0 || idx >= count) throw new ValueErrorException($"'{idx}' not in EmbeddedFiles array.");
+            var fs = mupdf.mupdf.pdf_array_get(names, idx * 2 + 1);
+            var buf = mupdf.mupdf.pdf_load_embedded_file_contents(fs);
+            return buf.fz_buffer_extract();
+        }
+
+        /// <summary>
+        /// Delete an entry from EmbeddedFiles.
+        ///
+        /// Physical deletion of data will happen on save to a new file with appropriate garbage option.
+        /// </summary>
+        public void EmbfileDel(string name)
+        {
+            int idx = EmbfileIndex(name);
+            var pdf = NativePdfDocument;
+            var names = Helpers.PdfDictGetl(mupdf.mupdf.pdf_trailer(pdf),
+                mupdf.mupdf.pdf_new_name("Root"), mupdf.mupdf.pdf_new_name("Names"),
+                mupdf.mupdf.pdf_new_name("EmbeddedFiles"), mupdf.mupdf.pdf_new_name("Names"));
+            int keyIndex = idx * 2;
+            mupdf.mupdf.pdf_array_delete(names, keyIndex + 1);
+            mupdf.mupdf.pdf_array_delete(names, keyIndex);
+        }
+
+        /// <summary>
+        /// Delete an entry from EmbeddedFiles by index.
+        /// </summary>
+        public void EmbfileDel(int idx)
+        {
+            var names = EmbfileNames();
+            if (idx < 0 || idx >= names.Count)
+                throw new ValueErrorException($"'{idx}' not in EmbeddedFiles array.");
+            EmbfileDel(names[idx]);
+        }
+
+        /// <summary>
+        /// Add an item to the EmbeddedFiles array.
+        /// </summary>
+        public int EmbfileAdd(string name, byte[] buffer, string filename = null, string ufilename = null, string desc = null)
+        {
+            if (string.IsNullOrEmpty(name)) throw new ArgumentException("name must not be empty");
+            if (buffer == null) throw new ArgumentException("buffer must not be null");
+            var filenames = EmbfileNames();
+            if (filenames.Contains(name))
+                throw new ValueErrorException($"Name '{name}' already exists.");
+
+            filename ??= name;
+            ufilename ??= filename;
+            desc ??= name;
+
+            var pdf = NativePdfDocument;
+            long now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            var fs = mupdf.mupdf.pdf_add_embedded_file(pdf, filename, null, Helpers.BufferFromBytes(buffer), now, now, 1);
+            if (fs.m_internal == null)
+                throw new InvalidOperationException("failed to add embedded file");
+
+            mupdf.mupdf.pdf_dict_put_text_string(fs, mupdf.mupdf.pdf_new_name("UF"), ufilename);
+            mupdf.mupdf.pdf_dict_put_text_string(fs, mupdf.mupdf.pdf_new_name("Desc"), desc);
+
+            var names = EnsureEmbeddedFilesNamesArray();
+            mupdf.mupdf.pdf_array_push(names, mupdf.mupdf.pdf_new_text_string(name));
+            mupdf.mupdf.pdf_array_push(names, fs);
+
+            var ef = mupdf.mupdf.pdf_dict_get(fs, mupdf.mupdf.pdf_new_name("EF"));
+            var stream = ef.m_internal != null ? mupdf.mupdf.pdf_dict_get(ef, mupdf.mupdf.pdf_new_name("F")) : new mupdf.PdfObj();
+            if (stream.m_internal != null)
+            {
+                mupdf.mupdf.pdf_dict_put(stream, mupdf.mupdf.pdf_new_name("Type"), mupdf.mupdf.pdf_new_name("EmbeddedFile"));
+                var date = Helpers.GetPdfNow();
+                var parms = mupdf.mupdf.pdf_dict_get(stream, mupdf.mupdf.pdf_new_name("Params"));
+                if (parms.m_internal == null)
+                {
+                    parms = mupdf.mupdf.pdf_new_dict(pdf, 2);
+                    mupdf.mupdf.pdf_dict_put(stream, mupdf.mupdf.pdf_new_name("Params"), parms);
+                }
+                mupdf.mupdf.pdf_dict_put_text_string(parms, mupdf.mupdf.pdf_new_name("CreationDate"), date);
+                mupdf.mupdf.pdf_dict_put_text_string(parms, mupdf.mupdf.pdf_new_name("ModDate"), date);
+                return mupdf.mupdf.pdf_to_num(stream);
+            }
+
+            return mupdf.mupdf.pdf_to_num(fs);
+        }
+
+        /// <summary>
+        /// Get information of an item in the EmbeddedFiles array by index.
+        /// </summary>
+        public Dictionary<string, object> EmbfileInfo(int idx)
+        {
+            var names = GetEmbeddedFilesNamesArray();
+            if (names.m_internal == null) throw new ValueErrorException($"'{idx}' not in EmbeddedFiles array.");
+            int count = mupdf.mupdf.pdf_array_len(names) / 2;
+            if (idx < 0 || idx >= count) throw new ValueErrorException($"'{idx}' not in EmbeddedFiles array.");
+
+            var keyObj = mupdf.mupdf.pdf_array_get(names, idx * 2);
+            var fs = mupdf.mupdf.pdf_array_get(names, idx * 2 + 1);
+
+            var info = new Dictionary<string, object>();
+            info["name"] = keyObj.m_internal != null ? mupdf.mupdf.pdf_to_text_string(keyObj) ?? "" : "";
+
+            var fObj = mupdf.mupdf.pdf_dict_get(fs, mupdf.mupdf.pdf_new_name("F"));
+            var ufObj = mupdf.mupdf.pdf_dict_get(fs, mupdf.mupdf.pdf_new_name("UF"));
+            var descObj = mupdf.mupdf.pdf_dict_get(fs, mupdf.mupdf.pdf_new_name("Desc"));
+            info["filename"] = fObj.m_internal != null ? mupdf.mupdf.pdf_to_text_string(fObj) ?? "" : "";
+            info["ufilename"] = ufObj.m_internal != null ? mupdf.mupdf.pdf_to_text_string(ufObj) ?? "" : "";
+            info["desc"] = descObj.m_internal != null ? mupdf.mupdf.pdf_to_text_string(descObj) : null;
+
+            var ef = mupdf.mupdf.pdf_dict_get(fs, mupdf.mupdf.pdf_new_name("EF"));
+            var stream = ef.m_internal != null ? mupdf.mupdf.pdf_dict_get(ef, mupdf.mupdf.pdf_new_name("F")) : new mupdf.PdfObj();
+            if (stream.m_internal != null)
+            {
+                var lengthObj = mupdf.mupdf.pdf_dict_get(stream, mupdf.mupdf.pdf_new_name("Length"));
+                info["length"] = lengthObj.m_internal != null ? mupdf.mupdf.pdf_to_int(lengthObj) : -1;
+
+                var paramsObj = mupdf.mupdf.pdf_dict_get(stream, mupdf.mupdf.pdf_new_name("Params"));
+                if (paramsObj.m_internal != null)
+                {
+                    var sizeObj = mupdf.mupdf.pdf_dict_get(paramsObj, mupdf.mupdf.pdf_new_name("Size"));
+                    if (sizeObj.m_internal != null) info["size"] = mupdf.mupdf.pdf_to_int(sizeObj);
+
+                    var cObj = mupdf.mupdf.pdf_dict_get(paramsObj, mupdf.mupdf.pdf_new_name("CreationDate"));
+                    if (cObj.m_internal != null) info["creationDate"] = mupdf.mupdf.pdf_to_text_string(cObj);
+
+                    var mObj = mupdf.mupdf.pdf_dict_get(paramsObj, mupdf.mupdf.pdf_new_name("ModDate"));
+                    if (mObj.m_internal != null) info["modDate"] = mupdf.mupdf.pdf_to_text_string(mObj);
+
+                    var csObj = mupdf.mupdf.pdf_dict_get(paramsObj, mupdf.mupdf.pdf_new_name("CheckSum"));
+                    if (csObj.m_internal != null)
+                    {
+                        string checksum = mupdf.mupdf.pdf_to_text_string(csObj) ?? "";
+                        info["checksum"] = BitConverter.ToString(System.Text.Encoding.UTF8.GetBytes(checksum)).Replace("-", "").ToLowerInvariant();
+                    }
+                }
+            }
+            else
+            {
+                info["length"] = -1;
+            }
+
+            return info;
+        }
+
+        /// <summary>
+        /// Get information of an item in the EmbeddedFiles array by name.
+        /// </summary>
+        public Dictionary<string, object> EmbfileInfo(string name) => EmbfileInfo(EmbfileIndex(name));
+
+        /// <summary>
+        /// Change an item of the EmbeddedFiles array by index.
+        /// </summary>
+        public int EmbfileUpd(int idx, byte[] buffer = null, string filename = null, string ufilename = null, string desc = null)
+        {
+            var names = GetEmbeddedFilesNamesArray();
+            if (names.m_internal == null) throw new ValueErrorException($"'{idx}' not in EmbeddedFiles array.");
+            int count = mupdf.mupdf.pdf_array_len(names) / 2;
+            if (idx < 0 || idx >= count) throw new ValueErrorException($"'{idx}' not in EmbeddedFiles array.");
+
+            var pdf = NativePdfDocument;
+            var fs = mupdf.mupdf.pdf_array_get(names, idx * 2 + 1);
+            var ef = mupdf.mupdf.pdf_dict_get(fs, mupdf.mupdf.pdf_new_name("EF"));
+            var stream = ef.m_internal != null ? mupdf.mupdf.pdf_dict_get(ef, mupdf.mupdf.pdf_new_name("F")) : new mupdf.PdfObj();
+            if (stream.m_internal == null)
+                throw new InvalidOperationException("bad PDF: no embedded file stream");
+
+            if (buffer != null)
+            {
+                mupdf.mupdf.pdf_update_stream(pdf, stream, Helpers.BufferFromBytes(buffer), 1);
+                var parms = mupdf.mupdf.pdf_dict_get(stream, mupdf.mupdf.pdf_new_name("Params"));
+                if (parms.m_internal == null)
+                {
+                    parms = mupdf.mupdf.pdf_new_dict(pdf, 1);
+                    mupdf.mupdf.pdf_dict_put(stream, mupdf.mupdf.pdf_new_name("Params"), parms);
+                }
+                mupdf.mupdf.pdf_dict_put(parms, mupdf.mupdf.pdf_new_name("Size"), mupdf.mupdf.pdf_new_int(buffer.Length));
+                mupdf.mupdf.pdf_dict_put(stream, mupdf.mupdf.pdf_new_name("DL"), mupdf.mupdf.pdf_new_int(buffer.Length));
+            }
+
+            if (!string.IsNullOrEmpty(filename))
+            {
+                mupdf.mupdf.pdf_dict_put_text_string(fs, mupdf.mupdf.pdf_new_name("F"), filename);
+                mupdf.mupdf.pdf_dict_put_text_string(fs, mupdf.mupdf.pdf_new_name("UF"), filename);
+                mupdf.mupdf.pdf_dict_put_text_string(stream, mupdf.mupdf.pdf_new_name("F"), filename);
+                mupdf.mupdf.pdf_dict_put_text_string(stream, mupdf.mupdf.pdf_new_name("UF"), filename);
+            }
+            if (!string.IsNullOrEmpty(ufilename))
+            {
+                mupdf.mupdf.pdf_dict_put_text_string(fs, mupdf.mupdf.pdf_new_name("UF"), ufilename);
+                mupdf.mupdf.pdf_dict_put_text_string(stream, mupdf.mupdf.pdf_new_name("UF"), ufilename);
+            }
+            if (!string.IsNullOrEmpty(desc))
+            {
+                mupdf.mupdf.pdf_dict_put_text_string(fs, mupdf.mupdf.pdf_new_name("Desc"), desc);
+                mupdf.mupdf.pdf_dict_put_text_string(stream, mupdf.mupdf.pdf_new_name("Desc"), desc);
+            }
+
+            var dateNow = Helpers.GetPdfNow();
+            var paramsObj = mupdf.mupdf.pdf_dict_get(stream, mupdf.mupdf.pdf_new_name("Params"));
+            if (paramsObj.m_internal == null)
+            {
+                paramsObj = mupdf.mupdf.pdf_new_dict(pdf, 1);
+                mupdf.mupdf.pdf_dict_put(stream, mupdf.mupdf.pdf_new_name("Params"), paramsObj);
+            }
+            mupdf.mupdf.pdf_dict_put_text_string(paramsObj, mupdf.mupdf.pdf_new_name("ModDate"), dateNow);
+
+            return mupdf.mupdf.pdf_to_num(stream);
+        }
+
+        /// <summary>
+        /// Change an item of the EmbeddedFiles array by name.
+        /// </summary>
+        public int EmbfileUpd(string name, byte[] buffer = null, string filename = null, string ufilename = null, string desc = null)
+            => EmbfileUpd(EmbfileIndex(name), buffer, filename, ufilename, desc);
+
+        private int EmbfileIndex(string name)
+        {
+            var names = EmbfileNames();
+            int idx = names.IndexOf(name);
+            if (idx < 0) throw new ValueErrorException($"'{name}' not in EmbeddedFiles array.");
+            return idx;
+        }
+
+        // ─── Font / Image extraction ────────────────────────────────────
+
+        /// <summary>
+        /// List fonts used on a page.
+        /// </summary>
+        public List<(int xref, string ext, string type, string baseName, string name, string encoding)> GetPageFonts(int pno, bool full = false)
+        {
+            // Keep Python structure: get_page_fonts() -> _getPageInfo(..., 1)
+            var pageInfo = _getPageInfo(pno, 1);
+            var result = new List<(int xref, string ext, string type, string baseName, string name, string encoding)>(pageInfo.Count);
+            foreach (var item in pageInfo)
+                result.Add(((int xref, string ext, string type, string baseName, string name, string encoding))item);
+            return result;
+        }
+
+        /// <summary>
+        /// List images used on a page.
+        /// </summary>
+        public List<(int xref, string smask, int width, int height, int bpc, string colorspace, string altCs, string name, string filter)> GetPageImages(int pno, bool full = false)
+        {
+            // Keep Python structure: get_page_images() -> _getPageInfo(..., 2)
+            var pageInfo = _getPageInfo(pno, 2);
+            var result = new List<(int xref, string smask, int width, int height, int bpc, string colorspace, string altCs, string name, string filter)>(pageInfo.Count);
+            foreach (var item in pageInfo)
+                result.Add(((int xref, string smask, int width, int height, int bpc, string colorspace, string altCs, string name, string filter))item);
+            return result;
+        }
+
+        internal List<(int xref, string ext, string type, string baseName, string name, string encoding)> GetPageFontsCore(int pno, bool full = false)
+        {
+            var result = new List<(int xref, string ext, string type, string baseName, string name, string encoding)>();
+            if (!IsPdf)
+                return result;
+
+            using var page = LoadPage(pno);
+            var pageObj = page.NativePdfPage.obj();
+            var resources = mupdf.mupdf.pdf_dict_get_inheritable(pageObj, mupdf.mupdf.pdf_new_name("Resources"));
+            if (resources.m_internal == null)
+                return result;
+
+            var fonts = mupdf.mupdf.pdf_dict_get(resources, mupdf.mupdf.pdf_new_name("Font"));
+            if (fonts.m_internal == null || mupdf.mupdf.pdf_is_dict(fonts) == 0)
+                return result;
+
+            int n = mupdf.mupdf.pdf_dict_len(fonts);
+            for (int i = 0; i < n; i++)
+            {
+                var key = mupdf.mupdf.pdf_dict_get_key(fonts, i);
+                var val = mupdf.mupdf.pdf_dict_get_val(fonts, i);
+                var resolved = mupdf.mupdf.pdf_resolve_indirect(val);
+
+                int xref = mupdf.mupdf.pdf_to_num(val);
+                string ext = "";
+                string type = "";
+                string baseName = "";
+                string name = mupdf.mupdf.pdf_to_name(key) ?? "";
+                string encoding = "";
+
+                var subtypeObj = mupdf.mupdf.pdf_dict_get(resolved, mupdf.mupdf.pdf_new_name("Subtype"));
+                if (subtypeObj.m_internal != null && mupdf.mupdf.pdf_is_name(subtypeObj) != 0)
+                    type = mupdf.mupdf.pdf_to_name(subtypeObj);
+
+                var basefontObj = mupdf.mupdf.pdf_dict_get(resolved, mupdf.mupdf.pdf_new_name("BaseFont"));
+                if (basefontObj.m_internal != null && mupdf.mupdf.pdf_is_name(basefontObj) != 0)
+                    baseName = mupdf.mupdf.pdf_to_name(basefontObj);
+
+                var encodingObj = mupdf.mupdf.pdf_dict_get(resolved, mupdf.mupdf.pdf_new_name("Encoding"));
+                if (encodingObj.m_internal != null)
+                {
+                    if (mupdf.mupdf.pdf_is_name(encodingObj) != 0)
+                        encoding = mupdf.mupdf.pdf_to_name(encodingObj);
+                    else if (mupdf.mupdf.pdf_is_dict(encodingObj) != 0)
+                    {
+                        var baseEncObj = mupdf.mupdf.pdf_dict_get(encodingObj, mupdf.mupdf.pdf_new_name("BaseEncoding"));
+                        if (baseEncObj.m_internal != null && mupdf.mupdf.pdf_is_name(baseEncObj) != 0)
+                            encoding = mupdf.mupdf.pdf_to_name(baseEncObj);
+                    }
+                }
+
+                if (xref > 0)
+                {
+                    try { ext = ExtractFont(xref).ext ?? ""; }
+                    catch { ext = ""; }
+                }
+
+                result.Add((xref, ext, type ?? "", baseName ?? "", name ?? "", encoding ?? ""));
+            }
+
+            return result;
+        }
+
+        internal List<(int xref, string smask, int width, int height, int bpc, string colorspace, string altCs, string name, string filter)> GetPageImagesCore(int pno, bool full = false)
+        {
+            var result = new List<(int xref, string smask, int width, int height, int bpc, string colorspace, string altCs, string name, string filter)>();
+            if (!IsPdf)
+                return result;
+
+            using var page = LoadPage(pno);
+            var pageObj = page.NativePdfPage.obj();
+            var resources = mupdf.mupdf.pdf_dict_get_inheritable(pageObj, mupdf.mupdf.pdf_new_name("Resources"));
+            if (resources.m_internal == null)
+                return result;
+
+            var xobjects = mupdf.mupdf.pdf_dict_get(resources, mupdf.mupdf.pdf_new_name("XObject"));
+            if (xobjects.m_internal == null || mupdf.mupdf.pdf_is_dict(xobjects) == 0)
+                return result;
+
+            int n = mupdf.mupdf.pdf_dict_len(xobjects);
+            for (int i = 0; i < n; i++)
+            {
+                var key = mupdf.mupdf.pdf_dict_get_key(xobjects, i);
+                var val = mupdf.mupdf.pdf_dict_get_val(xobjects, i);
+                var resolved = mupdf.mupdf.pdf_resolve_indirect(val);
+
+                var subtypeObj = mupdf.mupdf.pdf_dict_get(resolved, mupdf.mupdf.pdf_new_name("Subtype"));
+                if (subtypeObj.m_internal == null || mupdf.mupdf.pdf_is_name(subtypeObj) == 0)
+                    continue;
+                if (!string.Equals(mupdf.mupdf.pdf_to_name(subtypeObj), "Image", StringComparison.Ordinal))
+                    continue;
+
+                int xref = mupdf.mupdf.pdf_to_num(val);
+                if (xref <= 0 || !XrefIsStream(xref))
+                    continue;
+                string name = mupdf.mupdf.pdf_to_name(key) ?? "";
+
+                int width = 0;
+                int height = 0;
+                int bpc = 0;
+                string colorspace = "";
+                string altCs = "";
+                string filter = "";
+                string smask = "0";
+
+                var wObj = mupdf.mupdf.pdf_dict_get(resolved, mupdf.mupdf.pdf_new_name("Width"));
+                if (wObj.m_internal != null) width = mupdf.mupdf.pdf_to_int(wObj);
+                var hObj = mupdf.mupdf.pdf_dict_get(resolved, mupdf.mupdf.pdf_new_name("Height"));
+                if (hObj.m_internal != null) height = mupdf.mupdf.pdf_to_int(hObj);
+                var bpcObj = mupdf.mupdf.pdf_dict_get(resolved, mupdf.mupdf.pdf_new_name("BitsPerComponent"));
+                if (bpcObj.m_internal != null) bpc = mupdf.mupdf.pdf_to_int(bpcObj);
+
+                var csObj = mupdf.mupdf.pdf_dict_get(resolved, mupdf.mupdf.pdf_new_name("ColorSpace"));
+                if (csObj.m_internal != null)
+                {
+                    if (mupdf.mupdf.pdf_is_name(csObj) != 0)
+                    {
+                        colorspace = mupdf.mupdf.pdf_to_name(csObj);
+                    }
+                    else if (mupdf.mupdf.pdf_is_array(csObj) != 0 && mupdf.mupdf.pdf_array_len(csObj) > 0)
+                    {
+                        var cs0 = mupdf.mupdf.pdf_array_get(csObj, 0);
+                        if (cs0.m_internal != null && mupdf.mupdf.pdf_is_name(cs0) != 0)
+                            colorspace = mupdf.mupdf.pdf_to_name(cs0);
+                        if (mupdf.mupdf.pdf_array_len(csObj) > 1)
+                        {
+                            var cs1 = mupdf.mupdf.pdf_array_get(csObj, 1);
+                            if (cs1.m_internal != null && mupdf.mupdf.pdf_is_name(cs1) != 0)
+                                altCs = mupdf.mupdf.pdf_to_name(cs1);
+                        }
+                    }
+                }
+
+                var filterObj = mupdf.mupdf.pdf_dict_get(resolved, mupdf.mupdf.pdf_new_name("Filter"));
+                if (filterObj.m_internal != null)
+                {
+                    if (mupdf.mupdf.pdf_is_name(filterObj) != 0)
+                        filter = mupdf.mupdf.pdf_to_name(filterObj);
+                    else if (mupdf.mupdf.pdf_is_array(filterObj) != 0 && mupdf.mupdf.pdf_array_len(filterObj) > 0)
+                    {
+                        var f0 = mupdf.mupdf.pdf_array_get(filterObj, 0);
+                        if (f0.m_internal != null && mupdf.mupdf.pdf_is_name(f0) != 0)
+                            filter = mupdf.mupdf.pdf_to_name(f0);
+                    }
+                }
+
+                var smaskObj = mupdf.mupdf.pdf_dict_get(resolved, mupdf.mupdf.pdf_new_name("SMask"));
+                if (smaskObj.m_internal != null)
+                    smask = mupdf.mupdf.pdf_to_num(smaskObj).ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+                result.Add((xref, smask, width, height, bpc, colorspace ?? "", altCs ?? "", name, filter ?? ""));
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Retrieve annotation xref/type/id triples for a page.
+        /// </summary>
+        public List<(int xref, AnnotationType type, string id)> PageAnnotXrefs(int n)
+        {
+            int pageCount = PageCount;
             while (n < 0)
                 n += pageCount;
-            if (n >= pageCount)
-            {
-                pdf.Dispose();
-                throw new Exception(Utils.ErrorMessages["MSG_BAD_PAGENO"]);
-            }
-
-            PdfObj pageRef = pdf.pdf_lookup_page_obj(n);
-            PdfObj rsrc = pageRef.pdf_dict_get_inheritable(new PdfObj("Resources"));
-
-            List<Entry> liste = new List<Entry>();
-            List<dynamic> tracer = new List<dynamic>();
-
-            if (rsrc.m_internal != null)
-                Utils.ScanResources(pdf, rsrc, liste, what, 0, tracer);
-
-            pdf.Dispose();
-            return liste;
+            if (n < 0 || n >= pageCount)
+                throw new ValueErrorException(Constants.MSG_BAD_PAGENO);
+            using var page = LoadPage(n);
+            return page.AnnotXrefs();
         }
 
         /// <summary>
-        /// Create a Page object for further processing (like rendering, text searching, etc.).
+        /// Extract a font by xref. Returns (name, ext, type, content).
         /// </summary>
-        /// <param name="pageId">Either a 0-based page number, or a tuple (chapter, pno). For an integer, any -∞ < page_id < page_count is acceptable.</param>
-        /// <returns>page object</returns>
-        /// <exception cref="Exception"></exception>
-        public Page LoadPage(int pageId)
+        public (string name, string ext, string type, byte[] content) ExtractFont(int xref)
         {
-            if (IsClosed || IsEncrypted)
-                throw new Exception("document closed or encrypted");
-            
-            int np;
-            if (pageId < 0)
+            var pdf = NativePdfDocument;
+            var obj = mupdf.mupdf.pdf_load_object(pdf, xref);
+            string name = "", ext = "", type = "";
+            byte[] content = Array.Empty<byte>();
+
+            var basefont = mupdf.mupdf.pdf_dict_gets(obj, "BaseFont");
+            if (basefont.m_internal != null) name = mupdf.mupdf.pdf_to_name(basefont);
+
+            var subtype = mupdf.mupdf.pdf_dict_gets(obj, "Subtype");
+            if (subtype.m_internal != null) type = mupdf.mupdf.pdf_to_name(subtype);
+
+            var desc = mupdf.mupdf.pdf_dict_gets(obj, "FontDescriptor");
+            if (desc.m_internal != null)
             {
-                np = PageCount;
-                while (pageId < 0)
-                    pageId += np;
+                var ff = mupdf.mupdf.pdf_dict_gets(desc, "FontFile");
+                if (ff.m_internal == null) ff = mupdf.mupdf.pdf_dict_gets(desc, "FontFile2");
+                if (ff.m_internal == null) ff = mupdf.mupdf.pdf_dict_gets(desc, "FontFile3");
+                if (ff.m_internal != null)
+                {
+                    var buf = mupdf.mupdf.pdf_load_stream(ff);
+                    content = buf.fz_buffer_extract();
+                    ext = "n/a";
+                    var sub2 = mupdf.mupdf.pdf_dict_gets(ff, "Subtype");
+                    if (sub2.m_internal != null)
+                    {
+                        string sn = mupdf.mupdf.pdf_to_name(sub2);
+                        if (sn.Contains("Type1C")) ext = "cff";
+                        else if (sn.Contains("CIDFontType0C")) ext = "cff";
+                        else if (sn.Contains("OpenType")) ext = "otf";
+                        else ext = "ttf";
+                    }
+                    else ext = type == "Type1" ? "pfa" : "ttf";
+                }
             }
+            return (name, ext, type, content);
+        }
 
-            if (Utils.INRANGE(pageId, 0, PageCount - 1) == false)
-                throw new Exception("document page count is not enough");
-
-            FzPage page;
-            lock (Utils.MuPDFLock)
+        private object[] CheckFontInfo(int xref)
+        {
+            foreach (var fi in FontInfos)
             {
-                page = _nativeDocument.fz_load_page(pageId);
+                if (fi == null || fi.Length < 2)
+                    continue;
+                if (!(fi[0] is int))
+                    continue;
+                if ((int)fi[0] == xref)
+                    return fi;
             }
-            Page val = new Page(page, this);
+            return null;
+        }
 
-            val.ThisOwn = true;
-            val.Parent = this;
-            PageRefs[val.GetHashCode()] = val;
-            val.AnnotRefs = new Dictionary<int, dynamic>();
-            val.Number = pageId;
+        private void UpdateFontInfo(object[] fontInfo)
+        {
+            if (fontInfo == null || fontInfo.Length < 2 || !(fontInfo[0] is int))
+                return;
+            int xref = (int)fontInfo[0];
+            for (int i = 0; i < FontInfos.Count; i++)
+            {
+                var fi = FontInfos[i];
+                if (fi != null && fi.Length > 0 && fi[0] is int && (int)fi[0] == xref)
+                {
+                    FontInfos[i] = fontInfo;
+                    return;
+                }
+            }
+            FontInfos.Add(fontInfo);
+        }
 
-            return val;
+        private static int GetCjkOrdering(string name)
+        {
+            if (name == "Fangti" || name == "Ming") return 0;
+            if (name == "Heiti" || name == "Song") return 1;
+            if (name == "Gothic" || name == "Mincho") return 2;
+            if (name == "Dotum" || name == "Batang") return 3;
+            return -1;
+        }
+
+        private static bool IsSimpleFontType(string subtype)
+        {
+            return subtype == "Type1" || subtype == "MMType1" || subtype == "TrueType";
+        }
+
+        private static List<(int glyph, double width)> BuildCharWidths(mupdf.FzFont font, int limit)
+        {
+            int mylimit = limit < 256 ? 256 : limit;
+            var wlist = new List<(int glyph, double width)>(mylimit);
+            for (int i = 0; i < mylimit; i++)
+            {
+                int glyph = font.fz_encode_character(i);
+                double adv = font.fz_advance_glyph(glyph, 0);
+                if (glyph > 0)
+                    wlist.Add((glyph, adv));
+                else
+                    wlist.Add((glyph, 0.0));
+            }
+            return wlist;
         }
 
         /// <summary>
-        /// Create a Page object for further processing (like rendering, text searching, etc.).
+        /// Get list of glyph / width data for a font xref.
+        /// Port of Python Document.get_char_widths().
         /// </summary>
-        /// <param name="chapter"></param>
-        /// <param name="pagenum"></param>
-        /// <returns></returns>
-        /// <exception cref="Exception"></exception>
-        public Page LoadPage(int chapter, int pagenum)
+        public List<(int glyph, double width)> GetCharWidths(int xref, int limit = 256, int idx = 0, Dictionary<string, object> fontdict = null)
         {
-            if (IsClosed || IsEncrypted)
-                throw new Exception("document closed or encrypted");
+            EnsurePdf();
+            if (!XrefIsFont(xref))
+                throw new ArgumentException("xref is not a font");
 
-            FzPage page;
-            lock (Utils.MuPDFLock)
+            var fontinfo = CheckFontInfo(xref);
+            if (fontinfo == null)
             {
-                page = _nativeDocument.fz_load_chapter_page(chapter, pagenum);
-            }
-            Page val = new Page(page, this);
+                string name;
+                string ext;
+                string stype;
+                if (fontdict == null)
+                {
+                    var ef = ExtractFont(xref);
+                    name = ef.name;
+                    ext = ef.ext ?? "";
+                    stype = ef.type ?? "";
+                    fontdict = new Dictionary<string, object>
+                    {
+                        ["name"] = name,
+                        ["ext"] = ext,
+                        ["type"] = stype
+                    };
+                }
+                else
+                {
+                    name = fontdict.ContainsKey("name") ? (fontdict["name"]?.ToString() ?? "") : "";
+                    ext = fontdict.ContainsKey("ext") ? (fontdict["ext"]?.ToString() ?? "") : "";
+                    stype = fontdict.ContainsKey("type") ? (fontdict["type"]?.ToString() ?? "") : "";
+                }
 
-            val.ThisOwn = true;
-            val.Parent = this;
-            PageRefs[val.GetHashCode()] = val;
-            val.AnnotRefs = new Dictionary<int, dynamic>();
-            val.Number = 0;
+                if (ext == "")
+                    throw new ArgumentException("xref is not a font");
 
-            return val;
-        }
-
-        /// <summary>
-        /// PDF only: Provide a new copy of a page after finishing and updating all pending changes.
-        /// </summary>
-        /// <param name="page">page object.</param>
-        /// <returns>a new copy of the same page. All pending updates (e.g. to annotations or widgets) will be finalized and a fresh copy of the page will be loaded.</returns>
-        public Page ReloadPage(Page page)
-        {
-            Dictionary<int, dynamic> oldAnnots = new Dictionary<int, dynamic>();
-            int pno = page.Number;
-            foreach (var annot in page.AnnotRefs)
-                oldAnnots.Add(annot.Key, annot.Value);
-
-            int old_ref = page.GetPdfPage().super().m_internal.refs;
-            long m_internal_old = page.GetPdfPage().super().m_internal_value();
-
-            page.Erase();
-            page = null;
-            Utils.StoreShrink(100);
-
-            page = LoadPage(pno);
-
-            foreach (var oldAnnot in oldAnnots)
-            {
-                dynamic annot = oldAnnots[oldAnnot.Key];
-                page.AnnotRefs[oldAnnot.Key] = annot;
-            }
-
-            if (old_ref == 1)
-            {
-                // pass
+                bool simple = IsSimpleFontType(stype);
+                int ordering = GetCjkOrdering(name);
+                fontdict["simple"] = simple;
+                fontdict["ordering"] = ordering;
+                fontdict["glyphs"] = null;
+                fontinfo = new object[] { xref, fontdict };
+                UpdateFontInfo(fontinfo);
             }
             else
             {
-                long m_internal_new = page.GetPdfPage().super().m_internal_value();
+                fontdict = (Dictionary<string, object>)fontinfo[1];
             }
 
-            return page;
-        }
+            List<(int glyph, double width)> glyphs = null;
+            if (fontdict.ContainsKey("glyphs") && fontdict["glyphs"] is List<(int glyph, double width)>)
+                glyphs = (List<(int glyph, double width)>)fontdict["glyphs"];
 
-        /// <summary>
-        /// PDF Only: Return an embedded font file’s data and appropriate file extension.
-        /// <br/>
-        /// This can be used to store the font as an external file. The method does not throw exceptions (other than via checking for PDF and valid xref).
-        /// </summary>
-        /// <param name="xref">PDF object number of the font to extract.</param>
-        /// <param name="infoOnly">only return font information, not the buffer. To be used for information-only purposes, avoids allocation of large buffer areas.</param>
-        /// <param name="named"> If true, a dictionary with the following keys is returned: ‘name’ (font base name), ‘ext’ (font file extension), ‘type’ (font type), ‘content’ (font file content).</param>
-        /// <returns>Font object, where ext is a 3-byte suggested file extension (str), basename is the font’s name (str), type is the font’s type (e.g. “Type1”) and content is a bytes object containing the font file’s content (or b””).</returns>
-        public FontInfo ExtractFont(int xref = 0, int infoOnly = 0, string named = null)
-        {
-            PdfDocument pdf = AsPdfDocument(this);
-            PdfObj obj = pdf.pdf_load_object(xref);
-            PdfObj type = obj.pdf_dict_get(new PdfObj("Type"));
-            PdfObj subType = obj.pdf_dict_get(new PdfObj("Subtype"));
-
-            if (
-                type.pdf_name_eq(new PdfObj("Font")) != 0
-                && !subType.pdf_to_name().StartsWith("CIDFontType")
-            ) // matched
-            {
-                PdfObj bName = null;
-                PdfObj baseFont = obj.pdf_dict_get(new PdfObj("BaseFont"));
-                if (baseFont == null || baseFont.pdf_is_null() != 0)
-                {
-                    bName = obj.pdf_dict_get(new PdfObj("Name"));
-                }
-                else
-                {
-                    bName = baseFont;
-                }
-                string ext = Utils.GetFontExtension(pdf, xref);
-                byte[] bytes = null;
-                if (ext != "n/a" && infoOnly == 0)
-                {
-                    FzBuffer buf = Utils.GetFontBuffer(pdf, xref);
-                    bytes = Utils.BinFromBuffer(buf);
-                }
-                else
-                    bytes = Encoding.UTF8.GetBytes("");
-
-                subType.Dispose();
-                type.Dispose();
-                obj.Dispose();
-                pdf.Dispose();
-                return new FontInfo()
-                {
-                    Name = Utils.EscapeStrFromStr(bName.pdf_to_name()),
-                    Ext = Utils.UnicodeFromStr(ext),
-                    Type = Utils.UnicodeFromStr(subType.pdf_to_name()),
-                    Content = bytes
-                };
-            }
-            else
-            {
-                subType.Dispose();
-                type.Dispose();
-                obj.Dispose();
-                pdf.Dispose();
-                return new FontInfo()
-                {
-                    Name = "",
-                    Ext = "",
-                    Type = "",
-                    Content = Encoding.UTF8.GetBytes("")
-                };
-            }
-        }
-
-        /// <summary>
-        /// Get list of glyph information of a font.
-        /// </summary>
-        /// <param name="doc"></param>
-        /// <param name="xref"></param>
-        /// <param name="limit"></param>
-        /// <param name="idx"></param>
-        /// <param name="fontDict"></param>
-        /// <returns></returns>
-        /// <exception cref="Exception"></exception>
-        public List<(int, double)> GetCharWidths(
-            int xref,
-            int limit = 256,
-            int idx = 0,
-            FontInfo fontDict = null
-        )
-        {
-            FontInfo fontStruct = Utils.CheckFontInfo(this, xref);
-            string name = "";
-            string ext = "";
-            string stype = "";
-            float asc = 0.0f;
-            float dsc = 0.0f;
-            bool simple = false;
-            int ordering = 0;
-            List<(int, double)> glyphs = null;
-
-            if (fontStruct == null)
-            {
-                if (fontDict == null)
-                {
-                    (name, ext, stype, asc, dsc) = Utils.GetFontProperties(this, xref);
-                    fontStruct.Name = name;
-                    fontStruct.Ext = ext;
-                    fontStruct.Type = stype;
-                    fontStruct.Ascender = asc;
-                    fontStruct.Descender = dsc;
-                }
-                else
-                {
-                    name = fontDict.Name;
-                    ext = fontDict.Ext;
-                    stype = fontDict.Type;
-                    ordering = fontDict.Ordering;
-                    simple = fontDict.Simple;
-                }
-
-                if (string.IsNullOrEmpty(ext))
-                    throw new Exception("xref is not a font");
-
-                if (stype == "Type1" || stype == "MMType1" || stype == "TrueType")
-                    simple = true;
-                else
-                    simple = false;
-
-                if (name == "Fangti" || name == "Ming")
-                    ordering = 0;
-                else if (name == "Heiti" || name == "Song")
-                    ordering = 1;
-                else if (name == "Gothic" || name == "Mincho")
-                    ordering = 2;
-                else if (name == "Dotum" || name == "Batang")
-                    ordering = 3;
-                else
-                    ordering = -1;
-
-                fontDict.Simple = simple;
-
-                if (name == "ZapfDingbats")
-                    glyphs = new List<(int, double)>(Utils.zapf_glyphs);
-                else if (name == "Symbol")
-                    glyphs = new List<(int, double)>(Utils.symbol_glyphs);
-                else
-                    glyphs = null;
-
-                fontDict.Glyphs = glyphs;
-                fontDict.Ordering = ordering;
-                fontDict.Xref = xref;
-                FontInfos.Add(fontDict);
-            }
-            else
-            {
-                fontDict = fontStruct;
-                glyphs = new List<(int, double)>(fontDict.Glyphs);
-                simple = fontDict.Simple;
-                ordering = fontDict.Ordering;
-            }
-
-            int oldLimit = 0;
-            if (glyphs != null)
-                oldLimit = glyphs.Count;
-            int myLimit = Math.Max(256, limit);
-            if (myLimit <= oldLimit)
+            int oldlimit = glyphs != null ? glyphs.Count : 0;
+            int mylimit = limit < 256 ? 256 : limit;
+            if (glyphs != null && mylimit <= oldlimit)
                 return glyphs;
 
-            if (ordering < 0)
-                glyphs = _GetCharWidths(
-                    xref,
-                    fontDict.Name,
-                    fontDict.Ext,
-                    fontDict.Ordering,
-                    myLimit,
-                    idx
-                );
+            int cjkOrdering = fontdict.ContainsKey("ordering") && fontdict["ordering"] is int ? (int)fontdict["ordering"] : -1;
+            if (cjkOrdering >= 0)
+            {
+                // Python returns None for CJK fonts here; keep null-equivalent in cache and return null.
+                fontdict["glyphs"] = null;
+                fontinfo[1] = fontdict;
+                UpdateFontInfo(fontinfo);
+                return null;
+            }
+
+            var ef2 = ExtractFont(xref);
+            mupdf.FzFont font;
+            if (ef2.content != null && ef2.content.Length > 0)
+            {
+                var buf = Helpers.BufferFromBytes(ef2.content);
+                font = new mupdf.FzFont(null, buf, idx, 0);
+            }
             else
-                glyphs = null;
+            {
+                string name = fontdict.ContainsKey("name") ? (fontdict["name"]?.ToString() ?? null) : null;
+                font = new mupdf.FzFont(name);
+            }
 
-            fontDict.Glyphs = glyphs;
-            Utils.UpdateFontInfo(this, fontDict);
-
+            glyphs = BuildCharWidths(font, mylimit);
+            fontdict["glyphs"] = glyphs;
+            fontinfo[1] = fontdict;
+            UpdateFontInfo(fontinfo);
             return glyphs;
         }
 
         /// <summary>
-        /// Return a list of character glyphs and their widths for a font that is present in the document.
+        /// Get image by xref. Returns a dictionary.
         /// </summary>
-        /// <param name="xref">cross reference number of a font embedded in the PDF</param>
-        /// <param name="bfName"></param>
-        /// <param name="ext"></param>
-        /// <param name="ordering"></param>
-        /// <param name="limit">limits the number of returned entries</param>
-        /// <param name="idx"></param>
-        /// <returns></returns>
-        /// <exception cref="Exception"></exception>
-        internal List<(int, double)> _GetCharWidths(
-            int xref,
-            string bfName,
-            string ext,
-            int ordering,
-            int limit,
-            int idx = 0
-        )
-        {
-            PdfDocument pdf = AsPdfDocument(this);
-            int myLimit = limit;
-            FzFont font = null;
-
-            if (myLimit < 256)
-                myLimit = 256;
-            if (ordering >= 0)
-            {
-                ll_fz_lookup_cjk_font_outparams cjk = new ll_fz_lookup_cjk_font_outparams();
-                SWIGTYPE_p_unsigned_char data = mupdf.mupdf.ll_fz_lookup_cjk_font_outparams_fn(
-                    ordering,
-                    cjk
-                );
-
-                font = mupdf.mupdf.fz_new_font_from_memory(null, data, cjk.len, cjk.index, 0);
-            }
-            else
-            {
-                ll_fz_lookup_base14_font_outparams base14 =
-                    new ll_fz_lookup_base14_font_outparams();
-                SWIGTYPE_p_unsigned_char data = mupdf.mupdf.ll_fz_lookup_base14_font_outparams_fn(
-                    bfName,
-                    base14
-                );
-                if (data != null)
-                    font = mupdf.mupdf.fz_new_font_from_memory(bfName, data, base14.len, 0, 0);
-                else
-                {
-                    FzBuffer buf = Utils.GetFontBuffer(pdf, xref);
-                    if (buf == null)
-                        throw new Exception($"font at xref {xref} is not supported");
-                    font = mupdf.mupdf.fz_new_font_from_buffer(null, buf, idx, 0);
-                    buf.Dispose();
-                }
-            }
-            List<(int, double)> wList = new List<(int, double)>();
-            for (int i = 0; i < myLimit; i++)
-            {
-                int glyph = font.fz_encode_character(i);
-                float adv = font.fz_advance_glyph(glyph, 0);
-                if (ordering >= 0)
-                    glyph = i;
-                if (glyph > 0)
-                    wList.Add((glyph, adv));
-                else
-                    wList.Add((glyph, 0.0f));
-            }
-
-            if (font != null)
-                font.Dispose();
-            pdf.Dispose();
-            return wList;
-        }
-
-        /// <summary>
-        /// PDF only: Return the definition source of a PDF object.
-        /// </summary>
-        /// <param name="xref">the object’s xref.</param>
-        /// <param name="compressed">whether to generate a compact output with no line breaks or spaces.</param>
-        /// <param name="ascii">whether to ASCII-encode binary data.</param>
-        /// <returns>whether to ASCII-encode binary data.</returns>
-        public string GetXrefObject(int xref, int compressed = 0, int ascii = 0)
-        {
-            if (IsClosed)
-                throw new Exception("document closed");
-            
-            PdfDocument pdf = AsPdfDocument(this);
-            int xrefLen = pdf.pdf_xref_len();
-            PdfObj obj = null;
-
-            if (!Utils.INRANGE(xref, 1, xrefLen - 1) && xref != -1)
-            {
-                pdf.Dispose();
-                throw new Exception(Utils.ErrorMessages["MSG_BAD_XREF"]);
-            }
-            if (xref > 0)
-                obj = pdf.pdf_load_object(xref);
-            else
-                obj = pdf.pdf_trailer();
-
-            FzBuffer res = Utils.Object2Buffer(obj.pdf_resolve_indirect(), compressed, ascii);
-            string text = Utils.EscapeStrFromBuffer(res);
-
-            res.Dispose();
-            obj.Dispose();
-            pdf.Dispose();
-
-            return text;
-        }
-
-        /// <summary>
-        /// PDF only: Return a list of all XObjects referenced by a page.
-        /// </summary>
-        /// <param name="pno">page number, 0-based, -∞ < pno < PageCount</param>
-        /// <returns>a list of (non-image) XObjects. These objects typically represent pages embedded (not copied) from other PDFs.</returns>
-        /// <exception cref="Exception"></exception>
-        public List<Entry> GetPageXObjects(int pno)
+        public Dictionary<string, object> ExtractImage(int xref)
         {
             if (IsClosed || IsEncrypted)
-                throw new Exception("document closed or encrypted");
-            
-            if (!IsPDF)
-                return new List<Entry>();
-            
-            List<Entry> val = GetPageInfo(pno, 3);
-            
-            return val;
-        }
+                throw new ValueErrorException("document closed or encrypted");
 
-        /// <summary>
-        /// Retrieve a list of images used on a page.
-        /// </summary>
-        /// <param name="pno"> page number, 0-based, -∞ < pno < PageCount</param>
-        /// <param name="full"> whether to also include the referencer’s xref (which is zero if this is the page).</param>
-        /// <returns>a list of images referenced by this page.</returns>
-        /// <exception cref="Exception"></exception>
-        public List<Entry> GetPageImages(int pno, bool full = false)
-        {
-            if (IsClosed || IsEncrypted)
-                throw new Exception("document closed or encrypted");
-            
-            if (!IsPDF)
-                return new List<Entry>();
-            
-            List<Entry> val = GetPageInfo(pno, 2);
-            if (full == false)
-            {
-                List<Entry> ret = new List<Entry>();
-                foreach (Entry v in val)
-                {
-                    v.StreamXref = 0;
-                    ret.Add(v);
-                }
-                return ret;
-            }
+            var pdf = NativePdfDocument;
 
-            return val;
-        }
+            if (xref < 1 || xref > mupdf.mupdf.pdf_xref_len(pdf) - 1)
+                throw new ValueErrorException(Constants.MSG_BAD_XREF);
 
-        private void _DeletePage(int pno)
-        {
-            PdfDocument pdf = AsPdfDocument(this);
-            pdf.pdf_delete_page(pno);
-            if (pdf.m_internal.rev_page_map != null)
-                mupdf.mupdf.ll_pdf_drop_page_tree(pdf.m_internal);
-            pdf.Dispose();
-        }
+            var obj = mupdf.mupdf.pdf_new_indirect(pdf, xref, 0);
+            var subtype = mupdf.mupdf.pdf_dict_get(obj, mupdf.mupdf.pdf_new_name("Subtype"));
+            if (subtype.m_internal == null || !string.Equals(mupdf.mupdf.pdf_to_name(subtype), "Image", StringComparison.Ordinal))
+                throw new ValueErrorException("not an image");
 
-        /// <summary>
-        /// Create a table of contents.
-        /// </summary>
-        /// <param name="simple">a bool to control output.</param>
-        /// <returns>Returns a list, where each entry consists of outline level, title, page number and link destination (if simple = False). For details see MuPDF's documentation.</returns>
-        /// <exception cref="Exception"></exception>
-        public List<Toc> GetToc(bool simple = true)
-        {
-            List<Toc> Recurse(Outline _olItem, List<Toc> list, int _lvl)
-            {
-                while (_olItem != null && _olItem.ToFzOutline().m_internal != null)
-                {
-                    string title = "";
-                    int page = -1;
-                    if (_olItem.Title != null)
-                        title = _olItem.Title;
+            var o = mupdf.mupdf.pdf_dict_geta(obj, mupdf.mupdf.pdf_new_name("SMask"), mupdf.mupdf.pdf_new_name("Mask"));
+            int smask = o.m_internal != null ? mupdf.mupdf.pdf_to_num(o) : 0;
 
-                    if (!_olItem.IsExternal)
-                    {
-                        if (_olItem.Uri != null)
-                        {
-                            if (_olItem.Page == -1)
-                            {
-                                (List<int>, float, float) resolve = ResolveLink(_olItem.Uri);
-                                page = resolve.Item1[0] + 1;
-                            }
-                            else
-                                page = _olItem.Page + 1;
-                        }
-                        else
-                            page = -1;
-                    }
-                    else
-                        page = -1;
-
-                    if (!simple)
-                    {
-                        LinkInfo link = Utils.GetLinkDict(_olItem, this);
-                        list.Add(
-                            new Toc()
-                            {
-                                Level = _lvl,
-                                Title = title,
-                                Page = page,
-                                Link = link
-                            }
-                        );
-                    }
-                    else
-                        list.Add(
-                            new Toc()
-                            {
-                                Level = _lvl,
-                                Title = title,
-                                Page = page
-                            }
-                        );
-
-                    if (_olItem.Down != null)
-                        list = Recurse(_olItem.Down, list, _lvl + 1);
-                    _olItem = _olItem.Next;
-                }
-
-                return list;
-            }
-
-            if (IsClosed)
-                throw new Exception("document closed");
-            
-            InitDocument();
-            Outline olItem = Outline;
-            if (olItem == null)
-                return new List<Toc>();
-
-            int lvl = 1;
-            List<Toc> liste = new List<Toc>();
-            List<Toc> toc = Recurse(olItem, liste, lvl);
-
-            if (IsPDF && simple == false)
-                ExtendTocItems(toc);
-
-            return toc;
-        }
-
-        /// <summary>
-        /// Convert the PDF's destination names into a dict.
-        /// </summary>
-        /// <param name="uri"></param>
-        /// <param name="chapters"></param>
-        /// <returns></returns>
-        internal (List<int>, float, float) ResolveLink(string uri = null, int chapters = 0)
-        {
-            fz_location loc = null;
-            float xp = 0.0f;
-            float yp = 0.0f;
-
-            if (string.IsNullOrEmpty(uri))
-            {
-                if (chapters != 0)
-                    return (new List<int>() { -1, -1 }, 0, 0);
-                return (new List<int>() { -1 }, 0, 0);
-            }
-            try
-            {
-                ll_fz_resolve_link_outparams outparams = new ll_fz_resolve_link_outparams();
-                loc = mupdf.mupdf.ll_fz_resolve_link_outparams_fn(
-                    _nativeDocument.m_internal,
-                    uri,
-                    outparams
-                );
-                xp = outparams.xp;
-                yp = outparams.yp;
-            }
-            catch (Exception)
-            {
-                if (chapters != 0)
-                    return (new List<int>() { -1, -1 }, 0, 0);
-                return (new List<int>() { -1 }, 0, 0);
-            }
-
-            if (chapters != 0)
-                return (new List<int>() { loc.chapter, loc.page }, xp, yp);
-            int pno = _nativeDocument.fz_page_number_from_location(new FzLocation(loc));
-            
-            return (new List<int>() { pno }, xp, yp);
-        }
-
-        /// <summary>
-        /// Rewrite images in a PDF document.
-        /// The typical use case is to reduce the size of the PDF by recompressing
-        /// images.Default parameters will convert all images to JPEG where
-        /// possible, using the specified resolutions and quality.Exclude
-        /// undesired images by setting parameters to False.
-        /// </summary>
-        /// <param name="dpiThreshold">look at images with a larger DPI only.</param>
-        /// <param name="dpiTarget">change eligible images to this DPI.</param>
-        /// <param name="quality">Quality of the recompressed images (0-100).</param>
-        /// <param name="lossy">process lossy image types (e.g. JPEG).</param>
-        /// <param name="lossless">process lossless image types (e.g. PNG).</param>
-        /// <param name="bitonal">process black-and-white images (e.g. FAX)</param>
-        /// <param name="color">process colored images.</param>
-        /// <param name="gray">process gray images.</param>
-        /// <param name="setToGray">whether to change the PDF to gray at process start.</param>
-        /// <param name="options">Custom options for image rewriting(optional). 
-        ///     Expert use only.If provided, other parameters are ignored, except set_to_gray.</param>
-        /// <returns></returns>
-        public void RewriteImage(
-            int dpiThreshold = -1,
-            int dpiTarget = 0,
-            int quality = 0,
-            bool lossy = true,
-            bool lossless = true,
-            bool bitonal = true,
-            bool color = true,
-            bool gray = true,
-            bool setToGray = false,
-            PdfImageRewriterOptions options = null
-            )
-        {
-            string qualityStr = quality.ToString();
-            if (dpiTarget < 0)
-            {
-                dpiThreshold = 0;
-                dpiTarget = 0;
-            }
-            if (dpiTarget > 0 && dpiTarget >= dpiThreshold)
-            {
-                throw new Exception($"dpi_target={dpiTarget} must be less than dpi_threshold={dpiThreshold}");
-            }
-
-            var templateOpts = new PdfImageRewriterOptions();
-            HashSet<string> dir1 = new HashSet<string>(templateOpts.GetType().GetMembers().Select(m => m.Name));
-            
-            PdfImageRewriterOptions opts;
-            if (options == null)
-            {
-                opts = new PdfImageRewriterOptions();
-                if (bitonal == true)
-                {
-                    opts.bitonal_image_recompress_method = mupdf.mupdf.FZ_RECOMPRESS_FAX;
-                    opts.bitonal_image_subsample_method = mupdf.mupdf.FZ_SUBSAMPLE_AVERAGE;
-                    opts.bitonal_image_subsample_to = dpiTarget;
-                    opts.bitonal_image_recompress_quality = qualityStr;
-                    opts.bitonal_image_subsample_threshold = dpiThreshold;
-                }
-                if (color == true)
-                {
-                    if (lossless == true)
-                    {
-                        opts.color_lossless_image_recompress_method = mupdf.mupdf.FZ_RECOMPRESS_JPEG;
-                        opts.color_lossless_image_subsample_method = mupdf.mupdf.FZ_SUBSAMPLE_AVERAGE;
-                        opts.color_lossless_image_subsample_to = dpiTarget;
-                        opts.color_lossless_image_subsample_threshold = dpiThreshold;
-                        opts.color_lossless_image_recompress_quality = qualityStr;
-                    }
-                    if (lossy == true)
-                    {
-                        opts.color_lossy_image_recompress_method = mupdf.mupdf.FZ_RECOMPRESS_JPEG;
-                        opts.color_lossy_image_subsample_method = mupdf.mupdf.FZ_SUBSAMPLE_AVERAGE;
-                        opts.color_lossy_image_subsample_threshold = dpiThreshold;
-                        opts.color_lossy_image_subsample_to = dpiTarget;
-                        opts.color_lossy_image_recompress_quality = qualityStr;
-                    }
-                }
-                if (gray == true)
-                {
-                    if (lossless == true)
-                    {
-                        opts.gray_lossless_image_recompress_method = mupdf.mupdf.FZ_RECOMPRESS_JPEG;
-                        opts.gray_lossless_image_subsample_method = mupdf.mupdf.FZ_SUBSAMPLE_AVERAGE;
-                        opts.gray_lossless_image_subsample_to = dpiTarget;
-                        opts.gray_lossless_image_subsample_threshold = dpiThreshold;
-                        opts.gray_lossless_image_recompress_quality = qualityStr;
-                    }
-                    if (lossy == true)
-                    {
-                        opts.gray_lossy_image_recompress_method = mupdf.mupdf.FZ_RECOMPRESS_JPEG;
-                        opts.gray_lossy_image_subsample_method = mupdf.mupdf.FZ_SUBSAMPLE_AVERAGE;
-                        opts.gray_lossy_image_subsample_threshold = dpiThreshold;
-                        opts.gray_lossy_image_subsample_to = dpiTarget;
-                        opts.gray_lossy_image_recompress_quality = qualityStr;
-                    }
-                }
-            }
-            else
-                opts = options;
-
-            var dir2 = new HashSet<string>(opts.GetType().GetMembers().Select(m => m.Name));
-            var invalidOptions = dir2.Except(dir1).ToList();
-            if (invalidOptions.Any())
-            {
-                throw new ArgumentException($"Invalid options: {string.Join(", ", invalidOptions)}");
-            }
-
-            if (setToGray == true)
-                this.Recolor(1);
-
-            PdfDocument pdf = Document.AsPdfDocument(_nativeDocument);
-            mupdf.mupdf.pdf_rewrite_images(pdf, opts);
-            pdf.Dispose();
-        }
-
-        /// <summary>
-        /// Change the color component count on all pages.
-        /// </summary>
-        /// <param name="components">(int) desired color component count, one of 1, 3, 4.</param>
-        /// <returns></returns>
-        public void Recolor(int components=1)
-        {
-            if (!IsPDF)
-                throw new ArgumentException("is no PDF");
-            for (int i = 0; i < this.PageCount; i++)
-            {
-                this.LoadPage(i).Recolor(components);
-            }
-        }
-
-        /// <summary>
-        /// Return string version of a PDF object definition.
-        /// </summary>
-        /// <param name="obj">PdfObj</param>
-        /// <returns></returns>
-        private string ObjString(PdfObj obj)
-        {
-            FzBuffer buffer = mupdf.mupdf.fz_new_buffer(512);
-            FzOutput output = new FzOutput(buffer);
-            output.pdf_print_obj(obj, 1, 0);
-            output.fz_close_output();
-            output.Dispose();
-
-            return Utils.UnicodeFromBuffer(buffer);
-        }
-
-        /// <summary>
-        /// Generate value of one item of the names dictionary.
-        /// </summary>
-        /// <param name="val"></param>
-        /// <param name="page_refs"></param>
-        /// <returns></returns>
-        private DestName GetArray(PdfObj val, Dictionary<int, int> page_refs)
-        {
-            DestName template = new DestName() { Page = -1, Dest = "" };
-
-            string array = "";
-            if (val.pdf_is_indirect() != 0)
-                val = val.pdf_resolve_indirect();
-            if (val.pdf_is_array() != 0)
-                array = ObjString(val);
-            else if (val.pdf_is_dict() != 0)
-                array = ObjString(val.pdf_dict_gets("D"));
-            else
-                return template;
-
-            // replace PDF "null" by zero, omit the square brackets
-            array = array.Replace("null", "0");
-            if (array.Length >= 2 && array[0] == '[' && array[array.Length - 1] == ']')
-                array = array.Substring(1, array.Length - 2);
-
-            // find stuff before first /
-            int idx = array.IndexOf("/");
-            if (idx < 1)
-            {
-                template.Dest = array;
-                return template;
-            }
-
-            string subval = array.Substring(0, idx);
-            array = array.Substring(idx);
-            template.Dest = array;
-
-            // Parse destination type and parameters
-            string[] arr_t = array.Replace("null", "0").Split(new char[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
-            if (arr_t.Length == 0)
-                return template;
-
-            string destType = arr_t[0];
-            string[] params_t = arr_t.Skip(1).ToArray();
-
-            if (destType == "/XYZ")
-            {
-                template.Dest = destType;
-                if (params_t.Length >= 3)
-                {
-                    float x = float.Parse(params_t[0], System.Globalization.CultureInfo.InvariantCulture);
-                    float y = float.Parse(params_t[1], System.Globalization.CultureInfo.InvariantCulture);
-                    float z = float.Parse(params_t[2], System.Globalization.CultureInfo.InvariantCulture);
-                    template.To = new Point(x, y);
-                    template.Zoom = z;
-                }
-            }
-            else if (destType == "/FitH" || destType == "/FitBH")
-            {
-                template.Dest = destType;
-                if (params_t.Length >= 1)
-                {
-                    float top = float.Parse(params_t[0], System.Globalization.CultureInfo.InvariantCulture);
-                    template.To = new Point(0, top);
-                }
-            }
-            else if (destType == "/FitV" || destType == "/FitBV")
-            {
-                template.Dest = destType;
-                if (params_t.Length >= 1)
-                {
-                    float left = float.Parse(params_t[0], System.Globalization.CultureInfo.InvariantCulture);
-                    template.To = new Point(left, 0);
-                }
-            }
-            else if (destType == "/FitR")
-            {
-                template.Dest = destType;
-                if (params_t.Length >= 4)
-                {
-                    float left = float.Parse(params_t[0], System.Globalization.CultureInfo.InvariantCulture);
-                    float bottom = float.Parse(params_t[1], System.Globalization.CultureInfo.InvariantCulture);
-                    float right = float.Parse(params_t[2], System.Globalization.CultureInfo.InvariantCulture);
-                    float top = float.Parse(params_t[3], System.Globalization.CultureInfo.InvariantCulture);
-                    template.Rect = new Rect(left, top, right, bottom);
-                }
-            }
-            else if (destType == "/Fit" || destType == "/FitB")
-            {
-                // Fit and FitB have no parameters
-                template.Dest = destType;
-            }
-
-            // extract page number
-            if (subval.Contains(" R"))
-            {
-                string[] parts = subval.Split(new char[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
-                if (parts.Length > 0 && int.TryParse(parts[0], out int pageRef))
-                    template.Page = page_refs.ContainsKey(pageRef) ? page_refs[pageRef] : -1;
-            }
-            else
-            {
-                if (int.TryParse(subval.Trim(), out int pageNum))
-                    template.Page = pageNum;
-            }
-
-            return template;
-        }
-
-        private void FillDict(
-            Dictionary<string, DestName> destDict,
-            PdfObj pdfDict,
-            Dictionary<int, int> page_refs
-        )
-        {
-            int nameCount = pdfDict.pdf_dict_len();
-
-            for (int i = 0; i < nameCount; i++)
-            {
-                PdfObj key = pdfDict.pdf_dict_get_key(i);
-                PdfObj val = pdfDict.pdf_dict_get_val(i);
-                string dictKey = "";
-                if (key.pdf_is_name() != 0)
-                    dictKey = key.pdf_to_name();
-                else
-                {
-                    Console.WriteLine($"key {i} is no /Name");
-                    dictKey = null;
-                }
-
-                if (dictKey != null)
-                {
-                    destDict[dictKey] = GetArray(val, page_refs);
-                }
-            }
-        }
-
-        /// <summary>
-        /// PDF only: Convert destination names into a dict.
-        /// </summary>
-        /// <returns>PDF only: Convert destination names into a dict.</returns>
-        public Dictionary<string, dynamic> ResolveNames()
-        {
-            Dictionary<int, int> page_refs = new Dictionary<int, int>();
-            for (int i = 0; i < PageCount; i++)
-                page_refs[GetPageXref(i)] = i;
-
-            PdfDocument pdf = Document.AsPdfDocument(this);
-
-            // access PDF catalog
-            PdfObj catalog = pdf.pdf_trailer().pdf_dict_gets("Root");
-            Dictionary<string, DestName> destDict = new Dictionary<string, DestName>();
-            PdfObj dests = mupdf.mupdf.pdf_new_name("Dests");
-
-            if (catalog.m_internal != null)
-            {
-                PdfObj oldDests = catalog.pdf_dict_get(dests);
-                if (oldDests.m_internal != null && oldDests.pdf_is_dict() != 0)
-                    FillDict(destDict, oldDests, page_refs);
-            }
-
-            PdfObj tree = pdf.pdf_load_name_tree(dests);
-            if (tree.m_internal != null && tree.pdf_is_dict() != 0)
-                FillDict(destDict, tree, page_refs);
-
-            dests.Dispose();
-
-            Dictionary<string, dynamic> ret = new Dictionary<string, dynamic>();
-            foreach (var dict in destDict)
-                ret[dict.Key] = dict.Value;
-
-            pdf.Dispose();
-
-            return ret;
-        }
-
-        /// <summary>
-        /// PDF only: Return whether the document contains signature fields. This is an optional PDF property: if not present (return value -1), no conclusions can be drawn – the PDF creator may just not have bothered using it.
-        /// </summary>
-        /// <returns>int</returns>
-        public int GetSigFlags()
-        {
-            PdfDocument pdf = AsPdfDocument(this);
-            if (pdf.m_internal == null)
-                return -1;
-            PdfObj sigflags = Utils.pdf_dict_getl(
-                pdf.pdf_trailer(),
-                new string[] { "Root", "AcroForm", "SigFlags" }
-            );
-            int sigflag = -1;
-            if (sigflags != null)
-                sigflag = sigflags.pdf_to_int();
-
-            pdf.Dispose();
-
-            return sigflag;
-        }
-
-        /// <summary>
-        /// PDF only: Get the document XML metadata.
-        /// </summary>
-        /// <returns>XML metadata of the document. Empty string if not present or not a PDF.</returns>
-        public string GetXmlMetadata()
-        {
-            PdfObj xml = null;
-            PdfDocument pdf = AsPdfDocument(this);
-            if (pdf.m_internal != null)
-            {
-                xml = Utils.pdf_dict_getl(pdf.pdf_trailer(), new string[] { "Root", "Metadata" });
-            }
-
-            string rc = "";
-            if (xml.m_internal != null)
-            {
-                FzBuffer buff = xml.pdf_load_stream();
-                rc = Utils.UnicodeFromBuffer(buff);
-            }
-
-            pdf.Dispose();
-
+            // load the image
+            var img = mupdf.mupdf.pdf_load_image(pdf, obj);
+            var rc = new Dictionary<string, object>();
+            MakeImageDict(img, rc);
+            rc["smask"] = smask;
+            rc["cs-name"] = mupdf.mupdf.fz_colorspace_name(img.colorspace());
             return rc;
         }
 
-        /// <summary>
-        /// PDF only: Add an arbitrary supported document to the current PDF. Opens “infile” as a document, converts it to a PDF and then invokes Document.insert_pdf(). Parameters are the same as for that method. Among other things, this features an easy way to append images as full pages to an output PDF.
-        /// </summary>
-        /// <param name="infile"> the input document to insert. May be a filename specification as is valid for creating a Document or a Pixmap.</param>
-        /// <param name="fromPage"></param>
-        /// <param name="toPage"></param>
-        /// <param name="startAt"></param>
-        /// <param name="rotate"></param>
-        /// <param name="links"></param>
-        /// <param name="annots"></param>
-        /// <param name="showProgress"></param>
-        /// <param name="final"></param>
-        /// <exception cref="Exception"></exception>
-        public void InsertFile(
-            Document infile,
-            int fromPage = -1,
-            int toPage = -1,
-            int startAt = -1,
-            int rotate = -1,
-            bool links = true,
-            bool annots = true,
-            int showProgress = 0,
-            int final = 1
-        )
+        private static void MakeImageDict(mupdf.FzImage img, Dictionary<string, object> imgDict)
         {
-            Document src = infile;
-            if (src == null)
-                throw new Exception("bad infile parameter");
+            int imgType = img.fz_compressed_image_type();
+            string ext = JMImageExtension(imgType);
+            byte[] bytes_;
 
-            if (!src.IsPDF)
+            var llCbuf = mupdf.mupdf.ll_fz_compressed_image_buffer(img.m_internal);
+
+            if (llCbuf == null
+                || imgType == mupdf.mupdf.FZ_IMAGE_JBIG2
+                || imgType == mupdf.mupdf.FZ_IMAGE_UNKNOWN
+                || imgType < mupdf.mupdf.FZ_IMAGE_BMP)
             {
-                byte[] pdfBytes = src.Convert2Pdf();
-                src = new Document("pdf", pdfBytes);
+                var res = mupdf.mupdf.fz_new_buffer_from_image_as_png(
+                    img,
+                    new mupdf.FzColorParams(mupdf.mupdf.fz_default_color_params));
+                ext = "png";
+                bytes_ = res.fz_buffer_extract();
+            }
+            else if (ext == "jpeg" && img.n() == 4)
+            {
+                var res = mupdf.mupdf.fz_new_buffer_from_image_as_jpeg(
+                    img,
+                    new mupdf.FzColorParams(mupdf.mupdf.fz_default_color_params),
+                    95,
+                    1);
+                bytes_ = res.fz_buffer_extract();
+            }
+            else
+            {
+                var res = new mupdf.FzBuffer(mupdf.mupdf.ll_fz_keep_buffer(llCbuf.buffer));
+                bytes_ = res.fz_buffer_extract();
             }
 
-            InsertPdf(src, fromPage, toPage, startAt, rotate, links, annots, showProgress, final);
+            imgDict["width"] = img.w();
+            imgDict["height"] = img.h();
+            imgDict["ext"] = ext;
+            imgDict["colorspace"] = img.n();
+            imgDict["xres"] = img.xres();
+            imgDict["yres"] = img.yres();
+            imgDict["bpc"] = img.bpc();
+            imgDict["size"] = bytes_.Length;
+            imgDict["image"] = bytes_;
+        }
+
+        private static string JMImageExtension(int type)
+        {
+            switch (type)
+            {
+                case 1: return "png";
+                case 2: return "jpeg";
+                case 3: return "jxr";
+                case 4: return "jpx";
+                case 5: return "bmp";
+                case 6: return "gif";
+                case 7: return "tiff";
+                case 8: return "pnm";
+                default: return "unknown";
+            }
+        }
+
+        // ─── Search ─────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Search for text on a page.
+        /// </summary>
+        /// <remarks>PyMuPDF <c>Document.search_page_for</c> delegates to <c>Page.search_for</c>; optional <paramref name="clip"/>, <paramref name="flags"/>, and <paramref name="textpage"/> are forwarded.</remarks>
+        public List<Quad> SearchPageFor(int pno, string needle, int maxHits = 16, Quad clip = null, int flags = 0, TextPage textpage = null)
+        {
+            using var page = LoadPage(pno);
+            return page.SearchFor(needle, clip, maxHits, flags, textpage);
         }
 
         /// <summary>
-        /// Insert a page range from another PDF.
+        /// Search for text on a page; returns merged rectangles (PyMuPDF <c>quads=False</c> path).
         /// </summary>
-        /// <param name="docSrc">PDF to copy from. Must be different object, but may be same file.</param>
-        /// <param name="fromPage">first source page to copy, 0-based, default 0.</param>
-        /// <param name="toPage">last source page to copy, 0-based, default last page.</param>
-        /// <param name="startAt">from_page will become this page number in target.</param>
-        /// <param name="rotate">rotate copied pages, default -1 is no change.</param>
-        /// <param name="links">whether to also copy links.</param>
-        /// <param name="annots">whether to also copy annotations.</param>
-        /// <param name="showProgress">progress message interval, 0 is no messages.</param>
-        /// <param name="final"></param>
-        /// <param name="gmap">internal use only</param>
-        /// <exception cref="Exception"></exception>
-        public void InsertPdf(
-            Document docSrc,
-            int fromPage = -1,
-            int toPage = -1,
-            int startAt = -1,
-            int rotate = -1,
-            bool links = true,
-            bool annots = true,
-            int showProgress = 0,
-            int final = 1,
-            GraftMap gmap = null
-        )
+        public List<Rect> SearchPageForRects(int pno, string needle, int maxHits = 16, Quad clip = null, int flags = 0, TextPage textpage = null)
+        {
+            using var page = LoadPage(pno);
+            return page.SearchForRects(needle, clip, maxHits, flags, textpage);
+        }
+
+        // ─── Page Pixmap / Text convenience ─────────────────────────────
+
+        /// <summary>
+        /// Create pixmap of document page by page number.
+        /// </summary>
+        public Pixmap GetPagePixmap(int pno, Matrix matrix = null, Colorspace cs = null, bool alpha = false, IRect clip = null)
+        {
+            using var page = LoadPage(pno);
+            return page.GetPixmap(matrix, cs, clip, alpha);
+        }
+
+        /// <summary>
+        /// Extract text from page by page number.
+        /// </summary>
+        public string GetPageText(int pno, string option = "text", int flags = 0)
+        {
+            using var page = LoadPage(pno);
+            return page.GetText(option, flags: flags);
+        }
+
+        /// <summary>
+        /// Retrieve a list of XObjects used on a page.
+        /// </summary>
+        public List<Dictionary<string, object>> GetPageXobjects(int pno)
+        {
+            var result = new List<Dictionary<string, object>>();
+            if (!IsPdf)
+                return result;
+
+            using var page = LoadPage(pno);
+            var pageObj = page.NativePdfPage.obj();
+            var resources = mupdf.mupdf.pdf_dict_get(pageObj, mupdf.mupdf.pdf_new_name("Resources"));
+            if (resources.m_internal == null)
+                return result;
+
+            var xobjects = mupdf.mupdf.pdf_dict_get(resources, mupdf.mupdf.pdf_new_name("XObject"));
+            if (xobjects.m_internal == null || mupdf.mupdf.pdf_is_dict(xobjects) == 0)
+                return result;
+
+            int n = mupdf.mupdf.pdf_dict_len(xobjects);
+            for (int i = 0; i < n; i++)
+            {
+                var key = mupdf.mupdf.pdf_dict_get_key(xobjects, i);
+                var val = mupdf.mupdf.pdf_dict_get_val(xobjects, i);
+                var resolved = mupdf.mupdf.pdf_resolve_indirect(val);
+
+                string name = mupdf.mupdf.pdf_to_name(key);
+                int xref = mupdf.mupdf.pdf_to_num(val);
+                string subtype = "";
+                var subtypeObj = mupdf.mupdf.pdf_dict_get(resolved, mupdf.mupdf.pdf_new_name("Subtype"));
+                if (subtypeObj.m_internal != null && mupdf.mupdf.pdf_is_name(subtypeObj) != 0)
+                    subtype = mupdf.mupdf.pdf_to_name(subtypeObj);
+
+                result.Add(new Dictionary<string, object>
+                {
+                    ["xref"] = xref,
+                    ["name"] = name,
+                    ["subtype"] = subtype
+                });
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Return a list of page numbers with the given label.
+        ///
+        /// Args:
+        /// doc: PDF document object (resp. 'self').
+        /// label: (str) label.
+        /// only_one: (bool) stop searching after first hit.
+        /// Returns:
+        /// List of page numbers having this label.
+        /// </summary>
+        public List<int> GetPageNumbers(string label, bool onlyOne = false)
+        {
+            // Jorj McKie, 2021-01-06
+            var numbers = new List<int>();
+            // if not label: return numbers
+            if (string.IsNullOrEmpty(label))
+                return numbers;
+
+            // labels = doc._get_page_labels()
+            // if labels == []: return numbers
+            for (int i = 0; i < PageCount; i++)
+            {
+                using var page = LoadPage(i);
+                string pageLabel = page.NativePage.fz_page_label("", 128);
+                if (pageLabel == label)
+                {
+                    numbers.Add(i);
+                    // if only_one: break
+                    if (onlyOne)
+                        break;
+                }
+            }
+
+            return numbers;
+        }
+
+        /// <summary>
+        /// Return page label definitions in PDF document.
+        ///
+        /// Returns:
+        /// A list of dictionaries with the following format:
+        /// {'startpage': int, 'prefix': str, 'style': str, 'firstpagenum': int}.
+        /// </summary>
+        public List<Dictionary<string, object>> GetPageLabels()
+        {
+            // Jorj McKie, 2021-01-10
+            // return [utils.rule_dict(item) for item in self._get_page_labels()]
+            var result = new List<Dictionary<string, object>>();
+            if (!IsPdf)
+                return result;
+
+            var pdf = NativePdfDocument;
+            var trailer = mupdf.mupdf.pdf_trailer(pdf);
+            var root = mupdf.mupdf.pdf_dict_get(trailer, mupdf.mupdf.pdf_new_name("Root"));
+            if (root.m_internal == null)
+                return result;
+
+            var pageLabels = mupdf.mupdf.pdf_dict_get(root, mupdf.mupdf.pdf_new_name("PageLabels"));
+            if (pageLabels.m_internal == null)
+                return result;
+
+            var nums = mupdf.mupdf.pdf_dict_get(pageLabels, mupdf.mupdf.pdf_new_name("Nums"));
+            if (nums.m_internal == null)
+                return result;
+
+            int n = nums.pdf_array_len();
+            for (int i = 0; i + 1 < n; i += 2)
+            {
+                var startObj = nums.pdf_array_get(i);
+                var ruleObj = nums.pdf_array_get(i + 1);
+                if (startObj.m_internal == null || ruleObj.m_internal == null)
+                    continue;
+
+                var item = new Dictionary<string, object>
+                {
+                    ["startpage"] = startObj.pdf_to_int(),
+                    ["prefix"] = "",
+                    ["style"] = "",
+                    ["firstpagenum"] = 1
+                };
+
+                var p = ruleObj.pdf_dict_get(mupdf.mupdf.pdf_new_name("P"));
+                if (p.m_internal != null)
+                    item["prefix"] = p.pdf_to_text_string();
+
+                var s = ruleObj.pdf_dict_get(mupdf.mupdf.pdf_new_name("S"));
+                if (s.m_internal != null)
+                    item["style"] = s.pdf_to_name();
+
+                var st = ruleObj.pdf_dict_get(mupdf.mupdf.pdf_new_name("St"));
+                if (st.m_internal != null)
+                    item["firstpagenum"] = st.pdf_to_int();
+
+                result.Add(item);
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Add / replace page label definitions in PDF document.
+        ///
+        /// Args:
+        /// doc: PDF document (resp. 'self').
+        /// labels: list of label dictionaries like:
+        /// {'startpage': int, 'prefix': str, 'style': str, 'firstpagenum': int},
+        /// as returned by get_page_labels().
+        /// </summary>
+        public void SetPageLabels(List<Dictionary<string, object>> labels)
+        {
+            // William Chapman, 2021-01-06
+            if (!IsPdf)
+                throw new ValueErrorException(Constants.MSG_IS_NO_PDF);
+            if (labels == null)
+                throw new ArgumentNullException(nameof(labels));
+
+            var pdf = NativePdfDocument;
+
+            for (int i = 0; i < PageCount; i++)
+                mupdf.mupdf.pdf_delete_page_labels(pdf, i);
+
+            // def create_nums(labels):
+            //     """Return concatenated string of all labels rules.
+            //     Returns PDF compatible string for page label definitions,
+            //     ready to be enclosed in PDF array 'Nums[...]'.
+            //     """
+            //     labels.sort(key=lambda x: x["startpage"])
+            //     s = "".join([create_label_str(label) for label in labels])
+            labels.Sort((a, b) => Convert.ToInt32(a["startpage"]).CompareTo(Convert.ToInt32(b["startpage"])));
+            foreach (var label in labels)
+            {
+                // def create_label_str(label):
+                //     """Convert Python label dict to corresponding PDF rule string.
+                //     Returns PDF label rule string wrapped in "<<", ">>".
+                //     """
+                //     s = f"{label['startpage']}<<"
+                if (!label.ContainsKey("startpage"))
+                    throw new ValueErrorException("label is missing required key 'startpage'");
+                int startpage = Convert.ToInt32(label["startpage"]);
+                if (startpage < 0)
+                    throw new ValueErrorException("'startpage' must be >= 0");
+                string prefix = label.ContainsKey("prefix") ? (label["prefix"]?.ToString() ?? "") : "";
+                string style = label.ContainsKey("style") ? (label["style"]?.ToString() ?? "") : "";
+                int first = label.ContainsKey("firstpagenum") ? Convert.ToInt32(label["firstpagenum"]) : 1;
+                if (first < 1)
+                    throw new ValueErrorException("'firstpagenum' must be >= 1");
+                // if label.get("prefix", "") != "": s += f"/P({label['prefix']})"
+                // if label.get("style", "") != "": s += f"/S/{label['style']}"
+                // if label.get("firstpagenum", 1) > 1: s += f"/St {label['firstpagenum']}"
+                // s += ">>"
+                // return s
+                // doc._set_page_labels(create_nums(labels))
+                mupdf.mupdf.pdf_set_page_labels(pdf, startpage, ParsePageLabelStyle(style), prefix, first);
+            }
+        }
+
+        private static mupdf.pdf_page_label_style ParsePageLabelStyle(string style)
+        {
+            switch (style ?? "")
+            {
+                case "D": return mupdf.pdf_page_label_style.PDF_PAGE_LABEL_DECIMAL;
+                case "R": return mupdf.pdf_page_label_style.PDF_PAGE_LABEL_ROMAN_UC;
+                case "r": return mupdf.pdf_page_label_style.PDF_PAGE_LABEL_ROMAN_LC;
+                case "A": return mupdf.pdf_page_label_style.PDF_PAGE_LABEL_ALPHA_UC;
+                case "a": return mupdf.pdf_page_label_style.PDF_PAGE_LABEL_ALPHA_LC;
+                case "": return mupdf.pdf_page_label_style.PDF_PAGE_LABEL_NONE;
+                default: throw new ValueErrorException("bad page label style");
+            }
+        }
+
+        // ─── Layout ─────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Re-layout a reflowable document.
+        /// </summary>
+        public void Layout(float width = 400, float height = 600, float fontsize = 11)
         {
             if (IsClosed || IsEncrypted)
-                throw new Exception("document closed or encrypted");
+                throw new ValueErrorException("document closed or encrypted");
+            // if not mupdf.fz_is_document_reflowable(doc): return
+            if (!IsReflowable)
+                return;
+            float w = width;
+            float h = height;
+            // if w <= 0.0 or h <= 0.0: raise ValueError("bad page size")
+            if (w <= 0.0f || h <= 0.0f)
+                throw new ValueErrorException("bad page size");
+            mupdf.mupdf.fz_layout_document(NativeDocument, w, h, fontsize);
+            ResetPageRefsInternal();
+            InitDoc();
+        }
 
-            if (GraftID == docSrc.GraftID)
-                throw new Exception("source and target cannot be same object");
+        /// <summary>
+        /// Re-layout a reflowable document.
+        /// </summary>
+        public void Layout(Rect rect, float fontsize = 11)
+        {
+            Layout((float)rect.Width, (float)rect.Height, fontsize);
+        }
 
-            int sa = startAt;
-            if (sa < 0)
-                sa = PageCount;
+        // ─── Journal ────────────────────────────────────────────────────
 
-            if (docSrc.PageCount > showProgress && showProgress > 0)
+        /// <summary>
+        /// Activate document journalling.
+        /// </summary>
+        public void JournalEnable()
+        {
+            if (IsClosed || IsEncrypted)
+                throw new ValueErrorException("document closed or encrypted");
+            var pdf = NativePdfDocument;
+            mupdf.mupdf.pdf_enable_journal(pdf);
+        }
+        /// <summary>
+        /// Check if journalling is enabled.
+        /// </summary>
+        public bool JournalIsEnabled
+        {
+            get
             {
-                string inname = Path.GetFileName(docSrc.Name);
-                if (inname == null)
-                    inname = "memory PDF";
-                string outname = Path.GetFileName(Name);
-                if (outname == null)
-                    outname = "memory PDF";
-                Console.WriteLine(string.Format("Inserting {0} at {1}", inname, outname));
+                if (IsClosed || IsEncrypted)
+                    throw new ValueErrorException("document closed or encrypted");
+                var pdf = NativePdfDocument;
+                var pdoc = pdf.m_internal;
+                return pdoc != null && pdoc.journal != null;
             }
-
-            int isrt = docSrc.GraftID;
-            Dictionary<string, string> t = new Dictionary<string, string>();
-
-            //gmap = GraftMaps.GetValueOrDefault(isrt, null);
-            if (!GraftMaps.TryGetValue(isrt, out gmap))
-            {
-                gmap = null; // Default value if the key is missing
-            }
-            if (gmap == null)
-            {
-                gmap = new GraftMap(this);
-                GraftMaps[isrt] = gmap;
-            }
-
-            PdfDocument pdfout = AsPdfDocument(this);
-            PdfDocument pdfsrc = AsPdfDocument(docSrc);
-            int outCount = _nativeDocument.fz_count_pages();
-            int srcCount = docSrc.ToFzDocument().fz_count_pages();
-
-            int fp = fromPage;
-            int tp = toPage;
-            sa = startAt;
-
-            fp = Math.Max(fp, 0);
-            fp = Math.Min(fp, srcCount - 1);
-
-            if (tp < 0)
-                tp = srcCount - 1;
-
-            tp = Math.Min(tp, srcCount - 1);
-
-            if (sa < 0)
-                sa = outCount;
-            sa = Math.Min(sa, outCount);
-
-            if (pdfout.m_internal == null || pdfsrc.m_internal == null)
-                throw new Exception("source or target not a PDF");
-
-            Utils.MergeRange(
-                new Document(pdfout),
-                new Document(pdfsrc),
-                fp,
-                tp,
-                sa,
-                rotate,
-                links,
-                annots,
-                showProgress,
-                gmap
-            );
-
-            ResetPageRefs();
-            if (links)
-                Utils.DoLinks(this, docSrc, fromPage, toPage, sa);
-
-            if (final == 1)
-                GraftMaps[isrt] = null;
-
-            pdfout.Dispose();
-            pdfsrc.Dispose();
         }
 
         /// <summary>
         /// Show if undo and / or redo are possible.
         /// </summary>
-        /// <returns></returns>
-        /// <exception cref="Exception"></exception>
-        public (bool, bool) JournalCanDo()
+        public (bool canUndo, bool canRedo) JournalCanDo()
         {
             if (IsClosed || IsEncrypted)
-                throw new Exception("document closed or encrypted");
-
-            int undo = 0;
-            int redo = 0;
-            PdfDocument pdf = Document.AsPdfDocument(_nativeDocument);
-            undo = pdf.pdf_can_undo();
-            redo = pdf.pdf_can_redo();
-
-            pdf.Dispose();
-
-            return (undo != 0, redo != 0);
+                throw new ValueErrorException("document closed or encrypted");
+            var pdf = NativePdfDocument;
+            return (mupdf.mupdf.pdf_can_undo(pdf) != 0, mupdf.mupdf.pdf_can_redo(pdf) != 0);
         }
 
         /// <summary>
-        /// Activate document journalling.
+        /// Move backwards in the journal.
         /// </summary>
-        /// <exception cref="Exception"></exception>
-        public void JournalEnable()
+        public void JournalUndo()
         {
             if (IsClosed || IsEncrypted)
-                throw new Exception("document closed or encrypted");
-            
-            PdfDocument pdf = Document.AsPdfDocument(_nativeDocument);
-            pdf.pdf_enable_journal();
-            pdf.Dispose();
+                throw new ValueErrorException("document closed or encrypted");
+            mupdf.mupdf.pdf_undo(NativePdfDocument);
         }
-
         /// <summary>
         /// Move forward in the journal.
         /// </summary>
-        /// <returns>true if success</returns>
-        /// <exception cref="Exception"></exception>
-        public bool JournalRedo()
+        public void JournalRedo()
         {
             if (IsClosed || IsEncrypted)
-                throw new Exception("document closed or encrypted");
-            
-            PdfDocument pdf = Document.AsPdfDocument(this);
-            pdf.pdf_redo();
-
-            pdf.Dispose();
-
-            return true;
+                throw new ValueErrorException("document closed or encrypted");
+            mupdf.mupdf.pdf_redo(NativePdfDocument);
         }
 
         /// <summary>
-        /// Check if journalling is enabled.
+        /// Begin a journalling operation.
         /// </summary>
-        /// <returns></returns>
-        /// <exception cref="Exception"></exception>
-        public bool IsEnabledJournal()
+        public void JournalStartOp(string name = null)
         {
             if (IsClosed || IsEncrypted)
-                throw new Exception("document closed or encrypted");
-            
-            PdfDocument pdf = Document.AsPdfDocument(_nativeDocument);
-            bool enabled = (pdf != null) && (pdf.m_internal.journal != null);
-
-            pdf.Dispose();
-
-            return enabled;
-        }
-
-        /// <summary>
-        /// Load a journal from a file.
-        /// </summary>
-        /// <param name="filename">File name for loading journal</param>
-        /// <exception cref="Exception"></exception>
-        public void JournalLoad(string filename)
-        {
-            if (IsClosed || IsEncrypted)
-                throw new Exception("document closed or encrypted");
-            
-            PdfDocument pdf = Document.AsPdfDocument(_nativeDocument);
-
-            IntPtr utf8Ptr = Utils.Utf16_Utf8Ptr(filename);
-            try
-            {
-                pdf.pdf_load_journal(filename);
-            }
-            catch (Exception)
-            {
-                Marshal.FreeHGlobal(utf8Ptr);
-            }
-            
-            if (pdf.m_internal.journal == null)
-                throw new Exception("Journal and document do not match");
-
-            pdf.Dispose();
-        }
-
-        /// <summary>
-        /// Load a journal from a file.
-        /// </summary>
-        /// <param name="journal">Journal bytes</param>
-        /// <exception cref="Exception"></exception>
-        public void JournalLoad(byte[] journal)
-        {
-            if (IsClosed || IsEncrypted)
-                throw new Exception("document closed or encrypted");
-            
-            PdfDocument pdf = Document.AsPdfDocument(_nativeDocument);
-            FzBuffer res = Utils.BufferFromBytes(journal);
-            FzStream stream = res.fz_open_buffer();
-            pdf.pdf_deserialise_journal(stream);
-
-            if (pdf.m_internal.journal == null)
-                throw new Exception("Journal and document do not match");
-
-            pdf.Dispose();
-        }
-
-        /// <summary>
-        /// Show operation name for given step.
-        /// </summary>
-        /// <param name="step">Steps to redo or undo</param>
-        /// <returns></returns>
-        /// <exception cref="Exception"></exception>
-        public string JournalOpName(int step)
-        {
-            if (IsClosed || IsEncrypted)
-                throw new Exception("document closed or encrypted");
-            
-            PdfDocument pdf = Document.AsPdfDocument(_nativeDocument);
-            string name = pdf.pdf_undoredo_step(step);
-
-            pdf.Dispose();
-
-            return name;
-        }
-
-        /// <summary>
-        /// Show journalling state.
-        /// </summary>
-        /// <exception cref="Exception"></exception>
-        public (int, int) JournalPosition()
-        {
-            if (IsClosed || IsEncrypted)
-                throw new Exception("document closed or encrypted");
-            
-            PdfDocument pdf = Document.AsPdfDocument(_nativeDocument);
-            (int, int) rc = pdf.pdf_undoredo_state();
-
-            pdf.Dispose();
-
-            return rc;
-        }
-
-        /// <summary>
-        /// Save journal to a file
-        /// </summary>
-        /// <param name="filename"></param>
-        /// <exception cref="Exception"></exception>
-        public void JournalSave(string filename)
-        {
-            if (IsClosed || IsEncrypted)
-                throw new Exception("document closed or encrypted");
-            
-            PdfDocument pdf = Document.AsPdfDocument(_nativeDocument);
-            IntPtr utf8Ptr = Utils.Utf16_Utf8Ptr(filename);
-            pdf.pdf_save_journal(filename);
-            pdf.Dispose();
-        }
-
-        /// <summary>
-        /// Save journal to a file
-        /// </summary>
-        /// <param name="journal"></param>
-        /// <exception cref="Exception"></exception>
-        public void JournalSave(byte[] journal)
-        {
-            if (IsClosed || IsEncrypted)
-                throw new Exception("document closed or encrypted");
-            
-            PdfDocument pdf = Document.AsPdfDocument(_nativeDocument);
-            MemoryStream memoryStream = new MemoryStream(journal);
-            FilePtrOutput output = new FilePtrOutput(memoryStream);
-            pdf.pdf_write_journal(output);
-            pdf.Dispose();
-        }
-
-        /// <summary>
-        /// Begin a journaling operation.
-        /// </summary>
-        /// <param name="name"></param>
-        /// <exception cref="Exception"></exception>
-        public void JournalStartOp(string name)
-        {
-            if (IsClosed || IsEncrypted)
-                throw new Exception("document closed or encrypted");
-            
-            PdfDocument pdf = Document.AsPdfDocument(_nativeDocument);
-            if (pdf.m_internal.journal == null)
-                throw new Exception("Journalling not enabled");
-            
+                throw new ValueErrorException("document closed or encrypted");
+            var pdf = NativePdfDocument;
+            if (!JournalIsEnabled)
+                throw new InvalidOperationException("Journalling not enabled");
             if (!string.IsNullOrEmpty(name))
-                pdf.pdf_begin_operation(name);
+                mupdf.mupdf.pdf_begin_operation(pdf, name);
             else
-                pdf.pdf_begin_implicit_operation();
-
-            pdf.Dispose();
+                mupdf.mupdf.pdf_begin_implicit_operation(pdf);
         }
 
         /// <summary>
@@ -2621,3628 +3720,1535 @@ namespace MuPDF.NET
         public void JournalStopOp()
         {
             if (IsClosed || IsEncrypted)
-                throw new Exception("document closed or encrypted");
-
-            PdfDocument pdf = AsPdfDocument(_nativeDocument);
-            pdf.pdf_end_operation();
-            pdf.Dispose();
+                throw new ValueErrorException("document closed or encrypted");
+            mupdf.mupdf.pdf_end_operation(NativePdfDocument);
         }
 
         /// <summary>
-        /// Move backwards in the journal.
+        /// Save journal to a file.
         /// </summary>
-        /// <returns>true</returns>
-        /// <exception cref="Exception">document closed or encrypted</exception>
-        public bool JournalUndo()
+        public void JournalSave(string filename)
         {
             if (IsClosed || IsEncrypted)
-                throw new Exception("document closed or encrypted");
-            
-            PdfDocument pdf = AsPdfDocument(_nativeDocument);
-            pdf.pdf_undo();
-
-            pdf.Dispose();
-            return true;
+                throw new ValueErrorException("document closed or encrypted");
+            mupdf.mupdf.pdf_save_journal(NativePdfDocument, filename);
         }
-
         /// <summary>
-        /// Show OC visibility status modifiable by user.
+        /// Load a journal from a file.
         /// </summary>
-        /// <returns></returns>
-        public List<LayerConfigUI> LayerUIConfigs()
-        {
-            PdfDocument pdf = Document.AsPdfDocument(_nativeDocument);
-            PdfLayerConfigUi info = new PdfLayerConfigUi();
-            int n = pdf.pdf_count_layer_config_ui();
-            string type;
-
-            List<LayerConfigUI> rc = new List<LayerConfigUI>();
-            for (int i = 0; i < n; i++)
-            {
-                pdf.pdf_layer_config_ui_info(i, info);
-                switch ((int)info.type)
-                {
-                    case 1:
-                        type = "checkbox";
-                        break;
-                    case 2:
-                        type = "radiobox";
-                        break;
-                    default:
-                        type = "label";
-                        break;
-                }
-
-                LayerConfigUI item = new LayerConfigUI()
-                {
-                    Number = i,
-                    Text = info.text,
-                    Depth = info.depth,
-                    Type = type,
-                    On = info.selected != 0,
-                    IsLocked = info.locked != 0
-                };
-                rc.Add(item);
-            }
-
-            pdf.Dispose();
-            return rc;
-        }
-
-        /// <summary>
-        /// Re-layout a reflowable document.
-        /// </summary>
-        /// <param name="rect"></param>
-        /// <param name="width"></param>
-        /// <param name="height"></param>
-        /// <param name="fontSize"></param>
-        /// <exception cref="Exception"></exception>
-        public void SetLayout(
-            Rect rect = null,
-            float width = 0,
-            float height = 0,
-            int fontSize = 11
-        )
+        public void JournalLoad(string filename)
         {
             if (IsClosed || IsEncrypted)
-                throw new Exception("document closed or encrypted");
-            
-            FzDocument doc = _nativeDocument;
-            if (doc.fz_is_document_reflowable() == 0)
-                return;
-            
-            float w = width;
-            float h = height;
-            FzRect r = rect.ToFzRect();
-            if (r.fz_is_infinite_rect() == 0)
-            {
-                w = r.x1 - r.x0;
-                h = r.y1 - r.y0;
-            }
-            
-            if (w <= 0.0f || h <= 0.0f)
-                throw new Exception("bad page size");
-            
-            doc.fz_layout_document(w, h, fontSize);
-            ResetPageRefs();
-            InitDocument();
+                throw new ValueErrorException("document closed or encrypted");
+            mupdf.mupdf.pdf_load_journal(NativePdfDocument, filename);
+            if (!JournalIsEnabled)
+                throw new FileDataException("Journal and document do not match");
         }
 
         /// <summary>
-        /// Convert pno to (chapter, page)
+        /// Load a journal from serialized bytes.
         /// </summary>
-        /// <param name="pno"></param>
-        /// <returns></returns>
-        /// <exception cref="Exception"></exception>
-        public (int, int) GetLocationFromPageNumber(int pno)
-        {
-            if (IsClosed)
-            {
-                throw new Exception("document is closed");
-            }
-            
-            FzDocument doc = _nativeDocument;
-            FzLocation loc = mupdf.mupdf.fz_make_location(-1, -1);
-            int pageCount = doc.fz_count_pages();
-            while (pno < 0)
-                pno += pageCount;
-            
-            if (pno >= pageCount)
-                throw new Exception(Utils.ErrorMessages["MSG_BAD_PAGENO"]);
-            
-            loc = doc.fz_location_from_page_number(pno);
-            
-            return (loc.chapter, loc.page);
-        }
-
-        /// <summary>
-        /// Make a page pointer before layouting document.
-        /// </summary>
-        /// <param name="locNumbers">Contains chapter and page numbers</param>
-        /// <returns></returns>
-        /// <exception cref="Exception"></exception>
-        public ulong MakeBookmark((int, int) locNumbers)
+        public void JournalLoad(byte[] data)
         {
             if (IsClosed || IsEncrypted)
-                throw new Exception("document closed or encrypted");
-            FzLocation loc = new FzLocation(locNumbers.Item1, locNumbers.Item2);
-            ulong mark = mupdf.mupdf.ll_fz_make_bookmark2(
-                _nativeDocument.m_internal,
-                loc.internal_()
-            );
-            
-            return mark;
+                throw new ValueErrorException("document closed or encrypted");
+            if (data == null || data.Length == 0)
+                throw new EmptyFileException("Cannot open empty stream.");
+            var buffer = Helpers.BufferFromBytes(data);
+            var stream = mupdf.mupdf.fz_open_buffer(buffer);
+            mupdf.mupdf.pdf_deserialise_journal(NativePdfDocument, stream);
+            if (!JournalIsEnabled)
+                throw new FileDataException("Journal and document do not match");
         }
 
         /// <summary>
-        /// Get xref of PDF catalog.
+        /// Show operation name for given step.
         /// </summary>
-        /// <returns></returns>
-        public int GetPdfCatalog()
-        {
-            PdfDocument pdf = Document.AsPdfDocument(_nativeDocument, false);
-            int xref = 0;
-            if (pdf.m_internal == null)
-                return xref;
-            
-            PdfObj root = pdf.pdf_trailer().pdf_dict_get(new PdfObj("Root"));
-            xref = root.pdf_to_num();
-
-            pdf.Dispose();
-            return xref;
-        }
-
-        /// <summary>
-        /// PDF only: Return the trailer source of the PDF, which is usually located at the PDF file’s end.
-        /// </summary>
-        /// <param name="compressed"></param>
-        /// <param name="ascii"></param>
-        /// <returns></returns>
-        public string GetPdfTrailer(int compressed = 0, int ascii = 0)
-        {
-            return GetXrefObject(-1, compressed, ascii);
-        }
-
-        /// <summary>
-        /// Move a page within a PDF document.
-        /// </summary>
-        /// <param name="pno">source page number.</param>
-        /// <param name="to">put before this page, '-1' means after last page.</param>
-        /// <exception cref="Exception"></exception>
-        public void MovePage(int pno, int to = -1)
-        {
-            if (IsClosed)
-                throw new Exception("document closed");
-            int pageCount = PageCount;
-            if (pno >= pageCount || (to < -1 && to >= pageCount))
-                throw new Exception("bad page numbers(s)");
-            
-            bool before = true;
-            bool copy = false;
-            if (to == -1)
-            {
-                to = pageCount - 1;
-                before = false;
-            }
-            
-            MoveCopyPage(pno, to, before, copy);
-        }
-
-        private void MoveCopyPage(int pno, int nb, bool before, bool copy)
-        {
-            PdfDocument pdf = AsPdfDocument(_nativeDocument);
-            PdfObj parent;
-            bool same;
-            int pos;
-            (PdfObj page1, PdfObj parent1, int i1) = pdf.pdf_lookup_page_loc(pno);
-            PdfObj kids1 = parent1.pdf_dict_get(new PdfObj("Kids"));
-
-            (PdfObj page2, PdfObj parent2, int i2) = pdf.pdf_lookup_page_loc(nb);
-            PdfObj kids2 = parent2.pdf_dict_get(new PdfObj("Kids"));
-
-            if (before)
-                pos = i2;
-            else
-                pos = i2 + 1;
-
-            same = mupdf.mupdf.pdf_objcmp(kids1, kids2) == 0; // if same, true else false
-            if (!copy && !same)
-                page1.pdf_dict_put(new PdfObj("Parent"), parent2);
-            
-            kids2.pdf_array_insert(page1, pos);
-
-            if (!same) // not same
-            {
-                parent = parent2;
-                while (parent.m_internal != null)
-                {
-                    int count = parent.pdf_dict_get_int(new PdfObj("Count"));
-                    parent.pdf_dict_put_int(new PdfObj("Count"), count + 1);
-                    parent = parent.pdf_dict_get(new PdfObj("Parent"));
-                }
-                if (!copy)
-                {
-                    kids1.pdf_array_delete(i1);
-                    parent = parent1;
-                    while (parent.m_internal != null)
-                    {
-                        int count = parent.pdf_dict_get_int(new PdfObj("Count"));
-                        parent.pdf_dict_put_int(new PdfObj("Count"), count - 1);
-                        parent = parent.pdf_dict_get(new PdfObj("Parent"));
-                    }
-                }
-            }
-            else
-            {
-                if (copy)
-                {
-                    parent = parent2;
-                    while (parent.m_internal != null)
-                    {
-                        int count = parent.pdf_dict_get_int(new PdfObj("Count"));
-                        parent.pdf_dict_put_int(new PdfObj("Count"), count + 1);
-                        parent = parent.pdf_dict_get(new PdfObj("Parent"));
-                    }
-                }
-                else
-                {
-                    if (i1 < pos)
-                        kids1.pdf_array_delete(i1);
-                    else
-                        kids1.pdf_array_delete(i1 + 1);
-                }
-            }
-            if (pdf.m_internal.rev_page_map != null)
-                mupdf.mupdf.ll_pdf_drop_page_tree(pdf.m_internal);
-            
-            ResetPageRefs();
-
-            pdf.Dispose();
-        }
-
-        /// <summary>
-        /// Get/set the NeedAppearances value.
-        /// </summary>
-        /// <param name="value"></param>
-        /// <returns></returns>
-        public int NeedAppearances(int value = 0)
-        {
-            if (IsFormPDF == 0)
-                return 0;
-
-            using (PdfDocument pdf = Document.AsPdfDocument(_nativeDocument))
-            {
-                int oldVal = -1;
-                string appkey = "NeedAppearances";
-
-                PdfObj form = Utils.pdf_dict_getl(pdf.pdf_trailer(), new string[] { "Root/AcroForm" });
-                PdfObj app = form.pdf_dict_gets(appkey);
-                if (app.pdf_is_bool() == 1)
-                    oldVal = app.pdf_to_bool();
-                if (value != 0)
-                    form.pdf_dict_puts(appkey, new PdfObj(mupdf.mupdf.PDF_ENUM_TRUE));
-                else
-                    form.pdf_dict_puts(appkey, new PdfObj(mupdf.mupdf.PDF_ENUM_FALSE));
-
-                if (value == 0)
-                    return Convert.ToInt32(oldVal >= 0);
-
-                return value;
-            }
-        }
-
-        /// <summary>
-        /// Get (chapter, page) of next page.
-        /// </summary>
-        /// <param name="pageId">the current page id. This must be a tuple (chapter, pno) identifying an existing page.</param>
-        /// <returns>The tuple of the following page, i.e. either (chapter, pno + 1) or (chapter + 1, 0), or the empty tuple () if the argument was the last page. Relevant only for document types with chapter support (EPUB currently).</returns>
-        /// <exception cref="Exception"></exception>
-        public (int, int) NextLocation(int pageId)
+        public string JournalOpName(int step)
         {
             if (IsClosed || IsEncrypted)
-                throw new Exception("document closed or encrypted");
-            
-            (int, int) _pageId;
-            _pageId = (0, pageId);
-
-            if (!Contains(_pageId))
-                throw new Exception("page id not in document");
-
-            if (_pageId.Item1 == LastLocation.Item1 && _pageId.Item2 == LastLocation.Item2)
-                return (-1, -1);
-            PdfDocument pdf = Document.AsPdfDocument(_nativeDocument);
-            int val = _pageId.Item1;
-            int chapter = val;
-            val = _pageId.Item2;
-            int pno = val;
-            FzLocation loc = mupdf.mupdf.fz_make_location(chapter, pno);
-            FzLocation nextLoc = mupdf.mupdf.fz_next_page(_nativeDocument, loc);
-
-            pdf.Dispose();
-            return (nextLoc.chapter, nextLoc.page);
+                throw new ValueErrorException("document closed or encrypted");
+            return mupdf.mupdf.pdf_undoredo_step(NativePdfDocument, step);
         }
 
         /// <summary>
-        /// Get (chapter, page) of next page.
+        /// Show journalling state.
         /// </summary>
-        /// <param name="pageId"></param>
-        /// <returns></returns>
-        public (int, int) NextLocation((int, int) pageId)
+        public (int rc, int steps) JournalPosition()
         {
             if (IsClosed || IsEncrypted)
-                throw new Exception("document closed or encrypted");
-            
-            if (pageId.Item1 == LastLocation.Item1 && pageId.Item2 == LastLocation.Item2)
-                return (-1, -1);
-            if (!Contains(pageId))
-                throw new Exception("page id not in document");
-
-            PdfDocument pdf = Document.AsPdfDocument(_nativeDocument);
-            int val = pageId.Item1;
-            int chapter = val;
-            val = pageId.Item2;
-            int pno = val;
-            FzLocation loc = mupdf.mupdf.fz_make_location(chapter, pno);
-            FzLocation nextLoc = mupdf.mupdf.fz_next_page(_nativeDocument, loc);
-
-            pdf.Dispose();
-            return (nextLoc.chapter, nextLoc.page);
+                throw new ValueErrorException("document closed or encrypted");
+            var (rc, steps) = NativePdfDocument.pdf_undoredo_state();
+            return (rc, steps);
         }
 
+        // ─── Repair ─────────────────────────────────────────────────────
+
         /// <summary>
+        /// If this is a PDF, perform document repair/check.
+        /// </summary>
+        public void Repair()
+        {
+            var pdf = Helpers.AsPdfDocument(NativeDocument, required: false);
+            if (pdf != null && pdf.m_internal != null)
+                mupdf.mupdf.pdf_check_document(pdf);
+        }
+
+        // ─── Insert PDF ─────────────────────────────────────────────────
+
+        /// <summary>
+        /// Insert pages from another PDF.
         ///
+        /// Args:
+        /// docsrc: PDF to copy from. Must be different object, but may be same file.
+        /// from_page: (int) first source page to copy, 0-based, default 0.
+        /// to_page: (int) last source page to copy, 0-based, default last page.
+        /// start_at: (int) from_page will become this page number in target.
+        /// rotate: (int) rotate copied pages, default -1 is no change.
+        /// links: (int/bool) whether to also copy links.
+        /// annots: (int/bool) whether to also copy annotations.
+        ///
+        /// Copy sequence reversed if from_page > to_page.
         /// </summary>
-        /// <param name="n"></param>
-        /// <returns></returns>
-        /// <exception cref="Exception"></exception>
-        public List<AnnotXref> PageAnnotXrefs(int n)
+        public void InsertPdf(Document src, int fromPage = 0, int toPage = -1, int startAt = -1,
+            int rotate = -1, bool links = true, bool annots = true)
         {
-            using (PdfDocument pdf = AsPdfDocument(_nativeDocument))
-            {
-                int pageCount = pdf.pdf_count_pages();
-                while (n < 0)
-                {
-                    n += pageCount;
-                }
-
-                if (n > pageCount)
-                    throw new Exception(Utils.ErrorMessages["MSG_BAD_PAGENO"]);
-                PdfObj pageObj = pdf.pdf_lookup_page_obj(n);
-
-                return Utils.GetAnnotXrefList(pageObj);
-            }
-        }
-
-        /// <summary>
-        /// PDF only: Return the unrotated page rectangle – without loading the page
-        /// </summary>
-        /// <param name="pno">0-based page number.</param>
-        /// <returns>Rect of the page</returns>
-        /// <exception cref="Exception"></exception>
-        public Rect PageCropBox(int pno)
-        {
-            if (IsClosed)
-                throw new Exception("document closed");
-            
-            FzDocument doc = _nativeDocument;
-            int pageCount = doc.fz_count_pages();
-            int n = pno;
-            while (n < 0)
-                n += pageCount;
-            
-            PdfDocument pdf = AsPdfDocument(doc);
-            if (n >= pageCount)
-                throw new Exception(Utils.ErrorMessages["MSG_BAD_PAGENO"]);
-            
-            PdfObj pageRef = pdf.pdf_lookup_page_obj(n);
-            Rect cropbox = Utils.GetCropBox(pageRef);
-
-            pdf.Dispose();
-            return cropbox;
-        }
-
-        /// <summary>
-        /// Convert (chapter, pno) to page number.
-        /// </summary>
-        /// <param name="pageId">page id</param>
-        /// <returns>chapter and pno</returns>
-        public int GetPageNumberFromLocation(int pageId)
-        {
-            int pageN = PageCount;
-            while (pageId < 0)
-                pageId += pageN;
-            
-            (int, int) _pageId = (0, pageId);
-            if (!Contains(_pageId))
-                throw new Exception("page id not in document");
-
-            (int chapter, int pno) = _pageId;
-            FzLocation loc = mupdf.mupdf.fz_make_location(chapter, pno);
-            pageN = _nativeDocument.fz_page_number_from_location(loc);
-            
-            return pageN;
-        }
-
-        /// <summary>
-        /// Convert (chapter, pno) to page number.
-        /// </summary>
-        /// <param name="pageId">page id</param>
-        /// <returns>chapter and pno</returns>
-        public int GetPageNumberFromLocation(int chapter, int pno)
-        {
-            int pageN = PageCount;
-            while (pno < 0)
-                pno += pageN;
-            
-            FzLocation loc = mupdf.mupdf.fz_make_location(chapter, pno);
-            pageN = _nativeDocument.fz_page_number_from_location(loc);
-            
-            return pageN;
-        }
-
-        /// <summary>
-        /// PDF only: Return the xref of the page – without loading the page
-        /// </summary>
-        /// <param name="pno">0-based page number</param>
-        /// <returns>xref of the page</returns>
-        /// <exception cref="Exception"></exception>
-        public int PageXref(int pno)
-        {
-            if (IsClosed)
-                throw new Exception("document closed");
-            
-            int pageCount = _nativeDocument.fz_count_pages();
-            int n = pno;
-            while (n < 0)
-                n += pageCount;
-            
-            PdfDocument pdf = AsPdfDocument(_nativeDocument);
-            int xref = 0;
-            if (n >= pageCount)
-                throw new Exception(Utils.ErrorMessages["MSG_BAD_PAGENO"]);
-            
-            xref = pdf.pdf_lookup_page_obj(n).pdf_to_num();
-
-            pdf.Dispose();
-
-            return xref;
-        }
-
-        /// <summary>
-        /// A generator for a range of pages.
-        /// </summary>
-        /// <param name="start">start iteration with this page number</param>
-        /// <param name="stop">stop iteration at this page number.</param>
-        /// <param name="step">stop iteration at this page number.</param>
-        /// <returns>a generator iterator over the document’s pages.</returns>
-        /// <exception cref="Exception"></exception>
-        public List<Page> GetPages(int start, int stop, int step)
-        {
-            while (start < 0)
-                start += PageCount;
-            
-            if (!(PageCount > start && start >= 0))
-                throw new Exception("bad start page number");
-            
-            stop = (stop <= PageCount) ? stop : PageCount;
-            if (step == 0)
-                throw new Exception("arg 3 must not be zero");
-
-            if ((start > stop && step > 0) || (start < stop && step < 0))
-                throw new Exception("bad step, pick right direction");
-
-            List<Page> ret = new List<Page>();
-            for (int i = start; i < stop; i += step)
-            {
-                ret.Add(LoadPage(i));
-            }
-
-            return ret;
-        }
-
-        /// <summary>
-        /// Add new form font.
-        /// </summary>
-        /// <param name="name"></param>
-        /// <param name="font"></param>
-        /// <exception cref="Exception"></exception>
-        private void AddFormFont(string name, string font)
-        {
+            // if self.is_closed or self.is_encrypted: raise ValueError("document closed or encrypted")
             if (IsClosed || IsEncrypted)
-                throw new Exception("document closed or encrypted");
+                throw new ValueErrorException("document closed or encrypted");
+            if (src == null)
+                throw new ArgumentNullException(nameof(src));
+            // if self._graft_id == docsrc._graft_id: raise ValueError("source and target cannot be same object")
+            if (ReferenceEquals(this, src))
+                throw new ValueErrorException("source and target cannot be same object");
 
-            using (PdfDocument pdf = AsPdfDocument(this))
+            var pdfDst = NativePdfDocument;
+            var pdfSrc = src.NativePdfDocument;
+            int outCount = PageCount;
+            int srcCount = src.PageCount;
+
+            // normalize page numbers
+            int fp = Math.Max(fromPage, 0);
+            fp = Math.Min(fp, srcCount - 1);
+
+            int tp = toPage;
+            if (tp < 0)
+                tp = srcCount - 1;
+            tp = Math.Min(tp, srcCount - 1);
+
+            int sa = startAt;
+            if (sa < 0)
+                sa = outCount;
+            sa = Math.Min(sa, outCount);
+
+            var graftmap = mupdf.mupdf.pdf_new_graft_map(pdfDst);
+
+            int step = fp <= tp ? 1 : -1;
+            for (int i = fp; step > 0 ? i <= tp : i >= tp; i += step)
             {
-                if (pdf.m_internal == null)
-                    return;
-
-                PdfObj fonts = Utils.pdf_dict_getl(
-                    pdf.pdf_trailer(),
-                    new string[] { "Root", "AcroFrom", "DR", "Font" }
-                );
-
-                if (fonts.m_internal == null || fonts.pdf_is_dict() == 0)
-                    throw new Exception("PDF has no form fonts yet");
-
-                PdfObj k = mupdf.mupdf.pdf_new_name(name);
-                PdfObj v = Utils.PdfObjFromStr(pdf, font);
-                fonts.pdf_dict_put(k, v);
+                int dstIndex = sa + (step > 0 ? (i - fp) : (fp - i));
+                mupdf.mupdf.pdf_graft_mapped_page(graftmap, dstIndex, pdfSrc, i);
             }
+            ResetPageRefsInternal();
         }
 
         /// <summary>
-        /// Add color info to all items of an extended TOC list.
+        /// Insert an arbitrary supported document into an existing PDF.
+        ///
+        /// The infile may be given as a filename, a Document or a Pixmap. Other
+        /// parameters - where applicable - equal those of insert_pdf().
         /// </summary>
-        /// <param name="items"></param>
-        /// <exception cref="Exception"></exception>
-        public void ExtendTocItems(List<Toc> items)
+        public void InsertFile(object infile, int fromPage = -1, int toPage = -1, int startAt = -1,
+            int rotate = -1, bool links = true, bool annots = true, int showProgress = 0, int final = 1)
         {
-            if (IsClosed)
-                throw new Exception("document closed");
+            Document src = null;
+            bool disposeSrc = false;
 
-            using (PdfDocument pdf = AsPdfDocument(this))
+            if (infile is Pixmap pixmap)
             {
-                //string zoom = "zoom";
-                //string bold = "bold";
-                //string italic = "italic";
-                //string collapse = "collapse";
-                float[] color = null;
-                float z = 0;
-
-                PdfObj root = pdf.pdf_trailer().pdf_dict_get(new PdfObj("Root"));
-                if (root.m_internal == null)
-                    return;
-
-                PdfObj olRoot = root.pdf_dict_get(new PdfObj("Outlines"));
-                if (olRoot.m_internal == null)
-                    return;
-
-                PdfObj first = olRoot.pdf_dict_get(new PdfObj("First"));
-                if (first.m_internal == null)
-                    return;
-
-                List<int> xrefs = new List<int>();
-                xrefs = Utils.GetOutlineXrefs(first, xrefs);
-                int n = xrefs.Count;
-                int m = items.Count;
-
-                if (n == 0)
-                    return;
-                if (n != m)
-                    throw new Exception("internal error finding outline xrefs");
-
-                for (int i = 0; i < n; i++)
-                {
-                    int xref = xrefs[i];
-                    Toc item = items[i];
-                    LinkInfo link;
-                    if (item.Link != null)
-                        link = item.Link;
-                    else
-                        throw new Exception("need non-simple TOC format");
-
-                    link.Xref = xrefs[i];
-                    PdfObj bm = pdf.pdf_load_object(xref);
-                    int flags = bm.pdf_dict_get(new PdfObj("F")).pdf_to_int();
-                    if (flags == 1)
-                        link.Italic = true;
-                    else if (flags == 2)
-                        link.Bold = true;
-                    else if (flags == 3)
-                    {
-                        link.Italic = true;
-                        link.Bold = true;
-                    }
-                    int count = bm.pdf_dict_get(new PdfObj("F")).pdf_to_int();
-                    if (count < 0)
-                        link.Collapse = true;
-                    else if (count > 0)
-                        link.Collapse = false;
-                    PdfObj col = bm.pdf_dict_get(new PdfObj("C"));
-                    if (col.pdf_is_array() != 0 && col.pdf_array_len() == 3)
-                    {
-                        color = new float[3]
-                        {
-                        col.pdf_array_get(0).pdf_to_real(),
-                        col.pdf_array_get(1).pdf_to_real(),
-                        col.pdf_array_get(2).pdf_to_real(),
-                        };
-                        link.Color = color;
-                    }
-
-                    PdfObj obj = bm.pdf_dict_get(new PdfObj("Dest"));
-                    if (obj.m_internal == null || obj.pdf_is_array() == 0)
-                    {
-                        obj = Utils.pdf_dict_getl(bm, new string[] { "A", "D" });
-                    }
-
-                    if (obj.pdf_is_array() != 0 && obj.pdf_array_len() == 5)
-                    {
-                        z = obj.pdf_array_get(4).pdf_to_real();
-                    }
-
-                    link.Zoom = z;
-                    item.Link = link;
-                    items[i] = item;
-                }
+                // if infile.colorspace.n > 3: infile = Pixmap(csRGB, infile)
+                src = new Document(pixmap.ToBytes("png"), "png");
+                disposeSrc = true;
             }
-        }
-
-        /// <summary>
-        /// Remove a page from document page dict.
-        /// </summary>
-        /// <param name="page"></param>
-        public void ForgetPage(Page page)
-        {
-            int pid = page.GetHashCode();
-            if (PageRefs.ContainsKey(pid))
+            else if (infile is Document doc)
             {
-                PageRefs.Remove(pid);
+                src = doc;
             }
-        }
-
-        internal List<(int, string)> _getPageLabels()
-        {
-            using (PdfDocument pdf = AsPdfDocument(this))
+            else if (infile is string path)
             {
-                List<(int, string)> rc = new List<(int, string)>();
-
-                PdfObj obj = Utils.pdf_dict_getl(
-                    pdf.pdf_trailer(),
-                    new string[] { "Root", "PageLabels" }
-                );
-                if (obj.m_internal == null)
-                    return rc;
-
-                PdfObj nums = obj.pdf_dict_get(new PdfObj("Nums")).pdf_resolve_indirect();
-                if (nums.m_internal != null)
-                {
-                    Utils.GetPageLabels(rc, nums);
-                    return rc;
-                }
-
-                nums = Utils.pdf_dict_getl(obj, new string[] { "Kids", "Nums" }).pdf_resolve_indirect();
-                if (nums.m_internal != null)
-                {
-                    Utils.GetPageLabels(rc, nums);
-                    return rc;
-                }
-
-                PdfObj kids = obj.pdf_dict_get(new PdfObj("Kids")).pdf_resolve_indirect();
-                if (kids.m_internal == null || kids.pdf_is_array() == 0)
-                {
-                    return rc;
-                }
-
-                int n = kids.pdf_array_len();
-                for (int i = 0; i < n; i++)
-                {
-                    nums = kids.pdf_array_get(i)
-                        .pdf_dict_get(new PdfObj("Nums"))
-                        .pdf_resolve_indirect();
-                    Utils.GetPageLabels(rc, nums);
-                }
-
-                return rc;
+                src = new Document(path);
+                disposeSrc = true;
             }
-        }
-
-        /// <summary>
-        /// Return page label definitions in PDF document.
-        /// </summary>
-        /// <returns>A list of dictionaries with the following format</returns>
-        public List<Label> GetPageLabels()
-        {
-            List<Label> ret = new List<Label>();
-            foreach ((int, string) item in _getPageLabels())
-            {
-                Label d = Utils.RuleDict(item);
-                ret.Add(d);
-            }
-            
-            return ret;
-        }
-
-        /// <summary>
-        /// Get xref of Outline Root, create it if missing.
-        /// </summary>
-        public int GetOlRootNumber()
-        {
-            if (IsClosed || IsEncrypted)
-                throw new Exception("document closed or encrypted");
-            PdfDocument pdf = AsPdfDocument(this);
-
-            PdfObj root = pdf.pdf_trailer().pdf_dict_get(new PdfObj("Root"));
-            PdfObj olRoot = root.pdf_dict_get(new PdfObj("Outlines"));
-
-            if (olRoot.m_internal == null)
-            {
-                olRoot = pdf.pdf_new_dict(4);
-                olRoot.pdf_dict_put(new PdfObj("Type"), new PdfObj("Outlines"));
-                PdfObj indObj = pdf.pdf_add_object(olRoot);
-                root.pdf_dict_put(new PdfObj("Outlines"), indObj);
-                olRoot = root.pdf_dict_get(new PdfObj("Outlines"));
-            }
-
-            pdf.Dispose();
-            return olRoot.pdf_to_num();
-        }
-
-        /// <summary>
-        /// Get PDF file id.
-        /// </summary>
-        /// <returns>string list or null</returns>
-        public List<string> GetPdfFileID()
-        {
-            PdfDocument pdf = AsPdfDocument(this);
-            if (pdf == null)
-                return null;
-
-            List<string> idList = new List<string>();
-            PdfObj identity = pdf.pdf_trailer().pdf_dict_get(new PdfObj("ID"));
-            if (identity.m_internal != null)
-            {
-                int n = identity.pdf_array_len();
-                for (int i = 0; i < n; i++)
-                {
-                    PdfObj o = identity.pdf_array_get(i);
-                    string text = o.pdf_to_text_string();
-                    byte[] ba = Encoding.Default.GetBytes(text);
-                    var hexString = BitConverter.ToString(ba);
-                    string hex = hexString.Replace("-", "");
-
-                    idList.Add(hex);
-                }
-            }
-
-            pdf.Dispose();
-            return idList;
-        }
-
-        /// <summary>
-        /// Make an array page number -> page object.
-        /// </summary>
-        /// <exception cref="Exception"></exception>
-        public void MakePageMap()
-        {
-            if (IsClosed)
-                throw new Exception("document closed");
-        }
-
-        public void RemoveLinksTo(List<int> numbers)
-        {
-            PdfDocument pdf = AsPdfDocument(this);
-            Utils.RemoveDestRange(pdf, numbers);
-            pdf.Dispose();
-        }
-
-        /// <summary>
-        /// "remove" bookmark by letting it point to nowhere
-        /// </summary>
-        /// <param name="xref"></param>
-        public void RemoveTocItem(int xref)
-        {
-            PdfDocument pdf = AsPdfDocument(this);
-            PdfObj item = pdf.pdf_new_indirect(xref, 0);
-            item.pdf_dict_del(new PdfObj("Dest"));
-            item.pdf_dict_del(new PdfObj("A"));
-            PdfObj color = pdf.pdf_new_array(3);
-            for (int i = 0; i < 3; i++)
-                color.pdf_array_push_real(0.8f);
-            item.pdf_dict_put(new PdfObj("C"), color);
-
-            pdf.Dispose();
-        }
-
-        /// <summary>
-        /// PDF only: Add or update the page label definitions of the PDF.
-        /// </summary>
-        /// <param name="labels">a list of dictionaries. Each dictionary defines a label building rule and a 0-based “start” page number.</param>
-        public void SetPageLabels(List<Label> labels)
-        {
-            string CreateLabelStr(Label label)
-            {
-                string s = $"{label.StartPage}<<";
-                if (!string.IsNullOrEmpty(label.Prefix))
-                    s += $"/P({label.Prefix})";
-                if (!string.IsNullOrEmpty(label.Style))
-                    s += $"/S/{label.Style}";
-                if (label.FirstPageNum > 1)
-                    s += $"/St {label.FirstPageNum}";
-                s += ">>";
-                return s;
-            }
-
-            string CreateNums(List<Label> _labels)
-            {
-                _labels.Sort((a, b) =>
-                {
-                    return a.StartPage - b.StartPage;
-                });
-                string s = string.Join("", _labels.Select(label => CreateLabelStr(label)).ToArray());
-            
-                return s;
-            }
-
-            PdfDocument pdf = AsPdfDocument(this);
-            PdfObj root = pdf.pdf_trailer().pdf_dict_get(new PdfObj("Root"));
-
-            root.pdf_dict_del(mupdf.mupdf.pdf_new_name("PageLabels"));
-            Utils.pdf_dict_putl(
-                root,
-                mupdf.mupdf.pdf_new_array(pdf, 0),
-                new string[] { "PageLabels", "Nums" }
-            );
-            int xref = GetPdfCatalog();
-            string text = GetXrefObject(xref, compressed: 1);
-            text = text.Replace("/Nums[]", $"/Nums[{CreateNums(labels)}]");
-            UpdateObject(xref, text);
-
-            pdf.Dispose();
-        }
-
-        /// <summary>
-        /// Replace xref stream part.
-        /// </summary>
-        /// <param name="xref">xref number</param>
-        /// <param name="stream">the new content of the stream.</param>
-        /// <param name="_new">deprecated</param>
-        /// <param name="compress">whether to compress the inserted stream.</param>
-        /// <exception cref="Exception"></exception>
-        public void UpdateStream(int xref, byte[] stream = null, int _new = 1, int compress = 1)
-        {
-            if (IsClosed || IsEncrypted)
-                throw new Exception("document closed or encrypted");
-            using (PdfDocument pdf = AsPdfDocument(this))
-            {
-                int xrefLen = pdf.pdf_xref_len();
-                if (xref < 1 || xref > xrefLen)
-                    throw new Exception(Utils.ErrorMessages["MSG_BAD_XREF"]);
-                PdfObj obj = pdf.pdf_new_indirect(xref, 0);
-                if (obj.pdf_is_dict() == 0)
-                    throw new Exception(Utils.ErrorMessages["MSG_IS_NO_DICT"]);
-                FzBuffer res = Utils.BufferFromBytes(stream);
-                if (res == null)
-                    throw new Exception(Utils.ErrorMessages["MSG_BAD_BUFFER"]);
-                Utils.UpdateStream(pdf, obj, res, compress);
-                // pdfdocument does not have `dirty` property
-            }
-        }
-
-        /// <summary>
-        /// Replace object definition source.
-        /// </summary>
-        /// <param name="xref">xref number.</param>
-        /// <param name="text">a string containing a valid PDF object definition.</param>
-        /// <param name="page"> a page object. If provided, indicates, that annotations of this page should be refreshed (reloaded) to reflect changes incurred with links and / or annotations.</param>
-        /// <exception cref="Exception"></exception>
-        public void UpdateObject(int xref, string text, PdfPage page = null)
-        {
-            if (IsClosed || IsEncrypted)
-                throw new Exception("document closed or encrypted");
-            PdfDocument pdf = AsPdfDocument(this);
-            int xrefLen = pdf.pdf_xref_len();
-            if (!Utils.INRANGE(xref, 1, xrefLen - 1))
-                throw new Exception(Utils.ErrorMessages["MSG_BAD_XREF"]);
-            PdfObj newObj = Utils.PdfObjFromStr(pdf, text);
-            pdf.pdf_update_object(xref, newObj);
-
-            Utils.RefreshLinks(page);
-
-            pdf.Dispose();
-        }
-
-        /// <summary>
-        /// PDF only: Copy a page reference within the document.
-        /// </summary>
-        /// <param name="pno">the page to be copied. Must be in range 0 <= pno < page_count.</param>
-        /// <param name="to">the page number in front of which to copy. The default inserts after the last page.</param>
-        /// <exception cref="Exception"></exception>
-        public void CopyPage(int pno, int to = -1)
-        {
-            if (IsClosed)
-                throw new Exception("document closed");
-            int pageCount = PageCount;
-            if (!(pno < pageCount) || !Utils.INRANGE(to, -1, pageCount - 1))
-                throw new Exception("bad page number(s)");
-
-            int before = 1;
-            int copy = 1;
-            if (to == -1)
-            {
-                to = pageCount - 1;
-                before = 0;
-            }
-
-            MoveCopyPage(pno, to, before != 0, copy != 0);
-        }
-
-        /// <summary>
-        /// Delete XML metadata.
-        /// </summary>
-        /// <exception cref="Exception"></exception>
-        public void DeleteXmlMetadata()
-        {
-            if (IsClosed || IsEncrypted)
-                throw new Exception("document closed or encrypted");
-            
-            PdfDocument pdf = AsPdfDocument(this);
-            PdfObj root = pdf.pdf_trailer().pdf_dict_get(new PdfObj("Root"));
-            if (root.m_internal != null)
-                root.pdf_dict_del(new PdfObj("Metadata"));
-
-            pdf.Dispose();
-        }
-
-        /// <summary>
-        /// PDF only: Delete a page given by its 0-based number in -∞ < pno < page_count - 1.
-        /// </summary>
-        /// <param name="pno">the page to be deleted. Negative number count backwards from the end of the document (like with indices). Default is the last page.</param>
-        /// <exception cref="Exception"></exception>
-        public void DeletePage(int pno = -1)
-        {
-            if (!IsPDF)
-                throw new Exception("is no pdf");
-            if (IsClosed)
-                throw new Exception("document is closed");
-
-            int pageCount = PageCount;
-            while (pno < 0)
-                pno += pageCount;
-
-            if (pno >= pageCount)
-                throw new Exception("bad page number(s)");
-
-            List<Toc> toc = GetToc();
-            List<int> olXrefs = GetOutlineXrefs();
-
-            for (int i = 0; i < (toc != null ? toc.Count : 0); i++)
-            {
-                if (toc[i].Page == pno + 1)
-                    RemoveTocItem(olXrefs[i]);
-            }
-
-            RemoveLinksTo(new List<int>() { pno });
-            _DeletePage(pno);
-            ResetPageRefs();
-        }
-
-        /// <summary>
-        /// PDF only: Delete multiple pages given as 0-based numbers.
-        /// </summary>
-        /// <param name="from">start page number</param>
-        /// <param name="to">end page number</param>
-        /// <exception cref="Exception"></exception>
-        /// <exception cref="ArgumentException"></exception>
-        public void DeletePages(int from = -1, int to = -1)
-        {
-            if (!IsPDF)
-                throw new Exception("is no PDF");
-            if (IsClosed)
-                throw new Exception("document is closed");
-            int pageCount = PageCount;
-            List<int> numbers = new List<int>();
-
-            while (from < 0)
-                from += pageCount;
-            while (to < 0)
-                to += pageCount;
-
-            for (int i = from; i < to; i++)
-                numbers.Add(i);
-            if (numbers.Count == 0)
-            {
-                Console.WriteLine("noting to delete");
-                return;
-            }
-
-            numbers.Sort();
-            if (numbers[0] < 0 || numbers[numbers.Count - 1] >= pageCount)
-                throw new ArgumentException("bad page number(s)");
-            List<Toc> toc = GetToc();
-            List<int> olXrefs = GetOutlineXrefs();
-            for (int i = 0; i < olXrefs.Count; i++)
-            {
-                if (numbers.Contains(toc[i].Page - 1))
-                    RemoveTocItem(olXrefs[i]);
-            }
-
-            RemoveLinksTo(numbers);
-            numbers.Reverse();
-            foreach (int j in numbers)
-            {
-                DeletePage(j);
-            }
-
-            ResetPageRefs();
-        }
-
-        /// <summary>
-        /// PDF only: Delete multiple pages given as 0-based numbers.
-        /// </summary>
-        /// <param name="numbers">page list</param>
-        /// <exception cref="ArgumentException"></exception>
-        public void DeletePages(List<int> numbers)
-        {
-            if (numbers.Count == 0)
-            {
-                Console.WriteLine("noting to delete");
-                return;
-            }
-
-            numbers.Sort();
-            if (numbers[0] < 0 || numbers[numbers.Count - 1] >= PageCount)
-                throw new ArgumentException("bad page number(s)");
-            List<Toc> toc = GetToc();
-            List<int> olXrefs = GetOutlineXrefs();
-            for (int i = 0; i < olXrefs.Count; i++)
-            {
-                if (numbers.Contains(toc[i].Page - 1))
-                    RemoveTocItem(olXrefs[i]);
-            }
-            
-            RemoveLinksTo(numbers);
-            numbers.Reverse();
-            foreach (int j in numbers)
-            {
-                DeletePage(j);
-            }
-
-            ResetPageRefs();
-        }
-
-        public void DeletePages(int[] nums)
-        {
-            List<int> numbers = new List<int>(nums);
-            if (numbers.Count == 0)
-            {
-                Console.WriteLine("noting to delete");
-                return;
-            }
-
-            numbers.Sort();
-            if (numbers[0] < 0 || numbers[numbers.Count - 1] >= PageCount)
-                throw new ArgumentException("bad page number(s)");
-            
-            List<Toc> toc = GetToc();
-            List<int> olXrefs = GetOutlineXrefs();
-            for (int i = 0; i < olXrefs.Count; i++)
-            {
-                if (numbers.Contains(toc[i].Page - 1))
-                    RemoveTocItem(olXrefs[i]);
-            }
-            
-            RemoveLinksTo(numbers);
-            numbers.Reverse();
-            foreach (int j in numbers)
-            {
-                DeletePage(j);
-            }
-
-            ResetPageRefs();
-        }
-
-        /// <summary>
-        /// PDF only: Return the xref of the outline item. This is mainly used for internal purposes.
-        /// </summary>
-        /// <returns>xref numbers</returns>
-        public List<int> GetOutlineXrefs()
-        {
-            List<int> xrefs = new List<int>();
-            using (PdfDocument pdf = AsPdfDocument(this))
-            {
-                if (pdf.m_internal == null)
-                    return xrefs;
-
-                PdfObj root = pdf.pdf_trailer().pdf_dict_get(new PdfObj("Root"));
-                if (root.m_internal == null)
-                    return xrefs;
-
-                PdfObj olRoot = root.pdf_dict_get(new PdfObj("Outlines"));
-                if (olRoot.m_internal == null)
-                    return xrefs;
-
-                PdfObj first = olRoot.pdf_dict_get(new PdfObj("First"));
-                if (first.m_internal == null)
-                    return xrefs;
-
-                xrefs = Utils.GetOutlineXrefs(first, xrefs);
-                return xrefs;
-            }
-        }
-
-        /// <summary>
-        /// PDF only: Embed a new file. All string parameters except the name may be unicode (in previous versions, only ASCII worked correctly). File contents will be compressed (where beneficial).
-        /// </summary>
-        /// <param name="name">entry identifier, must not already exist.</param>
-        /// <param name="buffer">file contents.</param>
-        /// <param name="filename">optional filename. Documentation only, will be set to name if None.</param>
-        /// <param name="ufilename">optional unicode filename. Documentation only, will be set to filename if None.</param>
-        /// <param name="desc">optional description. Documentation only, will be set to name if None.</param>
-        /// <returns>The method now returns the xref of the inserted file.</returns>
-        /// <exception cref="Exception"></exception>
-        public int AddEmbfile(
-            string name,
-            byte[] buffer,
-            string filename = null,
-            string ufilename = null,
-            string desc = null
-        )
-        {
-            List<string> filenames = GetEmbfileNames();
-            string msg = $"Name {name} already exists.";
-            if (filenames.Contains(name))
-                throw new Exception(msg);
-
-            if (filename == null)
-                filename = name;
-            if (ufilename == null)
-                ufilename = filename;
-            if (desc == null)
-                desc = name;
-            int xref = _AddEmbfile(name, buffer, filename, ufilename, desc);
-            string date = Utils.GetPdfNow();
-            SetKeyXRef(xref, "Type", "/EmbeddedFile");
-            SetKeyXRef(xref, "Params/CreationDate", Utils.GetPdfString(date));
-            SetKeyXRef(xref, "Params/ModDate", Utils.GetPdfString(date));
-
-            return xref;
-        }
-
-        private int _AddEmbfile(
-            string name,
-            byte[] buffer,
-            string filename = null,
-            string ufilename = null,
-            string desc = null
-        )
-        {
-            PdfDocument pdf = AsPdfDocument(this);
-            FzBuffer data = Utils.BufferFromBytes(buffer);
-            if (data.m_internal == null)
-                throw new Exception(Utils.ErrorMessages["MSG_BAD_BUFFER"]);
-
-            PdfObj names = Utils.pdf_dict_getl(
-                pdf.pdf_trailer(),
-                new string[] { "Root", "Names", "EmbeddedFiles", "Names" }
-            );
-            if (names.pdf_is_array() == 0)
-            {
-                PdfObj root = pdf.pdf_trailer().pdf_dict_get(new PdfObj("Root"));
-                names = pdf.pdf_new_array(6);
-                Utils.pdf_dict_putl(
-                    root,
-                    names,
-                    new string[] { "Names", "EmbeddedFiles", "Names" }
-                );
-            }
-
-            PdfObj fileEntry = Utils.EmbedFile(pdf, data, filename, ufilename, desc, 1);
-            int xref = Utils.pdf_dict_getl(fileEntry, new string[] { "EF", "F" }).pdf_to_num();
-            names.pdf_array_push(mupdf.mupdf.pdf_new_text_string(name));
-            names.pdf_array_push(fileEntry);
-
-            pdf.Dispose();
-            return xref;
-        }
-
-        /// <summary>
-        /// PDF only: Retrieve the content of embedded file by its entry number or name. If the document is not a PDF, or entry cannot be found, an exception is raised.
-        /// </summary>
-        /// <returns>index or name of entry.</returns>
-        public List<string> GetEmbfileNames()
-        {
-            List<string> names = new List<string>();
-            _EmbfileNames(names);
-            
-            return names;
-        }
-
-        private void _EmbfileNames(List<string> filenames)
-        {
-            PdfDocument pdf = AsPdfDocument(this);
-            PdfObj names = Utils.pdf_dict_getl(
-                pdf.pdf_trailer(),
-                new string[] { "Root", "Names", "EmbeddedFiles", "Names" }
-            );
-            if (names.pdf_is_array() != 0)
-            {
-                int n = names.pdf_array_len();
-                for (int i = 0; i < n; i += 2)
-                {
-                    string val = Utils.EscapeStrFromStr(
-                        names.pdf_array_get(i).pdf_to_text_string()
-                    );
-                    filenames.Add(val);
-                }
-            }
-            pdf.Dispose();
-        }
-
-        public int GetEmbfileCount()
-        {
-            return GetEmbfileNames().Count;
-        }
-
-        /// <summary>
-        /// Delete an entry from EmbeddedFiles.
-        /// </summary>
-        /// <param name="item">name or number of item.></param>
-        public void DeleteEmbfile(int item)
-        {
-            int idx = EmbeddedfileIndex(item);
-            _DeleteEmbfile(idx);
-        }
-
-        /// <summary>
-        /// Delete an entry from EmbeddedFiles.
-        /// </summary>
-        /// <param name="item">name or number of item.></param>
-        public void DeleteEmbfile(string item)
-        {
-            int idx = EmbeddedfileIndex(item);
-            _DeleteEmbfile(idx);
-        }
-
-        private void _DeleteEmbfile(int idx)
-        {
-            PdfDocument pdf = AsPdfDocument(this);
-            PdfObj names = Utils.pdf_dict_getl(
-                pdf.pdf_trailer(),
-                new string[] { "Root", "Names", "EmbeddedFiles", "Names" }
-            );
-            names.pdf_array_delete(idx + 1);
-            names.pdf_array_delete(idx);
-            pdf.Dispose();
-        }
-
-        public int EmbeddedfileIndex(dynamic item)
-        {
-            List<string> filenames = GetEmbfileNames();
-            string msg = $"{item} not in EmbeddedFiles array";
-            int idx = 0;
-
-            if (item is string && filenames.Contains(item))
-                idx = filenames.IndexOf(item);
-            else if (item is int && Utils.INRANGE(item, 0, filenames.Count - 1))
-                idx = item;
-            else
-                throw new Exception(msg);
-            return idx;
-        }
-
-        private byte[] _GetEmbeddedFile(int idx)
-        {
-            PdfDocument pdf = AsPdfDocument(this);
-            PdfObj names = Utils.pdf_dict_getl(
-                pdf.pdf_trailer(),
-                new string[] { "Root", "Names", "EmbeddedFiles", "Names" }
-            );
-            PdfObj entry = names.pdf_array_get(2 * idx + 1);
-            PdfObj fileSpec = Utils.pdf_dict_getl(entry, new string[] { "EF", "F" });
-            FzBuffer buf = fileSpec.pdf_load_stream();
-            byte[] cont = Utils.BinFromBuffer(buf);
-
-            pdf.Dispose();
-            return cont;
-        }
-
-        /// <summary>
-        /// Get the content of an item in the EmbeddedFiles array.
-        /// </summary>
-        /// <param name="item"></param>
-        public byte[] GetEmbfile(int item)
-        {
-            int idx = EmbeddedfileIndex(item);
-            return _GetEmbeddedFile(idx);
-        }
-
-        public EmbfileInfo GetEmbfileInfo(dynamic item)
-        {
-            int index = EmbeddedfileIndex(item);
-            EmbfileInfo infoDict = new EmbfileInfo() { Name = GetEmbfileNames()[index] };
-            PdfDocument pdf = AsPdfDocument(this);
-            int xref = 0;
-            int ciXref = 0;
-
-            PdfObj trailer = pdf.pdf_trailer();
-            PdfObj names = Utils.pdf_dict_getl(
-                trailer,
-                new string[] { "Root", "Names", "EmbeddedFiles", "Names" }
-            );
-            PdfObj o = names.pdf_array_get(2 * index + 1);
-            PdfObj ci = o.pdf_dict_get(new PdfObj("CI"));
-            if (ci.m_internal != null)
-                ciXref = ci.pdf_to_num();
-
-            infoDict.Collection = ciXref;
-            string name = o.pdf_dict_get(new PdfObj("F")).pdf_to_text_string();
-            infoDict.FileName = Utils.EscapeStrFromStr(name);
-
-            name = o.pdf_dict_get(new PdfObj("UF")).pdf_to_text_string();
-            infoDict.UFileName = Utils.EscapeStrFromStr(name);
-
-            name = o.pdf_dict_get(new PdfObj("Desc")).pdf_to_text_string();
-            infoDict.Desc = Utils.UnicodeFromStr(name);
-
-            int len = -1;
-            int DL = -1;
-            PdfObj fileEntry = Utils.pdf_dict_getl(o, new string[] { "EF", "F" });
-            xref = fileEntry.pdf_to_num();
-            o = fileEntry.pdf_dict_get(new PdfObj("Length"));
-            if (o.m_internal != null)
-                len = o.pdf_to_int();
-
-            o = fileEntry.pdf_dict_get(new PdfObj("DL"));
-            if (o.m_internal != null)
-                DL = o.pdf_to_int();
             else
             {
-                o = Utils.pdf_dict_getl(fileEntry, new string[] { "Params", "Size" });
-                if (o.m_internal != null)
-                    DL = o.pdf_to_int();
+                throw new ValueErrorException("bad infile parameter");
             }
-            infoDict.Size = DL;
-            infoDict.Length = len;
-            (string t, string date) = GetKeyXref(xref, "Params/CreationDate");
-            if (t != "null")
-                infoDict.ModDate = date;
-            //(t, string md5) = GetKeyXref(xref, "Params/ModDate");
-            var result = GetKeyXref(xref, "Params/ModDate"); // Get the tuple first
-            t = result.Item1;
-            string md5 = result.Item2;
-            if (t != "null")
+
+            if (src == null)
+                throw new ValueErrorException("bad infile parameter");
+
+            Document pdfSrc = src;
+            bool disposePdfSrc = false;
+            // if not src.is_pdf: pdfbytes = src.convert_to_pdf(); src = Document("pdf", pdfbytes)
+            if (!src.IsPdf)
             {
-                byte[] textBytes = Encoding.UTF8.GetBytes(md5);
-                string hexString = BitConverter.ToString(textBytes).Replace("-", "").ToLower();
-                infoDict.CheckSum = hexString;
+                var pdfbytes = src.ConvertToPdf();
+                pdfSrc = new Document(pdfbytes, "pdf");
+                disposePdfSrc = true;
             }
-            pdf.Dispose();
-            return infoDict;
+
+            InsertPdf(pdfSrc, fromPage, toPage, startAt, rotate, links, annots);
+
+            if (disposePdfSrc)
+                pdfSrc.Dispose();
+            if (disposeSrc)
+                src.Dispose();
         }
 
-        /// <summary>
-        /// Change an item of the EmbeddedFiles array.
-        /// </summary>
-        /// <param name="item">number or name</param>
-        /// <param name="buffer">new file content</param>
-        /// <param name="filename">new file name</param>
-        /// <param name="ufilename">unicode new file name</param>
-        /// <param name="desc">the new description</param>
-        /// <returns></returns>
-        public int GetEmbfileUpd(
-            dynamic item,
-            byte[] buffer = null,
-            string filename = null,
-            string ufilename = null,
-            string desc = null
-        )
-        {
-            int idx = EmbeddedfileIndex(item);
-            PdfDocument pdf = AsPdfDocument(this);
-            int xref = 0;
-            PdfObj names = Utils.pdf_dict_getl(
-                pdf.pdf_trailer(),
-                new string[] { "Root", "Names", "EmbeddedFiles", "Names" }
-            );
-            PdfObj entry = names.pdf_array_get(2 * idx + 1);
-            PdfObj fileSpec = Utils.pdf_dict_getl(entry, new string[] { "EF", "F" });
-            if (fileSpec.m_internal == null)
-                throw new Exception("bad PDF: no /EF object");
-            FzBuffer res = Utils.BufferFromBytes(buffer);
-            if (buffer != null && res.m_internal == null)
-                throw new Exception(Utils.ErrorMessages["MSG_BAD_BUFFER"]);
-            if (res.m_internal != null && buffer != null)
-            {
-                Utils.UpdateStream(pdf, fileSpec, res, 1);
-                uint len = res.fz_buffer_storage(null);
-                PdfObj l = mupdf.mupdf.pdf_new_int(len);
-                fileSpec.pdf_dict_put(new PdfObj("DL"), l);
-                Utils.pdf_dict_putl(fileSpec, l, new string[] { "Params", "Size" });
-            }
-            xref = fileSpec.pdf_to_num();
-            if (!string.IsNullOrEmpty(filename))
-                entry.pdf_dict_put_text_string(new PdfObj("F"), filename);
-            if (!string.IsNullOrEmpty(ufilename))
-                entry.pdf_dict_put_text_string(new PdfObj("UF"), ufilename);
-            if (!string.IsNullOrEmpty(desc))
-                entry.pdf_dict_put_text_string(new PdfObj("Desc"), desc);
-
-            string date = Utils.GetPdfNow();
-            SetKeyXRef(xref, "Params/ModDate", Utils.GetPdfString(date));
-
-            pdf.Dispose();
-            return xref;
-        }
-
-        /// <summary>
-        /// Get image by xref. Returns a dictionary.
-        /// </summary>
-        /// <param name="xref"></param>
-        /// <returns></returns>
-        public ImageInfo ExtractImage(int xref)
-        {
-            if (IsClosed || IsEncrypted)
-                throw new Exception("document closed or encrypted");
-
-            PdfDocument pdf = AsPdfDocument(this);
-            int imgType = 0;
-            int smask = 0;
-            string ext = null;
-            FzBuffer res;
-            FzImage img;
-            if (!Utils.INRANGE(xref, 1, pdf.pdf_xref_len() - 1))
-                throw new Exception(Utils.ErrorMessages["MSG_BAD_XREF"]);
-
-            PdfObj obj = pdf.pdf_new_indirect(xref, 0);
-            PdfObj subtype = obj.pdf_dict_get(new PdfObj("Subtype"));
-            if (subtype.pdf_name_eq(new PdfObj("Image")) == 0) // mismatch
-                throw new Exception("not an image");
-
-            PdfObj o = obj.pdf_dict_geta(new PdfObj("SMask"), new PdfObj("Mask"));
-            if (o.m_internal != null)
-                smask = o.pdf_to_num();
-            if (obj.pdf_is_jpx_image() != 0)
-            {
-                imgType = (int)ImageType.FZ_IMAGE_JPX;
-                res = obj.pdf_load_stream();
-                ext = "jpx";
-            }
-            if (Utils.IsJbig2Image(obj))
-            {
-                imgType = (int)ImageType.FZ_IMAGE_JBIG2;
-                res = obj.pdf_load_stream();
-                ext = "jb2";
-            }
-            res = obj.pdf_load_raw_stream();
-            if (imgType == (int)ImageType.FZ_IMAGE_UNKNOWN)
-            {
-                res = obj.pdf_load_raw_stream();
-                ll_fz_buffer_storage_outparams outparams = new ll_fz_buffer_storage_outparams();
-                uint len = mupdf.mupdf.ll_fz_buffer_storage_outparams_fn(res.m_internal, outparams);
-                imgType = mupdf.mupdf.fz_recognize_image_format(outparams.datap);
-                ext = Utils.GetImageExtension(imgType);
-            }
-            if (imgType == (int)ImageType.FZ_IMAGE_UNKNOWN)
-            {
-                res = null;
-                img = pdf.pdf_load_image(obj);
-                //fz_compressed_buffer llCbuf = mupdf.mupdf.ll_fz_compressed_image_buffer(
-                //    img.m_internal
-                //);
-                fz_compressed_buffer llCbuf = img.fz_compressed_image_buffer().m_internal;
-                if (
-                    llCbuf != null
-                    && !(
-                        llCbuf.params_.type == (int)ImageType.FZ_IMAGE_RAW
-                        || llCbuf.params_.type == (int)ImageType.FZ_IMAGE_FAX
-                        || llCbuf.params_.type == (int)ImageType.FZ_IMAGE_FLATE
-                        || llCbuf.params_.type == (int)ImageType.FZ_IMAGE_LZW
-                        || llCbuf.params_.type == (int)ImageType.FZ_IMAGE_RLD
-                    )
-                )
-                {
-                    imgType = llCbuf.params_.type;
-                    ext = Utils.GetImageExtension(imgType);
-                    res = new FzBuffer(mupdf.mupdf.ll_fz_keep_buffer(llCbuf.buffer));
-                }
-                else
-                {
-                    fz_color_params defaultColorParams = new fz_color_params();
-                    defaultColorParams.ri = 1;
-                    defaultColorParams.bp = 1;
-                    defaultColorParams.op = 0;
-                    defaultColorParams.opm = 0;
-                    res = img.fz_new_buffer_from_image_as_png(
-                        new FzColorParams(defaultColorParams)
-                    );
-                    ext = "png";
-                }
-            }
-            else
-                img = res.fz_new_image_from_buffer();
-
-            (float xres, float yres) = img.fz_image_resolution();
-            float width = img.w();
-            float height = img.h();
-            int colorspace = img.n();
-            int bpc = img.bpc();
-            string csName = img.colorspace().fz_colorspace_name();
-
-            ImageInfo ret = new ImageInfo()
-            {
-                Ext = ext,
-                Smask = smask,
-                Width = width,
-                Height = height,
-                ColorSpace = colorspace,
-                Bpc = bpc,
-                Xres = xres,
-                Yres = yres,
-                CsName = csName,
-                Orientation = img.fz_image_orientation(),
-                Matrix = new Matrix(img.fz_image_orientation_matrix()),
-                Image = Utils.BinFromBuffer(res)
-            };
-
-            pdf.Dispose();
-            return ret;
-        }
-
-        /// <summary>
-        /// Find new location after layouting a document.
-        /// </summary>
-        /// <returns></returns>
-        public Location FindBookmark(int bm)
-        {
-            if (IsClosed || IsEncrypted)
-                throw new Exception("document closed or encrypted");
-            FzLocation location = _nativeDocument.fz_lookup_bookmark(bm);
-            return new Location() { Chapter = location.chapter, Page = location.page };
-        }
-
-        public void CopyFullPage(int pno, int to = -1)
-        {
-            PdfDocument pdf = AsPdfDocument(this);
-            int pageCount = pdf.pdf_count_pages();
-            int xref;
-            try
-            {
-                if (!Utils.INRANGE(pno, 0, pageCount - 1) || !Utils.INRANGE(to, -1, pageCount - 1))
-                    throw new Exception(Utils.ErrorMessages["MSG_BAD_PAGENO"]);
-                PdfObj page1 = pdf.pdf_lookup_page_obj(pno).pdf_resolve_indirect();
-                PdfObj page2 = page1.pdf_deep_copy_obj();
-                PdfObj oldAnnots = page2.pdf_dict_get(new PdfObj("Annots"));
-
-                if (oldAnnots.m_internal != null)
-                {
-                    int n = oldAnnots.pdf_array_len();
-                    PdfObj newAnnots = pdf.pdf_new_array(n);
-                    for (int i = 0; i < n; i++)
-                    {
-                        PdfObj o = oldAnnots.pdf_array_get(i);
-                        PdfObj subtype = o.pdf_dict_get(new PdfObj("Subtype"));
-                        if (subtype.pdf_name_eq(new PdfObj("Popup")) != 0)
-                            continue;
-                        if (o.pdf_dict_gets("IRT").m_internal != null)
-                            continue;
-            
-                        PdfObj copyObj = o.pdf_resolve_indirect().pdf_deep_copy_obj();
-                        xref = pdf.pdf_create_object();
-                        pdf.pdf_update_object(xref, copyObj);
-                        copyObj = pdf.pdf_new_indirect(xref, 0);
-                        copyObj.pdf_dict_del(new PdfObj("Popup"));
-                        copyObj.pdf_dict_del(new PdfObj("P"));
-                        newAnnots.pdf_array_push(copyObj);
-                    }
-                    page2.pdf_dict_put(new PdfObj("Annots"), newAnnots);
-                }
-                FzBuffer res = Utils.ReadContents(page1);
-
-                if (res.m_internal != null)
-                {
-                    FzBuffer buf = Utils.fz_new_buffer_from_data(Encoding.UTF8.GetBytes(" "));
-                    PdfObj contents = pdf.pdf_add_stream(buf, new PdfObj(), 0);
-                    Utils.UpdateStream(pdf, contents, res, 1);
-                    page2.pdf_dict_put(new PdfObj("Contents"), contents);
-                }
-
-                xref = pdf.pdf_create_object();
-                pdf.pdf_update_object(xref, page2);
-
-                page2 = pdf.pdf_new_indirect(xref, 0);
-                pdf.pdf_insert_page(to, page2);
-            }
-            finally
-            {
-                mupdf.mupdf.ll_pdf_drop_page_tree(pdf.m_internal);
-                pdf.Dispose();
-            }
-        }
-
-        /// <summary>
-        /// Content of ON, OFF, RBGroups of an OC layer.
-        /// </summary>
-        /// <param name="config"></param>
-        /// <returns>OCLayer object</returns>
-        /// <exception cref="Exception"></exception>
-        public OCLayer GetLayer(int config = -1)
-        {
-            PdfDocument pdf = AsPdfDocument(this);
-            PdfObj ocp = Utils.pdf_dict_getl(
-                pdf.pdf_trailer(),
-                new string[] { "Root", "OCProperties" }
-            );
-            PdfObj obj,
-                o;
-
-            if (ocp.m_internal == null)
-            {
-                pdf.Dispose();
-                return null;
-            }
-            if (config == -1)
-                obj = ocp.pdf_dict_get(new PdfObj("D"));
-            else
-            {
-                obj = ocp.pdf_dict_get(new PdfObj("Configs")).pdf_array_get(config);
-            }
-            if (obj.m_internal == null)
-                throw new Exception(Utils.ErrorMessages["MSG_BAD_OC_CONFIG"]);
-
-            OCLayer ret = new OCLayer();
-
-            PdfObj arr = obj.pdf_dict_get(new PdfObj("ON"));
-            List<int> list = Utils.GetOcgArraysImp(arr);
-            if (list != null || list.Count != 0)
-                ret.On = list.ToArray();
-
-            arr = obj.pdf_dict_get(new PdfObj("OFF"));
-            list = Utils.GetOcgArraysImp(arr);
-            if (list != null || list.Count != 0)
-                ret.Off = list.ToArray();
-
-            arr = obj.pdf_dict_get(new PdfObj("Locked"));
-            list = Utils.GetOcgArraysImp(arr);
-            if (list != null || list.Count != 0)
-                ret.Locked = list.ToArray();
-
-            arr = obj.pdf_dict_get(new PdfObj("RBGroups"));
-            List<int[]> rb = new List<int[]>();
-            if (arr.pdf_is_array() != 0)
-            {
-                int n = arr.pdf_array_len();
-                for (int i = 0; i < n; i++)
-                {
-                    o = arr.pdf_array_get(i);
-                    int[] list1 = Utils.GetOcgArraysImp(o).ToArray();
-                    rb.Add(list1);
-                }
-            }
-            if (rb.Count != 0)
-                ret.RBGroups = rb;
-            o = obj.pdf_dict_get(new PdfObj("BaseState"));
-            if (o.m_internal != null)
-                ret.BaseState = o.pdf_to_name();
-
-            pdf.Dispose();
-            return ret;
-        }
-
-        /// <summary>
-        /// Show optional OC layers.
-        /// </summary>
-        /// <returns>OCLayer config list</returns>
-        public List<OCLayerConfig> GetLayers()
-        {
-            PdfDocument pdf = AsPdfDocument(this);
-            int n = pdf.pdf_count_layer_configs();
-            if (n == 1)
-            {
-                PdfObj obj = Utils.pdf_dict_getl(
-                    pdf.pdf_trailer(),
-                    new string[] { "Root", "OCProperties", "Configs" }
-                );
-                if (obj.pdf_is_array() == 0)
-                    n = 0;
-            }
-            List<OCLayerConfig> ret = new List<OCLayerConfig>();
-            PdfLayerConfig info = new PdfLayerConfig();
-            for (int i = 0; i < n; i++)
-            {
-                pdf.pdf_layer_config_info(i, info);
-                ret.Add(new OCLayerConfig(i, info.name, info.creator));
-            }
-
-            pdf.Dispose();
-            return ret;
-        }
-
-        /// <summary>
-        /// Make new xref
-        /// </summary>
-        /// <returns>number of xref</returns>
-        /// <exception cref="Exception"></exception>
-        public int GetNewXref()
-        {
-            if (IsClosed || IsEncrypted)
-                throw new Exception("document closed or encrypted");
-            PdfDocument pdf = AsPdfDocument(this);
-            int xref = 0;
-            Utils.EnsureOperations(pdf);
-            xref = pdf.pdf_create_object();
-
-            pdf.Dispose();
-            return xref;
-        }
+        // ─── OC Layers ──────────────────────────────────────────────────
 
         /// <summary>
         /// Show existing optional content groups.
         /// </summary>
-        /// <returns></returns>
-        public Dictionary<int, OCGroup> GetOcgs()
+        public Dictionary<int, Dictionary<string, object>> GetOcgs()
         {
-            PdfObj ci = mupdf.mupdf.pdf_new_name("CreatorInfo");
-            PdfDocument pdf = AsPdfDocument(this);
-            PdfObj ocgs = Utils.pdf_dict_getl(
-                pdf.pdf_trailer().pdf_dict_get(new PdfObj("Root")),
-                new string[] { "OCProperties", "OCGs" }
-            );
+            // Return the definitions of existing optional content groups.
+            var result = new Dictionary<int, Dictionary<string, object>>();
+            var pdf = NativePdfDocument;
+            var ci = mupdf.mupdf.pdf_new_name("CreatorInfo");
+            var ocProps = mupdf.mupdf.pdf_dict_get(mupdf.mupdf.pdf_dict_get(mupdf.mupdf.pdf_trailer(pdf), mupdf.mupdf.pdf_new_name("Root")), mupdf.mupdf.pdf_new_name("OCProperties"));
+            if (ocProps.m_internal == null) return result;
 
-            Dictionary<int, OCGroup> ret = new Dictionary<int, OCGroup>();
-            if (ocgs.pdf_is_array() == 0)
-            {
-                pdf.Dispose();
-                return ret;
-            }
-            
-            int n = ocgs.pdf_array_len();
+            var ocgs = mupdf.mupdf.pdf_dict_get(ocProps, mupdf.mupdf.pdf_new_name("OCGs"));
+            if (ocgs.m_internal == null || mupdf.mupdf.pdf_is_array(ocgs) == 0) return result;
+
+            int n = mupdf.mupdf.pdf_array_len(ocgs);
             for (int i = 0; i < n; i++)
             {
-                PdfObj ocg = ocgs.pdf_array_get(i);
-                int xref = ocg.pdf_to_num();
-                string name = ocg.pdf_dict_get(new PdfObj("Name")).pdf_to_text_string();
-                PdfObj obj = Utils.pdf_dict_getl(
-                    ocg,
-                    new string[] { "Usage", "CreatorInfo", " Subtype" }
-                );
-                string usage = "";
-                if (obj.m_internal != null)
-                {
-                    usage = obj.pdf_to_name();
-                }
-                List<string> intents = new List<string>();
-                PdfObj intent = ocg.pdf_dict_get(new PdfObj("Intent"));
+                var ocg = mupdf.mupdf.pdf_array_get(ocgs, i);
+                int xref = mupdf.mupdf.pdf_to_num(ocg);
+                var ocgObj = mupdf.mupdf.pdf_resolve_indirect(ocg);
+                var nameObj = mupdf.mupdf.pdf_dict_get(ocgObj, mupdf.mupdf.pdf_new_name("Name"));
+                string name = nameObj.m_internal != null ? mupdf.mupdf.pdf_to_text_string(nameObj) : "";
+
+                string usage = null;
+                var usageObj = mupdf.mupdf.pdf_dict_get(
+                    mupdf.mupdf.pdf_dict_get(
+                        mupdf.mupdf.pdf_dict_get(ocgObj, mupdf.mupdf.pdf_new_name("Usage")),
+                        ci),
+                    mupdf.mupdf.pdf_new_name("Subtype"));
+                if (usageObj.m_internal != null)
+                    usage = mupdf.mupdf.pdf_to_name(usageObj);
+
+                var intents = new List<string>();
+                var intent = mupdf.mupdf.pdf_dict_get(ocgObj, mupdf.mupdf.pdf_new_name("Intent"));
                 if (intent.m_internal != null)
                 {
-                    if (intent.pdf_is_name() != 0)
-                        intents.Add(intent.pdf_to_name());
-                    else if (intent.pdf_is_array() != 0)
+                    if (mupdf.mupdf.pdf_is_name(intent) != 0)
                     {
-                        int m = intent.pdf_array_len();
+                        intents.Add(mupdf.mupdf.pdf_to_name(intent));
+                    }
+                    else if (mupdf.mupdf.pdf_is_array(intent) != 0)
+                    {
+                        int m = mupdf.mupdf.pdf_array_len(intent);
                         for (int j = 0; j < m; j++)
                         {
-                            PdfObj o = intent.pdf_array_get(j);
-                            if (o.pdf_is_name() != 0)
-                                intents.Add(o.pdf_to_name());
+                            var o = mupdf.mupdf.pdf_array_get(intent, j);
+                            if (mupdf.mupdf.pdf_is_name(o) != 0)
+                                intents.Add(mupdf.mupdf.pdf_to_name(o));
                         }
                     }
                 }
-                int hidden = pdf.pdf_is_ocg_hidden(new PdfResourceStack(), usage, ocg);
-                OCGroup item = new OCGroup()
+
+                var resourceStack = new mupdf.PdfResourceStack();
+                int hidden = mupdf.mupdf.pdf_is_ocg_hidden(pdf, resourceStack, usage, ocgObj);
+
+                var info = new Dictionary<string, object>
                 {
-                    Name = name,
-                    Intents = intents,
-                    On = 1 - hidden,
-                    Usage = usage
+                    ["name"] = name,
+                    ["intent"] = intents,
+                    ["on"] = hidden == 0,
+                    ["usage"] = usage,
                 };
-                ret[xref] = item;
+                result[xref] = info;
             }
-
-            pdf.Dispose();
-            return ret;
-        }
-
-        /// <summary>
-        /// Save a file snapshot suitable for journalling.
-        /// </summary>
-        /// <param name="filename"></param>
-        public void SaveSnapshot(string filename)
-        {
-            if (IsClosed)
-                throw new Exception("doc is closed");
-            
-            if (filename == Name)
-                throw new Exception("cannot snapshot to original");
-            
-            PdfDocument pdf = AsPdfDocument(this);
-            pdf.pdf_save_snapshot(filename);
-            pdf.Dispose();
-        }
-
-        /// <summary>
-        /// Save PDF incrementally
-        /// </summary>
-        public void SaveIncremental()
-        {
-            Save(Name, incremental: 1, encryption: (int)PdfCrypt.PDF_ENCRYPT_KEEP);
-        }
-
-        /// <summary>
-        /// Build sub-pdf with page numbers in the list.
-        /// </summary>
-        /// <param name="list">numbers of pages</param>
-        /// <exception cref="Exception"></exception>
-        public void Select(List<int> list)
-        {
-            if (IsClosed || IsEncrypted)
-                throw new Exception("document closed or encrypted");
-            if (!IsPDF)
-                throw new Exception("is no PDF");
-            if (list.Count == 0 || list.Min() < 0 || list.Max() > PageCount)
-                throw new Exception("bad page number(s)");
-
-            PdfDocument pdf = AsPdfDocument(this);
-
-            IntPtr pNumbers = Marshal.AllocHGlobal(list.Count * sizeof(int));
-            Marshal.Copy(list.ToArray(), 0, pNumbers, list.Count);
-            SWIGTYPE_p_int swigNumbers = new SWIGTYPE_p_int(pNumbers, true);
-
-            pdf.pdf_rearrange_pages(list.Count, swigNumbers, pdf_clean_options_structure.PDF_CLEAN_STRUCTURE_DROP);
-
-            ResetPageRefs();
-            pdf.Dispose();
-        }
-
-        public bool SetLanguage(string language)
-        {
-            PdfDocument pdf = AsPdfDocument(this);
-            fz_text_language lang;
-            if (string.IsNullOrEmpty(language))
-                lang = fz_text_language.FZ_LANG_UNSET;
-            else
-                lang = mupdf.mupdf.fz_text_language_from_string(language);
-            pdf.pdf_set_document_language(lang);
-
-            pdf.Dispose();
-            return true;
-        }
-
-        public void SetLayer(
-            int config,
-            string baseState = null,
-            int[] on = null,
-            int[] off = null,
-            List<int[]> rbgroups = null,
-            int[] locked = null
-        )
-        {
-            if (IsClosed)
-                throw new Exception("document is closed");
-            HashSet<int> ocgs = new HashSet<int>(GetOcgs().Keys);
-            HashSet<int> s;
-
-            if (on != null)
-            {
-                s = new HashSet<int>(on);
-                s.ExceptWith(ocgs);
-            }
-            if (off != null)
-            {
-                s = new HashSet<int>(off);
-                s.ExceptWith(ocgs);
-            }
-            if (locked != null)
-            {
-                s = new HashSet<int>(locked);
-                s.ExceptWith(ocgs);
-            }
-            if (rbgroups != null)
-            {
-                foreach (int[] x in rbgroups)
-                {
-                    s = new HashSet<int>(x);
-                    s.ExceptWith(ocgs);
-                }
-            }
-            if (!string.IsNullOrEmpty(baseState))
-            {
-                baseState = baseState.ToUpper();
-                if (baseState == "UNCHANGED")
-                    baseState = "Unchanged";
-                if (!(new List<string>() { "ON", "OFF", "Unchanged" }).Contains(baseState))
-                    throw new Exception("bad 'baseState'");
-            }
-            PdfDocument pdf = AsPdfDocument(this);
-            PdfObj obj;
-            PdfObj ocp = Utils.pdf_dict_getl(
-                pdf.pdf_trailer(),
-                new string[] { "Root", "OCProperties" }
-            );
-            if (ocp.m_internal == null)
-            {
-                pdf.Dispose();
-                return;
-            }
-            if (config == -1)
-                obj = ocp.pdf_dict_get(new PdfObj("D"));
-            else
-                obj = ocp.pdf_dict_get(new PdfObj("Configs")).pdf_array_get(config);
-            if (obj.m_internal == null)
-                throw new Exception(Utils.ErrorMessages["MSG_BAD_OC_CONFIG"]);
-
-            // set_ocg_arrays
-            if (!string.IsNullOrEmpty(baseState))
-                obj.pdf_dict_put_name(new PdfObj("BaseState"), baseState);
-            if (on != null)
-            {
-                obj.pdf_dict_del(new PdfObj("ON"));
-                PdfObj arr = obj.pdf_dict_put_array(new PdfObj("ON"), 1);
-                Utils.SetOcgArraysImp(arr, new List<int>(on));
-            }
-            if (off != null)
-            {
-                obj.pdf_dict_del(new PdfObj("OFF"));
-                PdfObj arr = obj.pdf_dict_put_array(new PdfObj("OFF"), 1);
-                Utils.SetOcgArraysImp(arr, new List<int>(off));
-            }
-            if (locked != null)
-            {
-                obj.pdf_dict_del(new PdfObj("Locked"));
-                PdfObj arr = obj.pdf_dict_put_array(new PdfObj("Locked"), 1);
-                Utils.SetOcgArraysImp(arr, new List<int>(locked));
-            }
-            if (rbgroups != null)
-            {
-                obj.pdf_dict_del(new PdfObj("RBGroups"));
-                PdfObj arr = obj.pdf_dict_put_array(new PdfObj("RBGroups"), 1);
-                int n = rbgroups.Count;
-                for (int i = 0; i < n; i++)
-                {
-                    List<int> item = new List<int>(rbgroups[i]);
-                    PdfObj o = arr.pdf_array_push_array(1);
-                    Utils.SetOcgArraysImp(o, item);
-                }
-            }
-            pdf.Dispose();
-        }
-
-        /// <summary>
-        /// Set / unset OC intent configuration.
-        /// </summary>
-        /// <param name="number">string or int</param>
-        /// <param name="action"></param>
-        public void SetLayerUIConfig(dynamic number, int action = 0)
-        {
-            int num;
-            if (number is string)
-            {
-                List<int> select = LayerUIConfigs()
-                    .Where(ui => ui.Text == number)
-                    .Select(ui => ui.Number)
-                    .ToList();
-                if (select.Count == 0)
-                {
-                    throw new Exception($"bad OCG '{number}'");
-                }
-                num = select[0];
-            }
-            else if (number is int)
-                num = number;
-            else
-                num = -1;
-
-            PdfDocument pdf = AsPdfDocument(this);
-            if (action == 1)
-                pdf.pdf_toggle_layer_config_ui(num);
-            else if (action == 2)
-                pdf.pdf_deselect_layer_config_ui(num);
-            else
-                pdf.pdf_select_layer_config_ui(num);
-            pdf.Dispose();
-        }
-
-        /// <summary>
-        /// Set the PDF MarkInfo values.
-        /// </summary>
-        /// <param name="markInfo"></param>
-        /// <returns></returns>
-        /// <exception cref="Exception"></exception>
-        public bool SetMarkInfo(Dictionary<string, bool> markInfo)
-        {
-            int xref = GetPdfCatalog();
-            if (xref == 0)
-                throw new Exception("not a pdf");
-            if (markInfo == null)
-                return false;
-            Dictionary<string, bool> valid = new Dictionary<string, bool>()
-            {
-                { "Marked", false },
-                { "UserProperties", false },
-                { "Suspects", false }
-            };
-
-            if (valid.Keys.Except(markInfo.Keys).Count() <= 0)
-                throw new Exception("bad MarkInfo key(s)");
-            string pdfDict = "<<";
-            foreach (var entry in valid)
-            {
-                string vStr = entry.Value.ToString().ToLower();
-                if (vStr != "true" || vStr != "false")
-                    throw new Exception($"bad key value {entry.Key} : {entry.Value}");
-                pdfDict += $"/{entry.Key} {entry.Value}";
-            }
-            pdfDict += ">>";
-            SetKeyXRef(xref, "MarkInfo", pdfDict);
-            return true;
-        }
-
-        /// <summary>
-        /// Set the PDF PageLayout value.
-        /// </summary>
-        /// <param name="pageLayout"></param>
-        /// <returns></returns>
-        /// <exception cref="Exception"></exception>
-        public bool SetPageLayout(string pageLayout)
-        {
-            string[] valid =
-            {
-                "SinglePage",
-                "OneColumn",
-                "TwoColumnLeft",
-                "TwoColumnRight",
-                "TwoPageLeft",
-                "TwoPageRight"
-            };
-            int xref = GetPdfCatalog();
-            if (xref == 0)
-                throw new Exception("not a PDF");
-            if (string.IsNullOrEmpty(pageLayout))
-                throw new Exception("bad PageLayout value");
-            if (pageLayout[0] == '/')
-                pageLayout = pageLayout.Substring(1);
-            foreach (string v in valid)
-            {
-                if (pageLayout.ToLower() == v.ToLower())
-                {
-                    SetKeyXRef(xref, "PageLayout", $"/{v}");
-                    return true;
-                }
-            }
-            throw new Exception("bad pagelayout value");
-        }
-
-        /// <summary>
-        /// Set the PDF PageMode value.
-        /// </summary>
-        /// <param name="pageMode"></param>
-        /// <returns></returns>
-        /// <exception cref="Exception"></exception>
-        public bool SetPageMode(string pageMode)
-        {
-            string[] valid =
-            {
-                "UseNone",
-                "UseOutlines",
-                "UseThumbs",
-                "FullScreen",
-                "UseOC",
-                "UseAttachments"
-            };
-            int xref = GetPdfCatalog();
-            if (xref == 0)
-                throw new Exception("not a PDF");
-            if (string.IsNullOrEmpty(pageMode))
-                throw new Exception("bad page mode value");
-            if (pageMode[0] == '/')
-                pageMode = pageMode.Substring(1);
-            foreach (string v in valid)
-            {
-                if (pageMode.ToLower() == v.ToLower())
-                {
-                    SetKeyXRef(xref, "PageMode", $"/{v}");
-                    return true;
-                }
-            }
-            throw new Exception("bad page mode value");
-        }
-
-        /// <summary>
-        /// Store XML document level metadata.
-        /// </summary>
-        public void SetXmlMetaData(string metadata)
-        {
-            if (IsClosed || IsEncrypted)
-                throw new Exception("document is closed or encrypted");
-            PdfDocument pdf = AsPdfDocument(this);
-            PdfObj root = pdf.pdf_trailer().pdf_dict_get(new PdfObj("Root"));
-            if (root.m_internal == null)
-                throw new Exception(Utils.ErrorMessages["MSG_BAD_PDFROOT"]);
-
-            byte[] utf8 = Encoding.UTF8.GetBytes(metadata);
-            FzBuffer res = Utils.fz_new_buffer_from_data(utf8);
-            PdfObj xml = root.pdf_dict_get(new PdfObj("Metadata"));
-            if (xml.m_internal != null)
-                Utils.UpdateStream(pdf, xml, res, 0);
-            else
-            {
-                xml = pdf.pdf_add_stream(res, new PdfObj(), 0);
-                xml.pdf_dict_put(new PdfObj("Type"), new PdfObj("Metadata"));
-                xml.pdf_dict_put(new PdfObj("Subtype"), new PdfObj("XML"));
-                root.pdf_dict_put(new PdfObj("Metadata"), xml);
-            }
-            pdf.Dispose();
-        }
-
-        /// <summary>
-        /// Activate an OC layer.
-        /// </summary>
-        /// <param name="config">config number as returned by layerconfigs</param>
-        /// <param name="asDefault">make this the default configuration.</param>
-        /// <exception cref="Exception"></exception>
-        public void SwitchLayer(int config, int asDefault = 0)
-        {
-            PdfDocument pdf = AsPdfDocument(this);
-            PdfObj cfgs = Utils.pdf_dict_getl(
-                pdf.pdf_trailer(),
-                new string[] { "Root", "OCProperties", "Configs" }
-            );
-            if (cfgs.pdf_is_array() == 0 || cfgs.pdf_array_len() == 0)
-            {
-                if (config < 1)
-                {
-                    pdf.Dispose();
-                    return;
-                }
-                throw new Exception(Utils.ErrorMessages["MSG_BAD_OC_LAYER"]);
-            }
-            if (config < 0)
-            {
-                pdf.Dispose();
-                return;
-            }
-            pdf.pdf_select_layer_config(config);
-            if (asDefault != 0)
-            {
-                pdf.pdf_set_layer_config_as_default();
-                mupdf.mupdf.ll_pdf_read_ocg(pdf.m_internal);
-            }
-            pdf.Dispose();
-        }
-
-        public byte[] Write(
-            bool garbage = false,
-            bool clean = false,
-            bool deflate = false,
-            bool deflateImages = false,
-            bool deflateFonts = false,
-            bool incremental = false,
-            bool ascii = false,
-            bool expand = false,
-            bool linear = false,
-            bool noNewId = false,
-            bool appearance = false,
-            bool pretty = false,
-            int encryption = 1,
-            int permissions = 4095,
-            string ownerPW = null,
-            string userPW = null,
-            bool preserveMetadata = true,
-            bool useObjstms = false,
-            bool compressionEffort = false
-        )
-        {
-            MemoryStream byteStream = new MemoryStream();
-            Save(
-                filename: byteStream,
-                garbage: garbage ? 1 : 0,
-                clean: clean ? 1 : 0,
-                noNewId: noNewId ? 1 : 0,
-                appearance: appearance ? 1 : 0,
-                deflate: deflate ? 1 : 0,
-                deflateImages: deflateImages ? 1 : 0,
-                deflateFonts: deflateFonts ? 1 : 0,
-                incremental: incremental ? 1 : 0,
-                ascii: ascii ? 1 : 0,
-                expand: expand ? 1 : 0,
-                linear: linear ? 1 : 0,
-                pretty: pretty ? 1 : 0,
-                encryption: encryption,
-                permissions: permissions,
-                ownerPW: ownerPW,
-                userPW: userPW,
-                preserveMetadata: preserveMetadata ? 1 : 0,
-                useObjstms: useObjstms ? 1 : 0,
-                compressionEffort: compressionEffort ? 1 : 0
-            );
-            return byteStream.ToArray();
-        }
-
-        public List<string> GetKeysXref(int xref)
-        {
-            PdfDocument pdf = AsPdfDocument(this);
-            int len = pdf.pdf_xref_len();
-            PdfObj obj;
-
-            if (!Utils.INRANGE(xref, 1, len - 1) && xref != -1)
-                throw new Exception(Utils.ErrorMessages["MSG_BAD_XREF"]);
-            if (xref > 0)
-                obj = pdf.pdf_load_object(xref);
-            else
-                obj = pdf.pdf_trailer();
-            int n = obj.pdf_dict_len();
-            List<string> ret = new List<string>();
-            if (n == 0)
-            {
-                pdf.Dispose();
-                return ret;
-            }
-            
-            for (int i = 0; i < n; i++)
-            {
-                string key = obj.pdf_dict_get_key(i).pdf_to_name();
-                ret.Add(key);
-            }
-
-            pdf.Dispose();
-            return ret;
-        }
-
-        /// <summary>
-        /// Check if xref is an image object.
-        /// </summary>
-        /// <param name="xref"></param>
-        /// <returns></returns>
-        /// <exception cref="Exception"></exception>
-        public bool XrefIsFont(int xref)
-        {
-            if (IsClosed || IsEncrypted)
-                throw new Exception("document closed or encrypted");
-            if (GetKeyXref(xref, "Subtype").Item2 == "/Image")
-                return true;
-            
-            return false;
-        }
-
-        /// <summary>
-        /// Check if xref is a stream object.
-        /// </summary>
-        /// <param name="xref"></param>
-        /// <returns></returns>
-        public bool XrefIsStream(int xref = 0)
-        {
-            bool ret;
-            PdfDocument pdf = AsPdfDocument(this);
-            if (pdf.m_internal == null)
-                return false;
-            
-            ret = pdf.pdf_obj_num_is_stream(xref) != 0;
-            pdf.Dispose();
-            return ret;
-        }
-
-        /// <summary>
-        /// Check if xref is a form xobject.
-        /// </summary>
-        /// <param name="xref"></param>
-        /// <returns></returns>
-        /// <exception cref="Exception"></exception>
-        public bool XrefIsXObject(int xref)
-        {
-            if (IsClosed || IsEncrypted)
-                throw new Exception("document is closed or encrypted");
-            if (GetKeyXref(xref, "Subtype").Item2 == "/From")
-                return true;
-            return false;
-        }
-
-        /// <summary>
-        /// Get length of xref table.
-        /// </summary>
-        /// <returns></returns>
-        public int GetXrefLength()
-        {
-            int ret = 0;
-            PdfDocument pdf = AsPdfDocument(this);
-            if (pdf != null)
-                ret = pdf.pdf_xref_len();
-
-            pdf.Dispose();
-            return ret;
-        }
-
-        public byte[] GetXrefStream(int xref)
-        {
-            if (IsClosed || IsEncrypted)
-                throw new Exception("document closed or encrypted");
-            PdfDocument pdf = AsPdfDocument(this);
-            int len = pdf.pdf_xref_len();
-            PdfObj obj;
-
-            if (!Utils.INRANGE(xref, 1, len - 1) && xref != -1)
-                throw new Exception(Utils.ErrorMessages["MSG_BAD_XREF"]);
-            if (xref >= 0)
-                obj = pdf.pdf_new_indirect(xref, 0);
-            else
-                obj = pdf.pdf_trailer();
-            
-            byte[] r = null;
-            if (obj.pdf_is_stream() != 0)
-            {
-                FzBuffer res = pdf.pdf_load_stream_number(xref);
-                r = Utils.BinFromBuffer(res);
-            }
-
-            pdf.Dispose();
-            return r;
-        }
-
-        /// <summary>
-        /// Get xref stream without decompression.
-        /// </summary>
-        /// <param name="xref"></param>
-        /// <returns></returns>
-        /// <exception cref="Exception"></exception>
-        public byte[] GetXrefStreamRaw(int xref)
-        {
-            if (IsClosed || IsEncrypted)
-                throw new Exception("document closed or encrypted");
-            PdfDocument pdf = AsPdfDocument(this);
-            int len = pdf.pdf_xref_len();
-            PdfObj obj;
-
-            if (!Utils.INRANGE(xref, 1, len - 1) && xref != -1)
-                throw new Exception(Utils.ErrorMessages["MSG_BAD_XREF"]);
-            if (xref >= 0)
-                obj = pdf.pdf_new_indirect(xref, 0);
-            else
-                obj = pdf.pdf_trailer();
-            byte[] r = null;
-            if (obj.pdf_is_stream() != 0)
-            {
-                FzBuffer res = pdf.pdf_load_raw_stream_number(xref);
-                r = Utils.BinFromBuffer(res);
-            }
-
-            pdf.Dispose();
-            return r;
-        }
-
-        /// <summary>
-        /// Get xref of document XML metadata.
-        /// </summary>
-        /// <returns></returns>
-        /// <exception cref="Exception"></exception>
-        public int XrefXmlMetaData()
-        {
-            PdfDocument pdf = AsPdfDocument(this);
-            PdfObj root = pdf.pdf_trailer().pdf_dict_get(new PdfObj("Root"));
-            if (root.m_internal == null)
-                throw new Exception(Utils.ErrorMessages["MSG_BAD_PDFROOT"]);
-            
-            PdfObj xml = root.pdf_dict_get(new PdfObj("Metadata"));
-            int xref = 0;
-            if (xml.m_internal != null)
-                xref = xml.pdf_to_num();
-
-            pdf.Dispose();
-
-            return xref;
-        }
-
-        /// <summary>
-        /// Check if xref is an image object
-        /// </summary>
-        /// <param name="xref"></param>
-        /// <returns></returns>
-        /// <exception cref="Exception"></exception>
-        public bool XrefIsImage(int xref)
-        {
-            if (IsClosed || IsEncrypted)
-                throw new Exception("document closed or encrypted");
-            if (GetKeyXref(xref, "Subtype").Item2 == "/Image")
-                return true;
-            
-            return false;
-        }
-
-        /// <summary>
-        /// Copy a PDF dictionary object to another one given their xref numbers.
-        /// </summary>
-        /// <param name="source"></param>
-        /// <param name="xref"></param>
-        public void CopyXref(int source, int target, List<string> keep = null)
-        {
-            if (XrefIsStream(source))
-            {
-                byte[] stream = GetXrefStreamRaw(source);
-                UpdateStream(target, stream, 1, 0);
-            }
-
-            if (keep == null)
-                keep = new List<string>();
-            foreach (string key in GetKeysXref(target))
-            {
-                if (keep.Contains(key))
-                    continue;
-                SetKeyXRef(target, key, "null");
-            }
-            
-            foreach (string key in GetKeysXref(source))
-            {
-                (string, string) item = GetKeyXref(source, key);
-                SetKeyXRef(target, key, item.Item2);
-            }
-        }
-
-        /// <summary>
-        /// Search for a string on a page.
-        /// </summary>
-        /// <param name="pno">page number</param>
-        /// <param name="text">string to be searched for</param>
-        /// <param name="quads">return quads instead of rectangles</param>
-        /// <param name="clip">restrict search to this rectangle</param>
-        /// <param name="flags">bit switches, default: join hyphened words</param>
-        /// <param name="textpage">reuse a prepared textpage</param>
-        /// <returns>a list of rectangles or quads, each containing an occurrence.</returns>
-        public List<Quad> SearchPageFor(
-            int pno,
-            string text,
-            bool quads = false,
-            Rect clip = null,
-            int flags =
-                (int)(
-                    TextFlags.TEXT_DEHYPHENATE
-                    | TextFlags.TEXT_PRESERVE_WHITESPACE
-                    | TextFlags.TEXT_PRESERVE_LIGATURES
-                    | TextFlags.TEXT_MEDIABOX_CLIP
-                ), // 83
-            TextPage textpage = null
-        )
-        {
-            return this[pno].SearchFor(text, clip, quads, flags, textpage);
-        }
-
-        private void DoLinks(
-            Document doc,
-            int fromPage = -1,
-            int toPage = -1,
-            int startAt = -1
-        )
-        {
-            Utils.DoLinks(this, doc, fromPage, toPage, startAt);
-        }
-
-        /// <summary>
-        /// Delete TOC / bookmark item by index.
-        /// </summary>
-        /// <param name="idx"></param>
-        public void DeleteTocItem(int idx)
-        {
-            int xref = GetOutlineXrefs()[idx];
-            RemoveTocItem(xref);
-        }
-
-        /// <summary>
-        /// Return the cross reference number of an OCG or OCMD attached to an image or form xobject.
-        /// </summary>
-        /// <param name="xref">the xref of an image or form xobject. Valid such cross reference numbers are returned by Document.get_page_images()</param>
-        /// <returns></returns>
-        public int GetOC(int xref)
-        {
-            return Utils.GetOC(this, xref);
-        }
-
-        /// <summary>
-        /// Retrieve the definition of an OCMD.
-        /// </summary>
-        /// <param name="xref">the xref of the OCMD.</param>
-        /// <returns></returns>
-        public OCMD GetOCMD(int xref)
-        {
-            return Utils.GetOCMD(this, xref);
-        }
-
-        /// <summary>
-        /// Return a list of page numbers with the given label
-        /// </summary>
-        /// <param name="label">label</param>
-        /// <param name="onlyOne">(bool) stop searching after first hit</param>
-        /// <returns></returns>
-        public List<int> GetPageNumbers(string label, bool onlyOne = false)
-        {
-            return Utils.GetPageNumbers(this, label, onlyOne);
-        }
-
-        /// <summary>
-        /// Create pixmap of document page by page number.
-        /// </summary>
-        /// <param name="doc"></param>
-        /// <param name="pno">page number</param>
-        /// <param name="matrix">Matrix for transformation </param>
-        /// <param name="dpi"></param>
-        /// <param name="colorSpace">rgb, rgb, gray - case ignored, default csRGB</param>
-        /// <param name="clip">restrict rendering to this area</param>
-        /// <param name="alpha">include alpha channel</param>
-        /// <param name="annots">also render annotations</param>
-        /// <returns></returns>
-        public Pixmap GetPagePixmap(
-            int pno,
-            IdentityMatrix matrix,
-            int dpi = 0,
-            string colorSpace = null,
-            Rect clip = null,
-            bool alpha = false,
-            bool annots = true
-        )
-        {
-            return Utils.GetPagePixmap(this, pno, matrix, dpi, colorSpace, clip, alpha, annots);
-        }
-
-        /// <summary>
-        /// Extract a document page's text by page number
-        /// </summary>
-        /// <param name="pno">page number</param>
-        /// <param name="option">text, words, blocks, html, dict, json, rawdict, xhtml or xml.</param>
-        /// <param name="clip"></param>
-        /// <param name="flags"></param>
-        /// <param name="textPage"></param>
-        /// <param name="sort"></param>
-        /// <returns>output from TextPage</returns>
-        public dynamic GetPageText(
-            int pno,
-            string option = "text",
-            Rect clip = null,
-            int flags = 0,
-            TextPage textPage = null,
-            bool sort = false
-        )
-        {
-            return this[pno].GetText(option, clip, flags, textPage, sort);
-        }
-
-        /// <summary>
-        /// Check whether there are annotations on any page.
-        /// </summary>
-        /// <returns>True / False. As opposed to fields, which are also stored in a central place of a PDF document, the existence of links / annotations can only be detected by parsing each page.</returns>
-        /// <exception cref="Exception"></exception>
-        public bool HasAnnots()
-        {
-            if (IsClosed)
-                throw new Exception("document closed");
-            if (!IsPDF)
-                throw new Exception("is no pdf");
-            for (int i = 0; i < PageCount; i++)
-            {
-                foreach (AnnotXref item in PageAnnotXrefs(i))
-                {
-                    if (
-                        item.AnnotType == PdfAnnotType.PDF_ANNOT_LINK
-                        || item.AnnotType == PdfAnnotType.PDF_ANNOT_WIDGET
-                    )
-                        return true;
-                }
-            }
-            
-            return false;
-        }
-
-        /// <summary>
-        /// PDF only: Check whether there are links, resp. annotations anywhere in the document.
-        /// </summary>
-        /// <returns>True / False. As opposed to fields, which are also stored in a central place of a PDF document, the existence of links / annotations can only be detected by parsing each page.</returns>
-        /// <exception cref="Exception"></exception>
-        public bool HasLinks()
-        {
-            if (IsClosed)
-                throw new Exception("document closed");
-            if (!IsPDF)
-                throw new Exception("is no pdf");
-            for (int i = 0; i < PageCount; i++)
-            {
-                foreach (AnnotXref item in PageAnnotXrefs(i))
-                {
-                    if (item.AnnotType == PdfAnnotType.PDF_ANNOT_LINK)
-                        return true;
-                }
-            }
-            
-            return false;
-        }
-
-        /// <summary>
-        /// PDF only: Remove potentially sensitive data from the PDF. This function is inspired by the similar “Sanitize” function in Adobe Acrobat products. The process is configurable by a number of options.
-        /// </summary>
-        /// <param name="attachedFiles">Search for ‘FileAttachment’ annotations and remove the file content.</param>
-        /// <param name="cleanPages">Remove any comments from page painting sources. If this option is set to False, then this is also done for hidden_text and redactions.</param>
-        /// <param name="embeddedFiles">Remove embedded files.</param>
-        /// <param name="hiddenText">Remove OCRed text and invisible text.</param>
-        /// <param name="javascript">Remove JavaScript sources.</param>
-        /// <param name="metadata">Remove PDF standard metadata.</param>
-        /// <param name="redactions">Apply redaction annotations.</param>
-        /// <param name="redactImages">how to handle images if applying redactions. One of 0 (ignore), 1 (blank out overlaps) or 2 (remove).</param>
-        /// <param name="removeLinks">how to handle images if applying redactions. One of 0 (ignore), 1 (blank out overlaps) or 2 (remove).</param>
-        /// <param name="resetFields">Reset all form fields to their defaults.</param>
-        /// <param name="resetResponses">Remove all responses from all annotations.</param>
-        /// <param name="thumbnails">Remove all responses from all annotations.</param>
-        /// <param name="xmlMetadata">Remove all responses from all annotations.</param>
-        /// <exception cref="Exception"></exception>
-        public void Scrub(
-            bool attachedFiles = true,
-            bool cleanPages = true,
-            bool embeddedFiles = true,
-            bool hiddenText = true,
-            bool javascript = true,
-            bool metadata = true,
-            bool redactions = true,
-            int redactImages = 0,
-            bool removeLinks = true,
-            bool resetFields = true,
-            bool resetResponses = true,
-            bool thumbnails = true,
-            bool xmlMetadata = true
-        )
-        {
-            List<string> RemoveHidden(string[] contLines)
-            {
-                List<string> outlines = new List<string>();
-                bool inText = false;
-                bool suppress = false;
-                bool makeReturn = false;
-                foreach (string line in contLines)
-                {
-                    if (line == "BT")
-                    {
-                        inText = true;
-                        outlines.Add(line);
-                        continue;
-                    }
-                    if (line == "ET")
-                    {
-                        inText = false;
-                        outlines.Add(line);
-                        continue;
-                    }
-                    if (line == "3 Tr")
-                    {
-                        suppress = true;
-                        makeReturn = true;
-                        continue;
-                    }
-                    if (line.Substring(line.Length - 2, 2) == "Tr" && line[0] == '3')
-                    {
-                        suppress = false;
-                        outlines.Add(line);
-                        continue;
-                    }
-                    if (suppress && inText)
-                        continue;
-                    outlines.Add(line);
-                }
-                if (makeReturn)
-                    return outlines;
-                else
-                    return null;
-            }
-
-            if (!IsPDF)
-                throw new Exception("is no PDF");
-            if (IsEncrypted || IsClosed)
-                throw new Exception("closed or encrypted doc");
-            if (cleanPages == false)
-            {
-                hiddenText = false;
-                redactions = false;
-            }
-            if (metadata)
-                SetMetadata(new Dictionary<string, string>()); // empty metadata
-
-            for (int i = 0; i < PageCount; i++)
-            {
-                Page page = this[i];
-                if (resetFields)
-                {
-                    foreach (Widget widget in page.GetWidgets())
-                        widget.Reset();
-                }
-                if (removeLinks)
-                {
-                    List<LinkInfo> links = page.GetLinks();
-                    foreach (LinkInfo link in links)
-                        page.DeleteLink(link);
-                }
-                bool foundRedacts = false;
-                foreach (Annot annot in page.GetAnnots())
-                {
-                    if (annot.Type.Item1 == PdfAnnotType.PDF_ANNOT_FILE_ATTACHMENT && attachedFiles)
-                        annot.UpdateFile(buffer: new byte[] { 32 });
-                    if (resetResponses)
-                        annot.DeleteResponses();
-                    if (annot.Type.Item1 == PdfAnnotType.PDF_ANNOT_REDACT)
-                        foundRedacts = true;
-                }
-
-                if (redactions && foundRedacts)
-                    page.ApplyRedactions(redactImages);
-
-                if (!(cleanPages || hiddenText))
-                    continue;
-
-                page.CleanContetns();
-                if (page.GetContents().Count == 0)
-                    continue;
-
-                if (hiddenText)
-                {
-                    int xref = page.GetContents()[0];
-                    byte[] cont = GetXrefStream(xref);
-                    List<string> contLines = RemoveHidden(
-                        Encoding.UTF8.GetString(cont).Split('\n')
-                    );
-                    if (contLines.Count != 0)
-                    {
-                        cont = Encoding.UTF8.GetBytes(string.Join("\n", contLines.ToArray()));
-                        UpdateStream(xref, cont);
-                    }
-                }
-                if (thumbnails)
-                {
-                    if (GetKeyXref(page.Xref, "Thumb").Item1 != "null")
-                        SetKeyXRef(page.Xref, "Thumb", "null");
-                }
-            }
-            if (embeddedFiles)
-            {
-                foreach (string name in GetEmbfileNames())
-                    DeleteEmbfile(name);
-            }
-
-            if (xmlMetadata)
-                DeleteXmlMetadata();
-
-            int xrefLimit = 0;
-            if (xmlMetadata || javascript)
-                xrefLimit = GetXrefLength();
-
-            for (int xref = 1; xref <= xrefLimit; xref++)
-            {
-                if (string.IsNullOrEmpty(GetXrefObject(xref)))
-                    throw new Exception($"bad xref {xref} - clean PDF before scrubbing");
-                if (javascript && GetKeyXref(xref, "S").Item2 == "/JavaScript")
-                {
-                    string obj = "<</S/JavaScript/JS()>>";
-                    UpdateObject(xref, obj);
-                    continue;
-                }
-                if (!xmlMetadata)
-                    continue;
-
-                if (GetKeyXref(xref, "Type").Item2 == "/Metadata")
-                {
-                    UpdateObject(xref, "<<>>");
-                    UpdateStream(xref, Encoding.UTF8.GetBytes("deleted")); // new is 1 as default
-                    continue;
-                }
-
-                if (GetKeyXref(xref, "Metadata").Item1 != "null")
-                    SetKeyXRef(xref, "Metadata", null);
-            }
-        }
-
-        /// <summary>
-        /// PDF only: Sets or updates the metadata of the document as specified in m, a dictionary.
-        /// </summary>
-        /// <param name="metadata">A dictionary with the same keys as metadata (see below). All keys are optional. A PDF’s format and encryption method cannot be set or changed and will be ignored. If any value should not contain data, do not specify its key or set the value to None. If you use {} all metadata information will be cleared to the string “none”. If you want to selectively change only some values, modify a copy of doc.metadata and use it as the argument. Arbitrary unicode values are possible if specified as UTF-8-encoded.</param>
-        /// <exception cref="Exception"></exception>
-        public void SetMetadata(Dictionary<string, string> metadata = null)
-        {
-            if (!IsPDF)
-                throw new Exception("is no PDF");
-            if (IsEncrypted || IsClosed)
-                throw new Exception("closed or encrypted doc");
-            if (metadata == null)
-                metadata = new Dictionary<string, string>();
-
-            Dictionary<string, string> keymap = new Dictionary<string, string>()
-            {
-                { "author", "Author" },
-                { "producer", "Producer" },
-                { "creator", "Creator" },
-                { "title", "Title" },
-                { "format", null },
-                { "encryption", null },
-                { "creationDate", "CreationDate" },
-                { "modDate", "ModDate" },
-                { "subject", "Subject" },
-                { "keywords", "Keywords" },
-                { "trapped", "Trapped" }
-            };
-            HashSet<string> keys = new HashSet<string>(keymap.Keys);
-            List<string> diffKeys = (new HashSet<string>(metadata.Keys)).Except(keys).ToList();
-            if (diffKeys.Count != 0)
-                throw new Exception($"bad dict key(s) - {string.Join(", ", diffKeys.ToArray())}");
-
-            (string t, string temp) = GetKeyXref(-1, "Info");
-            int infoXref = 0;
-            if (t != "xref")
-                infoXref = 0;
-            else
-                infoXref = Convert.ToInt32(temp.Replace("0 R", ""));
-
-            if (metadata.Count == 0 && infoXref == 0)
-                return;
-            if (infoXref == 0)
-            {
-                infoXref = GetNewXref();
-                UpdateObject(infoXref, "<<>>");
-                SetKeyXRef(-1, "Info", $"{infoXref} 0 R");
-            }
-
-            else if (metadata.Count == 0)
-            {
-                SetKeyXRef(-1, "Info", "null");
-                return;
-            }
-
-            foreach (string k in metadata.Keys)
-            {
-                //if (keymap.GetValueOrDefault(k, null) != null)
-                if (keymap.TryGetValue(k, out string value) && value != null)
-                {
-                    string pdfKey = keymap[k];
-                    string val = metadata[k];
-                    if (string.IsNullOrEmpty(val) || (val == "none" || val == "null"))
-                        val = "null";
-                    else
-                        val = Utils.GetPdfString(val);                                                                                                                                                    
-                    SetKeyXRef(infoXref, pdfKey, val);
-                }
-            }
-            InitDocument();
-        }
-
-        /// <summary>
-        /// Attach optional content object to image or form xobject.
-        /// </summary>
-        /// <param name="xref"xref number of an image or form xobject></param>
-        /// <param name="oc">xref number of an OCG or OCMD</param>
-        /// <exception cref="Exception"></exception>
-        public void SetOC(int xref, int oc)
-        {
-            if (IsClosed || IsEncrypted)
-                throw new Exception("document close or encrypted");
-            
-            (string t, string name) = GetKeyXref(xref, "Subtype");
-            if (t != "name" || !(name == "/Image" || name == " /Form"))
-                throw new Exception($"bad object type at xref {xref}");
-            
-            if (oc > 0)
-                (t, name) = GetKeyXref(oc, "Type");
-            
-            if (t != "name" || !(name == "/OCG" || name == "/OCMD"))
-                throw new Exception($"bad object type at xref {oc}");
-            
-            if (oc == 0)
-            {
-                SetKeyXRef(xref, "OC", "null");
-                return;
-            }
-            
-            SetKeyXRef(xref, "OC", $"{oc} 0 R");
-        }
-
-        /// <summary>
-        /// Create or update an OCMD object in a PDF document.
-        /// </summary>
-        /// <param name="xref">0 for creating a new object, otherwise update existing one.</param>
-        /// <param name="ocgs">OCG xref numbers, which shall be subject to 'policy'.</param>
-        /// <param name="policy">one of 'AllOn', 'AllOff', 'AnyOn', 'AnyOff' (any casing).</param>
-        /// <param name="ve">visibility expression. Use instead of 'ocgs' with 'policy'.</param>
-        /// <returns>Xref of the created or updated OCMD.</returns>
-        public int SetOCMD(
-            OCMD ocmd = null,
-            int xref = 0,
-            int[] ocgs = null,
-            string policy = null,
-            dynamic[] ve = null
-        )
-        {
-            List<int> allOcgs = GetOcgs().Keys.ToList();
-
-            if (ocmd != null)
-            {
-                if (xref == 0)
-                    xref = ocmd.Xref;
-                if (ocgs == null)
-                    ocgs = ocmd.Ocgs;
-                if (string.IsNullOrEmpty(policy))
-                    policy = ocmd.Policy;
-                if (ve == null)
-                    ve = ocmd.Ve;
-            }
-
-            string VeMaker(dynamic[] v)
-            {
-                if (v.Length < 2)
-                    throw new Exception($"bad ve length: {v.Length}");
-                
-                if (
-                    !(v[0] is string)
-                    || !(new List<string>() { "and", "or", "not" }).Contains(v[0].ToLower())
-                )
-                    throw new Exception($"bad operand: {v[0]}");
-                
-                if (v[0].ToLower() == "not" && v.Length != 2)
-                    throw new Exception($"operand is not, but ve length: {v.Length}");
-
-                string item = $"[/{v[0]}";
-                item = char.ToUpper(item[0]) + item.Substring(1).ToLower();
-                foreach (var x in v.Skip(1).ToArray())
-                {
-                    if (x is int)
-                    {
-                        if (!allOcgs.Contains(x))
-                            throw new Exception($"bad OCG {x}");
-                        item += $" {x} 0 R";
-                    }
-                    else
-                    {
-                        item += $" {VeMaker(x)}";
-                    }
-                }
-                item += "]";
-                
-                return item;
-            }
-
-            string text = "<</Type/OCMD";
-
-            if (ocgs != null)
-            {
-                List<int> s = ocgs.Except(allOcgs).ToList();
-                if (s.Count != 0)
-                    throw new Exception($"bad OCGs count: {s.Count}");
-                text += "/OCGs[" + string.Join(" ", ocgs.Select(x => $"{x} 0 R")) + "]";
-            }
-
-            if (!string.IsNullOrEmpty(policy))
-            {
-                policy = policy.ToLower();
-                Dictionary<string, string> pols = new Dictionary<string, string>()
-                {
-                    { "anyon", "AnyOn" },
-                    { "allon", "AllOn" },
-                    { "anyoff", "AnyOff" },
-                    { "alloff", "AnyOff" },
-                };
-
-                if (!pols.Keys.Contains(policy))
-                    throw new Exception($"bad policy: {policy}");
-                text += $"/P/{pols[policy]}";
-            }
-
-            if (ve != null)
-            {
-                text += $"/VE{VeMaker(ve)}";
-            }
-
-            text += ">>";
-            if (xref == 0)
-                xref = GetNewXref();
-            else if (!GetXrefObject(xref, 1).Contains("/Type/OCMD"))
-                throw new Exception("bad xref or not an OCMD");
-            UpdateObject(xref, text);
-
-            return xref;
-        }
-
-        /// <summary>
-        /// Create new outline tree (table of contents, TOC)
-        /// </summary>
-        /// <param name="tocs">each entry must contain level, title, page and optionally top margin on the page.None or '()' remove the TOC</param>
-        /// <param name="collapse">collapses entries beyond this level. Zero or Null shows all entries unfolded.</param>
-        /// <returns>the number of inserted items, or the number of removed items respectively.</returns>
-        public int SetToc(List<Toc> tocs, int collapse = 1)
-        {
-            if (IsClosed || IsEncrypted)
-                throw new Exception("document closed or encrypted");
-            if (!IsPDF)
-                throw new Exception("is no pdf");
-            if (tocs == null || tocs.Count == 0)
-                return DeleteToc().Count;
-
-            int n = tocs.Count;
-            int pageCount = PageCount;
-            Toc t0 = tocs[0];
-            if (t0.Level != 1)
-                throw new Exception("hierarchy level of item 0 must be 1");
-
-            foreach (int i in Enumerable.Range(0, n - 1))
-            {
-                Toc t1 = tocs[i];
-                Toc t2 = tocs[i + 1];
-                if (!(-1 <= t1.Page && t1.Page <= pageCount))
-                    throw new Exception($"row {i}: page number out of range");
-                if (t2.Level < 1)
-                    throw new Exception($"bad hierarchy level in row {i + 1}");
-                if (t2.Level > t1.Level + 1)
-                    throw new Exception($"bad hierarchy level in row {i + 1}");
-            }
-            List<int> oldXrefs = DeleteToc();
-            oldXrefs = new List<int>();
-
-            List<int> xref = new List<int>() { 0 }
-                .Concat(oldXrefs)
-                .ToList();
-            xref[0] = GetOlRootNumber();
-            if (n > oldXrefs.Count)
-            {
-                for (int i = 0; i < (n - oldXrefs.Count); i++)
-                {
-                    xref.Add(GetNewXref());
-                }
-            }
-
-            List<Dictionary<string, dynamic>> olItems = new List<Dictionary<string, dynamic>>()
-            {
-                new Dictionary<string, dynamic>()
-                {
-                    { "count", 0 },
-                    { "first", -1 },
-                    { "last", -1 },
-                    { "xref", xref[0] }
-                }
-            };
-
-            Dictionary<int, int> lvlTab = new Dictionary<int, int>();
-            lvlTab.Add(0, 0);
-
-            for (int i = 0; i < n; i++)
-            {
-                Toc o = tocs[i];
-                int lvl = o.Level;
-                string title = Utils.GetPdfString(o.Title);
-                int pno = Math.Min(PageCount - 1, Math.Max(0, o.Page - 1));
-                int pageXref = GetPageXref(pno);
-                float pageHeight = PageCropBox(pno).Height;
-                Point top = new Point(72, pageHeight - 36);
-
-                LinkInfo dest = new LinkInfo() { To = top, Kind = LinkType.LINK_GOTO };
-                if (o.Page < 0)
-                    dest.Kind = LinkType.LINK_NONE;
-                if (o.Link != null)
-                {
-                    if (o.Link is LinkInfo)
-                    {
-                        dest = o.Link;
-                        if (dest.To == null)
-                            dest.To = top;
-                        else
-                        {
-                            Page page = this[pno];
-                            Point point = new Point(dest.To);
-                            point.Y = page.CropBox.Height - point.Y;
-                            point = point * page.RotationMatrix;
-                            dest.To = new Point(point);
-                        }
-                    }
-                    else if (o.Link is float)
-                    {
-                        dest.To = new Point(72, pageHeight - o.Link);
-                    }
-                }
-
-                Dictionary<string, dynamic> d = new Dictionary<string, dynamic>();
-                d.Add("first", -1);
-                d.Add("count", 0);
-                d.Add("last", -1);
-                d.Add("prev", -1);
-                d.Add("next", -1);
-                d.Add("dest", Utils.GetDestString(pageXref, dest));
-                d.Add("top", dest.To);
-                d.Add("title", title);
-                d.Add("parent", lvlTab[lvl - 1]);
-                d.Add("xref", xref[i + 1]);
-                d.Add("color", dest.Color);
-                d.Add("flags", (dest.Italic ? 1 : 0) + 2 * (dest.Bold ? 1 : 0));
-                lvlTab[lvl] = i + 1;
-                Dictionary<string, dynamic> parent = olItems[lvlTab[lvl - 1]];
-
-                if (dest.Collapse || (collapse != 0 && lvl > collapse))
-                    parent["count"] -= 1;
-                else
-                    parent["count"] += 1;
-
-                if (parent["first"] == -1)
-                {
-                    parent["first"] = i + 1;
-                    parent["last"] = i + 1;
-                }
-                else
-                {
-                    d["prev"] = parent["last"];
-                    Dictionary<string, dynamic> prev = olItems[parent["last"]];
-                    prev["next"] = i + 1;
-                    parent["last"] = i + 1;
-                }
-                olItems.Add(d);
-            }
-
-            int index = 0;
-            foreach (Dictionary<string, dynamic> ol in olItems)
-            {
-                string txt = "<<";
-                if (ol["count"] != 0)
-                    txt += $"/Count {ol["count"]}";
-                try
-                {
-                    txt += ol["dest"];
-                }
-                catch (Exception) { }
-
-                try
-                {
-                    if (ol["first"] > -1)
-                        txt += $"/First {xref[ol["first"]]} 0 R";
-                }
-                catch (Exception) {  }
-
-                try
-                {
-                    if (ol["last"] > -1)
-                        txt += $"/Last {xref[ol["last"]]} 0 R";
-                }
-                catch (Exception) { }
-
-                try
-                {
-                    if (ol["next"] > -1)
-                        txt += $"/Next {xref[ol["next"]]} 0 R";
-                }
-                catch (Exception) { }
-
-                try
-                {
-                    if (ol["parent"] > -1)
-                        txt += $"/Parent {xref[ol["parent"]]} 0 R";
-                }
-                catch (Exception) { }
-
-                try
-                {
-                    if (ol["prev"] > -1)
-                        txt += $"/Prev {xref[ol["prev"]]} 0 R";
-                }
-                catch (Exception) { }
-
-                try
-                {
-                    txt += "/Title" + ol["title"];
-                }
-                catch (Exception) { }
-                //if (ol.GetValueOrDefault("count", 0) != 0 && ol.GetValueOrDefault("color", null) != null)
-                dynamic countVal = 0;
-                dynamic colorVal = null;
-                if (ol.TryGetValue("count", out countVal) && countVal != 0 &&
-                    ol.TryGetValue("color", out colorVal) && colorVal != null)
-                    if (ol["color"].Length == 3)
-                        txt += $"/C[ {Utils.FloatToString(ol["color"][0])} {Utils.FloatToString(ol["color"][1])} {Utils.FloatToString(ol["color"][2])}]";
-                //if (ol.GetValueOrDefault("flags", 0) > 0)
-                if (ol.TryGetValue("flags", out dynamic flagsVal) && flagsVal > 0)
-                    txt += $"/F {ol["flags"]}";
-                if (index == 0)
-                    txt += "/Type/Outlines";
-                txt += ">>";
-                UpdateObject(xref[index], txt);
-                index++;
-            }
-            InitDocument();
-            
-            return n;
-        }
-
-        /// <summary>
-        /// Delete the Toc
-        /// </summary>
-        /// <returns></returns>
-        private List<int> DeleteToc()
-        {
-            if (IsClosed || IsEncrypted)
-                throw new Exception("document closed or encrypted");
-            List<int> xrefs = new List<int>();
-            PdfDocument pdf = AsPdfDocument(this);
-            if (pdf.m_internal == null)
-                return xrefs;
-
-            PdfObj root = pdf.pdf_trailer().pdf_dict_get(new PdfObj("Root"));
-            PdfObj olRoot = root.pdf_dict_get(new PdfObj("Outlines"));
-            if (olRoot.m_internal == null)
-            {
-                pdf.Dispose();
-                return xrefs;
-            }
-
-            PdfObj first = olRoot.pdf_dict_get(new PdfObj("First"));
-            xrefs = Utils.GetOutlineXrefs(first, xrefs);
-            int xrefCount = xrefs.Count;
-
-            int olRootXref = olRoot.pdf_to_num();
-            pdf.pdf_delete_object(olRootXref);
-            root.pdf_dict_del(new PdfObj("Outlines"));
-
-            for (int i = 0; i < xrefCount; i++)
-            {
-                int xref = xrefs[i];
-                pdf.pdf_delete_object(xref);
-            }
-            xrefs.Add(olRootXref);
-            InitDocument();
-
-            pdf.Dispose();
-            return xrefs;
-        }
-
-        /// <summary>
-        /// Update TOC item by index.
-        /// </summary>
-        /// <param name="idx">desired index of the TOC list, as created by get_toc.</param>
-        /// <param name="dest">destination dictionary as created by get_toc(False). Outrules all other parameters.If None, the remaining parameters are used to make a dest dictionary.</param>
-        /// <param name="kind"></param>
-        /// <param name="pno"></param>
-        /// <param name="uri"></param>
-        /// <param name="title"></param>
-        /// <param name="to"></param>
-        /// <param name="filename"></param>
-        /// <param name="zoom"></param>
-        public void SetTocItem(
-            int idx,
-            LinkInfo dest,
-            int kind = 0,
-            int pno = 0,
-            string uri = null,
-            string title = null,
-            Point to = null,
-            string filename = null,
-            float zoom = 0
-        )
-        {
-            int xref = GetOutlineXrefs()[idx];
-            int pageXref = 0;
-            if (dest.Kind == LinkType.LINK_GOTO)
-            {
-                pno = dest.Page;
-                pageXref = GetPageXref(pno);
-                float pageHight = PageCropBox(pno).Height;
-                to = dest.To == null ? new Point(72, 36) : dest.To;
-                to.Y = pageHight - to.Y;
-                dest.To = to;
-            }
-            string action = Utils.GetDestString(pageXref, dest);
-            if (!action.StartsWith("/A"))
-                throw new Exception("bad bookmark dest");
-            
-            float[] color = dest.Color;
-            if (color != null)
-            {
-                if (color.Length != 3 || color.Min() < 0 || color.Max() > 1)
-                    throw new Exception("bad color value");
-            }
-            bool bold = dest.Bold;
-            bool italic = dest.Italic;
-            int flags = italic ? 1 : 0 + 2 * (bold ? 1 : 0);
-            bool collapse = dest.Collapse;
-            UpdateTocItem(xref, action, title, flags, collapse, color);
-        }
-
-        /// <summary>
-        /// "update" bookmark by letting it point to nowhere
-        /// </summary>
-        /// <param name="xref"></param>
-        /// <param name="action"></param>
-        /// <param name="title"></param>
-        /// <param name="flags"></param>
-        /// <param name="collapse"></param>
-        /// <param name="color"></param>
-        public void UpdateTocItem(
-            int xref,
-            string action = null,
-            string title = null,
-            int flags = 0,
-            bool collapse = false,
-            float[] color = null
-        )
-        {
-            int i;
-            PdfDocument pdf = Document.AsPdfDocument(this);
-            PdfObj item = pdf.pdf_new_indirect(xref, 0);
-            if (!string.IsNullOrEmpty(title))
-                item.pdf_dict_put_text_string(new PdfObj("Title"), title);
-            
-            if (!string.IsNullOrEmpty(action))
-            {
-                item.pdf_dict_del(new PdfObj("Dest"));
-                PdfObj obj = Utils.PdfObjFromStr(pdf, action);
-                item.pdf_dict_put(new PdfObj("A"), obj);
-            }
-            
-            item.pdf_dict_put_int(new PdfObj("F"), flags);
-            if (color != null && color.Length == 3)
-            {
-                PdfObj c = pdf.pdf_new_array(3);
-                for (i = 0; i < 3; i++)
-                {
-                    c.pdf_array_push_real((long)color[i]);
-                }
-                item.pdf_dict_put(new PdfObj("C"), c);
-            }
-            else if (color != null)
-                item.pdf_dict_del(new PdfObj("C"));
-            
-            if (item.pdf_dict_get(new PdfObj("Count")).m_internal != null)
-            {
-                i = item.pdf_dict_get_int(new PdfObj("Count"));
-                if ((i < 0 && collapse == false) || (i > 0 && collapse == true))
-                {
-                    i = i * -1;
-                    item.pdf_dict_put_int(new PdfObj("Count"), i);
-                }
-            }
-            pdf.Dispose();
-        }
-
-        /// <summary>
-        /// Build font subsets of a PDF.
-        /// </summary>
-        /// <param name="verbose">write various progress information to sysout. This currently only has an effect if fallback is True.</param>
-        public void SubsetFonts(bool verbose = false)
-        {
-            mupdf.mupdf.pdf_subset_fonts2(
-                AsPdfDocument(this),
-                new vectori(Enumerable.Range(0, PageCount))
-            );
-            return;
-        }
-
-        public bool Contains(int page)
-        {
-            if (page < PageCount)
-                return true;
-            return false;
-        }
-
-        public bool Contains((int, int) loc)
-        {
-            (int chapter, int pno) = loc;
-            if (chapter < 0 || chapter >= ChapterCount)
-                return false;
-            if (pno < 0 || pno >= GetChapterPageCount(chapter))
-                return false;
-            
-            return true;
-        }
-
-        public int GetChapterPageCount(int chapter)
-        {
-            if (IsClosed)
-                throw new Exception("document closed");
-            int chapters = _nativeDocument.fz_count_chapters();
-            if (chapters < 0 || chapter >= chapters)
-                throw new Exception("bad chapter number");
-            
-            return _nativeDocument.fz_count_chapter_pages(chapter);
-        }
-
-        /// <summary>
-        /// Convert annotations or fields to permanent content.
-        /// </summary>
-        /// <param name="annots">convert annotations</param>
-        /// <param name="widgets">convert form fields</param>
-        /// <exception cref="Exception"></exception>
-        public void Bake(bool annots = true, bool widgets = true)
-        {
-            PdfDocument pdf = AsPdfDocument(this);
-            if (pdf.m_internal == null)
-                throw new Exception("not a PDF");
-            
-            pdf.pdf_bake_document(annots ? 1 : 0, widgets ? 1 : 0);
-
-            pdf.Dispose();
-        }
-
-        public void Dispose()
-        {
-            // Make Dispose idempotent: safe to call multiple times.
-            if (IsClosed)
-                return;
-
-            if (Outline != null)
-            {
-                Outline.Dispose();
-                Outline = null;
-            }
-            ResetPageRefs();
-            IsClosed = true;
-            GraftMaps = new Dictionary<int, GraftMap>();
-            lock (Utils.MuPDFLock)
-            {
-                _nativeDocument.Dispose();
-            }
-            _nativeDocument = null;
-        }
-
-        public void Close()
-        {
-            // Preserve existing Close() behavior (throws if already closed),
-            // but delegate the actual cleanup to Dispose().
-            if (IsClosed)
-                throw new Exception("document closed");
-
-            Dispose();
-        }
-
-        /// <summary>
-        /// Add an optional content group. An OCG is the most important unit of information to determine object visibility. For a PDF, in order to be regarded as having optional content, at least one OCG must exist.
-        /// </summary>
-        /// <param name="name">arbitrary name. Will show up in supporting PDF viewers.</param>
-        /// <param name="config">layer configuration number. Default -1 is the standard configuration.</param>
-        /// <param name="on">standard visibility status for objects pointing to this OCG.</param>
-        /// <param name="intent">a string or list of strings declaring the visibility intents. There are two PDF standard values to choose from: “View” and “Design”. Default is “View”. Correct spelling is important.</param>
-        /// <param name="usage">another influencer for OCG visibility. This will become part of the OCG’s /Usage key. There are two PDF standard values to choose from: “Artwork” and “Technical”. Default is “Artwork”. Please only change when required.</param>
-        /// <returns>xref of the created OCG. Use as entry for oc parameter in supporting objects.</returns>
-        /// <exception cref="Exception"></exception>
-        public int AddOcg(
-            string name,
-            int config = -1,
-            bool on = true,
-            string intent = null,
-            string usage = null
-        )
-        {
-            int xref = 0;
-            PdfDocument pdf = Document.AsPdfDocument(this);
-
-            PdfObj ocg = pdf.pdf_add_new_dict(3);
-            ocg.pdf_dict_put(new PdfObj("Type"), new PdfObj("OCG"));
-            ocg.pdf_dict_put_text_string(new PdfObj("Name"), name);
-            PdfObj intents = ocg.pdf_dict_put_array(new PdfObj("Intent"), 2);
-
-            if (string.IsNullOrEmpty(intent))
-                intents.pdf_array_push(new PdfObj("View"));
-            else
-                intents.pdf_array_push(mupdf.mupdf.pdf_new_name(intent));
-            PdfObj useFor = ocg.pdf_dict_put_dict(new PdfObj("Usage"), 3);
-            PdfObj ciName = mupdf.mupdf.pdf_new_name("CreatorInfo");
-            PdfObj creInfo = useFor.pdf_dict_put_dict(ciName, 2);
-            creInfo.pdf_dict_put_text_string(new PdfObj("Creator"), "MuPDF");
-
-            if (!string.IsNullOrEmpty(usage))
-                creInfo.pdf_dict_put_name(new PdfObj("Subtype"), usage);
-            else
-                creInfo.pdf_dict_put_name(new PdfObj("Subtype"), "Artwork");
-            PdfObj indOcg = pdf.pdf_add_object(ocg);
-
-            PdfObj ocp = Utils.EnsureOCProperties(pdf);
-            PdfObj obj = ocp.pdf_dict_get(new PdfObj("OCGs"));
-            obj.pdf_array_push(indOcg);
-            PdfObj cfg;
-            if (config > -1)
-            {
-                obj = ocp.pdf_dict_get(new PdfObj("Configs"));
-                if (obj.pdf_is_array() == 0)
-                    throw new Exception(Utils.ErrorMessages["MSG_BAD_OC_CONFIG"]);
-                cfg = obj.pdf_array_get(config);
-                if (cfg.m_internal == null)
-                    throw new Exception(Utils.ErrorMessages["MSG_BAD_OC_CONFIG"]);
-            }
-            else
-            {
-                cfg = ocp.pdf_dict_get(new PdfObj("D"));
-            }
-
-            obj = cfg.pdf_dict_get(new PdfObj("Order"));
-            if (obj.m_internal == null)
-                cfg.pdf_dict_put_array(new PdfObj("Order"), 1);
-            obj.pdf_array_push(indOcg);
-
-            if (on)
-            {
-                obj = cfg.pdf_dict_get(new PdfObj("ON"));
-                if (obj.m_internal == null)
-                    obj = cfg.pdf_dict_put_array(new PdfObj("ON"), 1);
-            }
-            else
-            {
-                obj = cfg.pdf_dict_get(new PdfObj("OFF"));
-                if (obj.m_internal == null)
-                    obj = cfg.pdf_dict_put_array(new PdfObj("OFF"), 1);
-            }
-            obj.pdf_array_push(indOcg);
-            mupdf.mupdf.ll_pdf_read_ocg(pdf.m_internal);
-
-            xref = indOcg.pdf_to_num();
-
-            pdf.Dispose();
-
-            return xref;
-        }
-
-        /// <summary>
-        /// Check whether incremental saves are possible.
-        /// </summary>
-        /// <returns></returns>
-        public bool CanSaveIncrementally()
-        {
-            PdfDocument pdf = Document.AsPdfDocument(this);
-            if (pdf.m_internal != null)
-                return false;
-            
-            bool ret = pdf.pdf_can_be_saved_incrementally() != 0;
-            pdf.Dispose();
-            return ret;
+            return result;
         }
 
         /// <summary>
         /// Add a new OC layer.
         /// </summary>
-        /// <param name="name">arbitrary name.</param>
-        /// <param name="creator">(optional) creating software.</param>
-        /// <param name="on">a sequence of OCG</param>
-        public void AddLayer(string name, string creator = null, OCLayerConfig on = null)
+        public void AddLayer(string name, string creator = null, bool on = true)
         {
-            PdfDocument pdf = Document.AsPdfDocument(this);
-            Utils.AddLayerConfig(pdf, name, creator, on);
-            mupdf.mupdf.ll_pdf_read_ocg(pdf.m_internal);
-            pdf.Dispose();
+            // Add a new OC layer.
+            var pdf = NativePdfDocument;
+            var root = mupdf.mupdf.pdf_dict_get(mupdf.mupdf.pdf_trailer(pdf), mupdf.mupdf.pdf_new_name("Root"));
+            var ocProps = mupdf.mupdf.pdf_dict_get(root, mupdf.mupdf.pdf_new_name("OCProperties"));
+            if (ocProps.m_internal == null)
+            {
+                ocProps = mupdf.mupdf.pdf_new_dict(pdf, 2);
+                mupdf.mupdf.pdf_dict_puts(root, "OCProperties", ocProps);
+            }
+
+            var ocgs = mupdf.mupdf.pdf_dict_get(ocProps, mupdf.mupdf.pdf_new_name("OCGs"));
+            if (ocgs.m_internal == null)
+            {
+                ocgs = mupdf.mupdf.pdf_new_array(pdf, 1);
+                mupdf.mupdf.pdf_dict_puts(ocProps, "OCGs", ocgs);
+            }
+
+            var ocg = mupdf.mupdf.pdf_new_dict(pdf, 3);
+            mupdf.mupdf.pdf_dict_put(ocg, mupdf.mupdf.pdf_new_name("Type"), mupdf.mupdf.pdf_new_name("OCG"));
+            mupdf.mupdf.pdf_dict_put(ocg, mupdf.mupdf.pdf_new_name("Name"), mupdf.mupdf.pdf_new_text_string(name));
+            var indRef = mupdf.mupdf.pdf_add_object(pdf, ocg);
+            mupdf.mupdf.pdf_array_push(ocgs, indRef);
+
+            if (on)
+            {
+                var d = mupdf.mupdf.pdf_dict_get(ocProps, mupdf.mupdf.pdf_new_name("D"));
+                if (d.m_internal == null)
+                {
+                    d = mupdf.mupdf.pdf_new_dict(pdf, 1);
+                    mupdf.mupdf.pdf_dict_puts(ocProps, "D", d);
+                }
+                var onArr = mupdf.mupdf.pdf_dict_get(d, mupdf.mupdf.pdf_new_name("ON"));
+                if (onArr.m_internal == null)
+                {
+                    onArr = mupdf.mupdf.pdf_new_array(pdf, 1);
+                    mupdf.mupdf.pdf_dict_puts(d, "ON", onArr);
+                }
+                mupdf.mupdf.pdf_array_push(onArr, indRef);
+            }
         }
 
         /// <summary>
-        /// Decrypt document.
+        /// Add a new optional content group (OCG) and insert it into a configuration.
+        ///
+        /// Args:
+        /// name: (str) OCG name.
+        /// config: (int) put OCG in this configuration number.
+        /// on: (bool) set OCG state to ON (or OFF).
+        /// intent: (str) a `/Intent` name, default "View".
+        /// usage: (str) a `/Usage/CreatorInfo/Subtype` name, default "Artwork".
+        /// Returns:
+        /// Xref of the inserted OCG object.
         /// </summary>
-        /// <param name="password"></param>
-        /// <returns></returns>
-        /// <exception cref="Exception"></exception>
-        public int Authenticate(string password)
+        public int AddOcg(string name, int config = -1, bool on = true, string intent = null, string usage = null)
+        {
+            // Add new optional content group.
+            var pdf = NativePdfDocument;
+
+            var ocg = mupdf.mupdf.pdf_add_new_dict(pdf, 3);
+            mupdf.mupdf.pdf_dict_put(ocg, mupdf.mupdf.pdf_new_name("Type"), mupdf.mupdf.pdf_new_name("OCG"));
+            mupdf.mupdf.pdf_dict_put_text_string(ocg, mupdf.mupdf.pdf_new_name("Name"), name);
+
+            var intents = mupdf.mupdf.pdf_dict_put_array(ocg, mupdf.mupdf.pdf_new_name("Intent"), 2);
+            if (string.IsNullOrEmpty(intent))
+                mupdf.mupdf.pdf_array_push(intents, mupdf.mupdf.pdf_new_name("View"));
+            else
+                mupdf.mupdf.pdf_array_push(intents, mupdf.mupdf.pdf_new_name(intent));
+
+            var useFor = mupdf.mupdf.pdf_dict_put_dict(ocg, mupdf.mupdf.pdf_new_name("Usage"), 3);
+            var creInfo = mupdf.mupdf.pdf_dict_put_dict(useFor, mupdf.mupdf.pdf_new_name("CreatorInfo"), 2);
+            mupdf.mupdf.pdf_dict_put_text_string(creInfo, mupdf.mupdf.pdf_new_name("Creator"), "PyMuPDF");
+            mupdf.mupdf.pdf_dict_put_name(creInfo, mupdf.mupdf.pdf_new_name("Subtype"), string.IsNullOrEmpty(usage) ? "Artwork" : usage);
+
+            var indocg = mupdf.mupdf.pdf_add_object(pdf, ocg);
+
+            var root = mupdf.mupdf.pdf_dict_get(mupdf.mupdf.pdf_trailer(pdf), mupdf.mupdf.pdf_new_name("Root"));
+            var ocp = mupdf.mupdf.pdf_dict_get(root, mupdf.mupdf.pdf_new_name("OCProperties"));
+            if (ocp.m_internal == null)
+            {
+                ocp = mupdf.mupdf.pdf_new_dict(pdf, 2);
+                mupdf.mupdf.pdf_dict_put(root, mupdf.mupdf.pdf_new_name("OCProperties"), ocp);
+            }
+
+            var ocgs = mupdf.mupdf.pdf_dict_get(ocp, mupdf.mupdf.pdf_new_name("OCGs"));
+            if (ocgs.m_internal == null)
+                ocgs = mupdf.mupdf.pdf_dict_put_array(ocp, mupdf.mupdf.pdf_new_name("OCGs"), 1);
+            mupdf.mupdf.pdf_array_push(ocgs, indocg);
+
+            mupdf.PdfObj cfg;
+            // if config > -1: use Configs[config], else use default config D
+            if (config > -1)
+            {
+                var cfgs = mupdf.mupdf.pdf_dict_get(ocp, mupdf.mupdf.pdf_new_name("Configs"));
+                if (mupdf.mupdf.pdf_is_array(cfgs) == 0)
+                    throw new ValueErrorException(Constants.MSG_BAD_OC_CONFIG);
+                cfg = mupdf.mupdf.pdf_array_get(cfgs, config);
+                if (cfg.m_internal == null)
+                    throw new ValueErrorException(Constants.MSG_BAD_OC_CONFIG);
+            }
+            else
+            {
+                cfg = mupdf.mupdf.pdf_dict_get(ocp, mupdf.mupdf.pdf_new_name("D"));
+            }
+
+            var order = mupdf.mupdf.pdf_dict_get(cfg, mupdf.mupdf.pdf_new_name("Order"));
+            if (order.m_internal == null)
+                order = mupdf.mupdf.pdf_dict_put_array(cfg, mupdf.mupdf.pdf_new_name("Order"), 1);
+            mupdf.mupdf.pdf_array_push(order, indocg);
+
+            var stateArr = mupdf.mupdf.pdf_dict_get(cfg, mupdf.mupdf.pdf_new_name(on ? "ON" : "OFF"));
+            if (stateArr.m_internal == null)
+                stateArr = mupdf.mupdf.pdf_dict_put_array(cfg, mupdf.mupdf.pdf_new_name(on ? "ON" : "OFF"), 1);
+            mupdf.mupdf.pdf_array_push(stateArr, indocg);
+
+            mupdf.mupdf.ll_pdf_read_ocg(pdf.m_internal);
+            return mupdf.mupdf.pdf_to_num(indocg);
+        }
+
+        /// <summary>
+        /// Content of ON, OFF, RBGroups of an OC layer.
+        /// </summary>
+        public Dictionary<string, object> GetLayer(int config = -1)
+        {
+            var pdf = NativePdfDocument;
+            var ocp = mupdf.mupdf.pdf_dict_get(
+                mupdf.mupdf.pdf_dict_get(mupdf.mupdf.pdf_trailer(pdf), mupdf.mupdf.pdf_new_name("Root")),
+                mupdf.mupdf.pdf_new_name("OCProperties"));
+            if (ocp.m_internal == null)
+                return null;
+
+            mupdf.PdfObj obj;
+            if (config == -1)
+            {
+                obj = mupdf.mupdf.pdf_dict_get(ocp, mupdf.mupdf.pdf_new_name("D"));
+            }
+            else
+            {
+                obj = mupdf.mupdf.pdf_array_get(
+                    mupdf.mupdf.pdf_dict_get(ocp, mupdf.mupdf.pdf_new_name("Configs")),
+                    config
+                );
+            }
+            if (obj.m_internal == null)
+                throw new ValueErrorException(Constants.MSG_BAD_OC_CONFIG);
+
+            List<int> ReadXrefArray(string key)
+            {
+                var arr = mupdf.mupdf.pdf_dict_get(obj, mupdf.mupdf.pdf_new_name(key));
+                var rc = new List<int>();
+                if (arr.m_internal == null || mupdf.mupdf.pdf_is_array(arr) == 0)
+                    return rc;
+                int n = mupdf.mupdf.pdf_array_len(arr);
+                for (int i = 0; i < n; i++)
+                {
+                    var item = mupdf.mupdf.pdf_array_get(arr, i);
+                    rc.Add(mupdf.mupdf.pdf_to_num(item));
+                }
+                return rc;
+            }
+
+            var rb = new List<List<int>>();
+            var rbObj = mupdf.mupdf.pdf_dict_get(obj, mupdf.mupdf.pdf_new_name("RBGroups"));
+            if (rbObj.m_internal != null && mupdf.mupdf.pdf_is_array(rbObj) != 0)
+            {
+                int n = mupdf.mupdf.pdf_array_len(rbObj);
+                for (int i = 0; i < n; i++)
+                {
+                    var groupObj = mupdf.mupdf.pdf_array_get(rbObj, i);
+                    var group = new List<int>();
+                    if (groupObj.m_internal != null && mupdf.mupdf.pdf_is_array(groupObj) != 0)
+                    {
+                        int m = mupdf.mupdf.pdf_array_len(groupObj);
+                        for (int j = 0; j < m; j++)
+                            group.Add(mupdf.mupdf.pdf_to_num(mupdf.mupdf.pdf_array_get(groupObj, j)));
+                    }
+                    rb.Add(group);
+                }
+            }
+
+            string basestate = "";
+            var baseObj = mupdf.mupdf.pdf_dict_get(obj, mupdf.mupdf.pdf_new_name("BaseState"));
+            if (baseObj.m_internal != null)
+                basestate = mupdf.mupdf.pdf_to_name(baseObj);
+
+            return new Dictionary<string, object>
+            {
+                ["basestate"] = basestate,
+                ["on"] = ReadXrefArray("ON"),
+                ["off"] = ReadXrefArray("OFF"),
+                ["rbgroups"] = rb,
+                ["locked"] = ReadXrefArray("Locked"),
+            };
+        }
+
+        /// <summary>
+        /// Show optional OC layers.
+        /// </summary>
+        public List<Dictionary<string, object>> GetLayers()
+        {
+            var pdf = NativePdfDocument;
+            int n = mupdf.mupdf.pdf_count_layer_configs(pdf);
+            if (n == 1)
+            {
+                var obj = mupdf.mupdf.pdf_dict_get(
+                    mupdf.mupdf.pdf_dict_get(
+                        mupdf.mupdf.pdf_dict_get(mupdf.mupdf.pdf_trailer(pdf), mupdf.mupdf.pdf_new_name("Root")),
+                        mupdf.mupdf.pdf_new_name("OCProperties")),
+                    mupdf.mupdf.pdf_new_name("Configs"));
+                if (mupdf.mupdf.pdf_is_array(obj) == 0)
+                    n = 0;
+            }
+
+            var rc = new List<Dictionary<string, object>>();
+            var info = new mupdf.PdfLayerConfig();
+            for (int i = 0; i < n; i++)
+            {
+                mupdf.mupdf.pdf_layer_config_info(pdf, i, info);
+                rc.Add(new Dictionary<string, object>
+                {
+                    ["number"] = i,
+                    ["name"] = info.name,
+                    ["creator"] = info.creator,
+                });
+            }
+            return rc;
+        }
+
+        /// <summary>
+        /// Show OC visibility status modifiable by user.
+        /// </summary>
+        public List<Dictionary<string, object>> LayerUiConfigs()
+        {
+            var pdf = NativePdfDocument;
+            var info = new mupdf.PdfLayerConfigUi();
+            int n = mupdf.mupdf.pdf_count_layer_config_ui(pdf);
+            var rc = new List<Dictionary<string, object>>();
+            for (int i = 0; i < n; i++)
+            {
+                mupdf.mupdf.pdf_layer_config_ui_info(pdf, i, info);
+                string type = "label";
+                if ((int)info.type == 1) type = "checkbox";
+                else if ((int)info.type == 2) type = "radiobox";
+                rc.Add(new Dictionary<string, object>
+                {
+                    ["number"] = i,
+                    ["text"] = info.text,
+                    ["depth"] = info.depth,
+                    ["type"] = type,
+                    ["on"] = info.selected != 0,
+                    ["locked"] = info.locked != 0,
+                });
+            }
+            return rc;
+        }
+
+        /// <summary>
+        /// Set / unset OC intent configuration.
+        /// </summary>
+        public void SetLayerUiConfig(object number, int action = 0)
+        {
+            // The user might have given the name instead of sequence number,
+            // so select by that name and continue with corresp. number
+            int uiNumber;
+            if (number is string name)
+            {
+                uiNumber = -1;
+                foreach (var ui in LayerUiConfigs())
+                {
+                    if ((ui.TryGetValue("text", out var t) ? t?.ToString() : "") == name)
+                    {
+                        uiNumber = Convert.ToInt32(ui["number"]);
+                        break;
+                    }
+                }
+                if (uiNumber < 0)
+                    throw new ValueErrorException($"bad OCG '{name}'.");
+            }
+            else
+            {
+                uiNumber = Convert.ToInt32(number);
+            }
+
+            var pdf = NativePdfDocument;
+            if (action == 1)
+                mupdf.mupdf.pdf_toggle_layer_config_ui(pdf, uiNumber);
+            else if (action == 2)
+                mupdf.mupdf.pdf_deselect_layer_config_ui(pdf, uiNumber);
+            else
+                mupdf.mupdf.pdf_select_layer_config_ui(pdf, uiNumber);
+        }
+
+        /// <summary>
+        /// Set the PDF keys /ON, /OFF, /RBGroups of an OC layer.
+        /// </summary>
+        public void SetLayer(int config, string basestate = null, object on = null, object off = null, object rbgroups = null, object locked = null)
         {
             if (IsClosed)
-                throw new Exception("document closed");
-            int val = _nativeDocument.fz_authenticate_password(password);
-            if (val != 0)
+                throw new ValueErrorException("document closed");
+
+            var ocgs = new HashSet<int>(GetOcgs().Keys);
+            if (ocgs.Count == 0)
+                throw new ValueErrorException("document has no optional content");
+
+            List<int> ParseOcgsList(object value, string name)
             {
-                IsEncrypted = false;
-                InitDocument();
-                ThisOwn = true;
+                if (value == null) return null;
+                if (!(value is IList list))
+                    throw new ValueErrorException($"bad type: '{name}'");
+                var rc = new List<int>();
+                foreach (var item in list)
+                    rc.Add(Convert.ToInt32(item));
+                return rc;
             }
-            
-            return val;
+
+            void ValidateOcgsList(List<int> list, string name)
+            {
+                if (list == null) return;
+                var bad = new HashSet<int>(list);
+                bad.ExceptWith(ocgs);
+                if (bad.Count != 0)
+                {
+                    string badSetStr = string.Join(", ", bad.OrderBy(x => x).Select(x => x.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+                    throw new ValueErrorException($"bad OCGs in '{name}': {{{badSetStr}}}");
+                }
+            }
+
+            var onList = ParseOcgsList(on, "on");
+            var offList = ParseOcgsList(off, "off");
+            var lockedList = ParseOcgsList(locked, "locked");
+            ValidateOcgsList(onList, "on");
+            ValidateOcgsList(offList, "off");
+            ValidateOcgsList(lockedList, "locked");
+
+            List<List<int>> rbGroupsList = null;
+            if (rbgroups != null)
+            {
+                if (!(rbgroups is IList outer))
+                    throw new ValueErrorException("bad type: 'rbgroups'");
+                rbGroupsList = new List<List<int>>();
+                foreach (var x in outer)
+                {
+                    if (!(x is IList innerList))
+                        throw new ValueErrorException($"bad RBGroup '{x}'");
+                    var grp = new List<int>();
+                    foreach (var item in innerList)
+                        grp.Add(Convert.ToInt32(item));
+                    rbGroupsList.Add(grp);
+                    var bad = new HashSet<int>(grp);
+                    bad.ExceptWith(ocgs);
+                    if (bad.Count != 0)
+                    {
+                        string rbBadSetStr = string.Join(", ", bad.OrderBy(y => y).Select(y => y.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+                        throw new ValueErrorException($"bad OCGs in RBGroup: {{{rbBadSetStr}}}");
+                    }
+                }
+            }
+
+            string baseStateNorm = null;
+            if (!string.IsNullOrEmpty(basestate))
+            {
+                baseStateNorm = basestate.ToUpperInvariant();
+                if (baseStateNorm == "UNCHANGED")
+                    baseStateNorm = "Unchanged";
+                if (baseStateNorm != "ON" && baseStateNorm != "OFF" && baseStateNorm != "Unchanged")
+                    throw new ValueErrorException("bad 'basestate'");
+            }
+
+            var pdf = NativePdfDocument;
+            var ocp = mupdf.mupdf.pdf_dict_get(
+                mupdf.mupdf.pdf_dict_get(mupdf.mupdf.pdf_trailer(pdf), mupdf.mupdf.pdf_new_name("Root")),
+                mupdf.mupdf.pdf_new_name("OCProperties"));
+            if (ocp.m_internal == null)
+                return;
+
+            mupdf.PdfObj obj;
+            // if config == -1: obj = D else obj = Configs[config]
+            if (config == -1)
+            {
+                obj = mupdf.mupdf.pdf_dict_get(ocp, mupdf.mupdf.pdf_new_name("D"));
+            }
+            else
+            {
+                obj = mupdf.mupdf.pdf_array_get(
+                    mupdf.mupdf.pdf_dict_get(ocp, mupdf.mupdf.pdf_new_name("Configs")),
+                    config
+                );
+            }
+            if (obj.m_internal == null)
+                throw new ValueErrorException(Constants.MSG_BAD_OC_CONFIG);
+
+            mupdf.PdfObj BuildArray(List<int> refs)
+            {
+                var arr = mupdf.mupdf.pdf_new_array(pdf, refs?.Count ?? 0);
+                if (refs != null)
+                {
+                    foreach (var r in refs)
+                    {
+                        var o = mupdf.mupdf.pdf_new_indirect(pdf, r, 0);
+                        mupdf.mupdf.pdf_array_push(arr, o);
+                    }
+                }
+                return arr;
+            }
+
+            if (baseStateNorm != null)
+                mupdf.mupdf.pdf_dict_put(obj, mupdf.mupdf.pdf_new_name("BaseState"), mupdf.mupdf.pdf_new_name(baseStateNorm));
+
+            if (onList != null) mupdf.mupdf.pdf_dict_put(obj, mupdf.mupdf.pdf_new_name("ON"), BuildArray(onList));
+            if (offList != null) mupdf.mupdf.pdf_dict_put(obj, mupdf.mupdf.pdf_new_name("OFF"), BuildArray(offList));
+            if (lockedList != null) mupdf.mupdf.pdf_dict_put(obj, mupdf.mupdf.pdf_new_name("Locked"), BuildArray(lockedList));
+
+            if (rbGroupsList != null)
+            {
+                var rbTop = mupdf.mupdf.pdf_new_array(pdf, rbGroupsList.Count);
+                foreach (var grp in rbGroupsList)
+                    mupdf.mupdf.pdf_array_push(rbTop, BuildArray(grp));
+                mupdf.mupdf.pdf_dict_put(obj, mupdf.mupdf.pdf_new_name("RBGroups"), rbTop);
+            }
+
+            mupdf.mupdf.ll_pdf_read_ocg(pdf.m_internal);
         }
 
         /// <summary>
-        /// Get (chapter, page) of previous page.
+        /// Activate an OC layer.
         /// </summary>
-        /// <param name="pno">current page number</param>
-        /// <param name="chapter">chapter number</param>
-        /// <returns>The tuple of the preceding page.</returns>
-        public (int, int) PrevLocation(int pno, int chapter = 0)
+        public void SwitchLayer(int config, bool asDefault = false)
+        {
+            var pdf = NativePdfDocument;
+            var cfgs = mupdf.mupdf.pdf_dict_get(
+                mupdf.mupdf.pdf_dict_get(
+                    mupdf.mupdf.pdf_dict_get(mupdf.mupdf.pdf_trailer(pdf), mupdf.mupdf.pdf_new_name("Root")),
+                    mupdf.mupdf.pdf_new_name("OCProperties")),
+                mupdf.mupdf.pdf_new_name("Configs"));
+
+            if (mupdf.mupdf.pdf_is_array(cfgs) == 0 || mupdf.mupdf.pdf_array_len(cfgs) == 0)
+            {
+                if (config < 1)
+                    return;
+                throw new ValueErrorException(Constants.MSG_BAD_OC_LAYER);
+            }
+
+            if (config < 0)
+                return;
+
+            mupdf.mupdf.pdf_select_layer_config(pdf, config);
+            if (asDefault)
+            {
+                mupdf.mupdf.pdf_set_layer_config_as_default(pdf);
+                mupdf.mupdf.ll_pdf_read_ocg(pdf.m_internal);
+            }
+        }
+
+        // ─── Annotations query ──────────────────────────────────────────
+
+        /// <summary>
+        /// Check whether there are annotations on any page.
+        /// </summary>
+        public bool HasAnnots
+        {
+            get
+            {
+                for (int i = 0; i < PageCount; i++)
+                {
+                    using var page = LoadPage(i);
+                    if (page.FirstAnnot != null) return true;
+                }
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Check whether there are links on any page.
+        /// </summary>
+        public bool HasLinks
+        {
+            get
+            {
+                for (int i = 0; i < PageCount; i++)
+                {
+                    using var page = LoadPage(i);
+                    if (page.FirstLink != null) return true;
+                }
+                return false;
+            }
+        }
+
+        // ─── Bake ───────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Convert annotations or fields to permanent page content.
+        ///
+        /// After execution, pages will still look the same, but no longer have annotations or fields.
+        /// </summary>
+        public void Bake(bool annots = true, bool widgets = true)
+        {
+            var pdf = NativePdfDocument;
+            mupdf.mupdf.pdf_bake_document(pdf, annots ? 1 : 0, widgets ? 1 : 0);
+        }
+
+        // ─── Scrub ──────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Remove potentially sensitive data from a PDF.
+        /// Similar to the Adobe Acrobat 'sanitize' function.
+        /// </summary>
+        public void Scrub(bool attachedFiles = true, bool cleanPages = true, bool embeddedFiles = true,
+            bool hiddenText = true, bool javascript = true, bool metadata = true,
+            bool redactions = true, bool redactImages = false, bool removeLinks = true,
+            bool resetFields = true, bool resetResponses = true, bool thumbnails = true, bool xmlMetadata = true)
+        {
+            // if not doc.is_pdf: raise ValueError("is no PDF")
+            // After Close(), _nativeDoc is cleared so IsPdf is false; match Python by rejecting closed/encrypted first.
+            if (IsEncrypted || IsClosed)
+                throw new ValueErrorException("closed or encrypted doc");
+            if (!IsPdf)
+                throw new ValueErrorException(Constants.MSG_IS_NO_PDF);
+            var pdf = NativePdfDocument;
+
+            // if not clean_pages: hidden_text = False; redactions = False
+            if (!cleanPages)
+            {
+                hiddenText = false;
+                redactions = false;
+            }
+
+            if (metadata)
+            {
+                SetMetadata(new Dictionary<string, string>
+                {
+                    ["title"] = "", ["author"] = "", ["subject"] = "", ["keywords"] = "",
+                    ["creator"] = "", ["producer"] = "", ["creationDate"] = "", ["modDate"] = ""
+                });
+            }
+
+            if (xmlMetadata)
+            {
+                var root = mupdf.mupdf.pdf_dict_get(mupdf.mupdf.pdf_trailer(pdf), mupdf.mupdf.pdf_new_name("Root"));
+                mupdf.mupdf.pdf_dict_dels(root, "Metadata");
+            }
+
+            if (embeddedFiles)
+            {
+                var names = EmbfileNames();
+                foreach (var name in names)
+                {
+                    try { EmbfileDel(name); } catch { }
+                }
+            }
+
+            if (javascript)
+            {
+                var root = mupdf.mupdf.pdf_dict_get(mupdf.mupdf.pdf_trailer(pdf), mupdf.mupdf.pdf_new_name("Root"));
+                mupdf.mupdf.pdf_dict_dels(root, "OpenAction");
+                mupdf.mupdf.pdf_dict_dels(root, "AA");
+                var names = mupdf.mupdf.pdf_dict_get(root, mupdf.mupdf.pdf_new_name("Names"));
+                if (names.m_internal != null)
+                    mupdf.mupdf.pdf_dict_dels(names, "JavaScript");
+            }
+
+            for (int i = 0; i < PageCount; i++)
+            {
+                using var page = LoadPage(i);
+                var pdfPage = Helpers.AsPdfPage(page.NativePage, required: false);
+                if (pdfPage == null || pdfPage.m_internal == null) continue;
+
+                if (resetFields)
+                {
+                    // reset form fields (widgets)
+                    foreach (var widget in page.Widgets())
+                        widget.Reset();
+                }
+
+                if (removeLinks)
+                {
+                    var annotArr = mupdf.mupdf.pdf_dict_get(pdfPage.obj(), mupdf.mupdf.pdf_new_name("Annots"));
+                    if (annotArr.m_internal != null)
+                    {
+                        int n = mupdf.mupdf.pdf_array_len(annotArr);
+                        for (int j = n - 1; j >= 0; j--)
+                        {
+                            var obj = mupdf.mupdf.pdf_array_get(annotArr, j);
+                            var subtype = mupdf.mupdf.pdf_dict_get(obj, mupdf.mupdf.pdf_new_name("Subtype"));
+                            if (mupdf.mupdf.pdf_name_eq(subtype, mupdf.mupdf.pdf_new_name("Link")) != 0)
+                                mupdf.mupdf.pdf_array_delete(annotArr, j);
+                        }
+                    }
+                }
+
+                bool foundRedacts = false;
+                foreach (var annot in page.Annots())
+                {
+                    if (annot.Type == AnnotationType.FileAttachment && attachedFiles)
+                        annot.UpdateFile(buffer: new byte[] { (byte)' ' });
+                    if (resetResponses)
+                        annot.DeleteResponses();
+                    if (annot.Type == AnnotationType.Redact)
+                        foundRedacts = true;
+                }
+
+                if (redactions && foundRedacts)
+                    page.ApplyRedactions(images: redactImages ? 1 : 0);
+
+                if (thumbnails)
+                    mupdf.mupdf.pdf_dict_dels(pdfPage.obj(), "Thumb");
+
+                if (cleanPages)
+                {
+                    try { page.CleanContents(); } catch { }
+                }
+            }
+
+            // pages are scrubbed, now perform document-wide scrubbing
+            if (!(xmlMetadata || javascript))
+                return;
+            int xrefLimit = XrefLength;
+            for (int xref = 1; xref < xrefLimit; xref++)
+            {
+                if (string.IsNullOrEmpty(XrefObject(xref)))
+                    throw new ValueErrorException($"bad xref {xref} - clean PDF before scrubbing");
+
+                if (javascript && XrefGetKey(xref, "S").value == "/JavaScript")
+                {
+                    // a /JavaScript action object
+                    UpdateObject(xref, "<</S/JavaScript/JS()>>"); // replace with a null JavaScript
+                    continue;
+                }
+
+                if (!xmlMetadata)
+                    continue;
+
+                if (XrefGetKey(xref, "Type").value == "/Metadata")
+                {
+                    // delete any metadata object directly
+                    UpdateObject(xref, "<<>>");
+                    UpdateStream(xref, System.Text.Encoding.ASCII.GetBytes("deleted"), compress: false);
+                    continue;
+                }
+
+                if (XrefGetKey(xref, "Metadata").type != "null")
+                    XrefSetKey(xref, "Metadata", "null");
+            }
+        }
+
+        // ─── Resolve Link ───────────────────────────────────────────────
+
+        /// <summary>
+        /// Calculate internal link destination.
+        ///
+        /// Args:
+        /// uri: (str) some Link.uri
+        /// chapters: (bool) whether to use (chapter, page) format
+        /// Returns:
+        /// (page_id, x, y) where x, y are point coordinates on the page.
+        /// page_id is either page number (if chapters=false), or (chapter, pno).
+        /// </summary>
+        public (int page, float x, float y) ResolveLink(string uri)
+        {
+            var result = ResolveLink(uri, chapters: false);
+            int page = result.pageId is int p ? p : -1;
+            return (page, result.x, result.y);
+        }
+
+        /// <summary>
+        /// Calculate internal link destination with optional chapter-based page id.
+        ///
+        /// If chapters is false, pageId is an int page number.
+        /// If chapters is true, pageId is a (chapter, page) tuple.
+        /// </summary>
+        public (object pageId, float x, float y) ResolveLink(string uri, bool chapters)
+        {
+            if (string.IsNullOrEmpty(uri))
+            {
+                if (chapters)
+                    return ((-1, -1), 0, 0);
+                return (-1, 0, 0);
+            }
+
+            try
+            {
+                var outparams = new mupdf.ll_fz_resolve_link_outparams();
+                var loc = mupdf.mupdf.ll_fz_resolve_link_outparams_fn(NativeDocument.m_internal, uri, outparams);
+                float xp = outparams.xp;
+                float yp = outparams.yp;
+
+                if (chapters)
+                    return ((loc.chapter, loc.page), xp, yp);
+
+                int pno = mupdf.mupdf.fz_page_number_from_location(NativeDocument, new mupdf.FzLocation(loc));
+                return (pno, xp, yp);
+            }
+            catch
+            {
+                if (chapters)
+                    return ((-1, -1), 0, 0);
+                return (-1, 0, 0);
+            }
+        }
+
+        // ─── Subset / Rewrite ───────────────────────────────────────────
+
+        /// <summary>
+        /// Subset embedded fonts to reduce file size.
+        /// </summary>
+        public void SubsetFonts()
+        {
+            var pdf = NativePdfDocument;
+            var pages = new mupdf.vectori();
+            for (int i = 0; i < PageCount; i++) pages.Add(i);
+            mupdf.mupdf.pdf_subset_fonts2(pdf, pages);
+        }
+
+        /// <summary>
+        /// Rewrite images in a PDF document.
+        ///
+        /// The typical use case is to reduce the size of the PDF by recompressing
+        /// images. Default parameters will convert all images to JPEG where
+        /// possible, using the specified quality.
+        /// </summary>
+        public void RewriteImages(int quality = 0, int dpiThreshold = 0, int dpiTarget = 0,
+            bool lossy = true, bool lossless = true, bool bitonal = true,
+            bool color = true, bool gray = true)
+        {
+            EnsurePdf();
+            var pdf = NativePdfDocument;
+            string qualityStr = quality.ToString();
+
+            var opts = new mupdf.PdfImageRewriterOptions();
+            if (bitonal)
+            {
+                opts.bitonal_image_recompress_method = mupdf.mupdf.FZ_RECOMPRESS_FAX;
+                opts.bitonal_image_subsample_method = mupdf.mupdf.FZ_SUBSAMPLE_AVERAGE;
+                opts.bitonal_image_subsample_to = dpiTarget;
+                opts.bitonal_image_recompress_quality = qualityStr;
+                opts.bitonal_image_subsample_threshold = dpiThreshold;
+            }
+            if (color)
+            {
+                if (lossless)
+                {
+                    opts.color_lossless_image_recompress_method = mupdf.mupdf.FZ_RECOMPRESS_JPEG;
+                    opts.color_lossless_image_subsample_method = mupdf.mupdf.FZ_SUBSAMPLE_AVERAGE;
+                    opts.color_lossless_image_subsample_to = dpiTarget;
+                    opts.color_lossless_image_subsample_threshold = dpiThreshold;
+                    opts.color_lossless_image_recompress_quality = qualityStr;
+                }
+                if (lossy)
+                {
+                    opts.color_lossy_image_recompress_method = mupdf.mupdf.FZ_RECOMPRESS_JPEG;
+                    opts.color_lossy_image_subsample_method = mupdf.mupdf.FZ_SUBSAMPLE_AVERAGE;
+                    opts.color_lossy_image_subsample_threshold = dpiThreshold;
+                    opts.color_lossy_image_subsample_to = dpiTarget;
+                    opts.color_lossy_image_recompress_quality = qualityStr;
+                }
+            }
+            if (gray)
+            {
+                if (lossless)
+                {
+                    opts.gray_lossless_image_recompress_method = mupdf.mupdf.FZ_RECOMPRESS_JPEG;
+                    opts.gray_lossless_image_subsample_method = mupdf.mupdf.FZ_SUBSAMPLE_AVERAGE;
+                    opts.gray_lossless_image_subsample_to = dpiTarget;
+                    opts.gray_lossless_image_subsample_threshold = dpiThreshold;
+                    opts.gray_lossless_image_recompress_quality = qualityStr;
+                }
+                if (lossy)
+                {
+                    opts.gray_lossy_image_recompress_method = mupdf.mupdf.FZ_RECOMPRESS_JPEG;
+                    opts.gray_lossy_image_subsample_method = mupdf.mupdf.FZ_SUBSAMPLE_AVERAGE;
+                    opts.gray_lossy_image_subsample_threshold = dpiThreshold;
+                    opts.gray_lossy_image_subsample_to = dpiTarget;
+                    opts.gray_lossy_image_recompress_quality = qualityStr;
+                }
+            }
+
+            mupdf.mupdf.pdf_rewrite_images(pdf, opts);
+        }
+
+        /// <summary>
+        /// Change the color component count on all pages.
+        /// </summary>
+        public void Recolor(int components = 1)
+        {
+            if (!IsPdf)
+                throw new ValueErrorException(Constants.MSG_IS_NO_PDF);
+            var pdf = NativePdfDocument;
+            var opts = new mupdf.PdfRecolorOptions();
+            opts.num_comp = components;
+            for (int i = 0; i < PageCount; i++)
+                mupdf.mupdf.pdf_recolor_page(pdf, i, opts);
+        }
+
+        // ─── SetLanguage ────────────────────────────────────────────────
+
+        /// <summary>
+        /// Set document language.
+        /// </summary>
+        public void SetLanguage(string language)
+        {
+            var pdf = NativePdfDocument;
+            // if not language: lang = mupdf.FZ_LANG_UNSET
+            // else: lang = mupdf.fz_text_language_from_string(language)
+            var lang = string.IsNullOrEmpty(language)
+                ? mupdf.fz_text_language.FZ_LANG_UNSET
+                : mupdf.mupdf.fz_text_language_from_string(language);
+            // mupdf.pdf_set_document_language(pdf, lang)
+            mupdf.mupdf.pdf_set_document_language(pdf, lang);
+        }
+
+        // ─── Need Appearances ───────────────────────────────────────────
+
+        /// <summary>
+        /// Get/set the NeedAppearances value.
+        /// </summary>
+        public bool NeedAppearances
+        {
+            get
+            {
+                try
+                {
+                    var pdf = NativePdfDocument;
+                    var acro = Helpers.PdfDictGetl(mupdf.mupdf.pdf_trailer(pdf),
+                        mupdf.mupdf.pdf_new_name("Root"), mupdf.mupdf.pdf_new_name("AcroForm"));
+                    if (acro.m_internal == null) return false;
+                    var na = mupdf.mupdf.pdf_dict_gets(acro, "NeedAppearances");
+                    return na.m_internal != null && mupdf.mupdf.pdf_to_bool(na) != 0;
+                }
+                catch { return false; }
+            }
+        }
+
+        /// <summary>
+        /// Get/set the NeedAppearances value.
+        /// </summary>
+        public void SetNeedAppearances(bool value)
+        {
+            var pdf = NativePdfDocument;
+            var acro = Helpers.PdfDictGetl(mupdf.mupdf.pdf_trailer(pdf),
+                mupdf.mupdf.pdf_new_name("Root"), mupdf.mupdf.pdf_new_name("AcroForm"));
+            if (acro.m_internal == null) return;
+            mupdf.mupdf.pdf_dict_put_bool(acro, mupdf.mupdf.pdf_new_name("NeedAppearances"), value ? 1 : 0);
+        }
+
+        // ─── MarkInfo ───────────────────────────────────────────────────
+
+        /// <summary>
+        /// Return the PDF MarkInfo value.
+        /// </summary>
+        public Dictionary<string, bool> MarkInfo
+        {
+            get
+            {
+                var result = new Dictionary<string, bool>();
+                try
+                {
+                    var pdf = NativePdfDocument;
+                    var root = mupdf.mupdf.pdf_dict_get(mupdf.mupdf.pdf_trailer(pdf), mupdf.mupdf.pdf_new_name("Root"));
+                    var mi = mupdf.mupdf.pdf_dict_gets(root, "MarkInfo");
+                    if (mi.m_internal == null) return result;
+                    foreach (var key in new[] { "Marked", "UserProperties", "Suspects" })
+                    {
+                        var val = mupdf.mupdf.pdf_dict_gets(mi, key);
+                        result[key] = val.m_internal != null && mupdf.mupdf.pdf_to_bool(val) != 0;
+                    }
+                }
+                catch { }
+                return result;
+            }
+        }
+
+        /// <summary>
+        /// Set the PDF MarkInfo value.
+        /// </summary>
+        public bool SetMarkInfo(Dictionary<string, object> markinfo)
+        {
+            int xref = PdfCatalog;
+            if (xref == 0)
+                throw new ValueErrorException("not a PDF");
+            if (markinfo == null || markinfo.Count == 0)
+                return false;
+
+            var valid = new Dictionary<string, object>
+            {
+                ["Marked"] = false,
+                ["UserProperties"] = false,
+                ["Suspects"] = false
+            };
+
+            var extra = new List<string>();
+            foreach (var key in markinfo.Keys)
+            {
+                if (!valid.ContainsKey(key))
+                    extra.Add(key);
+            }
+            if (extra.Count > 0)
+            {
+                extra.Sort(StringComparer.Ordinal);
+                var quoted = new List<string>(extra.Count);
+                foreach (var k in extra)
+                    quoted.Add("'" + k + "'");
+                string inner = string.Join(", ", quoted);
+                throw new ValueErrorException($"bad MarkInfo key(s): {{{inner}}}");
+            }
+
+            foreach (var kv in markinfo)
+                valid[kv.Key] = kv.Value;
+
+            string pdfdict = "<<";
+            foreach (var kv in valid)
+            {
+                string value = Convert.ToString(kv.Value, System.Globalization.CultureInfo.InvariantCulture);
+                value = (value ?? "").ToLowerInvariant();
+                if (value != "true" && value != "false")
+                    throw new ValueErrorException($"bad key value '{kv.Key}': '{value}'");
+                pdfdict += $"/{kv.Key} {value}";
+            }
+            pdfdict += ">>";
+            XrefSetKey(xref, "MarkInfo", pdfdict);
+            return true;
+        }
+
+        // ─── PageLayout / PageMode ──────────────────────────────────────
+
+        /// <summary>
+        /// Return the PDF PageLayout value.
+        /// </summary>
+        public string PageLayout
+        {
+            get
+            {
+                try
+                {
+                    var pdf = NativePdfDocument;
+                    var root = mupdf.mupdf.pdf_dict_get(mupdf.mupdf.pdf_trailer(pdf), mupdf.mupdf.pdf_new_name("Root"));
+                    var val = mupdf.mupdf.pdf_dict_gets(root, "PageLayout");
+                    return val.m_internal != null ? mupdf.mupdf.pdf_to_name(val) : "SinglePage";
+                }
+                catch { return "SinglePage"; }
+            }
+        }
+
+        /// <summary>
+        /// Set the PDF PageLayout value.
+        /// </summary>
+        public void SetPageLayout(string layout)
+        {
+            string[] valid = { "SinglePage", "OneColumn", "TwoColumnLeft", "TwoColumnRight", "TwoPageLeft", "TwoPageRight" };
+            int xref = PdfCatalog;
+            if (xref == 0)
+                throw new ValueErrorException("not a PDF");
+            // if not pagelayout: raise ValueError("bad PageLayout value")
+            if (string.IsNullOrEmpty(layout))
+                throw new ValueErrorException("bad PageLayout value");
+            // if pagelayout[0] == "/": pagelayout = pagelayout[1:]
+            if (layout[0] == '/')
+                layout = layout.Substring(1);
+            // for v in valid: if pagelayout.lower() == v.lower(): ...
+            foreach (string v in valid)
+            {
+                if (string.Equals(layout, v, StringComparison.OrdinalIgnoreCase))
+                {
+                    // self.xref_set_key(xref, "PageLayout", f"/{v}")
+                    XrefSetKey(xref, "PageLayout", "/" + v);
+                    return;
+                }
+            }
+            throw new ValueErrorException("bad PageLayout value");
+        }
+
+        /// <summary>
+        /// Return the PDF PageMode value.
+        /// </summary>
+        public string PageMode
+        {
+            get
+            {
+                try
+                {
+                    var pdf = NativePdfDocument;
+                    var root = mupdf.mupdf.pdf_dict_get(mupdf.mupdf.pdf_trailer(pdf), mupdf.mupdf.pdf_new_name("Root"));
+                    var val = mupdf.mupdf.pdf_dict_gets(root, "PageMode");
+                    return val.m_internal != null ? mupdf.mupdf.pdf_to_name(val) : "UseNone";
+                }
+                catch { return "UseNone"; }
+            }
+        }
+
+        /// <summary>
+        /// Set the PDF PageMode value.
+        /// </summary>
+        public void SetPageMode(string mode)
+        {
+            string[] valid = { "UseNone", "UseOutlines", "UseThumbs", "FullScreen", "UseOC", "UseAttachments" };
+            int xref = PdfCatalog;
+            if (xref == 0)
+                throw new ValueErrorException("not a PDF");
+            // if not pagemode: raise ValueError("bad PageMode value")
+            if (string.IsNullOrEmpty(mode))
+                throw new ValueErrorException("bad PageMode value");
+            // if pagemode[0] == "/": pagemode = pagemode[1:]
+            if (mode[0] == '/')
+                mode = mode.Substring(1);
+            // for v in valid: if pagemode.lower() == v.lower(): ...
+            foreach (string v in valid)
+            {
+                if (string.Equals(mode, v, StringComparison.OrdinalIgnoreCase))
+                {
+                    // self.xref_set_key(xref, "PageMode", f"/{v}")
+                    XrefSetKey(xref, "PageMode", "/" + v);
+                    return;
+                }
+            }
+            throw new ValueErrorException("bad PageMode value");
+        }
+
+        // ─── Signature flags ────────────────────────────────────────────
+
+        /// <summary>
+        /// Get the /SigFlags value.
+        /// </summary>
+        public int GetSigFlags()
+        {
+            if (!IsPdf)
+                return -1;   // not a PDF
+            var pdf = NativePdfDocument;
+            var sigflags = Helpers.PdfDictGetl(
+                mupdf.mupdf.pdf_trailer(pdf),
+                mupdf.mupdf.pdf_new_name("Root"),
+                mupdf.mupdf.pdf_new_name("AcroForm"),
+                mupdf.mupdf.pdf_new_name("SigFlags"));
+            int sigflag = -1;
+            if (sigflags.m_internal != null)
+                sigflag = mupdf.mupdf.pdf_to_int(sigflags);
+            return sigflag;
+        }
+
+        // ─── Page CropBox ───────────────────────────────────────────────
+
+        /// <summary>
+        /// Get CropBox of page number (without loading page).
+        /// </summary>
+        public Rect PageCropBox(int pno)
+        {
+            if (IsClosed)
+                throw new ValueErrorException("document closed");
+            int pageCount = PageCount;
+            int n = pno;
+            while (n < 0)
+                n += pageCount;
+            var pdf = NativePdfDocument;
+            if (n >= pageCount)
+                throw new ValueErrorException(Constants.MSG_BAD_PAGENO);
+            var page_obj = mupdf.mupdf.pdf_lookup_page_obj(pdf, n);
+            var cropbox = mupdf.mupdf.pdf_dict_get_inheritable(page_obj, mupdf.mupdf.pdf_new_name("CropBox"));
+            if (cropbox.m_internal != null)
+            {
+                var r = mupdf.mupdf.pdf_to_rect(cropbox);
+                return new Rect(r.x0, r.y0, r.x1, r.y1);
+            }
+            var mb = mupdf.mupdf.pdf_dict_get_inheritable(page_obj, mupdf.mupdf.pdf_new_name("MediaBox"));
+            if (mb.m_internal != null)
+            {
+                var r = mupdf.mupdf.pdf_to_rect(mb);
+                return new Rect(r.x0, r.y0, r.x1, r.y1);
+            }
+            return new Rect(0, 0, 595, 842);
+        }
+
+        /// <summary>
+        /// Save a file snapshot suitable for journalling.
+        /// </summary>
+        public void SaveSnapshot(string filename)
+        {
+            if (IsClosed) throw new ValueErrorException("doc is closed");
+            if (string.IsNullOrEmpty(filename))
+                throw new ValueErrorException("filename must be str, Path or file object");
+            if (!string.IsNullOrEmpty(Name) && filename == Name)
+                throw new ValueErrorException("cannot snapshot to original");
+            var pdf = NativePdfDocument;
+            mupdf.mupdf.pdf_save_snapshot(pdf, filename);
+        }
+
+        /// <summary>
+        /// Save a file snapshot suitable for journalling.
+        /// </summary>
+        public void SaveSnapshot(object filename)
+        {
+            // if type(filename) is str: pass
+            // elif hasattr(filename, "open"): filename = str(filename)
+            // elif hasattr(filename, "name"): filename = filename.name
+            string target = null;
+            if (filename is string s)
+            {
+                target = s;
+            }
+            else if (filename is FileInfo fi)
+            {
+                target = fi.FullName;
+            }
+            else if (filename != null)
+            {
+                var nameProp = filename.GetType().GetProperty("Name");
+                if (nameProp != null && nameProp.CanRead)
+                    target = nameProp.GetValue(filename)?.ToString();
+            }
+            else
+            {
+                throw new ValueErrorException("filename must be str, Path or file object");
+            }
+            if (string.IsNullOrEmpty(target))
+                throw new ValueErrorException("filename must be str, Path or file object");
+            SaveSnapshot(target);
+        }
+
+        // ─── Close ──────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Close document.
+        /// </summary>
+        public void Close()
+        {
+            if (!IsClosed)
+            {
+                ResetPageRefsInternal();
+                Graftmaps.Clear();
+                IsClosed = true;
+                _nativeDoc?.Dispose();
+                _nativeDoc = null;
+            }
+        }
+
+        internal static int NextPageRefId() => Interlocked.Increment(ref _nextPageRefId);
+
+        internal void RegisterPageRef(Page page)
+        {
+            if (page == null) return;
+            lock (_pageRefs)
+                _pageRefs[page.PageRefId] = new WeakReference<Page>(page);
+        }
+
+        internal void ForgetPageRef(Page page)
+        {
+            if (page == null) return;
+            lock (_pageRefs)
+                _pageRefs.Remove(page.PageRefId);
+        }
+
+        /// <summary>
+        /// Port of Python <c>Document._reset_page_refs</c>: invalidate all tracked <see cref="Page"/> wrappers.
+        /// </summary>
+        internal void ResetPageRefsInternal()
         {
             if (IsClosed || IsEncrypted)
-                throw new Exception("document closed or encrypted");
-            if (pno == 0 && chapter == 0)
-                return (-1, -1);
-            FzLocation loc = mupdf.mupdf.fz_make_location(chapter, pno);
-            FzLocation prevLoc = _nativeDocument.fz_previous_page(loc);
-            
-            return (prevLoc.chapter, prevLoc.page);
+                return;
+
+            List<Page> pages;
+            lock (_pageRefs)
+            {
+                pages = new List<Page>(_pageRefs.Count);
+                foreach (var kv in _pageRefs)
+                {
+                    if (kv.Value != null && kv.Value.TryGetTarget(out var p) && p != null)
+                        pages.Add(p);
+                }
+                _pageRefs.Clear();
+            }
+
+            for (int i = 0; i < pages.Count; i++)
+                pages[i]?._erase();
         }
 
-        /// <summary>
-        /// Check if xref is a stream object.
-        /// </summary>
-        /// <param name="xref"></param>
-        /// <returns></returns>
-        public bool IsStream(int xref = 0)
+        // ─── Internal ───────────────────────────────────────────────────
+
+        private void InitDoc()
         {
-            return XrefIsStream(xref);
+            // Called after authentication or on open
         }
 
-        /// <summary>
-        /// Re-color pages of PDF
-        /// </summary>
-        /// <param name="pageNum">the number of page</param>
-        /// <param name="colorNum">the number of colorspace, which means bytes of colorspace, Gray = 1, RGB = 3 and CMYK = 4.</param>
-        /// <exception cref="Exception"></exception>
-        public void Recolor(int pageNum, int colorNum)
+        /// <summary>PDF-only mutator guard (cf. Python <c>set_metadata</c>, <c>delete_pages</c>): reject closed/encrypted before <c>is no PDF</c> because <see cref="Close"/> clears the native handle.</summary>
+        private void EnsurePdf()
         {
-            this[pageNum].Recolor(colorNum);
+            if (IsClosed || IsEncrypted)
+                throw new ValueErrorException("document closed or encrypted");
+            if (!IsPdf)
+                throw new ValueErrorException(Constants.MSG_IS_NO_PDF);
         }
 
-        /// <summary>
-        /// Re-color pages of PDF
-        /// </summary>
-        /// <param name="pageNum">the number of page, recolor all pages if invalid page number, otherwise convert specific page.</param>
-        /// <param name="colorSpaceName">the name of colorspace, which can be Gray, RGB, CMYK.</param>
-        public void Recolor(int pageNum, string colorSpaceName)
+        /// <summary>Python <c>delete_pages</c> / <c>copy_page</c> / <c>move_page</c> opening: <c>document closed</c> then <c>is no PDF</c> (closed first so a handle-cleared doc is not misreported as not-PDF).</summary>
+        private void EnsurePdfOpenForDeletePages()
         {
-            this[pageNum].Recolor(colorSpaceName);
+            if (IsClosed)
+                throw new ValueErrorException("document closed");
+            if (!IsPdf)
+                throw new ValueErrorException(Constants.MSG_IS_NO_PDF);
+        }
+
+        private void EnsureNotClosed()
+        {
+            if (IsClosed)
+                throw new ValueErrorException("document closed");
+            if (IsEncrypted)
+                throw new ValueErrorException("document closed or encrypted");
+        }
+
+        private mupdf.PdfObj GetEmbeddedFilesNamesArray()
+        {
+            var pdf = NativePdfDocument;
+            return Helpers.PdfDictGetl(
+                mupdf.mupdf.pdf_trailer(pdf),
+                mupdf.mupdf.pdf_new_name("Root"),
+                mupdf.mupdf.pdf_new_name("Names"),
+                mupdf.mupdf.pdf_new_name("EmbeddedFiles"),
+                mupdf.mupdf.pdf_new_name("Names"));
+        }
+
+        private mupdf.PdfObj EnsureEmbeddedFilesNamesArray()
+        {
+            var pdf = NativePdfDocument;
+            var trailer = mupdf.mupdf.pdf_trailer(pdf);
+            var root = mupdf.mupdf.pdf_dict_get(trailer, mupdf.mupdf.pdf_new_name("Root"));
+            var names = mupdf.mupdf.pdf_dict_get(root, mupdf.mupdf.pdf_new_name("Names"));
+            if (names.m_internal == null)
+            {
+                names = mupdf.mupdf.pdf_new_dict(pdf, 1);
+                mupdf.mupdf.pdf_dict_put(root, mupdf.mupdf.pdf_new_name("Names"), names);
+            }
+
+            var embedded = mupdf.mupdf.pdf_dict_get(names, mupdf.mupdf.pdf_new_name("EmbeddedFiles"));
+            if (embedded.m_internal == null)
+            {
+                embedded = mupdf.mupdf.pdf_new_dict(pdf, 1);
+                mupdf.mupdf.pdf_dict_put(names, mupdf.mupdf.pdf_new_name("EmbeddedFiles"), embedded);
+            }
+
+            var arr = mupdf.mupdf.pdf_dict_get(embedded, mupdf.mupdf.pdf_new_name("Names"));
+            if (arr.m_internal == null || mupdf.mupdf.pdf_is_array(arr) == 0)
+            {
+                arr = mupdf.mupdf.pdf_new_array(pdf, 8);
+                mupdf.mupdf.pdf_dict_put(embedded, mupdf.mupdf.pdf_new_name("Names"), arr);
+            }
+
+            return arr;
+        }
+
+        // ─── IDisposable ────────────────────────────────────────────────
+
+        public void Dispose()
+        {
+            if (!_disposed) { Close(); _disposed = true; }
+            GC.SuppressFinalize(this);
+        }
+
+        ~Document() { Dispose(); }
+
+        // ─── IEnumerable<Page> ──────────────────────────────────────────
+
+        public IEnumerator<Page> GetEnumerator()
+        {
+            for (int i = 0; i < PageCount; i++)
+                yield return LoadPage(i);
+        }
+
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+        public override string ToString()
+        {
+            string p = IsClosed ? "closed " : "";
+            if (StreamData != null) return $"{p}Document('{Name}', <memory, doc# {_graftId}>)";
+            if (string.IsNullOrEmpty(Name)) return $"{p}Document(<new PDF, doc# {_graftId}>)";
+            return $"{p}Document('{Name}')";
         }
     }
 }

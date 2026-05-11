@@ -1,14 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <!-- Demo: Support/, Samples/&lt;area&gt;/; PDF4LLM fixtures in Samples/Llm/Program.Llm.*.Fixtures.cs. -->
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
-    <Platforms>AnyCPU;x64;x86</Platforms>
+    <AssemblyName>Demo</AssemblyName>
+    <RootNamespace>Demo</RootNamespace>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\PDF4LLM\PDF4LLM.csproj" />
     <ProjectReference Include="..\MuPDF.NET\MuPDF.NET.csproj" />
   </ItemGroup>
 

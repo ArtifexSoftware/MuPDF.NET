@@ -1,1610 +1,871 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using mupdf;
-using Newtonsoft.Json;
+using System.Text;
+using System.Text.Json;
 
 namespace MuPDF.NET
 {
-    public class TextPage : IDisposable
+    /// <summary>
+    /// Represents the text content of a page, created by Page.GetTextPage().
+    /// Port of the Python TextPage class from __init__.py.
+    /// </summary>
+    public partial class TextPage : IDisposable
     {
-        static TextPage()
-        {
-            Utils.InitApp();
-        }
+        private mupdf.FzStextPage _nativeStp;
+        private bool _disposed;
+        internal Page Parent { get; set; }
 
-        internal FzStextPage _nativeTextPage;
-
-        public bool ThisOwn { get; set; }
-
-        public Page Parent = null;
-
-        /// <summary>
-        /// Rect of Stext Page
-        /// </summary>
-        private FzRect _mediaBox = null;
-        private FzRect MediaBox
-        {
-            get { 
-                if (_mediaBox == null)
-                {
-                    _mediaBox = new FzRect(_nativeTextPage.m_internal.mediabox);
-                }
-                return _mediaBox;
-            }
-        }
-
-        /// <summary>
-        /// Block List of Text
-        /// </summary>
-        private List<FzStextBlock> _blocks = null;
-        public List<FzStextBlock> Blocks
+        internal mupdf.FzStextPage NativeStextPage
         {
             get
             {
-                if (_blocks == null)
+                if (_disposed) throw new ObjectDisposedException(nameof(TextPage));
+                return _nativeStp;
+            }
+        }
+
+        internal TextPage(mupdf.FzStextPage stp)
+        {
+            _nativeStp = stp;
+        }
+
+        /// <summary>
+        /// Page rectangle of the text page.
+        /// Corresponds to Python TextPage.rect property.
+        /// </summary>
+        public Rect Rect
+        {
+            get
+            {
+                var r = _nativeStp.m_internal.mediabox;
+                return new Rect(r.x0, r.y0, r.x1, r.y1);
+            }
+        }
+
+        // ─── Text Extraction ────────────────────────────────────────────
+
+        /// <summary>
+        /// Extract plain text from the page.
+        /// Corresponds to Python TextPage._extractText(format_=0) / extractText().
+        /// </summary>
+        public string ExtractText(bool sort = false)
+        {
+            if (!sort)
+            {
+                var buf = mupdf.mupdf.fz_new_buffer_from_stext_page(NativeStextPage);
+                return Encoding.UTF8.GetString(buf.fz_buffer_extract());
+            }
+            var blocks = ExtractBlocks();
+            blocks.Sort((a, b) =>
+            {
+                int cmp = a.y1.CompareTo(b.y1);
+                return cmp != 0 ? cmp : a.x0.CompareTo(b.x0);
+            });
+            var sb = new StringBuilder();
+            foreach (var bl in blocks) sb.Append(bl.text);
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// Extract text blocks as list of (x0, y0, x1, y1, text, blockNo, blockType).
+        /// Corresponds to Python TextPage.extractBLOCKS().
+        /// Faithfully ported from extra.i extractBLOCKS.
+        /// </summary>
+        public List<(float x0, float y0, float x1, float y1, string text, int blockNo, int blockType)> ExtractBlocks()
+        {
+            var lines = new List<(float, float, float, float, string, int, int)>();
+            int block_n = -1;
+            var tp_rect = new mupdf.FzRect(NativeStextPage.m_internal.mediabox);
+
+            for (var block_iter = NativeStextPage.begin();
+                 block_iter.m_internal != NativeStextPage.end().m_internal;
+                 block_iter = block_iter.__increment__())
+            {
+                var block = block_iter.__ref__();
+                block_n++;
+                var blockrect = new mupdf.FzRect(mupdf.FzRect.Fixed.Fixed_EMPTY);
+
+                if (block.m_internal.type == mupdf.mupdf.FZ_STEXT_BLOCK_TEXT)
                 {
-                    List<FzStextBlock> blocks = new List<FzStextBlock>();
-                    for (
-                        fz_stext_block block = _nativeTextPage.m_internal.first_block;
-                        block != null;
-                        block = block.next
-                    )
+                    var res = mupdf.mupdf.fz_new_buffer(1024);
+                    int last_char = 0;
+
+                    for (var line_iter = block.begin();
+                         line_iter.m_internal != block.end().m_internal;
+                         line_iter = line_iter.__increment__())
                     {
-                        blocks.Add(new FzStextBlock(block));
-                    }
-                    _blocks = blocks;
-                }
-                return _blocks;
-            }
-        }
+                        var line = line_iter.__ref__();
+                        var linerect = new mupdf.FzRect(mupdf.FzRect.Fixed.Fixed_EMPTY);
 
-        /// <summary>
-        /// MuPDFStextPage Constructor
-        /// </summary>
-        /// <param name="rect">Page Rectangle Size</param>
-        public TextPage(FzRect rect)
-        {
-            _nativeTextPage = new FzStextPage(rect);
-            Parent = null;
-        }
-
-        public TextPage(FzStextPage stPage)
-        {
-            _nativeTextPage = stPage;
-            Parent = null;
-        }
-
-        /// <summary>
-        /// MuPDFStextPage Contructor
-        /// </summary>
-        /// <param name="stPage">MuPDFStextPage object</param>
-        public TextPage(TextPage stPage)
-        {
-            _nativeTextPage = stPage._nativeTextPage;
-            Parent = stPage.Parent;
-        }
-
-        public TextPage(FzPage page)
-        {
-            _nativeTextPage = new FzStextPage(page, new FzStextOptions());
-        }
-
-        public void Dispose()
-        {    
-            if (_nativeTextPage != null)
-            {
-                _nativeTextPage.Dispose();
-                _nativeTextPage = null;
-            }
-        }
-
-        /// <summary>
-        /// Extract Stext Page
-        /// </summary>
-        /// <param name="format">format of return value</param>
-        /// <returns>string of Text, HTML, XHTML, .. according to format</returns>
-        public string ExtractText(ExtractFormat format)
-        {
-            FzStextPage stPage = _nativeTextPage;
-            FzBuffer buffer = new FzBuffer(1024);
-            FzOutput output = new mupdf.FzOutput(buffer);
-
-            if (format == ExtractFormat.HTML)
-            {
-                output.fz_print_stext_page_as_html(stPage, 0);
-            }
-            else if (format == ExtractFormat.XML)
-            {
-                output.fz_print_stext_page_as_xml(stPage, 0);
-            }
-            else if (format == ExtractFormat.XHTML)
-            {
-                output.fz_print_stext_page_as_xhtml(stPage, 0);
-            }
-            else
-            {
-                output.fz_print_stext_page_as_text(stPage);
-            }
-
-            string ret = buffer.fz_string_from_buffer();
-
-            output.fz_close_output();
-            output.Dispose();
-
-            return ret;
-        }
-
-        /// <summary>
-        /// Extract Blocks in StextPage
-        /// </summary>
-        /// <returns>Return List of TextBlock</returns>
-        public List<TextBlock> ExtractBlocks()
-        {
-            int blockNum = -1;
-            FzRect stPageRect = new FzRect(_nativeTextPage.m_internal.mediabox);
-            FzBuffer res = new FzBuffer(1024);
-            List<TextBlock> lines = new List<TextBlock>();
-
-            foreach (FzStextBlock block in Blocks)
-            {
-                blockNum += 1;
-                FzRect blockRect = new FzRect(FzRect.Fixed.Fixed_EMPTY);
-                string text = "";
-                if (block.m_internal.type == (int)STextBlockType.FZ_STEXT_BLOCK_TEXT)
-                {
-                    res.fz_clear_buffer();
-                    int lineNum = -1;
-                    int lastChar = 0;
-                    for (
-                        fz_stext_line line = block.begin().__ref__().m_internal;
-                        line != null;
-                        line = line.next
-                    )
-                    {
-                        lineNum += 1;
-                        FzRect lineRect = new FzRect(FzRect.Fixed.Fixed_EMPTY);
-                        for (fz_stext_char ch = line.first_char; ch != null; ch = ch.next)
+                        for (var ch_iter = line.begin();
+                             ch_iter.m_internal != line.end().m_internal;
+                             ch_iter = ch_iter.__increment__())
                         {
-                            FzRect cbbox = GetCharBbox(new FzStextLine(line), new FzStextChar(ch));
-                            if (
-                                !IsRectsOverlap(stPageRect, cbbox)
-                                && stPageRect.fz_is_infinite_rect() == 0
-                            )
+                            var ch = ch_iter.__ref__();
+                            var cbbox = Helpers.JM_char_bbox(line.m_internal, ch.m_internal);
+                            if (!Helpers.JM_rects_overlap(tp_rect, cbbox)
+                                && mupdf.mupdf.fz_is_infinite_rect(tp_rect) == 0)
+                            {
                                 continue;
-
-                            res.fz_append_rune(ch.c);
-                            lastChar = ch.c;
-                            lineRect = FzRect.fz_union_rect(lineRect, cbbox);
+                            }
+                            mupdf.mupdf.fz_append_rune(res, ch.m_internal.c);
+                            last_char = ch.m_internal.c;
+                            linerect = mupdf.mupdf.fz_union_rect(linerect, cbbox);
                         }
-
-                        if (lastChar != 10 && lineRect.fz_is_empty_rect() != 0)
-                            res.fz_append_rune(10);
-
-                        blockRect = FzRect.fz_union_rect(blockRect, lineRect);
+                        if (last_char != 10 && mupdf.mupdf.fz_is_empty_rect(linerect) == 0)
+                        {
+                            mupdf.mupdf.fz_append_byte(res, 10);
+                        }
+                        blockrect = mupdf.mupdf.fz_union_rect(blockrect, linerect);
                     }
-                    text = Utils.EscapeStrFromBuffer(res);
-                }
-                else if (
-                    IsRectsOverlap(stPageRect, new FzRect(block.m_internal.bbox))
-                    || stPageRect.fz_is_infinite_rect() != 0
-                )
-                {
-                    FzImage img = block.i_image();
-                    FzColorspace cs = img.colorspace();
-                    text = string.Format(
-                        "<image: {0}, width: {1}, height: {2}, bpc: {3}>",
-                        cs.fz_colorspace_name(),
-                        img.w(),
-                        img.h(),
-                        img.bpc()
-                    );
-                    blockRect = FzRect.fz_union_rect(blockRect, new FzRect(block.m_internal.bbox));
-                }
-                if (blockRect.fz_is_empty_rect() == 0)
-                {
-                    TextBlock line = new TextBlock();
-                    line.X0 = blockRect.x0;
-                    line.Y0 = blockRect.y0;
-                    line.X1 = blockRect.x1;
-                    line.Y1 = blockRect.y1;
-                    line.BlockNum = blockNum;
-                    line.Text = text;
-                    line.Type = block.m_internal.type;
 
-                    lines.Add(line);
+                    if (mupdf.mupdf.fz_is_empty_rect(blockrect) == 0)
+                    {
+                        string text = Encoding.UTF8.GetString(res.fz_buffer_extract());
+                        lines.Add((blockrect.x0, blockrect.y0, blockrect.x1, blockrect.y1,
+                            text, block_n, block.m_internal.type));
+                    }
+                }
+                else
+                {
+                    if (Helpers.JM_rects_overlap(tp_rect, new mupdf.FzRect(block.m_internal.bbox))
+                        || mupdf.mupdf.fz_is_infinite_rect(tp_rect) != 0)
+                    {
+                        var img = block.i_image();
+                        var cs = img.colorspace();
+                        string text = $"<image: {mupdf.mupdf.fz_colorspace_name(cs)}, width: {img.w()}, height: {img.h()}, bpc: {img.bpc()}>";
+                        blockrect = mupdf.mupdf.fz_union_rect(blockrect, new mupdf.FzRect(block.m_internal.bbox));
+                        if (mupdf.mupdf.fz_is_empty_rect(blockrect) == 0)
+                        {
+                            lines.Add((blockrect.x0, blockrect.y0, blockrect.x1, blockrect.y1,
+                                text, block_n, block.m_internal.type));
+                        }
+                    }
                 }
             }
             return lines;
         }
 
         /// <summary>
-        /// Extract Stext Page
+        /// Extract text words as list of (x0, y0, x1, y1, word, blockNo, lineNo, wordNo).
+        /// Corresponds to Python TextPage.extractWORDS().
+        /// Faithfully ported from extra.i extractWORDS.
         /// </summary>
-        /// <param name="cropbox">Rectangle to extract in StextPage</param>
-        /// <param name="sort"></param>
-        /// <returns>Page information of CropBox</returns>
-        public PageInfo ExtractDict(Rect cropbox, bool sort = false)
+        public List<(float x0, float y0, float x1, float y1, string word, int blockNo, int lineNo, int wordNo)> ExtractWords(string delimiters = null)
         {
-            PageInfo pageDict = TextPage2Dict(false);
-            if (cropbox != null)
-            {
-                pageDict.Width = cropbox.Width;
-                pageDict.Height = cropbox.Height;
-            }
-            if (sort is true)
-            {
-                List<Block> blocks = pageDict.Blocks;
-                blocks.Sort(
-                    (b1, b2) =>
-                    {
-                        if (b1.Bbox.Y1 == b2.Bbox.Y1)
-                        {
-                            return b1.Bbox.X0.CompareTo(b2.Bbox.X0);
-                        }
-                        else
-                        {
-                            return b1.Bbox.Y1.CompareTo(b2.Bbox.Y1);
-                        }
-                    }
-                );
+            var lines = new List<(float, float, float, float, string, int, int, int)>();
+            int block_n = -1;
+            var tp_rect = new mupdf.FzRect(NativeStextPage.m_internal.mediabox);
+            var buff = mupdf.mupdf.fz_new_buffer(64);
+            var wbbox = new mupdf.FzRect(mupdf.FzRect.Fixed.Fixed_EMPTY);
+            int buflen = 0;
+            int last_char_rtl = 0;
 
-                pageDict.Blocks = blocks;
+            for (var block_iter = NativeStextPage.begin();
+                 block_iter.m_internal != NativeStextPage.end().m_internal;
+                 block_iter = block_iter.__increment__())
+            {
+                var block = block_iter.__ref__();
+                block_n++;
+                if (block.m_internal.type != mupdf.mupdf.FZ_STEXT_BLOCK_TEXT)
+                    continue;
+
+                int line_n = -1;
+                for (var line_iter = block.begin();
+                     line_iter.m_internal != block.end().m_internal;
+                     line_iter = line_iter.__increment__())
+                {
+                    var line = line_iter.__ref__();
+                    line_n++;
+                    int word_n = 0;
+                    mupdf.mupdf.fz_clear_buffer(buff);
+                    buflen = 0;
+
+                    for (var ch_iter = line.begin();
+                         ch_iter.m_internal != line.end().m_internal;
+                         ch_iter = ch_iter.__increment__())
+                    {
+                        var ch = ch_iter.__ref__();
+                        var cbbox = Helpers.JM_char_bbox(line.m_internal, ch.m_internal);
+                        if (!Helpers.JM_rects_overlap(tp_rect, cbbox)
+                            && mupdf.mupdf.fz_is_infinite_rect(tp_rect) == 0)
+                        {
+                            continue;
+                        }
+                        if (buflen == 0 && ch.m_internal.c == 0x200d)
+                            continue;
+
+                        bool word_delimiter = JM_is_word_delimiter(ch.m_internal.c, delimiters);
+                        int this_char_rtl = JM_is_rtl_char(ch.m_internal.c) ? 1 : 0;
+
+                        if (word_delimiter || this_char_rtl != last_char_rtl)
+                        {
+                            if (buflen == 0 && word_delimiter)
+                                continue;
+                            if (mupdf.mupdf.fz_is_empty_rect(wbbox) == 0)
+                            {
+                                string w = Encoding.UTF8.GetString(buff.fz_buffer_extract());
+                                lines.Add((wbbox.x0, wbbox.y0, wbbox.x1, wbbox.y1, w, block_n, line_n, word_n));
+                                word_n++;
+                                wbbox = new mupdf.FzRect(mupdf.FzRect.Fixed.Fixed_EMPTY);
+                            }
+                            mupdf.mupdf.fz_clear_buffer(buff);
+                            buflen = 0;
+                            if (word_delimiter)
+                                continue;
+                        }
+                        mupdf.mupdf.fz_append_rune(buff, ch.m_internal.c);
+                        last_char_rtl = this_char_rtl;
+                        buflen++;
+                        wbbox = mupdf.mupdf.fz_union_rect(wbbox, cbbox);
+                    }
+                    if (buflen > 0 && mupdf.mupdf.fz_is_empty_rect(wbbox) == 0)
+                    {
+                        string w = Encoding.UTF8.GetString(buff.fz_buffer_extract());
+                        lines.Add((wbbox.x0, wbbox.y0, wbbox.x1, wbbox.y1, w, block_n, line_n, word_n));
+                        word_n++;
+                        wbbox = new mupdf.FzRect(mupdf.FzRect.Fixed.Fixed_EMPTY);
+                    }
+                    buflen = 0;
+                }
             }
-            return pageDict;
+            return lines;
         }
 
         /// <summary>
-        /// Extract Stext Page in HTML
+        /// Extract text in HTML format.
+        /// Corresponds to Python TextPage.extractHTML().
         /// </summary>
-        /// <returns>string of HTML</returns>
         public string ExtractHtml()
         {
-            return ExtractText(ExtractFormat.HTML);
+            var res = mupdf.mupdf.fz_new_buffer(1024);
+            var output = new mupdf.FzOutput(res);
+            mupdf.mupdf.fz_print_stext_page_as_html(output, NativeStextPage, 0);
+            output.fz_close_output();
+            return Encoding.UTF8.GetString(res.fz_buffer_extract());
         }
 
         /// <summary>
-        /// Extract Stext Page with Image Information
+        /// Extract text in XHTML format.
+        /// Corresponds to Python TextPage.extractXHTML().
         /// </summary>
-        /// <param name="hashes">Encode image with given hash value</param>
-        public List<Block> ExtractImageInfo(int hashes = 0)
+        public string ExtractXhtml()
         {
-            int blockNum = -1;
-            List<Block> rc = new List<Block>();
-            foreach (FzStextBlock block in Blocks)
+            var res = mupdf.mupdf.fz_new_buffer(1024);
+            var output = new mupdf.FzOutput(res);
+            mupdf.mupdf.fz_print_stext_page_as_xhtml(output, NativeStextPage, 0);
+            output.fz_close_output();
+            return Encoding.UTF8.GetString(res.fz_buffer_extract());
+        }
+
+        /// <summary>
+        /// Extract text in XML format.
+        /// Corresponds to Python TextPage.extractXML().
+        /// </summary>
+        public string ExtractXml()
+        {
+            var res = mupdf.mupdf.fz_new_buffer(1024);
+            var output = new mupdf.FzOutput(res);
+            mupdf.mupdf.fz_print_stext_page_as_xml(output, NativeStextPage, 0);
+            output.fz_close_output();
+            return Encoding.UTF8.GetString(res.fz_buffer_extract());
+        }
+
+        private void _getNewBlockList(Dictionary<string, object> page_dict, bool raw)
+        {
+            JM_make_textpage_dict(NativeStextPage, page_dict, raw);
+        }
+
+        private Dictionary<string, object> _textpage_dict(bool raw = false)
+        {
+            var page_dict = new Dictionary<string, object>
             {
-                blockNum += 1;
+                ["width"] = Rect.Width,
+                ["height"] = Rect.Height,
+            };
+            _getNewBlockList(page_dict, raw);
+            return page_dict;
+        }
 
-                if (block.m_internal.type == (int)STextBlockType.FZ_STEXT_BLOCK_TEXT)
+        /// <summary>
+        /// Extract text as a dictionary (page level) with full block/line/span detail.
+        /// Corresponds to Python TextPage.extractDICT(raw=False).
+        /// Faithfully ported from extra.i _as_dict / JM_make_text_block / JM_make_spanlist.
+        /// </summary>
+        public Dictionary<string, object> ExtractDict(bool sort = false)
+        {
+            var page_dict = _textpage_dict(raw: false);
+            if (sort)
+            {
+                var block_list = (List<Dictionary<string, object>>)page_dict["blocks"];
+                block_list.Sort((a, b) =>
+                {
+                    var ba = (float[])a["bbox"];
+                    var bb = (float[])b["bbox"];
+                    int cmp = ba[3].CompareTo(bb[3]);
+                    return cmp != 0 ? cmp : ba[0].CompareTo(bb[0]);
+                });
+            }
+            return page_dict;
+        }
+
+        /// <summary>
+        /// Extract text as a raw dictionary with character-level detail (no span text merging).
+        /// Corresponds to Python TextPage.extractRAWDICT(raw=True).
+        /// </summary>
+        public Dictionary<string, object> ExtractRawDict(bool sort = false)
+        {
+            var page_dict = _textpage_dict(raw: true);
+            if (sort)
+            {
+                var block_list = (List<Dictionary<string, object>>)page_dict["blocks"];
+                block_list.Sort((a, b) =>
+                {
+                    var ba = (float[])a["bbox"];
+                    var bb = (float[])b["bbox"];
+                    int cmp = ba[3].CompareTo(bb[3]);
+                    return cmp != 0 ? cmp : ba[0].CompareTo(bb[0]);
+                });
+            }
+            return page_dict;
+        }
+
+        /// <summary>
+        /// Extract text in JSON format.
+        /// Corresponds to Python TextPage.extractJSON().
+        /// </summary>
+        public string ExtractJson(bool sort = false)
+        {
+            var dict = ExtractDict(sort);
+            return JsonSerializer.Serialize(dict, new JsonSerializerOptions { WriteIndented = true });
+        }
+
+        /// <summary>
+        /// Extract raw dictionary in JSON format.
+        /// Corresponds to Python TextPage.extractRAWJSON().
+        /// </summary>
+        public string ExtractRawJson(bool sort = false)
+        {
+            var dict = ExtractRawDict(sort);
+            return JsonSerializer.Serialize(dict, new JsonSerializerOptions { WriteIndented = true });
+        }
+
+        /// <summary>
+        /// Return a list with image meta information.
+        /// Corresponds to Python TextPage.extractIMGINFO().
+        /// </summary>
+        public List<Dictionary<string, object>> ExtractImgInfo(bool hashes = false)
+        {
+            int block_n = -1;
+            var rc = new List<Dictionary<string, object>>();
+            for (var block_iter = NativeStextPage.begin();
+                 block_iter.m_internal != NativeStextPage.end().m_internal;
+                 block_iter = block_iter.__increment__())
+            {
+                var block = block_iter.__ref__();
+                block_n++;
+                if (block.m_internal.type == mupdf.mupdf.FZ_STEXT_BLOCK_TEXT)
                     continue;
-                FzImage img = block.i_image();
-                vectoruc digest = new vectoruc();
-                if (hashes != 0)
+
+                var wrappedBlock = block;
+                var img = wrappedBlock.i_image();
+                int img_size = 0;
+                var mask = img.mask();
+                bool has_mask = mask.m_internal != null;
+
+                var compr_buff = mupdf.mupdf.fz_compressed_image_buffer(img);
+                if (compr_buff.m_internal != null)
+                    img_size = (int)compr_buff.fz_compressed_buffer_size();
+
+                byte[] digest = null;
+                if (hashes)
                 {
-                    FzIrect r = new FzIrect(
-                        Utils.FZ_MIN_INF_RECT,
-                        Utils.FZ_MIN_INF_RECT,
-                        Utils.FZ_MAX_INF_RECT,
-                        Utils.FZ_MAX_INF_RECT
-                    );
-
-                    Debug.Assert(r.fz_is_infinite_irect() != 0, "Rect is infinite");
-
-                    FzMatrix m = new FzMatrix(img.w(), 0, 0, img.h(), 0, 0);
-
-                    SWIGTYPE_p_int swigW = new SWIGTYPE_p_int(new IntPtr(), false);
-                    SWIGTYPE_p_int swigH = new SWIGTYPE_p_int(new IntPtr(), false);
-                    FzPixmap pixmap = img.fz_get_pixmap_from_image(r, m, swigW, swigH);
-                    digest = pixmap.fz_md5_pixmap2();
+                    var r = new mupdf.FzIrect(mupdf.mupdf.fz_infinite_irect);
+                    var m = new mupdf.FzMatrix(img.w(), 0, 0, img.h(), 0, 0);
+                    var pix = img.fz_get_pixmap_from_image(r, m, null, null);
+                    var md5 = pix.fz_md5_pixmap2();
+                    digest = new byte[md5.Count];
+                    for (int i = 0; i < md5.Count; i++)
+                        digest[i] = md5[i];
+                    if (img_size == 0)
+                        img_size = img.w() * img.h() * img.n();
                 }
-                FzColorspace cs = new FzColorspace(
-                    mupdf.mupdf.ll_fz_keep_colorspace(img.m_internal.colorspace)
-                );
-                Block blockDict = new Block();
-                blockDict.Number = blockNum;
-                blockDict.Bbox = new Rect(new FzRect(block.m_internal.bbox));
-                blockDict.Transform = new Matrix(block.i_transform());
-                blockDict.Width = img.w();
-                blockDict.Height = img.h();
-                blockDict.ColorSpace = cs.fz_colorspace_n();
-                blockDict.CsName = cs.fz_colorspace_name();
-                blockDict.Xres = img.xres();
-                blockDict.Yres = img.yres();
-                blockDict.Bpc = img.bpc();
-                blockDict.Size = img.fz_image_size();
-                if (hashes != 0)
+
+                var cs = img.colorspace();
+                var bbox = block.m_internal.bbox;
+                var matrix = wrappedBlock.i_transform();
+                var block_dict = new Dictionary<string, object>
                 {
-                    blockDict.Digest = digest;
-                }
-                rc.Add(blockDict);
+                    ["number"] = block_n,
+                    ["bbox"] = new float[] { bbox.x0, bbox.y0, bbox.x1, bbox.y1 },
+                    ["transform"] = new float[] { matrix.a, matrix.b, matrix.c, matrix.d, matrix.e, matrix.f },
+                    ["width"] = img.w(),
+                    ["height"] = img.h(),
+                    ["colorspace"] = mupdf.mupdf.fz_colorspace_n(cs),
+                    ["cs-name"] = mupdf.mupdf.fz_colorspace_name(cs),
+                    ["xres"] = img.xres(),
+                    ["yres"] = img.yres(),
+                    ["bpc"] = img.bpc(),
+                    ["size"] = img_size,
+                    ["has-mask"] = has_mask
+                };
+                if (hashes)
+                    block_dict["digest"] = digest;
+                rc.Add(block_dict);
             }
             return rc;
         }
 
+        // ─── Search ─────────────────────────────────────────────────────
+
         /// <summary>
-        /// Extract StextPage in JSON format
+        /// Search for a string. Returns list of Quad hit rectangles.
+        /// Corresponds to Python TextPage.search(..., quads=True).
         /// </summary>
-        /// <param name="cropbox">Rectangle area to extract</param>
-        /// <param name="sort"></param>
-        public string ExtractJSON(Rect cropbox = null, bool sort = false)
+        public List<Quad> Search(string needle, int maxHits = 16)
         {
-            PageInfo pageDict = TextPage2Dict(false);
-            if (cropbox != null)
+            var result = new List<Quad>();
+            if (string.IsNullOrEmpty(needle)) return result;
+            var quads = NativeStextPage.search_stext_page(needle, null, maxHits);
+            foreach (var q in quads)
             {
-                pageDict.Width = cropbox.Width;
-                pageDict.Height = cropbox.Height;
+                result.Add(new Quad(
+                    new Point(q.ul.x, q.ul.y),
+                    new Point(q.ur.x, q.ur.y),
+                    new Point(q.ll.x, q.ll.y),
+                    new Point(q.lr.x, q.lr.y)));
+                if (result.Count >= maxHits) break;
             }
-
-            if (sort)
-            {
-                List<Block> blocks = pageDict.Blocks;
-                blocks.Sort(
-                    (b1, b2) =>
-                    {
-                        if (b1.Bbox.Y1 == b2.Bbox.Y1)
-                        {
-                            return b1.Bbox.X0.CompareTo(b2.Bbox.X0);
-                        }
-                        else
-                        {
-                            return b1.Bbox.Y1.CompareTo(b2.Bbox.Y1);
-                        }
-                    }
-                );
-
-                pageDict.Blocks = blocks;
-            }
-            string ret = JsonConvert.SerializeObject(pageDict, Formatting.Indented);
-            return ret;
-        }
-
-        public string ExtractXML()
-        {
-            return ExtractText(ExtractFormat.XML);
+            return result;
         }
 
         /// <summary>
-        /// Extract Stext Page in format of PageStruct
+        /// Search for a string; returns axis-aligned rectangles with the same merge pass as PyMuPDF
+        /// <c>TextPage.search(..., quads=False)</c> (join overlapping hits on the same baseline).
         /// </summary>
-        /// <param name="cropbox">Rectangle Area to Extract</param>
-        /// <param name="sort"></param>
-        /// <returns></returns>
-        public PageInfo ExtractRAWDict(Rect cropbox, bool sort = false)
+        public List<Rect> SearchRects(string needle, int maxHits = 16)
         {
-            PageInfo pageDict = TextPage2Dict(true);
-            if (cropbox != null)
+            var quads = Search(needle, maxHits);
+            if (quads.Count == 0)
+                return new List<Rect>();
+            var val = new List<Rect>(quads.Count);
+            foreach (var q in quads)
+                val.Add(q.Rect);
+            int items = val.Count;
+            int i = 0;
+            while (i < items - 1)
             {
-                pageDict.Width = cropbox.Width;
-                pageDict.Height = cropbox.Height;
-            }
-            if (sort is true)
-            {
-                List<Block> blocks = pageDict.Blocks;
-                blocks.Sort(
-                    (b1, b2) =>
-                    {
-                        if (b1.Bbox.Y1 == b2.Bbox.Y1)
-                        {
-                            return b1.Bbox.X0.CompareTo(b2.Bbox.X0);
-                        }
-                        else
-                        {
-                            return b1.Bbox.Y1.CompareTo(b2.Bbox.Y1);
-                        }
-                    }
-                );
-
-                pageDict.Blocks = blocks;
-            }
-            return pageDict;
-        }
-
-        /// <summary>
-        /// Extract selection in format of string
-        /// </summary>
-        /// <param name="a">begin point of selection</param>
-        /// <param name="b">end point of selection</param>
-        /// <returns>returns text in format of string</returns>
-        public string ExtractSelection(Point a, Point b)
-        {
-            return mupdf.mupdf.fz_copy_selection(_nativeTextPage, a.ToFzPoint(), b.ToFzPoint(), 0);
-        }
-
-        /// <summary>
-        /// Extract Stext Page in format of Text
-        /// </summary>
-        /// <param name="sort"></param>
-        /// <returns>Return String</returns>
-        public string ExtractText(bool sort = false)
-        {
-            if (sort is false)
-            {
-                return ExtractText(ExtractFormat.TEXT);
-            }
-
-            List<TextBlock> blocks = ExtractBlocks();
-            blocks.Sort(
-                (b1, b2) =>
+                var v1 = val[i];
+                var v2 = val[i + 1];
+                if (Math.Abs(v1.Y1 - v2.Y1) > Constants.Epsilon || (v1 & v2).IsEmpty)
                 {
-                    if (b1.Y1 == b2.Y1)
+                    i++;
+                    continue;
+                }
+                val[i] = v1 | v2;
+                val.RemoveAt(i + 1);
+                items--;
+            }
+            return val;
+        }
+
+        /// <summary>
+        /// Extract text inside a rectangle.
+        /// Corresponds to Python TextPage.extractTextbox().
+        /// </summary>
+        public string ExtractTextbox(Rect rect)
+        {
+            var area = new mupdf.FzRect((float)rect.X0, (float)rect.Y0, (float)rect.X1, (float)rect.Y1);
+            return NativeStextPage.fz_copy_rectangle(area, 0);
+        }
+
+        /// <summary>
+        /// Extract text between two selection points.
+        /// Corresponds to Python TextPage.extractSelection().
+        /// </summary>
+        public string ExtractSelection(Point pointA, Point pointB)
+        {
+            var a = new mupdf.FzPoint((float)pointA.X, (float)pointA.Y);
+            var b = new mupdf.FzPoint((float)pointB.X, (float)pointB.Y);
+            return NativeStextPage.fz_copy_selection(a, b, 0);
+        }
+
+        // ─── Internal: Faithful port of extra.i _as_dict ────────────────
+
+        private void JM_make_textpage_dict(
+            mupdf.FzStextPage tp,
+            Dictionary<string, object> page_dict,
+            bool raw)
+        {
+            var text_buffer = mupdf.mupdf.fz_new_buffer(128);
+            var block_list = new List<Dictionary<string, object>>();
+            var tp_rect = new mupdf.FzRect(tp.m_internal.mediabox);
+            var block = tp.m_internal.first_block;
+            int block_n = -1;
+            JM_as_dict(block_list, block, text_buffer, raw, tp_rect, block_n);
+            page_dict["blocks"] = block_list;
+        }
+
+        /// <summary>
+        /// Recursive function for output by blocks as identified by MuPDF SEGMENT logic.
+        /// Port of extra.i _as_dict().
+        /// </summary>
+        private int JM_as_dict(
+            List<Dictionary<string, object>> block_list,
+            mupdf.fz_stext_block block,
+            mupdf.FzBuffer text_buffer,
+            bool raw,
+            mupdf.FzRect tp_rect,
+            int block_n)
+        {
+            while (block != null)
+            {
+                if (block.type == mupdf.mupdf.FZ_STEXT_BLOCK_TEXT)
+                {
+                    if (Helpers.JM_rects_overlap(tp_rect, new mupdf.FzRect(block.bbox))
+                        || mupdf.mupdf.fz_is_infinite_rect(tp_rect) != 0)
                     {
-                        return b1.X0.CompareTo(b2.X0);
+                        var block_dict = new Dictionary<string, object>();
+                        block_n++;
+                        block_dict["type"] = block.type;
+                        block_dict["number"] = block_n;
+                        JM_make_text_block(block, block_dict, raw, text_buffer, tp_rect);
+                        block_list.Add(block_dict);
+                    }
+                }
+                else if (block.type == mupdf.mupdf.FZ_STEXT_BLOCK_IMAGE)
+                {
+                    if (mupdf.mupdf.fz_contains_rect(tp_rect, new mupdf.FzRect(block.bbox)) != 0
+                        || mupdf.mupdf.fz_is_infinite_rect(tp_rect) != 0)
+                    {
+                        var block_dict = new Dictionary<string, object>();
+                        block_n++;
+                        block_dict["type"] = block.type;
+                        block_dict["number"] = block_n;
+                        block_dict["bbox"] = new float[] { block.bbox.x0, block.bbox.y0, block.bbox.x1, block.bbox.y1 };
+                        JM_make_image_block(block, block_dict);
+                        block_list.Add(block_dict);
+                    }
+                }
+                block = block.next;
+            }
+            return block_n;
+        }
+
+        /// <summary>
+        /// Port of extra.i JM_make_text_block().
+        /// </summary>
+        private void JM_make_text_block(
+            mupdf.fz_stext_block block,
+            Dictionary<string, object> block_dict,
+            bool raw,
+            mupdf.FzBuffer buff,
+            mupdf.FzRect tp_rect)
+        {
+            var line_list = new List<Dictionary<string, object>>();
+            var block_rect = new mupdf.FzRect(mupdf.FzRect.Fixed.Fixed_EMPTY);
+
+            var wrappedBlock = new mupdf.FzStextBlock(block);
+            for (var line_iter = wrappedBlock.begin();
+                 line_iter.m_internal != wrappedBlock.end().m_internal;
+                 line_iter = line_iter.__increment__())
+            {
+                var line = line_iter.__ref__();
+                var fzLine = line.m_internal;
+
+                var intersect = mupdf.mupdf.fz_intersect_rect(tp_rect, new mupdf.FzRect(fzLine.bbox));
+                if (mupdf.mupdf.fz_is_empty_rect(intersect) != 0
+                    && mupdf.mupdf.fz_is_infinite_rect(tp_rect) == 0)
+                {
+                    continue;
+                }
+
+                var line_dict = new Dictionary<string, object>();
+                var line_rect = JM_make_spanlist(line_dict, line, raw, buff, tp_rect);
+
+                block_rect = mupdf.mupdf.fz_union_rect(block_rect, line_rect);
+                line_dict["wmode"] = (int)fzLine.wmode;
+                line_dict["dir"] = new float[] { fzLine.dir.x, fzLine.dir.y };
+                line_dict["bbox"] = new float[] { line_rect.x0, line_rect.y0, line_rect.x1, line_rect.y1 };
+                line_list.Add(line_dict);
+            }
+
+            block_dict["bbox"] = new float[] { block_rect.x0, block_rect.y0, block_rect.x1, block_rect.y1 };
+            block_dict["lines"] = line_list;
+        }
+
+        /// <summary>
+        /// Port of extra.i JM_make_spanlist().
+        /// Builds span list for a single line, splitting spans by style changes.
+        /// </summary>
+        private mupdf.FzRect JM_make_spanlist(
+            Dictionary<string, object> line_dict,
+            mupdf.FzStextLine line,
+            bool raw,
+            mupdf.FzBuffer buff,
+            mupdf.FzRect tp_rect)
+        {
+            var span_list = new List<Dictionary<string, object>>();
+            mupdf.mupdf.fz_clear_buffer(buff);
+            var span_rect = new mupdf.FzRect(mupdf.FzRect.Fixed.Fixed_EMPTY);
+            var line_rect = new mupdf.FzRect(mupdf.FzRect.Fixed.Fixed_EMPTY);
+            float span_origin_x = 0, span_origin_y = 0;
+
+            float old_size = -1;
+            uint old_flags = 0;
+            uint old_char_flags = 0;
+            string old_font = "";
+            uint old_argb = 0;
+            ushort old_bidi = 0;
+
+            Dictionary<string, object> span = null;
+            List<Dictionary<string, object>> char_list = null;
+
+            for (var ch_iter = line.begin();
+                 ch_iter.m_internal != line.end().m_internal;
+                 ch_iter = ch_iter.__increment__())
+            {
+                var ch = ch_iter.__ref__();
+                var fzCh = ch.m_internal;
+                var fzLine = line.m_internal;
+
+                var r = Helpers.JM_char_bbox(fzLine, fzCh);
+                if (!Helpers.JM_rects_overlap(tp_rect, r)
+                    && mupdf.mupdf.fz_is_infinite_rect(tp_rect) == 0)
+                {
+                    continue;
+                }
+
+                int flags = Helpers.JM_char_font_flags(fzCh.font, fzLine, fzCh);
+                float size = fzCh.size;
+                uint char_flags = (uint)(fzCh.flags & ~mupdf.mupdf.FZ_STEXT_SYNTHETIC);
+                string fontName = Helpers.JM_font_name(fzCh.font);
+                uint argb = fzCh.argb;
+                float asc = Helpers.JM_font_ascender(fzCh.font);
+                float desc = Helpers.JM_font_descender(fzCh.font);
+                ushort bidi = fzCh.bidi;
+
+                bool style_changed =
+                    size != old_size
+                    || (uint)flags != old_flags
+                    || char_flags != old_char_flags
+                    || argb != old_argb
+                    || fontName != old_font
+                    || bidi != old_bidi;
+
+                if (style_changed)
+                {
+                    if (old_size >= 0)
+                    {
+                        if (raw)
+                        {
+                            span["chars"] = char_list;
+                            char_list = null;
+                        }
+                        else
+                        {
+                            span["text"] = Encoding.UTF8.GetString(
+                                buff.fz_buffer_extract());
+                            mupdf.mupdf.fz_clear_buffer(buff);
+                        }
+                        span["origin"] = new float[] { span_origin_x, span_origin_y };
+                        span["bbox"] = new float[] { span_rect.x0, span_rect.y0, span_rect.x1, span_rect.y1 };
+                        line_rect = mupdf.mupdf.fz_union_rect(line_rect, span_rect);
+                        span_list.Add(span);
+                        span = null;
+                    }
+
+                    span = new Dictionary<string, object>();
+                    float spanAsc = asc, spanDesc = desc;
+                    if (asc < 1e-3f)
+                    {
+                        spanAsc = 0.9f;
+                        spanDesc = -0.1f;
+                    }
+                    span["size"] = size;
+                    span["flags"] = (uint)flags;
+                    span["bidi"] = (uint)bidi;
+                    span["char_flags"] = char_flags;
+                    span["font"] = fontName;
+                    span["color"] = argb & 0xffffffu;
+                    span["alpha"] = argb >> 24;
+                    span["ascender"] = spanAsc;
+                    span["descender"] = spanDesc;
+
+                    old_size = size;
+                    old_flags = (uint)flags;
+                    old_char_flags = char_flags;
+                    old_font = fontName;
+                    old_argb = argb;
+                    old_bidi = bidi;
+                    span_rect = r;
+                    span_origin_x = fzCh.origin.x;
+                    span_origin_y = fzCh.origin.y;
+                }
+
+                span_rect = mupdf.mupdf.fz_union_rect(span_rect, r);
+
+                if (raw)
+                {
+                    var char_dict = new Dictionary<string, object>();
+                    char_dict["origin"] = new float[] { fzCh.origin.x, fzCh.origin.y };
+                    char_dict["bbox"] = new float[] { r.x0, r.y0, r.x1, r.y1 };
+                    char_dict["c"] = char.ConvertFromUtf32(fzCh.c);
+                    char_dict["synthetic"] = (fzCh.flags & mupdf.mupdf.FZ_STEXT_SYNTHETIC) != 0;
+                    if (char_list == null)
+                        char_list = new List<Dictionary<string, object>>();
+                    char_list.Add(char_dict);
+                }
+                else
+                {
+                    mupdf.mupdf.fz_append_rune(buff, fzCh.c);
+                }
+            }
+
+            if (span != null)
+            {
+                if (raw)
+                {
+                    span["chars"] = char_list;
+                    char_list = null;
+                }
+                else
+                {
+                    span["text"] = Encoding.UTF8.GetString(
+                        buff.fz_buffer_extract());
+                    mupdf.mupdf.fz_clear_buffer(buff);
+                }
+                span["origin"] = new float[] { span_origin_x, span_origin_y };
+                span["bbox"] = new float[] { span_rect.x0, span_rect.y0, span_rect.x1, span_rect.y1 };
+
+                if (mupdf.mupdf.fz_is_empty_rect(span_rect) == 0)
+                {
+                    span_list.Add(span);
+                    line_rect = mupdf.mupdf.fz_union_rect(line_rect, span_rect);
+                }
+                span = null;
+            }
+
+            line_dict["spans"] = span_list;
+            return line_rect;
+        }
+
+        /// <summary>
+        /// Port of extra.i JM_make_image_block().
+        /// </summary>
+        private void JM_make_image_block(
+            mupdf.fz_stext_block block,
+            Dictionary<string, object> block_dict)
+        {
+            var wrappedBlock = new mupdf.FzStextBlock(block);
+            var image = wrappedBlock.i_image();
+            var transform = wrappedBlock.i_transform();
+
+            int w = image.w();
+            int h = image.h();
+            var cs = image.colorspace();
+            int n = mupdf.mupdf.fz_colorspace_n(cs);
+
+            byte[] imageBytes;
+            string ext;
+            try
+            {
+                var compBuf = mupdf.mupdf.fz_compressed_image_buffer(image);
+                if (compBuf.m_internal != null)
+                {
+                    int imgType = compBuf.m_internal.params_.type;
+                    ext = JM_image_extension(imgType);
+                    if (imgType < mupdf.mupdf.FZ_IMAGE_BMP || imgType == mupdf.mupdf.FZ_IMAGE_JBIG2)
+                    {
+                        var pngBuf = mupdf.mupdf.fz_new_buffer_from_image_as_png(image, new mupdf.FzColorParams(mupdf.mupdf.fz_default_color_params));
+                        imageBytes = pngBuf.fz_buffer_extract();
+                        ext = "png";
+                    }
+                    else if (n == 4 && ext == "jpeg")
+                    {
+                        var jpgBuf = mupdf.mupdf.fz_new_buffer_from_image_as_jpeg(image, new mupdf.FzColorParams(mupdf.mupdf.fz_default_color_params), 95, 1);
+                        imageBytes = jpgBuf.fz_buffer_extract();
                     }
                     else
                     {
-                        return b1.Y1.CompareTo(b2.Y1);
-                    }
-                }
-            );
-
-            string ret = "";
-            foreach (TextBlock b in blocks)
-            {
-                ret += b.Text;
-            }
-
-            return ret;
-        }
-
-        /// <summary>
-        /// Extract TextBoxes
-        /// </summary>
-        /// <param name="area">Rectangle Area to extract</param>
-        /// <returns>Returns string in area</returns>
-        public string ExtractTextBox(FzRect area)
-        {
-            bool isNeedNewLine = false;
-            string ret = "";
-
-            foreach (FzStextBlock block in Blocks)
-            {
-                if (block.m_internal.type != (int)STextBlockType.FZ_STEXT_BLOCK_TEXT)
-                    continue;
-
-                for (
-                    fz_stext_line line = block.begin().__ref__().m_internal;
-                    line != null;
-                    line = line.next
-                )
-                {
-                    bool isLineHadText = false;
-                    for (fz_stext_char ch = line.first_char; ch != null; ch = ch.next)
-                    {
-                        FzRect r = GetCharBbox(new FzStextLine(line), new FzStextChar(ch));
-                        if (IsRectsOverlap(area, r))
-                        {
-                            isLineHadText = true;
-                            if (isNeedNewLine)
-                            {
-                                ret += "\n";
-                                isNeedNewLine = false;
-                            }
-
-                            ret += MakeEscape(ch.c);
-                        }
-                    }
-                    if (isLineHadText)
-                        isNeedNewLine = true;
-                }
-            }
-
-            return Utils.DecodeRawUnicodeEscape(ret);
-        }
-
-        /// <summary>
-        /// Extract Words
-        /// </summary>
-        /// <param name="delimiters"></param>
-        /// <returns></returns>
-        public List<WordBlock> ExtractWords(char[] delimiters = null)
-        {
-            int bufferLen;
-            int blockNum = -1;
-            FzRect wordBox = new FzRect(FzRect.Fixed.Fixed_EMPTY);
-            FzRect stPageRect = MediaBox;
-
-            List<WordBlock> lines = new List<WordBlock>();
-            FzBuffer buf = new FzBuffer(64);
-            foreach (FzStextBlock block in Blocks)
-            {
-                blockNum += 1;
-                if (block.m_internal.type != (int)STextBlockType.FZ_STEXT_BLOCK_TEXT)
-                    continue;
-
-                int lineNum = -1;
-                for (
-                    fz_stext_line line = block.begin().__ref__().m_internal;
-                    line != null;
-                    line = line.next
-                )
-                {
-                    lineNum += 1;
-                    int wordNum = 0;
-                    buf.fz_clear_buffer();
-                    bufferLen = 0;
-                    for (fz_stext_char ch = line.first_char; ch != null; ch = ch.next)
-                    {
-                        FzRect cbBox = GetCharBbox(new FzStextLine(line), new FzStextChar(ch));
-                        if (
-                            !IsRectsOverlap(stPageRect, cbBox)
-                            && stPageRect.fz_is_infinite_rect() == 0
-                        )
-                            continue;
-
-                        bool isWordDelimiter = IsWordDelimiter(ch.c, delimiters);
-                        if (isWordDelimiter)
-                        {
-                            if (bufferLen == 0)
-                                continue;
-                            if (wordBox.fz_is_empty_rect() == 0)
-                            {
-                                wordNum = AppendWord(
-                                    lines,
-                                    buf,
-                                    wordBox,
-                                    blockNum,
-                                    lineNum,
-                                    wordNum
-                                );
-                                wordBox = new FzRect(FzRect.Fixed.Fixed_EMPTY);
-                            }
-                            buf.fz_clear_buffer();
-                            bufferLen = 0;
-                            continue;
-                        }
-                        buf.fz_append_rune(ch.c);
-                        bufferLen += 1;
-                        wordBox = FzRect.fz_union_rect(
-                            wordBox,
-                            GetCharBbox(new FzStextLine(line), new FzStextChar(ch))
-                        );
-                    }
-                    if (bufferLen != 0 && wordBox.fz_is_empty_rect() == 0)
-                    {
-                        wordNum = AppendWord(lines, buf, wordBox, blockNum, lineNum, wordNum);
-                        wordBox = new FzRect(FzRect.Fixed.Fixed_EMPTY);
-                    }
-                    bufferLen = 0;
-                }
-            }
-            return lines;
-        }
-
-        /// <summary>
-        /// Extract Stext Page in format of XHtml
-        /// </summary>
-        /// <returns>Returns string in format of XHtml</returns>
-        public string ExtractXHtml()
-        {
-            return ExtractText(ExtractFormat.XHTML);
-        }
-
-        public uint PoolSize()
-        {
-            FzPool pool = new FzPool(_nativeTextPage.m_internal.pool);
-            uint size = pool.fz_pool_size();
-            pool.m_internal = null;
-            return size;
-        }
-
-        /// <summary>
-        /// Extract Hits of Matching in format of FzQuad List
-        /// </summary>
-        /// <param name="stPage">Stext Page</param>
-        /// <param name="needle">Text to search</param>
-        /// <returns></returns>
-        public static List<Quad> Search(
-            TextPage stPage,
-            string needle,
-            int hitMax = 10000,
-            bool quad = true
-        )
-        {
-            FzRect rect = stPage.MediaBox;
-            List<Quad> quads = new List<Quad>();
-            if (string.IsNullOrEmpty(needle))
-                return quads;
-
-            /*Hits hits = new Hits();
-
-            hits.Len = 0;
-            hits.Quads = quads;
-            hits.HFuzz = 0.2f;
-            hits.VFuzz = 0.1f;
-
-            FzBuffer buffer = stPage.GetBufferFromStextPage();
-            string hayStackString = buffer.fz_string_from_buffer();
-
-            int hayStack = 0;
-            int begin = 0;
-            int end = 0;*/
-
-            vectorq ret = stPage._nativeTextPage.search_stext_page(needle, null, hitMax); // use MuPDF api for search function
-            
-            foreach (FzQuad q in ret)
-                quads.Add(new Quad(q));
-
-            return quads;
-
-            /* int inside = 0;
-
-            foreach (FzStextBlock block in stPage.Blocks)
-            {
-                if (block.m_internal.type != (int)STextBlockType.FZ_STEXT_BLOCK_TEXT)
-                    continue;
-                for (
-                    fz_stext_line line = block.begin().__ref__().m_internal;
-                    line != null;
-                    line = line.next
-                )
-                {
-                    for (fz_stext_char ch = line.first_char; ch != null; ch = ch.next)
-                    {
-                        if (rect.fz_is_infinite_rect() == 0)
-                        {
-                            FzRect r = stPage.GetCharBbox(
-                                new FzStextLine(line),
-                                new FzStextChar(ch)
-                            );
-                            if (!stPage.IsRectsOverlap(rect, r))
-                                continue;
-                        }
-                        while (true)
-                        {
-                            if (inside == 0)
-                            {
-                                if (hayStack >= begin)
-                                {
-                                    inside = 1;
-                                }
-                            }
-                            if (inside != 0)
-                            {
-                                if (hayStack < end)
-                                {
-                                    stPage.OnHighlightChar(
-                                        hits,
-                                        new FzStextLine(line),
-                                        new FzStextChar(ch)
-                                    );
-                                    break;
-                                }
-                                else
-                                {
-                                    inside = 0;
-                                    (begin, end) = stPage.FindString(
-                                        hayStackString.Substring(hayStack),
-                                        needle
-                                    );
-
-                                    if (begin == -1)
-                                    {
-                                        goto no_more_matches;
-                                    }
-                                    else
-                                    {
-                                        begin += hayStack;
-                                        end += hayStack;
-                                        continue;
-                                    }
-                                }
-                            }
-                            break;
-                        }
-                        Tuple<int, int> res = TextPage.Char2Canon(
-                            hayStackString.Substring(hayStack)
-                        );
-                        hayStack += res.Item1;
-                    }
-                    hayStack += 1;
-                }
-                hayStack += 1;
-            }
-            no_more_matches:
-            ;
-            buffer.fz_clear_buffer();
-
-            int items = quads.Count;
-            if (items == 0)
-                return quads;
-            int i = 0;
-            List<Rect> ret = new List<Rect>();
-            for (i = 0; i < items; i++)
-            {
-                if (!quad)
-                    ret.Add(quads[i].Rect);
-            }
-
-            if (quad)
-                return quads;
-
-            i = 0;
-            while (i < items - 1)
-            {
-                Quad v1 = quads[i];
-                Quad v2 = quads[i + 1];
-                if ((v1.Rect.Y1 != v2.Rect.Y1) || (v1.Rect & v2.Rect).IsEmpty)
-                {
-                    i += 1;
-                    continue;
-                }
-                quads[i] = (v1.Rect | v2.Rect).Quad;
-                quads.RemoveAt(i + 1);
-                items -= 1;
-            }
-
-            return quads;
-            */
-        }
-
-        internal void OnHighlightChar(Hits hits, FzStextLine line, FzStextChar ch)
-        {
-            float vFuzz = ch.m_internal.size * hits.VFuzz;
-            float hFuzz = ch.m_internal.size * hits.HFuzz;
-            FzQuad chQuad = GetCharQuad(line, ch);
-
-            if (hits.Len > 0)
-            {
-                FzQuad end = hits.Quads[hits.Len - 1].ToFzQuad();
-                if (
-                    true
-                    && HDist(
-                        new FzPoint(line.m_internal.dir),
-                        new FzPoint(end.lr),
-                        new FzPoint(chQuad.ll)
-                    ) < hFuzz
-                    && VDist(
-                        new FzPoint(line.m_internal.dir),
-                        new FzPoint(end.lr),
-                        new FzPoint(chQuad.ll)
-                    ) < vFuzz
-                    && HDist(
-                        new FzPoint(line.m_internal.dir),
-                        new FzPoint(end.ur),
-                        new FzPoint(chQuad.ul)
-                    ) < hFuzz
-                    && VDist(
-                        new FzPoint(line.m_internal.dir),
-                        new FzPoint(end.ur),
-                        new FzPoint(chQuad.ll)
-                    ) < vFuzz
-                )
-                {
-                    end.ur = chQuad.ur;
-                    end.lr = chQuad.lr;
-                    Debug.Assert(hits.Quads[-1].ToFzQuad() == end);
-                    return;
-                }
-            }
-
-            hits.Quads.Add(new Quad(chQuad));
-            hits.Len += 1;
-        }
-
-        internal float HDist(FzPoint dir, FzPoint a, FzPoint b)
-        {
-            float dx = b.x - a.x;
-            float dy = b.y - a.y;
-            return Math.Abs(dx * dir.x + dy * dir.y);
-        }
-
-        internal float VDist(FzPoint dir, FzPoint a, FzPoint b)
-        {
-            float dx = b.x - a.x;
-            float dy = b.y - a.y;
-            return Math.Abs(dx * dir.y + dy * dir.x);
-        }
-
-        /// <summary>
-        /// Get Buffer from Stext Page
-        /// </summary>
-        /// <returns>Buffer</returns>
-        internal FzBuffer GetBufferFromStextPage()
-        {
-            FzRect r = MediaBox;
-            FzBuffer buf = new FzBuffer(256);
-            foreach (FzStextBlock block in Blocks)
-            {
-                if (block.m_internal.type == (int)STextBlockType.FZ_STEXT_BLOCK_TEXT)
-                {
-                    for (
-                        fz_stext_line line = block.begin().__ref__().m_internal;
-                        line != null;
-                        line = line.next
-                    )
-                    {
-                        for (fz_stext_char ch = line.first_char; ch != null; ch = ch.next)
-                        {
-                            if (
-                                !IsRectsOverlap(
-                                    r,
-                                    GetCharBbox(new FzStextLine(line), new FzStextChar(ch))
-                                )
-                                && r.fz_is_infinite_rect() == 0
-                            )
-                            {
-                                continue;
-                            }
-                            buf.fz_append_rune(ch.c);
-                        }
-                        buf.fz_append_byte(Convert.ToInt32('\n'));
-                    }
-                    buf.fz_append_byte(Convert.ToInt32('\n'));
-                }
-            }
-            return buf;
-        }
-
-        public (int, int) FindString(string s, string needle)
-        {
-            for (int index = 0; index < s.Length - needle.Length; index++)
-            {
-                int end = MatchString(s.Substring(index), needle);
-                
-                if (end != -1)
-                {
-                    end += index;
-                    return (index, end);
-                }
-            }
-
-            return (-1, -1);
-        }
-
-        public int MatchString(string h0, string n0)
-        {
-            int h = 0;
-            int n = 0;
-            int e = h;
-            Tuple<int, int> hc = Char2Canon(h0.Substring(h));
-            h += hc.Item1;
-            Tuple<int, int> nc = Char2Canon(n0.Substring(n));
-            n += nc.Item1;
-            while (hc.Item2 == nc.Item2)
-            {
-                e = h;
-                if (hc.Item2 == Convert.ToInt32(' '))
-                {
-                    while (true)
-                    {
-                        hc = Char2Canon(h0.Substring(h));
-                        h += hc.Item1;
-                        if (hc.Item2 != Convert.ToInt32(' '))
-                        {
-                            break;
-                        }
+                        var rawBuf = new mupdf.FzBuffer(compBuf.m_internal.buffer);
+                        imageBytes = rawBuf.fz_buffer_extract();
                     }
                 }
                 else
                 {
-                    hc = Char2Canon(h0.Substring(h));
-                    h += hc.Item1;
-                }
-                if (nc.Item2 == Convert.ToInt32(' '))
-                {
-                    while (true)
-                    {
-                        nc = Char2Canon(n0.Substring(n));
-                        n += nc.Item1;
-                        if (nc.Item2 != Convert.ToInt32(' '))
-                        {
-                            break;
-                        }
-                    }
-                }
-                else
-                {
-                    nc = Char2Canon(n0.Substring(n));
-                    n += nc.Item1;
+                    var pngBuf = mupdf.mupdf.fz_new_buffer_from_image_as_png(image, new mupdf.FzColorParams(mupdf.mupdf.fz_default_color_params));
+                    imageBytes = pngBuf.fz_buffer_extract();
+                    ext = "png";
                 }
             }
-
-            return nc.Item2 != 0 ? -1 : e;
-        }
-
-        public static int Canon(int c)
-        {
-            if (c == 0xA0 || c == 0x2028 || c == 0x2029)
+            catch
             {
-                return Convert.ToInt32(' ');
-            }
-            if (
-                c == Convert.ToInt32('\r')
-                || c == Convert.ToInt32('\n')
-                || c == Convert.ToInt32('\t')
-            )
-            {
-                return Convert.ToInt32(' ');
+                imageBytes = Array.Empty<byte>();
+                ext = "png";
             }
 
-            int A = Convert.ToInt32('A');
-            if (c >= A && c <= Convert.ToInt32('Z'))
-            {
-                return c - A + Convert.ToInt32('a');
-            }
-
-            return c;
+            block_dict["width"] = w;
+            block_dict["height"] = h;
+            block_dict["ext"] = ext;
+            block_dict["colorspace"] = n;
+            block_dict["xres"] = image.xres();
+            block_dict["yres"] = image.yres();
+            block_dict["bpc"] = image.bpc();
+            block_dict["transform"] = new float[] { transform.a, transform.b, transform.c, transform.d, transform.e, transform.f };
+            block_dict["size"] = imageBytes.Length;
+            block_dict["image"] = imageBytes;
         }
 
-        public static Tuple<int, int> Char2Canon(string s)
+        // ─── Private helpers ────────────────────────────────────────────
+
+        private static bool JM_is_word_delimiter(int c, string delimiters)
         {
-            ll_fz_chartorune_outparams outparams = new ll_fz_chartorune_outparams();
-
-            int n = mupdf.mupdf.ll_fz_chartorune_outparams_fn(s, outparams);
-            int c = Canon(outparams.rune);
-            /*if (s.Length == 0)
-                return new Tuple<int, int>(1, -1);*/
-            return new Tuple<int, int>(n, c);
-        }
-
-        internal int AppendWord(
-            List<WordBlock> lines,
-            FzBuffer buf,
-            FzRect wordBox,
-            int blockNum,
-            int lineNum,
-            int wordNum
-        )
-        {
-            string s = Utils.EscapeStrFromBuffer(buf);
-            WordBlock item = new WordBlock()
-            {
-                X0 = wordBox.x0,
-                Y0 = wordBox.y0,
-                X1 = wordBox.x1,
-                Y1 = wordBox.y1,
-                Text = s,
-                BlockNum = blockNum,
-                LineNum = lineNum,
-                WordNum = wordNum
-            };
-
-            lines.Add(item);
-            return wordNum + 1;
-        }
-
-        internal bool IsWordDelimiter(int ch, char[] delimiters)
-        {
-            if (ch <= 32 || ch == 160)
+            if (c <= 32 || c == 160 || (0x202a <= c && c <= 0x202e))
                 return true;
-            if (delimiters == null)
+            if (string.IsNullOrEmpty(delimiters))
                 return false;
-
-            char _ch = (char)ch;
-            foreach (char _c in delimiters)
+            foreach (char d in delimiters)
             {
-                if (_c == _ch)
-                    return true;
+                if (d == c) return true;
             }
-
             return false;
         }
 
-        /// <summary>
-        /// Utf8 to Unicode
-        /// </summary>
-        /// <param name="ch"></param>
-        /// <returns></returns>
-        internal string MakeEscape(int ch)
+        private static bool JM_is_rtl_char(int c)
         {
-            if (ch == 92)
+            return c >= 0x590 && c <= 0x900;
+        }
+
+        private static string JM_image_extension(int type)
+        {
+            switch (type)
             {
-                return "\\u005c";
-            }
-            else if (32 <= ch && ch <= 127 || ch == 10)
-            {
-                return ((char)ch).ToString();
-            }
-            else if (0xd800 <= ch && ch <= 0xdfff)
-            {
-                return "\\ufffd";
-            }
-            else if (ch <= 0xffff)
-            {
-                return "\\u" + ch.ToString("x4");
-            }
-            else
-            {
-                return "\\U" + ch.ToString("x8");
+                case 1: return "png";
+                case 2: return "jpeg";
+                case 3: return "jxr";
+                case 4: return "jpx";
+                case 5: return "bmp";
+                case 6: return "gif";
+                case 7: return "tiff";
+                case 8: return "pnm";
+                default: return "unknown";
             }
         }
 
-        /// <summary>
-        /// Make Block List of Stext Page
-        /// </summary>
-        /// <param name="pageDict">PageStruct including BlockList (width/height set by caller; blocks are filled here).</param>
-        /// <param name="raw"></param>
-        internal void GetNewBlockList(PageInfo pageDict, bool raw)
-        {
-            MakeTextPage2Dict(pageDict, raw);
-        }
+        // ─── IDisposable ────────────────────────────────────────────────
 
-        internal PageInfo TextPage2Dict(bool raw = false)
+        public void Dispose()
         {
-            PageInfo pageDict = new PageInfo
+            if (!_disposed)
             {
-                Width = MediaBox.x1 - MediaBox.x0,
-                Height = MediaBox.y1 - MediaBox.y0,
-                Blocks = new List<Block>()
-            };
-
-            GetNewBlockList(pageDict, raw);
-            return pageDict;
-        }
-
-        public string ExtractRawJSON(Rect cropbox = null, bool sort = false)
-        {
-            PageInfo val = TextPage2Dict(true);
-            if (cropbox != null)
-            {
-                val.Width = cropbox.Width;
-                val.Height = cropbox.Height;
+                _nativeStp?.Dispose();
+                _nativeStp = null;
+                _disposed = true;
             }
-            if (sort == true)
-            {
-                List<Block> blocks = val.Blocks;
-                blocks.Sort(
-                    (b1, b2) =>
-                    {
-                        if (b1.Bbox.Y1 == b2.Bbox.Y1)
-                        {
-                            return b1.Bbox.X0.CompareTo(b2.Bbox.X0);
-                        }
-                        else
-                        {
-                            return b1.Bbox.Y1.CompareTo(b2.Bbox.Y1);
-                        }
-                    }
-                );
-                val.Blocks = blocks;
-            }
-
-            string ret = JsonConvert.SerializeObject(val, Formatting.Indented);
-            return ret;
+            GC.SuppressFinalize(this);
         }
 
-        internal void MakeTextPage2Dict(PageInfo pageDict, bool raw)
-        {
-            FzBuffer textBuffer = new FzBuffer(128);
-            FzRect stPageRect = MediaBox;
-            int blockNum = -1;
-            foreach (FzStextBlock block in Blocks)
-            {
-                blockNum += 1;
-
-                int btype = block.m_internal.type;
-                FzRect blockBboxNative = new FzRect(block.m_internal.bbox);
-                bool pageFinite = stPageRect.fz_is_infinite_rect() == 0;
-
-                if (btype == mupdf.mupdf.FZ_STEXT_BLOCK_STRUCT)
-                {
-                    /* MuPdf recurses via block->u.s.down->first_block; fz_stext_block has no union accessors in these bindings. */
-                    continue;
-                }
-
-                if (pageFinite)
-                {
-                    if (btype == mupdf.mupdf.FZ_STEXT_BLOCK_IMAGE)
-                    {
-                        if (stPageRect.fz_contains_rect(blockBboxNative) == 0)
-                            continue;
-                    }
-                    else if (
-                        btype == mupdf.mupdf.FZ_STEXT_BLOCK_TEXT
-                        || btype == mupdf.mupdf.FZ_STEXT_BLOCK_VECTOR
-                        || btype == mupdf.mupdf.FZ_STEXT_BLOCK_GRID
-                    )
-                    {
-                        if (!IsRectsOverlap(stPageRect, blockBboxNative))
-                            continue;
-                    }
-                }
-
-                Block blockDict = new Block();
-
-                blockDict.Number = blockNum;
-                blockDict.Type = btype;
-                if (btype == mupdf.mupdf.FZ_STEXT_BLOCK_IMAGE)
-                {
-                    blockDict.Bbox = new Rect(blockBboxNative);
-                    FzImage image = block.i_image();
-                    int n = image.colorspace().fz_colorspace_n();
-                    int w = image.w();
-                    int h = image.h();
-                    int type = (int)ImageType.FZ_IMAGE_UNKNOWN;
-
-                    FzCompressedBuffer compressedBuffer = image.fz_compressed_image_buffer();
-                    if (compressedBuffer != null && compressedBuffer.m_internal != null)
-                        type = compressedBuffer.m_internal.params_.type;
-
-                    if (type < (int)ImageType.FZ_IMAGE_BMP || type == (int)ImageType.FZ_IMAGE_JBIG2)
-                        type = (int)ImageType.FZ_IMAGE_UNKNOWN;
-
-                    FzBuffer buf = null;
-                    FzBuffer ownedBuf = null;
-                    FzBuffer maskOwned = null;
-                    string ext;
-                    try
-                    {
-                        if (compressedBuffer == null || type == (int)ImageType.FZ_IMAGE_UNKNOWN)
-                        {
-                            ownedBuf = mupdf.mupdf.fz_new_buffer_from_image_as_png(
-                                image,
-                                new FzColorParams()
-                            );
-                            buf = ownedBuf;
-                            ext = "png";
-                        }
-                        else if (n == 4 && Utils.GetImageExtension(type) == "jpeg")
-                        {
-                            ownedBuf = image.fz_new_buffer_from_image_as_jpeg(
-                                new FzColorParams(),
-                                95,
-                                1
-                            );
-                            buf = ownedBuf;
-                            ext = "jpeg";
-                        }
-                        else
-                        {
-                            buf = new FzBuffer(
-                                mupdf.mupdf.ll_fz_keep_buffer(compressedBuffer.m_internal.buffer)
-                            );
-                            ext = Utils.GetImageExtension(type);
-                        }
-
-                        blockDict.Width = w;
-                        blockDict.Height = h;
-                        blockDict.Ext = ext;
-                        blockDict.ColorSpace = n;
-                        blockDict.Xres = image.xres();
-                        blockDict.Yres = image.yres();
-                        blockDict.Bpc = image.bpc();
-                        blockDict.Transform = new Matrix(block.i_transform());
-                        blockDict.Image = Utils.BinFromBuffer(buf);
-                        blockDict.Size = (uint)blockDict.Image.Length;
-                        /*
-                        FzImage maskIm = image.mask();
-                        if (maskIm != null)
-                        {
-                            maskOwned = mupdf.mupdf.fz_new_buffer_from_image_as_png(
-                                maskIm,
-                                new FzColorParams()
-                            );
-                            blockDict.Mask = Utils.BinFromBuffer(maskOwned);
-                        }
-                        */
-                    }
-                    catch (Exception)
-                    {
-                        blockDict.Image = Array.Empty<byte>();
-                        blockDict.Mask = null;
-                        blockDict.Size = 0;
-                        blockDict.Ext = "png";
-                    }
-                    finally
-                    {
-                        ownedBuf?.Dispose();
-                        maskOwned?.Dispose();
-                    }
-                }
-                else if (btype == mupdf.mupdf.FZ_STEXT_BLOCK_TEXT)
-                {
-                    List<Line> lineList = new List<Line>();
-
-                    FzRect blockRect = new FzRect(FzRect.Fixed.Fixed_EMPTY);
-                    ushort syntheticMask = (ushort)mupdf.mupdf.FZ_STEXT_SYNTHETIC;
-
-                    for (
-                        fz_stext_line line = block.begin().__ref__().m_internal;
-                        line != null;
-                        line = line.next
-                    )
-                    {
-                        {
-                            FzRect lineBbox = new FzRect(line.bbox);
-                            float ix0 = Math.Max(stPageRect.x0, lineBbox.x0);
-                            float iy0 = Math.Max(stPageRect.y0, lineBbox.y0);
-                            float ix1 = Math.Min(stPageRect.x1, lineBbox.x1);
-                            float iy1 = Math.Min(stPageRect.y1, lineBbox.y1);
-                            bool intersectionEmpty = ix0 >= ix1 || iy0 >= iy1;
-                            if (intersectionEmpty && pageFinite)
-                                continue;
-                        }
-
-                        Line lineDict = new Line();
-
-                        List<Char> charList = new List<Char>();
-                        List<Span> spanList = new List<Span>();
-                        mupdf.mupdf.fz_clear_buffer(textBuffer);
-                        FzRect spanRect = new FzRect(FzRect.Fixed.Fixed_EMPTY);
-                        FzRect lineRect = new FzRect(FzRect.Fixed.Fixed_EMPTY);
-
-                        MuPDFCharStyle style = new MuPDFCharStyle();
-                        MuPDFCharStyle oldStyle = new MuPDFCharStyle();
-
-                        Span span = new Span();
-                        FzPoint spanOrigin = new FzPoint();
-
-                        for (fz_stext_char ch = line.first_char; ch != null; ch = ch.next)
-                        {
-                            try
-                            {
-                                FzRect r = GetCharBbox(new FzStextLine(line), new FzStextChar(ch));
-                                if (!IsRectsOverlap(stPageRect, r) && pageFinite)
-                                    continue;
-                                float flags = CharFontFlags(
-                                    new FzFont(mupdf.mupdf.ll_fz_keep_font(ch.font)),
-                                    new FzStextLine(line),
-                                    new FzStextChar(ch)
-                                );
-                                FzPoint origin = new FzPoint(ch.origin);
-                                style.Size = ch.size;
-                                style.Flags = flags;
-                                style.Font = GetFontName(
-                                    new FzFont(mupdf.mupdf.ll_fz_keep_font(ch.font))
-                                );
-                                style.Argb = ch.argb;
-                                style.CharFlags = (uint)(ch.flags & ~syntheticMask);
-                                style.Bidi = ch.bidi;
-                                style.Asc = (
-                                    new FzFont(mupdf.mupdf.ll_fz_keep_font(ch.font))
-                                ).fz_font_ascender();
-                                style.Desc = (
-                                    new FzFont(mupdf.mupdf.ll_fz_keep_font(ch.font))
-                                ).fz_font_descender();
-                                if (
-                                    style.Size != oldStyle.Size
-                                    || style.Flags != oldStyle.Flags
-                                    || style.CharFlags != oldStyle.CharFlags
-                                    || style.Argb != oldStyle.Argb
-                                    || style.Font != oldStyle.Font
-                                    || style.Bidi != oldStyle.Bidi
-                                )
-                                {
-                                    if (oldStyle.Size >= 0)
-                                    {
-                                        if (raw)
-                                        {
-                                            span.Chars = charList;
-                                            charList = new List<Char>();
-                                        }
-                                        else
-                                        {
-                                            span.Text = Utils.EscapeStrFromBuffer(textBuffer);
-                                            mupdf.mupdf.fz_clear_buffer(textBuffer);
-                                        }
-                                        span.Origin = new Point(spanOrigin);
-                                        span.Bbox = new Rect(spanRect);
-                                        lineRect = FzRect.fz_union_rect(lineRect, spanRect);
-                                        spanList.Add(span);
-                                    }
-                                    span = new Span();
-                                    float asc = style.Asc;
-                                    float desc = style.Desc;
-                                    if (style.Asc < 1e-3)
-                                    {
-                                        asc = 0.9f;
-                                        desc = -0.1f;
-                                    }
-
-                                    span.Size = style.Size;
-                                    span.Flags = style.Flags;
-                                    span.CharFlags = style.CharFlags;
-                                    span.Bidi = style.Bidi;
-                                    span.Font = style.Font;
-                                    span.Color = (int)(style.Argb & 0xffffff);
-                                    span.Alpha = (int)(style.Argb >> 24);
-                                    span.Asc = asc;
-                                    span.Desc = desc;
-
-                                    oldStyle = new MuPDFCharStyle(style);
-                                    spanRect = r;
-                                    spanOrigin = origin;
-                                }
-                                spanRect = FzRect.fz_union_rect(spanRect, r);
-
-                                if (raw)
-                                {
-                                    Char charDict = new Char();
-                                    charDict.Origin = new FzPoint(ch.origin);
-                                    charDict.Bbox = r;
-                                    charDict.C = (char)ch.c;
-                                    charDict.Synthetic = (ch.flags & syntheticMask) != 0;
-                                    charList.Add(charDict);
-                                }
-                                else
-                                {
-                                    textBuffer.fz_append_rune(ch.c);
-                                }
-                            }
-                            catch (Exception)
-                            {
-                                continue;
-                            }
-                        }
-
-                        if (span != null)
-                        {
-                            if (raw)
-                            {
-                                span.Chars = charList;
-                            }
-                            else
-                            {
-                                span.Text = Utils.EscapeStrFromBuffer(textBuffer);
-                                textBuffer.fz_clear_buffer();
-                            }
-                            span.Origin = new Point(spanOrigin);
-                            span.Bbox = new Rect(spanRect);
-
-                            if (spanRect.fz_is_empty_rect() == 0)
-                            {
-                                spanList.Add(span);
-                                lineRect = FzRect.fz_union_rect(lineRect, spanRect);
-                            }
-                            span = null;
-                        }
-
-                        lineDict.Spans = new List<Span>(spanList);
-
-                        blockRect = FzRect.fz_union_rect(blockRect, lineRect);
-                        lineDict.WMode = line.wmode;
-                        lineDict.Dir = new Point(new FzPoint(line.dir));
-                        lineDict.Bbox = new Rect(lineRect);
-                        lineList.Add(lineDict);
-                    }
-                    blockDict.Bbox = new Rect(blockRect);
-                    blockDict.Lines = lineList;
-                }
-                else if (
-                    btype == mupdf.mupdf.FZ_STEXT_BLOCK_VECTOR
-                    || btype == mupdf.mupdf.FZ_STEXT_BLOCK_GRID
-                )
-                {
-                    blockDict.Bbox = new Rect(blockBboxNative);
-                }
-
-                pageDict.Blocks.Add(blockDict);
-            }
-        }
-
-        /// <summary>
-        /// Make flags according to font style or type
-        /// </summary>
-        /// <param name="font">source font</param>
-        /// <param name="line">target line</param>
-        /// <param name="ch">target char</param>
-        /// <returns></returns>
-        internal float CharFontFlags(FzFont font, FzStextLine line, FzStextChar ch)
-        {
-            float flags = DetectSuperScript(line, ch); // detect super string
-            flags += font.fz_font_is_italic() * (int)FontStyle.TEXT_FONT_ITALIC;
-            flags += font.fz_font_is_serif() * (int)FontStyle.TEXT_FONT_SERIFED;
-            flags += font.fz_font_is_monospaced() * (int)FontStyle.TEXT_FONT_MONOSPACED;
-            flags += font.fz_font_is_bold() * (int)FontStyle.TEXT_FONT_BOLD;
-            return flags;
-        }
-
-        /// <summary>
-        /// Detect super string
-        /// </summary>
-        /// <param name="line">target line</param>
-        /// <param name="ch">target char</param>
-        /// <returns></returns>
-        internal float DetectSuperScript(FzStextLine line, FzStextChar ch)
-        {
-            if (
-                line.m_internal.wmode == 0
-                && line.m_internal.dir.x == 1
-                && line.m_internal.dir.y == 0
-            )
-                return (
-                    ch.m_internal.origin.y
-                    < (line.m_internal.first_char.origin.y - ch.m_internal.size * 0.1)
-                )
-                    ? 1.0f
-                    : 0.0f;
-            return 0.0f;
-        }
-
-        /// <summary>
-        /// Get the font name from FzFont object
-        /// </summary>
-        /// <param name="font"></param>
-        /// <returns></returns>
-        internal string GetFontName(FzFont font)
-        {
-            string name = font.fz_font_name();
-            int s = name.IndexOf("+");
-
-            return name.Substring(s + 1);
-        }
-
-        public FzQuad GetCharQuad(FzStextLine line, FzStextChar ch)
-        {
-            if (line.m_internal.wmode != 0)
-                return new FzQuad(ch.m_internal.quad);
-
-            FzFont font = new FzFont(mupdf.mupdf.ll_fz_keep_font(ch.m_internal.font));
-            float asc = font.fz_font_ascender();
-            float desc = font.fz_font_descender();
-            float fontSize = ch.m_internal.size;
-            float asc_desc = asc - desc + (float)Utils.FLT_EPSILON;
-
-            if (asc_desc >= 1)
-            {
-                return new FzQuad(ch.m_internal.quad);
-            }
-
-            FzRect bbox = mupdf.mupdf.fz_font_bbox(font);
-            float fontWidth = bbox.y1 - bbox.y0;
-
-            if (asc < 1e-3)
-            {
-                desc = -0.1f;
-                asc = 0.9f;
-                asc_desc = 1.0f;
-            }
-
-            asc_desc = asc - desc;
-            asc = asc * fontSize / asc_desc;
-            desc = desc * fontSize / asc_desc;
-
-            float c = line.m_internal.dir.x;
-            float s = line.m_internal.dir.y;
-            FzMatrix trm1 = new FzMatrix(c, -s, s, c, 0, 0);
-            FzMatrix trm2 = new FzMatrix(c, s, -s, c, 0, 0);
-            if (c == -1)
-            {
-                trm1.d = 1;
-                trm2.d = 1;
-            }
-            FzMatrix xlate1 = new FzMatrix(
-                1,
-                0,
-                0,
-                1,
-                -ch.m_internal.origin.x,
-                -ch.m_internal.origin.y
-            );
-            FzMatrix xlate2 = new FzMatrix(
-                1,
-                0,
-                0,
-                1,
-                ch.m_internal.origin.x,
-                ch.m_internal.origin.y
-            );
-
-            FzQuad quad = mupdf.mupdf.fz_transform_quad(new FzQuad(ch.m_internal.quad), xlate1);
-            quad = mupdf.mupdf.fz_transform_quad(quad, trm1);
-
-            if (c == 1 && quad.ul.y > 0)
-            {
-                quad.ul.y = asc;
-                quad.ur.y = asc;
-                quad.ll.y = desc;
-                quad.lr.y = desc;
-            }
-            else
-            {
-                quad.ul.y = -asc;
-                quad.ur.y = -asc;
-                quad.ll.y = -desc;
-                quad.lr.y = -desc;
-            }
-
-            if (quad.ll.x < 0)
-            {
-                quad.ll.x = 0;
-                quad.ul.x = 0;
-            }
-
-            float cwidth = quad.lr.x - quad.ll.x;
-            if (cwidth < Utils.FLT_EPSILON)
-            {
-                int glyph = mupdf.mupdf.fz_encode_character(font, ch.m_internal.c);
-                if (glyph != 0)
-                {
-                    fontWidth = mupdf.mupdf.fz_advance_glyph(font, glyph, line.m_internal.wmode);
-                    quad.lr.x = quad.ll.x + fontWidth * fontSize;
-                    quad.ur.x = quad.lr.x;
-                }
-            }
-            quad = mupdf.mupdf.fz_transform_quad(quad, trm2);
-            quad = mupdf.mupdf.fz_transform_quad(quad, xlate2);
-
-            return quad;
-        }
-
-        public FzRect GetCharBbox(FzStextLine line, FzStextChar ch)
-        {
-            try
-            {
-                FzQuad q = GetCharQuad(line, ch);
-                FzRect r = q.fz_rect_from_quad();
-                if (line.m_internal.wmode != 0)
-                    return r;
-                if (r.y1 < r.y0 + ch.m_internal.size)
-                    r.y0 = r.y1 - ch.m_internal.size;
-                return r;
-            }
-            catch (Exception)
-            {
-                // Fallback when font/char access fails (e.g. null or invalid font pointer)
-                FzQuad q = new FzQuad(ch.m_internal.quad);
-                return q.fz_rect_from_quad();
-            }
-        }
-
-        public bool IsRectsOverlap(FzRect a, FzRect b)
-        {
-            if (false || a.x0 >= b.x1 || a.y0 >= b.y1 || a.x1 <= b.x0 || a.y1 <= b.y0)
-                return false;
-            return true;
-        }
-    }
-
-    public class MuPDFCharStyle
-    {
-        public float Size { get; set; }
-
-        public float Flags { get; set; }
-
-        public string Font { get; set; }
-
-        public uint Argb { get; set; }
-
-        public uint CharFlags { get; set; }
-
-        public ushort Bidi { get; set; }
-
-        public float Asc { get; set; }
-
-        public float Desc { get; set; }
-
-        public MuPDFCharStyle(Dictionary<string, dynamic> rhs)
-        {
-            Size = rhs["Size"];
-            Flags = rhs["Flags"];
-            Font = rhs["Font"];
-            Asc = rhs["Asc"];
-            Desc = rhs["Desc"];
-            Argb = rhs.ContainsKey("Argb")
-                ? Convert.ToUInt32(rhs["Argb"])
-                : (rhs.ContainsKey("Color") ? unchecked((uint)(int)rhs["Color"]) : 0u);
-            CharFlags = rhs.ContainsKey("CharFlags") ? Convert.ToUInt32(rhs["CharFlags"]) : 0;
-            Bidi = rhs.ContainsKey("Bidi") ? Convert.ToUInt16(rhs["Bidi"]) : (ushort)0;
-        }
-
-        public MuPDFCharStyle(MuPDFCharStyle rhs)
-        {
-            Size = rhs.Size;
-            Flags = rhs.Flags;
-            Font = rhs.Font;
-            Argb = rhs.Argb;
-            CharFlags = rhs.CharFlags;
-            Bidi = rhs.Bidi;
-            Asc = rhs.Asc;
-            Desc = rhs.Desc;
-        }
-
-        public MuPDFCharStyle()
-        {
-            Size = -1;
-            Flags = -1;
-            Font = "";
-            Argb = 0;
-            CharFlags = 0;
-            Bidi = 0;
-            Asc = 0;
-            Desc = 0;
-        }
-
-        public override string ToString()
-        {
-            return $"{Size} {Flags} {Font} {Argb:x8} {CharFlags} {Bidi} {Asc} {Desc}";
-        }
+        ~TextPage() { Dispose(); }
     }
 }

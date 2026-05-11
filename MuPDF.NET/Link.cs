@@ -1,307 +1,392 @@
-﻿using mupdf;
 using System;
 using System.Collections.Generic;
 
 namespace MuPDF.NET
 {
+    /// <summary>
+    /// Represents a link on a document page.
+    /// </summary>
     public class Link
     {
-        static Link()
+        private mupdf.FzLink _nativeLink;
+        private bool _detached;
+        internal Page? Parent { get; private set; }
+        /// <summary>Python <c>Page.load_links</c> / <c>Link.next</c>: xref + <c>/NM</c> when matched to the PDF link-annot list; otherwise rect-based xref resolution.</summary>
+        private int? _linkAnnotXrefHint;
+        private string _linkAnnotIdHint;
+
+        private Page RequirePage()
         {
-            Utils.InitApp();
+            if (_detached || Parent == null)
+                throw new ObjectDisposedException(nameof(Link));
+            return Parent;
         }
 
-        public bool ThisOwn { get; set; }
+        internal Link(mupdf.FzLink link, Page page)
+        {
+            _nativeLink = link;
+            Parent = page;
+        }
 
-        private FzLink _nativeLink;
-
-        public Page Parent { get; set; }
+        /// <summary>Match Python <c>Page.load_links</c> (first annot) or <c>Link.next</c> (successor row when prior <c>xref</c> &gt; 0).</summary>
+        internal void SetLinkAnnotIdentity(int xref, string nm)
+        {
+            _linkAnnotXrefHint = xref;
+            _linkAnnotIdHint = nm ?? "";
+        }
 
         /// <summary>
-        /// An integer specifying the PDF
+        /// Link rectangle.
         /// </summary>
-        public int Xref { get; set; }
-
-        public int Page { get; set; }
-
-        public string Uri
+        public Rect Rect
         {
             get
-            { 
-                return _nativeLink.m_internal != null ? _nativeLink.m_internal.uri : "";
+            {
+                var r = _nativeLink.m_internal.rect;
+                return new Rect(r.x0, r.y0, r.x1, r.y1);
             }
         }
 
-        public string Id { get; set; }
+        /// <summary>
+        /// Link URI string.
+        /// </summary>
+        public string Uri => _nativeLink.m_internal.uri;
 
-        public Link(FzLink link)
+        /// <summary>
+        /// Check if link target is external.
+        /// </summary>
+        /// <remarks>PyMuPDF <c>Link.is_external</c> uses <c>mupdf.fz_is_external_link</c> on the native URI.</remarks>
+        public bool IsExternal
         {
-            _nativeLink = link;
-        }
-
-        public Link() { }
-
-        public Border Border
-        {
-            get { return _Border(Parent.Parent, Xref); }
+            get
+            {
+                var u = Uri;
+                if (string.IsNullOrEmpty(u)) return false;
+                try
+                {
+                    return mupdf.mupdf.fz_is_external_link(u) != 0;
+                }
+                catch
+                {
+                    return u.StartsWith("http", StringComparison.OrdinalIgnoreCase)
+                        || u.StartsWith("mailto", StringComparison.OrdinalIgnoreCase)
+                        || u.StartsWith("ftp", StringComparison.OrdinalIgnoreCase);
+                }
+            }
         }
 
         /// <summary>
-        /// Meaningful for PDF only: A dictionary of two tuples of floats in range 0 <= float <= 1 specifying the stroke and the interior (fill) colors. If not a PDF, null is returned. As mentioned above, the fill color is always None for links. The stroke color is used for the border of the link rectangle. The length of the tuple implicitly determines the colorspace: 1 = GRAY, 3 = RGB, 4 = CMYK. So (1.0, 0.0, 0.0) stands for RGB color red. The value of each float f is mapped to the integer value i in range 0 to 255 via the computation f = i / 255.
+        /// Link xref number (PDF only).
         /// </summary>
-        public Color Colors
+        public int Xref
         {
-            get { return _Colors(Parent.Parent, Xref); }
+            get
+            {
+                if (_linkAnnotXrefHint.HasValue)
+                    return _linkAnnotXrefHint.Value;
+                try
+                {
+                    var pdfPage = Helpers.AsPdfPage(RequirePage().NativePage, required: false);
+                    if (pdfPage == null || pdfPage.m_internal == null) return 0;
+                    var annotArr = mupdf.mupdf.pdf_dict_get(pdfPage.obj(), mupdf.mupdf.pdf_new_name("Annots"));
+                    if (annotArr.m_internal == null) return 0;
+                    int n = mupdf.mupdf.pdf_array_len(annotArr);
+                    for (int i = 0; i < n; i++)
+                    {
+                        var obj = mupdf.mupdf.pdf_array_get(annotArr, i);
+                        var subtype = mupdf.mupdf.pdf_dict_get(obj, mupdf.mupdf.pdf_new_name("Subtype"));
+                        if (mupdf.mupdf.pdf_name_eq(subtype, mupdf.mupdf.pdf_new_name("Link")) != 0)
+                        {
+                            var r = mupdf.mupdf.pdf_dict_get_rect(obj, mupdf.mupdf.pdf_new_name("Rect"));
+                            var linkRect = Rect;
+                            if (Math.Abs(r.x0 - linkRect.X0) < 1 && Math.Abs(r.y0 - linkRect.Y0) < 1
+                                && Math.Abs(r.x1 - linkRect.X1) < 1 && Math.Abs(r.y1 - linkRect.Y1) < 1)
+                                return mupdf.mupdf.pdf_to_num(obj);
+                        }
+                    }
+                }
+                catch { }
+                return 0;
+            }
         }
 
-        /// <summary>
-        /// The link destination details object
-        /// </summary>
+        /// <summary>PDF <c>/NM</c> for this link when known (Python <c>Link.id</c>).</summary>
+        public string Id
+        {
+            get
+            {
+                if (_linkAnnotXrefHint.HasValue)
+                    return _linkAnnotIdHint ?? "";
+                try
+                {
+                    int xr = Xref;
+                    if (xr < 1) return "";
+                    return Helpers.PdfAnnotNmForXref(RequirePage().RequireParent().NativePdfDocument, xr);
+                }
+                catch { return ""; }
+            }
+        }
+
+        /// <summary>Python <c>Link.dest</c> — destination details as <see cref="LinkDest"/>.</summary>
         public LinkDest Dest
         {
             get
             {
-                if (Parent is null)
-                    throw new Exception("orphaned object: parent is None");
-                if (Parent.Parent.IsClosed || Parent.Parent.IsEncrypted)
-                    throw new Exception("document closed or encrypted");
+                if (_detached || Parent == null)
+                    throw new ValueErrorException("orphaned object: parent is None");
+                var doc = RequirePage().RequireParent();
+                if (doc.IsClosed || doc.IsEncrypted)
+                    throw new ValueErrorException("document closed or encrypted");
 
-                (List<int>, float, float) uri;
-                if (IsExternal || Uri.StartsWith("#"))
-                    uri = (null, 0, 0);
-                else
-                    uri = Parent.Parent.ResolveLink(Uri);
-                return new LinkDest(this, uri, Parent.Parent);
+                var u = Uri ?? "";
+                (int page, float x, float y)? resolved = null;
+                if (!IsExternal && !u.StartsWith("#", StringComparison.Ordinal))
+                    resolved = doc.ResolveLink(u);
+                return new LinkDest(this, resolved, doc);
             }
         }
 
         /// <summary>
-        /// Return the link annotation flags, an integer (see Annot.flags for details). Zero if not a PDF.
+        /// Link flags.
         /// </summary>
         public int Flags
         {
             get
             {
-                if (!Parent.Parent.IsPDF)
-                    return 0;
-                (string, string) f = Parent.Parent.GetKeyXref(Xref, "F");
-                if (f.Item2 != "null")
-                    return int.Parse(f.Item2);
-
-                return 0;
+                try
+                {
+                    int xref = Xref;
+                    if (xref == 0) return 0;
+                    var pdf = RequirePage().RequireParent().NativePdfDocument;
+                    var obj = mupdf.mupdf.pdf_new_indirect(pdf, xref, 0);
+                    var resolved = mupdf.mupdf.pdf_resolve_indirect(obj);
+                    var fObj = mupdf.mupdf.pdf_dict_get(resolved, mupdf.mupdf.pdf_new_name("F"));
+                    return fObj.m_internal != null ? mupdf.mupdf.pdf_to_int(fObj) : 0;
+                }
+                catch { return 0; }
             }
         }
 
-        /// <summary>
-        /// A bool specifying whether the link target is outside of the current document.
-        /// </summary>
-        public bool IsExternal
+        /// <summary>Border dictionary from the link annotation (Python <c>Link.border</c> / <c>_border</c>).</summary>
+        public Dictionary<string, object> Border
         {
             get
             {
-                if (
-                    _nativeLink.m_internal == null
-                    || string.IsNullOrEmpty(_nativeLink.m_internal.uri)
-                )
-                    return false;
-                
-                return mupdf.mupdf.fz_is_external_link(_nativeLink.m_internal.uri) != 0;
+                try
+                {
+                    int xref = Xref;
+                    if (xref < 1 || !RequirePage().RequireParent().IsPdf)
+                        return new Dictionary<string, object>();
+                    var pdf = RequirePage().RequireParent().NativePdfDocument;
+                    var obj = mupdf.mupdf.pdf_resolve_indirect(mupdf.mupdf.pdf_new_indirect(pdf, xref, 0));
+                    return Helpers.JM_annot_border(obj);
+                }
+                catch
+                {
+                    return new Dictionary<string, object>();
+                }
+            }
+        }
+
+        /// <summary>Color dictionary from the link annotation (Python <c>Link.colors</c> / <c>_colors</c>).</summary>
+        public Dictionary<string, object> Colors
+        {
+            get
+            {
+                int xref = Xref;
+                if (xref < 1)
+                    throw new ValueErrorException(Constants.MSG_BAD_XREF);
+                if (!RequirePage().RequireParent().IsPdf)
+                    throw new ValueErrorException("is no PDF");
+                var pdf = RequirePage().RequireParent().NativePdfDocument;
+                var obj = mupdf.mupdf.pdf_resolve_indirect(mupdf.mupdf.pdf_new_indirect(pdf, xref, 0));
+                if (obj.m_internal == null)
+                    throw new ValueErrorException(Constants.MSG_BAD_XREF);
+                return Helpers.JM_annot_colors(obj);
             }
         }
 
         /// <summary>
-        /// The next link or Null
+        /// Next link.
         /// </summary>
         public Link Next
         {
             get
             {
-                if (_nativeLink.m_internal == null)
-                    return null;
-
-                FzLink fzVal = _nativeLink.next();
-                if (fzVal.m_internal == null)
-                    return null;
-
-                Link val = new Link(fzVal);
-                if (val != null)
+                var nextNative = new mupdf.FzLink(_nativeLink.m_internal.next);
+                if (nextNative.m_internal == null) return null;
+                var val = new Link(nextNative, RequirePage());
+                int prevXref = Xref;
+                if (prevXref > 0)
                 {
-                    val.ThisOwn = true;
-                    val.Parent = Parent;
-                    val.Parent.AnnotRefs.Add(val.GetHashCode(), val);
-                    if (Xref > 0)
+                    try
                     {
-                        List<int> linkXrefs = new List<int>();
-                        List<string> linkIds = new List<string>();
-                        List<AnnotXref> annotXrefs = Parent.GetAnnotXrefs();
-                        int i = 0;
-                        for (i = 0; i < annotXrefs.Count; i++)
+                        var page = RequirePage();
+                        var items = Helpers.JM_get_annot_xref_list(page.NativePdfPage.obj());
+                        var linkAnnots = new List<(int xref, string nm)>();
+                        foreach (var t in items)
                         {
-                            if (annotXrefs[i].AnnotType == PdfAnnotType.PDF_ANNOT_LINK)
+                            if (t.type_ == (int)mupdf.pdf_annot_type.PDF_ANNOT_LINK)
+                                linkAnnots.Add((t.xref, t.nm ?? ""));
+                        }
+                        for (int i = 0; i < linkAnnots.Count - 1; i++)
+                        {
+                            if (linkAnnots[i].xref == prevXref)
                             {
-                                linkXrefs.Add(annotXrefs[i].Xref);
-                                linkIds.Add(annotXrefs[i].Id);
+                                val.SetLinkAnnotIdentity(linkAnnots[i + 1].xref, linkAnnots[i + 1].nm);
+                                break;
                             }
                         }
-
-                        for (i = 0; i < annotXrefs.Count; i++)
-                        {
-                            int idx = linkXrefs.IndexOf(Xref);
-                            val.Xref = linkXrefs[idx + 1];
-                            val.Id = linkIds[idx + 1];
-                        }
                     }
-                    else
-                    {
-                        Xref = 0;
-                        Id = "";
-                    }
+                    catch { }
                 }
                 return val;
             }
         }
 
         /// <summary>
-        /// The area that can be clicked in untransformed coordinates.
+        /// Target page number for internal links.
         /// </summary>
-        public Rect Rect
+        public int Page
         {
             get
             {
-                if (_nativeLink == null || _nativeLink.m_internal == null)
-                    throw new Exception("FzLink.m_internal not available");
-                
-                return new Rect(new FzRect(_nativeLink.rect()));
-            }
-        }
-
-        public override string ToString()
-        {
-            return base.ToString();
-        }
-
-        private Border _Border(Document doc, int xref)
-        {
-            PdfDocument pdf = Document.AsPdfDocument(doc);
-            if (pdf.m_internal == null)
-                return null;
-            PdfObj linkObj = pdf.pdf_new_indirect(xref, 0);
-            if (linkObj == null)
-                return null;
-
-            Border b = Utils.GetAnnotBorder(linkObj);
-
-            pdf.Dispose();
-
-            return b;
-        }
-
-        private Color _Colors(Document doc, int xref)
-        {
-            PdfDocument pdf = Document.AsPdfDocument(doc);
-            if (pdf.m_internal == null)
-                return null;
-            PdfObj linkObj = pdf.pdf_new_indirect(xref, 0);
-            if (linkObj == null)
-                throw new Exception(Utils.ErrorMessages["MSG_BAD_XREF"]);
-
-            pdf.Dispose();
-            return Utils.GetAnnotColors(linkObj);
-        }
-
-        /// <summary>
-        ///
-        /// </summary>
-        public void Erase()
-        {
-            Parent = null;
-            ThisOwn = false;
-        }
-
-        private void _SetBorder(Border border, Document doc, int xref)
-        {
-            PdfDocument pdf = Document.AsPdfDocument(doc);
-            if (pdf.m_internal == null)
-                return;
-            PdfObj linkObj = pdf.pdf_new_indirect(xref, 0);
-            if (linkObj == null)
-                return;
-
-            Annot.SetBorderAnnot(border, pdf, linkObj);
-
-            pdf.Dispose();
-        }
-
-        /// <summary>
-        /// PDF only: Change border width and dashing properties.
-        /// </summary>
-        /// <param name="border">a dictionary as returned by the border property, with keys “width” (float), “style” (str) and “dashes” (sequence). Omitted keys will leave the resp. property unchanged.</param>
-        /// <param name="width"></param>
-        /// <param name="dashes"></param>
-        /// <param name="style"></param>
-        public void SetBorder(
-            Border border,
-            float width = 0,
-            int[] dashes = null,
-            string style = null
-        )
-        {
-            if (border == null)
-                border = new Border()
+                if (Uri == null) return -1;
+                if (Uri.StartsWith("#"))
                 {
-                    Width = width,
-                    Style = style,
-                    Dashes = dashes
-                };
-
-            _SetBorder(border, Parent.Parent, Xref);
+                    var loc = mupdf.mupdf.fz_resolve_link(RequirePage().RequireParent().NativeDocument, Uri, null, null);
+                    return mupdf.mupdf.fz_page_number_from_location(RequirePage().RequireParent().NativeDocument, loc);
+                }
+                return -1;
+            }
         }
 
         /// <summary>
-        /// PDF only: Changes the “stroke” color.
+        /// Return link as a dictionary.
         /// </summary>
-        /// <param name="colors">a dictionary containing color specifications. For accepted dictionary keys and values see below. The most practical way should be to first make a copy of the colors property and then modify this dictionary as required.</param>
-        /// <param name="stroke"></param>
-        /// <param name="fill"></param>
-        public void SetColors(Color colors = null, float[] stroke = null, float[] fill = null)
+        public Dictionary<string, object> ToDictionary()
         {
-            Document doc = Parent.Parent;
-            if (colors == null)
-                colors = new Color() { Fill = fill, Stroke = stroke };
+            int xr = Xref;
+            string nm = Id;
 
-            fill = colors.Fill;
-            stroke = colors.Stroke;
-            if (fill != null)
-                Console.WriteLine("warning: links have no fill color");
-            if (stroke == null || stroke.Length == 0)
+            var d = new Dictionary<string, object>
             {
-                doc.SetKeyXRef(Xref, "C", "[]");
+                ["kind"] = IsExternal ? (int)LinkType.Uri : (int)LinkType.Goto,
+                ["from"] = Rect,
+                ["uri"] = Uri,
+                ["page"] = Page,
+                ["xref"] = xr,
+                ["id"] = nm,
+            };
+            if (xr > 0)
+            {
+                try
+                {
+                    if (RequirePage().RequireParent().IsPdf)
+                        Helpers.EnrichLinkDictFromPdfAnnot(RequirePage().RequireParent().NativePdfDocument, xr, d);
+                }
+                catch { }
+            }
+            return d;
+        }
+
+        /// <summary>Python <c>Link._erase</c>: detach wrapper from the owning <see cref="Page"/>.</summary>
+        public void _erase()
+        {
+            if (_detached) return;
+            _detached = true;
+            Parent = null;
+        }
+
+        /// <summary>
+        /// Set link border properties.
+        /// </summary>
+        public void SetBorder(Dictionary<string, object> border)
+        {
+            int xref = Xref;
+            if (xref == 0) return;
+            var pdf = RequirePage().RequireParent().NativePdfDocument;
+            var obj = mupdf.mupdf.pdf_resolve_indirect(mupdf.mupdf.pdf_new_indirect(pdf, xref, 0));
+
+            if (border == null)
+            {
+                mupdf.mupdf.pdf_dict_dels(obj, "Border");
                 return;
             }
 
-            Utils.CheckColor(stroke);
-            string s = "";
-            if (stroke.Length == 1)
-                s = $"[{Utils.FloatToString(stroke[0])}]";
-            else if (stroke.Length == 3)
-                s = $"[{Utils.FloatToString(stroke[0])} {Utils.FloatToString(stroke[1])} {Utils.FloatToString(stroke[2])}]";
-            else
-                s = $"[{Utils.FloatToString(stroke[0])} {Utils.FloatToString(stroke[1])} {Utils.FloatToString(stroke[2])} {Utils.FloatToString(stroke[3])}]";
-
-            doc.SetKeyXRef(Xref, "C", s);
+            var borderArr = mupdf.mupdf.pdf_new_array(pdf, 3);
+            float hCorner = border.ContainsKey("hCorner") ? Convert.ToSingle(border["hCorner"]) : 0;
+            float vCorner = border.ContainsKey("vCorner") ? Convert.ToSingle(border["vCorner"]) : 0;
+            float width = border.ContainsKey("width") ? Convert.ToSingle(border["width"]) : 0;
+            mupdf.mupdf.pdf_array_push_real(borderArr, hCorner);
+            mupdf.mupdf.pdf_array_push_real(borderArr, vCorner);
+            mupdf.mupdf.pdf_array_push_real(borderArr, width);
+            mupdf.mupdf.pdf_dict_puts(obj, "Border", borderArr);
         }
 
         /// <summary>
-        /// Set the PDF /F property of the link annotation.
+        /// Set link colors.
         /// </summary>
-        /// <param name="flags"></param>
-        /// <exception cref="Exception"></exception>
+        public void SetColors(Dictionary<string, object> colors)
+        {
+            int xref = Xref;
+            if (xref == 0) return;
+            var pdf = RequirePage().RequireParent().NativePdfDocument;
+            var obj = mupdf.mupdf.pdf_resolve_indirect(mupdf.mupdf.pdf_new_indirect(pdf, xref, 0));
+
+            if (colors == null || !colors.ContainsKey("stroke"))
+            {
+                mupdf.mupdf.pdf_dict_dels(obj, "C");
+                return;
+            }
+
+            var strokeColor = colors["stroke"] as float[];
+            if (strokeColor == null) return;
+
+            var cArr = mupdf.mupdf.pdf_new_array(pdf, strokeColor.Length);
+            foreach (float c in strokeColor)
+                mupdf.mupdf.pdf_array_push_real(cArr, c);
+            mupdf.mupdf.pdf_dict_puts(obj, "C", cArr);
+        }
+
+        /// <summary>
+        /// Set link flags.
+        /// </summary>
         public void SetFlags(int flags)
         {
-            Document doc = Parent.Parent;
-            if (!doc.IsPDF)
-                throw new Exception("is no PDF");
-            doc.SetKeyXRef(Xref, "F", flags.ToString());
+            int xref = Xref;
+            if (xref == 0) return;
+            var pdf = RequirePage().RequireParent().NativePdfDocument;
+            var obj = mupdf.mupdf.pdf_resolve_indirect(mupdf.mupdf.pdf_new_indirect(pdf, xref, 0));
+            mupdf.mupdf.pdf_dict_put_int(obj, mupdf.mupdf.pdf_new_name("F"), flags);
         }
+
+        /// <summary>
+        /// Returns a string representation of this link.
+        /// </summary>
+        public override string ToString() => $"Link('{Uri}' at {Rect})";
+
+        // Python/legacy compatibility aliases (mirrors _alias(Link, ...) and common snake_case access).
+        public bool is_external() => IsExternal;
+        public bool isExternal() => is_external();
+        public string id => Id;
+        public int xref => Xref;
+        public Link next => Next;
+        public string uri => Uri;
+        public int page => Page;
+        public Rect rect => Rect;
+        public LinkDest dest => Dest;
+        public Dictionary<string, object> to_dict() => ToDictionary();
+        /// <summary>Python <c>link.flags</c> getter; use this because a <c>flags</c> property would reserve <c>set_flags</c>.</summary>
+        public int get_flags() => Flags;
+        public Dictionary<string, object> get_border() => Border;
+        public Dictionary<string, object> get_colors() => Colors;
+        public void set_border(Dictionary<string, object> border) => SetBorder(border);
+        public void setBorder(Dictionary<string, object> border) => set_border(border);
+        public void set_colors(Dictionary<string, object> colors) => SetColors(colors);
+        public void setColors(Dictionary<string, object> colors) => set_colors(colors);
+        /// <summary>Python <c>Link.set_flags</c>. Use <see cref="Flags"/> for the getter (<c>flags</c> property name is not used here: it would reserve <c>set_flags</c> as a property accessor).</summary>
+        public void set_flags(int flags) => SetFlags(flags);
+        public void setFlags(int flags) => set_flags(flags);
     }
 }

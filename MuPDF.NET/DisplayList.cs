@@ -1,151 +1,135 @@
-using mupdf;
 using System;
+using System.Collections.Generic;
 
 namespace MuPDF.NET
 {
+    /// <summary>
+    /// Represents a display list (recorded drawing operations for a page).
+    /// </summary>
     public class DisplayList : IDisposable
     {
+        private mupdf.FzDisplayList _nativeDl;
+        private bool _disposed;
 
-        static DisplayList()
+        internal mupdf.FzDisplayList NativeDisplayList
         {
-            Utils.InitApp();
+            get
+            {
+                if (_disposed) throw new ObjectDisposedException(nameof(DisplayList));
+                return _nativeDl;
+            }
         }
 
-        private FzDisplayList _nativeDisplayList;
-        private FzPage _fzPage = null;
+        internal DisplayList(mupdf.FzDisplayList dl)
+        {
+            _nativeDl = dl;
+        }
 
         /// <summary>
-        /// Contains the display list's mediabox.
+        /// Initializes a new display list with the given media box.
+        /// </summary>
+        public DisplayList(Rect mediabox)
+        {
+            _nativeDl = mupdf.mupdf.fz_new_display_list(mediabox.ToFzRect());
+        }
+
+        /// <summary>
+        /// MediaBox of the display list.
         /// </summary>
         public Rect Rect
         {
             get
             {
-                return new Rect(_nativeDisplayList.fz_bound_display_list());
-            }
-        }
-
-        public bool ThisOwn { get; set; }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="rect">The page's rectangle.</param>
-        public DisplayList(Rect rect)
-        {
-            lock (Utils.MuPDFLock)
-            {
-                _nativeDisplayList = new FzDisplayList(rect.ToFzRect());
-            }
-            ThisOwn = true;
-        }
-
-        public DisplayList(DisplayList displayList)
-        {
-            lock (Utils.MuPDFLock)
-            {
-                _nativeDisplayList = displayList.ToFzDisplayList();
-            }
-        }
-
-        public DisplayList(PdfPage pdfPage, int annots = 1)
-        {
-            lock (Utils.MuPDFLock)
-            {
-                _fzPage = new FzPage(pdfPage);
-                if (annots != 0)
-                    _nativeDisplayList = mupdf.mupdf.fz_new_display_list_from_page(_fzPage);
-                else
-                    _nativeDisplayList = mupdf.mupdf.fz_new_display_list_from_page_contents(_fzPage);
-            }
-        }
-
-        public void Dispose()
-        {
-            if (_nativeDisplayList != null)
-            {
-                lock (Utils.MuPDFLock)
-                {
-                    _nativeDisplayList.Dispose();
-                }
-                _nativeDisplayList = null;
-                ThisOwn = false;
-            }
-
-            if (_fzPage != null)
-            {
-                lock (Utils.MuPDFLock)
-                {
-                    _fzPage.Dispose();
-                }
-                _fzPage = null;
+                var r = mupdf.mupdf.fz_bound_display_list(NativeDisplayList);
+                return new Rect(r.x0, r.y0, r.x1, r.y1);
             }
         }
 
         /// <summary>
-        /// Returns native object
+        /// Generate a Pixmap from the display list.
         /// </summary>
-        /// <returns>FzDisplayList</returns>
-        public FzDisplayList ToFzDisplayList()
+        public Pixmap GetPixmap(Matrix matrix = null, Colorspace cs = null, bool alpha = false, IRect clip = null)
         {
-            return _nativeDisplayList;
+            var ctm = (matrix ?? Matrix.Identity).ToFzMatrix();
+            var colorspace = (cs ?? Colorspace.CsRGB).ToFzColorspace();
+            var pix = mupdf.mupdf.fz_new_pixmap_from_display_list(NativeDisplayList, ctm, colorspace, alpha ? 1 : 0);
+            return new Pixmap(pix);
         }
 
         /// <summary>
-        /// Run the display list through a draw device and return a pixmap.
+        /// Generate a TextPage from the display list.
         /// </summary>
-        /// <param name="matrix">matrix to use. Default is the identity matrix.</param>
-        /// <param name="colorSpace">the desired colorspace. Default is RGB.</param>
-        /// <param name="alpha">determine whether or not (0, default) to include a transparency channel.</param>
-        /// <param name="clip">restrict rendering to the intersection of this area with Rect.</param>
-        /// <returns>pixmap of the display list.</returns>
-        public Pixmap GetPixmap(Matrix matrix = null, ColorSpace colorSpace = null, int alpha = 0, Rect clip = null)
-        {
-            FzColorspace _colorSpace;
-            if (colorSpace != null)
-                _colorSpace = colorSpace.ToFzColorspace();
-            else
-                _colorSpace = new FzColorspace(mupdf.FzColorspace.Fixed.Fixed_RGB);
-
-            if (matrix == null)
-                matrix = new Matrix(1.0f, 1.0f);
-
-            Pixmap val = Utils.GetPixmapFromDisplaylist(_nativeDisplayList, matrix, _colorSpace, alpha, clip, null);
-            ThisOwn = true;
-
-            return val;
-        }
-
-        /// <summary>
-        /// Run the display list through a text device and return a text page.
-        /// </summary>
-        /// <param name="flags"control which information is parsed into a text page.</param>
-        /// <returns>text page of the display list.</returns>
         public TextPage GetTextPage(int flags = 3)
         {
-            FzStextOptions opts = new FzStextOptions();
+            var opts = new mupdf.fz_stext_options();
             opts.flags = flags;
-
-            FzStextPage textPage = new FzStextPage(_nativeDisplayList, opts);
-            TextPage ret = new TextPage(textPage);
-            ret.ThisOwn = true;
-           
-            return ret;
+            var stp = new mupdf.FzStextPage(NativeDisplayList, new mupdf.FzStextOptions(opts));
+            return new TextPage(stp);
         }
 
         /// <summary>
-        /// Run the display list through a device. The device will populate the display list with its "commands" (i.e. text extraction or image creation). The display list can later be used to "read" a page many times without having to re-interpret it from the document file.
+        /// Replay the display list through a device.
         /// </summary>
-        /// <param name="dw">Device</param>
-        /// <param name="matrix">Transformation matrix to apply to the display list contents.</param>
-        /// <param name="area">Only the part visible within this area will be considered when the list is run through the device.</param>
-        public void Run(DeviceWrapper dw, Matrix matrix, Rect area)
+        public void Run(mupdf.FzDevice dev, Matrix ctm, Rect area = null)
         {
-            _nativeDisplayList.fz_run_display_list(
-                dw.ToFzDevice(),
-                matrix.ToFzMatrix(),
-                area.ToFzRect(),
-                new FzCookie());
+            var cookie = new mupdf.FzCookie();
+            mupdf.mupdf.fz_run_display_list(NativeDisplayList, dev, ctm.ToFzMatrix(), new mupdf.FzRect(), cookie);
         }
+
+        /// <summary>
+        /// Search for a string. Returns list of Quad hit rectangles.
+        /// </summary>
+        public List<Quad> Search(string needle, int maxHits = 16)
+        {
+            using var tp = GetTextPage();
+            return tp.Search(needle, maxHits);
+        }
+
+        /// <summary>
+        /// Extract text from the display list.
+        ///
+        /// Options: 'text', 'html', 'xhtml', 'xml'.
+        /// </summary>
+        public string GetText(string option = "text", int flags = 0)
+        {
+            using var tp = GetTextPage(flags);
+            switch (option.ToLower())
+            {
+                case "text": return tp.ExtractText();
+                case "html": return tp.ExtractHtml();
+                case "xhtml": return tp.ExtractXhtml();
+                case "xml": return tp.ExtractXml();
+                default: return tp.ExtractText();
+            }
+        }
+
+        // ─── IDisposable ────────────────────────────────────────────────
+
+        /// <summary>
+        /// Releases all resources used by the <see cref="DisplayList"/>.
+        /// </summary>
+        public void Dispose()
+        {
+            if (!_disposed)
+            {
+                _nativeDl?.Dispose();
+                _nativeDl = null;
+                _disposed = true;
+            }
+            GC.SuppressFinalize(this);
+        }
+
+        ~DisplayList() { Dispose(); }
+
+        /// <summary>
+        /// Returns a string that represents the current display list.
+        /// </summary>
+        public override string ToString() => $"DisplayList({Rect})";
+
+        // Python/legacy compatibility aliases (mirrors _alias(DisplayList, ...)).
+        public Pixmap get_pixmap(Matrix matrix = null, Colorspace cs = null, bool alpha = false, IRect clip = null)
+            => GetPixmap(matrix, cs, alpha, clip);
+        public TextPage get_textpage(int flags = 3) => GetTextPage(flags);
+        public TextPage getTextPage(int flags = 3) => get_textpage(flags);
     }
 }
