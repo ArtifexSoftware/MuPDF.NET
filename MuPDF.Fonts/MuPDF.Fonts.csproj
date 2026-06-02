@@ -9,8 +9,8 @@
     <RunAnalyzers>false</RunAnalyzers>
     <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
     <PackageId>MuPDF.Fonts</PackageId>
-    <Version>1.0.4-rc.1</Version>
-    <Authors>Artifex</Authors>
+    <Version>1.0.4</Version>
+    <Authors>Artifex Software Inc.</Authors>
     <Description>MuPDF.Fonts - font buffers for MuPDF.NET from pymupdf-fonts.</Description>
     <PackageTags>mupdf;pymupdf;fonts</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
