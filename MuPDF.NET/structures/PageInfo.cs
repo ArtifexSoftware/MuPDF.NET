@@ -2,21 +2,22 @@
 
 namespace MuPDF.NET
 {
-    public class PageInfo
+    /// <summary>
+    /// Typed page text dict from <see cref="TextPage.TextPage2Dict"/>; also dictionary-shaped
+    /// for PyMuPDF <c>get_text("dict")</c> / <c>get_text("rawdict")</c> callers.
+    /// </summary>
+    public class PageInfo : TextPageDict
     {
-        /// <summary>
-        /// width of the clip rectangle
-        /// </summary>
+        /// <summary>width of the clip rectangle</summary>
         public float Width { get; set; }
 
-        /// <summary>
-        /// height of the clip rectangle
-        /// </summary>
+        /// <summary>height of the clip rectangle</summary>
         public float Height { get; set; }
 
-        /// <summary>
-        /// list of Block
-        /// </summary>
+        /// <summary>list of Block</summary>
         public List<Block> Blocks { get; set; }
+
+        /// <summary>Populate dictionary keys from typed fields (PyMuPDF dict shape).</summary>
+        internal void SyncDict(bool raw) => TextPage.SyncPageInfoDict(this, raw);
     }
 }

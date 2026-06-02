@@ -4,49 +4,68 @@ namespace Demo
     {
         internal static void TestMoveFile()
         {
-            string origfilename = @"../../../TestDocuments/Blank.pdf";
+            string filePath = Path.GetFullPath("testmove.pdf");
+            string movedPath = Path.GetFullPath("moved.pdf");
 
-            string filePath = @"testmove.pdf";
+            if (File.Exists(filePath))
+                File.Delete(filePath);
+            if (File.Exists(movedPath))
+                File.Delete(movedPath);
 
-            File.Copy(origfilename, filePath, true);
+            try
+            {
+                File.Copy(Path.GetFullPath("../../../../TestDocuments/Demo/Blank.pdf"), filePath, true);
+            }
+            catch (FileNotFoundException)
+            {
+                using (Document seed = new Document())
+                {
+                    seed.NewPage();
+                    seed.Save(filePath);
+                    seed.Close();
+                }
+            }
 
-            Document d = new Document(filePath);
+            byte[] pdfBytes;
+            using (Document d = new Document(filePath))
+            {
+                Page page = d[0];
 
-            Page page = d[0];
-            
-            Point tl = new Point(100, 120);
-            Point br = new Point(300, 150);
+                Point tl = new Point(100, 120);
+                Point br = new Point(300, 150);
 
-            Rect rect = new Rect(tl, br);
-            
-            TextWriter pw = new TextWriter(page.TrimBox);
-            /*
-            Font font = new Font(fontName: "tiro");
+                Rect rect = new Rect(tl, br);
 
-            List<(string, float)> ret = pw.FillTextbox(rect, "This is a test to overwrite the original file and move it", font, fontSize: 24);
-            */
-            pw.WriteText(page);
-            
-            page.Dispose();
+                TextWriter pw = new TextWriter(page.TrimBox);
+                /*
+                Font font = new Font(fontName: "tiro");
 
-            MemoryStream tmp = new MemoryStream();
+                List<(string, float)> ret = pw.FillTextbox(rect, "This is a test to overwrite the original file and move it", font, fontSize: 24);
+                */
+                pw.WriteText(page);
 
-            d.Save(tmp, garbage: 3, deflateFonts: 1, deflate: 1);
+                page.Dispose();
 
-            d.Close();
+                using MemoryStream tmp = new MemoryStream();
+                d.Save(tmp, garbage: 3, deflateFonts: 1, deflate: 1);
+                pdfBytes = tmp.ToArray();
+            }
 
-            File.WriteAllBytes(filePath, tmp.ToArray());
+            using (var fs = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None))
+            {
+                fs.Write(pdfBytes, 0, pdfBytes.Length);
+                fs.Flush(true);
+            }
 
-            tmp.Dispose();
-
-            File.Move(filePath, @"moved.pdf", true);
+            File.Move(filePath, movedPath, true);
+            Console.WriteLine($"Moved {filePath} -> {movedPath}");
         }
 
         internal static void TestMetadata()
         {
             Console.WriteLine("\n=== TestMetadata =====================");
 
-            string testFilePath = @"../../../TestDocuments/Annot.pdf";
+            string testFilePath = @"../../../../TestDocuments/Demo/Annot.pdf";
 
             Document doc = new Document(testFilePath);
 
@@ -66,7 +85,7 @@ namespace Demo
         {
             Console.WriteLine("\n=== TestMorph =====================");
 
-            string testFilePath = @"../../../TestDocuments/Morph.pdf";
+            string testFilePath = @"../../../../TestDocuments/Demo/Morph.pdf";
 
             Document doc = new Document(testFilePath);
             Page page = doc[0];
@@ -89,17 +108,19 @@ namespace Demo
             page.Dispose();
             doc.Save(@"morph.pdf");
             doc.Close();
+
+            Console.WriteLine("Write to morph.pdf");
         }
 
         internal static void TestUnicodeDocument()
         {
             Console.WriteLine("\n=== TestUnicodeDocument =====================");
 
-            string testFilePath = @"../../../TestDocuments/Σ╜áσÑ╜.pdf";
+            string testFilePath = @"../../../../TestDocuments/Demo/你好.pdf";
 
             Document doc = new Document(testFilePath);
 
-            doc.Save(@"Σ╜áσÑ╜_.pdf");
+            doc.Save(@"你好_.pdf");
             doc.Close();
 
             Console.WriteLine("TestUnicodeDocument completed.");
@@ -108,7 +129,7 @@ namespace Demo
         internal static void TestMemoryLeak()
         {
             Console.WriteLine("\n=== TestMemoryLeak =======================");
-            string testFilePath = Path.GetFullPath("../../../TestDocuments/Blank.pdf");
+            string testFilePath = Path.GetFullPath("../../../../TestDocuments/Demo/Blank.pdf");
 
             for (int i = 0; i < 100; i++)
             {

@@ -10,10 +10,10 @@ namespace MuPDF.NET
     /// </summary>
     internal unsafe class Deskew
     {
-        public static void Process(ref SKBitmap inputImage, double minAngle)
+        public static void Process(ref SKBitmap inputImage, float minAngle)
         {
             var angle = ProjectionCalculator.FindRotateAngle(inputImage);
-            angle = (angle * 180 / Math.PI); // to degrees
+            angle = (angle * 180 / (float)Math.PI); // to degrees
 
             if (Math.Abs(angle) > minAngle)
             {
@@ -24,7 +24,7 @@ namespace MuPDF.NET
             }
         }
 
-        private static SKBitmap Rotate(SKBitmap img, double angle, SKFilterQuality quality = SKFilterQuality.Medium)
+        private static SKBitmap Rotate(SKBitmap img, float angle, SKFilterQuality quality = SKFilterQuality.Medium)
         {
             var rotated = new SKBitmap(img.Width, img.Height);
             using (var surface = SKSurface.Create(new SKImageInfo(img.Width, img.Height)))
@@ -60,7 +60,7 @@ namespace MuPDF.NET
             /// <param name="maxSkewAngle">Max skewing angle in degrees</param>
             /// <param name="isBinarized">True if image already was binarized</param>
             /// <returns>Skewing angle in radians</returns>
-            public static double FindRotateAngle(SKBitmap bmp, float precision = 0.2f, int maxSkewAngle = 5, bool isBinarized = false)
+            public static float FindRotateAngle(SKBitmap bmp, float precision = 0.2f, int maxSkewAngle = 5, bool isBinarized = false)
             {
                 using (var wr = new UnmanagedImage(bmp))
                 {
@@ -78,7 +78,7 @@ namespace MuPDF.NET
                 }
             }
 
-            private static double FindMaxOnHistogram(int[] hist, int dY, int dX)
+            private static float FindMaxOnHistogram(int[] hist, int dY, int dX)
             {
                 var maxVal = 0;
                 int bestIndex = -1;
@@ -118,7 +118,7 @@ namespace MuPDF.NET
                 }
 
                 //calc angle
-                var a = Math.Atan2(dy, dX);
+                float a = (float)Math.Atan2(dy, dX);
                 return a;
             }
 
@@ -131,7 +131,7 @@ namespace MuPDF.NET
 
                 var hist = new int[1 + dY * 2];
 
-                Parallel.For(0, h, (y) =>
+                ParallelRunner.For(0, h, (y) =>
                 //for (int y = 0; y < h; y++)
                 {
                     var ptr = wr.StartGreen + y * wr.Stride;
@@ -313,7 +313,7 @@ namespace MuPDF.NET
             var th1 = LINE_BRIGHTNESS * minLineLength;
             var th2 = NO_LINE_BRIGHTNESS * minLineLength;
 
-            Parallel.For(maxLineWidth, h - maxLineWidth, (y) =>
+            ParallelRunner.For(maxLineWidth, h - maxLineWidth, (y) =>
             {
                 var row0 = integral[y - maxLineWidth];
                 var row1 = integral[y];
@@ -376,7 +376,7 @@ namespace MuPDF.NET
             return res;
         }
 
-        private static double CalcWhitePercent(int[][] integral, Segment segment)
+        private static float CalcWhitePercent(int[][] integral, Segment segment)
         {
             var sum = integral[segment.To.Y][segment.To.X + 1] - integral[segment.From.Y][segment.From.X];
             return sum / segment.Length;
@@ -688,7 +688,7 @@ namespace MuPDF.NET
 
             var rows = new int[wr.Height][];
 
-            Parallel.For(0, h, (y) =>
+            ParallelRunner.For(0, h, (y) =>
             {
                 var row = rows[y] = new int[w + 1];
                 var sum = 0;
@@ -715,7 +715,7 @@ namespace MuPDF.NET
 
             var cols = new int[wr.Width][];
 
-            Parallel.For(0, w, (x) =>
+            ParallelRunner.For(0, w, (x) =>
             {
                 var col = cols[x] = new int[h + 1];
                 var sum = 0;
@@ -936,7 +936,7 @@ namespace MuPDF.NET
     internal class TiltModeler
     {
         // models and corrects any tilt in input image
-        public static void Process(ref SKBitmap inpImage, double minAngle)
+        public static void Process(ref SKBitmap inpImage, float minAngle)
         {
             List<SKPoint> points = new List<SKPoint>();
 
@@ -966,8 +966,8 @@ namespace MuPDF.NET
                 }
             }
 
-            double m, c;
-            double rSqr = Ransac(points, out m, out c);
+            float m, c;
+            float rSqr = Ransac(points, out m, out c);
             float slope = (float)Math.Round(Math.Atan(m) * 180 / Math.PI, 2);
 
             if (Math.Abs(slope) > minAngle)
@@ -979,7 +979,7 @@ namespace MuPDF.NET
         }
 
         // Ransac based tilt estimation from input image
-        private static double Ransac(List<SKPoint> points, out double optM, out double optC)
+        private static float Ransac(List<SKPoint> points, out float optM, out float optC)
         {
             optM = 0;
             optC = 0;
@@ -989,7 +989,7 @@ namespace MuPDF.NET
             if (n < 10) return (99999);
             Random rand = new Random();
             List<SKPoint> subset = new List<SKPoint>();
-            double minErr = 9999999;
+            float minErr = 9999999;
 
             for (int iter = 0; iter < 10000; iter++)
             {
@@ -998,9 +998,9 @@ namespace MuPDF.NET
                     int p = (int)(rand.NextDouble() * n);
                     subset.Add(points[p]);
                 }
-                double m, c;
+                float m, c;
                 LeastSquare(subset, out m, out c);
-                double rSqr = Evalute(points, m, c);
+                float rSqr = Evalute(points, m, c);
                 subset.Clear();
                 if (rSqr < minErr)
                 {
@@ -1013,39 +1013,39 @@ namespace MuPDF.NET
         }
 
         //evaluated linear model
-        private static double Evalute(List<SKPoint> points, double m, double c)
+        private static float Evalute(List<SKPoint> points, float m, float c)
         {
-            double rSqr = 0;
-            List<double> errors = new List<double>();
+            float rSqr = 0;
+            List<float> errors = new List<float>();
             for (int i = 0; i < points.Count; i++)
             {
-                double x = points[i].Y;
-                double y = points[i].X;
+                float x = points[i].Y;
+                float y = points[i].X;
 
-                double yp = m * x + c;
-                double err = yp - y;
+                float yp = m * x + c;
+                float err = yp - y;
 
                 err *= err;
                 errors.Add(err);
             }
             errors.Sort();
-            rSqr = Math.Sqrt(errors[errors.Count / 4]);
+            rSqr = (float)Math.Sqrt(errors[errors.Count / 4]);
             return rSqr;
         }
 
         // Least square estimation of tilt parameters
-        private static void LeastSquare(List<SKPoint> points, out double m, out double c)
+        private static void LeastSquare(List<SKPoint> points, out float m, out float c)
         {
-            double sx = 0;
-            double sy = 0;
-            double sxy = 0;
-            double syy = 0;
-            double sxx = 0;
+            float sx = 0;
+            float sy = 0;
+            float sxy = 0;
+            float syy = 0;
+            float sxx = 0;
 
             for (int i = 0; i < points.Count; i++)
             {
-                double x = points[i].Y;
-                double y = points[i].X;
+                float x = points[i].Y;
+                float y = points[i].X;
 
                 sx += x;
                 sy += y;
@@ -1411,7 +1411,7 @@ namespace MuPDF.NET
 
     internal class Gamma
     {
-        public static void Process(ref SKBitmap bitmap, double gamma)
+        public static void Process(ref SKBitmap bitmap, float gamma)
         {
             byte[] gammaLUT = GammaLUT(gamma);
 
@@ -1452,12 +1452,12 @@ namespace MuPDF.NET
         }
 
         // Create the gamma correction lookup table
-        private static byte[] GammaLUT(double gamma_new)
+        private static byte[] GammaLUT(float gamma_new)
         {
             byte[] gammaLUT = new byte[256];
 
             for (int i = 0; i < gammaLUT.Length; i++)
-                gammaLUT[i] = (byte)(255 * Math.Pow((double)i / (double)255, gamma_new));
+                gammaLUT[i] = (byte)(255 * Math.Pow((float)i / (float)255, gamma_new));
 
             return gammaLUT;
         }
@@ -1563,7 +1563,7 @@ namespace MuPDF.NET
             ConvolutionCore(ref bitmap, mask, len * len, 0);
         }
 
-        private static bool ConvolutionCore(ref SKBitmap bmp, int[,] mask, double divfactor, double offset)
+        private static bool ConvolutionCore(ref SKBitmap bmp, int[,] mask, float divfactor, float offset)
         {
             if (bmp.ColorType != SKColorType.Rgb888x)
                 return false;
@@ -1613,9 +1613,9 @@ namespace MuPDF.NET
                         }
 
                         dstPixels[y * w + x] = new SKColor(
-                            AdjustByte((double)r / divfactor + offset),
-                            AdjustByte((double)g / divfactor + offset),
-                            AdjustByte((double)b / divfactor + offset));
+                            AdjustByte((float)r / divfactor + offset),
+                            AdjustByte((float)g / divfactor + offset),
+                            AdjustByte((float)b / divfactor + offset));
                     }
                 }
             }
@@ -1633,7 +1633,7 @@ namespace MuPDF.NET
             return true;
         }
 
-        private static byte AdjustByte(double value)
+        private static byte AdjustByte(float value)
         {
             if (value < 0) return 0; else if (value > 255) return 255;
             return (byte)value;
@@ -2201,7 +2201,7 @@ namespace MuPDF.NET
     /// </summary>
     internal class Scale
     {
-        public static SKSizeI Process(ref SKBitmap bitmap, double scale, SKFilterQuality filterQuality)
+        public static SKSizeI Process(ref SKBitmap bitmap, float scale, SKFilterQuality filterQuality)
         {
             int width = (int)(bitmap.Width * scale);
             int height = (int)(bitmap.Height * scale);

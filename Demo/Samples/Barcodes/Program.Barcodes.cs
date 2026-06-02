@@ -6,7 +6,7 @@ namespace Demo
         {
             Console.WriteLine("\n=== TestWriteBarcode1 =====================");
 
-            string testFilePath = Path.GetFullPath("../../../TestDocuments/Blank.pdf");
+            string testFilePath = Path.GetFullPath("../../../../TestDocuments/Demo/Blank.pdf");
             Document doc = new Document(testFilePath);
 
             Page page = doc[0];
@@ -82,7 +82,7 @@ namespace Demo
 
             Console.WriteLine("\n=== TestReadDataMatrix =======================");
 
-            string testFilePath = Path.GetFullPath("../../../TestDocuments/Barcodes/datamatrix.pdf");
+            string testFilePath = Path.GetFullPath("../../../../TestDocuments/Demo/Barcodes/datamatrix.pdf");
             Document doc = new Document(testFilePath);
 
             Page page = doc[0];
@@ -144,7 +144,7 @@ namespace Demo
             Console.WriteLine("\n=== TestReadBarcode =======================");
 
             Console.WriteLine("--- Read from image file ----------");
-            string testFilePath1 = Path.GetFullPath("../../../TestDocuments/Barcodes/rendered.bmp");
+            string testFilePath1 = Path.GetFullPath("../../../../TestDocuments/Demo/Barcodes/rendered.bmp");
 
             Rect rect1 = new Rect(1260, 390, 1720, 580);
             List<Barcode> barcodes2 = Utils.ReadBarcodes(testFilePath1, clip:rect1);
@@ -158,7 +158,7 @@ namespace Demo
 
             Console.WriteLine("--- Read from pdf file ----------");
 
-            string testFilePath = Path.GetFullPath("../../../TestDocuments/Barcodes/Samples.pdf");
+            string testFilePath = Path.GetFullPath("../../../../TestDocuments/Demo/Barcodes/Samples.pdf");
             Document doc = new Document(testFilePath);
 
             Page page = doc[0];
@@ -179,7 +179,7 @@ namespace Demo
             int i = 0;
             /*
             Console.WriteLine("=== Read from image file =====================");
-            string testFilePath1 = Path.GetFullPath("../../../TestDocuments/Barcodes/2.png");
+            string testFilePath1 = Path.GetFullPath("../../../../TestDocuments/Demo/Barcodes/2.png");
 
             List<Barcode> barcodes2 = Utils.ReadBarcodes(testFilePath1, autoRotate:true);
 
@@ -194,7 +194,7 @@ namespace Demo
             Console.WriteLine("--- Read from pdf file ----------");
 
             string testImagePath = @"test.png";
-            string testFilePath = Path.GetFullPath("../../../TestDocuments/Barcodes/input.pdf");
+            string testFilePath = Path.GetFullPath("../../../../TestDocuments/Demo/Barcodes/input.pdf");
             Document doc = new Document(testFilePath);
 
             Page page = doc[0];
@@ -239,7 +239,7 @@ namespace Demo
         {
             Console.WriteLine("\n=== TestWriteBarcode =======================");
             Console.WriteLine("--- Write to pdf file ----------");
-            string testFilePath = Path.GetFullPath("../../../TestDocuments/Blank.pdf");
+            string testFilePath = Path.GetFullPath("../../../../TestDocuments/Demo/Blank.pdf");
             Document doc = new Document(testFilePath);
             Page page = doc[0];
 

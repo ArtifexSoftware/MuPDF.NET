@@ -1,6 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>annotations</Nullable>
     <TargetFrameworks>netstandard2.0;net461;net472;net48;net5.0;net6.0;net7.0;net8.0</TargetFrameworks>
     <Platforms>AnyCPU;x64;x86</Platforms>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
@@ -43,6 +45,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Platforms\**\*.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Remove="Barcode\Decoders\NewDecoders\Datamatrix\mpnonecc200.dat" />
     <None Remove="Barcode\Decoders\NewDecoders\PDF417\symbolmap.txt" />
   </ItemGroup>
@@ -51,6 +57,31 @@
     <EmbeddedResource Include="Barcode\Decoders\NewDecoders\Datamatrix\mpnonecc200.dat" />
     <EmbeddedResource Include="Barcode\Decoders\NewDecoders\PDF417\symbolmap.txt" />
   </ItemGroup>
+  
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\UnicodeData.txt.gz" />
+    <EmbeddedResource Include="Resources\NameAliases.txt.gz" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net461' Or '$(TargetFramework)' == 'net472' Or '$(TargetFramework)' == 'net48'">
+    <Reference Include="System.IO.Compression" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
+    <PackageReference Include="System.IO.Compression" Version="4.3.0" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net461'">
+    <PackageReference Include="System.Text.Json" Version="6.0.10" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net472' Or '$(TargetFramework)' == 'net48' Or '$(TargetFramework)' == 'netstandard2.0'">
+    <PackageReference Include="System.Text.Json" Version="8.0.5" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="MuPDF.NET.Test" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
@@ -58,5 +89,9 @@
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
     <PackageReference Include="SharpZipLib" Version="1.4.2" />
     <PackageReference Include="SkiaSharp" Version="3.119.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MuPDF.Fonts\MuPDF.Fonts.csproj" />
   </ItemGroup>
 </Project>

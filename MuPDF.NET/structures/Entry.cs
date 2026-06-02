@@ -42,5 +42,39 @@
         // form info struct
 
         public Rect Bbox { get; set; } = null;
+
+        // PyMuPDF get_images() tuple aliases (legacy tests / ports).
+        public int xref => Xref;
+        public string smask => Smask.ToString();
+        public int width => (int)Width;
+        public int height => (int)Height;
+        public int bpc => Bpc;
+        public string colorspace => CsName ?? "";
+        public string altCs => AltCsName ?? "";
+        public string name => Name ?? "";
+        public string filter => Filter ?? "";
+
+        /// <summary>Deconstruct like PyMuPDF <c>get_images()</c> row tuples.</summary>
+        public void Deconstruct(
+            out int xref,
+            out string smask,
+            out int width,
+            out int height,
+            out int bpc,
+            out string colorspace,
+            out string altCs,
+            out string name,
+            out string filter)
+        {
+            xref = Xref;
+            smask = Smask.ToString();
+            width = (int)Width;
+            height = (int)Height;
+            bpc = Bpc;
+            colorspace = CsName ?? "";
+            altCs = AltCsName ?? "";
+            name = Name ?? "";
+            filter = Filter ?? "";
+        }
     }
 }

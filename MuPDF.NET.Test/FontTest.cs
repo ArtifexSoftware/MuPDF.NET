@@ -4,34 +4,39 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-using NUnit.Framework;
+using Xunit;
 
 namespace MuPDF.NET.Test
 {
+    [Collection("MuPDF.NET native")]
     public class FontTest
     {
-        [Test]
+        private const string TestClassName = nameof(FontTest);
+        private static string Doc(string fileName) => _Path.ForTestClass(fileName, TestClassName);
+        private static string Out(string fileName) => _Path.ForOutput(fileName, TestClassName);
+
+        [Fact]
         public void Flags()
         {
-            Font font = new Font("kenpixel", "../../../resources/kenpixel.ttf", isBold: 1);
+            Font font = new Font("kenpixel", Doc("kenpixel.ttf"), isBold: 1);
 
             //Assert.Pass();
         }
 
-        [Test]
+        [Fact]
         public void TextLength()
         {
-            Font font = new Font("kenpixel", "../../../resources/kenpixel.ttf", isBold: 1);
+            Font font = new Font("kenpixel", Doc("kenpixel.ttf"), isBold: 1);
 
             float length = font.TextLength("hello world", 15);
 
-            Assert.That(length, Is.Not.Zero);
+            Assert.True(length != 0);
         }
 
-        [Test]
+        [Fact]
         public void SubsetFonts()
         {
-            Document doc = new Document("../../../resources/subset.pdf");
+            Document doc = new Document(Doc("subset.pdf"));
 
             int n = doc.PageCount;
 

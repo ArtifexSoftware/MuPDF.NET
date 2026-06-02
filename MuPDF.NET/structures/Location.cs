@@ -1,4 +1,4 @@
-﻿namespace MuPDF.NET
+namespace MuPDF.NET
 {
     public class Location
     {
@@ -11,5 +11,9 @@
         /// number of page
         /// </summary>
         public int Page { get; set; }
+
+        // Compatibility bridge: allows assignment from modern location tuples.
+        public static implicit operator Location((int chapter, int page) value)
+            => new Location { Chapter = value.chapter, Page = value.page };
     }
 }

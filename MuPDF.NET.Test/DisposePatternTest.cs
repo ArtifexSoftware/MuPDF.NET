@@ -1,25 +1,34 @@
 using System;
 using System.IO;
-using NUnit.Framework;
 using MuPDF.NET;
+using Xunit;
 
 namespace MuPDF.NET.Test
 {
+    [Collection("MuPDF.NET native")]
     public class DisposePatternTest
     {
-        private const string TocPath = "../../../resources/toc.pdf";
+        private const string TestClassName = nameof(DisposePatternTest);
+        private static string Doc(string fileName) => _Path.ForTestClass(fileName, TestClassName);
+        private static string Out(string fileName) => _Path.ForOutput(fileName, TestClassName);
+        private string TocPath = Doc("toc.pdf");
 
-        [Test]
+        private static void AssertDisposeDoesNotThrow(Action dispose)
+        {
+            Assert.Null(Record.Exception(dispose));
+        }
+
+        [Fact]
         public void Document_Dispose_MultipleTimes_DoesNotThrow()
         {
             var doc = new Document(TocPath);
 
             doc.Dispose();
 
-            Assert.DoesNotThrow(() => doc.Dispose());
+            AssertDisposeDoesNotThrow(() => doc.Dispose());
         }
 
-        [Test]
+        [Fact]
         public void Page_Dispose_MultipleTimes_DoesNotThrow()
         {
             var doc = new Document(TocPath);
@@ -27,12 +36,12 @@ namespace MuPDF.NET.Test
 
             page.Dispose();
 
-            Assert.DoesNotThrow(() => page.Dispose());
+            AssertDisposeDoesNotThrow(() => page.Dispose());
 
             doc.Dispose();
         }
 
-        [Test]
+        [Fact]
         public void TextPage_Dispose_MultipleTimes_DoesNotThrow()
         {
             var doc = new Document(TocPath);
@@ -41,23 +50,23 @@ namespace MuPDF.NET.Test
 
             textPage.Dispose();
 
-            Assert.DoesNotThrow(() => textPage.Dispose());
+            AssertDisposeDoesNotThrow(() => textPage.Dispose());
 
             page.Dispose();
             doc.Dispose();
         }
 
-        [Test]
+        [Fact]
         public void Story_Dispose_MultipleTimes_DoesNotThrow()
         {
             var story = new Story("<p>Hello</p>");
 
             story.Dispose();
 
-            Assert.DoesNotThrow(() => story.Dispose());
+            AssertDisposeDoesNotThrow(() => story.Dispose());
         }
 
-        [Test]
+        [Fact]
         public void DisplayList_Dispose_MultipleTimes_DoesNotThrow()
         {
             var rect = new Rect(0, 0, 100, 100);
@@ -65,10 +74,10 @@ namespace MuPDF.NET.Test
 
             dl.Dispose();
 
-            Assert.DoesNotThrow(() => dl.Dispose());
+            AssertDisposeDoesNotThrow(() => dl.Dispose());
         }
 
-        [Test]
+        [Fact]
         public void DocumentWriter_Dispose_MultipleTimes_DoesNotThrow()
         {
             string path = Path.GetTempFileName();
@@ -79,7 +88,7 @@ namespace MuPDF.NET.Test
 
                 writer.Dispose();
 
-                Assert.DoesNotThrow(() => writer.Dispose());
+                AssertDisposeDoesNotThrow(() => writer.Dispose());
             }
             finally
             {
@@ -88,17 +97,17 @@ namespace MuPDF.NET.Test
             }
         }
 
-        [Test]
+        [Fact]
         public void Font_Dispose_MultipleTimes_DoesNotThrow()
         {
             var font = new Font();
 
             font.Dispose();
 
-            Assert.DoesNotThrow(() => font.Dispose());
+            AssertDisposeDoesNotThrow(() => font.Dispose());
         }
 
-        [Test]
+        [Fact]
         public void GraftMap_Dispose_MultipleTimes_DoesNotThrow()
         {
             var doc = new Document(TocPath);
@@ -106,7 +115,7 @@ namespace MuPDF.NET.Test
 
             map.Dispose();
 
-            Assert.DoesNotThrow(() => map.Dispose());
+            AssertDisposeDoesNotThrow(() => map.Dispose());
 
             doc.Dispose();
         }
@@ -116,4 +125,3 @@ namespace MuPDF.NET.Test
         // indirectly via Document/Document.GetToc tests, so we skip a direct idempotency test.
     }
 }
-

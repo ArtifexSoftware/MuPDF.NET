@@ -8,7 +8,7 @@ namespace Demo
         {
             Console.WriteLine("\n=== TestIssue234 =======================");
 
-            var pix = new Pixmap("../../../TestDocuments/Image/boxedpage.jpg"); // 629x1000 image
+            var pix = new Pixmap("../../../../TestDocuments/Demo/Image/boxedpage.jpg"); // 629x1000 image
             var scaled = new Pixmap(pix, 943, 1500, null); // scale up
             byte[] jpeg = scaled.ToBytes("jpg", 65);
 
@@ -26,7 +26,7 @@ namespace Demo
         {
             Console.WriteLine("\n=== TestJBIG2 =======================");
 
-            string testFilePath = Path.GetFullPath("../../../TestDocuments/Jbig2.pdf");
+            string testFilePath = Path.GetFullPath("../../../../TestDocuments/Demo/Jbig2.pdf");
 
             Document doc = new Document(testFilePath);
 
@@ -37,17 +37,17 @@ namespace Demo
 
             doc.RewriteImage(options: opts);
 
-            doc.Save(@"e:\TestRecompressJBIG2.pdf");
+            doc.Save(@"TestRecompressJBIG2.pdf");
             doc.Close();
 
-            Console.WriteLine("Saved e:\\TestRecompressJBIG2.pdf");
+            Console.WriteLine("Saved TestRecompressJBIG2.pdf");
         }
 
         internal static void TestIssue1880()
         {
             Console.WriteLine("\n=== TestIssue1880 =======================");
 
-            string testFilePath = Path.GetFullPath(@"../../../TestDocuments/issue_1880.pdf");
+            string testFilePath = Path.GetFullPath(@"../../../../TestDocuments/Demo/issue_1880.pdf");
 
             Document doc = new Document(testFilePath);
 
@@ -72,8 +72,8 @@ namespace Demo
         {
             Console.WriteLine("\n=== TestIssue213 =======================");
 
-            string origfilename = @"../../../TestDocuments/issue_213.pdf";
-            string outfilename = @"../../../TestDocuments/Blank.pdf";
+            string origfilename = @"../../../../TestDocuments/Demo/issue_213.pdf";
+            string outfilename = @"../../../../TestDocuments/Demo/Blank.pdf";
             float newWidth = 0.5f;
 
             Document inputDoc = new Document(origfilename);
@@ -111,7 +111,7 @@ namespace Demo
                             }
                             else if (item.Type == "re")
                             {
-                                shape.DrawRect(item.Rect, item.Orientation);
+                                shape.DrawRect(item.Rect, Math.Abs((float)item.Orientation/2));
                                 //writer.Write($"{i:000}\\] rect: {item.Type} >>> {item.Rect}, {item.Orientation}\\n");
                             }
                             else if (item.Type == "qu")

@@ -4,11 +4,11 @@ using System.Threading;
 namespace MuPDF.NET
 {
 #if ENABLE_PARALLEL
-    internal static class Parallel
+    internal static class ParallelRunner
     {
         static int coreCount;
 
-        static Parallel()
+        static ParallelRunner()
         {
             coreCount = 8;
         }
@@ -76,7 +76,7 @@ namespace MuPDF.NET
 #endif
 
 #if !ENABLE_PARALLEL
-    internal static class Parallel
+    internal static class ParallelRunner
     {
         public static void For(int fromInclusive, int toExclusive, Action<int> act)
         {

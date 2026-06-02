@@ -1,7 +1,7 @@
 using ICSharpCode.SharpZipLib.Tar;
 using ICSharpCode.SharpZipLib.Zip;
 using MuPDF.NET;
-using NUnit.Framework;
+using Xunit;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -13,24 +13,30 @@ namespace MuPDF.NET.Test
 {
     public class PageTest : PdfTestBase
     {
-        [SetUp]
-        public void Setup()
+        private const string TestClassName = nameof(PageTest);
+        private static string Doc(string fileName) => _Path.ForTestClass(fileName, TestClassName);
+        private static string Out(string fileName) => _Path.ForOutput(fileName, TestClassName);
+
+        private Document doc;
+        private Page page;
+
+        public PageTest()
         {
-            doc = new Document("../../../resources/toc.pdf");
+            doc = new Document(Doc("toc.pdf"));
             page = doc[0];
         }
 
-        [Test]
+        [Fact]
         public void InsertPageAnnot()// passed but text was never drawn
         {
             Document doc = new Document();
             Page page = doc.NewPage();
 
             // insert text
-            int res = page.InsertText(new Point(100, 100), "hello", fontFile: "../../../resources/kenpixel.ttf", fontName: "kenpixel");
+            int res = page.InsertText(new Point(100, 100), "hello", fontFile: Doc("kenpixel.ttf"), fontName: "kenpixel");
             
             // insert text box
-            page.InsertTextbox(new Rect(300, 100, 400, 300), "hello", fontName: "kenpixel", fontFile: "../../../resources/kenpixel.ttf");
+            page.InsertTextbox(new Rect(300, 100, 400, 300), "hello", fontName: "kenpixel", fontFile: Doc("kenpixel.ttf"));
 
             // add react annot
             page.AddRectAnnot(new Rect(80, 80, 150, 120));
@@ -58,7 +64,7 @@ namespace MuPDF.NET.Test
             points.Add(new Point(200, 200));
             Annot annot = page.AddPolygonAnnot(points);
             annot.SetBorder(width: 0.3f, dashes: new int[] { 2 });
-            annot.SetColors(stroke: Constants.blue, fill: Constants.gold);
+            annot.SetColors(stroke: _Constants.blue, fill: _Constants.gold);
             annot.SetLineEnds(PdfLineEnding.PDF_ANNOT_LE_DIAMOND, PdfLineEnding.PDF_ANNOT_LE_CIRCLE);
             annot.Update();
 
@@ -70,25 +76,25 @@ namespace MuPDF.NET.Test
             page.DrawLine(p1, p2, color: color, width: 9, strokeOpacity: 0.5f);
 
             List<AnnotXref> annots =  doc.PageAnnotXrefs(0);
-            Assert.That(annots.Count, Is.EqualTo(7));
+            Assert.Equal(7, annots.Count);
 
             List<string> names = page.GetAnnotNames();
-            Assert.That(names.Count, Is.EqualTo(7));
+            Assert.Equal(7, names.Count);
 
             string ret = page.SetOpacity("hello", CA: 0.5f, ca: 0.8f);
-            Assert.That(ret, Is.EqualTo("fitzca5080"));
+            Assert.Equal("fitzca5080", ret);
 
             List<PathInfo> pageInfos = page.GetDrawings();
-            Assert.That(pageInfos.Count, Is.EqualTo(9));
+            Assert.Equal(9, pageInfos.Count);
 
-            doc.Save("InsertPageAnnot.pdf");
+            doc.Save(Out("InsertPageAnnot.pdf"));
             doc.Close();
         }
 
-        [Test]
+        [Fact]
         public void ShowPdfPage()
         {
-            Document doc = new Document("../../../resources/toc.pdf");
+            Document doc = new Document(Doc("toc.pdf"));
             Document output = new Document();
             Page page = output.NewPage();
 
@@ -97,16 +103,16 @@ namespace MuPDF.NET.Test
 
             page.ShowPdfPage(r1, doc, 0, rotate: 90);
             page.ShowPdfPage(r2, doc, 0, rotate: -90);
-            output.Save("ShowPdfPage.pdf");
+            output.Save(Out("ShowPdfPage.pdf"));
 
-            Assert.That(page.GetImages().Count, Is.EqualTo(15));
+            Assert.Equal(15, page.GetImages().Count);
 
             output.Close();
             doc.Close();
         }
 
 
-        [Test]
+        [Fact]
         public void InsertHtml()
         {
             Document doc = new Document();
@@ -124,25 +130,26 @@ namespace MuPDF.NET.Test
             link.Kind = LinkType.LINK_GOTO;
             page.InsertLink(link);
 
-            doc.Save("InsertHtml.pdf");
+            doc.Save(Out("InsertHtml.pdf"));
 
-            Assert.That(page.Xref, Is.EqualTo(4));
+            Assert.Equal(4, page.Xref);
 
             page.Dispose();
             doc.Close();
         }
 
-        [Test]
+        [Fact]
         public void Htmlbox1()
         {
             Rect rect = new Rect(100, 100, 200, 200);
             Document doc = new Document();
             Page page = doc.NewPage();
             (float s, float scale) = page.InsertHtmlBox(rect, "hello world", scaleLow: 1, rotate: 90);
-            Assert.That(scale, Is.EqualTo(1));
+            Assert.Equal(1, scale);
+            doc.Save(Out("Htmlbox1.pdf"));
         }
 
-        [Test]
+        [Fact]
         public void Htmlbox2()
         {
             Rect rect = new Rect(100, 250, 300, 350);
@@ -151,107 +158,108 @@ namespace MuPDF.NET.Test
             Page page = doc.NewPage();
 
             (float s, float scale) = page.InsertHtmlBox(rect, text, opacity: 0.5f);
-            Assert.That(s, Is.EqualTo(83.6f));
-
+            Assert.Equal(83.6f, s);
+            doc.Save(Out("Htmlbox2.pdf"));
             //Span span = page.GetText
         }
         /*
-        [Test]
+        [Fact]
         public void InsertImage()
         {
-            Document doc1 = new Document("../../../resources/toc.pdf");
+            Document doc1 = new Document(Doc("toc.pdf"));
             Page page = doc1.LoadPage(0);
 
-            page.InsertImage(new Rect(100, 100, 300, 300), "../../../resources/nur-ruhig.jpg", imageName: "back");
+            page.InsertImage(new Rect(100, 100, 300, 300), Doc("nur-ruhig.jpg"), imageName: "back");
 
             doc1.Save("output.pdf");
             doc1.Close();
         }
         */
-        [Test]
+        [Fact]
         public void InsertHtmlBox()
         {
             Document doc = new Document();
             Page page = doc.NewPage();
 
             Archive archive = new Archive();
-            FileStream st = new FileStream("../../../resources/kenpixel.zip", FileMode.Open);
+            FileStream st = new FileStream(Doc("kenpixel.zip"), FileMode.Open);
             ZipFile css = new ZipFile(st);
-            archive.Add(css, "../../../resources/kenpixel.zip");
+            archive.Add(css, Doc("kenpixel.zip"));
 
             page.InsertHtmlBox(new Rect(100, 100, 300, 300), "<h1 style=\"font-family:kenpixel\">hello</h1>", css: "@font-face {font-family: kenpixel; src: url(./kenpixel.ttf)}", scaleLow: 1, archive: archive);
 
-            doc.Save("output.pdf");
-            Assert.Pass();
+            doc.Save(Out("InsertHtmlBox.pdf"));
+            Assert.True(true);
         }
 
-        [Test]
+        [Fact]
         public void InsertImage1()
         {
-            Document doc1 = new Document("../../../resources/toc.pdf");
+            Document doc1 = new Document(Doc("toc.pdf"));
             Page page = doc1.LoadPage(0);
             List<Entry> images = page.GetImages();
 
             int xref = images[0].Xref;
 
             Pixmap pix = new Pixmap(new ColorSpace(Utils.CS_GRAY), new IRect(0, 0, 1, 1), 0);
-
+            pix.ClearWith();
             int nXref = page.InsertImage(page.Rect, pixmap: pix);
 
-            doc1.Save("InsertImage1.pdf");
+            doc1.Save(Out("InsertImage1.pdf"));
             doc1.Close();
 
-            Assert.That(nXref, Is.EqualTo(201));
+            Assert.Equal(201, nXref);
         }
 
-        [Test]
+        [Fact]
         public void GetImageRects()
         {
-            Document doc = new Document("../../../resources/image-file1.pdf");
+            Document doc = new Document(Doc("image-file1.pdf"));
             Page page = doc.LoadPage(0);
             List<Box> imgs = page.GetImageRects(5, true);
 
-            Assert.That(imgs.Count, Is.EqualTo(2));
+            Assert.Equal(2, imgs.Count);
         }
 
-        [Test]
+        [Fact]
         public void Bbox()
         {
             Document doc = new Document();
             Page page = doc.NewPage();
-            int xref = page.InsertImage(page.Rect, "../../../resources/img-transparent.png");
+            int xref = page.InsertImage(page.Rect, Doc("img-transparent.png"));
             List<Block> imginfo = page.GetImageInfo(xrefs: true);
-            Assert.That(imginfo.Count, Is.EqualTo(1));
+            Assert.Equal(1, imginfo.Count);
 
             Block info = imginfo[0];
-            Assert.That(info.Xref, Is.EqualTo(xref));
+            Assert.Equal(xref, info.Xref);
 
             List<BoxLog> bboxlog = page.GetBboxlog();
-            Assert.That(bboxlog.Count, Is.EqualTo(1));
+            Assert.Equal(1, bboxlog.Count);
 
-            Assert.That(bboxlog[0].Type, Is.EqualTo("fill-image"));
+            Assert.Equal("fill-image", bboxlog[0].Type);
+            doc.Save(Out("Bbox.pdf"));
         }
 
-        [Test]
+        [Fact]
         public void GetDrawings1()
         {
-            Document doc = new Document("../../../resources/drawings.pdf");
+            Document doc = new Document(Doc("drawings.pdf"));
             Page page = doc[0];
 
-            Assert.That(page.GetDrawings(extended: true).Count, Is.Not.Zero);
+            Assert.NotEqual(0, page.GetDrawings(extended: true).Count);
         }
         /*
-        [Test]
+        [Fact]
         public void ExtractImage()
         {
-            string path = "../../../resources/images.pdf";
+            string path = Doc("images.pdf");
             Document doc = new Document();
             Page page = doc.NewPage(width: 500, height: 842);
             Rect r = new Rect(20, 20, 480, 820);
-            page.InsertImage(r, filename: "../../../resources/nur-ruhig.jpg");
+            page.InsertImage(r, filename: Doc("nur-ruhig.jpg"));
             page = doc.NewPage(width: 500, height: 842);
-            page.InsertImage(r, filename: "../../../resources/img-transparent.png");
-            doc.Save(path);
+            page.InsertImage(r, filename: Doc("img-transparent.png"));
+            doc.Save(Out(path));
             doc.Close();
 
             doc = new Document(path);
@@ -259,16 +267,16 @@ namespace MuPDF.NET.Test
             List<Entry> imlist = page.GetImages();
             ImageInfo img = doc.ExtractImage(imlist[0].Xref);
             string ext = img.Ext;
-            Assert.That(ext, Is.EqualTo("jpx"));
+            Assert.Equal("jpx", ext);
 
             page = doc[1];
             imlist = page.GetImages();
             img = doc.ExtractImage(imlist[0].Xref);
             ext = img.Ext;
-            Assert.That(ext, Is.EqualTo("png"));
+            Assert.Equal("png", ext);
         }
         */
-        [Test]
+        [Fact]
         public void ObjectStream1()
         {
             string text = "Hello, world! Hallo, Welt!";
@@ -289,10 +297,11 @@ namespace MuPDF.NET.Test
                     break;
                 }
             }
-            Assert.That(found, Is.True);
+            Assert.True(found);
+            doc.Save(Out("ObjectStream1.pdf"));
         }
 
-        [Test]
+        [Fact]
         public void NamedLink()
         {
             Dictionary<string, LinkType> text = new Dictionary<string, LinkType>()
@@ -329,31 +338,34 @@ namespace MuPDF.NET.Test
             doc = new Document("pdf", pdfData);
             page = doc[0];
 
-            Assert.That(page.GetLinks().Count, Is.Not.Zero);
+            Assert.NotEqual(0, page.GetLinks().Count);
+            doc.Save(Out("NamedLink.pdf"));
         }
 
+        [Fact]
         public void Insert()
         {
             Document doc = new Document();
             Page page = doc.NewPage();
             Rect rect = new Rect(50, 50, 100, 100);
-            Document img = new Document("../../../resources/nur-ruhig.jpg");
+            Document img = new Document(Doc("nur-ruhig.jpg"));
             byte[] tobytes = img.Convert2Pdf();
 
             Document src = new Document("pdf", tobytes);
             int xref = page.ShowPdfPage(rect, src, 0, rotate: -23);
 
             Block img2 = page.GetImageInfo()[0];
-            Assert.That((rect + new Rect(-1, -1, 1, 1)).Contains(img2.Bbox), Is.True);
+            Assert.True((rect + new Rect(-1, -1, 1, 1)).Contains(img2.Bbox));
+            doc.Save(Out("Insert.pdf"));
         }
 
-        [Test]
+        [Fact]
         public void PageLinks()
         {
-            Document doc = new Document("../../../resources/2.pdf");
+            Document doc = new Document(Doc("2.pdf"));
             Page page = doc[-1];
 
-            Assert.That(page.GetLinks().Count, Is.EqualTo(7));
+            Assert.Equal(7, page.GetLinks().Count);
         }
         /*
         [Test]
@@ -376,25 +388,25 @@ namespace MuPDF.NET.Test
                 color: blue,
                 oc: ocg,
                 fontName: "kenpixel",
-                fontFile: "../../../resources/kenpixel.ttf");
+                fontFile: Doc("kenpixel.ttf"));
 
-            Assert.That(page.GetText(), Is.EqualTo(page.GetText(clip: rect)));
+            Assert.Equal(page.GetText(), page.GetText(clip: rect));
 
             doc1.Close();
         }
         */
 
-        [Test]
+        [Fact]
         public void GetDrawings2()
         {
-            Document doc = new Document("../../../resources/test-3591.pdf");
+            Document doc = new Document(Doc("test-3591.pdf"));
             Page page = doc[0];
             List<PathInfo> paths = page.GetDrawings();
             foreach (PathInfo p in paths)
-                Assert.That(p.Width, Is.EqualTo(15));
+                Assert.Equal(15, p.Width);
         }
 
-        [Test]
+        [Fact]
         public void TestInsertHtml()
         {
             Document doc = new Document();
@@ -402,40 +414,42 @@ namespace MuPDF.NET.Test
             Page page = doc.NewPage();
             (float sh, float scale) = page.InsertHtmlBox(rect, "hello world", scaleLow: 0.5f);
 
-            Assert.That(sh.Equals(-1f));
+            Assert.Equal(-1f, sh);
+            doc.Save(Out("TestInsertHtml.pdf"));
         }
 
-        [Test]
+        [Fact]
         public void TestReplaceImage()
         {
-            Document doc = new Document("../../../resources/PageTest/Color.pdf");
+            Document doc = new Document(Doc("Color.pdf"));
             Page page = doc[0];
 
             List<Entry> images = page.GetImages(true);
 
-            page.ReplaceImage(images[0].Xref, "../../../resources/PageTest/_apple.png");
+            page.ReplaceImage(images[0].Xref, Doc("_apple.png"));
 
             List<Block> infos = page.GetImageInfo(xrefs: true);
 
-            Assert.IsTrue(infos.Count == 1);
-            Assert.IsTrue(infos[0].Width == 400);
-            Assert.IsTrue(infos[0].Height == 400);
+            Assert.Equal(1, infos.Count);
+            Assert.Equal(400, infos[0].Width);
+            Assert.Equal(400, infos[0].Height);
 
             page.Dispose();
+            doc.Save(Out("TestReplaceImage.pdf"));
             doc.Close();
         }
 
-        [Test]
+        [Fact]
         public void TestGetTextPageOcr()
         {
-            Document doc = new Document("../../../resources/PageTest/Ocr.pdf");
+            Document doc = new Document(Doc("Ocr.pdf"));
             Page page = doc[0];
 
             TextPage tp = page.GetTextPageOcr((int)TextFlags.TEXT_PRESERVE_SPANS, dpi:100, full: true);
             string txt = tp.ExtractText();
 
-            Assert.IsTrue(txt.Contains("Rebate"));
-            Assert.IsTrue(txt.Contains("Receipt"));
+            Assert.True(txt.Contains("Rebate"));
+            Assert.True(txt.Contains("Receipt"));
 
             page.Dispose();
             doc.Close();

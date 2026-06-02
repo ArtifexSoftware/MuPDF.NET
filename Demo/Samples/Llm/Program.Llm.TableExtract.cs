@@ -55,6 +55,8 @@ namespace Demo
             }
 
             File.WriteAllLines("tables.csv", csvLines, Encoding.UTF8);
+
+            Console.WriteLine("Write to tables.csv");
         }
 
         internal static void TestTableExtract3()

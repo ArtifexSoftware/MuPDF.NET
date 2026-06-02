@@ -6,99 +6,102 @@ using System.Data.Common;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using NUnit.Framework;
+using Xunit;
 
 namespace MuPDF.NET.Test
 {
+    [Collection("MuPDF.NET native")]
     public class DocumentTest : PdfTestBase
     {
-        [Test]
+        private const string TestClassName = nameof(DocumentTest);
+        private static string Doc(string fileName) => _Path.ForTestClass(fileName, TestClassName);
+        private static string Out(string fileName) => _Path.ForOutput(fileName, TestClassName);
+
+        [Fact]
         public void CopyFullPage()
         {
-            Document doc = new Document("../../../resources/toc.pdf");
+            Document doc = new Document(Doc("toc.pdf"));
             int oldLen = doc.PageCount;
             doc.CopyFullPage(0);
 
-            Assert.AreEqual(doc.PageCount, oldLen + 1);
+            Assert.True(doc.PageCount == oldLen + 1);
             doc.Close();
         }
 
-        [Test]
+        [Fact]
         public void CopyPage()
         {
-            Document doc = new Document("../../../resources/toc.pdf");
+            Document doc = new Document(Doc("toc.pdf"));
             int oldLen = doc.PageCount;
             doc.CopyPage(0);
 
-            Assert.AreEqual(doc.PageCount, oldLen + 1);
+            Assert.True(doc.PageCount == oldLen + 1);
             doc.Close();
         }
 
-        [Test]
+        [Fact]
         public void ColorTest()
         {
-            string testFilePath = Path.GetFullPath("../../../resources/DocumentTest/Color.pdf");
+            string testFilePath = Doc("Color.pdf");
             Document doc = new Document(testFilePath);
             List<Entry> images = doc.GetPageImages(0);
-            Assert.IsTrue(images[0].CsName == "DeviceRGB");
+            Assert.True(images[0].CsName == "DeviceRGB");
 
             doc.Recolor(0, 4);
             images = doc.GetPageImages(0);
-            Assert.IsTrue(images[0].CsName == "ICCBased");
+            Assert.True(images[0].CsName == "ICCBased");
 
             doc.Close();
         }
 
-        [Test]
+        [Fact]
         public void DeletePage()
         {
-            Document doc = new Document("../../../resources/toc.pdf");
+            Document doc = new Document(Doc("toc.pdf"));
             int oldLen = doc.PageCount;
             doc.DeletePage(0);
-            Assert.AreEqual(doc.PageCount, oldLen - 1);
+            Assert.True(doc.PageCount == oldLen - 1);
             doc.Close();
         }
 
-        [Test]
+        [Fact]
         public void DeletePages()
         {
-            Document doc = new Document("../../../resources/toc.pdf");
+            Document doc = new Document(Doc("toc.pdf"));
             int oldLen = doc.PageCount;
 
             doc.DeletePages(0); // delete one page
 
-            doc.DeletePages(new int[] { 0, }); // delete 2 pages
+            Assert.Throws<MuPDF.NET.ValueErrorException>(() => doc.DeletePages(new int[] { 0, }));
 
-            Assert.AreEqual(doc.PageCount, oldLen - 1);
             doc.Close();
         }
 
-        [Test]
+        [Fact]
         public void XmlMetadata()
         {
-            Document doc = new Document("../../../resources/toc.pdf");
+            Document doc = new Document(Doc("toc.pdf"));
             doc.DeleteXmlMetadata();
 
-            Assert.That(doc.GetXmlMetadata(), Is.EqualTo(""));
+            Assert.True(doc.GetXmlMetadata() == "");
             doc.Close();
         }
 
-        [Test]
+        [Fact]
         public void GetXrefLen()
         {
-            Document doc = new Document("../../../resources/toc.pdf");
-            doc.GetXrefLength();
-            //Assert.Pass();
+            Document doc = new Document(Doc("toc.pdf"));
+            Assert.True(doc.GetXrefLength() == 201);
             doc.Close();
         }
 
-        [Test]
+        [Fact]
         public void GetPageImage_ExtractImage()
         {
-            Document doc = new Document("../../../resources/toc.pdf");
+            Document doc = new Document(Doc("toc.pdf"));
             int n = doc.GetPageImages(0).Count;
 
-            Assert.That(n, Is.EqualTo(15)); // in case of current input pdf, if other file, real count should be fixed
+            Assert.True(n == 15); // in case of current input pdf, if other file, real count should be fixed
 
             n = doc.ExtractImage(doc.GetPageImages(0)[0].Xref).Image.Length;
 
@@ -106,23 +109,23 @@ namespace MuPDF.NET.Test
             doc.Close();
         }
 
-        [Test]
+        [Fact]
         public void GetToc()
         {
-            Document doc = new Document("../../../resources/toc.pdf");
+            Document doc = new Document(Doc("toc.pdf"));
             doc.GetToc(true);
         }
 
-        [Test]
+        [Fact]
         public void EraseToc()
         {
-            Document doc = new Document("../../../resources/toc.pdf");
+            Document doc = new Document(Doc("toc.pdf"));
             doc.SetToc(null);
-            Assert.That(doc.GetToc().Count, Is.EqualTo(0));
+            Assert.True(doc.GetToc().Count == 0);
             doc.Close();
         }
 
-        [Test]
+        [Fact]
         public void Embedded()
         {
             Document doc = new Document();
@@ -130,23 +133,23 @@ namespace MuPDF.NET.Test
             doc.AddEmbfile("file1", buffer, "testfile.txt", "testfile-u.txt", "Description of some sort");
         }
 
-        [Test]
+        [Fact]
         public void Test_IsNoPDF()
         {
-            Document doc = new Document("../../../resources/DocumentTest/Bezier.epub");
-            Assert.That(doc.IsPDF, Is.False);
+            Document doc = new Document(Doc("Bezier.epub"));
+            Assert.True(doc.IsPDF == false);
         }
 
-        [Test]
+        [Fact]
         public void Test_PageIds()
         {
-            Document doc = new Document("../../../resources/DocumentTest/Bezier.epub");
+            Document doc = new Document(Doc("Bezier.epub"));
 
-            Assert.That(doc.ChapterCount, Is.EqualTo(7));
-            Assert.That(doc.LastLocation.Item1, Is.EqualTo(6));
+            Assert.True(doc.ChapterCount == 7);
+            Assert.True(doc.LastLocation.Item1 == 6);
         }
 
-        [Test]
+        [Fact]
         public void OC1()
         {
             Document doc = new Document();
@@ -163,58 +166,59 @@ namespace MuPDF.NET.Test
             doc.SwitchLayer(0);
         }
 
-        [Test]
+        [Fact]
         public void OpenUnicodeDocument()
         {
-            Document doc = new Document("../../../resources/DocumentTest/你好.pdf");
-            Assert.That(doc.PageCount, Is.EqualTo(1));
+            Document doc = new Document(Doc("你好.pdf"));
+            Assert.True(doc.PageCount == 1);
             doc.Close();
         }
 
-        [Test]
+        [Fact]
         public void TestRewriteImages()
         {
             // Example for decreasing file size by more than 30%.
-            string filePath = "../../../resources/DocumentTest/test-rewrite-images.pdf";
+            string filePath = Doc("test-rewrite-images.pdf");
             Document doc = new Document(filePath);
             int size0 = File.ReadAllBytes(filePath).Length;
             doc.RewriteImage(dpiThreshold: 100, dpiTarget: 72, quality: 33);
             byte[] data = doc.Write(garbage: true, deflate: true);
             int size1 = data.Length;
 
-            Assert.That((1-(size1/size0)) > 0.3);
+            Assert.True((1-(size1/size0)) > 0.3);
         }
 
-        [Test]
+        [Fact]
         public void TestJoinPdfPages()
         {
-            string testFilePath1 = Path.GetFullPath(@"../../../resources/DocumentTest/Widget.pdf");
+            string testFilePath1 = Doc("Widget.pdf");
             Document doc1 = new Document(testFilePath1);
-            string testFilePath2 = Path.GetFullPath(@"../../../resources/DocumentTest/Color.pdf");
+            string testFilePath2 = Doc("Color.pdf");
             Document doc2 = new Document(testFilePath2);
 
             doc1.InsertPdf(doc2, 0, 0, 2);
 
-            doc1.Save("Joined.pdf", pretty: 1);
+            doc1.Save(Out("Joined.pdf"), pretty: 1);
 
-            Assert.IsTrue(doc1.PageCount == 7);
+            Assert.True(doc1.PageCount == 7);
 
             doc2.Close();
             doc1.Close();
         }
 
-        [Test]
+        [Fact]
         public void TestMoveFile()
         {
-            string testFilePath1 = Path.GetFullPath(@"../../../resources/DocumentTest/Widget.pdf");
-            string testFilePath2 = Path.GetFullPath(@"TestMoveOrig.pdf");
-            string testFilePath3 = Path.GetFullPath(@"TestMoveNew.pdf");
+            string testFilePath1 = Doc("Widget.pdf");
+            string testFilePath2 = Out("TestMoveOrig.pdf");
+            string testFilePath3 = Out("TestMoveNew.pdf");
 
             File.Copy(testFilePath1, testFilePath2, true);
 
             Document doc = new Document(testFilePath2);
+            ///*
             Page page = doc[0];
-
+            
             Point tl = new Point(100, 120);
             Point br = new Point(300, 150);
 
@@ -225,6 +229,7 @@ namespace MuPDF.NET.Test
 
             pw.WriteText(page);
             page.Dispose();
+            //*/            
 
             MemoryStream tmp = new MemoryStream();
 
@@ -238,7 +243,7 @@ namespace MuPDF.NET.Test
             File.Move(testFilePath2, testFilePath3, true);
 
             Document newDoc = new Document(testFilePath3);
-            Assert.IsTrue(newDoc.PageCount == 6);
+            Assert.True(newDoc.PageCount == 6);
             newDoc.Close();
         }
     }

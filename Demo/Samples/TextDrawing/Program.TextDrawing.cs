@@ -31,8 +31,8 @@ namespace Demo
 
         internal static void TestDrawShape()
         {
-            string origfilename = @"../../../TestDocuments/NewAnnots.pdf";
-            string outfilename = @"../../../TestDocuments/Blank.pdf";
+            string origfilename = @"../../../../TestDocuments/Demo/NewAnnots.pdf";
+            string outfilename = @"../../../../TestDocuments/Demo/Blank.pdf";
             float newWidth = 0.5f;
 
             Document inputDoc = new Document(origfilename);
@@ -68,7 +68,7 @@ namespace Demo
                             }
                             else if (item.Type == "re")
                             {
-                                shape.DrawRect(item.Rect, item.Orientation);
+                                shape.DrawRect(item.Rect, Math.Abs((float)item.Orientation/2));
                                 //writer.Write($"{i:000}\\] rect: {item.Type} >>> {item.Rect}, {item.Orientation}\\n");
                             }
                             else if (item.Type == "qu")
@@ -123,6 +123,8 @@ namespace Demo
 
             outputDoc.Save(@"TestDrawShape.pdf");
             outputDoc.Close();
+
+            Console.WriteLine("Write to TestDrawShape.pdf");
 
             //writer.Close();
         }
@@ -189,7 +191,9 @@ namespace Demo
                 Document doc = new Document();
 
                 Page page0 = doc.NewPage();
-                Page page1 = doc.NewPage(pno: -1, width: 595, height: 842);
+                doc.NewPage(pno: -1, width: 595, height: 842);
+                page0 = doc[0];
+                Page page1 = doc[1];
 
                 string fontDir = Environment.GetFolderPath(Environment.SpecialFolder.Fonts);
 
@@ -199,7 +203,7 @@ namespace Demo
                 Rect rect1 = new Rect(100, 100, 510, 200);
                 Rect rect2 = new Rect(100, 250, 300, 400);
 
-                MuPDF.NET.Font font1 = new MuPDF.NET.Font("asdfasdf");
+                MuPDF.NET.Font font1 = new MuPDF.NET.Font("helv");
                 //MuPDF.NET.Font font1 = new MuPDF.NET.Font("arial", fontDir+"\\arial_0.ttf");
                 MuPDF.NET.Font font2 = new MuPDF.NET.Font("times", fontDir + "\\times.ttf");
 
@@ -207,18 +211,18 @@ namespace Demo
                 string text2 = "This is another test with Times New Roman font.";
 
                 MuPDF.NET.TextWriter tw1 = new MuPDF.NET.TextWriter(page0.Rect);
-                tw1.FillTextbox(rect: rect1, text: text1, font: font1, fontSize:20);
+                tw1.FillTextbox(rect: rect1, text: text1, font: font1, fontSize:15);
                 font1.Dispose();
                 tw1.WriteText(page0);
 
-                MuPDF.NET.TextWriter tw2 = new MuPDF.NET.TextWriter(page0.Rect, color: red);
+                MuPDF.NET.TextWriter tw2 = new MuPDF.NET.TextWriter(page1.Rect, color: red);
                 tw2.FillTextbox(rect: rect2, text: text2, font: font2, fontSize: 10, align: (int)TextAlign.TEXT_ALIGN_LEFT);
                 font2.Dispose();
-                tw2.WriteText(page0);
-
-                doc.Save(@"TestTextFont.pdf");
+                tw2.WriteText(page1);
 
                 page0.Dispose();
+
+                doc.Save(@"TestTextFont.pdf");
                 doc.Close();
 
                 Console.WriteLine("Write to TestTextFont.pdf");
@@ -254,6 +258,7 @@ namespace Demo
 
             newDoc.Save(@"TestLineAnnot1.pdf");
             newDoc.Close();
+            Console.WriteLine("Write to TestLineAnnot1.pdf");
 
             Document doc = new Document(@"TestLineAnnot1.pdf"); // open a document
             List<Annot> annotationsToUpdate = new List<Annot>();
@@ -270,6 +275,8 @@ namespace Demo
             annotationsToUpdate.Clear();
             doc.Save(@"TestLineAnnot2.pdf"); // Save the modified document
             doc.Close(); // Close the document
+
+            Console.WriteLine("Write to TestLineAnnot2.pdf");
         }
 
         internal static void TestHelloWorldToNewDocument(string[] args)
@@ -303,7 +310,7 @@ namespace Demo
         internal static void TestHelloWorldToExistingDocument(string[] args)
         {
             Console.WriteLine("\n=== TestHelloWorldToExistingDocument =======================");
-            string testFilePath = Path.GetFullPath("../../../TestDocuments/Blank.pdf");
+            string testFilePath = Path.GetFullPath("../../../../TestDocuments/Demo/Blank.pdf");
             Document doc = new Document(testFilePath);
             
             Page page = doc[0];

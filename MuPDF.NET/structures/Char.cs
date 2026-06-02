@@ -1,4 +1,4 @@
-﻿using mupdf;
+using mupdf;
 
 namespace MuPDF.NET
 {

@@ -1,558 +1,1070 @@
-﻿using mupdf;
-using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Linq;
 
 namespace MuPDF.NET
 {
-    public class Widget
+    /// <summary>
+    /// PDF form field (widget) for interactive forms (PyMuPDF <c>Widget</c>).
+    /// </summary>
+    /// <remarks>
+    /// <para>PDF only. Widgets are a specialized annotation type for user input. Traverse a page with
+    /// <see cref="Page.FirstWidget"/> and <see cref="Next"/> (not <see cref="Page.FirstAnnot"/>).</para>
+    /// <para>Create with <see cref="Widget()"/>, set properties, then <see cref="Page.AddWidget"/> or change an
+    /// existing field and call <see cref="Update"/>. Reload the page after adding fields if you need a fresh view.</para>
+    /// <para>Supported types: text, button, checkbox, combobox, listbox, radiobutton (no radio groups), signature (read-only).</para>
+    /// </remarks>
+    public class Widget : IDisposable
     {
-        static Widget()
+        private mupdf.PdfAnnot _nativeWidget;
+        private bool _disposed;
+        private bool _insertMode;
+
+        public Page Parent { get; internal set; }
+        internal Annot BoundAnnot { get; private set; }
+        internal mupdf.PdfAnnot NativeWidget => _nativeWidget;
+
+        // Values used when building a new widget (PyMuPDF Widget() before add_widget).
+        internal WidgetType InsertFieldType { get; private set; } = WidgetType.Unknown;
+        internal string InsertFieldName { get; private set; }
+        internal string InsertFieldValue { get; private set; }
+        internal bool? InsertFieldValueBool { get; private set; }
+        internal string InsertFieldLabel { get; private set; }
+        internal List<string> InsertChoiceValues { get; private set; } // choice fields only (PyMuPDF __init__)
+        internal List<object> InsertChoiceValuesMixed { get; private set; }
+        internal Rect InsertRect { get; private set; }
+        internal string InsertScript { get; private set; }
+        internal string InsertScriptStroke { get; private set; }
+        internal string InsertScriptFormat { get; private set; }
+        internal string InsertScriptChange { get; private set; }
+        internal string InsertScriptCalc { get; private set; }
+        internal string InsertScriptBlur { get; private set; }
+        internal string InsertScriptFocus { get; private set; }
+        internal string InsertBorderStyle { get; private set; } = "S";
+        internal float InsertBorderWidth { get; private set; }
+        internal int? InsertFieldFlags { get; private set; }
+        internal List<float> InsertFillColor { get; private set; }
+        internal List<float> InsertBorderColor { get; private set; }
+        internal List<int> InsertBorderDashes { get; private set; }
+        internal string InsertTextDa { get; private set; } = "";
+        internal int InsertTextMaxLen { get; private set; }
+        internal int InsertFieldDisplay { get; private set; }
+        internal string InsertButtonCaption { get; private set; }
+        internal List<float> InsertTextColor { get; private set; } = new List<float> { 0, 0, 0 };
+        internal string InsertTextFont { get; private set; } = "Helv";
+        internal float InsertTextFontsize { get; private set; }
+        private int _legacyTextFormat;
+        private int _legacyRbParent;
+
+        /// <summary>Creates a widget definition for <see cref="Page.AddWidget"/>.</summary>
+        public Widget()
         {
-            Utils.InitApp();
+            _insertMode = true;
         }
 
-        /// <summary>
-        /// A list of up to 4 floats defining the field’s border color
-        /// </summary>
-        public float[] BorderColor { get; set; }
-
-        /// <summary>
-        /// A string defining the line style of the field’s border
-        /// </summary>
-        public string BorderStyle { get; set; }
-
-        /// <summary>
-        /// A float defining the width of the border line
-        /// </summary>
-        public float BorderWidth { get; set; }
-
-        /// <summary>
-        /// A list/tuple of integers defining the dash properties of the border line
-        /// </summary>
-        public int[] BorderDashes { get; set; }
-
-        /// <summary>
-        /// A sequence of strings defining the valid choices of list boxes and combo boxes
-        /// </summary>
-        public List<dynamic> ChoiceValues { get; set; }
-
-        public int RbParent { get; set; }
-
-        /// <summary>
-        /// A mandatory string defining the field’s name
-        /// </summary>
-        public string FieldName { get; set; }
-
-        /// <summary>
-        /// An optional string containing an “alternate” field name
-        /// </summary>
-        public string FieldLabel { get; set; }
-
-        /// <summary>
-        /// The value of the field
-        /// </summary>
-        public string FieldValue { get; set; }
-
-        /// <summary>
-        /// An integer defining a large amount of properties of a field
-        /// </summary>
-        public int FieldFlags { get; set; }
-
-        /// <summary>
-        /// A mandatory integer defining the field type
-        /// </summary>
-        public int FieldType { get; set; }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        public int FieldDisplay { get; set; }
-
-        /// <summary>
-        /// A string describing (and derived from) the field type
-        /// </summary>
-        public string FieldTypeString { get; set; }
-
-        /// <summary>
-        /// A list of up to 4 floats defining the field’s background color
-        /// </summary>
-        public float[] FillColor { get; set; }
-
-        /// <summary>
-        /// The caption string of a button-type field
-        /// </summary>
-        public string ButtonCaption { get; set; }
-
-        /// <summary>
-        /// A bool indicating the signing status of a signature field, else false
-        /// </summary>
-        public bool IsSigned { get; set; }
-
-        /// <summary>
-        /// A list of 1, 3 or 4 floats defining the text color
-        /// </summary>
-        public float[] TextColor { get; set; }
-
-        /// <summary>
-        /// A string defining the font to be used
-        /// </summary>
-        public string TextFont { get; set; }
-
-        /// <summary>
-        /// A float defining the text fontsize
-        /// </summary>
-        public float TextFontSize { get; set; }
-
-        /// <summary>
-        /// An integer defining the maximum number of text characters
-        /// </summary>
-        public int TextMaxLen { get; set; }
-
-        public int TextFormat { get; set; }
-
-        public string TextDa { get; set; }
-
-        /// <summary>
-        /// JavaScript text (unicode) for an action associated with the widget, or null
-        /// </summary>
-        public string Script { get; set; }
-
-        /// <summary>
-        /// JavaScript text (unicode) to be performed when the user types a key-stroke into a text field or combo box or modifies the selection in a scrollable list box
-        /// </summary>
-        public string ScriptStroke { get; set; }
-
-        /// <summary>
-        /// JavaScript text (unicode) to be performed before the field is formatted to display its current value
-        /// </summary>
-        public string ScriptFormat { get; set; }
-
-        /// <summary>
-        /// JavaScript text (unicode) to be performed when the field’s value is changed
-        /// </summary>
-        public string ScriptChange { get; set; }
-
-        /// <summary>
-        /// JavaScript text (unicode) to be performed to recalculate the value of this field when that of another field changes
-        /// </summary>
-        public string ScriptCalc { get; set; }
-
-        /// <summary>
-        /// JavaScript text (unicode) to be performed on focusing this field
-        /// </summary>
-        public string ScriptBlur { get; set; }
-
-        /// <summary>
-        /// JavaScript text (unicode) to be performed on focusing this field
-        /// </summary>
-        public string ScriptFocus { get; set; }
-
-        /// <summary>
-        /// The PDF xref of the widget
-        /// </summary>
-        public int Xref { get; set; }
-
-        /// <summary>
-        /// The rectangle containing the field
-        /// </summary>
-        public Rect Rect { get; set; }
-
-        public Page Parent { get; set; }
-
-        public PdfAnnot _annot { get; set; }
-
+        /// <summary>Create an empty widget bound to a page (legacy MuPDF.NET API).</summary>
         public Widget(Page page)
         {
             Parent = page;
-            BorderColor = null;
-            BorderStyle = "S";
-            BorderWidth = 0;
-            BorderDashes = null;
-            ChoiceValues = null;
-            RbParent = 0;
-
-            FieldName = null;
-            FieldLabel = null;
-            FieldValue = null;
-            FieldFlags = 0;
-            FieldType = 0;
-            FieldDisplay = 0;
-            FieldTypeString = null;
-
-            FillColor = null;
-            ButtonCaption = null;
-            IsSigned = false;
-            TextColor = new float[] { 0, 0, 0 };
-            TextFont = "Helv";
-            TextFontSize = 0;
-            TextMaxLen = 0;
-            TextFormat = 0;
-            TextDa = "";
-
-            Script = null;
-            ScriptStroke = null;
-            ScriptFormat = null;
-            ScriptCalc = null;
-            ScriptChange = null;
-            ScriptBlur = null;
-            ScriptFocus = null;
-
-            Rect = null;
-            Xref = 0;
+            _insertMode = true;
         }
 
-        public override string ToString()
+        internal Widget(mupdf.PdfAnnot widget, Page page)
         {
-            return $"Widget:(field_type={FieldTypeString}) script={Script}";
+            _nativeWidget = widget;
+            Parent = page;
+            _insertMode = false;
+            SyncFromNative();
+        }
+
+        internal void BindAnnot(mupdf.PdfAnnot annot, Page page, Annot annotWrapper)
+        {
+            _nativeWidget = annot;
+            Parent = page;
+            BoundAnnot = annotWrapper;
+            _insertMode = false;
+        }
+
+        // ─── PyMuPDF Widget attributes (settable on insert widgets) ─────
+
+        /// <summary>
+        /// Field type 1–7 (<see cref="WidgetType"/>). Cannot be changed on an existing widget.
+        /// </summary>
+        public WidgetFieldType FieldType
+        {
+            get
+            {
+                if (_insertMode)
+                    return (int)InsertFieldType;
+                return (int)mupdf.mupdf.pdf_widget_type(_nativeWidget);
+            }
+            set
+            {
+                if (!_insertMode)
+                    throw new InvalidOperationException("cannot set field_type on existing widget");
+                int fieldType = value;
+                if (fieldType < 1 || fieldType > 7)
+                    throw new ValueErrorException("bad field type");
+                InsertFieldType = (WidgetType)fieldType;
+            }
+        }
+
+        /// <summary>Human-readable field type derived from <see cref="FieldType"/>.</summary>
+        public string FieldTypeString
+        {
+            get
+            {
+                return (WidgetType)FieldType switch
+                {
+                    WidgetType.Button => "Button",
+                    WidgetType.Text => "Text",
+                    WidgetType.ComboBox => "ComboBox",
+                    WidgetType.ListBox => "ListBox",
+                    WidgetType.Signature => "Signature",
+                    WidgetType.CheckBox => "CheckBox",
+                    WidgetType.RadioButton => "RadioButton",
+                    _ => "Unknown"
+                };
+            }
+        }
+
+        /// <summary>Mandatory PDF field name (unique within the form).</summary>
+        public string FieldName
+        {
+            get
+            {
+                if (_insertMode)
+                    return InsertFieldName ?? "";
+                var name = mupdf.mupdf.pdf_load_field_name(mupdf.mupdf.pdf_annot_obj(_nativeWidget));
+                return name ?? "";
+            }
+            set
+            {
+                if (_insertMode)
+                    InsertFieldName = value;
+                else
+                    throw new InvalidOperationException("use update_widget to change field_name");
+            }
+        }
+
+        /// <summary>Alternate field name or tooltip (<c>TU</c>); defaults to <see cref="FieldName"/>.</summary>
+        public string FieldLabel
+        {
+            get
+            {
+                if (_insertMode)
+                    return InsertFieldLabel ?? "";
+                return GetInheritableLabel(mupdf.mupdf.pdf_annot_obj(_nativeWidget)) ?? "";
+            }
+            set
+            {
+                if (_insertMode)
+                    InsertFieldLabel = value;
+                else
+                    throw new InvalidOperationException("use update_widget to change field_label");
+            }
         }
 
         /// <summary>
-        /// Ensure text_font is from our list and correctly spelled.
+        /// Optional attribute set by some PyMuPDF tests as <c>field.value</c>; not read by <see cref="Update"/>.
+        /// Use <see cref="FieldValue"/> for the PDF field value.
         /// </summary>
-        /// <returns></returns>
+        public string Value { get; set; }
+
+        /// <summary>Current field value; for buttons use <see cref="OnState"/> or <c>true</c>/<c>false</c> via <see cref="SetFieldValue"/>.</summary>
+        public string FieldValue
+        {
+            get
+            {
+                if (_insertMode)
+                    return InsertFieldValue ?? "";
+                return mupdf.mupdf.pdf_field_value(mupdf.mupdf.pdf_annot_obj(_nativeWidget)) ?? "";
+            }
+            set => SetFieldValue(value);
+        }
+
+        /// <summary>Set field value (PyMuPDF accepts bool for button fields).</summary>
+        public void SetFieldValue(object value)
+        {
+            InsertFieldValueBool = null;
+            if (value is bool b)
+            {
+                InsertFieldValueBool = b;
+                InsertFieldValue = b ? (OnState() ?? "Yes") : "Off";
+            }
+            else
+                InsertFieldValue = value?.ToString() ?? "";
+        }
+
+        /// <summary>Valid choices for list and combo boxes (at least two entries when creating).</summary>
+        public List<string> ChoiceValues
+        {
+            get
+            {
+                if (_insertMode)
+                    return InsertChoiceValues ?? new List<string>();
+                var result = new List<string>();
+                var obj = mupdf.mupdf.pdf_annot_obj(_nativeWidget);
+                var opt = mupdf.mupdf.pdf_dict_get(obj, mupdf.mupdf.pdf_new_name("Opt"));
+                if (opt.m_internal == null) return result;
+                int n = mupdf.mupdf.pdf_array_len(opt);
+                for (int i = 0; i < n; i++)
+                {
+                    var item = mupdf.mupdf.pdf_array_get(opt, i);
+                    if (mupdf.mupdf.pdf_is_array(item) != 0)
+                        result.Add(mupdf.mupdf.pdf_to_text_string(mupdf.mupdf.pdf_array_get(item, 1)));
+                    else
+                        result.Add(mupdf.mupdf.pdf_to_text_string(item));
+                }
+                return result;
+            }
+            set
+            {
+                if (_insertMode)
+                {
+                    InsertChoiceValuesMixed = null;
+                    InsertChoiceValues = value;
+                }
+                else
+                    SetChoiceValues(value);
+            }
+        }
+
+        /// <summary>
+        /// Set choice options (PyMuPDF <c>choice_values</c> with strings or 2-item lists/tuples).
+        /// </summary>
+        public void SetChoiceValues(IEnumerable<object> values)
+        {
+            if (values == null)
+            {
+                InsertChoiceValuesMixed = null;
+                InsertChoiceValues = null;
+                return;
+            }
+            InsertChoiceValuesMixed = values.ToList();
+            InsertChoiceValues = null;
+            if (!_insertMode && _nativeWidget?.m_internal != null)
+                Helpers.JmSetChoiceOptions(_nativeWidget, InsertChoiceValuesMixed);
+        }
+
+        /// <summary>Field rectangle on the page.</summary>
+        public Rect Rect
+        {
+            get
+            {
+                if (_insertMode)
+                    return InsertRect;
+                var r = mupdf.mupdf.pdf_bound_annot(_nativeWidget);
+                return new Rect(r.x0, r.y0, r.x1, r.y1);
+            }
+            set
+            {
+                if (_insertMode)
+                    InsertRect = value;
+                else
+                    SetRect(value);
+            }
+        }
+
+        /// <summary>JavaScript on change (PyMuPDF <c>script_change</c>, /AA/V).</summary>
+        public string ScriptChange
+        {
+            get => _insertMode ? InsertScriptChange : GetScript("V");
+            set
+            {
+                if (!_insertMode)
+                    throw new InvalidOperationException("use update_widget to change script_change");
+                InsertScriptChange = value;
+            }
+        }
+
+        /// <summary>Field flags (PyMuPDF <c>field_flags</c>).</summary>
+        public int FieldFlags
+        {
+            get
+            {
+                if (_insertMode)
+                    return InsertFieldFlags ?? 0;
+                return mupdf.mupdf.pdf_field_flags(mupdf.mupdf.pdf_annot_obj(_nativeWidget));
+            }
+            set => InsertFieldFlags = value;
+        }
+
+        /// <summary>Legacy field display flags.</summary>
+        public int FieldDisplay
+        {
+            get => InsertFieldDisplay;
+            set => InsertFieldDisplay = value;
+        }
+
+        /// <summary>Border color (up to four components, 0–1); null disables border drawing.</summary>
+        public IList<float> BorderColor
+        {
+            get => InsertBorderColor;
+            set => InsertBorderColor = ToFloatList(value);
+        }
+
+        /// <summary>Background fill color (up to four components).</summary>
+        public IList<float> FillColor
+        {
+            get => InsertFillColor;
+            set => InsertFillColor = ToFloatList(value);
+        }
+
+        /// <summary>Dash pattern for dashed borders (<see cref="BorderStyle"/> <c>D</c> with <see cref="BorderColor"/> set).</summary>
+        public IList<int> BorderDashes
+        {
+            get => InsertBorderDashes;
+            set => InsertBorderDashes = ToIntList(value);
+        }
+
+        /// <summary>JavaScript for button actions (<c>/A</c>); only supported on button-type fields.</summary>
+        public string Script
+        {
+            get => _insertMode ? InsertScript : GetTopLevelScript();
+            set
+            {
+                if (_insertMode)
+                    InsertScript = value;
+                else
+                    throw new InvalidOperationException("use Update() to change script");
+            }
+        }
+
+        /// <summary>Text max length (PyMuPDF <c>text_maxlen</c>).</summary>
+        public int TextMaxlen
+        {
+            get => MaxLen;
+            set => MaxLen = value;
+        }
+
+        /// <summary>
+        /// Border line style (first character only): <c>S</c> solid, <c>D</c> dashed, etc. (see <see cref="Annot"/> border styles).
+        /// </summary>
+        public string BorderStyle
+        {
+            get => InsertBorderStyle ?? "S";
+            set => InsertBorderStyle = value;
+        }
+
+        /// <summary>Border line width in points (default 1).</summary>
+        public float BorderWidth
+        {
+            get => InsertBorderWidth > 0 ? InsertBorderWidth : 1f;
+            set => InsertBorderWidth = value;
+        }
+
+        /// <summary>Caption text for push-button fields.</summary>
+        public string ButtonCaption
+        {
+            get => InsertButtonCaption;
+            set => InsertButtonCaption = value;
+        }
+
+        /// <summary>Text color for default appearance (PyMuPDF <c>text_color</c>).</summary>
+        public IList<float> TextColor
+        {
+            get => InsertTextColor;
+            set => InsertTextColor = ToFloatList(value) ?? new List<float> { 0, 0, 0 };
+        }
+
+        /// <summary>Text font name (PyMuPDF <c>text_font</c>).</summary>
+        public string TextFont
+        {
+            get => InsertTextFont;
+            set => InsertTextFont = NormalizeTextFont(value);
+        }
+
+        /// <summary>Text font size (PyMuPDF <c>text_fontsize</c>).</summary>
+        public float TextFontsize
+        {
+            get => InsertTextFontsize;
+            set => InsertTextFontsize = value;
+        }
+
+        // Legacy API alias uses capital "S".
+        public float TextFontSize
+        {
+            get => TextFontsize;
+            set => TextFontsize = value;
+        }
+
+        /// <summary>Field default value.</summary>
+        public string FieldDefault
+        {
+            get
+            {
+                if (_insertMode)
+                    return "";
+                var dv = mupdf.mupdf.pdf_dict_get_text_string(mupdf.mupdf.pdf_annot_obj(_nativeWidget),
+                    mupdf.mupdf.pdf_new_name("DV"));
+                return dv ?? "";
+            }
+        }
+
+        /// <summary>PDF object xref of this widget.</summary>
+        public int Xref =>
+            _insertMode ? 0 : mupdf.mupdf.pdf_to_num(mupdf.mupdf.pdf_annot_obj(_nativeWidget));
+
+        /// <summary>Check if field is read only.</summary>
+        public bool IsReadOnly => (FieldFlags & 1) != 0;
+
+        /// <summary>Check if field is required.</summary>
+        public bool IsRequired => (FieldFlags & 2) != 0;
+
+        /// <summary>Maximum text length.</summary>
+        public int MaxLen
+        {
+            get
+            {
+                if (_insertMode)
+                    return InsertTextMaxLen;
+                return mupdf.mupdf.pdf_dict_get_int(mupdf.mupdf.pdf_annot_obj(_nativeWidget),
+                    mupdf.mupdf.pdf_new_name("MaxLen"));
+            }
+            set
+            {
+                if (_insertMode)
+                    InsertTextMaxLen = value;
+            }
+        }
+
+        public int TextMaxLen
+        {
+            get => MaxLen;
+            set => MaxLen = value;
+        }
+
+        /// <summary>Legacy text-format flag (MuPDF.NET compatibility).</summary>
+        public int TextFormat
+        {
+            get => _legacyTextFormat;
+            set => _legacyTextFormat = value;
+        }
+
+        public string TextDa
+        {
+            get => InsertTextDa;
+            set => InsertTextDa = value ?? string.Empty;
+        }
+
+        public int RbParent
+        {
+            get => _legacyRbParent;
+            set => _legacyRbParent = value;
+        }
+
+        /// <summary>Check if text field is multi-line.</summary>
+        public bool IsMultiline => (FieldFlags & (1 << 12)) != 0;
+
+        /// <summary>Check if text field is a comb field.</summary>
+        public bool IsComb => (FieldFlags & (1 << 24)) != 0;
+
+        /// <summary>True when a signature field has a value; false for other field types.</summary>
+        public bool IsSigned
+        {
+            get
+            {
+                if (_insertMode || FieldType != (int)WidgetType.Signature)
+                    return false;
+                var obj = mupdf.mupdf.pdf_annot_obj(_nativeWidget);
+                var v = mupdf.mupdf.pdf_dict_get(obj, mupdf.mupdf.pdf_new_name("V"));
+                return v.m_internal != null && mupdf.mupdf.pdf_is_null(v) == 0;
+            }
+        }
+
+        /// <summary>Next widget on the same page, or null.</summary>
+        public Widget Next
+        {
+            get
+            {
+                if (_insertMode)
+                    return null;
+                var next = mupdf.mupdf.pdf_next_widget(_nativeWidget);
+                return next.m_internal != null ? new Widget(next, Parent) : null;
+            }
+        }
+
+        /// <summary>JavaScript calculation script (PyMuPDF <c>script_calc</c>, /AA/C).</summary>
+        public string ScriptCalc
+        {
+            get => _insertMode ? InsertScriptCalc : GetScript("C");
+            set
+            {
+                if (_insertMode)
+                    InsertScriptCalc = value;
+                else
+                    throw new InvalidOperationException("use Update() to change script_calc");
+            }
+        }
+
+        /// <summary>JavaScript format script (PyMuPDF <c>script_format</c>, /AA/F).</summary>
+        public string ScriptFormat
+        {
+            get => _insertMode ? InsertScriptFormat : GetScript("F");
+            set
+            {
+                if (_insertMode)
+                    InsertScriptFormat = value;
+                else
+                    throw new InvalidOperationException("use Update() to change script_format");
+            }
+        }
+
+        /// <summary>Keystroke validation script (<c>/AA/K</c>).</summary>
+        public string ScriptKeystroke => _insertMode ? InsertScriptStroke : GetScript("K");
+
+        /// <summary>Legacy name for <see cref="ScriptKeystroke"/>.</summary>
+        public string ScriptStroke
+        {
+            get => ScriptKeystroke;
+            set
+            {
+                if (_insertMode)
+                    InsertScriptStroke = value;
+                else
+                    throw new InvalidOperationException("use Update() to change script_stroke");
+            }
+        }
+
+        /// <summary>Alias for <see cref="ScriptChange"/> (PyMuPDF <c>script_validation</c>).</summary>
+        public string ScriptValidation => ScriptChange;
+
+        /// <summary>JavaScript blur script (PyMuPDF <c>script_blur</c>, /AA/Bl).</summary>
+        public string ScriptBlur
+        {
+            get => _insertMode ? InsertScriptBlur : GetScript("Bl");
+            set
+            {
+                if (_insertMode)
+                    InsertScriptBlur = value;
+                else
+                    throw new InvalidOperationException("use Update() to change script_blur");
+            }
+        }
+
+        /// <summary>JavaScript focus script (PyMuPDF <c>script_focus</c>, /AA/Fo).</summary>
+        public string ScriptFocus
+        {
+            get => _insertMode ? InsertScriptFocus : GetScript("Fo");
+            set
+            {
+                if (_insertMode)
+                    InsertScriptFocus = value;
+                else
+                    throw new InvalidOperationException("use Update() to change script_focus");
+            }
+        }
+
+        // ─── Methods ────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Persists property changes to the PDF (required after edits). Optionally syncs <see cref="FieldFlags"/> to the field group.
+        /// </summary>
+        /// <param name="syncFlags">Propagate flags to parent and sibling widgets in a field group.</param>
+        public void Update(bool syncFlags = false)
+        {
+            if (_nativeWidget?.m_internal == null)
+                throw new InvalidOperationException("Annot is not bound to a page");
+            if (InsertFieldType == WidgetType.Unknown)
+                InsertFieldType = (WidgetType)FieldType;
+            if (string.IsNullOrEmpty(InsertFieldName))
+                InsertFieldName = FieldName;
+            if (InsertRect.IsEmpty || InsertRect.IsInfinite)
+            {
+                var r = mupdf.mupdf.pdf_bound_annot(_nativeWidget);
+                InsertRect = new Rect(r.x0, r.y0, r.x1, r.y1);
+            }
+            if (InsertFieldType == WidgetType.RadioButton
+                && InsertFieldValueBool != false
+                && InsertFieldValue != "Off")
+                TurnOffSiblingRadioButtons();
+            Validate();
+            AdjustFont();
+            BuildTextDa();
+            if (!string.IsNullOrEmpty(InsertScriptCalc))
+                Helpers.EnsureWidgetCalc(_nativeWidget);
+            Helpers.JmSetWidgetProperties(_nativeWidget, this);
+            InsertTextDa = "";
+            InsertFieldValueBool = null;
+            if (syncFlags)
+                SyncFlags();
+        }
+
+        /// <summary>Port of PyMuPDF <c>Widget._validate</c>.</summary>
+        internal void Validate()
+        {
+            if (InsertRect.IsEmpty || InsertRect.IsInfinite)
+                throw new ValueErrorException("bad rect");
+            if (InsertFieldType == WidgetType.Unknown || (int)InsertFieldType < 1 || (int)InsertFieldType > 7)
+                throw new ValueErrorException("bad field type");
+            if (string.IsNullOrEmpty(InsertFieldName))
+                throw new ValueErrorException("field name missing");
+            if (InsertFieldLabel == "Unnamed")
+                InsertFieldLabel = null;
+            if (InsertTextColor == null || InsertTextColor.Count == 0)
+                InsertTextColor = new List<float> { 0, 0, 0 };
+            if (string.IsNullOrEmpty(InsertBorderStyle))
+                InsertBorderStyle = "S";
+            else
+                InsertBorderStyle = InsertBorderStyle.ToUpperInvariant().Substring(0, 1);
+
+            bool btnType = InsertFieldType == WidgetType.Button
+                || InsertFieldType == WidgetType.CheckBox
+                || InsertFieldType == WidgetType.RadioButton;
+            if (btnType || string.IsNullOrEmpty(InsertScriptCalc)) InsertScriptCalc = null;
+            if (btnType || string.IsNullOrEmpty(InsertScriptChange)) InsertScriptChange = null;
+            if (btnType || string.IsNullOrEmpty(InsertScriptFormat)) InsertScriptFormat = null;
+            if (btnType || string.IsNullOrEmpty(InsertScriptStroke)) InsertScriptStroke = null;
+            if (btnType || string.IsNullOrEmpty(InsertScriptBlur)) InsertScriptBlur = null;
+            if (btnType || string.IsNullOrEmpty(InsertScriptFocus)) InsertScriptFocus = null;
+            // PyMuPDF _validate: /A script is allowed on buttons; only AA/* scripts are cleared.
+            if (string.IsNullOrEmpty(InsertScript)) InsertScript = null;
+        }
+
         public void AdjustFont()
         {
-            if (string.IsNullOrEmpty(TextFont))
+            InsertTextFont = NormalizeTextFont(InsertTextFont);
+        }
+
+        private static string NormalizeTextFont(string font)
+        {
+            if (string.IsNullOrEmpty(font))
+                return "Helv";
+            foreach (var f in new[] { "Cour", "TiRo", "Helv", "ZaDb" })
             {
-                TextFont = "Helv";
+                if (string.Equals(font, f, StringComparison.OrdinalIgnoreCase))
+                    return f;
+            }
+            return "Helv";
+        }
+
+        private void BuildTextDa()
+        {
+            var tc = InsertTextColor;
+            string fmt;
+            if (tc.Count == 3)
+                fmt = "{0:g} {1:g} {2:g} rg /{3} {4:g} Tf";
+            else if (tc.Count == 1)
+                fmt = "{0:g} g /{1} {2:g} Tf";
+            else if (tc.Count == 4)
+                fmt = "{0:g} {1:g} {2:g} {3:g} k /{4} {5:g} Tf";
+            else
+            {
+                InsertTextDa = "";
                 return;
             }
-            List<string> validFonts = new List<string>() { "Cour", "TiRo", "Helv", "ZaDb" };
-            foreach (string f in validFonts)
-                if (TextFont.ToLower() == f.ToLower())
-                {
-                    TextFont = f;
-                    return;
-                }
-            TextFont = "Helv";
-            return;
+            if (tc.Count == 3)
+                InsertTextDa = string.Format(System.Globalization.CultureInfo.InvariantCulture,
+                    fmt, tc[0], tc[1], tc[2], InsertTextFont, InsertTextFontsize);
+            else if (tc.Count == 1)
+                InsertTextDa = string.Format(System.Globalization.CultureInfo.InvariantCulture,
+                    fmt, tc[0], InsertTextFont, InsertTextFontsize);
+            else
+                InsertTextDa = string.Format(System.Globalization.CultureInfo.InvariantCulture,
+                    fmt, tc[0], tc[1], tc[2], tc[3], InsertTextFont, InsertTextFontsize);
         }
 
-        /// <summary>
-        /// Any widget type checks.
-        /// </summary>
-        /// <returns></returns>
-        public void Checker()
-        {
-            if (!(FieldType >= 1 && FieldType < 8))
-                throw new Exception("bad field type");
-
-            if (FieldType == (int)PdfWidgetType.PDF_WIDGET_TYPE_RADIOBUTTON)
-            {
-                Document doc = Parent.Parent;
-                (string kidsType, string kidsValue) = doc.GetKeyXref(Xref, "Parent/Kids");
-                if (kidsType == "array")
-                {
-                    //List<int> xrefs = kidsValue.Substring(1, kidsValue.Length - 2).Replace("0 R", "").Split("").Select(x => int.Parse(x)).ToList();
-                    List<int> xrefs = kidsValue.Substring(1, kidsValue.Length - 2).Replace("0 R", " ").Split(' ').Select(x => int.Parse(x)).ToList();
-                    foreach (int xref in xrefs)
-                    {
-                        if (xref != Xref)
-                            doc.SetKeyXRef(xref, "AS", "/Off");
-                    }
-                }
-            }
-        }
-
-        /// <summary>
-        /// Extract font name, size and color from default appearance string (/DA object).
-        /// Equivalent to 'pdf_parse_default_appearance' function in MuPDF's 'pdf-annot.c'.
-        /// </summary>
-        /// <returns></returns>
-        public void ParseDa()
-        {
-            if (string.IsNullOrEmpty(TextDa))
-                return;
-            string font = "Helv";
-            float fontSize = 0;
-            float[] col = { 0, 0, 0 };
-            string[] dat = TextDa.Split(null as char[], StringSplitOptions.RemoveEmptyEntries);    // split on any whitespace and remove empty entries
-            for (int i = 0; i < dat.Length; i++)
-            {
-                string item = dat[i];
-                if (item == "Tf")
-                {
-                    font = dat[i - 2].Substring(1);
-                    fontSize = float.Parse(dat[i - 1], System.Globalization.CultureInfo.InvariantCulture);
-                    dat[i] = dat[i - 1] = dat[i - 2] = "";
-                    continue;
-                }
-                if (item == "g")
-                {
-                    col = new float[] { float.Parse(dat[i - 1], System.Globalization.CultureInfo.InvariantCulture) };
-                    dat[i] = dat[i - 1] = "";
-                    continue;
-                }
-                if (item == "rg")
-                {
-                    col = new float[3];
-                    for (int j = i - 3; j < i; j++)
-                        col[j - i + 3] = float.Parse(dat[j], System.Globalization.CultureInfo.InvariantCulture);
-                    dat[i] = dat[i - 1] = dat[i - 2] = dat[i - 3] = "";
-                    continue;
-                }
-            }
-            TextFont = font;
-            TextFontSize = fontSize;
-            TextColor = col;
-            TextDa = "";
-        }
-
-        /// <summary>
-        /// Validate the class entries.
-        /// </summary>
-        /// <returns></returns>
-        public void Validate()
-        {
-            if (Rect.IsInfinite || Rect.IsEmpty)
-                throw new Exception("bad rect");
-            if (string.IsNullOrEmpty(FieldName))
-                throw new Exception("field name missing");
-            if (FieldLabel == "Unnamed")
-                FieldLabel = null;
-            Utils.CheckColor(BorderColor);
-            Utils.CheckColor(FillColor);
-            if (TextColor == null)
-                TextColor = new float[] { 0, 0, 0 };
-            Utils.CheckColor(TextColor);
-
-            if (BorderWidth == 0)
-                BorderWidth = 0;
-            if (TextFontSize == 0)
-                TextFontSize = 0;
-
-            BorderStyle = BorderStyle.ToUpper().Substring(0, 1);
-
-            // standardize content of JavaScript entries
-            bool btnType = (new List<PdfWidgetType> {
-                PdfWidgetType.PDF_WIDGET_TYPE_BUTTON,
-                PdfWidgetType.PDF_WIDGET_TYPE_CHECKBOX,
-                PdfWidgetType.PDF_WIDGET_TYPE_RADIOBUTTON}).Contains((PdfWidgetType)FieldType);
-            if (string.IsNullOrEmpty(Script))
-                Script = null;
-
-            // buttons cannot have the following script actions
-            if (btnType || string.IsNullOrEmpty(ScriptCalc))
-                ScriptCalc = null;
-
-            if (btnType || string.IsNullOrEmpty(ScriptChange))
-                ScriptChange = null;
-
-            if (btnType || string.IsNullOrEmpty(ScriptFormat))
-                ScriptFormat = null;
-
-            if (btnType || string.IsNullOrEmpty(ScriptStroke))
-                ScriptStroke = null;
-
-            if (btnType || string.IsNullOrEmpty(ScriptBlur))
-                ScriptBlur = null;
-
-            if (btnType || string.IsNullOrEmpty(ScriptFocus))
-                ScriptFocus = null;
-
-            Checker(); // any field_type specific checks
-        }
-
-        /// <summary>
-        /// Propagate the field flags.
-        /// If this widget has a "/Parent", set its field flags and that of all
-        /// its /Kids widgets to the value of the current widget.
-        /// Only possible for widgets existing in the PDF.
-        /// </summary>
-        /// <returns>true/false</returns>
+        /// <summary>PyMuPDF <c>Widget._sync_flags</c> — propagate field flags to parent and kids.</summary>
         public bool SyncFlags()
         {
             if (Xref == 0)
-                return false;  // no xref: widget not in the PDF
-            Document doc = this.Parent.Parent; // the owning document
+                return false;
+            var doc = Parent?.Parent;
             if (doc == null)
                 return false;
-            PdfDocument pdf = Document.AsPdfDocument(doc);
-            // load underlying PDF object
-            PdfObj pdf_widget = pdf.pdf_load_object(Xref);
-            PdfObj parent = pdf_widget.pdf_dict_get(new PdfObj("Parent"));
-            if (parent.pdf_is_dict() == 0)
+            var pdf = doc.NativePdfDocument;
+            var pdfWidget = mupdf.mupdf.pdf_load_object(pdf, Xref);
+            var parentObj = mupdf.mupdf.pdf_dict_get(pdfWidget, mupdf.mupdf.pdf_new_name("Parent"));
+            if (mupdf.mupdf.pdf_is_dict(parentObj) == 0)
+                return false;
+
+            int flags = FieldFlags;
+            mupdf.mupdf.pdf_dict_put_int(parentObj, mupdf.mupdf.pdf_new_name("Ff"), flags);
+
+            var kids = mupdf.mupdf.pdf_dict_get(parentObj, mupdf.mupdf.pdf_new_name("Kids"));
+            if (mupdf.mupdf.pdf_is_array(kids) == 0)
             {
-                pdf.Dispose();
-                return false;  // no /Parent: nothing to do
+                Helpers.message("warning: malformed PDF, Parent has no Kids array");
+                return false;
             }
-
-            // put the field flags value into the parent field flags:
-            parent.pdf_dict_put_int(new PdfObj("Ff"), this.FieldFlags);
-
-            // also put that value into all kids of the Parent
-            PdfObj kids = parent.pdf_dict_get(new PdfObj("Kids"));
-            if (kids.pdf_is_array() == 0)
+            int n = mupdf.mupdf.pdf_array_len(kids);
+            for (int i = 0; i < n; i++)
             {
-                Console.WriteLine("warning: malformed PDF, Parent has no Kids array");
-                pdf.Dispose();
-                return false;  // no /Kids: should never happen!
-            }
-
-            for (int i = 0; i < kids.pdf_array_len(); i++)
-            {
-                // access kid widget, and do some precautionary checks
-                PdfObj kid = kids.pdf_array_get(i);
-                if (kid.pdf_is_dict() == 0)
-                    continue;  // not a dict: skip
-                int xref = kid.pdf_to_num();  // get xref of the kid
-                if (xref == this.Xref)  // skip self widget
+                var kid = mupdf.mupdf.pdf_array_get(kids, i);
+                if (mupdf.mupdf.pdf_is_dict(kid) == 0)
                     continue;
-                PdfObj subtype = kid.pdf_dict_get(new PdfObj("Subtype"));
-                if (subtype.pdf_to_name() != "Widget")
+                int kidXref = mupdf.mupdf.pdf_to_num(kid);
+                if (kidXref == Xref)
                     continue;
-                // put the field flags value into the kid field flags:
-                kid.pdf_dict_put_int(new PdfObj("Ff"), this.FieldFlags);
+                var subtype = mupdf.mupdf.pdf_dict_get(kid, mupdf.mupdf.pdf_new_name("Subtype"));
+                if (mupdf.mupdf.pdf_to_name(subtype) != "Widget")
+                    continue;
+                mupdf.mupdf.pdf_dict_put_int(kid, mupdf.mupdf.pdf_new_name("Ff"), flags);
             }
-
-            pdf.Dispose();
-            return true;  // all done
+            return true;
         }
 
+        /// <summary>Set widget rectangle on an existing field (PyMuPDF uses <c>rect</c> on insert widgets).</summary>
+        public void SetRect(Rect rect)
+        {
+            mupdf.mupdf.pdf_set_annot_rect(_nativeWidget, rect.ToFzRect());
+            mupdf.mupdf.pdf_update_annot(_nativeWidget);
+        }
+
+        public void SetChoiceValues(List<string> values)
+        {
+            if (values == null || values.Count == 0)
+            {
+                InsertChoiceValues = null;
+                InsertChoiceValuesMixed = null;
+                return;
+            }
+            InsertChoiceValuesMixed = null;
+            InsertChoiceValues = values;
+            if (!_insertMode && _nativeWidget?.m_internal != null)
+                Helpers.JmSetChoiceOptions(_nativeWidget, values);
+        }
+
+        /// <summary>Refresh the widget appearance stream (MuPDF <c>pdf_update_annot</c>).</summary>
+        public void UpdateAppearance() => mupdf.mupdf.pdf_update_annot(_nativeWidget);
+
         /// <summary>
-        /// Return the names of On / Off (i.e. selected / clicked or not) states a button field may have. While the ‘Off’ state usually is also named like so, the ‘On’ state is often given a name relating to the functional context, for example ‘Yes’, ‘Female’, etc.
-        /// A button may have 'normal' or 'pressed down' appearances. While the 'Off'
-        /// state is usually called like this, the 'On' state is often given a name
-        /// relating to the functional context.
+        /// Appearance state names for checkbox and radio button widgets (PyMuPDF <c>button_states</c>).
         /// </summary>
-        /// <returns></returns>
+        /// <returns>
+        /// Dictionary with keys <c>normal</c> and <c>down</c>, each a list of state names from <c>AP/N</c> and <c>AP/D</c>,
+        /// or null for non-button field types.
+        /// </returns>
         public Dictionary<string, List<string>> ButtonStates()
         {
-            if (!(FieldType == 2 || FieldType == 5))
-                return null;    // no button type
-            Document doc = this.Parent.Parent;  // field already exists on page
+            if (FieldType != (int)WidgetType.CheckBox && FieldType != (int)WidgetType.RadioButton)
+                return null;
+            if (_insertMode || Xref == 0)
+                return null;
+
+            var doc = Parent?.Parent;
             if (doc == null)
                 return null;
 
-            int xref = Xref;
-            Dictionary<string, List<string>> states = new Dictionary<string, List<string>>();
-            states.Add("normal", null);
-            states.Add("down", null);
-            (string, string) apn = doc.GetKeyXref(xref, "AP/N");
-            if (apn.Item1 == "dict")
+            var states = new Dictionary<string, List<string>>
             {
-                List<string> nstates = new List<string>();
-                string t = apn.Item2.Substring(2, apn.Item2.Length - 2 - 2);
-                string[] apnt = t.Split('/').Skip(1).ToArray();
-                foreach (string x in apnt)
-                    nstates.Add(x.Split()[0]);
-                states["normal"] = nstates;
-            }
-            if (apn.Item1 == "xref")
-            {
-                List<string> nstates = new List<string>();
-                int nxref = int.Parse(apn.Item2.Split(' ')[0]);
-                string t = doc.GetXrefObject(nxref);
-                string[] apnt = t.Split('/').Skip(1).ToArray();
-                foreach (string x in apnt)
-                    nstates.Add(x.Split()[0]);
-                states["normal"] = nstates;
-            }
-            (string, string) apd = doc.GetKeyXref(xref, "AP/D");
-            if (apd.Item1 == "dict")
-            {
-                List<string> dstates = new List<string>();
-                string t = apd.Item2.Substring(2, apd.Item2.Length - 2 - 2);
-                string[] apdt = t.Split('/').Skip(1).ToArray();
-                foreach (string x in apdt)
-                    dstates.Add(x.Split()[0]);
-                states["down"] = dstates;
-            }
-            if (apd.Item1 == "xref")
-            {
-                List<string> dstates = new List<string>();
-                int dxref = int.Parse(apd.Item2.Split(' ')[0]);
-                string t = doc.GetXrefObject(dxref);
-                string[] apdt = t.Split('/').Skip(1).ToArray();
-                foreach (string x in apdt)
-                    dstates.Add(x.Split()[0]);
-                states["down"] = dstates;
-            }
+                ["normal"] = null,
+                ["down"] = null,
+            };
+
+            states["normal"] = ReadAppearanceStates(doc, Xref, "AP/N");
+            states["down"] = ReadAppearanceStates(doc, Xref, "AP/D");
             return states;
         }
 
         /// <summary>
-        /// Point to the next form field on the page.
+        /// The “on” value for checkboxes and radio buttons (PyMuPDF <c>on_state</c>).
         /// </summary>
-        public dynamic Next
-        {
-            get
-            {
-                return (new Annot(_annot, Parent)).Next;
-            }
-        }
-
-        /// <summary>
-        /// Return the value of the “ON” state of check boxes and radio buttons. For check boxes this is always the value “Yes”. For radio buttons, this is the value to select / activate the button.
-        /// </summary>
-        /// <returns></returns>
+        /// <returns>The non-<c>Off</c> appearance state name from <see cref="ButtonStates"/>, or <c>Yes</c> if none is found.</returns>
         public string OnState()
         {
-            if (!(FieldType == 2 || FieldType == 5))
+            if (FieldType != (int)WidgetType.CheckBox && FieldType != (int)WidgetType.RadioButton)
                 return null;
-            if (FieldType == 2)
-                return "Yes";
-            Dictionary<string, List<string>> bstate = ButtonStates();
-            if (bstate == null)
-                bstate = new Dictionary<string, List<string>>();
-            foreach (string k in bstate.Keys)
+
+            if (!_insertMode && _nativeWidget?.m_internal != null)
             {
-                foreach (string v in bstate[k])
+                var onstate = mupdf.mupdf.pdf_button_field_on_state(mupdf.mupdf.pdf_annot_obj(_nativeWidget));
+                if (onstate.m_internal != null)
                 {
-                    if (v != "Off")
-                        return v;
+                    string name = mupdf.mupdf.pdf_to_name(onstate);
+                    if (!string.IsNullOrEmpty(name) && name != "Off")
+                        return name;
                 }
             }
-            Console.WriteLine("warning: radio button has no 'On' value");
-            return "";
+
+            var bstate = ButtonStates();
+            if (bstate != null)
+            {
+                foreach (var list in bstate.Values)
+                {
+                    if (list == null) continue;
+                    foreach (string v in list)
+                    {
+                        if (v != "Off")
+                            return v;
+                    }
+                }
+            }
+
+            Helpers.message("warning: radio button has no 'On' value.");
+            return "Yes";
+        }
+
+        private static List<string> ReadAppearanceStates(Document doc, int xref, string key)
+        {
+            var (kind, raw) = doc.XrefGetKey(xref, key);
+            if (kind == "null")
+                return null;
+            if (kind == "dict")
+                return ParseAppearanceStateNames(raw);
+            if (kind == "xref" && int.TryParse(raw.Split(' ')[0], out int subXref))
+                return ParseAppearanceStateNames(doc.XrefObject(subXref));
+            return null;
+        }
+
+        private static List<string> ParseAppearanceStateNames(string pdfObject)
+        {
+            if (string.IsNullOrEmpty(pdfObject))
+                return null;
+            string body = pdfObject.Trim();
+            if (body.StartsWith("<<", StringComparison.Ordinal))
+                body = body.Substring(2);
+            if (body.EndsWith(">>", StringComparison.Ordinal))
+                body = body.Substring(0, body.Length - 2);
+            var names = new List<string>();
+            foreach (string part in body.Split('/'))
+            {
+                if (string.IsNullOrWhiteSpace(part))
+                    continue;
+                string name = part.Split((char[])null, StringSplitOptions.RemoveEmptyEntries)[0];
+                if (!string.IsNullOrEmpty(name))
+                    names.Add(name);
+            }
+            return names.Count > 0 ? names : null;
         }
 
         /// <summary>
-        /// Reset the field’s value to its default – if defined – or remove it. Do not forget to issue update() afterwards.
+        /// Resets <see cref="FieldValue"/> to the default (<c>DV</c>) or clears it; call <see cref="Update"/> afterward if needed.
         /// </summary>
         public void Reset()
         {
-            Utils.ResetWidget(_annot);
+            // TOOLS._reset_widget(self._annot)
+            var obj = mupdf.mupdf.pdf_annot_obj(_nativeWidget);
+            var dv = mupdf.mupdf.pdf_dict_get(obj, mupdf.mupdf.pdf_new_name("DV"));
+            if (dv.m_internal != null)
+                mupdf.mupdf.pdf_dict_put(obj, mupdf.mupdf.pdf_new_name("V"), dv);
+            else
+                mupdf.mupdf.pdf_dict_del(obj, mupdf.mupdf.pdf_new_name("V"));
+            mupdf.mupdf.pdf_update_annot(_nativeWidget);
+        }
+
+        /// <summary>Render widget appearance to a pixmap (PyMuPDF annot pixmap pattern).</summary>
+        public Pixmap GetPixmap(Matrix matrix = null, Colorspace cs = null, bool alpha = false)
+        {
+            var ctm = (matrix ?? Matrix.Identity).ToFzMatrix();
+            var colorspace = (cs ?? Colorspace.Rgb).ToFzColorspace();
+            var pix = mupdf.mupdf.pdf_new_pixmap_from_annot(_nativeWidget, ctm, colorspace, new mupdf.FzSeparations(), alpha ? 1 : 0);
+            return new Pixmap(pix);
+        }
+
+        private string GetTopLevelScript()
+        {
+            var obj = mupdf.mupdf.pdf_annot_obj(_nativeWidget);
+            var action = mupdf.mupdf.pdf_dict_get(obj, mupdf.mupdf.pdf_new_name("A"));
+            return Helpers.JmGetScript(action);
+        }
+
+        private string GetScript(string trigger)
+        {
+            var obj = mupdf.mupdf.pdf_annot_obj(_nativeWidget);
+            var aa = mupdf.mupdf.pdf_dict_get(obj, mupdf.mupdf.pdf_new_name("AA"));
+            if (aa.m_internal == null) return null;
+            var action = mupdf.mupdf.pdf_dict_gets(aa, trigger);
+            return Helpers.JmGetScript(action);
+        }
+
+        /// <summary>Load widget attributes from the PDF (PyMuPDF <c>JM_make_widget</c>).</summary>
+        internal void SyncFromNative()
+        {
+            if (_nativeWidget?.m_internal == null)
+                return;
+            var annotObj = mupdf.mupdf.pdf_annot_obj(_nativeWidget);
+            InsertFieldType = (WidgetType)FieldType;
+            var r = mupdf.mupdf.pdf_bound_annot(_nativeWidget);
+            InsertRect = new Rect(r.x0, r.y0, r.x1, r.y1);
+            InsertFieldName = FieldName;
+            InsertFieldLabel = FieldLabel;
+            InsertFieldValue = FieldValue;
+            InsertFieldFlags = FieldFlags;
+            InsertBorderStyle = mupdf.mupdf.pdf_field_border_style(annotObj) ?? "S";
+            InsertBorderWidth = mupdf.mupdf.pdf_to_real(
+                Helpers.PdfDictGetl(annotObj, mupdf.mupdf.pdf_new_name("BS"), mupdf.mupdf.pdf_new_name("W")));
+            if (InsertBorderWidth == 0)
+                InsertBorderWidth = 1;
+
+            var dashObj = Helpers.PdfDictGetl(annotObj, mupdf.mupdf.pdf_new_name("BS"), mupdf.mupdf.pdf_new_name("D"));
+            if (dashObj.m_internal != null && mupdf.mupdf.pdf_is_array(dashObj) != 0)
+            {
+                int n = mupdf.mupdf.pdf_array_len(dashObj);
+                InsertBorderDashes = new List<int>(n);
+                for (int i = 0; i < n; i++)
+                    InsertBorderDashes.Add(mupdf.mupdf.pdf_to_int(mupdf.mupdf.pdf_array_get(dashObj, i)));
+            }
+
+            InsertFillColor = ReadColorArray(Helpers.PdfDictGetl(annotObj, mupdf.mupdf.pdf_new_name("MK"), mupdf.mupdf.pdf_new_name("BG")));
+            InsertBorderColor = ReadColorArray(Helpers.PdfDictGetl(annotObj, mupdf.mupdf.pdf_new_name("MK"), mupdf.mupdf.pdf_new_name("BC")));
+            InsertChoiceValues = new List<string>(ChoiceValues);
+            InsertTextMaxLen = MaxLen;
+            InsertScript = GetTopLevelScript();
+            InsertScriptStroke = GetScript("K");
+            InsertScriptFormat = GetScript("F");
+            InsertScriptChange = GetScript("V");
+            InsertScriptCalc = GetScript("C");
+            InsertScriptBlur = GetScript("Bl");
+            InsertScriptFocus = GetScript("Fo");
+
+            var da = mupdf.mupdf.pdf_to_text_string(
+                mupdf.mupdf.pdf_dict_get_inheritable(annotObj, mupdf.mupdf.pdf_new_name("DA"))) ?? "";
+            InsertTextDa = da;
+            ParseDa(da);
+        }
+
+        private static List<float> ToFloatList(IList<float> value)
+        {
+            if (value == null)
+                return null;
+            return value as List<float> ?? new List<float>(value);
+        }
+
+        private static List<int> ToIntList(IList<int> value)
+        {
+            if (value == null)
+                return null;
+            return value as List<int> ?? new List<int>(value);
+        }
+
+        private static List<float> ReadColorArray(mupdf.PdfObj obj)
+        {
+            if (obj.m_internal == null || mupdf.mupdf.pdf_is_array(obj) == 0)
+                return null;
+            int n = mupdf.mupdf.pdf_array_len(obj);
+            var col = new List<float>(n);
+            for (int i = 0; i < n; i++)
+                col.Add((float)mupdf.mupdf.pdf_to_real(mupdf.mupdf.pdf_array_get(obj, i)));
+            return col;
+        }
+
+        private static string GetInheritableLabel(mupdf.PdfObj node)
+        {
+            var tu = mupdf.mupdf.pdf_new_name("TU");
+            var parent = mupdf.mupdf.pdf_new_name("Parent");
+            var slow = node;
+            int halfbeat = 11;
+            while (node.m_internal != null)
+            {
+                var val = mupdf.mupdf.pdf_dict_get(node, tu);
+                if (val.m_internal != null)
+                {
+                    var label = mupdf.mupdf.pdf_to_text_string(val);
+                    if (!string.IsNullOrEmpty(label))
+                        return label;
+                }
+                node = mupdf.mupdf.pdf_dict_get(node, parent);
+                if (node.m_internal == slow.m_internal)
+                    break;
+                halfbeat--;
+                if (halfbeat == 0)
+                {
+                    slow = mupdf.mupdf.pdf_dict_get(slow, parent);
+                    halfbeat = 2;
+                }
+            }
+            return null;
         }
 
         /// <summary>
-        /// After any changes to a widget, this method must be used to store them in the PDF 
-        /// <param name="syncFlags">propagate field flags to parent and kids</param>
+        /// PyMuPDF <c>Widget._checker</c>: if setting a radio button to ON, set Off on siblings (MuPDF does not do this).
         /// </summary>
-        public void Update(bool syncFlags = false)
+        private void TurnOffSiblingRadioButtons()
         {
-            Validate();
-            AdjustFont(); // ensure valid text_font name
-
-            // now create the /DA string
-            TextDa = "";
-            string fmt = "";
-
-            if (TextColor != null && TextColor.Length == 3)
-                fmt = $"{Utils.FloatToString(TextColor[0])} {Utils.FloatToString(TextColor[1])} {Utils.FloatToString(TextColor[2])} rg /" + "{0} {1} Tf" + TextDa;
-            else if (TextColor.Length == 1)
-                fmt = $"{Utils.FloatToString(TextColor[0])} g /" + "{0} {1} Tf" + TextDa;
-            else if (TextColor.Length == 4)
-                fmt = $"{Utils.FloatToString(TextColor[0])} {Utils.FloatToString(TextColor[1])} {Utils.FloatToString(TextColor[2])} {Utils.FloatToString(TextColor[3])} k /" + "{0} {1} Tf" + TextDa;
-            TextDa = string.Format(System.Globalization.CultureInfo.InvariantCulture, fmt, TextFont, Utils.FloatToString(TextFontSize));
-
-            // if widget has a '/AA/C' script, make sure it is in the '/CO'
-            // array of the '/AcroForm' dictionary.
-            if (!string.IsNullOrEmpty(ScriptCalc)) // there is a "calculation" script:
+            if (Parent?.Parent == null)
+                return;
+            var doc = Parent.Parent;
+            var annotObj = mupdf.mupdf.pdf_annot_obj(_nativeWidget);
+            var (_, kidsValue) = doc.XrefGetKey(Xref, "Parent/Kids");
+            if (kidsValue == null || !kidsValue.StartsWith("["))
+                return;
+            foreach (var part in kidsValue.Trim('[', ']').Replace("0 R", "")
+                .Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries))
             {
-                // make sure we are in the /CO array
-                Utils.EnsureWidgetCalc(_annot);
+                if (!int.TryParse(part, out int xref) || xref == Xref)
+                    continue;
+                doc.XrefSetKey(xref, "AS", "/Off");
             }
-            
-            Utils.SaveWidget(_annot, this);
-            TextDa = "";
-
-            // finally update the widget
-            if (syncFlags)
-                SyncFlags();    // propagate field flags to parent and kids
         }
+
+        /// <summary>Legacy checker alias.</summary>
+        public void Checker() => TurnOffSiblingRadioButtons();
+
+        /// <summary>
+        /// Extract font, size and color from /DA (PyMuPDF <c>Widget._parse_da</c>, pdf_parse_default_appearance).
+        /// </summary>
+        private void ParseDa(string da)
+        {
+            if (string.IsNullOrEmpty(da))
+                return;
+            string font = "Helv";
+            float fsize = 0;
+            var col = new List<float> { 0, 0, 0 };
+            var dat = da.Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
+            for (int i = 0; i < dat.Length; i++)
+            {
+                if (dat[i] == "Tf" && i >= 2)
+                {
+                    font = dat[i - 2].TrimStart('/');
+                    if (float.TryParse(dat[i - 1], System.Globalization.NumberStyles.Float,
+                            System.Globalization.CultureInfo.InvariantCulture, out var fs))
+                        fsize = fs;
+                }
+                else if (dat[i] == "g" && i >= 1
+                    && float.TryParse(dat[i - 1], System.Globalization.NumberStyles.Float,
+                        System.Globalization.CultureInfo.InvariantCulture, out var gray))
+                    col = new List<float> { gray };
+                else if (dat[i] == "rg" && i >= 3)
+                {
+                    if (float.TryParse(dat[i - 3], System.Globalization.NumberStyles.Float,
+                            System.Globalization.CultureInfo.InvariantCulture, out var r)
+                        && float.TryParse(dat[i - 2], System.Globalization.NumberStyles.Float,
+                            System.Globalization.CultureInfo.InvariantCulture, out var g)
+                        && float.TryParse(dat[i - 1], System.Globalization.NumberStyles.Float,
+                            System.Globalization.CultureInfo.InvariantCulture, out var b))
+                        col = new List<float> { r, g, b };
+                }
+            }
+            InsertTextFont = font;
+            InsertTextFontsize = fsize;
+            InsertTextColor = col;
+        }
+
+        /// <summary>Legacy no-argument DA parser.</summary>
+        public void ParseDa() => ParseDa(InsertTextDa);
+
+        /// <summary>Releases managed wrapper state (native object owned by the page).</summary>
+        public void Dispose()
+        {
+            if (!_disposed) { _disposed = true; }
+            GC.SuppressFinalize(this);
+        }
+
+        ~Widget() => Dispose();
+
+        public override string ToString() => $"Widget('{FieldTypeString}', '{FieldName}')";
+
+        /// <summary>Legacy raw widget annotation handle.</summary>
+        public mupdf.PdfAnnot _annot
+        {
+            get => _nativeWidget;
+            set => _nativeWidget = value;
+        }
+
+        /// <summary>Legacy ownership compatibility flag.</summary>
+        public bool ThisOwn { get; set; } = true;
+
+        // ─── PyMuPDF API names (internal, same assembly) ─────────────────
+
+        internal void update(bool sync_flags = false) => Update(sync_flags);
+        internal void reset() => Reset();
+        internal Dictionary<string, List<string>> button_states() => ButtonStates();
+        internal string on_state() => OnState();
+        internal string field_name { get => FieldName; set => FieldName = value; }
+        internal int field_flags { get => FieldFlags; set => FieldFlags = value; }
+        internal int xref => Xref;
+        internal void set_value(string value) => SetFieldValue(value);
     }
 }

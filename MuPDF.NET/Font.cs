@@ -1,150 +1,49 @@
-using mupdf;
 using System;
 using System.Collections.Generic;
 
 namespace MuPDF.NET
 {
-    public class Font : IDisposable
+    /// <summary>
+    /// Font wrapper for metrics, encoding, and embedding.
+    /// <para>Ports PyMuPDF <c>class Font</c> (<c>src/__init__.py</c>).</para>
+    /// </summary>
+    public partial class Font : IDisposable
     {
-        static Font()
-        {
-            Utils.InitApp();
-        }
+        private static readonly object s_cacheLock = new object();
+        private static readonly Dictionary<string, Font> s_writableCache =
+            new Dictionary<string, Font>(StringComparer.OrdinalIgnoreCase);
 
-        private FzFont _nativeFont = null;
+        private mupdf.FzFont _this;
+        private bool _disposed;
 
-        /// <summary>
-        /// The ascender value of the font
-        /// </summary>
-        public float Ascender
-        {
-            get { return _nativeFont.fz_font_ascender(); }
-        }
+        internal mupdf.FzFont NativeFont => NativeFontCore;
 
-        /// <summary>
-        /// Copy of the binary font file content
-        /// </summary>
-        public byte[] Buffer
+        private mupdf.FzFont NativeFontCore
         {
             get
             {
-                FzBuffer buf = new FzBuffer(
-                    mupdf.mupdf.ll_fz_keep_buffer(_nativeFont.m_internal.buffer)
-                );
-                //return buf.fz_buffer_extract();
-                return Utils.BinFromBuffer( buf );
-            }
-        }
-
-        
-        public bool IsNull
-        {
-            get { return _nativeFont == null || _nativeFont.m_internal == null; }
-        }
-
-        /// <summary>
-        /// The descender value of the font
-        /// </summary>
-        public float Descender
-        {
-            get { return _nativeFont.fz_font_descender(); }
-        }
-
-        /// <summary>
-        /// Name of the font
-        /// </summary>
-        public string Name
-        {
-            get { return _nativeFont.fz_font_name(); }
-        }
-
-        /// <summary>
-        /// The font bbox
-        /// </summary>
-        public Rect Bbox
-        {
-            get { return new Rect(_nativeFont.fz_font_bbox()); }
-        }
-
-        /// <summary>
-        /// True if font is bold
-        /// </summary>
-        public int IsBold
-        {
-            get { return _nativeFont.fz_font_is_bold(); }
-        }
-
-        /// <summary>
-        /// True if font is italic
-        /// </summary>
-        public int IsItalic
-        {
-            get { return _nativeFont.fz_font_is_italic(); }
-        }
-
-        public int IsMonospaced
-        {
-            get { return _nativeFont.fz_font_is_monospaced(); }
-        }
-
-        public int IsSerif
-        {
-            get { return _nativeFont.fz_font_is_serif(); }
-        }
-
-        /// <summary>
-        /// Indicates whether this font can be used with TextWriter
-        /// </summary>
-        public bool IsWriteable
-        {
-            get { return true; }
-        }
-
-        public FzFont ToFzFont()
-        {
-            return _nativeFont;
-        }
-
-        public Dictionary<string, uint> Flags
-        {
-            get
-            {
-                fz_font_flags_t f = mupdf.mupdf.ll_fz_font_flags(_nativeFont.m_internal);
-                if (f == null)
-                    return null;
-                return new Dictionary<string, uint>()
-                {
-                    { "mono", f.is_mono },
-                    { "serif", f.is_serif },
-                    { "bold", f.is_bold },
-                    { "italic", f.is_italic },
-                    { "substitute", f.ft_substitute },
-                    { "stretch", f.ft_stretch },
-                    { "fake-bold", f.fake_bold },
-                    { "fake-italic", f.fake_italic },
-                    { "opentype", f.has_opentype },
-                    { "invalid-bbox", f.invalid_bbox },
-                    { "cjk", f.cjk },
-                    { "cjk-lang", f.cjk_lang },
-                    { "embed", f.embed },
-                    { "never-embed", f.never_embed }
-                };
+                if (_disposed) throw new ObjectDisposedException(nameof(Font));
+                return _this;
             }
         }
 
         /// <summary>
-        /// Return an array of unicodes supported by this font
+        /// Create a font (PyMuPDF <c>Font.__init__</c>).
         /// </summary>
-        public int GlyphCount
-        {
-            get { return _nativeFont.m_internal.glyph_count; }
-        }
-
-        public Font()
-        {
-            _nativeFont = new FzFont();
-        }
-
+        /// <remarks>
+        /// Parameterless <c>new Font()</c> loads the default fallback font (typically
+        /// <c>Noto Serif Regular</c> when Noto fonts are available), matching PyMuPDF.
+        /// </remarks>
+        /// <param name="fontName">Base-14 name, CJK name, etc.</param>
+        /// <param name="fontFile">Path to a font file.</param>
+        /// <param name="fontBuffer">Font binary (bytes).</param>
+        /// <param name="script">UCDN script id.</param>
+        /// <param name="language">Language tag for shaping.</param>
+        /// <param name="ordering">CJK ordering; derived from <paramref name="fontName"/> when negative.</param>
+        /// <param name="isBold">Non-zero for bold.</param>
+        /// <param name="isItalic">Non-zero for italic.</param>
+        /// <param name="isSerif">Non-zero for serif.</param>
+        /// <param name="embed">Non-zero to embed when writing PDF.</param>
         public Font(
             string fontName = null,
             string fontFile = null,
@@ -155,313 +54,382 @@ namespace MuPDF.NET
             int isBold = 0,
             int isItalic = 0,
             int isSerif = 0,
-            int embed = 1
-        )
+            int embed = 1)
         {
+            if (fontBuffer != null && fontBuffer.Length == 0)
+                fontBuffer = null;
+
             if (fontName != null)
             {
-                string fNameLower = fontName.ToLower();
-                if (
-                    fNameLower.IndexOf("/") != -1
-                    || fNameLower.IndexOf("\\") != -1
-                    || fNameLower.IndexOf(".") != -1
-                )
-                    Console.WriteLine("Warning: did you mean a fontfile?");
-                if ((new List<string>() { "cjk", "china-t", "china-ts" }).Contains(fNameLower))
+                string fname_lower = fontName.ToLowerInvariant();
+                if (fname_lower.IndexOf('/') >= 0 || fname_lower.IndexOf('\\') >= 0 || fname_lower.IndexOf('.') >= 0)
+                    Helpers.message("Warning: did you mean a fontfile?");
+
+                if (fname_lower == "cjk" || fname_lower == "china-t" || fname_lower == "china-ts")
                     ordering = 0;
-                else if (fNameLower.StartsWith("china-s"))
+                else if (fname_lower.StartsWith("china-s"))
                     ordering = 1;
-                else if (fNameLower.StartsWith("korea"))
+                else if (fname_lower.StartsWith("korea"))
                     ordering = 3;
-                else if (fNameLower.StartsWith("japan"))
+                else if (fname_lower.StartsWith("japan"))
                     ordering = 2;
-                // else if (fNameLower)
+                // elif fname_lower in fitz_fontdescriptors.keys():
+                //     import pymupdf_fonts  # optional fonts
+                //     fontbuffer = pymupdf_fonts.myfont(fname_lower)
+                //     fontname = None
                 else if (ordering < 0)
                 {
-                    //fontName = Utils.Base14_fontdict.GetValueOrDefault(fontName, fontName);
-                    if (!Utils.Base14_fontdict.TryGetValue(fontName, out fontName))
-                    {
-                        // If the key is not found, fontName remains unchanged (or can be assigned a default value)
-                    }
+                    if (Constants.Base14FontDict.TryGetValue(fname_lower, out string? resolved))
+                        fontName = resolved;
                 }
             }
-            
-            fz_text_language lang = mupdf.mupdf.fz_text_language_from_string(language);
-            _nativeFont = Utils.GetFont(
-                fontName,
-                fontFile,
-                fontBuffer,
-                script,
-                (int)lang,
-                ordering,
-                isBold,
-                isItalic,
-                isSerif,
-                embed
-            );
+
+            int lang = (int)mupdf.mupdf.fz_text_language_from_string(language);
+            _this = Helpers.JM_get_font(
+                fontName, fontFile, fontBuffer, script, lang, ordering,
+                isBold, isItalic, isSerif, embed);
         }
 
         /// <summary>
-        /// Sequence of character lengths in points of a unicode string.
+        /// Legacy MuPDF.NET constructor: <c>new Font("cour", isBold: 1)</c>.
         /// </summary>
-        /// <param name="text">a text string, UTF-8 encoded.</param>
-        /// <param name="fontSize">the fontsize.</param>
-        /// <param name="language"></param>
-        /// <param name="script"></param>
-        /// <param name="wmode"></param>
-        /// <param name="smallCaps"></param>
-        /// <returns>the lengths in points of the characters of a string when stored in the PDF. It works like Font.text_length().</returns>
-        public List<float> GetCharLengths(
-            string text,
-            float fontSize = 11,
-            string language = null,
-            int script = 0,
-            int wmode = 0,
-            int smallCaps = 0
-        )
+        public Font(string fontName, int isBold)
+            : this(fontName, null, null, 0, null, -1, isBold, 0, 0, 1)
         {
-            fz_text_language lang = mupdf.mupdf.fz_text_language_from_string(language);
-            List<float> rc = new List<float>();
-            FzFont font = null;
-            int gid = 0;
-            foreach (char ch in text)
+        }
+
+        internal Font(mupdf.FzFont font)
+        {
+            _this = font ?? throw new ArgumentNullException(nameof(font));
+        }
+
+        /// <inheritdoc/>
+        public override string ToString() => $"Font('{Name}')";
+
+        /// <summary>Glyph ascender (PyMuPDF <c>Font.ascender</c>).</summary>
+        public float Ascender => mupdf.mupdf.fz_font_ascender(NativeFontCore);
+
+        /// <summary>Font bounding box (PyMuPDF <c>Font.bbox</c>).</summary>
+        public Rect BBox
+        {
+            get
             {
-                int c = Convert.ToInt32(ch);
-                if (smallCaps != 0)
-                {
-                    gid = _nativeFont.fz_encode_character_sc(c);
-                    if (gid >= 0)
-                        font = _nativeFont;
-                    rc.Add(fontSize * font.fz_advance_glyph(gid, wmode));
-                }
-                else
-                {
-                    using (FzFont _font = new FzFont())
-                    {
-                        int _gid = _nativeFont.fz_encode_character_with_fallback(
-                            c,
-                            script,
-                            (int)lang,
-                            _font
-                        );
-                        rc.Add(fontSize * _font.fz_advance_glyph(_gid, wmode));
-                    }
-                }
+                var r = NativeFontCore.fz_font_bbox();
+                return new Rect(r.x0, r.y0, r.x1, r.y1);
             }
-            
-            return rc;
+        }
+
+        /// <summary>Font binary buffer (PyMuPDF <c>Font.buffer</c>).</summary>
+        public byte[] Buffer
+        {
+            get
+            {
+                var internalBuf = NativeFontCore.m_internal.buffer;
+                if (internalBuf == null)
+                    return null;
+                using var buffer_ = new mupdf.FzBuffer(mupdf.mupdf.ll_fz_keep_buffer(internalBuf));
+                return Helpers.BinFromBuffer(buffer_);
+            }
+        }
+
+        /// <summary>Glyph descender (PyMuPDF <c>Font.descender</c>).</summary>
+        public float Descender => mupdf.mupdf.fz_font_descender(NativeFontCore);
+
+        /// <summary>
+        /// Font flag dictionary (PyMuPDF <c>Font.flags</c>).
+        /// </summary>
+        public IReadOnlyDictionary<string, uint> FlagDictionary
+        {
+            get
+            {
+                var f = mupdf.mupdf.ll_fz_font_flags(NativeFontCore.m_internal);
+                if (f == null)
+                    return null;
+                // if mupdf_cppyy: cppyy bitfield handling (see PyMuPDF <c>Font.flags</c>)
+                return new Dictionary<string, uint>
+                {
+                    ["mono"] = f.is_mono,
+                    ["serif"] = f.is_serif,
+                    ["bold"] = f.is_bold,
+                    ["italic"] = f.is_italic,
+                    ["substitute"] = f.ft_substitute,
+                    ["stretch"] = f.ft_stretch,
+                    ["fake-bold"] = f.fake_bold,
+                    ["fake-italic"] = f.fake_italic,
+                    ["opentype"] = f.has_opentype,
+                    ["invalid-bbox"] = f.invalid_bbox,
+                    ["cjk"] = f.cjk,
+                    ["cjk-lang"] = f.cjk_lang,
+                    ["embed"] = f.embed,
+                    ["never-embed"] = f.never_embed,
+                };
+            }
         }
 
         /// <summary>
-        /// Calculate the “width” of the character’s glyph (visual representation).
+        /// Aggregated <see cref="TextFontFlags"/> bitmask from <see cref="FlagDictionary"/>.
         /// </summary>
-        /// <param name="chr">the unicode number of the character. Use ord(), not the character itself. Again, this should normally work even if a character is not supported by that font, because fallback fonts will be checked where necessary.</param>
-        /// <param name="language"></param>
-        /// <param name="script"></param>
-        /// <param name="wmode">write mode, 0 = horizontal, 1 = vertical.</param>
-        /// <param name="small_caps"></param>
-        /// <returns></returns>
-        public float GlyphAdvance(
-            int chr,
-            string language = null,
-            int script = 0,
-            int wmode = 0,
-            int smallCaps = 0
-        )
+        public int FlagMask
         {
-            fz_text_language lang = mupdf.mupdf.fz_text_language_from_string(language);
-            int gid = 0;
+            get
+            {
+                var f = FlagDictionary;
+                if (f == null) return 0;
+                int v = 0;
+                if (f["bold"] != 0) v |= (int)TextFontFlags.Bold;
+                if (f["italic"] != 0) v |= (int)TextFontFlags.Italic;
+                if (f["mono"] != 0) v |= (int)TextFontFlags.Monospaced;
+                if (f["serif"] != 0) v |= (int)TextFontFlags.Serifed;
+                return v;
+            }
+        }
+
+        /// <summary>Number of glyphs (PyMuPDF <c>Font.glyph_count</c>).</summary>
+        public int GlyphCount => NativeFontCore.m_internal.glyph_count;
+
+        /// <summary>Font name (PyMuPDF <c>Font.name</c>).</summary>
+        public string Name => mupdf.mupdf.fz_font_name(NativeFontCore);
+
+        /// <summary>Whether font is bold (PyMuPDF <c>Font.is_bold</c>).</summary>
+        public bool IsBold => mupdf.mupdf.fz_font_is_bold(NativeFontCore) != 0;
+
+        /// <summary>Whether font is italic (PyMuPDF <c>Font.is_italic</c>).</summary>
+        public bool IsItalic => mupdf.mupdf.fz_font_is_italic(NativeFontCore) != 0;
+
+        /// <summary>Whether font is monospaced (PyMuPDF <c>Font.is_monospaced</c>).</summary>
+        public bool IsMonospaced => mupdf.mupdf.fz_font_is_monospaced(NativeFontCore) != 0;
+
+        /// <summary>Whether font is serif (PyMuPDF <c>Font.is_serif</c>).</summary>
+        public bool IsSerif => mupdf.mupdf.fz_font_is_serif(NativeFontCore) != 0;
+
+        /// <summary>
+        /// Whether font can be written to PDF (PyMuPDF <c>Font.is_writable</c>).
+        /// </summary>
+        public bool IsWritable
+        {
+            get
+            {
+                mupdf.FzFont font = NativeFontCore;
+                var flagStruct = mupdf.mupdf.ll_fz_font_flags(font.m_internal);
+                // if mupdf_cppyy: ft_substitute = cppyy.gbl.mupdf_mfz_font_flags_ft_substitute(flags)
+                uint ft_substitute = flagStruct.ft_substitute;
+
+                if (mupdf.mupdf.ll_fz_font_t3_procs(font.m_internal) != null
+                        || ft_substitute != 0
+                        || mupdf.mupdf.pdf_font_writing_supported(font) == 0)
+                {
+                    return false;
+                }
+                return true;
+            }
+        }
+
+        /// <summary>
+        /// Per-character widths for <paramref name="text"/> (PyMuPDF <c>Font.char_lengths</c>).
+        /// </summary>
+        public float[] CharLengths(string text, float fontsize = 11, string language = null, int script = 0, int wmode = 0, int smallCaps = 0)
+        {
+            var rc = CharLengthsList(text, fontsize, language, script, wmode, smallCaps);
+            var arr = new float[rc.Count];
+            rc.CopyTo(arr, 0);
+            return arr;
+        }
+
+        /// <summary>
+        /// Glyph advance at font size 1 (PyMuPDF <c>Font.glyph_advance</c>).
+        /// </summary>
+        public float GlyphAdvance(int chr_, string language = null, int script = 0, int wmode = 0, int smallCaps = 0)
+        {
+            int lang = (int)mupdf.mupdf.fz_text_language_from_string(language);
+            return AdvanceGlyphForCharacter(NativeFontCore, chr_, script, lang, wmode, smallCaps);
+        }
+
+        /// <summary>
+        /// Glyph bbox at font size 1 (PyMuPDF <c>Font.glyph_bbox</c>).
+        /// </summary>
+        public Rect GlyphBbox(int chr_, string language = null, int script = 0, int smallCaps = 0)
+        {
+            int lang = (int)mupdf.mupdf.fz_text_language_from_string(language);
+            mupdf.FzFont thisfont = NativeFontCore;
             if (smallCaps != 0)
             {
-                FzFont font = null;
-                gid = _nativeFont.fz_encode_character_sc(chr);
+                int gid = mupdf.mupdf.fz_encode_character_sc(thisfont, chr_);
+                mupdf.FzFont font = thisfont;
                 if (gid >= 0)
-                    font = _nativeFont;
-                return font.fz_advance_glyph(gid, wmode);
+                    font = thisfont;
+                return new Rect(mupdf.mupdf.fz_bound_glyph(font, gid, new mupdf.FzMatrix()));
             }
-
-            using (FzFont _font = new FzFont())
-            {
-                int _gid = _nativeFont.fz_encode_character_with_fallback(chr, script, (int)lang, _font);
-                float ret = _font.fz_advance_glyph(_gid, wmode);
-                return ret;
-            }
+            using var outFont = new mupdf.FzFont();
+            int gid2 = thisfont.fz_encode_character_with_fallback(chr_, script, lang, outFont);
+            return new Rect(outFont.fz_bound_glyph(gid2, new mupdf.FzMatrix()));
         }
 
         /// <summary>
-        /// The glyph rectangle relative to fontsize
+        /// Unicode for a glyph name (PyMuPDF <c>Font.glyph_name_to_unicode</c>).
         /// </summary>
-        /// <param name="chr">ord() of the character.</param>
-        /// <param name="language"></param>
-        /// <param name="script"></param>
-        /// <param name="smallCaps"></param>
-        /// <returns>returns rect</returns>
-        public Rect GlyphBbox(int chr, string language = null, int script = 0, int smallCaps = 0)
-        {
-            fz_text_language lang = mupdf.mupdf.fz_text_language_from_string(language);
-            int gid = 0;
-            if (smallCaps != 0)
-            {
-                FzFont font = null;
-                gid = _nativeFont.fz_encode_character_sc(chr);
-                if (gid >= 0)
-                    font = _nativeFont;
-                return new Rect(font.fz_bound_glyph(gid, new FzMatrix()));
-            }
-
-            using (FzFont _font = new FzFont())
-            {
-                int _gid = _nativeFont.fz_encode_character_with_fallback(chr, script, (int)lang, _font);
-                Rect rect = new Rect(_font.fz_bound_glyph(_gid, new FzMatrix()));
-
-                return rect;
-            }
-            /*
-            (gid, font) = _nativeFont.fz_encode_character_with_fallback(chr, script, (int)lang);
-            Rect rect = new Rect(font.fz_bound_glyph(gid, new FzMatrix()));
-            //font.Dispose();
-            return rect;
-            */
-        }
+        public int GlyphNameToUnicode(string name) => Utils.GlyphNameToUnicode(name);
 
         /// <summary>
-        /// Return the unicode value for a given glyph name. Use it in conjunction with chr() if you want to output e.g. a certain symbol.
+        /// Whether font has a glyph for a unicode (PyMuPDF <c>Font.has_glyph</c>).
         /// </summary>
-        /// <param name="name">The name of the glyph.</param>
-        /// <returns>The unicode integer, or 65533 = 0xFFFD if the name is unknown.</returns>
-        public int GlyphName2Unicode(string name)
+        public int HasGlyph(int chr, string language = null, int script = 0, int fallback = 0, int smallCaps = 0)
         {
-            return Utils.GlyphName2Unicode(name);
-        }
-
-        /// <summary>
-        /// Check whether the unicode chr exists in the font or (option) some fallback font. May be used to check whether any “TOFU” symbols will appear on output.
-        /// </summary>
-        /// <param name="chr">the unicode of the character (i.e. ord()).</param>
-        /// <param name="language">the language – currently unused.</param>
-        /// <param name="script">the UCDN script number.</param>
-        /// <param name="fallback">perform an extended search in fallback fonts or restrict to current font (default).</param>
-        /// <param name="smallCaps"></param>
-        /// <returns>the glyph number. Zero indicates no glyph found.</returns>
-        public int HasGlyph(
-            int chr,
-            string language = null,
-            int script = 0,
-            int fallback = 0,
-            int smallCaps = 0
-        )
-        {
-            int gid;
             if (fallback != 0)
             {
-                fz_text_language lang = mupdf.mupdf.fz_text_language_from_string(language);
-                using (FzFont _font = new FzFont())
-                {
-                    int _gid = _nativeFont.fz_encode_character_with_fallback(chr, script, (int)lang, _font);
-                    gid = _gid;
-                }
-                /*
-                (int _gid, FzFont font) = _nativeFont.fz_encode_character_with_fallback(
-                    chr,
-                    script,
-                    (int)lang
-                );
-                gid = _gid;
-                */
+                int lang = (int)mupdf.mupdf.fz_text_language_from_string(language);
+                using var outFont = new mupdf.FzFont();
+                return NativeFontCore.fz_encode_character_with_fallback(chr, script, lang, outFont);
             }
-            else
-            {
-                if (smallCaps != 0)
-                    gid = _nativeFont.fz_encode_character_sc(chr);
-                else
-                    gid = _nativeFont.fz_encode_character(chr);
-            }
-
-            return gid;
+            if (smallCaps != 0)
+                return mupdf.mupdf.fz_encode_character_sc(NativeFontCore, chr);
+            return mupdf.mupdf.fz_encode_character(NativeFontCore, chr);
         }
 
         /// <summary>
-        /// Calculate the length in points of a unicode string.
+        /// Total text width (PyMuPDF <c>Font.text_length</c>).
         /// </summary>
-        /// <param name="text">a text string, UTF-8 encoded.</param>
-        /// <param name="fontSize">the fontsize.</param>
-        /// <param name="language"></param>
-        /// <param name="script"></param>
-        /// <param name="wmode"></param>
-        /// <param name="smallCaps"></param>
-        /// <returns>the length of the string in points when stored in the PDF. If a character is not contained in the font, it will automatically be looked up in a fallback font.</returns>
-        public float TextLength(
-            string text,
-            float fontSize = 11.0f,
-            string language = null,
-            int script = 0,
-            int wmode = 0,
-            int smallCaps = 0
-        )
+        public float TextLength(string text, float fontsize = 11, string language = null, int script = 0, int wmode = 0, int smallCaps = 0)
         {
-            FzFont thisfont = _nativeFont;
+            mupdf.FzFont thisfont = NativeFontCore;
             int lang = (int)mupdf.mupdf.fz_text_language_from_string(language);
             float rc = 0;
-            
+            if (text == null)
+                throw new ValueErrorException(Constants.MSG_BAD_TEXT);
             foreach (char ch in text)
-            {
-                int c = Convert.ToInt32(ch);
-                int gid;
-                if (smallCaps != 0)
-                {
-                    FzFont font = new FzFont();
-                    gid = thisfont.fz_encode_character_sc(c);
-                    if (gid >= 0)
-                    {
-                        font = thisfont;
-                    }
-                    rc += font.fz_advance_glyph(gid, wmode);
-                }
-                else
-                {
-                    using (FzFont _font = new FzFont())
-                    {
-                        int _gid = thisfont.fz_encode_character_with_fallback(c, script, lang, _font);
-                        rc += _font.fz_advance_glyph(_gid, wmode);
-                    }
-                }
-            }
-            rc *= fontSize;
-
+                rc += AdvanceGlyphForCharacter(thisfont, ch, script, lang, wmode, smallCaps);
+            rc *= fontsize;
             return rc;
         }
 
         /// <summary>
-        /// Show the name of the character’s glyph.
+        /// Glyph name for a unicode (PyMuPDF <c>Font.unicode_to_glyph_name</c>).
         /// </summary>
-        /// <param name="ch">the unicode number of the character. Use ord(), not the character itself.</param>
-        /// <returns></returns>
-        public string Unicode2GlyphName(int ch)
+        public string UnicodeToGlyphName(int ch) => Utils.UnicodeToGlyphName(ch);
+
+        /// <summary>
+        /// Sorted valid Unicode codepoints (PyMuPDF <c>Font.valid_codepoints</c>).
+        /// </summary>
+        public List<int> ValidCodepoints()
         {
-            return Utils.Unicode2GlyphName(ch);
+            var ucs_gids = NativeFontCore.fz_enumerate_font_cmap2();
+            var ucss = new List<int>();
+            foreach (mupdf.fz_font_ucs_gid i in ucs_gids)
+                ucss.Add((int)i.ucs);
+            var ucss_unique = new HashSet<int>(ucss);
+            var ucss_unique_sorted = new List<int>(ucss_unique);
+            ucss_unique_sorted.Sort();
+            return ucss_unique_sorted;
+        }
+
+        /// <summary>Maps user/base names to Base-14 names (<c>Base14_fontdict</c>).</summary>
+        internal static string NormalizeBase14FontName(string name)
+        {
+            if (name == null) return "Helvetica";
+            if (Constants.Base14FontDict.TryGetValue(name.ToLowerInvariant(), out string? resolved))
+                return resolved;
+            return name;
+        }
+
+        /// <summary>Reusable writable font (Base-14 / standard names). Do not dispose cached instances.</summary>
+        public static Font GetWritableCached(string fontName = "helv", string fontFile = null)
+        {
+            string key = string.IsNullOrEmpty(fontName) ? "helv" : fontName.ToLowerInvariant();
+            lock (s_cacheLock)
+            {
+                if (s_writableCache.TryGetValue(key, out Font cached))
+                    return cached;
+                var font = new Font(fontName, fontFile);
+                s_writableCache[key] = font;
+                return font;
+            }
+        }
+
+        /// <inheritdoc/>
+        public void Dispose()
+        {
+            if (!_disposed)
+            {
+                lock (s_cacheLock)
+                {
+                    foreach (var kv in s_writableCache)
+                    {
+                        if (ReferenceEquals(kv.Value, this))
+                            return;
+                    }
+                }
+                // PyMuPDF Font.__del__ is a no-op; do not fz_drop_font while TextWriter/PDF code may still use it.
+                _disposed = true;
+            }
+            GC.SuppressFinalize(this);
+        }
+
+        // ─── PyMuPDF API names (internal, same assembly) ─────────────────
+
+        internal float ascender => Ascender;
+        internal Rect bbox => BBox;
+        internal byte[] buffer => Buffer;
+        internal float descender => Descender;
+        internal Dictionary<string, uint> flags => FlagDictionary as Dictionary<string, uint>;
+        internal int glyph_count => GlyphCount;
+        internal bool is_bold => IsBold;
+        internal bool is_italic => IsItalic;
+        internal bool is_monospaced => IsMonospaced;
+        internal bool is_serif => IsSerif;
+        internal bool is_writable => IsWritable;
+        internal string name => Name;
+
+        internal IList<float> char_lengths(string text, float fontsize = 11, string language = null, int script = 0, int wmode = 0, int small_caps = 0)
+            => CharLengthsList(text, fontsize, language, script, wmode, small_caps);
+
+        internal float glyph_advance(int chr_, string language = null, int script = 0, int wmode = 0, int small_caps = 0)
+            => GlyphAdvance(chr_, language, script, wmode, small_caps);
+
+        internal Rect glyph_bbox(int chr_, string language = null, int script = 0, int small_caps = 0)
+            => GlyphBbox(chr_, language, script, small_caps);
+
+        internal int glyph_name_to_unicode(string name) => GlyphNameToUnicode(name);
+
+        internal int has_glyph(int chr, string language = null, int script = 0, int fallback = 0, int small_caps = 0)
+            => HasGlyph(chr, language, script, fallback, small_caps);
+
+        internal float text_length(string text, float fontsize = 11, string language = null, int script = 0, int wmode = 0, int small_caps = 0)
+            => TextLength(text, fontsize, language, script, wmode, small_caps);
+
+        internal string unicode_to_glyph_name(int ch) => UnicodeToGlyphName(ch);
+
+        internal List<int> valid_codepoints() => ValidCodepoints();
+
+        private List<float> CharLengthsList(string text, float fontsize, string language, int script, int wmode, int smallCaps)
+        {
+            int lang = (int)mupdf.mupdf.fz_text_language_from_string(language);
+            var rc = new List<float>();
+            mupdf.FzFont thisfont = NativeFontCore;
+            foreach (char ch in text)
+            {
+                float adv = AdvanceGlyphForCharacter(thisfont, ch, script, lang, wmode, smallCaps);
+                rc.Add(fontsize * adv);
+            }
+            return rc;
         }
 
         /// <summary>
-        /// Return an array of unicodes supported by this font.
+        /// Legacy MuPDF.NET / PyMuPDF pattern: keep an out-param <see cref="mupdf.FzFont"/> alive while advancing.
+        /// The tuple SWIG helper frees fallback state too early and causes native AVs.
         /// </summary>
-        /// <returns>an array.array of length at most Font.glyph_count.</returns>
-        public List<int> GetValidCodePoints()
+        private static float AdvanceGlyphForCharacter(
+            mupdf.FzFont thisfont, int c, int script, int lang, int wmode, int smallCaps)
         {
-            return new List<int>();
-        }
-
-        public override string ToString()
-        {
-            return $"Font('{Name}')";
-        }
-
-        public void Dispose()
-        {
-            if (_nativeFont != null)
+            if (smallCaps != 0)
             {
-                _nativeFont.Dispose();
-                _nativeFont = null;
+                int gid = mupdf.mupdf.fz_encode_character_sc(thisfont, c);
+                mupdf.FzFont font = thisfont;
+                if (gid >= 0)
+                    font = thisfont;
+                return mupdf.mupdf.fz_advance_glyph(font, gid, wmode);
             }
+            using var outFont = new mupdf.FzFont();
+            int gid2 = thisfont.fz_encode_character_with_fallback(c, script, lang, outFont);
+            return outFont.fz_advance_glyph(gid2, wmode);
         }
     }
 }

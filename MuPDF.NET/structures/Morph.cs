@@ -1,11 +1,10 @@
-﻿using System;
+using System;
 
 namespace MuPDF.NET
 {
     public class Morph
     {
         public Point P { get; set; }
-
         public Matrix M { get; set; }
 
         public Morph()
@@ -31,16 +30,11 @@ namespace MuPDF.NET
                     case 1:
                         return M;
                 }
+
                 throw new NotImplementedException();
             }
         }
 
-        public int Length
-        {
-            get
-            {
-                return 2;
-            }
-        }
+        public int Length => 2;
     }
 }

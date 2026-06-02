@@ -3,6 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 17.14.36511.14
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MuPDF.NET", "MuPDF.NET\MuPDF.NET.csproj", "{6E09980C-0293-4637-A374-A2C9DF020B19}"
+	ProjectSection(ProjectDependencies) = postProject
+		{7083C4C1-2088-3E05-E1F9-487AB90898D2} = {7083C4C1-2088-3E05-E1F9-487AB90898D2}
+	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MuPDF.NET.Test", "MuPDF.NET.Test\MuPDF.NET.Test.csproj", "{4D2877B8-599E-4A2A-9AC1-202983975284}"
 EndProject
@@ -11,6 +14,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PDF4LLM", "PDF4LLM\PDF4LLM.csproj", "{A34D58F2-3815-19A9-1D4C-8488A12C291C}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PDF4LLM.Test", "PDF4LLM.Test\PDF4LLM.Test.csproj", "{07FF113F-B37A-8C0E-CF2D-DE4E47EC6784}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MuPDF.Fonts", "MuPDF.Fonts\MuPDF.Fonts.csproj", "{7083C4C1-2088-3E05-E1F9-487AB90898D2}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -82,6 +87,18 @@ Global
 		{07FF113F-B37A-8C0E-CF2D-DE4E47EC6784}.Release|x64.Build.0 = Release|Any CPU
 		{07FF113F-B37A-8C0E-CF2D-DE4E47EC6784}.Release|x86.ActiveCfg = Release|Any CPU
 		{07FF113F-B37A-8C0E-CF2D-DE4E47EC6784}.Release|x86.Build.0 = Release|Any CPU
+		{7083C4C1-2088-3E05-E1F9-487AB90898D2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7083C4C1-2088-3E05-E1F9-487AB90898D2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7083C4C1-2088-3E05-E1F9-487AB90898D2}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{7083C4C1-2088-3E05-E1F9-487AB90898D2}.Debug|x64.Build.0 = Debug|Any CPU
+		{7083C4C1-2088-3E05-E1F9-487AB90898D2}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{7083C4C1-2088-3E05-E1F9-487AB90898D2}.Debug|x86.Build.0 = Debug|Any CPU
+		{7083C4C1-2088-3E05-E1F9-487AB90898D2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7083C4C1-2088-3E05-E1F9-487AB90898D2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7083C4C1-2088-3E05-E1F9-487AB90898D2}.Release|x64.ActiveCfg = Release|Any CPU
+		{7083C4C1-2088-3E05-E1F9-487AB90898D2}.Release|x64.Build.0 = Release|Any CPU
+		{7083C4C1-2088-3E05-E1F9-487AB90898D2}.Release|x86.ActiveCfg = Release|Any CPU
+		{7083C4C1-2088-3E05-E1F9-487AB90898D2}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

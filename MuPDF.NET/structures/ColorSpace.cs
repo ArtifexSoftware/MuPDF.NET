@@ -1,80 +1,96 @@
-﻿using mupdf;
-using System.Collections.Generic;
-using System.Runtime.InteropServices;
+using mupdf;
+using System;
 
 namespace MuPDF.NET
 {
-    public class ColorSpace
+    /// <summary>
+    /// Legacy MuPDF.NET colorspace type (readthedocs <c>ColorSpace</c>).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Thin wrapper over <see cref="Colorspace"/> for code written against the original API.
+    /// New code should prefer <see cref="Colorspace"/> and <see cref="Colorspace.Rgb"/> /
+    /// <see cref="Colorspace.Gray"/> / <see cref="Colorspace.Cmyk"/>.
+    /// </para>
+    /// <para>
+    /// See <see href="https://mupdfnet.readthedocs.io/en/latest/classes/ColorSpace.html"/>.
+    /// </para>
+    /// </remarks>
+    public sealed class ColorSpace
     {
-        static ColorSpace()
-        {
-            /*
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                Utils.LoadEmbeddedDllForWindows();
-            }
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-            {
-                Utils.LoadEmbeddedDllForLinux();
-            }
-            */
-        }
-
-        private readonly FzColorspace _nativeColorSpace;
+        private readonly Colorspace _inner;
 
         /// <summary>
-        /// The number of bytes required to define the color of one pixel.
+        /// Predefined RGB colorspace (<c>new ColorSpace(Utils.CS_RGB)</c>).
         /// </summary>
-        public int N
-        {
-            get
-            {
-                return _nativeColorSpace.fz_colorspace_n();
-            }
-        }
+        public static readonly ColorSpace csRGB = new ColorSpace(Utils.CS_RGB);
 
         /// <summary>
-        /// The name identifying the colorspace.
+        /// Predefined GRAY colorspace (<c>new ColorSpace(Utils.CS_GRAY)</c>).
         /// </summary>
-        public string Name
+        public static readonly ColorSpace csGRAY = new ColorSpace(Utils.CS_GRAY);
+
+        /// <summary>
+        /// Predefined CMYK colorspace (<c>new ColorSpace(Utils.CS_CMYK)</c>).
+        /// </summary>
+        public static readonly ColorSpace csCMYK = new ColorSpace(Utils.CS_CMYK);
+
+        /// <summary>
+        /// Creates a device colorspace from a legacy type id.
+        /// </summary>
+        /// <param name="n">
+        /// One of <see cref="Utils.CS_RGB"/> (1), <see cref="Utils.CS_GRAY"/> (2),
+        /// or <see cref="Utils.CS_CMYK"/> (3). Other values default to RGB.
+        /// </param>
+        public ColorSpace(int n) => _inner = new Colorspace(n);
+
+        /// <summary>
+        /// Shares the same underlying device colorspace as <paramref name="cs"/>.
+        /// </summary>
+        /// <param name="cs">Source colorspace.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="cs"/> is null.</exception>
+        public ColorSpace(ColorSpace cs)
         {
-            get
-            {
-                return _nativeColorSpace.fz_colorspace_name();
-            }
+            if (cs == null)
+                throw new ArgumentNullException(nameof(cs));
+            _inner = cs._inner;
         }
 
-        public ColorSpace(int type)
-        {
-            if (type == Utils.CS_GRAY)
-                _nativeColorSpace = new FzColorspace(FzColorspace.Fixed.Fixed_GRAY);
-            else if (type == Utils.CS_CMYK)
-                _nativeColorSpace = new FzColorspace(FzColorspace.Fixed.Fixed_CMYK);
-            else if (type == Utils.CS_RGB)
-                _nativeColorSpace = new FzColorspace(FzColorspace.Fixed.Fixed_RGB);
-            else
-                _nativeColorSpace = new FzColorspace(FzColorspace.Fixed.Fixed_RGB);
-        }
+        internal ColorSpace(Colorspace cs) =>
+            _inner = cs ?? throw new ArgumentNullException(nameof(cs));
 
-        public ColorSpace(ColorSpace cs) : this(cs.N)
-        {
+        internal ColorSpace(FzColorspace native) => _inner = new Colorspace(native);
 
-        }
+        /// <summary>
+        /// Number of color components per pixel (1 = gray, 3 = RGB, 4 = CMYK).
+        /// </summary>
+        /// <remarks>Legacy docs: bytes required to define the color of one pixel (component count).</remarks>
+        public int N => _inner.N;
 
-        public ColorSpace(FzColorspace nativeColorSpace)
-        {
-            _nativeColorSpace = nativeColorSpace;
-        }
+        /// <summary>
+        /// Name identifying the colorspace (e.g. <c>DeviceRGB</c>).
+        /// </summary>
+        public string Name => _inner.Name;
 
-        public FzColorspace ToFzColorspace()
-        {
-            return _nativeColorSpace;
-        }
+        /// <summary>Returns the native <c>fz_colorspace</c> handle.</summary>
+        public FzColorspace ToFzColorspace() => _inner.ToFzColorspace();
 
+        /// <inheritdoc />
         public override string ToString()
         {
-            string x = (new List<string>() { "", "GRAY", "", "RGB", "CMYK" })[N];
-            return $"ColorSpace(CS_{x}) - {Name}";
+            string label = N switch
+            {
+                1 => "GRAY",
+                3 => "RGB",
+                4 => "CMYK",
+                _ => "",
+            };
+            return $"ColorSpace(CS_{label}) - {Name}";
         }
+
+        internal Colorspace Inner => _inner;
+
+        /// <summary>Implicit conversion to <see cref="Colorspace"/>.</summary>
+        public static implicit operator Colorspace(ColorSpace cs) => cs._inner;
     }
 }

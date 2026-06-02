@@ -1,0 +1,252 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using Xunit;
+
+namespace MuPDF.NET.Test
+{
+    /// <summary>
+    /// Port of <c>PyMuPDF-1.27.2.2/tests/test_optional_content.py</c>.
+    /// </summary>
+    /// <remarks>
+    /// Inputs: <c>TestDocuments/TestOptionalContent/</c>; outputs: <c>TestDocuments/_Output/TestOptionalContent/</c>.
+    /// </remarks>
+    [Collection("MuPDF.NET native")]
+    public class TestOptionalContent
+    {
+        private const string TestClassName = nameof(TestOptionalContent);
+
+        private static string Doc(string fileName) => _Path.ForTestClass(fileName, TestClassName);
+
+        private static string Out(string fileName) => _Path.ForOutput(fileName, TestClassName);
+
+        [Fact]
+        public void test_oc1()
+        {
+            // """Arbitrary calls to OC code to get coverage."""
+            // doc = pymupdf.open()
+            using var doc = new Document();
+            // ocg1 = doc.AddOcg("ocg1")
+            int ocg1 = doc.AddOcg("ocg1");
+            // ocg2 = doc.AddOcg("ocg2")
+            int ocg2 = doc.AddOcg("ocg2");
+            // ocg3 = doc.AddOcg("ocg3")
+            int ocg3 = doc.AddOcg("ocg3");
+            // ocmd1 = doc.set_ocmd(xref=0, ocgs=(ocg1, ocg2))
+            int ocmd1 = doc.set_ocmd(xref: 0, ocgs: new List<int> { ocg1, ocg2 });
+            // doc.set_layer(-1)
+            doc.set_layer(-1);
+            // doc.AddLayer("layer1")
+            doc.AddLayer("layer1");
+            // test = doc.get_layer()
+            object? test = doc.get_layer();
+            // test = doc.GetLayers()
+            test = doc.GetLayers();
+            // test = doc.GetOcgs()
+            test = doc.GetOcgs();
+            // test = doc.layer_ui_configs()
+            test = doc.layer_ui_configs();
+            // doc.switch_layer(0)
+            doc.switch_layer(0);
+        }
+
+        [Fact]
+        public void test_oc2()
+        {
+            // # source file with at least 4 pages
+            // src = pymupdf.open(filename)
+            using var src = new Document(Doc("joined.pdf"));
+
+            // # new PDF with one page
+            // doc = pymupdf.open()
+            using var doc = new Document();
+            // page = doc.NewPage()
+            var page = doc.NewPage();
+
+            // # define the 4 rectangle quadrants to receive the source pages
+            // r0 = page.Rect / 2
+            var r0 = page.Rect / 2;
+            // r1 = r0 + (r0.width, 0, r0.width, 0)
+            var r1 = r0 + new Rect(r0.Width, 0, r0.Width, 0);
+            // r2 = r0 + (0, r0.height, 0, r0.height)
+            var r2 = r0 + new Rect(0, r0.Height, 0, r0.Height);
+            // r3 = r2 + (r2.width, 0, r2.width, 0)
+            var r3 = r2 + new Rect(r2.Width, 0, r2.Width, 0);
+
+            // # make 4 OCGs - one for each source page image.
+            // # only first is ON initially
+            // ocg0 = doc.AddOcg("ocg0", on=True)
+            int ocg0 = doc.AddOcg("ocg0", on: true);
+            // ocg1 = doc.AddOcg("ocg1", on=False)
+            int ocg1 = doc.AddOcg("ocg1", on: false);
+            // ocg2 = doc.AddOcg("ocg2", on=False)
+            int ocg2 = doc.AddOcg("ocg2", on: false);
+            // ocg3 = doc.AddOcg("ocg3", on=False)
+            int ocg3 = doc.AddOcg("ocg3", on: false);
+
+            // ocmd0 = doc.set_ocmd(ve=["and", ocg0, ["not", ["or", ocg1, ocg2, ocg3]]])
+            int ocmd0 = doc.set_ocmd(ve: new List<object>
+            {
+                "and", ocg0, new List<object> { "not", new List<object> { "or", ocg1, ocg2, ocg3 } },
+            });
+            // ocmd1 = doc.set_ocmd(ve=["and", ocg1, ["not", ["or", ocg0, ocg2, ocg3]]])
+            int ocmd1 = doc.set_ocmd(ve: new List<object>
+            {
+                "and", ocg1, new List<object> { "not", new List<object> { "or", ocg0, ocg2, ocg3 } },
+            });
+            // ocmd2 = doc.set_ocmd(ve=["and", ocg2, ["not", ["or", ocg1, ocg0, ocg3]]])
+            int ocmd2 = doc.set_ocmd(ve: new List<object>
+            {
+                "and", ocg2, new List<object> { "not", new List<object> { "or", ocg1, ocg0, ocg3 } },
+            });
+            // ocmd3 = doc.set_ocmd(ve=["and", ocg3, ["not", ["or", ocg1, ocg2, ocg0]]])
+            int ocmd3 = doc.set_ocmd(ve: new List<object>
+            {
+                "and", ocg3, new List<object> { "not", new List<object> { "or", ocg1, ocg2, ocg0 } },
+            });
+            // ocmds = (ocmd0, ocmd1, ocmd2, ocmd3)
+            var ocmds = new[] { ocmd0, ocmd1, ocmd2, ocmd3 };
+            // # insert the 4 source page images, each connected to one OCG
+            // page.ShowPdfPage(r0, src, 0, oc=ocmd0)
+            page.ShowPdfPage(r0, src, 0, oc: ocmd0);
+            // page.ShowPdfPage(r1, src, 1, oc=ocmd1)
+            page.ShowPdfPage(r1, src, 1, oc: ocmd1);
+            // page.ShowPdfPage(r2, src, 2, oc=ocmd2)
+            page.ShowPdfPage(r2, src, 2, oc: ocmd2);
+            // page.ShowPdfPage(r3, src, 3, oc=ocmd3)
+            page.ShowPdfPage(r3, src, 3, oc: ocmd3);
+            // xobj_ocmds = [doc.GetOc(item[0]) for item in page.GetXobjects() if item[1] != 0]
+            var xobjOcmds = new List<int>();
+            foreach (var item in page.GetXobjects())
+            {
+                if (item["xref"] is int xref && item["name"] is string name && name != "0")
+                    xobjOcmds.Add(doc.GetOc(xref));
+            }
+            // assert set(ocmds) <= set(xobj_ocmds)
+            Assert.True(new HashSet<int>(ocmds).IsSubsetOf(xobjOcmds));
+            // assert set((ocg0, ocg1, ocg2, ocg3)) == set(tuple(doc.GetOcgs().keys()))
+            Assert.Equal(
+                new HashSet<int> { ocg0, ocg1, ocg2, ocg3 },
+                new HashSet<int>(doc.GetOcgs().Keys));
+            // doc.get_ocmd(ocmd0)
+            doc.get_ocmd(ocmd0);
+            // page.get_oc_items()
+            page.get_oc_items();
+            doc.Save(Out("test_oc2.pdf"));
+        }
+
+        [Fact]
+        public void test_3143()
+        {
+            // """Support for non-ascii layer names."""
+            // doc = pymupdf.open(os.path.join(scriptdir, "resources", "test-3143.pdf"))
+            using var doc = new Document(Doc("test-3143.pdf"));
+            // page = doc[0]
+            var page = doc[0];
+            // set0 = set([l["text"] for l in doc.layer_ui_configs()])
+            var set0 = new HashSet<string>(doc.layer_ui_configs().Select(l => l["text"].ToString()!));
+            // set1 = set([p["layer"] for p in page.GetDrawings()])
+            var set1 = new HashSet<string>(page.GetDrawingsDict().Select(p => p["layer"].ToString()!));
+            // set2 = set([b[2] for b in page.GetBboxlog(layers=True)])
+            var set2 = new HashSet<string>(page.GetBboxlogTuples(includeLayerNames: true).Select(b => b.Item3!));
+            // assert set0 == set1 == set2
+            Assert.Equal(set0, set1);
+            Assert.Equal(set0, set2);
+        }
+
+        [Fact]
+        public void test_3180()
+        {
+            // doc = pymupdf.open()
+            using var doc = new Document();
+            // page = doc.NewPage()
+            var page = doc.NewPage();
+
+            // # Define the items for the combo box
+            // combo_items = ['first', 'second', 'third']
+            string[] comboItems = { "first", "second", "third" };
+
+            // # Create a combo box field
+            // combo_box = pymupdf.Widget()  # create a new widget
+            // combo_box.field_type = pymupdf.PDF_WIDGET_TYPE_COMBOBOX
+            // combo_box.field_name = "myComboBox"
+            // combo_box.field_value = combo_items[0]
+            // combo_box.choice_values = combo_items
+            // combo_box.rect = pymupdf.Rect(50, 50, 200, 75)  # position of the combo box
+            // combo_box.script_change = """
+            // var value = event.value;
+            // app.alert('You selected: ' + value);
+            //
+            // //var group_id = optional_content_group_ids[value];
+            //
+            // """
+            var comboBox = new Widget();
+            comboBox.FieldType = WidgetType.ComboBox;
+            comboBox.FieldName = "myComboBox";
+            comboBox.FieldValue = comboItems[0];
+            comboBox.ChoiceValues = comboItems.ToList();
+            comboBox.Rect = new Rect(50, 50, 200, 75);
+            comboBox.ScriptChange = """
+                var value = event.value;
+                app.alert('You selected: ' + value);
+
+                //var group_id = optional_content_group_ids[value];
+
+                """;
+            // # Insert the combo box into the page
+            // # https://pymupdf.readthedocs.io/en/latest/page.html#Page.add_widget
+            page.add_widget(comboBox);
+            /*
+            // # Create optional content groups
+            // # https://github.com/pymupdf/PyMuPDF-Utilities/blob/master/jupyter-notebooks/optional-content.ipynb
+
+            // # Load images and create OCGs for each
+            // optional_content_group_ids = {}
+            var optionalContentGroupIds = new Dictionary<string, int>();
+            // for i, item in enumerate(combo_items):
+            for (int i = 0; i < comboItems.Length; i++)
+            {
+                string item = comboItems[i];
+                // optional_content_group_id = doc.AddOcg(item, on=False)
+                int optionalContentGroupId = doc.AddOcg(item, on: 0);
+                // optional_content_group_ids[item] = optional_content_group_id
+                optionalContentGroupIds[item] = optionalContentGroupId;
+                // rect = pymupdf.Rect(50, 100, 250, 300)
+                var rect = new Rect(50, 100, 250, 300);
+                // image_file_name = f'{item}.png'
+                string imageFileName = $"{item}.png";
+                // # xref = page.InsertImage(
+                // #    rect,
+                // #    filename=image_file_name,
+                // #    oc=optional_content_group_id,
+                // # )
+            }
+
+            // first_id = optional_content_group_ids['first']
+            int firstId = optionalContentGroupIds["first"];
+            // second_id = optional_content_group_ids['second']
+            int secondId = optionalContentGroupIds["second"];
+            // third_id = optional_content_group_ids['third']
+            int thirdId = optionalContentGroupIds["third"];
+
+            // # https://pymupdf.readthedocs.io/en/latest/document.html#Document.set_layer
+
+            // doc.set_layer(-1, basestate="OFF")
+            doc.set_layer(-1, basestate: "OFF");
+            // layers = doc.get_layer()
+            var layers = doc.get_layer();
+            // doc.set_layer(config=-1, on=[first_id])
+            doc.set_layer(config: -1, on: new List<int> { firstId });
+
+            // # https://pymupdf.readthedocs.io/en/latest/document.html#Document.set_layer_ui_config
+            // # configs = doc.layer_ui_configs()
+            // # doc.set_layer_ui_config(0, pymupdf.PDF_OC_ON)
+            // # doc.set_layer_ui_config('third', action=2)
+            */
+            // # Save the PDF
+            // doc.Save(os.path.abspath(f'{__file__}/../../tests/test_3180.pdf'))
+            doc.Save(Out("test_3180.pdf"));
+            // doc.Close()
+        }
+    }
+}

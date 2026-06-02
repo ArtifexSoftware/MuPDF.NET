@@ -22,8 +22,8 @@ namespace Demo
             Console.WriteLine("\n=== Test4LlmToMarkdownCompareExpected370 (PDF4LLM) =======================");
 
             string testsDir = LlmRepositoryTestsDirectory();
-            string pdfPath = Path.Combine(testsDir, "test_370.pdf");
-            string expectedPath = Path.Combine(testsDir, "test_370_expected.md");
+            string pdfPath = @"../../../../TestDocuments/Demo/Llm/test_370.pdf";
+            string expectedPath = @"../../../../TestDocuments/Demo/Llm/test_370_expected.md";
             if (!File.Exists(pdfPath) || !File.Exists(expectedPath))
             {
                 Console.WriteLine($"Skip: need test_370.pdf and test_370_expected.md in: {testsDir}");
@@ -71,7 +71,7 @@ namespace Demo
             _ = args;
             Console.WriteLine("\n=== Test4LlmToMarkdownOcrFixture1 =======================");
 
-            string pdfPath = Path.Combine(LlmRepositoryTestsDirectory(), "test_ocr_loremipsum_FFFD.pdf");
+            string pdfPath = @"../../../../TestDocuments/Demo/Llm/test_ocr_loremipsum_FFFD.pdf";
             if (!File.Exists(pdfPath))
             {
                 Console.WriteLine($"Skip: missing {pdfPath}");
@@ -109,7 +109,7 @@ namespace Demo
             _ = args;
             Console.WriteLine("\n=== Test4LlmToMarkdownOcrFixture2 =======================");
 
-            string pdfPath = Path.Combine(LlmRepositoryTestsDirectory(), "test_ocr_loremipsum_FFFD.pdf");
+            string pdfPath = @"../../../../TestDocuments/Demo/Llm/test_ocr_loremipsum_FFFD.pdf";
             if (!File.Exists(pdfPath))
             {
                 Console.WriteLine($"Skip: missing {pdfPath}");
@@ -140,7 +140,7 @@ namespace Demo
             _ = args;
             Console.WriteLine("\n=== Test4LlmToMarkdownOcrFixture3 =======================");
 
-            string pdfPath = Path.Combine(LlmRepositoryTestsDirectory(), "test_ocr_loremipsum_svg.pdf");
+            string pdfPath = @"../../../../TestDocuments/Demo/Llm/test_ocr_loremipsum_svg.pdf";
             if (!File.Exists(pdfPath))
             {
                 Console.WriteLine($"Skip: missing {pdfPath}");

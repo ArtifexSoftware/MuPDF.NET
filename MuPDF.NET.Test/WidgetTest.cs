@@ -1,5 +1,5 @@
 ﻿using mupdf;
-using NUnit.Framework;
+using Xunit;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,9 +8,14 @@ using System.Threading.Tasks;
 
 namespace MuPDF.NET.Test
 {
+    [Collection("MuPDF.NET native")]
     public class WidgetTest
     {
-        [Test]
+        private const string TestClassName = nameof(WidgetTest);
+        private static string Doc(string fileName) => _Path.ForTestClass(fileName, TestClassName);
+        private static string Out(string fileName) => _Path.ForOutput(fileName, TestClassName);
+
+        [Fact]
         public void Text()
         {
             Document doc = new Document();
@@ -34,14 +39,15 @@ namespace MuPDF.NET.Test
             page.AddWidget(w);
             Widget first = page.FirstWidget;
 
-            Assert.That(first.FieldTypeString, Is.EqualTo("Text"));
+            Assert.Equal("Text", first.FieldTypeString);
+            doc.Save(Out("Text.pdf"));
         }
 
-        [Test]
+        [Fact]
         public void Test4505()
         {
             // Copy field flags to Parent widget and all of its kids.
-            Document doc = new Document("../../../resources/WidgetTest/test_4505.pdf");
+            Document doc = new Document(Doc("test_4505.pdf"));
             Page page = doc[0];
 
             Dictionary<int, int> text1_flags_before = new Dictionary<int, int>();
@@ -55,7 +61,7 @@ namespace MuPDF.NET.Test
 
                 text1_flags_before[_w.Xref] = _w.FieldFlags;
             }
-            Assert.That(text1_flags_before, Is.EqualTo(new Dictionary<int, int>{{ 8, 1 },{ 10, 0 },{ 33, 0 }}));
+            Assert.Equal(new Dictionary<int, int>{{ 8, 1 },{ 10, 0 },{ 33, 0 }}, text1_flags_before);
 
             Widget w = page.LoadWidget(8);  // first of these widgets
             // give all connected widgets that field flags value
@@ -68,22 +74,22 @@ namespace MuPDF.NET.Test
 
                 text1_flags_after[_w.Xref] = _w.FieldFlags;
             }
-            Assert.That(text1_flags_after, Is.EqualTo(new Dictionary<int, int> { { 8, 1 }, { 10, 1 }, { 33, 1 } }));
+            Assert.Equal(new Dictionary<int, int> { { 8, 1 }, { 10, 1 }, { 33, 1 } }, text1_flags_after);
         }
 
-        [Test]
+        [Fact]
         public void ShouldNotThrowOnGetWidgets()
         {
-            Document doc = new Document("../../../resources/WidgetTest/test_widget_parse.pdf");
+            Document doc = new Document(Doc("test_widget_parse.pdf"));
 
             var widgets = doc[0].GetWidgets().ToList();
-            Assert.That(widgets.Count, Is.EqualTo(85));
+            Assert.Equal(85, widgets.Count);
 
             widgets = doc[1].GetWidgets().ToList();
-            Assert.That(widgets.Count, Is.EqualTo(20));
+            Assert.Equal(20, widgets.Count);
         }
 
-        [Test]
+        [Fact]
         public void Checkbox()
         {
             Document doc = new Document();
@@ -102,30 +108,30 @@ namespace MuPDF.NET.Test
             page.AddWidget(w);
 
             Widget field = page.FirstWidget;
-            Assert.That(field.FieldTypeString, Is.EqualTo("CheckBox"));
+            Assert.Equal("CheckBox", field.FieldTypeString);
 
             w.FieldFlags |= (int)FormFlags.PDF_FIELD_IS_READ_ONLY;
             w.Update();
-            doc.Save("output.pdf");
+            doc.Save(Out("Checkbox.pdf"));
             //Assert.Pass();
         }
 
-        [Test]
+        [Fact]
         public void TestWidget()
         {
-            string testFilePath = Path.GetFullPath("../../../resources/WidgetTest/Widget.pdf");
+            string testFilePath = Path.GetFullPath(Doc("Widget.pdf"));
             Document doc = new Document(testFilePath);
 
             Page page = doc[0];
             Widget fWidget = page.FirstWidget;
 
-            Assert.IsTrue(fWidget.FieldName == "partlyDetail");
-            Assert.IsTrue(fWidget.FieldType == 7);
-            Assert.IsTrue(fWidget.FieldValue == "");
-            Assert.IsTrue(fWidget.FieldFlags == 8392704);
-            Assert.IsTrue(fWidget.FieldLabel == "undefined");
-            Assert.IsTrue(fWidget.TextFont == "SimSun");
-            Assert.IsTrue(fWidget.TextFontSize == 12);
+            Assert.True(fWidget.FieldName == "partlyDetail");
+            Assert.True(fWidget.FieldType == 7);
+            Assert.True(fWidget.FieldValue == "");
+            Assert.True(fWidget.FieldFlags == 8392704);
+            Assert.True(fWidget.FieldLabel == "undefined");
+            Assert.True(fWidget.TextFont == "SimSun");
+            Assert.True(fWidget.TextFontSize == 12);
             
             page.Dispose();
             doc.Close();

@@ -2,24 +2,28 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using NUnit.Framework;
+using Xunit;
 
 namespace MuPDF.NET.Test
 {
+    [Collection("MuPDF.NET native")]
     public class PointTest
     {
+        private const string TestClassName = nameof(PixmapTest);
+        private static string Doc(string fileName) => _Path.ForTestClass(fileName, TestClassName);
+        private static string Out(string fileName) => _Path.ForOutput(fileName, TestClassName);
+
         public Point op1;
 
         public Point op2;
 
-        [SetUp]
-        public void Setup()
+        public PointTest()
         {
             op1 = new Point(0, 0);
             op2 = new Point(3, 5);
         }
 
-        [Test]
+        [Fact]
         public void Contructor()
         {
             Point t1 = new Point(0, 0);
@@ -28,45 +32,45 @@ namespace MuPDF.NET.Test
 
             FzPoint p = new FzPoint();
             Point t2 = new Point(p);
-            Assert.That(t1.X, Is.EqualTo(t2.X));
+            Assert.Equal(t1.X, t2.X);
         }
 
-        [Test]
+        [Fact]
         public void Addition()
         {
             Point t = op1 + op2;
-            Assert.IsTrue(t.X.Equals(3.0f));
-            Assert.IsTrue(t.Y.Equals(5.0f));
+            Assert.Equal(3.0f, t.X);
+            Assert.Equal(5.0f, t.Y);
 
             t = op1 + 3.0f;
-            Assert.IsTrue(t.X.Equals(t.Y));
+            Assert.Equal(t.X, t.Y);
         }
 
-        [Test]
+        [Fact]
         public void Subtraction()
         {
             Point t = op1 - op2;
-            Assert.IsTrue(t.X.Equals(-3f));
-            Assert.IsTrue(t.Y.Equals(-5f));
+            Assert.Equal(-3f, t.X);
+            Assert.Equal(-5f, t.Y);
         }
 
-        [Test]
+        [Fact]
         public void Transform()
         {
             Matrix m = new Matrix(0, 0, 0, 1, 1, 1);
             Point t = op2.Transform(m);
-            Assert.IsTrue(t[0].Equals(1f));
-            Assert.IsTrue(t.Y.Equals(6f));
+            Assert.Equal(1f, t[0]);
+            Assert.Equal(6f, t.Y);
         }
 
-        [Test]
+        [Fact]
         public void Abs()
         {
             float abs = new Point(3.0f, 4.0f).Abs();
-            Assert.That(abs, Is.EqualTo(5.0f));
+            Assert.Equal(5.0f, abs);
         }
 
-        [Test]
+        [Fact]
         public void TrueDivide()
         {
             Point t = op1.TrueDivide(3.0f);

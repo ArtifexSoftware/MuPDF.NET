@@ -5,7 +5,7 @@ namespace Demo
         internal static void TestExtractTextWithLayout(string[] args)
         {
             Console.WriteLine("\n=== TestExtractTextWithLayout =====================");
-            string testFilePath = Path.GetFullPath("../../../TestDocuments/columns.pdf");
+            string testFilePath = Path.GetFullPath("../../../../TestDocuments/Demo/columns.pdf");
             Document doc = new Document(testFilePath);
 
             FileStream wstream = File.Create("columns.txt");
@@ -32,7 +32,7 @@ namespace Demo
         {
             Console.WriteLine("\n=== TestWidget =====================");
 
-            string testFilePath = Path.GetFullPath("../../../TestDocuments/Widget.pdf");
+            string testFilePath = Path.GetFullPath("../../../../TestDocuments/Demo/Widget.pdf");
             Document doc = new Document(testFilePath);
             for (int i = 0; i < 1; i++)
             {
@@ -78,7 +78,7 @@ namespace Demo
         {
             Console.WriteLine("\n=== TestColor =====================");
 
-            string testFilePath = Path.GetFullPath("../../../TestDocuments/Color.pdf");
+            string testFilePath = Path.GetFullPath("../../../../TestDocuments/Demo/Color.pdf");
             Document doc = new Document(testFilePath);
             List<Entry> images = doc.GetPageImages(0);
             Console.WriteLine($"CaName: {images[0].CsName}");
@@ -95,7 +95,7 @@ namespace Demo
         {
             Console.WriteLine("\n=== TestCMYKRecolor =====================");
 
-            string testFilePath = Path.GetFullPath("../../../TestDocuments/CMYK_Recolor.pdf");
+            string testFilePath = Path.GetFullPath("../../../../TestDocuments/Demo/CMYK_Recolor.pdf");
             Document doc = new Document(testFilePath);
             //List<Entry> images = doc.GetPageImages(0);
             //Console.WriteLine($"CaName: {images[0].CsName}");
@@ -112,7 +112,7 @@ namespace Demo
         {
             Console.WriteLine("\n=== TestSVGRecolor =====================");
 
-            string testFilePath = Path.GetFullPath("../../../TestDocuments/SvgTest.pdf");
+            string testFilePath = Path.GetFullPath("../../../../TestDocuments/Demo/SvgTest.pdf");
             Document doc = new Document(testFilePath);
             doc.Recolor(0, "RGB");
             doc.Save("SVGRecolor.pdf");
@@ -125,7 +125,7 @@ namespace Demo
         {
             Console.WriteLine("\n=== TestReplaceImage =====================");
 
-            string testFilePath = Path.GetFullPath("../../../TestDocuments/Color.pdf");
+            string testFilePath = Path.GetFullPath("../../../../TestDocuments/Demo/Color.pdf");
             Document doc = new Document(testFilePath);
             Page page = doc[0];
             List<Entry> images = page.GetImages(true);
@@ -133,21 +133,21 @@ namespace Demo
 
             List<Block> infos = page.GetImageInfo(xrefs: true);
 
-            page.ReplaceImage(images[0].Xref, "../../../TestDocuments/Image/_apple.png");
-            page.ReplaceImage(images[0].Xref, "../../../TestDocuments/Image/_bb-logo.png");
+            page.ReplaceImage(images[0].Xref, "../../../../TestDocuments/Demo/Image/_apple.png");
+            page.ReplaceImage(images[0].Xref, "../../../../TestDocuments/Demo/Image/_bb-logo.png");
 
             infos = page.GetImageInfo(xrefs: true);
             //page.DeleteImage(images[0].Xref);
 
-            //int newXref = page.InsertImage(imgs[0].Rect, "../../../TestDocuments/Sample.png");
+            //int newXref = page.InsertImage(imgs[0].Rect, "../../../../TestDocuments/Demo/Sample.png");
 
             //images = page.GetImages(true);
             //imgs = page.GetImageRects(images[0].Xref);
 
-            //page.ReplaceImage(infos[0].Xref, "../../../TestDocuments/Sample.png");
+            //page.ReplaceImage(infos[0].Xref, "../../../../TestDocuments/Demo/Sample.png");
             //page.DeleteImage(images[0].Xref);
 
-            //page.InsertImage(imgs[0].Rect, "../../../TestDocuments/Sample.jpg");
+            //page.InsertImage(imgs[0].Rect, "../../../../TestDocuments/Demo/Sample.jpg");
 
             doc.Save("ReplaceImage.pdf");
             doc.Close();
@@ -159,13 +159,13 @@ namespace Demo
         {
             Console.WriteLine("\n=== TestInsertImage =====================");
 
-            string testFilePath = Path.GetFullPath("../../../TestDocuments/Image/test.pdf");
+            string testFilePath = Path.GetFullPath("../../../../TestDocuments/Demo/Image/test.pdf");
             Document doc = new Document(testFilePath);
             Page page = doc[0];
 
-            var pixmap1 = new Pixmap("../../../TestDocuments/Image/_apple.png");
-            //var pixmap1 = new Pixmap("../../../TestDocuments/Image/30mb.jpg");
-            var pixmap2 = new Pixmap("../../../TestDocuments/Image/_bb-logo.png");
+            var pixmap1 = new Pixmap("../../../../TestDocuments/Demo/Image/_apple.png");
+            //var pixmap1 = new Pixmap("../../../../TestDocuments/Demo/Image/30mb.jpg");
+            var pixmap2 = new Pixmap("../../../../TestDocuments/Demo/Image/_bb-logo.png");
             var imageRect1 = new Rect(0, 0, 100, 100);
             var imageRect2 = new Rect(100, 100, 200, 200);
             var imageRect3 = new Rect(100, 200, 200, 300);
@@ -176,12 +176,12 @@ namespace Demo
             var img_xref = page.InsertImage(imageRect1, pixmap: pixmap1);
             Console.WriteLine(img_xref);
 
-            //img_xref = page.InsertImage(imageRect2, "../../../TestDocuments/Image/_apple.png");
+            //img_xref = page.InsertImage(imageRect2, "../../../../TestDocuments/Demo/Image/_apple.png");
             img_xref = page.InsertImage(imageRect2, pixmap: pixmap1);
             Console.WriteLine(img_xref);
             img_xref = page.InsertImage(imageRect3, pixmap: pixmap2);
             Console.WriteLine(img_xref);
-            img_xref = page.InsertImage(imageRect4, "../../../TestDocuments/Image/_bb-logo.png");
+            img_xref = page.InsertImage(imageRect4, "../../../../TestDocuments/Demo/Image/_bb-logo.png");
             Console.WriteLine(img_xref);
             page.InsertImage(imageRect5, xref: img_xref);
             Console.WriteLine(img_xref);
@@ -197,7 +197,7 @@ namespace Demo
         {
             Console.WriteLine("\n=== TestGetImageInfo =====================");
 
-            string testFilePath = Path.GetFullPath("../../../TestDocuments/Image/TestInsertImage.pdf");
+            string testFilePath = Path.GetFullPath("../../../../TestDocuments/Demo/Image/TestInsertImage.pdf");
             Document doc = new Document(testFilePath);
             Page page = doc[0];
 
@@ -212,7 +212,7 @@ namespace Demo
         {
             Console.WriteLine("\n=== TestGetTextPageOcr =====================");
 
-            string testFilePath = Path.GetFullPath(@"../../../TestDocuments/Ocr.pdf");
+            string testFilePath = Path.GetFullPath(@"../../../../TestDocuments/Demo/Ocr.pdf");
             Document doc = new Document(testFilePath);
             Page page = doc[0];
 
@@ -253,7 +253,7 @@ namespace Demo
         {
             Console.WriteLine("\n=== TestCreateImagePage =====================");
 
-            Pixmap pxmp = new Pixmap("../../../TestDocuments/Image/_bb-logo.png");
+            Pixmap pxmp = new Pixmap("../../../../TestDocuments/Demo/Image/_bb-logo.png");
 
             Document doc = new Document();
             Page page = doc.NewPage(width:pxmp.W, height:pxmp.H);
@@ -272,9 +272,9 @@ namespace Demo
         {
             Console.WriteLine("\n=== TestJoinPdfPages =====================");
 
-            string testFilePath1 = Path.GetFullPath(@"../../../TestDocuments/Widget.pdf");
+            string testFilePath1 = Path.GetFullPath(@"../../../../TestDocuments/Demo/Widget.pdf");
             Document doc1 = new Document(testFilePath1);
-            string testFilePath2 = Path.GetFullPath(@"../../../TestDocuments/Color.pdf");
+            string testFilePath2 = Path.GetFullPath(@"../../../../TestDocuments/Demo/Color.pdf");
             Document doc2 = new Document(testFilePath2);
 
             doc1.InsertPdf(doc2, 0, 0, 2);

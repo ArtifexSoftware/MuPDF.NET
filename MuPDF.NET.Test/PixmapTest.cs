@@ -1,13 +1,18 @@
-﻿using NUnit.Framework;
+﻿using Xunit;
 
 namespace MuPDF.NET.Test
 {
+    [Collection("MuPDF.NET native")]
     public class PixmapTest
     {
-        [Test]
+        private const string TestClassName = nameof(PixmapTest);
+        private static string Doc(string fileName) => _Path.ForTestClass(fileName, TestClassName);
+        private static string Out(string fileName) => _Path.ForOutput(fileName, TestClassName);
+        
+        [Fact]
         public void GetPixamp_Save()
         {
-            Document doc = new Document("../../../resources/cython.pdf");
+            Document doc = new Document(Doc("cython.pdf"));
 
             Page page = doc[0];
 
@@ -15,15 +20,15 @@ namespace MuPDF.NET.Test
             
             Pixmap p = new Pixmap(source.ColorSpace, source.W, source.H, source.SAMPLES, 0);
 
-            p.Save("1.jpg", "JPEG");
+            p.Save(Out("GetPixamp_Save.jpg"), "JPEG");
 
             //Assert.Pass();
         }
 
-        [Test]
+        [Fact]
         public void GetPixel()
         {
-            Document doc = new Document("../../../resources/cython.pdf");
+            Document doc = new Document(Doc("cython.pdf"));
 
             Page page = doc[0];
 
@@ -31,16 +36,16 @@ namespace MuPDF.NET.Test
 
             byte[] bPixel = pix.GetPixel(10, 10);
 
-            Assert.That(bPixel.Length, Is.EqualTo(3));
-            Assert.That(bPixel[0], Is.EqualTo(255));
-            Assert.That(bPixel[1], Is.EqualTo(255));
-            Assert.That(bPixel[2], Is.EqualTo(255));
+            Assert.Equal(3, bPixel.Length);
+            Assert.Equal(255, bPixel[0]);
+            Assert.Equal(255, bPixel[1]);
+            Assert.Equal(255, bPixel[2]);
         }
-
-        [Test]
+        
+        [Fact]
         public void ToBytes()
         {
-            Document doc = new Document("../../../resources/cython.pdf");
+            Document doc = new Document(Doc("cython.pdf"));
 
             Page page = doc[0];
 
@@ -48,13 +53,13 @@ namespace MuPDF.NET.Test
 
             byte[] bytes = pix.ToBytes();
 
-            Assert.That(bytes.Length, Is.EqualTo(21908));
+            Assert.Equal(21908, bytes.Length);
         }
-
-        [Test]
+        
+        [Fact]
         public void ColorToUsage()
         {
-            Document doc = new Document("../../../resources/cython.pdf");
+            Document doc = new Document(Doc("cython.pdf"));
 
             Page page = doc[0];
 
@@ -66,17 +71,17 @@ namespace MuPDF.NET.Test
             page.Dispose();
             doc.Close();
 
-            Assert.That(max[0], Is.EqualTo(255));
-            Assert.That(max[1], Is.EqualTo(255));
-            Assert.That(max[2], Is.EqualTo(255));
+            Assert.Equal(255, max[0]);
+            Assert.Equal(255, max[1]);
+            Assert.Equal(255, max[2]);
 
 
         }
-
-        [Test]
+        
+        [Fact]
         public void InvertIrect()
         {
-            Document doc = new Document("../../../resources/cython.pdf");
+            Document doc = new Document(Doc("cython.pdf"));
 
             Page page = doc[0];
 
@@ -84,77 +89,81 @@ namespace MuPDF.NET.Test
 
             bool result = pix.InvertIrect(new IRect(100, 100, 900, 900));
 
-            Assert.That(result, Is.True);
+            Assert.True(result);
+            doc.Save(Out("InvertIrect.pdf"));
         }
-
-        [Test]
+        
+        [Fact]
         public void PdfOCR()
         {
-            Document doc = new Document("../../../resources/cython.pdf");
+            Document doc = new Document(Doc("cython.pdf"));
 
             Page page = doc[0];
 
             Pixmap pix = page.GetPixmap();
 
-            pix.PdfOCR2Bytes();
+            byte[] byts = pix.PdfOCR2Bytes();
+
+            Assert.Equal(23813, byts.Length);
 
             //Assert.Pass();
         }
-
-        [Test]
+        
+        [Fact]
         public void PdfPixmap()
         {
-            Document doc = new Document("../../../resources/toc.pdf");
+            Document doc = new Document(Doc("toc.pdf"));
             Entry img = doc.GetPageImages(0)[0];
             Pixmap pix = new Pixmap(doc, img.Xref);
-            Assert.That(pix.W, Is.EqualTo(img.Width));
-            Assert.That(pix.H, Is.EqualTo(img.Height));
+            Assert.Equal(img.Width, pix.W);
+            Assert.Equal(img.Height, pix.H);
 
             ImageInfo ex = doc.ExtractImage(img.Xref);
-            Assert.That(ex.Width, Is.EqualTo(pix.W));
-            Assert.That(ex.Height, Is.EqualTo(pix.H));
+            Assert.Equal(pix.W, ex.Width);
+            Assert.Equal(pix.H, ex.Height);
         }
-
-        [Test]
+        
+        [Fact]
         public void InvertIrect1()
         {
-            Pixmap pix = new Pixmap("../../../resources/img-transparent.png");
+            Pixmap pix = new Pixmap(Doc("img-transparent.png"));
             Rect rect = new Rect(0, 0, 100, 100);
             pix.InvertIrect(new IRect(rect));
+            pix.Save(Out("InvertIrect1.png"));
             //Assert.Pass();
         }
-
-        [Test]
+        
+        [Fact]
         public void TestPixmapToBytes()
         {
             // Test single pixmap creation and PNG conversion with matrix scaling
-            Document doc = new Document("../../../resources/cython.pdf");
+            Document doc = new Document(Doc("cython.pdf"));
             Page page = doc[0];
             Pixmap pixmap = page.GetPixmap(new Matrix(2, 2));
 
             byte[] png = pixmap.ToBytes("png");
 
             // Verify PNG bytes are generated and valid
-            Assert.That(png.Length, Is.GreaterThan(0));
+            Assert.True(png.Length > 0);
             // PNG magic bytes: 137, 80, 78, 71
-            Assert.That(png[0], Is.EqualTo(137));
-            Assert.That(png[1], Is.EqualTo(80));
-            Assert.That(png[2], Is.EqualTo(78));
-            Assert.That(png[3], Is.EqualTo(71));
+            Assert.Equal(137, png[0]);
+            Assert.Equal(80, png[1]);
+            Assert.Equal(78, png[2]);
+            Assert.Equal(71, png[3]);
 
             pixmap.Dispose();
             page.Dispose();
             doc.Close();
         }
-
-        [Test]
+        
+        [Fact]
         public void TestPixmapParallel()
         {
             // Test parallel pixmap rendering with PNG conversion (simulating TestPixmap())
             const int iterations = 50;  // Reduced from 500 for unit test performance
             const int degreeOfParallelism = 4;  // Reduced from 10 for unit test performance
 
-            using (var document = new Document("../../../resources/cython.pdf"))
+            using (var document = new Document(Doc("cython.pdf")))
             {
                 var renderResults = new System.Collections.Concurrent.ConcurrentBag<int>();
                 var errors = new System.Collections.Concurrent.ConcurrentBag<Exception>();
@@ -178,11 +187,12 @@ namespace MuPDF.NET.Test
                     });
 
                 // Verify all iterations completed successfully
-                Assert.That(errors.Count, Is.EqualTo(0), $"Parallel rendering encountered errors: {string.Join(", ", errors.Select(e => e.Message))}");
-                Assert.That(renderResults.Count, Is.EqualTo(iterations), "Not all iterations completed");
-                Assert.That(renderResults.All(size => size > 0), Is.True, "All PNG bytes should be valid");
+                Assert.True(
+                    errors.Count == 0,
+                    $"Parallel rendering encountered errors: {string.Join(", ", errors.Select(e => e.Message))}");
+                Assert.True(renderResults.Count == iterations, "Not all iterations completed");
+                Assert.True(renderResults.All(size => size > 0), "All PNG bytes should be valid");
             }
         }
-
     }
 }

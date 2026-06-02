@@ -1,4 +1,4 @@
-﻿namespace MuPDF.NET
+namespace MuPDF.NET
 {
     public class AnnotValues
     {

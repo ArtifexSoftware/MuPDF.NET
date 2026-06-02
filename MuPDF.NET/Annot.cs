@@ -1,1556 +1,648 @@
-﻿using mupdf;
 using System;
 using System.Collections.Generic;
-using Microsoft.CSharp.RuntimeBinder;
-using System.Linq;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Linq;
+using System.Threading;
+using mupdf;
 
 namespace MuPDF.NET
 {
-    public class Annot
+    /// <summary>
+    /// Represents a PDF annotation bound to a page.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Ports PyMuPDF <c>class Annot</c>. An annotation associates an object (note, sound, link, etc.)
+    /// with a location on a page. It is always tied to its <see cref="Parent"/> page; if the page
+    /// or document becomes invalid, wrappers may throw when accessed.
+    /// </para>
+    /// <para>
+    /// Legacy MuPDF.NET names and DTOs (<see cref="AnnotInfo"/>, <see cref="Color"/> colors,
+    /// <c>GetPixmap</c> with <c>dpi</c>, etc.) are on the <c>Annot.Legacy.cs</c> partial —
+    /// see <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Annot.html"/>.
+    /// </para>
+    /// </remarks>
+    public partial class Annot : IDisposable
     {
-        static Annot()
-        {
-            Utils.InitApp();
-        }
+        private static int _nextAnnotRefId;
+        private mupdf.PdfAnnot _nativeAnnot;
+        private bool _disposed;
+        public Page Parent { get; }
 
-        internal PdfAnnot _nativeAnnotion;
+        /// <summary>
+        /// Stable identity for <see cref="Page"/> annot-ref bookkeeping (Python uses <c>id(annot)</c> keys in <c>Page._annot_refs</c>).
+        /// </summary>
+        internal int AnnotRefId { get; }
 
-        public bool IsOwner { get; set; }
-
-        public bool ThisOwn { get; set; }
-
+        /// <summary>PyMuPDF <c>Annot._yielded</c> (set by <c>Page.annots()</c>).</summary>
         public bool Yielded { get; set; }
 
-        delegate string LE_FUNCTION(
-            Annot annot,
-            Point p1,
-            Point p2,
-            bool lr,
-            float[] fillColor
-        );
+        internal mupdf.PdfAnnot NativeAnnot
+        {
+            get
+            {
+                if (_disposed) throw new ObjectDisposedException(nameof(Annot));
+                return _nativeAnnot;
+            }
+        }
 
-        private Page _parent;
+        internal Annot(mupdf.PdfAnnot annot, Page page)
+        {
+            _nativeAnnot = annot;
+            Parent = page;
+            AnnotRefId = Interlocked.Increment(ref _nextAnnotRefId);
+            page.RegisterAnnotRef(this);
+        }
 
+        private mupdf.PdfObj AnnotObj
+        {
+            get
+            {
+                EnsurePageBound();
+                return mupdf.mupdf.pdf_annot_obj(NativeAnnot);
+            }
+        }
+
+        /// <summary>PyMuPDF: annot use after its page wrapper was erased (e.g. after <see cref="Document.NewPage"/>).</summary>
+        private void EnsurePageBound()
+        {
+            if (Parent == null || Parent.py_this_is_none())
+                throw new InvalidOperationException("annotation not bound to any page");
+        }
+        private mupdf.PdfDocument ParentPdfDocument => Parent.Parent.NativePdfDocument;
+        private Matrix RotatePageMatrix => Helpers.RotatePageMatrix(Parent);
+        private Matrix DerotatePageMatrix => Helpers.DerotatePageMatrix(Parent);
+        private Matrix VertexMatrix => Helpers.AnnotVertexMatrix(Parent);
+        private bool IsWidgetAnnot => AnnotationType == AnnotationType.Widget;
+
+        // ─── Properties ─────────────────────────────────────────────────
+
+        /// <summary>
+        /// Type of the annotation: numeric PDF type, name string, and optional intent.
+        /// </summary>
+        /// <remarks>
+        /// Legacy code used <c>(PdfAnnotType, string, string)</c>; use <see cref="AnnotTypeInfo.Item1"/>,
+        /// <see cref="AnnotTypeInfo.Item2"/>, and <see cref="AnnotTypeInfo.Item3"/> for the same layout.
+        /// </remarks>
+        public AnnotTypeInfo Type
+        {
+            get
+            {
+                var t = mupdf.mupdf.pdf_annot_type(NativeAnnot);
+                string name = mupdf.mupdf.pdf_string_from_annot_type(t);
+                string intent = null;
+                var annotObj = AnnotObj;
+                var itObj = mupdf.mupdf.pdf_dict_get(annotObj, mupdf.mupdf.pdf_new_name("IT"));
+                if (itObj.m_internal != null && mupdf.mupdf.pdf_is_name(itObj) != 0)
+                    intent = mupdf.mupdf.pdf_to_name(itObj);
+                return new AnnotTypeInfo((PdfAnnotType)(int)t, name, intent);
+            }
+        }
+
+        /// <summary>PyMuPDF-style annotation type enum.</summary>
+        public AnnotationType AnnotationType => Type;
+
+        /// <summary>Annotation type name string (PyMuPDF <c>Annot.type</c>).</summary>
+        public string TypeString => Type.Name;
+
+        /// <summary>
+        /// Rectangle containing the annotation in page coordinates.
+        /// </summary>
+        /// <remarks>Transformed by the page derotation matrix (PyMuPDF <c>Annot.rect</c>).</remarks>
         public Rect Rect
         {
-            get { return new Rect(mupdf.mupdf.pdf_bound_annot(_nativeAnnotion)); }
-        }
-
-        internal Page Parent
-        {
-            get { return _parent; }
-            set { _parent = value; }
-        }
-
-        public Rect ApnBbox
-        {
             get
             {
-                PdfAnnot annot = _nativeAnnotion;
-                PdfObj annotObj = annot.pdf_annot_obj();
-                PdfObj ap = Utils.pdf_dict_getl(annotObj, new string[] { "AP", "N" });
-
-                FzRect val = null;
-                if (ap.m_internal == null)
-                    val = new FzRect(FzRect.Fixed.Fixed_EMPTY);
-                else
-                    val = ap.pdf_dict_get_rect(new PdfObj("BBOX"));
-
-                Rect ret = new Rect(val);
-                ret = ret * Parent.TransformationMatrix;
-                ret = ret * Parent.DerotationMatrix;
-
-                return ret;
+                var r = mupdf.mupdf.pdf_bound_annot(NativeAnnot);
+                // Python: "val *= p.derotation_matrix"
+                return Helpers.TransformRect(new Rect(r), DerotatePageMatrix);
             }
         }
 
-        public Matrix ApnMatrix
+        /// <summary>Annotation xref number (PyMuPDF <c>Annot.xref</c>).</summary>
+        public int Xref => mupdf.mupdf.pdf_to_num(mupdf.mupdf.pdf_annot_obj(NativeAnnot));
+
+        /// <summary>Flags field (PyMuPDF <c>Annot.flags</c> / <c>set_flags</c>).</summary>
+        public int Flags
         {
-            get
+            get => mupdf.mupdf.pdf_annot_flags(NativeAnnot);
+            set => mupdf.mupdf.pdf_set_annot_flags(NativeAnnot, value);
+        }
+
+        /// <summary>Annotation contents (PyMuPDF <c>Annot.info</c> / PDF /Contents).</summary>
+        public string Contents
+        {
+            get => mupdf.mupdf.pdf_annot_contents(NativeAnnot);
+            set
             {
-                PdfAnnot annot = _nativeAnnotion;
-                PdfObj ap = Utils.pdf_dict_getl(annot.pdf_annot_obj(), new string[] { "AP", "N" });
-                if (ap.m_internal == null)
-                {
-                    return new Matrix();
-                }
-
-                FzMatrix mat = ap.pdf_dict_get_matrix(new PdfObj("MATRIX"));
-
-                return new Matrix(mat);
+                mupdf.mupdf.pdf_set_annot_contents(NativeAnnot, value);
+                mupdf.mupdf.pdf_update_annot(NativeAnnot);
             }
         }
 
-        public string BlendMode
-        {
-            get
-            {
-                PdfAnnot annot = _nativeAnnotion;
-                PdfObj annotObj = annot.pdf_annot_obj();
-                PdfObj obj = annotObj.pdf_dict_get(new PdfObj("BM"));
-                string blendMode = "";
-
-                if (obj.m_internal != null)
-                {
-                    blendMode = obj.pdf_to_name();
-                    return blendMode;
-                }
-
-                obj = Utils.pdf_dict_getl(
-                    annotObj,
-                    new string[] { "AP", "N", "Resources", "ExtGState" }
-                );
-                
-                if (obj.pdf_is_dict() != 0)
-                {
-                    int n = obj.pdf_dict_len();
-                    for (int i = 0; i < n; i++)
-                    {
-                        PdfObj obj1 = obj.pdf_dict_get_val(i);
-                        if (obj1.pdf_is_dict() != 0)
-                        {
-                            int m = obj1.pdf_dict_len();
-                            for (int j = 0; j < m; j++)
-                            {   
-                                PdfObj obj2 = obj1.pdf_dict_get_key(j);
-                                if (obj2.pdf_objcmp(new PdfObj("BM")) == 0)
-                                {
-                                    blendMode = obj1.pdf_dict_get_val(j).pdf_to_name();
-                                    return blendMode;
-                                }
-                            }
-                        }
-                    }
-                }
-
-                return blendMode;
-            }
-        }
-
-        public FileInfo FileInfo
-        {
-            get
-            {
-                FileInfo ret = new FileInfo();
-                int length = -1;
-                int size = -1;
-                string filename = "";
-                string desc = "";
-
-                PdfAnnot annot = _nativeAnnotion;
-                PdfObj annotObj = annot.pdf_annot_obj();
-                pdf_annot_type type = annot.pdf_annot_type();
-
-                if ((PdfAnnotType)type != PdfAnnotType.PDF_ANNOT_FILE_ATTACHMENT)
-                {
-                    throw new Exception("bad annot type");
-                }
-
-                PdfObj stream = Utils.pdf_dict_getl(annotObj, new string[] { "FS", "EF", "F" });
-                if (stream == null)
-                {
-                    throw new Exception("bad PDF: file entry not found");
-                }
-
-                PdfObj fs = annotObj.pdf_dict_get(new PdfObj("FS"));
-                PdfObj o = fs.pdf_dict_get(new PdfObj("UF"));
-                if (o != null)
-                {
-                    filename = o.pdf_to_text_string();
-                }
-                else
-                {
-                    o = fs.pdf_dict_get(new PdfObj("F"));
-                    if (o != null)
-                    {
-                        filename = o.pdf_to_text_string();
-                    }
-                }
-
-                o = fs.pdf_dict_get(new PdfObj("Desc"));
-                if (o != null)
-                    desc = o.pdf_to_text_string();
-
-                o = stream.pdf_dict_get(new PdfObj("Length"));
-                if (o != null)
-                {
-                    length = o.pdf_to_int();
-                }
-
-                o = Utils.pdf_dict_getl(stream, new string[] { "Params", "Size" });
-                if (o != null)
-                {
-                    size = o.pdf_to_int();
-                }
-
-                ret.FileName = EscapeStrFromStr(filename);
-                ret.Desc = EscapeStrFromStr(desc);
-                ret.Size = size;
-                ret.Length = length;
-
-                return ret;
-            }
-        }
-
+        /// <summary>Whether the annotation has a Popup (PyMuPDF <c>Annot.has_popup</c>).</summary>
         public bool HasPopup
         {
             get
             {
-                PdfAnnot annot = _nativeAnnotion;
-                PdfObj obj = annot.pdf_annot_obj().pdf_dict_get(new PdfObj("Popup"));
-
-                if (obj.m_internal != null)
-                    return true;
-
-                return false;
+                var popup = mupdf.mupdf.pdf_dict_gets(AnnotObj, "Popup");
+                return popup.m_internal != null;
             }
         }
 
-        public AnnotInfo Info
-        {
-            get
-            {
-                AnnotInfo res = new AnnotInfo();
-                PdfAnnot annot = _nativeAnnotion;
-                PdfObj annotObj = annot.pdf_annot_obj();
-
-                res.Content = annot.pdf_annot_contents();
-
-                PdfObj o = annotObj.pdf_dict_get(new PdfObj("Name"));
-                res.Name = o.pdf_to_name();
-
-                o = annotObj.pdf_dict_get(new PdfObj("T"));
-                res.Title = o.pdf_to_text_string();
-
-                o = annotObj.pdf_dict_gets("CreationDate");
-                res.CreationDate = o.pdf_to_text_string();
-
-                o = annotObj.pdf_dict_get(new PdfObj("M"));
-                res.ModDate = o.pdf_to_text_string();
-
-                o = annotObj.pdf_dict_gets("Subj");
-                res.Subject = o.pdf_to_text_string();
-
-                o = annotObj.pdf_dict_gets("NM");
-                res.Id = o.pdf_to_text_string();
-
-                return res;
-            }
-        }
-
-        public int Flags
-        {
-            get { return _nativeAnnotion.pdf_annot_flags(); }
-        }
-
-        public bool IsOpen
-        {
-            get { return _nativeAnnotion.pdf_annot_is_open() == 0 ? false : true; }
-        }
-
-        public string Language
-        {
-            get
-            {
-                fz_text_language lang;
-                PdfAnnot annot = _nativeAnnotion;
-                lang = mupdf.mupdf.pdf_annot_language(annot);
-
-                if (lang == fz_text_language.FZ_LANG_UNSET)
-                    return null;
-                
-                return mupdf.mupdf.fz_string_from_text_language("", lang);
-            }
-        }
-
-        public int Xref
-        {
-            get
-            {
-                PdfAnnot annot = _nativeAnnotion;
-                return annot.pdf_annot_obj().pdf_to_num();
-            }
-        }
-
-        public (PdfLineEnding, PdfLineEnding) LineEnds
-        {
-            get
-            {
-                PdfAnnot annot = _nativeAnnotion;
-                if (annot.pdf_annot_has_line_ending_styles() == 0)
-                    return (0, 0);
-
-                PdfLineEnding lstart = (PdfLineEnding)annot.pdf_annot_line_start_style();
-                PdfLineEnding lend = (PdfLineEnding)annot.pdf_annot_line_end_style();
-
-                return (lstart, lend);
-            }
-        }
-
-        /// <summary>
-        /// return MuPDFAnnot or Widget
-        /// </summary>
-        public dynamic Next
-        {
-            get
-            {
-                try
-                {
-                    PdfAnnot annot = _nativeAnnotion;
-                    pdf_annot_type type = annot.pdf_annot_type();
-
-                    if (type != pdf_annot_type.PDF_ANNOT_WIDGET)
-                        annot = annot.pdf_next_annot();
-                    else
-                        annot = annot.pdf_next_widget();
-
-                    Annot val = (annot == null ? null : new Annot(annot, _parent));
-                    if (val == null)
-                    {
-                        return null;
-                    }
-                    
-                    val.IsOwner = true;
-                    if (val.GetParent() == null)
-                        throw new Exception("null parent");
-                    
-                    val.Parent.AnnotRefs[val.GetHashCode()] = val;
-
-                    if (val.Type.Item1 == PdfAnnotType.PDF_ANNOT_WIDGET)
-                    {
-                        Widget widget = new Widget(Parent);
-                        Utils.FillWidget(val, widget);
-                        return widget;
-                    }
-                    else if (val.Type.Item1 == PdfAnnotType.PDF_ANNOT_UNKNOWN)
-                    {
-                        return null;
-                    }
-
-                        return val;
-                }
-                catch(Exception e)
-                {
-                    throw new Exception(e.Message);
-                }
-            }
-        }
-
-        public float Opacity
-        {
-            get
-            {
-                float opy = -1.0f;
-                PdfAnnot annot = _nativeAnnotion;
-                PdfObj ca = annot.pdf_annot_obj().pdf_dict_get(new PdfObj("CA"));
-
-                if (ca.pdf_is_number() != 0)
-                    opy = ca.pdf_to_real();
-                
-                return opy;
-            }
-        }
-
+        /// <summary>Annotation Popup rectangle (PyMuPDF <c>Annot.popup_rect</c>).</summary>
         public Rect PopupRect
         {
             get
             {
-                PdfAnnot annot = _nativeAnnotion;
-                PdfObj annotObj = annot.pdf_annot_obj();
-                FzRect rect = new FzRect(FzRect.Fixed.Fixed_INFINITE);
-                PdfObj obj = annotObj.pdf_dict_get(new PdfObj("Popup"));
-
-                if (obj.m_internal != null)
-                {
-                    rect = obj.pdf_dict_get_rect(new PdfObj("Rect"));
-                }
-
-                Rect val = new Rect(rect);
-                val = val * Parent.TransformationMatrix;
-                val *= Parent.DerotationMatrix;
-
-                return val;
+                var rect = Rect.Infinite;
+                var popup = mupdf.mupdf.pdf_dict_gets(AnnotObj, "Popup");
+                if (popup.m_internal != null)
+                    rect = new Rect(mupdf.mupdf.pdf_dict_get_rect(popup, mupdf.mupdf.pdf_new_name("Rect")));
+                // Python: val = Rect(val) * transformation_matrix; val *= derotation_matrix
+                rect = Helpers.TransformRect(rect, Parent.TransformationMatrix);
+                rect = Helpers.TransformRect(rect, DerotatePageMatrix);
+                return rect;
             }
         }
 
+        /// <summary>Annotation Popup xref (PyMuPDF <c>Annot.popup_xref</c>).</summary>
         public int PopupXref
         {
             get
             {
-                int xref = 0;
-                PdfAnnot annot = _nativeAnnotion;
-                PdfObj annotObj = annot.pdf_annot_obj();
-                PdfObj obj = annotObj.pdf_dict_get(new PdfObj("Popup"));
-
-                if (obj.m_internal != null)
-                {
-                    xref = obj.pdf_to_num();
-                }
-
-                return xref;
+                if (!HasPopup) return 0;
+                var popup = mupdf.mupdf.pdf_dict_gets(AnnotObj, "Popup");
+                return mupdf.mupdf.pdf_to_num(popup);
             }
         }
 
-        public (float, float, float, float) RectDelta
+        /// <summary>Open status of annotation or its Popup (PyMuPDF <c>Annot.is_open</c> / <c>set_open</c>).</summary>
+        public bool IsOpen
         {
             get
             {
-                PdfObj annotObj = _nativeAnnotion.pdf_annot_obj();
-                PdfObj arr = annotObj.pdf_dict_get(new PdfObj("RD"));
-
-                if (arr.pdf_array_len() == 4)
-                {
-                    return (
-                        arr.pdf_array_get(0).pdf_to_real(),
-                        arr.pdf_array_get(1).pdf_to_real(),
-                        arr.pdf_array_get(2).pdf_to_real(),
-                        arr.pdf_array_get(3).pdf_to_real()
-                    );
-                }
-                else
-                    return (0, 0, 0, 0);
+                return mupdf.mupdf.pdf_annot_is_open(NativeAnnot) != 0;
             }
+            set => mupdf.mupdf.pdf_set_annot_is_open(NativeAnnot, value ? 1 : 0);
         }
 
-        public int Rotation
+        /// <summary>Opacity (PyMuPDF <c>Annot.opacity</c> / <c>set_opacity</c>).</summary>
+        public float Opacity
         {
             get
             {
-                PdfAnnot annot = _nativeAnnotion;
-                PdfObj rotation = annot.pdf_annot_obj().pdf_dict_get(new PdfObj("Rotate"));
-
-                if (rotation.m_internal == null)
-                    return -1;
-
-                return rotation.pdf_to_int();
+                var ca = mupdf.mupdf.pdf_dict_get(AnnotObj, mupdf.mupdf.pdf_new_name("CA"));
+                return mupdf.mupdf.pdf_is_number(ca) != 0 ? mupdf.mupdf.pdf_to_real(ca) : -1;
+            }
+            set
+            {
+                SetOpacity(value);
             }
         }
 
+        /// <summary>Border width from <see cref="Border"/> (PyMuPDF <c>Annot.border</c> width).</summary>
+        public float BorderWidth
+        {
+            get
+            {
+                var border = Border;
+                return border != null && border.Width > 0 ? border.Width : -1;
+            }
+        }
+
+        /// <summary>Annotation unique id /NM (PyMuPDF <c>Annot.info</c> id).</summary>
+        public string Id
+        {
+            get
+            {
+                var nm = mupdf.mupdf.pdf_dict_gets(mupdf.mupdf.pdf_annot_obj(NativeAnnot), "NM");
+                return nm.m_internal != null ? mupdf.mupdf.pdf_to_text_string(nm) : null;
+            }
+        }
+
+        /// <summary>Next annotation on the page (PyMuPDF <c>Annot.next</c>).</summary>
+        public Annot Next
+        {
+            get
+            {
+                var next = IsWidgetAnnot
+                    ? mupdf.mupdf.pdf_next_widget(NativeAnnot)
+                    : mupdf.mupdf.pdf_next_annot(NativeAnnot);
+                return next.m_internal != null ? new Annot(next, Parent) : null;
+            }
+        }
+
+
+        /// <summary>Stroke color components (PyMuPDF <c>Annot.colors</c> stroke). Legacy <c>Colors</c> DTO: <see cref="Annot.Legacy.cs"/>.</summary>
+        public float[] StrokeColor
+        {
+            get => ColorInfo.TryGetValue("stroke", out var stroke) ? (float[])stroke : Array.Empty<float>();
+        }
+
+        /// <summary>Interior (fill) color components (PyMuPDF <c>Annot.colors</c> fill).</summary>
+        public float[] InteriorColor
+        {
+            get => ColorInfo.TryGetValue("fill", out var fill) ? (float[])fill : Array.Empty<float>();
+        }
+
+        /// <summary>Color definitions (PyMuPDF <c>Annot.colors</c>).</summary>
+        public Dictionary<string, object> ColorInfo
+        {
+            get => Helpers.JM_annot_colors(AnnotObj);
+        }
+
+        /// <summary>Border information (PyMuPDF <c>Annot.border</c>).</summary>
         public Border Border
         {
             get
             {
-                PdfAnnotType atype = Type.Item1;
-                if (
-                    !(
-                        new List<PdfAnnotType>()
-                        {
-                            PdfAnnotType.PDF_ANNOT_CIRCLE,
-                            PdfAnnotType.PDF_ANNOT_FREE_TEXT,
-                            PdfAnnotType.PDF_ANNOT_INK,
-                            PdfAnnotType.PDF_ANNOT_LINE,
-                            PdfAnnotType.PDF_ANNOT_POLY_LINE,
-                            PdfAnnotType.PDF_ANNOT_POLYGON,
-                            PdfAnnotType.PDF_ANNOT_SQUARE
-                        }
-                    ).Contains(atype)
-                )
-                {
+                var annotType = AnnotationType;
+                if (annotType != AnnotationType.Circle
+                    && annotType != AnnotationType.FreeText
+                    && annotType != AnnotationType.Ink
+                    && annotType != AnnotationType.Line
+                    && annotType != AnnotationType.PolyLine
+                    && annotType != AnnotationType.Polygon
+                    && annotType != AnnotationType.Square)
                     return new Border();
-                }
-
-                PdfObj annotObj = _nativeAnnotion.pdf_annot_obj();
-
-                return GetBorderFromAnnot(annotObj);
+                return GetBorderFromAnnot(AnnotObj, 0);
             }
         }
 
-        public Color Colors
+        /// <summary>Annotation appearance bbox (PyMuPDF <c>Annot.apn_bbox</c>).</summary>
+        public Rect ApnBBox
         {
             get
             {
-                try
-                {
-                    PdfAnnot annot = _nativeAnnotion;
-                    return GetColorFromAnnot(annot.pdf_annot_obj());
-                }
-                catch
-                {
-                    throw;
-                }
+                var ap = GetAppearanceStreamObject("N");
+                Rect value = ap.m_internal == null
+                    ? Rect.Infinite
+                    : new Rect(mupdf.mupdf.pdf_dict_get_rect(ap, mupdf.mupdf.pdf_new_name("BBox")));
+                value = Helpers.TransformRect(value, Parent.TransformationMatrix);
+                value = Helpers.TransformRect(value, DerotatePageMatrix);
+                return value;
             }
         }
 
-        public dynamic Vertices
+        /// <summary>Annotation appearance matrix (PyMuPDF <c>Annot.apn_matrix</c>).</summary>
+        public Matrix ApnMatrix
         {
             get
             {
-                PdfAnnot annot = _nativeAnnotion;
-                FzMatrix pageCtm = new FzMatrix();
-                FzRect dummy = new FzRect(0);
-                annot.pdf_annot_page().pdf_page_transform(dummy, pageCtm);
-                FzMatrix derot = Utils.DerotatePageMatrix(annot.pdf_annot_page());
-                pageCtm = mupdf.mupdf.fz_concat(pageCtm, derot);
-
-                PdfObj obj = annot.pdf_annot_obj().pdf_dict_get(new PdfObj("Vertices"));
-                if (obj == null)
-                    obj = annot.pdf_annot_obj().pdf_dict_get(new PdfObj("L"));
-                if (obj == null)
-                    obj = annot.pdf_annot_obj().pdf_dict_get(new PdfObj("QuadPoints"));
-                if (obj == null)
-                    obj = annot.pdf_annot_obj().pdf_dict_get(new PdfObj("CL"));
-
-                if (obj.m_internal != null)
-                {
-                    List<Point> ret = new List<Point>();
-                    for (int i = 0; i < obj.pdf_array_len(); i += 2)
-                    {
-                        float x = obj.pdf_array_get(i).pdf_to_real();
-                        float y = obj.pdf_array_get(i + 1).pdf_to_real();
-                        FzPoint p = new FzPoint(x, y);
-                        p = mupdf.mupdf.fz_transform_point(p, pageCtm);
-                        ret.Add(new Point(p));
-                    }
-
-                    return ret;
-                }
-                else
-                {
-                    List<List<Point>> ret = new List<List<Point>>();
-                    for (int j = 0; j < obj.pdf_array_len(); j++)
-                    {
-                        List<Point> t = new List<Point>();
-                        PdfObj o = obj.pdf_array_get(j);
-                        for (int i = 0; i < o.pdf_array_len(); i += 2)
-                        {
-                            float x = o.pdf_array_get(i).pdf_to_real();
-                            float y = o.pdf_array_get(i + 1).pdf_to_real();
-                            FzPoint p = new FzPoint(x, y);
-                            p = mupdf.mupdf.fz_transform_point(p, pageCtm);
-                            t.Add(new Point(p));
-                        }
-                        ret.Add(t);
-                    }
-
-                    return ret;
-                }
+                var ap = GetAppearanceStreamObject("N");
+                if (ap.m_internal == null) return new Matrix();
+                return Helpers.MatrixFromFz(mupdf.mupdf.pdf_dict_get_matrix(ap, mupdf.mupdf.pdf_new_name("Matrix")));
             }
         }
 
-        public static string EscapeStrFromStr(string c)
-        {
-            if (c == null || c == "")
-                return "";
-            byte[] b = Encoding.UTF8.GetBytes(c);
-            string ret = "";
-            foreach (byte bb in b)
-            {
-                ret += (char)bb;
-            }
-
-            return ret;
-        }
-
-        public static string UnicodeFromStr(dynamic s)
-        {
-            string ret = "";
-            if (s is string && string.IsNullOrEmpty(s))
-                return "";
-
-            if (s is byte[])
-                ret = Encoding.UTF8.GetString(s);
-
-            return ret;
-        }
-
-        public (PdfAnnotType, string, string) Type
+        /// <summary>Annotation language (PyMuPDF <c>Annot.language</c>).</summary>
+        public string Language
         {
             get
             {
-                if (_nativeAnnotion.m_internal == null)
-                    return (PdfAnnotType.PDF_ANNOT_UNKNOWN, null, null);
+                var lang = mupdf.mupdf.pdf_annot_language(NativeAnnot);
+                return lang == mupdf.fz_text_language.FZ_LANG_UNSET
+                    ? null
+                    : mupdf.mupdf.fz_string_from_text_language2(lang);
+            }
+            set => SetLanguage(value);
+        }
 
-                pdf_annot_type t = _nativeAnnotion.pdf_annot_type();
-                string c = mupdf.mupdf.pdf_string_from_annot_type(t);
-                PdfObj obj = _nativeAnnotion.pdf_annot_obj().pdf_dict_gets("IT");
-
-                if (obj.m_internal == null || obj.pdf_is_name() != 0)
-                    return ((PdfAnnotType)t, c, null);
-                string it = obj.pdf_to_name();
-
-                return ((PdfAnnotType)t, c, it);
+        /// <summary>Line end codes (PyMuPDF <c>Annot.line_ends</c>).</summary>
+        public (int start, int end)? LineEnds
+        {
+            get
+            {
+                if (mupdf.mupdf.pdf_annot_has_line_ending_styles(NativeAnnot) == 0)
+                    return null;
+                return ((int)mupdf.mupdf.pdf_annot_line_start_style(NativeAnnot),
+                    (int)mupdf.mupdf.pdf_annot_line_end_style(NativeAnnot));
             }
         }
 
-        public override string ToString()
+        /// <summary>Annotation rotation (PyMuPDF <c>Annot.rotation</c>).</summary>
+        public int Rotation
         {
-            return string.Format("'{0}' annotation on", 0);
+            get
+            {
+                var rotation = mupdf.mupdf.pdf_dict_get(AnnotObj, mupdf.mupdf.pdf_new_name("Rotate"));
+                return rotation.m_internal == null ? -1 : mupdf.mupdf.pdf_to_int(rotation);
+            }
         }
 
-        public Annot(PdfAnnot annotion, Page parent)
-        {
-            _nativeAnnotion = new PdfAnnot(annotion);
-            _parent = parent;
-            IsOwner = true;
-        }
+        // ─── Methods ────────────────────────────────────────────────────
 
-        public void Erase()
+        /// <summary>
+        /// Change the annotation rectangle (move or scale; no rotation of appearance).
+        /// </summary>
+        /// <param name="rect">New rectangle; must be finite and non-empty.</param>
+        /// <returns>
+        /// <see langword="null"/> on success, <see langword="false"/> if MuPDF rejected the change
+        /// (unsupported type or internal error). Python returns <c>None</c>/<c>False</c> similarly.
+        /// </returns>
+        /// <exception cref="ValueErrorException">If <paramref name="rect"/> is empty or infinite.</exception>
+        /// <remarks>
+        /// Does not require <see cref="Update"/>. Only affects certain annotation types; others log
+        /// a message and return <see langword="false"/>.
+        /// </remarks>
+        public bool? SetRect(Rect rect)
         {
-            IsOwner = false;
-        }
-
-        internal AnnotValues GetRedactValues()
-        {
-            PdfAnnot annot = _nativeAnnotion;
-
-            AnnotValues values = new AnnotValues();
+            // CheckParent(self)
+            var annot = NativeAnnot;
+            // pdfpage = _pdf_annot_page(annot)
+            var pdfpage = mupdf.mupdf.pdf_annot_page(annot);            
+            // rot = JM_rotate_page_matrix(pdfpage)
+            var rot = Helpers.JM_rotate_page_matrix(pdfpage);
+            // r = mupdf.fz_transform_rect(JM_rect_from_py(rect), rot)
+            var r = mupdf.mupdf.fz_transform_rect(new Rect(rect).ToFzRect(), rot.ToFzMatrix());
+            if (mupdf.mupdf.fz_is_empty_rect(r) != 0 || mupdf.mupdf.fz_is_infinite_rect(r) != 0)
+                throw new ValueErrorException(Constants.MSG_BAD_RECT);
             try
             {
-                PdfObj obj = annot.pdf_annot_obj().pdf_dict_gets("RO");
-                if (obj.m_internal != null)
-                {
-                    int xref = obj.pdf_to_num();
-                    values.Xref = xref;
-                }
-
-                obj = annot.pdf_annot_obj().pdf_dict_gets("OverlayText");
-                if (obj.m_internal != null)
-                {
-                    string text = obj.pdf_to_text_string();
-                    values.Text = text;
-                }
-                else
-                {
-                    values.Text = "";
-                }
-
-                int align = 0;
-                obj = annot.pdf_annot_obj().pdf_dict_gets("Q");
-                if (obj.m_internal != null)
-                {
-                    align = obj.pdf_to_int();
-                }
-                values.Align = align;
-            }
-            catch (Exception)
-            {
+                mupdf.mupdf.pdf_set_annot_rect(annot, r);
                 return null;
-            }
-
-            if (values == null)
-                return values;
-
-            values.Rect = this.Rect;
-            List<float> tColor = new List<float>();
-            (tColor, values.FontName, values.FontSize) = ParseData(this);
-            values.TextColor = tColor.ToArray();
-            values.Fill = new float[Colors.Fill.Length];
-            Array.Copy(Colors.Fill, values.Fill, values.Fill.Length);
-
-            return values;
-        }
-
-        public static (List<float>, string, float) ParseData(Annot annot)
-        {
-            PdfObj obj = annot._nativeAnnotion.pdf_annot_obj();
-            PdfDocument pdf = obj.pdf_get_bound_document();
-            string da_string = "";
-            try
-            {
-                da_string = obj.pdf_dict_get_inheritable(new PdfObj("DA")).pdf_to_text_string();
-                /*
-                PdfObj da = obj.pdf_dict_get_inheritable(new PdfObj("DA"));
-                if (da.m_internal != null)
-                {
-                    PdfObj tailer = pdf.pdf_trailer();
-                    da = Utils.pdf_dict_getl(tailer, new string[] { "Root", "AcroForm", "DA" });
-                    da_string = da.pdf_to_text_string();
-                }
-                */
             }
             catch (Exception e)
             {
-                Console.WriteLine($"Error: {e.Message}");  // Example logging
-                da_string = "";
+                Trace.WriteLine($"cannot set rect: {e}");
+                return false;
             }
-
-            if (string.IsNullOrEmpty(da_string))
-            {
-                return (new List<float>(), "", 0.0f);
-            }
-
-            string font = "Helv";
-            float fsize = 12.0f;
-            List<float> col = new List<float>() { 0.0f, 0.0f, 0.0f };
-            string[] dat = da_string.Split();
-
-            for (int i = 0; i < dat.Length; i++)
-            {
-                string item = dat[i];
-                if (item == "Tf")
-                {
-                    font = dat[i - 2].Substring(1);
-                    fsize = float.Parse(dat[i - 1], System.Globalization.CultureInfo.InvariantCulture);
-                    dat[i] = dat[i - 1] = dat[i - 2] = "";
-                    continue;
-                }
-
-                if (item == "g")
-                {
-                    col = new List<float>() { float.Parse(dat[i - 1], System.Globalization.CultureInfo.InvariantCulture) };
-                    dat[i] = dat[i - 1] = "";
-                    continue;
-                }
-
-                if (item == "rg")
-                {
-                    col = new List<float>();
-                    for (int j = i - 3; j < i; j++)
-                    {
-                        col.Add(float.Parse(dat[j], System.Globalization.CultureInfo.InvariantCulture));
-                    }
-                    dat[i] = dat[i - 1] = dat[i - 2] = dat[i - 3] = "";
-                    continue;
-                }
-
-                if (item == "k")
-                {
-                    col = new List<float>();
-                    for (int j = i - 4; j < i; j++)
-                    {
-                        col.Add(float.Parse(dat[j], System.Globalization.CultureInfo.InvariantCulture));
-                    }
-
-                    dat[i] = dat[i - 1] = dat[i - 2] = dat[i - 3] = dat[i - 4] = "";
-                    continue;
-                }
-            }
-
-            return (col, font, fsize);
-        }
-
-        public static void UpdateData(PdfAnnot annot_, string dataStr)
-        {
-            try
-            {
-                PdfAnnot annot = annot_;
-                annot.pdf_annot_obj().pdf_dict_put_text_string(new PdfObj("DA"), dataStr);
-                annot.pdf_annot_obj().pdf_dict_del(new PdfObj("DS"));
-                annot.pdf_annot_obj().pdf_dict_del(new PdfObj("RC"));
-            }
-            catch
-            {
-                return;
-            }
-        }
-
-        public byte[] GetAP()
-        {
-            PdfObj obj = _nativeAnnotion.pdf_annot_obj();
-            PdfObj ap = Utils.pdf_dict_getl(obj, new string[] { "AP", "N" });
-
-            FzBuffer ret = null;
-            if (ap.pdf_is_stream() != 0)
-            {
-                ret = ap.pdf_load_stream();
-            }
-
-            byte[] r = null;
-            if (ret != null && ret.m_internal != null)
-                r = Utils.BinFromBuffer(ret);
-
-            return r;
-        }
-
-        public void SetAP(byte[] buffer, int rect = 0)
-        {
-            try
-            {
-                PdfObj annotObj = _nativeAnnotion.pdf_annot_obj();
-                PdfPage page = _nativeAnnotion.pdf_annot_page();
-                PdfObj apObj = Utils.pdf_dict_getl(annotObj, new string[] { "AP", "N" });
-
-                if (apObj.m_internal == null)
-                {
-                    throw new Exception("bad or missing annot AP/N");
-                }
-                if (apObj.pdf_is_stream() == 0)
-                {
-                    throw new Exception("bad or missing annot AP/N");
-                }
-                FzBuffer buf = Utils.BufferFromBytes(buffer);
-                if (buf.m_internal == null)
-                {
-                    throw new Exception("bad type: 'buffer'");
-                }
-                PdfDocument pageDoc = page.doc();
-                Utils.UpdateStream(pageDoc, apObj, buf, 1);
-                if (rect != 0)
-                {
-                    FzRect bbox = annotObj.pdf_dict_get_rect(new PdfObj("Rect"));
-                    apObj.pdf_dict_put_rect(new PdfObj("Rect"), bbox);
-                }
-                pageDoc.Dispose();
-            }
-            catch (Exception) { }
-        }
-
-        public static float[] ColorFromSequence(float[] seq)
-        {
-            if (!(seq is float[]) || seq == null)
-                return null;
-
-            if (!(new List<int>() { 0, 1, 3, 4 }).Contains(seq.Length))
-                return null;
-
-            for (int i = 0; i < seq.Length; i++)
-            {
-                if (seq[i] < 0 || seq[i] > 1)
-                    seq[i] = 1.0f;
-            }
-
-            return seq;
-        }
-
-        private bool UpdateAppearance(
-            float opacity = -1.0f,
-            string blendMode = null,
-            float[] fillColor = null,
-            float rotate = -1.0f
-        )
-        {
-            PdfObj annotObj = _nativeAnnotion.pdf_annot_obj();
-            PdfPage page = _nativeAnnotion.pdf_annot_page();
-            PdfDocument pageDoc = page.doc();
-            pdf_annot_type type = _nativeAnnotion.pdf_annot_type();
-            float[] cols = ColorFromSequence(fillColor);
-            int nCols = cols.Length;
-
-            IntPtr colsPtr = Marshal.AllocHGlobal(nCols * sizeof(float));
-            Marshal.Copy(cols, 0, colsPtr, nCols);
-            SWIGTYPE_p_float swigCols = new SWIGTYPE_p_float(colsPtr, false);
-
-            try
-            {
-                if (
-                    nCols == 0
-                    || !(
-                        new List<PdfAnnotType>()
-                        {
-                            PdfAnnotType.PDF_ANNOT_SQUARE,
-                            PdfAnnotType.PDF_ANNOT_CIRCLE,
-                            PdfAnnotType.PDF_ANNOT_LINE,
-                            PdfAnnotType.PDF_ANNOT_POLY_LINE,
-                            PdfAnnotType.PDF_ANNOT_POLYGON
-                        }
-                    ).Contains((PdfAnnotType)type)
-                )
-                {
-                    annotObj.pdf_dict_del(new PdfObj("IC"));
-                }
-                else if (nCols > 0)
-                {
-                    _nativeAnnotion.pdf_set_annot_interior_color(nCols, swigCols);
-                }
-
-                int insertRot = 0;
-                if (rotate >= 0)
-                    insertRot = 1;
-
-                if (
-                    !(
-                        new List<PdfAnnotType>()
-                        {
-                            PdfAnnotType.PDF_ANNOT_CARET,
-                            PdfAnnotType.PDF_ANNOT_CIRCLE,
-                            PdfAnnotType.PDF_ANNOT_FREE_TEXT,
-                            PdfAnnotType.PDF_ANNOT_FILE_ATTACHMENT,
-                            PdfAnnotType.PDF_ANNOT_INK,
-                            PdfAnnotType.PDF_ANNOT_LINE,
-                            PdfAnnotType.PDF_ANNOT_POLY_LINE,
-                            PdfAnnotType.PDF_ANNOT_POLYGON,
-                            PdfAnnotType.PDF_ANNOT_SQUARE,
-                            PdfAnnotType.PDF_ANNOT_STAMP,
-                            PdfAnnotType.PDF_ANNOT_TEXT,
-                        }
-                    ).Contains((PdfAnnotType)type)
-                )
-                {
-                    insertRot = 0;
-                }
-
-                if (insertRot != 0)
-                {
-                    annotObj.pdf_dict_put_int(new PdfObj("Rotate"), (long)rotate);
-                }
-
-                // insert fill color
-                if ((PdfAnnotType)type == PdfAnnotType.PDF_ANNOT_FREE_TEXT)
-                {
-                    if (nCols > 0)
-                    {
-                        _nativeAnnotion.pdf_set_annot_color(nCols, swigCols);
-                    }
-                }
-                else if (nCols > 0)
-                {
-                    PdfObj col = pageDoc.pdf_new_array(nCols);
-                    for (int i = 0; i < nCols; i++)
-                    {
-                        mupdf.mupdf.pdf_array_push_real(col, cols[i]);
-                    }
-                    annotObj.pdf_dict_put(new PdfObj("IC"), col);
-                }
-                _nativeAnnotion.pdf_dirty_annot();
-                _nativeAnnotion.pdf_update_annot();
-                pageDoc.m_internal.resynth_required = 0;
-            }
-            catch (Exception e) 
-            {
-                pageDoc.Dispose();
-                throw new Exception("cannot update annot:" + e.Message);
-            }
-
-            if ((opacity < 0 || opacity >= 1) && blendMode == null) // no opacity, no blend_mode
-            {
-                pageDoc.Dispose();
-                return true;
-            }
-
-            try // create or update /ExtGState
-            {
-                PdfObj ap = Utils.pdf_dict_getl(
-                    _nativeAnnotion.pdf_annot_obj(),
-                    new string[] { "AP", "N" }
-                );
-                if (ap.m_internal == null)
-                {
-                    // should never happen
-                    pageDoc.Dispose();
-                    throw new Exception("bad or missing annot AP/N");
-                }
-
-                PdfObj resources = ap.pdf_dict_get(new PdfObj("Resources"));
-                if (resources.m_internal == null)
-                    resources = ap.pdf_dict_put_dict(new PdfObj("Resources"), 2);
-
-                PdfObj alp0 = pageDoc.pdf_new_dict(3);
-                if (opacity >= 0 && opacity < 1)
-                {
-                    alp0.pdf_dict_put_real(new PdfObj("CA"), opacity);
-                    alp0.pdf_dict_put_real(new PdfObj("ca"), opacity);
-                    annotObj.pdf_dict_put_real(new PdfObj("CA"), opacity);
-                }
-
-                if (!string.IsNullOrEmpty(blendMode))
-                {
-                    alp0.pdf_dict_put_name(new PdfObj("BM"), blendMode);
-                    annotObj.pdf_dict_put_name(new PdfObj("BM"), blendMode);
-                }
-
-                PdfObj extg = resources.pdf_dict_get(new PdfObj("ExtGState"));
-                if (extg.m_internal == null) // no ExtGState yet: make one
-                    extg = resources.pdf_dict_put_dict(new PdfObj("ExtGState"), 2);
-
-                extg.pdf_dict_put(new PdfObj("H"), alp0);
-            }
-            catch (Exception)
-            {
-                Console.WriteLine("cannot set opacity or blend mode");
-            }
-
-            pageDoc.Dispose();
-
-            return true;
-        }
-
-        public void CleanContents(int sanitize = 1)
-        {
-            PdfAnnot annot = _nativeAnnotion;
-            PdfDocument pdf = annot.pdf_annot_obj().pdf_get_bound_document();
-            PdfFilterOptions filter = Utils.MakePdfFilterOptions(
-                recurse: 1,
-                instanceForms: 0,
-                ascii: 0,
-                sanitize: sanitize
-            );
-            pdf.pdf_filter_annot_contents(annot, filter);
-        }
-
-        public PdfAnnot ToPdfAnnot()
-        {
-            return _nativeAnnotion;
-        }
-
-        public static PdfAnnot FindAnnotIRT(PdfAnnot annot)
-        {
-            PdfAnnot irtAnnot = null;
-            PdfObj annotObj = annot.pdf_annot_obj();
-            int found = 0;
-            PdfPage page = annot.pdf_annot_page();
-            irtAnnot = page.pdf_first_annot();
-
-            while (true)
-            {
-                if (irtAnnot.m_internal == null)
-                {
-                    break;
-                }
-
-                PdfObj irtAnnotObj = irtAnnot.pdf_annot_obj();
-                PdfObj irt = irtAnnotObj.pdf_dict_gets("IRT");
-                if (irt.m_internal != null)
-                {
-                    if (irt.pdf_objcmp(annotObj) != 0)
-                    {
-                        found = 1;
-                        break;
-                    }
-                }
-                irtAnnot = irtAnnot.pdf_next_annot();
-            }
-
-            if (found != 0)
-                return irtAnnot;
-
-            return null;
-        }
-
-        public void DeleteResponses()
-        {
-            PdfAnnot annot = _nativeAnnotion;
-            PdfObj annotObj = annot.pdf_annot_obj();
-            PdfPage page = annot.pdf_annot_page();
-
-            while (true)
-            {
-                PdfAnnot irtAnnot = FindAnnotIRT(annot);
-                if (irtAnnot == null)
-                    break;
-                page.pdf_delete_annot(irtAnnot);
-            }
-
-            annotObj.pdf_dict_del(new PdfObj("Popup"));
-            PdfObj annots = page.obj().pdf_dict_get(new PdfObj("Annots"));
-            int n = annots.pdf_array_len();
-            int found = 0;
-
-            for (int i = n - 1; i >= 0; i--)
-            {
-                PdfObj o = annots.pdf_array_get(i);
-                PdfObj p = o.pdf_dict_get(new PdfObj("Parent"));
-                if (o.m_internal == null)
-                {
-                    continue;
-                }
-                if (p.pdf_objcmp(annotObj) == 0)
-                {
-                    annots.pdf_array_delete(i);
-                    found = 1;
-                }
-            }
-
-            if (found != 0)
-                page.obj().pdf_dict_put(new PdfObj("Annots"), annots);
-        }
-
-        public FzBuffer GetFile()
-        {
-            PdfAnnot annot = _nativeAnnotion;
-            PdfObj annotObj = annot.pdf_annot_obj();
-            PdfAnnotType type = (PdfAnnotType)annot.pdf_annot_type();
-
-            if (type != PdfAnnotType.PDF_ANNOT_FILE_ATTACHMENT)
-            {
-                throw new Exception("bad annot type");
-            }
-
-            PdfObj stream = Utils.pdf_dict_getl(annotObj, new string[] { "FS", "EF", "F" });
-            if (stream.m_internal == null)
-            {
-                throw new Exception("bad PDF: file entry not found");
-            }
-
-            FzBuffer buf = stream.pdf_load_stream();
-
-            return buf;
-        }
-
-        public int GetOC()
-        {
-            int oc = 0;
-            PdfAnnot annot = _nativeAnnotion;
-            PdfObj annotObj = annot.pdf_annot_obj();
-            PdfObj obj = annotObj.pdf_dict_get(new PdfObj("OC"));
-            if (obj.m_internal != null)
-                oc = obj.pdf_to_num();
-
-            return oc;
-        }
-
-        public Pixmap GetPixmap(
-            Matrix matrix = null,
-            int dpi = 0,
-            ColorSpace colorSpace = null,
-            int alpha = 0
-        )
-        {
-            List<ColorSpace> colorSpaces = new List<ColorSpace>()
-            {
-                new ColorSpace(Utils.CS_GRAY),
-                new ColorSpace(Utils.CS_RGB),
-                new ColorSpace(Utils.CS_CMYK),
-            };
-
-            if (dpi != 0)
-                matrix = new Matrix(dpi / 72, dpi / 72);
-
-            FzMatrix ctm = matrix == null ? new FzMatrix() : matrix.ToFzMatrix();
-            FzColorspace cs = null;
-            if (colorSpace == null)
-                cs = mupdf.mupdf.fz_device_rgb();
-            else
-                cs = colorSpace.ToFzColorspace();
-
-            FzPixmap pix = mupdf.mupdf.pdf_new_pixmap_from_annot(
-                _nativeAnnotion,
-                ctm,
-                cs,
-                new FzSeparations(0),
-                alpha
-            );
-
-            Pixmap ret = new Pixmap(pix);
-            if (dpi != 0)
-                ret.SetDpi(dpi, dpi);
-
-            return ret;
-        }
-
-        public Sound GetSound()
-        {
-            PdfAnnot annot = _nativeAnnotion;
-            PdfObj annotObj = annot.pdf_annot_obj();
-            PdfAnnotType type = (PdfAnnotType)annot.pdf_annot_type();
-            PdfObj sound = annotObj.pdf_dict_get(new PdfObj("Sound"));
-
-            if (type != PdfAnnotType.PDF_ANNOT_SOUND || sound.m_internal == null)
-            {
-                throw new Exception(Utils.ErrorMessages["MSG_BAD_ANNOT_TYPE"]);
-            }
-
-            if (sound.pdf_dict_get(new PdfObj("F")).m_internal != null)
-            {
-                throw new Exception("Unsupported Sound Stream");
-            }
-
-            Sound ret = new Sound();
-            PdfObj obj = sound.pdf_dict_get(new PdfObj("R"));
-            if (obj.m_internal != null)
-                ret.Rate = obj.pdf_to_real();
-            obj = sound.pdf_dict_get(new PdfObj("C"));
-            if (obj.m_internal != null)
-                ret.Channels = obj.pdf_to_int();
-            obj = sound.pdf_dict_get(new PdfObj("B"));
-            if (obj.m_internal != null)
-                ret.Bps = obj.pdf_to_int();
-            obj = sound.pdf_dict_get(new PdfObj("E"));
-            if (obj.m_internal != null)
-                ret.Encoding = obj.pdf_to_name();
-            obj = sound.pdf_dict_gets("CO");
-            if (obj.m_internal != null)
-                ret.Compression = obj.pdf_to_name();
-
-            FzBuffer buf = sound.pdf_load_stream();
-            byte[] stream = Utils.BinFromBuffer(buf);
-            ret.Stream = stream;
-
-            return ret;
-        }
-
-        public TextPage GetTextPage(Rect clip = null, int flags = 0)
-        {
-            FzStextOptions options = new FzStextOptions();
-            PdfAnnot annot = _nativeAnnotion;
-            options.flags = flags;
-            FzStextPage stPage = new FzStextPage(annot, options);
-
-            return new TextPage(stPage);
-        }
-
-        public int IrtXref
-        {
-            get
-            {
-                PdfAnnot annot = _nativeAnnotion;
-                PdfObj annotObj = annot.pdf_annot_obj();
-                PdfObj irt = annotObj.pdf_dict_get(new PdfObj("IRT"));
-                if (irt == null)
-                    return 0;
-                return irt.pdf_to_num();
-            }
-        }
-
-        private void SetApnBbox(Rect bbox)
-        {
-            Page page = Parent;
-            Matrix rot = page.DerotationMatrix;
-            Matrix mat = page.TransformationMatrix;
-            bbox = bbox * (rot * ~mat);
-
-            PdfAnnot annot = _nativeAnnotion;
-            PdfObj annotObj = annot.pdf_annot_obj();
-            PdfObj ap = Utils.pdf_dict_getl(annotObj, new string[] { "AP", "N" });
-
-            if (ap.m_internal == null)
-                throw new Exception(Utils.ErrorMessages["MSG_BAD_APN"]);
-
-            ap.pdf_dict_put_rect(new PdfObj("BBox"), bbox.ToFzRect());
-        }
-
-        private void SetApnMatrix(Matrix matrix)
-        {
-            PdfAnnot annot = _nativeAnnotion;
-            PdfObj annotObj = annot.pdf_annot_obj();
-            PdfObj ap = Utils.pdf_dict_getl(annotObj, new string[] { "AP", "N" });
-
-            if (ap.m_internal == null)
-                throw new Exception(Utils.ErrorMessages["MSG_BAD_APN"]);
-
-            ap.pdf_dict_put_matrix(new PdfObj("Matrix"), matrix.ToFzMatrix());
-        }
-
-        public void SetBlendMode(string blendMode)
-        {
-            PdfAnnot annot = _nativeAnnotion;
-            PdfObj annotObj = annot.pdf_annot_obj();
-            annotObj.pdf_dict_put_name(new PdfObj("BM"), blendMode);
-        }
-
-        public void SetBorder(
-            Border border = null,
-            float width = -1,
-            string style = null,
-            int[] dashes = null,
-            int clouds = -1
-        )
-        {
-            (PdfAnnotType atype, string atname, string _) = this.Type;
-
-            if (
-                !(
-                    new List<PdfAnnotType>()
-                    {
-                        PdfAnnotType.PDF_ANNOT_CIRCLE,
-                        PdfAnnotType.PDF_ANNOT_FREE_TEXT,
-                        PdfAnnotType.PDF_ANNOT_INK,
-                        PdfAnnotType.PDF_ANNOT_LINE,
-                        PdfAnnotType.PDF_ANNOT_POLY_LINE,
-                        PdfAnnotType.PDF_ANNOT_POLYGON,
-                        PdfAnnotType.PDF_ANNOT_SQUARE
-                    }
-                ).Contains(atype)
-            )
-            {
-                Console.WriteLine(string.Format("Cannot set cloudy border for '{0}'.", atname));
-                return;
-            }
-
-            if (
-                !(
-                    new List<PdfAnnotType>()
-                    {
-                        PdfAnnotType.PDF_ANNOT_CIRCLE,
-                        PdfAnnotType.PDF_ANNOT_FREE_TEXT,
-                        PdfAnnotType.PDF_ANNOT_POLYGON,
-                        PdfAnnotType.PDF_ANNOT_SQUARE
-                    }
-                ).Contains(atype)
-            )
-            {
-                if (clouds > 0)
-                {
-                    Console.WriteLine(string.Format("Cannot set cloudy border for '{0}'.", atname));
-                    clouds = -1;
-                }
-            }
-
-            Border border_ = new Border();
-            if (border == null)
-            {
-                border_.Width = width;
-                border_.Style = style;
-                border_.Dashes = dashes;
-                border_.Clouds = clouds;
-            }
-
-            PdfAnnot annot = _nativeAnnotion;
-            PdfObj annotObj = annot.pdf_annot_obj();
-            PdfDocument pdf = annotObj.pdf_get_bound_document();
-            SetBorderAnnot(border_, pdf, annotObj);
-        }
-
-        public static Border GetBorderFromAnnot(PdfObj annotObj)
-        {
-            List<int> dashes = new List<int>();
-            string style = "";
-            float width = -1.0f;
-            int clouds = -1;
-            PdfObj obj = annotObj.pdf_dict_get(new PdfObj("Border"));
-
-            if (obj.pdf_is_array() != 0)
-            {
-                width = obj.pdf_array_get(2).pdf_to_real();
-                if (obj.pdf_array_len() == 4)
-                {
-                    PdfObj dash = obj.pdf_array_get(3);
-                    for (int i = 0; i < dash.pdf_array_len(); i++)
-                    {
-                        int v = dash.pdf_array_get(i).pdf_to_int();
-                        dashes.Add(v);
-                    }
-                }
-            }
-
-            PdfObj bsObj = annotObj.pdf_dict_get(new PdfObj("BS"));
-            if (bsObj.m_internal != null)
-            {
-                width = bsObj.pdf_dict_get(new PdfObj("W")).pdf_to_real();
-                style = bsObj.pdf_dict_get(new PdfObj("S")).pdf_to_name();
-
-                if (style == "")
-                    style = null;
-                obj = bsObj.pdf_dict_get(new PdfObj("D"));
-                if (obj != null)
-                    for (int i = 0; i < obj.pdf_array_len(); i++)
-                    {
-                        int v = obj.pdf_array_get(i).pdf_to_int();
-                        dashes.Add(v);
-                    }
-            }
-
-            obj = annotObj.pdf_dict_get(new PdfObj("BE"));
-            if (obj.m_internal != null)
-                clouds = obj.pdf_dict_get(new PdfObj("I")).pdf_to_int();
-
-            Border ret = new Border();
-            ret.Width = width;
-            ret.Dashes = dashes.ToArray();
-            ret.Style = style;
-            ret.Clouds = clouds;
-
-            return ret;
-        }
-
-        public static Color GetColorFromAnnot(PdfObj annotObj)
-        {
-            Color ret = new Color();
-            List<float> bc = new List<float>();
-            List<float> fc = new List<float>();
-
-            PdfObj obj = annotObj.pdf_dict_get(new PdfObj("C"));
-            if (obj.pdf_is_array() != 0)
-            {
-                int n = obj.pdf_array_len();
-                for (int i = 0; i < n; i++)
-                {
-                    float col = obj.pdf_array_get(i).pdf_to_real();
-                    bc.Add(col);
-                }
-            }
-            ret.Stroke = bc.ToArray();
-
-            obj = annotObj.pdf_dict_gets("IC");
-            if (obj.pdf_is_array() != 0)
-            {
-                int n = obj.pdf_array_len();
-                for (int i = 0; i < n; i++)
-                {
-                    float col = obj.pdf_array_get(i).pdf_to_real();
-                    fc.Add(col);
-                }
-            }
-            ret.Fill = fc.ToArray();
-
-            return ret;
-        }
-
-        public static PdfObj GetBorderStyle(string s)
-        {
-            PdfObj val = new PdfObj("S");
-            if (string.IsNullOrEmpty(s))
-                return val;
-
-            if (s.StartsWith("b") || s.StartsWith("B"))
-                val = new PdfObj("B");
-            else if (s.StartsWith("d") || s.StartsWith("D"))
-                val = new PdfObj("D");
-            else if (s.StartsWith("i") || s.StartsWith("I"))
-                val = new PdfObj("I");
-            else if (s.StartsWith("u") || s.StartsWith("U"))
-                val = new PdfObj("U");
-            else if (s.StartsWith("s") || s.StartsWith("S"))
-                val = new PdfObj("S");
-
-            return val;
-        }
-
-        public static void SetBorderAnnot(Border border, PdfDocument doc, PdfObj annotObj)
-        {
-            int dashLen = 0;
-            float nWidth = border.Width;
-            int[] nDashes = border.Dashes;
-            string nStyle = border.Style;
-            float nClouds = border.Clouds;
-
-            Border oldBorder = GetBorderFromAnnot(annotObj);
-
-            annotObj.pdf_dict_del(new PdfObj("BS"));
-            annotObj.pdf_dict_del(new PdfObj("BE"));
-            annotObj.pdf_dict_del(new PdfObj("Border"));
-
-            if (nWidth < 0)
-                nWidth = oldBorder.Width;
-            if (nDashes == null)
-                nDashes = oldBorder.Dashes;
-            if (nStyle == null)
-                nStyle = oldBorder.Style;
-            if (nClouds < 0)
-                nClouds = oldBorder.Clouds;
-
-            if (nDashes != null && nDashes.Length > 0)
-            {
-                dashLen = nDashes.Length;
-                PdfObj darr = doc.pdf_new_array(dashLen);
-                foreach (int b in nDashes)
-                {
-                    darr.pdf_array_push_int(b);
-                }
-                Utils.pdf_dict_putl(annotObj, darr, new string[] { "BS", "D" });
-            }
-
-            Utils.pdf_dict_putl(
-                annotObj,
-                mupdf.mupdf.pdf_new_real(nWidth),
-                new string[] { "BS", "W" }
-            );
-
-            PdfObj obj = null;
-            if (dashLen == 0)
-                obj = GetBorderStyle(nStyle);
-            else
-                obj = new PdfObj("D");
-
-            Utils.pdf_dict_putl(annotObj, obj, new string[] { "BS", "S" });
-
-            if (nClouds > 0)
-            {
-                annotObj.pdf_dict_put_dict(new PdfObj("BE"), 2);
-                obj = annotObj.pdf_dict_get(new PdfObj("BE"));
-                obj.pdf_dict_put(new PdfObj("S"), new PdfObj("C"));
-                obj.pdf_dict_put_int(new PdfObj("I"), (long)nClouds);
-            }
-        }
-
-        public void SetColors(Color colors = null, float[] stroke = null, float[] fill = null)
-        {
-            pdf_annot_type type = _nativeAnnotion.pdf_annot_type();
-            if (type == pdf_annot_type.PDF_ANNOT_FREE_TEXT)
-            {
-                throw new Exception("cannot be used for FreeText annotations");
-            }
-            Document doc = Parent.Parent;
-
-            Color colors_ = new Color();
-            if (colors == null)
-            {
-                colors_.Fill = fill;
-                colors_.Stroke = stroke;
-            }
-            
-            fill = colors_.Fill;
-            stroke = colors_.Stroke;
-
-            List<PdfAnnotType> fillAnnots = new List<PdfAnnotType>()
-            {
-                PdfAnnotType.PDF_ANNOT_CIRCLE,
-                PdfAnnotType.PDF_ANNOT_SQUARE,
-                PdfAnnotType.PDF_ANNOT_LINE,
-                PdfAnnotType.PDF_ANNOT_POLY_LINE,
-                PdfAnnotType.PDF_ANNOT_POLYGON,
-                PdfAnnotType.PDF_ANNOT_REDACT
-            };
-
-            if (stroke != null && stroke.Length == 0)
-            {
-                doc.SetKeyXRef(this.Xref, "C", "[]");
-            }
-            else if (stroke != null)
-            {
-                string s = "";
-                if (stroke.Length == 1)
-                    s = string.Format(System.Globalization.CultureInfo.InvariantCulture, "[{0}]", Utils.FloatToString(stroke[0]));
-                if (stroke.Length == 3)
-                    s = string.Format(System.Globalization.CultureInfo.InvariantCulture, "[{0} {1} {2}]", Utils.FloatToString(stroke[0]), Utils.FloatToString(stroke[1]), Utils.FloatToString(stroke[2]));
-                else
-                    s = string.Format(
-                        System.Globalization.CultureInfo.InvariantCulture,
-                        "[{0} {1} {2} {3}]",
-                        Utils.FloatToString(stroke[0]),
-                        Utils.FloatToString(stroke[1]),
-                        Utils.FloatToString(stroke[2]),
-                        Utils.FloatToString(stroke[3])
-                    );
-                doc.SetKeyXRef(this.Xref, "C", s);
-            }
-
-            if (fill != null && !fillAnnots.Contains(this.Type.Item1))
-            {
-                Console.WriteLine(
-                    string.Format(
-                        "Warning: fill color ignored for annot type '{0}'",
-                        this.Type.Item1
-                    )
-                );
-                return;
-            }
-
-            if (fill != null && fill.Length == 0)
-                doc.SetKeyXRef(this.Xref, "IC", "[]");
-            else if (fill != null)
-            {
-                string s = "";
-                if (fill.Length == 1)
-                {
-                    s = string.Format(System.Globalization.CultureInfo.InvariantCulture, "[{0}]", Utils.FloatToString(fill[0]));
-                }
-                else if (fill.Length == 3)
-                {
-                    s = string.Format(System.Globalization.CultureInfo.InvariantCulture, "[{0} {1} {2}]", Utils.FloatToString(fill[0]), Utils.FloatToString(fill[1]), Utils.FloatToString(fill[2]));
-                }
-                else
-                {
-                    s = string.Format(System.Globalization.CultureInfo.InvariantCulture, "[{0} {1} {2} {3}]", Utils.FloatToString(fill[0]), Utils.FloatToString(fill[1]), Utils.FloatToString(fill[2]), Utils.FloatToString(fill[3]));
-                }
-                doc.SetKeyXRef(this.Xref, "IC", s);
-            }
-        }
-
-        public void SetFlags(int flags)
-        {
-            PdfAnnot annot = _nativeAnnotion;
-            mupdf.mupdf.pdf_set_annot_flags(annot, flags);
         }
 
         /// <summary>
-        /// Set various properties.
+        /// Change border width, style, dashing, or cloud effect (PDF only).
         /// </summary>
-        /// <param name="info">a dictionary compatible with the info property</param>
-        /// <param name="content">a string containing the text for type Text and FreeText annotations. Commonly used for filling the text field of annotation pop-up windows.</param>
-        /// <param name="title">a string containing the title of the annotation pop-up window. By convention, this is used for the annotation author.</param>
-        /// <param name="creationDate">creation timestamp.</param>
-        /// <param name="modDate">last modified timestamp.</param>
-        /// <param name="subject">subject.</param>
+        /// <param name="width">Border width; <c>-1</c> leaves unchanged. Must be non-negative when set.</param>
+        /// <param name="style">Border style letter (<c>"S"</c>, <c>"D"</c>, etc.); <c>null</c> leaves unchanged.</param>
+        /// <param name="dashes">Dash pattern as integers; empty array removes dashing and sets style <c>"D"</c>.</param>
+        /// <remarks>
+        /// Supported for Circle, FreeText, Ink, Line, PolyLine, Polygon, and Square annotations.
+        /// Use the dictionary overload for cloud borders. See <see cref="Border"/>.
+        /// </remarks>
+        public void SetBorder(float width = -1, string style = null, int[] dashes = null)
+        {
+            SetBorder(null, width, style, dashes, -1);
+        }
+
+        /// <summary>
+        /// Change border width and dash pattern (dash values as floats, converted to integers).
+        /// </summary>
+        /// <param name="width">Border width; <c>-1</c> leaves unchanged.</param>
+        /// <param name="dashes">Dash lengths in user units.</param>
+        public void SetBorder(float width, float[] dashes)
+            => SetBorder(width, null, Array.ConvertAll(dashes, x => (int)x));
+
+        /// <summary>
+        /// Change border properties using a dictionary and/or individual fields.
+        /// </summary>
+        /// <param name="border">
+        /// Dictionary with optional keys <c>width</c>, <c>style</c>, <c>dashes</c>, <c>clouds</c>
+        /// (as returned by <see cref="Border"/>). <c>null</c> uses only the other parameters.
+        /// </param>
+        /// <param name="width">Border width when not present in <paramref name="border"/>.</param>
+        /// <param name="style">Border style when not present in <paramref name="border"/>.</param>
+        /// <param name="dashes">Dash array when not present in <paramref name="border"/>.</param>
+        /// <param name="clouds">
+        /// Cloud border intensity for Square, Circle, and Polygon; <c>0</c> removes clouds.
+        /// </param>
+        /// <remarks>
+        /// Omitted keys leave the corresponding property unchanged. Non-integer dash entries are ignored.
+        /// </remarks>
+        public void SetBorder(Dictionary<string, object> border, float width = -1, string style = null, int[] dashes = null, float clouds = -1)
+        {
+            var annotType = AnnotationType;
+            if (annotType != AnnotationType.Circle
+                && annotType != AnnotationType.FreeText
+                && annotType != AnnotationType.Ink
+                && annotType != AnnotationType.Line
+                && annotType != AnnotationType.PolyLine
+                && annotType != AnnotationType.Polygon
+                && annotType != AnnotationType.Square)
+                return;
+
+            if (annotType != AnnotationType.Circle
+                && annotType != AnnotationType.FreeText
+                && annotType != AnnotationType.Polygon
+                && annotType != AnnotationType.Square
+                && clouds > 0)
+                clouds = -1;
+
+            border ??= new Dictionary<string, object>();
+            if (!border.ContainsKey("width")) border["width"] = width;
+            if (!border.ContainsKey("style")) border["style"] = style;
+            if (!border.ContainsKey("dashes")) border["dashes"] = dashes;
+            if (!border.ContainsKey("clouds")) border["clouds"] = clouds;
+            if (border["width"] == null) border["width"] = -1f;
+            if (border["clouds"] == null) border["clouds"] = -1f;
+            if (annotType != AnnotationType.Circle
+                && annotType != AnnotationType.FreeText
+                && annotType != AnnotationType.Polygon
+                && annotType != AnnotationType.Square
+                && border.TryGetValue("clouds", out var cloudObj)
+                && cloudObj != null
+                && Convert.ToSingle(cloudObj) > 0)
+                border["clouds"] = -1f;
+
+            if (border.TryGetValue("dashes", out var dashObj) && dashObj is System.Collections.IEnumerable seq && dashObj is not string)
+            {
+                var parsed = new List<int>();
+                bool ok = true;
+                foreach (var item in seq)
+                {
+                    if (item is int di) parsed.Add(di);
+                    else { ok = false; break; }
+                }
+                border["dashes"] = ok ? parsed.ToArray() : null;
+            }
+            Helpers.JM_annot_set_border(border, ParentPdfDocument, AnnotObj);
+        }
+
+        /// <summary>
+        /// Set stroke and fill colors (PyMuPDF <c>Annot.set_colors</c>).
+        /// <para>Use either a dictionary or the direct <paramref name="stroke"/> / <paramref name="fill"/> arguments.</para>
+        /// </summary>
+        public void SetColors(float[] stroke = null, float[] fill = null)
+        {
+            SetColors((Dictionary<string, float[]>)null, stroke, fill);
+        }
+
+        /// <inheritdoc cref="SetColors(float[], float[])"/>
+        public void SetColors(Dictionary<string, object> colors, object stroke = null, object fill = null)
+        {
+            colors ??= new Dictionary<string, object>
+            {
+                ["fill"] = fill,
+                ["stroke"] = stroke,
+            };
+            var strokeObj = colors.TryGetValue("stroke", out var s) ? s : stroke;
+            var fillObj = colors.TryGetValue("fill", out var f) ? f : fill;
+            SetColors((Dictionary<string, float[]>)null, NormalizeColorSequence(strokeObj), NormalizeColorSequence(fillObj));
+        }
+
+        /// <inheritdoc cref="SetColors(float[], float[])"/>
+        public void SetColors(Dictionary<string, float[]> colors, float[] stroke = null, float[] fill = null)
+        {
+            if (AnnotationType == AnnotationType.FreeText)
+                throw new ArgumentException("cannot be used for FreeText annotations");
+
+            colors ??= new Dictionary<string, float[]>
+            {
+                ["fill"] = fill,
+                ["stroke"] = stroke,
+            };
+
+            fill = colors.TryGetValue("fill", out var fillColor) ? fillColor : null;
+            stroke = colors.TryGetValue("stroke", out var strokeColor) ? strokeColor : null;
+
+            if (stroke != null)
+            {
+                if (stroke.Length == 0)
+                    Parent.Parent.XrefSetKey(Xref, "C", "[]");
+                else
+                {
+                    Helpers.CheckColor(stroke);
+                    Parent.Parent.XrefSetKey(Xref, "C", Helpers.EscapePdfArray(stroke));
+                }
+            }
+
+            bool allowFill = AnnotationType == AnnotationType.Circle
+                || AnnotationType == AnnotationType.Square
+                || AnnotationType == AnnotationType.Line
+                || AnnotationType == AnnotationType.PolyLine
+                || AnnotationType == AnnotationType.Polygon
+                || AnnotationType == AnnotationType.Redact;
+
+            if (fill != null)
+            {
+                if (!allowFill)
+                    return;
+                if (fill.Length == 0)
+                    Parent.Parent.XrefSetKey(Xref, "IC", "[]");
+                else
+                {
+                    Helpers.CheckColor(fill);
+                    Parent.Parent.XrefSetKey(Xref, "IC", Helpers.EscapePdfArray(fill));
+                }
+            }
+        }
+
+        /// <summary>Set opacity (PyMuPDF <c>Annot.set_opacity</c>).</summary>
+        public void SetOpacity(float opacity)
+        {
+            if (!Helpers.InRange(opacity, 0.0f, 1.0f))
+            {
+                mupdf.mupdf.pdf_set_annot_opacity(NativeAnnot, 1);
+                return;
+            }
+            mupdf.mupdf.pdf_set_annot_opacity(NativeAnnot, opacity);
+            if (opacity < 1.0)
+            {
+                var page = mupdf.mupdf.pdf_annot_page(NativeAnnot);
+                var pdfPage = page.m_internal;
+                if (pdfPage != null)
+                    pdfPage.transparency = 1;
+            }
+        }
+
+        /// <summary>Set /Name (icon) of annotation (PyMuPDF <c>Annot.set_name</c>).</summary>
+        public void SetName(string name)
+        {
+            mupdf.mupdf.pdf_dict_put_name(AnnotObj, mupdf.mupdf.pdf_new_name("Name"), name);
+        }
+
+        /// <summary>Get /Name (icon) of annotation (from <c>Annot.info</c> name field).</summary>
+        public string GetName()
+        {
+            var obj = mupdf.mupdf.pdf_dict_get(AnnotObj, mupdf.mupdf.pdf_new_name("Name"));
+            return obj.m_internal != null ? mupdf.mupdf.pdf_to_name(obj) : "";
+        }
+
+        /// <summary>Set annotation BlendMode (PyMuPDF <c>Annot.set_blendmode</c>).</summary>
+        public void SetBlendMode(string mode)
+        {
+            mupdf.mupdf.pdf_dict_put_name(AnnotObj, mupdf.mupdf.pdf_new_name("BM"), mode);
+        }
+
+        /// <summary>Annotation BlendMode (PyMuPDF <c>Annot.blendmode</c>).</summary>
+        public string BlendMode
+        {
+            get
+            {
+                var bm = mupdf.mupdf.pdf_dict_get(AnnotObj, mupdf.mupdf.pdf_new_name("BM"));
+                if (bm.m_internal != null) return mupdf.mupdf.pdf_to_name(bm);
+
+                var extState = GetNestedDict(AnnotObj, "AP", "N", "Resources", "ExtGState");
+                if (mupdf.mupdf.pdf_is_dict(extState) != 0)
+                {
+                    int n = mupdf.mupdf.pdf_dict_len(extState);
+                    for (int i = 0; i < n; i++)
+                    {
+                        var state = mupdf.mupdf.pdf_dict_get_val(extState, i);
+                        if (mupdf.mupdf.pdf_is_dict(state) == 0) continue;
+                        int m = mupdf.mupdf.pdf_dict_len(state);
+                        for (int j = 0; j < m; j++)
+                        {
+                            var key = mupdf.mupdf.pdf_dict_get_key(state, j);
+                            if (mupdf.mupdf.pdf_objcmp(key, mupdf.mupdf.pdf_new_name("BM")) == 0)
+                                return mupdf.mupdf.pdf_to_name(mupdf.mupdf.pdf_dict_get_val(state, j));
+                        }
+                    }
+                }
+                return null;
+            }
+        }
+
+        /// <summary>Annotation author / title (PyMuPDF <c>Annot.info</c> title).</summary>
+        public string Author
+        {
+            get
+            {
+                var title = mupdf.mupdf.pdf_dict_get(AnnotObj, mupdf.mupdf.pdf_new_name("T"));
+                return title.m_internal != null ? mupdf.mupdf.pdf_to_text_string(title) : "";
+            }
+            set
+            {
+                mupdf.mupdf.pdf_set_annot_author(NativeAnnot, value);
+            }
+        }
+
+        /// <summary>Creation date (PyMuPDF <c>Annot.info</c> creationDate).</summary>
+        public string CreationDate
+        {
+            get
+            {
+                var cd = mupdf.mupdf.pdf_dict_gets(mupdf.mupdf.pdf_annot_obj(NativeAnnot), "CreationDate");
+                return cd.m_internal != null ? mupdf.mupdf.pdf_to_text_string(cd) : "";
+            }
+        }
+
+        /// <summary>Modification date (PyMuPDF <c>Annot.info</c> modDate).</summary>
+        public string ModDate
+        {
+            get
+            {
+                var md = mupdf.mupdf.pdf_dict_gets(mupdf.mupdf.pdf_annot_obj(NativeAnnot), "M");
+                return md.m_internal != null ? mupdf.mupdf.pdf_to_text_string(md) : "";
+            }
+        }
+
+        /// <summary>Set various properties (PyMuPDF <c>Annot.set_info</c>).</summary>
+        public void SetInfo(string content = null, string title = null, string creationDate = null, string modDate = null, string subject = null)
+        {
+            SetInfo((Dictionary<string, string>)null, content, title, creationDate, modDate, subject);
+        }
+
+        /// <summary>Set various properties from <see cref="AnnotInfo"/> (MuPDF.NET / <c>annot.SetInfo(info)</c>).</summary>
         public void SetInfo(
             AnnotInfo info = null,
             string content = null,
             string title = null,
             string creationDate = null,
             string modDate = null,
-            string subject = null
-        )
+            string subject = null)
         {
             if (info != null)
             {
@@ -1559,1040 +651,559 @@ namespace MuPDF.NET
                 creationDate = info.CreationDate;
                 modDate = info.ModDate;
                 subject = info.Subject;
-                info = null;
             }
+            SetInfo((Dictionary<string, string>)null, content, title, creationDate, modDate, subject);
+        }
 
-            PdfAnnot annot = _nativeAnnotion;
-            bool isMarkup = Convert.ToBoolean(annot.pdf_annot_has_author());
+        /// <inheritdoc cref="SetInfo(string, string, string, string, string)"/>
+        public void SetInfo(Dictionary<string, string> info = null, string content = null, string title = null, string creationDate = null, string modDate = null, string subject = null)
+        {
+            if (info != null)
+            {
+                info.TryGetValue("content", out content);
+                info.TryGetValue("title", out title);
+                info.TryGetValue("creationDate", out creationDate);
+                info.TryGetValue("modDate", out modDate);
+                info.TryGetValue("subject", out subject);
+            }
 
             if (!string.IsNullOrEmpty(content))
-                annot.pdf_set_annot_contents(content);
+                mupdf.mupdf.pdf_set_annot_contents(NativeAnnot, content);
+            bool isMarkup = mupdf.mupdf.pdf_annot_has_author(NativeAnnot) != 0;
             if (isMarkup)
             {
-                if (!string.IsNullOrEmpty(title))
-                    annot.pdf_set_annot_author(title);
+                if (!string.IsNullOrEmpty(title)) Author = title;
                 if (!string.IsNullOrEmpty(creationDate))
-                    annot
-                        .pdf_annot_obj()
-                        .pdf_dict_put_text_string(new PdfObj("CreationDate"), creationDate);
-
+                    mupdf.mupdf.pdf_dict_put_text_string(AnnotObj,
+                        mupdf.mupdf.pdf_new_name("CreationDate"), creationDate);
                 if (!string.IsNullOrEmpty(modDate))
-                    annot.pdf_annot_obj().pdf_dict_put_text_string(new PdfObj("M"), modDate);
-
+                    mupdf.mupdf.pdf_dict_put_text_string(AnnotObj,
+                        mupdf.mupdf.pdf_new_name("M"), modDate);
                 if (!string.IsNullOrEmpty(subject))
-                    annot
-                        .pdf_annot_obj()
-                        .pdf_dict_puts("Subj", mupdf.mupdf.pdf_new_text_string(subject));
+                    mupdf.mupdf.pdf_dict_puts(AnnotObj,
+                        "Subj", mupdf.mupdf.pdf_new_text_string(subject));
             }
         }
 
-        public void SetIrtXref(int xref)
+        /// <summary>Various information details (PyMuPDF <c>Annot.info</c>).</summary>
+        public Dictionary<string, string> GetInfo()
         {
-            PdfAnnot annot = _nativeAnnotion;
-            PdfObj annotObj = annot.pdf_annot_obj();
-            PdfPage page = annot.pdf_annot_page();
+            var res = new Dictionary<string, string>();
 
-            PdfDocument pageDoc = page.doc();
-            if (xref < 1 || xref >= pageDoc.pdf_xref_len())
-                throw new Exception(Utils.ErrorMessages["MSG_BAD_XREF"]);
+            res["content"] = Contents;
 
-            PdfObj irt = pageDoc.pdf_new_indirect(xref, 0);
-            PdfObj subt = irt.pdf_dict_get(new PdfObj("Subtype"));
-            PdfAnnotType irtSubt = (PdfAnnotType)
-                mupdf.mupdf.pdf_annot_type_from_string(subt.pdf_to_name());
-            if ((int)irtSubt < 0)
-                throw new Exception(Utils.ErrorMessages["MSG_IS_NO_ANNOT"]);
+            var nameObj = mupdf.mupdf.pdf_dict_get(AnnotObj, mupdf.mupdf.pdf_new_name("Name"));
+            res["name"] = nameObj.m_internal != null ? mupdf.mupdf.pdf_to_name(nameObj) : "";
 
-            annotObj.pdf_dict_put(new PdfObj("IRT"), irt);
+            // Title (= author)
+            res["title"] = Author;
 
-            pageDoc.Dispose();
+            // CreationDate
+            res["creationDate"] = CreationDate;
+
+            // ModDate
+            res["modDate"] = ModDate;
+
+            // Subj
+            var subjObj = mupdf.mupdf.pdf_dict_gets(AnnotObj, "Subj");
+            res["subject"] = subjObj.m_internal != null ? mupdf.mupdf.pdf_to_text_string(subjObj) : "";
+
+            // Identification (PDF key /NM)
+            var nmObj = mupdf.mupdf.pdf_dict_gets(AnnotObj, "NM");
+            res["id"] = nmObj.m_internal != null ? mupdf.mupdf.pdf_to_text_string(nmObj) : "";
+
+            return res;
         }
 
-        public void SetLanguage(string language)
+        /// <summary>Annotation vertex points (PyMuPDF <c>Annot.vertices</c>).</summary>
+        public List<Point> Vertices
         {
-            PdfAnnot annot = _nativeAnnotion;
-            TextLanguage lang;
-            if (language == null)
-                lang = TextLanguage.FZ_LANG_UNSET;
-            else
-                lang = (TextLanguage)mupdf.mupdf.fz_text_language_from_string(language);
-
-            annot.pdf_set_annot_language((fz_text_language)lang);
-        }
-
-        public void SetLineEnds(PdfLineEnding start, PdfLineEnding end)
-        {
-            PdfAnnot annot = _nativeAnnotion;
-            if (annot.pdf_annot_has_line_ending_styles() != 0)
+            get
             {
-                annot.pdf_set_annot_line_ending_styles(
-                    (pdf_line_ending)start,
-                    (pdf_line_ending)end
-                );
-            }
-            else
-                Console.WriteLine("bad annot type for line ends");
-        }
+                var result = new List<Point>();
+                var source = mupdf.mupdf.pdf_dict_get(AnnotObj, mupdf.mupdf.pdf_new_name("Vertices"));
+                if (source.m_internal == null) source = mupdf.mupdf.pdf_dict_get(AnnotObj, mupdf.mupdf.pdf_new_name("L"));
+                if (source.m_internal == null) source = mupdf.mupdf.pdf_dict_get(AnnotObj, mupdf.mupdf.pdf_new_name("QuadPoints"));
+                if (source.m_internal == null) source = mupdf.mupdf.pdf_dict_gets(AnnotObj, "CL");
 
-        public void SetName(string name)
-        {
-            PdfAnnot annot = _nativeAnnotion;
-            PdfObj annotObj = annot.pdf_annot_obj();
-            annotObj.pdf_dict_put_name(new PdfObj("Name"), name);
-        }
-
-        public void SetOC(int oc = 0)
-        {
-            PdfAnnot annot = _nativeAnnotion;
-            PdfObj annotObj = annot.pdf_annot_obj();
-            if (oc == 0)
-                annotObj.pdf_dict_del(new PdfObj("OC"));
-            else
-                AddOCObject(annotObj.pdf_get_bound_document(), annotObj, oc);
-        }
-
-        public static void AddOCObject(PdfDocument doc, PdfObj _ref, int xref)
-        {
-            PdfObj indObj = doc.pdf_new_indirect(xref, 0);
-            if (indObj.pdf_is_dict() == 0)
-                throw new Exception(Utils.ErrorMessages["MSG_BAD_OC_REF"]);
-
-            PdfObj type = indObj.pdf_dict_get(new PdfObj("Type"));
-            if (type.pdf_objcmp(new PdfObj("OCG")) == 0 || type.pdf_objcmp(new PdfObj("OCMD")) == 0)
-            {
-                _ref.pdf_dict_put(new PdfObj("OC"), indObj);
-            }
-            else
-                throw new Exception(Utils.ErrorMessages["MSG_BAD_OC_REF"]);
-        }
-
-        public void SetOpacity(float opacity)
-        {
-            PdfAnnot annot = _nativeAnnotion;
-            if (!Utils.INRANGE(opacity, 0.0f, 1.0f))
-            {
-                annot.pdf_set_annot_opacity(1);
-                return;
-            }
-
-            annot.pdf_set_annot_opacity(opacity);
-            if (opacity < 1.0f)
-            {
-                PdfPage page = annot.pdf_annot_page();
-                page.m_internal.transparency = 1;
-            }
-        }
-
-        public void SetOpen(int isOpen)
-        {
-            PdfAnnot annot = _nativeAnnotion;
-            annot.pdf_set_annot_is_open(isOpen);
-        }
-
-        public void SetPopup(Rect rect)
-        {
-            PdfAnnot annot = _nativeAnnotion;
-            PdfPage page = annot.pdf_annot_page();
-            Matrix rot = Utils.RotatePageMatrix(page);
-
-            FzRect r = rect.ToFzRect().fz_transform_rect(rot.ToFzMatrix());
-            annot.pdf_set_annot_popup(r);
-        }
-
-        public void SetRect(Rect rect)
-        {
-            PdfAnnot annot = _nativeAnnotion;
-            PdfPage pdfPage = annot.pdf_annot_page();
-            Matrix rot = Utils.RotatePageMatrix(pdfPage);
-            FzRect r = rect.ToFzRect().fz_transform_rect(rot.ToFzMatrix());
-
-            if (r.fz_is_empty_rect() != 0 || r.fz_is_infinite_rect() != 0)
-            {
-                throw new Exception(Utils.ErrorMessages["MSG_BAD_RECT"]);
-            }
-
-            try
-            {
-                annot.pdf_set_annot_rect(r);
-            }
-            catch (Exception e)
-            {
-                //Console.WriteLine(string.Format("cannot set rect: {0}", e));
-            }
-            finally
-            {
-                r.Dispose();
-            }
-        }
-
-        public Page GetParent()
-        {
-            Page ret = null;
-            if (Parent != null)
-                ret = Parent;
-            else
-            {
-                PdfPage page = _nativeAnnotion.pdf_annot_page();
-                PdfDocument pageDoc = page.doc();
-                Document doc = (page.m_internal == null) ? null : new Document(pageDoc);
-                pageDoc.Dispose();
-                ret = new Page(page, doc);
-
-                Parent = ret;
-            }
-
-            return ret;
-        }
-
-        public void SetRotation(int rotate = 0)
-        {
-            PdfAnnot annot = _nativeAnnotion;
-            PdfAnnotType type = (PdfAnnotType)annot.pdf_annot_type();
-            if (
-                !(
-                    new List<PdfAnnotType>()
+                if (source.m_internal != null)
+                {
+                    for (int i = 0; i < mupdf.mupdf.pdf_array_len(source); i += 2)
                     {
-                        PdfAnnotType.PDF_ANNOT_CARET,
-                        PdfAnnotType.PDF_ANNOT_CIRCLE,
-                        PdfAnnotType.PDF_ANNOT_FREE_TEXT,
-                        PdfAnnotType.PDF_ANNOT_FILE_ATTACHMENT,
-                        PdfAnnotType.PDF_ANNOT_INK,
-                        PdfAnnotType.PDF_ANNOT_LINE,
-                        PdfAnnotType.PDF_ANNOT_POLY_LINE,
-                        PdfAnnotType.PDF_ANNOT_POLYGON,
-                        PdfAnnotType.PDF_ANNOT_SQUARE,
-                        PdfAnnotType.PDF_ANNOT_STAMP,
-                        PdfAnnotType.PDF_ANNOT_TEXT
+                        float x = mupdf.mupdf.pdf_to_real(mupdf.mupdf.pdf_array_get(source, i));
+                        float y = mupdf.mupdf.pdf_to_real(mupdf.mupdf.pdf_array_get(source, i + 1));
+                        result.Add(Helpers.TransformPoint(new Point(x, y), VertexMatrix));
                     }
-                ).Contains((PdfAnnotType)type)
-            )
-            {
-                return;
+                    return result;
+                }
+
+                var inkList = mupdf.mupdf.pdf_dict_gets(AnnotObj, "InkList");
+                if (inkList.m_internal != null)
+                {
+                    for (int i = 0; i < mupdf.mupdf.pdf_array_len(inkList); i++)
+                    {
+                        var sub = mupdf.mupdf.pdf_array_get(inkList, i);
+                        for (int j = 0; j < mupdf.mupdf.pdf_array_len(sub); j += 2)
+                        {
+                            float x = mupdf.mupdf.pdf_to_real(mupdf.mupdf.pdf_array_get(sub, j));
+                            float y = mupdf.mupdf.pdf_to_real(mupdf.mupdf.pdf_array_get(sub, j + 1));
+                            result.Add(Helpers.TransformPoint(new Point(x, y), VertexMatrix));
+                        }
+                    }
+                }
+                return result;
             }
+        }
 
-            int rot = rotate;
-            while (rot < 0)
-                rot += 360;
-            while (rot >= 360)
-                rot -= 360;
 
-            if (type == PdfAnnotType.PDF_ANNOT_FREE_TEXT && rot % 90 != 0)
-                rot = 0;
+        /// <summary>Line annotation endpoints (MuPDF <c>pdf_annot_line</c>; no named PyMuPDF API).</summary>
+        public (Point, Point) Line
+        {
+            get
+            {
+                var p1 = new mupdf.FzPoint();
+                var p2 = new mupdf.FzPoint();
+                NativeAnnot.pdf_annot_line(p1, p2);
+                return (Helpers.TransformPoint(new Point(p1), VertexMatrix), Helpers.TransformPoint(new Point(p2), VertexMatrix));
+            }
+        }
 
-            PdfObj annotObj = annot.pdf_annot_obj();
-            annotObj.pdf_dict_put_int(new PdfObj("Rotate"), rot);
+        /// <summary>Set line endpoints (MuPDF <c>pdf_set_annot_line</c>; no named PyMuPDF API).</summary>
+        public void SetLine(Point p1, Point p2)
+        {
+            var rp1 = Helpers.TransformPoint(new Point(p1), RotatePageMatrix);
+            var rp2 = Helpers.TransformPoint(new Point(p2), RotatePageMatrix);
+            mupdf.mupdf.pdf_set_annot_line(NativeAnnot, rp1.ToFzPoint(), rp2.ToFzPoint());
+        }
+
+        /// <summary>Set annotation vertices (no direct PyMuPDF name; uses MuPDF vertex APIs).</summary>
+        public void SetVertices(Point[] points)
+        {
+            mupdf.mupdf.pdf_clear_annot_vertices(NativeAnnot);
+            foreach (var p in points)
+            {
+                var rp = Helpers.TransformPoint(new Point(p), RotatePageMatrix);
+                mupdf.mupdf.pdf_add_annot_vertex(NativeAnnot, rp.ToFzPoint());
+            }
         }
 
         /// <summary>
-        /// Update annot appearance.
-        /// Depending on the annot type, some parameters make no sense,
-        /// while others are only available in this method to achieve the
-        /// desired result.This is especially true for 'FreeText' annots.
+        /// Synchronize the annotation’s visual appearance with its properties after changes.
         /// </summary>
-        /// <param name="blendMode">set the blend mode, all annotations.</param>
-        /// <param name="opacity">set the opacity, all annotations.</param>
-        /// <param name="fontSize">set fontsize, 'FreeText' only.</param>
-        /// <param name="fontName">set the font, 'FreeText' only.</param>
-        /// <param name="textColor">set text color, 'FreeText' only.</param>
-        /// <param name="borderColor">set border color, 'FreeText' only.</param>
-        /// <param name="fillColor">set fill color, all annotations.</param>
-        /// <param name="crossOut">draw diagonal lines, 'Redact' only.</param>
-        /// <param name="rotate">set rotation, 'FreeText' and some others.</param>
-        /// <return></return>
+        /// <param name="blendMode">
+        /// PDF blend mode for all annotation types (e.g. <c>"Normal"</c>). Use
+        /// <c>PDF_BM_Normal</c> to remove a blend mode.
+        /// </param>
+        /// <param name="opacity">
+        /// Transparency in <c>[0, 1)</c> for all types. Values outside the range are treated as opaque.
+        /// </param>
+        /// <param name="fontSize">Font size for FreeText annotations only.</param>
+        /// <param name="fontName">Font name for FreeText annotations only.</param>
+        /// <param name="textColor">
+        /// Text color for FreeText (1, 3, or 4 floats, 0–1 per channel: gray, RGB, or CMYK).
+        /// </param>
+        /// <param name="borderColor">
+        /// Border color for FreeText with rich text (<c>/RC</c> present) only.
+        /// </param>
+        /// <param name="fillColor">
+        /// Fill color; for Line, PolyLine, and Polygon can color line-end symbols.
+        /// </param>
+        /// <param name="crossOut">
+        /// For Redact annotations: draw diagonal lines when <see langword="true"/> (default).
+        /// </param>
+        /// <param name="rotate">
+        /// Rotation in degrees; <c>-1</c> means unchanged. FreeText accepts 0, 90, 180, 270 only.
+        /// </param>
+        /// <remarks>
+        /// <para>
+        /// You may omit this call after <see cref="SetRect"/>, <see cref="SetFlags"/>,
+        /// <see cref="SetOC"/>, <see cref="UpdateFile"/>, and most <see cref="SetInfo"/> changes
+        /// (except content changes). Required after color, border, rotation, and appearance edits.
+        /// </para>
+        /// <para>
+        /// Avoid calling inside a <see cref="Page.Annots"/> iteration loop — the page may need
+        /// reloading, which is not safe there.
+        /// </para>
+        /// </remarks>
         public void Update(
-            string blendMode = null,
-            float opacity = float.MaxValue,
-            float fontSize = 0.0f,
-            string fontName = null,
-            float[] textColor = null,
-            float[] borderColor = null,
-            float[] fillColor = null,
+            string? blendMode = null,
+            float? opacity = null,
+            float fontSize = 0,
+            string? fontName = null,
+            float[]? textColor = null,
+            float[]? borderColor = null,
+            float[]? fillColor = null,
             bool crossOut = true,
-            int rotate = -1
-        )
+            int rotate = -1)
         {
-            PdfAnnot annot = _nativeAnnotion;
-            PdfObj annotObj = annot.pdf_annot_obj();
-
+            var annotObj = AnnotObj;
             if (borderColor != null)
             {
-                PdfObj isRichText = annotObj.pdf_dict_get(new PdfObj("RC"));
-                if (isRichText != null)
-                    throw new Exception("cannot set border_color if rich_text is False");
+                var isRichText = mupdf.mupdf.pdf_dict_get(annotObj, mupdf.mupdf.pdf_new_name("RC"));
+                if (isRichText.m_internal == null)
+                    throw new ArgumentException("cannot set border_color if rich_text is False");
             }
-            
-            PdfAnnotType annotType = Type.Item1;
+            UpdateTimingTest();
 
-            int[] dt = Border.Dashes;
-            float borderWidth = Border.Width;
-            float[] stroke = Colors.Stroke;
-            List<float> fill = null;
-            if (fillColor != null)
-                fill = new List<float>(fillColor);
-            else
-                fill = new List<float>(Colors.Fill);
+            var annotType = AnnotationType;
+            var border = Border;
+            var dashes = border.Dashes;
+            float borderWidth = border.Width;
+            float[] stroke = StrokeColor;
+            float[] fill = fillColor ?? InteriorColor;
+            Matrix apnMatrix = ApnMatrix;
+            Rect? lineEndRect = null;
+            int lineEndLe = 0;
+            int lineEndRi = 0;
+            var lineEndsVal = LineEnds;
+            if (lineEndsVal != null)
+            {
+                lineEndLe = lineEndsVal.Value.start;
+                lineEndRi = lineEndsVal.Value.end;
+            }
+            Matrix iMat = Parent.TransformationMatrix.Inverted() ?? Matrix.Identity;
 
-            Rect rect = null;
-            Matrix apnMat = ApnMatrix;
             if (rotate != -1)
             {
-                while (rotate < 0)
-                    rotate += 360;
-                while (rotate >= 360)
-                    rotate -= 360;
-                if (annotType == PdfAnnotType.PDF_ANNOT_FREE_TEXT && rotate % 90 != 0)
+                while (rotate < 0) rotate += 360;
+                while (rotate >= 360) rotate -= 360;
+                if (annotType == AnnotationType.FreeText && rotate % 90 != 0)
                     rotate = 0;
             }
 
-            // handle opacity and blend mode
-            if (string.IsNullOrEmpty(blendMode))
-                blendMode = BlendMode;
-            if (opacity == float.MaxValue)
-                opacity = Opacity;
+            string effectiveBlendMode = blendMode ?? BlendMode;
+            float effectiveOpacity = opacity ?? Opacity;
+            string opaCode = (effectiveOpacity >= 0 && effectiveOpacity < 1) || !string.IsNullOrEmpty(effectiveBlendMode)
+                ? "/H gs\n" // Python: "then we must reference this 'gs'"
+                : "";
 
-            string opaCode = "";
-            if ((opacity >= 0 && opacity < 1) || !string.IsNullOrEmpty(blendMode))
-                opaCode = "/H gs\n";
-            else
-                opaCode = "";
-
-            if (annotType == PdfAnnotType.PDF_ANNOT_FREE_TEXT)
+            if (annotType == AnnotationType.FreeText)
             {
-                Utils.CheckColor(textColor);
-                Utils.CheckColor(fillColor);
-                (List<float> tcol, string fname, float fsize) = ParseData(this);
-
-                bool updateDefaultAppearance = false;
-                if (fsize <= 0)
-                {
-                    fsize = 12;
-                    updateDefaultAppearance = true;
-                }
-
-                if (textColor != null)
-                {
-                    tcol = new List<float>(textColor);
-                    updateDefaultAppearance = true;
-                }
-
-                if (fontName != null)
-                {
-                    fname = fontName;
-                    updateDefaultAppearance = true;
-                }
-
-                if (fontSize > 0)
-                {
-                    fsize = fontSize;
-                    updateDefaultAppearance = true;
-                }
-
-                if (updateDefaultAppearance)
-                {
-                    Utils.MakeAnnotDA(annot, tcol == null ? -1 : tcol.Count, tcol.ToArray(), fname, fsize);
-                    blendMode = null; // not supported for free text annotations!
-                }
+                Helpers.CheckColor(textColor);
+                Helpers.CheckColor(fillColor);
+                var (tcol, fname, fsize) = Helpers.ParseAnnotDefaultAppearance(NativeAnnot);
+                if (fsize <= 0) fsize = 12;
+                if (textColor != null) tcol = textColor;
+                if (!string.IsNullOrEmpty(fontName)) fname = fontName;
+                if (fontSize > 0) fsize = fontSize;
+                Helpers.JM_make_annot_DA(NativeAnnot, tcol?.Length ?? 0, tcol ?? Array.Empty<float>(), fname, fsize);
+                effectiveBlendMode = null; // Python: not supported for FreeText.
             }
 
-            // now invoke MuPDF to update the annot appearance
-            bool res = UpdateAppearance(
-                opacity: opacity,
-                blendMode: blendMode,
-                fillColor: fill.ToArray(),
-                rotate: rotate
-            );
-            if (!res)
-                throw new Exception("Error updating annotation");
+            bool val = _update_appearance(effectiveOpacity, effectiveBlendMode, fill, rotate, annotType);
+            if (!val)
+                throw new InvalidOperationException("Error updating annotation.");
 
-            if (annotType == PdfAnnotType.PDF_ANNOT_FREE_TEXT)
+            // Python: "read contents as created by MuPDF"
+            byte[] ap = _getAP();
+            if (ap == null || ap.Length == 0)
+                return;
+
+            if (annotType == AnnotationType.FreeText)
             {
-                // in absence of previous opacity, we may need to modify the AP
-                string apStr = Encoding.UTF8.GetString(this.GetAP());
-                if (opacity >= 0 && opacity < 1 && !apStr.StartsWith("/H gs"))
-                    this.SetAP(Encoding.UTF8.GetBytes("/H gs\n" + apStr));
+                string apPrefixCheck = Encoding.UTF8.GetString(ap);
+                if (effectiveOpacity >= 0 && effectiveOpacity < 1
+                    && !apPrefixCheck.StartsWith("/H gs", StringComparison.Ordinal))
+                    _setAP(Encoding.UTF8.GetBytes("/H gs\n").Concat(ap).ToArray());
                 return;
             }
 
-            byte[] bFill = ColorString(fill, "f");
-            byte[] bStroke = ColorString(stroke, "c");
-
-            Matrix pCTM = Parent.TransformationMatrix;
-            Matrix iMat = ~pCTM; // inverse page transf. matrix
-
-            string dashStr = "";
-            List<byte> bDash = new List<byte>();
-            UTF8Encoding utf8 = new UTF8Encoding();
-            if (dt != null && dt.Length > 0)
-            {
-                string[] dashes = new string[dt.Length];
-                for (int i = 0; i < dt.Length; i++)
-                {
-                    dashes[i] = Convert.ToString(dt[i]);
-                }
-                dashStr = "[" + string.Join(" ", dashes) + "] 0 d \n";
-                bDash.AddRange(utf8.GetBytes(dashStr));
-            }
-            else
-                bDash = null;
-                
-            PdfLineEnding line_end_le = LineEnds.Item1;
-            PdfLineEnding line_end_ri = LineEnds.Item2;
-
-            // read contents as created by MuPDF
-            byte[] ap = GetAP();
-            List<string> apTab = new List<string>(Encoding.UTF8.GetString(ap).Split('\n'));
+            string apText = Encoding.UTF8.GetString(ap);
             bool apUpdated = false;
 
-            if (annotType == PdfAnnotType.PDF_ANNOT_REDACT)
+            if (annotType == AnnotationType.Redact && crossOut)
             {
-                if (crossOut)
+                // Python: create crossed-out rect for redact annotations.
+                var lines = new List<string>(apText.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None));
+                if (lines.Count >= 6)
                 {
+                    int n = lines.Count;
+                    string ll = lines[n - 4];
+                    string lr = lines[n - 3];
+                    string ur = lines[n - 2];
+                    string ul = lines[n - 5];
+                    lines.RemoveAt(lines.Count - 1);
+                    lines.Add(lr);
+                    lines.Add(ll);
+                    lines.Add(ur);
+                    lines.Add(ll);
+                    lines.Add(ul);
+                    lines.Add("S");
+                    apText = string.Join("\n", lines);
                     apUpdated = true;
-                    apTab.RemoveAt(apTab.Count - 1);
-                    string t = apTab[0];
-                    string ll = apTab[1];
-                    string lr = apTab[2];
-                    string ur = apTab[3];
-                    string ul = apTab[4];
-                    apTab.Add(lr);
-                    apTab.Add(ll);
-                    apTab.Add(ur);
-                    apTab.Add(ll);
-                    apTab.Add(ul);
-                    apTab.Add("S");
                 }
-
-                List<string> nTab = new List<string>();
-                if (borderWidth > 0 || bStroke != null)
-                {
-                    apUpdated = true;
-                    nTab =
-                        borderWidth > 0
-                            ? new List<string>() { string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0} w", borderWidth) }
-                            : new List<string>();
-                    for (int i = 0; i < apTab.Count; i++)
-                    {
-                        string line = apTab[i];
-                        if (line.EndsWith("w"))
-                            continue;
-                        if (line.EndsWith("RG") && bStroke != null)
-                            line = bStroke.Take(bStroke.Length - 1).ToString();
-                        nTab.Add(line);
-                    }
-                    apTab = nTab;
-                }
-                ap = utf8.GetBytes(string.Join("\n", apTab.ToArray()));
             }
 
-            if (
-                annotType == PdfAnnotType.PDF_ANNOT_POLYGON
-                || annotType == PdfAnnotType.PDF_ANNOT_POLY_LINE
-            )
+            string fillCode = Helpers.ColorCode(fill, "f");
+            string strokeCode = Helpers.ColorCode(stroke, "c");
+
+            if (annotType == AnnotationType.Polygon || annotType == AnnotationType.PolyLine)
             {
-                List<string> newApTab = apTab;
-                newApTab.RemoveAt(newApTab.Count - 1);
-                ap = MergeByte(
-                    Utils.ToByte(string.Join("\n", newApTab.ToArray())),
-                    Utils.ToByte("\n")
-                );
-                apUpdated = true;
-                if (bFill != null && bFill.Length > 0)
-                {
-                    if (annotType == PdfAnnotType.PDF_ANNOT_POLYGON)
-                        ap = MergeByte(MergeByte(ap, bFill), Utils.ToByte("b"));
-                    else if (annotType == PdfAnnotType.PDF_ANNOT_POLY_LINE)
-                        ap = MergeByte(ap, Utils.ToByte("S"));
-                }
+                var tab = apText.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
+                if (tab.Length > 0)
+                    apText = string.Join("\n", tab.Take(tab.Length - 1)) + "\n";
+                if (!string.IsNullOrEmpty(fillCode))
+                    apText += fillCode + (annotType == AnnotationType.Polygon ? "b" : "S");
                 else
-                {
-                    if (annotType == PdfAnnotType.PDF_ANNOT_POLYGON)
-                        ap = MergeByte(ap, Utils.ToByte("s"));
-                    else if (annotType == PdfAnnotType.PDF_ANNOT_POLY_LINE)
-                        ap = MergeByte(ap, Utils.ToByte("S"));
-                }
-            }
-                                
-            if (bDash != null)
-            {
-                ap = MergeByte(bDash.ToArray(), ap);
-                // reset dashing -only applies for LINE annots with line ends given
-                ap = Utils.ReplaceBytes(ap, utf8.GetBytes("\nS\n"), utf8.GetBytes("\nS\n[] 0 d\n"), 1);
+                    apText += annotType == AnnotationType.Polygon ? "s" : "S";
                 apUpdated = true;
             }
 
+            if (dashes != null && dashes.Length > 0)
+            {
+                apText = "[" + string.Join(" ", dashes) + "] 0 d\n" + apText;
+                apText = apText.Replace("\nS\n", "\nS\n[] 0 d\n");
+                apUpdated = true;
+            }
             if (!string.IsNullOrEmpty(opaCode))
             {
-                ap = MergeByte(utf8.GetBytes(opaCode), ap);
+                apText = opaCode + apText;
                 apUpdated = true;
             }
 
-            ap = MergeByte(MergeByte(Utils.ToByte("q\n"), ap), Utils.ToByte("\nQ\n"));
-
-            // the following handles line end symbols for 'Polygon' and 'Polyline'
-            if (
-                ((int)line_end_le + (int)line_end_ri) > 0
-                && (
-                    annotType == PdfAnnotType.PDF_ANNOT_POLYGON
-                    || annotType == PdfAnnotType.PDF_ANNOT_POLY_LINE
-                )
-            )
+            if (annotType == AnnotationType.Redact && (borderWidth > 0 || !string.IsNullOrEmpty(strokeCode)))
             {
-                List<LE_FUNCTION> leFuncs = new List<LE_FUNCTION>()
+                var rebuilt = new StringBuilder();
+                if (borderWidth > 0)
+                    rebuilt.AppendLine(borderWidth.ToString("G", System.Globalization.CultureInfo.InvariantCulture) + " w");
+                foreach (var line in apText.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None))
                 {
-                    null,
-                    le_square,
-                    le_circle,
-                    le_diamond,
-                    le_openarrow,
-                    le_closedarrow,
-                    le_butt,
-                    le_ropenarrow,
-                    le_rclosedarrow,
-                    le_slash
-                };
-
-                float d = 2 * Math.Max(1, Border.Width);
-                rect = Rect + new Rect(-d, -d, d, d);
+                    if (line.EndsWith("w", StringComparison.Ordinal)) continue;
+                    rebuilt.AppendLine(line.EndsWith("RG", StringComparison.Ordinal) && !string.IsNullOrEmpty(strokeCode)
+                        ? strokeCode.TrimEnd()
+                        : line);
+                }
+                apText = rebuilt.ToString();
                 apUpdated = true;
-                List<Point> points = Vertices;
-                Point p1 = null;
-                Point p2 = null;
+            }
 
-                if ((int)line_end_le > 0 && (int)line_end_le < leFuncs.Count)
-                {
-                    p1 = points[0] * iMat;
-                    p2 = points[1] * iMat;
-                    string left = leFuncs[(int)line_end_le](this, p1, p2, false, fillColor);
-                    ap = MergeByte(ap, Utils.ToByte(left));
-                }
+            apText = "q\n" + apText.TrimEnd() + "\nQ\n";
 
-                if ((int)line_end_ri > 0 && (int)line_end_ri < leFuncs.Count)
-                {
-                    p1 = points[points.Count-2] * iMat;
-                    p2 = points[points.Count-1] * iMat;
-                    string left = leFuncs[(int)line_end_ri](this, p1, p2, true, fillColor);
-                    ap = MergeByte(ap, Utils.ToByte(left));
-                }
+            if ((lineEndLe + lineEndRi) > 0
+                && (annotType == AnnotationType.Polygon || annotType == AnnotationType.PolyLine))
+            {
+                apText = AppendLineEndSymbols(this, apText, lineEndLe, lineEndRi, iMat, fill, ref lineEndRect);
+                apUpdated = true;
             }
 
             if (apUpdated)
             {
-                if (rect != null)
+                byte[] updated = Encoding.UTF8.GetBytes(apText);
+                if (lineEndRect != null)
                 {
-                    SetRect(rect);
-                    SetAP(ap, 1);
+                    SetRect(lineEndRect);
+                    _setAP(updated, 1);
                 }
                 else
-                    SetAP(ap, 0);
+                    _setAP(updated, 0);
             }
 
+            //-------------------------------
             // handle annotation rotations
-            if (    // only these types are supported
-                !(
-                    new List<PdfAnnotType>()
-                    {
-                        PdfAnnotType.PDF_ANNOT_CARET,
-                        PdfAnnotType.PDF_ANNOT_CIRCLE,
-                        PdfAnnotType.PDF_ANNOT_FILE_ATTACHMENT,
-                        PdfAnnotType.PDF_ANNOT_INK,
-                        PdfAnnotType.PDF_ANNOT_LINE,
-                        PdfAnnotType.PDF_ANNOT_POLY_LINE,
-                        PdfAnnotType.PDF_ANNOT_POLYGON,
-                        PdfAnnotType.PDF_ANNOT_SQUARE,
-                        PdfAnnotType.PDF_ANNOT_STAMP,
-                        PdfAnnotType.PDF_ANNOT_TEXT
-                    }
-                ).Contains((PdfAnnotType)annotType)
-            )
-            {
+            //-------------------------------
+            if (annotType != AnnotationType.Caret
+                && annotType != AnnotationType.Circle
+                && annotType != AnnotationType.FileAttachment
+                && annotType != AnnotationType.Ink
+                && annotType != AnnotationType.Line
+                && annotType != AnnotationType.PolyLine
+                && annotType != AnnotationType.Polygon
+                && annotType != AnnotationType.Square
+                && annotType != AnnotationType.Stamp
+                && annotType != AnnotationType.Text)
                 return;
-            }
 
             int rot = Rotation; // get value from annot object
             if (rot == -1) // nothing to change
                 return;
-            Point M = (this.Rect.TopLeft + this.Rect.BottomRight) / 2.0f;
-            Quad quad = null;
-            if (rot == 0)
-            {
-                if ((apnMat - new Matrix(1, 1)).Abs() < 1e-5)
-                    return;
 
-                quad = this.Rect.Morph(M, ~apnMat);
-                SetRect(quad.Rect);
-                SetApnMatrix(new Matrix(1.0f, 1.0f));
+            var center = (Rect.TL + Rect.BR) / 2.0f; // center of annot rect
+            if (rot == 0) // undo rotations
+            {
+                if (apnMatrix == Matrix.Identity)
+                    return; // matrix already is a no-op
+                var quad = Rect.Morph(center, apnMatrix.Inverted() ?? Matrix.Identity); // derotate rect
+                SetRect(new Rect(quad.Rect));
+                SetApnMatrix(Matrix.Identity); // appearance matrix = no-op
                 return;
             }
 
-            Matrix mat = new Matrix(rot);
-            quad = this.Rect.Morph(M, mat);
-            SetRect(quad.Rect);
-            SetApnMatrix(apnMat * mat);
+            var mat = Matrix.Rotation(rot);
+            var rotated = Rect.Morph(center, mat);
+            SetRect(new Rect(rotated.Rect));
+            SetApnMatrix(apnMatrix * mat);
         }
 
-        internal static string le_square(
-            Annot annot,
-            Point p1,
-            Point p2,
-            bool lr,
-            float[] fillColor
-        )
+        /// <summary>PyMuPDF <c>Annot._update_appearance</c> — MuPDF appearance refresh and optional opacity/blend ExtGState.</summary>
+        private bool _update_appearance(float opacity, string blendMode, float[] fillColor, int rotate, AnnotationType annotType)
         {
-            (
-                Matrix m,
-                Matrix im,
-                Point L,
-                Point R,
-                float w,
-                string scol,
-                string fcol,
-                string opacity
-            ) = le_annot_parms(annot, p1, p2, fillColor);
-            float shift = 2.5f; // 2*shift*width = length of square edge
-            float d = shift * Math.Max(1, w);
-            Point M = lr ? R - new Point(d / 2.0f, 0) : L + new Point(d / 2.0f, 0);
+            var annotObj = AnnotObj;
+            int nFill = fillColor?.Length ?? 0;
 
-            Rect r = new Rect(M, M) + new Rect(-d, -d, d, d); // the square
-            // the square makes line longer by (2*shift - 1)*width
-            Point p = r.TopLeft * im;
-            string ap = string.Format(System.Globalization.CultureInfo.InvariantCulture, "q\n{0}{1} {2} m\n", opacity, Utils.FloatToString(p.X), Utils.FloatToString(p.Y));
-            p = r.TopRight * im;
-            ap += string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0} {1} l\n", Utils.FloatToString(p.X), Utils.FloatToString(p.Y));
-            p = r.BottomRight * im;
-            ap += string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0} {1} l\n", Utils.FloatToString(p.X), Utils.FloatToString(p.Y));
-            p = r.BottomLeft * im;
-            ap += string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0} {1} l\n", Utils.FloatToString(p.X), Utils.FloatToString(p.Y));
-            ap += string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0} w\n", Utils.FloatToString(w));
-            ap += scol + fcol + "b\nQ\n";
-            return ap;
-        }
-
-        internal static string le_diamond(
-            Annot annot,
-            Point p1,
-            Point p2,
-            bool lr,
-            float[] fillColor
-        )
-        {
-            (
-                Matrix m,
-                Matrix im,
-                Point L,
-                Point R,
-                float w,
-                string scol,
-                string fcol,
-                string opacity
-            ) = le_annot_parms(annot, p1, p2, fillColor);
-            float shift = 2.5f; // 2*shift*width = length of square edge
-            float d = shift * Math.Max(1, w);
-            Point M = lr ? R - new Point(d / 2.0f, 0) : L + new Point(d / 2.0f, 0);
-
-            Rect r = new Rect(M, M) + new Rect(-d, -d, d, d); // the square
-            // the square makes line longer by(2 * shift - 1)*width
-            Point p = (r.TopLeft + (r.BottomLeft - r.TopLeft) * 0.5f) * im;
-            string ap = string.Format(System.Globalization.CultureInfo.InvariantCulture, "q\n{0}{1} {2} m\n", opacity, Utils.FloatToString(p.X), Utils.FloatToString(p.Y));
-            p = (r.TopLeft + (r.TopRight - r.TopLeft) * 0.5f) * im;
-            ap += string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0} {1} l\n", Utils.FloatToString(p.X), Utils.FloatToString(p.Y));
-            p = (r.TopRight + (r.BottomLeft - r.BottomRight) * 0.5f) * im;
-            ap += string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0} {1} l\n", Utils.FloatToString(p.X), Utils.FloatToString(p.Y));
-            p = (r.BottomRight + (r.BottomLeft - r.BottomRight) * 0.5f) * im;
-            ap += string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0} {1} l\n", Utils.FloatToString(p.X), Utils.FloatToString(p.Y));
-            ap += string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0} w\n", Utils.FloatToString(w));
-            ap += scol + fcol + "b\nQ\n";
-            return ap;
-        }
-
-        internal static string le_openarrow(
-            Annot annot,
-            Point p1,
-            Point p2,
-            bool lr,
-            float[] fillColor
-        )
-        {
-            (
-                Matrix m,
-                Matrix im,
-                Point L,
-                Point R,
-                float w,
-                string scol,
-                string fcol,
-                string opacity
-            ) = le_annot_parms(annot, p1, p2, fillColor);
-            float shift = 2.5f;
-            float d = shift * Math.Max(1, w);
-            p2 = lr ? R + new Point(d / 2.0f, 0) : L - new Point(d / 2.0f, 0);
-
-            p1 = lr ? p2 + new Point(-2 * d, -d) : p2 + new Point(2 * d, -d);
-
-            Point p3 = lr ? p2 + new Point(-2 * d, d) : p2 + new Point(2 * d, d);
-
-            p1 *= im;
-            p2 *= im;
-            p3 *= im;
-            string ap = "\nq\n" + opacity + Utils.FloatToString(p1.X) + " " + Utils.FloatToString(p1.Y) + " m\n";
-            ap += Utils.FloatToString(p2.X) + " " + Utils.FloatToString(p2.Y) + " l\n";
-            ap += Utils.FloatToString(p3.X) + " " + Utils.FloatToString(p3.Y) + " l\n";
-            ap += Utils.FloatToString(w) + " w\n";
-            ap += scol + "S\nQ\n";
-            return ap;
-        }
-
-        internal static string le_closedarrow(
-            Annot annot,
-            Point p1,
-            Point p2,
-            bool lr,
-            float[] fillColor
-        )
-        {
-            (
-                Matrix m,
-                Matrix im,
-                Point L,
-                Point R,
-                float w,
-                string scol,
-                string fcol,
-                string opacity
-            ) = le_annot_parms(annot, p1, p2, fillColor);
-            float shift = 2.5f;
-            float d = shift * Math.Max(1, w);
-            p2 = lr ? R + new Point(d / 2.0f, 0) : L - new Point(d / 2.0f, 0);
-            p1 = lr ? p2 + new Point(-2 * d, -d) : p2 + new Point(2 * d, -d);
-            Point p3 = lr ? p2 + new Point(-2 * d, d) : p2 + new Point(2 * d, d);
-            p1 *= im;
-            p2 *= im;
-            p3 *= im;
-            string ap = $"\nq\n{opacity}{Utils.FloatToString(p1.X)} {Utils.FloatToString(p1.Y)} m\n";
-            ap += $"{Utils.FloatToString(p2.X)} {Utils.FloatToString(p2.Y)} l\n";
-            ap += $"{Utils.FloatToString(p3.X)} {Utils.FloatToString(p3.Y)} l\n";
-            ap += $"{Utils.FloatToString(w)} w\n";
-            ap += $"{scol}{fcol}b\nQ\n";
-            return ap;
-        }
-
-        internal static string le_butt(
-            Annot annot,
-            Point p1,
-            Point p2,
-            bool lr,
-            float[] fillColor
-        )
-        {
-            (
-                Matrix m,
-                Matrix im,
-                Point L,
-                Point R,
-                float w,
-                string scol,
-                string fcol,
-                string opacity
-            ) = le_annot_parms(annot, p1, p2, fillColor);
-            float shift = 3;
-            float d = shift * Math.Max(1, w);
-            var M = lr ? R : L;
-            var top = new Point(M.X, M.Y - d / 2.0f) * im;
-            var bot = new Point(M.X, M.Y + d / 2.0f) * im;
-            var ap = $"\nq\n{opacity}{Utils.FloatToString(top.X)} {Utils.FloatToString(top.Y)} m\n";
-            ap += $"{Utils.FloatToString(bot.X)} {Utils.FloatToString(bot.Y)} l\n";
-            ap += $"{Utils.FloatToString(w)} w\n";
-            ap += $"{scol}s\nQ\n";
-            return ap;
-        }
-
-        internal static string le_ropenarrow(
-            Annot annot,
-            Point p1,
-            Point p2,
-            bool lr,
-            float[] fillColor
-        )
-        {
-            (
-                Matrix m,
-                Matrix im,
-                Point L,
-                Point R,
-                float w,
-                string scol,
-                string fcol,
-                string opacity
-            ) = le_annot_parms(annot, p1, p2, fillColor);
-            float shift = 2.5f;
-            float d = shift * Math.Max(1, w);
-            p2 = lr ? new Point(R.X - (d / 3.0f), R.Y) : new Point(L.X + (d / 3.0f), L.Y);
-            p1 = lr ? new Point(p2.X + (2 * d), p2.Y - d) : new Point(p2.X - (2 * d), p2.Y - d);
-            Point p3 = lr
-                ? new Point(p2.X + (2 * d), p2.Y + d)
-                : new Point(p2.X - (2 * d), p2.Y + d);
-            p1 *= im;
-            p2 *= im;
-            p3 *= im;
-            string ap = "\nq\n" + opacity + Utils.FloatToString(p1.X) + " " + Utils.FloatToString(p1.Y) + " m\n";
-            ap += Utils.FloatToString(p2.X) + " " + Utils.FloatToString(p2.Y) + " l\n";
-            ap += Utils.FloatToString(p3.X) + " " + Utils.FloatToString(p3.Y) + " l\n";
-            ap += Utils.FloatToString(w) + " w\n";
-            ap += scol + fcol + "S\nQ\n";
-
-            return ap;
-        }
-
-        internal static string le_rclosedarrow(
-            Annot annot,
-            Point p1,
-            Point p2,
-            bool lr,
-            float[] fillColor
-        )
-        {
-            (
-                Matrix m,
-                Matrix im,
-                Point L,
-                Point R,
-                float w,
-                string scol,
-                string fcol,
-                string opacity
-            ) = le_annot_parms(annot, p1, p2, fillColor);
-            float shift = 2.5f;
-            float d = shift * Math.Max(1, w);
-            p2 = lr ? new Point(R.X - (2 * d), R.Y) : new Point(L.X + (2 * d), L.Y);
-            p1 = lr ? p2 + new Point(2 * d, -d) : p2 + new Point(-2 * d, -d);
-            Point p3 = lr ? p2 + new Point(2 * d, d) : p2 + new Point(-2 * d, d);
-            p1 *= im;
-            p2 *= im;
-            p3 *= im;
-            string ap = "\nq\n" + opacity + Utils.FloatToString(p1.X) + " " + Utils.FloatToString(p1.Y) + " m\n";
-            ap += Utils.FloatToString(p2.X) + " " + Utils.FloatToString(p2.Y) + " l\n";
-            ap += Utils.FloatToString(p3.X) + " " + Utils.FloatToString(p3.Y) + " l\n";
-            ap += Utils.FloatToString(w) + " w\n";
-            ap += scol + fcol + "b\nQ\n";
-            
-            return ap;
-        }
-
-        internal static string le_slash(
-            Annot annot,
-            Point p1,
-            Point p2,
-            bool lr,
-            float[] fillColor
-        )
-        {
-            (
-                Matrix m,
-                Matrix im,
-                Point L,
-                Point R,
-                float w,
-                string scol,
-                string fcol,
-                string opacity
-            ) = le_annot_parms(annot, p1, p2, fillColor);
-            float rw = 1.1547f * Math.Max(1, w) * 1.0f;
-            Point M = lr ? R : L;
-            Rect r = new Rect(M.X - rw, M.Y - 2 * w, M.X + rw, M.Y + 2 * w);
-            Point top = r.TopLeft * im;
-            Point bot = r.BottomRight * im;
-            string ap = "\nq\n" + opacity + Utils.FloatToString(top.X) + " " + Utils.FloatToString(top.Y) + " m\n";
-            ap += Utils.FloatToString(bot.X) + " " + Utils.FloatToString(bot.Y) + " l\n";
-            ap += Utils.FloatToString(w) + " w\n";
-            ap += scol + "b\nQ\n";
-            
-            return ap;
-        }
-
-        internal static string le_circle(
-            Annot annot,
-            Point p1,
-            Point p2,
-            bool lr,
-            float[] fillColor
-        )
-        {
-            (
-                Matrix m,
-                Matrix im,
-                Point L,
-                Point R,
-                float w,
-                string scol,
-                string fcol,
-                string opacity
-            ) = le_annot_parms(annot, p1, p2, fillColor);
-            float shift = 2.5f;
-            float d = shift * Math.Max(1, w);
-            Point M = lr ? R - new Point(d / 2.0f, 0) : L + new Point(d / 2.0f, 0);
-
-            Rect r = (new Rect(M, M)) + new Rect(-d, -d, d, d);
-            string ap =
-                "q\n"
-                + opacity
-                + oval_string(
-                    r.TopLeft * im,
-                    r.TopRight * im,
-                    r.BottomRight * im,
-                    r.BottomLeft * im
-                );
-            ap += string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0} w\n", Utils.FloatToString(w));
-            ap += scol + fcol + "b\nQ\n";
-            
-            return ap;
-        }
-
-        internal static string bezier(Point p, Point q, Point r)
-        {
-            string f = "{0} {1} {2} {3} {4} {5} c\n";
-            
-            return string.Format(System.Globalization.CultureInfo.InvariantCulture, f, 
-                Utils.FloatToString(p.X), Utils.FloatToString(p.Y), 
-                Utils.FloatToString(q.X), Utils.FloatToString(q.Y), 
-                Utils.FloatToString(r.X), Utils.FloatToString(r.Y));
-        }
-
-        internal static string oval_string(Point p1, Point p2, Point p3, Point p4)
-        {
-            float kappa = 0.55228474983f;
-            Point ml = p1 + (p4 - p1) * 0.5f;
-            Point mo = p1 + (p2 - p1) * 0.5f;
-            Point mr = p2 + (p3 - p2) * 0.5f;
-            Point mu = p4 + (p3 - p4) * 0.5f;
-            Point ol1 = ml + (p1 - ml) * kappa;
-            Point ol2 = mo + (p1 - mo) * kappa;
-            Point or1 = mo + (p2 - mo) * kappa;
-            Point or2 = mr + (p2 - mr) * kappa;
-            Point ur1 = mr + (p3 - mr) * kappa;
-            Point ur2 = mu + (p3 - mu) * kappa;
-            Point ul1 = mu + (p4 - mu) * kappa;
-            Point ul2 = ml + (p4 - ml) * kappa;
-
-            string ap = string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0} {1} m\n", Utils.FloatToString(ml.X), Utils.FloatToString(ml.Y));
-            ap += Annot.bezier(ol1, ol2, mo);
-            ap += Annot.bezier(or1, or2, mr);
-            ap += Annot.bezier(ur1, ur2, mu);
-            ap += Annot.bezier(ul1, ul2, ml);
-            
-            return ap;
-        }
-
-        internal static (
-            Matrix,
-            Matrix,
-            Point,
-            Point,
-            float,
-            string,
-            string,
-            string
-        ) le_annot_parms(Annot annot, Point p1, Point p2, float[] fillColor)
-        {
-            float w = annot.Border.Width;
-            float[] sc = annot.Colors.Stroke;
-            if (sc == null)
-                sc = new float[3] { 0, 0, 0 };
-
-            string[] scStr = new string[sc.Length];
-            for (int i = 0; i < sc.Length; i++)
+            bool supportsInterior = annotType == AnnotationType.Square
+                || annotType == AnnotationType.Circle
+                || annotType == AnnotationType.Line
+                || annotType == AnnotationType.PolyLine
+                || annotType == AnnotationType.Polygon;
+            // Match PyMuPDF _update_appearance: IC handling for annots that use interior color.
+            if (nFill == 0 || !supportsInterior)
+                mupdf.mupdf.pdf_dict_del(annotObj, mupdf.mupdf.pdf_new_name("IC"));
+            else if (nFill > 0)
             {
-                scStr[i] = Utils.FloatToString(sc[i]);
-            }
-            
-            string scol = string.Join(" ", scStr) + " RG\n";
-            scStr = null;
-            float[] fc = null;
-            if (fillColor != null)
-                fc = fillColor;
-            else
-                fc = annot.Colors.Fill;
-            if (fc == null)
-                fc = new float[3] { 1, 1, 1 };
-
-            string[] fcolStr = new string[fc.Length];
-            for (int i = 0; i < fc.Length; i++)
-            {
-                fcolStr[i] = Utils.FloatToString(fc[i]);
-            }
-            string fcol = string.Join(" ", fcolStr) + " rg\n";
-
-            Point np1 = p1;
-            Point np2 = p2;
-            Matrix m = new Matrix(Utils.HorMatrix(np1, np2));
-            Matrix im = ~m;
-            Point L = np1 * m;
-            Point R = np2 * m;
-            string opacity = "";
-            if (0 <= annot.Opacity && annot.Opacity < 1)
-                opacity = "/H gs\n";
-            else
-                opacity = "";
-
-            return (m, im, L, R, w, scol, fcol, opacity);
-        }
-
-        public static byte[] MergeByte(byte[] a, byte[] b)
-        {
-            return Enumerable.Concat(a, b).ToArray();
-        }
-
-        public static byte[] ColorString(dynamic cs, string code)
-        {
-            UTF8Encoding utf8 = new UTF8Encoding();
-            if (cs is List<float>)
-                cs = cs.ToArray();
-            string cc = ColorCode(cs, code);
-            if (cc == "")
-                return utf8.GetBytes("");
-            
-            return utf8.GetBytes(cc + "\n");
-        }
-
-        public static string ColorCode(float cs, string code)
-        {
-            string s = "";
-
-            s = string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0} ", cs);
-            if (code == "c")
-                return s + "G ";
-
-            return s + "g ";
-        }
-
-        public static string ColorCode(float[] cs, string code)
-        {
-            string s = "";
-            if (cs == null || cs.Length == 0)
-                return "";
-
-            Utils.CheckColor(cs);
-            if (cs.Length == 1)
-            {
-                s = string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0} ", Utils.FloatToString(cs[0]));
-                if (code == "c")
-                    return s + "G ";
-                return s + "g ";
+                var icPin = GCHandle.Alloc(fillColor, GCHandleType.Pinned);
+                try
+                {
+                    var icPtr = new mupdf.SWIGTYPE_p_float(icPin.AddrOfPinnedObject(), false);
+                    mupdf.mupdf.pdf_set_annot_interior_color(NativeAnnot, nFill, icPtr);
+                }
+                finally
+                {
+                    if (icPin.IsAllocated)
+                        icPin.Free();
+                }
             }
 
-            if (cs.Length == 3)
+            bool insertRot = rotate >= 0;
+            if (annotType != AnnotationType.Caret
+                && annotType != AnnotationType.Circle
+                && annotType != AnnotationType.FreeText
+                && annotType != AnnotationType.FileAttachment
+                && annotType != AnnotationType.Ink
+                && annotType != AnnotationType.Line
+                && annotType != AnnotationType.PolyLine
+                && annotType != AnnotationType.Polygon
+                && annotType != AnnotationType.Square
+                && annotType != AnnotationType.Stamp
+                && annotType != AnnotationType.Text)
+                insertRot = false;
+            if (insertRot)
+                mupdf.mupdf.pdf_dict_put_int(annotObj, mupdf.mupdf.pdf_new_name("Rotate"), rotate);
+
+            // FreeText fill uses border color via pdf_set_annot_color; others use /IC (see Python).
+            if (annotType == AnnotationType.FreeText)
             {
-                s = string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0} {1} {2} ", Utils.FloatToString(cs[0]), Utils.FloatToString(cs[1]), Utils.FloatToString(cs[2]));
-                if (code == "c")
-                    return s + "RG ";
-                return s + "rg ";
+                if (nFill > 0)
+                {
+                    var cPin = GCHandle.Alloc(fillColor, GCHandleType.Pinned);
+                    try
+                    {
+                        var cPtr = new mupdf.SWIGTYPE_p_float(cPin.AddrOfPinnedObject(), false);
+                        mupdf.mupdf.pdf_set_annot_color(NativeAnnot, nFill, cPtr);
+                    }
+                    finally
+                    {
+                        if (cPin.IsAllocated)
+                            cPin.Free();
+                    }
+                }
+            }
+            else if (nFill > 0)
+            {
+                var col = mupdf.mupdf.pdf_new_array(ParentPdfDocument, nFill);
+                for (int i = 0; i < nFill; i++)
+                    mupdf.mupdf.pdf_array_push_real(col, fillColor[i]);
+                mupdf.mupdf.pdf_dict_put(annotObj, mupdf.mupdf.pdf_new_name("IC"), col);
             }
 
-            s = string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0} {1} {2} {3} ", Utils.FloatToString(cs[0]), Utils.FloatToString(cs[1]), Utils.FloatToString(cs[2]), Utils.FloatToString(cs[3]));
-            if (code == "c")
-                return s + "K ";
-            
-            return s + "k ";
+            mupdf.mupdf.pdf_dirty_annot(NativeAnnot);
+            mupdf.mupdf.pdf_update_annot(NativeAnnot);
+
+            if ((opacity < 0 || opacity >= 1) && string.IsNullOrEmpty(blendMode))
+                return true;
+
+            var ap = Helpers.PdfDictGetl(annotObj, mupdf.mupdf.pdf_new_name("AP"), mupdf.mupdf.pdf_new_name("N"));
+            if (ap.m_internal == null) return true;
+            var resources = mupdf.mupdf.pdf_dict_get(ap, mupdf.mupdf.pdf_new_name("Resources"));
+            if (resources.m_internal == null)
+                resources = mupdf.mupdf.pdf_dict_put_dict(ap, mupdf.mupdf.pdf_new_name("Resources"), 2);
+
+            var alp0 = mupdf.mupdf.pdf_new_dict(ParentPdfDocument, 3);
+            if (opacity >= 0 && opacity < 1)
+            {
+                mupdf.mupdf.pdf_dict_put_real(alp0, mupdf.mupdf.pdf_new_name("CA"), opacity);
+                mupdf.mupdf.pdf_dict_put_real(alp0, mupdf.mupdf.pdf_new_name("ca"), opacity);
+                mupdf.mupdf.pdf_dict_put_real(annotObj, mupdf.mupdf.pdf_new_name("CA"), opacity);
+            }
+            if (!string.IsNullOrEmpty(blendMode))
+            {
+                mupdf.mupdf.pdf_dict_put_name(alp0, mupdf.mupdf.pdf_new_name("BM"), blendMode);
+                mupdf.mupdf.pdf_dict_put_name(annotObj, mupdf.mupdf.pdf_new_name("BM"), blendMode);
+            }
+            var extg = mupdf.mupdf.pdf_dict_get(resources, mupdf.mupdf.pdf_new_name("ExtGState"));
+            if (extg.m_internal == null)
+                extg = mupdf.mupdf.pdf_dict_put_dict(resources, mupdf.mupdf.pdf_new_name("ExtGState"), 2);
+            mupdf.mupdf.pdf_dict_put(extg, mupdf.mupdf.pdf_new_name("H"), alp0);
+            return true;
         }
 
+        /// <summary>PyMuPDF <c>Annot.update_timing_test</c> — no-op timing stub called from <see cref="Update"/>.</summary>
+        private static void UpdateTimingTest()
+        {
+            int total = 0;
+            for (int i = 0; i < 30 * 1000; i++) total += i;
+        }
+
+        /// <summary>
+        /// Renders the annotation into a <see cref="Pixmap"/> (PyMuPDF <c>Annot.get_pixmap</c>).
+        /// </summary>
+        /// <param name="matrix">Transform matrix; ignored when <paramref name="dpi"/> is non-zero.</param>
+        /// <param name="cs">Target colorspace; default RGB.</param>
+        /// <param name="alpha">Include an alpha channel when <see langword="true"/>.</param>
+        /// <param name="dpi">When non-zero, builds a scale matrix from <c>dpi / 72</c> and sets pixmap DPI.</param>
+        public Pixmap GetPixmap(Matrix matrix = null, Colorspace cs = null, bool alpha = false, int dpi = 0)
+        {
+            if (dpi != 0)
+                matrix = new Matrix((float)(dpi / 72.0), (float)(dpi / 72.0));
+            var ctm = (matrix ?? Matrix.Identity).ToFzMatrix();
+            var colorspace = (cs ?? Colorspace.Rgb).ToFzColorspace();
+            var pix = mupdf.mupdf.pdf_new_pixmap_from_annot(NativeAnnot, ctm, colorspace, new mupdf.FzSeparations(), alpha ? 1 : 0);
+            var result = new Pixmap(pix);
+            if (dpi != 0)
+                result.SetDpi(dpi, dpi);
+            return result;
+        }
+
+        /// <summary>
+        /// Make annotation TextPage (PyMuPDF <c>Annot.get_textpage</c>).
+        /// </summary>
+        public TextPage GetTextPage(int flags = 0, IRect clip = null)
+        {
+            var opts = new mupdf.FzStextOptions(flags);
+            if (clip != null)
+            {
+                opts.clip = new Rect(clip).ToFzRect().internal_();
+                opts.flags |= mupdf.mupdf.FZ_STEXT_CLIP_RECT;
+            }
+            var stp = new mupdf.FzStextPage(NativeAnnot, opts);
+            return new TextPage(stp) { Parent = Parent };
+        }
+
+        /// <summary>Extract annotation text (PyMuPDF <c>Annot.get_text()</c>).</summary>
+        public string GetText()
+            => (string)Utils.GetText(this, "text");
+
+        /// <summary>Extract annotation text with stext flags (PyMuPDF <c>Annot.get_textpage</c> + extract).</summary>
+        public string GetText(int flags)
+        {
+            int f = flags == 0 ? Constants.TextFlagsText : flags;
+            using var tp = GetTextPage(f);
+            return tp.ExtractText();
+        }
+
+        /// <summary>Extract annotation text (PyMuPDF <c>Annot.get_text</c> / <c>utils.get_text</c>).</summary>
+        public dynamic GetText(
+            string option,
+            IRect clip = null,
+            int? flags = null,
+            TextPage textpage = null,
+            bool sort = false,
+            char[] delimiters = null,
+            float tolerance = 3)
+            => Utils.GetText(this, option, clip, flags, textpage, sort, delimiters, tolerance);
+
+        /// <summary>
+        /// Legacy overload: <paramref name="page"/> must be this annotation's parent; extraction uses the annot AP, not the page.
+        /// </summary>
         public dynamic GetText(
             Page page,
             string option = "text",
@@ -2600,115 +1211,507 @@ namespace MuPDF.NET
             int flags = 0,
             TextPage stPage = null,
             bool sort = false,
-            char[] delimiters = null
-        )
+            char[] delimiters = null,
+            float tolerance = 3)
         {
-            return Utils.GetText(page, option, clip, flags, stPage, sort, delimiters);
+            if (page != null && page != Parent)
+                throw new ArgumentException("page must be the annotation's parent page");
+            return GetText(
+                option,
+                clip != null ? new IRect(clip) : null,
+                flags == 0 ? (int?)null : flags,
+                stPage,
+                sort,
+                delimiters,
+                tolerance);
         }
 
-        /// <summary>
-        /// Get text in the box area
-        /// </summary>
-        /// <param name="page"></param>
-        /// <param name="rect"></param>
-        /// <param name="textPage"></param>
-        /// <returns></returns>
-        public string GetTextbox(Page page, Rect rect, TextPage textPage)
+        /// <summary>Extract annotation text within a rectangle (PyMuPDF <c>Annot.get_textbox</c>).</summary>
+        public string GetTextbox(Rect rect, int flags = 0)
         {
-            return Utils.GetTextbox(page, rect, textPage);
+            using var tp = GetTextPage(flags);
+            return tp.ExtractTextbox(rect);
         }
 
-        public void UpdateFile(
-            byte[] buffer = null,
-            string fileName = null,
-            string uFilename = null,
-            string desc = null
-        )
+        /// <summary>Sound stream bytes from <see cref="GetSoundDictionary"/>.</summary>
+        public byte[] GetSoundData()
         {
-            PdfAnnot annot = _nativeAnnotion;
-            PdfObj annotObj = annot.pdf_annot_obj();
-            PdfDocument pdf = annotObj.pdf_get_bound_document();
-            pdf_annot_type type = annot.pdf_annot_type();
+            var sound = GetSoundDictionary();
+            return sound != null && sound.TryGetValue("stream", out var stream) ? (byte[])stream : null;
+        }
 
-            if (type != pdf_annot_type.PDF_ANNOT_FILE_ATTACHMENT)
+        /// <summary>Retrieve sound stream (PyMuPDF <c>Annot.get_sound</c>).</summary>
+        public Dictionary<string, object> GetSoundDictionary()
+        {
+            if (AnnotationType != AnnotationType.Sound)
+                throw new ArgumentException(Constants.MSG_BAD_ANNOT_TYPE);
+            var sound = mupdf.mupdf.pdf_dict_get(AnnotObj, mupdf.mupdf.pdf_new_name("Sound"));
+            if (sound.m_internal == null)
+                throw new ArgumentException(Constants.MSG_BAD_ANNOT_TYPE);
+            if (mupdf.mupdf.pdf_dict_get(sound, mupdf.mupdf.pdf_new_name("F")).m_internal != null)
+                throw new InvalidOperationException("unsupported sound stream");
+
+            var result = new Dictionary<string, object>();
+            var rate = mupdf.mupdf.pdf_dict_get(sound, mupdf.mupdf.pdf_new_name("R"));
+            if (rate.m_internal != null) result["rate"] = mupdf.mupdf.pdf_to_real(rate);
+            var channels = mupdf.mupdf.pdf_dict_get(sound, mupdf.mupdf.pdf_new_name("C"));
+            if (channels.m_internal != null) result["channels"] = mupdf.mupdf.pdf_to_int(channels);
+            var bps = mupdf.mupdf.pdf_dict_get(sound, mupdf.mupdf.pdf_new_name("B"));
+            if (bps.m_internal != null) result["bps"] = mupdf.mupdf.pdf_to_int(bps);
+            var encoding = mupdf.mupdf.pdf_dict_get(sound, mupdf.mupdf.pdf_new_name("E"));
+            if (encoding.m_internal != null) result["encoding"] = mupdf.mupdf.pdf_to_name(encoding);
+            var compression = mupdf.mupdf.pdf_dict_gets(sound, "CO");
+            if (compression.m_internal != null) result["compression"] = mupdf.mupdf.pdf_to_name(compression);
+            result["stream"] = Helpers.BufferToBytes(mupdf.mupdf.pdf_load_stream(sound));
+            return result;
+        }
+
+        /// <summary>Set or remove annotation OC xref (PyMuPDF <c>Annot.set_oc</c>).</summary>
+        public void SetOC(int oc)
+        {
+            var obj = mupdf.mupdf.pdf_annot_obj(NativeAnnot);
+            if (oc <= 0)
+                mupdf.mupdf.pdf_dict_dels(obj, "OC");
+            else
             {
-                throw new Exception(Utils.ErrorMessages["MSG_BAD_ANNOT_TYPE"]);
+                var pdf = Parent.Parent.NativePdfDocument;
+                Helpers.JM_add_oc_object(pdf, obj, oc);
             }
-            PdfObj stream = Utils.pdf_dict_getl(annotObj, new string[] { "FS", "EF", "F" });
+        }
 
+        /// <summary>Delete Popup and responding annotations (PyMuPDF <c>Annot.delete_responses</c>).</summary>
+        public void DeleteResponses()
+        {
+            var page = mupdf.mupdf.pdf_annot_page(NativeAnnot);
+            while (true)
+            {
+                var irtAnnot = Helpers.JM_find_annot_irt(NativeAnnot);
+                if (irtAnnot.m_internal == null) break;
+                mupdf.mupdf.pdf_delete_annot(page, irtAnnot);
+            }
+            mupdf.mupdf.pdf_dict_del(AnnotObj, mupdf.mupdf.pdf_new_name("Popup"));
+
+            // Python: also scan /Annots and remove entries whose /Parent is this annot.
+            var annots = mupdf.mupdf.pdf_dict_get(page.obj(), mupdf.mupdf.pdf_new_name("Annots"));
+            int n = mupdf.mupdf.pdf_array_len(annots);
+            bool found = false;
+            for (int i = n - 1; i >= 0; i--)
+            {
+                var o = mupdf.mupdf.pdf_array_get(annots, i);
+                if (o.m_internal == null) continue;
+                var p = mupdf.mupdf.pdf_dict_get(o, mupdf.mupdf.pdf_new_name("Parent"));
+                if (mupdf.mupdf.pdf_objcmp(p, AnnotObj) == 0)
+                {
+                    mupdf.mupdf.pdf_array_delete(annots, i);
+                    found = true;
+                }
+            }
+            if (found)
+                mupdf.mupdf.pdf_dict_put(page.obj(), mupdf.mupdf.pdf_new_name("Annots"), annots);
+        }
+
+        /// <summary>Get annotation optional content reference (PyMuPDF <c>Annot.get_oc</c>).</summary>
+        public int GetOC()
+        {
+            var obj = mupdf.mupdf.pdf_annot_obj(NativeAnnot);
+            var oc = mupdf.mupdf.pdf_dict_gets(obj, "OC");
+            return oc.m_internal != null ? mupdf.mupdf.pdf_to_num(oc) : 0;
+        }
+
+        /// <summary>Normal (/AP/N) appearance stream text (.NET helper; Python uses <c>_getAP</c> bytes).</summary>
+        public string GetAPNormal() => GetAP("N");
+        /// <summary>Rollover (/AP/R) appearance stream text.</summary>
+        public string GetAPRollover() => GetAP("R");
+        /// <summary>Down (/AP/D) appearance stream text.</summary>
+        public string GetAPDown() => GetAP("D");
+
+        /// <summary>Decode annotation appearance stream as UTF-8 text (.NET helper).</summary>
+        public string GetAP(string which = "N")
+        {
+            var ap = mupdf.mupdf.pdf_dict_get(AnnotObj, mupdf.mupdf.pdf_new_name("AP"));
+            if (ap.m_internal == null) return "";
+
+            mupdf.PdfObj apStream;
+            switch (which.ToUpper())
+            {
+                case "N": apStream = mupdf.mupdf.pdf_dict_get(ap, mupdf.mupdf.pdf_new_name("N")); break;
+                case "R": apStream = mupdf.mupdf.pdf_dict_get(ap, mupdf.mupdf.pdf_new_name("R")); break;
+                case "D": apStream = mupdf.mupdf.pdf_dict_get(ap, mupdf.mupdf.pdf_new_name("D")); break;
+                default: apStream = mupdf.mupdf.pdf_dict_get(ap, mupdf.mupdf.pdf_new_name("N")); break;
+            }
+
+            if (apStream.m_internal == null) return "";
+            if (mupdf.mupdf.pdf_is_stream(apStream) == 0) return "";
+
+            try
+            {
+                var buf = mupdf.mupdf.pdf_load_stream(apStream);
+                return Helpers.BufferToUtf8(buf);
+            }
+            catch
+            {
+                return "";
+            }
+        }
+
+        /// <summary>Set annotation appearance stream (.NET helper; Python uses <c>_setAP</c> on /AP/N).</summary>
+        public void SetAP(string which, byte[] buffer)
+        {
+            if (buffer == null || buffer.Length == 0) return;
+            var pdf = ParentPdfDocument;
+            var ap = mupdf.mupdf.pdf_dict_get(AnnotObj, mupdf.mupdf.pdf_new_name("AP"));
+            if (ap.m_internal == null)
+            {
+                ap = mupdf.mupdf.pdf_new_dict(pdf, 3);
+                mupdf.mupdf.pdf_dict_put(AnnotObj, mupdf.mupdf.pdf_new_name("AP"), ap);
+            }
+
+            var fzBuf = Helpers.BufferFromBytes(buffer);
+            var stream = mupdf.mupdf.pdf_add_stream(pdf, fzBuf, new mupdf.PdfObj(), 0);
+
+            var r = mupdf.mupdf.pdf_annot_rect(NativeAnnot);
+            var bbox = mupdf.mupdf.pdf_new_array(pdf, 4);
+            mupdf.mupdf.pdf_array_push_real(bbox, r.x0);
+            mupdf.mupdf.pdf_array_push_real(bbox, r.y0);
+            mupdf.mupdf.pdf_array_push_real(bbox, r.x1);
+            mupdf.mupdf.pdf_array_push_real(bbox, r.y1);
+            mupdf.mupdf.pdf_dict_put(stream, mupdf.mupdf.pdf_new_name("BBox"), bbox);
+            mupdf.mupdf.pdf_dict_put(stream, mupdf.mupdf.pdf_new_name("Type"), mupdf.mupdf.pdf_new_name("XObject"));
+            mupdf.mupdf.pdf_dict_put(stream, mupdf.mupdf.pdf_new_name("Subtype"), mupdf.mupdf.pdf_new_name("Form"));
+
+            switch (which.ToUpper())
+            {
+                case "N": mupdf.mupdf.pdf_dict_put(ap, mupdf.mupdf.pdf_new_name("N"), stream); break;
+                case "R": mupdf.mupdf.pdf_dict_puts(ap, "R", stream); break;
+                case "D": mupdf.mupdf.pdf_dict_puts(ap, "D", stream); break;
+                default: mupdf.mupdf.pdf_dict_put(ap, mupdf.mupdf.pdf_new_name("N"), stream); break;
+            }
+        }
+
+        /// <summary>Attached file information (PyMuPDF <c>Annot.file_info</c>).</summary>
+        public Dictionary<string, object> GetFileInfo()
+        {
+            if (AnnotationType != AnnotationType.FileAttachment)
+                throw new ArgumentException(Constants.MSG_BAD_ANNOT_TYPE);
+            var fs = mupdf.mupdf.pdf_dict_get(AnnotObj, mupdf.mupdf.pdf_new_name("FS"));
+            if (fs.m_internal == null) return null;
+
+            var result = new Dictionary<string, object>();
+            var ufnameObj = mupdf.mupdf.pdf_dict_get(fs, mupdf.mupdf.pdf_new_name("UF"));
+            var fnameObj = mupdf.mupdf.pdf_dict_get(fs, mupdf.mupdf.pdf_new_name("F"));
+            string filename = ufnameObj.m_internal != null
+                ? mupdf.mupdf.pdf_to_text_string(ufnameObj)
+                : fnameObj.m_internal != null ? mupdf.mupdf.pdf_to_text_string(fnameObj) : "";
+            result["filename"] = filename;
+
+            var descObj = mupdf.mupdf.pdf_dict_get(fs, mupdf.mupdf.pdf_new_name("Desc"));
+            result["desc"] = descObj.m_internal != null ? mupdf.mupdf.pdf_to_text_string(descObj) : null;
+            result["length"] = -1;
+            result["size"] = -1;
+
+            var ef = mupdf.mupdf.pdf_dict_get(fs, mupdf.mupdf.pdf_new_name("EF"));
+            if (ef.m_internal != null)
+            {
+                var fStream = mupdf.mupdf.pdf_dict_get(ef, mupdf.mupdf.pdf_new_name("F"));
+                if (fStream.m_internal != null)
+                {
+                    // Python: expose both stream /Length and /Params /Size.
+                    var lengthObj = mupdf.mupdf.pdf_dict_get(fStream, mupdf.mupdf.pdf_new_name("Length"));
+                    result["length"] = lengthObj.m_internal != null ? mupdf.mupdf.pdf_to_int(lengthObj) : -1;
+                    var sizeObj = mupdf.mupdf.pdf_dict_get(mupdf.mupdf.pdf_dict_get(fStream, mupdf.mupdf.pdf_new_name("Params")), mupdf.mupdf.pdf_new_name("Size"));
+                    result["size"] = sizeObj.m_internal != null ? mupdf.mupdf.pdf_to_int(sizeObj) : -1;
+                }
+            }
+            return result;
+        }
+
+        /// <summary>Retrieve attached file content (PyMuPDF <c>Annot.get_file</c>).</summary>
+        public byte[] GetFile()
+        {
+            if (AnnotationType != AnnotationType.FileAttachment)
+                throw new ArgumentException(Constants.MSG_BAD_ANNOT_TYPE);
+            var stream = GetNestedDict(AnnotObj, "FS", "EF", "F");
             if (stream.m_internal == null)
-                Console.WriteLine("bad PDF: no /EF object");
-            
-            PdfObj fs = annotObj.pdf_dict_get(new PdfObj("FS"));
-            FzBuffer res = Utils.BufferFromBytes(buffer);
+                throw new InvalidOperationException("bad PDF: file entry not found");
+            return Helpers.BufferToBytes(mupdf.mupdf.pdf_load_stream(stream));
+        }
 
+        /// <summary>Update attached file (PyMuPDF <c>Annot.update_file</c>).</summary>
+        public void UpdateFile(byte[] buffer = null, string filename = null, string ufilename = null, string desc = null)
+        {
+            if (AnnotationType != AnnotationType.FileAttachment)
+                throw new ArgumentException(Constants.MSG_BAD_ANNOT_TYPE);
+            var stream = GetNestedDict(AnnotObj, "FS", "EF", "F");
+            if (stream.m_internal == null)
+                throw new InvalidOperationException("bad PDF: no /EF object");
+
+            var fs = mupdf.mupdf.pdf_dict_get(AnnotObj, mupdf.mupdf.pdf_new_name("FS"));
+            var res = Helpers.BufferFromBytes(buffer);
             if (buffer != null && res.m_internal == null)
-                throw new Exception(Utils.ErrorMessages["MSG_BAD_BUFFER"]);
+                throw new ArgumentException(Constants.MSG_BAD_BUFFER);
             if (res.m_internal != null)
             {
-                Utils.UpdateStream(pdf, stream, res, 1);
-                uint len = res.fz_buffer_storage(
-                    new SWIGTYPE_p_p_unsigned_char(IntPtr.Zero, false)
-                );
-                PdfObj l = mupdf.mupdf.pdf_new_int((long)len);
-                stream.pdf_dict_put(new PdfObj("DL"), l);
-                Utils.pdf_dict_putl(stream, l, new string[] { "Params", "Size" });
+                mupdf.mupdf.pdf_update_stream(ParentPdfDocument, stream, res, 1);
+                // Python: adjust /DL and /Params /Size after stream replacement.
+                int len = buffer.Length;
+                var l = mupdf.mupdf.pdf_new_int(len);
+                mupdf.mupdf.pdf_dict_put(stream, mupdf.mupdf.pdf_new_name("DL"), l);
+                var parms = mupdf.mupdf.pdf_dict_get(stream, mupdf.mupdf.pdf_new_name("Params"));
+                if (parms.m_internal == null)
+                {
+                    parms = mupdf.mupdf.pdf_new_dict(ParentPdfDocument, 1);
+                    mupdf.mupdf.pdf_dict_put(stream, mupdf.mupdf.pdf_new_name("Params"), parms);
+                }
+                mupdf.mupdf.pdf_dict_put(parms, mupdf.mupdf.pdf_new_name("Size"), l);
             }
-            
-            if (fileName != null)
+
+            if (!string.IsNullOrEmpty(filename))
             {
-                stream.pdf_dict_put_text_string(new PdfObj("F"), fileName);
-                fs.pdf_dict_put_text_string(new PdfObj("F"), fileName);
-                stream.pdf_dict_put_text_string(new PdfObj("UF"), fileName);
-                fs.pdf_dict_put_text_string(new PdfObj("UF"), fileName);
-                annotObj.pdf_dict_put_text_string(new PdfObj("Contents"), fileName);
+                mupdf.mupdf.pdf_dict_put_text_string(stream, mupdf.mupdf.pdf_new_name("F"), filename);
+                mupdf.mupdf.pdf_dict_put_text_string(fs, mupdf.mupdf.pdf_new_name("F"), filename);
+                mupdf.mupdf.pdf_dict_put_text_string(stream, mupdf.mupdf.pdf_new_name("UF"), filename);
+                mupdf.mupdf.pdf_dict_put_text_string(fs, mupdf.mupdf.pdf_new_name("UF"), filename);
+                mupdf.mupdf.pdf_dict_put_text_string(AnnotObj, mupdf.mupdf.pdf_new_name("Contents"), filename);
             }
-            
-            if (uFilename != null)
+            if (!string.IsNullOrEmpty(ufilename))
             {
-                stream.pdf_dict_put_text_string(new PdfObj("UF"), uFilename);
-                fs.pdf_dict_put_text_string(new PdfObj("UF"), uFilename);
+                mupdf.mupdf.pdf_dict_put_text_string(stream, mupdf.mupdf.pdf_new_name("UF"), ufilename);
+                mupdf.mupdf.pdf_dict_put_text_string(fs, mupdf.mupdf.pdf_new_name("UF"), ufilename);
             }
-            
-            if (desc != null)
+            if (!string.IsNullOrEmpty(desc))
             {
-                stream.pdf_dict_put_text_string(new PdfObj("Desc"), desc);
-                fs.pdf_dict_put_text_string(new PdfObj("Desc"), desc);
+                mupdf.mupdf.pdf_dict_put_text_string(stream, mupdf.mupdf.pdf_new_name("Desc"), desc);
+                mupdf.mupdf.pdf_dict_put_text_string(fs, mupdf.mupdf.pdf_new_name("Desc"), desc);
             }
         }
-    }
 
-    internal class Factory : mupdf.PdfFilterFactory2
-    {
-        private PdfSanitizeFilterOptions sopts;
-
-        public Factory(PdfSanitizeFilterOptions sopts)
-            : base()
+        /// <summary>Clean appearance contents stream (PyMuPDF <c>Annot.clean_contents</c>).</summary>
+        public void CleanContents(int sanitize = 1)
         {
-            this.sopts = sopts;
-            use_virtual_filter();
+            // filter_ = _make_PdfFilterOptions(recurse=1, instance_forms=0, ascii=0, sanitize=sanitize)
+            Helpers.PdfFilterOptionsRef filterPkg = Helpers.MakePdfFilterOptions(
+                recurse: 1, instance_forms: 0, ascii: 0, sanitize: sanitize);
+            mupdf.mupdf.pdf_filter_annot_contents(ParentPdfDocument, NativeAnnot, filterPkg.Filter);
         }
 
-        public override pdf_processor filter(
-            fz_context arg_0,
-            pdf_document doc,
-            pdf_processor chain,
-            int stParents,
-            fz_matrix transform,
-            pdf_filter_options options
-        )
+        /// <summary>Create annotation Popup or update its rectangle (PyMuPDF <c>Annot.set_popup</c>).</summary>
+        public void SetPopup(Rect rect)
         {
-            return mupdf.mupdf.ll_pdf_new_sanitize_filter(
-                doc,
-                chain,
-                stParents,
-                transform,
-                options,
-                new SWIGTYPE_p_void(
-                    pdf_sanitize_filter_options.getCPtr(sopts.internal_()).Handle,
-                    true
-                )
-            );
+            var transformed = Helpers.TransformRect(new Rect(rect), RotatePageMatrix);
+            mupdf.mupdf.pdf_set_annot_popup(NativeAnnot, transformed.ToFzRect());
         }
+
+        /// <summary>Set annotation appearance bbox (PyMuPDF <c>Annot.set_apn_bbox</c>).</summary>
+        public void SetApnBBox(Rect bbox)
+        {
+            var transformed = Helpers.TransformRect(new Rect(bbox), RotatePageMatrix);
+            var ap = GetAppearanceStreamObject("N");
+            if (ap.m_internal == null)
+                throw new InvalidOperationException(Constants.MSG_BAD_APN);
+            mupdf.mupdf.pdf_dict_put_rect(ap, mupdf.mupdf.pdf_new_name("BBox"), transformed.ToFzRect());
+        }
+
+        private static PdfObj PdfDictGetl(PdfObj obj, string[] keys)
+        {
+            foreach (string key in keys)
+            {
+                if (obj.m_internal == null)
+                    break;
+                obj = obj.pdf_dict_get(new PdfObj(key));
+            }
+            return obj;
+        }
+
+        /// <summary>Set annotation appearance matrix (PyMuPDF <c>Annot.set_apn_matrix</c>).</summary>
+        public void SetApnMatrix(Matrix matrix)
+        {
+            /*
+            var annot = NativeAnnot;
+            var annot_obj = AnnotObj;
+            var ap = Helpers.PdfDictGetl(annot_obj, mupdf.mupdf.pdf_new_name("AP"), mupdf.mupdf.pdf_new_name("N"));
+            if (ap.m_internal == null)
+                throw new InvalidOperationException(Constants.MSG_BAD_APN);
+            var mat = matrix.ToFzMatrix();
+            mupdf.mupdf.pdf_dict_put_matrix(ap, mupdf.mupdf.pdf_new_name("Matrix"), mat);
+            */
+            var annot = NativeAnnot;
+            var annotObj = AnnotObj;// annot.pdf_annot_obj();
+            //var ap = Helpers.PdfDictGetl(annotObj, mupdf.mupdf.pdf_new_name("AP"), mupdf.mupdf.pdf_new_name("N"));
+            PdfObj ap = PdfDictGetl(annotObj, new string[] { "AP", "N" });
+
+            if (ap.m_internal == null)
+                throw new InvalidOperationException(Constants.MSG_BAD_APN);
+
+            ap.pdf_dict_put_matrix(new PdfObj("Matrix"), matrix.ToFzMatrix());
+        }
+
+        /// <summary>Set annotation language (PyMuPDF <c>Annot.set_language</c>).</summary>
+        public void SetLanguage(string language = null)
+        {
+            var lang = string.IsNullOrEmpty(language)
+                ? mupdf.fz_text_language.FZ_LANG_UNSET
+                : mupdf.mupdf.fz_text_language_from_string(language);
+            mupdf.mupdf.pdf_set_annot_language(NativeAnnot, lang);
+        }
+
+        /// <summary>Set line end codes (PyMuPDF <c>Annot.set_line_ends</c>).</summary>
+        public void SetLineEnds(int start, int end)
+        {
+            if (mupdf.mupdf.pdf_annot_has_line_ending_styles(NativeAnnot) != 0)
+                mupdf.mupdf.pdf_set_annot_line_ending_styles(NativeAnnot, (mupdf.pdf_line_ending)start, (mupdf.pdf_line_ending)end);
+            else
+                Trace.TraceWarning("bad annot type for line ends");
+        }
+
+        /// <summary>Legacy overload using <see cref="PdfLineEnding"/>.</summary>
+        public void SetLineEnds(PdfLineEnding start, PdfLineEnding end) => SetLineEnds((int)start, (int)end);
+
+        /// <summary>Set annotation rotation (PyMuPDF <c>Annot.set_rotation</c>).</summary>
+        public void SetRotation(int rotate = 0)
+        {
+            switch (AnnotationType)
+            {
+                case AnnotationType.Caret:
+                case AnnotationType.Circle:
+                case AnnotationType.FreeText:
+                case AnnotationType.FileAttachment:
+                case AnnotationType.Ink:
+                case AnnotationType.Line:
+                case AnnotationType.PolyLine:
+                case AnnotationType.Polygon:
+                case AnnotationType.Square:
+                case AnnotationType.Stamp:
+                case AnnotationType.Text:
+                    break;
+                default:
+                    return;
+            }
+
+            while (rotate < 0) rotate += 360;
+            while (rotate >= 360) rotate -= 360;
+            if (AnnotationType == AnnotationType.FreeText && rotate % 90 != 0)
+                rotate = 0;
+            mupdf.mupdf.pdf_dict_put_int(AnnotObj, mupdf.mupdf.pdf_new_name("Rotate"), rotate);
+        }
+
+        /// <summary>Set open status of annotation or its Popup (PyMuPDF <c>Annot.set_open</c>).</summary>
+        public void SetOpen(bool isOpen)
+        {
+            mupdf.mupdf.pdf_set_annot_is_open(NativeAnnot, isOpen ? 1 : 0);
+        }
+
+        // ─── IDisposable ────────────────────────────────────────────────
+
+        /// <summary>
+        /// Releases resources used by this annotation wrapper.
+        /// </summary>
+        public void Dispose()
+        {
+            if (!_disposed)
+            {
+                Parent.ForgetAnnotRef(this);
+                _disposed = true;
+            }
+            GC.SuppressFinalize(this);
+        }
+
+        ~Annot() { Dispose(); }
+
+        /// <summary>String form (PyMuPDF <c>Annot.__repr__</c> / <c>__str__</c>).</summary>
+        public override string ToString() => $"Annot('{TypeString}' on {Parent})";
+
+        public static string EscapeStrFromStr(string c) => Helpers.JM_EscapeStrFromStr(c);
+        public static string UnicodeFromStr(string s) => s ?? string.Empty;
+        public static byte[] MergeByte(byte[] a, byte[] b) => a.Concat(b).ToArray();
+        public static float[] ColorFromSequence(float[] seq) => NormalizeColorSequence(seq);
+        public static string ColorCode(float[] cs, string code) => Helpers.ColorCode(cs, code);
+        public static byte[] ColorString(float[] cs, string code) => Encoding.UTF8.GetBytes((Helpers.ColorCode(cs, code) ?? "") + "\n");
+        public static mupdf.PdfObj GetBorderStyle(string s)
+        {
+            if (string.IsNullOrEmpty(s))
+                return mupdf.mupdf.pdf_new_name("S");
+            char c = char.ToUpperInvariant(s[0]);
+            return c switch
+            {
+                'B' => mupdf.mupdf.pdf_new_name("B"),
+                'D' => mupdf.mupdf.pdf_new_name("D"),
+                'I' => mupdf.mupdf.pdf_new_name("I"),
+                'U' => mupdf.mupdf.pdf_new_name("U"),
+                _ => mupdf.mupdf.pdf_new_name("S"),
+            };
+        }
+        public static Dictionary<string, object> GetBorderFromAnnot(mupdf.PdfObj annotObj) => Helpers.JM_annot_border(annotObj);
+        public static Dictionary<string, object> GetColorFromAnnot(mupdf.PdfObj annotObj) => Helpers.JM_annot_colors(annotObj);
+        public static void SetBorderAnnot(Dictionary<string, object> border, mupdf.PdfDocument doc, mupdf.PdfObj annotObj) => Helpers.JM_annot_set_border(border, doc, annotObj);
+        public static mupdf.PdfAnnot FindAnnotIRT(mupdf.PdfAnnot annot) => Helpers.JM_find_annot_irt(annot);
+        public static void AddOCObject(mupdf.PdfDocument doc, mupdf.PdfObj reference, int xref) => Helpers.JM_add_oc_object(doc, reference, xref);
+
+        /// <summary>PyMuPDF <c>Annot._getAP</c> — AP/N stream bytes when present.</summary>
+        private byte[] _getAP()
+        {
+            var ap = GetAppearanceStreamObject("N");
+            if (mupdf.mupdf.pdf_is_stream(ap) == 0)
+                return null;
+            return Helpers.BufferToBytes(mupdf.mupdf.pdf_load_stream(ap));
+        }
+
+        /// <summary>PyMuPDF <c>Annot._setAP</c> — update AP/N stream; optional BBox sync when <paramref name="rect"/> is 1.</summary>
+        private void _setAP(byte[] buffer, int rect = 0)
+        {
+            var apobj = GetAppearanceStreamObject("N");
+            if (apobj.m_internal == null || mupdf.mupdf.pdf_is_stream(apobj) == 0)
+                throw new InvalidOperationException(Constants.MSG_BAD_APN);
+            var res = Helpers.BufferFromBytes(buffer);
+            if (res.m_internal == null)
+                throw new ArgumentException(Constants.MSG_BAD_BUFFER);
+            mupdf.mupdf.pdf_update_stream(ParentPdfDocument, apobj, res, 1);
+            if (rect != 0)
+            {
+                // Python _setAP(rect=1): sync AP /BBox to annot /Rect.
+                var bbox = mupdf.mupdf.pdf_dict_get_rect(AnnotObj, mupdf.mupdf.pdf_new_name("Rect"));
+                mupdf.mupdf.pdf_dict_put_rect(apobj, mupdf.mupdf.pdf_new_name("BBox"), bbox);
+            }
+        }
+
+        private mupdf.PdfObj GetAppearanceStreamObject(string which)
+        {
+            var ap = mupdf.mupdf.pdf_dict_gets(AnnotObj, "AP");
+            if (ap.m_internal == null) return ap;
+            return mupdf.mupdf.pdf_dict_gets(ap, which);
+        }
+
+        private static mupdf.PdfObj GetNestedDict(mupdf.PdfObj root, params string[] keys)
+        {
+            var current = root;
+            foreach (var key in keys)
+            {
+                if (current.m_internal == null) return current;
+                current = mupdf.mupdf.pdf_dict_gets(current, key);
+            }
+            return current;
+        }
+
+        private static float[] NormalizeColorSequence(object value)
+        {
+            if (value == null) return null;
+            if (value is float[] fa) return fa;
+            if (value is float[] da) return Array.ConvertAll(da, x => (float)x);
+            if (value is int[] ia) return Array.ConvertAll(ia, x => (float)x);
+            if (value is float f) return new[] { f };
+            if (value is float d) return new[] { (float)d };
+            if (value is int i) return new[] { (float)i };
+            if (value is System.Collections.IEnumerable seq && value is not string)
+            {
+                var list = new List<float>();
+                foreach (var item in seq)
+                {
+                    if (item == null) return null;
+                    list.Add(Convert.ToSingle(item));
+                }
+                return list.ToArray();
+            }
+            return null;
+        }
+
     }
 }
