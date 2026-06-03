@@ -15,7 +15,7 @@ namespace MuPDF.NET
         public float Height { get; set; }
 
         /// <summary>list of Block</summary>
-        public List<Block> Blocks { get; set; }
+        public new List<Block> Blocks { get; set; }
 
         /// <summary>Populate dictionary keys from typed fields (PyMuPDF dict shape).</summary>
         internal void SyncDict(bool raw) => TextPage.SyncPageInfoDict(this, raw);

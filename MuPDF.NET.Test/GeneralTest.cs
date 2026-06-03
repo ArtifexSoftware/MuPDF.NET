@@ -40,7 +40,7 @@ namespace MuPDF.NET.Test
             IRect ibbox1 = bbox1.Round();
             Assert.Equal(ibbox, ibbox1);
 
-            Assert.Equal(0, page.SearchFor("偿力很务").Count);
+            Assert.Empty(page.SearchFor("偿力很务"));
             doc.Close();
         }
         
@@ -455,7 +455,7 @@ namespace MuPDF.NET.Test
             doc.LoadPage(0).Recolor(1);
 
             List<Entry> images = doc.GetPageImages(0);
-            Assert.True(images[0].CsName.Equals("ICCBased"));
+            Assert.Equal("ICCBased", images[0].CsName);
         }
 
         // Text extraction should fail because of PDF structure cycle.
@@ -465,7 +465,6 @@ namespace MuPDF.NET.Test
         {
             int len0 = Utils.MUPDF_WARNINGS_STORE.Count;
             Document doc = new Document(Doc("test_2548.pdf"));
-            bool e = false;
             for (int i = 0; i < doc.PageCount; i++)
             {
                 Page page = doc[i];
@@ -478,7 +477,6 @@ namespace MuPDF.NET.Test
                 {
                     Console.WriteLine($"test_2548: ee = {ee}");
                     // Expected: RuntimeError (cycle in structure tree)
-                    e = true;
                 }
             }
             int len1 = Utils.MUPDF_WARNINGS_STORE.Count;

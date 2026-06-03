@@ -856,15 +856,7 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_4336()
         {
-            // if 0:
-            if (false)
-            {
-                // Compare with last classic release.
-                // (classic fitz/pickle subprocess harness — not ported)
-            }
-            // else:
-            // cc_old = None
-            int? cc_old = null;
+            // Classic fitz/pickle subprocess harness — not ported.
             if (!HasFile(imgfile)) return;
             // path = os.path.normpath(f'{__file__}/../../tests/resources/nur-ruhig.jpg')
             // pixmap = pymupdf.Pixmap(path)

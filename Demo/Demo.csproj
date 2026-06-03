@@ -5,6 +5,7 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
     <Platforms>AnyCPU;x64;x86</Platforms>
+    <NoWarn>$(NoWarn);0618;CA1416</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

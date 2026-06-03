@@ -374,7 +374,6 @@ namespace MuPDF.NET.Test
 
             var src = new Document(Doc("merge-form2.pdf"));
             var rc1 = names_and_kids(src);  // list of root namesand kids in source PDF
-            int dup_count = 0;  // counts duplicate names in source PDF
             int dup_kids = 0;  // counts the expected kids after merge
 
             foreach (var itm in rc1)  // walk root fields of source pdf

@@ -62,7 +62,7 @@ namespace MuPDF.NET.Test
             // out = io.StringIO()  # pprint output goes here
             // pprint.pprint(paths, stream=out)
             string outText = DrawingPathsPprint.Format(paths);
-            Assert.Equal(paths.Count, 29);
+            Assert.Equal(29, paths.Count);
             doc.Save(Out("test_drawings1.pdf"));
         }
 
@@ -249,7 +249,7 @@ namespace MuPDF.NET.Test
             var page = doc[0];
             // vg = page.GetDrawings(extended=True)
             var vg = page.GetDrawingsDict(extended: true);
-            Assert.Equal(vg.Count, 63);
+            Assert.Equal(63, vg.Count);
             doc.Save(Out("test_2462.pdf"));
         }
 

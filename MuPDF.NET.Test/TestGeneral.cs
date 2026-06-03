@@ -623,12 +623,7 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_2093()
         {
-            // if platform.python_implementation() == 'GraalVM':
-            if (false)
-            {
-                Console.WriteLine("test_2093(): Not running because slow on GraalVM.");
-                return;
-            }
+            // GraalVM skip from Python: if platform.python_implementation() == 'GraalVM': return
 
             // doc = pymupdf.open(f'{scriptdir}/resources/test2093.pdf')
             using var doc = Document.Open(Doc("test2093.pdf"));

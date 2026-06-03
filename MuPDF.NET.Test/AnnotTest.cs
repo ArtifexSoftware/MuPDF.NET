@@ -23,7 +23,7 @@ namespace MuPDF.NET.Test
 
             doc.Save(Out("Annot_CleanContents.pdf"));
 
-            Assert.True(annot.GetAP().StartsWith("q"));
+            Assert.StartsWith("q", annot.GetAP());
         }
 
         [Fact]
@@ -182,8 +182,8 @@ MuPDF.NET <span style=""color: red;"">འདི་ ཡིག་ཆ་བཀྲ�
             page.ApplyRedactions(text: 0);
             List<WordBlock> t = page.GetText("words");
 
-            Assert.Equal(0, t.Count);
-            Assert.Equal(0, page.GetDrawings().Count);
+            Assert.Empty(t);
+            Assert.Empty(page.GetDrawings());
 
             doc.Save(Out("Redact2.pdf"));
         }
@@ -308,7 +308,7 @@ MuPDF.NET <span style=""color: red;"">འདི་ ཡིག་ཆ་བཀྲ�
             {
                 annot.SetColors(stroke: _Constants.red);
             }
-            catch (Exception e) { }
+            catch (Exception) { }
 
             annot.Update();
 
@@ -320,7 +320,7 @@ MuPDF.NET <span style=""color: red;"">འདི་ ཡིག་ཆ་བཀྲ�
             {
                 annot.SetColors(stroke: _Constants.red);
             }
-            catch (Exception e) { }
+            catch (Exception) { }
 
             annot.Update();
             annot2.Update();
@@ -349,7 +349,6 @@ MuPDF.NET <span style=""color: red;"">འདི་ ཡིག་ཆ་བཀྲ�
         [Fact]
         public void TestRichText()
         {
-            string ds = "font-size: 11pt; font-family: sans-serif;";
             string bullet = "\u2610\u2611\u2612"; // Output: ???;
 
             string text = $@"<p style=""text-align:justify;margin-top:-25px;"">

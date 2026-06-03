@@ -10,7 +10,7 @@ namespace MuPDF.NET
     /// <remarks>
     /// <para>Obtain the document body via <see cref="Story.Body"/> rather than constructing a root node yourself.</para>
     /// <para>Block helpers such as <see cref="AddParagraph"/> return the new child so you can chain
-    /// <see cref="SetBold"/>, <see cref="AddText"/>, and similar calls on that node.</para>
+    /// <see cref="SetBold(bool)"/>, <see cref="AddText"/>, and similar calls on that node.</para>
     /// <para>Tree nodes returned by navigation properties and <see cref="Find"/> are views into the
     /// story DOM and are not owned by the wrapper — see <see cref="FromDomNode"/>.</para>
     /// </remarks>

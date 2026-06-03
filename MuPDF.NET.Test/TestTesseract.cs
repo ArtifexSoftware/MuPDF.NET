@@ -199,7 +199,7 @@ namespace MuPDF.NET.Test
                 Console.WriteLine($"text:\n{text}");
                 Console.WriteLine($"text_expected:\n{textExpected}");
                 // assert text == text_expected
-                Assert.True(text.Contains("Table of Contents"));
+                Assert.Contains("Table of Contents", text);
             }
             catch (Exception e)
             {

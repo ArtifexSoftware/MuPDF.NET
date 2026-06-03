@@ -153,7 +153,6 @@ namespace PDF4LLM.Helpers
                             text = $"[{text}]";
                         }
 
-                        sbbox = sbbox; // Update with the Rect version
                         // Include line/block numbers to facilitate separator insertion
                         ExtendedSpan extSpan = new ExtendedSpan
                         {

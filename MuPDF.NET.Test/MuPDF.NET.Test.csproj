@@ -4,7 +4,8 @@
     <TargetFramework>net8.0</TargetFramework>
     <RootNamespace>MuPDF.NET.Test</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
+    <Nullable>annotations</Nullable>
+    <NoWarn>$(NoWarn);0168;0219;0162;8625;8600;8602;8604;8618;8619;NU1701</NoWarn>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
     <!-- Set -p:MuPDFNetKillTestHostBeforeBuild=true if MuPDF.NET.dll is locked by testhost during rebuild (Windows). -->
@@ -17,7 +18,6 @@
   </Target>
 
   <ItemGroup>
-    <PackageReference Include="ICSharpCode.SharpZipLib.dll" Version="0.85.4.369" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.*" />
     <PackageReference Include="SharpZipLib" Version="1.4.2" />
     <PackageReference Include="xunit" Version="2.*" />

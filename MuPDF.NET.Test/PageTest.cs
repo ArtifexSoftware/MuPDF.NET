@@ -17,8 +17,8 @@ namespace MuPDF.NET.Test
         private static string Doc(string fileName) => _Path.ForTestClass(fileName, TestClassName);
         private static string Out(string fileName) => _Path.ForOutput(fileName, TestClassName);
 
-        private Document doc;
-        private Page page;
+        private new Document doc;
+        private new Page page;
 
         public PageTest()
         {
@@ -228,13 +228,13 @@ namespace MuPDF.NET.Test
             Page page = doc.NewPage();
             int xref = page.InsertImage(page.Rect, Doc("img-transparent.png"));
             List<Block> imginfo = page.GetImageInfo(xrefs: true);
-            Assert.Equal(1, imginfo.Count);
+            Assert.Single(imginfo);
 
             Block info = imginfo[0];
             Assert.Equal(xref, info.Xref);
 
             List<BoxLog> bboxlog = page.GetBboxlog();
-            Assert.Equal(1, bboxlog.Count);
+            Assert.Single(bboxlog);
 
             Assert.Equal("fill-image", bboxlog[0].Type);
             doc.Save(Out("Bbox.pdf"));
@@ -246,7 +246,7 @@ namespace MuPDF.NET.Test
             Document doc = new Document(Doc("drawings.pdf"));
             Page page = doc[0];
 
-            Assert.NotEqual(0, page.GetDrawings(extended: true).Count);
+            Assert.NotEmpty(page.GetDrawings(extended: true));
         }
         /*
         [Fact]
@@ -338,7 +338,7 @@ namespace MuPDF.NET.Test
             doc = new Document("pdf", pdfData);
             page = doc[0];
 
-            Assert.NotEqual(0, page.GetLinks().Count);
+            Assert.NotEmpty(page.GetLinks());
             doc.Save(Out("NamedLink.pdf"));
         }
 
@@ -430,7 +430,7 @@ namespace MuPDF.NET.Test
 
             List<Block> infos = page.GetImageInfo(xrefs: true);
 
-            Assert.Equal(1, infos.Count);
+            Assert.Single(infos);
             Assert.Equal(400, infos[0].Width);
             Assert.Equal(400, infos[0].Height);
 
@@ -448,8 +448,8 @@ namespace MuPDF.NET.Test
             TextPage tp = page.GetTextPageOcr((int)TextFlags.TEXT_PRESERVE_SPANS, dpi:100, full: true);
             string txt = tp.ExtractText();
 
-            Assert.True(txt.Contains("Rebate"));
-            Assert.True(txt.Contains("Receipt"));
+            Assert.Contains("Rebate", txt);
+            Assert.Contains("Receipt", txt);
 
             page.Dispose();
             doc.Close();

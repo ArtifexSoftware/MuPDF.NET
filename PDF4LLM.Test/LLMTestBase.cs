@@ -11,7 +11,7 @@ namespace PDF4LLM.Test
         protected string GetResourcePath(string relativePath)
         {
             // Get the test project directory
-            string testDir = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+            string testDir = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!;
             string projectDir = Path.GetFullPath(Path.Combine(testDir, "..", "..", ".."));
             return Path.Combine(projectDir, "resources", relativePath);
         }

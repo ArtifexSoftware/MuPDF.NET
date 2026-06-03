@@ -25,7 +25,7 @@ namespace MuPDF.NET.Test
 
         public static Func<string> FILENAME = () =>
         {
-            return System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName;
+            return System.Diagnostics.Process.GetCurrentProcess().MainModule!.FileName;
         };
     }
     internal static class _Path

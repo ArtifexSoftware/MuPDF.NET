@@ -237,7 +237,6 @@ namespace MuPDF.NET
         /// <c>[1,0,0,1,0,0] → [cos θ, sin θ, -sin θ, cos θ, 0, 0]</c>.</remarks>
         public virtual Matrix Prerotate(float theta)
         {
-            theta = (float)theta;
             while (theta < 0) theta += 360;
             while (theta >= 360) theta -= 360;
             if (Math.Abs(theta) < Constants.Epsilon) { }
@@ -273,8 +272,6 @@ namespace MuPDF.NET
         /// </summary>
         public virtual Matrix Prescale(float sx, float sy)
         {
-            sx = (float)sx;
-            sy = (float)sy;
             A *= sx; B *= sx; C *= sy; D *= sy;
             return this;
         }
@@ -282,8 +279,6 @@ namespace MuPDF.NET
         /// <summary>Pre-multiplies shearing (PyMuPDF <c>preshear</c>).</summary>
         public virtual Matrix Preshear(float h, float v)
         {
-            h = (float)h;
-            v = (float)v;
             float a0 = A, b0 = B;
             A += v * C; B += v * D;
             C += h * a0; D += h * b0;
@@ -295,8 +290,6 @@ namespace MuPDF.NET
         /// </summary>
         public virtual Matrix Pretranslate(float tx, float ty)
         {
-            tx = (float)tx;
-            ty = (float)ty;
             E += tx * A + ty * C;
             F += tx * B + ty * D;
             return this;
