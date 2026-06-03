@@ -5478,7 +5478,10 @@ namespace MuPDF.NET
                     page_src = null;
                     continue;
                 }
-                Matrix ctm = page_src.TransformationMatrix.Inverted() ?? Matrix.Identity;  // calc page transformation matrix
+                // Multiply link rects by inverse of pdf_page_transform() page CTM (#4958).
+                var pageCtm = new mupdf.FzMatrix();
+                Helpers.AsPdfPage(page_src, required: true).pdf_page_transform(new mupdf.FzRect(0, 0, 0, 0), pageCtm);
+                Matrix ctm = new Matrix(pageCtm.fz_invert_matrix());
                 Page page_dst = doc1[pno_dst[i]];  // load destination page
                 var link_tab = new List<string>();  // store all link definitions here
                 foreach (var l in links)

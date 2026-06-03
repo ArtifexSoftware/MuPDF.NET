@@ -1,97 +1,95 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <!-- Local build-output experiments under this folder must not be picked up by default globs (duplicate AssemblyInfo). -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);artifacts/**</DefaultItemExcludes>
+    <TargetFrameworks>net8.0;net472;net48;netstandard2.0</TargetFrameworks>
+    <RootNamespace>MuPDF.NET</RootNamespace>
+    <AssemblyName>MuPDF.NET</AssemblyName>
     <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <Description>MuPDF.NET - .NET bindings for the MuPDF library</Description>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(TargetFramework)' == 'netstandard2.0' Or '$(TargetFramework)' == 'net472' Or '$(TargetFramework)' == 'net48'">
     <Nullable>annotations</Nullable>
-    <TargetFrameworks>netstandard2.0;net461;net472;net48;net5.0;net6.0;net7.0;net8.0</TargetFrameworks>
-    <Platforms>AnyCPU;x64;x86</Platforms>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <PlatformFolder>$(Platform)</PlatformFolder>
-    <PlatformFolder Condition="'$(PlatformFolder)' == 'AnyCPU'">.</PlatformFolder>
-    <NuspecFile>$(ProjectDir)MuPDF.NET.nuspec</NuspecFile>
-    <NuspecProperties>Configuration=$(Configuration);PlatformFolder=$(PlatformFolder)</NuspecProperties>
-  </PropertyGroup>
-  
-  <PropertyGroup Condition="'$(OS)' == 'Windows_NT'">
-    <DefineConstants>WINDOWS</DefineConstants>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(OS)' != 'Windows_NT'">
-    <DefineConstants>LINUX</DefineConstants>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x86'">
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x86'">
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-  </PropertyGroup>
-
-  <ItemGroup>
-    <Compile Remove="Platforms\**\*.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Remove="Barcode\Decoders\NewDecoders\Datamatrix\mpnonecc200.dat" />
-    <None Remove="Barcode\Decoders\NewDecoders\PDF417\symbolmap.txt" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <EmbeddedResource Include="Barcode\Decoders\NewDecoders\Datamatrix\mpnonecc200.dat" />
-    <EmbeddedResource Include="Barcode\Decoders\NewDecoders\PDF417\symbolmap.txt" />
-  </ItemGroup>
-  
-  <ItemGroup>
-    <EmbeddedResource Include="Resources\UnicodeData.txt.gz" />
-    <EmbeddedResource Include="Resources\NameAliases.txt.gz" />
-  </ItemGroup>
-
-  <ItemGroup Condition="'$(TargetFramework)' == 'net461' Or '$(TargetFramework)' == 'net472' Or '$(TargetFramework)' == 'net48'">
-    <Reference Include="System.IO.Compression" />
-  </ItemGroup>
-
-  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
-    <PackageReference Include="System.IO.Compression" Version="4.3.0" />
-  </ItemGroup>
-
-  <ItemGroup Condition="'$(TargetFramework)' == 'net461'">
-    <PackageReference Include="System.Text.Json" Version="6.0.10" />
-  </ItemGroup>
-
-  <ItemGroup Condition="'$(TargetFramework)' == 'net472' Or '$(TargetFramework)' == 'net48' Or '$(TargetFramework)' == 'netstandard2.0'">
-    <PackageReference Include="System.Text.Json" Version="8.0.5" />
-  </ItemGroup>
-
+  <!-- MuPDF native assets NuGet package -->
   <ItemGroup>
     <InternalsVisibleTo Include="MuPDF.NET.Test" />
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Required for dynamic (legacy GetText API); implicit on net8.0 but not net472/net48/netstandard2.0 -->
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
     <PackageReference Include="MuPDF.NativeAssets" Version="1.27.2" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
-    <PackageReference Include="SharpZipLib" Version="1.4.2" />
-    <PackageReference Include="SkiaSharp" Version="3.119.1" />
+    <PackageReference Include="SkiaSharp" Version="*" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.119.1" />
+    <PackageReference Include="System.Text.Json" Version="10.0.6" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\MuPDF.Fonts\MuPDF.Fonts.csproj" />
   </ItemGroup>
+
+  <!-- ZipArchive (Archive.cs) is not in the default reference set for .NET Framework SDK projects. -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net472' Or '$(TargetFramework)' == 'net48'">
+    <Reference Include="System.IO.Compression" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\UnicodeData.txt.gz" />
+    <EmbeddedResource Include="Resources\NameAliases.txt.gz" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <EmbeddedResource Include="Barcode\Decoders\NewDecoders\Datamatrix\mpnonecc200.dat" />
+    <EmbeddedResource Include="Barcode\Decoders\NewDecoders\PDF417\symbolmap.txt" />
+  </ItemGroup>
+
+  <!-- SWIG: on Windows use mupdf_windows.cs except netstandard2.0 (see #if in those files). -->
+  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Windows')) AND '$(TargetFramework)' != 'netstandard2.0'">
+    <Compile Remove=".\mupdf_linux.cs" />
+  </ItemGroup>
+  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Windows')) AND '$(TargetFramework)' == 'netstandard2.0'">
+    <Compile Remove=".\mupdf_windows.cs" />
+  </ItemGroup>
+  <ItemGroup Condition="!$([MSBuild]::IsOSPlatform('Windows'))">
+    <Compile Remove=".\mupdf_windows.cs" />
+  </ItemGroup>
+
+  <!-- Define WINDOWS constant for conditional compilation in SWIG files -->
+  <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+    <DefineConstants>$(DefineConstants);WINDOWS</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net8.0|AnyCPU'">
+    <NoWarn>1701;1702;1591</NoWarn>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net472|AnyCPU'">
+    <NoWarn>1701;1702;1591</NoWarn>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net48|AnyCPU'">
+    <NoWarn>1701;1702;1591</NoWarn>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|netstandard2.0|AnyCPU'">
+    <NoWarn>1701;1702;1591</NoWarn>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net8.0|AnyCPU'">
+    <NoWarn>1701;1702;1591</NoWarn>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net472|AnyCPU'">
+    <NoWarn>1701;1702;1591</NoWarn>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net48|AnyCPU'">
+    <NoWarn>1701;1702;1591</NoWarn>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|netstandard2.0|AnyCPU'">
+    <NoWarn>1701;1702;1591</NoWarn>
+  </PropertyGroup>
+
 </Project>

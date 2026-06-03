@@ -5280,11 +5280,7 @@ namespace MuPDF.NET
         public override void stroke_path(mupdf.fz_context ctx, mupdf.SWIGTYPE_p_fz_path path, mupdf.fz_stroke_state stroke, mupdf.fz_matrix ctm,
             mupdf.fz_colorspace colorspace, mupdf.SWIGTYPE_p_float color, float alpha, mupdf.fz_color_params colorParams)
         {
-            pathfactor = 1f;
-            if (ctm.a != 0 && Math.Abs(ctm.a) == Math.Abs(ctm.d))
-                pathfactor = Math.Abs(ctm.a);
-            else if (ctm.b != 0 && Math.Abs(ctm.b) == Math.Abs(ctm.c))
-                pathfactor = Math.Abs(ctm.b);
+            pathfactor = (float)Math.Sqrt(Math.Abs(ctm.a * ctm.d - ctm.b * ctm.c));
 
             SetCtm(ctm);
             path_type = StrokePath;
@@ -5295,7 +5291,7 @@ namespace MuPDF.NET
             pathdict["color"] = jm_lineart_color(colorspace, color);
             pathdict["width"] = pathfactor * stroke.linewidth;
             pathdict["lineCap"] = new object[] { (int)stroke.start_cap, (int)stroke.dash_cap, (int)stroke.end_cap };
-            pathdict["lineJoin"] = pathfactor * (float)(int)stroke.linejoin;
+            pathdict["lineJoin"] = (float)(int)stroke.linejoin;
             if (!pathdict.ContainsKey("closePath"))
                 pathdict["closePath"] = false;
 

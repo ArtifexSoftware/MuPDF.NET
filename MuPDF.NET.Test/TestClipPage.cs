@@ -66,5 +66,16 @@ namespace MuPDF.NET.Test
             }
             doc.Save(outDocPath);
         }
+
+        /// <summary>PyMuPDF <c>tests/test_4942.py::test_4942</c> — clip page and read links without error.</summary>
+        [Fact]
+        public void test_4942()
+        {
+            using var document = new Document(_Path.ForTestClass("test_4942.pdf", nameof(TestClipPage)));
+            var page = document[0];
+            page.ClipToRect(page.Rect);
+            var links = page.GetLinks();
+            Assert.Equal(8, links.Count);
+        }
     }
 }

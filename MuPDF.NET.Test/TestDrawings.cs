@@ -330,6 +330,54 @@ namespace MuPDF.NET.Test
                 Assert.Equal(15.0, Convert.ToDouble(p["width"], CultureInfo.InvariantCulture));
         }
 
+        /// <summary>PyMuPDF <c>tests/test_drawings.py::test_4954_1</c> — lineJoin must not be scaled by pathfactor.</summary>
+        [Fact]
+        public void test_4954_1()
+        {
+            string pathOut = Out("test_4954_1.pdf");
+            byte[] content = Encoding.ASCII.GetBytes(
+                "q\n0.12 0 0 0.12 0 0 cm\n2 j\n6 w\n100 100 m\n800 100 l\nS\nQ\n");
+            using (var doc = new Document())
+            {
+                var page = doc.NewPage(width: 200, height: 200);
+                var shape = page.NewShape();
+                shape.DrawLine(new Point(0, 0), new Point(1, 1));
+                shape.Finish(color: new float[] { 0, 0, 0 }, width: 0.1f);
+                shape.Commit();
+                doc.UpdateStream(page.GetContents()[0], content, compress: false);
+                doc.Save(pathOut);
+            }
+            using (var doc = new Document(pathOut))
+            {
+                var d = doc[0].GetDrawings().Last();
+                Assert.Equal(2f, d.LineJoin);
+            }
+        }
+
+        /// <summary>PyMuPDF <c>tests/test_drawings.py::test_4954_2</c> — stroke width uses determinant pathfactor.</summary>
+        [Fact]
+        public void test_4954_2()
+        {
+            string pathOut = Out("test_4954_2.pdf");
+            byte[] content = Encoding.ASCII.GetBytes(
+                "q\n2 0 0 3 0 0 cm\n1 w\n10 10 m\n90 10 l\nS\nQ\n");
+            using (var doc = new Document())
+            {
+                var page = doc.NewPage(width: 200, height: 200);
+                var shape = page.NewShape();
+                shape.DrawLine(new Point(0, 0), new Point(1, 1));
+                shape.Finish(color: new float[] { 1, 0, 0 }, width: 0.1f);
+                shape.Commit();
+                doc.UpdateStream(page.GetContents()[0], content, compress: false);
+                doc.Save(pathOut);
+            }
+            using (var doc = new Document(pathOut))
+            {
+                var d = doc[0].GetDrawings().Last();
+                Assert.InRange(d.Width, 2.439f, 2.459f);
+            }
+        }
+
         private static Point PointFromPathItem(object o)
         {
             if (o is Point p) return p;

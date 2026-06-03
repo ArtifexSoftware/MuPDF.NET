@@ -533,10 +533,12 @@ namespace MuPDF.NET
             {
                 // annot = self.load_annot(xref)
                 Annot annot = LoadAnnot(xref);
-                // annot._yielded=True
+                // In #4928, annot can be null, which we need to ignore.
                 if (annot != null)
+                {
                     annot.Yielded = true;
-                yield return annot;
+                    yield return annot;
+                }
             }
         }
         /// <summary>
@@ -3912,6 +3914,7 @@ namespace MuPDF.NET
             clip = clip.Transform(TransformationMatrix);
             var pdfPage = NativePdfPage;
             pdfPage.pdf_clip_page(clip.ToFzRect());
+            Helpers.JM_refresh_links(RequireParent().NativePdfDocument, pdfPage);
         }
         /// <summary>
         /// See PyMuPDF Page.get_layout.

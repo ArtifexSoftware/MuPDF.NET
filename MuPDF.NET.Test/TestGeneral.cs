@@ -2319,8 +2319,8 @@ namespace MuPDF.NET.Test
         {
             string path = Doc("test_4928.pdf");
             using var document = new Document(path);
-            try { document.Scrub(); }
-            catch (Exception) { }
+            document.Scrub();
+            document.Save(Out("test_4928.pdf"));
         }
 
         /// <summary>PyMuPDF <c>tests/test_general.py::test_4902</c>.</summary>

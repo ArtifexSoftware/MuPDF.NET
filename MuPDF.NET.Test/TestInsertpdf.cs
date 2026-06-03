@@ -9,6 +9,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using Xunit;
@@ -475,6 +476,29 @@ namespace MuPDF.NET.Test
 
         static mupdf.PdfObj PdfDictGetp(mupdf.PdfDocument pdf, string path)
             => mupdf.mupdf.pdf_trailer(pdf).pdf_dict_getp(path);
+
+        /// <summary>PyMuPDF <c>tests/test_insertpdf.py::test_4958</c> — link rects preserved after insert_pdf with rotation.</summary>
+        [Fact]
+        public void test_4958()
+        {
+            using var documentOrig = new Document();
+            using var documentCopy = new Document();
+            documentOrig.NewPage();
+            documentOrig[0].SetRotation(90);
+            documentOrig[0].InsertLink(new Dictionary<string, object>
+            {
+                { "kind", Constants.LinkUri },
+                { "from", new Rect(10, 20, 40, 60) },
+                { "uri", "https://example.org" },
+            });
+            documentCopy.InsertPdf(documentOrig, links: true);
+
+            var fromRectsOrig = documentOrig[0].GetLinks().Select(l => l.From).ToList();
+            var fromRectsCopy = documentCopy[0].GetLinks().Select(l => l.From).ToList();
+            Assert.Equal(fromRectsOrig, fromRectsCopy);
+
+            documentCopy.Save(Out("test_4958.pdf"));
+        }
     }
 
     /// <summary>Minimal POSIX open/close for <c>test_issue1417_insertpdf_in_loop</c> on Unix.</summary>
