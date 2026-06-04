@@ -7,7 +7,7 @@
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <PlatformFolder>$(Platform)</PlatformFolder>
     <PlatformFolder Condition="'$(PlatformFolder)' == 'AnyCPU'">.</PlatformFolder>
-    <Version>1.27.2.9</Version>
+    <Version>1.27.2.10</Version>
     <NuspecFile>$(MSBuildProjectDirectory)\PDF4LLM.nuspec</NuspecFile>
     <NuspecProperties>Configuration=$(Configuration);version=$(Version);PlatformFolder=$(PlatformFolder)</NuspecProperties>
   </PropertyGroup>
@@ -25,6 +25,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Markdig" Version="0.38.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
   </ItemGroup>
 

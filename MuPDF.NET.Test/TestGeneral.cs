@@ -435,7 +435,7 @@ namespace MuPDF.NET.Test
             foreach (string f in files)
             {
                 // doc = pymupdf.open(os.path.join(folder, f))
-                using var doc = Document.Open(Path.Combine(folder, f));
+                using var doc = Document.Open(Doc(f));
                 Page page = doc[0];
                 float fontsize0 = (float)Convert.ToDouble(page.GetTextTrace()[0]["size"]);
                 // fontsize1 = page.GetText("dict", flags=pymupdf.TEXTFLAGS_TEXT)["blocks"][0]["lines"][0]["spans"][0]["size"]
@@ -1500,7 +1500,7 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_archive_3126()
         {
-            string p = Path.GetFullPath(TestDocumentsDir());  // p = os.path.abspath(f'{__file__}/../../tests/resources')
+            string p = Path.GetFullPath(Doc(""));  // p = os.path.abspath(f'{__file__}/../../tests/resources')
             // p = pathlib.Path(p)
             using var archive = new Archive(p);  // archive = pymupdf.Archive(p)
         }

@@ -10,8 +10,26 @@ namespace PDF4LLM
     /// <summary>
     /// Main entry point for PDF4LLM (to_markdown / to_json / to_text / parse_document / get_key_values / use_layout).
     /// </summary>
-    public static class PdfExtractor
+    public static partial class PdfExtractor
     {
+        static PdfExtractor()
+        {
+            string[] parts = MuPDF.NET.Utils.VersionBind.Split('-')[0].Split('.');
+            var mupdfTuple = (
+                int.Parse(parts[0]),
+                parts.Length > 1 ? int.Parse(parts[1]) : 0,
+                parts.Length > 2 ? int.Parse(parts[2]) : 0);
+            var req = VersionInfo.MinimumMuPDFVersion;
+            if (mupdfTuple != req)
+            {
+                throw new InvalidOperationException(
+                    $"Requires PyMuPDF VERSION={VersionInfo.Version} VERSION_TUPLE={req}, but you have pymupdf.__version__={MuPDF.NET.Utils.VersionBind}");
+            }
+
+            // Layout is opt-in: register a provider via SetLayoutProvider, then SetUseLayout(true).
+            UseLayout = false;
+        }
+
         /// <summary>Package version string (<c>Version</c> / semantic version tuple).</summary>
         public static string Version => VersionInfo.Version;
 
@@ -34,10 +52,7 @@ namespace PDF4LLM
         /// <see cref="ToJson(MuPDF.NET.Document)"/> and <see cref="ToText(MuPDF.NET.Document)"/> require layout mode in this port.
         /// Path overloads open the file for the duration of the call, then dispose it.
         /// </summary>
-        public static bool UseLayout { get; set; } = true;
-
-        /// <summary>Sets <see cref="UseLayout"/> (layout vs legacy RAG pipeline).</summary>
-        public static void SetUseLayout(bool yes) => UseLayout = yes;
+        public static bool UseLayout { get; set; }
 
         /// <summary>
         /// LlamaIndex-compatible <see cref="PDFMarkdownReader"/>.
@@ -68,7 +83,7 @@ namespace PDF4LLM
             float? pageHeight = null,
             bool ignoreCode = false,
             bool showProgress = false,
-            bool useOcr = false,
+            bool useOcr = true,
             string ocrLanguage = "eng",
             bool forceOcr = false,
             OcrPageFunction ocrFunction = null)
@@ -158,7 +173,7 @@ namespace PDF4LLM
             float? pageHeight = null,
             bool ignoreCode = false,
             bool showProgress = false,
-            bool useOcr = false,
+            bool useOcr = true,
             string ocrLanguage = "eng",
             bool forceOcr = false,
             OcrPageFunction ocrFunction = null)
@@ -203,7 +218,7 @@ namespace PDF4LLM
             bool embedImages = false,
             bool showProgress = false,
             bool forceText = true,
-            bool useOcr = false,
+            bool useOcr = true,
             string ocrLanguage = "eng",
             bool forceOcr = false,
             OcrPageFunction ocrFunction = null)
@@ -246,7 +261,7 @@ namespace PDF4LLM
             bool embedImages = false,
             bool showProgress = false,
             bool forceText = true,
-            bool useOcr = false,
+            bool useOcr = true,
             string ocrLanguage = "eng",
             bool forceOcr = false,
             OcrPageFunction ocrFunction = null)
@@ -282,7 +297,7 @@ namespace PDF4LLM
             bool showProgress = false,
             bool forceText = true,
             int ocrDpi = 300,
-            bool useOcr = false,
+            bool useOcr = true,
             string ocrLanguage = "eng",
             string tableFormat = "grid",
             bool pageChunks = false,
@@ -333,7 +348,7 @@ namespace PDF4LLM
             bool showProgress = false,
             bool forceText = true,
             int ocrDpi = 300,
-            bool useOcr = false,
+            bool useOcr = true,
             string ocrLanguage = "eng",
             string tableFormat = "grid",
             bool pageChunks = false,
@@ -378,7 +393,7 @@ namespace PDF4LLM
             bool embedImages = false,
             bool showProgress = false,
             bool forceText = true,
-            bool useOcr = false,
+            bool useOcr = true,
             string ocrLanguage = "eng",
             bool forceOcr = false,
             bool keepOcrText = false,

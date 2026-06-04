@@ -50,19 +50,16 @@ namespace MuPDF.NET.Test
 
         public static string ResolveTestDocument(string fileName, string? subFolder = null)
         {
-            if (string.IsNullOrWhiteSpace(fileName))
-                throw new ArgumentException("fileName must not be empty.", nameof(fileName));
-
             string root = ResolveSolutionRoot();
             return string.IsNullOrWhiteSpace(subFolder)
-                ? Path.Combine(root, "TestDocuments", fileName)
-                : Path.Combine(root, "TestDocuments", subFolder, fileName);
+                ? Path.Combine(root, "TestDocuments", "MuPDF.NET.Test", fileName)
+                : Path.Combine(root, "TestDocuments", "MuPDF.NET.Test", subFolder, fileName);
         }
 
         public static string RequireTestDocument(string fileName, string? subFolder = null)
         {
             string path = ResolveTestDocument(fileName, subFolder);
-            if (!File.Exists(path))
+            if (!string.IsNullOrWhiteSpace(fileName) && !File.Exists(path))
                 throw new FileNotFoundException($"Required test document not found: {path}");
             return path;
         }
@@ -81,7 +78,7 @@ namespace MuPDF.NET.Test
                 throw new ArgumentException("testClassName must not be empty.", nameof(testClassName));
 
             string path = Path.Combine(
-                ResolveSolutionRoot(), "TestDocuments", OutputFolderName, testClassName, fileName);
+                ResolveSolutionRoot(), "TestDocuments", "MuPDF.NET.Test", OutputFolderName, testClassName, fileName);
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
             return path;
         }

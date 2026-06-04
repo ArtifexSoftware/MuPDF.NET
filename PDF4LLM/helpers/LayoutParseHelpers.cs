@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using MuPDF.NET;
+using Newtonsoft.Json.Linq;
 using mupdf;
 namespace PDF4LLM.Helpers
 {
@@ -94,16 +96,126 @@ namespace PDF4LLM.Helpers
             }
         }
 
-        /// <summary>Default OCR backend selection.</summary>
+        /// <summary>
+        /// Check availability of OCR tools and language data.
+        /// Return the best OCR function available or null (pymupdf4llm select_ocr_function).
+        /// </summary>
         public static OcrPageFunction SelectOcrFunction()
         {
-            // Tesseract is the default OCR backend for this .NET port.
-            return global::PDF4LLM.Ocr.TesseractApi.ExecOcr;
+            string tessdata = null;
+            bool rapidocrAvailable = false;
+            bool paddleocrAvailable = false;
+            try
+            {
+                tessdata = global::MuPDF.NET.Utils.TESSDATA_PREFIX;
+            }
+            catch
+            {
+                tessdata = null;
+            }
+
+            // rapidocr_onnxruntime / PaddleOCR are not wired for .NET yet.
+            if (string.IsNullOrEmpty(tessdata) && !rapidocrAvailable && !paddleocrAvailable)
+                return null;
+
+            if (!string.IsNullOrEmpty(tessdata))
+            {
+                Console.WriteLine("Using Tesseract for OCR processing.");
+                return (page, ocrDpi, ocrLanguage, keepOcrText) =>
+                    global::PDF4LLM.Ocr.TesseractApi.ExecOcr(
+                        page, dpi: ocrDpi, language: ocrLanguage, keepOcrText: keepOcrText);
+            }
+
+            return null;
         }
 
-        /// <summary>Build layout from stext blocks, then merge <see cref="TableFinder"/> regions as <c>table</c> (approximates MuPdf.layout + table hints).</summary>
+        /// <summary>Parse <c>page.layout_information</c> rows <c>(x0, y0, x1, y1, class)</c>.</summary>
+        private static List<LayoutInfoEntry> ParseLayoutInformation(object layoutObj)
+        {
+            if (layoutObj == null)
+                return null;
+            if (!(layoutObj is System.Collections.IEnumerable rows))
+                return null;
+
+            var layout = new List<LayoutInfoEntry>();
+            int rawCount = 0;
+            foreach (object row in rows)
+            {
+                rawCount++;
+                if (!TryParseLayoutRow(row, out LayoutInfoEntry entry))
+                    continue;
+                layout.Add(entry);
+            }
+
+            // Treat parse failure like missing layout (fall back to stext-only boxes).
+            if (rawCount > 0 && layout.Count == 0)
+                return null;
+
+            return layout;
+        }
+
+        private static bool TryParseLayoutRow(object row, out LayoutInfoEntry entry)
+        {
+            entry = null;
+            JArray ja = row as JArray;
+            System.Collections.IList list = row as object[];
+            if (ja != null)
+                list = ja;
+            else if (list == null && row is System.Collections.IList il)
+                list = il;
+
+            if (list == null || list.Count < 5)
+                return false;
+
+            string cls = list[4]?.ToString() ?? "text";
+            if (ja != null && list[4] is JValue jv && jv.Type == JTokenType.String)
+                cls = jv.Value<string>() ?? cls;
+
+            entry = new LayoutInfoEntry
+            {
+                Bbox = new Rect(
+                    Convert.ToSingle(list[0], CultureInfo.InvariantCulture),
+                    Convert.ToSingle(list[1], CultureInfo.InvariantCulture),
+                    Convert.ToSingle(list[2], CultureInfo.InvariantCulture),
+                    Convert.ToSingle(list[3], CultureInfo.InvariantCulture)),
+                Class = cls,
+            };
+            return true;
+        }
+
+        /// <summary>
+        /// Layout from <see cref="Page.GetLayout"/> / <c>page.layout_information</c> when a provider is registered.
+        /// Returns <c>null</c> when no layout provider is active.
+        /// </summary>
+        private static List<LayoutInfoEntry> TryNativeLayoutInformation(Page page)
+        {
+            object layoutObj = page.LayoutInformation;
+            if (layoutObj == null)
+            {
+                page.GetLayout();
+                layoutObj = page.LayoutInformation;
+            }
+
+            if (layoutObj == null)
+                return null;
+
+            return ParseLayoutInformation(layoutObj);
+        }
+
+        /// <summary>
+        /// Build layout boxes for <c>parse_document</c>.
+        /// Prefer <see cref="Page.GetLayout"/> / <c>page.layout_information</c> when a provider is set.
+        /// If unavailable, stext text blocks only — tables come from layout boxes or
+        /// <c>tables_exist</c> handling in <c>parse_document</c> (see document_layout.py).
+        /// </summary>
         public static List<LayoutInfoEntry> BuildLayoutInformation(Page page, List<Block> blocks)
         {
+            List<LayoutInfoEntry> native = TryNativeLayoutInformation(page);
+            if (native != null && native.Count > 0)
+                return native;
+
+            // Fallback: do not map image blocks (type 1) to "picture" here.
+            // Do not run TableFinder here — Python only sets tables_exist from layout boxes.
             var layout = new List<LayoutInfoEntry>();
             if (blocks != null)
             {
@@ -113,37 +225,7 @@ namespace PDF4LLM.Helpers
                         continue;
                     if (b.Type == 0)
                         layout.Add(new LayoutInfoEntry { Bbox = new Rect(b.Bbox), Class = "text" });
-                    else if (b.Type == 1)
-                        layout.Add(new LayoutInfoEntry { Bbox = new Rect(b.Bbox), Class = "picture" });
                 }
-            }
-
-            TableFinder tbf = null;
-            try
-            {
-                tbf = TableFinderHelper.FindTables(page, strategy: "lines_strict");
-            }
-            catch
-            {
-                return layout;
-            }
-
-            if (tbf?.tables == null || tbf.tables.Count == 0)
-                return layout;
-
-            foreach (Table tab in tbf.tables
-                         .Where(t => t?.bbox != null)
-                         .OrderBy(t => t.bbox.Y0)
-                         .ThenBy(t => t.bbox.X0))
-            {
-                Rect tb = tab.bbox;
-                layout.RemoveAll(e =>
-                    e.Class == "text"
-                    && e.Bbox != null
-                    && Utils.AlmostInBbox(e.Bbox, tb, 0.85f));
-                if (layout.Any(e => e.Class == "table" && IoU(e.Bbox, tb) > 0.85f))
-                    continue;
-                layout.Add(new LayoutInfoEntry { Bbox = new Rect(tb), Class = "table" });
             }
 
             return layout;

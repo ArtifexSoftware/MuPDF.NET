@@ -10,14 +10,10 @@ using Newtonsoft.Json;
 namespace PDF4LLM.Helpers
 {
     /// <summary>
-    /// Optional hook for per-page OCR (<c>ocr_function</c>-style signature: page, dpi, language, keep OCR text).
-    /// When supplied and OCR runs, the callback returns an OCR-generated <see cref="TextPage"/>.
+    /// Optional hook for per-page OCR (<c>ocr_function</c> in pymupdf4llm).
+    /// Mutates the page in place (text layer via <c>show_pdf_page</c>), like the Python plugins.
     /// </summary>
-    /// <param name="page">Page to OCR.</param>
-    /// <param name="ocrDpi">Resolution hint (same role as <c>ocr_dpi</c> in the reference API).</param>
-    /// <param name="ocrLanguage">Tesseract / engine language code.</param>
-    /// <param name="keepOcrText">When <c>true</c>, preserve existing OCR text (<c>keep_ocr_text</c> flag).</param>
-    public delegate TextPage OcrPageFunction(Page page, int ocrDpi, string ocrLanguage, bool keepOcrText);
+    public delegate void OcrPageFunction(Page page, int ocrDpi, string ocrLanguage, bool keepOcrText);
 
     /// <summary>
     /// Layout box representing a content region on a page
@@ -258,9 +254,8 @@ namespace PDF4LLM.Helpers
                         stringLengths.Add(mdString.Length);
                     }
 
-                    int pageNumberOneBased = page.PageNumber + 1;
                     if (pageSeparators)
-                        mdString.Append($"--- end of page.page_number={pageNumberOneBased} ---\n\n");
+                        mdString.Append($"--- end of page.page_number={page.PageNumber} ---\n\n");
 
                     string pageMd = mdString.ToString();
                     if (!pageChunks)
@@ -292,13 +287,13 @@ namespace PDF4LLM.Helpers
             string text,
             List<int> stringLengths)
         {
-            int pageNumberOneBased = page.PageNumber + 1;
+            int pageNumber = page.PageNumber;
             var pageTocs = new List<object>();
             if (doc.Toc != null)
             {
                 foreach (object o in doc.Toc)
                 {
-                    if (o is Toc t && t.Page == pageNumberOneBased)
+                    if (o is Toc t && t.Page == pageNumber)
                         pageTocs.Add(new Dictionary<string, object>
                         {
                             ["level"] = t.Level,
@@ -317,7 +312,7 @@ namespace PDF4LLM.Helpers
 
             metadata["file_path"] = doc.Filename ?? "";
             metadata["page_count"] = doc.PageCount;
-            metadata["page_number"] = pageNumberOneBased;
+            metadata["page_number"] = pageNumber;
 
             var pageBoxes = new List<Dictionary<string, object>>();
             for (int i = 0; i < page.Boxes.Count; i++)
@@ -413,7 +408,7 @@ namespace PDF4LLM.Helpers
 
                     foreach (var (box, i) in page.Boxes.Select((b, idx) => (b, idx)))
                     {
-                        var clip = new Rect(box.X0, box.Y0, box.X1, box.Y1);
+                        var clip = new IRect(new Rect(box.X0, box.Y0, box.X1, box.Y1));
                         string btype = box.BoxClass ?? "";
 
                         if (btype == "page-header" && !header)
@@ -735,7 +730,7 @@ namespace PDF4LLM.Helpers
         }
 
         /// <summary><c>picture_text_to_text</c> (parameters match signature; <c>ignore_code</c> unused).</summary>
-        private static string PictureTextToText(List<TextLineInfo> textLines, bool ignoreCode = false, Rect clip = null)
+        private static string PictureTextToText(List<TextLineInfo> textLines, bool ignoreCode = false, IRect clip = null)
         {
             _ = ignoreCode;
             _ = clip;
@@ -753,14 +748,14 @@ namespace PDF4LLM.Helpers
         }
 
         /// <summary><c>fallback_text_to_text</c> (<c>tabulate</c> grid + <c>maxcolwidths</c>).</summary>
-        private static string FallbackTextToText(List<TextLineInfo> textLines, Rect clip, int tableMaxWidth = 100)
+        private static string FallbackTextToText(List<TextLineInfo> textLines, IRect clip, int tableMaxWidth = 100)
         {
             if (textLines == null || textLines.Count == 0)
                 return "";
             int spanCount = textLines.Max(tl => tl.Spans?.Count ?? 0);
             if (spanCount == 0)
                 return PictureTextToText(textLines);
-            float clipX0 = clip?.X0 ?? 0f;
+            int clipX0 = clip?.X0 ?? 0;
             var lines = new List<List<string>>();
             foreach (TextLineInfo tl in textLines)
             {
@@ -768,7 +763,7 @@ namespace PDF4LLM.Helpers
                 var line = new List<string>();
                 for (int k = 0; k < spanCount; k++)
                     line.Add("");
-                int i0 = spans.Count < spanCount && spans.Count > 0 && spans[0].Bbox != null && spans[0].Bbox.X0 > clipX0 + 10f
+                int i0 = spans.Count < spanCount && spans.Count > 0 && spans[0].Bbox != null && spans[0].Bbox.X0 > clipX0 + 10
                     ? 1
                     : 0;
                 for (int j = 0; j < spans.Count; j++)
@@ -1119,8 +1114,7 @@ namespace PDF4LLM.Helpers
         /// <c>add_image_orphans</c> / <c>clean_tables</c>, <c>find_reading_order</c>, <c>find_tables</c>, then box materialization.
         /// </summary>
         /// <remarks>
-        /// The native layout API is not available in this .NET port; layout regions are derived from stext blocks plus table detection.
-        /// <c>complete_table_structure</c> virtual lines are not generated yet (empty <c>add_lines</c>).
+        /// Uses native <see cref="Page.LayoutInformation"/> when available; otherwise layout regions are derived from stext blocks plus table detection.
         /// </remarks>
         public static ParsedDocument ParseDocument(
             Document doc,
@@ -1134,64 +1128,144 @@ namespace PDF4LLM.Helpers
             bool embedImages = false,
             bool showProgress = false,
             bool forceText = false,
-            bool useOcr = false,
+            bool useOcr = true,
             string ocrLanguage = "eng",
             bool forceOcr = false,
             bool keepOcrText = false,
             OcrPageFunction ocrFunction = null)
         {
-            if (embedImages && writeImages)
-                throw new ArgumentException("Cannot both embed and write images.");
+            Document mydoc = doc;
+            Document imagePdfDoc = null;
+            try
+            {
+                if (doc.MetaData != null
+                    && doc.MetaData.TryGetValue("format", out string fmt)
+                    && string.Equals(fmt, "Image", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Re-open as PDF to ensure we can successfully OCR the image.
+                    byte[] data = doc.ConvertToPdf();
+                    imagePdfDoc = new Document(data, "pdf");
+                    mydoc = imagePdfDoc;
+                }
 
-            LayoutParseHelpers.TryRemovePdfStructTreeRoot(doc);
+                if (mydoc.IsPdf)
+                    LayoutParseHelpers.TryRemovePdfStructTreeRoot(mydoc);
+                else
+                {
+                    if (forceOcr)
+                        Console.WriteLine(
+                            "Warning: force_ocr is True but document is not a PDF. OCR will be disabled.");
+                    useOcr = false;
+                    forceOcr = false;
+                }
 
+                if (embedImages && writeImages)
+                    throw new ArgumentException("Cannot both embed and write images.");
+
+                OcrMode useOcrMode = OcrMode.Never;
+                if (forceOcr)
+                    useOcrMode = keepOcrText ? OcrMode.AlwaysPreservingOld : OcrMode.AlwaysRemovingOld;
+                else if (useOcr)
+                    useOcrMode = keepOcrText ? OcrMode.SelectPreservingOld : OcrMode.SelectRemovingOld;
+
+                OcrPageFunction ocrImpl = ocrFunction;
+                if (useOcrMode != OcrMode.Never)
+                {
+                    if (ocrImpl == null)
+                        ocrImpl = LayoutParseHelpers.SelectOcrFunction();
+                    if (ocrImpl == null)
+                        useOcrMode = OcrMode.Never;
+                }
+
+                if (ocrImpl == null)
+                {
+                    if (useOcrMode == OcrMode.AlwaysRemovingOld || useOcrMode == OcrMode.AlwaysPreservingOld)
+                        throw new ArgumentException("Always OCR is True but no OCR function available.");
+                    if (useOcrMode != OcrMode.Never)
+                    {
+                        Console.WriteLine(
+                            "Warning: OCR is enabled but no OCR function is available. OCR will be disabled.");
+                        useOcrMode = OcrMode.Never;
+                    }
+                }
+
+                OcrMode effectiveOcr = useOcrMode;
+
+                string docBaseName = Path.GetFileNameWithoutExtension(
+                    string.IsNullOrEmpty(mydoc?.Name) ? "document" : mydoc.Name);
+                if (string.IsNullOrEmpty(docBaseName))
+                    docBaseName = "document";
+
+                var document = new ParsedDocument
+                {
+                    Filename = !string.IsNullOrEmpty(mydoc?.Name) ? mydoc.Name : filename,
+                    PageCount = mydoc.PageCount,
+                    Toc = mydoc.GetToc().Cast<object>().ToList(),
+                    Metadata = mydoc.MetaData,
+                    FormFields = Utils.ExtractFormFieldsWithPages(mydoc),
+                    ImageDpi = imageDpi,
+                    ImageFormat = imageFormat,
+                    ImagePath = imagePath,
+                    UseOcr = effectiveOcr != OcrMode.Never,
+                    OcrMode = effectiveOcr,
+                    ForceText = forceText,
+                    EmbedImages = embedImages,
+                    WriteImages = writeImages,
+                    Pages = new List<PageLayout>()
+                };
+
+                List<int> pageIndices = pages == null
+                    ? Enumerable.Range(0, mydoc.PageCount).ToList()
+                    : LayoutParseHelpers.ResolvePageFilter(mydoc.PageCount, pages);
+
+                return ParseDocumentPages(
+                    mydoc,
+                    document,
+                    pageIndices,
+                    ocrDpi,
+                    ocrLanguage,
+                    effectiveOcr,
+                    ocrImpl,
+                    showProgress,
+                    imagePath,
+                    imageFormat,
+                    imageDpi,
+                    forceText,
+                    writeImages,
+                    embedImages);
+            }
+            finally
+            {
+                imagePdfDoc?.Close();
+            }
+        }
+
+        private static ParsedDocument ParseDocumentPages(
+            Document mydoc,
+            ParsedDocument document,
+            List<int> pageIndices,
+            int ocrDpi,
+            string ocrLanguage,
+            OcrMode effectiveOcr,
+            OcrPageFunction ocrImpl,
+            bool showProgress,
+            string imagePath,
+            string imageFormat,
+            int imageDpi,
+            bool forceText,
+            bool writeImages,
+            bool embedImages)
+        {
             string docBaseName = Path.GetFileNameWithoutExtension(
-                string.IsNullOrEmpty(doc?.Name) ? "document" : doc.Name);
+                string.IsNullOrEmpty(mydoc?.Name) ? "document" : mydoc.Name);
             if (string.IsNullOrEmpty(docBaseName))
                 docBaseName = "document";
 
-            string docFileLabel = string.IsNullOrEmpty(doc?.Name)
-                ? (string.IsNullOrEmpty(filename) ? docBaseName : Path.GetFileName(filename))
-                : Path.GetFileName(doc.Name);
+            string docFileLabel = string.IsNullOrEmpty(mydoc?.Name)
+                ? docBaseName
+                : Path.GetFileName(mydoc.Name);
             if (string.IsNullOrEmpty(docFileLabel))
                 docFileLabel = docBaseName;
-
-            OcrMode effectiveOcr = OcrMode.Never;
-            if (forceOcr)
-                effectiveOcr = keepOcrText ? OcrMode.AlwaysPreservingOld : OcrMode.AlwaysRemovingOld;
-            else if (useOcr)
-                effectiveOcr = keepOcrText ? OcrMode.SelectPreservingOld : OcrMode.SelectRemovingOld;
-
-            OcrPageFunction ocrImpl = ocrFunction ?? LayoutParseHelpers.SelectOcrFunction();
-            if (effectiveOcr == OcrMode.AlwaysRemovingOld || effectiveOcr == OcrMode.AlwaysPreservingOld)
-            {
-                if (ocrImpl == null)
-                    throw new ArgumentException("Always OCR is requested but no OCR function is available.");
-            }
-            else if (effectiveOcr != OcrMode.Never && ocrImpl == null)
-                effectiveOcr = OcrMode.Never;
-
-            var document = new ParsedDocument
-            {
-                Filename = !string.IsNullOrEmpty(doc?.Name) ? doc.Name : filename,
-                PageCount = doc.PageCount,
-                Toc = doc.GetToc().Cast<object>().ToList(),
-                Metadata = doc.MetaData,
-                FormFields = Utils.ExtractFormFieldsWithPages(doc),
-                ImageDpi = imageDpi,
-                ImageFormat = imageFormat,
-                ImagePath = imagePath,
-                UseOcr = effectiveOcr != OcrMode.Never,
-                OcrMode = effectiveOcr,
-                ForceText = forceText,
-                EmbedImages = embedImages,
-                WriteImages = writeImages,
-                Pages = new List<PageLayout>()
-            };
-
-            List<int> pageIndices = pages == null
-                ? Enumerable.Range(0, doc.PageCount).ToList()
-                : LayoutParseHelpers.ResolvePageFilter(doc.PageCount, pages);
 
             var progressBar = showProgress && pageIndices.Count >= 5
                 ? ProgressBar.Create(pageIndices.Cast<object>().ToList())
@@ -1204,7 +1278,7 @@ namespace PDF4LLM.Helpers
                     if (progressBar != null && !progressBar.MoveNext())
                         break;
 
-                    Page page = doc.LoadPage(pno);
+                    Page page = mydoc.LoadPage(pno);
                     TextPage textPage = null;
                     try
                     {
@@ -1238,27 +1312,26 @@ namespace PDF4LLM.Helpers
                             && pageAnalysis.TryGetValue("needs_ocr", out object n) && n is bool nb && nb)
                             runOcr = true;
 
-                        if (runOcr)
+                        if (runOcr && ocrImpl != null)
                         {
                             textPage.Dispose();
                             textPage = null;
 
-                            if (ocrImpl != null)
-                            {
-                                //TextPage tp = page.GetTextPageOcr((int)TextFlags.TEXT_PRESERVE_SPANS, dpi: ocrDpi, language: ocrLanguage, full: true);
-                                textPage = ocrImpl(page, ocrDpi, ocrLanguage, keepOcrText: keepOcrTextRun);
-                            }
+                            ocrImpl(page, ocrDpi, ocrLanguage, keepOcrTextRun);
 
-                            if (textPage != null)
-                            {
-                                pageInfo = textPage.ExtractDict(null, false);
-                                blocks = pageInfo.Blocks ?? new List<Block>();
-                                pageFullOcred = true;
-                            }
+                            textPage = page.GetTextPage(
+                                clip: new Rect(float.NegativeInfinity, float.NegativeInfinity,
+                                    float.PositiveInfinity, float.PositiveInfinity),
+                                flags: Utils.FLAGS);
+                            pageInfo = textPage.ExtractDict(null, false);
+                            blocks = pageInfo.Blocks ?? new List<Block>();
+                            pageFullOcred = true;
                         }
 
                         List<Block> fulltext = blocks.Where(b => b.Type == 0).ToList();
 
+                        // Try to access layout information (page.get_layout).
+                        page.GetLayout();
                         List<LayoutInfoEntry> layout = LayoutParseHelpers.BuildLayoutInformation(page, blocks);
                         bool tablesExist = LayoutParseHelpers.TablesExist(layout);
 
@@ -1509,7 +1582,7 @@ namespace PDF4LLM.Helpers
                                     Y0 = boxRect.Y0,
                                     X1 = boxRect.X1,
                                     Y1 = boxRect.Y1,
-                                    BoxClass = bClass == "table-fallback" ? "table-fallback" : "text",
+                                    BoxClass = string.IsNullOrEmpty(bClass) ? "text" : bClass,
                                     TextLines = textLines
                                         .Select(l => new TextLineInfo { Bbox = l.Rect, Spans = l.Spans })
                                         .ToList()

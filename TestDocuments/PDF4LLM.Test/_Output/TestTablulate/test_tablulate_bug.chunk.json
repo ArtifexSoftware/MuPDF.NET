@@ -1,0 +1,206 @@
+[
+  {
+    "metadata": {
+      "format": "PDF 1.7",
+      "encryption": "",
+      "title": "",
+      "author": "",
+      "subject": "",
+      "keywords": "",
+      "creator": "",
+      "producer": "",
+      "creationDate": "",
+      "modDate": "",
+      "trapped": "",
+      "file_path": "D:\\Artifex\\MuPDF.NET\\PyMuPDF\\PyMuPDF-1.27.2.2\\TestDocuments\\PDF4LLM.Test\\TestTablulate\\test_tablulate_bug.pdf",
+      "page_count": 1,
+      "page_number": 1
+    },
+    "toc_items": [],
+    "page_boxes": [
+      {
+        "index": 0,
+        "class": "page-header",
+        "bbox": [
+          55,
+          33,
+          149,
+          43
+        ],
+        "pos": [
+          0,
+          0
+        ]
+      },
+      {
+        "index": 1,
+        "class": "section-header",
+        "bbox": [
+          68,
+          102,
+          276,
+          111
+        ],
+        "pos": [
+          0,
+          47
+        ]
+      },
+      {
+        "index": 2,
+        "class": "table",
+        "bbox": [
+          67,
+          124,
+          712,
+          303
+        ],
+        "pos": [
+          47,
+          4677
+        ]
+      },
+      {
+        "index": 3,
+        "class": "section-header",
+        "bbox": [
+          757,
+          119,
+          901,
+          131
+        ],
+        "pos": [
+          4677,
+          4707
+        ]
+      },
+      {
+        "index": 4,
+        "class": "picture",
+        "bbox": [
+          758,
+          152,
+          1021,
+          265
+        ],
+        "pos": [
+          4707,
+          5082
+        ]
+      },
+      {
+        "index": 5,
+        "class": "section-header",
+        "bbox": [
+          757,
+          303,
+          925,
+          315
+        ],
+        "pos": [
+          5082,
+          5116
+        ]
+      },
+      {
+        "index": 6,
+        "class": "picture",
+        "bbox": [
+          758,
+          336,
+          1021,
+          372
+        ],
+        "pos": [
+          5116,
+          5267
+        ]
+      },
+      {
+        "index": 7,
+        "class": "table",
+        "bbox": [
+          67,
+          389,
+          712,
+          437
+        ],
+        "pos": [
+          5267,
+          6850
+        ]
+      },
+      {
+        "index": 8,
+        "class": "text",
+        "bbox": [
+          68,
+          446,
+          715,
+          475
+        ],
+        "pos": [
+          6850,
+          7243
+        ]
+      },
+      {
+        "index": 9,
+        "class": "text",
+        "bbox": [
+          68,
+          476,
+          529,
+          485
+        ],
+        "pos": [
+          7243,
+          7388
+        ]
+      },
+      {
+        "index": 10,
+        "class": "text",
+        "bbox": [
+          68,
+          486,
+          407,
+          495
+        ],
+        "pos": [
+          7388,
+          7493
+        ]
+      },
+      {
+        "index": 11,
+        "class": "text",
+        "bbox": [
+          68,
+          496,
+          255,
+          505
+        ],
+        "pos": [
+          7493,
+          7552
+        ]
+      },
+      {
+        "index": 12,
+        "class": "page-footer",
+        "bbox": [
+          13,
+          566,
+          215,
+          574
+        ],
+        "pos": [
+          7552,
+          7552
+        ]
+      }
+    ],
+    "text": "Performance-based incentive scheme 2021–2025 \n\n==> picture [645 x 179] <==\n\n+----------------+-------------+-----------+--------------+-------------+----------------+--------+\n|                | 2023–2025*  |           |              |             |                |        |\n+----------------+-------------+-----------+--------------+-------------+----------------+--------+\n|                | Performance |           |              |             |                |        |\n+----------------+-------------+-----------+--------------+-------------+----------------+--------+\n|                | outcome     |           |              |             |                |        |\n+----------------+-------------+-----------+--------------+-------------+----------------+--------+\n| Targets        | Weighting   | Threshold | Maximum 100% | Achievement | (% of maximum) | Result |\n+----------------+-------------+-----------+--------------+-------------+----------------+--------+\n| Financial      | 90%         |           |              |             |                |        |\n| targets        |             |           |              |             |                |        |\n+----------------+-------------+-----------+--------------+-------------+----------------+--------+\n| Earnings per   | 60%         | 6.61      | 7.53         | 7.08        | 40%            | 24%    |\n| share (EPS)    |             |           |              |             |                |        |\n+----------------+-------------+-----------+--------------+-------------+----------------+--------+\n| Revenue from   | 10%         | N/A**     | N/A**        | N/A**       | 0%             | 0%     |\n| international  |             |           |              |             |                |        |\n| digital        |             |           |              |             |                |        |\n| services       |             |           |              |             |                |        |\n+----------------+-------------+-----------+--------------+-------------+----------------+--------+\n| IDS organic    | 10%         | 10%       | 20%          | 4.9%        | 0%             | 0%     |\n| revenue growth |             |           |              |             |                |        |\n+----------------+-------------+-----------+--------------+-------------+----------------+--------+\n| Other specific |             |           |              |             |                |        |\n| business       |             |           |              |             |                |        |\n| growth and     |             |           |              |             |                |        |\n| climate        |             |           |              |             |                |        |\n| targets        |             |           |              |             |                |        |\n+----------------+-------------+-----------+--------------+-------------+----------------+--------+\n| decided        | 6 targets   | 5 targets |              |             |                |        |\n| annually (e.g. |             |           |              |             |                |        |\n| active users   |             |           |              |             |                |        |\n| of selected    |             |           |              |             |                |        |\n| services,      |             |           |              |             |                |        |\n+----------------+-------------+-----------+--------------+-------------+----------------+--------+\n| sales of       | 10%         | 1 target  | achieved     | achieved    | 66.7%          | 6.67%  |\n| selected       |             | achieved  |              |             |                |        |\n| services)**    |             |           |              |             |                |        |\n+----------------+-------------+-----------+--------------+-------------+----------------+--------+\n| Non-financial  | 10%         |           |              |             |                |        |\n| target         |             |           |              |             |                |        |\n+----------------+-------------+-----------+--------------+-------------+----------------+--------+\n| Employee       | 10%         | 78        | 82           | 72          | 0%             | 0%     |\n| engagement     |             |           |              |             |                |        |\n| (ESG target)   |             |           |              |             |                |        |\n+----------------+-------------+-----------+--------------+-------------+----------------+--------+\n\nFinancial targets 2023–2025 \n\n==> picture [263 x 113] <==\n\n----- Start of picture text -----\n6.61 7.53\nEarnings per share  40%\n(EPS)  7.08\nN/A N/A\nRevenue from international\ndigital services  N/A 0%\n10% 20%\nIDS organic  0%\nrevenue growth  4.90%\n1 target achieved 6 targets achieved\nOther specific business growth targets  66.70%\n5 targets achieved\n0% 20% 40% 60% 80% 100%\n----- End of picture text -----\n\nNon-Financial targets 2023–2025 \n\n==> picture [263 x 36] <==\n\n----- Start of picture text -----\n78 82\nEmployee engagement 0%\n72\n0% 20% 40% 60% 80% 100%\n----- End of picture text -----\n\n==> picture [645 x 48] <==\n\n+-----------+-------------+--------------+------------+-------------+------------+------------+--------------+\n|           | Total value |              |            |             |            |            |              |\n|           | of          |              |            |             |            |            |              |\n+-----------+-------------+--------------+------------+-------------+------------+------------+--------------+\n| Financial | Maximum     | Total target | Dividend   | Amount paid | Date of    | Transfer   | performance- |\n| year in   | number      |              |            |             | share      | price, EUR | based        |\n| which     |             |              |            |             |            |            |              |\n+-----------+-------------+--------------+------------+-------------+------------+------------+--------------+\n| reward is | of shares   | realisation  | adjustment | as shares   | transfer   | incentive, |              |\n| paid      |             | (%)          | (%) ***    |             |            | EUR****    |              |\n+-----------+-------------+--------------+------------+-------------+------------+------------+--------------+\n| 2026      | 3,585       | 30.667%      | 17.89%     | 615         | 4 February | 40.3729    | 52,714       |\n|           |             |              |            |             | 2026       |            |              |\n+-----------+-------------+--------------+------------+-------------+------------+------------+--------------+\n\n*Compensation for former CEO Veli-Matti Mattila includes participation in performance-based incentive schemes covering the earnings periods 2023–2025 and 2024–2026. For the 2023–2025 period maximum number of shares that may be awarded is 14,945, amount paid as shares is 2,566 and total value of performance-based incentive EUR 219,693 (including shares, monetary portion and transfer tax). \n\n**Commercially sensitive information, the disclosure of which may be detrimental to the company. Annual set of targets with different weights. \n\n***The amount paid is adjusted to take into account dividends that are paid during the earning period. \n\n****Including shares, monetary portion and transfer tax. \n\n"
+  }
+]

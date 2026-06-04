@@ -206,6 +206,12 @@ namespace PDF4LLM.Helpers
         public List<PathInfo> ActualPaths { get; set; } = new List<PathInfo>();
         public List<Rect> VgClusters0 { get; set; } = new List<Rect>();
         public Dictionary<int, Rect> VgClusters { get; set; } = new Dictionary<int, Rect>();
+        public bool WriteImages { get; set; }
+        public bool EmbedImages { get; set; }
+        public string ImagePath { get; set; } = "";
+        public string ImageFormat { get; set; } = "png";
+        public int Dpi { get; set; } = 150;
+        public float ImageSizeLimit { get; set; } = 0.05f;
     }
 
     /// <summary>
@@ -885,8 +891,8 @@ namespace PDF4LLM.Helpers
                     if (forceText)
                     {
                         // Recursive invocation
-                        string imgTxt = WriteText(parms, imgRect, getHeaderId, forceText: true, 
-                            ignoreCode: false, extractWords: false);
+                        string imgTxt = WriteText(parms, imgRect, getHeaderId, forceText: true,
+                            ignoreCode: false, extractWords: false, tables: false, images: false);
                         if (!Utils.IsWhite(imgTxt)) // Was there text at all?
                         {
                             thisMd.Append(imgTxt);
@@ -912,8 +918,8 @@ namespace PDF4LLM.Helpers
                     
                     if (forceText)
                     {
-                        string imgTxt = WriteText(parms, parms.ImgRects[i], getHeaderId, forceText: true, 
-                            ignoreCode: false, extractWords: false);
+                        string imgTxt = WriteText(parms, parms.ImgRects[i], getHeaderId, forceText: true,
+                            ignoreCode: false, extractWords: false, tables: false, images: false);
                         if (!Utils.IsWhite(imgTxt))
                         {
                             thisMd.Append(imgTxt);
@@ -937,7 +943,8 @@ namespace PDF4LLM.Helpers
         /// objects.
         /// </summary>
         private static string WriteText(Parameters parms, Rect clip, 
-            Func<ExtendedSpan, Page, string> getHeaderId, bool forceText, bool ignoreCode, bool extractWords)
+            Func<ExtendedSpan, Page, string> getHeaderId, bool forceText, bool ignoreCode, bool extractWords,
+            bool tables = true, bool images = true)
         {
             if (clip == null)
                 clip = parms.Clip;
@@ -970,72 +977,79 @@ namespace PDF4LLM.Helpers
                     continue;
                 
                 // Pick up tables ABOVE this text block
-                var tabCandidates = parms.TabRects
-                    .Where(kvp => kvp.Value.Y1 <= lrect.Y0 && !parms.WrittenTables.Contains(kvp.Key) &&
-                        (lrect.X0 <= kvp.Value.X0 && kvp.Value.X0 < lrect.X1 ||
-                         lrect.X0 < kvp.Value.X1 && kvp.Value.X1 <= lrect.X1 ||
-                         kvp.Value.X0 <= lrect.X0 && lrect.X1 <= kvp.Value.X1))
-                    .ToList();
-                
-                foreach (var kvp in tabCandidates)
+                if (tables)
                 {
-                    int i = kvp.Key;
-                    outString.Append("\n" + parms.Tabs[i].ToMarkdown(clean: false) + "\n");
+                    var tabCandidates = parms.TabRects
+                        .Where(kvp => kvp.Value.Y1 <= lrect.Y0 && !parms.WrittenTables.Contains(kvp.Key) &&
+                            (lrect.X0 <= kvp.Value.X0 && kvp.Value.X0 < lrect.X1 ||
+                             lrect.X0 < kvp.Value.X1 && kvp.Value.X1 <= lrect.X1 ||
+                             kvp.Value.X0 <= lrect.X0 && lrect.X1 <= kvp.Value.X1))
+                        .ToList();
                     
-                    if (extractWords)
+                    foreach (var kvp in tabCandidates)
                     {
-                        var cells = new List<Rect>();
-                        if (parms.Tabs[i].header != null && parms.Tabs[i].header.cells != null)
+                        int i = kvp.Key;
+                        outString.Append("\n" + parms.Tabs[i].ToMarkdown(clean: false) + "\n");
+                        
+                        if (extractWords)
                         {
-                            foreach (var c in parms.Tabs[i].header.cells)
+                            var cells = new List<Rect>();
+                            if (parms.Tabs[i].header != null && parms.Tabs[i].header.cells != null)
                             {
-                                if (c != null)
-                                    cells.Add(c);
+                                foreach (var c in parms.Tabs[i].header.cells)
+                                {
+                                    if (c != null)
+                                        cells.Add(c);
+                                }
                             }
-                        }
-                        if (parms.Tabs[i].cells != null)
-                        {
-                            foreach (var c in parms.Tabs[i].cells)
+                            if (parms.Tabs[i].cells != null)
                             {
-                                if (c != null)
-                                    cells.Add(c);
+                                foreach (var c in parms.Tabs[i].cells)
+                                {
+                                    if (c != null)
+                                        cells.Add(c);
+                                }
                             }
+                            parms.LineRects.AddRange(cells.OrderBy(c => c.Y1).ThenBy(c => c.X0));
                         }
-                        parms.LineRects.AddRange(cells.OrderBy(c => c.Y1).ThenBy(c => c.X0));
+                        parms.WrittenTables.Add(i);
+                        prevHdrString = null;
                     }
-                    parms.WrittenTables.Add(i);
-                    prevHdrString = null;
                 }
                 
                 // Pick up images/graphics ABOVE this text block
-                for (int i = 0; i < parms.ImgRects.Count; i++)
+                if (images)
                 {
-                    if (parms.WrittenImages.Contains(i))
-                        continue;
-                    
-                    Rect r = parms.ImgRects[i];
-                    if (Math.Max(r.Y0, lrect.Y0) < Math.Min(r.Y1, lrect.Y1) &&
-                        (lrect.X0 <= r.X0 && r.X0 < lrect.X1 ||
-                         lrect.X0 < r.X1 && r.X1 <= lrect.X1 ||
-                         r.X0 <= lrect.X0 && lrect.X1 <= r.X1))
+                    for (int i = 0; i < parms.ImgRects.Count; i++)
                     {
-                        string pathname = SaveImage(parms.Page, r, i, false, false, "", "", "", 150, 0.05f);
-                        if (!string.IsNullOrEmpty(pathname))
-                        {
-                            outString.AppendFormat(GRAPHICS_TEXT, pathname);
-                        }
+                        if (parms.WrittenImages.Contains(i))
+                            continue;
                         
-                        if (forceText)
+                        Rect r = parms.ImgRects[i];
+                        if (Math.Max(r.Y0, lrect.Y0) < Math.Min(r.Y1, lrect.Y1) &&
+                            (lrect.X0 <= r.X0 && r.X0 < lrect.X1 ||
+                             lrect.X0 < r.X1 && r.X1 <= lrect.X1 ||
+                             r.X0 <= lrect.X0 && lrect.X1 <= r.X1))
                         {
-                            string imgTxt = WriteText(parms, r, getHeaderId, forceText: true, 
-                                ignoreCode: false, extractWords: false);
-                            if (!Utils.IsWhite(imgTxt))
+                            string pathname = SaveImage(parms.Page, r, i, parms.WriteImages, parms.EmbedImages,
+                                parms.ImagePath, parms.ImageFormat, parms.Filename, parms.Dpi, parms.ImageSizeLimit);
+                            if (!string.IsNullOrEmpty(pathname))
                             {
-                                outString.Append(imgTxt);
+                                outString.AppendFormat(GRAPHICS_TEXT, pathname);
                             }
+                            
+                            if (forceText)
+                            {
+                                string imgTxt = WriteText(parms, r, getHeaderId, forceText: true,
+                                    ignoreCode: false, extractWords: false, tables: false, images: false);
+                                if (!Utils.IsWhite(imgTxt))
+                                {
+                                    outString.Append(imgTxt);
+                                }
+                            }
+                            parms.WrittenImages.Add(i);
+                            prevHdrString = null;
                         }
-                        parms.WrittenImages.Add(i);
-                        prevHdrString = null;
                     }
                 }
                 
@@ -1253,7 +1267,13 @@ namespace PDF4LLM.Helpers
                 Graphics = new List<object>(),
                 Words = new List<object>(),
                 LineRects = new List<Rect>(),
-                AcceptInvisible = PageIsOcr(page) || ignoreAlpha
+                AcceptInvisible = PageIsOcr(page) || ignoreAlpha,
+                WriteImages = writeImages,
+                EmbedImages = embedImages,
+                ImagePath = imagePath ?? "",
+                ImageFormat = string.IsNullOrEmpty(imageFormat) ? "png" : imageFormat,
+                Dpi = dpi,
+                ImageSizeLimit = imageSizeLimit
             };
 
             // Determine background color
@@ -1404,7 +1424,7 @@ namespace PDF4LLM.Helpers
                     validImages = validImages.Take(30).ToList(); // Only accept the largest up to 30 images
 
                     // Remove images contained in larger images (run from back to front = small to large)
-                    for (int i = validImages.Count - 1; i >= 0; i--)
+                    for (int i = validImages.Count - 1; i > 0; i--)
                     {
                         Rect r = validImages[i].Bbox;
                         if (r.IsEmpty)
@@ -1566,8 +1586,8 @@ namespace PDF4LLM.Helpers
                 }
             }
 
-            // Process each text rectangle
-            StringBuilder mdOutput = new StringBuilder();
+            // Process each text rectangle (preserve any markdown already emitted, e.g. full-page image)
+            StringBuilder mdOutput = new StringBuilder(parms.MdString);
             foreach (Rect textRect in textRects)
             {
                 // Output tables above this text rectangle

@@ -155,6 +155,7 @@ namespace PDF4LLM.Test
             var doc = OpenTestDocument("columns.pdf");
             try
             {
+                PdfExtractor.SetUseLayout(true);
                 string json = PdfExtractor.ToJson(
                     doc,
                     showProgress: false,
@@ -175,6 +176,7 @@ namespace PDF4LLM.Test
         public void ToJson_WithPath_MatchesDocumentOverload()
         {
             string path = GetResourcePath("columns.pdf");
+            PdfExtractor.SetUseLayout(true);
             string fromPath = PdfExtractor.ToJson(path, showProgress: false, useOcr: false);
 
             var doc = OpenTestDocument("columns.pdf");
@@ -195,6 +197,7 @@ namespace PDF4LLM.Test
             var doc = OpenTestDocument("columns.pdf");
             try
             {
+                PdfExtractor.SetUseLayout(true);
                 string text = PdfExtractor.ToText(
                     doc,
                     header: false,
@@ -216,6 +219,7 @@ namespace PDF4LLM.Test
         public void ToText_WithPath_MatchesDocumentOverload()
         {
             string path = GetResourcePath("columns.pdf");
+            PdfExtractor.SetUseLayout(true);
             string fromPath = PdfExtractor.ToText(
                 path,
                 header: false,
@@ -246,6 +250,7 @@ namespace PDF4LLM.Test
             var doc = OpenTestDocument("columns.pdf");
             try
             {
+                PdfExtractor.SetUseLayout(true);
                 var parsedDoc = PdfExtractor.ParseDocument(
                     doc,
                     showProgress: false,
