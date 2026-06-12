@@ -85,8 +85,8 @@ namespace MuPDF.NET
         public List<Char> Chars { get; set; }
 
         /// <summary>
-        /// PyMuPDF <c>span["chars"]</c>: <c>List&lt;object&gt;</c> of
-        /// <c>(ucs, gid, origin, bbox)</c> tuples from the text-trace device.
+        /// Per-character tuples from the text-trace device (<c>span["chars"]</c> format).
+        /// Each entry is <c>(ucs, gid, origin, bbox)</c>.
         /// </summary>
         internal List<object> CharsPy { get; set; }
 

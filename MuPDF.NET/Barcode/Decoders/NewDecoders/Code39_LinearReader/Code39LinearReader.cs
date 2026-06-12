@@ -106,7 +106,6 @@ namespace BarcodeReader.Core.Code39
             minModulesPerBarcode = 26;
             maxModulesPerBarcode = int.MaxValue;
 
-            //
             //MidPoints = new float[] {0.5f, 0.3f, 0.7f};
             MinConfidence = 0.7f;
         }

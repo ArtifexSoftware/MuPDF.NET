@@ -23,7 +23,7 @@ namespace MuPDF.NET.Test
 
         private static string Out(string fileName) => _Path.ForOutput(fileName, TestClassName);
 
-        /// <summary>PyMuPDF <c>tests/test_font.py::test_font1</c>.</summary>
+        /// <summary>Regression test: font1 (PyMuPDF <c>tests/test_font.py::test_font1</c>).</summary>
         [Fact]
         public void test_font1()
         {
@@ -36,7 +36,6 @@ namespace MuPDF.NET.Test
             Assert.True(Math.Abs(cl.Sum() - tl) < Epsilon);
             for (int i = 0; i < cl.Length; i++)
             {
-                // assert cl[i] == font.glyph_advance(ord(text[i])) * 20
                 Assert.True(_Tools.IsClose(cl[i], font.GlyphAdvance(text[i]) * 20));
             }
 
@@ -53,7 +52,7 @@ namespace MuPDF.NET.Test
             Assert.Equal(bbox1, bbox2);
         }
 
-        /// <summary>PyMuPDF <c>tests/test_font.py::test_font2</c>.</summary>
+        /// <summary>Regression test: font2 (PyMuPDF <c>tests/test_font.py::test_font2</c>).</summary>
         [Fact]
         public void test_font2()
         {
@@ -62,7 +61,7 @@ namespace MuPDF.NET.Test
             Assert.Equal(font.TextLength(text), Utils.GetTextLength(text));
         }
 
-        /// <summary>PyMuPDF <c>tests/test_font.py::test_fontname</c>.</summary>
+        /// <summary>Regression test: fontname (PyMuPDF <c>tests/test_font.py::test_fontname</c>).</summary>
         [Fact]
         public void test_fontname()
         {
@@ -84,7 +83,7 @@ namespace MuPDF.NET.Test
             doc.Save(Out("test_fontname.pdf"));
         }
 
-        /// <summary>PyMuPDF <c>tests/test_font.py::test_2608</c>.</summary>
+        /// <summary>Regression test: 2608 (PyMuPDF <c>tests/test_font.py::test_2608</c>).</summary>
         [Fact]
         public void test_2608()
         {
@@ -105,7 +104,7 @@ namespace MuPDF.NET.Test
             doc.Save(Out("test_2608.pdf"));
         }
 
-        /// <summary>PyMuPDF <c>tests/test_font.py::test_mupdf_subset_fonts2</c>.</summary>
+        /// <summary>Regression test: mupdf subset fonts2 (PyMuPDF <c>tests/test_font.py::test_mupdf_subset_fonts2</c>).</summary>
         [Fact]
         public void test_mupdf_subset_fonts2()
         {
@@ -114,11 +113,11 @@ namespace MuPDF.NET.Test
             doc.Save(Out("test_mupdf_subset_fonts2.pdf"));
         }
 
-        /// <summary>PyMuPDF <c>tests/test_font.py::test_3677</c>.</summary>
+        /// <summary>Regression test: 3677 (PyMuPDF <c>tests/test_font.py::test_3677</c>).</summary>
         [Fact]
         public void test_3677()
         {
-            Helpers.SubsetFontnames = true; // pymupdf.TOOLS.set_subset_fontnames(True)
+            Helpers.SubsetFontnames = true;
             try
             {
                 var fontNamesExpected = new List<string>
@@ -129,7 +128,7 @@ namespace MuPDF.NET.Test
                     "BCDHEE+Calibri-Light",
                 };
                 var fontNames = new List<string>(); // font_names = list()
-                using (var document = new Document(Doc("test_3677.pdf"))) // with pymupdf.open(path) as document:
+                using (var document = new Document(Doc("test_3677.pdf")))
                 {
                     foreach (Page page in document) // for page in document:
                     {
@@ -157,11 +156,11 @@ namespace MuPDF.NET.Test
             }
             finally
             {
-                Helpers.SubsetFontnames = false; // pymupdf.TOOLS.set_subset_fontnames(False)
+                Helpers.SubsetFontnames = false;
             }
         }
 
-        /// <summary>PyMuPDF <c>tests/test_font.py::test_3933</c>.</summary>
+        /// <summary>Regression test: 3933 (PyMuPDF <c>tests/test_font.py::test_3933</c>).</summary>
         [Fact]
         public void test_3933()
         {
@@ -189,7 +188,7 @@ namespace MuPDF.NET.Test
             }
         }
 
-        /// <summary>PyMuPDF <c>tests/test_font.py::test_3780</c> (smoke).</summary>
+        /// <summary>smoke (PyMuPDF <c>tests/test_font.py::test_3780</c>).</summary>
         [Fact]
         public void test_3780()
         {
@@ -213,7 +212,7 @@ namespace MuPDF.NET.Test
             }
         }
 
-        /// <summary>PyMuPDF <c>tests/test.py::test_3887</c> (same as <c>tests/test_font.py::test_3887</c>).</summary>
+        /// <summary>same as <c>tests/test_font.py::test_3887</c> (PyMuPDF <c>tests/test.py::test_3887</c>).</summary>
         [Fact]
         public void test_3887()
         {
@@ -240,7 +239,6 @@ namespace MuPDF.NET.Test
                         .ToList();
                     // output = [c["c"] for c in chars]
                     var output = chars.Select(c => (string)c["c"]).ToList();
-                    // assert set(output)==set(text)
                     Assert.Equal(new HashSet<char>(text), new HashSet<char>(string.Concat(output)));
 
                     using Pixmap pixmap = page.GetPixmap();

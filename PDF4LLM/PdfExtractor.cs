@@ -8,7 +8,7 @@ using PDF4LLM.Llama;
 namespace PDF4LLM
 {
     /// <summary>
-    /// Main entry point for PDF4LLM (to_markdown / to_json / to_text / parse_document / get_key_values / use_layout).
+    /// Main entry point for PDF4LLM (to_markdown / to_json / to_text / parse_document / get_key_values / use_layout / load_ai).
     /// </summary>
     public static partial class PdfExtractor
     {
@@ -23,7 +23,7 @@ namespace PDF4LLM
             if (mupdfTuple != req)
             {
                 throw new InvalidOperationException(
-                    $"Requires PyMuPDF VERSION={VersionInfo.Version} VERSION_TUPLE={req}, but you have pymupdf.__version__={MuPDF.NET.Utils.VersionBind}");
+                    $"Requires MuPDF {req} (PDF4LLM {VersionInfo.Version}), but MuPDF.NET reports {MuPDF.NET.Utils.VersionBind}");
             }
 
             // Layout is opt-in: register a provider via SetLayoutProvider, then SetUseLayout(true).

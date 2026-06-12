@@ -9,7 +9,7 @@ namespace MuPDF.NET
     internal static class MupdfFonts
     {
         /// <summary>
-        /// One pymupdf-fonts entry: bold/italic flags and byte loader.
+        /// One MuPDF built-in font entry: bold/italic flags and byte loader.
         /// </summary>
         internal sealed class FontDescriptor
         {

@@ -11,7 +11,7 @@ namespace MuPDF.NET.Test
     /// </summary>
     public class TestBarcode
     {
-        /// <summary>PyMuPDF <c>tests/test_barcode.py::test_barcode</c>.</summary>
+        /// <summary>Regression test: barcode (PyMuPDF <c>tests/test_barcode.py::test_barcode</c>).</summary>
         [Fact]
         public void test_barcode()
         {
@@ -46,7 +46,6 @@ namespace MuPDF.NET.Test
                 {
                     int xref = images[i].xref;
                     using var pixmap = new Pixmap(document, xref);
-                    // Python: pymupdf.mupdf.fz_decode_barcode_from_pixmap2(pixmap.this, 0, outparams)
                     string hrt;
                     IntPtr pType = Marshal.AllocHGlobal(sizeof(int));
                     try

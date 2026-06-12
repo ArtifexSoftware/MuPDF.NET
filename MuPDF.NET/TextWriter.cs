@@ -241,7 +241,6 @@ namespace MuPDF.NET
 
             void OutputJustify(Point start, string line)
             {
-                // """Justified output of a line."""
                 // words = [w for w in line.split(" ") if w != ""]
                 string[] words = line.Split(' ').Where(w => w != "").ToArray();
                 int nwords = words.Length;
@@ -270,7 +269,6 @@ namespace MuPDF.NET
 
             (List<string> nwords, List<float> wordLengths) NormWords(float width, List<string> words)
             {
-                // """Cut any word in pieces no longer than 'width'."""
                 var nwordsOut = new List<string>();
                 var wordLengthsOut = new List<float>();
                 foreach (string w in words)
@@ -680,7 +678,7 @@ namespace MuPDF.NET
             public string Fontfile { get; }
         }
 
-        /// <summary>PyMuPDF <c>repair_mono_font</c> (<c>src/__init__.py</c>).</summary>
+        /// <summary><c>src/__init__.py</c>.</summary>
         internal static void RepairMonoFont(Page page, Font font)
         {
             if (!font.IsMonospaced)  // font not flagged as monospaced

@@ -32,6 +32,6 @@ namespace PDF4LLM.Helpers
         [JsonProperty("dir")]
         public Point Dir { get; set; }
         [JsonProperty("chars")]
-        public List<Char> Chars { get; set; }
+        public List<MuPDF.NET.Char> Chars { get; set; }
     }
 }

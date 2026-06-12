@@ -48,7 +48,7 @@ namespace MuPDF.NET.Test
             return string.Join("", lines, 0, end);
         }
 
-        /// <summary>PyMuPDF <c>tests/test_drawings.py::test_drawings1</c>.</summary>
+        /// <summary>Regression test: drawings1 (PyMuPDF <c>tests/test_drawings.py::test_drawings1</c>).</summary>
         [Fact]
         public void test_drawings1()
         {
@@ -57,7 +57,6 @@ namespace MuPDF.NET.Test
             string symbols_text = File.ReadAllText(Doc("symbols.txt")); // expected result
             using var doc = new Document(Doc("symbol-list.pdf"));
             var page = doc[0];
-            // Python: paths = page.GetCdrawings()
             var paths = page.GetCdrawings();
             // out = io.StringIO()  # pprint output goes here
             // pprint.pprint(paths, stream=out)
@@ -66,7 +65,7 @@ namespace MuPDF.NET.Test
             doc.Save(Out("test_drawings1.pdf"));
         }
 
-        /// <summary>PyMuPDF <c>tests/test_drawings.py::test_drawings2</c>.</summary>
+        /// <summary>Regression test: drawings2 (PyMuPDF <c>tests/test_drawings.py::test_drawings2</c>).</summary>
         [Fact]
         public void test_drawings2()
         {
@@ -115,7 +114,6 @@ namespace MuPDF.NET.Test
                 bboxes.Add(b.bbox);
             for (int i = 0; i < rects.Count; i++)
             {
-                // assert pymupdf.Rect(r) in pymupdf.Rect(bboxes[i])
                 Assert.True(bboxes[i].Contains(rects[i]));
             }
             doc.Save(Out("test_drawings2.pdf"));
@@ -127,7 +125,7 @@ namespace MuPDF.NET.Test
         /// * the items list of "a" must be one shorter but otherwise equal the "b" items
         ///
         /// Returns last item of b["items"].
-        /// PyMuPDF: <c>tests/test_drawings.py::_dict_difference</c>.
+        /// <summary>Regression test:  dict difference (PyMuPDF <c>tests/test_drawings.py::_dict_difference</c>).</summary>
         /// </summary>
         private static object[] DictDifference(Dictionary<string, object> a, Dictionary<string, object> b)
         {
@@ -152,7 +150,7 @@ namespace MuPDF.NET.Test
             return rc!;
         }
 
-        /// <summary>PyMuPDF <c>tests/test_drawings.py::test_drawings3</c>.</summary>
+        /// <summary>Regression test: drawings3 (PyMuPDF <c>tests/test_drawings.py::test_drawings3</c>).</summary>
         [Fact]
         public void test_drawings3()
         {
@@ -206,7 +204,7 @@ namespace MuPDF.NET.Test
         ///
         /// Then extract the page's vector graphics and confirm that only one path
         /// was generated which has all the right properties.
-        /// PyMuPDF: <c>tests/test_drawings.py::test_2365</c>.
+        /// <summary>Regression test: 2365 (PyMuPDF <c>tests/test_drawings.py::test_2365</c>).</summary>
         /// </summary>
         [Fact]
         public void test_2365()
@@ -240,7 +238,7 @@ namespace MuPDF.NET.Test
         /// a clip does not refer back the object(s) that have been clipped.
         /// In order to correctly compute the "scissor" rectangle, we now keep track
         /// of the clipped object type.
-        /// PyMuPDF: <c>tests/test_drawings.py::test_2462</c>.
+        /// <summary>Regression test: 2462 (PyMuPDF <c>tests/test_drawings.py::test_2462</c>).</summary>
         /// </summary>
         [Fact]
         public void test_2462()
@@ -255,7 +253,7 @@ namespace MuPDF.NET.Test
 
         /// <summary>
         /// Ensure that incomplete clip paths will be properly ignored.
-        /// PyMuPDF: <c>tests/test_drawings.py::test_2556</c>.
+        /// <summary>Regression test: 2556 (PyMuPDF <c>tests/test_drawings.py::test_2556</c>).</summary>
         /// </summary>
         [Fact]
         public void test_2556()
@@ -289,7 +287,7 @@ namespace MuPDF.NET.Test
         ///
         /// point p5 must equal p0, and p11 must equal p6 (for each of the
         /// two paths in the example).
-        /// PyMuPDF: <c>tests/test_drawings.py::test_3207</c>.
+        /// <summary>Regression test: 3207 (PyMuPDF <c>tests/test_drawings.py::test_3207</c>).</summary>
         /// </summary>
         [Fact]
         public void test_3207()
@@ -330,7 +328,7 @@ namespace MuPDF.NET.Test
                 Assert.Equal(15.0, Convert.ToDouble(p["width"], CultureInfo.InvariantCulture));
         }
 
-        /// <summary>PyMuPDF <c>tests/test_drawings.py::test_4954_1</c> — lineJoin must not be scaled by pathfactor.</summary>
+        /// <summary>lineJoin must not be scaled by pathfactor (PyMuPDF <c>tests/test_drawings.py::test_4954_1</c>).</summary>
         [Fact]
         public void test_4954_1()
         {
@@ -354,7 +352,7 @@ namespace MuPDF.NET.Test
             }
         }
 
-        /// <summary>PyMuPDF <c>tests/test_drawings.py::test_4954_2</c> — stroke width uses determinant pathfactor.</summary>
+        /// <summary>stroke width uses determinant pathfactor (PyMuPDF <c>tests/test_drawings.py::test_4954_2</c>).</summary>
         [Fact]
         public void test_4954_2()
         {

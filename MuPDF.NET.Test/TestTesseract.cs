@@ -16,9 +16,6 @@ namespace MuPDF.NET.Test
 
         private static string Out(string fileName) => _Path.ForOutput(fileName, TestClassName);
 
-        private static bool IsPyodide() =>
-            Environment.GetEnvironmentVariable("PYODIDE_ROOT") != null;
-
         private static void AssertMupdfException(
             Exception e,
             string expectedMessage,
@@ -37,26 +34,19 @@ namespace MuPDF.NET.Test
                 $"Unexpected exception type: {e.GetType().FullName}, expected {expectedTypeName}");
         }
 
-        /// <summary>
-        /// PyMuPDF <c>tests/test_tesseract.py::test_tesseract</c>.
-        /// </summary>
+        /// <summary>Regression test: tesseract (PyMuPDF <c>tests/test_tesseract.py::test_tesseract</c>).</summary>
+
         [Fact]
         public void test_tesseract()
         {
-            // '''
             // This checks that MuPDF has been built with tesseract support.
-            //
             // By default we don't supply a valid `tessdata` directory, and just assert
             // that attempting to use Tesseract raises the expected error (which checks
             // that MuPDF is built with Tesseract support).
-            //
             // But if TESSDATA_PREFIX is set in the environment, we assert that
             // FzPage.get_textpage_ocr() succeeds.
-            // '''
-            // path = os.path.abspath( f'{__file__}/../resources/2.pdf')
             string path = Doc("2.pdf");
 
-            // doc = pymupdf.open( path)
             using var doc = new Document(path);
             // page = doc[5]
             var page = doc[5];
@@ -64,30 +54,18 @@ namespace MuPDF.NET.Test
             const string tail = "Tesseract language initialisation failed";
             string eExpected;
             string? eExpectedTypeName;
-            // if os.environ.get('PYODIDE_ROOT'):
-            if (IsPyodide())
+
+            // e_expected = f'code=3: {tail}'
+            eExpected = $"code=3: {tail}";
+            // if platform.system() == 'OpenBSD':
+            if (RuntimeInformation.OSDescription.Contains("OpenBSD", StringComparison.OrdinalIgnoreCase))
             {
-                // e_expected = 'code=6: No OCR support in this build'
-                eExpected = "code=6: No OCR support in this build";
-                // e_expected_type = pymupdf.mupdf.FzErrorUnsupported
-                eExpectedTypeName = nameof(FzErrorUnsupported);
+                eExpectedTypeName = nameof(FzErrorBase);
+                Console.WriteLine("OpenBSD workaround - expecting FzErrorBase, not FzErrorLibrary.");
             }
             else
             {
-                // e_expected = f'code=3: {tail}'
-                eExpected = $"code=3: {tail}";
-                // if platform.system() == 'OpenBSD':
-                if (RuntimeInformation.OSDescription.Contains("OpenBSD", StringComparison.OrdinalIgnoreCase))
-                {
-                    // e_expected_type = pymupdf.mupdf.FzErrorBase
-                    eExpectedTypeName = nameof(FzErrorBase);
-                    Console.WriteLine("OpenBSD workaround - expecting FzErrorBase, not FzErrorLibrary.");
-                }
-                else
-                {
-                    // e_expected_type = pymupdf.mupdf.FzErrorLibrary
-                    eExpectedTypeName = nameof(FzErrorLibrary);
-                }
+                eExpectedTypeName = nameof(FzErrorLibrary);
             }
 
             // tessdata_prefix = os.environ.get('TESSDATA_PREFIX')
@@ -96,7 +74,6 @@ namespace MuPDF.NET.Test
             {
                 // tp = page.get_textpage_ocr(full=True)
                 var tp = page.get_textpage_ocr(full: true);
-                // print(f'test_tesseract(): page.get_textpage_ocr() succeeded')
                 Console.WriteLine("test_tesseract(): page.get_textpage_ocr() succeeded");
             }
             else
@@ -110,7 +87,6 @@ namespace MuPDF.NET.Test
                 catch (Exception e)
                 {
                     caught = e;
-                    // print(f'Received exception as expected.')
                     Console.WriteLine("Received exception as expected.");
                     Console.WriteLine($"type={e.GetType()}");
                     Console.WriteLine($"e_text={e.Message}");
@@ -123,24 +99,15 @@ namespace MuPDF.NET.Test
             }
         }
 
-        /// <summary>
-        /// PyMuPDF <c>tests/test_tesseract.py::test_3842b</c>.
-        /// </summary>
+        /// <summary>Regression test: 3842b (PyMuPDF <c>tests/test_tesseract.py::test_3842b</c>).</summary>
+
         [Fact]
         public void test_3842b()
         {
             // Check Tesseract failure when given a bogus languages.
-            // if os.environ.get('PYODIDE_ROOT'):
-            if (IsPyodide())
-            {
-                Console.WriteLine("test_3842b(): not running on Pyodide - cannot run child processes.");
-                return;
-            }
 
-            // path = os.path.normpath(f'{__file__}/../../tests/resources/test_3842.pdf')
             string path = Doc("test_3842.pdf");
 
-            // with pymupdf.open(path) as document:
             using var document = new Document(path);
             // page = document[6]
             var page = document[6];
@@ -152,7 +119,6 @@ namespace MuPDF.NET.Test
             }
             catch (Exception e)
             {
-                // print(f'test_3842b(): received exception: {e}')
                 Console.WriteLine($"test_3842b(): received exception: {e}");
                 string msg = e.Message;
                 // if 'No tessdata specified and Tesseract is not installed' in str(e):
@@ -163,28 +129,17 @@ namespace MuPDF.NET.Test
             }
         }
 
-        /// <summary>
-        /// PyMuPDF <c>tests/test_tesseract.py::test_3842</c>.
-        /// </summary>
+        /// <summary>Regression test: 3842 (PyMuPDF <c>tests/test_tesseract.py::test_3842</c>).</summary>
+
         [Fact]
         public void test_3842()
         {
-            // if os.environ.get('PYODIDE_ROOT'):
-            if (IsPyodide())
-            {
-                Console.WriteLine("test_3842(): not running on Pyodide - cannot run child processes.");
-                return;
-            }
-
-            // path = os.path.normpath(f'{__file__}/../../tests/resources/test_3842.pdf')
             string path = Doc("test_3842.pdf");
-            // path_text = os.path.normpath(f'{__file__}/../../tests/resources/test_3842_partial.txt')
             string pathText = Doc("test_3842_partial.txt");
 
             // text_expected = pathlib.Path(path_text).read_text()
             string textExpected = File.ReadAllText(pathText);
 
-            // with pymupdf.open(path) as document:
             using var document = new Document(path);
             // page = document[6]
             var page = document[6];
@@ -198,18 +153,15 @@ namespace MuPDF.NET.Test
                 Console.WriteLine(text);
                 Console.WriteLine($"text:\n{text}");
                 Console.WriteLine($"text_expected:\n{textExpected}");
-                // assert text == text_expected
                 Assert.Contains("Table of Contents", text);
             }
             catch (Exception e)
             {
-                // print(f'test_3842(): received exception: {e}', flush=1)
                 Console.WriteLine($"test_3842(): received exception: {e}");
                 string msg = e.Message;
                 // if 'No tessdata specified and Tesseract is not installed' in str(e):
                 if (msg.Contains("No tessdata specified and Tesseract is not installed"))
                     return;
-                // elif 'Tesseract language initialisation failed' in str(e):
                 if (msg.Contains("Tesseract language initialisation failed"))
                     return;
                 // else: assert 0, f'Unexpected exception text: {str(e)=}'

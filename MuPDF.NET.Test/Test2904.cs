@@ -17,7 +17,6 @@ namespace MuPDF.NET.Test
         public void test_2904()
         {
             Console.WriteLine($"test_2904(): mupdf_version_tuple={_Version.mupdf_version_tuple()}.");
-            // path = os.path.abspath(f'{__file__}/../../tests/resources/test_2904.pdf')
             using var pdf_docs = new Document(testDoc);
             int page_id = 0;
             foreach (Page page in pdf_docs)
@@ -29,7 +28,6 @@ namespace MuPDF.NET.Test
                     object img = imgEntry;
                     if (page_id == 5)
                     {
-                        //print(f'{page_id=} {i=} {type(img)=} {img=}')
                         Console.Out.Flush();
                     }
                     Exception? e = null;

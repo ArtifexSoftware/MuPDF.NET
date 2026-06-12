@@ -17,12 +17,9 @@ namespace MuPDF.NET.Test
         {
             // This test is for a bug in classic 'segfault trying to call clean_contents
             // on certain pdfs with python 3.12', which we are not going to fix.
-            // if not hasattr(pymupdf, 'mupdf'):
-            //     print('test_2907(): not running on classic because known to fail.')
             //     return;
-            // path = os.path.abspath(f'{__file__}/../../tests/resources/test_2907.pdf')
             byte[] pdf_file = File.ReadAllBytes(testDocPath);
-            using var fitz_document = new Document(pdf_file, filetype: "application/pdf");
+            using var fitz_document = new Document(pdf_file, fileType: "application/pdf");
 
             var pdf_pages = fitz_document.pages().ToList();
             Page page = Assert.Single(pdf_pages);

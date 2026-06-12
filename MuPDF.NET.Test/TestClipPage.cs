@@ -18,7 +18,7 @@ namespace MuPDF.NET.Test
         /// <summary>
         /// Clip a <see cref="Page"/> to a rectangle and confirm that no text has survived
         /// that is completely outside the rectangle.
-        /// PyMuPDF: <c>tests/test_clip_page.py::test_clip</c>.
+        /// <summary>Regression test: clip (PyMuPDF <c>tests/test_clip_page.py::test_clip</c>).</summary>
         /// </summary>
         [Fact]
         public void test_clip()
@@ -67,7 +67,7 @@ namespace MuPDF.NET.Test
             doc.Save(outDocPath);
         }
 
-        /// <summary>PyMuPDF <c>tests/test_4942.py::test_4942</c> — clip page and read links without error.</summary>
+        /// <summary>clip page and read links without error (PyMuPDF <c>tests/test_4942.py::test_4942</c>).</summary>
         [Fact]
         public void test_4942()
         {

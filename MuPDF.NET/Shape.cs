@@ -708,7 +708,6 @@ namespace MuPDF.NET
         public void Commit(bool overlay = true)
         {
             // PyMuPDF Shape.commit:
-            //     """Update the page's /Contents object with Shape data.
             //     The argument controls whether data appear in foreground (default)
             //     or background."""
             //     CheckParent(self.page)  # doc may have died meanwhile
@@ -1078,14 +1077,11 @@ namespace MuPDF.NET
             int setSimple = 0,
             float strokeOpacity = 1)
         {
-            // """Insert text into a given rectangle.
-            //
             // Args:
             //     rect -- the textbox to fill
             //     buffer -- text to be inserted
             //     fontname -- a Base-14 font, font name or '/name'
             //     fontfile -- name of a font file
-            //     fontsize -- font size
             //     lineheight -- overwrite the font property
             //     color -- RGB stroke color triple
             //     fill -- RGB fill color triple
@@ -1097,7 +1093,6 @@ namespace MuPDF.NET
             //     morph -- morph box with a matrix and a fixpoint
             // Returns:
             //     unused or deficit rectangle area (float)
-            // """
             rect = new Rect(rect);
             if (rect.IsEmpty || rect.IsInfinite)
                 throw new ValueErrorException("text box must be finite and not empty");
@@ -1215,7 +1210,6 @@ namespace MuPDF.NET
             // ----------------------------------------------------------------------
             float Pixlen(string x)
             {
-                // """Calculate pixel length of x."""
                 if (ordering < 0)
                 {
                     float sum = 0;

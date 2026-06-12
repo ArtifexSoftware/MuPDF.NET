@@ -1,15 +1,5 @@
-// """
 // Extract page text in various formats.
 // No checks performed - just contribute to code coverage.
-// """
-// import os
-// import platform
-// import sys
-// import textwrap
-//
-// import pymupdf
-//
-// import gentle_compare
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -76,7 +66,6 @@ namespace MuPDF.NET.Test
         public void test_extract1()
         {
             // filename = os.path.join(scriptdir, "resources", "symbol-list.pdf")
-            // doc = pymupdf.open(filename)
             using var doc = new Document(Doc("symbol-list.pdf"));
             // page = doc[0]
             var page = doc[0];
@@ -100,7 +89,6 @@ namespace MuPDF.NET.Test
             _ = page.GetText("xhtml");
             // text = page.GetText("xml")
             _ = page.GetText("xml");
-            // rects = pymupdf.get_highlight_selection(page, start=page.Rect.tl, stop=page.Rect.br)
             _ = Helpers.GetHighlightSelection(page, page.Rect.TopLeft, page.Rect.BottomRight);
             // ConversionHeader/ConversionTrailer are PyMuPDF helpers not ported to MuPDF.NET yet.
         }
@@ -109,7 +97,6 @@ namespace MuPDF.NET.Test
         public void test_extract4()
         {
             // Rebased-specific.
-            // document = pymupdf.open(path)
             using var document = new Document(Doc("2.pdf"));
             // page = document[4]
             var page = document[4];
@@ -121,7 +108,6 @@ namespace MuPDF.NET.Test
             Console.WriteLine($"Have written to: {outStext}");
 
             // Native FzDocumentWriter HTML export (PyMuPDF rebased path).
-            // Python: FzDocumentWriter(path, 'html', OutputType_DOCX) → path overload (PathType_DOCX).
             string outExtract = Out("test_extract4_1.html");
             using (var writer = new mupdf.FzDocumentWriter(
                 outExtract,
@@ -163,7 +149,6 @@ namespace MuPDF.NET.Test
             _ = GetTextWithSpaceGuess(0.3f);
             _ = GetTextWithSpaceGuess(0.9f);
             _ = GetTextWithSpaceGuess(5.9f);
-            // assert text1 == text0
             Assert.Equal(text0, text1);
         }
 
@@ -225,13 +210,11 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_3027()
         {
-            // path = f'{pymupdfdir}/tests/resources/2.pdf'
             using var doc = new Document(Doc("2.pdf"));
             // page = doc[0]
             var page = doc[0];
             // textpage = page.GetTextPage()
             var textpage = page.GetTextPage();
-            // pymupdf.utils.GetText(page=page, option="dict", textpage=textpage)["blocks"]
             var dict = (Dictionary<string, object>)Utils.GetText(page, "dict", textpage: textpage);
             Assert.True(dict.ContainsKey("blocks"));
         }
@@ -309,7 +292,6 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_document_text()
         {
-            // pymupdf.GetText(path, method='mp'|'fork') is not ported; use single-threaded extraction.
             string path = Doc("mupdf_explored.pdf");
 
             static long Llen(IReadOnlyList<object> texts)

@@ -125,7 +125,6 @@ namespace BarcodeReader.Core.Common
                     GotoNextBar(pixels, ref iPixel);
                     isBlack = !isBlack;
                 }
-                //
                 var iStop = iPixel;
                 //find best match
                 var iTable = _tableIndexes[iSymbol];

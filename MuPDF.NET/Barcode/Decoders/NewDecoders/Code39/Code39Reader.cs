@@ -171,10 +171,8 @@ namespace BarcodeReader.Core.Code39
                 return result;
             }
 
-            //
             //scan of region is failed :(
             //will use BarSymbolReaderLooseProjection...
-            //
 
             if (!anyFound) return null;
 

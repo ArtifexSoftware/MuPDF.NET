@@ -37,7 +37,7 @@ namespace Demo
             var reader = new PDFMarkdownReader();
             try
             {
-                reader.LoadData(Path.Combine(LlmRepositoryTestsDirectory(), "fake", "path", "nope.pdf"));
+                reader.LoadData(DemoPaths.Input("Llm/__missing_fixture__.pdf"));
                 Console.WriteLine("Unexpected: LoadData should throw for missing file.");
             }
             catch (FileNotFoundException ex)

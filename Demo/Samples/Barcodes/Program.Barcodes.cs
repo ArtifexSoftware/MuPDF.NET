@@ -94,7 +94,7 @@ namespace Demo
                 BarcodePoint[] points = barcode.ResultPoints;
                 Console.WriteLine($"Page {i++} - Type: {barcode.BarcodeFormat} - Value: {barcode.Text} - Rect: [{points[0]},{points[1]}]");
             }
-            /*
+            /* Alternate: decode per image block bbox instead of the full page.
             List<Block> blocks = page.GetImageInfo();
 
             foreach (Block block in blocks)
@@ -115,7 +115,7 @@ namespace Demo
                 }
             }
             */
-            /*
+            /* Alternate: extract each embedded image and decode from a temp PNG file.
             List<Entry> imlist = page.GetImages();
             foreach (Entry im in imlist) 
             {
@@ -162,7 +162,7 @@ namespace Demo
             Document doc = new Document(testFilePath);
 
             Page page = doc[0];
-            //Rect rect = new Rect(290, 590, 420, 660);
+            // Optional clip: new Rect(290, 590, 420, 660)
             List<Barcode> barcodes = page.ReadBarcodes();
 
             foreach (Barcode barcode in barcodes)
@@ -177,7 +177,7 @@ namespace Demo
         {
             Console.WriteLine("\n=== TestReadQrCode =======================");
             int i = 0;
-            /*
+            /* Alternate: decode directly from a PNG on disk (auto-rotate).
             Console.WriteLine("=== Read from image file =====================");
             string testFilePath1 = Path.GetFullPath("../../../../TestDocuments/Demo/Barcodes/2.png");
 
@@ -190,8 +190,7 @@ namespace Demo
                 Console.WriteLine($"Page {i++} - Type: {barcode.BarcodeFormat} - Value: {barcode.Text} - Rect: [{points[0]},{points[1]}]");
             }
             */
-            ///*
-            Console.WriteLine("--- Read from pdf file ----------");
+            Console.WriteLine("--- Read from pdf file (render page, then decode PNG) ----------");
 
             string testImagePath = @"test.png";
             string testFilePath = Path.GetFullPath("../../../../TestDocuments/Demo/Barcodes/input.pdf");
@@ -200,17 +199,17 @@ namespace Demo
             Page page = doc[0];
             page.RemoveRotation(); // remove rotation to read barcodes correctly
 
-            // Apply 2x scale (both X and Y)
+            // Upscale 3× before rendering to improve barcode detection
             var matrix = new Matrix(3.0f, 3.0f);
 
-            // Render the page using the scaled matrix
+            // Render page to a pixmap, then decode barcodes from the saved PNG
             var pixmap = page.GetPixmap(matrix);
 
             pixmap.GammaWith(3.2f); // apply gamma correction to improve barcode detection
 
             pixmap.Save(testImagePath);
 
-            /*
+            /* Alternate: decode from a page clip without rendering to PNG.
             Rect rect = new Rect(400, 700, page.Rect.X1, page.Rect.Y1);
             List<Barcode> barcodes = page.ReadBarcodes(rect);
 
@@ -232,7 +231,6 @@ namespace Demo
                 BarcodePoint[] points = barcode.ResultPoints;
                 Console.WriteLine($"Page {i++} - Type: {barcode.BarcodeFormat} - Value: {barcode.Text} - Rect: [{points[0]},{points[1]}]");
             }
-            //*/
         }
 
         internal static void TestWriteBarcode(string[] args)

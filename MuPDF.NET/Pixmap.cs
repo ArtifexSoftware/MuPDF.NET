@@ -97,16 +97,12 @@ namespace MuPDF.NET
     {
         private mupdf.FzPixmap _nativePixmap;
         private bool _disposed;
+        /// <summary><c>fz_scale_pixmap</c> results need <c>fz_drop_pixmap</c> before <c>delete_FzPixmap</c>.</summary>
+        private bool _dropNativePixmapSamples;
 
-        // Cache for property `self.samples_mv`. Set here so __del_() sees it if
-        // we raise.
-        //
+        // Cached memory view over native samples (PyMuPDF samples_mv); kept for dispose safety.
         private PixmapSamplesMemoryView? _samplesMv;
 
-        // 2024-01-16: Experimental support for a memory-view of the underlying
-        // data.  Doesn't seem to make much difference to Pixmap.set_pixel() so
-        // not currently used.
-        //
         private object? _memoryView;
 
         internal mupdf.FzPixmap NativePixmap
@@ -129,7 +125,7 @@ namespace MuPDF.NET
             mupdf.mupdf.fz_clear_pixmap(_nativePixmap);
         }
 
-        /// <summary>PyMuPDF <c>Pixmap(colorspace, irect, alpha)</c> — empty pixmap (no initial clear).</summary>
+        /// <summary>Creates an empty pixmap without clearing samples (integer alpha overload).</summary>
         public Pixmap(Colorspace cs, IRect irect, int alpha)
         {
             _nativePixmap = mupdf.mupdf.fz_new_pixmap_with_bbox(cs, irect.ToFzIRect(), new mupdf.FzSeparations(), alpha);
@@ -165,7 +161,7 @@ namespace MuPDF.NET
                 SetSamples(samples);
         }
 
-        /// <summary>PyMuPDF <c>Pixmap(colorspace, src)</c> — copy, optionally changing colorspace.</summary>
+        /// <summary>Copies a pixmap, optionally converting colorspace or extracting alpha.</summary>
         public Pixmap(Colorspace cs, Pixmap src)
         {
             if (src == null) throw new ArgumentNullException(nameof(src));
@@ -186,7 +182,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>PyMuPDF <c>Pixmap(color, mask)</c>.</summary>
+        /// <summary>Combines color and mask pixmaps into one image.</summary>
         public Pixmap(Pixmap colorPixmap, Pixmap maskPixmap)
         {
             if (maskPixmap == null) throw new ArgumentNullException(nameof(maskPixmap));
@@ -203,7 +199,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>PyMuPDF <c>Pixmap(src, width, height, [clip])</c> — scaled copy.</summary>
+        /// <summary>Creates a scaled copy of a pixmap, optionally clipped.</summary>
         public Pixmap(Pixmap src, int width, int height, IRect clip = null)
             : this(src, (float)width, (float)height, clip) { }
 
@@ -213,13 +209,19 @@ namespace MuPDF.NET
             int w = (int)width, h = (int)height;
             var spix = src.NativePixmap;
             mupdf.FzIrect bbox = clip != null ? clip.ToFzIRect() : InfiniteIrect();
-            if (bbox.fz_is_infinite_irect() == 0)
-                _nativePixmap = mupdf.mupdf.fz_scale_pixmap(spix, spix.fz_pixmap_x(), spix.fz_pixmap_y(), w, h, bbox);
-            else
-                _nativePixmap = mupdf.mupdf.fz_scale_pixmap(spix, spix.fz_pixmap_x(), spix.fz_pixmap_y(), w, h, InfiniteIrect());
+            try
+            {
+                _nativePixmap = mupdf.mupdf.fz_scale_pixmap(
+                    spix, spix.fz_pixmap_x(), spix.fz_pixmap_y(), w, h, bbox);
+                _dropNativePixmapSamples = true;
+            }
+            finally
+            {
+                bbox?.Dispose();
+            }
         }
 
-        /// <summary>PyMuPDF <c>Pixmap(src, alpha)</c> — copy; add/drop alpha (0 or 1).</summary>
+        /// <summary>Copies a pixmap and adds or removes the alpha channel (0 or 1).</summary>
         public Pixmap(Pixmap src, int alpha)
         {
             if (src == null) throw new ArgumentNullException(nameof(src));
@@ -252,7 +254,7 @@ namespace MuPDF.NET
                 GammaWith(gamma);
         }
 
-        /// <summary>PyMuPDF <c>Pixmap('raw', pm)</c>.</summary>
+        /// <summary>Wraps an existing pixmap without copying (tag <c>raw</c>).</summary>
         public Pixmap(string tag, Pixmap pm)
         {
             if (!string.Equals(tag, "raw", StringComparison.Ordinal))
@@ -261,7 +263,7 @@ namespace MuPDF.NET
             _nativePixmap = pm.NativePixmap;
         }
 
-        /// <summary>PyMuPDF <c>Pixmap(filename)</c>.</summary>
+        /// <summary>Loads a pixmap from an image file.</summary>
         public Pixmap(string filename)
         {
             if (string.IsNullOrEmpty(filename))
@@ -270,7 +272,7 @@ namespace MuPDF.NET
             _nativePixmap = PixmapFromImage(img);
         }
 
-        /// <summary>PyMuPDF <c>Pixmap(bytes)</c>.</summary>
+        /// <summary>Loads a pixmap from encoded image bytes.</summary>
         public Pixmap(byte[] data)
         {
             if (data == null || data.Length == 0)
@@ -331,9 +333,10 @@ namespace MuPDF.NET
         private static mupdf.FzPixmap PixmapFromImage(mupdf.FzImage img)
         {
             int iw = img.w(), ih = img.h();
+            using var subarea = InfiniteIrect();
             var pm = img.fz_get_pixmap_from_image(
-                InfiniteIrect(), new mupdf.FzMatrix(iw, 0, 0, ih, 0, 0), null, null);
-            var res = new mupdf.ll_fz_image_resolution_outparams();
+                subarea, new mupdf.FzMatrix(iw, 0, 0, ih, 0, 0), null, null);
+            using var res = new mupdf.ll_fz_image_resolution_outparams();
             mupdf.mupdf.ll_fz_image_resolution_outparams_fn(img.m_internal, res);
             pm.fz_set_pixmap_resolution(res.xres, res.yres);
             return pm;
@@ -577,7 +580,6 @@ namespace MuPDF.NET
                 // We remember the returned memoryview so that our `__del__()` can
                 // release it; otherwise accessing it after we have been destructed will
                 // fail, possibly crashing Python; this is #4155.
-                //
                 if (_samplesMv == null)
                     _samplesMv = new PixmapSamplesMemoryView(this);
                 return _samplesMv;
@@ -1440,6 +1442,19 @@ namespace MuPDF.NET
         internal byte[] getPNGData() => ToBytes("png");
         internal byte[] getPNGdata() => ToBytes("png");
 
+        private void ReleaseNativePixmap()
+        {
+            if (_nativePixmap == null)
+                return;
+            if (_dropNativePixmapSamples)
+                Helpers.DropFzPixmap(ref _nativePixmap);
+            else
+            {
+                _nativePixmap.Dispose();
+                _nativePixmap = null;
+            }
+        }
+
         // ─── IDisposable ────────────────────────────────────────────────
         /// <summary>
         /// Releases the native fz_pixmap and cached sample view.
@@ -1449,8 +1464,7 @@ namespace MuPDF.NET
             if (!_disposed)
             {
                 _samplesMvRelease();
-                _nativePixmap?.Dispose();
-                _nativePixmap = null;
+                ReleaseNativePixmap();
                 _disposed = true;
             }
             GC.SuppressFinalize(this);
@@ -1458,8 +1472,11 @@ namespace MuPDF.NET
 
         ~Pixmap()
         {
-            if (_samplesMv != null)
-                _samplesMv.Release();
+            if (_disposed)
+                return;
+            _samplesMvRelease();
+            ReleaseNativePixmap();
+            _disposed = true;
         }
         /// <summary>
         /// Diagnostic string with colorspace, IRect, and alpha flag.

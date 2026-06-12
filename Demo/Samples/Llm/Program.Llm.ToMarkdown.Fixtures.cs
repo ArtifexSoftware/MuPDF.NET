@@ -1,32 +1,25 @@
 namespace Demo
 {
     /// <summary>
-    /// PDF4LLM <see cref="PDF4LLM.PdfExtractor.ToMarkdown"/> demos aligned with repository <c>tests/</c> fixtures (golden markdown, OCR behavior).
-    /// PDFs live under repo <c>tests/</c>; samples skip if files are missing.
+    /// PDF4LLM <see cref="PDF4LLM.PdfExtractor.ToMarkdown"/> demos aligned with PDF4LLM test fixtures
+    /// (golden markdown, OCR behavior). PDFs live under <c>TestDocuments/Demo/Llm/</c>; samples skip if missing.
     /// </summary>
     internal partial class Program
     {
-        private static string LlmRepositoryRootFromAppBase() =>
-            Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
-
-        private static string LlmRepositoryTestsDirectory() =>
-            Path.Combine(LlmRepositoryRootFromAppBase(), "tests");
-
         private static bool LlmOcrEnvironmentLikelyAvailable() =>
             !string.IsNullOrEmpty(Utils.TESSDATA_PREFIX);
 
-        /// <summary>ToMarkdown with fixed flags vs <c>tests/test_370_expected.md</c> (fixture: <c>tests/test_370.pdf</c>).</summary>
+        /// <summary>ToMarkdown with fixed flags vs <c>test_370_expected.md</c> (fixture: <c>test_370.pdf</c>).</summary>
         internal static void Test4LlmToMarkdownCompareExpected370(string[] args)
         {
             _ = args;
             Console.WriteLine("\n=== Test4LlmToMarkdownCompareExpected370 (PDF4LLM) =======================");
 
-            string testsDir = LlmRepositoryTestsDirectory();
-            string pdfPath = @"../../../../TestDocuments/Demo/Llm/test_370.pdf";
-            string expectedPath = @"../../../../TestDocuments/Demo/Llm/test_370_expected.md";
+            string pdfPath = DemoPaths.Input("Llm/test_370.pdf");
+            string expectedPath = DemoPaths.Input("Llm/test_370_expected.md");
             if (!File.Exists(pdfPath) || !File.Exists(expectedPath))
             {
-                Console.WriteLine($"Skip: need test_370.pdf and test_370_expected.md in: {testsDir}");
+                Console.WriteLine($"Skip: need test_370.pdf and test_370_expected.md under TestDocuments/Demo/Llm/");
                 return;
             }
 
@@ -51,7 +44,7 @@ namespace Demo
 
                 if (!string.Equals(actual, expected, StringComparison.Ordinal))
                 {
-                    Console.WriteLine("Mismatch vs tests/test_370_expected.md (first differences):");
+                    Console.WriteLine("Mismatch vs test_370_expected.md (first differences):");
                     LlmPrintLineDiff(expected, actual, maxLines: 40);
                 }
                 else
@@ -65,13 +58,13 @@ namespace Demo
             }
         }
 
-        /// <summary>Default ToMarkdown on FFFD fixture; U+FFFD vs <c>TESSDATA_PREFIX</c> (fixture: <c>tests/test_ocr_loremipsum_FFFD.pdf</c>).</summary>
+        /// <summary>Default ToMarkdown on FFFD fixture; U+FFFD vs <c>TESSDATA_PREFIX</c> (<c>test_ocr_loremipsum_FFFD.pdf</c>).</summary>
         internal static void Test4LlmToMarkdownOcrFixture1(string[] args)
         {
             _ = args;
             Console.WriteLine("\n=== Test4LlmToMarkdownOcrFixture1 =======================");
 
-            string pdfPath = @"../../../../TestDocuments/Demo/Llm/test_ocr_loremipsum_FFFD.pdf";
+            string pdfPath = DemoPaths.Input("Llm/test_ocr_loremipsum_FFFD.pdf");
             if (!File.Exists(pdfPath))
             {
                 Console.WriteLine($"Skip: missing {pdfPath}");
@@ -94,13 +87,21 @@ namespace Demo
             Console.WriteLine($"TESSDATA_PREFIX set: {ocr}");
             bool hasReplacement = md.Contains(TesseractApi.ReplacementUnicode);
             if (ocr && hasReplacement)
+            {
                 Console.WriteLine("Note: U+FFFD still present—check tessdata / language / PDF.");
+            }
             else if (ocr && !hasReplacement)
+            {
                 Console.WriteLine("OK: no U+FFFD when tessdata is configured.");
+            }
             else if (!ocr && hasReplacement)
+            {
                 Console.WriteLine("OK: U+FFFD present without tessdata.");
+            }
             else
+            {
                 Console.WriteLine("Note: no U+FFFD without tessdata—compare llm_ocr_fixture_1.md.");
+            }
         }
 
         /// <summary><c>ToMarkdown(..., useOcr: false)</c> on FFFD fixture.</summary>
@@ -109,7 +110,7 @@ namespace Demo
             _ = args;
             Console.WriteLine("\n=== Test4LlmToMarkdownOcrFixture2 =======================");
 
-            string pdfPath = @"../../../../TestDocuments/Demo/Llm/test_ocr_loremipsum_FFFD.pdf";
+            string pdfPath = DemoPaths.Input("Llm/test_ocr_loremipsum_FFFD.pdf");
             if (!File.Exists(pdfPath))
             {
                 Console.WriteLine($"Skip: missing {pdfPath}");
@@ -129,18 +130,16 @@ namespace Demo
 
             File.WriteAllText(Path.Combine(AppContext.BaseDirectory, "llm_ocr_fixture_2.md"), md, Encoding.UTF8);
             bool hasReplacement = md.Contains(TesseractApi.ReplacementUnicode);
-            Console.WriteLine(hasReplacement
-                ? "OK: U+FFFD present with useOcr=false."
-                : "Note: no U+FFFD with OCR off—fixture-dependent.");
+            Console.WriteLine(hasReplacement ? "OK: U+FFFD present with useOcr=false." : "Note: no U+FFFD with OCR off—fixture-dependent.");
         }
 
-        /// <summary>SVG text fixture: compare default vs <c>useOcr: false</c> output size (fixture: <c>tests/test_ocr_loremipsum_svg.pdf</c>).</summary>
+        /// <summary>SVG text fixture: compare default vs <c>useOcr: false</c> output size (<c>test_ocr_loremipsum_svg.pdf</c>).</summary>
         internal static void Test4LlmToMarkdownOcrFixture3(string[] args)
         {
             _ = args;
             Console.WriteLine("\n=== Test4LlmToMarkdownOcrFixture3 =======================");
 
-            string pdfPath = @"../../../../TestDocuments/Demo/Llm/test_ocr_loremipsum_svg.pdf";
+            string pdfPath = DemoPaths.Input("Llm/test_ocr_loremipsum_svg.pdf");
             if (!File.Exists(pdfPath))
             {
                 Console.WriteLine($"Skip: missing {pdfPath}");
@@ -168,15 +167,17 @@ namespace Demo
             if (ocr)
             {
                 if (mdNoOcr.Length < md.Length)
+                {
                     Console.WriteLine($"OK: with tessdata, no-OCR shorter ({mdNoOcr.Length} < {md.Length}).");
+                }
                 else
+                {
                     Console.WriteLine($"Note: lengths OCR={md.Length}, no-OCR={mdNoOcr.Length} (environment-dependent).");
+                }
             }
             else
             {
-                Console.WriteLine(string.Equals(md, mdNoOcr, StringComparison.Ordinal)
-                    ? "OK: without tessdata, OCR on/off often match."
-                    : "Note: outputs differ; compare llm_ocr_fixture_3*.md.");
+                Console.WriteLine(string.Equals(md, mdNoOcr, StringComparison.Ordinal) ? "OK: without tessdata, OCR on/off often match." : "Note: outputs differ; compare llm_ocr_fixture_3*.md.");
             }
         }
 
@@ -198,7 +199,9 @@ namespace Demo
                 printed++;
             }
             if (printed >= maxLines)
+            {
                 Console.WriteLine("  ... (truncated)");
+            }
         }
 
         private static string LlmTruncateForConsole(string s, int max = 200)

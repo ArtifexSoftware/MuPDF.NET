@@ -115,10 +115,8 @@ namespace BarcodeWriter.Core.Internal
 		        "(/)C",  //#
 
 		        "$",  //$ 	    It's also valid to use "#D"but it uses an extra char
-		        //"/D",  //$ 	    
 
 		        "%",  //%		It's also valid to use "#E"but it uses an extra char
-		        //"/E",  //%		
 
 		        "(/)F",  //&
 		        "(/)G",  //'
@@ -127,48 +125,34 @@ namespace BarcodeWriter.Core.Internal
 		        "(/)J",  //*
                 
                 "+",  //+		It's also valid to use "#K"but it uses an extra char		        
-                //"/K",  //+		
 		        
                 "(/)L",  //,
 
 		        "-",  //-		It's also valid to use "#M" but it uses an extra char
-                //"/M",  //-		
 		        
                 ".",  //.		It's also valid to use "#N" but it uses an extra char
-                //"/N",  //.		
 		        
                 "/",  // /		It's also valid to use "#O" but it uses an extra char
-                //"/O",  ///		
 		        
                 "0",  //0		It's also valid to use "#P" but it uses an extra char
-                //"/P",  //0		
 
 		        "1",  //1		It's also valid to use "#Q" but it uses an extra char
-                //"/Q",  //1		
 
 		        "2",  //2		It's also valid to use "#R" but it uses an extra char
-                //"/E",  //2	
 
 		        "3",  //3		It's also valid to use "#S" but it uses an extra char
-                //"/S",  //3	
 
 		        "4",  //4		It's also valid to use "#T" but it uses an extra char
-                //"/T",  //4
 
 		        "5",  //5		It's also valid to use "#U" but it uses an extra char
-                //"/U",  //5	
 
 		        "6",  //6		It's also valid to use "#V" but it uses an extra char
-                //"/V",  //6
 
 		        "7",  //7		It's also valid to use "#W" but it uses an extra char
-                //"/W",  //7	
 
 		        "8",  //8		It's also valid to use "#X" but it uses an extra char
-                //"/X",  //8	
 
 		        "9",  //9		It's also valid to use "#Y" but it uses an extra char
-                //"/Y",  //9		
 
 		        "(/)Z",  //:
 		        "(%)F",  //;

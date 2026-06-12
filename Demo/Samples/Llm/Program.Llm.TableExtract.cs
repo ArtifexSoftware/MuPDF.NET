@@ -6,7 +6,8 @@ namespace Demo
     {
         internal static void TestTableExtract1()
         {
-            JArray pages = GetPagesFromJson(PdfExtractor.ToJson(@"..\..\..\TestDocuments\national-capitals.pdf"));
+            PdfExtractor.UseLayout = true;
+            JArray pages = GetPagesFromJson(PdfExtractor.ToJson(@"..\..\..\..\TestDocuments\Demo\national-capitals.pdf"));
 
             foreach (JObject page in pages)
             {
@@ -23,14 +24,17 @@ namespace Demo
                     Console.WriteLine($"Table: {rowCount} rows x {columnCount} columns");
 
                     foreach (var row in rows)
+                    {
                         Console.WriteLine(string.Join(" | ", row ?? []));
+                    }
                 }
             }
         }
 
         internal static void TestTableExtract2()
         {
-            JArray pages = GetPagesFromJson(PdfExtractor.ToJson(@"..\..\..\TestDocuments\national-capitals.pdf"));
+            PdfExtractor.UseLayout = true;
+            JArray pages = GetPagesFromJson(PdfExtractor.ToJson(@"..\..\..\..\TestDocuments\Demo\national-capitals.pdf"));
             var csvLines = new List<string>();
 
             foreach (JObject page in pages)
@@ -61,7 +65,8 @@ namespace Demo
 
         internal static void TestTableExtract3()
         {
-            JArray pages = GetPagesFromJson(PdfExtractor.ToJson(@"..\..\..\TestDocuments\national-capitals.pdf"));
+            PdfExtractor.UseLayout = true;
+            JArray pages = GetPagesFromJson(PdfExtractor.ToJson(@"..\..\..\..\TestDocuments\Demo\national-capitals.pdf"));
             var mergedRows = new List<List<string>>();
             int? prevColCount = null;
 
@@ -90,20 +95,24 @@ namespace Demo
 
             Console.WriteLine($"Merged table: {mergedRows.Count} rows");
             foreach (var row in mergedRows)
+            {
                 Console.WriteLine(string.Join(" | ", row ?? []));
+            }
         }
 
         internal static void TestOcr()
         {
-            PdfExtractor.ToMarkdown(@"..\..\..\TestDocuments\Ocr.pdf", useOcr: true, writeImages: false, embedImages: false);
-            string text = PdfExtractor.ToText(@"..\..\..\TestDocuments\Ocr.pdf", useOcr: true);
+            PdfExtractor.UseLayout = true;
+            PdfExtractor.ToMarkdown(@"..\..\..\..\TestDocuments\Demo\Ocr.pdf", useOcr: true, writeImages: false, embedImages: false);
+            string text = PdfExtractor.ToText(@"..\..\..\..\TestDocuments\Demo\Ocr.pdf", useOcr: true);
             Console.WriteLine(text);
         }
 
         internal static void TestLLM2()
         {
+            PdfExtractor.UseLayout = true;
             var reader = PdfExtractor.LlamaMarkdownReader();
-            var chunks = reader.LoadData(@"..\..\..\TestDocuments\magazine.pdf");
+            var chunks = reader.LoadData(@"..\..\..\..\TestDocuments\Demo\magazine.pdf");
 
             Directory.CreateDirectory("Output");
             foreach (var chunk in chunks)

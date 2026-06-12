@@ -5,9 +5,9 @@ using Xunit.Sdk;
 namespace MuPDF.NET.Test
 {
     /// <summary>
-    /// PyMuPDF <c>tests/conftest.py</c> — drain/clear <see cref="Tools.MupdfWarnings"/> before each test
-    /// so warning assertions see only the current test's MuPDF output.
+    /// Clears stored MuPDF warnings before each test so assertions see only the current test's output.
     /// </summary>
+    /// <remarks>PyMuPDF equivalent: <c>tests/conftest.py</c> warning drain.</remarks>
     [AttributeUsage(AttributeTargets.Assembly | AttributeTargets.Class | AttributeTargets.Method, AllowMultiple = false, Inherited = true)]
     public sealed class ResetMupdfWarningsAttribute : BeforeAfterTestAttribute
     {

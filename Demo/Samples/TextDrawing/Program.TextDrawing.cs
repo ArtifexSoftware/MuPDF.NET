@@ -38,9 +38,6 @@ namespace Demo
             Document inputDoc = new Document(origfilename);
             Document outputDoc = new Document(outfilename);
 
-            //string filePath = @"D:\\Vectorlab\\Jobs\\2025\\PACE\\pdf_fix\\assets\\exported_paths_net.txt";
-            //StreamWriter writer = new StreamWriter(filePath);
-
             if (inputDoc.PageCount != outputDoc.PageCount)
             {
                 return;

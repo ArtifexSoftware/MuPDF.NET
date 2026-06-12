@@ -865,7 +865,6 @@ namespace BarcodeWriter.Core.Internal
 
         protected override SKSize buildBars(SKCanvas canvas, SKFont font)
         {
-            //
             //              / \
             //            /     \
             //          /         \
@@ -878,7 +877,6 @@ namespace BarcodeWriter.Core.Internal
             //          \         / |
             //            \     /   | h
             //              \ /_____|
-            //
             // R=t; h=t/2
 
             if (Options.MaxiCodeMode > 6)
@@ -923,7 +921,6 @@ namespace BarcodeWriter.Core.Internal
             else
                 dY = Y;
             
-            // "full" height from the top of the top row to the bottom of the bottom row
             m_realSymbolHeight = (int)Math.Round(dY * 33.3333333);
             dY = m_realSymbolHeight / 33.3333333;
 

@@ -96,7 +96,7 @@ namespace MuPDF.NET.Test
             return ret;
         }
 
-        /// <summary>PyMuPDF <c>tests/test_insertpdf.py::test_insert</c>.</summary>
+        /// <summary>Regression test: insert (PyMuPDF <c>tests/test_insertpdf.py::test_insert</c>).</summary>
         [Fact]
         public void test_insert()
         {
@@ -152,11 +152,10 @@ namespace MuPDF.NET.Test
             new_doc.Save(Out("test_insert.pdf"));
         }
 
-        /// <summary>PyMuPDF <c>tests/test_insertpdf.py::test_issue1417_insertpdf_in_loop</c>.</summary>
+        /// <summary>Regression test: issue1417 insertpdf in loop (PyMuPDF <c>tests/test_insertpdf.py::test_issue1417_insertpdf_in_loop</c>).</summary>
         [Fact]
         public void test_issue1417_insertpdf_in_loop()
         {
-            // """Using a context manager instead of explicitly closing files"""
             string f = Doc("1.pdf");
             var big_doc = new Document();
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -177,7 +176,6 @@ namespace MuPDF.NET.Test
             {
                 using (var pdf = new Document(f))
                     big_doc.InsertPdf(pdf);
-                // Create a raw file descriptor. If the above pymupdf.open() context leaks
                 // a file descriptor, fd will be seen to increment.
                 int fd2 = Syscall.open(f, Syscall.O_RDONLY);
                 Assert.Equal(fd1, fd2);
@@ -199,7 +197,7 @@ namespace MuPDF.NET.Test
             }
         }
 
-        /// <summary>PyMuPDF <c>tests/test_insertpdf.py::test_2861</c>.</summary>
+        /// <summary>Regression test: 2861 (PyMuPDF <c>tests/test_insertpdf.py::test_2861</c>).</summary>
         [Fact]
         public void test_2861()
         {
@@ -214,7 +212,7 @@ namespace MuPDF.NET.Test
             }
         }
 
-        /// <summary>PyMuPDF <c>tests/test_insertpdf.py::test_2871</c>.</summary>
+        /// <summary>Regression test: 2871 (PyMuPDF <c>tests/test_insertpdf.py::test_2871</c>).</summary>
         [Fact]
         public void test_2871()
         {
@@ -229,7 +227,7 @@ namespace MuPDF.NET.Test
             }
         }
 
-        /// <summary>PyMuPDF <c>tests/test_insertpdf.py::test_3789</c>.</summary>
+        /// <summary>Regression test: 3789 (PyMuPDF <c>tests/test_insertpdf.py::test_3789</c>).</summary>
         [Fact]
         public void test_3789()
         {
@@ -283,11 +281,6 @@ namespace MuPDF.NET.Test
 
         static List<Dictionary<string, object>> names_and_kids(Document doc)
         {
-            // """Return a list of dictionaries with keys "name" and "kids".
-            //
-            // "name" is the name of a root field in "Root/AcroForm/Fields", and
-            // "kids" is the count of its immediate children.
-            // """
             var rc = new List<Dictionary<string, object>>();
             var pdf = Helpers.AsPdfDocument(doc);
             var fields = Helpers.PdfDictGetl(
@@ -311,11 +304,10 @@ namespace MuPDF.NET.Test
             return rc;
         }
 
-        /// <summary>PyMuPDF <c>tests/test_insertpdf.py::test_widget_insert</c>.</summary>
+        /// <summary>Regression test: widget insert (PyMuPDF <c>tests/test_insertpdf.py::test_widget_insert</c>).</summary>
         [Fact]
         public void test_widget_insert()
         {
-            // """Confirm copy of form fields / widgets."""
             var tar = new Document(Doc("merge-form1.pdf"));
             int pc0 = tar.PageCount;  // for later assertion
             var src = new Document(Doc("interfield-calculation.pdf"));
@@ -343,11 +335,10 @@ namespace MuPDF.NET.Test
             tar.Save(Out("test_widget_insert.pdf"));
         }
 
-        /// <summary>PyMuPDF <c>tests/test_insertpdf.py::test_merge_checks1</c>.</summary>
+        /// <summary>Regression test: merge checks1 (PyMuPDF <c>tests/test_insertpdf.py::test_merge_checks1</c>).</summary>
         [Fact]
         public void test_merge_checks1()
         {
-            // """Merge Form PDFs making any duplicate names unique."""
             var tar = new Document(Doc("merge-form1.pdf"));
             var rc0 = names_and_kids(tar);
             var src = new Document(Doc("merge-form2.pdf"));
@@ -358,7 +349,7 @@ namespace MuPDF.NET.Test
             tar.Save(Out("test_merge_checks1.pdf"));
         }
 
-        /// <summary>PyMuPDF <c>tests/test_insertpdf.py::test_merge_checks2</c>.</summary>
+        /// <summary>Regression test: merge checks2 (PyMuPDF <c>tests/test_insertpdf.py::test_merge_checks2</c>).</summary>
         [Fact]
         public void test_merge_checks2()
         {
@@ -414,7 +405,7 @@ namespace MuPDF.NET.Test
             tar.Save(Out("test_merge_checks2.pdf"));
         }
 
-        /// <summary>PyMuPDF <c>tests/test_insertpdf.py::test_4412</c>.</summary>
+        /// <summary>Regression test: 4412 (PyMuPDF <c>tests/test_insertpdf.py::test_4412</c>).</summary>
         [Fact]
         public void test_4412()
         {
@@ -437,7 +428,7 @@ namespace MuPDF.NET.Test
             }
         }
 
-        /// <summary>PyMuPDF <c>tests/test_insertpdf.py::test_4571</c>.</summary>
+        /// <summary>Regression test: 4571 (PyMuPDF <c>tests/test_insertpdf.py::test_4571</c>).</summary>
         [Fact]
         public void test_4571()
         {
@@ -476,7 +467,7 @@ namespace MuPDF.NET.Test
         static mupdf.PdfObj PdfDictGetp(mupdf.PdfDocument pdf, string path)
             => mupdf.mupdf.pdf_trailer(pdf).pdf_dict_getp(path);
 
-        /// <summary>PyMuPDF <c>tests/test_insertpdf.py::test_4958</c> — link rects preserved after insert_pdf with rotation.</summary>
+        /// <summary>link rects preserved after insert_pdf with rotation (PyMuPDF <c>tests/test_insertpdf.py::test_4958</c>).</summary>
         [Fact]
         public void test_4958()
         {

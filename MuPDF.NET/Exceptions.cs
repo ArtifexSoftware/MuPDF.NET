@@ -74,7 +74,7 @@ namespace MuPDF.NET
 
     // ─── PyMuPDF exception type names (internal, same assembly) ─────────
 
-    /// <summary>PyMuPDF <c>FileDataError</c> name alias for ported throw sites.</summary>
+    /// <summary>Exception alias matching PyMuPDF <c>FileDataError</c>.</summary>
     internal class FileDataError : FileDataException
     {
         public FileDataError() { }
@@ -82,7 +82,7 @@ namespace MuPDF.NET
         public FileDataError(string message, Exception inner) : base(message, inner) { }
     }
 
-    /// <summary>PyMuPDF <c>EmptyFileError</c> name alias.</summary>
+    /// <summary>Exception alias matching PyMuPDF <c>EmptyFileError</c>.</summary>
     internal class EmptyFileError : EmptyFileException
     {
         public EmptyFileError() { }

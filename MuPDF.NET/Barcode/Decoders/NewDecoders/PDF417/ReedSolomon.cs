@@ -240,7 +240,6 @@ namespace BarcodeReader.Core.PDF417
                 {
                     /* 2 lines below: B(x) <-- x*B(x) */
                     //  COPYDOWN(&b[1],b,synd_len);
-                    //
                     for (ci = errorCorrWordCount - 1; ci >= 0; ci--) b[ci + 1] = b[ci];
                     b[0] = A0;
                 }

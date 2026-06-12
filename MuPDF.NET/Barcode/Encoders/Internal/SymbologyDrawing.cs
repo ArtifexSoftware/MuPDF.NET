@@ -298,9 +298,7 @@ namespace BarcodeWriter.Core.Internal
 		public virtual SKSize Draw(SKCanvas canvas, SKPoint position, bool onlyCalculate)
         {
             // There is two main barcode image types: rectangular and EAN-like
-            //
             // Rectangular (1D and 2D):
-            //
             //                above
             //        | | | || ||| | | | || |
             //        | | | || ||| | | | || |
@@ -308,9 +306,7 @@ namespace BarcodeWriter.Core.Internal
             //        | | | || ||| | | | || | 
             //        | | | || ||| | | | || | 
             //                below  
-            //
             // EAN-like (EAN-13, EAN-8, ISBN, UPC-A, UPC-E):
-            //
             //                above
             //        | | | || ||| | | | || |
             //        | | | || ||| | | | || |

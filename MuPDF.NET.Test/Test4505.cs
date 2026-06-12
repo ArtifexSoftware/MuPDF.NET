@@ -13,7 +13,6 @@ namespace MuPDF.NET.Test
         public void test_4505()
         {
             // Copy field flags to Parent widget and all of its kids.
-            // path = os.path.abspath(f"{__file__}/../../tests/resources/test_4505.pdf")
             using var doc = new Document(testDocPath);
             Page page = doc[0];
             var text1_flags_before = new Dictionary<int, int>();

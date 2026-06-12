@@ -19,13 +19,13 @@ namespace MuPDF.NET
     /// </remarks>
     internal static class PageRunDevices
     {
-        /// <summary>PyMuPDF <c>JM_new_bbox_device(rc, inc_layers)</c>.</summary>
+        /// <summary>Creates a bbox-logging MuPDF device.</summary>
         internal static PageBboxLogDevice NewBboxDevice(
             List<(string code, Rect bbox, string? layer)> result,
             bool includeLayers) =>
             new PageBboxLogDevice(result, includeLayers);
 
-        /// <summary>PyMuPDF <c>JM_new_bbox_device(rc, inc_layers)</c>.</summary>
+        /// <summary>Creates a bbox-logging MuPDF device.</summary>
         internal static PageBboxLogDevice JM_new_bbox_device(
             List<(string code, Rect bbox, string? layer)> rc,
             bool inc_layers) =>
@@ -65,7 +65,7 @@ namespace MuPDF.NET
             use_virtual_end_layer();
         }
 
-        /// <summary>PyMuPDF <c>jm_bbox_add_rect</c>.</summary>
+        /// <summary>Records a bbox entry on the bbox device.</summary>
         private void Add(string code, mupdf.fz_rect r)
         {
             var rect = new Rect(r);
@@ -75,19 +75,19 @@ namespace MuPDF.NET
                 _result.Add((code, rect, null));
         }
 
-        /// <summary>PyMuPDF <c>jm_lineart_begin_layer</c> / <c>JM_new_bbox_device_Device.begin_layer</c>.</summary>
+        /// <summary>/ <c>JM_new_bbox_device_Device.begin_layer</c>.</summary>
         public override void begin_layer(mupdf.fz_context ctx, string name)
         {
             _layerName = string.IsNullOrEmpty(name) ? "" : name;
         }
 
-        /// <summary>PyMuPDF <c>jm_lineart_end_layer</c>.</summary>
+        /// <summary>Ends a line-art layer on the trace device.</summary>
         public override void end_layer(mupdf.fz_context ctx)
         {
             _layerName = "";
         }
 
-        /// <summary>PyMuPDF <c>jm_bbox_fill_path</c> — code <c>fill-path</c>.</summary>
+        /// <summary>BBox device callback for filled paths (<c>fill-path</c>).</summary>
         public override void fill_path(mupdf.fz_context ctx, mupdf.SWIGTYPE_p_fz_path path, int evenOdd, mupdf.fz_matrix ctm,
             mupdf.fz_colorspace colorspace, mupdf.SWIGTYPE_p_float color, float alpha, mupdf.fz_color_params colorParams)
         {
@@ -95,7 +95,7 @@ namespace MuPDF.NET
             catch { }
         }
 
-        /// <summary>PyMuPDF <c>jm_bbox_stroke_path</c> — code <c>stroke-path</c>.</summary>
+        /// <summary>BBox device callback for stroked paths (<c>stroke-path</c>).</summary>
         public override void stroke_path(mupdf.fz_context ctx, mupdf.SWIGTYPE_p_fz_path path, mupdf.fz_stroke_state stroke, mupdf.fz_matrix ctm,
             mupdf.fz_colorspace colorspace, mupdf.SWIGTYPE_p_float color, float alpha, mupdf.fz_color_params colorParams)
         {
@@ -103,7 +103,7 @@ namespace MuPDF.NET
             catch { }
         }
 
-        /// <summary>PyMuPDF <c>jm_bbox_fill_text</c> — code <c>fill-text</c>.</summary>
+        /// <summary>BBox device callback for filled text (<c>fill-text</c>).</summary>
         public override void fill_text(mupdf.fz_context ctx, mupdf.fz_text text, mupdf.fz_matrix ctm, mupdf.fz_colorspace colorspace,
             mupdf.SWIGTYPE_p_float color, float alpha, mupdf.fz_color_params colorParams)
         {
@@ -111,7 +111,7 @@ namespace MuPDF.NET
             catch { }
         }
 
-        /// <summary>PyMuPDF <c>jm_bbox_stroke_text</c> — code <c>stroke-text</c>.</summary>
+        /// <summary>BBox device callback for stroked text (<c>stroke-text</c>).</summary>
         public override void stroke_text(mupdf.fz_context ctx, mupdf.fz_text text, mupdf.fz_stroke_state stroke, mupdf.fz_matrix ctm,
             mupdf.fz_colorspace colorspace, mupdf.SWIGTYPE_p_float color, float alpha, mupdf.fz_color_params colorParams)
         {
@@ -119,27 +119,27 @@ namespace MuPDF.NET
             catch { }
         }
 
-        /// <summary>PyMuPDF <c>jm_bbox_ignore_text</c> — code <c>ignore-text</c>.</summary>
+        /// <summary>BBox device callback for ignored text (<c>ignore-text</c>).</summary>
         public override void ignore_text(mupdf.fz_context ctx, mupdf.fz_text text, mupdf.fz_matrix ctm)
         {
             try { Add("ignore-text", mupdf.mupdf.ll_fz_bound_text(text, null, ctm)); }
             catch { }
         }
 
-        /// <summary>PyMuPDF <c>jm_bbox_fill_shade</c> — code <c>fill-shade</c>.</summary>
+        /// <summary>BBox device callback for shade fills (<c>fill-shade</c>).</summary>
         public override void fill_shade(mupdf.fz_context ctx, mupdf.fz_shade shade, mupdf.fz_matrix ctm, float alpha, mupdf.fz_color_params colorParams)
         {
             try { Add("fill-shade", mupdf.mupdf.ll_fz_bound_shade(shade, ctm)); }
             catch { }
         }
 
-        /// <summary>PyMuPDF <c>jm_bbox_fill_image</c> — code <c>fill-image</c> (unit rect transformed by <c>ctm</c>).</summary>
+        /// <summary>BBox device callback for images (<c>fill-image</c>; unit rect transformed by <c>ctm</c>).</summary>
         public override void fill_image(mupdf.fz_context ctx, mupdf.fz_image image, mupdf.fz_matrix ctm, float alpha, mupdf.fz_color_params colorParams)
         {
             Add("fill-image", mupdf.mupdf.ll_fz_transform_rect(mupdf.mupdf.fz_unit_rect, ctm));
         }
 
-        /// <summary>PyMuPDF <c>jm_bbox_fill_image_mask</c> — code <c>fill-imgmask</c>.</summary>
+        /// <summary>BBox device callback for image masks (<c>fill-imgmask</c>).</summary>
         public override void fill_image_mask(mupdf.fz_context ctx, mupdf.fz_image image, mupdf.fz_matrix ctm, mupdf.fz_colorspace colorspace,
             mupdf.SWIGTYPE_p_float color, float alpha, mupdf.fz_color_params colorParams)
         {
@@ -184,51 +184,51 @@ namespace MuPDF.NET
             use_virtual_end_layer();
         }
 
-        /// <summary>PyMuPDF <c>jm_lineart_begin_layer</c>.</summary>
+        /// <summary>Line-art trace device callback when a layer begins.</summary>
         public override void begin_layer(mupdf.fz_context ctx, string name) =>
             layer_name = string.IsNullOrEmpty(name) ? "" : name;
 
-        /// <summary>PyMuPDF <c>jm_lineart_end_layer</c>.</summary>
+        /// <summary>Ends a line-art layer on the trace device.</summary>
         public override void end_layer(mupdf.fz_context ctx) => layer_name = "";
 
-        /// <summary>PyMuPDF <c>jm_increase_seqno</c> (non-text fill_path).</summary>
+        /// <summary>Increments line-art sequence number for non-text fill paths.</summary>
         public override void fill_path(mupdf.fz_context ctx, mupdf.SWIGTYPE_p_fz_path path, int evenOdd, mupdf.fz_matrix ctm,
             mupdf.fz_colorspace colorspace, mupdf.SWIGTYPE_p_float color, float alpha, mupdf.fz_color_params colorParams) =>
             jm_increase_seqno();
 
-        /// <summary>PyMuPDF <c>jm_dev_linewidth</c> — records stroke width then increments seqno.</summary>
+        /// <summary>Records stroke width and increments the line-art sequence number.</summary>
         public override void stroke_path(mupdf.fz_context ctx, mupdf.SWIGTYPE_p_fz_path path, mupdf.fz_stroke_state stroke, mupdf.fz_matrix ctm,
             mupdf.fz_colorspace colorspace, mupdf.SWIGTYPE_p_float color, float alpha, mupdf.fz_color_params colorParams) =>
             jm_dev_linewidth(stroke);
 
-        /// <summary>PyMuPDF <c>jm_increase_seqno</c>.</summary>
+        /// <summary>Increments the line-art trace sequence number.</summary>
         public override void fill_shade(mupdf.fz_context ctx, mupdf.fz_shade shade, mupdf.fz_matrix ctm, float alpha, mupdf.fz_color_params colorParams) =>
             jm_increase_seqno();
 
-        /// <summary>PyMuPDF <c>jm_increase_seqno</c>.</summary>
+        /// <summary>Increments the line-art trace sequence number.</summary>
         public override void fill_image(mupdf.fz_context ctx, mupdf.fz_image image, mupdf.fz_matrix ctm, float alpha, mupdf.fz_color_params colorParams) =>
             jm_increase_seqno();
 
-        /// <summary>PyMuPDF <c>jm_increase_seqno</c>.</summary>
+        /// <summary>Increments the line-art trace sequence number.</summary>
         public override void fill_image_mask(mupdf.fz_context ctx, mupdf.fz_image image, mupdf.fz_matrix ctm, mupdf.fz_colorspace colorspace,
             mupdf.SWIGTYPE_p_float color, float alpha, mupdf.fz_color_params colorParams) =>
             jm_increase_seqno();
 
-        /// <summary>PyMuPDF <c>jm_lineart_fill_text</c> (trace type 0).</summary>
+        /// <summary>Line-art trace callback for filled text (type 0).</summary>
         public override void fill_text(mupdf.fz_context ctx, mupdf.fz_text text, mupdf.fz_matrix ctm, mupdf.fz_colorspace colorspace,
             mupdf.SWIGTYPE_p_float color, float alpha, mupdf.fz_color_params colorParams)
         {
             jm_lineart_fill_text(text, ctm, colorspace, color, alpha);
         }
 
-        /// <summary>PyMuPDF <c>jm_lineart_stroke_text</c> (trace type 1).</summary>
+        /// <summary>Line-art trace callback for stroked text (type 1).</summary>
         public override void stroke_text(mupdf.fz_context ctx, mupdf.fz_text text, mupdf.fz_stroke_state stroke, mupdf.fz_matrix ctm,
             mupdf.fz_colorspace colorspace, mupdf.SWIGTYPE_p_float color, float alpha, mupdf.fz_color_params colorParams)
         {
             jm_lineart_stroke_text(text, ctm, colorspace, color, alpha);
         }
 
-        /// <summary>PyMuPDF <c>jm_lineart_ignore_text</c> (trace type 3).</summary>
+        /// <summary>Line-art trace callback for ignored text (type 3).</summary>
         public override void ignore_text(mupdf.fz_context ctx, mupdf.fz_text text, mupdf.fz_matrix ctm) =>
             jm_lineart_ignore_text(text, ctm);
 
@@ -365,7 +365,6 @@ namespace MuPDF.NET
                 using var charBbox = charRect.fz_transform_rect(m1);
                 var cb = new Rect(charBbox);
 
-                // Python: (ucs, gid, (char_orig.x, char_orig.y), (bbox.x0, bbox.y0, bbox.x1, bbox.y1))
                 chars.Add(new object[]
                 {
                     item.ucs,

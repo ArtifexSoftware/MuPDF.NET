@@ -1,6 +1,3 @@
-// import pymupdf
-// import os
-//
 // scriptdir = os.path.dirname(__file__)
 using System;
 using System.IO;
@@ -24,9 +21,7 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_rewrite_images()
         {
-            // """Example for decreasing file size by more than 30%."""
             string filename = Doc("test-rewrite-images.pdf");
-            // doc = pymupdf.open(filename)
             using var doc = new Document(filename);
             // size0 = os.path.getsize(doc.name)
             long size0 = new System.IO.FileInfo(doc.Name).Length;
@@ -41,7 +36,6 @@ namespace MuPDF.NET.Test
             }
             // size1 = len(data)
             int size1 = data.Length;
-            // assert (1 - (size1 / size0)) > 0.3
             Assert.True((1 - (size1 / (float)size0)) > 0.3);
             doc.Save(Out("test_rewrite_images.pdf"));
         }

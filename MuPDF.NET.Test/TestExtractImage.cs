@@ -18,7 +18,7 @@ namespace MuPDF.NET.Test
 
         private static string Out(string fileName) => _Path.ForOutput(fileName, TestClassName);
 
-        /// <summary>PyMuPDF <c>tests/test_extractimage.py::test_extract_image</c>.</summary>
+        /// <summary>Regression test: extract image (PyMuPDF <c>tests/test_extractimage.py::test_extract_image</c>).</summary>
         [Fact]
         public void test_extract_image()
         {
@@ -37,7 +37,7 @@ namespace MuPDF.NET.Test
             Assert.Equal(KnownImageCount, imageCount);
         }
 
-        /// <summary>PyMuPDF <c>tests/test_extractimage.py::test_2348</c>.</summary>
+        /// <summary>Regression test: 2348 (PyMuPDF <c>tests/test_extractimage.py::test_2348</c>).</summary>
         [Fact]
         public void test_2348()
         {
@@ -69,7 +69,7 @@ namespace MuPDF.NET.Test
             }
         }
 
-        /// <summary>PyMuPDF <c>tests/test_extractimage.py::test_delete_image</c> (smoke test; no assert in Python).</summary>
+        /// <summary>smoke test; no assert in Python (PyMuPDF <c>tests/test_extractimage.py::test_delete_image</c>).</summary>
         [Fact]
         public void test_delete_image()
         {

@@ -11,7 +11,6 @@ namespace MuPDF.NET
     /// </summary>
     /// <remarks>
     /// <para>
-    /// Ports PyMuPDF <c>pymupdf.apply_pages</c> (<c>src/__init__.py</c>, ~line 24655) and worker helpers in
     /// <c>src/_apply_pages.py</c>. Public API uses .NET <see cref="ApplyPages"/> overloads with
     /// <c>ParallelRunner.For</c> instead of Python <c>multiprocessing</c> / <c>os.fork()</c>.
     /// </para>
@@ -26,7 +25,7 @@ namespace MuPDF.NET
     {
         /// <summary>
         /// Returns a list of results from <paramref name="pageFunction"/>, one per selected page, in page order.
-        /// PyMuPDF <c>apply_pages</c> with <c>method='single'</c> (sequential semantics; here uses
+        /// Applies pages sequentially (<c>method='single'</c>; PyMuPDF <c>apply_pages</c>). Here uses
         /// <see cref="ParallelRunner.For"/> on the supplied open document).
         /// </summary>
         /// <typeparam name="T">Result type produced for each page.</typeparam>
@@ -114,7 +113,7 @@ namespace MuPDF.NET
 
         /// <summary>
         /// Applies <paramref name="pageAction"/> to each selected page of an open document (no return list).
-        /// PyMuPDF <c>apply_pages</c> when the page function returns <c>None</c>.
+        /// Skips pages when the callback returns <c>null</c> (PyMuPDF <c>apply_pages</c>).
         /// </summary>
         /// <param name="doc">Open document whose pages are processed.</param>
         /// <param name="pageAction">Called for each page. Must be thread-safe; avoid mutating <paramref name="doc"/>.</param>

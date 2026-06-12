@@ -400,7 +400,6 @@ namespace BarcodeReader.Core.Common
                             var end = q + vd * p.foundPattern.moduleLength * MaxDistanceBetweenStartAndStopPatternsInModules * 1.3f;
                             br = new Bresenham(c, end);
                         }
-                        //
 
                         stopFinder.NewSearch(br, checkEndLine, -1);
                         while (stopFinder.NextPattern() != -1)

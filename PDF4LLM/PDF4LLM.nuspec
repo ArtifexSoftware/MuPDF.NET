@@ -35,6 +35,10 @@
       </group>
       <group targetFramework="net8.0">
         <dependency id="MuPDF.NET" version="[3.2.16,)" exclude="Build,Analyzers" />
+        <dependency id="Azure.AI.OpenAI" version="[2.1.0,)" exclude="Build,Analyzers" />
+        <dependency id="Azure.Search.Documents" version="[11.6.0,)" exclude="Build,Analyzers" />
+        <dependency id="Microsoft.Extensions.AI" version="[10.3.0,)" exclude="Build,Analyzers" />
+        <dependency id="Microsoft.Extensions.AI.OpenAI" version="[10.3.0,)" exclude="Build,Analyzers" />
       </group>
       <group targetFramework=".NETStandard2.0">
         <dependency id="MuPDF.NET" version="[3.2.16,)" exclude="Build,Analyzers" />

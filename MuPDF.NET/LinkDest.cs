@@ -158,7 +158,6 @@ namespace MuPDF.NET
             {
                 if (string.IsNullOrEmpty(Uri))
                 {
-                    // pass
                 }
                 else if (Uri.StartsWith("file:", StringComparison.OrdinalIgnoreCase))
                 {
@@ -193,12 +192,11 @@ namespace MuPDF.NET
                     Kind = Constants.LinkLaunch;
                 }
             }
-            // assert isinstance(self.named, dict)
         }
 
         private static string FormatG(float v) => v.ToString("G9", CultureInfo.InvariantCulture);
 
-        /// <summary>PyMuPDF nested <c>uri_to_dict</c> in <c>linkDest.__init__</c>.</summary>
+        /// <summary>Parses a URI action string into a link-destination dictionary.</summary>
         private static Dictionary<string, object> UriToDict(string uriWithoutHash)
         {
             var ret = new Dictionary<string, object>();
@@ -214,7 +212,7 @@ namespace MuPDF.NET
             return ret;
         }
 
-        /// <summary>PyMuPDF nested <c>unescape</c>: unescape <c>%AB</c> substrings to characters.</summary>
+        /// <summary>Unescapes <c>%AB</c> URI substrings to characters.</summary>
         private static string UnescapePercent(string encodedName)
         {
             string split = encodedName.Replace("%%", "%25");

@@ -13,7 +13,6 @@ namespace PDF4LLM.Ocr
     {
         public const char ReplacementUnicode = '\uFFFD';  // Unicode Replacement Character
 
-        /// <summary>Resolved tessdata directory, or null (pymupdf.get_tessdata() / TESSDATA_PREFIX).</summary>
         public static string Tessdata => Utils.TESSDATA_PREFIX;
 
         static TesseractApi()
@@ -138,7 +137,7 @@ namespace PDF4LLM.Ocr
             byte[] ocrPdfBytes = pixmap.PdfOCR2Bytes(compress: true, language: language, tessdata: tessdata);
             pixmap.Dispose();
 
-            using (Document tempPdf = new Document(ocrPdfBytes, filetype: "pdf"))
+            using (Document tempPdf = new Document(ocrPdfBytes, fileType: "pdf"))
             {
                 Page tempPage = tempPdf.LoadPage(0);
                 tempPage.AddRedactAnnot(tempPage.Rect);

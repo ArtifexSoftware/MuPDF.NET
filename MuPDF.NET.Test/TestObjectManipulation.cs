@@ -21,13 +21,11 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_rotation1()
         {
-            // doc = pymupdf.open()
             using var doc = new Document();
             // page = doc.NewPage()
             var page = doc.NewPage();
             // page.SetRotation(270)
             page.SetRotation(270);
-            // assert doc.XrefGetKey(page.Xref, "Rotate") == ("int", "270")
             Assert.Equal(("int", "270"), doc.XrefGetKey(page.Xref, "Rotate"));
             doc.Save(Out("test_rotation1.pdf"));
         }
@@ -35,13 +33,11 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_rotation2()
         {
-            // doc = pymupdf.open()
             using var doc = new Document();
             // page = doc.NewPage()
             var page = doc.NewPage();
             // doc.XrefSetKey(page.Xref, "Rotate", "270")
             doc.XrefSetKey(page.Xref, "Rotate", "270");
-            // assert page.rotation == 270
             Assert.Equal(270, page.Rotation);
             doc.Save(Out("test_rotation2.pdf"));
         }
@@ -49,28 +45,20 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_trailer()
         {
-            // """Access PDF trailer information."""
-            // doc = pymupdf.open(filename)
             using var doc = new Document(Doc("001003ED.pdf"));
-            // xreflen = doc.XrefLength
             int xreflen = doc.XrefLength;
             // _, xreflen_str = doc.XrefGetKey(-1, "Size")
             var (_, xreflenStr) = doc.XrefGetKey(-1, "Size");
-            // assert xreflen == int(xreflen_str)
             Assert.Equal(xreflen, int.Parse(xreflenStr));
             // trailer_keys = doc.xref_get_keys(-1)
             var trailerKeys = doc.xref_get_keys(-1);
-            // assert "ID" in trailer_keys
             Assert.Contains("ID", trailerKeys);
-            // assert "Root" in trailer_keys
             Assert.Contains("Root", trailerKeys);
         }
 
         [Fact]
         public void test_valid_name()
         {
-            // """Verify correct PDF names in method xref_set_key."""
-            // doc = pymupdf.open()
             using var doc = new Document();
             // page = doc.NewPage()
             var page = doc.NewPage();
@@ -78,7 +66,6 @@ namespace MuPDF.NET.Test
             // testing name in "key": confirm correct spec is accepted
             // doc.XrefSetKey(page.Xref, "Rotate", "90")
             doc.XrefSetKey(page.Xref, "Rotate", "90");
-            // assert page.rotation == 90
             Assert.Equal(90, page.Rotation);
 
             // check wrong spec is detected
@@ -92,21 +79,17 @@ namespace MuPDF.NET.Test
             }
             catch (ValueErrorException e)
             {
-                // assert str(e) == "bad 'key'"
                 Assert.Equal("bad 'key'", e.Message);
                 errorGenerated = true;
             }
-            // assert error_generated
             Assert.True(errorGenerated);
 
             // test name in "value": confirm correct spec is accepted
             // doc.XrefSetKey(page.Xref, "my_rotate/something", "90")
             doc.XrefSetKey(page.Xref, "my_rotate/something", "90");
-            // assert doc.XrefGetKey(page.Xref, "my_rotate/something") == ("int", "90")
             Assert.Equal(("int", "90"), doc.XrefGetKey(page.Xref, "my_rotate/something"));
             // doc.XrefSetKey(page.Xref, "my_rotate", "/90")
             doc.XrefSetKey(page.Xref, "my_rotate", "/90");
-            // assert doc.XrefGetKey(page.Xref, "my_rotate") == ("name", "/90")
             Assert.Equal(("name", "/90"), doc.XrefGetKey(page.Xref, "my_rotate"));
 
             // check wrong spec is detected
@@ -120,11 +103,9 @@ namespace MuPDF.NET.Test
             }
             catch (ValueErrorException e)
             {
-                // assert str(e) == "bad 'value'"
                 Assert.Equal("bad 'value'", e.Message);
                 errorGenerated = true;
             }
-            // assert error_generated
             Assert.True(errorGenerated);
 
             doc.Save(Out("test_valid_name.pdf"));

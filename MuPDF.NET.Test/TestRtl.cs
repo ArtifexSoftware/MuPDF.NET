@@ -1,6 +1,3 @@
-// import pymupdf
-//
-// import os
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -24,9 +21,7 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_rtl()
         {
-            // path = os.path.normpath(f'{__file__}/../../tests/resources/test-E+A.pdf')
             string path = Doc("test-E+A.pdf");
-            // doc = pymupdf.open(path)
             using var doc = new Document(path);
             // page = doc[0]
             var page = doc[0];
@@ -44,7 +39,6 @@ namespace MuPDF.NET.Test
                 // ... or NONE.
                 // cond2 = rtl_chars.intersection(w[4]) == set()
                 bool cond2 = !w.word.Any(c => rtlChars.Contains(c));
-                // assert cond1 or cond2
                 Assert.True(cond1 || cond2);
             }
             doc.Save(Out("test_rtl.pdf"));

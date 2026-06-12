@@ -34,7 +34,7 @@ namespace MuPDF.NET.Test
             return lines.Count;
         }
 
-        /// <summary>PyMuPDF <c>tests/test_linebreaks.py::test_linebreaks</c>.</summary>
+        /// <summary>Regression test: linebreaks (PyMuPDF <c>tests/test_linebreaks.py::test_linebreaks</c>).</summary>
         [Fact]
         public void test_linebreaks()
         {

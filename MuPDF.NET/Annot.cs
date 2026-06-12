@@ -36,7 +36,7 @@ namespace MuPDF.NET
         /// </summary>
         internal int AnnotRefId { get; }
 
-        /// <summary>PyMuPDF <c>Annot._yielded</c> (set by <c>Page.annots()</c>).</summary>
+        /// <summary>Whether this annotation was yielded by <c>Page.Annots()</c>.</summary>
         public bool Yielded { get; set; }
 
         internal mupdf.PdfAnnot NativeAnnot
@@ -65,7 +65,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>PyMuPDF: annot use after its page wrapper was erased (e.g. after <see cref="Document.NewPage"/>).</summary>
+        /// <summary>Detects annotation use after its page wrapper was erased.</summary>
         private void EnsurePageBound()
         {
             if (Parent == null || Parent.py_this_is_none())
@@ -101,7 +101,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>PyMuPDF-style annotation type enum.</summary>
+        /// <summary>Annotation type enumeration (PyMuPDF-compatible values).</summary>
         public AnnotationType AnnotationType => Type;
 
         /// <summary>Annotation type name string (PyMuPDF <c>Annot.type</c>).</summary>
@@ -116,7 +116,6 @@ namespace MuPDF.NET
             get
             {
                 var r = mupdf.mupdf.pdf_bound_annot(NativeAnnot);
-                // Python: "val *= p.derotation_matrix"
                 return Helpers.TransformRect(new Rect(r), DerotatePageMatrix);
             }
         }
@@ -161,7 +160,6 @@ namespace MuPDF.NET
                 var popup = mupdf.mupdf.pdf_dict_gets(AnnotObj, "Popup");
                 if (popup.m_internal != null)
                     rect = new Rect(mupdf.mupdf.pdf_dict_get_rect(popup, mupdf.mupdf.pdf_new_name("Rect")));
-                // Python: val = Rect(val) * transformation_matrix; val *= derotation_matrix
                 rect = Helpers.TransformRect(rect, Parent.TransformationMatrix);
                 rect = Helpers.TransformRect(rect, DerotatePageMatrix);
                 return rect;
@@ -356,7 +354,6 @@ namespace MuPDF.NET
             var pdfpage = mupdf.mupdf.pdf_annot_page(annot);            
             // rot = JM_rotate_page_matrix(pdfpage)
             var rot = Helpers.JM_rotate_page_matrix(pdfpage);
-            // r = mupdf.fz_transform_rect(JM_rect_from_py(rect), rot)
             var r = mupdf.mupdf.fz_transform_rect(new Rect(rect).ToFzRect(), rot.ToFzMatrix());
             if (mupdf.mupdf.fz_is_empty_rect(r) != 0 || mupdf.mupdf.fz_is_infinite_rect(r) != 0)
                 throw new ValueErrorException(Constants.MSG_BAD_RECT);
@@ -894,7 +891,6 @@ namespace MuPDF.NET
             if (!val)
                 throw new InvalidOperationException("Error updating annotation.");
 
-            // Python: "read contents as created by MuPDF"
             byte[] ap = _getAP();
             if (ap == null || ap.Length == 0)
                 return;
@@ -913,7 +909,6 @@ namespace MuPDF.NET
 
             if (annotType == AnnotationType.Redact && crossOut)
             {
-                // Python: create crossed-out rect for redact annotations.
                 var lines = new List<string>(apText.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None));
                 if (lines.Count >= 6)
                 {
@@ -1034,7 +1029,7 @@ namespace MuPDF.NET
             SetApnMatrix(apnMatrix * mat);
         }
 
-        /// <summary>PyMuPDF <c>Annot._update_appearance</c> — MuPDF appearance refresh and optional opacity/blend ExtGState.</summary>
+        /// <summary>MuPDF appearance refresh and optional opacity/blend ExtGState.</summary>
         private bool _update_appearance(float opacity, string blendMode, float[] fillColor, int rotate, AnnotationType annotType)
         {
             var annotObj = AnnotObj;
@@ -1136,7 +1131,7 @@ namespace MuPDF.NET
             return true;
         }
 
-        /// <summary>PyMuPDF <c>Annot.update_timing_test</c> — no-op timing stub called from <see cref="Update"/>.</summary>
+        /// <summary>No-op timing hook called from <see cref="Update"/> (compatibility stub).</summary>
         private static void UpdateTimingTest()
         {
             int total = 0;
@@ -1291,7 +1286,6 @@ namespace MuPDF.NET
             }
             mupdf.mupdf.pdf_dict_del(AnnotObj, mupdf.mupdf.pdf_new_name("Popup"));
 
-            // Python: also scan /Annots and remove entries whose /Parent is this annot.
             var annots = mupdf.mupdf.pdf_dict_get(page.obj(), mupdf.mupdf.pdf_new_name("Annots"));
             int n = mupdf.mupdf.pdf_array_len(annots);
             bool found = false;
@@ -1415,7 +1409,6 @@ namespace MuPDF.NET
                 var fStream = mupdf.mupdf.pdf_dict_get(ef, mupdf.mupdf.pdf_new_name("F"));
                 if (fStream.m_internal != null)
                 {
-                    // Python: expose both stream /Length and /Params /Size.
                     var lengthObj = mupdf.mupdf.pdf_dict_get(fStream, mupdf.mupdf.pdf_new_name("Length"));
                     result["length"] = lengthObj.m_internal != null ? mupdf.mupdf.pdf_to_int(lengthObj) : -1;
                     var sizeObj = mupdf.mupdf.pdf_dict_get(mupdf.mupdf.pdf_dict_get(fStream, mupdf.mupdf.pdf_new_name("Params")), mupdf.mupdf.pdf_new_name("Size"));
@@ -1452,7 +1445,6 @@ namespace MuPDF.NET
             if (res.m_internal != null)
             {
                 mupdf.mupdf.pdf_update_stream(ParentPdfDocument, stream, res, 1);
-                // Python: adjust /DL and /Params /Size after stream replacement.
                 int len = buffer.Length;
                 var l = mupdf.mupdf.pdf_new_int(len);
                 mupdf.mupdf.pdf_dict_put(stream, mupdf.mupdf.pdf_new_name("DL"), l);
@@ -1646,7 +1638,7 @@ namespace MuPDF.NET
         public static mupdf.PdfAnnot FindAnnotIRT(mupdf.PdfAnnot annot) => Helpers.JM_find_annot_irt(annot);
         public static void AddOCObject(mupdf.PdfDocument doc, mupdf.PdfObj reference, int xref) => Helpers.JM_add_oc_object(doc, reference, xref);
 
-        /// <summary>PyMuPDF <c>Annot._getAP</c> — AP/N stream bytes when present.</summary>
+        /// <summary>AP/N stream bytes when present.</summary>
         private byte[] _getAP()
         {
             var ap = GetAppearanceStreamObject("N");
@@ -1655,7 +1647,7 @@ namespace MuPDF.NET
             return Helpers.BufferToBytes(mupdf.mupdf.pdf_load_stream(ap));
         }
 
-        /// <summary>PyMuPDF <c>Annot._setAP</c> — update AP/N stream; optional BBox sync when <paramref name="rect"/> is 1.</summary>
+        /// <summary>Updates the AP/N appearance stream; optionally syncs BBox when <paramref name="rect"/> is 1.</summary>
         private void _setAP(byte[] buffer, int rect = 0)
         {
             var apobj = GetAppearanceStreamObject("N");

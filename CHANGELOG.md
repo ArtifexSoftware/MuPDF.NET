@@ -1,5 +1,17 @@
 # Changelog
 
+### [3.2.17-rc.5] - 2026-06-11
+- Synced MuPDF.NET with PyMuPDF 1.27.3 patches and resolved project build warnings.
+- Fixed native memory leaks from duplicated `PdfDocument` handles: cache a borrowed document view on `Document`, add `PdfDocumentBorrowedFromFz` / `PdfDocumentForPdfPage`, and stop using owning `page.doc()` in annotation and page utilities.
+- Fixed intermittent `AccessViolationException` in `Page.SearchFor` by walking stext blocks/lines/chars via linked lists instead of SWIG stext iterators; added `BorrowStextBlock` and related helpers.
+- Fixed `Utils.GetText` / layout extraction crashes by disposing temporary `TextPage` instances instead of dropping managed references while native stext data was still in use.
+- Fixed scaled `Pixmap` sample-buffer leaks on dispose (`fz_drop_pixmap` before SWIG teardown) and hardened pixmap/image constructor resource handling.
+- Fixed `GetPageImages` / resource-scan leaks from transient `pdf_new_name` objects in `JM_gather_*` helpers.
+- Fixed `Document.Recolor` / `Page.Recolor` creating throwaway pages; recolor now calls `RecolorPage` directly with proper `PdfRecolorOptions` disposal and page-tree invalidation.
+- Improved `Document` save reliability on Windows: atomic temp-file replace with retries for `IOException` / `UnauthorizedAccessException` (e.g. memory-mapped or read-only outputs).
+- Added memory-regression tests in `TestMemory` (`test_pixmap_scale_memory`, `test_issue_213_insert_image_memory_filename`, `test_issue_213_insert_image_memory_stream`, `test_freetext_annot_memory`).
+- Updated **PDF4LLM** with the latest PyMuPDF4LLM patches, optional net8.0 AI/RAG integration (`Microsoft.Extensions.AI`, Azure OpenAI / Search), and OCR pipeline fixes.
+
 ### [3.2.16] - 2026-04-24
 - Added global `Utils.MuPDFLock` and synchronized MuPDF native calls for improved thread safety.
 - Improved Tesseract OCR stability in the `PDF4LLM` OCR pipeline and hardened OCR helper behavior.

@@ -41,7 +41,6 @@ namespace MuPDF.NET
             if (doc == null)
                 throw new ArgumentNullException(nameof(doc));
             // dst = _as_pdf_document(doc)
-            // map_ = mupdf.pdf_new_graft_map(dst)
             // self.this = map_
             // self.thisown = True
             _nativeGraftmap = mupdf.mupdf.pdf_new_graft_map(doc.NativePdfDocument);

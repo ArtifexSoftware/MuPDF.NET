@@ -263,7 +263,7 @@ namespace MuPDF.NET
                 i++;
             }
             annotObj.pdf_dict_puts("NM", mupdf.mupdf.pdf_new_string(stemId, (uint)stemId.Length));
-            page.doc().m_internal.resynth_required = 0;
+            Helpers.PdfClearResynthRequired(page);
         }
 
         /// <summary>Add optional-content reference to a dictionary (legacy <c>AddOcObject</c>).</summary>

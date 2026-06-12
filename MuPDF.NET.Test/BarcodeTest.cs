@@ -115,8 +115,6 @@ namespace MuPDF.NET.Test
 
             // Datamatrix
             List<Barcode> datamatrixes = page.ReadBarcodes(clip: new Rect(1400, 150, 1660, 357), barcodeFormat: BarcodeFormat.DM);
-            //Assert.True(datamatrixes.Count == 1);
-            //Assert.True(datamatrixes[0].Text == "-1234567");
 
             // QR
             List<Barcode> qrs = page.ReadBarcodes(clip: new Rect(1400, 357, 1660, 500), barcodeFormat: BarcodeFormat.QR);
@@ -267,10 +265,8 @@ namespace MuPDF.NET.Test
             Assert.True(barcodes.Count == 1 && barcodes[0].Text == "Hello World!");
 
             barcodes = page.ReadBarcodes(clip: new Rect(80, 500, 450, 700), barcodeFormat: BarcodeFormat.CODABAR);
-            //Assert.True(barcodes.Count == 1 && barcodes[0].Text == "12345678901234567890");
 
             barcodes = page.ReadBarcodes(clip: new Rect(100, 620, 140, 660), barcodeFormat: BarcodeFormat.DM);
-            //Assert.True(barcodes.Count == 1 && barcodes[0].Text == "01100000110419257000");
 
             page.Dispose();
             doc.Close();

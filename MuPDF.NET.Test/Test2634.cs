@@ -15,8 +15,6 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_2634()
         {
-            // if not hasattr(pymupdf, 'mupdf'):
-            //     print('test_2634(): Not running on classic.')
             //     return;
 
             using var pdf = new Document(testDoc);
@@ -28,9 +26,7 @@ namespace MuPDF.NET.Test
 
             void clear_xref(List<(int level, string title, int page, Dictionary<string, object> link)> toc)
             {
-                //
                 // Clear toc items that naturally differ.
-                //
                 foreach (var item in toc)
                 {
                     var d = item.link;
@@ -68,7 +64,6 @@ namespace MuPDF.NET.Test
             Console.WriteLine(string.Join("\n", diff));
 
             // Check 'to' points are identical apart from rounding errors.
-            //
             Assert.Equal(toc_pdf.Count, toc_new.Count);
             foreach (var pair in toc_pdf.Zip(toc_new))
             {

@@ -27,8 +27,6 @@ namespace PDF4LLM
 
             if (!yes)
             {
-                // IdentifyHeaders = pymupdf4llm.helpers.pymupdf_rag.IdentifyHeaders
-                // TocHeaders = pymupdf4llm.helpers.pymupdf_rag.TocHeaders
                 LayoutActivation.Deactivate();
             }
         }

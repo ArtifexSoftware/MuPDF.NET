@@ -20,7 +20,7 @@ namespace MuPDF.NET
     /// </summary>
     internal static class Helpers
     {
-        /// <summary>PyMuPDF <c>JM_mupdf_warnings_store</c>.</summary>
+        /// <summary>Thread-safe list storing MuPDF warning messages.</summary>
         internal static readonly List<string> JM_mupdf_warnings_store = new List<string>();
 
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
@@ -50,7 +50,7 @@ namespace MuPDF.NET
             return Encoding.UTF8.GetString(bytes);
         }
 
-        /// <summary>PyMuPDF <c>JM_mupdf_warning</c> — redirect MuPDF warnings.</summary>
+        /// <summary>Redirects MuPDF library warnings into the warning store.</summary>
         private static void JmMupdfWarning(IntPtr user, IntPtr message)
         {
             string text = PtrToStringUtf8(message);
@@ -61,7 +61,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>PyMuPDF <c>JM_mupdf_error</c>.</summary>
+        /// <summary>MuPDF error callback handler.</summary>
         private static void JmMupdfError(IntPtr user, IntPtr message)
         {
             string text = PtrToStringUtf8(message);
@@ -87,7 +87,7 @@ namespace MuPDF.NET
                 new SWIGTYPE_p_void(IntPtr.Zero, false));
         }
 
-        /// <summary>PyMuPDF <c>INFINITE_RECT()</c>.</summary>
+        /// <summary>Returns MuPDF's infinite rectangle constant.</summary>
         internal static Rect INFINITE_RECT()
             => Rect.Infinite;
 
@@ -242,7 +242,7 @@ namespace MuPDF.NET
 
         internal static Quad QuadFromFz(mupdf.FzQuad fz) => new Quad(fz);
 
-        /// <summary>PyMuPDF <c>CheckRect</c>.</summary>
+        /// <summary>Validates and converts a rectangle argument.</summary>
         internal static bool CheckRect(object? r)
         {
             try
@@ -256,7 +256,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>PyMuPDF <c>CheckQuad</c>.</summary>
+        /// <summary>Validates and converts a quad argument.</summary>
         internal static bool CheckQuad(object? q)
         {
             try
@@ -271,7 +271,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>PyMuPDF <c>CheckMarkerArg</c>.</summary>
+        /// <summary>Validates text-marker annotation arguments.</summary>
         internal static IReadOnlyList<object> CheckMarkerArg(object quads)
         {
             if (CheckRect(quads))
@@ -294,7 +294,7 @@ namespace MuPDF.NET
             throw new ValueErrorException("bad quads entry");
         }
 
-        /// <summary>PyMuPDF <c>JM_quad_from_py</c> (rect, quad, and 4-float rect sequences).</summary>
+        /// <summary>Converts rectangle, quad, or four-float sequences to <see cref="Quad"/>.</summary>
         internal static mupdf.FzQuad QuadFromPy(object item)
         {
             if (item is mupdf.FzQuad fz)
@@ -341,7 +341,7 @@ namespace MuPDF.NET
             throw new ArgumentException("invalid rect-like");
         }
 
-        /// <summary>PyMuPDF <c>get_highlight_selection</c>.</summary>
+        /// <summary>Builds highlight quads for a text selection.</summary>
         internal static List<Rect> GetHighlightSelection(Page page, Point? start = null, Point? stop = null, IRect? clip = null)
         {
             Rect clipRect = clip == null ? page.Rect : new Rect(clip);
@@ -430,7 +430,7 @@ namespace MuPDF.NET
             return buffer;
         }
 
-        /// <summary>PyMuPDF <c>message()</c> — user messages (warnings).</summary>
+        /// <summary>Emits user-facing warning messages.</summary>
         internal static void message(string text = "")
         {
             if (!string.IsNullOrEmpty(text))
@@ -465,7 +465,7 @@ namespace MuPDF.NET
         static string QuoteProcessArgument(string arg) =>
             "\"" + (arg ?? "").Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
 
-        /// <summary>PyMuPDF <c>JM_get_font</c> — return a fz_font from a number of parameters.</summary>
+        /// <summary>Resolves a MuPDF <c>fz_font</c> from font parameters.</summary>
         internal static mupdf.FzFont JM_get_font(
             string fontname,
             string fontfile,
@@ -493,14 +493,12 @@ namespace MuPDF.NET
             mupdf.FzFont font = null;
             if (fontfile != null)
             {
-                // goto have_file;
                 font = mupdf.mupdf.fz_new_font_from_file(null, fontfile, index, 0);
                 return fertig(font);
             }
 
             if (fontbuffer != null && fontbuffer.Length > 0)
             {
-                // goto have_buffer;
                 mupdf.FzBuffer res = BufferFromBytes(fontbuffer);
                 font = mupdf.mupdf.fz_new_font_from_buffer(null, res, index, 0);
                 return fertig(font);
@@ -508,14 +506,12 @@ namespace MuPDF.NET
 
             if (ordering > -1)
             {
-                // goto have_cjk;
                 font = mupdf.mupdf.fz_new_cjk_font(ordering);
                 return fertig(font);
             }
 
             if (fontname != null)
             {
-                // goto have_base14;
                 // Base-14 or a MuPDF builtin font
                 font = mupdf.mupdf.fz_new_base14_font(fontname);
                 if (font.m_internal != null)
@@ -525,7 +521,6 @@ namespace MuPDF.NET
             }
 
             // Check for NOTO font
-            // have_noto:;
             using (var notoOut = new mupdf.ll_fz_lookup_noto_font_outparams())
             {
                 var data = mupdf.mupdf.ll_fz_lookup_noto_font_outparams_fn(script, lang, notoOut);
@@ -540,7 +535,7 @@ namespace MuPDF.NET
             return fertig(font);
         }
 
-        /// <summary>PyMuPDF <c>JM_get_font_descriptor</c> — FontDescriptor for Type0/CID or simple fonts.</summary>
+        /// <summary>FontDescriptor for Type0/CID or simple fonts.</summary>
         internal static mupdf.PdfObj JM_get_font_descriptor(mupdf.PdfObj fontObj)
         {
             if (fontObj.m_internal == null)
@@ -554,7 +549,7 @@ namespace MuPDF.NET
             return PdfDictGet(fontObj, mupdf.mupdf.pdf_new_name("FontDescriptor"));
         }
 
-        /// <summary>PyMuPDF <c>JM_get_fontbuffer</c> — embedded font file bytes for a font xref.</summary>
+        /// <summary>Returns embedded font file bytes for a font xref.</summary>
         internal static byte[] JM_get_fontbuffer(mupdf.PdfDocument pdf, int xref)
         {
             if (xref < 1)
@@ -773,7 +768,7 @@ namespace MuPDF.NET
             return new object[] { ixref, fontdict };
         }
 
-        /// <summary>PyMuPDF <c>JM_insert_font</c> — insert a font in a PDF (<c>src/__init__.py</c>).</summary>
+        /// <summary>Inserts a font dictionary into a PDF document.</summary>
         internal static object[] JM_insert_font(
             mupdf.PdfDocument pdf,
             Document doc,
@@ -881,7 +876,7 @@ namespace MuPDF.NET
             return new object[] { ixref, fontdict };
         }
 
-        /// <summary>PyMuPDF <c>JM_compress_buffer</c>: deflate buffer contents, or <c>null</c> if not worthwhile.</summary>
+        /// <summary>Deflates buffer contents, or returns null if compression is not worthwhile.</summary>
         internal static mupdf.FzBuffer? JmCompressBuffer(mupdf.FzBuffer inbuffer)
         {
             if (inbuffer?.m_internal == null)
@@ -899,7 +894,7 @@ namespace MuPDF.NET
             return buf;
         }
 
-        /// <summary>PyMuPDF <c>JM_update_stream</c>: optionally Flate-compress stream when beneficial.</summary>
+        /// <summary>Updates a PDF stream, optionally Flate-compressing when beneficial.</summary>
         internal static void JmUpdateStream(mupdf.PdfDocument doc, mupdf.PdfObj obj, mupdf.FzBuffer buffer_, int compress)
         {
             if (compress != 0)
@@ -926,7 +921,7 @@ namespace MuPDF.NET
             mupdf.mupdf.pdf_update_stream(doc, obj, buffer_, 0);
         }
 
-        /// <summary>PyMuPDF <c>JM_embed_file</c>: build a <c>/Filespec</c> dict with embedded file stream.</summary>
+        /// <summary>Builds a <c>/Filespec</c> dictionary with an embedded file stream.</summary>
         internal static mupdf.PdfObj JmEmbedFile(
             mupdf.PdfDocument pdf,
             mupdf.FzBuffer buf,
@@ -1014,6 +1009,18 @@ namespace MuPDF.NET
         }
 
         /// <summary>
+        /// Non-owning <see cref="mupdf.PdfDocument"/> view of an open <see cref="mupdf.FzDocument"/>.
+        /// Uses <c>ll_pdf_specifics</c> — <c>new PdfDocument(fz)</c> duplicates stream-backed PDFs (~1 MB/iter leak).
+        /// </summary>
+        internal static mupdf.PdfDocument PdfDocumentBorrowedFromFz(mupdf.FzDocument fz)
+        {
+            var internalPdf = mupdf.mupdf.ll_pdf_specifics(fz.m_internal);
+            if (internalPdf == null)
+                return new mupdf.PdfDocument();
+            return PdfDocumentBorrowed(new mupdf.PdfDocument(internalPdf));
+        }
+
+        /// <summary>
         /// Wrap a <see cref="mupdf.PdfDocument"/> borrowed from an existing <see cref="mupdf.FzDocument"/>.
         /// </summary>
         internal static mupdf.PdfDocument PdfDocumentBorrowed(mupdf.PdfDocument wrapper)
@@ -1036,6 +1043,24 @@ namespace MuPDF.NET
 
         internal static mupdf.PdfPage PdfAnnotPage(mupdf.PdfAnnot annot)
             => PdfPageBorrowed(mupdf.mupdf.pdf_annot_page(annot));
+
+        /// <summary>
+        /// Non-owning <see cref="mupdf.PdfDocument"/> for a page. Never use <c>page.doc()</c> — it duplicates
+        /// the native <c>pdf_document</c> (~400 KB/iter leak). Use <see cref="PdfDocumentForPdfPage"/> instead.
+        /// </summary>
+        internal static mupdf.PdfDocument PdfDocumentForPdfPage(mupdf.PdfPage page)
+        {
+            if (page?.m_internal?.doc == null)
+                return new mupdf.PdfDocument();
+            return PdfDocumentBorrowed(new mupdf.PdfDocument(page.m_internal.doc));
+        }
+
+        /// <summary>Clear <c>pdf_document.resynth_required</c> without calling <c>page.doc()</c>.</summary>
+        internal static void PdfClearResynthRequired(mupdf.PdfPage page)
+        {
+            if (page?.m_internal?.doc != null)
+                page.m_internal.doc.resynth_required = 0;
+        }
 
         /// <summary>Clear SWIG ownership on an existing wrapper without invalidating it (safe when caller still uses the handle).</summary>
         internal static void PdfObjReleaseOwnership(mupdf.PdfObj obj)
@@ -1403,6 +1428,35 @@ namespace MuPDF.NET
             return new mupdf.FzPixmap(handle, false);
         }
 
+        /// <summary>
+        /// Drop an owning <see cref="mupdf.FzPixmap"/> created by MuPDF (e.g. <c>fz_scale_pixmap</c>).
+        /// <c>delete_FzPixmap</c> alone does not release sample storage; call <c>fz_drop_pixmap</c> first.
+        /// </summary>
+        internal static void DropFzPixmap(ref mupdf.FzPixmap? pm)
+        {
+            if (pm == null) return;
+            lock (Utils.MuPDFLock)
+            {
+                if (mupdf.FzPixmap.getCPtr(pm).Handle == IntPtr.Zero)
+                {
+                    pm = null;
+                    return;
+                }
+                try
+                {
+                    var internalPix = pm.m_internal;
+                    if (internalPix != null)
+                        mupdf.mupdf.ll_fz_drop_pixmap(internalPix);
+                }
+                catch
+                {
+                    // Best-effort; still run wrapper dispose.
+                }
+                try { pm.Dispose(); } catch { }
+            }
+            pm = null;
+        }
+
         internal static mupdf.PdfObj PdfDictGetInheritable(mupdf.PdfObj dict, mupdf.PdfObj key)
             => PdfObjBorrowed(mupdf.mupdf.pdf_dict_get_inheritable(dict, key));
 
@@ -1636,15 +1690,12 @@ namespace MuPDF.NET
         /// </remarks>
         internal static string GetPdfStr(string s)
         {
-            // if not bool(s):
             if (string.IsNullOrEmpty(s))
                 // return "()"
                 return "()";
 
-            // def make_utf16be(s):
             static string MakeUtf16be(string text)
             {
-                // r = bytearray([254, 255]) + bytearray(s, "UTF-16BE")
                 byte[] r = new byte[2 + Encoding.BigEndianUnicode.GetByteCount(text)];
                 r[0] = 254;
                 r[1] = 255;
@@ -1653,65 +1704,42 @@ namespace MuPDF.NET
                 return "<" + BytesToHex(r).ToLowerInvariant() + ">";
             }
 
-            // The following either returns the original string with mixed-in
             // octal numbers \nnn for chars outside the ASCII range, or returns
-            // the UTF-16BE BOM version of the string.
             var r = new StringBuilder();
-            // for c in s:
             foreach (char c in s)
             {
                 // oc = ord(c)
                 int oc = c;
-                // if oc > 255:  # shortcut if beyond 8-bit code range
                 if (oc > 255)
                     // return make_utf16be(s)
                     return MakeUtf16be(s);
 
-                // if oc > 31 and oc < 127:  # in ASCII range
                 if (oc > 31 && oc < 127)
                 {
-                    // if c in ("(", ")", "\\"):  # these need to be escaped
                     if (c is '(' or ')' or '\\')
-                        // r += "\\"
                         r.Append('\\');
-                    // r += c
                     r.Append(c);
-                    // continue
                     continue;
                 }
 
-                // if oc > 127:  # beyond ASCII
                 if (oc > 127)
                 {
-                    // r += f"\\{oc:03o}"
                     r.Append('\\');
                     r.Append(Convert.ToString(oc, 8).PadLeft(3, '0'));
                     continue;
                 }
 
-                // now the white spaces
-                // if oc == 8:  # backspace
                 if (oc == 8)
-                    // r += "\\b"
                     r.Append("\\b");
-                // elif oc == 9:  # tab
                 else if (oc == 9)
-                    // r += "\\t"
                     r.Append("\\t");
-                // elif oc == 10:  # line feed
                 else if (oc == 10)
-                    // r += "\\n"
                     r.Append("\\n");
-                // elif oc == 12:  # form feed
                 else if (oc == 12)
-                    // r += "\\f"
                     r.Append("\\f");
-                // elif oc == 13:  # carriage return
                 else if (oc == 13)
-                    // r += "\\r"
                     r.Append("\\r");
                 else
-                    // r += "\\267"  # unsupported: replace by 0xB7
                     r.Append("\\267");
             }
 
@@ -1724,20 +1752,14 @@ namespace MuPDF.NET
         /// </summary>
         internal static string GetPdfNow()
         {
-            // a = str(abs(time.altzone // 3600)).rjust(2, "0")
-            // b = str((abs(time.altzone // 60) % 60)).rjust(2, "0")
-            // tz = f"{a}'{b}'"
             var now = DateTime.Now;
             var offset = TimeZoneInfo.Local.GetUtcOffset(now);
             char sign = offset < TimeSpan.Zero ? '-' : '+';
             offset = offset.Duration();
-            // tstamp = time.strftime("D:%Y%m%d%H%M%S", time.localtime())
-            // if time.altzone > 0: tstamp += "-" + tz
-            // elif time.altzone < 0: tstamp += "+" + tz
             return $"D:{now:yyyyMMddHHmmss}{sign}{offset.Hours:00}'{offset.Minutes:00}'";
         }
 
-        /// <summary>PyMuPDF <c>JM_point_from_py</c> — PySequence to fz_point.</summary>
+        /// <summary>PySequence to fz_point.</summary>
         internal static mupdf.FzPoint JM_point_from_py(object p)
         {
             if (p is mupdf.FzPoint fp)
@@ -1757,11 +1779,11 @@ namespace MuPDF.NET
             return new mupdf.FzPoint(Constants.FzMinInfRect, Constants.FzMinInfRect);
         }
 
-        /// <summary>PyMuPDF <c>JM_get_annot_id_list</c>.</summary>
+        /// <summary>Lists annotation NM identifiers on a page.</summary>
         internal static List<string> JM_get_annot_id_list(mupdf.PdfPage page)
         {
             var names = new List<string>();
-            var annots = PdfDictGet(PdfPageObj(page), mupdf.mupdf.pdf_new_name("Annots"));
+            var annots = PdfDictGets(PdfPageObj(page), "Annots");
             if (annots.m_internal == null)
                 return names;
             for (int i = 0; i < mupdf.mupdf.pdf_array_len(annots); i++)
@@ -1777,11 +1799,10 @@ namespace MuPDF.NET
         /// <summary>
         /// Add a unique /NM key to an annotation or widget.
         /// Append a number to 'stem' such that the result is a unique name.
-        /// PyMuPDF <c>JM_add_annot_id</c>.
+        /// PyMuPDF equivalent: <c>JM_add_annot_id</c>.
         /// </summary>
-        internal static void JM_add_annot_id(mupdf.PdfAnnot annot, string stem)
+        internal static void JM_add_annot_id(mupdf.PdfAnnot annot, string stem, mupdf.PdfPage page)
         {
-            mupdf.PdfPage page = PdfAnnotPage(annot);
             var annot_obj = PdfAnnotObj(annot);
             var names = JM_get_annot_id_list(page);
             int i = 0;
@@ -1795,7 +1816,7 @@ namespace MuPDF.NET
             }
             var name = mupdf.mupdf.pdf_new_string(stem_id, (uint)stem_id.Length);
             PdfDictPuts(annot_obj, "NM", name);
-            page.doc().m_internal.resynth_required = 0;
+            PdfClearResynthRequired(page);
         }
 
         /// <summary>Return the inheritable /Rotate value of a PDF page.</summary>
@@ -1878,7 +1899,7 @@ namespace MuPDF.NET
             return new Point(point).Transform(matrix);
         }
 
-        /// <summary>PyMuPDF <c>JM_BinFromBuffer</c> — copy buffer bytes without consuming the <see cref="mupdf.FzBuffer"/>.</summary>
+        /// <summary>Copies buffer bytes without consuming the <see cref="mupdf.FzBuffer"/>.</summary>
         internal static byte[] BinFromBuffer(mupdf.FzBuffer buffer) => BufferToBytes(buffer);
 
         internal static byte[] BufferToBytes(mupdf.FzBuffer buffer)
@@ -2015,7 +2036,6 @@ namespace MuPDF.NET
             string nstyle = border.TryGetValue("style", out var styleObj) ? styleObj as string : null;
             int nclouds = border.TryGetValue("clouds", out var cloudsObj) && cloudsObj != null ? Convert.ToInt32(cloudsObj) : -1;
 
-            // Python: get old border properties before replacing dictionaries.
             var oborder = JM_annot_border(annot_obj);
 
             PdfDictDel(annot_obj, "BS");
@@ -2069,7 +2089,7 @@ namespace MuPDF.NET
             PdfDictPut(reference, "OC", indobj);
         }
 
-        /// <summary>PyMuPDF <c>JM_read_contents</c> (<c>src/__init__.py</c>) — read and concatenate a page's /Contents stream(s).</summary>
+        /// <summary><c>src/__init__.py</c>) — read and concatenate a page's /Contents stream(s.</summary>
         internal static mupdf.FzBuffer JM_read_contents(mupdf.PdfObj pageref)
         {
             var contents = PdfDictGets(pageref, "Contents");
@@ -2095,7 +2115,7 @@ namespace MuPDF.NET
             return new mupdf.FzBuffer(0);
         }
 
-        /// <summary>PyMuPDF <c>JM_insert_contents</c> (<c>src/__init__.py</c>).</summary>
+        /// <summary><c>src/__init__.py</c>.</summary>
         /// <remarks>
         /// Python docstring (verbatim intent):
         /// Insert a buffer as a new separate /Contents object of a page.
@@ -2171,7 +2191,7 @@ namespace MuPDF.NET
             return xobj1;
         }
 
-        /// <summary>PyMuPDF <c>JM_object_to_buffer</c>.</summary>
+        /// <summary>Serializes a PDF object to a buffer.</summary>
         internal static mupdf.FzBuffer JmObjectToBuffer(mupdf.PdfObj what, int compress, int ascii)
         {
             var res = mupdf.mupdf.fz_new_buffer(512);
@@ -2184,7 +2204,7 @@ namespace MuPDF.NET
             return res;
         }
 
-        /// <summary>PyMuPDF <c>JM_color_count</c> / <c>extra.ll_JM_color_count</c>.</summary>
+        /// <summary>/ <c>extra.ll_JM_color_count</c>.</summary>
         internal static Dictionary<byte[], int> JmColorCount(mupdf.FzPixmap pm, IRect clip = null)
         {
             var rc = new Dictionary<byte[], int>(ByteArrayComparer.Instance);
@@ -2270,7 +2290,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>PyMuPDF <c>JM_norm_rotation</c>.</summary>
+        /// <summary>Normalizes page rotation to 0, 90, 180, or 270 degrees.</summary>
         internal static int JmNormRotation(int rotate)
         {
             // return normalized /Rotate value:one of 0, 90, 180, 270
@@ -2283,7 +2303,7 @@ namespace MuPDF.NET
             return rotate;
         }
 
-        /// <summary>PyMuPDF <c>JM_convert_to_pdf</c>.</summary>
+        /// <summary>Converts a document to PDF in memory.</summary>
         internal static byte[] JmConvertToPdf(mupdf.FzDocument doc, int fp, int tp, int rotate)
         {
             /*
@@ -2342,12 +2362,11 @@ namespace MuPDF.NET
             var out_ = new mupdf.FzOutput(res);
             mupdf.mupdf.pdf_write_document(pdfout, out_, opts);
             out_.fz_close_output();
-            // c = mupdf.fz_buffer_extract_copy(res)
             byte[] c = res.fz_buffer_extract();
             return c;
         }
 
-        /// <summary>PyMuPDF <c>JM_get_page_labels</c>.</summary>
+        /// <summary>Reads PDF page label dictionaries.</summary>
         internal static void JmGetPageLabels(List<(int pno, string rule)> liste, mupdf.PdfObj nums)
         {
             int n = nums.pdf_array_len();
@@ -2365,7 +2384,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>PyMuPDF <c>JM_object_to_buffer</c> + <c>JM_EscapeStrFromBuffer</c>.</summary>
+        /// <summary>+ <c>JM_EscapeStrFromBuffer</c>.</summary>
         internal static string PdfObjPrintToString(mupdf.PdfObj obj, int compress, int ascii)
         {
             try
@@ -2380,7 +2399,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>PyMuPDF <c>JM_set_object_value</c> (<c>Document.xref_set_key</c>).</summary>
+        /// <summary><c>Document.xref_set_key</c>.</summary>
         internal static mupdf.PdfObj JmSetObjectValue(mupdf.PdfDocument pdf, mupdf.PdfObj obj, string key, string value)
         {
             const string eyecatcher = "fitz: replace me!";
@@ -2488,7 +2507,6 @@ namespace MuPDF.NET
 
         internal static mupdf.PdfAnnot JM_find_annot_irt(mupdf.PdfAnnot annot)
         {
-            // Python: return first annot with /IRT pointing to this annot.
             var annotObj = Helpers.PdfAnnotObj(annot);
             var page = PdfAnnotPage(annot);
             var it = PdfFirstAnnot(page);
@@ -2531,7 +2549,6 @@ namespace MuPDF.NET
             {
                 byte[] rnd0 = new byte[16];
                 // Need to convert raw bytes into a str to send to
-                // mupdf.pdf_new_string(). chr() seems to work for this.
                 string rnd = "";
                 for (int i = 0; i < rnd0.Length; i++)
                 {
@@ -2609,7 +2626,7 @@ namespace MuPDF.NET
             return (col, font, size);
         }
 
-        /// <summary>PyMuPDF <c>pdf_set_annot_color</c> wrapper (FreeText fill / border color).</summary>
+        /// <summary>Sets annotation color (FreeText fill or border).</summary>
         internal static void PdfSetAnnotColor(mupdf.PdfAnnot annot, int n, float[] color)
         {
             if (n <= 0 || color == null || color.Length == 0)
@@ -2649,7 +2666,6 @@ namespace MuPDF.NET
             var annotObj = Helpers.PdfAnnotObj(annot);
             int nFill = fillColor?.Length ?? 0;
 
-            // Python: remove fill color from unsupported annots or if requested.
             bool supportsInterior = annotType == AnnotationType.Square
                 || annotType == AnnotationType.Circle
                 || annotType == AnnotationType.Line
@@ -2688,7 +2704,6 @@ namespace MuPDF.NET
             if ((opacity < 0 || opacity >= 1) && string.IsNullOrEmpty(blendMode))
                 return true;
 
-            // Python: create or update /ExtGState for opacity/blend mode.
             var ap = PdfDictGetl(annotObj, "AP", "N");
             if (ap.m_internal == null) return true;
 
@@ -2739,7 +2754,6 @@ namespace MuPDF.NET
         {
             if (dashes == null || dashes.Length == 0) return apText;
             string ret = "[" + string.Join(" ", dashes) + "] 0 d\n" + apText;
-            // Python: reset dashing after first stroke.
             return ret.Replace("\nS\n", "\nS\n[] 0 d\n");
         }
 
@@ -2809,9 +2823,9 @@ namespace MuPDF.NET
             if (doc is mupdf.PdfDocument pd) return pd;
             if (doc is mupdf.FzDocument fd)
             {
-                var ret = fd.pdf_document_from_fz_document();
+                var ret = PdfDocumentBorrowedFromFz(fd);
                 if (required && ret.m_internal == null) throw new InvalidOperationException(Constants.MSG_IS_NO_PDF);
-                return PdfDocumentBorrowed(ret);
+                return ret;
             }
             throw new ArgumentException($"Unrecognised document type: {doc.GetType()}");
         }
@@ -2842,7 +2856,7 @@ namespace MuPDF.NET
             throw new ArgumentException($"Unrecognised page type: {page.GetType()}");
         }
 
-        /// <summary>PyMuPDF <c>_as_pdf_page(page)</c> — always <c>pdf_page_from_fz_page</c>, never a cached wrapper.</summary>
+        /// <summary>Returns a fresh <c>pdf_page</c> from <c>fz_page</c> (never a cached wrapper).</summary>
         internal static mupdf.PdfPage AsPdfPageFresh(Page page, bool required = true)
         {
             page.DisposeCachedPdfPage();
@@ -3167,9 +3181,26 @@ namespace MuPDF.NET
             return buffer.ToString();
         }
 
+        /// <summary>
+        /// Non-owning <see cref="mupdf.FzStextBlock"/> view of a block inside a live stext page.
+        /// Do not use <c>new FzStextBlock(internal_)</c> — that wrapper is owning and its finalizer
+        /// can delete in-page data while other code still walks lines/chars.
+        /// </summary>
+        internal static mupdf.FzStextBlock BorrowStextBlock(mupdf.fz_stext_block block)
+        {
+            if (block == null)
+                return null;
+            global::System.IntPtr cPtr = mupdf.mupdfPINVOKE.new_FzStextBlock__SWIG_2(mupdf.fz_stext_block.getCPtr(block));
+            if (mupdf.mupdfPINVOKE.SWIGPendingException.Pending)
+                throw mupdf.mupdfPINVOKE.SWIGPendingException.Retrieve();
+            return new mupdf.FzStextBlock(cPtr, false);
+        }
+
+        /// <summary>First line of a text block; then walk <c>line.next</c>.</summary>
         internal static mupdf.fz_stext_line FirstStextLinePtr(mupdf.fz_stext_block block)
         {
-            var iter = new mupdf.FzStextBlock(block).begin();
+            var wrap = BorrowStextBlock(block);
+            var iter = wrap.begin();
             try
             {
                 return iter.__deref__()?.m_internal;
@@ -3180,7 +3211,21 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>PyMuPDF <c>PyUnicode_DecodeRawUnicodeEscape</c>.</summary>
+        /// <summary>First line via a cached non-owning block view (see <see cref="TextPage"/>).</summary>
+        internal static mupdf.fz_stext_line FirstStextLine(mupdf.FzStextBlock block)
+        {
+            var iter = block.begin();
+            try
+            {
+                return iter.__deref__()?.m_internal;
+            }
+            finally
+            {
+                iter.Dispose();
+            }
+        }
+
+        /// <summary>Decodes PDF raw Unicode escape sequences in a buffer.</summary>
         internal static string PyUnicode_DecodeRawUnicodeEscape(string s, string errors = "strict")
         {
             // FIXED: handle raw unicode escape sequences
@@ -3270,7 +3315,7 @@ namespace MuPDF.NET
             return names;
         }
 
-        /// <summary>PyMuPDF <c>JM_get_annot_by_xref</c>.</summary>
+        /// <summary>Finds an annotation by xref on a page.</summary>
         internal static mupdf.PdfAnnot JmGetAnnotByXref(mupdf.PdfPage page, int xref)
         {
             int found = 0;
@@ -3289,7 +3334,7 @@ namespace MuPDF.NET
             return annot;
         }
 
-        /// <summary>PyMuPDF <c>JM_get_annot_by_name</c>.</summary>
+        /// <summary>Finds an annotation by NM name on a page.</summary>
         internal static mupdf.PdfAnnot JmGetAnnotByName(mupdf.PdfPage page, string name)
         {
             if (string.IsNullOrEmpty(name))
@@ -3334,7 +3379,6 @@ namespace MuPDF.NET
         /// <summary>Python <c>JM_have_operation</c> (<c>src/__init__.py</c>).</summary>
         internal static bool JM_have_operation(mupdf.PdfDocument pdf)
         {
-            // if pdf.m_internal.journal and not mupdf.pdf_undoredo_step(pdf, 0):
             //     return 0
             // return 1
             if (pdf?.m_internal == null)
@@ -3405,7 +3449,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>PyMuPDF <c>util_hor_matrix</c> (<c>src/__init__.py</c>).</summary>
+        /// <summary><c>src/__init__.py</c>.</summary>
         internal static Matrix UtilHorMatrix(Point c, Point p)
         {
             var diff = p - c;
@@ -3418,7 +3462,7 @@ namespace MuPDF.NET
             return m1 * m2;
         }
 
-        /// <summary>PyMuPDF <c>calc_image_matrix</c> (<c>src/__init__.py</c>).</summary>
+        /// <summary><c>src/__init__.py</c>.</summary>
         internal static Matrix CalcImageMatrix(int width, int height, Rect tr, int rotate, bool keep)
         {
             var trect = tr.ToFzRect();
@@ -3523,7 +3567,7 @@ namespace MuPDF.NET
             return new string(c);
         }
 
-        /// <summary>PyMuPDF <c>CheckMorph</c> (<c>src/__init__.py</c>).</summary>
+        /// <summary><c>src/__init__.py</c>.</summary>
         internal static bool CheckMorph(Point morphFix, Matrix morphMat)
         {
             if (morphFix == null || morphMat == null)
@@ -3534,7 +3578,7 @@ namespace MuPDF.NET
             return true;
         }
 
-        /// <summary>PyMuPDF <c>getTJstr</c> — PDF hex string for the <c>TJ</c> operator.</summary>
+        /// <summary>PDF hex string for the <c>TJ</c> operator.</summary>
         internal static string GetTJstr(string text, List<(int glyph, float width)> glyphs, bool simple, int ordering)
         {
             // if text.startswith("[<") and text.endswith(">]"):  # already done
@@ -3692,7 +3736,6 @@ namespace MuPDF.NET
                 return false;
 
             var inv = page.TransformationMatrix.Inverted() ?? Matrix.Identity;
-            // Python: tuple(r * ictm) — do not mutate lnk["from"]
             var rPdf = new Rect(fromRect).Transform(inv);
             string rectStr = FormatPdfReals(rPdf.X0, rPdf.Y0, rPdf.X1, rPdf.Y1);
 
@@ -4153,7 +4196,7 @@ namespace MuPDF.NET
             PdfArrayPush(annots, indObj);
         }
 
-        /// <summary>PyMuPDF <c>_make_PdfFilterOptions</c> — keeps the sanitize factory alive for the filter lifetime.</summary>
+        /// <summary>Builds <c>PdfFilterOptions</c> and keeps the sanitize factory alive for the filter lifetime.</summary>
         internal readonly struct PdfFilterOptionsRef
         {
             public mupdf.PdfFilterOptions Filter { get; }
@@ -4166,7 +4209,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>PyMuPDF <c>JM_image_reporter</c> — image resource names and quads from page contents.</summary>
+        /// <summary>Reports image resource names and quads from page contents.</summary>
         internal static List<(string name, mupdf.FzQuad quad)> JmImageReporter(mupdf.PdfPage page)
         {
             var entries = new List<(string, mupdf.FzQuad)>();
@@ -4177,7 +4220,7 @@ namespace MuPDF.NET
             var sopts = new ImageReporterSanitizeOptions(entries, pageMatrix);
             var filterPkg = MakePdfFilterOptions(
                 instance_forms: 1, ascii: 1, no_update: 1, sanitize: 1, sopts: sopts);
-            var pdf = page.doc();
+            var pdf = PdfDocumentForPdfPage(page);
             mupdf.mupdf.pdf_filter_page_contents(pdf, page, filterPkg.Filter);
             return entries;
         }
@@ -4207,7 +4250,7 @@ namespace MuPDF.NET
             return new PdfFilterOptionsRef(filter_, factory);
         }
 
-        /// <summary>PyMuPDF <c>JM_mediabox</c>.</summary>
+        /// <summary>Returns the page MediaBox as a <see cref="Rect"/>.</summary>
         internal static mupdf.FzRect JmMediabox(mupdf.PdfObj pageObj)
         {
             var mediabox = mupdf.mupdf.pdf_to_rect(
@@ -4226,7 +4269,7 @@ namespace MuPDF.NET
                 Math.Max(mediabox.y0, mediabox.y1));
         }
 
-        /// <summary>PyMuPDF <c>JM_cropbox</c>.</summary>
+        /// <summary>Returns the page CropBox as a <see cref="Rect"/>.</summary>
         internal static mupdf.FzRect JmCropbox(mupdf.PdfObj pageObj)
         {
             var mediabox = JmMediabox(pageObj);
@@ -4241,7 +4284,7 @@ namespace MuPDF.NET
             return cropbox;
         }
 
-        /// <summary>PyMuPDF <c>JM_rect_from_py</c>.</summary>
+        /// <summary>Converts rectangle-like input to <see cref="Rect"/>.</summary>
         internal static mupdf.FzRect JmRectFromPy(object? r)
         {
             if (r is mupdf.FzRect fz)
@@ -4261,7 +4304,7 @@ namespace MuPDF.NET
         /// Version of fz_new_pixmap_from_display_list (util.c) to also support
         /// rendering of only the 'clip' part of the displaylist rectangle.
         /// </summary>
-        /// <remarks>PyMuPDF <c>JM_pixmap_from_display_list</c>.</remarks>
+        /// <remarks>PyMuPDF equivalent: <c>JM_pixmap_from_display_list</c>.</remarks>
         internal static Pixmap JmPixmapFromDisplayList(
             mupdf.FzDisplayList list_,
             Matrix? ctm,
@@ -4276,7 +4319,6 @@ namespace MuPDF.NET
             var rect = mupdf.mupdf.fz_bound_display_list(list_);
             var matrix = MatrixToFz(ctm);
             var rclip = JmRectFromPy(clip);
-            // rect = mupdf.fz_intersect_rect(rect, rclip)    # no-op if clip is not given
             rect = mupdf.mupdf.fz_intersect_rect(rect, rclip);
 
             rect = rect.fz_transform_rect(matrix);
@@ -4310,26 +4352,23 @@ namespace MuPDF.NET
             return new Pixmap(pix);
         }
 
-        /// <summary>PyMuPDF <c>JM_UnicodeFromBuffer</c> (<c>src/__init__.py</c>).</summary>
+        /// <summary><c>src/__init__.py</c>.</summary>
         internal static string JM_UnicodeFromBuffer(mupdf.FzBuffer buff)
         {
             if (buff?.m_internal == null)
                 return "";
-            // buff_bytes = mupdf.fz_buffer_extract_copy(buff)
             byte[] buff_bytes = buff.fz_buffer_extract();
-            // val = buff_bytes.decode(errors='replace')
             string val = System.Text.Encoding.UTF8.GetString(buff_bytes);
             // z = val.find(chr(0))
             int z = val.IndexOf('\0');
             // if z >= 0:
             if (z >= 0)
-                // val = val[:z]
                 val = val.Substring(0, z);
             // return val
             return val;
         }
 
-        /// <summary>PyMuPDF <c>extra.i</c> <c>JM_append_rune</c> — non-ASCII as <c>\uXXXX</c> in buffer.</summary>
+        /// <summary><c>JM_append_rune</c> — non-ASCII as <c>\uXXXX</c> in buffer.</summary>
         internal static void JmAppendRune(mupdf.FzBuffer buff, int ch)
         {
             if (ch == 92)
@@ -4344,7 +4383,7 @@ namespace MuPDF.NET
                 buff.fz_append_string(string.Format(System.Globalization.CultureInfo.InvariantCulture, "\\U{0:x8}", ch));
         }
 
-        /// <summary>PyMuPDF <c>JM_EscapeStrFromBuffer</c> (<c>PyUnicode_DecodeRawUnicodeEscape</c>).</summary>
+        /// <summary><c>PyUnicode_DecodeRawUnicodeEscape</c>.</summary>
         internal static string JmEscapeStrFromBuffer(mupdf.FzBuffer buff)
         {
             if (buff?.m_internal == null)
@@ -4352,7 +4391,7 @@ namespace MuPDF.NET
             return DecodeRawUnicodeEscapeBytes(buff.fz_buffer_extract(), "replace");
         }
 
-        /// <summary>PyMuPDF <c>JM_merge_resources</c>.</summary>
+        /// <summary>Merges PDF resource dictionaries.</summary>
         internal static (int maxAlp, int maxFonts) JmMergeResources(mupdf.PdfPage page, mupdf.PdfObj tempRes)
         {
             var resources = PdfDictGets(PdfPageObj(page), "Resources");
@@ -4838,7 +4877,7 @@ namespace MuPDF.NET
             if (page?.m_internal == null)
                 throw new InvalidOperationException("Annot is not bound to a page");
             var annotObj = Helpers.PdfAnnotObj(annot);
-            var pdf = page.doc();
+            var pdf = PdfDocumentForPdfPage(page);
             var fieldType = widget.InsertFieldType;
 
             // rectangle
@@ -5018,10 +5057,9 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>PyMuPDF <c>util_measure_string</c> (<c>src/__init__.py</c>).</summary>
+        /// <summary><c>src/__init__.py</c>.</summary>
         internal static float UtilMeasureString(string text, string fontname, float fontsize, int encoding)
         {
-            // font = mupdf.fz_new_base14_font(fontname)
             FzFont font = mupdf.mupdf.fz_new_base14_font(fontname);
             try
             {
@@ -5032,30 +5070,22 @@ namespace MuPDF.NET
                 // while pos < len(text):
                 while (pos < text.Length)
                 {
-                    // t, c = mupdf.fz_chartorune(text[pos:])
                     using var chartoruneOut = new ll_fz_chartorune_outparams();
                     int t = mupdf.mupdf.ll_fz_chartorune_outparams_fn(text.Substring(pos), chartoruneOut);
                     int c = chartoruneOut.rune;
                     // pos += t
                     pos += t;
-                    // if encoding == mupdf.PDF_SIMPLE_ENCODING_GREEK:
                     if (encoding == mupdf.mupdf.PDF_SIMPLE_ENCODING_GREEK)
-                        // c = mupdf.fz_iso8859_7_from_unicode(c)
                         c = mupdf.mupdf.fz_iso8859_7_from_unicode(c);
-                    // elif encoding == mupdf.PDF_SIMPLE_ENCODING_CYRILLIC:
                     else if (encoding == mupdf.mupdf.PDF_SIMPLE_ENCODING_CYRILLIC)
-                        // c = mupdf.fz_windows_1251_from_unicode(c)
                         c = mupdf.mupdf.fz_windows_1251_from_unicode(c);
                     else
-                        // c = mupdf.fz_windows_1252_from_unicode(c)
                         c = mupdf.mupdf.fz_windows_1252_from_unicode(c);
                     // if c < 0:
                     if (c < 0)
                         // c = 0xB7
                         c = 0xB7;
-                    // g = mupdf.fz_encode_character(font, c)
                     int g = font.fz_encode_character(c);
-                    // dw = mupdf.fz_advance_glyph(font, g, 0)
                     float dw = font.fz_advance_glyph(g, 0);
                     // w += dw
                     w += dw;
@@ -5071,7 +5101,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>PyMuPDF <c>get_tessdata()</c> — resolve Tesseract language data directory.</summary>
+        /// <summary>Resolves the Tesseract language-data directory.</summary>
         internal static string GetTessdata(string tessdata = null)
         {
             if (!string.IsNullOrWhiteSpace(tessdata))

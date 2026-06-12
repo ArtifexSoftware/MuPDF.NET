@@ -1,6 +1,3 @@
-// import pymupdf
-// import pathlib
-// import os
 using System;
 using System.IO;
 using Xunit;
@@ -23,10 +20,8 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_spikes()
         {
-            // """Check suppression of text spikes caused by long miters."""
             string spikesYes = Doc("spikes-yes.png");
             string spikesNo = Doc("spikes-no.png");
-            // doc = pymupdf.open()
             using var doc = new Document();
             // text = "NATO MEMBERS"  # some text provoking spikes ("N", "M")
             string text = "NATO MEMBERS";
@@ -37,9 +32,7 @@ namespace MuPDF.NET.Test
             // page = doc.NewPage(width=200, height=50)  # small page
             var page = doc.NewPage(width: 200, height: 50);
             // page.InsertText(
-            //     point,
             //     text,
-            //     fontsize=20,
             //     render_mode=1,  # stroke text only
             //     border_width=0.3,  # causes thick border lines
             //     miter_limit=None,  # do not care about miter spikes
@@ -56,16 +49,13 @@ namespace MuPDF.NET.Test
             page.InsertText(point, text, fontSize: 20, color: _Constants.white);
             // pix1 = page.GetPixmap()
             var pix1 = page.GetPixmap();
-            // assert pix1.ToBytes() == spikes_yes.read_bytes()
             Assert.Equal(File.ReadAllBytes(spikesYes), pix1.ToBytes());
 
             // make text suppressing spikes
             // page = doc.NewPage(width=200, height=50)
             page = doc.NewPage(width: 200, height: 50);
             // page.InsertText(
-            //     point,
             //     text,
-            //     fontsize=20,
             //     render_mode=1,
             //     border_width=0.3,
             //     miter_limit=1,  # suppress each and every miter spike
@@ -81,7 +71,6 @@ namespace MuPDF.NET.Test
             page.InsertText(point, text, fontSize: 20, color: _Constants.white);
             // pix2 = page.GetPixmap()
             var pix2 = page.GetPixmap();
-            // assert pix2.ToBytes() == spikes_no.read_bytes()
             Assert.Equal(File.ReadAllBytes(spikesNo), pix2.ToBytes());
             doc.Save(Out("test_spikes.pdf"));
         }

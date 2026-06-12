@@ -594,10 +594,10 @@ namespace MuPDF.NET
         public static readonly List<string> ColorNames =
             ColorList.Select(c => c.Name).ToList();
 
-        /// <summary>PyMuPDF <c>colors_wx_list()</c> — same data as <see cref="ColorList"/>.</summary>
+        /// <summary>Returns the same data as <see cref="ColorList"/>.</summary>
         public static List<(string Name, int R, int G, int B)> GetWxColorList() => ColorList;
 
-        /// <summary>PyMuPDF <c>colors_pdf_dict()</c> — same data as <see cref="PdfColorDict"/>.</summary>
+        /// <summary>Returns the same data as <see cref="PdfColorDict"/>.</summary>
         public static Dictionary<string, (float r, float g, float b)> GetPdfColorDictionary() => PdfColorDict;
 
         // ─── PyMuPDF API names (internal, same assembly) ─────────────────

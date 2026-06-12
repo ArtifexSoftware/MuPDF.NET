@@ -234,12 +234,22 @@ namespace MuPDF.NET
         /// Legacy readthedocs <c>Recolor</c> — PDF only: execute <see cref="Page.Recolor"/> for all pages
         /// </summary>
         /// <remarks>See <see cref="Recolor"/>. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
-        public void Recolor(int pageNum, int colorNum) => this[pageNum].Recolor(colorNum);
+        public void Recolor(int pageNum, int colorNum) => RecolorPage(pageNum, colorNum);
         /// <summary>
         /// Legacy readthedocs <c>Recolor</c> — PDF only: execute <see cref="Page.Recolor"/> for all pages
         /// </summary>
         /// <remarks>See <see cref="Recolor"/>. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
-        public void Recolor(int pageNum, string colorSpaceName) => this[pageNum].Recolor(colorSpaceName);
+        public void Recolor(int pageNum, string colorSpaceName)
+        {
+            int components = colorSpaceName?.ToLowerInvariant() switch
+            {
+                "gray" or "grey" or "g" => 1,
+                "rgb" => 3,
+                "cmyk" => 4,
+                _ => 3,
+            };
+            RecolorPage(pageNum, components);
+        }
         /// <summary>
         /// Legacy readthedocs <c>LayerUIConfigs</c> — forwards to &lt;see cref="LayerUIConfigs"/&gt;.
         /// </summary>
@@ -523,10 +533,25 @@ namespace MuPDF.NET
             };
         }
 
-        /// <summary>MuPDF.NET constructor: <c>Document("pdf", bytes)</c>.</summary>
-        public Document(string filetype, byte[] data)
-            : this(data, filetype)
+        /// <summary>
+        /// Legacy MuPDF.NET / PyMuPDF <c>Document(filename, stream, filetype, rect, width, height, fontsize)</c>.
+        /// </summary>
+        /// <remarks>
+        /// Use <see cref="Document(string, string, Rect, float, float, float)"/> or
+        /// <see cref="Document(byte[], string, Rect, float, float, float)"/> for
+        /// <c>fileName:</c> / <c>stream:</c> named arguments. This overload covers
+        /// <c>new Document("pdf", bytes)</c> and <c>new Document(path, (byte[])null)</c>.
+        /// </remarks>
+        public Document(
+            string fileName,
+            byte[] stream,
+            string fileType = null,
+            Rect rect = null,
+            float width = 0,
+            float height = 0,
+            int fontSize = 11)
         {
+            InitFromLegacyOpen(fileName, stream, fileType, rect, width, height, fontSize);
         }
 
         /// <summary>MuPDF.NET named-args: <c>Document(stream: bytes, fileType: "pdf")</c>.</summary>
@@ -582,8 +607,8 @@ namespace MuPDF.NET
         /// <param name="noNewId">If true, do not regenerate the document /ID entry.</param>
         /// <param name="appearance">If true, regenerate widget appearance streams when saving.</param>
         /// <param name="pretty">If true, prettify PDF object syntax for readability.</param>
-        /// <param name="encryption">Encryption method (see PyMuPDF encryption constants).</param>
-        /// <param name="permissions">Permission flags bitmask (see PyMuPDF permission codes).</param>
+        /// <param name="encryption">Encryption method (see <see cref="Constants"/> PDF encryption members such as <see cref="Constants.PDF_ENCRYPT_AES_256"/>).</param>
+        /// <param name="permissions">Permission flags bitmask (see <see cref="Constants.PDF_PERM_PRINT"/> and related <see cref="Constants"/> permission flags).</param>
         /// <param name="ownerPW">Legacy parameter forwarded to &lt;see cref="Save"/&gt;.</param>
         /// <param name="userPW">Legacy parameter forwarded to &lt;see cref="Save"/&gt;.</param>
         /// <param name="preserveMetadata">Legacy parameter forwarded to &lt;see cref="Save"/&gt;.</param>

@@ -40,17 +40,17 @@ namespace MuPDF.NET
         /// <summary>Vertical shift: <c>(x, y) → (x, y - f)</c>; positive <c>f</c> moves down.</summary>
         public virtual float F { get; set; }
 
-        /// <summary>PyMuPDF lowercase alias for <see cref="A"/>.</summary>
+        /// <summary>Lowercase alias for <see cref="A"/>..</summary>
         public float a { get => A; set => A = value; }
-        /// <summary>PyMuPDF lowercase alias for <see cref="B"/>.</summary>
+        /// <summary>Lowercase alias for <see cref="B"/>..</summary>
         public float b { get => B; set => B = value; }
-        /// <summary>PyMuPDF lowercase alias for <see cref="C"/>.</summary>
+        /// <summary>Lowercase alias for <see cref="C"/>..</summary>
         public float c { get => C; set => C = value; }
-        /// <summary>PyMuPDF lowercase alias for <see cref="D"/>.</summary>
+        /// <summary>Lowercase alias for <see cref="D"/>..</summary>
         public float d { get => D; set => D = value; }
-        /// <summary>PyMuPDF lowercase alias for <see cref="E"/>.</summary>
+        /// <summary>Lowercase alias for <see cref="E"/>..</summary>
         public float e { get => E; set => E = value; }
-        /// <summary>PyMuPDF lowercase alias for <see cref="F"/>.</summary>
+        /// <summary>Lowercase alias for <see cref="F"/>..</summary>
         public float f { get => F; set => F = value; }
 
         /// <summary>Sequence length (always 6).</summary>
@@ -116,7 +116,7 @@ namespace MuPDF.NET
         /// <remarks>
         /// Documented on legacy readthedocs as <c>Matrix(Rect)</c>. Older MuPDF.NET builds incorrectly
         /// treated <see cref="Rect.X0"/> as a rotation angle; this constructor uses MuPDF page semantics.
-        /// PyMuPDF has no <c>Matrix(rect)</c> overload.
+        /// MuPDF.NET adds a <c>Matrix(rect)</c> overload not present in PyMuPDF.
         /// </remarks>
         public Matrix(Rect mediabox)
         {
@@ -128,7 +128,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// PyMuPDF-style factory with optional keyword overrides for <c>a</c>–<c>f</c>.
+        /// Factory with optional overrides for matrix elements <c>a</c>–<c>f</c>.
         /// </summary>
         public static Matrix Create(
             object[] args,
@@ -182,7 +182,7 @@ namespace MuPDF.NET
         public float Norm =>
             (float)Math.Sqrt(A * A + B * B + C * C + D * D + E * E + F * F);
 
-        /// <summary>PyMuPDF <c>__abs__</c> alias for <see cref="Norm"/>.</summary>
+        /// <summary>Absolute-value alias for <see cref="Norm"/>.</summary>
         public float Abs() => Norm;
 
         /// <summary>True if not all components are zero (PyMuPDF truthiness).</summary>
@@ -340,7 +340,7 @@ namespace MuPDF.NET
             return new Matrix(1, 1).Concat(a, new Matrix(ia, ib, ic, id, ie, iff));
         }
 
-        /// <summary>PyMuPDF <c>~matrix</c> — zero matrix if singular.</summary>
+        /// <summary>Matrix inversion; returns a zero matrix if singular.</summary>
         public static Matrix operator ~(Matrix m)
         {
             var m1 = new Matrix();

@@ -23,20 +23,12 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_2886()
         {
-            // """Confirm correct insertion of a 'named' link."""
-            // if not hasattr(pymupdf, "mupdf"):
-            //     print(f"test_2886(): not running on classic.")
             //     return
 
-            // path = os.path.abspath(f"{__file__}/../../tests/resources/cython.pdf")
             string path = Doc("cython.pdf");
-            // doc = pymupdf.open(path)
             using var doc = new Document(path);
             // name "Doc-Start" is a valid named destination in that file
             // link = {
-            //     "kind": pymupdf.LINK_NAMED,
-            //     "from": pymupdf.Rect(0, 0, 50, 50),
-            //     "name": "Doc-Start",
             // }
             var link = new Dictionary<string, object>
             {
@@ -55,11 +47,8 @@ namespace MuPDF.NET.Test
             var links = page.GetLinks();
             // l_dict = links[-1]
             var lDict = links[links.Count - 1];
-            // assert l_dict["kind"] == pymupdf.LINK_NAMED
             Assert.Equal(Constants.LinkNamed, lDict["kind"]);
-            // assert l_dict["nameddest"] == link["name"]
             Assert.Equal(link["name"], lDict["nameddest"]);
-            // assert l_dict["from"] == link["from"]
             Assert.Equal((Rect)link["from"], (Rect)lDict["from"]);
             doc.Save(Out("test_2886.pdf"));
         }
@@ -67,19 +56,11 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_2922()
         {
-            // """Confirm correct recycling of a 'named' link.
-            //
             // Re-insertion of a named link item in 'Page.GetLinks()' does not have
             // the required "name" key. We test the fallback here that uses key
-            // "nameddest" instead.
-            // """
-            // if not hasattr(pymupdf, "mupdf"):
-            //     print(f"test_2922(): not running on classic.")
             //     return
 
-            // path = os.path.abspath(f"{__file__}/../../tests/resources/cython.pdf")
             string path = Doc("cython.pdf");
-            // doc = pymupdf.open(path)
             using var doc = new Document(path);
             // page = doc[2]
             var page = doc[2];
@@ -96,13 +77,9 @@ namespace MuPDF.NET.Test
             // link1 = links[-1]
             var link1 = links[links.Count - 1];
 
-            // assert link0["nameddest"] == link1["nameddest"]
             Assert.Equal(link0["nameddest"], link1["nameddest"]);
-            // assert link0["page"] == link1["page"]
             Assert.Equal(link0["page"], link1["page"]);
-            // assert link0["to"] == link1["to"]
             Assert.Equal(link0["to"], link1["to"]);
-            // assert link0["from"] == link1["from"]
             Assert.Equal((Rect)link0["from"], (Rect)link1["from"]);
             doc.Save(Out("test_2922.pdf"));
         }
@@ -110,15 +87,10 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_3301()
         {
-            // """Test correct differentiation between URI and LAUNCH links.
-            //
             // Links encoded as /URI in PDF are converted to either LINK_URI or
             // LINK_LAUNCH in PyMuPDF.
             // This function ensures that the 'Link.uri' containing a ':' colon
             // is converted to a URI if not explicitly starting with "file://".
-            // """
-            // if not hasattr(pymupdf, "mupdf"):
-            //     print(f"test_3301(): not running on classic.")
             //     return
 
             // text = { ... }
@@ -135,21 +107,18 @@ namespace MuPDF.NET.Test
                 ["another.exe"] = Constants.LinkLaunch,
             };
 
-            // r = pymupdf.Rect(0, 0, 50, 20)
             var r = new Rect(0, 0, 50, 20);
             // rects = [r + (0, r.height * i, 0, r.height * i) for i in range(len(text.keys()))]
             var rects = Enumerable.Range(0, text.Count)
                 .Select(i => r + new Rect(0, r.Height * i, 0, r.Height * i))
                 .ToList();
 
-            // doc = pymupdf.open()
             using var doc = new Document();
             // page = doc.NewPage()
             var page = doc.NewPage();
             int i = 0;
             foreach (var k in text.Keys)
             {
-                // link = {"kind": pymupdf.LINK_URI, "uri": k, "from": rects[i]}
                 var link = new Dictionary<string, object>
                 {
                     ["kind"] = Constants.LinkUri,
@@ -163,7 +132,6 @@ namespace MuPDF.NET.Test
 
             // pdfdata = doc.write()
             var pdfdata = doc.Write();
-            // doc = pymupdf.open("pdf", pdfdata)
             using var doc2 = new Document(pdfdata, "pdf");
             // page = doc[0]
             page = doc2[0];
@@ -174,7 +142,6 @@ namespace MuPDF.NET.Test
                 string t = link.TryGetValue("file", out var f) && f != null
                     ? (string)f
                     : (string)link["uri"];
-                // assert text[t] == link["kind"]
                 Assert.Equal(text[t], link["kind"]);
             }
             doc2.Save(Out("test_3301.pdf"));

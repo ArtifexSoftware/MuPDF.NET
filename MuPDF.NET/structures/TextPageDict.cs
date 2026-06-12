@@ -3,7 +3,7 @@ using System.Collections.Generic;
 namespace MuPDF.NET
 {
     /// <summary>
-    /// PyMuPDF <c>get_text("dict")</c> / <c>get_text("rawdict")</c> result: dictionary-shaped
+    /// Dictionary-shaped text extraction result (<see cref="Page.GetText"/> <c>dict</c> / <c>rawdict</c> formats)
     /// with typed <see cref="Blocks"/> for legacy MuPDF.NET callers.
     /// </summary>
     public class TextPageDict : Dictionary<string, object>

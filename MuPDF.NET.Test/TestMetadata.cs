@@ -1,12 +1,5 @@
-// """
 // 1. Read metadata and compare with stored expected result.
 // 2. Erase metadata and assert object has indeed been deleted.
-// """
-// import json
-// import os
-// import sys
-//
-// import pymupdf
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -35,7 +28,6 @@ namespace MuPDF.NET.Test
 
         private static string Out(string fileName) => _Path.ForOutput(fileName, TestClassName);
 
-        // doc = pymupdf.open(filename)
         private static readonly Document doc = new Document(Doc("001003ED.pdf"));
 
         private static string JsonDumpsMetadata(Dictionary<string, string> metadata)
@@ -103,14 +95,14 @@ namespace MuPDF.NET.Test
         private static string PythonReprString(string value) =>
             value.Replace("\\", "\\\\").Replace("'", "\\'");
 
-        /// <summary>PyMuPDF <c>tests/test_metadata.py::test_metadata</c>.</summary>
+        /// <summary>Regression test: metadata (PyMuPDF <c>tests/test_metadata.py::test_metadata</c>).</summary>
         [Fact]
         public void test_metadata()
         {
             Assert.Equal(File.ReadAllText(Doc("metadata.txt")), JsonDumpsMetadata(doc.Metadata));
         }
 
-        /// <summary>PyMuPDF <c>tests/test_metadata.py::test_erase_meta</c>.</summary>
+        /// <summary>Regression test: erase meta (PyMuPDF <c>tests/test_metadata.py::test_erase_meta</c>).</summary>
         [Fact]
         public void test_erase_meta()
         {
@@ -122,12 +114,11 @@ namespace MuPDF.NET.Test
             bool statement1 = doc.XrefGetKey(-1, "Info").value == "null";
             // statement2 = "Info" not in doc.xref_get_keys(-1)
             bool statement2 = !doc.xref_get_keys(-1).Contains("Info");
-            // assert statement2 or statement1  (PyMuPDF: statement1)
             Assert.True(statement1);
             Assert.Contains("Info", doc.xref_get_keys(-1));
         }
 
-        /// <summary>PyMuPDF <c>tests/test_metadata.py::test_3237</c>.</summary>
+        /// <summary>Regression test: 3237 (PyMuPDF <c>tests/test_metadata.py::test_3237</c>).</summary>
         [Fact]
         public void test_3237()
         {
@@ -145,15 +136,11 @@ namespace MuPDF.NET.Test
                 var metadata2 = doc3237.Metadata;
                 // metadata2 = repr(metadata2).encode('utf8')
                 byte[] metadata2Bytes = ReprEncodeUtf8(metadata2);
-                // print(f'{metadata1=}')
                 Console.WriteLine($"metadata1={Encoding.UTF8.GetString(metadata1Bytes)}");
-                // print(f'{metadata2=}')
                 Console.WriteLine($"metadata2={Encoding.UTF8.GetString(metadata2Bytes)}");
-                // assert metadata1 == b'{\'format\': \'PDF 1.6\', ...'
                 Assert.Equal(
                     Encoding.UTF8.GetBytes("{'format': 'PDF 1.6', 'title': 'RUBRIK_Editorial_01-06.indd', 'author': 'Natalie Schaefer', 'subject': '', 'keywords': '', 'creator': '', 'producer': 'Acrobat Distiller 7.0.5 (Windows)', 'creationDate': \"D:20070113191400+01'00'\", 'modDate': \"D:20070120104154+01'00'\", 'trapped': '', 'encryption': None}"),
                     metadata1Bytes);
-                // assert metadata2 == b"{'format': 'PDF 1.6', 'title': '', ...}"
                 Assert.Equal(
                     Encoding.UTF8.GetBytes("{'format': 'PDF 1.6', 'title': '', 'author': '', 'subject': '', 'keywords': '', 'creator': '', 'producer': '', 'creationDate': '', 'modDate': '', 'trapped': '', 'encryption': None}"),
                     metadata2Bytes);

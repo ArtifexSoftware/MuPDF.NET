@@ -14,7 +14,6 @@ namespace MuPDF.NET.Test
         public void test_2548()
         {
             // Text extraction should fail because of PDF structure cycle.
-            //
             // Old MuPDF version did not detect the loop.
             Console.WriteLine($"test_2548(): mupdf_version_tuple={_Version.mupdf_version_tuple()}");
             Tools.MupdfWarnings(reset: true);

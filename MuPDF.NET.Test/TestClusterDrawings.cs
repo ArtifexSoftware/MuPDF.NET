@@ -21,13 +21,11 @@ namespace MuPDF.NET.Test
 
         /// <summary>
         /// Join disjoint but neighbored drawings.
-        /// PyMuPDF: <c>tests/test_cluster_drawings.py::test_cluster2</c>.
+        /// <summary>Regression test: cluster2 (PyMuPDF <c>tests/test_cluster_drawings.py::test_cluster2</c>).</summary>
         /// </summary>
         [Fact]
         public void test_cluster2()
         {
-            // if not hasattr(pymupdf, "mupdf"):
-            //     print("Not executing 'test_cluster2' in classic")
             //     return
 
             using var doc = new Document();
@@ -49,13 +47,11 @@ namespace MuPDF.NET.Test
 
         /// <summary>
         /// Confirm as separate if neighborhood threshold exceeded.
-        /// PyMuPDF: <c>tests/test_cluster_drawings.py::test_cluster3</c>.
+        /// <summary>Regression test: cluster3 (PyMuPDF <c>tests/test_cluster_drawings.py::test_cluster3</c>).</summary>
         /// </summary>
         [Fact]
         public void test_cluster3()
         {
-            // if not hasattr(pymupdf, "mupdf"):
-            //     print("Not executing 'test_cluster3' in classic")
             //     return
 
             using var doc = new Document();

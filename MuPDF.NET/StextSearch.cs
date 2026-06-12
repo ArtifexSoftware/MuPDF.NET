@@ -21,6 +21,11 @@ namespace MuPDF.NET
     /// <c>hfuzz</c> / <c>vfuzz</c> (0.2 / 0.1 × char size) merge kerning gaps on the same line without
     /// joining words across large horizontal gaps (Python: "merge kerns but not large gaps").
     /// </para>
+    /// <para>
+    /// Walks <c>first_block</c>/<c>next</c> and linked lines/chars (see <see cref="TextPage"/>).
+    /// Do not use SWIG stext iterators here: <c>begin()</c> is owning, <c>__increment__()</c> is not,
+    /// and repeated <c>end()</c> calls leak native iterators and can corrupt the heap.
+    /// </para>
     /// </remarks>
     internal static class StextSearch
     {
@@ -37,7 +42,7 @@ namespace MuPDF.NET
 
         /// <summary>
         /// Search a structured text page for <paramref name="needle"/> and return highlight quads.
-        /// PyMuPDF <c>JM_search_stext_page(page, needle)</c> → <c>extra.JM_search_stext_page</c>.
+        /// Searches a structured text page for a needle string.
         /// </summary>
         /// <returns>Empty list when <paramref name="needle"/> is empty or no match is found.</returns>
         internal static List<Quad> JM_search_stext_page(mupdf.FzStextPage page, string needle)
@@ -46,7 +51,6 @@ namespace MuPDF.NET
                 return new List<Quad>();
 
             var hits = new SearchHits();
-            // Python: buffer_ = JM_new_buffer_from_stext_page(page); haystack_string = fz_string_from_buffer(buffer_)
             string haystackString = JM_new_string_from_stext_page(page);
             int haystack = 0;
             var (begin, end) = FindString(haystackString, haystack, needle);
@@ -58,30 +62,28 @@ namespace MuPDF.NET
             bool inside = false;
             var rect = page.m_internal.mediabox;
             using var pageRect = new mupdf.FzRect(rect);
+            bool pageFinite = mupdf.mupdf.fz_is_infinite_rect(pageRect) == 0;
 
             // Walk blocks/lines/chars; haystack index advances per char and per '\n' after each line/block.
-            for (var blockIter = page.begin();
-                 blockIter.m_internal != page.end().m_internal;
-                 blockIter = blockIter.__increment__())
+            for (mupdf.fz_stext_block fb = page.m_internal.first_block;
+                 fb != null;
+                 fb = fb.next)
             {
-                var block = blockIter.__deref__();
-                if (block.m_internal.type != mupdf.mupdf.FZ_STEXT_BLOCK_TEXT)
+                if (fb.type != mupdf.mupdf.FZ_STEXT_BLOCK_TEXT)
                     continue;
 
-                for (var lineIter = block.begin();
-                     lineIter.m_internal != block.end().m_internal;
-                     lineIter = lineIter.__increment__())
+                for (mupdf.fz_stext_line line = Helpers.FirstStextLinePtr(fb);
+                     line != null;
+                     line = line.next)
                 {
-                    var line = lineIter.__deref__();
-                    for (var chIter = line.begin();
-                         chIter.m_internal != line.end().m_internal;
-                         chIter = chIter.__increment__())
+                    for (mupdf.fz_stext_char ch = line.first_char;
+                         ch != null;
+                         ch = ch.next)
                     {
-                        var ch = chIter.__deref__();
                         // Skip chars outside page mediabox when clip is finite (JM_rects_overlap).
-                        if (mupdf.mupdf.fz_is_infinite_rect(pageRect) == 0)
+                        if (pageFinite)
                         {
-                            var r = Helpers.JM_char_bbox(line.m_internal, ch.m_internal);
+                            var r = Helpers.JM_char_bbox(line, ch);
                             if (!Helpers.JM_rects_overlap(pageRect, r))
                                 goto next_char;
                         }
@@ -98,7 +100,7 @@ namespace MuPDF.NET
                             {
                                 if (haystack < endPos)
                                 {
-                                    OnHighlightChar(hits, line.m_internal, ch.m_internal);
+                                    OnHighlightChar(hits, line, ch);
                                     break;
                                 }
                                 inside = false;
@@ -114,7 +116,6 @@ namespace MuPDF.NET
                         haystack++;
                     next_char:;
                     }
-                    // Python: assert haystack_string[haystack] == '\n'
                     haystack++;
                 }
                 haystack++;
@@ -130,31 +131,29 @@ namespace MuPDF.NET
         {
             var rect = page.m_internal.mediabox;
             using var pageRect = new mupdf.FzRect(rect);
+            bool pageFinite = mupdf.mupdf.fz_is_infinite_rect(pageRect) == 0;
             var sb = new StringBuilder();
-            for (var blockIter = page.begin();
-                 blockIter.m_internal != page.end().m_internal;
-                 blockIter = blockIter.__increment__())
+            for (mupdf.fz_stext_block fb = page.m_internal.first_block;
+                 fb != null;
+                 fb = fb.next)
             {
-                var block = blockIter.__deref__();
-                if (block.m_internal.type != mupdf.mupdf.FZ_STEXT_BLOCK_TEXT)
+                if (fb.type != mupdf.mupdf.FZ_STEXT_BLOCK_TEXT)
                     continue;
-                for (var lineIter = block.begin();
-                     lineIter.m_internal != block.end().m_internal;
-                     lineIter = lineIter.__increment__())
+                for (mupdf.fz_stext_line line = Helpers.FirstStextLinePtr(fb);
+                     line != null;
+                     line = line.next)
                 {
-                    var line = lineIter.__deref__();
-                    for (var chIter = line.begin();
-                         chIter.m_internal != line.end().m_internal;
-                         chIter = chIter.__increment__())
+                    for (mupdf.fz_stext_char ch = line.first_char;
+                         ch != null;
+                         ch = ch.next)
                     {
-                        var ch = chIter.__deref__();
-                        if (mupdf.mupdf.fz_is_infinite_rect(pageRect) == 0)
+                        if (pageFinite)
                         {
-                            var r = Helpers.JM_char_bbox(line.m_internal, ch.m_internal);
+                            var r = Helpers.JM_char_bbox(line, ch);
                             if (!Helpers.JM_rects_overlap(pageRect, r))
                                 continue;
                         }
-                        sb.Append(char.ConvertFromUtf32(ch.m_internal.c));
+                        sb.Append(char.ConvertFromUtf32(ch.c));
                     }
                     sb.Append('\n');
                 }

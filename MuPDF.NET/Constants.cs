@@ -327,7 +327,7 @@ namespace MuPDF.NET
             ["zadb"] = "ZapfDingbats"
         };
 
-        /// <summary>PyMuPDF <c>INVALID_NAME_CHARS</c> (<c>src/__init__.py</c>).</summary>
+        /// <summary><c>src/__init__.py</c>.</summary>
         internal static readonly HashSet<char> InvalidNameChars = BuildInvalidNameChars();
 
         private static HashSet<char> BuildInvalidNameChars()
@@ -338,10 +338,10 @@ namespace MuPDF.NET
             return chars;
         }
 
-        /// <summary>PyMuPDF CJK font names (non-serif), <c>CJK_list_n</c> in <c>insert_font</c>.</summary>
+        /// <summary>CJK font names (non-serif) accepted by <see cref="Page.InsertFont"/>.</summary>
         internal static readonly string[] CjkListN = { "china-t", "china-s", "japan", "korea" };
 
-        /// <summary>PyMuPDF CJK font names (serif), <c>CJK_list_s</c> in <c>insert_font</c>.</summary>
+        /// <summary>CJK font names (serif) accepted by <see cref="Page.InsertFont"/>.</summary>
         internal static readonly string[] CjkListS = { "china-ts", "china-ss", "japan-s", "korea-s" };
 
         // ─── Text extraction flag bundles (PyMuPDF TEXTFLAGS_*) ──────────

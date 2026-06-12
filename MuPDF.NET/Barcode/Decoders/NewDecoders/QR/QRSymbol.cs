@@ -245,7 +245,6 @@ namespace BarcodeReader.Core.QR
 
                 return;
             }
-            // else:
 
             // Upper right and bottom left locator patterns + secondary format info
             for (int y = 0; y <= 8; ++y)

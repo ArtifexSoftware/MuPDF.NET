@@ -1224,7 +1224,6 @@ namespace BarcodeReader.Core.PDF417
                         }
                 }
 
-                //
                 res[iRow] = bestRowPos;
             }
 

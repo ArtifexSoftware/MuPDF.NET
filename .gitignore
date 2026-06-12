@@ -18,7 +18,11 @@ mono_crash.*
 
 # Build results
 docs/build/
-TestDocuments/_Output/
+
+# Test-generated output (PDFs, markdown, etc.)
+TestDocuments/MuPDF.NET.Test/_Output/
+TestDocuments/PDF4LLM.Test/_Output/
+TestDocuments/Demo/_Output/
 [Dd]ebug/
 [Dd]ebugPublic/
 [Rr]elease/

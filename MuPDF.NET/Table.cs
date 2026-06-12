@@ -1,5 +1,4 @@
 // Copyright (C) 2023 Artifex Software, Inc.
-//
 // Portions of this code have been ported from pdfplumber / PyMuPDF table.py.
 // pdfplumber is under the MIT License, Copyright (c) 2015 Jeremy Singer-Vine.
 
@@ -56,7 +55,7 @@ namespace MuPDF.NET
             ' ', '\t', '\n', '\r', '\f', '\v'
         };
 
-        /// <summary>PyMuPDF <c>table.TABLE_DETECTOR_FLAGS</c>.</summary>
+        /// <summary>Default flags for table edge detection.</summary>
         public static readonly int TableDetectorFlags =
             mupdf.mupdf.FZ_STEXT_ACCURATE_BBOXES
             | mupdf.mupdf.FZ_STEXT_SEGMENT
@@ -64,7 +63,7 @@ namespace MuPDF.NET
             | mupdf.mupdf.FZ_STEXT_MEDIABOX_CLIP;
     }
 
-    /// <summary>PyMuPDF <c>table.py</c> module globals (<c>EDGES</c>, <c>CHARS</c>, <c>TEXTPAGE</c>).</summary>
+    /// <summary>Table-detection module globals (<c>EDGES</c>, <c>CHARS</c>, <c>TEXTPAGE</c>).</summary>
     internal static class TableModule
     {
         // EDGES = []  # vector graphics from PyMuPDF
@@ -184,7 +183,7 @@ namespace MuPDF.NET
     /// A single table on a PDF page (PyMuPDF <c>table.Table</c> / pdfplumber port in <c>src/table.py</c>).
     /// </summary>
     /// <remarks>
-    /// PyMuPDF adds <see cref="Header"/> via <c>_get_header</c>. Public members use PascalCase;
+    /// Adds <see cref="Header"/> via internal header resolution. Public members use PascalCase;
     /// <c>internal</c> snake_case aliases match Python for same-assembly tests.
     /// </remarks>
     public class Table
@@ -192,7 +191,7 @@ namespace MuPDF.NET
         internal Page Page;
         internal TextPage TextPage;
 
-        /// <summary>PyMuPDF <c>CHARS</c> — page characters from <c>make_chars</c>.</summary>
+        /// <summary>Page characters produced by <c>make_chars</c>.</summary>
         internal List<Dictionary<string, object>> Chars;
 
         /// <summary>
@@ -292,7 +291,6 @@ namespace MuPDF.NET
             var chars = Chars ?? TableModule.CHARS;
             var tableArr = new List<List<string?>>();
 
-            // def char_in_bbox(char, bbox) -> bool:
             bool CharInBbox(Dictionary<string, object> ch, (float x0, float y0, float x1, float y1) bbox)
             {
                 // v_mid = (char["top"] + char["bottom"]) / 2
@@ -618,10 +616,9 @@ namespace MuPDF.NET
     {
         private static bool _recommendLayout = true;
 
-        /// <summary>PyMuPDF <c>_warn_layout_once</c>.</summary>
+        /// <summary>Emits a one-time layout warning.</summary>
         internal static void WarnLayoutOnce()
         {
-            // """Check if we should recommend installing the layout package."""
             const string msg =
                 "Consider using the pymupdf_layout package for a greatly improved page layout analysis.";
             if (_recommendLayout && Page.GetLayoutProvider == null
@@ -850,7 +847,7 @@ namespace MuPDF.NET
         /// <summary>Active settings used during detection.</summary>
         public TableSettings Settings { get; }
 
-        /// <summary>PyMuPDF <c>TableFinder.textpage</c>.</summary>
+        /// <summary>Text page used by table detection.</summary>
         public TextPage TextPage { get; internal set; }
 
         internal List<Dictionary<string, object>> Edges;
@@ -907,7 +904,7 @@ namespace MuPDF.NET
             CompleteDetection(textpage);
         }
 
-        /// <summary>PyMuPDF <c>find_tables</c> after <c>make_chars</c> / <c>make_edges</c>.</summary>
+        /// <summary>Finds tables after <c>make_chars</c> and <c>make_edges</c>.</summary>
         internal static TableFinder FromPrepared(
             Page page,
             TableSettings settings,
@@ -1522,7 +1519,6 @@ namespace MuPDF.NET
             int nPoints = points.Count;
             var cells = new List<(float x0, float y0, float x1, float y1)>();
 
-            // def find_smallest_cell(points, i: int):
             for (int i = 0; i < nPoints; i++)
             {
                 if (i == nPoints - 1)
@@ -1565,7 +1561,7 @@ namespace MuPDF.NET
 
         // ── Cells → Tables ──────────────────────────────────────────────
 
-        /// <summary>PyMuPDF <c>white_spaces.issuperset(text)</c> for table filtering.</summary>
+        /// <summary>Returns whether text is whitespace-only (table filtering).</summary>
         private static bool IsWhitespaceSuperset(string text)
         {
             if (string.IsNullOrEmpty(text))
@@ -1791,7 +1787,7 @@ namespace MuPDF.NET
 
         // ── Text extraction (word-level) ────────────────────────────────
 
-        /// <summary>PyMuPDF <c>WordExtractor.char_begins_new_word</c>.</summary>
+        /// <summary>Returns whether the current character starts a new word.</summary>
         private static bool CharBeginsNewWord(
             Dictionary<string, object> prevChar,
             Dictionary<string, object> currChar,
@@ -1843,7 +1839,7 @@ namespace MuPDF.NET
             return cx < ax || cx > bx + x || cy > ay + y;
         }
 
-        /// <summary>PyMuPDF <c>WordExtractor.iter_sort_chars</c>.</summary>
+        /// <summary>Sorts and iterates characters for word extraction.</summary>
         private static IEnumerable<Dictionary<string, object>> IterSortChars(
             List<Dictionary<string, object>> chars,
             float yTolerance,
@@ -1986,7 +1982,7 @@ namespace MuPDF.NET
             "horizontal_ltr", "vertical_ttb", "extra_attrs", "split_at_punctuation", "expand_ligatures",
         };
 
-        /// <summary>PyMuPDF <c>chars_to_textmap</c> (layout path; returns string like <c>as_string</c>).</summary>
+        /// <summary>Layout text extraction path; returns a string like <c>as_string</c>.</summary>
         internal static string CharsToTextmapString(
             List<Dictionary<string, object>> chars,
             Dictionary<string, object> kwargs)
@@ -2004,7 +2000,7 @@ namespace MuPDF.NET
             return ExtractText(chars, layoutKw);
         }
 
-        /// <summary>PyMuPDF <c>extract_text(chars, **kwargs)</c>.</summary>
+        /// <summary>Extracts text from character dictionaries with layout options.</summary>
         public static string ExtractText(
             List<Dictionary<string, object>> chars,
             Dictionary<string, object> kwargs = null)
@@ -2071,7 +2067,7 @@ namespace MuPDF.NET
 
         // ── Cell text extraction ────────────────────────────────────────
 
-        /// <summary>PyMuPDF <c>table.py</c> <c>extract_cells</c> horizontal line check.</summary>
+        /// <summary><c>extract_cells</c> horizontal line check.</summary>
         private static bool ExtractCellsHorizontal(float[] dir)
         {
             if (dir == null || dir.Length < 2)
@@ -2239,7 +2235,6 @@ namespace MuPDF.NET
             TextPage textpage = null,
             Rect clip = null)
         {
-            // """Extract text as "rawdict" to fill CHARS."""
             int pageNumber = page.Number + 1;
             float pageHeight = page.Height;
             float doctopBase = pageHeight * page.Number;
@@ -2262,7 +2257,6 @@ namespace MuPDF.NET
                     var ldir = (float[])line["dir"];
                     float dirX = (float)Math.Round(ldir[0], 4);
                     float dirY = (float)Math.Round(ldir[1], 4);
-                    // matrix = pymupdf.Matrix(ldir[0], -ldir[1], ldir[1], ldir[0], 0, 0)
                     var matrix = new Matrix(dirX, -dirY, dirY, dirX, 0, 0);
                     // if ldir[1] == 0: upright = True else: upright = False
                     bool upright = dirY == 0;
@@ -2287,11 +2281,9 @@ namespace MuPDF.NET
                         foreach (var ch in spanChars.OrderBy(c => ((float[])c["bbox"])[0]))
                         {
                             var cb = (float[])ch["bbox"];
-                            // bbox = pymupdf.Rect(char["bbox"])
                             var bbox = new Rect(cb[0], cb[1], cb[2], cb[3]);
                             // bbox_ctm = bbox * ctm
                             var bboxCtm = bbox * ctm;
-                            // origin = pymupdf.Point(char["origin"]) * ctm
                             var orig = (float[])ch["origin"];
                             var origin = new Point(orig[0], orig[1]) * ctm;
                             matrix.E = origin.X;
@@ -2330,7 +2322,7 @@ namespace MuPDF.NET
             return stp;
         }
 
-        /// <summary>PyMuPDF <c>table.py</c> <c>FLAGS</c> for <c>get_textpage</c> / <c>get_textbox</c>.</summary>
+        /// <summary><c>FLAGS</c> for <c>get_textpage</c> / <c>get_textbox</c>.</summary>
         internal static readonly int TableTextPageFlags =
             Constants.TextFlagsText
             | mupdf.mupdf.FZ_STEXT_COLLECT_STYLES
@@ -2664,7 +2656,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>PyMuPDF <c>table.page_rotation_set0</c>.</summary>
+        /// <summary>Temporarily sets page rotation to 0 for table detection.</summary>
         internal static (Page page, int xref, int rot, Rect mediabox) PageRotationSet0(Page page)
         {
             var mediabox = new Rect(page.MediaBox);
@@ -2690,7 +2682,7 @@ namespace MuPDF.NET
             return (doc[page.Number], xref, rot, mediabox);
         }
 
-        /// <summary>PyMuPDF <c>table.page_rotation_reset</c>.</summary>
+        /// <summary>Restores page rotation after table detection.</summary>
         internal static Page PageRotationReset(Page page, int xref, int rot, Rect mediabox)
         {
             var doc = page.Parent;
@@ -2719,7 +2711,7 @@ namespace MuPDF.NET
             return boxes;
         }
 
-        /// <summary>PyMuPDF <c>make_table_from_bbox</c>.</summary>
+        /// <summary>Builds table cell geometry from a bounding box and text page.</summary>
         internal static List<(float x0, float y0, float x1, float y1)> MakeTableFromBbox(
             TextPage textpage,
             List<Rect> wordRects,

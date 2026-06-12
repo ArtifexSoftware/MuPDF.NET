@@ -23,7 +23,6 @@ namespace PDF4LLM
             Archive archive = null,
             string outputPath = null)
         {
-            // desired page dimensions (pymupdf.paper_rect("A4") if page_rect is None)
             Rect mediabox = pageRect == null || pageRect.IsEmpty
                 ? MuPDF.NET.Utils.PaperRect("A4")
                 : pageRect;

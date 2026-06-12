@@ -21,7 +21,6 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_isnopdf()
         {
-            // assert not doc.is_pdf
             using var doc = new Document(Doc("Bezier.epub"));
             Assert.False(doc.IsPdf);
         }
@@ -30,13 +29,9 @@ namespace MuPDF.NET.Test
         public void test_pageids()
         {
             using var doc = new Document(Doc("Bezier.epub"));
-            // assert doc.chapter_count == 7
             Assert.Equal(7, doc.chapter_count());
-            // assert doc.last_location == (6, 1)
             Assert.Equal((6, 1), doc.last_location());
-            // assert doc.prev_location((6, 0)) == (5, 11)
             Assert.Equal((5, 11), doc.prev_location((6, 0)));
-            // assert doc.next_location((5, 11)) == (6, 0)
             Assert.Equal((6, 0), doc.next_location((5, 11)));
             // Check page numbers have no gaps:
             int i = 0;
@@ -44,7 +39,6 @@ namespace MuPDF.NET.Test
             {
                 for (int cpno = 0; cpno < doc.chapter_page_count(chapter); cpno++)
                 {
-                    // assert doc.page_number_from_location((chapter, cpno)) == i
                     Assert.Equal(i, doc.page_number_from_location((chapter, cpno)));
                     i++;
                 }
@@ -54,13 +48,10 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_layout()
         {
-            // """Memorize a page location, re-layout with ISO-A4, assert pre-determined location."""
             using var doc = new Document(Doc("Bezier.epub"));
             // loc = doc.make_bookmark((5, 11))
             var loc = doc.make_bookmark((5, 11));
-            // doc.layout(pymupdf.Rect(pymupdf.paper_rect("a4")))
             doc.layout(Utils.PaperRect("a4"));
-            // assert doc.find_bookmark(loc) == (5, 6)
             Assert.Equal((5, 6), doc.find_bookmark(loc));
         }
     }

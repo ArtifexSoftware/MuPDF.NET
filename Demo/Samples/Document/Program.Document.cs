@@ -37,11 +37,9 @@ namespace Demo
                 Rect rect = new Rect(tl, br);
 
                 TextWriter pw = new TextWriter(page.TrimBox);
-                /*
-                Font font = new Font(fontName: "tiro");
-
-                List<(string, float)> ret = pw.FillTextbox(rect, "This is a test to overwrite the original file and move it", font, fontSize: 24);
-                */
+                // Optional: fill the text box before saving (this sample only calls WriteText with default content).
+                // Font font = new Font(fontName: "tiro");
+                // pw.FillTextbox(rect, "This is a test to overwrite the original file and move it", font, fontSize: 24);
                 pw.WriteText(page);
 
                 page.Dispose();
@@ -128,18 +126,16 @@ namespace Demo
 
         internal static void TestMemoryLeak()
         {
-            Console.WriteLine("\n=== TestMemoryLeak =======================");
-            string testFilePath = Path.GetFullPath("../../../../TestDocuments/Demo/Blank.pdf");
+            Console.WriteLine("\n=== [diag] memory-leak: document open/close loop ===");
+            string testFilePath = DemoPaths.Input("Blank.pdf");
 
             for (int i = 0; i < 100; i++)
             {
-                Document doc = new Document(testFilePath);
-                Page page = doc.NewPage();
-                page.Dispose();
-                doc.Close();
+                using var doc = new Document(testFilePath);
+                using Page page = doc.NewPage();
             }
 
-            Console.WriteLine("Memory leak test completed. No leaks should be detected.");
+            Console.WriteLine("Completed 100 open/close iterations.");
         }
 
     }

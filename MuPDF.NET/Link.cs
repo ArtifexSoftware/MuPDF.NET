@@ -13,7 +13,7 @@ namespace MuPDF.NET
         private bool _detached;
         public Page? Parent { get; internal set; }
         public bool ThisOwn { get; set; } = true;
-        /// <summary>Python <c>Page.load_links</c> / <c>Link.next</c>: xref + <c>/NM</c> when matched to the PDF link-annot list; otherwise rect-based xref resolution.</summary>
+        /// <summary>Resolves link xref and <c>/NM</c> from the PDF link list, or by rectangle match.</summary>
         private int? _linkAnnotXrefHint;
         private string _linkAnnotIdHint;
 
@@ -123,7 +123,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>Python <c>Link.dest</c> — destination details as <see cref="LinkDest"/>.</summary>
+        /// <summary>Returns link destination details as <see cref="LinkDest"/>.</summary>
         public LinkDest Dest
         {
             get
@@ -210,7 +210,6 @@ namespace MuPDF.NET
                     return null;
                 if (_nativeLink?.m_internal == null)
                     return null;
-                // Python: val = self.this.next()  (not m_internal.next — uses FzLink_next / fz_link_next_get)
                 mupdf.FzLink val;
                 try
                 {

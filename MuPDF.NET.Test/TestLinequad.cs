@@ -20,7 +20,7 @@ namespace MuPDF.NET.Test
 
         private static string Out(string fileName) => _Path.ForOutput(fileName, TestClassName);
 
-        /// <summary>PyMuPDF <c>tests/test_linequad.py::test_quadcalc</c>.</summary>
+        /// <summary>Regression test: quadcalc (PyMuPDF <c>tests/test_linequad.py::test_quadcalc</c>).</summary>
         [Fact]
         public void test_quadcalc()
         {

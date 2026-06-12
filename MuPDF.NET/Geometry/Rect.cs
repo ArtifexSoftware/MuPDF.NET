@@ -163,7 +163,7 @@ namespace MuPDF.NET
         /// <summary>Epsilon-based equality against another rectangle.</summary>
         public bool EqualTo(Rect obj) => obj != null && this == obj;
 
-        /// <summary>PyMuPDF truthiness (not all coordinates zero).</summary>
+        /// <summary>True when not all coordinates are zero.</summary>
         public bool IsTruthy => !(Math.Max(Math.Max(X0, Y0), Math.Max(X1, Y1)) == 0
             && Math.Min(Math.Min(X0, Y0), Math.Min(X1, Y1)) == 0);
 

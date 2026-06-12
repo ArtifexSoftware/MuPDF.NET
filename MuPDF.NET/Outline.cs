@@ -14,13 +14,24 @@ namespace MuPDF.NET
     /// <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Outline.html"/>.</para>
     /// <para>Ports PyMuPDF <c>class Outline</c> (<c>src/__init__.py</c>).</para>
     /// </remarks>
-    public class Outline
+    public class Outline : IDisposable
     {
-        private readonly mupdf.FzOutline _nativeOutline;
+        private mupdf.FzOutline _nativeOutline;
+        private bool _disposed;
 
         internal Outline(mupdf.FzOutline outline)
         {
             _nativeOutline = outline ?? throw new ArgumentNullException(nameof(outline));
+        }
+
+        /// <summary>Releases the native outline tree loaded by <see cref="Document"/>.</summary>
+        public void Dispose()
+        {
+            if (_disposed)
+                return;
+            _nativeOutline?.Dispose();
+            _nativeOutline = null;
+            _disposed = true;
         }
 
         /// <summary>

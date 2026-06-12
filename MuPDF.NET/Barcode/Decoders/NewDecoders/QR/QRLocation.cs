@@ -91,7 +91,6 @@ namespace BarcodeReader.Core.QR
                     if ((A - (MyPointF)a).LengthSq < markerSizeSq * 0.8f)//too close to first square?
                         continue;
 
-                    //
                     SquareFinder sqFinder = SquareFinder.IsFinder(scan, a, b, crossFinder, factory);
                     if (sqFinder!=null)
                     {

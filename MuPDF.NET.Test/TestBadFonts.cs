@@ -12,7 +12,7 @@ namespace MuPDF.NET.Test
     {
         private static readonly string testDocPath = _Path.ForTestClass("has-bad-fonts.pdf", nameof(TestBadFonts));
 
-        /// <summary>PyMuPDF <c>tests/test_badfonts.py::test_survive_names</c>.</summary>
+        /// <summary>Regression test: survive names (PyMuPDF <c>tests/test_badfonts.py::test_survive_names</c>).</summary>
         [Fact]
         public void test_survive_names()
         {

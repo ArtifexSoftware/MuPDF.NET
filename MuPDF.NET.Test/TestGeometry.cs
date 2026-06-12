@@ -79,12 +79,11 @@ namespace MuPDF.NET.Test
             return false;
         }
 
-        /// <summary>PyMuPDF <c>tests/test_geometry.py::test_rect</c>.</summary>
+        /// <summary>Regression test: rect (PyMuPDF <c>tests/test_geometry.py::test_rect</c>).</summary>
         [Fact]
         public void test_rect()
         {
             Assert.Equal((0, 0, 0, 0), T(new Rect()));
-            // if hasattr(pymupdf, 'mupdf'):
             Assert.Equal((0, 12, 0, 0), T(new Rect(0, 12, 0, 0))); // Rect(y0=12)
             Assert.Equal((10, 20, 12, 200), T(new Rect(10, 20, 12, 200))); // Rect(10, 20, 100, 200, x1=12)
             var p1 = new Point(10, 20);
@@ -114,7 +113,7 @@ namespace MuPDF.NET.Test
                 var ctor = typeof(Rect).GetConstructor(new[] { typeof(float) });
                 if (ctor == null)
                     throw new MissingMethodException();
-                ctor.Invoke(new object[] { 1.0 }); // r = pymupdf.Rect(1)
+                ctor.Invoke(new object[] { 1.0 });
             });
             ExpectFailed(() =>
             {
@@ -124,16 +123,16 @@ namespace MuPDF.NET.Test
                 });
                 if (ctor == null)
                     throw new MissingMethodException();
-                ctor.Invoke(new object[] { 1.0, 2.0, 3.0, 4.0, 5.0 }); // r = pymupdf.Rect(1, 2, 3, 4, 5)
+                ctor.Invoke(new object[] { 1.0, 2.0, 3.0, 4.0, 5.0 });
             });
             ExpectFailed(() =>
             {
                 var ctor = typeof(Rect).GetConstructor(new[] { typeof(float[]) });
                 if (ctor == null)
                     throw new MissingMethodException();
-                ctor.Invoke(new object[] { new float[] { 1, 2, 3, 4, 5 } }); // r = pymupdf.Rect((1, 2, 3, 4, 5))
+                ctor.Invoke(new object[] { new float[] { 1, 2, 3, 4, 5 } });
             });
-            ExpectFailed(() => _ = new Rect(1, 2, 3, (float)Convert.ToDouble("x"))); // r = pymupdf.Rect(1, 2, 3, "x")
+            ExpectFailed(() => _ = new Rect(1, 2, 3, (float)Convert.ToDouble("x")));
             ExpectFailed(() =>
             {
                 var r0 = new Rect();
@@ -141,7 +140,7 @@ namespace MuPDF.NET.Test
             });
         }
 
-        /// <summary>PyMuPDF <c>tests/test_geometry.py::test_irect</c>.</summary>
+        /// <summary>Regression test: irect (PyMuPDF <c>tests/test_geometry.py::test_irect</c>).</summary>
         [Fact]
         public void test_irect()
         {
@@ -169,7 +168,7 @@ namespace MuPDF.NET.Test
                 var ctor = typeof(IRect).GetConstructor(new[] { typeof(int) });
                 if (ctor == null)
                     throw new MissingMethodException();
-                ctor.Invoke(new object[] { 1 }); // r = pymupdf.IRect(1)
+                ctor.Invoke(new object[] { 1 });
             });
             ExpectFailed(() =>
             {
@@ -179,16 +178,16 @@ namespace MuPDF.NET.Test
                 });
                 if (ctor == null)
                     throw new MissingMethodException();
-                ctor.Invoke(new object[] { 1, 2, 3, 4, 5 }); // r = pymupdf.IRect(1, 2, 3, 4, 5)
+                ctor.Invoke(new object[] { 1, 2, 3, 4, 5 });
             });
             ExpectFailed(() =>
             {
                 var ctor = typeof(IRect).GetConstructor(new[] { typeof(int[]) });
                 if (ctor == null)
                     throw new MissingMethodException();
-                ctor.Invoke(new object[] { new int[] { 1, 2, 3, 4, 5 } }); // r = pymupdf.IRect((1, 2, 3, 4, 5))
+                ctor.Invoke(new object[] { new int[] { 1, 2, 3, 4, 5 } });
             });
-            ExpectFailed(() => _ = new IRect(1, 2, 3, Convert.ToInt32("x"))); // r = pymupdf.IRect(1, 2, 3, "x")
+            ExpectFailed(() => _ = new IRect(1, 2, 3, Convert.ToInt32("x")));
             ExpectFailed(() =>
             {
                 r = new IRect();
@@ -196,7 +195,7 @@ namespace MuPDF.NET.Test
             });
         }
 
-        /// <summary>PyMuPDF <c>tests/test_geometry.py::test_inversion</c>.</summary>
+        /// <summary>Regression test: inversion (PyMuPDF <c>tests/test_geometry.py::test_inversion</c>).</summary>
         [Fact]
         public void test_inversion()
         {
@@ -210,13 +209,12 @@ namespace MuPDF.NET.Test
             Assert.Equal(new Matrix(), Invert(m));
         }
 
-        /// <summary>PyMuPDF <c>tests/test_geometry.py::test_matrix</c>.</summary>
+        /// <summary>Regression test: matrix (PyMuPDF <c>tests/test_geometry.py::test_matrix</c>).</summary>
         [Fact]
         public void test_matrix()
         {
             Assert.Equal((0, 0, 0, 0, 0, 0), T(new Matrix()));
             Assert.Equal((0, 1, -1, 0, 0, 0), T(new Matrix(90)));
-            // if hasattr(pymupdf, 'mupdf'):
             Assert.Equal((0, 0, 1, 0, 0, 0), T(new Matrix(0, 0, 1, 0, 0, 0))); // Matrix(c=1)
             Assert.Equal((0, 1, -1, 0, 5, 0), T(new Matrix(90) { E = 5 })); // Matrix(90, e=5)
             var m45p = new Matrix(45);
@@ -260,7 +258,7 @@ namespace MuPDF.NET.Test
                 });
                 if (ctor == null)
                     throw new MissingMethodException();
-                ctor.Invoke(new object[] { 1.0, 2.0, 3.0 }); // m = pymupdf.Matrix(1, 2, 3)
+                ctor.Invoke(new object[] { 1.0, 2.0, 3.0 });
             });
             ExpectFailed(() =>
             {
@@ -271,24 +269,24 @@ namespace MuPDF.NET.Test
                 });
                 if (ctor == null)
                     throw new MissingMethodException();
-                ctor.Invoke(new object[] { 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0 }); // m = pymupdf.Matrix(1, 2, 3, 4, 5, 6, 7)
+                ctor.Invoke(new object[] { 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0 });
             });
             ExpectFailed(() =>
             {
                 var ctor = typeof(Matrix).GetConstructor(new[] { typeof(float[]) });
                 if (ctor == null)
                     throw new MissingMethodException();
-                ctor.Invoke(new object[] { new float[] { 1, 2, 3, 4, 5, 6, 7 } }); // m = pymupdf.Matrix((1, 2, 3, 4, 5, 6, 7))
+                ctor.Invoke(new object[] { new float[] { 1, 2, 3, 4, 5, 6, 7 } });
             });
-            ExpectFailed(() => _ = new Matrix(1, 2, 3, 4, 5, (float)Convert.ToDouble("x"))); // m = pymupdf.Matrix(1, 2, 3, 4, 5, "x")
+            ExpectFailed(() => _ = new Matrix(1, 2, 3, 4, 5, (float)Convert.ToDouble("x")));
             ExpectFailed(() =>
             {
                 var singular = new Matrix(1, 0, 1, 0, 1, 0);
-                var n = new Matrix(1, 1) / singular; // n = pymupdf.Matrix(1, 1) / m
+                var n = new Matrix(1, 1) / singular;
             });
         }
 
-        /// <summary>PyMuPDF <c>tests/test_geometry.py::test_point</c>.</summary>
+        /// <summary>Regression test: point (PyMuPDF <c>tests/test_geometry.py::test_point</c>).</summary>
         [Fact]
         public void test_point()
         {
@@ -306,10 +304,10 @@ namespace MuPDF.NET.Test
                 });
                 if (ctor == null)
                     throw new MissingMethodException();
-                ctor.Invoke(new object[] { 1.0, 2.0, 3.0 }); // p = pymupdf.Point(1, 2, 3)
+                ctor.Invoke(new object[] { 1.0, 2.0, 3.0 });
             });
-            ExpectFailed(() => _ = new Point(new float[] { 1, 2, 3 })); // p = pymupdf.Point((1, 2, 3))
-            ExpectFailed(() => _ = new Point(1, (float)Convert.ToDouble("x"))); // p = pymupdf.Point(1, "x")
+            ExpectFailed(() => _ = new Point(new float[] { 1, 2, 3 }));
+            ExpectFailed(() => _ = new Point(1, (float)Convert.ToDouble("x")));
             ExpectFailed(() =>
             {
                 var p = new Point();
@@ -317,7 +315,7 @@ namespace MuPDF.NET.Test
             });
         }
 
-        /// <summary>PyMuPDF <c>tests/test_geometry.py::test_algebra</c>.</summary>
+        /// <summary>Regression test: algebra (PyMuPDF <c>tests/test_geometry.py::test_algebra</c>).</summary>
         [Fact]
         public void test_algebra()
         {
@@ -347,7 +345,7 @@ namespace MuPDF.NET.Test
             Assert.False(PyIn(r, m));
         }
 
-        /// <summary>PyMuPDF <c>tests/test_geometry.py::test_quad</c>.</summary>
+        /// <summary>Regression test: quad (PyMuPDF <c>tests/test_geometry.py::test_quad</c>).</summary>
         [Fact]
         public void test_quad()
         {
@@ -356,7 +354,7 @@ namespace MuPDF.NET.Test
             Assert.True(q.IsRectangular);
             Assert.False(q.IsEmpty);
             Assert.True(q.IsConvex);
-            q = q * new Matrix(1, 1).Preshear(2, 3); // q *= pymupdf.Matrix(1, 1).preshear(2, 3)
+            q = q * new Matrix(1, 1).Preshear(2, 3);
             Assert.False(q.IsRectangular);
             Assert.False(q.IsEmpty);
             Assert.True(q.IsConvex);
@@ -373,7 +371,7 @@ namespace MuPDF.NET.Test
             });
         }
 
-        /// <summary>PyMuPDF <c>tests/test_geometry.py::test_pageboxes</c>.</summary>
+        /// <summary>Regression test: pageboxes (PyMuPDF <c>tests/test_geometry.py::test_pageboxes</c>).</summary>
         [Fact]
         public void test_pageboxes()
         {
@@ -401,7 +399,7 @@ namespace MuPDF.NET.Test
             Assert.Equal(page.BleedBox, page.TrimBox);
         }
 
-        /// <summary>PyMuPDF <c>tests/test_geometry.py::test_3163</c>.</summary>
+        /// <summary>Regression test: 3163 (PyMuPDF <c>tests/test_geometry.py::test_3163</c>).</summary>
         [Fact]
         public void test_3163()
         {
@@ -448,7 +446,7 @@ namespace MuPDF.NET.Test
             var bbox = new IRect(new Rect(bb[0], bb[1], bb[2], bb[3]));
         }
 
-        /// <summary>PyMuPDF <c>tests/test_geometry.py::test_3182</c>.</summary>
+        /// <summary>Regression test: 3182 (PyMuPDF <c>tests/test_geometry.py::test_3182</c>).</summary>
         [Fact]
         public void test_3182()
         {

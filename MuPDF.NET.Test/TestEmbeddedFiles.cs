@@ -14,7 +14,7 @@ namespace MuPDF.NET.Test
     [Collection("MuPDF.NET native")]
     public class TestEmbeddedFiles
     {
-        /// <summary>PyMuPDF <c>tests/test_embeddedfiles.py::test_embedded1</c>.</summary>
+        /// <summary>Regression test: embedded1 (PyMuPDF <c>tests/test_embeddedfiles.py::test_embedded1</c>).</summary>
         [Fact]
         public void test_embedded1()
         {
@@ -36,7 +36,7 @@ namespace MuPDF.NET.Test
             Assert.Equal(0, doc.EmbeddedFileCount);
         }
 
-        /// <summary>PyMuPDF <c>tests/test_embeddedfiles.py::test_4050</c>.</summary>
+        /// <summary>Regression test: 4050 (PyMuPDF <c>tests/test_embeddedfiles.py::test_4050</c>).</summary>
         [Fact]
         public void test_4050()
         {

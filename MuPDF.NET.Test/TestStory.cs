@@ -1,6 +1,3 @@
-// import pymupdf
-// import os
-// import textwrap
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -102,33 +99,26 @@ namespace MuPDF.NET.Test
             otf = otf.Replace('\\', '/');
             // CSS = f"""
             //     @font-face {{font-family: test; src: url({otf});}}
-            // """
             string CSS = $@"
         @font-face {{font-family: test; src: url({otf});}}
     ";
 
             // HTML = """
             // <p style="font-family: test;color: blue">We shall meet again at a place where there is no darkness.</p>
-            // """
             string HTML = """
     <p style="font-family: test;color: blue">We shall meet again at a place where there is no darkness.</p>
     """;
 
-            // MEDIABOX = pymupdf.paper_rect("letter")
             Rect MEDIABOX = Utils.PaperRect("letter");
             // WHERE = MEDIABOX + (36, 36, -36, -36)
             Rect WHERE = MEDIABOX + new Rect(36, 36, -36, -36);
             // the font files are located in /home/chinese
-            // arch = pymupdf.Archive(".")
             var arch = new Archive(".");
             // if not specified user_css, the output pdf has content
-            // story = pymupdf.Story(HTML, user_css=CSS, archive=arch)
             using var story = new Story(HTML, CSS, archive: arch);
 
-            // writer = pymupdf.DocumentWriter("output.pdf")
             using var writer = new DocumentWriter(Out("test_story.pdf"));
 
-            // more = 1
             bool more = true;
 
             // while more:
@@ -151,19 +141,14 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_2753()
         {
-            // def rectfn(rect_num, filled):
-            //     return pymupdf.Rect(0, 0, 200, 200), pymupdf.Rect(50, 50, 100, 150), None
             Story.StoryRectFn rectfn = (rect_num, filled) =>
                 (new Rect(0, 0, 200, 200), new Rect(50, 50, 100, 150), null);
 
-            // def make_pdf(html, path_out):
             Document make_pdf(string html, string path_out)
             {
-                // story = pymupdf.Story(html=html)
                 using var story = new Story(html: html);
                 // document = story.write_with_links(rectfn)
                 var document = story.write_with_links(rectfn);
-                // print(f'test_2753(): Writing to: {path_out=}.')
                 Console.WriteLine($"test_2753(): Writing to: path_out={path_out}.");
                 // document.Save(path_out)
                 document.Save(path_out);
@@ -176,8 +161,6 @@ namespace MuPDF.NET.Test
             //             <p>Before</p>
             //             <p style="page-break-before: always;"></p>
             //             <p>After</p>
-            //             '''),
-            //         os.path.abspath(f'{__file__}/../../tests/test_2753-out-before.pdf'),
             //         )
             var doc_before = make_pdf(
                 Dedent("""
@@ -192,8 +175,6 @@ namespace MuPDF.NET.Test
             //             <p>Before</p>
             //             <p style="page-break-after: always;"></p>
             //             <p>After</p>
-            //             '''),
-            //         os.path.abspath(f'{__file__}/../../tests/test_2753-out-after.pdf'),
             //         )
             var doc_after = make_pdf(
                 Dedent("""
@@ -203,44 +184,32 @@ namespace MuPDF.NET.Test
                     """),
                 Out("test_2753-after.pdf"));
 
-            // path = os.path.normpath(f'{__file__}/../../tests/test_2753_out')
             string path = Path.Combine(Path.GetDirectoryName(Out("test_2753.pdf"))!, "test_2753");
             // doc_before.Save(f'{path}_before.pdf')
             doc_before.Save($"{path}_before.pdf");
             // doc_after.Save(f'{path}_after.pdf')
             doc_after.Save($"{path}_after.pdf");
-            // assert len(doc_before) == 2
             Assert.Equal(2, doc_before.PageCount);
-            // assert len(doc_after) == 2
             Assert.Equal(2, doc_after.PageCount);
         }
 
         [Fact]
         public void test_fit_springer()
         {
-            // if not hasattr(pymupdf, 'mupdf'):
-            //     print(f'test_fit_springer(): not running on classic.')
             //     return
 
-            // verbose = 0
             int verbose = 0;
-            // story = pymupdf.Story(springer_html)
             using var story = new Story(springer_html);
 
-            // def check(call, expected):
-            //     '''
             //     Checks that eval(call) returned parameter=expected. Also creates PDF
             //     using path that contains `call` in its leafname,
-            //     '''
             void check(string call, Story.FitResult fit_result, float? expected)
             {
                 // fit_result = eval(call)
-                // print(f'test_fit_springer(): {call=} => {fit_result=}.')
                 Console.WriteLine($"test_fit_springer(): call={call} => fit_result={fit_result}.");
                 // if expected is None:
                 if (expected is null)
                 {
-                    // assert not fit_result.big_enough
                     Assert.False(fit_result.big_enough ?? true);
                 }
                 else
@@ -248,30 +217,23 @@ namespace MuPDF.NET.Test
                     // document = story.write_with_links(lambda rectnum, filled: (fit_result.rect, fit_result.rect, None))
                     var document = story.write_with_links((rectnum, filled) =>
                         (fit_result.rect, fit_result.rect, null));
-                    // path = os.path.abspath(f'{__file__}/../../tests/test_fit_springer_{call}_{fit_result.parameter=}_{fit_result.rect=}.pdf')
                     string path = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(Out("test_fit_springer.pdf"))!,
                         SanitizeFileLeaf($"test_fit_springer_{call}_fit_result.parameter={fit_result.parameter}_fit_result.rect={fit_result.rect}.pdf")));
                     // document.Save(path)
                     document.Save(path);
-                    // print(f'Have saved document to {path}.')
                     Console.WriteLine($"Have saved document to {path}.");
-                    // assert abs(fit_result.parameter-expected) < 0.001, f'{expected=} {fit_result.parameter=}'
                     Assert.True(Math.Abs((fit_result.parameter ?? 0) - expected.Value) < 0.001,
                         $"expected={expected} fit_result.parameter={fit_result.parameter}");
                 }
             }
 
-            // check(f'story.fit_scale(pymupdf.Rect(0, 0, 200, 200), scale_min=1, verbose={verbose})', 3.685728073120117)
-            check($"story.fit_scale(pymupdf.Rect(0, 0, 200, 200), scale_min=1, verbose={verbose})",
+            check($"story.fit_scale(Rect(0, 0, 200, 200), scale_min=1, verbose={verbose})",
                 story.fit_scale(new Rect(0, 0, 200, 200), scale_min: 1, verbose: verbose != 0), 3.685728073120117f);
-            // check(f'story.fit_scale(pymupdf.Rect(0, 0, 595, 842), scale_min=1, verbose={verbose})', 1.0174560546875)
-            check($"story.fit_scale(pymupdf.Rect(0, 0, 595, 842), scale_min=1, verbose={verbose})",
+            check($"story.fit_scale(Rect(0, 0, 595, 842), scale_min=1, verbose={verbose})",
                 story.fit_scale(new Rect(0, 0, 595, 842), scale_min: 1, verbose: verbose != 0), 1.0174560546875f);
-            // check(f'story.fit_scale(pymupdf.Rect(0, 0, 300, 421), scale_min=1, verbose={verbose})', 2.02752685546875)
-            check($"story.fit_scale(pymupdf.Rect(0, 0, 300, 421), scale_min=1, verbose={verbose})",
+            check($"story.fit_scale(Rect(0, 0, 300, 421), scale_min=1, verbose={verbose})",
                 story.fit_scale(new Rect(0, 0, 300, 421), scale_min: 1, verbose: verbose != 0), 2.02752685546875f);
-            // check(f'story.fit_scale(pymupdf.Rect(0, 0, 600, 900), scale_min=1, scale_max=1, verbose={verbose})', 1)
-            check($"story.fit_scale(pymupdf.Rect(0, 0, 600, 900), scale_min=1, scale_max=1, verbose={verbose})",
+            check($"story.fit_scale(Rect(0, 0, 600, 900), scale_min=1, scale_max=1, verbose={verbose})",
                 story.fit_scale(new Rect(0, 0, 600, 900), scale_min: 1, scale_max: 1, verbose: verbose != 0), 1);
 
             // check(f'story.fit_height(20, verbose={verbose})', 10782.3291015625)
@@ -313,23 +275,16 @@ namespace MuPDF.NET.Test
                 story.fit_width(200, width_max: 200000, verbose: verbose != 0), null);
 
             // Run without verbose to check no calls to log() - checked by assert.
-            // check('story.fit_scale(pymupdf.Rect(0, 0, 600, 900), scale_min=1, scale_max=1, verbose=0)', 1)
-            check("story.fit_scale(pymupdf.Rect(0, 0, 600, 900), scale_min=1, scale_max=1, verbose=0)",
+            check("story.fit_scale(Rect(0, 0, 600, 900), scale_min=1, scale_max=1, verbose=0)",
                 story.fit_scale(new Rect(0, 0, 600, 900), scale_min: 1, scale_max: 1, verbose: false), 1);
-            // check('story.fit_scale(pymupdf.Rect(0, 0, 300, 421), scale_min=1, verbose=0)', 2.02752685546875)
-            check("story.fit_scale(pymupdf.Rect(0, 0, 300, 421), scale_min=1, verbose=0)",
+            check("story.fit_scale(Rect(0, 0, 300, 421), scale_min=1, verbose=0)",
                 story.fit_scale(new Rect(0, 0, 300, 421), scale_min: 1, verbose: false), 2.02752685546875f);
         }
 
         [Fact]
         public void test_write_stabilized_with_links()
         {
-            // def rectfn(rect_num, filled):
-            //     '''
             //     We return one rect per page.
-            //     '''
-            //     rect = pymupdf.Rect(10, 20, 290, 380)
-            //     mediabox = pymupdf.Rect(0, 0, 300, 400)
             //     #print(f'rectfn(): rect_num={rect_num} filled={filled}')
             //     return mediabox, rect, None
             Story.StoryRectFn rectfn = (rect_num, filled) =>
@@ -339,7 +294,6 @@ namespace MuPDF.NET.Test
                 return (mediabox, rect, null);
             };
 
-            // def contentfn(positions):
             string contentfn(List<StoryElementPositionInfo> positions)
             {
                 // ret = ''
@@ -349,7 +303,6 @@ namespace MuPDF.NET.Test
                 //         <body>
                 //         <h2>Contents</h2>
                 //         <ul>
-                //         ''')
                 ret += Dedent("""
                         <!DOCTYPE html>
                         <body>
@@ -384,7 +337,6 @@ namespace MuPDF.NET.Test
                 // ret += textwrap.dedent(f'''
                 //         <h1>First section</h1>
                 //         ...
-                //         ''')
                 ret += Dedent("""
                         <h1>First section</h1>
                         <p>Contents of first section.
@@ -411,19 +363,16 @@ namespace MuPDF.NET.Test
                 return ret.Trim();
             }
 
-            // document = pymupdf.Story.write_stabilized_with_links(contentfn, rectfn)
             var document = Story.write_stabilized_with_links(contentfn, rectfn);
 
             // Check links.
             // links = list()
             var links = new List<Dictionary<string, object>>();
-            // for page in document:
             foreach (var page in document)
             {
                 // links += page.GetLinks()
                 links.AddRange(page.GetLinks().Select(l => (Dictionary<string, object>)l));
             }
-            // print(f'{len(links)=}.')
             Console.WriteLine($"len(links)={links.Count}.");
             // external_links = dict()
             var external_links = new Dictionary<string, int>();
@@ -431,9 +380,7 @@ namespace MuPDF.NET.Test
             for (int i = 0; i < links.Count; i++)
             {
                 var link = links[i];
-                // print(f'    {i}: {link=}')
                 Console.WriteLine($"    {i}: link={link}");
-                // if link.get('kind') == pymupdf.LINK_URI:
                 if (link.TryGetValue("kind", out var kindObj) &&
                     Convert.ToInt32(kindObj) == Constants.LinkUri)
                 {
@@ -448,12 +395,8 @@ namespace MuPDF.NET.Test
             }
 
             // Check there is one external link.
-            // print(f'{external_links=}')
             Console.WriteLine($"external_links={external_links}");
-            // if hasattr(pymupdf, 'mupdf'):
-            // assert len(external_links) == 1
             Assert.Single(external_links);
-            // assert 'https://artifex.com/' in external_links
             Assert.Contains("https://artifex.com/", external_links.Keys);
 
             // out_path = __file__.replace('.py', '.pdf')
@@ -465,20 +408,16 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_archive_creation()
         {
-            // s = pymupdf.Story(archive=pymupdf.Archive('.'))
             using var s = new Story(archive: new Archive("."));
-            // s = pymupdf.Story(archive='.')
             using var s2 = new Story(archive: ".");
         }
 
         [Fact]
         public void test_3813()
         {
-            // import pymupdf
 
             // HTML = """
             // ...
-            // """
             string HTML = """
     <p>Count is fine:</p>
     <ol>
@@ -504,20 +443,15 @@ namespace MuPDF.NET.Test
         <li>Lorem</li>
     </ol>
     """;
-            // MEDIABOX = pymupdf.paper_rect("A4")
             Rect MEDIABOX = Utils.PaperRect("A4");
             // WHERE = MEDIABOX + (36, 36, -36, -36)
             Rect WHERE = MEDIABOX + new Rect(36, 36, -36, -36);
 
-            // story = pymupdf.Story(html=HTML)
             using var story = new Story(html: HTML);
-            // path = os.path.normpath(f'{__file__}/../../tests/test_3813.pdf')
             string path = Out("test_3813.pdf");
             File.Delete(path);
-            // writer = pymupdf.DocumentWriter(path)
             using var writer = new DocumentWriter(path);
 
-            // more = 1
             bool more = true;
 
             // while more:
@@ -536,7 +470,6 @@ namespace MuPDF.NET.Test
             // writer.close()
             writer.Close();
 
-            // with pymupdf.open(path) as document:
             using (var document = new Document(path))
             {
                 // page = document[0]
@@ -562,24 +495,19 @@ namespace MuPDF.NET.Test
                 // text_expected = text_expected_utf8.decode()
                 string text_expected = Encoding.UTF8.GetString(text_expected_utf8);
 
-                // print(f'text_utf8:\n    {text_utf8!r}')
                 Console.WriteLine($"text_utf8:\n    {text_utf8}");
-                // print(f'text_expected_utf8:\n    {text_expected_utf8!r}')
                 Console.WriteLine($"text_expected_utf8:\n    {text_expected_utf8}");
-                // print(f'text:\n    {textwrap.indent(text, "    ")}')
                 foreach (var line in text.Split('\n'))
                 {
                     Console.WriteLine($"    {line}");
                 }
 
-                // print(f'text_expected:\n    {textwrap.indent(text_expected, "   ")}')
                 foreach (var line in text_expected.Split('\n'))
                 {
                     Console.WriteLine($"   {line}");
                 }
 
 
-                // assert text == text_expected
                 Assert.Equal(text_expected, text);
             }
         }

@@ -24,16 +24,13 @@ namespace MuPDF.NET.Test
         {
             using var doc = new Document(Doc("2.pdf"));
 
-            // # select an arbitrary page
             // page = doc[-1]
             var page = doc[doc.PageCount - 1];
 
-            // # iterate over pages.links
             // link_generator = page.links()
             var linkGenerator = page.links();
             // links = list(link_generator)
             var links = linkGenerator.ToList();
-            // assert len(links) == 7
             Assert.Equal(7, links.Count);
         }
     }

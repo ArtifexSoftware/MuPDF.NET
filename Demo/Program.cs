@@ -1,9 +1,7 @@
-﻿using System.Threading.Tasks;
-
-namespace Demo
+﻿namespace Demo
 {
     /// <summary>
-    /// GitHub samples entry point. With no arguments, all samples run; see <see cref="SampleMenu"/>.
+    /// Demo entry point. With no arguments, every sample in <see cref="SampleMenu"/> runs (including <c>[diag]</c>).
     /// </summary>
     internal partial class Program
     {

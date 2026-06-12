@@ -203,7 +203,6 @@ namespace MuPDF.NET
             DisposeCachedPdfPage();
             if (_nativePage == null)
                 return;
-            // Python: page.this = None — one ref drop via the SWIG wrapper only.
             _nativePage.Dispose();
             _nativePage = null;
         }
@@ -531,7 +530,6 @@ namespace MuPDF.NET
 
             foreach (int xref in annotXrefs)
             {
-                // annot = self.load_annot(xref)
                 Annot annot = LoadAnnot(xref);
                 // In #4928, annot can be null, which we need to ignore.
                 if (annot != null)
@@ -542,9 +540,9 @@ namespace MuPDF.NET
             }
         }
         /// <summary>
-        /// Return a generator over the page's links. The results equal the entries of Page.get_links.
+        /// Return a generator over the page's links. The results equal the entries of <see cref="GetLinks"/>.
         /// </summary>
-        /// <returns>an entry of Page.get_links() for each iteration.</returns>
+        /// <returns>An entry of <see cref="GetLinks"/> for each iteration.</returns>
         public IEnumerable<Link> Links()
         {
             var link = FirstLink;
@@ -555,10 +553,10 @@ namespace MuPDF.NET
             }
         }
         /// <summary>
-        /// Return a generator over the page's links. The results equal the entries of Page.get_links.
+        /// Return a generator over the page's links. The results equal the entries of <see cref="GetLinks"/>.
         /// </summary>
-        /// <param name="kinds">a sequence of integers to down-select to one or more link kinds. Default is all links. Example: *kinds=(pymupdf.LINK_GOTO,)* will only return internal links.</param>
-        /// <returns>an entry of Page.get_links() for each iteration.</returns>
+        /// <param name="kinds">Optional link kinds to include. Example: <c>LinkType.Goto</c> or <c>Constants.LINK_GOTO</c> for internal links only.</param>
+        /// <returns>An entry of <see cref="GetLinks"/> for each iteration.</returns>
         public IEnumerable<Link> Links(params LinkType[] kinds)
         {
             HashSet<LinkType> filter = null;
@@ -577,10 +575,10 @@ namespace MuPDF.NET
             }
         }
         /// <summary>
-        /// Return a generator over the page's links. The results equal the entries of Page.get_links.
+        /// Return a generator over the page's links. The results equal the entries of <see cref="GetLinks"/>.
         /// </summary>
-        /// <param name="kinds">a sequence of integers to down-select to one or more link kinds. Default is all links. Example: *kinds=(pymupdf.LINK_GOTO,)* will only return internal links.</param>
-        /// <returns>an entry of Page.get_links() for each iteration.</returns>
+        /// <param name="kinds">Optional legacy link-kind integers (<see cref="Constants.LINK_GOTO"/>, <see cref="Constants.LINK_URI"/>, etc.).</param>
+        /// <returns>An entry of <see cref="GetLinks"/> for each iteration.</returns>
         public IEnumerable<Link> Links(params int[] kinds)
         {
             if (kinds == null || kinds.Length == 0)
@@ -603,7 +601,7 @@ namespace MuPDF.NET
         /// <summary>
         /// Return a generator over the page's form fields.
         /// </summary>
-        /// <returns>a Widget for each iteration.</returns>
+        /// <returns>A <see cref="Widget"/> for each iteration.</returns>
         public IEnumerable<Widget> Widgets()
         {
             var w = FirstWidget;
@@ -616,8 +614,8 @@ namespace MuPDF.NET
         /// <summary>
         /// Return a generator over the page's form fields.
         /// </summary>
-        /// <param name="types">a sequence of integers to down-select to one or more widget types. Default is all form fields. Example: `types=(pymupdf.PDF_WIDGET_TYPE_TEXT,)` will only return 'Text' fields.</param>
-        /// <returns>a Widget for each iteration.</returns>
+        /// <param name="types">Optional widget types to include. Example: <c>WidgetType.Text</c> or <c>Constants.PDF_WIDGET_TYPE_TEXT</c>.</param>
+        /// <returns>A <see cref="Widget"/> for each iteration.</returns>
         public IEnumerable<Widget> Widgets(params WidgetType[] types)
         {
             HashSet<WidgetType> filter = null;
@@ -632,8 +630,8 @@ namespace MuPDF.NET
         /// <summary>
         /// Return a generator over the page's form fields.
         /// </summary>
-        /// <param name="types">a sequence of integers to down-select to one or more widget types. Default is all form fields. Example: `types=(pymupdf.PDF_WIDGET_TYPE_TEXT,)` will only return 'Text' fields.</param>
-        /// <returns>a Widget for each iteration.</returns>
+        /// <param name="types">Optional legacy widget-type integers (<see cref="Constants.PDF_WIDGET_TYPE_TEXT"/>, <see cref="Constants.PDF_WIDGET_TYPE_BUTTON"/>, etc.).</param>
+        /// <returns>A <see cref="Widget"/> for each iteration.</returns>
         public IEnumerable<Widget> Widgets(params int[] types)
         {
             if (types == null || types.Length == 0)
@@ -666,7 +664,7 @@ namespace MuPDF.NET
         {
             var pdfPage = NativePdfPage;
             var fzPoint = pos.ToFzPoint();
-            var annot = mupdf.mupdf.pdf_create_annot(pdfPage, mupdf.pdf_annot_type.PDF_ANNOT_TEXT);
+            var annot = Helpers.PdfCreateAnnot(pdfPage, mupdf.pdf_annot_type.PDF_ANNOT_TEXT);
             var r0 = mupdf.mupdf.pdf_annot_rect(annot);
             var r = mupdf.mupdf.fz_make_rect(fzPoint.x, fzPoint.y, fzPoint.x + (r0.x1 - r0.x0), fzPoint.y + (r0.y1 - r0.y0));
             mupdf.mupdf.pdf_set_annot_rect(annot, r);
@@ -727,21 +725,21 @@ namespace MuPDF.NET
                 var fColor = Annot.ColorFromSequence(fillColor);
                 var tColor = Annot.ColorFromSequence(textColor);
 
-                var r = rect.ToFzRect();
+                using var r = rect.ToFzRect();
                 if (mupdf.mupdf.fz_is_infinite_rect(r) != 0 || mupdf.mupdf.fz_is_empty_rect(r) != 0)
                     throw new ValueErrorException(Constants.MSG_BAD_RECT);
 
                 var page = NativePdfPage;
-                var nativeAnnot = mupdf.mupdf.pdf_create_annot(page, mupdf.pdf_annot_type.PDF_ANNOT_FREE_TEXT);
-                var annotObj = mupdf.mupdf.pdf_annot_obj(nativeAnnot);
+                var nativeAnnot = Helpers.PdfCreateAnnot(page, mupdf.pdf_annot_type.PDF_ANNOT_FREE_TEXT);
+                var annotObj = Helpers.PdfAnnotObj(nativeAnnot);
 
                 if (!richtext)
                     mupdf.mupdf.pdf_set_annot_contents(nativeAnnot, text ?? "");
                 else
                 {
-                    mupdf.mupdf.pdf_dict_put_text_string(annotObj, mupdf.mupdf.pdf_new_name("RC"), rc);
+                    Helpers.PdfDictPutTextString(annotObj, "RC", rc);
                     if (style != null)
-                        mupdf.mupdf.pdf_dict_put_text_string(annotObj, mupdf.mupdf.pdf_new_name("DS"), style);
+                        Helpers.PdfDictPutTextString(annotObj, "DS", style);
                 }
 
                 mupdf.mupdf.pdf_set_annot_rect(nativeAnnot, r);
@@ -749,7 +747,7 @@ namespace MuPDF.NET
                 while (rotate < 0) rotate += 360;
                 while (rotate >= 360) rotate -= 360;
                 if (rotate != 0)
-                    mupdf.mupdf.pdf_dict_put_int(annotObj, mupdf.mupdf.pdf_new_name("Rotate"), rotate);
+                    Helpers.PdfDictPutInt(annotObj, "Rotate", rotate);
 
                 mupdf.mupdf.pdf_set_annot_quadding(nativeAnnot, align);
 
@@ -770,9 +768,9 @@ namespace MuPDF.NET
 
                 if (callout != null && callout.Length > 0)
                 {
-                    mupdf.mupdf.pdf_dict_put(annotObj, mupdf.mupdf.pdf_new_name("IT"), mupdf.mupdf.pdf_new_name("FreeTextCallout"));
+                    Helpers.PdfDictPutName(annotObj, "IT", "FreeTextCallout");
                     mupdf.mupdf.pdf_set_annot_callout_style(nativeAnnot, (mupdf.pdf_line_ending)lineEnd);
-                    var vv = new mupdf.vector_fz_point();
+                    using var vv = new mupdf.vector_fz_point();
                     foreach (var p in callout)
                     {
                         if (p == null) continue;
@@ -788,8 +786,8 @@ namespace MuPDF.NET
                     Helpers.JM_make_annot_DA(nativeAnnot, tColor?.Length ?? 0, tColor ?? Array.Empty<float>(), fontName ?? "Helv", fontSize);
                 }
 
-                mupdf.mupdf.pdf_update_annot(nativeAnnot);
-                Helpers.JM_add_annot_id(nativeAnnot, "A");
+                Helpers.PdfUpdateAnnot(nativeAnnot);
+                Helpers.JM_add_annot_id(nativeAnnot, "A", page);
                 annot = new Annot(nativeAnnot, this);
             }
             finally
@@ -808,10 +806,10 @@ namespace MuPDF.NET
         /// <returns>the created annotation. It is drawn with line (stroke) color red = (1, 0, 0) and line width 1. No fill color support. The annot rectangle is automatically created to contain both points, each one surrounded by a circle of radius 3 * line width to make room for any line end symbols.</returns>
         public Annot AddLineAnnot(Point p1, Point p2)
         {
-            var annot = mupdf.mupdf.pdf_create_annot(NativePdfPage, mupdf.pdf_annot_type.PDF_ANNOT_LINE);
+            var annot = Helpers.PdfCreateAnnot(NativePdfPage, mupdf.pdf_annot_type.PDF_ANNOT_LINE);
             mupdf.mupdf.pdf_set_annot_line(annot, p1.ToFzPoint(), p2.ToFzPoint());
             mupdf.mupdf.pdf_update_annot(annot);
-            Helpers.JM_add_annot_id(annot, "A");
+            Helpers.JM_add_annot_id(annot, "A", NativePdfPage);
             return new Annot(annot, this);
         }
         /// <summary>
@@ -823,10 +821,10 @@ namespace MuPDF.NET
             var fr = rect.ToFzRect();
             if (mupdf.mupdf.fz_is_infinite_rect(fr) != 0 || mupdf.mupdf.fz_is_empty_rect(fr) != 0)
                 throw new ValueErrorException(Constants.MSG_BAD_RECT);
-            var annot = mupdf.mupdf.pdf_create_annot(NativePdfPage, mupdf.pdf_annot_type.PDF_ANNOT_SQUARE);
+            var annot = Helpers.PdfCreateAnnot(NativePdfPage, mupdf.pdf_annot_type.PDF_ANNOT_SQUARE);
             mupdf.mupdf.pdf_set_annot_rect(annot, fr);
             mupdf.mupdf.pdf_update_annot(annot);
-            Helpers.JM_add_annot_id(annot, "A");
+            Helpers.JM_add_annot_id(annot, "A", NativePdfPage);
             return new Annot(annot, this);
         }
         /// <summary>
@@ -839,10 +837,10 @@ namespace MuPDF.NET
             var fr = rect.ToFzRect();
             if (mupdf.mupdf.fz_is_infinite_rect(fr) != 0 || mupdf.mupdf.fz_is_empty_rect(fr) != 0)
                 throw new ValueErrorException(Constants.MSG_BAD_RECT);
-            var annot = mupdf.mupdf.pdf_create_annot(NativePdfPage, mupdf.pdf_annot_type.PDF_ANNOT_CIRCLE);
+            var annot = Helpers.PdfCreateAnnot(NativePdfPage, mupdf.pdf_annot_type.PDF_ANNOT_CIRCLE);
             mupdf.mupdf.pdf_set_annot_rect(annot, fr);
             mupdf.mupdf.pdf_update_annot(annot);
-            Helpers.JM_add_annot_id(annot, "A");
+            Helpers.JM_add_annot_id(annot, "A", NativePdfPage);
             return new Annot(annot, this);
         }
         /// <summary>
@@ -855,10 +853,10 @@ namespace MuPDF.NET
                 throw new ArgumentException(Constants.MSG_BAD_ARG_POINTS);
             foreach (var p in points)
                 if (p == null) throw new ArgumentException(Constants.MSG_BAD_ARG_POINTS);
-            var annot = mupdf.mupdf.pdf_create_annot(NativePdfPage, mupdf.pdf_annot_type.PDF_ANNOT_POLY_LINE);
+            var annot = Helpers.PdfCreateAnnot(NativePdfPage, mupdf.pdf_annot_type.PDF_ANNOT_POLY_LINE);
             SetAnnotVertices(annot, points);
             mupdf.mupdf.pdf_update_annot(annot);
-            Helpers.JM_add_annot_id(annot, "A");
+            Helpers.JM_add_annot_id(annot, "A", NativePdfPage);
             return new Annot(annot, this);
         }
         /// <summary>
@@ -872,10 +870,10 @@ namespace MuPDF.NET
                 throw new ArgumentException(Constants.MSG_BAD_ARG_POINTS);
             foreach (var p in points)
                 if (p == null) throw new ArgumentException(Constants.MSG_BAD_ARG_POINTS);
-            var annot = mupdf.mupdf.pdf_create_annot(NativePdfPage, mupdf.pdf_annot_type.PDF_ANNOT_POLYGON);
+            var annot = Helpers.PdfCreateAnnot(NativePdfPage, mupdf.pdf_annot_type.PDF_ANNOT_POLYGON);
             SetAnnotVertices(annot, points);
             mupdf.mupdf.pdf_update_annot(annot);
-            Helpers.JM_add_annot_id(annot, "A");
+            Helpers.JM_add_annot_id(annot, "A", NativePdfPage);
             return new Annot(annot, this);
         }
         /// <summary>
@@ -942,12 +940,10 @@ namespace MuPDF.NET
         /// <summary>Add a 'Caret' annotation. PyMuPDF <c>Page.add_caret_annot</c>.</summary>
         internal Annot add_caret_annot(object point)
         {
-            // """Add a 'Caret' annotation."""
             int old_rotation = annot_preprocess();
             mupdf.PdfAnnot pdf_annot;
             try
             {
-                // annot = self._add_caret_annot(point)
                 pdf_annot = _add_caret_annot(point);
             }
             finally
@@ -957,40 +953,31 @@ namespace MuPDF.NET
                     // self.set_rotation(old_rotation)
                     SetRotation(old_rotation);
             }
-            // annot = Annot( annot)
             Annot annot = new Annot(pdf_annot, this);
             annot_postprocess(annot);
-            // assert hasattr( annot, 'parent')
             System.Diagnostics.Debug.Assert(annot.Parent != null);
             return annot;
         }
 
-        /// <summary>PyMuPDF <c>Page._add_caret_annot</c>.</summary>
+        /// <summary>Internal caret annotation creator.</summary>
         internal mupdf.PdfAnnot _add_caret_annot(object point)
         {
             // if g_use_extra:
-            //     annot = extra._add_caret_annot( self.this, JM_point_from_py(point))
-            // else:
             // page = self._pdf_page()
             mupdf.PdfPage page = _pdf_page();
-            // annot = mupdf.pdf_create_annot(page, mupdf.PDF_ANNOT_CARET)
-            mupdf.PdfAnnot annot = mupdf.mupdf.pdf_create_annot(page, mupdf.pdf_annot_type.PDF_ANNOT_CARET);
+            mupdf.PdfAnnot annot = Helpers.PdfCreateAnnot(page, mupdf.pdf_annot_type.PDF_ANNOT_CARET);
             // if point:
             if (point != null)
             {
                 // p = JM_point_from_py(point)
                 mupdf.FzPoint p = Helpers.JM_point_from_py(point);
-                // r = mupdf.pdf_annot_rect(annot)
                 mupdf.FzRect r = mupdf.mupdf.pdf_annot_rect(annot);
-                // r = mupdf.FzRect(p.x, p.y, p.x + r.x1 - r.x0, p.y + r.y1 - r.y0)
                 r = new mupdf.FzRect(p.x, p.y, p.x + r.x1 - r.x0, p.y + r.y1 - r.y0);
-                // mupdf.pdf_set_annot_rect(annot, r)
                 mupdf.mupdf.pdf_set_annot_rect(annot, r);
             }
-            // mupdf.pdf_update_annot(annot)
             mupdf.mupdf.pdf_update_annot(annot);
             // JM_add_annot_id(annot, "A")
-            Helpers.JM_add_annot_id(annot, "A");
+            Helpers.JM_add_annot_id(annot, "A", NativePdfPage);
             // return annot
             return annot;
         }
@@ -1056,7 +1043,7 @@ namespace MuPDF.NET
             try
             {
                 var page = NativePdfPage;
-                var annot = mupdf.mupdf.pdf_create_annot(page, mupdf.pdf_annot_type.PDF_ANNOT_STAMP);
+                var annot = Helpers.PdfCreateAnnot(page, mupdf.pdf_annot_type.PDF_ANNOT_STAMP);
                 var annotObj = mupdf.mupdf.pdf_annot_obj(annot);
 
                 bool imageStamp = (imageBytes != null && imageBytes.Length > 0) || usePixmap != null;
@@ -1101,7 +1088,7 @@ namespace MuPDF.NET
                 }
 
                 mupdf.mupdf.pdf_update_annot(annot);
-                Helpers.JM_add_annot_id(annot, "A");
+                Helpers.JM_add_annot_id(annot, "A", NativePdfPage);
                 return new Annot(annot, this);
             }
             finally
@@ -1118,7 +1105,6 @@ namespace MuPDF.NET
 
         internal Annot add_file_annot_impl(object point, byte[] buffer_, string filename, string uFileName = null, string desc = null, string icon = null)
         {
-            // """Add a 'FileAttachment' annotation."""
             int old_rotation = annot_preprocess();
             Annot annot;
             try
@@ -1136,7 +1122,7 @@ namespace MuPDF.NET
             return annot;
         }
 
-        /// <summary>PyMuPDF <c>Page._add_file_annot</c>.</summary>
+        /// <summary>Internal file-attachment annotation creator.</summary>
         internal Annot _add_file_annot(object point, byte[] buffer_, string filename, string uFileName = null, string desc = null, string icon = null)
         {
             // page = self._pdf_page()
@@ -1153,36 +1139,23 @@ namespace MuPDF.NET
             if (filebuf?.m_internal == null)
                 // raise TypeError( MSG_BAD_BUFFER)
                 throw new ArgumentException(Constants.MSG_BAD_BUFFER);
-            // annot = mupdf.pdf_create_annot(page, mupdf.PDF_ANNOT_FILE_ATTACHMENT)
-            mupdf.PdfAnnot annot = mupdf.mupdf.pdf_create_annot(page, mupdf.pdf_annot_type.PDF_ANNOT_FILE_ATTACHMENT);
-            // r = mupdf.pdf_annot_rect(annot)
+            mupdf.PdfAnnot annot = Helpers.PdfCreateAnnot(page, mupdf.pdf_annot_type.PDF_ANNOT_FILE_ATTACHMENT);
             mupdf.FzRect r = mupdf.mupdf.pdf_annot_rect(annot);
-            // r = mupdf.fz_make_rect(p.x, p.y, p.x + r.x1 - r.x0, p.y + r.y1 - r.y0)
             r = mupdf.mupdf.fz_make_rect(p.x, p.y, p.x + r.x1 - r.x0, p.y + r.y1 - r.y0);
-            // mupdf.pdf_set_annot_rect(annot, r)
             mupdf.mupdf.pdf_set_annot_rect(annot, r);
-            // flags = mupdf.PDF_ANNOT_IS_PRINT
             int flags = mupdf.mupdf.PDF_ANNOT_IS_PRINT;
-            // mupdf.pdf_set_annot_flags(annot, flags)
             mupdf.mupdf.pdf_set_annot_flags(annot, flags);
             // if icon:
             if (!string.IsNullOrEmpty(icon))
-                // mupdf.pdf_set_annot_icon_name(annot, icon)
                 mupdf.mupdf.pdf_set_annot_icon_name(annot, icon);
-            // val = JM_embed_file(page.doc(), filebuf, filename, uf, d, 1)
-            mupdf.PdfObj val = Helpers.JmEmbedFile(page.doc(), filebuf, filename, uf, d, 1);
-            // mupdf.pdf_dict_put(mupdf.pdf_annot_obj(annot), PDF_NAME('FS'), val)
+            mupdf.PdfObj val = Helpers.JmEmbedFile(Helpers.PdfDocumentForPdfPage(page), filebuf, filename, uf, d, 1);
             mupdf.mupdf.pdf_dict_put(mupdf.mupdf.pdf_annot_obj(annot), mupdf.mupdf.pdf_new_name("FS"), val);
-            // mupdf.pdf_dict_put_text_string(mupdf.pdf_annot_obj(annot), PDF_NAME('Contents'), filename)
             mupdf.mupdf.pdf_dict_put_text_string(mupdf.mupdf.pdf_annot_obj(annot), mupdf.mupdf.pdf_new_name("Contents"), filename);
-            // mupdf.pdf_update_annot(annot)
             mupdf.mupdf.pdf_update_annot(annot);
-            // mupdf.pdf_set_annot_rect(annot, r)
             mupdf.mupdf.pdf_set_annot_rect(annot, r);
-            // mupdf.pdf_set_annot_flags(annot, flags)
             mupdf.mupdf.pdf_set_annot_flags(annot, flags);
             // JM_add_annot_id(annot, "A")
-            Helpers.JM_add_annot_id(annot, "A");
+            Helpers.JM_add_annot_id(annot, "A", NativePdfPage);
             // return Annot(annot)
             return new Annot(annot, this);
         }
@@ -1257,17 +1230,17 @@ namespace MuPDF.NET
             var ctm = new mupdf.FzMatrix();
             page.pdf_page_transform(new mupdf.FzRect(0, 0, 0, 0), ctm);
             var inv_ctm = ctm.fz_invert_matrix();
-            var annot = mupdf.mupdf.pdf_create_annot(page, mupdf.pdf_annot_type.PDF_ANNOT_INK);
+            var annot = Helpers.PdfCreateAnnot(page, mupdf.pdf_annot_type.PDF_ANNOT_INK);
             var annot_obj = mupdf.mupdf.pdf_annot_obj(annot);
             int n0 = strokes.Count;
-            var inklist = mupdf.mupdf.pdf_new_array(page.doc(), n0);
+            var inklist = mupdf.mupdf.pdf_new_array(Helpers.PdfDocumentForPdfPage(page), n0);
 
             for (int j = 0; j < n0; j++)
             {
                 if (strokes[j] is not System.Collections.IList sublist)
                     throw new ValueErrorException(Constants.MSG_BAD_ARG_INK_ANNOT);
                 int n1 = sublist.Count;
-                var stroke = mupdf.mupdf.pdf_new_array(page.doc(), 2 * n1);
+                var stroke = mupdf.mupdf.pdf_new_array(Helpers.PdfDocumentForPdfPage(page), 2 * n1);
 
                 for (int i = 0; i < n1; i++)
                 {
@@ -1286,7 +1259,7 @@ namespace MuPDF.NET
 
             mupdf.mupdf.pdf_dict_put(annot_obj, mupdf.mupdf.pdf_new_name("InkList"), inklist);
             mupdf.mupdf.pdf_update_annot(annot);
-            Helpers.JM_add_annot_id(annot, "A");
+            Helpers.JM_add_annot_id(annot, "A", NativePdfPage);
             return new Annot(annot, this);
         }
         /// <summary>
@@ -1364,14 +1337,14 @@ namespace MuPDF.NET
             int align = 0, float[]? fillColor = null, float[]? textColor = null, bool crossOut = true)
             => AddRedactAnnot(new Quad(rect), text, fontName, fontSize, align, fillColor, textColor, crossOut);
 
-        /// <summary>PyMuPDF <c>Page._add_redact_annot</c> (no rotation preprocess; used by compat and internally after <see cref="AddRedactAnnot"/> prepares overlay).</summary>
+        /// <summary>Internal redact annotation path without rotation preprocessing.</summary>
         internal Annot AddRedactAnnotCore(Quad quad, string? text, string? daStr, int align, float[]? fill)
         {
             var pdfPage = NativePdfPage;
             var pdf = RequireParent().NativePdfDocument;
             var fzq = Helpers.QuadToFz(quad);
             var r = mupdf.mupdf.fz_rect_from_quad(fzq);
-            var annot = mupdf.mupdf.pdf_create_annot(pdfPage, mupdf.pdf_annot_type.PDF_ANNOT_REDACT);
+            var annot = Helpers.PdfCreateAnnot(pdfPage, mupdf.pdf_annot_type.PDF_ANNOT_REDACT);
             mupdf.mupdf.pdf_set_annot_rect(annot, r);
 
             var annotObj = mupdf.mupdf.pdf_annot_obj(annot);
@@ -1394,7 +1367,7 @@ namespace MuPDF.NET
             }
 
             mupdf.mupdf.pdf_update_annot(annot);
-            Helpers.JM_add_annot_id(annot, "A");
+            Helpers.JM_add_annot_id(annot, "A", NativePdfPage);
             return new Annot(annot, this);
         }
 
@@ -1408,7 +1381,7 @@ namespace MuPDF.NET
             return true;
         }
 
-        /// <summary>PyMuPDF <c>JM_color_FromSequence</c> subset for <c>/IC</c> (1, 3, or 4 components; clamp to [0,1]).</summary>
+        /// <summary>Parses interior color (<c>/IC</c>) from 1, 3, or 4 components (clamped to [0,1]).</summary>
         private static (int nf, float[] comps) ColorComponentsForRedactInterior(float[]? color)
         {
             if (color == null || color.Length == 0)
@@ -1431,7 +1404,7 @@ namespace MuPDF.NET
             return (ret.Length, ret);
         }
 
-        /// <summary>PyMuPDF <c>add_redact_annot</c> cross-out: extend the <c>/AP</c> <c>/N</c> stream with diagonals after <c>pdf_update_annot</c>.</summary>
+        /// <summary>Adds cross-out diagonals to the AP/N stream after <c>pdf_update_annot</c>.</summary>
         private static void TryAppendRedactCrossOutAppearance(Annot annot)
         {
             string ap = annot.GetAP("N");
@@ -1526,7 +1499,7 @@ namespace MuPDF.NET
             return true;
         }
 
-        /// <summary>PyMuPDF <c>Page._apply_redactions</c>: MuPDF <c>pdf_redact_page</c> only (no overlay redraw).</summary>
+        /// <summary>MuPDF <c>pdf_redact_page</c> only (no overlay redraw).</summary>
         internal bool ApplyRedactionsPdfOnly(int text, int images, int graphics)
         {
             var pdfPage = NativePdfPage;
@@ -1539,7 +1512,7 @@ namespace MuPDF.NET
             return result != 0;
         }
 
-        /// <summary>PyMuPDF <c>Annot._get_redact_values</c> subset for <see cref="ApplyRedactions"/>.</summary>
+        /// <summary>Reads redaction annotation values for <see cref="ApplyRedactions"/>.</summary>
         private static Dictionary<string, object>? TryBuildRedactApplySnapshot(Annot annot)
         {
             try
@@ -1754,7 +1727,7 @@ namespace MuPDF.NET
             SyncLinkWrapperCache();
         }
 
-        /// <summary>PyMuPDF <c>Page.add_*_annot</c> shared path for text marker annotations.</summary>
+        /// <summary>Shared internal path for highlight/underline/strikeout annotations.</summary>
         private Annot AddTextMarkerAnnot(mupdf.pdf_annot_type type, object quads, Point start, Point stop, IRect clip)
         {
             IReadOnlyList<object> items;
@@ -1770,7 +1743,7 @@ namespace MuPDF.NET
             return AddTextMarker(type, items);
         }
 
-        /// <summary>PyMuPDF <c>Page._add_text_marker</c>.</summary>
+        /// <summary>Internal text-marker annotation helper.</summary>
         private Annot AddTextMarker(mupdf.pdf_annot_type type, IReadOnlyList<object> items)
         {
             RequireParent();
@@ -1783,7 +1756,7 @@ namespace MuPDF.NET
             return annot;
         }
 
-        /// <summary>PyMuPDF <c>Page__add_text_marker</c>.</summary>
+        /// <summary>Low-level text-marker annotation implementation.</summary>
         private Annot PageAddTextMarker(mupdf.pdf_annot_type type, IReadOnlyList<object> items)
         {
             var pdfPage = NativePdfPage;
@@ -1797,14 +1770,14 @@ namespace MuPDF.NET
             {
                 if (rotation != 0)
                     mupdf.mupdf.pdf_dict_put_int(pdfPage.obj(), mupdf.mupdf.pdf_new_name("Rotate"), 0);
-                var annot = mupdf.mupdf.pdf_create_annot(pdfPage, type);
+                var annot = Helpers.PdfCreateAnnot(pdfPage, type);
                 foreach (var item in items)
                 {
                     var q = Helpers.QuadFromPy(item);
                     mupdf.mupdf.pdf_add_annot_quad_point(annot, q);
                 }
                 mupdf.mupdf.pdf_update_annot(annot);
-                Helpers.JM_add_annot_id(annot, "A");
+                Helpers.JM_add_annot_id(annot, "A", NativePdfPage);
                 RestoreRotation();
                 return new Annot(annot, this);
             }
@@ -1878,7 +1851,7 @@ namespace MuPDF.NET
         /// <summary>
         /// PDF only: Insert a new link on this page. The parameter must be a dictionary of format as provided by get_links(), see link_dict_description.
         /// </summary>
-        /// <param name="linkDict">Link dictionary in PyMuPDF get_links format.</param>
+        /// <param name="linkDict">Link dictionary as returned by <see cref="GetLinks"/> (PyMuPDF <c>get_links</c> format).</param>
         /// <param name="mark">If true, mark the page dirty after link changes.</param>
         public Link InsertLink(Dictionary<string, object> linkDict, bool mark = true)
         {
@@ -1895,7 +1868,7 @@ namespace MuPDF.NET
         /// <summary>
         /// PDF only: Insert a new link on this page. The parameter must be a dictionary of format as provided by get_links(), see link_dict_description.
         /// </summary>
-        /// <param name="linkDict">Link dictionary in PyMuPDF get_links format.</param>
+        /// <param name="linkDict">Link dictionary as returned by <see cref="GetLinks"/> (PyMuPDF <c>get_links</c> format).</param>
         /// <param name="mark">If true, mark the page dirty after link changes.</param>
         public void InsertLinkVoid(Dictionary<string, object> linkDict, bool mark = true)
         {
@@ -1942,7 +1915,6 @@ namespace MuPDF.NET
         {
             // CheckParent(page)
             RequireParent();
-            // annot = utils.getLinkText(page, lnk)
             string annot = Utils.GetLinkText(this, lnk);
             // if annot == "":
             if (annot == "")
@@ -1958,7 +1930,7 @@ namespace MuPDF.NET
         public List<LinkInfo> GetLinks() =>
             GetLinksDict().Select(d => (LinkInfo)d).ToList();
 
-        /// <summary>PyMuPDF <c>Page.get_links</c> as dictionaries.</summary>
+        /// <summary>Returns page links as dictionaries.</summary>
         internal List<Dictionary<string, object>> GetLinksDict()
         {
             // Python Page.get_links: ln = page.first_link; while ln: ... ln = ln.next
@@ -2053,7 +2025,7 @@ namespace MuPDF.NET
             return pix;
         }
         /// <summary>
-        /// See PyMuPDF Page.get_displaylist.
+        /// Builds a display list for this page (optionally including annotations).
         /// </summary>
         /// <param name="annots">Whether to include annotations when building display list or pixmap.</param>
         public DisplayList GetDisplayList(int annots = 1)
@@ -2077,31 +2049,22 @@ namespace MuPDF.NET
         {
             // CheckParent(self)
             RequireParent();
-            // mediabox = mupdf.fz_bound_page(self.this)
             var mediabox = mupdf.mupdf.fz_bound_page(NativePage);
             // ctm = JM_matrix_from_py(matrix)
             var ctm = Helpers.MatrixToFz(matrix);
-            // tbounds = mediabox
             var tbounds = mediabox;
-            // text_option = mupdf.FZ_SVG_TEXT_AS_PATH if text_as_path == 1 else mupdf.FZ_SVG_TEXT_AS_TEXT
             int text_option = textAsPath == 1 ? mupdf.mupdf.FZ_SVG_TEXT_AS_PATH : mupdf.mupdf.FZ_SVG_TEXT_AS_TEXT;
-            // tbounds = mupdf.fz_transform_rect(tbounds, ctm)
             tbounds = mupdf.mupdf.fz_transform_rect(tbounds, ctm);
 
-            // res = mupdf.fz_new_buffer(1024)
             var res = mupdf.mupdf.fz_new_buffer(1024);
-            // out = mupdf.FzOutput(res)
             var output = new mupdf.FzOutput(res);
-            // dev = mupdf.fz_new_svg_device(
             var dev = mupdf.mupdf.fz_new_svg_device(
                 output,
                 tbounds.x1 - tbounds.x0,  // width
                 tbounds.y1 - tbounds.y0,  // height
                 text_option,
                 1);
-            // mupdf.fz_run_page(self.this, dev, ctm, mupdf.FzCookie())
             mupdf.mupdf.fz_run_page(NativePage, dev, ctm, new mupdf.FzCookie());
-            // mupdf.fz_close_device(dev)
             mupdf.mupdf.fz_close_device(dev);
             // out.fz_close_output()
             output.fz_close_output();
@@ -2112,7 +2075,7 @@ namespace MuPDF.NET
 
         // ─── Text Extraction ────────────────────────────────────────────
 
-        /// <summary>PyMuPDF <c>Page.get_textpage</c> — build textpage with rotation reset like Python.</summary>
+        /// <summary>Builds a <see cref="TextPage"/> with rotation temporarily reset.</summary>
         internal TextPage NewTextPageForGetText(IRect clip, int flags, Matrix matrix = null)
         {
             RequireParent();
@@ -2163,14 +2126,16 @@ namespace MuPDF.NET
         private TextPage BuildTextPage(Rect clip, int flags, Matrix matrix)
             => new TextPage(CreateStextPage(clip, flags, matrix)) { Parent = this };
         /// <summary>
-        /// Create a TextPage for the page.
+        /// Create a <see cref="TextPage"/> for the page.
         /// </summary>
+        /// <param name="flags">Text extraction flags (e.g. <see cref="Constants.TextFlagsWords"/> or <see cref="Constants.TextFlagsSearch"/>).</param>
+        /// <param name="clip">Optional clip rectangle in page coordinates.</param>
         public TextPage GetTextPage(int flags = 0, IRect clip = null) =>
             NewTextPageForGetText(clip, flags);
         /// <summary>
-        /// See PyMuPDF Page.extend_textpage.
+        /// Appends text from this page onto an existing <see cref="TextPage"/>.
         /// </summary>
-        /// <param name="flags">Text extraction or search flags (see PyMuPDF text flags).</param>
+        /// <param name="flags">Text extraction or search flags (e.g. <see cref="Constants.TextFlagsSearch"/> or <see cref="Constants.TextFlagsText"/>).</param>
         /// <param name="matrix">Transformation matrix for rendering or text extraction.</param>
         public void ExtendTextPage(TextPage tpage, int flags = 0, Matrix matrix = null)
         {
@@ -2238,7 +2203,7 @@ namespace MuPDF.NET
             TextPage textpage = null,
             bool sort = false)
         {
-            RequireParent(); // pymupdf.CheckParent(page)
+            RequireParent();
             if (flags == null)
                 flags = Constants.TextFlagsBlocks;
             TextPage tp = textpage;
@@ -2334,9 +2299,9 @@ namespace MuPDF.NET
                 return nwords;
             }
 
-            RequireParent();  // pymupdf.CheckParent(page)
+            RequireParent();
             if (flags == null)
-                flags = Constants.TextFlagsWords;  // flags = pymupdf.TEXTFLAGS_WORDS
+                flags = Constants.TextFlagsWords;
             TextPage tp = textpage;
             if (tp == null)
             {
@@ -2395,7 +2360,7 @@ namespace MuPDF.NET
         /// <param name="needle">Text to search for. May contain spaces. Upper / lower case is ignored, but only works for ASCII characters: For example, "COMPÉTENCES" will not be found if needle is "compétences"; "compÉtences" however will. Similar is true for German umlauts and the like.</param>
         /// <param name="clip">only search within this area.</param>
         /// <param name="maxHits">Maximum number of search hits to return.</param>
-        /// <param name="flags">Control the data extracted by the underlying TextPage. By default, ligatures and white spaces are kept, and hyphenation is detected.</param>
+        /// <param name="flags">Text extraction flags passed to <see cref="GetTextPage(int, IRect)"/> (e.g. <see cref="Constants.TextFlagsSearch"/>).</param>
         /// <param name="textpage">Optional reused TextPage for repeated operations.</param>
         public List<Quad> SearchFor(string needle, Quad clip = null, int maxHits = 16, int flags = 0, TextPage textpage = null)
         {
@@ -2418,7 +2383,7 @@ namespace MuPDF.NET
         /// <param name="needle">Text to search for. May contain spaces. Upper / lower case is ignored, but only works for ASCII characters: For example, "COMPÉTENCES" will not be found if needle is "compétences"; "compÉtences" however will. Similar is true for German umlauts and the like.</param>
         /// <param name="clip">only search within this area.</param>
         /// <param name="maxHits">Maximum number of search hits to return.</param>
-        /// <param name="flags">Control the data extracted by the underlying TextPage. By default, ligatures and white spaces are kept, and hyphenation is detected.</param>
+        /// <param name="flags">Text extraction flags passed to <see cref="GetTextPage(int, IRect)"/> (e.g. <see cref="Constants.TextFlagsSearch"/>).</param>
         /// <param name="textpage">Optional reused TextPage for repeated operations.</param>
         public List<Rect> SearchForRects(string needle, Quad clip = null, int maxHits = 16, int flags = 0, TextPage textpage = null)
         {
@@ -2774,8 +2739,6 @@ namespace MuPDF.NET
             int setSimple = 0,
             float strokeOpacity = 1)
         {
-            // """Insert text into a given rectangle.
-            //
             // Notes:
             //     Creates a Shape object, uses its same-named method and commits it.
             // Parameters:
@@ -2783,7 +2746,6 @@ namespace MuPDF.NET
             //     buffer: text to be inserted
             //     fontname: a Base-14 font, font name or '/name'
             //     fontfile: name of a font file
-            //     fontsize: font size
             //     lineheight: overwrite the font property
             //     color: RGB color triple
             //     expandtabs: handles tabulators with string function
@@ -2793,13 +2755,11 @@ namespace MuPDF.NET
             //     overlay: put text in foreground or background
             // Returns:
             //     unused or deficit rectangle area (float)
-            // """
             // img = page.new_shape()
             using var img = NewShape();
             // rc = img.insert_textbox(
             //     rect,
             //     buffer,
-            //     fontsize=fontsize,
             //     lineheight=lineheight,
             //     fontname=fontname,
             //     fontfile=fontfile,
@@ -2811,7 +2771,6 @@ namespace MuPDF.NET
             //     render_mode=render_mode,
             //     miter_limit=miter_limit,
             //     border_width=border_width,
-            //     align=align,
             //     rotate=rotate,
             //     morph=morph,
             //     stroke_opacity=stroke_opacity,
@@ -3249,7 +3208,7 @@ namespace MuPDF.NET
             return RequireParent().GetPageFonts(Number, full);
         }
 
-        /// <summary>PyMuPDF-style image rows (tuples) for internal use.</summary>
+        /// <summary>Image information rows (tuple format) for internal use.</summary>
         internal List<(int xref, string smask, int width, int height, int bpc, string colorspace, string altCs, string name, string filter)> GetImageRows(bool full = false)
             => RequireParent().GetPageImageRows(Number, full);
 
@@ -3344,7 +3303,7 @@ namespace MuPDF.NET
             return imageXref;
         }
 
-        /// <summary>PyMuPDF <c>insert_image</c> resource name allocation (<c>fzImg*</c>).</summary>
+        /// <summary>Allocates a unique image resource name (<c>fzImg*</c>).</summary>
         private string AllocateFzImgName()
         {
             var doc = RequireParent();
@@ -3379,7 +3338,7 @@ namespace MuPDF.NET
             bool setSimple = false, int wmode = 0, int encoding = 0)
             => insert_font(fontName, fontFile, fontbuffer, setSimple, wmode, encoding);
 
-        /// <summary>PyMuPDF <c>Page.insert_font</c> (<c>src/__init__.py</c>).</summary>
+        /// <summary><c>src/__init__.py</c>.</summary>
         internal int insert_font(string fontname = "helv", string fontfile = null, byte[] fontbuffer = null,
             bool set_simple = false, int wmode = 0, int encoding = 0)
         {
@@ -3448,9 +3407,6 @@ namespace MuPDF.NET
 
             // if (fontname.ToLowerInvariant() in fitz_fontdescriptors.Keys)
             // {
-            //     import pymupdf_fonts
-            //     fontbuffer = pymupdf_fonts.myfont(fontname);  // make a copy
-            //     del pymupdf_fonts
             // }
 
             // install the font for the page
@@ -3479,7 +3435,7 @@ namespace MuPDF.NET
             return xref_out;
         }
 
-        /// <summary>PyMuPDF <c>CheckFont(page, fontname)</c> — page font list entry by resource name.</summary>
+        /// <summary>Looks up a page font list entry by resource name.</summary>
         private (int xref, string ext, string type, string baseName, string name, string encoding, int? referencer)? CheckFont(string fontname)
         {
             foreach (var f in GetFonts(false))
@@ -3490,14 +3446,14 @@ namespace MuPDF.NET
             return null;
         }
 
-        /// <summary>PyMuPDF <c>Page._insertFont</c> (<c>src/__init__.py</c>).</summary>
+        /// <summary><c>src/__init__.py</c>.</summary>
         internal object[] _insertFont(string fontname, string bfname, string fontfile, byte[] fontbuffer,
             bool set_simple, int idx, int wmode, int serif, int encoding, int ordering)
         {
             lock (Utils.MuPDFLock)
             {
                 mupdf.PdfPage page = NativePdfPage;
-                mupdf.PdfDocument pdf = page.doc();
+                mupdf.PdfDocument pdf = RequireParent().NativePdfDocument;
 
                 object[] value = Helpers.JmInsertFontLegacy(pdf, RequireParent(), bfname, fontfile, fontbuffer,
                     set_simple, idx, wmode, serif, encoding, ordering);
@@ -3516,7 +3472,7 @@ namespace MuPDF.NET
                     throw new InvalidOperationException("cannot insert font");
                 mupdf.PdfObj font_obj = mupdf.mupdf.pdf_new_indirect(pdf, xref, 0);
                 mupdf.mupdf.pdf_dict_puts(fonts, fontname, font_obj);
-                pdf.Dispose();
+                // Do not dispose pdf — it is the document's borrowed NativePdfDocument cache.
                 return value;
             }
         }
@@ -3810,7 +3766,7 @@ namespace MuPDF.NET
             return RequireParent().GetPageXobjects(Number);
         }
         /// <summary>
-        /// See PyMuPDF Page.language.
+        /// Gets the page language tag from the PDF <c>/Lang</c> entry.
         /// </summary>
         public string Language
         {
@@ -3826,7 +3782,7 @@ namespace MuPDF.NET
             }
         }
         /// <summary>
-        /// See PyMuPDF Page.set_language.
+        /// Sets or clears the page language tag (<c>/Lang</c>).
         /// </summary>
         /// <param name="language">OCR language tag (e.g. eng).</param>
         public void SetLanguage(string language = null)
@@ -3854,7 +3810,7 @@ namespace MuPDF.NET
             }
         }
         /// <summary>
-        /// See PyMuPDF Page.refresh.
+        /// Reloads this page from the parent document after structural edits.
         /// </summary>
         public void Refresh()
         {
@@ -3917,7 +3873,7 @@ namespace MuPDF.NET
             Helpers.JM_refresh_links(RequireParent().NativePdfDocument, pdfPage);
         }
         /// <summary>
-        /// See PyMuPDF Page.get_layout.
+        /// Returns layout information from the registered layout provider.
         /// </summary>
         public object GetLayout()
         {
@@ -3929,7 +3885,7 @@ namespace MuPDF.NET
             return _layoutInformation;
         }
         /// <summary>
-        /// See PyMuPDF Page.layout_information.
+        /// Gets or sets cached layout information for this page.
         /// </summary>
         public object LayoutInformation
         {
@@ -3937,7 +3893,7 @@ namespace MuPDF.NET
             set => _layoutInformation = value;
         }
         /// <summary>
-        /// See PyMuPDF Page.get_layout_provider.
+        /// Gets or sets the callback that supplies layout information for pages.
         /// </summary>
         public static Func<Page, object> GetLayoutProvider
         {
@@ -4006,10 +3962,10 @@ namespace MuPDF.NET
             float[] color = null, float? opacity = null, bool keepProportion = true, int rotate = 0, int oc = 0)
         {
             if (writers == null)
-                throw new ArgumentException("need at least one pymupdf.TextWriter");
+                throw new ArgumentException("need at least one TextWriter");
             var writerList = writers.ToList();
             if (writerList.Count == 0)
-                throw new ArgumentException("need at least one pymupdf.TextWriter");
+                throw new ArgumentException("need at least one TextWriter");
 
             if (writerList.Count == 1 && rotate == 0 && rect == null)
             {
@@ -4581,7 +4537,7 @@ namespace MuPDF.NET
 
         // ─── Page Contents / Resources ──────────────────────────────────
         /// <summary>
-        /// See PyMuPDF Page.clean_contents.
+        /// Optimizes and optionally sanitizes the page content stream.
         /// </summary>
         /// <param name="sanitize">Clean-contents sanitize level passed to MuPDF.</param>
         public void CleanContents(int sanitize = 1)
@@ -4596,8 +4552,7 @@ namespace MuPDF.NET
             try
             {
                 Helpers.PdfFilterOptionsRef filterPkg = Helpers.MakePdfFilterOptions(recurse: 1, sanitize: sanitize);
-                // Python: mupdf.pdf_filter_page_contents(page.doc(), page, filter_)
-                pdfPage.doc().pdf_filter_page_contents(pdfPage, filterPkg.Filter);
+                RequireParent().NativePdfDocument.pdf_filter_page_contents(pdfPage, filterPkg.Filter);
             }
             finally
             {
@@ -4624,11 +4579,11 @@ namespace MuPDF.NET
             fresh._nativePage = null;
         }
         /// <summary>
-        /// See PyMuPDF Page.read_contents.
+        /// Reads the concatenated raw page content stream bytes.
         /// </summary>
         public byte[] ReadContents() => Tools.GetAllContents(this);
         /// <summary>
-        /// See PyMuPDF Page.set_contents.
+        /// Replaces the page <c>/Contents</c> with a single xref reference.
         /// </summary>
         /// <param name="xref">PDF xref of image or contents stream.</param>
         public void SetContents(int xref)
@@ -4645,7 +4600,7 @@ namespace MuPDF.NET
             RequireParent().XrefSetKey(Xref, "Contents", $"{xref} 0 R");
         }
         /// <summary>
-        /// See PyMuPDF Page.get_contents.
+        /// Returns xref numbers of all content streams on this page.
         /// </summary>
         public List<int> GetContents()
         {
@@ -4664,7 +4619,7 @@ namespace MuPDF.NET
             return result;
         }
         /// <summary>
-        /// See PyMuPDF Page.wrap_contents.
+        /// Balances the page graphics state by inserting missing <c>q</c>/<c>Q</c> operators.
         /// </summary>
         public void WrapContents()
         {
@@ -4786,7 +4741,7 @@ namespace MuPDF.NET
             return mupdf.mupdf.fz_new_buffer(16);
         }
 
-        /// <summary>PyMuPDF <c>Page._count_q_balance</c> — count missing graphic state pushs and pops.</summary>
+        /// <summary>Counts missing <c>q</c>/<c>Q</c> graphics-state operators.</summary>
         /// <remarks>
         /// Returns a pair (push, pop). Push is the number of missing PDF "q" commands, pop is the number of "Q" commands.
         /// A balanced graphics state for the page will be reached if its /Contents is prepended with 'push' copies of string "q\n"
@@ -4931,7 +4886,6 @@ namespace MuPDF.NET
                     npath["items"] = newitems;
                 }
 
-                // Python: if npath['type'] in ('f', 's'):
                 if (typeStr is "f" or "s")
                 {
                     foreach (var k in allkeys)
@@ -4944,11 +4898,11 @@ namespace MuPDF.NET
             return val;
         }
         /// <summary>
-        /// See PyMuPDF Page.get_text_trace.
+        /// Returns detailed span-level text trace information for the page.
         /// </summary>
         public List<SpanInfo> GetTextTrace() => TextTraceDictToSpanInfo(GetTextTraceDict());
 
-        /// <summary>PyMuPDF <c>Page.get_texttrace</c> as dictionaries.</summary>
+        /// <summary>Returns text trace data as dictionaries.</summary>
         internal List<Dictionary<string, object>> GetTextTraceDict()
         {
             RequireParent();
@@ -4999,7 +4953,7 @@ namespace MuPDF.NET
             return result;
         }
 
-        /// <summary>PyMuPDF <c>span["chars"]</c> list (tuple rows as <c>object[]</c>).</summary>
+        /// <summary>Character list as tuple rows stored in <c>object[]</c>.</summary>
         private static List<object> TextTraceCharsToPyList(object charsObj)
         {
             if (charsObj == null)
@@ -5103,7 +5057,7 @@ namespace MuPDF.NET
             }
         }
         /// <summary>
-        /// See PyMuPDF Page.get_bboxlog.
+        /// Returns bounding boxes logged during page rendering (images, text, paths).
         /// </summary>
         public List<BoxLog> GetBboxlog(bool includeLayerNames = false) =>
             GetBboxlogTuples(includeLayerNames)
@@ -5209,13 +5163,10 @@ namespace MuPDF.NET
         /// <returns>the label string like "vii" for Roman numbering or "" if not defined.</returns>
         public string GetLabel()
         {
-            // """Return the label for this PDF page.
-            //
             // Args:
             //     page: page object.
             // Returns:
             //     The label (str) of the page. Errors return an empty string.
-            // """
             // Jorj McKie, 2021-01-06
 
             // labels = page.parent._get_page_labels()
@@ -5235,19 +5186,12 @@ namespace MuPDF.NET
         /// <param name="components">The desired count of color components. Must be one of 1, 3 or 4, which results in color spaces DeviceGray, DeviceRGB or DeviceCMYK respectively. The method affects text, images and vector graphics. For instance, with the default value 1, a page will be converted to grayscale. If a page is already grayscale, the method will not cause visible changes; independent of the value of components.</param>
         public void Recolor(int components = 1)
         {
-            if (components != 1 && components != 3 && components != 4)
-                throw new ValueErrorException("components must be one of 1, 3, 4");
-            var doc = RequireParent();
-            if (!doc.IsPdf)
-                throw new ValueErrorException(Constants.MSG_IS_NO_PDF);
-            using var ropts = new mupdf.PdfRecolorOptions();
-            ropts.num_comp = components;
-            mupdf.mupdf.pdf_recolor_page(doc.NativePdfDocument, Number, ropts);
+            RequireParent().RecolorPage(Number, components);
         }
 
         // ─── Tab ────────────────────────────────────────────────────────
         /// <summary>
-        /// See PyMuPDF Page.get_page_annot_types.
+        /// Lists annotation types and xrefs present on this page.
         /// </summary>
         public Dictionary<string, object>[] GetPageAnnotTypes()
         {
@@ -5335,7 +5279,6 @@ namespace MuPDF.NET
             else
                 throw new ArgumentException("identifier must be a string or integer");
 
-            // val = self._load_annot(name, xref)
             Annot val = _load_annot(name, xref);
             if (val == null)
                 return null;
@@ -5476,7 +5419,7 @@ namespace MuPDF.NET
 
         // ─── Run page ───────────────────────────────────────────────────
         /// <summary>
-        /// See PyMuPDF Page.run.
+        /// Renders page content to a MuPDF device with the given transform.
         /// </summary>
         /// <param name="dev">MuPDF device receiving rendered page content.</param>
         /// <param name="transform">If true, return transformation matrices with image rectangles.</param>
@@ -5487,7 +5430,7 @@ namespace MuPDF.NET
 
         // ─── Table Detection ─────────────────────────────────────────────
         /// <summary>
-        /// Gets or sets See PyMuPDF Page.table_settings.
+        /// Gets or sets default settings used by <see cref="FindTables"/>.
         /// </summary>
         public TableSettings TableSettings { get; set; }
 
@@ -5592,7 +5535,7 @@ namespace MuPDF.NET
         // Annotation and link generators.
         internal IEnumerable<Annot> annots() => Annots();
         internal IEnumerable<Annot> annots(params AnnotationType[] types) => Annots(types);
-        /// <summary>PyMuPDF <c>Page.links()</c> — generator over link dicts from <see cref="GetLinks"/>.</summary>
+        /// <summary>Iterates link dictionaries from <see cref="GetLinks"/>.</summary>
         internal IEnumerable<Dictionary<string, object>> links(IEnumerable<int> kinds = null)
         {
             HashSet<int> filter = null;
@@ -5810,7 +5753,7 @@ namespace MuPDF.NET
             => InsertText(point, text, fontSize: fontsize, fontName: fontname, color: color, rotate: rotate, renderMode: render_mode, borderWidth: border_width,
                 miterLimit: miter_limit.HasValue ? (float?)miter_limit.Value : null,
                 morphFix: morphFix, morphMat: morphMat);
-        /// <summary>PyMuPDF <c>Page.insert_textbox</c> (snake_case parameters).</summary>
+        /// <summary><see cref="InsertTextbox"/> overload with snake_case parameters.</summary>
         public InsertTextboxResult insert_textbox(
             Rect rect,
             string text,
@@ -5923,7 +5866,7 @@ namespace MuPDF.NET
             _set_resource_property(mc, xref);
             return mc;
         }
-        /// <summary>PyMuPDF <c>Page._set_pagebox</c>.</summary>
+        /// <summary>Sets a PDF page box (<c>/MediaBox</c>, <c>/CropBox</c>, etc.).</summary>
         internal void _set_pagebox(string boxtype, Rect rect)
         {
             var doc = Parent;
@@ -5989,7 +5932,7 @@ namespace MuPDF.NET
                 if (name == gstate)
                     return gstate;
             }
-            var opa = mupdf.mupdf.pdf_new_dict(page.doc(), 3);
+            var opa = mupdf.mupdf.pdf_new_dict(Helpers.PdfDocumentForPdfPage(page), 3);
             mupdf.mupdf.pdf_dict_put_real(opa, mupdf.mupdf.pdf_new_name("CA"), (float)CA);
             mupdf.mupdf.pdf_dict_put_real(opa, mupdf.mupdf.pdf_new_name("ca"), (float)ca);
             if (!string.IsNullOrEmpty(blendmode))
@@ -6006,12 +5949,10 @@ namespace MuPDF.NET
             mupdf.PdfAnnot annot;
             if (xref == 0)
             {
-                // annot = JM_get_annot_by_name(page, name)
                 annot = Helpers.JmGetAnnotByName(page, name);
             }
             else
             {
-                // annot = JM_get_annot_by_xref(page, xref)
                 annot = Helpers.JmGetAnnotByXref(page, xref);
             }
             if (annot.m_internal == null)
@@ -6256,7 +6197,7 @@ namespace MuPDF.NET
             var nativeAnnot = Helpers.JmCreateWidget(pdf, pdfPage, wt, field_name);
             if (nativeAnnot?.m_internal == null)
                 throw new InvalidOperationException("cannot create widget");
-            Helpers.JM_add_annot_id(nativeAnnot, "W");
+            Helpers.JM_add_annot_id(nativeAnnot, "W", pdfPage);
             return new Annot(nativeAnnot, this);
         }
 

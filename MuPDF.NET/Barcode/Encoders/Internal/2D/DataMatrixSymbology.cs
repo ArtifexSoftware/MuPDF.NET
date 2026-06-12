@@ -1424,7 +1424,6 @@ namespace BarcodeWriter.Core.Internal
                             // set the mode to ASCII
                             mode = DataMatrixCompactionMode.Ascii;
 
-                            // "c" variable already stores the current character (i.e. c == m_data[dataIndex])
                             // encode this sigle character using the ASCII mode (see the spec for ASCII mode)
                             if ((byte)c > 127)
                             {
@@ -1440,7 +1439,6 @@ namespace BarcodeWriter.Core.Internal
                             // check if we have one more character to encode in ASCII mode 
                             // this may happen if we are in x12 mode
 
-                            // "c" variable already stores the current character (i.e. c == m_data[dataIndex])
                             // encode this sigle character using the ASCII mode (see the spec for ASCII mode)
                             if (dataIndex < m_data.Length)
                             {

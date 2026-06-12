@@ -79,7 +79,6 @@ namespace BarcodeReader.Core.Code128
                 if (Decode(r, row)) return r; //if sampling is good enough, then use simple row scanning
             }
 
-            //
             BarSymbolReaderLooseProjection reader2 = new BarSymbolReaderLooseProjection(scan, 6, 11, true, _patterns, 106, true, useE);
             float[] widths = new float[] { 0.5f, 0.9f };
             foreach (float w in widths)

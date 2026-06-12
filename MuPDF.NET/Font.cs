@@ -73,9 +73,6 @@ namespace MuPDF.NET
                     ordering = 3;
                 else if (fname_lower.StartsWith("japan"))
                     ordering = 2;
-                // elif fname_lower in fitz_fontdescriptors.keys():
-                //     import pymupdf_fonts  # optional fonts
-                //     fontbuffer = pymupdf_fonts.myfont(fname_lower)
                 //     fontname = None
                 else if (ordering < 0)
                 {
@@ -145,7 +142,7 @@ namespace MuPDF.NET
                 var f = mupdf.mupdf.ll_fz_font_flags(NativeFontCore.m_internal);
                 if (f == null)
                     return null;
-                // if mupdf_cppyy: cppyy bitfield handling (see PyMuPDF <c>Font.flags</c>)
+                // cppyy bitfield path (PyMuPDF <c>Font.flags</c>); not used in MuPDF.NET.
                 return new Dictionary<string, uint>
                 {
                     ["mono"] = f.is_mono,

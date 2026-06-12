@@ -1,12 +1,7 @@
-// """
-// "test_search1":
 // Search for some text on a PDF page, and compare content of returned hit
 // rectangle with the searched text.
-//
-// "test_search2":
 // Text search with 'clip' parameter - clip rectangle contains two occurrences
 // of searched text. Confirm search locations are inside clip.
-// """
 using System;
 using System.Collections.Generic;
 using Xunit;
@@ -26,7 +21,7 @@ namespace MuPDF.NET.Test
 
         private static string Out(string fileName) => _Path.ForOutput(fileName, TestClassName);
 
-        /// <summary>PyMuPDF <c>Page.search_for</c> default flags when <c>flags=None</c>.</summary>
+        /// <summary>Default <see cref="Page.SearchFor"/> flags when none are specified.</summary>
         private static int TextFlagsSearchDefault =>
             0
             | mupdf.mupdf.FZ_STEXT_DEHYPHENATE
@@ -34,7 +29,7 @@ namespace MuPDF.NET.Test
             | mupdf.mupdf.FZ_STEXT_PRESERVE_LIGATURES
             | mupdf.mupdf.FZ_STEXT_MEDIABOX_CLIP;
 
-        /// <summary>PyMuPDF <c>TEXTFLAGS_SEARCH</c> (<c>src/__init__.py</c>).</summary>
+        /// <summary>Text-search flag set matching PyMuPDF <c>TEXTFLAGS_SEARCH</c>.</summary>
         private static int TextFlagsSearch =>
             0
             | mupdf.mupdf.FZ_STEXT_PRESERVE_WHITESPACE

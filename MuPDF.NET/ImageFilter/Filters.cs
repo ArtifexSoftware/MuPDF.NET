@@ -89,7 +89,6 @@ namespace MuPDF.NET
                         bestIndex = i;
                     }
 
-                //
                 float dy = bestIndex - dY;
 
                 //calc subpixel precision
@@ -762,7 +761,6 @@ namespace MuPDF.NET
 
             res.AddRange(temp);
 
-            //
             return res;
         }
 

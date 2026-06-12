@@ -6,8 +6,8 @@ namespace MuPDF.NET
     /// MuPDF device wrapper for drawing, list recording, or text extraction.
     /// </summary>
     /// <remarks>
-    /// PyMuPDF <c>DeviceWrapper</c> (<c>src/__init__.py</c>). Used with
-    /// <see cref="DisplayList.Run"/> and <see cref="DocumentWriter.BeginPage"/>.
+    /// Used with <see cref="DisplayList.Run"/> and <see cref="DocumentWriter.BeginPage"/>.
+    /// PyMuPDF equivalent: <c>DeviceWrapper</c>.
     /// </remarks>
     public class DeviceWrapper : IDisposable
     {
@@ -80,7 +80,7 @@ namespace MuPDF.NET
     /// </para>
     /// <para>
     /// Replay with <see cref="Run"/>, <see cref="GetPixmap"/>, or <see cref="GetTextPage"/>.
-    /// PyMuPDF-aligned API; legacy readthedocs names are on <c>DisplayList.Legacy.cs</c>.
+    /// Public display-list API; legacy readthedocs names are on <c>DisplayList.Legacy.cs</c>.
     /// </para>
     /// <para>
     /// See <see href="https://mupdfnet.readthedocs.io/en/latest/classes/DisplayList.html"/>.

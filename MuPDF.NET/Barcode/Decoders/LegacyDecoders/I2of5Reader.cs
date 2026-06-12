@@ -95,9 +95,7 @@ namespace BarcodeReader.Core.LegacyDecoders
 
             // values found during experiments
 
-            // "after" quote zone is quite large as it is inside the "circle"
             CONST_QUIET_ZONE_AFTER_WIDTH_FACTOR = 2.2f; // 2.2f;
-            // "before" quite zone is quite small as it may start anywhere
             CONST_QUIET_ZONE_BEFORE_WIDTH_FACTOR = 0.1f;// 2.2f;
 
             // values found during experiments with circle barcodes 

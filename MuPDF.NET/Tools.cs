@@ -5,7 +5,6 @@ using System.Threading;
 namespace MuPDF.NET
 {
     /// <summary>
-    /// Static utilities mirroring PyMuPDF <c>pymupdf.TOOLS</c> (<c>src/__init__.py</c>, class <c>TOOLS</c> ~24849).
     /// </summary>
     /// <remarks>
     /// <para>PyMuPDF uses <c>@staticmethod</c> so no instance is required. Public members use PascalCase;
@@ -20,7 +19,7 @@ namespace MuPDF.NET
     {
         private static int _uniqueId;
 
-        /// <summary>PyMuPDF <c>TOOLS.gen_id</c>.</summary>
+        /// <summary>Generates a unique annotation/object ID.</summary>
         public static int GenId()
         {
             // global TOOLS_JM_UNIQUE_ID
@@ -28,7 +27,7 @@ namespace MuPDF.NET
             return Interlocked.Increment(ref _uniqueId);
         }
 
-        /// <summary>PyMuPDF <c>TOOLS._insert_contents</c> — add bytes as a new <c>/Contents</c> stream; returns xref of the new stream.</summary>
+        /// <summary>Adds bytes as a new <c>/Contents</c> stream and returns the new stream xref.</summary>
         /// <remarks>Python docstring: Add bytes as a new /Contents object for a page, and return its xref.</remarks>
         /// <param name="page">Target PDF page.</param>
         /// <param name="newContent">Raw PDF content bytes.</param>
@@ -78,7 +77,7 @@ namespace MuPDF.NET
             return InsertContents(page, Encoding.UTF8.GetBytes(utf8Content), overlay);
         }
 
-        /// <summary>PyMuPDF <c>TOOLS._get_all_contents</c>.</summary>
+        /// <summary>Reads and concatenates all page <c>/Contents</c> stream bytes.</summary>
         public static byte[] GetAllContents(Page page)
         {
             if (page == null) throw new ArgumentNullException(nameof(page));
@@ -97,11 +96,11 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>PyMuPDF <c>TOOLS.glyph_cache_empty</c>.</summary>
+        /// <summary>Purges the MuPDF glyph cache.</summary>
         /// <remarks>Python docstring: Empty the glyph cache.</remarks>
         public static void GlyphCacheEmpty() => mupdf.mupdf.fz_purge_glyph_cache();
 
-        /// <summary>PyMuPDF <c>TOOLS.mupdf_version</c>.</summary>
+        /// <summary>Returns the linked MuPDF library version string.</summary>
         /// <remarks>Python docstring: Get version of MuPDF binary build.</remarks>
         public static string MupdfVersion() => mupdf.mupdf.FZ_VERSION;
 
@@ -111,7 +110,6 @@ namespace MuPDF.NET
         public static string MupdfWarnings(bool reset = true)
         {
             Helpers.EnsureMupdfWarningsHooked();
-            // mupdf.fz_flush_warnings()
             mupdf.mupdf.fz_flush_warnings();
             string ret;
             lock (Helpers.JM_mupdf_warnings_store)
@@ -129,23 +127,23 @@ namespace MuPDF.NET
                 Helpers.JM_mupdf_warnings_store.Clear();
         }
 
-        /// <summary>PyMuPDF <c>TOOLS.set_aa_level</c>.</summary>
+        /// <summary>Sets the anti-aliasing level.</summary>
         /// <remarks>Python docstring: Set anti-aliasing level.</remarks>
         public static void SetAaLevel(int level) => mupdf.mupdf.fz_set_aa_level(level);
 
-        /// <summary>PyMuPDF <c>TOOLS.set_graphics_min_line_width</c>.</summary>
+        /// <summary>Sets the minimum graphics line width.</summary>
         /// <remarks>Python docstring: Set the graphics minimum line width.</remarks>
         public static void SetGraphicsMinLineWidth(float minLineWidth) =>
             mupdf.mupdf.fz_set_graphics_min_line_width(minLineWidth);
 
-        /// <summary>PyMuPDF <c>TOOLS.show_aa_level</c>.</summary>
+        /// <summary>Returns current anti-aliasing and minimum line-width settings.</summary>
         /// <remarks>Python docstring: Show anti-aliasing values.</remarks>
         public static (int graphics, int text, float graphicsMinLineWidth) ShowAaLevel() => (
             mupdf.mupdf.fz_graphics_aa_level(),
             mupdf.mupdf.fz_text_aa_level(),
             mupdf.mupdf.fz_graphics_min_line_width());
 
-        /// <summary>PyMuPDF <c>TOOLS.store_shrink</c>.</summary>
+        /// <summary>Shrinks or empties the MuPDF resource store.</summary>
         /// <remarks>Python docstring: Free 'percent' of current store size.</remarks>
         public static void StoreShrink(int percent)
         {

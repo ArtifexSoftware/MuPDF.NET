@@ -29,7 +29,7 @@ namespace MuPDF.NET
 
         public Matrix Matrix { get; set; }
 
-        /// <summary>PyMuPDF dictionary-style access (<c>image["ext"]</c>).</summary>
+        /// <summary>Dictionary-style image metadata access (<c>image["ext"]</c>).</summary>
         public object this[string key]
         {
             get

@@ -15,9 +15,8 @@ namespace MuPDF.NET.Test
     {
         private static readonly string outDocPath = _Path.ForOutput("test_encryption.pdf", nameof(TestCrypting));
 
-        /// <summary>
-        /// PyMuPDF <c>tests/test_crypting.py::test_encryption</c>.
-        /// </summary>
+        /// <summary>Regression test: encryption (PyMuPDF <c>tests/test_crypting.py::test_encryption</c>).</summary>
+
         [Fact]
         public void test_encryption()
         {
@@ -35,7 +34,6 @@ namespace MuPDF.NET.Test
                 var page = doc.NewPage(); // empty page
                 page.InsertText(new Point(50, 72), text); // insert the data
                 using var ms = new MemoryStream();
-                // Python: tobytes = doc.tobytes(encryption=..., owner_pw=..., user_pw=..., permissions=perm)
                 doc.Save(
                     ms,
                     encryption: encrypt_meth, // set the encryption method
@@ -46,20 +44,18 @@ namespace MuPDF.NET.Test
                 doc.Save(outDocPath);
             }
 
-            using (var doc = new Document(tobytes, "pdf")) // Python: doc = pymupdf.open("pdf", tobytes)
+            using (var doc = new Document(tobytes, "pdf"))
             {
                 Assert.True(doc.NeedsPass);
                 Assert.True(doc.IsEncrypted);
-                // Python: rc = doc.authenticate("owner")  # returns fz_authenticate_password bitmask
                 int rc = mupdf.mupdf.fz_authenticate_password(doc.NativeDocument, "owner");
                 Assert.Equal(4, rc);
                 Assert.NotEqual(0, doc.Authenticate("owner")); // sync Document state (init_doc, is_encrypted)
                 Assert.False(doc.IsEncrypted);
             }
 
-            using (var doc = new Document(tobytes, "pdf")) // Python: doc = pymupdf.open("pdf", tobytes)
+            using (var doc = new Document(tobytes, "pdf"))
             {
-                // Python: rc = doc.authenticate("user")
                 int rc = mupdf.mupdf.fz_authenticate_password(doc.NativeDocument, "user");
                 Assert.Equal(2, rc);
                 Assert.NotEqual(0, doc.Authenticate("user"));

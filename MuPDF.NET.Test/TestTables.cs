@@ -1,11 +1,3 @@
-// import os
-// import io
-// from pprint import pprint
-// import textwrap
-// import pickle
-// import platform
-//
-// import pymupdf
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -143,40 +135,24 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_table1()
         {
-            // """Compare pickled tables with those of the current run."""
             if (!HasFile(filename) || !HasFile(pickle_file)) return;
             // pickle.load is not available in C#; skip when reference data is pickle-only.
             return;
 
             // pickle_in = open(pickle_file, "rb")
-            // doc = pymupdf.open(filename)
             // page = doc[0]
             // tabs = page.find_tables()
             // cells = tabs[0].cells + tabs[1].cells  # all table cell tuples on page
             // extracts = [tabs[0].extract(), tabs[1].extract()]  # all table cell content
             // old_data = pickle.load(pickle_in)  # previously saved data
-            //
-            // # Compare cell contents
-            // assert old_data["extracts"] == extracts  # same cell contents
-            //
-            // # Compare cell coordinates.
-            // # Cell rectangles may get somewhat larger due to more cautious border
-            // # computations, but any differences must be small.
             // old_cells = old_data["cells"][0] + old_data["cells"][1]
-            // assert len(cells) == len(old_cells)
             // for i in range(len(cells)):
-            //     c1 = pymupdf.Rect(cells[i])  # new cell coordinates
-            //     c0 = pymupdf.Rect(old_cells[i])  # old cell coordinates
-            //     assert c0 in c1  # always: old contained in new
-            //     assert abs(c1 - c0) < 0.2  # difference must be small
         }
 
         [Fact]
         public void test_table2()
         {
-            // """Confirm header properties."""
             if (!HasFile(filename)) return;
-            // doc = pymupdf.open(filename)
             using var doc = new Document(filename);
             // page = doc[0]
             var page = doc[0];
@@ -184,26 +160,18 @@ namespace MuPDF.NET.Test
             var tab1 = page.find_tables().Tables[0];
             var tab2 = page.find_tables().Tables[1];
             // both tables contain their header data
-            // assert tab1.header.external == False
             Assert.False(tab1.Header.External);
-            // assert tab1.header.cells == tab1.rows[0].cells
             Assert.True(NullableCellsEqual(tab1.Header.Cells, tab1.Rows[0].Cells));
-            // assert tab2.header.external == False
             Assert.False(tab2.Header.External);
-            // assert tab2.header.cells == tab2.rows[0].cells
             Assert.True(NullableCellsEqual(tab2.Header.Cells, tab2.Rows[0].Cells));
         }
 
         [Fact]
         public void test_2812()
         {
-            // """Ensure table detection and extraction independent from page rotation.
-            //
             // Make 4 pages with rotations 0, 90, 180 and 270 degrees respectively.
             // Each page shows the same 8x5 table.
             // We will check that each table is detected and delivers the same content.
-            // """
-            // doc = pymupdf.open()
             using var doc = new Document();
             // Page 0: rotation 0
             // page = doc.NewPage(width=842, height=595)
@@ -215,7 +183,6 @@ namespace MuPDF.NET.Test
             // rows = 8
             int rows = 8;
             // define the cells, draw the grid and insert unique text in each cell.
-            // cells = pymupdf.make_table(rect, rows=rows, cols=cols)
             var cells = Utils.MakeTable(rect, rows: rows, cols: cols);
             // for i in range(rows):
             //     for j in range(cols):
@@ -230,7 +197,6 @@ namespace MuPDF.NET.Test
             //         page.InsertTextbox(
             //             cells[i][j],
             //             f"cell[{i}][{j}]",
-            //             align=pymupdf.TEXT_ALIGN_CENTER,
             //         )
             for (int i = 0; i < rows; i++)
             {
@@ -253,7 +219,6 @@ namespace MuPDF.NET.Test
             cols = 8;
             // rows = 5
             rows = 5;
-            // cells = pymupdf.make_table(rect, rows=rows, cols=cols)
             cells = Utils.MakeTable(rect, rows: rows, cols: cols);
             // for i in range(rows):
             //     for j in range(cols):
@@ -269,7 +234,6 @@ namespace MuPDF.NET.Test
             //             cells[i][j],
             //             f"cell[{j}][{rows-i-1}]",
             //             rotate=90,
-            //             align=pymupdf.TEXT_ALIGN_CENTER,
             //         )
             for (int i = 0; i < rows; i++)
             {
@@ -296,7 +260,6 @@ namespace MuPDF.NET.Test
             cols = 5;
             // rows = 8
             rows = 8;
-            // cells = pymupdf.make_table(rect, rows=rows, cols=cols)
             cells = Utils.MakeTable(rect, rows: rows, cols: cols);
             // for i in range(rows):
             //     for j in range(cols):
@@ -312,7 +275,6 @@ namespace MuPDF.NET.Test
             //             cells[i][j],
             //             f"cell[{rows-i-1}][{cols-j-1}]",
             //             rotate=180,
-            //             align=pymupdf.TEXT_ALIGN_CENTER,
             //         )
             for (int i = 0; i < rows; i++)
             {
@@ -339,7 +301,6 @@ namespace MuPDF.NET.Test
             cols = 8;
             // rows = 5
             rows = 5;
-            // cells = pymupdf.make_table(rect, rows=rows, cols=cols)
             cells = Utils.MakeTable(rect, rows: rows, cols: cols);
             // for i in range(rows):
             //     for j in range(cols):
@@ -355,7 +316,6 @@ namespace MuPDF.NET.Test
             //             cells[i][j],
             //             f"cell[{cols-j-1}][{i}]",
             //             rotate=270,
-            //             align=pymupdf.TEXT_ALIGN_CENTER,
             //         )
             for (int i = 0; i < rows; i++)
             {
@@ -383,16 +343,13 @@ namespace MuPDF.NET.Test
             // Test PDF prepared. Extract table on each page and
             // ensure identical extracted table data.
             // -------------------------------------------------------------------------
-            // doc = pymupdf.open("pdf", pdfdata)
             using var doc2 = new Document(pdfdata, "pdf");
             // extracts = []
             var extracts = new List<string>();
-            // for page in doc:
             foreach (var page2 in doc2)
             {
                 // tabs = page.find_tables()
                 var tabs = page2.find_tables();
-                // assert len(tabs.tables) == 1
                 Assert.Single(tabs.Tables);
                 // tab = tabs[0]
                 var tab = tabs[0];
@@ -401,9 +358,7 @@ namespace MuPDF.NET.Test
                 // extracts.Append(fp.getvalue())
                 extracts.Add(PprintExtract(tab.Extract()));
                 // fp = None
-                // assert tab.row_count == 8
                 Assert.Equal(8, tab.RowCount);
-                // assert tab.col_count == 5
                 Assert.Equal(5, tab.ColCount);
             }
             // e0 = extracts[0]
@@ -411,7 +366,6 @@ namespace MuPDF.NET.Test
             // for e in extracts[1:]:
             foreach (var e in extracts.Skip(1))
             {
-                // assert e == e0
                 Assert.Equal(e0, e);
             }
             doc2.Save(Out("test_2812.pdf"));
@@ -420,15 +374,11 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_2979()
         {
-            // """This tests fix #2979 and #3001.
-            //
             // 2979: identical cell count for each row
             // 3001: no change of global glyph heights
-            // """
             // filename = os.path.join(scriptdir, "resources", "test_2979.pdf")
             string filename = Doc("test_2979.pdf");
             if (!HasFile(filename)) return;
-            // doc = pymupdf.open(filename)
             using var doc = new Document(filename);
             // page = doc[0]
             var page = doc[0];
@@ -444,26 +394,18 @@ namespace MuPDF.NET.Test
             }
 
             // test 2979
-            // assert len(lengths) == 1
             Assert.Single(lengths);
 
             // test 3001
-            // assert (
-            //     pymupdf.TOOLS.set_small_glyph_heights() is False
-            // ), f"{pymupdf.TOOLS.set_small_glyph_heights()=}"
             Assert.False(Tools.SetSmallGlyphHeights());
 
-            // wt = pymupdf.TOOLS.mupdf_warnings()
             string wt = Tools.MupdfWarnings();
-            // if pymupdf.mupdf_version_tuple >= (1, 28, 0):
             if (_Version.mupdf_version_tuple_at_least(1, 28, 0))
             {
-                // assert ( wt == '' )
                 Assert.Equal("", wt);
             }
             else
             {
-                // assert (
                 //     wt
                 //     == "bogus font ascent/descent values (3117 / -2463)\n... repeated 2 times..."
                 // )
@@ -476,17 +418,14 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_3062()
         {
-            // """Tests the fix for #3062.
             // After table extraction, a rotated page should behave and look
             // like as before."""
             // if platform.python_implementation() == 'GraalVM':
-            //     print(f'test_3062(): Not running because slow on GraalVM.')
             //     return
 
             // filename = os.path.join(scriptdir, "resources", "test_3062.pdf")
             string filename = Doc("test_3062.pdf");
             if (!HasFile(filename)) return;
-            // doc = pymupdf.open(filename)
             using var doc = new Document(filename);
             // page = doc[0]
             var page = doc[0];
@@ -503,18 +442,15 @@ namespace MuPDF.NET.Test
             var tab1 = page.find_tables()[0];
             // cells1 = tab1.cells
             var cells1 = tab1.Cells;
-            // assert cells1 == cells0
             Assert.True(CellsEqual(cells1, cells0));
         }
 
         [Fact]
         public void test_strict_lines()
         {
-            // """Confirm that ignoring borderless rectangles improves table detection."""
             // filename = os.path.join(scriptdir, "resources", "strict-yes-no.pdf")
             string filename = Doc("strict-yes-no.pdf");
             if (!HasFile(filename)) return;
-            // doc = pymupdf.open(filename)
             using var doc = new Document(filename);
             // page = doc[0]
             var page = doc[0];
@@ -527,28 +463,22 @@ namespace MuPDF.NET.Test
                 VerticalStrategy = "lines_strict",
                 HorizontalStrategy = "lines_strict",
             })[0];
-            // assert tab2.row_count < tab1.row_count
             Assert.True(tab2.RowCount < tab1.RowCount);
-            // assert tab2.col_count < tab1.col_count
             Assert.True(tab2.ColCount < tab1.ColCount);
         }
 
         [Fact]
         public void test_add_lines()
         {
-            // """Test new parameter add_lines for table recognition."""
             // if platform.python_implementation() == 'GraalVM':
-            //     print(f'test_add_lines(): Not running because breaks later tests on GraalVM.')
             //     return
 
             // filename = os.path.join(scriptdir, "resources", "small-table.pdf")
             string filename = Doc("small-table.pdf");
             if (!HasFile(filename)) return;
-            // doc = pymupdf.open(filename)
             using var doc = new Document(filename);
             // page = doc[0]
             var page = doc[0];
-            // assert page.find_tables().tables == []
             Assert.Empty(page.find_tables().Tables);
 
             // more_lines = [
@@ -556,7 +486,6 @@ namespace MuPDF.NET.Test
             //     ((334.5559997558594, 200.0), (334.5559997558594, 300.0)),
             //     ((433.1809997558594, 200.0), (433.1809997558594, 300.0)),
             // ]
-            //
             // these 3 additional vertical lines should additional 3 columns
             // tab2 = page.find_tables(add_lines=more_lines)[0]
             var tab2 = page.find_tables(new TableSettings
@@ -568,27 +497,18 @@ namespace MuPDF.NET.Test
                     433.1809997558594f,
                 },
             })[0];
-            // assert tab2.col_count == 4
             Assert.Equal(4, tab2.ColCount);
-            // assert tab2.row_count == 5
             Assert.Equal(5, tab2.RowCount);
         }
 
         [Fact]
         public void test_3148()
         {
-            // """Ensure correct extraction text of rotated text."""
-            // doc = pymupdf.open()
             using var doc = new Document();
             // page = doc.NewPage()
             var page = doc.NewPage();
-            // rect = pymupdf.Rect(100, 100, 300, 300)
             Rect rect = new Rect(100, 100, 300, 300);
             // text = (
-            //     "rotation 0 degrees",
-            //     "rotation 90 degrees",
-            //     "rotation 180 degrees",
-            //     "rotation 270 degrees",
             // )
             string[] text =
             {
@@ -601,7 +521,6 @@ namespace MuPDF.NET.Test
             int[] degrees = { 0, 90, 180, 270 };
             // delta = (2, 2, -2, -2)
             Rect delta = new Rect(2, 2, -2, -2);
-            // cells = pymupdf.make_table(rect, cols=3, rows=4)
             var cells = Utils.MakeTable(rect, cols: 3, rows: 4);
             // for i in range(3):
             //     for j in range(4):
@@ -631,7 +550,6 @@ namespace MuPDF.NET.Test
                 {
                     // item = item.replace("\n", " ")
                     string s = (item ?? "").Replace("\n", " ");
-                    // assert item in text
                     Assert.Contains(s, text);
                 }
             }
@@ -640,49 +558,39 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_3179()
         {
-            // """Test correct separation of multiple tables on page."""
             // filename = os.path.join(scriptdir, "resources", "test_3179.pdf")
             string filename = Doc("test_3179.pdf");
             if (!HasFile(filename)) return;
-            // doc = pymupdf.open(filename)
             using var doc = new Document(filename);
             // page = doc[0]
             var page = doc[0];
             // tabs = page.find_tables()
             var tabs = page.find_tables();
-            // assert len(tabs.tables) == 3
             Assert.Equal(3, tabs.Tables.Count);
         }
 
         [Fact]
         public void test_battery_file()
         {
-            // """Tests correctly ignoring non-table suspects.
-            //
             // Earlier versions erroneously tried to identify table headers
             // where there existed no table at all.
-            // """
             // filename = os.path.join(scriptdir, "resources", "battery-file-22.pdf")
             string filename = Doc("battery-file-22.pdf");
             if (!HasFile(filename)) return;
-            // doc = pymupdf.open(filename)
             using var doc = new Document(filename);
             // page = doc[0]
             var page = doc[0];
             // tabs = page.find_tables()
             var tabs = page.find_tables();
-            // assert len(tabs.tables) == 0
             Assert.Empty(tabs.Tables);
         }
 
         [Fact]
         public void test_markdown()
         {
-            // """Confirm correct markdown output."""
             // filename = os.path.join(scriptdir, "resources", "strict-yes-no.pdf")
             string filename = Doc("strict-yes-no.pdf");
             if (!HasFile(filename)) return;
-            // doc = pymupdf.open(filename)
             using var doc = new Document(filename);
             // page = doc[0]
             var page = doc[0];
@@ -692,7 +600,6 @@ namespace MuPDF.NET.Test
                 VerticalStrategy = "lines_strict",
                 HorizontalStrategy = "lines_strict",
             })[0];
-            // if pymupdf.mupdf_version_tuple < (1, 26, 3):
             string md_expected;
             if (!_Version.mupdf_version_tuple_at_least(1, 26, 3))
             {
@@ -703,8 +610,6 @@ namespace MuPDF.NET.Test
                 //         |Col13|~~Col23~~|Col34<br>Col35|
                 //         |Col14|~~Col24~~|Col36|
                 //         |Col15|~~Col25~~<br>~~Col26~~||
-                //
-                //         ''').lstrip()
                 md_expected = Dedent("""
                     |Header1|Header2|Header3|
                     |---|---|---|
@@ -718,12 +623,6 @@ namespace MuPDF.NET.Test
             else
             {
                 // md_expected = (
-                //     "|Header1|Header2|Header3|\n"
-                //     "|---|---|---|\n"
-                //     "|Col11<br>Col12|Col21<br>Col22|Col31<br>Col32<br>Col33|\n"
-                //     "|Col13|Col23|Col34<br>Col35|\n"
-                //     "|Col14|Col24|Col36|\n"
-                //     "|Col15|Col25<br>Col26||\n\n"
                 // )
                 md_expected =
                     "|Header1|Header2|Header3|\n" +
@@ -736,35 +635,29 @@ namespace MuPDF.NET.Test
 
             // md = tab.to_markdown()
             string md = tab.ToMarkdown();
-            // assert md == md_expected, f'Incorrect md:\n{textwrap.indent(md, "    ")}'
             Assert.Equal(md_expected, md.Replace("\r\n", "\n"));
         }
 
         [Fact]
         public void test_paths_param()
         {
-            // """Confirm acceptance of supplied vector graphics list."""
             // filename = os.path.join(scriptdir, "resources", "strict-yes-no.pdf")
             string filename = Doc("strict-yes-no.pdf");
             if (!HasFile(filename)) return;
-            // doc = pymupdf.open(filename)
             using var doc = new Document(filename);
             // page = doc[0]
             var page = doc[0];
             // tabs = page.find_tables(paths=[])  # will cause all tables are missed
             var tabs = page.find_tables(paths: Array.Empty<Dictionary<string, object>>());
-            // assert tabs.tables == []
             Assert.Empty(tabs.Tables);
         }
 
         [Fact]
         public void test_boxes_param()
         {
-            // """Confirm acceptance of supplied boxes list."""
             // filename = os.path.join(scriptdir, "resources", "small-table.pdf")
             string filename = Doc("small-table.pdf");
             if (!HasFile(filename)) return;
-            // doc = pymupdf.open(filename)
             using var doc = new Document(filename);
             // page = doc[0]
             var page = doc[0];
@@ -806,7 +699,6 @@ namespace MuPDF.NET.Test
                 addBoxes: boxes);
             // tab = tabs.tables[0]
             var tab = tabs.Tables[0];
-            // assert tab.extract() == [
             AssertExtractRowsEqual(
                 new List<List<string?>>
                 {
@@ -822,29 +714,23 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_dotted_grid()
         {
-            // """Confirm dotted lines are detected as gridlines."""
             // filename = os.path.join(scriptdir, "resources", "dotted-gridlines.pdf")
             string filename = Doc("dotted-gridlines.pdf");
             if (!HasFile(filename)) return;
-            // doc = pymupdf.open(filename)
             using var doc = new Document(filename);
             // page = doc[0]
             var page = doc[0];
             // tabs = page.find_tables()
             var tabs = page.find_tables();
-            // assert len(tabs.tables) == 3  # must be 3 tables
             Assert.Equal(3, tabs.Tables.Count);
             // t0, t1, t2 = tabs  # extract them
             var t0 = tabs[0];
             var t1 = tabs[1];
             var t2 = tabs[2];
-            // assert t0.row_count, t0.col_count == (11, 12)
             Assert.Equal(11, t0.RowCount);
             Assert.Equal(12, t0.ColCount);
-            // assert t1.row_count, t1.col_count == (25, 11)
             Assert.Equal(25, t1.RowCount);
             Assert.Equal(11, t1.ColCount);
-            // assert t2.row_count, t2.col_count == (1, 10)
             Assert.Equal(1, t2.RowCount);
             Assert.Equal(10, t2.ColCount);
         }
@@ -852,10 +738,8 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_4017()
         {
-            // path = os.path.normpath(f"{__file__}/../../tests/resources/test_4017.pdf")
             string path = Doc("test_4017.pdf");
             if (!HasFile(path)) return;
-            // with pymupdf.open(path) as document:
             using (var document = new Document(path))
             {
                 // page = document[0]
@@ -863,14 +747,11 @@ namespace MuPDF.NET.Test
 
                 // tables = page.find_tables(add_lines=None)
                 var tables = page.find_tables();
-                // print(f"{len(tables.tables)=}.")
                 Console.WriteLine($"len(tables.tables)={tables.Tables.Count}.");
                 // tables_text = list()
                 // for i, table in enumerate(tables):
-                //     print(f"## {i=}.")
                 //     t = table.extract()
                 //     for tt in t:
-                //         print(f"    {tt}")
                 for (int i = 0; i < tables.Tables.Count; i++)
                 {
                     Console.WriteLine($"## i={i}.");
@@ -907,38 +788,16 @@ namespace MuPDF.NET.Test
                     new() { null, null, null, null, null, "N/A" },
                     new() { "Class D Interest Coverage", "N/A", ">=", "105.00%", "", "N/A" },
                 };
-                // assert tables[-2].extract() == expected_a
                 AssertExtractRowsEqual(expected_a, tables[tables.Tables.Count - 2].Extract());
 
                 // expected_b = [
                 //     [
-                //         "Moody's Maximum Rating Factor Test",
-                //         "2,577",
-                //         "<=",
-                //         "3,250",
-                //         "",
-                //         "PASS",
-                //         "2,581",
                 //     ],
                 //     [None, None, None, None, None, "PASS", None],
                 //     [
-                //         "Minimum Floating Spread",
-                //         "3.5006%",
-                //         ">=",
-                //         "2.0000%",
-                //         "",
-                //         "PASS",
-                //         "3.4871%",
                 //     ],
                 //     [None, None, None, None, None, "PASS", None],
                 //     [
-                //         "Minimum Weighted Average S&P Recovery\nRate Test",
-                //         "40.50%",
-                //         ">=",
-                //         "40.00%",
-                //         "",
-                //         "PASS",
-                //         "40.40%",
                 //     ],
                 //     [None, None, None, None, None, "PASS", None],
                 //     ["Weighted Average Life", "4.83", "<=", "9.00", "", "PASS", "4.92"],
@@ -963,7 +822,6 @@ namespace MuPDF.NET.Test
                     new() { null, null, null, null, null, "PASS", null },
                     new() { "Weighted Average Life", "4.83", "<=", "9.00", "", "PASS", "4.92" },
                 };
-                // assert tables[-1].extract() == expected_b
                 AssertExtractRowsEqual(expected_b, tables[tables.Tables.Count - 1].Extract());
             }
         }
@@ -971,11 +829,9 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_md_styles()
         {
-            // """Test output of table with MD-styled cells."""
             // filename = os.path.join(scriptdir, "resources", "test-styled-table.pdf")
             string filename = Doc("test-styled-table.pdf");
             if (!HasFile(filename)) return;
-            // doc = pymupdf.open(filename)
             using var doc = new Document(filename);
             // page = doc[0]
             var page = doc[0];
@@ -989,7 +845,6 @@ namespace MuPDF.NET.Test
                 "|~~Strikeout (1,0), Zeile 1~~<br>~~Hier kommt Zeile 2.~~|Zelle (1,1)|~~Strikeout (1,2)~~|\n" +
                 "|**`Bold-monospaced`**<br>**`(2,0)`**|_Italic (2,1)_|**_Bold-italic_**<br>**_(2,2)_**|\n" +
                 "|Zelle (3,0)|~~**Bold-strikeout**~~<br>~~**(3,1)**~~|Zelle (3,2)|\n\n";
-            // assert tabs.to_markdown() == text
             Assert.Equal(text, tabs.ToMarkdown().Replace("\r\n", "\n"));
         }
     }

@@ -31,7 +31,7 @@ namespace MuPDF.NET.Test
             return blocks[0];
         }
 
-        /// <summary>PyMuPDF <c>tests/test_imagemasks.py::test_imagemask1</c>.</summary>
+        /// <summary>Regression test: imagemask1 (PyMuPDF <c>tests/test_imagemasks.py::test_imagemask1</c>).</summary>
         [Fact]
         public void test_imagemask1()
         {
@@ -45,7 +45,7 @@ namespace MuPDF.NET.Test
             Assert.False(Convert.ToBoolean(imgInfo["has-mask"]));
         }
 
-        /// <summary>PyMuPDF <c>tests/test_imagemasks.py::test_imagemask2</c>.</summary>
+        /// <summary>Regression test: imagemask2 (PyMuPDF <c>tests/test_imagemasks.py::test_imagemask2</c>).</summary>
         [Fact]
         public void test_imagemask2()
         {

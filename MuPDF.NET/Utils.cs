@@ -39,10 +39,8 @@ namespace MuPDF.NET
     /// </remarks>
     public static partial class Utils
     {
-        /// <summary>PyMuPDF <c>pymupdf.pymupdf_version</c> / MuPDF.NET <c>Utils.pymupdf_version</c>.</summary>
         public static string pymupdf_version = "1.27.2.2";
 
-        /// <summary>PyMuPDF <c>pymupdf.VersionBind</c> / MuPDF.NET <c>Utils.VersionBind</c>.</summary>
         public static string VersionBind = "1.27.2.2";
 
         public static (string, string) VERSION = ("1.26.1", "3.2.8-rc.6");
@@ -816,14 +814,6 @@ namespace MuPDF.NET
             }
 
             // if fontname in (
-            //     "china-t",
-            //     "china-s",
-            //     "china-ts",
-            //     "china-ss",
-            //     "japan",
-            //     "japan-s",
-            //     "korea",
-            //     "korea-s",
             // ):
             //     return len(text) * fontsize
             if (fontname is "china-t" or "china-s" or "china-ts" or "china-ss" or
@@ -867,7 +857,6 @@ namespace MuPDF.NET
                 var ms = (MemoryStream)img;
                 stream = ms.ToArray();
             }
-            // elif hasattr(img, "read"): stream = img.read()
             else if (img is Stream s)
             {
                 using (var mem = new MemoryStream())
@@ -876,7 +865,6 @@ namespace MuPDF.NET
                     stream = mem.ToArray();
                 }
             }
-            // elif type(img) in (bytes, bytearray): stream = img
             else if (img is byte[] bytes)
             {
                 stream = bytes;
@@ -898,28 +886,19 @@ namespace MuPDF.NET
 
             // c = imagedata
             // if keep_image:
-            //     res = mupdf.fz_new_buffer_from_copied_data(c, len_)
-            // else:
-            //     res = mupdf.fz_new_buffer_from_shared_data(c, len_)
             var buf = Helpers.BufferFromBytes(stream);
             int type = RecognizeImageType(buf);
-            // if type_ == mupdf.FZ_IMAGE_UNKNOWN: return None
             if (type == mupdf.mupdf.FZ_IMAGE_UNKNOWN)
                 return null;
 
             string ext = ImageExtensionFromType(type);
-            // image = mupdf.fz_new_image_from_buffer(res)
             var image = mupdf.mupdf.fz_new_image_from_buffer(buf);
             if (image == null || image.m_internal == null)
                 return null;
 
-            // ctm = mupdf.fz_image_orientation_matrix(image)
             var orientationMatrix = image.fz_image_orientation_matrix();
-            // xres, yres = mupdf.fz_image_resolution(image)
             var resolution = image.fz_image_resolution();
-            // orientation = mupdf.fz_image_orientation(image)
             byte orientation = image.fz_image_orientation();
-            // cs_name = mupdf.fz_colorspace_name(image.colorspace())
             var cs = image.colorspace();
             string csName = cs != null && cs.m_internal != null ? mupdf.mupdf.fz_colorspace_name(cs) : null;
             // result = dict()
@@ -1201,7 +1180,6 @@ namespace MuPDF.NET
         /// Extract text from a page or an annotation (PyMuPDF <c>utils.get_text</c>).
         /// </summary>
         /// <remarks>
-        /// This is a unifying wrapper for various methods of the pymupdf.TextPage class.
         /// </remarks>
         public static dynamic GetText(
             Page page,
@@ -1214,16 +1192,6 @@ namespace MuPDF.NET
             float tolerance = 3)
         {
             // formats = {
-            //     "text": pymupdf.TEXTFLAGS_TEXT,
-            //     "html": pymupdf.TEXTFLAGS_HTML,
-            //     "json": pymupdf.TEXTFLAGS_DICT,
-            //     "rawjson": pymupdf.TEXTFLAGS_RAWDICT,
-            //     "xml": pymupdf.TEXTFLAGS_XML,
-            //     "xhtml": pymupdf.TEXTFLAGS_XHTML,
-            //     "dict": pymupdf.TEXTFLAGS_DICT,
-            //     "rawdict": pymupdf.TEXTFLAGS_RAWDICT,
-            //     "words": pymupdf.TEXTFLAGS_WORDS,
-            //     "blocks": pymupdf.TEXTFLAGS_BLOCKS,
             // }
             var formats = new Dictionary<string, int>
             {
@@ -1240,7 +1208,6 @@ namespace MuPDF.NET
             };
             // option = option.lower()
             option = (option ?? "text").ToLowerInvariant();
-            // assert option in formats
             Debug.Assert(formats.ContainsKey(option));
             // if option not in formats:
             //     option = "text"
@@ -1280,7 +1247,6 @@ namespace MuPDF.NET
             if (option == "text" && sort)
                 return GetSortedText(page, clip, flags, textpage, tolerance);
 
-            // pymupdf.CheckParent(page)
             page.RequireParent();
             // cb = None
             Rect cb = null;
@@ -1289,9 +1255,7 @@ namespace MuPDF.NET
             if (option == "html" || option == "xml" || option == "xhtml")
                 clip = new IRect(page.CropBox);
             // if clip is not None:
-            //     clip = pymupdf.Rect(clip)
             //     cb = None
-            // elif type(page) is pymupdf.Page:
             //     cb = page.cropbox
             if (clip != null)
             {
@@ -1300,57 +1264,45 @@ namespace MuPDF.NET
             }
             else
                 cb = page.CropBox;
-            // pymupdf.TextPage with or without images
             // tp = textpage
             TextPage tp = textpage;
-            //pymupdf.exception_info()
             // if tp is None:
             //     tp = page.get_textpage(clip=clip, flags=flags)
             if (tp == null)
                 tp = page.NewTextPageForGetText(clip, flags.Value);
-            // elif getattr(tp, "parent") != page:
             //     raise ValueError("not a textpage of this page")
             else if (tp.Parent != page)
                 throw new ValueErrorException("not a textpage of this page");
-            //pymupdf.log( '{option=}')
             object t;
             // if option == "json":
             //     t = tp.extractJSON(cb=cb, sort=sort)
             if (option == "json")
                 t = ExtractJsonWithCb(tp, cb, sort);
-            // elif option == "rawjson":
             //     t = tp.extractRAWJSON(cb=cb, sort=sort)
             else if (option == "rawjson")
                 t = ExtractRawJsonWithCb(tp, cb, sort);
-            // elif option == "dict":
             //     t = tp.extractDICT(cb=cb, sort=sort)
             else if (option == "dict")
                 t = ExtractDictWithCb(tp, cb, sort);
-            // elif option == "rawdict":
             //     t = tp.extractRAWDICT(cb=cb, sort=sort)
             else if (option == "rawdict")
                 t = ExtractRawDictWithCb(tp, cb, sort);
-            // elif option == "html":
             //     t = tp.extractHTML()
             else if (option == "html")
                 t = tp.ExtractHtml();
-            // elif option == "xml":
             //     t = tp.extractXML()
             else if (option == "xml")
                 t = tp.ExtractXml();
-            // elif option == "xhtml":
             //     t = tp.extractXHTML()
             else if (option == "xhtml")
                 t = tp.ExtractXhtml();
-            // else:
             //     t = tp.extractText(sort=sort)
             else
                 t = tp.ExtractText(sort);
 
             // if textpage is None:
-            //     del tp
             if (textpage == null)
-                tp = null;
+                tp.Dispose();
             return t;
         }
 
@@ -1397,7 +1349,6 @@ namespace MuPDF.NET
                 return GetSortedTextAnnot(annot, clip, flags, textpage, tolerance);
 
             annot.Parent.RequireParent();
-            // Python: only Page sets cb = page.cropbox; Annot leaves cb None.
             Rect cb = null;
             if (option == "html" || option == "xml" || option == "xhtml")
                 clip = new IRect(annot.Parent.CropBox);
@@ -1669,7 +1620,7 @@ namespace MuPDF.NET
             return JsonSerializer.Serialize(val, new JsonSerializerOptions { WriteIndented = true });
         }
 
-        ///////////////////// Barcode
+        // --- Barcode ---
         /// <summary>
         /// Read barcodes from page.
         /// </summary>
@@ -2364,14 +2315,14 @@ namespace MuPDF.NET
                 marginLeft, marginTop, marginRight, marginBottom, 0, narrowBarWidth);
         }
 
-        /// <summary>PyMuPDF <c>utils.getLinkText</c> (<c>src/utils.py</c>).</summary>
+        /// <summary><c>src/utils.py</c>.</summary>
         public static string GetLinkText(Page page, Dictionary<string, object> lnk)
             => Helpers.GetLinkText(page, lnk);
 
         // ─── src/__init__.py module functions ─────────────────────────────
 
         /// <summary>
-        /// Build <c>@font-face</c> CSS for pymupdf-fonts (PyMuPDF <c>css_for_pymupdf_font</c>).
+        /// Build <c>@font-face</c> CSS for MuPDF built-in fonts (PyMuPDF <c>css_for_pymupdf_font</c>).
         /// </summary>
         public static string CssForPymupdfFont(
             string fontcode,
@@ -2436,7 +2387,6 @@ namespace MuPDF.NET
         public static int GlyphNameToUnicode(string name)
         {
             // Convenience function accessing unicodedata.
-            // import unicodedata
             int unc;
             try
             {
@@ -2453,7 +2403,6 @@ namespace MuPDF.NET
         public static string UnicodeToGlyphName(int ch)
         {
             // Convenience function accessing unicodedata.
-            // import unicodedata
             string name;
             try
             {

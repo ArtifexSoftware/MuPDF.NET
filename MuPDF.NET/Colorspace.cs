@@ -7,7 +7,7 @@ namespace MuPDF.NET
     /// </summary>
     /// <remarks>
     /// <para>
-    /// PyMuPDF-aligned API (<c>fitz.Colorspace</c>). Legacy MuPDF.NET used the spelling
+    /// MuPDF.NET colorspace type (PyMuPDF <c>fitz.Colorspace</c> equivalent). Legacy MuPDF.NET used the spelling
     /// <see cref="ColorSpace"/> with the same constructors and properties; see
     /// <see href="https://mupdfnet.readthedocs.io/en/latest/classes/ColorSpace.html"/>.
     /// </para>

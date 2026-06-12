@@ -79,7 +79,6 @@ namespace MuPDF.NET
         {
             if (!sort)
             {
-                // res = mupdf.fz_new_buffer(1024)
                 using var res = mupdf.mupdf.fz_new_buffer(1024);
                 // JM_print_stext_page_as_text(res, this_tpage)
                 JM_print_stext_page_as_text(res, NativeStextPage);
@@ -116,7 +115,7 @@ namespace MuPDF.NET
                     var res = mupdf.mupdf.fz_new_buffer(1024);
                     int last_char = 0;
 
-                    for (mupdf.fz_stext_line line = FirstStextLine(block);
+                    for (mupdf.fz_stext_line line = Helpers.FirstStextLine(block);
                          line != null;
                          line = line.next)
                     {
@@ -191,7 +190,7 @@ namespace MuPDF.NET
                     continue;
 
                 int line_n = -1;
-                for (mupdf.fz_stext_line line = FirstStextLine(block);
+                for (mupdf.fz_stext_line line = Helpers.FirstStextLine(block);
                      line != null;
                      line = line.next)
                 {
@@ -401,9 +400,9 @@ namespace MuPDF.NET
                 byte[] digest = null;
                 if (hashes)
                 {
-                    var r = new mupdf.FzIrect(mupdf.mupdf.fz_infinite_irect);
-                    var m = new mupdf.FzMatrix(img.w(), 0, 0, img.h(), 0, 0);
-                    var pix = img.fz_get_pixmap_from_image(r, m, null, null);
+                    using var r = new mupdf.FzIrect(mupdf.mupdf.fz_infinite_irect);
+                    using var m = new mupdf.FzMatrix(img.w(), 0, 0, img.h(), 0, 0);
+                    using var pix = img.fz_get_pixmap_from_image(r, m, null, null);
                     var md5 = pix.fz_md5_pixmap2();
                     digest = new byte[md5.Count];
                     for (int i = 0; i < md5.Count; i++)
@@ -651,7 +650,6 @@ namespace MuPDF.NET
         {
             // this_tpage = self.this
             mupdf.FzStextPage this_tpage = NativeStextPage;
-            // assert isinstance(this_tpage, mupdf.FzStextPage)
             // area = JM_rect_from_py(rect)
             mupdf.FzRect area = Helpers.JM_rect_from_py(rect);
             // found = JM_copy_rectangle(this_tpage, area)
@@ -691,22 +689,9 @@ namespace MuPDF.NET
                 {
                     _stextBlocks = new List<mupdf.FzStextBlock>();
                     for (var b = NativeStextPage.m_internal.first_block; b != null; b = b.next)
-                        _stextBlocks.Add(new mupdf.FzStextBlock(b));
+                        _stextBlocks.Add(Helpers.BorrowStextBlock(b));
                 }
                 return _stextBlocks;
-            }
-        }
-
-        private static mupdf.fz_stext_line FirstStextLine(mupdf.FzStextBlock block)
-        {
-            var iter = block.begin();
-            try
-            {
-                return iter.__deref__()?.m_internal;
-            }
-            finally
-            {
-                iter.Dispose();
             }
         }
 
@@ -771,7 +756,7 @@ namespace MuPDF.NET
                     var lineList = new List<Line>();
                     var blockRect = new mupdf.FzRect(mupdf.FzRect.Fixed.Fixed_EMPTY);
 
-                    for (mupdf.fz_stext_line fzLine = FirstStextLine(block);
+                    for (mupdf.fz_stext_line fzLine = Helpers.FirstStextLine(block);
                          fzLine != null;
                          fzLine = fzLine.next)
                     {
@@ -1092,7 +1077,7 @@ namespace MuPDF.NET
             var line_list = new List<Dictionary<string, object>>();
             var block_rect = new mupdf.FzRect(mupdf.FzRect.Fixed.Fixed_EMPTY);
 
-            for (mupdf.fz_stext_line fzLine = FirstStextLine(block);
+            for (mupdf.fz_stext_line fzLine = Helpers.FirstStextLine(block);
                  fzLine != null;
                  fzLine = fzLine.next)
             {
@@ -1707,7 +1692,7 @@ namespace MuPDF.NET
         // character (which else leads to 2 new-lines).
         //-----------------------------------------------------------------------------
 
-        /// <summary>PyMuPDF <c>JM_print_stext_page_as_text</c> (<c>extra.i</c>).</summary>
+        /// <summary><c>extra.i</c>.</summary>
         private static void JM_print_stext_page_as_text(mupdf.FzBuffer res, mupdf.FzStextPage page)
         {
             // fz_stext_block *block = page.m_internal->first_block;
@@ -1715,7 +1700,7 @@ namespace MuPDF.NET
             AsText(page, res);
         }
 
-        /// <summary>PyMuPDF <c>_as_text</c> (<c>extra.i</c>).</summary>
+        /// <summary><c>extra.i</c>.</summary>
         private static void AsText(mupdf.FzStextPage page, mupdf.FzBuffer res)
         {
             var rect = page.m_internal.mediabox;

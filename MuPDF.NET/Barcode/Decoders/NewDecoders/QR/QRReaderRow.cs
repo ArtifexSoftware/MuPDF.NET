@@ -223,7 +223,6 @@ namespace BarcodeReader.Core.QR
                                 best = ReadSymbol(symbol, finder);
                                 //calc correct MicroQR rectangle
                                 CalcMicroQRrectangle(finder, symbol);
-                                //
                                 break;
                             }
                             //rotate on 90 degree

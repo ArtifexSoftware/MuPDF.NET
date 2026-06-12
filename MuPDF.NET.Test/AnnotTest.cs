@@ -377,7 +377,6 @@ MuPDF.NET <span style=""color: red;"">འདི་ ཡིག་ཆ་བཀྲ�
                 );
             Pixmap pix1 = page.GetPixmap();
 
-            // # Second page.
             // the annotation is created with minimal parameters, which are supplied
             // in a separate call to the .update() method.
             page = doc.NewPage();

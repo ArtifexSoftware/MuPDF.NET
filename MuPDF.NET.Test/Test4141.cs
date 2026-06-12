@@ -14,7 +14,6 @@ namespace MuPDF.NET.Test
         public void test_4141()
         {
             // survive missing /Resources object in a number of cases
-            // path = os.path.abspath(f"{__file__}/../../tests/resources/test_4141.pdf")
             var doc = new Document(testDocPath);
             try
             {

@@ -102,10 +102,8 @@ namespace MuPDF.NET
         /// <param name="archive"><see cref="Archive"/>, folder path, or other archive constructor argument.</param>
         public Story(string html = "", string userCss = null, float em = 12, object archive = null)
         {
-            // buffer_ = mupdf.fz_new_buffer_from_copied_data( html.encode('utf-8'))
             var buffer_ = Helpers.BufferFromBytes(Encoding.UTF8.GetBytes(html ?? ""));
             // if archive and not isinstance(archive, Archive):
-            //     archive = Archive(archive)
             Archive arch = null;
             if (archive != null)
             {
@@ -114,12 +112,8 @@ namespace MuPDF.NET
                 else
                     arch = new Archive(archive);
             }
-            // arch = archive.this if archive else mupdf.FzArchive( None)
             var archNative = arch?.NativeArchive ?? new mupdf.FzArchive();
             // if hasattr(mupdf, 'FzStoryS'):
-            //     self.this = mupdf.FzStoryS( buffer_, user_css, em, arch)
-            // else:
-            //     self.this = mupdf.FzStory( buffer_, user_css, em, arch)
             _nativeStory = new mupdf.FzStory(buffer_, userCss, em, archNative);
         }
 
@@ -134,11 +128,8 @@ namespace MuPDF.NET
         /// <remarks>Used by <see cref="WriteStabilized"/> when <c>add_header_ids</c> is true to support table-of-contents links.</remarks>
         public void AddHeaderIds()
         {
-            // '''
             // Look for `<h1..6>` items in `self` and adds unique `id`
             // attributes if not already present.
-            // '''
-            // dom = self.body
             var dom = Body;
             // i = 0
             int i = 0;
@@ -181,7 +172,6 @@ namespace MuPDF.NET
         public static Document AddPdfLinks(object documentOrStream, List<StoryElementPositionInfo> positions)
         {
             Document document;
-            // if isinstance(document_or_stream, Document):
             if (documentOrStream is Document doc)
                 document = doc;
             else if (documentOrStream is byte[] bytes)
@@ -273,7 +263,6 @@ namespace MuPDF.NET
         {
             get
             {
-                // dom = self.document()
                 var dom = GetDocument();
                 // return dom.bodytag()
                 return dom.BodyTag() ?? throw new InvalidOperationException("Story HTML has no body");
@@ -283,7 +272,6 @@ namespace MuPDF.NET
         /// <summary>Returns the root DOM of the parsed HTML document.</summary>
         public Xml GetDocument()
         {
-            // dom = mupdf.fz_story_document( self.this)
             var dom = NativeStory.fz_story_document();
             // return Xml( dom)
             return Xml.FromDomNode(dom) ?? throw new InvalidOperationException("Story has no document");
@@ -306,9 +294,7 @@ namespace MuPDF.NET
         {
             // ctm2 = JM_matrix_from_py( matrix)
             var ctm2 = Helpers.MatrixToFz(matrix);
-            // dev = device.this if device else mupdf.FzDevice( None)
             var dev = device ?? new mupdf.FzDevice();
-            // mupdf.fz_draw_story( self.this, dev, ctm2)
             NativeStory.fz_draw_story(dev, ctm2);
         }
 
@@ -367,9 +353,7 @@ namespace MuPDF.NET
         {
             // where = JM_rect_from_py( where)
             var whereFz = where.ToFzRect();
-            // filled = mupdf.FzRect()
             var filled = new mupdf.FzRect();
-            // more = mupdf.fz_place_story_flags( self.this, where, filled, flags)
             int more = NativeStory.fz_place_story_flags(whereFz, filled, flags);
             // return more, JM_py_from_rect( filled)
             return (more != 0, RectFromFz(filled));
@@ -378,7 +362,6 @@ namespace MuPDF.NET
         /// <summary>Rewinds the story so output can start again from the beginning.</summary>
         public void Reset()
         {
-            // mupdf.fz_reset_story( self.this)
             NativeStory.fz_reset_story();
         }
 
@@ -391,13 +374,11 @@ namespace MuPDF.NET
         /// <param name="pagefn">Optional page hook: <c>(pageNum, mediabox, device, after)</c> where <c>after</c> is 0 at page start, 1 at page end.</param>
         public void Write(DocumentWriter writer, StoryRectFn rectfn, Action<StoryElementPositionInfo> positionfn = null, Action<int, Rect, mupdf.FzDevice, int> pagefn = null)
         {
-            // dev = None
             DeviceWrapper dev = null;
             // page_num = 0
             int page_num = 0;
             // rect_num = 0
             int rect_num = 0;
-            // filled = Rect(0, 0, 0, 0)
             var filled = new Rect(0, 0, 0, 0);
             // while 1:
             while (true)
@@ -419,7 +400,6 @@ namespace MuPDF.NET
                 // if positionfn:
                 if (positionfn != null)
                 {
-                    // def positionfn2(position):
                     void positionfn2(StoryElementPositionInfo position)
                     {
                         // position.page_num = page_num
@@ -447,7 +427,6 @@ namespace MuPDF.NET
                             // writer.end_page()
                             writer.EndPage();
                         }
-                        // dev = writer.begin_page( mediabox)
                         dev = writer.BeginPage(mediabox);
                         // if pagefn:
                         if (pagefn != null)
@@ -543,7 +522,6 @@ namespace MuPDF.NET
 
                 // positions = list()
                 positions = new List<StoryElementPositionInfo>();
-                // def positionfn2(position):
                 void positionfn2(StoryElementPositionInfo position)
                 {
                     // positions.append(position)
@@ -597,7 +575,6 @@ namespace MuPDF.NET
             using var writer = new DocumentWriter(stream);
             // positions = []
             var positions = new List<StoryElementPositionInfo>();
-            // def positionfn2(position):
             void positionfn2(StoryElementPositionInfo position)
             {
                 // positions.append(position)
@@ -646,7 +623,6 @@ namespace MuPDF.NET
             using var writer = new DocumentWriter(stream);
             // positions = []
             var positions = new List<StoryElementPositionInfo>();
-            // def positionfn2(position):
             void positionfn2(StoryElementPositionInfo position)
             {
                 // positions.append(position)
@@ -718,16 +694,12 @@ namespace MuPDF.NET
 
             void Log(string text)
             {
-                // assert verbose
                 if (verbose)
                     // message(f'fit(): {text}')
                     Helpers.message($"fit(): {text}");
             }
 
-            // assert isinstance(pmin, (int, float)) or pmin is None
-            // assert isinstance(pmax, (int, float)) or pmax is None
 
-            // class State:
             float? state_pmin = pmin;
             float? state_pmax = pmax;
             FitResult state_pmin_result = null;

@@ -79,14 +79,13 @@ namespace Demo
             Console.WriteLine("\n=== TestColor =====================");
 
             string testFilePath = Path.GetFullPath("../../../../TestDocuments/Demo/Color.pdf");
-            Document doc = new Document(testFilePath);
+            using Document doc = new Document(testFilePath);
             List<Entry> images = doc.GetPageImages(0);
             Console.WriteLine($"CaName: {images[0].CsName}");
             doc.Recolor(0, 4);
             images = doc.GetPageImages(0);
             Console.WriteLine($"CaName: {images[0].AltCsName}");
-            doc.Save("ReColor.pdf");
-            doc.Close();
+            doc.Save(DemoPaths.Output("ReColor.pdf"));
 
             Console.WriteLine("Color test completed.");
         }
@@ -102,7 +101,7 @@ namespace Demo
             doc.Recolor(0, "CMYK");
             //images = doc.GetPageImages(0);
             //Console.WriteLine($"CaName: {images[0].AltCsName}");
-            doc.Save("CMYKRecolor.pdf");
+            doc.Save(DemoPaths.Output("CMYKRecolor.pdf"));
             doc.Close();
 
             Console.WriteLine("CMYK Recolor test completed.");
@@ -164,7 +163,7 @@ namespace Demo
             Page page = doc[0];
 
             var pixmap1 = new Pixmap("../../../../TestDocuments/Demo/Image/_apple.png");
-            //var pixmap1 = new Pixmap("../../../../TestDocuments/Demo/Image/30mb.jpg");
+            // Swap to 30mb.jpg to stress-test large image insert (slow).
             var pixmap2 = new Pixmap("../../../../TestDocuments/Demo/Image/_bb-logo.png");
             var imageRect1 = new Rect(0, 0, 100, 100);
             var imageRect2 = new Rect(100, 100, 200, 200);

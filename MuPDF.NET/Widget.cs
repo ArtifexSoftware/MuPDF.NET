@@ -665,7 +665,7 @@ namespace MuPDF.NET
                     fmt, tc[0], tc[1], tc[2], tc[3], InsertTextFont, InsertTextFontsize);
         }
 
-        /// <summary>PyMuPDF <c>Widget._sync_flags</c> — propagate field flags to parent and kids.</summary>
+        /// <summary>Propagates widget field flags to parent fields and kids.</summary>
         public bool SyncFlags()
         {
             if (Xref == 0)
@@ -969,7 +969,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// PyMuPDF <c>Widget._checker</c>: if setting a radio button to ON, set Off on siblings (MuPDF does not do this).
+        /// When setting a radio button ON, clears sibling buttons (PyMuPDF <c>Widget._checker</c>; MuPDF does not do this).
         /// </summary>
         private void TurnOffSiblingRadioButtons()
         {

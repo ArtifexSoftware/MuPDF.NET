@@ -239,7 +239,6 @@ namespace PDF4LLM.Helpers
             {
                 ExtendedSpan s0 = line[i - 1]; // Preceding span
                 ExtendedSpan s1 = line[i]; // This span
-                // "Delta" depends on the font size. Spans will be joined if
                 // no more than 10% of the font size separates them and important
                 // attributes are the same.
                 float delta = s1.Size * 0.1f;

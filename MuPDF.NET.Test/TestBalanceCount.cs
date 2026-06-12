@@ -11,7 +11,7 @@ namespace MuPDF.NET.Test
         private static readonly string outDocPath = _Path.ForOutput("test_q_count.pdf", nameof(TestBalanceCount));
 
         /// <summary>
-        /// PyMuPDF <c>tests/test_balance_count.py::test_q_count</c>.
+        /// <summary>Regression test: q count (PyMuPDF <c>tests/test_balance_count.py::test_q_count</c>).</summary>
         /// Testing graphics state balances and wrap_contents().
         /// Take page's contents and generate various imbalanced graphics state
         /// situations. Each time compare q-count with expected results.
