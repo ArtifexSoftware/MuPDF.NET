@@ -9,8 +9,10 @@ public sealed class Pdf4LlmExtractor : IPdfExtractor
 {
     private readonly bool _useLayout;
 
+    /// <param name="useLayout">When <see langword="true"/>, extract using the PDF4LLM layout pipeline.</param>
     public Pdf4LlmExtractor(bool useLayout = false) => _useLayout = useLayout;
 
+    /// <inheritdoc />
     public Task<IReadOnlyList<ExtractedPage>> ExtractAsync(
         string pdfPath,
         CancellationToken cancellationToken = default)

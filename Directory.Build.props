@@ -1,0 +1,8 @@
+<Project>
+  <Import Project="Versions.props" />
+
+  <PropertyGroup>
+    <!-- NuGet packages may target newer TFMs than PDF4LLM multi-targets (net461–net7). -->
+    <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings>
+  </PropertyGroup>
+</Project>

@@ -9,6 +9,7 @@ public sealed class HashEmbeddingGenerator : IEmbeddingGenerator<string, Embeddi
 {
     private readonly int _dimensions;
 
+    /// <param name="dimensions">Output embedding vector size (minimum 8).</param>
     public HashEmbeddingGenerator(int dimensions = 128)
     {
         if (dimensions < 8)
@@ -19,6 +20,9 @@ public sealed class HashEmbeddingGenerator : IEmbeddingGenerator<string, Embeddi
     public EmbeddingGeneratorMetadata Metadata { get; } =
         new("hash-embedding", new Uri("https://artifex.com/pdf4llm-ai"));
 
+    /// <param name="values">Texts to embed.</param>
+    /// <param name="options">Optional embedding generation options.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     public Task<GeneratedEmbeddings<Embedding<float>>> GenerateAsync(
         IEnumerable<string> values,
         EmbeddingGenerationOptions? options = null,

@@ -34,7 +34,7 @@ namespace MuPDF.NET
 
         /// <summary>Combined MuPDF.NET / MuPDF version tuple (legacy <c>VERSION</c>).</summary>
         public static (string, string, string) VERSION =>
-            (Version.MuPdfNetVersion, Version.MupdfVersion, Version.BuildTimestamp);
+            (Version.PyMuPdfVersion, Version.MuPdfVersion, Version.BuildTimestamp);
 
         // ─── Document permissions ────────────────────────────────────────
 

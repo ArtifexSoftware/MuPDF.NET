@@ -16,6 +16,10 @@ public sealed class AzureSearchVectorIndex : IVectorIndex
     private readonly string _indexName;
     private readonly int _vectorDimensions;
 
+    /// <param name="endpoint">Azure AI Search service endpoint.</param>
+    /// <param name="apiKey">Azure AI Search API key.</param>
+    /// <param name="indexName">Name of the search index to create or use.</param>
+    /// <param name="vectorDimensions">Embedding vector size (must match the embedding model).</param>
     public AzureSearchVectorIndex(
         Uri endpoint,
         string apiKey,

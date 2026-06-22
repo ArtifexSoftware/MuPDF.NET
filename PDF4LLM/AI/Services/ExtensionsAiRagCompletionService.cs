@@ -9,6 +9,7 @@ public sealed class ExtensionsAiRagCompletionService : IRagCompletionService
 {
     private readonly IChatClient _chatClient;
 
+    /// <param name="chatClient">Chat client used for Ask and Summarize operations.</param>
     public ExtensionsAiRagCompletionService(IChatClient chatClient)
     {
         _chatClient = chatClient ?? throw new ArgumentNullException(nameof(chatClient));

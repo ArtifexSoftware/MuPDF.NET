@@ -8,13 +8,15 @@ namespace PDF4LLM
     public static partial class PdfExtractor
     {
         /// <summary>
-        /// Return a PDF Document for a given Markdown source string (pymupdf4llm.markdown_to_pdf).
-        ///
-        /// The MD string is converted to HTML using Markdig (equivalent to the Python 'markdown' package).
-        /// The HTML string is then rendered to PDF using PyMuPDF's Story feature.
-        /// The PDF is either returned as a Document object or saved to a file if
-        /// output_path is specified - in this case, null is returned.
+        /// Return a PDF document for a Markdown source string.
+        /// The Markdown is converted to HTML, then rendered with MuPDF Story.
         /// </summary>
+        /// <param name="mdPath">Path to the Markdown source file.</param>
+        /// <param name="userCss">Optional CSS stylesheet; uses a built-in default when <see langword="null"/>.</param>
+        /// <param name="pageRect">Media box for each page; uses A4 when empty.</param>
+        /// <param name="margins">Four margin values <c>[left, top, right, bottom]</c> in points.</param>
+        /// <param name="archive">Optional resource archive for embedded assets; defaults to the Markdown file directory.</param>
+        /// <param name="outputPath">When set, save the PDF to this path and return <see langword="null"/>.</param>
         public static Document MarkdownToPdf(
             string mdPath,
             string userCss = null,

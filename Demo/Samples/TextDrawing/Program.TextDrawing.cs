@@ -298,10 +298,11 @@ namespace Demo
             MuPDF.NET.TextWriter writer = new MuPDF.NET.TextWriter(page.Rect);
             var ret = writer.FillTextbox(page.Rect, "Hello World!", new MuPDF.NET.Font(fontName: "helv"), rtl: true);
             writer.WriteText(page);
+            var pageRect = page.Rect;
             doc.Save("text.pdf", pretty: 1);
             doc.Close();
 
-            Console.WriteLine($"Text written to 'text.pdf' in: {page.Rect}");
+            Console.WriteLine($"Text written to 'text.pdf' in: {pageRect}");
         }
 
         internal static void TestHelloWorldToExistingDocument(string[] args)
@@ -320,12 +321,14 @@ namespace Demo
             Font font = new Font("cobo", isBold: 0);
             var ret = writer.FillTextbox(page.Rect, "123456789012345678901234567890Peter Test- this is a string that is too long to fit into the TextBox", font, rtl: false);
             writer.WriteText(page);
+
+            var pageRect = page.Rect;
             
             doc.Save("text1.pdf", pretty: 1);
 
             doc.Close();
 
-            Console.WriteLine($"Text written to 'text1.pdf' in: {page.Rect}");
+            Console.WriteLine($"Text written to 'text1.pdf' in: {pageRect}");
         }
 
         internal static void TestFreeTextAnnot(string[] args)

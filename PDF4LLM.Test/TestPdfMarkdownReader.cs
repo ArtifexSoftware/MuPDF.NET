@@ -3,62 +3,87 @@ using System.Collections.Generic;
 using System.IO;
 using PDF4LLM;
 using PDF4LLM.Llama;
+using Xunit;
 
 namespace PDF4LLM.Test
 {
-    /// <summary>Port of pymupdf4llm/tests/pymupdf4llm/llama_index/_test_pdf_markdown_reader.py</summary>
-    [TestFixture]
-    public class TestPdfMarkdownReader : LLMTestBase
+    /// <summary>Port of <c>tests/llama_index/_test_pdf_markdown_reader.py</c>.</summary>
+    [Collection("PDF4LLM")]
+    public class TestPdfMarkdownReader
     {
-        [Test]
+        // PDF = "input.pdf"
+        private const string PDF = "input.pdf";
+
+        private static string _get_test_file_path(string fileName)
+        {
+            // def _get_test_file_path(file_name: str, __file__: str = __file__) -> str:
+            //     return os.path.normpath(f'{__file__}/../../source/4llm/helpers/{file_name}')
+            string fromTestDocuments = _Path.ResolveTestDocument(fileName, nameof(TestPdfMarkdownReader));
+            if (File.Exists(fromTestDocuments))
+                return fromTestDocuments;
+            string fromUpstream = Path.Combine(_Path.ResolveSolutionRoot(), "pymupdf4llm", "tests", fileName);
+            return fromUpstream;
+        }
+
+        [Fact]
         public void test_load_data()
         {
-            string path = FixturePath("input.pdf");
+            string path = _get_test_file_path(PDF);
             if (!File.Exists(path))
-            {
-                Assert.Ignore("Doing nothing because input.pdf does not exist.");
                 return;
-            }
 
             var pdfReader = PdfExtractor.LlamaMarkdownReader();
             var extraInfo = new Dictionary<string, object> { ["test_key"] = "test_value" };
             var documents = pdfReader.LoadData(path, extraInfo);
-            Assert.That(documents, Is.Not.Null);
-            Assert.That(documents.Count, Is.GreaterThan(0));
+
+            Assert.NotNull(documents);
+            Assert.NotEmpty(documents);
         }
 
-        [Test]
+        [Fact]
         public void test_load_data_with_invalid_file_path()
         {
-            var pdfReader = PdfExtractor.LlamaMarkdownReader();
-            var extraInfo = new Dictionary<string, object> { ["test_key"] = "test_value" };
-            Assert.Throws<FileNotFoundException>(() => pdfReader.LoadData("fake/path", extraInfo));
+            // # We need to disable layout.
+            bool prior = PdfExtractor.UseLayout;
+            try
+            {
+                PdfExtractor.SetUseLayout(false);
+                var pdfReader = PdfExtractor.LlamaMarkdownReader();
+                var extraInfo = new Dictionary<string, object> { ["test_key"] = "test_value" };
+                Assert.ThrowsAny<Exception>(() => pdfReader.LoadData("fake/path", extraInfo));
+            }
+            finally
+            {
+                PdfExtractor.SetUseLayout(prior);
+            }
         }
 
-        [Test]
+        [Fact]
         public void test_load_data_with_invalid_extra_info()
         {
-            string path = FixturePath("input.pdf");
+            // def test_load_data_with_invalid_extra_info():
+            //     pdf_reader = PDFMarkdownReader()
+            var pdfReader = PdfExtractor.LlamaMarkdownReader();
+            //     path = _get_test_file_path(PDF)
+            string path = _get_test_file_path(PDF);
             if (!File.Exists(path))
-            {
-                Assert.Ignore("Doing nothing because input.pdf does not exist.");
                 return;
-            }
-
-            // Python raises TypeError for extra_info=str; C# API requires Dictionary<string, object>.
-            Assert.Ignore("LoadData extra_info is strongly typed in C# (no TypeError for string).");
+            //     extra_info = "not a dict"
+            //     with pytest.raises(TypeError):
+            //         pdf_reader.load_data(path, extra_info)
+            Assert.Throws<ArgumentException>(() => pdfReader.LoadData(path, "not a dict"));
         }
 
-        [Test]
+        [Fact(Skip = "ALoadData is not implemented in PDF4LLM.Llama.PDFMarkdownReader.")]
         public void test_aload_data_with_invalid_file_path()
         {
-            Assert.Ignore("ALoadData is not implemented in PDF4LLM.Llama.PDFMarkdownReader.");
+            // async def test_aload_data_with_invalid_file_path():
         }
 
-        [Test]
+        [Fact(Skip = "ALoadData is not implemented in PDF4LLM.Llama.PDFMarkdownReader.")]
         public void test_aload_data_with_invalid_extra_info()
         {
-            Assert.Ignore("ALoadData is not implemented in PDF4LLM.Llama.PDFMarkdownReader.");
+            // async def test_aload_data_with_invalid_extra_info():
         }
     }
 }

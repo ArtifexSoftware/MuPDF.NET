@@ -1,0 +1,18 @@
+<Project>
+  <!--
+    Single source of truth for Artifex product versions in this solution.
+    Edit only here; C# constants are generated into build/ArtifexVersions.g.cs.
+  -->
+  <PropertyGroup Label="Artifex product versions">
+    <!-- Native MuPDF C library (FZ_VERSION / MuPDF.NativeAssets). -->
+    <ArtifexMuPdfVersion>1.27.2</ArtifexMuPdfVersion>
+    <!-- PyMuPDF Python package (VersionBind / bind release). -->
+    <ArtifexPyMuPDFVersion>1.27.2.3</ArtifexPyMuPDFVersion>
+    <!-- PyMuPDF4LLM Python package (pymupdf4llm on PyPI). -->
+    <ArtifexPyMuPDF4LLMVersion>1.27.2.3</ArtifexPyMuPDF4LLMVersion>
+    <!-- MuPDF.NET NuGet package. -->
+    <ArtifexMuPDFNetVersion>3.2.17.1</ArtifexMuPDFNetVersion>
+    <!-- PDF4LLM NuGet package. -->
+    <ArtifexPDF4LLMVersion>1.27.2.17</ArtifexPDF4LLMVersion>
+  </PropertyGroup>
+</Project>

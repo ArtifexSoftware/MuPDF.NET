@@ -39,11 +39,11 @@ namespace MuPDF.NET
     /// </remarks>
     public static partial class Utils
     {
-        public static string pymupdf_version = "1.27.2.2";
+        /// <summary>PyMuPDF package version (legacy name <c>pymupdf_version</c>).</summary>
+        public static string pymupdf_version = Artifex.Versions.PyMuPDF;
 
-        public static string VersionBind = "1.27.2.2";
-
-        public static (string, string) VERSION = ("1.26.1", "3.2.8-rc.6");
+        /// <summary>PyMuPDF bind version (legacy <c>VersionBind</c>; alias of <see cref="pymupdf_version"/>).</summary>
+        public static string VersionBind => pymupdf_version;
 
         public static int FZ_MIN_INF_RECT = (int)(-0x80000000);
 

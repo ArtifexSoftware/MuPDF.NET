@@ -16,32 +16,40 @@
     <repository type="git" url="https://github.com/ArtifexSoftware/MuPDF.NET" />
     <dependencies>
       <group targetFramework=".NETFramework4.6.1">
-        <dependency id="MuPDF.NET" version="[3.2.16,)" exclude="Build,Analyzers" />
+        <dependency id="Markdig" version="[0.38.0,)" exclude="Build,Analyzers" />
+        <dependency id="MuPDF.NET" version="[$mupdfNetMinVersion$,)" exclude="Build,Analyzers" />
       </group>
       <group targetFramework=".NETFramework4.7.2">
-        <dependency id="MuPDF.NET" version="[3.2.16,)" exclude="Build,Analyzers" />
+        <dependency id="Markdig" version="[0.38.0,)" exclude="Build,Analyzers" />
+        <dependency id="MuPDF.NET" version="[$mupdfNetMinVersion$,)" exclude="Build,Analyzers" />
       </group>
       <group targetFramework=".NETFramework4.8">
-        <dependency id="MuPDF.NET" version="[3.2.16,)" exclude="Build,Analyzers" />
+        <dependency id="Markdig" version="[0.38.0,)" exclude="Build,Analyzers" />
+        <dependency id="MuPDF.NET" version="[$mupdfNetMinVersion$,)" exclude="Build,Analyzers" />
       </group>
       <group targetFramework="net5.0">
-        <dependency id="MuPDF.NET" version="[3.2.16,)" exclude="Build,Analyzers" />
+        <dependency id="Markdig" version="[0.38.0,)" exclude="Build,Analyzers" />
+        <dependency id="MuPDF.NET" version="[$mupdfNetMinVersion$,)" exclude="Build,Analyzers" />
       </group>
       <group targetFramework="net6.0">
-        <dependency id="MuPDF.NET" version="[3.2.16,)" exclude="Build,Analyzers" />
+        <dependency id="Markdig" version="[0.38.0,)" exclude="Build,Analyzers" />
+        <dependency id="MuPDF.NET" version="[$mupdfNetMinVersion$,)" exclude="Build,Analyzers" />
       </group>
       <group targetFramework="net7.0">
-        <dependency id="MuPDF.NET" version="[3.2.16,)" exclude="Build,Analyzers" />
+        <dependency id="Markdig" version="[0.38.0,)" exclude="Build,Analyzers" />
+        <dependency id="MuPDF.NET" version="[$mupdfNetMinVersion$,)" exclude="Build,Analyzers" />
       </group>
       <group targetFramework="net8.0">
-        <dependency id="MuPDF.NET" version="[3.2.16,)" exclude="Build,Analyzers" />
+        <dependency id="Markdig" version="[0.38.0,)" exclude="Build,Analyzers" />
+        <dependency id="MuPDF.NET" version="[$mupdfNetMinVersion$,)" exclude="Build,Analyzers" />
         <dependency id="Azure.AI.OpenAI" version="[2.1.0,)" exclude="Build,Analyzers" />
         <dependency id="Azure.Search.Documents" version="[11.6.0,)" exclude="Build,Analyzers" />
         <dependency id="Microsoft.Extensions.AI" version="[10.3.0,)" exclude="Build,Analyzers" />
         <dependency id="Microsoft.Extensions.AI.OpenAI" version="[10.3.0,)" exclude="Build,Analyzers" />
       </group>
       <group targetFramework=".NETStandard2.0">
-        <dependency id="MuPDF.NET" version="[3.2.16,)" exclude="Build,Analyzers" />
+        <dependency id="Markdig" version="[0.38.0,)" exclude="Build,Analyzers" />
+        <dependency id="MuPDF.NET" version="[$mupdfNetMinVersion$,)" exclude="Build,Analyzers" />
       </group>
     </dependencies>
   </metadata>
@@ -59,5 +67,10 @@
     <file src="LICENSE.md" target="" />
     <file src="Description.md" target="" />
     <file src="logo.png" target="" />
+    <file src="build\PDF4LLM.targets" target="build\PDF4LLM.targets" />
+    <file src="scripts\requirements-layout.txt" target="build\layout\requirements-layout.txt" />
+    <file src="scripts\setup_layout_python.py" target="build\layout\setup_layout_python.py" />
+    <file src="scripts\setup_layout_python.ps1" target="build\layout\setup_layout_python.ps1" />
+    <file src="scripts\setup_layout_python.sh" target="build\layout\setup_layout_python.sh" />
   </files>
 </package>

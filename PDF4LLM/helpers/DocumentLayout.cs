@@ -9,10 +9,11 @@ using Newtonsoft.Json;
 
 namespace PDF4LLM.Helpers
 {
-    /// <summary>
-    /// Optional hook for per-page OCR (<c>ocr_function</c> in pymupdf4llm).
-    /// Mutates the page in place (text layer via <c>show_pdf_page</c>), like the Python plugins.
-    /// </summary>
+    /// <summary>Optional per-page OCR hook; mutates the page text layer in place.</summary>
+    /// <param name="page">Page to OCR.</param>
+    /// <param name="ocrDpi">OCR rendering resolution in dots per inch.</param>
+    /// <param name="ocrLanguage">Tesseract language code(s), for example <c>eng</c>.</param>
+    /// <param name="keepOcrText">When <see langword="true"/>, retain OCR-generated text on the page.</param>
     public delegate void OcrPageFunction(Page page, int ocrDpi, string ocrLanguage, bool keepOcrText);
 
     /// <summary>
@@ -73,10 +74,7 @@ namespace PDF4LLM.Helpers
         public List<LinkInfo> Links { get; set; }
     }
 
-    /// <summary>
-    /// Parsed document structure and layout serialization helpers.
-    /// Ported and adapted from LLM helpers.
-    /// </summary>
+    /// <summary>Parsed document with per-page layout boxes.</summary>
     public class ParsedDocument
     {
         [JsonProperty("filename")]
@@ -113,13 +111,42 @@ namespace PDF4LLM.Helpers
         public OcrMode OcrMode { get; set; } = OcrMode.Never;
 
         private const string GraphicsTextMd = "\n![]({0})\n";
-        private const string OcrFontName = "GlyphLessFont";
+
+        /// <summary>Emit image markdown from box.image (str path or bytes), matching Python <c>to_markdown</c>.</summary>
+        private static void AppendBoxImageMarkdown(StringBuilder md, LayoutBox box, string imageFormat)
+        {
+            if (!string.IsNullOrEmpty(box.ImageMarkdownRef))
+            {
+                md.Append(string.Format(GraphicsTextMd, box.ImageMarkdownRef));
+                md.Append("\n\n");
+                return;
+            }
+
+            if (box.Image != null && box.Image.Length > 0)
+            {
+                string base64 = Convert.ToBase64String(box.Image);
+                string data = $"data:image/{imageFormat};base64,{base64}";
+                md.Append(string.Format(GraphicsTextMd, data));
+                md.Append("\n\n");
+                return;
+            }
+
+            md.Append("\n\n");
+        }
 
         /// <summary>
         /// Serialize the parsed document into Markdown text, closely following
         /// <c>ParsedDocument.to_markdown</c> equivalent.
         /// When <paramref name="pageChunks"/> is true, returns JSON (array of page chunk dicts), matching MuPdfRag layout output style.
         /// </summary>
+        /// <param name="header">When <see langword="true"/>, include page-header regions in the output.</param>
+        /// <param name="footer">When <see langword="true"/>, include page-footer regions in the output.</param>
+        /// <param name="writeImages">When <see langword="true"/>, write image files referenced from picture boxes.</param>
+        /// <param name="embedImages">When <see langword="true"/>, embed images as base64 in the Markdown.</param>
+        /// <param name="ignoreCode">When <see langword="true"/>, do not apply monospace/code-block formatting.</param>
+        /// <param name="showProgress">When <see langword="true"/>, print a progress indicator while converting.</param>
+        /// <param name="pageSeparators">When <see langword="true"/>, insert debug separators between pages.</param>
+        /// <param name="pageChunks">When <see langword="true"/>, return JSON page-chunk structures instead of one Markdown string.</param>
         public string ToMarkdown(
             bool header = true,
             bool footer = true,
@@ -176,49 +203,26 @@ namespace PDF4LLM.Helpers
 
                         if (btype == "picture" || btype == "formula" || btype == "table-fallback")
                         {
-                            if (box.Image != null && box.Image.Length > 0)
-                            {
-                                if (embedImages)
-                                {
-                                    string base64 = Convert.ToBase64String(box.Image);
-                                    string data = $"data:image/{ImageFormat};base64,{base64}";
-                                    mdString.Append(string.Format(GraphicsTextMd, data));
-                                    mdString.Append("\n\n");
-                                }
-                                else if (writeImages)
-                                {
-                                    string mdRef = !string.IsNullOrEmpty(box.ImageMarkdownRef)
-                                        ? box.ImageMarkdownRef
-                                        : ImagePath;
-                                    mdString.Append(string.Format(GraphicsTextMd, mdRef));
-                                    mdString.Append("\n\n");
-                                }
-                            }
-                            else if (writeImages && !string.IsNullOrEmpty(box.ImageMarkdownRef))
-                            {
-                                mdString.Append(string.Format(GraphicsTextMd, box.ImageMarkdownRef));
-                                mdString.Append("\n\n");
-                            }
-                            else
-                            {
-                                mdString.Append($"**==> picture [{clip.Width} x {clip.Height}] intentionally omitted <==**\n\n");
-                            }
+                            AppendBoxImageMarkdown(mdString, box, ImageFormat);
 
                             if (box.TextLines != null && box.TextLines.Count > 0)
                             {
+                                bool ignore = ignoreCode || fullOcred;
                                 if (btype == "picture")
-                                    mdString.Append(PictureTextToMd(box.TextLines));
+                                    mdString.Append(PictureTextToMd(box.TextLines, ignore, clip));
                                 else if (btype == "table-fallback")
-                                    mdString.Append(FallbackTextToMd(box.TextLines));
+                                    mdString.Append(FallbackTextToMd(box.TextLines, ignore, clip));
                             }
 
                             stringLengths.Add(mdString.Length);
                             continue;
                         }
 
-                        if (btype == "table" && box.Table != null)
+                        if (btype == "table")
                         {
-                            if (box.Table.TryGetValue("markdown", out object mdObj) && mdObj != null)
+                            if (box.Table != null
+                                && box.Table.TryGetValue("markdown", out object mdObj)
+                                && mdObj != null)
                             {
                                 string tableText = mdObj.ToString();
                                 if (fullOcred)
@@ -230,7 +234,7 @@ namespace PDF4LLM.Helpers
                             continue;
                         }
 
-                        if (box.TextLines == null || box.TextLines.Count == 0)
+                        if (box.TextLines == null)
                         {
                             Console.WriteLine($"Warning: box {btype} has no textlines");
                             stringLengths.Add(mdString.Length);
@@ -368,6 +372,14 @@ namespace PDF4LLM.Helpers
         /// <summary>
         /// Serialize the parsed document to plain text (<c>ParsedDocument.to_text</c> behavior).
         /// </summary>
+        /// <param name="header">When <see langword="true"/>, include page-header regions in the output.</param>
+        /// <param name="footer">When <see langword="true"/>, include page-footer regions in the output.</param>
+        /// <param name="ignoreCode">When <see langword="true"/>, do not apply monospace/code-block formatting.</param>
+        /// <param name="showProgress">When <see langword="true"/>, print a progress indicator while converting.</param>
+        /// <param name="pageChunks">When <see langword="true"/>, return JSON page-chunk structures instead of one text string.</param>
+        /// <param name="tableFormat">Table rendering style (for example <c>grid</c>).</param>
+        /// <param name="tableMaxWidth">Maximum table width in characters for plain-text tables.</param>
+        /// <param name="tableMinColWidth">Minimum column width in characters for plain-text tables.</param>
         public string ToText(
             bool header = true,
             bool footer = true,
@@ -425,20 +437,18 @@ namespace PDF4LLM.Helpers
 
                         if (btype == "picture" || btype == "formula" || btype == "table-fallback")
                         {
-                            textString.Append($"==> picture [{clip.Width} x {clip.Height}] <==\n\n");
                             if (box.TextLines != null && box.TextLines.Count > 0)
                             {
+                                bool ignore = ignoreCode || fullOcred;
                                 if (btype == "picture")
-                                    textString.Append(PictureTextToText(box.TextLines, ignoreCode || fullOcred, clip));
+                                    textString.Append(PictureTextToText(box.TextLines, ignore, clip));
                                 else if (btype == "table-fallback")
-                                    textString.Append(FallbackTextToText(box.TextLines, clip, tableMaxWidth));
+                                    textString.Append(FallbackTextToText(box.TextLines, ignore, clip));
                             }
 
                             stringLengths.Add(textString.Length);
-                            continue;
                         }
-
-                        if (btype == "table" && box.Table != null)
+                        else if (btype == "table")
                         {
                             List<List<string>> extract = GetTableExtract(box.Table);
                             if (extract != null && extract.Count > 0)
@@ -453,26 +463,23 @@ namespace PDF4LLM.Helpers
                             }
 
                             stringLengths.Add(textString.Length);
-                            continue;
                         }
-
-                        if (btype == "list-item")
+                        else if (btype == "list-item")
                         {
                             int level = listItemLevels.ContainsKey(i) ? listItemLevels[i] : 1;
                             textString.Append(ListItemToText(box.TextLines, level));
                             stringLengths.Add(textString.Length);
-                            continue;
                         }
-
-                        if (btype == "footnote")
+                        else if (btype == "footnote")
                         {
                             textString.Append(FootnoteToText(box.TextLines));
                             stringLengths.Add(textString.Length);
-                            continue;
                         }
-
-                        textString.Append(TextToText(box.TextLines, ignoreCode || fullOcred));
-                        stringLengths.Add(textString.Length);
+                        else
+                        {
+                            textString.Append(TextToText(box.TextLines, ignoreCode || fullOcred));
+                            stringLengths.Add(textString.Length);
+                        }
                     }
 
                     string pageText = textString.ToString();
@@ -693,9 +700,18 @@ namespace PDF4LLM.Helpers
             return sb.Append("\n").ToString();
         }
 
-        private static string PictureTextToMd(List<TextLineInfo> textLines)
+        private const string OcrFontName = "GlyphLessFont";
+
+        private static string PictureTextToMd(
+            List<TextLineInfo> textLines,
+            bool ignoreCode = false,
+            Rect clip = null)
         {
-            var sb = new StringBuilder("**----- Start of picture text -----**<br>\n");
+            _ = ignoreCode;
+            _ = clip;
+            if (textLines == null || textLines.Count == 0)
+                return "\n";
+            var sb = new StringBuilder("<!-- Start of picture text -->\n");
             foreach (var tl in textLines)
             {
                 if (tl.Spans == null)
@@ -704,19 +720,21 @@ namespace PDF4LLM.Helpers
                 sb.Append(lineText.TrimEnd()).Append("<br>");
             }
 
-            sb.Append("**----- End of picture text -----**<br>\n");
-            return sb.Append("\n\n").ToString();
+            sb.Append("<!-- End of picture text -->\n");
+            return sb.Append("\n").ToString();
         }
 
-        private static string FallbackTextToMd(List<TextLineInfo> textLines)
+        private static string FallbackTextToMd(
+            List<TextLineInfo> textLines,
+            bool ignoreCode = false,
+            Rect clip = null)
         {
+            _ = ignoreCode;
+            _ = clip;
             if (textLines == null || textLines.Count == 0)
                 return "";
             int spanCount = textLines.Max(tl => tl.Spans?.Count ?? 0);
-            if (spanCount == 0)
-                return PictureTextToMd(textLines);
-
-            var sb = new StringBuilder("**----- Start of picture text -----**<br>\n");
+            var sb = new StringBuilder("<!-- Start of picture text -->\n");
             sb.Append('|', spanCount + 1).Append('\n');
             sb.Append('|').Append(string.Join("|", Enumerable.Repeat("---", spanCount))).Append("|\n");
             foreach (var tl in textLines)
@@ -725,15 +743,20 @@ namespace PDF4LLM.Helpers
                 sb.Append('|').Append(string.Join("|", spans.Select(s => (s.Text ?? "").Trim()))).Append("|\n");
             }
 
-            sb.Append("\n**----- End of picture text -----**<br>\n");
-            return sb.Append("\n\n").ToString();
+            sb.Append("\n<!-- End of picture text -->\n");
+            return sb.Append("\n").ToString();
         }
 
-        /// <summary><c>picture_text_to_text</c> (parameters match signature; <c>ignore_code</c> unused).</summary>
-        private static string PictureTextToText(List<TextLineInfo> textLines, bool ignoreCode = false, IRect clip = null)
+        /// <summary><c>picture_text_to_text</c></summary>
+        private static string PictureTextToText(
+            List<TextLineInfo> textLines,
+            bool ignoreCode = false,
+            IRect clip = null)
         {
             _ = ignoreCode;
             _ = clip;
+            if (textLines == null || textLines.Count == 0)
+                return "\n";
             var sb = new StringBuilder("----- Start of picture text -----\n");
             foreach (var tl in textLines)
             {
@@ -747,15 +770,17 @@ namespace PDF4LLM.Helpers
             return sb.ToString() + "\n";
         }
 
-        /// <summary><c>fallback_text_to_text</c> (<c>tabulate</c> grid + <c>maxcolwidths</c>).</summary>
-        private static string FallbackTextToText(List<TextLineInfo> textLines, IRect clip, int tableMaxWidth = 100)
+        /// <summary><c>fallback_text_to_text</c></summary>
+        private static string FallbackTextToText(
+            List<TextLineInfo> textLines,
+            bool ignoreCode = false,
+            IRect clip = null)
         {
+            _ = ignoreCode;
             if (textLines == null || textLines.Count == 0)
                 return "";
             int spanCount = textLines.Max(tl => tl.Spans?.Count ?? 0);
-            if (spanCount == 0)
-                return PictureTextToText(textLines);
-            int clipX0 = clip?.X0 ?? 0;
+            float clipX0 = clip?.X0 ?? 0;
             var lines = new List<List<string>>();
             foreach (TextLineInfo tl in textLines)
             {
@@ -763,20 +788,21 @@ namespace PDF4LLM.Helpers
                 var line = new List<string>();
                 for (int k = 0; k < spanCount; k++)
                     line.Add("");
-                int i0 = spans.Count < spanCount && spans.Count > 0 && spans[0].Bbox != null && spans[0].Bbox.X0 > clipX0 + 10
+                int i0 = spans.Count < spanCount && spans.Count > 0 && spans[0].Bbox != null
+                         && spans[0].Bbox.X0 > clipX0 + 10
                     ? 1
                     : 0;
                 for (int j = 0; j < spans.Count; j++)
                 {
                     int col = i0 + j;
                     if (col < spanCount)
-                        line[col] = (spans[j].Text ?? "").Trim();
+                        line[col] = (spans[j].Text ?? "").Trim() + " ";
                 }
 
                 lines.Add(line);
             }
 
-            int maxCol = Math.Max(1, tableMaxWidth / spanCount);
+            int maxCol = Math.Max(1, 100 / Math.Max(1, spanCount));
             return LayoutTabulate.Tabulate(lines, "grid", uniformMaxColWidth: maxCol) + "\n\n";
         }
 
@@ -1083,6 +1109,8 @@ namespace PDF4LLM.Helpers
         /// <summary>
         /// Normalizes page indices like <c>parse_document</c>: dedupe, sort, negative indices, bounds check.
         /// </summary>
+        /// <param name="pageCount">Total number of pages in the document.</param>
+        /// <param name="pages">Requested 0-based page indices; <see langword="null"/> means all pages.</param>
         public static List<int> NormalizePageIndices(int pageCount, List<int> pages)
         {
             if (pageCount < 0)
@@ -1116,6 +1144,22 @@ namespace PDF4LLM.Helpers
         /// <remarks>
         /// Uses native <see cref="Page.LayoutInformation"/> when available; otherwise layout regions are derived from stext blocks plus table detection.
         /// </remarks>
+        /// <param name="doc">PDF document to parse.</param>
+        /// <param name="filename">Logical file name stored in the parsed model metadata.</param>
+        /// <param name="imageDpi">Resolution in dots per inch for extracted images.</param>
+        /// <param name="imageFormat">Image file extension/format (for example <c>png</c>).</param>
+        /// <param name="imagePath">Folder for written images when <paramref name="writeImages"/> is <see langword="true"/>.</param>
+        /// <param name="ocrDpi">Resolution in dots per inch for OCR page rendering.</param>
+        /// <param name="pages">0-based page indices to process; <see langword="null"/> processes all pages.</param>
+        /// <param name="writeImages">When <see langword="true"/>, write image files during parsing.</param>
+        /// <param name="embedImages">When <see langword="true"/>, embed images as base64 in the parsed model.</param>
+        /// <param name="showProgress">When <see langword="true"/>, print a progress indicator while parsing.</param>
+        /// <param name="forceText">When <see langword="true"/>, extract text even from picture regions.</param>
+        /// <param name="useOcr">When <see langword="true"/>, apply OCR where the pipeline decides it is beneficial.</param>
+        /// <param name="ocrLanguage">Tesseract language code(s), for example <c>eng</c> or <c>eng+deu</c>.</param>
+        /// <param name="forceOcr">When <see langword="true"/>, OCR every page regardless of heuristics.</param>
+        /// <param name="keepOcrText">When <see langword="true"/>, retain OCR-generated text spans on the page.</param>
+        /// <param name="ocrFunction">Custom per-page OCR callback; <see langword="null"/> uses the built-in engine.</param>
         public static ParsedDocument ParseDocument(
             Document doc,
             string filename = "",
@@ -1164,7 +1208,7 @@ namespace PDF4LLM.Helpers
 
                 OcrMode useOcrMode = OcrMode.Never;
                 if (forceOcr)
-                    useOcrMode = keepOcrText ? OcrMode.AlwaysPreservingOld : OcrMode.AlwaysRemovingOld;
+                    useOcrMode = OcrMode.AlwaysRemovingOld;
                 else if (useOcr)
                     useOcrMode = keepOcrText ? OcrMode.SelectPreservingOld : OcrMode.SelectRemovingOld;
 
@@ -1261,15 +1305,16 @@ namespace PDF4LLM.Helpers
             if (string.IsNullOrEmpty(docBaseName))
                 docBaseName = "document";
 
-            string docFileLabel = string.IsNullOrEmpty(mydoc?.Name)
+            string docFileLabel = string.IsNullOrEmpty(document.Filename)
                 ? docBaseName
-                : Path.GetFileName(mydoc.Name);
-            if (string.IsNullOrEmpty(docFileLabel))
-                docFileLabel = docBaseName;
+                : document.Filename;
 
             var progressBar = showProgress && pageIndices.Count >= 5
                 ? ProgressBar.Create(pageIndices.Cast<object>().ToList())
                 : null;
+
+            if (showProgress && pageIndices.Count >= 5)
+                Console.WriteLine($"Parsing {pageIndices.Count} pages of '{document.Filename}'...");
 
             try
             {
@@ -1283,9 +1328,41 @@ namespace PDF4LLM.Helpers
                     try
                     {
                         page.RemoveRotation();
-                        
+
                         bool pageFullOcred = false;
                         bool pageTextOcred = false;
+
+                        var pageAnalysis = new Dictionary<string, object>
+                        {
+                            ["needs_ocr"] = false,
+                        };
+                        if (effectiveOcr == OcrMode.SelectRemovingOld
+                            || effectiveOcr == OcrMode.SelectPreservingOld)
+                            pageAnalysis = Utils.AnalyzePage(page);
+
+                        bool keepOcrTextRun = effectiveOcr == OcrMode.SelectPreservingOld
+                            || effectiveOcr == OcrMode.AlwaysPreservingOld;
+
+                        bool runOcr = pageAnalysis.TryGetValue("needs_ocr", out object n)
+                                        && n is bool nb
+                                        && nb;
+                        if (effectiveOcr == OcrMode.AlwaysRemovingOld
+                            || effectiveOcr == OcrMode.AlwaysPreservingOld)
+                            runOcr = true;
+
+                        if (runOcr && ocrImpl != null)
+                        {
+                            string skipReason = pageAnalysis.TryGetValue("reason", out object reasonObj)
+                                ? reasonObj as string
+                                : null;
+                            if (!(keepOcrTextRun && skipReason == "ocr_spans"))
+                            {
+                                ocrImpl(page, ocrDpi, ocrLanguage, keepOcrTextRun);
+                                Console.WriteLine(
+                                    $"OCR on page.Number={page.Number}/{page.Number + 1}.");
+                                // Python: page_full_ocred = True  (commented out)
+                            }
+                        }
 
                         textPage = page.GetTextPage(
                             clip: new Rect(float.NegativeInfinity, float.NegativeInfinity,
@@ -1294,65 +1371,33 @@ namespace PDF4LLM.Helpers
                         PageInfo pageInfo = textPage.ExtractDict(null, false);
                         List<Block> blocks = pageInfo.Blocks ?? new List<Block>();
 
-                        Dictionary<string, object> pageAnalysis = new Dictionary<string, object>
-                        {
-                            ["needs_ocr"] = false,
-                        };
-                        if (effectiveOcr == OcrMode.SelectRemovingOld || effectiveOcr == OcrMode.SelectPreservingOld)
-                            pageAnalysis = Utils.AnalyzePage(page, blocks);
-
-                        bool keepOcrTextRun = effectiveOcr == OcrMode.SelectPreservingOld
-                            || effectiveOcr == OcrMode.AlwaysPreservingOld;
-
-                        bool runOcr = false;
-                        if (effectiveOcr == OcrMode.AlwaysRemovingOld || effectiveOcr == OcrMode.AlwaysPreservingOld)
-                            runOcr = true;
-                        else if (
-                            (effectiveOcr == OcrMode.SelectRemovingOld || effectiveOcr == OcrMode.SelectPreservingOld)
-                            && pageAnalysis.TryGetValue("needs_ocr", out object n) && n is bool nb && nb)
-                            runOcr = true;
-
-                        if (runOcr && ocrImpl != null)
-                        {
-                            textPage.Dispose();
-                            textPage = null;
-
-                            ocrImpl(page, ocrDpi, ocrLanguage, keepOcrTextRun);
-
-                            textPage = page.GetTextPage(
-                                clip: new Rect(float.NegativeInfinity, float.NegativeInfinity,
-                                    float.PositiveInfinity, float.PositiveInfinity),
-                                flags: Utils.FLAGS);
-                            pageInfo = textPage.ExtractDict(null, false);
-                            blocks = pageInfo.Blocks ?? new List<Block>();
-                            pageFullOcred = true;
-                        }
-
-                        List<Block> fulltext = blocks.Where(b => b.Type == 0).ToList();
-
-                        // Try to access layout information (page.get_layout).
                         page.GetLayout();
-                        List<LayoutInfoEntry> layout = LayoutParseHelpers.BuildLayoutInformation(page, blocks);
-                        bool tablesExist = LayoutParseHelpers.TablesExist(layout);
+                        List<LayoutInfoEntry> layout = LayoutParseHelpers.ReadPageLayout(page, blocks);
+                        bool tablesExist = layout.Any(b => b.Class == "table");
 
                         if (!pageFullOcred)
                         {
                             LayoutParseHelpers.CleanPictures(page, blocks, layout);
                             LayoutParseHelpers.AddImageOrphans(page, blocks, layout);
+                            if (tablesExist)
+                                LayoutParseHelpers.CleanTables(page, blocks, layout, textPage);
                         }
 
-                        if (tablesExist)
-                            LayoutParseHelpers.CleanTables(page, blocks, layout);
-
                         layout = LayoutParseHelpers.FindReadingOrder(page.Rect, blocks, layout);
+                        LayoutParseHelpers.WritePageLayout(page, layout);
 
-                        List<Tuple<Point, Point>> addLines = null;
-                        List<Rect> addBoxes = null;
+                        List<Tuple<Point, Point>> addLines;
+                        List<Rect> addBoxes;
                         if (tablesExist && !pageFullOcred)
                         {
-                            var complete = LayoutParseHelpers.CompleteTableStructure(page, layout);
+                            var complete = LayoutParseHelpers.CompleteTableStructure(page);
                             addLines = complete.lines;
                             addBoxes = complete.boxes;
+                        }
+                        else
+                        {
+                            addLines = new List<Tuple<Point, Point>>();
+                            addBoxes = new List<Rect>();
                         }
 
                         TableFinder tbf = null;
@@ -1372,14 +1417,22 @@ namespace PDF4LLM.Helpers
                             }
                         }
 
+                        List<Block> fulltext = blocks.Where(b => b.Type == 0).ToList();
                         List<Block> tableBlocks;
-                        if (tablesExist && !(pageFullOcred || pageTextOcred))
+                        if (tablesExist)
                         {
-                            PageInfo rawInfo = textPage.ExtractRAWDict(null, false);
-                            tableBlocks = (rawInfo.Blocks ?? new List<Block>()).Where(b => b.Type == 0).ToList();
+                            if (!(pageFullOcred || pageTextOcred))
+                            {
+                                PageInfo rawInfo = textPage.ExtractRAWDict(null, false);
+                                tableBlocks = (rawInfo.Blocks ?? new List<Block>())
+                                    .Where(b => b.Type == 0)
+                                    .ToList();
+                            }
+                            else
+                                tableBlocks = fulltext;
                         }
                         else
-                            tableBlocks = fulltext;
+                            tableBlocks = null;
 
                         var pageLayout = new PageLayout
                         {
@@ -1392,6 +1445,8 @@ namespace PDF4LLM.Helpers
                             FullText = fulltext,
                             Words = new List<object>(),
                             Links = page.GetLinks()
+                                .Where(l => l.Kind == LinkType.LINK_URI)
+                                .ToList()
                         };
 
                         foreach (LayoutInfoEntry le in layout)
@@ -1401,41 +1456,39 @@ namespace PDF4LLM.Helpers
 
                             Rect clip = new Rect(le.Bbox);
                             string bClass = le.Class ?? "text";
+                            var layoutbox = new LayoutBox
+                            {
+                                X0 = clip.X0,
+                                Y0 = clip.Y0,
+                                X1 = clip.X1,
+                                Y1 = clip.Y1,
+                                BoxClass = bClass,
+                            };
 
                             if (bClass == "picture" || bClass == "formula")
                             {
-                                var picBox = new LayoutBox
-                                {
-                                    X0 = clip.X0,
-                                    Y0 = clip.Y0,
-                                    X1 = clip.X1,
-                                    Y1 = clip.Y1,
-                                    BoxClass = bClass,
-                                    Image = null,
-                                    ImageMarkdownRef = null
-                                };
-
                                 if (embedImages || writeImages)
                                 {
                                     using (Pixmap pix = page.GetPixmap(clip: clip, dpi: imageDpi))
                                     {
-                                        if (pix != null && !pix.IRect.IsEmpty)
+                                        IRect irect = pix?.IRect;
+                                        if (pix != null && irect != null && !irect.IsEmpty)
                                         {
                                             if (embedImages)
-                                                picBox.Image = pix.ToBytes(imageFormat);
+                                                layoutbox.Image = pix.ToBytes(imageFormat);
                                             else if (writeImages)
                                             {
-                                                string imgFile =
+                                                string imgFilename =
                                                     $"{docFileLabel}-{pno + 1:0000}-{pageLayout.Boxes.Count:00}.{imageFormat}";
-                                                var (mdRef, savePath) = Utils.MdPath(imagePath, imgFile);
-                                                picBox.ImageMarkdownRef = mdRef;
+                                                var (mdRef, savePath) = Utils.MdPath(imagePath, imgFilename);
+                                                layoutbox.ImageMarkdownRef = mdRef;
                                                 pix.Save(savePath, imageFormat);
                                             }
                                         }
                                     }
                                 }
 
-                                if (forceText)
+                                if (bClass == "picture" && forceText)
                                 {
                                     var picLines = GetTextLines.GetRawLines(
                                         textpage: null,
@@ -1445,77 +1498,64 @@ namespace PDF4LLM.Helpers
                                         onlyHorizontal: false);
                                     if (picLines.Count > 0)
                                     {
-                                        picBox.TextLines = picLines
+                                        layoutbox.TextLines = picLines
                                             .Select(l => new TextLineInfo { Bbox = l.Rect, Spans = l.Spans })
                                             .ToList();
                                     }
                                 }
-
-                                pageLayout.Boxes.Add(picBox);
                             }
                             else if (bClass == "table")
                             {
-                                var layoutbox = new LayoutBox
-                                {
-                                    X0 = clip.X0,
-                                    Y0 = clip.Y0,
-                                    X1 = clip.X1,
-                                    Y1 = clip.Y1,
-                                    BoxClass = "table"
-                                };
-
                                 try
                                 {
                                     Table table = tbf?.tables?.FirstOrDefault(tab =>
                                         tab?.bbox != null
                                         && LayoutParseHelpers.IntersectionOverUnion(tab.bbox, clip) > 0.6f);
 
-                                    if (table != null)
-                                    {
-                                        int rc = table.row_count;
-                                        int cc = table.col_count;
-                                        var cellsOut = new List<List<float[]>>();
-                                        foreach (TableRow row in table.rows)
-                                        {
-                                            var line = new List<float[]>();
-                                            foreach (Rect c in row.cells)
-                                            {
-                                                if (c == null)
-                                                {
-                                                    line.Add(null);
-                                                    continue;
-                                                }
-
-                                                line.Add(new[] { c.X0, c.Y0, c.X1, c.Y1 });
-                                            }
-
-                                            cellsOut.Add(line);
-                                        }
-
-                                        if (table.header?.external == true && table.header.cells != null)
-                                        {
-                                            var headerLine = table.header.cells
-                                                .Select(c => c == null ? null : new[] { c.X0, c.Y0, c.X1, c.Y1 })
-                                                .ToList();
-                                            cellsOut.Insert(0, headerLine);
-                                            rc += 1;
-                                        }
-
-                                        List<List<string>> extract = table.Extract();
-                                        string md = table.ToMarkdown();
-
-                                        layoutbox.Table = new Dictionary<string, object>
-                                        {
-                                            ["bbox"] = new List<float> { table.bbox.X0, table.bbox.Y0, table.bbox.X1, table.bbox.Y1 },
-                                            ["row_count"] = rc,
-                                            ["col_count"] = cc,
-                                            ["cells"] = cellsOut,
-                                            ["extract"] = extract,
-                                            ["markdown"] = md
-                                        };
-                                    }
-                                    else
+                                    if (table == null)
                                         throw new InvalidOperationException("no matching table");
+
+                                    int rc = table.row_count;
+                                    var cellsOut = new List<List<float[]>>();
+                                    foreach (TableRow row in table.rows)
+                                    {
+                                        var line = new List<float[]>();
+                                        foreach (Rect c in row.cells)
+                                        {
+                                            line.Add(c == null
+                                                ? null
+                                                : new[] { c.X0, c.Y0, c.X1, c.Y1 });
+                                        }
+                                        cellsOut.Add(line);
+                                    }
+
+                                    if (table.header?.external == true && table.header.cells != null)
+                                    {
+                                        var headerLine = table.header.cells
+                                            .Select(c => c == null
+                                                ? null
+                                                : new[] { c.X0, c.Y0, c.X1, c.Y1 })
+                                            .ToList();
+                                        cellsOut.Insert(0, headerLine);
+                                        rc += 1;
+                                    }
+
+                                    layoutbox.Table = new Dictionary<string, object>
+                                    {
+                                        ["bbox"] = new List<float>
+                                        {
+                                            table.bbox.X0, table.bbox.Y0, table.bbox.X1, table.bbox.Y1
+                                        },
+                                        ["row_count"] = rc,
+                                        ["col_count"] = table.col_count,
+                                        ["cells"] = cellsOut,
+                                    };
+
+                                    bool ocrPage = pageFullOcred || pageTextOcred;
+                                    layoutbox.Table["extract"] = Utils.TableExtract(
+                                        tableBlocks, layoutbox, ocrpage: ocrPage);
+                                    layoutbox.Table["markdown"] = Utils.TableToMarkdown(
+                                        tableBlocks, layoutbox, markdown: true, ocrpage: ocrPage);
                                 }
                                 catch
                                 {
@@ -1530,9 +1570,9 @@ namespace PDF4LLM.Helpers
                                                     layoutbox.Image = pix.ToBytes(imageFormat);
                                                 else if (writeImages)
                                                 {
-                                                    string imgFile =
+                                                    string imgFilename =
                                                         $"{docFileLabel}-{pno + 1:0000}-{pageLayout.Boxes.Count:00}.{imageFormat}";
-                                                    var (mdRef, savePath) = Utils.MdPath(imagePath, imgFile);
+                                                    var (mdRef, savePath) = Utils.MdPath(imagePath, imgFilename);
                                                     layoutbox.ImageMarkdownRef = mdRef;
                                                     pix.Save(savePath, imageFormat);
                                                 }
@@ -1540,26 +1580,22 @@ namespace PDF4LLM.Helpers
                                         }
                                     }
 
-                                    if (forceText)
+                                    var fbLines = GetTextLines.GetRawLines(
+                                        textpage: null,
+                                        blocks: fulltext,
+                                        clip: clip,
+                                        ignoreInvisible: !pageFullOcred,
+                                        onlyHorizontal: false);
+                                    if (fbLines.Count > 0)
                                     {
-                                        var fbLines = GetTextLines.GetRawLines(
-                                            textpage: null,
-                                            blocks: fulltext,
-                                            clip: clip,
-                                            ignoreInvisible: !pageFullOcred,
-                                            onlyHorizontal: false);
-                                        if (fbLines.Count > 0)
-                                        {
-                                            layoutbox.TextLines = fbLines
-                                                .Select(l => new TextLineInfo { Bbox = l.Rect, Spans = l.Spans })
-                                                .ToList();
-                                            if (fbLines.Count == 1 || fbLines.Max(l => l.Spans?.Count ?? 0) < 2)
-                                                layoutbox.BoxClass = "text";
-                                        }
+                                        layoutbox.TextLines = fbLines
+                                            .Select(l => new TextLineInfo { Bbox = l.Rect, Spans = l.Spans })
+                                            .ToList();
+                                        if (fbLines.Count == 1
+                                            || fbLines.Max(l => l.Spans?.Count ?? 0) < 2)
+                                            layoutbox.BoxClass = "text";
                                     }
                                 }
-
-                                pageLayout.Boxes.Add(layoutbox);
                             }
                             else
                             {
@@ -1569,25 +1605,12 @@ namespace PDF4LLM.Helpers
                                     clip: clip,
                                     ignoreInvisible: !pageFullOcred,
                                     onlyHorizontal: false);
-                                if (textLines.Count == 0)
-                                    continue;
-
-                                Rect boxRect = Utils.JoinRects(textLines.Select(l => l.Rect).ToList());
-                                if (Utils.BboxIsEmpty(boxRect))
-                                    boxRect = clip;
-
-                                pageLayout.Boxes.Add(new LayoutBox
-                                {
-                                    X0 = boxRect.X0,
-                                    Y0 = boxRect.Y0,
-                                    X1 = boxRect.X1,
-                                    Y1 = boxRect.Y1,
-                                    BoxClass = string.IsNullOrEmpty(bClass) ? "text" : bClass,
-                                    TextLines = textLines
-                                        .Select(l => new TextLineInfo { Bbox = l.Rect, Spans = l.Spans })
-                                        .ToList()
-                                });
+                                layoutbox.TextLines = textLines
+                                    .Select(l => new TextLineInfo { Bbox = l.Rect, Spans = l.Spans })
+                                    .ToList();
                             }
+
+                            pageLayout.Boxes.Add(layoutbox);
                         }
 
                         document.Pages.Add(pageLayout);

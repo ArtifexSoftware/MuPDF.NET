@@ -5,15 +5,6 @@ using System.Linq;
 
 namespace PDF4LLM.Helpers
 {
-    /// <summary>
-    /// Text-based progress bar to allow watching the advancement
-    /// of Markdown conversion of document pages.
-    /// Ported and adapted from LLM helpers.
-    /// 
-    /// Copyright and License
-    /// Copyright 2024 Artifex Software, Inc.
-    /// License GNU Affero GPL 3.0
-    /// </summary>
     public class _ProgressBar : IEnumerator<object>
     {
         private readonly List<object> _items;
@@ -23,6 +14,8 @@ namespace PDF4LLM.Helpers
         private int _currentIndex;
         private IEnumerator<object> _enumerator;
 
+        /// <param name="items">Items to iterate while updating the console progress bar.</param>
+        /// <param name="progressWidth">Character width of the progress bar display.</param>
         public _ProgressBar(List<object> items, int progressWidth = 40)
         {
             _items = items;
@@ -81,8 +74,11 @@ namespace PDF4LLM.Helpers
         }
     }
 
+    /// <summary>Console progress bar for page iteration.</summary>
     public static class ProgressBar
     {
+        /// <param name="list">Items to iterate while showing progress.</param>
+        /// <param name="progressWidth">Character width of the progress bar display.</param>
         public static IEnumerator<object> Create(List<object> list, int progressWidth = 40)
         {
             return new _ProgressBar(list, progressWidth);

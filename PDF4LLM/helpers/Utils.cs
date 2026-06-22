@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -8,11 +9,8 @@ using mupdf;
 
 namespace PDF4LLM.Helpers
 {
-    /// <summary>
-    /// Utility functions for PDF processing and layout analysis.
-    /// Ported and adapted from LLM helpers.
-    /// </summary>
-    public static class Utils
+    /// <summary>Utility functions for PDF processing and layout analysis.</summary>
+    public static partial class Utils
     {
         // Constants
         public static readonly HashSet<char> WHITE_CHARS = new HashSet<char>(
@@ -38,7 +36,8 @@ namespace PDF4LLM.Helpers
         );
 
         public const char REPLACEMENT_CHARACTER = '\uFFFD';
-        public const string TYPE3_FONT_NAME = "Unnamed-T3";
+        public const string TYPE3_FONT_NAME = "Type3";
+        public const string TESSERACT_FONT_NAME = "GlyphLessFont";
 
         public static readonly HashSet<char> BULLETS = new HashSet<char>(
             new[]
@@ -72,7 +71,8 @@ namespace PDF4LLM.Helpers
             mupdf.mupdf.FZ_STEXT_COLLECT_VECTORS |
             (int)TextFlags.TEXT_PRESERVE_IMAGES |
             (int)TextFlags.TEXT_ACCURATE_BBOXES |
-            (int)TextFlags.TEXT_MEDIABOX_CLIP
+            (int)TextFlags.TEXT_MEDIABOX_CLIP |
+            mupdf.mupdf.FZ_STEXT_IGNORE_ACTUALTEXT
         );
 
         /// <summary>
@@ -81,6 +81,8 @@ namespace PDF4LLM.Helpers
         /// Optionally, the xref of the field is included.
         /// Extract form fields with page references (interactive PDFs).
         /// </summary>
+        /// <param name="doc">PDF document to scan for AcroForm fields.</param>
+        /// <param name="xrefs">When <c>true</c>, include each field's PDF xref in the result.</param>
         public static Dictionary<string, Dictionary<string, object>> ExtractFormFieldsWithPages(Document doc, bool xrefs = false)
         {
             var result = new Dictionary<string, Dictionary<string, object>>();
@@ -215,6 +217,8 @@ namespace PDF4LLM.Helpers
         /// and return a Markdown-safe file reference using forward slashes.
         /// Prefers relative paths to avoid Windows drive-letter issues.
         /// </summary>
+        /// <param name="folder">Target directory; empty string uses the current working directory.</param>
+        /// <param name="filename">Image file name (only the base name is used).</param>
         public static (string mdRef, string actualPath) MdPath(string folder, string filename)
         {
             // 1. Use current working directory as script dir.
@@ -258,14 +262,46 @@ namespace PDF4LLM.Helpers
             // The first item is the MD-safe form,
             // the second is the actual path to use in pixmap saving.
             mdRef = mdRef.Replace("(", "-").Replace(")", "-")
-                         .Replace("[", "-").Replace("]", "-");
+                         .Replace("[", "-").Replace("]", "-")
+                         .Replace(" ", "_")
+                         .Replace("\u2010", "-").Replace("\u2011", "-").Replace("\u2012", "-")
+                         .Replace("\u2013", "-").Replace("\u2014", "-").Replace("\u2015", "-")
+                         .Replace("\u2212", "-");
 
-            return (mdRef, fullPath);
+            return (mdRef, mdRef);
+        }
+
+        /// <summary><c>is_ocr_text(span)</c></summary>
+        /// <param name="span">Text span to inspect for OCR origin.</param>
+        public static bool IsOcrText(ExtendedSpan span)
+        {
+            if (span == null)
+                return false;
+            if (span.Font == TESSERACT_FONT_NAME)
+                return true;
+            if ((span.CharFlags & (int)mupdf.mupdf.FZ_STEXT_STROKED) != 0
+                || (span.CharFlags & (int)mupdf.mupdf.FZ_STEXT_FILLED) != 0)
+                return false;
+            return true;
+        }
+
+        /// <summary>Blocks list from <c>TextPage.extractDICT()</c>.</summary>
+        internal static List<Dictionary<string, object>> StextDictBlocks(TextPage textPage)
+        {
+            if (textPage == null)
+                return new List<Dictionary<string, object>>();
+            Dictionary<string, object> pageDict = textPage.ExtractDict(false);
+            if (pageDict != null
+                && pageDict.TryGetValue("blocks", out object blocksObj)
+                && blocksObj is List<Dictionary<string, object>> blocks)
+                return blocks;
+            return new List<Dictionary<string, object>>();
         }
 
         /// <summary>
         /// Check if text starts with a bullet character
         /// </summary>
+        /// <param name="text">Text to check for a leading bullet character.</param>
         public static bool StartswithBullet(string text)
         {
             if (string.IsNullOrEmpty(text))
@@ -282,6 +318,7 @@ namespace PDF4LLM.Helpers
         /// <summary>
         /// Identify white text
         /// </summary>
+        /// <param name="text">Text to test for whitespace-only content.</param>
         public static bool IsWhite(string text)
         {
             if (string.IsNullOrEmpty(text))
@@ -302,6 +339,7 @@ namespace PDF4LLM.Helpers
         /// <summary>
         /// Check if bounding box is empty
         /// </summary>
+        /// <param name="bbox">Rectangle to test.</param>
         public static bool BboxIsEmpty(Rect bbox)
         {
             if (bbox == null)
@@ -312,6 +350,9 @@ namespace PDF4LLM.Helpers
         /// <summary>
         /// Intersect two rectangles
         /// </summary>
+        /// <param name="r1">First rectangle.</param>
+        /// <param name="r2">Second rectangle.</param>
+        /// <param name="bboxOnly">Reserved; kept for API parity with pymupdf4llm.</param>
         public static Rect IntersectRects(Rect r1, Rect r2, bool bboxOnly = false)
         {
             if (r1 == null || r2 == null)
@@ -331,6 +372,8 @@ namespace PDF4LLM.Helpers
         /// <summary>
         /// Join a list of rectangles into their bounding rectangle
         /// </summary>
+        /// <param name="rects">Rectangles to unite into one bounding box.</param>
+        /// <param name="bboxOnly">Reserved; kept for API parity with pymupdf4llm.</param>
         public static Rect JoinRects(List<Rect> rects, bool bboxOnly = false)
         {
             if (rects == null || rects.Count == 0)
@@ -347,6 +390,9 @@ namespace PDF4LLM.Helpers
         /// <summary>
         /// Check if bbox is almost entirely within clip
         /// </summary>
+        /// <param name="bbox">Rectangle to test.</param>
+        /// <param name="clip">Clipping rectangle.</param>
+        /// <param name="portion">Minimum fraction of <paramref name="bbox"/> area that must lie inside <paramref name="clip"/>.</param>
         public static bool AlmostInBbox(Rect bbox, Rect clip, float portion = 0.8f)
         {
             if (bbox == null || clip == null)
@@ -367,6 +413,9 @@ namespace PDF4LLM.Helpers
         /// <summary>
         /// Check if bbox is outside cell
         /// </summary>
+        /// <param name="bbox">Rectangle to test.</param>
+        /// <param name="cell">Reference cell rectangle.</param>
+        /// <param name="strict">When <c>true</c>, touching edges count as outside.</param>
         public static bool OutsideBbox(Rect bbox, Rect cell, bool strict = false)
         {
             if (bbox == null || cell == null)
@@ -387,6 +436,8 @@ namespace PDF4LLM.Helpers
         /// <summary>
         /// Check if inner rectangle is contained within outer rectangle
         /// </summary>
+        /// <param name="inner">Candidate inner rectangle.</param>
+        /// <param name="outer">Candidate outer rectangle.</param>
         public static bool BboxInBbox(Rect inner, Rect outer)
         {
             if (inner == null || outer == null)
@@ -399,6 +450,8 @@ namespace PDF4LLM.Helpers
         /// <summary>
         /// Check if rect is contained in any rect of the list
         /// </summary>
+        /// <param name="rect">Rectangle to test.</param>
+        /// <param name="rectList">Rectangles to search.</param>
         public static bool BboxInAnyBbox(Rect rect, IEnumerable<Rect> rectList)
         {
             if (rect == null || rectList == null)
@@ -410,6 +463,8 @@ namespace PDF4LLM.Helpers
         /// <summary>
         /// Check if rect is outside all rects in the list
         /// </summary>
+        /// <param name="rect">Rectangle to test.</param>
+        /// <param name="rectList">Rectangles to compare against.</param>
         public static bool OutsideAllBboxes(Rect rect, IEnumerable<Rect> rectList)
         {
             if (rect == null || rectList == null)
@@ -421,6 +476,9 @@ namespace PDF4LLM.Helpers
         /// <summary>
         /// Check if middle of rect is contained in any rect of the list
         /// </summary>
+        /// <param name="rect">Rectangle to test (slightly enlarged before comparison).</param>
+        /// <param name="rectList">Rectangles to search.</param>
+        /// <param name="portion">Minimum overlap fraction passed to <see cref="AlmostInBbox"/>.</param>
         public static bool AlmostInAnyBbox(Rect rect, IEnumerable<Rect> rectList, float portion = 0.5f)
         {
             if (rect == null || rectList == null)
@@ -446,6 +504,8 @@ namespace PDF4LLM.Helpers
         /// points in every direction.
         /// TODO: Consider using a sweeping line algorithm for this.
         /// </summary>
+        /// <param name="boxes">Input rectangles to merge where they overlap.</param>
+        /// <param name="enlarge">Points to expand each rectangle before overlap testing.</param>
         public static List<Rect> RefineBoxes(List<Rect> boxes, float enlarge = 0)
         {
             if (boxes == null || boxes.Count == 0)
@@ -492,6 +552,7 @@ namespace PDF4LLM.Helpers
         /// <summary>
         /// Determine the background color of the page
         /// </summary>
+        /// <param name="page">Page whose corner pixels are sampled for a uniform background.</param>
         public static float[] GetBgColor(Page page)
         {
             if (page == null)
@@ -577,6 +638,8 @@ namespace PDF4LLM.Helpers
         /// <summary>
         /// Check whether the rectangle contains significant drawings
         /// </summary>
+        /// <param name="box">Region to inspect for non-trivial vector graphics.</param>
+        /// <param name="paths">Drawing paths on the page.</param>
         public static bool IsSignificant(Rect box, List<PathInfo> paths)
         {
             if (box == null || paths == null || paths.Count == 0)
@@ -662,6 +725,8 @@ namespace PDF4LLM.Helpers
         /// <summary>
         /// Expand bbox to include all points
         /// </summary>
+        /// <param name="bbox">Starting bounding box as <c>(x0, y0, x1, y1)</c>.</param>
+        /// <param name="points">Points to include in the expanded box.</param>
         public static (float x0, float y0, float x1, float y1) ExpandBboxByPoints(
             (float x0, float y0, float x1, float y1) bbox,
             List<Point> points)
@@ -678,207 +743,122 @@ namespace PDF4LLM.Helpers
         }
 
         /// <summary>
-        /// Analyze the page for OCR decision
+        /// Analyze the page for OCR decision (delegates to <see cref="Ocr.AnalyzePage"/>).
         /// </summary>
-        private static (float variance, float edgeEnergy) GetPixmapStats(Page sourcePage, Rect clip, int dpi = 72)
+        /// <param name="page">Page to analyze.</param>
+        /// <param name="blocks">Optional pre-extracted text blocks; extracted when <c>null</c>.</param>
+        public static Dictionary<string, object> AnalyzePage(Page page, List<Block> blocks = null) =>
+            global::PDF4LLM.Ocr.AnalyzePage.Analyze(page, blocks, replaceOcr: false);
+
+        /// <summary><c>table_cleaner(page, blocks, tbbox)</c></summary>
+        /// <param name="blocks">Text/vector blocks from <c>extractDICT</c>.</param>
+        /// <param name="tableEntry">Layout table box to validate or split.</param>
+        public static (LayoutInfoEntry picture, LayoutInfoEntry table) TableCleaner(
+            List<Dictionary<string, object>> blocks,
+            LayoutInfoEntry tableEntry)
         {
-            using (Pixmap pix = sourcePage.GetPixmap(clip: clip, dpi: dpi))
+            if (tableEntry?.Bbox == null || blocks == null)
+                return (null, null);
+
+            Rect bbox = new Rect(tableEntry.Bbox);
+            var allVectors = new List<(IRect irect, bool isRect)>();
+            foreach (Dictionary<string, object> b in blocks)
             {
-                if (pix == null || pix.N < 1 || pix.W * pix.H == 0)
-                    return (0f, 0f);
-
-                byte[] samples = pix.SAMPLES;
-                if (samples == null || samples.Length == 0)
-                    return (0f, 0f);
-
-                int n = samples.Length;
-                double sum = 0;
-                for (int i = 0; i < n; i++)
-                    sum += samples[i];
-                double mean = sum / n;
-
-                double varAcc = 0;
-                for (int i = 0; i < n; i++)
-                {
-                    double d = samples[i] - mean;
-                    varAcc += d * d;
-                }
-                double variance = varAcc / n;
-
-                double edgeAcc = 0;
-                for (int i = 1; i < n; i++)
-                    edgeAcc += Math.Abs(samples[i] - samples[i - 1]);
-                double edge = edgeAcc / n;
-
-                return ((float)variance, (float)edge);
-            }
-        }
-
-        public static Dictionary<string, object> AnalyzePage(Page page, List<Block> blocks = null)
-        {
-            const float BAD_CHAR_THRESHOLD = 0.1f;
-            const float VEC_AREA_THRESHOLD = 0.05f;
-            const float IMG_VAR_THRESHOLD_HIGH = 50.0f;
-            const float IMG_EDGE_THRESHOLD_HIGH = 20.0f;
-
-            int charsTotal = 0;
-            int charsBad = 0;
-            
-            if (blocks == null)
-            {
-                TextPage textPage = page.GetTextPage(
-                    clip: new Rect(float.NegativeInfinity, float.NegativeInfinity, 
-                                   float.PositiveInfinity, float.PositiveInfinity),
-                    flags: FLAGS);
-                PageInfo pageInfo = textPage.ExtractDict(null, false);
-                blocks = pageInfo.Blocks;
-                textPage.Dispose();
-            }
-            
-            Rect imgRect = EmptyRect();
-            Rect txtRect = EmptyRect();
-            Rect vecRect = EmptyRect();
-            float imgArea = 0;
-            float txtArea = 0;
-            float vecArea = 0;
-            int ocrSpans = 0;
-            int vecSuspicious = 0;
-            float imgVarWeighted = 0;
-            float imgEdgeWeighted = 0;
-            
-            foreach (var b in blocks)
-            {
-                // Intersect each block bbox with the page rectangle.
-                // Note that this has no effect on text because of the clipping flags,
-                // which causes that we will not see ANY clipped text.
-                Rect bbox = IntersectRects(page.Rect, b.Bbox);
-                float area = bbox.Width * bbox.Height;
-                if (area == 0.0f) // Skip any empty block
+                if (!b.TryGetValue("type", out object typeObj) || Convert.ToInt32(typeObj) != 3)
                     continue;
-                
-                if (b.Type == 1) // Image block
+                if (!b.TryGetValue("bbox", out object bboxObj))
+                    continue;
+                Rect vb = DictBboxToRect(bboxObj);
+                if (!vb.Contains(new Point(bbox.X0, bbox.Y0)))
+                    continue;
+                bool isRect = b.TryGetValue("isrect", out object ir) && Convert.ToBoolean(ir);
+                allVectors.Add((new IRect(vb), isRect));
+            }
+
+            var tiltVectors = allVectors.Where(v => !v.isRect).ToList();
+            if (tiltVectors.Count == 0)
+                return (null, null);
+
+            float y0 = tiltVectors.Min(v => v.irect.Y0);
+            float y1 = tiltVectors.Max(v => v.irect.Y1);
+            float x0 = tiltVectors.Min(v => v.irect.X0);
+            float x1 = tiltVectors.Max(v => v.irect.X1);
+            Rect tilted = new Rect(x0, y0, x1, y1);
+
+            if (tilted.Width >= bbox.Width * 0.8f && tilted.Height >= bbox.Height * 0.8f)
+            {
+                return (new LayoutInfoEntry { Bbox = bbox, Class = "picture" }, null);
+            }
+
+            var spanRects = new List<Rect>();
+            foreach (Dictionary<string, object> b in blocks)
+            {
+                if (!b.TryGetValue("type", out object typeObj) || Convert.ToInt32(typeObj) != 0)
+                    continue;
+                if (!b.TryGetValue("lines", out object linesObj)
+                    || !(linesObj is List<Dictionary<string, object>> lines))
+                    continue;
+                foreach (Dictionary<string, object> line in lines)
                 {
-                    imgRect = JoinRects(new List<Rect> { imgRect, bbox });
-                    imgArea += area;
-                    var (varScore, edgeScore) = GetPixmapStats(page, bbox, dpi: 72);
-                    imgVarWeighted += varScore * area;
-                    imgEdgeWeighted += edgeScore * area;
-                }
-                else if (b.Type == 0) // Text block
-                {
-                    if (BboxIsEmpty(b.Bbox))
+                    if (!line.TryGetValue("spans", out object spansObj)
+                        || !(spansObj is List<Dictionary<string, object>> spans))
                         continue;
-                    
-                    if (b.Lines != null)
+                    foreach (Dictionary<string, object> span in spans)
                     {
-                        foreach (var line in b.Lines)
-                        {
-                            if (BboxIsEmpty(line.Bbox))
-                                continue;
-                            
-                            if (line.Spans != null)
-                            {
-                                foreach (var span in line.Spans)
-                                {
-                                    string text = span.Text ?? "";
-                                    if (IsWhite(text))
-                                        continue;
-                                    
-                                    Rect sr = IntersectRects(page.Rect, span.Bbox);
-                                    if (BboxIsEmpty(sr))
-                                        continue;
-                                    
-                                    if (span.Font == "GlyphLessFont"
-                                        || global::PDF4LLM.Ocr.TesseractApi.OcrText(span))
-                                    {
-                                        ocrSpans++;
-                                        continue;
-                                    }
-
-                                    if (span.Alpha == 0)
-                                        continue;
-
-                                    charsTotal += text.Trim().Length;
-                                    charsBad += text.Count(c => c == REPLACEMENT_CHARACTER);
-                                    txtRect = JoinRects(new List<Rect> { txtRect, sr });
-                                    txtArea += sr.Width * sr.Height;
-                                }
-                            }
-                        }
+                        if (!span.TryGetValue("bbox", out object sb))
+                            continue;
+                        Rect sr = DictBboxToRect(sb);
+                        if (bbox.Contains(sr))
+                            spanRects.Add(sr);
                     }
                 }
-                else if (
-                    true
-                    && b.Type == 3 // Vector block
-                    && 3 <= bbox.Width && bbox.Width <= 20 // Width limit for typical characters
-                    && 3 <= bbox.Height && bbox.Height <= 20 // Height limit for typical characters
-                )
+            }
+
+            if (tilted.Y1 - bbox.Y0 <= bbox.Height * 0.3f && tilted.Width >= bbox.Width * 0.7f)
+            {
+                tilted = new Rect(tilted.X0, tilted.Y0, tilted.X1, tilted.Y1 + 2);
+                foreach (Rect r in spanRects)
                 {
-                    // Potential character-like vector block
-                    vecSuspicious += 1;
-                    vecRect = JoinRects(new List<Rect> { vecRect, bbox });
-                    vecArea += area;
+                    if (tilted.Intersects(r))
+                        tilted |= r;
                 }
-            }
-            
-            // The rectangle on page covered by some content
-            Rect covered = JoinRects(new List<Rect> { imgRect, txtRect, vecRect });
-            if (BboxIsEmpty(covered))
-            {
-                return new Dictionary<string, object>
+
+                var picture = new LayoutInfoEntry
                 {
-                    ["covered"] = covered,
-                    ["img_joins"] = 0f,
-                    ["img_area"] = 0f,
-                    ["txt_joins"] = 0f,
-                    ["txt_area"] = 0f,
-                    ["vec_joins"] = 0f,
-                    ["vec_area"] = 0f,
-                    ["chars_total"] = 0,
-                    ["chars_bad"] = 0,
-                    ["ocr_spans"] = 0,
-                    ["img_var"] = 0f,
-                    ["img_edges"] = 0f,
-                    ["vec_suspicious"] = 0,
-                    ["needs_ocr"] = false,
-                    ["reason"] = null,
+                    Bbox = new Rect(bbox.X0, bbox.Y0, bbox.X1, tilted.Y1),
+                    Class = "picture"
                 };
+                var table = new LayoutInfoEntry
+                {
+                    Bbox = new Rect(bbox.X0, tilted.Y1 + 1, bbox.X1, bbox.Y1),
+                    Class = "table"
+                };
+                return (picture, table);
             }
 
-            float coverArea = Math.Abs((covered.X1 - covered.X0) * (covered.Y1 - covered.Y0));
-            float imgVar = (imgArea > 0 && coverArea > 0) ? (imgVarWeighted / imgArea) : 0f;
-            float imgEdges = (imgArea > 0 && coverArea > 0) ? (imgEdgeWeighted / imgArea) : 0f;
+            return (null, null);
+        }
 
-            var analysis = new Dictionary<string, object>
+        internal static Rect DictBboxToRect(object bboxObj)
+        {
+            if (bboxObj is Rect r)
+                return r;
+            if (bboxObj is float[] fa && fa.Length >= 4)
+                return new Rect(fa[0], fa[1], fa[2], fa[3]);
+            if (bboxObj is List<object> lo && lo.Count >= 4)
+                return new Rect(
+                    Convert.ToSingle(lo[0], CultureInfo.InvariantCulture),
+                    Convert.ToSingle(lo[1], CultureInfo.InvariantCulture),
+                    Convert.ToSingle(lo[2], CultureInfo.InvariantCulture),
+                    Convert.ToSingle(lo[3], CultureInfo.InvariantCulture));
+            if (bboxObj is IEnumerable<float> seq)
             {
-                ["covered"] = covered, // Page area covered by content
-                ["img_joins"] = coverArea > 0 ? Math.Abs(imgRect.Width * imgRect.Height) / coverArea : 0, // Fraction of area of the joined images
-                ["img_area"] = coverArea > 0 ? imgArea / coverArea : 0, // Fraction of sum of image area sizes
-                ["txt_joins"] = coverArea > 0 ? Math.Abs(txtRect.Width * txtRect.Height) / coverArea : 0, // Fraction of area of the joined text spans
-                ["txt_area"] = coverArea > 0 ? txtArea / coverArea : 0, // Fraction of sum of text span bbox area sizes
-                ["vec_area"] = coverArea > 0 ? vecArea / coverArea : 0, // Fraction of sum of vector character area sizes
-                ["vec_joins"] = coverArea > 0 ? Math.Abs(vecRect.Width * vecRect.Height) / coverArea : 0, // Fraction of area of the joined vector characters
-                ["chars_total"] = charsTotal, // Count of visible characters
-                ["chars_bad"] = charsBad, // Count of Replacement Unicode characters
-                ["ocr_spans"] = ocrSpans, // Count: text spans with ignored text (render mode 3)
-                ["img_var"] = imgVar,
-                ["img_edges"] = imgEdges,
-                ["vec_suspicious"] = vecSuspicious,
-            };
+                var list = seq.ToList();
+                if (list.Count >= 4)
+                    return new Rect(list[0], list[1], list[2], list[3]);
+            }
 
-            if (charsTotal > 0 && (float)charsBad / charsTotal > BAD_CHAR_THRESHOLD)
-                return new Dictionary<string, object>(analysis) { ["needs_ocr"] = true, ["reason"] = "chars_bad" };
-
-            if (ocrSpans > 0)
-                return new Dictionary<string, object>(analysis) { ["needs_ocr"] = true, ["reason"] = "ocr_spans" };
-
-            if (vecSuspicious > 3 && coverArea > 0 && (vecArea / coverArea) >= VEC_AREA_THRESHOLD)
-                return new Dictionary<string, object>(analysis) { ["needs_ocr"] = true, ["reason"] = "vec_text" };
-
-            if (imgArea > 0 && (imgVar > IMG_VAR_THRESHOLD_HIGH || imgEdges > IMG_EDGE_THRESHOLD_HIGH))
-                return new Dictionary<string, object>(analysis) { ["needs_ocr"] = true, ["reason"] = "img_text" };
-
-            return new Dictionary<string, object>(analysis) { ["needs_ocr"] = false, ["reason"] = null };
+            return MuPDF.NET.Utils.EMPTY_RECT();
         }
     }
 }

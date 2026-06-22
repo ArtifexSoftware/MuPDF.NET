@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
   <metadata>
     <id>MuPDF.NET</id>
-    <version>3.2.17-rc.5</version>
+    <version>$version$</version>
     <authors>Artifex Software Inc.</authors>
     <requireLicenseAcceptance>true</requireLicenseAcceptance>
     <license type="file">LICENSE.md</license>
@@ -15,7 +15,7 @@
       <group targetFramework="netstandard2.0">
         <dependency id="Microsoft.CSharp" version="4.7.0" exclude="Build,Analyzers" />
         <dependency id="MuPDF.Fonts" version="1.0.4" exclude="Build,Analyzers" />
-        <dependency id="MuPDF.NativeAssets" version="1.27.2" exclude="Build,Analyzers" />
+        <dependency id="MuPDF.NativeAssets" version="$mupdfVersion$" exclude="Build,Analyzers" />
         <dependency id="Newtonsoft.Json" version="13.0.4" exclude="Build,Analyzers" />
         <dependency id="SharpZipLib" version="1.4.2" exclude="Build,Analyzers" />
         <dependency id="SkiaSharp" version="3.119.1" exclude="Build,Analyzers" />
@@ -26,7 +26,7 @@
       <group targetFramework="net461">
         <dependency id="Microsoft.CSharp" version="4.7.0" exclude="Build,Analyzers" />
         <dependency id="MuPDF.Fonts" version="1.0.4" exclude="Build,Analyzers" />
-        <dependency id="MuPDF.NativeAssets" version="1.27.2" exclude="Build,Analyzers" />
+        <dependency id="MuPDF.NativeAssets" version="$mupdfVersion$" exclude="Build,Analyzers" />
         <dependency id="Newtonsoft.Json" version="13.0.4" exclude="Build,Analyzers" />
         <dependency id="SharpZipLib" version="1.4.2" exclude="Build,Analyzers" />
         <dependency id="SkiaSharp" version="3.119.1" exclude="Build,Analyzers" />
@@ -36,7 +36,7 @@
       <group targetFramework="net472">
         <dependency id="Microsoft.CSharp" version="4.7.0" exclude="Build,Analyzers" />
         <dependency id="MuPDF.Fonts" version="1.0.4" exclude="Build,Analyzers" />
-        <dependency id="MuPDF.NativeAssets" version="1.27.2" exclude="Build,Analyzers" />
+        <dependency id="MuPDF.NativeAssets" version="$mupdfVersion$" exclude="Build,Analyzers" />
         <dependency id="Newtonsoft.Json" version="13.0.4" exclude="Build,Analyzers" />
         <dependency id="SharpZipLib" version="1.4.2" exclude="Build,Analyzers" />
         <dependency id="SkiaSharp" version="3.119.1" exclude="Build,Analyzers" />
@@ -46,7 +46,7 @@
       <group targetFramework="net48">
         <dependency id="Microsoft.CSharp" version="4.7.0" exclude="Build,Analyzers" />
         <dependency id="MuPDF.Fonts" version="1.0.4" exclude="Build,Analyzers" />
-        <dependency id="MuPDF.NativeAssets" version="1.27.2" exclude="Build,Analyzers" />
+        <dependency id="MuPDF.NativeAssets" version="$mupdfVersion$" exclude="Build,Analyzers" />
         <dependency id="Newtonsoft.Json" version="13.0.4" exclude="Build,Analyzers" />
         <dependency id="SharpZipLib" version="1.4.2" exclude="Build,Analyzers" />
         <dependency id="SkiaSharp" version="3.119.1" exclude="Build,Analyzers" />
@@ -56,7 +56,7 @@
       <group targetFramework="net5.0">
         <dependency id="Microsoft.CSharp" version="4.7.0" exclude="Build,Analyzers" />
         <dependency id="MuPDF.Fonts" version="1.0.4" exclude="Build,Analyzers" />
-        <dependency id="MuPDF.NativeAssets" version="1.27.2" exclude="Build,Analyzers" />
+        <dependency id="MuPDF.NativeAssets" version="$mupdfVersion$" exclude="Build,Analyzers" />
         <dependency id="Newtonsoft.Json" version="13.0.4" exclude="Build,Analyzers" />
         <dependency id="SharpZipLib" version="1.4.2" exclude="Build,Analyzers" />
         <dependency id="SkiaSharp" version="3.119.1" exclude="Build,Analyzers" />
@@ -65,7 +65,7 @@
       <group targetFramework="net6.0">
         <dependency id="Microsoft.CSharp" version="4.7.0" exclude="Build,Analyzers" />
         <dependency id="MuPDF.Fonts" version="1.0.4" exclude="Build,Analyzers" />
-        <dependency id="MuPDF.NativeAssets" version="1.27.2" exclude="Build,Analyzers" />
+        <dependency id="MuPDF.NativeAssets" version="$mupdfVersion$" exclude="Build,Analyzers" />
         <dependency id="Newtonsoft.Json" version="13.0.4" exclude="Build,Analyzers" />
         <dependency id="SharpZipLib" version="1.4.2" exclude="Build,Analyzers" />
         <dependency id="SkiaSharp" version="3.119.1" exclude="Build,Analyzers" />
@@ -74,7 +74,7 @@
       <group targetFramework="net7.0">
         <dependency id="Microsoft.CSharp" version="4.7.0" exclude="Build,Analyzers" />
         <dependency id="MuPDF.Fonts" version="1.0.4" exclude="Build,Analyzers" />
-        <dependency id="MuPDF.NativeAssets" version="1.27.2" exclude="Build,Analyzers" />
+        <dependency id="MuPDF.NativeAssets" version="$mupdfVersion$" exclude="Build,Analyzers" />
         <dependency id="Newtonsoft.Json" version="13.0.4" exclude="Build,Analyzers" />
         <dependency id="SharpZipLib" version="1.4.2" exclude="Build,Analyzers" />
         <dependency id="SkiaSharp" version="3.119.1" exclude="Build,Analyzers" />
@@ -83,7 +83,7 @@
       <group targetFramework="net8.0">
         <dependency id="Microsoft.CSharp" version="4.7.0" exclude="Build,Analyzers" />
         <dependency id="MuPDF.Fonts" version="1.0.4" exclude="Build,Analyzers" />
-        <dependency id="MuPDF.NativeAssets" version="1.27.2" exclude="Build,Analyzers" />
+        <dependency id="MuPDF.NativeAssets" version="$mupdfVersion$" exclude="Build,Analyzers" />
         <dependency id="Newtonsoft.Json" version="13.0.4" exclude="Build,Analyzers" />
         <dependency id="SharpZipLib" version="1.4.2" exclude="Build,Analyzers" />
         <dependency id="SkiaSharp" version="3.119.1" exclude="Build,Analyzers" />

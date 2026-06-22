@@ -41,6 +41,9 @@ public sealed class AiDocumentCollection
     /// <summary>
     /// Phase 3: retrieve relevant chunks and ask GPT-4o (or configured chat model) for an answer.
     /// </summary>
+    /// <param name="question">Natural-language question to answer from indexed PDF content.</param>
+    /// <param name="topK">Maximum number of chunks to retrieve; uses the connector default when <see langword="null"/>.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     public async Task<string> AskAsync(
         string question,
         int? topK = null,
@@ -56,6 +59,8 @@ public sealed class AiDocumentCollection
     }
 
     /// <summary>Phase 3: summarize one of the loaded documents by file name or path.</summary>
+    /// <param name="filePathOrName">Source file path or file name matching an indexed PDF.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     public async Task<string> SummarizeAsync(
         string filePathOrName,
         CancellationToken cancellationToken = default)
@@ -77,6 +82,10 @@ public sealed class AiDocumentCollection
     /// <summary>
     /// Phase 2/3: semantic search — retrieval only, no LLM reasoning.
     /// </summary>
+    /// <param name="query">Natural-language search query.</param>
+    /// <param name="topK">Maximum number of results; uses the connector default when <see langword="null"/>.</param>
+    /// <param name="sourceFileName">Optional file-name filter to restrict results to one PDF.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     public async Task<IReadOnlyList<SearchResult>> SearchAsync(
         string query,
         int? topK = null,

@@ -6,12 +6,10 @@ using mupdf;
 
 namespace PDF4LLM.Ocr
 {
-    /// <summary>
-    /// Tesseract-oriented OCR API and page/span helpers, aligned with pymupdf4llm.ocr.tesseract_api.
-    /// </summary>
+    /// <summary>Tesseract OCR integration.</summary>
     public static class TesseractApi
     {
-        public const char ReplacementUnicode = '\uFFFD';  // Unicode Replacement Character
+        public const char ReplacementUnicode = '\uFFFD';
 
         public static string Tessdata => Utils.TESSDATA_PREFIX;
 
@@ -24,33 +22,26 @@ namespace PDF4LLM.Ocr
             }
         }
 
-        /// <summary>
-        /// Mirrors pymupdf4llm.ocr.tesseract_api.ocr_text(span).
-        /// </summary>
+        /// <summary>Whether span text came from OCR.</summary>
+        /// <param name="span">Text span to inspect.</param>
         public static bool OcrText(Span span)
         {
-            int flags = (int)(span?.CharFlags ?? 0);
-            if (flags == 0)
-                flags = (int)(span?.Flags ?? 0);
-            if ((flags & 32) == 0 && (flags & 16) == 0)
-                return true;
-            return false;
+            uint flags = span?.CharFlags ?? 0;
+            if ((flags & (uint)mupdf.mupdf.FZ_STEXT_STROKED) != 0)
+                return false;
+            if ((flags & (uint)mupdf.mupdf.FZ_STEXT_FILLED) != 0)
+                return false;
+            return true;
         }
 
         /// <summary>
-        /// This callback function performs OCR on the given page.
-        ///
-        /// It uses RapidOCR for text region detection and Tesseract OCR for text
-        /// recognition in each identified region (boundary box).
-        ///
-        /// If a Pixmap is provided, the DPI parameter is ignored. Otherwise, an RGB
-        /// Pixmap is created from the page at the specified DPI.
-        /// The DPI parameter is also used if extractable text is present.
-        ///
-        /// We ensure that legible extractable text is excluded from OCR. If present
-        /// on page we make a temporary copy without such text and perform OCR
-        /// on that copy.
+        /// Perform OCR on the given page, excluding legible extractable text.
         /// </summary>
+        /// <param name="page">Page to OCR.</param>
+        /// <param name="dpi">Rendering DPI for the culled pixmap when none is supplied.</param>
+        /// <param name="pixmap">Optional pre-rendered pixmap; created when <c>null</c>.</param>
+        /// <param name="language">Tesseract language code (e.g. <c>eng</c>).</param>
+        /// <param name="keepOcrText">When <c>true</c>, skip OCR if the page already contains OCR spans.</param>
         public static void ExecOcr(
             Page page,
             int dpi = 300,
@@ -58,95 +49,84 @@ namespace PDF4LLM.Ocr
             string language = "eng",
             bool keepOcrText = false)
         {
-            string tessdata = Tessdata;
-            if (string.IsNullOrEmpty(tessdata))
+            if (string.IsNullOrEmpty(Tessdata))
                 return;
 
-            TextPage textPage = page.GetTextPage(flags: (int)TextFlags.TEXT_ACCURATE_BBOXES);
-            PageInfo pageInfo = textPage.ExtractDict(null, false);
-            List<Block> textBlocks = pageInfo.Blocks ?? new List<Block>();
-
-            // get bboxes with significant legible text on page
-            var spans = new List<Rect>();
-            var fffdSpans = new List<Rect>();
-            foreach (Block b in textBlocks)
+            using (DisplayList displaylist = page.GetDisplayList())
+            using (TextPage stextPage = displaylist.GetTextPage((int)TextFlags.TEXT_ACCURATE_BBOXES))
             {
-                if (b?.Lines == null)
-                    continue;
-                foreach (Line l in b.Lines)
-                {
-                    if (l?.Spans == null)
-                        continue;
-                    foreach (Span s in l.Spans)
-                    {
-                        if (OcrText(s))
-                        {
-                            if (keepOcrText)
-                                spans.Add(new Rect(s.Bbox));
-                            else
-                                fffdSpans.Add(new Rect(s.Bbox));
-                            continue;
-                        }
+                PageInfo pageInfo = stextPage.ExtractDict(null, false);
+                List<Block> textBlocks = pageInfo.Blocks ?? new List<Block>();
 
-                        string text = s.Text ?? "";
-                        if (s.Chars != null && s.Chars.Count > 0)
-                            text = string.Join("", s.Chars.Select(c => c.C));
-                        if (text.Contains(ReplacementUnicode))
-                            fffdSpans.Add(new Rect(s.Bbox));
-                        else
-                            spans.Add(new Rect(s.Bbox));
+                var spans = new List<Rect>();
+                var fffdSpans = new List<Rect>();
+                var ocrSpans = new List<Rect>();
+
+                foreach (Block b in textBlocks)
+                {
+                    if (b?.Lines == null)
+                        continue;
+                    foreach (Line l in b.Lines)
+                    {
+                        if (l?.Spans == null)
+                            continue;
+                        foreach (Span s in l.Spans)
+                        {
+                            if (OcrText(s))
+                            {
+                                ocrSpans.Add(s.Bbox);
+                            }
+                            else
+                            {
+                                string text = s.Text ?? "";
+                                if (s.Chars != null && s.Chars.Count > 0)
+                                    text = string.Join("", s.Chars.Select(c => c.C));
+                                if (text.Contains(ReplacementUnicode))
+                                    fffdSpans.Add(s.Bbox);
+                                else
+                                    spans.Add(s.Bbox);
+                            }
+                        }
                     }
                 }
-            }
 
-            textPage.Dispose();
+                if (ocrSpans.Count > 0 && keepOcrText)
+                    return;
 
-            if (spans.Count > 0)
-            {
-                Document tempPdf = new Document();  // create a temporary PDF in memory
-                tempPdf.InsertPdf(
-                    page.Parent,
-                    fromPage: page.Number,
-                    toPage: page.Number);
-                Page tempPage = tempPdf.LoadPage(0);
-                foreach (Rect sbbox in spans)
-                    tempPage.AddRedactAnnot(sbbox);
+                bool ownPixmap = pixmap == null;
+                if (ownPixmap)
+                    pixmap = GetCulledPixmap.GetPixmap(displaylist, dpi, spans, page);
 
-                tempPage.ApplyRedactions(
-                    images: mupdf.mupdf.PDF_REDACT_IMAGE_NONE,
-                    graphics: mupdf.mupdf.PDF_REDACT_LINE_ART_NONE,
-                    text: mupdf.mupdf.PDF_REDACT_TEXT_REMOVE);
+                try
+                {
+                    byte[] ocrPdfBytes = pixmap.PdfOCR2Bytes(
+                        compress: true,
+                        language: language,
+                        tessdata: Tessdata);
 
-                pixmap = tempPage.GetPixmap(dpi: dpi);
-                tempPdf.Close();
-            }
+                    using (Document tempPdf = new Document(ocrPdfBytes, fileType: "pdf"))
+                    {
+                        Page tempPage = tempPdf.LoadPage(0);
+                        tempPage.AddRedactAnnot(tempPage.Rect);
+                        tempPage.ApplyRedactions(
+                            images: mupdf.mupdf.PDF_REDACT_IMAGE_REMOVE,
+                            graphics: mupdf.mupdf.PDF_REDACT_LINE_ART_REMOVE_IF_TOUCHED,
+                            text: mupdf.mupdf.PDF_REDACT_TEXT_NONE);
 
-            if (pixmap == null)
-                pixmap = page.GetPixmap(dpi: dpi);
+                        page.AddRedactAnnot(page.Rect);
+                        page.ApplyRedactions(
+                            images: mupdf.mupdf.PDF_REDACT_IMAGE_NONE,
+                            graphics: mupdf.mupdf.PDF_REDACT_LINE_ART_NONE,
+                            text: mupdf.mupdf.PDF_REDACT_TEXT_REMOVE);
 
-            if (fffdSpans.Count > 0)
-            {
-                foreach (Rect sbbox in fffdSpans)
-                    page.AddRedactAnnot(sbbox);
-                page.ApplyRedactions(
-                    images: mupdf.mupdf.PDF_REDACT_IMAGE_NONE,
-                    graphics: mupdf.mupdf.PDF_REDACT_LINE_ART_NONE,
-                    text: mupdf.mupdf.PDF_REDACT_TEXT_REMOVE);
-            }
-
-            byte[] ocrPdfBytes = pixmap.PdfOCR2Bytes(compress: true, language: language, tessdata: tessdata);
-            pixmap.Dispose();
-
-            using (Document tempPdf = new Document(ocrPdfBytes, fileType: "pdf"))
-            {
-                Page tempPage = tempPdf.LoadPage(0);
-                tempPage.AddRedactAnnot(tempPage.Rect);
-                tempPage.ApplyRedactions(
-                    images: mupdf.mupdf.PDF_REDACT_IMAGE_REMOVE,
-                    graphics: mupdf.mupdf.PDF_REDACT_LINE_ART_REMOVE_IF_TOUCHED,
-                    text: mupdf.mupdf.PDF_REDACT_TEXT_NONE);
-
-                page.ShowPdfPage(page.Rect, tempPdf, 0);
+                        page.ShowPdfPage(page.Rect, tempPdf, 0);
+                    }
+                }
+                finally
+                {
+                    if (ownPixmap)
+                        pixmap?.Dispose();
+                }
             }
         }
     }

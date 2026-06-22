@@ -1,38 +1,37 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using MuPDF.NET;
 using PDF4LLM.Helpers;
+using PDF4LLM.Layout;
 using PDF4LLM.Llama;
 
 namespace PDF4LLM
 {
-    /// <summary>
-    /// Main entry point for PDF4LLM (to_markdown / to_json / to_text / parse_document / get_key_values / use_layout / load_ai).
-    /// </summary>
+    /// <summary>PDF extraction and layout-to-markdown API.</summary>
     public static partial class PdfExtractor
     {
         static PdfExtractor()
         {
-            string[] parts = MuPDF.NET.Utils.VersionBind.Split('-')[0].Split('.');
-            var mupdfTuple = (
-                int.Parse(parts[0]),
-                parts.Length > 1 ? int.Parse(parts[1]) : 0,
-                parts.Length > 2 ? int.Parse(parts[2]) : 0);
-            var req = VersionInfo.MinimumMuPDFVersion;
-            if (mupdfTuple != req)
+            string bind = MuPDF.NET.Utils.VersionBind.Split('-')[0];
+            string required = VersionInfo.RequiredPyMuPDF.Split('-')[0];
+            if (!string.Equals(bind, required, StringComparison.Ordinal))
             {
                 throw new InvalidOperationException(
-                    $"Requires MuPDF {req} (PDF4LLM {VersionInfo.Version}), but MuPDF.NET reports {MuPDF.NET.Utils.VersionBind}");
+                    $"PDF4LLM {VersionInfo.Version} requires PyMuPDF {VersionInfo.RequiredPyMuPDF}, " +
+                    $"but MuPDF.NET reports VersionBind {MuPDF.NET.Utils.VersionBind}.");
             }
 
-            // Layout is opt-in: register a provider via SetLayoutProvider, then SetUseLayout(true).
-            UseLayout = false;
+            // Always attempt to use Layout by default.
+            if (PyMuPdfLayout.IsAvailable)
+                SetUseLayout(true);
+            else
+                SetUseLayout(false);
         }
 
-        /// <summary>Package version string (<c>Version</c> / semantic version tuple).</summary>
+        /// <summary>Package version string.</summary>
         public static string Version => VersionInfo.Version;
 
+        /// <summary>Semantic version as (major, minor, patch).</summary>
         public static (int major, int minor, int patch) VersionTuple
         {
             get
@@ -45,25 +44,40 @@ namespace PDF4LLM
             }
         }
 
-        /// <summary>
-        /// When <c>true</c> (default), <see cref="ToMarkdown(MuPDF.NET.Document)"/>, <see cref="ToJson(MuPDF.NET.Document)"/>, <see cref="ToText(MuPDF.NET.Document)"/> use the layout pipeline
-        /// (<see cref="DocumentLayout.ParseDocument"/>). When <c>false</c>, <see cref="ToMarkdown(MuPDF.NET.Document)"/> uses the legacy
-        /// <see cref="MuPdfRag.ToMarkdown"/> legacy RAG path when layout is disabled.
-        /// <see cref="ToJson(MuPDF.NET.Document)"/> and <see cref="ToText(MuPDF.NET.Document)"/> require layout mode in this port.
-        /// Path overloads open the file for the duration of the call, then dispose it.
-        /// </summary>
+        /// <summary>When true, export methods use the layout pipeline.</summary>
         public static bool UseLayout { get; set; }
 
-        /// <summary>
-        /// LlamaIndex-compatible <see cref="PDFMarkdownReader"/>.
-        /// </summary>
+        /// <summary>Returns a LlamaIndex-compatible PDF markdown reader.</summary>
+        /// <param name="metaFilter">Optional callback to transform per-page metadata before documents are returned.</param>
         public static PDFMarkdownReader LlamaMarkdownReader(
             Func<Dictionary<string, object>, Dictionary<string, object>> metaFilter = null)
         {
             return new PDFMarkdownReader(metaFilter);
         }
 
-        /// <summary>Convert document to Markdown.</summary>
+        /// <summary>Convert a document to Markdown.</summary>
+        /// <param name="doc">PDF document to convert (required for in-memory or non-path sources).</param>
+        /// <param name="header">When <see langword="true"/>, include page-header regions in the output.</param>
+        /// <param name="footer">When <see langword="true"/>, include page-footer regions in the output.</param>
+        /// <param name="pages">0-based page indices to process; <see langword="null"/> processes all pages.</param>
+        /// <param name="writeImages">When <see langword="true"/>, write image files and emit Markdown image references.</param>
+        /// <param name="embedImages">When <see langword="true"/>, embed images as base64 in the Markdown (mutually exclusive with <paramref name="writeImages"/>).</param>
+        /// <param name="imagePath">Folder for written images when <paramref name="writeImages"/> is <see langword="true"/>.</param>
+        /// <param name="imageFormat">Image file extension/format (for example <c>png</c> or <c>jpg</c>).</param>
+        /// <param name="filename">Base file name used for image output when <paramref name="doc"/> has no path.</param>
+        /// <param name="forceText">When <see langword="true"/>, extract text even from picture regions (after image references).</param>
+        /// <param name="pageChunks">When <see langword="true"/>, return JSON page-chunk structures instead of one Markdown string (layout mode).</param>
+        /// <param name="pageSeparators">When <see langword="true"/>, insert debug separators between pages.</param>
+        /// <param name="dpi">Resolution in dots per inch for extracted images.</param>
+        /// <param name="ocrDpi">Resolution in dots per inch for OCR page rendering (layout mode).</param>
+        /// <param name="pageWidth">Virtual page width for reflowable documents (legacy mode only).</param>
+        /// <param name="pageHeight">Virtual page height for reflowable documents; <see langword="null"/> means unlimited height (legacy mode only).</param>
+        /// <param name="ignoreCode">When <see langword="true"/>, do not apply monospace/code-block formatting.</param>
+        /// <param name="showProgress">When <see langword="true"/>, print a progress indicator while converting.</param>
+        /// <param name="useOcr">When <see langword="true"/>, apply OCR where the pipeline decides it is beneficial (layout mode).</param>
+        /// <param name="ocrLanguage">Tesseract language code(s), for example <c>eng</c> or <c>eng+deu</c> (layout mode).</param>
+        /// <param name="forceOcr">When <see langword="true"/>, OCR every page regardless of heuristics (layout mode).</param>
+        /// <param name="ocrFunction">Custom per-page OCR callback; <see langword="null"/> uses the built-in engine (layout mode).</param>
         public static string ToMarkdown(
             Document doc,
             bool header = true,
@@ -151,9 +165,29 @@ namespace PDF4LLM
                 pageChunks: pageChunks);
         }
 
-        /// <summary>
-        /// Opens <paramref name="path"/> for the duration of the call; same behavior as the overload taking <see cref="MuPDF.NET.Document"/>.
-        /// </summary>
+        /// <summary>Convert a PDF file path to Markdown.</summary>
+        /// <param name="path">Path to the PDF file.</param>
+        /// <param name="header">When <see langword="true"/>, include page-header regions in the output.</param>
+        /// <param name="footer">When <see langword="true"/>, include page-footer regions in the output.</param>
+        /// <param name="pages">0-based page indices to process; <see langword="null"/> processes all pages.</param>
+        /// <param name="writeImages">When <see langword="true"/>, write image files and emit Markdown image references.</param>
+        /// <param name="embedImages">When <see langword="true"/>, embed images as base64 in the Markdown (mutually exclusive with <paramref name="writeImages"/>).</param>
+        /// <param name="imagePath">Folder for written images when <paramref name="writeImages"/> is <see langword="true"/>.</param>
+        /// <param name="imageFormat">Image file extension/format (for example <c>png</c> or <c>jpg</c>).</param>
+        /// <param name="filename">Base file name used for image output.</param>
+        /// <param name="forceText">When <see langword="true"/>, extract text even from picture regions (after image references).</param>
+        /// <param name="pageChunks">When <see langword="true"/>, return JSON page-chunk structures instead of one Markdown string (layout mode).</param>
+        /// <param name="pageSeparators">When <see langword="true"/>, insert debug separators between pages.</param>
+        /// <param name="dpi">Resolution in dots per inch for extracted images.</param>
+        /// <param name="ocrDpi">Resolution in dots per inch for OCR page rendering (layout mode).</param>
+        /// <param name="pageWidth">Virtual page width for reflowable documents (legacy mode only).</param>
+        /// <param name="pageHeight">Virtual page height for reflowable documents; <see langword="null"/> means unlimited height (legacy mode only).</param>
+        /// <param name="ignoreCode">When <see langword="true"/>, do not apply monospace/code-block formatting.</param>
+        /// <param name="showProgress">When <see langword="true"/>, print a progress indicator while converting.</param>
+        /// <param name="useOcr">When <see langword="true"/>, apply OCR where the pipeline decides it is beneficial (layout mode).</param>
+        /// <param name="ocrLanguage">Tesseract language code(s), for example <c>eng</c> or <c>eng+deu</c> (layout mode).</param>
+        /// <param name="forceOcr">When <see langword="true"/>, OCR every page regardless of heuristics (layout mode).</param>
+        /// <param name="ocrFunction">Custom per-page OCR callback; <see langword="null"/> uses the built-in engine (layout mode).</param>
         public static string ToMarkdown(
             string path,
             bool header = true,
@@ -206,7 +240,21 @@ namespace PDF4LLM
                     ocrFunction);
         }
 
-        /// <summary>Layout JSON export (requires layout mode).</summary>
+        /// <summary>Convert a document to layout JSON.</summary>
+        /// <param name="doc">PDF document to convert.</param>
+        /// <param name="imageDpi">Resolution in dots per inch for extracted images.</param>
+        /// <param name="imageFormat">Image file extension/format (for example <c>png</c>).</param>
+        /// <param name="imagePath">Folder for written images when <paramref name="writeImages"/> is <see langword="true"/>.</param>
+        /// <param name="pages">0-based page indices to process; <see langword="null"/> processes all pages.</param>
+        /// <param name="ocrDpi">Resolution in dots per inch for OCR page rendering.</param>
+        /// <param name="writeImages">When <see langword="true"/>, write image files during parsing.</param>
+        /// <param name="embedImages">When <see langword="true"/>, embed images as base64 in the JSON model.</param>
+        /// <param name="showProgress">When <see langword="true"/>, print a progress indicator while converting.</param>
+        /// <param name="forceText">When <see langword="true"/>, extract text even from picture regions.</param>
+        /// <param name="useOcr">When <see langword="true"/>, apply OCR where the pipeline decides it is beneficial.</param>
+        /// <param name="ocrLanguage">Tesseract language code(s), for example <c>eng</c> or <c>eng+deu</c>.</param>
+        /// <param name="forceOcr">When <see langword="true"/>, OCR every page regardless of heuristics.</param>
+        /// <param name="ocrFunction">Custom per-page OCR callback; <see langword="null"/> uses the built-in engine.</param>
         public static string ToJson(
             Document doc,
             int imageDpi = 150,
@@ -225,7 +273,7 @@ namespace PDF4LLM
         {
             if (!UseLayout)
                 throw new NotSupportedException(
-                    "PdfExtractor.ToJson with UseLayout=false is not supported; the legacy MuPdf_rag path only implements ToMarkdown in this port. Set PdfExtractor.UseLayout = true.");
+                    "ToJson requires UseLayout=true.");
 
             var parsedDoc = DocumentLayout.ParseDocument(
                 doc,
@@ -247,9 +295,21 @@ namespace PDF4LLM
             return parsedDoc.ToJson(showProgress: showProgress);
         }
 
-        /// <summary>
-        /// Opens <paramref name="path"/> for the duration of the call; same behavior as the overload taking <see cref="MuPDF.NET.Document"/>.
-        /// </summary>
+        /// <summary>Convert a PDF file path to layout JSON.</summary>
+        /// <param name="path">Path to the PDF file.</param>
+        /// <param name="imageDpi">Resolution in dots per inch for extracted images.</param>
+        /// <param name="imageFormat">Image file extension/format (for example <c>png</c>).</param>
+        /// <param name="imagePath">Folder for written images when <paramref name="writeImages"/> is <see langword="true"/>.</param>
+        /// <param name="pages">0-based page indices to process; <see langword="null"/> processes all pages.</param>
+        /// <param name="ocrDpi">Resolution in dots per inch for OCR page rendering.</param>
+        /// <param name="writeImages">When <see langword="true"/>, write image files during parsing.</param>
+        /// <param name="embedImages">When <see langword="true"/>, embed images as base64 in the JSON model.</param>
+        /// <param name="showProgress">When <see langword="true"/>, print a progress indicator while converting.</param>
+        /// <param name="forceText">When <see langword="true"/>, extract text even from picture regions.</param>
+        /// <param name="useOcr">When <see langword="true"/>, apply OCR where the pipeline decides it is beneficial.</param>
+        /// <param name="ocrLanguage">Tesseract language code(s), for example <c>eng</c> or <c>eng+deu</c>.</param>
+        /// <param name="forceOcr">When <see langword="true"/>, OCR every page regardless of heuristics.</param>
+        /// <param name="ocrFunction">Custom per-page OCR callback; <see langword="null"/> uses the built-in engine.</param>
         public static string ToJson(
             string path,
             int imageDpi = 150,
@@ -286,7 +346,24 @@ namespace PDF4LLM
                     ocrFunction);
         }
 
-        /// <summary>Plain text export (layout pipeline).</summary>
+        /// <summary>Convert a document to plain text.</summary>
+        /// <param name="doc">PDF document to convert.</param>
+        /// <param name="filename">Logical file name stored in the parsed model metadata.</param>
+        /// <param name="header">When <see langword="true"/>, include page-header regions in the output.</param>
+        /// <param name="footer">When <see langword="true"/>, include page-footer regions in the output.</param>
+        /// <param name="pages">0-based page indices to process; <see langword="null"/> processes all pages.</param>
+        /// <param name="ignoreCode">When <see langword="true"/>, do not apply monospace/code-block formatting.</param>
+        /// <param name="showProgress">When <see langword="true"/>, print a progress indicator while converting.</param>
+        /// <param name="forceText">When <see langword="true"/>, extract text even from picture regions.</param>
+        /// <param name="ocrDpi">Resolution in dots per inch for OCR page rendering.</param>
+        /// <param name="useOcr">When <see langword="true"/>, apply OCR where the pipeline decides it is beneficial.</param>
+        /// <param name="ocrLanguage">Tesseract language code(s), for example <c>eng</c> or <c>eng+deu</c>.</param>
+        /// <param name="tableFormat">Table rendering style (for example <c>grid</c>).</param>
+        /// <param name="pageChunks">When <see langword="true"/>, return JSON page-chunk structures instead of one text string.</param>
+        /// <param name="tableMaxWidth">Maximum table width in characters for plain-text tables.</param>
+        /// <param name="tableMinColWidth">Minimum column width in characters for plain-text tables.</param>
+        /// <param name="forceOcr">When <see langword="true"/>, OCR every page regardless of heuristics.</param>
+        /// <param name="ocrFunction">Custom per-page OCR callback; <see langword="null"/> uses the built-in engine.</param>
         public static string ToText(
             Document doc,
             string filename = "",
@@ -308,7 +385,7 @@ namespace PDF4LLM
         {
             if (!UseLayout)
                 throw new NotSupportedException(
-                    "PdfExtractor.ToText with UseLayout=false is not supported; set PdfExtractor.UseLayout = true.");
+                    "ToText requires UseLayout=true.");
 
             var parsedDoc = DocumentLayout.ParseDocument(
                 doc,
@@ -335,9 +412,24 @@ namespace PDF4LLM
                 tableMinColWidth: tableMinColWidth);
         }
 
-        /// <summary>
-        /// Opens <paramref name="path"/> for the duration of the call; same behavior as the overload taking <see cref="MuPDF.NET.Document"/>.
-        /// </summary>
+        /// <summary>Convert a PDF file path to plain text.</summary>
+        /// <param name="path">Path to the PDF file.</param>
+        /// <param name="filename">Logical file name stored in the parsed model metadata.</param>
+        /// <param name="header">When <see langword="true"/>, include page-header regions in the output.</param>
+        /// <param name="footer">When <see langword="true"/>, include page-footer regions in the output.</param>
+        /// <param name="pages">0-based page indices to process; <see langword="null"/> processes all pages.</param>
+        /// <param name="ignoreCode">When <see langword="true"/>, do not apply monospace/code-block formatting.</param>
+        /// <param name="showProgress">When <see langword="true"/>, print a progress indicator while converting.</param>
+        /// <param name="forceText">When <see langword="true"/>, extract text even from picture regions.</param>
+        /// <param name="ocrDpi">Resolution in dots per inch for OCR page rendering.</param>
+        /// <param name="useOcr">When <see langword="true"/>, apply OCR where the pipeline decides it is beneficial.</param>
+        /// <param name="ocrLanguage">Tesseract language code(s), for example <c>eng</c> or <c>eng+deu</c>.</param>
+        /// <param name="tableFormat">Table rendering style (for example <c>grid</c>).</param>
+        /// <param name="pageChunks">When <see langword="true"/>, return JSON page-chunk structures instead of one text string.</param>
+        /// <param name="tableMaxWidth">Maximum table width in characters for plain-text tables.</param>
+        /// <param name="tableMinColWidth">Minimum column width in characters for plain-text tables.</param>
+        /// <param name="forceOcr">When <see langword="true"/>, OCR every page regardless of heuristics.</param>
+        /// <param name="ocrFunction">Custom per-page OCR callback; <see langword="null"/> uses the built-in engine.</param>
         public static string ToText(
             string path,
             string filename = "",
@@ -380,7 +472,23 @@ namespace PDF4LLM
                     ocrFunction);
         }
 
-        /// <summary>Parse the document into a <see cref="ParsedDocument"/>.</summary>
+        /// <summary>Parse a document into a structured layout model.</summary>
+        /// <param name="doc">PDF document to parse.</param>
+        /// <param name="filename">Logical file name stored in the parsed model metadata.</param>
+        /// <param name="imageDpi">Resolution in dots per inch for extracted images.</param>
+        /// <param name="imageFormat">Image file extension/format (for example <c>png</c>).</param>
+        /// <param name="imagePath">Folder for written images when <paramref name="writeImages"/> is <see langword="true"/>.</param>
+        /// <param name="ocrDpi">Resolution in dots per inch for OCR page rendering.</param>
+        /// <param name="pages">0-based page indices to process; <see langword="null"/> processes all pages.</param>
+        /// <param name="writeImages">When <see langword="true"/>, write image files during parsing.</param>
+        /// <param name="embedImages">When <see langword="true"/>, embed images as base64 in the parsed model.</param>
+        /// <param name="showProgress">When <see langword="true"/>, print a progress indicator while parsing.</param>
+        /// <param name="forceText">When <see langword="true"/>, extract text even from picture regions.</param>
+        /// <param name="useOcr">When <see langword="true"/>, apply OCR where the pipeline decides it is beneficial.</param>
+        /// <param name="ocrLanguage">Tesseract language code(s), for example <c>eng</c> or <c>eng+deu</c>.</param>
+        /// <param name="forceOcr">When <see langword="true"/>, OCR every page regardless of heuristics.</param>
+        /// <param name="keepOcrText">When <see langword="true"/>, retain OCR-generated text spans on the page.</param>
+        /// <param name="ocrFunction">Custom per-page OCR callback; <see langword="null"/> uses the built-in engine.</param>
         public static ParsedDocument ParseDocument(
             Document doc,
             string filename = "",
@@ -401,7 +509,7 @@ namespace PDF4LLM
         {
             if (!UseLayout)
                 throw new NotSupportedException(
-                    "PdfExtractor.ParseDocument requires UseLayout=true (legacy rag path has no ParsedDocument).");
+                    "ParseDocument requires UseLayout=true.");
 
             return DocumentLayout.ParseDocument(
                 doc,
@@ -422,7 +530,13 @@ namespace PDF4LLM
                 ocrFunction: ocrFunction);
         }
 
-        /// <summary>Form field key/value extraction for interactive PDFs.</summary>
+        /// <summary>
+        /// Extract form fields and their values from a PDF document.
+        /// </summary>
+        /// <param name="doc">The document to read.</param>
+        /// <param name="xrefs">
+        /// When true, include xref numbers of form fields (useful with <see cref="Page.LoadWidget"/>).
+        /// </param>
         public static Dictionary<string, Dictionary<string, object>> GetKeyValues(
             Document doc,
             bool xrefs = false)
@@ -432,9 +546,21 @@ namespace PDF4LLM
             return new Dictionary<string, Dictionary<string, object>>();
         }
 
-        /// <summary>
-        /// Same as <see cref="GetKeyValues(Document,bool)"/> but logs ignored optional argument names.
-        /// </summary>
+        /// <summary>Extract form fields from a PDF file path.</summary>
+        /// <param name="path">Path to the PDF file.</param>
+        /// <param name="xrefs">When <see langword="true"/>, include widget xref numbers in the result.</param>
+        public static Dictionary<string, Dictionary<string, object>> GetKeyValues(string path, bool xrefs = false)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+                throw new ArgumentException("Path must not be null or whitespace.", nameof(path));
+            using (var doc = new Document(path))
+                return GetKeyValues(doc, xrefs);
+        }
+
+        /// <summary>Extract form fields; logs ignored optional argument names.</summary>
+        /// <param name="doc">PDF document containing interactive form fields.</param>
+        /// <param name="xrefs">When <see langword="true"/>, include widget xref numbers in the result.</param>
+        /// <param name="ignoredKeywordArgumentNames">Names of unsupported keyword arguments (logged as a warning).</param>
         public static Dictionary<string, Dictionary<string, object>> GetKeyValues(
             Document doc,
             bool xrefs,

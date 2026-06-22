@@ -5,16 +5,13 @@ using MuPDF.NET;
 
 namespace PDF4LLM.Llama
 {
-    /// <summary>
-    /// LlamaIndex-compatible PDF reader using PDF4LLM.
-    /// Ported and adapted from llama/pdf_markdown_reader.
-    /// Note: This is a C# implementation that provides similar functionality
-    /// to the original PDFMarkdownReader.
-    /// </summary>
+    /// <summary>Read PDF files and emit LlamaIndex documents.</summary>
     public class PDFMarkdownReader
     {
         public Func<Dictionary<string, object>, Dictionary<string, object>> MetaFilter { get; set; }
 
+        /// <summary>Creates a reader with optional metadata filtering.</summary>
+        /// <param name="metaFilter">Optional callback to transform per-page metadata before documents are returned.</param>
         public PDFMarkdownReader(Func<Dictionary<string, object>, Dictionary<string, object>> metaFilter = null)
         {
             MetaFilter = metaFilter;
@@ -23,53 +20,40 @@ namespace PDF4LLM.Llama
         /// <summary>
         /// Loads list of documents from PDF file and also accepts extra information in dict format.
         /// </summary>
-        /// <param name="filePath">
-        /// Path-like object (string or <c>Path</c>-like) pointing to the PDF file.
-        /// </param>
-        /// <param name="extraInfo">
-        /// Optional base metadata dictionary that is copied and enriched per page
-        /// (file path, page number, total pages, document metadata).
-        /// </param>
-        /// <param name="loadKwargs">
-        /// Optional keyword arguments controlling rendering:
-        /// <c>write_images</c>, <c>embed_images</c>, <c>image_path</c>,
-        /// <c>image_format</c>, <c>force_text</c>, <c>show_progress</c> – these are
-        /// forwarded to <see cref="Helpers.MuPdfRag.ToMarkdown()"/>.
-        /// </param>
-        /// <returns>
-        /// A list of <see cref="LlamaIndexDocument"/> instances, one per page, whose
-        /// <see cref="LlamaIndexDocument.Text"/> contains Markdown for that page and whose
-        /// <see cref="LlamaIndexDocument.ExtraInfo"/> holds page‑level metadata.
-        /// </returns>
+        /// <param name="filePath">Path to the PDF file (string or path-like object).</param>
+        /// <param name="extraInfo">Additional metadata merged into each page document's <see cref="LlamaIndexDocument.ExtraInfo"/>.</param>
+        /// <param name="loadKwargs">Optional keyword arguments forwarded to the Markdown extractor.</param>
         public List<LlamaIndexDocument> LoadData(
-            object filePath, // Can be Path or string
-            Dictionary<string, object> extraInfo = null,
+            object filePath,
+            object extraInfo = null,
             Dictionary<string, object> loadKwargs = null)
         {
-            if (filePath == null)
-                throw new ArgumentNullException(nameof(filePath));
+            if (!IsValidFilePath(filePath))
+                throw new ArgumentException("file_path must be a string or Path.");
 
-            string filePathStr = filePath is string str ? str : filePath.ToString();
-            if (!File.Exists(filePathStr))
-                throw new FileNotFoundException($"File not found: {filePathStr}");
-
+            Dictionary<string, object> extraDict;
             if (extraInfo == null)
-                extraInfo = new Dictionary<string, object>();
+                extraDict = new Dictionary<string, object>();
+            else if (extraInfo is Dictionary<string, object> dict)
+                extraDict = dict;
+            else
+                throw new ArgumentException("extra_info must be a dictionary.");
 
             if (loadKwargs == null)
                 loadKwargs = new Dictionary<string, object>();
 
-            // Extract text header information
+            string filePathStr = filePath is string s ? s : filePath.ToString();
+
             var hdrInfo = new Helpers.IdentifyHeaders(filePathStr);
 
             Document doc = new Document(filePathStr);
-            List<LlamaIndexDocument> docs = new List<LlamaIndexDocument>();
+            var docs = new List<LlamaIndexDocument>();
 
             try
             {
                 for (int i = 0; i < doc.PageCount; i++)
                 {
-                    var pageExtraInfo = new Dictionary<string, object>(extraInfo);
+                    var pageExtraInfo = new Dictionary<string, object>(extraDict);
                     docs.Add(ProcessDocPage(
                         doc, pageExtraInfo, filePathStr, i, hdrInfo, loadKwargs));
                 }
@@ -80,6 +64,15 @@ namespace PDF4LLM.Llama
             }
 
             return docs;
+        }
+
+        private static bool IsValidFilePath(object filePath)
+        {
+            if (filePath is string)
+                return true;
+            if (filePath is System.IO.FileInfo)
+                return true;
+            return filePath != null && filePath.GetType().Name == "Path";
         }
 
         private LlamaIndexDocument ProcessDocPage(
@@ -99,14 +92,7 @@ namespace PDF4LLM.Llama
                 doc,
                 pages: new List<int> { pageNumber },
                 hdrInfo: hdrInfo,
-                writeImages: loadKwargs.ContainsKey("write_images") && (bool)loadKwargs["write_images"],
-                embedImages: loadKwargs.ContainsKey("embed_images") && (bool)loadKwargs["embed_images"],
-                imagePath: loadKwargs.ContainsKey("image_path") ? (string)loadKwargs["image_path"] : "",
-                imageFormat: loadKwargs.ContainsKey("image_format") ? (string)loadKwargs["image_format"] : "png",
-                filename: filePath,
-                forceText: loadKwargs.ContainsKey("force_text") ? (bool)loadKwargs["force_text"] : true,
-                showProgress: loadKwargs.ContainsKey("show_progress") && (bool)loadKwargs["show_progress"]
-            );
+                loadKwargs);
 
             return new LlamaIndexDocument
             {
@@ -115,9 +101,7 @@ namespace PDF4LLM.Llama
             };
         }
 
-        /// <summary>
-        /// Process metas of a PDF document.
-        /// </summary>
+        /// <summary>Processes metas of a PDF document.</summary>
         private Dictionary<string, object> ProcessDocMeta(
             Document doc,
             string filePath,
@@ -127,12 +111,8 @@ namespace PDF4LLM.Llama
             if (extraInfo == null)
                 extraInfo = new Dictionary<string, object>();
 
-            // Add document metadata
-            var metadata = doc.MetaData;
-            foreach (var kvp in metadata)
-            {
+            foreach (var kvp in doc.MetaData)
                 extraInfo[kvp.Key] = kvp.Value;
-            }
 
             extraInfo["page"] = pageNumber + 1;
             extraInfo["total_pages"] = doc.PageCount;
@@ -142,9 +122,7 @@ namespace PDF4LLM.Llama
         }
     }
 
-    /// <summary>
-    /// Document structure for LlamaIndex compatibility
-    /// </summary>
+    /// <summary>LlamaIndex-compatible document payload.</summary>
     public class LlamaIndexDocument
     {
         public string Text { get; set; }

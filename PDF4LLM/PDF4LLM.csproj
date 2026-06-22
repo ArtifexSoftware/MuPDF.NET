@@ -7,9 +7,10 @@
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <PlatformFolder>$(Platform)</PlatformFolder>
     <PlatformFolder Condition="'$(PlatformFolder)' == 'AnyCPU'">.</PlatformFolder>
-    <Version>1.27.2.10</Version>
+    <Version>$(ArtifexPDF4LLMVersion)</Version>
     <NuspecFile>$(MSBuildProjectDirectory)\PDF4LLM.nuspec</NuspecFile>
-    <NuspecProperties>Configuration=$(Configuration);version=$(Version);PlatformFolder=$(PlatformFolder)</NuspecProperties>
+    <NuspecProperties>Configuration=$(Configuration);version=$(ArtifexPDF4LLMVersion);PlatformFolder=$(PlatformFolder);mupdfNetMinVersion=$(ArtifexMuPDFNetVersion)</NuspecProperties>
+    <NoWarn>$(NoWarn);NU5110;NU5111</NoWarn>
   </PropertyGroup>
   
   <PropertyGroup Condition="'$(OS)' == 'Windows_NT'">
@@ -51,5 +52,16 @@
   <ItemGroup>
     <InternalsVisibleTo Include="PDF4LLM.Test" />
   </ItemGroup>
+
+  <Target Name="SyncLayoutRequirements" BeforeTargets="GenerateNuspec">
+    <PropertyGroup>
+      <_LayoutRequirementsFile>$(MSBuildProjectDirectory)\scripts\requirements-layout.txt</_LayoutRequirementsFile>
+    </PropertyGroup>
+    <WriteLinesToFile
+      File="$(_LayoutRequirementsFile)"
+      Overwrite="true"
+      Encoding="UTF-8"
+      Lines="# Auto-synced from Versions.props (ArtifexPyMuPDFVersion / ArtifexPyMuPDF4LLMVersion).;pymupdf==$(ArtifexPyMuPDFVersion);pymupdf-layout==$(ArtifexPyMuPDF4LLMVersion)" />
+  </Target>
 
 </Project>

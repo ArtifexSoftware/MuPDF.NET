@@ -14,6 +14,9 @@ namespace PDF4LLM
         /// (<see cref="AiDocumentCollection.AskAsync"/>, <see cref="AiDocumentCollection.SearchAsync"/>).
         /// Requires <c>net8.0</c> (Microsoft.Extensions.AI).
         /// </summary>
+        /// <param name="pdfPaths">Paths to one or more PDF files to index.</param>
+        /// <param name="options">Pipeline configuration; uses in-memory development defaults when <see langword="null"/>.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
         public static Task<AiDocumentCollection> LoadAiAsync(
             IEnumerable<string> pdfPaths,
             MicrosoftAIConnectorOptions? options = null,

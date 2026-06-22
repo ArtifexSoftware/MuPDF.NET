@@ -1,41 +1,35 @@
-using System;
 using System.IO;
 using MuPDF.NET;
 using PDF4LLM;
 using PDF4LLM.Llama;
+using Xunit;
 
 namespace PDF4LLM.Test
 {
-    /// <summary>Port of pymupdf4llm/tests/test_376.py</summary>
-    [TestFixture]
-    public class Test376 : LLMTestBase
+    /// <summary>Port of <c>tests/test_376.py</c>.</summary>
+    [Collection("PDF4LLM")]
+    public class Test376
     {
         private const string TestClassName = nameof(Test376);
-        private static string Doc(string fileName) => ForTestClass(fileName, TestClassName);
-        private static string Out(string fileName) => ForOutput(fileName, TestClassName);
 
-        [Test]
+        private static string Out(string fileName) => _Path.ForOutput(fileName, TestClassName);
+
+        [Fact]
         public void test_376()
         {
             string path = Out("test_376_out.pdf");
-            try
+            using (var document = new Document())
             {
-                using (var document = new Document())
-                {
-                    document.NewPage();
-                    document.Save(path);
-                }
+                document.NewPage();
+                document.Save(path);
+            }
 
-                var reader = PdfExtractor.LlamaMarkdownReader();
-                var documents = reader.LoadData(path);
-                Assert.That(documents, Is.Not.Null);
-                Assert.That(documents.Count, Is.GreaterThan(0));
-            }
-            finally
-            {
-                //if (File.Exists(path))
-                //    File.Delete(path);
-            }
+            // reader = LlamaMarkdownReader()
+            PDFMarkdownReader reader = PdfExtractor.LlamaMarkdownReader();
+            // documents = reader.load_data(path)
+            var documents = reader.LoadData(path);
+            Assert.NotNull(documents);
+            Assert.NotEmpty(documents);
         }
     }
 }

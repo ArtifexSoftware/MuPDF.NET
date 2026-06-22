@@ -1,14 +1,18 @@
 namespace PDF4LLM
 {
-    /// <summary>
-    /// Version information for PDF4LLM (aligned with pymupdf4llm versions_file).
-    /// </summary>
+    /// <summary>PDF4LLM package version metadata.</summary>
     public static class VersionInfo
     {
-        /// <summary>Must match <see cref="MuPDF.NET.Utils.VersionBind"/> major.minor.patch.</summary>
-        public static readonly (int Major, int Minor, int Patch) MinimumMuPDFVersion = (1, 27, 2);
-        // MuPDF.NET Utils.VersionBind must match this triple (patch level of PyMuPDF bind).
+        /// <summary>PDF4LLM NuGet package version.</summary>
+        public const string Version = Artifex.Versions.PDF4LLM;
 
-        public const string Version = "1.27.2.10";
+        /// <summary>PyMuPDF bind version required from MuPDF.NET (<see cref="MuPDF.NET.Utils.VersionBind"/>).</summary>
+        public const string RequiredPyMuPDF = Artifex.Versions.PyMuPDF;
+
+        /// <summary>PyMuPDF4LLM / pymupdf-layout version used by the layout Python bridge.</summary>
+        public const string RequiredPyMuPDF4LLM = Artifex.Versions.PyMuPDF4LLM;
+
+        /// <summary>Native MuPDF version bundled with MuPDF.NET.</summary>
+        public const string RequiredMuPdf = Artifex.Versions.MuPdf;
     }
 }

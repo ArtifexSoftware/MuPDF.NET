@@ -50,6 +50,8 @@ public sealed class MicrosoftAIConnectorOptions
     /// In-memory pipeline for development and unit tests (no Azure credentials required).
     /// Uses a deterministic hash-based embedding generator; Ask/Summarize require <see cref="ChatClient"/>.
     /// </summary>
+    /// <param name="chatClient">Optional chat client for Ask/Summarize operations.</param>
+    /// <param name="embeddingDimensions">Vector size for the hash-based development embedding generator.</param>
     public static MicrosoftAIConnectorOptions CreateForDevelopment(
         IChatClient? chatClient = null,
         int embeddingDimensions = 128)

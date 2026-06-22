@@ -5,15 +5,20 @@ using MuPDF.NET;
 
 namespace PDF4LLM.Helpers
 {
-    /// <summary>
-    /// Multi-column page detection utilities.
-    /// Ported and adapted from LLM helpers.
-    /// </summary>
+    /// <summary>Multi-column text layout helpers.</summary>
     public static class MultiColumn
     {
         /// <summary>
         /// Determine bboxes which wrap a column on the page
         /// </summary>
+        /// <param name="page">Source page.</param>
+        /// <param name="footerMargin">Points to exclude from the bottom of the page.</param>
+        /// <param name="headerMargin">Points to exclude from the top of the page.</param>
+        /// <param name="noImageText">When <c>true</c>, ignore text drawn on top of images.</param>
+        /// <param name="textpage">Optional pre-built text page; created when <c>null</c>.</param>
+        /// <param name="paths">Optional drawing paths; page drawings are used when <c>null</c>.</param>
+        /// <param name="avoid">Additional rectangles (e.g. tables, graphics) to treat like images.</param>
+        /// <param name="ignoreImages">When <c>true</c>, do not collect image bounding boxes.</param>
         public static List<Rect> ColumnBoxes(
             Page page,
             float footerMargin = 50,

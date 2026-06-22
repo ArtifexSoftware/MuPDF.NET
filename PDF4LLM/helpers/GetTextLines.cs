@@ -14,10 +14,7 @@ namespace PDF4LLM.Helpers
         public List<ExtendedSpan> Spans { get; set; }
     }
 
-    /// <summary>
-    /// Text line extraction utilities.
-    /// Ported and adapted from LLM helpers.
-    /// </summary>
+    /// <summary>Text line extraction utilities.</summary>
     public static class GetTextLines
     {
         /// <summary>

@@ -24,13 +24,14 @@ namespace MuPDF.NET
         /// MuPDF library version as <c>(major, minor, patch)</c> (legacy <c>MUPDF_VERSION</c>).
         /// </summary>
         public static readonly (int Major, int Minor, int Patch) MupdfVersion =
-            ParseVersionTuple(Utils.VERSION.Item1);
+            ParseVersionTuple(Artifex.Versions.MuPdf);
 
         /// <summary>
-        /// Combined version info: MuPDF.NET build, MuPDF string, optional timestamp (legacy <c>VERSION</c>).
+        /// Combined version info matching PyMuPDF <c>version</c>:
+        /// (PyMuPDF, native MuPDF, build timestamp).
         /// </summary>
-        public static readonly (string MuPdfNetVersion, string MupdfVersion, string BuildTimestamp) Version =
-            (Utils.pymupdf_version, Utils.VERSION.Item2, null);
+        public static readonly (string PyMuPdfVersion, string MuPdfVersion, string BuildTimestamp) Version =
+            (Artifex.Versions.PyMuPDF, Artifex.Versions.MuPdf, null);
 
         /// <summary>Small value used for floating-point comparisons.</summary>
         public const float Epsilon = 1e-5f;

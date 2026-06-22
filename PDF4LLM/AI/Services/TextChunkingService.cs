@@ -11,6 +11,8 @@ public sealed class TextChunkingService : IChunkingService
     private readonly int _maxChars;
     private readonly int _overlapChars;
 
+    /// <param name="maxChars">Maximum characters per chunk.</param>
+    /// <param name="overlapChars">Character overlap between consecutive chunks.</param>
     public TextChunkingService(int maxChars = 1000, int overlapChars = 100)
     {
         _maxChars = Math.Max(200, maxChars);
@@ -49,6 +51,9 @@ public sealed class TextChunkingService : IChunkingService
         return chunks;
     }
 
+    /// <param name="text">Source text to split.</param>
+    /// <param name="maxChars">Maximum characters per part.</param>
+    /// <param name="overlapChars">Character overlap between consecutive parts.</param>
     public static IReadOnlyList<string> SplitWithOverlap(string text, int maxChars, int overlapChars)
     {
         if (text.Length <= maxChars)
