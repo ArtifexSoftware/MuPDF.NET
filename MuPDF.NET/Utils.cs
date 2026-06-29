@@ -689,15 +689,15 @@ namespace MuPDF.NET
         /// </summary>
         /// <param name="doc">The parent document.</param>
         /// <param name="xref">The font object's xref number.</param>
-        public static (string fontname, string ext, string stype, float asc, float dsc) GetFontProperties(
+        public static (string fontName, string ext, string stype, float asc, float dsc) GetFontProperties(
             Document doc, int xref)
         {
-            var (fontname, ext, stype, buffer) = doc.ExtractFont(xref);
+            var (fontName, ext, stype, buffer) = doc.ExtractFont(xref);
             float asc = 0.8f;
             float dsc = -0.2f;
 
             if (string.IsNullOrEmpty(ext))
-                return (fontname, ext, stype, asc, dsc);
+                return (fontName, ext, stype, asc, dsc);
 
             if (buffer != null && buffer.Length > 0)
             {
@@ -719,14 +719,14 @@ namespace MuPDF.NET
                     asc *= 1.2f;
                     dsc *= 1.2f;
                 }
-                return (fontname, ext, stype, asc, dsc);
+                return (fontName, ext, stype, asc, dsc);
             }
 
             if (ext != "n/a")
             {
                 try
                 {
-                    using var font = new Font(fontName: fontname);
+                    using var font = new Font(fontName: fontName);
                     asc = font.Ascender;
                     dsc = font.Descender;
                 }
@@ -741,7 +741,7 @@ namespace MuPDF.NET
                 asc *= 1.2f;
                 dsc *= 1.2f;
             }
-            return (fontname, ext, stype, asc, dsc);
+            return (fontName, ext, stype, asc, dsc);
         }
 
         /// <summary>Current timestamp in PDF date format (PyMuPDF <c>get_pdf_now</c>).</summary>
@@ -762,16 +762,16 @@ namespace MuPDF.NET
         /// <summary>
         /// Calculate length of a string for a built-in font (PyMuPDF <c>get_text_length</c>).
         /// </summary>
-        /// <param name="fontname">Name of the font.</param>
-        /// <param name="fontsize">Font size points.</param>
+        /// <param name="fontName">Name of the font.</param>
+        /// <param name="fontSize">Font size points.</param>
         /// <param name="encoding">Encoding to use, 0=Latin (default), 1=Greek, 2=Cyrillic.</param>
         /// <returns>Length of text.</returns>
-        public static float GetTextLength(string text, string fontname = "helv", float fontsize = 11, int encoding = 0)
+        public static float GetTextLength(string text, string fontName = "helv", float fontSize = 11, int encoding = 0)
         {
             // fontname = fontname.lower()
-            fontname = (fontname ?? "helv").ToLowerInvariant();
+            fontName = (fontName ?? "helv").ToLowerInvariant();
             // basename = Base14_fontdict.get(fontname, None)
-            Constants.Base14FontDict.TryGetValue(fontname, out string? basename);
+            Constants.Base14FontDict.TryGetValue(fontName, out string? basename);
 
             // glyphs = None
             (int glyph, double width)[]? glyphs = null;
@@ -797,31 +797,31 @@ namespace MuPDF.NET
                         w += glyphs[183].width;
                 }
                 // return w * fontsize
-                return (float)(w * fontsize);
+                return (float)(w * fontSize);
             }
 
-            // if fontname in Base14_fontdict.keys():
-            if (Constants.Base14FontDict.ContainsKey(fontname))
+            // if fontName in Base14_fontdict.keys():
+            if (Constants.Base14FontDict.ContainsKey(fontName))
             {
                 // return util_measure_string(
-                //     text, Base14_fontdict[fontname], fontsize, encoding
+                //     text, Base14_fontdict[fontName], fontsize, encoding
                 // )
                 return Helpers.UtilMeasureString(
                     text,
-                    Constants.Base14FontDict[fontname],
-                    fontsize,
+                    Constants.Base14FontDict[fontName],
+                    fontSize,
                     encoding);
             }
 
             // if fontname in (
             // ):
             //     return len(text) * fontsize
-            if (fontname is "china-t" or "china-s" or "china-ts" or "china-ss" or
+            if (fontName is "china-t" or "china-s" or "china-ts" or "china-ss" or
                 "japan" or "japan-s" or "korea" or "korea-s")
-                return text.Length * fontsize;
+                return text.Length * fontSize;
 
-            // raise ValueError(f"Font '{fontname}' is unsupported")
-            throw new ValueErrorException($"Font '{fontname}' is unsupported");
+            // raise ValueError(f"Font '{fontName}' is unsupported")
+            throw new ValueErrorException($"Font '{fontName}' is unsupported");
         }
 
         /// <summary>
@@ -839,7 +839,7 @@ namespace MuPDF.NET
             string fontName = "helv",
             float fontSize = 11,
             int encoding = 0
-        ) => GetTextLength(text, fontname: fontName, fontsize: fontSize, encoding: encoding);
+        ) => GetTextLength(text, fontName: fontName, fontSize: fontSize, encoding: encoding);
 
         /// <summary>
         /// Basic image metadata (PyMuPDF <c>image_profile</c>): width, height, colorspace, bpc, ext, etc.

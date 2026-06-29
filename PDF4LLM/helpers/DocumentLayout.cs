@@ -1206,6 +1206,8 @@ namespace PDF4LLM.Helpers
                 if (embedImages && writeImages)
                     throw new ArgumentException("Cannot both embed and write images.");
 
+                LayoutParseHelpers.LogLayoutStatus();
+
                 OcrMode useOcrMode = OcrMode.Never;
                 if (forceOcr)
                     useOcrMode = OcrMode.AlwaysRemovingOld;
@@ -1227,8 +1229,11 @@ namespace PDF4LLM.Helpers
                         throw new ArgumentException("Always OCR is True but no OCR function available.");
                     if (useOcrMode != OcrMode.Never)
                     {
-                        Console.WriteLine(
-                            "Warning: OCR is enabled but no OCR function is available. OCR will be disabled.");
+                        if (!LayoutParseHelpers.TesseractSetupHelpPrinted)
+                        {
+                            Console.WriteLine(
+                                "Warning: OCR is enabled but no OCR function is available. OCR will be disabled.");
+                        }
                         useOcrMode = OcrMode.Never;
                     }
                 }

@@ -11,11 +11,13 @@ namespace PDF4LLM.Ocr
     {
         public static readonly string[] FeatureNames =
         {
+            // Text
             "num_spans",
             "text_area",
             "text_density",
             "avg_span_height",
             "avg_span_width",
+            // Layout
             "num_blocks",
             "num_images",
             "image_area",
@@ -26,6 +28,7 @@ namespace PDF4LLM.Ocr
             "page_sobel_entropy",
             "page_sobel_var",
             "page_white_ratio",
+            // Pixel features of the most relevant image
             "img_fft_energy",
             "img_fft_ratio",
             "img_black_ratio",
@@ -49,76 +52,275 @@ namespace PDF4LLM.Ocr
             { -1, -2, -1 },
         };
 
+        private static readonly int BlockText = mupdf.mupdf.FZ_STEXT_BLOCK_TEXT;
+        private static readonly int BlockImage = mupdf.mupdf.FZ_STEXT_BLOCK_IMAGE;
+        private static readonly int BlockVector = mupdf.mupdf.FZ_STEXT_BLOCK_VECTOR;
+
+        private static double[,] Conv2dFast(double[,] img, double[,] kernel)
+        {
+            int kh = kernel.GetLength(0);
+            int kw = kernel.GetLength(1);
+            int ih = img.GetLength(0);
+            int iw = img.GetLength(1);
+
+            int padH = kh / 2;
+            int padW = kw / 2;
+
+            // padded = np.pad(img, ((pad_h, pad_h), (pad_w, pad_w)), mode="reflect")
+            int ph = ih + 2 * padH;
+            int pw = iw + 2 * padW;
+            var padded = new double[ph, pw];
+            for (int y = 0; y < ph; y++)
+            {
+                for (int x = 0; x < pw; x++)
+                {
+                    int sy = ReflectPadIndex(y - padH, ih);
+                    int sx = ReflectPadIndex(x - padW, iw);
+                    padded[y, x] = img[sy, sx];
+                }
+            }
+
+            // Sliding window view
+            // shape = (ih, iw, kh, kw)
+            // windows = as_strided(padded, shape=shape, strides=strides)
+            var result = new double[ih, iw];
+            for (int y = 0; y < ih; y++)
+            {
+                for (int x = 0; x < iw; x++)
+                {
+                    double sum = 0;
+                    for (int ky = 0; ky < kh; ky++)
+                    {
+                        for (int kx = 0; kx < kw; kx++)
+                            sum += padded[y + ky, x + kx] * kernel[ky, kx];
+                    }
+
+                    // Vektorisierte Faltung
+                    result[y, x] = sum;
+                }
+            }
+
+            return result;
+        }
+
+        private static (float energy, float entropy, float variance) SobelFeatures(double[,] gray)
+        {
+            double[,] gx = Conv2dFast(gray, SobelX);
+            double[,] gy = Conv2dFast(gray, SobelY);
+
+            int height = gray.GetLength(0);
+            int width = gray.GetLength(1);
+
+            var mag = new double[height, width];
+            var ang = new double[height, width];
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    double gxv = gx[y, x];
+                    double gyv = gy[y, x];
+                    mag[y, x] = Math.Sqrt(gxv * gxv + gyv * gyv);
+                    ang[y, x] = Math.Atan2(gyv, gxv);
+                }
+            }
+
+            // sobel_energy = float(np.mean(mag))
+            double sobelEnergy = 0;
+            int n = height * width;
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                    sobelEnergy += mag[y, x];
+            }
+            sobelEnergy /= n;
+
+            // bins = np.linspace(-np.pi, np.pi, 37)
+            double[] bins = Linspace(-Math.PI, Math.PI, 37);
+            // hist, _ = np.histogram(ang, bins=bins)
+            var hist = new double[bins.Length - 1];
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                    hist[HistogramBin(ang[y, x], bins)]++;
+            }
+
+            // p = hist / (hist.sum() + 1e-9)
+            double histSum = 0;
+            for (int i = 0; i < hist.Length; i++)
+                histSum += hist[i];
+            histSum += 1e-9;
+
+            // sobel_entropy = float(-np.sum(p * np.log(p + 1e-9)))
+            double sobelEntropy = 0;
+            for (int i = 0; i < hist.Length; i++)
+            {
+                double p = hist[i] / histSum;
+                sobelEntropy -= p * Math.Log(p + 1e-9);
+            }
+
+            // sobel_var = float(np.var(mag))
+            double sobelVar = 0;
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    double d = mag[y, x] - sobelEnergy;
+                    sobelVar += d * d;
+                }
+            }
+            sobelVar /= n;
+
+            return ((float)sobelEnergy, (float)sobelEntropy, (float)sobelVar);
+        }
+
+        private static (float energy, float entropy, float variance, float whiteRatio) SobelFeaturesPage(Page page)
+        {
+            // 1. Render page as GRAY pixmap
+            using (Pixmap pix = page.GetPixmap(dpi: 72, cs: Colorspace.Gray, alpha: false))
+            {
+                // 2. Downscale to 128x128 using PyMuPDF
+                using (Pixmap pixSmall = new Pixmap(pix, 128, 128))
+                {
+                    double[,] gray = SamplesToGray(pixSmall.SAMPLES, 128, 128);
+                    float pageWhiteRatio = MeanAbove(gray, 128, 128, 230);
+                    (float energy, float entropy, float variance) = SobelFeatures(gray);
+                    return (energy, entropy, variance, pageWhiteRatio);
+                }
+            }
+        }
+
+        private static (float energy, float entropy, float variance, float whiteRatio) SobelFeaturesPixmap(Pixmap pixmap)
+        {
+            double[,] gray = SamplesToGray(pixmap.SAMPLES, 128, 128);
+            float pageWhiteRatio = MeanAbove(gray, 128, 128, 230);
+            (float energy, float entropy, float variance) = SobelFeatures(gray);
+            return (energy, entropy, variance, pageWhiteRatio);
+        }
+
         /// <summary>Return model-relevant features for the given page.</summary>
-        /// <param name="blocks">Page blocks from text extraction.</param>
-        /// <param name="pageRect">Page media box used for density calculations.</param>
+        /// <param name="blocks">
+        /// Blocks created by get_text("dict",flags=FLAGS)["blocks].
+        /// The FLAGS *MUST* include PRESERVE_IMAGES and COLLECT_VECTORS.
+        /// </param>
+        /// <param name="pageRect">The rectangle Page.rect.</param>
         /// <param name="page">Source page for pixmap and image feature extraction.</param>
         public static Dictionary<string, float> ComputeFeatures(
             List<Block> blocks,
             Rect pageRect,
-            Page page)
-        {
-            int numBlocks = blocks?.Count ?? 0;
-            float pageArea = pageRect.Width * pageRect.Height;
+            Page page) =>
+            ComputeFeatures(blocks, pageRect, page, null);
 
+        /// <summary>
+        /// Mirror <c>compute_features(blocks, page_rect, pix)</c> when <c>pix</c> is a 128x128 GRAY pixmap.
+        /// </summary>
+        public static Dictionary<string, float> ComputeFeatures(
+            List<Block> blocks,
+            Rect pageRect,
+            Pixmap pixmap) =>
+            ComputeFeatures(blocks, pageRect, null, pixmap);
+
+        private static Dictionary<string, float> ComputeFeatures(
+            List<Block> blocks,
+            Rect pageRect,
+            Page page,
+            Pixmap pixmap)
+        {
+            int numBlocks = blocks?.Count ?? 0; // total block count
+            float pageArea = (pageRect.X1 - pageRect.X0) * (pageRect.Y1 - pageRect.Y0);
+
+            // list of span rectangles
             var spanRects = new List<Rect>();
             if (blocks != null)
             {
                 foreach (Block b in blocks)
                 {
-                    if (b?.Type != 0 || b.Lines == null)
+                    if (b?.Type != BlockText || b.Lines == null)
                         continue;
-                    foreach (Line line in b.Lines)
+                    foreach (Line l in b.Lines)
                     {
-                        if (line?.Spans == null)
+                        if (l?.Spans == null)
                             continue;
-                        foreach (Span span in line.Spans)
+                        foreach (Span s in l.Spans)
                         {
-                            string text = span.Text ?? "";
-                            if (string.IsNullOrWhiteSpace(text))
+                            if (!SpanIncluded(s.Text))
                                 continue;
-                            spanRects.Add(span.Bbox);
+                            spanRects.Add(s.Bbox);
                         }
                     }
                 }
             }
 
-            int numSpans = spanRects.Count;
-            float textArea = spanRects.Sum(r => r.Width * r.Height);
-            float textDensity = pageArea > 0 ? textArea / pageArea : 0f;
-            float avgSpanHeight = numSpans > 0 ? spanRects.Average(r => r.Height) : 0f;
-            float avgSpanWidth = numSpans > 0 ? spanRects.Average(r => r.Width) : 0f;
+            int numSpans = spanRects.Count; // count of text spans
 
-            var vectors = blocks?.Where(b => b?.Type == 3).ToList() ?? new List<Block>();
-            float vectorArea = vectors.Sum(b => b.Bbox.Width * b.Bbox.Height);
+            // total area covered by text
+            float textArea = spanRects.Sum(r => (r.Y1 - r.Y0) * (r.X1 - r.X0));
+            // text density
+            float textDensity = pageArea > 0 ? textArea / pageArea : 0f;
+
+            float avgSpanHeight;
+            float avgSpanWidth;
+            if (numSpans > 0)
+            {
+                avgSpanHeight = spanRects.Average(r => r.Y1 - r.Y0);
+                avgSpanWidth = spanRects.Average(r => r.X1 - r.X0);
+            }
+            else
+            {
+                avgSpanHeight = 0f;
+                avgSpanWidth = 0f;
+            }
+
+            // vector block bboxes
+            var vectors = blocks?.Where(b => b?.Type == BlockVector).ToList() ?? new List<Block>();
+            float vectorArea = vectors.Sum(b => (b.Bbox.Y1 - b.Bbox.Y0) * (b.Bbox.X1 - b.Bbox.X0));
             float logVectorDensity = pageArea > 0
                 ? (float)Math.Log(1 + vectorArea / pageArea + 1e-9)
                 : 0f;
             int numSmallObliqueVectors = vectors.Count(b =>
-                b.Bbox.Width < 15
-                && b.Bbox.Height < 15);
+                GetIsRect(b)
+                && b.Bbox.X1 - b.Bbox.X0 < 15
+                && b.Bbox.Y1 - b.Bbox.Y0 < 15);
 
-            SobelStats pageSobel = SobelFeaturesPage(page);
-
-            var images = blocks?.Where(b => b?.Type == 1).ToList() ?? new List<Block>();
-            int numImages = images.Count;
-            float imageArea = 0f;
-            var relevantImages = new List<(float score, Block img)>();
-
-            foreach (Block img in images)
+            // Compute Sobel energy for the entire page as a layout feature
+            float pageSobelEnergy;
+            float pageSobelEntropy;
+            float pageSobelVar;
+            float pageWhiteRatio;
+            if (pixmap != null)
             {
-                Rect visible = Intersect(pageRect, img.Bbox);
-                float thisImgArea = visible.Width * visible.Height;
-                imageArea += thisImgArea;
-                if (pageArea <= 0 || thisImgArea <= 0.01f * pageArea)
-                    continue;
-                float totalImgArea = img.Bbox.Width * img.Bbox.Height;
-                if (totalImgArea <= 0)
-                    continue;
-                float score = thisImgArea / totalImgArea * thisImgArea;
-                relevantImages.Add((score, img));
+                (pageSobelEnergy, pageSobelEntropy, pageSobelVar, pageWhiteRatio) = SobelFeaturesPixmap(pixmap);
+            }
+            else
+            {
+                (pageSobelEnergy, pageSobelEntropy, pageSobelVar, pageWhiteRatio) = SobelFeaturesPage(page);
             }
 
+            // image block bboxes
+            var images = blocks?.Where(b => b?.Type == BlockImage).ToList() ?? new List<Block>();
+            // total area covered by images
+            int numImages = images.Count; // image block count
+            float imageArea = 0f;
+
+            var relevantImages = new List<(float score, Block imageBlock)>();
+            foreach (Block imageBlock in images)
+            {
+                float[] visibleBbox =
+                {
+                    Math.Max(imageBlock.Bbox.X0, pageRect.X0),
+                    Math.Max(imageBlock.Bbox.Y0, pageRect.Y0),
+                    Math.Min(imageBlock.Bbox.X1, pageRect.X1),
+                    Math.Min(imageBlock.Bbox.Y1, pageRect.Y1),
+                };
+                float thisImgArea = (visibleBbox[3] - visibleBbox[1]) * (visibleBbox[2] - visibleBbox[0]);
+                imageArea += thisImgArea;
+                if (thisImgArea <= 0.01f * pageArea)
+                    continue;
+                float totalImgArea = (imageBlock.Bbox.Y1 - imageBlock.Bbox.Y0) * (imageBlock.Bbox.X1 - imageBlock.Bbox.X0);
+                float score = thisImgArea / totalImgArea * thisImgArea;
+                relevantImages.Add((score, imageBlock));
+            }
+
+            // image density
             float imageDensity = pageArea > 0 ? imageArea / pageArea : 0f;
 
             var features = new Dictionary<string, float>
@@ -134,255 +336,286 @@ namespace PDF4LLM.Ocr
                 ["image_density"] = imageDensity,
                 ["num_small_oblique_vectors"] = numSmallObliqueVectors,
                 ["log_vector_density"] = logVectorDensity,
-                ["page_sobel_energy"] = pageSobel.Energy,
-                ["page_sobel_entropy"] = pageSobel.Entropy,
-                ["page_sobel_var"] = pageSobel.Variance,
-                ["page_white_ratio"] = pageSobel.WhiteRatio,
-                ["img_fft_energy"] = 0f,
-                ["img_fft_ratio"] = 0f,
-                ["img_black_ratio"] = 0f,
-                ["img_white_ratio"] = 0f,
-                ["img_sobel_energy"] = 0f,
-                ["img_sobel_orientation_entropy"] = 0f,
-                ["img_sobel_local_variance"] = 0f,
+                ["page_sobel_energy"] = pageSobelEnergy,
+                ["page_sobel_entropy"] = pageSobelEntropy,
+                ["page_sobel_var"] = pageSobelVar,
+                ["page_white_ratio"] = pageWhiteRatio,
+                ["img_fft_energy"] = 0.0f,
+                ["img_fft_ratio"] = 0.0f,
+                ["img_black_ratio"] = 0.0f,
+                ["img_white_ratio"] = 0.0f,
+                ["img_sobel_energy"] = 0.0f,
+                ["img_sobel_orientation_entropy"] = 0.0f,
+                ["img_sobel_local_variance"] = 0.0f,
             };
 
-            if (relevantImages.Count == 0 || page == null)
+            if (relevantImages.Count == 0)
                 return features;
 
-            Block bestImg = relevantImages.OrderByDescending(x => x.score).First().img;
-            byte[] gray = TryGetGray128(bestImg, page);
-            if (gray == null)
-                return features;
+            // find most relevant image on page
+            Block bestImg = relevantImages.OrderByDescending(x => x.score).First().imageBlock;
 
-            FftStats fft = FftFeatures(gray);
-            SobelStats imgSobel = SobelFeatures(gray, 128, 128);
-            features["img_fft_energy"] = fft.Energy;
-            features["img_fft_ratio"] = fft.Ratio;
-            features["img_black_ratio"] = gray.Count(b => b < 128) / (float)gray.Length;
-            features["img_white_ratio"] = gray.Count(b => b > 230) / (float)gray.Length;
-            features["img_sobel_energy"] = imgSobel.Energy;
-            features["img_sobel_orientation_entropy"] = imgSobel.Entropy;
-            features["img_sobel_local_variance"] = imgSobel.Variance;
-            return features;
-        }
-
-        private static Rect Intersect(Rect a, Rect b)
-        {
-            return new Rect(
-                Math.Max(a.X0, b.X0),
-                Math.Max(a.Y0, b.Y0),
-                Math.Min(a.X1, b.X1),
-                Math.Min(a.Y1, b.Y1));
-        }
-
-        private static SobelStats SobelFeaturesPage(Page page)
-        {
-            using (Pixmap pix = page.GetPixmap(dpi: 72, cs: Colorspace.Gray, alpha: false))
-            using (Pixmap small = new Pixmap(pix, 128, 128))
-            {
-                byte[] gray = small.SAMPLES;
-                if (gray == null || gray.Length < 128 * 128)
-                    return new SobelStats();
-                return SobelFeatures(gray, 128, 128);
-            }
-        }
-
-        private static byte[] TryGetGray128(Block imageBlock, Page page)
-        {
+            double[,] img = null;
+            Pixmap pix = new Pixmap(bestImg.Image);
             try
             {
-                if (imageBlock?.Image == null)
-                    return null;
-                using (var pix = new Pixmap(imageBlock.Image))
+                if (pix.Alpha != 0)
                 {
-                    Pixmap work = pix;
-                    Pixmap noAlpha = null;
-                    if (pix.Alpha != 0)
+                    Pixmap noAlpha = new Pixmap(pix, 0); // remove alpha channel
+                    pix.Dispose();
+                    pix = noAlpha;
+                }
+
+                try // apply any mask if available and compatible
+                {
+                    if (bestImg.Mask != null)
                     {
-                        noAlpha = new Pixmap(pix, 0);
-                        work = noAlpha;
-                    }
-                    try
-                    {
-                        using (Pixmap gray = work.N > 1
-                                   ? new Pixmap(ColorSpace.csGRAY, work)
-                                   : work)
-                        using (var small = new Pixmap(gray, 128, 128))
+                        Pixmap maskPix = new Pixmap(bestImg.Mask);
+                        try
                         {
-                            return small.SAMPLES;
+                            Pixmap masked = new Pixmap(pix, maskPix); // apply mask to image
+                            maskPix.Dispose();
+                            maskPix = null;
+                            Pixmap maskedNoAlpha = new Pixmap(masked, 0); // remove alpha channel after masking
+                            masked.Dispose();
+                            pix.Dispose();
+                            pix = maskedNoAlpha;
+                        }
+                        finally
+                        {
+                            maskPix?.Dispose();
                         }
                     }
-                    finally
-                    {
-                        noAlpha?.Dispose();
-                    }
                 }
-            }
-            catch
-            {
-                return null;
-            }
-        }
-
-        private readonly struct SobelStats
-        {
-            public SobelStats(float energy = 0, float entropy = 0, float variance = 0, float whiteRatio = 0)
-            {
-                Energy = energy;
-                Entropy = entropy;
-                Variance = variance;
-                WhiteRatio = whiteRatio;
-            }
-
-            public float Energy { get; }
-            public float Entropy { get; }
-            public float Variance { get; }
-            public float WhiteRatio { get; }
-        }
-
-        private static SobelStats SobelFeatures(byte[] gray, int width, int height)
-        {
-            var mag = new double[height, width];
-            var ang = new double[height, width];
-            ConvolveSobel(gray, width, height, mag, ang);
-
-            double energy = 0;
-            double varAcc = 0;
-            int n = width * height;
-            for (int y = 0; y < height; y++)
-            {
-                for (int x = 0; x < width; x++)
+                catch (Exception)
                 {
-                    energy += mag[y, x];
-                    varAcc += mag[y, x] * mag[y, x];
+                    // pass
                 }
-            }
-            energy /= n;
-            double variance = varAcc / n - energy * energy;
 
-            var hist = new double[36];
-            for (int y = 0; y < height; y++)
-            {
-                for (int x = 0; x < width; x++)
+                if (pix.N > 1)
                 {
-                    double a = ang[y, x];
-                    int bin = (int)Math.Floor((a + Math.PI) / (2 * Math.PI) * 36);
-                    if (bin < 0) bin = 0;
-                    if (bin > 35) bin = 35;
-                    hist[bin]++;
+                    Pixmap grayPix = new Pixmap(ColorSpace.csGRAY, pix); // convert to grayscale
+                    pix.Dispose();
+                    pix = grayPix;
                 }
+
+                // resize to 128x128 for consistent feature extraction
+                Pixmap resized = new Pixmap(pix, 128, 128);
+                pix.Dispose();
+                pix = resized;
+
+                // FFT / textmap
+                img = SamplesToGray(pix.SAMPLES, 128, 128);
             }
-            double sum = hist.Sum() + 1e-9;
-            double entropy = 0;
-            for (int i = 0; i < hist.Length; i++)
+            finally
             {
-                double p = hist[i] / sum;
-                if (p > 0)
-                    entropy -= p * Math.Log(p + 1e-9);
+                pix?.Dispose();
             }
 
-            float whiteRatio = gray.Count(v => v > 230) / (float)gray.Length;
-            return new SobelStats((float)energy, (float)entropy, (float)variance, whiteRatio);
-        }
+            if (img == null)
+                return features;
 
-        private static void ConvolveSobel(
-            byte[] gray,
-            int width,
-            int height,
-            double[,] mag,
-            double[,] ang)
-        {
-            for (int y = 0; y < height; y++)
+            var re = new double[128, 128];
+            var im = new double[128, 128];
+            for (int y = 0; y < 128; y++)
             {
-                for (int x = 0; x < width; x++)
+                for (int x = 0; x < 128; x++)
                 {
-                    double gx = 0;
-                    double gy = 0;
-                    for (int ky = -1; ky <= 1; ky++)
-                    {
-                        for (int kx = -1; kx <= 1; kx++)
-                        {
-                            int sy = Reflect(y + ky, height);
-                            int sx = Reflect(x + kx, width);
-                            double v = gray[sy * width + sx];
-                            gx += v * SobelX[ky + 1, kx + 1];
-                            gy += v * SobelY[ky + 1, kx + 1];
-                        }
-                    }
-                    mag[y, x] = Math.Sqrt(gx * gx + gy * gy);
-                    ang[y, x] = Math.Atan2(gy, gx);
+                    re[y, x] = img[y, x];
+                    im[y, x] = 0;
                 }
             }
-        }
 
-        private static int Reflect(int i, int size)
-        {
-            if (i < 0)
-                return -i;
-            if (i >= size)
-                return 2 * size - i - 1;
-            return i;
-        }
-
-        private readonly struct FftStats
-        {
-            public FftStats(float energy, float ratio)
-            {
-                Energy = energy;
-                Ratio = ratio;
-            }
-
-            public float Energy { get; }
-            public float Ratio { get; }
-        }
-
-        private static FftStats FftFeatures(byte[] gray)
-        {
-            int n = 128;
-            var re = new double[n, n];
-            var im = new double[n, n];
-            for (int y = 0; y < n; y++)
-            {
-                for (int x = 0; x < n; x++)
-                    re[y, x] = gray[y * n + x];
-            }
             Fft2(re, im);
+            FftShift(re, im);
 
-            var magnitude = new double[n, n];
+            var magnitude = new double[128, 128];
             double mean = 0;
-            for (int y = 0; y < n; y++)
+            for (int y = 0; y < 128; y++)
             {
-                for (int x = 0; x < n; x++)
+                for (int x = 0; x < 128; x++)
                 {
                     magnitude[y, x] = Math.Sqrt(re[y, x] * re[y, x] + im[y, x] * im[y, x]);
                     mean += magnitude[y, x];
                 }
             }
-            mean /= n * n;
+            mean /= 128 * 128;
 
-            double above = 0;
+            double aboveSum = 0;
             int aboveCount = 0;
-            double below = 0;
+            double belowSum = 0;
             int belowCount = 0;
-            for (int y = 0; y < n; y++)
+            for (int y = 0; y < 128; y++)
             {
-                for (int x = 0; x < n; x++)
+                for (int x = 0; x < 128; x++)
                 {
                     if (magnitude[y, x] > mean)
                     {
-                        above += magnitude[y, x];
+                        aboveSum += magnitude[y, x];
                         aboveCount++;
                     }
                     else
                     {
-                        below += magnitude[y, x];
+                        belowSum += magnitude[y, x];
                         belowCount++;
                     }
                 }
             }
-            float ratio = (float)((above / Math.Max(aboveCount, 1)) / (below / Math.Max(belowCount, 1) + 1e-6));
-            return new FftStats((float)mean, ratio);
+
+            float fftEnergy = (float)mean;
+            float fftRatio = (float)((aboveSum / Math.Max(aboveCount, 1))
+                / (belowSum / Math.Max(belowCount, 1) + 1e-6));
+
+            float blackRatio = MeanBelow(img, 128, 128, 128);
+            float whiteRatio = MeanAbove(img, 128, 128, 230);
+
+            // --- Sobel features ---
+            (float sobelEnergy, float sobelEntropy, float sobelVar) = SobelFeatures(img);
+            features["img_fft_energy"] = fftEnergy;
+            features["img_fft_ratio"] = fftRatio;
+            features["img_black_ratio"] = blackRatio;
+            features["img_white_ratio"] = whiteRatio;
+            features["img_sobel_energy"] = sobelEnergy;
+            features["img_sobel_orientation_entropy"] = sobelEntropy;
+            features["img_sobel_local_variance"] = sobelVar;
+
+            return features;
+        }
+
+        private static bool GetIsRect(Block block)
+        {
+            // b.get("isrect", False)
+            return false;
+        }
+
+        private static bool SpanIncluded(string text)
+        {
+            text = text ?? "";
+            // not (s["text"].isspace())
+            if (text.Length == 0)
+                return true;
+            return !text.All(char.IsWhiteSpace);
+        }
+
+        private static double[,] SamplesToGray(byte[] samples, int width, int height)
+        {
+            var gray = new double[height, width];
+            if (samples == null)
+                return gray;
+            int n = Math.Min(samples.Length, width * height);
+            for (int i = 0; i < n; i++)
+            {
+                gray[i / width, i % width] = samples[i];
+            }
+            return gray;
+        }
+
+        private static float MeanAbove(double[,] gray, int width, int height, int threshold)
+        {
+            int count = 0;
+            int total = width * height;
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    if (gray[y, x] > threshold)
+                        count++;
+                }
+            }
+            return count / (float)total;
+        }
+
+        private static float MeanBelow(double[,] gray, int width, int height, int threshold)
+        {
+            int count = 0;
+            int total = width * height;
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    if (gray[y, x] < threshold)
+                        count++;
+                }
+            }
+            return count / (float)total;
+        }
+
+        private static double[] Linspace(double start, double end, int num)
+        {
+            var result = new double[num];
+            if (num == 1)
+            {
+                result[0] = start;
+                return result;
+            }
+
+            double step = (end - start) / (num - 1);
+            for (int i = 0; i < num; i++)
+                result[i] = start + step * i;
+            return result;
+        }
+
+        private static int HistogramBin(double value, double[] binEdges)
+        {
+            int nBins = binEdges.Length - 1;
+            if (value >= binEdges[nBins - 1])
+                return nBins - 1;
+            for (int i = 0; i < nBins - 1; i++)
+            {
+                if (value >= binEdges[i] && value < binEdges[i + 1])
+                    return i;
+            }
+            return 0;
+        }
+
+        private static int ReflectPadIndex(int i, int size)
+        {
+            if (size == 1)
+                return 0;
+            while (i < 0 || i >= size)
+            {
+                if (i < 0)
+                    i = -i;
+                else
+                    i = 2 * (size - 1) - i;
+            }
+            return i;
+        }
+
+        private static void FftShift(double[,] re, double[,] im)
+        {
+            int rows = re.GetLength(0);
+            int cols = re.GetLength(1);
+            int rowHalf = rows / 2;
+            int colHalf = cols / 2;
+
+            for (int y = 0; y < rowHalf; y++)
+            {
+                for (int x = 0; x < cols; x++)
+                {
+                    int y2 = y + rowHalf;
+                    double tmpRe = re[y, x];
+                    double tmpIm = im[y, x];
+                    re[y, x] = re[y2, x];
+                    im[y, x] = im[y2, x];
+                    re[y2, x] = tmpRe;
+                    im[y2, x] = tmpIm;
+                }
+            }
+
+            for (int y = 0; y < rows; y++)
+            {
+                for (int x = 0; x < colHalf; x++)
+                {
+                    int x2 = x + colHalf;
+                    double tmpRe = re[y, x];
+                    double tmpIm = im[y, x];
+                    re[y, x] = re[y, x2];
+                    im[y, x] = im[y, x2];
+                    re[y, x2] = tmpRe;
+                    im[y, x2] = tmpIm;
+                }
+            }
         }
 
         private static void Fft2(double[,] re, double[,] im)

@@ -1,18 +1,37 @@
-using System.Collections.Generic;
+using System;
+using System.IO;
 
 namespace PDF4LLM.Ocr
 {
     /// <summary>
-    /// ONNX OCR decision model loader (<c>ocr_decision_model.onnx</c>).
+    /// ONNX model path resolution for <c>ocr_decision_model.onnx</c>.
     /// </summary>
-    /// <remarks>
-    /// Place <c>ocr_decision_model.onnx</c> next to the PDF4LLM assembly (or under
-    /// <c>ocr/</c>) and reference <c>Microsoft.ML.OnnxRuntime</c> to enable ML-based
-    /// OCR page selection. Without the model, <see cref="AnalyzePage.PredictOcrProbability"/>
-    /// returns 0 and heuristic checks still apply.
-    /// </remarks>
     internal static class OcrDecisionModel
     {
-        public static float Predict(Dictionary<string, float> features) => 0f;
+        public const string ModelFileName = "ocr_decision_model.onnx";
+
+        /// <summary>
+        /// Mirror <c>Path(__file__).parent / "ocr_decision_model.onnx"</c>.
+        /// </summary>
+        public static string ResolveModelPath()
+        {
+            string baseDir = Path.GetDirectoryName(typeof(OcrDecisionModel).Assembly.Location);
+            if (string.IsNullOrEmpty(baseDir))
+                baseDir = AppContext.BaseDirectory;
+
+            string[] candidates =
+            {
+                Path.Combine(baseDir, ModelFileName),
+                Path.Combine(baseDir, "ocr", ModelFileName),
+            };
+
+            foreach (string path in candidates)
+            {
+                if (File.Exists(path))
+                    return path;
+            }
+
+            return null;
+        }
     }
 }

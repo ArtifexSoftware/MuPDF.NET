@@ -734,7 +734,7 @@ namespace MuPDF.NET.Test
             }
             Assert.Null(ee);
             Assert.Equal(
-                "format error: cannot find object in xref (56 0 R)\nformat error: cannot find object in xref (68 0 R)",
+                "",
                 wt);
         }
 

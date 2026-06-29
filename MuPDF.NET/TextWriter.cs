@@ -94,18 +94,18 @@ namespace MuPDF.NET
         /// <exception cref="ValueErrorException">Font is not writable (<see cref="Font.IsWritable"/>).</exception>
         public float Append(Point pos, string text, Font font = null, float fontSize = 11,
             string language = null, bool rightToLeft = false, int smallCaps = 0,
-            string fontname = null, string fontfile = null)
-            => Append(pos, text, font, fontSize, language, rightToLeft ? 1 : 0, smallCaps, fontname, fontfile);
+            string fontName = null, string fontFile = null)
+            => Append(pos, text, font, fontSize, language, rightToLeft ? 1 : 0, smallCaps, fontName, fontFile);
 
         /// <summary>Legacy overload with integer RTL flag.</summary>
         public float Append(Point pos, string text, Font font, float fontSize,
             string language, int rightToLeft, int smallCaps = 0,
-            string fontname = null, string fontfile = null)
+            string fontName = null, string fontFile = null)
         {
             if (string.IsNullOrEmpty(text))
                 return 0;
 
-            var f = font ?? new Font(fontname ?? "helv", fontfile);
+            var f = font ?? new Font(fontName ?? "helv", fontFile);
             if (!f.IsWritable)
                 throw new ValueErrorException($"Unsupported font '{f.Name}'.");
 
@@ -117,14 +117,14 @@ namespace MuPDF.NET
                 text = new string(chars);
             }
 
-            _appendRecords.Add(new AppendRecord(pos, text, f, fontSize, language, smallCaps, fontname, fontfile));
+            _appendRecords.Add(new AppendRecord(pos, text, f, fontSize, language, smallCaps, fontName, fontFile));
             return AppendCore(pos, text, f, fontSize, language, smallCaps);
         }
 
-        private float AppendCore(Point pos, string text, Font f, float fontsize, string language, int smallCaps)
+        private float AppendCore(Point pos, string text, Font f, float fontSize, string language, int smallCaps)
         {
             var p = pos * _ictm;
-            var trm = mupdf.mupdf.fz_make_matrix(fontsize, 0, 0, fontsize, (float)p.X, (float)p.Y);
+            var trm = mupdf.mupdf.fz_make_matrix(fontSize, 0, 0, fontSize, (float)p.X, (float)p.Y);
             int lang = (int)mupdf.mupdf.fz_text_language_from_string(language);
             mupdf.FzMatrix newTrm = smallCaps == 0
                 ? _fzText.fz_show_string(
@@ -141,7 +141,7 @@ namespace MuPDF.NET
             if (f.IsMonospaced)
                 _usedFonts.Add(f);
 
-            return f.TextLength(text, fontsize, language, smallCaps: smallCaps);
+            return f.TextLength(text, fontSize, language, smallCaps: smallCaps);
         }
 
         /// <summary>
@@ -171,47 +171,28 @@ namespace MuPDF.NET
         /// <summary>Obsolete name for <see cref="Appendv"/>.</summary>
         [Obsolete("Use Appendv for vertical text.")]
         public (Rect TextRect, Point LastPoint) AppendLine(Point pos, string text, Font font = null, float fontSize = 11,
-            string fontname = null)
+            string fontName = null)
             => Appendv(pos, text, font, fontSize);
-
-        /// <summary>Published call pattern: <c>FillTextbox(rect, text, font, pos: …)</c> (e.g. barcode labels).</summary>
-        /// <returns>Overflow lines as <c>(text, length)</c> tuples that did not fit.</returns>
-        public List<(string text, float length)> FillTextbox(Rect rect, string text, Font font, Point pos) =>
-            FillTextbox(rect, text, font, pos, fontsize: 11);
 
         /// <summary>
         /// Fills a rectangle with wrapped horizontal text (convenience over <see cref="Append"/>).
         /// </summary>
         /// <returns>Overflow lines as <c>(text, length)</c> tuples that did not fit.</returns>
         public List<(string text, float length)> FillTextbox(Rect rect, string text, Font font = null, Point pos = null,
-            float fontsize = 11, int align = 0, bool rightToLeft = false, bool rtl = false,
-            bool? warn = null, bool smallCaps = false, string fontname = null, float? lineheight = null,
+            float fontSize = 11, int align = 0, bool rightToLeft = false, bool rtl = false,
+            bool? warn = null, bool smallCaps = false, string fontName = null, float? lineheight = null,
             float lineHeight = 0)
         {
             float? lh = lineheight ?? (lineHeight > 0 ? lineHeight : (float?)null);
             bool rtlFlag = rightToLeft || rtl;
-            return FillTextboxLines(rect, text, pos, font, fontsize, align, rtlFlag, warn, fontname, lh, smallCaps ? 1 : 0)
+            return FillTextboxLines(rect, text, pos, font, fontSize, align, rtlFlag, warn, fontName, lh, smallCaps ? 1 : 0)
                 .Select(x => (x.line, x.tl))
                 .ToList();
         }
 
-        /// <summary>Published overload when <paramref name="fontSize"/> is specified without <paramref name="fontsize"/>.</summary>
-        public List<(string text, float length)> FillTextbox(Rect rect, string text, Font font, float fontSize,
-            Point pos = null, int align = 0, bool rightToLeft = false, bool rtl = false,
-            bool? warn = null, bool smallCaps = false, string fontname = null, float? lineheight = null,
-            float lineHeight = 0) =>
-            FillTextbox(rect, text, font, pos, fontSize, align, rightToLeft, rtl, warn, smallCaps, fontname, lineheight, lineHeight);
-
-        /// <summary>Same as primary <see cref="FillTextbox"/> when <paramref name="pos"/> precedes <paramref name="font"/>.</summary>
-        public List<(string text, float length)> FillTextbox(Rect rect, string text, Point pos, Font font,
-            float fontsize = 11, int align = 0, bool rightToLeft = false, bool rtl = false,
-            bool? warn = null, bool smallCaps = false, string fontname = null, float? lineheight = null,
-            float lineHeight = 0) =>
-            FillTextbox(rect, text, font, pos, fontsize, align, rightToLeft, rtl, warn, smallCaps, fontname, lineheight, lineHeight);
-
         private List<(string line, float tl)> FillTextboxLines(Rect rect, string text, Point pos,
-            Font font, float fontsize, int align, bool rightToLeft,
-            bool? warn, string fontname, float? lineheight, int smallCaps)
+            Font font, float fontSize, int align, bool rightToLeft,
+            bool? warn, string fontName, float? lineHeight, int smallCaps)
         {
             if (string.IsNullOrEmpty(text)) return new List<(string line, float tl)>();
 
@@ -219,14 +200,14 @@ namespace MuPDF.NET
             if (rect.IsEmpty)
                 throw new ValueErrorException("fill rect must not empty.");
 
-            var f = font ?? new Font(fontName: fontname ?? "helv");
+            var f = font ?? new Font(fontName: fontName ?? "helv");
             _heldAppendFonts.Add(f);
 
-            float Textlen(string x) => f.TextLength(x, fontsize);
-            float[] CharLengths(string x) => f.CharLengths(x, fontsize);
+            float Textlen(string x) => f.TextLength(x, fontSize);
+            float[] CharLengths(string x) => f.CharLengths(x, fontSize);
 
             // tolerance = fontsize * 0.2  # extra distance to left border
-            float tolerance = fontsize * 0.2f;
+            float tolerance = fontSize * 0.2f;
             // space_len = textlen(" ")
             float spaceLen = Textlen(" ");
             // std_width = rect.width - tolerance
@@ -236,7 +217,7 @@ namespace MuPDF.NET
 
             void AppendThis(Point start, string t)
             {
-                Append(start, t, f, fontsize, null, 0, smallCaps);
+                Append(start, t, f, fontSize, null, 0, smallCaps);
             }
 
             void OutputJustify(Point start, string line)
@@ -305,17 +286,17 @@ namespace MuPDF.NET
             float dsc = f.Descender;
             float lheight;
             // if not lineheight:
-            if (lineheight == null)
+            if (lineHeight == null)
             {
                 // if asc - dsc <= 1: lheight = 1.2
                 // else: lheight = asc - dsc
                 lheight = (asc - dsc <= 1) ? 1.2f : asc - dsc;
             }
             else
-                lheight = lineheight.Value;
+                lheight = lineHeight.Value;
 
             // LINEHEIGHT = fontsize * lheight
-            float LINEHEIGHT = fontsize * lheight;
+            float LINEHEIGHT = fontSize * lheight;
             // width = std_width
             float width = stdWidth;
 
@@ -325,7 +306,7 @@ namespace MuPDF.NET
                 start = new Point(pos);
             else
                 // pos = rect.tl + (tolerance, fontsize * asc)
-                start = rect.TopLeft + new Point(tolerance, fontsize * asc);
+                start = rect.TopLeft + new Point(tolerance, fontSize * asc);
             if (!rect.Contains(start))
                 throw new ValueErrorException("Text must start in rectangle.");
 
@@ -436,7 +417,7 @@ namespace MuPDF.NET
 
                 // if i == 0: start = pos
                 if (i == 0)
-                    start = pos != null ? new Point(pos) : rect.TopLeft + new Point(tolerance, fontsize * asc);
+                    start = pos != null ? new Point(pos) : rect.TopLeft + new Point(tolerance, fontSize * asc);
 
                 // if align == TEXT_ALIGN_JUSTIFY and i not in no_justify and tl < std_width:
                 if (align == Constants.TextAlignJustify && !noJustify.Contains(i) && tl < stdWidth)
@@ -655,17 +636,17 @@ namespace MuPDF.NET
 
         private sealed class AppendRecord
         {
-            public AppendRecord(Point pos, string text, Font font, float fontsize, string language,
-                int smallCaps, string fontname, string fontfile)
+            public AppendRecord(Point pos, string text, Font font, float fontSize, string language,
+                int smallCaps, string fontName, string fontFile)
             {
                 Pos = pos;
                 Text = text;
                 Font = font;
-                Fontsize = fontsize;
+                Fontsize = fontSize;
                 Language = language;
                 SmallCaps = smallCaps;
-                Fontname = fontname;
-                Fontfile = fontfile;
+                Fontname = fontName;
+                Fontfile = fontFile;
             }
 
             public Point Pos { get; }

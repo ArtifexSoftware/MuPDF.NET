@@ -171,7 +171,7 @@ namespace MuPDF.NET.Test
         {
             var pdfNow = Utils.GetPdfNow();
             var pdfStr1 = Utils.GetPdfStr("Beijing, chinesisch 北京");
-            var txtLength = Utils.GetTextLength("Beijing, chinesisch 北京", fontname: "china-s");
+            var txtLength = Utils.GetTextLength("Beijing, chinesisch 北京", fontName: "china-s");
             var pdfStr2 = Utils.GetPdfStr("Latin characters êßöäü");
         }
 

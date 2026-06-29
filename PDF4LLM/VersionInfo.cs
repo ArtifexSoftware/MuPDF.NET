@@ -13,6 +13,6 @@ namespace PDF4LLM
         public const string RequiredPyMuPDF4LLM = Artifex.Versions.PyMuPDF4LLM;
 
         /// <summary>Native MuPDF version bundled with MuPDF.NET.</summary>
-        public const string RequiredMuPdf = Artifex.Versions.MuPdf;
+        public const string RequiredMuPdf = Artifex.Versions.MuPDF;
     }
 }

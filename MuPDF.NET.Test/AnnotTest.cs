@@ -268,8 +268,8 @@ MuPDF.NET <span style=""color: red;"">འདི་ ཡིག་ཆ་བཀྲ�
                 byte[] outBytes = File.ReadAllBytes(path_out);
                 byte[] expectedBytes = File.ReadAllBytes(path_expected);
 
-                Assert.True(outBytes.SequenceEqual(expectedBytes), "Byte arrays are not equal");
                 doc.Save(Out("Test1645.pdf"));
+                Assert.True(outBytes.SequenceEqual(expectedBytes), "Byte arrays are not equal");
             }
             finally
             {

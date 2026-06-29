@@ -201,13 +201,26 @@ namespace MuPDF.NET
         /// Replaces this matrix with <paramref name="one"/> × <paramref name="two"/> (PyMuPDF <c>concat</c>).
         /// </summary>
         /// <remarks>Multiplication is not commutative; order matters.</remarks>
-        public virtual Matrix Concat(Matrix one, Matrix two)
+        public virtual Matrix ConcatInto(Matrix one, Matrix two)
         {
             if (one.Count != 6 || two.Count != 6)
                 throw new ValueErrorException("Matrix: bad seq len");
             using var r = mupdf.mupdf.fz_concat(one.ToFzMatrix(), two.ToFzMatrix());
             Assign(r);
             return this;
+        }
+
+        /// <summary>
+        /// Returns <paramref name="one"/> × <paramref name="two"/> as a new matrix (PyMuPDF <c>Matrix(...).concat(one, two)</c>).
+        /// </summary>
+        public static Matrix Concat(Matrix one, Matrix two) => ConcatCore(one, two);
+
+        private static Matrix ConcatCore(Matrix one, Matrix two)
+        {
+            if (one.Count != 6 || two.Count != 6)
+                throw new ValueErrorException("Matrix: bad seq len");
+            using var r = mupdf.mupdf.fz_concat(one.ToFzMatrix(), two.ToFzMatrix());
+            return new Matrix(r);
         }
 
         /// <summary>
@@ -328,7 +341,7 @@ namespace MuPDF.NET
         public static Matrix operator *(float m, Matrix a) => a * m;
 
         public static Matrix operator *(Matrix a, Matrix b) =>
-            new Matrix(1, 1).Concat(a, b);
+            Concat(a, b);
 
         public static Matrix operator /(Matrix a, float m) => a * (1.0f / m);
 
@@ -337,17 +350,11 @@ namespace MuPDF.NET
             var (code, ia, ib, ic, id, ie, iff) = UtilInvertMatrix(b);
             if (code != 0)
                 throw new DivideByZeroException("matrix not invertible");
-            return new Matrix(1, 1).Concat(a, new Matrix(ia, ib, ic, id, ie, iff));
+            return Concat(a, new Matrix(ia, ib, ic, id, ie, iff));
         }
 
         /// <summary>Matrix inversion; returns a zero matrix if singular.</summary>
-        public static Matrix operator ~(Matrix m)
-        {
-            var m1 = new Matrix();
-            if (m1.Invert(m) != 0)
-                return new Matrix();
-            return m1;
-        }
+        public static Matrix operator ~(Matrix m) => m.Inverted() ?? new Matrix();
 
         public static Matrix operator +(Matrix a) => new Matrix(a);
 
@@ -545,7 +552,7 @@ namespace MuPDF.NET
         }
 
         /// <inheritdoc/>
-        public override Matrix Concat(Matrix one, Matrix two) => this;
+        public override Matrix ConcatInto(Matrix one, Matrix two) => this;
 
         /// <inheritdoc/>
         public override int Invert(Matrix? src = null)

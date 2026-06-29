@@ -92,7 +92,7 @@ namespace PDF4LLM.Test
                 return;
 
             string path = Doc("test_ocr_loremipsum_svg.pdf");
-            string md = PdfExtractor.ToMarkdown(path);
+            string md = PdfExtractor.ToMarkdown(path, useOcr: true, forceOcr: true);
             string mdNoOcr = PdfExtractor.ToMarkdown(path, useOcr: false);
             File.WriteAllText(Out("out_test_ocr_3.md"), md);
             File.WriteAllText(Out("out_test_ocr_3_no_ocr.md"), mdNoOcr);

@@ -238,7 +238,7 @@ namespace MuPDF.NET.Test
             Assert.Equal(new Matrix(0), new Matrix(1, 1).Prerotate(small));
             Assert.Equal(
                 new Matrix(3, 0, 0, 8, 0, 0),
-                new Matrix(1, 1).Concat(new Matrix(1, 2), new Matrix(3, 4))); // .concat(
+                new Matrix(1, 1).ConcatInto(new Matrix(1, 2), new Matrix(3, 4))); // .concat(
             Assert.Equal(new Matrix(1, 2, 3, 4, 5, 6), new Matrix(1, 2, 3, 4, 5, 6) / 1);
             Assert.Equal(m[0], m.A);
             Assert.Equal(m[1], m.B);

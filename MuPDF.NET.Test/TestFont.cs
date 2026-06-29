@@ -30,8 +30,8 @@ namespace MuPDF.NET.Test
             const string text = "PyMuPDF";
             using var font = new Font("helv");
             Assert.Equal("Helvetica", font.Name);
-            float tl = font.TextLength(text, fontsize: 20);
-            float[] cl = font.CharLengths(text, fontsize: 20);
+            float tl = font.TextLength(text, fontSize: 20);
+            float[] cl = font.CharLengths(text, fontSize: 20);
             Assert.Equal(text.Length, cl.Length);
             Assert.True(Math.Abs(cl.Sum() - tl) < Epsilon);
             for (int i = 0; i < cl.Length; i++)
@@ -95,9 +95,13 @@ namespace MuPDF.NET.Test
             text = text.Replace("\r", "");
 
             var (major, minor, _) = _Version.mupdf_version_tuple();
-            string expectedPath = major > 1 || (major == 1 && minor >= 27)
-                ? Doc("test_2608_expected")
-                : Doc("test_2608_expected_1.26");
+            string expectedPath = "";
+            if (major > 1 || (major == 1 && minor >= 28))
+                expectedPath = Doc("test_2608_expected");
+            else if (major > 1 || (major == 1 && minor == 27))
+                expectedPath = Doc("test_2608_expected_1.27");
+            else
+                Doc("test_2608_expected_1.26");
             string expected = File.ReadAllText(expectedPath);
             expected = expected.Replace("\r", "");
             Assert.Equal(expected, text);

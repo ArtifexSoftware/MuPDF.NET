@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import shutil
 import subprocess
 import sys
 import textwrap
@@ -46,7 +47,26 @@ def venv_python(venv_root: Path) -> Path:
 
 def run(cmd: list[str]) -> None:
     print("+", " ".join(cmd))
-    subprocess.check_call(cmd)
+    try:
+        subprocess.check_call(cmd)
+    except subprocess.CalledProcessError as exc:
+        print(f"Command failed with exit code {exc.returncode}: {' '.join(cmd)}", file=sys.stderr)
+        raise SystemExit(exc.returncode) from exc
+
+
+def check_linux_prerequisites(base: str) -> None:
+    if sys.platform == "win32":
+        return
+
+    if subprocess.run(
+        [base, "-m", "venv", "--help"],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    ).returncode != 0:
+        print("Python venv module is not available.", file=sys.stderr)
+        print("On Debian/Ubuntu install:", file=sys.stderr)
+        print("  sudo apt install python3-venv python3-pip", file=sys.stderr)
+        raise SystemExit(1)
 
 
 def pip_available(py: Path) -> bool:
@@ -83,7 +103,13 @@ def ensure_pip(py: Path, venv_root: Path) -> None:
 def create_venv(base: str, venv_root: Path) -> None:
     cmd = [base, "-m", "venv", str(venv_root)]
     if sys.version_info >= (3, 12):
-        cmd.append("--upgrade-deps")
+        try:
+            run(cmd + ["--upgrade-deps"])
+            return
+        except SystemExit:
+            if venv_root.is_dir():
+                shutil.rmtree(venv_root)
+            print("Retrying venv creation without --upgrade-deps ...", file=sys.stderr)
     run(cmd)
 
 
@@ -112,6 +138,12 @@ def main() -> int:
     venv_root = (args.venv or default_venv_path()).resolve()
     py = venv_python(venv_root)
 
+    print(f"Using Python: {base}")
+    print(f"Requirements: {REQUIREMENTS}")
+    print(f"Layout venv:  {venv_root}")
+
+    check_linux_prerequisites(base)
+
     if not venv_root.is_dir():
         venv_root.parent.mkdir(parents=True, exist_ok=True)
         create_venv(base, venv_root)
@@ -124,14 +156,27 @@ def main() -> int:
     run([str(py), "-m", "pip", "install", "-r", str(REQUIREMENTS)])
 
     if not args.skip_verify:
-        out = subprocess.check_output(
-            [
-                str(py),
-                "-c",
-                "import pymupdf.layout; pymupdf.layout.activate(); print(pymupdf.layout.version)",
-            ],
-            text=True,
-        ).strip()
+        try:
+            out = subprocess.check_output(
+                [
+                    str(py),
+                    "-c",
+                    "import pymupdf.layout; pymupdf.layout.activate(); print(pymupdf.layout.version)",
+                ],
+                text=True,
+                stderr=subprocess.STDOUT,
+            ).strip()
+        except subprocess.CalledProcessError as exc:
+            output = (exc.output or "").strip()
+            print("pymupdf.layout verification failed after install.", file=sys.stderr)
+            if output:
+                print(output, file=sys.stderr)
+            print(
+                "Try running pip manually:\n"
+                f"  {py} -m pip install -r {REQUIREMENTS}",
+                file=sys.stderr,
+            )
+            return 1
         print(f"Verified pymupdf.layout {out}")
 
     print(

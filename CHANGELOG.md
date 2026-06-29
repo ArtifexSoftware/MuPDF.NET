@@ -1,16 +1,17 @@
 # Changelog
 
-### [3.2.17-rc.5] - 2026-06-11
-- Synced MuPDF.NET with PyMuPDF 1.27.3 patches and resolved project build warnings.
-- Fixed native memory leaks from duplicated `PdfDocument` handles: cache a borrowed document view on `Document`, add `PdfDocumentBorrowedFromFz` / `PdfDocumentForPdfPage`, and stop using owning `page.doc()` in annotation and page utilities.
-- Fixed intermittent `AccessViolationException` in `Page.SearchFor` by walking stext blocks/lines/chars via linked lists instead of SWIG stext iterators; added `BorrowStextBlock` and related helpers.
-- Fixed `Utils.GetText` / layout extraction crashes by disposing temporary `TextPage` instances instead of dropping managed references while native stext data was still in use.
-- Fixed scaled `Pixmap` sample-buffer leaks on dispose (`fz_drop_pixmap` before SWIG teardown) and hardened pixmap/image constructor resource handling.
-- Fixed `GetPageImages` / resource-scan leaks from transient `pdf_new_name` objects in `JM_gather_*` helpers.
-- Fixed `Document.Recolor` / `Page.Recolor` creating throwaway pages; recolor now calls `RecolorPage` directly with proper `PdfRecolorOptions` disposal and page-tree invalidation.
-- Improved `Document` save reliability on Windows: atomic temp-file replace with retries for `IOException` / `UnauthorizedAccessException` (e.g. memory-mapped or read-only outputs).
-- Added memory-regression tests in `TestMemory` (`test_pixmap_scale_memory`, `test_issue_213_insert_image_memory_filename`, `test_issue_213_insert_image_memory_stream`, `test_freetext_annot_memory`).
-- Updated **PDF4LLM** with the latest PyMuPDF4LLM patches, optional net8.0 AI/RAG integration (`Microsoft.Extensions.AI`, Azure OpenAI / Search), and OCR pipeline fixes.
+### [3.2.17.9] - 2026-06-23
+- Depends on stable **`MuPDF.NativeAssets` 1.28.0**.
+- Updated PyMuPDF bind to **1.27.2.3** (`VersionBind` / `pymupdf_version`).
+- **`Matrix`**: added static `Matrix.Concat(one, two)`; renamed the in-place PyMuPDF `concat` equivalent to `ConcatInto(one, two)` (avoids C# static/instance signature clashes); added instance `Inverted()` returning a new matrix or `null` when singular.
+- **`Page`**: added `GetLayout()`, `LayoutInformation`, and `GetLayoutProvider` so external layout engines (e.g. pymupdf-layout via **PDF4LLM**) can supply `layout_information` boxes consumed by `Page.find_tables()`.
+- Expanded `MuPDF.NET.Test` matrix/geometry coverage aligned with PyMuPDF `test_geometry.py`.
+
+### [3.2.17] - 2026-06-11
+- Fixed `Page.find_tables()` on rotated pages by porting PyMuPDF `page_rotation_set0` / `page_rotation_reset`: temporary derotation via `Tools.InsertContents`, MediaBox/rotation updates, and page reload through `doc[page.Number]` so vector graphics and table detection work at 0°, 90°, 180°, and 270°.
+- Hardened `Tools.InsertContents` and related PDF page edits with `AsPdfPageFresh` and cached `PdfPage` invalidation to avoid stale native handles after `/Contents` changes.
+- Fixed `TableHelpers.CharsInRect` to use visual `top`/`bottom` coordinates when matching characters to table cells (pdfplumber / PyMuPDF parity).
+- Expanded `MuPDF.NET.Test` table coverage with ports from PyMuPDF `test_tables.py`, including rotation-independent extraction (`test_2812`), glyph-height handling (`test_2979`), and additional edge/strategy cases.
 
 ### [3.2.16] - 2026-04-24
 - Added global `Utils.MuPDFLock` and synchronized MuPDF native calls for improved thread safety.

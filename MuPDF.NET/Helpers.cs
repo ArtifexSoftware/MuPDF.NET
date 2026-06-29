@@ -1886,7 +1886,7 @@ namespace MuPDF.NET
         internal static Matrix AnnotVertexMatrix(Page page)
         {
             if (page == null) return Matrix.Identity;
-            return new Matrix(page.TransformationMatrix).Concat(page.TransformationMatrix, DerotatePageMatrix(page));
+            return new Matrix(page.TransformationMatrix).ConcatInto(page.TransformationMatrix, DerotatePageMatrix(page));
         }
 
         internal static Rect TransformRect(Rect rect, Matrix matrix)
@@ -2644,14 +2644,14 @@ namespace MuPDF.NET
             }
         }
 
-        internal static void JM_make_annot_DA(mupdf.PdfAnnot annot, int ncol, float[] col, string fontname, float fontsize)
+        internal static void JM_make_annot_DA(mupdf.PdfAnnot annot, int ncol, float[] col, string fontname, float fontSize)
         {
             var sb = new StringBuilder();
             if (ncol < 1) sb.Append("0 g ");
             else if (ncol == 1) sb.AppendFormat(System.Globalization.CultureInfo.InvariantCulture, "{0:g} g ", col[0]);
             else if (ncol == 3) sb.AppendFormat(System.Globalization.CultureInfo.InvariantCulture, "{0:g} {1:g} {2:g} rg ", col[0], col[1], col[2]);
             else sb.AppendFormat(System.Globalization.CultureInfo.InvariantCulture, "{0:g} {1:g} {2:g} {3:g} k ", col[0], col[1], col[2], col[3]);
-            sb.AppendFormat(System.Globalization.CultureInfo.InvariantCulture, "/{0} {1:g} Tf", JM_expand_fname(fontname), fontsize);
+            sb.AppendFormat(System.Globalization.CultureInfo.InvariantCulture, "/{0} {1:g} Tf", JM_expand_fname(fontname), fontSize);
             PdfDictPutTextString(Helpers.PdfAnnotObj(annot), "DA", sb.ToString());
         }
 

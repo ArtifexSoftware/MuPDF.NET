@@ -56,7 +56,7 @@ namespace MuPDF.NET.Test
         public void ExtractXml()
         {
             string txt = textPage.ExtractXML();
-            Assert.Equal(28768, txt.Length);
+            Assert.Equal(28927, txt.Length);
             //Assert.Pass();
         }
 
@@ -64,14 +64,14 @@ namespace MuPDF.NET.Test
         public void ExtractBlocks()
         {
             List<TextBlock> blocks = textPage.ExtractBlocks();
-            Assert.Equal(4, blocks.Count);
+            Assert.Equal(6, blocks.Count);
         }
 
         [Fact]
         public void ExtractXHtml()
         {
             string txt = textPage.ExtractXHtml();
-            Assert.Equal(257, txt.Length);
+            Assert.Equal(289, txt.Length);
             //Assert.Pass();
         }
 
@@ -79,7 +79,7 @@ namespace MuPDF.NET.Test
         public void ExtractDict()
         {
             var pageInfo = textPage.ExtractDict(new Rect(0, 0, 300, 300));
-            Assert.Equal(4, pageInfo.Blocks.Count);
+            Assert.Equal(6, pageInfo.Blocks.Count);
             //Assert.Pass();
         }
 

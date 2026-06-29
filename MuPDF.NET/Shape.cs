@@ -754,10 +754,10 @@ namespace MuPDF.NET
         /// </summary>
         /// <param name="point">Bottom-left of the first glyph (depends on <paramref name="rotate"/>).</param>
         /// <param name="buffer">Text; newline-separated lines are supported.</param>
-        /// <param name="fontsize">Font size in points.</param>
-        /// <param name="lineheight">Optional line-height factor (× fontsize).</param>
-        /// <param name="fontname">Base-14 name, registered font, or <c>/RefName</c>.</param>
-        /// <param name="fontfile">External font file when required.</param>
+        /// <param name="fontSize">Font size in points.</param>
+        /// <param name="lineHeight">Optional line-height factor (× fontsize).</param>
+        /// <param name="fontName">Base-14 name, registered font, or <c>/RefName</c>.</param>
+        /// <param name="fontFile">External font file when required.</param>
         /// <param name="setSimple">Use simple font embedding when non-zero.</param>
         /// <param name="encoding">Font encoding flag.</param>
         /// <param name="color">Stroke RGB components.</param>
@@ -775,10 +775,10 @@ namespace MuPDF.NET
         public int InsertText(
             Point point,
             string buffer,
-            float fontsize = 11,
-            float? lineheight = null,
-            string fontname = "helv",
-            string fontfile = null,
+            float fontSize = 11,
+            float? lineHeight = null,
+            string fontName = "helv",
+            string fontFile = null,
             int setSimple = 0,
             int encoding = 0,
             float[] color = null,
@@ -813,11 +813,11 @@ namespace MuPDF.NET
             }
 
             // ensure valid 'fontname'
-            string fname = fontname;
+            string fname = fontName;
             if (fname.StartsWith("/", StringComparison.Ordinal))
                 fname = fname.Substring(1);
 
-            int xref = _page.InsertFont(fname, fontfile, null, setSimple != 0, wmode: 0, encoding: encoding);
+            int xref = _page.InsertFont(fname, fontFile, null, setSimple != 0, wmode: 0, encoding: encoding);
             var fontinfo = _doc.CheckFontInfo(xref);
             if (fontinfo == null)
                 throw new InvalidOperationException($"font '{fname}' was not registered in the document");
@@ -839,12 +839,12 @@ namespace MuPDF.NET
                 ReadAscDesc(xref, ref ascender, ref descender);
 
             float lheight;
-            if (lineheight.HasValue)
-                lheight = fontsize * lineheight.Value;
+            if (lineHeight.HasValue)
+                lheight = fontSize * lineHeight.Value;
             else if (ascender - descender <= 1)
-                lheight = fontsize * 1.2f;
+                lheight = fontSize * 1.2f;
             else
-                lheight = fontsize * (ascender - descender);
+                lheight = fontSize * (ascender - descender);
 
             List<(int glyph, float width)> glyphs;
             if (maxcode > 255)
@@ -959,13 +959,13 @@ namespace MuPDF.NET
             nres.Append(" Tm\n/");
             nres.Append(resKey);
             nres.Append(' ');
-            nres.Append(fontsize.ToString("G9", CultureInfo.InvariantCulture));
+            nres.Append(fontSize.ToString("G9", CultureInfo.InvariantCulture));
             nres.Append(" Tf ");
 
             if (renderMode > 0)
             {
                 nres.Append(renderMode.ToString(CultureInfo.InvariantCulture)).Append(" Tr ");
-                nres.Append(Helpers.FormatPdfReals(borderWidth * fontsize)).Append(" w ");
+                nres.Append(Helpers.FormatPdfReals(borderWidth * fontSize)).Append(" w ");
                 if (miterLimit != null)
                     nres.Append(Helpers.FormatPdfReals(miterLimit.Value)).Append(" M ");
             }
@@ -1041,10 +1041,10 @@ namespace MuPDF.NET
         /// <param name="expandTabs">Tab expansion width (spaces per tab).</param>
         /// <param name="fillOpacity">Text fill opacity.</param>
         /// <param name="fill">Fill RGB.</param>
-        /// <param name="fontfile">External font file.</param>
+        /// <param name="fontFile">External font file.</param>
         /// <param name="fontname">Font name or <c>/RefName</c>.</param>
-        /// <param name="fontsize">Font size in points.</param>
-        /// <param name="lineheight">Optional line-height factor.</param>
+        /// <param name="fontSize">Font size in points.</param>
+        /// <param name="lineHeight">Optional line-height factor.</param>
         /// <param name="miterLimit">Miter limit for stroked glyphs.</param>
         /// <param name="morphFix">Morph fixed point.</param>
         /// <param name="morphMat">Morph matrix.</param>
@@ -1064,10 +1064,10 @@ namespace MuPDF.NET
             float expandTabs = 1,
             float fillOpacity = 1,
             float[] fill = null,
-            string fontfile = null,
-            string fontname = "helv",
-            float fontsize = 11,
-            float? lineheight = null,
+            string fontFile = null,
+            string fontName = "helv",
+            float fontSize = 11,
+            float? lineHeight = null,
             float? miterLimit = 1,
             Point morphFix = null,
             Matrix morphMat = null,
@@ -1147,11 +1147,11 @@ namespace MuPDF.NET
             string cm180 = "-1 0 0 -1 0 0 cm\n"; // rotates by 180 deg.
             float height = _height;
 
-            string fname = fontname;
+            string fname = fontName;
             if (fname.StartsWith("/", StringComparison.Ordinal))
                 fname = fname.Substring(1);
 
-            int xref = _page.InsertFont(fname, fontfile, null, setSimple != 0, wmode: 0, encoding: encoding);
+            int xref = _page.InsertFont(fname, fontFile, null, setSimple != 0, wmode: 0, encoding: encoding);
             var fontdict = _doc.GetFontDictForXref(xref);
             if (fontdict == null)
                 throw new ValueErrorException("font not found");
@@ -1169,13 +1169,13 @@ namespace MuPDF.NET
                 ReadAscDesc(xref, ref ascender, ref descender);
 
             float lheightFactor;
-            if (lineheight.HasValue)
-                lheightFactor = lineheight.Value;
+            if (lineHeight.HasValue)
+                lheightFactor = lineHeight.Value;
             else if (ascender - descender <= 1)
                 lheightFactor = 1.2f;
             else
                 lheightFactor = ascender - descender;
-            float lheight = fontsize * lheightFactor;
+            float lheight = fontSize * lheightFactor;
 
             // create a list from buffer, split into its lines
             string t0;
@@ -1219,18 +1219,18 @@ namespace MuPDF.NET
                         if (code >= 0 && code < glyphs.Count)
                             sum += (float)glyphs[code].Item2;
                     }
-                    return sum * fontsize;
+                    return sum * fontSize;
                 }
-                return x.Length * fontsize;
+                return x.Length * fontSize;
             }
 
             // ---------------------------------------------------------------------
 
             float blen;
             if (ordering < 0)
-                blen = (float)glyphs[32].Item2 * fontsize; // pixel size of space character
+                blen = (float)glyphs[32].Item2 * fontSize; // pixel size of space character
             else
-                blen = fontsize;
+                blen = fontSize;
 
             string text = ""; // output buffer
 
@@ -1249,7 +1249,7 @@ namespace MuPDF.NET
             // adjust for text orientation / rotation
             // ---------------------------------------------------------------------
             float progr = 1; // direction of line progress
-            Point c_pnt = new Point(0, fontsize * ascender); // used for line progress
+            Point c_pnt = new Point(0, fontSize * ascender); // used for line progress
             Point point;
             float maxwidth;
             float maxheight;
@@ -1261,7 +1261,7 @@ namespace MuPDF.NET
             }
             else if (rot == 90) // rotate counter clockwise
             {
-                c_pnt = new Point(fontsize * ascender, 0); // progress in x-direction
+                c_pnt = new Point(fontSize * ascender, 0); // progress in x-direction
                 point = rect.BottomLeft + c_pnt; // line 1 'lheight' away from left
                 maxwidth = (float)rect.Height; // pixels available in one line
                 maxheight = (float)rect.Width; // available text height
@@ -1270,7 +1270,7 @@ namespace MuPDF.NET
             else if (rot == 180) // text upside down
             {
                 // progress upwards in y direction
-                c_pnt = new Point(0, -fontsize * ascender);
+                c_pnt = new Point(0, -fontSize * ascender);
                 point = rect.BottomRight + c_pnt; // line 1 'lheight' above bottom
                 maxwidth = (float)rect.Width; // pixels available in one line
                 progr = -1; // subtract lheight for next line
@@ -1280,7 +1280,7 @@ namespace MuPDF.NET
             else // rotate clockwise (270 or -90)
             {
                 // progress from right to left
-                c_pnt = new Point(-fontsize * ascender, 0);
+                c_pnt = new Point(-fontSize * ascender, 0);
                 point = rect.TopRight + c_pnt; // line 1 'lheight' left of right
                 maxwidth = (float)rect.Height; // pixels available in one line
                 progr = -1; // subtract lheight for next line
@@ -1372,7 +1372,7 @@ namespace MuPDF.NET
             int lbCount = text.Count(c => c == '\n') + 1; // number of lines written
 
             // text height = line count * line height plus one descender value
-            float textHeight = lheight * lbCount - descender * fontsize;
+            float textHeight = lheight * lbCount - descender * fontSize;
 
             float more = textHeight - maxheight; // difference to height limit
             if (more > Constants.Epsilon) // landed too much outside rect
@@ -1439,13 +1439,13 @@ namespace MuPDF.NET
                 nres.Append(" Tm /");
                 nres.Append(fname);
                 nres.Append(' ');
-                nres.Append(Helpers.FormatPdfReals(fontsize));
+                nres.Append(Helpers.FormatPdfReals(fontSize));
                 nres.Append(" Tf ");
 
                 if (renderMode > 0)
                 {
                     nres.Append(renderMode.ToString(CultureInfo.InvariantCulture)).Append(" Tr ");
-                    nres.Append(Helpers.FormatPdfReals(borderWidth * fontsize)).Append(" w ");
+                    nres.Append(Helpers.FormatPdfReals(borderWidth * fontSize)).Append(" w ");
                     if (miterLimit != null)
                         nres.Append(Helpers.FormatPdfReals(miterLimit.Value)).Append(" M ");
                 }

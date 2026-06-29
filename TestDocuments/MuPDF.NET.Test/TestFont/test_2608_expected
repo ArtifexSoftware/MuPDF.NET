@@ -1,14 +1,12 @@
-No significant gamma-ray excess above the expected background
-is detected from the direction of FRB 20171019A, with 52 gamma
-candidate events from the source region and 524 background event.
-A second analysis using an independent event calibration and recon-
-struction (Parsons & Hinton 2014) confirms this result. A search for
-variable emission on timescales ranging from milliseconds to sev-
-eral minutes with tools provided in (Brun et al. 2020) does not reveal
-any variability above 2.2 𝜎. For the total data set of 1.8 h, 95% confi-
-dence level (C. L.) upper limits on the photon flux are derived using
-the method described by Rolke et al. (2005). The energy threshold
-of the data is highly dependent on the zenith angle of the observa-
-tions. For these observations, the zenith angles range from 15 to 25
-deg, which leads to an energy threshold for the stacked data set of
-𝐸th = 120 GeV. The upper limit on the Very High Energy (VHE)
+The XRT summed image is shown in Figure 5. At the edge
+of the field-of-view, we detect a source spatially coincident with
+the Wolf 1561 star. As we consider this source unrelated to the
+FRB, we use the online Swift-XRT data products generator (Evans
+et al. 2007) (Evans et al. 2009) to derive upper limits in the 0.3-
+10 keV range on the count rate of 0.001885 counts.s−1. Using
+WebPIMMS9 (v4.11a) and assuming a weighted average 𝑁H = 5.12×
+1020 cm−2 from the direction of the source estimated from the
+NASA’s HEASARC 10 online tools (HI4PI Collaboration et al.
+2016) and a power law model with a photon index = 2, this upper
+limit translates to an energy flux of 6.6 × 10−14 erg cm−2 s−1 (8.3 ×
+10−14 erg cm−2 s−1 unabsorbed).

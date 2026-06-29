@@ -101,27 +101,110 @@ namespace PDF4LLM.Helpers
             }
         }
 
+        static bool _tesseractSetupHelpPrinted;
+
+        /// <summary>Whether <see cref="PrintTesseractSetupHelp"/> has already run.</summary>
+        internal static bool TesseractSetupHelpPrinted => _tesseractSetupHelpPrinted;
+
+        /// <summary>
+        /// Log pymupdf-layout status at the start of layout parsing, or setup help when it is missing.
+        /// </summary>
+        public static void LogLayoutStatus()
+        {
+            if (global::PDF4LLM.Layout.PyMuPdfLayout.IsActivated
+                && Page.GetLayoutProvider != null)
+            {
+                string version = global::PDF4LLM.Layout.PyMuPdfLayout.Version;
+                if (!string.IsNullOrEmpty(version))
+                    Console.WriteLine($"Using pymupdf-layout ({version}) for document processing.");
+                else
+                    Console.WriteLine("Using pymupdf-layout for document processing.");
+                return;
+            }
+
+            global::PDF4LLM.Layout.LayoutPythonPaths.PrintSetupHelp();
+        }
+
+        /// <summary>Print once how to install Tesseract OCR and tessdata.</summary>
+        public static void PrintTesseractSetupHelp()
+        {
+            if (_tesseractSetupHelpPrinted)
+                return;
+            _tesseractSetupHelpPrinted = true;
+
+            Console.Error.WriteLine(
+                "PDF4LLM: Tesseract OCR is not available; OCR will be disabled.\n" +
+                "\n" +
+                "Install Tesseract OCR and language data (tessdata), then ensure one of:\n" +
+                "  - Tesseract is on PATH (verify with: tesseract --list-langs)\n" +
+                "  - Set TESSDATA_PREFIX to your tessdata folder\n" +
+                "\n" +
+                "Windows: https://github.com/UB-Mannheim/tesseract/wiki\n" +
+                "Debian/Ubuntu: sudo apt install tesseract-ocr tesseract-ocr-eng");
+        }
+
+        /// <summary>Resolve tessdata if Tesseract is installed; otherwise <c>null</c>.</summary>
+        internal static string TryGetTessdata()
+        {
+            string env = global::MuPDF.NET.Utils.TESSDATA_PREFIX;
+            if (!string.IsNullOrWhiteSpace(env))
+                return env;
+
+            env = Environment.GetEnvironmentVariable("TESSDATA_PREFIX");
+            if (!string.IsNullOrWhiteSpace(env))
+                return env;
+
+            return TryFindTessdataViaTesseractListLangs();
+        }
+
+        static string TryFindTessdataViaTesseractListLangs()
+        {
+            try
+            {
+                using (var process = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "tesseract",
+                    Arguments = "--list-langs",
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                }))
+                {
+                    if (process == null)
+                        return null;
+                    string stdout = process.StandardOutput.ReadToEnd();
+                    process.WaitForExit();
+                    if (process.ExitCode != 0)
+                        return null;
+                    var m = System.Text.RegularExpressions.Regex.Match(
+                        stdout,
+                        @"List of available languages in ""(.+)""");
+                    return m.Success ? m.Groups[1].Value : null;
+                }
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
         /// <summary>
         /// Check availability of OCR tools and language data.
         /// <summary>Return the best OCR function available or null.</summary>
         /// </summary>
         public static OcrPageFunction SelectOcrFunction()
         {
-            string tessdata = null;
+            string tessdata = TryGetTessdata();
             bool rapidocrAvailable = false;
             bool paddleocrAvailable = false;
-            try
-            {
-                tessdata = global::MuPDF.NET.Utils.TESSDATA_PREFIX;
-            }
-            catch
-            {
-                tessdata = null;
-            }
 
             // rapidocr_onnxruntime / PaddleOCR are not wired for .NET yet.
             if (string.IsNullOrEmpty(tessdata) && !rapidocrAvailable && !paddleocrAvailable)
+            {
+                PrintTesseractSetupHelp();
                 return null;
+            }
 
             if (!string.IsNullOrEmpty(tessdata))
             {

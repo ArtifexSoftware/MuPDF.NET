@@ -16,7 +16,7 @@ namespace Artifex
     public static class Versions
     {
         /// &lt;summary&gt;Native MuPDF library (FZ_VERSION).&lt;/summary&gt;
-        public const string MuPdf = "$(ArtifexMuPdfVersion)"%3B
+        public const string MuPDF = "$(ArtifexMuPDFVersion)"%3B
 
         /// &lt;summary&gt;PyMuPDF Python package (VersionBind).&lt;/summary&gt;
         public const string PyMuPDF = "$(ArtifexPyMuPDFVersion)"%3B

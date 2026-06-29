@@ -22,6 +22,12 @@ dotnet msbuild -t:PDF4LLMSetupLayoutPython
 
 This creates a per-user Python venv (Windows: `%LOCALAPPDATA%\PDF4LLM\.venv-layout`, Linux/macOS: `~/.local/share/pdf4llm/.venv-layout`) and installs pinned `pymupdf` / `pymupdf-layout` wheels. PDF4LLM discovers that venv automatically.
 
+On Debian/Ubuntu, install system packages first:
+
+```bash
+sudo apt install python3-venv python3-pip
+```
+
 Alternatively, install `pymupdf-layout` into any Python 3.10+ environment and set `PDF4LLM_PYTHON` to that interpreter. If layout is unavailable, PDF4LLM falls back to classic text extraction.
 
 Project-local venv: run `python path/to/setup_layout_python.py --venv .pdf4llm-venv` in your project directory (also auto-discovered).

@@ -95,7 +95,7 @@ namespace MuPDF.NET.Test
                 rect,
                 text,
                 align: Constants.TextAlignLeft,
-                fontsize: 12);
+                fontSize: 12);
             tw.WriteText(page, morphFix: rect.TopLeft, morphMat: new Matrix(1, 1));
             // check text containment
             Assert.Equal(page.GetText(), page.GetText("text", clip: rect.IRect));
@@ -155,7 +155,7 @@ namespace MuPDF.NET.Test
                 text,
                 align: Constants.TextAlignLeft,
                 //font: font,
-                fontsize: 12,
+                fontSize: 12,
                 rightToLeft: true);
             tw.WriteText(page, morphFix: rect.TopLeft, morphMat: new Matrix(1, 1));
             // check text containment
@@ -187,7 +187,7 @@ namespace MuPDF.NET.Test
                 rect,
                 text,
                 align: Constants.TextAlignLeft,
-                fontsize: 12,
+                fontSize: 12,
                 font: new Font("cour"),
                 rightToLeft: true);
             tw.WriteText(page, oc: ocg, morphFix: rect.TopLeft, morphMat: new Matrix(1, 1));
@@ -479,7 +479,7 @@ namespace MuPDF.NET.Test
             // text = '111111111'
             string text4400 = "111111111";
             Console.WriteLine("Calling writer.FillTextbox().");
-            writer.FillTextbox(rect: new Rect(0, 0, 100, 20), pos: new Point(80, 0), text: text4400, fontsize: 8);
+            writer.FillTextbox(rect: new Rect(0, 0, 100, 20), pos: new Point(80, 0), text: text4400, fontSize: 8);
             document.Save(Out("test_4400.pdf"));
         }
 

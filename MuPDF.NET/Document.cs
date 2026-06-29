@@ -130,16 +130,16 @@ namespace MuPDF.NET
         /// <param name="rect">Layout rectangle for reflowable documents (origin at top-left).</param>
         /// <param name="width">Page width if <paramref name="rect"/> is omitted.</param>
         /// <param name="height">Page height if <paramref name="rect"/> is omitted.</param>
-        /// <param name="fontsize">Default font size for reflowable layout.</param>
+        /// <param name="fontSize">Default font size for reflowable layout.</param>
         /// <exception cref="FileNotFoundException">File not found.</exception>
         /// <exception cref="EmptyFileException">File is empty.</exception>
         /// <exception cref="FileDataException">File cannot be opened as a document.</exception>
-        public Document(string fileName, string fileType = null, Rect rect = null, float width = 0, float height = 0, float fontsize = 11)
+        public Document(string fileName, string fileType = null, Rect rect = null, float width = 0, float height = 0, float fontSize = 11)
         {
-            InitFromFilename(fileName, fileType, rect, width, height, fontsize);
+            InitFromFilename(fileName, fileType, rect, width, height, fontSize);
         }
 
-        private void InitFromFilename(string filename, string filetype, Rect rect, float width, float height, float fontsize)
+        private void InitFromFilename(string filename, string filetype, Rect rect, float width, float height, float fontSize)
         {
             Helpers.EnsureMupdfWarningsHooked();
             _graftId = _nextGraftId++;
@@ -175,7 +175,7 @@ namespace MuPDF.NET
                 throw new FileDataException($"Failed to open file '{filename}'.", e);
             }
 
-            bool laidOut = LayoutDoc(doc, w, h, fontsize);
+            bool laidOut = LayoutDoc(doc, w, h, fontSize);
             _nativeDoc = doc;
             if (laidOut)
                 ResetPageRefsInternal();
@@ -216,15 +216,15 @@ namespace MuPDF.NET
         /// <param name="rect">Layout rectangle for reflowable documents.</param>
         /// <param name="width">Page width if <paramref name="rect"/> is omitted.</param>
         /// <param name="height">Page height if <paramref name="rect"/> is omitted.</param>
-        /// <param name="fontsize">Default font size for reflowable layout.</param>
+        /// <param name="fontSize">Default font size for reflowable layout.</param>
         /// <exception cref="EmptyFileException"><paramref name="stream"/> is null or empty.</exception>
         /// <exception cref="FileDataException">Buffer cannot be opened as a document.</exception>
-        public Document(byte[] stream, string fileType = null, Rect rect = null, float width = 0, float height = 0, float fontsize = 11)
+        public Document(byte[] stream, string fileType = null, Rect rect = null, float width = 0, float height = 0, float fontSize = 11)
         {
-            InitFromByteArray(stream, fileType, rect, width, height, fontsize);
+            InitFromByteArray(stream, fileType, rect, width, height, fontSize);
         }
 
-        private void InitFromByteArray(byte[] data, string filetype, Rect rect, float width, float height, float fontsize)
+        private void InitFromByteArray(byte[] data, string filetype, Rect rect, float width, float height, float fontSize)
         {
             Helpers.EnsureMupdfWarningsHooked();
             _graftId = _nextGraftId++;
@@ -250,7 +250,7 @@ namespace MuPDF.NET
                 throw new FileDataException("Failed to open stream", e);
             }
 
-            bool laidOut = LayoutDoc(doc, w, h, fontsize);
+            bool laidOut = LayoutDoc(doc, w, h, fontSize);
             _nativeDoc = doc;
             if (laidOut)
                 ResetPageRefsInternal();
@@ -286,12 +286,12 @@ namespace MuPDF.NET
         /// <param name="rect">Layout rectangle for reflowable documents.</param>
         /// <param name="width">Page width if <paramref name="rect"/> is omitted.</param>
         /// <param name="height">Page height if <paramref name="rect"/> is omitted.</param>
-        /// <param name="fontsize">Default font size for reflowable layout.</param>
+        /// <param name="fontSize">Default font size for reflowable layout.</param>
         /// <exception cref="ArgumentNullException"><paramref name="stream"/> is null.</exception>
         /// <exception cref="EmptyFileException">Stream has no data.</exception>
         /// <exception cref="FileDataException">Stream cannot be opened as a document.</exception>
-        public Document(Stream stream, string fileType = null, Rect rect = null, float width = 0, float height = 0, float fontsize = 11)
-            : this(ReadStreamFully(stream), fileType, rect, width, height, fontsize)
+        public Document(Stream stream, string fileType = null, Rect rect = null, float width = 0, float height = 0, float fontSize = 11)
+            : this(ReadStreamFully(stream), fileType, rect, width, height, fontSize)
         {
         }
 
@@ -303,18 +303,18 @@ namespace MuPDF.NET
 
         /// <summary>Opens a document from a file path.</summary>
         /// <inheritdoc cref="Document(string, string, Rect, float, float, float)"/>
-        public static Document Open(string fileName, string fileType = null, Rect rect = null, float width = 0, float height = 0, float fontsize = 11)
-            => new Document(fileName, fileType, rect, width, height, fontsize);
+        public static Document Open(string fileName, string fileType = null, Rect rect = null, float width = 0, float height = 0, float fontSize = 11)
+            => new Document(fileName, fileType, rect, width, height, fontSize);
 
         /// <summary>Opens a document from a byte buffer.</summary>
         /// <inheritdoc cref="Document(byte[], string, Rect, float, float, float)"/>
-        public static Document Open(byte[] stream, string fileType = null, Rect rect = null, float width = 0, float height = 0, float fontsize = 11)
-            => new Document(stream, fileType, rect, width, height, fontsize);
+        public static Document Open(byte[] stream, string fileType = null, Rect rect = null, float width = 0, float height = 0, float fontSize = 11)
+            => new Document(stream, fileType, rect, width, height, fontSize);
 
         /// <summary>Opens a document from a readable stream.</summary>
         /// <inheritdoc cref="Document(Stream, string, Rect, float, float, float)"/>
-        public static Document Open(Stream stream, string fileType = null, Rect rect = null, float width = 0, float height = 0, float fontsize = 11)
-            => new Document(stream, fileType, rect, width, height, fontsize);
+        public static Document Open(Stream stream, string fileType = null, Rect rect = null, float width = 0, float height = 0, float fontSize = 11)
+            => new Document(stream, fileType, rect, width, height, fontSize);
 
         private static byte[] ReadStreamFully(Stream stream)
         {
@@ -330,11 +330,11 @@ namespace MuPDF.NET
             }
         }
 
-        private bool LayoutDoc(mupdf.FzDocument doc, float w, float h, float fontsize)
+        private bool LayoutDoc(mupdf.FzDocument doc, float w, float h, float fontSize)
         {
             if (w > 0 && h > 0)
             {
-                mupdf.mupdf.fz_layout_document(doc, w, h, fontsize);
+                mupdf.mupdf.fz_layout_document(doc, w, h, fontSize);
                 return true;
             }
             if (mupdf.mupdf.fz_is_document_reflowable(doc) != 0)
@@ -1832,18 +1832,18 @@ namespace MuPDF.NET
         /// <remarks>PDF only: Insert a new page and insert some text. Convenience function which combines <see cref="NewPage"/> and (parts of) <see cref="Page.InsertText"/>. PyMuPDF <c>Document.insert_page</c>. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         /// <param name="pno">page number index (zero-indexed) at which to insert page. Special values -1 and <c><see cref="PageCount"/></c> insert after the last page.</param>
         /// <param name="text">Object definition or page text source.</param>
-        /// <param name="fontsize">Default font size for reflowable layout.</param>
+        /// <param name="fontSize">Default font size for reflowable layout.</param>
         /// <param name="width">Page width for reflowable layout (used with height if rect is omitted).</param>
         /// <param name="height">Page height for reflowable layout (used with width if rect is omitted).</param>
-        /// <param name="fontname">Base-14 or embedded font name (default <c>helv</c>).</param>
+        /// <param name="fontName">Base-14 or embedded font name (default <c>helv</c>).</param>
         /// <param name="color">Whether color images may be processed.</param>
         /// <returns>the result of <see cref="Page.InsertText"/> (number of successfully inserted lines).</returns>
-        public Page InsertPage(int pno = -1, string text = null, float fontsize = 11, float width = 595, float height = 842, string fontname = "helv", float[] color = null)
+        public Page InsertPage(int pno = -1, string text = null, float fontSize = 11, float width = 595, float height = 842, string fontName = "helv", float[] color = null)
         {
             var page = NewPage(pno, width, height);
             if (!string.IsNullOrEmpty(text))
             {
-                page.InsertText(new Point(72, 72), text, fontSize: fontsize, fontName: fontname, color: color);
+                page.InsertText(new Point(72, 72), text, fontSize: fontSize, fontName: fontName, color: color);
             }
             return page;
         }
@@ -4872,8 +4872,8 @@ namespace MuPDF.NET
         /// <remarks>Re-paginate ("reflow") the document based on the given page dimension and fontsize. This only affects some document types like e-books and HTML. Ignored if not supported. Supported documents have <see langword="true"/> in property <see cref="IsReflowable"/>. PyMuPDF <c>Document.layout</c>. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         /// <param name="width">use it together with <c>height</c> as alternative to <c>rect</c>.</param>
         /// <param name="height">use it together with <c>width</c> as alternative to <c>rect</c>.</param>
-        /// <param name="fontsize">the desired default fontsize.</param>
-        public void Layout(float width = 400, float height = 600, float fontsize = 11)
+        /// <param name="fontSize">the desired default fontsize.</param>
+        public void Layout(float width = 400, float height = 600, float fontSize = 11)
         {
             if (IsClosed || IsEncrypted)
                 throw new ValueErrorException("document closed or encrypted");
@@ -4884,19 +4884,19 @@ namespace MuPDF.NET
             // if w <= 0.0 or h <= 0.0: raise ValueError("bad page size")
             if (w <= 0.0f || h <= 0.0f)
                 throw new ValueErrorException("bad page size");
-            mupdf.mupdf.fz_layout_document(NativeDocument, w, h, fontsize);
+            mupdf.mupdf.fz_layout_document(NativeDocument, w, h, fontSize);
             ResetPageRefsInternal();
             InitDoc();
         }
         /// <summary>
         /// Re-layouts a reflowable document to new dimensions.
         /// </summary>
-        /// <remarks>Re-paginate ("reflow") the document based on the given page dimension and fontsize. This only affects some document types like e-books and HTML. Ignored if not supported. Supported documents have <see langword="true"/> in property <see cref="IsReflowable"/>. PyMuPDF <c>Document.layout</c>. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
+        /// <remarks>Re-paginate ("reflow") the document based on the given page dimension and fontSize. This only affects some document types like e-books and HTML. Ignored if not supported. Supported documents have <see langword="true"/> in property <see cref="IsReflowable"/>. PyMuPDF <c>Document.layout</c>. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         /// <param name="rect">desired page size. Must be finite, not empty and start at point (0, 0).</param>
-        /// <param name="fontsize">the desired default fontsize.</param>
-        public void Layout(Rect rect, float fontsize = 11)
+        /// <param name="fontSize">the desired default fontsize.</param>
+        public void Layout(Rect rect, float fontSize = 11)
         {
-            Layout((float)rect.Width, (float)rect.Height, fontsize);
+            Layout((float)rect.Width, (float)rect.Height, fontSize);
         }
 
         // ─── Journal ────────────────────────────────────────────────────
@@ -7874,14 +7874,14 @@ namespace MuPDF.NET
         /// <summary>Python <c>fitz.open</c> compatibility aliases for <see cref="Open()"/>.</summary>
         internal static Document open() => Open();
 
-        internal static Document open(string filename, string filetype = null, Rect rect = null, float width = 0, float height = 0, float fontsize = 11)
-            => Open(filename, filetype, rect, width, height, fontsize);
+        internal static Document open(string filename, string filetype = null, Rect rect = null, float width = 0, float height = 0, float fontSize = 11)
+            => Open(filename, filetype, rect, width, height, fontSize);
 
-        internal static Document open(byte[] data, string filetype = null, Rect rect = null, float width = 0, float height = 0, float fontsize = 11)
-            => Open(data, filetype, rect, width, height, fontsize);
+        internal static Document open(byte[] data, string filetype = null, Rect rect = null, float width = 0, float height = 0, float fontSize = 11)
+            => Open(data, filetype, rect, width, height, fontSize);
 
-        internal static Document open(Stream stream, string filetype = null, Rect rect = null, float width = 0, float height = 0, float fontsize = 11)
-            => Open(stream, filetype, rect, width, height, fontsize);
+        internal static Document open(Stream stream, string filetype = null, Rect rect = null, float width = 0, float height = 0, float fontSize = 11)
+            => Open(stream, filetype, rect, width, height, fontSize);
 
         /// <summary>Whether to use MuPDF extra page-count helpers.</summary>
         private static bool g_use_extra => true;
@@ -8008,8 +8008,8 @@ namespace MuPDF.NET
             EnsurePdf();
             DeletePages(pages);
         }
-        internal Page insert_page(int pno = -1, string text = null, float fontsize = 11, float width = 595, float height = 842, string fontname = "helv", float[] color = null)
-            => InsertPage(pno, text, fontsize, width, height, fontname, color);
+        internal Page insert_page(int pno = -1, string text = null, float fontSize = 11, float width = 595, float height = 842, string fontName = "helv", float[] color = null)
+            => InsertPage(pno, text, fontSize, width, height, fontName, color);
         internal void copy_page(int pno, int to = -1) => CopyPage(pno, to);
         internal void fullcopy_page(int pno, int to = -1) => FullCopyPage(pno, to);
         internal void move_page(int pno, int to = -1) => MovePage(pno, to);
@@ -8170,8 +8170,8 @@ namespace MuPDF.NET
             => (string)GetPageText(pno, option, flags);
 
         // Layout and journalling.
-        internal void layout(float width = 400, float height = 600, float fontsize = 11) => Layout(width, height, fontsize);
-        internal void layout(Rect rect, float fontsize = 11) => Layout(rect, fontsize);
+        internal void layout(float width = 400, float height = 600, float fontSize = 11) => Layout(width, height, fontSize);
+        internal void layout(Rect rect, float fontSize = 11) => Layout(rect, fontSize);
         internal void journal_enable() => JournalEnable();
         internal Dictionary<string, bool> journal_can_do()
         {

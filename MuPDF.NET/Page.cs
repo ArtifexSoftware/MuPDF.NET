@@ -1489,8 +1489,8 @@ namespace MuPDF.NET
                         newText,
                         align: align,
                         color: color,
-                        fontname: fname,
-                        fontsize: fsize);
+                        fontName: fname,
+                        fontSize: fsize);
                     fsize -= 0.5f;
                 }
             }
@@ -2476,23 +2476,23 @@ namespace MuPDF.NET
                             ocrPixmap = filteredPixmap;
                     }
 
-                var pdfocrOptions = new mupdf.FzPdfocrOptions();
-                ConfigurePdfOcrOptions(pdfocrOptions, language, tessdataDir);
+                    var pdfocrOptions = new mupdf.FzPdfocrOptions();
+                    ConfigurePdfOcrOptions(pdfocrOptions, language, tessdataDir);
 
-                var ocrBuf = mupdf.mupdf.fz_new_buffer(1024);
-                var ocrOut = new mupdf.FzOutput(ocrBuf);
-                ocrOut.fz_write_pixmap_as_pdfocr(ocrPixmap.NativePixmap, pdfocrOptions);
-                mupdf.mupdf.fz_close_output(ocrOut);
-                byte[] pdfBytes = ocrBuf.fz_buffer_extract();
+                    var ocrBuf = mupdf.mupdf.fz_new_buffer(1024);
+                    var ocrOut = new mupdf.FzOutput(ocrBuf);
+                    ocrOut.fz_write_pixmap_as_pdfocr(ocrPixmap.NativePixmap, pdfocrOptions);
+                    mupdf.mupdf.fz_close_output(ocrOut);
+                    byte[] pdfBytes = ocrBuf.fz_buffer_extract();
 
-                // Must stay alive as long as returned TextPage is in use.
-                var ocrDocFull = new Document(pdfBytes, "pdf");
-                var ocrPageFull = ocrDocFull.LoadPage(0);
-                float unzoom = Rect.Width / ocrPageFull.Rect.Width;
-                Matrix ctm = new Matrix(unzoom, unzoom) * DerotationMatrix;
-                var ocrTp = ocrPageFull.NewTextPageForGetText(null, flags, ctm);
-                ocrTp.Parent = this;
-                return ocrTp;
+                    // Must stay alive as long as returned TextPage is in use.
+                    var ocrDocFull = new Document(pdfBytes, "pdf");
+                    var ocrPageFull = ocrDocFull.LoadPage(0);
+                    float unzoom = Rect.Width / ocrPageFull.Rect.Width;
+                    Matrix ctm = new Matrix(unzoom, unzoom) * DerotationMatrix;
+                    var ocrTp = ocrPageFull.NewTextPageForGetText(null, flags, ctm);
+                    ocrTp.Parent = this;
+                    return ocrTp;
                 }
                 finally
                 {
@@ -2681,10 +2681,10 @@ namespace MuPDF.NET
             int rc = img.InsertText(
                 point,
                 text,
-                fontsize: fontSize,
-                lineheight: lineHeight,
-                fontname: fontName,
-                fontfile: fontFile,
+                fontSize: fontSize,
+                lineHeight: lineHeight,
+                fontName: fontName,
+                fontFile: fontFile,
                 setSimple: setSimple,
                 encoding: encoding,
                 color: color,
@@ -2787,10 +2787,10 @@ namespace MuPDF.NET
                 expandTabs: expandTabs,
                 fillOpacity: fillOpacity,
                 fill: fill,
-                fontfile: fontFile,
-                fontname: fontName,
-                fontsize: fontSize,
-                lineheight: lineHeight,
+                fontFile: fontFile,
+                fontName: fontName,
+                fontSize: fontSize,
+                lineHeight: lineHeight,
                 miterLimit: miterLimit,
                 morphFix: morphFix,
                 morphMat: morphMat,

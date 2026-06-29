@@ -224,9 +224,9 @@ namespace MuPDF.NET
         /// <summary>
         /// Per-character widths for <paramref name="text"/> (PyMuPDF <c>Font.char_lengths</c>).
         /// </summary>
-        public float[] CharLengths(string text, float fontsize = 11, string language = null, int script = 0, int wmode = 0, int smallCaps = 0)
+        public float[] CharLengths(string text, float fontSize = 11, string language = null, int script = 0, int wmode = 0, int smallCaps = 0)
         {
-            var rc = CharLengthsList(text, fontsize, language, script, wmode, smallCaps);
+            var rc = CharLengthsList(text, fontSize, language, script, wmode, smallCaps);
             var arr = new float[rc.Count];
             rc.CopyTo(arr, 0);
             return arr;
@@ -285,7 +285,7 @@ namespace MuPDF.NET
         /// <summary>
         /// Total text width (PyMuPDF <c>Font.text_length</c>).
         /// </summary>
-        public float TextLength(string text, float fontsize = 11, string language = null, int script = 0, int wmode = 0, int smallCaps = 0)
+        public float TextLength(string text, float fontSize = 11, string language = null, int script = 0, int wmode = 0, int smallCaps = 0)
         {
             mupdf.FzFont thisfont = NativeFontCore;
             int lang = (int)mupdf.mupdf.fz_text_language_from_string(language);
@@ -294,7 +294,7 @@ namespace MuPDF.NET
                 throw new ValueErrorException(Constants.MSG_BAD_TEXT);
             foreach (char ch in text)
                 rc += AdvanceGlyphForCharacter(thisfont, ch, script, lang, wmode, smallCaps);
-            rc *= fontsize;
+            rc *= fontSize;
             return rc;
         }
 
@@ -375,8 +375,8 @@ namespace MuPDF.NET
         internal bool is_writable => IsWritable;
         internal string name => Name;
 
-        internal IList<float> char_lengths(string text, float fontsize = 11, string language = null, int script = 0, int wmode = 0, int small_caps = 0)
-            => CharLengthsList(text, fontsize, language, script, wmode, small_caps);
+        internal IList<float> char_lengths(string text, float fontSize = 11, string language = null, int script = 0, int wmode = 0, int small_caps = 0)
+            => CharLengthsList(text, fontSize, language, script, wmode, small_caps);
 
         internal float glyph_advance(int chr_, string language = null, int script = 0, int wmode = 0, int small_caps = 0)
             => GlyphAdvance(chr_, language, script, wmode, small_caps);
@@ -389,14 +389,14 @@ namespace MuPDF.NET
         internal int has_glyph(int chr, string language = null, int script = 0, int fallback = 0, int small_caps = 0)
             => HasGlyph(chr, language, script, fallback, small_caps);
 
-        internal float text_length(string text, float fontsize = 11, string language = null, int script = 0, int wmode = 0, int small_caps = 0)
-            => TextLength(text, fontsize, language, script, wmode, small_caps);
+        internal float text_length(string text, float fontSize = 11, string language = null, int script = 0, int wmode = 0, int small_caps = 0)
+            => TextLength(text, fontSize, language, script, wmode, small_caps);
 
         internal string unicode_to_glyph_name(int ch) => UnicodeToGlyphName(ch);
 
         internal List<int> valid_codepoints() => ValidCodepoints();
 
-        private List<float> CharLengthsList(string text, float fontsize, string language, int script, int wmode, int smallCaps)
+        private List<float> CharLengthsList(string text, float fontSize, string language, int script, int wmode, int smallCaps)
         {
             int lang = (int)mupdf.mupdf.fz_text_language_from_string(language);
             var rc = new List<float>();
@@ -404,7 +404,7 @@ namespace MuPDF.NET
             foreach (char ch in text)
             {
                 float adv = AdvanceGlyphForCharacter(thisfont, ch, script, lang, wmode, smallCaps);
-                rc.Add(fontsize * adv);
+                rc.Add(fontSize * adv);
             }
             return rc;
         }

@@ -210,21 +210,21 @@ namespace MuPDF.NET
         }
 
         /// <summary>Built-in font name shorthand for annotation <c>/DA</c> strings.</summary>
-        public static string ExpandFontName(string fontname)
+        public static string ExpandFontName(string fontName)
         {
-            if (fontname == null)
+            if (fontName == null)
                 return "Helv";
-            if (fontname.StartsWith("Co", StringComparison.OrdinalIgnoreCase))
+            if (fontName.StartsWith("Co", StringComparison.OrdinalIgnoreCase))
                 return "Cour";
-            if (fontname.StartsWith("Ti", StringComparison.OrdinalIgnoreCase))
+            if (fontName.StartsWith("Ti", StringComparison.OrdinalIgnoreCase))
                 return "TiRo";
-            if (fontname.StartsWith("Sy", StringComparison.OrdinalIgnoreCase))
+            if (fontName.StartsWith("Sy", StringComparison.OrdinalIgnoreCase))
                 return "Symb";
-            if (fontname.StartsWith("Za", StringComparison.OrdinalIgnoreCase))
+            if (fontName.StartsWith("Za", StringComparison.OrdinalIgnoreCase))
                 return "Zadb";
-            if (fontname.StartsWith("He", StringComparison.OrdinalIgnoreCase))
+            if (fontName.StartsWith("He", StringComparison.OrdinalIgnoreCase))
                 return "Helv";
-            return fontname;
+            return fontName;
         }
 
         /// <summary>Build annotation default appearance (<c>/DA</c>) for a widget.</summary>

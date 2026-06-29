@@ -11,16 +11,7 @@ namespace PDF4LLM.Ocr
     {
         public const char ReplacementUnicode = '\uFFFD';
 
-        public static string Tessdata => Utils.TESSDATA_PREFIX;
-
-        static TesseractApi()
-        {
-            if (Tessdata == null)
-            {
-                Console.WriteLine(
-                    "Warning: Tesseract OCR is not available. No OCR text will be extracted.");
-            }
-        }
+        public static string Tessdata => global::PDF4LLM.Helpers.LayoutParseHelpers.TryGetTessdata();
 
         /// <summary>Whether span text came from OCR.</summary>
         /// <param name="span">Text span to inspect.</param>

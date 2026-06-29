@@ -2,7 +2,17 @@
   <PropertyGroup>
     <PDF4LLMLayoutToolsDir Condition="Exists('$(MSBuildThisFileDirectory)layout\setup_layout_python.py')">$(MSBuildThisFileDirectory)layout\</PDF4LLMLayoutToolsDir>
     <PDF4LLMLayoutToolsDir Condition="'$(PDF4LLMLayoutToolsDir)' == '' and Exists('$(MSBuildThisFileDirectory)..\scripts\setup_layout_python.py')">$(MSBuildThisFileDirectory)..\scripts\</PDF4LLMLayoutToolsDir>
+    <PDF4LLMOcrModelPath Condition="Exists('$(MSBuildThisFileDirectory)..\ocr\ocr_decision_model.onnx')">$(MSBuildThisFileDirectory)..\ocr\ocr_decision_model.onnx</PDF4LLMOcrModelPath>
+    <PDF4LLMOcrModelPath Condition="'$(PDF4LLMOcrModelPath)' == '' and Exists('$(MSBuildThisFileDirectory)ocr\ocr_decision_model.onnx')">$(MSBuildThisFileDirectory)ocr\ocr_decision_model.onnx</PDF4LLMOcrModelPath>
   </PropertyGroup>
+
+  <!-- Ship OCR decision model next to the app (mirrors pymupdf4llm/src/ocr/ocr_decision_model.onnx). -->
+  <ItemGroup Condition="'$(PDF4LLMOcrModelPath)' != ''">
+    <None Include="$(PDF4LLMOcrModelPath)"
+              Link="ocr\ocr_decision_model.onnx"
+              CopyToOutputDirectory="PreserveNewest"
+              Visible="false" />
+  </ItemGroup>
 
   <!-- Opt-in: dotnet msbuild -t:PDF4LLMSetupLayoutPython -->
   <Target Name="PDF4LLMSetupLayoutPython">
@@ -12,6 +22,8 @@
           Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(PDF4LLMLayoutToolsDir)setup_layout_python.ps1&quot;" />
     <!-- Invoke Python directly on Unix — avoids CRLF issues in packed .sh from Windows builds. -->
     <Exec Condition="'$(OS)' != 'Windows_NT'"
-          Command="python3 &quot;$(PDF4LLMLayoutToolsDir)setup_layout_python.py&quot;" />
+          Command="python3 &quot;$(PDF4LLMLayoutToolsDir)setup_layout_python.py&quot;"
+          StandardOutputImportance="High"
+          StandardErrorImportance="High" />
   </Target>
 </Project>

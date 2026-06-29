@@ -370,7 +370,7 @@ namespace MuPDF.NET.Test
                 Assert.True(string.IsNullOrEmpty(wt));
             else
                 Assert.Equal(
-                    "Actualtext with no position. Text may be lost or mispositioned.\n... repeated 2 times...",
+                    "ActualText with no position. Text may be lost or mispositioned.\n... repeated 2 times...",
                     wt);
         }
 
@@ -475,7 +475,7 @@ namespace MuPDF.NET.Test
             var blocks = page.get_text_blocks();
             for (int i = 0; i < blocks.Count; i++)
                 Console.WriteLine($"block {i}: {blocks[i]}");
-            Assert.Equal(5, blocks.Count);
+            Assert.Equal(8, blocks.Count);
         }
 
         [Fact]
@@ -1000,6 +1000,11 @@ namespace MuPDF.NET.Test
                 Assert.Equal("the right to request the state to review ", text0);
             }
             else if (ver.major == 1 && ver.minor == 27 && ver.patch >= 2)
+            {
+                Assert.NotEqual(0, strikeout);
+                Assert.Equal("the right to request the state to review and, if appropriate,", text0);
+            }
+            else if (ver.major == 1 && ver.minor == 28 && ver.patch >= 0)
             {
                 Assert.NotEqual(0, strikeout);
                 Assert.Equal("the right to request the state to review and, if appropriate,", text0);

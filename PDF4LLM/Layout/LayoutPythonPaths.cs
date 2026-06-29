@@ -100,15 +100,18 @@ namespace PDF4LLM.Layout
 
             string venv = UserLocalVenvRoot();
             Console.Error.WriteLine(
-                "PDF4LLM: pymupdf-layout is not installed; layout mode is unavailable.\n" +
+                "PDF4LLM: pymupdf-layout is not installed; layout analysis is unavailable.\n" +
                 "\n" +
                 "Install once per machine:\n" +
                 "  dotnet msbuild -t:PDF4LLMSetupLayoutPython\n" +
                 "\n" +
                 "Or run the setup script from the PDF4LLM package / repo:\n" +
-                "  python3 PDF4LLM/scripts/setup_layout_python.py\n" +
+                "  python PDF4LLM/scripts/setup_layout_python.py\n" +
                 "\n" +
-                $"Setup creates a venv at: {venv}\n" +
+                "On Debian/Ubuntu, install system packages first:\n" +
+                "  sudo apt install python3-venv python3-pip\n" +
+                "\n" +
+                $"The setup script creates a venv at: {venv}\n" +
                 "Or set PDF4LLM_PYTHON to a Python 3.10+ interpreter with pymupdf-layout installed.");
         }
     }

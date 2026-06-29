@@ -27,7 +27,12 @@
 
   <ItemGroup>
     <PackageReference Include="Markdig" Version="0.38.0" />
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.20.1" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="ocr\ocr_decision_model.onnx" CopyToOutputDirectory="PreserveNewest" Link="ocr\ocr_decision_model.onnx" />
   </ItemGroup>
 
   <!-- AI/RAG (net8.0 only — Microsoft.Extensions.AI) -->

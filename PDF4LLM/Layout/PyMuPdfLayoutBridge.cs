@@ -14,20 +14,25 @@ namespace PDF4LLM.Layout
     internal static class PyMuPdfLayoutBridge
     {
         const string WorkerReadyToken = "READY";
+        const string WorkerResultPrefix = "RESULT ";
 
         static readonly object Gate = new object();
         static readonly ConditionalWeakTable<Document, string> TempDocumentPaths =
             new ConditionalWeakTable<Document, string>();
 
         static readonly string WorkerScript = @"
+import contextlib
 import json
 import sys
 import traceback
 
+RESULT_PREFIX = 'RESULT '
+
 try:
-    import pymupdf
-    import pymupdf.layout
-    pymupdf.layout.activate()
+    with contextlib.redirect_stdout(sys.stderr):
+        import pymupdf
+        import pymupdf.layout
+        pymupdf.layout.activate()
 except Exception as exc:
     print('ERROR ' + json.dumps(str(exc)), flush=True)
     sys.exit(1)
@@ -47,14 +52,15 @@ for line in sys.stdin:
         doc = pymupdf.open(path)
         try:
             page = doc[page_no]
-            page.get_layout()
+            with contextlib.redirect_stdout(sys.stderr):
+                page.get_layout()
             result = page.layout_information or []
         finally:
             doc.close()
-        print(json.dumps(result), flush=True)
+        print(RESULT_PREFIX + json.dumps(result), flush=True)
     except Exception:
         traceback.print_exc(file=sys.stderr)
-        print('[]', flush=True)
+        print(RESULT_PREFIX + '[]', flush=True)
 ";
 
         static Process _worker;
@@ -186,14 +192,65 @@ for line in sys.stdin:
             _worker = Process.Start(psi) ?? throw new InvalidOperationException(
                 "Failed to start Python layout worker.");
 
-            string ready = _worker.StandardOutput.ReadLine();
-            if (ready != WorkerReadyToken)
+            if (!WaitForWorkerReady(_worker, out string startupDetail))
             {
-                string err = _worker.StandardError.ReadToEnd();
                 StopWorker();
                 throw new InvalidOperationException(
-                    "pymupdf.layout worker failed to start: " + err);
+                    "pymupdf.layout worker failed to start: " + startupDetail);
             }
+        }
+
+        static bool WaitForWorkerReady(Process worker, out string detail)
+        {
+            var startupLines = new List<string>();
+            detail = "";
+
+            for (int i = 0; i < 200; i++)
+            {
+                string line = worker.StandardOutput.ReadLine();
+                if (line == null)
+                    break;
+
+                if (line == WorkerReadyToken)
+                    return true;
+
+                if (line.StartsWith("ERROR ", StringComparison.Ordinal))
+                {
+                    detail = line.Substring(6);
+                    return false;
+                }
+
+                startupLines.Add(line);
+            }
+
+            string err = worker.StandardError.ReadToEnd();
+            detail = string.Join(Environment.NewLine, startupLines);
+            if (!string.IsNullOrEmpty(err))
+                detail = string.IsNullOrEmpty(detail) ? err : detail + Environment.NewLine + err;
+            if (string.IsNullOrEmpty(detail))
+                detail = "worker exited before READY";
+            return false;
+        }
+
+        static string ReadWorkerJsonPayload(Process worker)
+        {
+            for (int i = 0; i < 200; i++)
+            {
+                string line = worker.StandardOutput.ReadLine();
+                if (line == null)
+                    return null;
+
+                if (line.StartsWith(WorkerResultPrefix, StringComparison.Ordinal))
+                    return line.Substring(WorkerResultPrefix.Length);
+
+                // Backward compatibility with older workers that emitted bare JSON.
+                if (line.Length > 0 && line[0] == '[')
+                    return line;
+
+                Trace.WriteLine("pymupdf.layout worker stdout: " + line);
+            }
+
+            return null;
         }
 
         static void StopWorker()
@@ -239,39 +296,45 @@ for line in sys.stdin:
             {
                 EnsureWorker();
 
-                var request = new JObject
-                {
-                    ["path"] = path,
-                    ["page"] = page.Number,
-                };
-
-                _worker.StandardInput.WriteLine(request.ToString(Formatting.None));
+                _worker.StandardInput.WriteLine(
+                    JsonConvert.SerializeObject(new { path, page = page.Number }));
                 _worker.StandardInput.Flush();
 
-                string line = _worker.StandardOutput.ReadLine();
-                if (string.IsNullOrEmpty(line))
-                    return null;
-
-                JToken parsed = JToken.Parse(line);
-                if (!(parsed is JArray ja))
-                    return null;
-
-                var rows = new List<object[]>(ja.Count);
-                foreach (JToken item in ja)
+                string payload;
+                try
                 {
-                    if (!(item is JArray row) || row.Count < 5)
-                        continue;
-                    rows.Add(new object[]
-                    {
-                        row[0].Value<float>(),
-                        row[1].Value<float>(),
-                        row[2].Value<float>(),
-                        row[3].Value<float>(),
-                        row[4].Value<string>() ?? "text",
-                    });
-                }
+                    payload = ReadWorkerJsonPayload(_worker);
+                    if (string.IsNullOrEmpty(payload))
+                        return null;
 
-                return rows;
+                    JToken parsed = JToken.Parse(payload);
+                    if (!(parsed is JArray ja))
+                        return null;
+
+                    var rows = new List<object[]>(ja.Count);
+                    foreach (JToken item in ja)
+                    {
+                        if (!(item is JArray row) || row.Count < 5)
+                            continue;
+                        rows.Add(new object[]
+                        {
+                            row[0].Value<float>(),
+                            row[1].Value<float>(),
+                            row[2].Value<float>(),
+                            row[3].Value<float>(),
+                            row[4].Value<string>() ?? "text",
+                        });
+                    }
+
+                    return rows;
+                }
+                catch (JsonException ex)
+                {
+                    Console.Error.WriteLine(
+                        "PDF4LLM: pymupdf.layout worker returned invalid JSON: "
+                        + ex.Message);
+                    return null;
+                }
             }
         }
 
