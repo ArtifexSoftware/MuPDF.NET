@@ -6,9 +6,7 @@ using System.Text;
 
 namespace PDF4LLM.Helpers
 {
-    /// <summary>
-    /// Plain-text table formatting aligned with the <c>tabulate</c>-style layouts used for document text export.
-    /// </summary>
+    /// <summary>Plain-text table formatting for document export.</summary>
     internal static class LayoutTabulate
     {
         /// <summary>Known <c>tabulate</c> table format names (0.9.x set).</summary>

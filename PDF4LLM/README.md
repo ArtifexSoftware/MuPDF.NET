@@ -1,6 +1,8 @@
 # PDF4LLM
 
-LLM/RAG helpers for [MuPDF.NET](https://www.nuget.org/packages/MuPDF.NET): PDF-to-Markdown conversion, layout parsing, document structure analysis. Designed for use with RAG pipelines and integration with LLMs.
+LLM/RAG helpers for [MuPDF.NET](https://www.nuget.org/packages/MuPDF.NET): convert PDFs to Markdown or plain text, analyze page layout, export structure as JSON, and load documents for retrieval pipelines.
+
+The public API lives in the **`PDF4LLM`** namespace. The main entry point is the static class **`PdfExtractor`**.
 
 ## Installation
 
@@ -8,93 +10,143 @@ LLM/RAG helpers for [MuPDF.NET](https://www.nuget.org/packages/MuPDF.NET): PDF-t
 dotnet add package PDF4LLM
 ```
 
-PDF4LLM depends on [MuPDF.NET](https://www.nuget.org/packages/MuPDF.NET); it is installed automatically.
+[MuPDF.NET](https://www.nuget.org/packages/MuPDF.NET) is installed automatically as a dependency — you do not need to add it separately. If your project already references MuPDF.NET, add `PDF4LLM` anyway; NuGet will resolve a compatible MuPDF.NET version.
 
-## Features
+## PyMuPDF Layout (recommended)
 
-- **PDF-to-Markdown** — Convert PDF pages to Markdown with layout awareness (tables, headers, images)
-- **Layout parsing** — Extract document structure (pages, boxes, tables, images) as JSON or structured objects
-- **Plain text extraction** — Same layout analysis as Markdown, without syntax
-- **LlamaIndex integration** — `PDFMarkdownReader` for compatibility with LlamaIndex document loading
-- **OCR support** — Optional OCR for scanned or image-heavy pages
-- **Form fields** — Extract key/value pairs from interactive PDF forms
+AI-based layout analysis uses the Python package [pymupdf-layout](https://pypi.org/project/pymupdf-layout/) through a small external worker process. When layout is available, `PdfExtractor` enables it automatically on first use.
 
-## Quick Start
+### One-time setup (NuGet consumers)
 
-API types live in the **`PDF4LLM`** namespace (including **`PDF4LLM.Helpers`**, **`PDF4LLM.Llama`**, **`PDF4LLM.Ocr`**). The static entry type is **`PdfExtractor`**. Add `using PDF4LLM;` and call **`PdfExtractor.ToMarkdown(...)`**, **`PdfExtractor.ToJson(...)`**, etc.
+Requires **Python 3.10+** on `PATH`. From your project directory:
 
-### Convert PDF to Markdown
+```bash
+dotnet msbuild -t:PDF4LLMSetupLayoutPython
+```
+
+This creates a per-user venv and installs pinned `pymupdf` / `pymupdf-layout` wheels:
+
+| OS | Venv location |
+|----|---------------|
+| Windows | `%LOCALAPPDATA%\PDF4LLM\.venv-layout` |
+| Linux / macOS | `~/.local/share/pdf4llm/.venv-layout` |
+
+PDF4LLM discovers that venv automatically. No environment variables are required.
+
+### Alternatives
+
+- Set **`PDF4LLM_PYTHON`** to any Python interpreter that has `pymupdf-layout` installed.
+- Project-local venv (also auto-discovered):
+
+  ```bash
+  python path/to/setup_layout_python.py --venv .pdf4llm-venv
+  ```
+
+- Monorepo / source checkout:
+
+  ```bash
+  python PDF4LLM/scripts/setup_layout_python.py
+  ```
+
+If layout is not installed, PDF4LLM falls back to classic MuPDF text extraction. Check availability at runtime:
+
+```csharp
+using PDF4LLM;
+using PDF4LLM.Layout;
+
+bool layoutReady = PyMuPdfLayout.IsAvailable;   // Python import probe
+bool layoutActive = PdfExtractor.LayoutAvailable; // provider registered
+```
+
+## Quick start
 
 ```csharp
 using MuPDF.NET;
 using PDF4LLM;
 
-Document doc = new Document("document.pdf");
-string markdown = PdfExtractor.ToMarkdown(doc);
-doc.Close();
+// Path or open Document — both work
+string markdown = PdfExtractor.ToMarkdown(@"C:\docs\report.pdf");
 
-// Or pass a path (file is opened only for the call)
-string markdown2 = PdfExtractor.ToMarkdown(@"C:\path\to\document.pdf");
+using Document doc = new Document("report.pdf");
+string text  = PdfExtractor.ToText(doc);
+string json  = PdfExtractor.ToJson(doc);
+var parsed   = PdfExtractor.ParseDocument(doc);
+var formData = PdfExtractor.GetKeyValues(doc);
 ```
 
-### Convert to plain text
+### Selected pages and images
 
 ```csharp
-string text = PdfExtractor.ToText(doc);
+string md = PdfExtractor.ToMarkdown(
+    doc,
+    pages: new List<int> { 0, 1, 2 },
+    writeImages: true,
+    imagePath: @"C:\output\images",
+    imageFormat: "png");
 ```
 
-### Get layout as JSON
-
-```csharp
-string json = PdfExtractor.ToJson(doc);
-```
-
-### Use with LlamaIndex-style loading
+### LlamaIndex-style loading
 
 ```csharp
 var reader = PdfExtractor.LlamaMarkdownReader();
-var docs = reader.LoadData("document.pdf", extraInfo: new Dictionary<string, object>());
+var docs = reader.LoadData("report.pdf", extraInfo: new Dictionary<string, object>());
 foreach (var d in docs)
-{
     Console.WriteLine($"Page {d.ExtraInfo["page"]}: {d.Text}");
-}
 ```
 
-### Extract form field values
+### Markdown to PDF
 
 ```csharp
-var keyValues = PdfExtractor.GetKeyValues(doc);
+using Document pdf = PdfExtractor.MarkdownToPdf(@"C:\docs\readme.md");
+pdf.Save("readme.pdf");
 ```
 
-## API Overview
+### Layout on / off
 
-| Method | Description |
+```csharp
+PdfExtractor.SetUseLayout(true);   // default when pymupdf.layout is installed
+PdfExtractor.SetUseLayout(false);  // legacy header detection (IdentifyHeaders, TocHeaders)
+```
+
+## API overview
+
+| Member | Description |
 |--------|-------------|
-| `ToMarkdown()` | Convert document (or selected pages) to Markdown with optional images |
-| `ToText()` | Convert to plain text using layout analysis |
-| `ToJson()` | Export layout structure as JSON |
-| `ParseDocument()` | Return a `ParsedDocument` with pages, boxes, tables, images |
-| `LlamaMarkdownReader()` | Create a LlamaIndex-compatible PDF reader |
-| `GetKeyValues()` | Extract form field name/value pairs and page locations |
+| `ToMarkdown()` | Document → Markdown (tables, headers, images) |
+| `ToText()` | Document → plain text with the same layout pipeline |
+| `ToJson()` | Layout structure as JSON |
+| `ParseDocument()` | `ParsedDocument` with pages, boxes, tables, images |
+| `GetKeyValues()` | Interactive form field names, values, and locations |
+| `MarkdownToPdf()` | Markdown file → `Document` via MuPDF Story |
+| `LlamaMarkdownReader()` | LlamaIndex-compatible page loader |
+| `SetUseLayout()` | Enable or disable the layout pipeline |
+| `SetLayoutProvider()` | Plug in a custom `Func<Page, object>` layout source |
+| `LoadAiAsync()` | **net8.0 only** — chunk, embed, and index PDFs for RAG (`PDF4LLM.AI`) |
 
-## Options
+Lower-level layout control: **`PDF4LLM.Layout.PyMuPdfLayout`** (`Activate`, `Deactivate`, `IsAvailable`, `Version`).
 
-`ToMarkdown`, `ToText`, and `ToJson` support options such as:
+## Common options
 
-- `pages` — Restrict to specific pages (0-based)
-- `writeImages` / `embedImages` — Save or embed images
-- `imagePath`, `imageFormat` — Where and how to store images
-- `useOcr`, `ocrLanguage` — OCR for scanned content
-- `showProgress` — Log progress while processing
-- `forceText` — Prefer text extraction over image backgrounds
+`ToMarkdown`, `ToText`, and `ToJson` accept optional parameters including:
+
+| Parameter | Purpose |
+|-----------|---------|
+| `pages` | Restrict to specific pages (0-based) |
+| `writeImages` / `embedImages` | Save image files or embed as base64 |
+| `imagePath`, `imageFormat`, `filename` | Image output location and naming |
+| `useOcr`, `ocrLanguage`, `forceOcr`, `ocrFunction` | OCR for scanned pages |
+| `forceText` | Extract text even from picture regions (layout mode) |
+| `pageChunks`, `pageSeparators` | Chunked or separated page output |
+| `showProgress` | Log processing progress |
+| `header`, `footer` | Include page header/footer text (layout mode) |
 
 ## Requirements
 
-- .NET Standard 2.0 or later (net461, net472, net48, net5.0, net6.0, net7.0, net8.0)
-- [MuPDF.NET](https://www.nuget.org/packages/MuPDF.NET) 3.2.13 or newer
-
-**Note:** If you see "An assembly with the same simple name 'PDF4LLM' has already been imported", the MuPDF.NET package you have includes PDF4LLM. Use either MuPDF.NET alone (which has 4LLM bundled) or add only PDF4LLM (which brings MuPDF.NET). Do not add both if MuPDF.NET already bundles 4LLM. A future MuPDF.NET release will exclude the bundle so PDF4LLM can be used as a separate package without conflict.
+- **.NET:** netstandard2.0, net461, net472, net48, net5.0–net8.0
+- **MuPDF.NET:** 3.2.17 or newer (MuPDF bind **1.27.2** must match `PdfExtractor` at runtime)
+- **Layout (optional):** Python 3.10+ with [pymupdf-layout](https://pypi.org/project/pymupdf-layout/) 1.27.2.x
+- **AI/RAG helpers:** net8.0 + `Microsoft.Extensions.AI` (included in the net8.0 package build)
 
 ## License
 
-PDF4LLM is part of MuPDF.NET and is available under the [Artifex Community License](https://github.com/ArtifexSoftware/MuPDF.NET/blob/main/LICENSE.md) and commercial license agreements. For commercial use, please [contact Artifex](https://artifex.com/contact/mupdf-net).
+PDF4LLM is part of MuPDF.NET and is available under the [Artifex Community License](https://github.com/ArtifexSoftware/MuPDF.NET/blob/main/LICENSE.md) and commercial license agreements. For commercial licensing, [contact Artifex](https://artifex.com/contact/mupdf-net-inquiry.php).

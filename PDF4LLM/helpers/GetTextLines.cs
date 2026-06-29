@@ -14,10 +14,7 @@ namespace PDF4LLM.Helpers
         public List<ExtendedSpan> Spans { get; set; }
     }
 
-    /// <summary>
-    /// Text line extraction utilities.
-    /// Ported and adapted from LLM helpers.
-    /// </summary>
+    /// <summary>Text line extraction utilities.</summary>
     public static class GetTextLines
     {
         /// <summary>
@@ -153,7 +150,6 @@ namespace PDF4LLM.Helpers
                             text = $"[{text}]";
                         }
 
-                        sbbox = sbbox; // Update with the Rect version
                         // Include line/block numbers to facilitate separator insertion
                         ExtendedSpan extSpan = new ExtendedSpan
                         {
@@ -240,7 +236,6 @@ namespace PDF4LLM.Helpers
             {
                 ExtendedSpan s0 = line[i - 1]; // Preceding span
                 ExtendedSpan s1 = line[i]; // This span
-                // "Delta" depends on the font size. Spans will be joined if
                 // no more than 10% of the font size separates them and important
                 // attributes are the same.
                 float delta = s1.Size * 0.1f;

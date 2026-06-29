@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using MuPDF.NET;
+using Newtonsoft.Json.Linq;
 using mupdf;
 namespace PDF4LLM.Helpers
 {
@@ -41,9 +43,13 @@ namespace PDF4LLM.Helpers
         }
 
         /// <summary>Same role as MuPdf <c>table._iou</c> for matching layout clips to detected tables.</summary>
+        /// <param name="a">First rectangle.</param>
+        /// <param name="b">Second rectangle.</param>
         public static float IntersectionOverUnion(Rect a, Rect b) => IoU(a, b);
 
         /// <summary>Page filter: null (all pages), a single <c>int</c> (with negative wrap), or a sequence (sorted unique, strict bounds).</summary>
+        /// <param name="pageCount">Total number of pages in the document.</param>
+        /// <param name="pages"><c>null</c>, a single page index, or a sequence of 0-based page indices.</param>
         public static List<int> ResolvePageFilter(int pageCount, object pages)
         {
             if (pageCount < 0)
@@ -76,6 +82,7 @@ namespace PDF4LLM.Helpers
             throw new ArgumentException("'pages' must be null, int, or a sequence of ints.", nameof(pages));
         }
 
+        /// <param name="doc">PDF document whose structure tree may be removed for performance.</param>
         public static void TryRemovePdfStructTreeRoot(Document doc)
         {
             if (doc == null)
@@ -94,16 +101,243 @@ namespace PDF4LLM.Helpers
             }
         }
 
-        /// <summary>Default OCR backend selection.</summary>
-        public static OcrPageFunction SelectOcrFunction()
+        static bool _tesseractSetupHelpPrinted;
+
+        /// <summary>Whether <see cref="PrintTesseractSetupHelp"/> has already run.</summary>
+        internal static bool TesseractSetupHelpPrinted => _tesseractSetupHelpPrinted;
+
+        /// <summary>
+        /// Log pymupdf-layout status at the start of layout parsing, or setup help when it is missing.
+        /// </summary>
+        public static void LogLayoutStatus()
         {
-            // Tesseract is the default OCR backend for this .NET port.
-            return global::PDF4LLM.Ocr.TesseractApi.ExecOcr;
+            if (global::PDF4LLM.Layout.PyMuPdfLayout.IsActivated
+                && Page.GetLayoutProvider != null)
+            {
+                string version = global::PDF4LLM.Layout.PyMuPdfLayout.Version;
+                if (!string.IsNullOrEmpty(version))
+                    Console.WriteLine($"Using pymupdf-layout ({version}) for document processing.");
+                else
+                    Console.WriteLine("Using pymupdf-layout for document processing.");
+                return;
+            }
+
+            global::PDF4LLM.Layout.LayoutPythonPaths.PrintSetupHelp();
         }
 
-        /// <summary>Build layout from stext blocks, then merge <see cref="TableFinder"/> regions as <c>table</c> (approximates MuPdf.layout + table hints).</summary>
+        /// <summary>Print once how to install Tesseract OCR and tessdata.</summary>
+        public static void PrintTesseractSetupHelp()
+        {
+            if (_tesseractSetupHelpPrinted)
+                return;
+            _tesseractSetupHelpPrinted = true;
+
+            Console.Error.WriteLine(
+                "PDF4LLM: Tesseract OCR is not available; OCR will be disabled.\n" +
+                "\n" +
+                "Install Tesseract OCR and language data (tessdata), then ensure one of:\n" +
+                "  - Tesseract is on PATH (verify with: tesseract --list-langs)\n" +
+                "  - Set TESSDATA_PREFIX to your tessdata folder\n" +
+                "\n" +
+                "Windows: https://github.com/UB-Mannheim/tesseract/wiki\n" +
+                "Debian/Ubuntu: sudo apt install tesseract-ocr tesseract-ocr-eng");
+        }
+
+        /// <summary>Resolve tessdata if Tesseract is installed; otherwise <c>null</c>.</summary>
+        internal static string TryGetTessdata()
+        {
+            string env = global::MuPDF.NET.Utils.TESSDATA_PREFIX;
+            if (!string.IsNullOrWhiteSpace(env))
+                return env;
+
+            env = Environment.GetEnvironmentVariable("TESSDATA_PREFIX");
+            if (!string.IsNullOrWhiteSpace(env))
+                return env;
+
+            return TryFindTessdataViaTesseractListLangs();
+        }
+
+        static string TryFindTessdataViaTesseractListLangs()
+        {
+            try
+            {
+                using (var process = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "tesseract",
+                    Arguments = "--list-langs",
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                }))
+                {
+                    if (process == null)
+                        return null;
+                    string stdout = process.StandardOutput.ReadToEnd();
+                    process.WaitForExit();
+                    if (process.ExitCode != 0)
+                        return null;
+                    var m = System.Text.RegularExpressions.Regex.Match(
+                        stdout,
+                        @"List of available languages in ""(.+)""");
+                    return m.Success ? m.Groups[1].Value : null;
+                }
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Check availability of OCR tools and language data.
+        /// <summary>Return the best OCR function available or null.</summary>
+        /// </summary>
+        public static OcrPageFunction SelectOcrFunction()
+        {
+            string tessdata = TryGetTessdata();
+            bool rapidocrAvailable = false;
+            bool paddleocrAvailable = false;
+
+            // rapidocr_onnxruntime / PaddleOCR are not wired for .NET yet.
+            if (string.IsNullOrEmpty(tessdata) && !rapidocrAvailable && !paddleocrAvailable)
+            {
+                PrintTesseractSetupHelp();
+                return null;
+            }
+
+            if (!string.IsNullOrEmpty(tessdata))
+            {
+                if (rapidocrAvailable)
+                {
+                    Console.WriteLine("Using RapidOCR and Tesseract for OCR processing.");
+                    return (page, ocrDpi, ocrLanguage, keepOcrText) =>
+                        global::PDF4LLM.Ocr.RapidTessApi.ExecOcr(
+                            page, dpi: ocrDpi, language: ocrLanguage, keepOcrText: keepOcrText);
+                }
+
+                if (paddleocrAvailable)
+                {
+                    Console.WriteLine("Using PaddleOCR and Tesseract for OCR processing.");
+                    return (page, ocrDpi, ocrLanguage, keepOcrText) =>
+                        global::PDF4LLM.Ocr.PaddleTessApi.ExecOcr(
+                            page, dpi: ocrDpi, language: ocrLanguage, keepOcrText: keepOcrText);
+                }
+
+                Console.WriteLine("Using Tesseract for OCR processing.");
+                return (page, ocrDpi, ocrLanguage, keepOcrText) =>
+                    global::PDF4LLM.Ocr.TesseractApi.ExecOcr(
+                        page, dpi: ocrDpi, language: ocrLanguage, keepOcrText: keepOcrText);
+            }
+
+            if (rapidocrAvailable)
+            {
+                Console.WriteLine("Using RapidOCR for OCR processing.");
+                return (page, ocrDpi, ocrLanguage, keepOcrText) =>
+                    global::PDF4LLM.Ocr.RapidOcrApi.ExecOcr(
+                        page, dpi: ocrDpi, language: ocrLanguage, keepOcrText: keepOcrText);
+            }
+
+            if (paddleocrAvailable)
+            {
+                Console.WriteLine("Using PaddleOCR for OCR processing.");
+                return (page, ocrDpi, ocrLanguage, keepOcrText) =>
+                    global::PDF4LLM.Ocr.PaddleOcrApi.ExecOcr(
+                        page, dpi: ocrDpi, language: ocrLanguage, keepOcrText: keepOcrText);
+            }
+
+            return null;
+        }
+
+        /// <summary>Parse <c>page.layout_information</c> rows <c>(x0, y0, x1, y1, class)</c>.</summary>
+        private static List<LayoutInfoEntry> ParseLayoutInformation(object layoutObj)
+        {
+            if (layoutObj == null)
+                return null;
+            if (!(layoutObj is System.Collections.IEnumerable rows))
+                return null;
+
+            var layout = new List<LayoutInfoEntry>();
+            int rawCount = 0;
+            foreach (object row in rows)
+            {
+                rawCount++;
+                if (!TryParseLayoutRow(row, out LayoutInfoEntry entry))
+                    continue;
+                layout.Add(entry);
+            }
+
+            // Treat parse failure like missing layout (fall back to stext-only boxes).
+            if (rawCount > 0 && layout.Count == 0)
+                return null;
+
+            return layout;
+        }
+
+        private static bool TryParseLayoutRow(object row, out LayoutInfoEntry entry)
+        {
+            entry = null;
+            JArray ja = row as JArray;
+            System.Collections.IList list = row as object[];
+            if (ja != null)
+                list = ja;
+            else if (list == null && row is System.Collections.IList il)
+                list = il;
+
+            if (list == null || list.Count < 5)
+                return false;
+
+            string cls = list[4]?.ToString() ?? "text";
+            if (ja != null && list[4] is JValue jv && jv.Type == JTokenType.String)
+                cls = jv.Value<string>() ?? cls;
+
+            entry = new LayoutInfoEntry
+            {
+                Bbox = new Rect(
+                    Convert.ToSingle(list[0], CultureInfo.InvariantCulture),
+                    Convert.ToSingle(list[1], CultureInfo.InvariantCulture),
+                    Convert.ToSingle(list[2], CultureInfo.InvariantCulture),
+                    Convert.ToSingle(list[3], CultureInfo.InvariantCulture)),
+                Class = cls,
+            };
+            return true;
+        }
+
+        /// <summary>
+        /// Layout from <see cref="Page.GetLayout"/> / <c>page.layout_information</c> when a provider is registered.
+        /// Returns <c>null</c> when no layout provider is active.
+        /// </summary>
+        private static List<LayoutInfoEntry> TryNativeLayoutInformation(Page page)
+        {
+            object layoutObj = page.LayoutInformation;
+            if (layoutObj == null)
+            {
+                page.GetLayout();
+                layoutObj = page.LayoutInformation;
+            }
+
+            if (layoutObj == null)
+                return null;
+
+            return ParseLayoutInformation(layoutObj);
+        }
+
+        /// <summary>
+        /// Build layout boxes for <c>parse_document</c>.
+        /// Prefer <see cref="Page.GetLayout"/> / <c>page.layout_information</c> when a provider is set.
+        /// If unavailable, stext text blocks only — tables come from layout boxes or
+        /// <c>tables_exist</c> handling in <c>parse_document</c> (see document_layout.py).
+        /// </summary>
+        /// <param name="page">Page whose layout boxes are built.</param>
+        /// <param name="blocks">Extracted text blocks used when native layout is unavailable.</param>
         public static List<LayoutInfoEntry> BuildLayoutInformation(Page page, List<Block> blocks)
         {
+            List<LayoutInfoEntry> native = TryNativeLayoutInformation(page);
+            if (native != null && native.Count > 0)
+                return native;
+
+            // Fallback: do not map image blocks (type 1) to "picture" here.
+            // Do not run TableFinder here — Python only sets tables_exist from layout boxes.
             var layout = new List<LayoutInfoEntry>();
             if (blocks != null)
             {
@@ -113,46 +347,20 @@ namespace PDF4LLM.Helpers
                         continue;
                     if (b.Type == 0)
                         layout.Add(new LayoutInfoEntry { Bbox = new Rect(b.Bbox), Class = "text" });
-                    else if (b.Type == 1)
-                        layout.Add(new LayoutInfoEntry { Bbox = new Rect(b.Bbox), Class = "picture" });
                 }
-            }
-
-            TableFinder tbf = null;
-            try
-            {
-                tbf = TableFinderHelper.FindTables(page, strategy: "lines_strict");
-            }
-            catch
-            {
-                return layout;
-            }
-
-            if (tbf?.tables == null || tbf.tables.Count == 0)
-                return layout;
-
-            foreach (Table tab in tbf.tables
-                         .Where(t => t?.bbox != null)
-                         .OrderBy(t => t.bbox.Y0)
-                         .ThenBy(t => t.bbox.X0))
-            {
-                Rect tb = tab.bbox;
-                layout.RemoveAll(e =>
-                    e.Class == "text"
-                    && e.Bbox != null
-                    && Utils.AlmostInBbox(e.Bbox, tb, 0.85f));
-                if (layout.Any(e => e.Class == "table" && IoU(e.Bbox, tb) > 0.85f))
-                    continue;
-                layout.Add(new LayoutInfoEntry { Bbox = new Rect(tb), Class = "table" });
             }
 
             return layout;
         }
 
+        /// <param name="layout">Layout boxes to inspect.</param>
         public static bool TablesExist(IList<LayoutInfoEntry> layout) =>
             layout != null && layout.Any(b => b.Class == "table");
 
-        /// <summary>Port of <c>utils.clean_pictures</c> (subset: block types 0,1; vector type 3 skipped if absent).</summary>
+        /// <summary><c>utils.clean_pictures</c> (subset: block types 0,1; vector type 3 skipped if absent).</summary>
+        /// <param name="page">Source page (reserved for future vector-block support).</param>
+        /// <param name="blocks">Page text/image blocks used to expand picture regions.</param>
+        /// <param name="layout">Layout entries to adjust in place.</param>
         public static void CleanPictures(Page page, List<Block> blocks, List<LayoutInfoEntry> layout)
         {
             if (layout == null || blocks == null || layout.Count == 0)
@@ -206,6 +414,9 @@ namespace PDF4LLM.Helpers
         }
 
         /// <summary>Subset of <c>utils.add_image_orphans</c> using <see cref="Page.GetDrawings"/> when vector blocks are unavailable.</summary>
+        /// <param name="page">Source page for drawings and image blocks.</param>
+        /// <param name="blocks">Extracted page blocks.</param>
+        /// <param name="layout">Layout list to which orphan picture boxes are appended.</param>
         public static void AddImageOrphans(Page page, List<Block> blocks, List<LayoutInfoEntry> layout)
         {
             if (layout == null || page == null || blocks == null)
@@ -307,8 +518,12 @@ namespace PDF4LLM.Helpers
             }
         }
 
-        /// <summary>Simplified <c>utils.clean_tables</c> (line-density reclassification; no vector <c>table_cleaner</c> split).</summary>
-        public static void CleanTables(Page page, List<Block> blocks, List<LayoutInfoEntry> layout)
+        /// <summary><c>utils.clean_tables</c></summary>
+        /// <param name="page">Source page (reserved for extended table cleaning).</param>
+        /// <param name="blocks">Text blocks overlapping table layout boxes.</param>
+        /// <param name="layout">Layout entries to validate or reclassify in place.</param>
+        /// <param name="textPage">Optional text page for <see cref="Utils.TableCleaner"/> splitting.</param>
+        public static void CleanTables(Page page, List<Block> blocks, List<LayoutInfoEntry> layout, TextPage textPage = null)
         {
             if (layout == null || blocks == null)
                 return;
@@ -370,6 +585,22 @@ namespace PDF4LLM.Helpers
 
                 if (mxSame < 2)
                     layout[i].Class = "text";
+                else if (textPage != null)
+                {
+                    List<Dictionary<string, object>> dictBlocks = Utils.StextDictBlocks(textPage);
+                    (LayoutInfoEntry picture, LayoutInfoEntry table) = Utils.TableCleaner(dictBlocks, layout[i]);
+                    if (picture != null)
+                    {
+                        if (table == null)
+                            layout[i] = picture;
+                        else
+                        {
+                            layout[i] = table;
+                            layout.Insert(i, picture);
+                            i++;
+                        }
+                    }
+                }
             }
         }
 
@@ -400,7 +631,11 @@ namespace PDF4LLM.Helpers
             return outer.X0 <= inner.X0 && outer.Y0 <= inner.Y0 && outer.X1 >= inner.X1 && outer.Y1 >= inner.Y1;
         }
 
-        /// <summary>Port of <c>utils.find_reading_order</c>: filter contained boxes, split header/footer, <c>compute_reading_order</c> on body.</summary>
+        /// <summary><c>utils.find_reading_order</c>: filter contained boxes, split header/footer, <c>compute_reading_order</c> on body.</summary>
+        /// <param name="pageRect">Full page rectangle for scaling vertical gaps.</param>
+        /// <param name="blocks">Page blocks used as vector hints during ordering.</param>
+        /// <param name="boxes">Layout boxes to order for reading sequence.</param>
+        /// <param name="verticalGap">Base vertical gap in points before page-height scaling.</param>
         public static List<LayoutInfoEntry> FindReadingOrder(Rect pageRect, List<Block> blocks, List<LayoutInfoEntry> boxes, float verticalGap = 12f)
         {
             if (boxes == null || boxes.Count == 0)
@@ -463,7 +698,7 @@ namespace PDF4LLM.Helpers
             return final;
         }
 
-        /// <summary>Port of <c>utils.compute_reading_order</c>: <c>cluster_stripes</c> then <c>cluster_columns_in_stripe</c> per stripe.</summary>
+        /// <summary><c>utils.compute_reading_order</c>: <c>cluster_stripes</c> then <c>cluster_columns_in_stripe</c> per stripe.</summary>
         private static List<LayoutInfoEntry> ComputeReadingOrderSimple(
             List<LayoutInfoEntry> body,
             Rect joined,
@@ -484,7 +719,7 @@ namespace PDF4LLM.Helpers
             return ordered;
         }
 
-        /// <summary>Port of <c>utils.cluster_stripes</c>.</summary>
+        /// <summary><c>utils.cluster_stripes</c>.</summary>
         private static List<List<LayoutInfoEntry>> ClusterStripes(
             List<LayoutInfoEntry> boxes,
             Rect joinedBoxes,
@@ -547,7 +782,7 @@ namespace PDF4LLM.Helpers
             return stripes;
         }
 
-        /// <summary>Port of <c>utils.are_disjoint</c> (non-strict: shared edges count as disjoint).</summary>
+        /// <summary><c>utils.are_disjoint</c> (non-strict: shared edges count as disjoint).</summary>
         private static bool AreDisjoint(Rect bbox, Rect cell, bool strict = false)
         {
             if (bbox == null || cell == null)
@@ -557,7 +792,7 @@ namespace PDF4LLM.Helpers
             return bbox.X0 > cell.X1 || bbox.X1 < cell.X0 || bbox.Y0 > cell.Y1 || bbox.Y1 < cell.Y0;
         }
 
-        /// <summary>Port of <c>utils.cluster_substripe</c> inside <c>cluster_columns_in_stripe</c>.</summary>
+        /// <summary><c>utils.cluster_substripe</c> inside <c>cluster_columns_in_stripe</c>.</summary>
         private static List<List<LayoutInfoEntry>> ClusterSubstripe(List<LayoutInfoEntry> substripe)
         {
             const float HorizontalGap = 1f;
@@ -585,7 +820,7 @@ namespace PDF4LLM.Helpers
             return columns;
         }
 
-        /// <summary>Port of <c>utils.cluster_columns_in_stripe</c>.</summary>
+        /// <summary><c>utils.cluster_columns_in_stripe</c>.</summary>
         private static List<List<LayoutInfoEntry>> ClusterColumnsInStripe(List<LayoutInfoEntry> stripe)
         {
             if (stripe == null || stripe.Count == 0)
@@ -643,10 +878,243 @@ namespace PDF4LLM.Helpers
         }
 
         /// <summary><c>complete_table_structure</c> extras: virtual lines not ported; returns empty lists.</summary>
-        public static (List<Tuple<Point, Point>> lines, List<Rect> boxes) CompleteTableStructure(Page page, List<LayoutInfoEntry> layout)
+        /// <summary><c>utils.simplify_vectors</c></summary>
+        /// <param name="vectors">Vector drawing blocks from <c>extractDICT</c>.</param>
+        public static List<Dictionary<string, object>> SimplifyVectors(List<Dictionary<string, object>> vectors)
         {
-            return (new List<Tuple<Point, Point>>(), new List<Rect>());
+            const float yTolerance = 1f;
+            var newVectors = new List<Dictionary<string, object>>();
+            if (vectors == null || vectors.Count == 0)
+                return newVectors;
+
+            newVectors.Add(vectors[0]);
+            for (int vi = 1; vi < vectors.Count; vi++)
+            {
+                Dictionary<string, object> v = vectors[vi];
+                Dictionary<string, object> lastV = newVectors[newVectors.Count - 1];
+                var vb = GetMutableBbox(v);
+                var lb = GetMutableBbox(lastV);
+                if (vb == null || lb == null)
+                {
+                    newVectors.Add(v);
+                    continue;
+                }
+
+                if (Math.Abs(vb[1] - lb[1]) < yTolerance
+                    && Math.Abs(vb[3] - lb[3]) < yTolerance
+                    && vb[0] <= lb[2] + 1)
+                {
+                    lb[0] = Math.Min(vb[0], lb[0]);
+                    lb[1] = Math.Min(vb[1], lb[1]);
+                    lb[2] = Math.Max(vb[2], lb[2]);
+                    lb[3] = Math.Max(vb[3], lb[3]);
+                }
+                else
+                    newVectors.Add(v);
+            }
+
+            return newVectors;
         }
+
+        /// <summary><c>utils.find_virtual_lines</c></summary>
+        /// <param name="page">Source page.</param>
+        /// <param name="tableBbox">Bounding box of the table region.</param>
+        /// <param name="words">Word boxes inside the table as <c>[x0, y0, x1, y1]</c> arrays.</param>
+        /// <param name="vectors">Simplified vector blocks overlapping the table.</param>
+        /// <param name="linkRects">Link hot areas to exclude from vertical line inference.</param>
+        public static (List<Tuple<Point, Point>> lines, List<Rect> boxes) FindVirtualLines(
+            Page page,
+            Rect tableBbox,
+            List<float[]> words,
+            List<Dictionary<string, object>> vectors,
+            List<Rect> linkRects)
+        {
+            List<Tuple<Point, Point>> MakeVertical(Rect tbbox, Rect lineBbox, List<Rect> wboxes)
+            {
+                var top = new Point(lineBbox.X0, lineBbox.Y0 - 2);
+                var bottom = new Point(top.X, tbbox.Y1);
+                List<Rect> myWboxes = wboxes
+                    .Where(wr => wr.Y0 >= top.Y && wr.Y1 <= bottom.Y && wr.X0 < top.X && wr.X1 > top.X)
+                    .OrderBy(wr => wr.Y1)
+                    .ToList();
+                if (myWboxes.Count > 0)
+                    bottom.Y = myWboxes[0].Y0;
+
+                myWboxes = wboxes
+                    .Where(wr => wr.Y0 >= tbbox.Y0 && wr.Y1 <= top.Y && wr.X0 < top.X && wr.X1 > top.X)
+                    .OrderBy(wr => wr.Y1)
+                    .ToList();
+                if (myWboxes.Count > 0)
+                    top.Y = myWboxes[myWboxes.Count - 1].Y1;
+                else
+                    top.Y = tbbox.Y0;
+
+                return new List<Tuple<Point, Point>> { Tuple.Create(top, bottom) };
+            }
+
+            var wordBoxes = words
+                .Where(w => w != null && w.Length >= 4 && (w[3] - w[1]) > 5 && tableBbox.Contains(new Rect(w[0], w[1], w[2], w[3])))
+                .Select(w => new Rect(w[0], w[1], w[2], w[3]))
+                .OrderBy(r => r.Y1)
+                .ToList();
+
+            var allLines = new List<Tuple<Point, Point>>();
+            var allBoxes = new List<Rect>();
+            foreach (Dictionary<string, object> v in vectors)
+            {
+                Rect vbbox = Utils.DictBboxToRect(v.TryGetValue("bbox", out object bb) ? bb : null).Normalize();
+                vbbox = new Rect(vbbox.X0, vbbox.Y0 - 0.5f, vbbox.X1, vbbox.Y1 + 0.5f);
+                vbbox &= tableBbox;
+                if (Utils.BboxIsEmpty(vbbox))
+                    continue;
+
+                bool stroked = v.TryGetValue("stroked", out object so) && Convert.ToBoolean(so);
+                if (!stroked && vbbox.Height >= 5 && vbbox.Width > 20)
+                {
+                    allLines.Add(Tuple.Create(vbbox.TopLeft, vbbox.TopRight));
+                    allLines.Add(Tuple.Create(vbbox.BottomLeft, vbbox.BottomRight));
+                    continue;
+                }
+
+                if (vbbox.Width > 20 && vbbox.Height <= 3
+                    && !(linkRects?.Any(lr => vbbox.Intersects(lr)) ?? false))
+                {
+                    foreach (Tuple<Point, Point> line in MakeVertical(tableBbox, vbbox, wordBoxes))
+                        allLines.Add(line);
+                }
+            }
+
+            return (allLines, allBoxes);
+        }
+
+        private static float[] GetMutableBbox(Dictionary<string, object> block)
+        {
+            if (!block.TryGetValue("bbox", out object bboxObj))
+                return null;
+            if (bboxObj is float[] fa && fa.Length >= 4)
+                return fa;
+            Rect r = Utils.DictBboxToRect(bboxObj);
+            var arr = new float[] { r.X0, r.Y0, r.X1, r.Y1 };
+            block["bbox"] = arr;
+            return arr;
+        }
+
+        /// <summary>Write layout entries back to <see cref="Page.LayoutInformation"/>.</summary>
+        /// <param name="page">Page whose layout information is updated.</param>
+        /// <param name="layout">Layout boxes to serialize; clears layout when <c>null</c>.</param>
+        public static void WritePageLayout(Page page, List<LayoutInfoEntry> layout)
+        {
+            if (page == null)
+                return;
+            if (layout == null)
+            {
+                page.LayoutInformation = null;
+                return;
+            }
+
+            page.LayoutInformation = layout
+                .Select(e => (object)new object[]
+                {
+                    e.Bbox.X0, e.Bbox.Y0, e.Bbox.X1, e.Bbox.Y1, e.Class ?? "text"
+                })
+                .ToList();
+        }
+
+        /// <summary>Read layout from <see cref="Page.GetLayout"/> / <c>layout_information</c>.</summary>
+        /// <param name="page">Page to read or refresh layout from.</param>
+        /// <param name="blocks">Fallback text blocks when native layout is empty.</param>
+        public static List<LayoutInfoEntry> ReadPageLayout(Page page, List<Block> blocks)
+        {
+            page.GetLayout();
+            List<LayoutInfoEntry> layout = ParseLayoutInformation(page.LayoutInformation);
+            if (layout != null && layout.Count > 0)
+                return layout;
+            return BuildLayoutInformation(page, blocks);
+        }
+
+        /// <summary><c>utils.complete_table_structure(page)</c></summary>
+        /// <param name="page">Page whose table layout boxes are completed.</param>
+        public static (List<Tuple<Point, Point>> lines, List<Rect> boxes) CompleteTableStructure(Page page)
+        {
+            List<LayoutInfoEntry> layout = ParseLayoutInformation(page?.LayoutInformation);
+            if (page == null || layout == null)
+                return (new List<Tuple<Point, Point>>(), new List<Rect>());
+
+            int flags = (int)TextFlags.TEXT_ACCURATE_BBOXES
+                | (int)mupdf.mupdf.FZ_STEXT_COLLECT_VECTORS
+                | (int)mupdf.mupdf.FZ_STEXT_COLLECT_STYLES;
+            using (TextPage textPage = page.GetTextPage(flags: flags))
+            {
+                return CompleteTableStructure(page, layout, textPage);
+            }
+        }
+
+        /// <summary><c>utils.complete_table_structure</c></summary>
+        /// <param name="page">Source page.</param>
+        /// <param name="layout">Layout entries; table-class boxes are processed.</param>
+        /// <param name="textPage">Optional pre-built text page; created when <c>null</c>.</param>
+        public static (List<Tuple<Point, Point>> lines, List<Rect> boxes) CompleteTableStructure(
+            Page page,
+            List<LayoutInfoEntry> layout,
+            TextPage textPage = null)
+        {
+            var allLines = new List<Tuple<Point, Point>>();
+            var allBoxes = new List<Rect>();
+            if (page == null || layout == null)
+                return (allLines, allBoxes);
+
+            bool dispose = false;
+            if (textPage == null)
+            {
+                textPage = page.GetTextPage(flags: Utils.FLAGS);
+                dispose = true;
+            }
+
+            try
+            {
+                List<Dictionary<string, object>> dictBlocks = Utils.StextDictBlocks(textPage);
+                var words = page.GetTextWords(textpage: textPage)
+                    .Select(w => new[] { w.x0, w.y0, w.x1, w.y1 })
+                    .ToList();
+
+                var vectors = dictBlocks
+                    .Where(b => b.TryGetValue("type", out object t) && Convert.ToInt32(t) == 3
+                        && b.TryGetValue("isrect", out object ir) && Convert.ToBoolean(ir))
+                    .OrderBy(b => Utils.DictBboxToRect(b["bbox"]).Y1)
+                    .ThenBy(b => Utils.DictBboxToRect(b["bbox"]).X0)
+                    .ToList();
+                vectors = SimplifyVectors(vectors);
+
+                var linkRects = page.GetLinks()
+                    .Where(l => l.From != null)
+                    .Select(l => new Rect(l.From))
+                    .ToList();
+
+                foreach (LayoutInfoEntry entry in layout)
+                {
+                    if (entry?.Class != "table" || entry.Bbox == null)
+                        continue;
+                    Rect tableBbox = new Rect(entry.Bbox);
+                    allBoxes.Add(tableBbox);
+                    (List<Tuple<Point, Point>> lines, List<Rect> boxes) = FindVirtualLines(
+                        page, tableBbox, words, vectors, linkRects);
+                    allLines.AddRange(lines);
+                    allBoxes.AddRange(boxes);
+                }
+            }
+            finally
+            {
+                if (dispose)
+                    textPage?.Dispose();
+            }
+
+            return (allLines, allBoxes);
+        }
+
+        /// <param name="page">Source page.</param>
+        /// <param name="layout">Layout entries; table-class boxes are processed.</param>
+        public static (List<Tuple<Point, Point>> lines, List<Rect> boxes) CompleteTableStructure(Page page, List<LayoutInfoEntry> layout)
+            => CompleteTableStructure(page, layout, null);
 
     }
 }

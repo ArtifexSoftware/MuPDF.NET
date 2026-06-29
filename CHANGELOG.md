@@ -1,5 +1,18 @@
 # Changelog
 
+### [3.2.17.9] - 2026-06-23
+- Depends on stable **`MuPDF.NativeAssets` 1.28.0**.
+- Updated PyMuPDF bind to **1.27.2.3** (`VersionBind` / `pymupdf_version`).
+- **`Matrix`**: added static `Matrix.Concat(one, two)`; renamed the in-place PyMuPDF `concat` equivalent to `ConcatInto(one, two)` (avoids C# static/instance signature clashes); added instance `Inverted()` returning a new matrix or `null` when singular.
+- **`Page`**: added `GetLayout()`, `LayoutInformation`, and `GetLayoutProvider` so external layout engines (e.g. pymupdf-layout via **PDF4LLM**) can supply `layout_information` boxes consumed by `Page.find_tables()`.
+- Expanded `MuPDF.NET.Test` matrix/geometry coverage aligned with PyMuPDF `test_geometry.py`.
+
+### [3.2.17] - 2026-06-11
+- Fixed `Page.find_tables()` on rotated pages by porting PyMuPDF `page_rotation_set0` / `page_rotation_reset`: temporary derotation via `Tools.InsertContents`, MediaBox/rotation updates, and page reload through `doc[page.Number]` so vector graphics and table detection work at 0°, 90°, 180°, and 270°.
+- Hardened `Tools.InsertContents` and related PDF page edits with `AsPdfPageFresh` and cached `PdfPage` invalidation to avoid stale native handles after `/Contents` changes.
+- Fixed `TableHelpers.CharsInRect` to use visual `top`/`bottom` coordinates when matching characters to table cells (pdfplumber / PyMuPDF parity).
+- Expanded `MuPDF.NET.Test` table coverage with ports from PyMuPDF `test_tables.py`, including rotation-independent extraction (`test_2812`), glyph-height handling (`test_2979`), and additional edge/strategy cases.
+
 ### [3.2.16] - 2026-04-24
 - Added global `Utils.MuPDFLock` and synchronized MuPDF native calls for improved thread safety.
 - Improved Tesseract OCR stability in the `PDF4LLM` OCR pipeline and hardened OCR helper behavior.

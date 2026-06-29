@@ -1743,7 +1743,6 @@ namespace BarcodeWriter.Core
         private SKSize drawOnGraphics(SKCanvas canvas, bool onlyCalculate)
         {
 	        // Final barcode image is as follows:
-	        // 
 	        // -------------------------------------------------------------------------------------
 	        // |                        margin top                                                 |
 	        // |                   additional caption                                              |
@@ -1759,9 +1758,7 @@ namespace BarcodeWriter.Core
 	        // |              demo warning                                                         |
 	        // |                     margin bottom                                                 |
 	        // -------------------------------------------------------------------------------------
-	        //
 	        // (QZ == Quiet Zone, SS == Supplement Space)
-	        //
 	        // Note:
 	        //  1. Additional caption maybe drawn below barcode (just above demo warning)
 	        //  2. There is always a blank space above additional caption.

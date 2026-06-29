@@ -454,7 +454,6 @@ namespace BarcodeReader.Core.Common
         private void CreateClusterForPattern(PatternCluster[] clustersMap, LinkedList<PatternCluster> clusters, Pattern pattern)
         {
             var w = clustersMap.Length;
-            //
             var myY = pattern.y;
             var myX = Math.Min(pattern.xIn + MaxClusterDistanceX / 2, w - 1);
 

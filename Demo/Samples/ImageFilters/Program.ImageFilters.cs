@@ -4,7 +4,7 @@ namespace Demo
     {
         internal static void TestImageFilter()
         {
-            const string inputPath = @"../../../TestDocuments/Image/table.jpg";
+            const string inputPath = @"../../../../TestDocuments/Demo/Image/table.jpg";
             const string outputPath = @"output.png";
 
             // Load the image file into SKBitmap
@@ -54,7 +54,7 @@ namespace Demo
 
         internal static void TestImageFilterOcr()
         {
-            const string inputPath = @"../../../TestDocuments/Image/boxedpage.jpg";
+            const string inputPath = @"../../../../TestDocuments/Demo/Image/boxedpage.jpg";
 
             using (Pixmap pxmp = new Pixmap(inputPath))
             {

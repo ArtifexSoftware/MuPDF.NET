@@ -16,6 +16,10 @@ namespace PDF4LLM.Helpers
         private Dictionary<int, string> _headerId = new Dictionary<int, string>();
         private float _bodyLimit;
 
+        /// <param name="doc">Open <see cref="Document"/> or path to a PDF file.</param>
+        /// <param name="pages">0-based page numbers to scan; all pages when <c>null</c>.</param>
+        /// <param name="bodyLimit">Font size treated as body text; larger sizes become header candidates.</param>
+        /// <param name="maxLevels">Maximum number of distinct header levels (1–6).</param>
         public IdentifyHeaders(
             object doc, // Document or string
             List<int> pages = null,
@@ -113,6 +117,8 @@ namespace PDF4LLM.Helpers
         /// Given a text span from a "dict"/"rawdict" extraction, determine the
         /// markdown header prefix string of 0 to n concatenated '#' characters.
         /// </summary>
+        /// <param name="span">Text span whose font size determines the header level.</param>
+        /// <param name="page">Unused; kept for API parity with <see cref="TocHeaders.GetHeaderId"/>.</param>
         public string GetHeaderId(ExtendedSpan span, Page page = null)
         {
             int fontsize = (int)Math.Round(span.Size); // Compute fontsize
@@ -133,6 +139,7 @@ namespace PDF4LLM.Helpers
         /// <summary>
         /// Read and store the TOC of the document.
         /// </summary>
+        /// <param name="doc">Open <see cref="Document"/> or path to a PDF file.</param>
         public TocHeaders(object doc)
         {
             Document mydoc = doc as Document;
@@ -153,6 +160,8 @@ namespace PDF4LLM.Helpers
         /// Given a text span from a "dict"/"rawdict" extraction, determine the
         /// markdown header prefix string of 0 to n concatenated '#' characters.
         /// </summary>
+        /// <param name="span">Text span to match against TOC titles on the page.</param>
+        /// <param name="page">Page containing the span; required for TOC lookup.</param>
         public string GetHeaderId(ExtendedSpan span, Page page = null)
         {
             if (page == null)
@@ -206,6 +215,12 @@ namespace PDF4LLM.Helpers
         public List<PathInfo> ActualPaths { get; set; } = new List<PathInfo>();
         public List<Rect> VgClusters0 { get; set; } = new List<Rect>();
         public Dictionary<int, Rect> VgClusters { get; set; } = new Dictionary<int, Rect>();
+        public bool WriteImages { get; set; }
+        public bool EmbedImages { get; set; }
+        public string ImagePath { get; set; } = "";
+        public string ImageFormat { get; set; } = "png";
+        public int Dpi { get; set; } = 150;
+        public float ImageSizeLimit { get; set; } = 0.05f;
     }
 
     /// <summary>
@@ -546,6 +561,70 @@ namespace PDF4LLM.Helpers
         }
 
         /// <summary>
+        /// <c>to_markdown(doc, pages=..., hdr_info=..., **load_kwargs)</c> for LlamaIndex reader.
+        /// </summary>
+        /// <param name="doc">Input document to convert.</param>
+        /// <param name="pages">0-based page numbers to process.</param>
+        /// <param name="hdrInfo">Header resolver (<see cref="IdentifyHeaders"/>, <see cref="TocHeaders"/>, or <c>null</c>).</param>
+        /// <param name="loadKwargs">Keyword options mirroring the Python <c>to_markdown</c> API.</param>
+        public static string ToMarkdown(
+            Document doc,
+            List<int> pages,
+            object hdrInfo,
+            Dictionary<string, object> loadKwargs)
+        {
+            if (loadKwargs == null)
+                loadKwargs = new Dictionary<string, object>();
+
+            return ToMarkdown(
+                doc,
+                pages: pages,
+                hdrInfo: hdrInfo,
+                writeImages: GetKwBool(loadKwargs, "write_images", false),
+                embedImages: GetKwBool(loadKwargs, "embed_images", false),
+                ignoreImages: GetKwBool(loadKwargs, "ignore_images", false),
+                ignoreGraphics: GetKwBool(loadKwargs, "ignore_graphics", false),
+                detectBgColor: GetKwBool(loadKwargs, "detect_bg_color", true),
+                imagePath: GetKwString(loadKwargs, "image_path", ""),
+                imageFormat: GetKwString(loadKwargs, "image_format", "png"),
+                imageSizeLimit: GetKwFloat(loadKwargs, "image_size_limit", 0.05f),
+                filename: GetKwString(loadKwargs, "filename", null),
+                forceText: GetKwBool(loadKwargs, "force_text", true),
+                pageChunks: GetKwBool(loadKwargs, "page_chunks", false),
+                pageSeparators: GetKwBool(loadKwargs, "page_separators", false),
+                margins: loadKwargs.TryGetValue("margins", out object margins)
+                    ? margins as List<float>
+                    : null,
+                dpi: GetKwInt(loadKwargs, "dpi", 150),
+                pageWidth: GetKwFloat(loadKwargs, "page_width", 612),
+                pageHeight: loadKwargs.TryGetValue("page_height", out object ph) && ph != null
+                    ? Convert.ToSingle(ph)
+                    : (float?)null,
+                tableStrategy: GetKwString(loadKwargs, "table_strategy", "lines_strict"),
+                graphicsLimit: loadKwargs.TryGetValue("graphics_limit", out object gl) && gl != null
+                    ? Convert.ToInt32(gl)
+                    : (int?)null,
+                fontsizeLimit: GetKwFloat(loadKwargs, "fontsize_limit", 3.0f),
+                ignoreCode: GetKwBool(loadKwargs, "ignore_code", false),
+                extractWords: GetKwBool(loadKwargs, "extract_words", false),
+                showProgress: GetKwBool(loadKwargs, "show_progress", false),
+                useGlyphs: GetKwBool(loadKwargs, "use_glyphs", false),
+                ignoreAlpha: GetKwBool(loadKwargs, "ignore_alpha", false));
+        }
+
+        private static bool GetKwBool(Dictionary<string, object> kwargs, string key, bool defaultValue) =>
+            kwargs.TryGetValue(key, out object v) && v != null ? Convert.ToBoolean(v) : defaultValue;
+
+        private static string GetKwString(Dictionary<string, object> kwargs, string key, string defaultValue) =>
+            kwargs.TryGetValue(key, out object v) && v != null ? Convert.ToString(v) : defaultValue;
+
+        private static int GetKwInt(Dictionary<string, object> kwargs, string key, int defaultValue) =>
+            kwargs.TryGetValue(key, out object v) && v != null ? Convert.ToInt32(v) : defaultValue;
+
+        private static float GetKwFloat(Dictionary<string, object> kwargs, string key, float defaultValue) =>
+            kwargs.TryGetValue(key, out object v) && v != null ? Convert.ToSingle(v) : defaultValue;
+
+        /// <summary>
         /// Get maximum header ID from spans.
         /// </summary>
         private static string MaxHeaderId(
@@ -556,7 +635,7 @@ namespace PDF4LLM.Helpers
             var hdrIds = spans
                 .Select(s => getHeaderId(s, page))
                 .Where(h => !string.IsNullOrEmpty(h))
-                .Select(h => h.Trim().Length)
+                .Select(h => h.Length)
                 .Where(l => l > 0)
                 .Distinct()
                 .OrderBy(l => l)
@@ -600,10 +679,12 @@ namespace PDF4LLM.Helpers
                     continue;
 
                 string text = (span.Text ?? "").Trim();
-                if (!string.IsNullOrEmpty(text))
-                {
-                    return $"[{text}]({link.Uri})";
-                }
+                string uri = link.Uri;
+                // Escape characters that would mess up the generated markdown.
+                // See: https://bugs.ghostscript.com/show_bug.cgi?id=709173.
+                foreach (char c in new[] { '(', ')', '\n' })
+                    uri = uri.Replace(c.ToString(), "%0x" + Convert.ToString((int)c, 16));
+                return $"[{text}]({uri})";
             }
 
             return null;
@@ -885,8 +966,8 @@ namespace PDF4LLM.Helpers
                     if (forceText)
                     {
                         // Recursive invocation
-                        string imgTxt = WriteText(parms, imgRect, getHeaderId, forceText: true, 
-                            ignoreCode: false, extractWords: false);
+                        string imgTxt = WriteText(parms, imgRect, getHeaderId, forceText: true,
+                            ignoreCode: false, extractWords: false, tables: false, images: false);
                         if (!Utils.IsWhite(imgTxt)) // Was there text at all?
                         {
                             thisMd.Append(imgTxt);
@@ -912,8 +993,8 @@ namespace PDF4LLM.Helpers
                     
                     if (forceText)
                     {
-                        string imgTxt = WriteText(parms, parms.ImgRects[i], getHeaderId, forceText: true, 
-                            ignoreCode: false, extractWords: false);
+                        string imgTxt = WriteText(parms, parms.ImgRects[i], getHeaderId, forceText: true,
+                            ignoreCode: false, extractWords: false, tables: false, images: false);
                         if (!Utils.IsWhite(imgTxt))
                         {
                             thisMd.Append(imgTxt);
@@ -937,7 +1018,8 @@ namespace PDF4LLM.Helpers
         /// objects.
         /// </summary>
         private static string WriteText(Parameters parms, Rect clip, 
-            Func<ExtendedSpan, Page, string> getHeaderId, bool forceText, bool ignoreCode, bool extractWords)
+            Func<ExtendedSpan, Page, string> getHeaderId, bool forceText, bool ignoreCode, bool extractWords,
+            bool tables = true, bool images = true)
         {
             if (clip == null)
                 clip = parms.Clip;
@@ -970,72 +1052,79 @@ namespace PDF4LLM.Helpers
                     continue;
                 
                 // Pick up tables ABOVE this text block
-                var tabCandidates = parms.TabRects
-                    .Where(kvp => kvp.Value.Y1 <= lrect.Y0 && !parms.WrittenTables.Contains(kvp.Key) &&
-                        (lrect.X0 <= kvp.Value.X0 && kvp.Value.X0 < lrect.X1 ||
-                         lrect.X0 < kvp.Value.X1 && kvp.Value.X1 <= lrect.X1 ||
-                         kvp.Value.X0 <= lrect.X0 && lrect.X1 <= kvp.Value.X1))
-                    .ToList();
-                
-                foreach (var kvp in tabCandidates)
+                if (tables)
                 {
-                    int i = kvp.Key;
-                    outString.Append("\n" + parms.Tabs[i].ToMarkdown(clean: false) + "\n");
+                    var tabCandidates = parms.TabRects
+                        .Where(kvp => kvp.Value.Y1 <= lrect.Y0 && !parms.WrittenTables.Contains(kvp.Key) &&
+                            (lrect.X0 <= kvp.Value.X0 && kvp.Value.X0 < lrect.X1 ||
+                             lrect.X0 < kvp.Value.X1 && kvp.Value.X1 <= lrect.X1 ||
+                             kvp.Value.X0 <= lrect.X0 && lrect.X1 <= kvp.Value.X1))
+                        .ToList();
                     
-                    if (extractWords)
+                    foreach (var kvp in tabCandidates)
                     {
-                        var cells = new List<Rect>();
-                        if (parms.Tabs[i].header != null && parms.Tabs[i].header.cells != null)
+                        int i = kvp.Key;
+                        outString.Append("\n" + parms.Tabs[i].ToMarkdown(clean: false) + "\n");
+                        
+                        if (extractWords)
                         {
-                            foreach (var c in parms.Tabs[i].header.cells)
+                            var cells = new List<Rect>();
+                            if (parms.Tabs[i].header != null && parms.Tabs[i].header.cells != null)
                             {
-                                if (c != null)
-                                    cells.Add(c);
+                                foreach (var c in parms.Tabs[i].header.cells)
+                                {
+                                    if (c != null)
+                                        cells.Add(c);
+                                }
                             }
-                        }
-                        if (parms.Tabs[i].cells != null)
-                        {
-                            foreach (var c in parms.Tabs[i].cells)
+                            if (parms.Tabs[i].cells != null)
                             {
-                                if (c != null)
-                                    cells.Add(c);
+                                foreach (var c in parms.Tabs[i].cells)
+                                {
+                                    if (c != null)
+                                        cells.Add(c);
+                                }
                             }
+                            parms.LineRects.AddRange(cells.OrderBy(c => c.Y1).ThenBy(c => c.X0));
                         }
-                        parms.LineRects.AddRange(cells.OrderBy(c => c.Y1).ThenBy(c => c.X0));
+                        parms.WrittenTables.Add(i);
+                        prevHdrString = null;
                     }
-                    parms.WrittenTables.Add(i);
-                    prevHdrString = null;
                 }
                 
                 // Pick up images/graphics ABOVE this text block
-                for (int i = 0; i < parms.ImgRects.Count; i++)
+                if (images)
                 {
-                    if (parms.WrittenImages.Contains(i))
-                        continue;
-                    
-                    Rect r = parms.ImgRects[i];
-                    if (Math.Max(r.Y0, lrect.Y0) < Math.Min(r.Y1, lrect.Y1) &&
-                        (lrect.X0 <= r.X0 && r.X0 < lrect.X1 ||
-                         lrect.X0 < r.X1 && r.X1 <= lrect.X1 ||
-                         r.X0 <= lrect.X0 && lrect.X1 <= r.X1))
+                    for (int i = 0; i < parms.ImgRects.Count; i++)
                     {
-                        string pathname = SaveImage(parms.Page, r, i, false, false, "", "", "", 150, 0.05f);
-                        if (!string.IsNullOrEmpty(pathname))
-                        {
-                            outString.AppendFormat(GRAPHICS_TEXT, pathname);
-                        }
+                        if (parms.WrittenImages.Contains(i))
+                            continue;
                         
-                        if (forceText)
+                        Rect r = parms.ImgRects[i];
+                        if (Math.Max(r.Y0, lrect.Y0) < Math.Min(r.Y1, lrect.Y1) &&
+                            (lrect.X0 <= r.X0 && r.X0 < lrect.X1 ||
+                             lrect.X0 < r.X1 && r.X1 <= lrect.X1 ||
+                             r.X0 <= lrect.X0 && lrect.X1 <= r.X1))
                         {
-                            string imgTxt = WriteText(parms, r, getHeaderId, forceText: true, 
-                                ignoreCode: false, extractWords: false);
-                            if (!Utils.IsWhite(imgTxt))
+                            string pathname = SaveImage(parms.Page, r, i, parms.WriteImages, parms.EmbedImages,
+                                parms.ImagePath, parms.ImageFormat, parms.Filename, parms.Dpi, parms.ImageSizeLimit);
+                            if (!string.IsNullOrEmpty(pathname))
                             {
-                                outString.Append(imgTxt);
+                                outString.AppendFormat(GRAPHICS_TEXT, pathname);
                             }
+                            
+                            if (forceText)
+                            {
+                                string imgTxt = WriteText(parms, r, getHeaderId, forceText: true,
+                                    ignoreCode: false, extractWords: false, tables: false, images: false);
+                                if (!Utils.IsWhite(imgTxt))
+                                {
+                                    outString.Append(imgTxt);
+                                }
+                            }
+                            parms.WrittenImages.Add(i);
+                            prevHdrString = null;
                         }
-                        parms.WrittenImages.Add(i);
-                        prevHdrString = null;
                     }
                 }
                 
@@ -1253,7 +1342,13 @@ namespace PDF4LLM.Helpers
                 Graphics = new List<object>(),
                 Words = new List<object>(),
                 LineRects = new List<Rect>(),
-                AcceptInvisible = PageIsOcr(page) || ignoreAlpha
+                AcceptInvisible = PageIsOcr(page) || ignoreAlpha,
+                WriteImages = writeImages,
+                EmbedImages = embedImages,
+                ImagePath = imagePath ?? "",
+                ImageFormat = string.IsNullOrEmpty(imageFormat) ? "png" : imageFormat,
+                Dpi = dpi,
+                ImageSizeLimit = imageSizeLimit
             };
 
             // Determine background color
@@ -1404,7 +1499,7 @@ namespace PDF4LLM.Helpers
                     validImages = validImages.Take(30).ToList(); // Only accept the largest up to 30 images
 
                     // Remove images contained in larger images (run from back to front = small to large)
-                    for (int i = validImages.Count - 1; i >= 0; i--)
+                    for (int i = validImages.Count - 1; i > 0; i--)
                     {
                         Rect r = validImages[i].Bbox;
                         if (r.IsEmpty)
@@ -1566,8 +1661,8 @@ namespace PDF4LLM.Helpers
                 }
             }
 
-            // Process each text rectangle
-            StringBuilder mdOutput = new StringBuilder();
+            // Process each text rectangle (preserve any markdown already emitted, e.g. full-page image)
+            StringBuilder mdOutput = new StringBuilder(parms.MdString);
             foreach (Rect textRect in textRects)
             {
                 // Output tables above this text rectangle

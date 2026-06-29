@@ -513,11 +513,9 @@ namespace BarcodeWriter.Core.Internal
             return pattern.ToString();
         }
 
-        //////////////////////////////////////////////////////////////////////////
-        //
+        // ---
         //  Data part
-        //
-        //////////////////////////////////////////////////////////////////////////
+        // ---
 
         // Automatic sizing table
         static int[] m_microAutosize =

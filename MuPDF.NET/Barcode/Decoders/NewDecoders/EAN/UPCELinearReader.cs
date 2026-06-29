@@ -218,7 +218,6 @@ namespace BarcodeReader.Core.EAN
                     sign = sign * 10 + 0;
                 else
                     sign = sign * 10 + 1;
-            //
             switch (sign)
             {
                 case 111000: case 000111: return 0;
@@ -244,7 +243,6 @@ namespace BarcodeReader.Core.EAN
                     sign = sign * 10 + 0;
                 else
                     sign = sign * 10 + 1;
-            //
             switch (sign)
             {
                 case 111000: 

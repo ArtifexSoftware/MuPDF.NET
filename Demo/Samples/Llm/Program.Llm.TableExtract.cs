@@ -4,9 +4,12 @@ namespace Demo
 {
     internal partial class Program
     {
+        private static string NationalCapitalsPdf => DemoPaths.Input("Llm/national-capitals.pdf");
+
         internal static void TestTableExtract1()
         {
-            JArray pages = GetPagesFromJson(PdfExtractor.ToJson(@"..\..\..\TestDocuments\national-capitals.pdf"));
+            PdfExtractor.UseLayout = true;
+            JArray pages = GetPagesFromJson(PdfExtractor.ToJson(NationalCapitalsPdf));
 
             foreach (JObject page in pages)
             {
@@ -23,14 +26,17 @@ namespace Demo
                     Console.WriteLine($"Table: {rowCount} rows x {columnCount} columns");
 
                     foreach (var row in rows)
+                    {
                         Console.WriteLine(string.Join(" | ", row ?? []));
+                    }
                 }
             }
         }
 
         internal static void TestTableExtract2()
         {
-            JArray pages = GetPagesFromJson(PdfExtractor.ToJson(@"..\..\..\TestDocuments\national-capitals.pdf"));
+            PdfExtractor.UseLayout = true;
+            JArray pages = GetPagesFromJson(PdfExtractor.ToJson(NationalCapitalsPdf));
             var csvLines = new List<string>();
 
             foreach (JObject page in pages)
@@ -42,11 +48,7 @@ namespace Demo
                     var rows = ParseTableRows(box["table"]);
                     foreach (var row in rows)
                     {
-                        var escaped = (row ?? []).Select(cell =>
-                            cell.Contains(',') || cell.Contains('"')
-                                ? $"\"{cell.Replace("\"", "\"\"")}\""
-                                : cell
-                        );
+                        var escaped = (row ?? []).Select(EscapeCsvCell);
                         csvLines.Add(string.Join(",", escaped));
                     }
 
@@ -54,12 +56,16 @@ namespace Demo
                 }
             }
 
-            File.WriteAllLines("tables.csv", csvLines, Encoding.UTF8);
+            string outPath = DemoPaths.Output("tables.csv");
+            File.WriteAllLines(outPath, csvLines, Encoding.UTF8);
+
+            Console.WriteLine($"Write to {outPath}");
         }
 
         internal static void TestTableExtract3()
         {
-            JArray pages = GetPagesFromJson(PdfExtractor.ToJson(@"..\..\..\TestDocuments\national-capitals.pdf"));
+            PdfExtractor.UseLayout = true;
+            JArray pages = GetPagesFromJson(PdfExtractor.ToJson(NationalCapitalsPdf));
             var mergedRows = new List<List<string>>();
             int? prevColCount = null;
 
@@ -88,20 +94,24 @@ namespace Demo
 
             Console.WriteLine($"Merged table: {mergedRows.Count} rows");
             foreach (var row in mergedRows)
+            {
                 Console.WriteLine(string.Join(" | ", row ?? []));
+            }
         }
 
         internal static void TestOcr()
         {
-            PdfExtractor.ToMarkdown(@"..\..\..\TestDocuments\Ocr.pdf", useOcr: true, writeImages: false, embedImages: false);
-            string text = PdfExtractor.ToText(@"..\..\..\TestDocuments\Ocr.pdf", useOcr: true);
+            PdfExtractor.UseLayout = true;
+            PdfExtractor.ToMarkdown(@"..\..\..\..\TestDocuments\Demo\Ocr.pdf", useOcr: true, writeImages: false, embedImages: false);
+            string text = PdfExtractor.ToText(@"..\..\..\..\TestDocuments\Demo\Ocr.pdf", useOcr: true);
             Console.WriteLine(text);
         }
 
         internal static void TestLLM2()
         {
+            PdfExtractor.UseLayout = true;
             var reader = PdfExtractor.LlamaMarkdownReader();
-            var chunks = reader.LoadData(@"..\..\..\TestDocuments\magazine.pdf");
+            var chunks = reader.LoadData(@"..\..\..\..\TestDocuments\Demo\magazine.pdf");
 
             Directory.CreateDirectory("Output");
             foreach (var chunk in chunks)
@@ -131,5 +141,13 @@ namespace Demo
                 JObject obj when obj["extract"] is JArray extract => extract.ToObject<List<List<string>>>() ?? [],
                 _ => []
             };
+
+        private static string EscapeCsvCell(string cell)
+        {
+            cell ??= "";
+            return cell.Contains(',') || cell.Contains('"')
+                ? $"\"{cell.Replace("\"", "\"\"")}\""
+                : cell;
+        }
     }
 }

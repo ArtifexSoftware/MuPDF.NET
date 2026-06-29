@@ -1,134 +1,93 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
-using System.Runtime.InteropServices;
-using System.Text;
 using mupdf;
 
 namespace MuPDF.NET
 {
+    /// <summary>
+    /// HTML/XML DOM node for <see cref="Story"/> content (PyMuPDF <c>class Xml</c>).
+    /// </summary>
+    /// <remarks>
+    /// <para>Obtain the document body via <see cref="Story.Body"/> rather than constructing a root node yourself.</para>
+    /// <para>Block helpers such as <see cref="AddParagraph"/> return the new child so you can chain
+    /// <see cref="SetBold(bool)"/>, <see cref="AddText"/>, and similar calls on that node.</para>
+    /// <para>Tree nodes returned by navigation properties and <see cref="Find"/> are views into the
+    /// story DOM and are not owned by the wrapper — see <see cref="FromDomNode"/>.</para>
+    /// </remarks>
     public class Xml
     {
-        static Xml()
-        {
-            Utils.InitApp();
-        }
+        internal FzXml This { get; }
 
-        private FzXml _nativeXml;
-
-        public FzXml ToFzXml()
-        {
-            return _nativeXml;
-        }
-
-        public Xml(FzXml rhs)
-        {
-            _nativeXml = rhs;
-        }
+        internal static bool HasInternal(FzXml? xml) =>
+            xml?.m_internal != null;
 
         /// <summary>
-        /// Either the node’s text or Null if a tag node.
+        /// Wrap a DOM node returned by MuPDF without taking ownership (PyMuPDF <c>Xml(ret)</c> on tree nodes).
         /// </summary>
-        public string Text
+        internal static Xml? FromDomNode(FzXml? ret)
         {
-            get { return _nativeXml.fz_xml_text(); }
+            if (ret?.m_internal == null)
+                return null;
+            var h = FzXml.getCPtr(ret).Handle;
+            if (h == IntPtr.Zero)
+                return null;
+            return new Xml(new FzXml(h, false));
         }
 
-        /// <summary>
-        /// Check if a text node.
-        /// </summary>
-        public bool IsText
+        /// <summary>Wrap an existing <see cref="FzXml"/> handle (PyMuPDF <c>Xml(rhs)</c> when rhs is FzXml).</summary>
+        public Xml(FzXml rhs) =>
+            This = rhs ?? throw new ArgumentNullException(nameof(rhs));
+
+        /// <summary>Parse HTML5 from a string (PyMuPDF <c>Xml(rhs)</c> when rhs is str).</summary>
+        public Xml(string rhs)
         {
-            get { return Text != null; }
+            var buff = Helpers.BufferFromBytes(System.Text.Encoding.UTF8.GetBytes(rhs ?? ""));
+            This = buff.fz_parse_xml_from_html5();
         }
 
-        /// <summary>
-        /// Either the HTML tag name like p or Null if a text node.
-        /// </summary>
-        public string TagName
-        {
-            get { return _nativeXml.fz_xml_tag(); }
-        }
+        /// <summary>Text content of a text node; <c>null</c> for element nodes (PyMuPDF <c>Xml.text</c>).</summary>
+        public string? Text => This.fz_xml_text();
 
-        /// <summary>
-        /// The top node of the DOM, which hence has the tagname
-        /// </summary>
-        public Xml Root
-        {
-            get { return new Xml(_nativeXml.fz_xml_root()); }
-        }
+        /// <summary><c>true</c> if this node carries text rather than a tag (PyMuPDF <c>Xml.is_text</c>).</summary>
+        public bool IsText => Text != null;
 
-        /// <summary>
-        /// The previous node at the same level.
-        /// </summary>
-        public Xml Previous
+        /// <summary>HTML tag name (e.g. <c>p</c>), or <c>null</c> on text nodes (PyMuPDF <c>Xml.tagname</c>).</summary>
+        public string? TagName => This.fz_xml_tag();
+
+        /// <summary>Document root element (typically <c>html</c>) (PyMuPDF <c>Xml.root</c>).</summary>
+        public Xml? Root => FromDomNode(This.fz_xml_root());
+
+        /// <summary>Previous sibling at the same level, or <c>null</c> (PyMuPDF <c>Xml.previous</c>).</summary>
+        public Xml? Previous => FromDomNode(This.fz_dom_previous());
+
+        /// <summary>Next sibling at the same level, or <c>null</c> (PyMuPDF <c>Xml.next</c>).</summary>
+        public Xml? Next => FromDomNode(This.fz_dom_next());
+
+        /// <summary>Parent element, or <c>null</c> (PyMuPDF <c>Xml.parent</c>).</summary>
+        public Xml? Parent => FromDomNode(This.fz_dom_parent());
+
+        /// <summary>First child node, or <c>null</c>; text nodes have no children (PyMuPDF <c>Xml.first_child</c>).</summary>
+        public Xml? FirstChild
         {
             get
             {
-                FzXml ret = _nativeXml.fz_dom_previous();
-                if (ret != null)
-                    return new Xml(ret);
-                else
+                if (Text != null)
                     return null;
+                return FromDomNode(This.fz_dom_first_child());
             }
         }
 
-        /// <summary>
-        /// The next node at the same level (or None).
-        /// </summary>
-        public Xml Next
+        /// <summary>Last child among direct children, or <c>null</c> (PyMuPDF <c>Xml.last_child</c>).</summary>
+        public Xml? LastChild
         {
             get
             {
-                FzXml ret = _nativeXml.fz_dom_next();
-                if (ret != null)
-                    return new Xml(ret);
-                else
-                    return null;
-            }
-        }
-
-        public Xml Parent
-        {
-            get
-            {
-                FzXml ret = _nativeXml.fz_dom_parent();
-                if (ret != null)
-                    return new Xml(ret);
-                else
-                    return null;
-            }
-        }
-
-        /// <summary>
-        /// Contains the first node one level below this one (or null)
-        /// </summary>
-        public Xml FirstChild
-        {
-            get
-            {
-                if (_nativeXml.fz_xml_text() == null)
-                    return null;
-                FzXml ret = _nativeXml.fz_dom_first_child();
-                if (ret.m_internal != null)
-                    return new Xml(ret);
-                else
-                    return null;
-            }
-        }
-
-        /// <summary>
-        /// Contains the last node one level below this one (or null)
-        /// </summary>
-        public Xml LastChild
-        {
-            get
-            {
-                Xml child = FirstChild;
+                var child = FirstChild;
                 if (child == null)
                     return null;
                 while (true)
                 {
-                    Xml next = child.Next;
+                    var next = child.Next;
                     if (next == null)
                         return child;
                     child = next;
@@ -136,95 +95,314 @@ namespace MuPDF.NET
             }
         }
 
-        public Xml(string rhs)
-        {
-            byte[] bytes = Encoding.UTF8.GetBytes(rhs);
-            FzBuffer buf = Utils.fz_new_buffer_from_data(bytes);
-            _nativeXml = mupdf.mupdf.fz_parse_xml_from_html5(buf);
-        }
+        /// <summary>Return the document <c>body</c> element (PyMuPDF <c>Xml.bodytag</c>).</summary>
+        public Xml? BodyTag() => FromDomNode(This.fz_dom_body());
 
-        private List<(int, string)> ShowNode(Xml node, List<(int, string)> items, int shift)
+        /// <summary>
+        /// Find the first descendant matching tag/attribute (PyMuPDF <c>Xml.find</c>).
+        /// </summary>
+        /// <param name="tag">Element tag, or <c>null</c> for any tag.</param>
+        /// <param name="att">Attribute name, or <c>null</c>.</param>
+        /// <param name="match">Attribute value to match, or <c>null</c>.</param>
+        public Xml? Find(string? tag, string? att, string? match) =>
+            FromDomNode(This.fz_dom_find(tag, att, match));
+
+        /// <summary>Continue <see cref="Find"/> with the same criteria (PyMuPDF <c>Xml.find_next</c>).</summary>
+        public Xml? FindNext(string? tag, string? att, string? match) =>
+            FromDomNode(This.fz_dom_find_next(tag, att, match));
+
+        /// <summary>All attributes of an element node; <c>null</c> on text nodes (PyMuPDF <c>Xml.get_attributes</c>).</summary>
+        public Dictionary<string, string>? GetAttributes()
         {
-            while (node != null)
+            if (IsText)
+                return null;
+            var result = new Dictionary<string, string>();
+            for (int i = 0; ; i++)
             {
-                if (node.IsText)
-                {
-                    items.Add((shift, $"\"{node.Text}\""));
-                    node = node.Next;
-                    continue;
-                }
-                items.Add((shift, $"\"{node.TagName}\""));
-                foreach (var attr in node.GetAttributes())
-                    items.Add((shift, $"={attr.Key} \"{attr.Value}\""));
-                Xml child = node.FirstChild;
-                if (child != null)
-                {
-                    items = ShowNode(child, items, shift + 1);
-                }
-
-                items.Add((shift, $"){node.TagName}"));
-                node = node.Next;
+                var (val, key) = This.fz_dom_get_attribute(i);
+                if (string.IsNullOrEmpty(val) || string.IsNullOrEmpty(key))
+                    break;
+                result[key] = val;
             }
-            return items;
+            return result;
         }
 
-        private List<(int, string)> GetNodeTree()
+        /// <summary>Read a DOM attribute (PyMuPDF <c>Xml.get_attribute_value</c>).</summary>
+        public string? GetAttributeValue(string key)
         {
-            int shift = 0;
-            List<(int, string)> items = new List<(int, string)>();
-            items = ShowNode(this, items, shift);
-            return items;
+            if (string.IsNullOrEmpty(key))
+                throw new ArgumentException("key must be non-empty", nameof(key));
+            return This.fz_dom_attribute(key);
         }
 
-        /// <summary>
-        /// Create a new node with a given tag. This a low-level method used by other methods like
-        /// </summary>
-        /// <param name="tag">the element tag.</param>
-        /// <returns>the created element. To actually bind it to the DOM</returns>
-        public Xml CreateElement(string tag)
+        /// <summary>Add or replace a DOM attribute (PyMuPDF <c>Xml.set_attribute</c>).</summary>
+        public void SetAttribute(string key, string? value = null)
         {
-            return new Xml(_nativeXml.fz_dom_create_element(tag));
+            if (string.IsNullOrEmpty(key))
+                throw new ArgumentException("key must be non-empty", nameof(key));
+            This.fz_dom_add_attribute(key, value ?? "");
         }
 
-        /// <summary>
-        /// Create direct text for the current node.
-        /// </summary>
-        /// <param name="text">the text to append.</param>
-        /// <returns>the created element.</returns>
-        public Xml CreateTextNode(string text)
+        /// <summary>Remove attribute <paramref name="key"/> (PyMuPDF <c>Xml.remove_attribute</c>).</summary>
+        public void RemoveAttribute(string key)
         {
-            return new Xml(_nativeXml.fz_dom_create_text_node(text));
+            if (string.IsNullOrEmpty(key))
+                throw new ArgumentException("key must be non-empty", nameof(key));
+            This.fz_dom_remove_attribute(key);
         }
 
-        /// <summary>
-        /// Append a child node.
-        /// </summary>
-        /// <param name="child">the Xml node to append.</param>
-        public void AppendChild(Xml child)
+        /// <summary>Create an element node; bind with <see cref="AppendChild"/> (PyMuPDF <c>Xml.create_element</c>).</summary>
+        public Xml CreateElement(string tag) => new Xml(This.fz_dom_create_element(tag));
+
+        /// <summary>Create a text node (PyMuPDF <c>Xml.create_text_node</c>).</summary>
+        public Xml CreateTextNode(string text) => new Xml(This.fz_dom_create_text_node(text));
+
+        /// <summary>Append <paramref name="child"/> under this node (PyMuPDF <c>Xml.append_child</c>).</summary>
+        public void AppendChild(Xml child) =>
+            This.fz_dom_append_child(child.This);
+
+        /// <summary>Insert <paramref name="node"/> before this node (PyMuPDF <c>Xml.insert_before</c>).</summary>
+        public void InsertBefore(Xml node) => This.fz_dom_insert_before(node.This);
+
+        /// <summary>Insert <paramref name="node"/> after this node (PyMuPDF <c>Xml.insert_after</c>).</summary>
+        public void InsertAfter(Xml node) => This.fz_dom_insert_after(node.This);
+
+        /// <summary>Detach this node from the DOM (PyMuPDF <c>Xml.remove</c>).</summary>
+        public void Remove() => This.fz_dom_remove();
+
+        /// <summary>Deep copy of this node (PyMuPDF <c>Xml.clone</c>).</summary>
+        public Xml Clone() => new Xml(This.fz_dom_clone());
+
+        /// <summary>Convert a color argument to a CSS color string (PyMuPDF <c>Xml.color_text</c>).</summary>
+        public static string ColorText(object color)
         {
-            _nativeXml.fz_dom_append_child(child.ToFzXml());
+            if (color is string s)
+                return s;
+            if (color is int i)
+            {
+                var (r, g, b) = SRgbToRgb(i);
+                return $"rgb({r},{g},{b})";
+            }
+            if (color is float[] rgb && rgb.Length == 3)
+                return $"rgb({rgb[0]},{rgb[1]},{rgb[2]})";
+            if (color is double[] drgb && drgb.Length == 3)
+                return $"rgb({drgb[0]},{drgb[1]},{drgb[2]})";
+            return color?.ToString() ?? "";
         }
 
-        /// <summary>
-        /// Add an ul tag - bulleted list, context manager.
-        /// </summary>
-        /// <returns></returns>
+        /// <summary>Print a simplified node tree (PyMuPDF <c>Xml.debug</c>).</summary>
+        public void Debug()
+        {
+            foreach (var item in GetNodeTree())
+                Helpers.message(new string(' ', item.shift * 2) + EscapeDebugLine(item.line));
+        }
+
+        // ─── Block structure ─────────────────────────────────────────────
+
+        /// <summary>Add a bulleted list (<c>ul</c>) (PyMuPDF <c>Xml.add_bullet_list</c>).</summary>
         public Xml AddBulletList()
         {
-            Xml child = CreateElement("ul");
+            var child = CreateElement("ul");
             AppendChild(child);
             return child;
         }
 
+        /// <summary>Add a numbered list (<c>ol</c>) (PyMuPDF <c>Xml.add_number_list</c>).</summary>
+        public Xml AddNumberList(int start = 1, string? numType = null)
+        {
+            var child = CreateElement("ol");
+            if (start > 1)
+                child.SetAttribute("start", start.ToString());
+            if (numType != null)
+                child.SetAttribute("type", numType);
+            AppendChild(child);
+            return child;
+        }
+
+        /// <summary>Add a list item (<c>li</c>) under <c>ol</c> or <c>ul</c> (PyMuPDF <c>Xml.add_list_item</c>).</summary>
+        public Xml AddListItem()
+        {
+            var tag = TagName;
+            if (tag != "ol" && tag != "ul")
+                throw new ValueErrorException($"cannot add list item to {tag}");
+            var child = CreateElement("li");
+            AppendChild(child);
+            return child;
+        }
+
+        /// <summary>Add a paragraph (<c>p</c>) (PyMuPDF <c>Xml.add_paragraph</c>).</summary>
+        public Xml AddParagraph()
+        {
+            var child = CreateElement("p");
+            if (TagName != "p")
+                AppendChild(child);
+            else
+                Parent!.AppendChild(child);
+            return child;
+        }
+
+        /// <summary>Add a division (<c>div</c>) (PyMuPDF <c>Xml.add_division</c>).</summary>
+        public Xml AddDivision()
+        {
+            var child = CreateElement("div");
+            AppendChild(child);
+            return child;
+        }
+
+        /// <summary>Add a description list (<c>dl</c>) (PyMuPDF <c>Xml.add_description_list</c>).</summary>
+        public Xml AddDescriptionList()
+        {
+            var child = CreateElement("dl");
+            AppendChild(child);
+            return child;
+        }
+
+        /// <summary>Add a preformatted block (<c>pre</c>) (PyMuPDF <c>Xml.add_codeblock</c>).</summary>
+        public Xml AddCodeBlock()
+        {
+            var child = CreateElement("pre");
+            AppendChild(child);
+            return child;
+        }
+
+        /// <summary>Add a horizontal rule (<c>hr</c>) (PyMuPDF <c>Xml.add_horizontal_line</c>).</summary>
+        public Xml AddHorizontalLine()
+        {
+            var child = CreateElement("hr");
+            AppendChild(child);
+            return child;
+        }
+
+        /// <summary>Add a span wrapper (PyMuPDF <c>Xml.add_span</c>).</summary>
+        public Xml AddSpan()
+        {
+            var child = CreateElement("span");
+            AppendChild(child);
+            return child;
+        }
+
+        /// <summary>Add a heading <c>h1</c>–<c>h6</c> (PyMuPDF <c>Xml.add_header</c>).</summary>
+        /// <param name="level">Heading level from 1 to 6.</param>
+        public Xml AddHeader(int level = 1)
+        {
+            if (!Helpers.InRange(level, 1, 6))
+                throw new ValueErrorException("Header level must be in [1, 6]");
+            var thisTag = TagName;
+            var newTag = $"h{level}";
+            var child = CreateElement(newTag);
+            if (thisTag is not ("h1" or "h2" or "h3" or "h4" or "h5" or "h6" or "p"))
+                AppendChild(child);
+            else
+                Parent!.AppendChild(child);
+            return child;
+        }
+
         /// <summary>
-        /// Set (add) some "class" attribute.
+        /// Add an image (<c>img</c>). <paramref name="name"/> must match an archive entry used by <see cref="Story"/>.
         /// </summary>
-        /// <param name="text">the name of the class. Must have been defined in either the HTML or the CSS source of the DOM.</param>
-        /// <returns></returns>
+        public Xml AddImage(
+            string name,
+            string? width = null,
+            string? height = null,
+            string? imgFloat = null,
+            string? align = null)
+        {
+            var child = CreateElement("img");
+            if (width != null)
+                child.SetAttribute("width", width);
+            if (height != null)
+                child.SetAttribute("height", height);
+            if (imgFloat != null)
+                child.SetAttribute("style", $"float: {imgFloat}");
+            if (align != null)
+                child.SetAttribute("align", align);
+            child.SetAttribute("src", name);
+            AppendChild(child);
+            return child;
+        }
+
+        // ─── Inline content ──────────────────────────────────────────────
+
+        /// <summary>Add text with line breaks as <c>br</c> elements (PyMuPDF <c>Xml.add_text</c>).</summary>
+        public Xml AddText(string text)
+        {
+            var lines = SplitLines(text);
+            var prev = SpanBottom() ?? this;
+            for (int i = 0; i < lines.Length; i++)
+            {
+                prev.AppendChild(CreateTextNode(lines[i]));
+                if (i < lines.Length - 1)
+                    prev.AppendChild(CreateElement("br"));
+            }
+            return this;
+        }
+
+        /// <summary>Append text and <c>br</c> nodes as direct children (PyMuPDF <c>Xml.insert_text</c>).</summary>
+        public Xml InsertText(string text)
+        {
+            var lines = SplitLines(text);
+            for (int i = 0; i < lines.Length; i++)
+            {
+                AppendChild(CreateTextNode(lines[i]));
+                if (i < lines.Length - 1)
+                    AppendChild(CreateElement("br"));
+            }
+            return this;
+        }
+
+        /// <summary>Add a hyperlink (<c>a</c>) (PyMuPDF <c>Xml.add_link</c>).</summary>
+        public Xml AddLink(string href, string? text = null)
+        {
+            if (text == null)
+                text = href;
+            var child = CreateElement("a");
+            child.SetAttribute("href", href);
+            child.AppendChild(CreateTextNode(text));
+            var prev = SpanBottom() ?? this;
+            prev.AppendChild(child);
+            return this;
+        }
+
+        /// <summary>Add inline <c>code</c> (PyMuPDF <c>Xml.add_code</c>).</summary>
+        public Xml AddCode(string? text = null) => AddInlineTag("code", text);
+
+        /// <summary>Add inline <c>var</c> (PyMuPDF aliases <c>add_var</c> to <c>add_code</c>).</summary>
+        public Xml AddVar(string? text = null) => AddCode(text);
+
+        /// <summary>Add inline sample text (PyMuPDF aliases <c>add_samp</c> to <c>add_code</c>).</summary>
+        public Xml AddSamp(string? text = null) => AddCode(text);
+
+        /// <summary>Add inline keyboard text (PyMuPDF aliases <c>add_kbd</c> to <c>add_code</c>).</summary>
+        public Xml AddKbd(string? text = null) => AddCode(text);
+
+        /// <summary>Add subscript (<c>sub</c>) (PyMuPDF <c>Xml.add_subscript</c>).</summary>
+        public Xml AddSubscript(string? text = null) => AddInlineTag("sub", text);
+
+        /// <summary>Add superscript (<c>sup</c>) (PyMuPDF <c>Xml.add_superscript</c>).</summary>
+        public Xml AddSuperscript(string? text = null) => AddInlineTag("sup", text);
+
+        // ─── CSS / presentation ──────────────────────────────────────────
+
+        /// <summary>Append a CSS fragment to the <c>style</c> attribute (PyMuPDF <c>Xml.add_style</c>).</summary>
+        public Xml AddStyle(string text)
+        {
+            var style = GetAttributeValue("style");
+            if (style != null && style.IndexOf(text, StringComparison.Ordinal) >= 0)
+                return this;
+            RemoveAttribute("style");
+            if (style == null)
+                style = text;
+            else
+                style += ";" + text;
+            SetAttribute("style", style);
+            return this;
+        }
+
+        /// <summary>Append a class name to the <c>class</c> attribute (PyMuPDF <c>Xml.add_class</c>).</summary>
         public Xml AddClass(string text)
         {
-            string cls = GetAttributeValue("class");
-            if (cls != null && cls.Contains(text))
+            var cls = GetAttributeValue("class");
+            if (cls != null && cls.IndexOf(text, StringComparison.Ordinal) >= 0)
                 return this;
             RemoveAttribute("class");
             if (cls == null)
@@ -235,905 +413,229 @@ namespace MuPDF.NET
             return this;
         }
 
-        /// <summary>
-        /// Add "class" text (code tag) - inline element, treated like text.
-        /// </summary>
-        /// <param name="text"></param>
-        /// <returns></returns>
-        public Xml AddCode(string text = null)
+        /// <summary>Set text alignment on block nodes (PyMuPDF <c>Xml.set_align</c>).</summary>
+        public Xml SetAlign(object align)
         {
-            Xml child = CreateElement("code");
-            AppendChild(CreateTextNode(text));
-            Xml prev = SpanBottom();
-            if (prev != null)
-                prev = this;
-            prev.AppendChild(child);
-            return this;
-        }
-
-        /// <summary>
-        /// Add "variable" text (var tag) - inline element, treated like text
-        /// </summary>
-        /// <param name="text"></param>
-        /// <returns></returns>
-        public Xml AddVar(string text = null)
-        {
-            return AddCode(text);
-        }
-
-        /// <summary>
-        /// Add “sample output” text (samp tag) - inline element, treated like text
-        /// </summary>
-        /// <param name="text"></param>
-        /// <returns></returns>
-        public Xml AddSamp(string text = null)
-        {
-            return AddCode(text);
-        }
-
-        /// <summary>
-        /// Add “keyboard input” text (kbd tag) - inline element, treated like text
-        /// </summary>
-        /// <param name="text"></param>
-        /// <returns></returns>
-        public Xml AddKbd(string text = null)
-        {
-            return AddCode(text);
-        }
-
-        /// <summary>
-        /// Add a pre tag, context manager.
-        /// </summary>
-        /// <returns></returns>
-        public Xml AddCodeBlock()
-        {
-            Xml child = CreateElement("pre");
-            AppendChild(child);
-            return child;
-        }
-
-        /// <summary>
-        /// Add a dl tag, context manager.
-        /// </summary>
-        /// <returns></returns>
-        public Xml AddDescriptionList()
-        {
-            Xml child = CreateElement("dl");
-            AppendChild(child);
-            return child;
-        }
-
-        /// <summary>
-        /// Add a div tag, context manager.
-        /// </summary>
-        /// <returns></returns>
-        public Xml AddDivision()
-        {
-            Xml child = CreateElement("div");
-            AppendChild(child);
-            return child;
-        }
-
-        /// <summary>
-        /// Add a header tag (one of h1 to h6), context manager.
-        /// </summary>
-        /// <param name="level"></param>
-        /// <returns></returns>
-        /// <exception cref="Exception"></exception>
-        public Xml AddHeader(int level = 1)
-        {
-            if (!Utils.INRANGE(level, 1, 6))
-                throw new Exception("Header level must be in [1, 6]");
-            string tagName = TagName;
-            string newTag = $"h{level}";
-            Xml child = CreateElement(newTag);
-            //if (!(new[] { "h1", "h2", "h3", "h4", "h5", "h6" }).Contains(tagName))
-            if (!(new List<string> { "h1", "h2", "h3", "h4", "h5", "h6" }).Contains(tagName))
+            string t;
+            if (align is string s)
+                t = s;
+            else if (align is int n)
             {
-                AppendChild(child);
-                return child;
-            }
-            Parent.AppendChild(child);
-            return child;
-        }
-
-        /// <summary>
-        /// Add a hr tag.
-        /// </summary>
-        /// <returns></returns>
-        public Xml AddHorizontalLine()
-        {
-            Xml child = CreateElement("hr");
-            AppendChild(child);
-            return child;
-        }
-
-        /// <summary>
-        /// Add an img tag. This causes the inclusion of the named image in the DOM.
-        /// </summary>
-        /// <param name="name">the filename of the image. This must be the member name of some entry of the MuPDFArchive parameter of the MuPDFStory constructor.</param>
-        /// <param name="width">if provided, either an absolute (int) value, or a percentage string like “30%”.</param>
-        /// <param name="height"> if provided, either an absolute (int) value, or a percentage string like “30%”.</param>
-        /// <param name="imgFloat"></param>
-        /// <param name="align"></param>
-        /// <returns></returns>
-        public Xml AddImage(
-            string name,
-            string width = null,
-            string height = null,
-            string imgFloat = null,
-            string align = null
-        )
-        {
-            Xml child = CreateElement("img");
-            if (width != null)
-                child.SetAttribute("width", $"{width}");
-            if (height != null)
-                child.SetAttribute("height", $"{height}");
-            if (imgFloat != null)
-                child.SetAttribute("style", $"float: {imgFloat}");
-            if (align != null)
-                child.SetAttribute("align", $"{align}");
-            child.SetAttribute("src", $"{name}");
-            AppendChild(child);
-            return child;
-        }
-
-        /// <summary>
-        /// Add an a tag - inline element, treated like text.
-        /// </summary>
-        /// <param name="href">the URL target.</param>
-        /// <param name="text">the text to display. If omitted, the href text is shown instead.</param>
-        /// <returns></returns>
-        public Xml AddLink(string href, string text = null)
-        {
-            Xml child = CreateElement("a");
-            if (text is string)
-                text = href;
-            child.SetAttribute("href", href);
-            child.AppendChild(CreateTextNode(text));
-            Xml prev = SpanBottom();
-            if (prev == null)
-                prev = this;
-            prev.AppendChild(child);
-            return this;
-        }
-
-        /// <summary>
-        /// Add an ol tag, context manager.
-        /// </summary>
-        /// <returns></returns>
-        /// <exception cref="Exception"></exception>
-        public Xml AddListItem()
-        {
-            if (TagName != "ol" || TagName != "ul")
-                throw new Exception("cannot add list item");
-            Xml child = CreateElement("li");
-            AppendChild(child);
-            return child;
-        }
-
-        /// <summary>
-        /// Add an ol tag, context manager.
-        /// </summary>
-        /// <param name="start"></param>
-        /// <param name="numType"></param>
-        /// <returns></returns>
-        public Xml AddNumberList(int start = 1, string numType = null)
-        {
-            Xml child = CreateElement("ol");
-            if (start > 1)
-                child.SetAttribute("start", Convert.ToString(start));
-            if (numType != null)
-                child.SetAttribute("type", numType);
-            AppendChild(child);
-            return child;
-        }
-
-        /// <summary>
-        /// Add a <b>p</b> tag, context manager.
-        /// </summary>
-        /// <returns></returns>
-        public Xml AddParagraph()
-        {
-            Xml child = CreateElement("p");
-            if (TagName != "p")
-                AppendChild(child);
-            else
-                Parent.AppendChild(child);
-            return child;
-        }
-
-        /// <summary>
-        /// Add a span tag, context manager.
-        /// </summary>
-        /// <returns></returns>
-        public Xml AddSpan()
-        {
-            Xml child = CreateElement("span");
-            AppendChild(child);
-            return child;
-        }
-
-        /// <summary>
-        /// Set (add) some style attribute not supported by its own set_ method.
-        /// </summary>
-        /// <param name="text">any valid CSS style value.</param>
-        /// <returns></returns>
-        public Xml AddStyle(string text)
-        {
-            string style = GetAttributeValue("style");
-            if (style != null && style.Contains(text))
-                return this;
-            RemoveAttribute("style");
-            if (style == null)
-                style = Text;
-            else
-                style += ";" + Text;
-            SetAttribute("style", style);
-            return this;
-        }
-
-        /// <summary>
-        /// Add “subscript” text(sub tag) - inline element, treated like text.
-        /// </summary>
-        /// <param name="text"></param>
-        /// <returns></returns>
-        public Xml AddSubscript(string text)
-        {
-            Xml child = CreateElement("sub");
-            child.AppendChild(CreateTextNode(text));
-            Xml prev = SpanBottom();
-            if (prev == null)
-                prev = this;
-            prev.AppendChild(child);
-            return this;
-        }
-
-        /// <summary>
-        /// Add “superscript” text (sup tag) - inline element, treated like text.
-        /// </summary>
-        /// <param name="text"></param>
-        /// <returns></returns>
-        public Xml AddSuperscript(string text = null)
-        {
-            Xml child = CreateElement("sup");
-            child.AppendChild(CreateTextNode(text));
-            Xml prev = SpanBottom();
-            if (prev == null)
-                prev = this;
-            prev.AppendChild(child);
-            return this;
-        }
-
-        /// <summary>
-        /// Add a text string. Line breaks n are honored as br tags.
-        /// </summary>
-        /// <param name="text"></param>
-        /// <returns></returns>
-        public Xml AddText(string text)
-        {
-            string[] lines = text.Split('\n');
-            int lineCount = lines.Length;
-            Xml prev = SpanBottom();
-            if (prev == null)
-                prev = this;
-
-            for (int i = 0; i < lineCount; i++)
-            {
-                prev.AppendChild(CreateTextNode(lines[i]));
-                if (i < lineCount - 1)
+                t = n switch
                 {
-                    Xml br = CreateElement("br");
-                    prev.AppendChild(br);
-                }
+                    Constants.TextAlignLeft => "left",
+                    Constants.TextAlignCenter => "center",
+                    Constants.TextAlignRight => "right",
+                    Constants.TextAlignJustify => "justify",
+                    _ => throw new ValueErrorException($"Unrecognised {align}"),
+                };
             }
-            return this;
-        }
-
-        /// <summary>
-        ///
-        /// </summary>
-        /// <param name="style"></param>
-        /// <returns></returns>
-        public Xml AppendStyledSpan(string style)
-        {
-            Xml span = CreateElement("span");
-            span.AddStyle(style);
-            Xml prev = SpanBottom();
-            if (prev == null)
-                prev = this;
-            prev.AppendChild(span);
-            return prev;
-        }
-
-        /// <summary>
-        /// Make a copy if this node
-        /// </summary>
-        /// <returns></returns>
-        public Xml Clone()
-        {
-            return new Xml(_nativeXml.fz_dom_clone());
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="color"></param>
-        /// <returns></returns>
-        public static string ColorText(dynamic color)
-        {
-            if (color is string)
-                return color;
-            if (color is int)
-            {
-                (int, int, int) rgb = Utils.sRGB2Rgb(color);
-                return $"rgb({rgb.Item1},{rgb.Item2},{rgb.Item3})";
-            }
-            if ((color is float[] && color.Length == 3))
-            {
-                return $"rbg({color[0]},{color[1]},{color[2]}";
-            }
-            return color;
-        }
-
-        /// <summary>
-        /// For debugging purposes, print this node’s structure in a simplified form.
-        /// </summary>
-        public void Debug()
-        {
-            List<(int, string)> items = GetNodeTree();
-            foreach ((int k, string v) in items)
-            {
-                Console.WriteLine($"{k}: " + v.Replace("\n", "\\n"));
-            }
-        }
-
-        /// <summary>
-        /// Under the current node, find the first node with the given tag, attribute att and value match.
-        /// </summary>
-        /// <param name="tag">restrict search to this tag. May be null for unrestricted searches.</param>
-        /// <param name="att">check this attribute. May be None.</param>
-        /// <param name="match">the desired attribute value to match. May be null.</param>
-        /// <returns></returns>
-        public Xml Find(string tag, string att, string match)
-        {
-            FzXml ret = _nativeXml.fz_dom_find(tag, att, match);
-            if (ret != null)
-                return new Xml(ret);
-            return null;
-        }
-
-        /// <summary>
-        /// Continue a previous Xml.find() (or find_next()) with the same values.
-        /// </summary>
-        /// <param name="tag"></param>
-        /// <param name="att"></param>
-        /// <param name="match"></param>
-        /// <returns>Null if null more found, otherwise the next matching node.</returns>
-        public Xml FindNext(string tag, string att, string match)
-        {
-            FzXml ret = _nativeXml.fz_dom_find_next(tag, att, match);
-            if (ret != null)
-                return new Xml(ret);
-            return null;
-        }
-
-        /// <summary>
-        /// Insert the given element elem after this node.
-        /// </summary>
-        /// <param name="node"></param>
-        public void InsertAfter(Xml node)
-        {
-            _nativeXml.fz_dom_insert_after(node.ToFzXml());
-        }
-
-        /// <summary>
-        /// Insert the given element elem before this node.
-        /// </summary>
-        /// <param name="node"></param>
-        public void InsertBefore(Xml node)
-        {
-            _nativeXml.fz_dom_insert_before(node.ToFzXml());
-        }
-
-        public Xml InsertText(string text)
-        {
-            string[] lines = text.Split('\n');
-            int lineCount = lines.Length;
-
-            for (int i = 0; i < lineCount; i++)
-            {
-                AppendChild(CreateTextNode(lines[i]));
-                if (i < lineCount - 1)
-                    AppendChild(CreateElement("br"));
-            }
-            return this;
-        }
-
-        /// <summary>
-        /// Remove this node
-        /// </summary>
-        public void Remove()
-        {
-            _nativeXml.fz_dom_remove();
-        }
-
-        /// <summary>
-        /// Set the text alignment. Only works for block-level tags.
-        /// </summary>
-        /// <param name="align">either one of the Text Alignment or the text-align values.</param>
-        /// <returns></returns>
-        /// <exception cref="Exception"></exception>
-        public Xml SetAlign(dynamic align)
-        {
-            string text = "text-align: ";
-            if (align is string)
-                text += align;
-            else if (align == TextAlign.TEXT_ALIGN_LEFT)
-                text += "left";
-            else if (align == TextAlign.TEXT_ALIGN_CENTER)
-                text += "center";
-            else if (align == TextAlign.TEXT_ALIGN_RIGHT)
-                text += "right";
-            else if (align == TextAlign.TEXT_ALIGN_JUSTIFY)
-                text += "justify";
             else
-                throw new Exception($"Unrecognised {align}");
-
-            AddStyle(text);
-            return this;
+                throw new ValueErrorException($"Unrecognised {align}");
+            return AddStyle($"text-align: {t}");
         }
 
-        /// <summary>
-        /// Set the background color. Only works for block-level tags.
-        /// </summary>
-        /// <param name="color">either an RGB value like (255, 0, 0) (for “red”) or a valid background-color value.</param>
-        /// <returns></returns>
-        public Xml SetBgColor(int color)
-        {
-            string text = $"backgroud-color: {Xml.ColorText(color)}";
-            AddStyle(text);
-            return this;
-        }
+        /// <summary>Set background color on block nodes (PyMuPDF <c>Xml.set_bgcolor</c>).</summary>
+        public Xml SetBgColor(int color) => AddStyle($"background-color: {ColorText(color)}");
 
-        /// <summary>
-        /// Set the background color. Only works for block-level tags.
-        /// </summary>
-        /// <param name="color">either an RGB value like (255, 0, 0) (for “red”) or a valid background-color value.</param>
-        /// <returns></returns>
-        public Xml SetBgColor(float[] color)
-        {
-            string text = $"backgroud-color: {Xml.ColorText(color)}";
-            AddStyle(text);
-            return this;
-        }
+        /// <summary>Set background color on block nodes.</summary>
+        public Xml SetBgColor(float[] color) => AddStyle($"background-color: {ColorText(color)}");
 
-        /// <summary>
-        /// Set the background color. Only works for block-level tags.
-        /// </summary>
-        /// <param name="color">either an RGB value like (255, 0, 0) (for “red”) or a valid background-color value.</param>
-        /// <returns></returns>
-        public Xml SetBgColor(string color)
-        {
-            string text = $"backgroud-color: {Xml.ColorText(color)}";
-            AddStyle(text);
-            return this;
-        }
+        /// <summary>Set background color on block nodes.</summary>
+        public Xml SetBgColor(string color) => AddStyle($"background-color: {ColorText(color)}");
 
-        /// <summary>
-        /// Set bold on or off or to some string value.
-        /// </summary>
-        /// <param name="isBold">True, False or a valid font-weight value.</param>
-        /// <returns></returns>
-        public Xml SetBold(bool isBold)
-        {
-            string text = "font-weight: ";
-            if (isBold)
-                text += "bold";
-            else
-                text += "normal";
-            AppendStyledSpan(text);
-            return this;
-        }
+        /// <summary>Apply bold via a nested styled span (PyMuPDF <c>Xml.set_bold</c>).</summary>
+        public Xml SetBold(bool val = true) =>
+            AppendStyledSpan($"font-weight: {(val ? "bold" : "normal")}");
 
-        /// <summary>
-        /// Set the color of the text following.
-        /// </summary>
-        /// <param name="color">either an RGB value like (255, 0, 0) (for “red”) or a valid color value.</param>
-        /// <returns></returns>
-        public Xml SetColor(dynamic color)
-        {
-            string text = $"color: {Xml.ColorText(color)}";
-            AppendStyledSpan(text);
-            return this;
-        }
+        /// <summary>Apply bold with a custom <c>font-weight</c> value.</summary>
+        public Xml SetBold(string val) => AppendStyledSpan($"font-weight: {val}");
 
-        /// <summary>
-        /// Set the number of columns.
-        /// </summary>
-        /// <param name="cols">a valid columns value.</param>
-        /// <returns></returns>
-        public Xml SetColumns(int cols)
-        {
-            string text = $"columns: {cols}";
-            AppendStyledSpan(text);
-            return this;
-        }
+        /// <summary>Apply italic via a nested styled span (PyMuPDF <c>Xml.set_italic</c>).</summary>
+        public Xml SetItalic(bool val = true) =>
+            AppendStyledSpan($"font-style: {(val ? "italic" : "normal")}");
 
-        /// <summary>
-        /// Set the font-family.
-        /// </summary>
-        /// <param name="font"></param>
-        /// <returns></returns>
-        public Xml SetFont(string font)
-        {
-            string text = $"font-family: {font}";
-            AppendStyledSpan(text);
-            return this;
-        }
+        /// <summary>Apply italic with a custom <c>font-style</c> value.</summary>
+        public Xml SetItalic(string val) => AppendStyledSpan($"font-style: {val}");
 
-        /// <summary>
-        /// Set the font size for text following.
-        /// </summary>
-        /// <param name="fontSize">a float or a valid font-size value.</param>
-        /// <returns></returns>
-        public Xml SetFontSize(int fontSize)
-        {
-            string text = $"font-size: {fontSize}px";
-            AppendStyledSpan(text);
-            return this;
-        }
+        /// <summary>Set text color for following content (PyMuPDF <c>Xml.set_color</c>).</summary>
+        public Xml SetColor(object color) => AppendStyledSpan($"color: {ColorText(color)}");
 
-        /// <summary>
-        /// Set a id. This serves as a unique identification of the node within the DOM.
-        /// </summary>
-        /// <param name="unique">id string of the node.</param>
-        /// <returns></returns>
-        /// <exception cref="Exception"></exception>
+        /// <summary>Set column count (PyMuPDF <c>Xml.set_columns</c>).</summary>
+        public Xml SetColumns(int cols) => AppendStyledSpan($"columns: {cols}");
+
+        /// <summary>Set font family (PyMuPDF <c>Xml.set_font</c>).</summary>
+        public Xml SetFont(string font) => AppendStyledSpan($"font-family: {font}");
+
+        /// <summary>Set font size in pixels (PyMuPDF <c>Xml.set_fontsize</c>).</summary>
+        public Xml SetFontSize(float fontSize) => AppendStyledSpan($"font-size: {fontSize}px");
+
+        /// <summary>Set font size with a CSS length (PyMuPDF <c>Xml.set_fontsize</c>).</summary>
+        public Xml SetFontSize(string fontSize) => AppendStyledSpan($"font-size: {fontSize}");
+
+        /// <summary>Set a unique element <c>id</c> (PyMuPDF <c>Xml.set_id</c>).</summary>
         public Xml SetId(string unique)
         {
-            Xml root = Root;
-            if (root.Find(null, "id", unique) == null)
-                throw new Exception($"id \'{unique}\' already exists");
+            if (Root!.Find(null, "id", unique) != null)
+                throw new ValueErrorException($"id '{unique}' already exists");
             SetAttribute("id", unique);
             return this;
         }
 
-        /// <summary>
-        /// Set italic on or off or to some string value for the text following it.
-        /// </summary>
-        /// <param name="isItalic">True, False or some valid font-style value.</param>
-        /// <returns></returns>
-        public Xml SetItalic(bool isItalic)
-        {
-            string text = "font-style: ";
-            if (isItalic)
-                text += "italic";
-            else
-                text += "normal";
-            AppendStyledSpan(text);
-            return this;
-        }
+        /// <summary>Set inter-block leading (PyMuPDF <c>Xml.set_leading</c>).</summary>
+        public Xml SetLeading(string leading) => AddStyle($"-mupdf-leading: {leading}");
+
+        /// <summary>Set letter spacing (PyMuPDF <c>Xml.set_letter_spacing</c>).</summary>
+        public Xml SetLetterSpacing(string spacing) => AppendStyledSpan($"letter-spacing: {spacing}");
+
+        /// <summary>Set line height on block nodes (PyMuPDF <c>Xml.set_lineheight</c>).</summary>
+        public Xml SetLineHeight(string lineHeight) => AddStyle($"line-height: {lineHeight}");
+
+        /// <summary>Set margins via a styled span (PyMuPDF <c>Xml.set_margins</c>).</summary>
+        public Xml SetMargins(string val) => AppendStyledSpan($"margins: {val}");
+
+        /// <summary>Set opacity (PyMuPDF <c>Xml.set_opacity</c>).</summary>
+        public Xml SetOpacity(string opacity) => AppendStyledSpan($"opacity: {opacity}");
+
+        /// <summary>Force a page break after this node (PyMuPDF <c>Xml.set_pagebreak_after</c>).</summary>
+        public Xml SetPageBreakAfter() => AddStyle("page-break-after: always");
+
+        /// <summary>Force a page break before this node (PyMuPDF <c>Xml.set_pagebreak_before</c>).</summary>
+        public Xml SetPageBreakBefore() => AddStyle("page-break-before: always");
+
+        /// <summary>Set first-line indent on block nodes (PyMuPDF <c>Xml.set_text_indent</c>).</summary>
+        public Xml SetTextIndent(string indent) => AddStyle($"text-indent: {indent}");
+
+        /// <summary>Set text decoration (PyMuPDF <c>Xml.set_underline</c>).</summary>
+        public Xml SetUnderline(string val = "underline") =>
+            AppendStyledSpan($"text-decoration: {val}");
+
+        /// <summary>Set word spacing (PyMuPDF <c>Xml.set_word_spacing</c>).</summary>
+        public Xml SetWordSpacing(string spacing) => AppendStyledSpan($"word-spacing: {spacing}");
 
         /// <summary>
-        /// Set inter-block text distance (-mupdf-leading), only works on block-level nodes.
+        /// Apply multiple presentation properties on this node in one call (PyMuPDF <c>Xml.set_properties</c>).
         /// </summary>
-        /// <param name="leading">the distance in points to the previous block.</param>
-        /// <returns></returns>
-        public Xml SetLeading(string leading)
-        {
-            string text = $"-mupdf-leading: {leading}";
-            AddStyle(text);
-            return this;
-        }
-
-        /// <summary>
-        ///
-        /// </summary>
-        /// <param name="spacing"></param>
-        /// <returns></returns>
-        public Xml SetLetterSpacing(string spacing)
-        {
-            string text = $"leter-spacing: {spacing}";
-            AppendStyledSpan(text);
-            return this;
-        }
-
-        /// <summary>
-        /// Set height of a line.
-        /// </summary>
-        /// <param name="lineHeight">a float like 1.5 (which sets to 1.5 * fontsize), or some valid line-height value.</param>
-        /// <returns></returns>
-        public Xml SetLineHeight(string lineHeight)
-        {
-            string text = $"line-height: {lineHeight}";
-            AddStyle(text);
-            return this;
-        }
-
-        /// <summary>
-        /// Set the margin(s).
-        /// </summary>
-        /// <param name="val">float or string with up to 4 values.</param>
-        /// <returns></returns>
-        public Xml SetMargins(string val)
-        {
-            string text = $"margin: {val}";
-            AppendStyledSpan(text);
-            return this;
-        }
-
-        /// <summary>
-        /// Set opacity
-        /// </summary>
-        /// <param name="opacity"></param>
-        /// <returns></returns>
-        public Xml SetOpacity(string opacity)
-        {
-            string text = $"opacity: {opacity}";
-            AppendStyledSpan(text);
-            return this;
-        }
-
-        /// <summary>
-        /// Insert a page break after this node.
-        /// </summary>
-        /// <returns></returns>
-        public Xml SetPageBreakAfter()
-        {
-            string text = "page-break-after: always";
-            AddStyle(text);
-            return this;
-        }
-
-        /// <summary>
-        /// Insert a page break before this node.
-        /// </summary>
-        /// <returns></returns>
-        public Xml SetPageBreakBefore()
-        {
-            string text = "page-break-before: always";
-            AddStyle(text);
-            return this;
-        }
-
-        /// <summary>
-        /// Set any or all desired properties in one call. The meaning of argument values equal the values of the corresponding set_ methods.
-        /// </summary>
-        /// <param name="align"></param>
-        /// <param name="bgcolor"></param>
-        /// <param name="bold"></param>
-        /// <param name="color"></param>
-        /// <param name="columns"></param>
-        /// <param name="font"></param>
-        /// <param name="fontSize"></param>
-        /// <param name="italic"></param>
-        /// <param name="indent"></param>
-        /// <param name="leading"></param>
-        /// <param name="letterSpacing"></param>
-        /// <param name="lineHeight"></param>
-        /// <param name="margins"></param>
-        /// <param name="pageBreakAfter"></param>
-        /// <param name="pageBreakBefore"></param>
-        /// <param name="wordSpacing"></param>
-        /// <param name="unqid"></param>
-        /// <param name="cls"></param>
-        /// <returns></returns>
+        /// <remarks>Unlike individual <c>Set*</c> methods, styles are merged onto this node's <c>style</c> attribute.</remarks>
         public Xml SetProperties(
-            string align = null,
-            string bgcolor = null,
-            bool bold = false,
-            string color = null,
-            int columns = 0,
-            string font = null,
-            int fontSize = 10,
-            bool italic = false,
-            string indent = null,
-            string leading = null,
-            string letterSpacing = null,
-            string lineHeight = null,
-            string margins = null,
-            string pageBreakAfter = null,
-            string pageBreakBefore = null,
-            string wordSpacing = null,
-            string unqid = null,
-            string cls = null
-        )
+            object? align = null,
+            object? bgcolor = null,
+            bool? bold = null,
+            object? color = null,
+            int? columns = null,
+            string? font = null,
+            object? fontSize = null,
+            string? indent = null,
+            bool? italic = null,
+            string? leading = null,
+            string? letterSpacing = null,
+            string? lineHeight = null,
+            string? margins = null,
+            object? pageBreakAfter = null,
+            object? pageBreakBefore = null,
+            string? wordSpacing = null,
+            string? unqid = null,
+            string? cls = null)
         {
-            Xml root = Root;
-            Xml temp = root.AddDivision();
+            var root = Root!;
+            var temp = root.AddDivision();
             if (align != null)
-            {
                 temp.SetAlign(align);
-            }
             if (bgcolor != null)
             {
-                temp.SetBgColor(bgcolor);
+                if (bgcolor is int bi)
+                    temp.SetBgColor(bi);
+                else if (bgcolor is string bs)
+                    temp.SetBgColor(bs);
+                else if (bgcolor is float[] bf)
+                    temp.SetBgColor(bf);
+                else
+                    throw new ValueErrorException($"Unsupported bgcolor type: {bgcolor.GetType().Name}");
             }
-            if (bold)
-            {
-                temp.SetBold(bold);
-            }
+            if (bold != null)
+                temp.SetBold(bold.Value);
             if (color != null)
-            {
                 temp.SetColor(color);
-            }
-            if (columns != 0)
-            {
-                temp.SetColumns(columns);
-            }
+            if (columns != null)
+                temp.SetColumns(columns.Value);
             if (font != null)
-            {
                 temp.SetFont(font);
-            }
-            if (fontSize != 10)
+            if (fontSize != null)
             {
-                temp.SetFontSize(fontSize);
+                if (fontSize is float f)
+                    temp.SetFontSize(f);
+                else if (fontSize is int n)
+                    temp.SetFontSize(n);
+                else
+                    temp.SetFontSize(fontSize.ToString()!);
             }
             if (indent != null)
-            {
                 temp.SetTextIndent(indent);
-            }
-            if (italic)
-            {
-                temp.SetItalic(italic);
-            }
+            if (italic != null)
+                temp.SetItalic(italic.Value);
             if (leading != null)
-            {
                 temp.SetLeading(leading);
-            }
             if (letterSpacing != null)
-            {
                 temp.SetLetterSpacing(letterSpacing);
-            }
             if (lineHeight != null)
-            {
                 temp.SetLineHeight(lineHeight);
-            }
             if (margins != null)
-            {
                 temp.SetMargins(margins);
-            }
             if (pageBreakAfter != null)
-            {
                 temp.SetPageBreakAfter();
-            }
             if (pageBreakBefore != null)
-            {
                 temp.SetPageBreakBefore();
-            }
             if (wordSpacing != null)
-            {
                 temp.SetWordSpacing(wordSpacing);
-            }
             if (unqid != null)
-            {
-                this.SetId(unqid);
-            }
+                SetId(unqid);
             if (cls != null)
-            {
-                this.AddClass(cls);
-            }
+                AddClass(cls);
 
-            List<string> styles = new List<string>();
-            string topStyle = GetAttributeValue("style");
+            var styles = new List<string>();
+            var topStyle = temp.GetAttributeValue("style");
             if (topStyle != null)
                 styles.Add(topStyle);
-            Xml child = temp.FirstChild;
+            var child = temp.FirstChild;
             while (child != null)
             {
-                styles.Add(child.GetAttributeValue("style"));
+                var st = child.GetAttributeValue("style");
+                if (st != null)
+                    styles.Add(st);
                 child = child.FirstChild;
             }
-            SetAttribute("style", string.Join(";", styles.ToArray()));
+            SetAttribute("style", string.Join(";", styles));
             temp.Remove();
             return this;
         }
 
-        /// <summary>
-        /// Set indentation for the first textblock line. Only works for block-level nodes.
-        /// </summary>
-        /// <param name="indent"></param>
-        /// <returns></returns>
-        public Xml SetTextIndent(string indent)
+        // ─── Helpers ─────────────────────────────────────────────────────
+
+        private Xml AddInlineTag(string tag, string? text)
         {
-            string text = $"text-indent: {indent}";
-            AddStyle(text);
+            var child = CreateElement(tag);
+            if (text != null)
+                child.AppendChild(CreateTextNode(text));
+            var prev = SpanBottom() ?? this;
+            prev.AppendChild(child);
             return this;
         }
 
-        /// <summary>
-        /// Set underline for the text
-        /// </summary>
-        /// <param name="val">string "underline"</param>
-        /// <returns></returns>
-        public Xml SetUnderline(string val = "underline")
+        /// <summary>Append a <c>span</c> with inline CSS (PyMuPDF <c>Xml.append_styled_span</c>).</summary>
+        public Xml AppendStyledSpan(string style)
         {
-            string text = $"text-decoration: {val}";
-            AppendStyledSpan(text);
-            return this;
+            var span = CreateElement("span");
+            span.AddStyle(style);
+            var prev = SpanBottom() ?? this;
+            prev.AppendChild(span);
+            return prev;
         }
 
-        /// <summary>
-        /// Set word-spacing for the text
-        /// </summary>
-        /// <param name="spacing"></param>
-        /// <returns></returns>
-        public Xml SetWordSpacing(string spacing)
+        /// <summary>Deepest open <c>span</c> for inline styling (PyMuPDF <c>Xml.span_bottom</c>).</summary>
+        public Xml? SpanBottom()
         {
-            string text = $"text-spacing: {spacing}";
-            AppendStyledSpan(text);
-            return this;
-        }
-
-        /// <summary>
-        /// Retrieve all attributes of the current nodes as a dictionary
-        /// </summary>
-        /// <returns>a dictionary with the attributes and their values of the node</returns>
-        public Dictionary<string, string> GetAttributes()
-        {
-            if (!IsText)
-                return null;
-            Dictionary<string, string> ret = new Dictionary<string, string>();
-            int i = 0;
-            while (true)
-            {
-                (string val, string attr) = _nativeXml.fz_dom_get_attribute(i);
-                if (val == null || attr == null)
-                    break;
-                ret.Add(attr, val);
-                i += 1;
-            }
-            return ret;
-        }
-
-        /// <summary>
-        /// Returns body tag from xml
-        /// </summary>
-        /// <returns>Xml object</returns>
-        public Xml GetBodyTag()
-        {
-            return new Xml(_nativeXml.fz_dom_body());
-        }
-
-        /// <summary>
-        /// Get the attribute value of key
-        /// </summary>
-        /// <param name="attr">the name of the attribute</param>
-        /// <returns>a string with the value of key</returns>
-        public string GetAttributeValue(string attr)
-        {
-            return _nativeXml.fz_dom_attribute(attr);
-        }
-
-        /// <summary>
-        /// Remove the attribute key from the node
-        /// </summary>
-        /// <param name="attr">the name of attribute</param>
-        public void RemoveAttribute(string attr)
-        {
-            _nativeXml.fz_dom_remove_attribute(attr);
-        }
-
-        /// <summary>
-        /// Set an arbitrary key to some value
-        /// </summary>
-        /// <param name="attr">the name of the attribute</param>
-        /// <param name="value">the value of the attribute</param>
-        public void SetAttribute(string attr, string value)
-        {
-            _nativeXml.fz_dom_add_attribute(attr, value);
-        }
-
-        /// <summary>
-        /// Find deepest level in stacked spans
-        /// </summary>
-        /// <returns>spans in the bottom</returns>
-        public Xml SpanBottom()
-        {
-            Xml parent = this;
-            Xml child = LastChild;
+            var parent = this;
+            var child = LastChild;
             if (child == null)
                 return null;
             while (child.IsText)
@@ -1142,7 +644,6 @@ namespace MuPDF.NET
                 if (child == null)
                     break;
             }
-
             if (child == null || child.TagName != "span")
                 return null;
 
@@ -1150,12 +651,11 @@ namespace MuPDF.NET
             {
                 if (child == null)
                     return parent;
-                if ((new List<string>() { "a", "sub", "sup", "body" }).Contains(child.TagName))
+                if (child.TagName is "a" or "sub" or "sup" or "body" || child.IsText)
                 {
                     child = child.Next;
                     continue;
                 }
-
                 if (child.TagName == "span")
                 {
                     parent = child;
@@ -1165,5 +665,132 @@ namespace MuPDF.NET
                     return parent;
             }
         }
+
+        private static string EscapeDebugLine(string? text)
+        {
+            if (string.IsNullOrEmpty(text) || text.IndexOf('\n') < 0)
+                return text ?? "";
+            var sb = new System.Text.StringBuilder(text.Length + 4);
+            foreach (char ch in text)
+            {
+                if (ch == '\n')
+                    sb.Append("\\n");
+                else
+                    sb.Append(ch);
+            }
+            return sb.ToString();
+        }
+
+        private static string[] SplitLines(string text) =>
+            text.Replace("\r\n", "\n")
+                .Replace('\r', '\n')
+                .Split('\n');
+
+        private static (int r, int g, int b) SRgbToRgb(int srgb)
+        {
+            srgb &= 0xffffff;
+            return ((srgb >> 16) & 0xff, (srgb >> 8) & 0xff, srgb & 0xff);
+        }
+
+        private List<(int shift, string line)> GetNodeTree() => ShowNode(this, new List<(int, string)>(), 0);
+
+        private static List<(int shift, string line)> ShowNode(Xml? node, List<(int, string)> items, int shift)
+        {
+            while (node != null)
+            {
+                if (node.IsText)
+                {
+                    items.Add((shift, $"\"{node.Text}\""));
+                    node = node.Next;
+                    continue;
+                }
+                items.Add((shift, $"({node.TagName}"));
+                var attrs = node.GetAttributes();
+                if (attrs != null)
+                {
+                    foreach (var kv in attrs)
+                        items.Add((shift, $"={kv.Key} '{kv.Value}'"));
+                }
+                var child = node.FirstChild;
+                if (child != null)
+                    ShowNode(child, items, shift + 1);
+                items.Add((shift, $"){node.TagName}"));
+                node = node.Next;
+            }
+            return items;
+        }
+
+        // ─── PyMuPDF API names (internal, same assembly) ─────────────────
+
+        internal Xml? bodytag() => BodyTag();
+        internal Xml? find(string? tag, string? att, string? match) => Find(tag, att, match);
+        internal Xml? find_next(string? tag, string? att, string? match) => FindNext(tag, att, match);
+        internal string? tagname => TagName;
+        internal string? text => Text;
+        internal bool is_text => IsText;
+        internal Xml? root => Root;
+        internal Xml? previous => Previous;
+        internal Xml? next => Next;
+        internal Xml? parent => Parent;
+        internal Xml? first_child => FirstChild;
+        internal Xml? last_child => LastChild;
+        internal string? get_attribute_value(string key) => GetAttributeValue(key);
+        internal void set_attribute(string key, string? value = null) => SetAttribute(key, value);
+        internal void remove_attribute(string key) => RemoveAttribute(key);
+        internal Dictionary<string, string>? get_attributes() => GetAttributes();
+        internal void append_child(Xml child) => AppendChild(child);
+        internal Xml create_element(string tag) => CreateElement(tag);
+        internal Xml create_text_node(string text) => CreateTextNode(text);
+        internal void insert_before(Xml node) => InsertBefore(node);
+        internal void insert_after(Xml node) => InsertAfter(node);
+        internal void remove() => Remove();
+        internal Xml clone() => Clone();
+        internal void debug() => Debug();
+        internal Xml add_bullet_list() => AddBulletList();
+        internal Xml add_number_list(int start = 1, string? numtype = null) => AddNumberList(start, numtype);
+        internal Xml add_list_item() => AddListItem();
+        internal Xml add_paragraph() => AddParagraph();
+        internal Xml add_division() => AddDivision();
+        internal Xml add_description_list() => AddDescriptionList();
+        internal Xml add_codeblock() => AddCodeBlock();
+        internal Xml add_horizontal_line() => AddHorizontalLine();
+        internal Xml add_span() => AddSpan();
+        internal Xml add_header(int level = 1) => AddHeader(level);
+        internal Xml add_image(string name, string? width = null, string? height = null, string? imgfloat = null, string? align = null) =>
+            AddImage(name, width, height, imgfloat, align);
+        internal Xml add_text(string text) => AddText(text);
+        internal Xml insert_text(string text) => InsertText(text);
+        internal Xml add_link(string href, string? text = null) => AddLink(href, text);
+        internal Xml add_code(string? text = null) => AddCode(text);
+        internal Xml add_var(string? text = null) => AddVar(text);
+        internal Xml add_samp(string? text = null) => AddSamp(text);
+        internal Xml add_kbd(string? text = null) => AddKbd(text);
+        internal Xml add_subscript(string? text = null) => AddSubscript(text);
+        internal Xml add_superscript(string? text = null) => AddSuperscript(text);
+        internal Xml add_style(string text) => AddStyle(text);
+        internal Xml add_class(string text) => AddClass(text);
+        internal Xml set_align(object align) => SetAlign(align);
+        internal Xml set_bgcolor(int color) => SetBgColor(color);
+        internal Xml set_bold(bool val = true) => SetBold(val);
+        internal Xml set_italic(bool val = true) => SetItalic(val);
+        internal Xml set_color(object color) => SetColor(color);
+        internal Xml set_columns(int cols) => SetColumns(cols);
+        internal Xml set_font(string font) => SetFont(font);
+        internal Xml set_fontsize(float fontsize) => SetFontSize(fontsize);
+        internal Xml set_fontsize(string fontsize) => SetFontSize(fontsize);
+        internal Xml set_id(string unique) => SetId(unique);
+        internal Xml set_leading(string leading) => SetLeading(leading);
+        internal Xml set_letter_spacing(string spacing) => SetLetterSpacing(spacing);
+        internal Xml set_lineheight(string lineheight) => SetLineHeight(lineheight);
+        internal Xml set_margins(string val) => SetMargins(val);
+        internal Xml set_opacity(string opacity) => SetOpacity(opacity);
+        internal Xml set_pagebreak_after() => SetPageBreakAfter();
+        internal Xml set_pagebreak_before() => SetPageBreakBefore();
+        internal Xml set_text_indent(string indent) => SetTextIndent(indent);
+        internal Xml set_underline(string val = "underline") => SetUnderline(val);
+        internal Xml set_word_spacing(string spacing) => SetWordSpacing(spacing);
+        internal Xml append_styled_span(string style) => AppendStyledSpan(style);
+        internal Xml? span_bottom() => SpanBottom();
+        internal static string color_text(object color) => ColorText(color);
     }
 }

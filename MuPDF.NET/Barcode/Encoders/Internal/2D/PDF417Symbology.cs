@@ -1403,11 +1403,9 @@ namespace BarcodeWriter.Core.Internal
         }
 
 
-        //////////////////////////////////////////////////////////////////////////
-        //
+        // ---
         //  Data part
-        //
-        //////////////////////////////////////////////////////////////////////////
+        // ---
 
         /// <summary>
         /// Alphabet of symbols that may be found in a alpha pattern.

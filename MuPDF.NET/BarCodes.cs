@@ -42,16 +42,33 @@ using SymbologyType = BarcodeWriter.Core.SymbologyType;
 
 namespace MuPDF.NET
 {
+    /// <summary>
+    /// Internal decode options used by pixmap barcode helpers (not part of the public API).
+    /// </summary>
     internal sealed class Config
     {
+        /// <summary>Spend extra effort locating difficult symbols.</summary>
         public bool TryHarder { get; set; }
+
+        /// <summary>Also search inverted (light-on-dark) barcodes.</summary>
         public bool TryInverted { get; set; }
+
+        /// <summary>Assume the image contains only a barcode (no surrounding graphics).</summary>
         public bool PureBarcode { get; set; }
+
+        /// <summary>When <see langword="true"/>, decode multiple symbols per image.</summary>
         public bool Multi { get; set; } = true;
+
+        /// <summary>Optional crop rectangle as <c>[x0, y0, x1, y1]</c> in pixels.</summary>
         public int[] Crop { get; set; }
+
+        /// <summary>Number of threads for parallel decode (default 1).</summary>
         public int Threads { get; set; }
+
+        /// <summary>Try rotated orientations of the image.</summary>
         public bool AutoRotate { get; set; }
 
+        /// <summary>Initializes default config (<see cref="Multi"/> = true, <see cref="Threads"/> = 1).</summary>
         public Config()
         {
             Multi = true;
@@ -60,18 +77,36 @@ namespace MuPDF.NET
     }
 
     /// <summary>
-    /// Barcode Reader Class
+    /// Decodes barcodes from Skia bitmaps using the bundled BarcodeReader engine.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Construct with a symbology name (case-insensitive) and an optional configuration file path.
+    /// Call <see cref="Decode"/> on a <see cref="SKBitmap"/>, then read results via
+    /// <see cref="GetFoundBarcodesAsStrings"/> and <see cref="GetFoundBarcodesAsRectangles"/>.
+    /// </para>
+    /// <para>
+    /// Supported <c>barcodeType</c> values include <c>QR</c>, <c>DM</c>, <c>PDF417</c>, <c>CODE128</c>,
+    /// <c>CODE39</c>, <c>EAN13</c>, <c>AZTEC</c>, <c>IM</c>, OMR variants (<c>OMRCIRCLE</c>, …),
+    /// <c>MICR</c>, <c>RM</c>, GS1 DataBar types, and others (see constructor implementation).
+    /// </para>
+    /// </remarks>
     public class BarcodeReader
     {
         private readonly string _configFile = null;
         private readonly object _reader = null;
 
-        static BarcodeReader()
-        {
-            Utils.InitApp();
-        }
-
+        /// <summary>
+        /// Creates a reader for one symbology.
+        /// </summary>
+        /// <param name="barcodeType">
+        /// Symbology identifier (e.g. <c>"QR"</c>, <c>"CODE128"</c>, <c>"EAN13"</c>). Compared case-insensitively.
+        /// </param>
+        /// <param name="configFile">
+        /// Optional path to a text configuration file with <c>Property=value</c> or <c>Method()</c> lines
+        /// applied to the underlying decoder via reflection. Pass <c>null</c> to skip.
+        /// </param>
+        /// <exception cref="Exception">Thrown when <paramref name="barcodeType"/> is not recognized.</exception>
         public BarcodeReader(string barcodeType, string configFile)
         {
             _configFile = configFile;
@@ -145,47 +180,64 @@ namespace MuPDF.NET
         }
 
 
-        /// <summary>
-        /// Output results in string[] form
-        /// </summary>
+        /// <summary>Decoded barcode text values from the last successful <see cref="Decode"/> call.</summary>
         private List<string> listFoundBarcodesAsStrings = new List<string>();
+
+        /// <summary>Bounding rectangles for each decoded symbol from the last <see cref="Decode"/> call.</summary>
         private List<SKRect> listFoundBarcodesAsRectangles = new List<SKRect>();
 
         /// <summary>
-        /// returns found barcodes as an array of strings
+        /// Returns decoded barcode values from the most recent <see cref="Decode"/> operation.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>
+        /// Array of decoded strings, sorted top-to-bottom then left-to-right. Empty if nothing was found
+        /// or the last decode failed.
+        /// </returns>
         public string[] GetFoundBarcodesAsStrings()
         {
             return listFoundBarcodesAsStrings.ToArray();
         }
 
+        /// <summary>
+        /// Returns bounding rectangles for symbols found by the most recent <see cref="Decode"/> call.
+        /// </summary>
+        /// <returns>
+        /// <see cref="SKRect"/> array parallel to <see cref="GetFoundBarcodesAsStrings"/> (same index order).
+        /// </returns>
         public SKRect[] GetFoundBarcodesAsRectangles()
         {
             return listFoundBarcodesAsRectangles.ToArray();
         }
 
-
         /// <summary>
-        /// Contains exception message
+        /// Message from the last decode exception, or <c>null</c> if the last <see cref="Decode"/> succeeded.
         /// </summary>
         public string ExceptionMessage = null;
 
         /// <summary>
-        /// Indicates if got exception last time decoding bitmap
+        /// Whether the last <see cref="Decode"/> call threw an exception.
         /// </summary>
         public bool GotException = false;
 
         /// <summary>
-        /// last decoding time
+        /// Elapsed milliseconds for the last <see cref="Decode"/> call (native decoder time only).
         /// </summary>
         public long LastDecodingTime = 0;
 
         /// <summary>
-        /// Runs the decoding
+        /// Decodes barcodes in the given bitmap.
         /// </summary>
-        /// <param name="bitmap">input image</param>
-        /// <returns>true if decoded successfully (see FoundBarcodes property) or false (see ExceptionMessage for more info)</returns>
+        /// <param name="bitmap">Source image (converted internally to a black-and-white representation).</param>
+        /// <returns>
+        /// <see langword="true"/> if at least one symbol was found; <see langword="false"/> on failure or when
+        /// no barcodes are detected. Check <see cref="GotException"/> and <see cref="ExceptionMessage"/> on failure.
+        /// </returns>
+        /// <remarks>
+        /// Clears previous results, applies the optional config file from construction, runs the symbology-specific
+        /// decoder (2D vs linear thresholding), sorts results by position, and fills
+        /// <see cref="GetFoundBarcodesAsStrings"/> / <see cref="GetFoundBarcodesAsRectangles"/>.
+        /// For <c>QR</c>, partial symbols may be merged before returning.
+        /// </remarks>
         public bool Decode(SKBitmap bitmap)
         {
             try
@@ -300,6 +352,11 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// Applies decoder settings from a line-based configuration file.
+        /// </summary>
+        /// <param name="reader">Underlying symbology reader instance.</param>
+        /// <param name="configFile">Path to a text file with <c>Name=value</c> or <c>Type.Method()</c> lines.</param>
         private void ApplyConfig(object reader, string configFile)
         {
             StreamReader textReader = File.OpenText(configFile);
@@ -384,17 +441,28 @@ namespace MuPDF.NET
     }
 
     /// <summary>
-    /// Barcode Writer Class
+    /// Encodes barcode symbols into Skia bitmaps or image files using the bundled BarcodeWriter engine.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Construct with a symbology name (e.g. <c>"QR"</c>, <c>"CODE128"</c>, <c>"EAN13"</c>), then call
+    /// <see cref="Encode(string, SKEncodedImageFormat, int, int, string, bool, bool, bool, int, int, int, int, int, int)"/>
+    /// to obtain an <see cref="SKBitmap"/>, or the file overload to write PNG (or other format) directly.
+    /// </para>
+    /// </remarks>
     public class BarcodeWriter
     {
         private readonly SymbologyType _symbologyType = SymbologyType.Unknown;
         private readonly object _encoder = null;
 
-        static BarcodeWriter()
-        {
-            Utils.InitApp();
-        }
+        /// <summary>
+        /// Creates a writer for one symbology.
+        /// </summary>
+        /// <param name="barcodeType">
+        /// Symbology name: <c>CODE128</c>, <c>CODE39</c>, <c>QR</c>, <c>DM</c>, <c>PDF417</c>, <c>EAN13</c>,
+        /// <c>UPC_A</c>, <c>AZTEC</c>, GS1 variants, and others supported by <see cref="SymbologyType"/>.
+        /// Unknown names map to <see cref="SymbologyType.Unknown"/> and cause <see cref="Encode"/> to throw.
+        /// </param>
         public BarcodeWriter(string barcodeType)
         {
             switch (barcodeType)
@@ -458,6 +526,25 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// Renders a barcode into a new in-memory Skia bitmap.
+        /// </summary>
+        /// <param name="contents">Data to encode (symbology-specific format).</param>
+        /// <param name="imageFormat">Reserved for file encoding; bitmap output is format-agnostic.</param>
+        /// <param name="width">Target width when <paramref name="forceFitToRect"/> is <see langword="true"/>.</param>
+        /// <param name="height">Target height when <paramref name="forceFitToRect"/> is <see langword="true"/>; also used as bar height if <paramref name="barHeight"/> is 0.</param>
+        /// <param name="characterSet">Reserved (not applied by current encoder).</param>
+        /// <param name="disableEci">Reserved (not applied by current encoder).</param>
+        /// <param name="forceFitToRect">When <see langword="true"/> with positive <paramref name="width"/> and <paramref name="height"/>, scale to fit the rectangle.</param>
+        /// <param name="pureBarcode">When <see langword="true"/>, omit human-readable caption under the symbol.</param>
+        /// <param name="marginLeft">Quiet zone / margin on the left (pixels).</param>
+        /// <param name="marginTop">Quiet zone / margin on the top (pixels).</param>
+        /// <param name="marginRight">Quiet zone / margin on the right (pixels).</param>
+        /// <param name="marginBottom">Quiet zone / margin on the bottom (pixels).</param>
+        /// <param name="barHeight">Explicit bar height in pixels; overrides <paramref name="height"/> when &gt; 0.</param>
+        /// <param name="narrowBarWidth">Module width in pixels; 0 selects a symbology-appropriate default (1 or 3).</param>
+        /// <returns>Encoded barcode image, or <c>null</c> if <paramref name="contents"/> is <c>null</c>.</returns>
+        /// <exception cref="Exception">Thrown when symbology was not recognized at construction.</exception>
         public SKBitmap Encode(
             string contents,
             SKEncodedImageFormat imageFormat = SKEncodedImageFormat.Png,
@@ -536,6 +623,25 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>
+        /// Renders a barcode and saves it to an image file.
+        /// </summary>
+        /// <param name="imageFile">Output file path.</param>
+        /// <param name="contents">Data to encode.</param>
+        /// <param name="imageFormat">File format (e.g. <see cref="SKEncodedImageFormat.Png"/>).</param>
+        /// <param name="width">Target width when <paramref name="forceFitToRect"/> is <see langword="true"/>.</param>
+        /// <param name="height">Target height when <paramref name="forceFitToRect"/> is <see langword="true"/>.</param>
+        /// <param name="characterSet">Reserved (not applied by current encoder).</param>
+        /// <param name="disableEci">Reserved (not applied by current encoder).</param>
+        /// <param name="forceFitToRect">When <see langword="true"/>, save using explicit <see cref="SKSize"/> dimensions.</param>
+        /// <param name="pureBarcode">When <see langword="true"/>, omit human-readable caption.</param>
+        /// <param name="marginLeft">Left margin in pixels.</param>
+        /// <param name="marginTop">Top margin in pixels.</param>
+        /// <param name="marginRight">Right margin in pixels.</param>
+        /// <param name="marginBottom">Bottom margin in pixels.</param>
+        /// <param name="barHeight">Bar height in pixels when &gt; 0.</param>
+        /// <param name="narrowBarWidth">Module width; 0 uses symbology default.</param>
+        /// <remarks>No-op when <paramref name="contents"/> is <c>null</c>.</remarks>
         public void Encode(
             string imageFile,
             string contents,

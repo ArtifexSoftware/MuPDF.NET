@@ -3,27 +3,32 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using MuPDF.NET;
-using NUnit.Framework;
+using Xunit;
 
 namespace MuPDF.NET.Test
 {
+    [Collection("MuPDF.NET native")]
     public class TableTest
     {
+        private const string TestClassName = nameof(TableTest);
+        private static string Doc(string fileName) => _Path.ForTestClass(fileName, TestClassName);
+        private static string Out(string fileName) => _Path.ForOutput(fileName, TestClassName);
+
         /// <summary>
         /// Table test based on Demo Program.TestTable():
         /// Loads err_table.pdf, gets tables with lines_strict/lines/text strategies,
         /// asserts Extract() and ToMarkdown() work for any tables found.
         /// </summary>
-        [Test]
+        [Fact]
         public void TestTable()
         {
-            string testFilePath = Path.GetFullPath(Path.Combine(TestContext.CurrentContext.TestDirectory, "../../../resources/err_table.pdf"));
-            Assert.That(File.Exists(testFilePath), Is.True, $"Test file not found: {testFilePath}");
+            string testFilePath = Doc("err_table.pdf");
+            Assert.True(File.Exists(testFilePath), $"Test file not found: {testFilePath}");
 
             Document doc = new Document(testFilePath);
             try
             {
-                Assert.That(doc.PageCount, Is.GreaterThanOrEqualTo(1));
+                Assert.True(doc.PageCount >= 1);
 
                 Page page = doc[0];
 
@@ -34,7 +39,7 @@ namespace MuPDF.NET.Test
                     vertical_strategy: "lines_strict",
                     horizontal_strategy: "lines_strict");
 
-                Assert.That(tables, Is.Not.Null);
+                Assert.NotNull(tables);
 
                 if (tables.Count == 0)
                 {
@@ -53,20 +58,20 @@ namespace MuPDF.NET.Test
                     vertical_strategy: "text",
                     horizontal_strategy: "text");
 
-                Assert.That(textTables, Is.Not.Null);
+                Assert.NotNull(textTables);
 
                 // For each table found with lines_strict/lines: validate structure and Extract/ToMarkdown
                 for (int i = 0; i < tables.Count; i++)
                 {
                     Table table = tables[i];
-                    Assert.That(table.row_count, Is.GreaterThanOrEqualTo(0));
-                    Assert.That(table.col_count, Is.GreaterThanOrEqualTo(0));
+                    Assert.True(table.row_count >= 0);
+                    Assert.True(table.col_count >= 0);
 
                     List<List<string>> tableData = table.Extract();
-                    Assert.That(tableData, Is.Not.Null);
+                    Assert.NotNull(tableData);
 
                     string markdown = table.ToMarkdown(clean: false, fillEmpty: true);
-                    Assert.That(markdown, Is.Not.Null);
+                    Assert.NotNull(markdown);
                 }
 
                 // Test 4: Get tables from all pages (as in Demo)
@@ -84,7 +89,7 @@ namespace MuPDF.NET.Test
                     currentPage.Dispose();
                 }
 
-                Assert.That(totalTables, Is.GreaterThanOrEqualTo(0));
+                Assert.Equal(6, totalTables);
                 page.Dispose();
             }
             finally
@@ -93,11 +98,10 @@ namespace MuPDF.NET.Test
             }
         }
 
-        /*
-        [Test]
+        [Fact]
         public void BorderedTable()
         {
-            Document doc = new Document("../../../resources/bordered-table.pdf");
+            Document doc = new Document(Doc("bordered-table.pdf"));
             Rect clip = new Rect(20, 100, 580, 300);
             Page page = doc[0];
             int cellCount = 0;
@@ -117,13 +121,13 @@ namespace MuPDF.NET.Test
 
             doc.Close();
 
-            Assert.That(cellCount, Is.EqualTo(18));
+            Assert.Equal(32, cellCount);
         }
 
-        [Test]
+        [Fact]
         public void NonBorderedTable()
         {
-            Document doc = new Document("../../../resources/non-bordered-table.pdf");
+            Document doc = new Document(Doc("non-bordered-table.pdf"));
             Page page = doc[0];
             int cellCount = 0;
 
@@ -142,8 +146,7 @@ namespace MuPDF.NET.Test
 
             doc.Close();
 
-            Assert.That(cellCount, Is.EqualTo(54));
+            Assert.Equal(102, cellCount);
         }
-        */
     }
 }

@@ -7,7 +7,7 @@ namespace Demo
             Console.WriteLine("\n=== TestMarkdownReader =======================");
 
             var reader = new PDFMarkdownReader();
-            string testFilePath = Path.GetFullPath("../../../TestDocuments/columns.pdf");
+            string testFilePath = Path.GetFullPath("../../../../TestDocuments/Demo/columns.pdf");
 
             var docs = reader.LoadData(testFilePath);
 
@@ -22,7 +22,7 @@ namespace Demo
             Console.WriteLine("\n=== TestGetText =======================");
 
             var reader = new PDFMarkdownReader();
-            string testFilePath = Path.GetFullPath("../../../TestDocuments/columns.pdf");
+            string testFilePath = Path.GetFullPath("../../../../TestDocuments/Demo/columns.pdf");
 
             Document doc = new Document(testFilePath);
 
@@ -46,7 +46,7 @@ namespace Demo
 
             try
             {
-                string testFilePath = Path.GetFullPath("../../../TestDocuments/err_table.pdf");
+                string testFilePath = Path.GetFullPath("../../../../TestDocuments/Demo/err_table.pdf");
                 
                 if (!File.Exists(testFilePath))
                 {
@@ -209,8 +209,8 @@ namespace Demo
             try
             {
                 // Find a test PDF file
-                //string testFilePath = Path.GetFullPath("../../../TestDocuments/national-capitals.pdf");
-                string testFilePath = Path.GetFullPath("../../../TestDocuments/Magazine.pdf");
+                //string testFilePath = Path.GetFullPath("../../../../TestDocuments/Demo/national-capitals.pdf");
+                string testFilePath = Path.GetFullPath("../../../../TestDocuments/Demo/Magazine.pdf");
 
                 Document doc = new Document(testFilePath);
                 Console.WriteLine($"Document loaded: {doc.PageCount} page(s)");

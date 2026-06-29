@@ -6,27 +6,26 @@ namespace Demo
     {
         internal static void TestIssue234()
         {
-            Console.WriteLine("\n=== TestIssue234 =======================");
+            Console.WriteLine("\n=== issue-234: pixmap scale + insert image ===");
 
-            var pix = new Pixmap("../../../TestDocuments/Image/boxedpage.jpg"); // 629x1000 image
-            var scaled = new Pixmap(pix, 943, 1500, null); // scale up
+            using var pix = new Pixmap(DemoPaths.Input("Image/boxedpage.jpg"));
+            using var scaled = new Pixmap(pix, 943, 1500, null);
             byte[] jpeg = scaled.ToBytes("jpg", 65);
 
             using var doc = new Document();
-            Page page = doc.NewPage(0, 943, 1500);
+            using Page page = doc.NewPage(0, 943, 1500);
             page.InsertImage(page.Rect, stream: jpeg);
-            page.Dispose();
-            doc.Save("issue_234.pdf");
-            doc.Close();
+            string outPath = DemoPaths.Output("issue_234.pdf");
+            doc.Save(outPath);
 
-            Console.WriteLine("Saved issue_234.pdf");
+            Console.WriteLine($"Saved {outPath}");
         }
 
         internal static void TestRecompressJBIG2()
         {
             Console.WriteLine("\n=== TestJBIG2 =======================");
 
-            string testFilePath = Path.GetFullPath("../../../TestDocuments/Jbig2.pdf");
+            string testFilePath = Path.GetFullPath("../../../../TestDocuments/Demo/Jbig2.pdf");
 
             Document doc = new Document(testFilePath);
 
@@ -37,17 +36,17 @@ namespace Demo
 
             doc.RewriteImage(options: opts);
 
-            doc.Save(@"e:\TestRecompressJBIG2.pdf");
+            doc.Save(@"TestRecompressJBIG2.pdf");
             doc.Close();
 
-            Console.WriteLine("Saved e:\\TestRecompressJBIG2.pdf");
+            Console.WriteLine("Saved TestRecompressJBIG2.pdf");
         }
 
         internal static void TestIssue1880()
         {
             Console.WriteLine("\n=== TestIssue1880 =======================");
 
-            string testFilePath = Path.GetFullPath(@"../../../TestDocuments/issue_1880.pdf");
+            string testFilePath = Path.GetFullPath(@"../../../../TestDocuments/Demo/issue_1880.pdf");
 
             Document doc = new Document(testFilePath);
 
@@ -72,8 +71,8 @@ namespace Demo
         {
             Console.WriteLine("\n=== TestIssue213 =======================");
 
-            string origfilename = @"../../../TestDocuments/issue_213.pdf";
-            string outfilename = @"../../../TestDocuments/Blank.pdf";
+            string origfilename = @"../../../../TestDocuments/Demo/issue_213.pdf";
+            string outfilename = @"../../../../TestDocuments/Demo/Blank.pdf";
             float newWidth = 0.5f;
 
             Document inputDoc = new Document(origfilename);
@@ -111,7 +110,7 @@ namespace Demo
                             }
                             else if (item.Type == "re")
                             {
-                                shape.DrawRect(item.Rect, item.Orientation);
+                                shape.DrawRect(item.Rect, Math.Abs((float)item.Orientation/2));
                                 //writer.Write($"{i:000}\\] rect: {item.Type} >>> {item.Rect}, {item.Orientation}\\n");
                             }
                             else if (item.Type == "qu")
@@ -175,7 +174,7 @@ namespace Demo
             const int iterations = 300;
             const int degreeOfParallelism = 10;
 
-            var pdfPath = Path.Combine(@"..\..\..\TestDocuments\TestPdf1.pdf");
+            var pdfPath = Path.Combine(@"..\..\..\..\TestDocuments\Demo\TestPdf1.pdf");
             var pdf = File.ReadAllBytes(pdfPath);
 
             Console.WriteLine($"MuPDF.NET parallel Pixmap.ToBytes repro");

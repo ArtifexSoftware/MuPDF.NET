@@ -87,7 +87,6 @@ namespace BarcodeReader.Core.QR
                 }
             }
 
-            //
             var result = new List<FoundBarcode>();
             foreach (BarCodeRegion c in candidates)
             {

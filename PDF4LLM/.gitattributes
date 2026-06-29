@@ -1,0 +1,2 @@
+# Shell scripts must stay LF (CRLF breaks `set -eu` under dash/sh on Linux).
+scripts/*.sh text eol=lf

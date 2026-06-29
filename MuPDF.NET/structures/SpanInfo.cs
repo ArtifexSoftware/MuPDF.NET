@@ -1,9 +1,4 @@
-﻿using mupdf;
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace MuPDF.NET
 {
@@ -49,9 +44,6 @@ namespace MuPDF.NET
         /// </summary>
         public float Descender { get; set; }
 
-        /// <summary>
-        /// 
-        /// </summary>
         public int ColorSpace { get; set; }
 
         public float[] Color { get; set; }
@@ -72,9 +64,7 @@ namespace MuPDF.NET
         public float LineWidth { get; set; }
 
         public float SpaceWidth { get; set; }
-        /// <summary>
-        /// the span bbox
-        /// </summary>
+
         public int Type { get; set; }
 
         /// <summary>
@@ -87,14 +77,48 @@ namespace MuPDF.NET
         /// </summary>
         public string Layer { get; set; }
 
-        /// <summary>
-        /// no
-        /// </summary>
         public int SeqNo { get; set; }
 
         /// <summary>
         /// a list of char in span
         /// </summary>
         public List<Char> Chars { get; set; }
+
+        /// <summary>
+        /// Per-character tuples from the text-trace device (<c>span["chars"]</c> format).
+        /// Each entry is <c>(ucs, gid, origin, bbox)</c>.
+        /// </summary>
+        internal List<object> CharsPy { get; set; }
+
+        /// <summary>MuPDF.NET dictionary-style access (<c>span["font"]</c>).</summary>
+        public object this[string key]
+        {
+            get
+            {
+                switch (key)
+                {
+                    case "dir": return Dir;
+                    case "font": return Font;
+                    case "wmode": return WMode;
+                    case "flags": return Flags;
+                    case "bidi_lvl": return BidiLevel;
+                    case "bidi_dir": return BidiDir;
+                    case "ascender": return Ascender;
+                    case "descender": return Descender;
+                    case "colorspace": return ColorSpace;
+                    case "color": return Color;
+                    case "size": return Size;
+                    case "opacity": return Opacity;
+                    case "linewidth": return LineWidth;
+                    case "spacewidth": return SpaceWidth;
+                    case "type": return Type;
+                    case "bbox": return Bbox;
+                    case "layer": return Layer;
+                    case "seqno": return SeqNo;
+                    case "chars": return CharsPy;
+                    default: return null;
+                }
+            }
+        }
     }
 }

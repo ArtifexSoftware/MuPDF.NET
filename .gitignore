@@ -33,6 +33,12 @@ bld/
 [Ll]og/
 [Ll]ogs/
 
+# Test-generated output (PDFs, markdown, etc.)
+TestDocuments/MuPDF.NET.Test/_Output/
+TestDocuments/PDF4LLM.Test/_Output/
+TestDocuments/Demo/_Output/
+
+
 # Visual Studio 2015/2017 cache/options directory
 .vs/
 # Uncomment if you have tasks that create the project's static files in wwwroot
@@ -397,6 +403,12 @@ FodyWeavers.xsd
 
 # Local clone of https://github.com/pymupdf/pymupdf4llm for porting / diff (optional)
 pymupdf4llm/
+
+# PDF4LLM layout bridge venv (see PDF4LLM/scripts/setup_layout_python.py)
+PDF4LLM/.venv-layout/
+
+# Generated from Versions.props
+build/ArtifexVersions.g.cs
 
 # JetBrains Rider
 *.sln.iml

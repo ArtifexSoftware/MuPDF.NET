@@ -26,7 +26,6 @@ namespace BarcodeReader.Core
             //to avoid out of range
             size = (int)(size * 2f);
 
-            //
             var arraySize = size >> 5;
             if ((size & 0x1F) != 0)
                 arraySize++;

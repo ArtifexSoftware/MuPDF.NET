@@ -206,7 +206,6 @@ namespace BarcodeWriter.Core.Internal
         protected static string getRightCharPattern(char c)
         {
             // The "right-hand" encoding pattern is exactly the same as the 
-            // "left-hand odd" encoding pattern, but with 1's changed to 0's, 
             // and 0's changed to 1's.
 
             string leftOdd = getLeftOddCharPattern(c);

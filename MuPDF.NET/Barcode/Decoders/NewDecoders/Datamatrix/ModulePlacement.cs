@@ -253,12 +253,10 @@ namespace BarcodeReader.Core.Datamatrix
                     if (z == 0)
                     {
 						grid[rowCount - y - 1][x] = MyPoint.Empty;
-                        // "WHITE"
                     }
                     else if (z == 1)
                     {
 						grid[rowCount - y - 1][x] = MyPoint.Empty;
-                        // "BLACK"
                     }
                     else
                     {

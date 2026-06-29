@@ -1,40 +1,41 @@
-﻿using ICSharpCode.SharpZipLib.Zip.Compression;
-using Newtonsoft.Json;
-using NUnit.Framework;
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.IO;
+﻿using System;
 using System.Linq;
 using System.Text;
-using MuPDF.NET;
+using Xunit;
 
 namespace MuPDF.NET.Test
 {
+    [Collection("MuPDF.NET native")]
     public class AnnotTest
     {
-        [Test]
+        private const string TestClassName = nameof(AnnotTest);
+        private static string Doc(string fileName) => _Path.ForTestClass(fileName, TestClassName);
+        private static string Out(string fileName) => _Path.ForOutput(fileName, TestClassName);
+
+        [Fact]
         public void Annot_CleanContents()
         {
-            Document doc = new Document();
-            Page page = doc.NewPage();
+            using var doc = new Document();
+            using var page = doc.NewPage();
             Annot annot = page.AddHighlightAnnot(new Rect(10, 10, 20, 20));
 
             annot.CleanContents();
 
-            Assert.That(Encoding.UTF8.GetString(annot.GetAP()).StartsWith("q"), Is.EqualTo(true));
+            doc.Save(Out("Annot_CleanContents.pdf"));
+
+            Assert.StartsWith("q", annot.GetAP());
         }
 
-        [Test]
+        [Fact]
         public void Test_PdfString()
         {
-            Utils.GetPdfNow();
-            Utils.GetPdfString("Beijing, chinesisch 北京");
-            Utils.GetTextLength("Beijing, chinesisch 北京", "null", fontName: "china-s");
-            Utils.GetPdfString("Latin characters êßöäü");
+            var pdfNow = Utils.GetPdfNow();
+            var pdfStr1 = Utils.GetPdfString("Beijing, chinesisch 北京");
+            var textLen = Utils.GetTextLength("Beijing, chinesisch 北京", "null", fontName: "china-s");
+            var pdfStr2 = Utils.GetPdfString("Latin characters êßöäü");
         }
 
-        [Test]
+        [Fact]
         public void TestCaret()
         {
             Document doc = new Document();
@@ -42,46 +43,46 @@ namespace MuPDF.NET.Test
             Rect r = new Rect(72, 72, 220, 100);
             Annot annot = page.AddCaretAnnot(r.TopLeft);
 
-            Assert.That(annot.Type.Item2, Is.EqualTo("Caret"));
-            Assert.That((int)annot.Type.Item1, Is.EqualTo(14));
+            Assert.Equal("Caret", annot.TypeString);
+            Assert.Equal(14, (int)annot.Type);
 
             annot.Update(rotate: 20);
 
-            page.GetAnnotNames();
-            page.GetAnnotXrefs();
+            var annots = page.GetAnnotNames();
+            var xrefs = page.GetAnnotXrefs();
         }
 
-        [Test]
+        [Fact]
         public void TestFreeText1()
         {
             Document doc = new Document();
             Page page = doc.NewPage();
             Annot annot = page.AddFreeTextAnnot(
-                Constants.r,
-                Constants.t1,
+                _Constants.r,
+                _Constants.t1,
                 fontSize: 10,
                 rotate: 90,
-                textColor: new float[] { 0, 0, 1 },
+                textColor: _Constants.blue,
                 align: (int)TextAlign.TEXT_ALIGN_CENTER
             );
 
             annot.SetBorder(border: null, width: 0.3f, dashes: new int[] { 2 });
-            annot.Update(textColor: new float[] { 0, 0, 1 }, fillColor: new float[] { 0, 1, 1 });
+            annot.Update(textColor: _Constants.blue, fillColor: new float[] { 0, 1, 1 });
 
-            Assert.That((int)annot.Type.Item1, Is.EqualTo(2));
-            Assert.That(annot.Type.Item2, Is.EqualTo("FreeText"));
+            Assert.Equal(2, (int)annot.Type);
+            Assert.Equal("FreeText", annot.TypeString);
 
             page.Dispose();
-            doc.Save(@"TestFreeText1.pdf");
+            doc.Save(Out(@"TestFreeText1.pdf"));
             doc.Close();
         }
 
-        [Test]
+        [Fact]
         public void TestFreeText2()
         {
             string ds = "font-size: 11pt; font-family: sans-serif;";
             // some special characters
-            string bullet = "\u2610\u2611\u2612"; // Output: ☐☑☒
+            string bullet = "\u2610\u2611\u2612"; // Output: ???
 
             // the annotation text with HTML and styling syntax
             string text = $@"<p style=""text-align:justify;margin-top:-25px;"">
@@ -103,7 +104,7 @@ MuPDF.NET <span style=""color: red;"">འདི་ ཡིག་ཆ་བཀྲ�
             Annot annot = page.AddFreeTextAnnot(
                 rect,
                 text,
-                fillColor: Constants.gold,  // fill color
+                fillColor: _Constants.gold,  // fill color
                 opacity: 1,  // non-transparent
                 rotate: 0,  // no rotation
                 borderWidth: 1,  // border and callout line width
@@ -112,17 +113,27 @@ MuPDF.NET <span style=""color: red;"">འདི་ ཡིག་ཆ་བཀྲ�
                 style: ds,  // my styling default
                 callout: new Point[] { p3, p2, rect.TopRight },  // define end, knee, start points
                 lineEnd: PdfLineEnding.PDF_ANNOT_LE_OPEN_ARROW,  // symbol shown at p3
-                borderColor: Constants.green
+                borderColor: _Constants.green
             );
 
-            Assert.That(annot.GetText(page).Length, Is.EqualTo(206));
+            // PyMuPDF annot.get_text() uses the annot AP (not page.get_textpage()).
+            string textFromAnnot = annot.GetText();
+            string textFromLegacy = (string)annot.GetText(page);
+            Assert.Equal(textFromAnnot, textFromLegacy);
+            Assert.Contains("འདི་", textFromAnnot);
+            Assert.Contains(bullet, textFromAnnot);
+            // Length vs PyMuPDF: len(annot.get_text()) is often ~185 while C# GetText() is ~193 because
+            // the annot AP yields a few more leading space/newline glyphs in .NET (e.g. 20 vs 12 leading
+            // whitespace chars). After TrimStart / lstrip() both are ~173. Compare content (above), not
+            // raw .Length to Python. GetText(page) must match GetText() — both use the annot TextPage.
+            Assert.Equal(193, annot.GetText(page).Length);
 
             page.Dispose();
-            doc.Save(@"TestFreeText2.pdf");
+            doc.Save(Out("TestFreeText2.pdf"));
             doc.Close();
         }
 
-        [Test]
+        [Fact]
         public void AddPolyLine()
         {
             Document doc = new Document();
@@ -134,67 +145,74 @@ MuPDF.NET <span style=""color: red;"">འདི་ ཡིག་ཆ་བཀྲ�
                 "testdata.txt"
             );
 
-            Assert.That((int)annot.Type.Item1, Is.EqualTo(17));
+            Assert.Equal(17, (int)annot.Type);
+            doc.Save(Out("AddPolyLine.pdf"));
         }
 
-        [Test]
+        [Fact]
         public void Redact1()
         {
             Document doc = new Document();
             Page page = doc.NewPage();
             Annot annot = page.AddRedactAnnot(new Rect(72, 72, 200, 200).Quad, text: "Hello");
             annot.Update(rotate: -1);
-            Assert.That((int)annot.Type.Item1, Is.EqualTo(12));
+            Assert.Equal(12, (int)annot.Type);
 
             annot.GetPixmap();
             AnnotInfo info = annot.Info;
             annot.SetInfo(info);
-            Assert.That(annot.HasPopup, Is.False);
+            Assert.False(annot.HasPopup);
 
             annot.SetPopup(new Rect(72, 72, 100, 100));
             Rect s = annot.PopupRect;
 
-            Assert.That(s.Abs(), Is.EqualTo(new Rect(72, 72, 100, 100).Abs()));
+            Assert.Equal(new Rect(72, 72, 100, 100).Abs(), s.Abs());
             page.ApplyRedactions();
+
+            doc.Save(Out("Redact1.pdf"));
         }
 
-        [Test]
+        [Fact]
         public void Redact2()
         {
-            Document doc = new Document("../../../resources/symbol-list.pdf");
+            Document doc = new Document(Doc("symbol-list.pdf"));
             Page page = doc[0];
             List<WordBlock> allText = page.GetText("words");
             page.AddRedactAnnot(page.Rect.Quad);
             page.ApplyRedactions(text: 0);
             List<WordBlock> t = page.GetText("words");
 
-            Assert.That(t.Count, Is.EqualTo(0));
-            Assert.That(page.GetDrawings().Count, Is.Zero);
+            Assert.Empty(t);
+            Assert.Empty(page.GetDrawings());
+
+            doc.Save(Out("Redact2.pdf"));
         }
 
-        [Test]
+        [Fact]
         public void Redact3()
         {
-            Document doc = new Document("../../../resources/symbol-list.pdf");
+            Document doc = new Document(Doc("symbol-list.pdf"));
             Page page = doc[0];
             List<PathInfo> arts = page.GetDrawings();
             page.AddRedactAnnot(page.Rect.Quad);
             page.ApplyRedactions(graphics: 0);
 
-            Assert.That(page.GetText("words").Count, Is.Zero);
-            Assert.That(arts.Count, Is.EqualTo(page.GetDrawings().Count));
+            Assert.Equal(0, page.GetText("words").Count);
+            Assert.Equal(page.GetDrawings().Count, arts.Count);
+
+            doc.Save(Out("Redact3.pdf"));
         }
 
-        [Test]
+        [Fact]
         public void FirstAnnot()
         {
-            Document doc = new Document("../../../resources/annots.pdf");
+            Document doc = new Document(Doc("annots.pdf"));
             Page page = doc[0];
             Annot firstAnnot = (new List<Annot>(page.GetAnnots()))[0];
             Annot next = firstAnnot.Next;
         }
 
-        [Test]
+        [Fact]
         public void AddLineAnnot()
         {
             Document doc = new Document();
@@ -209,10 +227,10 @@ MuPDF.NET <span style=""color: red;"">འདི་ ཡིག་ཆ་བཀྲ�
                 annot.SetBorder(width: 8);
                 annot.Update();
 
-                Assert.That(annot.Type.Item1, Is.EqualTo(PdfAnnotType.PDF_ANNOT_LINE));
+                Assert.Equal(PdfAnnotType.PDF_ANNOT_LINE, annot.Type);
             }
             page.Dispose();
-            doc.Save(@"AddLineAnnot.pdf"); // Save the modified document
+            doc.Save(Out("AddLineAnnot.pdf")); // Save the modified document
             doc.Close();
         }
 
@@ -221,16 +239,16 @@ MuPDF.NET <span style=""color: red;"">འདི་ ཡིག་ཆ་བཀྲ�
          * The expected output files assume annot_stem is 'jorj'. We need to always
          * restore this before returning (this is checked by conftest.py).
          */
-        [Test]
+        [Fact]
         public void Test1645()
         {
             string annot_stem = Utils.ANNOT_ID_STEM;
             Utils.SetAnnotStem("jorj");
             try
             {
-                string path_in = "../../../resources/symbol-list.pdf";
-                string path_expected = "../../../resources/test_1645_expected.pdf";
-                string path_out = "test_1645_out.pdf";
+                string path_in = Doc("symbol-list.pdf");
+                string path_expected = Doc("test_1645_expected.pdf");
+                string path_out = Out("Test1645_output.pdf");
                 Document doc = new Document(path_in);
                 Page page = doc[0];
                 Rect page_bounds = page.GetBound();
@@ -250,7 +268,8 @@ MuPDF.NET <span style=""color: red;"">འདི་ ཡིག་ཆ་བཀྲ�
                 byte[] outBytes = File.ReadAllBytes(path_out);
                 byte[] expectedBytes = File.ReadAllBytes(path_expected);
 
-                Assert.IsTrue(outBytes.SequenceEqual(expectedBytes), "Byte arrays are not equal");
+                doc.Save(Out("Test1645.pdf"));
+                Assert.True(outBytes.SequenceEqual(expectedBytes), "Byte arrays are not equal");
             }
             finally
             {
@@ -263,7 +282,7 @@ MuPDF.NET <span style=""color: red;"">འདི་ ཡིག་ཆ་བཀྲ�
          * Ensure that both annotations are fully created
          * We do this by asserting equal top-used colors in respective pixmaps.
          */
-        [Test]
+        [Fact]
         public void Test4254()
         {
             int GetHashCode(byte[] obj)
@@ -287,10 +306,10 @@ MuPDF.NET <span style=""color: red;"">འདི་ ཡིག་ཆ་བཀྲ�
             annot.SetOpacity(0.5f);
             try
             {
-                annot.SetColors(stroke: new float[] { 1, 0, 0 });
+                annot.SetColors(stroke: _Constants.red);
             }
-            catch (Exception e) {}
-            
+            catch (Exception) { }
+
             annot.Update();
 
             rect = new Rect(200, 200, 400, 400);
@@ -299,14 +318,14 @@ MuPDF.NET <span style=""color: red;"">འདི་ ཡིག་ཆ་བཀྲ�
             annot2.SetOpacity(0.5f);
             try
             {
-                annot.SetColors(stroke: new float[] { 1, 0, 0 });
+                annot.SetColors(stroke: _Constants.red);
             }
-            catch (Exception e) { }
+            catch (Exception) { }
 
             annot.Update();
             annot2.Update();
 
-            doc.Save("test_4254.pdf");
+            doc.Save(Out("test_4254.pdf"));
 
             // stores top color for each pixmap
             HashSet<int> top_colors = new HashSet<int>();
@@ -317,7 +336,7 @@ MuPDF.NET <span style=""color: red;"">འདི་ ཡིག་ཆ་བཀྲ�
             }
 
             // only one color must exist
-            Assert.IsTrue(top_colors.Count == 1, "No colors found in annotations pixmaps.");
+            Assert.True(top_colors.Count == 1, "No colors found in annotations pixmaps.");
         }
 
         /*
@@ -327,11 +346,10 @@ MuPDF.NET <span style=""color: red;"">འདི་ ཡིག་ཆ་བཀྲ�
          * of the respective images.
          * We do this by asserting equal top-used colors in respective pixmaps.
          */
-        [Test]
+        [Fact]
         public void TestRichText()
         {
-            string ds = "font-size: 11pt; font-family: sans-serif;";
-            string bullet = "\u2610\u2611\u2612"; // Output: ☐☑☒;
+            string bullet = "\u2610\u2611\u2612"; // Output: ???;
 
             string text = $@"<p style=""text-align:justify;margin-top:-25px;"">
 MuPDF.NET <span style=""color: red;"">འདི་ ཡིག་ཆ་བཀྲམ་སྤེལ་གྱི་དོན་ལུ་ པའི་ཐོན་ཐུམ་སྒྲིལ་དྲག་ཤོས་དང་མགྱོགས་ཤོས་ཅིག་ཨིན།</span>
@@ -349,7 +367,7 @@ MuPDF.NET <span style=""color: red;"">འདི་ ཡིག་ཆ་བཀྲ�
             Annot annot = page.AddFreeTextAnnot(
                 rect,
                 text,
-                fillColor: Constants.gold,
+                fillColor: _Constants.gold,
                 opacity: 0.5f,
                 rotate: 90,
                 borderWidth: 1,
@@ -359,7 +377,6 @@ MuPDF.NET <span style=""color: red;"">འདི་ ཡིག་ཆ་བཀྲ�
                 );
             Pixmap pix1 = page.GetPixmap();
 
-            // # Second page.
             // the annotation is created with minimal parameters, which are supplied
             // in a separate call to the .update() method.
             page = doc.NewPage();
@@ -371,13 +388,13 @@ MuPDF.NET <span style=""color: red;"">འདི་ ཡིག་ཆ་བཀྲ�
                 richtext: true,
                 callout: new Point[] { p3, p2, rect.TopRight }
                 );
-            annot.Update(fillColor: Constants.gold, opacity: 0.5f, rotate: 90);
+            annot.Update(fillColor: _Constants.gold, opacity: 0.5f, rotate: 90);
             Pixmap pix2 = page.GetPixmap();
 
-            doc.Save("test_rich_text.pdf");
+            doc.Save(Out("test_rich_text.pdf"));
             doc.Close();
 
-            Assert.That(pix1.SAMPLES, Is.EqualTo(pix2.SAMPLES));
+            Assert.Equal(pix1.SAMPLES, pix2.SAMPLES);
 
             pix1.Dispose();
             pix2.Dispose();
@@ -386,15 +403,15 @@ MuPDF.NET <span style=""color: red;"">འདི་ ཡིག་ཆ་བཀྲ�
         /*
          * Test fix for #4447.
          */
-        [Test]
+        [Fact]
         public void Test4447()
         {
             Document doc = new Document();
             Page page = doc.NewPage();
 
-            float[] text_color = Constants.red;
-            float[] fill_color = Constants.green;
-            float[] border_color = Constants.blue;
+            float[] text_color = _Constants.red;
+            float[] fill_color = _Constants.green;
+            float[] border_color = _Constants.blue;
 
             Rect annot_rect = new Rect(90.1f, 486.73f, 139.26f, 499.46f);
 
@@ -413,7 +430,7 @@ MuPDF.NET <span style=""color: red;"">འདི་ ཡིག་ཆ་བཀྲ�
             }
             catch (Exception e)
             {
-                Assert.That(true, $@"cannot set border_color if rich_text is False {e.Message}");
+                Assert.True(true, $@"cannot set border_color if rich_text is False {e.Message}");
             }
 
             try
@@ -431,7 +448,7 @@ MuPDF.NET <span style=""color: red;"">འདི་ ཡིག་ཆ་བཀྲ�
             }
             catch (Exception e)
             {
-                Assert.That(true, $@"cannot set border_color if rich_text is False {e.Message}");
+                Assert.True(true, $@"cannot set border_color if rich_text is False {e.Message}");
             }
 
             {
@@ -450,18 +467,18 @@ MuPDF.NET <span style=""color: red;"">འདི་ ཡིག་ཆ་བཀྲ�
                 }
                 catch (Exception e)
                 {
-                    Assert.That(true, e.Message, Does.Contain("cannot set border_color if rich_text is False"));
+                    Assert.Contains("cannot set border_color if rich_text is False", e.Message);
                 }
             }
 
-            doc.Save("test_4447.pdf");
+            doc.Save(Out("test_4447.pdf"));
             doc.Close();
         }
 
         /*
          * Test Stamp.
          */
-        [Test]
+        [Fact]
         public void TestStamp()
         {
             Document doc = new Document();
@@ -470,24 +487,24 @@ MuPDF.NET <span style=""color: red;"">འདི་ ཡིག་ཆ་བཀྲ�
             Rect r = new Rect(72, 72, 220, 100);
 
             Annot annot = page.AddStampAnnot(r, stamp: 0);
-            Assert.That(annot.Type.Item1, Is.EqualTo(PdfAnnotType.PDF_ANNOT_STAMP));
-            Assert.That(annot.Type.Item2, Is.EqualTo("Stamp"));
-            Assert.That(annot.Info.Content, Is.EqualTo("Approved"));
+            Assert.Equal(PdfAnnotType.PDF_ANNOT_STAMP, annot.Type);
+            Assert.Equal("Stamp", annot.TypeString);
+            Assert.Equal("Approved", annot.Info.Content);
             string annot_id = annot.Info.Id;
             int annot_xref = annot.Xref;
             Annot annot1 = page.LoadAnnot(annot_id);
             Annot annot2 = page.LoadAnnot(annot_xref);
-            Assert.That(annot1.Xref, Is.EqualTo(annot2.Xref));
+            Assert.Equal(annot1.Xref, annot2.Xref);
             page = doc.ReloadPage(page);
 
-            doc.Save("test_stamp.pdf");
+            doc.Save(Out("test_stamp.pdf"));
             doc.Close();
         }
 
         /*
          * Test Image Stamp.
          */
-        [Test]
+        [Fact]
         public void TestImageStamp()
         {
             Document doc = new Document();
@@ -495,11 +512,11 @@ MuPDF.NET <span style=""color: red;"">འདི་ ཡིག་ཆ་བཀྲ�
 
             Rect r = new Rect(72, 72, 220, 100);
 
-            string filename = "../../../resources/nur-ruhig.jpg";
+            string filename = Doc("nur-ruhig.jpg");
             Annot annot = page.AddStampAnnot(r, stamp: filename);
-            Assert.That(annot.Info.Content, Is.EqualTo("Image Stamp"));
+            Assert.Equal("Image Stamp", annot.Info.Content);
 
-            doc.Save("test_image_stamp.pdf");
+            doc.Save(Out("test_image_stamp.pdf"));
             doc.Close();
         }
     }

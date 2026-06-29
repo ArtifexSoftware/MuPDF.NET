@@ -4,11 +4,7 @@ using Newtonsoft.Json;
 
 namespace PDF4LLM.Helpers
 {
-    /// <summary>
-    /// Extended span information for text line extraction.
-    /// Mirrors the span dictionaries produced by LLM helpers.
-    /// JSON names follow the layout document model / rawdict-style keys.
-    /// </summary>
+    /// <summary>Extended text span with layout metadata.</summary>
     public class ExtendedSpan
     {
         [JsonProperty("text")]
@@ -32,6 +28,6 @@ namespace PDF4LLM.Helpers
         [JsonProperty("dir")]
         public Point Dir { get; set; }
         [JsonProperty("chars")]
-        public List<Char> Chars { get; set; }
+        public List<MuPDF.NET.Char> Chars { get; set; }
     }
 }

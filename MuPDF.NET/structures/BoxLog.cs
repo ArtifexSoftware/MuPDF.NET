@@ -1,4 +1,4 @@
-﻿using mupdf;
+using mupdf;
 
 namespace MuPDF.NET
 {
@@ -39,5 +39,9 @@ namespace MuPDF.NET
             Box = new Rect(box);
             LayerName = layername;
         }
+
+        // Compatibility bridge: allows assignment from modern GetBboxlog tuples.
+        public static implicit operator BoxLog((string code, Rect bbox, string layer) value)
+            => new BoxLog(value.code, value.bbox, value.layer);
     }
 }

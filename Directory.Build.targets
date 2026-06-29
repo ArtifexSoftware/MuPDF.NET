@@ -1,0 +1,46 @@
+<Project>
+  <PropertyGroup>
+    <ArtifexVersionsGeneratedFile>$(MSBuildThisFileDirectory)build\ArtifexVersions.g.cs</ArtifexVersionsGeneratedFile>
+  </PropertyGroup>
+
+  <Target Name="GenerateArtifexVersions"
+          BeforeTargets="BeforeCompile"
+          Inputs="$(MSBuildThisFileDirectory)Versions.props"
+          Outputs="$(ArtifexVersionsGeneratedFile)">
+    <MakeDir Directories="$(MSBuildThisFileDirectory)build" />
+    <PropertyGroup>
+      <_ArtifexVersionCs>// &lt;auto-generated /&gt; Source: Versions.props. Do not edit.
+namespace Artifex
+{
+    /// &lt;summary&gt;Central version constants for the MuPDF.NET solution.&lt;/summary&gt;
+    public static class Versions
+    {
+        /// &lt;summary&gt;Native MuPDF library (FZ_VERSION).&lt;/summary&gt;
+        public const string MuPDF = "$(ArtifexMuPDFVersion)"%3B
+
+        /// &lt;summary&gt;PyMuPDF Python package (VersionBind).&lt;/summary&gt;
+        public const string PyMuPDF = "$(ArtifexPyMuPDFVersion)"%3B
+
+        /// &lt;summary&gt;PyMuPDF4LLM Python package.&lt;/summary&gt;
+        public const string PyMuPDF4LLM = "$(ArtifexPyMuPDF4LLMVersion)"%3B
+
+        /// &lt;summary&gt;MuPDF.NET NuGet package.&lt;/summary&gt;
+        public const string MuPDFNet = "$(ArtifexMuPDFNetVersion)"%3B
+
+        /// &lt;summary&gt;PDF4LLM NuGet package.&lt;/summary&gt;
+        public const string PDF4LLM = "$(ArtifexPDF4LLMVersion)"%3B
+    }
+}
+</_ArtifexVersionCs>
+    </PropertyGroup>
+    <WriteLinesToFile
+      File="$(ArtifexVersionsGeneratedFile)"
+      Lines="$(_ArtifexVersionCs)"
+      Overwrite="true"
+      Encoding="UTF-8" />
+  </Target>
+
+  <ItemGroup Condition="'$(MSBuildProjectName)' == 'MuPDF.NET'">
+    <Compile Include="$(ArtifexVersionsGeneratedFile)" />
+  </ItemGroup>
+</Project>

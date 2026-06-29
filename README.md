@@ -347,6 +347,16 @@ Building from source is only required if you want to modify the C# bindings or t
 
 See the [Getting Started](https://mupdfnet.readthedocs.io/en/latest/getting-started/index.html) guide for `dotnet` CLI instructions on Ubuntu/Debian.
 
+**Samples**
+
+The `Demo` project runs curated examples for MuPDF.NET and PDF4LLM. See [Demo/README.md](./Demo/README.md):
+
+```bash
+cd Demo
+dotnet run              # all samples (see Demo/README.md)
+dotnet run -- help      # full list (diagnostics marked [diag])
+```
+
 ---
 
 ## Documentation

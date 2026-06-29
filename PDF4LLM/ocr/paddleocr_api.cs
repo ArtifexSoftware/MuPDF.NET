@@ -12,8 +12,14 @@ namespace PDF4LLM.Ocr
 
         public static readonly Dictionary<string, object> Kwargs = new Dictionary<string, object>();
 
+        /// <param name="span">Text span to inspect.</param>
         public static bool OcrText(Span span) => TesseractApi.OcrText(span);
 
+        /// <param name="page">Page to OCR.</param>
+        /// <param name="dpi">Rendering DPI for the culled pixmap when none is supplied.</param>
+        /// <param name="pixmap">Optional pre-rendered pixmap; created when <c>null</c>.</param>
+        /// <param name="language">OCR language code passed to the backend.</param>
+        /// <param name="keepOcrText">When <c>true</c>, skip OCR if the page already contains OCR spans.</param>
         public static void ExecOcr(Page page, int dpi = 300, Pixmap pixmap = null, string language = "eng", bool keepOcrText = false)
         {
             throw new System.NotImplementedException(

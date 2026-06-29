@@ -1,1391 +1,1558 @@
-﻿using mupdf;
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 
 namespace MuPDF.NET
 {
-    public class Shape
+    /// <summary>
+    /// PDF-only helper for batching vector drawings and text onto a <see cref="Page"/>.
+    /// </summary>
+    /// <remarks>
+    /// <para>Create via <see cref="Page.NewShape"/>. Each draw method appends PDF operators to
+    /// <see cref="DrawCont"/>; call <see cref="Finish"/> to apply stroke/fill/morph attributes, then
+    /// <see cref="Commit"/> to write <see cref="TotalCont"/> into the page contents stream.</para>
+    /// <para><see cref="InsertText"/> and <see cref="InsertTextbox"/> append to <see cref="TextCont"/> and
+    /// implicitly finish the current path; only <see cref="Commit"/> is required afterward.</para>
+    /// <para>Ports PyMuPDF <c>Shape</c>.</para>
+    /// </remarks>
+    public class Shape : IDisposable
     {
-        static Shape()
+        private bool _disposed;
+        private Page _page;
+        private Document _doc;
+        private float _width;
+        private float _height;
+        private StringBuilder _contents;
+        private StringBuilder _totalContents;
+        private Rect _rect;
+        private Point _lastPoint;
+        private Point _firstPoint;
+        private int _drawCount;
+        private int _pathCount;
+        private readonly StringBuilder _textCont;
+        private readonly float _shapeX;
+        private readonly float _shapeY;
+        private readonly Matrix _pctm;
+        private readonly Matrix _ipctm;
+
+        /// <summary>Bounding box of all drawings and textboxes (null after <see cref="Commit"/> until next draw).</summary>
+        public Rect Rect => _rect;
+
+        /// <summary>Owning PDF page.</summary>
+        public Page Page => _page;
+
+        /// <summary>Document containing the page.</summary>
+        public Document Doc => _doc;
+
+        /// <summary>Page height in points (copy at construction).</summary>
+        public float Height => _height;
+
+        /// <summary>Page width in points (copy at construction).</summary>
+        public float Width => _width;
+
+        /// <summary>Crop-box X offset used when transforming to PDF coordinates.</summary>
+        public float X => _shapeX;
+
+        /// <summary>Crop-box Y offset used when transforming to PDF coordinates.</summary>
+        public float Y => _shapeY;
+
+        /// <summary>Page transformation matrix (<c>page.transformation_matrix</c>).</summary>
+        public Matrix Pctm => _pctm;
+
+        /// <summary>Inverse of <see cref="Pctm"/>.</summary>
+        public Matrix IPctm => _ipctm;
+
+        /// <summary>Raw PDF path operators since the last <see cref="Finish"/>.</summary>
+        public string DrawCont
         {
-            Utils.InitApp();
+            get => _contents.ToString();
+            set
+            {
+                _contents.Clear();
+                if (!string.IsNullOrEmpty(value))
+                    _contents.Append(value);
+            }
         }
 
-        /// <summary>
-        /// the owning page
-        /// </summary>
-        public Page Page { get; set; }
+        /// <summary>Accumulated PDF text operators (merged on <see cref="Commit"/>).</summary>
+        public string TextCont
+        {
+            get => _textCont.ToString();
+            set
+            {
+                _textCont.Clear();
+                if (!string.IsNullOrEmpty(value))
+                    _textCont.Append(value);
+            }
+        }
+
+        /// <summary>Finished draw segments plus text, written by <see cref="Commit"/>.</summary>
+        public string TotalCont
+        {
+            get => _totalContents.ToString();
+            set
+            {
+                _totalContents.Clear();
+                if (!string.IsNullOrEmpty(value))
+                    _totalContents.Append(value);
+            }
+        }
+
+        /// <summary>Current path end point; null after <see cref="Finish"/> or <see cref="Commit"/>.</summary>
+        public Point LastPoint => _lastPoint;
+
+        /// <summary>Count of draw primitives since the last <see cref="Finish"/>.</summary>
+        public int DrawCount => _drawCount;
 
         /// <summary>
-        /// the page's document
+        /// Creates a shape for a PDF page (throws if the page is not PDF).
         /// </summary>
-        public Document Doc { get; set; }
-
-        /// <summary>
-        /// The page's height
-        /// </summary>
-        public float Height { get; set; }
-
-        /// <summary>
-        /// The page's width
-        /// </summary>
-        public float Width { get; set; }
-
-        public float X { get; set; }
-
-        public float Y { get; set; }
-
-        public Matrix Pctm { get; set; }
-
-        public Matrix IPctm { get; set; }
-
-        /// <summary>
-        /// Accumulated command buffer for draw methods since last finish
-        /// </summary>
-        public string DrawCont { get; set; }
-
-        /// <summary>
-        /// Accumulated text buffer. All text insertions go here
-        /// </summary>
-        public string TextCont { get; set; }
-
-        /// <summary>
-        /// Total accumulated command buffer for draws and text insertions
-        /// </summary>
-        public string TotalCont { get; set; }
-
-        /// <summary>
-        /// For reference only: the current point of the drawing path
-        /// </summary>
-        public Point LastPoint { get; set; }
-
-        /// <summary>
-        /// Rectangle surrounding drawings
-        /// </summary>
-        public Rect Rect { get; set; }
-
+        /// <param name="page">Target page; use <see cref="Page.NewShape"/> as the usual entry point.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="page"/> is null.</exception>
+        /// <exception cref="ValueErrorException">Page has no parent or is not a PDF.</exception>
         public Shape(Page page)
         {
-            this.Page = page;
-            this.Doc = page.Parent;
-
-            if (!Doc.IsPDF)
-                throw new Exception("is no PDF");
-            Height = page.MediaBoxSize.Y;
-            Width = page.MediaBoxSize.X;
-            X = page.CropBoxPosition.X;
-            Y = page.CropBoxPosition.Y;
-            Pctm = page.TransformationMatrix;
-            IPctm = ~page.TransformationMatrix;
-
-            DrawCont = "";
-            TextCont = "";
-            TotalCont = "";
-            LastPoint = null;
-            Rect = null;
+            _page = page ?? throw new ArgumentNullException(nameof(page));
+            _doc = page.Parent ?? throw new ValueErrorException("orphaned object: parent is None");
+            if (!_doc.IsPdf)
+                throw new ValueErrorException("is no PDF");
+            _width = (float)page.MediaBoxSize.X;
+            _height = (float)page.MediaBoxSize.Y;
+            var cp = page.CropBoxPosition;
+            _shapeX = (float)cp.X;
+            _shapeY = (float)cp.Y;
+            _pctm = new Matrix(page.TransformationMatrix);
+            _ipctm = _pctm.Inverted() ?? Matrix.Identity;
+            _contents = new StringBuilder();
+            _totalContents = new StringBuilder();
+            _textCont = new StringBuilder();
+            _rect = new Rect();
+            _lastPoint = null;
+            _firstPoint = null;
         }
+
+        // ─── Drawing Primitives ─────────────────────────────────────────
 
         /// <summary>
-        /// Insert text lines
+        /// Angle in radians from <paramref name="c"/> to <paramref name="p"/> (PyMuPDF <c>horizontal_angle</c>).
         /// </summary>
-        /// <param name="point">the bottom-left position of the first character of text in pixels</param>
-        /// <param name="buffer"></param>
-        /// <param name="fontSize"></param>
-        /// <param name="lineHeight"></param>
-        /// <param name="fontName"></param>
-        /// <param name="fontFile"></param>
-        /// <param name="setSimple"></param>
-        /// <param name="encoding"></param>
-        /// <param name="color"></param>
-        /// <param name="fill"></param>
-        /// <param name="renderMode"></param>
-        /// <param name="borderWidth"></param>
-        /// <param name="rotate"></param>
-        /// <param name="morph"></param>
-        /// <param name="strokeOpacity">set transparency for stroke colors (the border line of a character). Only 0 <= value <= 1 will be considered. Default is 1</param>
-        /// <param name="fillOpacity">set transparency for fill colors. Default is 1</param>
-        /// <param name="oc">the xref number of an OCG or OCMD to make this text conditionally displayable</param>
-        /// <returns>number of lines inserted.</returns>
-        public int InsertText(
-            Point point,
-            List<string> buffer,
-            string fontName,
-            string fontFile,
-            float fontSize = 11,
-            float lineHeight = 0,
-            bool setSimple = false,
-            int encoding = 0,
-            float[] color = null,
-            float[] fill = null,
-            int renderMode = 0,
-            float borderWidth = 0.05f,
-            int rotate = 0,
-            Morph morph = null,
-            float strokeOpacity = 1,
-            float fillOpacity = 1,
-            int oc = 0
-            )
+        /// <param name="c">Center or origin point.</param>
+        /// <param name="p">Target point.</param>
+        public static float HorizontalAngle(Point c, Point p)
         {
-            if (string.IsNullOrEmpty(fontName) && string.IsNullOrEmpty(fontFile))
-                throw new Exception("should include fontName and fontFile.");
-
-            return _InsertText(point, buffer, fontSize, lineHeight, fontName, fontFile, setSimple, encoding,
-                color, fill, renderMode, borderWidth, rotate, morph, strokeOpacity, fillOpacity, oc);
-        }
-
-        /// <summary>
-        /// Insert text lines
-        /// </summary>
-        /// <param name="point">the bottom-left position of the first character of text in pixels</param>
-        /// <param name="buffer"></param>
-        /// <param name="fontSize"></param>
-        /// <param name="lineHeight"></param>
-        /// <param name="fontName"></param>
-        /// <param name="fontFile"></param>
-        /// <param name="setSimple"></param>
-        /// <param name="encoding"></param>
-        /// <param name="color"></param>
-        /// <param name="fill"></param>
-        /// <param name="renderMode"></param>
-        /// <param name="borderWidth"></param>
-        /// <param name="rotate"></param>
-        /// <param name="morph"></param>
-        /// <param name="strokeOpacity">set transparency for stroke colors (the border line of a character). Only 0 <= value <= 1 will be considered. Default is 1</param>
-        /// <param name="fillOpacity">set transparency for fill colors. Default is 1</param>
-        /// <param name="oc">the xref number of an OCG or OCMD to make this text conditionally displayable</param>
-        /// <returns>number of lines inserted.</returns>
-        public int InsertText(
-            Point point,
-            string buffer,
-            string fontName,
-            string fontFile,
-            float fontSize = 11,
-            float lineHeight = 0,
-            bool setSimple = false,
-            int encoding = 0,
-            float[] color = null,
-            float[] fill = null,
-            int renderMode = 0,
-            float borderWidth = 0.05f,
-            int rotate = 0,
-            Morph morph = null,
-            float strokeOpacity = 1,
-            float fillOpacity = 1,
-            int oc = 0
-            )
-        {
-            string[] list = buffer.Split('\n');
-            if (string.IsNullOrEmpty(fontName) && string.IsNullOrEmpty(fontFile))
-                throw new Exception("should include fontName or fontFile.");
-
-            return _InsertText(point, new List<string>(list), fontSize, lineHeight, fontName, fontFile, setSimple, encoding,
-                color, fill, renderMode, borderWidth, rotate, morph, strokeOpacity, fillOpacity, oc);
-        }
-
-        internal int _InsertText(
-            Point point,
-            List<string> buffer,
-            float fontSize = 11,
-            float lineHeight = 0,
-            string fontName = "helv",
-            string fontFile = null,
-            bool setSimple = false,
-            int encoding = 0,
-            float[] color = null,
-            float[] fill = null,
-            int renderMode = 0,
-            float borderWidth = 0.05f,
-            int rotate = 0,
-            Morph morph = null,
-            float strokeOpacity = 1,
-            float fillOpacity = 1,
-            int oc = 0
-            )
-        {
-            List<string> text = buffer;
-            if (text.Count == 0)
-                return 0;
-
-            int maxCode = 0;
-            try
+            var s = (p - c).Unit;
+            float alfa = (float)Math.Asin(Math.Abs(s.Y));
+            if (s.X < 0)
             {
-                foreach (char c in String.Join(" ", text))
-                {
-                    if (maxCode < Convert.ToInt32(c))
-                        maxCode = Convert.ToInt32(c);
-                }
-            }
-            catch (Exception)
-            {
-                return 0;
-            }
-
-            string fName = fontName;
-            if (fName.StartsWith("/"))
-                fName = fName.Substring(1);
-
-            int xref = Page.InsertFont(
-                fontName: fName,
-                fontFile: fontFile,
-                encoding: encoding,
-                setSimple: setSimple
-                );
-            FontInfo fontInfo = Utils.CheckFontInfo(Doc, xref);
-            
-            int ordering = fontInfo.Ordering;
-            bool simple = fontInfo.Simple;
-            string bfName = fontInfo.Name;
-            float ascender = fontInfo.Ascender;
-            float descender = fontInfo.Descender;
-            float lheight = 0;
-
-            if (lineHeight != 0)
-                lheight = fontSize * lineHeight;
-            else if (ascender - descender <= 1)
-                lheight = fontSize * 1.2f;
-            else
-                lheight = fontSize * (ascender - descender);
-            
-            List<(int, double)> glyphs = new List<(int, double)>();
-            if (maxCode > 255)
-                glyphs = Doc.GetCharWidths(xref: xref, limit: maxCode + 1);
-            else
-                glyphs = fontInfo.Glyphs;
-
-            List<string> tab = new List<string>();
-            List<(int, double)> g = null;
-            foreach (string t in text)
-            {
-                if (simple && !(bfName == "Symbol" || bfName == "ZapfDingbats"))
-                    g = null;
+                if (s.Y <= 0)
+                    alfa = -(float)(Math.PI - alfa);
                 else
-                    g = new List<(int, double)>(glyphs);
-                tab.Add(Utils.GetTJstr(t, g, simple, ordering));
+                    alfa = (float)Math.PI - alfa;
+            }
+            else if (s.Y < 0)
+                alfa = -alfa;
+            return alfa;
+        }
+
+        private Point Tf(Point p) => p * _ipctm;
+
+        private static bool SamePoint(Point a, Point b) =>
+            a != null && b != null && Math.Abs(a.X - b.X) < Constants.Epsilon && Math.Abs(a.Y - b.Y) < Constants.Epsilon;
+
+        private void AppendM(Point p)
+        {
+            var t = Tf(p);
+            _contents.Append(Helpers.FormatPdfReals(t.X, t.Y)).Append(" m\n");
+        }
+
+        private void AppendL(Point p)
+        {
+            var t = Tf(p);
+            _contents.Append(Helpers.FormatPdfReals(t.X, t.Y)).Append(" l\n");
+        }
+
+        private void AppendC(Point p2, Point p3, Point p4)
+        {
+            var t2 = Tf(p2);
+            var t3 = Tf(p3);
+            var t4 = Tf(p4);
+            _contents.Append(Helpers.FormatPdfReals(t2.X, t2.Y, t3.X, t3.Y, t4.X, t4.Y)).Append(" c\n");
+        }
+
+        /// <summary>Draw a straight line from <paramref name="p1"/> to <paramref name="p2"/>.</summary>
+        /// <param name="p1">Start point.</param>
+        /// <param name="p2">End point.</param>
+        /// <param name="count">When false, does not increment <see cref="DrawCount"/>.</param>
+        /// <returns><paramref name="p2"/>.</returns>
+        public Point DrawLine(Point p1, Point p2, bool count = true)
+        {
+            p1 = new Point(p1);
+            p2 = new Point(p2);
+            if (!SamePoint(_lastPoint, p1))
+            {
+                AppendM(p1);
+                _lastPoint = p1;
+                UpdateRect(p1);
+            }
+            AppendL(p2);
+            UpdateRect(p2);
+            _lastPoint = p2;
+            if (_firstPoint == null) _firstPoint = p1;
+            if (count) _drawCount++;
+            return _lastPoint;
+        }
+
+        /// <summary>
+        /// Draw a rectangle; optional rounded corners via <paramref name="radius"/>.
+        /// </summary>
+        /// <param name="rect">Rectangle in page coordinates.</param>
+        /// <param name="radius">
+        /// <c>null</c> for a plain rect; a float in (0, 0.5] as a fraction of min(width, height);
+        /// or a two-element sequence <c>(rx, ry)</c> for asymmetric corner radii.
+        /// </param>
+        /// <returns>Top-left corner of <paramref name="rect"/>.</returns>
+        public Point DrawRect(Rect rect, object radius = null)
+        {
+            var r = new Rect(rect);
+            if (radius == null)
+            {
+                var bl = Tf(r.BottomLeft);
+                _contents.Append(Helpers.FormatPdfReals(bl.X, bl.Y, r.Width, r.Height)).Append(" re\n");
+                UpdateRect(r);
+                _lastPoint = r.TopLeft;
+                if (_firstPoint == null) _firstPoint = r.TopLeft;
+                _drawCount++;
+                return _lastPoint;
             }
 
-            text = tab;
-            
-            string colorStr = Utils.GetColorCode(color, "c");
-            string fillStr = Utils.GetColorCode(fill, "f");
-            if (fill == null && renderMode == 0)
+            Point px, py;
+            float? rad = radius is float f ? f : radius is float dub ? dub : radius is int i ? i : (float?)null;
+            if (rad.HasValue)
             {
-                fill = color;
-                fillStr = Utils.GetColorCode(color, "f");
+                float rv = rad.Value;
+                if (rv <= 0 || rv > 0.5)
+                    throw new ValueErrorException($"bad radius value {radius}.");
+                float d = Math.Min(r.Width, r.Height) * rv;
+                px = new Point(d, 0);
+                py = new Point(0, d);
             }
-            
-            bool morphing = (morph != null);
-            int rot = rotate;
-            if (rot % 90 != 0)
-                throw new Exception("bad rotate value");
-
-            while (rot < 0)
-                rot += 360;
-            rot = rot % 360;
-
-            string cmp90 = "0 1 -1 0 0 0 cm\n";// rotates 90 deg counter-clockwise
-            string cmm90 = "0 -1 1 0 0 0 cm\n";// rotates 90 deg clockwise
-            string cm180 = "-1 0 0 -1 0 0 cm\n";// rotates by 180 deg.
-            float height = Height;
-            float width = Width;
-            string cm;
-            
-            if (morphing)
+            else if (radius is IList rl && rl.Count == 2)
             {
-                Matrix m1 = new Matrix(1, 0, 0, 1, morph.P.X + X, height - morph.P.Y - Y);
-                Matrix mat = ~m1 * morph.M * m1;
-                cm = $"{Utils.FloatToString(mat.A)} {Utils.FloatToString(mat.B)} {Utils.FloatToString(mat.C)} {Utils.FloatToString(mat.D)} {Utils.FloatToString(mat.E)} {Utils.FloatToString(mat.F)} cm\n";
+                float rx = (float)Convert.ToDouble(rl[0], CultureInfo.InvariantCulture);
+                float ry = (float)Convert.ToDouble(rl[1], CultureInfo.InvariantCulture);
+                if (Math.Min(rx, ry) <= 0 || Math.Max(rx, ry) > 0.5)
+                    throw new ValueErrorException($"bad radius value {radius}.");
+                px = new Point(rx * r.Width, 0);
+                py = new Point(0, ry * r.Height);
             }
-            else cm = "";
-
-            float top = height - point.Y - Y;
-            float left = point.X + X;
-            float space = top;
-            if (rot == 90)
-            {
-                left = height - point.Y - Y;
-                top = -point.X - X;
-                cm += cmp90;
-                space = width - Math.Abs(top);
-            }
-            else if (rot == 270)
-            {
-                left = -height + point.Y + Y;
-                top = point.X + X;
-                cm += cmm90;
-                space = Math.Abs(top);
-            }
-            else if (rot == 180)
-            {
-                left = -point.X - X;
-                top = -height + point.Y + Y;
-                cm += cm180;
-                space = Math.Abs(point.Y + Y);
-            }
-
-            string optCont = Page.GetOptionalContent(oc);
-            string bdc;
-            string emc;
-            if (optCont != null)
-            {
-                bdc = $"/OC /{optCont} BDC\n";
-                emc = "EMC\n";
-            }
-            else bdc = emc = "";
-
-            string alpha = Page.SetOpacity(CA: strokeOpacity, ca: fillOpacity);
-            if (alpha == null)
-                alpha = "";
             else
-                alpha = $"/{alpha} gs\n";
+                throw new ValueErrorException($"bad radius value {radius}.");
 
-            string nres = $"\nq\n{bdc}{alpha}BT\n{cm}1 0 0 1 {Utils.FloatToString(left)} {Utils.FloatToString(top)} Tm\n/{fName} {Utils.FloatToString(fontSize)} Tf ";
-            if (renderMode > 0)
-                nres += $"{renderMode} Tr ";
-            if (borderWidth != 1)
-                nres += $"{Utils.FloatToString(borderWidth)} w ";
-            if (color != null)
-                nres += colorStr;
-            if (fill != null)
-                nres += fillStr;
+            Point lp = DrawLine(r.TopLeft + py, r.BottomLeft - py, count: false);
+            lp = DrawCurve(lp, r.BottomLeft, r.BottomLeft + px, count: false);
+            lp = DrawLine(lp, r.BottomRight - px, count: false);
+            lp = DrawCurve(lp, r.BottomRight, r.BottomRight - py, count: false);
+            lp = DrawLine(lp, r.TopRight + py, count: false);
+            lp = DrawCurve(lp, r.TopRight, r.TopRight - px, count: false);
+            lp = DrawLine(lp, r.TopLeft + px, count: false);
+            _lastPoint = DrawCurve(lp, r.TopLeft, r.TopLeft + py, count: false);
+            UpdateRect(r);
+            _drawCount++;
+            return _lastPoint;
+        }
 
-            /// start text insertion
-            nres += text[0];
-            int nLines = 1;
-            string template = "TJ\n0 -{0} TD\n";
-            if (text.Count > 1)
-                nres += string.Format(System.Globalization.CultureInfo.InvariantCulture, template, Utils.FloatToString(lheight));
-            else nres += "TJ";
-
-            for (int i = 1; i < text.Count; i++)
+        internal static int ParseLineCapForPdf(string lineCap)
+        {
+            if (string.IsNullOrEmpty(lineCap)) return 0;
+            return lineCap.ToLowerInvariant() switch
             {
-                if (space < lheight)
-                    break; // no space left on page
-                if (i > 1)
-                    nres += "\nT* ";
-                nres += text[i] + "TJ";
-                space -= lheight;
-                nLines += 1;
-            }
+                "round" => 1,
+                "square" => 2,
+                _ => int.TryParse(lineCap, NumberStyles.Integer, CultureInfo.InvariantCulture, out var j) ? j : 0,
+            };
+        }
 
-            nres += $"\nET\n{emc}Q\n";
+        internal static int ParseLineJoinForPdf(string lineJoin)
+        {
+            if (string.IsNullOrEmpty(lineJoin)) return 0;
+            return lineJoin.ToLowerInvariant() switch
+            {
+                "round" => 1,
+                "bevel" => 2,
+                "miter" => 0,
+                _ => int.TryParse(lineJoin, NumberStyles.Integer, CultureInfo.InvariantCulture, out var j) ? j : 0,
+            };
+        }
 
-            // end of text insertion
-            TextCont += nres;
-            return nLines;
+        internal static string DashesArrayToPdfString(float[] dashes)
+        {
+            if (dashes == null || dashes.Length == 0) return null;
+            return "[" + string.Join(" ", dashes.Select(d => d.ToString("G9", CultureInfo.InvariantCulture))) + "] 0";
         }
 
         /// <summary>
-        /// Update the page's contents with the accumulated drawings, followed by any text insertions
+        /// Draw a circle (shortcut for <c>DrawSector(..., 360, fullSector: false)</c>).
         /// </summary>
-        /// <param name="overlay">determine whether to put content in foreground (default) or background</param>
-        public void Commit(bool overlay = true)
+        /// <param name="center">Circle center.</param>
+        /// <param name="radius">Radius in points (must be positive).</param>
+        /// <returns><c>(center.X - radius, center.Y)</c>.</returns>
+        public Point DrawCircle(Point center, float radius)
         {
-            TotalCont += this.TextCont;
-            byte[] bTotal = Encoding.UTF8.GetBytes(TotalCont);
-            if (TotalCont != "")
-            {
-                int xref = Utils.InsertContents(Page, Encoding.UTF8.GetBytes(" "), overlay ? 1 : 0);
-                //Doc.UpdateStream(xref, bTotal);
-                PdfDocument doc = Document.AsPdfDocument(Doc);
-                doc.pdf_update_stream(doc.pdf_load_object(xref), Utils.BufferFromBytes(bTotal), 1);
-                doc.Dispose();
-            }
-
-            LastPoint = null;
-            Rect = null;
-            DrawCont = "";
-            TextCont = "";
-            TotalCont = "";
-
-            return;
+            if (!(radius > Constants.Epsilon))
+                throw new ValueErrorException("radius must be positive");
+            center = new Point(center);
+            var p1 = center - new Point(radius, 0);
+            var q = DrawSector(center, p1, 360, fullSector: false, count: false);
+            _drawCount++;
+            return q;
         }
 
+        /// <summary>Draw an ellipse inside a rectangle (converted to <see cref="Quad"/>).</summary>
+        /// <param name="rect">Bounding rectangle.</param>
+        /// <returns>Midpoint of the left edge (path start).</returns>
+        public Point DrawOval(Rect rect) => DrawOval(new Quad(rect));
+
         /// <summary>
-        /// Draw a standard cubic Bezier curve.
+        /// Draw an ellipse inside a quadrilateral (anti-clockwise from left edge midpoint).
         /// </summary>
-        /// <param name="p1"></param>
-        /// <param name="p2"></param>
-        /// <param name="p3"></param>
-        /// <param name="p4"></param>
-        /// <returns></returns>
-        public Point DrawBezier(Point p1, Point p2, Point p3, Point p4)
+        /// <param name="quad">Target quad.</param>
+        /// <returns>Midpoint of <c>UL–LL</c> after the path is built.</returns>
+        public Point DrawOval(Quad quad)
         {
-            if (LastPoint == null || !LastPoint.EqualTo(p1))
+            var q = new Quad(quad);
+            var mt = q.UL + (q.UR - q.UL) * 0.5f;
+            var mr = q.UR + (q.LR - q.UR) * 0.5f;
+            var mb = q.LL + (q.LR - q.LL) * 0.5f;
+            var ml = q.UL + (q.LL - q.UL) * 0.5f;
+            if (!SamePoint(_lastPoint, ml))
             {
-                Point t = p1 * IPctm;
-                DrawCont += $"{Utils.FloatToString(t.X)} {Utils.FloatToString(t.Y)} m\n";
+                AppendM(ml);
+                _lastPoint = ml;
             }
+            DrawCurve(ml, q.LL, mb, count: false);
+            DrawCurve(mb, q.LR, mr, count: false);
+            DrawCurve(mr, q.UR, mt, count: false);
+            DrawCurve(mt, q.UL, ml, count: false);
+            UpdateRect(q.Rect);
+            _lastPoint = ml;
+            if (_firstPoint == null) _firstPoint = ml;
+            _drawCount++;
+            return _lastPoint;
+        }
 
-            Point t2 = p2 * IPctm;
-            Point t3 = p3 * IPctm;
-            Point t4 = p4 * IPctm;
-            DrawCont += $"{Utils.FloatToString(t2.X)} {Utils.FloatToString(t2.Y)} {Utils.FloatToString(t3.X)} {Utils.FloatToString(t3.Y)} {Utils.FloatToString(t4.X)} {Utils.FloatToString(t4.Y)} c\n";
+        /// <summary>Draw a cubic Bézier from <paramref name="p1"/> to <paramref name="p3"/> via helper <paramref name="p2"/>.</summary>
+        /// <param name="p1">Start point.</param>
+        /// <param name="p2">Helper point (controls curvature on both segments).</param>
+        /// <param name="p3">End point.</param>
+        /// <param name="count">When false, does not increment <see cref="DrawCount"/>.</param>
+        /// <returns><paramref name="p3"/>.</returns>
+        public Point DrawCurve(Point p1, Point p2, Point p3, bool count = true)
+        {
+            const float kappa = 0.55228474983f;
+            p1 = new Point(p1);
+            p2 = new Point(p2);
+            p3 = new Point(p3);
+            var k1 = p1 + (p2 - p1) * kappa;
+            var k2 = p3 + (p2 - p3) * kappa;
+            var q = DrawBezier(p1, k1, k2, p3, count: false);
+            if (count) _drawCount++;
+            return q;
+        }
 
+        /// <summary>Draw a standard cubic Bézier from <paramref name="p1"/> to <paramref name="p4"/>.</summary>
+        /// <param name="p1">Start point.</param>
+        /// <param name="p2">First control point.</param>
+        /// <param name="p3">Second control point.</param>
+        /// <param name="p4">End point.</param>
+        /// <param name="count">When false, does not increment <see cref="DrawCount"/>.</param>
+        /// <returns><paramref name="p4"/>.</returns>
+        public Point DrawBezier(Point p1, Point p2, Point p3, Point p4, bool count = true)
+        {
+            p1 = new Point(p1);
+            p2 = new Point(p2);
+            p3 = new Point(p3);
+            p4 = new Point(p4);
+            if (!SamePoint(_lastPoint, p1))
+                AppendM(p1);
+            AppendC(p2, p3, p4);
             UpdateRect(p1);
             UpdateRect(p2);
             UpdateRect(p3);
             UpdateRect(p4);
-            LastPoint = p4;
-            return LastPoint;
+            _lastPoint = p4;
+            if (_firstPoint == null) _firstPoint = p1;
+            if (count) _drawCount++;
+            return p4;
+        }
+
+        /// <summary>Draw connected segments through <paramref name="points"/> (length ≥ 1).</summary>
+        /// <param name="points">Vertices; close a polygon by repeating the first point at the end.</param>
+        /// <param name="count">When false, does not increment <see cref="DrawCount"/>.</param>
+        /// <returns>Last point in <paramref name="points"/>.</returns>
+        public Point DrawPolyline(Point[] points, bool count = true)
+        {
+            if (points == null || points.Length == 0)
+                throw new ArgumentException("need at least 1 point");
+            for (int i = 0; i < points.Length; i++)
+            {
+                var p = new Point(points[i]);
+                if (i == 0)
+                {
+                    if (!SamePoint(_lastPoint, p))
+                    {
+                        AppendM(p);
+                        _lastPoint = p;
+                    }
+                }
+                else
+                    AppendL(p);
+                UpdateRect(p);
+            }
+            _lastPoint = new Point(points[points.Length - 1]);
+            if (_firstPoint == null) _firstPoint = new Point(points[0]);
+            if (count) _drawCount++;
+            return _lastPoint;
+        }
+
+        /// <summary>Draw a quad as <c>UL → LL → LR → UR → UL</c>.</summary>
+        /// <param name="quad">Quadrilateral in page coordinates.</param>
+        /// <returns><see cref="Quad.UL"/>.</returns>
+        public Point DrawQuad(Quad quad)
+        {
+            return DrawPolyline(new[] { quad.UL, quad.LL, quad.LR, quad.UR, quad.UL });
         }
 
         /// <summary>
-        /// Draw a circle given its center and radius.
+        /// Draw a circular sector (pie slice) from <paramref name="point"/> by angle <paramref name="beta"/> degrees.
         /// </summary>
-        /// <param name="center">the center of the circle</param>
-        /// <param name="radius">the radius of the circle. Must be positive</param>
-        /// <returns></returns>
-        /// <exception cref="Exception"></exception>
-        public Point DrawCircle(Point center, float radius)
+        /// <param name="center">Circle center.</param>
+        /// <param name="point">One arc endpoint (radius defined by distance to center).</param>
+        /// <param name="beta">Sweep angle in degrees (sign sets direction).</param>
+        /// <param name="fullSector">When true, connect arc ends to center (filled pie).</param>
+        /// <param name="count">When false, does not increment <see cref="DrawCount"/>.</param>
+        /// <returns>The other arc endpoint (use as next <paramref name="point"/> for connected pies).</returns>
+        public Point DrawSector(Point center, Point point, float beta, bool fullSector = true, bool count = true)
         {
-            if (!(radius > Utils.FLT_EPSILON))
-                throw new Exception("radius must be postive");
-            Point p1 = center - new Point(radius, 0);
-            return DrawSector(center, p1, 360, fullSector: false);
-        }
-
-        /// <summary>
-        /// Draw a circle sector.
-        /// </summary>
-        /// <param name="center">the center of the circle</param>
-        /// <param name="point">one of the two end points of the pie’s arc segment. The other one is calculated from the angle</param>
-        /// <param name="beta">the angle of the sector in degrees</param>
-        /// <param name="fullSector">whether to draw connecting lines from the ends of the arc to the circle center</param>
-        /// <returns>the other end point of the arc</returns>
-        /// <exception cref="Exception"></exception>
-        public Point DrawSector(Point center, Point point, float beta, bool fullSector = true)
-        {
-            string l3 = "{0} {1} m\n";
-            string l4 = "{0} {1} {2} {3} {4} {5} c\n";
-            string l5 = "{0} {1} l\n";
-            double betar = ((-beta) * Math.PI / 180);
-            double w360 = (Math.Sign(betar) * 360.0f * (Math.PI / 180) * -1);
-            double w90 = (Math.Sign(betar) * 90.0f * (Math.PI / 180));
-            double w45 = w90 / 2;
+            center = new Point(center);
+            point = new Point(point);
+            float betar = -beta * (float)Math.PI / 180.0f;
+            float w360 = (float)Math.Sign(betar) * (float)Math.PI * 2 * -1;
+            float w90 = (float)Math.Sign(betar) * (float)Math.PI / 2;
+            float w45 = w90 / 2;
             while (Math.Abs(betar) > 2 * Math.PI)
                 betar += w360;
 
-            if (LastPoint == null || !LastPoint.EqualTo(point))
+            if (!SamePoint(_lastPoint, point))
             {
-                Point t = point * IPctm;
-                DrawCont += string.Format(System.Globalization.CultureInfo.InvariantCulture, l3, Utils.FloatToString(t.X), Utils.FloatToString(t.Y));
-                LastPoint = point;
+                AppendM(point);
+                _lastPoint = point;
             }
 
-            Point q = new Point(0, 0);
-            Point c = center;
-            Point p = point;
-            Point s = p - c;
-            float rad = s.Abs();
+            Point Q = new Point(0, 0);
+            var C = center;
+            var P = point;
+            var S = P - C;
+            float rad = S.Norm;
+            if (!(rad > Constants.Epsilon))
+                throw new ValueErrorException("radius must be positive");
 
-            if (!(rad > Utils.FLT_EPSILON))
-                throw new Exception("radius must be positive");
-
-            double alfa = HorizontalAngle(center, point);
+            float alfa = HorizontalAngle(center, point);
             while (Math.Abs(betar) > Math.Abs(w90))
             {
-                float q1 = c.X + (float)(Math.Cos(alfa + w90) * rad);
-                float q2 = c.Y + (float)(Math.Sin(alfa + w90) * rad);
-                q = new Point(q1, q2);
-                float r1 = c.X + (float)(Math.Cos(alfa + w45) * rad / Math.Cos(w45));
-                float r2 = c.Y + (float)(Math.Sin(alfa + w45) * rad / Math.Cos(w45));
-                Point r = new Point(r1, r2);
-
-                float kappah = (float)(((double)1 - Math.Cos(w45)) * 4 / 3 / (r - q).Abs());
-                float kappa = kappah * (p - q).Abs();
-                Point cp1 = p + (r - p) * kappa;
-                Point cp2 = q + (r - q) * kappa;
-
-                Point t1 = cp1 * IPctm;
-                Point t2 = cp2 * IPctm;
-                Point t3 = q * IPctm;                                                                                                        
-                DrawCont += string.Format(System.Globalization.CultureInfo.InvariantCulture, l4, Utils.FloatToString(t1.X), Utils.FloatToString(t1.Y), Utils.FloatToString(t2.X), Utils.FloatToString(t2.Y), Utils.FloatToString(t3.X), Utils.FloatToString(t3.Y));
+                float q1 = C.X + (float)Math.Cos(alfa + w90) * rad;
+                float q2 = C.Y + (float)Math.Sin(alfa + w90) * rad;
+                Q = new Point(q1, q2);
+                float r1 = C.X + (float)Math.Cos(alfa + w45) * rad / (float)Math.Cos(w45);
+                float r2 = C.Y + (float)Math.Sin(alfa + w45) * rad / (float)Math.Cos(w45);
+                var R = new Point(r1, r2);
+                float kappah = (1 - (float)Math.Cos(w45)) * 4 / 3 / (R - Q).Norm;
+                float kappa = kappah * (P - Q).Norm;
+                var cp1 = P + (R - P) * kappa;
+                var cp2 = Q + (R - Q) * kappa;
+                AppendC(cp1, cp2, Q);
                 betar -= w90;
                 alfa += w90;
-                p = q;
+                P = Q;
             }
 
             if (Math.Abs(betar) > 1e-3)
             {
-                double beta2 = betar / 2.0f;
-                double q1 = c.X + (Math.Cos(alfa + betar) * rad);
-                double q2 = c.Y + (Math.Sin(alfa + betar) * rad);
-                q = new Point((float)q1, (float)q2);
-                double r1 = c.X + Math.Cos(alfa + beta2) * rad / Math.Cos(beta2);
-                double r2 = c.Y + Math.Sin(alfa + beta2) * rad / Math.Cos(beta2);
-                Point r = new Point((float)r1, (float)r2);
-
-                double kappah = (1 - Math.Cos(beta2)) * 4 / 3 / (r - q).Abs();
-                double kappa = kappah * (p - q).Abs() / (1 - Math.Cos(betar));
-                Point cp1 = p + (r - p) * kappa;
-                Point cp2 = q + (r - q) * kappa;
-
-                Point t1 = cp1 * IPctm;
-                Point t2 = cp2 * IPctm;
-                Point t3 = q * IPctm;
-                DrawCont += string.Format(System.Globalization.CultureInfo.InvariantCulture, l4, Utils.FloatToString(t1.X), Utils.FloatToString(t1.Y), Utils.FloatToString(t2.X), Utils.FloatToString(t2.Y), Utils.FloatToString(t3.X), Utils.FloatToString(t3.Y));
+                float beta2 = betar / 2;
+                float q1 = C.X + (float)Math.Cos(alfa + betar) * rad;
+                float q2 = C.Y + (float)Math.Sin(alfa + betar) * rad;
+                Q = new Point(q1, q2);
+                float r1 = C.X + (float)Math.Cos(alfa + beta2) * rad / (float)Math.Cos(beta2);
+                float r2 = C.Y + (float)Math.Sin(alfa + beta2) * rad / (float)Math.Cos(beta2);
+                var R = new Point(r1, r2);
+                float kappah = (1 - (float)Math.Cos(beta2)) * 4 / 3 / (R - Q).Norm;
+                float kappa = kappah * (P - Q).Norm / (1 - (float)Math.Cos(betar));
+                var cp1 = P + (R - P) * kappa;
+                var cp2 = Q + (R - Q) * kappa;
+                AppendC(cp1, cp2, Q);
             }
-            
+
             if (fullSector)
             {
-                Point t = point * IPctm;
-                DrawCont += string.Format(System.Globalization.CultureInfo.InvariantCulture, l3, Utils.FloatToString(t.X), Utils.FloatToString(t.Y));
-                t = center * IPctm;
-                DrawCont += string.Format(System.Globalization.CultureInfo.InvariantCulture, l5, Utils.FloatToString(t.X), Utils.FloatToString(t.Y));
-                t = q * IPctm;
-                DrawCont += string.Format(System.Globalization.CultureInfo.InvariantCulture, l5, Utils.FloatToString(t.X), Utils.FloatToString(t.Y));
+                AppendM(point);
+                AppendL(center);
+                AppendL(Q);
             }
 
-            LastPoint = q;
-            return LastPoint;
-        }
-
-        public void UpdateRect(Point x)
-        {
-            if (Rect == null)
-                Rect = new Rect(x, x);
-            else
-            {
-                Rect.X0 = Math.Min(Rect.X0, x.X);
-                Rect.Y0 = Math.Min(Rect.Y0, x.Y);
-                Rect.X1 = Math.Max(Rect.X1, x.X);
-                Rect.Y1 = Math.Max(Rect.Y1, x.Y);
-            }
-        }
-
-        public void UpdateRect(Rect x)
-        {
-            if (Rect == null)
-                Rect = x;
-            else
-            {
-                Rect.X0 = Math.Min(Rect.X0, x.X0);
-                Rect.Y0 = Math.Min(Rect.Y0, x.Y0);
-                Rect.X1 = Math.Max(Rect.X1, x.X1);
-                Rect.Y1 = Math.Max(Rect.Y1, x.Y1);
-            }
-        }
-
-        public static double HorizontalAngle(Point c, Point p)
-        {
-            Point s = (p - c).Unit;
-            double alfa = Math.Asin(Math.Abs(s.Y));
-            if (s.X < 0)
-            {
-                if (s.Y <= 0)
-                    alfa = -((float)Math.PI - alfa);
-                else
-                    alfa = (float)Math.PI - alfa;
-            }
-            else
-            {
-                if (s.Y >= 0) { }
-                else alfa = -alfa;
-            }
-            return alfa;
-        }
-
-        public Point DrawCurve(Point p1, Point p2, Point p3)
-        {
-            float kappa = 0.55228474983f;
-            Point k1 = p1 + (p2 - p1) * kappa;
-            Point k2 = p3 + (p2 - p3) * kappa;
-            return DrawBezier(p1, k1, k2, p3);
+            _lastPoint = Q;
+            if (_firstPoint == null) _firstPoint = point;
+            if (count) _drawCount++;
+            return _lastPoint;
         }
 
         /// <summary>
-        /// Draw a line between two points.
+        /// Draw a wavy line; wave period length is <c>4 * breadth</c> (requires <c>2 * breadth &lt; |p2 - p1|</c>).
         /// </summary>
-        /// <param name="p1">starting point</param>
-        /// <param name="p2">end point</param>
-        /// <returns></returns>
-        public Point DrawLine(Point p1, Point p2)
-        {
-            Point t;
-            if (LastPoint == null || !LastPoint.EqualTo(p1))
-            {
-                t = p1 * IPctm;
-                DrawCont += $"{Utils.FloatToString(t.X)} {Utils.FloatToString(t.Y)} m\n";
-                LastPoint = p1;
-                UpdateRect(p1);
-            }
-
-            t = p2 * IPctm;
-            DrawCont += $"{Utils.FloatToString(t.X)} {Utils.FloatToString(t.Y)} l\n";
-            UpdateRect(p2);
-            LastPoint = p2;
-            return LastPoint;
-        }
-
-        /// <summary>
-        /// Draw an ellipse inside a tetrapod.
-        /// </summary>
-        /// <param name="tetra"></param>
-        /// <returns></returns>
-        public Point DrawOval(Rect tetra)
-        {
-            _DrawOval(tetra.Quad);
-            return LastPoint;
-        }
-
-        public Point DrawOval(Quad tetra)
-        {
-            _DrawOval(tetra);
-            return LastPoint;
-        }
-
-        private void _DrawOval(Quad tetra)
-        {
-            Point mt = tetra.UpperLeft + (tetra.UpperRight - tetra.UpperLeft) * 0.5f;
-            Point mr = tetra.UpperRight + (tetra.LowerRight - tetra.UpperRight) * 0.5f;
-            Point mb = tetra.LowerLeft + (tetra.LowerRight - tetra.LowerLeft) * 0.5f;
-            Point ml = tetra.UpperLeft + (tetra.LowerLeft - tetra.UpperLeft) * 0.5f;
-
-            if (LastPoint == null || !LastPoint.EqualTo(ml))
-            {
-                Point t = ml * IPctm;
-                DrawCont += $"{Utils.FloatToString(t.X)} {Utils.FloatToString(t.Y)} m\n";
-                LastPoint = ml;
-            }
-
-            DrawCurve(ml, tetra.LowerLeft, mb);
-            DrawCurve(mb, tetra.LowerRight, mr);
-            DrawCurve(mr, tetra.UpperRight, mt);
-            DrawCurve(mt, tetra.UpperLeft, ml);
-            UpdateRect(tetra.Rect);
-            LastPoint = ml;
-        }
-
-        /// <summary>
-        /// Draw several connected lines between points contained in the sequence points
-        /// </summary>
-        /// <param name="points">a sequence of Point objects</param>
-        /// <returns></returns>
-        public Point DrawPolyline(Point[] points)
-        {
-            for (int i = 0; i < points.Length; i++)
-            {
-                if (i == 0)
-                {
-                    if (LastPoint == null || !LastPoint.EqualTo(points[i]))
-                    {
-                        Point t = points[i] * IPctm;
-                        DrawCont += $"{Utils.FloatToString(t.X)} {Utils.FloatToString(t.Y)} m\n";
-                        LastPoint = points[i];
-                    }
-                }
-                else
-                {
-                    Point t = points[i] * IPctm;
-                    DrawCont += $"{Utils.FloatToString(t.X)} {Utils.FloatToString(t.Y)} l\n";
-                }
-                UpdateRect(points[i]);
-            }
-            LastPoint = points[points.Length - 1];
-            return LastPoint;
-        }
-
-        /// <summary>
-        /// Draw a Quad.
-        /// </summary>
-        /// <param name="quad"></param>
-        /// <returns></returns>
-        public Point DrawQuad(Quad quad)
-        {
-            Point[] points = new Point[5] { quad.UpperLeft, quad.LowerLeft, quad.LowerRight, quad.UpperRight, quad.UpperLeft };
-            return DrawPolyline(points);
-        }
-
-        /// <summary>
-        /// Draw a rectangle. Matches MuPdf <see href="https://MuPdf.readthedocs.io/en/latest/shape.html#Shape.draw_rect">Shape.draw_rect</see>.
-        /// </summary>
-        /// <param name="rect">Rectangle in page coordinates.</param>
-        /// <param name="radius">
-        /// If null, zero, or negative: draws a plain PDF rectangle (<c>re</c>), same as MuPdf <c>radius=None</c>.
-        /// If positive: corner radius as a fraction of the shorter side; must satisfy <c>0 &lt; radius ≤ 0.5</c>.
-        /// Use <see cref="DrawRect(Rect,float,float)"/> for separate horizontal/vertical fractions (MuPdf 2-tuple form).
-        /// </param>
-        /// <returns>Last point (top-left for plain rectangle; end of path for rounded).</returns>
-        public Point DrawRect(Rect rect, float? radius = null)
-        {
-            if (!radius.HasValue || radius.Value <= 0f)
-                return DrawRectPlain(rect);
-
-            float rv = radius.Value;
-            if (rv > 0.5f)
-                throw new ArgumentOutOfRangeException(nameof(radius), radius, "Radius must be greater than 0 and at most 0.5 (MuPdf draw_rect).");
-
-            float d = Math.Min(rect.Width, rect.Height) * rv;
-            Point px = new Point(d, 0);
-            Point py = new Point(0, d);
-            return DrawRectRoundedCorners(rect, px, py);
-        }
-
-        /// <summary>
-        /// Draw a rectangle with rounded corners: horizontal radius <paramref name="radiusX"/> × width and vertical <paramref name="radiusY"/> × height (MuPdf <c>radius=(rx, ry)</c>).
-        /// Each fraction must satisfy <c>0 &lt; value ≤ 0.5</c>. A pair <c>(0.5, 0.5)</c> yields an ellipse-like shape.
-        /// </summary>
-        public Point DrawRect(Rect rect, float radiusX, float radiusY)
-        {
-            if (radiusX <= 0f || radiusY <= 0f || radiusX > 0.5f || radiusY > 0.5f)
-                throw new ArgumentOutOfRangeException(
-                    $"{nameof(radiusX)}/{nameof(radiusY)}",
-                    "Each radius fraction must be greater than 0 and at most 0.5 (MuPdf draw_rect).");
-
-            Point px = new Point(radiusX * rect.Width, 0);
-            Point py = new Point(0, radiusY * rect.Height);
-            return DrawRectRoundedCorners(rect, px, py);
-        }
-
-        private Point DrawRectPlain(Rect rect)
-        {
-            Point t = rect.BottomLeft * IPctm;
-            DrawCont += $"{Utils.FloatToString(t.X)} {Utils.FloatToString(t.Y)} {Utils.FloatToString(rect.Width)} {Utils.FloatToString(rect.Height)} re\n";
-            UpdateRect(rect);
-            LastPoint = rect.TopLeft;
-            return LastPoint;
-        }
-
-        private Point DrawRectRoundedCorners(Rect r, Point px, Point py)
-        {
-            Point lp;
-
-            lp = DrawLine(r.TopLeft + py, r.BottomLeft - py);
-            lp = DrawCurve(lp, r.BottomLeft, r.BottomLeft + px);
-
-            lp = DrawLine(lp, r.BottomRight - px);
-            lp = DrawCurve(lp, r.BottomRight, r.BottomRight - py);
-
-            lp = DrawLine(lp, r.TopRight + py);
-            lp = DrawCurve(lp, r.TopRight, r.TopRight - px);
-
-            lp = DrawLine(lp, r.TopLeft + px);
-            LastPoint = DrawCurve(lp, r.TopLeft, r.TopLeft + py);
-
-            UpdateRect(r);
-            return LastPoint;
-        }
-
-        /// <summary>
-        /// Draw a squiggly line from p1 to p2.
-        /// </summary>
-        /// <param name="p1"></param>
-        /// <param name="p2"></param>
-        /// <param name="breadth"></param>
-        /// <returns></returns>
+        /// <param name="p1">Start point.</param>
+        /// <param name="p2">End point.</param>
+        /// <param name="breadth">Wave amplitude.</param>
+        /// <returns><paramref name="p2"/>.</returns>
         public Point DrawSquiggle(Point p1, Point p2, float breadth = 2)
         {
-            Point s = p2 - p1;
-            float rad = s.Abs();
-            int cnt = 4 * Convert.ToInt32(Math.Round(rad / (4 * breadth), 0));
+            p1 = new Point(p1);
+            p2 = new Point(p2);
+            var S = p2 - p1;
+            float rad = S.Norm;
+            int cnt = 4 * (int)Math.Round(rad / (4 * breadth), MidpointRounding.AwayFromZero);
             if (cnt < 4)
-                throw new Exception("points too close");
+                throw new ValueErrorException("points too close");
             float mb = rad / cnt;
-            
-            Matrix matrix = Utils.HorMatrix(p1, p2);
-            Matrix iMat = ~matrix;
-            float k = 2.4142135623765633f;
-            
-            List<Point> points = new List<Point>();
-
-            int i;
-            for (i = 1; i < cnt; i++)
-            {
-                Point p;
-                if (i % 4 == 1)
-                    p = (new Point(i, -k)) * mb;
-                else if (i % 4 == 3)
-                    p = (new Point(i, k)) * mb;
-                else
-                    p = (new Point(i, 0)) * mb;
-                points.Add(p * iMat);
-            }
-            points = (new List<Point>() { p1}).Concat(points).Concat(new List<Point>() { p2 }).ToList(); 
-            cnt = points.Count;
-            i = 0;
-            
-            while ((i + 2) < cnt)
-            {
-                DrawCurve(points[i], points[i + 1], points[i + 2]);
-                i += 2;
-            }
-
-            return p2;
-        }
-
-        /// <summary>
-        /// Draw a zigzag line from Point objects p1 to p2
-        /// </summary>
-        /// <param name="p1">starting point</param>
-        /// <param name="p2">end point</param>
-        /// <param name="breadth">the amplitude of the movement</param>
-        /// <returns></returns>
-        /// <exception cref="Exception"></exception>
-        public Point DrawZigzag(Point p1, Point p2, float breadth = 2.0f)
-        {
-            Point s = p2 - p1;
-            float rad = s.Abs();
-            int cnt = 4 * (int)(Math.Round(rad / (4 * breadth)));
-            if (cnt < 4)
-                throw new Exception("points too close");
-            float mb = rad / cnt;
-            Matrix matrix = Utils.HorMatrix(p1, p2);
-            Matrix iMat = ~matrix;
-
-            List<Point> points = new List<Point>();
+            var matrix = Helpers.UtilHorMatrix(p1, p2);
+            var iMat = matrix.Inverted() ?? throw new ValueErrorException("singular matrix");
+            const float k = 2.4142135623765633f;
+            var points = new List<Point> { p1 };
             for (int i = 1; i < cnt; i++)
             {
                 Point p;
                 if (i % 4 == 1)
-                    p = (new Point(i, -1) * mb);
+                    p = new Point(i, -k) * mb;
                 else if (i % 4 == 3)
-                    p = (new Point(i, 1) * mb);
-                else continue;
+                    p = new Point(i, k) * mb;
+                else
+                    p = new Point(i, 0) * mb;
                 points.Add(p * iMat);
             }
-            points.Insert(0, p1);
             points.Add(p2);
-            DrawPolyline(points.ToArray());
-
+            int n = points.Count;
+            int idx = 0;
+            while (idx + 2 < n)
+            {
+                DrawCurve(points[idx], points[idx + 1], points[idx + 2], count: false);
+                idx += 2;
+            }
+            _drawCount++;
             return p2;
         }
 
         /// <summary>
-        /// Finish the current drawing segment.
-        /// Apply colors, opacity, dashes, line style and width, or morphing.Also whether to close the path by connecting last to first point.
+        /// Draw a zigzag line with the same period rules as <see cref="DrawSquiggle"/>.
         /// </summary>
-        /// <param name="width"></param>
-        /// <param name="color"></param>
-        /// <param name="fill"></param>
-        /// <param name="lineCap"></param>
-        /// <param name="lineJoin"></param>
-        /// <param name="dashes"></param>
-        /// <param name="evenOdd">request the “even-odd rule” for filling operations. Default is False, so that the “nonzero winding number rule” is used.</param>
-        /// <param name="morph">morph the text or the compound drawing around some arbitrary Point fixpoint by applying Matrix matrix to it. This implies that fixpoint is a fixed point of this operation: it will not change its position. Default is no morphing (None). The matrix can contain any values in its first 4 components, matrix.e == matrix.f == 0 must be true, however. This means that any combination of scaling, shearing, rotating, flipping, etc. is possible, but translations are not.</param>
-        /// <param name="closePath"></param>
-        /// <param name="fillOpacity">(new in v1.18.1) set transparency for fill colors. Default is 1 (intransparent).</param>
-        /// <param name="strokeOpacity">(new in v1.18.1) set transparency for stroke colors. Value < 0 or > 1 will be ignored. Default is 1 (intransparent).</param>
-        /// <param name="oc">(new in v1.18.4) the xref number of an OCG or OCMD to make this drawing conditionally displayable.</param>
+        /// <param name="p1">Start point.</param>
+        /// <param name="p2">End point.</param>
+        /// <param name="breadth">Zigzag amplitude.</param>
+        /// <returns><paramref name="p2"/>.</returns>
+        public Point DrawZigzag(Point p1, Point p2, float breadth = 2)
+        {
+            p1 = new Point(p1);
+            p2 = new Point(p2);
+            var S = p2 - p1;
+            float rad = S.Norm;
+            int cnt = 4 * (int)Math.Round(rad / (4 * breadth), MidpointRounding.AwayFromZero);
+            if (cnt < 4)
+                throw new ValueErrorException("points too close");
+            float mb = rad / cnt;
+            var matrix = Helpers.UtilHorMatrix(p1, p2);
+            var iMat = matrix.Inverted() ?? throw new ValueErrorException("singular matrix");
+            var points = new List<Point>();
+            for (int i = 1; i < cnt; i++)
+            {
+                if (i % 4 == 1)
+                    points.Add(new Point(i, -1) * mb * iMat);
+                else if (i % 4 == 3)
+                    points.Add(new Point(i, 1) * mb * iMat);
+            }
+            var polyline = new List<Point>(points.Count + 2) { p1 };
+            polyline.AddRange(points);
+            polyline.Add(p2);
+            DrawPolyline(polyline.ToArray(), count: false);
+            _drawCount++;
+            return p2;
+        }
+
+        // ─── Finish / Commit ────────────────────────────────────────────
+
+        /// <summary>
+        /// Finalize the current path: stroke/fill, dashes, opacity, optional morph, and append to <see cref="TotalCont"/>.
+        /// </summary>
+        /// <param name="color">RGB stroke color, or null for no stroke.</param>
+        /// <param name="fill">RGB fill color, or null for no fill.</param>
+        /// <param name="width">Line width in points (0 forces no stroke).</param>
+        /// <param name="lineCap">PDF line cap: 0 butt, 1 round, 2 square.</param>
+        /// <param name="lineJoin">PDF line join: 0 miter, 1 round, 2 bevel.</param>
+        /// <param name="dashes">PDF dash array string, e.g. <c>[3 2] 0</c>.</param>
+        /// <param name="closePath">When true, close subpath with <c>h</c> before painting.</param>
+        /// <param name="evenOdd">Use even-odd fill rule when both stroke and fill are set.</param>
+        /// <param name="strokeOpacity">Stroke alpha 0–1.</param>
+        /// <param name="fillOpacity">Fill alpha 0–1.</param>
+        /// <param name="blendMode">Optional PDF blend mode name.</param>
+        /// <param name="oc">Optional content group xref (0 = none).</param>
+        /// <param name="morphFix">Morph fixed point (with <paramref name="morphMat"/>).</param>
+        /// <param name="morphMat">Morph matrix (translation components should be zero).</param>
         public void Finish(
-            float width = 1.0f,
             float[] color = null,
             float[] fill = null,
+            float width = 1,
             int lineCap = 0,
             int lineJoin = 0,
             string dashes = null,
-            bool evenOdd = false,
-            Morph morph = null,
             bool closePath = true,
-            float fillOpacity = 1.0f,
-            float strokeOpacity = 1.0f,
-            int oc = 0
-            )
+            bool evenOdd = false,
+            float strokeOpacity = 1,
+            float fillOpacity = 1,
+            string blendMode = null,
+            int oc = 0,
+            Point morphFix = null,
+            Matrix morphMat = null)
         {
-            if (string.IsNullOrEmpty(DrawCont))
+            if (_contents.Length == 0)
                 return;
-            if (color == null)
-                color = new float[]{ 0f, };
+
             if (width == 0)
                 color = null;
             else if (color == null)
                 width = 0;
 
-            string colorStr = Utils.GetColorCode(color, "c");
-            string fillStr = Utils.GetColorCode(fill, "f");
+            string drawCont = _contents.ToString();
 
-            string optCont = Page.GetOptionalContent(oc);
-            string emc = "";
-            if (!string.IsNullOrEmpty(optCont))
+            string optcont = _page._get_optional_content(oc == 0 ? null : oc);
+            string emc;
+            if (optcont != null)
             {
-                DrawCont = $"/OC /{optCont} BDC\n" + DrawCont;
+                drawCont = "/OC /" + optcont + " BDC\n" + drawCont;
                 emc = "EMC\n";
             }
+            else
+                emc = "";
 
-            if (width != 1 && width != 0)
-                DrawCont += $"{Utils.FloatToString(width)} w\n";
+            string alpha = _page._set_opacity(null, strokeOpacity, fillOpacity, blendMode);
+            if (alpha != null)
+                drawCont = "/" + alpha + " gs\n" + drawCont;
+
+            if (Math.Abs(width - 1f) > 1e-6 && Math.Abs(width) > 1e-6)
+                drawCont += width.ToString("G9", CultureInfo.InvariantCulture) + " w\n";
 
             if (lineCap != 0)
-                DrawCont = $"{lineCap} J\n" + DrawCont;
+                drawCont = lineCap.ToString(CultureInfo.InvariantCulture) + " J\n" + drawCont;
             if (lineJoin != 0)
-                DrawCont = $"{lineJoin} j\n" + DrawCont;
+                drawCont = lineJoin.ToString(CultureInfo.InvariantCulture) + " j\n" + drawCont;
 
-            if ((string.IsNullOrEmpty(dashes) == false) && (dashes != "[] 0"))
-                DrawCont = $"{dashes} d\n" + DrawCont;
-
-            string alpha = Page.SetOpacity(CA: strokeOpacity, ca: fillOpacity);
-            if (!string.IsNullOrEmpty(alpha))
-                DrawCont = $"/{alpha} gs\n" + DrawCont;
+            if (!string.IsNullOrEmpty(dashes) && dashes != "[] 0")
+                drawCont = dashes + " d\n" + drawCont;
 
             if (closePath)
             {
-                DrawCont += "h\n";
-                LastPoint = null;
+                drawCont += "h\n";
+                _lastPoint = null;
             }
 
+            string colorStr = Helpers.ColorCode(color, "c");
+            string fillStr = Helpers.ColorCode(fill, "f");
             if (color != null)
-                DrawCont += colorStr;
-
+                drawCont += colorStr;
             if (fill != null)
             {
-                DrawCont += fillStr;
+                drawCont += fillStr;
                 if (color != null)
-                {
-                    if (!evenOdd)
-                    {
-                        DrawCont += "B\n";
-                    }
-                    else
-                    {
-                        DrawCont += "B*\n";
-                    }
-                }
+                    drawCont += evenOdd ? "B*\n" : "B\n";
                 else
-                {
-                    if (!evenOdd)
-                        DrawCont += "f\n";
-                    else
-                        DrawCont += "f*\n";
-                }
+                    drawCont += evenOdd ? "f*\n" : "f\n";
             }
             else
+                drawCont += "S\n";
+
+            drawCont += emc;
+
+            if (morphFix != null && morphMat != null && Helpers.CheckMorph(morphFix, morphMat))
             {
-                DrawCont += "S\n";
+                var m1 = new Matrix(1, 0, 0, 1, morphFix.X + _shapeX, _height - morphFix.Y - _shapeY);
+                var inv = m1.Inverted() ?? throw new ValueErrorException("singular morph matrix");
+                var mat = inv * morphMat * m1;
+                drawCont = Helpers.FormatPdfReals(mat.A, mat.B, mat.C, mat.D, mat.E, mat.F) + " cm\n" + drawCont;
             }
 
-            DrawCont += emc;
-            if (morph != null)
-            {
-                Matrix m1 = new Matrix(1, 0, 0, 1, morph.P.X + X, Height - morph.P.Y - Y);
-                Matrix mat = ~m1 * morph.M * m1;
-                DrawCont = $"{Utils.FloatToString(mat.A)} {Utils.FloatToString(mat.B)} {Utils.FloatToString(mat.C)} {Utils.FloatToString(mat.D)} {Utils.FloatToString(mat.E)} {Utils.FloatToString(mat.F)} cm\n" + DrawCont;
-            }
-
-            TotalCont += "\nq\n" + DrawCont + "Q\n";
-            DrawCont = "";
-            LastPoint = null;
-            return;
+            // PyMuPDF: self.totalcont += "\nq\n" + self.draw_cont + "Q\n"
+            _totalContents.Append("\nq\n");
+            _totalContents.Append(drawCont);
+            _totalContents.Append("Q\n");
+            _contents.Clear();
+            _drawCount = 0;
+            _lastPoint = null;
+            _firstPoint = null;
+            _pathCount++;
         }
 
         /// <summary>
-        /// Insert text into a given rectangle.
+        /// Writes <see cref="TotalCont"/> and <see cref="TextCont"/> to the page and resets the shape buffers.
         /// </summary>
-        /// <param name="rect">the textbox to fill</param>
-        /// <param name="buffer">text to be inserted</param>
-        /// <param name="fontSize">font size</param>
-        /// <param name="lineHeight">overwrite the font property</param>
-        /// <param name="fontName">a Base-14 font, font name or '/name'</param>
-        /// <param name="fontFile">name of a font file</param>
-        /// <param name="setSimple"></param>
-        /// <param name="encoding"></param>
-        /// <param name="color">RGB stroke color triple</param>
-        /// <param name="fill">RGB fill color triple</param>
-        /// <param name="expandTabs">handles tabulators with string function</param>
-        /// <param name="align">left, center, right, justified</param>
-        /// <param name="renderMode">text rendering control</param>
-        /// <param name="borderWidth">thickness of glyph borders</param>
-        /// <param name="rotate">0, 90, 180, or 270 degrees</param>
-        /// <param name="morph">morph box with a matrix and a fixpoint</param>
-        /// <param name="strokeOpacity"></param>
-        /// <param name="fillOpacity"></param>
-        /// <param name="oc"></param>
-        /// <returns>unused or deficit rectangle area (float)</returns>
-        public float InsertTextbox(
-            Rect rect,
-            List<string> buffer,
-            string fontName = "helv",
-            string fontFile = null,
-            float fontSize = 11,
-            float lineHeight = 0,
-            bool setSimple = false,
-            int encoding = 0,
-            float[] color = null,
-            float[] fill = null,
-            int expandTabs = 1,
-            int align = 1,
-            int renderMode = 0,
-            float borderWidth = 1.0f,
-            int rotate = 0,
-            Morph morph = null,
-            float strokeOpacity = 1,
-            float fillOpacity = 1,
-            int oc = 0
-            )
+        /// <param name="overlay">
+        /// When true (default), new content is foreground; otherwise background. Calls <see cref="Page.WrapContents"/> when true.
+        /// </param>
+        /// <remarks>Must be called or nothing is persisted. Clears <see cref="Rect"/>, <see cref="LastPoint"/>, and content buffers.</remarks>
+        public void Commit(bool overlay = true)
         {
-            if (string.IsNullOrEmpty(fontName) && string.IsNullOrEmpty(fontFile))
-                throw new Exception("should include fontName and fontFile.");
-            return _InsertTextbox(rect, buffer, fontName, fontFile, fontSize, lineHeight, setSimple, encoding,
-                color, fill, expandTabs, align, renderMode, borderWidth, rotate, morph, strokeOpacity, fillOpacity, oc);
+            // PyMuPDF Shape.commit:
+            //     The argument controls whether data appear in foreground (default)
+            //     or background."""
+            //     CheckParent(self.page)  # doc may have died meanwhile
+            //     self.totalcont += self.text_cont
+            //     self.totalcont = self.totalcont.encode()
+            //     if self.totalcont:
+            //         if overlay:
+            //             self.page.wrap_contents()  # ensure a balanced graphics state
+            //         xref = TOOLS._insert_contents(self.page, b" ", overlay)
+            //         self.doc.UpdateStream(xref, self.totalcont)
+            //     self.last_point = None  # clean up ...
+            //     self.rect = None  #
+            //     self.draw_cont = ""  # for potential ...
+            //     self.text_cont = ""  # ...
+            //     self.totalcont = ""  # re-use
+            if (_textCont.Length > 0)
+            {
+                _totalContents.Append(_textCont);
+                _textCont.Clear();
+            }
+            if (_totalContents.Length == 0) return;
+            // CheckParent(self.page)  # doc may have died meanwhile
+            if (overlay)
+                _page.WrapContents(); // ensure a balanced graphics state
+            byte[] content = Encoding.UTF8.GetBytes(_totalContents.ToString());
+            // xref = TOOLS._insert_contents(self.page, b" ", overlay)
+            int xref = Tools.InsertContents(_page, new byte[] { (byte)' ' }, overlay);
+            // self.doc.UpdateStream(xref, self.totalcont)
+            _doc.UpdateStream(xref, content);
+
+            _totalContents.Clear();
+            _pathCount = 0;
+            // self.last_point = None  # clean up ...
+            // self.rect = None  #
+            // self.draw_cont = ""  # for potential ...
+            // self.text_cont = ""  # ...
+            // self.totalcont = ""  # re-use
         }
 
+        // ─── Text methods ───────────────────────────────────────────────
+
         /// <summary>
-        /// Insert text into a given rectangle.
+        /// Insert one or more text lines starting at <paramref name="point"/> (appends to <see cref="TextCont"/>).
         /// </summary>
-        /// <param name="rect">the textbox to fill</param>
-        /// <param name="buffer">text to be inserted</param>
-        /// <param name="fontSize">font size</param>
-        /// <param name="lineHeight">overwrite the font property</param>
-        /// <param name="fontName">a Base-14 font, font name or '/name'</param>
-        /// <param name="fontFile">name of a font file</param>
-        /// <param name="setSimple"></param>
-        /// <param name="encoding"></param>
-        /// <param name="color">RGB stroke color triple</param>
-        /// <param name="fill">RGB fill color triple</param>
-        /// <param name="expandTabs">handles tabulators with string function</param>
-        /// <param name="align">left, center, right, justified</param>
-        /// <param name="renderMode">text rendering control</param>
-        /// <param name="borderWidth">thickness of glyph borders</param>
-        /// <param name="rotate">0, 90, 180, or 270 degrees</param>
-        /// <param name="morph">morph box with a matrix and a fixpoint</param>
-        /// <param name="strokeOpacity"></param>
-        /// <param name="fillOpacity"></param>
-        /// <param name="oc"></param>
-        /// <returns>unused or deficit rectangle area (float)</returns>
-        public float InsertTextbox(
-            Rect rect,
+        /// <param name="point">Bottom-left of the first glyph (depends on <paramref name="rotate"/>).</param>
+        /// <param name="buffer">Text; newline-separated lines are supported.</param>
+        /// <param name="fontSize">Font size in points.</param>
+        /// <param name="lineHeight">Optional line-height factor (× fontsize).</param>
+        /// <param name="fontName">Base-14 name, registered font, or <c>/RefName</c>.</param>
+        /// <param name="fontFile">External font file when required.</param>
+        /// <param name="setSimple">Use simple font embedding when non-zero.</param>
+        /// <param name="encoding">Font encoding flag.</param>
+        /// <param name="color">Stroke RGB components.</param>
+        /// <param name="fill">Fill RGB (defaults to <paramref name="color"/> for text mode 0).</param>
+        /// <param name="renderMode">PDF text rendering mode.</param>
+        /// <param name="borderWidth">Glyph border width as fraction of fontsize.</param>
+        /// <param name="miterLimit">Miter limit for stroked text.</param>
+        /// <param name="rotate">Rotation: 0, 90, 180, or 270 degrees.</param>
+        /// <param name="morphFix">Morph fixed point.</param>
+        /// <param name="morphMat">Morph matrix.</param>
+        /// <param name="strokeOpacity">Stroke opacity 0–1.</param>
+        /// <param name="fillOpacity">Fill opacity 0–1.</param>
+        /// <param name="oc">Optional content xref (0 = none).</param>
+        /// <returns>Number of lines written.</returns>
+        public int InsertText(
+            Point point,
             string buffer,
-            string fontFile,
-            string fontName,
             float fontSize = 11,
-            float lineHeight = 0,
-            bool setSimple = false,
-            int encoding = 0,
-            float[] color = null,
-            float[] fill = null,
-            int expandTabs = 1,
-            int align = 1,
-            int renderMode = 0,
-            float borderWidth = 0.05f,
-            int rotate = 0,
-            Morph morph = null,
-            float strokeOpacity = 1,
-            float fillOpacity = 1,
-            int oc = 0
-            )
-        {
-            if (string.IsNullOrEmpty(fontName) && string.IsNullOrEmpty(fontFile))
-                throw new Exception("should include fontName and fontFile.");
-            string[] list = buffer.Split('\n');
-            return _InsertTextbox(rect, new List<string>(list), fontName, fontFile, fontSize, lineHeight, setSimple, encoding,
-                color, fill, expandTabs, align, renderMode, borderWidth, rotate, morph, strokeOpacity, fillOpacity, oc);
-        }
-
-        internal float _InsertTextbox(
-            Rect rect,
-            List<string> buffer,
+            float? lineHeight = null,
             string fontName = "helv",
             string fontFile = null,
-            float fontSize = 11,
-            float lineHeight = 0,
-            bool setSimple = true,
+            int setSimple = 0,
             int encoding = 0,
             float[] color = null,
             float[] fill = null,
-            int expandTabs = 1,
-            int align = 1,
             int renderMode = 0,
             float borderWidth = 0.05f,
+            float? miterLimit = 1f,
             int rotate = 0,
-            Morph morph = null,
+            Point morphFix = null,
+            Matrix morphMat = null,
             float strokeOpacity = 1,
             float fillOpacity = 1,
-            int oc = 0
-            )
+            int oc = 0)
         {
-            if (rect.IsEmpty || rect.IsInfinite)
-                throw new Exception("text box must be finite and not empty");
+            // ensure 'text' is a list of strings, worth dealing with
+            if (string.IsNullOrEmpty(buffer))
+                return 0;
 
-            string colorStr = Utils.GetColorCode(color, "c");
-            string fillStr = Utils.GetColorCode(fill, "f");
-            
-            
-            if (fill == null && renderMode == 0)
+            var textLines = buffer.Replace("\r\n", "\n").Split('\n');
+            if (textLines.Length == 0)
+                return 0;
+
+            int maxcode;
+            try
+            {
+                var joined = string.Join(" ", textLines);
+                maxcode = joined.Length == 0 ? 0 : joined.Max(ch => ch);
+            }
+            catch
+            {
+                return 0;
+            }
+
+            // ensure valid 'fontname'
+            string fname = fontName;
+            if (fname.StartsWith("/", StringComparison.Ordinal))
+                fname = fname.Substring(1);
+
+            int xref = _page.InsertFont(fname, fontFile, null, setSimple != 0, wmode: 0, encoding: encoding);
+            var fontinfo = _doc.CheckFontInfo(xref);
+            if (fontinfo == null)
+                throw new InvalidOperationException($"font '{fname}' was not registered in the document");
+            var fontdict = fontinfo[1] as Dictionary<string, object>;
+            if (fontdict == null)
+                throw new InvalidOperationException($"font info for '{fname}' is invalid");
+
+            bool simple = fontdict.TryGetValue("simple", out var sobj) && sobj is bool sb && sb;
+            int ordering = fontdict.TryGetValue("ordering", out var oobj) && oobj is int oi ? oi : -1;
+            string bfname = fontdict.TryGetValue("name", out var nobj) ? nobj?.ToString() ?? "" : "";
+
+            float ascender = 0.8f, descender = -0.2f;
+            if (fontdict.TryGetValue("ascender", out var ascObj) && fontdict.TryGetValue("descender", out var dscObj))
+            {
+                ascender = Convert.ToSingle(ascObj);
+                descender = Convert.ToSingle(dscObj);
+            }
+            else
+                ReadAscDesc(xref, ref ascender, ref descender);
+
+            float lheight;
+            if (lineHeight.HasValue)
+                lheight = fontSize * lineHeight.Value;
+            else if (ascender - descender <= 1)
+                lheight = fontSize * 1.2f;
+            else
+                lheight = fontSize * (ascender - descender);
+
+            List<(int glyph, float width)> glyphs;
+            if (maxcode > 255)
+                glyphs = _doc.GetCharWidths(xref, maxcode + 1);
+            else
+                glyphs = fontdict.TryGetValue("glyphs", out var gobj) && gobj is List<(int glyph, float width)> gl
+                    ? gl
+                    : null;
+
+            var tab = new List<string>();
+            foreach (var t in textLines)
+            {
+                List<(int glyph, float width)> gline;
+                if (simple && bfname != "Symbol" && bfname != "ZapfDingbats")
+                    gline = null;
+                else
+                    gline = glyphs;
+                tab.Add(Helpers.GetTJstr(t, gline, simple, ordering));
+            }
+
+            string colorStr = Helpers.ColorCode(color, "c");
+            string fillStr = Helpers.ColorCode(fill, "f");
+            if (fill == null && renderMode == 0) // ensure fill color when 0 Tr
             {
                 fill = color;
-                fillStr = Utils.GetColorCode(color, "f");
+                fillStr = Helpers.ColorCode(color, "f");
             }
 
-            string optCont = Page.GetOptionalContent(oc);
-            string bdc = "", emc = "";
-            if (!string.IsNullOrEmpty(optCont))
+            bool morphing = false;
+            if (morphFix != null && morphMat != null)
             {
-                bdc = $"/OC /{optCont} BDC\n";
+                morphing = Helpers.CheckMorph(morphFix, morphMat);
+            }
+
+            int rot = rotate;
+            if (rot % 90 != 0)
+                throw new ValueErrorException("bad rotate value");
+            while (rot < 0)
+                rot += 360;
+            rot %= 360; // text rotate = 0, 90, 270, 180
+
+            string cmp90 = "0 1 -1 0 0 0 cm\n"; // rotates 90 deg counter-clockwise
+            string cmm90 = "0 -1 1 0 0 0 cm\n"; // rotates 90 deg clockwise
+            string cm180 = "-1 0 0 -1 0 0 cm\n"; // rotates by 180 deg.
+            float height = _height;
+            float width = _width;
+
+            // setting up for standard rotation directions
+            // case rotate = 0
+            string cm;
+            if (morphing)
+            {
+                var m1 = new Matrix(1, 0, 0, 1, morphFix.X + _shapeX, height - morphFix.Y - _shapeY);
+                var inv = m1.Inverted() ?? throw new ValueErrorException("singular morph matrix");
+                var mat = inv * morphMat * m1;
+                cm = Helpers.FormatPdfReals(mat.A, mat.B, mat.C, mat.D, mat.E, mat.F) + " cm\n";
+            }
+            else
+                cm = "";
+
+            float top = height - (float)point.Y - _shapeY; // start of 1st char
+            float left = (float)point.X + _shapeX; // start of 1. char
+            float space = top;
+            if (rot == 90)
+            {
+                left = height - (float)point.Y - _shapeY;
+                top = -(float)point.X - _shapeX;
+                cm += cmp90;
+                space = width - Math.Abs(top);
+            }
+            else if (rot == 270)
+            {
+                left = -height + (float)point.Y + _shapeY;
+                top = (float)point.X + _shapeX;
+                cm += cmm90;
+                space = Math.Abs(top);
+            }
+            else if (rot == 180)
+            {
+                left = -(float)point.X - _shapeX;
+                top = -height + (float)point.Y + _shapeY;
+                cm += cm180;
+                space = Math.Abs((float)point.Y + _shapeY);
+            }
+
+            string optcont = _page._get_optional_content(oc);
+            string bdc, emc;
+            if (optcont != null)
+            {
+                bdc = $"/OC /{optcont} BDC\n";
                 emc = "EMC\n";
             }
+            else
+                bdc = emc = "";
 
-            string alpha = Page.SetOpacity(CA: strokeOpacity, ca: fillOpacity);
-            if (string.IsNullOrEmpty(alpha))
+            string alpha = _page._set_opacity(CA: strokeOpacity, ca: fillOpacity);
+            if (alpha == null)
+                alpha = "";
+            else
+                alpha = $"/{alpha} gs\n";
+
+            // PyMuPDF Shape.insert_text uses fontname (e.g. "helv"), not "F{xref}".
+            string resKey = fname;
+            var nres = new StringBuilder();
+            nres.Append("\nq\n");
+            nres.Append(bdc);
+            nres.Append(alpha);
+            nres.Append(cm);
+            nres.Append("BT\n");
+            nres.Append("1 0 0 1 ");
+            nres.Append(Helpers.FormatPdfReals(left, top));
+            nres.Append(" Tm\n/");
+            nres.Append(resKey);
+            nres.Append(' ');
+            nres.Append(fontSize.ToString("G9", CultureInfo.InvariantCulture));
+            nres.Append(" Tf ");
+
+            if (renderMode > 0)
+            {
+                nres.Append(renderMode.ToString(CultureInfo.InvariantCulture)).Append(" Tr ");
+                nres.Append(Helpers.FormatPdfReals(borderWidth * fontSize)).Append(" w ");
+                if (miterLimit != null)
+                    nres.Append(Helpers.FormatPdfReals(miterLimit.Value)).Append(" M ");
+            }
+            if (color != null)
+                nres.Append(colorStr);
+            if (fill != null)
+                nres.Append(fillStr);
+
+            // =========================================================================
+            //   start text insertion
+            // =========================================================================
+            nres.Append(tab[0]);
+            int nlines = 1; // set output line counter
+            if (tab.Count > 1)
+            {
+                nres.Append("TJ\n0 -");
+                nres.Append(lheight.ToString("G9", CultureInfo.InvariantCulture));
+                nres.Append(" TD\n");
+            }
+            else
+                nres.Append("TJ");
+
+            for (int i = 1; i < tab.Count; i++)
+            {
+                if (space < lheight)
+                    break; // no space left on page
+                if (i > 1)
+                    nres.Append("\nT* ");
+                nres.Append(tab[i]).Append("TJ");
+                space -= lheight;
+                nlines++;
+            }
+
+            nres.Append("\nET\n").Append(emc).Append("Q\n");
+
+            // =========================================================================
+            //   end of text insertion
+            // =========================================================================
+            // update the /Contents object
+            _textCont.Append(nres.ToString());
+            return nlines;
+        }
+
+        private void ReadAscDesc(int xref, ref float ascender, ref float descender)
+        {
+            var ef = _doc.ExtractFont(xref);
+            var font = Document.LoadFzFontForCharWidths(_doc, xref, ef.name, ef.content);
+            bool disposeFont = ef.content != null && ef.content.Length > 0;
+            try
+            {
+                ascender = (float)font.fz_font_ascender();
+                descender = (float)font.fz_font_descender();
+            }
+            finally
+            {
+                if (disposeFont)
+                    font?.Dispose();
+            }
+        }
+
+        // ==============================================================================
+        // Shape.insert_textbox
+        // ==============================================================================
+        /// <summary>
+        /// Fit text into a rectangle with wrapping and alignment (appends to <see cref="TextCont"/>).
+        /// </summary>
+        /// <param name="rect">Finite, non-empty text box.</param>
+        /// <param name="buffer">String or sequence of strings.</param>
+        /// <param name="align">0 left, 1 center, 2 right, 3 justified.</param>
+        /// <param name="borderWidth">Glyph border width as fraction of fontsize.</param>
+        /// <param name="color">Stroke RGB.</param>
+        /// <param name="encoding">Font encoding.</param>
+        /// <param name="expandTabs">Tab expansion width (spaces per tab).</param>
+        /// <param name="fillOpacity">Text fill opacity.</param>
+        /// <param name="fill">Fill RGB.</param>
+        /// <param name="fontFile">External font file.</param>
+        /// <param name="fontname">Font name or <c>/RefName</c>.</param>
+        /// <param name="fontSize">Font size in points.</param>
+        /// <param name="lineHeight">Optional line-height factor.</param>
+        /// <param name="miterLimit">Miter limit for stroked glyphs.</param>
+        /// <param name="morphFix">Morph fixed point.</param>
+        /// <param name="morphMat">Morph matrix.</param>
+        /// <param name="oc">Optional content xref.</param>
+        /// <param name="renderMode">PDF text rendering mode.</param>
+        /// <param name="rotate">0, 90, 180, or 270 degrees.</param>
+        /// <param name="setSimple">Simple font mode when non-zero.</param>
+        /// <param name="strokeOpacity">Stroke opacity.</param>
+        /// <returns>Unused rectangle height in points if ≥ 0; negative deficit if text did not fit.</returns>
+        public float InsertTextbox(
+            Rect rect,
+            object buffer,
+            int align = 0,
+            float borderWidth = 0.05f,
+            float[] color = null,
+            int encoding = 0,
+            float expandTabs = 1,
+            float fillOpacity = 1,
+            float[] fill = null,
+            string fontFile = null,
+            string fontName = "helv",
+            float fontSize = 11,
+            float? lineHeight = null,
+            float? miterLimit = 1,
+            Point morphFix = null,
+            Matrix morphMat = null,
+            int oc = 0,
+            int renderMode = 0,
+            int rotate = 0,
+            int setSimple = 0,
+            float strokeOpacity = 1)
+        {
+            // Args:
+            //     rect -- the textbox to fill
+            //     buffer -- text to be inserted
+            //     fontname -- a Base-14 font, font name or '/name'
+            //     fontfile -- name of a font file
+            //     lineheight -- overwrite the font property
+            //     color -- RGB stroke color triple
+            //     fill -- RGB fill color triple
+            //     render_mode -- text rendering control
+            //     border_width -- thickness of glyph borders as percentage of fontsize
+            //     expandtabs -- handles tabulators with string function
+            //     align -- left, center, right, justified
+            //     rotate -- 0, 90, 180, or 270 degrees
+            //     morph -- morph box with a matrix and a fixpoint
+            // Returns:
+            //     unused or deficit rectangle area (float)
+            rect = new Rect(rect);
+            if (rect.IsEmpty || rect.IsInfinite)
+                throw new ValueErrorException("text box must be finite and not empty");
+
+            string colorStr = Helpers.ColorCode(color, "c");
+            string fillStr = Helpers.ColorCode(fill, "f");
+            if (fill == null && renderMode == 0) // ensure fill color for 0 Tr
+            {
+                fill = color;
+                fillStr = Helpers.ColorCode(color, "f");
+            }
+
+            string optcont = _page._get_optional_content(oc);
+            string bdc, emc;
+            if (optcont != null)
+            {
+                bdc = $"/OC /{optcont} BDC\n";
+                emc = "EMC\n";
+            }
+            else
+                bdc = emc = "";
+
+            // determine opacity / transparency
+            string alpha = _page._set_opacity(CA: strokeOpacity, ca: fillOpacity);
+            if (alpha == null)
                 alpha = "";
             else
                 alpha = $"/{alpha} gs\n";
 
             if (rotate % 90 != 0)
-                throw new Exception("rotate must be multiple of 90");
+                throw new ValueErrorException("rotate must be multiple of 90");
 
             int rot = rotate;
             while (rot < 0)
                 rot += 360;
-            rot = rot % 360;
+            rot %= 360;
 
-            if (buffer.Count == 0 )
-                return (rot == 0 || rot == 180) ? rect.Height : rect.Width;
+            // is buffer worth of dealing with?
+            bool hasBuffer = buffer switch
+            {
+                null => false,
+                string s => !string.IsNullOrEmpty(s),
+                IEnumerable<string> seq => seq.Any(),
+                IEnumerable<object> seq => seq.Any(),
+                _ => true
+            };
+            if (!hasBuffer)
+                return (float)(rot == 0 || rot == 180 ? rect.Height : rect.Width);
 
-            string cmp90 = "0 1 -1 0 0 0 cm\n";
-            string cmm90 = "0 -1 1 0 0 0 cm\n";
-            string cm180 = "-1 0 0 -1 0 0 cm\n";
-            float height = this.Height;
+            string cmp90 = "0 1 -1 0 0 0 cm\n"; // rotates counter-clockwise
+            string cmm90 = "0 -1 1 0 0 0 cm\n"; // rotates clockwise
+            string cm180 = "-1 0 0 -1 0 0 cm\n"; // rotates by 180 deg.
+            float height = _height;
 
             string fname = fontName;
-            if (fname.StartsWith("/"))
+            if (fname.StartsWith("/", StringComparison.Ordinal))
                 fname = fname.Substring(1);
 
-            int xref = Page.InsertFont(fontName: fname, fontFile: fontFile, encoding: encoding, setSimple: setSimple);
-            FontInfo fontInfo = Utils.CheckFontInfo(Doc, xref);
-            
-            if (fontInfo == null)
-                throw new Exception("not found font info");
-            
-            int ordering = fontInfo.Ordering;
-            bool simple = fontInfo.Simple;
-            List<(int, double)> glyphs = fontInfo.Glyphs;
-            string bfName = fontInfo.Name;
-            float asc = fontInfo.Ascender;
-            float des = fontInfo.Descender;
+            int xref = _page.InsertFont(fname, fontFile, null, setSimple != 0, wmode: 0, encoding: encoding);
+            var fontdict = _doc.GetFontDictForXref(xref);
+            if (fontdict == null)
+                throw new ValueErrorException("font not found");
+
+            int ordering = fontdict.TryGetValue("ordering", out var oobj) && oobj is int oi ? oi : -1;
+            bool simple = fontdict.TryGetValue("simple", out var sobj) && sobj is bool sb && sb;
+            string bfname = fontdict.TryGetValue("name", out var nobj) ? nobj?.ToString() ?? "" : "";
+            float ascender = 0.8f, descender = -0.2f;
+            if (fontdict.TryGetValue("ascender", out var ascObj) && fontdict.TryGetValue("descender", out var dscObj))
+            {
+                ascender = Convert.ToSingle(ascObj);
+                descender = Convert.ToSingle(dscObj);
+            }
+            else
+                ReadAscDesc(xref, ref ascender, ref descender);
+
             float lheightFactor;
-            if (lineHeight != 0)
-                lheightFactor = lineHeight;
-            else if (asc - des <= 1)
+            if (lineHeight.HasValue)
+                lheightFactor = lineHeight.Value;
+            else if (ascender - descender <= 1)
                 lheightFactor = 1.2f;
             else
-                lheightFactor = asc - des;
+                lheightFactor = ascender - descender;
             float lheight = fontSize * lheightFactor;
-            string t0 = string.Join("\n", buffer);
-            int maxCode = 0;
-            foreach (char c in t0)
-                maxCode = maxCode < Convert.ToInt32(c) ? Convert.ToInt32(c) : maxCode;
 
-            string t1 = "";
-            if (simple && maxCode > 255)
-                foreach (char c in t0)
-                    t1 += Convert.ToInt32(c) < 256 ? c : '?';
-
-            string[] t2 = string.IsNullOrEmpty(t1) ? t0.Split('\n') : t1.Split('\n');
-            glyphs = Doc.GetCharWidths(xref, maxCode + 1);
-
-            List<(int, double)> tj_glyphs;
-            if (simple && !(bfName == "Symbol" || bfName == "ZapfDingbats"))
-                tj_glyphs = null;
+            // create a list from buffer, split into its lines
+            string t0;
+            if (buffer is IEnumerable<string> listBuf && buffer is not string)
+                t0 = string.Join("\n", listBuf);
+            else if (buffer is IEnumerable<object> objBuf && buffer is not string)
+                t0 = string.Join("\n", objBuf.Select(o => o?.ToString() ?? ""));
             else
-                tj_glyphs = glyphs;
+                t0 = buffer?.ToString() ?? "";
 
-            float PixLen(string x)
+            int maxcode = t0.Length == 0 ? 0 : t0.Max(c => c);
+            // replace invalid char codes for simple fonts
+            if (simple && maxcode > 255)
+            {
+                var sbChars = new StringBuilder(t0.Length);
+                foreach (char c in t0)
+                    sbChars.Append(c < 256 ? c : '?');
+                t0 = sbChars.ToString();
+            }
+
+            string[] t0Lines = t0.Split('\n');
+
+            List<(int glyph, float width)> glyphs = _doc.GetCharWidths(xref, maxcode + 1);
+            List<(int glyph, float width)> tjGlyphs;
+            if (simple && bfname != "Symbol" && bfname != "ZapfDingbats")
+                tjGlyphs = null;
+            else
+                tjGlyphs = glyphs;
+
+            // ----------------------------------------------------------------------
+            // calculate pixel length of a string
+            // ----------------------------------------------------------------------
+            float Pixlen(string x)
             {
                 if (ordering < 0)
                 {
-                    double sum = 0;
-                    foreach (char c in x)
-                        sum += glyphs[Convert.ToInt32(c)].Item2;
-                    return (float)(sum * fontSize);
+                    float sum = 0;
+                    foreach (char ch in x)
+                    {
+                        int code = ch;
+                        if (code >= 0 && code < glyphs.Count)
+                            sum += (float)glyphs[code].Item2;
+                    }
+                    return sum * fontSize;
                 }
-                else
-                {
-                    return x.Length * fontSize;
-                }
+                return x.Length * fontSize;
             }
+
+            // ---------------------------------------------------------------------
 
             float blen;
             if (ordering < 0)
-                blen = (float)(glyphs[32].Item2 * fontSize);
+                blen = (float)glyphs[32].Item2 * fontSize; // pixel size of space character
             else
                 blen = fontSize;
 
-            string text = "";
-            string cm = "";
-            if (morph != null)
-            {
-                Matrix m1 = new Matrix(1, 0, 0, 1, morph.P.X + X, Height - morph.P.Y - Y);
-                Matrix mat = ~m1 * morph.M * m1;
-                cm = $"{Utils.FloatToString(mat.A)} {Utils.FloatToString(mat.B)} {Utils.FloatToString(mat.C)} {Utils.FloatToString(mat.D)} {Utils.FloatToString(mat.E)} {Utils.FloatToString(mat.F)} cm\n";
-            }
+            string text = ""; // output buffer
 
-            int progr = 1;
-            Point cPnt = new Point(0, fontSize * asc);
-            Point point = new Point();
-            float pos = 0, maxWidth = 0, maxHeight = 0;
-            if (rot == 0)
+            string cm;
+            if (morphFix != null && morphMat != null && Helpers.CheckMorph(morphFix, morphMat))
             {
-                point = rect.TopLeft + cPnt;
-                maxWidth = rect.Width;
-                maxHeight = rect.Height;
-            }
-            else if (rot == 90)
-            {
-                cPnt = new Point(fontSize * asc, 0);
-                point = rect.BottomLeft + cPnt;
-                maxWidth = rect.Height;
-                maxHeight = rect.Width;
-                cm += cmp90;
-            }
-            else if (rot == 180)
-            {
-                cPnt = -(new Point(0, fontSize * asc));
-                point = rect.BottomRight + cPnt;
-                maxWidth = rect.Width;
-                maxHeight = rect.Height;
-                cm += cm180;
+                var m1 = new Matrix(1, 0, 0, 1, morphFix.X + _shapeX, height - morphFix.Y - _shapeY);
+                var inv = m1.Inverted() ?? throw new ValueErrorException("singular morph matrix");
+                var mat = inv * morphMat * m1;
+                cm = Helpers.FormatPdfReals(mat.A, mat.B, mat.C, mat.D, mat.E, mat.F) + " cm\n";
             }
             else
+                cm = "";
+
+            // ---------------------------------------------------------------------
+            // adjust for text orientation / rotation
+            // ---------------------------------------------------------------------
+            float progr = 1; // direction of line progress
+            Point c_pnt = new Point(0, fontSize * ascender); // used for line progress
+            Point point;
+            float maxwidth;
+            float maxheight;
+            if (rot == 0) // normal orientation
             {
-                cPnt = -(new Point(fontSize * asc, 0));
-                point = rect.TopRight + cPnt;
-                pos = point.X + X;
-                maxWidth = rect.Height;
-                progr = -1;
-                maxHeight = rect.Width;
+                point = rect.TopLeft + c_pnt; // line 1 is 'lheight' below top
+                maxwidth = (float)rect.Width; // pixels available in one line
+                maxheight = (float)rect.Height; // available text height
+            }
+            else if (rot == 90) // rotate counter clockwise
+            {
+                c_pnt = new Point(fontSize * ascender, 0); // progress in x-direction
+                point = rect.BottomLeft + c_pnt; // line 1 'lheight' away from left
+                maxwidth = (float)rect.Height; // pixels available in one line
+                maxheight = (float)rect.Width; // available text height
+                cm += cmp90;
+            }
+            else if (rot == 180) // text upside down
+            {
+                // progress upwards in y direction
+                c_pnt = new Point(0, -fontSize * ascender);
+                point = rect.BottomRight + c_pnt; // line 1 'lheight' above bottom
+                maxwidth = (float)rect.Width; // pixels available in one line
+                progr = -1; // subtract lheight for next line
+                maxheight = (float)rect.Height; // available text height
+                cm += cm180;
+            }
+            else // rotate clockwise (270 or -90)
+            {
+                // progress from right to left
+                c_pnt = new Point(-fontSize * ascender, 0);
+                point = rect.TopRight + c_pnt; // line 1 'lheight' left of right
+                maxwidth = (float)rect.Height; // pixels available in one line
+                progr = -1; // subtract lheight for next line
+                maxheight = (float)rect.Width; // available text height
                 cm += cmm90;
             }
 
-            List<bool> justTab = new List<bool>();
-            for (int i = 0; i < t2.Length; i++)
-            {
-                string[] line_t = t2[i].Replace("\t", new string(' ', expandTabs)).Split(' ');
-                string lbuff = "";
-                float rest = maxWidth;
+            // =====================================================================
+            // line loop
+            // =====================================================================
+            var justTab = new List<bool>(); // 'justify' indicators per line
 
-                foreach (string word in line_t)
+            int tabSize = (int)expandTabs;
+            if (tabSize < 1)
+                tabSize = 8;
+
+            for (int i = 0; i < t0Lines.Length; i++)
+            {
+                string line = t0Lines[i];
+                string[] lineT = ExpandTabsLine(line, tabSize).Split(' '); // split into words
+                int numWords = lineT.Length;
+                string lbuff = ""; // init line buffer
+                float rest = maxwidth; // available line pixels
+                // =================================================================
+                // word loop
+                // =================================================================
+                for (int j = 0; j < numWords; j++)
                 {
-                    float pl_w = PixLen(word);
-                    if (rest >= pl_w)
+                    string word = lineT[j];
+                    float plW = Pixlen(word); // pixel len of word
+                    if (rest >= plW) // does it fit on the line?
                     {
-                        lbuff += word + " ";
-                        rest -= (pl_w + blen);
-                        continue;
+                        lbuff += word + " "; // yes, append word
+                        rest -= plW + blen; // update available line space
+                        continue; // next word
                     }
+
+                    // word doesn't fit - output line (if not empty)
                     if (!string.IsNullOrEmpty(lbuff))
                     {
-                        lbuff = lbuff.TrimEnd() + "\n";
-                        text += lbuff;
-                        justTab.Add(true);
+                        lbuff = lbuff.TrimEnd() + "\n"; // line full, append line break
+                        text += lbuff; // append to total text
+                        justTab.Add(true); // can align-justify
                     }
-                    lbuff = "";
-                    rest = maxWidth;
-                    if (pl_w <= maxWidth)
+
+                    lbuff = ""; // re-init line buffer
+                    rest = maxwidth; // re-init avail. space
+
+                    if (plW <= maxwidth) // word shorter than 1 line?
                     {
-                        lbuff = word + " ";
-                        rest = maxWidth - pl_w - blen;
+                        lbuff = word + " "; // start the line with it
+                        rest = maxwidth - plW - blen; // update free space
                         continue;
                     }
 
+                    // long word: split across multiple lines - char by char ...
                     if (justTab.Count > 0)
-                        justTab[justTab.Count - 1] = false;
+                        justTab[justTab.Count - 1] = false; // cannot align-justify
                     foreach (char c in word)
                     {
-                        if (PixLen(lbuff) <= (maxWidth - PixLen(Convert.ToString(c))))
+                        if (Pixlen(lbuff) <= maxwidth - Pixlen(c.ToString()))
                             lbuff += c;
-                        else
+                        else // line full
                         {
-                            lbuff += "\n";
-                            text += lbuff;
-                            justTab.Add(false);
-                            lbuff = Convert.ToString(c);
+                            lbuff += "\n"; // close line
+                            text += lbuff; // append to text
+                            justTab.Add(false); // cannot align-justify
+                            lbuff = c.ToString(); // start new line with this char
                         }
                     }
 
-                    lbuff += " ";
-                    rest = maxWidth - PixLen(lbuff);
+                    lbuff += " "; // finish long word
+                    rest = maxwidth - Pixlen(lbuff); // long word stored
                 }
-                if (!string.IsNullOrEmpty(lbuff))
+
+                if (!string.IsNullOrEmpty(lbuff)) // unprocessed line content?
                 {
-                    text += lbuff.TrimEnd();
-                    justTab.Add(false);
+                    text += lbuff.TrimEnd(); // append to text
+                    justTab.Add(false); // cannot align-justify
                 }
-                if (i < t2.Count() - 1)
-                {
-                    text += "\n";
-                }
+
+                if (i < t0Lines.Length - 1) // not the last line?
+                    text += "\n"; // insert line break
             }
-            if (text.EndsWith("\n"))
+
+            // compute used part of the textbox
+            if (text.EndsWith("\n", StringComparison.Ordinal))
                 text = text.Substring(0, text.Length - 1);
+            int lbCount = text.Count(c => c == '\n') + 1; // number of lines written
 
-            int lbCount = text.Split('\n').Length;
+            // text height = line count * line height plus one descender value
+            float textHeight = lheight * lbCount - descender * fontSize;
 
-            float more = (lheight * lbCount) - des * fontSize - maxHeight;
-            if (more > Utils.FLT_EPSILON)
-                return (-1) * more;
-            
+            float more = textHeight - maxheight; // difference to height limit
+            if (more > Constants.Epsilon) // landed too much outside rect
+                return -more; // return deficit, don't output
+
             more = Math.Abs(more);
-            if (more < Utils.FLT_EPSILON)
-                more = 0;
-
-            string nres = $"\nq\n{bdc}{alpha}BT\n" + cm;
-            string template = "1 0 0 1 {0} {1} Tm /{2} {3} Tf ";
-            string[] text_t = text.Split('\n');
-
-            justTab[justTab.Count - 1] = false;
-            
-            for (int i = 0; i < text_t.Length; i++)
+            if (more < Constants.Epsilon)
+                more = 0; // don't bother with epsilons
+            var nres = new StringBuilder();
+            nres.Append("\nq\n").Append(bdc).Append(alpha).Append("BT\n").Append(cm); // initialize output buffer
+            // templ = lambda a, b, c, d: f"1 0 0 1 {_format_g((a, b))} Tm /{c} {_format_g(d)} Tf "
+            // center, right, justify: output each line with its own specifics
+            string[] textT = text.Split('\n'); // split text in lines again
+            if (justTab.Count > 0)
+                justTab[justTab.Count - 1] = false; // never justify last line
+            for (int i = 0; i < textT.Length; i++)
             {
-                float pl = maxWidth - PixLen(text_t[i]);
-                Point pnt = point + cPnt * (i * lheightFactor);
+                string t = textT[i];
                 float spacing = 0;
-                if (align == 1)
-                {
-                    if (rot == 0 && rot == 180)
-                        pnt = pnt + new Point(pl / 2, 0) * progr;
-                    else
-                        pnt = pnt - new Point(0, pl / 2) * progr;
-                }
-                else if (align == 2)
+                float pl = maxwidth - Pixlen(t); // length of empty line part
+                Point pnt = point + c_pnt * (i * lheightFactor); // text start of line
+                if (align == 1) // center: right shift by half width
                 {
                     if (rot == 0 || rot == 180)
-                        pnt = pnt + new Point(pl, 0) * progr;
+                        pnt += new Point(pl / 2, 0) * progr;
                     else
-                        pnt = pnt - new Point(0, pl) * progr;
+                        pnt -= new Point(0, pl / 2) * progr;
                 }
-                else if (align == 3)
+                else if (align == 2) // right: right shift by full width
                 {
-                    int spaces = text_t[i].Count(c => c == ' ');
-                    if (spaces > 0 && justTab[i])
-                        spacing = pl / spaces;
+                    if (rot == 0 || rot == 180)
+                        pnt += new Point(pl, 0) * progr;
+                    else
+                        pnt -= new Point(0, pl) * progr;
                 }
-                float top = height - pnt.Y - Y;
-                float left = pnt.X + X;
+                else if (align == 3) // justify
+                {
+                    int spaces = t.Count(ch => ch == ' '); // number of spaces in line
+                    if (spaces > 0 && i < justTab.Count && justTab[i]) // if any, and we may justify
+                        spacing = pl / spaces; // make every space this much larger
+                    else
+                        spacing = 0; // keep normal space length
+                }
+                float top = height - (float)pnt.Y - _shapeY;
+                float left = (float)pnt.X + _shapeX;
                 if (rot == 90)
                 {
-                    left = height - pnt.Y - Y;
-                    top = -pnt.X - X;
+                    left = height - (float)pnt.Y - _shapeY;
+                    top = -(float)pnt.X - _shapeX;
                 }
                 else if (rot == 270)
                 {
-                    left = -height + pnt.Y + Y;
-                    top = pnt.X + X;
+                    left = -height + (float)pnt.Y + _shapeY;
+                    top = (float)pnt.X + _shapeX;
                 }
                 else if (rot == 180)
                 {
-                    left = -pnt.X - X;
-                    top = -height + pnt.Y + Y;
+                    left = -(float)pnt.X - _shapeX;
+                    top = -height + (float)pnt.Y + _shapeY;
                 }
 
-                nres += string.Format(System.Globalization.CultureInfo.InvariantCulture, template, Utils.FloatToString(left), Utils.FloatToString(top), fname, Utils.FloatToString(fontSize));
+                nres.Append("1 0 0 1 ");
+                nres.Append(Helpers.FormatPdfReals(left, top));
+                nres.Append(" Tm /");
+                nres.Append(fname);
+                nres.Append(' ');
+                nres.Append(Helpers.FormatPdfReals(fontSize));
+                nres.Append(" Tf ");
+
                 if (renderMode > 0)
-                    nres += $"{renderMode} Tr ";
+                {
+                    nres.Append(renderMode.ToString(CultureInfo.InvariantCulture)).Append(" Tr ");
+                    nres.Append(Helpers.FormatPdfReals(borderWidth * fontSize)).Append(" w ");
+                    if (miterLimit != null)
+                        nres.Append(Helpers.FormatPdfReals(miterLimit.Value)).Append(" M ");
+                }
+
                 if (align == 3)
-                    nres += $"{Utils.FloatToString(spacing)} Tw ";
+                    nres.Append(Helpers.FormatPdfReals(spacing)).Append(" Tw ");
 
                 if (color != null)
-                    nres += colorStr;
+                    nres.Append(colorStr);
                 if (fill != null)
-                    nres += fillStr;
-                if (borderWidth != 1)
-                    nres += $"{Utils.FloatToString(borderWidth)} w ";
-                nres += $"{Utils.GetTJstr(text_t[i], tj_glyphs, simple, ordering)}TJ\n";
+                    nres.Append(fillStr);
+                nres.Append(Helpers.GetTJstr(t, tjGlyphs, simple, ordering)).Append("TJ\n");
             }
-            nres += $"ET\n{emc}Q\n";
 
-            TextCont += nres;
+            nres.Append("ET\n").Append(emc).Append("Q\n");
+
+            _textCont.Append(nres.ToString());
             UpdateRect(rect);
             return more;
         }
+
+        private static string ExpandTabsLine(string line, int tabSize)
+        {
+            if (!line.Contains('\t'))
+                return line;
+            var sb = new StringBuilder(line.Length);
+            int col = 0;
+            foreach (char ch in line)
+            {
+                if (ch == '\t')
+                {
+                    int next = ((col / tabSize) + 1) * tabSize;
+                    sb.Append(' ', next - col);
+                    col = next;
+                }
+                else
+                {
+                    sb.Append(ch);
+                    col++;
+                }
+            }
+            return sb.ToString();
+        }
+
+        // ─── Internal helpers ───────────────────────────────────────────
+
+        /// <summary>Expands <see cref="Rect"/> to include <paramref name="p"/>.</summary>
+        public void UpdateRect(Point p) => _rect = _rect.IncludePoint(p);
+
+        /// <summary>Expands <see cref="Rect"/> to include <paramref name="r"/>.</summary>
+        public void UpdateRect(Rect r) => _rect = _rect.IncludeRect(r);
+
+        // ─── IDisposable ────────────────────────────────────────────────
+
+        /// <summary>Releases managed resources (does not call <see cref="Commit"/>).</summary>
+        public void Dispose()
+        {
+            if (!_disposed) { _disposed = true; }
+            GC.SuppressFinalize(this);
+        }
+
+        ~Shape() { Dispose(); }
+
+        // ─── PyMuPDF API names (internal, same assembly) ─────────────────
+
+        internal static float horizontal_angle(Point c, Point p) => HorizontalAngle(c, p);
+        internal Point draw_bezier(Point p1, Point p2, Point p3, Point p4) => DrawBezier(p1, p2, p3, p4);
+        internal Point draw_circle(Point center, float radius) => DrawCircle(center, radius);
+        internal Point draw_curve(Point p1, Point p2, Point p3) => DrawCurve(p1, p2, p3);
+        internal Point draw_line(Point p1, Point p2) => DrawLine(p1, p2);
+        internal Point draw_oval(Rect rect) => DrawOval(rect);
+        internal Point draw_polyline(Point[] points) => DrawPolyline(points);
+        internal Point draw_quad(Quad quad) => DrawQuad(quad);
+        internal Point draw_rect(Rect rect, object radius = null) => DrawRect(rect, radius);
+        internal Point draw_sector(Point center, Point point, float angle, bool fullSector = true) => DrawSector(center, point, angle, fullSector);
+        internal Point draw_squiggle(Point p1, Point p2, float breadth = 2) => DrawSquiggle(p1, p2, breadth);
+        internal Point draw_zigzag(Point p1, Point p2, float breadth = 2) => DrawZigzag(p1, p2, breadth);
+        internal void finish(
+            float[] color = null,
+            float[] fill = null,
+            float width = 1,
+            int lineCap = 0,
+            int lineJoin = 0,
+            string dashes = null,
+            bool closePath = true,
+            bool even_odd = false,
+            float strokeOpacity = 1,
+            float fillOpacity = 1,
+            string blendMode = null,
+            int oc = 0,
+            Point morphFix = null,
+            Matrix morphMat = null) =>
+            Finish(color, fill, width, lineCap, lineJoin, dashes, closePath, even_odd, strokeOpacity, fillOpacity, blendMode, oc, morphFix, morphMat);
+        internal void commit(bool overlay = true) => Commit(overlay);
+        internal int insert_text(Point point, string text, float fontsize = 11, string fontname = "helv",
+            float[] color = null, int renderMode = 0, float borderWidth = 0.05f, int rotate = 0)
+            => InsertText(point, text, fontsize, null, fontname, null, 0, 0, color, null, renderMode, borderWidth, 1f, rotate, null, null, 1, 1, 0);
+        internal (int rc, List<string> rest) insert_textbox(Rect rect, string text, float fontsize = 11,
+            string fontname = "helv", float[] color = null, int align = 0, int renderMode = 0,
+            float borderWidth = 0.05f, int rotate = 0, float expandTabs = 1)
+        {
+            float more = InsertTextbox(rect, text, align, borderWidth, color, 0, expandTabs, 1, null, null, fontname,
+                fontsize, null, 1, null, null, 0, renderMode, rotate, 0, 1);
+            return (more >= 0 ? 0 : -1, new List<string>());
+        }
+
+        /// <summary>Diagnostic summary of path and draw counts.</summary>
+        public override string ToString() => $"Shape(paths={_pathCount}, draws={_drawCount})";
     }
 }

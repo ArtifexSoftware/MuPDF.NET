@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace MuPDF.NET
 {
@@ -92,46 +93,126 @@ namespace MuPDF.NET
 
         public float Opacity { get; set; }
 
-        public PathInfo()
+        // Compatibility bridge: allows assignment from modern GetDrawings dictionaries.
+        public static implicit operator PathInfo(Dictionary<string, object> data)
         {
-
+            if (data == null)
+                return null;
+            float F(string key) => data.TryGetValue(key, out var v) ? Convert.ToSingle(v) : 0f;
+            int I(string key) => data.TryGetValue(key, out var v) ? Convert.ToInt32(v) : 0;
+            bool Z(string key) => data.TryGetValue(key, out var v) && Convert.ToBoolean(v);
+            string S(string key) => data.TryGetValue(key, out var v) ? v?.ToString() ?? string.Empty : string.Empty;
+            float[] A(string key) => data.TryGetValue(key, out var v) && v is float[] arr ? arr : Array.Empty<float>();
+            List<LineCapType> LineCaps(string key)
+            {
+                if (!data.TryGetValue(key, out var v) || v is not object[] caps)
+                    return null;
+                return caps.Select(c => (LineCapType)Convert.ToInt32(c)).ToList();
+            }
+            return new PathInfo
+            {
+                Type = S("type"),
+                EvenOdd = Z("even_odd"),
+                FillOpacity = F("fill_opacity"),
+                Fill = A("fill"),
+                Rect = data.TryGetValue("rect", out var rect) ? rect as Rect : null,
+                SeqNo = I("seqno"),
+                Layer = S("layer"),
+                Width = F("width"),
+                StrokeOpacity = F("stroke_opacity"),
+                LineJoin = F("lineJoin"),
+                ClosePath = Z("closePath"),
+                Dashes = S("dashes"),
+                Color = A("color"),
+                LineCap = LineCaps("lineCap"),
+                Scissor = data.TryGetValue("scissor", out var sc) ? sc as Rect : null,
+                Level = I("level"),
+                Isolated = Z("isolated"),
+                Knockout = Z("knockout"),
+                BlendMode = S("blendmode"),
+                Opacity = F("opacity"),
+                Items = ItemsFromDict(data),
+            };
         }
 
-        public PathInfo(PathInfo path)
+        private static List<Item> ItemsFromDict(Dictionary<string, object> data)
         {
-            Items = new List<Item>(path.Items);
-            Type = path.Type;
-            EvenOdd = path.EvenOdd;
-            FillOpacity = path.FillOpacity;
+            if (!data.TryGetValue("items", out var itemsObj) || itemsObj is not List<object> raw)
+                return null;
 
-            if (path.Fill != null)
+            var items = new List<Item>(raw.Count);
+            foreach (var entry in raw)
             {
-                Fill = new float[path.Fill.Length];
-                Array.Copy(path.Fill, Fill, Fill.Length);
+                Item? item = ItemFromDictEntry(entry);
+                if (item != null)
+                    items.Add(item);
+            }
+            return items;
+        }
+
+        private static Item? ItemFromDictEntry(object entry)
+        {
+            if (entry is not object[] oa || oa.Length == 0)
+                return null;
+
+            string cmd = oa[0]?.ToString() ?? string.Empty;
+            var item = new Item { Type = cmd };
+
+            switch (cmd)
+            {
+                case "l":
+                    if (oa.Length >= 3)
+                    {
+                        item.P1 = CoercePoint(oa[1]);
+                        item.LastPoint = CoercePoint(oa[2]);
+                    }
+                    break;
+                case "c":
+                    if (oa.Length >= 5)
+                    {
+                        item.P1 = CoercePoint(oa[1]);
+                        item.P2 = CoercePoint(oa[2]);
+                        item.P3 = CoercePoint(oa[3]);
+                        item.LastPoint = CoercePoint(oa[4]);
+                    }
+                    break;
+                case "re":
+                    if (oa.Length >= 2)
+                    {
+                        item.Rect = CoerceRect(oa[1]);
+                        if (oa.Length >= 3)
+                            item.Orientation = Convert.ToInt32(oa[2]);
+                    }
+                    break;
+                case "qu":
+                    if (oa.Length >= 2 && oa[1] is Quad q)
+                        item.Quad = q;
+                    break;
             }
 
-            Rect = new Rect(path.Rect);
-            SeqNo = path.SeqNo;
-            Layer = path.Layer;
-            Width = path.Width;
-            StrokeOpacity = path.StrokeOpacity;
-            LineJoin = path.LineJoin;
-            ClosePath = path.ClosePath;
-            Dashes = path.Dashes;
+            return item;
+        }
 
-            if (path.Color != null)
-            {
-                Color = new float[path.Color.Length];
-                Array.Copy(path.Color, Color, Color.Length);
-            }
+        private static Point CoercePoint(object? o)
+        {
+            if (o is Point p)
+                return new Point(p);
+            if (o is mupdf.FzPoint fp)
+                return Helpers.PointFromFz(fp);
+            if (o != null && Helpers.TryCoercePoint(o, out var pt))
+                return pt;
+            return null;
+        }
 
-            LineCap = new List<LineCapType>(path.LineCap);
-            Scissor = path.Scissor;
-            Level = path.Level;
-            Isolated = path.Isolated;
-            Knockout = path.Knockout;
-            BlendMode = path.BlendMode;
-            Opacity = path.Opacity;
+        private static Rect CoerceRect(object? o)
+        {
+            if (o is Rect r)
+                return r;
+            if (o is mupdf.FzRect fr)
+                return new Rect(fr);
+            if (o != null && Helpers.TryCoerceRect(o, out var rect))
+                return rect;
+            return null;
         }
     }
 
@@ -152,20 +233,5 @@ namespace MuPDF.NET
         public Point P3 { get; set; }
 
         public Quad Quad { get; set; }
-
-        public bool Equal(Item other)
-        {
-            if (Type != other.Type) return false;
-
-            bool ret = true;
-            ret = other != null && (Rect == null ? other.Rect == null : Rect.EqualTo(other.Rect));
-            ret = other != null && (LastPoint == null ? other.LastPoint == null : LastPoint.EqualTo(other.LastPoint));
-            ret = other != null && (P1 == null ? other.P1 == null : P1.EqualTo(other.P1));
-            ret = other != null && (P2 == null ? other.P2 == null : P2.EqualTo(other.P2));
-            ret = other != null && (P3 == null ? other.P3 == null : P3.EqualTo(other.P3));
-            ret = other != null && (Quad == null ? other.Quad == null : Quad.EqualTo(other.Quad));
-
-            return true;
-        }
     }
 }

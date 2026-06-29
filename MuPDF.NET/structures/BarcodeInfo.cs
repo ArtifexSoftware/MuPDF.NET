@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+using System;
 using System.Globalization;
 using System.Text;
 
@@ -8,17 +7,12 @@ namespace MuPDF.NET
     public class BarcodePoint
     {
         private readonly float x;
-
         private readonly float y;
-
         private readonly byte[] bytesX;
-
         private readonly byte[] bytesY;
-
         private string toString;
 
         public virtual float X => x;
-
         public virtual float Y => y;
 
         public BarcodePoint()
@@ -36,21 +30,16 @@ namespace MuPDF.NET
         public override bool Equals(object other)
         {
             if (!(other is BarcodePoint resultPoint))
-            {
                 return false;
-            }
-
             if (x == resultPoint.x)
-            {
                 return y == resultPoint.y;
-            }
-
             return false;
         }
 
         public override int GetHashCode()
         {
-            return 31 * ((bytesX[0] << 24) + (bytesX[1] << 16) + (bytesX[2] << 8) + bytesX[3]) + (bytesY[0] << 24) + (bytesY[1] << 16) + (bytesY[2] << 8) + bytesY[3];
+            return 31 * ((bytesX[0] << 24) + (bytesX[1] << 16) + (bytesX[2] << 8) + bytesX[3]) +
+                   (bytesY[0] << 24) + (bytesY[1] << 16) + (bytesY[2] << 8) + bytesY[3];
         }
 
         public override string ToString()
@@ -61,10 +50,9 @@ namespace MuPDF.NET
                 stringBuilder.AppendFormat(CultureInfo.CurrentUICulture, "({0}, {1})", x, y);
                 toString = stringBuilder.ToString();
             }
-
             return toString;
         }
-    }    
+    }
 
     public class Barcode
     {
@@ -74,8 +62,9 @@ namespace MuPDF.NET
         public BarcodeFormat BarcodeFormat { get; private set; }
         public long Timestamp { get; private set; }
         public int NumBits { get; private set; }
+
         public Barcode(string text, byte[] rawBytes, BarcodePoint[] resultPoints, BarcodeFormat type)
-        : this(text, rawBytes, (rawBytes != null) ? (8 * rawBytes.Length) : 0, resultPoints, type, DateTime.Now.Ticks)
+            : this(text, rawBytes, (rawBytes != null) ? (8 * rawBytes.Length) : 0, resultPoints, type, DateTime.Now.Ticks)
         {
         }
 
@@ -92,9 +81,7 @@ namespace MuPDF.NET
         public Barcode(string text, byte[] rawBytes, int numBits, BarcodePoint[] resultPoints, BarcodeFormat type, long timestamp)
         {
             if (text == null && rawBytes == null)
-            {
                 throw new ArgumentException("Text and bytes are null");
-            }
 
             Text = text;
             RawBytes = rawBytes;
@@ -123,10 +110,7 @@ namespace MuPDF.NET
         public override string ToString()
         {
             if (Text == null)
-            {
                 return "[" + RawBytes.Length + " bytes]";
-            }
-
             return Text;
         }
     }

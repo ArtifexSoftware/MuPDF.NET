@@ -234,7 +234,6 @@ namespace BarcodeReader.Core.Datamatrix
             //skip two pixels
             if (!br.End()) br.Next();
             if (!br.End()) br.Next();
-            //
             if (!br.End())
             {
                 first = current = scan.isBlack(br.Current.X, br.Current.Y);
