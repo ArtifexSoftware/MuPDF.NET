@@ -1,4 +1,3 @@
-// Port of PyMuPDF-1.27.2.2/tests/test_crypting.py
 using System.IO;
 using Xunit;
 
@@ -15,7 +14,7 @@ namespace MuPDF.NET.Test
     {
         private static readonly string outDocPath = _Path.ForOutput("test_encryption.pdf", nameof(TestCrypting));
 
-        /// <summary>Regression test: encryption (PyMuPDF <c>tests/test_crypting.py::test_encryption</c>).</summary>
+        /// <summary>Regression test: encryption.</summary>
 
         [Fact]
         public void test_encryption()

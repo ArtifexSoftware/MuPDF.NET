@@ -5,7 +5,6 @@ namespace MuPDF.NET
 {
     /// <summary>
     /// Font wrapper for metrics, encoding, and embedding.
-    /// <para>Ports PyMuPDF <c>class Font</c> (<c>src/__init__.py</c>).</para>
     /// </summary>
     public partial class Font : IDisposable
     {
@@ -28,11 +27,11 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Create a font (PyMuPDF <c>Font.__init__</c>).
+        /// Create a font .
         /// </summary>
         /// <remarks>
         /// Parameterless <c>new Font()</c> loads the default fallback font (typically
-        /// <c>Noto Serif Regular</c> when Noto fonts are available), matching PyMuPDF.
+        /// <c>Noto Serif Regular</c> when Noto fonts are available), matching MuPDF.
         /// </remarks>
         /// <param name="fontName">Base-14 name, CJK name, etc.</param>
         /// <param name="fontFile">Path to a font file.</param>
@@ -103,10 +102,10 @@ namespace MuPDF.NET
         /// <inheritdoc/>
         public override string ToString() => $"Font('{Name}')";
 
-        /// <summary>Glyph ascender (PyMuPDF <c>Font.ascender</c>).</summary>
+        /// <summary>Glyph ascender.</summary>
         public float Ascender => mupdf.mupdf.fz_font_ascender(NativeFontCore);
 
-        /// <summary>Font bounding box (PyMuPDF <c>Font.bbox</c>).</summary>
+        /// <summary>Font bounding box.</summary>
         public Rect BBox
         {
             get
@@ -116,7 +115,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>Font binary buffer (PyMuPDF <c>Font.buffer</c>).</summary>
+        /// <summary>Font binary buffer.</summary>
         public byte[] Buffer
         {
             get
@@ -129,11 +128,11 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>Glyph descender (PyMuPDF <c>Font.descender</c>).</summary>
+        /// <summary>Glyph descender.</summary>
         public float Descender => mupdf.mupdf.fz_font_descender(NativeFontCore);
 
         /// <summary>
-        /// Font flag dictionary (PyMuPDF <c>Font.flags</c>).
+        /// Font flag dictionary .
         /// </summary>
         public IReadOnlyDictionary<string, uint> FlagDictionary
         {
@@ -142,7 +141,7 @@ namespace MuPDF.NET
                 var f = mupdf.mupdf.ll_fz_font_flags(NativeFontCore.m_internal);
                 if (f == null)
                     return null;
-                // cppyy bitfield path (PyMuPDF <c>Font.flags</c>); not used in MuPDF.NET.
+                // cppyy bitfield path ; not used in MuPDF.NET.
                 return new Dictionary<string, uint>
                 {
                     ["mono"] = f.is_mono,
@@ -181,26 +180,26 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>Number of glyphs (PyMuPDF <c>Font.glyph_count</c>).</summary>
+        /// <summary>Number of glyphs.</summary>
         public int GlyphCount => NativeFontCore.m_internal.glyph_count;
 
-        /// <summary>Font name (PyMuPDF <c>Font.name</c>).</summary>
+        /// <summary>Font name.</summary>
         public string Name => mupdf.mupdf.fz_font_name(NativeFontCore);
 
-        /// <summary>Whether font is bold (PyMuPDF <c>Font.is_bold</c>).</summary>
+        /// <summary>Whether font is bold.</summary>
         public bool IsBold => mupdf.mupdf.fz_font_is_bold(NativeFontCore) != 0;
 
-        /// <summary>Whether font is italic (PyMuPDF <c>Font.is_italic</c>).</summary>
+        /// <summary>Whether font is italic.</summary>
         public bool IsItalic => mupdf.mupdf.fz_font_is_italic(NativeFontCore) != 0;
 
-        /// <summary>Whether font is monospaced (PyMuPDF <c>Font.is_monospaced</c>).</summary>
+        /// <summary>Whether font is monospaced.</summary>
         public bool IsMonospaced => mupdf.mupdf.fz_font_is_monospaced(NativeFontCore) != 0;
 
-        /// <summary>Whether font is serif (PyMuPDF <c>Font.is_serif</c>).</summary>
+        /// <summary>Whether font is serif.</summary>
         public bool IsSerif => mupdf.mupdf.fz_font_is_serif(NativeFontCore) != 0;
 
         /// <summary>
-        /// Whether font can be written to PDF (PyMuPDF <c>Font.is_writable</c>).
+        /// Whether font can be written to PDF .
         /// </summary>
         public bool IsWritable
         {
@@ -208,7 +207,6 @@ namespace MuPDF.NET
             {
                 mupdf.FzFont font = NativeFontCore;
                 var flagStruct = mupdf.mupdf.ll_fz_font_flags(font.m_internal);
-                // if mupdf_cppyy: ft_substitute = cppyy.gbl.mupdf_mfz_font_flags_ft_substitute(flags)
                 uint ft_substitute = flagStruct.ft_substitute;
 
                 if (mupdf.mupdf.ll_fz_font_t3_procs(font.m_internal) != null
@@ -222,7 +220,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Per-character widths for <paramref name="text"/> (PyMuPDF <c>Font.char_lengths</c>).
+        /// Per-character widths for <paramref name="text"/> .
         /// </summary>
         public float[] CharLengths(string text, float fontSize = 11, string language = null, int script = 0, int wmode = 0, int smallCaps = 0)
         {
@@ -233,7 +231,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Glyph advance at font size 1 (PyMuPDF <c>Font.glyph_advance</c>).
+        /// Glyph advance at font size 1 .
         /// </summary>
         public float GlyphAdvance(int chr_, string language = null, int script = 0, int wmode = 0, int smallCaps = 0)
         {
@@ -242,7 +240,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Glyph bbox at font size 1 (PyMuPDF <c>Font.glyph_bbox</c>).
+        /// Glyph bbox at font size 1 .
         /// </summary>
         public Rect GlyphBbox(int chr_, string language = null, int script = 0, int smallCaps = 0)
         {
@@ -262,12 +260,12 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Unicode for a glyph name (PyMuPDF <c>Font.glyph_name_to_unicode</c>).
+        /// Unicode for a glyph name .
         /// </summary>
         public int GlyphNameToUnicode(string name) => Utils.GlyphNameToUnicode(name);
 
         /// <summary>
-        /// Whether font has a glyph for a unicode (PyMuPDF <c>Font.has_glyph</c>).
+        /// Whether font has a glyph for a unicode .
         /// </summary>
         public int HasGlyph(int chr, string language = null, int script = 0, int fallback = 0, int smallCaps = 0)
         {
@@ -283,7 +281,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Total text width (PyMuPDF <c>Font.text_length</c>).
+        /// Total text width .
         /// </summary>
         public float TextLength(string text, float fontSize = 11, string language = null, int script = 0, int wmode = 0, int smallCaps = 0)
         {
@@ -299,12 +297,12 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Glyph name for a unicode (PyMuPDF <c>Font.unicode_to_glyph_name</c>).
+        /// Glyph name for a unicode .
         /// </summary>
         public string UnicodeToGlyphName(int ch) => Utils.UnicodeToGlyphName(ch);
 
         /// <summary>
-        /// Sorted valid Unicode codepoints (PyMuPDF <c>Font.valid_codepoints</c>).
+        /// Sorted valid Unicode codepoints .
         /// </summary>
         public List<int> ValidCodepoints()
         {
@@ -354,13 +352,13 @@ namespace MuPDF.NET
                             return;
                     }
                 }
-                // PyMuPDF Font.__del__ is a no-op; do not fz_drop_font while TextWriter/PDF code may still use it.
+                // MuPDF Font.__del__ is a no-op; do not fz_drop_font while TextWriter/PDF code may still use it.
                 _disposed = true;
             }
             GC.SuppressFinalize(this);
         }
 
-        // ─── PyMuPDF API names (internal, same assembly) ─────────────────
+        // ─── MuPDF API names (internal, same assembly) ─────────────────
 
         internal float ascender => Ascender;
         internal Rect bbox => BBox;
@@ -410,7 +408,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Legacy MuPDF.NET / PyMuPDF pattern: keep an out-param <see cref="mupdf.FzFont"/> alive while advancing.
+        /// Legacy MuPDF.NET / MuPDF pattern: keep an out-param <see cref="mupdf.FzFont"/> alive while advancing.
         /// The tuple SWIG helper frees fallback state too early and causes native AVs.
         /// </summary>
         private static float AdvanceGlyphForCharacter(

@@ -131,7 +131,6 @@ namespace MuPDF.NET
                 var hist = new int[1 + dY * 2];
 
                 ParallelRunner.For(0, h, (y) =>
-                //for (int y = 0; y < h; y++)
                 {
                     var ptr = wr.StartGreen + y * wr.Stride;
 
@@ -434,8 +433,6 @@ namespace MuPDF.NET
                 if (line != null)
                 {
                     var d = line.Width / 2;
-                    //if (!rect.Contains(line.CorrectedFrom.X, line.CorrectedFrom.Y)) continue;
-                    //if (!rect.Contains(line.CorrectedTo.X, line.CorrectedTo.Y)) continue;
 
                     var dY = Math.Abs(line.CorrectedTo.Y - line.CorrectedFrom.Y);
                     var dX = Math.Abs(line.CorrectedTo.X - line.CorrectedFrom.X);

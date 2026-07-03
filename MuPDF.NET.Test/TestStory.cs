@@ -6,7 +6,6 @@ using Xunit;
 
 namespace MuPDF.NET.Test
 {
-    /// <summary>Port of <c>PyMuPDF-1.27.2.2/tests/test_story.py</c>.</summary>
     /// <remarks>
     /// Inputs: <c>TestDocuments/TestStory/</c>; outputs: <c>TestDocuments/_Output/TestStory/</c>.
     /// </remarks>
@@ -114,7 +113,6 @@ namespace MuPDF.NET.Test
             Rect WHERE = MEDIABOX + new Rect(36, 36, -36, -36);
             // the font files are located in /home/chinese
             var arch = new Archive(".");
-            // if not specified user_css, the output pdf has content
             using var story = new Story(HTML, CSS, archive: arch);
 
             using var writer = new DocumentWriter(Out("test_story.pdf"));
@@ -152,7 +150,6 @@ namespace MuPDF.NET.Test
                 Console.WriteLine($"test_2753(): Writing to: path_out={path_out}.");
                 // document.Save(path_out)
                 document.Save(path_out);
-                // return document
                 return document;
             }
 
@@ -207,7 +204,6 @@ namespace MuPDF.NET.Test
             {
                 // fit_result = eval(call)
                 Console.WriteLine($"test_fit_springer(): call={call} => fit_result={fit_result}.");
-                // if expected is None:
                 if (expected is null)
                 {
                     Assert.False(fit_result.big_enough ?? true);
@@ -285,8 +281,6 @@ namespace MuPDF.NET.Test
         public void test_write_stabilized_with_links()
         {
             //     We return one rect per page.
-            //     #print(f'rectfn(): rect_num={rect_num} filled={filled}')
-            //     return mediabox, rect, None
             Story.StoryRectFn rectfn = (rect_num, filled) =>
             {
                 Rect rect = new Rect(10, 20, 290, 380);
@@ -309,15 +303,12 @@ namespace MuPDF.NET.Test
                         <h2>Contents</h2>
                         <ul>
                         """);
-                // for position in positions:
                 foreach (var position in positions)
                 {
-                    // if position.heading and (position.open_close & 1):
                     if (position.heading != 0 && (position.open_close & 1) != 0)
                     {
                         // text = position.text if position.text else ''
                         string text = position.text ?? "";
-                        // if position.id:
                         if (!string.IsNullOrEmpty(position.id))
                         {
                             // ret += f'    <li><a href="#{position.id}">{text}</a>'
@@ -359,7 +350,6 @@ namespace MuPDF.NET.Test
                     
                         </body>
                         """);
-                // return ret.strip()
                 return ret.Trim();
             }
 
@@ -376,7 +366,6 @@ namespace MuPDF.NET.Test
             Console.WriteLine($"len(links)={links.Count}.");
             // external_links = dict()
             var external_links = new Dictionary<string, int>();
-            // for i, link in enumerate(links):
             for (int i = 0; i < links.Count; i++)
             {
                 var link = links[i];

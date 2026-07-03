@@ -1,4 +1,3 @@
-// Port of PyMuPDF-1.27.2.2/tests/test_2907.py
 using System;
 using System.IO;
 using System.Linq;

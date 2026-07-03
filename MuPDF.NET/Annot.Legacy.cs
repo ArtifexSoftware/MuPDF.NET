@@ -11,7 +11,7 @@ namespace MuPDF.NET
     /// This partial class restores names and signatures from the original MuPDF.NET wrapper
     /// documented at
     /// <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Annot.html"/>.
-    /// Implementations forward to the modern PyMuPDF-aligned API in <c>Annot.cs</c>.
+    /// Implementations forward to the modern MuPDF-aligned API in <c>Annot.cs</c>.
     /// </para>
     /// <para>
     /// <b>PDF only.</b> An annotation is bound to its <see cref="Parent"/> page. If the page
@@ -27,7 +27,7 @@ namespace MuPDF.NET
         /// <remarks>
         /// Legacy MuPDF.NET returned a <see cref="Color"/> object with <see cref="Color.Stroke"/>
         /// and <see cref="Color.Fill"/> arrays (float components 0–1).
-        /// For PyMuPDF-style stroke-only access use <see cref="StrokeColor"/> on the main partial.
+        /// For MuPDF-style stroke-only access use <see cref="StrokeColor"/> on the main partial.
         /// </remarks>
         /// <value>A <see cref="Color"/> built from the PDF annotation dictionary.</value>
         public Color Colors => GetColorFromAnnot(AnnotObj, 0);
@@ -105,7 +105,7 @@ namespace MuPDF.NET
         /// Four floats <c>(left, top, -right, -bottom)</c> describing the offset between
         /// <see cref="Rect"/> and an inner rectangle. If <c>/RD</c> is missing, returns
         /// <c>(0, 0, 0, 0)</c>.
-        /// Inner rectangle: <c>rect + rect_delta</c> in PyMuPDF terms (component-wise on
+        /// Inner rectangle: <c>rect + rect_delta</c> in MuPDF terms (component-wise on
         /// <see cref="Rect"/> corners).
         /// </remarks>
         public (float, float, float, float) RectDelta
@@ -255,7 +255,7 @@ namespace MuPDF.NET
         /// compression, and raw stream bytes.
         /// </returns>
         /// <remarks>
-        /// Legacy MuPDF.NET returned a <see cref="Sound"/> DTO. PyMuPDF-style dictionary access
+        /// Legacy MuPDF.NET returned a <see cref="Sound"/> DTO. MuPDF-style dictionary access
         /// is available via <see cref="GetSoundDictionary"/>.
         /// </remarks>
         /// <exception cref="ArgumentException">Not a sound annotation or missing sound stream.</exception>

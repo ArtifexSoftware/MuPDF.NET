@@ -1,4 +1,3 @@
-// Port of PyMuPDF-1.27.2.2/tests/test_widgets.py
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -199,7 +198,6 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_2411()
         {
-            // Port of test.py:test_2411 — combobox choice_values as string or 2-item list/tuple.
             using var doc = new Document();
             var page = doc.NewPage();
             var rect = new Rect(100, 100, 300, 200);
@@ -382,7 +380,6 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_4004()
         {
-            // Port of test.py:test_4004
             using var doc = new Document(Doc("test_4004.pdf"));
             var widgetsByName = GetWidgetsByName(doc);
 
@@ -478,6 +475,80 @@ namespace MuPDF.NET.Test
                 }
             }
             return widgetsByName;
+        }
+
+        [Fact]
+        public void test_4114()
+        {
+            var expectedValues = new List<string>
+            {
+                " - Select One - ", "  ", "Cincinnati, OH 45999", "Memphis, TN 37501",
+                "Ogden, UT 84201", "Philadelphia, PA 19255",
+            };
+            var values = new List<List<string>>();
+            string path = Doc("test_4114.pdf");
+            using var document = new Document(path);
+            for (int page_i = 0; page_i < document.PageCount; page_i++)
+            {
+                var page = document[page_i];
+                foreach (var widget in page.Widgets())
+                {
+                    if (widget.FieldTypeString == "ComboBox")
+                        values.Add(widget.ChoiceValues);
+                    widget.Update();
+                }
+            }
+            document.Save(Out("test_4114_out.pdf"));
+            Assert.Equal(new[] { expectedValues, expectedValues }, values);
+        }
+
+        [Fact]
+        public void test_4950()
+        {
+            using var document = new Document();
+            var page = document.NewPage();
+            page.SetRotation(90);
+
+            var widget = new Widget
+            {
+                FieldName = "Signature",
+                FieldType = WidgetType.Signature,
+                Rect = new Rect(0, 0, 10, 10),
+            };
+            page.AddWidget(widget);
+            document.XrefSetKey(page.FirstWidget.Xref, "Rect", "[0 0 0 0]");
+            page = document.ReloadPage(page);
+
+            page.RemoveRotation();
+            document.Save(Out("test_4950_out.pdf"));
+            Assert.Equal(0, page.Rotation);
+        }
+
+        [Fact]
+        public void test_4965()
+        {
+            string path = Doc("test_4965.pdf");
+            using (var document = new Document(path))
+            {
+                foreach (var page in document)
+                {
+                    Console.WriteLine($"test_4965(): page.Number={page.Number}");
+                    // Iterate over all form fields (widgets) on the page
+                    int widgetI = 0;
+                    foreach (var field in page.Widgets())
+                    {
+                        // Access field properties
+                        string name = field.FieldName;       // The internal name of the field
+                        string value = field.FieldValue;     // The data currently in the field
+                        var fType = field.FieldType;      // Integer representing the field type
+                        Console.WriteLine($"     widgetI={widgetI}");
+                        Console.WriteLine($"        name={name}");
+                        Console.WriteLine($"        value={value}");
+                        Console.WriteLine($"        fType={fType}");
+                        widgetI++;
+                    }
+                }
+            }
         }
     }
 }

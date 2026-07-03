@@ -6,7 +6,6 @@ using Xunit;
 namespace MuPDF.NET.Test
 {
     /// <summary>
-    /// Port of <c>PyMuPDF-1.27.2.2/tests/test_mupdf_regressions.py</c>.
     /// </summary>
     /// <remarks>
     /// Inputs: <c>TestDocuments/TestMuPdfRegressions/</c>;
@@ -96,7 +95,7 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_707721()
         {
-            // PyMuPDF issue https://github.com/pymupdf/PyMuPDF/issues/3357
+            // MuPDF issue https://github.com/ArtifexSoftware/mupdf/issues/3357
             // MuPDF issue: https://bugs.ghostscript.com/show_bug.cgi?id=707721
             // filename = os.path.join(scriptdir, "resources", "test_3357.pdf")
             string filename = Doc("test_3357.pdf");
@@ -112,7 +111,7 @@ namespace MuPDF.NET.Test
         public void test_3376()
         {
             // https://bugs.ghostscript.com/show_bug.cgi?id=707733
-            // PyMuPDF issue https://github.com/pymupdf/PyMuPDF/issues/3376
+            // MuPDF issue https://github.com/ArtifexSoftware/mupdf/issues/3376
             // Test file contains a redaction for the first 3 words: "Table of Contents".
             // Test strategy:
             // - extract all words (sorted)

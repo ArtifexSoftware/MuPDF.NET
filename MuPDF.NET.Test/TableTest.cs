@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using MuPDF.NET;
 using Xunit;
 
@@ -60,7 +62,6 @@ namespace MuPDF.NET.Test
 
                 Assert.NotNull(textTables);
 
-                // For each table found with lines_strict/lines: validate structure and Extract/ToMarkdown
                 for (int i = 0; i < tables.Count; i++)
                 {
                     Table table = tables[i];
@@ -147,6 +148,54 @@ namespace MuPDF.NET.Test
             doc.Close();
 
             Assert.Equal(102, cellCount);
+        }
+
+        /// <summary>
+        /// Parallel stress test for <see cref="Utils.GetTables"/>; each worker opens its own document.
+        /// </summary>
+        [Fact]
+        public void TestGetTablesParallel()
+        {
+            const int iterations = 50;
+            const int degreeOfParallelism = 4;
+
+            string testFilePath = Doc("bordered-table.pdf");
+            var errors = new ConcurrentBag<Exception>();
+            var tableCounts = new ConcurrentBag<int>();
+
+            Parallel.ForEach(
+                Enumerable.Range(0, iterations),
+                new ParallelOptions { MaxDegreeOfParallelism = degreeOfParallelism },
+                iteration =>
+                {
+                    try
+                    {
+                        using var doc = new Document(testFilePath);
+                        using var page = doc[0];
+
+                        List<Table> tables = Utils.GetTables(
+                            page,
+                            clip: page.Rect,
+                            vertical_strategy: iteration % 2 == 0 ? "lines" : "text",
+                            horizontal_strategy: iteration % 2 == 0 ? "lines" : "text");
+
+                        tableCounts.Add(tables.Count);
+                        foreach (Table table in tables)
+                        {
+                            List<List<string>> data = table.Extract();
+                            if (data == null)
+                                throw new InvalidOperationException("table.Extract() returned null");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        errors.Add(ex);
+                    }
+                });
+
+            Assert.True(errors.IsEmpty, string.Join(Environment.NewLine, errors.Select(e => e.ToString())));
+            Assert.Equal(iterations, tableCounts.Count);
+            Assert.Contains(tableCounts, count => count > 0);
         }
     }
 }

@@ -29,7 +29,7 @@ namespace MuPDF.NET
 
         // ─── Geometry sentinels ──────────────────────────────────────────
 
-        /// <summary>Largest valid rectangle; all valid rects are contained in it (PyMuPDF <c>INFINITE_RECT</c>).</summary>
+        /// <summary>Largest valid rectangle; all valid rects are contained in it.</summary>
         public static Rect INFINITE_RECT() => Helpers.INFINITE_RECT();
 
         /// <summary><see cref="INFINITE_RECT"/> as <see cref="IRect"/> (legacy <c>INFINITE_IRECT</c>).</summary>
@@ -148,13 +148,13 @@ namespace MuPDF.NET
 
         // ─── Buffers / compression ───────────────────────────────────────
 
-        /// <summary>Copy <see cref="FzBuffer"/> bytes (PyMuPDF <c>JM_BinFromBuffer</c>).</summary>
+        /// <summary>Copy <see cref="FzBuffer"/> bytes.</summary>
         public static byte[] BinFromBuffer(FzBuffer buffer) => Helpers.BinFromBuffer(buffer);
 
-        /// <summary>Create <see cref="FzBuffer"/> from bytes (PyMuPDF buffer helper).</summary>
+        /// <summary>Create <see cref="FzBuffer"/> from bytes.</summary>
         public static FzBuffer BufferFromBytes(byte[] data) => Helpers.BufferFromBytes(data);
 
-        /// <summary>Compress a buffer with zlib (PyMuPDF <c>JM_compress_buffer</c>).</summary>
+        /// <summary>Compress a buffer with zlib.</summary>
         public static FzBuffer? CompressBuffer(FzBuffer inbuffer) => Helpers.JmCompressBuffer(inbuffer);
 
         /// <summary>Decode Python-style raw-unicode-escape bytes in a string.</summary>
@@ -167,7 +167,7 @@ namespace MuPDF.NET
 
         // ─── PDF / page utilities ────────────────────────────────────────
 
-        /// <summary>Unique numeric id for this process (legacy <c>GetId</c> / PyMuPDF <c>TOOLS.gen_id</c>).</summary>
+        /// <summary>Unique numeric id for this process (legacy <c>GetId</c>).</summary>
         public static int GetId() => Tools.GenId();
 
         /// <summary>Concatenate all <c>/Contents</c> streams of a page (legacy API; see <see cref="Tools.GetAllContents"/>).</summary>

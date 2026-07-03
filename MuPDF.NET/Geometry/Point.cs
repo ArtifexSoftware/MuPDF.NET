@@ -6,11 +6,11 @@ using System.Globalization;
 namespace MuPDF.NET
 {
     /// <summary>
-    /// A point in the plane defined by <see cref="X"/> and <see cref="Y"/> (PyMuPDF <c>Point</c>).
+    /// A point in the plane defined by <see cref="X"/> and <see cref="Y"/> .
     /// </summary>
     /// <remarks>
     /// <para>Supports sequence-style indexing (<c>[0]</c> = x, <c>[1]</c> = y) and arithmetic with
-    /// <see cref="Point"/>, <see cref="Matrix"/>, and scalars, matching PyMuPDF behavior.</para>
+    /// <see cref="Point"/>, <see cref="Matrix"/>, and scalars, matching MuPDF behavior.</para>
     /// <para>Constructors: parameterless <c>(0, 0)</c>, coordinates, copy of another point,
     /// <see cref="mupdf.FzPoint"/>, or a two-element sequence.</para>
     /// </remarks>
@@ -60,7 +60,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Builds a point from positional arguments with optional keyword overrides (PyMuPDF factory).
+        /// Builds a point from positional arguments with optional keyword overrides.
         /// </summary>
         /// <param name="args">Zero, one, or two positional arguments (point, native point, or x/y pair).</param>
         /// <param name="x">If set, overrides the X coordinate after parsing <paramref name="args"/>.</param>
@@ -73,7 +73,7 @@ namespace MuPDF.NET
             return p;
         }
 
-        /// <summary>Builds a point from positional arguments (PyMuPDF <c>Point(*args)</c>).</summary>
+        /// <summary>Builds a point from positional arguments.</summary>
         public static Point Create(params object[] args) => FromArgs(args);
 
         /// <summary>Number of components (always 2).</summary>
@@ -97,14 +97,14 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Euclidean length of the vector from the origin to this point (PyMuPDF <c>norm</c> / <c>abs</c>).
+        /// Euclidean length of the vector from the origin to this point ( / <c>abs</c>).
         /// </summary>
         public float Norm => (float)Math.Sqrt(X * X + Y * Y);
 
         /// <summary>True if both coordinates are within <see cref="Constants.Epsilon"/> of zero.</summary>
         public bool IsZero() => Math.Abs(X) < Constants.Epsilon && Math.Abs(Y) < Constants.Epsilon;
 
-        /// <summary>Returns a copy of this point (PyMuPDF <c>position</c>).</summary>
+        /// <summary>Returns a copy of this point.</summary>
         public Point Position() => new Point(X, Y);
 
         /// <summary>Epsilon-based equality test against another point.</summary>
@@ -128,12 +128,12 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Euclidean length of this vector (published MuPDF.NET <c>Abs()</c>; PyMuPDF <c>abs</c> / <c>norm</c>).
+        /// Euclidean length of this vector (published MuPDF.NET <c>Abs()</c>; / <c>norm</c>).
         /// </summary>
         public float Abs() => Norm;
 
         /// <summary>
-        /// Like <see cref="Unit"/>, but each coordinate is replaced by its absolute value (PyMuPDF <c>abs_unit</c>).
+        /// Like <see cref="Unit"/>, but each coordinate is replaced by its absolute value .
         /// </summary>
         public Point AbsUnit
         {
@@ -227,7 +227,7 @@ namespace MuPDF.NET
         /// <summary>Creates a MuPDF <c>FzPoint</c> from a managed point.</summary>
         public static mupdf.FzPoint toFzPoint(Point p) => p?.ToFzPoint();
 
-        // ─── Operators (PyMuPDF) ───
+        // ─── Operators ───
 
         /// <summary>Component-wise addition of two points.</summary>
         public static Point operator +(Point a, Point b) =>
@@ -298,10 +298,10 @@ namespace MuPDF.NET
         public static Point operator /(Point a, float m) =>
             new Point(a.X / m, a.Y / m);
 
-        /// <summary>Divides both coordinates by a scalar (PyMuPDF <c>__truediv__</c>).</summary>
+        /// <summary>Divides both coordinates by a scalar.</summary>
         public Point TrueDivide(float m) => this / m;
 
-        /// <summary>Divides by the inverse of a matrix (PyMuPDF matrix division).</summary>
+        /// <summary>Divides by the inverse of a matrix.</summary>
         public static Point operator /(Point p, Matrix m)
         {
             var inv = m.Inverted();

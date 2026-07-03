@@ -6,7 +6,6 @@ using Xunit;
 namespace MuPDF.NET.Test
 {
     /// <summary>
-    /// Port of <c>PyMuPDF-1.27.2.2/tests/test_geometry.py</c>.
     /// </summary>
     /// <remarks>
     /// * Check various construction methods of rects, points, matrices
@@ -79,7 +78,7 @@ namespace MuPDF.NET.Test
             return false;
         }
 
-        /// <summary>Regression test: rect (PyMuPDF <c>tests/test_geometry.py::test_rect</c>).</summary>
+        /// <summary>Regression test: rect.</summary>
         [Fact]
         public void test_rect()
         {
@@ -140,7 +139,7 @@ namespace MuPDF.NET.Test
             });
         }
 
-        /// <summary>Regression test: irect (PyMuPDF <c>tests/test_geometry.py::test_irect</c>).</summary>
+        /// <summary>Regression test: irect.</summary>
         [Fact]
         public void test_irect()
         {
@@ -195,7 +194,7 @@ namespace MuPDF.NET.Test
             });
         }
 
-        /// <summary>Regression test: inversion (PyMuPDF <c>tests/test_geometry.py::test_inversion</c>).</summary>
+        /// <summary>Regression test: inversion.</summary>
         [Fact]
         public void test_inversion()
         {
@@ -209,7 +208,7 @@ namespace MuPDF.NET.Test
             Assert.Equal(new Matrix(), Invert(m));
         }
 
-        /// <summary>Regression test: matrix (PyMuPDF <c>tests/test_geometry.py::test_matrix</c>).</summary>
+        /// <summary>Regression test: matrix.</summary>
         [Fact]
         public void test_matrix()
         {
@@ -286,7 +285,7 @@ namespace MuPDF.NET.Test
             });
         }
 
-        /// <summary>Regression test: point (PyMuPDF <c>tests/test_geometry.py::test_point</c>).</summary>
+        /// <summary>Regression test: point.</summary>
         [Fact]
         public void test_point()
         {
@@ -315,7 +314,7 @@ namespace MuPDF.NET.Test
             });
         }
 
-        /// <summary>Regression test: algebra (PyMuPDF <c>tests/test_geometry.py::test_algebra</c>).</summary>
+        /// <summary>Regression test: algebra.</summary>
         [Fact]
         public void test_algebra()
         {
@@ -345,7 +344,7 @@ namespace MuPDF.NET.Test
             Assert.False(PyIn(r, m));
         }
 
-        /// <summary>Regression test: quad (PyMuPDF <c>tests/test_geometry.py::test_quad</c>).</summary>
+        /// <summary>Regression test: quad.</summary>
         [Fact]
         public void test_quad()
         {
@@ -371,7 +370,7 @@ namespace MuPDF.NET.Test
             });
         }
 
-        /// <summary>Regression test: pageboxes (PyMuPDF <c>tests/test_geometry.py::test_pageboxes</c>).</summary>
+        /// <summary>Regression test: pageboxes.</summary>
         [Fact]
         public void test_pageboxes()
         {
@@ -399,7 +398,7 @@ namespace MuPDF.NET.Test
             Assert.Equal(page.BleedBox, page.TrimBox);
         }
 
-        /// <summary>Regression test: 3163 (PyMuPDF <c>tests/test_geometry.py::test_3163</c>).</summary>
+        /// <summary>Regression test: 3163.</summary>
         [Fact]
         public void test_3163()
         {
@@ -446,7 +445,7 @@ namespace MuPDF.NET.Test
             var bbox = new IRect(new Rect(bb[0], bb[1], bb[2], bb[3]));
         }
 
-        /// <summary>Regression test: 3182 (PyMuPDF <c>tests/test_geometry.py::test_3182</c>).</summary>
+        /// <summary>Regression test: 3182.</summary>
         [Fact]
         public void test_3182()
         {

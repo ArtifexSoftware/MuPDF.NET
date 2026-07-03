@@ -6,7 +6,6 @@ using Xunit;
 namespace MuPDF.NET.Test
 {
     /// <summary>
-    /// Port of <c>PyMuPDF-1.27.2.2/tests/test_linebreaks.py</c>.
     /// </summary>
     /// <remarks>
     /// Test avoidance of linebreaks.
@@ -34,7 +33,7 @@ namespace MuPDF.NET.Test
             return lines.Count;
         }
 
-        /// <summary>Regression test: linebreaks (PyMuPDF <c>tests/test_linebreaks.py::test_linebreaks</c>).</summary>
+        /// <summary>Regression test: linebreaks.</summary>
         [Fact]
         public void test_linebreaks()
         {

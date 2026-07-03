@@ -1,4 +1,3 @@
-// Port of PyMuPDF-1.27.2.2/tests/test_2548.py
 using System;
 using System.Linq;
 using Xunit;
@@ -36,7 +35,7 @@ namespace MuPDF.NET.Test
             string wt = Tools.MupdfWarnings();
             Console.WriteLine($"test_2548(): wt={wt}");
 
-            // This checks that PyMuPDF 1.23.7 fixes this bug, and also that earlier
+            // This checks that fixes this bug, and also that earlier
             // versions with updated MuPDF also fix the bug.
             string expectedWt;
             var ver = _Version.mupdf_version_tuple();

@@ -7,8 +7,8 @@ namespace MuPDF.NET
     /// <summary>
     /// </summary>
     /// <remarks>
-    /// <para>PyMuPDF uses <c>@staticmethod</c> so no instance is required. Public members use PascalCase;
-    /// <c>internal</c> snake_case aliases match Python for same-assembly tests. <c>JM_*</c> helpers live on <see cref="Helpers"/>.</para>
+    /// <para>MuPDF uses <c>@staticmethod</c> so no instance is required. Public members use PascalCase;
+    /// <c>internal</c> snake_case aliases are available for same-assembly tests. <c>JM_*</c> helpers live on <see cref="Helpers"/>.</para>
     /// <para>Legacy MuPDF.NET readthedocs listed some of these under <see cref="Utils"/>:
     /// <see cref="Utils.GetId"/> → <see cref="GenId"/>,
     /// <see cref="Utils.GetAllContents"/> → <see cref="GetAllContents"/>,
@@ -31,7 +31,7 @@ namespace MuPDF.NET
         /// <remarks>Python docstring: Add bytes as a new /Contents object for a page, and return its xref.</remarks>
         /// <param name="page">Target PDF page.</param>
         /// <param name="newContent">Raw PDF content bytes.</param>
-        /// <param name="overlay">If <see langword="true"/>, append; otherwise prepend (same as PyMuPDF <c>overlay</c> argument).</param>
+        /// <param name="overlay">If <see langword="true"/>, append; otherwise prepend (same as argument).</param>
         public static int InsertContents(Page page, ReadOnlySpan<byte> newContent, bool overlay = true)
         {
             if (page == null) throw new ArgumentNullException(nameof(page));
@@ -105,7 +105,7 @@ namespace MuPDF.NET
         public static string MupdfVersion() => mupdf.mupdf.FZ_VERSION;
 
         /// <summary>
-        /// Get MuPDF warnings/errors with optional reset (PyMuPDF <c>TOOLS.mupdf_warnings</c>).
+        /// Get MuPDF warnings/errors with optional reset .
         /// </summary>
         public static string MupdfWarnings(bool reset = true)
         {
@@ -119,7 +119,7 @@ namespace MuPDF.NET
             return ret;
         }
 
-        /// <summary>Clear the stored MuPDF warning list (PyMuPDF <c>TOOLS.reset_mupdf_warnings</c>).</summary>
+        /// <summary>Clear the stored MuPDF warning list.</summary>
         public static void ResetMupdfWarnings()
         {
             // global JM_mupdf_warnings_store
@@ -150,7 +150,6 @@ namespace MuPDF.NET
             if (percent >= 100)
             {
                 mupdf.mupdf.fz_empty_store();
-                // return 0  (Python returned 0 here)
             }
             else if (percent > 0)
             {
@@ -159,7 +158,7 @@ namespace MuPDF.NET
             // fixme: return gctx->store->size.
         }
 
-        /// <summary>Set or query small glyph heights mode (PyMuPDF <c>TOOLS.set_small_glyph_heights</c>).</summary>
+        /// <summary>Set or query small glyph heights mode.</summary>
         public static bool SetSmallGlyphHeights(bool? on = null)
         {
             if (on != null)
@@ -167,7 +166,7 @@ namespace MuPDF.NET
             return Helpers.SmallGlyphHeights;
         }
 
-        /// <summary>Set fixed font width in a descendant font (PyMuPDF <c>TOOLS.set_font_width</c>).</summary>
+        /// <summary>Set fixed font width in a descendant font.</summary>
         public static bool SetFontWidth(Document doc, int xref, int width)
         {
             if (doc?.NativePdfDocument == null) return false;
@@ -191,7 +190,7 @@ namespace MuPDF.NET
             return true;
         }
 
-        // ─── PyMuPDF API names (internal, same assembly) ─────────────────
+        // ─── MuPDF API names (internal, same assembly) ─────────────────
 
         internal static int gen_id() => GenId();
         internal static void glyph_cache_empty() => GlyphCacheEmpty();

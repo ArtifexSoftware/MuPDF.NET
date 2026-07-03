@@ -5,7 +5,6 @@ using Xunit;
 namespace MuPDF.NET.Test
 {
     /// <summary>
-    /// Port of <c>PyMuPDF-1.27.2.2/tests/test_linequad.py</c>.
     /// </summary>
     /// <remarks>
     /// Check approx. equality of search quads versus quads recovered from text extractions.
@@ -20,7 +19,7 @@ namespace MuPDF.NET.Test
 
         private static string Out(string fileName) => _Path.ForOutput(fileName, TestClassName);
 
-        /// <summary>Regression test: quadcalc (PyMuPDF <c>tests/test_linequad.py::test_quadcalc</c>).</summary>
+        /// <summary>Regression test: quadcalc.</summary>
         [Fact]
         public void test_quadcalc()
         {

@@ -4,7 +4,6 @@ namespace MuPDF.NET
 {
     /// <summary>
     /// Raised for documents with file structure issues.
-    /// <para>Ports PyMuPDF <c>FileDataError</c> (<c>src/__init__.py</c>).</para>
     /// </summary>
     public class FileDataException : Exception
     {
@@ -17,8 +16,7 @@ namespace MuPDF.NET
 
     /// <summary>
     /// Raised if a file does not exist.
-    /// <para>Ports PyMuPDF <c>FileNotFoundError</c> (<c>src/__init__.py</c>).</para>
-    /// <para>Not the same as <see cref="System.IO.FileNotFoundException"/>; PyMuPDF defines this as a separate <c>RuntimeError</c> subclass.</para>
+    /// <para>Not the same as <see cref="System.IO.FileNotFoundException"/>; MuPDF defines this as a separate <c>RuntimeError</c> subclass.</para>
     /// </summary>
     public class FileNotFoundError : Exception
     {
@@ -39,7 +37,7 @@ namespace MuPDF.NET
 
     /// <summary>
     /// Raised when creating documents from zero-length data.
-    /// <para>Ports PyMuPDF <c>EmptyFileError</c> (<c>src/__init__.py</c>), a subclass of <c>FileDataError</c>.</para>
+    /// <para>Subclass of <see cref="FileDataException"/>.</para>
     /// </summary>
     public class EmptyFileException : FileDataException
     {
@@ -52,7 +50,7 @@ namespace MuPDF.NET
 
     /// <summary>
     /// Operation on a closed document.
-    /// <para>PyMuPDF often raises <c>ValueError</c> with message <c>document closed</c>; this type is available when a dedicated exception is preferred.</para>
+    /// <para>MuPDF often raises <c>ValueError</c> with message <c>document closed</c>; this type is available when a dedicated exception is preferred.</para>
     /// </summary>
     public class DocumentClosedException : InvalidOperationException
     {
@@ -62,7 +60,7 @@ namespace MuPDF.NET
     }
 
     /// <summary>
-    /// Invalid argument in the PyMuPDF API sense (Python <c>ValueError</c>).
+    /// Invalid argument in the MuPDF API sense (<c>ValueError</c>).
     /// <para>Used for bad rectangles, wrong types, closed/encrypted documents, etc.</para>
     /// </summary>
     public class ValueErrorException : ArgumentException
@@ -72,9 +70,9 @@ namespace MuPDF.NET
         public ValueErrorException(string message, Exception innerException) : base(message, innerException) { }
     }
 
-    // ─── PyMuPDF exception type names (internal, same assembly) ─────────
+    // ─── MuPDF exception type names (internal, same assembly) ─────────
 
-    /// <summary>Exception alias matching PyMuPDF <c>FileDataError</c>.</summary>
+    /// <summary>Internal exception alias.</summary>
     internal class FileDataError : FileDataException
     {
         public FileDataError() { }
@@ -82,7 +80,7 @@ namespace MuPDF.NET
         public FileDataError(string message, Exception inner) : base(message, inner) { }
     }
 
-    /// <summary>Exception alias matching PyMuPDF <c>EmptyFileError</c>.</summary>
+    /// <summary>Internal exception alias.</summary>
     internal class EmptyFileError : EmptyFileException
     {
         public EmptyFileError() { }

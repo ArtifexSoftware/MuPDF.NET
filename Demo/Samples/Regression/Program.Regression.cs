@@ -198,5 +198,61 @@ namespace Demo
 
             Console.WriteLine("Completed without crashing.");
         }
+
+        internal static void TestGetTablesParallel()
+        {
+            const int iterations = 100;
+            const int degreeOfParallelism = 10;
+
+            string testFilePath = DemoPaths.Input("err_table.pdf");
+            if (!File.Exists(testFilePath))
+            {
+                Console.WriteLine($"Test file not found: {testFilePath}");
+                return;
+            }
+
+            int failures = 0;
+            long totalTables = 0;
+
+            Console.WriteLine("\n=== Parallel Utils.GetTables ===");
+            Console.WriteLine($"PDF: {testFilePath}");
+            Console.WriteLine($"Iterations: {iterations}");
+            Console.WriteLine($"Degree of parallelism: {degreeOfParallelism}");
+            Console.WriteLine();
+
+            Parallel.ForEach(
+                Enumerable.Range(0, iterations),
+                new ParallelOptions { MaxDegreeOfParallelism = degreeOfParallelism },
+                iteration =>
+                {
+                    try
+                    {
+                        using var doc = new Document(testFilePath);
+                        using var page = doc[0];
+
+                        List<Table> tables = Utils.GetTables(
+                            page,
+                            clip: page.Rect,
+                            vertical_strategy: iteration % 2 == 0 ? "lines" : "text",
+                            horizontal_strategy: iteration % 2 == 0 ? "lines" : "text");
+
+                        Interlocked.Add(ref totalTables, tables.Count);
+                        Console.WriteLine(
+                            $"Iteration {iteration + 1} (thread {Environment.CurrentManagedThreadId}): {tables.Count} table(s)");
+                    }
+                    catch (Exception ex)
+                    {
+                        Interlocked.Increment(ref failures);
+                        Console.WriteLine($"Iteration {iteration + 1} FAILED: {ex}");
+                    }
+                });
+
+            Console.WriteLine();
+            Console.WriteLine(
+                $"Completed: {iterations - failures}/{iterations} OK, tables found: {totalTables}, failures: {failures}");
+
+            if (failures > 0)
+                throw new InvalidOperationException($"{failures} iteration(s) failed.");
+        }
     }
 }

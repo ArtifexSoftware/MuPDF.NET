@@ -10,7 +10,7 @@ using Xunit;
 namespace MuPDF.NET.Test
 {
     /// <summary>
-    /// Strict ports of <c>PyMuPDF-1.27.2.2/tests/test_annots.py</c> (same test names and flow).
+    /// Strict ports of <c>MuPDF-1.27.2.2/tests/test_annots.py</c> (same test names and flow).
     /// Inputs: <c>TestDocuments/TestAnnots/</c>; outputs: <c>TestDocuments/_Output/TestAnnots/</c>.
     /// </summary>
     [Collection("MuPDF.NET native")]
@@ -878,6 +878,87 @@ namespace MuPDF.NET.Test
                     page.Dispose();
                 }
                 document.Save(Out("test_4755.pdf"));
+            }
+        }
+
+        [Fact]
+        public void test_5033()
+        {
+            using var document = new Document();
+            document.InsertPage(0);
+            var page = document[0];
+            var annot = page.AddLineAnnot(new Point(0, 0), new Point(1, 1));
+            annot.SetRotation(90);
+            annot.Update();
+            annot.SetRotation(0);
+            annot.Update();
+            document.Save(Out("test_5033.pdf"));
+        }
+
+        [Fact]
+        public void test_3758()
+        {
+            // This test requires input file that is not public, so is usually not
+            // available.
+            string path = Path.GetFullPath(Path.Combine(_Path.ResolveSolutionRoot(), "..", "test_3758.pdf"));
+            if (!File.Exists(path))
+            {
+                Console.WriteLine($"test_3758(): not running because does not exist: path={path}.");
+                return;
+            }
+
+            using (var document = new Document(path))
+            {
+                foreach (var page in document)
+                {
+                    string infoJson = (string)page.GetText("json", flags: Constants.TextFlagsText);
+                    using var pageJson = JsonDocument.Parse(infoJson);
+                    foreach (var block in pageJson.RootElement.GetProperty("blocks").EnumerateArray())
+                    {
+                        foreach (var line in block.GetProperty("lines").EnumerateArray())
+                        {
+                            foreach (var span in line.GetProperty("spans").EnumerateArray())
+                            {
+                                var bbox = span.GetProperty("bbox");
+                                page.AddRedactAnnot(new Rect(
+                                    (float)bbox[0].GetDouble(),
+                                    (float)bbox[1].GetDouble(),
+                                    (float)bbox[2].GetDouble(),
+                                    (float)bbox[3].GetDouble()));
+                            }
+                        }
+                    }
+                    page.ApplyRedactions();
+                }
+
+                string wt = Tools.MupdfWarnings();
+                Assert.False(string.IsNullOrEmpty(wt));
+                document.Save(Out("test_3758.pdf"));
+            }
+        }
+
+        [Fact]
+        public void test_4944()
+        {
+            string path = Doc("test_4944.pdf");
+            string pathOut = Out("test_4944_out.pdf");
+            Console.WriteLine();
+            using (var document = new Document(path))
+            {
+                var page = document[0];
+                Console.WriteLine();
+                Console.WriteLine($"page.Rect={page.Rect}");
+                Console.WriteLine($"page.Rotation={page.Rotation}");
+                Console.WriteLine($"page.RotationMatrix={page.RotationMatrix}");
+                Console.WriteLine($"page.TransformationMatrix={page.TransformationMatrix}");
+                _ = page.GetText("rawjson");
+
+                page.AddRedactAnnot(page.Rect);
+                page.ApplyRedactions(text: mupdf.mupdf.PDF_REDACT_TEXT_REMOVE);
+                document.Save(pathOut);
+                Console.WriteLine(page.GetText());
+
+                _ = page.GetText("rawjson");
             }
         }
     }

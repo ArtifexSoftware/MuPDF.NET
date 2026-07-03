@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Text;
 using Xunit;
@@ -116,13 +116,13 @@ MuPDF.NET <span style=""color: red;"">འདི་ ཡིག་ཆ་བཀྲ�
                 borderColor: _Constants.green
             );
 
-            // PyMuPDF annot.get_text() uses the annot AP (not page.get_textpage()).
+            // MuPDF annot.get_text() uses the annot AP (not page.get_textpage()).
             string textFromAnnot = annot.GetText();
             string textFromLegacy = (string)annot.GetText(page);
             Assert.Equal(textFromAnnot, textFromLegacy);
             Assert.Contains("འདི་", textFromAnnot);
             Assert.Contains(bullet, textFromAnnot);
-            // Length vs PyMuPDF: len(annot.get_text()) is often ~185 while C# GetText() is ~193 because
+            // Length vs MuPDF: len(annot.get_text()) is often ~185 while C# GetText() is ~193 because
             // the annot AP yields a few more leading space/newline glyphs in .NET (e.g. 20 vs 12 leading
             // whitespace chars). After TrimStart / lstrip() both are ~173. Compare content (above), not
             // raw .Length to Python. GetText(page) must match GetText() — both use the annot TextPage.

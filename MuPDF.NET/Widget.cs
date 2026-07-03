@@ -5,7 +5,7 @@ using System.Linq;
 namespace MuPDF.NET
 {
     /// <summary>
-    /// PDF form field (widget) for interactive forms (PyMuPDF <c>Widget</c>).
+    /// PDF form field (widget) for interactive forms .
     /// </summary>
     /// <remarks>
     /// <para>PDF only. Widgets are a specialized annotation type for user input. Traverse a page with
@@ -24,13 +24,13 @@ namespace MuPDF.NET
         internal Annot BoundAnnot { get; private set; }
         internal mupdf.PdfAnnot NativeWidget => _nativeWidget;
 
-        // Values used when building a new widget (PyMuPDF Widget() before add_widget).
+        // Values used when building a new widget before add_widget).
         internal WidgetType InsertFieldType { get; private set; } = WidgetType.Unknown;
         internal string InsertFieldName { get; private set; }
         internal string InsertFieldValue { get; private set; }
         internal bool? InsertFieldValueBool { get; private set; }
         internal string InsertFieldLabel { get; private set; }
-        internal List<string> InsertChoiceValues { get; private set; } // choice fields only (PyMuPDF __init__)
+        internal List<string> InsertChoiceValues { get; private set; } // choice fields only
         internal List<object> InsertChoiceValuesMixed { get; private set; }
         internal Rect InsertRect { get; private set; }
         internal string InsertScript { get; private set; }
@@ -85,7 +85,7 @@ namespace MuPDF.NET
             _insertMode = false;
         }
 
-        // ─── PyMuPDF Widget attributes (settable on insert widgets) ─────
+        // ─── MuPDF Widget attributes (settable on insert widgets) ─────
 
         /// <summary>
         /// Field type 1–7 (<see cref="WidgetType"/>). Cannot be changed on an existing widget.
@@ -166,7 +166,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Optional attribute set by some PyMuPDF tests as <c>field.value</c>; not read by <see cref="Update"/>.
+        /// Optional attribute set by some MuPDF tests as <c>field.value</c>; not read by <see cref="Update"/>.
         /// Use <see cref="FieldValue"/> for the PDF field value.
         /// </summary>
         public string Value { get; set; }
@@ -183,7 +183,7 @@ namespace MuPDF.NET
             set => SetFieldValue(value);
         }
 
-        /// <summary>Set field value (PyMuPDF accepts bool for button fields).</summary>
+        /// <summary>Set field value.</summary>
         public void SetFieldValue(object value)
         {
             InsertFieldValueBool = null;
@@ -205,7 +205,7 @@ namespace MuPDF.NET
                     return InsertChoiceValues ?? new List<string>();
                 var result = new List<string>();
                 var obj = mupdf.mupdf.pdf_annot_obj(_nativeWidget);
-                var opt = mupdf.mupdf.pdf_dict_get(obj, mupdf.mupdf.pdf_new_name("Opt"));
+                var opt = mupdf.mupdf.pdf_dict_get_inheritable(obj, mupdf.mupdf.pdf_new_name("Opt"));
                 if (opt.m_internal == null) return result;
                 int n = mupdf.mupdf.pdf_array_len(opt);
                 for (int i = 0; i < n; i++)
@@ -231,7 +231,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Set choice options (PyMuPDF <c>choice_values</c> with strings or 2-item lists/tuples).
+        /// Set choice options ( with strings or 2-item lists/tuples).
         /// </summary>
         public void SetChoiceValues(IEnumerable<object> values)
         {
@@ -266,7 +266,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>JavaScript on change (PyMuPDF <c>script_change</c>, /AA/V).</summary>
+        /// <summary>JavaScript on change ( , /AA/V).</summary>
         public string ScriptChange
         {
             get => _insertMode ? InsertScriptChange : GetScript("V");
@@ -278,7 +278,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>Field flags (PyMuPDF <c>field_flags</c>).</summary>
+        /// <summary>Field flags.</summary>
         public int FieldFlags
         {
             get
@@ -331,7 +331,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>Text max length (PyMuPDF <c>text_maxlen</c>).</summary>
+        /// <summary>Text max length.</summary>
         public int TextMaxlen
         {
             get => MaxLen;
@@ -361,21 +361,21 @@ namespace MuPDF.NET
             set => InsertButtonCaption = value;
         }
 
-        /// <summary>Text color for default appearance (PyMuPDF <c>text_color</c>).</summary>
+        /// <summary>Text color for default appearance.</summary>
         public IList<float> TextColor
         {
             get => InsertTextColor;
             set => InsertTextColor = ToFloatList(value) ?? new List<float> { 0, 0, 0 };
         }
 
-        /// <summary>Text font name (PyMuPDF <c>text_font</c>).</summary>
+        /// <summary>Text font name.</summary>
         public string TextFont
         {
             get => InsertTextFont;
             set => InsertTextFont = NormalizeTextFont(value);
         }
 
-        /// <summary>Text font size (PyMuPDF <c>text_fontsize</c>).</summary>
+        /// <summary>Text font size.</summary>
         public float TextFontsize
         {
             get => InsertTextFontsize;
@@ -485,7 +485,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>JavaScript calculation script (PyMuPDF <c>script_calc</c>, /AA/C).</summary>
+        /// <summary>JavaScript calculation script ( , /AA/C).</summary>
         public string ScriptCalc
         {
             get => _insertMode ? InsertScriptCalc : GetScript("C");
@@ -498,7 +498,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>JavaScript format script (PyMuPDF <c>script_format</c>, /AA/F).</summary>
+        /// <summary>JavaScript format script ( , /AA/F).</summary>
         public string ScriptFormat
         {
             get => _insertMode ? InsertScriptFormat : GetScript("F");
@@ -527,10 +527,10 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>Alias for <see cref="ScriptChange"/> (PyMuPDF <c>script_validation</c>).</summary>
+        /// <summary>Alias for <see cref="ScriptChange"/>.</summary>
         public string ScriptValidation => ScriptChange;
 
-        /// <summary>JavaScript blur script (PyMuPDF <c>script_blur</c>, /AA/Bl).</summary>
+        /// <summary>JavaScript blur script ( , /AA/Bl).</summary>
         public string ScriptBlur
         {
             get => _insertMode ? InsertScriptBlur : GetScript("Bl");
@@ -543,7 +543,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>JavaScript focus script (PyMuPDF <c>script_focus</c>, /AA/Fo).</summary>
+        /// <summary>JavaScript focus script ( , /AA/Fo).</summary>
         public string ScriptFocus
         {
             get => _insertMode ? InsertScriptFocus : GetScript("Fo");
@@ -591,7 +591,7 @@ namespace MuPDF.NET
                 SyncFlags();
         }
 
-        /// <summary>Port of PyMuPDF <c>Widget._validate</c>.</summary>
+        /// <summary>Validate widget field state.</summary>
         internal void Validate()
         {
             if (InsertRect.IsEmpty || InsertRect.IsInfinite)
@@ -618,7 +618,7 @@ namespace MuPDF.NET
             if (btnType || string.IsNullOrEmpty(InsertScriptStroke)) InsertScriptStroke = null;
             if (btnType || string.IsNullOrEmpty(InsertScriptBlur)) InsertScriptBlur = null;
             if (btnType || string.IsNullOrEmpty(InsertScriptFocus)) InsertScriptFocus = null;
-            // PyMuPDF _validate: /A script is allowed on buttons; only AA/* scripts are cleared.
+            // MuPDF _validate: /A script is allowed on buttons; only AA/* scripts are cleared.
             if (string.IsNullOrEmpty(InsertScript)) InsertScript = null;
         }
 
@@ -705,7 +705,7 @@ namespace MuPDF.NET
             return true;
         }
 
-        /// <summary>Set widget rectangle on an existing field (PyMuPDF uses <c>rect</c> on insert widgets).</summary>
+        /// <summary>Set widget rectangle on an existing field.</summary>
         public void SetRect(Rect rect)
         {
             mupdf.mupdf.pdf_set_annot_rect(_nativeWidget, rect.ToFzRect());
@@ -730,7 +730,7 @@ namespace MuPDF.NET
         public void UpdateAppearance() => mupdf.mupdf.pdf_update_annot(_nativeWidget);
 
         /// <summary>
-        /// Appearance state names for checkbox and radio button widgets (PyMuPDF <c>button_states</c>).
+        /// Appearance state names for checkbox and radio button widgets .
         /// </summary>
         /// <returns>
         /// Dictionary with keys <c>normal</c> and <c>down</c>, each a list of state names from <c>AP/N</c> and <c>AP/D</c>,
@@ -759,7 +759,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// The “on” value for checkboxes and radio buttons (PyMuPDF <c>on_state</c>).
+        /// The “on” value for checkboxes and radio buttons .
         /// </summary>
         /// <returns>The non-<c>Off</c> appearance state name from <see cref="ButtonStates"/>, or <c>Yes</c> if none is found.</returns>
         public string OnState()
@@ -844,7 +844,7 @@ namespace MuPDF.NET
             mupdf.mupdf.pdf_update_annot(_nativeWidget);
         }
 
-        /// <summary>Render widget appearance to a pixmap (PyMuPDF annot pixmap pattern).</summary>
+        /// <summary>Render widget appearance to a pixmap.</summary>
         public Pixmap GetPixmap(Matrix matrix = null, Colorspace cs = null, bool alpha = false)
         {
             var ctm = (matrix ?? Matrix.Identity).ToFzMatrix();
@@ -869,7 +869,7 @@ namespace MuPDF.NET
             return Helpers.JmGetScript(action);
         }
 
-        /// <summary>Load widget attributes from the PDF (PyMuPDF <c>JM_make_widget</c>).</summary>
+        /// <summary>Load widget attributes from the PDF.</summary>
         internal void SyncFromNative()
         {
             if (_nativeWidget?.m_internal == null)
@@ -969,7 +969,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// When setting a radio button ON, clears sibling buttons (PyMuPDF <c>Widget._checker</c>; MuPDF does not do this).
+        /// When setting a radio button ON, clears sibling buttons ( ; MuPDF does not do this).
         /// </summary>
         private void TurnOffSiblingRadioButtons()
         {
@@ -993,7 +993,7 @@ namespace MuPDF.NET
         public void Checker() => TurnOffSiblingRadioButtons();
 
         /// <summary>
-        /// Extract font, size and color from /DA (PyMuPDF <c>Widget._parse_da</c>, pdf_parse_default_appearance).
+        /// Extract font, size and color from /DA ( , pdf_parse_default_appearance).
         /// </summary>
         private void ParseDa(string da)
         {
@@ -1056,7 +1056,7 @@ namespace MuPDF.NET
         /// <summary>Legacy ownership compatibility flag.</summary>
         public bool ThisOwn { get; set; } = true;
 
-        // ─── PyMuPDF API names (internal, same assembly) ─────────────────
+        // ─── MuPDF API names (internal, same assembly) ─────────────────
 
         internal void update(bool sync_flags = false) => Update(sync_flags);
         internal void reset() => Reset();

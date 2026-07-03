@@ -1,10 +1,10 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 
 namespace MuPDF.NET
 {
     /// <summary>
     /// Typed page text dict from <see cref="TextPage.TextPage2Dict"/>; also dictionary-shaped
-    /// for PyMuPDF <c>get_text("dict")</c> / <c>get_text("rawdict")</c> callers.
+    /// for / <c>get_text("rawdict")</c> callers.
     /// </summary>
     public class PageInfo : TextPageDict
     {
@@ -17,7 +17,7 @@ namespace MuPDF.NET
         /// <summary>list of Block</summary>
         public new List<Block> Blocks { get; set; }
 
-        /// <summary>Populate dictionary keys from typed fields (PyMuPDF dict shape).</summary>
+        /// <summary>Populate dictionary keys from typed fields.</summary>
         internal void SyncDict(bool raw) => TextPage.SyncPageInfoDict(this, raw);
     }
 }

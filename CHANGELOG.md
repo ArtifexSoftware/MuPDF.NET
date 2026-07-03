@@ -1,5 +1,31 @@
 # Changelog
 
+### [3.28.0] - 2026-07-02
+
+Aligned MuPDF.NET with **PyMuPDF 1.28.0** and **MuPDF 1.28.0**.
+
+#### New APIs and behavior
+
+- **`Document`**: optional `archive` on open (uses `fz_open_document_with_stream_and_dir` for reflowable/HTML/Markdown documents with embedded assets).
+- **`Document.ApplyCss()`**: apply user CSS to reflowable documents (`fz_style_document`).
+- **`Document.Save()` / `Write()`**: non-PDF documents are converted via `ConvertToPdf()` before writing (PyMuPDF 1.28 parity).
+- **`ConvertToPdf()`**: copies external and internal links into the generated PDF (`JmConvertToPdf`).
+
+#### Bug fixes (PyMuPDF parity)
+
+- **`Widget.ChoiceValues`**: reads `/Opt` with `pdf_dict_get_inheritable` ([#4114](https://github.com/pymupdf/PyMuPDF/issues/4114)).
+- **`Page.RemoveRotation()`**: skips widgets with empty or infinite rectangles ([#4950](https://github.com/pymupdf/PyMuPDF/issues/4950)).
+- **`Page.Annots()`**: ignores null annotation handles ([#4928](https://github.com/pymupdf/PyMuPDF/issues/4928)).
+- **`Page.GetDrawings()`**: `lineJoin` is no longer scaled by path factor; stroke width still uses path factor ([#4954](https://github.com/pymupdf/PyMuPDF/issues/4954)).
+- **`Document.InsertPdf()`**: link rectangles are transformed by the inverse page CTM when copying rotated pages ([#4958](https://github.com/pymupdf/PyMuPDF/issues/4958)).
+- **`Shape`**: PDF `lineJoin` operator is prepended correctly (fixes invalid `lineJoin j` content generation from 1.27.2.2).
+- **`Annot.SetRotation()` / `Update()`**: rotation round-trip works without errors ([#5033](https://github.com/pymupdf/PyMuPDF/issues/5033)).
+- **`AsPdfDocument()` / `SaveCore()`**: non-PDF documents no longer appear as empty PDFs during save, fixing corrupted Markdown-to-PDF output.
+
+#### Tests
+
+- Expanded `MuPDF.NET.Test` for PyMuPDF 1.28.0 regression coverage, including markdown/archive support (`TestMarkdownSupport`), clip+links ([#4942](https://github.com/pymupdf/PyMuPDF/issues/4942)), threading stress (`TestThreads`), object streams, formula rendering ([#5001](https://github.com/pymupdf/PyMuPDF/issues/5001)), and `fz_load_system_font` callback tracing (`test_load_system_font`).
+
 ### [3.2.17.9] - 2026-06-23
 - Depends on stable **`MuPDF.NativeAssets` 1.28.0**.
 - Updated PyMuPDF bind to **1.27.2.3** (`VersionBind` / `pymupdf_version`).

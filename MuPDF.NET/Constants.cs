@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace MuPDF.NET
 {
     /// <summary>
-    /// Module-level constants for MuPDF.NET (PyMuPDF <c>src/__init__.py</c> and legacy glossary).
+    /// Module-level constants for MuPDF.NET ( and legacy glossary).
     /// </summary>
     /// <remarks>
     /// <para>
@@ -27,8 +27,8 @@ namespace MuPDF.NET
             ParseVersionTuple(Artifex.Versions.MuPDF);
 
         /// <summary>
-        /// Combined version info matching PyMuPDF <c>version</c>:
-        /// (PyMuPDF, native MuPDF, build timestamp).
+        /// Combined version info matching :
+        /// .
         /// </summary>
         public static readonly (string PyMuPdfVersion, string MuPdfVersion, string BuildTimestamp) Version =
             (Artifex.Versions.PyMuPDF, Artifex.Versions.MuPDF, null);
@@ -36,7 +36,7 @@ namespace MuPDF.NET
         /// <summary>Small value used for floating-point comparisons.</summary>
         public const float Epsilon = 1e-5f;
 
-        /// <summary>Alias of <see cref="Epsilon"/> (PyMuPDF <c>FLT_EPSILON</c> usage).</summary>
+        /// <summary>Alias of <see cref="Epsilon"/> ( usage).</summary>
         public const float FltEpsilon = 1e-5f;
 
         /// <summary>MuPDF minimum infinite rectangle coordinate.</summary>
@@ -45,7 +45,7 @@ namespace MuPDF.NET
         /// <summary>MuPDF maximum infinite rectangle coordinate.</summary>
         public const int FzMaxInfRect = 0x7fffff80;
 
-        // ─── Link kinds (PyMuPDF LINK_*) ───────────────────────────────
+        // ─── Link kinds ───────────────────────────────
 
         /// <summary>No link action (<c>LINK_NONE</c>).</summary>
         public const int LinkNone = (int)LinkType.None;
@@ -65,7 +65,7 @@ namespace MuPDF.NET
         /// <summary>Go to destination in another file (<c>LINK_GOTOR</c>).</summary>
         public const int LinkGotor = (int)LinkType.Gotor;
 
-        // ─── Link flags (PyMuPDF LINK_FLAG_*) ───────────────────────────
+        // ─── Link flags ───────────────────────────
 
         /// <summary>Left coordinate valid (<c>LINK_FLAG_L_VALID</c>).</summary>
         public const int LinkFlagLValid = (int)LinkFlags.LValid;
@@ -88,7 +88,7 @@ namespace MuPDF.NET
         /// <summary>Right value is zoom factor (<c>LINK_FLAG_R_IS_ZOOM</c>).</summary>
         public const int LinkFlagRIsZoom = (int)LinkFlags.RIsZoom;
 
-        // ─── Signature flags (PyMuPDF SigFlag_*) ────────────────────────
+        // ─── Signature flags ────────────────────────
 
         /// <summary>Document contains signatures (<c>SigFlag_SignaturesExist</c>).</summary>
         public const int SigFlagSignaturesExist = 1;
@@ -96,7 +96,7 @@ namespace MuPDF.NET
         /// <summary>Append-only after signing (<c>SigFlag_AppendOnly</c>).</summary>
         public const int SigFlagAppendOnly = 2;
 
-        // ─── Stamp types (PyMuPDF STAMP_*) ──────────────────────────────
+        // ─── Stamp types ──────────────────────────────
 
         /// <summary>Stamp appearance: Approved.</summary>
         public const int StampApproved = (int)StampType.Approved;
@@ -140,7 +140,7 @@ namespace MuPDF.NET
         /// <summary>Stamp appearance: Draft.</summary>
         public const int StampDraft = (int)StampType.Draft;
 
-        // ─── Text alignment (PyMuPDF TEXT_ALIGN_*) ──────────────────────
+        // ─── Text alignment ──────────────────────
 
         /// <summary>Left-aligned text (<c>TEXT_ALIGN_LEFT</c>).</summary>
         public const int TextAlignLeft = (int)TextAlign.Left;
@@ -154,7 +154,7 @@ namespace MuPDF.NET
         /// <summary>Justified text (<c>TEXT_ALIGN_JUSTIFY</c>).</summary>
         public const int TextAlignJustify = (int)TextAlign.Justify;
 
-        // ─── Text font flags (PyMuPDF TEXT_FONT_*) ───────────────────────
+        // ─── Text font flags ───────────────────────
 
         /// <summary>Superscript span flag (<c>TEXT_FONT_SUPERSCRIPT</c>).</summary>
         public const int TextFontSuperscript = (int)TextFontFlags.Superscript;
@@ -171,7 +171,7 @@ namespace MuPDF.NET
         /// <summary>Bold span flag (<c>TEXT_FONT_BOLD</c>).</summary>
         public const int TextFontBold = (int)TextFontFlags.Bold;
 
-        // ─── Text output kinds (PyMuPDF TEXT_OUTPUT_*) ──────────────────
+        // ─── Text output kinds ──────────────────
 
         /// <summary>Plain text output (<c>TEXT_OUTPUT_TEXT</c>).</summary>
         public const int TextOutputText = (int)TextOutput.Text;
@@ -188,7 +188,7 @@ namespace MuPDF.NET
         /// <summary>XHTML output (<c>TEXT_OUTPUT_XHTML</c>).</summary>
         public const int TextOutputXhtml = (int)TextOutput.XHtml;
 
-        // ─── Text encoding (PyMuPDF TEXT_ENCODING_*) ────────────────────
+        // ─── Text encoding ────────────────────
 
         /// <summary>Latin text encoding (<c>TEXT_ENCODING_LATIN</c>).</summary>
         public const int TextEncodingLatin = (int)TextEncoding.Latin;
@@ -199,7 +199,7 @@ namespace MuPDF.NET
         /// <summary>Cyrillic text encoding (<c>TEXT_ENCODING_CYRILLIC</c>).</summary>
         public const int TextEncodingCyrillic = (int)TextEncoding.Cyrillic;
 
-        // ─── Colorspace identifiers (PyMuPDF CS_*) ────────────────────────
+        // ─── Colorspace identifiers ────────────────────────
 
         /// <summary>RGB colorspace id (<c>CS_RGB</c>).</summary>
         public const int CsRgb = (int)ColorspaceType.Rgb;
@@ -210,7 +210,7 @@ namespace MuPDF.NET
         /// <summary>CMYK colorspace id (<c>CS_CMYK</c>).</summary>
         public const int CsCmyk = (int)ColorspaceType.Cmyk;
 
-        // ─── PDF optional content (PyMuPDF PDF_OC_*) ─────────────────────
+        // ─── PDF optional content ─────────────────────
 
         /// <summary>Layer on (<c>PDF_OC_ON</c>).</summary>
         public const int PdfOcOn = (int)PdfOcMode.On;
@@ -221,7 +221,7 @@ namespace MuPDF.NET
         /// <summary>Layer off (<c>PDF_OC_OFF</c>).</summary>
         public const int PdfOcOff = (int)PdfOcMode.Off;
 
-        // ─── PDF blend modes (PyMuPDF PDF_BM_*) ─────────────────────────
+        // ─── PDF blend modes ─────────────────────────
 
         /// <summary>Blend mode Color.</summary>
         public const string PdfBlendModeColor = "Color";
@@ -345,7 +345,7 @@ namespace MuPDF.NET
         /// <summary>CJK font names (serif) accepted by <see cref="Page.InsertFont"/>.</summary>
         internal static readonly string[] CjkListS = { "china-ts", "china-ss", "japan-s", "korea-s" };
 
-        // ─── Text extraction flag bundles (PyMuPDF TEXTFLAGS_*) ──────────
+        // ─── Text extraction flag bundles ──────────
 
         /// <summary>Default flags for plain text extraction (<c>TEXTFLAGS_TEXT</c>).</summary>
         public static readonly int TextFlagsText =
@@ -438,7 +438,7 @@ namespace MuPDF.NET
         /// <summary>Placeholder when a font cannot be extracted (Base-14, Type3, etc.).</summary>
         public const string FontExtNotAvailable = "n/a";
 
-        // ─── Internal error messages (PyMuPDF MSG_*) ─────────────────────
+        // ─── Internal error messages ─────────────────────
 
         internal const string MSG_BAD_ANNOT_TYPE = "bad annot type";
         internal const string MSG_BAD_APN = "bad or missing annot AP/N";

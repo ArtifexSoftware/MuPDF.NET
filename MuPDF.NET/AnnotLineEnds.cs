@@ -3,7 +3,7 @@ using System.Globalization;
 
 namespace MuPDF.NET
 {
-    /// <summary>Line-end appearance helpers (PyMuPDF <c>TOOLS._le_*</c>).</summary>
+    /// <summary>Line-end appearance helpers.</summary>
     public partial class Annot
     {
         private delegate string LeFunction(Annot annot, Point p1, Point p2, bool lr, float[] fillColor);

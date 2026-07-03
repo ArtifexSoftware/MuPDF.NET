@@ -1,11 +1,10 @@
-// Port of PyMuPDF-1.27.2.2/tests/test_cluster_drawings.py
+using System;
 using System.Collections.Generic;
 using Xunit;
 
 namespace MuPDF.NET.Test
 {
     /// <summary>
-    /// Port of <c>PyMuPDF-1.27.2.2/tests/test_cluster_drawings.py</c>.
     /// Outputs: <c>TestDocuments/_Output/TestClusterDrawings/</c>.
     /// </summary>
     /// <remarks>
@@ -17,11 +16,53 @@ namespace MuPDF.NET.Test
     {
         private const string TestClassName = nameof(TestClusterDrawings);
 
+        private static string Doc(string fileName) => _Path.ForTestClass(fileName, TestClassName);
+
         private static string Out(string fileName) => _Path.ForOutput(fileName, TestClassName);
+
+        /// <summary>Confirm correct identification of known examples.</summary>
+        [Fact]
+        public void test_cluster1()
+        {
+            string filename = Doc("symbol-list.pdf");
+            using (var doc = new Document(filename))
+            {
+                var page = doc[0];
+                Assert.Equal(10, page.ClusterDrawings(drawings: (List<Dictionary<string, object>>?)null).Count);
+            }
+
+            filename = Doc("chinese-tables.pdf");
+            using (var doc = new Document(filename))
+            {
+                var page = doc[0];
+                Assert.Equal(2, page.ClusterDrawings(drawings: (List<Dictionary<string, object>>?)null).Count);
+            }
+        }
+
+        /// <summary>Regression test: 4599.</summary>
+        [Fact]
+        public void test_4599()
+        {
+            Console.WriteLine();
+            string path = Doc("test_4599.pdf");
+            int n = 0;
+            using (var document = new Document(path))
+            {
+                foreach (var page in document)
+                {
+                    foreach (var clip in page.ClusterDrawings(drawings: (List<Dictionary<string, object>>?)null))
+                    {
+                        Console.WriteLine(clip);
+                        n++;
+                    }
+                }
+            }
+            Assert.Equal(3, n);
+        }
 
         /// <summary>
         /// Join disjoint but neighbored drawings.
-        /// <summary>Regression test: cluster2 (PyMuPDF <c>tests/test_cluster_drawings.py::test_cluster2</c>).</summary>
+        /// <summary>Regression test: cluster2.</summary>
         /// </summary>
         [Fact]
         public void test_cluster2()
@@ -34,7 +75,7 @@ namespace MuPDF.NET.Test
             var r2 = new Rect(203, 203, 400, 400);
             page.DrawRect(r1);
             page.DrawRect(r2);
-            // PyMuPDF: page.cluster_drawings() calls get_drawings() internally. Supply equivalent "rect" dicts so we test
+            // MuPDF: page.cluster_drawings() calls get_drawings() internally. Supply equivalent "rect" dicts so we test
             // ClusterDrawings without invoking GetDrawings (same skip reason as test_cluster1).
             var drawings = new List<Dictionary<string, object>>
             {
@@ -47,7 +88,7 @@ namespace MuPDF.NET.Test
 
         /// <summary>
         /// Confirm as separate if neighborhood threshold exceeded.
-        /// <summary>Regression test: cluster3 (PyMuPDF <c>tests/test_cluster_drawings.py::test_cluster3</c>).</summary>
+        /// <summary>Regression test: cluster3.</summary>
         /// </summary>
         [Fact]
         public void test_cluster3()

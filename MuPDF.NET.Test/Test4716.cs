@@ -1,4 +1,3 @@
-// Port of PyMuPDF-1.27.2.2/tests/test_4716.py
 using System.Collections.Generic;
 using Xunit;
 
@@ -21,7 +20,7 @@ namespace MuPDF.NET.Test
             var word_text = new HashSet<string>();
             foreach (Page page in doc)
             {
-                // PyMuPDF: page.get_text("words") -> list of tuples; MuPDF.NET -> List<WordBlock>
+                // MuPDF: page.get_text("words") -> list of tuples; MuPDF.NET -> List<WordBlock>
                 foreach (WordBlock w in (List<WordBlock>)page.GetText("words"))
                     word_text.Add(w.Text);
             }

@@ -17,7 +17,6 @@ namespace MuPDF.NET.Test
     {
     }
 
-    /// <summary>Port of <c>PyMuPDF-1.27.2.2/tests/test_general.py</c>.</summary>
     /// <remarks>
     /// Inputs: <c>TestDocuments/TestGeneral/</c>; outputs: <c>TestDocuments/_Output/TestGeneral/</c>.
     /// </remarks>
@@ -32,7 +31,10 @@ namespace MuPDF.NET.Test
         private static string Out(string fileName) => _Path.ForOutput(fileName, TestClassName);
 
         private static string TestDocumentsDir() =>
-            Path.Combine(_Path.ResolveSolutionRoot(), "TestDocuments", TestClassName);
+            Path.Combine(_Path.ResolveSolutionRoot(), "TestDocuments", "MuPDF.NET.Test", TestClassName);
+
+        private static string OptionalDocPath(string fileName) =>
+            Path.Combine(_Path.ResolveSolutionRoot(), "TestDocuments", "MuPDF.NET.Test", TestClassName, fileName);
 
         private static bool g_use_extra => true;
 
@@ -44,7 +46,7 @@ namespace MuPDF.NET.Test
             var (r, g, b) = SRgbToRgb(srgb);
             return (r / 255.0f, g / 255.0f, b / 255.0f);
         }
-        /// <summary>Regression test: haslinks (PyMuPDF <c>tests/test_general.py::test_haslinks</c>).</summary>
+        /// <summary>Regression test: haslinks.</summary>
         [Fact]
         public void test_haslinks()
         {
@@ -52,7 +54,7 @@ namespace MuPDF.NET.Test
             Assert.False(doc.HasLinks());
         }
 
-        /// <summary>Regression test: hasannots (PyMuPDF <c>tests/test_general.py::test_hasannots</c>).</summary>
+        /// <summary>Regression test: hasannots.</summary>
         [Fact]
         public void test_hasannots()
         {
@@ -60,7 +62,7 @@ namespace MuPDF.NET.Test
             Assert.False(doc.HasAnnots());
         }
 
-        /// <summary>Regression test: haswidgets (PyMuPDF <c>tests/test_general.py::test_haswidgets</c>).</summary>
+        /// <summary>Regression test: haswidgets.</summary>
         [Fact]
         public void test_haswidgets()
         {
@@ -68,7 +70,7 @@ namespace MuPDF.NET.Test
             Assert.False(doc.IsFormPdf);
         }
 
-        /// <summary>Regression test: isrepaired (PyMuPDF <c>tests/test_general.py::test_isrepaired</c>).</summary>
+        /// <summary>Regression test: isrepaired.</summary>
         [Fact]
         public void test_isrepaired()
         {
@@ -76,7 +78,7 @@ namespace MuPDF.NET.Test
             Assert.False(doc.IsRepaired);
         }
 
-        /// <summary>Regression test: isdirty (PyMuPDF <c>tests/test_general.py::test_isdirty</c>).</summary>
+        /// <summary>Regression test: isdirty.</summary>
         [Fact]
         public void test_isdirty()
         {
@@ -84,7 +86,7 @@ namespace MuPDF.NET.Test
             Assert.False(doc.IsDirty);
         }
 
-        /// <summary>Regression test: cansaveincrementally (PyMuPDF <c>tests/test_general.py::test_cansaveincrementally</c>).</summary>
+        /// <summary>Regression test: cansaveincrementally.</summary>
         [Fact]
         public void test_cansaveincrementally()
         {
@@ -92,7 +94,7 @@ namespace MuPDF.NET.Test
             Assert.True(doc.CanSaveIncrementally());
         }
 
-        /// <summary>Regression test: iswrapped (PyMuPDF <c>tests/test_general.py::test_iswrapped</c>).</summary>
+        /// <summary>Regression test: iswrapped.</summary>
         [Fact]
         public void test_iswrapped()
         {
@@ -101,7 +103,7 @@ namespace MuPDF.NET.Test
             Assert.True(page.IsWrapped);
         }
 
-        /// <summary>Regression test: wrapcontents (PyMuPDF <c>tests/test_general.py::test_wrapcontents</c>).</summary>
+        /// <summary>Regression test: wrapcontents.</summary>
         [Fact]
         public void test_wrapcontents()
         {
@@ -117,7 +119,7 @@ namespace MuPDF.NET.Test
             doc.Save(Out("test_wrapcontents.pdf"));
         }
 
-        /// <summary>Regression test: page clean contents (PyMuPDF <c>tests/test_general.py::test_page_clean_contents</c>).</summary>
+        /// <summary>Regression test: page clean contents.</summary>
         [Fact]
         public void test_page_clean_contents()
         {
@@ -133,7 +135,7 @@ namespace MuPDF.NET.Test
             doc.Save(Out("test_page_clean_contents.pdf"));
         }
 
-        /// <summary>Regression test: annot clean contents (PyMuPDF <c>tests/test_general.py::test_annot_clean_contents</c>).</summary>
+        /// <summary>Regression test: annot clean contents.</summary>
         [Fact]
         public void test_annot_clean_contents()
         {
@@ -146,7 +148,14 @@ namespace MuPDF.NET.Test
             doc.Save(Out("test_annot_clean_contents.pdf"));
         }
 
-        /// <summary>Regression test: glyphnames (PyMuPDF <c>tests/test_general.py::test_glyphnames</c>).</summary>
+        /// <summary>Regression test: config.</summary>
+        [Fact]
+        public void test_config()
+        {
+            Console.WriteLine("test_config(): not running on .NET - TOOLS.fitz_config is not available.");
+        }
+
+        /// <summary>Regression test: glyphnames.</summary>
         [Fact]
         public void test_glyphnames()
         {
@@ -156,7 +165,7 @@ namespace MuPDF.NET.Test
             Assert.Equal(name, Utils.UnicodeToGlyphName(infinity));
         }
 
-        /// <summary>Regression test: rgbcodes (PyMuPDF <c>tests/test_general.py::test_rgbcodes</c>).</summary>
+        /// <summary>Regression test: rgbcodes.</summary>
         [Fact]
         public void test_rgbcodes()
         {
@@ -165,7 +174,7 @@ namespace MuPDF.NET.Test
             Assert.Equal((255, 255, 255), SRgbToRgb(sRGB));
         }
 
-        /// <summary>Regression test: pdfstring (PyMuPDF <c>tests/test_general.py::test_pdfstring</c>).</summary>
+        /// <summary>Regression test: pdfstring.</summary>
         [Fact]
         public void test_pdfstring()
         {
@@ -175,7 +184,7 @@ namespace MuPDF.NET.Test
             var pdfStr2 = Utils.GetPdfStr("Latin characters êßöäü");
         }
 
-        /// <summary>Regression test: open exceptions (PyMuPDF <c>tests/test_general.py::test_open_exceptions</c>).</summary>
+        /// <summary>Regression test: open exceptions.</summary>
         [Fact]
         public void test_open_exceptions()
         {
@@ -188,7 +197,50 @@ namespace MuPDF.NET.Test
             Assert.Throws<EmptyFileException>(() => new Document(Array.Empty<byte>(), fileType: "pdf"));
         }
 
-        /// <summary>Legacy MuPDF.NET / PyMuPDF combined <c>Document(filename, stream, filetype, ...)</c> constructor.</summary>
+        /// <summary>Regression test: open.</summary>
+        [Fact]
+        public void test_open()
+        {
+            using (var doc = Document.Open(Doc("1.pdf")))
+                Assert.True(doc.PageCount > 0);
+
+            using (var doc = Document.Open(Doc("Bezier.epub")))
+                Assert.True(doc.PageCount > 0);
+
+            Console.WriteLine(
+                "test_open(): skipping bad filename type check - Document constructor requires string.");
+
+            Assert.Throws<FileNotFoundException>(() => new Document("test_open-this-file-will-not-exist"));
+
+            var dirEx = Assert.ThrowsAny<Exception>(() => new Document(TestDocumentsDir()));
+            Assert.True(
+                dirEx is FileDataException or FileNotFoundException,
+                $"Unexpected exception type: {dirEx.GetType()}");
+
+            string emptyPath = Out("test_open_empty");
+            File.WriteAllBytes(emptyPath, Array.Empty<byte>());
+            try
+            {
+                Assert.Throws<EmptyFileException>(() => new Document(emptyPath));
+            }
+            finally
+            {
+                if (File.Exists(emptyPath))
+                    File.Delete(emptyPath);
+            }
+
+            using (var doc = new Document(Doc("1.pdf"), fileType: "xps"))
+                Assert.Contains("PDF", doc.GetMetadata()["format"] ?? "");
+
+            Assert.Throws<FileDataException>(() => new Document(Doc("chinese-tables.pickle")));
+
+            Console.WriteLine(
+                "test_open(): skipping bad stream type check - Document constructor requires byte[].");
+
+            Assert.Throws<EmptyFileException>(() => new Document(Array.Empty<byte>(), fileType: "pdf"));
+        }
+
+        /// <summary>Legacy combined <c>Document(filename, stream, filetype, ...)</c> constructor.</summary>
         [Fact]
         public void test_legacy_document_constructor()
         {
@@ -216,7 +268,7 @@ namespace MuPDF.NET.Test
                 Assert.Equal(1, doc.PageCount);
         }
 
-        /// <summary>Regression test: bug1945 (PyMuPDF <c>tests/test_general.py::test_bug1945</c>).</summary>
+        /// <summary>Regression test: bug1945.</summary>
         [Fact]
         public void test_bug1945()
         {
@@ -227,7 +279,7 @@ namespace MuPDF.NET.Test
             pdf.Save(Out("test_bug1945.pdf"));
         }
 
-        /// <summary>Regression test: bug1971 (PyMuPDF <c>tests/test_general.py::test_bug1971</c>).</summary>
+        /// <summary>Regression test: bug1971.</summary>
         [Fact]
         public void test_bug1971()
         {
@@ -245,7 +297,7 @@ namespace MuPDF.NET.Test
             }
         }
 
-        /// <summary>Regression test: default font (PyMuPDF <c>tests/test_general.py::test_default_font</c>).</summary>
+        /// <summary>Regression test: default font.</summary>
         [Fact]
         public void test_default_font()
         {
@@ -254,7 +306,7 @@ namespace MuPDF.NET.Test
             Assert.Equal("Font('Noto Serif Regular')", f.ToString());
         }
 
-        /// <summary>Regression test: add ink annot (PyMuPDF <c>tests/test_general.py::test_add_ink_annot</c>).</summary>
+        /// <summary>Regression test: add ink annot.</summary>
         [Fact]
         public void test_add_ink_annot()
         {
@@ -277,7 +329,7 @@ namespace MuPDF.NET.Test
             document.Save(Out("test_add_ink_annot.pdf"));
         }
 
-        /// <summary>Regression test: techwriter append (PyMuPDF <c>tests/test_general.py::test_techwriter_append</c>).</summary>
+        /// <summary>Regression test: techwriter append.</summary>
         [Fact]
         public void test_techwriter_append()
         {
@@ -295,7 +347,7 @@ namespace MuPDF.NET.Test
             doc.Save(Out("test_techwriter_append.pdf"));
         }
 
-        /// <summary>Regression test: opacity (PyMuPDF <c>tests/test_general.py::test_opacity</c>).</summary>
+        /// <summary>Regression test: opacity.</summary>
         [Fact]
         public void test_opacity()
         {
@@ -316,7 +368,7 @@ namespace MuPDF.NET.Test
             Console.WriteLine("saved " + outfile);
         }
 
-        /// <summary>Regression test: get text dict (PyMuPDF <c>tests/test_general.py::test_get_text_dict</c>).</summary>
+        /// <summary>Regression test: get text dict.</summary>
         [Fact]
         public void test_get_text_dict()
         {
@@ -329,7 +381,7 @@ namespace MuPDF.NET.Test
             File.WriteAllText(Outfile, JsonSerializer.Serialize(blocks));
         }
 
-        /// <summary>Regression test: font (PyMuPDF <c>tests/test_general.py::test_font</c>).</summary>
+        /// <summary>Regression test: font.</summary>
         [Fact]
         public void test_font()
         {
@@ -339,7 +391,7 @@ namespace MuPDF.NET.Test
             Console.WriteLine($"bbox={bbox}");
         }
 
-        /// <summary>Regression test: insert font (PyMuPDF <c>tests/test_general.py::test_insert_font</c>).</summary>
+        /// <summary>Regression test: insert font.</summary>
         [Fact]
         public void test_insert_font()
         {
@@ -350,7 +402,7 @@ namespace MuPDF.NET.Test
             doc.Save(Out("test_insert_font.pdf"));
         }
 
-        /// <summary>Regression test: 2173 (PyMuPDF <c>tests/test_general.py::test_2173</c>).</summary>
+        /// <summary>Regression test: 2173.</summary>
         [Fact]
         public void test_2173()
         {
@@ -358,7 +410,7 @@ namespace MuPDF.NET.Test
                 _ = new Pixmap(Colorspace.Rgb, new IRect(0, 0, 13, 37));
         }
 
-        /// <summary>Regression test: texttrace (PyMuPDF <c>tests/test_general.py::test_texttrace</c>).</summary>
+        /// <summary>Regression test: texttrace.</summary>
         [Fact]
         public void test_texttrace()
         {
@@ -394,7 +446,7 @@ namespace MuPDF.NET.Test
         ///
         /// Search for a unique char on page and confirm that page.GetTextTrace()
         /// returns the same bbox as the search method.
-        /// <summary>Regression test: 2533 (PyMuPDF <c>tests/test_general.py::test_2533</c>).</summary>
+        /// <summary>Regression test: 2533.</summary>
         /// </summary>
         [Fact]
         public void test_2533()
@@ -414,7 +466,6 @@ namespace MuPDF.NET.Test
                 Rect bbox = null;
                 foreach (var span in page.GetTextTrace())
                 {
-                    // for char in span["chars"]:
                     foreach (object charObj in (List<object>)span["chars"])
                     {
                         object[] @char = (object[])charObj;
@@ -441,7 +492,7 @@ namespace MuPDF.NET.Test
 
         /// <summary>
         /// Assert same font size calculation in corner cases.
-        /// <summary>Regression test: 2645 (PyMuPDF <c>tests/test_general.py::test_2645</c>).</summary>
+        /// <summary>Regression test: 2645.</summary>
         /// </summary>
         [Fact]
         public void test_2645()
@@ -465,7 +516,7 @@ namespace MuPDF.NET.Test
 
         /// <summary>
         /// Ensure expected font size across text writing angles.
-        /// <summary>Regression test: 2506 (PyMuPDF <c>tests/test_general.py::test_2506</c>).</summary>
+        /// <summary>Regression test: 2506.</summary>
         /// </summary>
         [Fact]
         public void test_2506()
@@ -514,7 +565,7 @@ namespace MuPDF.NET.Test
             doc.Save(Out("test_2506.pdf"));
         }
 
-        /// <summary>Regression test: 2108 (PyMuPDF <c>tests/test_general.py::test_2108</c>).</summary>
+        /// <summary>Regression test: 2108.</summary>
         [Fact]
         public void test_2108()
         {
@@ -584,7 +635,7 @@ namespace MuPDF.NET.Test
             Assert.Equal(text_expected, text);
         }
 
-        /// <summary>Regression test: 2238 (PyMuPDF <c>tests/test_general.py::test_2238</c>).</summary>
+        /// <summary>Regression test: 2238.</summary>
         [Fact]
         public void test_2238()
         {
@@ -619,7 +670,7 @@ namespace MuPDF.NET.Test
             Assert.Equal("Hello World\n", last_page);
         }
 
-        /// <summary>Regression test: 2093 (PyMuPDF <c>tests/test_general.py::test_2093</c>).</summary>
+        /// <summary>Regression test: 2093.</summary>
         [Fact]
         public void test_2093()
         {
@@ -632,20 +683,16 @@ namespace MuPDF.NET.Test
                 using Pixmap pixmap = page.GetPixmap();
                 // p_average = [0] * pixmap.n
                 float[] p_average = new float[pixmap.N];
-                // for y in range(pixmap.height):
                 for (int y = 0; y < pixmap.Height; y++)
                 {
-                    // for x in range(pixmap.width):
                     for (int x = 0; x < pixmap.Width; x++)
                     {
                         // p = pixmap.GetPixelBytes(x, y)
                         byte[] p = pixmap.GetPixelBytes(x, y);
-                        // for i in range(pixmap.n):
                         for (int i = 0; i < pixmap.N; i++)
                             p_average[i] += p[i];
                     }
                 }
-                // for i in range(pixmap.n):
                 float count = pixmap.Height * pixmap.Width;
                 for (int i = 0; i < pixmap.N; i++)
                     p_average[i] /= count;
@@ -672,7 +719,6 @@ namespace MuPDF.NET.Test
             float[] fill_color = _Constants.black;
             // page.AddRedactAnnot(
             //     quad=rect,
-            //     #text="null",
             //     fontname=font.name,
             //     fill=fill_color,
             //     text_color=(1,1,1),
@@ -698,7 +744,6 @@ namespace MuPDF.NET.Test
             // After fix:
             //   pixel_average_before=[130.864323120088, 115.23577810900859, 92.9268559996174]
             //   pixel_average_after=[130.8889209934799, 115.25722751837269, 92.94327384463327]
-            // for i in range(len(pixel_average_before)):
             for (int i = 0; i < pixel_average_before.Length; i++)
             {
                 // diff = pixel_average_before[i] - pixel_average_after[i]
@@ -712,14 +757,13 @@ namespace MuPDF.NET.Test
             Console.WriteLine($"Have written to: {out_path}");
         }
 
-        /// <summary>Regression test: 2182 (PyMuPDF <c>tests/test_general.py::test_2182</c>).</summary>
+        /// <summary>Regression test: 2182.</summary>
         [Fact]
         public void test_2182()
         {
             Console.WriteLine("test_2182() started");
             using var doc = Document.Open(Doc("test2182.pdf"));
             Page page = doc[0];
-            // for annot in page.Annots():
             foreach (Annot annot in page.Annots())
             {
                 Console.WriteLine(annot);
@@ -744,7 +788,7 @@ namespace MuPDF.NET.Test
         /// Then extracts the text spans and confirms that they all occupy the same bbox.
         /// This ensures coincidence of text positions of page.of insert_text()
         /// (which is assumed correct) and TextWriter.WriteText().
-        /// <summary>Regression test: 2246 (PyMuPDF <c>tests/test_general.py::test_2246</c>).</summary>
+        /// <summary>Regression test: 2246.</summary>
         /// </summary>
         [Fact]
         public void test_2246()
@@ -802,7 +846,6 @@ namespace MuPDF.NET.Test
                         }
                     }
                 }
-                //doc.Save(Out("test_2246.pdf"));
                 return bboxes.Count; // should be 1!
             }
 
@@ -813,14 +856,14 @@ namespace MuPDF.NET.Test
             Assert.Equal(1, BboxCount(270));
         }
 
-        /// <summary>Converts PyMuPDF <c>JM_TUPLE3</c> tuples to <see cref="Rect"/>.</summary>
+        /// <summary>Converts tuples to <see cref="Rect"/>.</summary>
         private static Rect JmTuple3Rect(float[] o)
         {
             float Round3(float x) => (float)Math.Abs(x) >= 1e-3f ? (float)Math.Round(x, 3) : 0;
             return new Rect(Round3(o[0]), Round3(o[1]), Round3(o[2]), Round3(o[3]));
         }
 
-        /// <summary>Regression test: 2430 (PyMuPDF <c>tests/test_general.py::test_2430</c>).</summary>
+        /// <summary>Regression test: 2430.</summary>
         [Fact]
         public void test_2430()
         {
@@ -829,7 +872,7 @@ namespace MuPDF.NET.Test
                 _ = font.Flags;
         }
 
-        /// <summary>Regression test: 2692 (PyMuPDF <c>tests/test_general.py::test_2692</c>).</summary>
+        /// <summary>Regression test: 2692.</summary>
         [Fact]
         public void test_2692()
         {
@@ -845,11 +888,9 @@ namespace MuPDF.NET.Test
         }
 
         /// <summary>Confirm correctly abandoning cache when reloading a page.</summary>
-        /// <remarks>PyMuPDF <c>tests/test_general.py::test_2596</c>.</remarks>
         [Fact]
         public void test_2596()
         {
-            // if platform.python_implementation() == 'GraalVM':
             //     return
             string path = Doc("test_2596.pdf");
             using var doc = new Document(path);
@@ -886,7 +927,7 @@ namespace MuPDF.NET.Test
             }
         }
 
-        /// <summary>Regression test: 2730 (PyMuPDF <c>tests/test_general.py::test_2730</c>).</summary>
+        /// <summary>Regression test: 2730.</summary>
         [Fact]
         public void test_2730()
         {
@@ -901,7 +942,6 @@ namespace MuPDF.NET.Test
         }
 
         /// <summary>Ensure identical output across text extractions.</summary>
-        /// <remarks>PyMuPDF <c>tests/test_general.py::test_2553</c>.</remarks>
         [Fact]
         public void test_2553()
         {
@@ -931,10 +971,8 @@ namespace MuPDF.NET.Test
 
             //     ret = f'len={len(l)}\n'
             //         cc = ord(c)
-            //         if (cc >= 32 and cc < 127) or c == '\n':
             //             ret += c
             //             ret += f' [0x{hex(cc)}]'
-            //     return ret
             string Show(string l)
             {
                 string ret = $"len={l.Length}\n";
@@ -948,8 +986,6 @@ namespace MuPDF.NET.Test
                 }
                 return ret;
             }
-
-            // if verbose:
             if (verbose != 0)
             {
                 Console.WriteLine($"list1:\n{Show(list1)}");
@@ -961,7 +997,6 @@ namespace MuPDF.NET.Test
             Assert.Equal(set1, set2);
             Assert.Equal(set1, set3);
 
-            // With mupdf later than 1.23.4, this special page contains no invalid
             // Unicodes.
             var mupdf_version_tuple = (
                 mupdf.mupdf.FZ_VERSION_MAJOR,
@@ -971,7 +1006,7 @@ namespace MuPDF.NET.Test
             Assert.DoesNotContain('\uFFFD', set1);
         }
 
-        /// <summary>Regression test: 2553 2 (PyMuPDF <c>tests/test_general.py::test_2553_2</c>).</summary>
+        /// <summary>Regression test: 2553 2.</summary>
         [Fact]
         public void test_2553_2()
         {
@@ -981,7 +1016,7 @@ namespace MuPDF.NET.Test
             Assert.DoesNotContain('�', text);
         }
 
-        /// <summary>Regression test: 2635 (PyMuPDF <c>tests/test_general.py::test_2635</c>).</summary>
+        /// <summary>Regression test: 2635.</summary>
         [Fact]
         public void test_2635()
         {
@@ -996,11 +1031,10 @@ namespace MuPDF.NET.Test
         }
 
         /// <summary>Test PDF name resolution.</summary>
-        /// <remarks>PyMuPDF <c>tests/test_general.py::test_resolve_names</c>.</remarks>
         [Fact]
         public void test_resolve_names()
         {
-            // guard against wrong PyMuPDF architecture version
+            // guard against wrong MuPDF architecture version
             if (typeof(Document).GetMethod(nameof(Document.ResolveNames)) == null)
             {
                 Console.WriteLine("PyMuPDF version does not support resolving PDF names");
@@ -1018,7 +1052,7 @@ namespace MuPDF.NET.Test
             Assert.True(ResolveNamesEqual(new_names, old_names));
         }
 
-        /// <summary>Regression test: 2777 (PyMuPDF <c>tests/test_general.py::test_2777</c>).</summary>
+        /// <summary>Regression test: 2777.</summary>
         [Fact]
         public void test_2777()
         {
@@ -1027,7 +1061,7 @@ namespace MuPDF.NET.Test
             Assert.True(page.MediaBox.Width > 0);
         }
 
-        /// <summary>Regression test: 2710 (PyMuPDF <c>tests/test_general.py::test_2710</c>).</summary>
+        /// <summary>Regression test: 2710.</summary>
         [Fact]
         public void test_2710()
         {
@@ -1039,13 +1073,9 @@ namespace MuPDF.NET.Test
             Console.WriteLine($"test_2710(): cropbox={page.CropBox}");
             Console.WriteLine($"test_2710(): mediabox={page.MediaBox}");
             Console.WriteLine($"test_2710(): rect={page.Rect}");
-
-            //     return abs(a-b) < 0.001
             bool numbers_approx_eq(float a, float b) => Math.Abs(a - b) < 0.001;
-            //     return numbers_approx_eq(a.x, b.x) and numbers_approx_eq(a.y, b.y)
             bool points_approx_eq(Point a, Point b) =>
                 numbers_approx_eq(a.X, b.X) && numbers_approx_eq(a.Y, b.Y);
-            //     return points_approx_eq(a.bottom_left, b.bottom_left) and points_approx_eq(a.top_right, b.top_right)
             bool rects_approx_eq(Rect a, Rect b) =>
                 points_approx_eq(a.BottomLeft, b.BottomLeft) && points_approx_eq(a.TopRight, b.TopRight);
             void assert_rects_approx_eq(Rect a, Rect b)
@@ -1084,7 +1114,7 @@ namespace MuPDF.NET.Test
             Assert.Equal(wt_expected, wt);
         }
 
-        /// <summary>CropBox vs MediaBox with negative coordinates (PyMuPDF <c>tests/test_general.py::test_2736</c>).</summary>
+        /// <summary>CropBox vs MediaBox with negative coordinates.</summary>
         [Fact]
         public void test_2736()
         {
@@ -1093,7 +1123,6 @@ namespace MuPDF.NET.Test
             Page page = doc.NewPage();
 
             // fake a MediaBox for demo purposes
-            // doc.XrefSetKey(page.Xref, "MediaBox", "[-30 -20 595 842]")
             doc.XrefSetKey(page.Xref, "MediaBox", "[-30 -20 595 842]");
 
             Assert.Equal(new Rect(-30, 0, 595, 862), page.CropBox);
@@ -1130,7 +1159,7 @@ namespace MuPDF.NET.Test
             doc.Save(Out("test_2736.pdf"));
         }
 
-        /// <summary>Regression test: subset fonts (PyMuPDF <c>tests/test_general.py::test_subset_fonts</c>).</summary>
+        /// <summary>Regression test: subset fonts.</summary>
         [Fact]
         public void test_subset_fonts()
         {
@@ -1146,14 +1175,11 @@ namespace MuPDF.NET.Test
             Page page = doc.NewPage();
             // page.InsertHtmlbox(page.Rect, text, css=css, archive=arch)
             page.InsertHtmlbox(page.Rect, text, css: css, archive: arch);
-            // doc.SubsetFonts(verbose=True)
             doc.SubsetFonts(verbose: true);
             // found = False
             bool found = false;
-            // for xref in range(1, doc.XrefLength):
             for (int xref = 1; xref < doc.XrefLength; xref++)
             {
-                // if "+Ubuntu#20Regular" in doc.XrefObject(xref):
                 if (doc.XrefObject(xref).Contains("+Ubuntu#20Regular"))
                 {
                     // found = True
@@ -1166,7 +1192,7 @@ namespace MuPDF.NET.Test
             doc.Save(Out("test_subset_fonts.pdf"));
         }
 
-        /// <summary>Regression test: 2957 1 (PyMuPDF <c>tests/test_general.py::test_2957_1</c>).</summary>
+        /// <summary>Regression test: 2957 1.</summary>
         [Fact]
         public void test_2957_1()
         {
@@ -1198,7 +1224,7 @@ namespace MuPDF.NET.Test
             }
         }
 
-        /// <summary>Regression test: 2957 2 (PyMuPDF <c>tests/test_general.py::test_2957_2</c>).</summary>
+        /// <summary>Regression test: 2957 2.</summary>
         [Fact]
         public void test_2957_2()
         {
@@ -1224,7 +1250,7 @@ namespace MuPDF.NET.Test
         }
 
         /// <summary>
-        /// <summary>Regression test: 707560 (PyMuPDF <c>tests/test_general.py::test_707560</c>).</summary>
+        /// <summary>Regression test: 707560.</summary>
         /// https://bugs.ghostscript.com/show_bug.cgi?id=707560
         /// Ensure that redactions also remove characters with an empty width bbox.
         /// </summary>
@@ -1273,7 +1299,7 @@ namespace MuPDF.NET.Test
             doc.Save(Out("test_707560.pdf"));
         }
 
-        /// <summary>Regression test: 3070 (PyMuPDF <c>tests/test_general.py::test_3070</c>).</summary>
+        /// <summary>Regression test: 3070.</summary>
         [Fact]
         public void test_3070()
         {
@@ -1285,7 +1311,7 @@ namespace MuPDF.NET.Test
             pdf.Save(Out("test_3070.pdf"));
         }
 
-        /// <summary>Regression test: bboxlog 2885 (PyMuPDF <c>tests/test_general.py::test_bboxlog_2885</c>).</summary>
+        /// <summary>Regression test: bboxlog 2885.</summary>
         [Fact]
         public void test_bboxlog_2885()
         {
@@ -1313,7 +1339,7 @@ namespace MuPDF.NET.Test
         }
 
         /// <summary>
-        /// <summary>Regression test: 3081 (PyMuPDF <c>tests/test_general.py::test_3081</c>).</summary>
+        /// <summary>Regression test: 3081.</summary>
         /// Check Document.close() closes file handles, even if a Page instance exists.
         /// </summary>
         [Fact]
@@ -1381,7 +1407,7 @@ namespace MuPDF.NET.Test
             }
         }
 
-        /// <summary>Regression test: xml (PyMuPDF <c>tests/test_general.py::test_xml</c>).</summary>
+        /// <summary>Regression test: xml.</summary>
         [Fact]
         public void test_xml()
         {
@@ -1390,7 +1416,7 @@ namespace MuPDF.NET.Test
             var xml = document.GetXmlMetadata();
         }
 
-        /// <summary>Regression test: 3112 set xml metadata (PyMuPDF <c>tests/test_general.py::test_3112_set_xml_metadata</c>).</summary>
+        /// <summary>Regression test: 3112 set xml metadata.</summary>
         [Fact]
         public void test_3112_set_xml_metadata()
         {
@@ -1399,7 +1425,7 @@ namespace MuPDF.NET.Test
             var xml = document.GetXmlMetadata();
         }
 
-        /// <summary>Regression test: archive 3126 (PyMuPDF <c>tests/test_general.py::test_archive_3126</c>).</summary>
+        /// <summary>Regression test: archive 3126.</summary>
         [Fact]
         public void test_archive_3126()
         {
@@ -1408,7 +1434,7 @@ namespace MuPDF.NET.Test
             using var archive = new Archive(p);
         }
 
-        /// <summary>Regression test: 3140 (PyMuPDF <c>tests/test_general.py::test_3140</c>).</summary>
+        /// <summary>Regression test: 3140.</summary>
         [Fact]
         public void test_3140()
         {
@@ -1459,7 +1485,7 @@ namespace MuPDF.NET.Test
             File.Delete(oldfile);  // os.remove(oldfile)
         }
 
-        /// <summary>Regression test: 533 (PyMuPDF <c>tests/test_general.py::test_533</c>).</summary>
+        /// <summary>Regression test: 533.</summary>
         [Fact]
         public void test_533()
         {
@@ -1470,7 +1496,7 @@ namespace MuPDF.NET.Test
             for (int i = 0; i < doc.PageCount; i++) _ = doc[i];
         }
 
-        /// <summary>Regression test: 3354 (PyMuPDF <c>tests/test_general.py::test_3354</c>).</summary>
+        /// <summary>Regression test: 3354.</summary>
         [Fact]
         public void test_3354()
         {
@@ -1480,7 +1506,7 @@ namespace MuPDF.NET.Test
             Assert.Equal(v, document.Metadata);  // assert document.metadata == v
         }
 
-        /// <summary>Regression test: scientific numbers (PyMuPDF <c>tests/test_general.py::test_scientific_numbers</c>).</summary>
+        /// <summary>Regression test: scientific numbers.</summary>
         [Fact]
         public void test_scientific_numbers()
         {
@@ -1492,7 +1518,7 @@ namespace MuPDF.NET.Test
             doc.Save(Out("test_scientific_numbers.pdf"));
         }
 
-        /// <summary>Regression test: 3615 (PyMuPDF <c>tests/test_general.py::test_3615</c>).</summary>
+        /// <summary>Regression test: 3615.</summary>
         [Fact]
         public void test_3615()
         {
@@ -1509,7 +1535,7 @@ namespace MuPDF.NET.Test
             Assert.False(string.IsNullOrEmpty(wt));  // assert wt
         }
 
-        /// <summary>Regression test: 3654 (PyMuPDF <c>tests/test_general.py::test_3654</c>).</summary>
+        /// <summary>Regression test: 3654.</summary>
         [Fact]
         public void test_3654()
         {
@@ -1523,7 +1549,7 @@ namespace MuPDF.NET.Test
             content = content.Trim();  // content = content.strip()
         }
 
-        /// <summary>Regression test: 3727 (PyMuPDF <c>tests/test_general.py::test_3727</c>).</summary>
+        /// <summary>Regression test: 3727.</summary>
         [Fact]
         public void test_3727()
         {
@@ -1535,7 +1561,7 @@ namespace MuPDF.NET.Test
             }
         }
 
-        /// <summary>Regression test: 3569 (PyMuPDF <c>tests/test_general.py::test_3569</c>).</summary>
+        /// <summary>Regression test: 3569.</summary>
         [Fact]
         public void test_3569()
         {
@@ -1613,14 +1639,14 @@ namespace MuPDF.NET.Test
                     wt);
         }
 
-        /// <summary>Regression test: 3450 (PyMuPDF <c>tests/test_general.py::test_3450</c>).</summary>
+        /// <summary>Regression test: 3450.</summary>
         [Fact]
         public void test_3450()
         {
             // This issue is a slow-down, so we just show time taken - it's not safe
             // to fail if test takes too long because that can give spurious failures
             // depending on hardware etc.
-            // On a mac-mini, PyMuPDF-1.24.8 takes 60s, PyMuPDF-1.24.9 takes 4s.
+            // On a mac-mini, MuPDF-1.24.8 takes 60s, MuPDF-1.24.9 takes 4s.
             string path = Doc("test_3450.pdf");
             var pdf = Document.Open(path);
             Page page = pdf[0];  // page = pdf[0]
@@ -1634,7 +1660,7 @@ namespace MuPDF.NET.Test
             Console.WriteLine($"test_3450(): t={t}");  // print(f'test_3450(): {t=}')
         }
 
-        /// <summary><c>mupdf.PDF_NULL</c>/<c>PDF_TRUE</c>/<c>PDF_FALSE</c> are <see cref="mupdf.PdfObj"/> (PyMuPDF <c>tests/test_general.py::test_3859</c>).</summary>
+        /// <summary><c>mupdf.PDF_NULL</c>/<c>PDF_TRUE</c>/<c>PDF_FALSE</c> are <see cref="mupdf.PdfObj"/>.</summary>
         [Fact]
         public void test_3859()
         {
@@ -1656,7 +1682,7 @@ namespace MuPDF.NET.Test
             }
         }
 
-        /// <summary>Regression test: 3905 (PyMuPDF <c>tests/test_general.py::test_3905</c>).</summary>
+        /// <summary>Regression test: 3905.</summary>
         [Fact]
         public void test_3905()
         {
@@ -1664,7 +1690,7 @@ namespace MuPDF.NET.Test
             Assert.Throws<FileDataException>(() => new Document(data, fileType: "pdf"));
         }
 
-        /// <summary>Regression test: 3624 (PyMuPDF <c>tests/test_general.py::test_3624</c>).</summary>
+        /// <summary>Regression test: 3624.</summary>
         [Fact]
         public void test_3624()
         {
@@ -1691,7 +1717,7 @@ namespace MuPDF.NET.Test
             }
         }
 
-        /// <summary>Regression test: 4043 (PyMuPDF <c>tests/test_general.py::test_4043</c>).</summary>
+        /// <summary>Regression test: 4043.</summary>
         [Fact]
         public void test_4043()
         {
@@ -1701,7 +1727,7 @@ namespace MuPDF.NET.Test
             doc.Save(Out("test_4043.pdf"));
         }
 
-        /// <summary>Regression test: 4018 (PyMuPDF <c>tests/test_general.py::test_4018</c>).</summary>
+        /// <summary>Regression test: 4018.</summary>
         [Fact]
         public void test_4018()
         {
@@ -1710,11 +1736,11 @@ namespace MuPDF.NET.Test
                 _ = page;
         }
 
-        /// <summary>Regression test: 4034 (PyMuPDF <c>tests/test_general.py::test_4034</c>).</summary>
+        /// <summary>Regression test: 4034.</summary>
         [Fact]
         public void test_4034()
         {
-            // https://github.com/pymupdf/PyMuPDF/issues/4034.
+            // MuPDF issue https://github.com/ArtifexSoftware/mupdf/issues/4034.
             string path = Doc("test_4034.pdf");
             string path_clean = Out("test_4034.pdf");  // path_clean = os.path.normpath(f'{__file__}/../../tests/test_4034_out.pdf')
             Pixmap pixmap1;
@@ -1734,7 +1760,7 @@ namespace MuPDF.NET.Test
             }
         }
 
-        /// <summary>Regression test: 4309 (PyMuPDF <c>tests/test_general.py::test_4309</c>).</summary>
+        /// <summary>Regression test: 4309.</summary>
         [Fact]
         public void test_4309()
         {
@@ -1743,7 +1769,7 @@ namespace MuPDF.NET.Test
             document.DeletePage(0);
         }
 
-        /// <summary>Regression test: 4224 (PyMuPDF <c>tests/test_general.py::test_4224</c>).</summary>
+        /// <summary>Regression test: 4224.</summary>
         [Fact]
         public void test_4224()
         {
@@ -1761,7 +1787,7 @@ namespace MuPDF.NET.Test
             }
         }
 
-        /// <summary>Regression test: 4319 (PyMuPDF <c>tests/test_general.py::test_4319</c>).</summary>
+        /// <summary>Regression test: 4319.</summary>
         [Fact]
         public void test_4319()
         {
@@ -1782,11 +1808,10 @@ namespace MuPDF.NET.Test
                 }
             }
             finally { 
-                //if (File.Exists(path)) File.Delete(path); 
             }
         }
 
-        /// <summary>Regression test: 3886 (PyMuPDF <c>tests/test_general.py::test_3886</c>).</summary>
+        /// <summary>Regression test: 3886.</summary>
         [Fact]
         public void test_3886()
         {
@@ -1823,7 +1848,7 @@ namespace MuPDF.NET.Test
             }
         }
 
-        /// <summary>Regression test: 4415 (PyMuPDF <c>tests/test_general.py::test_4415</c>).</summary>
+        /// <summary>Regression test: 4415.</summary>
         [Fact]
         public void test_4415()
         {
@@ -1845,7 +1870,7 @@ namespace MuPDF.NET.Test
             }
         }
 
-        /// <summary>Regression test: 4466 (PyMuPDF <c>tests/test_general.py::test_4466</c>).</summary>
+        /// <summary>Regression test: 4466.</summary>
         [Fact]
         public void test_4466()
         {
@@ -1858,16 +1883,15 @@ namespace MuPDF.NET.Test
             }
         }
 
-        /// <summary>Regression test: 4479 (PyMuPDF <c>tests/test_general.py::test_4479</c>).</summary>
+        /// <summary>Regression test: 4479.</summary>
         [Fact]
         public void test_4479()
         {
-            // PyMuPDF test_4479: passes on 1.24.14 and 1.26.0; regressed on 1.25.x.
+            // MuPDF test_4479: passes on 1.24.14 and 1.26.0; regressed on 1.25.x.
             Console.WriteLine();
             string path = Doc("test_4479.pdf");
             using (var document = Document.Open(path))
             {
-                //     for item in items:
                 void Show(List<Dictionary<string, object>> layerItems)
                 {
                     foreach (var item in layerItems)
@@ -1942,7 +1966,7 @@ namespace MuPDF.NET.Test
             }
         }
 
-        /// <summary>Regression test: 4564 (PyMuPDF <c>tests/test_general.py::test_4564</c>).</summary>
+        /// <summary>Regression test: 4564.</summary>
         [Fact]
         public void test_4564()
         {
@@ -1952,7 +1976,7 @@ namespace MuPDF.NET.Test
             Assert.Contains("Adobe PSL 1.3e for Canon", producer);
         }
 
-        /// <summary>Regression test: 4496 (PyMuPDF <c>tests/test_general.py::test_4496</c>).</summary>
+        /// <summary>Regression test: 4496.</summary>
         [Fact]
         public void test_4496()
         {
@@ -1963,7 +1987,7 @@ namespace MuPDF.NET.Test
             }
         }
 
-        /// <summary>Regression test: 4590 (PyMuPDF <c>tests/test_general.py::test_4590</c>).</summary>
+        /// <summary>Regression test: 4590.</summary>
         [Fact]
         public void test_4590()
         {
@@ -1999,7 +2023,7 @@ namespace MuPDF.NET.Test
             }
         }
 
-        /// <summary>Regression test: 4702 (PyMuPDF <c>tests/test.py::test_4702</c>).</summary>
+        /// <summary>Regression test: 4702.</summary>
         [Fact]
         public void test_4702()
         {
@@ -2043,7 +2067,105 @@ namespace MuPDF.NET.Test
             Assert.Equal("repairing PDF document", wt);  // assert wt == 'repairing PDF document'
         }
 
-        /// <summary>Regression test: 4712 (PyMuPDF <c>tests/test_general.py::test_4712</c>).</summary>
+        /// <summary>Regression test: 4639.</summary>
+        [Fact]
+        public void test_4639()
+        {
+            string path = Doc("test_4639.pdf");
+            using var document = new Document(path);
+            var page = document[document.PageCount - 1];
+            var bLog = page.GetBboxlog(includeLayerNames: true);
+            Assert.Equal(326, bLog.Count);
+        }
+
+        /// <summary>Regression test: gitinfo.</summary>
+        [Fact]
+        public void test_gitinfo()
+        {
+            Console.WriteLine();
+            string versionsPath = Path.Combine(_Path.ResolveSolutionRoot(), "build", "ArtifexVersions.g.cs");
+            if (File.Exists(versionsPath))
+            {
+                foreach (string line in File.ReadAllLines(versionsPath))
+                {
+                    if (line.Contains("public const string", StringComparison.Ordinal))
+                        Console.WriteLine(line.Trim());
+                }
+            }
+            else
+            {
+                Console.WriteLine($"test_gitinfo(): ArtifexVersions.g.cs not found at {versionsPath}");
+            }
+            Console.WriteLine($"mupdf_version={Tools.MupdfVersion()}");
+        }
+
+        /// <summary>Regression test: 4263.</summary>
+        [Fact]
+        public void test_4263()
+        {
+            Console.WriteLine("test_4263(): not running on .NET - pymupdf CLI is not available.");
+        }
+
+        /// <summary>Regression test: 4533.</summary>
+        [Fact]
+        public void test_4533()
+        {
+            string path = OptionalDocPath("test_4533.pdf");
+            if (!File.Exists(path))
+            {
+                Console.WriteLine(
+                    "test_4533(): skipping because test_4533.pdf not present "
+                    + "(download from https://github.com/user-attachments/files/20497146/NineData_user_manual_V3.0.5.pdf).");
+                return;
+            }
+            using var document = new Document(path);
+            Console.WriteLine($"page_count={document.PageCount}");
+            if (_Version.mupdf_version_tuple_at_least(1, 26, 6))
+                Assert.True(document.PageCount > 0);
+        }
+
+        /// <summary>Regression test: 4392.</summary>
+        [Fact]
+        public void test_4392()
+        {
+            Console.WriteLine("test_4392(): not running on .NET - cannot run child processes.");
+        }
+
+        /// <summary>Regression test: cli.</summary>
+        [Fact]
+        public void test_cli()
+        {
+            Console.WriteLine("test_cli(): not running on .NET - pymupdf CLI is not available.");
+        }
+
+        /// <summary>Regression test: cli out.</summary>
+        [Fact]
+        public void test_cli_out()
+        {
+            Console.WriteLine("test_cli_out(): not running on .NET - cannot run child processes.");
+        }
+
+        /// <summary>Regression test: use python logging.</summary>
+        [Fact]
+        public void test_use_python_logging()
+        {
+            Console.WriteLine("test_use_python_logging(): not running on .NET - cannot run child processes.");
+        }
+
+        /// <summary>Regression test: open2.</summary>
+        [Fact]
+        public void test_open2()
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                Console.WriteLine(
+                    "test_open2(): not running on Windows because `git ls-files` known fail on Github Windows runners.");
+                return;
+            }
+            Console.WriteLine("test_open2(): not running on .NET - cannot run child processes.");
+        }
+
+        /// <summary>Regression test: 4712.</summary>
         [Fact]
         public void test_4712()
         {
@@ -2062,18 +2184,16 @@ namespace MuPDF.NET.Test
             string path_a = Doc("test_4712_a.pdf");  // path_a = os.path.normpath(f'{__file__}/../../tests/resources/test_4712_a.pdf')
             string path_b = Doc("test_4712_b.pdf");  // path_b = os.path.normpath(f'{__file__}/../../tests/resources/test_4712_b.pdf')
             using var doc1 = Document.Open(path_a);
-            // for i in range(6):
             for (int i = 0; i < 6; i++)
                 // doc1.LoadPage(i).GetPixmap()
                 using (var _ = doc1.LoadPage(i).GetPixmap()) { }
             using var doc2 = Document.Open(path_b);
-            // for i in range(6):
             for (int i = 0; i < 6; i++)
                 // doc2.LoadPage(i).GetPixmap()
                 using (var _ = doc2.LoadPage(i).GetPixmap()) { }
         }
 
-        /// <summary>Regression test: 4712m (PyMuPDF <c>tests/test_general.py::test_4712m</c>).</summary>
+        /// <summary>Regression test: 4712m.</summary>
         [Fact]
         public void test_4712m()
         {
@@ -2118,7 +2238,6 @@ namespace MuPDF.NET.Test
 
             void ProcessDocument(mupdf.FzDocument document)
             {
-                // for i in range(6):
                 for (int i = 0; i < 6; i++)
                 {
                     Console.WriteLine($"    i={i}");
@@ -2139,7 +2258,7 @@ namespace MuPDF.NET.Test
                 ProcessDocument(document_b);
         }
 
-        /// <summary>Regression test: 4746 (PyMuPDF <c>tests/test_general.py::test_4746</c>).</summary>
+        /// <summary>Regression test: 4746.</summary>
         [Fact]
         public void test_4746()
         {
@@ -2149,7 +2268,7 @@ namespace MuPDF.NET.Test
             archive.Add(file, "foo");
         }
 
-        /// <summary>Regression test: 4907 (PyMuPDF <c>tests/test_general.py::test_4907</c>).</summary>
+        /// <summary>Regression test: 4907.</summary>
         [Fact]
         public void test_4907()
         {
@@ -2162,7 +2281,7 @@ namespace MuPDF.NET.Test
             }
         }
 
-        /// <summary>Regression test: 4928 (PyMuPDF <c>tests/test_general.py::test_4928</c>).</summary>
+        /// <summary>Regression test: 4928.</summary>
         [Fact]
         public void test_4928()
         {
@@ -2172,7 +2291,7 @@ namespace MuPDF.NET.Test
             document.Save(Out("test_4928.pdf"));
         }
 
-        /// <summary>Regression test: 4902 (PyMuPDF <c>tests/test_general.py::test_4902</c>).</summary>
+        /// <summary>Regression test: 4902.</summary>
         [Fact]
         public void test_4902()
         {

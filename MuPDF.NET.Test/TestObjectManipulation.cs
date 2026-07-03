@@ -4,7 +4,6 @@ using Xunit;
 namespace MuPDF.NET.Test
 {
     /// <summary>
-    /// Port of <c>PyMuPDF-1.27.2.2/tests/test_object_manipulation.py</c>.
     /// </summary>
     /// <remarks>
     /// Inputs: <c>TestDocuments/TestObjectManipulation/</c>; outputs: <c>TestDocuments/_Output/TestObjectManipulation/</c>.
@@ -36,7 +35,6 @@ namespace MuPDF.NET.Test
             using var doc = new Document();
             // page = doc.NewPage()
             var page = doc.NewPage();
-            // doc.XrefSetKey(page.Xref, "Rotate", "270")
             doc.XrefSetKey(page.Xref, "Rotate", "270");
             Assert.Equal(270, page.Rotation);
             doc.Save(Out("test_rotation2.pdf"));
@@ -64,7 +62,6 @@ namespace MuPDF.NET.Test
             var page = doc.NewPage();
 
             // testing name in "key": confirm correct spec is accepted
-            // doc.XrefSetKey(page.Xref, "Rotate", "90")
             doc.XrefSetKey(page.Xref, "Rotate", "90");
             Assert.Equal(90, page.Rotation);
 
@@ -74,7 +71,6 @@ namespace MuPDF.NET.Test
             try
             {
                 // illegal char in name (white space)
-                // doc.XrefSetKey(page.Xref, "my rotate", "90")
                 doc.XrefSetKey(page.Xref, "my rotate", "90");
             }
             catch (ValueErrorException e)
@@ -85,10 +81,8 @@ namespace MuPDF.NET.Test
             Assert.True(errorGenerated);
 
             // test name in "value": confirm correct spec is accepted
-            // doc.XrefSetKey(page.Xref, "my_rotate/something", "90")
             doc.XrefSetKey(page.Xref, "my_rotate/something", "90");
             Assert.Equal(("int", "90"), doc.XrefGetKey(page.Xref, "my_rotate/something"));
-            // doc.XrefSetKey(page.Xref, "my_rotate", "/90")
             doc.XrefSetKey(page.Xref, "my_rotate", "/90");
             Assert.Equal(("name", "/90"), doc.XrefGetKey(page.Xref, "my_rotate"));
 
@@ -98,7 +92,6 @@ namespace MuPDF.NET.Test
             try
             {
                 // no slash inside name allowed
-                // doc.XrefSetKey(page.Xref, "my_rotate", "/9/0")
                 doc.XrefSetKey(page.Xref, "my_rotate", "/9/0");
             }
             catch (ValueErrorException e)

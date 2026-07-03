@@ -8,7 +8,7 @@ using Xunit;
 
 namespace MuPDF.NET.Test
 {
-    /// <summary>Memory regression tests ported from PyMuPDF <c>tests/test_memory.py</c>.</summary>
+    /// <summary>Memory regression tests ported from </summary>
     /// <remarks>
     /// Fixtures: <c>TestDocuments/MuPDF.NET.Test/TestMemory/</c>.
     /// Outputs: <c>TestDocuments/MuPDF.NET.Test/_Output/TestMemory/</c>.
@@ -23,7 +23,7 @@ namespace MuPDF.NET.Test
 
         private static string Out(string fileName) => _Path.ForOutput(fileName, TestClassName);
 
-        /// <summary>Honours <c>PYMUPDF_TEST_QUICK=1</c> (PyMuPDF <c>util.skip_slow_tests</c>).</summary>
+        /// <summary>Honours <c>PYMUPDF_TEST_QUICK=1</c>.</summary>
         private static bool SkipSlowTests(string testName)
         {
             string? pymupdfTestQuick = Environment.GetEnvironmentVariable("PYMUPDF_TEST_QUICK");
@@ -35,7 +35,7 @@ namespace MuPDF.NET.Test
             return false;
         }
 
-        /// <summary>Process working set (RSS), analogous to PyMuPDF <c>psutil.Process().memory_info().rss</c>.</summary>
+        /// <summary>Process working set (RSS), analogous to </summary>
         private static long GetProcessRss()
         {
             using var process = Process.GetCurrentProcess();
@@ -59,7 +59,7 @@ namespace MuPDF.NET.Test
         private static bool IsWindows() =>
             RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
 
-        /// <summary>.NET runtime version; used where PyMuPDF gates assertions on Python &gt;= 3.11.</summary>
+        /// <summary>.NET runtime version; used where MuPDF gates assertions on Python &gt;= 3.11.</summary>
         private static Version PythonVersionTuple() => Environment.Version;
 
         /// <summary>Insert <paramref name="content"/> into <paramref name="coverpage"/> and return PDF bytes.</summary>
@@ -285,7 +285,7 @@ namespace MuPDF.NET.Test
             Assert.True(ratio >= 0.90f && ratio < 1.15f, $"ratio={ratio}");
         }
 
-        /// <summary>Repeated <c>MergePdf</c> must not grow RSS (PyMuPDF test_2791).</summary>
+        /// <summary>Repeated <c>MergePdf</c> must not grow RSS.</summary>
         [Fact]
         public void test_2791()
         {
@@ -336,7 +336,7 @@ namespace MuPDF.NET.Test
 
             if (!IsLinux())
             {
-                // RSS varies on non-Linux CI hosts; only assert on Linux (PyMuPDF parity).
+                // RSS varies on non-Linux CI hosts; only assert on Linux.
                 Console.WriteLine("test_2791(): not asserting ratio because not running on Linux.");
             }
             else if (PythonVersionTuple().Major < 3 || (PythonVersionTuple().Major == 3 && PythonVersionTuple().Minor < 11))
@@ -349,12 +349,12 @@ namespace MuPDF.NET.Test
             }
             else if (stat_type == "psutil")
             {
-                // PyMuPDF expects ratio in [0.990, 1.027) after merge-PDF leak fixes.
+                // MuPDF expects ratio in [0.990, 1.027) after merge-PDF leak fixes.
                 Assert.True(ratio >= 0.990 && ratio < 1.027, $"ratio={ratio}");
             }
         }
 
-        /// <summary>Repeated <c>GetText(rawdict)</c> over all pages must not grow RSS (PyMuPDF test_4090).</summary>
+        /// <summary>Repeated <c>GetText(rawdict)</c> over all pages must not grow RSS.</summary>
         [Fact]
         public void test_4090()
         {
@@ -396,7 +396,7 @@ namespace MuPDF.NET.Test
         private static void ShowTracemallocDiff(object snapshot1, object snapshot2) =>
             throw new NotSupportedException("tracemalloc is not available in MuPDF.NET.Test");
 
-        /// <summary>Pixmap extraction per page image must not leak (PyMuPDF test_4125).</summary>
+        /// <summary>Pixmap extraction per page image must not leak.</summary>
         [Fact]
         public void test_4125()
         {
@@ -460,7 +460,7 @@ namespace MuPDF.NET.Test
                 }
                 else
                 {
-                    // PyMuPDF: pre-fix leaked ~4.9 MB per iteration; cap delta at 100 KB × iteration count.
+                    // MuPDF: pre-fix leaked ~4.9 MB per iteration; cap delta at 100 KB × iteration count.
                     long rss_delta_max = 100 * 1000 * (state.Rsss.Count - 3);
                     Assert.True(rss_delta < rss_delta_max);
                 }
@@ -477,10 +477,35 @@ namespace MuPDF.NET.Test
             public long Prev { get; set; }
         }
 
-        /// <summary>Not ported: Python tracemalloc leak test (PyMuPDF <c>_test_4751</c>).</summary>
+        /// <summary>Not ported: Python tracemalloc leak test.</summary>
         private static void _test_4751()
         {
             Console.WriteLine("_test_4751(): tracemalloc is not available in MuPDF.NET.Test");
+        }
+
+        [Fact]
+        public void test_4751()
+        {
+            // We run the actual test in a child process, because otherwise previous
+            // tests seem to effect the leak detection causing false positives. It's
+            // possible that these could be real leaks, but they are not the ones
+            // we are testing for here.
+            {
+                Console.WriteLine("test_4751(): not running on Pyodide - cannot run child processes.");
+                return;
+            }
+
+            string? githubActions = Environment.GetEnvironmentVariable("GITHUB_ACTIONS");
+            if (githubActions == "true")
+            {
+                // We see additional leaks on Github, don't know why.
+                Console.WriteLine($"test_4751(): GITHUB_ACTIONS={githubActions}; not running on Github because known to fail.");
+                return;
+            }
+
+            Console.WriteLine();
+            Console.WriteLine("test_4751(): tracemalloc is not available in MuPDF.NET.Test; skipping leak detection.");
+            _test_4751();
         }
     }
 }

@@ -26,7 +26,7 @@ namespace MuPDF.NET
         /// </summary>
         public object Link { get; set; } = null;
 
-        /// <summary>Legacy MuPDF.NET / PyMuPDF tuple field names.</summary>
+        /// <summary>Legacy MuPDF.NET / MuPDF tuple field names.</summary>
         public int level
         {
             get => Level;

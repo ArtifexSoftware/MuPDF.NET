@@ -1,4 +1,3 @@
-// Port of PyMuPDF-1.27.2.2/tests/test_badfonts.py
 using Xunit;
 
 namespace MuPDF.NET.Test
@@ -12,7 +11,7 @@ namespace MuPDF.NET.Test
     {
         private static readonly string testDocPath = _Path.ForTestClass("has-bad-fonts.pdf", nameof(TestBadFonts));
 
-        /// <summary>Regression test: survive names (PyMuPDF <c>tests/test_badfonts.py::test_survive_names</c>).</summary>
+        /// <summary>Regression test: survive names.</summary>
         [Fact]
         public void test_survive_names()
         {

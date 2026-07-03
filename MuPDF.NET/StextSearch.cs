@@ -9,7 +9,7 @@ namespace MuPDF.NET
     /// </summary>
     /// <remarks>
     /// <para>
-    /// Ports PyMuPDF <c>JM_search_stext_page</c> in <c>src/__init__.py</c> (~21384) and
+    /// Ports in <c>src/__init__.py</c> (~21384) and
     /// <c>src/extra.i</c> (~4194). This type is <c>internal</c>; there is no public surface here.
     /// User-facing search is <see cref="Page.SearchFor"/> / <see cref="TextPage.Search"/>.
     /// </para>
@@ -167,7 +167,7 @@ namespace MuPDF.NET
         /// <paramref name="offset"/> (C <c>find_string</c> / Python <c>find_string</c> + <c>match_string</c>).
         /// </summary>
         /// <remarks>
-        /// Uses ordinal case-insensitive matching as a .NET approximation of PyMuPDF
+        /// Uses ordinal case-insensitive matching as a .NET approximation of MuPDF
         /// <c>chartocanon</c> / <c>match_string</c> canonical comparison in <c>extra.i</c>.
         /// </remarks>
         private static (int? begin, int? end) FindString(string haystack, int offset, string needle)

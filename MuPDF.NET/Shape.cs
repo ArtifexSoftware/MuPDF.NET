@@ -16,7 +16,7 @@ namespace MuPDF.NET
     /// <see cref="Commit"/> to write <see cref="TotalCont"/> into the page contents stream.</para>
     /// <para><see cref="InsertText"/> and <see cref="InsertTextbox"/> append to <see cref="TextCont"/> and
     /// implicitly finish the current path; only <see cref="Commit"/> is required afterward.</para>
-    /// <para>Ports PyMuPDF <c>Shape</c>.</para>
+    /// <para>Ports </para>
     /// </remarks>
     public class Shape : IDisposable
     {
@@ -137,7 +137,7 @@ namespace MuPDF.NET
         // ─── Drawing Primitives ─────────────────────────────────────────
 
         /// <summary>
-        /// Angle in radians from <paramref name="c"/> to <paramref name="p"/> (PyMuPDF <c>horizontal_angle</c>).
+        /// Angle in radians from <paramref name="c"/> to <paramref name="p"/> .
         /// </summary>
         /// <param name="c">Center or origin point.</param>
         /// <param name="p">Target point.</param>
@@ -687,7 +687,7 @@ namespace MuPDF.NET
                 drawCont = Helpers.FormatPdfReals(mat.A, mat.B, mat.C, mat.D, mat.E, mat.F) + " cm\n" + drawCont;
             }
 
-            // PyMuPDF: self.totalcont += "\nq\n" + self.draw_cont + "Q\n"
+            // MuPDF: self.totalcont += "\nq\n" + self.draw_cont + "Q\n"
             _totalContents.Append("\nq\n");
             _totalContents.Append(drawCont);
             _totalContents.Append("Q\n");
@@ -707,14 +707,12 @@ namespace MuPDF.NET
         /// <remarks>Must be called or nothing is persisted. Clears <see cref="Rect"/>, <see cref="LastPoint"/>, and content buffers.</remarks>
         public void Commit(bool overlay = true)
         {
-            // PyMuPDF Shape.commit:
+            // MuPDF Shape.commit:
             //     The argument controls whether data appear in foreground (default)
             //     or background."""
             //     CheckParent(self.page)  # doc may have died meanwhile
             //     self.totalcont += self.text_cont
             //     self.totalcont = self.totalcont.encode()
-            //     if self.totalcont:
-            //         if overlay:
             //             self.page.wrap_contents()  # ensure a balanced graphics state
             //         xref = TOOLS._insert_contents(self.page, b" ", overlay)
             //         self.doc.UpdateStream(xref, self.totalcont)
@@ -946,7 +944,7 @@ namespace MuPDF.NET
             else
                 alpha = $"/{alpha} gs\n";
 
-            // PyMuPDF Shape.insert_text uses fontname (e.g. "helv"), not "F{xref}".
+            // MuPDF Shape.insert_text uses fontname (e.g. "helv"), not "F{xref}".
             string resKey = fname;
             var nres = new StringBuilder();
             nres.Append("\nq\n");
@@ -1509,7 +1507,7 @@ namespace MuPDF.NET
 
         ~Shape() { Dispose(); }
 
-        // ─── PyMuPDF API names (internal, same assembly) ─────────────────
+        // ─── MuPDF API names (internal, same assembly) ─────────────────
 
         internal static float horizontal_angle(Point c, Point p) => HorizontalAngle(c, p);
         internal Point draw_bezier(Point p1, Point p2, Point p3, Point p4) => DrawBezier(p1, p2, p3, p4);

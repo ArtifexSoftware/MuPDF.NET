@@ -6,7 +6,6 @@ using Xunit;
 namespace MuPDF.NET.Test
 {
     /// <summary>
-    /// Port of <c>PyMuPDF-1.27.2.2/tests/test_named_links.py</c>.
     /// </summary>
     /// <remarks>
     /// Inputs: <c>TestDocuments/TestNamedLinks/</c>; outputs: <c>TestDocuments/_Output/TestNamedLinks/</c>.
@@ -88,7 +87,7 @@ namespace MuPDF.NET.Test
         public void test_3301()
         {
             // Links encoded as /URI in PDF are converted to either LINK_URI or
-            // LINK_LAUNCH in PyMuPDF.
+            // LINK_LAUNCH in MuPDF.
             // This function ensures that the 'Link.uri' containing a ':' colon
             // is converted to a URI if not explicitly starting with "file://".
             //     return
@@ -135,7 +134,6 @@ namespace MuPDF.NET.Test
             using var doc2 = new Document(pdfdata, "pdf");
             // page = doc[0]
             page = doc2[0];
-            // for link in page.GetLinks():
             foreach (var link in page.GetLinks())
             {
                 // t = link["uri"] if (_ := link.get("file")) is None else _

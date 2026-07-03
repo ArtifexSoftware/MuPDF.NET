@@ -8,7 +8,7 @@ using System.Text;
 namespace MuPDF.NET
 {
     /// <summary>
-    /// Prepares PDF text spans for deferred output on pages of matching size (PyMuPDF <c>TextWriter</c>).
+    /// Prepares PDF text spans for deferred output on pages of matching size .
     /// </summary>
     /// <remarks>
     /// <para>PDF only. Decouples text preparation from <see cref="WriteText"/> on a <see cref="Page"/>.
@@ -285,10 +285,8 @@ namespace MuPDF.NET
             float asc = f.Ascender;
             float dsc = f.Descender;
             float lheight;
-            // if not lineheight:
             if (lineHeight == null)
             {
-                // if asc - dsc <= 1: lheight = 1.2
                 // else: lheight = asc - dsc
                 lheight = (asc - dsc <= 1) ? 1.2f : asc - dsc;
             }
@@ -334,7 +332,6 @@ namespace MuPDF.NET
             for (int i = 0; i < textlines.Length; i++)
             {
                 string line = textlines[i];
-                // if line in ("", " "):
                 if (line == "" || line == " ")
                 {
                     newLines.Add((line, spaceLen));
@@ -342,13 +339,10 @@ namespace MuPDF.NET
                     noJustify.Add(newLines.Count - 1);
                     continue;
                 }
-                // if i == 0: width = rect.x1 - pos.x
                 if (i == 0)
                     width = (float)(rect.X1 - start.X);
                 else
                     width = (float)rect.Width - tolerance;
-
-                // if right_to_left:  # reverses Arabic / Hebrew text front to back
                 if (rightToLeft)
                     line = CleanRtl(line);
                 float tl = Textlen(line);
@@ -410,16 +404,10 @@ namespace MuPDF.NET
                 // line, tl = new_lines.pop(0)
                 var (line, tl) = newLines[0];
                 newLines.RemoveAt(0);
-
-                // if right_to_left:  # Arabic, Hebrew
                 if (rightToLeft)
                     line = new string(line.Reverse().ToArray());
-
-                // if i == 0: start = pos
                 if (i == 0)
                     start = pos != null ? new Point(pos) : rect.TopLeft + new Point(tolerance, fontSize * asc);
-
-                // if align == TEXT_ALIGN_JUSTIFY and i not in no_justify and tl < std_width:
                 if (align == Constants.TextAlignJustify && !noJustify.Contains(i) && tl < stdWidth)
                 {
                     OutputJustify(start, line);
@@ -427,8 +415,6 @@ namespace MuPDF.NET
                     start.Y += LINEHEIGHT;
                     continue;
                 }
-
-                // if i > 0 or pos.x == std_start:
                 if (i > 0 || Math.Abs(start.X - stdStart) < 1e-6)
                     start.X += (width - tl) * factor;
 
@@ -483,7 +469,6 @@ namespace MuPDF.NET
             }
             if (matrix != null && morph != null)
                 throw new ValueErrorException("only one of matrix, morph is allowed");
-            // if getattr(opacity, "__float__", None) is None or opacity == -1:
             if (opacity < 0 || Math.Abs(opacity + 1) < 1e-9f)
                 opacity = _opacity;
             if (color == null)
@@ -699,7 +684,7 @@ namespace MuPDF.NET
             LastPoint = new Point(0, 0);
         }
 
-        /// <summary>Append text using small-cap glyphs (PyMuPDF <c>JM_show_string_cs</c>).</summary>
+        /// <summary>Append text using small-cap glyphs.</summary>
         private static mupdf.FzMatrix ShowStringSmallCaps(
             mupdf.FzText text, Font userFont, mupdf.FzMatrix trm, string s, int lang)
         {
@@ -734,7 +719,7 @@ namespace MuPDF.NET
             return trm;
         }
 
-        /// <summary>Reorders Latin runs inside RTL text for PDF output (PyMuPDF <c>clean_rtl</c>).</summary>
+        /// <summary>Reorders Latin runs inside RTL text for PDF output.</summary>
         public static string CleanRtl(string text)
         {
             if (string.IsNullOrEmpty(text)) return text;
@@ -793,7 +778,7 @@ namespace MuPDF.NET
 
         public override string ToString() => $"TextWriter(spans={_spanCount}, rect={TextRect})";
 
-        // ─── PyMuPDF API names (internal, same assembly) ─────────────────
+        // ─── MuPDF API names (internal, same assembly) ─────────────────
 
         internal Rect text_rect => TextRect;
         internal Point last_point => LastPoint;

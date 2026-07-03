@@ -14,7 +14,7 @@ namespace MuPDF.NET
     /// </summary>
     /// <remarks>
     /// <para>
-    /// Ports PyMuPDF <c>class Annot</c>. An annotation associates an object (note, sound, link, etc.)
+    /// Ports An annotation associates an object (note, sound, link, etc.)
     /// with a location on a page. It is always tied to its <see cref="Parent"/> page; if the page
     /// or document becomes invalid, wrappers may throw when accessed.
     /// </para>
@@ -101,16 +101,16 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>Annotation type enumeration (PyMuPDF-compatible values).</summary>
+        /// <summary>Annotation type enumeration.</summary>
         public AnnotationType AnnotationType => Type;
 
-        /// <summary>Annotation type name string (PyMuPDF <c>Annot.type</c>).</summary>
+        /// <summary>Annotation type name string.</summary>
         public string TypeString => Type.Name;
 
         /// <summary>
         /// Rectangle containing the annotation in page coordinates.
         /// </summary>
-        /// <remarks>Transformed by the page derotation matrix (PyMuPDF <c>Annot.rect</c>).</remarks>
+        /// <remarks>Transformed by the page derotation matrix .</remarks>
         public Rect Rect
         {
             get
@@ -120,17 +120,17 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>Annotation xref number (PyMuPDF <c>Annot.xref</c>).</summary>
+        /// <summary>Annotation xref number.</summary>
         public int Xref => mupdf.mupdf.pdf_to_num(mupdf.mupdf.pdf_annot_obj(NativeAnnot));
 
-        /// <summary>Flags field (PyMuPDF <c>Annot.flags</c> / <c>set_flags</c>).</summary>
+        /// <summary>Flags field ( / <c>set_flags</c>).</summary>
         public int Flags
         {
             get => mupdf.mupdf.pdf_annot_flags(NativeAnnot);
             set => mupdf.mupdf.pdf_set_annot_flags(NativeAnnot, value);
         }
 
-        /// <summary>Annotation contents (PyMuPDF <c>Annot.info</c> / PDF /Contents).</summary>
+        /// <summary>Annotation contents ( / PDF /Contents).</summary>
         public string Contents
         {
             get => mupdf.mupdf.pdf_annot_contents(NativeAnnot);
@@ -141,7 +141,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>Whether the annotation has a Popup (PyMuPDF <c>Annot.has_popup</c>).</summary>
+        /// <summary>Whether the annotation has a Popup.</summary>
         public bool HasPopup
         {
             get
@@ -151,7 +151,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>Annotation Popup rectangle (PyMuPDF <c>Annot.popup_rect</c>).</summary>
+        /// <summary>Annotation Popup rectangle.</summary>
         public Rect PopupRect
         {
             get
@@ -166,7 +166,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>Annotation Popup xref (PyMuPDF <c>Annot.popup_xref</c>).</summary>
+        /// <summary>Annotation Popup xref.</summary>
         public int PopupXref
         {
             get
@@ -177,7 +177,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>Open status of annotation or its Popup (PyMuPDF <c>Annot.is_open</c> / <c>set_open</c>).</summary>
+        /// <summary>Open status of annotation or its Popup ( / <c>set_open</c>).</summary>
         public bool IsOpen
         {
             get
@@ -187,7 +187,7 @@ namespace MuPDF.NET
             set => mupdf.mupdf.pdf_set_annot_is_open(NativeAnnot, value ? 1 : 0);
         }
 
-        /// <summary>Opacity (PyMuPDF <c>Annot.opacity</c> / <c>set_opacity</c>).</summary>
+        /// <summary>Opacity ( / <c>set_opacity</c>).</summary>
         public float Opacity
         {
             get
@@ -201,7 +201,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>Border width from <see cref="Border"/> (PyMuPDF <c>Annot.border</c> width).</summary>
+        /// <summary>Border width from <see cref="Border"/> ( width).</summary>
         public float BorderWidth
         {
             get
@@ -211,7 +211,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>Annotation unique id /NM (PyMuPDF <c>Annot.info</c> id).</summary>
+        /// <summary>Annotation unique id /NM ( id).</summary>
         public string Id
         {
             get
@@ -221,7 +221,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>Next annotation on the page (PyMuPDF <c>Annot.next</c>).</summary>
+        /// <summary>Next annotation on the page.</summary>
         public Annot Next
         {
             get
@@ -234,25 +234,25 @@ namespace MuPDF.NET
         }
 
 
-        /// <summary>Stroke color components (PyMuPDF <c>Annot.colors</c> stroke). Legacy <c>Colors</c> DTO: <see cref="Annot.Legacy.cs"/>.</summary>
+        /// <summary>Stroke color components ( stroke). Legacy <c>Colors</c> DTO: <see cref="Annot.Legacy.cs"/>.</summary>
         public float[] StrokeColor
         {
             get => ColorInfo.TryGetValue("stroke", out var stroke) ? (float[])stroke : Array.Empty<float>();
         }
 
-        /// <summary>Interior (fill) color components (PyMuPDF <c>Annot.colors</c> fill).</summary>
+        /// <summary>Interior (fill) color components ( fill).</summary>
         public float[] InteriorColor
         {
             get => ColorInfo.TryGetValue("fill", out var fill) ? (float[])fill : Array.Empty<float>();
         }
 
-        /// <summary>Color definitions (PyMuPDF <c>Annot.colors</c>).</summary>
+        /// <summary>Color definitions.</summary>
         public Dictionary<string, object> ColorInfo
         {
             get => Helpers.JM_annot_colors(AnnotObj);
         }
 
-        /// <summary>Border information (PyMuPDF <c>Annot.border</c>).</summary>
+        /// <summary>Border information.</summary>
         public Border Border
         {
             get
@@ -270,7 +270,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>Annotation appearance bbox (PyMuPDF <c>Annot.apn_bbox</c>).</summary>
+        /// <summary>Annotation appearance bbox.</summary>
         public Rect ApnBBox
         {
             get
@@ -285,7 +285,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>Annotation appearance matrix (PyMuPDF <c>Annot.apn_matrix</c>).</summary>
+        /// <summary>Annotation appearance matrix.</summary>
         public Matrix ApnMatrix
         {
             get
@@ -296,7 +296,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>Annotation language (PyMuPDF <c>Annot.language</c>).</summary>
+        /// <summary>Annotation language.</summary>
         public string Language
         {
             get
@@ -309,7 +309,7 @@ namespace MuPDF.NET
             set => SetLanguage(value);
         }
 
-        /// <summary>Line end codes (PyMuPDF <c>Annot.line_ends</c>).</summary>
+        /// <summary>Line end codes.</summary>
         public (int start, int end)? LineEnds
         {
             get
@@ -321,7 +321,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>Annotation rotation (PyMuPDF <c>Annot.rotation</c>).</summary>
+        /// <summary>Annotation rotation.</summary>
         public int Rotation
         {
             get
@@ -458,7 +458,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Set stroke and fill colors (PyMuPDF <c>Annot.set_colors</c>).
+        /// Set stroke and fill colors .
         /// <para>Use either a dictionary or the direct <paramref name="stroke"/> / <paramref name="fill"/> arguments.</para>
         /// </summary>
         public void SetColors(float[] stroke = null, float[] fill = null)
@@ -526,7 +526,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>Set opacity (PyMuPDF <c>Annot.set_opacity</c>).</summary>
+        /// <summary>Set opacity.</summary>
         public void SetOpacity(float opacity)
         {
             if (!Helpers.InRange(opacity, 0.0f, 1.0f))
@@ -544,7 +544,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>Set /Name (icon) of annotation (PyMuPDF <c>Annot.set_name</c>).</summary>
+        /// <summary>Set /Name (icon) of annotation.</summary>
         public void SetName(string name)
         {
             mupdf.mupdf.pdf_dict_put_name(AnnotObj, mupdf.mupdf.pdf_new_name("Name"), name);
@@ -557,13 +557,13 @@ namespace MuPDF.NET
             return obj.m_internal != null ? mupdf.mupdf.pdf_to_name(obj) : "";
         }
 
-        /// <summary>Set annotation BlendMode (PyMuPDF <c>Annot.set_blendmode</c>).</summary>
+        /// <summary>Set annotation BlendMode.</summary>
         public void SetBlendMode(string mode)
         {
             mupdf.mupdf.pdf_dict_put_name(AnnotObj, mupdf.mupdf.pdf_new_name("BM"), mode);
         }
 
-        /// <summary>Annotation BlendMode (PyMuPDF <c>Annot.blendmode</c>).</summary>
+        /// <summary>Annotation BlendMode.</summary>
         public string BlendMode
         {
             get
@@ -592,7 +592,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>Annotation author / title (PyMuPDF <c>Annot.info</c> title).</summary>
+        /// <summary>Annotation author / title ( title).</summary>
         public string Author
         {
             get
@@ -606,7 +606,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>Creation date (PyMuPDF <c>Annot.info</c> creationDate).</summary>
+        /// <summary>Creation date ( creationDate).</summary>
         public string CreationDate
         {
             get
@@ -616,7 +616,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>Modification date (PyMuPDF <c>Annot.info</c> modDate).</summary>
+        /// <summary>Modification date ( modDate).</summary>
         public string ModDate
         {
             get
@@ -626,7 +626,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>Set various properties (PyMuPDF <c>Annot.set_info</c>).</summary>
+        /// <summary>Set various properties.</summary>
         public void SetInfo(string content = null, string title = null, string creationDate = null, string modDate = null, string subject = null)
         {
             SetInfo((Dictionary<string, string>)null, content, title, creationDate, modDate, subject);
@@ -682,7 +682,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>Various information details (PyMuPDF <c>Annot.info</c>).</summary>
+        /// <summary>Various information details.</summary>
         public Dictionary<string, string> GetInfo()
         {
             var res = new Dictionary<string, string>();
@@ -712,7 +712,7 @@ namespace MuPDF.NET
             return res;
         }
 
-        /// <summary>Annotation vertex points (PyMuPDF <c>Annot.vertices</c>).</summary>
+        /// <summary>Annotation vertex points.</summary>
         public List<Point> Vertices
         {
             get
@@ -753,7 +753,7 @@ namespace MuPDF.NET
         }
 
 
-        /// <summary>Line annotation endpoints (MuPDF <c>pdf_annot_line</c>; no named PyMuPDF API).</summary>
+        /// <summary>Line annotation endpoints (MuPDF <c>pdf_annot_line</c>; no named MuPDF API).</summary>
         public (Point, Point) Line
         {
             get
@@ -765,7 +765,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>Set line endpoints (MuPDF <c>pdf_set_annot_line</c>; no named PyMuPDF API).</summary>
+        /// <summary>Set line endpoints (MuPDF <c>pdf_set_annot_line</c>; no named MuPDF API).</summary>
         public void SetLine(Point p1, Point p2)
         {
             var rp1 = Helpers.TransformPoint(new Point(p1), RotatePageMatrix);
@@ -773,7 +773,7 @@ namespace MuPDF.NET
             mupdf.mupdf.pdf_set_annot_line(NativeAnnot, rp1.ToFzPoint(), rp2.ToFzPoint());
         }
 
-        /// <summary>Set annotation vertices (no direct PyMuPDF name; uses MuPDF vertex APIs).</summary>
+        /// <summary>Set annotation vertices (no direct MuPDF name; uses MuPDF vertex APIs).</summary>
         public void SetVertices(Point[] points)
         {
             mupdf.mupdf.pdf_clear_annot_vertices(NativeAnnot);
@@ -1040,7 +1040,7 @@ namespace MuPDF.NET
                 || annotType == AnnotationType.Line
                 || annotType == AnnotationType.PolyLine
                 || annotType == AnnotationType.Polygon;
-            // Match PyMuPDF _update_appearance: IC handling for annots that use interior color.
+            // Match MuPDF _update_appearance: IC handling for annots that use interior color.
             if (nFill == 0 || !supportsInterior)
                 mupdf.mupdf.pdf_dict_del(annotObj, mupdf.mupdf.pdf_new_name("IC"));
             else if (nFill > 0)
@@ -1139,7 +1139,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Renders the annotation into a <see cref="Pixmap"/> (PyMuPDF <c>Annot.get_pixmap</c>).
+        /// Renders the annotation into a <see cref="Pixmap"/> .
         /// </summary>
         /// <param name="matrix">Transform matrix; ignored when <paramref name="dpi"/> is non-zero.</param>
         /// <param name="cs">Target colorspace; default RGB.</param>
@@ -1159,7 +1159,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Make annotation TextPage (PyMuPDF <c>Annot.get_textpage</c>).
+        /// Make annotation TextPage .
         /// </summary>
         public TextPage GetTextPage(int flags = 0, IRect clip = null)
         {
@@ -1173,11 +1173,11 @@ namespace MuPDF.NET
             return new TextPage(stp) { Parent = Parent };
         }
 
-        /// <summary>Extract annotation text (PyMuPDF <c>Annot.get_text()</c>).</summary>
+        /// <summary>Extract annotation text.</summary>
         public string GetText()
             => (string)Utils.GetText(this, "text");
 
-        /// <summary>Extract annotation text with stext flags (PyMuPDF <c>Annot.get_textpage</c> + extract).</summary>
+        /// <summary>Extract annotation text with stext flags ( + extract).</summary>
         public string GetText(int flags)
         {
             int f = flags == 0 ? Constants.TextFlagsText : flags;
@@ -1185,7 +1185,7 @@ namespace MuPDF.NET
             return tp.ExtractText();
         }
 
-        /// <summary>Extract annotation text (PyMuPDF <c>Annot.get_text</c> / <c>utils.get_text</c>).</summary>
+        /// <summary>Extract annotation text ( / <c>utils.get_text</c>).</summary>
         public dynamic GetText(
             string option,
             IRect clip = null,
@@ -1221,7 +1221,7 @@ namespace MuPDF.NET
                 tolerance);
         }
 
-        /// <summary>Extract annotation text within a rectangle (PyMuPDF <c>Annot.get_textbox</c>).</summary>
+        /// <summary>Extract annotation text within a rectangle.</summary>
         public string GetTextbox(Rect rect, int flags = 0)
         {
             using var tp = GetTextPage(flags);
@@ -1235,7 +1235,7 @@ namespace MuPDF.NET
             return sound != null && sound.TryGetValue("stream", out var stream) ? (byte[])stream : null;
         }
 
-        /// <summary>Retrieve sound stream (PyMuPDF <c>Annot.get_sound</c>).</summary>
+        /// <summary>Retrieve sound stream.</summary>
         public Dictionary<string, object> GetSoundDictionary()
         {
             if (AnnotationType != AnnotationType.Sound)
@@ -1261,7 +1261,7 @@ namespace MuPDF.NET
             return result;
         }
 
-        /// <summary>Set or remove annotation OC xref (PyMuPDF <c>Annot.set_oc</c>).</summary>
+        /// <summary>Set or remove annotation OC xref.</summary>
         public void SetOC(int oc)
         {
             var obj = mupdf.mupdf.pdf_annot_obj(NativeAnnot);
@@ -1274,7 +1274,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>Delete Popup and responding annotations (PyMuPDF <c>Annot.delete_responses</c>).</summary>
+        /// <summary>Delete Popup and responding annotations.</summary>
         public void DeleteResponses()
         {
             var page = mupdf.mupdf.pdf_annot_page(NativeAnnot);
@@ -1304,7 +1304,7 @@ namespace MuPDF.NET
                 mupdf.mupdf.pdf_dict_put(page.obj(), mupdf.mupdf.pdf_new_name("Annots"), annots);
         }
 
-        /// <summary>Get annotation optional content reference (PyMuPDF <c>Annot.get_oc</c>).</summary>
+        /// <summary>Get annotation optional content reference.</summary>
         public int GetOC()
         {
             var obj = mupdf.mupdf.pdf_annot_obj(NativeAnnot);
@@ -1382,7 +1382,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>Attached file information (PyMuPDF <c>Annot.file_info</c>).</summary>
+        /// <summary>Attached file information.</summary>
         public Dictionary<string, object> GetFileInfo()
         {
             if (AnnotationType != AnnotationType.FileAttachment)
@@ -1418,7 +1418,7 @@ namespace MuPDF.NET
             return result;
         }
 
-        /// <summary>Retrieve attached file content (PyMuPDF <c>Annot.get_file</c>).</summary>
+        /// <summary>Retrieve attached file content.</summary>
         public byte[] GetFile()
         {
             if (AnnotationType != AnnotationType.FileAttachment)
@@ -1429,7 +1429,7 @@ namespace MuPDF.NET
             return Helpers.BufferToBytes(mupdf.mupdf.pdf_load_stream(stream));
         }
 
-        /// <summary>Update attached file (PyMuPDF <c>Annot.update_file</c>).</summary>
+        /// <summary>Update attached file.</summary>
         public void UpdateFile(byte[] buffer = null, string filename = null, string ufilename = null, string desc = null)
         {
             if (AnnotationType != AnnotationType.FileAttachment)
@@ -1477,7 +1477,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>Clean appearance contents stream (PyMuPDF <c>Annot.clean_contents</c>).</summary>
+        /// <summary>Clean appearance contents stream.</summary>
         public void CleanContents(int sanitize = 1)
         {
             // filter_ = _make_PdfFilterOptions(recurse=1, instance_forms=0, ascii=0, sanitize=sanitize)
@@ -1486,14 +1486,14 @@ namespace MuPDF.NET
             mupdf.mupdf.pdf_filter_annot_contents(ParentPdfDocument, NativeAnnot, filterPkg.Filter);
         }
 
-        /// <summary>Create annotation Popup or update its rectangle (PyMuPDF <c>Annot.set_popup</c>).</summary>
+        /// <summary>Create annotation Popup or update its rectangle.</summary>
         public void SetPopup(Rect rect)
         {
             var transformed = Helpers.TransformRect(new Rect(rect), RotatePageMatrix);
             mupdf.mupdf.pdf_set_annot_popup(NativeAnnot, transformed.ToFzRect());
         }
 
-        /// <summary>Set annotation appearance bbox (PyMuPDF <c>Annot.set_apn_bbox</c>).</summary>
+        /// <summary>Set annotation appearance bbox.</summary>
         public void SetApnBBox(Rect bbox)
         {
             var transformed = Helpers.TransformRect(new Rect(bbox), RotatePageMatrix);
@@ -1514,7 +1514,7 @@ namespace MuPDF.NET
             return obj;
         }
 
-        /// <summary>Set annotation appearance matrix (PyMuPDF <c>Annot.set_apn_matrix</c>).</summary>
+        /// <summary>Set annotation appearance matrix.</summary>
         public void SetApnMatrix(Matrix matrix)
         {
             /*
@@ -1537,7 +1537,7 @@ namespace MuPDF.NET
             ap.pdf_dict_put_matrix(new PdfObj("Matrix"), matrix.ToFzMatrix());
         }
 
-        /// <summary>Set annotation language (PyMuPDF <c>Annot.set_language</c>).</summary>
+        /// <summary>Set annotation language.</summary>
         public void SetLanguage(string language = null)
         {
             var lang = string.IsNullOrEmpty(language)
@@ -1546,7 +1546,7 @@ namespace MuPDF.NET
             mupdf.mupdf.pdf_set_annot_language(NativeAnnot, lang);
         }
 
-        /// <summary>Set line end codes (PyMuPDF <c>Annot.set_line_ends</c>).</summary>
+        /// <summary>Set line end codes.</summary>
         public void SetLineEnds(int start, int end)
         {
             if (mupdf.mupdf.pdf_annot_has_line_ending_styles(NativeAnnot) != 0)
@@ -1558,7 +1558,7 @@ namespace MuPDF.NET
         /// <summary>Legacy overload using <see cref="PdfLineEnding"/>.</summary>
         public void SetLineEnds(PdfLineEnding start, PdfLineEnding end) => SetLineEnds((int)start, (int)end);
 
-        /// <summary>Set annotation rotation (PyMuPDF <c>Annot.set_rotation</c>).</summary>
+        /// <summary>Set annotation rotation.</summary>
         public void SetRotation(int rotate = 0)
         {
             switch (AnnotationType)
@@ -1586,7 +1586,7 @@ namespace MuPDF.NET
             mupdf.mupdf.pdf_dict_put_int(AnnotObj, mupdf.mupdf.pdf_new_name("Rotate"), rotate);
         }
 
-        /// <summary>Set open status of annotation or its Popup (PyMuPDF <c>Annot.set_open</c>).</summary>
+        /// <summary>Set open status of annotation or its Popup.</summary>
         public void SetOpen(bool isOpen)
         {
             mupdf.mupdf.pdf_set_annot_is_open(NativeAnnot, isOpen ? 1 : 0);
@@ -1609,7 +1609,7 @@ namespace MuPDF.NET
 
         ~Annot() { Dispose(); }
 
-        /// <summary>String form (PyMuPDF <c>Annot.__repr__</c> / <c>__str__</c>).</summary>
+        /// <summary>String form ( / <c>__str__</c>).</summary>
         public override string ToString() => $"Annot('{TypeString}' on {Parent})";
 
         public static string EscapeStrFromStr(string c) => Helpers.JM_EscapeStrFromStr(c);

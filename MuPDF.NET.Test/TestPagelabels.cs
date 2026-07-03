@@ -8,7 +8,6 @@ using Xunit;
 namespace MuPDF.NET.Test
 {
     /// <summary>
-    /// Port of <c>PyMuPDF-1.27.2.2/tests/test_pagelabels.py</c>.
     /// </summary>
     /// <remarks>
     /// Inputs: <c>TestDocuments/TestPagelabels/</c>; outputs: <c>TestDocuments/_Output/TestPagelabels/</c>.
@@ -25,7 +24,6 @@ namespace MuPDF.NET.Test
         private static Document make_doc()
         {
             var doc = new Document();
-            // for i in range(10):
             for (int i = 0; i < 10; i++)
             {
                 // page = doc.NewPage()
@@ -38,7 +36,6 @@ namespace MuPDF.NET.Test
         //     - Rule 2: labels as capital Roman numbers, page 4 is first and has "I".
         private static List<Dictionary<string, object>> make_labels()
         {
-            // return [
             //     {"startpage": 0, "prefix": "A-", "style": "D", "firstpagenum": 1},
             //     {"startpage": 4, "prefix": "", "style": "R", "firstpagenum": 1},
             // ]
@@ -95,7 +92,6 @@ namespace MuPDF.NET.Test
             // - Get list of page numbers for a given label.
             // doc = make_doc()
             using var doc = make_doc();
-            // doc.set_page_labels(make_labels())
             doc.SetPageLabels(make_labels());
             // page_labels = [p.get_label() for p in doc]
             var page_labels = doc.Select(p => p.get_label()).ToList();
@@ -133,11 +129,9 @@ namespace MuPDF.NET.Test
                     ["firstpagenum"] = 1,
                 },
             };
-            // doc.set_page_labels(labels)
             doc.SetPageLabels(labels);
             // pdfdata = doc.ToBytes()
             byte[] pdfdata = doc.ToBytes();
-            // doc.Close()
             doc.Close();
             using var doc2 = new Document(pdfdata, "pdf");
             // answer = ["a", "b", "c", "d", "e", "A", "B", "C", "D", "E"]

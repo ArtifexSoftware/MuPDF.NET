@@ -11,7 +11,7 @@ namespace MuPDF.NET
     /// <remarks>
     /// <para>Used for pixmap clips and raster bounds. Coordinates are truncated/rounded from floats
     /// where noted. See <see cref="Rect"/> for validity, emptiness, and infinite-rect rules.</para>
-    /// <para>Ports PyMuPDF <c>IRect</c>.</para>
+    /// <para>Ports </para>
     /// </remarks>
     public class IRect : IEnumerable<int>, IEquatable<IRect>
     {

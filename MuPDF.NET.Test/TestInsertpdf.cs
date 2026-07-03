@@ -18,7 +18,6 @@ using mupdf;
 namespace MuPDF.NET.Test
 {
     /// <summary>
-    /// Port of <c>PyMuPDF-1.27.2.2/tests/test_insertpdf.py</c>.
     /// </summary>
     /// <remarks>
     /// Inputs: <c>TestDocuments/TestInsertpdf/</c>; outputs: <c>TestDocuments/_Output/TestInsertpdf/</c>.
@@ -96,7 +95,7 @@ namespace MuPDF.NET.Test
             return ret;
         }
 
-        /// <summary>Regression test: insert (PyMuPDF <c>tests/test_insertpdf.py::test_insert</c>).</summary>
+        /// <summary>Regression test: insert.</summary>
         [Fact]
         public void test_insert()
         {
@@ -152,7 +151,7 @@ namespace MuPDF.NET.Test
             new_doc.Save(Out("test_insert.pdf"));
         }
 
-        /// <summary>Regression test: issue1417 insertpdf in loop (PyMuPDF <c>tests/test_insertpdf.py::test_issue1417_insertpdf_in_loop</c>).</summary>
+        /// <summary>Regression test: issue1417 insertpdf in loop.</summary>
         [Fact]
         public void test_issue1417_insertpdf_in_loop()
         {
@@ -197,7 +196,7 @@ namespace MuPDF.NET.Test
             }
         }
 
-        /// <summary>Regression test: 2861 (PyMuPDF <c>tests/test_insertpdf.py::test_2861</c>).</summary>
+        /// <summary>Regression test: 2861.</summary>
         [Fact]
         public void test_2861()
         {
@@ -212,7 +211,7 @@ namespace MuPDF.NET.Test
             }
         }
 
-        /// <summary>Regression test: 2871 (PyMuPDF <c>tests/test_insertpdf.py::test_2871</c>).</summary>
+        /// <summary>Regression test: 2871.</summary>
         [Fact]
         public void test_2871()
         {
@@ -227,7 +226,7 @@ namespace MuPDF.NET.Test
             }
         }
 
-        /// <summary>Regression test: 3789 (PyMuPDF <c>tests/test_insertpdf.py::test_3789</c>).</summary>
+        /// <summary>Regression test: 3789.</summary>
         [Fact]
         public void test_3789()
         {
@@ -304,7 +303,7 @@ namespace MuPDF.NET.Test
             return rc;
         }
 
-        /// <summary>Regression test: widget insert (PyMuPDF <c>tests/test_insertpdf.py::test_widget_insert</c>).</summary>
+        /// <summary>Regression test: widget insert.</summary>
         [Fact]
         public void test_widget_insert()
         {
@@ -335,7 +334,7 @@ namespace MuPDF.NET.Test
             tar.Save(Out("test_widget_insert.pdf"));
         }
 
-        /// <summary>Regression test: merge checks1 (PyMuPDF <c>tests/test_insertpdf.py::test_merge_checks1</c>).</summary>
+        /// <summary>Regression test: merge checks1.</summary>
         [Fact]
         public void test_merge_checks1()
         {
@@ -349,7 +348,7 @@ namespace MuPDF.NET.Test
             tar.Save(Out("test_merge_checks1.pdf"));
         }
 
-        /// <summary>Regression test: merge checks2 (PyMuPDF <c>tests/test_insertpdf.py::test_merge_checks2</c>).</summary>
+        /// <summary>Regression test: merge checks2.</summary>
         [Fact]
         public void test_merge_checks2()
         {
@@ -371,7 +370,6 @@ namespace MuPDF.NET.Test
             {
                 if (!names0.Contains((string)itm["name"]))  // not a duplicate name
                     continue;
-                // if target field has kids, add their count, else add 1
                 int dup_kids0 = 0;
                 foreach (var i in rc0)
                 {
@@ -379,7 +377,6 @@ namespace MuPDF.NET.Test
                         dup_kids0 += Convert.ToInt32(i["kids"]);
                 }
                 dup_kids += dup_kids0 != 0 ? dup_kids0 : 1;
-                // if source field has kids add their count, else add 1
                 dup_kids += Convert.ToInt32(itm["kids"]) != 0 ? Convert.ToInt32(itm["kids"]) : 1;
             }
 
@@ -405,7 +402,7 @@ namespace MuPDF.NET.Test
             tar.Save(Out("test_merge_checks2.pdf"));
         }
 
-        /// <summary>Regression test: 4412 (PyMuPDF <c>tests/test_insertpdf.py::test_4412</c>).</summary>
+        /// <summary>Regression test: 4412.</summary>
         [Fact]
         public void test_4412()
         {
@@ -428,7 +425,7 @@ namespace MuPDF.NET.Test
             }
         }
 
-        /// <summary>Regression test: 4571 (PyMuPDF <c>tests/test_insertpdf.py::test_4571</c>).</summary>
+        /// <summary>Regression test: 4571.</summary>
         [Fact]
         public void test_4571()
         {
@@ -467,7 +464,7 @@ namespace MuPDF.NET.Test
         static mupdf.PdfObj PdfDictGetp(mupdf.PdfDocument pdf, string path)
             => mupdf.mupdf.pdf_trailer(pdf).pdf_dict_getp(path);
 
-        /// <summary>link rects preserved after insert_pdf with rotation (PyMuPDF <c>tests/test_insertpdf.py::test_4958</c>).</summary>
+        /// <summary>link rects preserved after insert_pdf with rotation.</summary>
         [Fact]
         public void test_4958()
         {

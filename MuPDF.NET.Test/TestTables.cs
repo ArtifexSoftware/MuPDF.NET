@@ -7,7 +7,6 @@ using Xunit;
 
 namespace MuPDF.NET.Test
 {
-    /// <summary>Port of <c>PyMuPDF-1.27.2.2/tests/test_tables.py</c>.</summary>
     /// <remarks>
     /// Inputs: <c>TestDocuments/TestTables/</c>; outputs: <c>TestDocuments/_Output/TestTables/</c>.
     /// </remarks>
@@ -146,7 +145,6 @@ namespace MuPDF.NET.Test
             // extracts = [tabs[0].extract(), tabs[1].extract()]  # all table cell content
             // old_data = pickle.load(pickle_in)  # previously saved data
             // old_cells = old_data["cells"][0] + old_data["cells"][1]
-            // for i in range(len(cells)):
         }
 
         [Fact]
@@ -184,16 +182,12 @@ namespace MuPDF.NET.Test
             int rows = 8;
             // define the cells, draw the grid and insert unique text in each cell.
             var cells = Utils.MakeTable(rect, rows: rows, cols: cols);
-            // for i in range(rows):
-            //     for j in range(cols):
             //         page.DrawRect(cells[i][j])
             for (int i = 0; i < rows; i++)
             {
                 for (int j = 0; j < cols; j++)
                     page.DrawRect(cells[i][j]);
             }
-            // for i in range(rows):
-            //     for j in range(cols):
             //         page.InsertTextbox(
             //             cells[i][j],
             //             f"cell[{i}][{j}]",
@@ -220,16 +214,12 @@ namespace MuPDF.NET.Test
             // rows = 5
             rows = 5;
             cells = Utils.MakeTable(rect, rows: rows, cols: cols);
-            // for i in range(rows):
-            //     for j in range(cols):
             //         page.DrawRect(cells[i][j])
             for (int i = 0; i < rows; i++)
             {
                 for (int j = 0; j < cols; j++)
                     page.DrawRect(cells[i][j]);
             }
-            // for i in range(rows):
-            //     for j in range(cols):
             //         page.InsertTextbox(
             //             cells[i][j],
             //             f"cell[{j}][{rows-i-1}]",
@@ -261,16 +251,12 @@ namespace MuPDF.NET.Test
             // rows = 8
             rows = 8;
             cells = Utils.MakeTable(rect, rows: rows, cols: cols);
-            // for i in range(rows):
-            //     for j in range(cols):
             //         page.DrawRect(cells[i][j])
             for (int i = 0; i < rows; i++)
             {
                 for (int j = 0; j < cols; j++)
                     page.DrawRect(cells[i][j]);
             }
-            // for i in range(rows):
-            //     for j in range(cols):
             //         page.InsertTextbox(
             //             cells[i][j],
             //             f"cell[{rows-i-1}][{cols-j-1}]",
@@ -302,16 +288,12 @@ namespace MuPDF.NET.Test
             // rows = 5
             rows = 5;
             cells = Utils.MakeTable(rect, rows: rows, cols: cols);
-            // for i in range(rows):
-            //     for j in range(cols):
             //         page.DrawRect(cells[i][j])
             for (int i = 0; i < rows; i++)
             {
                 for (int j = 0; j < cols; j++)
                     page.DrawRect(cells[i][j]);
             }
-            // for i in range(rows):
-            //     for j in range(cols):
             //         page.InsertTextbox(
             //             cells[i][j],
             //             f"cell[{cols-j-1}][{i}]",
@@ -335,8 +317,6 @@ namespace MuPDF.NET.Test
 
             // pdfdata = doc.ToBytes()
             byte[] pdfdata = doc.ToBytes();
-            // doc.EzSave("test-2812.pdf")
-            // doc.Close()
             doc.Close();
 
             // -------------------------------------------------------------------------
@@ -363,7 +343,6 @@ namespace MuPDF.NET.Test
             }
             // e0 = extracts[0]
             string e0 = extracts[0];
-            // for e in extracts[1:]:
             foreach (var e in extracts.Skip(1))
             {
                 Assert.Equal(e0, e);
@@ -386,7 +365,6 @@ namespace MuPDF.NET.Test
             var tab = page.find_tables()[0];
             // lengths = set()  # stores all row cell counts
             var lengths = new HashSet<int>();
-            // for e in tab.extract():
             foreach (var e in tab.Extract())
             {
                 // lengths.add(len(e))  # store number of cells for row
@@ -420,7 +398,6 @@ namespace MuPDF.NET.Test
         {
             // After table extraction, a rotated page should behave and look
             // like as before."""
-            // if platform.python_implementation() == 'GraalVM':
             //     return
 
             // filename = os.path.join(scriptdir, "resources", "test_3062.pdf")
@@ -470,7 +447,6 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_add_lines()
         {
-            // if platform.python_implementation() == 'GraalVM':
             //     return
 
             // filename = os.path.join(scriptdir, "resources", "small-table.pdf")
@@ -522,8 +498,6 @@ namespace MuPDF.NET.Test
             // delta = (2, 2, -2, -2)
             Rect delta = new Rect(2, 2, -2, -2);
             var cells = Utils.MakeTable(rect, cols: 3, rows: 4);
-            // for i in range(3):
-            //     for j in range(4):
             //         page.DrawRect(cells[j][i])
             //         k = (i + j) % 4
             //         page.InsertTextbox(cells[j][i] + delta, text[k], rotate=degrees[k])
@@ -537,15 +511,12 @@ namespace MuPDF.NET.Test
                 }
             }
             doc.Save(Out("test_3148.pdf"));
-            // doc.Save("multi-degree.pdf")
             // tabs = page.find_tables()
             var tabs = page.find_tables();
             // tab = tabs[0]
             var tab = tabs[0];
-            // for extract in tab.extract():
             foreach (var extract in tab.Extract())
             {
-                // for item in extract:
                 foreach (var item in extract)
                 {
                     // item = item.replace("\n", " ")
@@ -632,8 +603,6 @@ namespace MuPDF.NET.Test
                     "|Col14|Col24|Col36|\n" +
                     "|Col15|Col25<br>Col26||\n\n";
             }
-
-            // md = tab.to_markdown()
             string md = tab.ToMarkdown();
             Assert.Equal(md_expected, md.Replace("\r\n", "\n"));
         }
@@ -682,7 +651,6 @@ namespace MuPDF.NET.Test
 
             // y_vals = sorted(set([round(w[3]) for w in words]))
             var yVals = words.Select(w => (int)Math.Round(w.y1)).Distinct().OrderBy(y => y).ToList();
-            // for y in y_vals[:-1]:  # skip last one to avoid empty row
             foreach (var y in yVals.Take(yVals.Count - 1))
             {
                 // r = +box0
@@ -749,9 +717,7 @@ namespace MuPDF.NET.Test
                 var tables = page.find_tables();
                 Console.WriteLine($"len(tables.tables)={tables.Tables.Count}.");
                 // tables_text = list()
-                // for i, table in enumerate(tables):
                 //     t = table.extract()
-                //     for tt in t:
                 for (int i = 0; i < tables.Tables.Count; i++)
                 {
                     Console.WriteLine($"## i={i}.");

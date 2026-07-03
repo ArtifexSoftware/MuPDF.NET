@@ -10,7 +10,6 @@ namespace MuPDF.NET.Test
     /// Tests for the Font class.
     /// </summary>
     /// <remarks>
-    /// Port of <c>PyMuPDF-1.27.2.2/tests/test_font.py</c>.
     /// Inputs: <c>TestDocuments/TestFont/</c>; outputs: <c>TestDocuments/_Output/TestFont/</c>.
     /// </remarks>
     [Collection("MuPDF.NET native")]
@@ -19,11 +18,18 @@ namespace MuPDF.NET.Test
         private const float Epsilon = 1e-5f;
         private const string TestClassName = nameof(TestFont);
 
+        // Mirrors pyg_fz_install_load_system_font_funcs_args: the SWIG
+        // director must stay alive after fz_install_load_system_font_funcs2().
+        static SystemFontFontTrace _installedSystemFontTrace;
+
         private static string Doc(string fileName) => _Path.ForTestClass(fileName, TestClassName);
+
+        private static string OptionalDocPath(string fileName) =>
+            Path.Combine(_Path.ResolveSolutionRoot(), "TestDocuments", "MuPDF.NET.Test", TestClassName, fileName);
 
         private static string Out(string fileName) => _Path.ForOutput(fileName, TestClassName);
 
-        /// <summary>Regression test: font1 (PyMuPDF <c>tests/test_font.py::test_font1</c>).</summary>
+        /// <summary>Regression test: font1.</summary>
         [Fact]
         public void test_font1()
         {
@@ -52,7 +58,7 @@ namespace MuPDF.NET.Test
             Assert.Equal(bbox1, bbox2);
         }
 
-        /// <summary>Regression test: font2 (PyMuPDF <c>tests/test_font.py::test_font2</c>).</summary>
+        /// <summary>Regression test: font2.</summary>
         [Fact]
         public void test_font2()
         {
@@ -61,7 +67,43 @@ namespace MuPDF.NET.Test
             Assert.Equal(font.TextLength(text), Utils.GetTextLength(text));
         }
 
-        /// <summary>Regression test: fontname (PyMuPDF <c>tests/test_font.py::test_fontname</c>).</summary>
+        /// <summary>Regression test: fontarchive.</summary>
+        [Fact]
+        public void test_fontarchive()
+        {
+            var arch = new Archive();
+            string css = Utils.CssForPymupdfFont("notos", archive: arch, name: "sans-serif");
+            Console.WriteLine(css);
+            foreach (var entry in arch.EntryList)
+                Console.WriteLine($"fmt={entry.Fmt} entries={string.Join(", ", entry.Entries)} path={entry.Path}");
+            Assert.Single(arch.EntryList);
+            var sub = arch.EntryList[0];
+            Assert.Equal("tree", sub.Fmt);
+            Assert.Equal(
+                new[] { "notosbo", "notosbi", "notosit", "notos" }.OrderBy(x => x),
+                sub.Entries.OrderBy(x => x));
+            Assert.Null(sub.Path);
+        }
+
+        /// <summary>Regression test: load system font.</summary>
+        [Fact]
+        public void test_load_system_font()
+        {
+            // trace = list()
+            var trace = new SystemFontFontTrace();
+            trace.EnableVirtualCallbacks();
+            trace.fz_install_load_system_font_funcs2();
+            _installedSystemFontTrace = trace;
+            // f = pyfz_load_system_font("some-font-name", 0, 0, 0)
+            var f = mupdf.mupdf.fz_load_system_font("some-font-name", 0, 0, 0);
+            Assert.Equal(
+                new List<(string, int, int, int)> { ("some-font-name", 0, 0, 0) },
+                trace.FontTrace);
+            Console.WriteLine($"test_load_system_font(): f.m_internal={f.m_internal}");
+            f.Dispose();
+        }
+
+        /// <summary>Regression test: fontname.</summary>
         [Fact]
         public void test_fontname()
         {
@@ -83,7 +125,7 @@ namespace MuPDF.NET.Test
             doc.Save(Out("test_fontname.pdf"));
         }
 
-        /// <summary>Regression test: 2608 (PyMuPDF <c>tests/test_font.py::test_2608</c>).</summary>
+        /// <summary>Regression test: 2608.</summary>
         [Fact]
         public void test_2608()
         {
@@ -108,7 +150,7 @@ namespace MuPDF.NET.Test
             doc.Save(Out("test_2608.pdf"));
         }
 
-        /// <summary>Regression test: mupdf subset fonts2 (PyMuPDF <c>tests/test_font.py::test_mupdf_subset_fonts2</c>).</summary>
+        /// <summary>Regression test: mupdf subset fonts2.</summary>
         [Fact]
         public void test_mupdf_subset_fonts2()
         {
@@ -117,7 +159,7 @@ namespace MuPDF.NET.Test
             doc.Save(Out("test_mupdf_subset_fonts2.pdf"));
         }
 
-        /// <summary>Regression test: 3677 (PyMuPDF <c>tests/test_font.py::test_3677</c>).</summary>
+        /// <summary>Regression test: 3677.</summary>
         [Fact]
         public void test_3677()
         {
@@ -164,7 +206,7 @@ namespace MuPDF.NET.Test
             }
         }
 
-        /// <summary>Regression test: 3933 (PyMuPDF <c>tests/test_font.py::test_3933</c>).</summary>
+        /// <summary>Regression test: 3933.</summary>
         [Fact]
         public void test_3933()
         {
@@ -192,7 +234,7 @@ namespace MuPDF.NET.Test
             }
         }
 
-        /// <summary>smoke (PyMuPDF <c>tests/test_font.py::test_3780</c>).</summary>
+        /// <summary>smoke.</summary>
         [Fact]
         public void test_3780()
         {
@@ -216,7 +258,7 @@ namespace MuPDF.NET.Test
             }
         }
 
-        /// <summary>same as <c>tests/test_font.py::test_3887</c> (PyMuPDF <c>tests/test.py::test_3887</c>).</summary>
+        /// <summary>same as <c>tests/test_font.py::test_3887</c>.</summary>
         [Fact]
         public void test_3887()
         {
@@ -260,6 +302,143 @@ namespace MuPDF.NET.Test
                 {
                     // path2 may still be open briefly on Windows
                 }
+            }
+        }
+
+        /// <summary>Regression test: 4457.</summary>
+        [Fact]
+        public void test_4457()
+        {
+            string pathA = OptionalDocPath("test_4457_a.pdf");
+            if (!File.Exists(pathA))
+            {
+                Console.WriteLine(
+                    "test_4457(): skipping because test_4457_a.pdf not present "
+                    + "(download from https://github.com/user-attachments/files/20862923/test_4457_a.pdf).");
+                return;
+            }
+
+            var files = new (string path, int rmsOldAfterMax)[]
+            {
+                (pathA, 4),
+                (OptionalDocPath("test_4457_b.pdf"), 9),
+            };
+
+            Tools.ResetMupdfWarnings();
+            foreach (var (path, rmsOldAfterMax) in files)
+            {
+                if (!File.Exists(path))
+                {
+                    Console.WriteLine($"test_4457(): skipping missing file: {path}");
+                    continue;
+                }
+
+                string text;
+                Pixmap pixmap;
+                string baseName = Path.GetFileNameWithoutExtension(path);
+                string pathBefore = Out($"{baseName}.before.pdf");
+                string pathAfter = Out($"{baseName}.after.pdf");
+                using (var document = new Document(path))
+                {
+                    var page = document[0];
+                    pixmap = page.GetPixmap();
+                    pixmap.Save(Out($"{baseName}.png"));
+                    text = (string)page.GetText();
+                    document.EzSave(pathBefore, garbage: 4);
+                    document.SubsetFonts();
+                    document.EzSave(pathAfter, garbage: 4);
+                }
+
+                string textBefore;
+                Pixmap pixmapBefore;
+                using (var document = new Document(pathBefore))
+                {
+                    textBefore = (string)document[0].GetText();
+                    pixmapBefore = document[0].GetPixmap();
+                    pixmapBefore.Save(Out($"{baseName}.before.png"));
+                }
+
+                Pixmap pixmapAfter;
+                using (var document = new Document(pathAfter))
+                {
+                    _ = (string)document[0].GetText();
+                    pixmapAfter = document[0].GetPixmap();
+                    pixmapAfter.Save(Out($"{baseName}.after.png"));
+                }
+
+                float rmsBefore = _Compare.PixmapsRms(pixmap, pixmapBefore);
+                float rmsAfter = _Compare.PixmapsRms(pixmap, pixmapAfter);
+                Console.WriteLine($"rms_before={rmsBefore}");
+                Console.WriteLine($"rms_after={rmsAfter}");
+
+                using var pixmapAfterDiff = _Compare.PixmapsDiff(pixmap, pixmapAfter);
+                pixmapAfterDiff.Save(Out($"{baseName}.after.diff.png"));
+
+                Assert.Equal(text, textBefore);
+                Assert.Equal(0, rmsBefore);
+
+                if (_Version.mupdf_version_tuple_at_least(1, 26, 6))
+                    Assert.Equal(0, rmsAfter);
+                else
+                    Assert.True(Math.Abs(rmsAfter - rmsOldAfterMax) < 2);
+            }
+
+            string wt = Tools.MupdfWarnings();
+            Console.WriteLine($"wt={wt}");
+            if (!_Version.mupdf_version_tuple_at_least(1, 27, 0))
+            {
+                Assert.Equal(
+                    "bogus font ascent/descent values (0 / 0)\n... repeated 5 times...",
+                    wt);
+            }
+        }
+
+        /// <summary>Records <c>fz_install_load_system_font_funcs</c> callback invocations for <see cref="test_load_system_font"/>.</summary>
+        private sealed class SystemFontFontTrace : mupdf.FzInstallLoadSystemFontFuncsArgs2
+        {
+            public List<(string name, int bold, int italic, int needsExactMetrics)> FontTrace { get; } = new();
+
+            public List<(string name, int ordering, int serif)> CjkTrace { get; } = new();
+
+            public List<(int script, int language, int serif, int bold, int italic)> FallbackTrace { get; } = new();
+
+            public void EnableVirtualCallbacks()
+            {
+                use_virtual_f();
+                use_virtual_f_cjk();
+                use_virtual_f_fallback();
+            }
+
+            public override mupdf.fz_font f(
+                mupdf.fz_context arg_0,
+                string name,
+                int bold,
+                int italic,
+                int needs_exact_metrics)
+            {
+                // trace.append((name, bold, italic, needs_exact_metrics))
+                FontTrace.Add((name, bold, italic, needs_exact_metrics));
+                return null;
+            }
+
+            public override mupdf.fz_font f_cjk(mupdf.fz_context arg_0, string name, int ordering, int serif)
+            {
+                // trace.append((name, ordering, serif))
+                CjkTrace.Add((name, ordering, serif));
+                return null;
+            }
+
+            public override mupdf.fz_font f_fallback(
+                mupdf.fz_context arg_0,
+                int script,
+                int language,
+                int serif,
+                int bold,
+                int italic)
+            {
+                // trace.append((script, language, serif, bold, italic))
+                FallbackTrace.Add((script, language, serif, bold, italic));
+                return null;
             }
         }
     }

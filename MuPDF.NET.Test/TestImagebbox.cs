@@ -5,7 +5,6 @@ using Xunit;
 namespace MuPDF.NET.Test
 {
     /// <summary>
-    /// Port of <c>PyMuPDF-1.27.2.2/tests/test_imagebbox.py</c>.
     /// </summary>
     /// <remarks>
     /// Ensures equality of bboxes computed via
@@ -39,7 +38,7 @@ namespace MuPDF.NET.Test
 
         private static bool BboxesNear(Rect a, Rect b) => (a - b).Norm() < Tol;
 
-        /// <summary>Regression test: image bbox (PyMuPDF <c>tests/test_imagebbox.py::test_image_bbox</c>).</summary>
+        /// <summary>Regression test: image bbox.</summary>
         [Fact]
         public void test_image_bbox()
         {
@@ -68,7 +67,7 @@ namespace MuPDF.NET.Test
             Assert.True(match);
         }
 
-        /// <summary>Regression test: bboxlog (PyMuPDF <c>tests/test_imagebbox.py::test_bboxlog</c>).</summary>
+        /// <summary>Regression test: bboxlog.</summary>
         [Fact]
         public void test_bboxlog()
         {

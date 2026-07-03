@@ -1,5 +1,5 @@
 // Copyright (C) 2023 Artifex Software, Inc.
-// Portions of this code have been ported from pdfplumber / PyMuPDF table.py.
+// Portions of this code have been ported from pdfplumber / MuPDF table.py.
 // pdfplumber is under the MIT License, Copyright (c) 2015 Jeremy Singer-Vine.
 
 using System;
@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Text;
+using System.Threading;
 
 namespace MuPDF.NET
 {
@@ -63,15 +64,14 @@ namespace MuPDF.NET
             | mupdf.mupdf.FZ_STEXT_MEDIABOX_CLIP;
     }
 
-    /// <summary>Table-detection module globals (<c>EDGES</c>, <c>CHARS</c>, <c>TEXTPAGE</c>).</summary>
+    /// <summary>Per-thread scratch buffers for table detection (reused across calls).</summary>
     internal static class TableModule
     {
-        // EDGES = []  # vector graphics from PyMuPDF
-        internal static List<Dictionary<string, object>> EDGES = new List<Dictionary<string, object>>();
-        // CHARS = []  # text characters from PyMuPDF
-        internal static List<Dictionary<string, object>> CHARS = new List<Dictionary<string, object>>();
-        // TEXTPAGE = None  # textpage for cell text extraction
-        internal static TextPage TEXTPAGE = null;
+        internal static readonly ThreadLocal<List<Dictionary<string, object>>> Chars =
+            new(() => new List<Dictionary<string, object>>(2048), trackAllValues: false);
+
+        internal static readonly ThreadLocal<List<Dictionary<string, object>>> Edges =
+            new(() => new List<Dictionary<string, object>>(512), trackAllValues: false);
     }
 
     // ────────────────────────────────────────────────────────────────────
@@ -134,7 +134,7 @@ namespace MuPDF.NET
     // ────────────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Detected table header (PyMuPDF <c>TableHeader</c> extension in <c>table.py</c>).
+    /// Detected table header ( extension in <c>table.py</c>).
     /// </summary>
     public class TableHeader
     {
@@ -180,11 +180,11 @@ namespace MuPDF.NET
     // ────────────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// A single table on a PDF page (PyMuPDF <c>table.Table</c> / pdfplumber port in <c>src/table.py</c>).
+    /// A single table on a PDF page ( / pdfplumber port in <c>src/table.py</c>).
     /// </summary>
     /// <remarks>
     /// Adds <see cref="Header"/> via internal header resolution. Public members use PascalCase;
-    /// <c>internal</c> snake_case aliases match Python for same-assembly tests.
+    /// <c>internal</c> snake_case aliases are available for same-assembly tests.
     /// </remarks>
     public class Table
     {
@@ -196,7 +196,7 @@ namespace MuPDF.NET
 
         /// <summary>
         /// All cell bounding boxes that compose this table.
-        /// Tuple is <c>(x0, top, x1, bottom)</c> — same as PyMuPDF/pdfplumber (<c>y0</c> = top, <c>y1</c> = bottom).
+        /// Tuple is <c>(x0, top, x1, bottom)</c> — same as MuPDF/pdfplumber (<c>y0</c> = top, <c>y1</c> = bottom).
         /// </summary>
         public List<(float x0, float y0, float x1, float y1)> Cells { get; set; }
 
@@ -263,10 +263,10 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>Number of rows (PyMuPDF <c>row_count</c>).</summary>
+        /// <summary>Number of rows.</summary>
         public int RowCount => Rows.Count;
 
-        /// <summary>Number of columns, widest row (PyMuPDF <c>col_count</c>).</summary>
+        /// <summary>Number of columns, widest row.</summary>
         public int ColCount => Rows.Max(r => r.Cells.Count);
 
         /// <summary>Legacy MuPDF.NET aliases.</summary>
@@ -274,21 +274,27 @@ namespace MuPDF.NET
         public int row_count => RowCount;
         public int col_count => ColCount;
 
-        internal Table(Page page, List<(float x0, float y0, float x1, float y1)> cells)
+        internal Table(
+            Page page,
+            List<(float x0, float y0, float x1, float y1)> cells,
+            List<Dictionary<string, object>> chars = null,
+            TextPage textpage = null)
         {
             Page = page;
-            TextPage = null;
+            TextPage = textpage;
             Cells = cells;
+            if (chars != null)
+                Chars = new List<Dictionary<string, object>>(chars);
             Header = GetHeader();
         }
 
         /// <summary>
-        /// Extract cell text row-by-row (PyMuPDF <c>Table.extract</c>).
+        /// Extract cell text row-by-row .
         /// Uses module-level <c>CHARS</c>; optional <c>x_shift</c>, <c>y_shift</c>, <c>layout*</c> kwargs per cell.
         /// </summary>
         public List<List<string?>> Extract(Dictionary<string, object> kwargs = null)
         {
-            var chars = Chars ?? TableModule.CHARS;
+            var chars = Chars ?? new List<Dictionary<string, object>>();
             var tableArr = new List<List<string?>>();
 
             bool CharInBbox(Dictionary<string, object> ch, (float x0, float y0, float x1, float y1) bbox)
@@ -299,7 +305,6 @@ namespace MuPDF.NET
                 float hMid = (TableHelpers.F(ch, "x0") + TableHelpers.F(ch, "x1")) / 2f;
                 // x0, top, x1, bottom = bbox
                 float x0 = bbox.x0, top = bbox.y0, x1 = bbox.x1, bottom = bbox.y1;
-                // return bool(
                 //     (h_mid >= x0) and (h_mid < x1) and (v_mid >= top) and (v_mid < bottom)
                 // )
                 return hMid >= x0 && hMid < x1 && vMid >= top && vMid < bottom;
@@ -307,7 +312,6 @@ namespace MuPDF.NET
 
             kwargs ??= new Dictionary<string, object>();
 
-            // for row in self.rows:
             foreach (var row in Rows)
             {
                 // arr = []
@@ -315,11 +319,9 @@ namespace MuPDF.NET
                 // row_chars = [char for char in chars if char_in_bbox(char, row.bbox)]
                 var rowChars = chars.Where(ch => CharInBbox(ch, row.Bbox)).ToList();
 
-                // for cell in row.cells:
                 foreach (var cell in row.Cells)
                 {
                     string cellText;
-                    // if cell is None:
                     if (cell == null)
                     {
                         // cell_text = None
@@ -353,13 +355,11 @@ namespace MuPDF.NET
                 // table_arr.append(arr)
                 tableArr.Add(arr);
             }
-
-            // return table_arr
             return tableArr;
         }
 
         /// <summary>
-        /// GitHub-flavoured Markdown for this table (PyMuPDF <c>Table.to_markdown</c>).
+        /// GitHub-flavoured Markdown for this table .
         /// </summary>
         /// <param name="clean">When true, escape Markdown-sensitive characters in cells and header.</param>
         /// <param name="fillEmpty">When true, copy content into null cells from left/top to approximate spans.</param>
@@ -433,15 +433,15 @@ namespace MuPDF.NET
             return sb.ToString();
         }
 
-        // ─── PyMuPDF API names (internal, same assembly) ─────────────────
+        // ─── MuPDF API names (internal, same assembly) ─────────────────
 
         internal List<List<string?>> extract(Dictionary<string, object> kwargs = null) => Extract(kwargs);
         internal string to_markdown(bool clean = false, bool fillEmpty = true) => ToMarkdown(clean, fillEmpty);
 
-        // ── Header detection (PyMuPDF extension) ────────────────────────
+        // ── Header detection ────────────────────────
 
         /// <summary>
-        /// Identify the table header (PyMuPDF <c>Table._get_header</c>).
+        /// Identify the table header .
         /// One-line or single-column tables use the first row; returns null if there are no rows.
         /// </summary>
         private TableHeader GetHeader(float yTolerance = 3)
@@ -630,7 +630,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Find tables on a page. Port of <c>table.find_tables</c> (<c>src/table.py</c>).
+        /// Find tables on a page. (<c>src/table.py</c>).
         /// </summary>
         public static TableFinder FindTables(
             Page page,
@@ -661,15 +661,14 @@ namespace MuPDF.NET
             IList<Dictionary<string, object>> paths = null)
         {
             WarnLayoutOnce();
-            // CHARS.clear()
-            TableModule.CHARS.Clear();
-            // EDGES.clear()
-            TableModule.EDGES.Clear();
-            // TEXTPAGE = None
-            TableModule.TEXTPAGE = null;
+            var chars = TableModule.Chars.Value;
+            chars.Clear();
+            var edges = TableModule.Edges.Value;
+            edges.Clear();
             TextPage textpage = null;
-            bool oldSmall = Tools.set_small_glyph_heights(); // save old value
-            Tools.set_small_glyph_heights(true); // we need minimum bboxes
+            bool? savedSmallGlyphHeights = Helpers.ThreadSmallGlyphHeights;
+            bool? savedSkipQuadCorrections = Helpers.ThreadSkipQuadCorrections;
+            Helpers.ThreadSmallGlyphHeights = true;
             Page workPage = page;
             int? oldXref = null;
             int? oldRot = null;
@@ -734,7 +733,7 @@ namespace MuPDF.NET
                 tset.Validate();
             }
 
-            bool oldQuadCorrections = Helpers.SkipQuadCorrections;
+            bool layoutQuadCorrections = false;
             TableFinder tbf = null;
             try
             {
@@ -742,7 +741,8 @@ namespace MuPDF.NET
                 List<Rect> boxes;
                 if (workPage.LayoutInformation != null)
                 {
-                    Helpers.SkipQuadCorrections = true;
+                    layoutQuadCorrections = true;
+                    Helpers.ThreadSkipQuadCorrections = true;
                     boxes = TableHelpers.LayoutTableBoxes(workPage.LayoutInformation);
                 }
                 else
@@ -762,22 +762,21 @@ namespace MuPDF.NET
                 workPage.TableSettings = tset;
 
                 // TEXTPAGE = make_chars(page, clip=clip)  # create character list of page
-                textpage = TableHelpers.MakeChars(workPage, TableModule.CHARS, clip: clip);
+                textpage = TableHelpers.MakeChars(workPage, chars, clip: clip);
                 // make_edges(page, clip=clip, tset=tset, paths=paths, add_lines=add_lines, add_boxes=add_boxes)  # create lines and curves
                 TableHelpers.MakeEdges(
                     workPage,
-                    TableModule.EDGES,
-                    TableModule.CHARS,
+                    edges,
+                    chars,
                     tset,
                     clip,
                     paths,
                     addLines,
                     addBoxes);
 
-                tbf = TableFinder.FromPrepared(workPage, tset, TableModule.CHARS, TableModule.EDGES, textpage);
+                tbf = TableFinder.FromPrepared(workPage, tset, chars, edges, textpage);
                 // tbf.textpage = TEXTPAGE  # store textpage for later use
                 tbf.TextPage = textpage;
-                TableModule.TEXTPAGE = textpage;
                 if (boxes.Count > 0)
                 {
                     // only keep Finder tables that match a layout box
@@ -799,7 +798,7 @@ namespace MuPDF.NET
                     {
                         var cells = TableHelpers.MakeTableFromBbox(tp2, wordRects, rect);
                         if (cells.Count > 0)
-                            tbf.Tables.Add(new Table(workPage, cells));
+                            tbf.Tables.Add(new Table(workPage, cells, chars, textpage));
                     }
                 }
             }
@@ -810,17 +809,19 @@ namespace MuPDF.NET
             }
             finally
             {
-                Tools.set_small_glyph_heights(oldSmall);
+                Helpers.ThreadSmallGlyphHeights = savedSmallGlyphHeights;
+                if (layoutQuadCorrections)
+                    Helpers.ThreadSkipQuadCorrections = savedSkipQuadCorrections;
                 if (oldXref != null && oldMediabox != null)
                     TableHelpers.PageRotationReset(workPage, oldXref.Value, oldRot.Value, oldMediabox);
-                Helpers.SkipQuadCorrections = oldQuadCorrections;
             }
-            // for table in tbf.tables:
             //     table.textpage = TEXTPAGE
             foreach (var table in tbf.Tables)
             {
-                table.TextPage = TableModule.TEXTPAGE;
-                table.Chars = new List<Dictionary<string, object>>(TableModule.CHARS);
+                if (table.TextPage == null)
+                    table.TextPage = textpage;
+                if (table.Chars == null)
+                    table.Chars = new List<Dictionary<string, object>>(chars);
             }
             return tbf;
 
@@ -947,12 +948,9 @@ namespace MuPDF.NET
 
             var cellGroups = TableHelpers.CellsToTables(Page, cells, textpage);
 
-            Tables = cellGroups.Select(g => new Table(Page, g)).ToList();
-            foreach (var table in Tables)
-            {
-                table.TextPage = textpage;
-                table.Chars = new List<Dictionary<string, object>>(Chars);
-            }
+            Tables = cellGroups
+                .Select(g => new Table(Page, g, Chars, textpage))
+                .ToList();
         }
 
         /// <summary>
@@ -1104,9 +1102,14 @@ namespace MuPDF.NET
             List<Dictionary<string, object>> chars,
             (float x0, float y0, float x1, float y1) rect)
         {
-            return chars.Any(c =>
-                rect.x0 <= F(c, "x0") && F(c, "x1") <= rect.x1 &&
-                rect.y0 <= F(c, "top") && F(c, "bottom") >= rect.y1);
+            for (int i = 0; i < chars.Count; i++)
+            {
+                var c = chars[i];
+                if (rect.x0 <= F(c, "x0") && F(c, "x1") <= rect.x1
+                    && rect.y0 <= F(c, "top") && F(c, "bottom") >= rect.y1)
+                    return true;
+            }
+            return false;
         }
 
         /// <summary>
@@ -1546,7 +1549,6 @@ namespace MuPDF.NET
                             && EdgeConnects(bottomRight, rightPt)
                             && EdgeConnects(bottomRight, belowPt))
                         {
-                            // return (pt[0], pt[1], bottom_right[0], bottom_right[1])
                             cells.Add((pt.x, pt.y, bottomRight.x, bottomRight.y));
                             goto nextPoint;
                         }
@@ -1555,7 +1557,6 @@ namespace MuPDF.NET
                 nextPoint:;
             }
             // cell_gen = (find_smallest_cell(points, i) for i in range(len(points)))
-            // return list(filter(None, cell_gen))
             return cells;
         }
 
@@ -1597,7 +1598,6 @@ namespace MuPDF.NET
             while (remaining.Count > 0)
             {
                 int initialCount = currentCells.Count;
-                // for cell in list(remaining_cells):
                 foreach (var cell in remaining.ToList())
                 {
                     var corners = BboxToCorners(cell);
@@ -1846,7 +1846,6 @@ namespace MuPDF.NET
             bool horizontalLtr = true,
             bool verticalTtb = true)
         {
-            // for upright_cluster in cluster_objects(list(chars), upright_key, 0):
             var uprightClusters = ClusterObjects(chars, c => (c.TryGetValue("upright", out var u) && (bool)u) ? 1f : 0f, 0);
             foreach (var uprightCluster in uprightClusters)
             {
@@ -1873,7 +1872,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Extract words from character dictionaries (PyMuPDF <c>WordExtractor.extract_words</c>).
+        /// Extract words from character dictionaries .
         /// </summary>
         public static List<Dictionary<string, object>> ExtractWords(
             List<Dictionary<string, object>> chars,
@@ -2013,7 +2012,6 @@ namespace MuPDF.NET
 
             if (kwargs.TryGetValue("layout", out var layoutObj) && layoutObj != null)
             {
-                // return chars_to_textmap(chars, **kwargs).as_string
                 return CharsToTextmapString(chars, kwargs);
             }
 
@@ -2080,7 +2078,7 @@ namespace MuPDF.NET
         /// <summary>
         /// Extract text from a single cell bbox using the TextPage,
         /// optionally with Markdown styling.
-        /// Port of PyMuPDF <c>extract_cells</c> (<c>table.py</c>).
+        ///
         /// </summary>
         public static string ExtractCells(
             TextPage textpage,
@@ -2245,12 +2243,10 @@ namespace MuPDF.NET
             // ctm = page.transformation_matrix
             var ctm = page.TransformationMatrix;
 
-            // for block in blocks:
             foreach (var block in blocks)
             {
                 if (block["lines"] is not List<Dictionary<string, object>> lines)
                     continue;
-                // for line in block["lines"]:
                 foreach (var line in lines)
                 {
                     // ldir = line["dir"]  # = (cosine, sine) of angle
@@ -2258,10 +2254,8 @@ namespace MuPDF.NET
                     float dirX = (float)Math.Round(ldir[0], 4);
                     float dirY = (float)Math.Round(ldir[1], 4);
                     var matrix = new Matrix(dirX, -dirY, dirY, dirX, 0, 0);
-                    // if ldir[1] == 0: upright = True else: upright = False
                     bool upright = dirY == 0;
 
-                    // for span in sorted(line["spans"], key=lambda s: s["bbox"][0]):
                     var spans = ((List<Dictionary<string, object>>)line["spans"])
                         .OrderBy(s => ((float[])s["bbox"])[0])
                         .ToList();
@@ -2277,7 +2271,6 @@ namespace MuPDF.NET
 
                         if (span["chars"] is not List<Dictionary<string, object>> spanChars)
                             continue;
-                        // for char in sorted(span["chars"], key=lambda c: c["bbox"][0]):
                         foreach (var ch in spanChars.OrderBy(c => ((float[])c["bbox"])[0]))
                         {
                             var cb = (float[])ch["bbox"];
@@ -2692,7 +2685,7 @@ namespace MuPDF.NET
             return doc[page.Number];
         }
 
-        /// <summary>Layout boxes tagged <c>table</c> (PyMuPDF <c>find_tables</c>).</summary>
+        /// <summary>Layout boxes tagged <c>table</c>.</summary>
         internal static List<Rect> LayoutTableBoxes(object layoutInformation)
         {
             var boxes = new List<Rect>();
@@ -2728,7 +2721,7 @@ namespace MuPDF.NET
             }
             catch
             {
-                // match Python: skip on failure
+                // Skip on failure
             }
             return cells;
         }

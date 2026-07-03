@@ -6,7 +6,6 @@ using Xunit;
 namespace MuPDF.NET.Test
 {
     /// <summary>
-    /// Port of <c>PyMuPDF-1.27.2.2/tests/test_optional_content.py</c>.
     /// </summary>
     /// <remarks>
     /// Inputs: <c>TestDocuments/TestOptionalContent/</c>; outputs: <c>TestDocuments/_Output/TestOptionalContent/</c>.
@@ -32,9 +31,7 @@ namespace MuPDF.NET.Test
             int ocg3 = doc.AddOcg("ocg3");
             // ocmd1 = doc.set_ocmd(xref=0, ocgs=(ocg1, ocg2))
             int ocmd1 = doc.set_ocmd(xref: 0, ocgs: new List<int> { ocg1, ocg2 });
-            // doc.set_layer(-1)
             doc.set_layer(-1);
-            // doc.AddLayer("layer1")
             doc.AddLayer("layer1");
             // test = doc.get_layer()
             object? test = doc.get_layer();
@@ -44,7 +41,6 @@ namespace MuPDF.NET.Test
             test = doc.GetOcgs();
             // test = doc.layer_ui_configs()
             test = doc.layer_ui_configs();
-            // doc.switch_layer(0)
             doc.switch_layer(0);
         }
 
@@ -116,7 +112,6 @@ namespace MuPDF.NET.Test
             Assert.Equal(
                 new HashSet<int> { ocg0, ocg1, ocg2, ocg3 },
                 new HashSet<int>(doc.GetOcgs().Keys));
-            // doc.get_ocmd(ocmd0)
             doc.get_ocmd(ocmd0);
             // page.get_oc_items()
             page.get_oc_items();
@@ -174,7 +169,6 @@ namespace MuPDF.NET.Test
 
             // optional_content_group_ids = {}
             var optionalContentGroupIds = new Dictionary<string, int>();
-            // for i, item in enumerate(combo_items):
             for (int i = 0; i < comboItems.Length; i++)
             {
                 string item = comboItems[i];
@@ -193,19 +187,13 @@ namespace MuPDF.NET.Test
             int secondId = optionalContentGroupIds["second"];
             // third_id = optional_content_group_ids['third']
             int thirdId = optionalContentGroupIds["third"];
-
-
-            // doc.set_layer(-1, basestate="OFF")
             doc.set_layer(-1, basestate: "OFF");
             // layers = doc.get_layer()
             var layers = doc.get_layer();
-            // doc.set_layer(config=-1, on=[first_id])
             doc.set_layer(config: -1, on: new List<int> { firstId });
 
             */
-            // doc.Save(os.path.abspath(f'{__file__}/../../tests/test_3180.pdf'))
             doc.Save(Out("test_3180.pdf"));
-            // doc.Close()
         }
     }
 }

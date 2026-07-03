@@ -1,11 +1,9 @@
-// scriptdir = os.path.dirname(__file__)
 using System;
 using System.IO;
 using Xunit;
 
 namespace MuPDF.NET.Test
 {
-    /// <summary>Port of <c>PyMuPDF-1.27.2.2/tests/test_rewrite_images.py</c>.</summary>
     /// <remarks>
     /// Inputs: <c>TestDocuments/TestRewriteImages/</c>; outputs: <c>TestDocuments/_Output/TestRewriteImages/</c>.
     /// </remarks>
@@ -23,11 +21,8 @@ namespace MuPDF.NET.Test
         {
             string filename = Doc("test-rewrite-images.pdf");
             using var doc = new Document(filename);
-            // size0 = os.path.getsize(doc.name)
             long size0 = new System.IO.FileInfo(doc.Name).Length;
-            // doc.rewrite_images(dpi_threshold=100, dpi_target=72, quality=33)
             doc.RewriteImages(dpiThreshold: 100, dpiTarget: 72, quality: 33);
-            // data = doc.tobytes(garbage=3, deflate=True)
             byte[] data;
             using (var ms = new MemoryStream())
             {
@@ -38,6 +33,34 @@ namespace MuPDF.NET.Test
             int size1 = data.Length;
             Assert.True((1 - (size1 / (float)size0)) > 0.3);
             doc.Save(Out("test_rewrite_images.pdf"));
+        }
+
+        [Fact]
+        public void test_4918()
+        {
+            /*
+             * By default this test does nothing, because it requires a rather large input document from:
+             *     https://drive.google.com/file/d/1OkIq3XJuKiFfKDWBIcAk8_fLLjpNkuHQ/view?usp=sharing
+             *
+             * It's non-trivial to download from this url, so we only do anything if
+             * environment variable PYMUPDF_TEST_4918_PATH is set to local path of the
+             * input document.
+             *
+             * As of 2026-06-04 this passes with mupdf master, but segvs with current
+             * pymupdf release 1.27.2.3.
+             */
+            string? pymupdfTest4918Path = Doc("test_4918.pdf");
+            if (string.IsNullOrEmpty(pymupdfTest4918Path))
+            {
+                Console.WriteLine($"test_4918(): Doing nothing because PYMUPDF_TEST_4918_PATH={pymupdfTest4918Path}.");
+                return;
+            }
+
+            string path = pymupdfTest4918Path;
+            Console.WriteLine($"path={path}");
+            using var document = new Document(path);
+            document.RewriteImages(dpiThreshold: 150, dpiTarget: 100, quality: 50);
+            document.Save(Out("test_4918.pdf"));
         }
     }
 }

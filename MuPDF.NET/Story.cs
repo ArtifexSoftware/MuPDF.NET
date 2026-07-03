@@ -7,7 +7,7 @@ using System.Text;
 namespace MuPDF.NET
 {
     /// <summary>
-    /// Placement record for one HTML element after <see cref="Story.Place"/> (PyMuPDF <c>ElementPosition</c>).
+    /// Placement record for one HTML element after <see cref="Story.Place"/> .
     /// </summary>
     /// <remarks>
     /// Populated by <see cref="Story.ElementPositions"/> for headings (<c>h1</c>–<c>h6</c>),
@@ -54,7 +54,7 @@ namespace MuPDF.NET
     }
 
     /// <summary>
-    /// Lays out HTML/CSS into PDF pages using an internal DOM (PyMuPDF <c>Story</c>).
+    /// Lays out HTML/CSS into PDF pages using an internal DOM .
     /// </summary>
     /// <remarks>
     /// <para>Parse HTML (and optional CSS), optionally modify via <see cref="Xml"/> on <see cref="Body"/>,
@@ -103,7 +103,6 @@ namespace MuPDF.NET
         public Story(string html = "", string userCss = null, float em = 12, object archive = null)
         {
             var buffer_ = Helpers.BufferFromBytes(Encoding.UTF8.GetBytes(html ?? ""));
-            // if archive and not isinstance(archive, Archive):
             Archive arch = null;
             if (archive != null)
             {
@@ -113,7 +112,6 @@ namespace MuPDF.NET
                     arch = new Archive(archive);
             }
             var archNative = arch?.NativeArchive ?? new mupdf.FzArchive();
-            // if hasattr(mupdf, 'FzStoryS'):
             _nativeStory = new mupdf.FzStory(buffer_, userCss, em, archNative);
         }
 
@@ -140,12 +138,10 @@ namespace MuPDF.NET
             {
                 // name = x.tagname
                 string? name = x.TagName;
-                // if len(name) == 2 and name[0]=="h" and name[1] in "123456":
                 if (name != null && name.Length == 2 && name[0] == 'h' && "123456".IndexOf(name[1]) >= 0)
                 {
                     // attr = x.get_attribute_value("id")
                     var attr = x.GetAttributeValue("id");
-                    // if not attr:
                     if (string.IsNullOrEmpty(attr))
                     {
                         // id_ = f"h_id_{i}"
@@ -163,7 +159,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Add links to a PDF from element positions (PyMuPDF <c>Story.add_pdf_links</c>).
+        /// Add links to a PDF from element positions .
         /// </summary>
         /// <param name="documentOrStream">A <see cref="Document"/>, PDF bytes, or stream.</param>
         /// <param name="positions">Positions from <see cref="ElementPositions"/>; duplicate ids are ignored for targets.</param>
@@ -192,22 +188,17 @@ namespace MuPDF.NET
 
             // id_to_position = dict()
             var id_to_position = new Dictionary<string, StoryElementPositionInfo>();
-            // for position in positions:
             foreach (var position in positions)
             {
-                // if (position.open_close & 1) and position.id:
                 if ((position.OpenClose & 1) != 0 && !string.IsNullOrEmpty(position.Id))
                 {
-                    // if position.id in id_to_position:
                     if (!id_to_position.ContainsKey(position.Id))
                         id_to_position[position.Id] = position;
                 }
             }
 
-            // for position_from in positions:
             foreach (var position_from in positions)
             {
-                // if (position_from.open_close & 1) and position_from.href:
                 if ((position_from.OpenClose & 1) == 0 || string.IsNullOrEmpty(position_from.Href))
                     continue;
 
@@ -217,8 +208,6 @@ namespace MuPDF.NET
                     // link['from'] = Rect(position_from.rect)
                     ["from"] = new Rect(position_from.Rect),
                 };
-
-                // if position_from.href.startswith("#"):
                 if (position_from.Href.StartsWith("#", StringComparison.Ordinal))
                 {
                     // target_id = position_from.href[1:]
@@ -235,7 +224,6 @@ namespace MuPDF.NET
                 }
                 else
                 {
-                    // if position_from.href.startswith('name:'):
                     if (position_from.Href.StartsWith("name:", StringComparison.Ordinal))
                     {
                         link["kind"] = Constants.LinkNamed;
@@ -251,8 +239,6 @@ namespace MuPDF.NET
                 // document[position_from.page_num - 1].insert_link(link)
                 document[position_from.PageNum - 1].InsertLinkVoid(link);
             }
-
-            // return document
             return document;
         }
 
@@ -264,7 +250,6 @@ namespace MuPDF.NET
             get
             {
                 var dom = GetDocument();
-                // return dom.bodytag()
                 return dom.BodyTag() ?? throw new InvalidOperationException("Story HTML has no body");
             }
         }
@@ -273,7 +258,6 @@ namespace MuPDF.NET
         public Xml GetDocument()
         {
             var dom = NativeStory.fz_story_document();
-            // return Xml( dom)
             return Xml.FromDomNode(dom) ?? throw new InvalidOperationException("Story has no document");
         }
 
@@ -318,13 +302,10 @@ namespace MuPDF.NET
         /// <param name="args">Optional extra fields merged onto each record (keys must be valid C# identifiers).</param>
         public void ElementPositions(Action<StoryElementPositionInfo> function, Dictionary<string, object> args = null)
         {
-            // if type(args) is dict:
             if (args != null)
             {
-                // for k in args.keys():
                 foreach (var k in args.Keys)
                 {
-                    // if not (type(k) is str and k.isidentifier()):
                     if (string.IsNullOrEmpty(k) || !IsIdentifier(k))
                         throw new ArgumentException($"invalid key '{k}'");
                 }
@@ -334,8 +315,6 @@ namespace MuPDF.NET
                 // args = {}
                 args = new Dictionary<string, object>();
             }
-
-            // if not callable(function) or function.__code__.co_argcount != 1:
             if (function == null)
                 function = _ => { };
 
@@ -355,7 +334,6 @@ namespace MuPDF.NET
             var whereFz = where.ToFzRect();
             var filled = new mupdf.FzRect();
             int more = NativeStory.fz_place_story_flags(whereFz, filled, flags);
-            // return more, JM_py_from_rect( filled)
             return (more != 0, RectFromFz(filled));
         }
 
@@ -387,7 +365,6 @@ namespace MuPDF.NET
                 var (mediabox, rect, ctm) = rectfn(rect_num, filled);
                 // rect_num += 1
                 rect_num += 1;
-                // if mediabox:
                 if (PyRectBool(mediabox))
                 {
                     // new page.
@@ -397,7 +374,6 @@ namespace MuPDF.NET
                 // more, filled = self.place( rect)
                 var (more, filledOut) = Place(rect);
                 filled = filledOut;
-                // if positionfn:
                 if (positionfn != null)
                 {
                     void positionfn2(StoryElementPositionInfo position)
@@ -410,17 +386,13 @@ namespace MuPDF.NET
                     // self.element_positions(positionfn2)
                     ElementPositions(positionfn2);
                 }
-                // if writer:
                 if (writer != null)
                 {
-                    // if mediabox:
                     if (PyRectBool(mediabox))
                     {
                         // new page.
-                        // if dev:
                         if (dev != null)
                         {
-                            // if pagefn:
                             if (pagefn != null)
                                 // pagefn(page_num, mediabox, dev, 1)
                                 pagefn(page_num, mediabox, dev?.ToFzDevice(), 1);
@@ -428,17 +400,14 @@ namespace MuPDF.NET
                             writer.EndPage();
                         }
                         dev = writer.BeginPage(mediabox);
-                        // if pagefn:
                         if (pagefn != null)
                             // pagefn(page_num, mediabox, dev, 0)
                             pagefn(page_num, mediabox, dev?.ToFzDevice(), 0);
                     }
                     // self.draw( dev, ctm)
                     Draw(dev, ctm);
-                    // if not more:
                     if (!more)
                     {
-                        // if pagefn:
                         if (pagefn != null)
                             // pagefn( page_num, mediabox, dev, 1)
                             pagefn(page_num, mediabox, dev?.ToFzDevice(), 1);
@@ -451,7 +420,6 @@ namespace MuPDF.NET
                     // self.draw(None, ctm)
                     Draw((mupdf.FzDevice)null, ctm);
                 }
-                // if not more:
                 if (!more)
                     // break
                     break;
@@ -506,7 +474,6 @@ namespace MuPDF.NET
                 content = contentfn(positions);
                 // stable = False
                 bool stable = false;
-                // if content == content_prev:
                 if (content == content_prev)
                     // stable = True
                     stable = true;
@@ -514,8 +481,6 @@ namespace MuPDF.NET
                 string content2 = content;
                 // story = Story(content2, user_css, em, archive)
                 using var story = new Story(content2, user_css, em, archive);
-
-                // if add_header_ids:
                 if (add_header_ids)
                     // story.add_header_ids()
                     story.AddHeaderIds();
@@ -526,7 +491,6 @@ namespace MuPDF.NET
                 {
                     // positions.append(position)
                     positions.Add(position);
-                    // if stable and positionfn:
                     if (stable && positionfn != null)
                         // positionfn(position)
                         positionfn(position);
@@ -539,8 +503,6 @@ namespace MuPDF.NET
                     positionfn2,
                     pagefn
                 );
-
-                // if stable:
                 if (stable)
                     // break
                     break;
@@ -579,7 +541,6 @@ namespace MuPDF.NET
             {
                 // positions.append(position)
                 positions.Add(position);
-                // if positionfn:
                 if (positionfn != null)
                     // positionfn(position)
                     positionfn(position);
@@ -589,7 +550,6 @@ namespace MuPDF.NET
             // writer.close()
             byte[] pdf = writer.Close();
             // stream.seek(0)
-            // return Story.add_pdf_links(stream, positions)
             return AddPdfLinks(pdf, positions);
         }
 
@@ -627,7 +587,6 @@ namespace MuPDF.NET
             {
                 // positions.append(position)
                 positions.Add(position);
-                // if positionfn:
                 if (positionfn != null)
                     // positionfn(position)
                     positionfn(position);
@@ -637,7 +596,6 @@ namespace MuPDF.NET
             // writer.close()
             byte[] pdf = writer.Close();
             // stream.seek(0)
-            // return Story.add_pdf_links(stream, positions)
             return AddPdfLinks(pdf, positions);
         }
 
@@ -678,7 +636,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Find an optimal rectangle parameter that contains the story (PyMuPDF <c>Story.fit</c>).
+        /// Find an optimal rectangle parameter that contains the story .
         /// On success, the last <see cref="Place"/> used the returned rectangle so <see cref="Draw"/> can be called directly.
         /// </summary>
         /// <param name="fn">Maps parameter to a rectangle; empty rect means “does not fit” without calling <see cref="Place"/>. Width and height must not shrink as parameter increases.</param>
@@ -902,7 +860,7 @@ namespace MuPDF.NET
             return Fit(fn, width_min, width_max, delta, verbose, 0);
         }
 
-        // ─── PyMuPDF API names (internal, same assembly) ─────────────────
+        // ─── MuPDF API names (internal, same assembly) ─────────────────
 
         internal void add_header_ids() => AddHeaderIds();
         internal Xml body => Body;

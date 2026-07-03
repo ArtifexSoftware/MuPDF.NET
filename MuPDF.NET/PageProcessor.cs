@@ -17,7 +17,7 @@ namespace MuPDF.NET
     /// <para>
     /// Prefer the <see cref="ApplyPages(string, Func{Page, T}, int?, int?, int?)"/> overload when processing many
     /// pages in parallel: each worker thread opens its own <see cref="Document"/> (same pattern as
-    /// <c>_apply_pages._worker_fn</c>). PyMuPDF documents that a shared <see cref="Document"/> must not be used
+    /// <c>_apply_pages._worker_fn</c>). MuPDF documents that a shared <see cref="Document"/> must not be used
     /// across forked processes because file-descriptor offsets are shared.
     /// </para>
     /// </remarks>
@@ -25,7 +25,7 @@ namespace MuPDF.NET
     {
         /// <summary>
         /// Returns a list of results from <paramref name="pageFunction"/>, one per selected page, in page order.
-        /// Applies pages sequentially (<c>method='single'</c>; PyMuPDF <c>apply_pages</c>). Here uses
+        /// Applies pages sequentially (<c>method='single'</c>; ). Here uses
         /// <see cref="ParallelRunner.For"/> on the supplied open document).
         /// </summary>
         /// <typeparam name="T">Result type produced for each page.</typeparam>
@@ -62,11 +62,11 @@ namespace MuPDF.NET
 
         /// <summary>
         /// Returns a list of results from <paramref name="pageFunction"/> using parallel workers that each open
-        /// the file at <paramref name="filename"/> (PyMuPDF <c>apply_pages</c> with <c>method='mp'</c> /
+        /// the file at <paramref name="filename"/> ( with <c>method='mp'</c> /
         /// <c>'fork'</c> — one <see cref="Document"/> per worker in <c>_apply_pages._worker_fn</c>).
         /// </summary>
         /// <typeparam name="T">Result type produced for each page.</typeparam>
-        /// <param name="filename">Path of the document file (PyMuPDF <c>path</c> argument).</param>
+        /// <param name="filename">Path of the document file ( argument).</param>
         /// <param name="pageFunction">Called for each page; must be thread-safe.</param>
         /// <param name="start">First page number (0-based, inclusive).</param>
         /// <param name="stop">Last page number (exclusive).</param>
@@ -113,7 +113,7 @@ namespace MuPDF.NET
 
         /// <summary>
         /// Applies <paramref name="pageAction"/> to each selected page of an open document (no return list).
-        /// Skips pages when the callback returns <c>null</c> (PyMuPDF <c>apply_pages</c>).
+        /// Skips pages when the callback returns <c>null</c> .
         /// </summary>
         /// <param name="doc">Open document whose pages are processed.</param>
         /// <param name="pageAction">Called for each page. Must be thread-safe; avoid mutating <paramref name="doc"/>.</param>
@@ -217,7 +217,7 @@ namespace MuPDF.NET
             return pages;
         }
 
-        // ─── PyMuPDF API names (internal, same assembly) ─────────────────
+        // ─── MuPDF API names (internal, same assembly) ─────────────────
 
         internal static List<T> apply_pages<T>(
             string path,

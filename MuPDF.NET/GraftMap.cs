@@ -12,7 +12,6 @@ namespace MuPDF.NET
 
     /// <summary>
     /// Maps PDF objects when grafting pages or merging documents so shared resources are not duplicated.
-    /// <para>Ports PyMuPDF <c>class Graftmap</c> (<c>src/__init__.py</c>).</para>
     /// <para>Created and cached on <see cref="Document.Graftmaps"/> during <c>insert_pdf</c> /
     /// <see cref="Document.InsertPdf"/> and <see cref="Page.ShowPdfPage"/> to avoid duplicate object copies.</para>
     /// </summary>
@@ -33,7 +32,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Create a graft map for the target PDF document (PyMuPDF <c>Graftmap.__init__(doc)</c>).
+        /// Create a graft map for the target PDF document .
         /// </summary>
         /// <param name="doc">Destination PDF document (<c>_as_pdf_document(doc)</c> in Python).</param>
         public Graftmap(Document doc)

@@ -4,7 +4,7 @@ using MuPDF.Fonts;
 
 namespace MuPDF.NET
 {
-    /// <summary>Bridge to <c>MuPDF.Fonts</c> package data (PyMuPDF <c>fitz_fontdescriptors</c>).</summary>
+    /// <summary>Bridge to <c>MuPDF.Fonts</c> package data.</summary>
     /// <remarks>Font naming uses codes like <c>notos</c>, <c>notosit</c>, <c>notosbo</c>, <c>notosbi</c>.</remarks>
     internal static class MupdfFonts
     {

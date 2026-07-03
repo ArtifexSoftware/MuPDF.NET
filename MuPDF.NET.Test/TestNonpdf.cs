@@ -4,7 +4,6 @@ using Xunit;
 namespace MuPDF.NET.Test
 {
     /// <summary>
-    /// Port of <c>PyMuPDF-1.27.2.2/tests/test_nonpdf.py</c>.
     /// </summary>
     /// <remarks>
     /// Inputs: <c>TestDocuments/TestNonpdf/</c>; outputs: <c>TestDocuments/_Output/TestNonpdf/</c>.
