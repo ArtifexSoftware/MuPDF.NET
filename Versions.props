@@ -11,7 +11,7 @@
     <!-- PyMuPDF4LLM Python package (pymupdf4llm on PyPI). -->
     <ArtifexPyMuPDF4LLMVersion>1.27.2.3</ArtifexPyMuPDF4LLMVersion>
     <!-- MuPDF.NET NuGet package. -->
-    <ArtifexMuPDFNetVersion>3.28.0-rc.1</ArtifexMuPDFNetVersion>
+    <ArtifexMuPDFNetVersion>3.28.0</ArtifexMuPDFNetVersion>
     <!-- PDF4LLM NuGet package. -->
     <ArtifexPDF4LLMVersion>1.27.2.27</ArtifexPDF4LLMVersion>
   </PropertyGroup>

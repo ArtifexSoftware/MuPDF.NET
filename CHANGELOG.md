@@ -2,7 +2,7 @@
 
 ### [3.28.0] - 2026-07-02
 
-Aligned MuPDF.NET with **PyMuPDF 1.28.0** and **MuPDF 1.28.0**.
+MuPDF.NET now supports loading of Markdown files.
 
 #### New APIs and behavior
 
