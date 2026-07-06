@@ -29,6 +29,7 @@ Document Formats
 - CBZ
 - SVG
 - TXT
+- MD
 
 
 Image Formats
@@ -395,6 +396,129 @@ For example:
 
 ----------
 
+
+.. _The_Basics_Markdown_to_PDF:
+
+Markdown to PDF
+~~~~~~~~~~~~~~~~~
+
+As Markdown files are supported input files they can be easily converted to PDF by opening the Markdown file and calling the :meth:`Document.Save` method.
+
+In the simplest case you can just open the Markdown file and call the method to get a PDF representation of the content. 
+
+
+Defining paper size
+"""""""""""""""""""
+
+The default paper size is 400 x 600 :doc:`Rect` but you can specify a custom paper size if you wish, to do this just send through the `rect` parameter as required, for example:
+
+.. code-block:: cs
+
+    MuPDF.NET.Document md_doc = new MuPDF.NET.Document("example.md", Utils.PaperRect("A4")); // A4 size
+
+
+Defining CSS
+""""""""""""
+
+By default, the Markdown content will be converted to PDF using a default CSS stylesheet. However, you can specify your own CSS stylesheet to customize the appearance of the resulting PDF. To do this, define your ``css`` and apply it.
+
+For example, to make all ``h1`` headers red (The single ``#`` symbol in Markdown), you could do the following:
+
+.. code-block:: cs
+
+    MuPDF.NET.Document md_doc = new MuPDF.NET.Document("example.md", Utils.PaperRect("A4"));
+     
+    string css = "h1 {color:red;}";
+    md_doc.ApplyCss(css);
+
+    md_doc.Save("red-colored-header.pdf");
+
+.. note::
+
+    The `support for CSS <https://pymupdf.readthedocs.io/en/latest/app3.html#css-support>`_ is currently limited.
+
+
+Using CSS Custom Element Selectors
+""""""""""""""""""""""""""""""""""
+
+Markdown input supports custom element selectors in the CSS, so you can define your own tags in the Markdown and then refer to them in the CSS.
+
+In this way you can specify custom styles for specific elements in the Markdown content. For example, you could define a custom tag called ``mytag`` in the Markdown and then refer to it in the CSS to make it red:
+
+.. code-block:: cs
+
+    css = """
+    mytag {
+        color: red;
+    }
+    """;
+
+And the corresponding Markdown:
+
+.. code-block:: markdown
+
+    # This is a header
+
+    This is some text.
+
+    <mytag>This text will be red.</mytag>
+
+This is particularly useful for defining image sizes. For example, you could define a custom class called ``my_image_class`` in the CSS and then refer to it in the Markdown to style images:
+
+.. code-block:: cs
+
+    css = """
+    my_image_class img {
+        width: 100px;
+        height: 100px;
+    }
+    """;
+
+With the corresponding Markdown:
+
+.. code-block:: markdown
+
+    # This is a header
+
+    This is some text.
+
+    <my_image_class><img src="pie-chart.png" /></my_image_class>
+
+
+Defining Fonts
+"""""""""""""""""
+
+Fonts can be defined by using the `archive` parameter to provide a custom :ref:`Archive` containing the font files.
+
+The fonts must exist in an archive which is provided to the `archive` parameter when opening the Markdown file. The CSS can then refer to these fonts by their names as defined in the archive.
+
+For example, assuming you have access to the source files for the "Comic Sans" font for all text, you could do the following:
+
+.. code-block:: cs
+
+    // Global CSS instructions to use the "Comic Sans" font for all text. The font files must be provided in the archive.
+    string css = """
+    @font-face {font-family: sans-serif; src: url(comic.ttf);}
+    @font-face {font-family: sans-serif; src: url(comicbd.ttf); font-weight: bold;}
+    @font-face {font-family: sans-serif; src: url(comicz.ttf); font-weight: bold; font-style: italic;}
+    @font-face {font-family: sans-serif; src: url(comici.ttf); font-style: italic;}
+    """;
+
+    Archive archive = new Archive("C:/Windows/Fonts");  // the fonts are here
+    archive.Add(".");  // we've stored the archive image in this script's folder
+
+    string md_file = "sample.md";
+    Document md_doc = new MuPDF.NET.Document(  // open the Markdown document
+        md_file,
+        archive: archive,  // where to look for resources (fonts, images)
+        rect: Utils.PaperRect("A4")  // page dimension ISO A4
+    );
+
+    md_doc.ApplyCss(css);
+
+
+
+----------
 
 .. _The_Basics_Extracting_and_Drawing_Vector_Graphics:
 

@@ -16,6 +16,7 @@ This class represents a document. It can be constructed from a file or from memo
 =============================================== ==========================================================
 :meth:`Document.AddLayer`                       PDF only: make new optional content configuration
 :meth:`Document.AddOcg`                         PDF only: add new optional content group
+:meth:`Document.ApplyCss`                       Markdown only: apply CSS stylesheet to Markdown content
 :meth:`Document.Authenticate`                   Gain access to an encrypted document
 :meth:`Document.Bake`                           PDF only: make annotations / fields permanent content
 :meth:`Document.CanSaveIncrementally`           Check if incremental save is possible
@@ -176,20 +177,21 @@ This class represents a document. It can be constructed from a file or from memo
     pair: filetype; Document
     pair: rect; Document
     pair: fontSize; Document
+    pair: archive; Document
 
-  .. method:: Document(string filename: null, byte[] stream: null, filetype: null, rect: null, width: 0, height: 0, fontSize: 11)
+  .. method:: Document(string fileName: null, byte[] stream: null, string fileType: null, Rect rect: null, float width: 0, float height: 0, float fontSize: 11, Archive archive = null)
 
     Creates a *Document* object.
 
     * With default parameters, a **new empty PDF** document will be created.
-    * If *stream* is given, then the document is created from memory and, if not a PDF, either *filename* or *filetype* must indicate its type.
-    * If *stream* is `null`, then a document is created from the file given by *filename*. Its type is inferred from the extension. This can be overruled by *filetype.*
+    * If *stream* is given, then the document is created from memory and, if not a PDF, either *fileName* or *fileType* must indicate its type.
+    * If *stream* is `null`, then a document is created from the file given by *fileName*. Its type is inferred from the extension. This can be overruled by *fileType.*
 
-    :arg string filename: A UTF-8 string containing a file path. The document type is inferred from the filename extension. If not present or not matching :ref:`a supported type<Supported_File_Types>`, a PDF document is assumed. For memory documents, this argument may be used instead of `filetype`, see below.
+    :arg string fileName: a UTF-8 string containing a file path. The document type is inferred from the filename extension. If not present or not matching :ref:`a supported type<Supported_File_Types>`, a PDF document is assumed. For memory documents, this argument may be used instead of `fileType`, see below.
 
-    :arg byte[] stream: A memory area containing a supported document. If not a PDF, its type **must** be specified by either `filename` or `filetype`.
+    :arg byte[] stream: a memory area containing a supported document. If not a PDF, its type **must** be specified by either `fileName` or `fileType`.
 
-    :arg string filetype: A string specifying the type of document. This may be anything looking like a filename (e.g. "x.pdf"), in which case MuPDF uses the extension to determine the type, or a mime type like *application/pdf*. Just using strings like "pdf"  or ".pdf" will also work. May be omitted for PDF documents, otherwise must match :ref:`a supported document type<Supported_File_Types>`.
+    :arg string fileType: a string specifying the type of document. This may be anything looking like a filename (e.g. "x.pdf"), in which case MuPDF uses the extension to determine the type, or a mime type like *application/pdf*. Just using strings like "pdf"  or ".pdf" will also work. May be omitted for PDF documents, otherwise must match :ref:`a supported document type<Supported_File_Types>`.
 
     :arg Rect rect: a rectangle specifying the desired page size. This parameter is only meaningful for documents with a variable page layout ("reflowable" documents), like e-books or HTML, and ignored otherwise. If specified, it must be a non-empty, finite rectangle with top-left coordinates (0, 0). Together with parameter *fontSize*, each page will be accordingly laid out and hence also determine the number of pages.
 
@@ -198,6 +200,8 @@ This class represents a document. It can be constructed from a file or from memo
     :arg float height: may used together with *width* as an alternative to *rect* to specify layout information.
 
     :arg float fontSize: the default :data:`fontSize` for reflowable document types. This parameter is ignored if none of the parameters *rect* or *width* and *height* are specified. Will be used to calculate the page layout.
+
+    :arg Archive archive: an optional Archive object to use as a source for resources like fonts and images.
 
     :return: A document object. If the document cannot be created, an exception is raised.
 
@@ -286,6 +290,18 @@ This class represents a document. It can be constructed from a file or from memo
     :returns: :data:`xref` of the created OCG. Use as entry for `oc` parameter in supporting objects.
 
     .. note:: Multiple OCGs with identical parameters may be created. This will not cause problems. Garbage option 3 of :meth:`Document.save` will get rid of any duplicates.
+
+  .. method:: ApplyCss(string css, bool append = true)
+
+    * New in v3.28.0
+
+    Apply CSS styles to the document. This is a global operation, which means that the styles will be applied to all pages and all elements of the document. The CSS syntax is the same as for HTML documents, but only a subset of CSS properties is supported.
+
+    :arg string css: a string containing the CSS styles to be applied.
+    :arg bool append: whether to append the new styles to existing ones (if any) or to replace them.
+
+    .. note:: This method is primarily intended for use with :ref:`Markdown documents <The_Basics_Markdown_to_PDF>`.
+
 
 
   .. method:: SetOCMD(OCMD ocmd: null, int xref: 0, int[] ocgs: null, string policy: null, dynamic[] ve: null)
