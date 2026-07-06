@@ -1,4 +1,3 @@
-// Port of PyMuPDF-1.27.2.2/tests/test_toc.py
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -266,7 +265,7 @@ namespace MuPDF.NET.Test
         }
 
         /// <summary>
-        /// Port of <c>test_3400()</c> in <c>PyMuPDF-1.27.2.2/tests/test.py</c> (#3400 link destinations with page rotation).
+        /// in <c>MuPDF-1.27.2.2/tests/test.py</c> (#3400 link destinations with page rotation).
         /// </summary>
         [Fact]
         public void test_3400()

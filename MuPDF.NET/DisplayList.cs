@@ -7,7 +7,6 @@ namespace MuPDF.NET
     /// </summary>
     /// <remarks>
     /// Used with <see cref="DisplayList.Run"/> and <see cref="DocumentWriter.BeginPage"/>.
-    /// PyMuPDF equivalent: <c>DeviceWrapper</c>.
     /// </remarks>
     public class DeviceWrapper : IDisposable
     {

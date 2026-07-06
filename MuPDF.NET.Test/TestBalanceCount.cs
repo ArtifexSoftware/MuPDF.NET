@@ -3,7 +3,7 @@ using Xunit;
 namespace MuPDF.NET.Test
 {
     /// <summary>
-    /// Port of <c>PyMuPDF-1.27.2.2/tests/test_balance_count.py</c> — graphics state <c>q</c>/<c>Q</c> balance,
+    /// — graphics state <c>q</c>/<c>Q</c> balance,
     /// <see cref="Page.IsWrapped"/>, and <see cref="Page.WrapContents"/>.
     /// </summary>
     public class TestBalanceCount
@@ -11,7 +11,7 @@ namespace MuPDF.NET.Test
         private static readonly string outDocPath = _Path.ForOutput("test_q_count.pdf", nameof(TestBalanceCount));
 
         /// <summary>
-        /// <summary>Regression test: q count (PyMuPDF <c>tests/test_balance_count.py::test_q_count</c>).</summary>
+        /// <summary>Regression test: q count.</summary>
         /// Testing graphics state balances and wrap_contents().
         /// Take page's contents and generate various imbalanced graphics state
         /// situations. Each time compare q-count with expected results.

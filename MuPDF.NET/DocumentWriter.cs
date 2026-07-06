@@ -7,10 +7,10 @@ namespace MuPDF.NET
     /// Writes multi-page documents (primarily PDF) using MuPDF's document writer API.
     /// </summary>
     /// <remarks>
-    /// <para>Ports PyMuPDF <c>class DocumentWriter</c> (<c>src/__init__.py</c>). Typical use is with
+    /// <para>Typical use is with
     /// <see cref="Story"/> to layout HTML/CSS into PDF pages. Legacy API:
     /// <see href="https://mupdfnet.readthedocs.io/en/latest/classes/DocumentWriter.html"/>.</para>
-    /// <para>Use <c>using</c> (<see cref="IDisposable"/>) like Python's context manager: call
+    /// <para>Use <c>using</c> (<see cref="IDisposable"/>) like a context manager: call
     /// <see cref="Close"/> (or dispose) to flush output.</para>
     /// </remarks>
     public partial class DocumentWriter : IDisposable
@@ -62,7 +62,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Creates a writer that writes PDF into a growable buffer (PyMuPDF file-like / <c>BytesIO</c>).
+        /// Creates a writer that writes PDF into a growable buffer.
         /// </summary>
         /// <param name="stream">Memory stream that receives PDF bytes when the writer is closed.</param>
         /// <param name="options">PDF writer options.</param>
@@ -77,7 +77,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Creates a writer backed by an <see cref="mupdf.FzBuffer"/> (same as PyMuPDF <c>DocumentWriter(buffer)</c>).
+        /// Creates a writer backed by an <see cref="mupdf.FzBuffer"/> (same as ).
         /// </summary>
         /// <param name="buffer">Buffer; bytes are extracted in <see cref="Close"/> when this is the primary sink.</param>
         /// <param name="format">Document format (default <c>pdf</c>).</param>
@@ -162,7 +162,7 @@ namespace MuPDF.NET
         /// <inheritdoc/>
         public override string ToString() => "DocumentWriter()";
 
-        // ─── PyMuPDF API names (internal, same assembly) ─────────────────
+        // ─── MuPDF API names (internal, same assembly) ─────────────────
 
         internal DeviceWrapper begin_page(Rect mediabox) => BeginPage(mediabox);
 

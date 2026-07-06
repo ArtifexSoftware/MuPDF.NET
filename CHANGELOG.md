@@ -1,5 +1,24 @@
 # Changelog
 
+### [3.28.0] - 2026-07-02
+
+MuPDF.NET now supports loading of Markdown files.  
+Aligned MuPDF.NET with **PyMuPDF 1.28.0** and **MuPDF 1.28.0**.
+
+#### New APIs and behavior
+
+- **`Document`**: optional `archive` on open (uses `fz_open_document_with_stream_and_dir` for reflowable/HTML/Markdown documents with embedded assets).
+- **`Document.ApplyCss()`**: apply user CSS to reflowable documents (`fz_style_document`).
+- **`Document.Save()` / `Write()`**: non-PDF documents are converted via `ConvertToPdf()` before writing (PyMuPDF 1.28 parity).
+- **`ConvertToPdf()`**: copies external and internal links into the generated PDF (`JmConvertToPdf`).
+
+#### Bug fixes (table extraction / concurrency)
+
+- **`TableHelpers.FindTables()` / `Utils.GetTables()`**: replaced process-wide shared table scratch buffers (`TableModule.CHARS`, `TableModule.EDGES`) with **per-thread reusable lists**, so concurrent table detection on separate `Document`/`Page` instances no longer corrupts extracted content.
+- **Table detection settings**: `FindTables()` now uses thread-local small-glyph-height and skip-quad-correction overrides instead of toggling global `Tools.SetSmallGlyphHeights()` / `Helpers.SkipQuadCorrections`, avoiding cross-thread interference during parallel extraction.
+- **`Table` header / `ToMarkdown()`**: `Table` now receives character data before header resolution, fixing a regression where markdown headers fell back to `Col1`, `Col2`, … after the thread-safety refactor.
+- **`TableHelpers.CharsInRect`**: hot-path scan uses a direct loop instead of LINQ `.Any()`.
+
 ### [3.2.17.9] - 2026-06-23
 - Depends on stable **`MuPDF.NativeAssets` 1.28.0**.
 - Updated PyMuPDF bind to **1.27.2.3** (`VersionBind` / `pymupdf_version`).

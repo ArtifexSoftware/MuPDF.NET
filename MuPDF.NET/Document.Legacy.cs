@@ -534,7 +534,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Legacy MuPDF.NET / PyMuPDF <c>Document(filename, stream, filetype, rect, width, height, fontsize)</c>.
+        /// Legacy MuPDF.NET /
         /// </summary>
         /// <remarks>
         /// Use <see cref="Document(string, string, Rect, float, float, float)"/> or

@@ -13,7 +13,7 @@ namespace MuPDF.NET
     }
 
     /// <summary>
-    /// Field type value accepting legacy <see cref="int"/> and PyMuPDF <see cref="WidgetType"/> assignments.
+    /// Field type value accepting legacy <see cref="int"/> and MuPDF <see cref="WidgetType"/> assignments.
     /// </summary>
     public readonly struct WidgetFieldType : System.IEquatable<WidgetFieldType>
     {

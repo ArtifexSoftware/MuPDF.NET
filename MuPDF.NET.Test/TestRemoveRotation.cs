@@ -1,4 +1,3 @@
-// scriptdir = os.path.dirname(__file__)
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -6,7 +5,6 @@ using Xunit;
 
 namespace MuPDF.NET.Test
 {
-    /// <summary>Port of <c>PyMuPDF-1.27.2.2/tests/test_remove-rotation.py</c>.</summary>
     /// <remarks>
     /// Inputs: <c>TestDocuments/TestRemoveRotation/</c>; outputs: <c>TestDocuments/_Output/TestRemoveRotation/</c>.
     /// </remarks>
@@ -31,7 +29,6 @@ namespace MuPDF.NET.Test
             // We always create fresh pages to avoid false positives from cache content.
             // Text on these pages consists of pairwise different strings, sorting by
             // these strings must therefore yield identical bounding boxes.
-            // for i in range(1, doc.page_count):
             for (int i = 1; i < doc.PageCount; i++)
             {
                 var page = doc[i];
@@ -40,7 +37,6 @@ namespace MuPDF.NET.Test
                 var pix0 = page.GetPixmap();
                 // words0 = []
                 var words0 = new List<(float x0, float y0, float x1, float y1, string word)>();
-                // for w in doc[i].GetText("words"):
                 foreach (var w in page.get_text_words())
                 {
                     var r = new Rect(w.x0, w.y0, w.x1, w.y1) * page.RotationMatrix;

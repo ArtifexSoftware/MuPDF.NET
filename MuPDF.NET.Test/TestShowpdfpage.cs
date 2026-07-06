@@ -9,7 +9,6 @@ using Xunit;
 
 namespace MuPDF.NET.Test
 {
-    /// <summary>Port of <c>PyMuPDF-1.27.2.2/tests/test_showpdfpage.py</c>.</summary>
     /// <remarks>
     /// Inputs: <c>TestDocuments/TestShowpdfpage/</c>; outputs: <c>TestDocuments/_Output/TestShowpdfpage/</c>.
     /// </remarks>

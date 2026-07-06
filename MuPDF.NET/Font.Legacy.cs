@@ -12,7 +12,7 @@ namespace MuPDF.NET
     /// Required for <see cref="TextWriter"/> and <see cref="Page.WriteText"/>.
     /// </para>
     /// <para>
-    /// Modern PyMuPDF-aligned members live on the main <c>Font.cs</c> partial
+    /// Modern MuPDF-aligned members live on the main <c>Font.cs</c> partial
     /// (<see cref="BBox"/>, <see cref="GlyphAdvance"/>, <see cref="CharLengths"/>, etc.).
     /// </para>
     /// </remarks>

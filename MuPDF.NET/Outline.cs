@@ -8,11 +8,10 @@ namespace MuPDF.NET
     /// </summary>
     /// <remarks>
     /// <para>Outlines form a tree: follow <see cref="Down"/> for the first child and <see cref="Next"/> for
-    /// siblings at the same level. The document’s root entry is <see cref="Document.GetOutline"/> (PyMuPDF
+    /// siblings at the same level. The document’s root entry is <see cref="Document.GetOutline"/> (MuPDF
     /// <c>Document.outline</c>).</para>
     /// <para>Legacy API:
     /// <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Outline.html"/>.</para>
-    /// <para>Ports PyMuPDF <c>class Outline</c> (<c>src/__init__.py</c>).</para>
     /// </remarks>
     public class Outline : IDisposable
     {
@@ -35,7 +34,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// The link destination details object (legacy <c>Dest</c>; PyMuPDF <c>dest</c>).
+        /// The link destination details object (legacy <c>Dest</c>; ).
         /// </summary>
         /// <remarks>
         /// Does not resolve named destinations; use <see cref="Destination(Document)"/> when
@@ -90,26 +89,26 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// The page number (0-based) this bookmark points to (PyMuPDF <c>page</c>).
+        /// The page number (0-based) this bookmark points to .
         /// </summary>
         public int Page =>
             _nativeOutline.m_internal != null ? _nativeOutline.m_internal.page.page : -1;
 
         /// <summary>
-        /// The item’s title, or <see langword="null"/> if missing (PyMuPDF <c>title</c>).
+        /// The item’s title, or <see langword="null"/> if missing .
         /// </summary>
         public string? Title =>
             _nativeOutline.m_internal != null ? _nativeOutline.m_internal.title : null;
 
         /// <summary>
         /// Whether sub-outlines should be expanded (<see langword="true"/>) or collapsed
-        /// (<see langword="false"/>); interpreted by PDF viewers (PyMuPDF <c>is_open</c>).
+        /// (<see langword="false"/>); interpreted by PDF viewers .
         /// </summary>
         public bool IsOpen =>
             _nativeOutline.m_internal != null && _nativeOutline.m_internal.is_open != 0;
 
         /// <summary>
-        /// Whether the target is outside the current document (PyMuPDF <c>is_external</c>).
+        /// Whether the target is outside the current document .
         /// </summary>
         /// <remarks>Uses <c>mupdf.fz_is_external_link</c> on <see cref="Uri"/> when present.</remarks>
         public bool IsExternal
@@ -132,7 +131,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Link target URI (PyMuPDF <c>uri</c>).
+        /// Link target URI .
         /// </summary>
         /// <remarks>
         /// Interpret together with <see cref="IsExternal"/>:
@@ -146,11 +145,11 @@ namespace MuPDF.NET
         public string? Uri =>
             _nativeOutline.m_internal != null ? _nativeOutline.m_internal.uri : null;
 
-        /// <summary>Horizontal destination coordinate (PyMuPDF <c>x</c>).</summary>
+        /// <summary>Horizontal destination coordinate.</summary>
         public float X =>
             _nativeOutline.m_internal != null ? _nativeOutline.m_internal.x : 0f;
 
-        /// <summary>Vertical destination coordinate (PyMuPDF <c>y</c>).</summary>
+        /// <summary>Vertical destination coordinate.</summary>
         public float Y =>
             _nativeOutline.m_internal != null ? _nativeOutline.m_internal.y : 0f;
 
@@ -182,7 +181,7 @@ namespace MuPDF.NET
             }
         }
 
-        // PyMuPDF snake_case aliases (same assembly / dynamic interop)
+        // MuPDF snake_case aliases (same assembly / dynamic interop)
         internal bool is_external() => IsExternal;
         internal bool is_open() => IsOpen;
         internal LinkDest dest => Dest;

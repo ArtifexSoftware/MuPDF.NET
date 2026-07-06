@@ -83,6 +83,7 @@ namespace Demo
             new("Regression & diagnostics", "issue-1880", "[diag] Read Data Matrix barcodes", _ => Program.TestIssue1880(), Diagnostic: true),
             new("Regression & diagnostics", "issue-234", "[diag] Pixmap scale + insert image", _ => Program.TestIssue234(), Diagnostic: true),
             new("Regression & diagnostics", "pixmap-parallel", "[diag] Parallel Pixmap.ToBytes", _ => Program.TestPixmapParallel(), Diagnostic: true),
+            new("Regression & diagnostics", "gettables-parallel", "[diag] Parallel Utils.GetTables", _ => Program.TestGetTablesParallel(), Diagnostic: true),
             new("Regression & diagnostics", "jbig2", "[diag] JBIG2 image recompression", _ => Program.TestRecompressJBIG2(), Diagnostic: true),
         };
 

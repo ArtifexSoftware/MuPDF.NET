@@ -10,20 +10,20 @@ namespace MuPDF.NET
     /// <remarks>
     /// <para>Used for text-search hits, text-markup annotations, and drawing on pages. Applying
     /// rotation, scale, or translation to a rectangle yields a <see cref="IsRectangular"/> quad.</para>
-    /// <para>Ports PyMuPDF <c>Quad</c>.</para>
+    /// <para>Ports </para>
     /// </remarks>
     public class Quad : IEnumerable<Point>, IEquatable<Quad>
     {
-        /// <summary>Upper-left corner (PyMuPDF <c>ul</c>).</summary>
+        /// <summary>Upper-left corner.</summary>
         public Point UL { get; set; }
 
-        /// <summary>Upper-right corner (PyMuPDF <c>ur</c>).</summary>
+        /// <summary>Upper-right corner.</summary>
         public Point UR { get; set; }
 
-        /// <summary>Lower-left corner (PyMuPDF <c>ll</c>).</summary>
+        /// <summary>Lower-left corner.</summary>
         public Point LL { get; set; }
 
-        /// <summary>Lower-right corner (PyMuPDF <c>lr</c>).</summary>
+        /// <summary>Lower-right corner.</summary>
         public Point LR { get; set; }
 
         /// <summary>Legacy name for <see cref="UL"/>.</summary>
@@ -127,7 +127,7 @@ namespace MuPDF.NET
         /// <summary>Enclosed area; zero when <see cref="IsEmpty"/>.</summary>
         public float Area => IsEmpty ? 0.0f : (UL - UR).Norm * (UL - LL).Norm;
 
-        /// <summary>Same as <see cref="Area"/> (PyMuPDF <c>abs(quad)</c>).</summary>
+        /// <summary>Same as <see cref="Area"/>.</summary>
         public float Abs() => Area;
 
         /// <summary>Maximum length of the top and bottom edges.</summary>

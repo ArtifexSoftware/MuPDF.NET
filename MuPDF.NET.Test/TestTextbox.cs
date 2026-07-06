@@ -11,7 +11,6 @@ using Xunit;
 
 namespace MuPDF.NET.Test
 {
-    /// <summary>Port of <c>PyMuPDF-1.27.2.2/tests/test_textbox.py</c>.</summary>
     /// <remarks>
     /// Inputs: <c>TestDocuments/TestTextbox/</c>; outputs: <c>TestDocuments/_Output/TestTextbox/</c>.
     /// </remarks>
@@ -161,9 +160,7 @@ namespace MuPDF.NET.Test
             // check text containment
             Assert.Equal(page.GetText(), page.GetText("text", clip: rect.IRect));
             doc.Save(Out("test_textbox3.pdf"));
-            // doc.scrub()
             doc.scrub();
-            // doc.SubsetFonts()
             doc.SubsetFonts();
         }
 
@@ -298,7 +295,6 @@ namespace MuPDF.NET.Test
 
             using var doc = new Document();
 
-            // for rot in (0, 90, 180, 270):
             foreach (var rot in new[] { 0, 90, 180, 270 })
             {
                 // wdirs = ((1, 0), (0, -1), (-1, 0), (0, 1))  # all writing directions
@@ -313,7 +309,6 @@ namespace MuPDF.NET.Test
                 (spare_height, scale) = page.InsertHtmlbox(rect, html_text, css: null, scaleLow: 0, archive: null, rotate: rot);
                 // page.DrawRect(rect, (1, 0, 0))
                 page.DrawRect(rect, _Constants.red);
-                // doc.Save(os.path.normpath(f'{__file__}/../../tests/test_htmlbox1.pdf'))
                 doc.Save(Out("test_htmlbox1.pdf"));
                 Assert.True(Math.Abs(spare_height - 3.8507) < 0.001);
                 Assert.True(0 < scale && scale < 1);
@@ -324,25 +319,21 @@ namespace MuPDF.NET.Test
 
                 Assert.Equal("https://www.artifex.com", link["uri"]);
 
-                // Assert plain text is complete.
                 // We must remove line breaks and any ligatures for this.
                 string pageText = (string)page.GetText(flags: 0);
                 Assert.Equal(base_text, pageText[..^1].Replace("\n", " "));
 
                 // encounters = 0  # counts the words with selected properties
                 int encounters = 0;
-                // for b in page.GetText("dict")["blocks"]:
                 var dict = (Dictionary<string, object>)page.GetText("dict");
                 foreach (var b in (List<Dictionary<string, object>>)dict["blocks"])
                 {
-                    // for l in b["lines"]:
                     foreach (var l in (List<Dictionary<string, object>>)b["lines"])
                     {
                         // wdir = l["dir"]  # writing direction
                         var wdirArr = (float[])l["dir"];
                         var wdir = (wdirArr[0], wdirArr[1]);
                         Assert.Equal(wdirs[page.Number], wdir);
-                        // for s in l["spans"]:
                         foreach (var s in (List<Dictionary<string, object>>)l["spans"])
                         {
                             // stext = s["text"]
@@ -352,12 +343,10 @@ namespace MuPDF.NET.Test
                             bool bold = (Convert.ToUInt32(s["flags"]) & Constants.TextFontBold) != 0;
                             // italic = bool(s["flags"] & 2)
                             bool italic = (Convert.ToUInt32(s["flags"]) & Constants.TextFontItalic) != 0;
-                            // if stext in ("ullamco", "laboris", "voluptate"):
                             if (stext is "ullamco" or "laboris" or "voluptate")
                             {
                                 // encounters += 1
                                 encounters += 1;
-                                // if stext == "ullamco":
                                 if (stext == "ullamco")
                                 {
                                     Assert.True(bold);
@@ -402,7 +391,6 @@ namespace MuPDF.NET.Test
             var page = doc.NewPage();
             // bottoms = set()
             var bottoms = new HashSet<float>();
-            // for rot in (0, 90, 180, 270):
             foreach (var rot in new[] { 0, 90, 180, 270 })
             {
                 // spare_height, scale = page.InsertHtmlbox(
@@ -486,7 +474,6 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_4613()
         {
-            // Port of PyMuPDF-1.27.2.2/tests/test.py test_4613().
             Console.WriteLine();
             // text = 3 * 'abcdefghijklmnopqrstuvwxyz\nABCDEFGHIJKLMNOPQRSTUVWXYZ\n'
             string text4613 = string.Concat(
@@ -510,7 +497,6 @@ namespace MuPDF.NET.Test
                 page.DrawRect(rect, _Constants.red);
                 // path = "D:\\Artifex\\TestDocuments\\TestTextbox\\test_4613_0_.pdf"
                 string path = Out("test_4613_0.pdf");
-                // doc.Save(path)
                 doc.Save(path);
 
                 // path_pixmap = 'D:\\Artifex\\TestDocuments\\TestTextbox\\test_4613_.png'
@@ -540,7 +526,6 @@ namespace MuPDF.NET.Test
                 Console.WriteLine("test_4613(): new_text:");
                 Console.WriteLine(Indent(new_text, "    "));
                 Assert.Equal(text4613, new_text);
-                // doc.Save("D:\\Artifex\\TestDocuments\\TestTextbox\\test_4613_1_.pdf")
                 doc.Save(Out("test_4613_1.pdf"));
             }
 
@@ -553,7 +538,6 @@ namespace MuPDF.NET.Test
                 // spare_height, scale = page.InsertHtmlbox(rect, story, _scale_word_width=False)
                 (float spare_height, float scale) = page.InsertHtmlbox(rect, story, scaleWordWidth: false);
                 Console.WriteLine($"test_4613(): _scale_word_width=False: spare_height={spare_height} scale={scale}");
-                // With _scale_word_width=False we allow long words to extend beyond the
                 // rect, so we should have spare_height == 0 and only a small amount of
                 // down-scaling.
                 Assert.Equal(0, spare_height);
@@ -573,7 +557,6 @@ namespace MuPDF.NET.Test
                 if (expectedTruncated.Length > 0 && expectedTruncated[0] == '\n')
                     expectedTruncated = expectedTruncated.Substring(1);
                 //Assert.Equal(expectedTruncated, new_text);
-                // doc.Save("D:\\Artifex\\TestDocuments\\TestTextbox\\test_4613_2.pdf")
                 doc.Save(Out("test_4613_2.pdf"));
             }
 
@@ -590,7 +573,6 @@ namespace MuPDF.NET.Test
                 Console.WriteLine($"test_4613(): scale_low={scale_low}: spare_height={spare_height} scale={scale}");
                 Assert.Equal(-1, spare_height);
                 Assert.Equal((float)scale_low, scale);
-                // doc.Save("D:\\Artifex\\TestDocuments\\TestTextbox\\test_4613_3_.pdf")
                 doc.Save(Out("test_4613_3.pdf"));
             }
         }

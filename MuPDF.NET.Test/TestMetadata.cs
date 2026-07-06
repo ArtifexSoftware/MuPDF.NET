@@ -12,7 +12,6 @@ using Xunit.Sdk;
 namespace MuPDF.NET.Test
 {
     /// <summary>
-    /// Port of <c>PyMuPDF-1.27.2.2/tests/test_metadata.py</c>.
     /// </summary>
     /// <remarks>
     /// Inputs: <c>TestDocuments/TestMetadata/</c>; outputs: <c>TestDocuments/_Output/TestMetadata/</c>.
@@ -95,18 +94,17 @@ namespace MuPDF.NET.Test
         private static string PythonReprString(string value) =>
             value.Replace("\\", "\\\\").Replace("'", "\\'");
 
-        /// <summary>Regression test: metadata (PyMuPDF <c>tests/test_metadata.py::test_metadata</c>).</summary>
+        /// <summary>Regression test: metadata.</summary>
         [Fact]
         public void test_metadata()
         {
             Assert.Equal(File.ReadAllText(Doc("metadata.txt")), JsonDumpsMetadata(doc.Metadata));
         }
 
-        /// <summary>Regression test: erase meta (PyMuPDF <c>tests/test_metadata.py::test_erase_meta</c>).</summary>
+        /// <summary>Regression test: erase meta.</summary>
         [Fact]
         public void test_erase_meta()
         {
-            // doc.set_metadata({})
             doc.SetMetadata(new Dictionary<string, string>());
             // Check PDF trailer and assert that there is no more /Info object
             // or is set to "null".
@@ -118,7 +116,7 @@ namespace MuPDF.NET.Test
             Assert.Contains("Info", doc.xref_get_keys(-1));
         }
 
-        /// <summary>Regression test: 3237 (PyMuPDF <c>tests/test_metadata.py::test_3237</c>).</summary>
+        /// <summary>Regression test: 3237.</summary>
         [Fact]
         public void test_3237()
         {
@@ -129,7 +127,6 @@ namespace MuPDF.NET.Test
                 var metadata1 = doc3237.Metadata;
                 // metadata1 = repr(metadata1).encode('utf8')
                 byte[] metadata1Bytes = ReprEncodeUtf8(metadata1);
-                // doc.set_metadata({})
                 doc3237.SetMetadata(new Dictionary<string, string>());
 
                 // metadata2 = doc.metadata

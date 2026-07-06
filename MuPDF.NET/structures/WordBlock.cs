@@ -18,7 +18,7 @@ namespace MuPDF.NET
 
         public int WordNum { get; set; }
 
-        /// <summary>Legacy MuPDF.NET / PyMuPDF tuple field names.</summary>
+        /// <summary>Legacy MuPDF.NET / MuPDF tuple field names.</summary>
         public float x0
         {
             get => X0;

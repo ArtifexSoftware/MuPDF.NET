@@ -10,7 +10,6 @@ using Xunit;
 namespace MuPDF.NET.Test
 {
     /// <summary>
-    /// Port of <c>PyMuPDF-1.27.2.2/tests/test_insertimage.py</c>.
     /// </summary>
     /// <remarks>
     /// Inputs: <c>TestDocuments/TestInsertimage/</c>; outputs: <c>TestDocuments/_Output/TestInsertimage/</c>.
@@ -33,7 +32,7 @@ namespace MuPDF.NET.Test
             throw new InvalidOperationException("unexpected bbox in image info");
         }
 
-        /// <summary>Regression test: insert (PyMuPDF <c>tests/test_insertimage.py::test_insert</c>).</summary>
+        /// <summary>Regression test: insert.</summary>
         [Fact]
         public void test_insert()
         {
@@ -52,7 +51,7 @@ namespace MuPDF.NET.Test
             doc.Save(Out("test_insert.pdf"));
         }
 
-        /// <summary>Regression test: compress (PyMuPDF <c>tests/test_insertimage.py::test_compress</c>).</summary>
+        /// <summary>Regression test: compress.</summary>
         [Fact]
         public void test_compress()
         {
@@ -76,7 +75,7 @@ namespace MuPDF.NET.Test
                 pretty: 1);
         }
 
-        /// <summary>Regression test: 3087 (PyMuPDF <c>tests/test_insertimage.py::test_3087</c>).</summary>
+        /// <summary>Regression test: 3087.</summary>
         [Fact]
         public void test_3087()
         {

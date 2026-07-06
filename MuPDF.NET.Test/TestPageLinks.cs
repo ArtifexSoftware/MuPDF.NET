@@ -5,7 +5,6 @@ using Xunit;
 namespace MuPDF.NET.Test
 {
     /// <summary>
-    /// Port of <c>PyMuPDF-1.27.2.2/tests/test_page_links.py</c>.
     /// </summary>
     /// <remarks>
     /// Inputs: <c>TestDocuments/TestPageLinks/</c>; outputs: <c>TestDocuments/_Output/TestPageLinks/</c>.

@@ -1,4 +1,3 @@
-// Port of PyMuPDF-1.27.2.2/tests/test_4614.py
 using Xunit;
 
 namespace MuPDF.NET.Test

@@ -20,7 +20,6 @@ namespace MuPDF.NET.Test
     {
     }
 
-    /// <summary>Port of <c>PyMuPDF-1.27.2.2/tests/test_pixmap.py</c>.</summary>
     [Collection("MuPDF.NET pixmap")]
     public class TestPixmap
     {
@@ -211,7 +210,7 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_color_count()
         {
-            // This is known to fail if MuPDF is built without PyMuPDF's custom config.h,
+            // This is known to fail if MuPDF is built without MuPDF's custom config.h,
             // e.g. in Linux system installs.
             if (!HasFile(imgfile)) return;
             var pm = new Pixmap(imgfile);
@@ -283,7 +282,6 @@ namespace MuPDF.NET.Test
         {
             if (!HasFile(pdf)) return;
             using var doc = new Document(pdf);
-            // with pytest.raises(AssertionError):
             //     doc["0"]
             Assert.ThrowsAny<Exception>(() => doc_getitem(doc, "0"));
             Assert.NotNull(doc[0]);
@@ -347,14 +345,10 @@ namespace MuPDF.NET.Test
                 // pix.Save(path_out)
                 pix.Save(path_out);
                 Console.WriteLine($"pix.width={pix.Width} pix.height={pix.Height}");
-                //     for yy in y:
-                //         for xx in x:
                 //             yield (xx, yy)
                 int n = 0;
-                // for pos in product(range(100), range(100)):
                 foreach (var pos in product(100, 100))
                 {
-                    // if sum(pix.GetPixelBytes(pos[0], pos[1])) >= 600:
                     if (pix.GetPixelBytes(pos.xx, pos.yy).Sum(b => (int)b) >= 600)
                     {
                         n += 1;
@@ -493,9 +487,7 @@ namespace MuPDF.NET.Test
             // If python3-gi is installed, we check fix for #3493, where importing gi
             // would load an older version of libjpeg than is used in MuPDF, and break
             // MuPDF.
-            // This test is excluded by default in sysinstall tests, because running
-            // commands in a new venv does not seem to pick up pymupdf as expected.
-            // if platform.system() != 'Linux':
+            // Excluded by default in sysinstall tests: a fresh venv may not pick up the expected Python package layout.
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
                 Console.WriteLine($"Not running because not Linux: platform={Environment.OSVersion.Platform}");
@@ -507,10 +499,8 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_3848()
         {
-            // if util.skip_slow_tests('test_3848'):
             if (SkipSlowTests("test_3848"))
                 return;
-            // if os.environ.get('PYMUPDF_RUNNING_ON_VALGRIND') == '1':
             if (Environment.GetEnvironmentVariable("PYMUPDF_RUNNING_ON_VALGRIND") == "1")
             {
                 Console.WriteLine("test_3848(): not running on valgrind because very slow.");
@@ -520,16 +510,13 @@ namespace MuPDF.NET.Test
             if (!HasFile(path)) return;
 
             using var document = new Document(path);
-            // for i in range(len(document)):
             for (int i = 0; i < document.PageCount; i++)
             {
                 // page = document.LoadPage(i)
                 var page = document.LoadPage(i);
                 Console.WriteLine($"page={page}.");
-                // for annot in page.GetDrawings():
                 foreach (var annot in page.GetDrawingsDict())
                 {
-                    // if page.GetTextbox(annot['rect']):
                     if (!string.IsNullOrEmpty(page.GetTextbox((Rect)annot["rect"])))
                     {
                         // rect = annot['rect']
@@ -559,7 +546,6 @@ namespace MuPDF.NET.Test
             var dict = (Dictionary<string, object>)page.GetText("dict");
             var blocks = (List<Dictionary<string, object>>)dict["blocks"];
             var txt_blocks = blocks.Where(blk => Convert.ToInt32(blk["type"]) == 0).ToList();
-            // for blk in txt_blocks:
             foreach (var blk in txt_blocks)
             {
                 var clip = BboxFromBlock(blk);
@@ -633,7 +619,6 @@ namespace MuPDF.NET.Test
             // rms = gentle_compare.pixmaps_rms(pixmap, pixmap_expected)
             float rms = _Compare.PixmapsRms(pixmap, pixmap_expected);
             Console.WriteLine($"rms={rms}.");
-            // if os.environ.get('PYMUPDF_SYSINSTALL_TEST') == '1':
             if (Environment.GetEnvironmentVariable("PYMUPDF_SYSINSTALL_TEST") == "1")
             {
                 // MuPDF using external third-party libs gives slightly different
@@ -690,14 +675,12 @@ namespace MuPDF.NET.Test
             // t = time.time()
             var sw = Stopwatch.StartNew();
             int cc = 0;
-            // for i in range(10):
             for (int i = 0; i < 10; i++)
                 // cc = pixmap.color_count()
                 cc = (int)pixmap.color_count();
             // t = time.time() - t
             sw.Stop();
             Console.WriteLine($"test_4336(): t={sw.Elapsed.TotalSeconds}");
-            // if cc_old:
         }
 
         [Fact]
@@ -742,7 +725,7 @@ namespace MuPDF.NET.Test
         public void test_4445()
         {
             Console.WriteLine();
-            // Test case is large so we download it instead of having it in PyMuPDF
+            // Test case is large so we download it instead of having it in MuPDF
             // git. We put it in `cache/` directory do it is not removed by `git clean`
             // (unless `-d` is specified).
             string path = Path.GetFullPath(Resource("test_4445.pdf"));
@@ -756,7 +739,6 @@ namespace MuPDF.NET.Test
                 Console.WriteLine($"pixmap.width={pixmap.Width}");
                 Console.WriteLine($"pixmap.height={pixmap.Height}");
                 Assert.Equal((792, 612), (pixmap.Width, pixmap.Height));
-                // if 1:
                 if (1 != 0)
                 {
                     // path_pixmap = os.path.join("D:\\Artifex\\TestDocuments\\TestPixmap", "test_4445_.png")
@@ -884,6 +866,198 @@ namespace MuPDF.NET.Test
                 Assert.Contains("syntax error: cannot find ExtGState resource", wt);
                 Assert.True(rms > 20);
             }
+        }
+
+        [Fact]
+        public void test_5001()
+        {
+            string path = Resource("test_5001.pdf");
+            if (!HasFile(path)) return;
+            string pathExpected = Resource("test_5001_expected.png");
+            if (!HasFile(pathExpected)) return;
+            string pathOut = Out("test_5001_out.png");
+
+            Pixmap pixmap;
+            using (var document = new Document(path))
+            {
+                var page = document[0];
+                float zoom = 0.3f;
+                pixmap = page.GetPixmap(matrix: new Matrix(zoom, zoom));
+            }
+            pixmap.Save(pathOut);
+            float rms = _Compare.PixmapsRms(pathExpected, pixmap);
+            Console.WriteLine($"test_5001(): rms={rms}");
+            if (_Version.mupdf_version_tuple_at_least(1, 28, 0))
+                Assert.Equal(0, rms);
+            else
+            {
+                Assert.NotEqual(0, rms);
+                string wt = Tools.MupdfWarnings();
+                Assert.False(string.IsNullOrEmpty(wt));
+            }
+        }
+
+        /// <summary>Regression test: 4435.</summary>
+        [Fact]
+        public void test_4435()
+        {
+            if (SkipSlowTests("test_4435"))
+                return;
+            Console.WriteLine($"mupdf_version={Tools.MupdfVersion()}");
+            string path = Resource("test_4435.pdf");
+            if (!HasFile(path)) return;
+
+            Tools.ResetMupdfWarnings();
+            using var document = new Document(path);
+            var page = document[2];
+            Console.WriteLine("Calling page.GetPixmap().");
+            Pixmap pixmap;
+            if (_Version.mupdf_version_tuple_at_least(1, 27, 0)
+                && OperatingSystem.IsWindows() && IntPtr.Size == 4)
+            {
+                try
+                {
+                    pixmap = page.GetPixmap(alpha: false, dpi: 120);
+                }
+                catch (Exception e) when (e.Message.Contains("malloc") && e.Message.Contains("failed"))
+                {
+                    Console.WriteLine($"Received exception: {e.GetType()}={e}");
+                    Assert.Matches(@"code=2: malloc \([0-9]+ bytes\) failed", e.Message);
+                    return;
+                }
+                Assert.Fail("Expected alloc failure on 32-bit Windows");
+            }
+            else
+            {
+                pixmap = page.GetPixmap(alpha: false, dpi: 120);
+            }
+            Console.WriteLine("Called page.GetPixmap().");
+            _ = pixmap;
+
+            string wt = Tools.MupdfWarnings();
+            if (!_Version.mupdf_version_tuple_at_least(1, 27, 0))
+            {
+                Assert.Equal(
+                    "bogus font ascent/descent values (0 / 0)\n... repeated 9 times...",
+                    wt);
+            }
+            else if (_Version.mupdf_version_tuple_at_least(1, 28, 0))
+            {
+                string wtExpected = string.Concat(
+                    Enumerable.Repeat("limit error: Overly large image\ncannot render glyph\n", 42)).TrimEnd();
+                Assert.Equal(wtExpected, wt);
+            }
+        }
+
+        /// <summary>Regression test: 5001b.</summary>
+        [Fact]
+        public void test_5001b()
+        {
+            string iccPath = Resource("test_5001b_srgb.icc");
+            if (!File.Exists(iccPath))
+                throw new FileNotFoundException($"Required test document not found: {iccPath}");
+            byte[] icc = File.ReadAllBytes(iccPath);
+            byte[] pdfBytes = BuildTest5001bPdf(icc);
+
+            Tools.ResetMupdfWarnings();
+            using var doc = new Document(pdfBytes, "pdf");
+            var pix = doc[0].GetPixmap(dpi: 150);
+            int x = (int)(50 * 150 / 72.0);
+            int y = (int)(25 * 150 / 72.0);
+            byte[] p = pix.GetPixelBytes(x, y);
+            Console.WriteLine($"center of the indexed image: ({string.Join(", ", p)})");
+            pix.Save(Out("test_5001b_out.png"));
+            if (_Version.mupdf_version_tuple_at_least(1, 28, 0))
+                Assert.Equal(new byte[] { 255, 255, 255 }, p);
+            else
+            {
+                string wt = Tools.MupdfWarnings();
+                Assert.False(string.IsNullOrEmpty(wt));
+            }
+        }
+
+        /// <summary>Regression test: natural.</summary>
+        [Fact]
+        public void test_natural()
+        {
+            if (!_Version.mupdf_version_tuple_at_least(1, 28, 0))
+            {
+                Console.WriteLine("test_natural(): Not running because segv fixed on mupdf master (1.28).");
+                return;
+            }
+            string path = Resource("test_natural.pdf");
+            if (!HasFile(path)) return;
+
+            using var document = new Document(path);
+            var page = document[0];
+            using var ctm = mupdf.mupdf.fz_make_matrix(200f / 72f, 0, 0, 200f / 72f, 0, 0);
+            using var rect = mupdf.mupdf.ll_fz_make_rect(
+                (float)page.Rect.X0, (float)page.Rect.Y0, (float)page.Rect.X1, (float)page.Rect.Y1);
+            using var rects = new mupdf.vector_fz_rect(new[] { rect });
+            using var fzPm = page.NativePage.fz_new_pixmap_from_page_culling_text2(
+                ctm,
+                mupdf.mupdf.fz_device_rgb(),
+                0,
+                rects);
+            using var pix = new Pixmap(fzPm);
+            Console.WriteLine($"pix={pix}");
+        }
+
+        private static byte[] BuildTest5001bPdf(byte[] icc)
+        {
+            byte[] bitmap = Enumerable.Repeat((byte)0xff, 8).ToArray();
+            byte[] rgb = new byte[12];
+            for (int i = 0; i < 4; i++)
+            {
+                rgb[i * 3] = 0x00;
+                rgb[i * 3 + 1] = 0x80;
+                rgb[i * 3 + 2] = 0xff;
+            }
+            byte[] draw = Encoding.ASCII.GetBytes(
+                "q 10 0 0 10 0 0 cm /Im1 Do Q q 80 0 0 30 10 10 cm /Im0 Do Q");
+            var objs = new SortedDictionary<int, (string head, byte[]? data)>
+            {
+                [1] = ("<< /Type /Catalog /Pages 2 0 R >>", null),
+                [2] = ("<< /Type /Pages /Kids [3 0 R] /Count 1 >>", null),
+                [3] = (
+                    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 50] "
+                    + "/Resources << /XObject << /Im0 5 0 R /Im1 8 0 R >> >> /Contents 4 0 R >>",
+                    null),
+                [4] = ($"<< /Length {draw.Length} >>", draw),
+                [5] = (
+                    "<< /Type /XObject /Subtype /Image /Width 8 /Height 8 /BitsPerComponent 1 "
+                    + "/ColorSpace [/Indexed 6 0 R 1 <000000FFFFFF>] /Length " + bitmap.Length + " >>",
+                    bitmap),
+                [6] = ("[/ICCBased 7 0 R]", null),
+                [7] = ($"<< /N 3 /Length {icc.Length} >>", icc),
+                [8] = (
+                    "<< /Type /XObject /Subtype /Image /Width 2 /Height 2 /BitsPerComponent 8 "
+                    + "/ColorSpace 6 0 R /Length " + rgb.Length + " >>",
+                    rgb),
+            };
+
+            var output = new MemoryStream();
+            output.Write(Encoding.ASCII.GetBytes("%PDF-1.4\n"));
+            var offsets = new Dictionary<int, int>();
+            foreach (var (num, (head, data)) in objs)
+            {
+                offsets[num] = (int)output.Length;
+                output.Write(Encoding.ASCII.GetBytes($"{num} 0 obj\n{head}\n"));
+                if (data != null)
+                {
+                    output.Write(Encoding.ASCII.GetBytes("stream\n"));
+                    output.Write(data);
+                    output.Write(Encoding.ASCII.GetBytes("\nendstream\n"));
+                }
+                output.Write(Encoding.ASCII.GetBytes("endobj\n"));
+            }
+            int xrefPos = (int)output.Length;
+            output.Write(Encoding.ASCII.GetBytes($"xref\n0 {objs.Count + 1}\n0000000000 65535 f \n"));
+            foreach (var num in objs.Keys)
+                output.Write(Encoding.ASCII.GetBytes($"{offsets[num]:D10} 00000 n \n"));
+            output.Write(Encoding.ASCII.GetBytes(
+                $"trailer\n<< /Size {objs.Count + 1} /Root 1 0 R >>\nstartxref\n{xrefPos}\n%%EOF"));
+            return output.ToArray();
         }
     }
 }

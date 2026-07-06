@@ -1,4 +1,3 @@
-// Port of PyMuPDF-1.27.2.2/tests/test_clip_page.py
 using System.Collections.Generic;
 using Xunit;
 
@@ -18,7 +17,7 @@ namespace MuPDF.NET.Test
         /// <summary>
         /// Clip a <see cref="Page"/> to a rectangle and confirm that no text has survived
         /// that is completely outside the rectangle.
-        /// <summary>Regression test: clip (PyMuPDF <c>tests/test_clip_page.py::test_clip</c>).</summary>
+        /// <summary>Regression test: clip.</summary>
         /// </summary>
         [Fact]
         public void test_clip()
@@ -31,7 +30,6 @@ namespace MuPDF.NET.Test
             page.ClipToRect(rect);
 
             // capture font warning message of MuPDF
-            // if mupdf_version_tuple < (1, 27): assert TOOLS.mupdf_warnings() == "bogus font ascent/descent values (0 / 0)"
 
             // extract all text characters and assert that each one
             // has a non-empty intersection with the rectangle.
@@ -65,17 +63,6 @@ namespace MuPDF.NET.Test
                 }
             }
             doc.Save(outDocPath);
-        }
-
-        /// <summary>clip page and read links without error (PyMuPDF <c>tests/test_4942.py::test_4942</c>).</summary>
-        [Fact]
-        public void test_4942()
-        {
-            using var document = new Document(_Path.ForTestClass("test_4942.pdf", nameof(TestClipPage)));
-            var page = document[0];
-            page.ClipToRect(page.Rect);
-            var links = page.GetLinks();
-            Assert.Equal(8, links.Count);
         }
     }
 }

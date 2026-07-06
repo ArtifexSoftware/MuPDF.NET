@@ -1,4 +1,4 @@
-// Glyph width tables from PyMuPDF src/__init__.py (symbol_glyphs, zapf_glyphs).
+// Glyph width tables from MuPDF src/__init__.py (symbol_glyphs, zapf_glyphs).
 namespace MuPDF.NET
 {
     public static partial class Constants

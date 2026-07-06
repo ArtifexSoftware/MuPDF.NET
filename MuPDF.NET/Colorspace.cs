@@ -7,7 +7,7 @@ namespace MuPDF.NET
     /// </summary>
     /// <remarks>
     /// <para>
-    /// MuPDF.NET colorspace type (PyMuPDF <c>fitz.Colorspace</c> equivalent). Legacy MuPDF.NET used the spelling
+    /// MuPDF.NET colorspace type ( equivalent). Legacy MuPDF.NET used the spelling
     /// <see cref="ColorSpace"/> with the same constructors and properties; see
     /// <see href="https://mupdfnet.readthedocs.io/en/latest/classes/ColorSpace.html"/>.
     /// </para>
@@ -26,17 +26,17 @@ namespace MuPDF.NET
         internal mupdf.FzColorspace _native;
 
         /// <summary>
-        /// Predefined RGB device colorspace (PyMuPDF <c>csRGB</c> / <c>CS_RGB</c>).
+        /// Predefined RGB device colorspace ( / <c>CS_RGB</c>).
         /// </summary>
         public static readonly Colorspace Rgb = new Colorspace(ColorspaceType.Rgb);
 
         /// <summary>
-        /// Predefined GRAY device colorspace (PyMuPDF <c>csGRAY</c> / <c>CS_GRAY</c>).
+        /// Predefined GRAY device colorspace ( / <c>CS_GRAY</c>).
         /// </summary>
         public static readonly Colorspace Gray = new Colorspace(ColorspaceType.Gray);
 
         /// <summary>
-        /// Predefined CMYK device colorspace (PyMuPDF <c>csCMYK</c> / <c>CS_CMYK</c>).
+        /// Predefined CMYK device colorspace ( / <c>CS_CMYK</c>).
         /// </summary>
         public static readonly Colorspace Cmyk = new Colorspace(ColorspaceType.Cmyk);
 
@@ -55,7 +55,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Creates a device colorspace from a legacy or PyMuPDF numeric type id.
+        /// Creates a device colorspace from a legacy or MuPDF numeric type id.
         /// </summary>
         /// <param name="n">
         /// Colorspace id: <see cref="Utils.CS_RGB"/> (1), <see cref="Utils.CS_GRAY"/> (2),
@@ -86,13 +86,13 @@ namespace MuPDF.NET
         /// Number of color components required for one pixel (not including alpha).
         /// </summary>
         /// <value>1 for gray, 3 for RGB, 4 for CMYK.</value>
-        /// <remarks>PyMuPDF <c>Colorspace.n</c>; legacy <see cref="ColorSpace.N"/>.</remarks>
+        /// <remarks> ; legacy <see cref="ColorSpace.N"/>.</remarks>
         public int N => mupdf.mupdf.fz_colorspace_n(_native);
 
         /// <summary>
         /// Name identifying this colorspace (e.g. <c>DeviceRGB</c>, <c>DeviceGray</c>).
         /// </summary>
-        /// <remarks>PyMuPDF <c>Colorspace.name</c>; legacy <see cref="ColorSpace.Name"/>.</remarks>
+        /// <remarks> ; legacy <see cref="ColorSpace.Name"/>.</remarks>
         public string Name => mupdf.mupdf.fz_colorspace_name(_native);
 
         internal mupdf.FzColorspace Native => _native;
@@ -100,7 +100,7 @@ namespace MuPDF.NET
         /// <summary>Returns the native <c>fz_colorspace</c> handle for MuPDF calls.</summary>
         public mupdf.FzColorspace ToFzColorspace() => _native;
 
-        /// <summary>Debug string (PyMuPDF <c>Colorspace.__repr__</c>).</summary>
+        /// <summary>Debug string.</summary>
         public override string ToString()
         {
             string csLabel = N switch

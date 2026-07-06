@@ -6,7 +6,6 @@ using Xunit;
 
 namespace MuPDF.NET.Test
 {
-    /// <summary>Port of <c>PyMuPDF-1.27.2.2/tests/test_tesseract.py</c>.</summary>
     [Collection("MuPDF.NET native")]
     public class TestTesseract
     {
@@ -34,7 +33,7 @@ namespace MuPDF.NET.Test
                 $"Unexpected exception type: {e.GetType().FullName}, expected {expectedTypeName}");
         }
 
-        /// <summary>Regression test: tesseract (PyMuPDF <c>tests/test_tesseract.py::test_tesseract</c>).</summary>
+        /// <summary>Regression test: tesseract.</summary>
 
         [Fact]
         public void test_tesseract()
@@ -57,7 +56,6 @@ namespace MuPDF.NET.Test
 
             // e_expected = f'code=3: {tail}'
             eExpected = $"code=3: {tail}";
-            // if platform.system() == 'OpenBSD':
             if (RuntimeInformation.OSDescription.Contains("OpenBSD", StringComparison.OrdinalIgnoreCase))
             {
                 eExpectedTypeName = nameof(FzErrorBase);
@@ -99,7 +97,7 @@ namespace MuPDF.NET.Test
             }
         }
 
-        /// <summary>Regression test: 3842b (PyMuPDF <c>tests/test_tesseract.py::test_3842b</c>).</summary>
+        /// <summary>Regression test: 3842b.</summary>
 
         [Fact]
         public void test_3842b()
@@ -121,7 +119,6 @@ namespace MuPDF.NET.Test
             {
                 Console.WriteLine($"test_3842b(): received exception: {e}");
                 string msg = e.Message;
-                // if 'No tessdata specified and Tesseract is not installed' in str(e):
                 if (msg.Contains("No tessdata specified and Tesseract is not installed"))
                     return;
                 // else: assert 'Tesseract language initialisation failed' in str(e)
@@ -129,7 +126,7 @@ namespace MuPDF.NET.Test
             }
         }
 
-        /// <summary>Regression test: 3842 (PyMuPDF <c>tests/test_tesseract.py::test_3842</c>).</summary>
+        /// <summary>Regression test: 3842.</summary>
 
         [Fact]
         public void test_3842()
@@ -159,7 +156,6 @@ namespace MuPDF.NET.Test
             {
                 Console.WriteLine($"test_3842(): received exception: {e}");
                 string msg = e.Message;
-                // if 'No tessdata specified and Tesseract is not installed' in str(e):
                 if (msg.Contains("No tessdata specified and Tesseract is not installed"))
                     return;
                 if (msg.Contains("Tesseract language initialisation failed"))

@@ -5,7 +5,6 @@ using Xunit;
 
 namespace MuPDF.NET.Test
 {
-    /// <summary>Port of <c>PyMuPDF-1.27.2.2/tests/test_rtl.py</c>.</summary>
     /// <remarks>
     /// Inputs: <c>TestDocuments/TestRtl/</c>; outputs: <c>TestDocuments/_Output/TestRtl/</c>.
     /// </remarks>
@@ -30,7 +29,6 @@ namespace MuPDF.NET.Test
             for (int i = 0x590; i < 0x901; i++)
                 rtlChars.Add((char)i);
 
-            // for w in page.GetText("words"):
             foreach (var w in page.get_text_words())
             {
                 // every word string must either ONLY contain RTL chars

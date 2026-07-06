@@ -1,11 +1,10 @@
-// Port of PyMuPDF-1.27.2.2/tests/test_2904.py
 using System;
 using Xunit;
 
 namespace MuPDF.NET.Test
 {
     /// <summary>
-    /// Port of <c>tests/test_2904.py</c>: <c>test_2904.pdf</c> page 6 (0-based index 5), image 3 has a broken JPX stream.
+    /// : <c>test_2904.pdf</c> page 6 (0-based index 5), image 3 has a broken JPX stream.
     /// <see cref="Page.GetImageRects"/> must throw <c>code=8: Failed to read JPX header</c> for that entry only.
     /// </summary>
     [Collection("MuPDF.NET native")]
@@ -37,13 +36,13 @@ namespace MuPDF.NET.Test
                     }
                     catch (Exception ee)
                     {
-                        // PyMuPDF: print(f'Exception: {page_id=} {i=} {img=}: {ee}')
+                        // MuPDF: print(f'Exception: {page_id=} {i=} {img=}: {ee}')
                         e = ee;
                     }
                     if (page_id == 5 && i == 3)
                     {
                         Assert.NotNull(e);
-                        // PyMuPDF: assert str(e) == 'code=8: Failed to read JPX header'
+                        // MuPDF: assert str(e) == 'code=8: Failed to read JPX header'
                         Assert.Equal("code=8: Failed to read JPX header", e!.Message);
                     }
                     else

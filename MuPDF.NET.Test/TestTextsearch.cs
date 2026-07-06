@@ -8,7 +8,6 @@ using Xunit;
 
 namespace MuPDF.NET.Test
 {
-    /// <summary>Port of <c>PyMuPDF-1.27.2.2/tests/test_textsearch.py</c>.</summary>
     /// <remarks>
     /// Inputs: <c>TestDocuments/TestTextsearch/</c>; outputs: <c>TestDocuments/_Output/TestTextsearch/</c>.
     /// </remarks>
@@ -29,7 +28,7 @@ namespace MuPDF.NET.Test
             | mupdf.mupdf.FZ_STEXT_PRESERVE_LIGATURES
             | mupdf.mupdf.FZ_STEXT_MEDIABOX_CLIP;
 
-        /// <summary>Text-search flag set matching PyMuPDF <c>TEXTFLAGS_SEARCH</c>.</summary>
+        /// <summary>Default text-search flag set.</summary>
         private static int TextFlagsSearch =>
             0
             | mupdf.mupdf.FZ_STEXT_PRESERVE_WHITESPACE

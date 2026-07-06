@@ -5,7 +5,7 @@ using mupdf;
 namespace MuPDF.NET
 {
     /// <summary>
-    /// HTML/XML DOM node for <see cref="Story"/> content (PyMuPDF <c>class Xml</c>).
+    /// HTML/XML DOM node for <see cref="Story"/> content .
     /// </summary>
     /// <remarks>
     /// <para>Obtain the document body via <see cref="Story.Body"/> rather than constructing a root node yourself.</para>
@@ -22,7 +22,7 @@ namespace MuPDF.NET
             xml?.m_internal != null;
 
         /// <summary>
-        /// Wrap a DOM node returned by MuPDF without taking ownership (PyMuPDF <c>Xml(ret)</c> on tree nodes).
+        /// Wrap a DOM node returned by MuPDF without taking ownership ( on tree nodes).
         /// </summary>
         internal static Xml? FromDomNode(FzXml? ret)
         {
@@ -34,39 +34,39 @@ namespace MuPDF.NET
             return new Xml(new FzXml(h, false));
         }
 
-        /// <summary>Wrap an existing <see cref="FzXml"/> handle (PyMuPDF <c>Xml(rhs)</c> when rhs is FzXml).</summary>
+        /// <summary>Wrap an existing <see cref="FzXml"/> handle ( when rhs is FzXml).</summary>
         public Xml(FzXml rhs) =>
             This = rhs ?? throw new ArgumentNullException(nameof(rhs));
 
-        /// <summary>Parse HTML5 from a string (PyMuPDF <c>Xml(rhs)</c> when rhs is str).</summary>
+        /// <summary>Parse HTML5 from a string ( when rhs is str).</summary>
         public Xml(string rhs)
         {
             var buff = Helpers.BufferFromBytes(System.Text.Encoding.UTF8.GetBytes(rhs ?? ""));
             This = buff.fz_parse_xml_from_html5();
         }
 
-        /// <summary>Text content of a text node; <c>null</c> for element nodes (PyMuPDF <c>Xml.text</c>).</summary>
+        /// <summary>Text content of a text node; <c>null</c> for element nodes.</summary>
         public string? Text => This.fz_xml_text();
 
-        /// <summary><c>true</c> if this node carries text rather than a tag (PyMuPDF <c>Xml.is_text</c>).</summary>
+        /// <summary><c>true</c> if this node carries text rather than a tag.</summary>
         public bool IsText => Text != null;
 
-        /// <summary>HTML tag name (e.g. <c>p</c>), or <c>null</c> on text nodes (PyMuPDF <c>Xml.tagname</c>).</summary>
+        /// <summary>HTML tag name (e.g. <c>p</c>), or <c>null</c> on text nodes.</summary>
         public string? TagName => This.fz_xml_tag();
 
-        /// <summary>Document root element (typically <c>html</c>) (PyMuPDF <c>Xml.root</c>).</summary>
+        /// <summary>Document root element (typically <c>html</c>).</summary>
         public Xml? Root => FromDomNode(This.fz_xml_root());
 
-        /// <summary>Previous sibling at the same level, or <c>null</c> (PyMuPDF <c>Xml.previous</c>).</summary>
+        /// <summary>Previous sibling at the same level, or <c>null</c>.</summary>
         public Xml? Previous => FromDomNode(This.fz_dom_previous());
 
-        /// <summary>Next sibling at the same level, or <c>null</c> (PyMuPDF <c>Xml.next</c>).</summary>
+        /// <summary>Next sibling at the same level, or <c>null</c>.</summary>
         public Xml? Next => FromDomNode(This.fz_dom_next());
 
-        /// <summary>Parent element, or <c>null</c> (PyMuPDF <c>Xml.parent</c>).</summary>
+        /// <summary>Parent element, or <c>null</c>.</summary>
         public Xml? Parent => FromDomNode(This.fz_dom_parent());
 
-        /// <summary>First child node, or <c>null</c>; text nodes have no children (PyMuPDF <c>Xml.first_child</c>).</summary>
+        /// <summary>First child node, or <c>null</c>; text nodes have no children.</summary>
         public Xml? FirstChild
         {
             get
@@ -77,7 +77,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>Last child among direct children, or <c>null</c> (PyMuPDF <c>Xml.last_child</c>).</summary>
+        /// <summary>Last child among direct children, or <c>null</c>.</summary>
         public Xml? LastChild
         {
             get
@@ -95,11 +95,11 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>Return the document <c>body</c> element (PyMuPDF <c>Xml.bodytag</c>).</summary>
+        /// <summary>Return the document <c>body</c> element.</summary>
         public Xml? BodyTag() => FromDomNode(This.fz_dom_body());
 
         /// <summary>
-        /// Find the first descendant matching tag/attribute (PyMuPDF <c>Xml.find</c>).
+        /// Find the first descendant matching tag/attribute .
         /// </summary>
         /// <param name="tag">Element tag, or <c>null</c> for any tag.</param>
         /// <param name="att">Attribute name, or <c>null</c>.</param>
@@ -107,11 +107,11 @@ namespace MuPDF.NET
         public Xml? Find(string? tag, string? att, string? match) =>
             FromDomNode(This.fz_dom_find(tag, att, match));
 
-        /// <summary>Continue <see cref="Find"/> with the same criteria (PyMuPDF <c>Xml.find_next</c>).</summary>
+        /// <summary>Continue <see cref="Find"/> with the same criteria.</summary>
         public Xml? FindNext(string? tag, string? att, string? match) =>
             FromDomNode(This.fz_dom_find_next(tag, att, match));
 
-        /// <summary>All attributes of an element node; <c>null</c> on text nodes (PyMuPDF <c>Xml.get_attributes</c>).</summary>
+        /// <summary>All attributes of an element node; <c>null</c> on text nodes.</summary>
         public Dictionary<string, string>? GetAttributes()
         {
             if (IsText)
@@ -127,7 +127,7 @@ namespace MuPDF.NET
             return result;
         }
 
-        /// <summary>Read a DOM attribute (PyMuPDF <c>Xml.get_attribute_value</c>).</summary>
+        /// <summary>Read a DOM attribute.</summary>
         public string? GetAttributeValue(string key)
         {
             if (string.IsNullOrEmpty(key))
@@ -135,7 +135,7 @@ namespace MuPDF.NET
             return This.fz_dom_attribute(key);
         }
 
-        /// <summary>Add or replace a DOM attribute (PyMuPDF <c>Xml.set_attribute</c>).</summary>
+        /// <summary>Add or replace a DOM attribute.</summary>
         public void SetAttribute(string key, string? value = null)
         {
             if (string.IsNullOrEmpty(key))
@@ -143,7 +143,7 @@ namespace MuPDF.NET
             This.fz_dom_add_attribute(key, value ?? "");
         }
 
-        /// <summary>Remove attribute <paramref name="key"/> (PyMuPDF <c>Xml.remove_attribute</c>).</summary>
+        /// <summary>Remove attribute <paramref name="key"/>.</summary>
         public void RemoveAttribute(string key)
         {
             if (string.IsNullOrEmpty(key))
@@ -151,29 +151,29 @@ namespace MuPDF.NET
             This.fz_dom_remove_attribute(key);
         }
 
-        /// <summary>Create an element node; bind with <see cref="AppendChild"/> (PyMuPDF <c>Xml.create_element</c>).</summary>
+        /// <summary>Create an element node; bind with <see cref="AppendChild"/>.</summary>
         public Xml CreateElement(string tag) => new Xml(This.fz_dom_create_element(tag));
 
-        /// <summary>Create a text node (PyMuPDF <c>Xml.create_text_node</c>).</summary>
+        /// <summary>Create a text node.</summary>
         public Xml CreateTextNode(string text) => new Xml(This.fz_dom_create_text_node(text));
 
-        /// <summary>Append <paramref name="child"/> under this node (PyMuPDF <c>Xml.append_child</c>).</summary>
+        /// <summary>Append <paramref name="child"/> under this node.</summary>
         public void AppendChild(Xml child) =>
             This.fz_dom_append_child(child.This);
 
-        /// <summary>Insert <paramref name="node"/> before this node (PyMuPDF <c>Xml.insert_before</c>).</summary>
+        /// <summary>Insert <paramref name="node"/> before this node.</summary>
         public void InsertBefore(Xml node) => This.fz_dom_insert_before(node.This);
 
-        /// <summary>Insert <paramref name="node"/> after this node (PyMuPDF <c>Xml.insert_after</c>).</summary>
+        /// <summary>Insert <paramref name="node"/> after this node.</summary>
         public void InsertAfter(Xml node) => This.fz_dom_insert_after(node.This);
 
-        /// <summary>Detach this node from the DOM (PyMuPDF <c>Xml.remove</c>).</summary>
+        /// <summary>Detach this node from the DOM.</summary>
         public void Remove() => This.fz_dom_remove();
 
-        /// <summary>Deep copy of this node (PyMuPDF <c>Xml.clone</c>).</summary>
+        /// <summary>Deep copy of this node.</summary>
         public Xml Clone() => new Xml(This.fz_dom_clone());
 
-        /// <summary>Convert a color argument to a CSS color string (PyMuPDF <c>Xml.color_text</c>).</summary>
+        /// <summary>Convert a color argument to a CSS color string.</summary>
         public static string ColorText(object color)
         {
             if (color is string s)
@@ -190,7 +190,7 @@ namespace MuPDF.NET
             return color?.ToString() ?? "";
         }
 
-        /// <summary>Print a simplified node tree (PyMuPDF <c>Xml.debug</c>).</summary>
+        /// <summary>Print a simplified node tree.</summary>
         public void Debug()
         {
             foreach (var item in GetNodeTree())
@@ -199,7 +199,7 @@ namespace MuPDF.NET
 
         // ─── Block structure ─────────────────────────────────────────────
 
-        /// <summary>Add a bulleted list (<c>ul</c>) (PyMuPDF <c>Xml.add_bullet_list</c>).</summary>
+        /// <summary>Add a bulleted list (<c>ul</c>).</summary>
         public Xml AddBulletList()
         {
             var child = CreateElement("ul");
@@ -207,7 +207,7 @@ namespace MuPDF.NET
             return child;
         }
 
-        /// <summary>Add a numbered list (<c>ol</c>) (PyMuPDF <c>Xml.add_number_list</c>).</summary>
+        /// <summary>Add a numbered list (<c>ol</c>).</summary>
         public Xml AddNumberList(int start = 1, string? numType = null)
         {
             var child = CreateElement("ol");
@@ -219,7 +219,7 @@ namespace MuPDF.NET
             return child;
         }
 
-        /// <summary>Add a list item (<c>li</c>) under <c>ol</c> or <c>ul</c> (PyMuPDF <c>Xml.add_list_item</c>).</summary>
+        /// <summary>Add a list item (<c>li</c>) under <c>ol</c> or <c>ul</c>.</summary>
         public Xml AddListItem()
         {
             var tag = TagName;
@@ -230,7 +230,7 @@ namespace MuPDF.NET
             return child;
         }
 
-        /// <summary>Add a paragraph (<c>p</c>) (PyMuPDF <c>Xml.add_paragraph</c>).</summary>
+        /// <summary>Add a paragraph (<c>p</c>).</summary>
         public Xml AddParagraph()
         {
             var child = CreateElement("p");
@@ -241,7 +241,7 @@ namespace MuPDF.NET
             return child;
         }
 
-        /// <summary>Add a division (<c>div</c>) (PyMuPDF <c>Xml.add_division</c>).</summary>
+        /// <summary>Add a division (<c>div</c>).</summary>
         public Xml AddDivision()
         {
             var child = CreateElement("div");
@@ -249,7 +249,7 @@ namespace MuPDF.NET
             return child;
         }
 
-        /// <summary>Add a description list (<c>dl</c>) (PyMuPDF <c>Xml.add_description_list</c>).</summary>
+        /// <summary>Add a description list (<c>dl</c>).</summary>
         public Xml AddDescriptionList()
         {
             var child = CreateElement("dl");
@@ -257,7 +257,7 @@ namespace MuPDF.NET
             return child;
         }
 
-        /// <summary>Add a preformatted block (<c>pre</c>) (PyMuPDF <c>Xml.add_codeblock</c>).</summary>
+        /// <summary>Add a preformatted block (<c>pre</c>).</summary>
         public Xml AddCodeBlock()
         {
             var child = CreateElement("pre");
@@ -265,7 +265,7 @@ namespace MuPDF.NET
             return child;
         }
 
-        /// <summary>Add a horizontal rule (<c>hr</c>) (PyMuPDF <c>Xml.add_horizontal_line</c>).</summary>
+        /// <summary>Add a horizontal rule (<c>hr</c>).</summary>
         public Xml AddHorizontalLine()
         {
             var child = CreateElement("hr");
@@ -273,7 +273,7 @@ namespace MuPDF.NET
             return child;
         }
 
-        /// <summary>Add a span wrapper (PyMuPDF <c>Xml.add_span</c>).</summary>
+        /// <summary>Add a span wrapper.</summary>
         public Xml AddSpan()
         {
             var child = CreateElement("span");
@@ -281,7 +281,7 @@ namespace MuPDF.NET
             return child;
         }
 
-        /// <summary>Add a heading <c>h1</c>–<c>h6</c> (PyMuPDF <c>Xml.add_header</c>).</summary>
+        /// <summary>Add a heading <c>h1</c>–<c>h6</c>.</summary>
         /// <param name="level">Heading level from 1 to 6.</param>
         public Xml AddHeader(int level = 1)
         {
@@ -323,7 +323,7 @@ namespace MuPDF.NET
 
         // ─── Inline content ──────────────────────────────────────────────
 
-        /// <summary>Add text with line breaks as <c>br</c> elements (PyMuPDF <c>Xml.add_text</c>).</summary>
+        /// <summary>Add text with line breaks as <c>br</c> elements.</summary>
         public Xml AddText(string text)
         {
             var lines = SplitLines(text);
@@ -337,7 +337,7 @@ namespace MuPDF.NET
             return this;
         }
 
-        /// <summary>Append text and <c>br</c> nodes as direct children (PyMuPDF <c>Xml.insert_text</c>).</summary>
+        /// <summary>Append text and <c>br</c> nodes as direct children.</summary>
         public Xml InsertText(string text)
         {
             var lines = SplitLines(text);
@@ -350,7 +350,7 @@ namespace MuPDF.NET
             return this;
         }
 
-        /// <summary>Add a hyperlink (<c>a</c>) (PyMuPDF <c>Xml.add_link</c>).</summary>
+        /// <summary>Add a hyperlink (<c>a</c>).</summary>
         public Xml AddLink(string href, string? text = null)
         {
             if (text == null)
@@ -363,27 +363,27 @@ namespace MuPDF.NET
             return this;
         }
 
-        /// <summary>Add inline <c>code</c> (PyMuPDF <c>Xml.add_code</c>).</summary>
+        /// <summary>Add inline <c>code</c>.</summary>
         public Xml AddCode(string? text = null) => AddInlineTag("code", text);
 
-        /// <summary>Add inline <c>var</c> (PyMuPDF aliases <c>add_var</c> to <c>add_code</c>).</summary>
+        /// <summary>Add inline <c>var</c>.</summary>
         public Xml AddVar(string? text = null) => AddCode(text);
 
-        /// <summary>Add inline sample text (PyMuPDF aliases <c>add_samp</c> to <c>add_code</c>).</summary>
+        /// <summary>Add inline sample text.</summary>
         public Xml AddSamp(string? text = null) => AddCode(text);
 
-        /// <summary>Add inline keyboard text (PyMuPDF aliases <c>add_kbd</c> to <c>add_code</c>).</summary>
+        /// <summary>Add inline keyboard text.</summary>
         public Xml AddKbd(string? text = null) => AddCode(text);
 
-        /// <summary>Add subscript (<c>sub</c>) (PyMuPDF <c>Xml.add_subscript</c>).</summary>
+        /// <summary>Add subscript (<c>sub</c>).</summary>
         public Xml AddSubscript(string? text = null) => AddInlineTag("sub", text);
 
-        /// <summary>Add superscript (<c>sup</c>) (PyMuPDF <c>Xml.add_superscript</c>).</summary>
+        /// <summary>Add superscript (<c>sup</c>).</summary>
         public Xml AddSuperscript(string? text = null) => AddInlineTag("sup", text);
 
         // ─── CSS / presentation ──────────────────────────────────────────
 
-        /// <summary>Append a CSS fragment to the <c>style</c> attribute (PyMuPDF <c>Xml.add_style</c>).</summary>
+        /// <summary>Append a CSS fragment to the <c>style</c> attribute.</summary>
         public Xml AddStyle(string text)
         {
             var style = GetAttributeValue("style");
@@ -398,7 +398,7 @@ namespace MuPDF.NET
             return this;
         }
 
-        /// <summary>Append a class name to the <c>class</c> attribute (PyMuPDF <c>Xml.add_class</c>).</summary>
+        /// <summary>Append a class name to the <c>class</c> attribute.</summary>
         public Xml AddClass(string text)
         {
             var cls = GetAttributeValue("class");
@@ -413,7 +413,7 @@ namespace MuPDF.NET
             return this;
         }
 
-        /// <summary>Set text alignment on block nodes (PyMuPDF <c>Xml.set_align</c>).</summary>
+        /// <summary>Set text alignment on block nodes.</summary>
         public Xml SetAlign(object align)
         {
             string t;
@@ -435,7 +435,7 @@ namespace MuPDF.NET
             return AddStyle($"text-align: {t}");
         }
 
-        /// <summary>Set background color on block nodes (PyMuPDF <c>Xml.set_bgcolor</c>).</summary>
+        /// <summary>Set background color on block nodes.</summary>
         public Xml SetBgColor(int color) => AddStyle($"background-color: {ColorText(color)}");
 
         /// <summary>Set background color on block nodes.</summary>
@@ -444,36 +444,36 @@ namespace MuPDF.NET
         /// <summary>Set background color on block nodes.</summary>
         public Xml SetBgColor(string color) => AddStyle($"background-color: {ColorText(color)}");
 
-        /// <summary>Apply bold via a nested styled span (PyMuPDF <c>Xml.set_bold</c>).</summary>
+        /// <summary>Apply bold via a nested styled span.</summary>
         public Xml SetBold(bool val = true) =>
             AppendStyledSpan($"font-weight: {(val ? "bold" : "normal")}");
 
         /// <summary>Apply bold with a custom <c>font-weight</c> value.</summary>
         public Xml SetBold(string val) => AppendStyledSpan($"font-weight: {val}");
 
-        /// <summary>Apply italic via a nested styled span (PyMuPDF <c>Xml.set_italic</c>).</summary>
+        /// <summary>Apply italic via a nested styled span.</summary>
         public Xml SetItalic(bool val = true) =>
             AppendStyledSpan($"font-style: {(val ? "italic" : "normal")}");
 
         /// <summary>Apply italic with a custom <c>font-style</c> value.</summary>
         public Xml SetItalic(string val) => AppendStyledSpan($"font-style: {val}");
 
-        /// <summary>Set text color for following content (PyMuPDF <c>Xml.set_color</c>).</summary>
+        /// <summary>Set text color for following content.</summary>
         public Xml SetColor(object color) => AppendStyledSpan($"color: {ColorText(color)}");
 
-        /// <summary>Set column count (PyMuPDF <c>Xml.set_columns</c>).</summary>
+        /// <summary>Set column count.</summary>
         public Xml SetColumns(int cols) => AppendStyledSpan($"columns: {cols}");
 
-        /// <summary>Set font family (PyMuPDF <c>Xml.set_font</c>).</summary>
+        /// <summary>Set font family.</summary>
         public Xml SetFont(string font) => AppendStyledSpan($"font-family: {font}");
 
-        /// <summary>Set font size in pixels (PyMuPDF <c>Xml.set_fontsize</c>).</summary>
+        /// <summary>Set font size in pixels.</summary>
         public Xml SetFontSize(float fontSize) => AppendStyledSpan($"font-size: {fontSize}px");
 
-        /// <summary>Set font size with a CSS length (PyMuPDF <c>Xml.set_fontsize</c>).</summary>
+        /// <summary>Set font size with a CSS length.</summary>
         public Xml SetFontSize(string fontSize) => AppendStyledSpan($"font-size: {fontSize}");
 
-        /// <summary>Set a unique element <c>id</c> (PyMuPDF <c>Xml.set_id</c>).</summary>
+        /// <summary>Set a unique element <c>id</c>.</summary>
         public Xml SetId(string unique)
         {
             if (Root!.Find(null, "id", unique) != null)
@@ -482,39 +482,39 @@ namespace MuPDF.NET
             return this;
         }
 
-        /// <summary>Set inter-block leading (PyMuPDF <c>Xml.set_leading</c>).</summary>
+        /// <summary>Set inter-block leading.</summary>
         public Xml SetLeading(string leading) => AddStyle($"-mupdf-leading: {leading}");
 
-        /// <summary>Set letter spacing (PyMuPDF <c>Xml.set_letter_spacing</c>).</summary>
+        /// <summary>Set letter spacing.</summary>
         public Xml SetLetterSpacing(string spacing) => AppendStyledSpan($"letter-spacing: {spacing}");
 
-        /// <summary>Set line height on block nodes (PyMuPDF <c>Xml.set_lineheight</c>).</summary>
+        /// <summary>Set line height on block nodes.</summary>
         public Xml SetLineHeight(string lineHeight) => AddStyle($"line-height: {lineHeight}");
 
-        /// <summary>Set margins via a styled span (PyMuPDF <c>Xml.set_margins</c>).</summary>
+        /// <summary>Set margins via a styled span.</summary>
         public Xml SetMargins(string val) => AppendStyledSpan($"margins: {val}");
 
-        /// <summary>Set opacity (PyMuPDF <c>Xml.set_opacity</c>).</summary>
+        /// <summary>Set opacity.</summary>
         public Xml SetOpacity(string opacity) => AppendStyledSpan($"opacity: {opacity}");
 
-        /// <summary>Force a page break after this node (PyMuPDF <c>Xml.set_pagebreak_after</c>).</summary>
+        /// <summary>Force a page break after this node.</summary>
         public Xml SetPageBreakAfter() => AddStyle("page-break-after: always");
 
-        /// <summary>Force a page break before this node (PyMuPDF <c>Xml.set_pagebreak_before</c>).</summary>
+        /// <summary>Force a page break before this node.</summary>
         public Xml SetPageBreakBefore() => AddStyle("page-break-before: always");
 
-        /// <summary>Set first-line indent on block nodes (PyMuPDF <c>Xml.set_text_indent</c>).</summary>
+        /// <summary>Set first-line indent on block nodes.</summary>
         public Xml SetTextIndent(string indent) => AddStyle($"text-indent: {indent}");
 
-        /// <summary>Set text decoration (PyMuPDF <c>Xml.set_underline</c>).</summary>
+        /// <summary>Set text decoration.</summary>
         public Xml SetUnderline(string val = "underline") =>
             AppendStyledSpan($"text-decoration: {val}");
 
-        /// <summary>Set word spacing (PyMuPDF <c>Xml.set_word_spacing</c>).</summary>
+        /// <summary>Set word spacing.</summary>
         public Xml SetWordSpacing(string spacing) => AppendStyledSpan($"word-spacing: {spacing}");
 
         /// <summary>
-        /// Apply multiple presentation properties on this node in one call (PyMuPDF <c>Xml.set_properties</c>).
+        /// Apply multiple presentation properties on this node in one call .
         /// </summary>
         /// <remarks>Unlike individual <c>Set*</c> methods, styles are merged onto this node's <c>style</c> attribute.</remarks>
         public Xml SetProperties(
@@ -621,7 +621,7 @@ namespace MuPDF.NET
             return this;
         }
 
-        /// <summary>Append a <c>span</c> with inline CSS (PyMuPDF <c>Xml.append_styled_span</c>).</summary>
+        /// <summary>Append a <c>span</c> with inline CSS.</summary>
         public Xml AppendStyledSpan(string style)
         {
             var span = CreateElement("span");
@@ -631,7 +631,7 @@ namespace MuPDF.NET
             return prev;
         }
 
-        /// <summary>Deepest open <c>span</c> for inline styling (PyMuPDF <c>Xml.span_bottom</c>).</summary>
+        /// <summary>Deepest open <c>span</c> for inline styling.</summary>
         public Xml? SpanBottom()
         {
             var parent = this;
@@ -720,7 +720,7 @@ namespace MuPDF.NET
             return items;
         }
 
-        // ─── PyMuPDF API names (internal, same assembly) ─────────────────
+        // ─── MuPDF API names (internal, same assembly) ─────────────────
 
         internal Xml? bodytag() => BodyTag();
         internal Xml? find(string? tag, string? att, string? match) => Find(tag, att, match);

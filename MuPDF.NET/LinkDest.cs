@@ -7,7 +7,6 @@ namespace MuPDF.NET
 {
     /// <summary>
     /// Link or outline destination details.
-    /// <para>Ports PyMuPDF <c>class linkDest</c> (<c>src/__init__.py</c>).</para>
     /// </summary>
     public class LinkDest
     {
@@ -18,44 +17,44 @@ namespace MuPDF.NET
         private static readonly Regex RxNamedDest =
             new Regex(@"^#nameddest=(.*)", RegexOptions.CultureInvariant);
 
-        /// <summary>Reserved destination string (PyMuPDF <c>linkDest.dest</c>; stays empty).</summary>
+        /// <summary>Reserved destination string ( ; stays empty).</summary>
         public string DestStr { get; } = "";
 
-        /// <summary>External file spec (PyMuPDF <c>linkDest.file_spec</c>).</summary>
+        /// <summary>External file spec.</summary>
         public string FileSpec { get; private set; } = "";
 
-        /// <summary>Link destination flags (PyMuPDF <c>linkDest.flags</c>).</summary>
+        /// <summary>Link destination flags.</summary>
         public int Flags { get; private set; }
 
-        /// <summary>Whether destination is a map (PyMuPDF <c>linkDest.is_map</c>).</summary>
+        /// <summary>Whether destination is a map.</summary>
         public bool IsMap { get; private set; }
 
-        /// <summary>Whether destination is a URI (PyMuPDF <c>linkDest.is_uri</c>).</summary>
+        /// <summary>Whether destination is a URI.</summary>
         public bool IsUri { get; private set; }
 
         /// <summary>Link kind (<c>LINK_*</c> / <see cref="LinkType"/>).</summary>
         public int Kind { get; private set; } = Constants.LinkNone;
 
-        /// <summary>Top-left point for zoom destinations (PyMuPDF <c>linkDest.lt</c>).</summary>
+        /// <summary>Top-left point for zoom destinations.</summary>
         public Point Lt { get; private set; } = new Point(0, 0);
 
-        /// <summary>Bottom-right point (PyMuPDF <c>linkDest.rb</c>).</summary>
+        /// <summary>Bottom-right point.</summary>
         public Point Rb { get; private set; } = new Point(0, 0);
 
-        /// <summary>Named destination parameters (PyMuPDF <c>linkDest.named</c>).</summary>
+        /// <summary>Named destination parameters.</summary>
         public Dictionary<string, object> Named { get; private set; } = new Dictionary<string, object>();
 
-        /// <summary>New-window flag (PyMuPDF <c>linkDest.new_window</c>).</summary>
+        /// <summary>New-window flag.</summary>
         public string NewWindow { get; private set; } = "";
 
-        /// <summary>Target page number (PyMuPDF <c>linkDest.page</c>).</summary>
+        /// <summary>Target page number.</summary>
         public int Page { get; private set; }
 
-        /// <summary>URI fragment or external URI (PyMuPDF <c>linkDest.uri</c>).</summary>
+        /// <summary>URI fragment or external URI.</summary>
         public string Uri { get; private set; }
 
         /// <summary>
-        /// Build from a <see cref="Link"/> (PyMuPDF <c>linkDest(obj, rlink, document)</c>).
+        /// Build from a <see cref="Link"/> .
         /// </summary>
         /// <param name="link">Source link.</param>
         /// <param name="resolved">Result of <see cref="Document.ResolveLink(string)"/> when applicable.</param>
@@ -67,7 +66,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Build from an <see cref="Outline"/> (PyMuPDF <c>linkDest(outline, None, document)</c>).
+        /// Build from an <see cref="Outline"/> .
         /// </summary>
         public LinkDest(Outline outline, Document document)
         {
@@ -83,8 +82,6 @@ namespace MuPDF.NET
             Page = sourcePage;
             Kind = Constants.LinkNone;
             Named = new Dictionary<string, object>();
-
-            // if rlink and not self.uri.startswith("#"):
             if (resolved.HasValue && (Uri.Length == 0 || Uri[0] != '#'))
             {
                 var r = resolved.Value;
@@ -235,7 +232,7 @@ namespace MuPDF.NET
             return sb.ToString();
         }
 
-        // ─── PyMuPDF attribute names (internal, same assembly) ───────────
+        // ─── MuPDF attribute names (internal, same assembly) ───────────
 
         internal string dest => DestStr;
 

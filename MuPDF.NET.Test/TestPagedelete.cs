@@ -19,7 +19,6 @@ using mupdf;
 namespace MuPDF.NET.Test
 {
     /// <summary>
-    /// Port of <c>PyMuPDF-1.27.2.2/tests/test_pagedelete.py</c>.
     /// </summary>
     /// <remarks>
     /// Inputs: <c>TestDocuments/TestPagedelete/</c>; outputs: <c>TestDocuments/_Output/TestPagedelete/</c>.
@@ -55,14 +54,12 @@ namespace MuPDF.NET.Test
             using var doc = new Document();
             // toc = []
             var toc = new List<object>();
-            // for i in range(page_count):
             for (int i = 0; i < page_count; i++)
             {
                 // page = doc.NewPage()  # make a page
                 var page = doc.NewPage();  // make a page
                 // page.InsertText((100, 100), "%i" % i)  # insert unique text
                 page.InsertText(new Point(100, 100), string.Format("{0}", i));  // insert unique text
-                // if i > r[0]:  # insert a link
                 if (i > r[0])  // insert a link
                 {
                     // page.insert_link(link)
@@ -71,8 +68,6 @@ namespace MuPDF.NET.Test
                 // toc.Append([1, "%i" % i, i + 1])  # TOC bookmark to this page
                 toc.Add(new object[] { 1, string.Format("{0}", i), i + 1 });  // TOC bookmark to this page
             }
-
-            // doc.SetToc(toc)  # insert the TOC
             doc.SetToc(toc);  // insert the TOC
             Assert.True(doc.HasLinks());  // check we did insert links
 
@@ -86,18 +81,15 @@ namespace MuPDF.NET.Test
             // verify number of emptied items (have page number -1)
             Assert.Equal(r.Length, toc_new.Count(item => item.page == -1));
             // Deleted page numbers must correspond to TOC items with page number -1.
-            // for i in r:
             foreach (int i in r)
             {
                 Assert.Equal(-1, toc_new[i].page);
             }
             // Remaining pages must be correctly pointed to by the non-empty TOC items
-            // for item in toc_new:
             foreach (var item in toc_new)
             {
                 // pno = item[-1]
                 int pno = item.page;
-                // if pno == -1:  # one of the emptied items
                 if (pno == -1)  // one of the emptied items
                     continue;
                 // pno -= 1  # PDF page number
@@ -107,17 +99,11 @@ namespace MuPDF.NET.Test
                 // toc text must equal text on page
                 Assert.Equal(item.title, text);
             }
-
-            // doc.DeletePage(0)  # just for the coverage stats
             doc.DeletePage(0);  // just for the coverage stats
             doc.delete_pages_by_slice(5, 10);
-            // doc.Select(range(doc.page_count))
             doc.Select(Enumerable.Range(0, doc.PageCount).ToArray());
-            // doc.CopyPage(0)
             doc.CopyPage(0);
-            // doc.MovePage(0)
             doc.MovePage(0);
-            // doc.FullcopyPage(0)
             doc.FullCopyPage(0);
             doc.Save(Out("test_deletion.pdf"));
         }
@@ -144,7 +130,6 @@ namespace MuPDF.NET.Test
             // pages = [3, 3, 3, 2, 3, 1, 0, 0]
             int[] pages = { 3, 3, 3, 2, 3, 1, 0, 0 };
             using var doc = new Document(filename);
-            // doc.Select(pages)
             doc.Select(pages);
             Assert.Equal(pages.Length, doc.PageCount);
         }

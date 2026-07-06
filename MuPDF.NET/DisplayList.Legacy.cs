@@ -16,7 +16,7 @@ namespace MuPDF.NET
         /// <param name="alpha"><c>1</c> to include alpha; <c>0</c> for opaque (default).</param>
         /// <param name="clip">Clip rectangle intersected with <see cref="Rect"/>; <c>null</c> for full list.</param>
         /// <remarks>
-        /// Parameterless and PyMuPDF-style calls use
+        /// Parameterless and MuPDF-style calls use
         /// <see cref="GetPixmap(Matrix, Colorspace, bool, IRect)"/>.
         /// </remarks>
         public Pixmap GetPixmap(Matrix matrix, ColorSpace colorSpace, int alpha, Rect clip)

@@ -1,4 +1,4 @@
-﻿namespace MuPDF.NET
+namespace MuPDF.NET
 {
     public class Entry
     {
@@ -43,7 +43,7 @@
 
         public Rect Bbox { get; set; } = null;
 
-        // PyMuPDF get_images() tuple aliases (legacy tests / ports).
+        // MuPDF get_images() tuple aliases (legacy tests / ports).
         public int xref => Xref;
         public string smask => Smask.ToString();
         public int width => (int)Width;
@@ -54,7 +54,7 @@
         public string name => Name ?? "";
         public string filter => Filter ?? "";
 
-        /// <summary>Deconstruct like PyMuPDF <c>get_images()</c> row tuples.</summary>
+        /// <summary>Deconstruct like row tuples.</summary>
         public void Deconstruct(
             out int xref,
             out string smask,

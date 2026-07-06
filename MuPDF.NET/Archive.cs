@@ -15,7 +15,7 @@ namespace MuPDF.NET
     /// </summary>
     /// <remarks>
     /// <para>
-    /// Ports PyMuPDF <c>class Archive</c>. An archive combines multiple sub-archives (folders,
+    /// Ports An archive combines multiple sub-archives (folders,
     /// zip/tar files, in-memory blobs, nested archives) into one searchable namespace for HTML
     /// and CSS assets.
     /// </para>
@@ -377,7 +377,7 @@ namespace MuPDF.NET
 
         ~Archive() { Dispose(); }
 
-        // ─── PyMuPDF API names (internal, same assembly) ─────────────────
+        // ─── MuPDF API names (internal, same assembly) ─────────────────
 
         internal void add(object content, string? path = null) => Add(content, path);
         internal List<Dictionary<string, object?>> entry_list

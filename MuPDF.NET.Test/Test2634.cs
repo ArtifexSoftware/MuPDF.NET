@@ -1,4 +1,3 @@
-// Port of PyMuPDF-1.27.2.2/tests/test_2634.py
 using System;
 using System.Collections.Generic;
 using System.Globalization;

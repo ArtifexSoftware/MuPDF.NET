@@ -7,7 +7,7 @@ using System.Text.Json;
 namespace MuPDF.NET
 {
     /// <summary>
-    /// Text and images on a document page (PyMuPDF <c>TextPage</c>).
+    /// Text and images on a document page .
     /// </summary>
     /// <remarks>
     /// <para>Create with <see cref="Page.GetTextPage"/> or <see cref="DisplayList.GetTextPage"/>.
@@ -96,7 +96,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Text block list (PyMuPDF <c>TextPage.extractBLOCKS</c>); tuples are <c>(x0, y0, x1, y1, text, block_no, block_type)</c>.
+        /// Text block list ; tuples are <c>(x0, y0, x1, y1, text, block_no, block_type)</c>.
         /// Ported from <c>extra.i</c> <c>extractBLOCKS</c>.
         /// </summary>
         internal List<(float x0, float y0, float x1, float y1, string text, int blockNo, int blockType)> ExtractBlockTuples()
@@ -170,7 +170,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Word list (PyMuPDF <c>TextPage.extractWORDS</c>); tuples are <c>(x0, y0, x1, y1, word, block_no, line_no, word_no)</c>.
+        /// Word list ; tuples are <c>(x0, y0, x1, y1, word, block_no, line_no, word_no)</c>.
         /// Ported from <c>extra.i</c> <c>extractWORDS</c>.
         /// </summary>
         public List<(float x0, float y0, float x1, float y1, string word, int blockNo, int lineNo, int wordNo)> ExtractWordTuples(string delimiters = null)
@@ -377,7 +377,7 @@ namespace MuPDF.NET
             return JsonSerializer.Serialize(dict, new JsonSerializerOptions { WriteIndented = true });
         }
 
-        /// <summary>Image metadata list (PyMuPDF <c>TextPage.extractIMGINFO</c>).</summary>
+        /// <summary>Image metadata list.</summary>
         public List<Dictionary<string, object>> ExtractImgInfo(bool hashes = false)
         {
             int block_n = -1;
@@ -1065,7 +1065,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Port of extra.i JM_make_text_block().
+        /// Build a text block structure from stext output (JM_make_text_block).
         /// </summary>
         private void JM_make_text_block(
             mupdf.FzStextBlock block,
@@ -1103,7 +1103,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Port of extra.i JM_make_spanlist().
+        /// Build a span list from stext output (JM_make_spanlist).
         /// Builds span list for a single line, splitting spans by style changes.
         /// </summary>
         private mupdf.FzRect JM_make_spanlist(
@@ -1253,7 +1253,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Port of extra.i JM_make_image_block().
+        /// Build an image block structure from stext output (JM_make_image_block).
         /// </summary>
         private void JM_make_image_block(
             mupdf.FzStextBlock block,
@@ -1663,8 +1663,7 @@ namespace MuPDF.NET
         }
 
 
-
-        // ─── PyMuPDF API names (internal, same assembly) ─────────────────
+// ─── MuPDF API names (internal, same assembly) ─────────────────
 
         internal Rect rect => Rect;
         internal string extractText(bool sort = false) => ExtractText(sort);

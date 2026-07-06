@@ -6,12 +6,12 @@ using Xunit;
 namespace MuPDF.NET.Test
 {
     /// <summary>
-    /// Port of <c>PyMuPDF-1.27.2.2/tests/test_barcode.py</c> — generate QR and EAN-13 barcodes,
+    /// — generate QR and EAN-13 barcodes,
     /// embed them in a PDF, reload, and decode via MuPDF's barcode reader.
     /// </summary>
     public class TestBarcode
     {
-        /// <summary>Regression test: barcode (PyMuPDF <c>tests/test_barcode.py::test_barcode</c>).</summary>
+        /// <summary>Regression test: barcode.</summary>
         [Fact]
         public void test_barcode()
         {

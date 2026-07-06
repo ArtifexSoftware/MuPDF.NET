@@ -9,7 +9,7 @@ using SkiaSharp;
 namespace MuPDF.NET
 {
     /// <summary>
-    /// Read-only view over a <see cref="Pixmap"/> sample buffer (PyMuPDF <c>samples_mv</c>).
+    /// Read-only view over a <see cref="Pixmap"/> sample buffer .
     /// </summary>
     /// <remarks>Call <see cref="Release"/> when finished; the owning <see cref="Pixmap"/> also releases this view on dispose.</remarks>
     public sealed class PixmapSamplesMemoryView
@@ -91,7 +91,6 @@ namespace MuPDF.NET
     /// <para>Pixmaps hold rectangular pixel data: color components per <see cref="Colorspace"/> plus an
     /// optional alpha channel. Create from <see cref="Page.GetPixmap"/>, files, byte buffers, PDF image
     /// xrefs, or other pixmaps (scale, convert colorspace, add mask).</para>
-    /// <para>Ports PyMuPDF <c>Pixmap</c> (<c>src/__init__.py</c>).</para>
     /// </remarks>
     public class Pixmap : IDisposable
     {
@@ -100,7 +99,7 @@ namespace MuPDF.NET
         /// <summary><c>fz_scale_pixmap</c> results need <c>fz_drop_pixmap</c> before <c>delete_FzPixmap</c>.</summary>
         private bool _dropNativePixmapSamples;
 
-        // Cached memory view over native samples (PyMuPDF samples_mv); kept for dispose safety.
+        // Cached memory view over native samples; kept for dispose safety.
         private PixmapSamplesMemoryView? _samplesMv;
 
         private object? _memoryView;
@@ -286,7 +285,7 @@ namespace MuPDF.NET
 
         /// <summary>
         /// Load pixmap pixels for a PDF image stream identified by xref.
-        /// Port of PyMuPDF <c>Pixmap(Document, xref)</c> (<c>src/__init__.py</c>, PDF image branch).
+        ///
         /// </summary>
         public Pixmap(Document document, int xref)
         {
@@ -402,7 +401,7 @@ namespace MuPDF.NET
             }
         }
 
-        // ─── Properties (PyMuPDF) ───────────────────────────────────────
+        // ─── Properties ───────────────────────────────────────
         /// <summary>
         /// pixmap width.
         /// </summary>
@@ -1021,7 +1020,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Runs Tesseract OCR and returns a one-page searchable PDF in memory (PyMuPDF <c>pdfocr_tobytes</c>).
+        /// Runs Tesseract OCR and returns a one-page searchable PDF in memory .
         /// </summary>
         /// <param name="compress">Whether to compress the PDF (default true).</param>
         /// <param name="language">Tesseract language code(s).</param>
@@ -1350,7 +1349,7 @@ namespace MuPDF.NET
             return rc;
         }
 
-        /// <summary>Return most frequent color and its usage ratio (PyMuPDF <c>Pixmap.color_topusage</c>).</summary>
+        /// <summary>Return most frequent color and its usage ratio.</summary>
         public (float ratio, byte[] color) ColorTopUsage(IRect clip = null)
         {
             int allpixels = 0;
@@ -1383,7 +1382,7 @@ namespace MuPDF.NET
 
         private static int[]? MatteToInt(float[]? v) => OpaqueToInt(v);
 
-        // ─── PyMuPDF API names (internal, same assembly) ─────────────────
+        // ─── MuPDF API names (internal, same assembly) ─────────────────
 
         internal int x => X;
         internal int y => Y;

@@ -26,7 +26,7 @@ namespace MuPDF.NET
 
         public string Name { get; set; }
 
-        /// <summary>Named destination (PyMuPDF <c>nameddest</c> key for <c>LINK_NAMED</c>).</summary>
+        /// <summary>Named destination ( key for <c>LINK_NAMED</c>).</summary>
         public string NamedDest { get; set; }
 
         /// <summary>

@@ -1,5 +1,4 @@
-// Port of PyMuPDF-1.27.2.2/tests/test_4503.py
-// Test for issue #4503 in pymupdf:
+// Regression test for issue #4503:
 // Correct recognition of strikeout and underline styles in text spans.
 using System;
 using System.Collections.Generic;
@@ -25,7 +24,6 @@ namespace MuPDF.NET.Test
             // strikeout, but no underline.
             // Previously, the text was broken in multiple spans with span breaks at
             // every space. and some parts were not detected as strikeout at all.
-            // scriptdir = os.path.dirname(os.path.abspath(__file__))
             const string text = "the right to request the state to review and, if appropriate,";
             // filename = os.path.join(scriptdir, "resources", "test-4503.pdf")
             using var doc = new Document(testDocPath);

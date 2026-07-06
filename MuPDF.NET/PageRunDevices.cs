@@ -9,7 +9,7 @@ namespace MuPDF.NET
     /// <see cref="Page.GetBboxlog"/> and <see cref="Page.GetTextTrace"/>.
     /// </summary>
     /// <remarks>
-    /// <para>Ports PyMuPDF <c>JM_new_bbox_device_Device</c> and <c>JM_new_texttrace_device</c> in
+    /// <para>Ports and <c>JM_new_texttrace_device</c> in
     /// <c>src/__init__.py</c> (~23403 and ~23559). Types in this file are <c>internal</c>; they are not
     /// part of the public MuPDF.NET API.</para>
     /// <para>
@@ -33,7 +33,7 @@ namespace MuPDF.NET
     }
 
     /// <summary>
-    /// Bounding-box log device for <see cref="Page.GetBboxlog"/> (PyMuPDF <c>JM_new_bbox_device_Device</c>).
+    /// Bounding-box log device for <see cref="Page.GetBboxlog"/> .
     /// </summary>
     /// <remarks>
     /// Appends <c>(code, rect[, layer])</c> tuples to <paramref name="sink"/> for each drawing operation,
@@ -149,7 +149,7 @@ namespace MuPDF.NET
     }
 
     /// <summary>
-    /// Trace TEXT device for <see cref="Page.GetTextTrace"/> (PyMuPDF <c>JM_new_texttrace_device</c>).
+    /// Trace TEXT device for <see cref="Page.GetTextTrace"/> .
     /// </summary>
     /// <remarks>
     /// <para>Docstring in Python: "Trace TEXT device for Python method Page.GetTextTrace()".</para>
@@ -304,7 +304,7 @@ namespace MuPDF.NET
                 asc = 0.9f;
                 asc_dsc = 1.0f;
             }
-            if (Helpers.SmallGlyphHeights || asc_dsc < 1)
+            if (Helpers.UseSmallGlyphHeights || asc_dsc < 1)
             {
                 dsc = dsc / asc_dsc;
                 asc = asc / asc_dsc;

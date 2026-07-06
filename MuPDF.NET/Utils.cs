@@ -13,13 +13,13 @@ using System.Text.Json;
 namespace MuPDF.NET
 {
     /// <summary>
-    /// Miscellaneous low-level helpers (legacy MuPDF.NET <c>Utils</c> / PyMuPDF <c>utils</c>).
+    /// Miscellaneous low-level helpers (legacy MuPDF.NET <c>Utils</c>).
     /// </summary>
     /// <remarks>
     /// <para>Includes PDF string encoding, paper sizes, text-extraction helpers, quad recovery, colors,
     /// image metadata, tables, barcodes, and related helpers used across the library.</para>
-    /// <para>Public members use PascalCase; <c>internal</c> snake_case aliases match Python for same-assembly tests.</para>
-    /// <para><b>Legacy readthedocs <c>Utils</c> vs <see cref="Tools"/> (PyMuPDF <c>TOOLS</c>)</b> — prefer <see cref="Tools"/>
+    /// <para>Public members use PascalCase; <c>internal</c> snake_case aliases are available for same-assembly tests.</para>
+    /// <para><b>Legacy readthedocs <c>Utils</c> vs <see cref="Tools"/> </b> — prefer <see cref="Tools"/>
     /// for new code. These legacy <c>Utils</c> entry points remain as thin forwards:</para>
     /// <list type="table">
     /// <listheader><term>Legacy <c>Utils</c></term><description>Use instead (<see cref="Tools"/>)</description></listheader>
@@ -27,7 +27,7 @@ namespace MuPDF.NET
     /// <item><term><see cref="GetAllContents"/></term><description><see cref="Tools.GetAllContents"/></description></item>
     /// <item><term><see cref="InsertContents"/></term><description><see cref="Tools.InsertContents"/></description></item>
     /// </list>
-    /// <para>Other runtime tuning from PyMuPDF <c>TOOLS</c> (not on legacy <c>Utils</c>):</para>
+    /// <para>Other runtime tuning from (not on legacy <c>Utils</c>):</para>
     /// <list type="bullet">
     /// <item><description><see cref="Tools.MupdfWarnings"/> / <see cref="Tools.ResetMupdfWarnings"/></description></item>
     /// <item><description><see cref="Tools.SetAaLevel"/> / <see cref="Tools.ShowAaLevel"/></description></item>
@@ -39,10 +39,10 @@ namespace MuPDF.NET
     /// </remarks>
     public static partial class Utils
     {
-        /// <summary>PyMuPDF package version (legacy name <c>pymupdf_version</c>).</summary>
+        /// <summary>Package version bind string.</summary>
         public static string pymupdf_version = Artifex.Versions.PyMuPDF;
 
-        /// <summary>PyMuPDF bind version (legacy <c>VersionBind</c>; alias of <see cref="pymupdf_version"/>).</summary>
+        /// <summary>Version bind string (alias of <see cref="pymupdf_version"/>).</summary>
         public static string VersionBind => pymupdf_version;
 
         public static int FZ_MIN_INF_RECT = (int)(-0x80000000);
@@ -73,7 +73,7 @@ namespace MuPDF.NET
 
         public static string ANNOT_ID_STEM = "fitz";
 
-        /// <summary>MuPDF.NET / PyMuPDF <c>TOOLS.set_annot_stem</c>: get or set annotation /NM name prefix.</summary>
+        /// <summary>MuPDF.NET / : get or set annotation /NM name prefix.</summary>
         public static string SetAnnotStem(string stem = null)
         {
             if (stem == null)
@@ -744,11 +744,11 @@ namespace MuPDF.NET
             return (fontName, ext, stype, asc, dsc);
         }
 
-        /// <summary>Current timestamp in PDF date format (PyMuPDF <c>get_pdf_now</c>).</summary>
+        /// <summary>Current timestamp in PDF date format.</summary>
         public static string GetPdfNow() => Helpers.GetPdfNow();
 
         /// <summary>
-        /// Encode a string for PDF (PyMuPDF <c>get_pdf_str</c>): parentheses, octal escapes, or UTF-16BE hex.
+        /// Encode a string for PDF : parentheses, octal escapes, or UTF-16BE hex.
         /// </summary>
         public static string GetPdfStr(string s) => Helpers.GetPdfStr(s);
 
@@ -760,7 +760,7 @@ namespace MuPDF.NET
         public static string GetPdfString(string s) => Helpers.GetPdfStr(s);
 
         /// <summary>
-        /// Calculate length of a string for a built-in font (PyMuPDF <c>get_text_length</c>).
+        /// Calculate length of a string for a built-in font .
         /// </summary>
         /// <param name="fontName">Name of the font.</param>
         /// <param name="fontSize">Font size points.</param>
@@ -775,15 +775,12 @@ namespace MuPDF.NET
 
             // glyphs = None
             (int glyph, double width)[]? glyphs = null;
-            // if basename == "Symbol":
             //     glyphs = symbol_glyphs
             if (basename == "Symbol")
                 glyphs = (Constants.SymbolGlyphs);
-            // if basename == "ZapfDingbats":
             //     glyphs = zapf_glyphs
             if (basename == "ZapfDingbats")
                 glyphs = Constants.ZapfGlyphs;
-            // if glyphs is not None:
             if (glyphs != null)
             {
                 // w = sum([glyphs[ord(c)][1] if ord(c) < 256 else glyphs[183][1] for c in text])
@@ -796,14 +793,10 @@ namespace MuPDF.NET
                     else
                         w += glyphs[183].width;
                 }
-                // return w * fontsize
                 return (float)(w * fontSize);
             }
-
-            // if fontName in Base14_fontdict.keys():
             if (Constants.Base14FontDict.ContainsKey(fontName))
             {
-                // return util_measure_string(
                 //     text, Base14_fontdict[fontName], fontsize, encoding
                 // )
                 return Helpers.UtilMeasureString(
@@ -812,10 +805,7 @@ namespace MuPDF.NET
                     fontSize,
                     encoding);
             }
-
-            // if fontname in (
             // ):
-            //     return len(text) * fontsize
             if (fontName is "china-t" or "china-s" or "china-ts" or "china-ss" or
                 "japan" or "japan-s" or "korea" or "korea-s")
                 return text.Length * fontSize;
@@ -842,7 +832,7 @@ namespace MuPDF.NET
         ) => GetTextLength(text, fontName: fontName, fontSize: fontSize, encoding: encoding);
 
         /// <summary>
-        /// Basic image metadata (PyMuPDF <c>image_profile</c>): width, height, colorspace, bpc, ext, etc.
+        /// Basic image metadata : width, height, colorspace, bpc, ext, etc.
         /// </summary>
         /// <param name="keep_image">When non-zero, include the native <c>fz_image</c> handle under key <c>image</c>.</param>
         public static Dictionary<string, object> ImageProperties(object img, int keep_image = 0)
@@ -851,7 +841,6 @@ namespace MuPDF.NET
                 throw new ArgumentException("bad argument 'img'");
 
             byte[] stream;
-            // if type(img) is io.BytesIO: stream = img.getvalue()
             if (img != null && img.GetType() == typeof(MemoryStream))
             {
                 var ms = (MemoryStream)img;
@@ -885,7 +874,6 @@ namespace MuPDF.NET
                 return null;
 
             // c = imagedata
-            // if keep_image:
             var buf = Helpers.BufferFromBytes(stream);
             int type = RecognizeImageType(buf);
             if (type == mupdf.mupdf.FZ_IMAGE_UNKNOWN)
@@ -926,24 +914,22 @@ namespace MuPDF.NET
                 // result[dictkey_cs_name] = cs_name
                 ["cs-name"] = csName,
             };
-
-            // if keep_image: result[dictkey_image] = image
             if (keep_image != 0)
                 result["image"] = image;
             return result;
         }
 
-        /// <summary>Paper rectangle at 72 dpi (PyMuPDF <c>paper_rect</c>).</summary>
+        /// <summary>Paper rectangle at 72 dpi.</summary>
         public static Rect PaperRect(string s) => Helpers.PaperRect(s);
 
-        /// <summary>Paper (width, height) at 72 dpi; <c>A4-L</c> is landscape (PyMuPDF <c>paper_size</c>).</summary>
+        /// <summary>Paper (width, height) at 72 dpi; <c>A4-L</c> is landscape.</summary>
         public static (float w, float h) PaperSize(string s) => Helpers.PaperSize(s);
 
-        /// <summary>All known paper sizes (PyMuPDF <c>paper_sizes</c>).</summary>
+        /// <summary>All known paper sizes.</summary>
         public static Dictionary<string, (float w, float h)> PaperSizes() => Helpers.GetPaperSizes();
 
         /// <summary>
-        /// Map line <paramref name="p1"/>–<paramref name="p2"/> to the x-axis; <paramref name="p1"/> becomes origin (PyMuPDF <c>planish_line</c>).
+        /// Map line <paramref name="p1"/>–<paramref name="p2"/> to the x-axis; <paramref name="p1"/> becomes origin .
         /// </summary>
         public static Matrix PlanishLine(Point p1, Point p2) => PlanishLineCore(p1, p2);
 
@@ -967,13 +953,12 @@ namespace MuPDF.NET
 
         private static int RecognizeImageType(mupdf.FzBuffer buffer)
         {
-            // #log('calling mfz_recognize_image_format with {c!r=}')
             var outparams = new mupdf.ll_fz_buffer_storage_outparams();
             mupdf.mupdf.ll_fz_buffer_storage_outparams_fn(buffer.m_internal, outparams);
             return mupdf.mupdf.fz_recognize_image_format(outparams.datap);
         }
 
-        /// <summary>Map MuPDF image type constant to file extension (PyMuPDF <c>JM_image_extension</c>).</summary>
+        /// <summary>Map MuPDF image type constant to file extension.</summary>
         public static string GetImageExtension(int type) => ImageExtensionFromType(type);
 
         private static string ImageExtensionFromType(int type) =>
@@ -1087,7 +1072,6 @@ namespace MuPDF.NET
                 List<Rect> prevRow = rects[i - 1];
                 List<Rect> newRow = new List<Rect>();
 
-                // for each previous cell add its downward copy
                 foreach (Rect cell in prevRow)
                 {
                     newRow.Add(cell + deltaV);
@@ -1099,7 +1083,7 @@ namespace MuPDF.NET
             return rects;
         }
 
-        /// <summary>Extract plain text avoiding unacceptable line breaks (PyMuPDF <c>utils.get_sorted_text</c>).</summary>
+        /// <summary>Extract plain text avoiding unacceptable line breaks.</summary>
         public static string GetSortedText(
             Page page,
             IRect clip = null,
@@ -1177,7 +1161,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Extract text from a page or an annotation (PyMuPDF <c>utils.get_text</c>).
+        /// Extract text from a page or an annotation .
         /// </summary>
         /// <remarks>
         /// </remarks>
@@ -1209,17 +1193,12 @@ namespace MuPDF.NET
             // option = option.lower()
             option = (option ?? "text").ToLowerInvariant();
             Debug.Assert(formats.ContainsKey(option));
-            // if option not in formats:
             //     option = "text"
             if (!formats.ContainsKey(option))
                 option = "text";
-            // if flags is None:
             //     flags = formats[option]
             if (flags == null)
                 flags = formats[option];
-
-            // if option == "words":
-            //     return get_text_words(
             //         page,
             //         clip=clip,
             //         flags=flags,
@@ -1229,15 +1208,10 @@ namespace MuPDF.NET
             //     )
             if (option == "words")
                 return WordBlocksFromTuples(page.GetTextWords(clip, flags, textpage, sort, DelimitersToString(delimiters), tolerance));
-            // if option == "blocks":
-            //     return get_text_blocks(
             //         page, clip=clip, flags=flags, textpage=textpage, sort=sort
             //     )
             if (option == "blocks")
                 return TextBlocksFromTuples(page.GetTextBlocks(clip, flags, textpage, sort));
-
-            // if option == "text" and sort:
-            //     return get_sorted_text(
             //         page,
             //         clip=clip,
             //         flags=flags,
@@ -1250,11 +1224,9 @@ namespace MuPDF.NET
             page.RequireParent();
             // cb = None
             Rect cb = null;
-            // if option in ("html", "xml", "xhtml"):  # no clipping for MuPDF functions
             //     clip = page.cropbox
             if (option == "html" || option == "xml" || option == "xhtml")
                 clip = new IRect(page.CropBox);
-            // if clip is not None:
             //     cb = None
             //     cb = page.cropbox
             if (clip != null)
@@ -1266,7 +1238,6 @@ namespace MuPDF.NET
                 cb = page.CropBox;
             // tp = textpage
             TextPage tp = textpage;
-            // if tp is None:
             //     tp = page.get_textpage(clip=clip, flags=flags)
             if (tp == null)
                 tp = page.NewTextPageForGetText(clip, flags.Value);
@@ -1274,7 +1245,6 @@ namespace MuPDF.NET
             else if (tp.Parent != page)
                 throw new ValueErrorException("not a textpage of this page");
             object t;
-            // if option == "json":
             //     t = tp.extractJSON(cb=cb, sort=sort)
             if (option == "json")
                 t = ExtractJsonWithCb(tp, cb, sort);
@@ -1299,15 +1269,13 @@ namespace MuPDF.NET
             //     t = tp.extractText(sort=sort)
             else
                 t = tp.ExtractText(sort);
-
-            // if textpage is None:
             if (textpage == null)
                 tp.Dispose();
             return t;
         }
 
         /// <summary>
-        /// Extract text from an annotation (PyMuPDF <c>utils.get_text</c> when called on <c>Annot</c>).
+        /// Extract text from an annotation ( when called on <c>Annot</c>).
         /// </summary>
         public static dynamic GetText(
             Annot annot,
@@ -1589,7 +1557,6 @@ namespace MuPDF.NET
 
         static void ApplyCbToTextpageDict(Dictionary<string, object> val, Rect cb)
         {
-            // if cb is not None:
             if (cb != null)
             {
                 // val["width"] = cb.width
@@ -1645,7 +1612,6 @@ namespace MuPDF.NET
             bool autoRotate = true
             )
         {
-            // if clip is null, use the whole page rect
             if (clip == null)
             {
                 clip = new Rect(0, 0, page.Rect.Width, page.Rect.Height);
@@ -2322,7 +2288,7 @@ namespace MuPDF.NET
         // ─── src/__init__.py module functions ─────────────────────────────
 
         /// <summary>
-        /// Build <c>@font-face</c> CSS for MuPDF built-in fonts (PyMuPDF <c>css_for_pymupdf_font</c>).
+        /// Build <c>@font-face</c> CSS for MuPDF built-in fonts .
         /// </summary>
         public static string CssForPymupdfFont(
             string fontcode,
@@ -2333,11 +2299,8 @@ namespace MuPDF.NET
             // @font-face template string
             // CSSFONT = "\n@font-face {font-family: %s; src: url(%s);%s%s}\n"
             const string CSSFONT = "\n@font-face {{font-family: {0}; src: url({1});{2}{3}}}\n";
-
-            // if not type(archive) is Archive:
             if (archive is not Archive)
                 throw new ValueErrorException("'archive' must be an Archive");
-            // if CSS is None:
             if (CSS == null)
                 CSS = "";
 
@@ -2349,17 +2312,13 @@ namespace MuPDF.NET
                 if (k.StartsWith(fontcode, StringComparison.Ordinal))
                     font_keys.Add(k);
             }
-            // if font_keys == []:
             if (font_keys.Count == 0)
                 throw new ValueErrorException($"No font code '{fontcode}' found in pymupdf-fonts.");
-            // if len(font_keys) > 4:
             if (font_keys.Count > 4)
                 throw new ValueErrorException("fontcode too short");
-            // if name is None:  # use this name for font-family
             if (name == null)
                 name = fontcode;
 
-            // for fkey in font_keys:
             foreach (string fkey in font_keys)
             {
                 // font = fitz_fontdescriptors[fkey]
@@ -2379,11 +2338,10 @@ namespace MuPDF.NET
                 // CSS += CSSFONT % (name, fkey, bold_text, italic_text)
                 CSS += string.Format(CultureInfo.InvariantCulture, CSSFONT, name, fkey, bold_text, italic_text);
             }
-            // return CSS
             return CSS;
         }
 
-        /// <summary>Map Adobe glyph name to Unicode code point (PyMuPDF helper).</summary>
+        /// <summary>Map Adobe glyph name to Unicode code point.</summary>
         public static int GlyphNameToUnicode(string name)
         {
             // Convenience function accessing unicodedata.
@@ -2399,7 +2357,7 @@ namespace MuPDF.NET
             return unc;
         }
 
-        /// <summary>Map Unicode code point to Adobe glyph name (PyMuPDF helper).</summary>
+        /// <summary>Map Unicode code point to Adobe glyph name.</summary>
         public static string UnicodeToGlyphName(int ch)
         {
             // Convenience function accessing unicodedata.
@@ -2531,11 +2489,11 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>Standard empty / invalid rectangle used in text extraction (PyMuPDF <c>EMPTY_RECT</c>).</summary>
+        /// <summary>Standard empty / invalid rectangle used in text extraction.</summary>
         public static Rect EMPTY_RECT() =>
             new Rect(FZ_MAX_INF_RECT, FZ_MAX_INF_RECT, FZ_MIN_INF_RECT, FZ_MIN_INF_RECT);
 
-        /// <summary>Standard empty / invalid quad (PyMuPDF <c>EMPTY_QUAD</c>).</summary>
+        /// <summary>Standard empty / invalid quad.</summary>
         public static Quad EMPTY_QUAD() => EMPTY_RECT().Quad;
 
         static bool IsRtl(string text)
@@ -2847,7 +2805,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Find tables on a page (MuPDF.NET <c>Utils.GetTables</c> / PyMuPDF <c>utils.get_tables</c>).
+        /// Find tables on a page (MuPDF.NET <c>Utils.GetTables</c>).
         /// </summary>
         public static List<Table> GetTables(
             Page page,
@@ -2904,7 +2862,7 @@ namespace MuPDF.NET
             return finder?.Tables ?? new List<Table>();
         }
 
-        // ─── PyMuPDF API names (internal, same assembly) ─────────────────
+        // ─── MuPDF API names (internal, same assembly) ─────────────────
 
         internal static string get_pdf_now() => GetPdfNow();
         internal static string getPDFnow() => GetPdfNow();

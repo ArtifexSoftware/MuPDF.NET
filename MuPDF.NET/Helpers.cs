@@ -482,7 +482,6 @@ namespace MuPDF.NET
             {
                 if (font.m_internal == null)
                     throw new Exception(Constants.MSG_FONT_FAILED);
-                // if font allows this, set embedding
                 var flags = mupdf.mupdf.ll_fz_font_flags(font.m_internal);
                 if (flags != null && flags.never_embed == 0)
                     font.fz_set_font_embedding(embed);
@@ -593,7 +592,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Ensure an embedded font stream is populated (PyMuPDF <c>pdf_add_cid_font</c> result).
+        /// Ensure an embedded font stream is populated ( result).
         /// Some SWIG paths leave <c>/FontFile2</c> with <c>/Length 0</c> while <c>/Length1</c> is set.
         /// </summary>
         internal static void JM_sync_fontfile_streams(mupdf.PdfDocument pdf, Document doc)
@@ -824,7 +823,7 @@ namespace MuPDF.NET
 
                 if (fontObj == null)
                 {
-                    // PyMuPDF JM_insert_font: fz_new_font_from_file when fontfile set, else buffer.
+                    // MuPDF JM_insert_font: fz_new_font_from_file when fontfile set, else buffer.
                     if (!string.IsNullOrEmpty(fontfile))
                         font = mupdf.mupdf.fz_new_font_from_file(null, fontfile, idx, 0);
                     else
@@ -1009,6 +1008,13 @@ namespace MuPDF.NET
         }
 
         /// <summary>
+        /// Sentinel for a failed PDF downcast ( with <c>m_internal is None</c>).
+        /// Must not use <c>new PdfDocument()</c> — that creates a new empty PDF document.
+        /// </summary>
+        internal static mupdf.PdfDocument PdfDocumentAbsent()
+            => new mupdf.PdfDocument(IntPtr.Zero, false);
+
+        /// <summary>
         /// Non-owning <see cref="mupdf.PdfDocument"/> view of an open <see cref="mupdf.FzDocument"/>.
         /// Uses <c>ll_pdf_specifics</c> — <c>new PdfDocument(fz)</c> duplicates stream-backed PDFs (~1 MB/iter leak).
         /// </summary>
@@ -1016,7 +1022,7 @@ namespace MuPDF.NET
         {
             var internalPdf = mupdf.mupdf.ll_pdf_specifics(fz.m_internal);
             if (internalPdf == null)
-                return new mupdf.PdfDocument();
+                return PdfDocumentAbsent();
             return PdfDocumentBorrowed(new mupdf.PdfDocument(internalPdf));
         }
 
@@ -1026,7 +1032,7 @@ namespace MuPDF.NET
         internal static mupdf.PdfDocument PdfDocumentBorrowed(mupdf.PdfDocument wrapper)
         {
             if (wrapper == null || wrapper.m_internal == null)
-                return new mupdf.PdfDocument();
+                return PdfDocumentAbsent();
             IntPtr handle;
             try
             {
@@ -1037,7 +1043,7 @@ namespace MuPDF.NET
                 handle = mupdf.PdfDocument.getCPtr(wrapper).Handle;
             }
             if (handle == IntPtr.Zero)
-                return new mupdf.PdfDocument();
+                return PdfDocumentAbsent();
             return new mupdf.PdfDocument(handle, false);
         }
 
@@ -1051,7 +1057,7 @@ namespace MuPDF.NET
         internal static mupdf.PdfDocument PdfDocumentForPdfPage(mupdf.PdfPage page)
         {
             if (page?.m_internal?.doc == null)
-                return new mupdf.PdfDocument();
+                return PdfDocumentAbsent();
             return PdfDocumentBorrowed(new mupdf.PdfDocument(page.m_internal.doc));
         }
 
@@ -1679,7 +1685,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Return a PDF string depending on its coding (PyMuPDF <c>get_pdf_str</c>).
+        /// Return a PDF string depending on its coding .
         /// </summary>
         /// <remarks>
         /// Returns a string bracketed with either "()" or "&lt;&gt;" for hex values.
@@ -1691,7 +1697,6 @@ namespace MuPDF.NET
         internal static string GetPdfStr(string s)
         {
             if (string.IsNullOrEmpty(s))
-                // return "()"
                 return "()";
 
             static string MakeUtf16be(string text)
@@ -1700,7 +1705,6 @@ namespace MuPDF.NET
                 r[0] = 254;
                 r[1] = 255;
                 Encoding.BigEndianUnicode.GetBytes(text, 0, text.Length, r, 2);
-                // return "<" + r.hex() + ">"  # brackets indicate hex
                 return "<" + BytesToHex(r).ToLowerInvariant() + ">";
             }
 
@@ -1711,7 +1715,6 @@ namespace MuPDF.NET
                 // oc = ord(c)
                 int oc = c;
                 if (oc > 255)
-                    // return make_utf16be(s)
                     return MakeUtf16be(s);
 
                 if (oc > 31 && oc < 127)
@@ -1742,8 +1745,6 @@ namespace MuPDF.NET
                 else
                     r.Append("\\267");
             }
-
-            // return "(" + r + ")"
             return "(" + r + ")";
         }
 
@@ -1799,7 +1800,6 @@ namespace MuPDF.NET
         /// <summary>
         /// Add a unique /NM key to an annotation or widget.
         /// Append a number to 'stem' such that the result is a unique name.
-        /// PyMuPDF equivalent: <c>JM_add_annot_id</c>.
         /// </summary>
         internal static void JM_add_annot_id(mupdf.PdfAnnot annot, string stem, mupdf.PdfPage page)
         {
@@ -2293,7 +2293,6 @@ namespace MuPDF.NET
         /// <summary>Normalizes page rotation to 0, 90, 180, or 270 degrees.</summary>
         internal static int JmNormRotation(int rotate)
         {
-            // return normalized /Rotate value:one of 0, 90, 180, 270
             while (rotate < 0)
                 rotate += 360;
             while (rotate >= 360)
@@ -2301,6 +2300,18 @@ namespace MuPDF.NET
             if (rotate % 90 != 0)
                 return 0;
             return rotate;
+        }
+
+        private sealed class JmInternalLink
+        {
+            internal int Page;
+            internal int Chapter;
+            internal int PageLoc;
+            internal mupdf.FzRect From;
+            internal float H;
+            internal float W;
+            internal float Xp;
+            internal float Yp;
         }
 
         /// <summary>Converts a document to PDF in memory.</summary>
@@ -2322,7 +2333,8 @@ namespace MuPDF.NET
             }
             int rot = JmNormRotation(rotate);
             int i = fp;
-            while (true)
+            var internalLinks = new List<JmInternalLink>();  // collect PDF-wide internal links here
+            while (true)  // interpret & write document pages as PDF pages
             {
                 if (!InRange(i, s, e))
                     break;
@@ -2336,6 +2348,47 @@ namespace MuPDF.NET
                     dev.Dispose();
                     var page_obj = PdfAddPage(pdfout, mediabox, rot, resources, contents);
                     PdfInsertPage(pdfout, -1, page_obj);
+
+                    // also copy links to the output PDF page
+                    // get the PDF page we've just created
+                    var pdf_page = pdfout.pdf_load_page(i);
+
+                    // loop through source page links
+                    var link = FzLoadLinks(page);  // load first link
+                    while (link.m_internal != null)  // break loop when link is None
+                    {
+                        string uri = link.uri();  // URI string
+                        using (var linkRect = link.rect())
+                        {
+                            var rect = new mupdf.FzRect(linkRect);  // link "from" rectangle
+                            bool isExternal = mupdf.mupdf.fz_is_external_link(uri) != 0;
+
+                            if (isExternal)  // external links can be copied directly
+                            {
+                                PdfCreateLink(pdf_page, rect, uri);
+                            }
+                            else  // internal links done when PDF is complete
+                            {
+                                // find target of internal link
+                                var outparams = new mupdf.ll_fz_resolve_link_outparams();
+                                var ret = mupdf.mupdf.ll_fz_resolve_link_outparams_fn(doc.m_internal, uri, outparams);
+                                internalLinks.Add(new JmInternalLink
+                                {
+                                    Page = i,
+                                    Chapter = ret.chapter,
+                                    PageLoc = ret.page,
+                                    From = new mupdf.FzRect(rect),
+                                    H = rect.y1 - rect.y0,
+                                    W = rect.x1 - rect.x0,
+                                    Xp = outparams.xp,
+                                    Yp = outparams.yp,
+                                });
+                                ret.Dispose();
+                            }
+                        }
+                        link = FzLinkNext(link);
+                    }
+                    pdf_page.Dispose();
                 }
                 finally
                 {
@@ -2344,9 +2397,31 @@ namespace MuPDF.NET
                 i += incr;
             }
             // PDF created - now write it to Python bytearray
+            // insert any internal links collected before:
+            foreach (var ilink in internalLinks)
+            {
+                var pdf_page = pdfout.pdf_load_page(ilink.Page);
+                var dest = new mupdf.fz_link_dest();
+                dest.type = mupdf.fz_link_dest_type.FZ_LINK_DEST_XYZ;  // XYZ destination format
+                dest.loc.chapter = ilink.Chapter;
+                dest.loc.page = ilink.PageLoc;
+                dest.h = ilink.H;
+                dest.w = ilink.W;
+                dest.x = ilink.Xp;
+                dest.y = ilink.Yp;
+                dest.zoom = 0;
+                var rect = ilink.From;
+                var linkDest = new mupdf.FzLinkDest(dest);
+                string uri = mupdf.mupdf.pdf_new_uri_from_explicit_dest(linkDest);
+                PdfCreateLink(pdf_page, rect, uri);
+                linkDest.Dispose();
+                dest.Dispose();
+                rect.Dispose();
+                pdf_page.Dispose();
+            }
             // prepare write options structure
             var opts = new mupdf.PdfWriteOptions();
-            opts.do_garbage = 4;
+            opts.do_garbage = 3;
             opts.do_compress = 1;
             opts.do_compress_images = 1;
             opts.do_compress_fonts = 1;
@@ -2817,8 +2892,10 @@ namespace MuPDF.NET
                 if (d.IsPdf)
                     // Fresh non-owning wrapper: callers (e.g. PDF4LLM) may Dispose without breaking the cache.
                     return PdfDocumentBorrowed(d.NativePdfDocument);
-                if (required) throw new InvalidOperationException(Constants.MSG_IS_NO_PDF);
-                return new mupdf.PdfDocument();
+                var ret = PdfDocumentBorrowedFromFz(d.NativeDocument);
+                if (required && ret.m_internal == null)
+                    throw new InvalidOperationException(Constants.MSG_IS_NO_PDF);
+                return ret;
             }
             if (doc is mupdf.PdfDocument pd) return pd;
             if (doc is mupdf.FzDocument fd)
@@ -2863,7 +2940,7 @@ namespace MuPDF.NET
             return AsPdfPage(page.NativePage, required);
         }
 
-        /// <summary>Drop MuPDF's loaded page tree after direct xref edits (PyMuPDF relies on fresh <c>pdf_page_from_fz_page</c>).</summary>
+        /// <summary>Drop MuPDF's loaded page tree after direct xref edits.</summary>
         internal static void InvalidatePdfPageCache(mupdf.PdfDocument pdf, Page page)
         {
             mupdf.mupdf.ll_pdf_drop_page_tree_internal(pdf.m_internal);
@@ -2949,6 +3026,12 @@ namespace MuPDF.NET
         internal static bool SubsetFontnames = false;
         internal static bool SmallGlyphHeights = false;
 
+        [ThreadStatic] internal static bool? ThreadSmallGlyphHeights;
+        [ThreadStatic] internal static bool? ThreadSkipQuadCorrections;
+
+        internal static bool UseSmallGlyphHeights => ThreadSmallGlyphHeights ?? SmallGlyphHeights;
+        internal static bool UseSkipQuadCorrections => ThreadSkipQuadCorrections ?? SkipQuadCorrections;
+
         private const float FLT_EPSILON = 1.192092896e-07f;
 
         private const int TEXT_FONT_SUPERSCRIPT = 1;
@@ -2959,13 +3042,13 @@ namespace MuPDF.NET
 
         internal static float JM_font_ascender(mupdf.fz_font font)
         {
-            if (SkipQuadCorrections) return 0.8f;
+            if (UseSkipQuadCorrections) return 0.8f;
             return WithKeptFont(font, f => f.fz_font_ascender());
         }
 
         internal static float JM_font_descender(mupdf.fz_font font)
         {
-            if (SkipQuadCorrections) return -0.2f;
+            if (UseSkipQuadCorrections) return -0.2f;
             return WithKeptFont(font, f => f.fz_font_descender());
         }
 
@@ -3033,7 +3116,7 @@ namespace MuPDF.NET
 
         internal static mupdf.FzQuad JM_char_quad(mupdf.fz_stext_line line, mupdf.fz_stext_char ch)
         {
-            if (SkipQuadCorrections)
+            if (UseSkipQuadCorrections)
                 return new mupdf.FzQuad(ch.quad);
             if (line.wmode != 0)
                 return new mupdf.FzQuad(ch.quad);
@@ -3044,7 +3127,7 @@ namespace MuPDF.NET
             float fsize = ch.size;
             float asc_dsc = asc - dsc + FLT_EPSILON;
 
-            if (asc_dsc >= 1 && !SmallGlyphHeights)
+            if (asc_dsc >= 1 && !UseSmallGlyphHeights)
                 return new mupdf.FzQuad(ch.quad);
 
             if (asc < 1e-3f)
@@ -3054,7 +3137,7 @@ namespace MuPDF.NET
                 asc_dsc = 1.0f;
             }
 
-            if (SmallGlyphHeights || asc_dsc < 1)
+            if (UseSmallGlyphHeights || asc_dsc < 1)
             {
                 dsc = dsc / asc_dsc;
                 asc = asc / asc_dsc;
@@ -3357,7 +3440,7 @@ namespace MuPDF.NET
             return annot;
         }
 
-        /// <summary>Read <c>/NM</c> for an indirect object (used for link dict <c>id</c> like PyMuPDF <c>get_links</c>).</summary>
+        /// <summary>Read <c>/NM</c> for an indirect object (used for link dict <c>id</c> like ).</summary>
         internal static string PdfAnnotNmForXref(mupdf.PdfDocument pdf, int xref)
         {
             if (pdf == null || pdf.m_internal == null || xref < 1)
@@ -3379,8 +3462,6 @@ namespace MuPDF.NET
         /// <summary>Python <c>JM_have_operation</c> (<c>src/__init__.py</c>).</summary>
         internal static bool JM_have_operation(mupdf.PdfDocument pdf)
         {
-            //     return 0
-            // return 1
             if (pdf?.m_internal == null)
                 return true;
             if (pdf.m_internal.journal != null && string.IsNullOrEmpty(mupdf.mupdf.pdf_undoredo_step(pdf, 0)))
@@ -3545,7 +3626,7 @@ namespace MuPDF.NET
             return BytesToHex(md5.Hash!);
         }
 
-        /// <summary>MD5 hex key from <see cref="mupdf.FzPixmap.fz_md5_pixmap2"/> (PyMuPDF pixmap digest).</summary>
+        /// <summary>MD5 hex key from <see cref="mupdf.FzPixmap.fz_md5_pixmap2"/>.</summary>
         internal static string Md5HexKeyFromPixmap(mupdf.FzPixmap pm)
         {
             using var digest = pm.fz_md5_pixmap2();
@@ -3572,7 +3653,6 @@ namespace MuPDF.NET
         {
             if (morphFix == null || morphMat == null)
                 return false;
-            // if not o[1][4] == o[1][5] == 0:
             if (Math.Abs(morphMat[4]) > Constants.Epsilon || Math.Abs(morphMat[5]) > Constants.Epsilon)
                 throw new ValueErrorException("invalid morph param 1");
             return true;
@@ -3581,7 +3661,6 @@ namespace MuPDF.NET
         /// <summary>PDF hex string for the <c>TJ</c> operator.</summary>
         internal static string GetTJstr(string text, List<(int glyph, float width)> glyphs, bool simple, int ordering)
         {
-            // if text.startswith("[<") and text.endswith(">]"):  # already done
             if (text.StartsWith("[<", StringComparison.Ordinal) && text.EndsWith(">]", StringComparison.Ordinal))
                 return text;
             if (string.IsNullOrEmpty(text))
@@ -3985,11 +4064,11 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>Port of <c>utils.getLinkDict</c> — used by <see cref="Page.GetLinks"/> like PyMuPDF.</summary>
+        /// <summary>— used by <see cref="Page.GetLinks"/> like MuPDF.</summary>
         internal static Dictionary<string, object> GetLinkDict(Link ln, Document document)
             => GetLinkDictFromDest(ln.Dest, ln.Rect, document);
 
-        /// <summary>Port of <c>utils.getLinkDict</c> for outline items (<c>Outline.destination</c>).</summary>
+        /// <summary>for outline items (<c>Outline.destination</c>).</summary>
         internal static Dictionary<string, object> GetLinkDict(Outline ln, Document document)
             => GetLinkDictFromDest(ln.Destination(document), null, document);
 
@@ -4225,7 +4304,7 @@ namespace MuPDF.NET
             return entries;
         }
 
-        /// <summary>Returns a <see cref="mupdf.PdfFilterOptions"/> instance (PyMuPDF <c>_make_PdfFilterOptions</c>).</summary>
+        /// <summary>Returns a <see cref="mupdf.PdfFilterOptions"/> instance.</summary>
         internal static PdfFilterOptionsRef MakePdfFilterOptions(
             int recurse = 0,
             int instance_forms = 0,
@@ -4304,7 +4383,6 @@ namespace MuPDF.NET
         /// Version of fz_new_pixmap_from_display_list (util.c) to also support
         /// rendering of only the 'clip' part of the displaylist rectangle.
         /// </summary>
-        /// <remarks>PyMuPDF equivalent: <c>JM_pixmap_from_display_list</c>.</remarks>
         internal static Pixmap JmPixmapFromDisplayList(
             mupdf.FzDisplayList list_,
             Matrix? ctm,
@@ -4361,10 +4439,8 @@ namespace MuPDF.NET
             string val = System.Text.Encoding.UTF8.GetString(buff_bytes);
             // z = val.find(chr(0))
             int z = val.IndexOf('\0');
-            // if z >= 0:
             if (z >= 0)
                 val = val.Substring(0, z);
-            // return val
             return val;
         }
 
@@ -4578,7 +4654,7 @@ namespace MuPDF.NET
             mupdf.mupdf.pdf_insert_page(docDes, pageTo, pageRefOut);
         }
 
-        /// <summary>Collects image placements via sanitize <c>image_filter</c> (PyMuPDF <c>JM_image_filter</c>).</summary>
+        /// <summary>Collects image placements via sanitize <c>image_filter</c>.</summary>
         sealed class ImageReporterSanitizeOptions : mupdf.PdfSanitizeFilterOptions2
         {
             readonly List<(string name, mupdf.FzQuad quad)> _entries;
@@ -4602,9 +4678,8 @@ namespace MuPDF.NET
             }
         }
 
-        // ─── Widget / form field (PyMuPDF JM_create_widget, JM_set_widget_properties) ───
+        // ─── Widget / form field ───
 
-        /// <summary>Port of <c>JM_create_widget</c>.</summary>
         internal static mupdf.PdfAnnot JmCreateWidget(
             mupdf.PdfDocument doc,
             mupdf.PdfPage page,
@@ -4655,7 +4730,6 @@ namespace MuPDF.NET
             return annot;
         }
 
-        /// <summary>Port of <c>JM_set_field_type</c>.</summary>
         internal static void JmSetFieldType(mupdf.PdfObj obj, WidgetType type)
         {
             int setBits = 0, clearBits = 0;
@@ -4716,7 +4790,6 @@ namespace MuPDF.NET
             };
         }
 
-        /// <summary>Port of <c>JM_new_javascript</c>.</summary>
         internal static mupdf.PdfObj JmNewJavascript(mupdf.PdfDocument pdf, string value)
         {
             if (string.IsNullOrEmpty(value))
@@ -4729,7 +4802,6 @@ namespace MuPDF.NET
             return newaction;
         }
 
-        /// <summary>Port of <c>JM_put_script</c>.</summary>
         internal static void JmPutScript(mupdf.PdfObj annotObj, string key1, string key2, string value)
         {
             if (string.IsNullOrEmpty(key2))
@@ -4798,7 +4870,6 @@ namespace MuPDF.NET
             return mupdf.mupdf.pdf_to_text_string(js);
         }
 
-        /// <summary>Port of <c>util_ensure_widget_calc</c>.</summary>
         internal static void EnsureWidgetCalc(mupdf.PdfAnnot annot)
         {
             var annotObj = Helpers.PdfAnnotObj(annot);
@@ -4824,7 +4895,6 @@ namespace MuPDF.NET
             JmSetChoiceOptions(annot, liste.Cast<object>().ToList());
         }
 
-        /// <summary>Port of <c>JM_set_choice_options</c>.</summary>
         internal static void JmSetChoiceOptions(mupdf.PdfAnnot annot, IList<object> liste)
         {
             if (liste == null || liste.Count == 0)
@@ -4870,7 +4940,6 @@ namespace MuPDF.NET
             return !string.IsNullOrEmpty(opt1) && !string.IsNullOrEmpty(opt2);
         }
 
-        /// <summary>Port of <c>JM_set_widget_properties</c>.</summary>
         internal static void JmSetWidgetProperties(mupdf.PdfAnnot annot, Widget widget)
         {
             var page = PdfAnnotPage(annot);
@@ -5081,7 +5150,6 @@ namespace MuPDF.NET
                         c = mupdf.mupdf.fz_windows_1251_from_unicode(c);
                     else
                         c = mupdf.mupdf.fz_windows_1252_from_unicode(c);
-                    // if c < 0:
                     if (c < 0)
                         // c = 0xB7
                         c = 0xB7;
@@ -5092,7 +5160,6 @@ namespace MuPDF.NET
                 }
                 // ret = w * fontsize
                 float ret = w * fontsize;
-                // return ret
                 return ret;
             }
             finally
@@ -5197,7 +5264,7 @@ namespace MuPDF.NET
     }
 
     /// <summary>
-    /// LINEART device for <see cref="Page.get_cdrawings"/> (PyMuPDF <c>extra.JM_new_lineart_device</c> / <c>trace_path_walker</c>).
+    /// LINEART device for <see cref="Page.get_cdrawings"/> ( / <c>trace_path_walker</c>).
     /// </summary>
     internal sealed class JM_new_lineart_device_Device : mupdf.FzDevice2
     {
@@ -5211,7 +5278,7 @@ namespace MuPDF.NET
         private static readonly PathCurvetoDelegate s_curveto;
         private static readonly PathClosepathDelegate s_closepath;
 
-        /// <summary>Output list or callback target (PyMuPDF <c>dev.out</c>).</summary>
+        /// <summary>Output list or callback target.</summary>
         internal object Out { get; }
 
         internal ulong seqno;

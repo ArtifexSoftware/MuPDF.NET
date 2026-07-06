@@ -5,7 +5,6 @@ namespace MuPDF.NET
 {
     /// <summary>
     /// Represents a hyperlink on a PDF page.
-    /// <para>Ports PyMuPDF <c>class Link</c> (<c>src/__init__.py</c>).</para>
     /// </summary>
     public class Link
     {
@@ -37,7 +36,7 @@ namespace MuPDF.NET
             _linkAnnotIdHint = nm ?? "";
         }
 
-        /// <summary>Hot area rectangle (PyMuPDF <c>Link.rect</c>).</summary>
+        /// <summary>Hot area rectangle.</summary>
         public Rect Rect
         {
             get
@@ -47,11 +46,11 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>URI string (PyMuPDF <c>Link.uri</c>).</summary>
+        /// <summary>URI string.</summary>
         public string Uri => _nativeLink.m_internal.uri;
 
         /// <summary>
-        /// Whether the link is external (PyMuPDF <c>Link.is_external</c>).
+        /// Whether the link is external .
         /// Uses <c>mupdf.fz_is_external_link</c> on the native URI when available.
         /// </summary>
         public bool IsExternal
@@ -73,7 +72,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>PDF annotation xref (PyMuPDF <c>Link.xref</c>).</summary>
+        /// <summary>PDF annotation xref.</summary>
         public int Xref
         {
             get
@@ -142,7 +141,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>Link annotation flags (PyMuPDF <c>Link.flags</c>).</summary>
+        /// <summary>Link annotation flags.</summary>
         public int Flags
         {
             get
@@ -200,7 +199,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>Next link in the page chain (PyMuPDF <c>Link.next</c>).</summary>
+        /// <summary>Next link in the page chain.</summary>
         public Link Next
         {
             get
@@ -261,7 +260,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>Target page number for internal links (PyMuPDF <c>Link.page</c>, default -1).</summary>
+        /// <summary>Target page number for internal links ( , default -1).</summary>
         public int Page
         {
             get
@@ -276,7 +275,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>Link as a dictionary (PyMuPDF <c>utils.getLinkDict</c> / link dict conventions).</summary>
+        /// <summary>Link as a dictionary ( / link dict conventions).</summary>
         public Dictionary<string, object> ToDictionary()
         {
             int xr = Xref;
@@ -304,7 +303,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Detach this wrapper from its owning <see cref="Page"/> (PyMuPDF <c>Link._erase</c>).
+        /// Detach this wrapper from its owning <see cref="Page"/> .
         /// </summary>
         public void Erase()
         {
@@ -314,7 +313,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Set link border (PyMuPDF <c>Link.set_border</c>).
+        /// Set link border .
         /// <para>Pass a border dictionary, or use <c>width</c>/<c>style</c>/<c>dashes</c> keys as in Python.</para>
         /// </summary>
         public void SetBorder(Dictionary<string, object> border)
@@ -341,7 +340,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Set link colors (PyMuPDF <c>Link.set_colors</c>).
+        /// Set link colors .
         /// <para>Links have no fill color; only <c>stroke</c> is applied. Empty stroke removes <c>C</c>.</para>
         /// </summary>
         public void SetColors(Dictionary<string, object> colors)
@@ -366,7 +365,7 @@ namespace MuPDF.NET
             mupdf.mupdf.pdf_dict_puts(obj, "C", cArr);
         }
 
-        /// <summary>Set link flags (PyMuPDF <c>Link.set_flags</c>). Requires a PDF document.</summary>
+        /// <summary>Set link flags . Requires a PDF document.</summary>
         public void SetFlags(int flags)
         {
             if (!RequirePage().RequireParent().IsPdf)
@@ -386,7 +385,7 @@ namespace MuPDF.NET
             return $"Link('{Uri}' at {Rect})";
         }
 
-        // ─── PyMuPDF API names (internal, same assembly) ─────────────────
+        // ─── MuPDF API names (internal, same assembly) ─────────────────
 
         internal void _erase() => Erase();
 

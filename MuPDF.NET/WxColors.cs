@@ -4,17 +4,17 @@ using System.Linq;
 namespace MuPDF.NET
 {
     /// <summary>
-    /// wxWidgets colour database used by PyMuPDF (<c>src/_wxcolors.py</c>, imported in <c>__init__.py</c> ~25459).
+    /// wxWidgets colour database used by MuPDF (<c>src/_wxcolors.py</c>, imported in <c>__init__.py</c> ~25459).
     /// </summary>
     /// <remarks>
     /// Named-colour helpers (<c>getColor</c>, <c>getColorList</c>, …) live on <see cref="Utils"/>.
-    /// Public members use PascalCase; <c>internal</c> snake_case aliases match Python for same-assembly tests.
+    /// Public members use PascalCase; <c>internal</c> snake_case aliases are available for same-assembly tests.
     /// </remarks>
     public static class WxColors
     {
         /// <summary>
         /// List of (name, red, green, blue) where name is upper-case and RGB are integers 0–255
-        /// (PyMuPDF <c>_wxcolors</c> / <c>colors_wx_list()</c>).
+        /// ( / <c>colors_wx_list()</c>).
         /// </summary>
         public static readonly List<(string Name, int R, int G, int B)> ColorList = new List<(string, int, int, int)>
         {
@@ -582,7 +582,7 @@ namespace MuPDF.NET
 
         /// <summary>
         /// Dict mapping lower-case name to (red, green, blue) floats in 0.0–1.0
-        /// (PyMuPDF module <c>pdfcolor</c> / <c>colors_pdf_dict()</c>).
+        /// </c>).
         /// </summary>
         public static readonly Dictionary<string, (float r, float g, float b)> PdfColorDict =
             ColorList.ToDictionary(
@@ -600,7 +600,7 @@ namespace MuPDF.NET
         /// <summary>Returns the same data as <see cref="PdfColorDict"/>.</summary>
         public static Dictionary<string, (float r, float g, float b)> GetPdfColorDictionary() => PdfColorDict;
 
-        // ─── PyMuPDF API names (internal, same assembly) ─────────────────
+        // ─── MuPDF API names (internal, same assembly) ─────────────────
 
         internal static List<(string Name, int R, int G, int B)> _wxcolors => ColorList;
         internal static Dictionary<string, (float r, float g, float b)> pdfcolor => PdfColorDict;

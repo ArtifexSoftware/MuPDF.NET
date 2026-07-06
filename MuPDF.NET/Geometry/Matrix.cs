@@ -6,7 +6,7 @@ using System.Globalization;
 namespace MuPDF.NET
 {
     /// <summary>
-    /// Row-major 3×3 affine transform used for PDF/image coordinate mapping (PyMuPDF <c>Matrix</c>).
+    /// Row-major 3×3 affine transform used for PDF/image coordinate mapping .
     /// </summary>
     /// <remarks>
     /// <para>Only six values <c>[a, b, c, d, e, f]</c> are used; they map points as in the Adobe PDF
@@ -14,7 +14,7 @@ namespace MuPDF.NET
     /// equivalent to updating those six numbers directly.</para>
     /// <para>Legacy API reference:
     /// <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Matrix.html"/>.</para>
-    /// <para>Constructors (PyMuPDF): <see cref="Matrix()"/> (zeros),
+    /// <para>Constructors: <see cref="Matrix()"/> (zeros),
     /// <see cref="Matrix(float,float)"/> (zoom),
     /// <see cref="Matrix(float,float,float)"/> (zoom with third arg <c>0</c>, or shear with <c>1</c>),
     /// <see cref="Matrix(float,float,float,float,float,float)"/>,
@@ -56,7 +56,7 @@ namespace MuPDF.NET
         /// <summary>Sequence length (always 6).</summary>
         public int Length => Count;
 
-        /// <summary>Shared identity instance (PyMuPDF <c>Identity</c>).</summary>
+        /// <summary>Shared identity instance.</summary>
         public static readonly Matrix Identity = new IdentityMatrix();
 
         /// <summary>Creates the zero matrix <c>(0, 0, 0, 0, 0, 0)</c>.</summary>
@@ -68,7 +68,7 @@ namespace MuPDF.NET
             A = a; B = b; C = c; D = d; E = e; F = f;
         }
 
-        /// <summary>Creates a zoom matrix <c>(zoomX, 0, 0, zoomY, 0, 0)</c> (PyMuPDF <c>Matrix(zoom-x, zoom-y)</c>).</summary>
+        /// <summary>Creates a zoom matrix <c>(zoomX, 0, 0, zoomY, 0, 0)</c>.</summary>
         public Matrix(float zoomX, float zoomY)
         {
             A = zoomX; B = 0; C = 0; D = zoomY; E = 0; F = 0;
@@ -76,7 +76,7 @@ namespace MuPDF.NET
 
         /// <summary>
         /// Creates a counter-clockwise rotation matrix for positive <paramref name="angleDegrees"/>
-        /// (PyMuPDF <c>Matrix(degree)</c>).
+        /// .
         /// </summary>
         public Matrix(float angleDegrees) => Assign(RotationMatrix(angleDegrees));
 
@@ -116,7 +116,7 @@ namespace MuPDF.NET
         /// <remarks>
         /// Documented on legacy readthedocs as <c>Matrix(Rect)</c>. Older MuPDF.NET builds incorrectly
         /// treated <see cref="Rect.X0"/> as a rotation angle; this constructor uses MuPDF page semantics.
-        /// MuPDF.NET adds a <c>Matrix(rect)</c> overload not present in PyMuPDF.
+        /// MuPDF.NET adds a <c>Matrix(rect)</c> overload not present in MuPDF.
         /// </remarks>
         public Matrix(Rect mediabox)
         {
@@ -155,7 +155,7 @@ namespace MuPDF.NET
         /// <summary>Number of components (6).</summary>
         public int Count => 6;
 
-        /// <summary>Indexed access to <c>[a, b, c, d, e, f]</c> (PyMuPDF sequence protocol).</summary>
+        /// <summary>Indexed access to <c>[a, b, c, d, e, f]</c>.</summary>
         public virtual float this[int i]
         {
             get => i switch
@@ -178,14 +178,14 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>Euclidean norm of the six-element vector (PyMuPDF <c>norm</c> / <c>__abs__</c>).</summary>
+        /// <summary>Euclidean norm of the six-element vector ( / <c>__abs__</c>).</summary>
         public float Norm =>
             (float)Math.Sqrt(A * A + B * B + C * C + D * D + E * E + F * F);
 
         /// <summary>Absolute-value alias for <see cref="Norm"/>.</summary>
         public float Abs() => Norm;
 
-        /// <summary>True if not all components are zero (PyMuPDF truthiness).</summary>
+        /// <summary>True if not all components are zero.</summary>
         public bool IsTruthy => !(Math.Max(Math.Max(A, B), Math.Max(C, Math.Max(D, Math.Max(E, F)))) == 0
             && Math.Min(Math.Min(A, B), Math.Min(C, Math.Min(D, Math.Min(E, F)))) == 0);
 
@@ -198,7 +198,7 @@ namespace MuPDF.NET
             || (Math.Abs(A) < Constants.Epsilon && Math.Abs(D) < Constants.Epsilon);
 
         /// <summary>
-        /// Replaces this matrix with <paramref name="one"/> × <paramref name="two"/> (PyMuPDF <c>concat</c>).
+        /// Replaces this matrix with <paramref name="one"/> × <paramref name="two"/> .
         /// </summary>
         /// <remarks>Multiplication is not commutative; order matters.</remarks>
         public virtual Matrix ConcatInto(Matrix one, Matrix two)
@@ -211,7 +211,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Returns <paramref name="one"/> × <paramref name="two"/> as a new matrix (PyMuPDF <c>Matrix(...).concat(one, two)</c>).
+        /// Returns <paramref name="one"/> × <paramref name="two"/> as a new matrix .
         /// </summary>
         public static Matrix Concat(Matrix one, Matrix two) => ConcatCore(one, two);
 
@@ -289,7 +289,7 @@ namespace MuPDF.NET
             return this;
         }
 
-        /// <summary>Pre-multiplies shearing (PyMuPDF <c>preshear</c>).</summary>
+        /// <summary>Pre-multiplies shearing.</summary>
         public virtual Matrix Preshear(float h, float v)
         {
             float a0 = A, b0 = B;
@@ -512,7 +512,7 @@ namespace MuPDF.NET
     }
 
     /// <summary>
-    /// Immutable identity matrix <c>[1, 0, 0, 1, 0, 0]</c> (PyMuPDF <c>IdentityMatrix</c> / <c>Identity</c>).
+    /// Immutable identity matrix <c>[1, 0, 0, 1, 0, 0]</c> ( / <c>Identity</c>).
     /// </summary>
     /// <remarks>
     /// <para>Performs no transform. Component setters and mutating methods are disabled; values always

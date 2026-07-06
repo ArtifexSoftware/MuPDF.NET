@@ -12,7 +12,7 @@ namespace MuPDF.NET
     /// <para>PDF coordinates in points (72 per inch). Valid when <c>x0 &lt;= x1</c> and <c>y0 &lt;= y1</c>;
     /// empty when <c>x0 &gt;= x1</c> or <c>y0 &gt;= y1</c>. One infinite rect exists (<see cref="Infinite"/>).
     /// Right and bottom edges are semi-open (not included in containment).</para>
-    /// <para>Ports PyMuPDF <c>Rect</c>.</para>
+    /// <para>Ports </para>
     /// </remarks>
     public class Rect : IEnumerable<float>, IEquatable<Rect>
     {
@@ -336,7 +336,7 @@ namespace MuPDF.NET
             X0 = r.X0; Y0 = r.Y0; X1 = r.X1; Y1 = r.Y1;
         }
 
-        // ─── Operators (PyMuPDF) ───
+        // ─── Operators ───
 
         public static Rect operator +(Rect a, Rect b) =>
             new Rect(a.X0 + b.X0, a.Y0 + b.Y0, a.X1 + b.X1, a.Y1 + b.Y1);
