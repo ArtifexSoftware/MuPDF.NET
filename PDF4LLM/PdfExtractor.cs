@@ -534,41 +534,41 @@ namespace PDF4LLM
         /// Extract form fields and their values from a PDF document.
         /// </summary>
         /// <param name="doc">The document to read.</param>
-        /// <param name="xrefs">
+        /// <param name="includeXrefs">
         /// When true, include xref numbers of form fields (useful with <see cref="Page.LoadWidget"/>).
         /// </param>
         public static Dictionary<string, Dictionary<string, object>> GetKeyValues(
             Document doc,
-            bool xrefs = false)
+            bool includeXrefs = false)
         {
             if (doc.IsFormPDF != 0)
-                return Helpers.Utils.ExtractFormFieldsWithPages(doc, xrefs);
+                return Helpers.Utils.ExtractFormFieldsWithPages(doc, includeXrefs);
             return new Dictionary<string, Dictionary<string, object>>();
         }
 
         /// <summary>Extract form fields from a PDF file path.</summary>
         /// <param name="path">Path to the PDF file.</param>
-        /// <param name="xrefs">When <see langword="true"/>, include widget xref numbers in the result.</param>
-        public static Dictionary<string, Dictionary<string, object>> GetKeyValues(string path, bool xrefs = false)
+        /// <param name="includeXrefs">When <see langword="true"/>, include widget xref numbers in the result.</param>
+        public static Dictionary<string, Dictionary<string, object>> GetKeyValues(string path, bool includeXrefs = false)
         {
             if (string.IsNullOrWhiteSpace(path))
                 throw new ArgumentException("Path must not be null or whitespace.", nameof(path));
             using (var doc = new Document(path))
-                return GetKeyValues(doc, xrefs);
+                return GetKeyValues(doc, includeXrefs);
         }
 
         /// <summary>Extract form fields; logs ignored optional argument names.</summary>
         /// <param name="doc">PDF document containing interactive form fields.</param>
-        /// <param name="xrefs">When <see langword="true"/>, include widget xref numbers in the result.</param>
+        /// <param name="includeXrefs">When <see langword="true"/>, include widget xref numbers in the result.</param>
         /// <param name="ignoredKeywordArgumentNames">Names of unsupported keyword arguments (logged as a warning).</param>
         public static Dictionary<string, Dictionary<string, object>> GetKeyValues(
             Document doc,
-            bool xrefs,
+            bool includeXrefs,
             IReadOnlyCollection<string> ignoredKeywordArgumentNames)
         {
             if (ignoredKeywordArgumentNames != null && ignoredKeywordArgumentNames.Count > 0)
                 Console.WriteLine($"Warning: keyword arguments ignored: {{{string.Join(", ", ignoredKeywordArgumentNames)}}}");
-            return GetKeyValues(doc, xrefs);
+            return GetKeyValues(doc, includeXrefs);
         }
     }
 }

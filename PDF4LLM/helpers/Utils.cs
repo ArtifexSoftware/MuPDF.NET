@@ -82,8 +82,8 @@ namespace PDF4LLM.Helpers
         /// Extract form fields with page references (interactive PDFs).
         /// </summary>
         /// <param name="doc">PDF document to scan for AcroForm fields.</param>
-        /// <param name="xrefs">When <c>true</c>, include each field's PDF xref in the result.</param>
-        public static Dictionary<string, Dictionary<string, object>> ExtractFormFieldsWithPages(Document doc, bool xrefs = false)
+        /// <param name="includeXrefs">When <c>true</c>, include each field's PDF xref in the result.</param>
+        public static Dictionary<string, Dictionary<string, object>> ExtractFormFieldsWithPages(Document doc, bool includeXrefs = false)
         {
             var result = new Dictionary<string, Dictionary<string, object>>();
             if (doc == null || doc.IsClosed)
@@ -188,7 +188,7 @@ namespace PDF4LLM.Helpers
                         ["value"] = value,
                         ["pages"] = pages.Distinct().OrderBy(p => p).ToList()
                     };
-                    if (xrefs)
+                    if (includeXrefs)
                         valueDict["xref"] = fieldXref;
                     result[fqName] = valueDict;
                 }
@@ -285,6 +285,19 @@ namespace PDF4LLM.Helpers
             return true;
         }
 
+        /// <summary><c>is_ocr_text(span)</c> for table-cell <see cref="Span"/> objects.</summary>
+        public static bool IsOcrText(Span span)
+        {
+            if (span == null)
+                return false;
+            if (span.Font == TESSERACT_FONT_NAME)
+                return true;
+            if ((span.CharFlags & (uint)mupdf.mupdf.FZ_STEXT_STROKED) != 0
+                || (span.CharFlags & (uint)mupdf.mupdf.FZ_STEXT_FILLED) != 0)
+                return false;
+            return true;
+        }
+
         /// <summary>Blocks list from <c>TextPage.extractDICT()</c>.</summary>
         internal static List<Dictionary<string, object>> StextDictBlocks(TextPage textPage)
         {
@@ -352,7 +365,7 @@ namespace PDF4LLM.Helpers
         /// </summary>
         /// <param name="r1">First rectangle.</param>
         /// <param name="r2">Second rectangle.</param>
-        /// <param name="bboxOnly">Reserved; kept for API parity with pymupdf4llm.</param>
+        /// <param name="bboxOnly">Reserved; kept for API parity with layout package.</param>
         public static Rect IntersectRects(Rect r1, Rect r2, bool bboxOnly = false)
         {
             if (r1 == null || r2 == null)
@@ -373,7 +386,7 @@ namespace PDF4LLM.Helpers
         /// Join a list of rectangles into their bounding rectangle
         /// </summary>
         /// <param name="rects">Rectangles to unite into one bounding box.</param>
-        /// <param name="bboxOnly">Reserved; kept for API parity with pymupdf4llm.</param>
+        /// <param name="bboxOnly">Reserved; kept for API parity with layout package.</param>
         public static Rect JoinRects(List<Rect> rects, bool bboxOnly = false)
         {
             if (rects == null || rects.Count == 0)
@@ -747,11 +760,21 @@ namespace PDF4LLM.Helpers
         /// </summary>
         /// <param name="page">Page to analyze.</param>
         /// <param name="blocks">Optional pre-extracted text blocks; extracted when <c>null</c>.</param>
-        public static Dictionary<string, object> AnalyzePage(Page page, List<Block> blocks = null) =>
-            global::PDF4LLM.Ocr.AnalyzePage.Analyze(page, blocks, replaceOcr: false);
+        /// <param name="replaceOcr">When <c>true</c>, replace an existing OCR text layer.</param>
+        public static Dictionary<string, object> AnalyzePage(
+            Page page,
+            List<Block> blocks = null,
+            bool replaceOcr = false) =>
+            global::PDF4LLM.Ocr.AnalyzePage.Analyze(page, blocks, replaceOcr: replaceOcr);
 
-        /// <summary><c>table_cleaner(page, blocks, tbbox)</c></summary>
-        /// <param name="blocks">Text/vector blocks from <c>extractDICT</c>.</param>
+        /// <summary>Compute intersection over union of two rectangles.</summary>
+        public static float Iou(Rect r1, Rect r2) =>
+            LayoutParseHelpers.IntersectionOverUnion(r1, r2);
+
+        /// <summary>
+        /// Split a table layout box into separate picture and table regions when tilted vector graphics dominate the area.
+        /// </summary>
+        /// <param name="blocks">Text and vector blocks from the page text layer.</param>
         /// <param name="tableEntry">Layout table box to validate or split.</param>
         public static (LayoutInfoEntry picture, LayoutInfoEntry table) TableCleaner(
             List<Dictionary<string, object>> blocks,

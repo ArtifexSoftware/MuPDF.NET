@@ -233,8 +233,7 @@ namespace PDF4LLM.Helpers
         private const string GRAPHICS_TEXT = "\n![]({0})\n";
 
         /// <summary>
-        /// Convert a document to Markdown, closely following the behavior of
-        /// ToMarkdown equivalent.
+        /// Convert a document to Markdown.
         /// </summary>
         /// <param name="doc">Input <see cref="Document"/> to convert.</param>
         /// <param name="pages">
@@ -402,7 +401,6 @@ namespace PDF4LLM.Helpers
                 doc.Bake();
             }
 
-            // For reflowable documents, allow making 1 page for the whole document
             if (doc.IsReflowable)
             {
                 if (pageHeight.HasValue)
@@ -535,7 +533,6 @@ namespace PDF4LLM.Helpers
             }
             else
             {
-                // For page_chunks mode, we need to return a structured format
                 // Since System.Text.Json may not be available in all .NET versions,
                 // we'll use Newtonsoft.Json if available, or return a simple string representation
                 try
@@ -561,12 +558,12 @@ namespace PDF4LLM.Helpers
         }
 
         /// <summary>
-        /// <c>to_markdown(doc, pages=..., hdr_info=..., **load_kwargs)</c> for LlamaIndex reader.
+        /// Process the document and return Markdown text for the selected pages.
         /// </summary>
         /// <param name="doc">Input document to convert.</param>
         /// <param name="pages">0-based page numbers to process.</param>
-        /// <param name="hdrInfo">Header resolver (<see cref="IdentifyHeaders"/>, <see cref="TocHeaders"/>, or <c>null</c>).</param>
-        /// <param name="loadKwargs">Keyword options mirroring the Python <c>to_markdown</c> API.</param>
+        /// <param name="hdrInfo">Header resolver (<see cref="IdentifyHeaders"/>, <see cref="TocHeaders"/>, or <see langword="null"/>).</param>
+        /// <param name="loadKwargs">Conversion options (images, OCR, tables, page chunks, and related settings).</param>
         public static string ToMarkdown(
             Document doc,
             List<int> pages,
@@ -859,7 +856,6 @@ namespace PDF4LLM.Helpers
                     
                     if (extractWords)
                     {
-                        // For "words" extraction, add table cells as line rects
                         var cells = new List<Rect>();
                         if (parms.Tabs[i].header != null && parms.Tabs[i].header.cells != null)
                         {
@@ -898,7 +894,6 @@ namespace PDF4LLM.Helpers
                     
                     if (extractWords)
                     {
-                        // For "words" extraction, add table cells as line rects
                         var cells = new List<Rect>();
                         if (parms.Tabs[i].header != null && parms.Tabs[i].header.cells != null)
                         {
@@ -1643,7 +1638,7 @@ namespace PDF4LLM.Helpers
                         footerMargin: bottom,
                         headerMargin: top,
                         noImageText: !forceText,
-                        textpage: txtPage,
+                        textPage: txtPage,
                         paths: parms.ActualPaths,
                         avoid: parms.TabRects0.Concat(parms.VgClusters0).ToList(),
                         ignoreImages: ignoreImages);

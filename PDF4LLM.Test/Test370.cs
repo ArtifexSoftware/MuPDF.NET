@@ -6,7 +6,6 @@ using Xunit;
 
 namespace PDF4LLM.Test
 {
-    /// <summary>Port of <c>tests/test_370.py</c>.</summary>
     [Collection("PDF4LLM")]
     public class Test370
     {
@@ -19,10 +18,6 @@ namespace PDF4LLM.Test
         [Fact]
         public void test_370()
         {
-            // def test_370():
-            //     # https://github.com/ArtifexSoftware/sce/issues/137
-            //     print()
-            //     path = os.path.normpath(f'{__file__}/../../tests/test_370.pdf')
             string path = Doc("test_370.pdf");
             string pathExpected = Doc("test_370_expected.md");
             string pathActual = Out("test_370_actual.md");
@@ -50,7 +45,6 @@ namespace PDF4LLM.Test
                     File.WriteAllText(pathActual, actual);
 
                     // Full golden compare only when layout is off (stext fallback).
-                    // With pymupdf.layout, picture markdown differs from the legacy expected file.
                     if (!PdfExtractor.LayoutAvailable)
                         Assert.Equal(expected.Replace("\r\n", "\n"), actual.Replace("\r\n", "\n"));
                     else

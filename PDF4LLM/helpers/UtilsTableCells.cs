@@ -10,16 +10,16 @@ namespace PDF4LLM.Helpers
     /// <summary>Table cell extraction and markdown formatting.</summary>
     public static partial class Utils
     {
-        /// <summary><c>extract_cells(table_blocks, cell, markdown=False, ocrpage=False)</c></summary>
+        /// <summary>Extract plain or Markdown text from a table cell region.</summary>
         /// <param name="tableBlocks">Text blocks overlapping the table region.</param>
         /// <param name="cell">Cell bounding box as <c>[x0, y0, x1, y1]</c>.</param>
-        /// <param name="markdown">When <c>true</c>, emit inline Markdown styling and <c>&lt;br&gt;</c> line breaks.</param>
-        /// <param name="ocrpage">When <c>true</c>, use span text directly instead of per-character clipping.</param>
+        /// <param name="markdown">When <see langword="true"/>, emit inline Markdown styling and <c>&lt;br&gt;</c> line breaks.</param>
+        /// <param name="ocrPage">When <see langword="true"/>, use span text directly instead of per-character clipping.</param>
         public static string ExtractCells(
             List<Block> tableBlocks,
             float[] cell,
             bool markdown = false,
-            bool ocrpage = false)
+            bool ocrPage = false)
         {
             if (tableBlocks == null || cell == null || cell.Length < 4)
                 return "";
@@ -53,7 +53,7 @@ namespace PDF4LLM.Helpers
                             continue;
 
                         string spanText;
-                        if (ocrpage)
+                        if (ocrPage)
                         {
                             spanText = span.Text ?? "";
                         }
@@ -83,42 +83,39 @@ namespace PDF4LLM.Helpers
                             continue;
                         }
 
-                        string prefix = "";
-                        string suffix = "";
-                        if (horizontal && (span.CharFlags & (uint)mupdf.mupdf.FZ_STEXT_STRIKEOUT) != 0)
-                        {
-                            prefix += "~~";
-                            suffix = "~~" + suffix;
-                        }
+                        bool superscript = ((int)span.Flags & Constants.TextFontSuperscript) != 0;
+                        bool mono = ((int)span.Flags & Constants.TextFontMonospaced) != 0
+                            && !IsOcrText(span);
+                        bool bold = ((int)span.Flags & Constants.TextFontBold) != 0
+                            || (span.CharFlags & (uint)mupdf.mupdf.FZ_STEXT_BOLD) != 0;
+                        bool italic = ((int)span.Flags & Constants.TextFontItalic) != 0;
+                        bool strikeout = (span.CharFlags & (uint)mupdf.mupdf.FZ_STEXT_STRIKEOUT) != 0;
 
-                        if ((span.CharFlags & (uint)mupdf.mupdf.FZ_STEXT_BOLD) != 0)
-                        {
-                            prefix += "**";
-                            suffix = "**" + suffix;
-                        }
+                        var prefixParts = new List<string>();
+                        var suffixParts = new List<string>();
+                        if (superscript) { prefixParts.Add("<sup>"); suffixParts.Add("</sup>"); }
+                        if (bold) { prefixParts.Add("**"); suffixParts.Add("**"); }
+                        if (italic) { prefixParts.Add("_"); suffixParts.Add("_"); }
+                        if (horizontal && strikeout) { prefixParts.Add("~~"); suffixParts.Add("~~"); }
+                        if (mono) { prefixParts.Add("`"); suffixParts.Add("`"); }
 
-                        if (((int)span.Flags & Constants.TextFontItalic) != 0)
-                        {
-                            prefix += "_";
-                            suffix = "_" + suffix;
-                        }
-
-                        if (!ocrpage && ((int)span.Flags & Constants.TextFontMonospaced) != 0)
-                        {
-                            prefix += "`";
-                            suffix = "`" + suffix;
-                        }
+                        string prefix = string.Concat(prefixParts);
+                        string suffix = string.Concat(suffixParts.AsEnumerable().Reverse());
 
                         if (spanText.Length > 2)
                             spanText = spanText.TrimEnd();
 
+                        string trimmed = spanText.Trim();
                         string current = text.ToString();
                         if (suffix.Length > 0 && current.EndsWith(suffix, StringComparison.Ordinal))
+                        {
                             text.Length -= suffix.Length;
-                        else if (!string.IsNullOrWhiteSpace(spanText.Trim()))
-                            text.Append(prefix + spanText.Trim() + suffix);
-                        else
+                            text.Append(trimmed + suffix);
+                        }
+                        else if (string.IsNullOrWhiteSpace(trimmed))
                             text.Append(' ');
+                        else
+                            text.Append(prefix + trimmed + suffix);
                     }
                 }
             }
@@ -131,16 +128,16 @@ namespace PDF4LLM.Helpers
             return result.Trim();
         }
 
-        /// <summary><c>table_to_markdown(table_blocks, table_item, markdown=True, ocrpage=False)</c></summary>
+        /// <summary>Format a detected table as a Markdown pipe table.</summary>
         /// <param name="tableBlocks">Text blocks overlapping the table region.</param>
         /// <param name="tableItem">Detected table structure with cell rectangles.</param>
-        /// <param name="markdown">When <c>true</c>, apply inline Markdown in cell text.</param>
-        /// <param name="ocrpage">When <c>true</c>, treat page text as OCR output.</param>
+        /// <param name="markdown">When <see langword="true"/>, apply inline Markdown in cell text.</param>
+        /// <param name="ocrPage">When <see langword="true"/>, treat page text as OCR output.</param>
         public static string TableToMarkdown(
             List<Block> tableBlocks,
             Table tableItem,
             bool markdown = true,
-            bool ocrpage = false)
+            bool ocrPage = false)
         {
             if (tableItem == null)
                 return "";
@@ -185,7 +182,7 @@ namespace PDF4LLM.Helpers
                             tableBlocks,
                             new[] { cell.X0, cell.Y0, cell.X1, cell.Y1 },
                             markdown: markdown,
-                            ocrpage: ocrpage);
+                            ocrPage: ocrPage);
                     }
                 }
             }
@@ -211,14 +208,14 @@ namespace PDF4LLM.Helpers
             return output.Append('\n').ToString();
         }
 
-        /// <summary><c>table_extract(table_blocks, table_item, ocrpage=False)</c></summary>
+        /// <summary>Extract plain text for each cell in a detected table.</summary>
         /// <param name="tableBlocks">Text blocks overlapping the table region.</param>
         /// <param name="tableItem">Detected table structure with cell rectangles.</param>
-        /// <param name="ocrpage">When <c>true</c>, treat page text as OCR output.</param>
+        /// <param name="ocrPage">When <see langword="true"/>, treat page text as OCR output.</param>
         public static List<List<string>> TableExtract(
             List<Block> tableBlocks,
             Table tableItem,
-            bool ocrpage = false)
+            bool ocrPage = false)
         {
             if (tableItem == null)
                 return new List<List<string>>();
@@ -246,7 +243,7 @@ namespace PDF4LLM.Helpers
                             tableBlocks,
                             new[] { cell.X0, cell.Y0, cell.X1, cell.Y1 },
                             markdown: false,
-                            ocrpage: ocrpage);
+                            ocrPage: ocrPage);
                     }
                 }
             }
@@ -254,28 +251,28 @@ namespace PDF4LLM.Helpers
             return cells;
         }
 
-        /// <summary><c>table_extract(table_blocks, layoutbox, ocrpage=False)</c></summary>
+        /// <summary>Extract plain text for each cell in a layout table box.</summary>
         /// <param name="tableBlocks">Text blocks overlapping the table region.</param>
-        /// <param name="layoutBox">Layout box whose <c>Table</c> property holds the table dict.</param>
-        /// <param name="ocrpage">When <c>true</c>, treat page text as OCR output.</param>
+        /// <param name="layoutBox">Layout box whose <see cref="LayoutBox.Table"/> property holds the table data.</param>
+        /// <param name="ocrPage">When <see langword="true"/>, treat page text as OCR output.</param>
         public static List<List<string>> TableExtract(
             List<Block> tableBlocks,
             LayoutBox layoutBox,
-            bool ocrpage = false)
+            bool ocrPage = false)
         {
             if (layoutBox?.Table == null)
                 return new List<List<string>>();
-            return TableExtract(tableBlocks, layoutBox.Table, ocrpage);
+            return TableExtract(tableBlocks, layoutBox.Table, ocrPage);
         }
 
-        /// <summary><c>table_extract(table_blocks, table_item.table, ...)</c></summary>
+        /// <summary>Extract plain text for each cell from a table dictionary.</summary>
         /// <param name="tableBlocks">Text blocks overlapping the table region.</param>
-        /// <param name="table">Table dictionary with <c>row_count</c>, <c>col_count</c>, and <c>cells</c>.</param>
-        /// <param name="ocrpage">When <c>true</c>, treat page text as OCR output.</param>
+        /// <param name="table">Table dictionary with row/column counts and cell bounding boxes.</param>
+        /// <param name="ocrPage">When <see langword="true"/>, treat page text as OCR output.</param>
         public static List<List<string>> TableExtract(
             List<Block> tableBlocks,
             Dictionary<string, object> table,
-            bool ocrpage = false)
+            bool ocrPage = false)
         {
             if (table == null)
                 return new List<List<string>>();
@@ -304,7 +301,7 @@ namespace PDF4LLM.Helpers
                     if (cell != null && cell.Length >= 4)
                     {
                         cells[i][j] = ExtractCells(
-                            tableBlocks, cell, markdown: false, ocrpage: ocrpage);
+                            tableBlocks, cell, markdown: false, ocrPage: ocrPage);
                     }
                 }
             }
@@ -312,32 +309,32 @@ namespace PDF4LLM.Helpers
             return cells;
         }
 
-        /// <summary><c>table_to_markdown(table_blocks, layoutbox, ...)</c></summary>
+        /// <summary>Format a layout table box as a Markdown pipe table.</summary>
         /// <param name="tableBlocks">Text blocks overlapping the table region.</param>
-        /// <param name="layoutBox">Layout box whose <c>Table</c> property holds the table dict.</param>
-        /// <param name="markdown">When <c>true</c>, apply inline Markdown in cell text.</param>
-        /// <param name="ocrpage">When <c>true</c>, treat page text as OCR output.</param>
+        /// <param name="layoutBox">Layout box whose <see cref="LayoutBox.Table"/> property holds the table data.</param>
+        /// <param name="markdown">When <see langword="true"/>, apply inline Markdown in cell text.</param>
+        /// <param name="ocrPage">When <see langword="true"/>, treat page text as OCR output.</param>
         public static string TableToMarkdown(
             List<Block> tableBlocks,
             LayoutBox layoutBox,
             bool markdown = true,
-            bool ocrpage = false)
+            bool ocrPage = false)
         {
             if (layoutBox?.Table == null)
                 return "";
-            return TableToMarkdown(tableBlocks, layoutBox.Table, markdown, ocrpage);
+            return TableToMarkdown(tableBlocks, layoutBox.Table, markdown, ocrPage);
         }
 
-        /// <summary><c>table_to_markdown(table_blocks, table_item.table, ...)</c></summary>
+        /// <summary>Format a table dictionary as a Markdown pipe table.</summary>
         /// <param name="tableBlocks">Text blocks overlapping the table region.</param>
-        /// <param name="table">Table dictionary with <c>row_count</c>, <c>col_count</c>, and <c>cells</c>.</param>
-        /// <param name="markdown">When <c>true</c>, apply inline Markdown in cell text.</param>
-        /// <param name="ocrpage">When <c>true</c>, treat page text as OCR output.</param>
+        /// <param name="table">Table dictionary with row/column counts and cell bounding boxes.</param>
+        /// <param name="markdown">When <see langword="true"/>, apply inline Markdown in cell text.</param>
+        /// <param name="ocrPage">When <see langword="true"/>, treat page text as OCR output.</param>
         public static string TableToMarkdown(
             List<Block> tableBlocks,
             Dictionary<string, object> table,
             bool markdown = true,
-            bool ocrpage = false)
+            bool ocrPage = false)
         {
             if (table == null)
                 return "";
@@ -383,7 +380,7 @@ namespace PDF4LLM.Helpers
                     if (cell != null && cell.Length >= 4)
                     {
                         cells[i][j] = ExtractCells(
-                            tableBlocks, cell, markdown: markdown, ocrpage: ocrpage);
+                            tableBlocks, cell, markdown: markdown, ocrPage: ocrPage);
                     }
                 }
             }
@@ -403,6 +400,28 @@ namespace PDF4LLM.Helpers
                 output.Append('|');
                 for (int i = 0; i < colCount; i++)
                     output.Append(cells[j][i] ?? "").Append('|');
+                output.Append('\n');
+            }
+
+            return output.Append('\n').ToString();
+        }
+
+        /// <summary>Format pre-filled cell text rows as a Markdown pipe table.</summary>
+        public static string TableToMarkdown(List<List<string>> cells)
+        {
+            if (cells == null || cells.Count == 0)
+                return "";
+
+            var output = new StringBuilder();
+            output.Append('|').Append(string.Join("|", cells[0] ?? new List<string>())).Append("|\n");
+            output.Append('|').Append(string.Join("|", Enumerable.Repeat("---", cells[0].Count))).Append("|\n");
+
+            for (int j = 1; j < cells.Count; j++)
+            {
+                output.Append('|');
+                List<string> row = cells[j] ?? new List<string>();
+                for (int i = 0; i < row.Count; i++)
+                    output.Append(row[i] ?? "").Append('|');
                 output.Append('\n');
             }
 

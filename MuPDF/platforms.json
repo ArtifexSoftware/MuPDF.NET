@@ -1,0 +1,52 @@
+{
+  "platforms": [
+    {
+      "packageId": "MuPDF.NativeAssets.Windows.x86",
+      "rid": "win-x86",
+      "sourceDir": "native/win-x86",
+      "description": "MuPDF native libraries for Windows x86."
+    },
+    {
+      "packageId": "MuPDF.NativeAssets.Windows.x64",
+      "rid": "win-x64",
+      "sourceDir": "native/win-x64",
+      "description": "MuPDF native libraries for Windows x64."
+    },
+    {
+      "packageId": "MuPDF.NativeAssets.Windows.arm64",
+      "rid": "win-arm64",
+      "sourceDir": "native/win-arm64",
+      "description": "MuPDF native libraries for Windows ARM64."
+    },
+    {
+      "packageId": "MuPDF.NativeAssets.Linux.x64",
+      "rid": "linux-x64",
+      "sourceDir": "native/linux-x64",
+      "description": "MuPDF native libraries for Linux x64."
+    },
+    {
+      "packageId": "MuPDF.NativeAssets.Linux.arm",
+      "rid": "linux-arm",
+      "sourceDir": "native/linux-arm",
+      "description": "MuPDF native libraries for Linux ARM32."
+    },
+    {
+      "packageId": "MuPDF.NativeAssets.Linux.arm64",
+      "rid": "linux-arm64",
+      "sourceDir": "native/linux-arm64",
+      "description": "MuPDF native libraries for Linux ARM64."
+    },
+    {
+      "packageId": "MuPDF.NativeAssets.macOS.x64",
+      "rid": "osx-x64",
+      "sourceDir": "native/osx-x64",
+      "description": "MuPDF native libraries for macOS x64."
+    },
+    {
+      "packageId": "MuPDF.NativeAssets.macOS.arm64",
+      "rid": "osx-arm64",
+      "sourceDir": "native/osx-arm64",
+      "description": "MuPDF native libraries for macOS ARM64."
+    }
+  ]
+}

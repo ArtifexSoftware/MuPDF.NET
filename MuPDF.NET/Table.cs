@@ -2685,23 +2685,110 @@ namespace MuPDF.NET
             return doc[page.Number];
         }
 
-        /// <summary>Layout boxes tagged <c>table</c>.</summary>
+        /// <summary>
+        /// Extract bounding boxes tagged <c>table</c> from <see cref="Page.LayoutInformation"/>.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// This does not run layout analysis itself. <see cref="Page.GetLayout"/> must already
+        /// have populated <paramref name="layoutInformation"/> (for example via
+        /// <see cref="Page.GetLayoutProvider"/> and pymupdf-layout).
+        /// </para>
+        /// <para>
+        /// pymupdf-layout rows arrive in one of two encodings; both are supported here:
+        /// </para>
+        /// <list type="bullet">
+        /// <item>
+        /// <description>
+        /// Normalized tuple:
+        /// <c>[x0, y0, x1, y1, "table"]</c> — written by layout pipelines such as PDF4LLM
+        /// <c>WritePageLayout</c> after <c>find_reading_order</c>.
+        /// </description>
+        /// </item>
+        /// <item>
+        /// <description>
+        /// Raw dict:
+        /// <c>{ "class_name": "table", "group_bbox": [x0, y0, x1, y1], ... }</c> — returned
+        /// directly when the layout provider calls Python <c>get_layout(return_raw=True)</c>.
+        /// </description>
+        /// </item>
+        /// </list>
+        /// <para>
+        /// Classic table detection (<see cref="MakeEdges"/>, lines/text strategies) is separate
+        /// and runs later in <see cref="FindTables"/>; this helper only identifies which layout
+        /// regions are tables so those results can guide or complement the classic finder.
+        /// </para>
+        /// </remarks>
+        /// <param name="layoutInformation">Cached value from <see cref="Page.LayoutInformation"/>.</param>
         internal static List<Rect> LayoutTableBoxes(object layoutInformation)
         {
             var boxes = new List<Rect>();
-            if (layoutInformation is IEnumerable<object> rows)
+            if (layoutInformation is System.Collections.IEnumerable rows)
             {
-                foreach (var row in rows)
+                foreach (object row in rows)
                 {
-                    if (row is object[] arr && arr.Length >= 5 && arr[arr.Length - 1]?.ToString() == "table")
-                        boxes.Add(new Rect(
-                            Convert.ToSingle(arr[0]),
-                            Convert.ToSingle(arr[1]),
-                            Convert.ToSingle(arr[2]),
-                            Convert.ToSingle(arr[3])));
+                    if (TryGetLayoutTableRect(row, out Rect rect))
+                        boxes.Add(rect);
                 }
             }
             return boxes;
+        }
+
+        /// <summary>Parse one layout row as a table rectangle (tuple or raw dict format).</summary>
+        static bool TryGetLayoutTableRect(object row, out Rect rect)
+        {
+            rect = null;
+            if (row is object[] arr && arr.Length >= 5
+                && string.Equals(arr[arr.Length - 1]?.ToString(), "table", StringComparison.Ordinal))
+            {
+                rect = new Rect(
+                    Convert.ToSingle(arr[0]),
+                    Convert.ToSingle(arr[1]),
+                    Convert.ToSingle(arr[2]),
+                    Convert.ToSingle(arr[3]));
+                return true;
+            }
+
+            string className = GetLayoutRowValue(row, "class_name")?.ToString();
+            if (!string.Equals(className, "table", StringComparison.Ordinal))
+                return false;
+
+            object bbox = GetLayoutRowValue(row, "group_bbox") ?? GetLayoutRowValue(row, "bbox");
+            if (!TryParseLayoutBbox(bbox, out float x0, out float y0, out float x1, out float y1))
+                return false;
+
+            rect = new Rect(x0, y0, x1, y1);
+            return true;
+        }
+
+        /// <summary>Read a field from a layout row (dict, JSON object, or plain object).</summary>
+        static object GetLayoutRowValue(object row, string key)
+        {
+            if (row == null || string.IsNullOrEmpty(key))
+                return null;
+
+            if (row is System.Collections.IDictionary dict && dict.Contains(key))
+                return dict[key];
+
+            var indexer = row.GetType().GetProperty("Item", new[] { typeof(string) });
+            if (indexer != null)
+                return indexer.GetValue(row, new object[] { key });
+
+            return row.GetType().GetProperty(key)?.GetValue(row);
+        }
+
+        static bool TryParseLayoutBbox(object bbox, out float x0, out float y0, out float x1, out float y1)
+        {
+            x0 = y0 = x1 = y1 = 0;
+            if (bbox is System.Collections.IList list && list.Count >= 4)
+            {
+                x0 = Convert.ToSingle(list[0]);
+                y0 = Convert.ToSingle(list[1]);
+                x1 = Convert.ToSingle(list[2]);
+                y1 = Convert.ToSingle(list[3]);
+                return true;
+            }
+            return false;
         }
 
         /// <summary>Builds table cell geometry from a bounding box and text page.</summary>

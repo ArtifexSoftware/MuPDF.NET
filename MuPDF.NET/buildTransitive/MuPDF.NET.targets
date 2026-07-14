@@ -1,0 +1,78 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildThisFileDirectory)../build/net4/MuPDF.NET.targets"
+          Condition="Exists('$(MSBuildThisFileDirectory)../build/net4/MuPDF.NET.targets')" />
+
+  <!--
+    dotnet run loads native libraries from the app output directory, not from
+    runtimes/{rid}/native/. Copy matching natives flat into OutputPath.
+    Set DisableMuPDFNativeAssetSelection=true to skip host selection.
+  -->
+  <Target Name="MuPDFResolveNativeAssetsRuntimeId"
+          BeforeTargets="MuPDFCopyNativeAssetsToOutput;MuPDFRemoveExtraNativeRuntimes"
+          Condition="'$(DisableMuPDFNativeAssetSelection)' != 'true'">
+    <!--
+      Refresh RID at target time. Package props may have defaulted to linux-x64 because
+      PROCESSOR_ARCHITECTURE is unset on Linux; overwrite using SDK RID / OSArchitecture.
+    -->
+    <PropertyGroup>
+      <_MuPDFHostArch>$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)</_MuPDFHostArch>
+
+      <!-- Explicit -r / RuntimeIdentifier wins. -->
+      <MuPDFNativeAssetsRuntimeId Condition="'$(RuntimeIdentifier)' != ''">$(RuntimeIdentifier)</MuPDFNativeAssetsRuntimeId>
+      <!-- Else prefer .NET SDK portable host RID when available. -->
+      <MuPDFNativeAssetsRuntimeId Condition="'$(RuntimeIdentifier)' == '' and '$(NETCoreSdkPortableRuntimeIdentifier)' != ''">$(NETCoreSdkPortableRuntimeIdentifier)</MuPDFNativeAssetsRuntimeId>
+      <!-- Else re-detect from OS architecture (overwrites any early wrong default). -->
+      <MuPDFNativeAssetsRuntimeId Condition="'$(RuntimeIdentifier)' == '' and '$(NETCoreSdkPortableRuntimeIdentifier)' == '' and $([MSBuild]::IsOSPlatform('Linux')) and '$(_MuPDFHostArch)' == 'Arm64'">linux-arm64</MuPDFNativeAssetsRuntimeId>
+      <MuPDFNativeAssetsRuntimeId Condition="'$(RuntimeIdentifier)' == '' and '$(NETCoreSdkPortableRuntimeIdentifier)' == '' and $([MSBuild]::IsOSPlatform('Linux')) and '$(_MuPDFHostArch)' == 'Arm'">linux-arm</MuPDFNativeAssetsRuntimeId>
+      <MuPDFNativeAssetsRuntimeId Condition="'$(RuntimeIdentifier)' == '' and '$(NETCoreSdkPortableRuntimeIdentifier)' == '' and $([MSBuild]::IsOSPlatform('Linux')) and '$(_MuPDFHostArch)' == 'X64'">linux-x64</MuPDFNativeAssetsRuntimeId>
+      <MuPDFNativeAssetsRuntimeId Condition="'$(RuntimeIdentifier)' == '' and '$(NETCoreSdkPortableRuntimeIdentifier)' == '' and $([MSBuild]::IsOSPlatform('OSX')) and '$(_MuPDFHostArch)' == 'Arm64'">osx-arm64</MuPDFNativeAssetsRuntimeId>
+      <MuPDFNativeAssetsRuntimeId Condition="'$(RuntimeIdentifier)' == '' and '$(NETCoreSdkPortableRuntimeIdentifier)' == '' and $([MSBuild]::IsOSPlatform('OSX')) and '$(_MuPDFHostArch)' == 'X64'">osx-x64</MuPDFNativeAssetsRuntimeId>
+      <MuPDFNativeAssetsRuntimeId Condition="'$(RuntimeIdentifier)' == '' and '$(NETCoreSdkPortableRuntimeIdentifier)' == '' and $([MSBuild]::IsOSPlatform('Windows')) and '$(_MuPDFHostArch)' == 'Arm64'">win-arm64</MuPDFNativeAssetsRuntimeId>
+      <MuPDFNativeAssetsRuntimeId Condition="'$(RuntimeIdentifier)' == '' and '$(NETCoreSdkPortableRuntimeIdentifier)' == '' and $([MSBuild]::IsOSPlatform('Windows')) and '$(_MuPDFHostArch)' == 'X86'">win-x86</MuPDFNativeAssetsRuntimeId>
+      <MuPDFNativeAssetsRuntimeId Condition="'$(RuntimeIdentifier)' == '' and '$(NETCoreSdkPortableRuntimeIdentifier)' == '' and $([MSBuild]::IsOSPlatform('Windows')) and '$(_MuPDFHostArch)' == 'X64'">win-x64</MuPDFNativeAssetsRuntimeId>
+
+      <MuPDFNativeAssetsPackageId Condition="'$(MuPDFNativeAssetsRuntimeId)' == 'win-x86'">MuPDF.NativeAssets.Windows.x86</MuPDFNativeAssetsPackageId>
+      <MuPDFNativeAssetsPackageId Condition="'$(MuPDFNativeAssetsRuntimeId)' == 'win-x64'">MuPDF.NativeAssets.Windows.x64</MuPDFNativeAssetsPackageId>
+      <MuPDFNativeAssetsPackageId Condition="'$(MuPDFNativeAssetsRuntimeId)' == 'win-arm64'">MuPDF.NativeAssets.Windows.arm64</MuPDFNativeAssetsPackageId>
+      <MuPDFNativeAssetsPackageId Condition="'$(MuPDFNativeAssetsRuntimeId)' == 'linux-x64'">MuPDF.NativeAssets.Linux.x64</MuPDFNativeAssetsPackageId>
+      <MuPDFNativeAssetsPackageId Condition="'$(MuPDFNativeAssetsRuntimeId)' == 'linux-arm'">MuPDF.NativeAssets.Linux.arm</MuPDFNativeAssetsPackageId>
+      <MuPDFNativeAssetsPackageId Condition="'$(MuPDFNativeAssetsRuntimeId)' == 'linux-arm64'">MuPDF.NativeAssets.Linux.arm64</MuPDFNativeAssetsPackageId>
+      <MuPDFNativeAssetsPackageId Condition="'$(MuPDFNativeAssetsRuntimeId)' == 'osx-x64'">MuPDF.NativeAssets.macOS.x64</MuPDFNativeAssetsPackageId>
+      <MuPDFNativeAssetsPackageId Condition="'$(MuPDFNativeAssetsRuntimeId)' == 'osx-arm64'">MuPDF.NativeAssets.macOS.arm64</MuPDFNativeAssetsPackageId>
+      <MuPDFNativeAssetsPackageFolder Condition="'$(MuPDFNativeAssetsPackageId)' != ''">$(NuGetPackageRoot)$([System.String]::Copy('$(MuPDFNativeAssetsPackageId)').ToLowerInvariant())\</MuPDFNativeAssetsPackageFolder>
+    </PropertyGroup>
+  </Target>
+
+  <Target Name="MuPDFCopyNativeAssetsToOutput"
+          AfterTargets="CopyFilesToOutputDirectory"
+          DependsOnTargets="MuPDFResolveNativeAssetsRuntimeId"
+          Condition="'$(DisableMuPDFNativeAssetSelection)' != 'true' and '$(MuPDFNativeAssetsRuntimeId)' != ''">
+    <PropertyGroup>
+      <_MuPDFNativeRuntimeDir>$(OutputPath)runtimes/$(MuPDFNativeAssetsRuntimeId)/native/</_MuPDFNativeRuntimeDir>
+    </PropertyGroup>
+
+    <ItemGroup Condition="Exists('$(_MuPDFNativeRuntimeDir)')">
+      <_MuPDFNativeAssetFile Include="$(_MuPDFNativeRuntimeDir)*" />
+    </ItemGroup>
+
+    <ItemGroup Condition="!Exists('$(_MuPDFNativeRuntimeDir)') and '$(MuPDFNativeAssetsPackageFolder)' != ''">
+      <_MuPDFNativeAssetFile Include="$(MuPDFNativeAssetsPackageFolder)*\runtimes\$(MuPDFNativeAssetsRuntimeId)\native\*" />
+    </ItemGroup>
+
+    <Copy SourceFiles="@(_MuPDFNativeAssetFile)"
+          DestinationFolder="$(OutputPath)"
+          SkipUnchangedFiles="true"
+          Condition="'@(_MuPDFNativeAssetFile)' != ''" />
+  </Target>
+
+  <Target Name="MuPDFRemoveExtraNativeRuntimes"
+          AfterTargets="MuPDFCopyNativeAssetsToOutput"
+          DependsOnTargets="MuPDFResolveNativeAssetsRuntimeId"
+          Condition="'$(DisableMuPDFNativeAssetSelection)' != 'true' and '$(MuPDFNativeAssetsRuntimeId)' != ''">
+    <ItemGroup>
+      <_MuPDFExtraNativeAsset Include="$(OutputPath)runtimes/**/**"
+                              Exclude="$(OutputPath)runtimes/$(MuPDFNativeAssetsRuntimeId)/**/**" />
+    </ItemGroup>
+    <Delete Files="@(_MuPDFExtraNativeAsset)" ContinueOnError="true" />
+  </Target>
+</Project>

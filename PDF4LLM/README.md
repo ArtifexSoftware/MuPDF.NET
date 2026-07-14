@@ -4,6 +4,8 @@ LLM/RAG helpers for [MuPDF.NET](https://www.nuget.org/packages/MuPDF.NET): conve
 
 The public API lives in the **`PDF4LLM`** namespace. The main entry point is the static class **`PdfExtractor`**.
 
+**API naming:** Public members use C# conventions — PascalCase methods and properties, camelCase parameters (for example `writeImages`, `includeXrefs`, `useLayout`). Python-style names from [pymupdf4llm](https://pypi.org/project/pymupdf4llm/) appear only in internal port alignment and in the optional Python layout worker; customer-facing docs and IntelliSense use the C# names below.
+
 ## Installation
 
 ```bash
@@ -54,8 +56,8 @@ If layout is not installed, PDF4LLM falls back to classic MuPDF text extraction.
 using PDF4LLM;
 using PDF4LLM.Layout;
 
-bool layoutReady = PyMuPdfLayout.IsAvailable;   // Python import probe
-bool layoutActive = PdfExtractor.LayoutAvailable; // provider registered
+bool layoutReady = PyMuPdfLayout.IsAvailable;      // Python import probe
+bool layoutActive = PdfExtractor.LayoutAvailable;  // provider registered
 ```
 
 ## Quick start
@@ -85,6 +87,15 @@ string md = PdfExtractor.ToMarkdown(
     imageFormat: "png");
 ```
 
+### Interactive form fields
+
+```csharp
+// includeXrefs: true adds each widget's PDF xref (for Page.LoadWidget)
+var fields = PdfExtractor.GetKeyValues(doc, includeXrefs: true);
+foreach (var kv in fields)
+    Console.WriteLine($"{kv.Key}: {kv.Value["value"]}");
+```
+
 ### LlamaIndex-style loading
 
 ```csharp
@@ -104,9 +115,25 @@ pdf.Save("readme.pdf");
 ### Layout on / off
 
 ```csharp
-PdfExtractor.SetUseLayout(true);   // default when pymupdf.layout is installed
-PdfExtractor.SetUseLayout(false);  // legacy header detection (IdentifyHeaders, TocHeaders)
+PdfExtractor.SetUseLayout(useLayout: true);   // default when pymupdf-layout is installed
+PdfExtractor.SetUseLayout(useLayout: false);  // legacy header detection (IdentifyHeaders, TocHeaders)
 ```
+
+### OCR
+
+When layout mode is active, OCR is selected automatically via `LayoutParseHelpers.SelectOcrFunction()` when Tesseract or RapidOCR is available. Control behavior with `useOcr`, `forceOcr`, `ocrLanguage`, and optional `ocrFunction`:
+
+```csharp
+using PDF4LLM.Ocr;
+
+string md = PdfExtractor.ToMarkdown(
+    doc,
+    useOcr: true,
+    forceOcr: false,
+    ocrLanguage: "eng");
+```
+
+`OcrMode` values (layout pipeline): `Never`, `SelectDropOld`, `SelectKeepOld` (default), `ForceDropOld`, `ForceKeepOld`.
 
 ## API overview
 
@@ -125,6 +152,8 @@ PdfExtractor.SetUseLayout(false);  // legacy header detection (IdentifyHeaders, 
 
 Lower-level layout control: **`PDF4LLM.Layout.PyMuPdfLayout`** (`Activate`, `Deactivate`, `IsAvailable`, `Version`).
 
+Additional public helpers: `LayoutParseHelpers.ReadPageLayoutRaw`, `LayoutParseHelpers.SelectOcrFunction`, `GetTextLines.GetRawLines`, `Utils.Iou`, `Utils.TableToMarkdown`.
+
 ## Common options
 
 `ToMarkdown`, `ToText`, and `ToJson` accept optional parameters including:
@@ -140,11 +169,13 @@ Lower-level layout control: **`PDF4LLM.Layout.PyMuPdfLayout`** (`Activate`, `Dea
 | `showProgress` | Log processing progress |
 | `header`, `footer` | Include page header/footer text (layout mode) |
 
+`GetKeyValues` also accepts `includeXrefs` to include widget xref numbers in the result.
+
 ## Requirements
 
 - **.NET:** netstandard2.0, net461, net472, net48, net5.0–net8.0
-- **MuPDF.NET:** 3.2.17 or newer (MuPDF bind **1.27.2** must match `PdfExtractor` at runtime)
-- **Layout (optional):** Python 3.10+ with [pymupdf-layout](https://pypi.org/project/pymupdf-layout/) 1.27.2.x
+- **MuPDF.NET:** 3.28.0 or newer (MuPDF bind **1.28.0** must match `PdfExtractor` at runtime)
+- **Layout (optional):** Python 3.10+ with [pymupdf-layout](https://pypi.org/project/pymupdf-layout/) 1.28.0
 - **AI/RAG helpers:** net8.0 + `Microsoft.Extensions.AI` (included in the net8.0 package build)
 
 ## License

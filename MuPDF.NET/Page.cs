@@ -2091,8 +2091,10 @@ namespace MuPDF.NET
             var page = NativePage;
             using var options = new mupdf.FzStextOptions(flags);
             mupdf.FzRect rect;
-            if (clip == null || clip.IsInfinite || clip.IsEmpty)
+            if (clip == null || clip.IsEmpty)
                 rect = mupdf.mupdf.fz_bound_page(page);
+            else if (clip.IsInfinite)
+                rect = new mupdf.FzRect(mupdf.FzRect.Fixed.Fixed_INFINITE);
             else
                 rect = clip.ToFzRect();
             using var ctm = matrix.ToFzMatrix();

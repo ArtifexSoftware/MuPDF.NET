@@ -45,7 +45,7 @@ namespace MuPDF.NET.Test
         {
             // In CHANGELOG.md, first item must match ArtifexMuPDFNetVersion.
             var (_, _, versionNet) = ReadVersionsProps();
-            string path = Path.Combine(SolutionRoot, "CHANGELOG.md");
+            string path = Path.Combine(SolutionRoot, "MuPDF.NET\\CHANGELOG.md");
             string text = File.ReadAllText(path).Replace("\r\n", "\n");
             var m = Regex.Match(text, @"\n### \[([0-9.]+)\] - [0-9]{4}-[0-9]{2}-[0-9]{2}\n");
             Assert.True(m.Success, $"Cannot parse {path}.");

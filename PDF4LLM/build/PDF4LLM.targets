@@ -6,12 +6,31 @@
     <PDF4LLMOcrModelPath Condition="'$(PDF4LLMOcrModelPath)' == '' and Exists('$(MSBuildThisFileDirectory)ocr\ocr_decision_model.onnx')">$(MSBuildThisFileDirectory)ocr\ocr_decision_model.onnx</PDF4LLMOcrModelPath>
   </PropertyGroup>
 
-  <!-- Ship OCR decision model next to the app (mirrors pymupdf4llm/src/ocr/ocr_decision_model.onnx). -->
+  <!-- Ship OCR decision model next to the app output directory. -->
   <ItemGroup Condition="'$(PDF4LLMOcrModelPath)' != ''">
     <None Include="$(PDF4LLMOcrModelPath)"
               Link="ocr\ocr_decision_model.onnx"
               CopyToOutputDirectory="PreserveNewest"
               Visible="false" />
+  </ItemGroup>
+
+  <!-- RapidOCR PP-OCRv5 models (.NET 8+): copy next to app output for test hosts and consumers. -->
+  <PropertyGroup Condition="'$(TargetFrameworkIdentifier)' == '.NETCoreApp'">
+    <_PDF4LLMNetCoreVersion>$([MSBuild]::GetTargetFrameworkVersion('$(TargetFramework)'))</_PDF4LLMNetCoreVersion>
+    <_PDF4LLMSupportsRapidOcr>$([MSBuild]::VersionGreaterThanOrEquals($(_PDF4LLMNetCoreVersion), 8.0))</_PDF4LLMSupportsRapidOcr>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(TargetFrameworkIdentifier)' != '.NETCoreApp'">
+    <_PDF4LLMSupportsRapidOcr>false</_PDF4LLMSupportsRapidOcr>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(_PDF4LLMSupportsRapidOcr)' == 'true'">
+    <_PDF4LLMRapidOcrModelsSource Condition="'$(PkgRapidOcrNet)' != ''">$(PkgRapidOcrNet)\models\v5</_PDF4LLMRapidOcrModelsSource>
+    <_PDF4LLMRapidOcrModelsSource Condition="'$(_PDF4LLMRapidOcrModelsSource)' == '' and '$(NuGetPackageRoot)' != ''">$(NuGetPackageRoot)rapidocrnet\2.0.0\models\v5</_PDF4LLMRapidOcrModelsSource>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(_PDF4LLMSupportsRapidOcr)' == 'true' and Exists('$(_PDF4LLMRapidOcrModelsSource)\ch_PP-OCRv5_mobile_det.onnx')">
+    <None Include="$(_PDF4LLMRapidOcrModelsSource)\*.*"
+          Link="models\v5\%(Filename)%(Extension)"
+          CopyToOutputDirectory="PreserveNewest"
+          Visible="false" />
   </ItemGroup>
 
   <!-- Opt-in: dotnet msbuild -t:PDF4LLMSetupLayoutPython -->
@@ -23,6 +42,20 @@
     <!-- Invoke Python directly on Unix — avoids CRLF issues in packed .sh from Windows builds. -->
     <Exec Condition="'$(OS)' != 'Windows_NT'"
           Command="python3 &quot;$(PDF4LLMLayoutToolsDir)setup_layout_python.py&quot;"
+          StandardOutputImportance="High"
+          StandardErrorImportance="High" />
+  </Target>
+
+  <!-- Opt-in: dotnet msbuild -t:PDF4LLMVerifyLayoutPython -->
+  <Target Name="PDF4LLMVerifyLayoutPython">
+    <Error Condition="!Exists('$(PDF4LLMLayoutToolsDir)setup_layout_python.py')"
+           Text="PDF4LLM layout setup scripts are missing from the NuGet package ($(PDF4LLMLayoutToolsDir))." />
+    <Exec Condition="'$(OS)' == 'Windows_NT'"
+          Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(PDF4LLMLayoutToolsDir)setup_layout_python.ps1&quot; --verify-only"
+          StandardOutputImportance="High"
+          StandardErrorImportance="High" />
+    <Exec Condition="'$(OS)' != 'Windows_NT'"
+          Command="python3 &quot;$(PDF4LLMLayoutToolsDir)setup_layout_python.py&quot; --verify-only"
           StandardOutputImportance="High"
           StandardErrorImportance="High" />
   </Target>

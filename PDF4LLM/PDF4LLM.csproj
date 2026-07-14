@@ -25,9 +25,16 @@
     <ProjectReference Include="..\MuPDF.NET\MuPDF.NET.csproj" />
   </ItemGroup>
 
+  <ItemGroup Condition="'$(TargetFramework)' != 'net8.0'">
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.20.1" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.24.3" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="Markdig" Version="0.38.0" />
-    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.20.1" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
   </ItemGroup>
 
@@ -51,6 +58,7 @@
     <PackageReference Include="Azure.Search.Documents" Version="11.6.0" />
     <PackageReference Include="Microsoft.Extensions.AI" Version="10.3.0" />
     <PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.3.0" />
+    <PackageReference Include="RapidOcrNet" Version="2.0.0" GeneratePathProperty="true" />
   </ItemGroup>
 
   <!-- MuPdfRag is internal; unit tests call it directly; Demo uses public PDF4LLM.UseLayout = false. -->
@@ -62,11 +70,9 @@
     <PropertyGroup>
       <_LayoutRequirementsFile>$(MSBuildProjectDirectory)\scripts\requirements-layout.txt</_LayoutRequirementsFile>
     </PropertyGroup>
-    <WriteLinesToFile
-      File="$(_LayoutRequirementsFile)"
-      Overwrite="true"
-      Encoding="UTF-8"
-      Lines="# Auto-synced from Versions.props (ArtifexPyMuPDFVersion / ArtifexPyMuPDF4LLMVersion).;pymupdf==$(ArtifexPyMuPDFVersion);pymupdf-layout==$(ArtifexPyMuPDF4LLMVersion)" />
+    <WriteLinesToFile File="$(_LayoutRequirementsFile)" Overwrite="true" Encoding="UTF-8" Lines="# Auto-synced from Versions.props (ArtifexPyMuPDFVersion / ArtifexPyMuPDF4LLMVersion).;pymupdf==$(ArtifexPyMuPDFVersion);pymupdf-layout==$(ArtifexPyMuPDF4LLMVersion)" />
   </Target>
+
+  <Import Project="build\PDF4LLM.targets" Condition="Exists('build\PDF4LLM.targets')" />
 
 </Project>

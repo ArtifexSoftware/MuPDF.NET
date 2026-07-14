@@ -731,7 +731,8 @@ namespace MuPDF.NET
                 {
                     if (btype == mupdf.mupdf.FZ_STEXT_BLOCK_IMAGE)
                     {
-                        if (mupdf.mupdf.fz_contains_rect(stPageRect, new mupdf.FzRect(blockBboxNative)) == 0)
+                        if (mupdf.mupdf.fz_contains_rect(stPageRect, new mupdf.FzRect(blockBboxNative)) == 0
+                            && mupdf.mupdf.fz_is_infinite_rect(stPageRect) == 0)
                             continue;
                     }
                     else if (btype == mupdf.mupdf.FZ_STEXT_BLOCK_TEXT

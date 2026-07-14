@@ -201,9 +201,6 @@ namespace Demo
 
         internal static void TestGetTablesParallel()
         {
-            const int iterations = 100;
-            const int degreeOfParallelism = 10;
-
             string testFilePath = DemoPaths.Input("err_table.pdf");
             if (!File.Exists(testFilePath))
             {
@@ -211,10 +208,12 @@ namespace Demo
                 return;
             }
 
+            const int iterations = 100;
+            const int degreeOfParallelism = 10;
             int failures = 0;
             long totalTables = 0;
 
-            Console.WriteLine("\n=== Parallel Utils.GetTables ===");
+            Console.WriteLine("Multi-thread Utils.GetTables test");
             Console.WriteLine($"PDF: {testFilePath}");
             Console.WriteLine($"Iterations: {iterations}");
             Console.WriteLine($"Degree of parallelism: {degreeOfParallelism}");
@@ -238,12 +237,12 @@ namespace Demo
 
                         Interlocked.Add(ref totalTables, tables.Count);
                         Console.WriteLine(
-                            $"Iteration {iteration + 1} (thread {Environment.CurrentManagedThreadId}): {tables.Count} table(s)");
+                            $"Iteration {iteration + 1} (thread {Environment.CurrentManagedThreadId}): {totalTables} table(s)");
                     }
                     catch (Exception ex)
                     {
                         Interlocked.Increment(ref failures);
-                        Console.WriteLine($"Iteration {iteration + 1} FAILED: {ex}");
+                        Console.WriteLine($"Iteration {iteration + 1} FAILED: {ex.Message}");
                     }
                 });
 

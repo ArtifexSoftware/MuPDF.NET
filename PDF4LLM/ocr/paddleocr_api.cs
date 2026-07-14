@@ -1,29 +1,20 @@
-using System.Collections.Generic;
 using MuPDF.NET;
 
 namespace PDF4LLM.Ocr
 {
-    /// <summary>
-    /// Same module contract as PDF4LLM.ocr.paddleocr_api (duplicate of rapidocr_api in upstream).
-    /// </summary>
+    /// <summary>PaddleOCR ONNX pipeline (alias of <see cref="RapidOcrApi"/> in upstream).</summary>
     public static class PaddleOcrApi
     {
-        public const char ReplacementUnicode = '\uFFFD';
+        public const char ReplacementUnicode = RapidOcrApi.ReplacementUnicode;
 
-        public static readonly Dictionary<string, object> Kwargs = new Dictionary<string, object>();
+        public static bool OcrText(Span span) => RapidOcrApi.OcrText(span);
 
-        /// <param name="span">Text span to inspect.</param>
-        public static bool OcrText(Span span) => TesseractApi.OcrText(span);
-
-        /// <param name="page">Page to OCR.</param>
-        /// <param name="dpi">Rendering DPI for the culled pixmap when none is supplied.</param>
-        /// <param name="pixmap">Optional pre-rendered pixmap; created when <c>null</c>.</param>
-        /// <param name="language">OCR language code passed to the backend.</param>
-        /// <param name="keepOcrText">When <c>true</c>, skip OCR if the page already contains OCR spans.</param>
-        public static void ExecOcr(Page page, int dpi = 300, Pixmap pixmap = null, string language = "eng", bool keepOcrText = false)
-        {
-            throw new System.NotImplementedException(
-                "PaddleOcrApi.ExecOcr is not implemented for MuPDF.NET; see PDF4LLM.ocr.paddleocr_api.");
-        }
+        public static void ExecOcr(
+            Page page,
+            int dpi = 300,
+            Pixmap pixmap = null,
+            string language = "eng",
+            bool keepOcrText = false) =>
+            RapidOcrApi.ExecOcr(page, dpi, pixmap, language, keepOcrText);
     }
 }
