@@ -27,11 +27,11 @@ namespace MuPDF.NET
             ParseVersionTuple(Artifex.Versions.MuPDF);
 
         /// <summary>
-        /// Combined version info matching :
-        /// .
+        /// Combined version info (legacy <c>VERSION</c>):
+        /// <c>(MuPDF.NET package, MuPDF library, build timestamp)</c>.
         /// </summary>
-        public static readonly (string PyMuPdfVersion, string MuPdfVersion, string BuildTimestamp) Version =
-            (Artifex.Versions.PyMuPDF, Artifex.Versions.MuPDF, null);
+        public static readonly (string MuPdfNetVersion, string MuPdfVersion, string BuildTimestamp) Version =
+            (Artifex.Versions.MuPDFNet, Artifex.Versions.MuPDF, null);
 
         /// <summary>Small value used for floating-point comparisons.</summary>
         public const float Epsilon = 1e-5f;

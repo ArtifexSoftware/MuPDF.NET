@@ -228,7 +228,10 @@ for line in sys.stdin:
         {
             if (string.IsNullOrWhiteSpace(version))
                 return "";
-            return version.Trim().Split('-')[0];
+            string[] parts = version.Trim().Split('-')[0].Split('.');
+            if (parts.Length >= 3)
+                return parts[0] + "." + parts[1] + "." + parts[2];
+            return string.Join(".", parts);
         }
 
         /// <summary>Compare dotted numeric versions. Returns &lt;0, 0, or &gt;0.</summary>

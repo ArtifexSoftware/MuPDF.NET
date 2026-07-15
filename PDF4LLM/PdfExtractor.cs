@@ -12,13 +12,13 @@ namespace PDF4LLM
     {
         static PdfExtractor()
         {
-            string bind = MuPDF.NET.Utils.VersionBind.Split('-')[0];
-            string required = VersionInfo.RequiredPyMuPDF.Split('-')[0];
-            if (!string.Equals(bind, required, StringComparison.Ordinal))
+            string actual = Artifex.Versions.MuPDF.Split('-')[0];
+            string required = VersionInfo.RequiredMuPdf.Split('-')[0];
+            if (!string.Equals(actual, required, StringComparison.Ordinal))
             {
                 throw new InvalidOperationException(
-                    $"PDF4LLM {VersionInfo.Version} requires PyMuPDF {VersionInfo.RequiredPyMuPDF}, " +
-                    $"but MuPDF.NET reports VersionBind {MuPDF.NET.Utils.VersionBind}.");
+                    $"PDF4LLM {VersionInfo.Version} requires MuPDF {VersionInfo.RequiredMuPdf}, " +
+                    $"but MuPDF.NET reports {Artifex.Versions.MuPDF}.");
             }
 
             // Always attempt to use Layout by default.

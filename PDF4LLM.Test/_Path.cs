@@ -59,26 +59,6 @@ namespace PDF4LLM.Test
             return path;
         }
 
-        /// <summary>Upstream fixture under <c>layout package-1.28.0/tests/</c> (fallback).</summary>
-        public static string Pymupdf4llmTests(string fileName)
-        {
-            string root = ResolveSolutionRoot();
-            foreach (string testsDir in new[]
-            {
-                Path.Combine(root, "pymupdf4llm-1.28.0", "tests"),
-                Path.Combine(root, "pymupdf4llm-1.27.2.3", "tests"),
-                Path.Combine(root, "pymupdf4llm", "tests"),
-            })
-            {
-                string path = Path.Combine(testsDir, fileName);
-                if (File.Exists(path))
-                    return path;
-            }
-
-            throw new FileNotFoundException(
-                $"Required pymupdf4llm test document not found: {fileName}");
-        }
-
         /// <summary>Test class fixture, or upstream <c>layout package*/tests</c> when absent.</summary>
         public static string ForTestClassOrUpstream(string fileName, string testClassName)
         {
@@ -86,26 +66,7 @@ namespace PDF4LLM.Test
                 ResolveSolutionRoot(), "TestDocuments", "PDF4LLM.Test", testClassName, fileName);
             if (File.Exists(local))
                 return local;
-            return Pymupdf4llmTests(fileName);
-        }
-
-        /// <summary>Returns <c>null</c> when the upstream layout package tests fixture is absent.</summary>
-        public static string? TryPymupdf4llmTests(string fileName)
-        {
-            string root = ResolveSolutionRoot();
-            foreach (string testsDir in new[]
-            {
-                Path.Combine(root, "pymupdf4llm-1.28.0", "tests"),
-                Path.Combine(root, "pymupdf4llm-1.27.2.3", "tests"),
-                Path.Combine(root, "pymupdf4llm", "tests"),
-            })
-            {
-                string path = Path.Combine(testsDir, fileName);
-                if (File.Exists(path))
-                    return path;
-            }
-
-            return null;
+            return "";
         }
 
         /// <summary>Returns <c>null</c> when the fixture is not present locally or upstream.</summary>
@@ -116,7 +77,7 @@ namespace PDF4LLM.Test
             if (File.Exists(local))
                 return local;
 
-            return TryPymupdf4llmTests(fileName);
+            return null;
         }
     }
 }

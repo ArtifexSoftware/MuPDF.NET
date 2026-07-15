@@ -882,7 +882,7 @@ namespace MuPDF.NET.Test
         {
             Console.WriteLine();
             string path = Doc("test_4363.pdf");
-            Console.WriteLine($"version={Utils.pymupdf_version}");
+            Console.WriteLine($"version={Artifex.Versions.MuPDF}");
             int n = 0;
             var texts = new List<string>();
             using (var document = new Document(path))

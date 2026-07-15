@@ -39,12 +39,6 @@ namespace MuPDF.NET
     /// </remarks>
     public static partial class Utils
     {
-        /// <summary>Package version bind string.</summary>
-        public static string pymupdf_version = Artifex.Versions.PyMuPDF;
-
-        /// <summary>Version bind string (alias of <see cref="pymupdf_version"/>).</summary>
-        public static string VersionBind => pymupdf_version;
-
         public static int FZ_MIN_INF_RECT = (int)(-0x80000000);
 
         public static int FZ_MAX_INF_RECT = (int)0x7fffff80;
@@ -2290,7 +2284,7 @@ namespace MuPDF.NET
         /// <summary>
         /// Build <c>@font-face</c> CSS for MuPDF built-in fonts .
         /// </summary>
-        public static string CssForPymupdfFont(
+        public static string CssForMupdfFont(
             string fontcode,
             string CSS = null,
             Archive archive = null,
@@ -2313,7 +2307,7 @@ namespace MuPDF.NET
                     font_keys.Add(k);
             }
             if (font_keys.Count == 0)
-                throw new ValueErrorException($"No font code '{fontcode}' found in pymupdf-fonts.");
+                throw new ValueErrorException($"No font code '{fontcode}' found in mupdf-fonts.");
             if (font_keys.Count > 4)
                 throw new ValueErrorException("fontcode too short");
             if (name == null)
@@ -2879,8 +2873,8 @@ namespace MuPDF.NET
         internal static Matrix planish_line(Point p1, Point p2) => PlanishLine(p1, p2);
         internal static Rect empty_rect() => EMPTY_RECT();
         internal static Quad empty_quad() => EMPTY_QUAD();
-        internal static string css_for_pymupdf_font(string fontcode, string CSS = null, Archive archive = null, string name = null)
-            => CssForPymupdfFont(fontcode, CSS, archive, name);
+        internal static string css_for_mupdf_font(string fontcode, string CSS = null, Archive archive = null, string name = null)
+            => CssForMupdfFont(fontcode, CSS, archive, name);
         internal static object get_text(
             Page page,
             string option = "text",

@@ -70,7 +70,7 @@
     <PropertyGroup>
       <_LayoutRequirementsFile>$(MSBuildProjectDirectory)\scripts\requirements-layout.txt</_LayoutRequirementsFile>
     </PropertyGroup>
-    <WriteLinesToFile File="$(_LayoutRequirementsFile)" Overwrite="true" Encoding="UTF-8" Lines="# Auto-synced from Versions.props (ArtifexPyMuPDFVersion / ArtifexPyMuPDF4LLMVersion).;pymupdf==$(ArtifexPyMuPDFVersion);pymupdf-layout==$(ArtifexPyMuPDF4LLMVersion)" />
+    <WriteLinesToFile File="$(_LayoutRequirementsFile)" Overwrite="true" Encoding="UTF-8" Lines="# Auto-synced from Versions.props (ArtifexPyMuPDFLayoutVersion).;pymupdf==$(ArtifexPyMuPDFLayoutVersion);pymupdf-layout==$(ArtifexPyMuPDFLayoutVersion)" />
   </Target>
 
   <Import Project="build\PDF4LLM.targets" Condition="Exists('build\PDF4LLM.targets')" />

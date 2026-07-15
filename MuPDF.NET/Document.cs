@@ -5925,7 +5925,7 @@ namespace MuPDF.NET
 
             var useFor = mupdf.mupdf.pdf_dict_put_dict(ocg, mupdf.mupdf.pdf_new_name("Usage"), 3);
             var creInfo = mupdf.mupdf.pdf_dict_put_dict(useFor, mupdf.mupdf.pdf_new_name("CreatorInfo"), 2);
-            mupdf.mupdf.pdf_dict_put_text_string(creInfo, mupdf.mupdf.pdf_new_name("Creator"), "PyMuPDF");
+            mupdf.mupdf.pdf_dict_put_text_string(creInfo, mupdf.mupdf.pdf_new_name("Creator"), "MuPDF.NET");
             mupdf.mupdf.pdf_dict_put_name(creInfo, mupdf.mupdf.pdf_new_name("Subtype"), string.IsNullOrEmpty(usage) ? "Artwork" : usage);
 
             var indocg = mupdf.mupdf.pdf_add_object(pdf, ocg);

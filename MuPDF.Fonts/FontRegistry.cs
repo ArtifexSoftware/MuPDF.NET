@@ -4,10 +4,10 @@ using MuPDF.Fonts.MupdfFontsData;
 
 namespace MuPDF.Fonts
 {
-    /// <summary>Font descriptor and buffer loaders generated from pymupdf-fonts sources.</summary>
+    /// <summary>Font descriptor and buffer loaders generated from bundled font sources.</summary>
     public static class FontRegistry
     {
-        /// <summary>One pymupdf-fonts descriptor entry.</summary>
+        /// <summary>One bundled font descriptor entry.</summary>
         public sealed class Entry
         {
             /// <summary>True when the face is bold.</summary>

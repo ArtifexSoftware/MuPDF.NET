@@ -15,7 +15,7 @@ namespace PDF4LLM.Test
 
         private static string? _get_test_file_path(string fileName) =>
             _Path.TryForTestClass(fileName, nameof(TestPdfMarkdownReader))
-            ?? _Path.TryPymupdf4llmTests(fileName);
+            ?? null;
 
         [Fact]
         public void test_load_data()

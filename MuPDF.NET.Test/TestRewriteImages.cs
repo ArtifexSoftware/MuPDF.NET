@@ -38,25 +38,7 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_4918()
         {
-            /*
-             * By default this test does nothing, because it requires a rather large input document from:
-             *     https://drive.google.com/file/d/1OkIq3XJuKiFfKDWBIcAk8_fLLjpNkuHQ/view?usp=sharing
-             *
-             * It's non-trivial to download from this url, so we only do anything if
-             * environment variable PYMUPDF_TEST_4918_PATH is set to local path of the
-             * input document.
-             *
-             * As of 2026-06-04 this passes with mupdf master, but segvs with current
-             * pymupdf release 1.27.2.3.
-             */
-            string? pymupdfTest4918Path = Doc("test_4918.pdf");
-            if (string.IsNullOrEmpty(pymupdfTest4918Path))
-            {
-                Console.WriteLine($"test_4918(): Doing nothing because PYMUPDF_TEST_4918_PATH={pymupdfTest4918Path}.");
-                return;
-            }
-
-            string path = pymupdfTest4918Path;
+            string path = Doc("test_4918.pdf");
             Console.WriteLine($"path={path}");
             using var document = new Document(path);
             document.RewriteImages(dpiThreshold: 150, dpiTarget: 100, quality: 50);

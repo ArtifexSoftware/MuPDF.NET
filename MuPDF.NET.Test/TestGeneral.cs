@@ -333,7 +333,7 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_techwriter_append()
         {
-            Console.WriteLine("PyMuPDF implemented on top of MuPDF Python bindings.");
+            Console.WriteLine("MuPDF.NET implemented on top of MuPDF C# bindings.");
             using var doc = Document.Open();
             Page page = doc.NewPage();
             var tw = new TextWriter(page.Rect);
@@ -1037,7 +1037,7 @@ namespace MuPDF.NET.Test
             // guard against wrong MuPDF architecture version
             if (typeof(Document).GetMethod(nameof(Document.ResolveNames)) == null)
             {
-                Console.WriteLine("PyMuPDF version does not support resolving PDF names");
+                Console.WriteLine("MuPDF.NET version does not support resolving PDF names");
                 return;
             }
             // pickle_in = open(f"{scriptdir}/resources/cython.pickle", "rb")
@@ -1167,7 +1167,7 @@ namespace MuPDF.NET.Test
             // text = "Just some arbitrary text."
             string text = "Just some arbitrary text.";
             var arch = new Archive();
-            string css = Utils.CssForPymupdfFont("ubuntu", archive: arch);
+            string css = Utils.CssForMupdfFont("ubuntu", archive: arch);
             // css += "* {font-family: ubuntu;}"
             css += "* {font-family: ubuntu;}";
             using var doc = new Document();
@@ -1523,9 +1523,7 @@ namespace MuPDF.NET.Test
         public void test_3615()
         {
             Console.WriteLine("");
-            Console.WriteLine($"pymupdf_version={Utils.pymupdf_version}");
-            Console.Out.Flush();
-            Console.WriteLine($"VersionBind={Utils.VersionBind}");
+            Console.WriteLine($"MuPDF={Artifex.Versions.MuPDF}");
             Console.Out.Flush();
             string path = Doc("test_3615.epub");
             var doc = Document.Open(path);
@@ -2099,13 +2097,6 @@ namespace MuPDF.NET.Test
             Console.WriteLine($"mupdf_version={Tools.MupdfVersion()}");
         }
 
-        /// <summary>Regression test: 4263.</summary>
-        [Fact]
-        public void test_4263()
-        {
-            Console.WriteLine("test_4263(): not running on .NET - pymupdf CLI is not available.");
-        }
-
         /// <summary>Regression test: 4533.</summary>
         [Fact]
         public void test_4533()
@@ -2122,34 +2113,6 @@ namespace MuPDF.NET.Test
             Console.WriteLine($"page_count={document.PageCount}");
             if (_Version.mupdf_version_tuple_at_least(1, 26, 6))
                 Assert.True(document.PageCount > 0);
-        }
-
-        /// <summary>Regression test: 4392.</summary>
-        [Fact]
-        public void test_4392()
-        {
-            Console.WriteLine("test_4392(): not running on .NET - cannot run child processes.");
-        }
-
-        /// <summary>Regression test: cli.</summary>
-        [Fact]
-        public void test_cli()
-        {
-            Console.WriteLine("test_cli(): not running on .NET - pymupdf CLI is not available.");
-        }
-
-        /// <summary>Regression test: cli out.</summary>
-        [Fact]
-        public void test_cli_out()
-        {
-            Console.WriteLine("test_cli_out(): not running on .NET - cannot run child processes.");
-        }
-
-        /// <summary>Regression test: use python logging.</summary>
-        [Fact]
-        public void test_use_python_logging()
-        {
-            Console.WriteLine("test_use_python_logging(): not running on .NET - cannot run child processes.");
         }
 
         /// <summary>Regression test: open2.</summary>
