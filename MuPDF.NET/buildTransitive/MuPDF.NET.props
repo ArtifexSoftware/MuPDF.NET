@@ -1,0 +1,11 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!--
+    Infer the host RID for MuPDF native asset selection. Does not set RuntimeIdentifier
+    (that would require restore with -r and cause NETSDK1047).
+  -->
+  <Import Project="$(MSBuildThisFileDirectory)../build/MuPDF.NET.NativeAssets.props"
+          Condition="'$(MuPDFNativeAssetsImported)' != 'true' and Exists('$(MSBuildThisFileDirectory)../build/MuPDF.NET.NativeAssets.props')" />
+  <PropertyGroup Condition="'$(MuPDFNativeAssetsImported)' != 'true'">
+    <MuPDFNativeAssetsImported>true</MuPDFNativeAssetsImported>
+  </PropertyGroup>
+</Project>

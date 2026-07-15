@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<!--
+  Reference template. Use pack-nativeassets.ps1 to produce packages.
+  Version comes from ArtifexMuPDFVersion in Versions.props.
+-->
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+  <metadata>
+    <id>MuPDF.NativeAssets</id>
+    <version>0.0.0</version>
+    <authors>Artifex Software Inc.</authors>
+    <license type="file">LICENSE.md</license>
+    <icon>logo.png</icon>
+    <readme>Description.md</readme>
+    <description>Meta-package for MuPDF native libraries. Referenced by MuPDF.NET.</description>
+    <copyright>Artifex</copyright>
+    <tags>C# MuPDF DotNet PDF nativeassets</tags>
+    <repository type="git" url="https://github.com/ArtifexSoftware/MuPDF.NET" />
+  </metadata>
+  <files>
+    <file src="logo.png" />
+    <file src="Description.md" />
+    <file src="LICENSE.md" />
+  </files>
+</package>

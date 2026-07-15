@@ -6,7 +6,6 @@ using Xunit;
 
 namespace PDF4LLM.Test
 {
-    /// <summary>Port of <c>tests/test_376.py</c>.</summary>
     [Collection("PDF4LLM")]
     public class Test376
     {

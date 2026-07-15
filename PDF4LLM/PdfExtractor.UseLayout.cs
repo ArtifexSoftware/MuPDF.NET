@@ -17,12 +17,12 @@ namespace PDF4LLM
         }
 
         /// <summary>Enable or disable the layout analysis pipeline.</summary>
-        /// <param name="yes">When true, activate layout; when false, restore legacy header helpers.</param>
-        public static void SetUseLayout(bool yes)
+        /// <param name="useLayout">When true, activate layout; when false, restore legacy header helpers.</param>
+        public static void SetUseLayout(bool useLayout)
         {
-            UseLayout = yes;
+            UseLayout = useLayout;
 
-            if (yes)
+            if (useLayout)
             {
                 // IdentifyHeaders and TocHeaders are not available.
                 LayoutActivation.Activate();

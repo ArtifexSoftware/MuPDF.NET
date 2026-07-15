@@ -102,7 +102,8 @@ namespace Demo
         internal static void TestOcr()
         {
             PdfExtractor.UseLayout = true;
-            PdfExtractor.ToMarkdown(@"..\..\..\..\TestDocuments\Demo\Ocr.pdf", useOcr: true, writeImages: false, embedImages: false);
+            string md = PdfExtractor.ToMarkdown(@"..\..\..\..\TestDocuments\Demo\Ocr.pdf", useOcr: true, writeImages: false, embedImages: false);
+            Console.WriteLine(md);
             string text = PdfExtractor.ToText(@"..\..\..\..\TestDocuments\Demo\Ocr.pdf", useOcr: true);
             Console.WriteLine(text);
         }

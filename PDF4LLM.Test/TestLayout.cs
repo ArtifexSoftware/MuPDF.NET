@@ -4,7 +4,6 @@ using Xunit;
 
 namespace PDF4LLM.Test
 {
-    /// <summary>Port of <c>tests/llama_index/test_layout.py</c>.</summary>
     [Collection("PDF4LLM")]
     public class TestLayout
     {
@@ -39,13 +38,16 @@ namespace PDF4LLM.Test
         [Fact]
         public void test_layout_default()
         {
-            // Check that deactivating layout clears the provider.
+            // Fresh interpreter import enables layout analysis when the layout bridge is installed.
+            if (!PyMuPdfLayout.IsAvailable)
+                return;
+
             bool prior = PdfExtractor.UseLayout;
             try
             {
-                PdfExtractor.SetUseLayout(false);
-                Assert.False(PdfExtractor.UseLayout);
-                Assert.False(PdfExtractor.LayoutAvailable);
+                PdfExtractor.SetUseLayout(true);
+                Assert.True(PdfExtractor.UseLayout);
+                Assert.True(PdfExtractor.LayoutAvailable);
             }
             finally
             {

@@ -33,7 +33,7 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_font1()
         {
-            const string text = "PyMuPDF";
+            const string text = "MuPDF.NET";
             using var font = new Font("helv");
             Assert.Equal("Helvetica", font.Name);
             float tl = font.TextLength(text, fontSize: 20);
@@ -63,7 +63,7 @@ namespace MuPDF.NET.Test
         public void test_font2()
         {
             using var font = new Font("helv");
-            const string text = "PyMuPDF";
+            const string text = "MuPDF.NET";
             Assert.Equal(font.TextLength(text), Utils.GetTextLength(text));
         }
 
@@ -72,7 +72,7 @@ namespace MuPDF.NET.Test
         public void test_fontarchive()
         {
             var arch = new Archive();
-            string css = Utils.CssForPymupdfFont("notos", archive: arch, name: "sans-serif");
+            string css = Utils.CssForMupdfFont("notos", archive: arch, name: "sans-serif");
             Console.WriteLine(css);
             foreach (var entry in arch.EntryList)
                 Console.WriteLine($"fmt={entry.Fmt} entries={string.Join(", ", entry.Entries)} path={entry.Path}");

@@ -2,7 +2,7 @@ namespace PDF4LLM.Layout
 {
     /// <summary>
     /// ONNX layout analysis via an external Python worker.
-    /// Run <c>dotnet msbuild -t:PDF4LLMSetupLayoutPython</c> once to install pymupdf.layout.
+    /// Run <c>dotnet msbuild -t:PDF4LLMSetupLayoutPython</c> once to install layout bridge.
     /// </summary>
     public static class PyMuPdfLayout
     {

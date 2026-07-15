@@ -1,0 +1,8 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!-- Dev builds: same host RID inference as the MuPDF.NET NuGet package. -->
+  <Import Project="$(MSBuildThisFileDirectory)..\MuPDF.NET\build\MuPDF.NET.NativeAssets.props"
+          Condition="'$(MuPDFNativeAssetsImported)' != 'true' and Exists('$(MSBuildThisFileDirectory)..\MuPDF.NET\build\MuPDF.NET.NativeAssets.props')" />
+  <PropertyGroup Condition="'$(MuPDFNativeAssetsImported)' != 'true'">
+    <MuPDFNativeAssetsImported>true</MuPDFNativeAssetsImported>
+  </PropertyGroup>
+</Project>

@@ -229,6 +229,7 @@ namespace MuPDF.NET
         /// <param name="width">Page width if <paramref name="rect"/> is omitted.</param>
         /// <param name="height">Page height if <paramref name="rect"/> is omitted.</param>
         /// <param name="fontSize">Default font size for reflowable layout.</param>
+        /// <param name="archive">An optional Archive object to use as a source for resources like fonts and images.</param>
         /// <exception cref="EmptyFileException"><paramref name="stream"/> is null or empty.</exception>
         /// <exception cref="FileDataException">Buffer cannot be opened as a document.</exception>
         public Document(byte[] stream, string fileType = null, Rect rect = null, float width = 0, float height = 0, float fontSize = 11, Archive archive = null)
@@ -5924,7 +5925,7 @@ namespace MuPDF.NET
 
             var useFor = mupdf.mupdf.pdf_dict_put_dict(ocg, mupdf.mupdf.pdf_new_name("Usage"), 3);
             var creInfo = mupdf.mupdf.pdf_dict_put_dict(useFor, mupdf.mupdf.pdf_new_name("CreatorInfo"), 2);
-            mupdf.mupdf.pdf_dict_put_text_string(creInfo, mupdf.mupdf.pdf_new_name("Creator"), "PyMuPDF");
+            mupdf.mupdf.pdf_dict_put_text_string(creInfo, mupdf.mupdf.pdf_new_name("Creator"), "MuPDF.NET");
             mupdf.mupdf.pdf_dict_put_name(creInfo, mupdf.mupdf.pdf_new_name("Subtype"), string.IsNullOrEmpty(usage) ? "Artwork" : usage);
 
             var indocg = mupdf.mupdf.pdf_add_object(pdf, ocg);

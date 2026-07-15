@@ -39,6 +39,38 @@ except Exception as exc:
 
 print('READY', flush=True)
 
+def serialize_layout_for_json(items):
+    out = []
+    for entry in items or []:
+        if not isinstance(entry, dict):
+            out.append(entry)
+            continue
+        row = {}
+        for key, val in entry.items():
+            if key == 'table_grid' and val is not None:
+                row[key] = {
+                    'h_lines': list(getattr(val, 'h_lines', val.get('h_lines', []) if isinstance(val, dict) else [])),
+                    'v_lines': list(getattr(val, 'v_lines', val.get('v_lines', []) if isinstance(val, dict) else [])),
+                }
+            elif key == 'table_cells' and val is not None:
+                cells = []
+                for cell in val:
+                    if isinstance(cell, dict):
+                        cells.append(cell)
+                    else:
+                        cells.append({
+                            'text': getattr(cell, 'text', ''),
+                            'row': getattr(cell, 'row', 0),
+                            'col': getattr(cell, 'col', 0),
+                        })
+                row[key] = cells
+            elif isinstance(val, (list, tuple)):
+                row[key] = list(val)
+            else:
+                row[key] = val
+        out.append(row)
+    return out
+
 for line in sys.stdin:
     line = line.strip()
     if not line:
@@ -53,8 +85,11 @@ for line in sys.stdin:
         try:
             page = doc[page_no]
             with contextlib.redirect_stdout(sys.stderr):
-                page.get_layout()
-            result = page.layout_information or []
+                try:
+                    page.get_layout(return_raw=True)
+                except TypeError:
+                    page.get_layout()
+            result = serialize_layout_for_json(page.layout_information or [])
         finally:
             doc.close()
         print(RESULT_PREFIX + json.dumps(result), flush=True)
@@ -88,11 +123,8 @@ for line in sys.stdin:
         {
             get
             {
-                if (_version != null)
-                    return _version;
-                if (!IsAvailable)
-                    return null;
-                _version = RunPythonCapture("import pymupdf.layout; print(pymupdf.layout.version)");
+                if (!_probeResult.HasValue)
+                    _ = IsAvailable;
                 return _version;
             }
         }
@@ -128,28 +160,94 @@ for line in sys.stdin:
             }
         }
 
+        /// <summary>
+        /// Persist in-memory document changes (e.g. OCR) for the layout worker and invalidate cached layout.
+        /// </summary>
+        internal static void RefreshLayoutSnapshot(Document doc)
+        {
+            if (doc == null)
+                return;
+
+            lock (Gate)
+            {
+                string path = GetOrCreateLayoutSnapshotPath(doc);
+                doc.Save(path);
+                ClearLayoutCache(doc);
+            }
+        }
+
+        static void ClearLayoutCache(Document doc)
+        {
+            if (doc == null)
+                return;
+
+            for (int i = 0; i < doc.PageCount; i++)
+                doc.LoadPage(i).LayoutInformation = null;
+        }
+
+        static string GetOrCreateLayoutSnapshotPath(Document doc) =>
+            TempDocumentPaths.GetValue(doc, d =>
+            {
+                string tmp = Path.Combine(
+                    Path.GetTempPath(),
+                    "pdf4llm_layout_" + Guid.NewGuid().ToString("N") + ".pdf");
+                d.Save(tmp);
+                return tmp;
+            });
+
         static bool ProbePythonLayout()
+        {
+            string version = TryQueryLayoutVersion();
+            if (string.IsNullOrEmpty(version))
+                return false;
+
+            string required = NormalizeVersion(VersionInfo.RequiredPyMuPDFLayout);
+            string actual = NormalizeVersion(version);
+            if (CompareVersions(actual, required) < 0)
+                LayoutPythonPaths.PrintVersionTooLowWarning(
+                    VersionInfo.RequiredPyMuPDFLayout,
+                    version);
+
+            _version = version;
+            return true;
+        }
+
+        static string TryQueryLayoutVersion()
         {
             try
             {
-                var psi = CreatePythonStartInfo("-c \"import pymupdf.layout\"");
-                using (var proc = Process.Start(psi))
-                {
-                    if (proc == null)
-                        return false;
-                    if (!proc.WaitForExit(15000))
-                    {
-                        try { proc.Kill(); } catch { }
-                        return false;
-                    }
-
-                    return proc.ExitCode == 0;
-                }
+                return RunPythonCapture("import pymupdf.layout; print(pymupdf.layout.version)");
             }
             catch
             {
-                return false;
+                return null;
             }
+        }
+
+        static string NormalizeVersion(string version)
+        {
+            if (string.IsNullOrWhiteSpace(version))
+                return "";
+            string[] parts = version.Trim().Split('-')[0].Split('.');
+            if (parts.Length >= 3)
+                return parts[0] + "." + parts[1] + "." + parts[2];
+            return string.Join(".", parts);
+        }
+
+        /// <summary>Compare dotted numeric versions. Returns &lt;0, 0, or &gt;0.</summary>
+        static int CompareVersions(string a, string b)
+        {
+            string[] pa = a.Split('.');
+            string[] pb = b.Split('.');
+            int len = Math.Max(pa.Length, pb.Length);
+            for (int i = 0; i < len; i++)
+            {
+                int va = i < pa.Length && int.TryParse(pa[i], out int x) ? x : 0;
+                int vb = i < pb.Length && int.TryParse(pb[i], out int y) ? y : 0;
+                if (va != vb)
+                    return va < vb ? -1 : 1;
+            }
+            return 0;
         }
 
         static string RunPythonCapture(string script)
@@ -308,25 +406,10 @@ for line in sys.stdin:
                         return null;
 
                     JToken parsed = JToken.Parse(payload);
-                    if (!(parsed is JArray ja))
-                        return null;
+                    if (parsed is JArray ja)
+                        return ja;
 
-                    var rows = new List<object[]>(ja.Count);
-                    foreach (JToken item in ja)
-                    {
-                        if (!(item is JArray row) || row.Count < 5)
-                            continue;
-                        rows.Add(new object[]
-                        {
-                            row[0].Value<float>(),
-                            row[1].Value<float>(),
-                            row[2].Value<float>(),
-                            row[3].Value<float>(),
-                            row[4].Value<string>() ?? "text",
-                        });
-                    }
-
-                    return rows;
+                    return null;
                 }
                 catch (JsonException ex)
                 {
@@ -343,6 +426,12 @@ for line in sys.stdin:
             if (doc == null)
                 return null;
 
+            if (TempDocumentPaths.TryGetValue(doc, out string snapshotPath)
+                && !string.IsNullOrEmpty(snapshotPath))
+            {
+                return snapshotPath;
+            }
+
             if (!string.IsNullOrEmpty(doc.Name)
                 && !string.Equals(doc.Name, "<memory>", StringComparison.Ordinal)
                 && File.Exists(doc.Name))
@@ -350,14 +439,7 @@ for line in sys.stdin:
                 return doc.Name;
             }
 
-            return TempDocumentPaths.GetValue(doc, d =>
-            {
-                string tmp = Path.Combine(
-                    Path.GetTempPath(),
-                    "pdf4llm_layout_" + Guid.NewGuid().ToString("N") + ".pdf");
-                d.Save(tmp);
-                return tmp;
-            });
+            return GetOrCreateLayoutSnapshotPath(doc);
         }
 
         static string PythonExecutable =>

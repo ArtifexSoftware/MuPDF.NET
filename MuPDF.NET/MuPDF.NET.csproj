@@ -89,7 +89,7 @@
     <PackageReference Include="MuPDF.NativeAssets" Version="$(ArtifexMuPDFVersion)" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
     <PackageReference Include="SharpZipLib" Version="1.4.2" />
-    <PackageReference Include="SkiaSharp" Version="3.119.1" />
+    <PackageReference Include="SkiaSharp" Version="3.119.4" />
   </ItemGroup>
 
   <ItemGroup>
@@ -99,4 +99,8 @@
   <PropertyGroup>
     <NoWarn>$(NoWarn);1701;1702;1591;0618;0612;0169;0219;0162;0108;0414;8981;0168;0164;0649;1589;1711;1580;0114;0184;1734;1717;0419;1570;1572;1573;1574;1587;0419;8625;8603;8600;8602;8604;8601;8605;8618;8619;8622;8629;8765;8767;8769</NoWarn>
   </PropertyGroup>
+
+  <Target Name="GenerateMuPDFRuntimeJson" BeforeTargets="Pack">
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildThisFileDirectory)..\MuPDF\generate-runtimejson.ps1&quot;" />
+  </Target>
 </Project>

@@ -15,16 +15,16 @@ namespace PDF4LLM.Helpers
         /// <param name="footerMargin">Points to exclude from the bottom of the page.</param>
         /// <param name="headerMargin">Points to exclude from the top of the page.</param>
         /// <param name="noImageText">When <c>true</c>, ignore text drawn on top of images.</param>
-        /// <param name="textpage">Optional pre-built text page; created when <c>null</c>.</param>
-        /// <param name="paths">Optional drawing paths; page drawings are used when <c>null</c>.</param>
+        /// <param name="textPage">Optional pre-built text page; created when <see langword="null"/>.</param>
+        /// <param name="paths">Optional drawing paths; page drawings are used when <see langword="null"/>.</param>
         /// <param name="avoid">Additional rectangles (e.g. tables, graphics) to treat like images.</param>
-        /// <param name="ignoreImages">When <c>true</c>, do not collect image bounding boxes.</param>
+        /// <param name="ignoreImages">When <see langword="true"/>, do not collect image bounding boxes.</param>
         public static List<Rect> ColumnBoxes(
             Page page,
             float footerMargin = 50,
             float headerMargin = 50,
             bool noImageText = true,
-            TextPage textpage = null,
+            TextPage textPage = null,
             List<PathInfo> paths = null,
             List<Rect> avoid = null,
             bool ignoreImages = false)
@@ -41,9 +41,9 @@ namespace PDF4LLM.Helpers
                     .ToList();
             }
 
-            if (textpage == null)
+            if (textPage == null)
             {
-                textpage = page.GetTextPage(clip: clip, flags: (int)TextFlags.TEXT_ACCURATE_BBOXES);
+                textPage = page.GetTextPage(clip: clip, flags: (int)TextFlags.TEXT_ACCURATE_BBOXES);
             }
 
             List<Rect> bboxes = new List<Rect>();
@@ -90,7 +90,7 @@ namespace PDF4LLM.Helpers
             }
 
             // Blocks of text on page
-            PageInfo pageInfo = textpage.ExtractDict(null, false);
+            PageInfo pageInfo = textPage.ExtractDict(null, false);
             List<Block> blocks = pageInfo.Blocks;
 
             // Make block rectangles, ignoring non-horizontal text
@@ -205,8 +205,6 @@ namespace PDF4LLM.Helpers
             nblocks = JoinRectsPhase3(nblocks, pathRects, cache);
 
             // Return identified text bboxes
-
-            //if (textpage != null && textpage != page.GetTextPage())
             //    textpage.Dispose();
 
             return nblocks;
@@ -370,7 +368,6 @@ namespace PDF4LLM.Helpers
 
                         Rect temp = Utils.JoinRects(new List<Rect> { prect0, prect1 });
                         // Test: rects that intersect temp
-                        //        if test == set((tuple(prect0), tuple(prect1))): join
                         var intersecting = prects.Concat(newRects).Where(b => b != null && b.Intersects(temp)).ToList();
                         var intersectingCoords = new HashSet<(float, float, float, float)>(
                             intersecting.Select(b => (b.X0, b.Y0, b.X1, b.Y1)));

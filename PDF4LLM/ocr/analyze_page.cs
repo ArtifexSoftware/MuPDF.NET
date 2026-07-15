@@ -95,7 +95,6 @@ namespace PDF4LLM.Ocr
                 using (IDisposableReadOnlyCollection<DisposableNamedOnnxValue> results = session.Run(inputs))
                 {
                     Tensor<float> probas = results[1].AsTensor<float>();
-                    // return float(probas[0, 1])
                     return probas[0, 1];
                 }
             }
@@ -195,20 +194,14 @@ namespace PDF4LLM.Ocr
             }
         }
 
-        // def get_pixmap(displaylist, dpi=200, rects=[]):
         //     """Make a pixmap from the page removing "good" text."""
         //
-        //     # Matrix for desired DPI
         //     ctm = mupdf.fz_make_matrix(dpi / 72, 0, 0, dpi / 72, 0, 0)
         //
-        //     # Returns a GRAY fz_pixmap
         //     pm = mupdf.fz_new_pixmap_from_display_list_culling_text2(
         //         displaylist, ctm, GRAY, 0, rects
         //     )
         //
-        //     # Convert to a PyMuPDF pixmap
-        //     pix = pymupdf.Pixmap(pm, 0)
-        //     return pix
 
         /// <summary>If this is an OCR text span.</summary>
         public static bool IsOcrSpan(Span span)
@@ -272,7 +265,6 @@ namespace PDF4LLM.Ocr
             if (blocks == null) // make "dict" text extraction if not provided
             {
                 // stextpage = displaylist.get_textpage(flags=FLAGS)
-                // textpage = pymupdf.TextPage(stextpage)
                 // blocks = textpage.extractDICT()["blocks"]
                 var pageDict = page.GetText(
                     "dict",
@@ -360,7 +352,6 @@ namespace PDF4LLM.Ocr
                     // Image block
                     imgRect = JoinRects(imgRect, bbox);
                     imgArea += area;
-                    // if area / page_area > 0.10:  # image large enough for text?
                     //     image_blocks.append(b)
                     continue;
                 }

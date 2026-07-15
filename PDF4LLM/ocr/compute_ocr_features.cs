@@ -178,7 +178,7 @@ namespace PDF4LLM.Ocr
             // 1. Render page as GRAY pixmap
             using (Pixmap pix = page.GetPixmap(dpi: 72, cs: Colorspace.Gray, alpha: false))
             {
-                // 2. Downscale to 128x128 using PyMuPDF
+                // 2. Downscale to 128x128 using MuPDF
                 using (Pixmap pixSmall = new Pixmap(pix, 128, 128))
                 {
                     double[,] gray = SamplesToGray(pixSmall.SAMPLES, 128, 128);
@@ -211,7 +211,7 @@ namespace PDF4LLM.Ocr
             ComputeFeatures(blocks, pageRect, page, null);
 
         /// <summary>
-        /// Mirror <c>compute_features(blocks, page_rect, pix)</c> when <c>pix</c> is a 128x128 GRAY pixmap.
+        /// Return model-relevant features for the given page that can be used to decide whether OCR is beneficial.
         /// </summary>
         public static Dictionary<string, float> ComputeFeatures(
             List<Block> blocks,

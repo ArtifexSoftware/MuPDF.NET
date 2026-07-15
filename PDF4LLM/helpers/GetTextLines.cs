@@ -33,18 +33,18 @@ namespace PDF4LLM.Helpers
         /// items. Each span is annotated with its original block / line index so that
         /// callers can still detect original MuPDF line breaks if needed.
         /// </remarks>
-        /// <param name="textpage">
-        /// Source <see cref="TextPage"/>. May be <c>null</c> if <paramref name="blocks"/>
+        /// <param name="textPage">
+        /// Source <see cref="TextPage"/>. May be <see langword="null"/> if <paramref name="blocks"/>
         /// are provided directly.
         /// </param>
         /// <param name="blocks">
         /// Optional list of <see cref="Block"/> objects to reuse an existing
-        /// <c>ExtractDict</c> result instead of re‑extracting from <paramref name="textpage"/>.
+        /// text extraction result instead of re-extracting from <paramref name="textPage"/>.
         /// Only text blocks (Type == 0) with non‑empty bounding boxes are considered.
         /// </param>
         /// <param name="clip">
-/// Optional clipping rectangle. Only spans whose bounding boxes overlap this
-/// area (within <see cref="Utils.AlmostInBbox"/>) are taken into account.
+        /// Optional clipping rectangle. Only spans whose bounding boxes overlap this
+        /// area (within <see cref="Utils.AlmostInBbox"/>) are taken into account.
         /// </param>
         /// <param name="tolerance">
         /// Maximum vertical distance (in points) between span baselines or tops for
@@ -64,7 +64,7 @@ namespace PDF4LLM.Helpers
         /// empty list is returned.
         /// </returns>
         public static List<TextLine> GetRawLines(
-            TextPage textpage = null,
+            TextPage textPage = null,
             List<Block> blocks = null,
             Rect clip = null,
             float tolerance = 3.0f,
@@ -73,10 +73,10 @@ namespace PDF4LLM.Helpers
         {
             float yDelta = tolerance; // Allowable vertical coordinate deviation
 
-            if (textpage == null && blocks == null)
-                throw new ArgumentException("Either textpage or blocks must be provided.");
+            if (textPage == null && blocks == null)
+                throw new ArgumentException("Either textPage or blocks must be provided.");
 
-            if (clip == null && textpage != null)
+            if (clip == null && textPage != null)
             {
                 // Use TextPage rect if not provided
                 clip = new Rect(float.NegativeInfinity, float.NegativeInfinity,
@@ -84,9 +84,9 @@ namespace PDF4LLM.Helpers
             }
 
             // Extract text blocks - if bbox is not empty
-            if (blocks == null && textpage != null)
+            if (blocks == null && textPage != null)
             {
-                PageInfo pageInfo = textpage.ExtractDict(null, false);
+                PageInfo pageInfo = textPage.ExtractDict(null, false);
                 blocks = pageInfo.Blocks?.Where(b => b.Type == 0 && !Utils.BboxIsEmpty(b.Bbox)).ToList();
             }
 
@@ -128,10 +128,9 @@ namespace PDF4LLM.Helpers
 
                         // Ignore invisible text. Type 3 font text is never invisible.
                         // Note: Alpha and CharFlags may need different access in MuPDF.NET
-                        if (s.Font != Utils.TYPE3_FONT_NAME && ignoreInvisible)
+                        if (s.Font != null && !s.Font.StartsWith(Utils.TYPE3_FONT_NAME, StringComparison.Ordinal) && ignoreInvisible)
                         {
                             // Skip invisible text if needed - would need Alpha property
-                            // For now, continue
                         }
 
                         if (!Utils.AlmostInBbox(s.Bbox, clip)) // If not in clip
@@ -140,14 +139,13 @@ namespace PDF4LLM.Helpers
                         Rect sbbox = new Rect(s.Bbox); // Span bbox as a Rect
                         if (((int)s.Flags & 1) != 0) // If a superscript, modify bbox
                         {
-                            // With that of the preceding or following span
                             int i = sno == 0 ? 1 : sno - 1;
                             if (line.Spans.Count > i)
                             {
                                 Span neighbor = line.Spans[i];
                                 sbbox.Y1 = neighbor.Bbox.Y1;
                             }
-                            text = $"[{text}]";
+                            text = $"{text}";
                         }
 
                         // Include line/block numbers to facilitate separator insertion
@@ -155,10 +153,11 @@ namespace PDF4LLM.Helpers
                         {
                             Text = text,
                             Bbox = sbbox,
+                            Origin = s.Origin,
                             Size = s.Size,
                             Font = s.Font,
                             Flags = (int)s.Flags,
-                            CharFlags = 0, // Would need to extract from Span if available
+                            CharFlags = (int)s.CharFlags,
                             Alpha = 1.0f, // Would need to extract from Span if available
                             Line = lno,
                             Block = bno,
@@ -280,10 +279,10 @@ namespace PDF4LLM.Helpers
         /// implementation.
         /// </remarks>
         /// <param name="page">The source <see cref="Page"/> to extract text from.</param>
-        /// <param name="textpage">
-        /// Optional pre‑created <see cref="TextPage"/>. When <c>null</c>, this method
-/// will create a temporary text page (or OCR text page if <paramref name="ocr"/>
-/// is <c>true</c>) and dispose it afterwards.
+        /// <param name="textPage">
+        /// Optional pre-created <see cref="TextPage"/>. When <see langword="null"/>, this method
+        /// creates a temporary text page (or OCR text page when <paramref name="ocr"/> is
+        /// <see langword="true"/>) and disposes it afterwards.
         /// </param>
         /// <param name="clip">
         /// Optional clipping rectangle restricting the area from which lines are read.
@@ -306,7 +305,7 @@ namespace PDF4LLM.Helpers
         /// </returns>
         public static string GetTextLinesFormatted(
             Page page,
-            TextPage textpage = null,
+            TextPage textPage = null,
             Rect clip = null,
             string sep = "\t",
             float tolerance = 3.0f,
@@ -319,7 +318,7 @@ namespace PDF4LLM.Helpers
             string xsep = sep == "|" ? "" : sep;
 
             // Make a TextPage if required
-            TextPage tp = textpage;
+            TextPage tp = textPage;
             bool disposeTp = false;
 
             if (tp == null)
@@ -382,7 +381,6 @@ namespace PDF4LLM.Helpers
                 return alltext;
             }
 
-            // For OCR output, we try a rudimentary table recognition.
             List<List<string>> rows = new List<List<string>>();
             List<float> xvalues = new List<float>();
             int colCount = 0;

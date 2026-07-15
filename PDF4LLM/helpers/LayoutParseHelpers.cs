@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using MuPDF.NET;
+using PDF4LLM.Ocr;
 using Newtonsoft.Json.Linq;
 using mupdf;
 namespace PDF4LLM.Helpers
@@ -14,6 +15,15 @@ namespace PDF4LLM.Helpers
     {
         public Rect Bbox { get; set; }
         public string Class { get; set; }
+        /// <summary>Raw layout bridge dict when <c>return_raw=True</c>.</summary>
+        public JObject RawDict { get; set; }
+    }
+
+    /// <summary>Result of reading layout bridge raw boxes (<c>return_raw=True</c>).</summary>
+    public sealed class LayoutRawParseResult
+    {
+        public List<LayoutInfoEntry> Layout { get; set; }
+        public Dictionary<string, JObject> TableInfos { get; set; } = new Dictionary<string, JObject>();
     }
 
     /// <summary>
@@ -107,7 +117,7 @@ namespace PDF4LLM.Helpers
         internal static bool TesseractSetupHelpPrinted => _tesseractSetupHelpPrinted;
 
         /// <summary>
-        /// Log pymupdf-layout status at the start of layout parsing, or setup help when it is missing.
+        /// Log layout bridge status at the start of layout parsing, or setup help when it is missing.
         /// </summary>
         public static void LogLayoutStatus()
         {
@@ -196,10 +206,9 @@ namespace PDF4LLM.Helpers
         public static OcrPageFunction SelectOcrFunction()
         {
             string tessdata = TryGetTessdata();
-            bool rapidocrAvailable = false;
-            bool paddleocrAvailable = false;
+            bool rapidocrAvailable = RapidOcrSupport.IsAvailable;
+            bool paddleocrAvailable = rapidocrAvailable;
 
-            // rapidocr_onnxruntime / PaddleOCR are not wired for .NET yet.
             if (string.IsNullOrEmpty(tessdata) && !rapidocrAvailable && !paddleocrAvailable)
             {
                 PrintTesseractSetupHelp();
@@ -249,8 +258,10 @@ namespace PDF4LLM.Helpers
             return null;
         }
 
-        /// <summary>Parse <c>page.layout_information</c> rows <c>(x0, y0, x1, y1, class)</c>.</summary>
-        private static List<LayoutInfoEntry> ParseLayoutInformation(object layoutObj)
+        /// <summary>Parse <c>page.layout_information</c> rows or raw layout dicts.</summary>
+        private static List<LayoutInfoEntry> ParseLayoutInformation(
+            object layoutObj,
+            Dictionary<string, JObject> tableInfos = null)
         {
             if (layoutObj == null)
                 return null;
@@ -262,16 +273,52 @@ namespace PDF4LLM.Helpers
             foreach (object row in rows)
             {
                 rawCount++;
+                if (row is JObject jo && TryParseRawLayoutObject(jo, out LayoutInfoEntry rawEntry, tableInfos))
+                {
+                    layout.Add(rawEntry);
+                    continue;
+                }
                 if (!TryParseLayoutRow(row, out LayoutInfoEntry entry))
                     continue;
                 layout.Add(entry);
             }
 
-            // Treat parse failure like missing layout (fall back to stext-only boxes).
             if (rawCount > 0 && layout.Count == 0)
                 return null;
 
             return layout;
+        }
+
+        internal static string LayoutTableKey(Rect bbox)
+        {
+            var ir = new IRect(bbox);
+            return $"{ir.X0},{ir.Y0},{ir.X1},{ir.Y1}";
+        }
+
+        private static bool TryParseRawLayoutObject(
+            JObject jo,
+            out LayoutInfoEntry entry,
+            Dictionary<string, JObject> tableInfos)
+        {
+            entry = null;
+            if (jo == null)
+                return false;
+
+            JArray bboxArr = jo["group_bbox"] as JArray;
+            if (bboxArr == null || bboxArr.Count < 4)
+                return false;
+
+            string cls = jo["class_name"]?.Value<string>() ?? "text";
+            var bbox = new Rect(
+                bboxArr[0].Value<float>(),
+                bboxArr[1].Value<float>(),
+                bboxArr[2].Value<float>(),
+                bboxArr[3].Value<float>());
+
+            entry = new LayoutInfoEntry { Bbox = bbox, Class = cls, RawDict = jo };
+            if (tableInfos != null && cls == "table")
+                tableInfos[LayoutTableKey(bbox)] = jo;
+            return true;
         }
 
         private static bool TryParseLayoutRow(object row, out LayoutInfoEntry entry)
@@ -304,8 +351,8 @@ namespace PDF4LLM.Helpers
         }
 
         /// <summary>
-        /// Layout from <see cref="Page.GetLayout"/> / <c>page.layout_information</c> when a provider is registered.
-        /// Returns <c>null</c> when no layout provider is active.
+        /// Read layout boxes from <see cref="Page.GetLayout"/> / <see cref="Page.LayoutInformation"/> when a layout provider is registered.
+        /// Returns <see langword="null"/> when no layout provider is active.
         /// </summary>
         private static List<LayoutInfoEntry> TryNativeLayoutInformation(Page page)
         {
@@ -323,10 +370,9 @@ namespace PDF4LLM.Helpers
         }
 
         /// <summary>
-        /// Build layout boxes for <c>parse_document</c>.
-        /// Prefer <see cref="Page.GetLayout"/> / <c>page.layout_information</c> when a provider is set.
-        /// If unavailable, stext text blocks only — tables come from layout boxes or
-        /// <c>tables_exist</c> handling in <c>parse_document</c> (see document_layout.py).
+        /// Build layout boxes for document parsing.
+        /// Prefers native layout from <see cref="Page.GetLayout"/> when a provider is set;
+        /// otherwise falls back to text blocks from the page text layer.
         /// </summary>
         /// <param name="page">Page whose layout boxes are built.</param>
         /// <param name="blocks">Extracted text blocks used when native layout is unavailable.</param>
@@ -357,9 +403,11 @@ namespace PDF4LLM.Helpers
         public static bool TablesExist(IList<LayoutInfoEntry> layout) =>
             layout != null && layout.Any(b => b.Class == "table");
 
-        /// <summary><c>utils.clean_pictures</c> (subset: block types 0,1; vector type 3 skipped if absent).</summary>
+        /// <summary>
+        /// Extend picture, formula, and table layout boxes by joining intersecting text, image, and vector blocks.
+        /// </summary>
         /// <param name="page">Source page (reserved for future vector-block support).</param>
-        /// <param name="blocks">Page text/image blocks used to expand picture regions.</param>
+        /// <param name="blocks">Page text and image blocks used to expand picture regions.</param>
         /// <param name="layout">Layout entries to adjust in place.</param>
         public static void CleanPictures(Page page, List<Block> blocks, List<LayoutInfoEntry> layout)
         {
@@ -413,7 +461,9 @@ namespace PDF4LLM.Helpers
             return outer.X0 <= inner.X0 && outer.Y0 <= inner.Y0 && outer.X1 >= inner.X1 && outer.Y1 >= inner.Y1;
         }
 
-        /// <summary>Subset of <c>utils.add_image_orphans</c> using <see cref="Page.GetDrawings"/> when vector blocks are unavailable.</summary>
+        /// <summary>
+        /// Add orphan images and unmatched vector graphics as layout boxes of class <c>picture</c>.
+        /// </summary>
         /// <param name="page">Source page for drawings and image blocks.</param>
         /// <param name="blocks">Extracted page blocks.</param>
         /// <param name="layout">Layout list to which orphan picture boxes are appended.</param>
@@ -518,7 +568,10 @@ namespace PDF4LLM.Helpers
             }
         }
 
-        /// <summary><c>utils.clean_tables</c></summary>
+        /// <summary>
+        /// Validate table layout boxes and reclassify weak detections as text or table-fallback;
+        /// optionally split mixed picture/table regions.
+        /// </summary>
         /// <param name="page">Source page (reserved for extended table cleaning).</param>
         /// <param name="blocks">Text blocks overlapping table layout boxes.</param>
         /// <param name="layout">Layout entries to validate or reclassify in place.</param>
@@ -631,11 +684,15 @@ namespace PDF4LLM.Helpers
             return outer.X0 <= inner.X0 && outer.Y0 <= inner.Y0 && outer.X1 >= inner.X1 && outer.Y1 >= inner.Y1;
         }
 
-        /// <summary><c>utils.find_reading_order</c>: filter contained boxes, split header/footer, <c>compute_reading_order</c> on body.</summary>
+        /// <summary>
+        /// Given page layout information, return the boxes in reading order.
+        /// Removes nested boxes, separates page headers and footers from the body,
+        /// orders body boxes, then concatenates headers, body, and footers.
+        /// </summary>
         /// <param name="pageRect">Full page rectangle for scaling vertical gaps.</param>
         /// <param name="blocks">Page blocks used as vector hints during ordering.</param>
-        /// <param name="boxes">Layout boxes to order for reading sequence.</param>
-        /// <param name="verticalGap">Base vertical gap in points before page-height scaling.</param>
+        /// <param name="boxes">Classified layout bounding boxes to order.</param>
+        /// <param name="verticalGap">Minimum vertical gap to separate stripes before page-height scaling.</param>
         public static List<LayoutInfoEntry> FindReadingOrder(Rect pageRect, List<Block> blocks, List<LayoutInfoEntry> boxes, float verticalGap = 12f)
         {
             if (boxes == null || boxes.Count == 0)
@@ -698,7 +755,10 @@ namespace PDF4LLM.Helpers
             return final;
         }
 
-        /// <summary><c>utils.compute_reading_order</c>: <c>cluster_stripes</c> then <c>cluster_columns_in_stripe</c> per stripe.</summary>
+        /// <summary>
+        /// Compute reading order of layout boxes delivered by the layout engine.
+        /// Clusters boxes into horizontal stripes, then into columns within each stripe.
+        /// </summary>
         private static List<LayoutInfoEntry> ComputeReadingOrderSimple(
             List<LayoutInfoEntry> body,
             Rect joined,
@@ -719,7 +779,9 @@ namespace PDF4LLM.Helpers
             return ordered;
         }
 
-        /// <summary><c>utils.cluster_stripes</c>.</summary>
+        /// <summary>
+        /// Divide the page into horizontal stripes based on vertical gaps between layout boxes.
+        /// </summary>
         private static List<List<LayoutInfoEntry>> ClusterStripes(
             List<LayoutInfoEntry> boxes,
             Rect joinedBoxes,
@@ -782,7 +844,7 @@ namespace PDF4LLM.Helpers
             return stripes;
         }
 
-        /// <summary><c>utils.are_disjoint</c> (non-strict: shared edges count as disjoint).</summary>
+        /// <summary>Check whether one rectangle lies outside another (shared edges count as outside when not strict).</summary>
         private static bool AreDisjoint(Rect bbox, Rect cell, bool strict = false)
         {
             if (bbox == null || cell == null)
@@ -792,7 +854,9 @@ namespace PDF4LLM.Helpers
             return bbox.X0 > cell.X1 || bbox.X1 < cell.X0 || bbox.Y0 > cell.Y1 || bbox.Y1 < cell.Y0;
         }
 
-        /// <summary><c>utils.cluster_substripe</c> inside <c>cluster_columns_in_stripe</c>.</summary>
+        /// <summary>
+        /// Within a horizontal stripe, group boxes into columns based on horizontal proximity.
+        /// </summary>
         private static List<List<LayoutInfoEntry>> ClusterSubstripe(List<LayoutInfoEntry> substripe)
         {
             const float HorizontalGap = 1f;
@@ -820,7 +884,10 @@ namespace PDF4LLM.Helpers
             return columns;
         }
 
-        /// <summary><c>utils.cluster_columns_in_stripe</c>.</summary>
+        /// <summary>
+        /// Within a horizontal stripe, group boxes into columns based on horizontal proximity.
+        /// Uses full-width solitary boxes to split the stripe into sub-stripes when needed.
+        /// </summary>
         private static List<List<LayoutInfoEntry>> ClusterColumnsInStripe(List<LayoutInfoEntry> stripe)
         {
             if (stripe == null || stripe.Count == 0)
@@ -877,9 +944,10 @@ namespace PDF4LLM.Helpers
             return columns.Count > 1;
         }
 
-        /// <summary><c>complete_table_structure</c> extras: virtual lines not ported; returns empty lists.</summary>
-        /// <summary><c>utils.simplify_vectors</c></summary>
-        /// <param name="vectors">Vector drawing blocks from <c>extractDICT</c>.</param>
+        /// <summary>
+        /// Join vectors that are horizontally adjacent and vertically aligned.
+        /// </summary>
+        /// <param name="vectors">Vector drawing blocks from the page text layer.</param>
         public static List<Dictionary<string, object>> SimplifyVectors(List<Dictionary<string, object>> vectors)
         {
             const float yTolerance = 1f;
@@ -916,7 +984,10 @@ namespace PDF4LLM.Helpers
             return newVectors;
         }
 
-        /// <summary><c>utils.find_virtual_lines</c></summary>
+        /// <summary>
+        /// Return virtual grid lines for a table bounding box.
+        /// Detects horizontal non-stroke vectors and thin horizontal lines to infer row and column borders.
+        /// </summary>
         /// <param name="page">Source page.</param>
         /// <param name="tableBbox">Bounding box of the table region.</param>
         /// <param name="words">Word boxes inside the table as <c>[x0, y0, x1, y1]</c> arrays.</param>
@@ -1020,19 +1091,29 @@ namespace PDF4LLM.Helpers
                 .ToList();
         }
 
-        /// <summary>Read layout from <see cref="Page.GetLayout"/> / <c>layout_information</c>.</summary>
-        /// <param name="page">Page to read or refresh layout from.</param>
-        /// <param name="blocks">Fallback text blocks when native layout is empty.</param>
-        public static List<LayoutInfoEntry> ReadPageLayout(Page page, List<Block> blocks)
+        /// <summary>Read layout boxes from <see cref="Page.GetLayout"/> / <see cref="Page.LayoutInformation"/>.</summary>
+        public static List<LayoutInfoEntry> ReadPageLayout(Page page, List<Block> blocks) =>
+            ReadPageLayoutRaw(page, blocks).Layout;
+
+        /// <summary>Read layout and retain raw table dicts for grid extraction.</summary>
+        public static LayoutRawParseResult ReadPageLayoutRaw(Page page, List<Block> blocks)
         {
             page.GetLayout();
-            List<LayoutInfoEntry> layout = ParseLayoutInformation(page.LayoutInformation);
+            var tableInfos = new Dictionary<string, JObject>();
+            List<LayoutInfoEntry> layout = ParseLayoutInformation(page.LayoutInformation, tableInfos);
             if (layout != null && layout.Count > 0)
-                return layout;
-            return BuildLayoutInformation(page, blocks);
+                return new LayoutRawParseResult { Layout = layout, TableInfos = tableInfos };
+
+            return new LayoutRawParseResult
+            {
+                Layout = BuildLayoutInformation(page, blocks),
+                TableInfos = tableInfos,
+            };
         }
 
-        /// <summary><c>utils.complete_table_structure(page)</c></summary>
+        /// <summary>
+        /// Complete table layout structures by finding virtual grid lines and boxes for table regions.
+        /// </summary>
         /// <param name="page">Page whose table layout boxes are completed.</param>
         public static (List<Tuple<Point, Point>> lines, List<Rect> boxes) CompleteTableStructure(Page page)
         {
@@ -1049,10 +1130,12 @@ namespace PDF4LLM.Helpers
             }
         }
 
-        /// <summary><c>utils.complete_table_structure</c></summary>
+        /// <summary>
+        /// Complete table layout structures by finding virtual grid lines and boxes for table regions.
+        /// </summary>
         /// <param name="page">Source page.</param>
         /// <param name="layout">Layout entries; table-class boxes are processed.</param>
-        /// <param name="textPage">Optional pre-built text page; created when <c>null</c>.</param>
+        /// <param name="textPage">Optional pre-built text page; created when <see langword="null"/>.</param>
         public static (List<Tuple<Point, Point>> lines, List<Rect> boxes) CompleteTableStructure(
             Page page,
             List<LayoutInfoEntry> layout,

@@ -15,20 +15,17 @@ namespace Artifex
     /// &lt;summary&gt;Central version constants for the MuPDF.NET solution.&lt;/summary&gt;
     public static class Versions
     {
-        /// &lt;summary&gt;Native MuPDF library (FZ_VERSION).&lt;/summary&gt;
+        /// &lt;summary&gt;Native MuPDF library (FZ_VERSION / MuPDF.NativeAssets).&lt;/summary&gt;
         public const string MuPDF = "$(ArtifexMuPDFVersion)"%3B
-
-        /// &lt;summary&gt;PyMuPDF Python package (VersionBind).&lt;/summary&gt;
-        public const string PyMuPDF = "$(ArtifexPyMuPDFVersion)"%3B
-
-        /// &lt;summary&gt;PyMuPDF4LLM Python package.&lt;/summary&gt;
-        public const string PyMuPDF4LLM = "$(ArtifexPyMuPDF4LLMVersion)"%3B
 
         /// &lt;summary&gt;MuPDF.NET NuGet package.&lt;/summary&gt;
         public const string MuPDFNet = "$(ArtifexMuPDFNetVersion)"%3B
 
         /// &lt;summary&gt;PDF4LLM NuGet package.&lt;/summary&gt;
         public const string PDF4LLM = "$(ArtifexPDF4LLMVersion)"%3B
+
+        /// &lt;summary&gt;pymupdf-layout PyPI package (PDF4LLM layout bridge).&lt;/summary&gt;
+        public const string PyMuPDFLayout = "$(ArtifexPyMuPDFLayoutVersion)"%3B
     }
 }
 </_ArtifexVersionCs>

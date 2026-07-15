@@ -59,13 +59,25 @@ namespace PDF4LLM.Test
             return path;
         }
 
-        /// <summary>Upstream fixture under <c>pymupdf4llm/tests/</c> (fallback).</summary>
-        public static string Pymupdf4llmTests(string fileName)
+        /// <summary>Test class fixture, or upstream <c>layout package*/tests</c> when absent.</summary>
+        public static string ForTestClassOrUpstream(string fileName, string testClassName)
         {
-            string path = Path.Combine(ResolveSolutionRoot(), "pymupdf4llm", "tests", fileName);
-            if (!File.Exists(path))
-                throw new FileNotFoundException($"Required pymupdf4llm test document not found: {path}");
-            return path;
+            string local = Path.Combine(
+                ResolveSolutionRoot(), "TestDocuments", "PDF4LLM.Test", testClassName, fileName);
+            if (File.Exists(local))
+                return local;
+            return "";
+        }
+
+        /// <summary>Returns <c>null</c> when the fixture is not present locally or upstream.</summary>
+        public static string? TryForTestClass(string fileName, string testClassName)
+        {
+            string local = Path.Combine(
+                ResolveSolutionRoot(), "TestDocuments", "PDF4LLM.Test", testClassName, fileName);
+            if (File.Exists(local))
+                return local;
+
+            return null;
         }
     }
 }

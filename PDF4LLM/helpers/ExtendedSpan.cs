@@ -11,6 +11,8 @@ namespace PDF4LLM.Helpers
         public string Text { get; set; }
         [JsonProperty("bbox")]
         public Rect Bbox { get; set; }
+        [JsonProperty("origin")]
+        public Point Origin { get; set; }
         [JsonProperty("size")]
         public float Size { get; set; }
         [JsonProperty("font")]

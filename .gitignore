@@ -47,6 +47,9 @@ TestDocuments/Demo/_Output/
 # Visual Studio 2017 auto generated files
 Generated\ Files/
 
+# MuPDF.NativeAssets generation files
+MuPDF/packages
+
 # MSTest test Results
 [Tt]est[Rr]esult*/
 [Bb]uild[Ll]og.*

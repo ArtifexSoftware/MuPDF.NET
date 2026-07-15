@@ -1,18 +1,16 @@
-<Project>
-  <!--
-    Single source of truth for Artifex product versions in this solution.
-    Edit only here; C# constants are generated into build/ArtifexVersions.g.cs.
-  -->
-  <PropertyGroup Label="Artifex product versions">
-    <!-- Native MuPDF C library (FZ_VERSION / MuPDF.NativeAssets). -->
-    <ArtifexMuPDFVersion>1.28.0</ArtifexMuPDFVersion>
-    <!-- PyMuPDF Python package (VersionBind / bind release). -->
-    <ArtifexPyMuPDFVersion>1.28.0</ArtifexPyMuPDFVersion>
-    <!-- PyMuPDF4LLM Python package (pymupdf4llm on PyPI). -->
-    <ArtifexPyMuPDF4LLMVersion>1.27.2.3</ArtifexPyMuPDF4LLMVersion>
-    <!-- MuPDF.NET NuGet package. -->
-    <ArtifexMuPDFNetVersion>3.28.0</ArtifexMuPDFNetVersion>
-    <!-- PDF4LLM NuGet package. -->
-    <ArtifexPDF4LLMVersion>1.27.2.27</ArtifexPDF4LLMVersion>
-  </PropertyGroup>
-</Project>
+<Project>
+  <!--
+    Single source of truth for Artifex product versions in this solution.
+    Edit only here; C# constants are generated into build/ArtifexVersions.g.cs.
+  -->
+  <PropertyGroup Label="Artifex product versions">
+    <!-- Native MuPDF C library (FZ_VERSION / MuPDF.NativeAssets). -->
+    <ArtifexMuPDFVersion>1.28.0.1</ArtifexMuPDFVersion>
+    <!-- MuPDF.NET NuGet package. -->
+    <ArtifexMuPDFNetVersion>3.28.1.3</ArtifexMuPDFNetVersion>
+    <!-- PDF4LLM NuGet package. -->
+    <ArtifexPDF4LLMVersion>1.28.0.2</ArtifexPDF4LLMVersion>
+    <!-- pymupdf-layout (and pymupdf) PyPI pin for the PDF4LLM layout bridge. -->
+    <ArtifexPyMuPDFLayoutVersion>1.28.0</ArtifexPyMuPDFLayoutVersion>
+  </PropertyGroup>
+</Project>

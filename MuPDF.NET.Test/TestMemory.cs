@@ -12,7 +12,6 @@ namespace MuPDF.NET.Test
     /// <remarks>
     /// Fixtures: <c>TestDocuments/MuPDF.NET.Test/TestMemory/</c>.
     /// Outputs: <c>TestDocuments/MuPDF.NET.Test/_Output/TestMemory/</c>.
-    /// Set <c>PYMUPDF_TEST_QUICK=1</c> to skip slow RSS loops.
     /// </remarks>
     [Collection("MuPDF.NET native")]
     public class TestMemory
@@ -23,15 +22,8 @@ namespace MuPDF.NET.Test
 
         private static string Out(string fileName) => _Path.ForOutput(fileName, TestClassName);
 
-        /// <summary>Honours <c>PYMUPDF_TEST_QUICK=1</c>.</summary>
         private static bool SkipSlowTests(string testName)
         {
-            string? pymupdfTestQuick = Environment.GetEnvironmentVariable("PYMUPDF_TEST_QUICK");
-            if (pymupdfTestQuick == "1")
-            {
-                Console.WriteLine($"{testName}(): skipping test because PYMUPDF_TEST_QUICK={pymupdfTestQuick}.");
-                return true;
-            }
             return false;
         }
 

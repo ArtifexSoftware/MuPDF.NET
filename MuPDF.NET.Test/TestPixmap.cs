@@ -49,12 +49,6 @@ namespace MuPDF.NET.Test
 
         private static bool SkipSlowTests(string testName)
         {
-            string? pymupdfTestQuick = Environment.GetEnvironmentVariable("PYMUPDF_TEST_QUICK");
-            if (pymupdfTestQuick == "1")
-            {
-                Console.WriteLine($"{testName}(): skipping test because PYMUPDF_TEST_QUICK={pymupdfTestQuick}.");
-                return true;
-            }
             return false;
         }
 
@@ -501,11 +495,7 @@ namespace MuPDF.NET.Test
         {
             if (SkipSlowTests("test_3848"))
                 return;
-            if (Environment.GetEnvironmentVariable("PYMUPDF_RUNNING_ON_VALGRIND") == "1")
-            {
-                Console.WriteLine("test_3848(): not running on valgrind because very slow.");
-                return;
-            }
+
             string path = Resource("test_3848.pdf");
             if (!HasFile(path)) return;
 
@@ -619,16 +609,7 @@ namespace MuPDF.NET.Test
             // rms = gentle_compare.pixmaps_rms(pixmap, pixmap_expected)
             float rms = _Compare.PixmapsRms(pixmap, pixmap_expected);
             Console.WriteLine($"rms={rms}.");
-            if (Environment.GetEnvironmentVariable("PYMUPDF_SYSINSTALL_TEST") == "1")
-            {
-                // MuPDF using external third-party libs gives slightly different
-                // behaviour.
-                Assert.True(rms < 2);
-            }
-            else
-            {
-                Assert.Equal(0, rms);
-            }
+            Assert.Equal(0, rms);
         }
 
         [Fact]

@@ -4,7 +4,7 @@ using System.IO;
 
 namespace PDF4LLM.Layout
 {
-    /// <summary>Shared venv locations for the pymupdf.layout Python bridge.</summary>
+    /// <summary>Shared venv locations for the layout bridge Python bridge.</summary>
     internal static class LayoutPythonPaths
     {
         public const string VenvDirName = ".venv-layout";
@@ -90,6 +90,7 @@ namespace PDF4LLM.Layout
         }
 
         static bool _setupHelpPrinted;
+        static bool _versionMismatchWarningPrinted;
 
         /// <summary>Print setup instructions once when layout is requested but unavailable.</summary>
         internal static void PrintSetupHelp()
@@ -113,6 +114,21 @@ namespace PDF4LLM.Layout
                 "\n" +
                 $"The setup script creates a venv at: {venv}\n" +
                 "Or set PDF4LLM_PYTHON to a Python 3.10+ interpreter with pymupdf-layout installed.");
+        }
+
+        /// <summary>Warn once when the installed pymupdf-layout is older than expected.</summary>
+        internal static void PrintVersionTooLowWarning(string requiredVersion, string installedVersion)
+        {
+            if (_versionMismatchWarningPrinted)
+                return;
+            _versionMismatchWarningPrinted = true;
+
+            Console.Error.WriteLine(
+                $"PDF4LLM warning: pymupdf-layout {installedVersion} is installed; " +
+                $"PDF4LLM {VersionInfo.Version} expects pymupdf-layout {requiredVersion} or newer. " +
+                "Continuing with the installed version.\n" +
+                "To install the expected version:\n" +
+                "  dotnet msbuild -t:PDF4LLMSetupLayoutPython");
         }
     }
 }

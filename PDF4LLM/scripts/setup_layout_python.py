@@ -113,6 +113,73 @@ def create_venv(base: str, venv_root: Path) -> None:
     run(cmd)
 
 
+def required_layout_version() -> str:
+    for line in REQUIREMENTS.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.startswith("pymupdf-layout=="):
+            return line.split("==", 1)[1].strip()
+    print("pymupdf-layout pin missing from requirements-layout.txt", file=sys.stderr)
+    raise SystemExit(1)
+
+
+def normalize_version(version: str) -> str:
+    return (version or "").strip().split("-", 1)[0]
+
+
+def resolve_layout_python(venv_root: Path | None) -> Path | None:
+    env = os.environ.get("PDF4LLM_PYTHON") or os.environ.get("PYTHON")
+    if env:
+        candidate = Path(env)
+        if candidate.is_file():
+            return candidate
+
+    if venv_root is not None:
+        py = venv_python(venv_root)
+        if py.is_file():
+            return py
+
+    for root in (default_venv_path(),):
+        py = venv_python(root)
+        if py.is_file():
+            return py
+
+    return None
+
+
+def verify_layout_python(py: Path, required: str) -> int:
+    try:
+        out = subprocess.check_output(
+            [str(py), "-c", "import pymupdf.layout; print(pymupdf.layout.version)"],
+            text=True,
+            stderr=subprocess.STDOUT,
+        ).strip()
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        print("pymupdf-layout is not installed.", file=sys.stderr)
+        print(
+            "Install with:\n"
+            "  dotnet msbuild -t:PDF4LLMSetupLayoutPython",
+            file=sys.stderr,
+        )
+        return 1
+
+    if normalize_version(out) != normalize_version(required):
+        print(
+            f"pymupdf-layout {out} is installed; PDF4LLM requires pymupdf-layout {required}.",
+            file=sys.stderr,
+        )
+        print(
+            "Refresh with:\n"
+            "  dotnet msbuild -t:PDF4LLMSetupLayoutPython",
+            file=sys.stderr,
+        )
+        return 1
+
+    print(f"Verified pymupdf-layout {out}")
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -128,7 +195,28 @@ def main() -> int:
         help="Python used to create the venv (default: this interpreter)",
     )
     parser.add_argument("--skip-verify", action="store_true")
+    parser.add_argument(
+        "--verify-only",
+        action="store_true",
+        help="check pymupdf-layout version without creating or updating the venv",
+    )
     args = parser.parse_args()
+
+    required = required_layout_version()
+
+    if args.verify_only:
+        venv_root = (args.venv or default_venv_path()).resolve()
+        py = resolve_layout_python(venv_root if venv_root.is_dir() else None)
+        if py is None:
+            print("No layout Python interpreter found.", file=sys.stderr)
+            print(
+                "Install with:\n"
+                "  dotnet msbuild -t:PDF4LLMSetupLayoutPython",
+                file=sys.stderr,
+            )
+            return 1
+        print(f"Checking layout Python: {py}")
+        return verify_layout_python(py, required)
 
     if not REQUIREMENTS.is_file():
         print(f"Missing {REQUIREMENTS}", file=sys.stderr)
@@ -156,28 +244,8 @@ def main() -> int:
     run([str(py), "-m", "pip", "install", "-r", str(REQUIREMENTS)])
 
     if not args.skip_verify:
-        try:
-            out = subprocess.check_output(
-                [
-                    str(py),
-                    "-c",
-                    "import pymupdf.layout; pymupdf.layout.activate(); print(pymupdf.layout.version)",
-                ],
-                text=True,
-                stderr=subprocess.STDOUT,
-            ).strip()
-        except subprocess.CalledProcessError as exc:
-            output = (exc.output or "").strip()
-            print("pymupdf.layout verification failed after install.", file=sys.stderr)
-            if output:
-                print(output, file=sys.stderr)
-            print(
-                "Try running pip manually:\n"
-                f"  {py} -m pip install -r {REQUIREMENTS}",
-                file=sys.stderr,
-            )
+        if verify_layout_python(py, required) != 0:
             return 1
-        print(f"Verified pymupdf.layout {out}")
 
     print(
         textwrap.dedent(
