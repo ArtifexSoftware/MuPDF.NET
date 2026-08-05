@@ -1042,7 +1042,7 @@ This class represents a document. It can be constructed from a file or from memo
     :arg bool xmlMetadata: Remove XML metadata.
 
 
-  .. method:: Save(string filename, int garbage: 0, int clean: 0, int deflate: 0, int deflateImages: 0, int deflateFonts: false, int incremental: 0, int ascii: 0, int expand: 0, int linear: 0, int pretty: 0, int noNewId: 0, int encryption: PDF_ENCRYPT_NONE, int permissions: -1, string ownerPW: null, string userPW: null, int useObjstms: 0)
+  .. method:: Save(string filename, int garbage: 0, int clean: 0, int deflate: 0, int deflate_images: 0, int deflate_fonts: false, int incremental: 0, int ascii: 0, int expand: 0, int linear: 0, int noNewId: 0, int pretty: 0, int encryption: PDF_ENCRYPT_NONE, int permissions: 4095, string ownerPW: null, string userPW: null, int preserve_metadata: 1, int use_objstms: 0, compression_effort:0, raise_on_repair: false)
 
     PDF only: Saves the document in its **current state**.
 
@@ -1059,8 +1059,8 @@ This class represents a document. It can be constructed from a file or from memo
     :arg int clean: Clean and sanitize content streams [#f1]_. Corresponds to "mutool clean -sc".
 
     :arg int deflate: Deflate (compress) uncompressed streams.
-    :arg int deflateImages: Deflate (compress) uncompressed image streams [#f4]_.
-    :arg int deflateFonts: Deflate (compress) uncompressed fontFile streams [#f4]_.
+    :arg int deflate_images: Deflate (compress) uncompressed image streams [#f4]_.
+    :arg int deflate_fonts: Deflate (compress) uncompressed fontFile streams [#f4]_.
 
     :arg int incremental: Only save changes to the PDF. Excludes "garbage" and "linear". Can only be used if *outfile* is a string or a `pathlib.Path` and equal to :attr:`Document.name`. Cannot be used for files that are decrypted or repaired and also in some other cases. To be sure, check :meth:`Document.CanSaveIncrementally`. If this is false, saving to a new file is required.
 
@@ -1075,19 +1075,29 @@ This class represents a document. It can be constructed from a file or from memo
 
     :arg int linear: Save a linearised version of the document. This option creates a file format for improved performance for Internet access. Excludes "incremental".
 
-    :arg int pretty: Prettify the document source for better readability. PDF objects will be reformatted to look like the default output of :meth:`Document.GetXrefObject`.
-
     :arg int noNewId: Suppress the update of the file's `/ID` field. If the file happens to have no such field at all, also suppress creation of a new one. Default is `false`, so every save will lead to an updated file identification.
 
+
+    :arg int pretty: Prettify the document source for better readability. PDF objects will be reformatted to look like the default output of :meth:`Document.GetXrefObject`.
+
+    
     :arg int permissions: Set the desired permission levels. See :ref:`PermissionCodes` for possible values. Default is granting all.
 
     :arg int encryption: Set the desired encryption method. See :ref:`EncryptionMethods` for possible values.
 
-    :arg string ownerPW: Set the document's owner password. If not provided, the user password is taken if provided. The string length must not exceed 40 characters.
+    :arg string owner_pw: Set the document's owner password. If not provided, the user password is taken if provided. The string length must not exceed 40 characters.
 
-    :arg string userPW: Set the document's user password. The string length must not exceed 40 characters.
+    :arg string user_pw: Set the document's user password. The string length must not exceed 40 characters.
 
-    :arg int useObjstms: Compression option that converts eligible PDF object definitions to information that is stored in some other object's :data:`stream` data. Depending on the `deflate` parameter value, the converted object definitions will be compressed -- which can lead to very significant file size reductions.
+    :arg int use_objstms: Compression option that converts eligible PDF object definitions to information that is stored in some other object's :data:`stream` data. Depending on the `deflate` parameter value, the converted object definitions will be compressed -- which can lead to very significant file size reductions.
+
+    :arg int compression_effort:
+    
+      * 0 for default
+      * 1 for minimum effort.
+      * 100 for maximum effort.
+    
+    :arg bool raise_on_repair: If `true` we raise an exception if the save caused a repair. This is useful because repairs can cause changes to be lost.
 
     .. warning:: The method does not check, whether a file of that name already exists, will hence not ask for confirmation, and overwrite the file. It is your responsibility as a programmer to handle this.
 
