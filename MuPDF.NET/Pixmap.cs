@@ -913,8 +913,8 @@ namespace MuPDF.NET
         /// </summary>
         /// <param name="filename">The file to save to. May be provided as a string, as a pathlib.Path or as a Python file object. In the latter two cases, the filename is taken from the resp. object. The filename's extension determines the image format, which can be overruled by the output parameter.</param>
         /// <param name="output">The desired image format. The default is the filename's extension. If both, this value and the file extension are unsupported, an exception is raised. For possible values see PixmapOutput.</param>
-        /// <param name="jpg_quality">The desired image quality, default 95. Only applies to JPEG images, else ignored. This parameter trades quality against file size. A value of 98 is close to lossless. Higher values should not lead to better quality.</param>
-        public void Save(string filename, string output = null, int jpg_quality = 95)
+        /// <param name="jpgQuality">The desired image quality, default 95. Only applies to JPEG images, else ignored. This parameter trades quality against file size. A value of 98 is close to lossless. Higher values should not lead to better quality.</param>
+        public void Save(string filename, string output = null, int jpgQuality = 95)
         {
             if (filename == null) throw new ArgumentNullException(nameof(filename));
             string path = filename;
@@ -931,7 +931,7 @@ namespace MuPDF.NET
                 throw new ValueErrorException($"unsupported colorspace for '{ext}'");
             if (idx == 7)
                 SetDpi(XRes, YRes);
-            WriteImage(path, idx.Value, jpg_quality);
+            WriteImage(path, idx.Value, jpgQuality);
         }
 
         private static int? FormatIndex(string ext) => ext switch
@@ -945,7 +945,7 @@ namespace MuPDF.NET
             _ => null,
         };
 
-        private void WriteImage(string filename, int format, int jpg_quality)
+        private void WriteImage(string filename, int format, int jpgQuality)
         {
             var pm = NativePixmap;
             switch (format)
@@ -955,12 +955,12 @@ namespace MuPDF.NET
                 case 3: mupdf.mupdf.fz_save_pixmap_as_pam(pm, filename); break;
                 case 5: mupdf.mupdf.fz_save_pixmap_as_psd(pm, filename); break;
                 case 6: mupdf.mupdf.fz_save_pixmap_as_ps(pm, filename, 0); break;
-                case 7: mupdf.mupdf.fz_save_pixmap_as_jpeg(pm, filename, jpg_quality); break;
+                case 7: mupdf.mupdf.fz_save_pixmap_as_jpeg(pm, filename, jpgQuality); break;
                 default: mupdf.mupdf.fz_save_pixmap_as_png(pm, filename); break;
             }
         }
 
-        private byte[] ToBytesInternal(int format, int jpg_quality)
+        private byte[] ToBytesInternal(int format, int jpgQuality)
         {
             var pm = NativePixmap;
             int size = pm.fz_pixmap_stride() * pm.h();
@@ -973,7 +973,7 @@ namespace MuPDF.NET
                 case 3: out_.fz_write_pixmap_as_pam(pm); break;
                 case 5: out_.fz_write_pixmap_as_psd(pm); break;
                 case 6: out_.fz_write_pixmap_as_ps(pm); break;
-                case 7: out_.fz_write_pixmap_as_jpeg(pm, jpg_quality, 0); break;
+                case 7: out_.fz_write_pixmap_as_jpeg(pm, jpgQuality, 0); break;
                 default: out_.fz_write_pixmap_as_png(pm); break;
             }
             out_.fz_close_output();
@@ -983,8 +983,8 @@ namespace MuPDF.NET
         /// return a memory area in a variety of formats.
         /// </summary>
         /// <param name="output">The requested image format. The default is "png". For other possible values see PixmapOutput.</param>
-        /// <param name="jpg_quality">The desired image quality, default 95. Only applies to JPEG images, else ignored. This parameter trades quality against file size. A value of 98 is close to lossless. Higher values should not lead to better quality.</param>
-        public byte[] ToBytes(string output = "png", int jpg_quality = 95)
+        /// <param name="jpgQuality">The desired image quality, default 95. Only applies to JPEG images, else ignored. This parameter trades quality against file size. A value of 98 is close to lossless. Higher values should not lead to better quality.</param>
+        public byte[] ToBytes(string output = "png", int jpgQuality = 95)
         {
             string ext = (output ?? "png").ToLowerInvariant();
             int? idx = FormatIndex(ext);
@@ -996,7 +996,7 @@ namespace MuPDF.NET
                 throw new ValueErrorException($"unsupported colorspace for '{output}'");
             if (idx == 7)
                 SetDpi(XRes, YRes);
-            return ToBytesInternal(idx.Value, jpg_quality);
+            return ToBytesInternal(idx.Value, jpgQuality);
         }
         /// <summary>
         /// Returns a one-page searchable PDF (OCR text layer) as bytes; alias for <see cref="PdfOCRSave"/>.

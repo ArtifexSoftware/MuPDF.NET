@@ -535,28 +535,28 @@ namespace MuPDF.NET
                 morphMat = tupleMorph.Item2;
             }
 
-            var modernResult = insert_textbox(
+            var modernResult = InsertTextbox(
                 rect,
                 text?.ToString() ?? string.Empty,
                 align: align,
-                border_width: borderWidth,
+                borderWidth: borderWidth,
                 color: color,
                 encoding: encoding,
-                expandtabs: expandTabs,
-                fill_opacity: fillOpacity,
+                expandTabs: expandTabs,
+                fillOpacity: fillOpacity,
                 fill: fill,
-                fontfile: fontFile,
-                fontname: fontName,
-                fontsize: fontSize,
-                lineheight: lineHeight,
-                morph_fix: morphFix,
-                morph_mat: morphMat,
+                fontFile: fontFile,
+                fontName: fontName,
+                fontSize: fontSize,
+                lineHeight: lineHeight,
+                morphFix: morphFix,
+                morphMat: morphMat,
                 oc: oc,
                 overlay: overlay,
-                render_mode: renderMode,
+                renderMode: renderMode,
                 rotate: rotate,
-                set_simple: setSimple,
-                stroke_opacity: strokeOpacity);
+                setSimple: setSimple,
+                strokeOpacity: strokeOpacity);
             return modernResult.Rc;
         }
 

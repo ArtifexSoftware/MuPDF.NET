@@ -2701,7 +2701,7 @@ namespace MuPDF.NET
         /// <item>
         /// <description>
         /// Normalized tuple:
-        /// <c>[x0, y0, x1, y1, "table"]</c> — written by layout pipelines such as PDF4LLM
+        /// <c>[x0, y0, x1, y1, "table"]</c> — written by layout pipelines such as MuPDF.NET.PDF4LLM
         /// <c>WritePageLayout</c> after <c>find_reading_order</c>.
         /// </description>
         /// </item>

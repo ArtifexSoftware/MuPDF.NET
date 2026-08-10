@@ -8,7 +8,7 @@
 
 ### [3.28.1] - 2026-07-10
 
-- **`FindTables()` / `Utils.GetTables()`**: layout-guided detection when `Page.GetLayoutProvider` is set (pymupdf-layout / **PDF4LLM**); supports tuple and raw layout `table` boxes.
+- **`FindTables()` / `Utils.GetTables()`**: layout-guided detection when `Page.GetLayoutProvider` is set (pymupdf-layout / **MuPDF.NET.PDF4LLM**); supports tuple and raw layout `table` boxes.
 - **Concurrency**: per-thread scratch buffers and detection settings replace shared `TableModule` state — safe for parallel extraction across separate documents.
 - **`ToMarkdown()`**: fixed header regression (`Col1`, `Col2`, …) after the thread-safety refactor.
 
@@ -35,7 +35,7 @@ Aligned MuPDF.NET with **PyMuPDF 1.28.0** and **MuPDF 1.28.0**.
 - Depends on stable **`MuPDF.NativeAssets` 1.28.0**.
 - Updated PyMuPDF bind to **1.27.2.3** (`VersionBind` / `pymupdf_version`).
 - **`Matrix`**: added static `Matrix.Concat(one, two)`; renamed the in-place PyMuPDF `concat` equivalent to `ConcatInto(one, two)` (avoids C# static/instance signature clashes); added instance `Inverted()` returning a new matrix or `null` when singular.
-- **`Page`**: added `GetLayout()`, `LayoutInformation`, and `GetLayoutProvider` so external layout engines (e.g. pymupdf-layout via **PDF4LLM**) can supply `layout_information` boxes consumed by `Page.find_tables()`.
+- **`Page`**: added `GetLayout()`, `LayoutInformation`, and `GetLayoutProvider` so external layout engines (e.g. pymupdf-layout via **MuPDF.NET.PDF4LLM**) can supply `layout_information` boxes consumed by `Page.find_tables()`.
 - Expanded `MuPDF.NET.Test` matrix/geometry coverage aligned with PyMuPDF `test_geometry.py`.
 
 ### [3.2.17] - 2026-06-11
@@ -46,18 +46,18 @@ Aligned MuPDF.NET with **PyMuPDF 1.28.0** and **MuPDF 1.28.0**.
 
 ### [3.2.16] - 2026-04-24
 - Added global `Utils.MuPDFLock` and synchronized MuPDF native calls for improved thread safety.
-- Improved Tesseract OCR stability in the `PDF4LLM` OCR pipeline and hardened OCR helper behavior.
+- Improved Tesseract OCR stability in the `MuPDF.NET.PDF4LLM` OCR pipeline and hardened OCR helper behavior.
 - Fixed a regression in Llama `LoadData` and added a new `TableExtract` demo sample.
-- Updated `PDF4LLM` package metadata and NuGet project files.
+- Updated `MuPDF.NET.PDF4LLM` package metadata and NuGet project files.
 
 ### [3.2.15] - 2026-04-17
-- Migrated the helper package from `MuPDF.NET4LLM` to `PDF4LLM` and refreshed the package layout, demos, and documentation.
+- Migrated the helper package from `MuPDF.NET4LLM` to `MuPDF.NET.PDF4LLM` and refreshed the package layout, demos, and documentation.
 - Added file-path overloads for `ToMarkdown`, `ToJson`, and `ToText` helpers.
-- Updated `PDF4LLM` package support for the latest MuPDF bindings and metadata.
+- Updated `MuPDF.NET.PDF4LLM` package support for the latest MuPDF bindings and metadata.
 
 ### [3.2.14] - 2026-03-23
 - Fixed issue #234 in page/text utilities and added a regression test in `UtilsTest`.
-- Minor `PDF4LLM` documentation and comment updates.
+- Minor `MuPDF.NET.PDF4LLM` documentation and comment updates.
 
 ### [3.2.13] - 2026-03-18
 - Added **MuPDF.NET4LLM** as a separate NuGet package: LLM/RAG helpers for PDF-to-Markdown conversion, layout parsing, document structure analysis, and LlamaIndex integration. Install via `dotnet add package MuPDF.NET4LLM`; depends on MuPDF.NET.

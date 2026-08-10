@@ -11,7 +11,9 @@
 dotnet add package MuPDF.NET
 ```
 
-> **LLM / RAG use?** See the companion package [`PDF4LLM`](./PDF4LLM/README.md) for PDF-to-Markdown conversion and LlamaIndex integration, or install it separately: `dotnet add package PDF4LLM`
+> **LLM / RAG use?** Install `MuPDF.NET.PDF4LLM` from NuGet, or build the **`MuPDF.NET.PDF4LLM`** project in this solution.
+
+Open **`MuPDF.NET.sln`** at the repository root.
 
 ---
 
@@ -38,7 +40,7 @@ dotnet add package MuPDF.NET
 - **Versatile** — read, write, annotate, redact, merge, split, convert, and render documents
 - **Multi-language** — works in C#, F#, and Visual Basic; mirrors the PyMuPDF API so Python experience transfers directly
 - **Barcode support** — read and generate QR, Code 128, Data Matrix, PDF417, and more
-- **LLM-ready** — via the `PDF4LLM` companion for Markdown output, layout parsing, and LlamaIndex loading
+- **LLM-ready** — via the `MuPDF.NET.PDF4LLM` companion for Markdown output, layout parsing, and LlamaIndex loading
 
 ---
 
@@ -46,7 +48,7 @@ dotnet add package MuPDF.NET
 
 | Requirement | Version |
 |---|---|
-| .NET | 8.0 or later (.NET Standard 2.0 via `PDF4LLM`) |
+| .NET | 8.0 or later (.NET Standard 2.0 via `MuPDF.NET.PDF4LLM`) |
 | Visual Studio | 2019 or 2022 (Windows build path) |
 | OS | Windows, Linux |
 
@@ -136,7 +138,7 @@ doc.Close();
 | **OCR** | OCR image-heavy pages via integrated Tesseract support |
 | **Images** | Extract, insert, and replace embedded images and vector graphics |
 | **Barcodes** | Scan and generate QR codes, Code 128, Data Matrix, PDF417 |
-| **LLM / RAG** | Convert to Markdown with layout awareness via `PDF4LLM` companion package |
+| **LLM / RAG** | Convert to Markdown with layout awareness via `MuPDF.NET.PDF4LLM` companion package |
 
 ---
 
@@ -347,16 +349,6 @@ Building from source is only required if you want to modify the C# bindings or t
 
 See the [Getting Started](https://mupdfnet.readthedocs.io/en/latest/getting-started/index.html) guide for `dotnet` CLI instructions on Ubuntu/Debian.
 
-**Samples**
-
-The `Demo` project runs curated examples for MuPDF.NET and PDF4LLM. See [Demo/README.md](./Demo/README.md):
-
-```bash
-cd Demo
-dotnet run              # all samples (see Demo/README.md)
-dotnet run -- help      # full list (diagnostics marked [diag])
-```
-
 ---
 
 ## Documentation
@@ -366,7 +358,7 @@ dotnet run -- help      # full list (diagnostics marked [diag])
 | Full API reference | https://mupdfnet.readthedocs.io |
 | Getting started guide | https://mupdfnet.readthedocs.io/en/latest/getting-started/index.html |
 | The Basics (cookbook) | https://mupdfnet.readthedocs.io/en/latest/the-basics/index.html |
-| LLM/RAG companion (`PDF4LLM`) | https://docs.pdf4llm.com/dotnet/getting-started/installation |
+| LLM/RAG companion (`MuPDF.NET.PDF4LLM`) | https://docs.pdf4llm.com/dotnet/getting-started/installation |
 
 ---
 

@@ -70,8 +70,8 @@ namespace MuPDF.NET.Test
                 Out("test_compress.pdf"),
                 garbage: 3,
                 deflate: 1,
-                deflate_images: 1,
-                deflate_fonts: 1,
+                deflateImages: 1,
+                deflateFonts: 1,
                 pretty: 1);
         }
 

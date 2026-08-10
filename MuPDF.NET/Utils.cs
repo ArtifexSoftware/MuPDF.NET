@@ -828,8 +828,8 @@ namespace MuPDF.NET
         /// <summary>
         /// Basic image metadata : width, height, colorspace, bpc, ext, etc.
         /// </summary>
-        /// <param name="keep_image">When non-zero, include the native <c>fz_image</c> handle under key <c>image</c>.</param>
-        public static Dictionary<string, object> ImageProperties(object img, int keep_image = 0)
+        /// <param name="keepImage">When non-zero, include the native <c>fz_image</c> handle under key <c>image</c>.</param>
+        public static Dictionary<string, object> ImageProperties(object img, int keepImage = 0)
         {
             if (img == null)
                 throw new ArgumentException("bad argument 'img'");
@@ -908,7 +908,7 @@ namespace MuPDF.NET
                 // result[dictkey_cs_name] = cs_name
                 ["cs-name"] = csName,
             };
-            if (keep_image != 0)
+            if (keepImage != 0)
                 result["image"] = image;
             return result;
         }

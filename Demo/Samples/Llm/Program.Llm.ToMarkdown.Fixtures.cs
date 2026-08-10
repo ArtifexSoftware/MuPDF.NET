@@ -1,7 +1,7 @@
 namespace Demo
 {
     /// <summary>
-    /// PDF4LLM <see cref="PDF4LLM.PdfExtractor.ToMarkdown"/> demos aligned with PDF4LLM test fixtures
+    /// MuPDF.NET.PDF4LLM <see cref="MuPDF.NET.PDF4LLM.MuPDF4LLM.ToMarkdown"/> demos aligned with MuPDF.NET.PDF4LLM test fixtures
     /// (golden markdown, OCR behavior). PDFs live under <c>TestDocuments/Demo/Llm/</c>; samples skip if missing.
     /// </summary>
     internal partial class Program
@@ -13,7 +13,7 @@ namespace Demo
         internal static void Test4LlmToMarkdownCompareExpected370(string[] args)
         {
             _ = args;
-            Console.WriteLine("\n=== Test4LlmToMarkdownCompareExpected370 (PDF4LLM) =======================");
+            Console.WriteLine("\n=== Test4LlmToMarkdownCompareExpected370 (MuPDF.NET.PDF4LLM) =======================");
 
             string pdfPath = DemoPaths.Input("Llm/test_370.pdf");
             string expectedPath = DemoPaths.Input("Llm/test_370_expected.md");
@@ -27,7 +27,7 @@ namespace Demo
             Document document = new Document(pdfPath);
             try
             {
-                string actual = ToMarkdown(
+                string actual = MuPDF4LLM.ToMarkdown(
                     document,
                     header: false,
                     footer: false,
@@ -75,7 +75,7 @@ namespace Demo
             string md;
             try
             {
-                md = ToMarkdown(doc);
+                md = MuPDF4LLM.ToMarkdown(doc);
             }
             finally
             {
@@ -104,7 +104,7 @@ namespace Demo
             }
         }
 
-        /// <summary><c>ToMarkdown(..., useOcr: false)</c> on FFFD fixture.</summary>
+        /// <summary><c>MuPDF4LLM.ToMarkdown(..., useOcr: false)</c> on FFFD fixture.</summary>
         internal static void Test4LlmToMarkdownOcrFixture2(string[] args)
         {
             _ = args;
@@ -121,7 +121,7 @@ namespace Demo
             string md;
             try
             {
-                md = ToMarkdown(doc, useOcr: false);
+                md = MuPDF4LLM.ToMarkdown(doc, useOcr: false);
             }
             finally
             {
@@ -151,8 +151,8 @@ namespace Demo
             string mdNoOcr;
             try
             {
-                md = ToMarkdown(doc);
-                mdNoOcr = ToMarkdown(doc, useOcr: false);
+                md = MuPDF4LLM.ToMarkdown(doc);
+                mdNoOcr = MuPDF4LLM.ToMarkdown(doc, useOcr: false);
             }
             finally
             {

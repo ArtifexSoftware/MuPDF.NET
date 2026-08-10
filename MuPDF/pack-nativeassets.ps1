@@ -69,12 +69,24 @@ function Test-HasBinaries([string] $sourceDir) {
     return $files.Count -gt 0
 }
 
-function New-PlatformTargetsContent([string] $packageId, [string] $rid) {
+function New-PlatformTargetsContent([string] $rid, [string] $nativeRoot) {
+    # Every installed MuPDF.NativeAssets.* package imports its own copy of this file,
+    # so the copy must be gated on the RID being built for. Without the gate the
+    # win-x86 and win-x64 packages both write mupdfcsharp.dll to the output directory
+    # and Linux/macOS binaries are copied into Windows builds.
     @"
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <!-- .NET Framework: copy runtimes/$rid/native from this package to output. -->
-  <ItemGroup Condition="'`$(TargetFrameworkIdentifier)' == '.NETFramework'">
-    <None Include="`$(MSBuildThisFileDirectory)..\..\runtimes\$rid\native\*.*"
+  <PropertyGroup Condition="'`$(TargetFrameworkIdentifier)' == '.NETFramework' and '`$(MuPDFNativeAssetsRuntimeId)' == ''">
+    <MuPDFNativeAssetsRuntimeId Condition="'`$(PlatformTarget)' == 'x86'">win-x86</MuPDFNativeAssetsRuntimeId>
+    <MuPDFNativeAssetsRuntimeId Condition="'`$(PlatformTarget)' == 'x64'">win-x64</MuPDFNativeAssetsRuntimeId>
+    <MuPDFNativeAssetsRuntimeId Condition="'`$(PlatformTarget)' == 'ARM64'">win-arm64</MuPDFNativeAssetsRuntimeId>
+    <!-- AnyCPU: the process runs 32-bit when Prefer32Bit is on, 64-bit otherwise. -->
+    <MuPDFNativeAssetsRuntimeId Condition="'`$(MuPDFNativeAssetsRuntimeId)' == '' and '`$(Prefer32Bit)' == 'true'">win-x86</MuPDFNativeAssetsRuntimeId>
+    <MuPDFNativeAssetsRuntimeId Condition="'`$(MuPDFNativeAssetsRuntimeId)' == ''">win-x64</MuPDFNativeAssetsRuntimeId>
+  </PropertyGroup>
+  <ItemGroup Condition="'`$(TargetFrameworkIdentifier)' == '.NETFramework' and '`$(MuPDFNativeAssetsRuntimeId)' == '$rid'">
+    <None Include="`$(MSBuildThisFileDirectory)$nativeRoot\$rid\native\*.*"
           CopyToOutputDirectory="PreserveNewest"
           Link="%(Filename)%(Extension)" />
   </ItemGroup>
@@ -112,8 +124,22 @@ foreach ($platform in $manifest.platforms) {
     New-Item -ItemType Directory -Force -Path $targetsDir | Out-Null
     $targetsFileName = "$packageId.targets"
     $targetsPath = Join-Path $targetsDir $targetsFileName
-    Set-Content -Path $targetsPath -Value (New-PlatformTargetsContent $packageId $rid) -Encoding UTF8
+    Set-Content -Path $targetsPath -Value (New-PlatformTargetsContent $rid '..\runtimes') -Encoding UTF8
     $fileLines.Add("    <file src=`"buildTransitive\$targetsFileName`" target=`"buildTransitive\`" />")
+
+    # Legacy packages.config determines compatibility from lib/content assets and
+    # does not import buildTransitive. Add conventional empty reference assets and
+    # framework-specific build imports for supported .NET Framework targets.
+    $placeholderPath = Join-Path $stage '_._'
+    [System.IO.File]::WriteAllBytes($placeholderPath, [byte[]]@())
+    foreach ($framework in @('net461', 'net472', 'net48')) {
+        $legacyTargetsDir = Join-Path $stage "build\$framework"
+        New-Item -ItemType Directory -Force -Path $legacyTargetsDir | Out-Null
+        Set-Content -Path (Join-Path $legacyTargetsDir $targetsFileName) `
+            -Value (New-PlatformTargetsContent $rid '..\..\runtimes') -Encoding UTF8
+        $fileLines.Add("    <file src=`"_._`" target=`"lib\$framework\_._`" />")
+        $fileLines.Add("    <file src=`"build\$framework\$targetsFileName`" target=`"build\$framework\`" />")
+    }
 
     Copy-Item (Join-Path $root 'LICENSE.md') $stage
     $fileLines.Add('    <file src="LICENSE.md" />')
@@ -131,6 +157,11 @@ foreach ($platform in $manifest.platforms) {
     <copyright>Artifex</copyright>
     <tags>C# MuPDF DotNet PDF nativeassets $rid</tags>
     <repository type="git" url="https://github.com/ArtifexSoftware/MuPDF.NET" />
+    <dependencies>
+      <group targetFramework="net461" />
+      <group targetFramework="net472" />
+      <group targetFramework="net48" />
+    </dependencies>
   </metadata>
   <files>
 $filesSection

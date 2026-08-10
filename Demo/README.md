@@ -1,6 +1,6 @@
 # MuPDF.NET Demo
 
-Runnable samples for **MuPDF.NET** and **PDF4LLM**, grouped by API area under `Samples/`.
+Runnable samples for **MuPDF.NET** and **MuPDF.NET.PDF4LLM**, grouped by API area under `Samples/`.
 
 ## Run
 
@@ -11,7 +11,8 @@ dotnet run                    # all samples in SampleMenu.cs (default, includes 
 dotnet run -- user            # user-facing samples only (skips [diag])
 dotnet run -- diagnostics     # [diag] samples only
 dotnet run -- help            # list all samples
-dotnet run -- hello-new-pdf   # one sample by name
+dotnet run -- hello-new-pdf   # one MuPDF.NET sample by name
+dotnet run -- rag-markdown    # one MuPDF.NET.PDF4LLM sample by name
 ```
 
 ## Layout
@@ -24,11 +25,7 @@ dotnet run -- hello-new-pdf   # one sample by name
 | `Samples/PageContent/` | Images, recolor, widgets, OCR |
 | `Samples/ImageFilters/` | Skia image filters |
 | `Samples/Barcodes/` | Barcode read/write |
-| `Samples/Llm/` | PDF4LLM markdown, tables, AI connector |
 | `Samples/Regression/` | Issue repros (diagnostics only) |
+| `Samples/Llm/` | MuPDF.NET.PDF4LLM: Markdown, tables, OCR, RAG |
 
-Input PDFs and images live in `TestDocuments/Demo/`. Generated PDFs are written to `TestDocuments/Demo/_Output/` (gitignored).
-
-## PDF4LLM AI sample
-
-The `ai-connector` sample uses `PdfExtractor.LoadAiAsync`. Set `AZURE_OPENAI_ENDPOINT` and related variables for Azure OpenAI, or run without them to use the in-memory demo pipeline.
+Input PDFs and images live in `TestDocuments/Demo/` (and `TestDocuments/Demo/Llm/`). Generated PDFs are written to `TestDocuments/Demo/_Output/` (gitignored).

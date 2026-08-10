@@ -3,7 +3,7 @@
   <Import Project="MuPDF\NativeAssets.Dev.props" Condition="Exists('$(MSBuildThisFileDirectory)MuPDF\NativeAssets.Dev.props')" />
 
   <PropertyGroup>
-    <!-- NuGet packages may target newer TFMs than PDF4LLM multi-targets (net461–net7). -->
+    <!-- NuGet packages may target newer TFMs than Demo multi-targets. -->
     <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings>
   </PropertyGroup>
 </Project>

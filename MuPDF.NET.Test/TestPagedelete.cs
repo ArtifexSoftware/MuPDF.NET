@@ -265,7 +265,7 @@ namespace MuPDF.NET.Test
                 try
                 {
                     // document.Save(path2, raise_on_repair=True)
-                    document.Save(path2, raise_on_repair: true);
+                    document.Save(path2, raiseOnRepair: true);
                 }
                 catch (Exception e)
                 {
@@ -288,7 +288,7 @@ namespace MuPDF.NET.Test
                 // document.delete_pages(page_to_delete)
                 document.delete_pages(page_to_delete);
                 // document.Save(path2, raise_on_repair=True)
-                document.Save(path2, raise_on_repair: true);
+                document.Save(path2, raiseOnRepair: true);
             }
             using (var document = new Document(path2))
             {

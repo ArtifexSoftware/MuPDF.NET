@@ -1,19 +1,20 @@
 using Microsoft.Extensions.AI;
-using PDF4LLM.AI;
-using PDF4LLM.AI.Models;
-using PDF4LLM.AI.Options;
+using MuPDF.NET.PDF4LLM;
+using MuPDF.NET.PDF4LLM.AI;
+using MuPDF.NET.PDF4LLM.AI.Models;
+using MuPDF.NET.PDF4LLM.AI.Options;
 
 namespace Demo
 {
     /// <summary>
-    /// <see cref="PdfExtractor.LoadAiAsync"/> demo: index two PDFs, then Ask, Summarize, and Search.
+    /// <see cref="MuPDF.NET.PDF4LLM.MuPDF4LLM.LoadAiAsync"/> demo: index two PDFs, then Ask, Summarize, and Search.
     /// Uses Azure OpenAI when <c>AZURE_OPENAI_*</c> env vars are set; otherwise an offline demo client.
     /// </summary>
     internal partial class Program
     {
         internal static async Task TestMicrosoftAiConnector(string[] args)
         {
-            Console.WriteLine("\n=== TestMicrosoftAiConnector (PDF4LLM.AI) =======================");
+            Console.WriteLine("\n=== TestMicrosoftAiConnector (MuPDF.NET.PDF4LLM.AI) =======================");
 
             string capitals = DemoPaths.Input("Llm/national-capitals.pdf");
             string nato = DemoPaths.Input("Llm/nato-members.pdf");
@@ -22,7 +23,7 @@ namespace Demo
             bool azure = !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("AZURE_OPENAI_ENDPOINT"));
             Console.WriteLine($"Pipeline: {(azure ? "Azure OpenAI" : "development (in-memory index + demo chat)")}");
 
-            AiDocumentCollection aiDocs = await PdfExtractor.LoadAiAsync(
+            AiDocumentCollection aiDocs = await MuPDF4LLM.LoadAiAsync(
                 new[] { capitals, nato },
                 options);
 

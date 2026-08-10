@@ -414,7 +414,7 @@ namespace MuPDF.NET.Test
                 // image_save_path = f'{out}/1.jpg'
                 string image_save_path = Path.Combine(outDir, "test_3072_1.jpg");
                 // pix.Save(image_save_path, jpg_quality=95)
-                pix.Save(image_save_path, jpg_quality: 95);
+                pix.Save(image_save_path, jpgQuality: 95);
             }
 
             using (var doc = new Document(path))
@@ -429,7 +429,7 @@ namespace MuPDF.NET.Test
                 // image_save_path = f'{out}/2.jpg'
                 string image_save_path = Path.Combine(outDir, "test_3072_2.jpg");
                 // pix.Save(image_save_path, jpg_quality=95)
-                pix.Save(image_save_path, jpg_quality: 95);
+                pix.Save(image_save_path, jpgQuality: 95);
                 string wt = Tools.MupdfWarnings();
                 Assert.Equal(
                     "syntax error: cannot find ExtGState resource 'BlendMode0'\n"

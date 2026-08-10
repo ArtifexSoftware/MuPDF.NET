@@ -8,8 +8,8 @@ namespace Demo
 
         internal static void TestTableExtract1()
         {
-            PdfExtractor.UseLayout = true;
-            JArray pages = GetPagesFromJson(PdfExtractor.ToJson(NationalCapitalsPdf));
+            MuPDF4LLM.UseLayout = true;
+            JArray pages = GetPagesFromJson(MuPDF4LLM.ToJson(NationalCapitalsPdf));
 
             foreach (JObject page in pages)
             {
@@ -35,8 +35,8 @@ namespace Demo
 
         internal static void TestTableExtract2()
         {
-            PdfExtractor.UseLayout = true;
-            JArray pages = GetPagesFromJson(PdfExtractor.ToJson(NationalCapitalsPdf));
+            MuPDF4LLM.UseLayout = true;
+            JArray pages = GetPagesFromJson(MuPDF4LLM.ToJson(NationalCapitalsPdf));
             var csvLines = new List<string>();
 
             foreach (JObject page in pages)
@@ -64,8 +64,8 @@ namespace Demo
 
         internal static void TestTableExtract3()
         {
-            PdfExtractor.UseLayout = true;
-            JArray pages = GetPagesFromJson(PdfExtractor.ToJson(NationalCapitalsPdf));
+            MuPDF4LLM.UseLayout = true;
+            JArray pages = GetPagesFromJson(MuPDF4LLM.ToJson(NationalCapitalsPdf));
             var mergedRows = new List<List<string>>();
             int? prevColCount = null;
 
@@ -101,25 +101,27 @@ namespace Demo
 
         internal static void TestOcr()
         {
-            PdfExtractor.UseLayout = true;
-            string md = PdfExtractor.ToMarkdown(@"..\..\..\..\TestDocuments\Demo\Ocr.pdf", useOcr: true, writeImages: false, embedImages: false);
+            MuPDF4LLM.UseLayout = true;
+            string ocrPdf = DemoPaths.Input("Ocr.pdf");
+            string md = MuPDF4LLM.ToMarkdown(ocrPdf, useOcr: true, writeImages: false, embedImages: false);
             Console.WriteLine(md);
-            string text = PdfExtractor.ToText(@"..\..\..\..\TestDocuments\Demo\Ocr.pdf", useOcr: true);
+            string text = MuPDF4LLM.ToText(ocrPdf, useOcr: true);
             Console.WriteLine(text);
         }
 
         internal static void TestLLM2()
         {
-            PdfExtractor.UseLayout = true;
-            var reader = PdfExtractor.LlamaMarkdownReader();
-            var chunks = reader.LoadData(@"..\..\..\..\TestDocuments\Demo\magazine.pdf");
+            MuPDF4LLM.UseLayout = true;
+            var reader = MuPDF4LLM.LlamaMarkdownReader();
+            var chunks = reader.LoadData(DemoPaths.Input("Magazine.pdf"));
 
-            Directory.CreateDirectory("Output");
+            string outDir = DemoPaths.Output("pages");
+            Directory.CreateDirectory(outDir);
             foreach (var chunk in chunks)
             {
                 int pageNum = (int)chunk.ExtraInfo["page"];
                 Console.WriteLine(pageNum);
-                string filePath = $"output/page-{pageNum}.md";
+                string filePath = Path.Combine(outDir, $"page-{pageNum}.md");
                 File.WriteAllText(filePath, chunk.Text, Encoding.UTF8);
             }
         }

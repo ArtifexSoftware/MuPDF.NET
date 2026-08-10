@@ -21,10 +21,7 @@ namespace Artifex
         /// &lt;summary&gt;MuPDF.NET NuGet package.&lt;/summary&gt;
         public const string MuPDFNet = "$(ArtifexMuPDFNetVersion)"%3B
 
-        /// &lt;summary&gt;PDF4LLM NuGet package.&lt;/summary&gt;
-        public const string PDF4LLM = "$(ArtifexPDF4LLMVersion)"%3B
-
-        /// &lt;summary&gt;pymupdf-layout PyPI package (PDF4LLM layout bridge).&lt;/summary&gt;
+        /// &lt;summary&gt;pymupdf-layout PyPI package pin (used by companion MuPDF.NET.PDF4LLM).&lt;/summary&gt;
         public const string PyMuPDFLayout = "$(ArtifexPyMuPDFLayoutVersion)"%3B
     }
 }
@@ -39,5 +36,41 @@ namespace Artifex
 
   <ItemGroup Condition="'$(MSBuildProjectName)' == 'MuPDF.NET'">
     <Compile Include="$(ArtifexVersionsGeneratedFile)" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <MuPDFNetPDF4LLMVersionsGeneratedFile>$(MSBuildThisFileDirectory)build\MuPDFNetPDF4LLMVersions.g.cs</MuPDFNetPDF4LLMVersionsGeneratedFile>
+  </PropertyGroup>
+
+  <Target Name="GenerateMuPDFNetPDF4LLMVersions"
+          BeforeTargets="CoreCompile;BeforeCompile;Compile"
+          Condition="'$(MSBuildProjectName)' == 'MuPDF.NET.PDF4LLM'"
+          Inputs="$(MSBuildThisFileDirectory)Versions.props"
+          Outputs="$(MuPDFNetPDF4LLMVersionsGeneratedFile)">
+    <MakeDir Directories="$(MSBuildThisFileDirectory)build" />
+    <PropertyGroup>
+      <_VersionCs>// &lt;auto-generated /&gt; Source: Versions.props. Do not edit.
+namespace MuPDF.NET.PDF4LLM
+{
+    /// &lt;summary&gt;Build-time version pins for MuPDF.NET.PDF4LLM (from Versions.props).&lt;/summary&gt;
+    internal static class BuildVersions
+    {
+        public const string Package = "$(ArtifexMuPDFNetPDF4LLMVersion)"%3B
+        public const string RequiredMuPdf = "$(ArtifexMuPDFVersion)"%3B
+        public const string RequiredPyMuPDFLayout = "$(ArtifexPyMuPDFLayoutVersion)"%3B
+        public const string MuPDFNet = "$(ArtifexMuPDFNetVersion)"%3B
+    }
+}
+</_VersionCs>
+    </PropertyGroup>
+    <WriteLinesToFile
+      File="$(MuPDFNetPDF4LLMVersionsGeneratedFile)"
+      Lines="$(_VersionCs)"
+      Overwrite="true"
+      Encoding="UTF-8" />
+  </Target>
+
+  <ItemGroup Condition="'$(MSBuildProjectName)' == 'MuPDF.NET.PDF4LLM'">
+    <Compile Include="$(MuPDFNetPDF4LLMVersionsGeneratedFile)" />
   </ItemGroup>
 </Project>
