@@ -98,8 +98,10 @@ This class represents a document. It can be constructed from a file or from memo
 :meth:`Document.Recolor`                        PDF only: recolor pages of document
 :meth:`Document.ForgetPage`                     Remove a page from document page dict
 :meth:`Document.ResolveNames`                   PDF only: Convert destination names into a Dictionary 
+:meth:`Document.RewriteImages`                  PDF only: rewrite / extra compression for images
 :meth:`Document.ExtendTocItems`                 Add color info to all items of an extended TOC list
 :meth:`Document.Save`                           PDF only: save the document
+:meth:`Document.EzSave`                         PDF only: :meth:`Document.Save` with different defaults
 :meth:`Document.SaveIncremental`                PDF only: save the document incrementally
 :meth:`Document.Scrub`                          PDF only: remove sensitive data
 :meth:`Document.SearchPageFor`                  Search for a string on a page
@@ -289,7 +291,7 @@ This class represents a document. It can be constructed from a file or from memo
 
     :returns: :data:`xref` of the created OCG. Use as entry for `oc` parameter in supporting objects.
 
-    .. note:: Multiple OCGs with identical parameters may be created. This will not cause problems. Garbage option 3 of :meth:`Document.save` will get rid of any duplicates.
+    .. note:: Multiple OCGs with identical parameters may be created. This will not cause problems. Garbage option 3 of :meth:`Document.Save` will get rid of any duplicates.
 
   .. method:: ApplyCss(string css, bool append = true)
 
@@ -605,6 +607,36 @@ This class represents a document. It can be constructed from a file or from memo
 
     All names found in the catalog under keys "/Dests" and "/Names/Dests" are
     included.
+
+
+  .. method:: RewriteImages(int dpiThreshold: 0, int dpiTarget: 0, bool lossy: true, bool lossless: true, bool bitonal: true, bool color: true, bool gray: true)
+
+    PDF only: Walk through all images and rewrite them according to the specified parameters. This is useful for reducing file size, changing image formats, or converting color spaces.
+
+    The typical usage is extra compression of images for significantly reducing the file size of the PDF. When setting quality and the DPI parameters to positive values and accepting defaults for the rest, the following will happen:
+
+    * Lossy and lossless images will be rewritten as JPEG images (FZ_RECOMPRESS_JPEG) as far as technically possible.
+
+    * Bitonal (monochrome) images will be rewritten in FAX format (FZ_RECOMPRESS_FAX).
+
+    * Subsampling method is **FZ_SUBSAMPLE_AVERAGE**.
+
+    
+    :arg int dpiThreshold: If `0` (the default) no resampling takes place. Otherwise images with a DPI value larger than this will be resampled to `dpiTarget` (which must be less than `dpiThreshold`).
+
+    :arg int dpiTarget: Target DPI value for the resampled images. Ignored if `dpiThreshold` is `0`, otherwise must be less than `dpiThreshold` and positive.
+
+    :arg int quality: Desired target JPEG quality, a value between `0` and `100`. `0` means no quality change, `100` means best quality.
+
+    :arg bool lossy: Include lossy image types (e.g. JPEG).
+
+    :arg bool lossless: Include lossless image types (e.g. PNG).
+
+    :arg bool bitonal: Include black-and-white images (e.g. FAX).
+
+    :arg bool color: Include colored images.
+
+    :arg bool gray: Include grayscale images.
 
 
   .. method:: PageCropBox(int pno)
@@ -1042,7 +1074,7 @@ This class represents a document. It can be constructed from a file or from memo
     :arg bool xmlMetadata: Remove XML metadata.
 
 
-  .. method:: Save(string filename, int garbage: 0, int clean: 0, int deflate: 0, int deflate_images: 0, int deflate_fonts: false, int incremental: 0, int ascii: 0, int expand: 0, int linear: 0, int noNewId: 0, int pretty: 0, int encryption: PDF_ENCRYPT_NONE, int permissions: 4095, string ownerPW: null, string userPW: null, int preserve_metadata: 1, int use_objstms: 0, compression_effort:0, raise_on_repair: false)
+  .. method:: Save(string filename, int garbage: 0, int clean: 0, int deflate: 0, int deflateImages: 0, int deflateFonts: false, int incremental: 0, int ascii: 0, int expand: 0, int linear: 0, int noNewId: 0, int pretty: 0, int encryption: PDF_ENCRYPT_NONE, int permissions: 4095, string ownerPW: null, string userPW: null, int preserveMetadata: 1, int useObjstms: 0, compressionEffort:0, raiseOnRepair: false)
 
     PDF only: Saves the document in its **current state**.
 
@@ -1056,12 +1088,12 @@ This class represents a document. It can be constructed from a file or from memo
      * 3 = in addition to 2, merge duplicate objects.
      * 4 = in addition to 3, check :data:`stream` objects for duplication. This may be slow because such data are typically large.
 
-    :arg int clean: Clean and sanitize content streams [#f1]_. Corresponds to "mutool clean -sc".
+    :arg int clean: Clean and sanitize content streams [#f1]_. Corresponds to `mutool clean -sc`.
 
-    :arg int deflate: Deflate (compress) uncompressed streams.
-    :arg int deflate_images: Deflate (compress) uncompressed image streams [#f4]_.
-    :arg int deflate_fonts: Deflate (compress) uncompressed fontFile streams [#f4]_.
-
+    :arg int deflate: Deflate (compress) uncompressed streams. See: :ref:`Compressing Files <CompressingFiles>` for full details on this parameter.
+    :arg int deflateImages: Deflate (compress) uncompressed image streams [#f4]_.
+    :arg int deflateFonts: Deflate (compress) uncompressed fontFile streams [#f4]_.
+ 
     :arg int incremental: Only save changes to the PDF. Excludes "garbage" and "linear". Can only be used if *outfile* is a string or a `pathlib.Path` and equal to :attr:`Document.name`. Cannot be used for files that are decrypted or repaired and also in some other cases. To be sure, check :meth:`Document.CanSaveIncrementally`. If this is false, saving to a new file is required.
 
     :arg int ascii: convert binary data to ASCII.
@@ -1077,27 +1109,27 @@ This class represents a document. It can be constructed from a file or from memo
 
     :arg int noNewId: Suppress the update of the file's `/ID` field. If the file happens to have no such field at all, also suppress creation of a new one. Default is `false`, so every save will lead to an updated file identification.
 
-
     :arg int pretty: Prettify the document source for better readability. PDF objects will be reformatted to look like the default output of :meth:`Document.GetXrefObject`.
-
     
     :arg int permissions: Set the desired permission levels. See :ref:`PermissionCodes` for possible values. Default is granting all.
 
     :arg int encryption: Set the desired encryption method. See :ref:`EncryptionMethods` for possible values.
 
-    :arg string owner_pw: Set the document's owner password. If not provided, the user password is taken if provided. The string length must not exceed 40 characters.
+    :arg string ownerPW: Set the document's owner password. If not provided, the user password is taken if provided. The string length must not exceed 40 characters.
 
-    :arg string user_pw: Set the document's user password. The string length must not exceed 40 characters.
+    :arg string userPW: Set the document's user password. The string length must not exceed 40 characters.
 
-    :arg int use_objstms: Compression option that converts eligible PDF object definitions to information that is stored in some other object's :data:`stream` data. Depending on the `deflate` parameter value, the converted object definitions will be compressed -- which can lead to very significant file size reductions.
+    :arg int useObjstms: Compression option that converts eligible PDF object definitions to information that is stored in some other object's :data:`stream` data. Depending on the `deflate` parameter value, the converted object definitions will be compressed -- which can lead to very significant file size reductions. See: :ref:`Compressing Files <CompressingFiles>` for full details on this parameter.
 
-    :arg int compression_effort:
+    :arg int compressionEffort:
     
       * 0 for default
       * 1 for minimum effort.
       * 100 for maximum effort.
+
+      See: :ref:`Compressing Files <CompressingFiles>` for full details on this parameter.
     
-    :arg bool raise_on_repair: If `true` we raise an exception if the save caused a repair. This is useful because repairs can cause changes to be lost.
+    :arg bool raiseOnRepair: If `true` we raise an exception if the save caused a repair. This is useful because repairs can cause changes to be lost.
 
     .. warning:: The method does not check, whether a file of that name already exists, will hence not ask for confirmation, and overwrite the file. It is your responsibility as a programmer to handle this.
 
@@ -1110,6 +1142,11 @@ This class represents a document. It can be constructed from a file or from memo
 
       1. "Lossy" file size reduction in essence must give up something with respect to images, like (a) remove all images (b) replace images by their grayscale versions (c) reduce image resolutions.
 
+  .. method:: EzSave(string filename)
+
+    PDF only: Saves the document in its **current state** with a set of options that are known to reduce file size without losing any information.
+
+    This is a convenience abbreviation for `doc.Save(filename, garbage: 3, deflate: 1, useObjstms: 1)`
 
   .. method:: SaveIncremental()
 
