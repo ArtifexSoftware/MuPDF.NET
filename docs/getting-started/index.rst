@@ -9,7 +9,7 @@ Prerequisites
 -----------------
 
 - Visual Studio 2019, 2022
-- .NET 8.0 or later
+- .NET 4.8 or later
 - Windows OS / Linux
 
 

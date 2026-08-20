@@ -34,11 +34,12 @@ Developer documentation to help you get started
 
 
 .. toctree::
-    :caption: Welcome
+    :caption: User Guide
     :maxdepth: 2
 
     getting-started/index.rst
     the-basics/index.rst
+    compressing-files.rst
 
 
 .. toctree::

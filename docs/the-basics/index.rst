@@ -8,6 +8,23 @@ The Basics
 ==============================
 
 
+.. _PrintVersion:
+
+Print Version
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+To print your current version of MuPDF.NET (and underlying MuPDF) use the following:
+
+
+.. code-block:: cs
+
+    using MuPDF.NET;
+
+    var v = Constants.Version;
+    Console.WriteLine($"MuPDF.NET {v.MuPdfNetVersion}");
+    Console.WriteLine($"MuPDF     {v.MuPdfVersion}");
+
+
 .. _Supported_File_Types:
 
 Supported File Types
@@ -392,7 +409,7 @@ For example:
     page.InsertImage(page.Rect, pixmap: pxmp); // inset the image on the page
     doc.Save("output.pdf", pretty: 1);
     doc.Close();
-
+ 
 
 ----------
 
