@@ -82,5 +82,11 @@ namespace MuPDF.NET
         public vectoruc Digest { get; set; }
 
         public List<Line> Lines { get; set; }
+
+        /// <summary>
+        /// For vector blocks: whether the path is an axis-aligned rectangle
+        /// (<c>FZ_STEXT_VECTOR_IS_RECTANGLE</c>). Defaults to <c>true</c> when unknown.
+        /// </summary>
+        public bool IsRect { get; set; } = true;
     }
 }

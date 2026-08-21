@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-"""Create the local Python venv used by MuPDF4LLM.NET's pymupdf.layout bridge.
+"""Create the local Python venv used by MuPDF.NET.PDF4LLM's pymupdf.layout bridge.
 
-Run once per machine (or after upgrading MuPDF4LLM.NET).
+Run once per machine (or after upgrading MuPDF.NET.PDF4LLM).
 
 From a NuGet consumer project:
 
-    dotnet msbuild -t:MuPDF4LLMNetSetupLayoutPython
+    dotnet msbuild -t:MuPDFNetPDF4LLMSetupLayoutPython
 
 From the MuPDF.NET repo:
 
-    python MuPDF4LLM.NET/scripts/setup_layout_python.py
+    python MuPDF.NET.PDF4LLM/scripts/setup_layout_python.py
 
 Windows:
 
@@ -31,11 +31,11 @@ REQUIREMENTS = SCRIPT_DIR / "requirements-layout.txt"
 
 
 def default_venv_path() -> Path:
-    """Must match MuPDF4LLM.NET.Layout.LayoutPythonPaths.UserLocalVenvRoot()."""
+    """Must match MuPDF.NET.PDF4LLM.Layout.LayoutPythonPaths.UserLocalVenvRoot()."""
     if sys.platform == "win32":
         local = os.environ.get("LOCALAPPDATA")
         base = Path(local) if local else Path.home() / "AppData" / "Local"
-        return base / "MuPDF4LLM.NET" / ".venv-layout"
+        return base / "MuPDF.NET.PDF4LLM" / ".venv-layout"
     return Path.home() / ".local" / "share" / "mupdf4llm.net" / ".venv-layout"
 
 
@@ -54,6 +54,22 @@ def run(cmd: list[str]) -> None:
         raise SystemExit(exc.returncode) from exc
 
 
+def print_debian_help(venv_root: Path) -> None:
+    print(
+        textwrap.dedent(
+            f"""
+            On Debian/Ubuntu (PEP 668 / externally-managed-environment), install:
+              sudo apt install python3-venv python3-pip python3-full
+
+            Then remove any broken layout venv and retry:
+              rm -rf {venv_root}
+              dotnet msbuild -t:MuPDFNetPDF4LLMSetupLayoutPython
+            """
+        ).strip(),
+        file=sys.stderr,
+    )
+
+
 def check_linux_prerequisites(base: str) -> None:
     if sys.platform == "win32":
         return
@@ -64,9 +80,33 @@ def check_linux_prerequisites(base: str) -> None:
         stderr=subprocess.DEVNULL,
     ).returncode != 0:
         print("Python venv module is not available.", file=sys.stderr)
-        print("On Debian/Ubuntu install:", file=sys.stderr)
-        print("  sudo apt install python3-venv python3-pip", file=sys.stderr)
+        print_debian_help(default_venv_path())
         raise SystemExit(1)
+
+
+def is_isolated_venv(py: Path, venv_root: Path) -> bool:
+    """True when *py* is a real virtualenv interpreter (PEP 668 does not apply)."""
+    if not py.is_file() or not (venv_root / "pyvenv.cfg").is_file():
+        return False
+    try:
+        out = subprocess.check_output(
+            [
+                str(py),
+                "-c",
+                "import sys; print('1' if sys.prefix != sys.base_prefix else '0')",
+            ],
+            text=True,
+            stderr=subprocess.DEVNULL,
+        ).strip()
+    except (subprocess.CalledProcessError, FileNotFoundError, OSError):
+        return False
+    return out == "1"
+
+
+def remove_venv(venv_root: Path) -> None:
+    if venv_root.is_dir():
+        print(f"Removing broken layout venv: {venv_root}", file=sys.stderr)
+        shutil.rmtree(venv_root)
 
 
 def pip_available(py: Path) -> bool:
@@ -91,18 +131,15 @@ def ensure_pip(py: Path, venv_root: Path) -> None:
         return
 
     print("pip is not available in the layout venv.", file=sys.stderr)
-    print(
-        "On Debian/Ubuntu install system packages, remove the broken venv, and retry:",
-        file=sys.stderr,
-    )
-    print("  sudo apt install python3-pip python3-venv", file=sys.stderr)
-    print(f"  rm -rf {venv_root}", file=sys.stderr)
+    print_debian_help(venv_root)
     raise SystemExit(1)
 
 
 def create_venv(base: str, venv_root: Path) -> None:
+    # Avoid --upgrade-deps on Unix: on Debian/Ubuntu it can fail with PEP 668
+    # during bootstrap and leave a half-broken tree that looks like a venv.
     cmd = [base, "-m", "venv", str(venv_root)]
-    if sys.version_info >= (3, 12):
+    if sys.platform == "win32" and sys.version_info >= (3, 12):
         try:
             run(cmd + ["--upgrade-deps"])
             return
@@ -111,6 +148,87 @@ def create_venv(base: str, venv_root: Path) -> None:
                 shutil.rmtree(venv_root)
             print("Retrying venv creation without --upgrade-deps ...", file=sys.stderr)
     run(cmd)
+
+
+def ensure_venv(base: str, venv_root: Path) -> Path:
+    py = venv_python(venv_root)
+
+    if venv_root.is_dir() and not is_isolated_venv(py, venv_root):
+        print(
+            "Existing layout directory is not an isolated Python venv "
+            "(common after a failed Debian/Ubuntu bootstrap).",
+            file=sys.stderr,
+        )
+        remove_venv(venv_root)
+
+    if not venv_root.is_dir():
+        venv_root.parent.mkdir(parents=True, exist_ok=True)
+        create_venv(base, venv_root)
+        py = venv_python(venv_root)
+
+    if not py.is_file():
+        print(f"venv exists but interpreter not found: {py}", file=sys.stderr)
+        print_debian_help(venv_root)
+        raise SystemExit(1)
+
+    if not is_isolated_venv(py, venv_root):
+        print(
+            "Created layout venv is not isolated; Python cannot install packages into it.",
+            file=sys.stderr,
+        )
+        print_debian_help(venv_root)
+        raise SystemExit(1)
+
+    return py
+
+
+def run_pip(py: Path, args: list[str]) -> subprocess.CompletedProcess[str]:
+    cmd = [str(py), "-m", "pip", *args]
+    print("+", " ".join(cmd))
+    return subprocess.run(cmd, text=True, capture_output=True)
+
+
+def print_pip_output(proc: subprocess.CompletedProcess[str]) -> None:
+    if proc.stdout:
+        sys.stdout.write(proc.stdout)
+    if proc.stderr:
+        sys.stderr.write(proc.stderr)
+
+
+def is_externally_managed_failure(proc: subprocess.CompletedProcess[str]) -> bool:
+    blob = f"{proc.stdout}\n{proc.stderr}".lower()
+    return "externally-managed-environment" in blob or "pep 668" in blob
+
+
+def pip_install(py: Path, venv_root: Path, base: str, args: list[str]) -> None:
+    """Run pip in the layout venv; recreate once if PEP 668 indicates a broken tree."""
+    proc = run_pip(py, args)
+    print_pip_output(proc)
+    if proc.returncode == 0:
+        return
+
+    if is_externally_managed_failure(proc):
+        print(
+            "pip reported externally-managed-environment inside the layout venv; recreating...",
+            file=sys.stderr,
+        )
+        remove_venv(venv_root)
+        py = ensure_venv(base, venv_root)
+        ensure_pip(py, venv_root)
+        proc = run_pip(py, args)
+        print_pip_output(proc)
+        if proc.returncode == 0:
+            return
+        if is_externally_managed_failure(proc):
+            print_debian_help(venv_root)
+            raise SystemExit(proc.returncode)
+
+    print(
+        f"Command failed with exit code {proc.returncode}: "
+        f"{py} -m pip {' '.join(args)}",
+        file=sys.stderr,
+    )
+    raise SystemExit(proc.returncode)
 
 
 def required_layout_version() -> str:
@@ -159,19 +277,19 @@ def verify_layout_python(py: Path, required: str) -> int:
         print("pymupdf-layout is not installed.", file=sys.stderr)
         print(
             "Install with:\n"
-            "  dotnet msbuild -t:MuPDF4LLMNetSetupLayoutPython",
+            "  dotnet msbuild -t:MuPDFNetPDF4LLMSetupLayoutPython",
             file=sys.stderr,
         )
         return 1
 
     if normalize_version(out) != normalize_version(required):
         print(
-            f"pymupdf-layout {out} is installed; MuPDF4LLM.NET requires pymupdf-layout {required}.",
+            f"pymupdf-layout {out} is installed; MuPDF.NET.PDF4LLM requires pymupdf-layout {required}.",
             file=sys.stderr,
         )
         print(
             "Refresh with:\n"
-            "  dotnet msbuild -t:MuPDF4LLMNetSetupLayoutPython",
+            "  dotnet msbuild -t:MuPDFNetPDF4LLMSetupLayoutPython",
             file=sys.stderr,
         )
         return 1
@@ -211,7 +329,7 @@ def main() -> int:
             print("No layout Python interpreter found.", file=sys.stderr)
             print(
                 "Install with:\n"
-                "  dotnet msbuild -t:MuPDF4LLMNetSetupLayoutPython",
+                "  dotnet msbuild -t:MuPDFNetPDF4LLMSetupLayoutPython",
                 file=sys.stderr,
             )
             return 1
@@ -224,24 +342,19 @@ def main() -> int:
 
     base = args.base_python or sys.executable
     venv_root = (args.venv or default_venv_path()).resolve()
-    py = venv_python(venv_root)
 
     print(f"Using Python: {base}")
     print(f"Requirements: {REQUIREMENTS}")
     print(f"Layout venv:  {venv_root}")
 
     check_linux_prerequisites(base)
-
-    if not venv_root.is_dir():
-        venv_root.parent.mkdir(parents=True, exist_ok=True)
-        create_venv(base, venv_root)
-    elif not py.is_file():
-        print(f"venv exists but interpreter not found: {py}", file=sys.stderr)
-        return 1
-
+    py = ensure_venv(base, venv_root)
     ensure_pip(py, venv_root)
-    run([str(py), "-m", "pip", "install", "--upgrade", "pip"])
-    run([str(py), "-m", "pip", "install", "-r", str(REQUIREMENTS)])
+    pip_install(py, venv_root, base, ["install", "--upgrade", "pip"])
+    # Re-resolve after possible recreate inside pip_install.
+    py = venv_python(venv_root)
+    pip_install(py, venv_root, base, ["install", "-r", str(REQUIREMENTS)])
+    py = venv_python(venv_root)
 
     if not args.skip_verify:
         if verify_layout_python(py, required) != 0:
@@ -254,7 +367,7 @@ def main() -> int:
               {venv_root}
               interpreter: {py}
 
-            MuPDF4LLM.NET discovers this venv automatically when present.
+            MuPDF.NET.PDF4LLM discovers this venv automatically when present.
             To use another interpreter, set MuPDF4LLM_NET_PYTHON:
               {py}
             """

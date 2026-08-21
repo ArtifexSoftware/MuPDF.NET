@@ -23,9 +23,10 @@
     <DefineConstants>LINUX</DefineConstants>
   </PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\MuPDF.NET\MuPDF.NET.csproj" />
-  </ItemGroup>
+    <ItemGroup>
+      <ProjectReference Include="..\MuPDF.NET\MuPDF.NET.csproj" />
+      <InternalsVisibleTo Include="MuPDF.NET.PDF4LLM.Test" />
+    </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' != 'net8.0'">
     <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.20.1" />

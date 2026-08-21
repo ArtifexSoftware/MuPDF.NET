@@ -75,6 +75,34 @@ namespace MuPDF.NET.Test
                 pretty: 1);
         }
 
+        /// <summary>
+        /// keepProportion must preserve a square image's aspect ratio inside a non-square target.
+        /// </summary>
+        [Fact]
+        public void test_keep_proportion_square()
+        {
+            using var doc = new Document();
+            using var page = doc.NewPage(width: 400, height: 300);
+
+            using var pix = new Pixmap(Colorspace.Rgb, new IRect(0, 0, 100, 100), false);
+            pix.SetRect(pix.IRect, new float[] { 1f, 0f, 0f });
+
+            var target = new Rect(50, 50, 250, 100); // 200 x 50
+            page.DrawRect(target, color: new[] { 0f, 0f, 1f }, width: 1);
+            page.InsertImage(target, pixmap: pix, keepProportion: true);
+
+            var info = page.GetImageInfoDict();
+            Assert.Single(info);
+            var bbox = BboxFromInfo(info[0]);
+
+            float expected = Math.Min(target.Width, target.Height); // 50
+            Assert.True(Math.Abs(bbox.Width - expected) < 0.5f, $"bbox width {bbox.Width}, expected ~{expected}");
+            Assert.True(Math.Abs(bbox.Height - expected) < 0.5f, $"bbox height {bbox.Height}, expected ~{expected}");
+            Assert.True(Math.Abs(bbox.Width / bbox.Height - 1f) < 1e-3f);
+
+            doc.Save(Out("keep_proportion_square.pdf"));
+        }
+
         /// <summary>Regression test: 3087.</summary>
         [Fact]
         public void test_3087()

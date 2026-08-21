@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using Xunit;
 
 namespace MuPDF.NET.Test
@@ -813,5 +814,553 @@ namespace MuPDF.NET.Test
                 "|Zelle (3,0)|~~**Bold-strikeout**~~<br>~~**(3,1)**~~|Zelle (3,2)|\n\n";
             Assert.Equal(text, tabs.ToMarkdown().Replace("\r\n", "\n"));
         }
+
+        static byte[] _make_find_tables_state_doc()
+        {
+            using var doc = new Document();
+            var page = doc.NewPage(width: 360, height: 220);
+            var rect = new Rect(40, 40, 320, 180);
+            var cells = Utils.MakeTable(rect, rows: 3, cols: 3);
+            for (int rowIndex = 0; rowIndex < cells.Count; rowIndex++)
+            {
+                for (int colIndex = 0; colIndex < cells[rowIndex].Count; colIndex++)
+                {
+                    page.DrawRect(cells[rowIndex][colIndex]);
+                    page.InsertTextbox(
+                        cells[rowIndex][colIndex],
+                        $"r{rowIndex}c{colIndex}",
+                        align: Constants.TextAlignCenter);
+                }
+            }
+            return doc.Write();
+        }
+
+        static (int rowCount, int colCount, List<List<string?>> extract) _find_tables_use_layout_false_signature(byte[] pdfBytes)
+        {
+            using var doc = new Document(pdfBytes, "pdf");
+            var table = TableHelpers.FindTables(doc[0], strategy: "lines_strict", useLayout: false)[0];
+            return (table.RowCount, table.ColCount, table.Extract());
+        }
+
+        [Fact]
+        public void test_find_tables_use_layout_false_does_not_call_get_layout()
+        {
+            // use_layout=False must keep find_tables on the pure line-based path.
+            byte[] pdfBytes = _make_find_tables_state_doc();
+            using var doc = new Document(pdfBytes, "pdf");
+            var page = doc[0];
+            var original = Page.GetLayoutProvider;
+            Page.GetLayoutProvider = _ => throw new InvalidOperationException("get_layout() should not be called");
+            try
+            {
+                var table = TableHelpers.FindTables(page, strategy: "lines_strict", useLayout: false)[0];
+                Assert.Equal(3, table.RowCount);
+                Assert.Equal(3, table.ColCount);
+                Assert.Equal("r1c1", table.Extract()[1][1]);
+            }
+            finally
+            {
+                Page.GetLayoutProvider = original;
+            }
+        }
+
+        [Fact]
+        public void test_find_tables_state_is_call_local_for_threads()
+        {
+            // Concurrent find_tables calls must not mix text/vector extraction state.
+            byte[] pdfBytes = _make_find_tables_state_doc();
+            var expected = _find_tables_use_layout_false_signature(pdfBytes);
+
+            // find_tables() uses thread-local TOOLS-flag overrides; snapshot globals
+            // so the suite's global-state checks stay clean.
+            bool smallBefore = Tools.SetSmallGlyphHeights();
+            bool quadBefore = Helpers.SkipQuadCorrections;
+            try
+            {
+                var results = new (int, int, List<List<string?>>)[32];
+                Parallel.For(0, 32, i =>
+                {
+                    results[i] = _find_tables_use_layout_false_signature(pdfBytes);
+                });
+                foreach (var r in results)
+                {
+                    Assert.Equal(expected.rowCount, r.Item1);
+                    Assert.Equal(expected.colCount, r.Item2);
+                    Assert.Equal(expected.extract, r.Item3);
+                }
+            }
+            finally
+            {
+                Tools.SetSmallGlyphHeights(smallBefore);
+                Helpers.SkipQuadCorrections = quadBefore;
+            }
+        }
+
+        static Document _make_marker_table_doc(string marker)
+        {
+            // Build a 1-page doc with a small drawn table whose cells embed `marker`.
+            var doc = new Document();
+            var page = doc.NewPage(width: 360, height: 220);
+            var rect = new Rect(40, 40, 320, 180);
+            var cells = Utils.MakeTable(rect, rows: 2, cols: 2);
+            for (int rowIndex = 0; rowIndex < cells.Count; rowIndex++)
+            {
+                for (int colIndex = 0; colIndex < cells[rowIndex].Count; colIndex++)
+                {
+                    page.DrawRect(cells[rowIndex][colIndex]);
+                    page.InsertTextbox(
+                        cells[rowIndex][colIndex],
+                        $"{marker}-{rowIndex}{colIndex}",
+                        align: Constants.TextAlignCenter);
+                }
+            }
+            page.CleanContents();
+            return doc;
+        }
+
+        [Fact]
+        public void test_table_extract_stable_after_second_find_tables()
+        {
+            // Regression test for the stale-CHARS bug.
+            //
+            // find_tables() snapshots table._chars right after each call so that an
+            // already-returned Table's extract() cannot silently pick up a later,
+            // unrelated find_tables() call's live (ContextVar-backed) CHARS content.
+            using var doc1 = _make_marker_table_doc("PAGE1");
+            using var doc2 = _make_marker_table_doc("PAGE2");
+            var table1 = TableHelpers.FindTables(doc1[0], strategy: "lines_strict")[0];
+            var first = table1.Extract();
+
+            // An unrelated find_tables() call on a different page/doc resets and
+            // repopulates the shared CHARS state used during text extraction.
+            _ = TableHelpers.FindTables(doc2[0], strategy: "lines_strict");
+
+            Assert.Equal(first, table1.Extract());
+            string flatText = string.Join(" ", first.SelectMany(row => row).Where(c => c != null));
+            Assert.Contains("PAGE1", flatText);  // guard against both-empty passes
+            Assert.DoesNotContain("PAGE2", flatText);
+        }
+
+        [Fact]
+        public void test_find_tables_use_layout_true_without_layout_is_line_based()
+        {
+            // use_layout=True (the default) must gracefully degrade to the pure
+            // line-based detection path when the optional layout provider is not
+            // available: get_layout() becomes a no-op, page.layout_information stays
+            // None, and results must match use_layout=False exactly.
+            byte[] pdfBytes = _make_find_tables_state_doc();
+            using var doc = new Document(pdfBytes, "pdf");
+            var page = doc[0];
+            var original = Page.GetLayoutProvider;
+            Page.GetLayoutProvider = null;  // simulate: layout wheel not installed
+            try
+            {
+                var tablesTrue = TableHelpers.FindTables(page, strategy: "lines_strict", useLayout: true);
+                Assert.Null(page.LayoutInformation);
+
+                var tablesFalse = TableHelpers.FindTables(page, strategy: "lines_strict", useLayout: false);
+
+                Assert.Single(tablesTrue.Tables);
+                Assert.Equal(
+                    tablesFalse.Tables.Select(t => t.Extract()).ToList(),
+                    tablesTrue.Tables.Select(t => t.Extract()).ToList());
+                var table = tablesTrue[0];
+                Assert.Equal(3, table.RowCount);
+                Assert.Equal(3, table.ColCount);
+                Assert.Equal("r1c1", table.Extract()[1][1]);
+            }
+            finally
+            {
+                Page.GetLayoutProvider = original;
+            }
+        }
+
+        static (Document doc, Page page) _make_overmerged_page()
+        {
+            // A page whose line grid detects one tall body row that actually holds
+            // three record lines -- an under-segmented (over-merged) grid the refinement
+            // is meant to repair. Needs no layout, so it exercises the standalone benefit.
+            var doc = new Document();
+            var page = doc.NewPage(width: 400, height: 300);
+            // 2-column grid: header row 100-120, a single tall body row 120-200.
+            foreach (float y in new float[] { 100, 120, 200 })
+                page.DrawLine(new Point(100, y), new Point(300, y));
+            foreach (float x in new float[] { 100, 200, 300 })
+                page.DrawLine(new Point(x, 100), new Point(x, 200));
+            page.InsertText(new Point(130, 114), "A");
+            page.InsertText(new Point(230, 114), "B");
+            // Three record lines crammed into the one body row.
+            int i = 1;
+            foreach (float y in new float[] { 140, 160, 180 })
+            {
+                page.InsertText(new Point(130, y), i.ToString());
+                page.InsertText(new Point(230, y), (i * 10).ToString());
+                i++;
+            }
+            return (doc, page);
+        }
+
+        [Fact]
+        public void test_refine_grid_splits_overmerged_body()
+        {
+            // refine_grid() splits an over-merged body row into one row per record.
+            // *** PyMuPDF extension (opt-in grid refinement). ***
+            var (doc, page) = _make_overmerged_page();
+            try
+            {
+                var grid = new List<List<(float x0, float y0, float x1, float y1)?>>
+                {
+                    new() { (100, 100, 200, 120), (200, 100, 300, 120) },  // header row
+                    new() { (100, 120, 200, 200), (200, 120, 300, 200) },  // one over-merged body row
+                };
+                var refined = TableRefine.RefineGrid(page, grid, headerRowCount: 1);
+                // header kept, body row split into the three record rows
+                Assert.Equal(2, grid.Count);  // input untouched
+                Assert.Equal(4, refined.Count);
+                Assert.Equal(grid[0], refined[0]);  // header preserved verbatim
+                Assert.All(refined, r => Assert.Equal(2, r.Count));
+            }
+            finally
+            {
+                doc.Dispose();
+            }
+        }
+
+        [Fact]
+        public void test_find_tables_refine_splits_rows_default_unchanged()
+        {
+            // find_tables(refine=True) repairs the over-merged grid; the default result
+            // is unchanged -- refinement is strictly opt-in.
+            // *** PyMuPDF extension. ***
+            var (doc, page) = _make_overmerged_page();
+            try
+            {
+                var defaultTf = page.FindTables(useLayout: false);
+                var refined = page.FindTables(useLayout: false, refine: true);
+                Assert.Single(defaultTf.Tables);
+                Assert.Single(refined.Tables);
+
+                // Default detects the merged 2-row grid (unchanged behaviour).
+                Assert.Equal(2, defaultTf.Tables[0].RowCount);
+                Assert.Equal(2, defaultTf.Tables[0].ColCount);
+
+                // refine=True splits the body into three record rows.
+                var t = refined.Tables[0];
+                Assert.Equal(4, t.RowCount);
+                Assert.Equal(2, t.ColCount);
+                Assert.Equal(
+                    new List<List<string?>>
+                    {
+                        new() { "A", "B" },
+                        new() { "1", "10" },
+                        new() { "2", "20" },
+                        new() { "3", "30" },
+                    },
+                    t.Extract());
+            }
+            finally
+            {
+                doc.Dispose();
+            }
+        }
+
+        static (Document doc, Page page) _make_merged_header_page()
+        {
+            // A page whose line grid detects a header cell that spans both body columns.
+            //
+            // The middle vertical divider is drawn only in the body (below the header
+            // separator), so the top row is one wide cell over two columns while each body
+            // row has two cells -- a merged header cell find_tables detects on its own.
+            // Needs no layout, so it exercises the standalone benefit.
+            var doc = new Document();
+            var page = doc.NewPage(width: 400, height: 300);
+            foreach (float y in new float[] { 100, 120, 140, 160 })
+                page.DrawLine(new Point(100, y), new Point(300, y));
+            page.DrawLine(new Point(100, 100), new Point(100, 160));  // left border
+            page.DrawLine(new Point(300, 100), new Point(300, 160));  // right border
+            page.DrawLine(new Point(200, 120), new Point(200, 160));  // middle divider: body only
+            page.InsertText(new Point(150, 114), "Merged Header");
+            page.InsertText(new Point(120, 134), "a");
+            page.InsertText(new Point(220, 134), "b");
+            page.InsertText(new Point(120, 154), "c");
+            page.InsertText(new Point(220, 154), "d");
+            return (doc, page);
+        }
+
+        [Fact]
+        public void test_resolve_spans_merged_header()
+        {
+            // resolve_spans() surfaces a merged header cell as a colspan-2 SpanCell.
+            // *** PyMuPDF extension (opt-in span resolution). ***
+            var (doc, page) = _make_merged_header_page();
+            try
+            {
+                var grid = new List<List<(float x0, float y0, float x1, float y1)?>>
+                {
+                    new() { (100, 100, 300, 120) },  // header spanning both columns
+                    new() { (100, 120, 200, 140), (200, 120, 300, 140) },
+                    new() { (100, 140, 200, 160), (200, 140, 300, 160) },
+                };
+                var placements = TableSpans.ResolveSpans(page, grid);
+                Assert.Equal(3, placements.Count);
+                // header is one placement spanning both columns
+                Assert.Single(placements[0]);
+                var head = placements[0][0];
+                Assert.Equal((2, 1), (head.Colspan, head.Rowspan));
+                Assert.Equal((100.0f, 100.0f, 300.0f, 120.0f), head.Bbox);
+                Assert.Contains("Merged Header", head.Text);
+                // resolve_spans leaves the HTML tag at its default; tagging td/th is the
+                // caller's job (find_tables(refine=True) / the engine model builder).
+                Assert.Equal("td", head.Tag);
+                // body cells stay 1x1
+                Assert.Equal(new[] { (1, 1), (1, 1) }, placements[1].Select(c => (c.Colspan, c.Rowspan)).ToArray());
+                Assert.Equal(new[] { "c", "d" }, placements[2].Select(c => c.Text).ToArray());
+            }
+            finally
+            {
+                doc.Dispose();
+            }
+        }
+
+        [Fact]
+        public void test_find_tables_refine_exposes_placements_default_none()
+        {
+            // find_tables(refine=True) attaches Table.placements with the colspan/rowspan
+            // structure; the default result exposes no placements and is otherwise unchanged.
+            // *** PyMuPDF extension. ***
+            var (doc, page) = _make_merged_header_page();
+            try
+            {
+                var defaultTf = page.FindTables(useLayout: false);
+                var refined = page.FindTables(useLayout: false, refine: true);
+                Assert.Single(defaultTf.Tables);
+                Assert.Single(refined.Tables);
+
+                // Default detects the merged-header grid but resolves no spans.
+                var dt = defaultTf.Tables[0];
+                Assert.Equal((3, 2), (dt.RowCount, dt.ColCount));
+                Assert.Null(dt.Placements);
+
+                // refine=True exposes the header cell's colspan via .placements.
+                var t = refined.Tables[0];
+                Assert.NotNull(t.Placements);
+                Assert.Equal(2, t.Placements[0][0].Colspan);
+                Assert.Equal(1, t.Placements[0][0].Rowspan);
+                Assert.Equal(new[] { 1, 1 }, t.Placements[1].Select(c => c.Colspan).ToArray());
+                // placements are tagged: the top header row is th, body rows are td.
+                Assert.Equal("th", t.Placements[0][0].Tag);
+                Assert.Equal(new[] { "td", "td" }, t.Placements[1].Select(c => c.Tag).ToArray());
+                Assert.Equal(new[] { "td", "td" }, t.Placements[2].Select(c => c.Tag).ToArray());
+            }
+            finally
+            {
+                doc.Dispose();
+            }
+        }
+
+        [Fact]
+        public void test_find_tables_refine_to_html_merged_header()
+        {
+            // find_tables(refine=True) + Table.to_html() serialize a merged header as a
+            // <th colspan=2>, with body rows as <td>.
+            // *** PyMuPDF extension (opt-in header tagging + HTML serialization). ***
+            var (doc, page) = _make_merged_header_page();
+            try
+            {
+                var t = page.FindTables(useLayout: false, refine: true).Tables[0];
+                string html = t.ToHtml();
+                Assert.Equal(
+                    "<table>" +
+                    "<tr><th colspan=\"2\">Merged Header</th></tr>" +
+                    "<tr><td>a</td><td>b</td></tr>" +
+                    "<tr><td>c</td><td>d</td></tr>" +
+                    "</table>",
+                    html);
+            }
+            finally
+            {
+                doc.Dispose();
+            }
+        }
+
+        [Fact]
+        public void test_find_tables_refine_header_meta()
+        {
+            // find_tables(refine=True) exposes the header meta (header_rows/section_rows)
+            // on the Table; the default path leaves the conservative defaults.
+            // *** PyMuPDF extension. ***
+            var (doc, page) = _make_merged_header_page();
+            try
+            {
+                var defaultT = page.FindTables(useLayout: false).Tables[0];
+                Assert.Equal(0, defaultT.HeaderRows);
+                Assert.Empty(defaultT.SectionRows);
+
+                var t = page.FindTables(useLayout: false, refine: true).Tables[0];
+                Assert.Equal(1, t.HeaderRows);
+                Assert.Empty(t.SectionRows);
+            }
+            finally
+            {
+                doc.Dispose();
+            }
+        }
+
+        [Fact]
+        public void test_table_to_html_fallback_flat()
+        {
+            // Table.to_html() on a default (non-refined) table returns a well-formed,
+            // td-only flat <table> built from extract() -- no placements needed.
+            // *** PyMuPDF extension. ***
+            var (doc, page) = _make_merged_header_page();
+            try
+            {
+                var t = page.FindTables(useLayout: false).Tables[0];
+                Assert.Null(t.Placements);
+                string html = t.ToHtml();
+                Assert.StartsWith("<table>", html);
+                Assert.EndsWith("</table>", html);
+                Assert.DoesNotContain("<th", html);  // flat fallback is td-only
+                Assert.Equal(t.RowCount, System.Text.RegularExpressions.Regex.Matches(html, "<tr>").Count);
+                // every cell is a plain <td>; the merged header text lands in one cell
+                Assert.Contains("<td>Merged Header</td>", html);
+                Assert.Contains("<td>a</td>", html);
+                Assert.Contains("<td>d</td>", html);
+            }
+            finally
+            {
+                doc.Dispose();
+            }
+        }
+
+        [Fact]
+        public void test_render_table_html_section_row_collapse()
+        {
+            // The core serializer collapses a section-label row (a lone centered label)
+            // to a single <th colspan=N>, and honours per-cell td/th tags + colspan.
+            // *** PyMuPDF extension (HTML serialization). ***
+            SpanCell Cell(string text, int colspan = 1, int rowspan = 1, string tag = "td") =>
+                new SpanCell(null, text, colspan, rowspan, tag);
+
+            var rows = new List<List<SpanCell>>
+            {
+                new() { Cell("Group", colspan: 3, tag: "th") },
+                new() { Cell(""), Cell("Section", tag: "th"), Cell("") },  // centered section label
+                new() { Cell("x"), Cell("1"), Cell("2") },
+            };
+            string html = TableHeaders.RenderTableHtml(rows, sectionHeaderRows: new[] { 1 });
+            Assert.Equal(
+                "<table>" +
+                "<tr><th colspan=\"3\">Group</th></tr>" +
+                "<tr><th colspan=\"3\">Section</th></tr>" +
+                "<tr><td>x</td><td>1</td><td>2</td></tr>" +
+                "</table>",
+                html);
+            // escaping (& < >) and <br/> line joins, quotes left literal
+            Assert.Equal(
+                "<table><tr><td>a &amp; b &lt; c &gt; \"d\"<br/>second</td></tr></table>",
+                TableHeaders.RenderTableHtml(new List<List<SpanCell>>
+                {
+                    new() { Cell("a & b < c > \"d\"\nsecond") },
+                }));
+        }
+
+        static void _make_bordered_table(Page page, float x0, float y0, string[][] texts)
+        {
+            // Draw a bordered 2x2 table (cells 100 wide, 20 tall) at (x0, y0), with the
+            // 2x2 texts grid inserted into its cells; returns nothing (mutates page).
+            float x1 = x0 + 100, x2 = x0 + 200;
+            float y1 = y0 + 20, y2 = y0 + 40;
+            foreach (float y in new float[] { y0, y1, y2 })
+                page.DrawLine(new Point(x0, y), new Point(x2, y));
+            foreach (float x in new float[] { x0, x1, x2 })
+                page.DrawLine(new Point(x, y0), new Point(x, y2));
+            float[] rys = { y0, y1 };
+            float[] cxs = { x0, x1 };
+            for (int r = 0; r < 2; r++)
+                for (int c = 0; c < 2; c++)
+                    page.InsertText(new Point(cxs[c] + 5, rys[r] + 14), texts[r][c]);
+        }
+
+        [Fact]
+        public void test_find_tables_union_fuses_layout_grid_with_line_candidate()
+        {
+            // find_tables(union=True) fuses the layout analyzer's GNN table grids with
+            // the line-based finder's candidates: a layout table with no matching line
+            // candidate is kept from its GNN grid, and a disjoint line-detected table is
+            // appended -- layout order first, then appended candidates.
+            // *** PyMuPDF extension (opt-in layout/candidate union). ***
+            using var doc = new Document();
+            var page = doc.NewPage(width: 500, height: 500);
+            // Table B: a real bordered 2x2 table the line finder detects (disjoint from A).
+            _make_bordered_table(page, 80, 300, new[] { new[] { "b00", "b01" }, new[] { "b10", "b11" } });
+            // Table A: only a layout (GNN) grid, no drawn lines. Inject the raw layout
+            // form union reads (return_raw=True shape): a "table" group whose
+            // table_grid carries interior h_lines/v_lines offsets.
+            page.LayoutInformation = new List<object>
+            {
+                new Dictionary<string, object>
+                {
+                    ["class_name"] = "table",
+                    ["group_bbox"] = new List<float> { 80.0f, 80.0f, 280.0f, 120.0f },
+                    ["table_grid"] = new Dictionary<string, object>
+                    {
+                        ["h_lines"] = new List<float> { 20.0f },
+                        ["v_lines"] = new List<float> { 100.0f },
+                    },
+                },
+            };
+            var tf = page.FindTables(useLayout: true, union: true);
+            var tables = tf.Tables;
+            Assert.Equal(2, tables.Count);
+
+            // A first (layout order): a 2x2 grid built from group_bbox + interior lines.
+            var a = tables[0];
+            Assert.Equal((2, 2), (a.RowCount, a.ColCount));
+            Assert.Equal((80.0f, 80.0f, 280.0f, 120.0f), a.Bbox);
+            var aCells = a.Rows.Select(row => row.Cells.ToList()).ToList();
+            Assert.Equal((80.0f, 80.0f, 180.0f, 100.0f), aCells[0][0]);
+            Assert.Equal((180.0f, 100.0f, 280.0f, 120.0f), aCells[1][1]);
+
+            // B appended after the layout table: the line-detected grid, extractable.
+            var b = tables[1];
+            Assert.Equal((2, 2), (b.RowCount, b.ColCount));
+            Assert.Equal("b00", b.Extract()[0][0]);
+        }
+
+        [Fact]
+        public void test_find_tables_union_no_layout_degrades_to_line_candidates()
+        {
+            // union=True degrades to the pure line-based candidates when the layout
+            // analyzer is unavailable: get_layout() is a no-op, layout_information stays
+            // None, there are no primary grids, so every line-detected table is appended --
+            // matching the plain line-based find_tables result.
+            // *** PyMuPDF extension. ***
+            using var doc = new Document();
+            var page = doc.NewPage(width: 400, height: 400);
+            _make_bordered_table(page, 80, 80, new[] { new[] { "a", "b" }, new[] { "c", "d" } });
+            var original = Page.GetLayoutProvider;
+            Page.GetLayoutProvider = null;  // simulate: layout wheel not installed
+            try
+            {
+                var union = page.FindTables(useLayout: true, union: true);
+                Assert.Null(page.LayoutInformation);
+
+                var line = TableHelpers.FindTables(page, strategy: "lines_strict", useLayout: false);
+                Assert.Single(union.Tables);
+                // Same table as the pure line-based path, just routed through the union.
+                Assert.Equal(
+                    line.Tables.Select(t => t.Extract()).ToList(),
+                    union.Tables.Select(t => t.Extract()).ToList());
+                var t = union.Tables[0];
+                Assert.Equal((2, 2), (t.RowCount, t.ColCount));
+                Assert.Equal("a", t.Extract()[0][0]);
+            }
+            finally
+            {
+                Page.GetLayoutProvider = original;
+            }
+        }
+
     }
 }

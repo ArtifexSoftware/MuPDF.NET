@@ -10,20 +10,20 @@ namespace MuPDF.NET.PDF4LLM.Ocr
         [Description("Never run OCR")]
         Never = 0,
 
-        /// <summary>Run OCR when needed, remove previous OCR text.</summary>
-        [Description("Run OCR when needed, remove previous OCR text")]
+        /// <summary>OCR when needed dropping old OCR text.</summary>
+        [Description("OCR when needed dropping old OCR text")]
         SelectDropOld = 1,
 
-        /// <summary>Run OCR when needed, preserve previous OCR text.</summary>
-        [Description("Run OCR when needed, preserve previous OCR text")]
+        /// <summary>OCR when needed and there is no old OCR text.</summary>
+        [Description("OCR when needed and there is no old OCR text")]
         SelectKeepOld = 2,
 
-        /// <summary>Run OCR for all pages, remove previous OCR text.</summary>
-        [Description("Run OCR for all pages, remove previous OCR text")]
+        /// <summary>OCR for all pages dropping old OCR text.</summary>
+        [Description("OCR for all pages dropping old OCR text")]
         ForceDropOld = 3,
 
-        /// <summary>Run OCR for all pages, preserve previous OCR text.</summary>
-        [Description("Run OCR for all pages, preserve previous OCR text")]
+        /// <summary>OCR for all pages which contain no old OCR text.</summary>
+        [Description("OCR for all pages which contain no old OCR text")]
         ForceKeepOld = 4,
 
         /// <summary>Alias for <see cref="SelectDropOld"/> (pre-1.28 name).</summary>

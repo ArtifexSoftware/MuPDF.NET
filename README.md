@@ -136,7 +136,7 @@ doc.Close();
 | **Encryption** | Encrypt, decrypt, set passwords, and control permissions |
 | **Forms** | Read and write PDF form field values (widgets) |
 | **OCR** | OCR image-heavy pages via integrated Tesseract support |
-| **Images** | Extract, insert, and replace embedded images and vector graphics |
+| **Images** | Extract, insert, replace, and rewrite/recompress embedded images (`RewriteImages`) |
 | **Barcodes** | Scan and generate QR codes, Code 128, Data Matrix, PDF417 |
 | **LLM / RAG** | Convert to Markdown with layout awareness via `MuPDF.NET.PDF4LLM` companion package |
 
@@ -294,6 +294,7 @@ The library's primary entry points are `Document` and `Page`. Most workflows fol
 | `doc.GetToc()` | Return the table of contents |
 | `doc.SetMetadata(dict)` | Set document metadata (title, author, etc.) |
 | `doc.Encrypt(...)` | Encrypt with password and permissions |
+| `doc.RewriteImages(...)` | Downsample / recompress images (`setToGray`, expert `options`) |
 | `doc.Close()` | Release resources |
 
 ### Key `Page` methods

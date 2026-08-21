@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using MuPDF.NET;
+using MuPDF.NET.PDF4LLM.Helpers.TableHtml;
 using MuPDF.NET.PDF4LLM.Layout;
 using MuPDF.NET.PDF4LLM.Ocr;
 using Newtonsoft.Json;
@@ -18,6 +19,24 @@ namespace MuPDF.NET.PDF4LLM.Helpers
     /// <param name="ocrLanguage">Tesseract language code(s), for example <c>eng</c>.</param>
     /// <param name="keepOcrText">When <see langword="true"/>, retain OCR-generated text on the page.</param>
     public delegate void OcrPageFunction(Page page, int ocrDpi, string ocrLanguage, bool keepOcrText);
+
+    /// <summary>
+    /// Observed kwargs from <see cref="DocumentLayout.ParseDocument"/> for tests
+    /// (Python monkeypatches <c>document_layout.parse_document</c> and appends
+    /// <c>kwargs.copy()</c>).
+    /// </summary>
+    internal sealed class ParseDocumentCallInfo
+    {
+        /// <summary>Named arguments in snake_case, matching Python kwargs keys.</summary>
+        public Dictionary<string, object> Kwargs { get; set; }
+
+        public bool? RenderHtmlTables =>
+            Kwargs != null
+            && Kwargs.TryGetValue("render_html_tables", out object v)
+            && v is bool b
+                ? b
+                : (bool?)null;
+    }
 
     /// <summary>
     /// Layout box representing a content region on a page (text, picture, table, heading, and similar types).
@@ -224,6 +243,13 @@ namespace MuPDF.NET.PDF4LLM.Helpers
                         if (btype == "table")
                         {
                             if (box.Table != null
+                                && box.Table.TryGetValue("html", out object htmlObj)
+                                && htmlObj is string htmlStr
+                                && !string.IsNullOrEmpty(htmlStr))
+                            {
+                                mdString.Append(htmlStr + "\n\n");
+                            }
+                            else if (box.Table != null
                                 && box.Table.TryGetValue("markdown", out object mdObj)
                                 && mdObj != null)
                             {
@@ -568,7 +594,8 @@ namespace MuPDF.NET.PDF4LLM.Helpers
             var span0 = spans[0];
             var span1 = spans[1];
             if (span0.Origin != null && span1.Origin != null
-                && span0.Origin.Y < span1.Origin.Y && span0.Size < span1.Size)
+                && span0.Origin.Y < span1.Origin.Y
+                && span0.Size <= span1.Size * 0.8f)
                 return true;
             return false;
         }
@@ -813,8 +840,10 @@ namespace MuPDF.NET.PDF4LLM.Helpers
                 lines.Add(line);
             }
 
-            int maxCol = Math.Max(1, 100 / Math.Max(1, spanCount));
-            return LayoutTabulate.Tabulate(lines, "grid", uniformMaxColWidth: maxCol) + "\n\n";
+            // prevents exceptions in corner cases:
+            int maxCol = 100 / Math.Max(1, spanCount);
+            return LayoutTabulate.Tabulate(
+                lines, "grid", uniformMaxColWidth: maxCol > 0 ? maxCol : (int?)null) + "\n\n";
         }
 
         /// <summary>Convert a title layout box to a Markdown heading.</summary>
@@ -1188,27 +1217,39 @@ namespace MuPDF.NET.PDF4LLM.Helpers
         /// Decide whether a page should be OCR-processed.
         /// </summary>
         /// <returns>
-        /// A tuple where the first value indicates whether OCR is needed and the second is the
-        /// number of existing OCR spans on the page (if any).
+        /// <c>(needsOcr, ocrSpans, onlyText)</c> matching pymupdf4llm <c>make_ocr_decision</c>.
         /// </returns>
-        private static (bool needsOcr, int ocrSpans) MakeOcrDecision(Page page, OcrMode useOcr)
+        private static (bool needsOcr, int ocrSpans, bool onlyText) MakeOcrDecision(Page page, OcrMode useOcr)
         {
             if (useOcr == OcrMode.Never)
-                return (false, 0);
+                return (false, 0, false);
 
             Dictionary<string, object> pageAnalysis = Utils.AnalyzePage(page);
-            bool needsOcr = pageAnalysis.TryGetValue("needs_ocr", out object n)
-                && n is bool nb
-                && nb;
-            int ocrSpans = pageAnalysis.TryGetValue("ocr_spans", out object os) && os is int oi
-                ? oi
-                : Convert.ToInt32(os ?? 0);
+
+            float imgArea = 0f;
+            if (pageAnalysis.TryGetValue("img_area", out object ia) && ia != null)
+                imgArea = Convert.ToSingle(ia);
+            int vecNorects = 0;
+            if (pageAnalysis.TryGetValue("vec_norects", out object vn) && vn != null)
+                vecNorects = Convert.ToInt32(vn);
+            bool onlyText = imgArea == 0f && vecNorects == 0;
+
+            bool needsOcr = false;
+            if (pageAnalysis.TryGetValue("needs_ocr", out object n) && n != null)
+                needsOcr = Convert.ToBoolean(n);
+
+            int ocrSpans = 0;
+            if (pageAnalysis.TryGetValue("ocr_spans", out object os) && os != null)
+                ocrSpans = Convert.ToInt32(os);
 
             if (ocrSpans > 0
                 && (useOcr == OcrMode.ForceKeepOld || useOcr == OcrMode.SelectKeepOld))
-                return (false, ocrSpans);
+                return (false, ocrSpans, onlyText);
 
-            return (needsOcr, 0);
+            if ((useOcr == OcrMode.ForceDropOld || useOcr == OcrMode.ForceKeepOld) && !onlyText)
+                return (true, ocrSpans, onlyText);
+
+            return (needsOcr, ocrSpans, onlyText);
         }
 
         /// <summary>Assign Markdown header levels to title and section-header boxes based on font sizes.</summary>
@@ -1290,6 +1331,13 @@ namespace MuPDF.NET.PDF4LLM.Helpers
         }
 
         /// <summary>
+        /// Optional observer for <see cref="ParseDocument"/> kwargs. Tests replace this
+        /// to assert <c>renderHtmlTables</c> (Python monkeypatches
+        /// <c>document_layout.parse_document</c>).
+        /// </summary>
+        internal static Action<ParseDocumentCallInfo> ParseDocumentObserver { get; set; }
+
+        /// <summary>
         /// Parse a supported document into a <see cref="ParsedDocument"/> with per-page layout boxes.
         /// </summary>
         /// <remarks>
@@ -1314,13 +1362,15 @@ namespace MuPDF.NET.PDF4LLM.Helpers
         /// <param name="forceOcr">When <see langword="true"/>, OCR every page regardless of heuristics.</param>
         /// <param name="keepOcrText">When <see langword="true"/>, retain OCR-generated text spans on the page.</param>
         /// <param name="ocrFunction">Custom per-page OCR callback; <see langword="null"/> uses the built-in engine.</param>
+        /// <param name="renderHtmlTables">When <see langword="true"/>, reconstruct tables as HTML.</param>
+        /// <param name="edgeThreshold">Optional edge threshold for table detection.</param>
         public static ParsedDocument ParseDocument(
             Document doc,
             string filename = "",
             int imageDpi = 150,
             string imageFormat = "png",
             string imagePath = "",
-            int ocrDpi = 300,
+            int ocrDpi = 150,
             List<int> pages = null,
             bool writeImages = false,
             bool embedImages = false,
@@ -1330,8 +1380,33 @@ namespace MuPDF.NET.PDF4LLM.Helpers
             string ocrLanguage = "eng",
             bool forceOcr = false,
             bool keepOcrText = true,
-            OcrPageFunction ocrFunction = null)
+            OcrPageFunction ocrFunction = null,
+            bool? renderHtmlTables = null,
+            float? edgeThreshold = null)
         {
+            ParseDocumentObserver?.Invoke(new ParseDocumentCallInfo
+            {
+                // Same named args Python's to_json/to_markdown pass into parse_document
+                // (kwargs.copy() in the test spy). Keep snake_case keys for parity.
+                Kwargs = new Dictionary<string, object>
+                {
+                    ["image_dpi"] = imageDpi,
+                    ["image_format"] = imageFormat,
+                    ["image_path"] = imagePath,
+                    ["pages"] = pages,
+                    ["embed_images"] = embedImages,
+                    ["write_images"] = writeImages,
+                    ["show_progress"] = showProgress,
+                    ["force_text"] = forceText,
+                    ["use_ocr"] = useOcr,
+                    ["force_ocr"] = forceOcr,
+                    ["ocr_language"] = ocrLanguage,
+                    ["ocr_function"] = ocrFunction,
+                    ["render_html_tables"] = renderHtmlTables,
+                    ["edge_threshold"] = edgeThreshold,
+                },
+            });
+
             Document mydoc = doc;
             Document imagePdfDoc = null;
             var headerFontsizes = new HashSet<int>();
@@ -1437,7 +1512,9 @@ namespace MuPDF.NET.PDF4LLM.Helpers
                     forceText,
                     writeImages,
                     embedImages,
-                    headerFontsizes);
+                    headerFontsizes,
+                    renderHtmlTables,
+                    edgeThreshold);
                 UpdateHeaderTags(parsed.Pages, headerFontsizes);
                 return parsed;
             }
@@ -1462,7 +1539,9 @@ namespace MuPDF.NET.PDF4LLM.Helpers
             bool forceText,
             bool writeImages,
             bool embedImages,
-            HashSet<int> headerFontsizes)
+            HashSet<int> headerFontsizes,
+            bool? renderHtmlTables = null,
+            float? edgeThreshold = null)
         {
             string docBaseName = Path.GetFileNameWithoutExtension(
                 string.IsNullOrEmpty(mydoc?.Name) ? "document" : mydoc.Name);
@@ -1493,7 +1572,7 @@ namespace MuPDF.NET.PDF4LLM.Helpers
                     {
                         page.RemoveRotation();
 
-                        (bool needsOcr, int ocrSpans) = MakeOcrDecision(page, effectiveOcr);
+                        (bool needsOcr, int ocrSpans, bool _) = MakeOcrDecision(page, effectiveOcr);
                         if (needsOcr && ocrImpl != null)
                         {
                             ocrImpl(page, ocrDpi, ocrLanguage, keepOcrText: false);
@@ -1509,8 +1588,44 @@ namespace MuPDF.NET.PDF4LLM.Helpers
                         PageInfo pageInfo = textPage.ExtractDict(null, false);
                         List<Block> blocks = pageInfo.Blocks ?? new List<Block>();
 
-                        LayoutRawParseResult layoutRaw = LayoutParseHelpers.ReadPageLayoutRaw(page, blocks);
-                        List<LayoutInfoEntry> layout = layoutRaw.Layout;
+                        LayoutRawParseResult layoutRaw = LayoutParseHelpers.ReadPageLayoutRaw(
+                            page, blocks, edgeThreshold);
+                        List<LayoutInfoEntry> layout = layoutRaw.Layout ?? new List<LayoutInfoEntry>();
+
+                        var htmlTablesByBox =
+                            new Dictionary<string, List<LayoutNormalize.HtmlTableMeta>>();
+                        var textlinesByBox = new Dictionary<string, List<TextLineInfo>>();
+                        bool doHtmlTables = renderHtmlTables == true;
+                        if (doHtmlTables)
+                        {
+                            object savedLayout = page.LayoutInformation;
+                            List<(Rect bbox, string html, int rows, int cols, List<List<object>> cells, List<List<object>> extract)>
+                                pageHtmlTablesList = null;
+                            try
+                            {
+                                pageHtmlTablesList = TableHtml.TableHtml.PageHtmlTables(page);
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.WriteLine(
+                                    $"Warning: HTML table engine failed on page {page.Number}: "
+                                    + $"{ex.GetType().Name}: {ex.Message}");
+                                pageHtmlTablesList = null;
+                            }
+                            finally
+                            {
+                                page.LayoutInformation = savedLayout;
+                            }
+
+                            if (pageHtmlTablesList != null && pageHtmlTablesList.Count > 0)
+                            {
+                                List<Block> fulltextForNorm = blocks.Where(b => b.Type == 0).ToList();
+                                (layout, htmlTablesByBox, textlinesByBox) =
+                                    LayoutNormalize.NormalizeLayoutBoxes(
+                                        layout, pageHtmlTablesList, fulltextForNorm);
+                            }
+                        }
+
                         bool tablesExist = layout.Any(b => b.Class == "table");
 
                         if (ocrSpans == 0)
@@ -1604,26 +1719,87 @@ namespace MuPDF.NET.PDF4LLM.Helpers
                             }
                             else if (bClass == "table")
                             {
-                                JObject tabDict = le.RawDict
-                                    ?? FindBestTableDict(layoutRaw.TableInfos, clip);
-                                if (tabDict != null)
+                                string clipKey = LayoutParseHelpers.LayoutTableKey(clip);
+                                if (htmlTablesByBox.TryGetValue(clipKey, out var htmlTables)
+                                    && htmlTables != null
+                                    && htmlTables.Count > 0)
                                 {
-                                    TableDetails tabDetails = GetTableDetails(tabDict, tableBlocks);
+                                    LayoutNormalize.HtmlTableMeta single =
+                                        htmlTables.Count == 1 ? htmlTables[0] : null;
                                     layoutbox.Table = new Dictionary<string, object>
                                     {
                                         ["bbox"] = new List<float>
                                         {
-                                            tabDetails.Bbox.X0,
-                                            tabDetails.Bbox.Y0,
-                                            tabDetails.Bbox.X1,
-                                            tabDetails.Bbox.Y1,
+                                            layoutbox.X0,
+                                            layoutbox.Y0,
+                                            layoutbox.X1,
+                                            layoutbox.Y1,
                                         },
-                                        ["row_count"] = tabDetails.RowCount,
-                                        ["col_count"] = tabDetails.ColCount,
-                                        ["cells"] = tabDetails.Cells,
-                                        ["extract"] = tabDetails.Extract,
-                                        ["markdown"] = tabDetails.Markdown,
+                                        ["row_count"] = single?.Rows,
+                                        ["col_count"] = single?.Cols,
+                                        ["cells"] = single?.Cells,
+                                        ["extract"] = single?.Extract,
+                                        ["markdown"] = null,
+                                        ["html_tables"] = htmlTables
+                                            .Select(t => t.ToDict())
+                                            .ToList(),
+                                        ["html"] = string.Join(
+                                            "\n\n",
+                                            htmlTables.Select(t => t.Html ?? "")),
                                     };
+                                }
+                                else
+                                {
+                                    JObject tabDict = le.RawDict
+                                        ?? FindBestTableDict(layoutRaw.TableInfos, clip);
+                                    TableDetails tabDetails = tabDict != null
+                                        ? GetTableDetails(tabDict, tableBlocks)
+                                        : null;
+                                    if (tabDetails != null)
+                                    {
+                                        layoutbox.Table = new Dictionary<string, object>
+                                        {
+                                            ["bbox"] = new List<float>
+                                            {
+                                                tabDetails.Bbox.X0,
+                                                tabDetails.Bbox.Y0,
+                                                tabDetails.Bbox.X1,
+                                                tabDetails.Bbox.Y1,
+                                            },
+                                            ["row_count"] = tabDetails.RowCount,
+                                            ["col_count"] = tabDetails.ColCount,
+                                            ["cells"] = tabDetails.Cells,
+                                            ["extract"] = tabDetails.Extract,
+                                            ["markdown"] = tabDetails.Markdown,
+                                        };
+                                    }
+                                    else
+                                    {
+                                        layoutbox.Table = new Dictionary<string, object>
+                                        {
+                                            ["bbox"] = new List<float>
+                                            {
+                                                layoutbox.X0,
+                                                layoutbox.Y0,
+                                                layoutbox.X1,
+                                                layoutbox.Y1,
+                                            },
+                                            ["row_count"] = null,
+                                            ["col_count"] = null,
+                                            ["cells"] = null,
+                                            ["extract"] = null,
+                                            ["markdown"] = "",
+                                        };
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                string clipKey = LayoutParseHelpers.LayoutTableKey(clip);
+                                if (textlinesByBox.TryGetValue(clipKey, out var prefLines)
+                                    && prefLines != null)
+                                {
+                                    layoutbox.TextLines = prefLines;
                                 }
                                 else
                                 {
@@ -1637,23 +1813,12 @@ namespace MuPDF.NET.PDF4LLM.Helpers
                                         .Select(l => new TextLineInfo { Bbox = l.Rect, Spans = l.Spans })
                                         .ToList();
                                 }
-                            }
-                            else
-                            {
-                                var textLines = GetTextLines.GetRawLines(
-                                    textPage: null,
-                                    blocks: fulltext,
-                                    clip: clip,
-                                    ignoreInvisible: false,
-                                    onlyHorizontal: true);
-                                layoutbox.TextLines = textLines
-                                    .Select(l => new TextLineInfo { Bbox = l.Rect, Spans = l.Spans })
-                                    .ToList();
 
                                 if (bClass == "title" || bClass == "section-header")
                                 {
                                     int maxFontsize = 0;
-                                    foreach (TextLineInfo line in layoutbox.TextLines)
+                                    foreach (TextLineInfo line in layoutbox.TextLines
+                                        ?? new List<TextLineInfo>())
                                     {
                                         foreach (ExtendedSpan span in line.Spans ?? new List<ExtendedSpan>())
                                         {

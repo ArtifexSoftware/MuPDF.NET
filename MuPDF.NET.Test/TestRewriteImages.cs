@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using mupdf;
 using Xunit;
 
 namespace MuPDF.NET.Test
@@ -33,6 +34,27 @@ namespace MuPDF.NET.Test
             int size1 = data.Length;
             Assert.True((1 - (size1 / (float)size0)) > 0.3);
             doc.Save(Out("test_rewrite_images.pdf"));
+        }
+
+        [Fact]
+        public void test_rewrite_images_set_to_gray()
+        {
+            string filename = Doc("test-rewrite-images.pdf");
+            using var doc = new Document(filename);
+            doc.RewriteImages(dpiThreshold: 100, dpiTarget: 72, quality: 33, setToGray: true);
+            doc.Save(Out("test_rewrite_images_gray.pdf"), garbage: 3, deflate: 1);
+        }
+
+        [Fact]
+        public void test_rewrite_images_options()
+        {
+            string filename = Doc("test-rewrite-images.pdf");
+            using var doc = new Document(filename);
+            var opts = new mupdf.PdfImageRewriterOptions();
+            opts.color_lossy_image_recompress_method = mupdf.mupdf.FZ_RECOMPRESS_JPEG;
+            opts.color_lossy_image_recompress_quality = "50";
+            doc.RewriteImages(options: opts);
+            doc.Save(Out("test_rewrite_images_options.pdf"), garbage: 3, deflate: 1);
         }
 
         [Fact]

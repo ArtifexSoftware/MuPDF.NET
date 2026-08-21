@@ -194,17 +194,51 @@ namespace MuPDF.NET
         /// <summary>Page characters produced by <c>make_chars</c>.</summary>
         internal List<Dictionary<string, object>> Chars;
 
+        // Explicit reported-bbox override; null means Bbox is computed from
+        // cells. Set only for a union grid-ref table, whose reported region
+        // (its layout box) is decoupled from its replacement cell grid.
+        internal Rect _bbox;
+
         /// <summary>
         /// All cell bounding boxes that compose this table.
         /// Tuple is <c>(x0, top, x1, bottom)</c> — same as MuPDF/pdfplumber (<c>y0</c> = top, <c>y1</c> = bottom).
         /// </summary>
         public List<(float x0, float y0, float x1, float y1)> Cells { get; set; }
 
+        // Filled by FindTables(refine: true): Placements is a row-major grid of
+        // tagged SpanCell colspan/rowspan placements (null otherwise); HeaderRows
+        // is the leading header-row count, SectionRows the section-label rows.
+        /// <summary>
+        /// Tagged span placements from <c>FindTables(refine: true)</c>; null on the default path.
+        /// </summary>
+        public List<List<SpanCell>> Placements { get; set; }
+
+        /// <summary>Leading header-row count from refine (PyMuPDF <c>header_rows</c>).</summary>
+        public int HeaderRows { get; set; }
+
+        /// <summary>Section-label row indexes from refine (PyMuPDF <c>section_rows</c>).</summary>
+        public IReadOnlyList<int> SectionRows { get; set; } = Array.Empty<int>();
+
         // Legacy aliases from MuPDF.NET public API.
         public List<Rect> cells =>
             Cells?.Select(c => new Rect(c.x0, c.y0, c.x1, c.y1)).ToList();
         public Page page => Page;
         public TextPage textpage => TextPage;
+        public List<List<SpanCell>> placements
+        {
+            get => Placements;
+            set => Placements = value;
+        }
+        public int header_rows
+        {
+            get => HeaderRows;
+            set => HeaderRows = value;
+        }
+        public IReadOnlyList<int> section_rows
+        {
+            get => SectionRows;
+            set => SectionRows = value ?? Array.Empty<int>();
+        }
 
         /// <summary>Detected header for this table.</summary>
         public TableHeader Header { get; internal set; }
@@ -217,11 +251,19 @@ namespace MuPDF.NET
         {
             get
             {
+                if (_bbox != null)
+                    return (_bbox.X0, _bbox.Y0, _bbox.X1, _bbox.Y1);
+                // PyMuPDF 1.28.2 (#5030): avoid Min/Max on empty cell lists from layout tables.
+                if (Cells == null || Cells.Count == 0)
+                    return (0, 0, 0, 0);
+                var cells = Cells.Where(c => c != default).ToList();
+                if (cells.Count == 0)
+                    return (0, 0, 0, 0);
                 return (
-                    Cells.Min(c => c.x0),
-                    Cells.Min(c => c.y0),
-                    Cells.Max(c => c.x1),
-                    Cells.Max(c => c.y1)
+                    cells.Min(c => c.x0),
+                    cells.Min(c => c.y0),
+                    cells.Max(c => c.x1),
+                    cells.Max(c => c.y1)
                 );
             }
         }
@@ -278,14 +320,16 @@ namespace MuPDF.NET
             Page page,
             List<(float x0, float y0, float x1, float y1)> cells,
             List<Dictionary<string, object>> chars = null,
-            TextPage textpage = null)
+            TextPage textpage = null,
+            Rect bbox = null)
         {
             Page = page;
             TextPage = textpage;
             Cells = cells;
+            _bbox = bbox;
             if (chars != null)
                 Chars = new List<Dictionary<string, object>>(chars);
-            Header = GetHeader();
+            Header = GetHeader();  // PyMuPDF extension
         }
 
         /// <summary>
@@ -433,10 +477,36 @@ namespace MuPDF.NET
             return sb.ToString();
         }
 
+        /// <summary>
+        /// Output the table as an HTML <c>&lt;table&gt;</c> string.
+        ///
+        /// With span placements (from <c>FindTables(refine: true)</c>) each
+        /// placement's colspan/rowspan and th/td tag are honoured and a
+        /// section-label row collapses to one spanning <c>&lt;th&gt;</c>. Otherwise a flat
+        /// td-only table is built from <see cref="Extract"/>.
+        /// </summary>
+        public string ToHtml()
+        {
+            if (Placements != null)
+                return TableHeaders.RenderTableHtml(Placements, SectionRows);
+            // No placements: flat td-only grid from Extract().
+            var rows = Extract()
+                .Select(row => row
+                    .Select(cell => new SpanCell(
+                        bbox: null,
+                        text: cell ?? "",
+                        colspan: 1,
+                        rowspan: 1))
+                    .ToList())
+                .ToList();
+            return TableHeaders.RenderTableHtml(rows);
+        }
+
         // ─── MuPDF API names (internal, same assembly) ─────────────────
 
         internal List<List<string?>> extract(Dictionary<string, object> kwargs = null) => Extract(kwargs);
         internal string to_markdown(bool clean = false, bool fillEmpty = true) => ToMarkdown(clean, fillEmpty);
+        internal string to_html() => ToHtml();
 
         // ── Header detection ────────────────────────
 
@@ -630,8 +700,40 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Find tables on a page. (<c>src/table.py</c>).
+        /// Detect and extract tables on a page (PyMuPDF <c>find_tables</c> / <c>src/table.py</c>).
+        ///
+        /// <para>
+        /// <paramref name="useLayout"/>: if true (default), use <see cref="Page.GetLayout"/> to find
+        /// layout-identified table regions and use them to restrict/complete line-based
+        /// detection; if layout ran and found no tables, return an empty result
+        /// immediately. Set false to always run full detection.
+        /// </para>
+        /// <para>
+        /// <paramref name="union"/>: if true (requires the layout analyzer), detect tables by
+        /// fusing the layout analyzer's table grids with the line-based finder's candidates --
+        /// a candidate matching a layout table 1:1 can replace its grid, candidates
+        /// contained in one layout table can split it, and unowned candidates are
+        /// appended -- returning the fused tables in layout order then appended order.
+        /// Off by default. Needs the raw layout form: when <see cref="Page.LayoutInformation"/>
+        /// is null it is computed with <c>GetLayout(returnRaw: true)</c>; when already
+        /// populated it is reused as-is.
+        /// </para>
+        /// <para>
+        /// <paramref name="refine"/>: if true, refine each detected table's cell grid before
+        /// building the <see cref="Table"/> -- splitting rows/columns the line grid merged
+        /// (using page text and background shading) -- then reconstruct its merged-cell
+        /// structure and header semantics. The tagged grid is attached as
+        /// <see cref="Table.Placements"/> (a row-major grid of <see cref="SpanCell"/>
+        /// colspan/rowspan placements, each carrying its td/th tag; null on the default
+        /// path), the header meta as <see cref="Table.HeaderRows"/>/<see cref="Table.SectionRows"/>,
+        /// and <see cref="Table.ToHtml"/> serializes it. Off by default. A grid whose column
+        /// count the span resolution cannot preserve falls back to a flat one-cell-per-slot
+        /// placement grid.
+        /// </para>
         /// </summary>
+        /// <param name="useLayout">Gate line-based tables by layout table boxes.</param>
+        /// <param name="union">Opt-in: fuse layout grids with line-based candidates.</param>
+        /// <param name="refine">Opt-in: refine each detected table's cell grid.</param>
         public static TableFinder FindTables(
             Page page,
             TableSettings settings = null,
@@ -658,7 +760,10 @@ namespace MuPDF.NET
             string strategy = null,
             IList<(Point p1, Point p2)> addLines = null,
             IList<Rect> addBoxes = null,
-            IList<Dictionary<string, object>> paths = null)
+            IList<Dictionary<string, object>> paths = null,
+            bool useLayout = true,   // gate line-based tables by layout table boxes
+            bool union = false,      // opt-in: fuse layout grids with line-based candidates
+            bool refine = false)     // opt-in: refine each detected table's cell grid
         {
             WarnLayoutOnce();
             var chars = TableModule.Chars.Value;
@@ -668,7 +773,7 @@ namespace MuPDF.NET
             TextPage textpage = null;
             bool? savedSmallGlyphHeights = Helpers.ThreadSmallGlyphHeights;
             bool? savedSkipQuadCorrections = Helpers.ThreadSkipQuadCorrections;
-            Helpers.ThreadSmallGlyphHeights = true;
+            Helpers.ThreadSmallGlyphHeights = true;  // we need minimum bboxes
             Page workPage = page;
             int? oldXref = null;
             int? oldRot = null;
@@ -733,73 +838,116 @@ namespace MuPDF.NET
                 tset.Validate();
             }
 
-            bool layoutQuadCorrections = false;
             TableFinder tbf = null;
             try
             {
-                workPage.GetLayout();
-                List<Rect> boxes;
-                if (workPage.LayoutInformation != null)
+                if (union)
                 {
-                    layoutQuadCorrections = true;
-                    Helpers.ThreadSkipQuadCorrections = true;
-                    boxes = TableHelpers.LayoutTableBoxes(workPage.LayoutInformation);
+                    // Union path: fuse layout grids with line-based candidates instead
+                    // of the ordinary useLayout gating. It builds its own tables (and,
+                    // via a nested FindTables, its own char list), so the MakeChars/
+                    // MakeEdges/TableFinder setup below is skipped; TextPage comes from
+                    // the nested finder. TableUnion lives in a sibling file to keep the
+                    // import cycle with FindTables out of this method's call graph.
+                    tbf = TableUnion.FindTablesUnion(workPage);
+                    textpage = tbf.TextPage;
                 }
                 else
-                    boxes = new List<Rect>();
-
-                if (boxes.Count > 0)
                 {
-                    // layout did find some tables
-                }
-                else if (workPage.LayoutInformation != null)
-                {
-                    // layout was executed but found no tables
-                    // make sure we exit quickly with an empty TableFinder
-                    return new TableFinder(workPage);
-                }
-
-                workPage.TableSettings = tset;
-
-                // TEXTPAGE = make_chars(page, clip=clip)  # create character list of page
-                textpage = TableHelpers.MakeChars(workPage, chars, clip: clip);
-                // make_edges(page, clip=clip, tset=tset, paths=paths, add_lines=add_lines, add_boxes=add_boxes)  # create lines and curves
-                TableHelpers.MakeEdges(
-                    workPage,
-                    edges,
-                    chars,
-                    tset,
-                    clip,
-                    paths,
-                    addLines,
-                    addBoxes);
-
-                tbf = TableFinder.FromPrepared(workPage, tset, chars, edges, textpage);
-                // tbf.textpage = TEXTPAGE  # store textpage for later use
-                tbf.TextPage = textpage;
-                if (boxes.Count > 0)
-                {
-                    // only keep Finder tables that match a layout box
-                    tbf.Tables = tbf.Tables
-                        .Where(tab => boxes.Any(r => TableHelpers.Iou(tab.Bbox, ToTuple(r)) >= 0.6f))
-                        .ToList();
-                }
-                // build the complementary list of layout table boxes
-                var myBoxes = boxes
-                    .Where(r => tbf.Tables.All(tab => TableHelpers.Iou(ToTuple(r), tab.Bbox) < 0.6f))
-                    .ToList();
-                if (myBoxes.Count > 0)
-                {
-                    var wordRects = textpage.ExtractWords()
-                        .Select(w => new Rect(w.X0, w.Y0, w.X1, w.Y1))
-                        .ToList();
-                    var tp2 = workPage.GetTextPage(TableConstants.TableDetectorFlags);
-                    foreach (var rect in myBoxes)
+                    var boxes = new List<Rect>();
+                    if (useLayout)
                     {
-                        var cells = TableHelpers.MakeTableFromBbox(tp2, wordRects, rect);
-                        if (cells.Count > 0)
-                            tbf.Tables.Add(new Table(workPage, cells, chars, textpage));
+                        workPage.GetLayout();
+                        if (workPage.LayoutInformation != null)
+                        {
+                            Helpers.ThreadSkipQuadCorrections = true;
+                            boxes = TableHelpers.LayoutTableBoxes(workPage.LayoutInformation);
+                        }
+
+                        if (boxes.Count == 0 && workPage.LayoutInformation != null)
+                        {
+                            // layout was executed but found no tables
+                            // make sure we exit quickly with an empty TableFinder
+                            return new TableFinder(workPage);
+                        }
                     }
+
+                    workPage.TableSettings = tset;
+
+                    textpage = TableHelpers.MakeChars(workPage, chars, clip: clip);  // create character list of page
+                    TableHelpers.MakeEdges(
+                        workPage,
+                        edges,
+                        chars,
+                        tset,
+                        clip,
+                        paths,
+                        addLines,
+                        addBoxes);  // create lines and curves
+
+                    tbf = TableFinder.FromPrepared(workPage, tset, chars, edges, textpage);
+                    tbf.TextPage = textpage;  // store textpage for later use
+                    if (boxes.Count > 0)
+                    {
+                        // only keep Finder tables that match a layout box
+                        tbf.Tables = tbf.Tables
+                            .Where(tab => tab.Cells != null && tab.Cells.Count > 0
+                                && boxes.Any(r => TableHelpers.Iou(tab.Bbox, ToTuple(r)) >= 0.6f))
+                            .ToList();
+                    }
+                    // build the complementary list of layout table boxes
+                    var myBoxes = boxes
+                        .Where(r => tbf.Tables.All(tab => TableHelpers.Iou(ToTuple(r), tab.Bbox) < 0.6f))
+                        .ToList();
+                    if (myBoxes.Count > 0)
+                    {
+                        var wordRects = textpage.ExtractWords()
+                            .Select(w => new Rect(w.X0, w.Y0, w.X1, w.Y1))
+                            .ToList();
+                        var tp2 = workPage.GetTextPage(TableConstants.TableDetectorFlags);
+                        foreach (var rect in myBoxes)
+                        {
+                            var cells = TableHelpers.MakeTableFromBbox(tp2, wordRects, rect);
+                            if (cells.Count > 0)
+                                tbf.Tables.Add(new Table(workPage, cells, chars, textpage));
+                        }
+                    }
+                }
+
+                if (refine && tbf != null)
+                {
+                    // Grid refinement + reconstruction. Runs while the page is still
+                    // derotated (before the finally block resets rotation) so word and
+                    // vector coordinates match the detected cells. Order: structural
+                    // split (shaded rows + under-segmented columns), resolve the header/
+                    // body boundary, split over-merged body rows, resolve the final
+                    // merged-cell placement grid (strict colspan) and tag each placement
+                    // td/th. The tagged grid is attached as .Placements, the header meta
+                    // as .HeaderRows/.SectionRows.
+                    var refinedTables = new List<Table>();
+                    foreach (var tab in tbf.Tables)
+                    {
+                        var grid = TableRefine.CellsToGrid(tab.Cells);
+                        // The reported bbox (a union grid-ref table's layout box, else
+                        // the cells' union) bounds the shaded-rectangle search.
+                        var working = TableRefine.RefineGridStructure(workPage, grid, tableBbox: tab.bbox);
+                        int bodyStart = TableRefine.BodyStartRow(workPage, working);
+                        working = TableRefine.RefineGridRows(workPage, working, headerRowCount: bodyStart);
+                        var flat = TableRefine.GridToCells(working);
+                        // Preserve an explicit reported-bbox override (union grid-ref
+                        // tables): the refined grid must not change the reported region.
+                        var newTab = flat.Count > 0
+                            ? new Table(workPage, flat, chars, textpage, bbox: tab._bbox)
+                            : tab;
+                        // Build the tagged model on `working` directly, not on the
+                        // re-gridded newTab.Cells, so placements match the refined grid.
+                        var (placements, region) = TableRefine.BuildPlacements(workPage, working, bodyStart);
+                        newTab.Placements = placements;
+                        newTab.HeaderRows = region.TopHeaderRows;
+                        newTab.SectionRows = region.SectionHeaderRows;
+                        refinedTables.Add(newTab);
+                    }
+                    tbf.Tables = refinedTables;
                 }
             }
             catch (Exception e)
@@ -810,18 +958,23 @@ namespace MuPDF.NET
             finally
             {
                 Helpers.ThreadSmallGlyphHeights = savedSmallGlyphHeights;
-                if (layoutQuadCorrections)
-                    Helpers.ThreadSkipQuadCorrections = savedSkipQuadCorrections;
+                Helpers.ThreadSkipQuadCorrections = savedSkipQuadCorrections;
                 if (oldXref != null && oldMediabox != null)
                     TableHelpers.PageRotationReset(workPage, oldXref.Value, oldRot.Value, oldMediabox);
             }
-            //     table.textpage = TEXTPAGE
+
+            if (tbf == null)
+                return null;
+
+            // Snapshot the page's characters onto each table so a later FindTables()
+            // call's CHARS reset cannot leak into this table's Extract(). One shallow
+            // copy shared per call.
+            var charsSnapshot = new List<Dictionary<string, object>>(chars);
             foreach (var table in tbf.Tables)
             {
                 if (table.TextPage == null)
                     table.TextPage = textpage;
-                if (table.Chars == null)
-                    table.Chars = new List<Dictionary<string, object>>(chars);
+                table.Chars = charsSnapshot;
             }
             return tbf;
 
@@ -2800,7 +2953,9 @@ namespace MuPDF.NET
             var cells = new List<(float x0, float y0, float x1, float y1)>();
             try
             {
-                using var block = textpage.NativeStextPage.fz_find_table_within_bounds(rect.ToFzRect());
+                // MuPDF 1.28.1+: fz_find_table_within_bounds requires opts (null = defaults).
+                using var block = textpage.NativeStextPage.fz_find_table_within_bounds(
+                    rect.ToFzRect(), null);
                 if (block?.m_internal == null
                     || block.m_internal.type != mupdf.mupdf.FZ_STEXT_BLOCK_GRID)
                     return cells;
@@ -2855,7 +3010,10 @@ namespace MuPDF.NET
             string strategy = null,
             List<Tuple<Point, Point>> add_lines = null,
             List<Rect> add_boxes = null,
-            List<PathInfo> paths = null)
+            List<PathInfo> paths = null,
+            bool use_layout = true,
+            bool union = false,
+            bool refine = false)
         {
             List<float> verticalCoords = null;
             if (vertical_lines != null)
@@ -2916,7 +3074,10 @@ namespace MuPDF.NET
                 strategy: strategy,
                 addLines: addLines,
                 addBoxes: add_boxes,
-                paths: null);
+                paths: null,
+                useLayout: use_layout,
+                union: union,
+                refine: refine);
         }
     }
 

@@ -2,6 +2,17 @@
 
 All notable changes for `MuPDF.NET.PDF4LLM` are documented in this file.
 
+## [1.28.2]
+- Synced with **pymupdf4llm** 1.28.2 and **pymupdf-layout 1.28.2** (layout bridge pin in `Versions.props` / `scripts/requirements-layout.txt`).
+- Optional HTML table output (`tableOutput="html"`), default OCR DPI **150**, and layout `edgeThreshold` wiring through the pymupdf-layout bridge.
+- New `helpers/TableHtml` module (`PageHtmlTables` / `ToHtml`) driven by `FindTables(useLayout, union, refine)` + `Table.ToHtml()`.
+- `MakeOcrDecision` now returns `(needsOcr, ocrSpans, onlyText)` with Force/Select KeepOld and Force OCR heuristics matching Python (image/vector “only text” short-circuit).
+- OCR analysis: bad-char threshold **10%**, `IsOcrSpan` includes alpha=0, AND bad-char gate, `vec_norects` / early exit when no images or non-rect vectors; culled pixmap DPI cap + empty-page skip.
+- Layout path can render tables via `TableHtml.PageHtmlTables` + `LayoutNormalize.NormalizeLayoutBoxes`; Markdown emission prefers box `table["html"]` when present.
+- Raw layout parsing skips tiny boxes (`w/h <= 2`) and tables with null/empty `table_grid`; legacy RAG path supports `tableOutput` / `HtmlTables`.
+- `AlmostInBbox` default portion **0.6** (`>=`); `GetRawLines` uses line y-extents and portion **0.51**.
+- `PDFMarkdownReader` / `MuPDF4LLM.LlamaMarkdownReader()`: when `MuPDF4LLM.UseLayout` is true, per-page markdown uses layout `MuPDF4LLM.ToMarkdown` instead of always calling the legacy `MuPdfRag` path.
+
 ## [1.28.0.1]
 - Synced with **pymupdf4llm** 1.28.0 and **MuPDF.NET 3.2.28.0**.
 - Renamed `OcrMode` values to match Python `OCRMode`: `SelectDropOld`, `SelectKeepOld`, `ForceDropOld`, `ForceKeepOld` (obsolete aliases kept for the old names). Default OCR behavior now preserves existing text (`SelectKeepOld`).

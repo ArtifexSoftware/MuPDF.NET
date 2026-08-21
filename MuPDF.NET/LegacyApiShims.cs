@@ -284,7 +284,10 @@ namespace MuPDF.NET
             float text_x_tolerance = 3.0f,
             float text_y_tolerance = 3.0f,
             string strategy = null,
-            List<Line> add_lines = null)
+            List<Line> add_lines = null,
+            bool use_layout = true,
+            bool union = false,
+            bool refine = false)
         {
             return TableHelpers.FindTables(
                 this,
@@ -308,7 +311,10 @@ namespace MuPDF.NET
                 textTolerance: text_tolerance,
                 textXTolerance: text_x_tolerance,
                 textYTolerance: text_y_tolerance,
-                strategy: strategy)?.Tables ?? new List<Table>();
+                strategy: strategy,
+                useLayout: use_layout,
+                union: union,
+                refine: refine)?.Tables ?? new List<Table>();
         }
 
         public List<Entry> GetFonts(bool full, int legacyMarker) =>

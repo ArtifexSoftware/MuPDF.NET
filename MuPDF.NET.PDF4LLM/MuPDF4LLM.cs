@@ -47,6 +47,12 @@ namespace MuPDF.NET.PDF4LLM
         /// <summary>When true, export methods use the layout pipeline.</summary>
         public static bool UseLayout { get; set; }
 
+        static void ValidateTableOutput(string tableOutput)
+        {
+            if (tableOutput != "markdown" && tableOutput != "html")
+                throw new ArgumentException("'tableOutput' must be 'markdown' or 'html'.");
+        }
+
         /// <summary>Returns a LlamaIndex-compatible PDF markdown reader.</summary>
         /// <param name="metaFilter">Optional callback to transform per-page metadata before documents are returned.</param>
         public static PDFMarkdownReader LlamaMarkdownReader(
@@ -78,6 +84,8 @@ namespace MuPDF.NET.PDF4LLM
         /// <param name="ocrLanguage">Tesseract language code(s), for example <c>eng</c> or <c>eng+deu</c> (layout mode).</param>
         /// <param name="forceOcr">When <see langword="true"/>, OCR every page regardless of heuristics (layout mode).</param>
         /// <param name="ocrFunction">Custom per-page OCR callback; <see langword="null"/> uses the built-in engine (layout mode).</param>
+        /// <param name="tableOutput"><c>markdown</c> (default) or <c>html</c> table rendering.</param>
+        /// <param name="edgeThreshold">Optional layout edge threshold passed to pymupdf-layout (layout mode).</param>
         public static string ToMarkdown(
             Document doc,
             bool header = true,
@@ -92,7 +100,7 @@ namespace MuPDF.NET.PDF4LLM
             bool pageChunks = false,
             bool pageSeparators = false,
             int dpi = 150,
-            int ocrDpi = 300,
+            int ocrDpi = 150,
             float pageWidth = 612,
             float? pageHeight = null,
             bool ignoreCode = false,
@@ -100,10 +108,15 @@ namespace MuPDF.NET.PDF4LLM
             bool useOcr = true,
             string ocrLanguage = "eng",
             bool forceOcr = false,
-            OcrPageFunction ocrFunction = null)
+            OcrPageFunction ocrFunction = null,
+            string tableOutput = "markdown",
+            float? edgeThreshold = null)
         {
             if (writeImages && embedImages)
                 throw new ArgumentException("Cannot both write_images and embed_images");
+            ValidateTableOutput(tableOutput);
+
+            bool renderHtmlTables = tableOutput == "html";
 
             if (!UseLayout)
             {
@@ -128,6 +141,7 @@ namespace MuPDF.NET.PDF4LLM
                     pageWidth: pageWidth,
                     pageHeight: pageHeight,
                     tableStrategy: "lines_strict",
+                    tableOutput: tableOutput,
                     graphicsLimit: null,
                     fontsizeLimit: 3.0f,
                     ignoreCode: ignoreCode,
@@ -152,7 +166,9 @@ namespace MuPDF.NET.PDF4LLM
                 useOcr: useOcr,
                 ocrLanguage: ocrLanguage,
                 forceOcr: forceOcr,
-                ocrFunction: ocrFunction);
+                ocrFunction: ocrFunction,
+                renderHtmlTables: renderHtmlTables ? true : (bool?)null,
+                edgeThreshold: edgeThreshold);
 
             return parsedDoc.ToMarkdown(
                 header: header,
@@ -188,6 +204,8 @@ namespace MuPDF.NET.PDF4LLM
         /// <param name="ocrLanguage">Tesseract language code(s), for example <c>eng</c> or <c>eng+deu</c> (layout mode).</param>
         /// <param name="forceOcr">When <see langword="true"/>, OCR every page regardless of heuristics (layout mode).</param>
         /// <param name="ocrFunction">Custom per-page OCR callback; <see langword="null"/> uses the built-in engine (layout mode).</param>
+        /// <param name="tableOutput"><c>markdown</c> (default) or <c>html</c> table rendering.</param>
+        /// <param name="edgeThreshold">Optional layout edge threshold passed to pymupdf-layout (layout mode).</param>
         public static string ToMarkdown(
             string path,
             bool header = true,
@@ -202,7 +220,7 @@ namespace MuPDF.NET.PDF4LLM
             bool pageChunks = false,
             bool pageSeparators = false,
             int dpi = 150,
-            int ocrDpi = 300,
+            int ocrDpi = 150,
             float pageWidth = 612,
             float? pageHeight = null,
             bool ignoreCode = false,
@@ -210,7 +228,9 @@ namespace MuPDF.NET.PDF4LLM
             bool useOcr = true,
             string ocrLanguage = "eng",
             bool forceOcr = false,
-            OcrPageFunction ocrFunction = null)
+            OcrPageFunction ocrFunction = null,
+            string tableOutput = "markdown",
+            float? edgeThreshold = null)
         {
             if (string.IsNullOrWhiteSpace(path))
                 throw new ArgumentException("Path must not be null or whitespace.", nameof(path));
@@ -237,7 +257,9 @@ namespace MuPDF.NET.PDF4LLM
                     useOcr,
                     ocrLanguage,
                     forceOcr,
-                    ocrFunction);
+                    ocrFunction,
+                    tableOutput,
+                    edgeThreshold);
         }
 
         /// <summary>Convert a document to layout JSON.</summary>
@@ -255,13 +277,15 @@ namespace MuPDF.NET.PDF4LLM
         /// <param name="ocrLanguage">Tesseract language code(s), for example <c>eng</c> or <c>eng+deu</c>.</param>
         /// <param name="forceOcr">When <see langword="true"/>, OCR every page regardless of heuristics.</param>
         /// <param name="ocrFunction">Custom per-page OCR callback; <see langword="null"/> uses the built-in engine.</param>
+        /// <param name="tableOutput"><c>markdown</c> (default) or <c>html</c> table rendering.</param>
+        /// <param name="edgeThreshold">Optional layout edge threshold passed to pymupdf-layout.</param>
         public static string ToJson(
             Document doc,
             int imageDpi = 150,
             string imageFormat = "png",
             string imagePath = "",
             List<int> pages = null,
-            int ocrDpi = 300,
+            int ocrDpi = 150,
             bool writeImages = false,
             bool embedImages = false,
             bool showProgress = false,
@@ -269,11 +293,16 @@ namespace MuPDF.NET.PDF4LLM
             bool useOcr = true,
             string ocrLanguage = "eng",
             bool forceOcr = false,
-            OcrPageFunction ocrFunction = null)
+            OcrPageFunction ocrFunction = null,
+            string tableOutput = "markdown",
+            float? edgeThreshold = null)
         {
             if (!UseLayout)
                 throw new NotSupportedException(
                     "ToJson requires UseLayout=true.");
+            ValidateTableOutput(tableOutput);
+
+            bool renderHtmlTables = tableOutput == "html";
 
             var parsedDoc = DocumentLayout.ParseDocument(
                 doc,
@@ -290,7 +319,9 @@ namespace MuPDF.NET.PDF4LLM
                 useOcr: useOcr,
                 ocrLanguage: ocrLanguage,
                 forceOcr: forceOcr,
-                ocrFunction: ocrFunction);
+                ocrFunction: ocrFunction,
+                renderHtmlTables: renderHtmlTables ? true : (bool?)null,
+                edgeThreshold: edgeThreshold);
 
             return parsedDoc.ToJson(showProgress: showProgress);
         }
@@ -310,13 +341,15 @@ namespace MuPDF.NET.PDF4LLM
         /// <param name="ocrLanguage">Tesseract language code(s), for example <c>eng</c> or <c>eng+deu</c>.</param>
         /// <param name="forceOcr">When <see langword="true"/>, OCR every page regardless of heuristics.</param>
         /// <param name="ocrFunction">Custom per-page OCR callback; <see langword="null"/> uses the built-in engine.</param>
+        /// <param name="tableOutput"><c>markdown</c> (default) or <c>html</c> table rendering.</param>
+        /// <param name="edgeThreshold">Optional layout edge threshold passed to pymupdf-layout.</param>
         public static string ToJson(
             string path,
             int imageDpi = 150,
             string imageFormat = "png",
             string imagePath = "",
             List<int> pages = null,
-            int ocrDpi = 300,
+            int ocrDpi = 150,
             bool writeImages = false,
             bool embedImages = false,
             bool showProgress = false,
@@ -324,7 +357,9 @@ namespace MuPDF.NET.PDF4LLM
             bool useOcr = true,
             string ocrLanguage = "eng",
             bool forceOcr = false,
-            OcrPageFunction ocrFunction = null)
+            OcrPageFunction ocrFunction = null,
+            string tableOutput = "markdown",
+            float? edgeThreshold = null)
         {
             if (string.IsNullOrWhiteSpace(path))
                 throw new ArgumentException("Path must not be null or whitespace.", nameof(path));
@@ -343,7 +378,9 @@ namespace MuPDF.NET.PDF4LLM
                     useOcr,
                     ocrLanguage,
                     forceOcr,
-                    ocrFunction);
+                    ocrFunction,
+                    tableOutput,
+                    edgeThreshold);
         }
 
         /// <summary>Convert a document to plain text.</summary>
@@ -358,12 +395,13 @@ namespace MuPDF.NET.PDF4LLM
         /// <param name="ocrDpi">Resolution in dots per inch for OCR page rendering.</param>
         /// <param name="useOcr">When <see langword="true"/>, apply OCR where the pipeline decides it is beneficial.</param>
         /// <param name="ocrLanguage">Tesseract language code(s), for example <c>eng</c> or <c>eng+deu</c>.</param>
-        /// <param name="tableFormat">Table rendering style (for example <c>grid</c>).</param>
+        /// <param name="tableFormat">Plain-text table style (for example <c>grid</c>).</param>
         /// <param name="pageChunks">When <see langword="true"/>, return JSON page-chunk structures instead of one text string.</param>
-        /// <param name="tableMaxWidth">Maximum table width in characters for plain-text tables.</param>
-        /// <param name="tableMinColWidth">Minimum column width in characters for plain-text tables.</param>
+        /// <param name="tableMaxWidth">Maximum table width used by the plain-text table formatter.</param>
+        /// <param name="tableMinColWidth">Minimum column width used by the plain-text table formatter.</param>
         /// <param name="forceOcr">When <see langword="true"/>, OCR every page regardless of heuristics.</param>
         /// <param name="ocrFunction">Custom per-page OCR callback; <see langword="null"/> uses the built-in engine.</param>
+        /// <param name="edgeThreshold">Optional layout edge threshold passed to pymupdf-layout.</param>
         public static string ToText(
             Document doc,
             string filename = "",
@@ -373,7 +411,7 @@ namespace MuPDF.NET.PDF4LLM
             bool ignoreCode = false,
             bool showProgress = false,
             bool forceText = true,
-            int ocrDpi = 300,
+            int ocrDpi = 150,
             bool useOcr = true,
             string ocrLanguage = "eng",
             string tableFormat = "grid",
@@ -381,7 +419,8 @@ namespace MuPDF.NET.PDF4LLM
             int tableMaxWidth = 100,
             int tableMinColWidth = 10,
             bool forceOcr = false,
-            OcrPageFunction ocrFunction = null)
+            OcrPageFunction ocrFunction = null,
+            float? edgeThreshold = null)
         {
             if (!UseLayout)
                 throw new NotSupportedException(
@@ -399,7 +438,8 @@ namespace MuPDF.NET.PDF4LLM
                 useOcr: useOcr,
                 ocrLanguage: ocrLanguage,
                 forceOcr: forceOcr,
-                ocrFunction: ocrFunction);
+                ocrFunction: ocrFunction,
+                edgeThreshold: edgeThreshold);
 
             return parsedDoc.ToText(
                 header: header,
@@ -424,12 +464,13 @@ namespace MuPDF.NET.PDF4LLM
         /// <param name="ocrDpi">Resolution in dots per inch for OCR page rendering.</param>
         /// <param name="useOcr">When <see langword="true"/>, apply OCR where the pipeline decides it is beneficial.</param>
         /// <param name="ocrLanguage">Tesseract language code(s), for example <c>eng</c> or <c>eng+deu</c>.</param>
-        /// <param name="tableFormat">Table rendering style (for example <c>grid</c>).</param>
+        /// <param name="tableFormat">Plain-text table style (for example <c>grid</c>).</param>
         /// <param name="pageChunks">When <see langword="true"/>, return JSON page-chunk structures instead of one text string.</param>
-        /// <param name="tableMaxWidth">Maximum table width in characters for plain-text tables.</param>
-        /// <param name="tableMinColWidth">Minimum column width in characters for plain-text tables.</param>
+        /// <param name="tableMaxWidth">Maximum table width used by the plain-text table formatter.</param>
+        /// <param name="tableMinColWidth">Minimum column width used by the plain-text table formatter.</param>
         /// <param name="forceOcr">When <see langword="true"/>, OCR every page regardless of heuristics.</param>
         /// <param name="ocrFunction">Custom per-page OCR callback; <see langword="null"/> uses the built-in engine.</param>
+        /// <param name="edgeThreshold">Optional layout edge threshold passed to pymupdf-layout.</param>
         public static string ToText(
             string path,
             string filename = "",
@@ -439,7 +480,7 @@ namespace MuPDF.NET.PDF4LLM
             bool ignoreCode = false,
             bool showProgress = false,
             bool forceText = true,
-            int ocrDpi = 300,
+            int ocrDpi = 150,
             bool useOcr = true,
             string ocrLanguage = "eng",
             string tableFormat = "grid",
@@ -447,7 +488,8 @@ namespace MuPDF.NET.PDF4LLM
             int tableMaxWidth = 100,
             int tableMinColWidth = 10,
             bool forceOcr = false,
-            OcrPageFunction ocrFunction = null)
+            OcrPageFunction ocrFunction = null,
+            float? edgeThreshold = null)
         {
             if (string.IsNullOrWhiteSpace(path))
                 throw new ArgumentException("Path must not be null or whitespace.", nameof(path));
@@ -469,7 +511,8 @@ namespace MuPDF.NET.PDF4LLM
                     tableMaxWidth,
                     tableMinColWidth,
                     forceOcr,
-                    ocrFunction);
+                    ocrFunction,
+                    edgeThreshold);
         }
 
         /// <summary>Parse a document into a structured layout model.</summary>
@@ -489,13 +532,15 @@ namespace MuPDF.NET.PDF4LLM
         /// <param name="forceOcr">When <see langword="true"/>, OCR every page regardless of heuristics.</param>
         /// <param name="keepOcrText">When <see langword="true"/>, retain OCR-generated text spans on the page.</param>
         /// <param name="ocrFunction">Custom per-page OCR callback; <see langword="null"/> uses the built-in engine.</param>
+        /// <param name="renderHtmlTables">When <see langword="true"/>, reconstruct tables as HTML via the table HTML engine.</param>
+        /// <param name="edgeThreshold">Optional layout edge threshold passed to pymupdf-layout.</param>
         public static ParsedDocument ParseDocument(
             Document doc,
             string filename = "",
             int imageDpi = 150,
             string imageFormat = "png",
             string imagePath = "",
-            int ocrDpi = 300,
+            int ocrDpi = 150,
             List<int> pages = null,
             bool writeImages = false,
             bool embedImages = false,
@@ -505,7 +550,9 @@ namespace MuPDF.NET.PDF4LLM
             string ocrLanguage = "eng",
             bool forceOcr = false,
             bool keepOcrText = false,
-            OcrPageFunction ocrFunction = null)
+            OcrPageFunction ocrFunction = null,
+            bool? renderHtmlTables = null,
+            float? edgeThreshold = null)
         {
             if (!UseLayout)
                 throw new NotSupportedException(
@@ -527,7 +574,9 @@ namespace MuPDF.NET.PDF4LLM
                 ocrLanguage: ocrLanguage,
                 forceOcr: forceOcr,
                 keepOcrText: keepOcrText,
-                ocrFunction: ocrFunction);
+                ocrFunction: ocrFunction,
+                renderHtmlTables: renderHtmlTables,
+                edgeThreshold: edgeThreshold);
         }
 
         /// <summary>

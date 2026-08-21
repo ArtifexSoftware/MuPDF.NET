@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 namespace MuPDF.NET
@@ -203,10 +204,14 @@ namespace MuPDF.NET
         /// Legacy readthedocs <c>IsFormPDF</c> — forwards to &lt;see cref="IsFormPDF"/&gt;.
         /// </summary>
         /// <remarks>See <see cref="IsFormPDF"/>. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         public int IsFormPDF
         {
             get
             {
+                if (IsClosed || !IsPdf)
+                    return -1;
+
                 mupdf.PdfDocument pdf = Helpers.AsPdfDocument(this, required: false);
                 if (pdf.m_internal == null)
                     return -1;
@@ -267,19 +272,9 @@ namespace MuPDF.NET
             }).ToList();
         }
         /// <summary>
-        /// Legacy readthedocs <c>RewriteImage</c> — forwards to &lt;see cref="RewriteImage"/&gt;.
+        /// Legacy readthedocs <c>RewriteImage</c> — forwards to <see cref="RewriteImages"/>.
         /// </summary>
-        /// <remarks>See <see cref="RewriteImage"/>. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
-        /// <param name="dpiThreshold">Legacy parameter forwarded to &lt;see cref="RewriteImage"/&gt;.</param>
-        /// <param name="dpiTarget">Legacy parameter forwarded to &lt;see cref="RewriteImage"/&gt;.</param>
-        /// <param name="quality">JPEG quality for lossy recompression.</param>
-        /// <param name="lossy">Whether lossy images may be recompressed.</param>
-        /// <param name="lossless">Whether lossless images may be recompressed.</param>
-        /// <param name="bitonal">Whether bitonal images may be processed.</param>
-        /// <param name="color">Whether color images may be processed.</param>
-        /// <param name="gray">Whether grayscale images may be processed.</param>
-        /// <param name="setToGray">Legacy parameter forwarded to &lt;see cref="RewriteImage"/&gt;.</param>
-        /// <param name="options">Low-level MuPDF PdfImageRewriterOptions (advanced).</param>
+        /// <remarks>See <see cref="RewriteImages"/>. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public void RewriteImage(
             int dpiThreshold = -1,
             int dpiTarget = 0,
@@ -292,25 +287,13 @@ namespace MuPDF.NET
             bool setToGray = false,
             mupdf.PdfImageRewriterOptions options = null)
         {
-            if (setToGray)
-                Recolor(1);
-
-            if (options != null)
-            {
-                EnsurePdf();
-                mupdf.mupdf.pdf_rewrite_images(NativePdfDocument, options);
-                return;
-            }
-
             if (dpiTarget < 0)
             {
                 dpiThreshold = 0;
                 dpiTarget = 0;
             }
-            if (dpiTarget > 0 && dpiTarget >= dpiThreshold)
-                throw new Exception($"dpi_target={dpiTarget} must be less than dpi_threshold={dpiThreshold}");
 
-            RewriteImages(quality, dpiThreshold, dpiTarget, lossy, lossless, bitonal, color, gray);
+            RewriteImages(quality, dpiThreshold, dpiTarget, lossy, lossless, bitonal, color, gray, setToGray, options);
         }
         /// <summary>
         /// Legacy readthedocs <c>AddEmbfile</c> — forwards to &lt;see cref="AddEmbfile"/&gt;.

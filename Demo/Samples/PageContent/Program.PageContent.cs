@@ -192,6 +192,33 @@ namespace Demo
             Console.WriteLine("Image insertion test completed.");
         }
 
+        /// <summary>
+        /// Square pixmap into a wide rect with keepProportion=True.
+        /// Open keep_proportion_square.pdf: red square should stay square inside the blue outline.
+        /// </summary>
+        internal static void TestInsertImageKeepProportionSquare(string[] args)
+        {
+            Console.WriteLine("\n=== TestInsertImageKeepProportionSquare =====================");
+
+            Document doc = new Document();
+            Page page = doc.NewPage(width: 400, height: 300);
+
+            // Square 100x100 red pixmap.
+            Pixmap pix = new Pixmap(Colorspace.Rgb, new IRect(0, 0, 100, 100), false);
+            pix.SetRect(pix.IRect, new float[] { 1f, 0f, 0f });
+
+            Rect target = new Rect(50, 50, 250, 100); // 200 x 50 — not square
+            page.DrawRect(target, color: new[] { 0f, 0f, 1f }, width: 1); // blue outline
+            page.InsertImage(target, pixmap: pix, keepProportion: true);
+
+            string outPath = Path.GetFullPath("keep_proportion_square.pdf");
+            doc.Save(outPath);
+            doc.Close();
+            pix.Dispose();
+
+            Console.WriteLine($"wrote {outPath}");
+        }
+
         internal static void TestGetImageInfo(string[] args)
         {
             Console.WriteLine("\n=== TestGetImageInfo =====================");

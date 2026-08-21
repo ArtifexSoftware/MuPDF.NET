@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using MuPDF.NET;
+using MuPDF.NET.PDF4LLM.Helpers.TableHtml;
 
 namespace MuPDF.NET.PDF4LLM.Helpers
 {
@@ -210,6 +211,13 @@ namespace MuPDF.NET.PDF4LLM.Helpers
         public List<Rect> TabRects0 { get; set; } = new List<Rect>();
         public Dictionary<int, Rect> TabRects { get; set; } = new Dictionary<int, Rect>();
         public List<Table> Tabs { get; set; } = new List<Table>();
+        /// <summary>
+        /// HTML table payloads when <c>tableOutput == "html"</c>:
+        /// <c>(bbox, html, rows, cols)</c>.
+        /// </summary>
+        public List<(Rect bbox, string html, int rows, int cols)> HtmlTables { get; set; } =
+            new List<(Rect bbox, string html, int rows, int cols)>();
+        public string TableOutput { get; set; } = "markdown";
         public List<int> WrittenTables { get; set; } = new List<int>();
         public List<int> WrittenImages { get; set; } = new List<int>();
         public List<PathInfo> ActualPaths { get; set; } = new List<PathInfo>();
@@ -349,6 +357,7 @@ namespace MuPDF.NET.PDF4LLM.Helpers
             float pageWidth = 612,
             float? pageHeight = null,
             string tableStrategy = "lines_strict",
+            string tableOutput = "markdown",
             int? graphicsLimit = null,
             float fontsizeLimit = 3.0f,
             bool ignoreCode = false,
@@ -370,6 +379,8 @@ namespace MuPDF.NET.PDF4LLM.Helpers
                     nameof(imageSizeLimit),
                     "'imageSizeLimit' must be non-negative and less than 1.");
             }
+            if (tableOutput != "markdown" && tableOutput != "html")
+                throw new ArgumentException("'tableOutput' must be 'markdown' or 'html'.");
 
             int DPI = dpi;
             bool IGNORE_CODE = ignoreCode;
@@ -380,6 +391,7 @@ namespace MuPDF.NET.PDF4LLM.Helpers
                 pageChunks = true;
                 ignoreCode = true;
             }
+            string TABLE_OUTPUT = tableOutput;
             string IMG_PATH = imagePath;
             if (!string.IsNullOrEmpty(IMG_PATH) && writeImages && !Directory.Exists(IMG_PATH))
                 Directory.CreateDirectory(IMG_PATH);
@@ -493,7 +505,7 @@ namespace MuPDF.NET.PDF4LLM.Helpers
                     Parameters pageParms = GetPageOutput(
                         doc, pno, margins, getHeaderId, writeImages, embedImages, ignoreImages,
                         imagePath, imageFormat, filename, forceText, dpi, ignoreCode,
-                        ignoreGraphics, tableStrategy, detectBgColor, graphicsLimit,
+                        ignoreGraphics, tableStrategy, TABLE_OUTPUT, detectBgColor, graphicsLimit,
                         ignoreAlpha, extractWords, pageSeparators, imageSizeLimit, textFlags);
 
                     if (!pageChunks)
@@ -598,6 +610,7 @@ namespace MuPDF.NET.PDF4LLM.Helpers
                     ? Convert.ToSingle(ph)
                     : (float?)null,
                 tableStrategy: GetKwString(loadKwargs, "table_strategy", "lines_strict"),
+                tableOutput: GetKwString(loadKwargs, "table_output", "markdown"),
                 graphicsLimit: loadKwargs.TryGetValue("graphics_limit", out object gl) && gl != null
                     ? Convert.ToInt32(gl)
                     : (int?)null,
@@ -831,6 +844,14 @@ namespace MuPDF.NET.PDF4LLM.Helpers
             return nwords;
         }
 
+        /// <summary>Render table <paramref name="i"/> as markdown or reconstructed HTML.</summary>
+        private static string TableString(Parameters parms, int i)
+        {
+            if (parms.TableOutput == "html")
+                return parms.HtmlTables[i].html;
+            return parms.Tabs[i].ToMarkdown(clean: false);
+        }
+
         /// <summary>
         /// Output tables above given text rectangle.
         /// </summary>
@@ -852,9 +873,9 @@ namespace MuPDF.NET.PDF4LLM.Helpers
                 foreach (var kvp in tabCandidates)
                 {
                     int i = kvp.Key;
-                    thisMd.Append("\n" + parms.Tabs[i].ToMarkdown(clean: false) + "\n");
+                    thisMd.Append("\n" + TableString(parms, i) + "\n");
                     
-                    if (extractWords)
+                    if (extractWords && parms.TableOutput != "html")
                     {
                         var cells = new List<Rect>();
                         if (parms.Tabs[i].header != null && parms.Tabs[i].header.cells != null)
@@ -890,9 +911,9 @@ namespace MuPDF.NET.PDF4LLM.Helpers
                     if (parms.WrittenTables.Contains(i))
                         continue;
                     
-                    thisMd.Append("\n" + parms.Tabs[i].ToMarkdown(clean: false) + "\n");
+                    thisMd.Append("\n" + TableString(parms, i) + "\n");
                     
-                    if (extractWords)
+                    if (extractWords && parms.TableOutput != "html")
                     {
                         var cells = new List<Rect>();
                         if (parms.Tabs[i].header != null && parms.Tabs[i].header.cells != null)
@@ -1059,9 +1080,9 @@ namespace MuPDF.NET.PDF4LLM.Helpers
                     foreach (var kvp in tabCandidates)
                     {
                         int i = kvp.Key;
-                        outString.Append("\n" + parms.Tabs[i].ToMarkdown(clean: false) + "\n");
+                        outString.Append("\n" + TableString(parms, i) + "\n");
                         
-                        if (extractWords)
+                        if (extractWords && parms.TableOutput != "html")
                         {
                             var cells = new List<Rect>();
                             if (parms.Tabs[i].header != null && parms.Tabs[i].header.cells != null)
@@ -1314,6 +1335,7 @@ namespace MuPDF.NET.PDF4LLM.Helpers
             bool ignoreCode,
             bool ignoreGraphics,
             string tableStrategy,
+            string tableOutput,
             bool detectBgColor,
             int? graphicsLimit,
             bool ignoreAlpha,
@@ -1343,7 +1365,8 @@ namespace MuPDF.NET.PDF4LLM.Helpers
                 ImagePath = imagePath ?? "",
                 ImageFormat = string.IsNullOrEmpty(imageFormat) ? "png" : imageFormat,
                 Dpi = dpi,
-                ImageSizeLimit = imageSizeLimit
+                ImageSizeLimit = imageSizeLimit,
+                TableOutput = tableOutput ?? "markdown",
             };
 
             // Determine background color
@@ -1407,40 +1430,71 @@ namespace MuPDF.NET.PDF4LLM.Helpers
             List<Table> tables = new List<Table>();
             Dictionary<int, Rect> tabRects = new Dictionary<int, Rect>();
             List<int> writtenTables = new List<int>();
+            parms.HtmlTables = new List<(Rect bbox, string html, int rows, int cols)>();
+            parms.Tables = new List<object>();
 
             if (!ignoreGraphics && !string.IsNullOrEmpty(tableStrategy))
             {
                 try
                 {
-                    var foundTables = page.GetTables(clip: page.Rect, strategy: tableStrategy);
-                    for (int i = 0; i < foundTables.Count; i++)
+                    if (parms.TableOutput == "html")
                     {
-                        var t = foundTables[i];
-                        // Remove tables with too few rows or columns
-                        if (t.row_count < 2 || t.col_count < 2)
-                            continue;
-                        tables.Add(t);
-                        // Combine table bbox with header bbox
-                        Rect tabRect = t.bbox;
-                        if (t.header != null && t.header.bbox != null)
+                        var htmlTables = TableHtml.TableHtml.PageHtmlTables(page);
+                        for (int i = 0; i < htmlTables.Count; i++)
                         {
-                            Rect headerRect = t.header.bbox;
-                            tabRect = Utils.JoinRects(new List<Rect> { tabRect, headerRect });
+                            var item = htmlTables[i];
+                            parms.HtmlTables.Add((new Rect(item.bbox), item.html, item.rows, item.cols));
+                            tabRects[i] = new Rect(item.bbox);
+                            parms.Tables.Add(new Dictionary<string, object>
+                            {
+                                ["bbox"] = new[] { tabRects[i].X0, tabRects[i].Y0, tabRects[i].X1, tabRects[i].Y1 },
+                                ["rows"] = item.rows,
+                                ["columns"] = item.cols,
+                            });
                         }
-                        tabRects[tables.Count - 1] = tabRect;
                     }
-                    // Sort tables by position (top to bottom, left to right)
-                    var sortedIndices = Enumerable.Range(0, tables.Count)
-                        .OrderBy(i => tabRects[i].Y0)
-                        .ThenBy(i => tabRects[i].X0)
-                        .ToList();
-                    var sortedTables = sortedIndices.Select(i => tables[i]).ToList();
-                    var sortedRects = sortedIndices.ToDictionary(
-                        idx => sortedIndices.IndexOf(idx),
-                        idx => tabRects[idx]
-                    );
-                    tables = sortedTables;
-                    tabRects = sortedRects;
+                    else
+                    {
+                        var foundTables = page.GetTables(clip: page.Rect, strategy: tableStrategy);
+                        for (int i = 0; i < foundTables.Count; i++)
+                        {
+                            var t = foundTables[i];
+                            // Remove tables with too few rows or columns
+                            if (t.row_count < 2 || t.col_count < 2)
+                                continue;
+                            tables.Add(t);
+                            // Combine table bbox with header bbox
+                            Rect tabRect = t.bbox;
+                            if (t.header != null && t.header.bbox != null)
+                            {
+                                Rect headerRect = t.header.bbox;
+                                tabRect = Utils.JoinRects(new List<Rect> { tabRect, headerRect });
+                            }
+                            tabRects[tables.Count - 1] = tabRect;
+                        }
+                        // Sort tables by position (top to bottom, left to right)
+                        var sortedIndices = Enumerable.Range(0, tables.Count)
+                            .OrderBy(i => tabRects[i].Y0)
+                            .ThenBy(i => tabRects[i].X0)
+                            .ToList();
+                        var sortedTables = sortedIndices.Select(i => tables[i]).ToList();
+                        var sortedRects = sortedIndices.ToDictionary(
+                            idx => sortedIndices.IndexOf(idx),
+                            idx => tabRects[idx]
+                        );
+                        tables = sortedTables;
+                        tabRects = sortedRects;
+                        for (int i = 0; i < tables.Count; i++)
+                        {
+                            Rect tabRect = tabRects[i];
+                            parms.Tables.Add(new Dictionary<string, object>
+                            {
+                                ["bbox"] = new[] { tabRect.X0, tabRect.Y0, tabRect.X1, tabRect.Y1 },
+                                ["rows"] = tables[i].row_count,
+                                ["columns"] = tables[i].col_count,
+                            });
+                        }
+                    }
                 }
                 catch
                 {

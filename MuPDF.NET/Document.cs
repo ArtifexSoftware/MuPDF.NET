@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -463,10 +464,16 @@ namespace MuPDF.NET
         /// </summary>
         /// <value>is this a Form PDF?</value>
         /// <remarks><see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         public bool IsFormPdf
         {
             get
             {
+                // PDF-only; debugger Locals/Watch evaluates this on Office docs and
+                // native pdf_trailer can AV (0xC0000005) — not catchable as Exception.
+                if (IsClosed || !IsPdf)
+                    return false;
+
                 mupdf.PdfDocument pdf = Helpers.AsPdfDocument(this, required: false);
                 if (pdf.m_internal == null)
                     return false;
@@ -496,32 +503,45 @@ namespace MuPDF.NET
         /// </summary>
         /// <value>Font names from <c>/Root/AcroForm/DR/Font</c>, or <see langword="null"/> if not a PDF.</value>
         /// <remarks><see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         public List<string> FormFonts
         {
             get
             {
-                mupdf.PdfDocument pdf = Helpers.AsPdfDocument(this, required: false);
-                if (pdf.m_internal == null)
+                // PDF-only; Office / non-PDF docs must not walk AcroForm (debugger
+                // Locals/Watch evaluates this and previously could AV).
+                if (IsClosed || !IsPdf)
                     return null;
 
-                mupdf.PdfObj fonts = Helpers.PdfDictGetl(
-                    mupdf.mupdf.pdf_trailer(pdf),
-                    "Root",
-                    "AcroForm",
-                    "DR",
-                    "Font");
-                var names = new List<string>();
-                if (fonts.m_internal != null && mupdf.mupdf.pdf_is_dict(fonts) != 0)
+                try
                 {
-                    int n = mupdf.mupdf.pdf_dict_len(fonts);
-                    for (int i = 0; i < n; i++)
-                    {
-                        mupdf.PdfObj key = fonts.pdf_dict_get_key(i);
-                        names.Add(Utils.UnicodeFromStr(key.pdf_to_name()));
-                    }
-                }
+                    mupdf.PdfDocument pdf = Helpers.AsPdfDocument(this, required: false);
+                    if (pdf.m_internal == null)
+                        return null;
 
-                return names;
+                    mupdf.PdfObj fonts = Helpers.PdfDictGetl(
+                        mupdf.mupdf.pdf_trailer(pdf),
+                        "Root",
+                        "AcroForm",
+                        "DR",
+                        "Font");
+                    var names = new List<string>();
+                    if (fonts.m_internal != null && mupdf.mupdf.pdf_is_dict(fonts) != 0)
+                    {
+                        int n = mupdf.mupdf.pdf_dict_len(fonts);
+                        for (int i = 0; i < n; i++)
+                        {
+                            mupdf.PdfObj key = fonts.pdf_dict_get_key(i);
+                            names.Add(Utils.UnicodeFromStr(key.pdf_to_name()));
+                        }
+                    }
+
+                    return names;
+                }
+                catch
+                {
+                    return null;
+                }
             }
         }
 
@@ -3401,6 +3421,7 @@ namespace MuPDF.NET
 
             Dictionary<string, object> GetArray(mupdf.PdfObj val)
             {
+                // PyMuPDF 1.28.2 (#5044): robust dest parsing (null tokens, Fit*, page coords).
                 var templ = new Dictionary<string, object>
                 {
                     ["page"] = -1,
@@ -3418,7 +3439,7 @@ namespace MuPDF.NET
                 else
                     return templ;
 
-                array = array.Replace("null", "0");
+                // Omit the square brackets around a destination array (do not map null→0).
                 if (array.Length >= 2 && array[0] == '[' && array[array.Length - 1] == ']')
                     array = array.Substring(1, array.Length - 2);
 
@@ -3433,31 +3454,110 @@ namespace MuPDF.NET
                 array = array.Substring(idx);
                 templ["dest"] = array;
 
-                if (array.StartsWith("/XYZ", StringComparison.Ordinal))
-                {
-                    templ.Remove("dest");
-                    var split = array.Split((char[])null, StringSplitOptions.RemoveEmptyEntries);
-                    var arrayList = new List<string>();
-                    for (int si = 1; si < split.Length && si < 4; si++)
-                        arrayList.Add(split[si]);
-                    while (arrayList.Count < 3)
-                        arrayList.Add("0");
-                    float x = float.Parse(arrayList[0], System.Globalization.CultureInfo.InvariantCulture);
-                    float y = float.Parse(arrayList[1], System.Globalization.CultureInfo.InvariantCulture);
-                    float z = float.Parse(arrayList[2], System.Globalization.CultureInfo.InvariantCulture);
-                    templ["to"] = (x, y);
-                    templ["zoom"] = z;
-                }
-
                 if (subval.EndsWith("0 R", StringComparison.Ordinal))
                 {
-                    int px = int.Parse(subval.Split(' ')[0], System.Globalization.CultureInfo.InvariantCulture);
-                    templ["page"] = pageXrefs.ContainsKey(px) ? pageXrefs[px] : -1;
+                    try
+                    {
+                        int px = int.Parse(subval.Split(' ')[0], CultureInfo.InvariantCulture);
+                        templ["page"] = pageXrefs.ContainsKey(px) ? pageXrefs[px] : -1;
+                    }
+                    catch
+                    {
+                        templ["page"] = -1;
+                    }
                 }
                 else
                 {
-                    templ["page"] = int.Parse(subval, System.Globalization.CultureInfo.InvariantCulture);
+                    try
+                    {
+                        templ["page"] = int.Parse(subval, CultureInfo.InvariantCulture);
+                    }
+                    catch
+                    {
+                        templ["page"] = -1;
+                    }
                 }
+
+                int pno = Convert.ToInt32(templ["page"], CultureInfo.InvariantCulture);
+                if (pno < 0)
+                    return templ;
+
+                Rect pageRect;
+                try { pageRect = this[pno].Rect; }
+                catch { return templ; }
+
+                static float? AsFloat(string token)
+                {
+                    if (token == null) return null;
+                    token = token.Trim().Trim('[', ']');
+                    if (string.Equals(token, "null", StringComparison.OrdinalIgnoreCase))
+                        return null;
+                    if (!float.TryParse(token, NumberStyles.Float, CultureInfo.InvariantCulture, out float v))
+                        return null;
+                    return v;
+                }
+
+                float? ToFitzX(float? pdfX) => pdfX.HasValue ? pdfX.Value - pageRect.X0 : (float?)null;
+                float? ToFitzY(float? pdfY) => pdfY.HasValue ? pdfY.Value - pageRect.Y0 : (float?)null;
+
+                var parts = array.Split((char[])null, StringSplitOptions.RemoveEmptyEntries)
+                    .Select(p => p.Trim().Trim('[', ']'))
+                    .ToList();
+                if (parts.Count == 0)
+                    return templ;
+
+                string mode = new string(parts[0].Where(ch => char.IsLetter(ch) || ch == '/').ToArray());
+                var args = parts.Skip(1).ToList();
+
+                if (mode == "/XYZ")
+                {
+                    templ.Remove("dest");
+                    float? left = args.Count > 0 ? AsFloat(args[0]) : null;
+                    float? top = args.Count > 1 ? AsFloat(args[1]) : null;
+                    float? zoom = args.Count > 2 ? AsFloat(args[2]) : null;
+                    float? x = ToFitzX(left);
+                    float? y = ToFitzY(top);
+                    templ["to"] = (x ?? 0f, y ?? 0f);
+                    templ["zoom"] = zoom ?? 0f;
+                }
+                else if (mode == "/Fit" || mode == "/FitB")
+                {
+                    templ.Remove("dest");
+                    templ["to"] = (0f, 0f);
+                    templ["zoom"] = 0f;
+                }
+                else if (mode == "/FitH" || mode == "/FitBH")
+                {
+                    templ.Remove("dest");
+                    float? top = args.Count > 0 ? AsFloat(args[0]) : null;
+                    float? y = ToFitzY(top);
+                    templ["to"] = (0f, y ?? 0f);
+                    templ["zoom"] = 0f;
+                }
+                else if (mode == "/FitV" || mode == "/FitBV")
+                {
+                    templ.Remove("dest");
+                    float? left = args.Count > 0 ? AsFloat(args[0]) : null;
+                    float? x = ToFitzX(left);
+                    templ["to"] = (x ?? 0f, 0f);
+                    templ["zoom"] = 0f;
+                }
+                else if (mode == "/FitR" && args.Count >= 4)
+                {
+                    templ.Remove("dest");
+                    float? left = AsFloat(args[0]);
+                    float? bottom = AsFloat(args[1]);
+                    float? right = AsFloat(args[2]);
+                    float? top = AsFloat(args[3]);
+                    float? x0 = ToFitzX(left);
+                    float? y0 = ToFitzY(top);
+                    float? x1 = ToFitzX(right);
+                    float? y1 = ToFitzY(bottom);
+                    templ["to"] = (x0 ?? 0f, y0 ?? 0f);
+                    templ["rect"] = (x0 ?? 0f, y0 ?? 0f, x1 ?? 0f, y1 ?? 0f);
+                    templ["zoom"] = 0f;
+                }
+
                 return templ;
             }
 
@@ -4343,9 +4443,13 @@ namespace MuPDF.NET
                 }
             }
 
+            // Only Base-14 / builtin names can be loaded by name. CID fonts such as
+            // Source Han must be loaded from their FontFile stream or cached content.
             if (Constants.Base14FontDict.TryGetValue(loadName.ToLowerInvariant(), out mapped))
-                loadName = mapped;
-            return Helpers.JM_get_font(loadName, null, null, 0, 0, -1, 0, 0, 0, 0);
+                return Helpers.JM_get_font(mapped, null, null, 0, 0, -1, 0, 0, 0, 0);
+
+            throw new ArgumentException(
+                $"cannot load font '{pdfBaseFontName}' for character widths (no FontFile/content).");
         }
 
         /// <summary>
@@ -4392,7 +4496,16 @@ namespace MuPDF.NET
                     throw new ArgumentException("xref is not a font");
 
                 bool simple = IsSimpleFontType(stype);
-                int ordering = GetCjkOrdering(name);
+                // Preserve ordering from InsertFont / JM_insert_font (e.g. china-t → 0).
+                // GetCjkOrdering only knows legacy BaseFont names (Ming/Song/…), not
+                // MuPDF 1.28.2 Source Han names — overwriting would force a broken
+                // Base-14 lookup and "cannot find builtin font SourceHanSerif…".
+                int ordering = -1;
+                if (fontdict.TryGetValue("ordering", out object ordObj) && ordObj != null
+                    && int.TryParse(ordObj.ToString(), out int passedOrd))
+                    ordering = passedOrd;
+                if (ordering < 0)
+                    ordering = GetCjkOrdering(name);
                 fontdict["simple"] = simple;
                 fontdict["ordering"] = ordering;
                 fontdict["glyphs"] = null;
@@ -6401,73 +6514,155 @@ namespace MuPDF.NET
             bool thumbnails = true,
             bool xmlMetadata = true)
         {
-            byte[][] RemoveHidden(byte[][] contLines)
+            // PyMuPDF 1.28.2 (#4670): remove hidden text via redaction annots instead of
+            // rewriting cleaned content streams (which no longer keep reliable "3 Tr" lines).
+            int AddHiddenTextRedactions(Page page)
             {
-                // Args:
-                //     cont_lines: list of lines with /Contents content. Should have status
-                //         from after page.cleanContents().
-                // Returns:
-                //     List of /Contents lines from which hidden text has been removed.
-                // Notes:
-                //     The input must have been created after the page's /Contents object(s)
-                //     have been cleaned with page.cleanContents(). This ensures a standard
-                //     formatting: one command per line, single spaces between operators.
-                //     This allows for drastic simplification of this code.
-                var outLines = new List<byte[]>();  // will return this
-                bool inText = false;  // indicate if within BT/ET object
-                bool suppress = false;  // indicate text suppression active
-                bool makeReturn = false;
-                foreach (byte[] line in contLines)
+                int filledFlag = mupdf.mupdf.FZ_STEXT_FILLED;
+                int strokedFlag = mupdf.mupdf.FZ_STEXT_STROKED;
+                int flags = mupdf.mupdf.FZ_STEXT_PRESERVE_SPANS | mupdf.mupdf.FZ_STEXT_COLLECT_STYLES;
+
+                bool IsHiddenSpan(Dictionary<string, object> span)
                 {
-                    if (ScrubBytesEqual(line, "BT"))  // start of text object
+                    if (span.TryGetValue("font", out var fontObj) && fontObj is string font && font.Length > 0)
                     {
-                        inText = true;  // switch on
-                        outLines.Add(line);  // output it
-                        continue;
+                        int plus = font.LastIndexOf('+');
+                        string baseName = plus >= 0 && plus + 1 < font.Length ? font.Substring(plus + 1) : font;
+                        if (string.Equals(baseName, "GlyphLessFont", StringComparison.Ordinal))
+                            return true;
                     }
-                    if (ScrubBytesEqual(line, "ET"))  // end of text object
+
+                    if (span.TryGetValue("alpha", out var alphaObj))
                     {
-                        inText = false;  // switch off
-                        outLines.Add(line);  // output it
-                        continue;
+                        try
+                        {
+                            if (Convert.ToInt32(alphaObj, CultureInfo.InvariantCulture) == 0)
+                                return true;
+                        }
+                        catch { /* ignore bad alpha */ }
                     }
-                    if (ScrubBytesEqual(line, "3 Tr"))  // text suppression operator
+
+                    if (span.TryGetValue("char_flags", out var cfObj))
                     {
-                        suppress = true;  // switch on
-                        makeReturn = true;
-                        continue;
+                        try
+                        {
+                            int charFlags = Convert.ToInt32(cfObj, CultureInfo.InvariantCulture);
+                            bool filled = (charFlags & filledFlag) != 0;
+                            bool stroked = (charFlags & strokedFlag) != 0;
+                            if (!filled && !stroked)
+                                return true;
+                        }
+                        catch { /* ignore bad flags */ }
                     }
-                    if (line.Length >= 2 && line[line.Length - 2] == (byte)'T' && line[line.Length - 1] == (byte)'r' && line[0] != (byte)'3')
-                    {
-                        suppress = false;  // text rendering changed
-                        outLines.Add(line);
-                        continue;
-                    }
-                    if (ScrubBytesEqual(line, "Q"))  // unstack command also switches off
-                    {
-                        suppress = false;
-                        outLines.Add(line);
-                        continue;
-                    }
-                    if (suppress && inText)  // suppress hidden lines
-                        continue;
-                    outLines.Add(line);
+
+                    return false;
                 }
-                if (makeReturn)
-                    return outLines.ToArray();
-                return null;
+
+                int count = 0;
+                void RedactSpan(string font, int? alpha, int? charFlags, Rect rect)
+                {
+                    if (rect == null || rect.IsEmpty || rect.IsInfinite)
+                        return;
+                    bool hidden = false;
+                    if (!string.IsNullOrEmpty(font))
+                    {
+                        int plus = font.LastIndexOf('+');
+                        string baseName = plus >= 0 && plus + 1 < font.Length ? font.Substring(plus + 1) : font;
+                        if (string.Equals(baseName, "GlyphLessFont", StringComparison.Ordinal))
+                            hidden = true;
+                    }
+                    if (!hidden && alpha == 0)
+                        hidden = true;
+                    if (!hidden && charFlags.HasValue)
+                    {
+                        bool filled = (charFlags.Value & filledFlag) != 0;
+                        bool stroked = (charFlags.Value & strokedFlag) != 0;
+                        if (!filled && !stroked)
+                            hidden = true;
+                    }
+                    if (!hidden)
+                        return;
+                    page.AddRedactAnnot(rect, crossOut: false);
+                    count++;
+                }
+
+                // GetText("dict") returns typed PageInfo in MuPDF.NET (not a raw dict).
+                object textpage = page.GetText("dict", flags: flags);
+                if (textpage is PageInfo pageInfo && pageInfo.Blocks != null)
+                {
+                    foreach (var block in pageInfo.Blocks)
+                    {
+                        if (block == null || block.Type != 0 || block.Lines == null)
+                            continue;
+                        foreach (var line in block.Lines)
+                        {
+                            if (line?.Spans == null)
+                                continue;
+                            foreach (var span in line.Spans)
+                            {
+                                if (span == null)
+                                    continue;
+                                RedactSpan(span.Font, span.Alpha, unchecked((int)span.CharFlags), span.Bbox);
+                            }
+                        }
+                    }
+                    return count;
+                }
+
+                if (textpage is not Dictionary<string, object> textDict
+                    || !textDict.TryGetValue("blocks", out var blocksObj)
+                    || blocksObj is not System.Collections.IEnumerable blocks)
+                    return 0;
+
+                foreach (var blockObj in blocks)
+                {
+                    if (blockObj is not Dictionary<string, object> block)
+                        continue;
+                    if (!block.TryGetValue("type", out var typeObj) || Convert.ToInt32(typeObj, CultureInfo.InvariantCulture) != 0)
+                        continue;
+                    if (!block.TryGetValue("lines", out var linesObj) || linesObj is not System.Collections.IEnumerable lines)
+                        continue;
+                    foreach (var lineObj in lines)
+                    {
+                        if (lineObj is not Dictionary<string, object> line)
+                            continue;
+                        if (!line.TryGetValue("spans", out var spansObj) || spansObj is not System.Collections.IEnumerable spans)
+                            continue;
+                        foreach (var spanObj in spans)
+                        {
+                            if (spanObj is not Dictionary<string, object> span || !IsHiddenSpan(span))
+                                continue;
+                            if (!span.TryGetValue("bbox", out var bboxObj) || bboxObj == null)
+                                continue;
+                            Rect rect;
+                            try
+                            {
+                                if (bboxObj is float[] fa && fa.Length >= 4)
+                                    rect = new Rect(fa[0], fa[1], fa[2], fa[3]);
+                                else if (bboxObj is double[] da && da.Length >= 4)
+                                    rect = new Rect((float)da[0], (float)da[1], (float)da[2], (float)da[3]);
+                                else if (bboxObj is Rect rr)
+                                    rect = rr;
+                                else
+                                    continue;
+                            }
+                            catch { continue; }
+                            if (rect.IsEmpty || rect.IsInfinite)
+                                continue;
+                            page.AddRedactAnnot(rect, crossOut: false);
+                            count++;
+                        }
+                    }
+                }
+                return count;
             }
+
             if (!IsPdf)
                 throw new ValueErrorException(Constants.MSG_IS_NO_PDF);
             if (IsEncrypted || IsClosed)
                 throw new ValueErrorException("closed or encrypted doc");
             if (!cleanPages)
-            {
-                // hidden_text = False
-                hiddenText = false;
-                // redactions = False
                 redactions = false;
-            }
             if (metadata)
                 SetMetadata(new Dictionary<string, string>());  // remove standard metadata
 
@@ -6481,57 +6676,36 @@ namespace MuPDF.NET
                 Page page = LoadPage(pno);
                 if (resetFields)
                 {
-                    // reset form fields (widgets)
                     foreach (var widget in page.Widgets())
                         widget.reset();
                 }
                 if (removeLinks)
                 {
-                    // links = page.GetLinks()  # list of all links on page
                     var links = page.GetLinksDict();
                     foreach (var link in links)
                         page.DeleteLink(link);
                 }
 
-                // found_redacts = False
-                bool foundRedacts = false;
+                int hiddenRedacts = 0;
+                if (hiddenText)
+                    hiddenRedacts = AddHiddenTextRedactions(page);
+
+                bool foundRedacts = hiddenRedacts > 0;
                 foreach (var annot in page.Annots())
                 {
                     if (annot.AnnotationType == AnnotationType.FileAttachment && attachedFiles)
-                        annot.UpdateFile(buffer: new byte[] { (byte)' ' });  // set file content to empty
+                        annot.UpdateFile(buffer: new byte[] { (byte)' ' });
                     if (resetResponses)
                         annot.DeleteResponses();
                     if (annot.AnnotationType == AnnotationType.Redact)
                         foundRedacts = true;
                 }
-                if (redactions && foundRedacts)
+                if (hiddenRedacts > 0 || (redactions && foundRedacts))
                     page.ApplyRedactions(images: redactImages);
-                if (!(cleanPages || hiddenText))
-                    continue;  // done with the page
 
-                // page.CleanContents()
-                page.CleanContents();
-                if (page.GetContents().Count == 0)
-                    continue;
-                if (hiddenText)
-                {
-                    // xrefs = page.GetContents()
-                    var xrefs = page.GetContents();
-                    System.Diagnostics.Debug.Assert(xrefs.Count == 1);
-                    // xref = xrefs[0]
-                    int xref = xrefs[0];
-                    // cont = doc.xref_stream(xref)
-                    byte[] cont = xref_stream(xref);
-                    // cont_lines = remove_hidden(cont.splitlines())  # remove hidden text
-                    byte[][] contLines = ScrubSplitBytesLines(cont);
-                    byte[][] cleaned = RemoveHidden(contLines);
-                    if (cleaned != null && cleaned.Length > 0)
-                    {
-                        // cont = b"\n".join(cont_lines)
-                        cont = ScrubJoinBytesLines(cleaned);
-                        UpdateStream(xref, cont);  // rewrite the page /Contents
-                    }
-                }
+                if (cleanPages)
+                    page.CleanContents();
+
                 if (thumbnails)
                 {
                     if (xref_get_key(page.Xref, "Thumb").type != "null")
@@ -6579,50 +6753,6 @@ namespace MuPDF.NET
                 if (xref_get_key(xref, "Metadata").type != "null")
                     XrefSetKey(xref, "Metadata", "null");
             }
-        }
-
-        private static bool ScrubBytesEqual(byte[] line, string text)
-        {
-            byte[] b = System.Text.Encoding.ASCII.GetBytes(text);
-            if (line.Length != b.Length) return false;
-            for (int i = 0; i < b.Length; i++)
-                if (line[i] != b[i]) return false;
-            return true;
-        }
-
-        private static byte[][] ScrubSplitBytesLines(byte[] cont)
-        {
-            var lines = new List<byte[]>();
-            int start = 0;
-            for (int i = 0; i <= cont.Length; i++)
-            {
-                if (i == cont.Length || cont[i] == (byte)'\n')
-                {
-                    int end = i;
-                    if (end > start && cont[end - 1] == (byte)'\r')
-                        end--;
-                    if (end > start)
-                    {
-                        var slice = new byte[end - start];
-                        Buffer.BlockCopy(cont, start, slice, 0, end - start);
-                        lines.Add(slice);
-                    }
-                    start = i + 1;
-                }
-            }
-            return lines.ToArray();
-        }
-
-        private static byte[] ScrubJoinBytesLines(byte[][] contLines)
-        {
-            using var ms = new System.IO.MemoryStream();
-            for (int i = 0; i < contLines.Length; i++)
-            {
-                if (i > 0)
-                    ms.WriteByte((byte)'\n');
-                ms.Write(contLines[i], 0, contLines[i].Length);
-            }
-            return ms.ToArray();
         }
 
         // ─── Resolve Link ───────────────────────────────────────────────
@@ -7091,7 +7221,7 @@ namespace MuPDF.NET
         /// <summary>
         /// Rewrites or recompresses images across the PDF.
         /// </summary>
-        /// <remarks>PDF only: Walk through all images and rewrite them according to the specified parameters. This is useful for reducing file size, changing image formats, or converting color spaces. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
+        /// <remarks>PDF only: Walk through all images and rewrite them according to the specified parameters. This is useful for reducing file size, changing image formats, or converting color spaces. Matches PyMuPDF <c>Document.rewrite_images</c>. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         /// <param name="quality">desired target JPEG quality, a value between 0 and 100. 0 means no quality change, 100 means best quality.</param>
         /// <param name="dpiThreshold">Only subsample images above this DPI (0 = disabled).</param>
         /// <param name="dpiTarget">Target DPI when subsampling (used with <paramref name="dpiThreshold"/>).</param>
@@ -7100,59 +7230,82 @@ namespace MuPDF.NET
         /// <param name="bitonal">include black-and-white images (e.g. FAX).</param>
         /// <param name="color">include colored images.</param>
         /// <param name="gray">include grayscale images.</param>
+        /// <param name="setToGray">When <see langword="true"/>, convert the PDF to DeviceGRAY before rewriting images.</param>
+        /// <param name="options">Expert: custom <see cref="mupdf.PdfImageRewriterOptions"/>. When set, other image-type parameters are ignored (except <paramref name="setToGray"/>).</param>
         public void RewriteImages(int quality = 0, int dpiThreshold = 0, int dpiTarget = 0,
             bool lossy = true, bool lossless = true, bool bitonal = true,
-            bool color = true, bool gray = true)
+            bool color = true, bool gray = true,
+            bool setToGray = false,
+            mupdf.PdfImageRewriterOptions options = null)
         {
+            if (setToGray)
+                Recolor(1);
+
             EnsurePdf();
             var pdf = NativePdfDocument;
-            string qualityStr = quality.ToString();
 
-            var opts = new mupdf.PdfImageRewriterOptions();
-            if (bitonal)
+            mupdf.PdfImageRewriterOptions opts;
+            if (options != null)
             {
-                opts.bitonal_image_recompress_method = mupdf.mupdf.FZ_RECOMPRESS_FAX;
-                opts.bitonal_image_subsample_method = mupdf.mupdf.FZ_SUBSAMPLE_AVERAGE;
-                opts.bitonal_image_subsample_to = dpiTarget;
-                opts.bitonal_image_recompress_quality = qualityStr;
-                opts.bitonal_image_subsample_threshold = dpiThreshold;
+                opts = options;
             }
-            if (color)
+            else
             {
-                if (lossless)
+                if (dpiThreshold <= 0)
                 {
-                    opts.color_lossless_image_recompress_method = mupdf.mupdf.FZ_RECOMPRESS_JPEG;
-                    opts.color_lossless_image_subsample_method = mupdf.mupdf.FZ_SUBSAMPLE_AVERAGE;
-                    opts.color_lossless_image_subsample_to = dpiTarget;
-                    opts.color_lossless_image_subsample_threshold = dpiThreshold;
-                    opts.color_lossless_image_recompress_quality = qualityStr;
+                    dpiThreshold = 0;
+                    dpiTarget = 0;
                 }
-                if (lossy)
+                if (dpiTarget > 0 && dpiTarget >= dpiThreshold)
+                    throw new ValueErrorException($"dpiTarget={dpiTarget} must be less than dpiThreshold={dpiThreshold}");
+
+                string qualityStr = quality.ToString();
+                opts = new mupdf.PdfImageRewriterOptions();
+                if (bitonal)
                 {
-                    opts.color_lossy_image_recompress_method = mupdf.mupdf.FZ_RECOMPRESS_JPEG;
-                    opts.color_lossy_image_subsample_method = mupdf.mupdf.FZ_SUBSAMPLE_AVERAGE;
-                    opts.color_lossy_image_subsample_threshold = dpiThreshold;
-                    opts.color_lossy_image_subsample_to = dpiTarget;
-                    opts.color_lossy_image_recompress_quality = qualityStr;
+                    opts.bitonal_image_recompress_method = mupdf.mupdf.FZ_RECOMPRESS_FAX;
+                    opts.bitonal_image_subsample_method = mupdf.mupdf.FZ_SUBSAMPLE_AVERAGE;
+                    opts.bitonal_image_subsample_to = dpiTarget;
+                    opts.bitonal_image_recompress_quality = qualityStr;
+                    opts.bitonal_image_subsample_threshold = dpiThreshold;
                 }
-            }
-            if (gray)
-            {
-                if (lossless)
+                if (color)
                 {
-                    opts.gray_lossless_image_recompress_method = mupdf.mupdf.FZ_RECOMPRESS_JPEG;
-                    opts.gray_lossless_image_subsample_method = mupdf.mupdf.FZ_SUBSAMPLE_AVERAGE;
-                    opts.gray_lossless_image_subsample_to = dpiTarget;
-                    opts.gray_lossless_image_subsample_threshold = dpiThreshold;
-                    opts.gray_lossless_image_recompress_quality = qualityStr;
+                    if (lossless)
+                    {
+                        opts.color_lossless_image_recompress_method = mupdf.mupdf.FZ_RECOMPRESS_JPEG;
+                        opts.color_lossless_image_subsample_method = mupdf.mupdf.FZ_SUBSAMPLE_AVERAGE;
+                        opts.color_lossless_image_subsample_to = dpiTarget;
+                        opts.color_lossless_image_subsample_threshold = dpiThreshold;
+                        opts.color_lossless_image_recompress_quality = qualityStr;
+                    }
+                    if (lossy)
+                    {
+                        opts.color_lossy_image_recompress_method = mupdf.mupdf.FZ_RECOMPRESS_JPEG;
+                        opts.color_lossy_image_subsample_method = mupdf.mupdf.FZ_SUBSAMPLE_AVERAGE;
+                        opts.color_lossy_image_subsample_threshold = dpiThreshold;
+                        opts.color_lossy_image_subsample_to = dpiTarget;
+                        opts.color_lossy_image_recompress_quality = qualityStr;
+                    }
                 }
-                if (lossy)
+                if (gray)
                 {
-                    opts.gray_lossy_image_recompress_method = mupdf.mupdf.FZ_RECOMPRESS_JPEG;
-                    opts.gray_lossy_image_subsample_method = mupdf.mupdf.FZ_SUBSAMPLE_AVERAGE;
-                    opts.gray_lossy_image_subsample_threshold = dpiThreshold;
-                    opts.gray_lossy_image_subsample_to = dpiTarget;
-                    opts.gray_lossy_image_recompress_quality = qualityStr;
+                    if (lossless)
+                    {
+                        opts.gray_lossless_image_recompress_method = mupdf.mupdf.FZ_RECOMPRESS_JPEG;
+                        opts.gray_lossless_image_subsample_method = mupdf.mupdf.FZ_SUBSAMPLE_AVERAGE;
+                        opts.gray_lossless_image_subsample_to = dpiTarget;
+                        opts.gray_lossless_image_subsample_threshold = dpiThreshold;
+                        opts.gray_lossless_image_recompress_quality = qualityStr;
+                    }
+                    if (lossy)
+                    {
+                        opts.gray_lossy_image_recompress_method = mupdf.mupdf.FZ_RECOMPRESS_JPEG;
+                        opts.gray_lossy_image_subsample_method = mupdf.mupdf.FZ_SUBSAMPLE_AVERAGE;
+                        opts.gray_lossy_image_subsample_threshold = dpiThreshold;
+                        opts.gray_lossy_image_subsample_to = dpiTarget;
+                        opts.gray_lossy_image_recompress_quality = qualityStr;
+                    }
                 }
             }
 
@@ -8174,8 +8327,8 @@ namespace MuPDF.NET
         internal (object page_id, float x, float y) resolve_link(string uri = null, bool chapters = false) => ResolveLink(uri, chapters);
         internal int? subset_fonts(bool verbose = false, bool fallback = false) => SubsetFonts(verbose, fallback);
         internal void recolor(int components = 1) => Recolor(components);
-        internal void rewrite_images(int quality = 0, int dpi_threshold = 0, int dpi_target = 0, bool lossy = true, bool lossless = true, bool bitonal = true, bool color = true, bool gray = true)
-            => RewriteImages(quality, dpi_threshold, dpi_target, lossy, lossless, bitonal, color, gray);
+        internal void rewrite_images(int quality = 0, int dpi_threshold = 0, int dpi_target = 0, bool lossy = true, bool lossless = true, bool bitonal = true, bool color = true, bool gray = true, bool set_to_gray = false, mupdf.PdfImageRewriterOptions options = null)
+            => RewriteImages(quality, dpi_threshold, dpi_target, lossy, lossless, bitonal, color, gray, set_to_gray, options);
         internal bool set_language(string language)
         {
             SetLanguage(language);

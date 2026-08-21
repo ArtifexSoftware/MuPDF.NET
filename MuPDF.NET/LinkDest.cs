@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace MuPDF.NET
@@ -10,10 +11,6 @@ namespace MuPDF.NET
     /// </summary>
     public class LinkDest
     {
-        private static readonly Regex RxPageZoom =
-            new Regex(@"^#page=([0-9]+)&zoom=([0-9.]+),(-?[0-9.]+),(-?[0-9.]+)$", RegexOptions.CultureInvariant);
-        private static readonly Regex RxPageOnly =
-            new Regex(@"^#page=([0-9]+)$", RegexOptions.CultureInvariant);
         private static readonly Regex RxNamedDest =
             new Regex(@"^#nameddest=(.*)", RegexOptions.CultureInvariant);
 
@@ -74,9 +71,21 @@ namespace MuPDF.NET
             InitFromUriPage(outline.Uri ?? "", outline.IsExternal, outline.Page, null, document);
         }
 
+        /// <summary>
+        /// Build from a URI fragment (e.g. <c>#page=1&amp;view=FitH,-4</c>) without a <see cref="Link"/> / <see cref="Outline"/>.
+        /// </summary>
+        /// <param name="uri">Destination URI or fragment.</param>
+        /// <param name="isExternal">Whether the destination is external.</param>
+        /// <param name="page">Source page number when applicable (-1 if unknown).</param>
+        /// <param name="document">Owning document for named destinations.</param>
+        public LinkDest(string uri, bool isExternal = false, int page = -1, Document document = null)
+        {
+            InitFromUriPage(uri ?? "", isExternal, page, null, document);
+        }
+
         private void InitFromUriPage(string uri0, bool isExt, int sourcePage, (int page, float x, float y)? resolved, Document document)
         {
-            // isExt = obj.is_external; isInt = not isExt
+            // PyMuPDF 1.28.2 (#5044): parse #page / #view / named destinations more robustly.
             bool isInt = !isExt;
             Uri = uri0 ?? "";
             Page = sourcePage;
@@ -107,40 +116,48 @@ namespace MuPDF.NET
                 if (Uri.StartsWith("#", StringComparison.Ordinal))
                 {
                     Kind = Constants.LinkGoto;
-                    var mz = RxPageZoom.Match(Uri);
-                    if (mz.Success)
+                    var parameters = UriToDict(Uri);
+                    string pageArg = parameters.TryGetValue("page", out var pageObj) ? pageObj?.ToString() : null;
+                    if (pageArg != null && IsAllDigits(pageArg))
                     {
-                        Page = int.Parse(mz.Groups[1].Value, CultureInfo.InvariantCulture) - 1;
-                        Lt = new Point(
-                            float.Parse(mz.Groups[3].Value, CultureInfo.InvariantCulture),
-                            float.Parse(mz.Groups[4].Value, CultureInfo.InvariantCulture));
-                        Flags |= Constants.LinkFlagLValid | Constants.LinkFlagTValid;
+                        Page = int.Parse(pageArg, CultureInfo.InvariantCulture) - 1;
+                        bool haveLocation = false;
+                        if (parameters.TryGetValue("zoom", out var zoomObj) && zoomObj != null)
+                        {
+                            var zoomItems = zoomObj.ToString().Split(',');
+                            if (zoomItems.Length >= 3
+                                && float.TryParse(zoomItems[1], NumberStyles.Float, CultureInfo.InvariantCulture, out float zx)
+                                && float.TryParse(zoomItems[2], NumberStyles.Float, CultureInfo.InvariantCulture, out float zy))
+                            {
+                                Lt = new Point(zx, zy);
+                                Flags |= Constants.LinkFlagLValid | Constants.LinkFlagTValid;
+                                haveLocation = true;
+                            }
+                        }
+                        if (!haveLocation)
+                        {
+                            parameters.TryGetValue("view", out var viewObj);
+                            ApplyView(viewObj?.ToString());
+                        }
                     }
                     else
                     {
-                        var mp = RxPageOnly.Match(Uri);
-                        if (mp.Success)
-                            Page = int.Parse(mp.Groups[1].Value, CultureInfo.InvariantCulture) - 1;
+                        Kind = Constants.LinkNamed;
+                        var mn = RxNamedDest.Match(Uri);
+                        if (document != null && mn.Success)
+                        {
+                            string named = UnescapePercent(mn.Groups[1].Value);
+                            Named.Clear();
+                            if (document.ResolveNames().TryGetValue(named, out var entry))
+                            {
+                                foreach (var kv in entry)
+                                    Named[kv.Key] = kv.Value;
+                            }
+                            Named["nameddest"] = named;
+                        }
                         else
                         {
-                            Kind = Constants.LinkNamed;
-                            var mn = RxNamedDest.Match(Uri);
-                            if (document != null && mn.Success)
-                            {
-                                // named = unescape(m.group(1)); self.named = document.resolve_names().get(named)
-                                string named = UnescapePercent(mn.Groups[1].Value);
-                                Named.Clear();
-                                if (document.ResolveNames().TryGetValue(named, out var entry))
-                                {
-                                    foreach (var kv in entry)
-                                        Named[kv.Key] = kv.Value;
-                                }
-                                Named["nameddest"] = named;
-                            }
-                            else
-                            {
-                                Named = UriToDict(Uri.Length > 1 ? Uri.Substring(1) : "");
-                            }
+                            Named = UriToDict(Uri);
                         }
                     }
                 }
@@ -191,13 +208,111 @@ namespace MuPDF.NET
             }
         }
 
+        private bool ApplyView(string view)
+        {
+            if (string.IsNullOrWhiteSpace(view))
+                return false;
+            var items = view.Split(',').Select(i => i.Trim()).Where(i => i.Length > 0).ToList();
+            if (items.Count == 0)
+                return false;
+            string mode = items[0];
+            if (mode.Length == 0)
+                return false;
+            if (mode[0] != '/')
+                mode = "/" + mode;
+            var args = items.Skip(1).ToList();
+
+            if (mode == "/Fit" || mode == "/FitB")
+            {
+                Lt = new Point(0, 0);
+                return true;
+            }
+            if (mode == "/FitH" || mode == "/FitBH")
+            {
+                float? top = args.Count >= 1 ? AsFloat(args[0]) : null;
+                if (top.HasValue)
+                {
+                    Lt = new Point(0, top.Value);
+                    Flags |= Constants.LinkFlagTValid;
+                }
+                return true;
+            }
+            if (mode == "/FitV" || mode == "/FitBV")
+            {
+                float? left = args.Count >= 1 ? AsFloat(args[0]) : null;
+                if (left.HasValue)
+                {
+                    Lt = new Point(left.Value, 0);
+                    Flags |= Constants.LinkFlagLValid;
+                }
+                return true;
+            }
+            if (mode == "/FitR")
+            {
+                if (args.Count >= 4)
+                {
+                    float? left = AsFloat(args[0]);
+                    float? top = AsFloat(args[3]);
+                    if (left.HasValue && top.HasValue)
+                    {
+                        Lt = new Point(left.Value, top.Value);
+                        Flags |= Constants.LinkFlagLValid | Constants.LinkFlagTValid;
+                        return true;
+                    }
+                }
+                return false;
+            }
+            if (mode == "/XYZ")
+            {
+                float? left = args.Count >= 1 ? AsFloat(args[0]) : null;
+                float? top = args.Count >= 2 ? AsFloat(args[1]) : null;
+                if (left.HasValue)
+                {
+                    Lt.X = left.Value;
+                    Flags |= Constants.LinkFlagLValid;
+                }
+                if (top.HasValue)
+                {
+                    Lt.Y = top.Value;
+                    Flags |= Constants.LinkFlagTValid;
+                }
+                return true;
+            }
+            return false;
+        }
+
+        private static float? AsFloat(string text)
+        {
+            if (text == null) return null;
+            text = text.Trim();
+            if (text.Length == 0) return null;
+            if (string.Equals(text, "null", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(text, "nan", StringComparison.OrdinalIgnoreCase))
+                return null;
+            if (float.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out float v))
+                return v;
+            return null;
+        }
+
+        private static bool IsAllDigits(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return false;
+            foreach (char c in s)
+                if (!char.IsDigit(c)) return false;
+            return true;
+        }
+
         private static string FormatG(float v) => v.ToString("G9", CultureInfo.InvariantCulture);
 
         /// <summary>Parses a URI action string into a link-destination dictionary.</summary>
-        private static Dictionary<string, object> UriToDict(string uriWithoutHash)
+        private static Dictionary<string, object> UriToDict(string uri)
         {
+            if (uri != null && uri.StartsWith("#", StringComparison.Ordinal))
+                uri = uri.Substring(1);
             var ret = new Dictionary<string, object>();
-            foreach (var item in uriWithoutHash.Split('&'))
+            if (string.IsNullOrEmpty(uri))
+                return ret;
+            foreach (var item in uri.Split('&'))
             {
                 if (item.Length == 0) continue;
                 int eq = item.IndexOf('=');

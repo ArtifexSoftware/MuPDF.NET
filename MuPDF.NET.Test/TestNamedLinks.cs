@@ -144,5 +144,59 @@ namespace MuPDF.NET.Test
             }
             doc2.Save(Out("test_3301.pdf"));
         }
+
+        [Fact]
+        public void test_resolve_names_fit_variants()
+        {
+            // Ensure named destinations parse all common /Fit* variants and /XYZ.
+            using var doc = new Document();
+            var page = doc.NewPage(width: 200, height: 300);
+            int pageXref = doc.PageXref(0);
+            int catalogXref = doc.PdfCatalog;
+
+            string dests =
+                "<< " +
+                $"/XYZDest [{pageXref} 0 R /XYZ 10 250 1.5] " +
+                "/NullPageDest [null /XYZ 10 20 0] " +
+                $"/FitDest [{pageXref} 0 R /Fit] " +
+                $"/FitBDest [{pageXref} 0 R /FitB] " +
+                $"/FitHDest [{pageXref} 0 R /FitH 20] " +    // codespell:ignore
+                $"/FitHNull [{pageXref} 0 R /FitH null] " +  // codespell:ignore
+                $"/FitVDest [{pageXref} 0 R /FitV 15] " +
+                $"/FitBHDest [{pageXref} 0 R /FitBH 25] " +
+                $"/FitBVDest [{pageXref} 0 R /FitBV 30] " +
+                $"/FitRDest [{pageXref} 0 R /FitR 5 10 100 200] " +
+                ">>";
+            doc.XrefSetKey(catalogXref, "Dests", dests);
+
+            var names = doc.ResolveNames();
+            Assert.Equal(0, Convert.ToInt32(names["XYZDest"]["page"]));
+            Assert.Equal((10.0f, 250.0f), ((float, float))names["XYZDest"]["to"]);
+            Assert.Equal(1.5f, Convert.ToSingle(names["XYZDest"]["zoom"]));
+
+            Assert.Equal(-1, Convert.ToInt32(names["NullPageDest"]["page"]));
+            Assert.StartsWith("/XYZ", (string)names["NullPageDest"]["dest"]);
+
+            Assert.Equal((0.0f, 0.0f), ((float, float))names["FitDest"]["to"]);
+            Assert.Equal((0.0f, 0.0f), ((float, float))names["FitBDest"]["to"]);
+
+            Assert.Equal((0.0f, 20.0f), ((float, float))names["FitHDest"]["to"]);
+            Assert.Equal((0.0f, 0.0f), ((float, float))names["FitHNull"]["to"]);
+            Assert.Equal((15.0f, 0.0f), ((float, float))names["FitVDest"]["to"]);
+            Assert.Equal((0.0f, 25.0f), ((float, float))names["FitBHDest"]["to"]);
+            Assert.Equal((30.0f, 0.0f), ((float, float))names["FitBVDest"]["to"]);
+            Assert.Equal((5.0f, 200.0f), ((float, float))names["FitRDest"]["to"]);
+        }
+
+        [Fact]
+        public void test_linkdest_view_fith_uri()
+        {
+            // codespell:ignore FitH
+            var d = new LinkDest("#page=1&view=FitH,-4.299011");
+            Assert.Equal(Constants.LinkGoto, d.Kind);
+            Assert.Equal(0, d.Page);
+            Assert.Equal(0.0f, d.Lt.X);
+            Assert.Equal(-4.299011f, d.Lt.Y);
+        }
     }
 }

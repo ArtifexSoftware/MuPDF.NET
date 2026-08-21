@@ -423,11 +423,22 @@ namespace MuPDF.NET
 
         internal static mupdf.FzBuffer BufferFromBytes(byte[]? data)
         {
-            if (data == null || data.Length == 0) return new mupdf.FzBuffer();
-            var buffer = new mupdf.FzBuffer((uint)data.Length);
-            foreach (byte b in data)
-                buffer.fz_append_byte(b);
-            return buffer;
+            if (data == null || data.Length == 0)
+                return new mupdf.FzBuffer();
+
+            // Match PyMuPDF JM_BufferFromBytes → fz_new_buffer_from_copied_data.
+            // Appending with fz_append_byte is O(n²)-ish for large fonts and can yield a
+            // buffer that pdf_add_cid_font cannot embed (Font("cjk") / Source Han ~24MB).
+            var pin = GCHandle.Alloc(data, GCHandleType.Pinned);
+            try
+            {
+                var ptr = new mupdf.SWIGTYPE_p_unsigned_char(pin.AddrOfPinnedObject(), false);
+                return mupdf.mupdf.fz_new_buffer_from_copied_data(ptr, (uint)data.Length);
+            }
+            finally
+            {
+                pin.Free();
+            }
         }
 
         /// <summary>Emits user-facing warning messages.</summary>
@@ -619,7 +630,9 @@ namespace MuPDF.NET
             if (pdf?.m_internal == null || fontXref < 1 || fontBytes == null || fontBytes.Length == 0)
                 return;
             byte[] existing = JM_get_fontbuffer(pdf, fontXref);
-            if (existing != null && existing.Length > 0)
+            // pdf_add_cid_font can leave a truncated FontFile (Length>0 but far smaller than
+            // the source). Always replace when the embedded stream is missing or shorter.
+            if (existing != null && existing.Length >= fontBytes.Length)
                 return;
 
             var fontObj = PdfLoadObject(pdf, fontXref);
@@ -764,6 +777,8 @@ namespace MuPDF.NET
             };
             if (!string.IsNullOrEmpty(fontFile))
                 fontdict["fontfile"] = fontFile;
+            if (fontBuffer != null && fontBuffer.Length > 0)
+                fontdict["content"] = fontBuffer;
             return new object[] { ixref, fontdict };
         }
 
@@ -872,6 +887,10 @@ namespace MuPDF.NET
             };
             if (!string.IsNullOrEmpty(fontfile))
                 fontdict["fontfile"] = fontfile;
+            // Keep the source bytes so GetCharWidths can rebuild an FzFont when the
+            // PDF FontFile stream is not yet readable (same role as "fontfile" above).
+            if (fontbuffer != null && fontbuffer.Length > 0)
+                fontdict["content"] = fontbuffer;
             return new object[] { ixref, fontdict };
         }
 
@@ -3596,6 +3615,14 @@ namespace MuPDF.NET
                     w = trw;
                     h = trw * small;
                 }
+            }
+            else if (keep)
+            {
+                // Square image (fw == fh): fit uniformly inside the target.
+                // Previously filled trw x trh, which ignored keep_proportion.
+                float side = Math.Min(trw, trh);
+                w = side;
+                h = side;
             }
             else
             {

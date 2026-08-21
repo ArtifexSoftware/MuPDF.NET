@@ -20,6 +20,13 @@ namespace MuPDF.NET.PDF4LLM.Layout
         static readonly ConditionalWeakTable<Document, string> TempDocumentPaths =
             new ConditionalWeakTable<Document, string>();
 
+        /// <summary>
+        /// Optional <c>edge_threshold</c> for the next <c>page.get_layout</c> call in the worker.
+        /// Set by <see cref="Helpers.LayoutParseHelpers.ReadPageLayoutRaw"/> around <see cref="Page.GetLayout"/>.
+        /// </summary>
+        internal static readonly System.Threading.AsyncLocal<float?> CurrentEdgeThreshold =
+            new System.Threading.AsyncLocal<float?>();
+
         static readonly string WorkerScript = @"
 import contextlib
 import json
@@ -81,14 +88,21 @@ for line in sys.stdin:
         req = json.loads(line)
         path = req['path']
         page_no = int(req['page'])
+        edge_threshold = req.get('edge_threshold', None)
         doc = pymupdf.open(path)
         try:
             page = doc[page_no]
             with contextlib.redirect_stdout(sys.stderr):
                 try:
-                    page.get_layout(return_raw=True)
+                    if edge_threshold is not None:
+                        page.get_layout(return_raw=True, edge_threshold=edge_threshold)
+                    else:
+                        page.get_layout(return_raw=True)
                 except TypeError:
-                    page.get_layout()
+                    try:
+                        page.get_layout(return_raw=True)
+                    except TypeError:
+                        page.get_layout()
             result = serialize_layout_for_json(page.layout_information or [])
         finally:
             doc.close()
@@ -411,8 +425,15 @@ for line in sys.stdin:
             {
                 EnsureWorker();
 
-                _worker.StandardInput.WriteLine(
-                    JsonConvert.SerializeObject(new { path, page = page.Number }));
+                var req = new Dictionary<string, object>
+                {
+                    ["path"] = path,
+                    ["page"] = page.Number,
+                };
+                if (CurrentEdgeThreshold.Value.HasValue)
+                    req["edge_threshold"] = CurrentEdgeThreshold.Value.Value;
+
+                _worker.StandardInput.WriteLine(JsonConvert.SerializeObject(req));
                 _worker.StandardInput.Flush();
 
                 string payload;
