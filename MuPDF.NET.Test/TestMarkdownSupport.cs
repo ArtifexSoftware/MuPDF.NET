@@ -175,5 +175,98 @@ namespace MuPDF.NET.Test
                 document_md.Save(out_pdf);
             }
         }
+
+        [Fact]
+        public void test_markdown_bad_unicode()
+        {
+            string pathMd = Doc("test_markdown_bad_unicode.md");
+            string pathMdPdf = Out("test_markdown_bad_unicode.md.pdf");
+            using (var mdDoc = new Document(pathMd))
+                mdDoc.Save(pathMdPdf);
+
+            // To check that MuPDF.NET has done the right thing, we extract text from our
+            // generated pdf and assert that it is as expected.
+            string text;
+            using (var document = new Document(pathMdPdf))
+                text = (string)document[0].GetText();
+            byte[] textb = Encoding.UTF8.GetBytes(text);
+            Console.WriteLine();
+            foreach (var line in text.Replace("\r\n", "\n").Split('\n'))
+                Console.WriteLine("    " + line);
+            Console.WriteLine("textb:");
+            foreach (var line in text.Replace("\r\n", "\n").Split('\n'))
+                Console.WriteLine("    " + Encoding.UTF8.GetString(Encoding.UTF8.GetBytes(line)));
+            var v = _Version.mupdf_version_tuple();
+            Console.WriteLine($"mupdf_version_tuple={v}");
+
+            // MuPDF 1.28.2 → mupdf_version_tuple > (1,28,0) expected branch
+            string[] textbExpectedLines;
+            if (_Version.mupdf_version_tuple_at_least(1, 28, 1))
+            {
+                textbExpectedLines = new[]
+                {
+                    "Title",
+                    "A Table",
+                    "Boiling Points \u0239C",
+                    "min",
+                    "max",
+                    "avg",
+                    "Noble gases",
+                    "-269",
+                    "-62",
+                    "-170.5",
+                    "Nonmetals",
+                    "-253",
+                    "4827",
+                    "414.1",
+                    "Metalloids",
+                    "335",
+                    "3900",
+                    "741.5",
+                    "Metals",
+                    "357",
+                    ">5000",
+                    "2755.9",
+                    "A List",
+                    "\u2022  Comment 1",
+                    "\u2022  Comment 2",
+                    "\u2022  Comment 3 with a link to Find out more",
+                    "My TO-DOs",
+                    "\u2022  \u2612 Done!",
+                    "\u2022  \u2612 Also done!",
+                    "\u2022  \u2610 Still open",
+                    "",
+                };
+            }
+            else
+            {
+                // Table is not recognised because it contains illegal utf8 sequence.
+                textbExpectedLines = new[]
+                {
+                    "Title",
+                    "A Table",
+                    "|Boiling Points \u0239C|min|max|avg| |---|---|---|---| |Noble",
+                    "gases|-269|-62|-170.5| |Nonmetals|-253|4827|414.1| |Metalloids|",
+                    "335|3900|741.5| |Metals|357|>5000|2755.9|",
+                    "A List",
+                    "\u2022  Comment 1",
+                    "\u2022  Comment 2",
+                    "\u2022  Comment 3 with a link to Find out more",
+                    "My TO-DOs",
+                    "\u2022  \u2612 Done!",
+                    "\u2022  \u2612 Also done!",
+                    "\u2022  \u2610 Still open",
+                    "",
+                };
+            }
+            byte[] textbExpected = Encoding.UTF8.GetBytes(string.Join("\n", textbExpectedLines));
+            if (!textb.SequenceEqual(textbExpected))
+            {
+                Console.WriteLine("textb_expected:");
+                foreach (var line in textbExpectedLines)
+                    Console.WriteLine("    " + line);
+            }
+            Assert.Equal(textbExpected, textb);
+        }
     }
 }

@@ -41,7 +41,7 @@ Tests can be run using:
 - `dotnet test` command
 - xUnit Test Adapter
 
-Office/HWP integration tests (`TestOffice.cs`) use the `MuPDF.NET.Office` / `MuPDF.NET.Office.NativeAssets` NuGet packages. The test project references `MuPDF.NET.PDF4LLM` via NuGet (version from `Versions.props`), not a project reference.
+Office/HWP integration tests (`TestOffice.cs`) use the `MuPDF.NET.Office` / `MuPDF.NET.Office.NativeAssets` NuGet packages. The test project references `MuPDF.NET.PDF4LLM` via a **project reference** (local build), not NuGet.
 
 ## Test Resources
 

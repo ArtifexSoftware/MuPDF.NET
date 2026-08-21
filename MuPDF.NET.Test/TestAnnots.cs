@@ -754,7 +754,7 @@ namespace MuPDF.NET.Test
         {
             var bullet = $"{(char)0x2610}{(char)0x2611}{(char)0x2612}";
             var text = $@"<p style=""text-align:justify;margin-top:-25px;"">
-    MuPDF.NET <span style=""color: red;"">འདི་ ཡིག་ཆ་བཀྲམ་སྤེལ་གྱི་དོན་ལུ་ པའི་ཐོན་ཐུམ་སྒྲིལ་དྲག་ཤོས་དང་མགྱོགས་ཤོས་ཅིག་ཨིན།</span>
+    MuPDF.NET <span style=""color: red;"">à½ à½‘à½²à¼‹ à½¡à½²à½‚à¼‹à½†à¼‹à½–à½€à¾²à½˜à¼‹à½¦à¾¤à½ºà½£à¼‹à½‚à¾±à½²à¼‹à½‘à½¼à½“à¼‹à½£à½´à¼‹ à½”à½ à½²à¼‹à½à½¼à½“à¼‹à½à½´à½˜à¼‹à½¦à¾’à¾²à½²à½£à¼‹à½‘à¾²à½‚à¼‹à½¤à½¼à½¦à¼‹à½‘à½„à¼‹à½˜à½‚à¾±à½¼à½‚à½¦à¼‹à½¤à½¼à½¦à¼‹à½…à½²à½‚à¼‹à½¨à½²à½“à¼</span>
     <span style=""color:blue;"">Here is some <b>bold</b> and <i>italic</i> text, followed by <b><i>bold-italic</i></b>. Text-based check boxes: {bullet}.</span>
     </p>";
             var doc = new Document();
@@ -960,6 +960,56 @@ namespace MuPDF.NET.Test
 
                 _ = page.GetText("rawjson");
             }
+        }
+
+        [Fact]
+        public void test_4943()
+        {
+            // MuPDF.NET tracks MuPDF 1.28.2, so redactions should succeed (expectFail=false).
+            string path = Doc("test_4943.pdf");
+            using var document = new Document(path);
+            var page = document[0];
+            page.AddRedactAnnot(page.Rect);
+            bool expectFail = false;
+            var v = _Version.mupdf_version_tuple();
+            Console.WriteLine($"mupdf_version_tuple={v} expectFail={expectFail}.");
+            try
+            {
+                page.ApplyRedactions(images: mupdf.mupdf.PDF_REDACT_IMAGE_PIXELS);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Exception: {e}");
+                Assert.True(expectFail, $"mupdf_version_tuple={v}");
+                string wt = Tools.MupdfWarnings();
+                Console.WriteLine($"wt={wt}");
+                Assert.False(string.IsNullOrEmpty(wt));
+                return;
+            }
+            Console.WriteLine("No exception.");
+            Assert.False(expectFail, $"mupdf_version_tuple={v}");
+        }
+
+        [Fact]
+        public void test_4936()
+        {
+            string path = Doc("test_4936.pdf");
+            List<PathInfo> drawings;
+            using (var document = new Document(path))
+            {
+                var page = document[0];
+                var rect = new Rect(
+                    Utils.FZ_MIN_INF_RECT,
+                    Utils.FZ_MIN_INF_RECT,
+                    Utils.FZ_MAX_INF_RECT,
+                    Utils.FZ_MAX_INF_RECT);
+                // fill=False â†’ no interior color when overlay text is omitted
+                page.AddRedactAnnot(rect, fillColor: null);
+                page.ApplyRedactions(graphics: 2);
+                drawings = page.GetDrawings();
+            }
+            Console.WriteLine($"len(drawings)={drawings.Count}");
+            Assert.Empty(drawings);
         }
     }
 }

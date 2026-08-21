@@ -34,7 +34,7 @@ namespace MuPDF.NET.PDF4LLM.Ocr
         private static readonly int BlockVector = mupdf.mupdf.FZ_STEXT_BLOCK_VECTOR;
 
         // Thresholds
-        public const float BadCharThreshold = 0.05f; // >=5% bad chars suggests OCR
+        public const float BadCharThreshold = 0.10f; // >=10% bad chars suggests OCR
 
         // Return needs_ocr as True if the probability is at least this:
         public const float OcrModelThreshold = 0.93f;
@@ -209,9 +209,9 @@ namespace MuPDF.NET.PDF4LLM.Ocr
             if (span == null)
                 return false;
             return span.Font == TesseractFontName
+                || span.Alpha == 0
                 || (
-                    true
-                    && (span.CharFlags & TextStroked) == 0
+                    (span.CharFlags & TextStroked) == 0
                     && (span.CharFlags & TextFilled) == 0
                 );
         }
@@ -283,6 +283,7 @@ namespace MuPDF.NET.PDF4LLM.Ocr
             float imgArea = 0.0f; // sum of image block areas
             float txtArea = 0.0f; // sum of all text span bbox areas
             float vecArea = 0.0f; // sum of suspicious vector block areas
+            int vecNorects = 0; // count of vectors with isrect=False (not in a rectangle)
             int ocrSpans = 0; // count text spans with OCR flags
             var ocrSpanBoxes = new List<Rect>();
             var badCharBoxes = new List<Rect>();
@@ -361,6 +362,8 @@ namespace MuPDF.NET.PDF4LLM.Ocr
                     // Vector block
                     vecRect = JoinRects(vecRect, bbox);
                     vecArea += area;
+                    if (!b.IsRect)
+                        vecNorects++;
                     continue;
                 }
             }
@@ -379,6 +382,7 @@ namespace MuPDF.NET.PDF4LLM.Ocr
                     ["txt_area"] = 0.0f,
                     ["vec_joins"] = 0.0f,
                     ["vec_area"] = 0.0f,
+                    ["vec_norects"] = 0,
                     ["chars_total"] = 0,
                     ["chars_bad"] = 0,
                     ["bad_areas"] = 0.0f,
@@ -391,6 +395,13 @@ namespace MuPDF.NET.PDF4LLM.Ocr
             }
 
             float coverArea = (covered.X1 - covered.X0) * (covered.Y1 - covered.Y0);
+
+            // The page is considered to have an OCR layer only if ALL text spans:
+            // - have been marked as render mode 3, or
+            // - have been written using the GlyphLessFont of Tesseract, or
+            // - are fully transparent (alpha = 0).
+            // We therefore return ocr_spans = 0 if any of the previous is not true.
+            ocrSpans = ocrSpans > 0 && goodCharBoxes.Count == 0 ? ocrSpans : 0;
 
             var analysis = new Dictionary<string, object>
             {
@@ -406,6 +417,7 @@ namespace MuPDF.NET.PDF4LLM.Ocr
                 ["bad_areas"] = coverArea > 0 ? badAreas / coverArea : 0.0f,
                 ["ocr_spans"] = ocrSpans,
                 ["pixmap"] = null,
+                ["vec_norects"] = vecNorects,
             };
 
             // --- final OCR decision ---
@@ -437,16 +449,18 @@ namespace MuPDF.NET.PDF4LLM.Ocr
 
             // 2. Bad character check
             // Too many bad characters result in early exit with OCR recommended.
-            if (true
-                && charsTotal > 0
+            if (charsTotal > 0
                 && txtArea > 0
-                && (
-                    false
-                    || (float)charsBad / charsTotal > BadCharThreshold
-                    || badAreas / txtArea > BadCharThreshold
-                ))
+                && (float)charsBad / charsTotal > BadCharThreshold
+                && badAreas / txtArea > BadCharThreshold)
             {
                 return MergeAnalysis(analysis, true, "chars_bad", null);
+            }
+
+            if (vecNorects == 0 && imgArea == 0)
+            {
+                // No suspicious vectors and no images → no OCR needed
+                return MergeAnalysis(analysis, false, null, null);
             }
 
             if (stats != null)

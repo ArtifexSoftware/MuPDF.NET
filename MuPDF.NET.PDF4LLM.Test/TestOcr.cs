@@ -69,7 +69,9 @@ namespace MuPDF.NET.PDF4LLM.Test
                 return;
 
             string path = Doc("test_ocr_loremipsum_svg.pdf");
-            string md = MuPDF4LLM.ToMarkdown(path, useOcr: true, forceOcr: true);
+            // Python: to_markdown(path) then to_markdown(path, use_ocr=False).
+            // With vector IsRect populated, AnalyzePage sets needs_ocr and OCR runs.
+            string md = MuPDF4LLM.ToMarkdown(path);
             string mdNoOcr = MuPDF4LLM.ToMarkdown(path, useOcr: false);
             File.WriteAllText(Out("out_test_ocr_3.md"), md);
             File.WriteAllText(Out("out_test_ocr_3_no_ocr.md"), mdNoOcr);

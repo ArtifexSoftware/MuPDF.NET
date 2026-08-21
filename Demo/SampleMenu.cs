@@ -23,6 +23,7 @@ namespace Demo
             new("Document & I/O", "metadata", "Print document metadata", _ => Program.TestMetadata()),
             new("Document & I/O", "move-file", "Save through MemoryStream and move output", _ => Program.TestMoveFile()),
             new("Document & I/O", "unicode-doc", "Save PDF with unicode filename", _ => Program.TestUnicodeDocument()),
+            new("Document & I/O", "zugferd-embedded-xml", "Extract / embed ZUGFeRD Factur-X XML (EmbeddedFiles)", a => Program.TestZugferdEmbeddedXml(a)),
             new("Document & I/O", "memory-leak", "[diag] Open/close documents in a loop", _ => Program.TestMemoryLeak(), Diagnostic: true),
             
             // —— Text, story & vector drawing —— Samples/TextDrawing
@@ -44,11 +45,13 @@ namespace Demo
             
             // —— Pages, widgets, images & color —— Samples/PageContent
             new("Pages, widgets, images & color", "widget", "Inspect form widgets", a => Program.TestWidget(a)),
+            new("Pages, widgets, images & color", "remove-adbe-fillsign", "[diag] Remove ADBE_FillSign Form XObjects from page content", a => Program.TestRemoveAdbeFillSign(a), Diagnostic: true),
             new("Pages, widgets, images & color", "color", "Recolor page images", a => Program.TestColor(a)),
             new("Pages, widgets, images & color", "cmyk-recolor", "CMYK recolor", a => Program.TestCMYKRecolor(a)),
             new("Pages, widgets, images & color", "svg-recolor", "SVG / RGB recolor", a => Program.TestSVGRecolor(a)),
             new("Pages, widgets, images & color", "replace-image", "Replace embedded images", a => Program.TestReplaceImage(a)),
             new("Pages, widgets, images & color", "insert-image", "Insert images from pixmaps and files", a => Program.TestInsertImage(a)),
+            new("Pages, widgets, images & color", "keep-proportion-square", "Square image + keepProportion into wide rect", a => Program.TestInsertImageKeepProportionSquare(a)),
             new("Pages, widgets, images & color", "get-image-info", "Dump image xref info", a => Program.TestGetImageInfo(a)),
             new("Pages, widgets, images & color", "page-ocr", "OCR text page with image filter pipeline", a => Program.TestGetTextPageOcr(a)),
             new("Pages, widgets, images & color", "create-image-page", "New PDF page from PNG pixmap", a => Program.TestCreateImagePage(a)),
@@ -68,7 +71,7 @@ namespace Demo
             new("Regression & diagnostics", "pixmap-parallel", "[diag] Parallel Pixmap.ToBytes", _ => Program.TestPixmapParallel(), Diagnostic: true),
             new("Regression & diagnostics", "gettables-parallel", "[diag] Parallel Utils.GetTables", _ => Program.TestGetTablesParallel(), Diagnostic: true),
             new("Regression & diagnostics", "jbig2", "[diag] JBIG2 image recompression", _ => Program.TestRecompressJBIG2(), Diagnostic: true),
-
+            
             // —— MuPDF.NET.PDF4LLM —— Samples/Llm
             new("MuPDF.NET.PDF4LLM", "rag-markdown", "PDF to Markdown (Magazine.pdf)", _ => Program.TestMuPdfRagToMarkdown()),
             new("MuPDF.NET.PDF4LLM", "table", "Detect tables and export markdown", _ => Program.TestTable()),

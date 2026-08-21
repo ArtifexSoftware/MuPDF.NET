@@ -1453,7 +1453,7 @@ namespace MuPDF.NET
                     shape.Finish(fill: fillArr, color: fillArr, strokeOpacity: 1, fillOpacity: 1);
                 }
 
-                if (!redact.ContainsKey("text") || redact["text"] is not string newText)
+                if (!redact.ContainsKey("text") || redact["text"] is not string newText || string.IsNullOrEmpty(newText))
                     continue;
 
                 int align = redact.TryGetValue("align", out var ao) ? Convert.ToInt32(ao) : 0;
@@ -3837,10 +3837,17 @@ namespace MuPDF.NET
         /// <param name="rect">The rectangle to clip to. Must be finite and its intersection with the page must not be empty.</param>
         public void ClipToRect(Rect rect)
         {
+            // PyMuPDF Page.clip_to_rect (src/__init__.py):
+            // clip away page content outside the rectangle.
             var clip = new Rect(rect);
             if (clip.IsInfinite || (clip & Rect).IsEmpty)
                 throw new ArgumentException("rect must not be infinite or empty");
-            clip = clip.Transform(TransformationMatrix);
+            // MuPDF < 1.28.1 expected PDF space; 1.28.1+ takes page coordinates as-is.
+            var ver = Constants.MupdfVersion;
+            if (ver.Major < 1
+                || (ver.Major == 1 && ver.Minor < 28)
+                || (ver.Major == 1 && ver.Minor == 28 && ver.Patch < 1))
+                clip *= TransformationMatrix;
             var pdfPage = NativePdfPage;
             pdfPage.pdf_clip_page(clip.ToFzRect());
             Helpers.JM_refresh_links(RequireParent().NativePdfDocument, pdfPage);
@@ -5418,14 +5425,20 @@ namespace MuPDF.NET
             TableSettings settings = null,
             IList<Dictionary<string, object>> paths = null,
             IList<(Point p1, Point p2)> addLines = null,
-            IList<Rect> addBoxes = null)
+            IList<Rect> addBoxes = null,
+            bool useLayout = true,
+            bool union = false,
+            bool refine = false)
         {
             return TableHelpers.FindTables(
                 this,
                 settings,
                 paths: paths,
                 addLines: addLines,
-                addBoxes: addBoxes);
+                addBoxes: addBoxes,
+                useLayout: useLayout,
+                union: union,
+                refine: refine);
         }
 
         // ─── IDisposable ────────────────────────────────────────────────
@@ -6198,8 +6211,11 @@ namespace MuPDF.NET
             TableSettings settings = null,
             IList<Dictionary<string, object>> paths = null,
             IList<(Point p1, Point p2)> addLines = null,
-            IList<Rect> addBoxes = null)
-            => FindTables(settings, paths, addLines, addBoxes); // return table.find_tables(self, **kwargs)
+            IList<Rect> addBoxes = null,
+            bool useLayout = true,
+            bool union = false,
+            bool refine = false)
+            => FindTables(settings, paths, addLines, addBoxes, useLayout, union, refine);
         internal void run(mupdf.FzDevice dev, Matrix transform) => Run(dev, transform);
         internal void clip_to_rect(Rect rect) => ClipToRect(rect);
         internal List<(string name, int xref, string type)> get_oc_items() => GetOcItems();

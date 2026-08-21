@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 
@@ -906,14 +907,34 @@ namespace MuPDF.NET
                     blockDict.Bbox = new Rect(blockRect);
                     blockDict.Lines = lineList;
                 }
-                else if (btype == mupdf.mupdf.FZ_STEXT_BLOCK_VECTOR
-                    || btype == mupdf.mupdf.FZ_STEXT_BLOCK_GRID)
+                else if (btype == mupdf.mupdf.FZ_STEXT_BLOCK_VECTOR)
+                {
+                    blockDict.Bbox = new Rect(blockBboxNative);
+                    FillVectorBlockFields(block, blockDict);
+                }
+                else if (btype == mupdf.mupdf.FZ_STEXT_BLOCK_GRID)
                 {
                     blockDict.Bbox = new Rect(blockBboxNative);
                 }
 
                 pageDict.Blocks.Add(blockDict);
             }
+        }
+
+        /// <summary>
+        /// Populate vector-block fields from <c>fz_stext_block.u.v</c>
+        /// (PyMuPDF <c>JM_make_vector_block</c>). SWIG does not expose the union,
+        /// so flags/argb are read at the known MuPDF 1.28 struct offset after
+        /// <c>type</c>, <c>id</c>, and <c>bbox</c>.
+        /// </summary>
+        private static void FillVectorBlockFields(mupdf.FzStextBlock block, Block blockDict)
+        {
+            const int VectorFlagsOffset = 24; // after type + id + fz_rect
+            long p = block.m_internal_value();
+            if (p == 0)
+                return;
+            int flags = Marshal.ReadInt32((IntPtr)(p + VectorFlagsOffset));
+            blockDict.IsRect = (flags & mupdf.mupdf.FZ_STEXT_VECTOR_IS_RECTANGLE) != 0;
         }
 
         private static void FillImageBlockFields(mupdf.FzStextBlock block, Block blockDict)

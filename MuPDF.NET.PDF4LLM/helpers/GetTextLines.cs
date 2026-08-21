@@ -76,12 +76,8 @@ namespace MuPDF.NET.PDF4LLM.Helpers
             if (textPage == null && blocks == null)
                 throw new ArgumentException("Either textPage or blocks must be provided.");
 
-            if (clip == null && textPage != null)
-            {
-                // Use TextPage rect if not provided
-                clip = new Rect(float.NegativeInfinity, float.NegativeInfinity,
-                              float.PositiveInfinity, float.PositiveInfinity);
-            }
+            if (clip == null && textPage != null) // use TextPage rect if not provided
+                clip = textPage.Rect;
 
             // Extract text blocks - if bbox is not empty
             if (blocks == null && textPage != null)
@@ -133,22 +129,15 @@ namespace MuPDF.NET.PDF4LLM.Helpers
                             // Skip invisible text if needed - would need Alpha property
                         }
 
-                        if (!Utils.AlmostInBbox(s.Bbox, clip)) // If not in clip
+                        Rect sbbox = new Rect(s.Bbox); // Span bbox as a Rect
+                        // the y-coords of the line bbox wrap the y-coords of
+                        // all spans. Therefore use the line's y coordinates.
+                        sbbox.Y0 = line.Bbox.Y0;
+                        sbbox.Y1 = line.Bbox.Y1;
+                        if (!Utils.AlmostInBbox(sbbox, clip, portion: 0.51f))
+                            // if not mostly inside clip
                             continue;
 
-                        Rect sbbox = new Rect(s.Bbox); // Span bbox as a Rect
-                        if (((int)s.Flags & 1) != 0) // If a superscript, modify bbox
-                        {
-                            int i = sno == 0 ? 1 : sno - 1;
-                            if (line.Spans.Count > i)
-                            {
-                                Span neighbor = line.Spans[i];
-                                sbbox.Y1 = neighbor.Bbox.Y1;
-                            }
-                            text = $"{text}";
-                        }
-
-                        // Include line/block numbers to facilitate separator insertion
                         ExtendedSpan extSpan = new ExtendedSpan
                         {
                             Text = text,

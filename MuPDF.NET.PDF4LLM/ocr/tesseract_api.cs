@@ -35,7 +35,7 @@ namespace MuPDF.NET.PDF4LLM.Ocr
         /// <param name="keepOcrText">When <c>true</c>, skip OCR if the page already contains OCR spans.</param>
         public static void ExecOcr(
             Page page,
-            int dpi = 300,
+            int dpi = 150,
             Pixmap pixmap = null,
             string language = "eng",
             bool keepOcrText = false)
@@ -85,8 +85,12 @@ namespace MuPDF.NET.PDF4LLM.Ocr
                     return;
 
                 bool ownPixmap = pixmap == null;
+                bool empty = false;
                 if (ownPixmap)
-                    pixmap = GetCulledPixmap.GetPixmap(displaylist, dpi, spans, page);
+                    (pixmap, empty) = GetCulledPixmap.GetPixmap(
+                        displaylist, dpi, spans, page, emptyThreshold: 250);
+                if (empty || pixmap == null)
+                    return;
 
                 try
                 {
@@ -104,12 +108,7 @@ namespace MuPDF.NET.PDF4LLM.Ocr
                             graphics: mupdf.mupdf.PDF_REDACT_LINE_ART_REMOVE_IF_TOUCHED,
                             text: mupdf.mupdf.PDF_REDACT_TEXT_NONE);
 
-                        page.AddRedactAnnot(page.Rect);
-                        page.ApplyRedactions(
-                            images: mupdf.mupdf.PDF_REDACT_IMAGE_NONE,
-                            graphics: mupdf.mupdf.PDF_REDACT_LINE_ART_NONE,
-                            text: mupdf.mupdf.PDF_REDACT_TEXT_REMOVE);
-
+                        // insert the OCR text layer into the original page
                         page.ShowPdfPage(page.Rect, tempPdf, 0);
                     }
                 }

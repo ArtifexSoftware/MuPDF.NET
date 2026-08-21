@@ -621,5 +621,26 @@ namespace MuPDF.NET.Test
                     return Convert.ToString(v, CultureInfo.InvariantCulture) ?? "None";
             }
         }
+
+        [Fact]
+        public void test_2788_page_param_order()
+        {
+            // Ensure '#page=' destinations do not fall back to LINK_NAMED.
+            //
+            // The order of URI parameters is not guaranteed. Any URI with a valid
+            // 'page' parameter must still be interpreted as LINK_GOTO.
+            foreach (string uri in new[]
+            {
+                "#page=2&zoom=0,123.5,456.25",
+                "#zoom=0,123.5,456.25&page=2",
+                "#page=2&foo=bar&zoom=0,123.5,456.25",
+            })
+            {
+                var dest = new LinkDest(uri);
+                Assert.Equal(Constants.LinkGoto, dest.Kind);
+                Assert.Equal(1, dest.Page);
+                Assert.Equal(new Point(123.5f, 456.25f), dest.Lt);
+            }
+        }
     }
 }

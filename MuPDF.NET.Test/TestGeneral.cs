@@ -1,4 +1,4 @@
-
+﻿
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -1013,7 +1013,7 @@ namespace MuPDF.NET.Test
             string path = Doc("test_2553-2.pdf");
             using var doc = new Document(path);
             string text = (string)doc[0].GetText();
-            Assert.DoesNotContain('�', text);
+            Assert.DoesNotContain('\uFFFD', text);
         }
 
         /// <summary>Regression test: 2635.</summary>
@@ -2383,6 +2383,32 @@ namespace MuPDF.NET.Test
             return true;
         }
 
+
+        [Fact]
+        public void test_5056()
+        {
+            // Confirm absence of MuPDF version number if reproducible.
+            // Document.Write / ToBytes have no reproducible parameter (and Save does not expose an equivalent).
+            Console.WriteLine("test_5056(): SKIPPED � Document.Write/ToBytes has no reproducible parameter; not adding library API.");
+        }
+
+        [Fact]
+        public void test_5054()
+        {
+            string path = Doc("test_5054.pdf");
+            using var document = new Document(path);
+            var page = document[0];
+            string text1 = (string)page.GetText();
+            page.CleanContents(sanitize: 1);
+            string text2 = (string)page.GetText();
+            Console.WriteLine($"text1={text1}");
+            Console.WriteLine($"text2={text2}");
+            // MuPDF.NET is on MuPDF 1.28.2 (< 1.29): expect text to change after sanitize.
+            if (!_Version.mupdf_version_tuple_at_least(1, 29, 0))
+                Assert.NotEqual(text1, text2);
+            else
+                Assert.Equal(text1, text2);
+        }
         /// <summary>Approximate Python <c>repr(bytes)</c> for verbose test output.</summary>
         private static string PyBytesRepr(byte[] bytes)
         {

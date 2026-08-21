@@ -393,6 +393,67 @@ namespace MuPDF.NET.Test
             }
         }
 
+        [Fact]
+        public void test_5049()
+        {
+            string path = Doc("test_5049.pdf");
+
+            Document CreatePdf()
+            {
+                using var sourcePdf = new Document(path);
+                int n = sourcePdf.PageCount;
+                var exam = new Document();
+                // copy the pages one at a time from the source
+                for (int pg = 0; pg < n; pg++)
+                    exam.InsertPdf(sourcePdf, fromPage: pg, toPage: pg, startAt: -1);
+                return exam;
+            }
+
+            // I don't think the details matter too much here, just that we write the non-ascii
+            // name on the page somewhere
+            void AddName(Page page, string name)
+            {
+                float x = 50;
+                float y = 42;
+                float pageWidth = page.Bound().Width;
+                float pageHeight = page.Bound().Height;
+                float boxWidth = 410;
+                float box1Height = 108;
+                float box2Height = 90;
+
+                var nameIdRect = new Rect(
+                    pageWidth * (x / 100.0f) - boxWidth / 2,
+                    (pageHeight - box1Height - box2Height) * (y / 100.0f),
+                    pageWidth * (x / 100.0f) + boxWidth / 2,
+                    (pageHeight - box1Height - box2Height) * (y / 100.0f) + box1Height);
+                page.DrawRect(nameIdRect, color: new float[] { 0, 0, 0 }, fill: new float[] { 1, 1, 1 }, width: 3);
+
+                float fontsize = 37;
+                float w = float.PositiveInfinity;
+                using var font = new Font("cour");
+                while (w > nameIdRect.Width)
+                {
+                    if (fontsize < 6)
+                        throw new InvalidOperationException($"Overly long name? fontsize={fontsize} for name=\"{name}\"");
+                    fontsize -= 1;
+                    w = font.TextLength(name, fontSize: fontsize);
+                }
+                var tw = new TextWriter(page.Rect);
+                tw.Append(
+                    new Point(pageWidth * (x / 100.0f) - w / 2, nameIdRect.Y0 + 38),
+                    name,
+                    font: font,
+                    fontSize: fontsize);
+                tw.WriteText(page);
+            }
+
+            using var exam = CreatePdf();
+            AddName(exam[0], "싸이");  // CJK so we want subsetting
+            exam.SubsetFonts();
+            string pathOut = Out("test_5049_out.pdf");
+            exam.Save(pathOut, garbage: 4, deflate: 1, clean: 1);
+        }
+
         /// <summary>Records <c>fz_install_load_system_font_funcs</c> callback invocations for <see cref="test_load_system_font"/>.</summary>
         private sealed class SystemFontFontTrace : mupdf.FzInstallLoadSystemFontFuncsArgs2
         {

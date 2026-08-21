@@ -5,18 +5,18 @@
   -->
   <PropertyGroup Label="Artifex product versions">
     <!-- Native MuPDF C library (FZ_VERSION / MuPDF.NativeAssets). -->
-    <ArtifexMuPDFVersion>1.28.0.3</ArtifexMuPDFVersion>
+    <ArtifexMuPDFVersion>1.28.2</ArtifexMuPDFVersion>
 	
     <!-- MuPDF.NET NuGet package. -->
-    <ArtifexMuPDFNetVersion>3.28.1.6</ArtifexMuPDFNetVersion>
+    <ArtifexMuPDFNetVersion>3.28.2</ArtifexMuPDFNetVersion>
 	
     <!-- MuPDF.NET.PDF4LLM NuGet package. -->
-    <ArtifexMuPDFNetPDF4LLMVersion>1.28.0.3</ArtifexMuPDFNetPDF4LLMVersion>
+    <ArtifexMuPDFNetPDF4LLMVersion>1.28.2</ArtifexMuPDFNetPDF4LLMVersion>
 	
     <!-- MuPDF.NET.Office (+ NativeAssets) NuGet packages; same version always. -->
-    <ArtifexMuPDFNetOfficeVersion>1.28.0.3</ArtifexMuPDFNetOfficeVersion>
+    <ArtifexMuPDFNetOfficeVersion>1.28.2</ArtifexMuPDFNetOfficeVersion>
 	
     <!-- pymupdf-layout (and pymupdf) PyPI pin for the MuPDF.NET.PDF4LLM layout bridge. -->
-    <ArtifexPyMuPDFLayoutVersion>1.28.0</ArtifexPyMuPDFLayoutVersion>
+    <ArtifexPyMuPDFLayoutVersion>1.28.2</ArtifexPyMuPDFLayoutVersion>
   </PropertyGroup>
 </Project>

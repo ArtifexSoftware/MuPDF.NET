@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using MuPDF.NET;
+using MuPDF.NET.PDF4LLM.Layout;
 using MuPDF.NET.PDF4LLM.Ocr;
 using Newtonsoft.Json.Linq;
 using mupdf;
@@ -209,7 +210,18 @@ namespace MuPDF.NET.PDF4LLM.Helpers
             bool rapidocrAvailable = RapidOcrSupport.IsAvailable;
             bool paddleocrAvailable = rapidocrAvailable;
 
-            if (string.IsNullOrEmpty(tessdata) && !rapidocrAvailable && !paddleocrAvailable)
+            // pymupdf4llm: when the modern `rapidocr` package is present (not
+            // rapidocr_onnxruntime), prefer full RapidOCR over RapidOCR+Tesseract.
+            // RapidOcrNet is that full detect+recognize path on .NET.
+            if (rapidocrAvailable)
+            {
+                Console.WriteLine("Using RapidOCR for OCR processing.");
+                return (page, ocrDpi, ocrLanguage, keepOcrText) =>
+                    global::MuPDF.NET.PDF4LLM.Ocr.RapidOcrApi.ExecOcr(
+                        page, dpi: ocrDpi, language: ocrLanguage, keepOcrText: keepOcrText);
+            }
+
+            if (string.IsNullOrEmpty(tessdata) && !paddleocrAvailable)
             {
                 PrintTesseractSetupHelp();
                 return null;
@@ -217,17 +229,9 @@ namespace MuPDF.NET.PDF4LLM.Helpers
 
             if (!string.IsNullOrEmpty(tessdata))
             {
-                if (rapidocrAvailable)
-                {
-                    Console.WriteLine("Using RapidOCR and Tesseract for OCR processing.");
-                    return (page, ocrDpi, ocrLanguage, keepOcrText) =>
-                        global::MuPDF.NET.PDF4LLM.Ocr.RapidTessApi.ExecOcr(
-                            page, dpi: ocrDpi, language: ocrLanguage, keepOcrText: keepOcrText);
-                }
-
                 if (paddleocrAvailable)
                 {
-                    Console.WriteLine("Using PaddleOCR and Tesseract for OCR processing.");
+                    Console.WriteLine("Using PaddleOCR & Tesseract for OCR processing.");
                     return (page, ocrDpi, ocrLanguage, keepOcrText) =>
                         global::MuPDF.NET.PDF4LLM.Ocr.PaddleTessApi.ExecOcr(
                             page, dpi: ocrDpi, language: ocrLanguage, keepOcrText: keepOcrText);
@@ -236,14 +240,6 @@ namespace MuPDF.NET.PDF4LLM.Helpers
                 Console.WriteLine("Using Tesseract for OCR processing.");
                 return (page, ocrDpi, ocrLanguage, keepOcrText) =>
                     global::MuPDF.NET.PDF4LLM.Ocr.TesseractApi.ExecOcr(
-                        page, dpi: ocrDpi, language: ocrLanguage, keepOcrText: keepOcrText);
-            }
-
-            if (rapidocrAvailable)
-            {
-                Console.WriteLine("Using RapidOCR for OCR processing.");
-                return (page, ocrDpi, ocrLanguage, keepOcrText) =>
-                    global::MuPDF.NET.PDF4LLM.Ocr.RapidOcrApi.ExecOcr(
                         page, dpi: ocrDpi, language: ocrLanguage, keepOcrText: keepOcrText);
             }
 
@@ -314,6 +310,19 @@ namespace MuPDF.NET.PDF4LLM.Helpers
                 bboxArr[1].Value<float>(),
                 bboxArr[2].Value<float>(),
                 bboxArr[3].Value<float>());
+
+            if (bbox.Width <= 2 || bbox.Height <= 2)
+                return false;
+
+            if (cls == "table")
+            {
+                JToken grid = jo["table_grid"];
+                if (grid == null
+                    || grid.Type == JTokenType.Null
+                    || (grid is JArray ga && ga.Count == 0)
+                    || (grid is JObject go && !go.HasValues))
+                    return false;
+            }
 
             entry = new LayoutInfoEntry { Bbox = bbox, Class = cls, RawDict = jo };
             if (tableInfos != null && cls == "table")
@@ -404,7 +413,7 @@ namespace MuPDF.NET.PDF4LLM.Helpers
             layout != null && layout.Any(b => b.Class == "table");
 
         /// <summary>
-        /// Extend picture, formula, and table layout boxes by joining intersecting text, image, and vector blocks.
+        /// Extend picture and formula layout boxes by joining intersecting text, image, and vector blocks.
         /// </summary>
         /// <param name="page">Source page (reserved for future vector-block support).</param>
         /// <param name="blocks">Page text and image blocks used to expand picture regions.</param>
@@ -419,7 +428,9 @@ namespace MuPDF.NET.PDF4LLM.Helpers
             for (int i = 0; i < layout.Count; i++)
             {
                 string cls = layout[i].Class;
-                if (cls != "picture" && cls != "formula" && cls != "table")
+                // Match pymupdf4llm utils.clean_pictures: only picture/formula.
+                // Expanding tables here changes IRect keys and breaks html_tables_by_box lookup.
+                if (cls != "picture" && cls != "formula")
                     continue;
 
                 Rect bbox = new Rect(layout[i].Bbox);
@@ -1096,9 +1107,22 @@ namespace MuPDF.NET.PDF4LLM.Helpers
             ReadPageLayoutRaw(page, blocks).Layout;
 
         /// <summary>Read layout and retain raw table dicts for grid extraction.</summary>
-        public static LayoutRawParseResult ReadPageLayoutRaw(Page page, List<Block> blocks)
+        public static LayoutRawParseResult ReadPageLayoutRaw(
+            Page page,
+            List<Block> blocks,
+            float? edgeThreshold = null)
         {
-            page.GetLayout();
+            float? previous = PyMuPdfLayoutBridge.CurrentEdgeThreshold.Value;
+            try
+            {
+                PyMuPdfLayoutBridge.CurrentEdgeThreshold.Value = edgeThreshold;
+                page.GetLayout();
+            }
+            finally
+            {
+                PyMuPdfLayoutBridge.CurrentEdgeThreshold.Value = previous;
+            }
+
             var tableInfos = new Dictionary<string, JObject>();
             List<LayoutInfoEntry> layout = ParseLayoutInformation(page.LayoutInformation, tableInfos);
             if (layout != null && layout.Count > 0)

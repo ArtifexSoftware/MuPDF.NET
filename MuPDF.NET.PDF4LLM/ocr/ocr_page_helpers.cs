@@ -9,9 +9,13 @@ namespace MuPDF.NET.PDF4LLM.Ocr
     /// <summary>Shared helpers for OCR page execution callbacks.</summary>
     internal static class OcrPageHelpers
     {
+        /// <summary>Resource name for OCR text — matches pymupdf4llm <c>FONTNAME = "myfont"</c>.</summary>
         internal const string OcrFontName = "myfont";
 
-        private static readonly Lazy<Font> OcrFont = new Lazy<Font>(() => new Font("cjk"));
+        /// <summary>CJK fallback font — matches pymupdf4llm <c>FONT = pymupdf.Font("cjk")</c>.</summary>
+        static readonly Lazy<Font> OcrFont = new Lazy<Font>(() => new Font("cjk"));
+
+        static string _insertFontName = OcrFontName;
 
         internal readonly struct SpanBuckets
         {
@@ -100,7 +104,15 @@ namespace MuPDF.NET.PDF4LLM.Ocr
                 return pixmap;
 
             using (DisplayList displaylist = page.GetDisplayList())
-                return GetCulledPixmap.GetPixmap(displaylist, dpi, goodSpans, page);
+            {
+                (Pixmap pix, bool empty) = GetCulledPixmap.GetPixmap(displaylist, dpi, goodSpans, page);
+                if (empty)
+                {
+                    pix?.Dispose();
+                    return null;
+                }
+                return pix;
+            }
         }
 
         internal static Matrix PixmapToPageMatrix(Pixmap pix, Page page) =>
@@ -118,22 +130,23 @@ namespace MuPDF.NET.PDF4LLM.Ocr
             return new Rect(minX, minY, maxX, maxY) * matrix;
         }
 
-        static string _insertFontName = OcrFontName;
-
+        /// <summary>
+        /// Install OCR font like pymupdf4llm:
+        /// <c>page.insert_font(fontname="myfont", fontbuffer=Font("cjk").buffer)</c>.
+        /// </summary>
         internal static void EnsureOcrFont(Page page)
         {
             _insertFontName = OcrFontName;
             try
             {
                 byte[] buffer = OcrFont.Value.Buffer;
-                if (buffer != null && buffer.Length > 0)
-                    page.InsertFont(OcrFontName, fontbuffer: buffer);
-                else
+                if (buffer == null || buffer.Length == 0)
                     throw new InvalidOperationException("CJK fallback font buffer is empty.");
+                page.InsertFont(OcrFontName, fontbuffer: buffer);
             }
             catch (Exception)
             {
-                // Some page types (e.g. SVG) cannot embed the CJK fallback buffer.
+                // Some page types (e.g. SVG) cannot embed the CJK buffer.
                 _insertFontName = "helv";
                 page.InsertFont("helv");
             }

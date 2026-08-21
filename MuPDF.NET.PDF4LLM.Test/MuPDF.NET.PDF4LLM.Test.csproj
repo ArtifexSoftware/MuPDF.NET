@@ -22,10 +22,15 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="MuPDF.NET.PDF4LLM" Version="$(ArtifexMuPDFNetPDF4LLMVersion)" />
     <!-- MuPDF.NET.Office is a separate repo; referenced via NuGet only (never a ProjectReference). -->
     <PackageReference Include="MuPDF.NET.Office" Version="$(ArtifexMuPDFNetOfficeVersion)" />
     <PackageReference Include="MuPDF.NET.Office.NativeAssets" Version="$(ArtifexMuPDFNetOfficeVersion)" />
   </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MuPDF.NET.PDF4LLM\MuPDF.NET.PDF4LLM.csproj" />
+  </ItemGroup>
+
+  <Import Project="..\MuPDF.NET.PDF4LLM\build\MuPDF.NET.PDF4LLM.targets" Condition="Exists('..\MuPDF.NET.PDF4LLM\build\MuPDF.NET.PDF4LLM.targets')" />
 
 </Project>

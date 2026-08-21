@@ -406,7 +406,7 @@ namespace MuPDF.NET.PDF4LLM.Helpers
         /// <param name="bbox">Rectangle to test.</param>
         /// <param name="clip">Clipping rectangle.</param>
         /// <param name="portion">Minimum fraction of <paramref name="bbox"/> area that must lie inside <paramref name="clip"/>.</param>
-        public static bool AlmostInBbox(Rect bbox, Rect clip, float portion = 0.8f)
+        public static bool AlmostInBbox(Rect bbox, Rect clip, float portion = 0.6f)
         {
             if (bbox == null || clip == null)
                 return false;
@@ -419,8 +419,8 @@ namespace MuPDF.NET.PDF4LLM.Helpers
             float interArea = Math.Max(0, x1 - x0) * Math.Max(0, y1 - y0);
             float boxArea = (bbox.X1 - bbox.X0) * (bbox.Y1 - bbox.Y0);
             
-            // If intersection area is greater than portion of box area
-            return interArea > boxArea * portion;
+            // If intersection area is at least portion of box area
+            return interArea >= boxArea * portion;
         }
 
         /// <summary>

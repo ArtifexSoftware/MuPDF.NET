@@ -44,7 +44,10 @@ namespace MuPDF.NET.PDF4LLM.Llama
 
             string filePathStr = filePath is string s ? s : filePath.ToString();
 
-            var hdrInfo = new Helpers.IdentifyHeaders(filePathStr);
+            // IdentifyHeaders is only used on the legacy (non-layout) markdown path.
+            object hdrInfo = MuPDF4LLM.UseLayout
+                ? null
+                : new Helpers.IdentifyHeaders(filePathStr);
 
             Document doc = new Document(filePathStr);
             var docs = new List<LlamaIndexDocument>();
@@ -88,11 +91,24 @@ namespace MuPDF.NET.PDF4LLM.Llama
             if (MetaFilter != null)
                 extraInfo = MetaFilter(extraInfo);
 
-            string text = Helpers.MuPdfRag.ToMarkdown(
-                doc,
-                pages: new List<int> { pageNumber },
-                hdrInfo: hdrInfo,
-                loadKwargs);
+            // Prefer layout markdown when UseLayout is on; otherwise keep the
+            // classic RAG extractor (matches pymupdf4llm Llama reader defaults).
+            string text;
+            if (MuPDF4LLM.UseLayout)
+            {
+                text = MuPDF4LLM.ToMarkdown(
+                    doc,
+                    pages: new List<int> { pageNumber },
+                    showProgress: false) ?? "";
+            }
+            else
+            {
+                text = Helpers.MuPdfRag.ToMarkdown(
+                    doc,
+                    pages: new List<int> { pageNumber },
+                    hdrInfo: hdrInfo,
+                    loadKwargs);
+            }
 
             return new LlamaIndexDocument
             {
