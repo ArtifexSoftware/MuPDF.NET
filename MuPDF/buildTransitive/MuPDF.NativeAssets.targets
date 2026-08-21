@@ -16,9 +16,18 @@
     <IsPrefer32Bit Condition="'$(Prefer32Bit)' == 'true'">true</IsPrefer32Bit>
   </PropertyGroup>
 
+  <!-- Windows: ARM64 -->
+  <ItemGroup Condition="'$(OS)' == 'Windows_NT' and
+                        ('$(PlatformTarget)' == 'ARM64' or '$(Platform)' == 'ARM64')">
+    <Content Include="$(MSBuildThisFileDirectory)../native/win-arm64/*.*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
   <!-- Windows: x64 (including AnyCPU without Prefer32Bit on a 64-bit OS) -->
-  <ItemGroup Condition="'$(OS)' == 'Windows_NT' and 
-                        ( '$(IsX64)' == 'true' or 
+  <ItemGroup Condition="'$(OS)' == 'Windows_NT' and
+                        '$(PlatformTarget)' != 'ARM64' and '$(Platform)' != 'ARM64' and
+                        ( '$(IsX64)' == 'true' or
                           ('$(IsAnyCPU)' == 'true' and '$(IsPrefer32Bit)' != 'true'))">
     <Content Include="$(MSBuildThisFileDirectory)../native/win-x64/*.*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -26,8 +35,8 @@
   </ItemGroup>
 
   <!-- Windows: x86 (32-bit or AnyCPU with Prefer32Bit) -->
-  <ItemGroup Condition="'$(OS)' == 'Windows_NT' and 
-                        ( '$(IsX86)' == 'true' or 
+  <ItemGroup Condition="'$(OS)' == 'Windows_NT' and
+                        ( '$(IsX86)' == 'true' or
                           ('$(IsAnyCPU)' == 'true' and '$(IsPrefer32Bit)' == 'true'))">
     <Content Include="$(MSBuildThisFileDirectory)../native/win-x86/*.*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

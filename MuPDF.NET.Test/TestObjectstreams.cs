@@ -79,14 +79,14 @@ namespace MuPDF.NET.Test
                     garbage: 1,
                     clean: 0,
                     deflate: 1,
-                    deflate_images: 1,
-                    deflate_fonts: 1,
+                    deflateImages: 1,
+                    deflateFonts: 1,
                     pretty: 0,
                     linear: 0,
                     ascii: 0,
                     encryption: 1,
                     noNewId: 1,
-                    use_objstms: 1);
+                    useObjstms: 1);
                 Assert.True(HasObjStm(doc), "No object stream found");
                 doc.EzSave(Out("test_objectstream3.pdf"));
             }

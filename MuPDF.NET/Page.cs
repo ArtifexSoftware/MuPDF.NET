@@ -1092,12 +1092,6 @@ namespace MuPDF.NET
                     SetRotation(oldRotation);
             }
         }
-        /// <summary>
-        /// PDF only: Add a file attachment annotation with a "PushPin" icon at the specified location.
-        /// </summary>
-        public Annot add_file_annot(object point, byte[] buffer_, string filename, string ufilename = null, string desc = null, string icon = null)
-            => add_file_annot_impl(point, buffer_, filename, uFileName: ufilename, desc: desc, icon: icon);
-
         internal Annot add_file_annot_impl(object point, byte[] buffer_, string filename, string uFileName = null, string desc = null, string icon = null)
         {
             int old_rotation = annot_preprocess();
@@ -5630,17 +5624,6 @@ namespace MuPDF.NET
             SyncLinkWrapperCache();
         }
         internal Annot add_text_annot(Point point, string text, string icon = "Note") => AddTextAnnot(point, text, icon);
-        /// <summary>
-        /// PDF only: Add text in a given rectangle. Optionally, the appearance of a "callout" shape can be requested by specifying two or three point-like objects; see below.
-        /// </summary>
-        public Annot add_freetext_annot(Rect rect, string text, float fontsize = 12, string fontname = "helv",
-            float[] text_color = null, float[] fill_color = null, float[] border_color = null, float border_width = 0,
-            int[] dashes = null, Point[] callout = null, int line_end = (int)mupdf.pdf_line_ending.PDF_ANNOT_LE_OPEN_ARROW,
-            float opacity = 1, int align = 0, int rotate = 0, bool richtext = false, string style = null)
-            => AddFreeTextAnnot(rect, text, fontSize: fontsize, fontName: fontname, textColor: text_color,
-                fillColor: fill_color, borderColor: border_color, borderWidth: border_width, dashes: dashes,
-                callout: callout, lineEnd: (PdfLineEnding)line_end, opacity: opacity, align: align, rotate: rotate,
-                richtext: richtext, style: style);
         internal Annot add_line_annot(Point p1, Point p2) => AddLineAnnot(p1, p2);
         internal Annot add_rect_annot(Rect rect) => AddRectAnnot(rect);
         internal Annot add_circle_annot(Rect rect) => AddCircleAnnot(rect);
@@ -5652,18 +5635,6 @@ namespace MuPDF.NET
         internal Annot add_strikeout_annot(Quad[] quads = null, Point start = null, Point stop = null, IRect clip = null) => AddStrikeoutAnnot(quads, start, stop, clip);
         internal Annot add_squiggly_annot(Quad[] quads = null, Point start = null, Point stop = null, IRect clip = null) => AddSquigglyAnnot(quads, start, stop, clip);
         internal Annot add_stamp_annot(Rect rect, object stamp = null) => _add_stamp_annot(rect, stamp);
-        /// <summary>
-        /// , text_color=(0, 0, 0), cross_out=True).
-        /// </summary>
-        public Annot add_redact_annot(Quad quad, string text = null, string fontname = null, float fontsize = 11,
-            int align = 0, float[] fill = null, float[] text_color = null, bool cross_out = true)
-            => AddRedactAnnot(quad, text, fontName: fontname, fontSize: fontsize, align: align, fillColor: fill, textColor: text_color, crossOut: cross_out);
-        /// <summary>
-        /// , text_color=(0, 0, 0), cross_out=True).
-        /// </summary>
-        public Annot add_redact_annot(Rect rect, string text = null, string fontname = null, float fontsize = 11,
-            int align = 0, float[] fill = null, float[] text_color = null, bool cross_out = true)
-            => AddRedactAnnot(rect, text, fontName: fontname, fontSize: fontsize, align: align, fillColor: fill, textColor: text_color, crossOut: cross_out);
 
         // Annotation/link operations.
         internal bool apply_redactions(int images = 2, int graphics = 1, int text = 0) => ApplyRedactions(images, graphics, text);
@@ -5718,60 +5689,6 @@ namespace MuPDF.NET
             => search_for(needle, clip, max_hits, flags, textpage);
 
         // Insertion helpers.
-        /// <summary>
-        /// PDF only: Insert text lines starting at point_like point. See Shape.insert_text.
-        /// </summary>
-        public int insert_text(Point point, string text, float fontsize = 11, string fontname = "helv",
-            float[] color = null, float rotate = 0, int render_mode = 0, float border_width = 0.05f,
-            float? miter_limit = null, Point morphFix = null, Matrix morphMat = null)
-            => InsertText(point, text, fontSize: fontsize, fontName: fontname, color: color, rotate: rotate, renderMode: render_mode, borderWidth: border_width,
-                miterLimit: miter_limit.HasValue ? (float?)miter_limit.Value : null,
-                morphFix: morphFix, morphMat: morphMat);
-        /// <summary><see cref="InsertTextbox"/> overload with snake_case parameters.</summary>
-        public InsertTextboxResult insert_textbox(
-            Rect rect,
-            string text,
-            float fontsize = 11,
-            string fontname = "helv",
-            float[] color = null,
-            int align = 0,
-            float border_width = 0.05f,
-            float expandtabs = 1,
-            int render_mode = 0,
-            int rotate = 0,
-            int encoding = 0,
-            float fill_opacity = 1,
-            float[] fill = null,
-            string fontfile = null,
-            float? lineheight = null,
-            int set_simple = 0,
-            Point morph_fix = null,
-            Matrix morph_mat = null,
-            bool overlay = true,
-            float stroke_opacity = 1,
-            int oc = 0)
-            => InsertTextbox(
-                rect,
-                text,
-                align: align,
-                borderWidth: border_width,
-                color: color,
-                encoding: encoding,
-                expandTabs: expandtabs,
-                fillOpacity: fill_opacity,
-                fill: fill,
-                fontFile: fontfile,
-                fontName: fontname,
-                fontSize: fontsize,
-                lineHeight: lineheight,
-                morphFix: morph_fix,
-                morphMat: morph_mat,
-                oc: oc,
-                overlay: overlay,
-                renderMode: render_mode,
-                rotate: rotate,
-                setSimple: set_simple,
-                strokeOpacity: stroke_opacity);
         internal (float spare_height, float scale) insert_htmlbox(Rect rect, string text, string css = null, float scale_low = 0,
             Archive archive = null, int rotate = 0, int oc = 0, float opacity = 1, bool overlay = true,
             bool scale_word_width = true, bool verbose = false)

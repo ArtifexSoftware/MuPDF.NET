@@ -2313,8 +2313,8 @@ namespace MuPDF.NET
         /// <param name="garbage">Garbage collection level: 0 none; 1 unused objects; 2 compact xref; 3 merge duplicates; 4 stream dedup.</param>
         /// <param name="clean">Clean and sanitize content streams (mutool clean -sc).</param>
         /// <param name="deflate">Deflate (compress) uncompressed streams.</param>
-        /// <param name="deflate_images">Deflate uncompressed image streams.</param>
-        /// <param name="deflate_fonts">Deflate uncompressed fontfile streams.</param>
+        /// <param name="deflateImages">Deflate uncompressed image streams.</param>
+        /// <param name="deflateFonts">Deflate uncompressed fontfile streams.</param>
         /// <param name="incremental">Incremental save to the original file only; excludes garbage and linear.</param>
         /// <param name="ascii">Convert binary stream data to ASCII.</param>
         /// <param name="expand">Decompress objects: 0 none, 1 images, 2 fonts, 255 all.</param>
@@ -2324,20 +2324,20 @@ namespace MuPDF.NET
         /// <param name="pretty">Prettify PDF object syntax.</param>
         /// <param name="encryption">Encryption method when saving.</param>
         /// <param name="permissions">Permission flags for encrypted output.</param>
-        /// <param name="owner_pw">Owner password (max 40 characters).</param>
-        /// <param name="user_pw">User password (max 40 characters).</param>
-        /// <param name="preserve_metadata">Preserve existing document metadata.</param>
-        /// <param name="use_objstms">Store eligible objects in object streams (size reduction).</param>
-        /// <param name="compression_effort">Compression effort 0 (default) to 100 (maximum).</param>
-        /// <param name="raise_on_repair">Throw if save repairs the PDF structure.</param>
+        /// <param name="ownerPW">Owner password (max 40 characters).</param>
+        /// <param name="userPW">User password (max 40 characters).</param>
+        /// <param name="preserveMetadata">Preserve existing document metadata when cleaning.</param>
+        /// <param name="useObjstms">Store eligible objects in object streams (size reduction).</param>
+        /// <param name="compressionEffort">Compression effort 0 (default) to 100 (maximum).</param>
+        /// <param name="raiseOnRepair">Throw if save repairs the PDF structure.</param>
         /// <exception cref="ValueErrorException">Document is closed, encrypted, or arguments are invalid.</exception>
         public void Save(
             object filename, 
             int garbage = 0, 
             int clean = 0, 
             int deflate = 0, 
-            int deflate_images = 0, 
-            int deflate_fonts = 0, 
+            int deflateImages = 0, 
+            int deflateFonts = 0, 
             int incremental = 0, 
             int ascii = 0, 
             int expand = 0, 
@@ -2347,14 +2347,14 @@ namespace MuPDF.NET
             int pretty = 0, 
             int encryption = 1, 
             int permissions = 4095, 
-            string owner_pw = null, 
-            string user_pw = null, 
-            int preserve_metadata = 1, 
-            int use_objstms = 0, 
-            int compression_effort = 0, 
-            bool raise_on_repair = false)
+            string ownerPW = null, 
+            string userPW = null, 
+            int preserveMetadata = 1, 
+            int useObjstms = 0, 
+            int compressionEffort = 0, 
+            bool raiseOnRepair = false)
         {
-            SaveCore(filename, garbage, clean, deflate, deflate_images, deflate_fonts, incremental, ascii, expand, linear, noNewId, appearance, pretty, encryption, permissions, owner_pw, user_pw, preserve_metadata, use_objstms, compression_effort, raise_on_repair);
+            SaveCore(filename, garbage, clean, deflate, deflateImages, deflateFonts, incremental, ascii, expand, linear, noNewId, appearance, pretty, encryption, permissions, ownerPW, userPW, preserveMetadata, useObjstms, compressionEffort, raiseOnRepair);
         }
         /// <summary>
         /// PDF only: save the document
@@ -2375,12 +2375,12 @@ namespace MuPDF.NET
         /// <param name="pretty">Prettify PDF object syntax.</param>
         /// <param name="encryption">Encryption method when saving.</param>
         /// <param name="permissions">Permission flags for encrypted output.</param>
-        /// <param name="owner_pw">Owner password (max 40 characters).</param>
-        /// <param name="user_pw">User password (max 40 characters).</param>
-        /// <param name="preserve_metadata">Preserve existing document metadata.</param>
-        /// <param name="use_objstms">Store eligible objects in object streams (size reduction).</param>
-        /// <param name="compression_effort">Compression effort 0 (default) to 100 (maximum).</param>
-        /// <param name="raise_on_repair">Throw if save repairs the PDF structure.</param>
+        /// <param name="ownerPW">Owner password (max 40 characters).</param>
+        /// <param name="userPW">User password (max 40 characters).</param>
+        /// <param name="preserveMetadata">Preserve existing document metadata when cleaning.</param>
+        /// <param name="useObjstms">Store eligible objects in object streams (size reduction).</param>
+        /// <param name="compressionEffort">Compression effort 0 (default) to 100 (maximum).</param>
+        /// <param name="raiseOnRepair">Throw if save repairs the PDF structure.</param>
         /// <exception cref="ValueErrorException">Document is closed, encrypted, or arguments are invalid.</exception>
         public void Save(
             Stream output,
@@ -2398,14 +2398,14 @@ namespace MuPDF.NET
             int pretty = 0,
             int encryption = 1,
             int permissions = 4095,
-            string owner_pw = null,
-            string user_pw = null,
-            int preserve_metadata = 1,
-            int use_objstms = 0,
-            int compression_effort = 0,
-            bool raise_on_repair = false)
+            string ownerPW = null,
+            string userPW = null,
+            int preserveMetadata = 1,
+            int useObjstms = 0,
+            int compressionEffort = 0,
+            bool raiseOnRepair = false)
         {
-            SaveCore(output, garbage, clean, deflate, deflateImages, deflateFonts, incremental, ascii, expand, linear, noNewId, appearance, pretty, encryption, permissions, owner_pw, user_pw, preserve_metadata, use_objstms, compression_effort, raise_on_repair);
+            SaveCore(output, garbage, clean, deflate, deflateImages, deflateFonts, incremental, ascii, expand, linear, noNewId, appearance, pretty, encryption, permissions, ownerPW, userPW, preserveMetadata, useObjstms, compressionEffort, raiseOnRepair);
         }
 
         private void SaveCore(
@@ -2413,8 +2413,8 @@ namespace MuPDF.NET
             int garbage,
             int clean,
             int deflate,
-            int deflate_images,
-            int deflate_fonts,
+            int deflateImages,
+            int deflateFonts,
             int incremental,
             int ascii,
             int expand,
@@ -2424,12 +2424,12 @@ namespace MuPDF.NET
             int pretty,
             int encryption,
             int permissions,
-            string owner_pw,
-            string user_pw,
-            int preserve_metadata,
-            int use_objstms,
-            int compression_effort,
-            bool raise_on_repair)
+            string ownerPW,
+            string userPW,
+            int preserveMetadata,
+            int useObjstms,
+            int compressionEffort,
+            bool raiseOnRepair)
         {
             bool is_repaired_pre = IsRepaired;
             if (IsClosed || IsEncrypted)
@@ -2445,7 +2445,7 @@ namespace MuPDF.NET
             // MuPDF: disallow overwriting the on-disk path unless incremental. Memory opens (StreamData) are ok.
             if (fname == Name && incremental == 0 && (StreamData == null || StreamData.Length == 0))
                 throw new ValueErrorException("save to original must be incremental");
-            if (linear != 0 && use_objstms != 0)
+            if (linear != 0 && useObjstms != 0)
                 throw new ValueErrorException("'linear' and 'use_objstms' cannot both be requested");
             if (PageCount < 1)
                 throw new ValueErrorException("cannot save with zero pages");
@@ -2454,7 +2454,7 @@ namespace MuPDF.NET
                 if (Name != fname || StreamData != null)
                     throw new ValueErrorException("incremental needs original file");
             }
-            if ((user_pw != null && user_pw.Length > 40) || (owner_pw != null && owner_pw.Length > 40))
+            if ((userPW != null && userPW.Length > 40) || (ownerPW != null && ownerPW.Length > 40))
                 throw new ValueErrorException("password length must not exceed 40");
             
             // Use cached borrowed PdfDocument — do not dispose (owned by FzDocument).
@@ -2472,8 +2472,8 @@ namespace MuPDF.NET
                     opts.do_incremental = incremental;
                     opts.do_ascii = ascii;
                     opts.do_compress = deflate;
-                    opts.do_compress_images = deflate_images;
-                    opts.do_compress_fonts = deflate_fonts;
+                    opts.do_compress_images = deflateImages;
+                    opts.do_compress_fonts = deflateFonts;
                     opts.do_decompress = expand;
                     opts.do_garbage = garbage;
                     opts.do_pretty = pretty;
@@ -2484,15 +2484,15 @@ namespace MuPDF.NET
                     opts.do_appearance = appearance;
                     opts.do_encrypt = encryption;
                     opts.permissions = permissions;
-                    if (owner_pw != null)
-                        opts.opwd_utf8_set_value(owner_pw);
-                    else if (user_pw != null)
-                        opts.opwd_utf8_set_value(user_pw);
-                    if (user_pw != null)
-                        opts.upwd_utf8_set_value(user_pw);
-                    opts.do_preserve_metadata = preserve_metadata;
-                    opts.do_use_objstms = use_objstms;
-                    opts.compression_effort = compression_effort;
+                    if (ownerPW != null)
+                        opts.opwd_utf8_set_value(ownerPW);
+                    else if (userPW != null)
+                        opts.opwd_utf8_set_value(userPW);
+                    if (userPW != null)
+                        opts.upwd_utf8_set_value(userPW);
+                    opts.do_preserve_metadata = preserveMetadata;
+                    opts.do_use_objstms = useObjstms;
+                    opts.compression_effort = compressionEffort;
 
                     pdf.m_internal.resynth_required = 0;
                     Helpers.JM_embedded_clean(pdf);
@@ -2559,7 +2559,7 @@ namespace MuPDF.NET
                 DropPdfPageTreeIfPdf();
                 convertedDoc?.Close();
             }
-            if (raise_on_repair)
+            if (raiseOnRepair)
             {
                 if (IsRepaired && !is_repaired_pre)
                     throw new Exception("Document save did a repair");
@@ -2617,11 +2617,11 @@ namespace MuPDF.NET
                 pretty: pretty ? 1 : 0,
                 encryption: encryption,
                 permissions: permissions,
-                owner_pw: ownerPassword,
-                user_pw: userPassword,
-                preserve_metadata: preserveMetadata ? 1 : 0,
-                use_objstms: useObjstms ? 1 : 0,
-                compression_effort: compressionEffort ? 1 : 0);
+                ownerPW: ownerPassword,
+                userPW: userPassword,
+                preserveMetadata: preserveMetadata ? 1 : 0,
+                useObjstms: useObjstms ? 1 : 0,
+                compressionEffort: compressionEffort ? 1 : 0);
             return ms.ToArray();
         }
         /// <summary>
@@ -2696,9 +2696,9 @@ namespace MuPDF.NET
             int deflateImages = 1, int deflateFonts = 1, int pretty = 0, int linear = 0,
             int ascii = 0, int encryption = 1, int noNewId = 1, int useObjstms = 1)
         {
-            Save(filename, garbage: garbage, clean: clean, deflate: deflate, deflate_images: deflateImages,
-                deflate_fonts: deflateFonts, pretty: pretty, linear: linear, ascii: ascii, encryption: encryption,
-                noNewId: noNewId, use_objstms: useObjstms);
+            Save(filename, garbage: garbage, clean: clean, deflate: deflate, deflateImages: deflateImages,
+                deflateFonts: deflateFonts, pretty: pretty, linear: linear, ascii: ascii, encryption: encryption,
+                noNewId: noNewId, useObjstms: useObjstms);
         }
 
         // ─── Xref Operations ────────────────────────────────────────────

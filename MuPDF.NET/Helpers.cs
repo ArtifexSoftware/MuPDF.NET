@@ -2890,7 +2890,7 @@ namespace MuPDF.NET
             {
                 if (d.IsClosed) throw new ValueErrorException("document closed");
                 if (d.IsPdf)
-                    // Fresh non-owning wrapper: callers (e.g. PDF4LLM) may Dispose without breaking the cache.
+                    // Fresh non-owning wrapper: callers (e.g. MuPDF.NET.PDF4LLM) may Dispose without breaking the cache.
                     return PdfDocumentBorrowed(d.NativePdfDocument);
                 var ret = PdfDocumentBorrowedFromFz(d.NativeDocument);
                 if (required && ret.m_internal == null)

@@ -37,8 +37,8 @@ namespace MuPDF.NET.Test
                     ms,
                     encryption: encrypt_meth, // set the encryption method
                     permissions: perm, // set permissions
-                    owner_pw: owner_pass, // set the owner password
-                    user_pw: user_pass); // set the user password
+                    ownerPW: owner_pass, // set the owner password
+                    userPW: user_pass); // set the user password
                 tobytes = ms.ToArray();
                 doc.Save(outDocPath);
             }

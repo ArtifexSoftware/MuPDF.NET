@@ -18,6 +18,7 @@ mono_crash.*
 
 # Build results
 docs/build/
+TestDocuments/_Output/
 [Dd]ebug/
 [Dd]ebugPublic/
 [Rr]elease/
@@ -35,9 +36,8 @@ bld/
 
 # Test-generated output (PDFs, markdown, etc.)
 TestDocuments/MuPDF.NET.Test/_Output/
-TestDocuments/PDF4LLM.Test/_Output/
+TestDocuments/MuPDF.NET.PDF4LLM.Test/_Output/
 TestDocuments/Demo/_Output/
-
 
 # Visual Studio 2015/2017 cache/options directory
 .vs/
@@ -46,9 +46,6 @@ TestDocuments/Demo/_Output/
 
 # Visual Studio 2017 auto generated files
 Generated\ Files/
-
-# MuPDF.NativeAssets generation files
-MuPDF/packages
 
 # MSTest test Results
 [Tt]est[Rr]esult*/

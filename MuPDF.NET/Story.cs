@@ -445,22 +445,22 @@ namespace MuPDF.NET
         /// <param name="writer">Final output writer; null during intermediate passes.</param>
         /// <param name="contentfn">Returns HTML from prior <see cref="StoryElementPositionInfo"/> list (e.g. table of contents). Use <see cref="ContentFunction"/> for legacy naming.</param>
         /// <param name="rectfn">Pagination callback.</param>
-        /// <param name="user_css">User CSS for each iteration.</param>
+        /// <param name="userCss">User CSS for each iteration.</param>
         /// <param name="em">Base font size.</param>
         /// <param name="positionfn">Called when layout has stabilized.</param>
         /// <param name="pagefn">Per-page hook (see <see cref="Write"/>).</param>
         /// <param name="archive">Resource archive for images/fonts.</param>
-        /// <param name="add_header_ids">When true, assign ids to header tags without ids.</param>
+        /// <param name="addHeaderIds">When true, assign ids to header tags without ids.</param>
         public static void WriteStabilized(
             DocumentWriter writer,
             Func<List<StoryElementPositionInfo>, string> contentfn,
             StoryRectFn rectfn,
-            string user_css = null,
+            string userCss = null,
             float em = 12,
             Action<StoryElementPositionInfo> positionfn = null,
             Action<int, Rect, mupdf.FzDevice, int> pagefn = null,
             Archive archive = null,
-            bool add_header_ids = true)
+            bool addHeaderIds = true)
         {
             var positions = new List<StoryElementPositionInfo>();
             // content = None
@@ -480,8 +480,8 @@ namespace MuPDF.NET
                 // content2 = content
                 string content2 = content;
                 // story = Story(content2, user_css, em, archive)
-                using var story = new Story(content2, user_css, em, archive);
-                if (add_header_ids)
+                using var story = new Story(content2, userCss, em, archive);
+                if (addHeaderIds)
                     // story.add_header_ids()
                     story.AddHeaderIds();
 
@@ -514,22 +514,22 @@ namespace MuPDF.NET
         /// </summary>
         /// <param name="contentfn">HTML builder from element positions.</param>
         /// <param name="rectfn">Pagination callback.</param>
-        /// <param name="user_css">User CSS.</param>
+        /// <param name="userCss">User CSS.</param>
         /// <param name="em">Base font size.</param>
         /// <param name="positionfn">Optional position callback on final pass.</param>
         /// <param name="pagefn">Optional page hook.</param>
         /// <param name="archive">Resource archive.</param>
-        /// <param name="add_header_ids">Assign header ids when missing.</param>
+        /// <param name="addHeaderIds">Assign header ids when missing.</param>
         /// <returns>PDF document with goto links for internal <c>href</c> anchors.</returns>
         public static Document WriteStabilizedWithLinks(
             Func<List<StoryElementPositionInfo>, string> contentfn,
             StoryRectFn rectfn,
-            string user_css = null,
+            string userCss = null,
             float em = 12,
             Action<StoryElementPositionInfo> positionfn = null,
             Action<int, Rect, mupdf.FzDevice, int> pagefn = null,
             Archive archive = null,
-            bool add_header_ids = true)
+            bool addHeaderIds = true)
         {
             // stream = io.BytesIO()
             var stream = mupdf.mupdf.fz_new_buffer(1024);
@@ -546,7 +546,7 @@ namespace MuPDF.NET
                     positionfn(position);
             }
             // Story.write_stabilized(writer, contentfn, rectfn, user_css, em, positionfn2, pagefn, archive, add_header_ids)
-            WriteStabilized(writer, contentfn, rectfn, user_css, em, positionfn2, pagefn, archive, add_header_ids);
+            WriteStabilized(writer, contentfn, rectfn, userCss, em, positionfn2, pagefn, archive, addHeaderIds);
             // writer.close()
             byte[] pdf = writer.Close();
             // stream.seek(0)
@@ -804,60 +804,60 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Finds the smallest scale in <paramref name="scale_min"/>..<paramref name="scale_max"/> so the scaled <paramref name="rect"/> contains the story.
+        /// Finds the smallest scale in <paramref name="scaleMin"/>..<paramref name="scaleMax"/> so the scaled <paramref name="rect"/> contains the story.
         /// </summary>
         /// <param name="rect">Base rectangle (origin and size).</param>
-        /// <param name="scale_min">Minimum scale (≥ 0).</param>
-        /// <param name="scale_max">Maximum scale, or null for no upper bound.</param>
+        /// <param name="scaleMin">Minimum scale (≥ 0).</param>
+        /// <param name="scaleMax">Maximum scale, or null for no upper bound.</param>
         /// <param name="delta">Maximum error in returned scale.</param>
         /// <param name="verbose">Log search diagnostics.</param>
         /// <param name="flags">Placement flags for internal <see cref="Place"/> calls.</param>
-        public FitResult FitScale(Rect rect, float scale_min = 0, float? scale_max = null, float delta = 0.001f, bool verbose = false, int flags = 0)
+        public FitResult FitScale(Rect rect, float scaleMin = 0, float? scaleMax = null, float delta = 0.001f, bool verbose = false, int flags = 0)
         {
             float x0 = rect.X0;
             float y0 = rect.Y0;
             float width = rect.Width;
             float height = rect.Height;
             Rect fn(float scale) => new Rect(x0, y0, x0 + scale * width, y0 + scale * height);
-            return Fit(fn, scale_min, scale_max, delta, verbose, flags);
+            return Fit(fn, scaleMin, scaleMax, delta, verbose, flags);
         }
 
         /// <summary>
         /// Finds the smallest height for a fixed <paramref name="width"/> rectangle that contains the story.
         /// </summary>
         /// <param name="width">Rectangle width.</param>
-        /// <param name="height_min">Minimum height (≥ 0).</param>
-        /// <param name="height_max">Maximum height, or null for no upper bound.</param>
+        /// <param name="heightMin">Minimum height (≥ 0).</param>
+        /// <param name="heightMax">Maximum height, or null for no upper bound.</param>
         /// <param name="origin">Top-left corner of the rectangle (default 0, 0).</param>
         /// <param name="delta">Maximum error in returned height.</param>
         /// <param name="verbose">Log search diagnostics.</param>
-        public FitResult FitHeight(float width, float height_min = 0, float? height_max = null, Point origin = null, float delta = 0.001f, bool verbose = false)
+        public FitResult FitHeight(float width, float heightMin = 0, float? heightMax = null, Point origin = null, float delta = 0.001f, bool verbose = false)
         {
             origin ??= new Point(0, 0);
             float x0 = origin.X;
             float y0 = origin.Y;
             float x1 = x0 + width;
             Rect fn(float height) => new Rect(x0, y0, x1, y0 + height);
-            return Fit(fn, height_min, height_max, delta, verbose, 0);
+            return Fit(fn, heightMin, heightMax, delta, verbose, 0);
         }
 
         /// <summary>
         /// Finds the smallest width for a fixed <paramref name="height"/> rectangle that contains the story.
         /// </summary>
         /// <param name="height">Rectangle height.</param>
-        /// <param name="width_min">Minimum width (≥ 0).</param>
-        /// <param name="width_max">Maximum width, or null for no upper bound.</param>
+        /// <param name="widthMin">Minimum width (≥ 0).</param>
+        /// <param name="widthMax">Maximum width, or null for no upper bound.</param>
         /// <param name="origin">Top-left corner of the rectangle (default 0, 0).</param>
         /// <param name="delta">Maximum error in returned width.</param>
         /// <param name="verbose">Log search diagnostics.</param>
-        public FitResult FitWidth(float height, float width_min = 0, float? width_max = null, Point origin = null, float delta = 0.001f, bool verbose = false)
+        public FitResult FitWidth(float height, float widthMin = 0, float? widthMax = null, Point origin = null, float delta = 0.001f, bool verbose = false)
         {
             origin ??= new Point(0, 0);
             float x0 = origin.X;
             float y0 = origin.Y;
             float y1 = y0 + height;
             Rect fn(float width) => new Rect(x0, y0, x0 + width, y1);
-            return Fit(fn, width_min, width_max, delta, verbose, 0);
+            return Fit(fn, widthMin, widthMax, delta, verbose, 0);
         }
 
         // ─── MuPDF API names (internal, same assembly) ─────────────────

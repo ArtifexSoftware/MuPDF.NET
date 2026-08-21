@@ -1,7 +1,7 @@
 namespace Demo
 {
     /// <summary>
-    /// Demo samples grouped by MuPDF.NET / PDF4LLM feature areas.
+    /// Demo samples grouped by MuPDF.NET feature areas.
     /// Default run executes every entry in <see cref="Samples"/> (including <c>[diag]</c> samples).
     /// Use <c>user</c> to skip diagnostics, or <c>diagnostics</c> to run only <c>[diag]</c> samples.
     /// </summary>
@@ -61,23 +61,6 @@ namespace Demo
             new("Barcodes", "write-barcode", "Write many barcode types to PDF and PNG", a => Program.TestWriteBarcode(a)),
             new("Barcodes", "write-barcode1", "Write CODE39/CODE128/DM with Units rects", _ => Program.TestWriteBarcode1()),
             
-            // —— PDF4LLM —— Samples/Llm
-            new("PDF4LLM", "rag-markdown", "PDF to Markdown (Magazine.pdf)", _ => Program.TestMuPdfRagToMarkdown()),
-            new("PDF4LLM", "table", "Detect tables and export markdown", _ => Program.TestTable()),
-            new("PDF4LLM", "table-extract-1", "Dump detected tables by page to console", _ => Program.TestTableExtract1()),
-            new("PDF4LLM", "table-extract-2", "Export detected tables to tables.csv", _ => Program.TestTableExtract2()),
-            new("PDF4LLM", "table-extract-3", "Merge continued table pages by column count", _ => Program.TestTableExtract3()),
-            new("PDF4LLM", "table-ocr", "Extract OCR text from Ocr.pdf", _ => Program.TestOcr()),
-            new("PDF4LLM", "llm-reader-save-pages", "Load markdown chunks and save per-page .md files", _ => Program.TestLLM2()),
-            new("PDF4LLM", "markdown-reader", "LlamaIndex PDFMarkdownReader", _ => Program.TestMarkdownReader()),
-            new("PDF4LLM", "ai-connector", "LoadAiAsync: Ask / Summarize / Search", a => Program.TestMicrosoftAiConnector(a).GetAwaiter().GetResult()),
-            new("PDF4LLM", "llm-to-markdown-fixture-370", "[diag] ToMarkdown vs test_370 expected output", a => Program.Test4LlmToMarkdownCompareExpected370(a), Diagnostic: true),
-            new("PDF4LLM", "llm-to-markdown-ocr-1", "[diag] ToMarkdown OCR fixture (FFFD)", a => Program.Test4LlmToMarkdownOcrFixture1(a), Diagnostic: true),
-            new("PDF4LLM", "llm-to-markdown-ocr-2", "[diag] ToMarkdown without OCR on FFFD fixture", a => Program.Test4LlmToMarkdownOcrFixture2(a), Diagnostic: true),
-            new("PDF4LLM", "llm-to-markdown-ocr-3", "[diag] ToMarkdown OCR on/off SVG fixture", a => Program.Test4LlmToMarkdownOcrFixture3(a), Diagnostic: true),
-            new("PDF4LLM", "llm-pdf-reader-empty", "[diag] PDFMarkdownReader empty page", a => Program.Test4LlmPdfMarkdownReaderEmptyPage(a), Diagnostic: true),
-            new("PDF4LLM", "llm-pdf-reader-missing-file", "[diag] PDFMarkdownReader missing file", a => Program.Test4LlmPdfMarkdownReaderMissingFile(a), Diagnostic: true),
-            
             // —— Regression & diagnostics —— Samples/Regression
             new("Regression & diagnostics", "issue-213", "[diag] Drawing paths / line width", _ => Program.TestIssue213(), Diagnostic: true),
             new("Regression & diagnostics", "issue-1880", "[diag] Read Data Matrix barcodes", _ => Program.TestIssue1880(), Diagnostic: true),
@@ -85,6 +68,23 @@ namespace Demo
             new("Regression & diagnostics", "pixmap-parallel", "[diag] Parallel Pixmap.ToBytes", _ => Program.TestPixmapParallel(), Diagnostic: true),
             new("Regression & diagnostics", "gettables-parallel", "[diag] Parallel Utils.GetTables", _ => Program.TestGetTablesParallel(), Diagnostic: true),
             new("Regression & diagnostics", "jbig2", "[diag] JBIG2 image recompression", _ => Program.TestRecompressJBIG2(), Diagnostic: true),
+
+            // —— MuPDF.NET.PDF4LLM —— Samples/Llm
+            new("MuPDF.NET.PDF4LLM", "rag-markdown", "PDF to Markdown (Magazine.pdf)", _ => Program.TestMuPdfRagToMarkdown()),
+            new("MuPDF.NET.PDF4LLM", "table", "Detect tables and export markdown", _ => Program.TestTable()),
+            new("MuPDF.NET.PDF4LLM", "table-extract-1", "Dump detected tables by page to console", _ => Program.TestTableExtract1()),
+            new("MuPDF.NET.PDF4LLM", "table-extract-2", "Export detected tables to tables.csv", _ => Program.TestTableExtract2()),
+            new("MuPDF.NET.PDF4LLM", "table-extract-3", "Merge continued table pages by column count", _ => Program.TestTableExtract3()),
+            new("MuPDF.NET.PDF4LLM", "table-ocr", "Extract OCR text from Ocr.pdf", _ => Program.TestOcr()),
+            new("MuPDF.NET.PDF4LLM", "llm-reader-save-pages", "Load markdown chunks and save per-page .md files", _ => Program.TestLLM2()),
+            new("MuPDF.NET.PDF4LLM", "markdown-reader", "LlamaIndex PDFMarkdownReader", _ => Program.TestMarkdownReader()),
+            new("MuPDF.NET.PDF4LLM", "ai-connector", "LoadAiAsync: Ask / Summarize / Search", a => Program.TestMicrosoftAiConnector(a).GetAwaiter().GetResult()),
+            new("MuPDF.NET.PDF4LLM", "llm-to-markdown-fixture-370", "[diag] ToMarkdown vs test_370 expected output", a => Program.Test4LlmToMarkdownCompareExpected370(a), Diagnostic: true),
+            new("MuPDF.NET.PDF4LLM", "llm-to-markdown-ocr-1", "[diag] ToMarkdown OCR fixture (FFFD)", a => Program.Test4LlmToMarkdownOcrFixture1(a), Diagnostic: true),
+            new("MuPDF.NET.PDF4LLM", "llm-to-markdown-ocr-2", "[diag] ToMarkdown without OCR on FFFD fixture", a => Program.Test4LlmToMarkdownOcrFixture2(a), Diagnostic: true),
+            new("MuPDF.NET.PDF4LLM", "llm-to-markdown-ocr-3", "[diag] ToMarkdown OCR on/off SVG fixture", a => Program.Test4LlmToMarkdownOcrFixture3(a), Diagnostic: true),
+            new("MuPDF.NET.PDF4LLM", "llm-pdf-reader-empty", "[diag] PDFMarkdownReader empty page", a => Program.Test4LlmPdfMarkdownReaderEmptyPage(a), Diagnostic: true),
+            new("MuPDF.NET.PDF4LLM", "llm-pdf-reader-missing-file", "[diag] PDFMarkdownReader missing file", a => Program.Test4LlmPdfMarkdownReaderMissingFile(a), Diagnostic: true),
         };
 
         private static readonly Dictionary<string, Sample> ByName = BuildIndex();

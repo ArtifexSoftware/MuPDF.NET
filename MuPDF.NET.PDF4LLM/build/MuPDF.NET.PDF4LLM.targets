@@ -1,0 +1,62 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <MuPDFNetPDF4LLMLayoutToolsDir Condition="Exists('$(MSBuildThisFileDirectory)layout\setup_layout_python.py')">$(MSBuildThisFileDirectory)layout\</MuPDFNetPDF4LLMLayoutToolsDir>
+    <MuPDFNetPDF4LLMLayoutToolsDir Condition="'$(MuPDFNetPDF4LLMLayoutToolsDir)' == '' and Exists('$(MSBuildThisFileDirectory)..\scripts\setup_layout_python.py')">$(MSBuildThisFileDirectory)..\scripts\</MuPDFNetPDF4LLMLayoutToolsDir>
+    <MuPDFNetPDF4LLMOcrModelPath Condition="Exists('$(MSBuildThisFileDirectory)..\ocr\ocr_decision_model.onnx')">$(MSBuildThisFileDirectory)..\ocr\ocr_decision_model.onnx</MuPDFNetPDF4LLMOcrModelPath>
+    <MuPDFNetPDF4LLMOcrModelPath Condition="'$(MuPDFNetPDF4LLMOcrModelPath)' == '' and Exists('$(MSBuildThisFileDirectory)ocr\ocr_decision_model.onnx')">$(MSBuildThisFileDirectory)ocr\ocr_decision_model.onnx</MuPDFNetPDF4LLMOcrModelPath>
+  </PropertyGroup>
+
+  <!-- Ship OCR decision model next to the app output directory. -->
+  <ItemGroup Condition="'$(MuPDFNetPDF4LLMOcrModelPath)' != ''">
+    <None Include="$(MuPDFNetPDF4LLMOcrModelPath)"
+              Link="ocr\ocr_decision_model.onnx"
+              CopyToOutputDirectory="PreserveNewest"
+              Visible="false" />
+  </ItemGroup>
+
+  <!-- RapidOCR PP-OCRv5 models (.NET 8+): copy next to app output for test hosts and consumers. -->
+  <PropertyGroup Condition="'$(TargetFrameworkIdentifier)' == '.NETCoreApp'">
+    <_MuPDFNetPDF4LLMNetCoreVersion>$([MSBuild]::GetTargetFrameworkVersion('$(TargetFramework)'))</_MuPDFNetPDF4LLMNetCoreVersion>
+    <_MuPDFNetPDF4LLMSupportsRapidOcr>$([MSBuild]::VersionGreaterThanOrEquals($(_MuPDFNetPDF4LLMNetCoreVersion), 8.0))</_MuPDFNetPDF4LLMSupportsRapidOcr>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(TargetFrameworkIdentifier)' != '.NETCoreApp'">
+    <_MuPDFNetPDF4LLMSupportsRapidOcr>false</_MuPDFNetPDF4LLMSupportsRapidOcr>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(_MuPDFNetPDF4LLMSupportsRapidOcr)' == 'true'">
+    <_MuPDFNetPDF4LLMRapidOcrModelsSource Condition="'$(PkgRapidOcrNet)' != ''">$(PkgRapidOcrNet)\models\v5</_MuPDFNetPDF4LLMRapidOcrModelsSource>
+    <_MuPDFNetPDF4LLMRapidOcrModelsSource Condition="'$(_MuPDFNetPDF4LLMRapidOcrModelsSource)' == '' and '$(NuGetPackageRoot)' != ''">$(NuGetPackageRoot)rapidocrnet\2.0.0\models\v5</_MuPDFNetPDF4LLMRapidOcrModelsSource>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(_MuPDFNetPDF4LLMSupportsRapidOcr)' == 'true' and Exists('$(_MuPDFNetPDF4LLMRapidOcrModelsSource)\ch_PP-OCRv5_mobile_det.onnx')">
+    <None Include="$(_MuPDFNetPDF4LLMRapidOcrModelsSource)\*.*"
+          Link="models\v5\%(Filename)%(Extension)"
+          CopyToOutputDirectory="PreserveNewest"
+          Visible="false" />
+  </ItemGroup>
+
+  <!-- Opt-in: dotnet msbuild -t:MuPDFNetPDF4LLMSetupLayoutPython -->
+  <Target Name="MuPDFNetPDF4LLMSetupLayoutPython">
+    <Error Condition="!Exists('$(MuPDFNetPDF4LLMLayoutToolsDir)setup_layout_python.py')"
+           Text="MuPDF.NET.PDF4LLM layout setup scripts are missing from the NuGet package ($(MuPDFNetPDF4LLMLayoutToolsDir))." />
+    <Exec Condition="'$(OS)' == 'Windows_NT'"
+          Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MuPDFNetPDF4LLMLayoutToolsDir)setup_layout_python.ps1&quot;" />
+    <!-- Invoke Python directly on Unix — avoids CRLF issues in packed .sh from Windows builds. -->
+    <Exec Condition="'$(OS)' != 'Windows_NT'"
+          Command="python3 &quot;$(MuPDFNetPDF4LLMLayoutToolsDir)setup_layout_python.py&quot;"
+          StandardOutputImportance="High"
+          StandardErrorImportance="High" />
+  </Target>
+
+  <!-- Opt-in: dotnet msbuild -t:MuPDFNetPDF4LLMVerifyLayoutPython -->
+  <Target Name="MuPDFNetPDF4LLMVerifyLayoutPython">
+    <Error Condition="!Exists('$(MuPDFNetPDF4LLMLayoutToolsDir)setup_layout_python.py')"
+           Text="MuPDF.NET.PDF4LLM layout setup scripts are missing from the NuGet package ($(MuPDFNetPDF4LLMLayoutToolsDir))." />
+    <Exec Condition="'$(OS)' == 'Windows_NT'"
+          Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MuPDFNetPDF4LLMLayoutToolsDir)setup_layout_python.ps1&quot; --verify-only"
+          StandardOutputImportance="High"
+          StandardErrorImportance="High" />
+    <Exec Condition="'$(OS)' != 'Windows_NT'"
+          Command="python3 &quot;$(MuPDFNetPDF4LLMLayoutToolsDir)setup_layout_python.py&quot; --verify-only"
+          StandardOutputImportance="High"
+          StandardErrorImportance="High" />
+  </Target>
+</Project>
