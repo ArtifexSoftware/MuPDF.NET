@@ -19,6 +19,7 @@ namespace MuPDF.NET
         private mupdf.PdfAnnot _nativeWidget;
         private bool _disposed;
         private bool _insertMode;
+        private int _xref;
 
         public Page Parent { get; internal set; }
         internal Annot BoundAnnot { get; private set; }
@@ -135,8 +136,10 @@ namespace MuPDF.NET
             {
                 if (_insertMode)
                     return InsertFieldName ?? "";
-                var name = mupdf.mupdf.pdf_load_field_name(mupdf.mupdf.pdf_annot_obj(_nativeWidget));
-                return name ?? "";
+                // pdf_load_field_name returns a C char* that SWIG never frees.
+                // pdf_load_field_name2 copies into std::string so the native buffer is released.
+                using var annotObj = mupdf.mupdf.pdf_annot_obj(_nativeWidget);
+                return mupdf.mupdf.pdf_load_field_name2(annotObj) ?? "";
             }
             set
             {
@@ -154,7 +157,8 @@ namespace MuPDF.NET
             {
                 if (_insertMode)
                     return InsertFieldLabel ?? "";
-                return GetInheritableLabel(mupdf.mupdf.pdf_annot_obj(_nativeWidget)) ?? "";
+                using var annotObj = mupdf.mupdf.pdf_annot_obj(_nativeWidget);
+                return GetInheritableLabel(annotObj) ?? "";
             }
             set
             {
@@ -178,7 +182,8 @@ namespace MuPDF.NET
             {
                 if (_insertMode)
                     return InsertFieldValue ?? "";
-                return mupdf.mupdf.pdf_field_value(mupdf.mupdf.pdf_annot_obj(_nativeWidget)) ?? "";
+                using var annotObj = mupdf.mupdf.pdf_annot_obj(_nativeWidget);
+                return mupdf.mupdf.pdf_field_value(annotObj) ?? "";
             }
             set => SetFieldValue(value);
         }
@@ -204,15 +209,19 @@ namespace MuPDF.NET
                 if (_insertMode)
                     return InsertChoiceValues ?? new List<string>();
                 var result = new List<string>();
-                var obj = mupdf.mupdf.pdf_annot_obj(_nativeWidget);
-                var opt = mupdf.mupdf.pdf_dict_get_inheritable(obj, mupdf.mupdf.pdf_new_name("Opt"));
+                using var obj = mupdf.mupdf.pdf_annot_obj(_nativeWidget);
+                using var optKey = mupdf.mupdf.pdf_new_name("Opt");
+                using var opt = mupdf.mupdf.pdf_dict_get_inheritable(obj, optKey);
                 if (opt.m_internal == null) return result;
                 int n = mupdf.mupdf.pdf_array_len(opt);
                 for (int i = 0; i < n; i++)
                 {
-                    var item = mupdf.mupdf.pdf_array_get(opt, i);
+                    using var item = mupdf.mupdf.pdf_array_get(opt, i);
                     if (mupdf.mupdf.pdf_is_array(item) != 0)
-                        result.Add(mupdf.mupdf.pdf_to_text_string(mupdf.mupdf.pdf_array_get(item, 1)));
+                    {
+                        using var nested = mupdf.mupdf.pdf_array_get(item, 1);
+                        result.Add(mupdf.mupdf.pdf_to_text_string(nested));
+                    }
                     else
                         result.Add(mupdf.mupdf.pdf_to_text_string(item));
                 }
@@ -285,7 +294,8 @@ namespace MuPDF.NET
             {
                 if (_insertMode)
                     return InsertFieldFlags ?? 0;
-                return mupdf.mupdf.pdf_field_flags(mupdf.mupdf.pdf_annot_obj(_nativeWidget));
+                using var annotObj = mupdf.mupdf.pdf_annot_obj(_nativeWidget);
+                return mupdf.mupdf.pdf_field_flags(annotObj);
             }
             set => InsertFieldFlags = value;
         }
@@ -396,15 +406,15 @@ namespace MuPDF.NET
             {
                 if (_insertMode)
                     return "";
-                var dv = mupdf.mupdf.pdf_dict_get_text_string(mupdf.mupdf.pdf_annot_obj(_nativeWidget),
-                    mupdf.mupdf.pdf_new_name("DV"));
+                using var annotObj = mupdf.mupdf.pdf_annot_obj(_nativeWidget);
+                using var dvKey = mupdf.mupdf.pdf_new_name("DV");
+                var dv = mupdf.mupdf.pdf_dict_get_text_string(annotObj, dvKey);
                 return dv ?? "";
             }
         }
 
         /// <summary>PDF object xref of this widget.</summary>
-        public int Xref =>
-            _insertMode ? 0 : mupdf.mupdf.pdf_to_num(mupdf.mupdf.pdf_annot_obj(_nativeWidget));
+        public int Xref => _insertMode ? 0 : _xref;
 
         /// <summary>Check if field is read only.</summary>
         public bool IsReadOnly => (FieldFlags & 1) != 0;
@@ -419,8 +429,9 @@ namespace MuPDF.NET
             {
                 if (_insertMode)
                     return InsertTextMaxLen;
-                return mupdf.mupdf.pdf_dict_get_int(mupdf.mupdf.pdf_annot_obj(_nativeWidget),
-                    mupdf.mupdf.pdf_new_name("MaxLen"));
+                using var annotObj = mupdf.mupdf.pdf_annot_obj(_nativeWidget);
+                using var key = mupdf.mupdf.pdf_new_name("MaxLen");
+                return mupdf.mupdf.pdf_dict_get_int(annotObj, key);
             }
             set
             {
@@ -467,8 +478,9 @@ namespace MuPDF.NET
             {
                 if (_insertMode || FieldType != (int)WidgetType.Signature)
                     return false;
-                var obj = mupdf.mupdf.pdf_annot_obj(_nativeWidget);
-                var v = mupdf.mupdf.pdf_dict_get(obj, mupdf.mupdf.pdf_new_name("V"));
+                using var obj = mupdf.mupdf.pdf_annot_obj(_nativeWidget);
+                using var vKey = mupdf.mupdf.pdf_new_name("V");
+                using var v = mupdf.mupdf.pdf_dict_get(obj, vKey);
                 return v.m_internal != null && mupdf.mupdf.pdf_is_null(v) == 0;
             }
         }
@@ -481,7 +493,12 @@ namespace MuPDF.NET
                 if (_insertMode)
                     return null;
                 var next = mupdf.mupdf.pdf_next_widget(_nativeWidget);
-                return next.m_internal != null ? new Widget(next, Parent) : null;
+                if (next.m_internal == null)
+                {
+                    next.Dispose();
+                    return null;
+                }
+                return new Widget(next, Parent);
             }
         }
 
@@ -769,7 +786,8 @@ namespace MuPDF.NET
 
             if (!_insertMode && _nativeWidget?.m_internal != null)
             {
-                var onstate = mupdf.mupdf.pdf_button_field_on_state(mupdf.mupdf.pdf_annot_obj(_nativeWidget));
+                using var annotObj = mupdf.mupdf.pdf_annot_obj(_nativeWidget);
+                using var onstate = mupdf.mupdf.pdf_button_field_on_state(annotObj);
                 if (onstate.m_internal != null)
                 {
                     string name = mupdf.mupdf.pdf_to_name(onstate);
@@ -835,12 +853,14 @@ namespace MuPDF.NET
         public void Reset()
         {
             // TOOLS._reset_widget(self._annot)
-            var obj = mupdf.mupdf.pdf_annot_obj(_nativeWidget);
-            var dv = mupdf.mupdf.pdf_dict_get(obj, mupdf.mupdf.pdf_new_name("DV"));
+            using var obj = mupdf.mupdf.pdf_annot_obj(_nativeWidget);
+            using var dvKey = mupdf.mupdf.pdf_new_name("DV");
+            using var dv = mupdf.mupdf.pdf_dict_get(obj, dvKey);
+            using var vKey = mupdf.mupdf.pdf_new_name("V");
             if (dv.m_internal != null)
-                mupdf.mupdf.pdf_dict_put(obj, mupdf.mupdf.pdf_new_name("V"), dv);
+                mupdf.mupdf.pdf_dict_put(obj, vKey, dv);
             else
-                mupdf.mupdf.pdf_dict_del(obj, mupdf.mupdf.pdf_new_name("V"));
+                mupdf.mupdf.pdf_dict_del(obj, vKey);
             mupdf.mupdf.pdf_update_annot(_nativeWidget);
         }
 
@@ -855,17 +875,19 @@ namespace MuPDF.NET
 
         private string GetTopLevelScript()
         {
-            var obj = mupdf.mupdf.pdf_annot_obj(_nativeWidget);
-            var action = mupdf.mupdf.pdf_dict_get(obj, mupdf.mupdf.pdf_new_name("A"));
+            using var obj = mupdf.mupdf.pdf_annot_obj(_nativeWidget);
+            using var key = mupdf.mupdf.pdf_new_name("A");
+            using var action = mupdf.mupdf.pdf_dict_get(obj, key);
             return Helpers.JmGetScript(action);
         }
 
         private string GetScript(string trigger)
         {
-            var obj = mupdf.mupdf.pdf_annot_obj(_nativeWidget);
-            var aa = mupdf.mupdf.pdf_dict_get(obj, mupdf.mupdf.pdf_new_name("AA"));
+            using var obj = mupdf.mupdf.pdf_annot_obj(_nativeWidget);
+            using var aaKey = mupdf.mupdf.pdf_new_name("AA");
+            using var aa = mupdf.mupdf.pdf_dict_get(obj, aaKey);
             if (aa.m_internal == null) return null;
-            var action = mupdf.mupdf.pdf_dict_gets(aa, trigger);
+            using var action = mupdf.mupdf.pdf_dict_gets(aa, trigger);
             return Helpers.JmGetScript(action);
         }
 
@@ -874,7 +896,8 @@ namespace MuPDF.NET
         {
             if (_nativeWidget?.m_internal == null)
                 return;
-            var annotObj = mupdf.mupdf.pdf_annot_obj(_nativeWidget);
+            using var annotObj = mupdf.mupdf.pdf_annot_obj(_nativeWidget);
+            _xref = mupdf.mupdf.pdf_to_num(annotObj);
             InsertFieldType = (WidgetType)FieldType;
             var r = mupdf.mupdf.pdf_bound_annot(_nativeWidget);
             InsertRect = new Rect(r.x0, r.y0, r.x1, r.y1);
@@ -883,22 +906,31 @@ namespace MuPDF.NET
             InsertFieldValue = FieldValue;
             InsertFieldFlags = FieldFlags;
             InsertBorderStyle = mupdf.mupdf.pdf_field_border_style(annotObj) ?? "S";
-            InsertBorderWidth = mupdf.mupdf.pdf_to_real(
-                Helpers.PdfDictGetl(annotObj, mupdf.mupdf.pdf_new_name("BS"), mupdf.mupdf.pdf_new_name("W")));
-            if (InsertBorderWidth == 0)
-                InsertBorderWidth = 1;
-
-            var dashObj = Helpers.PdfDictGetl(annotObj, mupdf.mupdf.pdf_new_name("BS"), mupdf.mupdf.pdf_new_name("D"));
-            if (dashObj.m_internal != null && mupdf.mupdf.pdf_is_array(dashObj) != 0)
+            using (var widthObj = mupdf.mupdf.pdf_dict_getp(annotObj, "BS/W"))
             {
-                int n = mupdf.mupdf.pdf_array_len(dashObj);
-                InsertBorderDashes = new List<int>(n);
-                for (int i = 0; i < n; i++)
-                    InsertBorderDashes.Add(mupdf.mupdf.pdf_to_int(mupdf.mupdf.pdf_array_get(dashObj, i)));
+                InsertBorderWidth = mupdf.mupdf.pdf_to_real(widthObj);
+                if (InsertBorderWidth == 0)
+                    InsertBorderWidth = 1;
             }
 
-            InsertFillColor = ReadColorArray(Helpers.PdfDictGetl(annotObj, mupdf.mupdf.pdf_new_name("MK"), mupdf.mupdf.pdf_new_name("BG")));
-            InsertBorderColor = ReadColorArray(Helpers.PdfDictGetl(annotObj, mupdf.mupdf.pdf_new_name("MK"), mupdf.mupdf.pdf_new_name("BC")));
+            using (var dashObj = mupdf.mupdf.pdf_dict_getp(annotObj, "BS/D"))
+            {
+                if (dashObj.m_internal != null && mupdf.mupdf.pdf_is_array(dashObj) != 0)
+                {
+                    int n = mupdf.mupdf.pdf_array_len(dashObj);
+                    InsertBorderDashes = new List<int>(n);
+                    for (int i = 0; i < n; i++)
+                    {
+                        using var item = mupdf.mupdf.pdf_array_get(dashObj, i);
+                        InsertBorderDashes.Add(mupdf.mupdf.pdf_to_int(item));
+                    }
+                }
+            }
+
+            using (var bg = mupdf.mupdf.pdf_dict_getp(annotObj, "MK/BG"))
+                InsertFillColor = ReadColorArray(bg);
+            using (var bc = mupdf.mupdf.pdf_dict_getp(annotObj, "MK/BC"))
+                InsertBorderColor = ReadColorArray(bc);
             InsertChoiceValues = new List<string>(ChoiceValues);
             InsertTextMaxLen = MaxLen;
             InsertScript = GetTopLevelScript();
@@ -909,10 +941,12 @@ namespace MuPDF.NET
             InsertScriptBlur = GetScript("Bl");
             InsertScriptFocus = GetScript("Fo");
 
-            var da = mupdf.mupdf.pdf_to_text_string(
-                mupdf.mupdf.pdf_dict_get_inheritable(annotObj, mupdf.mupdf.pdf_new_name("DA"))) ?? "";
-            InsertTextDa = da;
-            ParseDa(da);
+            using (var daKey = mupdf.mupdf.pdf_new_name("DA"))
+            using (var daObj = mupdf.mupdf.pdf_dict_get_inheritable(annotObj, daKey))
+            {
+                InsertTextDa = mupdf.mupdf.pdf_to_text_string(daObj) ?? "";
+                ParseDa(InsertTextDa);
+            }
         }
 
         private static List<float> ToFloatList(IList<float> value)
@@ -936,36 +970,44 @@ namespace MuPDF.NET
             int n = mupdf.mupdf.pdf_array_len(obj);
             var col = new List<float>(n);
             for (int i = 0; i < n; i++)
-                col.Add((float)mupdf.mupdf.pdf_to_real(mupdf.mupdf.pdf_array_get(obj, i)));
+            {
+                using var item = mupdf.mupdf.pdf_array_get(obj, i);
+                col.Add((float)mupdf.mupdf.pdf_to_real(item));
+            }
             return col;
         }
 
-        private static string GetInheritableLabel(mupdf.PdfObj node)
+        private static string GetInheritableLabel(mupdf.PdfObj start)
         {
-            var tu = mupdf.mupdf.pdf_new_name("TU");
-            var parent = mupdf.mupdf.pdf_new_name("Parent");
-            var slow = node;
-            int halfbeat = 11;
-            while (node.m_internal != null)
+            using var tu = mupdf.mupdf.pdf_new_name("TU");
+            using var parent = mupdf.mupdf.pdf_new_name("Parent");
+            mupdf.PdfObj node = start;
+            mupdf.PdfObj owned = null;
+            try
             {
-                var val = mupdf.mupdf.pdf_dict_get(node, tu);
-                if (val.m_internal != null)
+                int depth = 0;
+                while (node.m_internal != null && depth++ < 32)
                 {
-                    var label = mupdf.mupdf.pdf_to_text_string(val);
-                    if (!string.IsNullOrEmpty(label))
-                        return label;
+                    using (var val = mupdf.mupdf.pdf_dict_get(node, tu))
+                    {
+                        if (val.m_internal != null)
+                        {
+                            var label = mupdf.mupdf.pdf_to_text_string(val);
+                            if (!string.IsNullOrEmpty(label))
+                                return label;
+                        }
+                    }
+                    var next = mupdf.mupdf.pdf_dict_get(node, parent);
+                    owned?.Dispose();
+                    owned = next;
+                    node = next;
                 }
-                node = mupdf.mupdf.pdf_dict_get(node, parent);
-                if (node.m_internal == slow.m_internal)
-                    break;
-                halfbeat--;
-                if (halfbeat == 0)
-                {
-                    slow = mupdf.mupdf.pdf_dict_get(slow, parent);
-                    halfbeat = 2;
-                }
+                return null;
             }
-            return null;
+            finally
+            {
+                owned?.Dispose();
+            }
         }
 
         /// <summary>
@@ -976,7 +1018,7 @@ namespace MuPDF.NET
             if (Parent?.Parent == null)
                 return;
             var doc = Parent.Parent;
-            var annotObj = mupdf.mupdf.pdf_annot_obj(_nativeWidget);
+            using var annotObj = mupdf.mupdf.pdf_annot_obj(_nativeWidget);
             var (_, kidsValue) = doc.XrefGetKey(Xref, "Parent/Kids");
             if (kidsValue == null || !kidsValue.StartsWith("["))
                 return;
@@ -1035,10 +1077,14 @@ namespace MuPDF.NET
         /// <summary>Legacy no-argument DA parser.</summary>
         public void ParseDa() => ParseDa(InsertTextDa);
 
-        /// <summary>Releases managed wrapper state (native object owned by the page).</summary>
+        /// <summary>Releases the native annot wrapper (page still owns the annot).</summary>
         public void Dispose()
         {
-            if (!_disposed) { _disposed = true; }
+            if (_disposed)
+                return;
+            _disposed = true;
+            _nativeWidget?.Dispose();
+            _nativeWidget = null;
             GC.SuppressFinalize(this);
         }
 

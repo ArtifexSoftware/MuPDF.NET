@@ -1,5 +1,14 @@
 # Changelog
 
+### [3.28.2.2] - 2026-09-16
+
+- Native leak in `Document.GetKeyXref` / `XrefGetKey` (#256 follow-up): dispose owning `PdfObj` wrappers from `pdf_load_object` / `pdf_dict_getp` instead of `PdfObjBorrowed`. Same for `XrefGetKeys`.
+- Widget enumeration: dispose owning `pdf_annot_obj` / `pdf_new_name` / parent-walk wrappers, cache `Xref`, and drop the `PdfAnnot` wrapper in `Dispose`.
+
+### [3.28.2.1] - 2026-09-15
+
+- Native leaks in widget enumeration and `TextPage.Search` (#256): use `pdf_load_field_name2` for field names, dispose owning `PdfObj` wrappers when reading widget dict entries, and dispose C++ `FzStextBlock` wrappers (`BorrowStextBlock` / `FirstStextLinePtr` / `TextPage.Dispose`).
+
 ### [3.28.2] - 2026-08-14
 
 Aligned MuPDF.NET with **PyMuPDF 1.28.2** and **MuPDF 1.28.2** (`MuPDF.NativeAssets` / `ArtifexMuPDFVersion` **1.28.2**; package **3.28.2**).

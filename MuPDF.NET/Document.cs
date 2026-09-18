@@ -2905,14 +2905,28 @@ namespace MuPDF.NET
             EnsureNotClosed();
             EnsureValidXrefDict(xref);
             var pdf = NativePdfDocument;
-            var obj = xref > 0 ? mupdf.mupdf.pdf_load_object(pdf, xref) : mupdf.mupdf.pdf_trailer(pdf);
+            using var obj = xref > 0 ? mupdf.mupdf.pdf_load_object(pdf, xref) : mupdf.mupdf.pdf_trailer(pdf);
             if (obj.m_internal == null) return ("null", "null");
-            // Prefer path lookup; fall back to direct name.
-            var sub = Helpers.PdfDictGetp(obj, key);
-            if (sub.m_internal == null && !string.IsNullOrEmpty(key) && key[0] != '/')
-                sub = Helpers.PdfDictGet(obj, mupdf.mupdf.pdf_new_name(key));
-            if (sub.m_internal == null) return ("null", "null");
 
+            // Owning SWIG wrappers: pdf_dict_getp / pdf_dict_get keep the result.
+            // PdfObjBorrowed used to strip ownership without pdf_drop_obj, leaking one
+            // keep per distinct key (same extra keep on a later call does not grow RSS).
+            using var subPath = mupdf.mupdf.pdf_dict_getp(obj, key);
+            if (subPath.m_internal != null)
+                return PdfObjKeyTypeAndValue(subPath);
+
+            if (string.IsNullOrEmpty(key) || key[0] == '/')
+                return ("null", "null");
+
+            using var nameKey = mupdf.mupdf.pdf_new_name(key);
+            using var subName = mupdf.mupdf.pdf_dict_get(obj, nameKey);
+            if (subName.m_internal == null)
+                return ("null", "null");
+            return PdfObjKeyTypeAndValue(subName);
+        }
+
+        private static (string type, string value) PdfObjKeyTypeAndValue(mupdf.PdfObj sub)
+        {
             if (mupdf.mupdf.pdf_is_indirect(sub) != 0) return ("xref", $"{mupdf.mupdf.pdf_to_num(sub)} 0 R");
             if (mupdf.mupdf.pdf_is_int(sub) != 0) return ("int", $"{mupdf.mupdf.pdf_to_int(sub)}");
             if (mupdf.mupdf.pdf_is_real(sub) != 0) return ("float", PdfObjToKeyValueString(sub));
@@ -2935,11 +2949,14 @@ namespace MuPDF.NET
             EnsureNotClosed();
             EnsureValidXrefDict(xref);
             var pdf = NativePdfDocument;
-            var obj = xref > 0 ? mupdf.mupdf.pdf_load_object(pdf, xref) : mupdf.mupdf.pdf_trailer(pdf);
+            using var obj = xref > 0 ? mupdf.mupdf.pdf_load_object(pdf, xref) : mupdf.mupdf.pdf_trailer(pdf);
             int n = mupdf.mupdf.pdf_dict_len(obj);
             var rc = new List<string>(n);
             for (int i = 0; i < n; i++)
-                rc.Add(mupdf.mupdf.pdf_to_name(Helpers.PdfDictGetKey(obj, i)));
+            {
+                using var keyObj = mupdf.mupdf.pdf_dict_get_key(obj, i);
+                rc.Add(mupdf.mupdf.pdf_to_name(keyObj));
+            }
             return rc;
         }
 

@@ -477,7 +477,12 @@ namespace MuPDF.NET
                 try
                 {
                     var w = mupdf.mupdf.pdf_first_widget(NativePdfPage);
-                    return w.m_internal != null ? new Widget(w, this) : null;
+                    if (w.m_internal == null)
+                    {
+                        w.Dispose();
+                        return null;
+                    }
+                    return new Widget(w, this);
                 }
                 catch { return null; }
             }

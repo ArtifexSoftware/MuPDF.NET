@@ -3284,33 +3284,25 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Non-owning <see cref="mupdf.FzStextBlock"/> view of a block inside a live stext page.
-        /// Do not use <c>new FzStextBlock(internal_)</c> — that wrapper is owning and its finalizer
-        /// can delete in-page data while other code still walks lines/chars.
+        /// C++ wrapper around an in-page <c>fz_stext_block</c>. Owns the wrapper only:
+        /// <c>~FzStextBlock</c> does not drop in-page stext (debug instance counter / default).
+        /// Callers must <see cref="IDisposable.Dispose"/> the wrapper.
         /// </summary>
         internal static mupdf.FzStextBlock BorrowStextBlock(mupdf.fz_stext_block block)
         {
             if (block == null)
                 return null;
-            global::System.IntPtr cPtr = mupdf.mupdfPINVOKE.new_FzStextBlock__SWIG_2(mupdf.fz_stext_block.getCPtr(block));
-            if (mupdf.mupdfPINVOKE.SWIGPendingException.Pending)
-                throw mupdf.mupdfPINVOKE.SWIGPendingException.Retrieve();
-            return new mupdf.FzStextBlock(cPtr, false);
+            return new mupdf.FzStextBlock(block);
         }
 
         /// <summary>First line of a text block; then walk <c>line.next</c>.</summary>
         internal static mupdf.fz_stext_line FirstStextLinePtr(mupdf.fz_stext_block block)
         {
-            var wrap = BorrowStextBlock(block);
-            var iter = wrap.begin();
-            try
-            {
-                return iter.__deref__()?.m_internal;
-            }
-            finally
-            {
-                iter.Dispose();
-            }
+            using var wrap = BorrowStextBlock(block);
+            if (wrap == null)
+                return null;
+            using var iter = wrap.begin();
+            return iter.__deref__()?.m_internal;
         }
 
         /// <summary>First line via a cached non-owning block view (see <see cref="TextPage"/>).</summary>
@@ -5016,7 +5008,7 @@ namespace MuPDF.NET
             // field name
             if (!string.IsNullOrEmpty(widget.InsertFieldName))
             {
-                var oldName = mupdf.mupdf.pdf_load_field_name(annotObj);
+                var oldName = mupdf.mupdf.pdf_load_field_name2(annotObj);
                 if (widget.InsertFieldName != oldName)
                     PdfDictPutTextString(annotObj, "T", widget.InsertFieldName);
             }
