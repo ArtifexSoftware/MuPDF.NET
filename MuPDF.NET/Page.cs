@@ -329,8 +329,9 @@ namespace MuPDF.NET
             {
                 if (_pageNumber >= 0)
                     return _pageNumber;
+                using var pageObj = NativePdfPage.obj();
                 return mupdf.mupdf.pdf_lookup_page_number(
-                    RequireParent().NativePdfDocument, NativePdfPage.obj());
+                    RequireParent().NativePdfDocument, pageObj);
             }
         }
         /// <summary>
@@ -340,7 +341,7 @@ namespace MuPDF.NET
         {
             get
             {
-                var r = mupdf.mupdf.fz_bound_page(NativePage);
+                using var r = mupdf.mupdf.fz_bound_page(NativePage);
                 return new Rect(r.x0, r.y0, r.x1, r.y1);
             }
         }
@@ -669,8 +670,8 @@ namespace MuPDF.NET
             var pdfPage = NativePdfPage;
             var fzPoint = pos.ToFzPoint();
             var annot = Helpers.PdfCreateAnnot(pdfPage, mupdf.pdf_annot_type.PDF_ANNOT_TEXT);
-            var r0 = mupdf.mupdf.pdf_annot_rect(annot);
-            var r = mupdf.mupdf.fz_make_rect(fzPoint.x, fzPoint.y, fzPoint.x + (r0.x1 - r0.x0), fzPoint.y + (r0.y1 - r0.y0));
+            using var r0 = mupdf.mupdf.pdf_annot_rect(annot);
+            using var r = mupdf.mupdf.fz_make_rect(fzPoint.x, fzPoint.y, fzPoint.x + (r0.x1 - r0.x0), fzPoint.y + (r0.y1 - r0.y0));
             mupdf.mupdf.pdf_set_annot_rect(annot, r);
             mupdf.mupdf.pdf_set_annot_contents(annot, text);
             if (!string.IsNullOrEmpty(icon))
@@ -972,8 +973,8 @@ namespace MuPDF.NET
             {
                 // p = JM_point_from_py(point)
                 mupdf.FzPoint p = Helpers.JM_point_from_py(point);
-                mupdf.FzRect r = mupdf.mupdf.pdf_annot_rect(annot);
-                r = new mupdf.FzRect(p.x, p.y, p.x + r.x1 - r.x0, p.y + r.y1 - r.y0);
+                using var r0 = mupdf.mupdf.pdf_annot_rect(annot);
+                using var r = new mupdf.FzRect(p.x, p.y, p.x + r0.x1 - r0.x0, p.y + r0.y1 - r0.y0);
                 mupdf.mupdf.pdf_set_annot_rect(annot, r);
             }
             mupdf.mupdf.pdf_update_annot(annot);
@@ -1132,8 +1133,8 @@ namespace MuPDF.NET
                 // raise TypeError( MSG_BAD_BUFFER)
                 throw new ArgumentException(Constants.MSG_BAD_BUFFER);
             mupdf.PdfAnnot annot = Helpers.PdfCreateAnnot(page, mupdf.pdf_annot_type.PDF_ANNOT_FILE_ATTACHMENT);
-            mupdf.FzRect r = mupdf.mupdf.pdf_annot_rect(annot);
-            r = mupdf.mupdf.fz_make_rect(p.x, p.y, p.x + r.x1 - r.x0, p.y + r.y1 - r.y0);
+            using var r0 = mupdf.mupdf.pdf_annot_rect(annot);
+            using var r = mupdf.mupdf.fz_make_rect(p.x, p.y, p.x + r0.x1 - r0.x0, p.y + r0.y1 - r0.y0);
             mupdf.mupdf.pdf_set_annot_rect(annot, r);
             int flags = mupdf.mupdf.PDF_ANNOT_IS_PRINT;
             mupdf.mupdf.pdf_set_annot_flags(annot, flags);
@@ -2036,28 +2037,24 @@ namespace MuPDF.NET
         {
             // CheckParent(self)
             RequireParent();
-            var mediabox = mupdf.mupdf.fz_bound_page(NativePage);
-            // ctm = JM_matrix_from_py(matrix)
-            var ctm = Helpers.MatrixToFz(matrix);
-            var tbounds = mediabox;
+            using var mediabox = mupdf.mupdf.fz_bound_page(NativePage);
+            using var ctm = Helpers.MatrixToFz(matrix);
             int text_option = textAsPath == 1 ? mupdf.mupdf.FZ_SVG_TEXT_AS_PATH : mupdf.mupdf.FZ_SVG_TEXT_AS_TEXT;
-            tbounds = mupdf.mupdf.fz_transform_rect(tbounds, ctm);
+            using var tbounds = mupdf.mupdf.fz_transform_rect(mediabox, ctm);
 
-            var res = mupdf.mupdf.fz_new_buffer(1024);
-            var output = new mupdf.FzOutput(res);
-            var dev = mupdf.mupdf.fz_new_svg_device(
+            using var res = mupdf.mupdf.fz_new_buffer(1024);
+            using var output = new mupdf.FzOutput(res);
+            using var cookie = new mupdf.FzCookie();
+            using var dev = mupdf.mupdf.fz_new_svg_device(
                 output,
                 tbounds.x1 - tbounds.x0,  // width
                 tbounds.y1 - tbounds.y0,  // height
                 text_option,
                 1);
-            mupdf.mupdf.fz_run_page(NativePage, dev, ctm, new mupdf.FzCookie());
+            mupdf.mupdf.fz_run_page(NativePage, dev, ctm, cookie);
             mupdf.mupdf.fz_close_device(dev);
-            // out.fz_close_output()
             output.fz_close_output();
-            // text = JM_EscapeStrFromBuffer(res)
-            string text = Helpers.JmEscapeStrFromBuffer(res);
-            return text;
+            return Helpers.JmEscapeStrFromBuffer(res);
         }
 
         // ─── Text Extraction ────────────────────────────────────────────
@@ -2096,20 +2093,27 @@ namespace MuPDF.NET
                 rect = new mupdf.FzRect(mupdf.FzRect.Fixed.Fixed_INFINITE);
             else
                 rect = clip.ToFzRect();
-            using var ctm = matrix.ToFzMatrix();
-            using var cookie = new mupdf.FzCookie();
-            var stPage = new mupdf.FzStextPage(rect);
-            var dev = stPage.fz_new_stext_device(options);
             try
             {
-                mupdf.mupdf.fz_run_page(page, dev, ctm, cookie);
-                mupdf.mupdf.fz_close_device(dev);
+                using var ctm = matrix.ToFzMatrix();
+                using var cookie = new mupdf.FzCookie();
+                var stPage = new mupdf.FzStextPage(rect);
+                var dev = stPage.fz_new_stext_device(options);
+                try
+                {
+                    mupdf.mupdf.fz_run_page(page, dev, ctm, cookie);
+                    mupdf.mupdf.fz_close_device(dev);
+                }
+                finally
+                {
+                    dev?.Dispose();
+                }
+                return stPage;
             }
             finally
             {
-                dev?.Dispose();
+                rect?.Dispose();
             }
-            return stPage;
         }
 
         private TextPage BuildTextPage(Rect clip, int flags, Matrix matrix)
@@ -4897,10 +4901,15 @@ namespace MuPDF.NET
             var page = NativePage;
             var rc = new List<Dictionary<string, object>>();
             var dev = new JM_new_texttrace_device(rc);
-            var prect = mupdf.mupdf.fz_bound_page(page);
+            using var prect = mupdf.mupdf.fz_bound_page(page);
             dev.ptm = new mupdf.FzMatrix(1, 0, 0, -1, 0, prect.y1);
-            mupdf.mupdf.fz_run_page(page, dev, new mupdf.FzMatrix(), new mupdf.FzCookie());
-            mupdf.mupdf.fz_close_device(dev);
+            using (dev)
+            {
+                using var ctm = new mupdf.FzMatrix();
+                using var cookie = new mupdf.FzCookie();
+                mupdf.mupdf.fz_run_page(page, dev, ctm, cookie);
+                mupdf.mupdf.fz_close_device(dev);
+            }
             if (old_rotation != 0)
                 SetRotation(old_rotation);
             return rc;
@@ -5358,7 +5367,8 @@ namespace MuPDF.NET
                 var pdfPage = NativePdfPage;
                 if (pdfPage?.m_internal != null)
                 {
-                    var r = Helpers.JmMediabox(pdfPage.obj());
+                    using var pageObj = pdfPage.obj();
+                    using var r = Helpers.JmMediabox(pageObj);
                     return new Rect(r.x0, r.y0, r.x1, r.y1);
                 }
             }
@@ -5373,7 +5383,8 @@ namespace MuPDF.NET
                 var pdfPage = NativePdfPage;
                 if (pdfPage?.m_internal != null)
                 {
-                    var r = Helpers.JmCropbox(pdfPage.obj());
+                    using var pageObj = pdfPage.obj();
+                    using var r = Helpers.JmCropbox(pageObj);
                     return new Rect(r.x0, r.y0, r.x1, r.y1);
                 }
             }
@@ -5386,10 +5397,11 @@ namespace MuPDF.NET
             try
             {
                 var pdfPage = NativePdfPage;
-                var box = mupdf.mupdf.pdf_dict_gets(pdfPage.obj(), name);
+                using var pageObj = pdfPage.obj();
+                using var box = mupdf.mupdf.pdf_dict_gets(pageObj, name);
                 if (box.m_internal != null)
                 {
-                    var r = mupdf.mupdf.pdf_to_rect(box);
+                    using var r = mupdf.mupdf.pdf_to_rect(box);
                     var mb = MediaBox;
                     return new Rect(r.x0, mb.Y1 - r.y1, r.x1, mb.Y1 - r.y0);
                 }
@@ -6170,11 +6182,13 @@ namespace MuPDF.NET
                 rc = new List<Dictionary<string, object>>();
                 dev = new JM_new_lineart_device_Device(rc, clips, method);
             }
-            var prect = mupdf.mupdf.fz_bound_page(page);
+            using var prect = mupdf.mupdf.fz_bound_page(page);
             dev.ptm = new mupdf.FzMatrix(1, 0, 0, -1, 0, prect.y1);
             using (dev)
             {
-                mupdf.mupdf.fz_run_page(page, dev, new mupdf.FzMatrix(), new mupdf.FzCookie());
+                using var ctm = new mupdf.FzMatrix();
+                using var cookie = new mupdf.FzCookie();
+                mupdf.mupdf.fz_run_page(page, dev, ctm, cookie);
                 mupdf.mupdf.fz_close_device(dev);
             }
             if (oldRotation != 0)

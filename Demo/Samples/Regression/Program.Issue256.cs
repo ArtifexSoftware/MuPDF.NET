@@ -5,12 +5,12 @@ namespace Demo
     internal partial class Program
     {
         /// <summary>
-        /// Issue #256 — widget enumeration, TextPage.Search, and GetKeyXref(AP/N)
-        /// must not leak native wrappers across open/close loops.
+        /// Issue #256 — widget enumeration, TextPage.Search, GetKeyXref(AP/N),
+        /// and Page.MediaBox (Search then MediaBox per widget).
         /// </summary>
         internal static void TestIssue256(string[] args)
         {
-            Console.WriteLine("\n=== issue-256: widgets / Search / GetKeyXref memory ===");
+            Console.WriteLine("\n=== issue-256: widgets / Search / GetKeyXref / MediaBox memory ===");
             Console.WriteLine("https://github.com/ArtifexSoftware/MuPDF.NET/issues/256");
 
             string[] rest = args ?? Array.Empty<string>();
@@ -32,15 +32,25 @@ namespace Demo
                 RunIssue256Mode("widgets", iterations, needle);
                 RunIssue256Mode("search", iterations, needle);
                 RunIssue256Mode("getkey10", iterations, needle);
+                RunIssue256Mode("mediabox", iterations, needle);
+                RunIssue256Mode("mediabox-once", iterations, needle);
+                RunIssue256Mode("mediabox-widget", iterations, needle);
                 return;
             }
 
             RunIssue256Mode(mode, iterations, needle);
         }
 
+        private static bool Issue256IsMediaBoxMode(string mode) =>
+            mode == "mediabox" || mode == "mediabox-once" || mode == "mediabox-widget";
+
         private static void RunIssue256Mode(string mode, int iterations, string needle)
         {
-            byte[] data = mode == "search" ? Issue256BuildTextPdf() : Issue256BuildWidgetPdf();
+            byte[] data = mode == "search"
+                ? Issue256BuildTextPdf()
+                : Issue256IsMediaBoxMode(mode)
+                    ? Issue256BuildFormAndTextPdf()
+                    : Issue256BuildWidgetPdf();
             Console.WriteLine($"--- {mode}  iterations={iterations}  pdfBytes={data.Length} ---");
 
             using (var probe = new Document(stream: data))
@@ -48,6 +58,8 @@ namespace Demo
                 Page page = probe[0];
                 if (mode == "search")
                     Issue256SearchOnce(page, needle);
+                else if (Issue256IsMediaBoxMode(mode))
+                    Issue256MediaBoxOnce(page, needle, mode);
                 else
                     Issue256WidgetsOnce(probe, page, mode);
                 page.Dispose();
@@ -58,20 +70,27 @@ namespace Demo
 
             for (int i = 1; i <= iterations; i++)
             {
-                using var doc = new Document(stream: data);
-                Page page = doc[0];
-                if (mode == "search")
-                    Issue256SearchPage(page, needle);
+                if (Issue256IsMediaBoxMode(mode))
+                {
+                    Issue256MediaBoxRepro(data, needle, mode);
+                }
                 else
-                    Issue256WidgetsPage(doc, page, mode);
-                page.Dispose();
-                doc.Close();
+                {
+                    using var doc = new Document(stream: data);
+                    Page page = doc[0];
+                    if (mode == "search")
+                        Issue256SearchPage(page, needle);
+                    else
+                        Issue256WidgetsPage(doc, page, mode);
+                    page.Dispose();
+                    doc.Close();
+                }
             }
 
             Issue256Stabilize();
             long endPrivate = Process.GetCurrentProcess().PrivateMemorySize64;
             Console.WriteLine(
-                $"  deltaPrivateKB={(endPrivate - startPrivate) / 1024}  (widgets/Search/GetKeyXref after dispose)");
+                $"  deltaPrivateKB={(endPrivate - startPrivate) / 1024}  (widgets/Search/GetKeyXref/MediaBox after dispose)");
         }
 
         private static void Issue256WidgetsOnce(Document doc, Page page, string mode)
@@ -159,6 +178,70 @@ namespace Demo
             }
         }
 
+        private static void Issue256MediaBoxOnce(Page page, string needle, string mode)
+        {
+            using TextPage tp = page.GetTextPage();
+            var hits = TextPage.Search(tp, needle, hitMax: 1);
+            Console.WriteLine($"  searchHits={hits.Count}  MediaBox={page.MediaBox}");
+            var widgets = page.GetWidgets().ToList();
+            try
+            {
+                Console.WriteLine($"  widgetsOnPage0={widgets.Count}  mode={mode}");
+                if (widgets.Count > 0)
+                    Console.WriteLine($"  first widget Rect={widgets[0].Rect}  intersects={page.MediaBox.Intersects(widgets[0].Rect)}");
+            }
+            finally
+            {
+                foreach (Widget w in widgets)
+                    w.Dispose();
+            }
+        }
+
+        /// <summary>
+        /// https://github.com/ArtifexSoftware/MuPDF.NET/issues/256#issuecomment-5728502983
+        /// </summary>
+        private static void Issue256MediaBoxRepro(byte[] data, string needle, string mode)
+        {
+            bool searchFirst = mode != "mediabox";
+            bool mediaBoxPerWidget = mode != "mediabox-once";
+
+            if (searchFirst)
+            {
+                using (var doc = new Document(stream: data))
+                {
+                    foreach (Page page in doc)
+                    {
+                        using TextPage tp = page.GetTextPage();
+                        var hits = TextPage.Search(tp, needle, hitMax: 1);
+                        if (hits.Count > 0)
+                            _ = page.Rect.Intersects(hits[0].Rect.Transform(page.RotationMatrix));
+                        page.Dispose();
+                    }
+                    doc.Close();
+                }
+            }
+
+            using (var doc = new Document(stream: data))
+            {
+                foreach (Page page in doc)
+                {
+                    if (mediaBoxPerWidget)
+                    {
+                        foreach (Widget w in page.GetWidgets())
+                            _ = page.MediaBox.Intersects(w.Rect);
+                    }
+                    else
+                    {
+                        Rect mb = page.MediaBox;
+                        foreach (Widget w in page.GetWidgets())
+                            _ = mb.Intersects(w.Rect);
+                    }
+                    page.Dispose();
+                }
+                doc.Close();
+            }
+        }
+
         private static void Issue256Stabilize()
         {
             GC.Collect();
@@ -194,6 +277,30 @@ namespace Demo
                 html.Append("<p>the quick brown fox jumps over the lazy dog ").Append(i).Append("</p>");
             html.Append("</body></html>");
             page.InsertHtmlbox(page.Rect, html.ToString());
+            return doc.Write();
+        }
+
+        private static byte[] Issue256BuildFormAndTextPdf()
+        {
+            using var doc = new Document();
+            Page page = doc.NewPage();
+            var html = new StringBuilder();
+            html.Append("<html><body>");
+            for (int i = 0; i < 40; i++)
+                html.Append("<p>the quick brown fox jumps over the lazy dog ").Append(i).Append("</p>");
+            html.Append("</body></html>");
+            page.InsertHtmlbox(page.Rect, html.ToString());
+            for (int i = 0; i < 8; i++)
+            {
+                var w = new Widget(page)
+                {
+                    FieldName = "text_" + i,
+                    FieldType = (int)WidgetType.Text,
+                    Rect = new Rect(50, 50 + i * 28, 400, 72 + i * 28),
+                    FieldValue = "value " + i,
+                };
+                page.AddWidget(w);
+            }
             return doc.Write();
         }
     }

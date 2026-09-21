@@ -263,7 +263,7 @@ namespace MuPDF.NET
             {
                 if (_insertMode)
                     return InsertRect;
-                var r = mupdf.mupdf.pdf_bound_annot(_nativeWidget);
+                using var r = mupdf.mupdf.pdf_bound_annot(_nativeWidget);
                 return new Rect(r.x0, r.y0, r.x1, r.y1);
             }
             set
@@ -589,7 +589,7 @@ namespace MuPDF.NET
                 InsertFieldName = FieldName;
             if (InsertRect.IsEmpty || InsertRect.IsInfinite)
             {
-                var r = mupdf.mupdf.pdf_bound_annot(_nativeWidget);
+                using var r = mupdf.mupdf.pdf_bound_annot(_nativeWidget);
                 InsertRect = new Rect(r.x0, r.y0, r.x1, r.y1);
             }
             if (InsertFieldType == WidgetType.RadioButton
@@ -691,33 +691,37 @@ namespace MuPDF.NET
             if (doc == null)
                 return false;
             var pdf = doc.NativePdfDocument;
-            var pdfWidget = mupdf.mupdf.pdf_load_object(pdf, Xref);
-            var parentObj = mupdf.mupdf.pdf_dict_get(pdfWidget, mupdf.mupdf.pdf_new_name("Parent"));
+            using var pdfWidget = mupdf.mupdf.pdf_load_object(pdf, Xref);
+            using var parentName = mupdf.mupdf.pdf_new_name("Parent");
+            using var parentObj = mupdf.mupdf.pdf_dict_get(pdfWidget, parentName);
             if (mupdf.mupdf.pdf_is_dict(parentObj) == 0)
                 return false;
 
             int flags = FieldFlags;
-            mupdf.mupdf.pdf_dict_put_int(parentObj, mupdf.mupdf.pdf_new_name("Ff"), flags);
+            using var ffName = mupdf.mupdf.pdf_new_name("Ff");
+            mupdf.mupdf.pdf_dict_put_int(parentObj, ffName, flags);
 
-            var kids = mupdf.mupdf.pdf_dict_get(parentObj, mupdf.mupdf.pdf_new_name("Kids"));
+            using var kidsName = mupdf.mupdf.pdf_new_name("Kids");
+            using var kids = mupdf.mupdf.pdf_dict_get(parentObj, kidsName);
             if (mupdf.mupdf.pdf_is_array(kids) == 0)
             {
                 Helpers.message("warning: malformed PDF, Parent has no Kids array");
                 return false;
             }
             int n = mupdf.mupdf.pdf_array_len(kids);
+            using var subtypeName = mupdf.mupdf.pdf_new_name("Subtype");
             for (int i = 0; i < n; i++)
             {
-                var kid = mupdf.mupdf.pdf_array_get(kids, i);
+                using var kid = mupdf.mupdf.pdf_array_get(kids, i);
                 if (mupdf.mupdf.pdf_is_dict(kid) == 0)
                     continue;
                 int kidXref = mupdf.mupdf.pdf_to_num(kid);
                 if (kidXref == Xref)
                     continue;
-                var subtype = mupdf.mupdf.pdf_dict_get(kid, mupdf.mupdf.pdf_new_name("Subtype"));
+                using var subtype = mupdf.mupdf.pdf_dict_get(kid, subtypeName);
                 if (mupdf.mupdf.pdf_to_name(subtype) != "Widget")
                     continue;
-                mupdf.mupdf.pdf_dict_put_int(kid, mupdf.mupdf.pdf_new_name("Ff"), flags);
+                mupdf.mupdf.pdf_dict_put_int(kid, ffName, flags);
             }
             return true;
         }
@@ -899,7 +903,7 @@ namespace MuPDF.NET
             using var annotObj = mupdf.mupdf.pdf_annot_obj(_nativeWidget);
             _xref = mupdf.mupdf.pdf_to_num(annotObj);
             InsertFieldType = (WidgetType)FieldType;
-            var r = mupdf.mupdf.pdf_bound_annot(_nativeWidget);
+            using var r = mupdf.mupdf.pdf_bound_annot(_nativeWidget);
             InsertRect = new Rect(r.x0, r.y0, r.x1, r.y1);
             InsertFieldName = FieldName;
             InsertFieldLabel = FieldLabel;

@@ -8,7 +8,7 @@
     <ArtifexMuPDFVersion>1.28.2</ArtifexMuPDFVersion>
 	
     <!-- MuPDF.NET NuGet package. -->
-    <ArtifexMuPDFNetVersion>3.28.2</ArtifexMuPDFNetVersion>
+    <ArtifexMuPDFNetVersion>3.28.2.3</ArtifexMuPDFNetVersion>
 	
     <!-- MuPDF.NET.PDF4LLM NuGet package. -->
     <ArtifexMuPDFNetPDF4LLMVersion>1.28.2</ArtifexMuPDFNetPDF4LLMVersion>

@@ -63,10 +63,11 @@ namespace MuPDF.NET
             var page = _pdf_page(required: false);
             if (page?.m_internal == null)
                 return null;
-            var obj = mupdf.mupdf.pdf_dict_gets(page.obj(), boxtype);
+            using var pageObj = page.obj();
+            using var obj = mupdf.mupdf.pdf_dict_gets(pageObj, boxtype);
             if (obj?.m_internal == null || mupdf.mupdf.pdf_is_array(obj) == 0)
                 return null;
-            var r = mupdf.mupdf.pdf_to_rect(obj);
+            using var r = mupdf.mupdf.pdf_to_rect(obj);
             return new Rect(r.x0, r.y0, r.x1, r.y1);
         }
 

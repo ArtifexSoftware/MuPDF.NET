@@ -25,6 +25,7 @@ Open **`MuPDF.NET.sln`** at the repository root.
 - [Quick start](#quick-start)
 - [Key capabilities](#key-capabilities)
 - [Code examples](#code-examples)
+- [Examples](#examples)
 - [API overview](#api-overview)
 - [Supported formats](#supported-formats)
 - [Building from source](#building-from-source)
@@ -144,6 +145,8 @@ doc.Close();
 
 ## Code examples
 
+Copy-paste snippets for common tasks. Full runnable sample apps (one project per feature, NuGet-only) live in **[MuPDF.NET.Examples](https://github.com/ArtifexSoftware/MuPDF.NET.Examples)**.
+
 ### Add a text watermark
 
 ```csharp
@@ -257,6 +260,23 @@ End Module
 
 ---
 
+## Examples
+
+Runnable console samples for this package, plus `MuPDF.NET.PDF4LLM` and `MuPDF.NET.Office`, are in a separate repository:
+
+**https://github.com/ArtifexSoftware/MuPDF.NET.Examples**
+
+```powershell
+git clone https://github.com/ArtifexSoftware/MuPDF.NET.Examples.git
+cd MuPDF.NET.Examples
+dotnet restore
+dotnet run --project MuPDF.NET\01-OpenSave
+```
+
+Each sample is a small project under `MuPDF.NET/` (for example `04-TextExtractSearch`, `08-FormWidgets`). See that repo’s README for the full list and how to batch-run against golden `Expected/` files.
+
+---
+
 ## API overview
 
 The library's primary entry points are `Document` and `Page`. Most workflows follow the pattern: open → get page → operate → save → close.
@@ -360,6 +380,7 @@ See the [Getting Started](https://mupdfnet.readthedocs.io/en/latest/getting-star
 | Getting started guide | https://mupdfnet.readthedocs.io/en/latest/getting-started/index.html |
 | The Basics (cookbook) | https://mupdfnet.readthedocs.io/en/latest/the-basics/index.html |
 | LLM/RAG companion (`MuPDF.NET.PDF4LLM`) | https://docs.pdf4llm.com/dotnet/getting-started/installation |
+| Sample apps (`MuPDF.NET.Examples`) | https://github.com/ArtifexSoftware/MuPDF.NET.Examples |
 
 ---
 

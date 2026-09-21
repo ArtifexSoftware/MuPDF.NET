@@ -115,13 +115,20 @@ namespace MuPDF.NET
         {
             get
             {
-                var r = mupdf.mupdf.pdf_bound_annot(NativeAnnot);
+                using var r = mupdf.mupdf.pdf_bound_annot(NativeAnnot);
                 return Helpers.TransformRect(new Rect(r), DerotatePageMatrix);
             }
         }
 
         /// <summary>Annotation xref number.</summary>
-        public int Xref => mupdf.mupdf.pdf_to_num(mupdf.mupdf.pdf_annot_obj(NativeAnnot));
+        public int Xref
+        {
+            get
+            {
+                using var obj = mupdf.mupdf.pdf_annot_obj(NativeAnnot);
+                return mupdf.mupdf.pdf_to_num(obj);
+            }
+        }
 
         /// <summary>Flags field ( / <c>set_flags</c>).</summary>
         public int Flags
@@ -1363,7 +1370,7 @@ namespace MuPDF.NET
             var fzBuf = Helpers.BufferFromBytes(buffer);
             var stream = mupdf.mupdf.pdf_add_stream(pdf, fzBuf, new mupdf.PdfObj(), 0);
 
-            var r = mupdf.mupdf.pdf_annot_rect(NativeAnnot);
+            using var r = mupdf.mupdf.pdf_annot_rect(NativeAnnot);
             var bbox = mupdf.mupdf.pdf_new_array(pdf, 4);
             mupdf.mupdf.pdf_array_push_real(bbox, r.x0);
             mupdf.mupdf.pdf_array_push_real(bbox, r.y0);

@@ -1,13 +1,8 @@
 # Changelog
 
-### [3.28.2.2] - 2026-09-16
+### [3.28.2.3] - 2026-09-18
 
-- Native leak in `Document.GetKeyXref` / `XrefGetKey` (#256 follow-up): dispose owning `PdfObj` wrappers from `pdf_load_object` / `pdf_dict_getp` instead of `PdfObjBorrowed`. Same for `XrefGetKeys`.
-- Widget enumeration: dispose owning `pdf_annot_obj` / `pdf_new_name` / parent-walk wrappers, cache `Xref`, and drop the `PdfAnnot` wrapper in `Dispose`.
-
-### [3.28.2.1] - 2026-09-15
-
-- Native leaks in widget enumeration and `TextPage.Search` (#256): use `pdf_load_field_name2` for field names, dispose owning `PdfObj` wrappers when reading widget dict entries, and dispose C++ `FzStextBlock` wrappers (`BorrowStextBlock` / `FirstStextLinePtr` / `TextPage.Dispose`).
+- Native leaks (#256, also 3.28.2.1 / 3.28.2.2): dispose owning SWIG wrappers so `pdf_drop_obj` / C++ destructors run. Widgets (`pdf_load_field_name2`, `pdf_annot_obj`, `Dispose`), `TextPage.Search` (`BorrowStextBlock` / `FirstStextLinePtr`), `GetKeyXref` / `XrefGetKey` / `XrefGetKeys` / `XrefSetKey`, `Annot.Rect` / `page.Rect` / `GetSvgImage` / text-trace / drawings / `pdf_to_rect`, `Widget.SyncFlags`, convert-to-PDF links. Stop `PdfObjBorrowed` / `FzRectBorrowed` on dict/load/annot getters.
 
 ### [3.28.2] - 2026-08-14
 
