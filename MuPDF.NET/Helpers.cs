@@ -545,18 +545,22 @@ namespace MuPDF.NET
             return fertig(font);
         }
 
-        /// <summary>FontDescriptor for Type0/CID or simple fonts.</summary>
+        /// <summary>FontDescriptor for Type0/CID or simple fonts. Caller must dispose the result.</summary>
         internal static mupdf.PdfObj JM_get_font_descriptor(mupdf.PdfObj fontObj)
         {
             if (fontObj.m_internal == null)
                 return new mupdf.PdfObj();
-            var desft = PdfDictGet(fontObj, mupdf.mupdf.pdf_new_name("DescendantFonts"));
+            using var desftKey = mupdf.mupdf.pdf_new_name("DescendantFonts");
+            using var desft = PdfDictGet(fontObj, desftKey);
             if (desft.m_internal != null)
             {
-                var first = mupdf.mupdf.pdf_resolve_indirect(mupdf.mupdf.pdf_array_get(desft, 0));
-                return PdfDictGet(first, mupdf.mupdf.pdf_new_name("FontDescriptor"));
+                using var firstArr = mupdf.mupdf.pdf_array_get(desft, 0);
+                using var first = mupdf.mupdf.pdf_resolve_indirect(firstArr);
+                using var fdKey = mupdf.mupdf.pdf_new_name("FontDescriptor");
+                return PdfDictGet(first, fdKey);
             }
-            return PdfDictGet(fontObj, mupdf.mupdf.pdf_new_name("FontDescriptor"));
+            using var descKey = mupdf.mupdf.pdf_new_name("FontDescriptor");
+            return PdfDictGet(fontObj, descKey);
         }
 
         /// <summary>Returns embedded font file bytes for a font xref.</summary>
@@ -564,8 +568,8 @@ namespace MuPDF.NET
         {
             if (xref < 1)
                 return null;
-            var o = mupdf.mupdf.pdf_load_object(pdf, xref);
-            var desc = JM_get_font_descriptor(o);
+            using var o = mupdf.mupdf.pdf_load_object(pdf, xref);
+            using var desc = JM_get_font_descriptor(o);
             if (desc.m_internal == null)
             {
                 message("invalid font - FontDescriptor missing");
@@ -1110,7 +1114,11 @@ namespace MuPDF.NET
             return DeviceGrayColorspace;
         }
 
-        /// <summary>Indirect PDF objects from MuPDF getters are borrowed; SWIG must not call <c>pdf_drop_obj</c>.</summary>
+        /// <summary>
+        /// Strip SWIG ownership so <c>~PdfObj</c> does not <c>pdf_drop_obj</c>.
+        /// Only for add/graft wrappers that <see cref="PdfObjReleaseOwnership"/> already
+        /// transferred into the document. Getters must return owning wrappers (#256).
+        /// </summary>
         internal static mupdf.PdfObj PdfObjBorrowed(mupdf.PdfObj wrapper)
         {
             if (wrapper == null || wrapper.m_internal == null)
@@ -1129,26 +1137,32 @@ namespace MuPDF.NET
             return new mupdf.PdfObj(handle, false);
         }
 
+        /// <summary>
+        /// C++ <see cref="mupdf.PdfObj"/> getters keep; return the owning SWIG wrapper so
+        /// <see cref="IDisposable.Dispose"/> can <c>pdf_drop_obj</c>. Do not strip
+        /// <c>cMemOwn</c> (that was the #256 leak). Callers should dispose when convenient;
+        /// GC still drops the extra keep if they do not.
+        /// </summary>
         internal static mupdf.PdfObj PdfAnnotObj(mupdf.PdfAnnot annot)
-            => PdfObjBorrowed(mupdf.mupdf.pdf_annot_obj(annot));
+            => mupdf.mupdf.pdf_annot_obj(annot);
 
         internal static mupdf.PdfObj PdfPageObj(mupdf.PdfPage page)
-            => PdfObjBorrowed(page.obj());
+            => page.obj();
 
         internal static mupdf.PdfObj PdfLoadObject(mupdf.PdfDocument doc, int xref)
-            => PdfObjBorrowed(mupdf.mupdf.pdf_load_object(doc, xref));
+            => mupdf.mupdf.pdf_load_object(doc, xref);
 
         internal static mupdf.PdfObj PdfTrailer(mupdf.PdfDocument doc)
-            => PdfObjBorrowed(mupdf.mupdf.pdf_trailer(doc));
+            => mupdf.mupdf.pdf_trailer(doc);
 
         internal static mupdf.PdfObj PdfArrayGet(mupdf.PdfObj arr, int index)
-            => PdfObjBorrowed(mupdf.mupdf.pdf_array_get(arr, index));
+            => mupdf.mupdf.pdf_array_get(arr, index);
 
         internal static mupdf.PdfObj PdfResolveIndirect(mupdf.PdfObj obj)
-            => PdfObjBorrowed(mupdf.mupdf.pdf_resolve_indirect(obj));
+            => mupdf.mupdf.pdf_resolve_indirect(obj);
 
         internal static mupdf.PdfObj PdfLookupPageObj(mupdf.PdfDocument doc, int pageNo)
-            => PdfObjBorrowed(mupdf.mupdf.pdf_lookup_page_obj(doc, pageNo));
+            => mupdf.mupdf.pdf_lookup_page_obj(doc, pageNo);
 
         internal static mupdf.PdfObj PdfAddObject(mupdf.PdfDocument doc, mupdf.PdfObj obj)
         {
@@ -1284,10 +1298,10 @@ namespace MuPDF.NET
         }
 
         internal static mupdf.PdfObj PdfDictGet(mupdf.PdfObj dict, mupdf.PdfObj key)
-            => PdfObjBorrowed(mupdf.mupdf.pdf_dict_get(dict, key));
+            => mupdf.mupdf.pdf_dict_get(dict, key);
 
         internal static mupdf.PdfObj PdfDictGets(mupdf.PdfObj dict, string key)
-            => PdfObjBorrowed(mupdf.mupdf.pdf_dict_gets(dict, key));
+            => mupdf.mupdf.pdf_dict_gets(dict, key);
 
         internal static void PdfDictPuts(mupdf.PdfObj dict, string key, mupdf.PdfObj val)
         {
@@ -1483,7 +1497,7 @@ namespace MuPDF.NET
         }
 
         internal static mupdf.PdfObj PdfDictGetInheritable(mupdf.PdfObj dict, mupdf.PdfObj key)
-            => PdfObjBorrowed(mupdf.mupdf.pdf_dict_get_inheritable(dict, key));
+            => mupdf.mupdf.pdf_dict_get_inheritable(dict, key);
 
         internal static mupdf.PdfObj PdfDictGetInheritable(mupdf.PdfObj dict, string key)
         {
@@ -1502,22 +1516,22 @@ namespace MuPDF.NET
             => PdfDictGets(dict, key);
 
         internal static mupdf.PdfObj PdfDictGetp(mupdf.PdfObj dict, string path)
-            => PdfObjBorrowed(mupdf.mupdf.pdf_dict_getp(dict, path));
+            => mupdf.mupdf.pdf_dict_getp(dict, path);
 
         internal static mupdf.PdfObj PdfDictGetpInheritable(mupdf.PdfObj dict, string path)
-            => PdfObjBorrowed(mupdf.mupdf.pdf_dict_getp_inheritable(dict, path));
+            => mupdf.mupdf.pdf_dict_getp_inheritable(dict, path);
 
         internal static mupdf.PdfObj PdfDictGetsInheritable(mupdf.PdfObj dict, string key)
-            => PdfObjBorrowed(mupdf.mupdf.pdf_dict_gets_inheritable(dict, key));
+            => mupdf.mupdf.pdf_dict_gets_inheritable(dict, key);
 
         internal static mupdf.PdfObj PdfDictGetVal(mupdf.PdfObj dict, int idx)
-            => PdfObjBorrowed(mupdf.mupdf.pdf_dict_get_val(dict, idx));
+            => mupdf.mupdf.pdf_dict_get_val(dict, idx);
 
         internal static mupdf.PdfObj PdfDictGetKey(mupdf.PdfObj dict, int idx)
-            => PdfObjBorrowed(mupdf.mupdf.pdf_dict_get_key(dict, idx));
+            => mupdf.mupdf.pdf_dict_get_key(dict, idx);
 
         internal static mupdf.PdfObj PdfDictGeta(mupdf.PdfObj dict, mupdf.PdfObj key, mupdf.PdfObj abbrev)
-            => PdfObjBorrowed(mupdf.mupdf.pdf_dict_geta(dict, key, abbrev));
+            => mupdf.mupdf.pdf_dict_geta(dict, key, abbrev);
 
         internal static mupdf.PdfObj PdfDictGeta(mupdf.PdfObj dict, string key, string abbrev)
         {
@@ -1535,13 +1549,13 @@ namespace MuPDF.NET
         }
 
         internal static mupdf.FzLink PdfCreateLink(mupdf.PdfPage page, mupdf.FzRect bbox, string uri)
-            => FzLinkBorrowed(mupdf.mupdf.pdf_create_link(page, bbox, uri));
+            => mupdf.mupdf.pdf_create_link(page, bbox, uri);
 
         internal static mupdf.PdfObj PdfObjDictGet(mupdf.PdfObj dict, mupdf.PdfObj key)
             => PdfDictGet(dict, key);
 
         internal static mupdf.PdfObj PdfObjDictGet(mupdf.PdfObj dict, int key)
-            => PdfObjBorrowed(dict.pdf_dict_get(key));
+            => dict.pdf_dict_get(key);
 
         internal static mupdf.PdfObj PdfObjDictGeta(mupdf.PdfObj dict, mupdf.PdfObj key, mupdf.PdfObj abbrev)
             => PdfDictGeta(dict, key, abbrev);
@@ -1552,82 +1566,39 @@ namespace MuPDF.NET
         internal static mupdf.PdfObj PdfObjDictGetp(mupdf.PdfObj dict, string path)
             => PdfDictGetp(dict, path);
 
+        /// <summary>
+        /// Owning <see cref="mupdf.FzRect"/> from <c>fz_bound_page</c>. Callers must
+        /// <see cref="IDisposable.Dispose"/> it (same class of leak as #256).
+        /// </summary>
         internal static mupdf.FzRect FzBoundPage(mupdf.FzPage page)
-            => FzRectBorrowed(mupdf.mupdf.fz_bound_page(page));
+            => mupdf.mupdf.fz_bound_page(page);
 
-        /// <summary><c>pdf_annot_rect</c> / <c>pdf_bound_annot</c> return rects owned by the annot; do not drop.</summary>
-        internal static mupdf.FzRect FzRectBorrowed(mupdf.FzRect wrapper)
-        {
-            if (wrapper == null || mupdf.FzRect.getCPtr(wrapper).Handle == IntPtr.Zero)
-                return new mupdf.FzRect();
-            IntPtr handle;
-            try
-            {
-                handle = mupdf.FzRect.swigRelease(wrapper).Handle;
-            }
-            catch (ApplicationException)
-            {
-                handle = mupdf.FzRect.getCPtr(wrapper).Handle;
-            }
-            if (handle == IntPtr.Zero)
-                return new mupdf.FzRect();
-            return new mupdf.FzRect(handle, false);
-        }
-
+        /// <summary>Owning rect from <c>pdf_annot_rect</c>. Callers must dispose.</summary>
         internal static mupdf.FzRect PdfAnnotRect(mupdf.PdfAnnot annot)
-            => FzRectBorrowed(mupdf.mupdf.pdf_annot_rect(annot));
+            => mupdf.mupdf.pdf_annot_rect(annot);
 
+        /// <summary>Owning rect from <c>pdf_bound_annot</c>. Callers must dispose.</summary>
         internal static mupdf.FzRect PdfBoundAnnot(mupdf.PdfAnnot annot)
-            => FzRectBorrowed(mupdf.mupdf.pdf_bound_annot(annot));
+            => mupdf.mupdf.pdf_bound_annot(annot);
 
-        internal static mupdf.FzMatrix FzMatrixBorrowed(mupdf.FzMatrix wrapper)
-        {
-            if (wrapper == null || mupdf.FzMatrix.getCPtr(wrapper).Handle == IntPtr.Zero)
-                return new mupdf.FzMatrix();
-            IntPtr handle;
-            try
-            {
-                handle = mupdf.FzMatrix.swigRelease(wrapper).Handle;
-            }
-            catch (ApplicationException)
-            {
-                handle = mupdf.FzMatrix.getCPtr(wrapper).Handle;
-            }
-            if (handle == IntPtr.Zero)
-                return new mupdf.FzMatrix();
-            return new mupdf.FzMatrix(handle, false);
-        }
-
+        /// <summary>Owning rect from <c>pdf_dict_get_rect</c>. Callers must dispose.</summary>
         internal static mupdf.FzRect PdfDictGetRect(mupdf.PdfObj dict, mupdf.PdfObj key)
-            => FzRectBorrowed(mupdf.mupdf.pdf_dict_get_rect(dict, key));
+            => mupdf.mupdf.pdf_dict_get_rect(dict, key);
 
         internal static mupdf.FzRect PdfDictGetRect(mupdf.PdfObj dict, string key)
         {
-            var keyObj = mupdf.mupdf.pdf_new_name(key);
-            try
-            {
-                return PdfDictGetRect(dict, keyObj);
-            }
-            finally
-            {
-                keyObj.Dispose();
-            }
+            using var keyObj = mupdf.mupdf.pdf_new_name(key);
+            return PdfDictGetRect(dict, keyObj);
         }
 
+        /// <summary>Owning matrix from <c>pdf_dict_get_matrix</c>. Callers must dispose.</summary>
         internal static mupdf.FzMatrix PdfDictGetMatrix(mupdf.PdfObj dict, mupdf.PdfObj key)
-            => FzMatrixBorrowed(mupdf.mupdf.pdf_dict_get_matrix(dict, key));
+            => mupdf.mupdf.pdf_dict_get_matrix(dict, key);
 
         internal static mupdf.FzMatrix PdfDictGetMatrix(mupdf.PdfObj dict, string key)
         {
-            var keyObj = mupdf.mupdf.pdf_new_name(key);
-            try
-            {
-                return PdfDictGetMatrix(dict, keyObj);
-            }
-            finally
-            {
-                keyObj.Dispose();
-            }
+            using var keyObj = mupdf.mupdf.pdf_new_name(key);
+            return PdfDictGetMatrix(dict, keyObj);
         }
 
         internal static mupdf.PdfAnnot PdfFirstAnnot(mupdf.PdfPage page)
@@ -1687,11 +1658,13 @@ namespace MuPDF.NET
             return new mupdf.FzLink(handle, false);
         }
 
+        /// <summary>
+        /// <c>fz_load_links</c> keeps the list head; return the owning wrapper.
+        /// Page-owned nodes walked via <c>m_internal.next</c> must not be wrapped with
+        /// <c>cMemOwn</c> true. <see cref="PdfCreateLink"/> is also owning — dispose it.
+        /// </summary>
         internal static mupdf.FzLink FzLoadLinks(mupdf.FzPage page)
-            => FzLinkBorrowed(mupdf.mupdf.fz_load_links(page));
-
-        internal static mupdf.FzLink FzLinkNext(mupdf.FzLink link)
-            => FzLinkBorrowed(link.next());
+            => mupdf.mupdf.fz_load_links(page);
 
         internal static bool InRange(int val, int low, int high) => val >= low && val <= high;
         internal static bool InRange(float val, float low, float high) => val >= low && val <= high;
@@ -1841,7 +1814,8 @@ namespace MuPDF.NET
         /// <summary>Return the inheritable /Rotate value of a PDF page.</summary>
         internal static int PageRotation(mupdf.PdfPage page)
         {
-            int rotate = PdfDictGetInheritableInt(PdfPageObj(page), "Rotate");
+            using var pageObj = page.obj();
+            int rotate = PdfDictGetInheritableInt(pageObj, "Rotate");
             return JmNormRotation(rotate);
         }
 
@@ -1873,27 +1847,27 @@ namespace MuPDF.NET
             if (rotation == 0)
                 return Matrix.Identity;  // no rotation
 
-            var cb = Helpers.PdfDictGetsInheritable(PdfPageObj(page), "CropBox");
-            Rect cbSize;
+            using var pageObj = page.obj();
+            using var cb = mupdf.mupdf.pdf_dict_gets_inheritable(pageObj, "CropBox");
+            mupdf.FzRect boxRect;
             if (cb.m_internal != null)
-            {
-                cbSize = new Rect(mupdf.mupdf.pdf_to_rect(cb));
-            }
+                boxRect = mupdf.mupdf.pdf_to_rect(cb);
             else
             {
-                var mb = Helpers.PdfDictGetsInheritable(PdfPageObj(page), "MediaBox");
-                cbSize = new Rect(mupdf.mupdf.pdf_to_rect(mb));
+                using var mb = mupdf.mupdf.pdf_dict_gets_inheritable(pageObj, "MediaBox");
+                boxRect = mupdf.mupdf.pdf_to_rect(mb);
             }
-            float w = cbSize.Width;
-            float h = cbSize.Height;
-            //log( '{=h w}')
-            if (rotation == 90)
-                return new Matrix(0, 1, -1, 0, h, 0);
-            else if (rotation == 180)
-                return new Matrix(-1, 0, 0, -1, w, h);
-            else
-                return new Matrix(0, -1, 1, 0, 0, w);
-            //log( 'returning {m=}')
+            using (boxRect)
+            {
+                float w = boxRect.x1 - boxRect.x0;
+                float h = boxRect.y1 - boxRect.y0;
+                if (rotation == 90)
+                    return new Matrix(0, 1, -1, 0, h, 0);
+                else if (rotation == 180)
+                    return new Matrix(-1, 0, 0, -1, w, h);
+                else
+                    return new Matrix(0, -1, 1, 0, 0, w);
+            }
         }
 
         internal static Matrix DerotatePageMatrix(Page page)
@@ -2195,10 +2169,10 @@ namespace MuPDF.NET
             if (xref > 0)
                 return PdfNewIndirect(pdfout, xref, 0);
 
-            var spageref = PdfPageObj(srcpage);
-            var mediabox = mupdf.mupdf.pdf_to_rect(
-                Helpers.PdfDictGetsInheritable(spageref, "MediaBox"));
-            var resourcesSrc = Helpers.PdfDictGetsInheritable(spageref, "Resources");
+            using var spageref = srcpage.obj();
+            using var mbObj = mupdf.mupdf.pdf_dict_gets_inheritable(spageref, "MediaBox");
+            using var mediabox = mupdf.mupdf.pdf_to_rect(mbObj);
+            using var resourcesSrc = mupdf.mupdf.pdf_dict_gets_inheritable(spageref, "Resources");
             var resources = gmap?.m_internal != null
                 ? PdfGraftMappedObject(gmap, resourcesSrc)
                 : PdfGraftObject(pdfout, resourcesSrc);
@@ -2360,54 +2334,47 @@ namespace MuPDF.NET
                 var page = mupdf.mupdf.fz_load_page(doc, i);
                 try
                 {
-                    var mediabox = FzBoundPage(page);
+                    using var mediabox = FzBoundPage(page);
                     var (dev, resources, contents) = pdfout.pdf_page_write(mediabox);
-                    mupdf.mupdf.fz_run_page(page, dev, new mupdf.FzMatrix(), new mupdf.FzCookie());
+                    using var identity = new mupdf.FzMatrix();
+                    using var cookie = new mupdf.FzCookie();
+                    mupdf.mupdf.fz_run_page(page, dev, identity, cookie);
                     mupdf.mupdf.fz_close_device(dev);
                     dev.Dispose();
                     var page_obj = PdfAddPage(pdfout, mediabox, rot, resources, contents);
                     PdfInsertPage(pdfout, -1, page_obj);
 
-                    // also copy links to the output PDF page
-                    // get the PDF page we've just created
-                    var pdf_page = pdfout.pdf_load_page(i);
-
-                    // loop through source page links
-                    var link = FzLoadLinks(page);  // load first link
-                    while (link.m_internal != null)  // break loop when link is None
+                    using var pdf_page = pdfout.pdf_load_page(i);
+                    using var links = FzLoadLinks(page);
+                    for (var node = links.m_internal; node != null; node = node.next)
                     {
-                        string uri = link.uri();  // URI string
-                        using (var linkRect = link.rect())
-                        {
-                            var rect = new mupdf.FzRect(linkRect);  // link "from" rectangle
-                            bool isExternal = mupdf.mupdf.fz_is_external_link(uri) != 0;
+                        string uri = node.uri;
+                        var fr = node.rect;
+                        using var rect = new mupdf.FzRect(fr.x0, fr.y0, fr.x1, fr.y1);
+                        bool isExternal = mupdf.mupdf.fz_is_external_link(uri) != 0;
 
-                            if (isExternal)  // external links can be copied directly
-                            {
-                                PdfCreateLink(pdf_page, rect, uri);
-                            }
-                            else  // internal links done when PDF is complete
-                            {
-                                // find target of internal link
-                                var outparams = new mupdf.ll_fz_resolve_link_outparams();
-                                var ret = mupdf.mupdf.ll_fz_resolve_link_outparams_fn(doc.m_internal, uri, outparams);
-                                internalLinks.Add(new JmInternalLink
-                                {
-                                    Page = i,
-                                    Chapter = ret.chapter,
-                                    PageLoc = ret.page,
-                                    From = new mupdf.FzRect(rect),
-                                    H = rect.y1 - rect.y0,
-                                    W = rect.x1 - rect.x0,
-                                    Xp = outparams.xp,
-                                    Yp = outparams.yp,
-                                });
-                                ret.Dispose();
-                            }
+                        if (isExternal)
+                        {
+                            using (PdfCreateLink(pdf_page, rect, uri)) { }
                         }
-                        link = FzLinkNext(link);
+                        else
+                        {
+                            var outparams = new mupdf.ll_fz_resolve_link_outparams();
+                            var ret = mupdf.mupdf.ll_fz_resolve_link_outparams_fn(doc.m_internal, uri, outparams);
+                            internalLinks.Add(new JmInternalLink
+                            {
+                                Page = i,
+                                Chapter = ret.chapter,
+                                PageLoc = ret.page,
+                                From = new mupdf.FzRect(rect),
+                                H = rect.y1 - rect.y0,
+                                W = rect.x1 - rect.x0,
+                                Xp = outparams.xp,
+                                Yp = outparams.yp,
+                            });
+                            ret.Dispose();
+                        }
                     }
-                    pdf_page.Dispose();
                 }
                 finally
                 {
@@ -2432,7 +2399,7 @@ namespace MuPDF.NET
                 var rect = ilink.From;
                 var linkDest = new mupdf.FzLinkDest(dest);
                 string uri = mupdf.mupdf.pdf_new_uri_from_explicit_dest(linkDest);
-                PdfCreateLink(pdf_page, rect, uri);
+                using (PdfCreateLink(pdf_page, rect, uri)) { }
                 linkDest.Dispose();
                 dest.Dispose();
                 rect.Dispose();
@@ -3284,47 +3251,34 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Non-owning <see cref="mupdf.FzStextBlock"/> view of a block inside a live stext page.
-        /// Do not use <c>new FzStextBlock(internal_)</c> — that wrapper is owning and its finalizer
-        /// can delete in-page data while other code still walks lines/chars.
+        /// C++ wrapper around an in-page <c>fz_stext_block</c>. Owns the wrapper only:
+        /// <c>~FzStextBlock</c> does not drop in-page stext (debug instance counter / default).
+        /// Callers must <see cref="IDisposable.Dispose"/> the wrapper.
         /// </summary>
         internal static mupdf.FzStextBlock BorrowStextBlock(mupdf.fz_stext_block block)
         {
             if (block == null)
                 return null;
-            global::System.IntPtr cPtr = mupdf.mupdfPINVOKE.new_FzStextBlock__SWIG_2(mupdf.fz_stext_block.getCPtr(block));
-            if (mupdf.mupdfPINVOKE.SWIGPendingException.Pending)
-                throw mupdf.mupdfPINVOKE.SWIGPendingException.Retrieve();
-            return new mupdf.FzStextBlock(cPtr, false);
+            return new mupdf.FzStextBlock(block);
         }
 
         /// <summary>First line of a text block; then walk <c>line.next</c>.</summary>
         internal static mupdf.fz_stext_line FirstStextLinePtr(mupdf.fz_stext_block block)
         {
-            var wrap = BorrowStextBlock(block);
-            var iter = wrap.begin();
-            try
-            {
-                return iter.__deref__()?.m_internal;
-            }
-            finally
-            {
-                iter.Dispose();
-            }
+            using var wrap = BorrowStextBlock(block);
+            if (wrap == null)
+                return null;
+            using var iter = wrap.begin();
+            // Iterator.m_internal is the in-page line pointer. __deref__() would
+            // allocate a C++ FzStextLine with cMemOwn false and leak it.
+            return iter.m_internal;
         }
 
         /// <summary>First line via a cached non-owning block view (see <see cref="TextPage"/>).</summary>
         internal static mupdf.fz_stext_line FirstStextLine(mupdf.FzStextBlock block)
         {
-            var iter = block.begin();
-            try
-            {
-                return iter.__deref__()?.m_internal;
-            }
-            finally
-            {
-                iter.Dispose();
-            }
+            using var iter = block.begin();
+            return iter.m_internal;
         }
 
         /// <summary>Decodes PDF raw Unicode escape sequences in a buffer.</summary>
@@ -4359,35 +4313,46 @@ namespace MuPDF.NET
         /// <summary>Returns the page MediaBox as a <see cref="Rect"/>.</summary>
         internal static mupdf.FzRect JmMediabox(mupdf.PdfObj pageObj)
         {
-            var mediabox = mupdf.mupdf.pdf_to_rect(
-                Helpers.PdfDictGetsInheritable(pageObj, "MediaBox"));
+            // pdf_dict_gets_inheritable keeps; PdfObjBorrowed used to strip ownership
+            // without pdf_drop_obj (same class of leak as XrefGetKey / #256).
+            using var mbObj = mupdf.mupdf.pdf_dict_gets_inheritable(pageObj, "MediaBox");
+            using var mediabox = mupdf.mupdf.pdf_to_rect(mbObj);
+            float x0 = mediabox.x0;
+            float y0 = mediabox.y0;
+            float x1 = mediabox.x1;
+            float y1 = mediabox.y1;
             if (mupdf.mupdf.fz_is_empty_rect(mediabox) != 0 || mupdf.mupdf.fz_is_infinite_rect(mediabox) != 0)
             {
-                mediabox.x0 = 0;
-                mediabox.y0 = 0;
-                mediabox.x1 = 612;
-                mediabox.y1 = 792;
+                x0 = 0;
+                y0 = 0;
+                x1 = 612;
+                y1 = 792;
             }
             return mupdf.mupdf.fz_make_rect(
-                Math.Min(mediabox.x0, mediabox.x1),
-                Math.Min(mediabox.y0, mediabox.y1),
-                Math.Max(mediabox.x0, mediabox.x1),
-                Math.Max(mediabox.y0, mediabox.y1));
+                Math.Min(x0, x1),
+                Math.Min(y0, y1),
+                Math.Max(x0, x1),
+                Math.Max(y0, y1));
         }
 
         /// <summary>Returns the page CropBox as a <see cref="Rect"/>.</summary>
         internal static mupdf.FzRect JmCropbox(mupdf.PdfObj pageObj)
         {
-            var mediabox = JmMediabox(pageObj);
-            var cropbox = mupdf.mupdf.pdf_to_rect(
-                Helpers.PdfDictGetsInheritable(pageObj, "CropBox"));
+            using var mediabox = JmMediabox(pageObj);
+            using var cropObj = mupdf.mupdf.pdf_dict_gets_inheritable(pageObj, "CropBox");
+            using var cropbox = mupdf.mupdf.pdf_to_rect(cropObj);
+            float mx0 = mediabox.x0, my0 = mediabox.y0, mx1 = mediabox.x1, my1 = mediabox.y1;
+            float x0 = cropbox.x0, y0 = cropbox.y0, x1 = cropbox.x1, y1 = cropbox.y1;
             if (mupdf.mupdf.fz_is_infinite_rect(cropbox) != 0 || mupdf.mupdf.fz_is_empty_rect(cropbox) != 0)
-                cropbox = mediabox;
-            float y0 = mediabox.y1 - cropbox.y1;
-            float y1 = mediabox.y1 - cropbox.y0;
-            cropbox.y0 = y0;
-            cropbox.y1 = y1;
-            return cropbox;
+            {
+                x0 = mx0;
+                y0 = my0;
+                x1 = mx1;
+                y1 = my1;
+            }
+            float outY0 = my1 - y1;
+            float outY1 = my1 - y0;
+            return mupdf.mupdf.fz_make_rect(x0, outY0, x1, outY1);
         }
 
         /// <summary>Converts rectangle-like input to <see cref="Rect"/>.</summary>
@@ -5016,7 +4981,7 @@ namespace MuPDF.NET
             // field name
             if (!string.IsNullOrEmpty(widget.InsertFieldName))
             {
-                var oldName = mupdf.mupdf.pdf_load_field_name(annotObj);
+                var oldName = mupdf.mupdf.pdf_load_field_name2(annotObj);
                 if (widget.InsertFieldName != oldName)
                     PdfDictPutTextString(annotObj, "T", widget.InsertFieldName);
             }

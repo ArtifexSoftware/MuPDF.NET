@@ -975,45 +975,56 @@ namespace MuPDF.NET
             }
 
             var pdf = NativePdfDocument;
-            var trailer = mupdf.mupdf.pdf_trailer(pdf);
-            var infoKey = mupdf.mupdf.pdf_new_name("Info");
+            using var trailer = mupdf.mupdf.pdf_trailer(pdf);
+            using var infoKey = mupdf.mupdf.pdf_new_name("Info");
             var info = Helpers.PdfDictGet(trailer, infoKey);
 
             mupdf.PdfObj infoObj;
-            if (infoXref == 0)
+            mupdf.PdfObj loaded = null;
+            try
             {
-                // MuPDF: info_xref = doc.get_new_xref(); doc.UpdateObject(info_xref, "<<>>");
-                infoXref = GetNewXref();
-                UpdateObject(infoXref, "<<>>");
-                XrefSetKey(-1, "Info", $"{infoXref} 0 R");
-                info = Helpers.PdfDictGet(trailer, infoKey);
-            }
+                if (infoXref == 0)
+                {
+                    // MuPDF: info_xref = doc.get_new_xref(); doc.UpdateObject(info_xref, "<<>>");
+                    infoXref = GetNewXref();
+                    UpdateObject(infoXref, "<<>>");
+                    XrefSetKey(-1, "Info", $"{infoXref} 0 R");
+                    info?.Dispose();
+                    info = Helpers.PdfDictGet(trailer, infoKey);
+                }
 
-            if (info.m_internal != null && mupdf.mupdf.pdf_is_indirect(info) != 0)
-            {
-                infoXref = mupdf.mupdf.pdf_to_num(info);
-                infoObj = mupdf.mupdf.pdf_load_object(pdf, infoXref);
-            }
-            else
-                infoObj = info;
-
-            foreach (var kv in m)
-            {
-                if (!keymap.TryGetValue(kv.Key, out var pdfKey) || pdfKey == null)
-                    continue;
-
-                var nameObj = mupdf.mupdf.pdf_new_name(pdfKey);
-                if (string.IsNullOrEmpty(kv.Value) || string.Equals(kv.Value, "none", StringComparison.OrdinalIgnoreCase)
-                    || string.Equals(kv.Value, "null", StringComparison.OrdinalIgnoreCase))
-                    infoObj.pdf_dict_del(nameObj);
+                if (info.m_internal != null && mupdf.mupdf.pdf_is_indirect(info) != 0)
+                {
+                    infoXref = mupdf.mupdf.pdf_to_num(info);
+                    loaded = mupdf.mupdf.pdf_load_object(pdf, infoXref);
+                    infoObj = loaded;
+                }
                 else
-                    infoObj.pdf_dict_put_text_string(nameObj, kv.Value);
+                    infoObj = info;
+
+                foreach (var kv in m)
+                {
+                    if (!keymap.TryGetValue(kv.Key, out var pdfKey) || pdfKey == null)
+                        continue;
+
+                    using var nameObj = mupdf.mupdf.pdf_new_name(pdfKey);
+                    if (string.IsNullOrEmpty(kv.Value) || string.Equals(kv.Value, "none", StringComparison.OrdinalIgnoreCase)
+                        || string.Equals(kv.Value, "null", StringComparison.OrdinalIgnoreCase))
+                        infoObj.pdf_dict_del(nameObj);
+                    else
+                        infoObj.pdf_dict_put_text_string(nameObj, kv.Value);
+                }
+
+                if (infoXref > 0)
+                    pdf.pdf_update_object(infoXref, infoObj);
+
+                InitDoc();
             }
-
-            if (infoXref > 0)
-                pdf.pdf_update_object(infoXref, infoObj);
-
-            InitDoc();
+            finally
+            {
+                loaded?.Dispose();
+                info?.Dispose();
+            }
         }
 
         // ─── TOC ────────────────────────────────────────────────────────
@@ -1126,7 +1137,7 @@ namespace MuPDF.NET
                 if (itemdict == null)
                     throw new ValueErrorException("need non-simple TOC format");
                 itemdict["xref"] = xrefs[i];
-                var bm = mupdf.mupdf.pdf_load_object(pdf, xref);
+                using var bm = mupdf.mupdf.pdf_load_object(pdf, xref);
                 int flags = mupdf.mupdf.pdf_to_int(Helpers.PdfDictGet(bm, mupdf.mupdf.pdf_new_name("F")));
                 if (flags == 1)
                     itemdict[italic] = true;
@@ -2783,12 +2794,16 @@ namespace MuPDF.NET
                 obj = mupdf.mupdf.pdf_load_object(pdf, xref);
             else
                 obj = mupdf.mupdf.pdf_trailer(pdf);
-            int compress = compressed ? 1 : 0;
-            int asciiVal = ascii ? 1 : 0;
-            using (var res = Helpers.JmObjectToBuffer(mupdf.mupdf.pdf_resolve_indirect(obj), compress, asciiVal))
+            using (obj)
             {
-                string text = Helpers.JmEscapeStrFromBuffer(res);
-                return text;
+                int compress = compressed ? 1 : 0;
+                int asciiVal = ascii ? 1 : 0;
+                using var resolved = mupdf.mupdf.pdf_resolve_indirect(obj);
+                using (var res = Helpers.JmObjectToBuffer(resolved, compress, asciiVal))
+                {
+                    string text = Helpers.JmEscapeStrFromBuffer(res);
+                    return text;
+                }
             }
         }
         /// <summary>
@@ -2905,14 +2920,28 @@ namespace MuPDF.NET
             EnsureNotClosed();
             EnsureValidXrefDict(xref);
             var pdf = NativePdfDocument;
-            var obj = xref > 0 ? mupdf.mupdf.pdf_load_object(pdf, xref) : mupdf.mupdf.pdf_trailer(pdf);
+            using var obj = xref > 0 ? mupdf.mupdf.pdf_load_object(pdf, xref) : mupdf.mupdf.pdf_trailer(pdf);
             if (obj.m_internal == null) return ("null", "null");
-            // Prefer path lookup; fall back to direct name.
-            var sub = Helpers.PdfDictGetp(obj, key);
-            if (sub.m_internal == null && !string.IsNullOrEmpty(key) && key[0] != '/')
-                sub = Helpers.PdfDictGet(obj, mupdf.mupdf.pdf_new_name(key));
-            if (sub.m_internal == null) return ("null", "null");
 
+            // Owning SWIG wrappers: pdf_dict_getp / pdf_dict_get keep the result.
+            // PdfObjBorrowed used to strip ownership without pdf_drop_obj, leaking one
+            // keep per distinct key (same extra keep on a later call does not grow RSS).
+            using var subPath = mupdf.mupdf.pdf_dict_getp(obj, key);
+            if (subPath.m_internal != null)
+                return PdfObjKeyTypeAndValue(subPath);
+
+            if (string.IsNullOrEmpty(key) || key[0] == '/')
+                return ("null", "null");
+
+            using var nameKey = mupdf.mupdf.pdf_new_name(key);
+            using var subName = mupdf.mupdf.pdf_dict_get(obj, nameKey);
+            if (subName.m_internal == null)
+                return ("null", "null");
+            return PdfObjKeyTypeAndValue(subName);
+        }
+
+        private static (string type, string value) PdfObjKeyTypeAndValue(mupdf.PdfObj sub)
+        {
             if (mupdf.mupdf.pdf_is_indirect(sub) != 0) return ("xref", $"{mupdf.mupdf.pdf_to_num(sub)} 0 R");
             if (mupdf.mupdf.pdf_is_int(sub) != 0) return ("int", $"{mupdf.mupdf.pdf_to_int(sub)}");
             if (mupdf.mupdf.pdf_is_real(sub) != 0) return ("float", PdfObjToKeyValueString(sub));
@@ -2935,11 +2964,14 @@ namespace MuPDF.NET
             EnsureNotClosed();
             EnsureValidXrefDict(xref);
             var pdf = NativePdfDocument;
-            var obj = xref > 0 ? mupdf.mupdf.pdf_load_object(pdf, xref) : mupdf.mupdf.pdf_trailer(pdf);
+            using var obj = xref > 0 ? mupdf.mupdf.pdf_load_object(pdf, xref) : mupdf.mupdf.pdf_trailer(pdf);
             int n = mupdf.mupdf.pdf_dict_len(obj);
             var rc = new List<string>(n);
             for (int i = 0; i < n; i++)
-                rc.Add(mupdf.mupdf.pdf_to_name(Helpers.PdfDictGetKey(obj, i)));
+            {
+                using var keyObj = mupdf.mupdf.pdf_dict_get_key(obj, i);
+                rc.Add(mupdf.mupdf.pdf_to_name(keyObj));
+            }
             return rc;
         }
 
@@ -2978,9 +3010,9 @@ namespace MuPDF.NET
                 throw new ValueErrorException("bad 'value'");
             EnsureValidXrefDict(xref);
             var pdf = NativePdfDocument;
-            var obj = xref > 0 ? mupdf.mupdf.pdf_load_object(pdf, xref) : mupdf.mupdf.pdf_trailer(pdf);
+            using var obj = xref > 0 ? mupdf.mupdf.pdf_load_object(pdf, xref) : mupdf.mupdf.pdf_trailer(pdf);
             // MuPDF JM_set_object_value: "null" writes a PDF null object (key remains in the dict).
-            var newObj = Helpers.JmSetObjectValue(pdf, obj, key, value);
+            using var newObj = Helpers.JmSetObjectValue(pdf, obj, key, value);
             if (newObj?.m_internal == null)
                 return;
             if (xref != -1)
@@ -2991,10 +3023,9 @@ namespace MuPDF.NET
             int n = mupdf.mupdf.pdf_dict_len(newObj);
             for (int i = 0; i < n; i++)
             {
-                mupdf.mupdf.pdf_dict_put(
-                    obj,
-                    Helpers.PdfDictGetKey(newObj, i),
-                    Helpers.PdfDictGetVal(newObj, i));
+                using var dictKey = mupdf.mupdf.pdf_dict_get_key(newObj, i);
+                using var dictVal = mupdf.mupdf.pdf_dict_get_val(newObj, i);
+                mupdf.mupdf.pdf_dict_put(obj, dictKey, dictVal);
             }
         }
         /// <summary>
@@ -4145,18 +4176,22 @@ namespace MuPDF.NET
                     continue;
                 var o = Helpers.PdfDictGets(formdict, "BBox");
                 var m = Helpers.PdfDictGets(formdict, "Matrix");
-                mupdf.FzMatrix mat;
-                if (m.m_internal != null)
-                    mat = mupdf.mupdf.pdf_to_matrix(m);
-                else
-                    mat = new mupdf.FzMatrix();
-                mupdf.FzRect bbox;
+                using var mat = m.m_internal != null
+                    ? mupdf.mupdf.pdf_to_matrix(m)
+                    : new mupdf.FzMatrix();
+                Rect bboxRect;
                 if (o.m_internal != null)
-                    bbox = mupdf.mupdf.fz_transform_rect(mupdf.mupdf.pdf_to_rect(o), mat);
+                {
+                    using var src = mupdf.mupdf.pdf_to_rect(o);
+                    using var bbox = mupdf.mupdf.fz_transform_rect(src, mat);
+                    bboxRect = new Rect(bbox);
+                }
                 else
-                    bbox = new mupdf.FzRect(mupdf.FzRect.Fixed.Fixed_INFINITE);
+                {
+                    using var bbox = new mupdf.FzRect(mupdf.FzRect.Fixed.Fixed_INFINITE);
+                    bboxRect = new Rect(bbox);
+                }
                 int xref = mupdf.mupdf.pdf_to_num(formdict);
-                var bboxRect = new Rect(bbox);
                 formlist.Add((xref, mupdf.mupdf.pdf_to_name(refname) ?? "", stream_xref, bboxRect));
             }
         }
@@ -4177,7 +4212,7 @@ namespace MuPDF.NET
             var doc = NativePdfDocument;
             if (xref < 1)
                 return "n/a";
-            var o = doc.pdf_load_object(xref);
+            using var o = doc.pdf_load_object(xref);
             var desft = Helpers.PdfDictGet(o, mupdf.mupdf.pdf_new_name("DescendantFonts"));
             mupdf.PdfObj fd;
             if (desft.m_internal != null)
@@ -4320,7 +4355,7 @@ namespace MuPDF.NET
         public (string name, string ext, string type, byte[] content) ExtractFont(int xref)
         {
             var pdf = NativePdfDocument;
-            var obj = mupdf.mupdf.pdf_load_object(pdf, xref);
+            using var obj = mupdf.mupdf.pdf_load_object(pdf, xref);
             string name = "", ext = "", type = "";
             byte[] content = Array.Empty<byte>();
 
@@ -5538,9 +5573,12 @@ namespace MuPDF.NET
                     if (kids2.pdf_is_array() == 0)
                     {
                         var widget = mupdf.mupdf.pdf_load_object(pdfDoc, x2);
-                        widget.pdf_dict_del(mupdf.mupdf.pdf_new_name("T"));
-                        widget.pdf_dict_put(mupdf.mupdf.pdf_new_name("Parent"), w1_ind);
-                        kids1.pdf_array_push(w2_ind);
+                        using (widget)
+                        {
+                            widget.pdf_dict_del(mupdf.mupdf.pdf_new_name("T"));
+                            widget.pdf_dict_put(mupdf.mupdf.pdf_new_name("Parent"), w1_ind);
+                            kids1.pdf_array_push(w2_ind);
+                        }
                     }
                     else
                     {
@@ -5590,8 +5628,8 @@ namespace MuPDF.NET
                     acroFlds.pdf_array_push(new_ind);
                 }
 
-                var w1 = mupdf.mupdf.pdf_load_object(pdf, xref1);
-                var w2 = mupdf.mupdf.pdf_load_object(pdf, xref2);
+                using var w1 = mupdf.mupdf.pdf_load_object(pdf, xref1);
+                using var w2 = mupdf.mupdf.pdf_load_object(pdf, xref2);
                 var kids1 = Helpers.PdfObjDictGet(w1,mupdf.mupdf.pdf_new_name("Kids"));
                 var kids2 = Helpers.PdfObjDictGet(w2,mupdf.mupdf.pdf_new_name("Kids"));
 
@@ -5660,7 +5698,7 @@ namespace MuPDF.NET
                     else
                     {
                         string newname = name + $" [{xref1}]";  // append this to the name
-                        var wobject = mupdf.mupdf.pdf_load_object(pdf, xref1);
+                        using var wobject = mupdf.mupdf.pdf_load_object(pdf, xref1);
                         wobject.pdf_dict_put_text_string(mupdf.mupdf.pdf_new_name("T"), newname);
                     }
                 }
@@ -5671,7 +5709,8 @@ namespace MuPDF.NET
             mupdf.PdfObj get_acroform(Document doc)
             {
                 var pdf = doc.NativePdfDocument;
-                return Helpers.PdfDictGetp(mupdf.mupdf.pdf_trailer(pdf), "Root/AcroForm");
+                using var trailer = mupdf.mupdf.pdf_trailer(pdf);
+                return Helpers.PdfDictGetp(trailer, "Root/AcroForm");
             }
 
             mupdf.PdfObj acro;
@@ -5728,7 +5767,7 @@ namespace MuPDF.NET
                 {
                     if (wtype != AnnotationType.Widget)
                         continue;
-                    var w_obj = mupdf.mupdf.pdf_load_object(srcpdf, xref);
+                    using var w_obj = mupdf.mupdf.pdf_load_object(srcpdf, xref);
                     w_obj.pdf_dict_del(mupdf.mupdf.pdf_new_name("P"));
 
                     var (parent_xref, old_kids) = kids_xrefs(w_obj);
@@ -5746,7 +5785,7 @@ namespace MuPDF.NET
 
             foreach (int xref in parents.Keys)
             {
-                var parent = mupdf.mupdf.pdf_load_object(srcpdf, xref);
+                using var parent = mupdf.mupdf.pdf_load_object(srcpdf, xref);
                 var parent_graft = gm.pdf_graft_mapped_object(parent);
                 var parent_tar = mupdf.mupdf.pdf_add_object(tarpdf, parent_graft);
                 var kids_xrefs_new = get_kids(parent_tar, new List<int>());
@@ -5778,7 +5817,7 @@ namespace MuPDF.NET
 
                 foreach (int xref in w_xrefs)
                 {
-                    var w_obj = mupdf.mupdf.pdf_load_object(srcpdf, xref);
+                    using var w_obj = mupdf.mupdf.pdf_load_object(srcpdf, xref);
                     var is_aac = mupdf.mupdf.pdf_is_dict(w_obj.pdf_dict_getp("AA/C"));
                     int parent_xref = Helpers.PdfObjDictGet(w_obj,mupdf.mupdf.pdf_new_name("Parent")).pdf_to_num();
                     mupdf.PdfObj w_obj_tar_ind;
@@ -7613,17 +7652,19 @@ namespace MuPDF.NET
             var pdf = NativePdfDocument;
             if (n >= pageCount)
                 throw new ValueErrorException(Constants.MSG_BAD_PAGENO);
-            var page_obj = mupdf.mupdf.pdf_lookup_page_obj(pdf, n);
-            var cropbox = Helpers.PdfDictGetInheritable(page_obj, mupdf.mupdf.pdf_new_name("CropBox"));
+            using var page_obj = mupdf.mupdf.pdf_lookup_page_obj(pdf, n);
+            using var cropName = mupdf.mupdf.pdf_new_name("CropBox");
+            using var cropbox = mupdf.mupdf.pdf_dict_get_inheritable(page_obj, cropName);
             if (cropbox.m_internal != null)
             {
-                var r = mupdf.mupdf.pdf_to_rect(cropbox);
+                using var r = mupdf.mupdf.pdf_to_rect(cropbox);
                 return new Rect(r.x0, r.y0, r.x1, r.y1);
             }
-            var mb = Helpers.PdfDictGetInheritable(page_obj, mupdf.mupdf.pdf_new_name("MediaBox"));
+            using var mbName = mupdf.mupdf.pdf_new_name("MediaBox");
+            using var mb = mupdf.mupdf.pdf_dict_get_inheritable(page_obj, mbName);
             if (mb.m_internal != null)
             {
-                var r = mupdf.mupdf.pdf_to_rect(mb);
+                using var r = mupdf.mupdf.pdf_to_rect(mb);
                 return new Rect(r.x0, r.y0, r.x1, r.y1);
             }
             return new Rect(0, 0, 595, 842);

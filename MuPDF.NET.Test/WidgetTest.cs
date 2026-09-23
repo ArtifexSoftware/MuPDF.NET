@@ -40,6 +40,7 @@ namespace MuPDF.NET.Test
             Widget first = page.FirstWidget;
 
             Assert.Equal("Text", first.FieldTypeString);
+            Assert.Equal("Textfield-1", first.FieldName);
             doc.Save(Out("Text.pdf"));
         }
 

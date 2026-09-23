@@ -1,0 +1,10 @@
+# Default line endings for paths that do not have a nested root .editorconfig.
+# MuPDF.NET/.editorconfig stays root=true and owns C# settings under that folder.
+root = true
+
+[*]
+end_of_line = lf
+charset = utf-8
+
+[*.{bat,cmd}]
+end_of_line = crlf

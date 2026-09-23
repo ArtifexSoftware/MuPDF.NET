@@ -5,15 +5,12 @@ using System.Threading;
 namespace MuPDF.NET
 {
     /// <summary>
+    /// Global MuPDF runtime helpers (anti-aliasing, caches, warnings, page contents).
     /// </summary>
     /// <remarks>
-    /// <para>MuPDF uses <c>@staticmethod</c> so no instance is required. Public members use PascalCase;
-    /// <c>internal</c> snake_case aliases are available for same-assembly tests. <c>JM_*</c> helpers live on <see cref="Helpers"/>.</para>
-    /// <para>Legacy MuPDF.NET readthedocs listed some of these under <see cref="Utils"/>:
-    /// <see cref="Utils.GetId"/> → <see cref="GenId"/>,
-    /// <see cref="Utils.GetAllContents"/> → <see cref="GetAllContents"/>,
-    /// <see cref="Utils.InsertContents"/> → <see cref="InsertContents"/>.
-    /// The <see cref="Utils"/> forwards are kept for backward compatibility.</para>
+    /// All members are static. Some of these used to be documented on <see cref="Utils"/>
+    /// (<see cref="Utils.GetId"/>, <see cref="Utils.GetAllContents"/>, <see cref="Utils.InsertContents"/>);
+    /// those forwards remain for compatibility. Prefer <see cref="Tools"/> for new code.
     /// </remarks>
     public static class Tools
     {
@@ -22,16 +19,15 @@ namespace MuPDF.NET
         /// <summary>Generates a unique annotation/object ID.</summary>
         public static int GenId()
         {
-            // global TOOLS_JM_UNIQUE_ID
-            // TOOLS_JM_UNIQUE_ID += 1
             return Interlocked.Increment(ref _uniqueId);
         }
 
-        /// <summary>Adds bytes as a new <c>/Contents</c> stream and returns the new stream xref.</summary>
-        /// <remarks>Python docstring: Add bytes as a new /Contents object for a page, and return its xref.</remarks>
+        /// <summary>
+        /// Adds bytes as a new page <c>/Contents</c> object and returns its xref.
+        /// </summary>
         /// <param name="page">Target PDF page.</param>
         /// <param name="newContent">Raw PDF content bytes.</param>
-        /// <param name="overlay">If <see langword="true"/>, append; otherwise prepend (same as argument).</param>
+        /// <param name="overlay">If <see langword="true"/>, append; otherwise prepend.</param>
         public static int InsertContents(Page page, ReadOnlySpan<byte> newContent, bool overlay = true)
         {
             if (page == null) throw new ArgumentNullException(nameof(page));
@@ -81,13 +77,10 @@ namespace MuPDF.NET
         public static byte[] GetAllContents(Page page)
         {
             if (page == null) throw new ArgumentNullException(nameof(page));
-            // page = _as_pdf_page(page.this)
             var pdfPage = Helpers.AsPdfPage(page, required: true);
-            // res = JM_read_contents(page.obj())
             var res = Helpers.JM_read_contents(pdfPage.obj());
             try
             {
-                // result = JM_BinFromBuffer(res)
                 return Helpers.BinFromBuffer(res);
             }
             finally
@@ -96,17 +89,16 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>Purges the MuPDF glyph cache.</summary>
-        /// <remarks>Python docstring: Empty the glyph cache.</remarks>
+        /// <summary>Empties the MuPDF glyph cache.</summary>
         public static void GlyphCacheEmpty() => mupdf.mupdf.fz_purge_glyph_cache();
 
-        /// <summary>Returns the linked MuPDF library version string.</summary>
-        /// <remarks>Python docstring: Get version of MuPDF binary build.</remarks>
+        /// <summary>Returns the version of the linked MuPDF native library.</summary>
         public static string MupdfVersion() => mupdf.mupdf.FZ_VERSION;
 
         /// <summary>
-        /// Get MuPDF warnings/errors with optional reset .
+        /// Returns accumulated MuPDF warnings and errors.
         /// </summary>
+        /// <param name="reset">If <see langword="true"/>, clear the stored list after reading.</param>
         public static string MupdfWarnings(bool reset = true)
         {
             Helpers.EnsureMupdfWarningsHooked();
@@ -122,29 +114,44 @@ namespace MuPDF.NET
         /// <summary>Clear the stored MuPDF warning list.</summary>
         public static void ResetMupdfWarnings()
         {
-            // global JM_mupdf_warnings_store
             lock (Helpers.JM_mupdf_warnings_store)
                 Helpers.JM_mupdf_warnings_store.Clear();
         }
 
-        /// <summary>Sets the anti-aliasing level.</summary>
-        /// <remarks>Python docstring: Set anti-aliasing level.</remarks>
+        /// <summary>
+        /// Sets the number of anti-aliasing bits used when rendering graphics and text (0–8).
+        /// The value stays in effect until changed again. Used by <see cref="Page.GetPixmap"/>.
+        /// </summary>
+        /// <param name="level">Anti-aliasing bits. Values outside 0–8 are clamped by MuPDF.</param>
         public static void SetAaLevel(int level) => mupdf.mupdf.fz_set_aa_level(level);
 
-        /// <summary>Sets the minimum graphics line width.</summary>
-        /// <remarks>Python docstring: Set the graphics minimum line width.</remarks>
+        /// <summary>
+        /// Sets the minimum stroked line width in pixels when rendering graphics.
+        /// Hairlines thinner than this are drawn at least this wide. Used by <see cref="Page.GetPixmap"/>.
+        /// </summary>
+        /// <param name="minLineWidth">Minimum stroke width in pixels (0 = no minimum).</param>
         public static void SetGraphicsMinLineWidth(float minLineWidth) =>
             mupdf.mupdf.fz_set_graphics_min_line_width(minLineWidth);
 
-        /// <summary>Returns current anti-aliasing and minimum line-width settings.</summary>
-        /// <remarks>Python docstring: Show anti-aliasing values.</remarks>
+        /// <summary>
+        /// Returns the current anti-aliasing levels and graphics minimum line width.
+        /// </summary>
+        /// <returns>
+        /// Graphics AA bits, text AA bits, and minimum stroke width in pixels.
+        /// Typical defaults are graphics=8, text=8, graphicsMinLineWidth=0.
+        /// </returns>
         public static (int graphics, int text, float graphicsMinLineWidth) ShowAaLevel() => (
             mupdf.mupdf.fz_graphics_aa_level(),
             mupdf.mupdf.fz_text_aa_level(),
             mupdf.mupdf.fz_graphics_min_line_width());
 
-        /// <summary>Shrinks or empties the MuPDF resource store.</summary>
-        /// <remarks>Python docstring: Free 'percent' of current store size.</remarks>
+        /// <summary>
+        /// Frees a percentage of the current MuPDF resource-store size.
+        /// </summary>
+        /// <param name="percent">
+        /// 0 does nothing. 1–99 shrinks the store. 100 or more empties it.
+        /// Least-recently-used items are removed first.
+        /// </param>
         public static void StoreShrink(int percent)
         {
             if (percent >= 100)
@@ -155,10 +162,13 @@ namespace MuPDF.NET
             {
                 mupdf.mupdf.fz_shrink_store((uint)(100 - percent));
             }
-            // fixme: return gctx->store->size.
         }
 
-        /// <summary>Set or query small glyph heights mode.</summary>
+        /// <summary>
+        /// Sets or queries whether text search/extract uses smaller glyph bbox heights.
+        /// </summary>
+        /// <param name="on">New value, or <see langword="null"/> to only query.</param>
+        /// <returns>The current setting.</returns>
         public static bool SetSmallGlyphHeights(bool? on = null)
         {
             if (on != null)

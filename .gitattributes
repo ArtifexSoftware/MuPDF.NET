@@ -1,0 +1,36 @@
+# Cross-platform line endings (Windows + Linux).
+# Overrides core.autocrlf: store LF in git and check out LF in the working tree.
+* text=auto eol=lf
+
+# Unix shells: CRLF breaks `set -eu` under dash/sh.
+*.sh text eol=lf
+
+# Windows command scripts
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binary — never convert line endings
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.dll binary
+*.exe binary
+*.so binary
+*.dylib binary
+*.a binary
+*.lib binary
+*.pdb binary
+*.nupkg binary
+*.snupkg binary
+*.zip binary
+*.gz binary
+*.7z binary
+*.ttf binary
+*.otf binary
+*.woff binary
+*.woff2 binary
+*.eot binary
+*.bin binary

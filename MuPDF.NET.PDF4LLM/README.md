@@ -13,6 +13,7 @@ The public API lives in the **`MuPDF.NET.PDF4LLM`** namespace. The main entry po
 | Full documentation | https://docs.pdf4llm.com/ |
 | .NET getting started | https://docs.pdf4llm.com/dotnet/getting-started/installation |
 | MuPDF.NET API reference | https://mupdfnet.readthedocs.io/ |
+| Sample apps (`MuPDF.NET.Examples`) | https://github.com/ArtifexSoftware/MuPDF.NET.Examples |
 
 ## Installation
 
@@ -66,6 +67,17 @@ using MuPDF.NET.PDF4LLM.Layout;
 
 bool layoutReady = PyMuPdfLayout.IsAvailable;      // Python import probe
 bool layoutActive = MuPDF4LLM.LayoutAvailable;  // provider registered
+```
+
+## Examples
+
+Runnable console samples for this package (Markdown, JSON/layout, OCR, tables, LlamaIndex, Markdown-to-PDF) live in **[MuPDF.NET.Examples](https://github.com/ArtifexSoftware/MuPDF.NET.Examples)** under `MuPDF.NET.PDF4LLM/`.
+
+```powershell
+git clone https://github.com/ArtifexSoftware/MuPDF.NET.Examples.git
+cd MuPDF.NET.Examples
+dotnet restore
+dotnet run --project MuPDF.NET.PDF4LLM\01-ToMarkdown
 ```
 
 ## Quick start

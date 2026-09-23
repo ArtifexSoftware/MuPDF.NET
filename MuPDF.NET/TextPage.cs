@@ -20,7 +20,7 @@ namespace MuPDF.NET
     {
         private mupdf.FzStextPage _nativeStp;
         private bool _disposed;
-        /// <summary>Cached block views; native memory is owned by <see cref="_nativeStp"/>.</summary>
+        /// <summary>Cached C++ block wrappers; in-page stext is owned by <see cref="_nativeStp"/>.</summary>
         private List<mupdf.FzStextBlock> _stextBlocks;
         internal Page Parent { get; set; }
         public bool ThisOwn { get; set; } = true;
@@ -679,8 +679,9 @@ namespace MuPDF.NET
         // ─── Internal: Faithful port of extra.i _as_dict ────────────────
 
         /// <summary>
-        /// Stable block views for the lifetime of this text page (MuPDF.NET <c>Blocks</c> pattern).
+        /// Stable C++ block wrappers for the lifetime of this text page (MuPDF.NET <c>Blocks</c> pattern).
         /// Walk via <c>first_block</c>/<c>next</c>; do not use iterator <c>__ref__()</c> (owning wrappers).
+        /// Disposed in <see cref="Dispose"/>.
         /// </summary>
         private IReadOnlyList<mupdf.FzStextBlock> StextBlocks
         {
@@ -1775,7 +1776,12 @@ namespace MuPDF.NET
         {
             if (!_disposed)
             {
-                _stextBlocks = null;
+                if (_stextBlocks != null)
+                {
+                    foreach (var b in _stextBlocks)
+                        b?.Dispose();
+                    _stextBlocks = null;
+                }
                 if (ThisOwn && _nativeStp != null)
                 {
                     _nativeStp.Dispose();
