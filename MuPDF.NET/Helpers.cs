@@ -1467,6 +1467,8 @@ namespace MuPDF.NET
             return new mupdf.FzPixmap(handle, false);
         }
 
+        internal static readonly object PixmapDropLock = new object();
+
         /// <summary>
         /// Drop an owning <see cref="mupdf.FzPixmap"/> created by MuPDF (e.g. <c>fz_scale_pixmap</c>).
         /// <c>delete_FzPixmap</c> alone does not release sample storage; call <c>fz_drop_pixmap</c> first.
@@ -1474,7 +1476,7 @@ namespace MuPDF.NET
         internal static void DropFzPixmap(ref mupdf.FzPixmap? pm)
         {
             if (pm == null) return;
-            lock (Utils.MuPDFLock)
+            lock (PixmapDropLock)
             {
                 if (mupdf.FzPixmap.getCPtr(pm).Handle == IntPtr.Zero)
                 {

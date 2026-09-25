@@ -1,8 +1,9 @@
 # Changelog
 
-### [3.28.2.3] - 2026-09-18
+### [3.28.2.4] - 2026-09-23
 
-- Native leaks (#256, also 3.28.2.1 / 3.28.2.2): dispose owning SWIG wrappers so `pdf_drop_obj` / C++ destructors run. Widgets (`pdf_load_field_name2`, `pdf_annot_obj`, `Dispose`), `TextPage.Search` (`BorrowStextBlock` / `FirstStextLinePtr`), `GetKeyXref` / `XrefGetKey` / `XrefGetKeys` / `XrefSetKey`, `Annot.Rect` / `page.Rect` / `GetSvgImage` / text-trace / drawings / `pdf_to_rect`, `Widget.SyncFlags`, convert-to-PDF links. Stop `PdfObjBorrowed` / `FzRectBorrowed` on dict/load/annot getters.
+- Parallel `GetPixmap` (#191): per-document native lock instead of process-wide `Utils.MuPDFLock` on open / `LoadPage` / `GetDisplayList`. Independent documents can render on multiple cores; the same document is still serialized (MuPDF: no simultaneous use of one document). Raster after the display list stays unlocked. `Utils.MuPDFLock` is obsolete (library no longer takes it).
+- Native leaks (#256, also 3.28.2.3 / 3.28.2.1 / 3.28.2.2): dispose owning SWIG wrappers so `pdf_drop_obj` / C++ destructors run. Widgets (`pdf_load_field_name2`, `pdf_annot_obj`, `Dispose`), `TextPage.Search` (`BorrowStextBlock` / `FirstStextLinePtr`), `GetKeyXref` / `XrefGetKey` / `XrefGetKeys` / `XrefSetKey`, `Annot.Rect` / `page.Rect` / `GetSvgImage` / text-trace / drawings / `pdf_to_rect`, `Widget.SyncFlags`, convert-to-PDF links. Stop `PdfObjBorrowed` / `FzRectBorrowed` on dict/load/annot getters.
 
 ### [3.28.2] - 2026-08-14
 

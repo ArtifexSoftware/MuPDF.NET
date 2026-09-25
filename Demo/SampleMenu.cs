@@ -68,6 +68,7 @@ namespace Demo
             new("Regression & diagnostics", "issue-213", "[diag] Drawing paths / line width", _ => Program.TestIssue213(), Diagnostic: true),
             new("Regression & diagnostics", "issue-1880", "[diag] Read Data Matrix barcodes", _ => Program.TestIssue1880(), Diagnostic: true),
             new("Regression & diagnostics", "issue-234", "[diag] Pixmap scale + insert image", _ => Program.TestIssue234(), Diagnostic: true),
+            new("Regression & diagnostics", "issue-191", "[diag] Parallel GetPixmap independent vs shared document (#191)", a => Program.TestIssue191(a), Diagnostic: true),
             new("Regression & diagnostics", "issue-256", "[diag] Widget / Search / GetKeyXref / MediaBox leak (#256)", a => Program.TestIssue256(a), Diagnostic: true),
             new("Regression & diagnostics", "pixmap-parallel", "[diag] Parallel Pixmap.ToBytes", _ => Program.TestPixmapParallel(), Diagnostic: true),
             new("Regression & diagnostics", "gettables-parallel", "[diag] Parallel Utils.GetTables", _ => Program.TestGetTablesParallel(), Diagnostic: true),

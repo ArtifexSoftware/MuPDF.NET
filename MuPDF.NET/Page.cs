@@ -35,6 +35,7 @@ namespace MuPDF.NET
         /// (<c>weakref.WeakValueDictionary</c> after <c>load_page</c>).
         /// </summary>
         private readonly object _wrapperCacheLock = new object();
+        private readonly object _pageNativeLock = new object();
         private readonly Dictionary<int, WeakReference<Annot>> _annotRefs = new Dictionary<int, WeakReference<Annot>>();
         /// <summary>Best-effort cache of <see cref="Link"/> wrappers keyed by link-annot xref (Python <c>delete_link</c> / <c>get_links</c> flow).</summary>
         private readonly Dictionary<int, WeakReference<Link>> _linkRefsByXref = new Dictionary<int, WeakReference<Link>>();
@@ -76,6 +77,11 @@ namespace MuPDF.NET
         /// Gets or sets Owning document. Null after the page is detached from a closed document.
         /// </summary>
         public Document? Parent { get; internal set; }
+        /// <summary>
+        /// Native lock for this page: the parent document lock when attached (MuPDF rule #2),
+        /// otherwise a page-local lock after detach.
+        /// </summary>
+        internal object NativeLock => Parent?.NativeLock ?? _pageNativeLock;
         /// <summary>
         /// Gets or sets Whether this wrapper disposes the native page handle.
         /// </summary>
@@ -2018,7 +2024,7 @@ namespace MuPDF.NET
         /// <param name="annots">Whether to include annotations when building display list or pixmap.</param>
         public DisplayList GetDisplayList(int annots = 1)
         {
-            lock (Utils.MuPDFLock)
+            lock (NativeLock)
             {
                 mupdf.FzDisplayList dl;
                 if (annots != 0)
@@ -3432,7 +3438,7 @@ namespace MuPDF.NET
         internal object[] _insertFont(string fontname, string bfname, string fontfile, byte[] fontbuffer,
             bool set_simple, int idx, int wmode, int serif, int encoding, int ordering)
         {
-            lock (Utils.MuPDFLock)
+            lock (NativeLock)
             {
                 mupdf.PdfPage page = NativePdfPage;
                 mupdf.PdfDocument pdf = RequireParent().NativePdfDocument;
@@ -5481,11 +5487,12 @@ namespace MuPDF.NET
                 return;
 
             _reset_annot_refs();
+            object nativeLock = NativeLock;
             Parent?.ForgetPageRef(this);
             Parent = null;
 
             DisposeCachedPdfPage();
-            lock (Utils.MuPDFLock)
+            lock (nativeLock)
             {
                 _nativePage?.Dispose();
                 _nativePage = null;
