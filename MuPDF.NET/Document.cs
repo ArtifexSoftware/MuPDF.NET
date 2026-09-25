@@ -26,6 +26,13 @@ namespace MuPDF.NET
         private mupdf.PdfDocument _cachedPdfDocument;
         private bool _disposed;
         /// <summary>
+        /// Serializes native use of <em>this</em> document (MuPDF: no two threads may use the
+        /// same document at once). Independent <see cref="Document"/> instances do not share
+        /// this lock, so parallel <see cref="Page.GetPixmap"/> across files can use multiple cores
+        /// (#191).
+        /// </summary>
+        internal readonly object NativeLock = new object();
+        /// <summary>
         /// Gets or sets Gets or sets whether this wrapper owns the native document handle.
         /// </summary>
         /// <value>Gets or sets whether this wrapper owns the native document handle.</value>
@@ -276,14 +283,11 @@ namespace MuPDF.NET
         /// <summary>Opens paths via <c>fz_open_document_with_stream_and_dir</c>.</summary>
         private static mupdf.FzDocument OpenNativeFromFilename(string filename, string filetype, Archive archive)
         {
-            lock (Utils.MuPDFLock)
-            {
-                string suffix = filetype;
-                if (string.IsNullOrEmpty(suffix))
-                    suffix = Path.GetExtension(filename).TrimStart('.');
-                using var fzStream = mupdf.mupdf.fz_open_file(filename);
-                return mupdf.mupdf.fz_open_document_with_stream_and_dir(suffix, fzStream, archive.NativeArchive);
-            }
+            string suffix = filetype;
+            if (string.IsNullOrEmpty(suffix))
+                suffix = Path.GetExtension(filename).TrimStart('.');
+            using var fzStream = mupdf.mupdf.fz_open_file(filename);
+            return mupdf.mupdf.fz_open_document_with_stream_and_dir(suffix, fzStream, archive.NativeArchive);
         }
 
         /// <summary>Opens memory bytes via <c>fz_open_document_with_stream_and_dir</c>.</summary>
@@ -291,8 +295,7 @@ namespace MuPDF.NET
         {
             using var mem = Helpers.BufferFromBytes(data);
             using var bufStream = mupdf.mupdf.fz_open_buffer(mem);
-            lock (Utils.MuPDFLock)
-                return mupdf.mupdf.fz_open_document_with_stream_and_dir(filetype ?? "", bufStream, archive.NativeArchive);
+            return mupdf.mupdf.fz_open_document_with_stream_and_dir(filetype ?? "", bufStream, archive.NativeArchive);
         }
 
         /// <summary>
@@ -689,10 +692,12 @@ namespace MuPDF.NET
         /// <exception cref="ValueErrorException">Document is closed, encrypted, or page out of range.</exception>
         public Page LoadPage(int pageNo)
         {
-            if (IsClosed || IsEncrypted)
-                throw new ValueErrorException("document closed or encrypted");
-            lock (Utils.MuPDFLock)
+            lock (NativeLock)
+            {
+                if (IsClosed || IsEncrypted)
+                    throw new ValueErrorException("document closed or encrypted");
                 return LoadPageCore(pageNo);
+            }
         }
 
         private Page LoadPageCore(int pageNo)
@@ -724,10 +729,10 @@ namespace MuPDF.NET
         /// <exception cref="ValueErrorException">Document is closed, encrypted, or location out of range.</exception>
         public Page LoadPage(int chapter, int pageInChapter)
         {
-            if (IsClosed || IsEncrypted)
-                throw new ValueErrorException("document closed or encrypted");
-            lock (Utils.MuPDFLock)
+            lock (NativeLock)
             {
+                if (IsClosed || IsEncrypted)
+                    throw new ValueErrorException("document closed or encrypted");
                 if (!ContainsChapterPage(chapter, pageInChapter))
                     throw new ValueErrorException("page not in document");
                 var fzPage = mupdf.mupdf.fz_load_chapter_page(NativeDocument, chapter, pageInChapter);
@@ -738,7 +743,7 @@ namespace MuPDF.NET
         /// <summary>Python <c>Document.__getitem__(i)</c> for an <c>int</c>: <c>if i not in self: raise IndexError</c> then <c>load_page(i)</c>.</summary>
         internal Page GetItemPageForIndexer(int pageNo)
         {
-            lock (Utils.MuPDFLock)
+            lock (NativeLock)
             {
                 int pc = PageCount;
                 if (!(pageNo < pc))
@@ -750,7 +755,7 @@ namespace MuPDF.NET
         /// <summary>Python <c>Document.__getitem__((chapter, pno))</c> membership then <c>load_page</c>.</summary>
         internal Page GetItemPageForIndexer(int chapter, int pageInChapter)
         {
-            lock (Utils.MuPDFLock)
+            lock (NativeLock)
             {
                 _ = PageCount;
                 if (!ContainsChapterPage(chapter, pageInChapter))
@@ -5031,7 +5036,7 @@ namespace MuPDF.NET
                 return;
             if (string.IsNullOrEmpty(css))
                 return;
-            lock (Utils.MuPDFLock)
+            lock (NativeLock)
                 mupdf.mupdf.fz_style_document(NativeDocument, append ? 1 : 0, css);
         }
 
@@ -7723,8 +7728,10 @@ namespace MuPDF.NET
         /// <exception cref="ValueErrorException">Document is closed, encrypted, or arguments are invalid.</exception>
         public void Close()
         {
-            if (!IsClosed)
+            lock (NativeLock)
             {
+                if (IsClosed)
+                    return;
                 if (_outline != null)
                 {
                     _outline.Dispose();
@@ -7735,10 +7742,7 @@ namespace MuPDF.NET
                 Graftmaps.Clear();
                 IsClosed = true;
                 DisposeCachedPdfDocument();
-                lock (Utils.MuPDFLock)
-                {
-                    _nativeDoc?.Dispose();
-                }
+                _nativeDoc?.Dispose();
                 _nativeDoc = null;
                 StreamData = null;
                 ReleaseOpenArchive();

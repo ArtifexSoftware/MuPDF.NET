@@ -60,9 +60,11 @@ namespace MuPDF.NET
         public static int CS_CMYK = 3;
 
         /// <summary>
-        /// Global lock for thread-safe access to native MuPDF library.
-        /// MuPDF is not thread-safe, so all P/Invoke calls must be synchronized with this lock.
+        /// Obsolete process-wide gate. The library does not lock this (#191). Each
+        /// <see cref="Document"/> serializes its own native use; locking this only serializes
+        /// the caller's code and is not required for thread safety.
         /// </summary>
+        [Obsolete("Utils.MuPDFLock is unused. Parallel GetPixmap is gated per Document, not process-wide. Remove lock (Utils.MuPDFLock) from your code.")]
         public static readonly object MuPDFLock = new object();
 
         public static string ANNOT_ID_STEM = "fitz";
