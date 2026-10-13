@@ -4,7 +4,10 @@ using Microsoft.Extensions.AI;
 
 namespace MuPDF.NET.PDF4LLM.AI.Services;
 
-/// <summary>Deterministic embeddings for development/tests (no cloud credentials).</summary>
+/// <summary>
+/// Deterministic embeddings for tests. The vector is a hash of the text, so cosine
+/// similarity does not mean the texts are about the same thing.
+/// </summary>
 public sealed class HashEmbeddingGenerator : IEmbeddingGenerator<string, Embedding<float>>
 {
     private readonly int _dimensions;

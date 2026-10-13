@@ -12,7 +12,8 @@ namespace Demo
             string Name,
             string Description,
             Action<string[]> Run,
-            bool Diagnostic = false);
+            bool Diagnostic = false,
+            bool OptIn = false);
 
         private static readonly Sample[] Samples =
         {
@@ -84,6 +85,9 @@ namespace Demo
             new("MuPDF.NET.PDF4LLM", "llm-reader-save-pages", "Load markdown chunks and save per-page .md files", _ => Program.TestLLM2()),
             new("MuPDF.NET.PDF4LLM", "markdown-reader", "LlamaIndex PDFMarkdownReader", _ => Program.TestMarkdownReader()),
             new("MuPDF.NET.PDF4LLM", "ai-connector", "LoadAiAsync: Ask / Summarize / Search", a => Program.TestMicrosoftAiConnector(a).GetAwaiter().GetResult()),
+            new("MuPDF.NET.PDF4LLM", "capitals-extract", "ToMarkdown national-capitals.pdf", _ => Program.TestExtractNationalCapitals()),
+            new("MuPDF.NET.PDF4LLM", "ollama", "LoadAiAsync with local Ollama (opt-in; needs Ollama)", _ => Program.TestOllama().GetAwaiter().GetResult(), OptIn: true),
+            new("MuPDF.NET.PDF4LLM", "ollama-magazines", "LoadAiAsync Magazines-PDF.pdf with local Ollama (opt-in)", _ => Program.TestOllamaMagazines().GetAwaiter().GetResult(), OptIn: true),
             new("MuPDF.NET.PDF4LLM", "llm-to-markdown-fixture-370", "[diag] ToMarkdown vs test_370 expected output", a => Program.Test4LlmToMarkdownCompareExpected370(a), Diagnostic: true),
             new("MuPDF.NET.PDF4LLM", "llm-to-markdown-ocr-1", "[diag] ToMarkdown OCR fixture (FFFD)", a => Program.Test4LlmToMarkdownOcrFixture1(a), Diagnostic: true),
             new("MuPDF.NET.PDF4LLM", "llm-to-markdown-ocr-2", "[diag] ToMarkdown without OCR on FFFD fixture", a => Program.Test4LlmToMarkdownOcrFixture2(a), Diagnostic: true),
@@ -161,7 +165,7 @@ namespace Demo
             var sampleArgs = Array.Empty<string>();
             foreach (var s in Samples)
             {
-                if (!include(s))
+                if (!include(s) || s.OptIn)
                     continue;
                 Console.WriteLine();
                 Console.WriteLine($"========== {s.Category} / {s.Name} ==========");

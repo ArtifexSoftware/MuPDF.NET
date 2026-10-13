@@ -2,7 +2,7 @@ using MuPDF.NET.PDF4LLM.AI.Models;
 
 namespace MuPDF.NET.PDF4LLM.AI.Abstractions;
 
-/// <summary>Vector store for semantic search (Phase 2 — Azure AI Search or in-memory).</summary>
+/// <summary>Vector store for the loaded chunks (in-memory, JSON file, or Azure AI Search).</summary>
 public interface IVectorIndex
 {
     /// <param name="chunks">Embedded chunks to upsert into the index.</param>
@@ -18,4 +18,7 @@ public interface IVectorIndex
         int topK = 5,
         string? sourceFileName = null,
         CancellationToken cancellationToken = default);
+
+    /// <summary>Drop every chunk whose source file name matches.</summary>
+    Task RemoveBySourceAsync(string sourceFileName, CancellationToken cancellationToken = default);
 }

@@ -13,6 +13,8 @@
   <ItemGroup>
     <ProjectReference Include="..\MuPDF.NET\MuPDF.NET.csproj" />
     <ProjectReference Include="..\MuPDF.NET.PDF4LLM\MuPDF.NET.PDF4LLM.csproj" />
+    <PackageReference Include="Microsoft.Extensions.AI" Version="10.10.0" />
+    <PackageReference Include="OllamaSharp" Version="5.4.30" />
   </ItemGroup>
 
   <Import Project="..\MuPDF.NET.PDF4LLM\build\MuPDF.NET.PDF4LLM.targets" Condition="Exists('..\MuPDF.NET.PDF4LLM\build\MuPDF.NET.PDF4LLM.targets')" />

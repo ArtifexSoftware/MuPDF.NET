@@ -46,6 +46,8 @@ public sealed class AzureSearchVectorIndex : IVectorIndex
             return;
 
         await EnsureIndexAsync(cancellationToken).ConfigureAwait(false);
+        foreach (string source in chunks.Select(c => c.SourceFileName).Distinct(StringComparer.OrdinalIgnoreCase))
+            await DeleteSourceAsync(source, cancellationToken).ConfigureAwait(false);
 
         var documents = chunks.Select(c => new SearchDocument
         {
@@ -114,6 +116,9 @@ public sealed class AzureSearchVectorIndex : IVectorIndex
         return results;
     }
 
+    public Task RemoveBySourceAsync(string sourceFileName, CancellationToken cancellationToken = default)
+        => DeleteSourceAsync(Path.GetFileName(sourceFileName), cancellationToken);
+
     private async Task EnsureIndexAsync(CancellationToken cancellationToken)
     {
         try
@@ -150,6 +155,39 @@ public sealed class AzureSearchVectorIndex : IVectorIndex
             };
 
             await _indexClient.CreateIndexAsync(index, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    async Task DeleteSourceAsync(string sourceFileName, CancellationToken cancellationToken)
+    {
+        var options = new SearchOptions
+        {
+            Filter = $"sourceFileName eq '{EscapeFilter(sourceFileName)}'",
+            Size = 1000,
+        };
+        options.Select.Add("id");
+
+        while (true)
+        {
+            SearchResults<SearchDocument> response = await _searchClient
+                .SearchAsync<SearchDocument>("*", options, cancellationToken)
+                .ConfigureAwait(false);
+
+            var keys = new List<string>();
+            await foreach (SearchResult<SearchDocument> hit in response.GetResultsAsync())
+            {
+                string? id = hit.Document["id"]?.ToString();
+                if (!string.IsNullOrEmpty(id))
+                    keys.Add(id);
+            }
+
+            if (keys.Count == 0)
+                return;
+
+            await _searchClient.DeleteDocumentsAsync("id", keys, cancellationToken: cancellationToken)
+                .ConfigureAwait(false);
+            if (keys.Count < 1000)
+                return;
         }
     }
 
