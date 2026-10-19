@@ -40,6 +40,7 @@ Developer documentation to help you get started
     getting-started/index.rst
     the-basics/index.rst
     compressing-files.rst
+    office/index.rst
 
 
 .. toctree::

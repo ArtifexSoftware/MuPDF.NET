@@ -22,6 +22,10 @@
 
     <cite>MuPDF.NET</cite>
 
+.. |MuPDF.NET Office| raw:: html
+
+    <cite>MuPDF.NET Office</cite>
+
 .. |MuPDF| raw:: html
 
     <cite>MuPDF</cite>
@@ -41,6 +45,14 @@
 .. |PDF| raw:: html
 
     <cite>PDF</cite>
+
+.. |Markdown| raw:: html
+
+    <cite>Markdown</cite>
+
+.. |JSON| raw:: html
+
+    <cite>JSON</cite>
 
 .. |TODO| raw:: html
 
