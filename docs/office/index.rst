@@ -96,7 +96,7 @@ Restrictions
 Trial keys
 -----------------------
 
-To obtain a license key `please fill out the form on this page <https://mupdf.com/mupdf-dotnet/office/try/?utm_source=rtd-mupdfnet&utm_medium=rtd&utm_content=cta-button-mupdfnet-pro-page&utm_campaign=docs>`_. You will then have the trial key emailled to the address you submitted.
+To obtain a license key `please fill out the form on this page <https://mupdf.com/mupdf-dotnet/office/try/?utm_source=rtd-mupdfnet&utm_medium=rtd&utm_content=cta-button-mupdfnet-pro-page&utm_campaign=docs>`_. You will then have the trial key emailed to the address you submitted.
 
 
 Using a key
@@ -137,7 +137,7 @@ If you require a byte representation of the PDF data, you can use the :meth:`MuP
     using MuPDF.NET.Office;
     MuPDFOffice.Unlock(my_key);
 
-    var pdfdata = MuPDFOffice.ToPdf("input.docx")
+    var pdfdata = MuPDFOffice.ToPdf("input.docx");
 
 
 **Office** document to Images
@@ -147,14 +147,15 @@ In order to convert an **Office** document to images, you should iterate the doc
 
 .. code-block:: cs
 
+    using MuPDF.NET;
     using MuPDF.NET.Office;
 
-    var doc = MuPDFOffice.Open("input.docx");
+    var doc = Document.Open("input.docx");
 
     for (int i = 0; i < doc.PageCount; i++)
     {
         var page = doc[i];
-        var pix = page.GetPixmap(200);
+        var pix = page.GetPixmap(dpi: 200);
         pix.Save($"page-{i+1}.png");
     }
 
@@ -170,7 +171,7 @@ Use the :meth:`MuPDFOffice.ToMarkdown` method to convert an **Office** document 
     using MuPDF.NET.Office;
     MuPDFOffice.Unlock(my_key);
 
-    MuPDFOffice.ToMarkdown("input.docx", "output.md")
+    MuPDFOffice.ToMarkdown("input.docx", "output.md");
 
 If you require a string representation of the Markdown data, you can use the :meth:`MuPDFOffice.ToMarkdown` method without specifying an output file.
 
@@ -184,7 +185,7 @@ Use the :meth:`MuPDFOffice.ToJson` method to convert an **Office** document to |
     using MuPDF.NET.Office;
     MuPDFOffice.Unlock(my_key);
 
-    MuPDFOffice.ToJson("input.docx", "output.json")
+    MuPDFOffice.ToJson("input.docx", "output.json");
 
 If you require a string representation of the JSON data, you can use the :meth:`MuPDFOffice.ToJson` method without specifying an output file.
 
@@ -195,27 +196,29 @@ API
 
 
 
-.. method:: MuPDFOffice.Unlock(string? keyString = null, string? fontPath = null, bool? fontPathAuto = null)
+.. method:: MuPDFOffice.Unlock(string? keyString = null, string? fontPath = null, bool? fontPathAuto = null) -> int
 
-    Unlocks the PyMuPDF Office functionality with the provided key.
+    Unlocks the MuPDF.NET Office functionality with the provided key.
 
     :arg string? keyString: the license key for |MuPDF.NET Office|.
     :arg string? fontPath: identify specific font directories.
     :arg bool? fontPathAuto: whether to append system font directories.
 
+    :returns: key flags as int. 0 if no key (restricted, 3 pages). `MuPDFOffice.KeyFlagVolumeLicense` (1) = volume license. `MuPDFOffice.KeyFlagDisableSo` (2) = SmartOffice disabled. The return can be ignored. Invalid keys throw exceptions.
+
     Grants access to the full functionality of |MuPDF.NET Office|. For a free trial key please visit: `https://mupdf.com/mupdf-dotnet/office/try/ <https://mupdf.com/mupdf-dotnet/office/try/?utm_source=rtd-mupdfnet&utm_medium=rtd&utm_content=cta-button-mupdfnet-pro-page&utm_campaign=docs>`_.
 
 .. _pymupdf_office_api_to_pdf:
 
-.. method:: MuPDFOffice.ToPdf(string inputPath, string? outputPath = null) -> bytes | null
+.. method:: MuPDFOffice.ToPdf(string inputPath, string? outputPath = null) -> byte[] | null
 
     Reads the input file and converts its contents into |PDF| format.
 
     :arg string inputPath: the input file path.
 
-    :arg str outputPath: the path to the output file. If `null` (the default), the method returns the PDF content as ``bytes``.
+    :arg string? outputPath: the path to the output file. If `null` (the default), the method returns the PDF content as ``byte[]``.
     
-    :returns: ``bytes`` of the PDF content or `null` if `outputPath` is specified.
+    :returns: ``byte[]`` of the PDF content or `null` if `outputPath` is specified.
 
 
 .. _pymupdf_office_api_to_markdown:
@@ -245,11 +248,11 @@ API
     :returns: string of the JSON representation or `null` if `outputPath` is specified.
 
 
-.. method:: MuPDFOffice.GetFontPath() -> string[]
+.. method:: MuPDFOffice.GetFontPath() -> IReadOnlyList<string>
 
     Retrieves the list of font paths currently recognized by |MuPDF.NET Office|.
 
-    :returns: an array of strings representing the font paths.
+    :returns: an array ``IReadOnlyList<string>`` representing the font paths.
 
 
 .. raw:: html
