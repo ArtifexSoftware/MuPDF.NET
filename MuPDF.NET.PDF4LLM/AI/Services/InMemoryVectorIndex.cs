@@ -12,8 +12,13 @@ public sealed class InMemoryVectorIndex : IVectorIndex
     public Task IndexAsync(IReadOnlyList<AiChunk> chunks, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        var names = new HashSet<string>(chunks.Select(c => c.SourceFileName), StringComparer.OrdinalIgnoreCase);
         lock (_lock)
+        {
+            _chunks.RemoveAll(c => names.Contains(c.SourceFileName));
             _chunks.AddRange(chunks);
+        }
+
         return Task.CompletedTask;
     }
 
@@ -48,6 +53,24 @@ public sealed class InMemoryVectorIndex : IVectorIndex
         return Task.FromResult<IReadOnlyList<SearchResult>>(results);
     }
 
+    public Task RemoveBySourceAsync(string sourceFileName, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (string.IsNullOrWhiteSpace(sourceFileName))
+            return Task.CompletedTask;
+
+        string name = Path.GetFileName(sourceFileName);
+        lock (_lock)
+        {
+            _chunks.RemoveAll(c =>
+                string.Equals(c.SourceFileName, sourceFileName, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(c.SourceFileName, name, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(Path.GetFileName(c.SourceFilePath), name, StringComparison.OrdinalIgnoreCase));
+        }
+
+        return Task.CompletedTask;
+    }
+
     internal int Count
     {
         get
@@ -55,6 +78,12 @@ public sealed class InMemoryVectorIndex : IVectorIndex
             lock (_lock)
                 return _chunks.Count;
         }
+    }
+
+    public IReadOnlyList<AiChunk> Snapshot()
+    {
+        lock (_lock)
+            return _chunks.ToList();
     }
 
     private static double CosineSimilarity(ReadOnlySpan<float> a, ReadOnlySpan<float> b)

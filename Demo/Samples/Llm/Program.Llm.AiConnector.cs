@@ -29,14 +29,14 @@ namespace Demo
 
             Console.WriteLine($"Indexed {aiDocs.ChunkCount} chunks from: {string.Join(", ", aiDocs.SourceFiles)}");
 
-            // RAG question across all indexed PDFs
-            const string question =
-                "Which NATO member countries have capitals with more than 5 million people?";
-            Console.WriteLine($"\n--- AskAsync ---\nQ: {question}");
+            const string question = "What is the capital of South Sudan?";
+            Console.WriteLine($"\n--- AskDetailedAsync ---\nQ: {question}");
             try
             {
-                string answer = await aiDocs.AskAsync(question);
-                Console.WriteLine($"A: {answer}");
+                GroundedAnswer answer = await aiDocs.AskDetailedAsync(question);
+                Console.WriteLine(answer.InsufficientEvidence ? "(insufficient evidence)" : "A: " + answer.Text);
+                foreach (Citation cite in answer.Citations)
+                    Console.WriteLine($"  cite: {cite.SourceFileName} p{cite.PageNumber} \"{cite.Quote}\"");
             }
             catch (InvalidOperationException ex)
             {

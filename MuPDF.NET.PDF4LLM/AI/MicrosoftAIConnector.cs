@@ -7,19 +7,13 @@ using MuPDF.NET.PDF4LLM.AI.Services;
 namespace MuPDF.NET.PDF4LLM.AI;
 
 /// <summary>
-/// Unified connector linking MuPDF.NET.PDF4LLM extraction with Microsoft's AI ecosystem
-/// (Kernel Memory chunking, Microsoft.Extensions.AI embeddings, Azure AI Search, Azure OpenAI).
+/// Loads PDFs into an <see cref="AiDocumentCollection"/>: extract, chunk, embed, index.
 /// </summary>
 public static class MsAIConnector
 {
     /// <summary>
     /// Extract, chunk, embed, and index one or more PDFs.
-    /// Returns a collection supporting <see cref="AiDocumentCollection.AskAsync"/>,
-    /// <see cref="AiDocumentCollection.SummarizeAsync"/>, and <see cref="AiDocumentCollection.SearchAsync"/>.
     /// </summary>
-    /// <param name="pdfPaths">Paths to PDF files (e.g. national-capitals.pdf, nato-members.pdf).</param>
-    /// <param name="options">Pipeline configuration. When null, uses in-memory development defaults.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
     public static async Task<AiDocumentCollection> LoadAsync(
         IEnumerable<string> pdfPaths,
         MicrosoftAIConnectorOptions? options = null,
@@ -33,47 +27,76 @@ public static class MsAIConnector
             throw new ArgumentException("At least one PDF path is required.", nameof(pdfPaths));
 
         options ??= MicrosoftAIConnectorOptions.CreateForDevelopment();
-
-        IPdfExtractor extractor = options.MuPDF4LLM
-            ?? new Pdf4LlmExtractor(options.UseLayout);
-
-        IChunkingService chunking = options.ChunkingService
-            ?? new TextChunkingService(options.MaxChunkCharacters, options.ChunkOverlapCharacters);
+        options.Validate();
 
         IEmbeddingGenerator<string, Embedding<float>> embeddings = options.EmbeddingGenerator
             ?? throw new InvalidOperationException(
-                "EmbeddingGenerator is required. Configure Azure OpenAI or use CreateForDevelopment().");
+                "EmbeddingGenerator is required. Set MicrosoftAIConnectorOptions.EmbeddingGenerator or use CreateForDevelopment().");
 
-        IVectorIndex vectorIndex = ResolveVectorIndex(options);
+        List<AiChunk> chunks = await PrepareChunksAsync(paths, options, cancellationToken).ConfigureAwait(false);
 
-        IRagCompletionService? completion = options.ChatClient != null
-            ? new ExtensionsAiRagCompletionService(options.ChatClient)
-            : null;
-
-        var allPages = new List<ExtractedPage>();
-        foreach (string path in paths)
+        int dimensions = chunks.Count == 0 ? options.EmbeddingDimensions : chunks[0].Embedding.Length;
+        if (options.EmbeddingDimensions > 0 && chunks.Count > 0 && options.EmbeddingDimensions != dimensions)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            string fullPath = Path.GetFullPath(path);
-            IReadOnlyList<ExtractedPage> pages = await extractor.ExtractAsync(fullPath, cancellationToken)
-                .ConfigureAwait(false);
-            allPages.AddRange(pages);
+            throw new InvalidOperationException(
+                $"EmbeddingDimensions is {options.EmbeddingDimensions}, but the embedding model returned {dimensions}. Set EmbeddingDimensions to {dimensions}.");
         }
 
-        IReadOnlyList<AiChunk> chunks = chunking.Chunk(allPages);
-        var mutableChunks = chunks.ToList();
-        await EmbeddingIndexer.EmbedChunksAsync(mutableChunks, embeddings, cancellationToken).ConfigureAwait(false);
-        await vectorIndex.IndexAsync(mutableChunks, cancellationToken).ConfigureAwait(false);
+        IVectorIndex vectorIndex = ResolveVectorIndex(options, dimensions);
+        await vectorIndex.IndexAsync(chunks, cancellationToken).ConfigureAwait(false);
+        if (vectorIndex is FileVectorIndex fileIndex)
+            chunks = fileIndex.Snapshot().ToList();
+        options.Trace?.Invoke($"Indexed {chunks.Count} chunks from {paths.Count} file(s).");
 
         return new AiDocumentCollection(
             vectorIndex,
             embeddings,
-            completion,
-            mutableChunks,
-            options.DefaultTopK);
+            options.ChatClient,
+            chunks,
+            Math.Max(1, options.DefaultTopK),
+            Math.Max(1, options.AskExcerptCount),
+            options.AskContextCharacters,
+            options.EmbedAskQuery,
+            options.MaxOutputTokens,
+            options.AskMinScore,
+            options.SearchMinScore,
+            options);
     }
 
-    private static IVectorIndex ResolveVectorIndex(MicrosoftAIConnectorOptions options)
+    internal static async Task<List<AiChunk>> PrepareChunksAsync(
+        IEnumerable<string> pdfPaths,
+        MicrosoftAIConnectorOptions options,
+        CancellationToken cancellationToken)
+    {
+        var paths = pdfPaths.Where(p => !string.IsNullOrWhiteSpace(p)).ToList();
+        if (paths.Count == 0)
+            throw new ArgumentException("At least one PDF path is required.", nameof(pdfPaths));
+
+        IEmbeddingGenerator<string, Embedding<float>> embeddings = options.EmbeddingGenerator
+            ?? throw new InvalidOperationException("EmbeddingGenerator is required.");
+
+        IDocumentExtractor extractor = options.DocumentExtractor ?? new PageExtractor(options.UseLayout);
+        var pages = new List<ExtractedPage>();
+        foreach (string path in paths)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            try
+            {
+                pages.AddRange(extractor.Extract(path, cancellationToken));
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                throw new InvalidOperationException($"Failed to extract '{path}'.", ex);
+            }
+        }
+
+        List<AiChunk> chunks = TextChunker.Chunk(pages, options.MaxChunkCharacters, options.ChunkOverlapCharacters);
+        await EmbeddingIndexer.EmbedAsync(chunks, embeddings, options.EmbedBatchSize, cancellationToken)
+            .ConfigureAwait(false);
+        return chunks;
+    }
+
+    static IVectorIndex ResolveVectorIndex(MicrosoftAIConnectorOptions options, int dimensions)
     {
         if (options.VectorIndex != null)
             return options.VectorIndex;
@@ -86,8 +109,11 @@ public static class MsAIConnector
                 new Uri(options.AzureSearchEndpoint),
                 options.AzureSearchApiKey,
                 options.AzureSearchIndexName,
-                options.EmbeddingDimensions);
+                dimensions > 0 ? dimensions : 1536);
         }
+
+        if (!string.IsNullOrWhiteSpace(options.LocalIndexPath))
+            return new FileVectorIndex(options.LocalIndexPath);
 
         return new InMemoryVectorIndex();
     }
