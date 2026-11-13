@@ -6,6 +6,7 @@ namespace MuPDF.NET
 {
     public class Toc
     {
+
         /// <summary>
         /// hierarchy level
         /// </summary>
@@ -22,7 +23,7 @@ namespace MuPDF.NET
         public int Page { get; set; }
 
         /// <summary>
-        /// included only if simple is False. Contains details of the TOC item
+        /// Included only if simple is false. Contains details of the TOC item.
         /// </summary>
         public object Link { get; set; } = null;
 
@@ -91,7 +92,7 @@ namespace MuPDF.NET
 
         public TocResult(List<Toc> items) => _items = items ?? new List<Toc>();
 
-        public int Count => _items.Count;
+        public int Count => _items?.Count ?? 0;
 
         public (int level, string title, int page, Dictionary<string, object> link) this[int index]
         {
@@ -104,6 +105,8 @@ namespace MuPDF.NET
 
         public IEnumerator<(int level, string title, int page, Dictionary<string, object> link)> GetEnumerator()
         {
+            if (_items == null)
+                yield break;
             foreach (var item in _items)
                 yield return (item.level, item.title, item.page, item.link);
         }

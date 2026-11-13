@@ -1,8 +1,8 @@
-// Tests:
-//     * Convert some image to a PDF
-//     * Insert it rotated in some rectangle of a PDF page
-//     * Assert PDF Form XObject has been created
-//     * Assert that image contained in inserted PDF is inside given rectangle
+﻿// Tests:
+// * Convert some image to a PDF
+// * Insert it rotated in some rectangle of a PDF page
+// * Assert PDF Form XObject has been created
+// * Assert that image contained in inserted PDF is inside given rectangle
 using System;
 using System.Collections.Generic;
 using Xunit;
@@ -37,20 +37,16 @@ namespace MuPDF.NET.Test
         public void test_insert()
         {
             using var doc = new Document();
-            // page = doc.NewPage()
+
             var page = doc.NewPage();
             var rect = new Rect(50, 50, 100, 100);
             using var img = new Document(Doc("nur-ruhig.jpg"));
-            // tobytes = img.convert_to_pdf()  # get its PDF version (bytes object)
             byte[] tobytes = img.convert_to_pdf();
             using var src = new Document(tobytes, "pdf");
-            // xref = page.ShowPdfPage(rect, src, 0, rotate=-23)  # insert in rectangle
             int xref = page.ShowPdfPage(rect, src, 0, rotate: -23);
             // extract just inserted image info
-            // img = page.GetImages(True)[0]
             var imgTuple = doc.get_page_images_py(page.Number, full: true)[0];
             Assert.Equal(xref, (int)imgTuple[^1]);
-            // img = page.GetImageInfo()[0]  # read the page's images
             var imgInfo = page.GetImageInfoDict()[0];
 
             // Multiple computations may have lead to rounding deviations, so we need
@@ -64,7 +60,6 @@ namespace MuPDF.NET.Test
         public void test_2742()
         {
             using var dest = new Document();
-            // destpage = dest.NewPage(width=842, height=595)
             var destpage = dest.NewPage(width: 842, height: 595);
 
             var a5 = new Rect(0, 0, destpage.Rect.Width / 3, destpage.Rect.Height);
@@ -72,20 +67,15 @@ namespace MuPDF.NET.Test
 
             using var src = new Document(Doc("test_2742.pdf"));
 
-            // destpage.ShowPdfPage(a5, src, 0)
             destpage.ShowPdfPage(a5, src, 0);
-            // destpage.ShowPdfPage(a5 + shiftright, src, 0)
             destpage.ShowPdfPage(a5 + shiftright, src, 0);
-            // destpage.ShowPdfPage(a5 + shiftright + shiftright, src, 0)
             destpage.ShowPdfPage(a5 + shiftright + shiftright, src, 0);
 
-            // dest.Save(os.path.abspath(f'{__file__}/../../tests/test_2742-out.pdf'))
             dest.Save(Out("test_2742.pdf"));
 
             string wt = Tools.MupdfWarnings();
-            //         'Circular dependencies! Consider page cleaning.\n'
-            //         '... repeated 3 times...'
-            //         ), f'{wt=}'
+            // 'Circular dependencies! Consider page cleaning.\n'
+            // '... repeated 3 times...'
             Assert.Equal(
                 "Circular dependencies! Consider page cleaning.\n... repeated 3 times...",
                 wt);

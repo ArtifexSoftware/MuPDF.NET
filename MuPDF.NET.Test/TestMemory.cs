@@ -51,7 +51,7 @@ namespace MuPDF.NET.Test
         private static bool IsWindows() =>
             RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
 
-        /// <summary>.NET runtime version; used where MuPDF gates assertions on Python &gt;= 3.11.</summary>
+        /// <summary>.NET runtime version; used where MuPDF gates assertions on PyMuPDF &gt;= 3.11.</summary>
         private static Version PythonVersionTuple() => Environment.Version;
 
         /// <summary>Insert <paramref name="content"/> into <paramref name="coverpage"/> and return PDF bytes.</summary>
@@ -311,7 +311,7 @@ namespace MuPDF.NET.Test
                 MergePdf(content, coverpage);
                 Console.Out.Flush();
 
-                GC.Collect();
+                StabilizeProcessMemory();
                 stats[i] = get_stat();
             }
 
@@ -328,7 +328,6 @@ namespace MuPDF.NET.Test
 
             if (!IsLinux())
             {
-                // RSS varies on non-Linux CI hosts; only assert on Linux.
                 Console.WriteLine("test_2791(): not asserting ratio because not running on Linux.");
             }
             else if (PythonVersionTuple().Major < 3 || (PythonVersionTuple().Major == 3 && PythonVersionTuple().Minor < 11))
@@ -382,6 +381,7 @@ namespace MuPDF.NET.Test
             long r1 = rsss[2];
             long r2 = rsss[^1];
             float r = (float)r2 / r1;
+            Console.WriteLine($"first={r1} last={r2} ratio={r}");
             Assert.True(0.93 <= r && r < 2.5, $"r1={r1} r2={r2} r={r}.");
         }
 
@@ -392,7 +392,6 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_4125()
         {
-            StabilizeProcessMemory();
             Console.WriteLine("");
             Console.WriteLine($"test_4125(): {Environment.Version}.");
 
@@ -407,15 +406,12 @@ namespace MuPDF.NET.Test
                 state.Rsss.Add(rss);
                 long drss = rss - state.Prev;
                 state.Prev = rss;
-                {
-                    Console.WriteLine(
-                        "test_4125():"
-                        + $" rss={rss:N0}"
-                        + $" rss-rss0={rss - state.Rsss[0]:,}"
-                        + $" drss={drss:,}"
-                        + ".");
-                }
-                
+                Console.WriteLine(
+                    "test_4125():"
+                    + $" rss={rss:N0}"
+                    + $" rss-rss0={rss - state.Rsss[0]:N0}"
+                    + $" drss={drss:N0}"
+                    + ".");
             }
 
             for (int i = 0; i < 10; i++)
@@ -427,16 +423,18 @@ namespace MuPDF.NET.Test
                         foreach (var image_info in page.GetImages(full: true))
                         {
                             var (xref, smask, width, height, bpc, colorspace, alt_colorspace, name, filter_) = image_info;
-                            var pixmap = new Pixmap(document, xref);
-                            if (!ReferenceEquals(pixmap.Colorspace, Colorspace.Rgb))
+                            using var pixmap = new Pixmap(document, xref);
+                            if (pixmap.Colorspace != Colorspace.Rgb)
                             {
-                                var pixmap2 = new Pixmap(Colorspace.Rgb, pixmap);
+                                using var pixmap2 = new Pixmap(Colorspace.Rgb, pixmap);
                             }
                         }
                     }
                 }
                 Tools.StoreShrink(100);
                 Tools.GlyphCacheEmpty();
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
                 GC.Collect();
                 GetStat();
             }
@@ -469,35 +467,10 @@ namespace MuPDF.NET.Test
             public long Prev { get; set; }
         }
 
-        /// <summary>Not ported: Python tracemalloc leak test.</summary>
-        private static void _test_4751()
-        {
-            Console.WriteLine("_test_4751(): tracemalloc is not available in MuPDF.NET.Test");
-        }
-
         [Fact]
         public void test_4751()
         {
-            // We run the actual test in a child process, because otherwise previous
-            // tests seem to effect the leak detection causing false positives. It's
-            // possible that these could be real leaks, but they are not the ones
-            // we are testing for here.
-            {
-                Console.WriteLine("test_4751(): not running on Pyodide - cannot run child processes.");
-                return;
-            }
-
-            string? githubActions = Environment.GetEnvironmentVariable("GITHUB_ACTIONS");
-            if (githubActions == "true")
-            {
-                // We see additional leaks on Github, don't know why.
-                Console.WriteLine($"test_4751(): GITHUB_ACTIONS={githubActions}; not running on Github because known to fail.");
-                return;
-            }
-
-            Console.WriteLine();
             Console.WriteLine("test_4751(): tracemalloc is not available in MuPDF.NET.Test; skipping leak detection.");
-            _test_4751();
         }
     }
 }

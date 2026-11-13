@@ -10,7 +10,6 @@ namespace MuPDF.NET
     /// <remarks>
     /// <para>Used for text-search hits, text-markup annotations, and drawing on pages. Applying
     /// rotation, scale, or translation to a rectangle yields a <see cref="IsRectangular"/> quad.</para>
-    /// <para>Ports </para>
     /// </remarks>
     public class Quad : IEnumerable<Point>, IEquatable<Quad>
     {

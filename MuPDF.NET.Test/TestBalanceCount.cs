@@ -4,19 +4,20 @@ namespace MuPDF.NET.Test
 {
     /// <summary>
     /// — graphics state <c>q</c>/<c>Q</c> balance,
-    /// <see cref="Page.IsWrapped"/>, and <see cref="Page.WrapContents"/>.
     /// </summary>
+    /// <see cref="Page.IsWrapped"/>, and <see cref="Page.WrapContents"/>.
+
     public class TestBalanceCount
     {
         private static readonly string outDocPath = _Path.ForOutput("test_q_count.pdf", nameof(TestBalanceCount));
 
-        /// <summary>
         /// <summary>Regression test: q count.</summary>
-        /// Testing graphics state balances and wrap_contents().
+        /// <summary>
+        /// Testing graphics state balances and wrap_contents.
         /// Take page's contents and generate various imbalanced graphics state
         /// situations. Each time compare q-count with expected results.
         /// Finally confirm we are out of balance using "is_wrapped", wrap the
-        /// contents object(s) via "wrap_contents()" and confirm success.
+        /// contents object(s) via "wrap_contents" and confirm success.
         /// PDF commands "q" / "Q" stand for "push", respectively "pop".
         /// </summary>
         [Fact]

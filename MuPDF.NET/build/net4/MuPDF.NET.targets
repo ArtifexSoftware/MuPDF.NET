@@ -1,8 +1,0 @@
-<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <!-- .NET Framework: copy natives from the host platform package. -->
-  <ItemGroup Condition="'$(TargetFrameworkIdentifier)' == '.NETFramework' and '$(MuPDFNativeAssetsPackageFolder)' != ''">
-    <None Include="$(MuPDFNativeAssetsPackageFolder)*\runtimes\$(MuPDFNativeAssetsRuntimeId)\native\*.*"
-          CopyToOutputDirectory="PreserveNewest"
-          Link="%(Filename)%(Extension)" />
-  </ItemGroup>
-</Project>

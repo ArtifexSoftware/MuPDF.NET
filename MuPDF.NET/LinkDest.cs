@@ -14,7 +14,7 @@ namespace MuPDF.NET
         private static readonly Regex RxNamedDest =
             new Regex(@"^#nameddest=(.*)", RegexOptions.CultureInvariant);
 
-        /// <summary>Reserved destination string ( ; stays empty).</summary>
+        /// <summary>Reserved destination string (; stays empty).</summary>
         public string DestStr { get; } = "";
 
         /// <summary>External file spec.</summary>
@@ -51,7 +51,7 @@ namespace MuPDF.NET
         public string Uri { get; private set; }
 
         /// <summary>
-        /// Build from a <see cref="Link"/> .
+        /// Build from a <see cref="Link"/>.
         /// </summary>
         /// <param name="link">Source link.</param>
         /// <param name="resolved">Result of <see cref="Document.ResolveLink(string)"/> when applicable.</param>
@@ -63,7 +63,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Build from an <see cref="Outline"/> .
+        /// Build from an <see cref="Outline"/>.
         /// </summary>
         public LinkDest(Outline outline, Document document)
         {
@@ -181,18 +181,16 @@ namespace MuPDF.NET
                     IsUri = false;
                     Uri = "";
                     Kind = Constants.LinkLaunch;
-                    var hash = FileSpec.IndexOf('#');
-                    if (hash >= 0)
+                    // linkDest: ftab = file_spec.split("#"); only rewrite if
+                    // fragment is part of the filename, not a page destination.
+                    var ftab = FileSpec.Split('#');
+                    if (ftab.Length == 2 && ftab[1].StartsWith("page=", StringComparison.Ordinal))
                     {
-                        string tail = FileSpec.Substring(hash + 1);
-                        FileSpec = FileSpec.Substring(0, hash);
-                        if (tail.StartsWith("page=", StringComparison.Ordinal))
-                        {
-                            Kind = Constants.LinkGotor;
-                            var part = tail.Split('&')[0];
-                            if (part.Length > 5 && int.TryParse(part.Substring(5), NumberStyles.Integer, CultureInfo.InvariantCulture, out int p1))
-                                Page = p1 - 1;
-                        }
+                        Kind = Constants.LinkGotor;
+                        FileSpec = ftab[0];
+                        var part = ftab[1].Split('&')[0];
+                        if (part.Length > 5 && int.TryParse(part.Substring(5), NumberStyles.Integer, CultureInfo.InvariantCulture, out int p1))
+                            Page = p1 - 1;
                     }
                 }
                 else if (Uri.IndexOf(':') >= 0)

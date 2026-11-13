@@ -5,15 +5,15 @@
 [![Discord](https://img.shields.io/discord/770681584617652264?color=6A7EC2&logo=discord&logoColor=ffffff)](https://pymupdf.io/discord/artifex/)
 [![Forum](https://img.shields.io/badge/Forum-ff6600?logo=python&logoColor=ffffff)](https://forum.mupdf.com/c/general/4)
 
-**MuPDF.NET** is a high-performance C# library for reading, writing, rendering, and manipulating PDF, XPS, EPUB, and other document formats. It exposes the full power of the [MuPDF](https://mupdf.com) C engine — as clean, idiomatic .NET bindings for C#, F#, and Visual Basic.
+**MuPDF.NET** is a C# library for reading, writing, rendering, and editing PDF, XPS, EPUB, and other document formats. It is a port of [PyMuPDF](https://pymupdf.readthedocs.io) to .NET, built on the [MuPDF](https://mupdf.com) engine, with idiomatic APIs for C#, F#, and Visual Basic.
 
 ```bash
 dotnet add package MuPDF.NET
 ```
 
-> **LLM / RAG use?** Install `MuPDF.NET.PDF4LLM` from NuGet, or build the **`MuPDF.NET.PDF4LLM`** project in this solution.
+Runnable samples (one project per feature) are in **[MuPDF.NET.Examples](https://github.com/ArtifexSoftware/MuPDF.NET.Examples)**.
 
-Open **`MuPDF.NET.sln`** at the repository root.
+> **Markdown / JSON for LLM and RAG** is in this package: `Document.ToMarkdown`, `ToJson`, `ToText`, `ToChunks`, and `Utils.LoadAiAsync`. Optional layout: [Layout analysis](#layout-analysis-optional). Office and HWP files: [MuPDF.NET.Office](https://www.nuget.org/packages/MuPDF.NET.Office). Do **not** add `MuPDF.NET.PDF4LLM` — that package is deprecated.
 
 ---
 
@@ -22,6 +22,7 @@ Open **`MuPDF.NET.sln`** at the repository root.
 - [Why MuPDF.NET](#why-mupdfnet)
 - [Requirements](#requirements)
 - [Installation](#installation)
+- [Layout analysis](#layout-analysis-optional)
 - [Quick start](#quick-start)
 - [Key capabilities](#key-capabilities)
 - [Code examples](#code-examples)
@@ -36,12 +37,12 @@ Open **`MuPDF.NET.sln`** at the repository root.
 
 ## Why MuPDF.NET
 
-- **Fast** — built on MuPDF, a best-in-class C rendering engine with no mandatory GPU dependency
-- **Accurate** — pixel-perfect text extraction with font, colour, and position metadata
-- **Versatile** — read, write, annotate, redact, merge, split, convert, and render documents
-- **Multi-language** — works in C#, F#, and Visual Basic; mirrors the PyMuPDF API so Python experience transfers directly
-- **Barcode support** — read and generate QR, Code 128, Data Matrix, PDF417, and more
-- **LLM-ready** — via the `MuPDF.NET.PDF4LLM` companion for Markdown output, layout parsing, and LlamaIndex loading
+- **Fast** — built on MuPDF, with no mandatory GPU dependency
+- **Accurate** — text extraction with font, colour, and position metadata
+- **Versatile** — read, write, annotate, redact, merge, split, convert, and render
+- **Multi-language** — C#, F#, and Visual Basic; the API mirrors [PyMuPDF](https://pymupdf.readthedocs.io) so Python experience transfers directly
+- **Barcodes** — read and generate QR, Code 128, Data Matrix, PDF417, and more
+- **LLM-ready** — Markdown / JSON / text extract in this package; optional RAG helpers on .NET 8
 
 ---
 
@@ -49,55 +50,107 @@ Open **`MuPDF.NET.sln`** at the repository root.
 
 | Requirement | Version |
 |---|---|
-| .NET | 8.0 or later (.NET Standard 2.0 via `MuPDF.NET.PDF4LLM`) |
-| Visual Studio | 2019 or 2022 (Windows build path) |
+| .NET | 8.0 or later (also .NET Standard 2.0 and .NET Framework 4.6.1+) |
+| Visual Studio | 2019 or 2022 (Windows) |
 | OS | Windows, Linux |
 
-> **Note:** While MuPDF.NET is portable, the build instructions in this README target Windows and Visual Studio. See [Getting Started](https://mupdfnet.readthedocs.io/en/latest/getting-started/index.html) for Linux CLI instructions.
+Linux CLI install steps: [Getting Started](https://mupdfnet.readthedocs.io/en/latest/getting-started/index.html).
 
 ---
 
 ## Installation
 
-**Option 1 — NuGet (recommended)**
-
 ```bash
 dotnet add package MuPDF.NET
 ```
 
-Or in the Visual Studio NuGet Package Manager, search for `MuPDF.NET`.
-
-**Option 2 — Package Manager Console**
+Or in Visual Studio: NuGet Package Manager → search **MuPDF.NET**.
 
 ```powershell
 Install-Package MuPDF.NET
 ```
 
-Then add the using directive at the top of your file:
-
 ```csharp
 using MuPDF.NET;
 ```
 
-The NuGet package bundles the native MuPDF binaries (`mupdfcpp64.dll`, `mupdfcsharp.dll`) — no separate download is required.
+The package includes the native MuPDF binaries. No separate download is required.
+
+**Office / HWP** (DOC/DOCX, XLS/XLSX, PPT/PPTX, HWP/HWPX) is a separate commercial package:
+
+```bash
+dotnet add package MuPDF.NET.Office
+```
+
+Call `MuPDFOffice.Unlock` once, then open those files with `Document` and the same `ToMarkdown` / `ToJson` / `ToText` APIs.
+
+---
+
+## Layout analysis (optional)
+
+`GetLayout`, `FindTables`, and layout-aware `ToMarkdown` can use [pymupdf](https://pypi.org/project/pymupdf/) **2.1** as an optional layout worker (`import pymupdf.layout`). Without it, MuPDF.NET uses classic text extraction.
+
+Requires **Python 3.11+** on `PATH`. From any project that references MuPDF.NET:
+
+```bash
+dotnet msbuild -t:MuPDFNetSetupLayoutPython
+```
+
+That creates a per-user virtual environment and installs `pymupdf==2.1`. MuPDF.NET finds it automatically.
+
+| OS | Location |
+|----|----------|
+| Windows | `%LOCALAPPDATA%\MuPDF.NET\.venv-layout` |
+| Linux / macOS | `~/.local/share/mupdf.net/.venv-layout` |
+
+Check the install:
+
+```bash
+dotnet msbuild -t:MuPDFNetVerifyLayoutPython
+```
+
+On Ubuntu 22.04, install Python 3.11 first (`python3` is 3.10 there):
+
+```bash
+sudo apt install python3.11 python3.11-venv python3.11-full
+```
+
+To use another Python 3.11+ interpreter that already has pymupdf 2.1, set **`MUPDF_NET_PYTHON`**.
+
+```csharp
+bool layoutReady = Utils.LayoutPythonAvailable;  // worker can be imported
+bool layoutActive = Utils.LayoutAvailable;       // provider is registered
+Utils.UseLayout(false);                          // classic extraction
+```
 
 ---
 
 ## Quick start
 
-**Extract text from a PDF**
+**Extract text**
 
 ```csharp
 using MuPDF.NET;
 
 Document doc = new Document("document.pdf");
-Page page = doc[0];                          // zero-based page index
+Page page = doc[0];
 TextPage tpage = page.GetTextPage();
 Console.WriteLine(tpage.ExtractText());
 doc.Close();
 ```
 
-**Search and highlight text**
+**Convert to Markdown**
+
+```csharp
+using MuPDF.NET;
+
+using Document doc = new Document("document.pdf");
+Utils.UseLayout(false);                         // omit this line to use layout when installed
+string markdown = doc.ToMarkdown(showProgress: false);
+File.WriteAllText("document.md", markdown);
+```
+
+**Search and highlight**
 
 ```csharp
 using MuPDF.NET;
@@ -129,23 +182,24 @@ doc.Close();
 
 | Area | What you can do |
 |---|---|
-| **Text extraction** | Extract plain text, JSON, XML, HTML, or raw dict with position/font metadata |
-| **Rendering** | Render pages to PNG, JPEG, TIFF, BMP, or in-memory bitmaps at any DPI |
-| **Annotation** | Add, edit, and delete highlights, underlines, stamps, links, comments, and shapes |
-| **Redaction** | Permanently remove text, images, and vector graphics from specified regions |
-| **Merging & splitting** | Join multiple PDFs, insert pages, reorder, rotate, and delete pages |
-| **Encryption** | Encrypt, decrypt, set passwords, and control permissions |
-| **Forms** | Read and write PDF form field values (widgets) |
-| **OCR** | OCR image-heavy pages via integrated Tesseract support |
-| **Images** | Extract, insert, replace, and rewrite/recompress embedded images (`RewriteImages`) |
-| **Barcodes** | Scan and generate QR codes, Code 128, Data Matrix, PDF417 |
-| **LLM / RAG** | Convert to Markdown with layout awareness via `MuPDF.NET.PDF4LLM` companion package |
+| **Text extraction** | Plain text, JSON, XML, HTML, or structured dict with position and font metadata |
+| **Rendering** | PNG, JPEG, TIFF, BMP, or in-memory bitmaps at any DPI |
+| **Annotation** | Highlights, underlines, stamps, links, comments, and shapes |
+| **Redaction** | Permanently remove text, images, and graphics from a region |
+| **Merging & splitting** | Join PDFs, insert, reorder, rotate, and delete pages |
+| **Encryption** | Encrypt, decrypt, passwords, and permissions |
+| **Forms** | Read and write PDF form fields |
+| **OCR** | Image-heavy pages via Tesseract |
+| **Images** | Extract, insert, replace, and recompress (`RewriteImages`) |
+| **Barcodes** | Scan and generate QR, Code 128, Data Matrix, PDF417 |
+| **LLM / RAG** | `ToMarkdown` / `ToJson` / `ToText` / `ToChunks`; `Utils.LoadAiAsync`; layout when the worker is installed |
+| **Office / HWP** | [MuPDF.NET.Office](https://www.nuget.org/packages/MuPDF.NET.Office); unlock, then use `Document` as usual |
 
 ---
 
 ## Code examples
 
-Copy-paste snippets for common tasks. Full runnable sample apps (one project per feature, NuGet-only) live in **[MuPDF.NET.Examples](https://github.com/ArtifexSoftware/MuPDF.NET.Examples)**.
+Copy-paste snippets. Full apps are in **[MuPDF.NET.Examples](https://github.com/ArtifexSoftware/MuPDF.NET.Examples)**.
 
 ### Add a text watermark
 
@@ -173,7 +227,7 @@ using MuPDF.NET;
 Document doc = new Document("input.pdf");
 Page page = doc[0];
 Rect region = new Rect(0, 0, 200, 200);
-page.AddRedactAnnot(region, fill: new float[] { 1, 0, 0 }); // red fill
+page.AddRedactAnnot(region, fill: new float[] { 1, 0, 0 });
 page.ApplyRedactions();
 doc.Save("redacted.pdf");
 doc.Close();
@@ -186,13 +240,13 @@ using MuPDF.NET;
 
 Document docA = new Document("first.pdf");
 Document docB = new Document("second.pdf");
-docA.InsertPdf(docB);                        // append all pages from docB
+docA.InsertPdf(docB);
 docA.Save("merged.pdf");
 docA.Close();
 docB.Close();
 ```
 
-### Insert an image watermark on every page
+### Insert an image on every page
 
 ```csharp
 using MuPDF.NET;
@@ -207,14 +261,13 @@ doc.Save("watermarked.pdf");
 doc.Close();
 ```
 
-### Extract text with position metadata
+### Extract text with positions
 
 ```csharp
 using MuPDF.NET;
 
 Document doc = new Document("input.pdf");
 Page page = doc[0];
-// Returns structured blocks: (x0, y0, x1, y1, text, block_no, block_type)
 var blocks = page.GetTextPage().ExtractBLOCKS();
 foreach (var block in blocks)
     Console.WriteLine(block);
@@ -228,13 +281,12 @@ using MuPDF.NET;
 
 Document doc = new Document("scanned.pdf");
 Page page = doc[0];
-// Requires Tesseract installed; language codes follow ISO 639-2
 TextPage tpage = page.GetTextPageOCR(language: "eng", dpi: 300, full: true);
 Console.WriteLine(tpage.ExtractText());
 doc.Close();
 ```
 
-### F# example
+### F#
 
 ```fsharp
 #r "MuPDF.NET.dll"
@@ -244,7 +296,7 @@ let tpage = page.GetTextPage()
 printfn $"{tpage.ExtractText()}"
 ```
 
-### Visual Basic example
+### Visual Basic
 
 ```vb
 Imports MuPDF.NET
@@ -262,9 +314,7 @@ End Module
 
 ## Examples
 
-Runnable console samples for this package, plus `MuPDF.NET.PDF4LLM` and `MuPDF.NET.Office`, are in a separate repository:
-
-**https://github.com/ArtifexSoftware/MuPDF.NET.Examples**
+**[MuPDF.NET.Examples](https://github.com/ArtifexSoftware/MuPDF.NET.Examples)** is a separate repo of small console apps. Each one references [MuPDF.NET](https://www.nuget.org/packages/MuPDF.NET) (and [MuPDF.NET.Office](https://www.nuget.org/packages/MuPDF.NET.Office) where needed) from nuget.org.
 
 ```powershell
 git clone https://github.com/ArtifexSoftware/MuPDF.NET.Examples.git
@@ -273,65 +323,94 @@ dotnet restore
 dotnet run --project MuPDF.NET\01-OpenSave
 ```
 
-Each sample is a small project under `MuPDF.NET/` (for example `04-TextExtractSearch`, `08-FormWidgets`). See that repo’s README for the full list and how to batch-run against golden `Expected/` files.
+```bash
+dotnet run --project MuPDF.NET/01-OpenSave
+```
+
+| Folder | Contents |
+|--------|----------|
+| `MuPDF.NET/` | Open/save, pages, render, text, annotations, forms, images, tables, barcodes, encrypt, Markdown / JSON / text, OCR, RAG |
+| `MuPDF.NET.Office/` | Unlock, open DOCX/HWPX, export PDF / Markdown / JSON |
+
+- Layout samples (`33-ToJsonLayout`, `34-ToText`): Python 3.11+, then `dotnet msbuild -t:MuPDFNetSetupLayoutPython`.
+- Office samples: set `MUPDF_OFFICE_KEY` for a full unlock; without a key they open the first 3 pages only.
+
+Batch-run with `run-all.cmd` / `run-all.ps1` / `run-all.sh`. See the [Examples README](https://github.com/ArtifexSoftware/MuPDF.NET.Examples#readme) for the full project list.
 
 ---
 
 ## API overview
 
-The library's primary entry points are `Document` and `Page`. Most workflows follow the pattern: open → get page → operate → save → close.
+Typical workflow: open → get a page → operate → save → close.
 
 ### Core classes
 
 | Class | Purpose |
 |---|---|
-| `Document` | Open, create, save, and manipulate documents; access pages |
-| `Page` | Extract text/images, render, annotate, and redact individual pages |
-| `TextPage` | Structured text extraction (plain text, JSON, XML, HTML, raw dict) |
-| `Pixmap` | Raster image representation; save to PNG, JPEG, TIFF, and more |
-| `Rect` / `IRect` | Rectangle geometry used for regions, bounds, and clip boxes |
-| `Point` / `Quad` | Point and quadrilateral geometry for precise positioning |
-| `Annot` | PDF annotations (highlights, underlines, stamps, shapes, links) |
-| `Widget` | Interactive PDF form fields (text boxes, checkboxes, dropdowns) |
+| `Document` | Open, create, save, and manipulate documents |
+| `Page` | Text, images, render, annotate, redact |
+| `TextPage` | Structured text (plain, JSON, XML, HTML, dict) |
+| `Pixmap` | Raster image; save as PNG, JPEG, TIFF, and more |
+| `Rect` / `IRect` | Regions, bounds, clip boxes |
+| `Point` / `Quad` | Points and quads |
+| `Annot` | Highlights, stamps, shapes, links |
+| `Widget` | Form fields |
 | `Font` | Font loading and metrics |
-| `TextWriter` | Construct and write formatted text blocks onto pages |
-| `Outline` | Access and modify the document table of contents |
-| `Barcode` | Scan and generate barcodes and QR codes |
-| `Story` | Flow and render HTML content onto pages |
-| `Matrix` | Affine transformations for rotation, scaling, and translation |
+| `TextWriter` | Write formatted text onto a page |
+| `Outline` | Table of contents |
+| `Barcode` | Scan and generate barcodes |
+| `Story` | Flow HTML onto pages |
+| `Matrix` | Rotation, scaling, translation |
 
-### Key `Document` methods
+### `Document`
 
 | Method | Description |
 |---|---|
-| `new Document(filename)` | Open a document from a file path |
-| `new Document(stream: byte[])` | Open a document from a byte array |
-| `doc[n]` / `doc.LoadPage(n)` | Load page at zero-based index `n` |
-| `doc.PageCount` | Total number of pages |
+| `new Document(filename)` | Open from a path |
+| `new Document(stream: byte[])` | Open from a byte array |
+| `doc[n]` / `doc.LoadPage(n)` | Page at zero-based index `n` |
+| `doc[(chapter, page)]` | Page by chapter location |
+| `doc.PageCount` | Number of pages |
 | `doc.Save(filename)` | Save to disk |
-| `doc.InsertPdf(src)` | Insert all or selected pages from another PDF |
-| `doc.InsertFile(infile)` | Append any supported document type as PDF pages |
-| `doc.GetToc()` | Return the table of contents |
-| `doc.SetMetadata(dict)` | Set document metadata (title, author, etc.) |
-| `doc.Encrypt(...)` | Encrypt with password and permissions |
-| `doc.RewriteImages(...)` | Downsample / recompress images (`setToGray`, expert `options`) |
+| `doc.InsertPdf(src)` | Insert pages from another PDF |
+| `doc.InsertFile(infile)` | Append a supported file as PDF pages |
+| `doc.GetToc()` / `doc.SetToc(...)` | Table of contents |
+| `doc.SetMetadata(dict)` | Title, author, and other metadata |
+| `doc.Encrypt(...)` | Password and permissions |
+| `doc.RewriteImages(...)` | Downsample or recompress images |
+| `doc.ToMarkdown(...)` | Convert to Markdown |
+| `doc.ToJson(...)` | Layout structure as JSON |
+| `doc.ToText(...)` | Convert to plain text |
+| `doc.ToChunks(...)` | Retrieval-ready chunks |
+| `doc.GetKeyValues(...)` | Form field names and values |
 | `doc.Close()` | Release resources |
 
-### Key `Page` methods
+### `Utils`
+
+| Member | Description |
+|---|---|
+| `Utils.UseLayout(bool)` | Enable or disable layout analysis |
+| `Utils.LayoutAvailable` | Whether a layout provider is registered |
+| `Utils.LoadAiAsync(...)` | **net8.0** — chunk, embed, and index PDFs for RAG |
+| `Utils.MarkdownToPdf(...)` | Markdown file → PDF |
+| `Utils.GetKeyValues(...)` | Form fields from a `Document` or path |
+| `new PDFMarkdownReader()` | LlamaIndex-compatible page loader |
+
+### `Page`
 
 | Method | Description |
 |---|---|
-| `page.GetTextPage()` | Return a `TextPage` for text extraction |
-| `page.GetTextPageOCR(language, dpi, full)` | OCR the page using Tesseract |
-| `page.GetText(option)` | Shorthand: `"text"`, `"blocks"`, `"html"`, `"json"`, `"xml"` |
-| `page.SearchFor(needle)` | Return list of `Rect` matches for a string |
-| `page.GetPixmap(matrix, colorspace, dpi)` | Render to a `Pixmap` |
-| `page.GetImages()` | List all images on the page |
-| `page.InsertImage(rect, filename)` | Insert an image into a region |
-| `page.AddHighlightAnnot(rects)` | Add a highlight annotation |
+| `page.GetTextPage()` | `TextPage` for extraction |
+| `page.GetTextPageOCR(language, dpi, full)` | OCR with Tesseract |
+| `page.GetText(option)` | `"text"`, `"blocks"`, `"html"`, `"json"`, `"xml"` |
+| `page.SearchFor(needle)` | List of `Rect` matches |
+| `page.GetPixmap(...)` | Render to a `Pixmap` |
+| `page.GetImages()` | Images on the page |
+| `page.InsertImage(rect, filename)` | Insert an image |
+| `page.AddHighlightAnnot(rects)` | Highlight annotation |
 | `page.AddRedactAnnot(rect, fill)` | Mark a region for redaction |
-| `page.ApplyRedactions()` | Permanently apply all redaction marks |
-| `page.GetBound()` | Return the page's bounding `Rect` |
+| `page.ApplyRedactions()` | Apply redaction marks |
+| `page.GetBound()` | Page bounding `Rect` |
 
 ---
 
@@ -345,30 +424,13 @@ The library's primary entry points are `Document` and `Page`. Most workflows fol
 
 ## Building from source
 
-Building from source is only required if you want to modify the C# bindings or the underlying MuPDF C engine. **To use MuPDF.NET in an application, use NuGet instead** (see [Installation](#installation)).
+Use NuGet unless you need to change the bindings or the MuPDF engine.
 
-**Steps (Windows / Visual Studio)**
+1. `git clone https://github.com/ArtifexSoftware/MuPDF.NET.git`
+2. Open `MuPDF.NET.sln` in Visual Studio 2019 or 2022.
+3. **Release** / **x64**, then **Build → Build Solution**.
 
-1. Clone this repository:
-   ```bash
-   git clone https://github.com/ArtifexSoftware/MuPDF.NET.git
-   ```
-
-2. Open `MuPDF.NET/MuPDF.NET.sln` in Visual Studio 2019 or 2022.
-
-3. Set the configuration to **Release** and the platform to **x64**.
-
-4. Select **Build → Build Solution**. If Visual Studio shows missing component warnings in Solution Explorer, click **Install** to resolve them, then build again.
-
-5. The `MuPDF.NET` folder will contain the output DLLs:
-   - `mupdfcpp64.dll` — the MuPDF C engine with C++ binding
-   - `mupdfcsharp.dll` — the C# bindings layer
-
-   Place both DLLs either in a system folder on your `PATH`, or in the `bin` folder of your application project.
-
-**Linux (command line)**
-
-See the [Getting Started](https://mupdfnet.readthedocs.io/en/latest/getting-started/index.html) guide for `dotnet` CLI instructions on Ubuntu/Debian.
+Linux: see [Getting Started](https://mupdfnet.readthedocs.io/en/latest/getting-started/index.html).
 
 ---
 
@@ -376,19 +438,21 @@ See the [Getting Started](https://mupdfnet.readthedocs.io/en/latest/getting-star
 
 | Resource | URL |
 |---|---|
-| Full API reference | https://mupdfnet.readthedocs.io |
-| Getting started guide | https://mupdfnet.readthedocs.io/en/latest/getting-started/index.html |
-| The Basics (cookbook) | https://mupdfnet.readthedocs.io/en/latest/the-basics/index.html |
-| LLM/RAG companion (`MuPDF.NET.PDF4LLM`) | https://docs.pdf4llm.com/dotnet/getting-started/installation |
-| Sample apps (`MuPDF.NET.Examples`) | https://github.com/ArtifexSoftware/MuPDF.NET.Examples |
+| API reference | https://mupdfnet.readthedocs.io |
+| Getting started | https://mupdfnet.readthedocs.io/en/latest/getting-started/index.html |
+| Cookbook | https://mupdfnet.readthedocs.io/en/latest/the-basics/index.html |
+| LLM / RAG | https://docs.pdf4llm.com/dotnet/getting-started/installation |
+| Sample apps | https://github.com/ArtifexSoftware/MuPDF.NET.Examples |
 
 ---
 
 ## License
+
+MuPDF.NET, [PyMuPDF](https://pymupdf.readthedocs.io), and [MuPDF](https://mupdf.com) are developed by [Artifex Software, Inc.](https://artifex.com)
 
 MuPDF.NET is available under two licences:
 
 - **[Artifex Community License](./LICENSE.md)** — free for non-commercial use (personal, educational, open-source projects)
 - **Commercial licence** — required for any commercial use; [contact Artifex](https://artifex.com/contact/mupdf-net)
 
-> **What counts as commercial use?** Any use that directly or indirectly generates revenue — including internal business tooling, SaaS products, and enterprise workflows. See [LICENSE.md](./LICENSE.md) for the complete definition.
+> **Commercial use** includes any use that directly or indirectly generates revenue — internal business tooling, SaaS, and enterprise workflows. See [LICENSE.md](./LICENSE.md).

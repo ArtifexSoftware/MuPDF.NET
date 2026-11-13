@@ -9,7 +9,7 @@ using SkiaSharp;
 namespace MuPDF.NET
 {
     /// <summary>
-    /// Read-only view over a <see cref="Pixmap"/> sample buffer .
+    /// Read-only view over a <see cref="Pixmap"/> sample buffer.
     /// </summary>
     /// <remarks>Call <see cref="Release"/> when finished; the owning <see cref="Pixmap"/> also releases this view on dispose.</remarks>
     public sealed class PixmapSamplesMemoryView
@@ -240,7 +240,7 @@ namespace MuPDF.NET
             _nativePixmap.m_internal.yres = srcPix.m_internal.yres;
 
             // copy samples data ------------------------------------------
-            // We use our pixmap_copy() to get best performance.
+            // We use our pixmap_copy to get best performance.
             CopyPixmapSamples(_nativePixmap, srcPix, alpha);
         }
 
@@ -285,8 +285,9 @@ namespace MuPDF.NET
 
         /// <summary>
         /// Load pixmap pixels for a PDF image stream identified by xref.
-        ///
         /// </summary>
+
+
         public Pixmap(Document document, int xref)
         {
             if (document == null)
@@ -341,7 +342,7 @@ namespace MuPDF.NET
             return pm;
         }
 
-        // copy samples data — extra.pixmap_copy() in extra.i
+        // copy samples data — extra.pixmap_copy in
         private static void CopyPixmapSamples(mupdf.FzPixmap dst, mupdf.FzPixmap src, int dstAlpha)
         {
             int w = mupdf.mupdf.fz_pixmap_width(src);
@@ -401,7 +402,25 @@ namespace MuPDF.NET
             }
         }
 
+        /// <summary>90° clockwise (<c>Pixmap.ROTATE_90</c>).</summary>
+        public const int Rotate90 = 1;
+        /// <summary>270° clockwise (<c>Pixmap.ROTATE_270</c>).</summary>
+        public const int Rotate270 = 2;
+        /// <summary>180° (<c>Pixmap.ROTATE_180</c>).</summary>
+        public const int Rotate180 = 3;
+        /// <summary>Horizontal mirror (<c>Pixmap.FLIP_LEFT_RIGHT</c>).</summary>
+        public const int FlipLeftRight = 4;
+        /// <summary>Vertical mirror (<c>Pixmap.FLIP_TOP_BOTTOM</c>).</summary>
+        public const int FlipTopBottom = 5;
+
+        internal const int ROTATE_90 = Rotate90;
+        internal const int ROTATE_270 = Rotate270;
+        internal const int ROTATE_180 = Rotate180;
+        internal const int FLIP_LEFT_RIGHT = FlipLeftRight;
+        internal const int FLIP_TOP_BOTTOM = FlipTopBottom;
+
         // ─── Properties ───────────────────────────────────────
+
         /// <summary>
         /// pixmap width.
         /// </summary>
@@ -413,6 +432,7 @@ namespace MuPDF.NET
                 return mupdf.mupdf.fz_pixmap_width(_nativePixmap);
             }
         }
+
         /// <summary>
         /// pixmap height.
         /// </summary>
@@ -424,38 +444,47 @@ namespace MuPDF.NET
                 return mupdf.mupdf.fz_pixmap_height(_nativePixmap);
             }
         }
+
         /// <summary>
         /// X coordinate of the pixmap origin within its bounding rectangle.
         /// </summary>
         public int X => NativePixmap.fz_pixmap_x();
+
         /// <summary>
         /// Y coordinate of the pixmap origin within its bounding rectangle.
         /// </summary>
         public int Y => NativePixmap.fz_pixmap_y();
+
         /// <summary>
         /// Total bytes per pixel (color components plus alpha if present).
         /// </summary>
         public int N => mupdf.mupdf.fz_pixmap_components(_nativePixmap);
+
         /// <summary>
         /// 1 if the pixmap has an alpha channel, else 0.
         /// </summary>
         public int Alpha => mupdf.mupdf.fz_pixmap_alpha(_nativePixmap);
+
         /// <summary>
         /// Byte length of one image row (may include padding).
         /// </summary>
         public int Stride => NativePixmap.fz_pixmap_stride();
+
         /// <summary>
         /// Horizontal resolution in dots per inch.
         /// </summary>
         public int XRes => _nativePixmap.m_internal.xres;
+
         /// <summary>
         /// Vertical resolution in dots per inch.
         /// </summary>
         public int YRes => _nativePixmap.m_internal.yres;
+
         /// <summary>
         /// Total byte size of the sample buffer in memory.
         /// </summary>
         public int Size => (int)mupdf.mupdf.fz_pixmap_size(_nativePixmap);
+
         /// <summary>
         /// True if every pixel is black or white only.
         /// </summary>
@@ -495,10 +524,12 @@ namespace MuPDF.NET
                 return true;
             }
         }
+
         /// <summary>
         /// Legacy spelling of IsUnicolor.
         /// </summary>
         public bool IsUniColor => IsUnicolor;
+
         /// <summary>
         /// IRect of the pixmap.
         /// </summary>
@@ -510,6 +541,7 @@ namespace MuPDF.NET
                 return new IRect(b.x0, b.y0, b.x1, b.y1);
             }
         }
+
         /// <summary>
         /// Colorspace of the pixmap, or null for alpha-only masks.
         /// </summary>
@@ -521,6 +553,7 @@ namespace MuPDF.NET
                 return cs.m_internal != null ? new Colorspace(cs) : null;
             }
         }
+
         /// <summary>
         /// Legacy Colorspace wrapper.
         /// </summary>
@@ -532,14 +565,17 @@ namespace MuPDF.NET
                 return cs.m_internal != null ? new ColorSpace(cs) : null;
             }
         }
+
         /// <summary>
         /// Width in pixels (alias).
         /// </summary>
         public int W => Width;
+
         /// <summary>
         /// Height in pixels (alias).
         /// </summary>
         public int H => Height;
+
         /// <summary>
         /// Copy of all pixel bytes (including alpha when present).
         /// </summary>
@@ -551,14 +587,17 @@ namespace MuPDF.NET
                 return mv.ToArray();
             }
         }
+
         /// <summary>
         /// Legacy alias for Samples.
         /// </summary>
         public byte[] SAMPLES => Samples;
+
         /// <summary>
         /// Legacy alias for SamplesMv.
         /// </summary>
         public PixmapSamplesMemoryView SAMPLES_MV => SamplesMv;
+
         /// <summary>
         /// Unmanaged pointer to the first sample byte.
         /// </summary>
@@ -569,6 +608,7 @@ namespace MuPDF.NET
                 return new IntPtr(mupdf.mupdf.fz_pixmap_samples_int(NativePixmap));
             }
         }
+
         /// <summary>
         /// Read-only memory view over the native sample buffer.
         /// </summary>
@@ -576,7 +616,7 @@ namespace MuPDF.NET
         {
             get
             {
-                // We remember the returned memoryview so that our `__del__()` can
+                // We remember the returned memoryview so that our `Dispose` can
                 // release it; otherwise accessing it after we have been destructed will
                 // fail, possibly crashing Python; this is #4155.
                 if (_samplesMv == null)
@@ -584,6 +624,7 @@ namespace MuPDF.NET
                 return _samplesMv;
             }
         }
+
         /// <summary>
         /// MD5 digest of the sample bytes.
         /// </summary>
@@ -599,6 +640,7 @@ namespace MuPDF.NET
             }
         }
         // ─── Methods ────────────────────────────────────────────────────
+
         /// <summary>
         /// Initialize the samples area.
         /// </summary>
@@ -613,6 +655,7 @@ namespace MuPDF.NET
             else
                 NativePixmap.fz_clear_pixmap_rect_with_value(value.Value, bbox.ToFzIRect());
         }
+
         /// <summary>
         /// Colorize a pixmap by replacing black and / or white with colors given as sRGB integer values. Only colorspaces CS_GRAY and CS_RGB are supported, others are ignored with a warning.
         /// </summary>
@@ -624,8 +667,9 @@ namespace MuPDF.NET
                 return;
             mupdf.mupdf.fz_tint_pixmap(NativePixmap, black, white);
         }
+
         /// <summary>
-        /// Apply a gamma factor to a pixmap, i.e. lighten or darken it. Pixmaps with colorspace None are ignored with a warning.
+        /// Apply a gamma factor to a pixmap, i.e. lighten or darken it. Pixmaps with colorspace null are ignored with a warning.
         /// </summary>
         /// <param name="gamma">*gamma = 1.0* does nothing, *gamma &lt; 1.0* lightens, *gamma &gt; 1.0* darkens the image.</param>
         public void GammaWith(float gamma)
@@ -634,8 +678,9 @@ namespace MuPDF.NET
                 return;
             mupdf.mupdf.fz_gamma_pixmap(NativePixmap, gamma);
         }
+
         /// <summary>
-        /// Apply a gamma factor to a pixmap, i.e. lighten or darken it. Pixmaps with colorspace None are ignored with a warning.
+        /// Apply a gamma factor to a pixmap, i.e. lighten or darken it. Pixmaps with colorspace null are ignored with a warning.
         /// </summary>
         /// <param name="radius">Sharpen filter radius.</param>
         public void SharpenWith(int radius = 2)
@@ -673,8 +718,9 @@ namespace MuPDF.NET
             }
             SetSamples(dst);
         }
+
         /// <summary>
-        /// Invert the color of all pixels in IRect *irect*. Will have no effect if colorspace is None.
+        /// Invert the color of all pixels in IRect *irect*. Will have no effect if colorspace is null.
         /// </summary>
         /// <param name="bbox">Sub-rectangle to affect (IRect).</param>
         public bool InvertIRect(IRect bbox = null)
@@ -693,16 +739,18 @@ namespace MuPDF.NET
                 NativePixmap.fz_invert_pixmap_rect(r);
             return true;
         }
+
         /// <summary>
-        /// Invert the color of all pixels in IRect *irect*. Will have no effect if colorspace is None.
+        /// Invert the color of all pixels in IRect *irect*. Will have no effect if colorspace is null.
         /// </summary>
         public bool InvertIrect(IRect bbox = null) => InvertIRect(bbox);
+
         /// <summary>
         /// Change the alpha values. The pixmap must have an alpha channel.
         /// </summary>
         /// <param name="alphaValues">Per-pixel alpha bytes.</param>
         /// <param name="premultiply">*New in v1.18.13:* whether to premultiply color components with the alpha value.</param>
-        /// <param name="opaque">ignore the alpha value and set this color to fully transparent. A sequence of integers in `range(256)` with a length of n. Default is None. For example, a typical choice for RGB would be `opaque=(255, 255, 255)` (white).</param>
+        /// <param name="opaque">Ignore the alpha value and set this color to fully transparent. A sequence of integers 0–255 with length n. Default is null. For RGB a typical choice is white (255, 255, 255).</param>
         /// <param name="matte">Matte color for SetAlpha.</param>
         public void SetAlpha(byte[] alphaValues = null, int premultiply = 1, int[] opaque = null, int[] matte = null)
         {
@@ -759,6 +807,7 @@ namespace MuPDF.NET
             }
             InvalidateSamplesCache();
         }
+
         /// <summary>
         /// Set the x and y values of the pixmap's top-left point.
         /// </summary>
@@ -769,6 +818,7 @@ namespace MuPDF.NET
             NativePixmap.m_internal.x = x;
             NativePixmap.m_internal.y = y;
         }
+
         /// <summary>
         /// Set the resolution (dpi) in x and y direction.
         /// </summary>
@@ -779,12 +829,12 @@ namespace MuPDF.NET
             NativePixmap.m_internal.xres = xres;
             NativePixmap.m_internal.yres = yres;
         }
+
         /// <summary>
-        /// .. note::.
+        /// Fill a rectangle of the pixmap with a color.
         /// </summary>
         /// <param name="irect">the rectangle to be filled with the value. The actual area is the intersection of this parameter and irect. For an empty intersection (or an invalid parameter), no change will happen.</param>
-        /// <param name="color">the desired value, given as a sequence of integers in `range(256)`. The length of the sequence must equal n, which includes any alpha byte.</param>
-        /// <returns>False if the rectangle was invalid or had an empty intersection with irect, else True.</returns>
+        /// <param name="color">The desired value, given as integers 0–255. The length must equal n, which includes any alpha byte.</param>
         public void SetRect(IRect irect, float[] color)
         {
             int n = N;
@@ -813,12 +863,13 @@ namespace MuPDF.NET
                 }
             }
         }
+
         /// <summary>
         /// set color and alpha of a pixel.
         /// </summary>
-        /// <param name="x">the column number of the pixel. Must be in `range(pix.width)`.</param>
-        /// <param name="y">the line number of the pixel. Must be in `range(pix.height)`.</param>
-        /// <param name="color">the desired pixel value given as a sequence of integers in `range(256)`. The length of the sequence must equal n, which includes any alpha byte.</param>
+        /// <param name="x">Column of the pixel (0 to width-1).</param>
+        /// <param name="y">Row of the pixel (0 to height-1).</param>
+        /// <param name="color">Desired pixel value as integers 0–255. Length must equal n, which includes any alpha byte.</param>
         public void SetPixel(int x, int y, float[] color)
         {
             int n = N;
@@ -835,12 +886,13 @@ namespace MuPDF.NET
                 Marshal.WriteByte(IntPtr.Add(basePtr, offset + c), (byte)(component < 0 ? 0 : (component > 255 ? 255 : component)));
             }
         }
+
         /// <summary>
         /// return the value of a pixel.
         /// </summary>
-        /// <param name="x">the column number of the pixel. Must be in `range(pix.width)`.</param>
-        /// <param name="y">the line number of the pixel, Must be in `range(pix.height)`.</param>
-        /// <returns>a list of color values and, potentially the alpha value. Its length and content depend on the pixmap's colorspace and the presence of an alpha. For RGBA pixmaps the result would e.g. be *[r, g, b, a]*. All items are integers in `range(256)`.</returns>
+        /// <param name="x">Column of the pixel (0 to width-1).</param>
+        /// <param name="y">Row of the pixel (0 to height-1).</param>
+        /// <returns>Color values and, if present, the alpha value. Length depends on colorspace and alpha. For RGBA the result is [r, g, b, a]. Each item is 0–255.</returns>
         public byte[] GetPixel(int x, int y)
         {
             var pm = NativePixmap;
@@ -855,16 +907,18 @@ namespace MuPDF.NET
                 ret[j] = mv[i + j];
             return ret;
         }
+
         /// <summary>
         /// return the value of a pixel.
         /// </summary>
         public byte[] GetPixelBytes(int x, int y) => GetPixel(x, y);
+
         /// <summary>
         /// return the value of a pixel.
         /// </summary>
-        /// <param name="x">the column number of the pixel. Must be in `range(pix.width)`.</param>
-        /// <param name="y">the line number of the pixel, Must be in `range(pix.height)`.</param>
-        /// <returns>a list of color values and, potentially the alpha value. Its length and content depend on the pixmap's colorspace and the presence of an alpha. For RGBA pixmaps the result would e.g. be *[r, g, b, a]*. All items are integers in `range(256)`.</returns>
+        /// <param name="x">Column of the pixel (0 to width-1).</param>
+        /// <param name="y">Row of the pixel (0 to height-1).</param>
+        /// <returns>Color values and, if present, the alpha value. Length depends on colorspace and alpha. For RGBA the result is [r, g, b, a]. Each item is 0–255.</returns>
         public float[] GetPixelFloat(int x, int y)
         {
             if (x < 0 || x >= Width || y < 0 || y >= Height)
@@ -878,8 +932,9 @@ namespace MuPDF.NET
                 result[c] = Marshal.ReadByte(IntPtr.Add(basePtr, offset + c)) / 255.0f;
             return result;
         }
+
         /// <summary>
-        /// Copy the *irect* part of the *source* pixmap into the corresponding area of this one. The two pixmaps may have different dimensions and can each have CS_GRAY or CS_RGB colorspaces, but they currently must have the same alpha property . The copy mechanism automatically adjusts discrepancies between source and target like so:.
+        /// Copy the *irect* part of the *source* pixmap into the corresponding area of this one. The two pixmaps may have different dimensions and can each have CS_GRAY or CS_RGB colorspaces, but they currently must have the same alpha property. The copy mechanism automatically adjusts discrepancies between source and target like so:.
         /// </summary>
         /// <param name="src">Source pixmap.</param>
         /// <param name="bbox">Sub-rectangle to affect (IRect).</param>
@@ -896,6 +951,7 @@ namespace MuPDF.NET
         }
 
         // ─── Color conversions ──────────────────────────────────────────
+
         /// <summary>
         /// return a memory area in a variety of formats.
         /// </summary>
@@ -908,10 +964,11 @@ namespace MuPDF.NET
         }
 
         // ─── Save ───────────────────────────────────────────────────────
+
         /// <summary>
         /// Save pixmap as an image file. Depending on the output chosen, only some or all colorspaces are supported and different file extensions can be chosen. Please see the table below.
         /// </summary>
-        /// <param name="filename">The file to save to. May be provided as a string, as a pathlib.Path or as a Python file object. In the latter two cases, the filename is taken from the resp. object. The filename's extension determines the image format, which can be overruled by the output parameter.</param>
+        /// <param name="filename">Destination path. The extension selects the image format unless <paramref name="output"/> is set. In PyMuPDF this may also be a pathlib.Path or a Python file object.</param>
         /// <param name="output">The desired image format. The default is the filename's extension. If both, this value and the file extension are unsupported, an exception is raised. For possible values see PixmapOutput.</param>
         /// <param name="jpgQuality">The desired image quality, default 95. Only applies to JPEG images, else ignored. This parameter trades quality against file size. A value of 98 is close to lossless. Higher values should not lead to better quality.</param>
         public void Save(string filename, string output = null, int jpgQuality = 95)
@@ -979,6 +1036,7 @@ namespace MuPDF.NET
             out_.fz_close_output();
             return Helpers.BinFromBuffer(res);
         }
+
         /// <summary>
         /// return a memory area in a variety of formats.
         /// </summary>
@@ -998,6 +1056,142 @@ namespace MuPDF.NET
                 SetDpi(XRes, YRes);
             return ToBytesInternal(idx.Value, jpgQuality);
         }
+
+        /// <summary>
+        /// Create an intermediate image from pixmap samples (<c>pil_image</c> / Pillow <c>Image.frombytes</c>).
+        /// </summary>
+        public SKBitmap PilImage() => ToSKBitmap();
+
+        /// <summary>
+        /// Encode via an intermediate image (<c>pil_tobytes</c> / Pillow <c>Image.save</c>).
+        /// JPEG quality defaults to 75, matching Pillow. Use <see cref="ToBytes"/> for the MuPDF encoder.
+        /// </summary>
+        /// <param name="format">Pillow-style format name, e.g. <c>JPEG</c>, <c>PNG</c>, <c>WEBP</c>.</param>
+        /// <param name="quality">JPEG/WEBP quality (Pillow default 75). Ignored for lossless formats.</param>
+        public byte[] PilToBytes(string format = "png", int quality = 75)
+        {
+            var skFormat = ParsePilEncodedFormat(format)
+                ?? throw new ValueErrorException($"Image format {format} not in supported set");
+            using var bmp = PilImage();
+            using var encodeBmp = BitmapForPilEncode(bmp, skFormat);
+            using var image = SKImage.FromBitmap(encodeBmp);
+            int encodeQuality = skFormat == SKEncodedImageFormat.Jpeg || skFormat == SKEncodedImageFormat.Webp
+                ? quality
+                : 100;
+            using var data = image.Encode(skFormat, encodeQuality);
+            if (data == null)
+                throw new ValueErrorException($"Image format {format} not in supported set");
+            byte[] bytes = data.ToArray();
+            if (skFormat == SKEncodedImageFormat.Jpeg)
+                bytes = EnsureJpegDpi(bytes, XRes, YRes);
+            return bytes;
+        }
+
+        /// <summary>
+        /// Write via an intermediate image (<c>pil_save</c> / Pillow <c>Image.save</c>).
+        /// </summary>
+        public void PilSave(string filename, string format = null, int quality = 75)
+        {
+            if (filename == null)
+                throw new ArgumentNullException(nameof(filename));
+            string fmt = format ?? Path.GetExtension(filename).TrimStart('.');
+            if (string.IsNullOrEmpty(fmt))
+                fmt = "png";
+            File.WriteAllBytes(filename, PilToBytes(fmt, quality));
+        }
+
+        /// <summary>
+        /// Pillow JPEG cannot keep alpha; flatten onto white and use RGBA8888 so Skia can encode.
+        /// </summary>
+        private static SKBitmap BitmapForPilEncode(SKBitmap src, SKEncodedImageFormat format)
+        {
+            bool jpeg = format == SKEncodedImageFormat.Jpeg;
+            var alpha = jpeg || src.AlphaType == SKAlphaType.Opaque || src.AlphaType == SKAlphaType.Unknown
+                ? SKAlphaType.Opaque
+                : src.AlphaType;
+            var info = new SKImageInfo(src.Width, src.Height, SKColorType.Rgba8888, alpha);
+            var dst = new SKBitmap(info);
+            using var canvas = new SKCanvas(dst);
+            if (jpeg)
+                canvas.Clear(SKColors.White);
+            else
+                canvas.Clear(SKColors.Transparent);
+            canvas.DrawBitmap(src, 0, 0);
+            canvas.Flush();
+            return dst;
+        }
+
+        private static SKEncodedImageFormat? ParsePilEncodedFormat(string format)
+        {
+            if (string.IsNullOrWhiteSpace(format))
+                return SKEncodedImageFormat.Png;
+            return format.Trim().TrimStart('.').ToUpperInvariant() switch
+            {
+                "PNG" => SKEncodedImageFormat.Png,
+                "JPG" or "JPEG" => SKEncodedImageFormat.Jpeg,
+                "WEBP" => SKEncodedImageFormat.Webp,
+                "GIF" => SKEncodedImageFormat.Gif,
+                "BMP" => SKEncodedImageFormat.Bmp,
+                "ICO" => SKEncodedImageFormat.Ico,
+                "WBMP" => SKEncodedImageFormat.Wbmp,
+                _ => null,
+            };
+        }
+
+        /// <summary>
+        /// Pillow <c>save(..., dpi=(xres, yres))</c> writes JFIF density. Patch or insert APP0.
+        /// </summary>
+        private static byte[] EnsureJpegDpi(byte[] jpeg, int xres, int yres)
+        {
+            if (jpeg == null || jpeg.Length < 4 || jpeg[0] != 0xFF || jpeg[1] != 0xD8)
+                return jpeg;
+            int x = Math.Max(1, xres);
+            int y = Math.Max(1, yres);
+            int i = 2;
+            while (i + 18 <= jpeg.Length && jpeg[i] == 0xFF)
+            {
+                byte marker = jpeg[i + 1];
+                if (marker == 0xDA || marker == 0xD9)
+                    break;
+                if (marker >= 0xD0 && marker <= 0xD7)
+                {
+                    i += 2;
+                    continue;
+                }
+                if (i + 4 > jpeg.Length)
+                    break;
+                int len = (jpeg[i + 2] << 8) | jpeg[i + 3];
+                if (marker == 0xE0 && i + 16 <= jpeg.Length
+                    && jpeg[i + 4] == (byte)'J' && jpeg[i + 5] == (byte)'F'
+                    && jpeg[i + 6] == (byte)'I' && jpeg[i + 7] == (byte)'F' && jpeg[i + 8] == 0)
+                {
+                    jpeg[i + 11] = 1;
+                    jpeg[i + 12] = (byte)((x >> 8) & 0xFF);
+                    jpeg[i + 13] = (byte)(x & 0xFF);
+                    jpeg[i + 14] = (byte)((y >> 8) & 0xFF);
+                    jpeg[i + 15] = (byte)(y & 0xFF);
+                    return jpeg;
+                }
+                i += 2 + len;
+            }
+
+            byte[] app0 =
+            {
+                0xFF, 0xE0, 0x00, 0x10,
+                (byte)'J', (byte)'F', (byte)'I', (byte)'F', 0x00,
+                0x01, 0x01, 0x01,
+                (byte)((x >> 8) & 0xFF), (byte)(x & 0xFF),
+                (byte)((y >> 8) & 0xFF), (byte)(y & 0xFF),
+                0x00, 0x00,
+            };
+            var result = new byte[jpeg.Length + app0.Length];
+            result[0] = 0xFF;
+            result[1] = 0xD8;
+            Buffer.BlockCopy(app0, 0, result, 2, app0.Length);
+            Buffer.BlockCopy(jpeg, 2, result, 2 + app0.Length, jpeg.Length - 2);
+            return result;
+        }
+
         /// <summary>
         /// Returns a one-page searchable PDF (OCR text layer) as bytes; alias for <see cref="PdfOCRSave"/>.
         /// </summary>
@@ -1020,7 +1214,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Runs Tesseract OCR and returns a one-page searchable PDF in memory .
+        /// Runs Tesseract OCR and returns a one-page searchable PDF in memory.
         /// </summary>
         /// <param name="compress">Whether to compress the PDF (default true).</param>
         /// <param name="language">Tesseract language code(s).</param>
@@ -1041,6 +1235,7 @@ namespace MuPDF.NET
         /// </summary>
         public byte[] PdfOCR2Bytes(bool compress = true, string language = "eng", string tessdata = null) =>
             PdfOCRSave(compress, language, tessdata);
+
         /// <summary>
         /// Applies an ImageFilterPipeline and returns a new pixmap.
         /// </summary>
@@ -1084,6 +1279,7 @@ namespace MuPDF.NET
                 workingBitmap.Dispose();
             }
         }
+
         /// <summary>
         /// Runs Tesseract OCR and returns extracted text.
         /// </summary>
@@ -1167,6 +1363,7 @@ namespace MuPDF.NET
         }
 
         // ─── SkiaSharp interop ───────────────────────────────────────────
+
         /// <summary>
         /// Exports pixels to an SkiaSharp SKBitmap.
         /// </summary>
@@ -1230,6 +1427,7 @@ namespace MuPDF.NET
 
             return bmp;
         }
+
         /// <summary>
         /// Creates a pixmap from an SkiaSharp bitmap.
         /// </summary>
@@ -1246,10 +1444,12 @@ namespace MuPDF.NET
             var nativePix = img.fz_get_pixmap_from_image(new mupdf.FzIrect(), new mupdf.FzMatrix(), null, null);
             return new Pixmap(nativePix);
         }
+
         /// <summary>
         /// Returns PNG-encoded image bytes.
         /// </summary>
         public byte[] ToPng() => ToBytes("png");
+
         /// <summary>
         /// Replaces sample bytes from a caller-provided buffer.
         /// </summary>
@@ -1264,6 +1464,7 @@ namespace MuPDF.NET
             Marshal.Copy(data, 0, basePtr, data.Length);
             InvalidateSamplesCache();
         }
+
         /// <summary>
         /// return a pixmap made from a quad inside.
         /// </summary>
@@ -1312,6 +1513,7 @@ namespace MuPDF.NET
             result.SetSamples(dst);
             return result;
         }
+
         /// <summary>
         /// return a pixmap made from a quad inside.
         /// </summary>
@@ -1324,8 +1526,9 @@ namespace MuPDF.NET
             var dst = NativePixmap.fz_warp_pixmap(quad.ToFzQuad(), width, height);
             return new Pixmap(dst);
         }
+
         /// <summary>
-        /// Shrink the pixmap by dividing both, its width and height by 2\ :sup:n.
+        /// Shrink the pixmap by dividing both, its width and height by 2\:sup:n.
         /// </summary>
         /// <param name="factor">Subsample factor for Shrink (≥1).</param>
         public Pixmap Shrink(int factor)
@@ -1336,6 +1539,7 @@ namespace MuPDF.NET
             InvalidateSamplesCache();
             return this;
         }
+
         /// <summary>
         /// determine used colors.
         /// </summary>
@@ -1402,6 +1606,114 @@ namespace MuPDF.NET
         internal byte[] samples => Samples;
         internal IntPtr samples_ptr => SamplesPtr;
         internal PixmapSamplesMemoryView samples_mv => SamplesMv;
+
+        /// <summary>
+        /// Rotate or flip this pixmap (<c>Pixmap.flip_rotate</c>).
+        /// Modes: <see cref="Rotate90"/>, <see cref="Rotate270"/>, <see cref="Rotate180"/>,
+        /// </summary>
+        /// <see cref="FlipLeftRight"/>, <see cref="FlipTopBottom"/>.
+        /// <summary>
+        /// Invalid modes log a warning and return this instance.
+        /// </summary>
+        public Pixmap FlipRotate(int mode)
+        {
+            if (mode < 1 || mode > 5)
+            {
+                Helpers.message($"warning: Invalid flip/rotate mode: {mode}.");
+                return this;
+            }
+
+            int w = Width, h = Height, n = N;
+            int alpha = Alpha;
+            int stride = w * n;
+            byte[] src = Samples;
+            Colorspace cs = Colorspace;
+
+            void SwapPixels(byte[] buf, int a, int b)
+            {
+                for (int i = 0; i < n; i++)
+                {
+                    byte t = buf[a + i];
+                    buf[a + i] = buf[b + i];
+                    buf[b + i] = t;
+                }
+            }
+
+            void SwapRows(byte[] buf, int top, int bottom)
+            {
+                for (int i = 0; i < stride; i++)
+                {
+                    byte t = buf[top + i];
+                    buf[top + i] = buf[bottom + i];
+                    buf[bottom + i] = t;
+                }
+            }
+
+            if (mode == FlipLeftRight)
+            {
+                byte[] buf = (byte[])src.Clone();
+                for (int y = 0; y < h; y++)
+                {
+                    int row = y * stride;
+                    for (int x = 0; x < w / 2; x++)
+                        SwapPixels(buf, row + x * n, row + (w - 1 - x) * n);
+                }
+                return new Pixmap(cs, w, h, buf, alpha != 0);
+            }
+
+            if (mode == FlipTopBottom)
+            {
+                byte[] buf = (byte[])src.Clone();
+                for (int y = 0; y < h / 2; y++)
+                    SwapRows(buf, y * stride, (h - 1 - y) * stride);
+                return new Pixmap(cs, w, h, buf, alpha != 0);
+            }
+
+            if (mode == Rotate180)
+            {
+                byte[] buf = (byte[])src.Clone();
+                for (int y = 0; y < h / 2; y++)
+                    SwapRows(buf, y * stride, (h - 1 - y) * stride);
+                for (int y = 0; y < h; y++)
+                {
+                    int row = y * stride;
+                    for (int x = 0; x < w / 2; x++)
+                        SwapPixels(buf, row + x * n, row + (w - 1 - x) * n);
+                }
+                return new Pixmap(cs, w, h, buf, alpha != 0);
+            }
+
+            int newW = h, newH = w;
+            byte[] dst = new byte[newW * newH * n];
+            if (mode == Rotate90)
+            {
+                for (int y = 0; y < h; y++)
+                {
+                    int row = y * stride;
+                    for (int x = 0; x < w; x++)
+                    {
+                        int dstPos = (x * newW + (h - 1 - y)) * n;
+                        Buffer.BlockCopy(src, row + x * n, dst, dstPos, n);
+                    }
+                }
+            }
+            else
+            {
+                for (int y = 0; y < h; y++)
+                {
+                    int row = y * stride;
+                    for (int x = 0; x < w; x++)
+                    {
+                        int dstPos = ((w - 1 - x) * newW + y) * n;
+                        Buffer.BlockCopy(src, row + x * n, dst, dstPos, n);
+                    }
+                }
+            }
+            return new Pixmap(cs, newW, newH, dst, alpha != 0);
+        }
+
+        internal Pixmap flip_rotate(int mode) => FlipRotate(mode);
+
         internal byte[] digest => Digest;
 
         internal byte[] pixel(int x, int y) => GetPixel(x, y);
@@ -1421,10 +1733,13 @@ namespace MuPDF.NET
         internal void gamma_with(float gamma) => GammaWith(gamma);
         internal bool invert_irect(IRect irect = null) => InvertIRect(irect);
         internal bool invertIRect(IRect irect = null) => InvertIRect(irect);
-        internal void pil_save(string filename, string output = null, int quality = 95) => Save(filename, output, quality);
-        internal void pillowWrite(string filename, string output = null, int quality = 95) => Save(filename, output, quality);
-        internal byte[] pil_tobytes(string output = "png", int quality = 96) => ToBytes(output, quality);
-        internal byte[] pillowData(string output = "png", int quality = 96) => ToBytes(output, quality);
+        internal SKBitmap pil_image() => PilImage();
+        internal void pil_save(string filename, string output = null, int quality = 75) =>
+            PilSave(filename, output, quality);
+        internal void pillowWrite(string filename, string output = null, int quality = 75) =>
+            PilSave(filename, output, quality);
+        internal byte[] pil_tobytes(string output = "png", int quality = 75) => PilToBytes(output, quality);
+        internal byte[] pillowData(string output = "png", int quality = 75) => PilToBytes(output, quality);
         internal void save(string filename, string output = null, int quality = 95) => Save(filename, output, quality);
         internal void writeImage(string filename, string output = null, int quality = 95) => Save(filename, output, quality);
         internal void writePNG(string filename, int quality = 95) => Save(filename, "png", quality);
@@ -1455,6 +1770,7 @@ namespace MuPDF.NET
         }
 
         // ─── IDisposable ────────────────────────────────────────────────
+
         /// <summary>
         /// Releases the native fz_pixmap and cached sample view.
         /// </summary>
@@ -1477,6 +1793,7 @@ namespace MuPDF.NET
             ReleaseNativePixmap();
             _disposed = true;
         }
+
         /// <summary>
         /// Diagnostic string with colorspace, IRect, and alpha flag.
         /// </summary>

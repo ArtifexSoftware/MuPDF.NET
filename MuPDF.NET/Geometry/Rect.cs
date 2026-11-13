@@ -12,7 +12,6 @@ namespace MuPDF.NET
     /// <para>PDF coordinates in points (72 per inch). Valid when <c>x0 &lt;= x1</c> and <c>y0 &lt;= y1</c>;
     /// empty when <c>x0 &gt;= x1</c> or <c>y0 &gt;= y1</c>. One infinite rect exists (<see cref="Infinite"/>).
     /// Right and bottom edges are semi-open (not included in containment).</para>
-    /// <para>Ports </para>
     /// </remarks>
     public class Rect : IEnumerable<float>, IEquatable<Rect>
     {

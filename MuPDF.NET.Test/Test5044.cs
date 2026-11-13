@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Xunit;
@@ -7,7 +7,7 @@ namespace MuPDF.NET.Test
 {
     /// <remarks>
     /// Input: <c>TestDocuments/Test5044/test_5044.pdf</c>.
-    /// Port of PyMuPDF 1.28.2 <c>tests/test_5044.py</c> (#5044 TOC / named dest parsing).
+    /// Issue 5044: TOC / named dest parsing.
     /// </remarks>
     [Collection("MuPDF.NET native")]
     public class Test5044
@@ -28,33 +28,17 @@ namespace MuPDF.NET.Test
                 ["kind"] = 1,
                 ["xref"] = 11,
                 ["page"] = 0,
-                ["to"] = new Point(0.0f, 0.89001467f),
+                ["to"] = new Point(0.0f, 0.89001465f),
                 ["zoom"] = 0.0f,
-                ["color"] = new float[] { 0.0f, 0.0f, 0.0f },
+                ["color"] = (0.0f, 0.0f, 0.0f),
             };
 
             Assert.Equal(expectLink["kind"], link["kind"]);
             Assert.Equal(expectLink["xref"], link["xref"]);
             Assert.Equal(expectLink["page"], link["page"]);
-            Assert.Equal(expectLink["zoom"], Convert.ToSingle(link["zoom"]));
-
-            Point to = link["to"] switch
-            {
-                Point pt => pt,
-                ValueTuple<float, float> vt => new Point(vt.Item1, vt.Item2),
-                _ => throw new InvalidCastException($"Unexpected 'to' type: {link["to"]?.GetType().FullName}"),
-            };
-            Assert.Equal(0.0f, to.X, 5);
-            Assert.Equal(0.89001467f, to.Y, 5);
-
-            float[] color = link["color"] switch
-            {
-                float[] fa => fa,
-                ValueTuple<float, float, float> vt3 => new[] { vt3.Item1, vt3.Item2, vt3.Item3 },
-                IEnumerable<object> objs => objs.Select(Convert.ToSingle).ToArray(),
-                _ => throw new InvalidCastException($"Unexpected 'color' type: {link["color"]?.GetType().FullName}"),
-            };
-            Assert.Equal(new float[] { 0f, 0f, 0f }, color);
+            Assert.Equal(expectLink["to"], link["to"]);
+            Assert.Equal(expectLink["zoom"], link["zoom"]);
+            Assert.Equal(expectLink["color"], link["color"]);
         }
     }
 }

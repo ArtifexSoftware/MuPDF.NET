@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace MuPDF.NET
 {
     /// <summary>
-    /// Module-level constants for MuPDF.NET ( and legacy glossary).
+    /// Module-level constants for MuPDF.NET (and legacy glossary).
     /// </summary>
     /// <remarks>
     /// <para>
@@ -28,15 +28,16 @@ namespace MuPDF.NET
 
         /// <summary>
         /// Combined version info (legacy <c>VERSION</c>):
-        /// <c>(MuPDF.NET package, MuPDF library, build timestamp)</c>.
         /// </summary>
+        /// <c>(MuPDF.NET package, MuPDF library, build timestamp)</c>.
+
         public static readonly (string MuPdfNetVersion, string MuPdfVersion, string BuildTimestamp) Version =
             (Artifex.Versions.MuPDFNet, Artifex.Versions.MuPDF, null);
 
         /// <summary>Small value used for floating-point comparisons.</summary>
         public const float Epsilon = 1e-5f;
 
-        /// <summary>Alias of <see cref="Epsilon"/> ( usage).</summary>
+        /// <summary>Alias of <see cref="Epsilon"/> (usage).</summary>
         public const float FltEpsilon = 1e-5f;
 
         /// <summary>MuPDF minimum infinite rectangle coordinate.</summary>
@@ -328,7 +329,7 @@ namespace MuPDF.NET
             ["zadb"] = "ZapfDingbats"
         };
 
-        /// <summary><c>src/__init__.py</c>.</summary>
+
         internal static readonly HashSet<char> InvalidNameChars = BuildInvalidNameChars();
 
         private static HashSet<char> BuildInvalidNameChars()

@@ -1,11 +1,13 @@
 // Copyright (C) 2023 Artifex Software, Inc.
-// Portions of this code have been ported from pdfplumber / MuPDF table.py.
+// Portions of this code have been ported from pdfplumber / MuPDF.
 // pdfplumber is under the MIT License, Copyright (c) 2015 Jeremy Singer-Vine.
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 
@@ -83,8 +85,9 @@ namespace MuPDF.NET
     /// </summary>
     public class CellGroup
     {
+
         /// <summary>
-        /// Individual cell bounding boxes.  A null entry means the cell is
+        /// Individual cell bounding boxes. A null entry means the cell is
         /// spanned by a neighbour (row-/column-span).
         /// </summary>
         public List<(float x0, float y0, float x1, float y1)?> Cells { get; set; }
@@ -134,21 +137,21 @@ namespace MuPDF.NET
     // ────────────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Detected table header ( extension in <c>table.py</c>).
+    /// Detected table header (extension in).
     /// </summary>
     public class TableHeader
     {
-        /// <summary>Header bounding box (Python <c>bbox</c>).</summary>
+        /// <summary>Header bounding box (PyMuPDF <c>bbox</c>).</summary>
         public (float x0, float y0, float x1, float y1) Bbox { get; }
 
         /// <summary>Per-column header cell boxes (null = spanned).</summary>
         public List<(float x0, float y0, float x1, float y1)?> Cells { get; }
 
-        /// <summary>Column header text (Python <c>names</c>).</summary>
+        /// <summary>Column header text (PyMuPDF <c>names</c>).</summary>
         public List<string?> Names { get; }
 
         /// <summary>
-        /// True when header is outside table cells (Python <c>above</c> / external);
+        /// True when header is outside table cells (PyMuPDF <c>above</c> / external);
         /// false when the first table row is the header.
         /// </summary>
         public bool External { get; }
@@ -180,11 +183,10 @@ namespace MuPDF.NET
     // ────────────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// A single table on a PDF page ( / pdfplumber port in <c>src/table.py</c>).
+    /// A single table on a PDF page.
     /// </summary>
     /// <remarks>
-    /// Adds <see cref="Header"/> via internal header resolution. Public members use PascalCase;
-    /// <c>internal</c> snake_case aliases are available for same-assembly tests.
+    /// Adds <see cref="Header"/> via internal header resolution. Public members use PascalCase.
     /// </remarks>
     public class Table
     {
@@ -208,6 +210,7 @@ namespace MuPDF.NET
         // Filled by FindTables(refine: true): Placements is a row-major grid of
         // tagged SpanCell colspan/rowspan placements (null otherwise); HeaderRows
         // is the leading header-row count, SectionRows the section-label rows.
+
         /// <summary>
         /// Tagged span placements from <c>FindTables(refine: true)</c>; null on the default path.
         /// </summary>
@@ -329,12 +332,12 @@ namespace MuPDF.NET
             _bbox = bbox;
             if (chars != null)
                 Chars = new List<Dictionary<string, object>>(chars);
-            Header = GetHeader();  // PyMuPDF extension
+            Header = GetHeader();  // extension
         }
 
         /// <summary>
-        /// Extract cell text row-by-row .
-        /// Uses module-level <c>CHARS</c>; optional <c>x_shift</c>, <c>y_shift</c>, <c>layout*</c> kwargs per cell.
+        /// Extract cell text row-by-row.
+        /// Uses module-level <c>CHARS</c>; optional <c>x_shift</c>, <c>y_shift</c>, <c>layout*</c> named arguments per cell.
         /// </summary>
         public List<List<string?>> Extract(Dictionary<string, object> kwargs = null)
         {
@@ -343,14 +346,10 @@ namespace MuPDF.NET
 
             bool CharInBbox(Dictionary<string, object> ch, (float x0, float y0, float x1, float y1) bbox)
             {
-                // v_mid = (char["top"] + char["bottom"]) / 2
                 float vMid = (TableHelpers.F(ch, "top") + TableHelpers.F(ch, "bottom")) / 2f;
-                // h_mid = (char["x0"] + char["x1"]) / 2
                 float hMid = (TableHelpers.F(ch, "x0") + TableHelpers.F(ch, "x1")) / 2f;
-                // x0, top, x1, bottom = bbox
                 float x0 = bbox.x0, top = bbox.y0, x1 = bbox.x1, bottom = bbox.y1;
-                //     (h_mid >= x0) and (h_mid < x1) and (v_mid >= top) and (v_mid < bottom)
-                // )
+                // (h_mid >= x0) and (h_mid <x1) and (v_mid >= top) and (v_mid <bottom)
                 return hMid >= x0 && hMid < x1 && vMid >= top && vMid < bottom;
             }
 
@@ -358,9 +357,7 @@ namespace MuPDF.NET
 
             foreach (var row in Rows)
             {
-                // arr = []
                 var arr = new List<string?>();
-                // row_chars = [char for char in chars if char_in_bbox(char, row.bbox)]
                 var rowChars = chars.Where(ch => CharInBbox(ch, row.Bbox)).ToList();
 
                 foreach (var cell in row.Cells)
@@ -368,7 +365,6 @@ namespace MuPDF.NET
                     string cellText;
                     if (cell == null)
                     {
-                        // cell_text = None
                         cellText = null;
                     }
                     else
@@ -389,21 +385,18 @@ namespace MuPDF.NET
                         }
                         else
                         {
-                            // cell_text = ""
                             cellText = "";
                         }
                     }
-                    // arr.append(cell_text)
                     arr.Add(cellText);
                 }
-                // table_arr.append(arr)
                 tableArr.Add(arr);
             }
             return tableArr;
         }
 
         /// <summary>
-        /// GitHub-flavoured Markdown for this table .
+        /// GitHub-flavoured Markdown for this table.
         /// </summary>
         /// <param name="clean">When true, escape Markdown-sensitive characters in cells and header.</param>
         /// <param name="fillEmpty">When true, copy content into null cells from left/top to approximate spans.</param>
@@ -479,7 +472,8 @@ namespace MuPDF.NET
 
         /// <summary>
         /// Output the table as an HTML <c>&lt;table&gt;</c> string.
-        ///
+        /// </summary>
+        /// <summary>
         /// With span placements (from <c>FindTables(refine: true)</c>) each
         /// placement's colspan/rowspan and th/td tag are honoured and a
         /// section-label row collapses to one spanning <c>&lt;th&gt;</c>. Otherwise a flat
@@ -489,7 +483,7 @@ namespace MuPDF.NET
         {
             if (Placements != null)
                 return TableHeaders.RenderTableHtml(Placements, SectionRows);
-            // No placements: flat td-only grid from Extract().
+            // No placements: flat td-only grid from Extract.
             var rows = Extract()
                 .Select(row => row
                     .Select(cell => new SpanCell(
@@ -511,7 +505,7 @@ namespace MuPDF.NET
         // ── Header detection ────────────────────────
 
         /// <summary>
-        /// Identify the table header .
+        /// Identify the table header.
         /// One-line or single-column tables use the first row; returns null if there are no rows.
         /// </summary>
         private TableHeader GetHeader(float yTolerance = 3)
@@ -549,7 +543,7 @@ namespace MuPDF.NET
 
     /// <summary>
     /// Configuration for the table-detection algorithm.
-    /// Mirrors the Python <c>TableSettings</c> dataclass.
+    /// Mirrors the PyMuPDF <c>TableSettings</c> dataclass.
     /// </summary>
     public class TableSettings
     {
@@ -625,9 +619,10 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Resolve settings from a key/value dictionary.  Keys prefixed with
-        /// <c>text_</c> are placed into <see cref="TextSettings"/>.
+        /// Resolve settings from a key/value dictionary. Keys prefixed with
         /// </summary>
+        /// <c>text_</c> are placed into <see cref="TextSettings"/>.
+
         public static TableSettings Resolve(Dictionary<string, object> dict)
         {
             if (dict == null)
@@ -679,7 +674,6 @@ namespace MuPDF.NET
     }
 
     // ────────────────────────────────────────────────────────────────────
-    // find_tables  (module-level in table.py; methods on TableHelpers here)
     // ────────────────────────────────────────────────────────────────────
 
     public static partial class TableHelpers
@@ -692,7 +686,7 @@ namespace MuPDF.NET
             const string msg =
                 "Consider using the pymupdf_layout package for a greatly improved page layout analysis.";
             if (_recommendLayout && Page.GetLayoutProvider == null
-                && Environment.GetEnvironmentVariable("PYMUPDF_SUGGEST_LAYOUT_ANALYZER") != "0")
+                && Environment.GetEnvironmentVariable("MUPDF_NET_SUGGEST_LAYOUT_ANALYZER") != "0")
             {
                 Helpers.message(msg);
                 _recommendLayout = false;
@@ -701,15 +695,18 @@ namespace MuPDF.NET
 
         /// <summary>
         /// Detect and extract tables on a page (PyMuPDF <c>find_tables</c> / <c>src/table.py</c>).
-        ///
+        /// </summary>
         /// <para>
         /// <paramref name="useLayout"/>: if true (default), use <see cref="Page.GetLayout"/> to find
+        /// <summary>
         /// layout-identified table regions and use them to restrict/complete line-based
         /// detection; if layout ran and found no tables, return an empty result
         /// immediately. Set false to always run full detection.
+        /// </summary>
         /// </para>
         /// <para>
         /// <paramref name="union"/>: if true (requires the layout analyzer), detect tables by
+        /// <summary>
         /// fusing the layout analyzer's table grids with the line-based finder's candidates --
         /// a candidate matching a layout table 1:1 can replace its grid, candidates
         /// contained in one layout table can split it, and unowned candidates are
@@ -717,20 +714,25 @@ namespace MuPDF.NET
         /// Off by default. Needs the raw layout form: when <see cref="Page.LayoutInformation"/>
         /// is null it is computed with <c>GetLayout(returnRaw: true)</c>; when already
         /// populated it is reused as-is.
+        /// </summary>
         /// </para>
         /// <para>
         /// <paramref name="refine"/>: if true, refine each detected table's cell grid before
+        /// <summary>
         /// building the <see cref="Table"/> -- splitting rows/columns the line grid merged
         /// (using page text and background shading) -- then reconstruct its merged-cell
         /// structure and header semantics. The tagged grid is attached as
+        /// </summary>
         /// <see cref="Table.Placements"/> (a row-major grid of <see cref="SpanCell"/>
+        /// <summary>
         /// colspan/rowspan placements, each carrying its td/th tag; null on the default
         /// path), the header meta as <see cref="Table.HeaderRows"/>/<see cref="Table.SectionRows"/>,
         /// and <see cref="Table.ToHtml"/> serializes it. Off by default. A grid whose column
         /// count the span resolution cannot preserve falls back to a flat one-cell-per-slot
         /// placement grid.
-        /// </para>
         /// </summary>
+        /// </para>
+
         /// <param name="useLayout">Gate line-based tables by layout table boxes.</param>
         /// <param name="union">Opt-in: fuse layout grids with line-based candidates.</param>
         /// <param name="refine">Opt-in: refine each detected table's cell grid.</param>
@@ -785,6 +787,15 @@ namespace MuPDF.NET
                 oldXref = derot.xref;
                 oldRot = derot.rot;
                 oldMediabox = derot.mediabox;
+            }
+
+            // Share one drawings extraction for this call. Nested FindTables
+            // (union) must neither replace nor remove the outer cache.
+            bool ownsDrawings = workPage.TableDrawingsCache == null;
+            if (ownsDrawings)
+            {
+                try { workPage.TableDrawingsCache = new List<List<Dictionary<string, object>>>(); }
+                catch { ownsDrawings = false; }
             }
 
             if (snapXTolerance == null)
@@ -845,11 +856,11 @@ namespace MuPDF.NET
                 {
                     // Union path: fuse layout grids with line-based candidates instead
                     // of the ordinary useLayout gating. It builds its own tables (and,
-                    // via a nested FindTables, its own char list), so the MakeChars/
+                    // via a nested FindTables, its own char list), so the MakeChars
                     // MakeEdges/TableFinder setup below is skipped; TextPage comes from
                     // the nested finder. TableUnion lives in a sibling file to keep the
                     // import cycle with FindTables out of this method's call graph.
-                    tbf = TableUnion.FindTablesUnion(workPage);
+                    tbf = TableUnion.FindTablesUnion(workPage, addLines, addBoxes);
                     textpage = tbf.TextPage;
                 }
                 else
@@ -919,34 +930,14 @@ namespace MuPDF.NET
                     // Grid refinement + reconstruction. Runs while the page is still
                     // derotated (before the finally block resets rotation) so word and
                     // vector coordinates match the detected cells. Order: structural
-                    // split (shaded rows + under-segmented columns), resolve the header/
+                    // split (shaded rows + under-segmented columns), resolve the header
                     // body boundary, split over-merged body rows, resolve the final
                     // merged-cell placement grid (strict colspan) and tag each placement
-                    // td/th. The tagged grid is attached as .Placements, the header meta
-                    // as .HeaderRows/.SectionRows.
+                    // td/th. The tagged grid is attached as.Placements, the header meta
+                    // as.HeaderRows/.SectionRows.
                     var refinedTables = new List<Table>();
                     foreach (var tab in tbf.Tables)
-                    {
-                        var grid = TableRefine.CellsToGrid(tab.Cells);
-                        // The reported bbox (a union grid-ref table's layout box, else
-                        // the cells' union) bounds the shaded-rectangle search.
-                        var working = TableRefine.RefineGridStructure(workPage, grid, tableBbox: tab.bbox);
-                        int bodyStart = TableRefine.BodyStartRow(workPage, working);
-                        working = TableRefine.RefineGridRows(workPage, working, headerRowCount: bodyStart);
-                        var flat = TableRefine.GridToCells(working);
-                        // Preserve an explicit reported-bbox override (union grid-ref
-                        // tables): the refined grid must not change the reported region.
-                        var newTab = flat.Count > 0
-                            ? new Table(workPage, flat, chars, textpage, bbox: tab._bbox)
-                            : tab;
-                        // Build the tagged model on `working` directly, not on the
-                        // re-gridded newTab.Cells, so placements match the refined grid.
-                        var (placements, region) = TableRefine.BuildPlacements(workPage, working, bodyStart);
-                        newTab.Placements = placements;
-                        newTab.HeaderRows = region.TopHeaderRows;
-                        newTab.SectionRows = region.SectionHeaderRows;
-                        refinedTables.Add(newTab);
-                    }
+                        refinedTables.AddRange(TableRefine.RefineGridTables(workPage, tab, chars, textpage));
                     tbf.Tables = refinedTables;
                 }
             }
@@ -957,6 +948,11 @@ namespace MuPDF.NET
             }
             finally
             {
+                if (ownsDrawings)
+                {
+                    try { workPage.TableDrawingsCache = null; }
+                    catch { }
+                }
                 Helpers.ThreadSmallGlyphHeights = savedSmallGlyphHeights;
                 Helpers.ThreadSkipQuadCorrections = savedSkipQuadCorrections;
                 if (oldXref != null && oldMediabox != null)
@@ -966,8 +962,8 @@ namespace MuPDF.NET
             if (tbf == null)
                 return null;
 
-            // Snapshot the page's characters onto each table so a later FindTables()
-            // call's CHARS reset cannot leak into this table's Extract(). One shallow
+            // Snapshot the page's characters onto each table so a later FindTables
+            // call's CHARS reset cannot leak into this table's Extract. One shallow
             // copy shared per call.
             var charsSnapshot = new List<Dictionary<string, object>>(chars);
             foreach (var table in tbf.Tables)
@@ -1223,7 +1219,7 @@ namespace MuPDF.NET
     }
 
     // ────────────────────────────────────────────────────────────────────
-    // TableHelpers  – static helper functions
+    // TableHelpers – static helper functions
     // ────────────────────────────────────────────────────────────────────
 
     /// <summary>
@@ -1285,8 +1281,9 @@ namespace MuPDF.NET
 
         /// <summary>
         /// Convert a line dictionary to an edge dictionary by adding an
-        /// <c>orientation</c> key.
         /// </summary>
+        /// <c>orientation</c> key.
+
         public static Dictionary<string, object> LineToEdge(Dictionary<string, object> line)
         {
             var edge = new Dictionary<string, object>(line);
@@ -1377,8 +1374,9 @@ namespace MuPDF.NET
 
         /// <summary>
         /// Cluster a list of float values so that consecutive values within
-        /// <paramref name="tolerance"/> of each other are in the same cluster.
         /// </summary>
+        /// <paramref name="tolerance"/> of each other are in the same cluster.
+
         public static List<List<float>> ClusterList(List<float> xs, float tolerance = 0)
         {
             if (xs.Count < 2)
@@ -1421,8 +1419,9 @@ namespace MuPDF.NET
 
         /// <summary>
         /// Group objects by a float key, clustering keys within
-        /// <paramref name="tolerance"/>.
         /// </summary>
+        /// <paramref name="tolerance"/>.
+
         internal static List<List<T>> ClusterObjects<T>(
             List<T> xs, Func<T, float> keyFn, float tolerance)
         {
@@ -1670,7 +1669,6 @@ namespace MuPDF.NET
                 return false;
             }
 
-            // points = list(sorted(intersections.keys()))
             var points = intersections.Keys.OrderBy(p => p.x).ThenBy(p => p.y).ToList();
             int nPoints = points.Count;
             var cells = new List<(float x0, float y0, float x1, float y1)>();
@@ -1681,9 +1679,7 @@ namespace MuPDF.NET
                     continue;
                 var pt = points[i];
                 var rest = points.Skip(i + 1).ToList();
-                // below = [x for x in rest if x[0] == pt[0]]
                 var below = rest.Where(p => p.x == pt.x).ToList();
-                // right = [x for x in rest if x[1] == pt[1]]
                 var right = rest.Where(p => p.y == pt.y).ToList();
 
                 foreach (var belowPt in below)
@@ -1709,7 +1705,6 @@ namespace MuPDF.NET
                 }
                 nextPoint:;
             }
-            // cell_gen = (find_smallest_cell(points, i) for i in range(len(points)))
             return cells;
         }
 
@@ -2003,14 +1998,12 @@ namespace MuPDF.NET
             foreach (var uprightCluster in uprightClusters)
             {
                 bool upright = uprightCluster[0].TryGetValue("upright", out var uo) && (bool)uo;
-                // cluster_key = "doctop" if upright else "x0"
                 var subclusters = upright
                     ? ClusterObjects(uprightCluster, c => F(c, "doctop"), yTolerance)
                     : ClusterObjects(uprightCluster, c => F(c, "x0"), yTolerance);
 
                 foreach (var sc in subclusters)
                 {
-                    // sort_key = "x0" if upright else "doctop"
                     var sorted = upright
                         ? sc.OrderBy(c => F(c, "x0")).ToList()
                         : sc.OrderBy(c => F(c, "doctop")).ToList();
@@ -2025,7 +2018,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Extract words from character dictionaries .
+        /// Extract words from character dictionaries.
         /// </summary>
         public static List<Dictionary<string, object>> ExtractWords(
             List<Dictionary<string, object>> chars,
@@ -2033,7 +2026,7 @@ namespace MuPDF.NET
         {
             float xTol = TableConstants.DefaultXTolerance;
             float yTol = TableConstants.DefaultYTolerance;
-            // horizontal_ltr=True, vertical_ttb=False  (WordExtractor defaults in table.py)
+
             bool horizontalLtr = true;
             bool verticalTtb = false;
             if (settings != null)
@@ -2054,7 +2047,7 @@ namespace MuPDF.NET
             var words = new List<Dictionary<string, object>>();
             var current = new List<Dictionary<string, object>>();
 
-            // ordered_chars = self.iter_sort_chars(chars)
+
             foreach (var ch in IterSortChars(chars, yTol, horizontalLtr, verticalTtb))
             {
                 string text = (string)ch["text"];
@@ -2139,13 +2132,12 @@ namespace MuPDF.NET
             List<Dictionary<string, object>> chars,
             Dictionary<string, object> kwargs)
         {
-            // kwargs.update({"presorted": True})
+
             var mapKw = new Dictionary<string, object>(kwargs) { ["presorted"] = true };
             var wordKw = new Dictionary<string, object>();
             foreach (var key in WordExtractorKwargKeys)
                 if (mapKw.ContainsKey(key))
                     wordKw[key] = mapKw[key];
-            // wordmap = extractor.extract_wordmap(chars); textmap = wordmap.to_textmap(...)
             // Simplified: layout uses same word clustering as non-layout extract_text.
             var layoutKw = new Dictionary<string, object>(mapKw);
             layoutKw.Remove("layout");
@@ -2157,7 +2149,6 @@ namespace MuPDF.NET
             List<Dictionary<string, object>> chars,
             Dictionary<string, object> kwargs = null)
         {
-            // chars = to_list(chars)
             if (chars == null || chars.Count == 0)
                 return "";
 
@@ -2168,18 +2159,17 @@ namespace MuPDF.NET
                 return CharsToTextmapString(chars, kwargs);
             }
 
-            // y_tolerance = kwargs.get("y_tolerance", DEFAULT_Y_TOLERANCE)
+
             float yTolerance = kwargs.TryGetValue("y_tolerance", out var yt)
                 ? Convert.ToSingle(yt)
                 : TableConstants.DefaultYTolerance;
 
-            // extractor = WordExtractor(**{k: kwargs[k] for k in WORD_EXTRACTOR_KWARGS if k in kwargs})
+
             var wordKw = new Dictionary<string, object>();
             foreach (var key in WordExtractorKwargKeys)
                 if (kwargs.ContainsKey(key))
                     wordKw[key] = kwargs[key];
 
-            // words = extractor.extract_words(chars)
             var words = ExtractWords(chars, wordKw);
 
             int rotation = 0;
@@ -2190,26 +2180,20 @@ namespace MuPDF.NET
 
             if (rotation == 90)
             {
-                // words.sort(key=lambda w: (w["x1"], -w["top"]))
                 words = words.OrderBy(w => F(w, "x1")).ThenByDescending(w => F(w, "top")).ToList();
-                // lines = " ".join([w["text"] for w in words])
                 return string.Join(" ", words.Select(w => (string)w["text"]));
             }
             if (rotation == 270)
             {
-                // words.sort(key=lambda w: (-w["x1"], w["top"]))
                 words = words.OrderByDescending(w => F(w, "x1")).ThenBy(w => F(w, "top")).ToList();
                 return string.Join(" ", words.Select(w => (string)w["text"]));
             }
 
-            // lines = cluster_objects(words, itemgetter("doctop"), y_tolerance)
             var lineGroups = ClusterObjects(words, w => F(w, "doctop"), yTolerance);
-            // lines = "\n".join(" ".join(word["text"] for word in line) for line in lines)
             string lines = string.Join("\n",
                 lineGroups.Select(line => string.Join(" ", line.Select(w => (string)w["text"]))));
             if (rotation == 180) // needs extra treatment
             {
-                // lines = "".join([(c if c != "\n" else " ") for c in reversed(lines)])
                 var chars180 = lines.Select(c => c == '\n' ? ' ' : c).Reverse();
                 lines = new string(chars180.ToArray());
             }
@@ -2231,8 +2215,9 @@ namespace MuPDF.NET
         /// <summary>
         /// Extract text from a single cell bbox using the TextPage,
         /// optionally with Markdown styling.
-        ///
         /// </summary>
+
+
         public static string ExtractCells(
             TextPage textpage,
             (float x0, float y0, float x1, float y1) cell,
@@ -2393,7 +2378,6 @@ namespace MuPDF.NET
             var raw = stp.ExtractRawDict(sort: false);
             if (raw == null || raw["blocks"] is not List<Dictionary<string, object>> blocks)
                 return stp;
-            // ctm = page.transformation_matrix
             var ctm = page.TransformationMatrix;
 
             foreach (var block in blocks)
@@ -2402,7 +2386,6 @@ namespace MuPDF.NET
                     continue;
                 foreach (var line in lines)
                 {
-                    // ldir = line["dir"]  # = (cosine, sine) of angle
                     var ldir = (float[])line["dir"];
                     float dirX = (float)Math.Round(ldir[0], 4);
                     float dirY = (float)Math.Round(ldir[1], 4);
@@ -2428,7 +2411,6 @@ namespace MuPDF.NET
                         {
                             var cb = (float[])ch["bbox"];
                             var bbox = new Rect(cb[0], cb[1], cb[2], cb[3]);
-                            // bbox_ctm = bbox * ctm
                             var bboxCtm = bbox * ctm;
                             var orig = (float[])ch["origin"];
                             var origin = new Point(orig[0], orig[1]) * ctm;
@@ -2468,7 +2450,7 @@ namespace MuPDF.NET
             return stp;
         }
 
-        /// <summary><c>FLAGS</c> for <c>get_textpage</c> / <c>get_textbox</c>.</summary>
+        /// <summary>Text-page flags used when extracting table cell text.</summary>
         internal static readonly int TableTextPageFlags =
             Constants.TextFlagsText
             | mupdf.mupdf.FZ_STEXT_COLLECT_STYLES
@@ -2486,10 +2468,55 @@ namespace MuPDF.NET
         /// <summary>
         /// Fill the <paramref name="edges"/> list with vector-graphic line
         /// dictionaries extracted from the page's drawings.
-        /// Page.GetDrawingsDict() returns paths as List&lt;Dictionary&lt;string,object&gt;&gt;.
+        /// Page.GetDrawingsDict returns paths as List&lt;Dictionary&lt;string,object&gt;&gt;.
         /// Each path has "items" (list of drawing commands), "width", "rect", etc.
         /// Each item is a tuple-like list: ["l", p1, p2] or ["re", rect].
         /// </summary>
+        internal static List<Dictionary<string, object>> GetTableDrawings(Page page, bool native = false)
+        {
+            List<Dictionary<string, object>> paths;
+            var cache = page?.TableDrawingsCache;
+            if (cache == null)
+                paths = page?.GetDrawingsDict() ?? new List<Dictionary<string, object>>();
+            else
+            {
+                if (cache.Count == 0)
+                    cache.Add(page.GetDrawingsDict() ?? new List<Dictionary<string, object>>());
+                paths = cache[0];
+            }
+            if (!native)
+                return paths;
+            var copies = new List<Dictionary<string, object>>(paths.Count);
+            foreach (var path in paths)
+            {
+                var copy = new Dictionary<string, object>(path);
+                if (path.TryGetValue("rect", out var rectObj) && rectObj is Rect rect)
+                    copy["rect"] = new Rect(rect);
+                if (path.TryGetValue("items", out var itemsObj) && itemsObj is IList items)
+                {
+                    var newItems = new List<object>(items.Count);
+                    foreach (var item in items)
+                    {
+                        if (item is IList row && row.Count > 1 && row[0] is string kind && kind == "re")
+                        {
+                            var cloned = new object[row.Count];
+                            for (int i = 0; i < row.Count; i++)
+                                cloned[i] = i == 1 && row[1] is Rect r ? new Rect(r) : row[i];
+                            newItems.Add(cloned);
+                        }
+                        else
+                            newItems.Add(item);
+                    }
+                    copy["items"] = newItems;
+                }
+                copies.Add(copy);
+            }
+            return copies;
+        }
+
+        internal static List<Dictionary<string, object>> _get_table_drawings(Page page, bool native = false)
+            => GetTableDrawings(page, native);
+
         internal static void MakeEdges(
             Page page,
             List<Dictionary<string, object>> edges,
@@ -2589,24 +2616,58 @@ namespace MuPDF.NET
                 return false;
             }
 
+            static bool IsLineLike(Rect rect, float minLen)
+                => (rect.Width <= minLen && rect.Width < rect.Height)
+                || (rect.Height <= minLen && rect.Height < rect.Width);
+
+            static bool IsBatchedRule(Rect rect, float minLen)
+                => IsLineLike(rect, minLen) && Math.Max(rect.Width, rect.Height) > minLen;
+
+            static Rect ItemRect(object item1)
+            {
+                if (item1 is Rect r)
+                    return r.Normalize();
+                return null;
+            }
+
             (List<Rect> graphicsBboxes, List<Dictionary<string, object>> pathList) CleanGraphics(
                 List<Dictionary<string, object>> allPaths)
             {
                 var cleanedPaths = new List<Dictionary<string, object>>();
+                var bboxPaths = new List<Dictionary<string, object>>();
                 foreach (var pathDict in allPaths)
                 {
                     string pathType = pathDict.TryGetValue("type", out var ptObj) ? ptObj as string : null;
-                    if (linesStrict && pathType == "f")
+                    if (linesStrict && pathType == "f"
+                        && TryPathDictRect(pathDict, out var pathRect)
+                        && pathRect.Width > snapX && pathRect.Height > snapY)
                     {
-                        if (TryPathDictRect(pathDict, out var pathRect)
-                            && pathRect.Width > snapX && pathRect.Height > snapY)
-                            continue;
+                        var lineItems = new List<object>();
+                        if (pathDict.TryGetValue("items", out var itemsObj) && itemsObj is IList items)
+                        {
+                            foreach (var item in items)
+                            {
+                                if (item is IList row && row.Count > 1 && row[0] is string kind && kind == "re")
+                                {
+                                    var ir = ItemRect(row[1]);
+                                    if (ir != null && IsBatchedRule(ir, minLength))
+                                        lineItems.Add(item);
+                                }
+                            }
+                        }
+                        if (lineItems.Count > 0)
+                        {
+                            var linePath = new Dictionary<string, object>(pathDict) { ["items"] = lineItems };
+                            cleanedPaths.Add(linePath);
+                        }
+                        continue;
                     }
                     cleanedPaths.Add(pathDict);
+                    bboxPaths.Add(pathDict);
                 }
 
                 var pendingRects = new List<Rect>();
-                foreach (var path in cleanedPaths)
+                foreach (var path in bboxPaths)
                 {
                     if (TryPathDictRect(path, out var pathRect))
                         pendingRects.Add(pathRect);
@@ -2647,7 +2708,7 @@ namespace MuPDF.NET
 
             var rawPathList = paths != null
                 ? paths.ToList()
-                : page.GetDrawingsDict() ?? new List<Dictionary<string, object>>();
+                : GetTableDrawings(page, native: true);
             var (graphicsBboxes, pathList) = CleanGraphics(rawPathList);
 
             void AddLine(float lw, float p1x, float p1y, float p2x, float p2y)
@@ -2854,15 +2915,15 @@ namespace MuPDF.NET
         /// <item>
         /// <description>
         /// Normalized tuple:
-        /// <c>[x0, y0, x1, y1, "table"]</c> — written by layout pipelines such as MuPDF.NET.PDF4LLM
+        /// <c>[x0, y0, x1, y1, "table"]</c> — written by the MuPDF.NET layout pipeline
         /// <c>WritePageLayout</c> after <c>find_reading_order</c>.
         /// </description>
         /// </item>
         /// <item>
         /// <description>
         /// Raw dict:
-        /// <c>{ "class_name": "table", "group_bbox": [x0, y0, x1, y1], ... }</c> — returned
-        /// directly when the layout provider calls Python <c>get_layout(return_raw=True)</c>.
+        /// <c>{ "class_name": "table", "group_bbox": [x0, y0, x1, y1],... }</c> — returned
+        /// directly when the layout provider returns raw layout dictionaries. directly when the layout provider calls PyMuPDF <c>get_layout(return_raw=True)</c>.
         /// </description>
         /// </item>
         /// </list>
@@ -2944,29 +3005,159 @@ namespace MuPDF.NET
             return false;
         }
 
-        /// <summary>Builds table cell geometry from a bounding box and text page.</summary>
+        /// <summary>
+        /// Builds table cell geometry from a bounding box and text page
+        /// (<c>make_table_from_bbox</c> / <c>extra.make_table_dict</c>).
+        /// </summary>
         internal static List<(float x0, float y0, float x1, float y1)> MakeTableFromBbox(
             TextPage textpage,
             List<Rect> wordRects,
             Rect rect)
         {
             var cells = new List<(float x0, float y0, float x1, float y1)>();
+            if (textpage == null || rect == null || rect.IsEmpty)
+                return cells;
             try
             {
                 // MuPDF 1.28.1+: fz_find_table_within_bounds requires opts (null = defaults).
-                using var block = textpage.NativeStextPage.fz_find_table_within_bounds(
-                    rect.ToFzRect(), null);
-                if (block?.m_internal == null
-                    || block.m_internal.type != mupdf.mupdf.FZ_STEXT_BLOCK_GRID)
+                var stext = textpage.NativeStextPage;
+                using var bounds = rect.ToFzRect();
+                using var huntOpts = new mupdf.FzTableHuntOptions();
+                huntOpts.fz_init_table_hunt_options();
+                using var block = stext.fz_find_table_within_bounds(bounds, huntOpts);
+                var native = block?.m_internal;
+                var bbox = rect;
+                if (native != null)
+                {
+                    var bb = native.bbox;
+                    bbox = new Rect(bb.x0, bb.y0, bb.x1, bb.y1);
+                }
+
+                List<(float pos, int unc)> xpos = null;
+                List<(float pos, int unc)> ypos = null;
+                if (native != null
+                    && native.type == mupdf.mupdf.FZ_STEXT_BLOCK_GRID
+                    && TryReadGridPositionsFromBlock(block, out xpos, out ypos)
+                    && xpos.Count >= 2 && ypos.Count >= 2)
+                {
+                    // Prefer the grid stored on the found block (extra.make_table_dict).
+                }
+                else
+                {
+                    // SWIG does not expose block->u.b.xs/ys on all block types;
+                    // propose_table_within_bounds returns equivalent positions.
+                    var huntInternal = huntOpts.internal_();
+                    using var outp = new mupdf.ll_fz_propose_table_within_bounds_outparams();
+                    mupdf.mupdf.ll_fz_propose_table_within_bounds_outparams_fn(
+                        stext.m_internal, bounds.internal_(), huntInternal, outp);
+                    var xsPos = outp.xposp;
+                    var ysPos = outp.yposp;
+                    if (xsPos == null || ysPos == null || xsPos.len < 2 || ysPos.len < 2)
+                        return cells;
+                    xpos = ReadGridPositions(xsPos);
+                    ypos = ReadGridPositions(ysPos);
+                }
+                if (xpos.Count == 0 || ypos.Count == 0)
                     return cells;
-                // Grid block detected; full cell decomposition requires extra.make_table_dict (not bound in .NET).
+                xpos.Sort((a, b) => a.pos.CompareTo(b.pos));
+                ypos.Sort((a, b) => a.pos.CompareTo(b.pos));
+
+                var nypos = new List<float>();
+                foreach (var (y, yunc) in ypos)
+                {
+                    if (yunc > 0)
+                        continue;
+                    if (IntersectsWordsH(bbox, y, wordRects))
+                        continue;
+                    if (nypos.Count > 0 && y - nypos[nypos.Count - 1] < 3)
+                        nypos[nypos.Count - 1] = y;
+                    else
+                        nypos.Add(y);
+                }
+
+                int ymaxu = Math.Max(0, (int)Math.Round((nypos.Count - 2) * 0.35));
+                var nxpos = xpos.Where(x => x.unc <= ymaxu).Select(x => x.pos).ToList();
+                if (nxpos.Count == 0)
+                    return cells;
+                if (bbox.X1 > nxpos[nxpos.Count - 1] + 3)
+                    nxpos.Add((float)bbox.X1);
+
+                wordRects ??= new List<Rect>();
+                for (int i = 0; i < nypos.Count - 1; i++)
+                {
+                    var rowBox = new Rect(bbox.X0, nypos[i], bbox.X1, nypos[i + 1]);
+                    var rowWords = wordRects
+                        .Where(r => RectInRect(r, rowBox))
+                        .OrderBy(r => r.X0)
+                        .ToList();
+                    var thisXpos = nxpos
+                        .Where(x => !rowWords.Any(r => r.X0 < x && x < r.X1))
+                        .ToList();
+                    for (int j = 0; j < thisXpos.Count - 1; j++)
+                    {
+                        var cell = new Rect(thisXpos[j], nypos[i], thisXpos[j + 1], nypos[i + 1]);
+                        if (!cell.IsEmpty)
+                            cells.Add(((float)cell.X0, (float)cell.Y0, (float)cell.X1, (float)cell.Y1));
+                    }
+                }
             }
             catch
             {
-                // Skip on failure
+                // Skip on failure, matching extra.make_table_dict.
             }
             return cells;
         }
+
+        /// <summary>
+        /// Read <c>block-&gt;u.b.xs/ys</c> from a GRID <see cref="mupdf.FzStextBlock"/>.
+        /// SWIG does not wrap the union, so this uses the documented 64-bit layout:
+        /// type, id, bbox, then two pointers at offset 24/32.
+        /// </summary>
+        static bool TryReadGridPositionsFromBlock(
+            mupdf.FzStextBlock block,
+            out List<(float pos, int unc)> xpos,
+            out List<(float pos, int unc)> ypos)
+        {
+            xpos = ypos = null;
+            if (block == null)
+                return false;
+            long addr = block.m_internal_value();
+            if (addr == 0)
+                return false;
+            var p = new IntPtr(addr);
+            int type = Marshal.ReadInt32(p, 0);
+            if (type != mupdf.mupdf.FZ_STEXT_BLOCK_GRID)
+                return false;
+            IntPtr xsPtr = Marshal.ReadIntPtr(p, 24);
+            IntPtr ysPtr = Marshal.ReadIntPtr(p, 32);
+            if (xsPtr == IntPtr.Zero || ysPtr == IntPtr.Zero)
+                return false;
+            xpos = ReadGridPositions(new mupdf.fz_stext_grid_positions(xsPtr, false));
+            ypos = ReadGridPositions(new mupdf.fz_stext_grid_positions(ysPtr, false));
+            return xpos.Count >= 2 && ypos.Count >= 2;
+        }
+
+        static List<(float pos, int unc)> ReadGridPositions(mupdf.fz_stext_grid_positions positions)
+        {
+            var result = new List<(float pos, int unc)>(positions.len);
+            var wrap = new mupdf.FzStextGridPositions(positions);
+            for (int i = 0; i < positions.len; i++)
+            {
+                var divider = wrap.list(i);
+                result.Add((divider.pos, divider.uncertainty));
+            }
+            return result;
+        }
+
+        static bool RectInRect(Rect inner, Rect outer) =>
+            inner.X0 >= outer.X0
+            && inner.Y0 >= outer.Y0
+            && inner.X1 <= outer.X1
+            && inner.Y1 <= outer.Y1;
+
+        static bool IntersectsWordsH(Rect bbox, float y, List<Rect> wordRects) =>
+            wordRects != null
+            && wordRects.Any(r => RectInRect(r, bbox) && r.Y0 < y && y < r.Y1);
 
         // ── Convenience accessor ────────────────────────────────────────
 

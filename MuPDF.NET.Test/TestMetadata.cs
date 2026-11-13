@@ -1,5 +1,4 @@
-// 1. Read metadata and compare with stored expected result.
-// 2. Erase metadata and assert object has indeed been deleted.
+﻿// 1. Read metadata and compare with stored expected result.
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -11,14 +10,14 @@ using Xunit.Sdk;
 
 namespace MuPDF.NET.Test
 {
-    /// <summary>
-    /// </summary>
+
+
     /// <remarks>
     /// Inputs: <c>TestDocuments/TestMetadata/</c>; outputs: <c>TestDocuments/_Output/TestMetadata/</c>.
     /// Tests run in order and share <see cref="doc"/> (see <see cref="TestMetadataCollection"/>).
     /// </remarks>
     [Collection("TestMetadata")]
-    [TestCaseOrderer("MuPDF.NET.Test.TestMetadataCollectionOrderer", "MuPDF.NET.Test")]
+    [TestCaseOrderer("MuPDF.NET.Test.TestMetadataCollectionOrderer", "MuPDF.NET.Test_")]
     public class TestMetadata
     {
         private const string TestClassName = nameof(TestMetadata);
@@ -56,7 +55,6 @@ namespace MuPDF.NET.Test
 
         private static byte[] ReprEncodeUtf8(Dictionary<string, string> metadata)
         {
-            // repr(metadata).encode('utf8') — Python 3 dict repr
             var sb = new StringBuilder("{");
             bool first = true;
             foreach (var key in MetadataKeyOrder)
@@ -106,11 +104,8 @@ namespace MuPDF.NET.Test
         public void test_erase_meta()
         {
             doc.SetMetadata(new Dictionary<string, string>());
-            // Check PDF trailer and assert that there is no more /Info object
             // or is set to "null".
-            // statement1 = doc.XrefGetKey(-1, "Info")[1] == "null"
             bool statement1 = doc.XrefGetKey(-1, "Info").value == "null";
-            // statement2 = "Info" not in doc.xref_get_keys(-1)
             bool statement2 = !doc.xref_get_keys(-1).Contains("Info");
             Assert.True(statement1);
             Assert.Contains("Info", doc.xref_get_keys(-1));
@@ -123,15 +118,11 @@ namespace MuPDF.NET.Test
             using (var doc3237 = new Document(Doc("001003ED.pdf")))
             {
                 // We need to explicitly encode in utf8 on windows.
-                // metadata1 = doc.metadata
                 var metadata1 = doc3237.Metadata;
-                // metadata1 = repr(metadata1).encode('utf8')
                 byte[] metadata1Bytes = ReprEncodeUtf8(metadata1);
                 doc3237.SetMetadata(new Dictionary<string, string>());
 
-                // metadata2 = doc.metadata
                 var metadata2 = doc3237.Metadata;
-                // metadata2 = repr(metadata2).encode('utf8')
                 byte[] metadata2Bytes = ReprEncodeUtf8(metadata2);
                 Console.WriteLine($"metadata1={Encoding.UTF8.GetString(metadata1Bytes)}");
                 Console.WriteLine($"metadata2={Encoding.UTF8.GetString(metadata2Bytes)}");

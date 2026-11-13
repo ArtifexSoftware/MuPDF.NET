@@ -1,29 +1,29 @@
 // Copyright (C) 2023 Artifex Software, Inc.
-//
+
 // This file is part of MuPDF.NET.
-//
+
 // MuPDF.NET is free software: you can redistribute it and/or modify it under the
 // terms of the GNU Affero General Public License as published by the Free
 // Software Foundation, either version 3 of the License, or (at your option)
 // any later version.
-//
+
 // MuPDF.NET is distributed in the hope that it will be useful, but WITHOUT ANY
 // WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
 // FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more
 // details.
-//
+
 // You should have received a copy of the GNU Affero General Public License
 // along with MuPDF. If not, see <https://www.gnu.org/licenses/agpl-3.0.en.html>
-//
+
 // Alternative licensing terms are available from the licensor.
 // For commercial licensing, see <https://www.artifex.com/> or contact
 // Artifex Software, Inc., 39 Mesa Street, Suite 108A, San Francisco,
 // CA 94129, USA, for further information.
-//
+
 // ---------------------------------------------------------------------
-//
+
 // Port of PyMuPDF 1.28.2 src/_table_union.py
-//
+
 // MuPDF.NET table union stage, behind FindTables(union: true): fuse the layout
 // analyzer's table grids with the line-based finder's candidates. Table,
 // TableFinder and Iou come from Table.cs; FindTables is called with useLayout:false.
@@ -38,13 +38,12 @@ namespace MuPDF.NET
     // ---------------------------------------------------------------------------
     // FindTables(union: true) fuses two table sources on one page: PRIMARY grids
     // from the layout analyzer (each "table" group's GridPrediction, read from
-    // page.GetLayout() / LayoutInformation in its raw form by LayoutTableGrids)
+    // page.GetLayout / LayoutInformation in its raw form by LayoutTableGrids)
     // and CANDIDATE grids from a nested line-based FindTables. A candidate matching a
     // primary 1:1 (high IoU) may REPLACE its grid (grid-ref), several candidates
     // each contained in one primary may SPLIT it, and candidates owned by no primary
-    // are APPENDED. The output order -- primaries (kept / grid-ref'd / split) then
     // appended candidates -- is contractual: downstream consumers key tables by it.
-    //
+
     // LayoutTableGrids also replaces FindTables' MakeTableFromBbox path,
     // which silently yields an empty Table because the stext grid block it needs is
     // not emitted; MakeTableFromBbox is left in place pending a separate cleanup.
@@ -57,13 +56,15 @@ namespace MuPDF.NET
         const float UnionGridRefSpanMultThreshold = 3.0f;     // max horizontally-separated span groups per cell
         const float UnionOwnerContainment = 0.85f;            // min containment for a split candidate's owner
         const float UnionOwnerAmbiguousOverlap = 0.25f;       // overlap above which an unowned candidate is suppressed
+        const float UnionPictureContainment = 0.8f;           // area fraction that puts a candidate inside a picture
 
         static readonly ConditionalWeakTable<Page, List<Rect>> TextSpansCache =
             new ConditionalWeakTable<Page, List<Rect>>();
 
         /// <summary>
         /// Primary table grids from the raw layout analyzer result.
-        ///
+        /// </summary>
+        /// <summary>
         /// Reads page.LayoutInformation in its raw form and yields a
         /// (bbox, grid) pair per "table" group -- grid is the full row-major cell
         /// grid built from the group box plus its interior GridPrediction lines, in
@@ -80,7 +81,7 @@ namespace MuPDF.NET
             {
                 if (group == null)
                     continue;
-                // The union path needs the raw (return_raw=True) layout form; the
+                // The union path needs the raw layout form; the
                 // normalized [x0, y0, x1, y1, class] tuples carry no table_grid.
                 bool isDictLike = group is System.Collections.IDictionary
                     || group.GetType().GetProperty("Item", new[] { typeof(string) }) != null;
@@ -122,20 +123,71 @@ namespace MuPDF.NET
 
         /// <summary>
         /// Line-based table candidates for the union stage as (bbox, grid) pairs.
-        ///
+        /// </summary>
+        /// <summary>
         /// Runs a nested FindTables (strategy=UnionStrategy, useLayout=false) and
         /// keeps each detected table's bbox and row-major cell grid (Table.Rows, null
         /// for a gap), deduped by rounded bbox. Returns (candidates, finder); the
         /// finder is reused as the returned TableFinder shell.
         /// </summary>
+        internal static List<(string className, Rect rect)> LayoutGroups(Page page)
+        {
+            var groups = new List<(string, Rect)>();
+            var info = page.LayoutInformation;
+            if (info is not System.Collections.IEnumerable rows)
+                return groups;
+            foreach (object group in rows)
+            {
+                if (group == null)
+                    continue;
+                object groupBbox = GetLayoutValue(group, "group_bbox");
+                if (groupBbox == null)
+                    continue;
+                if (!TryParseBbox(groupBbox, out float x0, out float y0, out float x1, out float y1))
+                    continue;
+                var rect = new Rect(x0, y0, x1, y1);
+                if (rect.IsEmpty)
+                    continue;
+                groups.Add((GetLayoutValue(group, "class_name")?.ToString(), rect));
+            }
+            return groups;
+        }
+
+        /// <summary>
+        /// Whether a candidate sits inside a layout picture without covering it
+        /// (<c>_union_candidate_inside_picture</c>).
+        /// </summary>
+        internal static bool CandidateInsidePicture(Page page, Rect candidateBbox)
+        {
+            float candidateArea = RectArea(candidateBbox);
+            if (candidateArea <= 0)
+                return false;
+            float threshold = UnionPictureContainment * candidateArea;
+            foreach (var (className, rect) in LayoutGroups(page))
+            {
+                if (!string.Equals(className, "picture", StringComparison.Ordinal))
+                    continue;
+                if (IntersectionArea(candidateBbox, rect) < threshold)
+                    continue;
+                if (candidateArea > RectArea(rect))
+                    continue;
+                return true;
+            }
+            return false;
+        }
+
         internal static (List<(Rect bbox, List<List<(float x0, float y0, float x1, float y1)?>> grid)> candidates, TableFinder finder)
-            LineCandidates(Page page)
+            LineCandidates(
+                Page page,
+                IList<(Point p1, Point p2)> addLines = null,
+                IList<Rect> addBoxes = null)
         {
             // Called here (not via a module-level import cycle) to break the cycle:
-            // this module is itself used lazily by TableHelpers.FindTables (union path).
-            var finder = TableHelpers.FindTables(page, strategy: UnionStrategy, useLayout: false);
+            var finder = TableHelpers.FindTables(
+                page, strategy: UnionStrategy, useLayout: false, addLines: addLines, addBoxes: addBoxes);
             var candidates = new List<(Rect, List<List<(float x0, float y0, float x1, float y1)?>>)>();
             var seen = new HashSet<(int, int, int, int)>();
+            List<(float vMid, float hMid)> points = null;
             foreach (var tab in finder?.Tables ?? new List<Table>())
             {
                 try
@@ -153,8 +205,23 @@ namespace MuPDF.NET
                     if (grid.Count == 0)
                         continue;
                     var key = ((int)Math.Round(b.X0), (int)Math.Round(b.Y0), (int)Math.Round(b.X1), (int)Math.Round(b.Y1));
-                    if (!seen.Add(key))
+                    if (seen.Contains(key))
                         continue;
+                    if (CandidateInsidePicture(page, b))
+                    {
+                        points ??= CharMidpoints(finder.Chars ?? tab.Chars);
+                        var content = GridContentSupport(grid, points);
+                        // A chart labels one row and one column -- its axes -- and its
+                        // partial gridlines leave most slots without a cell. A table has
+                        // a header row and a label column that are each at least half
+                        if (!(content.Supported
+                              && content.DenseRows >= 2
+                              && content.DenseColumns >= 2
+                              && content.Concrete * 2 >= content.Slots))
+                            continue;
+                    }
+                    // Dedup only admitted candidates: a rejected one must not shadow a
+                    seen.Add(key);
                     candidates.Add((b, grid));
                 }
                 catch (Exception)
@@ -163,6 +230,188 @@ namespace MuPDF.NET
                 }
             }
             return (candidates, finder);
+        }
+
+        struct UnionContent
+        {
+            public bool Supported;
+            public int DenseRows;
+            public int DenseColumns;
+            public int Concrete;
+            public int Slots;
+        }
+
+        /// <summary>
+        /// The page's non-blank character midpoints as (v_mid, h_mid), y-sorted
+        /// (<c>_union_char_midpoints</c>).
+        /// </summary>
+        static List<(float vMid, float hMid)> CharMidpoints(IList<Dictionary<string, object>> chars)
+        {
+            var points = new List<(float vMid, float hMid)>();
+            if (chars == null)
+                return points;
+            foreach (var ch in chars)
+            {
+                if (ch == null)
+                    continue;
+                string text = null;
+                if (ch.TryGetValue("text", out var raw))
+                    text = raw?.ToString();
+                if (string.IsNullOrWhiteSpace(text))
+                    continue;
+                try
+                {
+                    float hMid = (TableHelpers.F(ch, "x0") + TableHelpers.F(ch, "x1")) / 2f;
+                    float vMid = (TableHelpers.F(ch, "top") + TableHelpers.F(ch, "bottom")) / 2f;
+                    points.Add((vMid, hMid));
+                }
+                catch
+                {
+                    continue;
+                }
+            }
+            points.Sort((a, b) => a.vMid.CompareTo(b.vMid));
+            return points;
+        }
+
+        /// <summary>
+        /// How a candidate line grid's text is distributed
+        /// (<c>_union_grid_content_support</c>).
+        /// </summary>
+        static UnionContent GridContentSupport(
+            List<List<(float x0, float y0, float x1, float y1)?>> grid,
+            List<(float vMid, float hMid)> points)
+        {
+            var columns = grid
+                .SelectMany(row => row)
+                .Where(cell => cell != null)
+                .Select(cell => (float)cell.Value.x0)
+                .Distinct()
+                .OrderBy(x => x)
+                .ToList();
+            int width = grid.Count == 0 ? 0 : grid.Max(row => row?.Count ?? 0);
+            var columnPopulated = new int[Math.Max(width, 0)];
+            var columnConcrete = new int[Math.Max(width, 0)];
+            var rowColumns = new List<HashSet<int>>();
+            var rowCounts = new List<(int filled, int total)>();
+            int concrete = 0;
+            int slots = 0;
+            points ??= new List<(float vMid, float hMid)>();
+            foreach (var row in grid)
+            {
+                slots += row?.Count ?? 0;
+                var covered = new HashSet<int>();
+                int rowPopulated = 0;
+                var rects = new List<(int index, Rect rect)>();
+                if (row != null)
+                {
+                    for (int index = 0; index < row.Count; index++)
+                    {
+                        if (row[index] is not { } cell)
+                            continue;
+                        var rect = new Rect(cell.x0, cell.y0, cell.x1, cell.y1);
+                        if (rect.IsEmpty)
+                            continue;
+                        rects.Add((index, rect));
+                    }
+                }
+                concrete += rects.Count;
+                if (rects.Count > 0)
+                {
+                    var band = RowPoints(rects, points);
+                    foreach (var (index, rect) in rects)
+                    {
+                        if (index < columnConcrete.Length)
+                            columnConcrete[index]++;
+                        if (!RectHasPoint(rect, band))
+                            continue;
+                        rowPopulated++;
+                        if (index < columnPopulated.Length)
+                            columnPopulated[index]++;
+                        var spanned = new List<int>();
+                        for (int column = 0; column < columns.Count; column++)
+                        {
+                            float x = columns[column];
+                            if ((float)rect.X0 <= x && x < (float)rect.X1)
+                                spanned.Add(column);
+                        }
+                        if (spanned.Count == 0)
+                            covered.Add(index);
+                        else
+                            foreach (int column in spanned)
+                                covered.Add(column);
+                    }
+                }
+                rowColumns.Add(covered);
+                rowCounts.Add((rowPopulated, rects.Count));
+            }
+
+            int rowsWithTwoCols = rowColumns.Count(covered => covered.Count >= 2);
+            int colsWithTwoRows = 0;
+            for (int column = 0; column < columns.Count; column++)
+            {
+                int hits = rowColumns.Count(covered => covered.Contains(column));
+                if (hits >= 2)
+                    colsWithTwoRows++;
+            }
+            bool supported = rowsWithTwoCols >= 2 && colsWithTwoRows >= 2;
+            int denseRows = rowCounts.Count(t => t.total > 0 && t.filled * 2 >= t.total);
+            int denseColumns = 0;
+            for (int i = 0; i < width; i++)
+            {
+                int total = columnConcrete[i];
+                if (total > 0 && columnPopulated[i] * 2 >= total)
+                    denseColumns++;
+            }
+            return new UnionContent
+            {
+                Supported = supported,
+                DenseRows = denseRows,
+                DenseColumns = denseColumns,
+                Concrete = concrete,
+                Slots = slots,
+            };
+        }
+
+        static List<(float vMid, float hMid)> RowPoints(
+            List<(int index, Rect rect)> rects,
+            List<(float vMid, float hMid)> points)
+        {
+            float y0 = rects.Min(r => (float)r.rect.Y0);
+            float y1 = rects.Max(r => (float)r.rect.Y1);
+            int lo = 0;
+            int hi = points.Count;
+            while (lo < hi)
+            {
+                int mid = (lo + hi) / 2;
+                if (points[mid].vMid < y0)
+                    lo = mid + 1;
+                else
+                    hi = mid;
+            }
+            int start = lo;
+            lo = start;
+            hi = points.Count;
+            while (lo < hi)
+            {
+                int mid = (lo + hi) / 2;
+                if (points[mid].vMid < y1)
+                    lo = mid + 1;
+                else
+                    hi = mid;
+            }
+            return points.GetRange(start, lo - start);
+        }
+
+        static bool RectHasPoint(Rect rect, List<(float vMid, float hMid)> band)
+        {
+            float x0 = (float)rect.X0, y0 = (float)rect.Y0, x1 = (float)rect.X1, y1 = (float)rect.Y1;
+            foreach (var (vMid, hMid) in band)
+            {
+                if (x0 <= hMid && hMid < x1 && y0 <= vMid && vMid < y1)
+                    return true;
+            }
+            return false;
         }
 
         static float RectArea(Rect rect)
@@ -184,9 +433,10 @@ namespace MuPDF.NET
 
         /// <summary>
         /// The primary a split candidate belongs inside, plus an ambiguity flag.
-        ///
+        /// </summary>
+        /// <summary>
         /// Returns (ownerIndex, ambiguous): owner is the best-contained primary
-        /// (candidate&gt;=UnionOwnerContainment inside it), else null; ambiguous is True
+        /// (candidate&gt;=UnionOwnerContainment inside it), else null; ambiguous is true
         /// when the candidate overlaps some primary enough to be unsafe to append.
         /// </summary>
         static (int? ownerIndex, bool ambiguous) FindOwner(Rect candidateBbox, IList<Rect> existingBboxes)
@@ -222,7 +472,8 @@ namespace MuPDF.NET
 
         /// <summary>
         /// Non-empty page text-span rects, cached on the page.
-        ///
+        /// </summary>
+        /// <summary>
         /// Drives the grid-ref span-multiplicity gate: every non-blank span as a bare
         /// rect.
         /// </summary>
@@ -347,7 +598,8 @@ namespace MuPDF.NET
 
         /// <summary>
         /// Primaries a candidate can grid-ref (replace grid with), 1:1 by IoU.
-        ///
+        /// </summary>
+        /// <summary>
         /// existing/candidates are (bbox, grid) lists. Returns (refs, consumed):
         /// refs maps a primary index to the candidate supplying its grid (mutual 1:1
         /// IoU&gt;=threshold matches passing the span-multiplicity gate), consumed the
@@ -405,7 +657,8 @@ namespace MuPDF.NET
 
         /// <summary>
         /// Fuse primary and candidate (bbox, grid) entries.
-        ///
+        /// </summary>
+        /// <summary>
         /// Applies grid-ref replacement, split replacement (&gt;=2 candidates owned by one
         /// primary replace it, ordered by y0/x0) and append of unowned candidates,
         /// returning the fused entry list in the contractual order.
@@ -483,19 +736,23 @@ namespace MuPDF.NET
 
         /// <summary>
         /// Detect a page's tables by fusing layout grids with line-based candidates.
-        ///
+        /// </summary>
+        /// <summary>
         /// Ensures the raw layout (computed only when page.LayoutInformation is null,
         /// like the official use_layout path), reads primary grids, detects candidates,
-        /// applies grid-ref / split / append, and returns a TableFinder whose .Tables
+        /// applies grid-ref / split / append, and returns a TableFinder whose.Tables
         /// carry the fused grids in contractual order (grid-ref tables keep their
         /// explicit layout bbox).
         /// </summary>
-        internal static TableFinder FindTablesUnion(Page page)
+        internal static TableFinder FindTablesUnion(
+            Page page,
+            IList<(Point p1, Point p2)> addLines = null,
+            IList<Rect> addBoxes = null)
         {
             if (page.LayoutInformation == null)
                 page.GetLayout();
             var primaries = LayoutTableGrids(page);
-            var (candidates, finder) = LineCandidates(page);
+            var (candidates, finder) = LineCandidates(page, addLines, addBoxes);
             var entries = ReplaceAppend(
                 primaries,
                 candidates,

@@ -16,7 +16,7 @@ namespace MuPDF.NET
 
         public int Type { get; set; }
 
-        /// <summary>Legacy tuple deconstruction for <c>foreach (var (x0, y0, ...) in ExtractBlocks())</c>.</summary>
+        /// <summary>Legacy tuple deconstruction for <c>foreach (var (x0, y0,...) in ExtractBlocks)</c>.</summary>
         public void Deconstruct(
             out float x0,
             out float y0,

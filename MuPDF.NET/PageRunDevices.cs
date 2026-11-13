@@ -9,13 +9,9 @@ namespace MuPDF.NET
     /// <see cref="Page.GetBboxlog"/> and <see cref="Page.GetTextTrace"/>.
     /// </summary>
     /// <remarks>
-    /// <para>Ports and <c>JM_new_texttrace_device</c> in
-    /// <c>src/__init__.py</c> (~23403 and ~23559). Types in this file are <c>internal</c>; they are not
-    /// part of the public MuPDF.NET API.</para>
-    /// <para>
+    /// Types in this file are <c>internal</c>; they are not part of the public API.
     /// Override methods such as <c>fill_path</c> use MuPDF/SWIG names from <see cref="mupdf.FzDevice2"/>
     /// and cannot be renamed to PascalCase without breaking virtual dispatch from native code.
-    /// </para>
     /// </remarks>
     internal static class PageRunDevices
     {
@@ -33,12 +29,12 @@ namespace MuPDF.NET
     }
 
     /// <summary>
-    /// Bounding-box log device for <see cref="Page.GetBboxlog"/> .
+    /// Bounding-box log device for <see cref="Page.GetBboxlog"/>.
     /// </summary>
     /// <remarks>
     /// Appends <c>(code, rect[, layer])</c> tuples to <paramref name="sink"/> for each drawing operation,
-    /// matching <c>jm_bbox_add_rect</c>. When <c>layers</c> is truthy in Python (<see cref="Page.GetBboxlog"/>
-    /// with <c>includeLayerNames</c>), the optional-content layer name is included.
+    /// matching <c>jm_bbox_add_rect</c>. When <c>layers</c> is truthy in PyMuPDF (<see cref="Page.GetBboxlog"/>
+    /// with <c>includeLayerNames</c>, the optional-content layer name is included.
     /// </remarks>
     internal sealed class PageBboxLogDevice : mupdf.FzDevice2
     {
@@ -46,7 +42,7 @@ namespace MuPDF.NET
         private readonly bool _includeLayers;
         private string _layerName = "";
 
-        /// <summary>Accumulated bbox log (Python <c>dev.result</c>).</summary>
+        /// <summary>Accumulated bbox log (PyMuPDF <c>dev.result</c>).</summary>
         internal IReadOnlyList<(string code, Rect bbox, string? layer)> Result => _result;
 
         internal PageBboxLogDevice(List<(string code, Rect bbox, string? layer)> sink, bool includeLayers)
@@ -149,10 +145,10 @@ namespace MuPDF.NET
     }
 
     /// <summary>
-    /// Trace TEXT device for <see cref="Page.GetTextTrace"/> .
+    /// Trace TEXT device for <see cref="Page.GetTextTrace"/>.
     /// </summary>
     /// <remarks>
-    /// <para>Docstring in Python: "Trace TEXT device for Python method Page.GetTextTrace()".</para>
+    /// <para>Trace TEXT device used by <see cref="Page.GetTextTrace"/>. Docstring in PyMuPDF: "Trace TEXT device for PyMuPDF method Page.GetTextTrace()".</para>
     /// <para>
     /// Non-text operations bump <see cref="seqno"/> (<c>jm_increase_seqno</c> / <c>jm_dev_linewidth</c>).
     /// Text operations build span dictionaries via <c>jm_lineart_fill_text</c>, <c>jm_lineart_stroke_text</c>,
@@ -161,7 +157,7 @@ namespace MuPDF.NET
     /// </remarks>
     internal sealed class JM_new_texttrace_device : mupdf.FzDevice2
     {
-        /// <summary>Output span list (Python <c>dev.out</c>).</summary>
+        /// <summary>Output span list (PyMuPDF <c>dev.out</c>).</summary>
         internal readonly List<Dictionary<string, object>> Out;
         internal ulong seqno;
         internal float linewidth;
@@ -218,14 +214,14 @@ namespace MuPDF.NET
         public override void fill_text(mupdf.fz_context ctx, mupdf.fz_text text, mupdf.fz_matrix ctm, mupdf.fz_colorspace colorspace,
             mupdf.SWIGTYPE_p_float color, float alpha, mupdf.fz_color_params colorParams)
         {
-            jm_lineart_fill_text(text, ctm, colorspace, color, alpha);
+            jm_lineart_fill_text(text, ctm, colorspace, color, alpha, stroke: null);
         }
 
         /// <summary>Line-art trace callback for stroked text (type 1).</summary>
         public override void stroke_text(mupdf.fz_context ctx, mupdf.fz_text text, mupdf.fz_stroke_state stroke, mupdf.fz_matrix ctm,
             mupdf.fz_colorspace colorspace, mupdf.SWIGTYPE_p_float color, float alpha, mupdf.fz_color_params colorParams)
         {
-            jm_lineart_stroke_text(text, ctm, colorspace, color, alpha);
+            jm_lineart_stroke_text(text, ctm, colorspace, color, alpha, stroke);
         }
 
         /// <summary>Line-art trace callback for ignored text (type 3).</summary>
@@ -241,37 +237,37 @@ namespace MuPDF.NET
         }
 
         private void jm_lineart_fill_text(mupdf.fz_text text, mupdf.fz_matrix ctm, mupdf.fz_colorspace colorspace,
-            mupdf.SWIGTYPE_p_float color, float alpha)
+            mupdf.SWIGTYPE_p_float color, float alpha, mupdf.fz_stroke_state stroke)
         {
-            jm_trace_text(text, 0, ctm, colorspace, color, alpha, seqno);
+            jm_trace_text(text, 0, ctm, colorspace, color, alpha, seqno, stroke);
             seqno++;
         }
 
         private void jm_lineart_stroke_text(mupdf.fz_text text, mupdf.fz_matrix ctm, mupdf.fz_colorspace colorspace,
-            mupdf.SWIGTYPE_p_float color, float alpha)
+            mupdf.SWIGTYPE_p_float color, float alpha, mupdf.fz_stroke_state stroke)
         {
-            jm_trace_text(text, 1, ctm, colorspace, color, alpha, seqno);
+            jm_trace_text(text, 1, ctm, colorspace, color, alpha, seqno, stroke);
             seqno++;
         }
 
         private void jm_lineart_ignore_text(mupdf.fz_text text, mupdf.fz_matrix ctm)
         {
-            jm_trace_text(text, 3, ctm, null, null, 1f, seqno);
+            jm_trace_text(text, 3, ctm, null, null, 1f, seqno, stroke: null);
             seqno++;
         }
 
         private void jm_trace_text(mupdf.fz_text text, int type_, mupdf.fz_matrix ctm, mupdf.fz_colorspace colorspace,
-            mupdf.SWIGTYPE_p_float colorPtr, float alpha, ulong seqno_)
+            mupdf.SWIGTYPE_p_float colorPtr, float alpha, ulong seqno_, mupdf.fz_stroke_state stroke)
         {
             for (var raw = text.head; raw != null; raw = raw.next)
             {
                 using var span = new mupdf.FzTextSpan(raw);
-                jm_trace_text_span(span, type_, ctm, colorspace, colorPtr, alpha, seqno_);
+                jm_trace_text_span(span, type_, ctm, colorspace, colorPtr, alpha, seqno_, stroke);
             }
         }
 
         private void jm_trace_text_span(mupdf.FzTextSpan span, int type_, mupdf.fz_matrix ctm, mupdf.fz_colorspace colorspace,
-            mupdf.SWIGTYPE_p_float colorPtr, float alpha, ulong seqno_)
+            mupdf.SWIGTYPE_p_float colorPtr, float alpha, ulong seqno_, mupdf.fz_stroke_state stroke)
         {
             const int TEXT_FONT_ITALIC = 2;
             const int TEXT_FONT_SERIFED = 4;
@@ -284,6 +280,7 @@ namespace MuPDF.NET
             using var trm = span.trm();
             using var mat = mupdf.mupdf.fz_concat(trm, ctmFz);
             float fsize;
+            float vsize;
             float dx, dy;
             using (var dir0 = mupdf.mupdf.fz_transform_vector(mupdf.mupdf.fz_make_point(1, 0), mat))
             {
@@ -293,6 +290,10 @@ namespace MuPDF.NET
                     dx = dirN.x;
                     dy = dirN.y;
                 }
+            }
+            using (var vdir0 = mupdf.mupdf.fz_transform_vector(mupdf.mupdf.fz_make_point(0, 1), mat))
+            {
+                vsize = (float)Math.Sqrt(vdir0.x * vdir0.x + vdir0.y * vdir0.y);
             }
 
             float asc = Helpers.JM_font_ascender(font);
@@ -309,8 +310,9 @@ namespace MuPDF.NET
                 dsc = dsc / asc_dsc;
                 asc = asc / asc_dsc;
             }
-            float ascsize = asc * fsize / (asc - dsc);
-            float dscsize = dsc * fsize / (asc - dsc);
+            // Bbox height follows Y scale (vsize), not X (fsize).
+            float ascsize = asc * vsize / (asc - dsc);
+            float dscsize = dsc * vsize / (asc - dsc);
 
             int fflags = 0;
             if (mupdf.mupdf.ll_fz_font_is_monospaced(font) != 0) fflags |= TEXT_FONT_MONOSPACED;
@@ -394,7 +396,8 @@ namespace MuPDF.NET
             }
 
             var (r, g, b) = jm_lineart_color(colorspace, colorPtr);
-            float span_linewidth = linewidth > 0 ? linewidth : fsize * 0.05f;
+            // : stroke text stores stroke->linewidth; fill/ignore stores null.
+            object span_linewidth = stroke != null ? (object)stroke.linewidth : null;
 
             var span_dict = new Dictionary<string, object>
             {

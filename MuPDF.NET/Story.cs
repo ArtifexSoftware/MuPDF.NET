@@ -7,7 +7,7 @@ using System.Text;
 namespace MuPDF.NET
 {
     /// <summary>
-    /// Placement record for one HTML element after <see cref="Story.Place"/> .
+    /// Placement record for one HTML element after <see cref="Story.Place"/>.
     /// </summary>
     /// <remarks>
     /// Populated by <see cref="Story.ElementPositions"/> for headings (<c>h1</c>–<c>h6</c>),
@@ -54,7 +54,7 @@ namespace MuPDF.NET
     }
 
     /// <summary>
-    /// Lays out HTML/CSS into PDF pages using an internal DOM .
+    /// Lays out HTML/CSS into PDF pages using an internal DOM.
     /// </summary>
     /// <remarks>
     /// <para>Parse HTML (and optional CSS), optionally modify via <see cref="Xml"/> on <see cref="Body"/>,
@@ -129,37 +129,29 @@ namespace MuPDF.NET
             // Look for `<h1..6>` items in `self` and adds unique `id`
             // attributes if not already present.
             var dom = Body;
-            // i = 0
             int i = 0;
-            // x = dom.find(None, None, None)
             var x = dom.Find(null, null, null);
             // while x:
             while (x != null)
             {
-                // name = x.tagname
                 string? name = x.TagName;
                 if (name != null && name.Length == 2 && name[0] == 'h' && "123456".IndexOf(name[1]) >= 0)
                 {
-                    // attr = x.get_attribute_value("id")
                     var attr = x.GetAttributeValue("id");
                     if (string.IsNullOrEmpty(attr))
                     {
-                        // id_ = f"h_id_{i}"
                         string id_ = $"h_id_{i}";
-                        //log(f"{name=}: setting {id_=}")
-                        // x.set_attribute("id", id_)
+
                         x.SetAttribute("id", id_);
-                        // i += 1
                         i += 1;
                     }
                 }
-                // x = x.find_next(None, None, None)
                 x = x.FindNext(null, null, null);
             }
         }
 
         /// <summary>
-        /// Add links to a PDF from element positions .
+        /// Add links to a PDF from element positions.
         /// </summary>
         /// <param name="documentOrStream">A <see cref="Document"/>, PDF bytes, or stream.</param>
         /// <param name="positions">Positions from <see cref="ElementPositions"/>; duplicate ids are ignored for targets.</param>
@@ -186,7 +178,6 @@ namespace MuPDF.NET
             if (document == null) throw new ArgumentNullException(nameof(document));
             if (positions == null) return document;
 
-            // id_to_position = dict()
             var id_to_position = new Dictionary<string, StoryElementPositionInfo>();
             foreach (var position in positions)
             {
@@ -202,7 +193,6 @@ namespace MuPDF.NET
                 if ((position_from.OpenClose & 1) == 0 || string.IsNullOrEmpty(position_from.Href))
                     continue;
 
-                // link = dict()
                 var link = new Dictionary<string, object>
                 {
                     // link['from'] = Rect(position_from.rect)
@@ -210,9 +200,7 @@ namespace MuPDF.NET
                 };
                 if (position_from.Href.StartsWith("#", StringComparison.Ordinal))
                 {
-                    // target_id = position_from.href[1:]
                     string target_id = position_from.Href.Substring(1);
-                    // position_to = id_to_position[ target_id]
                     if (!id_to_position.TryGetValue(target_id, out var position_to))
                         throw new InvalidOperationException($"No destination with id={target_id}, required by position_from: {position_from}");
                     // link["kind"] = LINK_GOTO
@@ -276,7 +264,6 @@ namespace MuPDF.NET
         /// <param name="matrix">Optional transform applied when drawing.</param>
         public void Draw(mupdf.FzDevice device = null, Matrix matrix = null)
         {
-            // ctm2 = JM_matrix_from_py( matrix)
             var ctm2 = Helpers.MatrixToFz(matrix);
             var dev = device ?? new mupdf.FzDevice();
             NativeStory.fz_draw_story(dev, ctm2);
@@ -312,7 +299,6 @@ namespace MuPDF.NET
             }
             else
             {
-                // args = {}
                 args = new Dictionary<string, object>();
             }
             if (function == null)
@@ -330,7 +316,6 @@ namespace MuPDF.NET
         /// <returns><c>more</c> is true if content remains; <c>filled</c> is the area actually used.</returns>
         public (bool more, Rect filled) Place(Rect where, int flags = 0)
         {
-            // where = JM_rect_from_py( where)
             var whereFz = where.ToFzRect();
             var filled = new mupdf.FzRect();
             int more = NativeStory.fz_place_story_flags(whereFz, filled, flags);
@@ -353,37 +338,30 @@ namespace MuPDF.NET
         public void Write(DocumentWriter writer, StoryRectFn rectfn, Action<StoryElementPositionInfo> positionfn = null, Action<int, Rect, mupdf.FzDevice, int> pagefn = null)
         {
             DeviceWrapper dev = null;
-            // page_num = 0
             int page_num = 0;
-            // rect_num = 0
             int rect_num = 0;
             var filled = new Rect(0, 0, 0, 0);
             // while 1:
             while (true)
             {
-                // mediabox, rect, ctm = rectfn(rect_num, filled)
                 var (mediabox, rect, ctm) = rectfn(rect_num, filled);
-                // rect_num += 1
                 rect_num += 1;
                 if (PyRectBool(mediabox))
                 {
                     // new page.
-                    // page_num += 1
                     page_num += 1;
                 }
-                // more, filled = self.place( rect)
+
                 var (more, filledOut) = Place(rect);
                 filled = filledOut;
                 if (positionfn != null)
                 {
                     void positionfn2(StoryElementPositionInfo position)
                     {
-                        // position.page_num = page_num
                         position.PageNum = page_num;
-                        // positionfn(position)
                         positionfn(position);
                     }
-                    // self.element_positions(positionfn2)
+
                     ElementPositions(positionfn2);
                 }
                 if (writer != null)
@@ -394,30 +372,25 @@ namespace MuPDF.NET
                         if (dev != null)
                         {
                             if (pagefn != null)
-                                // pagefn(page_num, mediabox, dev, 1)
                                 pagefn(page_num, mediabox, dev?.ToFzDevice(), 1);
-                            // writer.end_page()
                             writer.EndPage();
                         }
                         dev = writer.BeginPage(mediabox);
                         if (pagefn != null)
-                            // pagefn(page_num, mediabox, dev, 0)
                             pagefn(page_num, mediabox, dev?.ToFzDevice(), 0);
                     }
-                    // self.draw( dev, ctm)
+
                     Draw(dev, ctm);
                     if (!more)
                     {
                         if (pagefn != null)
-                            // pagefn( page_num, mediabox, dev, 1)
                             pagefn(page_num, mediabox, dev?.ToFzDevice(), 1);
-                        // writer.end_page()
                         writer.EndPage();
                     }
                 }
                 else
                 {
-                    // self.draw(None, ctm)
+
                     Draw((mupdf.FzDevice)null, ctm);
                 }
                 if (!more)
@@ -463,41 +436,30 @@ namespace MuPDF.NET
             bool addHeaderIds = true)
         {
             var positions = new List<StoryElementPositionInfo>();
-            // content = None
             string content = null;
             // while 1:
             while (true)
             {
-                // content_prev = content
                 string content_prev = content;
-                // content = contentfn( positions)
                 content = contentfn(positions);
-                // stable = False
                 bool stable = false;
                 if (content == content_prev)
-                    // stable = True
                     stable = true;
-                // content2 = content
                 string content2 = content;
-                // story = Story(content2, user_css, em, archive)
                 using var story = new Story(content2, userCss, em, archive);
                 if (addHeaderIds)
-                    // story.add_header_ids()
                     story.AddHeaderIds();
 
-                // positions = list()
                 positions = new List<StoryElementPositionInfo>();
                 void positionfn2(StoryElementPositionInfo position)
                 {
-                    // positions.append(position)
                     positions.Add(position);
                     if (stable && positionfn != null)
-                        // positionfn(position)
                         positionfn(position);
                 }
                 // story.write(
                 story.Write(
-                    // writer if stable else None,
+                    // writer if stable else null,
                     stable ? writer : null,
                     rectfn,
                     positionfn2,
@@ -531,25 +493,17 @@ namespace MuPDF.NET
             Archive archive = null,
             bool addHeaderIds = true)
         {
-            // stream = io.BytesIO()
             var stream = mupdf.mupdf.fz_new_buffer(1024);
-            // writer = DocumentWriter(stream)
             using var writer = new DocumentWriter(stream);
-            // positions = []
             var positions = new List<StoryElementPositionInfo>();
             void positionfn2(StoryElementPositionInfo position)
             {
-                // positions.append(position)
                 positions.Add(position);
                 if (positionfn != null)
-                    // positionfn(position)
                     positionfn(position);
             }
-            // Story.write_stabilized(writer, contentfn, rectfn, user_css, em, positionfn2, pagefn, archive, add_header_ids)
             WriteStabilized(writer, contentfn, rectfn, userCss, em, positionfn2, pagefn, archive, addHeaderIds);
-            // writer.close()
             byte[] pdf = writer.Close();
-            // stream.seek(0)
             return AddPdfLinks(pdf, positions);
         }
 
@@ -577,25 +531,18 @@ namespace MuPDF.NET
         /// <param name="pagefn">Optional page hook (see <see cref="Write"/>).</param>
         public Document WriteWithLinks(StoryRectFn rectfn, Action<StoryElementPositionInfo> positionfn = null, Action<int, Rect, mupdf.FzDevice, int> pagefn = null)
         {
-            // stream = io.BytesIO()
             var stream = mupdf.mupdf.fz_new_buffer(1024);
-            // writer = DocumentWriter(stream)
             using var writer = new DocumentWriter(stream);
-            // positions = []
             var positions = new List<StoryElementPositionInfo>();
             void positionfn2(StoryElementPositionInfo position)
             {
-                // positions.append(position)
                 positions.Add(position);
                 if (positionfn != null)
-                    // positionfn(position)
                     positionfn(position);
             }
-            // self.write(writer, rectfn, positionfn=positionfn2, pagefn=pagefn)
+
             Write(writer, rectfn, positionfn2, pagefn);
-            // writer.close()
             byte[] pdf = writer.Close();
-            // stream.seek(0)
             return AddPdfLinks(pdf, positions);
         }
 
@@ -636,7 +583,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Find an optimal rectangle parameter that contains the story .
+        /// Find an optimal rectangle parameter that contains the story.
         /// On success, the last <see cref="Place"/> used the returned rectangle so <see cref="Draw"/> can be called directly.
         /// </summary>
         /// <param name="fn">Maps parameter to a rectangle; empty rect means “does not fit” without calling <see cref="Place"/>. Width and height must not shrink as parameter increases.</param>
@@ -653,7 +600,6 @@ namespace MuPDF.NET
             void Log(string text)
             {
                 if (verbose)
-                    // message(f'fit(): {text}')
                     Helpers.message($"fit(): {text}");
             }
 
@@ -670,7 +616,7 @@ namespace MuPDF.NET
             if (verbose)
                 Log($"starting. state_pmin={state_pmin} state_pmax={state_pmax}.");
 
-            // self.reset()
+
             Reset();
 
             FitResult ret()

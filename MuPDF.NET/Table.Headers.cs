@@ -1,34 +1,35 @@
 // Copyright (C) 2023 Artifex Software, Inc.
-//
+
 // This file is part of MuPDF.NET.
-//
+
 // MuPDF.NET is free software: you can redistribute it and/or modify it under the
 // terms of the GNU Affero General Public License as published by the Free
 // Software Foundation, either version 3 of the License, or (at your option)
 // any later version.
-//
+
 // MuPDF.NET is distributed in the hope that it will be useful, but WITHOUT ANY
 // WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
 // FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more
 // details.
-//
+
 // You should have received a copy of the GNU Affero General Public License
 // along with MuPDF. If not, see <https://www.gnu.org/licenses/agpl-3.0.en.html>
-//
+
 // Alternative licensing terms are available from the licensor.
 // For commercial licensing, see <https://www.artifex.com/> or contact
 // Artifex Software, Inc., 39 Mesa Street, Suite 108A, San Francisco,
 // CA 94129, USA, for further information.
-//
+
 // ---------------------------------------------------------------------
-//
+
 // Port of PyMuPDF 1.28.2 src/_table_headers.py
-//
+
 // MuPDF.NET table header detection and HTML serialization (opt-in extension).
 // Pure text-grid module: the header-region rules operate on a row-major
-// [[cell text]] grid, and the serializer turns a tagged placement grid into
+// [[cell text]] grid, extend_header_leaf_labels completes that region from a
+// placement grid's spans, and the serializer turns a tagged placement grid into
 // an HTML <table>. Used only by FindTables(refine: true) (via Table.cs) and
-// Table.ToHtml(); never runs on the default detection path.
+// Table.ToHtml; never runs on the default detection path.
 
 using System;
 using System.Collections.Generic;
@@ -42,8 +43,9 @@ namespace MuPDF.NET
     /// Pure text-grid port of PyMuPDF <c>_table_headers</c>: header-region rules
     /// on a row-major <c>[[cell text]]</c> grid, plus tagged-placement HTML
     /// serialization. Used only by <c>FindTables(refine: true)</c> and
-    /// <see cref="Table.ToHtml"/>; never runs on the default detection path.
     /// </summary>
+    /// <see cref="Table.ToHtml"/>; never runs on the default detection path.
+
     internal static partial class TableHeaders
     {
         static readonly Regex TokenRe = new Regex(
@@ -541,7 +543,8 @@ namespace MuPDF.NET
 
         /// <summary>
         /// Promote a leaf-label row under a sparse/grouped rowspan header scaffold.
-        ///
+        /// </summary>
+        /// <summary>
         /// An empty first cell in the candidate row is the textual shadow of the row-0
         /// rowspan label; treat it as header only when later rows form a stable body.
         /// </summary>
@@ -1024,7 +1027,6 @@ namespace MuPDF.NET
                     if (RowspanLeafHeaderGuard(rows, 1))
                         return 2;
                     // A dense period/label header (row 0) over a value-like sub-row (bare
-                    // years, enumerated headers) is not caught by the sparse-prefix guards.
                     if (rows.Count >= 3 && NextHeaderRowValueGuard(rows[1], rows.Skip(2).ToList()))
                         return 2;
                     return 1;
@@ -1068,6 +1070,7 @@ namespace MuPDF.NET
 
     internal static partial class TableHeaders
     {
+
         /// <summary>
         /// Detect top header rows and in-prefix section-header rows
         /// (PyMuPDF <c>find_header_region</c>).
@@ -1082,6 +1085,114 @@ namespace MuPDF.NET
             var sectionRows = SectionHeaderRows(rows, topHeaderRows);
             return new HeaderRegion(topHeaderRows, sectionRows);
         }
+
+        // --- Leaf labels under spanning header cells: placement grid -> depth --------
+        // Digits with only currency, sign, grouping, decimal, percent or date
+        // punctuation read as a value; a single letter makes the cell a label.
+        static readonly Regex PlainNumberRe = new Regex(
+            @"^[\s$€£(),.%\-–—+0-9/:]+$",
+            RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
+        static bool PlainNumber(string text)
+            => !string.IsNullOrEmpty(text) && PlainNumberRe.IsMatch(text) && text.Any(char.IsDigit);
+
+        static (List<(int row0, int row1, int col0, int col1, string text)> slots, int ncols) SpanSlots(
+            IList<List<SpanCell>> grid)
+        {
+            var occupied = new HashSet<(int row, int col)>();
+            var slots = new List<(int row0, int row1, int col0, int col1, string text)>();
+            if (grid == null)
+                return (slots, 0);
+            for (int row0 = 0; row0 < grid.Count; row0++)
+            {
+                var row = grid[row0];
+                if (row == null)
+                    continue;
+                int col0 = 0;
+                foreach (var cell in row)
+                {
+                    while (occupied.Contains((row0, col0)))
+                        col0++;
+                    int rowspan = Math.Max(1, cell?.Rowspan ?? 1);
+                    int colspan = Math.Max(1, cell?.Colspan ?? 1);
+                    int row1 = row0 + rowspan;
+                    int col1 = col0 + colspan;
+                    for (int r = row0; r < row1; r++)
+                        for (int c = col0; c < col1; c++)
+                            occupied.Add((r, c));
+                    slots.Add((row0, row1, col0, col1, CollapseCellWs(cell?.Text)));
+                    col0 = col1;
+                }
+            }
+            int ncols = occupied.Count == 0 ? 0 : occupied.Max(p => p.col) + 1;
+            return (slots, ncols);
+        }
+
+        static string[] RowShape(
+            List<(int row0, int row1, int col0, int col1, string text)> slots,
+            int row,
+            int ncols)
+        {
+            var shape = new string[ncols];
+            for (int i = 0; i < ncols; i++)
+                shape[i] = "";
+            foreach (var (row0, row1, col0, col1, text) in slots)
+            {
+                if (row0 <= row && row < row1 && !string.IsNullOrEmpty(text))
+                {
+                    string kind = PlainNumber(text) ? "number" : "text";
+                    int end = Math.Min(col1, ncols);
+                    for (int col = col0; col < end; col++)
+                        shape[col] = kind;
+                }
+            }
+            return shape;
+        }
+
+        /// <summary>
+        /// Extend the header over the row naming the columns of a spanning header cell.
+        /// Port of <c>_table_headers.extend_header_leaf_labels</c>.
+        /// </summary>
+        internal static int ExtendHeaderLeafLabels(IList<List<SpanCell>> grid, int topHeaderRows)
+        {
+            var (slots, ncols) = SpanSlots(grid);
+            int depth = topHeaderRows;
+            int nRows = grid?.Count ?? 0;
+            if (!(0 < depth && depth < nRows) || ncols < 2)
+                return depth;
+            while (depth < nRows - 1)  // a header never takes the whole table
+            {
+                var header = slots.Where(s => s.row1 <= depth && !string.IsNullOrEmpty(s.text)).ToList();
+                var labeled = new HashSet<int>(
+                    header.Where(s => s.col1 - s.col0 == 1).Select(s => s.col0));
+                var spans = header
+                    .Where(s => 1 < s.col1 - s.col0 && s.col1 - s.col0 < ncols
+                        && !labeled.Overlaps(Enumerable.Range(s.col0, s.col1 - s.col0)))
+                    .Select(s => Enumerable.Range(s.col0, s.col1 - s.col0).ToList())
+                    .ToList();
+                var row = slots
+                    .Where(s => s.row0 == depth && !string.IsNullOrEmpty(s.text))
+                    .Select(s => (s.col0, s.col1, s.text))
+                    .ToList();
+                if (spans.Count == 0 || row.Count == 0
+                    || (row.Count == 1 && row[0].col1 - row[0].col0 == ncols))
+                    break;
+                var leaves = new HashSet<int>(
+                    row.Where(c => c.col1 - c.col0 == 1).Select(c => c.col0));
+                if (!spans.Any(span => leaves.IsSupersetOf(span)))
+                    break;
+                if (row.Any(c => PlainNumber(c.text)
+                    && labeled.Overlaps(Enumerable.Range(c.col0, c.col1 - c.col0))))
+                    break;
+                if (RowShape(slots, depth, ncols).SequenceEqual(RowShape(slots, depth + 1, ncols)))
+                    break;
+                depth++;
+            }
+            return depth;
+        }
+
+        internal static int extend_header_leaf_labels(IList<List<SpanCell>> grid, int topHeaderRows)
+            => ExtendHeaderLeafLabels(grid, topHeaderRows);
 
         // ---------------------------------------------------------------------------
         // HTML serialization: tagged placement grid -> <table>
@@ -1113,10 +1224,11 @@ namespace MuPDF.NET
 
         /// <summary>
         /// Serialize a tagged placement grid to its final <c>&lt;table&gt;</c> HTML in one pass.
-        ///
+        /// </summary>
         /// <paramref name="rows"/> is a row-major grid of cells duck-typed with
         /// <c>text</c> / <c>colspan</c> / <c>rowspan</c> / <c>tag</c> (e.g.
         /// <see cref="SpanCell"/>): each cell emits its tag, its colspan/rowspan
+        /// <summary>
         /// attributes and its <c>&lt;br/&gt;</c>-joined escaped inner HTML. A row
         /// whose index is in <paramref name="sectionHeaderRows"/> and that carries
         /// a single non-empty label collapses to one <c>&lt;th colspan=N&gt;</c>

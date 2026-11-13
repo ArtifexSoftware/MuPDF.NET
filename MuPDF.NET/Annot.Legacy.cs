@@ -21,6 +21,7 @@ namespace MuPDF.NET
     /// </remarks>
     public partial class Annot
     {
+
         /// <summary>
         /// Border, background, and fill colors of the annotation.
         /// </summary>
@@ -130,7 +131,7 @@ namespace MuPDF.NET
         public bool IsOwner { get; private set; } = true;
 
         /// <summary>
-        /// Whether the native object is owned by this wrapper (SWIG <c>thisown</c>).
+        /// Whether the native object is owned by this wrapper (SWIG <c>native ownership</c>).
         /// </summary>
         public bool ThisOwn { get; set; } = true;
 

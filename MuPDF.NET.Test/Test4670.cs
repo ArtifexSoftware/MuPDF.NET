@@ -1,10 +1,10 @@
-using Xunit;
+﻿using Xunit;
 
 namespace MuPDF.NET.Test
 {
     /// <remarks>
     /// Input: <c>TestDocuments/Test4670/test_4670.pdf</c>.
-    /// Port of PyMuPDF 1.28.2 <c>tests/test_4670.py</c> (#4670 scrub hidden text).
+    /// Issue 4670: scrub hidden text.
     /// </remarks>
     [Collection("MuPDF.NET native")]
     public class Test4670
@@ -17,7 +17,7 @@ namespace MuPDF.NET.Test
         public void test_4670()
         {
             // Remove hidden text using redaction annotations.
-            //
+
             // The page only contains hidden text, which should be removed
             // entirely after scrubbing the document.
             string filename = Doc("test_4670.pdf");

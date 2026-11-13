@@ -25,6 +25,7 @@ namespace MuPDF.NET
         private mupdf.FzDocument? _nativeDoc;
         private mupdf.PdfDocument _cachedPdfDocument;
         private bool _disposed;
+
         /// <summary>
         /// Serializes native use of <em>this</em> document (MuPDF: no two threads may use the
         /// same document at once). Independent <see cref="Document"/> instances do not share
@@ -32,6 +33,7 @@ namespace MuPDF.NET
         /// (#191).
         /// </summary>
         internal readonly object NativeLock = new object();
+
         /// <summary>
         /// Gets or sets Gets or sets whether this wrapper owns the native document handle.
         /// </summary>
@@ -46,32 +48,36 @@ namespace MuPDF.NET
         private Outline _outline;
 
         /// <summary>
-        /// Loaded <see cref="Page"/> wrappers keyed by <see cref="Page.PageRefId"/> (Python <c>_page_refs</c>).
-        /// Strong references so <see cref="ResetPageRefsInternal"/> can invalidate the cache (legacy: clear only; optional erase).
+        /// Loaded <see cref="Page"/> wrappers keyed by <see cref="Page.PageRefId"/> (PyMuPDF <c>_page_refs</c>).
+        /// Strong references so <see cref="ResetPageRefsInternal"/> can invalidate the cache.
         /// </summary>
         private readonly Dictionary<int, Page> _pageRefs = new Dictionary<int, Page>();
         private int _suppressPageRefReset;
-        /// <summary>Keeps the open-time archive alive ( on <c>Document.__init__</c>).</summary>
+        /// <summary>Keeps the archive passed to open alive for the document lifetime.</summary>
         private Archive _openArchive;
         private bool _ownsOpenArchive;
+
         /// <summary>
         /// Gets or sets has document been closed?.
         /// </summary>
         /// <value>has document been closed?</value>
         /// <remarks><see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public bool IsClosed { get; private set; }
+
         /// <summary>
         /// Gets or sets document (still) encrypted?.
         /// </summary>
         /// <value>document (still) encrypted?</value>
         /// <remarks><see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public bool IsEncrypted { get; private set; }
+
         /// <summary>
         /// Gets or sets Gets the file path or "&lt;memory&gt;" for stream-backed documents.
         /// </summary>
         /// <value>Gets the file path or "&lt;memory&gt;" for stream-backed documents.</value>
         /// <remarks><see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public string Name { get; private set; } = "";
+
         /// <summary>
         /// Gets or sets Gets the in-memory file bytes when the document was opened from memory.
         /// </summary>
@@ -120,9 +126,9 @@ namespace MuPDF.NET
         // ─── Constructors ───────────────────────────────────────────────
 
         /// <summary>
-        /// Creates a new empty PDF document (<see cref="Open()"/>).
+        /// Creates a new empty PDF document (<see cref="Open"/>).
         /// </summary>
-        /// <remarks>Alias: <see cref="Open()"/>.</remarks>
+        /// <remarks>Alias: <see cref="Open"/>.</remarks>
         public Document() => InitEmptyDocument();
 
         private void InitEmptyDocument()
@@ -167,10 +173,10 @@ namespace MuPDF.NET
         {
             Helpers.EnsureMupdfWarningsHooked();
             _graftId = _nextGraftId++;
-            if (!File.Exists(filename))
-                throw new FileNotFoundException($"no such file: '{filename}'");
             if (Directory.Exists(filename))
                 throw new FileDataException($"'{filename}' is no file");
+            if (!File.Exists(filename))
+                throw new FileNotFoundException($"no such file: '{filename}'");
             if (new global::System.IO.FileInfo(filename).Length == 0)
                 throw new EmptyFileException($"Cannot open empty file: {filename}");
 
@@ -317,7 +323,7 @@ namespace MuPDF.NET
 
         // --- Static factory (Document.Open) ---
 
-        /// <summary>Creates a new empty PDF (<see cref="Document()"/>).</summary>
+        /// <summary>Creates a new empty PDF (<see cref="Document"/>).</summary>
         public static Document Open() => new Document();
 
         /// <summary>Opens a document from a file path.</summary>
@@ -379,6 +385,7 @@ namespace MuPDF.NET
         }
 
         // ─── Properties ─────────────────────────────────────────────────
+
         /// <summary>
         /// Gets is this a PDF?.
         /// </summary>
@@ -405,6 +412,7 @@ namespace MuPDF.NET
 
         /// <summary>Whether to use MuPDF extra page-count helpers.</summary>
         private static bool GUseExtra => true;
+
         /// <summary>
         /// Gets number of pages.
         /// </summary>
@@ -423,6 +431,7 @@ namespace MuPDF.NET
                 return mupdf.mupdf.pdf_count_pages(NativePdfDocument);
             }
         }
+
         /// <summary>
         /// Gets whether the native handle was released after Close.
         /// </summary>
@@ -432,23 +441,27 @@ namespace MuPDF.NET
         private static int QueryPageCountFz(Document self) =>
             mupdf.mupdf.fz_count_pages(self.NativeDocument);
 
-        /// <summary><c>src/extra.i</c>.</summary>
+
         private static int QueryPageCountPdf(Document self) => QueryPageCountFz(self);
+
         /// <summary>
         /// number of chapters
         /// </summary>
         /// <remarks><see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public int ChapterCount => mupdf.mupdf.fz_count_chapters(NativeDocument);
+
         /// <summary>
         /// require password to access data?
         /// </summary>
         /// <remarks><see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public bool NeedsPass => mupdf.mupdf.fz_needs_password(NativeDocument) != 0;
+
         /// <summary>
         /// is this a reflowable document?
         /// </summary>
         /// <remarks><see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public bool IsReflowable => mupdf.mupdf.fz_is_document_reflowable(NativeDocument) != 0;
+
         /// <summary>
         /// Gets PDF only: has document been changed yet?.
         /// </summary>
@@ -462,6 +475,7 @@ namespace MuPDF.NET
                 return mupdf.mupdf.pdf_has_unsaved_changes(NativePdfDocument) != 0;
             }
         }
+
         /// <summary>
         /// Gets is this a Form PDF?.
         /// </summary>
@@ -501,6 +515,7 @@ namespace MuPDF.NET
                 return false;
             }
         }
+
         /// <summary>
         /// Gets font resource names referenced by the AcroForm dictionary.
         /// </summary>
@@ -560,6 +575,7 @@ namespace MuPDF.NET
                 return new mupdf.PdfObj();
             return Helpers.PdfObjDictGet(current,key2);
         }
+
         /// <summary>
         /// Gets PDF only: has this PDF been repaired during open?.
         /// </summary>
@@ -573,6 +589,7 @@ namespace MuPDF.NET
                 return mupdf.mupdf.pdf_was_repaired(NativePdfDocument) != 0;
             }
         }
+
         /// <summary>
         /// Gets is PDF linearized?.
         /// </summary>
@@ -586,6 +603,7 @@ namespace MuPDF.NET
                 catch { return false; }
             }
         }
+
         /// <summary>
         /// Gets PDF count of versions.
         /// </summary>
@@ -599,6 +617,7 @@ namespace MuPDF.NET
                 catch { return 0; }
             }
         }
+
         /// <summary>
         /// Gets the number of entries in the PDF cross-reference table.
         /// </summary>
@@ -612,6 +631,7 @@ namespace MuPDF.NET
                 catch { return 0; }
             }
         }
+
         /// <summary>
         /// Gets permissions to access the document.
         /// </summary>
@@ -625,6 +645,7 @@ namespace MuPDF.NET
                 catch { return 0; }
             }
         }
+
         /// <summary>
         /// Gets the document language tag from PDF /Root/Lang.
         /// </summary>
@@ -654,6 +675,7 @@ namespace MuPDF.NET
         public (int, int) LastLocation => (ChapterCount - 1, ChapterPageCount(ChapterCount - 1) - 1);
 
         // ─── Core Methods ───────────────────────────────────────────────
+
         /// <summary>
         /// Decrypts the document with an owner or user password.
         /// </summary>
@@ -680,12 +702,13 @@ namespace MuPDF.NET
             }
             return val;
         }
+
         /// <summary>
         /// Loads a page by 0-based index for rendering, text extraction, or annotation work.
         /// </summary>
         /// <remarks>
         /// Negative <paramref name="pageNo"/> values wrap from the end
-        /// (e.g. <c>-1</c> is the last page). Equivalent to <c>doc[pageNo]</c> in Python.
+        /// (e.g. <c>-1</c> is the last page). Equivalent to <c>doc[pageNo]</c> in PyMuPDF.
         /// </remarks>
         /// <param name="pageNo">0-based page number. Negative values wrap from the end of the document.</param>
         /// <returns>A new <see cref="Page"/> instance.</returns>
@@ -703,7 +726,8 @@ namespace MuPDF.NET
         private Page LoadPageCore(int pageNo)
         {
             int pc = PageCount;
-            // Python Document.__contains__(int): loc < page_count; load_page then wraps negatives.
+            // Membership is pageNo < PageCount (negatives wrap later).
+            // PyMuPDF Document.__contains__(int): loc < page_count; load_page then wraps negatives.
             if (!(pageNo < pc))
                 throw new ValueErrorException("page not in document");
             int idx = pageNo;
@@ -717,6 +741,7 @@ namespace MuPDF.NET
             var fzPage = mupdf.mupdf.fz_load_page(NativeDocument, idx);
             return new Page(fzPage, this, pageNumber: idx);
         }
+
         /// <summary>
         /// Loads a page by chapter and page index (EPUB and other multi-chapter formats).
         /// </summary>
@@ -740,7 +765,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>Python <c>Document.__getitem__(i)</c> for an <c>int</c>: <c>if i not in self: raise IndexError</c> then <c>load_page(i)</c>.</summary>
+        /// <summary>Indexer for an <see cref="int"/> page number: membership check, then <see cref="LoadPage(int)"/>. PyMuPDF <c>Document.__getitem__(i)</c> for an <c>int</c>: <c>if i not in self: raise IndexError</c> then <c>load_page(i)</c>.</summary>
         internal Page GetItemPageForIndexer(int pageNo)
         {
             lock (NativeLock)
@@ -752,7 +777,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>Python <c>Document.__getitem__((chapter, pno))</c> membership then <c>load_page</c>.</summary>
+        /// <summary>Indexer for a chapter/page pair: membership check, then load. PyMuPDF <c>Document.__getitem__((chapter, pno))</c> membership then <c>load_page</c>.</summary>
         internal Page GetItemPageForIndexer(int chapter, int pageInChapter)
         {
             lock (NativeLock)
@@ -766,20 +791,45 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Load a page (Python <c>doc[i]</c> / <c>__getitem__</c>).
+        /// Load a page by 0-based index (<c>doc[i]</c>). Load a page (PyMuPDF <c>doc[i]</c> / <c>__getitem__</c>).
         /// </summary>
         public Page this[int pageNo] => GetItemPageForIndexer(pageNo);
+
+        /// <summary>
+        /// Load a page by chapter location (<c>doc[(chapter, pno)]</c>).
+        /// </summary>
+        /// <param name="loc">0-based <c>(chapter, page)</c>. For PDFs this is <c>(0, pno)</c>.</param>
+        public Page this[(int chapter, int page) loc] => GetItemPageForIndexer(loc.chapter, loc.page);
+
+        /// <summary>
+        /// Load a page from a boxed key: <see cref="int"/> or a 2-int location.
+        /// Other key types raise <see cref="InvalidOperationException"/>.
+        /// </summary>
+        public Page this[object i] => GetItemPageForIndexer(i);
+
+        /// <summary>Type-check the indexer key, then membership / load.</summary>
+        internal Page GetItemPageForIndexer(object i)
+        {
+            if (i is int pageNo)
+                return GetItemPageForIndexer(pageNo);
+            if (i is ValueTuple<int, int> loc)
+                return GetItemPageForIndexer(loc.Item1, loc.Item2);
+            throw new InvalidOperationException($"Invalid item number: i={i}.");
+        }
+
         /// <summary>
         /// number of pages in chapter
         /// </summary>
         /// <remarks>Return the number of pages of a chapter. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public int ChapterPageCount(int chapter) => mupdf.mupdf.fz_count_chapter_pages(NativeDocument, chapter);
+
         /// <summary>
         /// Returns whether <paramref name="pageNo"/> is a valid 0-based page index.
         /// </summary>
         /// <param name="pageNo">0-based page number.</param>
         /// <remarks><see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public bool ContainsPage(int pageNo) => pageNo >= 0 && pageNo < PageCount;
+
         /// <summary>
         /// Returns whether the chapter/page pair exists in this document.
         /// </summary>
@@ -793,17 +843,19 @@ namespace MuPDF.NET
             if (pageInChapter < 0 || pageInChapter >= ChapterPageCount(chapter)) return false;
             return true;
         }
+
         /// <summary>
         /// Gets whether the (chapter, page) location exists in this document.
         /// </summary>
         /// <remarks><see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public bool ContainsLocation((int chapter, int page) loc) => ContainsChapterPage(loc.chapter, loc.page);
+
         /// <summary>
         /// Iterates pages with optional start, stop, and step (like Python slice).
         /// </summary>
-        /// <remarks>A generator for a range of pages. Parameters have the same meaning as in the built-in function *range()*. Intended for expressions of the form *"for page in doc.pages(start, stop, step): ..."*. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
+        /// <remarks>Yields pages in <c>[start, stop)</c>. Negative start wraps by adding <see cref="PageCount"/>. Zero step is not allowed. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         /// <param name="start">start iteration with this page number. Default is zero, allowed values are <c>-∞ &lt; start &lt; page_count</c>. While this is negative, <see cref="PageCount"/> is added before starting the iteration.</param>
-        /// <param name="stop">stop iteration at this page number. Default is <see cref="PageCount"/>, possible are <c>-∞ &lt; stop &lt;= page_count</c>. Larger values are silently replaced by the default. Negative values will cyclically emit the pages in reversed order. As with the built-in *range()*, this is the first page not returned.</param>
+        /// <param name="stop">stop iteration at this page number. Default is <see cref="PageCount"/>, possible are <c>-∞ &lt; stop &lt;= page_count</c>. Larger values are silently replaced by the default. Negative values will cyclically emit the pages in reversed order. As with the built-in *range*, this is the first page not returned.</param>
         /// <param name="step">stepping value. Defaults are 1 if start &lt; stop and -1 if start &gt; stop. Zero is not allowed.</param>
         /// <returns>a generator iterator over the document's pages. Some examples:</returns>
         public IEnumerable<Page> Pages(int? start = null, int? stop = null, int? step = null)
@@ -845,6 +897,7 @@ namespace MuPDF.NET
             var loc = mupdf.mupdf.fz_location_from_page_number(NativeDocument, pno);
             return (loc.chapter, loc.page);
         }
+
         /// <summary>
         /// Converts a (chapter, page) location to a 0-based page number.
         /// </summary>
@@ -857,6 +910,7 @@ namespace MuPDF.NET
             fzLoc.page = loc.page;
             return mupdf.mupdf.fz_page_number_from_location(NativeDocument, new mupdf.FzLocation(fzLoc));
         }
+
         /// <summary>
         /// Creates a bookmark pointer for reflowable documents.
         /// </summary>
@@ -885,6 +939,7 @@ namespace MuPDF.NET
         // ─── Metadata ───────────────────────────────────────────────────
 
         private Dictionary<string, string> _metadata;
+
         /// <summary>
         /// Gets Gets or sets the document metadata dictionary (PDF Info keys).
         /// </summary>
@@ -895,6 +950,7 @@ namespace MuPDF.NET
             get => _metadata ?? GetMetadata();
             set => _metadata = value;
         }
+
         /// <summary>
         /// Returns a copy of the metadata dictionary.
         /// </summary>
@@ -932,18 +988,19 @@ namespace MuPDF.NET
             }
             return result;
         }
+
         /// <summary>
         /// Replaces document metadata from a dictionary.
         /// </summary>
         /// <remarks>PDF only: Sets or updates the metadata of the document as specified in *m*, a Python dictionary. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
-        /// <param name="m">A dictionary with the same keys as *metadata* (see below). All keys are optional. A PDF's format and encryption method cannot be set or changed and will be ignored. If any value should not contain data, do not specify its key or set the value to <c>None</c>. If you use *{}* all metadata information will be cleared to the string *"none"*. If you want to selectively change only some values, modify a copy of *doc.metadata* and use it as the argument. Arbitrary unicode values are possible if specified as UTF-8-encoded.</param>
+        /// <param name="m">Metadata keys matching <see cref="Metadata"/>. All keys are optional. Format and encryption cannot be changed. Omit a key or pass null to clear that field. An empty dictionary clears all values to the string <c>none</c>.</param>
         public void SetMetadata(Dictionary<string, string> m)
         {
             EnsurePdf();
 
             m ??= new Dictionary<string, string>();
 
-            // Keys accepted by MuPDF Document.set_metadata (src/__init__.py).
+            // Keys accepted by MuPDF Document.set_metadata.
             var keymap = new Dictionary<string, string>
             {
                 ["author"] = "Author",
@@ -973,7 +1030,6 @@ namespace MuPDF.NET
 
             if (m.Count == 0)
             {
-                // MuPDF: doc.XrefSetKey(-1, "Info", "null") — keep /Info with null value
                 XrefSetKey(-1, "Info", "null");
                 InitDoc();
                 return;
@@ -990,7 +1046,7 @@ namespace MuPDF.NET
             {
                 if (infoXref == 0)
                 {
-                    // MuPDF: info_xref = doc.get_new_xref(); doc.UpdateObject(info_xref, "<<>>");
+                    // MuPDF: info_xref = doc.get_new_xref; doc.UpdateObject(info_xref, "<<>>");
                     infoXref = GetNewXref();
                     UpdateObject(infoXref, "<<>>");
                     XrefSetKey(-1, "Info", $"{infoXref} 0 R");
@@ -1033,6 +1089,7 @@ namespace MuPDF.NET
         }
 
         // ─── TOC ────────────────────────────────────────────────────────
+
         /// <summary>
         /// extract the table of contents
         /// </summary>
@@ -1309,14 +1366,55 @@ namespace MuPDF.NET
                 for (int i = 0; i < il.Count; i++) rc.Add(il[i]);
                 return rc;
             }
+            if (row is Toc tocItem)
+                return TocEntryToRow(tocItem.Level, tocItem.Title, tocItem.Page, tocItem.link);
+            if (row is ValueTuple<int, string, int, Dictionary<string, object>> vt)
+                return TocEntryToRow(vt.Item1, vt.Item2, vt.Item3, vt.Item4);
             return null;
         }
+
+        private static List<object> TocEntryToRow(int level, string title, int page, Dictionary<string, object> link)
+        {
+            if (link != null)
+                return new List<object> { level, title, page, link };
+            return new List<object> { level, title, page };
+        }
+
+        private static List<object> TocEntriesToRows(
+            IEnumerable<(int level, string title, int page, Dictionary<string, object> link)> toc)
+        {
+            if (toc == null)
+                return null;
+            var rows = new List<object>();
+            foreach (var (level, title, page, link) in toc)
+                rows.Add(TocEntryToRow(level, title, page, link).ToArray());
+            return rows;
+        }
+
+        /// <summary>
+        /// PDF only: set the table of contents from <see cref="GetToc"/> (<c>set_toc(get_toc(...))</c>).
+        /// </summary>
+        /// <remarks>
+        /// Dest dictionaries from <c>GetToc(simple: false)</c> are kept. Existing
+        /// <see cref="SetToc(IList{object})"/> row lists and the <c>List&lt;Toc&gt;</c> shim stay available.
+        /// </remarks>
+        public int SetToc(TocResult toc, int collapse = 1) =>
+            SetToc(TocEntriesToRows(toc), collapse);
+
+        /// <summary>
+        /// PDF only: set the table of contents from <see cref="GetToc"/> tuple rows.
+        /// </summary>
+        public int SetToc(
+            IEnumerable<(int level, string title, int page, Dictionary<string, object> link)> toc,
+            int collapse = 1) =>
+            SetToc(TocEntriesToRows(toc), collapse);
+
         /// <summary>
         /// PDF only: set the table of contents (TOC)
         /// </summary>
         /// <remarks>PDF only: Replaces the complete current outline tree (table of contents) with the one provided as the argument. After successful execution, the new outline tree can be accessed as usual via <see cref="GetToc"/> or via <see cref="GetOutline"/>. Like with other output-oriented methods, changes become permanent only via <see cref="Save"/> (incremental save supported). Internally, this method consists of the following two steps. For a demonstration see example below. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         /// <param name="toc">Outline rows: each entry is <c>[level, title, page]</c> or <c>[level, title, page, dest]</c> (same format as <see cref="GetToc"/>).</param>
-        /// <param name="collapse">*(new in v1.16.9)* controls the hierarchy level beyond which outline entries should initially show up collapsed. The default 1 will hence only display level 1, higher levels must be unfolded using the PDF viewer. To unfold everything, specify either a large integer, 0 or None.</param>
+        /// <param name="collapse">*(new in v1.16.9)* controls the hierarchy level beyond which outline entries should initially show up collapsed. The default 1 will hence only display level 1, higher levels must be unfolded using the PDF viewer. To unfold everything, specify either a large integer, 0 or null.</param>
         /// <returns>the number of inserted, resp. deleted items.</returns>
         public int SetToc(IList<object> toc, int collapse = 1)
         {
@@ -1526,6 +1624,7 @@ namespace MuPDF.NET
                 }
             }
         }
+
         /// <summary>
         /// PDF only: remove a single TOC item
         /// </summary>
@@ -1536,16 +1635,17 @@ namespace MuPDF.NET
             int xref = GetOutlineXrefs()[idx];
             RemoveTocItemByXref(xref);
         }
+
         /// <summary>
         /// PDF only: change a single TOC item
         /// </summary>
         /// <remarks>PDF only: Changes the TOC item identified by its index. Change the item title, destination, appearance (color, bold, italic) or collapsing sub-items -- or to remove the item altogether. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         /// <param name="idx">the index of the entry in the list created by <see cref="GetToc"/>.</param>
         /// <param name="destDict">Destination dictionary (keys such as <c>kind</c>, <c>page</c>, <c>to</c>, <c>uri</c>) instead of separate <paramref name="kind"/> / <paramref name="pno"/> arguments.</param>
-        /// <param name="kind">the link kind, see linkDest Kinds. If LINK_NONE, then all remaining parameter will be ignored, and the TOC item will be removed -- same as <see cref="DeleteTocItem"/>. If None, then only the title is modified and the remaining parameters are ignored. All other values will lead to making a new destination dictionary using the subsequent arguments.</param>
+        /// <param name="kind">the link kind, see linkDest Kinds. If LINK_NONE, then all remaining parameter will be ignored, and the TOC item will be removed -- same as <see cref="DeleteTocItem"/>. If null, then only the title is modified and the remaining parameters are ignored. All other values will lead to making a new destination dictionary using the subsequent arguments.</param>
         /// <param name="pno">the 1-based page number, i.e. a value 1 &lt;= pno &lt;= doc.page_count. Required for LINK_GOTO.</param>
         /// <param name="uri">the URL text. Required for LINK_URI.</param>
-        /// <param name="title">the desired new title. None if no change.</param>
+        /// <param name="title">the desired new title. null if no change.</param>
         /// <param name="to">(optional) points to a coordinate on the target page. Relevant for LINK_GOTO. If omitted, a point near the page's top is chosen.</param>
         /// <param name="filename">required for LINK_GOTOR and LINK_LAUNCH.</param>
         /// <param name="zoom">use this zoom factor when showing the target page.</param>
@@ -1635,6 +1735,7 @@ namespace MuPDF.NET
 
             UpdateTocItemByXref(xref, action: action2.Substring(2), title: title);
         }
+
         /// <summary>
         /// first `Outline` item
         /// </summary>
@@ -1655,6 +1756,7 @@ namespace MuPDF.NET
                 return null;
             }
         }
+
         /// <summary>
         /// PDF only: xref a TOC item
         /// </summary>
@@ -1694,6 +1796,7 @@ namespace MuPDF.NET
         }
 
         // ─── Page Operations ────────────────────────────────────────────
+
         /// <summary>
         /// PDF only: insert a new empty page
         /// </summary>
@@ -1726,7 +1829,7 @@ namespace MuPDF.NET
             var pageObj = pdf.pdf_add_page(mediabox, 0, resources, contents);
             mupdf.mupdf.pdf_insert_page(pdf, pno, pageObj);
 
-            // MuPDF Document._newPage() -> _reset_page_refs() invalidates all cached Page wrappers.
+            // MuPDF Document._newPage -> _reset_page_refs invalidates all cached Page wrappers.
             ResetPageRefsInternal(erasePages: true);
             return LoadPage(pno);
         }
@@ -1739,6 +1842,7 @@ namespace MuPDF.NET
             if (pdf.m_internal.rev_page_map != null)
                 mupdf.mupdf.ll_pdf_drop_page_tree(pdf.m_internal);
         }
+
         /// <summary>
         /// Deletes a single page.
         /// </summary>
@@ -1750,7 +1854,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Delete pages from a PDF (Python <c>Document.delete_pages</c>).
+        /// Delete pages from a PDF (PyMuPDF <c>Document.delete_pages</c>).
         /// </summary>
         private void DeletePagesCore(IEnumerable<int> pages)
         {
@@ -1794,11 +1898,13 @@ namespace MuPDF.NET
             }
             ResetPageRefsInternal();
         }
+
         /// <summary>
         /// Deletes one or more pages by number.
         /// </summary>
         /// <remarks>PDF only: Delete multiple pages given as 0-based numbers. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public void DeletePages(params int[] pages) => DeletePagesCore(pages);
+
         /// <summary>
         /// Deletes one or more pages by number.
         /// </summary>
@@ -1845,12 +1951,13 @@ namespace MuPDF.NET
             }
             return indices;
         }
+
         /// <summary>
         /// PDF only: delete multiple pages
         /// </summary>
         /// <remarks>PDF only: Delete multiple pages given as 0-based numbers. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         /// <param name="start">First page index in the slice (0-based; negative values count from the end).</param>
-        /// <param name="stop">End page index (exclusive, like <c>range()</c>).</param>
+        /// <param name="stop">End page index (exclusive, like <c>range</c>).</param>
         /// <param name="step">Page index step (must not be 0).</param>
         public void DeletePagesBySlice(int start, int stop, int step = 1)
         {
@@ -1859,12 +1966,13 @@ namespace MuPDF.NET
             if (indices.Count == 0) return;
             DeletePages(indices.ToArray());
         }
+
         /// <summary>
         /// iterator over a page range
         /// </summary>
-        /// <remarks>A generator for a range of pages. Parameters have the same meaning as in the built-in function *range()*. Intended for expressions of the form *"for page in doc.pages(start, stop, step): ..."*. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
+        /// <remarks>Yields pages in <c>[start, stop)</c>. Negative start wraps by adding <see cref="PageCount"/>. Zero step is not allowed. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         /// <param name="start">start iteration with this page number. Default is zero, allowed values are <c>-∞ &lt; start &lt; page_count</c>. While this is negative, <see cref="PageCount"/> is added before starting the iteration.</param>
-        /// <param name="stop">stop iteration at this page number. Default is <see cref="PageCount"/>, possible are <c>-∞ &lt; stop &lt;= page_count</c>. Larger values are silently replaced by the default. Negative values will cyclically emit the pages in reversed order. As with the built-in *range()*, this is the first page not returned.</param>
+        /// <param name="stop">stop iteration at this page number. Default is <see cref="PageCount"/>, possible are <c>-∞ &lt; stop &lt;= page_count</c>. Larger values are silently replaced by the default. Negative values will cyclically emit the pages in reversed order. As with the built-in *range*, this is the first page not returned.</param>
         /// <param name="step">stepping value. Defaults are 1 if start &lt; stop and -1 if start &gt; stop. Zero is not allowed.</param>
         /// <returns>a generator iterator over the document's pages. Some examples:</returns>
         public List<Page> LoadPagesBySlice(int start, int stop, int step = 1)
@@ -1876,6 +1984,7 @@ namespace MuPDF.NET
                 list.Add(LoadPage(i));
             return list;
         }
+
         /// <summary>
         /// PDF only: insert a new page
         /// </summary>
@@ -1898,87 +2007,59 @@ namespace MuPDF.NET
             return page;
         }
 
-        /// <summary>Internal page move/copy implementation.</summary>
+        /// <summary>Internal page copy implementation (duplicate a page reference in /Kids).</summary>
         private void _move_copy_page(int pno, int nb, int before, int copy)
         {
             var pdf = Helpers.AsPdfDocument(this, required: true);
-            int same = 0;
             var (page1, parent1, i1) = pdf.pdf_lookup_page_loc(pno);
-            // kids1 = Helpers.PdfObjDictGet(mupdf, parent1, PDF_NAME('Kids'))
-            var kids1 = Helpers.PdfDictGet(parent1, mupdf.mupdf.pdf_new_name("Kids"));
-            // page2, parent2, i2 = pdf_lookup_page_loc( pdf, nb)
+            var kids1 = Helpers.PdfDictGets(parent1, "Kids");
             var (page2, parent2, i2) = pdf.pdf_lookup_page_loc(nb);
-            // kids2 = Helpers.PdfObjDictGet(mupdf, parent2, PDF_NAME('Kids'))
-            var kids2 = Helpers.PdfDictGet(parent2, mupdf.mupdf.pdf_new_name("Kids"));
-            int pos;
-            if (before != 0)
-                // pos = i2
-                pos = i2;
-            else
-                // pos = i2 + 1
-                pos = i2 + 1;
-            // same /Kids array? ------------------------------------------
-            same = mupdf.mupdf.pdf_objcmp(kids1, kids2);
-            // put source page in target /Kids array ----------------------
+            var kids2 = Helpers.PdfDictGets(parent2, "Kids");
+            int pos = before != 0 ? i2 : i2 + 1;
+            int same = mupdf.mupdf.pdf_objcmp(kids1, kids2);
+            // Lookup PdfObj wrappers own a keep. Helpers.PdfDictPut / PdfArrayInsert
+            // strip that keep, and disposing two wrappers for the same /Kids (same==0)
+            // double-drops on glibc (malloc_consolidate in 29-PageOps).
             if (copy == 0 && same != 0)
                 mupdf.mupdf.pdf_dict_put(page1, mupdf.mupdf.pdf_new_name("Parent"), parent2);
             mupdf.mupdf.pdf_array_insert(kids2, page1, pos);
             if (same != 0)
             {
-                // parent = parent2
-                var parent = parent2;
-                // while parent.m_internal:    # increase /Count objects in parents
-                while (parent.m_internal != null)
-                {
-                    int count = mupdf.mupdf.pdf_dict_get_int(parent, mupdf.mupdf.pdf_new_name("Count"));
-                    mupdf.mupdf.pdf_dict_put_int(parent, mupdf.mupdf.pdf_new_name("Count"), count + 1);
-                    // parent = Helpers.PdfObjDictGet(mupdf, parent, PDF_NAME('Parent'))
-                    parent = Helpers.PdfDictGet(parent, mupdf.mupdf.pdf_new_name("Parent"));
-                }
+                AdjustPageTreeCount(parent2, +1);
                 if (copy == 0)
                 {
                     mupdf.mupdf.pdf_array_delete(kids1, i1);
-                    // parent = parent1
-                    parent = parent1;
-                    // while parent.m_internal:    # decrease /Count objects in parents
-                    while (parent.m_internal != null)
-                    {
-                        int count = mupdf.mupdf.pdf_dict_get_int(parent, mupdf.mupdf.pdf_new_name("Count"));
-                        mupdf.mupdf.pdf_dict_put_int(parent, mupdf.mupdf.pdf_new_name("Count"), count - 1);
-                        // parent = Helpers.PdfObjDictGet(mupdf, parent, PDF_NAME('Parent'))
-                        parent = Helpers.PdfDictGet(parent, mupdf.mupdf.pdf_new_name("Parent"));
-                    }
+                    AdjustPageTreeCount(parent1, -1);
                 }
+            }
+            else if (copy != 0)
+            {
+                AdjustPageTreeCount(parent2, +1);
             }
             else
             {
-                // else:   # same /Kids array
-                if (copy != 0)
-                {
-                    // parent = parent2
-                    var parent = parent2;
-                    // while parent.m_internal:    # increase /Count object in parents
-                    while (parent.m_internal != null)
-                    {
-                        int count = mupdf.mupdf.pdf_dict_get_int(parent, mupdf.mupdf.pdf_new_name("Count"));
-                        mupdf.mupdf.pdf_dict_put_int(parent, mupdf.mupdf.pdf_new_name("Count"), count + 1);
-                        // parent = Helpers.PdfDictGet( parent, PDF_NAME('Parent'))
-                        parent = Helpers.PdfDictGet(parent, mupdf.mupdf.pdf_new_name("Parent"));
-                    }
-                }
+                if (i1 < pos)
+                    mupdf.mupdf.pdf_array_delete(kids1, i1);
                 else
-                {
-                    if (i1 < pos)
-                        mupdf.mupdf.pdf_array_delete(kids1, i1);
-                    else
-                        mupdf.mupdf.pdf_array_delete(kids1, i1 + 1);
-                }
+                    mupdf.mupdf.pdf_array_delete(kids1, i1 + 1);
             }
             if (pdf.m_internal.rev_page_map != null)
                 mupdf.mupdf.ll_pdf_drop_page_tree(pdf.m_internal);
-            // self._reset_page_refs()
+
             ResetPageRefsInternal();
         }
+
+        /// <summary>Walk /Parent and add <paramref name="delta"/> to each /Count.</summary>
+        private static void AdjustPageTreeCount(mupdf.PdfObj parent, int delta)
+        {
+            while (parent != null && parent.m_internal != null)
+            {
+                int count = Helpers.PdfDictGetInt(parent, "Count");
+                Helpers.PdfDictPutInt(parent, "Count", count + delta);
+                parent = Helpers.PdfDictGets(parent, "Parent");
+            }
+        }
+
         /// <summary>
         /// Copies a page reference within the same PDF.
         /// </summary>
@@ -1989,32 +2070,25 @@ namespace MuPDF.NET
         {
             // This will only create another reference of the same page object.
             // Args:
-            //     pno: source page number
-            //     to: put before this page, '-1' means after last page.
+            // pno: source page number
+            // to: put before this page, '-1' means after last page.
             if (IsClosed)
-                // raise ValueError("document closed")
+
                 throw new ValueErrorException("document closed");
-            // page_count = len(self)
             int page_count = PageCount;
-            //         pno not in range(page_count)
-            //         or to not in range(-1, page_count)
-            //         ):
             if (pno < 0 || pno >= page_count || to < -1 || to >= page_count)
-                // raise ValueError("bad page number(s)")
+
                 throw new ValueErrorException("bad page number(s)");
-            // before = 1
             int before = 1;
-            // copy = 1
             int copy = 1;
             if (to == -1)
             {
-                // to = page_count - 1
                 to = page_count - 1;
-                // before = 0
                 before = 0;
             }
             _move_copy_page(pno, to, before, copy);
         }
+
         /// <summary>
         /// PDF only: duplicate a page
         /// </summary>
@@ -2106,6 +2180,7 @@ namespace MuPDF.NET
             if (_suppressPageRefReset == 0)
                 ResetPageRefsInternal();
         }
+
         /// <summary>
         /// Moves a page to another position in the document.
         /// </summary>
@@ -2115,33 +2190,40 @@ namespace MuPDF.NET
         public void MovePage(int pno, int to = -1)
         {
             // Args:
-            //     pno: source page number.
-            //     to: put before this page, '-1' means after last page.
+            // pno: source page number.
+            // to: put before this page, '-1' means after last page.
             if (IsClosed)
-                // raise ValueError("document closed")
+
                 throw new ValueErrorException("document closed");
-            // page_count = len(self)
             int page_count = PageCount;
             if (pno < 0 || pno >= page_count || to < -1 || to >= page_count)
-                // raise ValueError("bad page number(s)")
+
                 throw new ValueErrorException("bad page number(s)");
-            // before = 1
-            int before = 1;
-            // copy = 0
-            int copy = 0;
-            if (to == -1)
-            {
-                // to = page_count - 1
-                to = page_count - 1;
-                // before = 0
-                before = 0;
-            }
-            _move_copy_page(pno, to, before, copy);
+            // Reorder via MuPDF's page-tree rewrite (same as Select). Manual /Kids
+            // surgery through SWIG PdfObj wrappers aborts glibc (29-PageOps).
+            var order = new List<int>(page_count);
+            for (int i = 0; i < page_count; i++)
+                order.Add(i);
+            int moving = order[pno];
+            order.RemoveAt(pno);
+            if (to < 0)
+                order.Add(moving);
+            else
+                order.Insert(pno < to ? to - 1 : to, moving);
+
+            var pdf = NativePdfDocument;
+            var pageList = new mupdf.vectori();
+            foreach (int p in order)
+                pageList.Add(p);
+            mupdf.mupdf.pdf_rearrange_pages2(pdf, pageList,
+                mupdf.pdf_clean_options_structure.PDF_CLEAN_STRUCTURE_KEEP);
+            ResetPageRefsInternal();
         }
+
         /// <summary>
         /// Replaces the PDF with only the selected pages.
         /// </summary>
-        /// <remarks>PDF only: Keeps only those pages of the document whose numbers occur in the list. Empty sequences or elements outside <c>range(<see cref="PageCount"/>)</c> will cause a *ValueError*. For more details see remarks at the bottom or this chapter. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
+        /// <remarks>PDF only: keeps only those pages whose numbers occur in the list. Empty sequences or elements outside 0..<see cref="PageCount"/>-1 throw <see cref="ValueErrorException"/>. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         /// <param name="pages">Page numbers to select or delete.</param>
         public void Select(int[] pages)
         {
@@ -2163,6 +2245,7 @@ namespace MuPDF.NET
                 mupdf.pdf_clean_options_structure.PDF_CLEAN_STRUCTURE_KEEP);
             ResetPageRefsInternal();
         }
+
         /// <summary>
         /// PDF only: provide a new copy of a page
         /// </summary>
@@ -2171,67 +2254,54 @@ namespace MuPDF.NET
         /// <returns>a new copy of the same page. All pending updates (e.g. to annotations or widgets) will be finalized and a fresh copy of the page will be loaded.</returns>
         public Page ReloadPage(Page page)
         {
-            // old_annots = {}  # copy annot references to here
             var old_annots = new Dictionary<int, Annot>();
-            // pno = page.number  # save the page number
             int pno = page.Number;
             int chapter = page.ReloadChapter;
             int chapterPage = page.ReloadChapterPage;
             foreach (var kvp in page.SnapshotAnnotRefsForReload())
                 old_annots[kvp.Key] = kvp.Value;
 
-            // When we call `self.load_page()` below, it will end up in
+            // When we call `self.load_page` below, it will end up in
             // document's list of non-ref-counted loaded pages, instead of actually
             // reloading the page.
-            // We want to assert that we have actually reloaded the fz_page, and not
             // simply returned the same `fz_page*` pointer from the document's list
             // of non-ref-counted loaded pages.
             // So we first remove our reference to the `fz_page*`. This will
-            // decrement .refs, and if .refs was 1, this is guaranteed to free the
             // `fz_page*` and remove it from the document's list if it was there. So
             // we are guaranteed that our returned `fz_page*` is from a genuine
-            // reload, even if it happens to reuse the original block of memory.
-            // However if the original .refs is greater than one, there must be
+            // However if the original.refs is greater than one, there must be
             // other references to the `fz_page` somewhere, and we require that
             // these other references are not keeping the page in the document's
-            // list.  We check that we are returning a newly loaded page by
+            // list. We check that we are returning a newly loaded page by
             // asserting that our returned `fz_page*` is different from the original
             // `fz_page*` - the original was not freed, so a new `fz_page` cannot
             // reuse the same block of memory.
 
-            // refs_old = page.this.m_internal.refs
             var fz_page_old = page.NativePage;
             int refs_old = fz_page_old.m_internal.refs;
-            // m_internal_old = page.this.m_internal_value()
             long m_internal_old = fz_page_old.m_internal_value();
 
-            // page.this = None
             page.ReleaseNativeForReload();
-            // page._erase()  # remove the page
             page.EraseForReload();
-            // page = None
 
-            // TOOLS.store_shrink(100)
+
+
             Tools.StoreShrink(100);
             GC.Collect();
             GC.WaitForPendingFinalizers();
-            // page = self.load_page(pno)  # reload the page
+
             page = chapter >= 0 ? LoadPage(chapter, chapterPage) : LoadPage(pno);
 
-            // copy annot refs over to the new dictionary
-            // page_proxy = weakref.proxy(page)
             page.RestoreAnnotRefsFromReload(old_annots);
             if (refs_old == 1)
             {
-                // We know that `page.this = None` will have decremented the ref
-                // count to zero so we are guaranteed that the new `fz_page` is a
-                // new page even if it happens to have reused the same block of
-                // memory.
+                // Native handle was dropped (refcount to zero), so the new fz_page
+                // is a new page even if it reused the same block of memory.
             }
             else if (IsPdf)
             {
                 // Evict MuPDF's non-refcounted page cache when other wrappers may still
-                // hold the old fz_page (common in .NET after Story/ShowPdfPage work).
+                // hold the old fz_page (common in.NET after Story/ShowPdfPage work).
                 long m_internal_new = page.NativePage.m_internal_value();
                 if (m_internal_new == m_internal_old)
                 {
@@ -2305,7 +2375,7 @@ namespace MuPDF.NET
 
             var pdf = NativePdfDocument;
             var opts = new mupdf.PdfWriteOptions();
-            //opts.do_incremental = incremental;
+            // opts.do_incremental = incremental;
             opts.do_ascii = ascii;
             opts.do_compress = deflate;
             opts.do_compress_images = deflateImages;
@@ -2332,15 +2402,16 @@ namespace MuPDF.NET
             opts.compression_effort = compressionEffort;
 
             pdf.m_internal.resynth_required = 0;
-            //Utils.EmbeddedClean(pdf);
+            // Utils.EmbeddedClean(pdf);
 
             pdf.pdf_save_document(filename, opts);
             opts.Dispose();
         }
 
-        /*
-        // Legacy bool Save(Stream) — use Save(Stream, int garbage, ...) or Write() instead.
-        */
+ /*
+ // Legacy bool Save(Stream) — use Save(Stream, int garbage,...) or Write instead.
+ */
+
         /// <summary>
         /// PDF only: save the document
         /// </summary>
@@ -2366,6 +2437,7 @@ namespace MuPDF.NET
         /// <param name="useObjstms">Store eligible objects in object streams (size reduction).</param>
         /// <param name="compressionEffort">Compression effort 0 (default) to 100 (maximum).</param>
         /// <param name="raiseOnRepair">Throw if save repairs the PDF structure.</param>
+        /// <param name="reproducible">If non-zero, omit the MuPDF version from the PDF header comment.</param>
         /// <exception cref="ValueErrorException">Document is closed, encrypted, or arguments are invalid.</exception>
         public void Save(
             object filename, 
@@ -2388,10 +2460,12 @@ namespace MuPDF.NET
             int preserveMetadata = 1, 
             int useObjstms = 0, 
             int compressionEffort = 0, 
-            bool raiseOnRepair = false)
+            bool raiseOnRepair = false,
+            int reproducible = 0)
         {
-            SaveCore(filename, garbage, clean, deflate, deflateImages, deflateFonts, incremental, ascii, expand, linear, noNewId, appearance, pretty, encryption, permissions, ownerPW, userPW, preserveMetadata, useObjstms, compressionEffort, raiseOnRepair);
+            SaveCore(filename, garbage, clean, deflate, deflateImages, deflateFonts, incremental, ascii, expand, linear, noNewId, appearance, pretty, encryption, permissions, ownerPW, userPW, preserveMetadata, useObjstms, compressionEffort, raiseOnRepair, reproducible);
         }
+
         /// <summary>
         /// PDF only: save the document
         /// </summary>
@@ -2417,6 +2491,7 @@ namespace MuPDF.NET
         /// <param name="useObjstms">Store eligible objects in object streams (size reduction).</param>
         /// <param name="compressionEffort">Compression effort 0 (default) to 100 (maximum).</param>
         /// <param name="raiseOnRepair">Throw if save repairs the PDF structure.</param>
+        /// <param name="reproducible">If non-zero, omit the MuPDF version from the PDF header comment.</param>
         /// <exception cref="ValueErrorException">Document is closed, encrypted, or arguments are invalid.</exception>
         public void Save(
             Stream output,
@@ -2439,12 +2514,13 @@ namespace MuPDF.NET
             int preserveMetadata = 1,
             int useObjstms = 0,
             int compressionEffort = 0,
-            bool raiseOnRepair = false)
+            bool raiseOnRepair = false,
+            int reproducible = 0)
         {
-            SaveCore(output, garbage, clean, deflate, deflateImages, deflateFonts, incremental, ascii, expand, linear, noNewId, appearance, pretty, encryption, permissions, ownerPW, userPW, preserveMetadata, useObjstms, compressionEffort, raiseOnRepair);
+            SaveCore(output, garbage, clean, deflate, deflateImages, deflateFonts, incremental, ascii, expand, linear, noNewId, appearance, pretty, encryption, permissions, ownerPW, userPW, preserveMetadata, useObjstms, compressionEffort, raiseOnRepair, reproducible);
         }
 
-        private void SaveCore(
+        private byte[] SaveCore(
             object filename,
             int garbage,
             int clean,
@@ -2465,7 +2541,8 @@ namespace MuPDF.NET
             int preserveMetadata,
             int useObjstms,
             int compressionEffort,
-            bool raiseOnRepair)
+            bool raiseOnRepair,
+            int reproducible = 0)
         {
             bool is_repaired_pre = IsRepaired;
             if (IsClosed || IsEncrypted)
@@ -2476,7 +2553,7 @@ namespace MuPDF.NET
                 fname = s;
             else if (filename is Stream st)
                 stream = st;
-            else
+            else if (filename != null)
                 throw new ValueErrorException("filename must be str or Stream");
             // MuPDF: disallow overwriting the on-disk path unless incremental. Memory opens (StreamData) are ok.
             if (fname == Name && incremental == 0 && (StreamData == null || StreamData.Length == 0))
@@ -2496,6 +2573,7 @@ namespace MuPDF.NET
             // Use cached borrowed PdfDocument — do not dispose (owned by FzDocument).
             var pdf = Helpers.AsPdfDocument(this, required: false);
             Document convertedDoc = null;
+            byte[] pdfBytes = null;
             if (!IsPdf || pdf.m_internal == null)
             {
                 convertedDoc = new Document(ConvertToPdf(), "pdf");
@@ -2529,6 +2607,7 @@ namespace MuPDF.NET
                     opts.do_preserve_metadata = preserveMetadata;
                     opts.do_use_objstms = useObjstms;
                     opts.compression_effort = compressionEffort;
+                    opts.reproducible = reproducible;
 
                     pdf.m_internal.resynth_required = 0;
                     Helpers.JM_embedded_clean(pdf);
@@ -2545,47 +2624,20 @@ namespace MuPDF.NET
                         else
                         {
                             // pdf_save_document removes the target first; on Windows that
-                            // fails if another handle still has the file open. Write to memory
-                            // then create/truncate via .NET (MuPDF uses pdf_save_document
-                            using var memStream = new MemoryStream();
-                            var output = new FilePtrOutput(memStream);
-                            try
-                            {
-                                pdf.pdf_write_document(output, opts);
-                                output.fz_close_output();
-                            }
-                            finally
-                            {
-                                output.Dispose();
-                            }
-                            WriteBytesToFile(fname, memStream.ToArray());
+                            // fails if another handle still has the file open. Write to an
+                            WriteBytesToFile(fname, Helpers.PdfWriteDocumentToBytes(pdf, opts));
                         }
                     }
-                    else if (stream != null)
+                    else
                     {
-                        var memStream = stream as MemoryStream;
-                        if (memStream == null)
+                        pdfBytes = Helpers.PdfWriteDocumentToBytes(pdf, opts);
+                        if (stream != null)
                         {
-                            using var copy = new MemoryStream();
                             if (stream.CanSeek)
                                 stream.Position = 0;
-                            stream.CopyTo(copy);
-                            memStream = copy;
-                        }
-                        var output = new FilePtrOutput(memStream);
-                        try
-                        {
-                            pdf.pdf_write_document(output, opts);
-                            output.fz_close_output();
-                        }
-                        finally
-                        {
-                            output.Dispose();
-                        }
-                        if (!ReferenceEquals(stream, memStream) && stream.CanWrite)
-                        {
-                            memStream.Position = 0;
-                            memStream.CopyTo(stream);
+                            stream.Write(pdfBytes, 0, pdfBytes.Length);
+                            if (stream.CanSeek)
+                                stream.SetLength(pdfBytes.Length);
                         }
                     }
                 }
@@ -2600,11 +2652,13 @@ namespace MuPDF.NET
                 if (IsRepaired && !is_repaired_pre)
                     throw new Exception("Document save did a repair");
             }
+            return pdfBytes;
         }
+
         /// <summary>
         /// PDF only: writes document to memory
         /// </summary>
-        /// <remarks>PDF only: Writes the current content of the document to a bytes object instead of to a file. Obviously, you should be wary about memory requirements. The meanings of the parameters exactly equal those in <see cref="Save"/>. Chapter the MuPDF FAQ contains an example for using this method as a pre-processor to <c>pdfrw &lt;https://pypi.python.org/pypi/pdfrw/0.3&gt;. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
+        /// <remarks>PDF only: writes the current document content to a byte array instead of a file. Watch memory usage. Parameter meanings match <see cref="Save"/>. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         /// <param name="garbage">Garbage-collection level (0–4). Positive values exclude incremental save.</param>
         /// <param name="clean">If true, clean and sanitize content streams.</param>
         /// <param name="deflate">If true, deflate (compress) uncompressed streams.</param>
@@ -2626,19 +2680,21 @@ namespace MuPDF.NET
         /// <param name="preserveMetadata">If <see langword="true"/>, keep existing metadata when encrypting.</param>
         /// <param name="useObjstms">If <see langword="true"/>, store eligible objects in object streams.</param>
         /// <param name="compressionEffort">If <see langword="true"/>, spend extra effort on stream compression.</param>
-        /// <returns>a bytes object containing the complete document.</returns>
+        /// <returns>A byte array containing the complete document.</returns>
         public byte[] Write(bool garbage = false, bool clean = false, bool deflate = false,
             bool deflateImages = false, bool deflateFonts = false, bool incremental = false,
             bool ascii = false, bool expand = false, bool linear = false, bool noNewId = false,
             bool appearance = false, bool pretty = false, int encryption = 1, int permissions = 4095,
             string ownerPw = null, string userPw = null, string ownerPW = null, string userPW = null,
-            bool preserveMetadata = true, bool useObjstms = false, bool compressionEffort = false)
+            bool preserveMetadata = true, bool useObjstms = false, bool compressionEffort = false,
+            bool raiseOnRepair = false, bool reproducible = false)
         {
             string ownerPassword = ownerPW ?? ownerPw;
             string userPassword = userPW ?? userPw;
-            using var ms = new MemoryStream();
-            Save(
-                ms,
+            // write goes to an fz_buffer (not a director Stream). Avoid
+            // MemoryStream + ToArray extra LOH copies that keep WorkingSet high.
+            return SaveCore(
+                null,
                 garbage: garbage ? 1 : 0,
                 clean: clean ? 1 : 0,
                 deflate: deflate ? 1 : 0,
@@ -2657,22 +2713,24 @@ namespace MuPDF.NET
                 userPW: userPassword,
                 preserveMetadata: preserveMetadata ? 1 : 0,
                 useObjstms: useObjstms ? 1 : 0,
-                compressionEffort: compressionEffort ? 1 : 0);
-            return ms.ToArray();
+                compressionEffort: compressionEffort ? 1 : 0,
+                raiseOnRepair: raiseOnRepair,
+                reproducible: reproducible ? 1 : 0) ?? Array.Empty<byte>();
         }
+
         /// <summary>
-        /// PDF only: writes the current document to a byte array .
+        /// PDF only: writes the current document to a byte array.
         /// </summary>
         /// <remarks>Parameter meanings match <see cref="Save(object, int, int, int, int, int, int, int, int, int, int?, int, int, int, int, string, string, int, int, int, bool)"/>.</remarks>
         /// <param name="garbage">Garbage-collection level (0–4).</param>
         /// <param name="clean">If true, clean and sanitize content streams.</param>
         /// <param name="deflate">If true, deflate uncompressed streams.</param>
         /// <returns>PDF file bytes.</returns>
-        public byte[] ToBytes(bool garbage = false, bool clean = false, bool deflate = false) =>
-            Write(garbage: garbage, clean: clean, deflate: deflate);
+        public byte[] ToBytes(bool garbage = false, bool clean = false, bool deflate = false, bool reproducible = false) =>
+            Write(garbage: garbage, clean: clean, deflate: deflate, reproducible: reproducible);
 
         /// <summary>
-        /// Convert document to a PDF, selecting page range and optional rotation. Output bytes object.
+        /// Convert document to a PDF, selecting page range and optional rotation. Returns PDF bytes.
         /// </summary>
         public byte[] ConvertToPdf(int fromPage = 0, int toPage = -1, int rotate = 0)
         {
@@ -2697,11 +2755,13 @@ namespace MuPDF.NET
                 Helpers.message($"{Helpers.JM_mupdf_warnings_store[i]}");
             return doc;
         }
+
         /// <summary>
         /// PDF only: save the document incrementally
         /// </summary>
         /// <remarks>PDF only: saves the document incrementally. This is a convenience abbreviation for <c>doc.save(doc.name, incremental=True, encryption=PDF_ENCRYPT_KEEP)</c>. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public void SaveIncr() => Save(Name, incremental: 1);
+
         /// <summary>
         /// check if incremental save is possible
         /// </summary>
@@ -2712,6 +2772,7 @@ namespace MuPDF.NET
             try { return mupdf.mupdf.pdf_can_be_saved_incrementally(NativePdfDocument) != 0; }
             catch { return false; }
         }
+
         /// <summary>
         /// PDF only: <see cref="Save"/> with different defaults
         /// </summary>
@@ -2730,11 +2791,12 @@ namespace MuPDF.NET
         /// <param name="useObjstms">If non-zero, store eligible objects in object streams (default 1 for <see cref="EzSave"/>).</param>
         public void EzSave(string filename, int garbage = 1, int clean = 0, int deflate = 1,
             int deflateImages = 1, int deflateFonts = 1, int pretty = 0, int linear = 0,
-            int ascii = 0, int encryption = 1, int noNewId = 1, int useObjstms = 1)
+            int ascii = 0, int encryption = 1, int noNewId = 1, int useObjstms = 1,
+            int reproducible = 0)
         {
             Save(filename, garbage: garbage, clean: clean, deflate: deflate, deflateImages: deflateImages,
                 deflateFonts: deflateFonts, pretty: pretty, linear: linear, ascii: ascii, encryption: encryption,
-                noNewId: noNewId, useObjstms: useObjstms);
+                noNewId: noNewId, useObjstms: useObjstms, reproducible: reproducible);
         }
 
         // ─── Xref Operations ────────────────────────────────────────────
@@ -2766,6 +2828,7 @@ namespace MuPDF.NET
             if (xref < 1 || xref > len)
                 throw new ValueErrorException(Constants.MSG_BAD_XREF);
         }
+
         /// <summary>
         /// PDF only: xref of a page number
         /// </summary>
@@ -2777,6 +2840,7 @@ namespace MuPDF.NET
             pno = Helpers.ResolvePageIndex(PageCount, pno);
             return mupdf.mupdf.pdf_to_num(mupdf.mupdf.pdf_lookup_page_obj(NativePdfDocument, pno));
         }
+
         /// <summary>
         /// PDF only: get the definition source of xref
         /// </summary>
@@ -2789,7 +2853,7 @@ namespace MuPDF.NET
         {
             if (IsClosed)
                 throw new ValueErrorException("document closed");
-            //     ret = extra.xref_object( self.this, xref, compressed, ascii)
+
             var pdf = Helpers.AsPdfDocument(this, required: true);
             int xreflen = mupdf.mupdf.pdf_xref_len(pdf);
             if (!Helpers.InRange(xref, 1, xreflen - 1) && xref != -1)
@@ -2811,6 +2875,7 @@ namespace MuPDF.NET
                 }
             }
         }
+
         /// <summary>
         /// Gets whether the xref identifies a stream object.
         /// </summary>
@@ -2822,6 +2887,7 @@ namespace MuPDF.NET
             try { return mupdf.mupdf.pdf_obj_num_is_stream(NativePdfDocument, xref) != 0; }
             catch { return false; }
         }
+
         /// <summary>
         /// Gets whether the xref identifies a font object.
         /// </summary>
@@ -2838,16 +2904,19 @@ namespace MuPDF.NET
             return st == "/Type1" || st == "/TrueType" || st == "/MMType1" || st == "/Type3"
                 || st == "/Type0" || st == "/CIDFontType0" || st == "/CIDFontType2" || st == "/CIDFontType0C";
         }
+
         /// <summary>
         /// Gets whether the xref identifies an image object.
         /// </summary>
         /// <remarks><see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public bool XrefIsImage(int xref) => XrefGetKey(xref, "Subtype").value == "/Image";
+
         /// <summary>
         /// Gets whether the xref identifies a Form XObject.
         /// </summary>
         /// <remarks><see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public bool XrefIsXobject(int xref) => XrefGetKey(xref, "Subtype").value == "/Form";
+
         /// <summary>
         /// Gets the decompressed stream bytes at xref.
         /// </summary>
@@ -2865,10 +2934,11 @@ namespace MuPDF.NET
             if (mupdf.mupdf.pdf_is_stream(obj) != 0)
             {
                 var res = mupdf.mupdf.pdf_load_stream_number(pdf, xref);
-                return res.fz_buffer_extract();
+                return Helpers.JM_BinFromBuffer(res);
             }
             return null;
         }
+
         /// <summary>
         /// PDF only: raw stream source at xref
         /// </summary>
@@ -2886,13 +2956,13 @@ namespace MuPDF.NET
             if (mupdf.mupdf.pdf_is_stream(obj) != 0)
             {
                 var res = mupdf.mupdf.pdf_load_raw_stream_number(pdf, xref);
-                return res.fz_buffer_extract();
+                return Helpers.JM_BinFromBuffer(res);
             }
             return null;
         }
 
         /// <summary>
-        /// Same as + UTF-8 decode (Python uses raw-unicode-escape; PDF syntax is ASCII-safe here).
+        /// Same as + UTF-8 decode (PyMuPDF uses raw-unicode-escape; PDF syntax is ASCII-safe here).
         /// </summary>
         private static string PdfObjPrintToString(mupdf.PdfObj obj, int compress, int ascii)
             => Helpers.PdfObjPrintToString(obj, compress, ascii);
@@ -2958,6 +3028,7 @@ namespace MuPDF.NET
             if (mupdf.mupdf.pdf_is_dict(sub) != 0) return ("dict", PdfObjToKeyValueString(sub));
             return ("unknown", PdfObjToKeyValueString(sub));
         }
+
         /// <summary>
         /// PDF only: list the keys of object at xref
         /// </summary>
@@ -2985,7 +3056,6 @@ namespace MuPDF.NET
 
         private static bool IsValidXrefSetKey(string key)
         {
-            // INVALID_NAME_CHARS.intersection(key) not in (set(), {"/"})
             if (string.IsNullOrEmpty(key))
                 return false;
             var bad = new HashSet<char>(key.Where(c => InvalidNameChars.Contains(c)));
@@ -3000,6 +3070,7 @@ namespace MuPDF.NET
                 return !value.Substring(1).Any(c => InvalidNameChars.Contains(c));
             return true;
         }
+
         /// <summary>
         /// PDF only: set the value of a dictionary key
         /// </summary>
@@ -3033,6 +3104,7 @@ namespace MuPDF.NET
                 mupdf.mupdf.pdf_dict_put(obj, dictKey, dictVal);
             }
         }
+
         /// <summary>
         /// Gets PDF only: xref of XML metadata.
         /// </summary>
@@ -3052,6 +3124,7 @@ namespace MuPDF.NET
                 catch { return 0; }
             }
         }
+
         /// <summary>
         /// PDF only: read the XML metadata
         /// </summary>
@@ -3063,9 +3136,8 @@ namespace MuPDF.NET
             var pdf = Helpers.AsPdfDocument(this, required: false);
             if (pdf.m_internal != null)
             {
-                //         PDF_NAME('Root'),
-                //         PDF_NAME('Metadata'),
-                //         )
+                // PDF_NAME('Root'),
+                // PDF_NAME('Metadata'),
                 xml = Helpers.PdfDictGetl(
                     mupdf.mupdf.pdf_trailer(pdf),
                     mupdf.mupdf.pdf_new_name("Root"),
@@ -3074,12 +3146,11 @@ namespace MuPDF.NET
             if (xml.m_internal != null)
             {
                 using var buff = mupdf.mupdf.pdf_load_stream(xml);
-                // rc = JM_UnicodeFromBuffer(buff)
                 return Helpers.JM_UnicodeFromBuffer(buff);
             }
-            //     rc = ''
             return "";
         }
+
         /// <summary>
         /// PDF only: create or update document XML metadata
         /// </summary>
@@ -3088,18 +3159,16 @@ namespace MuPDF.NET
         public void SetXmlMetadata(string metadata)
         {
             if (IsClosed || IsEncrypted)
-                // raise ValueError("document closed or encrypted")
+
                 throw new ValueErrorException("document closed or encrypted");
             var pdf = Helpers.AsPdfDocument(this, required: true);
             var root = Helpers.PdfDictGet(mupdf.mupdf.pdf_trailer(pdf), mupdf.mupdf.pdf_new_name("Root"));
             if (root.m_internal == null)
-                // RAISEPY( MSG_BAD_PDFROOT, JM_Exc_FileDataError)
                 throw new FileDataException(Constants.MSG_BAD_PDFROOT);
             var res = Helpers.BufferFromBytes(System.Text.Encoding.UTF8.GetBytes(metadata ?? ""));
             var xml = Helpers.PdfDictGet(root, mupdf.mupdf.pdf_new_name("Metadata"));
             if (xml.m_internal != null)
             {
-                // JM_update_stream( pdf, xml, res, 0)
                 Helpers.JmUpdateStream(pdf, xml, res, 0);
             }
             else
@@ -3110,6 +3179,7 @@ namespace MuPDF.NET
                 mupdf.mupdf.pdf_dict_put(root, mupdf.mupdf.pdf_new_name("Metadata"), xml);
             }
         }
+
         /// <summary>
         /// Removes the PDF XMP metadata stream.
         /// </summary>
@@ -3121,6 +3191,7 @@ namespace MuPDF.NET
             var root = Helpers.PdfDictGet(mupdf.mupdf.pdf_trailer(pdf), mupdf.mupdf.pdf_new_name("Root"));
             mupdf.mupdf.pdf_dict_dels(root, "Metadata");
         }
+
         /// <summary>
         /// PDF only: Replace object definition of xref with the provided string. The xref may also be new, in which case this instruction completes the object definition. If a page object is also given, its links and annotations will be reloaded afterwards.
         /// </summary>
@@ -3131,30 +3202,27 @@ namespace MuPDF.NET
         public void UpdateObject(int xref, string text, Page page = null)
         {
             if (IsClosed || IsEncrypted)
-                // raise ValueError("document closed or encrypted")
+
                 throw new ValueErrorException("document closed or encrypted");
             var pdf = Helpers.AsPdfDocument(this, required: true);
             int xreflen = mupdf.mupdf.pdf_xref_len(pdf);
             if (!Helpers.InRange(xref, 1, xreflen - 1))
-                // RAISEPY("bad xref", MSG_BAD_XREF)
                 throw new ValueErrorException(Constants.MSG_BAD_XREF);
-            // ENSURE_OPERATION(pdf)
             Helpers.ENSURE_OPERATION(pdf);
             // create new object with passed-in string
-            // new_obj = JM_pdf_obj_from_str(pdf, text)
             var new_obj = Helpers.JM_pdf_obj_from_str(pdf, text);
             mupdf.mupdf.pdf_update_object(pdf, xref, new_obj);
             if (page != null)
-                // JM_refresh_links( _as_pdf_page(page))
                 Helpers.JM_refresh_links(pdf, Helpers.AsPdfPage(page, required: true));
         }
+
         /// <summary>
         /// Replace the stream of an object identified by xref, which must be a PDF dictionary. If the object is no stream, it will be turned into one. The function automatically performs a compress operation ("deflate") where beneficial.
         /// </summary>
         /// <remarks><see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         /// <param name="xref">PDF object number of the font to extract.</param>
         /// <param name="stream">the new content of the stream.</param>
-        /// <param name="compress">whether to compress the inserted stream. If `True` (default), the stream will be inserted using `/FlateDecode` compression (if beneficial), otherwise the stream will inserted as is.</param>
+        /// <param name="compress">Whether to compress the inserted stream. If true (default), the stream is inserted using <c>/FlateDecode</c> when beneficial; otherwise it is inserted as-is.</param>
         public void UpdateStream(int xref, byte[] stream, bool compress = true)
         {
             EnsureNotClosed();
@@ -3170,6 +3238,7 @@ namespace MuPDF.NET
                 throw new ArgumentException(Constants.MSG_BAD_BUFFER);
             Helpers.JmUpdateStream(pdf, obj, buf, compress ? 1 : 0);
         }
+
         /// <summary>
         /// PDF only: copy a PDF dictionary to another xref
         /// </summary>
@@ -3183,6 +3252,7 @@ namespace MuPDF.NET
             if (document == null) throw new ArgumentNullException(nameof(document));
             document.XrefCopyImpl(source, target, keepKeys);
         }
+
         /// <summary>
         /// PDF only: copy a PDF dictionary to another xref
         /// </summary>
@@ -3219,6 +3289,7 @@ namespace MuPDF.NET
                 XrefSetKey(target, key, value);
             }
         }
+
         /// <summary>
         /// Allocates a new unused PDF object number (xref).
         /// </summary>
@@ -3232,6 +3303,7 @@ namespace MuPDF.NET
             EnsurePdf();
             return mupdf.mupdf.pdf_create_object(NativePdfDocument);
         }
+
         /// <summary>
         /// PDF only: get OCG /OCMD xref of image / form xobject
         /// </summary>
@@ -3250,11 +3322,12 @@ namespace MuPDF.NET
 
             return int.Parse(oc.value.Replace("0 R", "").Trim());
         }
+
         /// <summary>
         /// PDF only: attach OCG/OCMD to image / form xobject
         /// </summary>
         /// <remarks>If xref represents an image or form xobject, set or remove the cross reference number *ocxref* of an optional contents object. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
-        /// <param name="xref">the xref of an image or form xobject . Valid such cross reference numbers are returned by <see cref="GetPageImages"/>, resp. <see cref="GetPageXobjects"/>. For invalid numbers, an exception is raised.</param>
+        /// <param name="xref">the xref of an image or form xobject. Valid such cross reference numbers are returned by <see cref="GetPageImages"/>, resp. <see cref="GetPageXobjects"/>. For invalid numbers, an exception is raised.</param>
         /// <param name="oc">OCG or OCMD xref to attach.</param>
         public void SetOc(int xref, int oc)
         {
@@ -3277,6 +3350,7 @@ namespace MuPDF.NET
 
             XrefSetKey(xref, "OC", $"{oc} 0 R");
         }
+
         /// <summary>
         /// PDF only: retrieve definition of an OCMD
         /// </summary>
@@ -3348,6 +3422,7 @@ namespace MuPDF.NET
                 ["ve"] = ve
             };
         }
+
         /// <summary>
         /// PDF only: create or update an OCMD
         /// </summary>
@@ -3441,6 +3516,7 @@ namespace MuPDF.NET
             UpdateObject(xref, text);
             return xref;
         }
+
         /// <summary>
         /// PDF only: Convert destination names into a Python dict
         /// </summary>
@@ -3629,6 +3705,7 @@ namespace MuPDF.NET
             _resolvedNames = destDictResult;
             return destDictResult;
         }
+
         /// <summary>
         /// Gets Gets the xref of the PDF catalog (root) dictionary.
         /// </summary>
@@ -3649,6 +3726,7 @@ namespace MuPDF.NET
                 catch { return 0; }
             }
         }
+
         /// <summary>
         /// Gets the trailer dictionary as a formatted string.
         /// </summary>
@@ -3661,6 +3739,7 @@ namespace MuPDF.NET
         }
 
         // ─── Embedded Files ─────────────────────────────────────────────
+
         /// <summary>
         /// Gets Gets the number of embedded files.
         /// </summary>
@@ -3674,6 +3753,7 @@ namespace MuPDF.NET
                 return GetEmbeddedFileNames().Count;
             }
         }
+
         /// <summary>
         /// PDF only: list of embedded files
         /// </summary>
@@ -3686,35 +3766,40 @@ namespace MuPDF.NET
                 _embfile_names(filenames);
             return filenames;
         }
+
         /// <summary>
         /// PDF only: extract an embedded file buffer
         /// </summary>
         /// <remarks>PDF only: Retrieve the content of embedded file by its entry number or name. If the document is not a PDF, or entry cannot be found, an exception is raised. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public byte[] GetEmbeddedFile(string name) => _embeddedFileGet(_embeddedFileIndex(name));
+
         /// <summary>
         /// PDF only: extract an embedded file buffer
         /// </summary>
         /// <remarks>PDF only: Retrieve the content of embedded file by its entry number or name. If the document is not a PDF, or entry cannot be found, an exception is raised. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public byte[] GetEmbeddedFile(int idx) => _embeddedFileGet(_embeddedFileIndex(idx));
+
         /// <summary>
         /// PDF only: delete an embedded file entry
         /// </summary>
         /// <remarks>PDF only: Remove an entry from `/EmbeddedFiles`. As always, physical deletion of the embedded file content (and file space regain) will occur only when the document is saved to a new file with a suitable garbage option. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public void DeleteEmbeddedFile(string name) => _embfile_del(_embeddedFileIndex(name));
+
         /// <summary>
         /// PDF only: delete an embedded file entry
         /// </summary>
         /// <remarks>PDF only: Remove an entry from `/EmbeddedFiles`. As always, physical deletion of the embedded file content (and file space regain) will occur only when the document is saved to a new file with a suitable garbage option. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public void DeleteEmbeddedFile(int idx) => _embfile_del(_embeddedFileIndex(idx));
+
         /// <summary>
         /// Adds an embedded file from a byte buffer.
         /// </summary>
         /// <remarks>PDF only: Embed a new file. All string parameters except the name may be unicode (in previous versions, only ASCII worked correctly). File contents will be compressed (where beneficial). <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         /// <param name="name">entry identifier, must not already exist.</param>
         /// <param name="buffer">file contents.</param>
-        /// <param name="filename">optional filename. Documentation only, will be set to *name* if <c>None</c>.</param>
+        /// <param name="filename">optional filename. Documentation only; defaults to <paramref name="name"/>.</param>
         /// <param name="uFileName">Unicode display filename for the embedded file (defaults to <paramref name="filename"/>).</param>
-        /// <param name="desc">optional description. Documentation only, will be set to *name* if <c>None</c>.</param>
+        /// <param name="desc">optional description. Documentation only; defaults to <paramref name="name"/>.</param>
         /// <returns>*(Changed in v1.18.13)* The method now returns the xref of the inserted file. In addition, the file object now will be automatically given the PDF keys <c>/CreationDate</c> and <c>/ModDate</c> based on the current date-time.</returns>
         public int AddEmbeddedFile(string name, byte[] buffer, string filename = null, string uFileName = null, string desc = null)
         {
@@ -3731,11 +3816,13 @@ namespace MuPDF.NET
             XrefSetKey(xref, "Params/ModDate", Helpers.GetPdfStr(date));
             return xref;
         }
+
         /// <summary>
         /// PDF only: metadata of an embedded file
         /// </summary>
         /// <remarks>PDF only: Retrieve information of an embedded file given by its number or by its name. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public Dictionary<string, object> GetEmbeddedFileInfo(string name) => GetEmbeddedFileInfo(_embeddedFileIndex(name));
+
         /// <summary>
         /// PDF only: metadata of an embedded file
         /// </summary>
@@ -3768,12 +3855,14 @@ namespace MuPDF.NET
             }
             return infodict;
         }
+
         /// <summary>
         /// Updates an existing embedded file entry.
         /// </summary>
         /// <remarks>PDF only: Change an embedded file given its entry number or name. All parameters are optional. Letting them default leads to a no-operation. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public int UpdateEmbeddedFile(string name, byte[] buffer = null, string filename = null, string uFileName = null, string desc = null)
             => UpdateEmbeddedFile(_embeddedFileIndex(name), buffer, filename, uFileName, desc);
+
         /// <summary>
         /// Updates an existing embedded file entry.
         /// </summary>
@@ -3805,7 +3894,7 @@ namespace MuPDF.NET
             var entry = mupdf.mupdf.pdf_array_get(names, 2 * idx + 1);
             var filespec = Helpers.PdfDictGetl(entry, mupdf.mupdf.pdf_new_name("EF"), mupdf.mupdf.pdf_new_name("F"));
             var buf = mupdf.mupdf.pdf_load_stream(filespec);
-            return buf.fz_buffer_extract();
+            return Helpers.JM_BinFromBuffer(buf);
         }
 
         /// <summary>Resolves an embedded file index by name.</summary>
@@ -3977,8 +4066,8 @@ namespace MuPDF.NET
         // ─── Font / Image extraction ────────────────────────────────────
 
         /// <summary>
-        /// List fonts used on a page .
-        /// When <paramref name="full"/> is false, the last tuple item is null (Python omits the referencer xref).
+        /// List fonts used on a page.
+        /// When <paramref name="full"/> is false, the last tuple item is null (PyMuPDF omits the referencer xref).
         /// When true, it is the stream xref of the Form XObject whose <c>/Resources</c> contained the font (0 on the page itself).
         /// </summary>
         public List<(int xref, string ext, string type, string baseName, string name, string encoding, int? referencer)> GetPageFonts(int pno, bool full = false)
@@ -4256,6 +4345,7 @@ namespace MuPDF.NET
             }
             return "n/a";
         }
+
         /// <summary>
         /// Lists images referenced on a page.
         /// </summary>
@@ -4332,6 +4422,7 @@ namespace MuPDF.NET
                 result.Add((item.xref, (AnnotationType)item.type_, item.nm));
             return result;
         }
+
         /// <summary>
         /// Lists annotation xrefs on a page.
         /// </summary>
@@ -4445,8 +4536,9 @@ namespace MuPDF.NET
 
         /// <summary>
         /// Load an <see cref="mupdf.FzFont"/> for width/glyph tables (MuPDF
-        /// <c>Document._get_char_widths</c>: Base-14 lookup, then <c>JM_get_fontbuffer</c>).
         /// </summary>
+        /// <c>Document._get_char_widths</c>: Base-14 lookup, then <c>JM_get_fontbuffer</c>).
+
         internal static mupdf.FzFont LoadFzFontForCharWidths(
             Document doc, int xref, string pdfBaseFontName, byte[] content, int idx = 0,
             string fontfile = null)
@@ -4536,7 +4628,6 @@ namespace MuPDF.NET
                     throw new ArgumentException("xref is not a font");
 
                 bool simple = IsSimpleFontType(stype);
-                // Preserve ordering from InsertFont / JM_insert_font (e.g. china-t → 0).
                 // GetCjkOrdering only knows legacy BaseFont names (Ming/Song/…), not
                 // MuPDF 1.28.2 Source Han names — overwriting would force a broken
                 // Base-14 lookup and "cannot find builtin font SourceHanSerif…".
@@ -4569,7 +4660,7 @@ namespace MuPDF.NET
             int cjkOrdering = fontdict.ContainsKey("ordering") && fontdict["ordering"] is int ? (int)fontdict["ordering"] : -1;
             if (cjkOrdering >= 0)
             {
-                // Python returns None for CJK fonts here; keep null-equivalent in cache and return null.
+                // PyMuPDF returns None for CJK fonts here; keep null-equivalent in cache and return null.
                 fontdict["glyphs"] = null;
                 fontinfo[1] = fontdict;
                 UpdateFontInfo(fontinfo);
@@ -4608,6 +4699,7 @@ namespace MuPDF.NET
             UpdateFontInfo(fontinfo);
             return glyphs;
         }
+
         /// <summary>
         /// Extracts image information by xref.
         /// </summary>
@@ -4708,6 +4800,7 @@ namespace MuPDF.NET
         }
 
         // ─── Search ─────────────────────────────────────────────────────
+
         /// <summary>
         /// search for a string on a page
         /// </summary>
@@ -4724,6 +4817,7 @@ namespace MuPDF.NET
             using var page = LoadPage(pno);
             return page.SearchFor(needle, clip, maxHits, flags, textpage);
         }
+
         /// <summary>
         /// search for a string on a page
         /// </summary>
@@ -4742,6 +4836,7 @@ namespace MuPDF.NET
         }
 
         // ─── Page Pixmap / Text convenience ─────────────────────────────
+
         /// <summary>
         /// create a pixmap of a page by page number
         /// </summary>
@@ -4756,6 +4851,7 @@ namespace MuPDF.NET
             using var page = LoadPage(pno);
             return page.GetPixmap(matrix, cs, clip, alpha);
         }
+
         /// <summary>
         /// extract the text of a page by page number
         /// </summary>
@@ -4768,6 +4864,7 @@ namespace MuPDF.NET
             using var page = LoadPage(pno);
             return page.GetText(option, flags: flags);
         }
+
         /// <summary>
         /// Lists Form XObjects referenced on a page.
         /// </summary>
@@ -4814,6 +4911,7 @@ namespace MuPDF.NET
 
             return result;
         }
+
         /// <summary>
         /// Gets page numbers that use a given label.
         /// </summary>
@@ -4828,17 +4926,14 @@ namespace MuPDF.NET
             if (string.IsNullOrEmpty(label))
                 return numbers;
 
-            // labels = doc._get_page_labels()
             var labels = _get_page_labels();
             if (labels.Count == 0)
                 return numbers;
             for (int i = 0; i < PageCount; i++)
             {
-                // plabel = utils.get_label_pno(i, labels)
                 string plabel = Utils.GetLabelPno(i, labels);
                 if (plabel == label)
                 {
-                    // numbers.append(i)
                     numbers.Add(i);
                     if (onlyOne)
                         break;
@@ -4849,10 +4944,10 @@ namespace MuPDF.NET
         }
 
         /// <summary>Internal page-label reader.</summary>
-        internal List<(int pno, string rule)> _get_page_labels()
+        internal List<(int pno, mupdf.PdfObj rule)> _get_page_labels()
         {
             var pdf = Helpers.AsPdfDocument(this, required: true);
-            var rc = new List<(int pno, string rule)>();
+            var rc = new List<(int pno, mupdf.PdfObj rule)>();
             var pagelabels = mupdf.mupdf.pdf_new_name("PageLabels");
             var obj = Helpers.PdfDictGetl(
                 mupdf.mupdf.pdf_trailer(pdf),
@@ -4865,7 +4960,6 @@ namespace MuPDF.NET
                 Helpers.PdfDictGet(obj, mupdf.mupdf.pdf_new_name("Nums")));
             if (nums.m_internal != null)
             {
-                // JM_get_page_labels(rc, nums)
                 Helpers.JmGetPageLabels(rc, nums);
                 return rc;
             }
@@ -4874,7 +4968,6 @@ namespace MuPDF.NET
                 Helpers.PdfDictGetl(obj, mupdf.mupdf.pdf_new_name("Kids"), mupdf.mupdf.pdf_new_name("Nums")));
             if (nums.m_internal != null)
             {
-                // JM_get_page_labels(rc, nums)
                 Helpers.JmGetPageLabels(rc, nums);
                 return rc;
             }
@@ -4886,19 +4979,17 @@ namespace MuPDF.NET
             int n = kids.pdf_array_len();
             for (int i = 0; i < n; i++)
             {
-                //         Helpers.PdfObjDictGet(mupdf,
-                //             PDF_NAME('Nums'),
-                //             )
-                //         )
+                // Helpers.PdfObjDictGet(mupdf,
+                // PDF_NAME('Nums'),
                 nums = mupdf.mupdf.pdf_resolve_indirect(
                     Helpers.PdfDictGet(
                         kids.pdf_array_get(i),
                         mupdf.mupdf.pdf_new_name("Nums")));
-                // JM_get_page_labels(rc, nums)
                 Helpers.JmGetPageLabels(rc, nums);
             }
             return rc;
         }
+
         /// <summary>
         /// Gets PDF page label definitions.
         /// </summary>
@@ -4929,15 +5020,15 @@ namespace MuPDF.NET
                 pagelabels,
                 mupdf.mupdf.pdf_new_name("Nums"));
 
-            // xref = self.pdf_catalog()
+
             int xref = pdf_catalog();
-            // text = self.xref_object(xref, compressed=True)
+
             string text = xref_object(xref, compressed: true);
-            // text = text.replace("/Nums[]", f"/Nums[{labels}]")
             text = text.Replace("/Nums[]", $"/Nums[{labels}]");
-            // self.UpdateObject(xref, text)
+
             UpdateObject(xref, text);
         }
+
         /// <summary>
         /// PDF only: add/update page label definitions
         /// </summary>
@@ -4946,30 +5037,24 @@ namespace MuPDF.NET
         public void SetPageLabels(List<Dictionary<string, object>> labels)
         {
             // Args:
-            //     doc: PDF document (resp. 'self').
-            //     labels: list of label dictionaries like:
-            //     {'startpage': int, 'prefix': str, 'style': str, 'firstpagenum': int},
-            //     as returned by get_page_labels().
+            // labels: list of label dictionaries like:
+            // {'startpage': int, 'prefix': str, 'style': str, 'firstpagenum': int},
+            // as returned by get_page_labels.
             // William Chapman, 2021-01-06
 
             string create_label_str(Dictionary<string, object> label)
             {
                 // Args:
-                //     label: (dict) build rule for the label.
+                // label: (dict) build rule for the label.
                 // Returns:
-                //     PDF label rule string wrapped in "<<", ">>".
-                // s = f"{label['startpage']}<<"
+                // PDF label rule string wrapped in "<<", ">>".
                 string s = Convert.ToInt32(label["startpage"]) + "<<";
                 if (((label.ContainsKey("prefix") ? label["prefix"]?.ToString() : null) ?? "") != "")
-                    // s += f"/P({label['prefix']})"
                     s += "/P(" + label["prefix"] + ")";
                 if (((label.ContainsKey("style") ? label["style"]?.ToString() : null) ?? "") != "")
-                    // s += f"/S/{label['style']}"
                     s += "/S/" + label["style"];
                 if ((label.ContainsKey("firstpagenum") ? Convert.ToInt32(label["firstpagenum"]) : 1) > 1)
-                    // s += f"/St {label['firstpagenum']}"
                     s += "/St " + label["firstpagenum"];
-                // s += ">>"
                 s += ">>";
                 return s;
             }
@@ -4977,13 +5062,11 @@ namespace MuPDF.NET
             string create_nums(List<Dictionary<string, object>> labelList)
             {
                 // Args:
-                //     labels: (list) dictionaries as created by function 'rule_dict'.
+                // labels: (list) dictionaries as created by function 'rule_dict'.
                 // Returns:
-                //     PDF compatible string for page label definitions, ready to be
-                //     enclosed in PDF array 'Nums[...]'.
-                // labels.sort(key=lambda x: x["startpage"])
+                // PDF compatible string for page label definitions, ready to be
+                // enclosed in PDF array 'Nums[...]'.
                 labelList.Sort((a, b) => Convert.ToInt32(a["startpage"]).CompareTo(Convert.ToInt32(b["startpage"])));
-                // s = "".join([create_label_str(label) for label in labels])
                 string s = string.Concat(labelList.Select(create_label_str));
                 return s;
             }
@@ -4991,6 +5074,7 @@ namespace MuPDF.NET
         }
 
         // ─── Layout ─────────────────────────────────────────────────────
+
         /// <summary>
         /// Re-layouts a reflowable document to new dimensions.
         /// </summary>
@@ -5012,6 +5096,7 @@ namespace MuPDF.NET
             ResetPageRefsInternal();
             InitDoc();
         }
+
         /// <summary>
         /// Re-layouts a reflowable document to new dimensions.
         /// </summary>
@@ -5024,7 +5109,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Apply CSS to a reflowable document .
+        /// Apply CSS to a reflowable document.
         /// </summary>
         /// <param name="css">User CSS text.</param>
         /// <param name="append">If true, append to the document type's default CSS; otherwise replace it.</param>
@@ -5041,6 +5126,7 @@ namespace MuPDF.NET
         }
 
         // ─── Journal ────────────────────────────────────────────────────
+
         /// <summary>
         /// PDF only: enables journalling for the document
         /// </summary>
@@ -5052,6 +5138,7 @@ namespace MuPDF.NET
             var pdf = NativePdfDocument;
             mupdf.mupdf.pdf_enable_journal(pdf);
         }
+
         /// <summary>
         /// Gets Gets whether PDF journalling is enabled.
         /// </summary>
@@ -5079,6 +5166,7 @@ namespace MuPDF.NET
             var pdf = NativePdfDocument;
             return (mupdf.mupdf.pdf_can_undo(pdf) != 0, mupdf.mupdf.pdf_can_redo(pdf) != 0);
         }
+
         /// <summary>
         /// PDF only: undo current operation
         /// </summary>
@@ -5089,6 +5177,7 @@ namespace MuPDF.NET
                 throw new ValueErrorException("document closed or encrypted");
             mupdf.mupdf.pdf_undo(NativePdfDocument);
         }
+
         /// <summary>
         /// PDF only: redo current operation
         /// </summary>
@@ -5099,6 +5188,7 @@ namespace MuPDF.NET
                 throw new ValueErrorException("document closed or encrypted");
             mupdf.mupdf.pdf_redo(NativePdfDocument);
         }
+
         /// <summary>
         /// Starts a named journalling operation (PDF undo stack).
         /// </summary>
@@ -5116,6 +5206,7 @@ namespace MuPDF.NET
             else
                 mupdf.mupdf.pdf_begin_implicit_operation(pdf);
         }
+
         /// <summary>
         /// PDF only: end current operation
         /// </summary>
@@ -5126,22 +5217,24 @@ namespace MuPDF.NET
                 throw new ValueErrorException("document closed or encrypted");
             mupdf.mupdf.pdf_end_operation(NativePdfDocument);
         }
+
         /// <summary>
         /// PDF only: save journal to a file
         /// </summary>
         /// <remarks>PDF only: Save the journal to a file. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
-        /// <param name="filename">either a filename as string or a file object opened as "wb" (or an `io.BytesIO()` object).</param>
+        /// <param name="filename">either a filename as string or a file object opened as "wb" (or an `io.BytesIO` object).</param>
         public void JournalSave(string filename)
         {
             if (IsClosed || IsEncrypted)
                 throw new ValueErrorException("document closed or encrypted");
             mupdf.mupdf.pdf_save_journal(NativePdfDocument, filename);
         }
+
         /// <summary>
         /// PDF only: load journal from a file
         /// </summary>
         /// <remarks>PDF only: Load journal from a file. Enables journalling for the document. If journalling is already enabled, an exception is raised. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
-        /// <param name="filename">the filename (str) of the journal or a file object opened as "rb" (or an `io.BytesIO()` object).</param>
+        /// <param name="filename">the filename (str) of the journal or a file object opened as "rb" (or an `io.BytesIO` object).</param>
         public void JournalLoad(string filename)
         {
             if (IsClosed || IsEncrypted)
@@ -5150,6 +5243,7 @@ namespace MuPDF.NET
             if (!JournalIsEnabled)
                 throw new FileDataException("Journal and document do not match");
         }
+
         /// <summary>
         /// PDF only: load journal from a file
         /// </summary>
@@ -5167,6 +5261,7 @@ namespace MuPDF.NET
             if (!JournalIsEnabled)
                 throw new FileDataException("Journal and document do not match");
         }
+
         /// <summary>
         /// PDF only: return name of a journalling step
         /// </summary>
@@ -5191,6 +5286,7 @@ namespace MuPDF.NET
         }
 
         // ─── Repair ─────────────────────────────────────────────────────
+
         /// <summary>
         /// Repairs PDF structure issues.
         /// </summary>
@@ -5203,6 +5299,7 @@ namespace MuPDF.NET
         }
 
         // ─── Insert PDF ─────────────────────────────────────────────────
+
         /// <summary>
         /// Copies a page range from another PDF into this document.
         /// </summary>
@@ -5212,9 +5309,9 @@ namespace MuPDF.NET
         /// <param name="toPage">Last source page number (0-based, inclusive).</param>
         /// <param name="startAt">0-based page number in this document where copied pages are inserted (-1 = append).</param>
         /// <param name="rotate">All copied pages will be rotated by the provided value (degrees, integer multiple of 90).</param>
-        /// <param name="links">Choose whether (internal and external) links should be included in the copy. Default is <c>True</c>. *Named* links (LINK_NAMED) and internal links to outside the copied page range are always excluded.</param>
+        /// <param name="links">Whether internal and external links are included in the copy (default true). Named links and internal links that target pages outside the copied range are always excluded.</param>
         /// <param name="annots">choose whether annotations should be included in the copy.</param>
-        /// <param name="widgets">choose whether annotations should be included in the copy. If `True` and at least one of the source pages contains form fields, the target PDF will be turned into a Form PDF (if not already being one).</param>
+        /// <param name="widgets">Whether form fields are included in the copy. If true and a source page has form fields, the target PDF becomes a Form PDF if it is not already one.</param>
         /// <param name="joinDuplicates">If <see langword="true"/>, merge duplicate field names when copying widgets.</param>
         /// <param name="showProgress">If non-zero, print progress while copying pages.</param>
         /// <param name="final">*(new in v1.18.0)* controls whether the list of already copied objects should be dropped after this method, default <see langword="true"/>. Set it to 0 except for the last one of multiple insertions from the same source PDF. This saves target file size and speeds up execution considerably.</param>
@@ -5236,13 +5333,21 @@ namespace MuPDF.NET
         {
             // Insert pages from a source PDF into this PDF.
             // insertion point (start_at) if it was specified as -1.
-            //log( 'insert_pdf(): start')
+
             if (IsClosed || IsEncrypted)
                 throw new ValueErrorException("document closed or encrypted");
             if (docsrc == null)
                 throw new ArgumentNullException(nameof(docsrc));
             if (_graftId == docsrc._graftId)
                 throw new ValueErrorException("source and target cannot be same object");
+            if (widgets)
+            {
+                foreach (var page in docsrc)
+                {
+                    using (page)
+                        page.RepairFlatRbgs();
+                }
+            }
             int sa = startAt;
             if (sa < 0)
                 sa = PageCount;
@@ -5278,56 +5383,47 @@ namespace MuPDF.NET
             }
 
             // retrieve / make a Graftmap to avoid duplicate objects
-            //log( 'insert_pdf(): Graftmaps')
+
             int isrt = docsrc._graftId;
             Graftmap _gmap = null;
             if (!Graftmaps.TryGetValue(isrt, out _gmap) || _gmap == null)
             {
-                //log( 'insert_pdf(): Graftmaps2')
+
                 _gmap = new Graftmap(this);
                 Graftmaps[isrt] = _gmap;
             }
 
-            if (GUseExtra)
+            using (var pdfout = Helpers.AsPdfDocument(this))
+            using (var pdfsrc = Helpers.AsPdfDocument(docsrc))
             {
-                //log( 'insert_pdf(): calling extra_FzDocument_insert_pdf()')
-                var pdfout = Helpers.AsPdfDocument(this);
-                var pdfsrc = Helpers.AsPdfDocument(docsrc);
-                if (pdfout.m_internal == null || pdfsrc.m_internal == null)
-                    throw new ArgumentException("source or target not a PDF");
-                Helpers.ENSURE_OPERATION(pdfout);
-                Helpers.JmMergeRange(pdfout, pdfsrc, fp, tp, sa, rotate, links, annots, showProgress, _gmap.NativeGraftMap);
-                //log( 'insert_pdf(): extra_FzDocument_insert_pdf() returned.')
-            }
-            else
-            {
-                var pdfout = Helpers.AsPdfDocument(this);
-                var pdfsrc = Helpers.AsPdfDocument(docsrc);
-
                 if (pdfout.m_internal == null || pdfsrc.m_internal == null)
                     throw new ArgumentException("source or target not a PDF");
                 Helpers.ENSURE_OPERATION(pdfout);
                 Helpers.JmMergeRange(pdfout, pdfsrc, fp, tp, sa, rotate, links, annots, showProgress, _gmap.NativeGraftMap);
             }
 
-            //log( 'insert_pdf(): calling self._reset_page_refs()')
+
             ResetPageRefsInternal();
             if (links)
             {
-                //log( 'insert_pdf(): calling self._do_links()')
+
                 _do_links(docsrc, fromPage: fp, toPage: tp, startAt: sa);
             }
             if (widgets)
                 _do_widgets(docsrc, _gmap, fromPage: fp, toPage: tp, startAt: sa, joinDuplicates: joinDuplicates);
             if (final == 1)
+            {
                 Graftmaps[isrt] = null;
-            //log( 'insert_pdf(): returning')
+                _gmap.Dispose();
+            }
+
         }
 
         /// <summary>
         /// Insert links contained in copied page range into destination PDF.
-        ///
-        /// Parameter values must equal those of method insert_pdf(), which must
+        /// </summary>
+        /// <summary>
+        /// Parameter values must equal those of method insert_pdf, which must
         /// have been previously executed.
         /// </summary>
         internal void _do_links(
@@ -5341,7 +5437,7 @@ namespace MuPDF.NET
             // --------------------------------------------------------------------------
             // internal function to create the actual "/Annots" object string
             // --------------------------------------------------------------------------
-            // annot_skel — Python module-level dict in __init__.py
+            // annot_skel — annotation dictionary templates annot_skel — PyMuPDF module-level dict in __init__.py
             string annot_goto1(int a, float b, float c, float d, string e) =>
                 "<</A<</S/GoTo/D[" + a.ToString(System.Globalization.CultureInfo.InvariantCulture)
                 + " 0 R/XYZ " + Helpers.FormatPdfReals(b, c, d) + "]>>/Rect[" + e + "]/BS<</W 0>>/Subtype/Link>>";
@@ -5367,7 +5463,6 @@ namespace MuPDF.NET
                 string annot;
                 if (kind == Constants.LinkGoto)
                 {
-                    // txt = annot_skel["goto1"]  # annot_goto
                     int idx = pno_src.IndexOf(Convert.ToInt32(lnk["page"], System.Globalization.CultureInfo.InvariantCulture));
                     if (idx < 0)
                         return "";
@@ -5390,7 +5485,6 @@ namespace MuPDF.NET
                     int gpage = Convert.ToInt32(lnk["page"], System.Globalization.CultureInfo.InvariantCulture);
                     if (gpage >= 0)
                     {
-                        // txt = annot_skel["gotor1"]  # annot_gotor
                         object pnt = lnk.TryGetValue("to", out var toO) ? toO : new Point(0, 0);  // destination point
                         if (!(pnt is Point))
                             pnt = new Point(0, 0);
@@ -5410,7 +5504,6 @@ namespace MuPDF.NET
                     }
                     else
                     {
-                        // txt = annot_skel["gotor2"]  # annot_gotor_n
                         string to = Helpers.GetPdfStr(DoLinksToPdfString(lnk["to"]));
                         to = to.Length >= 2 ? to.Substring(1, to.Length - 2) : to;
                         string f = lnk["file"]?.ToString() ?? "";
@@ -5419,13 +5512,11 @@ namespace MuPDF.NET
                 }
                 else if (kind == Constants.LinkLaunch)
                 {
-                    // txt = annot_skel["launch"]  # annot_launch
                     string file = lnk["file"]?.ToString() ?? "";
                     annot = annot_launch(file, file, rect);
                 }
                 else if (kind == Constants.LinkUri)
                 {
-                    // txt = annot_skel["uri"]  # annot_uri
                     annot = annot_uri(lnk["uri"]?.ToString() ?? "", rect);
                 }
                 else
@@ -5485,22 +5576,18 @@ namespace MuPDF.NET
             // create the links for each copied page in destination PDF
             for (int i = 0; i < xref_src.Count; i++)
             {
-                Page page_src = doc2[pno_src[i]];  // load source page
+                using var page_src = doc2[pno_src[i]];  // load source page
                 var links = page_src.GetLinksDict();  // get all its links
-                //log( '{pno_src=}')
-                //log( '{type(page_src)=}')
-                //log( '{page_src=}')
-                //log( '{=i len(links)}')
                 if (links.Count == 0)  // no links there
-                {
-                    page_src = null;
                     continue;
-                }
-                // Multiply link rects by inverse of pdf_page_transform() page CTM (#4958).
-                var pageCtm = new mupdf.FzMatrix();
-                Helpers.AsPdfPage(page_src, required: true).pdf_page_transform(new mupdf.FzRect(0, 0, 0, 0), pageCtm);
-                Matrix ctm = new Matrix(pageCtm.fz_invert_matrix());
-                Page page_dst = doc1[pno_dst[i]];  // load destination page
+                // Multiply link rects by inverse of pdf_page_transform page CTM (#4958).
+                using var pageCtm = new mupdf.FzMatrix();
+                using var emptyRect = new mupdf.FzRect(0, 0, 0, 0);
+                using (var pdfPage = Helpers.AsPdfPage(page_src, required: true))
+                    pdfPage.pdf_page_transform(emptyRect, pageCtm);
+                using var invCtm = pageCtm.fz_invert_matrix();
+                Matrix ctm = new Matrix(invCtm);
+                using var page_dst = doc1[pno_dst[i]];  // load destination page
                 var link_tab = new List<string>();  // store all link definitions here
                 foreach (var l in links)
                 {
@@ -5516,7 +5603,7 @@ namespace MuPDF.NET
                 if (link_tab.Count > 0)
                     page_dst._addAnnot_FromString(link_tab.ToArray());
             }
-            //log( 'utils.do_links() returning.')
+
         }
 
         /// <summary>String operand for <c>get_pdf_str</c> in <c>_do_links</c> / GoToR named destinations.</summary>
@@ -5530,8 +5617,9 @@ namespace MuPDF.NET
 
         /// <summary>
         /// Insert widgets of copied page range into target PDF.
-        ///
-        /// Parameter values must equal those of method insert_pdf() which
+        /// </summary>
+        /// <summary>
+        /// Parameter values must equal those of method insert_pdf which
         /// must have been previously executed.
         /// </summary>
         internal void _do_widgets(
@@ -5666,10 +5754,29 @@ namespace MuPDF.NET
             (int parent_xref, List<int> kids_list) kids_xrefs(mupdf.PdfObj widget)
             {
                 var kids_list = new List<int>();
-                var parent = Helpers.PdfDictGet(widget, mupdf.mupdf.pdf_new_name("Parent"));
+                var parent = Helpers.PdfDictGets(widget, "Parent");
                 int parent_xref = parent.pdf_to_num();
                 if (parent_xref == 0)
                     return (parent_xref, kids_list);
+
+                // Fix #5154: ensure the widget is in the parent's /Kids array
+                var kids = Helpers.PdfDictGets(parent, "Kids");
+                if (mupdf.mupdf.pdf_is_array(kids) == 0)
+                    kids = Helpers.PdfDictPutArray(parent, "Kids", 1);
+                bool inKids = false;
+                int widgetNum = widget.pdf_to_num();
+                int kn = kids.pdf_array_len();
+                for (int i = 0; i < kn; i++)
+                {
+                    using var kid = kids.pdf_array_get(i);
+                    if (kid.pdf_to_num() == widgetNum)
+                    {
+                        inKids = true;
+                        break;
+                    }
+                }
+                if (!inKids)
+                    mupdf.mupdf.pdf_array_push(kids, widget);
                 kids_list = get_kids(parent, kids_list);
                 return (parent_xref, kids_list);
             }
@@ -5738,8 +5845,8 @@ namespace MuPDF.NET
                 acro.pdf_dict_del(mupdf.mupdf.pdf_new_name("CO"));
                 acro.pdf_dict_put_array(mupdf.mupdf.pdf_new_name("CO"), 5);
 
-                var acro_graft = gm.pdf_graft_mapped_object(acro);
-                var acro_tar = mupdf.mupdf.pdf_add_object(tarpdf, acro_graft);
+                using var acro_graft = gm.pdf_graft_mapped_object(acro);
+                using var acro_tar = mupdf.mupdf.pdf_add_object(tarpdf, acro_graft);
                 acro_fields = Helpers.PdfObjDictGet(acro_tar,mupdf.mupdf.pdf_new_name("Fields"));
                 tar_co = Helpers.PdfObjDictGet(acro_tar,mupdf.mupdf.pdf_new_name("CO"));
 
@@ -5772,7 +5879,7 @@ namespace MuPDF.NET
                 {
                     if (wtype != AnnotationType.Widget)
                         continue;
-                    using var w_obj = mupdf.mupdf.pdf_load_object(srcpdf, xref);
+                    using var w_obj = mupdf.mupdf.pdf_new_indirect(srcpdf, xref, 0);
                     w_obj.pdf_dict_del(mupdf.mupdf.pdf_new_name("P"));
 
                     var (parent_xref, old_kids) = kids_xrefs(w_obj);
@@ -5791,8 +5898,8 @@ namespace MuPDF.NET
             foreach (int xref in parents.Keys)
             {
                 using var parent = mupdf.mupdf.pdf_load_object(srcpdf, xref);
-                var parent_graft = gm.pdf_graft_mapped_object(parent);
-                var parent_tar = mupdf.mupdf.pdf_add_object(tarpdf, parent_graft);
+                using var parent_graft = gm.pdf_graft_mapped_object(parent);
+                using var parent_tar = mupdf.mupdf.pdf_add_object(tarpdf, parent_graft);
                 var kids_xrefs_new = get_kids(parent_tar, new List<int>());
                 int parent_xref_new = parent_tar.pdf_to_num();
                 var parent_ind = mupdf.mupdf.pdf_new_indirect(tarpdf, parent_xref_new, 0);
@@ -5830,8 +5937,8 @@ namespace MuPDF.NET
                     {
                         try
                         {
-                            var w_obj_graft = gm.pdf_graft_mapped_object(w_obj);
-                            var w_obj_tar = mupdf.mupdf.pdf_add_object(tarpdf, w_obj_graft);
+                            using var w_obj_graft = gm.pdf_graft_mapped_object(w_obj);
+                            using var w_obj_tar = mupdf.mupdf.pdf_add_object(tarpdf, w_obj_graft);
                             int tar_xref = w_obj_tar.pdf_to_num();
                             w_obj_tar_ind = mupdf.mupdf.pdf_new_indirect(tarpdf, tar_xref, 0);
                             tar_annots.pdf_array_push(w_obj_tar_ind);
@@ -5861,6 +5968,7 @@ namespace MuPDF.NET
 
             deduplicate_names(tarpdf, acro_fields, joinDuplicates);
         }
+
         /// <summary>
         /// Inserts pages from any supported document type.
         /// </summary>
@@ -5937,6 +6045,7 @@ namespace MuPDF.NET
             mupdf.mupdf.pdf_dict_put_array(d, mupdf.mupdf.pdf_new_name("RBGroups"), 0);
             return ocp;
         }
+
         /// <summary>
         /// Gets details for all OCGs.
         /// </summary>
@@ -6006,6 +6115,7 @@ namespace MuPDF.NET
             }
             return result;
         }
+
         /// <summary>
         /// Adds an optional content configuration.
         /// </summary>
@@ -6015,46 +6125,48 @@ namespace MuPDF.NET
         /// <param name="on">a sequence of OCG xref numbers which should be set to ON when this layer gets activated. All OCGs not listed here will be set to OFF.</param>
         public void AddLayer(string name, string creator = null, bool on = true)
         {
-            // Add a new OC layer.
-            var pdf = NativePdfDocument;
-            var root = Helpers.PdfDictGet(mupdf.mupdf.pdf_trailer(pdf), mupdf.mupdf.pdf_new_name("Root"));
-            var ocProps = Helpers.PdfDictGet(root, mupdf.mupdf.pdf_new_name("OCProperties"));
-            if (ocProps.m_internal == null)
-            {
-                ocProps = mupdf.mupdf.pdf_new_dict(pdf, 2);
-                mupdf.mupdf.pdf_dict_puts(root, "OCProperties", ocProps);
-            }
-
-            var ocgs = Helpers.PdfDictGet(ocProps, mupdf.mupdf.pdf_new_name("OCGs"));
-            if (ocgs.m_internal == null)
-            {
-                ocgs = mupdf.mupdf.pdf_new_array(pdf, 1);
-                mupdf.mupdf.pdf_dict_puts(ocProps, "OCGs", ocgs);
-            }
-
-            var ocg = mupdf.mupdf.pdf_new_dict(pdf, 3);
-            mupdf.mupdf.pdf_dict_put(ocg, mupdf.mupdf.pdf_new_name("Type"), mupdf.mupdf.pdf_new_name("OCG"));
-            mupdf.mupdf.pdf_dict_put(ocg, mupdf.mupdf.pdf_new_name("Name"), mupdf.mupdf.pdf_new_text_string(name));
-            var indRef = mupdf.mupdf.pdf_add_object(pdf, ocg);
-            mupdf.mupdf.pdf_array_push(ocgs, indRef);
-
-            if (on)
-            {
-                var d = Helpers.PdfDictGet(ocProps, mupdf.mupdf.pdf_new_name("D"));
-                if (d.m_internal == null)
-                {
-                    d = mupdf.mupdf.pdf_new_dict(pdf, 1);
-                    mupdf.mupdf.pdf_dict_puts(ocProps, "D", d);
-                }
-                var onArr = Helpers.PdfDictGet(d, mupdf.mupdf.pdf_new_name("ON"));
-                if (onArr.m_internal == null)
-                {
-                    onArr = mupdf.mupdf.pdf_new_array(pdf, 1);
-                    mupdf.mupdf.pdf_dict_puts(d, "ON", onArr);
-                }
-                mupdf.mupdf.pdf_array_push(onArr, indRef);
-            }
+            // add_layer(name, creator=null, on=null): on is a sequence of OCG
+            // AddLayer("name") matches on=null (do not create an OCG).
+            _ = on;
+            JmAddLayerConfig(name, creator, onXrefs: null);
         }
+
+        /// <summary><c>add_layer(name, creator, on)</c> with an OCG xref sequence.</summary>
+        public void AddLayer(string name, string creator, IEnumerable<int> on)
+        {
+            JmAddLayerConfig(name, creator, on);
+        }
+
+        /// <summary><c>JM_add_layer_config</c>.</summary>
+        private void JmAddLayerConfig(string name, string creator, IEnumerable<int> onXrefs)
+        {
+            var pdf = NativePdfDocument;
+            var ocp = EnsureOcProperties(pdf);
+            var configs = Helpers.PdfDictGet(ocp, mupdf.mupdf.pdf_new_name("Configs"));
+            if (mupdf.mupdf.pdf_is_array(configs) == 0)
+                configs = mupdf.mupdf.pdf_dict_put_array(ocp, mupdf.mupdf.pdf_new_name("Configs"), 1);
+            using var d = mupdf.mupdf.pdf_new_dict(pdf, 5);
+            mupdf.mupdf.pdf_dict_put_text_string(d, mupdf.mupdf.pdf_new_name("Name"), name);
+            if (creator != null)
+                mupdf.mupdf.pdf_dict_put_text_string(d, mupdf.mupdf.pdf_new_name("Creator"), creator);
+            using (var baseState = mupdf.mupdf.pdf_new_name("BaseState"))
+            using (var offName = mupdf.mupdf.pdf_new_name("OFF"))
+                mupdf.mupdf.pdf_dict_put(d, baseState, offName);
+            using var onarray = mupdf.mupdf.pdf_dict_put_array(d, mupdf.mupdf.pdf_new_name("ON"), 5);
+            if (onXrefs != null)
+            {
+                var ocgs = Helpers.PdfDictGet(ocp, mupdf.mupdf.pdf_new_name("OCGs"));
+                foreach (int xref in onXrefs)
+                {
+                    using var ind = mupdf.mupdf.pdf_new_indirect(pdf, xref, 0);
+                    if (mupdf.mupdf.pdf_array_contains(ocgs, ind) != 0)
+                        mupdf.mupdf.pdf_array_push(onarray, ind);
+                }
+            }
+            mupdf.mupdf.pdf_array_push(configs, d);
+            mupdf.mupdf.ll_pdf_read_ocg(pdf.m_internal);
+        }
+
         /// <summary>
         /// Adds an optional content group (layer).
         /// </summary>
@@ -6119,6 +6231,7 @@ namespace MuPDF.NET
             mupdf.mupdf.ll_pdf_read_ocg(pdf.m_internal);
             return mupdf.mupdf.pdf_to_num(indocg);
         }
+
         /// <summary>
         /// Gets OCG on/off/radio-button groups for a configuration.
         /// </summary>
@@ -6149,54 +6262,54 @@ namespace MuPDF.NET
             if (obj.m_internal == null)
                 throw new ValueErrorException(Constants.MSG_BAD_OC_CONFIG);
 
-            List<int> ReadXrefArray(string key)
-            {
-                var arr = Helpers.PdfDictGet(obj, mupdf.mupdf.pdf_new_name(key));
-                var rc = new List<int>();
-                if (arr.m_internal == null || mupdf.mupdf.pdf_is_array(arr) == 0)
-                    return rc;
-                int n = mupdf.mupdf.pdf_array_len(arr);
-                for (int i = 0; i < n; i++)
-                {
-                    var item = mupdf.mupdf.pdf_array_get(arr, i);
-                    rc.Add(mupdf.mupdf.pdf_to_num(item));
-                }
-                return rc;
-            }
+            return JmGetOcgArrays(obj);
+        }
 
+        /// <summary><c>JM_get_ocg_arrays_imp</c>: unique xref numbers from an array.</summary>
+        private static List<int> JmGetOcgArraysImp(mupdf.PdfObj arr)
+        {
+            var list = new List<int>();
+            if (mupdf.mupdf.pdf_is_array(arr) == 0)
+                return list;
+            int n = mupdf.mupdf.pdf_array_len(arr);
+            for (int i = 0; i < n; i++)
+            {
+                int item = mupdf.mupdf.pdf_to_num(mupdf.mupdf.pdf_array_get(arr, i));
+                if (!list.Contains(item))
+                    list.Add(item);
+            }
+            return list;
+        }
+
+        /// <summary><c>JM_get_ocg_arrays</c>: omit empty ON/OFF/Locked/RBGroups; include basestate only if present.</summary>
+        private static Dictionary<string, object> JmGetOcgArrays(mupdf.PdfObj conf)
+        {
+            var rc = new Dictionary<string, object>();
+            var on = JmGetOcgArraysImp(Helpers.PdfDictGet(conf, mupdf.mupdf.pdf_new_name("ON")));
+            if (on.Count > 0)
+                rc["on"] = on;
+            var off = JmGetOcgArraysImp(Helpers.PdfDictGet(conf, mupdf.mupdf.pdf_new_name("OFF")));
+            if (off.Count > 0)
+                rc["off"] = off;
+            var locked = JmGetOcgArraysImp(Helpers.PdfDictGet(conf, mupdf.mupdf.pdf_new_name("Locked")));
+            if (locked.Count > 0)
+                rc["locked"] = locked;
             var rb = new List<List<int>>();
-            var rbObj = Helpers.PdfDictGet(obj, mupdf.mupdf.pdf_new_name("RBGroups"));
-            if (rbObj.m_internal != null && mupdf.mupdf.pdf_is_array(rbObj) != 0)
+            var rbObj = Helpers.PdfDictGet(conf, mupdf.mupdf.pdf_new_name("RBGroups"));
+            if (mupdf.mupdf.pdf_is_array(rbObj) != 0)
             {
                 int n = mupdf.mupdf.pdf_array_len(rbObj);
                 for (int i = 0; i < n; i++)
-                {
-                    var groupObj = mupdf.mupdf.pdf_array_get(rbObj, i);
-                    var group = new List<int>();
-                    if (groupObj.m_internal != null && mupdf.mupdf.pdf_is_array(groupObj) != 0)
-                    {
-                        int m = mupdf.mupdf.pdf_array_len(groupObj);
-                        for (int j = 0; j < m; j++)
-                            group.Add(mupdf.mupdf.pdf_to_num(mupdf.mupdf.pdf_array_get(groupObj, j)));
-                    }
-                    rb.Add(group);
-                }
+                    rb.Add(JmGetOcgArraysImp(mupdf.mupdf.pdf_array_get(rbObj, i)));
             }
-
-            string basestate = "";
-            var baseObj = Helpers.PdfDictGet(obj, mupdf.mupdf.pdf_new_name("BaseState"));
+            if (rb.Count > 0)
+                rc["rbgroups"] = rb;
+            var baseObj = Helpers.PdfDictGet(conf, mupdf.mupdf.pdf_new_name("BaseState"));
             if (baseObj.m_internal != null)
-                basestate = mupdf.mupdf.pdf_to_name(baseObj);
-
-            return new Dictionary<string, object>
-            {
-                ["basestate"] = basestate,
-                ["on"] = ReadXrefArray("ON"),
-                ["off"] = ReadXrefArray("OFF"),
-                ["rbgroups"] = rb,
-                ["locked"] = ReadXrefArray("Locked"),
-            };
+                rc["basestate"] = mupdf.mupdf.pdf_to_name(baseObj);
+            return rc;
         }
+
         /// <summary>
         /// Lists optional content configurations.
         /// </summary>
@@ -6231,6 +6344,7 @@ namespace MuPDF.NET
             }
             return rc;
         }
+
         /// <summary>
         /// Lists user-toggleable optional content items.
         /// </summary>
@@ -6260,6 +6374,7 @@ namespace MuPDF.NET
             }
             return rc;
         }
+
         /// <summary>
         /// Changes OC visibility via UI-style actions.
         /// </summary>
@@ -6298,6 +6413,7 @@ namespace MuPDF.NET
             else
                 mupdf.mupdf.pdf_select_layer_config_ui(pdf, uiNumber);
         }
+
         /// <summary>
         /// Permanently sets OCG states for a configuration.
         /// </summary>
@@ -6434,6 +6550,7 @@ namespace MuPDF.NET
 
             mupdf.mupdf.ll_pdf_read_ocg(pdf.m_internal);
         }
+
         /// <summary>
         /// Temporarily switches the active OC configuration.
         /// </summary>
@@ -6468,6 +6585,7 @@ namespace MuPDF.NET
         }
 
         // ─── Annotations query ──────────────────────────────────────────
+
         /// <summary>
         /// PDF only: check if PDF contains any annots
         /// </summary>
@@ -6490,6 +6608,7 @@ namespace MuPDF.NET
             }
             return false;
         }
+
         /// <summary>
         /// PDF only: check if PDF contains any links
         /// </summary>
@@ -6513,6 +6632,7 @@ namespace MuPDF.NET
         }
 
         // ─── Bake ───────────────────────────────────────────────────────
+
         /// <summary>
         /// Bakes annotations and widgets into page content.
         /// </summary>
@@ -6526,6 +6646,7 @@ namespace MuPDF.NET
         }
 
         // ─── Scrub ──────────────────────────────────────────────────────
+
         /// <summary>
         /// Removes sensitive data from the PDF (metadata, scripts, etc.).
         /// </summary>
@@ -6710,7 +6831,6 @@ namespace MuPDF.NET
             if (metadata)
                 SetMetadata(new Dictionary<string, string>());  // remove standard metadata
 
-            // MuPDF's in-memory page cache can be stale after xref edits (e.g. TextWriter).
             if (cleanPages || hiddenText)
                 SyncNativePdfFromMemory();
 
@@ -6775,7 +6895,6 @@ namespace MuPDF.NET
             {
                 if (string.IsNullOrEmpty(xref_object(xref)))
                 {
-                    // msg = f"bad xref {xref} - clean PDF before scrubbing"
                     string msg = $"bad xref {xref} - clean PDF before scrubbing";
                     throw new ValueErrorException(msg);
                 }
@@ -6803,7 +6922,8 @@ namespace MuPDF.NET
 
         /// <summary>
         /// Calculate internal link destination.
-        ///
+        /// </summary>
+        /// <summary>
         /// Args:
         /// uri: (str) some Link.uri
         /// chapters: (bool) whether to use (chapter, page) format
@@ -6820,7 +6940,8 @@ namespace MuPDF.NET
 
         /// <summary>
         /// Calculate internal link destination with optional chapter-based page id.
-        ///
+        /// </summary>
+        /// <summary>
         /// If chapters is false, pageId is an int page number.
         /// If chapters is true, pageId is a (chapter, page) tuple.
         /// </summary>
@@ -6855,19 +6976,20 @@ namespace MuPDF.NET
         }
 
         // ─── Subset / Rewrite ───────────────────────────────────────────
+
         /// <summary>
         /// Creates font subsets to reduce file size.
         /// </summary>
         /// <remarks>PDF only: Investigate eligible fonts for their use by text in the document. If a font is supported and a size reduction is possible, that font is replaced by a version with a subset of its characters. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
-        /// <param name="verbose">write various progress information to sysout. This currently only has an effect if `fallback` is `True`.</param>
-        /// <param name="fallback">if <c>True</c> use the deprecated algorithm that makes use of package <c>fontTools &lt;https://pypi.org/project/fonttools/&gt;</c>_ (which hence must be installed). If using the recommended value <c>False</c> (default), MuPDF's native function is used -- which is very much faster and can subset a broader range of font types. Package fontTools is not required then.</param>
+        /// <param name="verbose">Write progress information to the console. Currently only has an effect when <paramref name="fallback"/> is true.</param>
+        /// <param name="fallback">If true, use the slower deprecated subsetter. If false (default), use MuPDF's native subsetter, which is faster and covers more font types.</param>
         public int? SubsetFonts(bool verbose = false, bool fallback = false)
         {
-            // Font binaries: -  "buffer" -> (names, xrefs, (unicodes, glyphs))
+            // Font binaries: - "buffer" -> (names, xrefs, (unicodes, glyphs))
             // An embedded font is uniquely defined by its fontbuffer only. It may have
             // multiple names and xrefs.
             // Once the sets of used unicodes and glyphs are known, we compute a
-            // smaller version of the buffer user package fontTools.
+            // smaller version of the buffer.
 
             if (!fallback)  // by default use MuPDF function
             {
@@ -6883,7 +7005,9 @@ namespace MuPDF.NET
 
             (string widths, string dwidths) get_old_widths(int xref)
             {
+                /// <summary>
                 /// Retrieve old font '/W' and '/DW' values.
+                /// </summary>
                 var df = XrefGetKey(xref, "DescendantFonts");
                 if (df.type != "array")  // only handle xref specifications
                     return (null, null);
@@ -6905,10 +7029,13 @@ namespace MuPDF.NET
 
             void set_old_widths(int xref, string widths, string dwidths)
             {
+                /// <summary>
                 /// Restore the old '/W' and '/DW' in subsetted font.
-                ///
-                /// If either parameter is None or evaluates to False, the corresponding
+                /// </summary>
+                /// <summary>
+                /// If either parameter is null or false, the corresponding
                 /// dictionary key will be set to null.
+                /// </summary>
                 var df = XrefGetKey(xref, "DescendantFonts");
                 if (df.type != "array")  // only handle xref specs
                     return;
@@ -6925,11 +7052,14 @@ namespace MuPDF.NET
 
             void set_subset_fontname(int new_xref)
             {
+                /// <summary>
                 /// Generate a name prefix to tag a font as subset.
-                ///
+                /// </summary>
+                /// <summary>
                 /// We use a random generator to select 6 upper case ASCII characters.
                 /// The prefixed name must be put in the font xref as the "/BaseFont" value
                 /// and in the FontDescriptor object as the '/FontName' value.
+                /// </summary>
                 // The following generates a prefix like 'ABCDEF+'
                 const string ascii_uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
                 var rng = new Random();
@@ -6957,13 +7087,16 @@ namespace MuPDF.NET
 
             byte[] build_subset(byte[] buffer, HashSet<int> unc_set, HashSet<int> gid_set)
             {
+                /// <summary>
                 /// Build font subset using fontTools.
-                ///
+                /// </summary>
+                /// <summary>
                 /// Args:
-                ///     buffer: (bytes) the font given as a binary buffer.
-                ///     unc_set: (set) required glyph ids.
+                /// buffer: (bytes) the font given as a binary buffer.
+                /// unc_set: (set) required glyph ids.
                 /// Returns:
-                ///     Either None if subsetting is unsuccessful or the subset font buffer.
+                /// Either null if subsetting is unsuccessful or the subset font buffer.
+                /// </summary>
                 try
                 {
                     RunFontToolsSubsetCheckImport();
@@ -7037,7 +7170,7 @@ namespace MuPDF.NET
                     }
                     catch (Exception)
                     {
-                        // exception_info()
+                        // exception_info
                         new_buffer = null;
                     }
                     return new_buffer;
@@ -7050,16 +7183,22 @@ namespace MuPDF.NET
 
             void repl_fontnames(Document doc)
             {
+                /// <summary>
                 /// Populate 'font_buffers'.
-                ///
+                /// </summary>
+                /// <summary>
                 /// For each font candidate, store its xref and the list of names
                 /// by which PDF text may refer to it (there may be multiple).
+                /// </summary>
 
                 string norm_name(string name)
                 {
+                    /// <summary>
                     /// Recreate font name that contains PDF hex codes.
-                    ///
+                    /// </summary>
+                    /// <summary>
                     /// E.g. #20 -> space, chr(32)
+                    /// </summary>
                     while (name.Contains("#"))
                     {
                         int p = name.IndexOf('#');
@@ -7071,9 +7210,12 @@ namespace MuPDF.NET
 
                 List<string> get_fontnames(Document doc_, object[] item)
                 {
-                    /// Return a list of fontnames for an item of page.get_fonts().
-                    ///
+                    /// <summary>
+                    /// Return a list of fontnames for an item of page.get_fonts.
+                    /// </summary>
+                    /// <summary>
                     /// There may be multiple names e.g. for Type0 fonts.
+                    /// </summary>
                     string fontname = (string)item[3];
                     var names = new List<string> { fontname };
                     string baseFont = XrefGetKey((int)item[0], "BaseFont").value;
@@ -7224,7 +7366,6 @@ namespace MuPDF.NET
                     if (!string.IsNullOrEmpty(width_table) || !string.IsNullOrEmpty(def_width))
                         set_old_widths(font_xref, width_table, def_width);
                 }
-                // 'new_xref' remains unused in the PDF and must be removed
                 // by garbage collection.
                 new_fontsize += new_buffer.Length;
             }
@@ -7262,6 +7403,7 @@ namespace MuPDF.NET
             public override int GetHashCode() =>
                 StructuralComparisons.StructuralEqualityComparer.GetHashCode(Buffer);
         }
+
         /// <summary>
         /// Rewrites or recompresses images across the PDF.
         /// </summary>
@@ -7355,6 +7497,7 @@ namespace MuPDF.NET
 
             mupdf.mupdf.pdf_rewrite_images(pdf, opts);
         }
+
         /// <summary>
         /// Recolors a single page (PDF only) without loading a <see cref="Page"/> wrapper.
         /// </summary>
@@ -7395,6 +7538,7 @@ namespace MuPDF.NET
         }
 
         // ─── SetLanguage ────────────────────────────────────────────────
+
         /// <summary>
         /// Sets the document language (/Root/Lang).
         /// </summary>
@@ -7410,11 +7554,12 @@ namespace MuPDF.NET
         }
 
         // ─── Need Appearances ───────────────────────────────────────────
+
         /// <summary>
         /// Gets PDF only: get/set `/NeedAppearances` property.
         /// </summary>
         /// <value>PDF only: get/set `/NeedAppearances` property</value>
-        /// <remarks>PDF only: Get or set the */NeedAppearances* property of Form PDFs. Quote: *"(Optional) A flag specifying whether to construct appearance streams and appearance dictionaries for all widget annotations in the document ... Default value: false."* This may help controlling the behavior of some readers / viewers. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
+        /// <remarks>PDF only: Get or set the */NeedAppearances* property of Form PDFs. Quote: *"(Optional) A flag specifying whether to construct appearance streams and appearance dictionaries for all widget annotations in the document... Default value: false."* This may help controlling the behavior of some readers / viewers. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public bool NeedAppearances
         {
             get
@@ -7431,6 +7576,7 @@ namespace MuPDF.NET
                 catch { return false; }
             }
         }
+
         /// <summary>
         /// Sets the AcroForm <c>/NeedAppearances</c> flag.
         /// </summary>
@@ -7445,6 +7591,7 @@ namespace MuPDF.NET
         }
 
         // ─── MarkInfo ───────────────────────────────────────────────────
+
         /// <summary>
         /// Gets PDF MarkInfo value.
         /// </summary>
@@ -7471,6 +7618,7 @@ namespace MuPDF.NET
                 return result;
             }
         }
+
         /// <summary>
         /// Sets PDF MarkInfo dictionary values.
         /// </summary>
@@ -7526,6 +7674,7 @@ namespace MuPDF.NET
         }
 
         // ─── PageLayout / PageMode ──────────────────────────────────────
+
         /// <summary>
         /// Gets PDF PageLayout value.
         /// </summary>
@@ -7545,6 +7694,7 @@ namespace MuPDF.NET
                 catch { return "SinglePage"; }
             }
         }
+
         /// <summary>
         /// PDF only: set the PageLayout
         /// </summary>
@@ -7564,13 +7714,14 @@ namespace MuPDF.NET
             {
                 if (string.Equals(layout, v, StringComparison.OrdinalIgnoreCase))
                 {
-                    // self.XrefSetKey(xref, "PageLayout", f"/{v}")
+
                     XrefSetKey(xref, "PageLayout", "/" + v);
                     return;
                 }
             }
             throw new ValueErrorException("bad PageLayout value");
         }
+
         /// <summary>
         /// Gets PDF PageMode value.
         /// </summary>
@@ -7590,6 +7741,7 @@ namespace MuPDF.NET
                 catch { return "UseNone"; }
             }
         }
+
         /// <summary>
         /// PDF only: set the PageMode
         /// </summary>
@@ -7609,7 +7761,7 @@ namespace MuPDF.NET
             {
                 if (string.Equals(mode, v, StringComparison.OrdinalIgnoreCase))
                 {
-                    // self.XrefSetKey(xref, "PageMode", f"/{v}")
+
                     XrefSetKey(xref, "PageMode", "/" + v);
                     return;
                 }
@@ -7618,6 +7770,7 @@ namespace MuPDF.NET
         }
 
         // ─── Signature flags ────────────────────────────────────────────
+
         /// <summary>
         /// PDF only: determine signature state
         /// </summary>
@@ -7640,6 +7793,7 @@ namespace MuPDF.NET
         }
 
         // ─── Page CropBox ───────────────────────────────────────────────
+
         /// <summary>
         /// PDF only: the unrotated page rectangle
         /// </summary>
@@ -7674,6 +7828,7 @@ namespace MuPDF.NET
             }
             return new Rect(0, 0, 595, 842);
         }
+
         /// <summary>
         /// PDF only: Saves a "snapshot" of the document. This is a PDF document with a special, incremental-save format compatible with journalling -- therefore no save options are available. Saving a snapshot is not possible for new documents.
         /// </summary>
@@ -7689,6 +7844,7 @@ namespace MuPDF.NET
             var pdf = NativePdfDocument;
             mupdf.mupdf.pdf_save_snapshot(pdf, filename);
         }
+
         /// <summary>
         /// PDF only: Saves a "snapshot" of the document. This is a PDF document with a special, incremental-save format compatible with journalling -- therefore no save options are available. Saving a snapshot is not possible for new documents.
         /// </summary>
@@ -7721,10 +7877,11 @@ namespace MuPDF.NET
         }
 
         // ─── Close ──────────────────────────────────────────────────────
+
         /// <summary>
         /// Closes the document and releases native resources.
         /// </summary>
-        /// <remarks>Release objects and space allocations associated with the document. If created from a file, also closes *filename* (releasing control to the OS). Explicitly closing a document is equivalent to deleting it, <c>del doc</c>, or assigning it to something else like <c>doc = None</c>. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
+        /// <remarks>Releases native resources. If opened from a file, also releases the file handle. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         /// <exception cref="ValueErrorException">Document is closed, encrypted, or arguments are invalid.</exception>
         public void Close()
         {
@@ -7737,8 +7894,10 @@ namespace MuPDF.NET
                     _outline.Dispose();
                     _outline = null;
                 }
-                // MuPDF Document.close() -> _reset_page_refs() invalidates all Page wrappers.
+                // MuPDF Document.close -> _reset_page_refs invalidates all Page wrappers.
                 ResetPageRefsInternal(erasePages: true);
+                foreach (var gmap in Graftmaps.Values)
+                    gmap?.Dispose();
                 Graftmaps.Clear();
                 IsClosed = true;
                 DisposeCachedPdfDocument();
@@ -7907,8 +8066,9 @@ namespace MuPDF.NET
         /// <summary>
         /// Invalidate all tracked <see cref="Page"/> wrappers after structural document changes.
         /// </summary>
+
         /// <summary>
-        /// Re-open the native PDF from current <see cref="Write()"/> bytes so MuPDF sees latest xref edits.
+        /// Re-open the native PDF from current <see cref="Write"/> bytes so MuPDF sees latest xref edits.
         /// </summary>
         internal void SyncNativePdfFromMemory()
         {
@@ -7959,7 +8119,7 @@ namespace MuPDF.NET
                 _metadata["encryption"] = "";
         }
 
-        /// <summary>PDF-only mutator guard (cf. Python <c>set_metadata</c>, <c>delete_pages</c>): reject closed/encrypted before <c>is no PDF</c> because <see cref="Close"/> clears the native handle.</summary>
+        /// <summary>PDF-only mutator guard (cf. PyMuPDF <c>set_metadata</c>, <c>delete_pages</c>): reject closed/encrypted before <c>is no PDF</c> because <see cref="Close"/> clears the native handle.</summary>
         private void EnsurePdf()
         {
             if (IsClosed || IsEncrypted)
@@ -7968,7 +8128,7 @@ namespace MuPDF.NET
                 throw new ValueErrorException(Constants.MSG_IS_NO_PDF);
         }
 
-        /// <summary>Python <c>delete_pages</c> / <c>copy_page</c> / <c>move_page</c> opening: <c>document closed</c> then <c>is no PDF</c> (closed first so a handle-cleared doc is not misreported as not-PDF).</summary>
+        /// <summary>PyMuPDF <c>delete_pages</c> / <c>copy_page</c> / <c>move_page</c> opening: <c>document closed</c> then <c>is no PDF</c> (closed first so a handle-cleared doc is not misreported as not-PDF).</summary>
         private void EnsurePdfOpenForDeletePages()
         {
             if (IsClosed)
@@ -7986,8 +8146,9 @@ namespace MuPDF.NET
         }
 
         // ─── IDisposable ────────────────────────────────────────────────
+
         /// <summary>
-        /// Releases the document; prefer Close() for PDF semantics.
+        /// Releases the document; prefer Close for PDF semantics.
         /// </summary>
         /// <remarks><see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public void Dispose()
@@ -7999,6 +8160,7 @@ namespace MuPDF.NET
         ~Document() { Dispose(); }
 
         // ─── IEnumerable<Page> ──────────────────────────────────────────
+
         /// <summary>
         /// Returns an enumerator over all pages.
         /// </summary>
@@ -8017,7 +8179,7 @@ namespace MuPDF.NET
         // Ported from Document.PythonCompat.cs: snake_case / dunder / legacy aliases.
         // Public callers should use the PascalCase members on this class.
 
-        /// <summary>Python <c>fitz.open</c> compatibility aliases for <see cref="Open()"/>.</summary>
+        /// <summary>PyMuPDF <c>fitz.open</c> compatibility aliases for <see cref="Open()"/>.</summary>
         internal static Document open() => Open();
 
         internal static Document open(string filename, string filetype = null, Rect rect = null, float width = 0, float height = 0, float fontSize = 11)
@@ -8032,12 +8194,11 @@ namespace MuPDF.NET
         /// <summary>Whether to use MuPDF extra page-count helpers.</summary>
         private static bool g_use_extra => true;
 
-        // Python-style wrappers.
-        /// <summary>Python-style <c>page_count</c> property wrapper.</summary>
+        /// <summary>Internal page-count helper. PyMuPDF-style <c>page_count</c> property wrapper.</summary>
         internal int page_count()
         {
             if (IsClosed)
-                // raise ValueError('document closed')
+
                 throw new ValueErrorException("document closed");
             if (GUseExtra)
                 return page_count2(this);
@@ -8050,18 +8211,18 @@ namespace MuPDF.NET
         private static int page_count2(Document self) =>
             self.IsPdf ? page_count_pdf(self) : page_count_fz(self);
 
-        /// <summary><c>src/extra.i</c>.</summary>
+
         private static int page_count_fz(Document self) =>
             mupdf.mupdf.fz_count_pages(self.NativeDocument);
 
-        /// <summary><c>src/extra.i</c>.</summary>
+
         private static int page_count_pdf(Document self)
         {
-            // mupdf::FzDocument document = pdf.super();
+            // mupdf::FzDocument document = pdf.super;
             return page_count_fz(self);
         }
 
-        /// <summary>Python <c>Document.this is None</c> after <see cref="Close"/>.</summary>
+        /// <summary>True when the native document handle has been released. PyMuPDF <c>Document.this is None</c> after <see cref="Close"/>.</summary>
         internal bool py_this_is_none() => _nativeDoc == null;
         internal bool is_pdf() => IsPdf;
         internal int chapter_count() => ChapterCount;
@@ -8069,7 +8230,7 @@ namespace MuPDF.NET
         internal bool is_reflowable() => IsReflowable;
         internal bool is_closed() => IsClosed;
         internal bool is_encrypted() => IsEncrypted;
-        /// <summary>Python <c>Document.init_doc()</c> — safe to call after <c>authenticate()</c>; throws if the document is still encrypted.</summary>
+        /// <summary>PyMuPDF <c>Document.init_doc()</c> — safe to call after <c>authenticate()</c>; throws if the document is still encrypted.</summary>
         internal void init_doc()
         {
             if (IsEncrypted)
@@ -8095,7 +8256,7 @@ namespace MuPDF.NET
         internal bool has_annots() => HasAnnots();
         internal bool has_links() => HasLinks();
 
-        // Python dunder compatibility helpers.
+        // Internal indexer / membership aliases. PyMuPDF dunder compatibility helpers.
         internal int __len__() => PageCount;
         internal bool __contains__(int page_number) => ContainsPage(page_number);
         internal bool __contains__((int chapter, int page) loc) => ContainsLocation(loc);
@@ -8104,11 +8265,12 @@ namespace MuPDF.NET
         internal string __repr__() => ToString();
         internal Page __getitem__(int page_number) => GetItemPageForIndexer(page_number);
         internal Page __getitem__((int chapter, int page) loc) => GetItemPageForIndexer(loc.chapter, loc.page);
+        internal Page __getitem__(object i) => GetItemPageForIndexer(i);
 
-        /// <summary>Python context-manager entry: returns this document (<c>__enter__</c>).</summary>
+        /// <summary>Returns this document (using-block entry). PyMuPDF context-manager entry: returns this document (<c>__enter__</c>).</summary>
         internal Document __enter__() => this;
 
-        /// <summary>Python context-manager exit: closes the document.</summary>
+        /// <summary>Closes the document (using-block exit). PyMuPDF context-manager exit: closes the document.</summary>
         internal void __exit__(object exc_type = null, object exc_value = null, object traceback = null) => Close();
 
         // Page loading/navigation.
@@ -8126,6 +8288,7 @@ namespace MuPDF.NET
         // Metadata and outlines.
         internal List<(int level, string title, int page, Dictionary<string, object> link)> get_toc(bool simple = true) => GetToc(simple);
         internal int set_toc(IList<object> toc, int collapse = 1) => SetToc(toc, collapse);
+        internal int set_toc(TocResult toc, int collapse = 1) => SetToc(toc, collapse);
         internal void set_toc_item(int idx, Dictionary<string, object> dest_dict = null, int? kind = null, int? pno = null,
             string uri = null, string title = null, Point to = null, string filename = null, float zoom = 0)
             => SetTocItem(idx, dest_dict, kind, pno, uri, title, to, filename, zoom);
@@ -8208,14 +8371,14 @@ namespace MuPDF.NET
         internal void update_object(int xref, string text, Page page = null) => UpdateObject(xref, text, page);
         internal void update_stream(int xref, byte[] stream, bool compress = true) => UpdateStream(xref, stream, compress);
 
-        /// <summary>Python <c>UpdateStream(xref, stream, new=1, compress=1)</c> when <c>new</c> and <c>compress</c> are passed as ints (e.g. <c>0</c>/<c>1</c>). <paramref name="new_"/> is ignored (unused in MuPDF).</summary>
+        /// <summary>PyMuPDF <c>UpdateStream(xref, stream, new=1, compress=1)</c> when <c>new</c> and <c>compress</c> are passed as ints (e.g. <c>0</c>/<c>1</c>). <paramref name="new_"/> is ignored (unused in MuPDF).</summary>
         internal void UpdateStream(int xref, byte[] stream, int new_, int compress)
             => UpdateStream(xref, stream, compress != 0);
         internal static void xref_copy(Document doc, int source, int target, List<string> keep = null)
             => Document.XrefCopy(doc, source, target, keep);
         internal string pdf_trailer(bool compressed = false, bool ascii = false) => PdfTrailer(compressed, ascii);
 
-        // Embedded files (Python-name aliases).
+        // Embedded files (PyMuPDF-name aliases).
         internal List<string> embfile_names() => GetEmbeddedFileNames();
         internal byte[] embfile_get(string name) => GetEmbeddedFile(name);
         internal byte[] embfile_get(int idx) => GetEmbeddedFile(idx);
@@ -8235,10 +8398,11 @@ namespace MuPDF.NET
         // Page resource extraction helpers.
         internal List<(int xref, string ext, string type, string baseName, string name, string encoding, int? referencer)> get_page_fonts(int pno, bool full = false) => GetPageFonts(pno, full);
         internal List<(int xref, string smask, int width, int height, int bpc, string colorspace, string altCs, string name, string filter)> get_page_images(int pno, bool full = false) => GetPageImageRows(pno, full);
+
         /// <summary>
-        /// Python-shape compatibility helper for <c>get_page_fonts</c>.
+        /// PyMuPDF-shape compatibility helper for <c>get_page_fonts</c>.
         /// Returns list entries as object arrays so callers can compare tuple lengths:
-        /// <c>full=False</c> => 6 fields, <c>full=True</c> => 7 fields (last entry is referencer / stream xref).
+        /// <c>full=false</c> has 6 fields, <c>full=true</c> has 7 (last entry is referencer / stream xref).
         /// </summary>
         internal List<object[]> get_page_fonts_py(int pno, bool full = false)
         {
@@ -8256,9 +8420,9 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Python-shape compatibility helper for <c>get_page_images</c>.
+        /// PyMuPDF-shape compatibility helper for <c>get_page_images</c>.
         /// Returns list entries as object arrays so callers can compare tuple lengths:
-        /// <c>full=False</c> => 9 fields, <c>full=True</c> => 10 fields (last entry is referencer / stream xref).
+        /// <c>full=false</c> has 9 fields, <c>full=true</c> has 10 (last entry is referencer / stream xref).
         /// </summary>
         internal List<object[]> get_page_images_py(int pno, bool full = false)
         {
@@ -8408,7 +8572,7 @@ namespace MuPDF.NET
         internal void save_snapshot(object filename) => SaveSnapshot(filename);
         internal void close() => Close();
 
-        // Private Python helper-name parity.
+        // Private PyMuPDF helper-name parity.
         internal List<int> _delToC()
         {
             var xrefs = GetOutlineXrefs();
@@ -8484,8 +8648,9 @@ namespace MuPDF.NET
                 JM_scan_resources(pdf, rsrc, liste, wi, 0, tracer);
             return liste;
         }
+
         /// <summary>
-        /// Python-shape compatibility overload for <c>_getPageInfo</c>.
+        /// PyMuPDF-shape compatibility overload for <c>_getPageInfo</c>.
         /// </summary>
         internal List<object[]> _getPageInfo_py(int pno, int what, bool full = true)
         {
@@ -8546,6 +8711,7 @@ namespace MuPDF.NET
             var v = Helpers.JM_pdf_obj_from_str(pdf, font);
             mupdf.mupdf.pdf_dict_put(fonts, k, v);
         }
+
         /// <summary>
         /// Returns a short diagnostic string for this document.
         /// </summary>

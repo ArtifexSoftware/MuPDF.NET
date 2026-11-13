@@ -9,8 +9,7 @@ namespace MuPDF.NET
     /// </summary>
     /// <remarks>
     /// <para>
-    /// Ports in <c>src/__init__.py</c> (~21384) and
-    /// <c>src/extra.i</c> (~4194). This type is <c>internal</c>; there is no public surface here.
+    /// This type is <c>internal</c>; there is no public surface here.
     /// User-facing search is <see cref="Page.SearchFor"/> / <see cref="TextPage.Search"/>.
     /// </para>
     /// <para>
@@ -19,24 +18,24 @@ namespace MuPDF.NET
     /// </para>
     /// <para>
     /// <c>hfuzz</c> / <c>vfuzz</c> (0.2 / 0.1 × char size) merge kerning gaps on the same line without
-    /// joining words across large horizontal gaps (Python: "merge kerns but not large gaps").
+    /// joining words across large horizontal gaps (PyMuPDF: "merge kerns but not large gaps").
     /// </para>
     /// <para>
     /// Walks <c>first_block</c>/<c>next</c> and linked lines/chars (see <see cref="TextPage"/>).
-    /// Do not use SWIG stext iterators here: <c>begin()</c> is owning, <c>__increment__()</c> is not,
-    /// and repeated <c>end()</c> calls leak native iterators and can corrupt the heap.
+    /// Do not use SWIG stext iterators here: <c>begin</c> is owning, <c>next</c> is not,
+    /// and repeated <c>end</c> calls leak native iterators and can corrupt the heap.
     /// </para>
     /// </remarks>
     internal static class StextSearch
     {
-        /// <summary>Mutable hit list while scanning (C <c>struct highlight</c> / Python <c>Hits</c>).</summary>
+        /// <summary>Mutable hit list while scanning (C <c>struct highlight</c> / PyMuPDF <c>Hits</c>).</summary>
         private sealed class SearchHits
         {
             public readonly List<Quad> Quads = new List<Quad>();
             public int Len;
-            /// <summary>Horizontal merge tolerance as fraction of char size (Python <c>hfuzz = 0.2</c>).</summary>
+            /// <summary>Horizontal merge tolerance as fraction of char size (PyMuPDF <c>hfuzz = 0.2</c>).</summary>
             public float Hfuzz = 0.2f;
-            /// <summary>Vertical merge tolerance as fraction of char size (Python <c>vfuzz = 0.1</c>).</summary>
+            /// <summary>Vertical merge tolerance as fraction of char size (PyMuPDF <c>vfuzz = 0.1</c>).</summary>
             public float Vfuzz = 0.1f;
         }
 
@@ -116,7 +115,10 @@ namespace MuPDF.NET
                         haystack++;
                     next_char:;
                     }
-                    haystack++;
+                    // : if (*haystack == '\n') ++haystack;
+                    // Joined (dehyphenated) lines omit the newline in the haystack.
+                    if (haystack < haystackString.Length && haystackString[haystack] == '\n')
+                        haystack++;
                 }
                 haystack++;
             }
@@ -124,9 +126,10 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Build the flat search string from a text page (Python <c>JM_new_buffer_from_stext_page</c> +
-        /// <c>fz_string_from_buffer</c>). Inserts <c>'\n'</c> after each line and each block.
+        /// Build the flat search string from a text page (PyMuPDF <c>JM_new_buffer_from_stext_page</c> +
         /// </summary>
+        /// <c>fz_string_from_buffer</c>). Inserts <c>'\n'</c> after each line and each block.
+
         private static string JM_new_string_from_stext_page(mupdf.FzStextPage page)
         {
             var rect = page.m_internal.mediabox;
@@ -143,6 +146,7 @@ namespace MuPDF.NET
                      line != null;
                      line = line.next)
                 {
+                    bool breakLine = true;
                     for (mupdf.fz_stext_char ch = line.first_char;
                          ch != null;
                          ch = ch.next)
@@ -153,9 +157,16 @@ namespace MuPDF.NET
                             if (!Helpers.JM_rects_overlap(pageRect, r))
                                 continue;
                         }
+                        // : skip trailing hyphen on FZ_STEXT_LINE_FLAGS_JOINED.
+                        if (Helpers.StextCharIsJoinedHyphen(line, ch))
+                        {
+                            breakLine = false;
+                            continue;
+                        }
                         sb.Append(char.ConvertFromUtf32(ch.c));
                     }
-                    sb.Append('\n');
+                    if (breakLine)
+                        sb.Append('\n');
                 }
                 sb.Append('\n');
             }
@@ -164,11 +175,12 @@ namespace MuPDF.NET
 
         /// <summary>
         /// Find next occurrence of <paramref name="needle"/> in <paramref name="haystack"/> from
-        /// <paramref name="offset"/> (C <c>find_string</c> / Python <c>find_string</c> + <c>match_string</c>).
         /// </summary>
+        /// <paramref name="offset"/> (C <c>find_string</c> / PyMuPDF <c>find_string</c> + <c>match_string</c>).
+
         /// <remarks>
-        /// Uses ordinal case-insensitive matching as a .NET approximation of MuPDF
-        /// <c>chartocanon</c> / <c>match_string</c> canonical comparison in <c>extra.i</c>.
+        /// Uses ordinal case-insensitive matching as a.NET approximation of MuPDF
+        /// <c>chartocanon</c> / <c>match_string</c> canonical comparison in.
         /// </remarks>
         private static (int? begin, int? end) FindString(string haystack, int offset, string needle)
         {

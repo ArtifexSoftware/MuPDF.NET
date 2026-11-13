@@ -16,8 +16,8 @@ namespace MuPDF.NET
 
     /// <summary>
     /// Raised if a file does not exist.
-    /// <para>Not the same as <see cref="System.IO.FileNotFoundException"/>; MuPDF defines this as a separate <c>RuntimeError</c> subclass.</para>
     /// </summary>
+    /// <para>Not the same as <see cref="System.IO.FileNotFoundException"/>; MuPDF defines this as a separate <c>RuntimeError</c> subclass.</para>
     public class FileNotFoundError : Exception
     {
         public FileNotFoundError() { }
@@ -37,8 +37,8 @@ namespace MuPDF.NET
 
     /// <summary>
     /// Raised when creating documents from zero-length data.
-    /// <para>Subclass of <see cref="FileDataException"/>.</para>
     /// </summary>
+    /// <para>Subclass of <see cref="FileDataException"/>.</para>
     public class EmptyFileException : FileDataException
     {
         public EmptyFileException() { }
@@ -50,8 +50,8 @@ namespace MuPDF.NET
 
     /// <summary>
     /// Operation on a closed document.
-    /// <para>MuPDF often raises <c>ValueError</c> with message <c>document closed</c>; this type is available when a dedicated exception is preferred.</para>
     /// </summary>
+    /// <para>MuPDF often raises <c>ValueError</c> with message <c>document closed</c>; this type is available when a dedicated exception is preferred.</para>
     public class DocumentClosedException : InvalidOperationException
     {
         public DocumentClosedException() : base("document closed") { }
@@ -61,8 +61,8 @@ namespace MuPDF.NET
 
     /// <summary>
     /// Invalid argument in the MuPDF API sense (<c>ValueError</c>).
-    /// <para>Used for bad rectangles, wrong types, closed/encrypted documents, etc.</para>
     /// </summary>
+    /// <para>Used for bad rectangles, wrong types, closed/encrypted documents, etc.</para>
     public class ValueErrorException : ArgumentException
     {
         public ValueErrorException(string message) : base(message) { }

@@ -21,7 +21,7 @@ namespace Artifex
         /// &lt;summary&gt;MuPDF.NET NuGet package.&lt;/summary&gt;
         public const string MuPDFNet = "$(ArtifexMuPDFNetVersion)"%3B
 
-        /// &lt;summary&gt;pymupdf-layout PyPI package pin (used by companion MuPDF.NET.PDF4LLM).&lt;/summary&gt;
+        /// &lt;summary&gt;Layout-worker version pin (layout ships in the layout wheel).&lt;/summary&gt;
         public const string PyMuPDFLayout = "$(ArtifexPyMuPDFLayoutVersion)"%3B
     }
 }
@@ -44,7 +44,7 @@ namespace Artifex
 
   <Target Name="GenerateMuPDFNetPDF4LLMVersions"
           BeforeTargets="CoreCompile;BeforeCompile;Compile"
-          Condition="'$(MSBuildProjectName)' == 'MuPDF.NET.PDF4LLM'"
+          Condition="'$(MSBuildProjectName)' == 'MuPDF.NET'"
           Inputs="$(MSBuildThisFileDirectory)Versions.props"
           Outputs="$(MuPDFNetPDF4LLMVersionsGeneratedFile)">
     <MakeDir Directories="$(MSBuildThisFileDirectory)build" />
@@ -52,10 +52,10 @@ namespace Artifex
       <_VersionCs>// &lt;auto-generated /&gt; Source: Versions.props. Do not edit.
 namespace MuPDF.NET.PDF4LLM
 {
-    /// &lt;summary&gt;Build-time version pins for MuPDF.NET.PDF4LLM (from Versions.props).&lt;/summary&gt;
+    /// &lt;summary&gt;Build-time version pins for 4llm sources compiled into MuPDF.NET (from Versions.props).&lt;/summary&gt;
     internal static class BuildVersions
     {
-        public const string Package = "$(ArtifexMuPDFNetPDF4LLMVersion)"%3B
+        public const string Package = "$(ArtifexMuPDFNetVersion)"%3B
         public const string RequiredMuPdf = "$(ArtifexMuPDFVersion)"%3B
         public const string RequiredPyMuPDFLayout = "$(ArtifexPyMuPDFLayoutVersion)"%3B
         public const string MuPDFNet = "$(ArtifexMuPDFNetVersion)"%3B
@@ -70,7 +70,7 @@ namespace MuPDF.NET.PDF4LLM
       Encoding="UTF-8" />
   </Target>
 
-  <ItemGroup Condition="'$(MSBuildProjectName)' == 'MuPDF.NET.PDF4LLM'">
+  <ItemGroup Condition="'$(MSBuildProjectName)' == 'MuPDF.NET'">
     <Compile Include="$(MuPDFNetPDF4LLMVersionsGeneratedFile)" />
   </ItemGroup>
 </Project>

@@ -1,3 +1,4 @@
+using MuPDF.NET;
 namespace Demo
 {
     internal partial class Program

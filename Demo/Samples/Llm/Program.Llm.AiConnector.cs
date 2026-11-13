@@ -1,29 +1,34 @@
 using Microsoft.Extensions.AI;
-using MuPDF.NET.PDF4LLM;
-using MuPDF.NET.PDF4LLM.AI;
-using MuPDF.NET.PDF4LLM.AI.Models;
-using MuPDF.NET.PDF4LLM.AI.Options;
-
+using MuPDF.NET;
 namespace Demo
 {
     /// <summary>
-    /// <see cref="MuPDF.NET.PDF4LLM.MuPDF4LLM.LoadAiAsync"/> demo: index two PDFs, then Ask, Summarize, and Search.
+    /// <see cref="Utils.LoadAiAsync"/> demo: index two PDFs, then Ask, Summarize, and Search.
     /// Uses Azure OpenAI when <c>AZURE_OPENAI_*</c> env vars are set; otherwise an offline demo client.
     /// </summary>
     internal partial class Program
     {
         internal static async Task TestMicrosoftAiConnector(string[] args)
         {
-            Console.WriteLine("\n=== TestMicrosoftAiConnector (MuPDF.NET.PDF4LLM.AI) =======================");
+            Console.WriteLine("\n=== TestMicrosoftAiConnector (MuPDF.NET) =======================");
 
             string capitals = DemoPaths.Input("Llm/national-capitals.pdf");
             string nato = DemoPaths.Input("Llm/nato-members.pdf");
 
-            MicrosoftAIConnectorOptions options = ResolveAiConnectorOptions();
             bool azure = !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("AZURE_OPENAI_ENDPOINT"));
             Console.WriteLine($"Pipeline: {(azure ? "Azure OpenAI" : "development (in-memory index + demo chat)")}");
+            var options = azure
+                ? Utils.CreateAzureAiOptions(
+                    Environment.GetEnvironmentVariable("AZURE_OPENAI_ENDPOINT"),
+                    Environment.GetEnvironmentVariable("AZURE_OPENAI_API_KEY"),
+                    Environment.GetEnvironmentVariable("AZURE_OPENAI_CHAT_DEPLOYMENT"),
+                    Environment.GetEnvironmentVariable("AZURE_OPENAI_EMBEDDING_DEPLOYMENT"),
+                    Environment.GetEnvironmentVariable("AZURE_SEARCH_ENDPOINT"),
+                    Environment.GetEnvironmentVariable("AZURE_SEARCH_API_KEY"),
+                    Environment.GetEnvironmentVariable("AZURE_SEARCH_INDEX"))
+                : Utils.CreateDevelopmentAiOptions(chatClient: new DemoRagChatClient());
 
-            AiDocumentCollection aiDocs = await MuPDF4LLM.LoadAiAsync(
+            var aiDocs = await Utils.LoadAiAsync(
                 new[] { capitals, nato },
                 options);
 
@@ -33,9 +38,9 @@ namespace Demo
             Console.WriteLine($"\n--- AskDetailedAsync ---\nQ: {question}");
             try
             {
-                GroundedAnswer answer = await aiDocs.AskDetailedAsync(question);
+                var answer = await aiDocs.AskDetailedAsync(question);
                 Console.WriteLine(answer.InsufficientEvidence ? "(insufficient evidence)" : "A: " + answer.Text);
-                foreach (Citation cite in answer.Citations)
+                foreach (var cite in answer.Citations)
                     Console.WriteLine($"  cite: {cite.SourceFileName} p{cite.PageNumber} \"{cite.Quote}\"");
             }
             catch (InvalidOperationException ex)
@@ -58,42 +63,14 @@ namespace Demo
             // Vector search without chat completion
             const string searchQuery = "capital cities with more than 50% of national population";
             Console.WriteLine($"\n--- SearchAsync ---\nQuery: {searchQuery}");
-            IReadOnlyList<SearchResult> results = await aiDocs.SearchAsync(searchQuery, topK: 5);
-            foreach (SearchResult hit in results)
+            var results = await aiDocs.SearchAsync(searchQuery, topK: 5);
+            foreach (var hit in results)
             {
                 string preview = hit.Chunk.Text.Replace('\n', ' ').Trim();
                 if (preview.Length > 12000)
                     preview = preview[..12000] + "...";
                 Console.WriteLine($"  [{hit.Score:F3}] {hit.Chunk.SourceFileName} p{hit.Chunk.PageNumber}: {preview}");
             }
-        }
-
-        private static MicrosoftAIConnectorOptions ResolveAiConnectorOptions()
-        {
-            string endpoint = Environment.GetEnvironmentVariable("AZURE_OPENAI_ENDPOINT");
-            string apiKey = Environment.GetEnvironmentVariable("AZURE_OPENAI_API_KEY");
-            string chatDeployment = Environment.GetEnvironmentVariable("AZURE_OPENAI_CHAT_DEPLOYMENT");
-            string embeddingDeployment = Environment.GetEnvironmentVariable("AZURE_OPENAI_EMBEDDING_DEPLOYMENT");
-
-            if (!string.IsNullOrWhiteSpace(endpoint)
-                && !string.IsNullOrWhiteSpace(apiKey)
-                && !string.IsNullOrWhiteSpace(chatDeployment)
-                && !string.IsNullOrWhiteSpace(embeddingDeployment))
-            {
-                var azure = new AzureAiOptions
-                {
-                    OpenAiEndpoint = endpoint,
-                    OpenAiApiKey = apiKey,
-                    ChatDeploymentName = chatDeployment,
-                    EmbeddingDeploymentName = embeddingDeployment,
-                    SearchEndpoint = Environment.GetEnvironmentVariable("AZURE_SEARCH_ENDPOINT"),
-                    SearchApiKey = Environment.GetEnvironmentVariable("AZURE_SEARCH_API_KEY"),
-                    SearchIndexName = Environment.GetEnvironmentVariable("AZURE_SEARCH_INDEX"),
-                };
-                return azure.ToConnectorOptions();
-            }
-
-            return MicrosoftAIConnectorOptions.CreateForDevelopment(chatClient: new DemoRagChatClient());
         }
 
         /// <summary>Offline chat client: answers from retrieved excerpts (no Azure credentials).</summary>
