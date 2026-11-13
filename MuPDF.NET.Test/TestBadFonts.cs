@@ -15,7 +15,7 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_survive_names()
         {
-            // filename = os.path.join(scriptdir, "resources", "has-bad-fonts.pdf")
+
             using var doc = new Document(testDocPath);
             var fonts = doc.GetPageFonts(0);
             Assert.NotEmpty(fonts);

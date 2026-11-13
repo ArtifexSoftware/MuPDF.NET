@@ -1,16 +1,16 @@
 ﻿/*
  * -------------------------------------------------------------------------------
  * Demo script showing how annotations can be added to a PDF using MuPDF.NET.
- * 
+ *
  * It contains the following annotation types:
  * Caret, Text, FreeText, text markers (underline, strike-out, highlight,
  * squiggle), Circle, Square, Line, PolyLine, Polygon, FileAttachment, Stamp
  * and Redaction.
  * There is some effort to vary appearances by adding colors, line ends,
  * opacity, rotation, dashed lines, etc.
- * 
--------------------------------------------------------------------------------
-*/
+ *
+ * -------------------------------------------------------------------------------
+ */
 
 using MuPDF.NET;
 using System;

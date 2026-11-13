@@ -12,9 +12,10 @@ namespace MuPDF.NET
 
     /// <summary>
     /// Maps PDF objects when grafting pages or merging documents so shared resources are not duplicated.
-    /// <para>Created and cached on <see cref="Document.Graftmaps"/> during <c>insert_pdf</c> /
-    /// <see cref="Document.InsertPdf"/> and <see cref="Page.ShowPdfPage"/> to avoid duplicate object copies.</para>
     /// </summary>
+    /// <para>Created and cached on <see cref="Document.Graftmaps"/> during <c>insert_pdf</c>
+    /// <see cref="Document.InsertPdf"/> and <see cref="Page.ShowPdfPage"/> to avoid duplicate object copies.</para>
+
     public class Graftmap : IDisposable
     {
         private mupdf.PdfGraftMap _nativeGraftmap;
@@ -32,16 +33,15 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Create a graft map for the target PDF document .
+        /// Create a graft map for the target PDF document.
         /// </summary>
-        /// <param name="doc">Destination PDF document (<c>_as_pdf_document(doc)</c> in Python).</param>
+        /// <param name="doc">Destination PDF document (<c>_as_pdf_document(doc)</c> in PyMuPDF).</param>
         public Graftmap(Document doc)
         {
             if (doc == null)
                 throw new ArgumentNullException(nameof(doc));
-            // dst = _as_pdf_document(doc)
-            // self.this = map_
-            // self.thisown = True
+
+
             _nativeGraftmap = mupdf.mupdf.pdf_new_graft_map(doc.NativePdfDocument);
         }
 
@@ -64,6 +64,8 @@ namespace MuPDF.NET
             }
             GC.SuppressFinalize(this);
         }
+
+        ~Graftmap() { Dispose(); }
 
         /// <inheritdoc/>
         public override string ToString() => "Graftmap()";

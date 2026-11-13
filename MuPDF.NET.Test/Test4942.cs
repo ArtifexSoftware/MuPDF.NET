@@ -1,3 +1,4 @@
+﻿using System;
 using Xunit;
 
 namespace MuPDF.NET.Test
@@ -17,13 +18,22 @@ namespace MuPDF.NET.Test
         {
             string path = Doc("test_4942.pdf");
             using var document = new Document(path);
-            // page = document[0]
+
             var page = document[0];
-            // page.clip_to_rect(page.rect)
             page.ClipToRect(page.Rect);
-            // page.get_links()
             var links = page.GetLinks();
             Assert.Equal(8, links.Count);
+            foreach (var link in links)
+            {
+                Console.WriteLine(
+                    $"kind={link.Kind} xref={link.Xref} page={link.Page} dest={link.Dest} nameddest={link.NamedDest} from={link.From} id={link.Id}");
+                Assert.Equal(Constants.LinkNamed, (int)link.Kind);
+                Assert.Equal(-1, link.Page);
+                Assert.Equal("/XYZ null null null", link.Dest);
+                Assert.False(string.IsNullOrEmpty(link.NamedDest));
+                Assert.True(link.TryGetValue("dest", out var destVal));
+                Assert.Equal("/XYZ null null null", destVal);
+            }
         }
     }
 }

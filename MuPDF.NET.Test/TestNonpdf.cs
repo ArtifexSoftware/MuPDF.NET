@@ -1,10 +1,10 @@
-using System;
+﻿using System;
 using Xunit;
-
+using MuPDF.NET;
 namespace MuPDF.NET.Test
 {
-    /// <summary>
-    /// </summary>
+
+
     /// <remarks>
     /// Inputs: <c>TestDocuments/TestNonpdf/</c>; outputs: <c>TestDocuments/_Output/TestNonpdf/</c>.
     /// </remarks>
@@ -48,7 +48,6 @@ namespace MuPDF.NET.Test
         public void test_layout()
         {
             using var doc = new Document(Doc("Bezier.epub"));
-            // loc = doc.make_bookmark((5, 11))
             var loc = doc.make_bookmark((5, 11));
             doc.layout(Utils.PaperRect("a4"));
             Assert.Equal((5, 6), doc.find_bookmark(loc));

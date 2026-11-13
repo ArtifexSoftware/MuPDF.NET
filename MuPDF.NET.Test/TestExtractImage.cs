@@ -21,7 +21,7 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_extract_image()
         {
-            // filename = os.path.join(scriptdir, "resources", "joined.pdf")
+
             using var doc = new Document(Doc("joined.pdf"));
             int imageCount = 1;
             for (int xref = 1; xref < doc.XrefLength - 1; xref++)
@@ -68,7 +68,7 @@ namespace MuPDF.NET.Test
             }
         }
 
-        /// <summary>smoke test; no assert in Python.</summary>
+        /// <summary>smoke test </summary>
         [Fact]
         public void test_delete_image()
         {

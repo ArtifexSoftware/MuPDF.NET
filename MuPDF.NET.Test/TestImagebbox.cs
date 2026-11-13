@@ -1,16 +1,16 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Xunit;
 
 namespace MuPDF.NET.Test
 {
-    /// <summary>
-    /// </summary>
+
+
     /// <remarks>
     /// Ensures equality of bboxes computed via
-    /// <c>page.get_image_bbox()</c>,
-    /// <c>page.GetImageInfo()</c>, and
-    /// <c>page.GetBboxlog()</c>.
+    /// <c>page.get_image_bbox</c>,
+    /// <c>page.GetImageInfo</c>, and
+    /// <c>page.GetBboxlog</c>.
     /// Inputs: <c>TestDocuments/TestImagebbox/</c>; outputs: <c>TestDocuments/_Output/TestImagebbox/</c>.
     /// </remarks>
     [Collection("MuPDF.NET native")]

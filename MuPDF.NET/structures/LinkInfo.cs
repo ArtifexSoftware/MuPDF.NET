@@ -5,6 +5,7 @@ namespace MuPDF.NET
 {
     public class LinkInfo
     {
+
         /// <summary>
         /// describing the "hot spot" location on the page's visible representation
         /// </summary>
@@ -17,7 +18,7 @@ namespace MuPDF.NET
 
         public Point To { get; set; } = null;
 
-        public string ToStr { get; set; } //used page number is less than 0
+        public string ToStr { get; set; } // used page number is less than 0
 
         /// <summary>
         /// page number
@@ -26,8 +27,14 @@ namespace MuPDF.NET
 
         public string Name { get; set; }
 
-        /// <summary>Named destination ( key for <c>LINK_NAMED</c>).</summary>
+        /// <summary>Named destination (key for <c>LINK_NAMED</c>).</summary>
         public string NamedDest { get; set; }
+
+        /// <summary>
+        /// Raw PDF dest string from <see cref="Document.ResolveNames"/> when the named
+        /// target has no page (<c>dest</c>, e.g. <c>/XYZ null null null</c>).
+        /// </summary>
+        public string Dest { get; set; }
 
         /// <summary>
         /// a string specifying the destination internet resource
@@ -44,9 +51,9 @@ namespace MuPDF.NET
         /// </summary>
         public string File { get; set; }
 
-        /// <summary>
-        /// 
-        /// </summary>
+
+
+
         public string Id { get; set; }
 
         /// <summary>
@@ -76,7 +83,7 @@ namespace MuPDF.NET
 
         public override string ToString()
         {
-            return $"Kind = {(int)Kind}, Xref = {Xref}, Page = {Page}, To = {To.ToString()}, Zoom = {Zoom}, Collapse = {Collapse}";
+            return $"Kind = {(int)Kind}, Xref = {Xref}, Page = {Page}, To = {To}, Zoom = {Zoom}, NamedDest = {NamedDest}, Dest = {Dest}, Collapse = {Collapse}";
         }
 
         /// <summary>MuPDF.NET dictionary-style access (<c>link["kind"]</c>).</summary>
@@ -92,6 +99,7 @@ namespace MuPDF.NET
                     case "page": return Page;
                     case "name": return Name;
                     case "nameddest": return NamedDest;
+                    case "dest": return Dest;
                     case "uri": return Uri;
                     case "zoom": return Zoom;
                     case "file": return File;
@@ -115,6 +123,7 @@ namespace MuPDF.NET
                     case "page": Page = Convert.ToInt32(value); break;
                     case "name": Name = value?.ToString(); break;
                     case "nameddest": NamedDest = value?.ToString(); break;
+                    case "dest": Dest = value?.ToString(); break;
                     case "uri": Uri = value?.ToString(); break;
                     case "zoom": Zoom = Convert.ToSingle(value); break;
                     case "file": File = value?.ToString(); break;
@@ -150,6 +159,8 @@ namespace MuPDF.NET
                 d["name"] = link.Name;
             if (!string.IsNullOrEmpty(link.NamedDest))
                 d["nameddest"] = link.NamedDest;
+            if (!string.IsNullOrEmpty(link.Dest))
+                d["dest"] = link.Dest;
             if (!string.IsNullOrEmpty(link.Uri))
                 d["uri"] = link.Uri;
             if (!string.IsNullOrEmpty(link.File))
@@ -176,6 +187,7 @@ namespace MuPDF.NET
                 Page = I("page"),
                 Name = Opt("name"),
                 NamedDest = Opt("nameddest"),
+                Dest = Opt("dest"),
                 Uri = Opt("uri"),
                 Zoom = F("zoom"),
                 File = Opt("file"),

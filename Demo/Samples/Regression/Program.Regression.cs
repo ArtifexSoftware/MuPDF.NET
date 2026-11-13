@@ -1,5 +1,5 @@
 using System.Threading.Tasks;
-
+using MuPDF.NET;
 namespace Demo
 {
     internal partial class Program
@@ -130,7 +130,6 @@ namespace Demo
                         }
                     }
 
-                    //pathInfo.Items.get
                     float newLineWidth = pathInfo.Width;
                     if (pathInfo.Width <= newWidth)
                     {
@@ -153,7 +152,6 @@ namespace Demo
                         dashes: pathInfo.Dashes
                      );
 
-                    // file_export.write(f'Path {i:03}\] width: {lwidth}, dashes: {path\["dashes"\]}, closePath: {path\["closePath"\]}\\n')
                     //writer.Write($"Path {i:000}\\] with: {newLineWidth}, dashes: {pathInfo.Dashes}, closePath: {pathInfo.ClosePath}\\n");
 
                     i++;

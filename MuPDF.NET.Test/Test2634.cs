@@ -14,12 +14,12 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_2634()
         {
-            //     return;
+            // return;
 
             using var pdf = new Document(testDoc);
             using var newDoc = new Document();
             newDoc.InsertPdf(pdf);
-            newDoc.SetToc(TocToRows(pdf.GetToc(simple: false)));
+            newDoc.SetToc(pdf.GetToc(simple: false));
             var toc_pdf = pdf.GetToc(simple: false);
             var toc_new = newDoc.GetToc(simple: false);
 
@@ -85,15 +85,6 @@ namespace MuPDF.NET.Test
                     Assert.True(Math.Abs(aPt.Y - bPt.Y) < 0.01);
                 }
             }
-        }
-
-        private static List<object> TocToRows(
-            List<(int level, string title, int page, Dictionary<string, object> link)> toc)
-        {
-            var rows = new List<object>();
-            foreach (var (level, title, page, link) in toc)
-                rows.Add(new object[] { level, title, page, link });
-            return rows;
         }
 
         private static string Pformat(List<(int level, string title, int page, Dictionary<string, object> link)> toc, int indent = 4)

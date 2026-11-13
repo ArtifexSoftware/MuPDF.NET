@@ -1,3 +1,4 @@
+using MuPDF.NET;
 namespace Demo
 {
     /// <summary>
@@ -74,26 +75,29 @@ namespace Demo
             new("Regression & diagnostics", "pixmap-parallel", "[diag] Parallel Pixmap.ToBytes", _ => Program.TestPixmapParallel(), Diagnostic: true),
             new("Regression & diagnostics", "gettables-parallel", "[diag] Parallel Utils.GetTables", _ => Program.TestGetTablesParallel(), Diagnostic: true),
             new("Regression & diagnostics", "jbig2", "[diag] JBIG2 image recompression", _ => Program.TestRecompressJBIG2(), Diagnostic: true),
-            
-            // —— MuPDF.NET.PDF4LLM —— Samples/Llm
-            new("MuPDF.NET.PDF4LLM", "rag-markdown", "PDF to Markdown (Magazine.pdf)", _ => Program.TestMuPdfRagToMarkdown()),
-            new("MuPDF.NET.PDF4LLM", "table", "Detect tables and export markdown", _ => Program.TestTable()),
-            new("MuPDF.NET.PDF4LLM", "table-extract-1", "Dump detected tables by page to console", _ => Program.TestTableExtract1()),
-            new("MuPDF.NET.PDF4LLM", "table-extract-2", "Export detected tables to tables.csv", _ => Program.TestTableExtract2()),
-            new("MuPDF.NET.PDF4LLM", "table-extract-3", "Merge continued table pages by column count", _ => Program.TestTableExtract3()),
-            new("MuPDF.NET.PDF4LLM", "table-ocr", "Extract OCR text from Ocr.pdf", _ => Program.TestOcr()),
-            new("MuPDF.NET.PDF4LLM", "llm-reader-save-pages", "Load markdown chunks and save per-page .md files", _ => Program.TestLLM2()),
-            new("MuPDF.NET.PDF4LLM", "markdown-reader", "LlamaIndex PDFMarkdownReader", _ => Program.TestMarkdownReader()),
-            new("MuPDF.NET.PDF4LLM", "ai-connector", "LoadAiAsync: Ask / Summarize / Search", a => Program.TestMicrosoftAiConnector(a).GetAwaiter().GetResult()),
-            new("MuPDF.NET.PDF4LLM", "capitals-extract", "ToMarkdown national-capitals.pdf", _ => Program.TestExtractNationalCapitals()),
-            new("MuPDF.NET.PDF4LLM", "ollama", "LoadAiAsync with local Ollama (opt-in; needs Ollama)", _ => Program.TestOllama().GetAwaiter().GetResult(), OptIn: true),
-            new("MuPDF.NET.PDF4LLM", "ollama-magazines", "LoadAiAsync Magazines-PDF.pdf with local Ollama (opt-in)", _ => Program.TestOllamaMagazines().GetAwaiter().GetResult(), OptIn: true),
-            new("MuPDF.NET.PDF4LLM", "llm-to-markdown-fixture-370", "[diag] ToMarkdown vs test_370 expected output", a => Program.Test4LlmToMarkdownCompareExpected370(a), Diagnostic: true),
-            new("MuPDF.NET.PDF4LLM", "llm-to-markdown-ocr-1", "[diag] ToMarkdown OCR fixture (FFFD)", a => Program.Test4LlmToMarkdownOcrFixture1(a), Diagnostic: true),
-            new("MuPDF.NET.PDF4LLM", "llm-to-markdown-ocr-2", "[diag] ToMarkdown without OCR on FFFD fixture", a => Program.Test4LlmToMarkdownOcrFixture2(a), Diagnostic: true),
-            new("MuPDF.NET.PDF4LLM", "llm-to-markdown-ocr-3", "[diag] ToMarkdown OCR on/off SVG fixture", a => Program.Test4LlmToMarkdownOcrFixture3(a), Diagnostic: true),
-            new("MuPDF.NET.PDF4LLM", "llm-pdf-reader-empty", "[diag] PDFMarkdownReader empty page", a => Program.Test4LlmPdfMarkdownReaderEmptyPage(a), Diagnostic: true),
-            new("MuPDF.NET.PDF4LLM", "llm-pdf-reader-missing-file", "[diag] PDFMarkdownReader missing file", a => Program.Test4LlmPdfMarkdownReaderMissingFile(a), Diagnostic: true),
+
+            // —— MuPDF.NET.Office —— Samples/Office
+            new("MuPDF.NET.Office", "volume-license", "Unlock a volume key, open documents, flush the usage count (opt-in)", a => Program.TestVolumeLicense(a), OptIn: true),
+
+            // —— LLM (MuPDF.NET) —— Samples/Llm
+            new("MuPDF.NET", "rag-markdown", "PDF to Markdown (Magazine.pdf)", _ => Program.TestMuPdfRagToMarkdown()),
+            new("MuPDF.NET", "table", "Detect tables and export markdown", _ => Program.TestTable()),
+            new("MuPDF.NET", "table-extract-1", "Dump detected tables by page to console", _ => Program.TestTableExtract1()),
+            new("MuPDF.NET", "table-extract-2", "Export detected tables to tables.csv", _ => Program.TestTableExtract2()),
+            new("MuPDF.NET", "table-extract-3", "Merge continued table pages by column count", _ => Program.TestTableExtract3()),
+            new("MuPDF.NET", "table-ocr", "Extract OCR text from Ocr.pdf", _ => Program.TestOcr()),
+            new("MuPDF.NET", "llm-reader-save-pages", "Load markdown chunks and save per-page .md files", _ => Program.TestLLM2()),
+            new("MuPDF.NET", "markdown-reader", "LlamaIndex PDFMarkdownReader", _ => Program.TestMarkdownReader()),
+            new("MuPDF.NET", "ai-connector", "LoadAiAsync: Ask / Summarize / Search", a => Program.TestMicrosoftAiConnector(a).GetAwaiter().GetResult()),
+            new("MuPDF.NET", "capitals-extract", "ToMarkdown national-capitals.pdf", _ => Program.TestExtractNationalCapitals()),
+            new("MuPDF.NET", "ollama", "LoadAiAsync with local Ollama (opt-in; needs Ollama)", _ => Program.TestOllama().GetAwaiter().GetResult(), OptIn: true),
+            new("MuPDF.NET", "ollama-magazines", "LoadAiAsync Magazines-PDF.pdf with local Ollama (opt-in)", _ => Program.TestOllamaMagazines().GetAwaiter().GetResult(), OptIn: true),
+            new("MuPDF.NET", "llm-to-markdown-fixture-370", "[diag] ToMarkdown vs test_370 expected output", a => Program.Test4LlmToMarkdownCompareExpected370(a), Diagnostic: true),
+            new("MuPDF.NET", "llm-to-markdown-ocr-1", "[diag] ToMarkdown OCR fixture (FFFD)", a => Program.Test4LlmToMarkdownOcrFixture1(a), Diagnostic: true),
+            new("MuPDF.NET", "llm-to-markdown-ocr-2", "[diag] ToMarkdown without OCR on FFFD fixture", a => Program.Test4LlmToMarkdownOcrFixture2(a), Diagnostic: true),
+            new("MuPDF.NET", "llm-to-markdown-ocr-3", "[diag] ToMarkdown OCR on/off SVG fixture", a => Program.Test4LlmToMarkdownOcrFixture3(a), Diagnostic: true),
+            new("MuPDF.NET", "llm-pdf-reader-empty", "[diag] PDFMarkdownReader empty page", a => Program.Test4LlmPdfMarkdownReaderEmptyPage(a), Diagnostic: true),
+            new("MuPDF.NET", "llm-pdf-reader-missing-file", "[diag] PDFMarkdownReader missing file", a => Program.Test4LlmPdfMarkdownReaderMissingFile(a), Diagnostic: true),
         };
 
         private static readonly Dictionary<string, Sample> ByName = BuildIndex();

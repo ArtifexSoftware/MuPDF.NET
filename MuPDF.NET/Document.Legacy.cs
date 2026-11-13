@@ -11,16 +11,19 @@ namespace MuPDF.NET
     /// <remarks><see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/>.</remarks>
     public partial class Document
     {
+
         /// <summary>
         /// Legacy readthedocs <c>ToFzDocument</c> — forwards to &lt;see cref="NativeDocument"/&gt;.
         /// </summary>
         /// <remarks>See <see cref="NativeDocument"/>. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public mupdf.FzDocument ToFzDocument() => NativeDocument;
+
         /// <summary>
         /// Legacy readthedocs <c>InitDocument</c> — Initializes outline and internal state after open.
         /// </summary>
         /// <remarks>See <see cref="InitDoc"/>. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public void InitDocument() => InitDoc();
+
         /// <summary>
         /// Legacy readthedocs <c>SetObjectValue</c> — forwards to &lt;see cref="SetObjectValue"/&gt;.
         /// </summary>
@@ -31,74 +34,88 @@ namespace MuPDF.NET
             var pdf = obj.pdf_get_bound_document();
             return Helpers.JmSetObjectValue(pdf, obj, key, value);
         }
+
         /// <summary>
         /// Legacy readthedocs <c>GetChapterPageCount</c> — forwards to &lt;see cref="ChapterPageCount"/&gt;.
         /// </summary>
         /// <remarks>See <see cref="ChapterPageCount"/>. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public int GetChapterPageCount(int chapter) => ChapterPageCount(chapter);
+
         /// <summary>
         /// Legacy readthedocs <c>Contains</c> — forwards to &lt;see cref="Contains"/&gt;.
         /// </summary>
         /// <remarks>See <see cref="Contains"/>. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public bool Contains((int chapter, int page) loc) => ContainsLocation(loc);
+
         /// <summary>
         /// Legacy readthedocs <c>GetPageNumberFromLocation</c> — forwards to &lt;see cref="PageNumberFromLocation"/&gt;.
         /// </summary>
         /// <remarks>See <see cref="PageNumberFromLocation"/>. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public int GetPageNumberFromLocation(int chapter, int pno) =>
             PageNumberFromLocation((chapter, pno));
+
         /// <summary>
         /// Legacy readthedocs <c>GetPageXref</c> — forwards to &lt;see cref="PageXref"/&gt;.
         /// </summary>
         /// <remarks>See <see cref="PageXref"/>. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public int GetPageXref(int pno) => PageXref(pno);
+
         /// <summary>
         /// Legacy readthedocs <c>GetPdfCatalog</c> — Gets the xref of the PDF catalog (root) dictionary.
         /// </summary>
         /// <remarks>See <see cref="PdfCatalog"/>. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public int GetPdfCatalog() => PdfCatalog;
+
         /// <summary>
         /// Legacy readthedocs <c>GetPdfTrailer</c> — Gets the trailer dictionary as a formatted string.
         /// </summary>
         /// <remarks>See <see cref="PdfTrailer"/>. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public string GetPdfTrailer(int compressed = 0, int ascii = 0) =>
             PdfTrailer(compressed != 0, ascii != 0);
+
         /// <summary>
         /// Legacy readthedocs <c>GetPdfFileID</c> — forwards to &lt;see cref="PdfFileID"/&gt;.
         /// </summary>
         /// <remarks>See <see cref="PdfFileID"/>. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public List<string> GetPdfFileID() => _getPDFfileid();
+
         /// <summary>
         /// Legacy readthedocs <c>GetXrefLength</c> — forwards to &lt;see cref="XrefLength"/&gt;.
         /// </summary>
         /// <remarks>See <see cref="XrefLength"/>. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public int GetXrefLength() => XrefLength;
+
         /// <summary>
         /// Legacy readthedocs <c>GetXrefObject</c> — forwards to &lt;see cref="XrefObject"/&gt;.
         /// </summary>
         /// <remarks>See <see cref="XrefObject"/>. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public string GetXrefObject(int xref, int compressed = 0, int ascii = 0) =>
             XrefObject(xref, compressed != 0, ascii != 0);
+
         /// <summary>
         /// Legacy readthedocs <c>GetXrefStream</c> — Gets the decompressed stream bytes at xref.
         /// </summary>
         /// <remarks>See <see cref="XrefStream"/>. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public byte[] GetXrefStream(int xref) => XrefStream(xref);
+
         /// <summary>
         /// Legacy readthedocs <c>GetXrefStreamRaw</c> — forwards to &lt;see cref="XrefStreamRaw"/&gt;.
         /// </summary>
         /// <remarks>See <see cref="XrefStreamRaw"/>. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public byte[] GetXrefStreamRaw(int xref) => XrefStreamRaw(xref);
+
         /// <summary>
         /// Legacy readthedocs <c>SaveIncremental</c> — forwards to &lt;see cref="SaveIncremental"/&gt;.
         /// </summary>
         /// <remarks>See <see cref="SaveIncremental"/>. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public void SaveIncremental() => SaveIncr();
+
         /// <summary>
         /// Legacy readthedocs <c>SetLayout</c> — Re-layouts a reflowable document to new dimensions.
         /// </summary>
         /// <remarks>See <see cref="Layout"/>. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public void SetLayout(string layout) => SetPageLayout(layout);
+
         /// <summary>
         /// Legacy readthedocs <c>SetLayout</c> — Re-layouts a reflowable document to new dimensions.
         /// </summary>
@@ -116,21 +133,25 @@ namespace MuPDF.NET
             }
             Layout(width, height, fontSize);
         }
+
         /// <summary>
         /// Legacy readthedocs <c>GetKeysXref</c> — forwards to &lt;see cref="XrefGetKeys"/&gt;.
         /// </summary>
         /// <remarks>See <see cref="XrefGetKeys"/>. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public List<string> GetKeysXref(int xref) => XrefGetKeys(xref);
+
         /// <summary>
         /// Legacy readthedocs <c>XrefIsXObject</c> — forwards to &lt;see cref="XrefIsXObject"/&gt;.
         /// </summary>
         /// <remarks>See <see cref="XrefIsXObject"/>. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public bool XrefIsXObject(int xref) => XrefIsXobject(xref);
+
         /// <summary>
         /// Legacy readthedocs <c>SetXmlMetaData</c> — forwards to &lt;see cref="SetXmlMetadata"/&gt;.
         /// </summary>
         /// <remarks>See <see cref="SetXmlMetadata"/>. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public void SetXmlMetaData(string metadata) => SetXmlMetadata(metadata);
+
         /// <summary>
         /// Legacy readthedocs <c>MetaData</c> — Gets or sets the document metadata dictionary (PDF Info keys).
         /// </summary>
@@ -140,16 +161,19 @@ namespace MuPDF.NET
             get => Metadata;
             set => Metadata = value;
         }
+
         /// <summary>
         /// Legacy readthedocs <c>GetOC</c> — forwards to &lt;see cref="OC"/&gt;.
         /// </summary>
         /// <remarks>See <see cref="OC"/>. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public int GetOC(int xref) => GetOc(xref);
+
         /// <summary>
         /// Legacy readthedocs <c>SetOC</c> — forwards to &lt;see cref="OC"/&gt;.
         /// </summary>
         /// <remarks>See <see cref="OC"/>. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public void SetOC(int xref, int oc) => SetOc(xref, oc);
+
         /// <summary>
         /// Legacy readthedocs <c>GetOCMD</c> — forwards to &lt;see cref="OCMD"/&gt;.
         /// </summary>
@@ -166,6 +190,7 @@ namespace MuPDF.NET
                 Ve = d.TryGetValue("ve", out var ve) && ve is IEnumerable<object> veo ? veo.ToArray() : Array.Empty<object>(),
             };
         }
+
         /// <summary>
         /// Legacy readthedocs <c>SetOCMD</c> — forwards to &lt;see cref="OCMD"/&gt;.
         /// </summary>
@@ -195,11 +220,13 @@ namespace MuPDF.NET
             }
             return SetOcmd(xref, ocgs?.ToList(), policy, ve);
         }
+
         /// <summary>
         /// Legacy readthedocs <c>IsPDF</c> — forwards to &lt;see cref="IsPdf"/&gt;.
         /// </summary>
         /// <remarks>See <see cref="IsPdf"/>. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public bool IsPDF => IsPdf;
+
         /// <summary>
         /// Legacy readthedocs <c>IsFormPDF</c> — forwards to &lt;see cref="IsFormPDF"/&gt;.
         /// </summary>
@@ -235,11 +262,13 @@ namespace MuPDF.NET
                 return count >= 0 ? count : -1;
             }
         }
+
         /// <summary>
         /// Legacy readthedocs <c>Recolor</c> — PDF only: execute <see cref="Page.Recolor"/> for all pages
         /// </summary>
         /// <remarks>See <see cref="Recolor"/>. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public void Recolor(int pageNum, int colorNum) => RecolorPage(pageNum, colorNum);
+
         /// <summary>
         /// Legacy readthedocs <c>Recolor</c> — PDF only: execute <see cref="Page.Recolor"/> for all pages
         /// </summary>
@@ -255,6 +284,7 @@ namespace MuPDF.NET
             };
             RecolorPage(pageNum, components);
         }
+
         /// <summary>
         /// Legacy readthedocs <c>LayerUIConfigs</c> — forwards to &lt;see cref="LayerUIConfigs"/&gt;.
         /// </summary>
@@ -271,6 +301,7 @@ namespace MuPDF.NET
                 IsLocked = ui.TryGetValue("locked", out var lk) && Convert.ToBoolean(lk),
             }).ToList();
         }
+
         /// <summary>
         /// Legacy readthedocs <c>RewriteImage</c> — forwards to <see cref="RewriteImages"/>.
         /// </summary>
@@ -295,6 +326,7 @@ namespace MuPDF.NET
 
             RewriteImages(quality, dpiThreshold, dpiTarget, lossy, lossless, bitonal, color, gray, setToGray, options);
         }
+
         /// <summary>
         /// Legacy readthedocs <c>AddEmbfile</c> — forwards to &lt;see cref="AddEmbfile"/&gt;.
         /// </summary>
@@ -306,31 +338,37 @@ namespace MuPDF.NET
             string uFileName = null,
             string desc = null) =>
             AddEmbeddedFile(name, buffer, filename, uFileName, desc);
+
         /// <summary>
         /// Legacy readthedocs <c>GetEmbfileNames</c> — forwards to &lt;see cref="GetEmbeddedFileNames"/&gt;.
         /// </summary>
         /// <remarks>See <see cref="GetEmbeddedFileNames"/>. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public List<string> GetEmbfileNames() => GetEmbeddedFileNames();
+
         /// <summary>
         /// Legacy readthedocs <c>GetEmbfileCount</c> — Gets the number of embedded files.
         /// </summary>
         /// <remarks>See <see cref="EmbeddedFileCount"/>. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public int GetEmbfileCount() => EmbeddedFileCount;
+
         /// <summary>
         /// Legacy readthedocs <c>DeleteEmbfile</c> — forwards to &lt;see cref="DeleteEmbfile"/&gt;.
         /// </summary>
         /// <remarks>See <see cref="DeleteEmbfile"/>. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public void DeleteEmbfile(int item) => DeleteEmbeddedFile(item);
+
         /// <summary>
         /// Legacy readthedocs <c>DeleteEmbfile</c> — forwards to &lt;see cref="DeleteEmbfile"/&gt;.
         /// </summary>
         /// <remarks>See <see cref="DeleteEmbfile"/>. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public void DeleteEmbfile(string item) => DeleteEmbeddedFile(item);
+
         /// <summary>
         /// Legacy readthedocs <c>GetEmbfile</c> — forwards to &lt;see cref="GetEmbeddedFile"/&gt;.
         /// </summary>
         /// <remarks>See <see cref="GetEmbeddedFile"/>. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public byte[] GetEmbfile(int item) => GetEmbeddedFile(item);
+
         /// <summary>
         /// Legacy readthedocs <c>GetEmbfileInfo</c> — forwards to &lt;see cref="EmbfileInfo"/&gt;.
         /// </summary>
@@ -355,6 +393,7 @@ namespace MuPDF.NET
                 Length = I(info, "length"),
             };
         }
+
         /// <summary>
         /// Legacy readthedocs <c>GetEmbfileUpd</c> — forwards to &lt;see cref="EmbfileUpd"/&gt;.
         /// </summary>
@@ -368,26 +407,31 @@ namespace MuPDF.NET
             item is int i
                 ? UpdateEmbeddedFile(i, buffer, filename, uFileName, desc)
                 : UpdateEmbeddedFile(item?.ToString() ?? string.Empty, buffer, filename, uFileName, desc);
+
         /// <summary>
         /// Legacy readthedocs <c>IsEnabledJournal</c> — forwards to &lt;see cref="IsEnabledJournal"/&gt;.
         /// </summary>
         /// <remarks>See <see cref="IsEnabledJournal"/>. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public bool IsEnabledJournal() => JournalIsEnabled;
+
         /// <summary>
         /// Legacy readthedocs <c>IsStream</c> — forwards to &lt;see cref="IsStream"/&gt;.
         /// </summary>
         /// <remarks>See <see cref="IsStream"/>. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public bool IsStream(int xref = 0) => XrefIsStream(xref);
+
         /// <summary>
         /// Legacy readthedocs <c>SetKeyXRef</c> — forwards to &lt;see cref="KeyXRef"/&gt;.
         /// </summary>
         /// <remarks>See <see cref="KeyXRef"/>. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public void SetKeyXRef(int xref, string key, string value) => XrefSetKey(xref, key, value);
+
         /// <summary>
         /// Legacy readthedocs <c>RemoveTocItem</c> — forwards to &lt;see cref="RemoveTocItem"/&gt;.
         /// </summary>
         /// <remarks>See <see cref="RemoveTocItem"/>. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public void RemoveTocItem(int xref) => _remove_toc_item(xref);
+
         /// <summary>
         /// Legacy readthedocs <c>UpdateTocItem</c> — forwards to &lt;see cref="UpdateTocItem"/&gt;.
         /// </summary>
@@ -400,6 +444,7 @@ namespace MuPDF.NET
             bool collapse = false,
             float[] color = null) =>
             _update_toc_item(xref, action, title, flags, collapse, color);
+
         /// <summary>
         /// Legacy readthedocs <c>GetPageNumberFromLocation</c> — forwards to &lt;see cref="PageNumberFromLocation"/&gt;.
         /// </summary>
@@ -414,23 +459,27 @@ namespace MuPDF.NET
                 throw new Exception("page id not in document");
             return PageNumberFromLocation((0, pageId));
         }
+
         /// <summary>
         /// Legacy readthedocs <c>Convert2Pdf</c> — forwards to &lt;see cref="Convert2Pdf"/&gt;.
         /// </summary>
         /// <remarks>See <see cref="Convert2Pdf"/>. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public byte[] Convert2Pdf(int from = 0, int to = -1, int rotate = 0) => ConvertToPdf(from, to, rotate);
+
         /// <summary>
         /// Legacy readthedocs <c>AsPdfDocument</c> — forwards to &lt;see cref="AsPdfDocument"/&gt;.
         /// </summary>
         /// <remarks>See <see cref="AsPdfDocument"/>. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public static mupdf.PdfDocument AsPdfDocument(mupdf.FzDocument document, bool required = true) =>
             Helpers.AsPdfDocument(document, required);
+
         /// <summary>
         /// Legacy readthedocs <c>AsPdfDocument</c> — forwards to &lt;see cref="AsPdfDocument"/&gt;.
         /// </summary>
         /// <remarks>See <see cref="AsPdfDocument"/>. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public static mupdf.PdfDocument AsPdfDocument(Document document) =>
             Helpers.AsPdfDocument(document, required: false);
+
         /// <summary>
         /// Legacy readthedocs <c>ExtendTocItems</c> — forwards to &lt;see cref="ExtendTocItems"/&gt;.
         /// </summary>
@@ -443,16 +492,19 @@ namespace MuPDF.NET
                 .ToList() ?? new List<(int level, string title, int page, Dictionary<string, object> link)>();
             _extend_toc_items(src);
         }
+
         /// <summary>
         /// Legacy readthedocs <c>ForgetPage</c> — forwards to &lt;see cref="ForgetPage"/&gt;.
         /// </summary>
         /// <remarks>See <see cref="ForgetPage"/>. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public void ForgetPage(Page page) => ForgetPageRef(page);
+
         /// <summary>
         /// Legacy readthedocs <c>EmbeddedfileIndex</c> — forwards to &lt;see cref="EmbeddedfileIndex"/&gt;.
         /// </summary>
         /// <remarks>See <see cref="EmbeddedfileIndex"/>. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public int EmbeddedfileIndex(object item) => _embeddedFileIndex(item);
+
         /// <summary>
         /// Legacy readthedocs <c>FindBookmark</c> — retrieve page location after laid out document
         /// </summary>
@@ -463,17 +515,20 @@ namespace MuPDF.NET
             var (chapter, page) = FindBookmark((ulong)Math.Max(0, bm));
             return new Location { Chapter = chapter, Page = page };
         }
+
         /// <summary>
         /// Legacy readthedocs <c>CopyFullPage</c> — forwards to &lt;see cref="CopyFullPage"/&gt;.
         /// </summary>
         /// <remarks>See <see cref="CopyFullPage"/>. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public void CopyFullPage(int pno, int to = -1) => FullCopyPage(pno, to);
+
         /// <summary>
         /// Legacy readthedocs <c>CopyXref</c> — forwards to &lt;see cref="CopyXref"/&gt;.
         /// </summary>
         /// <remarks>See <see cref="CopyXref"/>. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public void CopyXref(int source, int target, List<string> keep = null) =>
             XrefCopy(source, target, keep);
+
         /// <summary>
         /// Legacy readthedocs <c>GetPageXObjects</c> — forwards to &lt;see cref="PageXObjects"/&gt;.
         /// </summary>
@@ -490,6 +545,7 @@ namespace MuPDF.NET
                 Bbox = r.TryGetValue("bbox", out var b) && b is Rect rb ? rb : null,
             }).ToList();
         }
+
         /// <summary>
         /// Legacy readthedocs <c>GetPages</c> — Iterates pages with optional start, stop, and step (like Python slice).
         /// </summary>
@@ -497,6 +553,7 @@ namespace MuPDF.NET
         public List<Page> GetPages(int start, int stop, int step) => Pages(start, stop, step).ToList();
 
         // Legacy overload: mirrors MuPDF.NET ExtractFont(xref, infoOnly, named).
+
         /// <summary>
         /// Legacy readthedocs <c>ExtractFont</c> — PDF only: extract a font by xref
         /// </summary>
@@ -517,7 +574,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Legacy MuPDF.NET /
+        /// Legacy MuPDF.NET
         /// </summary>
         /// <remarks>
         /// Use <see cref="Document(string, string, Rect, float, float, float)"/> or
@@ -550,11 +607,13 @@ namespace MuPDF.NET
         }
 
         public (string type, string value) GetKeyXref(int xref, string key) => XrefGetKey(xref, key);
+
         /// <summary>
         /// Legacy readthedocs <c>Select</c> — PDF only: select a subset of pages
         /// </summary>
         /// <remarks>See <see cref="Select"/>. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public void Select(List<int> pages) => Select(pages?.ToArray() ?? Array.Empty<int>());
+
         /// <summary>
         /// Legacy readthedocs <c>SetPageLabels</c> — PDF only: add/update page label definitions
         /// </summary>
@@ -573,6 +632,7 @@ namespace MuPDF.NET
             }).ToList();
             SetPageLabels(dicts);
         }
+
         /// <summary>
         /// Legacy readthedocs <c>Save</c> — PDF only: save the document
         /// </summary>
@@ -644,16 +704,19 @@ namespace MuPDF.NET
                 compressionEffort,
                 raiseOnRepair);
         }
+
         /// <summary>
         /// Legacy readthedocs <c>Outline</c> — first `Outline` item
         /// </summary>
         /// <remarks>See <see cref="Outline"/>. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public Outline Outline => GetOutline();
+
         /// <summary>
         /// Legacy readthedocs <c>LoadOutline</c> — forwards to &lt;see cref="LoadOutline"/&gt;.
         /// </summary>
         /// <remarks>See <see cref="LoadOutline"/>. <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Document.html"/></remarks>
         public Outline LoadOutline() => GetOutline();
+
         /// <summary>
         /// Legacy readthedocs <c>GetPdfCatelog</c> — forwards to &lt;see cref="GetPdfCatalog"/&gt;.
         /// </summary>
@@ -662,6 +725,7 @@ namespace MuPDF.NET
 
         /// <summary>Convert global page number to (chapter, page).</summary>
         public (int chapter, int page) GetLocationFromPageNumber(int pno) => LocationFromPageNumber(pno);
+
         /// <summary>
         /// Legacy readthedocs <c>GetPagePixmap</c> — create a pixmap of a page by page number
         /// </summary>

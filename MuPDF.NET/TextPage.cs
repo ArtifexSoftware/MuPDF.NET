@@ -8,7 +8,7 @@ using System.Text.Json;
 namespace MuPDF.NET
 {
     /// <summary>
-    /// Text and images on a document page .
+    /// Text and images on a document page.
     /// </summary>
     /// <remarks>
     /// <para>Create with <see cref="Page.GetTextPage"/> or <see cref="DisplayList.GetTextPage"/>.
@@ -81,7 +81,6 @@ namespace MuPDF.NET
             if (!sort)
             {
                 using var res = mupdf.mupdf.fz_new_buffer(1024);
-                // JM_print_stext_page_as_text(res, this_tpage)
                 JM_print_stext_page_as_text(res, NativeStextPage);
                 return Helpers.JmEscapeStrFromBuffer(res);
             }
@@ -98,7 +97,7 @@ namespace MuPDF.NET
 
         /// <summary>
         /// Text block list ; tuples are <c>(x0, y0, x1, y1, text, block_no, block_type)</c>.
-        /// Ported from <c>extra.i</c> <c>extractBLOCKS</c>.
+        /// Ported from <c>extractBLOCKS</c>.
         /// </summary>
         internal List<(float x0, float y0, float x1, float y1, string text, int blockNo, int blockType)> ExtractBlockTuples()
         {
@@ -172,7 +171,7 @@ namespace MuPDF.NET
 
         /// <summary>
         /// Word list ; tuples are <c>(x0, y0, x1, y1, word, block_no, line_no, word_no)</c>.
-        /// Ported from <c>extra.i</c> <c>extractWORDS</c>.
+        /// Ported from <c>extractWORDS</c>.
         /// </summary>
         public List<(float x0, float y0, float x1, float y1, string word, int blockNo, int lineNo, int wordNo)> ExtractWordTuples(string delimiters = null)
         {
@@ -649,13 +648,10 @@ namespace MuPDF.NET
         /// <summary>Plain text inside a rectangle.</summary>
         public string ExtractTextbox(Rect rect)
         {
-            // this_tpage = self.this
+
             mupdf.FzStextPage this_tpage = NativeStextPage;
-            // area = JM_rect_from_py(rect)
             mupdf.FzRect area = Helpers.JM_rect_from_py(rect);
-            // found = JM_copy_rectangle(this_tpage, area)
             string found = Helpers.JM_copy_rectangle(this_tpage, area);
-            // rc = PyUnicode_DecodeRawUnicodeEscape(found)
             string rc = Helpers.PyUnicode_DecodeRawUnicodeEscape(found);
             return rc;
         }
@@ -676,11 +672,11 @@ namespace MuPDF.NET
             return NativeStextPage.fz_copy_selection(a, b, 0);
         }
 
-        // ─── Internal: Faithful port of extra.i _as_dict ────────────────
+        // ─── Internal: dictionary extraction ────────────────
 
         /// <summary>
         /// Stable C++ block wrappers for the lifetime of this text page (MuPDF.NET <c>Blocks</c> pattern).
-        /// Walk via <c>first_block</c>/<c>next</c>; do not use iterator <c>__ref__()</c> (owning wrappers).
+        /// Walk via <c>first_block</c>/<c>next</c>; do not use iterator <c>ref</c> (owning wrappers).
         /// Disposed in <see cref="Dispose"/>.
         /// </summary>
         private IReadOnlyList<mupdf.FzStextBlock> StextBlocks
@@ -712,7 +708,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Walk stext via cached blocks and linked lists (no iterator <c>__ref__()</c>).
+        /// Walk stext via cached blocks and linked lists (no iterator <c>ref</c>).
         /// </summary>
         internal void MakeTextPage2Dict(PageInfo pageDict, bool raw)
         {
@@ -926,8 +922,9 @@ namespace MuPDF.NET
         /// Populate vector-block fields from <c>fz_stext_block.u.v</c>
         /// (PyMuPDF <c>JM_make_vector_block</c>). SWIG does not expose the union,
         /// so flags/argb are read at the known MuPDF 1.28 struct offset after
-        /// <c>type</c>, <c>id</c>, and <c>bbox</c>.
         /// </summary>
+        /// <c>type</c>, <c>id</c>, and <c>bbox</c>.
+
         private static void FillVectorBlockFields(mupdf.FzStextBlock block, Block blockDict)
         {
             const int VectorFlagsOffset = 24; // after type + id + fz_rect
@@ -1708,13 +1705,13 @@ namespace MuPDF.NET
         internal List<Quad> search(string needle, int hit_max = 16) => Search(needle, hit_max);
         internal List<Rect> search_rects(string needle, int hit_max = 16) => SearchRects(needle, hit_max);
 
-        //-----------------------------------------------------------------------------
+        // -----------------------------------------------------------------------------
         // Plain text output. An identical copy of fz_print_stext_page_as_text,
         // but lines within a block are concatenated by space instead a new-line
         // character (which else leads to 2 new-lines).
-        //-----------------------------------------------------------------------------
+        // -----------------------------------------------------------------------------
 
-        /// <summary><c>extra.i</c>.</summary>
+
         private static void JM_print_stext_page_as_text(mupdf.FzBuffer res, mupdf.FzStextPage page)
         {
             // fz_stext_block *block = page.m_internal->first_block;
@@ -1722,7 +1719,7 @@ namespace MuPDF.NET
             AsText(page, res);
         }
 
-        /// <summary><c>extra.i</c>.</summary>
+
         private static void AsText(mupdf.FzStextPage page, mupdf.FzBuffer res)
         {
             var rect = page.m_internal.mediabox;
@@ -1743,10 +1740,16 @@ namespace MuPDF.NET
                      line != null;
                      line = line.next)
                 {
+                    bool breakLine = true;
                     for (mupdf.fz_stext_char ch = line.first_char;
                          ch != null;
                          ch = ch.next)
                     {
+                        if (Helpers.StextCharIsJoinedHyphen(line, ch))
+                        {
+                            breakLine = false;
+                            continue;
+                        }
                         var cbbox = Helpers.JM_char_bbox(line, ch);
                         if (mupdf.mupdf.fz_is_infinite_rect(pageRect) != 0
                             || Helpers.JM_rects_overlap(pageRect, cbbox))
@@ -1755,7 +1758,7 @@ namespace MuPDF.NET
                             Helpers.JmAppendRune(res, last_char);
                         }
                     }
-                    if (last_char != 10 && last_char > 0)
+                    if (breakLine && last_char != 10 && last_char > 0)
                     {
                         res.fz_append_string("\n");
                         last_char = 10;

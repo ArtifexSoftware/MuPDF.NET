@@ -34,7 +34,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// The link destination details object (legacy <c>Dest</c>; ).
+        /// The link destination details object (legacy <c>Dest</c>;).
         /// </summary>
         /// <remarks>
         /// Does not resolve named destinations; use <see cref="Destination(Document)"/> when
@@ -89,26 +89,26 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// The page number (0-based) this bookmark points to .
+        /// The page number (0-based) this bookmark points to.
         /// </summary>
         public int Page =>
             _nativeOutline.m_internal != null ? _nativeOutline.m_internal.page.page : -1;
 
         /// <summary>
-        /// The item’s title, or <see langword="null"/> if missing .
+        /// The item’s title, or <see langword="null"/> if missing.
         /// </summary>
         public string? Title =>
             _nativeOutline.m_internal != null ? _nativeOutline.m_internal.title : null;
 
         /// <summary>
         /// Whether sub-outlines should be expanded (<see langword="true"/>) or collapsed
-        /// (<see langword="false"/>); interpreted by PDF viewers .
+        /// (<see langword="false"/>); interpreted by PDF viewers.
         /// </summary>
         public bool IsOpen =>
             _nativeOutline.m_internal != null && _nativeOutline.m_internal.is_open != 0;
 
         /// <summary>
-        /// Whether the target is outside the current document .
+        /// Whether the target is outside the current document.
         /// </summary>
         /// <remarks>Uses <c>mupdf.fz_is_external_link</c> on <see cref="Uri"/> when present.</remarks>
         public bool IsExternal
@@ -131,7 +131,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Link target URI .
+        /// Link target URI.
         /// </summary>
         /// <remarks>
         /// Interpret together with <see cref="IsExternal"/>:
@@ -181,7 +181,7 @@ namespace MuPDF.NET
             }
         }
 
-        // MuPDF snake_case aliases (same assembly / dynamic interop)
+        // Internal aliases (same assembly / dynamic interop)
         internal bool is_external() => IsExternal;
         internal bool is_open() => IsOpen;
         internal LinkDest dest => Dest;

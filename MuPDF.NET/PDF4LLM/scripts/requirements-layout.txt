@@ -1,0 +1,3 @@
+﻿# Auto-synced from Versions.props (ArtifexPyMuPDFLayoutVersion).
+pymupdf==2.1
+pymupdf-layout==2.1

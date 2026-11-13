@@ -1,34 +1,34 @@
 // Copyright (C) 2023 Artifex Software, Inc.
-//
+
 // This file is part of MuPDF.NET.
-//
+
 // MuPDF.NET is free software: you can redistribute it and/or modify it under the
 // terms of the GNU Affero General Public License as published by the Free
 // Software Foundation, either version 3 of the License, or (at your option)
 // any later version.
-//
+
 // MuPDF.NET is distributed in the hope that it will be useful, but WITHOUT ANY
 // WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
 // FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more
 // details.
-//
+
 // You should have received a copy of the GNU Affero General Public License
 // along with MuPDF. If not, see <https://www.gnu.org/licenses/agpl-3.0.en.html>
-//
+
 // Alternative licensing terms are available from the licensor.
 // For commercial licensing, see <https://www.artifex.com/> or contact
 // Artifex Software, Inc., 39 Mesa Street, Suite 108A, San Francisco,
 // CA 94129, USA, for further information.
-//
+
 // ---------------------------------------------------------------------
-//
+
 // Port of PyMuPDF 1.28.2 src/_table_spans.py
-//
+
 // MuPDF.NET table cell-span resolution (opt-in extension).
-//
+
 // Provides SpanCell and ResolveSpans (plus the Span* helpers), which
 // reconstruct a detected table's merged-cell (colspan / rowspan) structure.
-// Re-exported via the table API; never runs on the default FindTables() path.
+// Re-exported via the table API; never runs on the default FindTables path.
 // Reuses the word-selection helpers of Table.Refine.cs (TableRefine).
 
 using System;
@@ -40,15 +40,17 @@ namespace MuPDF.NET
 {
     /// <summary>
     /// One reconstructed table cell after span resolution (PyMuPDF extension).
-    ///
+    /// </summary>
     /// <c>Bbox</c> is the placement's <c>(x0, y0, x1, y1)</c> union rect, <c>Text</c> the
+    /// <summary>
     /// page text it claims (lines joined by <c>\n</c>), and <c>Colspan</c>/<c>Rowspan</c>
     /// how many grid columns/rows it covers. ResolveSpans always sets a real bbox;
     /// a caller padding its own grid may construct SpanCells with <c>Bbox=null</c>.
-    ///
+    /// </summary>
     /// <c>Tag</c> is the cell's HTML tag (<c>"td"</c>/<c>"th"</c>), defaulting to <c>"td"</c>.
+    /// <summary>
     /// ResolveSpans leaves it at the default; FindTables(refine: true) overwrites
-    /// it from the resolved header region so Table.ToHtml() can serialize the grid
+    /// it from the resolved header region so Table.ToHtml can serialize the grid
     /// directly, and a caller building its own grid may set it too.
     /// </summary>
     public class SpanCell
@@ -79,7 +81,7 @@ namespace MuPDF.NET
             Tag = tag ?? "td";
         }
 
-        // snake_case aliases (PyMuPDF attribute names)
+        // Dictionary keys (attribute names) snake_case aliases (PyMuPDF attribute names)
         public (float x0, float y0, float x1, float y1)? bbox
         {
             get => Bbox;
@@ -143,7 +145,8 @@ namespace MuPDF.NET
 
         /// <summary>
         /// Greedy 1-D clustering of edge coordinates into slot boundaries.
-        ///
+        /// </summary>
+        /// <summary>
         /// Keeps a sorted value only when it is more than <c>tolerance</c> from the last
         /// kept boundary, so the first value of each run is the retained boundary.
         /// </summary>
@@ -212,7 +215,8 @@ namespace MuPDF.NET
 
         /// <summary>
         /// True if a text span overlaps a cell by enough x to signal a merge.
-        ///
+        /// </summary>
+        /// <summary>
         /// A few points of overlap is noise (a span drifting across a column line with
         /// trailing whitespace or a currency glyph); require &gt;2pt and &gt;=15% of the cell
         /// width before treating it as a merged-cell signal.
@@ -275,7 +279,7 @@ namespace MuPDF.NET
 
         // --- cell text: page words + vertical-text lines claimed by a placement -------
 
-        /// <summary>Space-joined non-empty span texts of a get_text("dict") line.</summary>
+        /// <summary>Space-joined non-empty span texts of a dict-format line.</summary>
         static string SpanLineText(Line line)
         {
             if (line?.Spans == null)
@@ -305,8 +309,9 @@ namespace MuPDF.NET
 
         /// <summary>
         /// Vertical/rotated text lines as (rect, text), cached on the page.
-        ///
-        /// Selects non-horizontal lines whose reading order get_text("dict") already
+        /// </summary>
+        /// <summary>
+        /// Selects non-horizontal lines whose dict-format reading order already
         /// preserves.
         /// </summary>
         static List<(Rect rect, string text)> SpanVerticalTextLines(Page page)
@@ -353,7 +358,8 @@ namespace MuPDF.NET
 
         /// <summary>
         /// Text of vertical lines centered in rect, when they dominate the rect.
-        ///
+        /// </summary>
+        /// <summary>
         /// Returns the stacked line text only if vertical lines are centered in the rect,
         /// cover &gt;=60% of the rect's selected words, and carry &gt;=2 tokens; else null so
         /// the caller falls back to horizontal line synthesis.
@@ -398,8 +404,9 @@ namespace MuPDF.NET
 
         /// <summary>
         /// Join center-point-selected cell words into text, re-synthesizing lines.
-        ///
+        /// </summary>
         /// <c>words</c> are (y0, x0, y1, text) tuples; they are grouped into lines by an
+        /// <summary>
         /// adaptive median-height nearest-line rule, each line's words ordered by x, and
         /// the lines joined by newlines.
         /// </summary>
@@ -456,7 +463,8 @@ namespace MuPDF.NET
 
         /// <summary>
         /// (index, word) pairs whose center lies in rect, index into <c>pageWords</c>.
-        ///
+        /// </summary>
+        /// <summary>
         /// The index is what lets ResolveSpans claim each page word for exactly one
         /// placement (an earlier cell's word is not re-claimed by a later one).
         /// </summary>
@@ -519,7 +527,8 @@ namespace MuPDF.NET
 
         /// <summary>
         /// Page text spans as (rect, text), length&gt;=2, cached on the page.
-        ///
+        /// </summary>
+        /// <summary>
         /// These drive merged-cell detection: a single span whose x-extent crosses a
         /// grid column line signals cells the line grid split but text joins.
         /// </summary>
@@ -568,8 +577,9 @@ namespace MuPDF.NET
 
         /// <summary>
         /// Column ranges within one grid row that a single text span crosses.
-        ///
+        /// </summary>
         /// <c>entries</c> are the row's cell rects (in column order). A text span centered
+        /// <summary>
         /// in the row band and substantially overlapping &gt;=2 adjacent cells marks those
         /// cells for merging; overlapping intervals are merged. Returns
         /// (start, end, texts) with end&gt;start.
@@ -624,9 +634,12 @@ namespace MuPDF.NET
 
         /// <summary>
         /// Describe every grid cell by row/slot-range/role for the strict-colspan gate.
-        ///
+        /// </summary>
+        /// <summary>
         /// Header cells split into <c>header_leaf</c> (no header cell below within body) vs
+        /// </summary>
         /// <c>header_group</c> (spans over a lower leaf), which the reject rules compare
+        /// <summary>
         /// against the body split.
         /// </summary>
         static List<BaseCell> SpanBuildBaseCells(
@@ -752,7 +765,8 @@ namespace MuPDF.NET
 
         /// <summary>
         /// Allow an otherwise-rejected header merge when a covered part is empty.
-        ///
+        /// </summary>
+        /// <summary>
         /// A header leaf that would be rejected against a body split is still merged if
         /// one of the merged parts has no text (an empty header slot the body fills).
         /// </summary>
@@ -774,18 +788,22 @@ namespace MuPDF.NET
 
         /// <summary>
         /// Resolve a detected table's merged-cell (colspan/rowspan) structure.
-        ///
+        /// </summary>
         /// <c>cells</c> is a row-major grid: a list of rows, each a list of
         /// <c>(x0, y0, x1, y1)</c> cell rectangles (null for a gap) -- the same grid
+        /// <summary>
         /// shape <see cref="TableRefine.RefineGrid"/> accepts. Returns a row-major
         /// grid of <see cref="SpanCell"/> placements, ragged where cells span: each
         /// placement carries its union <c>Bbox</c>, the page <c>Text</c> it claims, and
         /// its <c>Colspan</c>/<c>Rowspan</c> (how many clustered column/row slots it
         /// covers). Every page word is claimed by at most one placement.
-        ///
+        /// </summary>
         /// <c>headerRowCount</c> is the number of leading header rows (default a
+        /// <summary>
         /// conservative 1); it only matters together with <c>strictColspan</c>.
+        /// </summary>
         /// <c>strictColspan</c> (default false), when set, refuses a merge whose colspan
+        /// <summary>
         /// would contradict the header/body column split. This is a PyMuPDF extension;
         /// it reads page text/graphics but does not mutate the page.
         /// </summary>

@@ -18,6 +18,9 @@
   </Target>
 
   <ItemGroup>
+    <PackageReference Include="RapidOcrNet" Version="2.0.0">
+      <GeneratePathProperty>true</GeneratePathProperty>
+    </PackageReference>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.*" />
     <PackageReference Include="SharpZipLib" Version="1.4.2" />
     <PackageReference Include="xunit" Version="2.*" />
@@ -34,6 +37,14 @@
   <ItemGroup>
     <ProjectReference Include="..\MuPDF.NET\MuPDF.NET.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <!-- MuPDF.NET.Office is a separate repo; referenced via NuGet only (never a ProjectReference). -->
+    <PackageReference Include="MuPDF.NET.Office" Version="$(ArtifexMuPDFNetOfficeVersion)" />
+    <PackageReference Include="MuPDF.NET.Office.NativeAssets" Version="$(ArtifexMuPDFNetOfficeVersion)" />
+  </ItemGroup>
+
+  <Import Project="..\MuPDF.NET\build\MuPDF.NET.Layout.targets" Condition="Exists('..\MuPDF.NET\build\MuPDF.NET.Layout.targets')" />
 
   <ItemGroup>
     <None Update="resources\**\*">

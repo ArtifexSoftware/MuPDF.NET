@@ -1,8 +1,8 @@
 # MuPDF.NET.PDF4LLM
 
-LLM/RAG helpers for [MuPDF.NET](https://www.nuget.org/packages/MuPDF.NET): convert PDFs to Markdown or plain text, analyze page layout, export structure as JSON, and load documents for retrieval pipelines.
+**Deprecated.** This package **will be removed**. 2.1 is an empty type-forward stub (same pattern as PyPI [pymupdf4llm 2.1](https://pypi.org/project/pymupdf4llm/)).
 
-The public API lives in the **`MuPDF.NET.PDF4LLM`** namespace. The main entry point is the static class **`MuPDF4LLM`**.
+**Do not add this package.** Use [MuPDF.NET](https://www.nuget.org/packages/MuPDF.NET) **4.1** (`Document.ToMarkdown` / `ToJson` / `ToText` / `ToChunks`, `Utils.UseLayout`, `Utils.LoadAiAsync`) and [MuPDF.NET.Office](https://www.nuget.org/packages/MuPDF.NET.Office) **2.1** for Office/HWP. Until removal, existing `PackageReference Include="MuPDF.NET.PDF4LLM"` lines still type-forward from `MuPDF.NET.dll`.
 
 **API naming:** Public members use C# conventions — PascalCase methods and properties, camelCase parameters (for example `writeImages`, `includeXrefs`, `useLayout`). Python-style names from [pymupdf4llm](https://pypi.org/project/pymupdf4llm/) appear only in internal port alignment and in the optional Python layout worker; customer-facing docs and IntelliSense use the C# names below.
 
@@ -18,89 +18,55 @@ The public API lives in the **`MuPDF.NET.PDF4LLM`** namespace. The main entry po
 ## Installation
 
 ```bash
-dotnet add package MuPDF.NET.PDF4LLM
+dotnet add package MuPDF.NET
 ```
 
-[MuPDF.NET](https://www.nuget.org/packages/MuPDF.NET) is installed automatically as a dependency — you do not need to add it separately. If your project already references MuPDF.NET, add `MuPDF.NET.PDF4LLM` anyway; NuGet will resolve a compatible MuPDF.NET version.
+LLM extract is in MuPDF.NET 4.1. Do **not** `dotnet add package MuPDF.NET.PDF4LLM`.
 
-## PyMuPDF Layout (recommended)
+## PyMuPDF Layout
 
-AI-based layout analysis uses the Python package [pymupdf-layout](https://pypi.org/project/pymupdf-layout/) through a small external worker process. When layout is available, `MuPDF4LLM` enables it automatically on first use.
+Layout setup ships in **MuPDF.NET** (scripts + `MuPDFNetSetupLayoutPython` MSBuild target). See **[MuPDF.NET README — Layout analysis](../README.md#layout-analysis-optional)**.
 
-### One-time setup (NuGet consumers)
-
-Requires **Python 3.10+** on `PATH`. From your project directory:
-
-```bash
-dotnet msbuild -t:MuPDFNetPDF4LLMSetupLayoutPython
-```
-
-This creates a per-user venv and installs pinned `pymupdf` / `pymupdf-layout` wheels:
-
-| OS | Venv location |
-|----|---------------|
-| Windows | `%LOCALAPPDATA%\MuPDF.NET.PDF4LLM\.venv-layout` |
-| Linux / macOS | `~/.local/share/mupdf4llm.net/.venv-layout` |
-
-MuPDF.NET.PDF4LLM discovers that venv automatically. No environment variables are required.
-
-### Alternatives
-
-- Set **`MuPDF4LLM_NET_PYTHON`** to any Python interpreter that has `pymupdf-layout` installed.
-- Project-local venv (also auto-discovered):
-
-  ```bash
-  python path/to/setup_layout_python.py --venv .mupdf4llm-net-venv
-  ```
-
-- Monorepo / source checkout:
-
-  ```bash
-  python MuPDF.NET.PDF4LLM/scripts/setup_layout_python.py
-  ```
-
-If layout is not installed, MuPDF.NET.PDF4LLM falls back to classic MuPDF text extraction. Check availability at runtime:
-
-```csharp
-using MuPDF.NET.PDF4LLM;
-using MuPDF.NET.PDF4LLM.Layout;
-
-bool layoutReady = PyMuPdfLayout.IsAvailable;      // Python import probe
-bool layoutActive = MuPDF4LLM.LayoutAvailable;  // provider registered
-```
+Deprecated type-forward names (migrate off them): `PyMuPdfLayout.IsAvailable` / `MuPDF4LLM.LayoutAvailable`. Prefer `Utils.LayoutPythonAvailable` / `Utils.LayoutAvailable`.
 
 ## Examples
 
-Runnable console samples for this package (Markdown, JSON/layout, OCR, tables, LlamaIndex, Markdown-to-PDF) live in **[MuPDF.NET.Examples](https://github.com/ArtifexSoftware/MuPDF.NET.Examples)** under `MuPDF.NET.PDF4LLM/`.
+Runnable console samples live in **[MuPDF.NET.Examples](https://github.com/ArtifexSoftware/MuPDF.NET.Examples)**. LLM/RAG apps are under `MuPDF.NET/` (`32-ToMarkdown` … `42-OllamaMagazines`) and **PackageReference MuPDF.NET**, not this deprecated package. Office + Markdown is `MuPDF.NET.Office/05-ToMarkdown`.
 
 ```powershell
 git clone https://github.com/ArtifexSoftware/MuPDF.NET.Examples.git
 cd MuPDF.NET.Examples
 dotnet restore
-dotnet run --project MuPDF.NET.PDF4LLM\01-ToMarkdown
+dotnet run --project MuPDF.NET\32-ToMarkdown
 ```
 
-## Quick start
+## Quick start (new code)
 
 ```csharp
 using MuPDF.NET;
-using MuPDF.NET.PDF4LLM;
-
-// Path or open Document — both work
-string markdown = MuPDF4LLM.ToMarkdown(@"C:\docs\report.pdf");
 
 using Document doc = new Document("report.pdf");
-string text  = MuPDF4LLM.ToText(doc);
-string json  = MuPDF4LLM.ToJson(doc);
-var parsed   = MuPDF4LLM.ParseDocument(doc);
-var formData = MuPDF4LLM.GetKeyValues(doc);
+string markdown = doc.ToMarkdown();
+string text     = doc.ToText();
+string json     = doc.ToJson();
+ChunkedDocument chunks = doc.ToChunks();
+var formData    = Utils.GetKeyValues(doc);
+```
+
+Migrate existing `using MuPDF.NET.PDF4LLM` code to `using MuPDF.NET` (`Utils.GetKeyValues` / `LlamaMarkdownReader` / `MarkdownToPdf` / `LoadAiAsync`). Type-forwards still compile until this package is removed.
+
+### Retrieval chunks (layout mode)
+
+```csharp
+ChunkedDocument chunks = doc.ToChunks(maxTokens: 400, minTokens: 120);
+foreach (Chunk c in chunks)
+    Console.WriteLine($"{c.Id} ({c.Metadata.TokenCount}): {c.Text}");
 ```
 
 ### Selected pages and images
 
 ```csharp
-string md = MuPDF4LLM.ToMarkdown(
-    doc,
+string md = doc.ToMarkdown(
     pages: new List<int> { 0, 1, 2 },
     writeImages: true,
     imagePath: @"C:\output\images",
@@ -111,15 +77,15 @@ string md = MuPDF4LLM.ToMarkdown(
 
 ```csharp
 // includeXrefs: true adds each widget's PDF xref (for Page.LoadWidget)
-var fields = MuPDF4LLM.GetKeyValues(doc, includeXrefs: true);
+var fields = Utils.GetKeyValues(doc, includeXrefs: true);
 foreach (var kv in fields)
-    Console.WriteLine($"{kv.Key}: {kv.Value["value"]}");
+    Console.WriteLine($"{kv.Key}: {kv.Value["field_value"]}");
 ```
 
 ### LlamaIndex-style loading
 
 ```csharp
-var reader = MuPDF4LLM.LlamaMarkdownReader();
+var reader = new PDFMarkdownReader();
 var docs = reader.LoadData("report.pdf", extraInfo: new Dictionary<string, object>());
 foreach (var d in docs)
     Console.WriteLine($"Page {d.ExtraInfo["page"]}: {d.Text}");
@@ -128,48 +94,50 @@ foreach (var d in docs)
 ### Markdown to PDF
 
 ```csharp
-using Document pdf = MuPDF4LLM.MarkdownToPdf(@"C:\docs\readme.md");
+using Document pdf = Utils.MarkdownToPdf(@"C:\docs\readme.md");
 pdf.Save("readme.pdf");
 ```
 
 ### Layout on / off
 
 ```csharp
-MuPDF4LLM.SetUseLayout(useLayout: true);   // default when pymupdf-layout is installed
-MuPDF4LLM.SetUseLayout(useLayout: false);  // legacy header detection (IdentifyHeaders, TocHeaders)
+Utils.UseLayout(true);    // default when the pymupdf 2.1 worker is installed
+Utils.UseLayout(false);   // classic RAG markdown (IdentifyHeaders, TocHeaders)
 ```
 
 ### Optional Office / HWP support
 
-`MuPDF.NET.PDF4LLM` does not bundle commercial Office natives. Install the sibling package
+This stub does not bundle commercial Office natives. Install
 [MuPDF.NET.Office](https://www.nuget.org/packages/MuPDF.NET.Office), unlock once,
 then pass Office/HWP paths to the same extractors:
 
 ```csharp
+using MuPDF.NET;
 using MuPDF.NET.Office;
-using MuPDF.NET.PDF4LLM;
 
 MuPDFOffice.Unlock("YOUR-LICENSE-OR-TRIAL-KEY", fontPathAuto: true);
 
-string markdown = MuPDF4LLM.ToMarkdown(@"C:\docs\report.docx");
-string json     = MuPDF4LLM.ToJson(@"C:\docs\report.hwpx");
-string text     = MuPDF4LLM.ToText(@"C:\docs\report.pptx");
+using Document docx = new Document(@"C:\docs\report.docx");
+string markdown = docx.ToMarkdown();
+using Document hwpx = new Document(@"C:\docs\report.hwpx");
+string json     = hwpx.ToJson();
+using Document pptx = new Document(@"C:\docs\report.pptx");
+string text     = pptx.ToText();
 ```
 
 Supported Office formats follow MuPDF.NET.Office (DOC/DOCX, XLS/XLSX, PPT/PPTX,
-HWP/HWPX, and related SmartOffice inputs). Layout mode still works: MuPDF.NET.PDF4LLM
+HWP/HWPX, and related SmartOffice inputs). Layout mode still works: MuPDF.NET
 snapshots non-PDF pages to a temporary PDF for the external layout worker while
 keeping the original document for extraction metadata.
 
 ### OCR
 
-When layout mode is active, OCR is selected automatically via `LayoutParseHelpers.SelectOcrFunction()` when Tesseract or RapidOCR is available. Control behavior with `useOcr`, `forceOcr`, `ocrLanguage`, and optional `ocrFunction`:
+When layout mode is active, OCR is selected automatically when Tesseract or RapidOCR is available. Control behavior with `useOcr`, `forceOcr`, `ocrLanguage`, and optional `ocrFunction`:
 
 ```csharp
-using MuPDF.NET.PDF4LLM.Ocr;
+using MuPDF.NET;
 
-string md = MuPDF4LLM.ToMarkdown(
-    doc,
+string md = doc.ToMarkdown(
     useOcr: true,
     forceOcr: false,
     ocrLanguage: "eng");
@@ -181,24 +149,22 @@ string md = MuPDF4LLM.ToMarkdown(
 
 | Member | Description |
 |--------|-------------|
-| `MuPDF4LLM.ToMarkdown()` | Document → Markdown (tables, headers, images) |
-| `MuPDF4LLM.ToText()` | Document → plain text with the same layout pipeline |
-| `MuPDF4LLM.ToJson()` | Layout structure as JSON |
-| `MuPDF4LLM.ParseDocument()` | `ParsedDocument` with pages, boxes, tables, images |
-| `MuPDF4LLM.GetKeyValues()` | Interactive form field names, values, and locations |
-| `MuPDF4LLM.MarkdownToPdf()` | Markdown file → `Document` via MuPDF Story |
-| `MuPDF4LLM.LlamaMarkdownReader()` | LlamaIndex-compatible page loader |
-| `MuPDF4LLM.SetUseLayout()` | Enable or disable the layout pipeline |
-| `MuPDF4LLM.SetLayoutProvider()` | Plug in a custom `Func<Page, object>` layout source |
-| `MuPDF4LLM.LoadAiAsync()` | **net8.0 only** — chunk, embed, and index PDFs for RAG (`MuPDF.NET.PDF4LLM.AI`) |
+| `Document.ToMarkdown()` | Document → Markdown (tables, headers, images) |
+| `Document.ToText()` | Document → plain text with the same layout pipeline |
+| `Document.ToJson()` | Layout structure as JSON |
+| `Utils.UseLayout()` | Enable or disable the layout pipeline |
+| `Utils.GetKeyValues()` | Interactive form field names, values, and locations |
+| `Utils.MarkdownToPdf()` | Markdown file → `Document` via MuPDF Story |
+| `new PDFMarkdownReader()` / `Utils.LlamaMarkdownReader()` | LlamaIndex-compatible page loader |
+| `Utils.LoadAiAsync()` | **net8.0 only** — chunk, embed, and index PDFs for RAG |
 
-Lower-level layout control: **`MuPDF.NET.PDF4LLM.Layout.PyMuPdfLayout`** (`Activate`, `Deactivate`, `IsAvailable`, `Version`).
+Deprecated type-forward names (remove before this package is deleted): `MuPDF4LLM.ToMarkdown` / `ToText` / `ToJson` / `ParseDocument` / `GetKeyValues` / `MarkdownToPdf` / `LlamaMarkdownReader` / `SetUseLayout` / `SetLayoutProvider` / `LoadAiAsync`. Lower-level layout: `PyMuPdfLayout` (`Activate`, `Deactivate`, `IsAvailable`, `Version`).
 
 Additional public helpers: `LayoutParseHelpers.ReadPageLayoutRaw`, `LayoutParseHelpers.SelectOcrFunction`, `GetTextLines.GetRawLines`, `Utils.Iou`, `Utils.TableToMarkdown`.
 
 ## Common options
 
-`MuPDF4LLM.ToMarkdown`, `MuPDF4LLM.ToText`, and `MuPDF4LLM.ToJson` accept optional parameters including:
+`Document.ToMarkdown` / `ToText` / `ToJson` accept optional parameters including:
 
 | Parameter | Purpose |
 |-----------|---------|
@@ -211,13 +177,14 @@ Additional public helpers: `LayoutParseHelpers.ReadPageLayoutRaw`, `LayoutParseH
 | `showProgress` | Log processing progress |
 | `header`, `footer` | Include page header/footer text (layout mode) |
 
-`MuPDF4LLM.GetKeyValues` also accepts `includeXrefs` to include widget xref numbers in the result.
+`Utils.GetKeyValues` also accepts `includeXrefs` to include widget xref numbers in the result.
 
 ## Requirements
 
 - **.NET:** netstandard2.0, net461, net472, net48, net5.0–net8.0
-- **MuPDF.NET:** 3.28.0 or newer (MuPDF bind **1.28.0** must match `MuPDF4LLM` at runtime)
-- **Layout (optional):** Python 3.10+ with [pymupdf-layout](https://pypi.org/project/pymupdf-layout/) 1.28.0
+- **MuPDF.NET:** **4.1.0** (MuPDF bind **1.28.6**)
+- **Layout (optional):** see [MuPDF.NET README — Layout analysis](../README.md#layout-analysis-optional)
+- **Office / HWP:** [MuPDF.NET.Office](https://www.nuget.org/packages/MuPDF.NET.Office) **2.1.0**
 - **AI/RAG helpers:** net8.0 + `Microsoft.Extensions.AI` (included in the net8.0 package build)
 
 ## License

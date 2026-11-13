@@ -1,11 +1,8 @@
 using System.Net.Http;
 using Microsoft.Extensions.AI;
-using MuPDF.NET.PDF4LLM.AI;
-using MuPDF.NET.PDF4LLM.AI.Models;
-using MuPDF.NET.PDF4LLM.AI.Options;
 using OllamaSharp;
 using OllamaSharp.Models;
-
+using MuPDF.NET;
 namespace Demo
 {
     /// <summary>
@@ -29,7 +26,7 @@ namespace Demo
             IReadOnlyList<string> askQuestions,
             IReadOnlyList<string> searchQueries)
         {
-            Console.WriteLine($"\n=== {title} (MuPDF.NET.PDF4LLM + Ollama) =======================");
+            Console.WriteLine($"\n=== {title} (MuPDF.NET + Ollama) =======================");
 
             string host = Environment.GetEnvironmentVariable("OLLAMA_HOST") ?? "http://localhost:11434";
             string chatModel = Environment.GetEnvironmentVariable("OLLAMA_MODEL") ?? "mistral";
@@ -84,25 +81,23 @@ namespace Demo
             Console.WriteLine($"Ollama {uri}  chat={chatModel}  embed={embedModel}");
             Console.WriteLine($"Indexing {pdfName} …");
 
-            bool priorLayout = MuPDF4LLM.UseLayout;
-            AiDocumentCollection aiDocs;
+            bool priorLayout = Utils.LayoutEnabled;
+            dynamic aiDocs;
             try
             {
-                MuPDF4LLM.SetUseLayout(true);
-                var options = new MicrosoftAIConnectorOptions
-                {
-                    ChatClient = chat,
-                    EmbeddingGenerator = embed,
-                    UseLayout = true,
-                    AskExcerptCount = 2,
-                    AskMinScore = 0.35,
-                    EmbedBatchSize = 4,
-                    EmbedAskQuery = false,
-                    MaxOutputTokens = 512,
-                    LocalIndexPath = OllamaIndexPathFor(pdfName),
-                    Trace = msg => Console.WriteLine("  " + msg),
-                };
-                aiDocs = await MuPDF4LLM.LoadAiAsync(new[] { pdfPath }, options);
+                Utils.UseLayout(true);
+                var options = Utils.CreateAiOptions(
+                    chatClient: chat,
+                    embeddingGenerator: embed,
+                    useLayout: true,
+                    askExcerptCount: 2,
+                    askMinScore: 0.35,
+                    embedBatchSize: 4,
+                    embedAskQuery: false,
+                    maxOutputTokens: 512,
+                    localIndexPath: OllamaIndexPathFor(pdfName),
+                    trace: msg => Console.WriteLine("  " + msg));
+                aiDocs = await Utils.LoadAiAsync(new[] { pdfPath }, options);
             }
             catch (HttpRequestException ex)
             {
@@ -120,7 +115,7 @@ namespace Demo
             }
             finally
             {
-                MuPDF4LLM.SetUseLayout(priorLayout);
+                Utils.UseLayout(priorLayout);
             }
 
             Console.WriteLine($"Indexed {aiDocs.ChunkCount} chunks from: {string.Join(", ", aiDocs.SourceFiles)}");
@@ -156,7 +151,8 @@ namespace Demo
 
         static string? OllamaIndexPathFor(string pdfName)
         {
-            string? index = Environment.GetEnvironmentVariable("PDF4LLM_INDEX");
+            string? index = Environment.GetEnvironmentVariable("MUPDF_NET_INDEX")
+                ?? Environment.GetEnvironmentVariable("PDF4LLM_INDEX"); // deprecated alias
             if (string.IsNullOrWhiteSpace(index))
                 return null;
 
@@ -166,20 +162,20 @@ namespace Demo
             return Path.Combine(dir, stem + "-" + pdfStem + Path.GetExtension(index));
         }
 
-        static async Task PrintOllamaAskAsync(AiDocumentCollection aiDocs, string question)
+        static async Task PrintOllamaAskAsync(dynamic aiDocs, string question)
         {
             Console.WriteLine($"Ask: {question}");
             try
             {
-                GroundedAnswer answer = await aiDocs.AskDetailedAsync(question);
+                var answer = await aiDocs.AskDetailedAsync(question);
                 if (answer.InsufficientEvidence)
                     Console.WriteLine("(insufficient evidence)");
                 Console.WriteLine(answer.Text);
                 if (!string.IsNullOrEmpty(answer.Warning))
                     Console.WriteLine($"  warning: {answer.Warning}");
-                foreach (Citation cite in answer.Citations)
+                foreach (var cite in answer.Citations)
                     Console.WriteLine($"  cite: {cite.SourceFileName} p{cite.PageNumber} \"{cite.Quote}\"");
-                foreach (RetrievedPassage passage in answer.Evidence)
+                foreach (var passage in answer.Evidence)
                     Console.WriteLine($"  evidence: {passage.SourceFileName} p{passage.PageNumber} id={passage.SourceId}");
             }
             catch (Exception ex)
@@ -193,7 +189,7 @@ namespace Demo
         }
 
         static async Task PrintOllamaSummarizeAsync(
-            AiDocumentCollection aiDocs,
+            dynamic aiDocs,
             string source,
             int? pageNumber = null)
         {
@@ -217,16 +213,16 @@ namespace Demo
             Console.WriteLine();
         }
 
-        static async Task PrintOllamaSearchAsync(AiDocumentCollection aiDocs, string query)
+        static async Task PrintOllamaSearchAsync(dynamic aiDocs, string query)
         {
             Console.WriteLine($"Search: {query}");
             try
             {
-                IReadOnlyList<SearchResult> hits = await aiDocs.SearchAsync(query, topK: 10);
+                var hits = await aiDocs.SearchAsync(query, topK: 10);
                 Console.WriteLine($"  Ranked all {aiDocs.ChunkCount} chunks; showing top {hits.Count}.");
                 for (int i = 0; i < hits.Count; i++)
                 {
-                    SearchResult hit = hits[i];
+                    var hit = hits[i];
                     if (i > 0)
                         Console.WriteLine();
                     Console.WriteLine($"  {i + 1}. [{hit.Score:F3}] {hit.Chunk.SourceFileName} p{hit.Chunk.PageNumber}");

@@ -368,8 +368,10 @@ doc = new Document();
 | `Document.Write()` | Write to byte array (alias) |
 | `Document.Convert2Pdf(...)` | Convert any document to PDF in memory |
 | `Document.Authenticate(string password)` | Decrypt with password |
-| `Document.GetToc(bool simple)` | Get table of contents list |
-| `Document.SetToc(List<Toc> tocs, int collapse)` | Replace full TOC |
+| `Document.GetToc(bool simple)` | Get table of contents (`TocResult`) |
+| `Document.SetToc(TocResult toc, int collapse)` | Replace full TOC; pass `GetToc()` to keep dests (`simple: false`) |
+| `Document.SetToc(IList<object> toc, int collapse)` | Replace TOC from `[level, title, page, dest?]` rows |
+| `Document.SetToc(List<Toc> tocs, int collapse)` | Legacy: level, title, page only (dest dicts dropped) |
 | `Document.SetTocItem(int idx, ...)` | Update a single TOC entry |
 | `Document.DeleteTocItem(int idx)` | Remove a TOC item |
 | `Document.GetMetadata(string key)` | Get metadata value |

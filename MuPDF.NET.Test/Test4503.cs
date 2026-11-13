@@ -1,4 +1,4 @@
-// Regression test for issue #4503:
+﻿// Regression test for issue #4503:
 // Correct recognition of strikeout and underline styles in text spans.
 using System;
 using System.Collections.Generic;
@@ -22,10 +22,10 @@ namespace MuPDF.NET.Test
         {
             // Check that the text span with the specified text has the correct styling:
             // strikeout, but no underline.
-            // Previously, the text was broken in multiple spans with span breaks at
-            // every space. and some parts were not detected as strikeout at all.
+            // Previously the text was broken into multiple spans at every space,
+            // and some parts were not detected as strikeout at all.
             const string text = "the right to request the state to review and, if appropriate,";
-            // filename = os.path.join(scriptdir, "resources", "test-4503.pdf")
+
             using var doc = new Document(testDocPath);
             Page page = doc[0];
             int flags = mupdf.mupdf.FZ_STEXT_ACCURATE_BBOXES | mupdf.mupdf.FZ_STEXT_COLLECT_STYLES;

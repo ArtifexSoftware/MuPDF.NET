@@ -75,4 +75,7 @@
     </ItemGroup>
     <Delete Files="@(_MuPDFExtraNativeAsset)" ContinueOnError="true" />
   </Target>
+
+  <Import Project="$(MSBuildThisFileDirectory)../build/MuPDF.NET.Layout.targets"
+          Condition="Exists('$(MSBuildThisFileDirectory)../build/MuPDF.NET.Layout.targets')" />
 </Project>

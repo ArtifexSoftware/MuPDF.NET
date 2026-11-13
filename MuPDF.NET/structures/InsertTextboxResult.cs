@@ -3,7 +3,7 @@ using System.Collections.Generic;
 namespace MuPDF.NET
 {
     /// <summary>
-    /// Return value for <see cref="Page.InsertTextbox"/> /
+    /// Return value for <see cref="Page.InsertTextbox"/>
     /// Supports legacy <c>float</c> assignment and tuple deconstruction <c>(rc, rest)</c>.
     /// </summary>
     public readonly struct InsertTextboxResult

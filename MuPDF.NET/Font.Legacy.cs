@@ -18,6 +18,7 @@ namespace MuPDF.NET
     /// </remarks>
     public partial class Font
     {
+
         /// <summary>
         /// Whether the native font handle is missing or this wrapper has been disposed.
         /// </summary>

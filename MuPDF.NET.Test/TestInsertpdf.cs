@@ -1,8 +1,8 @@
-/*
+﻿/*
 * Join multiple PDFs into a new one.
 * Compare with stored earlier result:
-*     - must have identical object definitions
-*     - must have different trailers
+* - must have identical object definitions
+* - must have different trailers
 * Try inserting files in a loop.
 */
 
@@ -17,8 +17,8 @@ using mupdf;
 
 namespace MuPDF.NET.Test
 {
-    /// <summary>
-    /// </summary>
+
+
     /// <remarks>
     /// Inputs: <c>TestDocuments/TestInsertpdf/</c>; outputs: <c>TestDocuments/_Output/TestInsertpdf/</c>.
     /// </remarks>
@@ -33,11 +33,11 @@ namespace MuPDF.NET.Test
 
         static List<(string text, float? number)> approx_parse(string text)
         {
-            /*
-            Splits <text> into sequence of (text, number) pairs. Where sequence of
-            [0-9.] is not convertible to a number (e.g. '4.5.6'), <number> will be
-            None.
-            */
+ /*
+ Splits <text> into sequence of (text, number) pairs. Where sequence of
+ [0-9.] is not convertible to a number (e.g. '4.5.6'), <number> will be
+ null.
+ */
             var ret = new List<(string, float?)>();
             foreach (Match m in Regex.Matches(text, @"([^0-9]+)([0-9.]*)"))
             {
@@ -58,9 +58,9 @@ namespace MuPDF.NET.Test
 
         static int approx_compare(string a, string b, float max_delta)
         {
-            /*
-            Compares <a> and <b>, allowing numbers to differ by up to <delta>.
-            */
+ /*
+ Compares <a> and <b>, allowing numbers to differ by up to <delta>.
+ */
             var aa = approx_parse(a);
             var bb = approx_parse(b);
             if (aa.Count != bb.Count)
@@ -406,9 +406,8 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_4412()
         {
-            // This tests whether a page from a PDF containing widgets found in the wild
-            // can be inserted into a new document with default options (widget=True)
-            // and widget=False.
+            // Page from a PDF containing widgets can be inserted with default options
+            // and with widgets excluded.
             Console.WriteLine();
             foreach (bool widget in new[] { true, false })
             {
@@ -419,8 +418,8 @@ namespace MuPDF.NET.Test
                     using var buf = new MemoryStream();
                     new_doc.InsertPdf(doc, fromPage: 1, toPage: 1);
                     new_doc.Save(buf);
+                    File.WriteAllBytes(Out($"test_4412_{widget}.pdf"), buf.ToArray());
                     Assert.Equal(1, new_doc.PageCount);
-                    new_doc.Save(Out("test_4412.pdf"));
                 }
             }
         }
@@ -438,20 +437,11 @@ namespace MuPDF.NET.Test
                 Console.WriteLine($"Have saved to: path_out={path_out}");
             }
             byte[] content = File.ReadAllBytes(path_out);
-            if (_Version.mupdf_version_tuple().CompareTo((1, 26, 6)) >= 0)
-            {
-                // Correct.
-                Assert.Contains(
-                    "<</Type/Pages/Count 6/Kids[4 0 R 6 0 R 12 0 R 13 0 R 14 0 R 15 0 R]>>",
-                    System.Text.Encoding.ASCII.GetString(content));
-            }
-            else
-            {
-                // Incorrect.
-                Assert.Contains(
-                    "<</Type/Pages/Count 6/Kids[4 0 R 6 0 R 12 0 R 4 0 R 6 0 R 12 0 R]>>",
-                    System.Text.Encoding.ASCII.GetString(content));
-            }
+
+            // Correct.
+            Assert.Contains(
+                "<</Type/Pages/Count 6/Kids[4 0 R 6 0 R 12 0 R 13 0 R 14 0 R 15 0 R]>>",
+                System.Text.Encoding.ASCII.GetString(content));
         }
 
         static byte[] ReadAllBytes(Stream s)

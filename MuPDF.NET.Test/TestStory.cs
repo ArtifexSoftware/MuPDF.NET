@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using Xunit;
-
+using MuPDF.NET;
 namespace MuPDF.NET.Test
 {
     /// <remarks>
@@ -56,7 +56,6 @@ namespace MuPDF.NET.Test
         }
 
         // codespell:ignore-begin
-        // springer_html = '''
         private const string springer_html = @"
 <article>
 <aside>
@@ -86,30 +85,27 @@ namespace MuPDF.NET.Test
 <p>Vermutlich ist eine derart mit sich selbst be&#173;schäf&#173;tigte Sig&#173;nal&#173;ver&#173;ar&#173;beitung die Vor&#173;be&#173;ding&#173;ung für ge&#173;stei&#173;gerte Hirn&#173;leis&#173;tungen. Um einen Ver&#173;gleich mit verhältnismäßig pri&#173;mi&#173;ti&#173;ver Tech&#173;nik zu wagen: Bei küns&#173;tli&#173;chen neu&#173;ro&#173;na&#173;len Netzen – Algorithmen nach dem Vor&#173;bild verknüpfter Nervenzellen – ge&#173;nü&#173;gen schon ein, zwei so genannte ver&#173;bor&#173;ge&#173;ne Schich&#173;ten von selbst&#173;be&#173;züg&#173;li&#173;chen Schaltstellen zwischen Input und Output-Ebene, um die ver&#173;blüf&#173;fen&#173;den Erfolge der künstlichen Intel&#173;ligenz her&#173;vor&#173;zu&#173;bringen.</p>
 </article>
 ";
-        //codespell:ignore-end
+        // codespell:ignore-end
 
         [Fact]
         public void test_story()
         {
-            // otf = os.path.abspath(f'{__file__}/../resources/PragmaticaC.otf')
+
             string otf = Doc("PragmaticaC.otf");
             // 2023-12-06: latest mupdf throws exception if path uses back-slashes.
-            // otf = otf.replace('\\', '/')
+
             otf = otf.Replace('\\', '/');
-            // CSS = f"""
-            //     @font-face {{font-family: test; src: url({otf});}}
+            // @font-face {{font-family: test; src: url({otf});}}
             string CSS = $@"
         @font-face {{font-family: test; src: url({otf});}}
     ";
 
-            // HTML = """
             // <p style="font-family: test;color: blue">We shall meet again at a place where there is no darkness.</p>
             string HTML = """
     <p style="font-family: test;color: blue">We shall meet again at a place where there is no darkness.</p>
     """;
 
             Rect MEDIABOX = Utils.PaperRect("letter");
-            // WHERE = MEDIABOX + (36, 36, -36, -36)
             Rect WHERE = MEDIABOX + new Rect(36, 36, -36, -36);
             // the font files are located in /home/chinese
             var arch = new Archive(".");
@@ -122,17 +118,12 @@ namespace MuPDF.NET.Test
             // while more:
             while (more)
             {
-                // device = writer.BeginPage(MEDIABOX)
                 var device = writer.BeginPage(MEDIABOX);
-                // more, _ = story.place(WHERE)
                 (more, _) = story.place(WHERE);
-                // story.draw(device)
                 story.draw(device);
-                // writer.EndPage()
                 writer.EndPage();
             }
 
-            // writer.close()
             writer.Close();
         }
 
@@ -145,20 +136,16 @@ namespace MuPDF.NET.Test
             Document make_pdf(string html, string path_out)
             {
                 using var story = new Story(html: html);
-                // document = story.write_with_links(rectfn)
                 var document = story.write_with_links(rectfn);
                 Console.WriteLine($"test_2753(): Writing to: path_out={path_out}.");
-                // document.Save(path_out)
                 document.Save(path_out);
                 return document;
             }
 
-            // doc_before = make_pdf(
-            //         textwrap.dedent('''
-            //             <p>Before</p>
-            //             <p style="page-break-before: always;"></p>
-            //             <p>After</p>
-            //         )
+            // textwrap.dedent('''
+            // <p>Before</p>
+            // <p style="page-break-before: always;"></p>
+            // <p>After</p>
             var doc_before = make_pdf(
                 Dedent("""
                     <p>Before</p>
@@ -167,12 +154,10 @@ namespace MuPDF.NET.Test
                     """),
                 Out("test_2753-before.pdf"));
 
-            // doc_after = make_pdf(
-            //         textwrap.dedent('''
-            //             <p>Before</p>
-            //             <p style="page-break-after: always;"></p>
-            //             <p>After</p>
-            //         )
+            // textwrap.dedent('''
+            // <p>Before</p>
+            // <p style="page-break-after: always;"></p>
+            // <p>After</p>
             var doc_after = make_pdf(
                 Dedent("""
                     <p>Before</p>
@@ -182,9 +167,7 @@ namespace MuPDF.NET.Test
                 Out("test_2753-after.pdf"));
 
             string path = Path.Combine(Path.GetDirectoryName(Out("test_2753.pdf"))!, "test_2753");
-            // doc_before.Save(f'{path}_before.pdf')
             doc_before.Save($"{path}_before.pdf");
-            // doc_after.Save(f'{path}_after.pdf')
             doc_after.Save($"{path}_after.pdf");
             Assert.Equal(2, doc_before.PageCount);
             Assert.Equal(2, doc_after.PageCount);
@@ -193,16 +176,15 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_fit_springer()
         {
-            //     return
+            // return
 
             int verbose = 0;
             using var story = new Story(springer_html);
 
-            //     Checks that eval(call) returned parameter=expected. Also creates PDF
-            //     using path that contains `call` in its leafname,
+            // Checks that eval(call) returned parameter=expected. Also creates PDF
+            // using path that contains `call` in its leafname,
             void check(string call, Story.FitResult fit_result, float? expected)
             {
-                // fit_result = eval(call)
                 Console.WriteLine($"test_fit_springer(): call={call} => fit_result={fit_result}.");
                 if (expected is null)
                 {
@@ -210,12 +192,10 @@ namespace MuPDF.NET.Test
                 }
                 else
                 {
-                    // document = story.write_with_links(lambda rectnum, filled: (fit_result.rect, fit_result.rect, None))
                     var document = story.write_with_links((rectnum, filled) =>
                         (fit_result.rect, fit_result.rect, null));
                     string path = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(Out("test_fit_springer.pdf"))!,
                         SanitizeFileLeaf($"test_fit_springer_{call}_fit_result.parameter={fit_result.parameter}_fit_result.rect={fit_result.rect}.pdf")));
-                    // document.Save(path)
                     document.Save(path);
                     Console.WriteLine($"Have saved document to {path}.");
                     Assert.True(Math.Abs((fit_result.parameter ?? 0) - expected.Value) < 0.001,
@@ -232,45 +212,32 @@ namespace MuPDF.NET.Test
             check($"story.fit_scale(Rect(0, 0, 600, 900), scale_min=1, scale_max=1, verbose={verbose})",
                 story.fit_scale(new Rect(0, 0, 600, 900), scale_min: 1, scale_max: 1, verbose: verbose != 0), 1);
 
-            // check(f'story.fit_height(20, verbose={verbose})', 10782.3291015625)
             check($"story.fit_height(20, verbose={verbose})",
                 story.fit_height(20, verbose: verbose != 0), 10782.3291015625f);
-            // check(f'story.fit_height(200, verbose={verbose})', 2437.4990234375)
             check($"story.fit_height(200, verbose={verbose})",
                 story.fit_height(200, verbose: verbose != 0), 2437.4990234375f);
-            // check(f'story.fit_height(2000, verbose={verbose})', 450.2998046875)
             check($"story.fit_height(2000, verbose={verbose})",
                 story.fit_height(2000, verbose: verbose != 0), 450.2998046875f);
-            // check(f'story.fit_height(5000, verbose={verbose})', 378.2998046875)
             check($"story.fit_height(5000, verbose={verbose})",
                 story.fit_height(5000, verbose: verbose != 0), 378.2998046875f);
-            // check(f'story.fit_height(5500, verbose={verbose})', 378.2998046875)
             check($"story.fit_height(5500, verbose={verbose})",
                 story.fit_height(5500, verbose: verbose != 0), 378.2998046875f);
 
-            // check(f'story.fit_width(3000, verbose={verbose})', 167.30859375)
             check($"story.fit_width(3000, verbose={verbose})",
                 story.fit_width(3000, verbose: verbose != 0), 167.30859375f);
-            // check(f'story.fit_width(2000, verbose={verbose})', 239.595703125)
             check($"story.fit_width(2000, verbose={verbose})",
                 story.fit_width(2000, verbose: verbose != 0), 239.595703125f);
-            // check(f'story.fit_width(1000, verbose={verbose})', 510.85546875)
             check($"story.fit_width(1000, verbose={verbose})",
                 story.fit_width(1000, verbose: verbose != 0), 510.85546875f);
-            // check(f'story.fit_width(500, verbose={verbose})', 1622.1272945404053)
             check($"story.fit_width(500, verbose={verbose})",
                 story.fit_width(500, verbose: verbose != 0), 1622.1272945404053f);
-            // check(f'story.fit_width(400, verbose={verbose})', 2837.507724761963)
             check($"story.fit_width(400, verbose={verbose})",
                 story.fit_width(400, verbose: verbose != 0), 2837.507724761963f);
-            // check(f'story.fit_width(300, width_max=200000, verbose={verbose})', None)
             check($"story.fit_width(300, width_max=200000, verbose={verbose})",
                 story.fit_width(300, width_max: 200000, verbose: verbose != 0), null);
-            // check(f'story.fit_width(200, width_max=200000, verbose={verbose})', None)
             check($"story.fit_width(200, width_max=200000, verbose={verbose})",
                 story.fit_width(200, width_max: 200000, verbose: verbose != 0), null);
 
-            // Run without verbose to check no calls to log() - checked by assert.
             check("story.fit_scale(Rect(0, 0, 600, 900), scale_min=1, scale_max=1, verbose=0)",
                 story.fit_scale(new Rect(0, 0, 600, 900), scale_min: 1, scale_max: 1, verbose: false), 1);
             check("story.fit_scale(Rect(0, 0, 300, 421), scale_min=1, verbose=0)",
@@ -280,7 +247,7 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_write_stabilized_with_links()
         {
-            //     We return one rect per page.
+            // We return one rect per page.
             Story.StoryRectFn rectfn = (rect_num, filled) =>
             {
                 Rect rect = new Rect(10, 20, 290, 380);
@@ -290,13 +257,11 @@ namespace MuPDF.NET.Test
 
             string contentfn(List<StoryElementPositionInfo> positions)
             {
-                // ret = ''
                 string ret = "";
-                // ret += textwrap.dedent('''
-                //         <!DOCTYPE html>
-                //         <body>
-                //         <h2>Contents</h2>
-                //         <ul>
+                // <!DOCTYPE html>
+                // <body>
+                // <h2>Contents</h2>
+                // <ul>
                 ret += Dedent("""
                         <!DOCTYPE html>
                         <body>
@@ -307,32 +272,25 @@ namespace MuPDF.NET.Test
                 {
                     if (position.heading != 0 && (position.open_close & 1) != 0)
                     {
-                        // text = position.text if position.text else ''
                         string text = position.text ?? "";
                         if (!string.IsNullOrEmpty(position.id))
                         {
-                            // ret += f'    <li><a href="#{position.id}">{text}</a>'
                             ret += $"    <li><a href=\"#{position.id}\">{text}</a>";
                         }
                         else
                         {
-                            // ret += f'    <li>{text}'
                             ret += $"    <li>{text}";
                         }
-                        // ret += f' page={position.page_num}\n'
                         ret += $" page={position.page_num}\n";
                     }
                 }
-                // ret += '</ul>\n'
                 ret += "</ul>\n";
-                // ret += textwrap.dedent(f'''
-                //         <h1>First section</h1>
-                //         ...
+                // <h1>First section</h1>
                 ret += Dedent("""
                         <h1>First section</h1>
                         <p>Contents of first section.
                         <ul>
-                        <li>External <a href="https://artifex.com/">link to https://artifex.com/</a>.
+                        <li>External <a href="https://artifex.com/">link to https:// artifex.com/</a>.
                         <li><a href="#idtest">Link to IDTEST</a>.
                         <li><a href="#nametest">Link to NAMETEST</a>.
                         </ul>
@@ -356,15 +314,12 @@ namespace MuPDF.NET.Test
             var document = Story.write_stabilized_with_links(contentfn, rectfn);
 
             // Check links.
-            // links = list()
             var links = new List<Dictionary<string, object>>();
             foreach (var page in document)
             {
-                // links += page.GetLinks()
                 links.AddRange(page.GetLinks().Select(l => (Dictionary<string, object>)l));
             }
             Console.WriteLine($"len(links)={links.Count}.");
-            // external_links = dict()
             var external_links = new Dictionary<string, int>();
             for (int i = 0; i < links.Count; i++)
             {
@@ -373,9 +328,7 @@ namespace MuPDF.NET.Test
                 if (link.TryGetValue("kind", out var kindObj) &&
                     Convert.ToInt32(kindObj) == Constants.LinkUri)
                 {
-                    // uri = link['uri']
                     string uri = link["uri"]?.ToString() ?? "";
-                    // external_links.setdefault(uri, 0)
                     if (!external_links.ContainsKey(uri))
                         external_links[uri] = 0;
                     // external_links[uri] += 1
@@ -388,9 +341,8 @@ namespace MuPDF.NET.Test
             Assert.Single(external_links);
             Assert.Contains("https://artifex.com/", external_links.Keys);
 
-            // out_path = __file__.replace('.py', '.pdf')
+
             string out_path = Out("test_write_stabilized_with_links.pdf");
-            // document.Save(out_path)
             document.Save(out_path);
         }
 
@@ -405,8 +357,6 @@ namespace MuPDF.NET.Test
         public void test_3813()
         {
 
-            // HTML = """
-            // ...
             string HTML = """
     <p>Count is fine:</p>
     <ol>
@@ -433,7 +383,6 @@ namespace MuPDF.NET.Test
     </ol>
     """;
             Rect MEDIABOX = Utils.PaperRect("A4");
-            // WHERE = MEDIABOX + (36, 36, -36, -36)
             Rect WHERE = MEDIABOX + new Rect(36, 36, -36, -36);
 
             using var story = new Story(html: HTML);
@@ -446,29 +395,21 @@ namespace MuPDF.NET.Test
             // while more:
             while (more)
             {
-                // device = writer.BeginPage(MEDIABOX)
                 var device = writer.BeginPage(MEDIABOX);
-                // more, _ = story.place(WHERE)
                 (more, _) = story.place(WHERE);
-                // story.draw(device)
                 story.draw(device);
-                // writer.EndPage()
                 writer.EndPage();
             }
 
-            // writer.close()
             writer.Close();
 
             using (var document = new Document(path))
             {
-                // page = document[0]
+
                 var page = document[0];
-                // text = page.GetText()
                 string text = page.GetText()?.ToString() ?? "";
-                // text_utf8 = text.encode()
                 byte[] text_utf8 = Encoding.UTF8.GetBytes(text);
 
-                // text_expected_utf8 = b'Count is \xef\xac\x81ne:\n1. Lorem\n1. Sub Lorem\n2. Sub Lorem\n2. Lorem\n3. Lorem\nBroken count:\n1. Lorem\n\xe2\x80\xa2  Sub Lorem\n\xe2\x80\xa2  Sub Lorem\n2. Lorem\n3. Lorem\n'
                 byte[] text_expected_utf8 = new byte[]
                 {
                     0x43, 0x6f, 0x75, 0x6e, 0x74, 0x20, 0x69, 0x73, 0x20, 0xef, 0xac, 0x81, 0x6e, 0x65, 0x3a, 0x0a,
@@ -481,7 +422,6 @@ namespace MuPDF.NET.Test
                     0x53, 0x75, 0x62, 0x20, 0x4c, 0x6f, 0x72, 0x65, 0x6d, 0x0a, 0x32, 0x2e, 0x20, 0x4c, 0x6f, 0x72,
                     0x65, 0x6d, 0x0a, 0x33, 0x2e, 0x20, 0x4c, 0x6f, 0x72, 0x65, 0x6d, 0x0a,
                 };
-                // text_expected = text_expected_utf8.decode()
                 string text_expected = Encoding.UTF8.GetString(text_expected_utf8);
 
                 Console.WriteLine($"text_utf8:\n    {text_utf8}");
@@ -499,6 +439,88 @@ namespace MuPDF.NET.Test
 
                 Assert.Equal(text_expected, text);
             }
+        }
+
+        [Fact]
+        public void test_5110()
+        {
+            string pathOut = Out("test_5110_out.pdf");
+            var mediabox = Utils.PaperRect("letter");
+            var frame = mediabox + new Rect(54, 54, -54, -54);
+            string html = Dedent($@"
+            <html><body>
+            <div style=""background-color:#1f3a5f;color:#ffffff;padding:12pt"">BANNER</div>
+            <p>{string.Concat(Enumerable.Repeat("filler words ", 400))}</p>
+            </body></html>
+            ");
+
+            // Create pdf.
+            using (var story = new Story(html: html))
+            using (var writer = new DocumentWriter(pathOut))
+            {
+                Story.StoryRectFn rectfn = (rectNum, filled) => (mediabox, frame, null);
+                story.Write(writer, rectfn);
+                writer.Close();
+            }
+
+            // Look for drawings that overlap frame in second page.
+            using (var document = new Document(pathOut))
+            {
+                var page = document[1];
+                foreach (var drawing in page.GetDrawings())
+                {
+                    var rect = drawing.Rect;
+                    Console.WriteLine($"Drawing with rect={rect}");
+                }
+                int numDrawings = page.GetDrawings().Count;
+                Console.WriteLine($"num_drawings={numDrawings}");
+                if (_Version.mupdf_version_tuple_at_least(1, 28, 7))
+                    Assert.Equal(0, numDrawings);
+                else
+                {
+                    // 2026-09-11: Expect error.
+                    Assert.Equal(1, numDrawings);
+                }
+            }
+        }
+
+        [Fact]
+        public void test_5119()
+        {
+            // This does not yet reproduce the problem - does not hang.
+
+            string chineseText = string.Concat(Enumerable.Repeat("\u4f60\u7684", 1000));
+            string html = Dedent($@"
+            <style>
+                .column {{
+                    width: 100px;
+                }}
+            </style>
+            <div class=""column"">
+                {chineseText}
+            </div>
+            ");
+            string pathOut = Out("test_5119_out.pdf");
+            using var story = new Story(html: html);
+            var mediabox = Utils.PaperRect("a4");
+            var where = mediabox + new Rect(36, 36, -36, -36);
+            using var writer = new DocumentWriter(pathOut);
+            bool more = true;
+            int pageCount = 0;
+            while (more)
+            {
+                pageCount += 1;
+                // Safety limit added only to demonstrate the problem.
+                if (pageCount > 100)
+                    throw new InvalidOperationException("Story.place() did not make progress");
+                var device = writer.BeginPage(mediabox);
+                var placed = story.Place(where);
+                more = placed.more;
+                Console.WriteLine($"page={pageCount}, more={more}, filled={placed.filled}");
+                story.Draw(device);
+                writer.EndPage();
+            }
+            writer.Close();
         }
     }
 }

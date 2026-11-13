@@ -9,7 +9,7 @@ namespace MuPDF.NET
     /// <remarks>
     /// <para>
     /// Thin wrapper over <see cref="Colorspace"/> for code written against the original API.
-    /// New code should prefer <see cref="Colorspace"/> and <see cref="Colorspace.Rgb"/> /
+    /// New code should prefer <see cref="Colorspace"/> and <see cref="Colorspace.Rgb"/>
     /// <see cref="Colorspace.Gray"/> / <see cref="Colorspace.Cmyk"/>.
     /// </para>
     /// <para>

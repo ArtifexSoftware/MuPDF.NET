@@ -179,19 +179,7 @@ namespace MuPDF.NET
         }
 
         public Matrix CalcMatrix(Rect sr, Rect tr, bool keep = true, int rotate = 0)
-        {
-            Point smp = (sr.TopLeft + sr.BottomRight) / 2.0f;
-            Point tmp = (tr.TopLeft + tr.BottomRight) / 2.0f;
-            Matrix m = new Matrix(1, 0, 0, 1, -smp.X, -smp.Y) * new Matrix(rotate);
-            Rect sr1 = sr * m;
-            float fw = (float)(tr.Width / sr1.Width);
-            float fh = (float)(tr.Height / sr1.Height);
-            if (keep)
-                fw = fh = Math.Min(fw, fh);
-            m *= new Matrix(fw, fh);
-            m *= new Matrix(1, 0, 0, 1, tmp.X, tmp.Y);
-            return m;
-        }
+            => Helpers.CalcMatrix(sr, tr, keep, rotate);
 
         public string GetTextWithLayout(Rect clip = null, int flags = 0, int tolerance = 5)
         {
@@ -368,29 +356,6 @@ namespace MuPDF.NET
         public List<PathInfo> GetDrawings(bool extended, int legacyMarker) =>
             GetDrawingsDict(extended).Select(d => (PathInfo)d).ToList();
 
-        /// <summary>MuPDF.NET API: cluster drawings supplied as <see cref="PathInfo"/>.</summary>
-        public List<Rect> ClusterDrawings(
-            Rect clip = null,
-            List<PathInfo> drawings = null,
-            float xTolerance = 3f,
-            float yTolerance = 3f,
-            bool finalFilter = true)
-        {
-            List<Dictionary<string, object>> dictDrawings = null;
-            if (drawings != null)
-            {
-                dictDrawings = new List<Dictionary<string, object>>(drawings.Count);
-                foreach (var path in drawings)
-                {
-                    if (path?.Rect == null)
-                        continue;
-                    dictDrawings.Add(new Dictionary<string, object> { ["rect"] = path.Rect });
-                }
-            }
-
-            return ClusterDrawings(clip, dictDrawings, xTolerance, yTolerance, finalFilter);
-        }
-
         public void AddAnnotFromString(List<string> links)
         {
             if (links == null || links.Count == 0)
@@ -414,7 +379,7 @@ namespace MuPDF.NET
         /// <param name="pureBarcode">Image is a pure monochrome image of a barcode.</param>
         /// <param name="multi">Try to read multi barcodes on page.</param>
         /// <param name="autoRotate">Indicate whether the image should be automatically rotated.
-        ///                          Rotation is supported for 90, 180 and 270 degrees.</param>
+        /// Rotation is supported for 90, 180 and 270 degrees.</param>
         public List<Barcode> ReadBarcodes(
             Rect clip = null,
             bool decodeEmbeddedOnly = false,
@@ -602,6 +567,8 @@ namespace MuPDF.NET
                 d["name"] = link.Name;
             if (!string.IsNullOrEmpty(link.NamedDest))
                 d["nameddest"] = link.NamedDest;
+            if (!string.IsNullOrEmpty(link.Dest))
+                d["dest"] = link.Dest;
             if (!string.IsNullOrEmpty(link.Uri))
                 d["uri"] = link.Uri;
             if (!string.IsNullOrEmpty(link.File))
@@ -614,7 +581,13 @@ namespace MuPDF.NET
 
     public static class DocumentLegacyExtensions
     {
-        /// <summary>MuPDF.NET <c>Document.set_toc</c> with <see cref="Toc"/> rows.</summary>
+
+        /// <summary>
+        /// Legacy <c>Document.SetToc(List&lt;Toc&gt;)</c>: copies level, title, and page only.
+        /// Prefer <see cref="Document.SetToc(TocResult, int)"/> to keep dest dictionaries from
+        /// </summary>
+        /// <c>GetToc(simple: false)</c>.
+
         public static int SetToc(this Document doc, List<Toc> tocs, int collapse = 1)
         {
             if (tocs == null || tocs.Count == 0)
@@ -625,7 +598,7 @@ namespace MuPDF.NET
             return doc.SetToc(rows, collapse);
         }
 
-        // Keep legacy call shape doc.NeedAppearances(int) without conflicting with Document.NeedAppearances property.
+        /// <summary>Legacy call shape that does not conflict with the NeedAppearances property.</summary>
         public static int NeedAppearances(this Document doc, int value = 0)
         {
             if (!doc.IsFormPdf)
@@ -635,7 +608,7 @@ namespace MuPDF.NET
             return value == 0 ? (hadNeedAppearances ? 1 : 0) : value;
         }
 
-        // Legacy shape: page.GetTextPage(Rect clip, int flags, Matrix matrix)
+        /// <summary>Legacy GetTextPage(Rect clip, int flags, Matrix matrix).</summary>
         public static TextPage GetTextPage(this Page page, Rect clip = null, int flags = 0, Matrix matrix = null)
         {
             _ = matrix;

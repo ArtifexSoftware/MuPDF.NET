@@ -15,7 +15,7 @@ namespace MuPDF.NET
     /// </summary>
     /// <remarks>
     /// <para>
-    /// Ports An archive combines multiple sub-archives (folders,
+    /// An archive combines multiple sub-archives (folders,
     /// zip/tar files, in-memory blobs, nested archives) into one searchable namespace for HTML
     /// and CSS assets.
     /// </para>
@@ -143,7 +143,7 @@ namespace MuPDF.NET
         /// </summary>
         /// <param name="content">
         /// Content to mount: directory or file path (<see cref="string"/>); raw bytes
-        /// (<see cref="byte"/>[], <see cref="MemoryStream"/>); <see cref="ZipArchive"/>; Python-style
+        /// (<see cref="byte"/>[], <see cref="MemoryStream"/>); <see cref="ZipArchive"/>; PyMuPDF-style
         /// tar objects; nested <see cref="Archive"/>; <c>(data, name)</c> tuple; or a sequence of
         /// these (not a length-2 tuple).
         /// </param>

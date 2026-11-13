@@ -6,11 +6,11 @@ using System.Reflection.Metadata;
 using System.Text;
 using System.Text.Json;
 using Xunit;
-
+using MuPDF.NET;
 namespace MuPDF.NET.Test
 {
     /// <summary>
-    /// Strict ports of <c>MuPDF-1.27.2.2/tests/test_annots.py</c> (same test names and flow).
+        /// Annotation tests (same names and flow as the original suite).
     /// Inputs: <c>TestDocuments/TestAnnots/</c>; outputs: <c>TestDocuments/_Output/TestAnnots/</c>.
     /// </summary>
     [Collection("MuPDF.NET native")]
@@ -73,8 +73,8 @@ namespace MuPDF.NET.Test
                 var annot = page.add_caret_annot(_Constants.rect.TL);
                 AssertAnnotType(annot, AnnotationType.Caret, "Caret");
                 annot.Update(rotate: 20);
-                page.annot_names();
-                page.annot_xrefs();
+                var annotnames = page.annot_names();
+                var annotxrefs = page.annot_xrefs();
                 annot.Dispose();
                 page.Dispose();
                 doc.Save(Out("test_caret.pdf"));
@@ -127,7 +127,7 @@ namespace MuPDF.NET.Test
             using (doc)
             {
                 var page = doc.NewPage();
-                var annot = page.AddHighlightAnnot(new[] { new Quad(_Constants.rect) });
+                var annot = page.AddHighlightAnnot(_Constants.rect);
                 AssertAnnotType(annot, AnnotationType.Highlight, "Highlight");
                 annot.Dispose();
                 page.Dispose();
@@ -142,7 +142,7 @@ namespace MuPDF.NET.Test
             using (doc)
             {
                 var page = doc.NewPage();
-                var annot = page.AddUnderlineAnnot(new[] { new Quad(_Constants.rect) });
+                var annot = page.AddUnderlineAnnot(_Constants.rect);
                 AssertAnnotType(annot, AnnotationType.Underline, "Underline");
                 annot.Dispose();
                 page.Dispose();
@@ -157,7 +157,7 @@ namespace MuPDF.NET.Test
             using (doc)
             {
                 var page = doc.NewPage();
-                var annot = page.add_squiggly_annot(new[] { new Quad(_Constants.rect) });
+                var annot = page.AddSquigglyAnnot(_Constants.rect);
                 AssertAnnotType(annot, AnnotationType.Squiggly, "Squiggly");
                 annot.Dispose();
                 page.Dispose();
@@ -172,7 +172,7 @@ namespace MuPDF.NET.Test
             using (doc)
             {
                 var page = doc.NewPage();
-                var annot = page.add_strikeout_annot(new[] { new Quad(_Constants.rect) });
+                var annot = page.AddStrikeoutAnnot(_Constants.rect);
                 AssertAnnotType(annot, AnnotationType.StrikeOut, "StrikeOut");
                 page.DeleteAnnot(annot);
                 page.Dispose();
@@ -394,7 +394,7 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_redact4()
         {
-            /* Python captures line_art = page.GetDrawings() before redact; MuPDF.NET hits AV in
+            /* PyMuPDF captures line_art = page.GetDrawings() before redact; MuPDF.NET hits AV in
                PageLineartDevice on symbol-list.pdf for that call. Parity on the redaction outcome only. */
             using var doc = new Document(Doc("symbol-list.pdf"));
             var page = doc[0];
@@ -752,45 +752,52 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_richtext()
         {
-            var bullet = $"{(char)0x2610}{(char)0x2611}{(char)0x2612}";
-            var text = $@"<p style=""text-align:justify;margin-top:-25px;"">
-    MuPDF.NET <span style=""color: red;"">à½ à½‘à½²à¼‹ à½¡à½²à½‚à¼‹à½†à¼‹à½–à½€à¾²à½˜à¼‹à½¦à¾¤à½ºà½£à¼‹à½‚à¾±à½²à¼‹à½‘à½¼à½“à¼‹à½£à½´à¼‹ à½”à½ à½²à¼‹à½à½¼à½“à¼‹à½à½´à½˜à¼‹à½¦à¾’à¾²à½²à½£à¼‹à½‘à¾²à½‚à¼‹à½¤à½¼à½¦à¼‹à½‘à½„à¼‹à½˜à½‚à¾±à½¼à½‚à½¦à¼‹à½¤à½¼à½¦à¼‹à½…à½²à½‚à¼‹à½¨à½²à½“à¼</span>
+            // Test creation of rich text FreeText annotations.
+            // We create the same annotation on different pages in different ways,
+            // with and without Annot.Update, then assert equality of the images.
+            string bullet = $"{(char)0x2610}{(char)0x2611}{(char)0x2612}";
+            string text = $@"<p style=""text-align:justify;margin-top:-25px;"">
+    PyMuPDF <span style=""color: red;"">འདི་ ཡིག་ཆ་བཀྲམ་སྤེལ་གྱི་དོན་ལུ་ པའི་ཐོན་ཐུམ་སྒྲིལ་དྲག་ཤོས་དང་མགྱོགས་ཤོས་ཅིག་ཨིན།</span>
     <span style=""color:blue;"">Here is some <b>bold</b> and <i>italic</i> text, followed by <b><i>bold-italic</i></b>. Text-based check boxes: {bullet}.</span>
     </p>";
-            var doc = new Document();
-            using (doc)
-            {
-                var page = doc.NewPage();
-                var rt = new Rect(100, 100, 350, 200);
-                var p2 = rt.TR + new Point(50, 30);
-                var p3 = p2 + new Point(0, 30);
-                page.AddFreeTextAnnot(
-                    rt,
-                    text,
-                    fillColor: _Constants.gold,
-                    opacity: 0.5f,
-                    rotate: 90,
-                    borderWidth: 1,
-                    dashes: null,
-                    richtext: true,
-                    callout: new[] { p3, p2, rt.TR });
-                using var pix1 = page.GetPixmap();
-                page = doc.NewPage();
-                var annot = page.AddFreeTextAnnot(
-                    rt,
-                    text,
-                    borderWidth: 1,
-                    dashes: null,
-                    richtext: true,
-                    callout: new[] { p3, p2, rt.TR });
-                annot.Update(fillColor: _Constants.gold, opacity: 0.5f, rotate: 90);
-                using var pix2 = page.GetPixmap();
-                var rms = PixmapsRms(pix1, pix2);
-                Assert.True(rms < 20, $"richtext pixmap rms={rms}");
-                annot.Dispose();
-                page.Dispose();
-                doc.Save(Out("test_richtext.pdf"));
-            }
+            float[] gold = new float[] { 1, 1, 0 };
+            using var doc = new Document();
+
+            // First page.
+            var page = doc.NewPage();
+            var rect = new Rect(100, 100, 350, 200);
+            var p2 = rect.TR + new Point(50, 30);
+            var p3 = p2 + new Point(0, 30);
+            var annot = page.AddFreeTextAnnot(
+                rect,
+                text,
+                fillColor: gold,
+                opacity: 0.5f,
+                rotate: 90,
+                borderWidth: 1,
+                dashes: null,
+                richtext: true,
+                callout: new[] { p3, p2, rect.TR });
+
+            using var pix1 = page.GetPixmap();
+
+            // Second page.
+            // the annotation is created with minimal parameters, which are supplied
+            // in a separate call to the.Update method.
+            page = doc.NewPage();
+            annot = page.AddFreeTextAnnot(
+                rect,
+                text,
+                borderWidth: 1,
+                dashes: null,
+                richtext: true,
+                callout: new[] { p3, p2, rect.TR });
+            annot.Update(fillColor: gold, opacity: 0.5f, rotate: 90);
+            using var pix2 = page.GetPixmap();
+            Assert.Equal(pix1.Samples, pix2.Samples);
+            annot.Dispose();
+            page.Dispose();
+            doc.Save(Out("test_richtext.pdf"));
         }
 
         [Fact]
@@ -898,7 +905,6 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_3758()
         {
-            // This test requires input file that is not public, so is usually not
             // available.
             string path = Path.GetFullPath(Path.Combine(_Path.ResolveSolutionRoot(), "..", "test_3758.pdf"));
             if (!File.Exists(path))
@@ -955,6 +961,7 @@ namespace MuPDF.NET.Test
 
                 page.AddRedactAnnot(page.Rect);
                 page.ApplyRedactions(text: mupdf.mupdf.PDF_REDACT_TEXT_REMOVE);
+                page.DrawRect(page.Rect, color: new float[] { 1, 0, 0 });
                 document.Save(pathOut);
                 Console.WriteLine(page.GetText());
 
@@ -988,6 +995,7 @@ namespace MuPDF.NET.Test
             }
             Console.WriteLine("No exception.");
             Assert.False(expectFail, $"mupdf_version_tuple={v}");
+            document.Save(Out("test_4943.pdf"));
         }
 
         [Fact]
@@ -1003,13 +1011,134 @@ namespace MuPDF.NET.Test
                     Utils.FZ_MIN_INF_RECT,
                     Utils.FZ_MAX_INF_RECT,
                     Utils.FZ_MAX_INF_RECT);
-                // fill=False â†’ no interior color when overlay text is omitted
                 page.AddRedactAnnot(rect, fillColor: null);
                 page.ApplyRedactions(graphics: 2);
                 drawings = page.GetDrawings();
+                document.Save(Out("test_4936.pdf"));
             }
             Console.WriteLine($"len(drawings)={drawings.Count}");
             Assert.Empty(drawings);
+        }
+
+        [Fact]
+        public void test_5112()
+        {
+            Console.WriteLine();
+            using var document = new Document();
+            var page = document.NewPage();
+            var rect = new Rect(50, 50, 200, 150);
+            var callout = Enumerable.Repeat(new Point(10, 10), 100).ToArray();
+            bool threw = false;
+            try
+            {
+                Console.WriteLine("test_5112(): calling page.add_freetext_annot().");
+                _ = page.AddFreeTextAnnot(rect, "test", callout: callout);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Received exception: {e}");
+                Assert.Equal("bad seq of points", e.Message);
+                threw = true;
+            }
+            document.Save(Out("test_5112.pdf"));
+            Assert.True(threw, "Expected exception from page.add_freetext_annot().");
+        }
+
+        /// <summary>Check that removal of the last annotation removes the entire key.</summary>
+        [Fact]
+        public void test_annots_removal()
+        {
+            // Check that removal of the last annotation removes the entire key.
+            using var doc = new Document();
+            var page = doc.NewPage();
+            var a = page.AddCircleAnnot(new Rect(100, 100, 200, 200));
+            _ = page.DeleteAnnot(a);
+            Assert.DoesNotContain("Annots", doc.XrefGetKeys(page.Xref));
+            doc.Save(Out("test_annots_removal.pdf"));
+        }
+
+        [Fact]
+        public void test_5152()
+        {
+            (Document doc, Page page) MakePage(string ops)
+            {
+                var doc = new Document();
+                var page = doc.NewPage(width: 300, height: 200);
+                page.InsertText(new Point(0, 0), "x", fontName: "helv"); // adds a Helvetica resource
+                string font = page.GetFonts()[0].name;
+                doc.UpdateStream(page.GetContents()[0], Encoding.ASCII.GetBytes(ops.Replace("/F1", "/" + font)));
+                return (doc, page);
+            }
+
+            List<(string word, double y)> Words(Page page)
+            {
+                return page.GetTextWords()
+                    .Select(w => (w.word, Math.Round((double)w.y0, 1)))
+                    .ToList();
+            }
+
+            const string OPS = "BT /F1 12 Tf 20 150 Td 20 TL (Line1) Tj 0 -40 Td (SECRET) ' ET";
+            Console.WriteLine($"MuPDF.NET MuPDF {Tools.MupdfVersion()}");
+
+            var results = new List<List<(string word, double y)>>();
+
+            var made = MakePage(OPS);
+            using (made.doc)
+            {
+                var page = made.page;
+                var words = Words(page);
+                Console.WriteLine("original:           " + string.Join(", ", words));
+                Assert.Equal(new[] { ("Line1", 37.1), ("SECRET", 97.1) }, words);
+                results.Add(words);
+
+                page.AddRedactAnnot(page.SearchForRects("SECRET")[0]);
+                page.ApplyRedactions();
+                words = Words(page);
+                Console.WriteLine("after redaction:    " + string.Join(", ", words) + "  <- SECRET should be gone");
+                results.Add(words);
+            }
+
+            made = MakePage(OPS);
+            using (made.doc)
+            {
+                var page = made.page;
+                page.CleanContents();
+                var words = Words(page);
+                Console.WriteLine("after clean:        " + string.Join(", ", words) + "  <- positions should be unchanged");
+                results.Add(words);
+            }
+
+            made = MakePage(OPS.Replace("(SECRET) '", "T* (SECRET) Tj"));
+            using (made.doc)
+            {
+                var page = made.page;
+                page.AddRedactAnnot(page.SearchForRects("SECRET")[0]);
+                page.ApplyRedactions();
+                var words = Words(page);
+                Console.WriteLine("T* Tj equivalent:   " + string.Join(", ", words) + "  <- works");
+                results.Add(words);
+                made.doc.Save(Out("test_5152.pdf"));
+            }
+
+            var expected = new List<List<(string word, double y)>>
+            {
+                new() { ("Line1", 37.1), ("SECRET", 97.1) },
+                new() { ("Line1", 37.1) },
+                new() { ("Line1", 37.1), ("SECRET", 97.1) },
+                new() { ("Line1", 37.1) },
+            };
+
+            Console.WriteLine("expected");
+            foreach (var i in expected)
+                Console.WriteLine(string.Join(", ", i));
+
+            Console.WriteLine("results");
+            foreach (var i in results)
+                Console.WriteLine(string.Join(", ", i));
+
+            Assert.Equal(expected.Count, results.Count);
+            for (int i = 0; i < expected.Count; i++)
+                Assert.Equal(expected[i], results[i]);
         }
     }
 }
