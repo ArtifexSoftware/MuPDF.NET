@@ -1,5 +1,6 @@
 using Microsoft.Extensions.AI;
 using MuPDF.NET;
+using MuPDF.NET.PDF4LLM.AI.Models;
 namespace Demo
 {
     /// <summary>
@@ -38,9 +39,9 @@ namespace Demo
             Console.WriteLine($"\n--- AskDetailedAsync ---\nQ: {question}");
             try
             {
-                var answer = await aiDocs.AskDetailedAsync(question);
+                GroundedAnswer answer = await aiDocs.AskDetailedAsync(question);
                 Console.WriteLine(answer.InsufficientEvidence ? "(insufficient evidence)" : "A: " + answer.Text);
-                foreach (var cite in answer.Citations)
+                foreach (Citation cite in answer.Citations)
                     Console.WriteLine($"  cite: {cite.SourceFileName} p{cite.PageNumber} \"{cite.Quote}\"");
             }
             catch (InvalidOperationException ex)

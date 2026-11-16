@@ -143,7 +143,7 @@ namespace MuPDF.NET
         /// </summary>
         /// <param name="content">
         /// Content to mount: directory or file path (<see cref="string"/>); raw bytes
-        /// (<see cref="byte"/>[], <see cref="MemoryStream"/>); <see cref="ZipArchive"/>; PyMuPDF-style
+        /// (<see cref="byte"/>[], <see cref="MemoryStream"/>); <see cref="ZipArchive"/>;
         /// tar objects; nested <see cref="Archive"/>; <c>(data, name)</c> tuple; or a sequence of
         /// these (not a length-2 tuple).
         /// </param>
