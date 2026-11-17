@@ -1,4 +1,4 @@
-using Xunit;
+﻿using Xunit;
 
 namespace MuPDF.NET.Test
 {
@@ -11,8 +11,8 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_4614()
         {
-            // script_dir = os.path.dirname(__file__)
-            // filename = os.path.join(script_dir, "resources", "test_4614.pdf")
+
+
             using var src = new Document(testDocPath);
             using var doc = new Document();
             doc.InsertPdf(src);

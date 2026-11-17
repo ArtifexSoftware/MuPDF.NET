@@ -9,7 +9,7 @@ namespace MuPDF.NET
     /// </para>
     /// <list type="table">
     /// <listheader><term>Legacy</term><description>C# equivalent</description></listheader>
-    /// <item><term><c>Archive()</c></term><description><c>new Archive()</c></description></item>
+    /// <item><term><c>Archive</c></term><description><c>new Archive</c></description></item>
     /// <item><term><c>Archive(dirname, path)</c></term><description><c>new Archive(dirname, path)</c> (two-argument form)</description></item>
     /// <item><term><c>Archive(data, name)</c></term><description><c>new Archive(data, name)</c> for <see cref="byte"/>[]</description></item>
     /// </list>

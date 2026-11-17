@@ -48,12 +48,24 @@ namespace MuPDF.NET.Test
             throw new InvalidOperationException("Could not find solution root (MuPDF.NET.sln)");
         }
 
-        public static string ResolveTestDocument(string fileName, string? subFolder = null)
+        static string CombineTestDocument(string product, string fileName, string? subFolder)
         {
             string root = ResolveSolutionRoot();
             return string.IsNullOrWhiteSpace(subFolder)
-                ? Path.Combine(root, "TestDocuments", "MuPDF.NET.Test", fileName)
-                : Path.Combine(root, "TestDocuments", "MuPDF.NET.Test", subFolder, fileName);
+                ? Path.Combine(root, "TestDocuments", product, fileName)
+                : Path.Combine(root, "TestDocuments", product, subFolder, fileName);
+        }
+
+        public static string ResolveTestDocument(string fileName, string? subFolder = null)
+        {
+            string primary = CombineTestDocument("MuPDF.NET.Test", fileName, subFolder);
+            if (File.Exists(primary) || string.IsNullOrWhiteSpace(fileName))
+                return primary;
+            // Historical fixture folder from before LLM tests lived in MuPDF.NET.Test.
+            string layout = CombineTestDocument("MuPDF.NET.PDF4LLM.Test", fileName, subFolder);
+            if (File.Exists(layout))
+                return layout;
+            return primary;
         }
 
         public static string RequireTestDocument(string fileName, string? subFolder = null)
@@ -69,6 +81,13 @@ namespace MuPDF.NET.Test
 
         public static string ForTestClass(string fileName, string testClassName) =>
             RequireTestDocument(fileName, testClassName);
+
+        /// <summary>Returns <c>null</c> when the fixture is not present.</summary>
+        public static string? TryForTestClass(string fileName, string testClassName)
+        {
+            string path = ResolveTestDocument(fileName, testClassName);
+            return File.Exists(path) ? path : null;
+        }
 
         public static string ForOutput(string fileName, string testClassName)
         {
@@ -140,7 +159,7 @@ namespace MuPDF.NET.Test
             {
                 if (verbose != null && i % verbose.Value == 0)
                 {
-                    // Console.WriteLine($"{out_prefix}rms(): i={i} e={e} aa={a[i]} bb={b[i]}.");
+                    // Console.WriteLine($"{out_prefix}rms: i={i} e={e} aa={a[i]} bb={b[i]}.");
                 }
                 int d = a[i] - b[i];
                 e += d * d;

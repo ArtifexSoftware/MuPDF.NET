@@ -1,3 +1,4 @@
+using SkiaSharp;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -24,7 +25,8 @@ namespace MuPDF.NET.Test
 
         private static string Out(string fileName) => _Path.ForOutput(fileName, TestClassName);
 
-        private static readonly float[] color0 = { 0f }; // Python: color=0
+        /// <summary><c>color=0</c> (DeviceGray black).</summary>
+        private static readonly float[] color0 = { 0f };
 
         private static float[] PdfColor(string name)
         {
@@ -32,47 +34,27 @@ namespace MuPDF.NET.Test
             return new float[] { r, g, b };
         }
 
-        /// <summary>Normalize golden-file and pprint output before <c>Assert.Equal</c> (line endings, trailing space, final newline).</summary>
-        private static string NormalizePprintComparisonText(string text)
-        {
-            if (string.IsNullOrEmpty(text))
-                return "";
-            text = text.Replace("\r\n", "\n").Replace('\r', '\n');
-            string[] lines = text.Split('\n');
-            for (int i = 0; i < lines.Length; i++)
-                lines[i] = lines[i].TrimEnd();
-            int end = lines.Length;
-            while (end > 0 && lines[end - 1].Length == 0)
-                end--;
-            return string.Join("", lines, 0, end);
-        }
-
         /// <summary>Regression test: drawings1.</summary>
         [Fact]
         public void test_drawings1()
         {
-            // filename = os.path.join(scriptdir, "resources", "symbol-list.pdf")
-            // symbols = os.path.join(scriptdir, "resources", "symbols.txt")
-            string symbols_text = File.ReadAllText(Doc("symbols.txt")); // expected result
+            string symbolsText = File.ReadAllText(Doc("symbols.txt"));
             using var doc = new Document(Doc("symbol-list.pdf"));
             var page = doc[0];
             var paths = page.GetCdrawings();
-            // out = io.StringIO()  # pprint output goes here
-            // pprint.pprint(paths, stream=out)
             string outText = DrawingPathsPprint.Format(paths);
-            Assert.Equal(29, paths.Count);
-            doc.Save(Out("test_drawings1.pdf"));
+            Assert.Equal(NormalizeNl(symbolsText), NormalizeNl(outText));
         }
 
         /// <summary>Regression test: drawings2.</summary>
         [Fact]
         public void test_drawings2()
         {
-            var delta = new Rect(0, 20, 0, 20);
             using var doc = new Document();
+            var delta = new Rect(0, 20, 0, 20);
             var page = doc.NewPage();
 
-            var r = _Constants.rect;
+            var r = new Rect(100, 100, 200, 200);
             page.DrawCircle(r.BR, 2, color: color0);
             r += delta;
 
@@ -100,21 +82,17 @@ namespace MuPDF.NET.Test
             page.DrawSquiggle(r.TL, r.BR, color: color0);
             r += delta;
 
-            // rects = [p["rect"] for p in page.GetCdrawings()]
             var rects = new List<Rect>();
             foreach (var p in page.GetCdrawings())
             {
                 if (p.TryGetValue("rect", out var rv) && Helpers.TryCoerceRect(rv, out var rr))
                     rects.Add(rr);
             }
-            // bboxes = [b[1] for b in page.GetBboxlog()]
             var bboxes = new List<Rect>();
             foreach (var b in page.GetBboxlogTuples())
                 bboxes.Add(b.bbox);
             for (int i = 0; i < rects.Count; i++)
-            {
                 Assert.True(bboxes[i].Contains(rects[i]));
-            }
             doc.Save(Out("test_drawings2.pdf"));
         }
 
@@ -122,14 +100,12 @@ namespace MuPDF.NET.Test
         /// Verifies that dictionaries "a", "b"
         /// * have the same keys and values, except for key "items":
         /// * the items list of "a" must be one shorter but otherwise equal the "b" items
-        ///
         /// Returns last item of b["items"].
-        /// <summary>Regression test: dict difference.</summary>
         /// </summary>
         private static object[] DictDifference(Dictionary<string, object> a, Dictionary<string, object> b)
         {
             Assert.Equal(a.Keys.OrderBy(k => k).ToList(), b.Keys.OrderBy(k => k).ToList());
-            object[]? rc = null;
+            object[] rc = null;
             foreach (var k in a.Keys)
             {
                 var v1 = a[k];
@@ -146,7 +122,7 @@ namespace MuPDF.NET.Test
                     rc = (object[])l2[l2.Count - 1];
                 }
             }
-            return rc!;
+            return rc;
         }
 
         /// <summary>Regression test: drawings3.</summary>
@@ -200,17 +176,15 @@ namespace MuPDF.NET.Test
 
         /// <summary>
         /// Draw a filled rectangle on a new page.
-        ///
         /// Then extract the page's vector graphics and confirm that only one path
         /// was generated which has all the right properties.
-        /// <summary>Regression test: 2365.</summary>
         /// </summary>
         [Fact]
         public void test_2365()
         {
             using var doc = new Document();
             var page = doc.NewPage();
-            var rect = _Constants.rect;
+            var rect = new Rect(100, 100, 200, 200);
             page.DrawRect(
                 rect,
                 color: PdfColor("black"),
@@ -231,48 +205,38 @@ namespace MuPDF.NET.Test
 
         /// <summary>
         /// Assertion happens, if this code does NOT bring down the interpreter.
-        ///
         /// Background:
         /// We previously ignored clips for non-vector-graphics. However, ending
         /// a clip does not refer back the object(s) that have been clipped.
         /// In order to correctly compute the "scissor" rectangle, we now keep track
         /// of the clipped object type.
-        /// <summary>Regression test: 2462.</summary>
         /// </summary>
         [Fact]
         public void test_2462()
         {
             using var doc = new Document(Doc("test-2462.pdf"));
             var page = doc[0];
-            // vg = page.GetDrawings(extended=True)
             var vg = page.GetDrawingsDict(extended: true);
             Assert.Equal(63, vg.Count);
-            doc.Save(Out("test_2462.pdf"));
         }
 
-        /// <summary>
-        /// Ensure that incomplete clip paths will be properly ignored.
-        /// <summary>Regression test: 2556.</summary>
-        /// </summary>
+        /// <summary>Ensure that incomplete clip paths will be properly ignored.</summary>
         [Fact]
         public void test_2556()
         {
-            using var doc = new Document(); // new empty PDF
-            var page = doc.NewPage(); // new page
-            // following contains an incomplete clip
+            using var doc = new Document();
+            var page = doc.NewPage();
             byte[] c = Encoding.ASCII.GetBytes("q 50 697.6 400 100.0 re W n q 0 0 m W n Q ");
-            int xref = doc.GetNewXref(); // prepare /Contents object for page
-            doc.UpdateObject(xref, "<<>>"); // new xref now is a dictionary
-            doc.UpdateStream(xref, c); // store drawing commands
-            page.SetContents(xref); // give the page this xref as /Contents
-            // following will bring down interpreter if fix not installed
+            int xref = doc.GetNewXref();
+            doc.UpdateObject(xref, "<<>>");
+            doc.UpdateStream(xref, c);
+            page.SetContents(xref);
             Assert.NotEmpty(page.GetDrawingsDict(extended: true));
             doc.Save(Out("test_2556.pdf"));
         }
 
         /// <summary>
         /// Example graphics with multiple "close path" commands within same path.
-        ///
         /// The fix translates a close-path commands into an additional line
         /// which connects the current point with a preceding "move" target.
         /// The example page has 2 paths which each contain 2 close-path
@@ -281,12 +245,9 @@ namespace MuPDF.NET.Test
         /// This is converted into 3 connected lines, where the last end point
         /// is connect to the start point of the first line.
         /// So, in the sequence of lines / points
-        ///
         /// (p0, p1), (p2, p3), (p4, p5), (p6, p7), (p8, p9), (p10, p11)
-        ///
         /// point p5 must equal p0, and p11 must equal p6 (for each of the
         /// two paths in the example).
-        /// <summary>Regression test: 3207.</summary>
         /// </summary>
         [Fact]
         public void test_3207()
@@ -296,9 +257,9 @@ namespace MuPDF.NET.Test
             var paths = page.GetDrawingsDict();
             Assert.Equal(2, paths.Count);
 
-            static void CheckPath(Dictionary<string, object> path0)
+            static void CheckPath(Dictionary<string, object> path)
             {
-                var items = (List<object>)path0["items"];
+                var items = (List<object>)path["items"];
                 Assert.Equal(6, items.Count);
                 var item0 = (object[])items[0];
                 var item2 = (object[])items[2];
@@ -316,7 +277,7 @@ namespace MuPDF.NET.Test
             CheckPath(paths[1]);
         }
 
-        /// <summary>Confirm correct scaling factor for rotation matrices. MuPDF: <c>tests/test_drawings.py::test_3591</c>.</summary>
+        /// <summary>Confirm correct scaling factor for rotation matrices.</summary>
         [Fact]
         public void test_3591()
         {
@@ -346,8 +307,8 @@ namespace MuPDF.NET.Test
             }
             using (var doc = new Document(pathOut))
             {
-                var d = doc[0].GetDrawings().Last();
-                Assert.Equal(2f, d.LineJoin);
+                var d = doc[0].GetDrawingsDict().Last();
+                Assert.Equal(2.0, Convert.ToDouble(d["lineJoin"], CultureInfo.InvariantCulture));
             }
         }
 
@@ -370,16 +331,57 @@ namespace MuPDF.NET.Test
             }
             using (var doc = new Document(pathOut))
             {
-                var d = doc[0].GetDrawings().Last();
-                Assert.InRange(d.Width, 2.439f, 2.459f);
+                var d = doc[0].GetDrawingsDict().Last();
+                double width = Convert.ToDouble(d["width"], CultureInfo.InvariantCulture);
+                Assert.True(Math.Abs(width - 2.449) < 0.01, $"width={width}");
             }
         }
+
+        /// <summary>
+        /// An exception raised by a get_cdrawings callback must not crash the process.
+        /// It used to: jm_append_merge reports the failed callback via messagef
+        /// while the exception is still set, so messagev's import of
+        /// returned NULL, which was then dereferenced.
+        /// C# analog: InvokeCallback catches the throw, prints the same message, and GetCdrawings returns.
+        /// </summary>
+        [Fact]
+        public void test_cdrawings_callback_exception()
+        {
+            using var document = new Document();
+            var page = document.NewPage();
+            page.DrawLine(new Point(10, 10), new Point(100, 100));
+            void Callback(Dictionary<string, object> path)
+            {
+                throw new InvalidOperationException("callback failed");
+            }
+
+            var stdout = new StringWriter();
+            var old = Console.Out;
+            Console.SetOut(stdout);
+            try
+            {
+                page.GetCdrawings(callback: (Action<Dictionary<string, object>>)Callback);
+                Console.WriteLine("returned");
+            }
+            finally
+            {
+                Console.SetOut(old);
+            }
+
+            string text = stdout.ToString().Replace("\r\n", "\n");
+            Assert.Contains("calling cdrawings callback function/method failed!\n", text);
+            Assert.Contains("returned", text);
+        }
+
+        private static string NormalizeNl(string text) =>
+            (text ?? "").Replace("\r\n", "\n");
 
         private static Point PointFromPathItem(object o)
         {
             if (o is Point p) return p;
             if (o is IList list && list.Count >= 2)
-                return new Point((float)Convert.ToDouble(list[0], CultureInfo.InvariantCulture),
+                return new Point(
+                    (float)Convert.ToDouble(list[0], CultureInfo.InvariantCulture),
                     (float)Convert.ToDouble(list[1], CultureInfo.InvariantCulture));
             throw new InvalidOperationException($"not a point: {o}");
         }
@@ -426,44 +428,181 @@ namespace MuPDF.NET.Test
         }
 
         private static bool IsNumeric(object o) =>
-            o is int or long or float or float or decimal;
+            o is sbyte or byte or short or ushort or int or uint or long or ulong or float or double or decimal;
 
-        /// <summary>Python <c>pprint.pprint</c> formatting for <c>get_cdrawings()</c> output (golden <c>symbols.txt</c>).</summary>
+        /// <summary>PyMuPDF <c>pprint.pprint</c> formatting for <c>get_cdrawings()</c> output (golden <c>symbols.txt</c>).</summary>
         private static class DrawingPathsPprint
         {
+            private const int Width = 80;
+
             public static string Format(IReadOnlyList<Dictionary<string, object>> paths)
             {
-                var sb = new StringBuilder();
-                sb.Append('[');
-                for (int i = 0; i < paths.Count; i++)
+                var w = new Writer();
+                w.FormatValue(paths);
+                w.Sb.Append('\n');
+                return w.Sb.ToString();
+            }
+
+            private sealed class Writer
+            {
+                public readonly StringBuilder Sb = new StringBuilder();
+                public int Col;
+
+                public void Append(string s)
                 {
-                    if (i > 0) sb.Append(',');
-                    sb.Append('\n');
-                    FormatDict(sb, paths[i], 1);
+                    foreach (char c in s)
+                    {
+                        Sb.Append(c);
+                        Col = c == '\n' ? 0 : Col + 1;
+                    }
                 }
-                if (paths.Count > 0) sb.Append('\n');
-                sb.Append(']');
+
+                public void Append(char c)
+                {
+                    Sb.Append(c);
+                    Col = c == '\n' ? 0 : Col + 1;
+                }
+
+                public void FormatValue(object v)
+                {
+                    switch (v)
+                    {
+                        case null:
+                            Append("None");
+                            break;
+                        case bool b:
+                            Append(b ? "True" : "False");
+                            break;
+                        case string s:
+                            Append("'");
+                            Append(s);
+                            Append("'");
+                            break;
+                        case float f:
+                            Append(FormatFloat(f));
+                            break;
+                        case double d:
+                            Append(FormatFloat((float)d));
+                            break;
+                        case int n:
+                            Append(n.ToString(CultureInfo.InvariantCulture));
+                            break;
+                        case long ln:
+                            Append(ln.ToString(CultureInfo.InvariantCulture));
+                            break;
+                        case Point p:
+                            FormatSequence(new object[] { p.X, p.Y }, '(', ')');
+                            break;
+                        case Rect r:
+                            FormatSequence(new object[] { r.X0, r.Y0, r.X1, r.Y1 }, '(', ')');
+                            break;
+                        case mupdf.FzRect fr:
+                            FormatSequence(new object[] { fr.x0, fr.y0, fr.x1, fr.y1 }, '(', ')');
+                            break;
+                        case float[] fa:
+                            FormatSequence(fa.Cast<object>().ToArray(), '(', ')');
+                            break;
+                        case object[] oa:
+                            FormatSequence(oa, '(', ')');
+                            break;
+                        case Dictionary<string, object> dict:
+                            FormatDict(dict);
+                            break;
+                        case IList list:
+                            FormatSequence(list, '[', ']');
+                            break;
+                        default:
+                            Append(v.ToString());
+                            break;
+                    }
+                }
+
+                public void FormatDict(Dictionary<string, object> d)
+                {
+                    var keys = d.Keys.OrderBy(k => k, StringComparer.Ordinal).ToList();
+                    if (keys.Count == 0)
+                    {
+                        Append("{}");
+                        return;
+                    }
+
+                    string compact = CompactDict(d, keys);
+                    if (Col + compact.Length <= Width)
+                    {
+                        Append(compact);
+                        return;
+                    }
+
+                    Append('{');
+                    int hang = Col;
+                    for (int i = 0; i < keys.Count; i++)
+                    {
+                        if (i > 0)
+                        {
+                            Append(",\n");
+                            Append(new string(' ', hang));
+                        }
+                        string key = keys[i];
+                        Append("'");
+                        Append(key);
+                        Append("': ");
+                        FormatValue(d[key]);
+                    }
+                    Append('}');
+                }
+
+                public void FormatSequence(IList items, char open, char close)
+                {
+                    string compact = CompactSequence(items, open, close);
+                    if (Col + compact.Length <= Width)
+                    {
+                        Append(compact);
+                        return;
+                    }
+
+                    Append(open);
+                    int hang = Col;
+                    for (int i = 0; i < items.Count; i++)
+                    {
+                        if (i > 0)
+                        {
+                            Append(",\n");
+                            Append(new string(' ', hang));
+                        }
+                        FormatValue(items[i]);
+                    }
+                    Append(close);
+                }
+            }
+
+            private static string CompactDict(Dictionary<string, object> d, List<string> keys)
+            {
+                var sb = new StringBuilder();
+                sb.Append('{');
+                for (int i = 0; i < keys.Count; i++)
+                {
+                    if (i > 0) sb.Append(", ");
+                    sb.Append('\'').Append(keys[i]).Append("': ");
+                    CompactValue(sb, d[keys[i]]);
+                }
+                sb.Append('}');
                 return sb.ToString();
             }
 
-            private static void FormatDict(StringBuilder sb, Dictionary<string, object> d, int depth)
+            private static string CompactSequence(IList items, char open, char close)
             {
-                sb.Append('{');
-                int ki = 0;
-                foreach (var kv in d)
+                var sb = new StringBuilder();
+                sb.Append(open);
+                for (int i = 0; i < items.Count; i++)
                 {
-                    if (ki++ > 0) sb.Append(',');
-                    sb.Append('\n');
-                    sb.Append(' ', depth * 2);
-                    sb.Append('\'').Append(kv.Key).Append("': ");
-                    FormatValue(sb, kv.Value, depth + 1);
+                    if (i > 0) sb.Append(", ");
+                    CompactValue(sb, items[i]);
                 }
-                sb.Append('\n');
-                sb.Append(' ', (depth - 1) * 2);
-                sb.Append('}');
+                sb.Append(close);
+                return sb.ToString();
             }
 
-            private static void FormatValue(StringBuilder sb, object v, int depth)
+            private static void CompactValue(StringBuilder sb, object v)
             {
                 switch (v)
                 {
@@ -489,64 +628,39 @@ namespace MuPDF.NET.Test
                         sb.Append(ln.ToString(CultureInfo.InvariantCulture));
                         break;
                     case Point p:
-                        FormatTuple(sb, new object[] { p.X, p.Y });
+                // Match PyMuPDF repr-style floats in symbols.txt (no gratuitous trailing zeros).
+                        sb.Append(CompactSequence(new object[] { p.X, p.Y }, '(', ')'));
                         break;
                     case Rect r:
-                        FormatTuple(sb, new object[] { r.X0, r.Y0, r.X1, r.Y1 });
+                        sb.Append(CompactSequence(new object[] { r.X0, r.Y0, r.X1, r.Y1 }, '(', ')'));
                         break;
                     case mupdf.FzRect fr:
-                        FormatTuple(sb, new object[] { fr.x0, fr.y0, fr.x1, fr.y1 });
+                        sb.Append(CompactSequence(new object[] { fr.x0, fr.y0, fr.x1, fr.y1 }, '(', ')'));
                         break;
                     case float[] fa:
-                        FormatTuple(sb, fa);
+                        sb.Append(CompactSequence(fa.Cast<object>().ToArray(), '(', ')'));
                         break;
                     case object[] oa:
-                        FormatTuple(sb, oa);
+                        sb.Append(CompactSequence(oa, '(', ')'));
                         break;
-                    case List<object> list:
-                        FormatList(sb, list, depth);
+                    case Dictionary<string, object> dict:
+                        sb.Append(CompactDict(dict, dict.Keys.OrderBy(k => k, StringComparer.Ordinal).ToList()));
                         break;
                     case IList list:
-                        FormatList(sb, list, depth);
+                        sb.Append(CompactSequence(list, '[', ']'));
                         break;
                     default:
-                        sb.Append(v.ToString());
+                        sb.Append(v);
                         break;
                 }
-            }
-
-            private static void FormatList(StringBuilder sb, IList list, int depth)
-            {
-                sb.Append('[');
-                for (int i = 0; i < list.Count; i++)
-                {
-                    if (i > 0) sb.Append(',');
-                    sb.Append('\n');
-                    sb.Append(' ', depth * 2);
-                    FormatValue(sb, list[i], depth + 1);
-                }
-                sb.Append('\n');
-                sb.Append(' ', (depth - 1) * 2);
-                sb.Append(']');
-            }
-
-            private static void FormatTuple(StringBuilder sb, IList items)
-            {
-                sb.Append('(');
-                for (int i = 0; i < items.Count; i++)
-                {
-                    if (i > 0) sb.Append(", ");
-                    FormatValue(sb, items[i], 0);
-                }
-                sb.Append(')');
             }
 
             private static string FormatFloat(float f)
             {
                 if (float.IsNaN(f) || float.IsInfinity(f))
                     return f.ToString(CultureInfo.InvariantCulture);
-                // Match Python repr-style floats in symbols.txt (no gratuitous trailing zeros).
-                string s = f.ToString("R", CultureInfo.InvariantCulture);
+                double d = f;
+                string s = d.ToString("R", CultureInfo.InvariantCulture);
                 if (!s.Contains('.') && !s.Contains('E') && !s.Contains('e'))
                     s += ".0";
                 return s;

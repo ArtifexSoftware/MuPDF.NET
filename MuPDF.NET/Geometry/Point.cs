@@ -6,7 +6,7 @@ using System.Globalization;
 namespace MuPDF.NET
 {
     /// <summary>
-    /// A point in the plane defined by <see cref="X"/> and <see cref="Y"/> .
+    /// A point in the plane defined by <see cref="X"/> and <see cref="Y"/>.
     /// </summary>
     /// <remarks>
     /// <para>Supports sequence-style indexing (<c>[0]</c> = x, <c>[1]</c> = y) and arithmetic with
@@ -97,7 +97,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Euclidean length of the vector from the origin to this point ( / <c>abs</c>).
+        /// Euclidean length of the vector from the origin to this point (/ <c>abs</c>).
         /// </summary>
         public float Norm => (float)Math.Sqrt(X * X + Y * Y);
 
@@ -128,12 +128,12 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Euclidean length of this vector (published MuPDF.NET <c>Abs()</c>; / <c>norm</c>).
+        /// Euclidean length of this vector (published MuPDF.NET <c>Abs</c>; / <c>norm</c>).
         /// </summary>
         public float Abs() => Norm;
 
         /// <summary>
-        /// Like <see cref="Unit"/>, but each coordinate is replaced by its absolute value .
+        /// Like <see cref="Unit"/>, but each coordinate is replaced by its absolute value.
         /// </summary>
         public Point AbsUnit
         {

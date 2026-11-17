@@ -77,7 +77,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Creates a writer backed by an <see cref="mupdf.FzBuffer"/> (same as ).
+        /// Creates a writer backed by an <see cref="mupdf.FzBuffer"/> (same as).
         /// </summary>
         /// <param name="buffer">Buffer; bytes are extracted in <see cref="Close"/> when this is the primary sink.</param>
         /// <param name="format">Document format (default <c>pdf</c>).</param>

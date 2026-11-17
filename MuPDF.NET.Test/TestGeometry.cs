@@ -1,12 +1,12 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
 using Xunit;
 
 namespace MuPDF.NET.Test
 {
-    /// <summary>
-    /// </summary>
+
+
     /// <remarks>
     /// * Check various construction methods of rects, points, matrices
     /// * Check matrix inversions in variations
@@ -28,7 +28,7 @@ namespace MuPDF.NET.Test
         private static (float a, float b, float c, float d, float e, float f) T(Matrix m) => (m.A, m.B, m.C, m.D, m.E, m.F);
         private static (float x, float y) T(Point p) => (p.X, p.Y);
 
-        /// <summary>Python <c>~matrix</c> (<see cref="Matrix.Invert"/>; zero matrix if singular).</summary>
+        /// <summary>PyMuPDF <c>~matrix</c> (<see cref="Matrix.Invert"/>; zero matrix if singular).</summary>
         private static Matrix Invert(Matrix self)
         {
             var m1 = new Matrix();
@@ -54,11 +54,11 @@ namespace MuPDF.NET.Test
             Assert.True(failed);
         }
 
-        /// <summary>Python <c>point in rect</c> (<c>fz_is_point_inside_rect</c>).</summary>
+        /// <summary>PyMuPDF <c>point in rect</c> (<c>fz_is_point_inside_rect</c>).</summary>
         private static bool PyIn(Rect r, Point p) =>
             mupdf.mupdf.fz_is_point_inside_rect(p.ToFzPoint(), r.ToFzRect()) != 0;
 
-        /// <summary>Python <c>item in rect</c> for points (and <c>not in</c> for non-points).</summary>
+        /// <summary>PyMuPDF <c>item in rect</c> for points (and <c>not in</c> for non-points).</summary>
         private static bool PyIn(Rect r, object x)
         {
             if (x is Point p)
@@ -66,7 +66,7 @@ namespace MuPDF.NET.Test
             return false;
         }
 
-        /// <summary>Python <c>item in quad</c>.</summary>
+        /// <summary>PyMuPDF <c>item in quad</c>.</summary>
         private static bool PyIn(Quad q, object x)
         {
             if (x is Point p)
@@ -374,7 +374,9 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_pageboxes()
         {
+            /// <summary>
             /// Tests concerning ArtBox, TrimBox, BleedBox.
+            /// </summary>
             using var doc = new Document();
             var page = doc.NewPage();
             Assert.Equal(page.CropBox, page.ArtBox);

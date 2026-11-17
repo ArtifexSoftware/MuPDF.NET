@@ -16,7 +16,6 @@ namespace MuPDF.NET
     /// <see cref="Commit"/> to write <see cref="TotalCont"/> into the page contents stream.</para>
     /// <para><see cref="InsertText"/> and <see cref="InsertTextbox"/> append to <see cref="TextCont"/> and
     /// implicitly finish the current path; only <see cref="Commit"/> is required afterward.</para>
-    /// <para>Ports </para>
     /// </remarks>
     public class Shape : IDisposable
     {
@@ -137,7 +136,7 @@ namespace MuPDF.NET
         // ─── Drawing Primitives ─────────────────────────────────────────
 
         /// <summary>
-        /// Angle in radians from <paramref name="c"/> to <paramref name="p"/> .
+        /// Angle in radians from <paramref name="c"/> to <paramref name="p"/>.
         /// </summary>
         /// <param name="c">Center or origin point.</param>
         /// <param name="p">Target point.</param>
@@ -438,10 +437,14 @@ namespace MuPDF.NET
         {
             center = new Point(center);
             point = new Point(point);
-            float betar = -beta * (float)Math.PI / 180.0f;
-            float w360 = (float)Math.Sign(betar) * (float)Math.PI * 2 * -1;
-            float w90 = (float)Math.Sign(betar) * (float)Math.PI / 2;
-            float w45 = w90 / 2;
+            // Shape.draw_sector uses math.radians / math.cos (IEEE double).
+            // Computing betar in float then comparing to double 2*pi wraps a 360°
+            // circle to 0 (float 2π > double 2π), leaving only the initial moveto.
+            double betar = -beta * Math.PI / 180.0;
+            double sign = betar < 0 ? -1.0 : 1.0;
+            double w360 = sign * 2 * Math.PI * -1.0;
+            double w90 = sign * Math.PI / 2.0;
+            double w45 = w90 / 2.0;
             while (Math.Abs(betar) > 2 * Math.PI)
                 betar += w360;
 
@@ -452,26 +455,26 @@ namespace MuPDF.NET
             }
 
             Point Q = new Point(0, 0);
-            var C = center;
-            var P = point;
-            var S = P - C;
-            float rad = S.Norm;
+            double cx = center.X, cy = center.Y;
+            Point P = point;
+            var S = P - center;
+            double rad = Math.Sqrt((double)S.X * S.X + (double)S.Y * S.Y);
             if (!(rad > Constants.Epsilon))
                 throw new ValueErrorException("radius must be positive");
 
-            float alfa = HorizontalAngle(center, point);
+            double alfa = HorizontalAngle(center, point);
             while (Math.Abs(betar) > Math.Abs(w90))
             {
-                float q1 = C.X + (float)Math.Cos(alfa + w90) * rad;
-                float q2 = C.Y + (float)Math.Sin(alfa + w90) * rad;
-                Q = new Point(q1, q2);
-                float r1 = C.X + (float)Math.Cos(alfa + w45) * rad / (float)Math.Cos(w45);
-                float r2 = C.Y + (float)Math.Sin(alfa + w45) * rad / (float)Math.Cos(w45);
-                var R = new Point(r1, r2);
-                float kappah = (1 - (float)Math.Cos(w45)) * 4 / 3 / (R - Q).Norm;
-                float kappa = kappah * (P - Q).Norm;
-                var cp1 = P + (R - P) * kappa;
-                var cp2 = Q + (R - Q) * kappa;
+                double q1 = cx + Math.Cos(alfa + w90) * rad;
+                double q2 = cy + Math.Sin(alfa + w90) * rad;
+                Q = new Point((float)q1, (float)q2);
+                double r1 = cx + Math.Cos(alfa + w45) * rad / Math.Cos(w45);
+                double r2 = cy + Math.Sin(alfa + w45) * rad / Math.Cos(w45);
+                var R = new Point((float)r1, (float)r2);
+                double kappah = (1 - Math.Cos(w45)) * 4 / 3 / Hypot(R, Q);
+                double kappa = kappah * Hypot(P, Q);
+                var cp1 = P + (R - P) * (float)kappa;
+                var cp2 = Q + (R - Q) * (float)kappa;
                 AppendC(cp1, cp2, Q);
                 betar -= w90;
                 alfa += w90;
@@ -480,17 +483,17 @@ namespace MuPDF.NET
 
             if (Math.Abs(betar) > 1e-3)
             {
-                float beta2 = betar / 2;
-                float q1 = C.X + (float)Math.Cos(alfa + betar) * rad;
-                float q2 = C.Y + (float)Math.Sin(alfa + betar) * rad;
-                Q = new Point(q1, q2);
-                float r1 = C.X + (float)Math.Cos(alfa + beta2) * rad / (float)Math.Cos(beta2);
-                float r2 = C.Y + (float)Math.Sin(alfa + beta2) * rad / (float)Math.Cos(beta2);
-                var R = new Point(r1, r2);
-                float kappah = (1 - (float)Math.Cos(beta2)) * 4 / 3 / (R - Q).Norm;
-                float kappa = kappah * (P - Q).Norm / (1 - (float)Math.Cos(betar));
-                var cp1 = P + (R - P) * kappa;
-                var cp2 = Q + (R - Q) * kappa;
+                double beta2 = betar / 2;
+                double q1 = cx + Math.Cos(alfa + betar) * rad;
+                double q2 = cy + Math.Sin(alfa + betar) * rad;
+                Q = new Point((float)q1, (float)q2);
+                double r1 = cx + Math.Cos(alfa + beta2) * rad / Math.Cos(beta2);
+                double r2 = cy + Math.Sin(alfa + beta2) * rad / Math.Cos(beta2);
+                var R = new Point((float)r1, (float)r2);
+                double kappah = (1 - Math.Cos(beta2)) * 4 / 3 / Hypot(R, Q);
+                double kappa = kappah * Hypot(P, Q) / (1 - Math.Cos(betar));
+                var cp1 = P + (R - P) * (float)kappa;
+                var cp2 = Q + (R - Q) * (float)kappa;
                 AppendC(cp1, cp2, Q);
             }
 
@@ -505,6 +508,13 @@ namespace MuPDF.NET
             if (_firstPoint == null) _firstPoint = point;
             if (count) _drawCount++;
             return _lastPoint;
+        }
+
+        private static double Hypot(Point a, Point b)
+        {
+            double dx = (double)a.X - b.X;
+            double dy = (double)a.Y - b.Y;
+            return Math.Sqrt(dx * dx + dy * dy);
         }
 
         /// <summary>
@@ -708,41 +718,41 @@ namespace MuPDF.NET
         public void Commit(bool overlay = true)
         {
             // MuPDF Shape.commit:
-            //     The argument controls whether data appear in foreground (default)
-            //     or background."""
-            //     CheckParent(self.page)  # doc may have died meanwhile
-            //     self.totalcont += self.text_cont
-            //     self.totalcont = self.totalcont.encode()
-            //             self.page.wrap_contents()  # ensure a balanced graphics state
-            //         xref = TOOLS._insert_contents(self.page, b" ", overlay)
-            //         self.doc.UpdateStream(xref, self.totalcont)
-            //     self.last_point = None  # clean up ...
-            //     self.rect = None  #
-            //     self.draw_cont = ""  # for potential ...
-            //     self.text_cont = ""  # ...
-            //     self.totalcont = ""  # re-use
+            // The argument controls whether data appear in foreground (default)
+            // or background."""
+
+
+
+
+
+
+
+
+
+
+
             if (_textCont.Length > 0)
             {
                 _totalContents.Append(_textCont);
                 _textCont.Clear();
             }
             if (_totalContents.Length == 0) return;
-            // CheckParent(self.page)  # doc may have died meanwhile
+
             if (overlay)
                 _page.WrapContents(); // ensure a balanced graphics state
             byte[] content = Encoding.UTF8.GetBytes(_totalContents.ToString());
-            // xref = TOOLS._insert_contents(self.page, b" ", overlay)
+
             int xref = Tools.InsertContents(_page, new byte[] { (byte)' ' }, overlay);
-            // self.doc.UpdateStream(xref, self.totalcont)
+
             _doc.UpdateStream(xref, content);
 
             _totalContents.Clear();
             _pathCount = 0;
-            // self.last_point = None  # clean up ...
-            // self.rect = None  #
-            // self.draw_cont = ""  # for potential ...
-            // self.text_cont = ""  # ...
-            // self.totalcont = ""  # re-use
+
+
+
+
+
         }
 
         // ─── Text methods ───────────────────────────────────────────────
@@ -944,7 +954,6 @@ namespace MuPDF.NET
             else
                 alpha = $"/{alpha} gs\n";
 
-            // MuPDF Shape.insert_text uses fontname (e.g. "helv"), not "F{xref}".
             string resKey = fname;
             var nres = new StringBuilder();
             nres.Append("\nq\n");
@@ -973,7 +982,7 @@ namespace MuPDF.NET
                 nres.Append(fillStr);
 
             // =========================================================================
-            //   start text insertion
+            // start text insertion
             // =========================================================================
             nres.Append(tab[0]);
             int nlines = 1; // set output line counter
@@ -1000,7 +1009,7 @@ namespace MuPDF.NET
             nres.Append("\nET\n").Append(emc).Append("Q\n");
 
             // =========================================================================
-            //   end of text insertion
+            // end of text insertion
             // =========================================================================
             // update the /Contents object
             _textCont.Append(nres.ToString());
@@ -1025,8 +1034,8 @@ namespace MuPDF.NET
         }
 
         // ==============================================================================
-        // Shape.insert_textbox
         // ==============================================================================
+
         /// <summary>
         /// Fit text into a rectangle with wrapping and alignment (appends to <see cref="TextCont"/>).
         /// </summary>
@@ -1076,21 +1085,21 @@ namespace MuPDF.NET
             float strokeOpacity = 1)
         {
             // Args:
-            //     rect -- the textbox to fill
-            //     buffer -- text to be inserted
-            //     fontname -- a Base-14 font, font name or '/name'
-            //     fontfile -- name of a font file
-            //     lineheight -- overwrite the font property
-            //     color -- RGB stroke color triple
-            //     fill -- RGB fill color triple
-            //     render_mode -- text rendering control
-            //     border_width -- thickness of glyph borders as percentage of fontsize
-            //     expandtabs -- handles tabulators with string function
-            //     align -- left, center, right, justified
-            //     rotate -- 0, 90, 180, or 270 degrees
-            //     morph -- morph box with a matrix and a fixpoint
+            // rect -- the textbox to fill
+            // buffer -- text to be inserted
+            // fontname -- a Base-14 font, font name or '/name'
+            // fontfile -- name of a font file
+            // lineheight -- overwrite the font property
+            // color -- RGB stroke color triple
+            // fill -- RGB fill color triple
+            // render_mode -- text rendering control
+            // border_width -- thickness of glyph borders as percentage of fontsize
+            // expandtabs -- handles tabulators with string function
+            // align -- left, center, right, justified
+            // rotate -- 0, 90, 180, or 270 degrees
+            // morph -- morph box with a matrix and a fixpoint
             // Returns:
-            //     unused or deficit rectangle area (float)
+            // unused or deficit rectangle area (float)
             rect = new Rect(rect);
             if (rect.IsEmpty || rect.IsInfinite)
                 throw new ValueErrorException("text box must be finite and not empty");
@@ -1334,7 +1343,7 @@ namespace MuPDF.NET
                         continue;
                     }
 
-                    // long word: split across multiple lines - char by char ...
+                    // long word: split across multiple lines - char by char...
                     if (justTab.Count > 0)
                         justTab[justTab.Count - 1] = false; // cannot align-justify
                     foreach (char c in word)
@@ -1381,7 +1390,6 @@ namespace MuPDF.NET
                 more = 0; // don't bother with epsilons
             var nres = new StringBuilder();
             nres.Append("\nq\n").Append(bdc).Append(alpha).Append("BT\n").Append(cm); // initialize output buffer
-            // templ = lambda a, b, c, d: f"1 0 0 1 {_format_g((a, b))} Tm /{c} {_format_g(d)} Tf "
             // center, right, justify: output each line with its own specifics
             string[] textT = text.Split('\n'); // split text in lines again
             if (justTab.Count > 0)

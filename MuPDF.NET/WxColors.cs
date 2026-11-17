@@ -4,17 +4,13 @@ using System.Linq;
 namespace MuPDF.NET
 {
     /// <summary>
-    /// wxWidgets colour database used by MuPDF (<c>src/_wxcolors.py</c>, imported in <c>__init__.py</c> ~25459).
+    /// wxWidgets colour names used by named-colour helpers on <see cref="Utils"/>.
     /// </summary>
-    /// <remarks>
-    /// Named-colour helpers (<c>getColor</c>, <c>getColorList</c>, …) live on <see cref="Utils"/>.
-    /// Public members use PascalCase; <c>internal</c> snake_case aliases are available for same-assembly tests.
-    /// </remarks>
     public static class WxColors
     {
+
         /// <summary>
-        /// List of (name, red, green, blue) where name is upper-case and RGB are integers 0–255
-        /// ( / <c>colors_wx_list()</c>).
+        /// List of (name, red, green, blue) where name is upper-case and RGB are integers 0–255.
         /// </summary>
         public static readonly List<(string Name, int R, int G, int B)> ColorList = new List<(string, int, int, int)>
         {
@@ -582,8 +578,9 @@ namespace MuPDF.NET
 
         /// <summary>
         /// Dict mapping lower-case name to (red, green, blue) floats in 0.0–1.0
-        /// </c>).
         /// </summary>
+        /// </c>).
+
         public static readonly Dictionary<string, (float r, float g, float b)> PdfColorDict =
             ColorList.ToDictionary(
                 c => c.Name.ToLower(),

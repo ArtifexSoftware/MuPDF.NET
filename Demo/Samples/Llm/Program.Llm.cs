@@ -1,3 +1,4 @@
+using MuPDF.NET;
 namespace Demo
 {
     internal partial class Program
@@ -6,7 +7,7 @@ namespace Demo
         {
             Console.WriteLine("\n=== TestMarkdownReader =======================");
 
-            var reader = new PDFMarkdownReader();
+            var reader = Utils.LlamaMarkdownReader();
             string testFilePath = DemoPaths.Input("columns.pdf");
 
             var docs = reader.LoadData(testFilePath);
@@ -100,7 +101,7 @@ namespace Demo
 
         internal static void TestMuPdfRagToMarkdown()
         {
-            Console.WriteLine("\n=== TestMuPdfRagToMarkdown (legacy RAG via MuPDF4LLM.UseLayout=false) =======================");
+            Console.WriteLine("\n=== TestMuPdfRagToMarkdown (legacy RAG via Utils.LayoutEnabled=false) =======================");
 
             try
             {
@@ -110,17 +111,16 @@ namespace Demo
                 Console.WriteLine($"Document loaded: {doc.PageCount} page(s)");
                 Console.WriteLine($"Document name: {doc.Name}");
 
-                Console.WriteLine("\n--- Test 1: MuPDF4LLM.ToMarkdown with MuPDF4LLM.UseLayout =false ---");
+                Console.WriteLine("\n--- Test 1: Document.ToMarkdown with Utils.LayoutFlag =false ---");
                 try
                 {
                     List<int> pages = new List<int> { 0 };
-                    bool prev = MuPDF4LLM.UseLayout;
+                    bool prev = Utils.LayoutEnabled;
                     string markdown;
                     try
                     {
-                        MuPDF4LLM.UseLayout = false;
-                        markdown = MuPDF4LLM.ToMarkdown(
-                            doc,
+                        Utils.LayoutFlag = false;
+                        markdown = doc.ToMarkdown(
                             pages: pages,
                             writeImages: false,
                             embedImages: false,
@@ -138,7 +138,7 @@ namespace Demo
                     }
                     finally
                     {
-                        MuPDF4LLM.UseLayout = prev;
+                        Utils.LayoutFlag = prev;
                     }
 
                     string markdownFile = DemoPaths.Output("TestMuPdfRag_Output.md");

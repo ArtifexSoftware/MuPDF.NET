@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using Xunit;
 
@@ -22,20 +22,13 @@ namespace MuPDF.NET.Test
             string spikesYes = Doc("spikes-yes.png");
             string spikesNo = Doc("spikes-no.png");
             using var doc = new Document();
-            // text = "NATO MEMBERS"  # some text provoking spikes ("N", "M")
             string text = "NATO MEMBERS";
-            // point = (10, 35)  # insert point
             var point = new Point(10, 35);
 
             // make text provoking spikes
-            // page = doc.NewPage(width=200, height=50)  # small page
+
             var page = doc.NewPage(width: 200, height: 50);
-            // page.InsertText(
-            //     text,
-            //     render_mode=1,  # stroke text only
-            //     border_width=0.3,  # causes thick border lines
-            //     miter_limit=None,  # do not care about miter spikes
-            // )
+            // text,
             page.InsertText(
                 point,
                 text,
@@ -44,21 +37,15 @@ namespace MuPDF.NET.Test
                 borderWidth: 0.3f,
                 miterLimit: null);
             // write same text in white over the previous for better demo purpose
-            // page.InsertText(point, text, fontsize=20, color=(1, 1, 1))
             page.InsertText(point, text, fontSize: 20, color: _Constants.white);
-            // pix1 = page.GetPixmap()
             var pix1 = page.GetPixmap();
             Assert.Equal(File.ReadAllBytes(spikesYes), pix1.ToBytes());
+            pix1.Save(Out("test_spikes_test_pix1.png"));
 
             // make text suppressing spikes
-            // page = doc.NewPage(width=200, height=50)
+
             page = doc.NewPage(width: 200, height: 50);
-            // page.InsertText(
-            //     text,
-            //     render_mode=1,
-            //     border_width=0.3,
-            //     miter_limit=1,  # suppress each and every miter spike
-            // )
+            // text,
             page.InsertText(
                 point,
                 text,
@@ -66,10 +53,9 @@ namespace MuPDF.NET.Test
                 renderMode: 1,
                 borderWidth: 0.3f,
                 miterLimit: 1);
-            // page.InsertText(point, text, fontsize=20, color=(1, 1, 1))
             page.InsertText(point, text, fontSize: 20, color: _Constants.white);
-            // pix2 = page.GetPixmap()
             var pix2 = page.GetPixmap();
+            pix2.Save(Out("test_spikes_test_pix2.png"));
             Assert.Equal(File.ReadAllBytes(spikesNo), pix2.ToBytes());
             doc.Save(Out("test_spikes.pdf"));
         }

@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Xunit;
 
 namespace MuPDF.NET.Test
@@ -13,14 +13,14 @@ namespace MuPDF.NET.Test
         public void test_4716()
         {
             // Confirm that ZERO WIDTH JOINER will never start a word.
-            // script_dir = os.path.dirname(__file__)
-            // filename = os.path.join(script_dir, "resources", "test_4716.pdf")
+
+
             using var doc = new Document(testDocPath);
             var expected = new HashSet<string> { "+25.00", "Любимый", "-10.00" };
             var word_text = new HashSet<string>();
             foreach (Page page in doc)
             {
-                // MuPDF: page.get_text("words") -> list of tuples; MuPDF.NET -> List<WordBlock>
+                // GetText("words") returns List<WordBlock>.
                 foreach (WordBlock w in (List<WordBlock>)page.GetText("words"))
                     word_text.Add(w.Text);
             }

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -21,7 +21,6 @@ namespace MuPDF.NET.Test
 
         private static string Dedent(string text)
         {
-            // textwrap.dedent
             var lines = text.Replace("\r\n", "\n").Trim('\n').Split('\n');
             if (lines.Length == 0)
                 return "";
@@ -63,13 +62,12 @@ namespace MuPDF.NET.Test
             string path = Path.GetFullPath(Path.GetDirectoryName(Doc("nur-ruhig.jpg"))!);
             byte[] md = Encoding.UTF8.GetBytes("![](nur-ruhig.jpg)\n\n**A referenced image.**");
             using var md_doc = new Document(md, "md", archive: new Archive(path));
-            // pdfdata = md_doc.convert_to_pdf()
             byte[] pdfdata = md_doc.ConvertToPdf();
             using var doc = new Document(pdfdata, "pdf");
-            // page = doc[0]
+
             var page = doc[0];
-            // images = page.get_image_info()
             var images = page.GetImageInfo();
+            doc.Save(Out("test_archive_markdown.pdf"));
             Assert.Single(images);
         }
 
@@ -91,17 +89,16 @@ namespace MuPDF.NET.Test
     Some text following the header.
     ";
             using var md_doc = new Document(Encoding.UTF8.GetBytes(md), "md");
-            // pdfdata = md_doc.convert_to_pdf()
             byte[] pdfdata = md_doc.ConvertToPdf();
             using var doc = new Document(pdfdata, "pdf");
-            // page = doc[0]
+
             var page = doc[0];
-            // links=page.get_links()
             var links = page.GetLinks();
             Assert.Equal(2, links.Count);
             Assert.Equal("http://www.google.com", links[0].Uri);
             Assert.Equal(Constants.LinkUri, (int)links[0].Kind);
             Assert.Equal(Constants.LinkGoto, (int)links[1].Kind);
+            doc.Save(Out("test_archive_links.pdf"));
         }
 
         [Fact]
@@ -117,25 +114,19 @@ namespace MuPDF.NET.Test
             var font = new Font("tiro");
             using var arch = new Archive(font.Buffer, "tiro");
 
-            // css = """@font-face {font-family: sans-serif; src: url(tiro);}"""
             string css = "@font-face {font-family: sans-serif; src: url(tiro);}";
             string md = "Overriding sans-serif with Times-Roman.";
             foreach (int use_css in new[] { 0, 1 })
             {
                 using var md_doc = new Document(Encoding.UTF8.GetBytes(md), "md", archive: arch);
                 if (use_css != 0)
-                    // md_doc.apply_css(css)  # apply the CSS to the document
                     md_doc.ApplyCss(css);
 
-                // md_pdf_stream = md_doc.convert_to_pdf()
                 byte[] md_pdf_stream = md_doc.ConvertToPdf();
                 using (var pdf_doc = new Document(md_pdf_stream, "pdf"))
                 {
-                    // page = pdf_doc[0]
+
                     var page = pdf_doc[0];
-                    // spans = [
-                    //     s for b in page.get_text("dict")["blocks"] for l in b["lines"] for s in l["spans"]
-                    // ]
                     var dict = (Dictionary<string, object>)page.GetText("dict");
                     var spans = new List<Dictionary<string, object>>();
                     foreach (var b in (List<Dictionary<string, object>>)dict["blocks"])
@@ -154,6 +145,8 @@ namespace MuPDF.NET.Test
                     else
                         Assert.DoesNotContain("Roman", spans[0]["font"]?.ToString());
                 }
+                md_doc.Save(Out($"test_markdown_style_{use_css}.pdf"));
+
             }
         }
 
@@ -169,9 +162,8 @@ namespace MuPDF.NET.Test
             ");
             using (var document_md = new Document(Encoding.UTF8.GetBytes(md), "md"))
             {
-                // out_pdf = os.path.normpath(f'{__file__}/../../tests/test_markdown_save.pdf')
+
                 string out_pdf = Out("test_markdown_save.pdf");
-                // document_md.save(out_pdf)
                 document_md.Save(out_pdf);
             }
         }
@@ -185,7 +177,6 @@ namespace MuPDF.NET.Test
                 mdDoc.Save(pathMdPdf);
 
             // To check that MuPDF.NET has done the right thing, we extract text from our
-            // generated pdf and assert that it is as expected.
             string text;
             using (var document = new Document(pathMdPdf))
                 text = (string)document[0].GetText();
@@ -240,7 +231,6 @@ namespace MuPDF.NET.Test
             }
             else
             {
-                // Table is not recognised because it contains illegal utf8 sequence.
                 textbExpectedLines = new[]
                 {
                     "Title",

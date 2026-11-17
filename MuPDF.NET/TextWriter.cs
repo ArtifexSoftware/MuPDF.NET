@@ -8,12 +8,12 @@ using System.Text;
 namespace MuPDF.NET
 {
     /// <summary>
-    /// Prepares PDF text spans for deferred output on pages of matching size .
+    /// Prepares PDF text spans for deferred output on pages of matching size.
     /// </summary>
     /// <remarks>
     /// <para>PDF only. Decouples text preparation from <see cref="WriteText"/> on a <see cref="Page"/>.
     /// Alternative to <see cref="Page.InsertText"/> with per-span fonts, justified boxes, opacity, and morph rotation.</para>
-    /// <para>Workflow: construct with a fixed page <see cref="Rect"/> → <see cref="Append"/> / <see cref="Appendv"/> /
+    /// <para>Workflow: construct with a fixed page <see cref="Rect"/> → <see cref="Append"/> / <see cref="Appendv"/>
     /// <see cref="FillTextbox"/> → <see cref="WriteText"/> (reusable on compatible pages).</para>
     /// </remarks>
     public class TextWriter : IDisposable
@@ -206,13 +206,9 @@ namespace MuPDF.NET
             float Textlen(string x) => f.TextLength(x, fontSize);
             float[] CharLengths(string x) => f.CharLengths(x, fontSize);
 
-            // tolerance = fontsize * 0.2  # extra distance to left border
             float tolerance = fontSize * 0.2f;
-            // space_len = textlen(" ")
             float spaceLen = Textlen(" ");
-            // std_width = rect.width - tolerance
             float stdWidth = (float)rect.Width - tolerance;
-            // std_start = rect.x0 + tolerance
             float stdStart = (float)rect.X0 + tolerance;
 
             void AppendThis(Point start, string t)
@@ -222,28 +218,21 @@ namespace MuPDF.NET
 
             void OutputJustify(Point start, string line)
             {
-                // words = [w for w in line.split(" ") if w != ""]
                 string[] words = line.Split(' ').Where(w => w != "").ToArray();
                 int nwords = words.Length;
                 if (nwords == 0)
                     return;
                 if (nwords == 1)
                 {
-                    // append_this(start, words[0])
                     AppendThis(start, words[0]);
                     return;
                 }
-                // tl = sum([textlen(w) for w in words])
                 float tl = words.Sum(Textlen);
-                // gaps = nwords - 1
                 int gaps = nwords - 1;
-                // gapl = (std_width - tl) / gaps
                 float gapl = (stdWidth - tl) / gaps;
                 foreach (string w in words)
                 {
-                    // _, lp = append_this(start, w)
                     AppendThis(start, w);
-                    // start.x = lp.x + gapl
                     start.X = LastPoint.X + gapl;
                 }
             }
@@ -293,9 +282,7 @@ namespace MuPDF.NET
             else
                 lheight = lineHeight.Value;
 
-            // LINEHEIGHT = fontsize * lheight
             float LINEHEIGHT = fontSize * lheight;
-            // width = std_width
             float width = stdWidth;
 
             // starting point of text
@@ -303,7 +290,6 @@ namespace MuPDF.NET
             if (pos != null)
                 start = new Point(pos);
             else
-                // pos = rect.tl + (tolerance, fontsize * asc)
                 start = rect.TopLeft + new Point(tolerance, fontSize * asc);
             if (!rect.Contains(start))
                 throw new ValueErrorException("Text must start in rectangle.");
@@ -318,15 +304,11 @@ namespace MuPDF.NET
                 factor = 0;
 
             // split in lines if just a string was given
-            // textlines = text.splitlines()
             string[] textlines = text.Split(new[] { "\r\n", "\n", "\r" }, StringSplitOptions.None);
 
-            // max_lines = int((rect.y1 - pos.y) / LINEHEIGHT) + 1
             int maxLines = (int)(((float)rect.Y1 - start.Y) / LINEHEIGHT) + 1;
 
-            // new_lines = []
             var newLines = new List<(string line, float tl)>();
-            // no_justify = []
             var noJustify = new List<int>();
 
             for (int i = 0; i < textlines.Length; i++)
@@ -353,17 +335,13 @@ namespace MuPDF.NET
                     continue;
                 }
 
-                // words = line.split(" ")
                 var words = line.Split(' ').ToList();
-                // words, word_lengths = norm_words(width, words)
                 (words, var wordLengths) = NormWords(width, words);
 
                 int n = words.Count;
                 while (true)
                 {
-                    // line0 = " ".join(words[:n])
                     string line0 = string.Join(" ", words.Take(n));
-                    // wl = sum(word_lengths[:n]) + space_len * (n - 1)
                     float wl = wordLengths.Take(n).Sum() + spaceLen * (n - 1);
                     if (wl <= width)
                     {
@@ -382,7 +360,6 @@ namespace MuPDF.NET
                 }
             }
 
-            // nlines = len(new_lines)
             int nlines = newLines.Count;
             if (nlines > maxLines)
             {
@@ -393,7 +370,6 @@ namespace MuPDF.NET
                     throw new ValueErrorException(msg);
             }
 
-            // no_justify += [len(new_lines) - 1]
             noJustify.Add(newLines.Count - 1);
 
             for (int i = 0; i < maxLines; i++)
@@ -401,7 +377,6 @@ namespace MuPDF.NET
                 if (newLines.Count == 0)
                     break;
 
-                // line, tl = new_lines.pop(0)
                 var (line, tl) = newLines[0];
                 newLines.RemoveAt(0);
                 if (rightToLeft)
@@ -454,7 +429,7 @@ namespace MuPDF.NET
         private void WriteTextCore(Page page, float[] color, float opacity, int overlay,
             (Point, Matrix)? morph, Matrix matrix, int render_mode, int oc)
         {
-            // CheckParent(page)
+
             Document doc = page.RequireParent();
             if (Math.Abs(_rect.Width - page.Rect.Width) > 1e-3
                 || Math.Abs(_rect.Height - page.Rect.Height) > 1e-3
@@ -475,7 +450,6 @@ namespace MuPDF.NET
                 color = _color;
 
             // Use the document's borrowed PdfDocument and a fresh page wrapper (never dispose
-            // pdfpage.doc() — that drops the shared pdf_document while the Document is open).
             mupdf.PdfDocument pdfDoc = doc.NativePdfDocument;
             mupdf.PdfPage pdfpage = Helpers.AsPdfPageFresh(page);
             try
@@ -501,7 +475,7 @@ namespace MuPDF.NET
                 mupdf.PdfObj resources = mupdf.mupdf.pdf_new_dict(pdfDoc, 5);
                 using mupdf.FzBuffer contents = mupdf.mupdf.fz_new_buffer(1024);
                 using mupdf.FzDevice dev = mupdf.mupdf.pdf_new_pdf_device(pdfDoc, new mupdf.FzMatrix(), resources, contents);
-                //log( '=== {dev_color!r=}')
+
                 GCHandle colorPin = GCHandle.Alloc(dev_color, GCHandleType.Pinned);
                 try
                 {
@@ -644,7 +618,7 @@ namespace MuPDF.NET
             public string Fontfile { get; }
         }
 
-        /// <summary><c>src/__init__.py</c>.</summary>
+
         internal static void RepairMonoFont(Page page, Font font)
         {
             if (!font.IsMonospaced)  // font not flagged as monospaced
@@ -666,7 +640,7 @@ namespace MuPDF.NET
             {
                 if (!Tools.SetFontWidth(doc, xref, width))
                 {
-                    // log(f"Cannot set width for '{font.Name}' in xref {xref}")
+
                 }
             }
         }
@@ -754,7 +728,7 @@ namespace MuPDF.NET
                 else
                     idx2.Add(idx[i]);
             }
-            // Python clean_rtl does not reverse the final idx2 group here.
+            // PyMuPDF clean_rtl does not reverse the final idx2 group here.
             return string.Join(" ", words);
         }
 

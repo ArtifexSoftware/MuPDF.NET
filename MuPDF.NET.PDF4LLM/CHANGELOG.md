@@ -2,6 +2,17 @@
 
 All notable changes for `MuPDF.NET.PDF4LLM` are documented in this file.
 
+## [2.1.0]
+- **Deprecated.** This package will be removed. Empty type-forward stub, matching PyPI **pymupdf4llm 2.1**. All 4llm sources compile into **MuPDF.NET 4.1**; this nupkg only forwards public `MuPDF.NET.PDF4LLM` types from `MuPDF.NET.dll` until removal.
+- New code uses `Document.ToMarkdown` / `ToJson` / `ToText` / `ToChunks` and `Utils.UseLayout` on **MuPDF.NET**. Layout setup is `MuPDFNetSetupLayoutPython` (pymupdf **2.1**).
+- Depends on MuPDF.NET **4.1.0** (MuPDF **1.28.6**). Office/HWP path: **MuPDF.NET.Office 2.1.0**.
+- Tests, Demo, Examples, and Office tests use **MuPDF.NET** / **MuPDF.NET.Office** only. Do not add this package to new projects.
+
+## [2.0.0]
+- Empty type-forward stub, matching PyPI **pymupdf4llm 2.0**. All 4llm sources compile into **MuPDF.NET 4.0**; this nupkg only forwards public `MuPDF.NET.PDF4LLM` types from `MuPDF.NET.dll`.
+- Prefer `Document.ToMarkdown` / `ToJson` / `ToText` / `ToChunks` and `Utils.UseLayout`. Layout setup is `MuPDFNetSetupLayoutPython` (pymupdf **2.0**).
+- Depends on MuPDF.NET **4.0.0** (MuPDF **1.28.5**). Office/HWP path: **MuPDF.NET.Office 2.0.2**.
+
 ## [1.28.2]
 - Synced with **pymupdf4llm** 1.28.2 and **pymupdf-layout 1.28.2** (layout bridge pin in `Versions.props` / `scripts/requirements-layout.txt`).
 - Optional HTML table output (`tableOutput="html"`), default OCR DPI **150**, and layout `edgeThreshold` wiring through the pymupdf-layout bridge.

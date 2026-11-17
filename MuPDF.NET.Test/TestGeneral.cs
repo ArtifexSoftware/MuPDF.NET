@@ -1,15 +1,14 @@
-﻿
+
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Reflection.Metadata;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using Xunit;
-
+using MuPDF.NET;
 namespace MuPDF.NET.Test
 {
     [CollectionDefinition("MuPDF.NET native", DisableParallelization = true)]
@@ -33,19 +32,7 @@ namespace MuPDF.NET.Test
         private static string TestDocumentsDir() =>
             Path.Combine(_Path.ResolveSolutionRoot(), "TestDocuments", "MuPDF.NET.Test", TestClassName);
 
-        private static string OptionalDocPath(string fileName) =>
-            Path.Combine(_Path.ResolveSolutionRoot(), "TestDocuments", "MuPDF.NET.Test", TestClassName, fileName);
-
         private static bool g_use_extra => true;
-
-        private static (int r, int g, int b) SRgbToRgb(int srgb) =>
-            ((srgb >> 16) & 255, (srgb >> 8) & 255, srgb & 255);
-
-        private static (float r, float g, float b) SRgbToPdf(int srgb)
-        {
-            var (r, g, b) = SRgbToRgb(srgb);
-            return (r / 255.0f, g / 255.0f, b / 255.0f);
-        }
         /// <summary>Regression test: haslinks.</summary>
         [Fact]
         public void test_haslinks()
@@ -116,6 +103,8 @@ namespace MuPDF.NET.Test
             page.SetContents(xref);
             Assert.Single(page.GetContents());
             page.CleanContents();
+            string wt = Tools.MupdfWarnings();
+            Assert.Equal("PDF stream Length incorrect", wt);
             doc.Save(Out("test_wrapcontents.pdf"));
         }
 
@@ -142,17 +131,9 @@ namespace MuPDF.NET.Test
             using var doc = new Document();
             var page = doc.NewPage();
             Annot annot = page.AddHighlightAnnot(new Rect(10, 10, 20, 20));
-            Assert.False(System.Text.Encoding.UTF8.GetBytes(annot.GetAP("N")).AsSpan().StartsWith("q"u8));
             annot.CleanContents();
-            Assert.True(System.Text.Encoding.UTF8.GetBytes(annot.GetAP("N")).AsSpan().StartsWith("q"u8));
+            Assert.True(annot.GetAPBytes().AsSpan().StartsWith("q"u8));
             doc.Save(Out("test_annot_clean_contents.pdf"));
-        }
-
-        /// <summary>Regression test: config.</summary>
-        [Fact]
-        public void test_config()
-        {
-            Console.WriteLine("test_config(): not running on .NET - TOOLS.fitz_config is not available.");
         }
 
         /// <summary>Regression test: glyphnames.</summary>
@@ -160,8 +141,7 @@ namespace MuPDF.NET.Test
         public void test_glyphnames()
         {
             const string name = "INFINITY";
-            using var font = new Font();
-            int infinity = font.GlyphNameToUnicode(name);
+            int infinity = Utils.GlyphNameToUnicode(name);
             Assert.Equal(name, Utils.UnicodeToGlyphName(infinity));
         }
 
@@ -170,8 +150,8 @@ namespace MuPDF.NET.Test
         public void test_rgbcodes()
         {
             const int sRGB = 0xFFFFFF;
-            Assert.Equal((1.0, 1.0, 1.0), SRgbToPdf(sRGB));
-            Assert.Equal((255, 255, 255), SRgbToRgb(sRGB));
+            Assert.Equal((1f, 1f, 1f), Utils.SRgb2Pdf(sRGB));
+            Assert.Equal((255, 255, 255), Utils.SRgb2Rgb(sRGB));
         }
 
         /// <summary>Regression test: pdfstring.</summary>
@@ -207,21 +187,19 @@ namespace MuPDF.NET.Test
             using (var doc = Document.Open(Doc("Bezier.epub")))
                 Assert.True(doc.PageCount > 0);
 
-            Console.WriteLine(
-                "test_open(): skipping bad filename type check - Document constructor requires string.");
+            var missing = Assert.Throws<FileNotFoundException>(() => new Document("test_open-this-file-will-not-exist"));
+            Assert.Contains("no such file: 'test_open-this-file-will-not-exist'", missing.Message);
 
-            Assert.Throws<FileNotFoundException>(() => new Document("test_open-this-file-will-not-exist"));
-
-            var dirEx = Assert.ThrowsAny<Exception>(() => new Document(TestDocumentsDir()));
-            Assert.True(
-                dirEx is FileDataException or FileNotFoundException,
-                $"Unexpected exception type: {dirEx.GetType()}");
+            string resources = TestDocumentsDir().Replace('\\', '/');
+            var dirEx = Assert.Throws<FileDataException>(() => new Document(TestDocumentsDir()));
+            Assert.Contains($"'{resources}' is no file", dirEx.Message.Replace('\\', '/'));
 
             string emptyPath = Out("test_open_empty");
             File.WriteAllBytes(emptyPath, Array.Empty<byte>());
             try
             {
-                Assert.Throws<EmptyFileException>(() => new Document(emptyPath));
+                var emptyEx = Assert.Throws<EmptyFileException>(() => new Document(emptyPath));
+                Assert.Contains("Cannot open empty file:", emptyEx.Message);
             }
             finally
             {
@@ -234,13 +212,11 @@ namespace MuPDF.NET.Test
 
             Assert.Throws<FileDataException>(() => new Document(Doc("chinese-tables.pickle")));
 
-            Console.WriteLine(
-                "test_open(): skipping bad stream type check - Document constructor requires byte[].");
-
-            Assert.Throws<EmptyFileException>(() => new Document(Array.Empty<byte>(), fileType: "pdf"));
+            var emptyStream = Assert.Throws<EmptyFileException>(() => new Document(Array.Empty<byte>(), fileType: "pdf"));
+            Assert.Equal("Cannot open empty stream.", emptyStream.Message);
         }
 
-        /// <summary>Legacy combined <c>Document(filename, stream, filetype, ...)</c> constructor.</summary>
+        /// <summary>Legacy Document constructors (path, bytes, filetype overloads).</summary>
         [Fact]
         public void test_legacy_document_constructor()
         {
@@ -425,7 +401,6 @@ namespace MuPDF.NET.Test
                 / (float)System.Diagnostics.Stopwatch.Frequency;
             Console.WriteLine($"test_texttrace(): t={t}");
 
-            // Repeat, this time writing data to file.
             string path = Out("test_texttrace.txt");
             Console.WriteLine($"test_texttrace(): Writing to: {path}");
             using (var f = new StreamWriter(path, false, Encoding.UTF8))
@@ -442,12 +417,14 @@ namespace MuPDF.NET.Test
         }
 
         /// <summary>
-        /// Assert correct char bbox in page.GetTextTrace().
-        ///
-        /// Search for a unique char on page and confirm that page.GetTextTrace()
-        /// returns the same bbox as the search method.
-        /// <summary>Regression test: 2533.</summary>
+        /// Assert correct char bbox in page.GetTextTrace.
         /// </summary>
+        /// <summary>
+        /// Search for a unique char on page and confirm that page.GetTextTrace
+        /// returns the same bbox as the search method.
+        /// </summary>
+        /// <summary>Regression test: 2533.</summary>
+
         [Fact]
         public void test_2533()
         {
@@ -492,12 +469,13 @@ namespace MuPDF.NET.Test
 
         /// <summary>
         /// Assert same font size calculation in corner cases.
-        /// <summary>Regression test: 2645.</summary>
         /// </summary>
+        /// <summary>Regression test: 2645.</summary>
+
         [Fact]
         public void test_2645()
         {
-            // folder = os.path.join(scriptdir, "resources")
+
             string folder = TestDocumentsDir();
             string[] files = { "test_2645_1.pdf", "test_2645_2.pdf", "test_2645_3.pdf" };
             foreach (string f in files)
@@ -516,8 +494,9 @@ namespace MuPDF.NET.Test
 
         /// <summary>
         /// Ensure expected font size across text writing angles.
-        /// <summary>Regression test: 2506.</summary>
         /// </summary>
+        /// <summary>Regression test: 2506.</summary>
+
         [Fact]
         public void test_2506()
         {
@@ -531,8 +510,6 @@ namespace MuPDF.NET.Test
             // write text with different angles
             foreach (int angle in angles)
             {
-                // page.InsertText(
-                // )
                 page.InsertText(
                     point,
                     text,
@@ -541,14 +518,14 @@ namespace MuPDF.NET.Test
                     morphMat: new Matrix(angle));
             }
 
-            // ensure correct fontsize for get_texttrace() - forgiving rounding problems
+            // ensure correct fontsize for GetTextTrace - forgiving rounding problems
             foreach (var span in page.GetTextTrace())
             {
                 Console.WriteLine(span["dir"]);
                 Assert.True(Math.Round(Convert.ToDouble(span["size"])) == fontsize);
             }
 
-            // ensure correct fontsize for get_text() - forgiving rounding problems
+            // ensure correct fontsize for GetText - forgiving rounding problems
             var textDict = (Dictionary<string, object>)page.GetText("dict");
             foreach (var block in (List<Dictionary<string, object>>)textDict["blocks"])
             {
@@ -577,7 +554,6 @@ namespace MuPDF.NET.Test
             page.ApplyRedactions();
             string text = (string)page.GetText();
 
-            // text_expected = b'Frau\nClaire Dunphy\nTeststra\xc3\x9fe 5\n12345 Stadt\nVertragsnummer:  12345\nSehr geehrte Frau Dunphy,\nText\nMit freundlichen Gr\xc3\xbc\xc3\x9fen\nTestfirma\nVertrag:\n  12345\nAnsprechpartner:\nJay Pritchet\nTelefon:\n123456\nE-Mail:\ntest@test.de\nDatum:\n07.12.2022\n'.decode('utf8')
             string text_expected = Encoding.UTF8.GetString(new byte[]
             {
                 0x46, 0x72, 0x61, 0x75, 0x0a, 0x43, 0x6c, 0x61, 0x69, 0x72, 0x65, 0x20, 0x44, 0x75, 0x6e,
@@ -615,7 +591,6 @@ namespace MuPDF.NET.Test
 
                 bool ok1 = text == text_expected;
                 bool ok2 = Encoding.UTF8.GetBytes(text).SequenceEqual(Encoding.UTF8.GetBytes(text_expected));
-                // ok3 = (repr(text.encode("utf8")) == repr(text_expected.encode("utf8")))
                 bool ok3 = PyBytesRepr(Encoding.UTF8.GetBytes(text))
                     == PyBytesRepr(Encoding.UTF8.GetBytes(text_expected));
 
@@ -639,7 +614,6 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_2238()
         {
-            // filepath = f'{scriptdir}/resources/test2238.pdf'
             string filepath = Doc("test2238.pdf");
             using var doc = Document.Open(filepath);
             string wt = Tools.MupdfWarnings();
@@ -674,6 +648,7 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_2093()
         {
+            // Skip on GraalVM.
             // GraalVM skip from Python: if platform.python_implementation() == 'GraalVM': return
 
             using var doc = Document.Open(Doc("test2093.pdf"));
@@ -681,13 +656,11 @@ namespace MuPDF.NET.Test
             float[] AverageColor(Page page)
             {
                 using Pixmap pixmap = page.GetPixmap();
-                // p_average = [0] * pixmap.n
                 float[] p_average = new float[pixmap.N];
                 for (int y = 0; y < pixmap.Height; y++)
                 {
                     for (int x = 0; x < pixmap.Width; x++)
                     {
-                        // p = pixmap.GetPixelBytes(x, y)
                         byte[] p = pixmap.GetPixelBytes(x, y);
                         for (int i = 0; i < pixmap.N; i++)
                             p_average[i] += p[i];
@@ -699,7 +672,7 @@ namespace MuPDF.NET.Test
                 return p_average;
             }
 
-            // page = doc.LoadPage(0)
+
             Page page = doc.LoadPage(0);
             float[] pixel_average_before = AverageColor(page);
 
@@ -717,12 +690,6 @@ namespace MuPDF.NET.Test
 
             Font font = new Font("Helvetica");
             float[] fill_color = _Constants.black;
-            // page.AddRedactAnnot(
-            //     quad=rect,
-            //     fontname=font.name,
-            //     fill=fill_color,
-            //     text_color=(1,1,1),
-            // )
             page.AddRedactAnnot(
                 rect,
                 text: null,
@@ -739,19 +706,13 @@ namespace MuPDF.NET.Test
             Console.WriteLine($"pixel_average_after={JsonSerializer.Serialize(pixel_average_after)}");
 
             // Before this bug was fixed (MuPDF-1.22):
-            //   pixel_average_before=[130.864323120088, 115.23577810900859, 92.9268559996174]
-            //   pixel_average_after=[138.68844553555772, 123.05687162237561, 100.74275056194105]
             // After fix:
-            //   pixel_average_before=[130.864323120088, 115.23577810900859, 92.9268559996174]
-            //   pixel_average_after=[130.8889209934799, 115.25722751837269, 92.94327384463327]
             for (int i = 0; i < pixel_average_before.Length; i++)
             {
-                // diff = pixel_average_before[i] - pixel_average_after[i]
                 float diff = pixel_average_before[i] - pixel_average_after[i];
                 Assert.True(Math.Abs(diff) < 0.1);
             }
 
-            // out = f'{scriptdir}/resources/test2093-out.pdf'
             string out_path = Out("test_2093.pdf");
             doc.Save(out_path);
             Console.WriteLine($"Have written to: {out_path}");
@@ -772,23 +733,8 @@ namespace MuPDF.NET.Test
         }
 
         /// <summary>
-        /// Test / confirm identical text positions generated by
-        /// * page.InsertText()
-        /// versus
-        /// * TextWriter.WriteText()
-        ///
-        /// ... under varying situations as follows:
-        ///
-        /// 1. MediaBox does not start at (0, 0)
-        /// 2. CropBox origin is different from that of MediaBox
-        /// 3. Check for all 4 possible page rotations
-        ///
-        /// The test writes the same text at the same positions using page.InsertText(),
-        /// respectively TextWriter.WriteText().
-        /// Then extracts the text spans and confirms that they all occupy the same bbox.
-        /// This ensures coincidence of text positions of page.of insert_text()
-        /// (which is assumed correct) and TextWriter.WriteText().
-        /// <summary>Regression test: 2246.</summary>
+        /// Regression test 2246: InsertText and TextWriter.WriteText occupy the same bbox
+        /// under shifted MediaBox/CropBox and all four page rotations.
         /// </summary>
         [Fact]
         public void test_2246()
@@ -806,7 +752,6 @@ namespace MuPDF.NET.Test
                 Rect mediabox = Utils.PaperRect("letter");
                 Page page = doc.NewPage(width: (float)mediabox.Width, height: (float)mediabox.Height);
                 int xref = page.Xref;
-                // newmbox = list(map(float, doc.XrefGetKey(xref, "MediaBox")[1][1:-1].split()))
                 var mboxKey = doc.XrefGetKey(xref, "MediaBox");
                 string mboxInner = mboxKey.value.Substring(1, mboxKey.value.Length - 2);
                 string[] mboxParts = mboxInner.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
@@ -815,9 +760,7 @@ namespace MuPDF.NET.Test
                     float.Parse(mboxParts[1], System.Globalization.CultureInfo.InvariantCulture),
                     float.Parse(mboxParts[2], System.Globalization.CultureInfo.InvariantCulture),
                     float.Parse(mboxParts[3], System.Globalization.CultureInfo.InvariantCulture));
-                // mbox = newmbox + (10, 20, 10, 20)
                 Rect mbox = new Rect(newmbox.X0 + 10, newmbox.Y0 + 20, newmbox.X1 + 10, newmbox.Y1 + 20);
-                // cbox = mbox + (10, 10, -10, -10)
                 Rect cbox = new Rect(mbox.X0 + 10, mbox.Y0 + 10, mbox.X1 - 10, mbox.Y1 - 10);
                 doc.XrefSetKey(xref, "MediaBox",
                     string.Format(System.Globalization.CultureInfo.InvariantCulture,
@@ -891,14 +834,12 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_2596()
         {
-            //     return
+            // return
             string path = Doc("test_2596.pdf");
             using var doc = new Document(path);
-            // page = doc[0]
+
             var page = doc[0];
-            // pix0 = page.GetPixmap()  # render the page
             var pix0 = page.GetPixmap();
-            // _ = doc.ToBytes(garbage=3)  # save with garbage collection
             using (var ms = new MemoryStream())
             {
                 doc.Save(ms, garbage: 3);
@@ -908,9 +849,8 @@ namespace MuPDF.NET.Test
             // Note this will invalidate cache content for this page.
             // Reloading the page now empties the cache, so rendering
             // will deliver the same pixmap
-            // page = doc.ReloadPage(page)
+
             page = doc.ReloadPage(page);
-            // pix1 = page.GetPixmap()
             var pix1 = page.GetPixmap();
             Assert.Equal(pix0.Samples, pix1.Samples);
             pix1.Save(Out("test_2596.png"));
@@ -948,31 +888,21 @@ namespace MuPDF.NET.Test
             int verbose = 1;
             string path = Doc("test_2553.pdf");
             using var doc = new Document(path);
-            // page = doc[0]
+
             var page = doc[0];
 
             // extract plain text, build set of all characters
-            // list1 = page.GetText()
             string list1 = (string)page.GetText();
-            // set1 = set(list1)
             var set1 = new HashSet<char>(list1);
 
             // extract text blocks, build set of all characters
-            // list2 = page.GetText(sort=True)  # internally uses "blocks"
             string list2 = (string)page.GetText(sort: true);
-            // set2 = set(list2)
             var set2 = new HashSet<char>(list2);
 
             // extract textbox content, build set of all characters
-            // list3 = page.GetTextbox(page.Rect)
             string list3 = page.GetTextbox(page.Rect);
-            // set3 = set(list3)
             var set3 = new HashSet<char>(list3);
 
-            //     ret = f'len={len(l)}\n'
-            //         cc = ord(c)
-            //             ret += c
-            //             ret += f' [0x{hex(cc)}]'
             string Show(string l)
             {
                 string ret = $"len={l.Length}\n";
@@ -1034,20 +964,11 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_resolve_names()
         {
-            // guard against wrong MuPDF architecture version
-            if (typeof(Document).GetMethod(nameof(Document.ResolveNames)) == null)
-            {
-                Console.WriteLine("MuPDF.NET version does not support resolving PDF names");
-                return;
-            }
-            // pickle_in = open(f"{scriptdir}/resources/cython.pickle", "rb")
             string picklePath = Doc("cython.pickle");
             using var pickle_in = File.OpenRead(picklePath);
-            // old_names = pickle.load(pickle_in)
             var old_names = PickleLoad(pickle_in);
             string pdfPath = Doc("cython.pdf");
             using var doc = new Document(pdfPath);
-            // new_names = doc.ResolveNames()
             var new_names = doc.ResolveNames();
             Assert.True(ResolveNamesEqual(new_names, old_names));
         }
@@ -1067,7 +988,7 @@ namespace MuPDF.NET.Test
         {
             string path = Doc("test_2710.pdf");
             using var doc = Document.Open(path);
-            // page = doc.LoadPage(0)
+
             Page page = doc.LoadPage(0);
 
             Console.WriteLine($"test_2710(): cropbox={page.CropBox}");
@@ -1083,14 +1004,12 @@ namespace MuPDF.NET.Test
                 Assert.True(rects_approx_eq(a, b), $"Not nearly identical: a={a} b={b}");
             }
 
-            // blocks = page.GetText('blocks')
+
             var blocks = page.GetTextBlocks();
             Console.WriteLine($"test_2710(): blocks={blocks}");
             Assert.Equal(2, blocks.Count);
-            // block = blocks[1]
             var block = blocks[1];
             Rect rect = new Rect(block.x0, block.y0, block.x1, block.y1);
-            // text = block[4]
             string text = block.text;
             Console.WriteLine($"test_2710(): rect={rect}");
             Console.WriteLine($"test_2710(): text={text}");
@@ -1106,7 +1025,6 @@ namespace MuPDF.NET.Test
             // 2023-11-05: Currently broken in mupdf master.
             Console.WriteLine("test_2710(): Not Checking page.Rect and rect.");
             string wt = Tools.MupdfWarnings();
-            //         )
             string wt_expected =
                 "syntax error: cannot find ExtGState resource 'GS7'\n" +
                 "syntax error: cannot find ExtGState resource 'GS8'\n" +
@@ -1119,7 +1037,7 @@ namespace MuPDF.NET.Test
         public void test_2736()
         {
             using var doc = new Document();
-            // page = doc.NewPage()
+
             Page page = doc.NewPage();
 
             // fake a MediaBox for demo purposes
@@ -1136,21 +1054,16 @@ namespace MuPDF.NET.Test
             Assert.Equal("[-20 -10 595 842]", doc.XrefGetKey(page.Xref, "CropBox").value);
             Assert.Equal(new Rect(0, 0, 615, 852), page.Rect);
 
-            // error = False
             bool error = false;
-            // text = ""
             string text = "";
             try
             {
                 // check error detection
-                // page.SetCropBox((-35, -10, 595, 842))
                 page.SetCropBox(new Rect(-35, -10, 595, 842));
             }
             catch (Exception e)
             {
-                // text = str(e)
                 text = e.Message;
-                // error = True
                 error = true;
             }
             Assert.True(error);
@@ -1163,26 +1076,21 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_subset_fonts()
         {
-            //     return
-            // text = "Just some arbitrary text."
+            // return
             string text = "Just some arbitrary text.";
             var arch = new Archive();
             string css = Utils.CssForMupdfFont("ubuntu", archive: arch);
-            // css += "* {font-family: ubuntu;}"
             css += "* {font-family: ubuntu;}";
             using var doc = new Document();
-            // page = doc.NewPage()
+
             Page page = doc.NewPage();
-            // page.InsertHtmlbox(page.Rect, text, css=css, archive=arch)
             page.InsertHtmlbox(page.Rect, text, css: css, archive: arch);
             doc.SubsetFonts(verbose: true);
-            // found = False
             bool found = false;
             for (int xref = 1; xref < doc.XrefLength; xref++)
             {
                 if (doc.XrefObject(xref).Contains("+Ubuntu#20Regular"))
                 {
-                    // found = True
                     found = true;
                     // break
                     break;
@@ -1236,7 +1144,7 @@ namespace MuPDF.NET.Test
             page.ApplyRedactions();  // remove/redact the word "longer"
             var words1 = page.GetTextWords();  // extract words again
             Assert.Equal(words0.Count - 1, words1.Count);  // must be one word less
-            Assert.Equal("longer", words0[3].word);  // just confirm test file is correct one  // words0[3][4]
+            Assert.Equal("longer", words0[3].word);  // just confirm test file is correct one // words0[3][4]
             words0.RemoveAt(3);  // remove the redacted word from first list
             for (int i = 0; i < words1.Count; i++)  // compare words
             {
@@ -1249,8 +1157,8 @@ namespace MuPDF.NET.Test
             doc.Save(Out("test_2957_2.pdf"));
         }
 
-        /// <summary>
         /// <summary>Regression test: 707560.</summary>
+        /// <summary>
         /// https://bugs.ghostscript.com/show_bug.cgi?id=707560
         /// Ensure that redactions also remove characters with an empty width bbox.
         /// </summary>
@@ -1275,7 +1183,7 @@ namespace MuPDF.NET.Test
                 "नमस्कार, विश्व !",  // sanskrit
                 "हैलो वर्ल्ड!",  // hindi
             };
-            string text = string.Join(" ... ", greetings);  // text = " ... ".join([g for g in greetings])
+            string text = string.Join(" ... ", greetings);  // text = "... ".join([g for g in greetings])
             var where = new Rect(50, 50, 400, 500);  // where = (50, 50, 400, 500)
             using var story = new Story(text);
             var bio = mupdf.mupdf.fz_new_buffer(1024);
@@ -1286,15 +1194,15 @@ namespace MuPDF.NET.Test
                 using var dev = writer.BeginPage(Utils.PaperRect("a4"));
                 (more, _) = story.Place(where);  // more, _ = story.place(where)
                 story.Draw(dev);  // story.draw(dev)
-                writer.EndPage();  // writer.EndPage()
+                writer.EndPage();  // writer.EndPage
             }
-            byte[] pdfbytes = writer.Close();  // writer.close()
+            byte[] pdfbytes = writer.Close();  // writer.close
             using var doc = new Document(pdfbytes, "pdf");
             var page = doc[0];
-            string pageText = (string)page.GetText();  // text = page.GetText()
+            string pageText = (string)page.GetText();  // text = page.GetText
             Assert.False(string.IsNullOrEmpty(pageText), "Unexpected: test page has no text.");
             page.AddRedactAnnot(page.Rect);  // page.AddRedactAnnot(page.Rect)
-            page.ApplyRedactions();  // page.ApplyRedactions()
+            page.ApplyRedactions();  // page.ApplyRedactions
             Assert.True(string.IsNullOrEmpty((string)page.GetText()), "Unexpected: text not fully redacted.");
             doc.Save(Out("test_707560.pdf"));
         }
@@ -1305,7 +1213,7 @@ namespace MuPDF.NET.Test
         {
             string path = Doc("test_3070.pdf");
             using var pdf = Document.Open(path);
-            var links = pdf[0].GetLinks();  // links = pdf[0].GetLinks()
+            var links = pdf[0].GetLinks();  // links = pdf[0].GetLinks
             links[0]["uri"] = "https://www.ddg.gg";  // links[0]['uri'] = "https://www.ddg.gg"
             pdf[0].UpdateLink(links[0]);  // pdf[0].UpdateLink(links[0])
             pdf.Save(Out("test_3070.pdf"));
@@ -1319,7 +1227,7 @@ namespace MuPDF.NET.Test
             using var doc = Document.Open(path);
             var page = doc[0];  // page=doc[0]
 
-            var bbl = page.GetBboxlog();  // bbl = page.GetBboxlog()
+            var bbl = page.GetBboxlog();  // bbl = page.GetBboxlog
             string wt = Tools.MupdfWarnings();
             var mupdf_version_tuple = (
                 mupdf.mupdf.FZ_VERSION_MAJOR,
@@ -1338,15 +1246,15 @@ namespace MuPDF.NET.Test
                 Assert.Equal("invalid marked content and clip nesting", wt);
         }
 
-        /// <summary>
         /// <summary>Regression test: 3081.</summary>
-        /// Check Document.close() closes file handles, even if a Page instance exists.
+        /// <summary>
+        /// Check Document.close closes file handles, even if a Page instance exists.
         /// </summary>
         [Fact]
         public void test_3081()
         {
-            string path1 = Doc("1.pdf");  // path1 = os.path.abspath(f'{__file__}/../../tests/resources/1.pdf')
-            string path2 = Out("test_3081.pdf");  // path2 = os.path.abspath(f'{__file__}/../../tests/test_3081-2.pdf')
+            string path1 = Doc("1.pdf");
+            string path2 = Out("test_3081.pdf");
             File.Copy(path1, path2, overwrite: true);  // shutil.copy2(path1, path2)
 
             // Find next two available fds.
@@ -1364,35 +1272,33 @@ namespace MuPDF.NET.Test
 
             int fd1 = next_fd();
             var document = Document.Open(path2);
-            var page = document[0];  // page = document[0]
+            var page = document[0];
             int fd2 = next_fd();
-            document.Close();  // document.Close()
+            document.Close();  // document.Close
             Assert.True(document.IsNativeReleased);
             Assert.True(page.IsNativeReleased);
             try
             {
-                _ = document.PageCount;  // document.page_count()
+                _ = document.PageCount;  // document.page_count
                 Assert.Fail("Did not receive expected exception.");  // assert 0, 'Did not receive expected exception.'
             }
             catch (Exception e)
             {
                 Console.WriteLine($"Received expected exception: {e}");  // print(f'Received expected exception: {e}')
-                //traceback.print_exc(file=sys.stdout)
                 Assert.Equal("document closed", e.Message);  // assert str(e) == 'document closed'
             }
             int fd3 = next_fd();
             try
             {
-                page.Bound();  // page.Bound()
+                page.Bound();  // page.Bound
                 Assert.Fail("Did not receive expected exception.");  // assert 0, 'Did not receive expected exception.'
             }
             catch (Exception e)
             {
                 Console.WriteLine($"Received expected exception: {e}");  // print(f'Received expected exception: {e}')
-                //traceback.print_exc(file=sys.stdout)
-                Assert.Equal("page is None", e.Message);  // assert str(e) == 'page is None'
+                Assert.Equal("page is None", e.Message);  // assert str(e) == 'page is null'
             }
-            page = null;  // page = None
+            page = null;
             int fd4 = next_fd();
             Console.WriteLine($"next_fd_1={next_fd_1} next_fd_2={next_fd_2}");  // print(f'{next_fd_1=} {next_fd_2=}')
             Console.WriteLine($"fd1={fd1} fd2={fd2} fd3={fd3} fd4={fd4}");  // print(f'{fd1=} {fd2=} {fd3=} {fd4=}')
@@ -1429,8 +1335,7 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_archive_3126()
         {
-            string p = Path.GetFullPath(Doc(""));  // p = os.path.abspath(f'{__file__}/../../tests/resources')
-            // p = pathlib.Path(p)
+            string p = Path.GetFullPath(Doc(""));
             using var archive = new Archive(p);
         }
 
@@ -1440,8 +1345,8 @@ namespace MuPDF.NET.Test
         {
             string css2 = "";
             string path = Doc("2.pdf");
-            string oldfile = Out("test_3140_old.pdf");  // oldfile = os.path.abspath(f'{__file__}/../../tests/test_3140_old.pdf')
-            string newfile = Out("test_3140.pdf");  // newfile = os.path.abspath(f'{__file__}/../../tests/test_3140_new.pdf')
+            string oldfile = Out("test_3140_old.pdf");
+            string newfile = Out("test_3140.pdf");
             File.Copy(path, oldfile, overwrite: true);  // shutil.copy2(path, oldfile)
             int next_fd()
             {
@@ -1455,7 +1360,7 @@ namespace MuPDF.NET.Test
                 Page page = doc[0];
                 Rect rect = new Rect(130, 400, 430, 600);
                 var CELLS = Utils.MakeTable(rect, cols: 3, rows: 5);
-                Shape shape = page.NewShape();  // shape = page.NewShape()  # create Shape
+                Shape shape = page.NewShape();  // shape = page.NewShape # create Shape
                 for (int i = 0; i < 5; i++)
                 {
                     for (int j = 0; j < 3; j++)
@@ -1463,7 +1368,7 @@ namespace MuPDF.NET.Test
                         string qtext = "<b>" + "Ques #" + (i * 3 + j + 1) + ": " + "</b>";  // qtext = "<b>" + "Ques #" + str(i*3+j+1) + ": " + "</b>" # codespell:ignore
                         string atext = "<b>" + "Ans:" + "</b>";  // atext = "<b>" + "Ans:" + "</b>" # codespell:ignore
                         qtext = qtext + "<br>" + atext;
-                        shape.DrawRect(CELLS[i][j]);  // shape.DrawRect(CELLS[i][j])  # draw rectangle
+                        shape.DrawRect(CELLS[i][j]);  // shape.DrawRect(CELLS[i][j]) # draw rectangle
                         page.InsertHtmlbox(CELLS[i][j], qtext, css: css2, scaleLow: 0);
                     }
                 }
@@ -1471,7 +1376,7 @@ namespace MuPDF.NET.Test
                 shape.Finish(
                     color: new float[] { pdfcolor["blue"].r, pdfcolor["blue"].g, pdfcolor["blue"].b },
                     width: 2.5f);
-                shape.Commit();  // shape.Commit()  # write all stuff to the page
+                shape.Commit();  // shape.Commit # write all stuff to the page
                 shape.Dispose();
                 page.Dispose();
                 doc.SubsetFonts();
@@ -1542,9 +1447,9 @@ namespace MuPDF.NET.Test
             using (var document = Document.Open(path))
             {
                 foreach (var page in document)  // for page in document:
-                    content += (string)page.GetText() + "\n\n";  // content += page.GetText() + '\n\n'
+                    content += (string)page.GetText() + "\n\n";  // content += page.GetText + '\n\n'
             }
-            content = content.Trim();  // content = content.strip()
+            content = content.Trim();  // content = content.strip
         }
 
         /// <summary>Regression test: 3727.</summary>
@@ -1565,7 +1470,7 @@ namespace MuPDF.NET.Test
         {
             string path = Doc("test_3569.pdf");
             var document = Document.Open(path);
-            Page page = document[0];  // page = document[0]
+            Page page = document[0];
             string svg = page.get_svg_image(text_as_path: 0);  // svg = page.get_svg_image(text_as_path=False)
             Console.WriteLine($"svg={svg}");  // print(f'{svg=}')
             var mupdf_version_tuple = (
@@ -1627,7 +1532,11 @@ namespace MuPDF.NET.Test
                     svg);
             }
             string wt = Tools.MupdfWarnings();
-            if (mupdf_version_tuple.Item1 > 1 || (mupdf_version_tuple.Item1 == 1 && mupdf_version_tuple.Item2 >= 28))
+            if (_Version.mupdf_version_tuple_at_least(1, 28, 5))
+                Assert.Equal(
+                    "unknown cid collection: PDFAUTOCAD-Indentity0\nnon-embedded font using identity encoding: ArialMT (mapping via Adobe-Identity-UCS)\ninvalid marked content sequence / clip nesting",
+                    wt);
+            else if (mupdf_version_tuple.Item1 > 1 || (mupdf_version_tuple.Item1 == 1 && mupdf_version_tuple.Item2 >= 28))
                 Assert.Equal(
                     "unknown cid collection: PDFAUTOCAD-Indentity0\nnon-embedded font using identity encoding: ArialMT (mapping via )\ninvalid marked content sequence / clip nesting",
                     wt);
@@ -1647,15 +1556,12 @@ namespace MuPDF.NET.Test
             // On a mac-mini, MuPDF-1.24.8 takes 60s, MuPDF-1.24.9 takes 4s.
             string path = Doc("test_3450.pdf");
             var pdf = Document.Open(path);
-            Page page = pdf[0];  // page = pdf[0]
-            // t = time.time()
+            Page page = pdf[0];
             float t = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() / 1000.0f;
-            // pix = page.GetPixmap(alpha=False, dpi=150)
             Pixmap pix = page.GetPixmap(alpha: false, dpi: 150);
             _ = pix;
-            // t = time.time() - t
             t = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() / 1000.0f - t;
-            Console.WriteLine($"test_3450(): t={t}");  // print(f'test_3450(): {t=}')
+            Console.WriteLine($"test_3450(): t={t}");  // print(f'test_3450: {t=}')
         }
 
         /// <summary><c>mupdf.PDF_NULL</c>/<c>PDF_TRUE</c>/<c>PDF_FALSE</c> are <see cref="mupdf.PdfObj"/>.</summary>
@@ -1693,11 +1599,11 @@ namespace MuPDF.NET.Test
         public void test_3624()
         {
             string path = Doc("test_3624.pdf");
-            string path_png_expected = Doc("test_3624_expected.png");  // path_png_expected = os.path.normpath(f'{__file__}/../../tests/resources/test_3624_expected.png')
-            string path_png = Out("test_3624.png");  // path_png = os.path.normpath(f'{__file__}/../../tests/test_3624.png')
+            string path_png_expected = Doc("test_3624_expected.png");
+            string path_png = Out("test_3624.png");
             using (var document = Document.Open(path))
             {
-                Page page = document[0];  // page = document[0]
+                Page page = document[0];
                 using Pixmap pixmap = page.GetPixmap(matrix: new Matrix(2, 2));
                 Console.WriteLine($"Saving to path_png={path_png}.");  // print(f'Saving to {path_png=}.')
                 pixmap.Save(path_png);  // pixmap.Save(path_png)
@@ -1708,7 +1614,7 @@ namespace MuPDF.NET.Test
                 if (rms > 1)
                 {
                     using Pixmap pixmap_diff = _Compare.PixmapsDiff(path_png_expected, path_png);  // pixmap_diff = gentle_compare.pixmaps_diff(path_png_expected, path_png)
-                    string path_png_diff = Out("test_3624_diff.png");  // path_png_diff = os.path.normpath(f'{__file__}/../../tests/test_3624_diff.png')
+                    string path_png_diff = Out("test_3624_diff.png");
                     pixmap_diff.Save(path_png_diff);  // pixmap_diff.Save(path_png_diff)
                     Assert.Fail($"rms={rms}");  // assert 0, f'{rms=}'
                 }
@@ -1740,20 +1646,20 @@ namespace MuPDF.NET.Test
         {
             // MuPDF issue https://github.com/ArtifexSoftware/mupdf/issues/4034.
             string path = Doc("test_4034.pdf");
-            string path_clean = Out("test_4034.pdf");  // path_clean = os.path.normpath(f'{__file__}/../../tests/test_4034_out.pdf')
+            string path_clean = Out("test_4034.pdf");
             Pixmap pixmap1;
             using (var document = Document.Open(path))
             {
-                pixmap1 = document[0].GetPixmap();  // pixmap1 = document[0].GetPixmap()
+                pixmap1 = document[0].GetPixmap();  // pixmap1 = document[0].GetPixmap
                 document.Save(path_clean, clean: 1);  // document.Save(path_clean, clean=1)
             }
             using (pixmap1)
             using (var document = Document.Open(path_clean))
             {
-                Page page = document[0];  // page = document[0]
-                using Pixmap pixmap2 = document[0].GetPixmap();  // pixmap2 = document[0].GetPixmap()
+                Page page = document[0];
+                using Pixmap pixmap2 = document[0].GetPixmap();  // pixmap2 = document[0].GetPixmap
                 float rms = _Compare.PixmapsRms(pixmap1, pixmap2);  // rms = gentle_compare.pixmaps_rms(pixmap1, pixmap2)
-                Console.WriteLine($"test_4034(): Comparison of original/cleaned page 0 pixmaps: rms={rms}.");  // print(f'test_4034(): Comparison of original/cleaned page 0 pixmaps: {rms=}.')
+                Console.WriteLine($"test_4034(): Comparison of original/cleaned page 0 pixmaps: rms={rms}.");  // print(f'test_4034: Comparison of original/cleaned page 0 pixmaps: {rms=}.')
                 Assert.Equal(0, rms);  // assert rms == 0
             }
         }
@@ -1775,7 +1681,7 @@ namespace MuPDF.NET.Test
             string path_out = Path.Combine(Path.GetDirectoryName(Out("test_4224.pdf"))!, "test_4224");
             using (var document = Document.Open(path))
             {
-                foreach (Page page in document.pages())  // for page in document.pages():
+                foreach (Page page in document.pages())  // for page in document.pages:
                 {
                     using Pixmap pixmap = page.GetPixmap(dpi: 150);  // pixmap = page.GetPixmap(dpi=150)
                     string path_pixmap = $"{path_out}.{page.Number}.png";  // path_pixmap = f'{path}.{page.number}.png'
@@ -1789,7 +1695,7 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_4319()
         {
-            //string path = Path.Combine(Path.GetTempPath(), $"mupdfnet_test_4319_{Guid.NewGuid():N}.pdf");
+            // string path = Path.Combine(Path.GetTempPath, $"mupdfnet_test_4319_{Guid.NewGuid:N}.pdf");
             string path = Out("test_4319.pdf");
             try
             {
@@ -1814,12 +1720,12 @@ namespace MuPDF.NET.Test
         public void test_3886()
         {
             string path = Doc("test_3886.pdf");
-            string path_clean0 = Out("test_3886_clean0.pdf");  // path_clean0 = os.path.normpath(f'{__file__}/../../tests/resources/test_3886_clean0.pdf')
-            string path_clean1 = Out("test_3886_clean1.pdf");  // path_clean1 = os.path.normpath(f'{__file__}/../../tests/resources/test_3886_clean1.pdf')
+            string path_clean0 = Out("test_3886_clean0.pdf");
+            string path_clean1 = Out("test_3886_clean1.pdf");
             Pixmap pixmap;
             using (var document = Document.Open(path))
             {
-                pixmap = document[0].GetPixmap();  // pixmap = document[0].GetPixmap()
+                pixmap = document[0].GetPixmap();  // pixmap = document[0].GetPixmap
                 document.Save(path_clean0, clean: 0);  // document.Save(path_clean0, clean=0)
             }
             using (var document = Document.Open(path))
@@ -1829,12 +1735,12 @@ namespace MuPDF.NET.Test
             Pixmap pixmap_clean0;
             using (var document = Document.Open(path_clean0))
             {
-                pixmap_clean0 = document[0].GetPixmap();  // pixmap_clean0 = document[0].GetPixmap()
+                pixmap_clean0 = document[0].GetPixmap();  // pixmap_clean0 = document[0].GetPixmap
             }
             Pixmap pixmap_clean1;
             using (var document = Document.Open(path_clean1))
             {
-                pixmap_clean1 = document[0].GetPixmap();  // pixmap_clean1 = document[0].GetPixmap()
+                pixmap_clean1 = document[0].GetPixmap();  // pixmap_clean1 = document[0].GetPixmap
             }
             using (pixmap)
             using (pixmap_clean0)
@@ -1842,7 +1748,7 @@ namespace MuPDF.NET.Test
             {
                 float rms_0 = _Compare.PixmapsRms(pixmap, pixmap_clean0);  // rms_0 = gentle_compare.pixmaps_rms(pixmap, pixmap_clean0)
                 float rms_1 = _Compare.PixmapsRms(pixmap, pixmap_clean1);  // rms_1 = gentle_compare.pixmaps_rms(pixmap, pixmap_clean1)
-                Console.WriteLine($"test_3886(): rms_0={rms_0} rms_1={rms_1}");  // print(f'test_3886(): {rms_0=} {rms_1=}')
+                Console.WriteLine($"test_3886(): rms_0={rms_0} rms_1={rms_1}");  // print(f'test_3886: {rms_0=} {rms_1=}')
             }
         }
 
@@ -1851,17 +1757,17 @@ namespace MuPDF.NET.Test
         public void test_4415()
         {
             string path = Doc("test_4415.pdf");
-            string path_out = Out("test_4415.png");  // path_out = os.path.normpath(f'{__file__}/../../tests/resources/test_4415_out.png')
-            string path_out_expected = Doc("test_4415_out_expected.png");  // path_out_expected = os.path.normpath(f'{__file__}/../../tests/resources/test_4415_out_expected.png')
+            string path_out = Out("test_4415.png");
+            string path_out_expected = Doc("test_4415_out_expected.png");
             using (var document = Document.Open(path))
             {
-                Page page = document[0];  // page = document[0]
+                Page page = document[0];
                 int rot = page.Rotation;  // rot = page.rotation
                 Point orig = new Point(100, 100);
                 string text = "Text at Top-Left";  // text = 'Text at Top-Left'
-                Matrix mrot = page.DerotationMatrix;  // mrot = page.derotation_matrix  # matrix annihilating page rotation
+                Matrix mrot = page.DerotationMatrix;  // mrot = page.derotation_matrix # matrix annihilating page rotation
                 page.InsertText(orig * mrot, text, fontSize: 60, rotate: rot);  // page.InsertText(orig * mrot, text, fontSize=60, rotate=rot)
-                using Pixmap pixmap = page.GetPixmap();  // pixmap = page.GetPixmap()
+                using Pixmap pixmap = page.GetPixmap();  // pixmap = page.GetPixmap
                 pixmap.Save(path_out);  // pixmap.Save(path_out)
                 float rms = _Compare.PixmapsRms(path_out_expected, path_out);  // rms = gentle_compare.pixmaps_rms(path_out_expected, path_out)
                 Assert.Equal(0, rms);  // assert rms == 0, f'{rms=}'
@@ -1898,7 +1804,7 @@ namespace MuPDF.NET.Test
                     }
                 }
 
-                var items = document.layer_ui_configs();  // items = document.layer_ui_configs()
+                var items = document.layer_ui_configs();  // items = document.layer_ui_configs
                 Show(items);  // show(items)
                 AssertLayerUiConfigsEqual(items, new List<Dictionary<string, object>>  // assert items == [
                 {
@@ -1913,7 +1819,7 @@ namespace MuPDF.NET.Test
                 });  // ]
 
                 document.set_layer_ui_config(0, Constants.PdfOcOff);
-                items = document.layer_ui_configs();  // items = document.layer_ui_configs()
+                items = document.layer_ui_configs();  // items = document.layer_ui_configs
                 Show(items);  // show(items)
                 AssertLayerUiConfigsEqual(items, new List<Dictionary<string, object>>  // assert items == [
                 {
@@ -1993,15 +1899,15 @@ namespace MuPDF.NET.Test
             string path = Out("test_4590.pdf");
             using (var document = new Document())
             {
-                Page page = document.NewPage();  // page = document.NewPage()
+                Page page = document.NewPage();
                 // Add some text
                 string text = "This PDF contains a file attachment annotation.";  // text = 'This PDF contains a file attachment annotation.'
                 page.InsertText(new Point(72, 72), text, fontSize: 12);  // page.InsertText((72, 72), text, fontSize=12)
                 // Create a sample file.
-                string path_sample = Path.GetFullPath(Doc("test_4590_annotation_sample.txt"));  // path_sample = os.path.normpath(f'{__file__}/../../tests/test_4590_annotation_sample.txt')
+                string path_sample = Path.GetFullPath(Doc("test_4590_annotation_sample.txt"));
                 File.WriteAllText(path_sample, "This is a sample attachment file.");  // with open(path_sample, 'w') as f: f.write('This is a sample attachment file.')
                 // Read file as bytes
-                byte[] sample = File.ReadAllBytes(path_sample);  // with open(path_sample, 'rb') as f: sample = f.read()
+                byte[] sample = File.ReadAllBytes(path_sample);  // with open(path_sample, 'rb') as f: sample = f.read
                 // Define annotation position (rect or point)
                 Rect annot_pos = new Rect(72, 100, 92, 120);
                 // Add the file attachment annotation
@@ -2017,7 +1923,7 @@ namespace MuPDF.NET.Test
             }
             using (var document = Document.Open(path))
             {
-                document.scrub();  // document.scrub()
+                document.scrub();  // document.scrub
             }
         }
 
@@ -2101,18 +2007,10 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_4533()
         {
-            string path = OptionalDocPath("test_4533.pdf");
-            if (!File.Exists(path))
-            {
-                Console.WriteLine(
-                    "test_4533(): skipping because test_4533.pdf not present "
-                    + "(download from https://github.com/user-attachments/files/20497146/NineData_user_manual_V3.0.5.pdf).");
-                return;
-            }
+            string path = Doc("test_4533.pdf");
             using var document = new Document(path);
             Console.WriteLine($"page_count={document.PageCount}");
-            if (_Version.mupdf_version_tuple_at_least(1, 26, 6))
-                Assert.True(document.PageCount > 0);
+            Assert.True(document.PageCount > 0);
         }
 
         /// <summary>Regression test: open2.</summary>
@@ -2132,27 +2030,16 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_4712()
         {
-            /*
-            Crash with "corrupted float-linked list
-            */
-            var mupdf_version_tuple = (
-                mupdf.mupdf.FZ_VERSION_MAJOR,
-                mupdf.mupdf.FZ_VERSION_MINOR,
-                mupdf.mupdf.FZ_VERSION_PATCH);
-            if (mupdf_version_tuple.CompareTo((1, 26, 11)) < 0)
-            {
-                Console.WriteLine($"test_4712m(): Not running because known to fail on mupdf < 1.26.11: mupdf_version={Tools.MupdfVersion()}.");
-                return;
-            }
-            string path_a = Doc("test_4712_a.pdf");  // path_a = os.path.normpath(f'{__file__}/../../tests/resources/test_4712_a.pdf')
-            string path_b = Doc("test_4712_b.pdf");  // path_b = os.path.normpath(f'{__file__}/../../tests/resources/test_4712_b.pdf')
+ /*
+ Crash with "corrupted float-linked list
+ */
+            string path_a = Doc("test_4712_a.pdf");
+            string path_b = Doc("test_4712_b.pdf");
             using var doc1 = Document.Open(path_a);
             for (int i = 0; i < 6; i++)
-                // doc1.LoadPage(i).GetPixmap()
                 using (var _ = doc1.LoadPage(i).GetPixmap()) { }
             using var doc2 = Document.Open(path_b);
             for (int i = 0; i < 6; i++)
-                // doc2.LoadPage(i).GetPixmap()
                 using (var _ = doc2.LoadPage(i).GetPixmap()) { }
         }
 
@@ -2160,35 +2047,23 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_4712m()
         {
-            var mupdf_version_tuple = (
-                mupdf.mupdf.FZ_VERSION_MAJOR,
-                mupdf.mupdf.FZ_VERSION_MINOR,
-                mupdf.mupdf.FZ_VERSION_PATCH);
-            if (mupdf_version_tuple.CompareTo((1, 26, 11)) < 0)
-            {
-                Console.WriteLine($"test_4712m(): Not running because known to fail on mupdf < 1.26.11: mupdf_version={Tools.MupdfVersion()}.");
-                return;
-            }
-
-            string path_a = Doc("test_4712_a.pdf");  // path_a = os.path.normpath(f'{__file__}/../../tests/resources/test_4712_a.pdf')
-            string path_b = Doc("test_4712_b.pdf");  // path_b = os.path.normpath(f'{__file__}/../../tests/resources/test_4712_b.pdf')
+            string path_a = Doc("test_4712_a.pdf");
+            string path_b = Doc("test_4712_b.pdf");
 
             void GetPixmap(mupdf.FzPage page)
             {
                 using var displaylist = mupdf.mupdf.fz_new_display_list_from_page(page);
                 using var rect = mupdf.mupdf.fz_bound_display_list(displaylist);
                 using var irect = mupdf.mupdf.fz_round_rect(rect);
-                //         irect,
-                //         0,  # alpha
-                //         )
+                // irect,
+                // 0, # alpha
                 var colorspace = new mupdf.FzColorspace(mupdf.FzColorspace.Fixed.Fixed_RGB);
                 using var pixmap = colorspace.fz_new_pixmap_with_bbox(irect, new mupdf.FzSeparations(), 0);  // alpha
                 mupdf.mupdf.fz_clear_pixmap_with_value(pixmap, 0xFF);
                 var matrix = new mupdf.FzMatrix();
                 var device = mupdf.mupdf.fz_new_draw_device(matrix, pixmap);
-                //         displaylist,
-                //         device,
-                //         )
+                // displaylist,
+                // device,
                 mupdf.mupdf.fz_run_display_list(
                     displaylist,
                     device,
@@ -2226,8 +2101,7 @@ namespace MuPDF.NET.Test
         public void test_4746()
         {
             using var archive = new Archive(".");
-            // archive.add(__file__, 'foo')
-            string file = Doc("bug1971.pdf");  // __file__
+            string file = Doc("bug1971.pdf");
             archive.Add(file, "foo");
         }
 
@@ -2269,7 +2143,15 @@ namespace MuPDF.NET.Test
             using (var doc = new Document(data))
             {
                 var spans = doc[0].GetTextTrace();
+                for (int i = 0; i < spans.Count; i++)
+                {
+                    var span = spans[i];
+                    string cs = string.Concat(((List<object>)span["chars"]).Select(cc => char.ConvertFromUtf32(Convert.ToInt32(((object[])cc)[0]))));
+                    Console.WriteLine($"test_4902(): i={i} linewidth={span["linewidth"]} cs={cs}");
+                }
                 Assert.Equal(2, spans.Count);
+                Assert.Null(spans[0]["linewidth"]);
+                Assert.Equal(8.0, Convert.ToDouble(spans[1]["linewidth"]));
                 doc.Save(Out("test_4902.pdf"));
             }
         }
@@ -2387,9 +2269,16 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_5056()
         {
-            // Confirm absence of MuPDF version number if reproducible.
-            // Document.Write / ToBytes have no reproducible parameter (and Save does not expose an equivalent).
-            Console.WriteLine("test_5056(): SKIPPED � Document.Write/ToBytes has no reproducible parameter; not adding library API.");
+            using var doc = new Document();
+            doc.NewPage();
+            string dataRepro = Encoding.UTF8.GetString(doc.ToBytes(reproducible: true));
+            string dataNormal = Encoding.UTF8.GetString(doc.ToBytes(reproducible: false));
+            string mupdfVsn = Tools.MupdfVersion();
+            string textNormal = $"% Written by MuPDF {mupdfVsn}";
+            string textRepro = "% Written by MuPDF";
+            Assert.Contains(textNormal, dataNormal);
+            Assert.DoesNotContain(textNormal, dataRepro);
+            Assert.Contains(textRepro, dataRepro);
         }
 
         [Fact]
@@ -2403,12 +2292,82 @@ namespace MuPDF.NET.Test
             string text2 = (string)page.GetText();
             Console.WriteLine($"text1={text1}");
             Console.WriteLine($"text2={text2}");
-            // MuPDF.NET is on MuPDF 1.28.2 (< 1.29): expect text to change after sanitize.
-            if (!_Version.mupdf_version_tuple_at_least(1, 29, 0))
+            if (!_Version.mupdf_version_tuple_at_least(1, 28, 5))
                 Assert.NotEqual(text1, text2);
             else
                 Assert.Equal(text1, text2);
         }
+
+        /// <summary>Regression test: 4263.</summary>
+        [Fact]
+        public void test_4263()
+        {
+
+            string path = Doc("test_4263.pdf");
+            string path_out = Out("test_4263.pdf.linerarized.pdf");
+
+            Console.WriteLine($"Running: Document.Save linear=1 {path} -> {path_out}");  // print(f'Running: {command}')
+            using var document = new Document(path);
+            // Support for linerarisation dropped in MuPDF-1.26.
+            Exception ex = Assert.ThrowsAny<Exception>(() => document.Save(path_out, linear: 1));
+            Assert.Contains("Linearisation is no longer supported", ex.Message);
+        }
+
+        /// <summary>Regression test: 4846.</summary>
+        [Fact]
+        public void test_4846()
+        {
+            // Currently doesn't test the generated file, just leaves to to be looked at
+            // manually.
+            string path = Doc("test_4846.pdf");
+            string path_out = Out("test_out.svg");
+            using (var document = new Document(path))  // with open(path) as document:
+            {
+                Page page = document[0];
+                string svg_content = page.GetSvgImage();  // svg_content = page.get_svg_image
+                File.WriteAllText(path_out, svg_content, new UTF8Encoding(false));  // open(path_out, 'w', encoding="utf8")
+            }
+        }
+
+        /// <summary>Regression test: 4896.</summary>
+        [Fact]
+        public void test_4896()
+        {
+            string path = Doc("test_4896.pdf");
+            string outPrefix = Path.Combine(Path.GetDirectoryName(Out("test_4896_out_2.pdf"))!, "test_4896_out");
+            Console.WriteLine();  // print
+
+            Pixmap pixmap0;
+            string saved2;
+            using (var document = new Document(path))  // with open(path) as document:
+            {
+                saved2 = $"{outPrefix}_2.pdf";  // path = f'{out}_2.pdf'
+                document.EzSave(saved2, garbage: 2);  // document.ez_save(path, garbage=2)
+                Console.WriteLine($"Have saved to: {saved2}");  // print(f'Have saved to: {path}')
+                pixmap0 = document[0].GetPixmap();  // pixmap0 = document[0].get_pixmap
+            }
+
+            using (pixmap0)
+            using (var document = new Document(saved2))  // with open(path) as document:
+            {
+                document.RewriteImages(dpiThreshold: 160, dpiTarget: 150);  // document.rewrite_images(dpi_threshold=160, dpi_target=150)
+                foreach (int g in new[] { 1, 2, 3, 4 })  // for g in 1, 2, 3, 4:
+                {
+                    string rewritten = $"{outPrefix}_rewrite_{g}.pdf";  // path = f'{out}_rewrite_{g}.pdf'
+                    document.EzSave(rewritten, garbage: g);  // document.ez_save(path, garbage=g)
+                    Console.WriteLine($"Have saved to: {rewritten}");  // print(f'Have saved to: {path}')
+
+                    using (var document2 = new Document(rewritten))  // with open(path) as document2:
+                    using (Pixmap pixmap = document2[0].GetPixmap())  // pixmap = document2[0].get_pixmap
+                    {
+                        float diff = _Compare.PixmapsRms(pixmap0, pixmap);  // diff = gentle_compare.pixmaps_rms(pixmap0, pixmap)
+                        Console.WriteLine($"diff={diff} for path={rewritten}.");  // print(f'{diff=} for {path=}.')
+                        Assert.Equal(0, diff);  // assert diff == 0
+                    }
+                }
+            }
+        }
+
         /// <summary>Approximate Python <c>repr(bytes)</c> for verbose test output.</summary>
         private static string PyBytesRepr(byte[] bytes)
         {

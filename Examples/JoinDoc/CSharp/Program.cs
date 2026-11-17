@@ -7,7 +7,7 @@ string cdate = Utils.GetPdfNow();
 Dictionary<string, string> pdfDict = new Dictionary<string, string>()
 {
     {"creator", "PDF Joiner" },
-    {"producer", "PyMuPDF" },
+    {"producer", "MuPDF.NET" },
     {"creationDate", cdate },
     {"modDate", cdate },
     {"title", "Pdf Joiner" },

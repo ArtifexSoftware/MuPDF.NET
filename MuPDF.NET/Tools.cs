@@ -107,12 +107,22 @@ namespace MuPDF.NET
             lock (Helpers.JM_mupdf_warnings_store)
                 ret = string.Join("\n", Helpers.JM_mupdf_warnings_store);
             if (reset)
-                ResetMupdfWarnings();
+                ClearMupdfWarningsStore();
             return ret;
         }
 
-        /// <summary>Clear the stored MuPDF warning list.</summary>
+        /// <summary>
+        /// Discard stored warnings and flush MuPDF's last-warning coalescing
+        /// so the next warning is not merged into a previous test's message.
+        /// </summary>
         public static void ResetMupdfWarnings()
+        {
+            Helpers.EnsureMupdfWarningsHooked();
+            mupdf.mupdf.fz_flush_warnings();
+            ClearMupdfWarningsStore();
+        }
+
+        private static void ClearMupdfWarningsStore()
         {
             lock (Helpers.JM_mupdf_warnings_store)
                 Helpers.JM_mupdf_warnings_store.Clear();
@@ -172,8 +182,29 @@ namespace MuPDF.NET
         public static bool SetSmallGlyphHeights(bool? on = null)
         {
             if (on != null)
+            {
                 Helpers.SmallGlyphHeights = on.Value;
+                // Process-wide setting. Drop any leftover FindTables thread overlay
+                // so this call actually takes effect.
+                Helpers.ThreadSmallGlyphHeights = null;
+            }
             return Helpers.SmallGlyphHeights;
+        }
+
+        /// <summary>
+        /// When on, text extraction uses dummy ascender 0.8 / descender -0.2
+        /// instead of the font’s real metrics.
+        /// </summary>
+        /// <param name="on">New value, or <see langword="null"/> to only query.</param>
+        /// <returns>The current setting.</returns>
+        public static bool UnsetQuadCorrections(bool? on = null)
+        {
+            if (on != null)
+            {
+                Helpers.SkipQuadCorrections = on.Value;
+                Helpers.ThreadSkipQuadCorrections = null;
+            }
+            return Helpers.SkipQuadCorrections;
         }
 
         /// <summary>Set fixed font width in a descendant font.</summary>
@@ -212,6 +243,7 @@ namespace MuPDF.NET
         internal static (int graphics, int text, float graphicsMinLineWidth) show_aa_level() => ShowAaLevel();
         internal static void store_shrink(int percent) => StoreShrink(percent);
         internal static bool set_small_glyph_heights(bool? on = null) => SetSmallGlyphHeights(on);
+        internal static bool unset_quad_corrections(bool? on = null) => UnsetQuadCorrections(on);
         internal static bool set_font_width(Document doc, int xref, int width) => SetFontWidth(doc, xref, width);
         internal static int _insert_contents(Page page, byte[] newcont, bool overlay = true) => InsertContents(page, newcont, overlay);
         internal static byte[] _get_all_contents(Page page) => GetAllContents(page);

@@ -5,12 +5,12 @@ using System.Linq;
 namespace MuPDF.NET
 {
     /// <summary>
-    /// PDF form field (widget) for interactive forms .
+    /// PDF form field (widget) for interactive forms.
     /// </summary>
     /// <remarks>
     /// <para>PDF only. Widgets are a specialized annotation type for user input. Traverse a page with
     /// <see cref="Page.FirstWidget"/> and <see cref="Next"/> (not <see cref="Page.FirstAnnot"/>).</para>
-    /// <para>Create with <see cref="Widget()"/>, set properties, then <see cref="Page.AddWidget"/> or change an
+    /// <para>Create with <see cref="Widget"/>, set properties, then <see cref="Page.AddWidget"/> or change an
     /// existing field and call <see cref="Update"/>. Reload the page after adding fields if you need a fresh view.</para>
     /// <para>Supported types: text, button, checkbox, combobox, listbox, radiobutton (no radio groups), signature (read-only).</para>
     /// </remarks>
@@ -75,6 +75,9 @@ namespace MuPDF.NET
             _nativeWidget = widget;
             Parent = page;
             _insertMode = false;
+            // first_widget / Widget.next: TOOLS._fill_widget sets widget._annot.
+            if (widget?.m_internal != null)
+                BoundAnnot = new Annot(widget, page);
             SyncFromNative();
         }
 
@@ -84,6 +87,12 @@ namespace MuPDF.NET
             Parent = page;
             BoundAnnot = annotWrapper;
             _insertMode = false;
+            // add_widget: widget.xref = annot.xref before update/_adjust_widget.
+            if (annot?.m_internal != null)
+            {
+                using var annotObj = mupdf.mupdf.pdf_annot_obj(annot);
+                _xref = mupdf.mupdf.pdf_to_num(annotObj);
+            }
         }
 
         // ─── MuPDF Widget attributes (settable on insert widgets) ─────
@@ -183,6 +192,18 @@ namespace MuPDF.NET
                 if (_insertMode)
                     return InsertFieldValue ?? "";
                 using var annotObj = mupdf.mupdf.pdf_annot_obj(_nativeWidget);
+                // Widget_Load: radio field_value is /AS, else pdf_field_value.
+                if (FieldType == (int)WidgetType.RadioButton)
+                {
+                    using var asKey = mupdf.mupdf.pdf_new_name("AS");
+                    using var asObj = mupdf.mupdf.pdf_dict_get(annotObj, asKey);
+                    if (asObj != null && asObj.m_internal != null)
+                    {
+                        string asName = mupdf.mupdf.pdf_to_name(asObj);
+                        if (!string.IsNullOrEmpty(asName))
+                            return asName;
+                    }
+                }
                 return mupdf.mupdf.pdf_field_value(annotObj) ?? "";
             }
             set => SetFieldValue(value);
@@ -240,7 +261,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Set choice options ( with strings or 2-item lists/tuples).
+        /// Set choice options (with strings or 2-item lists/tuples).
         /// </summary>
         public void SetChoiceValues(IEnumerable<object> values)
         {
@@ -275,7 +296,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>JavaScript on change ( , /AA/V).</summary>
+        /// <summary>JavaScript on change (, /AA/V).</summary>
         public string ScriptChange
         {
             get => _insertMode ? InsertScriptChange : GetScript("V");
@@ -502,7 +523,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>JavaScript calculation script ( , /AA/C).</summary>
+        /// <summary>JavaScript calculation script (, /AA/C).</summary>
         public string ScriptCalc
         {
             get => _insertMode ? InsertScriptCalc : GetScript("C");
@@ -515,7 +536,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>JavaScript format script ( , /AA/F).</summary>
+        /// <summary>JavaScript format script (, /AA/F).</summary>
         public string ScriptFormat
         {
             get => _insertMode ? InsertScriptFormat : GetScript("F");
@@ -547,7 +568,7 @@ namespace MuPDF.NET
         /// <summary>Alias for <see cref="ScriptChange"/>.</summary>
         public string ScriptValidation => ScriptChange;
 
-        /// <summary>JavaScript blur script ( , /AA/Bl).</summary>
+        /// <summary>JavaScript blur script (, /AA/Bl).</summary>
         public string ScriptBlur
         {
             get => _insertMode ? InsertScriptBlur : GetScript("Bl");
@@ -560,7 +581,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>JavaScript focus script ( , /AA/Fo).</summary>
+        /// <summary>JavaScript focus script (, /AA/Fo).</summary>
         public string ScriptFocus
         {
             get => _insertMode ? InsertScriptFocus : GetScript("Fo");
@@ -592,15 +613,9 @@ namespace MuPDF.NET
                 using var r = mupdf.mupdf.pdf_bound_annot(_nativeWidget);
                 InsertRect = new Rect(r.x0, r.y0, r.x1, r.y1);
             }
-            if (InsertFieldType == WidgetType.RadioButton
-                && InsertFieldValueBool != false
-                && InsertFieldValue != "Off")
-                TurnOffSiblingRadioButtons();
             Validate();
             AdjustFont();
             BuildTextDa();
-            if (!string.IsNullOrEmpty(InsertScriptCalc))
-                Helpers.EnsureWidgetCalc(_nativeWidget);
             Helpers.JmSetWidgetProperties(_nativeWidget, this);
             InsertTextDa = "";
             InsertFieldValueBool = null;
@@ -751,7 +766,7 @@ namespace MuPDF.NET
         public void UpdateAppearance() => mupdf.mupdf.pdf_update_annot(_nativeWidget);
 
         /// <summary>
-        /// Appearance state names for checkbox and radio button widgets .
+        /// Appearance state names for checkbox and radio button widgets.
         /// </summary>
         /// <returns>
         /// Dictionary with keys <c>normal</c> and <c>down</c>, each a list of state names from <c>AP/N</c> and <c>AP/D</c>,
@@ -780,7 +795,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// The “on” value for checkboxes and radio buttons .
+        /// The “on” value for checkboxes and radio buttons.
         /// </summary>
         /// <returns>The non-<c>Off</c> appearance state name from <see cref="ButtonStates"/>, or <c>Yes</c> if none is found.</returns>
         public string OnState()
@@ -856,7 +871,7 @@ namespace MuPDF.NET
         /// </summary>
         public void Reset()
         {
-            // TOOLS._reset_widget(self._annot)
+
             using var obj = mupdf.mupdf.pdf_annot_obj(_nativeWidget);
             using var dvKey = mupdf.mupdf.pdf_new_name("DV");
             using var dv = mupdf.mupdf.pdf_dict_get(obj, dvKey);
@@ -909,6 +924,14 @@ namespace MuPDF.NET
             InsertFieldLabel = FieldLabel;
             InsertFieldValue = FieldValue;
             InsertFieldFlags = FieldFlags;
+            // Widget_Load: rb_parent is the owning radio group's xref.
+            if (InsertFieldType == WidgetType.RadioButton)
+            {
+                using var parentKey = mupdf.mupdf.pdf_new_name("Parent");
+                using var parent = mupdf.mupdf.pdf_dict_get(annotObj, parentKey);
+                if (parent != null && parent.m_internal != null)
+                    _legacyRbParent = mupdf.mupdf.pdf_to_num(parent);
+            }
             InsertBorderStyle = mupdf.mupdf.pdf_field_border_style(annotObj) ?? "S";
             using (var widthObj = mupdf.mupdf.pdf_dict_getp(annotObj, "BS/W"))
             {
@@ -1015,7 +1038,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// When setting a radio button ON, clears sibling buttons ( ; MuPDF does not do this).
+        /// When setting a radio button ON, clears sibling buttons (; MuPDF does not do this).
         /// </summary>
         private void TurnOffSiblingRadioButtons()
         {
@@ -1039,7 +1062,7 @@ namespace MuPDF.NET
         public void Checker() => TurnOffSiblingRadioButtons();
 
         /// <summary>
-        /// Extract font, size and color from /DA ( , pdf_parse_default_appearance).
+        /// Extract font, size and color from /DA (pdf_parse_default_appearance).
         /// </summary>
         private void ParseDa(string da)
         {

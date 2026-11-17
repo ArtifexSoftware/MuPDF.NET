@@ -1,16 +1,15 @@
 using System.Text;
-using MuPDF.NET.PDF4LLM;
-
+using MuPDF.NET;
 namespace Demo
 {
     /// <summary>
-    /// Extract <c>national-capitals.pdf</c> to Markdown with <c>MuPDF4LLM.ToMarkdown</c>.
+    /// Extract <c>national-capitals.pdf</c> to Markdown with <c>Document.ToMarkdown</c>.
     /// </summary>
     internal partial class Program
     {
         internal static void TestExtractNationalCapitals()
         {
-            Console.WriteLine("\n=== TestExtractNationalCapitals (MuPDF.NET.PDF4LLM.ToMarkdown) =======================");
+            Console.WriteLine("\n=== TestExtractNationalCapitals (Document.ToMarkdown) =======================");
 
             string path = DemoPaths.Input("Llm/national-capitals.pdf");
             if (!File.Exists(path))
@@ -19,12 +18,13 @@ namespace Demo
                 return;
             }
 
-            bool priorLayout = MuPDF4LLM.UseLayout;
+            bool priorLayout = Utils.LayoutEnabled;
             try
             {
                 // Same path as LoadAiAsync / ollama: markdown tables without pymupdf_layout.
-                MuPDF4LLM.SetUseLayout(true);
-                string markdown = MuPDF4LLM.ToMarkdown(path, header: true, footer: true, showProgress: false);
+                Utils.UseLayout(true);
+                using Document doc = new Document(path);
+                string markdown = doc.ToMarkdown(header: true, footer: true, showProgress: false);
 
                 string output = DemoPaths.Output("national-capitals.md");
                 File.WriteAllText(output, markdown, Encoding.UTF8);
@@ -40,7 +40,7 @@ namespace Demo
             }
             finally
             {
-                MuPDF4LLM.SetUseLayout(priorLayout);
+                Utils.UseLayout(priorLayout);
             }
         }
     }

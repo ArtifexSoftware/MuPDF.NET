@@ -11,6 +11,6 @@ namespace MuPDF.NET.Test
     [AttributeUsage(AttributeTargets.Assembly | AttributeTargets.Class | AttributeTargets.Method, AllowMultiple = false, Inherited = true)]
     public sealed class ResetMupdfWarningsAttribute : BeforeAfterTestAttribute
     {
-        public override void Before(MethodInfo methodUnderTest) => Tools.MupdfWarnings();
+        public override void Before(MethodInfo methodUnderTest) => Tools.ResetMupdfWarnings();
     }
 }

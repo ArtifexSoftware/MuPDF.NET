@@ -7,7 +7,7 @@ namespace MuPDF.NET
     /// </summary>
     /// <remarks>
     /// <para>
-    /// MuPDF.NET colorspace type ( equivalent). Legacy MuPDF.NET used the spelling
+    /// MuPDF.NET colorspace type (equivalent). Legacy MuPDF.NET used the spelling
     /// <see cref="ColorSpace"/> with the same constructors and properties; see
     /// <see href="https://mupdfnet.readthedocs.io/en/latest/classes/ColorSpace.html"/>.
     /// </para>
@@ -26,17 +26,17 @@ namespace MuPDF.NET
         internal mupdf.FzColorspace _native;
 
         /// <summary>
-        /// Predefined RGB device colorspace ( / <c>CS_RGB</c>).
+        /// Predefined RGB device colorspace (/ <c>CS_RGB</c>).
         /// </summary>
         public static readonly Colorspace Rgb = new Colorspace(ColorspaceType.Rgb);
 
         /// <summary>
-        /// Predefined GRAY device colorspace ( / <c>CS_GRAY</c>).
+        /// Predefined GRAY device colorspace (/ <c>CS_GRAY</c>).
         /// </summary>
         public static readonly Colorspace Gray = new Colorspace(ColorspaceType.Gray);
 
         /// <summary>
-        /// Predefined CMYK device colorspace ( / <c>CS_CMYK</c>).
+        /// Predefined CMYK device colorspace (/ <c>CS_CMYK</c>).
         /// </summary>
         public static readonly Colorspace Cmyk = new Colorspace(ColorspaceType.Cmyk);
 

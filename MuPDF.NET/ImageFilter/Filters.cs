@@ -52,6 +52,7 @@ namespace MuPDF.NET
 
         private static unsafe class ProjectionCalculator
         {
+
             /// <summary>
             /// Calc angle of skewing
             /// </summary>
@@ -64,16 +65,16 @@ namespace MuPDF.NET
             {
                 using (var wr = new UnmanagedImage(bmp))
                 {
-                    //calc threshold level (to binarize)
+                    // calc threshold level (to binarize)
                     var treshold = CalcThreshold(wr, isBinarized);
 
-                    //calc projection histogram (HOG)
-                    var dX = 3 + (int)(precision * bmp.Width / 4); //length of ray
-                    var dY = (int)(Math.Tan(maxSkewAngle * Math.PI / 180) * dX); //max DY of ray
+                    // calc projection histogram (HOG)
+                    var dX = 3 + (int)(precision * bmp.Width / 4); // length of ray
+                    var dY = (int)(Math.Tan(maxSkewAngle * Math.PI / 180) * dX); // max DY of ray
 
                     var hist = CalcHistogram(wr, treshold, dX, dY);
 
-                    //find max of histogram
+                    // find max of histogram
                     return FindMaxOnHistogram(hist, dY, dX);
                 }
             }
@@ -91,7 +92,7 @@ namespace MuPDF.NET
 
                 float dy = bestIndex - dY;
 
-                //calc subpixel precision
+                // calc subpixel precision
                 if (bestIndex > 0 && bestIndex < hist.Length - 2)
                 {
                     float x0 = bestIndex - 1;
@@ -101,7 +102,7 @@ namespace MuPDF.NET
                     float v1 = hist[(int)x1];
                     float v2 = hist[(int)x2];
 
-                    //Lagrange quadratic interpolation
+                    // Lagrange quadratic interpolation
                     var max = 0f;
 
                     for (int dI = -20; dI <= 20; dI++)
@@ -116,7 +117,7 @@ namespace MuPDF.NET
                     }
                 }
 
-                //calc angle
+                // calc angle
                 float a = (float)Math.Atan2(dy, dX);
                 return a;
             }
@@ -162,7 +163,6 @@ namespace MuPDF.NET
 
             private static int CalcThreshold(UnmanagedImage wr, bool isBinarized)
             {
-                //min, max, avg
                 long min = 255, max = 0, avg = 0;
                 if (!isBinarized)
                 {
@@ -192,7 +192,7 @@ namespace MuPDF.NET
                     avg = 127;
                 }
 
-                //calc threshold
+                // calc threshold
                 var thres = (int)((avg + min) * 0.9f);
 
                 return thres;
@@ -203,14 +203,14 @@ namespace MuPDF.NET
 
     public unsafe class LineRemover
     {
-        private const float MAX_LINE_WIDTH = 180;//280
+        private const float MAX_LINE_WIDTH = 180;// 280
         private const float MIN_LINE = 45;
-        private const float MIN_LINE_VERT = 50;//is not used
-        private const float LINE_BRIGHTNESS = 0.1f;//0.15
+        private const float MIN_LINE_VERT = 50;// is not used
+        private const float LINE_BRIGHTNESS = 0.1f;// 0.15
         private const float NO_LINE_BRIGHTNESS = 0.6f;
-        private const float SENSITIVITY = 0.7f;//0.7//1
+        private const float SENSITIVITY = 0.7f;// 0.7//1
         private const float CONST5 = 0.6f;
-        private const float BROKENNESS_TOLERANCE = 0.02f;//0.04
+        private const float BROKENNESS_TOLERANCE = 0.02f;// 0.04
 
         public static void Process(ref SKBitmap bitmap, bool vertical)
         {
@@ -240,7 +240,6 @@ namespace MuPDF.NET
         /// <returns></returns>
         private static int CalcThreshold(UnmanagedImage wr, bool isBinarized, float sensitivity = SENSITIVITY)
         {
-            //min, max, avg
             long min = 255, max = 0, avg = 0;
             if (!isBinarized)
             {
@@ -270,7 +269,7 @@ namespace MuPDF.NET
                 avg = 127;
             }
 
-            //calc threshold
+            // calc threshold
             var thres = (int)((avg + max * sensitivity) / (1 + sensitivity));
 
             return thres;
@@ -294,15 +293,15 @@ namespace MuPDF.NET
                 h = wr.Width;
             }
 
-            //calc integral image by horiz/vert
+            // calc integral image by horiz/vert
             int[][] integral;
             if (byVert)
                 integral = CalcIntegralByCols(wr, threshold);
             else
                 integral = CalcIntegralByRows(wr, threshold);
 
-            //find lines
-            //var minLineLength = (int)(5 + w / (byVert ? MIN_LINE_VERT : MIN_LINE));
+            // find lines
+            // var minLineLength = (int)(5 + w / (byVert ? MIN_LINE_VERT: MIN_LINE));
             var minLineLength = (int)(5 + Math.Max(w, h) / MIN_LINE);
 
             if (minLineLength < 25)
@@ -319,14 +318,14 @@ namespace MuPDF.NET
 
                 for (int x = 0; x < w - minLineLength; x++)
                 {
-                    var sum0 = row0[x + minLineLength] - row0[x];//row above
-                    var sum1 = row1[x + minLineLength] - row1[x];//the row
-                    var sum2 = row2[x + minLineLength] - row2[x];//row below
+                    var sum0 = row0[x + minLineLength] - row0[x];// row above
+                    var sum1 = row1[x + minLineLength] - row1[x];// the row
+                    var sum2 = row2[x + minLineLength] - row2[x];// row below
 
                     if (sum1 <= th1)
                         if (sum0 >= th2 || sum2 >= th2)
                         {
-                            //start scan line
+                            // start scan line
                             var fromX = FirstBlack(row1, x);
                             int toX = -1;
                             if (fromX == -1)
@@ -336,33 +335,33 @@ namespace MuPDF.NET
                                 var sum = row1[x + minLineLength] - row1[x];
                                 if (sum > th1)
                                     break;
-                                if (row1[x + minLineLength + 1] - row1[x + minLineLength] == 0)//is black
+                                if (row1[x + minLineLength + 1] - row1[x + minLineLength] == 0)// is black
                                     toX = x + minLineLength;
                             }
 
                             if (toX >= 0)
                             {
-                                //we found start X and stop X of line
+                                // we found start X and stop X of line
                                 var segment = new Segment() { From = new SKPointI(fromX, y), To = new SKPointI(toX, y) };
-                                //clac width
+                                // clac width
                                 CalcLineWidth(integral, segment, maxLineWidth);
 
-                                if (segment.Width <= 0)//it is not line
+                                if (segment.Width <= 0)// it is not line
                                     continue;
                                 if (segment.Width > maxLineWidth)
-                                    continue;//too thick
+                                    continue;// too thick
 
                                 if (segment.Length / segment.Width < 8)
-                                    continue;//it is rectangle, not line
+                                    continue;// it is rectangle, not line
 
                                 if (segment.Width > maxLineWidth / 3)
                                 {
                                     var disp = CalcWhitePercent(integral, segment);
                                     if (disp > BROKENNESS_TOLERANCE + segment.Length / 15000)
-                                        continue;//too dotted line (may be it is word with small font)
+                                        continue;// too dotted line (may be it is word with small font)
                                 }
 
-                                //add to segment list
+                                // add to segment list
                                 if (byVert)
                                     segment.SwapXY();
                                 res.Add(segment);
@@ -428,7 +427,7 @@ namespace MuPDF.NET
             var points = new List<SKPointI>();
             var rect = new SKRect(D + 2, D + 2, w - D - 3, h - D - 3);
 
-            //remove horiz
+            // remove horiz
             foreach (var line in lines)
                 if (line != null)
                 {
@@ -451,7 +450,7 @@ namespace MuPDF.NET
 
         private static void RemovePoints(UnmanagedImage wr, List<SKPointI> pointsToDel, SKColor white)
         {
-            //remove points
+            // remove points
             var step = wr.Step;
             var stride = wr.Stride;
             foreach (var p in pointsToDel)
@@ -514,13 +513,13 @@ namespace MuPDF.NET
                 sum2 /= count;
 
                 if (sum1 <= sum2 * 0.9f)
-                    continue; //disbalance - no line
+                    continue; // disbalance - no line
                 if (sum3 <= sum2 * 0.9f)
-                    continue; //disbalance - no line
+                    continue; // disbalance - no line
                 if (sum1 < 127 || sum3 < 127)
-                    continue; //too dark sides - no line
+                    continue; // too dark sides - no line
 
-                //it is line - remove
+                // it is line - remove
                 var fromY = Y - d - 2;
                 var toY = Y + d + 2;
                 for (float yy = fromY; yy <= toY; yy++)
@@ -571,13 +570,13 @@ namespace MuPDF.NET
                 sum2 /= count;
 
                 if (sum1 <= sum2 * 0.9f)
-                    continue; //disbalance - no line
+                    continue; // disbalance - no line
                 if (sum3 <= sum2 * 0.9f)
-                    continue; //disbalance - no line
+                    continue; // disbalance - no line
                 if (sum1 < 127 || sum3 < 127)
-                    continue; //too dark sides - no line
+                    continue; // too dark sides - no line
 
-                //it is line - remove
+                // it is line - remove
                 var fromX = X - d - 2;
                 var toX = X + d + 2;
                 for (float xx = fromX; xx <= toX; xx++)
@@ -601,16 +600,16 @@ namespace MuPDF.NET
         {
             var y = segment.From.Y;
             var th = CONST5 * (segment.To.X - segment.From.X);
-            var th2 = 0.70f;//0.85
+            var th2 = 0.70f;// 0.85
 
-            //build histogram
+            // build histogram
             var hist = new float[MAX_LINE_WIDTH * 2 + 1];
             for (int dy = -MAX_LINE_WIDTH; dy <= MAX_LINE_WIDTH; dy++)
             {
                 hist[MAX_LINE_WIDTH + dy] = intByRows[y + dy][segment.To.X + 1] - intByRows[y + dy][segment.From.X];
             }
 
-            //normalize histogram
+            // normalize histogram
             var min = float.MaxValue;
             var max = float.MinValue;
             for (int i = 0; i < hist.Length; i++)
@@ -628,7 +627,7 @@ namespace MuPDF.NET
             for (int i = 0; i < hist.Length; i++)
                 hist[i] = (hist[i] - min) / (max - min);
 
-            //find top white line
+            // find top white line
             var center = hist[MAX_LINE_WIDTH];
             var top = 0;
             for (int dy = -1; dy >= -MAX_LINE_WIDTH; dy--)
@@ -640,7 +639,7 @@ namespace MuPDF.NET
                 }
             }
 
-            //find bottom white line
+            // find bottom white line
             var bottom = 0;
             for (int dy = 1; dy <= MAX_LINE_WIDTH; dy++)
             {
@@ -652,7 +651,7 @@ namespace MuPDF.NET
             }
 
             if (top == 0 || bottom == 0)
-                segment.Width = -1; //no white line on on top or bottom
+                segment.Width = -1; // no white line on on top or bottom
             else
             {
                 segment.Width = (bottom - top) - 1;
@@ -736,13 +735,13 @@ namespace MuPDF.NET
         {
             var temp = new List<Segment>();
 
-            //horiz
+            // horiz
             foreach (var s in segments)
                 if (s != null && !s.IsVertical)
                     temp.Add(s);
             var res = JoinSegmentsHoriz(temp);
 
-            //vert
+            // vert
             temp.Clear();
             foreach (var s in segments)
                 if (s != null && s.IsVertical)
@@ -763,7 +762,7 @@ namespace MuPDF.NET
 
         private static List<Segment> JoinSegmentsHoriz(List<Segment> segments)
         {
-            //build hash by Y
+            // build hash by Y
             var hashByY = new List<List<Segment>>();
             foreach (var s in segments)
             {
@@ -777,12 +776,12 @@ namespace MuPDF.NET
                 hashByY[y].Add(s);
             }
 
-            //sort by X
+            // sort by X
             foreach (var list in hashByY)
                 if (list != null)
                     list.Sort((s1, s2) => s1.CorrectedFrom.X.CompareTo(s2.CorrectedFrom.X));
 
-            //join horizontally
+            // join horizontally
             var maxD = 10;
             foreach (var list in hashByY)
                 if (list != null && list.Count > 1)
@@ -800,7 +799,7 @@ namespace MuPDF.NET
                     }
                 }
 
-            //join vertically (cluster analysis)
+            // join vertically (cluster analysis)
             var segToCluster = new Dictionary<Segment, int>();
 
             foreach (var list in hashByY)
@@ -817,7 +816,7 @@ namespace MuPDF.NET
                     foreach (var s1 in list2)
                         foreach (var s2 in list1)
                         {
-                            //intersect?
+                            // intersect?
                             if (AreIntersectedHoriz(s1, s2))
                             {
                                 var cl1 = segToCluster[s1];
@@ -831,7 +830,7 @@ namespace MuPDF.NET
                 }
             }
 
-            //get clusters
+            // get clusters
             var clusters = new Dictionary<int, Segment>();
             foreach (var pair in segToCluster)
             {
@@ -922,8 +921,7 @@ namespace MuPDF.NET
         }
     }
 
-
-    /// <summary>
+	/// <summary>
 	/// TiltModeler estimates tilt in input image and rotates it.
 	/// OBSOLETE! Use `Deskew` class instead.
 	/// </summary>
@@ -940,17 +938,17 @@ namespace MuPDF.NET
             var width = inpImage.Width;
             var height = inpImage.Height;
 
-            /* the size of the image in Bytes */
+            // the size of the image in Bytes
             int size = stride * height;
 
-            /* Allocate buffer for image */
+            // Allocate buffer for image
             byte[] inData = new byte[size];
             Marshal.Copy(inpImage.GetPixels(), inData, 0, size);
 
             for (int i = 0; i < height; i += 8)
             {
                 int imgLocation = i * stride;
-                for (int j = 0; j < width / 5; j++) //max left margin 1/5th
+                for (int j = 0; j < width / 5; j++) // max left margin 1/5th
                 {
                     if (inData[imgLocation] < 32)
                     {
@@ -1007,7 +1005,7 @@ namespace MuPDF.NET
             return minErr;
         }
 
-        //evaluated linear model
+        // evaluated linear model
         private static float Evalute(List<SKPoint> points, float m, float c)
         {
             float rSqr = 0;
@@ -1081,11 +1079,11 @@ namespace MuPDF.NET
             int nChannels = origBytesPerPixel;
             if (nChannels == 4) nChannels--;
 
-            /* the size of the image in Bytes */
+            // the size of the image in Bytes
             int stride = bitmap.RowBytes;
             int size = stride * bitmap.Height;
 
-            /* Allocate buffer for image */
+            // Allocate buffer for image
             byte[] inData = new byte[size];
             byte[] destData = new byte[size];
 
@@ -1150,7 +1148,6 @@ namespace MuPDF.NET
         }
     }
 
-
     /// <summary>
     /// Obsolete. Use `LineRemover` instead.
     /// </summary>
@@ -1179,13 +1176,13 @@ namespace MuPDF.NET
             int oChannels = destBytesPerPixel;
             if (oChannels == 4) oChannels--;
 
-            /* the size of the image in bytes */
+            // the size of the image in bytes
             int inStride = bitmap.RowBytes;
             int destStride = destImage.RowBytes;
             int inSize = inStride * bitmap.Height;
             int destSize = destStride * destImage.Height;
 
-            /* Allocate buffer for image */
+            // Allocate buffer for image
             byte[] inData = new byte[inSize];
             byte[] destData = new byte[destSize];
 
@@ -1262,7 +1259,6 @@ namespace MuPDF.NET
         }
     }
 
-
     /// <summary>
     /// Obsolete. Use `LineRemover` instead.
     /// </summary>
@@ -1291,13 +1287,13 @@ namespace MuPDF.NET
             int oChannels = destBytesPerPixel;
             if (oChannels == 4) oChannels--;
 
-            /*the size of the image in bytes */
+            // the size of the image in bytes
             int inStride = bitmap.RowBytes;
             int destStride = destImage.RowBytes;
             int inSize = inStride * bitmap.Height;
             int destSize = destStride * destImage.Height;
 
-            /*Allocate buffer for image*/
+            // Allocate buffer for image
             byte[] inData = new byte[inSize];
             byte[] destData = new byte[destSize];
 
@@ -1361,14 +1357,14 @@ namespace MuPDF.NET
             if (nChannels == 4) nChannels--;
             byte[] buf = new byte[winX * winY];
 
-            /* the size of the image in bytes */
+            // the size of the image in bytes
             int stride = bitmap.RowBytes;
             int size = stride * bitmap.Height;
 
-            /* Allocate buffer for image */
+            // Allocate buffer for image
             byte[] inData = new byte[size];
 
-            /* This overload copies data of /size/ into /data/ from location specified (/Scan0/) */
+            // This overload copies data of /size/ into /data/ from location specified (/Scan0/)
             Marshal.Copy(bitmap.GetPixels(), inData, 0, size);
 
             for (int i = halfY; i < i1; i++)
@@ -1415,14 +1411,14 @@ namespace MuPDF.NET
             if (nChannels == 4)
                 nChannels--;
 
-            /*the size of the image in bytes */
+            // the size of the image in bytes
             int stride = bitmap.RowBytes;
             int size = stride * bitmap.Height;
 
-            /*Allocate buffer for image*/
+            // Allocate buffer for image
             byte[] inData = new byte[size];
 
-            /*This overload copies data of /size/ into /data/ from location specified (/Scan0/)*/
+            // This overload copies data of /size/ into /data/ from location specified (/Scan0/)
             Marshal.Copy(bitmap.GetPixels(), inData, 0, size);
 
             for (int i = 0; i < bitmap.Height; i++)
@@ -1458,12 +1454,12 @@ namespace MuPDF.NET
         }
     }
 
-
     /// <summary>
     /// Represents contrast image filter.
     /// </summary>
     internal class Contrast
     {
+
         /// <summary>
         /// Applies contrast image filter to bitmap.
         /// </summary>
@@ -1530,12 +1526,12 @@ namespace MuPDF.NET
         }
     }
 
-
     /// <summary>
     /// Represents blur image filter.
     /// </summary>
     internal class Blur
     {
+
         /// <summary>
         /// Applies blur image filter to bitmap.
         /// </summary>
@@ -1635,13 +1631,12 @@ namespace MuPDF.NET
         }
     }
 
-
     /// <summary>
     /// Transform class corrects for image tilt
     /// and supports image resize. Although, resize filter is
     /// not used, it will be useful if image has very small font
     /// or scanned at a low DPI
-    /// Author: KKMohanty (kkmohanty@gmail.com )
+    /// Author: KKMohanty (kkmohanty@gmail.com)
     /// </summary>
     internal class Transform
     {
@@ -2113,6 +2108,7 @@ namespace MuPDF.NET
         /// <summary>
         /// Destroys the instance of the <see cref="UnmanagedImage"/> class.
         /// </summary>
+
         ~UnmanagedImage()
         {
             Dispose(false);
@@ -2124,7 +2120,7 @@ namespace MuPDF.NET
         public void Dispose()
         {
             Dispose(true);
-            // remove me from the Finalization queue 
+            // remove me from the Finalization queue
             GC.SuppressFinalize(this);
         }
 

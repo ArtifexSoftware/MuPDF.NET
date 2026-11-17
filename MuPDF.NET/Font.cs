@@ -27,10 +27,10 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Create a font .
+        /// Create a font.
         /// </summary>
         /// <remarks>
-        /// Parameterless <c>new Font()</c> loads the default fallback font (typically
+        /// Parameterless <c>new Font</c> loads the default fallback font (typically
         /// <c>Noto Serif Regular</c> when Noto fonts are available), matching MuPDF.
         /// </remarks>
         /// <param name="fontName">Base-14 name, CJK name, etc.</param>
@@ -72,7 +72,6 @@ namespace MuPDF.NET
                     ordering = 3;
                 else if (fname_lower.StartsWith("japan"))
                     ordering = 2;
-                //     fontname = None
                 else if (ordering < 0)
                 {
                     if (Constants.Base14FontDict.TryGetValue(fname_lower, out string? resolved))
@@ -132,7 +131,7 @@ namespace MuPDF.NET
         public float Descender => mupdf.mupdf.fz_font_descender(NativeFontCore);
 
         /// <summary>
-        /// Font flag dictionary .
+        /// Font flag dictionary.
         /// </summary>
         public IReadOnlyDictionary<string, uint> FlagDictionary
         {
@@ -199,7 +198,7 @@ namespace MuPDF.NET
         public bool IsSerif => mupdf.mupdf.fz_font_is_serif(NativeFontCore) != 0;
 
         /// <summary>
-        /// Whether font can be written to PDF .
+        /// Whether font can be written to PDF.
         /// </summary>
         public bool IsWritable
         {
@@ -220,7 +219,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Per-character widths for <paramref name="text"/> .
+        /// Per-character widths for <paramref name="text"/>.
         /// </summary>
         public float[] CharLengths(string text, float fontSize = 11, string language = null, int script = 0, int wmode = 0, int smallCaps = 0)
         {
@@ -231,7 +230,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Glyph advance at font size 1 .
+        /// Glyph advance at font size 1.
         /// </summary>
         public float GlyphAdvance(int chr_, string language = null, int script = 0, int wmode = 0, int smallCaps = 0)
         {
@@ -240,7 +239,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Glyph bbox at font size 1 .
+        /// Glyph bbox at font size 1.
         /// </summary>
         public Rect GlyphBbox(int chr_, string language = null, int script = 0, int smallCaps = 0)
         {
@@ -260,12 +259,12 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Unicode for a glyph name .
+        /// Unicode for a glyph name.
         /// </summary>
         public int GlyphNameToUnicode(string name) => Utils.GlyphNameToUnicode(name);
 
         /// <summary>
-        /// Whether font has a glyph for a unicode .
+        /// Whether font has a glyph for a unicode.
         /// </summary>
         public int HasGlyph(int chr, string language = null, int script = 0, int fallback = 0, int smallCaps = 0)
         {
@@ -281,7 +280,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Total text width .
+        /// Total text width.
         /// </summary>
         public float TextLength(string text, float fontSize = 11, string language = null, int script = 0, int wmode = 0, int smallCaps = 0)
         {
@@ -297,12 +296,12 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Glyph name for a unicode .
+        /// Glyph name for a unicode.
         /// </summary>
         public string UnicodeToGlyphName(int ch) => Utils.UnicodeToGlyphName(ch);
 
         /// <summary>
-        /// Sorted valid Unicode codepoints .
+        /// Sorted valid Unicode codepoints.
         /// </summary>
         public List<int> ValidCodepoints()
         {
@@ -352,7 +351,7 @@ namespace MuPDF.NET
                             return;
                     }
                 }
-                // MuPDF Font.__del__ is a no-op; do not fz_drop_font while TextWriter/PDF code may still use it.
+                // MuPDF Font.Dispose is a no-op; do not fz_drop_font while TextWriter/PDF code may still use it.
                 _disposed = true;
             }
             GC.SuppressFinalize(this);

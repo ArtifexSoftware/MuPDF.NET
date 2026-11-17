@@ -12,6 +12,9 @@
     <NuspecFile>$(ProjectDir)MuPDF.NET.nuspec</NuspecFile>
     <NuspecProperties>Configuration=$(Configuration);version=$(ArtifexMuPDFNetVersion);PlatformFolder=$(PlatformFolder);mupdfVersion=$(ArtifexMuPDFVersion)</NuspecProperties>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net8.0'">
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
   
   <PropertyGroup Condition="'$(OS)' == 'Windows_NT'">
     <DefineConstants>WINDOWS</DefineConstants>
@@ -82,6 +85,25 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="MuPDF.NET.Test" />
+    <InternalsVisibleTo Include="MuPDF.NET.Test_" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' != 'net8.0'">
+    <Compile Remove="PDF4LLM\AI\**\*.cs" />
+    <Compile Remove="PDF4LLM\MuPDF4LLM.Ai.cs" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' != 'net8.0'">
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.20.1" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.24.3" />
+    <PackageReference Include="Azure.AI.OpenAI" Version="2.1.0" />
+    <PackageReference Include="Azure.Search.Documents" Version="11.6.0" />
+    <PackageReference Include="Microsoft.Extensions.AI" Version="10.3.0" />
+    <PackageReference Include="Microsoft.Extensions.AI.OpenAI" Version="10.3.0" />
+    <PackageReference Include="RapidOcrNet" Version="2.0.0" GeneratePathProperty="true" />
   </ItemGroup>
 
   <ItemGroup>
@@ -90,6 +112,7 @@
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
     <PackageReference Include="SharpZipLib" Version="1.4.2" />
     <PackageReference Include="SkiaSharp" Version="3.119.4" />
+    <PackageReference Include="Markdig" Version="0.38.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -103,4 +126,13 @@
   <Target Name="GenerateMuPDFRuntimeJson" BeforeTargets="Pack">
     <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildThisFileDirectory)..\MuPDF\generate-runtimejson.ps1&quot;" />
   </Target>
+
+  <Target Name="SyncLayoutRequirements" BeforeTargets="BeforeCompile;GenerateNuspec">
+    <PropertyGroup>
+      <_LayoutRequirementsFile>$(MSBuildThisFileDirectory)PDF4LLM\scripts\requirements-layout.txt</_LayoutRequirementsFile>
+    </PropertyGroup>
+    <WriteLinesToFile File="$(_LayoutRequirementsFile)" Overwrite="true" Encoding="UTF-8" Lines="# Auto-synced from Versions.props (ArtifexPyMuPDFLayoutVersion).;pymupdf==$(ArtifexPyMuPDFLayoutVersion);pymupdf-layout==$(ArtifexPyMuPDFLayoutVersion)" />
+  </Target>
+
+  <Import Project="build\MuPDF.NET.Layout.targets" Condition="Exists('build\MuPDF.NET.Layout.targets')" />
 </Project>

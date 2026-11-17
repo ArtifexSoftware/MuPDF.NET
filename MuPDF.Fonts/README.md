@@ -27,4 +27,4 @@ Font software is subject to the licenses described in `LICENSE.txt` (primarily S
 
 ## Dependencies
 
-- [SharpCompress](https://www.nuget.org/packages/SharpCompress) — XZ decompression of embedded font buffers
+- [SharpCompress](https://www.nuget.org/packages/SharpCompress) `[0.50.7]` — XZ decompression of embedded font buffers (exact pin; see #261)

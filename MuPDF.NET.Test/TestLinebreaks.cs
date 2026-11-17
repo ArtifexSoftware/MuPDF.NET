@@ -5,8 +5,8 @@ using Xunit;
 
 namespace MuPDF.NET.Test
 {
-    /// <summary>
-    /// </summary>
+
+
     /// <remarks>
     /// Test avoidance of linebreaks.
     /// Inputs: <c>TestDocuments/TestLinebreaks/</c>; outputs: <c>TestDocuments/_Output/TestLinebreaks/</c>.

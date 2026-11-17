@@ -29,7 +29,7 @@ namespace MuPDF.NET
             Parent = page;
         }
 
-        /// <summary>Match Python <c>Page.load_links</c> (first annot) or <c>Link.next</c> (successor row when prior <c>xref</c> &gt; 0).</summary>
+        /// <summary>Match PyMuPDF <c>Page.load_links</c> (first annot) or <c>Link.next</c> (successor row when prior <c>xref</c> &gt; 0).</summary>
         internal void SetLinkAnnotIdentity(int xref, string nm)
         {
             _linkAnnotXrefHint = xref;
@@ -50,7 +50,7 @@ namespace MuPDF.NET
         public string Uri => _nativeLink.m_internal.uri;
 
         /// <summary>
-        /// Whether the link is external .
+        /// Whether the link is external.
         /// Uses <c>mupdf.fz_is_external_link</c> on the native URI when available.
         /// </summary>
         public bool IsExternal
@@ -105,7 +105,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>PDF <c>/NM</c> for this link when known (Python <c>Link.id</c>).</summary>
+        /// <summary>PDF <c>/NM</c> for this link when known (PyMuPDF <c>Link.id</c>).</summary>
         public string Id
         {
             get
@@ -160,7 +160,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>Border dictionary from the link annotation (Python <c>Link.border</c> / <c>_border</c>).</summary>
+        /// <summary>Border dictionary from the link annotation (PyMuPDF <c>Link.border</c> / <c>_border</c>).</summary>
         public Dictionary<string, object> Border
         {
             get
@@ -181,7 +181,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>Color dictionary from the link annotation (Python <c>Link.colors</c> / <c>_colors</c>).</summary>
+        /// <summary>Color dictionary from the link annotation (PyMuPDF <c>Link.colors</c> / <c>_colors</c>).</summary>
         public Dictionary<string, object> Colors
         {
             get
@@ -204,7 +204,7 @@ namespace MuPDF.NET
         {
             get
             {
-                // Python Link.next: if not self.this.m_internal: return None
+                // PyMuPDF Link.next: if not self.this.m_internal: return None
                 if (_detached || Parent == null)
                     return null;
                 if (_nativeLink?.m_internal == null)
@@ -227,25 +227,12 @@ namespace MuPDF.NET
                     try
                     {
                         var page = RequirePage();
-                        var link_xrefs = new List<int>();
-                        var link_ids = new List<string>();
-                        foreach (var t in Helpers.JM_get_annot_xref_list(page.NativePdfPage.obj()))
-                        {
-                            if (t.type_ == (int)mupdf.pdf_annot_type.PDF_ANNOT_LINK)
-                            {
-                                link_xrefs.Add(t.xref);
-                                link_ids.Add(t.nm ?? "");
-                            }
-                        }
-                        int idx = link_xrefs.IndexOf(prevXref);
-                        if (idx >= 0 && idx + 1 < link_xrefs.Count)
-                        {
-                            nextLink.SetLinkAnnotIdentity(link_xrefs[idx + 1], link_ids[idx + 1]);
-                        }
+                        var identities = page.LinkAnnotIdentities();
+                        int idx = identities.FindIndex(t => t.xref == prevXref);
+                        if (idx >= 0 && idx + 1 < identities.Count)
+                            nextLink.SetLinkAnnotIdentity(identities[idx + 1].xref, identities[idx + 1].nm);
                         else
-                        {
                             nextLink.SetLinkAnnotIdentity(0, "");
-                        }
                     }
                     catch
                     {
@@ -260,7 +247,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>Target page number for internal links ( , default -1).</summary>
+        /// <summary>Target page number for internal links (, default -1).</summary>
         public int Page
         {
             get
@@ -275,7 +262,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>Link as a dictionary ( / link dict conventions).</summary>
+        /// <summary>Link as a dictionary (/ link dict conventions).</summary>
         public Dictionary<string, object> ToDictionary()
         {
             int xr = Xref;
@@ -303,7 +290,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Detach this wrapper from its owning <see cref="Page"/> .
+        /// Detach this wrapper from its owning <see cref="Page"/>.
         /// </summary>
         public void Erase()
         {
@@ -313,9 +300,10 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Set link border .
-        /// <para>Pass a border dictionary, or use <c>width</c>/<c>style</c>/<c>dashes</c> keys as in Python.</para>
+        /// Set link border.
         /// </summary>
+        /// <para>Pass a border dictionary, or use <c>width</c>/<c>style</c>/<c>dashes</c> keys as in PyMuPDF.</para>
+
         public void SetBorder(Dictionary<string, object> border)
         {
             int xref = Xref;
@@ -340,9 +328,10 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Set link colors .
-        /// <para>Links have no fill color; only <c>stroke</c> is applied. Empty stroke removes <c>C</c>.</para>
+        /// Set link colors.
         /// </summary>
+        /// <para>Links have no fill color; only <c>stroke</c> is applied. Empty stroke removes <c>C</c>.</para>
+
         public void SetColors(Dictionary<string, object> colors)
         {
             int xref = Xref;
@@ -365,7 +354,7 @@ namespace MuPDF.NET
             mupdf.mupdf.pdf_dict_puts(obj, "C", cArr);
         }
 
-        /// <summary>Set link flags . Requires a PDF document.</summary>
+        /// <summary>Set link flags. Requires a PDF document.</summary>
         public void SetFlags(int flags)
         {
             if (!RequirePage().RequireParent().IsPdf)

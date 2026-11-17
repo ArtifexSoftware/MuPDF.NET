@@ -1,4 +1,4 @@
-// Define some page labels in a PDF.
+﻿// Define some page labels in a PDF.
 // Check success in various aspects.
 using System;
 using System.Collections.Generic;
@@ -7,8 +7,8 @@ using Xunit;
 
 namespace MuPDF.NET.Test
 {
-    /// <summary>
-    /// </summary>
+
+
     /// <remarks>
     /// Inputs: <c>TestDocuments/TestPagelabels/</c>; outputs: <c>TestDocuments/_Output/TestPagelabels/</c>.
     /// </remarks>
@@ -26,19 +26,18 @@ namespace MuPDF.NET.Test
             var doc = new Document();
             for (int i = 0; i < 10; i++)
             {
-                // page = doc.NewPage()
+
                 doc.NewPage();
             }
             return doc;
         }
 
-        //     - Rule 1: labels like "A-n", page 0 is first and has "A-1".
-        //     - Rule 2: labels as capital Roman numbers, page 4 is first and has "I".
+        // - Rule 1: labels like "A-n", page 0 is first and has "A-1".
+        // - Rule 2: labels as capital Roman numbers, page 4 is first and has "I".
         private static List<Dictionary<string, object>> make_labels()
         {
-            //     {"startpage": 0, "prefix": "A-", "style": "D", "firstpagenum": 1},
-            //     {"startpage": 4, "prefix": "", "style": "R", "firstpagenum": 1},
-            // ]
+            // {"startpage": 0, "prefix": "A-", "style": "D", "firstpagenum": 1},
+            // {"startpage": 4, "prefix": "", "style": "R", "firstpagenum": 1},
             return new List<Dictionary<string, object>>
             {
                 new Dictionary<string, object>
@@ -90,12 +89,10 @@ namespace MuPDF.NET.Test
             // - Label pages
             // - Inquire labels of pages
             // - Get list of page numbers for a given label.
-            // doc = make_doc()
+
             using var doc = make_doc();
             doc.SetPageLabels(make_labels());
-            // page_labels = [p.get_label() for p in doc]
             var page_labels = doc.Select(p => p.get_label()).ToList();
-            // answer = ["A-1", "A-2", "A-3", "A-4", "I", "II", "III", "IV", "V", "VI"]
             string[] answer = { "A-1", "A-2", "A-3", "A-4", "I", "II", "III", "IV", "V", "VI" };
             Assert.Equal(answer, page_labels);
             Assert.Equal(new[] { 8 }, doc.get_page_numbers("V"));
@@ -106,12 +103,10 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_labels_styleA()
         {
-            // doc = make_doc()
+
             using var doc = make_doc();
-            // labels = [
-            //     {"startpage": 0, "prefix": "", "style": "a", "firstpagenum": 1},
-            //     {"startpage": 5, "prefix": "", "style": "A", "firstpagenum": 1},
-            // ]
+            // {"startpage": 0, "prefix": "", "style": "a", "firstpagenum": 1},
+            // {"startpage": 5, "prefix": "", "style": "A", "firstpagenum": 1},
             var labels = new List<Dictionary<string, object>>
             {
                 new Dictionary<string, object>
@@ -130,13 +125,10 @@ namespace MuPDF.NET.Test
                 },
             };
             doc.SetPageLabels(labels);
-            // pdfdata = doc.ToBytes()
             byte[] pdfdata = doc.ToBytes();
             doc.Close();
             using var doc2 = new Document(pdfdata, "pdf");
-            // answer = ["a", "b", "c", "d", "e", "A", "B", "C", "D", "E"]
             string[] answer = { "a", "b", "c", "d", "e", "A", "B", "C", "D", "E" };
-            // page_labels = [page.get_label() for page in doc]
             var page_labels = doc2.Select(page => page.get_label()).ToList();
             Assert.Equal(answer, page_labels);
             Assert.True(PageLabelsRulesEqual(doc2.get_page_labels(), labels));

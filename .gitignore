@@ -39,6 +39,11 @@ TestDocuments/MuPDF.NET.Test/_Output/
 TestDocuments/MuPDF.NET.PDF4LLM.Test/_Output/
 TestDocuments/Demo/_Output/
 
+# Real Office license keys — never commit. Do not put keys in source, tests, or nupkgs.
+TestDocuments/office.keys
+**/office.keys
+!**/office.keys.example
+
 # Visual Studio 2015/2017 cache/options directory
 .vs/
 # Uncomment if you have tasks that create the project's static files in wwwroot

@@ -18,7 +18,7 @@ namespace MuPDF.NET
     /// <remarks>
     /// <para>Includes PDF string encoding, paper sizes, text-extraction helpers, quad recovery, colors,
     /// image metadata, tables, barcodes, and related helpers used across the library.</para>
-    /// <para>Public members use PascalCase; <c>internal</c> snake_case aliases are available for same-assembly tests.</para>
+    /// <para>Public members use PascalCase; internal aliases exist for same-assembly tests.</para>
     /// <para><b>Legacy readthedocs <c>Utils</c> vs <see cref="Tools"/> </b> — prefer <see cref="Tools"/>
     /// for new code. These legacy <c>Utils</c> entry points remain as thin forwards:</para>
     /// <list type="table">
@@ -61,7 +61,9 @@ namespace MuPDF.NET
 
         /// <summary>
         /// Obsolete process-wide gate. The library does not lock this (#191). Each
+        /// </summary>
         /// <see cref="Document"/> serializes its own native use; locking this only serializes
+        /// <summary>
         /// the caller's code and is not required for thread safety.
         /// </summary>
         [Obsolete("Utils.MuPDFLock is unused. Parallel GetPixmap is gated per Document, not process-wide. Remove lock (Utils.MuPDFLock) from your code.")]
@@ -69,7 +71,7 @@ namespace MuPDF.NET
 
         public static string ANNOT_ID_STEM = "fitz";
 
-        /// <summary>MuPDF.NET / : get or set annotation /NM name prefix.</summary>
+        /// <summary>MuPDF.NET /: get or set annotation /NM name prefix.</summary>
         public static string SetAnnotStem(string stem = null)
         {
             if (stem == null)
@@ -212,17 +214,13 @@ namespace MuPDF.NET
         /// <param name="item">Tuple of (page number, raw rule string like "&lt;&lt;/S/D…&gt;&gt;").</param>
         public static Dictionary<string, object> RuleDict((int pno, string rule) item)
         {
-            string rule = item.rule;
-            rule = rule.Substring(2, rule.Length - 4);
+            string rule = item.rule ?? "";
+            // rule[2:-2].split("/")[1:] — empty / short strings become [].
+            rule = rule.Length >= 4 ? rule.Substring(2, rule.Length - 4) : "";
             string[] parts = rule.Split('/');
-            string[] entries = parts.Skip(1).ToArray();
+            string[] entries = parts.Length > 1 ? parts.Skip(1).ToArray() : Array.Empty<string>();
 
-            var d = new Dictionary<string, object>
-            {
-                ["startpage"] = item.pno,
-                ["prefix"] = "",
-                ["firstpagenum"] = 1
-            };
+            var d = EmptyLabelRule(item.pno);
 
             bool skip = false;
             for (int i = 0; i < entries.Length; i++)
@@ -254,14 +252,77 @@ namespace MuPDF.NET
         }
 
         /// <summary>
+        /// Convert a PDF page-label rule (page number + <c>PdfObj</c> dict) into
+        /// startpage / prefix / style / firstpagenum.
+        /// </summary>
+        public static Dictionary<string, object> RuleDict((int pno, mupdf.PdfObj rule) item)
+        {
+            var d = EmptyLabelRule(item.pno);
+            var rule = item.rule;
+            if (rule?.m_internal == null)
+                return d;
+            int n = rule.pdf_dict_len();
+            for (int i = 0; i < n; i++)
+            {
+                var key = rule.pdf_dict_get_key(i);
+                var value = rule.pdf_dict_get_val(i);
+                string name = key.pdf_to_name();
+                if (name == "S")
+                    d["style"] = value.pdf_to_name();
+                else if (name == "P")
+                    d["prefix"] = value.pdf_to_text_string() ?? "";
+                else if (name == "St")
+                    d["firstpagenum"] = value.pdf_to_int();
+            }
+            return d;
+        }
+
+        static Dictionary<string, object> EmptyLabelRule(int startpage) => new Dictionary<string, object>
+        {
+            ["startpage"] = startpage,
+            ["prefix"] = "",
+            ["firstpagenum"] = 1
+        };
+
+        /// <summary>
         /// Return the page label string for a given 0-based page number.
         /// </summary>
         /// <param name="pageNo">0-based page number.</param>
         /// <param name="labels">List of (page-number, rule-string) pairs from the document.</param>
         public static string GetLabelPno(int pageNo, List<(int pno, string rule)> labels)
         {
-            var item = labels.Last(x => x.pno <= pageNo);
-            var rule = RuleDict(item);
+            // (#5140): no covering rule → empty label, not IndexError.
+            (int pno, string rule) item = (pageNo, "");
+            for (int i = labels.Count - 1; i >= 0; i--)
+            {
+                if (labels[i].pno <= pageNo)
+                {
+                    item = labels[i];
+                    break;
+                }
+            }
+            return LabelFromRule(pageNo, RuleDict(item));
+        }
+
+        /// <summary>
+        /// Return the page label string for a given 0-based page number (PdfObj rules).
+        /// </summary>
+        public static string GetLabelPno(int pageNo, List<(int pno, mupdf.PdfObj rule)> labels)
+        {
+            (int pno, mupdf.PdfObj rule) item = (pageNo, null);
+            for (int i = labels.Count - 1; i >= 0; i--)
+            {
+                if (labels[i].pno <= pageNo)
+                {
+                    item = labels[i];
+                    break;
+                }
+            }
+            return LabelFromRule(pageNo, RuleDict(item));
+        }
+
+        static string LabelFromRule(int pageNo, Dictionary<string, object> rule)
+        {
             string prefix = rule.ContainsKey("prefix") ? (string)rule["prefix"] : "";
             string style = rule.ContainsKey("style") ? (string)rule["style"] : "";
             int delta = (style == "a" || style == "A") ? -1 : 0;
@@ -365,7 +426,7 @@ namespace MuPDF.NET
         /// <param name="span">The span dictionary from text extraction.</param>
         /// <param name="bbox">The bounding box as a <see cref="Rect"/>.</param>
         /// <param name="smallGlyphHeights">
-        /// When true, use only font-size as glyph height (matching TOOLS.set_small_glyph_heights()).
+        /// When true, use only font-size as glyph height (matching TOOLS.set_small_glyph_heights).
         /// </param>
         public static Quad RecoverBboxQuad(
             (float cos, float sin) lineDir,
@@ -744,7 +805,7 @@ namespace MuPDF.NET
         public static string GetPdfNow() => Helpers.GetPdfNow();
 
         /// <summary>
-        /// Encode a string for PDF : parentheses, octal escapes, or UTF-16BE hex.
+        /// Encode a string for PDF: parentheses, octal escapes, or UTF-16BE hex.
         /// </summary>
         public static string GetPdfStr(string s) => Helpers.GetPdfStr(s);
 
@@ -756,7 +817,7 @@ namespace MuPDF.NET
         public static string GetPdfString(string s) => Helpers.GetPdfStr(s);
 
         /// <summary>
-        /// Calculate length of a string for a built-in font .
+        /// Calculate length of a string for a built-in font.
         /// </summary>
         /// <param name="fontName">Name of the font.</param>
         /// <param name="fontSize">Font size points.</param>
@@ -764,22 +825,16 @@ namespace MuPDF.NET
         /// <returns>Length of text.</returns>
         public static float GetTextLength(string text, string fontName = "helv", float fontSize = 11, int encoding = 0)
         {
-            // fontname = fontname.lower()
             fontName = (fontName ?? "helv").ToLowerInvariant();
-            // basename = Base14_fontdict.get(fontname, None)
             Constants.Base14FontDict.TryGetValue(fontName, out string? basename);
 
-            // glyphs = None
             (int glyph, double width)[]? glyphs = null;
-            //     glyphs = symbol_glyphs
             if (basename == "Symbol")
                 glyphs = (Constants.SymbolGlyphs);
-            //     glyphs = zapf_glyphs
             if (basename == "ZapfDingbats")
                 glyphs = Constants.ZapfGlyphs;
             if (glyphs != null)
             {
-                // w = sum([glyphs[ord(c)][1] if ord(c) < 256 else glyphs[183][1] for c in text])
                 double w = 0;
                 foreach (char ch in text)
                 {
@@ -793,20 +848,17 @@ namespace MuPDF.NET
             }
             if (Constants.Base14FontDict.ContainsKey(fontName))
             {
-                //     text, Base14_fontdict[fontName], fontsize, encoding
-                // )
                 return Helpers.UtilMeasureString(
                     text,
                     Constants.Base14FontDict[fontName],
                     fontSize,
                     encoding);
             }
-            // ):
             if (fontName is "china-t" or "china-s" or "china-ts" or "china-ss" or
                 "japan" or "japan-s" or "korea" or "korea-s")
                 return text.Length * fontSize;
 
-            // raise ValueError(f"Font '{fontName}' is unsupported")
+
             throw new ValueErrorException($"Font '{fontName}' is unsupported");
         }
 
@@ -828,7 +880,7 @@ namespace MuPDF.NET
         ) => GetTextLength(text, fontName: fontName, fontSize: fontSize, encoding: encoding);
 
         /// <summary>
-        /// Basic image metadata : width, height, colorspace, bpc, ext, etc.
+        /// Basic image metadata: width, height, colorspace, bpc, ext, etc.
         /// </summary>
         /// <param name="keepImage">When non-zero, include the native <c>fz_image</c> handle under key <c>image</c>.</param>
         public static Dictionary<string, object> ImageProperties(object img, int keepImage = 0)
@@ -854,22 +906,18 @@ namespace MuPDF.NET
             {
                 stream = bytes;
             }
-            // else: raise ValueError("bad argument 'img'")
             else
             {
                 throw new ArgumentException("bad argument 'img'");
             }
 
-            // JM_image_profile: if not imagedata: return None
+            // JM_image_profile: if not imagedata: return null
             if (stream.Length == 0)
                 return null;
-            // len_ = len(imagedata)
-            // JM_image_profile: if len_ < 8 -> return None.
-            // message("bad image data")
+            // JM_image_profile: if len_ <8 -> return null.
             if (stream.Length < 8)
                 return null;
 
-            // c = imagedata
             var buf = Helpers.BufferFromBytes(stream);
             int type = RecognizeImageType(buf);
             if (type == mupdf.mupdf.FZ_IMAGE_UNKNOWN)
@@ -885,13 +933,10 @@ namespace MuPDF.NET
             byte orientation = image.fz_image_orientation();
             var cs = image.colorspace();
             string csName = cs != null && cs.m_internal != null ? mupdf.mupdf.fz_colorspace_name(cs) : null;
-            // result = dict()
 
             var result = new Dictionary<string, object>
             {
-                // result[dictkey_width] = image.w()
                 ["width"] = image.w(),
-                // result[dictkey_height] = image.h()
                 ["height"] = image.h(),
                 // result["orientation"] = orientation
                 ["orientation"] = orientation,
@@ -901,9 +946,7 @@ namespace MuPDF.NET
                 ["xres"] = resolution.xres,
                 // result[dictkey_yres] = yres
                 ["yres"] = resolution.yres,
-                // result[dictkey_colorspace] = image.n()
                 ["colorspace"] = image.n(),
-                // result[dictkey_bpc] = image.bpc()
                 ["bpc"] = image.bpc(),
                 // result[dictkey_ext] = JM_image_extension(type_)
                 ["ext"] = ext,
@@ -925,14 +968,12 @@ namespace MuPDF.NET
         public static Dictionary<string, (float w, float h)> PaperSizes() => Helpers.GetPaperSizes();
 
         /// <summary>
-        /// Map line <paramref name="p1"/>–<paramref name="p2"/> to the x-axis; <paramref name="p1"/> becomes origin .
+        /// Map line <paramref name="p1"/>–<paramref name="p2"/> to the x-axis; <paramref name="p1"/> becomes origin.
         /// </summary>
         public static Matrix PlanishLine(Point p1, Point p2) => PlanishLineCore(p1, p2);
 
         private static Matrix PlanishLineCore(Point p1, Point p2)
         {
-            // p1 = Point(p1)
-            // p2 = Point(p2)
             float dx = p2.X - p1.X;
             float dy = p2.Y - p1.Y;
             float length = (float)Math.Sqrt(dx * dx + dy * dy);
@@ -1024,9 +1065,9 @@ namespace MuPDF.NET
             int cols = 1,
             int rows = 1)
         {
-            /*
-                Return a list of (rows x cols) equal sized rectangles.
-            */
+ /*
+ Return a list of (rows x cols) equal sized rectangles.
+ */
 
             // ensure valid rect
             if (rect.IsEmpty || rect.IsInfinite)
@@ -1086,7 +1127,17 @@ namespace MuPDF.NET
             int? flags = null,
             TextPage textpage = null,
             float tolerance = 3)
+            => GetSortedText(page, clip == null ? null : new Rect(clip), flags, textpage, tolerance);
+
+        /// <summary>Same as <see cref="GetSortedText(Page, IRect, int?, TextPage, float)"/> with a float clip rectangle.</summary>
+        public static string GetSortedText(
+            Page page,
+            Rect clipRect,
+            int? flags = null,
+            TextPage textpage = null,
+            float tolerance = 3)
         {
+            Rect clip = clipRect;
             string LineText(Rect clipRect, List<(Rect wr, string text)> line)
             {
                 // Create the string of one text line.
@@ -1157,7 +1208,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Extract text from a page or an annotation .
+        /// Extract text from a page or an annotation.
         /// </summary>
         /// <remarks>
         /// </remarks>
@@ -1170,9 +1221,23 @@ namespace MuPDF.NET
             bool sort = false,
             object delimiters = null,
             float tolerance = 3)
+            => GetText(page, option, clip == null ? null : new Rect(clip), flags, textpage, sort, delimiters, tolerance);
+
+        /// <summary>
+        /// Same as <see cref="GetText(Page, string, IRect, int?, TextPage, bool, object, float)"/>
+        /// with a float clip rectangle.
+        /// </summary>
+        public static dynamic GetText(
+            Page page,
+            string option,
+            Rect clipRect,
+            int? flags = null,
+            TextPage textpage = null,
+            bool sort = false,
+            object delimiters = null,
+            float tolerance = 3)
         {
-            // formats = {
-            // }
+            Rect clip = clipRect;
             var formats = new Dictionary<string, int>
             {
                 ["text"] = Constants.TextFlagsText,
@@ -1186,83 +1251,53 @@ namespace MuPDF.NET
                 ["words"] = Constants.TextFlagsWords,
                 ["blocks"] = Constants.TextFlagsBlocks,
             };
-            // option = option.lower()
             option = (option ?? "text").ToLowerInvariant();
             Debug.Assert(formats.ContainsKey(option));
-            //     option = "text"
             if (!formats.ContainsKey(option))
                 option = "text";
-            //     flags = formats[option]
             if (flags == null)
                 flags = formats[option];
-            //         page,
-            //         clip=clip,
-            //         flags=flags,
-            //         textpage=textpage,
-            //         sort=sort,
-            //         delimiters=delimiters,
-            //     )
+            // page,
             if (option == "words")
                 return WordBlocksFromTuples(page.GetTextWords(clip, flags, textpage, sort, DelimitersToString(delimiters), tolerance));
-            //         page, clip=clip, flags=flags, textpage=textpage, sort=sort
-            //     )
             if (option == "blocks")
                 return TextBlocksFromTuples(page.GetTextBlocks(clip, flags, textpage, sort));
-            //         page,
-            //         clip=clip,
-            //         flags=flags,
-            //         textpage=textpage,
-            //         tolerance=tolerance,
-            //     )
+            // page,
             if (option == "text" && sort)
                 return GetSortedText(page, clip, flags, textpage, tolerance);
 
             page.RequireParent();
-            // cb = None
             Rect cb = null;
-            //     clip = page.cropbox
             if (option == "html" || option == "xml" || option == "xhtml")
-                clip = new IRect(page.CropBox);
-            //     cb = None
-            //     cb = page.cropbox
+                clip = page.CropBox;
             if (clip != null)
             {
-                clip = new IRect(clip);
+                clip = new Rect(clip);
                 cb = null;
             }
             else
                 cb = page.CropBox;
-            // tp = textpage
             TextPage tp = textpage;
-            //     tp = page.get_textpage(clip=clip, flags=flags)
             if (tp == null)
                 tp = page.NewTextPageForGetText(clip, flags.Value);
-            //     raise ValueError("not a textpage of this page")
+
             else if (tp.Parent != page)
                 throw new ValueErrorException("not a textpage of this page");
             object t;
-            //     t = tp.extractJSON(cb=cb, sort=sort)
             if (option == "json")
                 t = ExtractJsonWithCb(tp, cb, sort);
-            //     t = tp.extractRAWJSON(cb=cb, sort=sort)
             else if (option == "rawjson")
                 t = ExtractRawJsonWithCb(tp, cb, sort);
-            //     t = tp.extractDICT(cb=cb, sort=sort)
             else if (option == "dict")
                 t = ExtractDictWithCb(tp, cb, sort);
-            //     t = tp.extractRAWDICT(cb=cb, sort=sort)
             else if (option == "rawdict")
                 t = ExtractRawDictWithCb(tp, cb, sort);
-            //     t = tp.extractHTML()
             else if (option == "html")
                 t = tp.ExtractHtml();
-            //     t = tp.extractXML()
             else if (option == "xml")
                 t = tp.ExtractXml();
-            //     t = tp.extractXHTML()
             else if (option == "xhtml")
                 t = tp.ExtractXhtml();
-            //     t = tp.extractText(sort=sort)
             else
                 t = tp.ExtractText(sort);
             if (textpage == null)
@@ -1271,7 +1306,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Extract text from an annotation ( when called on <c>Annot</c>).
+        /// Extract text from an annotation (when called on <c>Annot</c>).
         /// </summary>
         public static dynamic GetText(
             Annot annot,
@@ -1555,7 +1590,6 @@ namespace MuPDF.NET
         {
             if (cb != null)
             {
-                // val["width"] = cb.width
                 // val["height"] = cb.height
                 val["width"] = cb.Width;
                 val["height"] = cb.Height;
@@ -1584,6 +1618,7 @@ namespace MuPDF.NET
         }
 
         // --- Barcode ---
+
         /// <summary>
         /// Read barcodes from page.
         /// </summary>
@@ -1595,7 +1630,7 @@ namespace MuPDF.NET
         /// <param name="pureBarcode">Image is a pure monochrome image of a barcode.</param>
         /// <param name="multi">Try to read multi barcodes on page.</param>
         /// <param name="autoRotate">Indicate whether the image should be automatically rotated.
-        ///                          Rotation is supported for 90, 180 and 270 degrees.</param>
+        /// Rotation is supported for 90, 180 and 270 degrees.</param>
         public static List<Barcode> ReadBarcodes(
             Page page,
             Rect clip = null,
@@ -1731,7 +1766,7 @@ namespace MuPDF.NET
         /// <param name="pureBarcode">Image is a pure monochrome image of a barcode.</param>
         /// <param name="multi">Try to read multi barcodes on page.</param>
         /// <param name="autoRotate">Indicate whether the image should be automatically rotated.
-        ///                          Rotation is supported for 90, 180 and 270 degrees.</param>
+        /// Rotation is supported for 90, 180 and 270 degrees.</param>
         public static List<Barcode> ReadBarcodes(
             string imageFile,
             Rect clip = null,
@@ -2277,14 +2312,14 @@ namespace MuPDF.NET
                 marginLeft, marginTop, marginRight, marginBottom, 0, narrowBarWidth);
         }
 
-        /// <summary><c>src/utils.py</c>.</summary>
+
         public static string GetLinkText(Page page, Dictionary<string, object> lnk)
             => Helpers.GetLinkText(page, lnk);
 
-        // ─── src/__init__.py module functions ─────────────────────────────
+        // ─── module functions ─────────────────────────────
 
         /// <summary>
-        /// Build <c>@font-face</c> CSS for MuPDF built-in fonts .
+        /// Build <c>@font-face</c> CSS for MuPDF built-in fonts.
         /// </summary>
         public static string CssForMupdfFont(
             string fontcode,
@@ -2293,7 +2328,6 @@ namespace MuPDF.NET
             string name = null)
         {
             // @font-face template string
-            // CSSFONT = "\n@font-face {font-family: %s; src: url(%s);%s%s}\n"
             const string CSSFONT = "\n@font-face {{font-family: {0}; src: url({1});{2}{3}}}\n";
             if (archive is not Archive)
                 throw new ValueErrorException("'archive' must be an Archive");
@@ -2301,7 +2335,6 @@ namespace MuPDF.NET
                 CSS = "";
 
             // select font codes starting with the pass-in string
-            // font_keys = [k for k in fitz_fontdescriptors.keys() if k.startswith(fontcode)]
             var font_keys = new List<string>();
             foreach (string k in MupdfFonts.FitzFontDescriptors.Keys)
             {
@@ -2317,21 +2350,13 @@ namespace MuPDF.NET
 
             foreach (string fkey in font_keys)
             {
-                // font = fitz_fontdescriptors[fkey]
                 var font = MupdfFonts.FitzFontDescriptors[fkey];
-                // bold = font["bold"]  # determine font property
                 bool bold = font.Bold;
-                // italic = font["italic"]  # determine font property
                 bool italic = font.Italic;
-                // fbuff = font["loader"]()  # load the fontbuffer
                 byte[] fbuff = font.Loader();
-                // archive.add(fbuff, fkey)  # update the archive
                 archive.Add(fbuff, fkey);
-                // bold_text = "font-weight: bold;" if bold else ""
                 string bold_text = bold ? "font-weight: bold;" : "";
-                // italic_text = "font-style: italic;" if italic else ""
                 string italic_text = italic ? "font-style: italic;" : "";
-                // CSS += CSSFONT % (name, fkey, bold_text, italic_text)
                 CSS += string.Format(CultureInfo.InvariantCulture, CSSFONT, name, fkey, bold_text, italic_text);
             }
             return CSS;
@@ -2664,9 +2689,9 @@ namespace MuPDF.NET
                     TextFlags.TEXT_PRESERVE_WHITESPACE
                     | TextFlags.TEXT_PRESERVE_LIGATURES
                     | TextFlags.TEXT_MEDIABOX_CLIP
-                    //| TextFlags.TEXT_PRESERVE_IMAGES
+                    // | TextFlags.TEXT_PRESERVE_IMAGES
                     | TextFlags.TEXT_INHIBIT_SPACES
-                    //| TextFlags.TEXT_DEHYPHENATE
+                    // | TextFlags.TEXT_DEHYPHENATE
                     | TextFlags.TEXT_PRESERVE_SPANS
                     | TextFlags.TEXT_CID_FOR_UNKNOWN_UNICODE
                     | TextFlags.TEXT_ACCURATE_BBOXES
@@ -2681,7 +2706,7 @@ namespace MuPDF.NET
             words[0] = new List<(Rect, string)>();
             words[1] = new List<(Rect, string)>();
 
-            foreach (Block block in page.GetText("dict", clip: clip, flags: flags, sort: true).Blocks)
+            foreach (Block block in page.GetText("dict", clip, flags: flags, sort: true).Blocks)
             {
                 if (block.Lines != null)
                 {

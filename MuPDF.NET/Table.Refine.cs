@@ -1,36 +1,35 @@
 // Copyright (C) 2023 Artifex Software, Inc.
-//
+
 // This file is part of MuPDF.NET.
-//
+
 // MuPDF.NET is free software: you can redistribute it and/or modify it under the
 // terms of the GNU Affero General Public License as published by the Free
 // Software Foundation, either version 3 of the License, or (at your option)
 // any later version.
-//
+
 // MuPDF.NET is distributed in the hope that it will be useful, but WITHOUT ANY
 // WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
 // FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more
 // details.
-//
+
 // You should have received a copy of the GNU Affero General Public License
 // along with MuPDF. If not, see <https://www.gnu.org/licenses/agpl-3.0.en.html>
-//
+
 // Alternative licensing terms are available from the licensor.
 // For commercial licensing, see <https://www.artifex.com/> or contact
 // Artifex Software, Inc., 39 Mesa Street, Suite 108A, San Francisco,
 // CA 94129, USA, for further information.
-//
+
 // ---------------------------------------------------------------------
-//
+
 // Port of PyMuPDF 1.28.2 src/_table_refine.py
-// plus find_tables(refine=True) reconstruction glue from src/table.py.
-//
+
 // MuPDF.NET table grid refinement (opt-in extension).
-//
+
 // Provides the RefineGrid / RefineGridStructure / RefineGridRows API that
 // refines a detected table's cell grid using page text and vector-graphics
 // geometry. Re-exported via the table API; never runs on the default
-// FindTables() path.
+// FindTables path.
 
 using System;
 using System.Collections;
@@ -50,28 +49,26 @@ namespace MuPDF.NET
 
         // Grid refinement runs three splitters, each taking (page, grid) and returning a
         // grid without mutating the page:
-        //   * SplitShadedRows            split rows the line grid merged but a cell
-        //                                background-shading rectangle separates,
-        //   * SplitUndersegmentedColumns split a column that jams several values into
-        //                                one cell,
-        //   * SplitOvermergedRows        split body rows that collapsed several
-        //                                records into a single grid row.
+        // * SplitShadedRows split rows the line grid merged but a cell
+        // background-shading rectangle separates,
+        // * SplitUndersegmentedColumns split a column that jams several values into
+        // one cell,
+        // * SplitOvermergedRows split body rows that collapsed several
+        // records into a single grid row.
         // Word selection uses center-point cell membership with rotated/vertical span
         // substitution; it is independent of the CHARS/extract_words path in
-        // Table.cs, so refinement needs no CHARS state.
 
 
 
         // grid without mutating the page:
-        //   * SplitShadedRows            split rows the line grid merged but a cell
-        //                                background-shading rectangle separates,
-        //   * SplitUndersegmentedColumns split a column that jams several values into
-        //                                one cell,
-        //   * SplitOvermergedRows        split body rows that collapsed several
-        //                                records into a single grid row.
+        // * SplitShadedRows split rows the line grid merged but a cell
+        // background-shading rectangle separates,
+        // * SplitUndersegmentedColumns split a column that jams several values into
+        // one cell,
+        // * SplitOvermergedRows split body rows that collapsed several
+        // records into a single grid row.
         // Word selection uses center-point cell membership with rotated/vertical span
         // substitution; it is independent of the CHARS/extract_words path in
-        // Table.cs, so refinement needs no CHARS state.
 
         const float RefineLineGap = 3.0f;  
 // center-y gap (points) that groups body words into lines
@@ -106,7 +103,8 @@ namespace MuPDF.NET
 
         /// <summary>
         /// Flattened rawdict text spans carrying line-direction metadata.
-        ///
+        /// </summary>
+        /// <summary>
         /// Only used to locate vertical/rotated text so those words can be replaced by
         /// span-level bboxes in PageWords / BuildPageWords. Minimal fields (bbox/text/dir/wmode)
         /// -- the only ones the consumers read.
@@ -160,7 +158,8 @@ namespace MuPDF.NET
 
         /// <summary>
         /// True when a rawdict span's direction indicates non-horizontal text flow.
-        ///
+        /// </summary>
+        /// <summary>
         /// wmode != 0 is vertical; otherwise compare |dir_x| vs |dir_y| (a missing or
         /// unparsable direction counts as horizontal).
         /// </summary>
@@ -184,7 +183,8 @@ namespace MuPDF.NET
 
         /// <summary>
         /// True when a line/span direction indicates non-horizontal text flow.
-        ///
+        /// </summary>
+        /// <summary>
         /// wmode != 0 is vertical; otherwise compare |dir_x| vs |dir_y| (a missing or
         /// unparsable direction counts as horizontal).
         /// </summary>
@@ -197,8 +197,9 @@ namespace MuPDF.NET
 
         /// <summary>
         /// Dictionary/span-info overload for callers that pass
-        /// <c>{"wmode", "dir", ...}</c>.
         /// </summary>
+        /// <c>{"wmode", "dir",...}</c>.
+
         internal static bool IsVerticalOrRotated(IDictionary<string, object> span)
         {
             if (span == null)
@@ -296,8 +297,9 @@ namespace MuPDF.NET
 
         /// <summary>
         /// Center-point word list for grid refinement, cached on the page via ConditionalWeakTable.
-        ///
-        /// Extract page words once (page.GetText("words")), then substitute vertical/
+        /// </summary>
+        /// <summary>
+        /// Extract page words once (page.GetText("words")), then substitute vertical
         /// rotated text: any horizontal word whose center falls inside a rotated span's
         /// bbox is dropped, and each rotated span is appended as a single word.
         /// </summary>
@@ -310,7 +312,8 @@ namespace MuPDF.NET
 
         /// <summary>
         /// Word-to-cell membership by CENTER point (inclusive), not clip-overlap.
-        ///
+        /// </summary>
+        /// <summary>
         /// A word straddling a column line is claimed by exactly one cell.
         /// </summary>
         static bool WordInRect(
@@ -516,7 +519,7 @@ namespace MuPDF.NET
         {
             var outRects = new List<Rect>();
             float pageWidth = (float)page.Rect.Width;
-            foreach (var drawing in page.GetDrawingsDict() ?? new List<Dictionary<string, object>>())
+            foreach (var drawing in TableHelpers.GetTableDrawings(page) ?? new List<Dictionary<string, object>>())
             {
                 if (drawing == null)
                     continue;
@@ -597,7 +600,7 @@ namespace MuPDF.NET
         {
             var xs = new HashSet<float>();
             var ys = new HashSet<float>();
-            foreach (var drawing in page.GetDrawingsDict() ?? new List<Dictionary<string, object>>())
+            foreach (var drawing in TableHelpers.GetTableDrawings(page) ?? new List<Dictionary<string, object>>())
             {
                 if (drawing == null)
                     continue;
@@ -717,7 +720,8 @@ namespace MuPDF.NET
 
         /// <summary>
         /// Split rows the line grid merged but a cell background rectangle separates.
-        ///
+        /// </summary>
+        /// <summary>
         /// Cell background-shading rectangles give row boundaries the border lines do
         /// not; candidate y-edges from those rectangles (minus edges that coincide with
         /// real borders, minus edges that would cut an empty band) subdivide each row.
@@ -1292,7 +1296,8 @@ namespace MuPDF.NET
         /// <summary>
         /// Decide whether the body rows are over-merged. Returns the geometry needed
         /// to re-cut them (body bbox, column bounds, per-record y-bounds) or null.
-        ///
+        /// </summary>
+        /// <summary>
         /// Fires only when the body text clusters into clean multi-column "record" lines
         /// (clean_ratio &gt;= cleanThreshold) and there are more records than existing body
         /// rows -- i.e. several records collapsed into one grid row.
@@ -1354,7 +1359,8 @@ namespace MuPDF.NET
 
         /// <summary>
         /// Re-cut over-merged body rows into one grid row per detected record.
-        ///
+        /// </summary>
+        /// <summary>
         /// Keeps the header rows intact, then rebuilds the body as evenly-bounded rows
         /// (cut at the midpoints between consecutive record centers) across the detected
         /// column bounds. <c>headerRowCount</c> is the number of leading header rows to keep.
@@ -1445,16 +1451,18 @@ namespace MuPDF.NET
 
         /// <summary>
         /// Refine a detected table's cell grid and return the refined grid.
-        ///
+        /// </summary>
         /// <c>cells</c> is a row-major grid: a list of rows, each a list of
         /// <c>(x0, y0, x1, y1)</c> cell rectangles (null for a gap). The grid is refined
+        /// <summary>
         /// in three stages -- split rows that cell background shading separates, split
         /// columns that jam several values into one cell, and split body rows that merged
         /// several records -- using the page's words and vector graphics. The result is
         /// a new grid in the same format (rows may be added and rows may widen).
-        ///
+        /// </summary>
         /// <c>tableBbox</c> optionally bounds the table (else the cells' union is used).
         /// <c>headerRowCount</c> is the number of leading header rows to preserve when
+        /// <summary>
         /// re-cutting body rows (default 1). This is the all-in-one convenience wrapper;
         /// a caller needing the header boundary of the intermediate grid can instead
         /// call <see cref="RefineGridStructure"/> then <see cref="RefineGridRows"/>.
@@ -1474,7 +1482,8 @@ namespace MuPDF.NET
 
         /// <summary>
         /// Convert a Table's flat cell list into the row-major grid RefineGrid wants.
-        ///
+        /// </summary>
+        /// <summary>
         /// Mirrors Table.Rows: columns are the sorted distinct left edges, rows are the
         /// cells grouped by top edge, each padded with null where a column has no cell.
         /// </summary>
@@ -1531,8 +1540,7 @@ namespace MuPDF.NET
         }
 
         // ---------------------------------------------------------------------------
-        // find_tables(refine=True) reconstruction glue.
-        //
+
         // Resolve a merged-cell placement grid (falling back to a flat 1x1 grid when
         // span resolution changes the column count), determine the header/body split,
         // and tag each placement td/th. Built on ResolveSpans, FindHeaderRegion and
@@ -1575,7 +1583,8 @@ namespace MuPDF.NET
 
         /// <summary>
         /// Flat fallback grid: one 1x1 SpanCell per slot, padded to <c>colCount</c>.
-        ///
+        /// </summary>
+        /// <summary>
         /// Selects words per cell by center-point and synthesizes each cell's line text
         /// ("" for a gap), using the same word source and line builder as ResolveSpans.
         /// Used when span resolution changes the column count.
@@ -1687,7 +1696,7 @@ namespace MuPDF.NET
         /// <summary>
         /// Header/body boundary: resolve the merge-preserved placement grid once and
         /// ask the header finder how many leading rows are header, clamped to [1, rows].
-        /// Port of table.py <c>_refine_body_start_row</c>.
+        /// Port of <c>_refine_body_start_row</c>.
         /// </summary>
         internal static int BodyStartRow(
             Page page,
@@ -1711,7 +1720,7 @@ namespace MuPDF.NET
         /// <summary>
         /// Resolve the final placement grid (strict colspan, header boundary known),
         /// run header rules on its own text grid, tag cells -&gt; (tagged grid, region).
-        /// Port of table.py <c>_refine_build_placements</c>.
+        /// Port of <c>_refine_build_placements</c>.
         /// </summary>
         internal static (List<List<SpanCell>> placements, HeaderRegion region) BuildPlacements(
             Page page,
@@ -1721,8 +1730,138 @@ namespace MuPDF.NET
             var grid = PlacementOrFlatGrid(
                 page, working, strictColspan: true, headerRowCount: bodyStart);
             var region = TableHeaders.FindHeaderRegion(PlacementsTextGrid(grid));
-            var tagged = TagGrid(grid, region.TopHeaderRows);
-            return (tagged, region);
+            // The text-grid rules cannot see spans. A row added here holds at least two
+            int depth = TableHeaders.ExtendHeaderLeafLabels(grid, region.TopHeaderRows);
+            var tagged = TagGrid(grid, depth);
+            return (tagged, new HeaderRegion(depth, region.SectionHeaderRows));
+        }
+
+        /// <summary>
+        /// Merge-preserved model grid plus header counts
+        /// (<c>_refine_model_grid</c>).
+        /// </summary>
+        static (List<List<SpanCell>> grid, int headerRows, int bodyStart) ModelGrid(
+            Page page,
+            List<List<(float x0, float y0, float x1, float y1)?>> cells)
+        {
+            try
+            {
+                var grid = PlacementOrFlatGrid(page, cells);
+                var region = TableHeaders.FindHeaderRegion(PlacementsTextGrid(grid));
+                int headerRows = region.TopHeaderRows;
+                int bodyStart = cells != null && cells.Count > 0
+                    ? Math.Max(1, Math.Min(headerRows, cells.Count))
+                    : 0;
+                return (grid, headerRows, bodyStart);
+            }
+            catch
+            {
+                return (null, 0, 1);
+            }
+        }
+
+        /// <summary>
+        /// Rows at which a repeated leading header splits a stacked table
+        /// (<c>_refine_repeated_leading_header_cuts</c>).
+        /// </summary>
+        internal static int[] RepeatedLeadingHeaderCuts(List<List<string>> rows, int headerRows)
+        {
+            if (rows == null || rows.Count == 0)
+                return Array.Empty<int>();
+            var normalized = rows
+                .Select(row => row.Select(t => TableHeaders.CollapseCellWs(t)?.ToLowerInvariant() ?? "").ToList())
+                .ToList();
+            int width = normalized.Max(r => r.Count);
+            if (width < 2)
+                return Array.Empty<int>();
+            int scan = Math.Min(Math.Max(headerRows, 3), normalized.Count);
+            for (int index = 0; index < scan; index++)
+            {
+                var signature = normalized[index];
+                if (signature.Count * 2 < width)
+                    continue;
+                var nonempty = signature.Where(t => !string.IsNullOrEmpty(t)).ToList();
+                if (nonempty.Count < 2)
+                    continue;
+                if (!nonempty.Any(t => t.Any(char.IsLetter)))
+                    continue;
+                var repeats = new List<int>();
+                for (int rowIndex = index + 1; rowIndex < normalized.Count; rowIndex++)
+                {
+                    if (normalized[rowIndex].Count == signature.Count
+                        && normalized[rowIndex].SequenceEqual(signature))
+                        repeats.Add(rowIndex);
+                }
+                if (repeats.Count == 0)
+                    continue;
+                var signatureRows = new List<int> { index };
+                signatureRows.AddRange(repeats);
+                var segmentEnds = new List<int>(repeats) { normalized.Count };
+                bool ok = true;
+                for (int i = 0; i < signatureRows.Count; i++)
+                {
+                    if (segmentEnds[i] - signatureRows[i] < 2)
+                    {
+                        ok = false;
+                        break;
+                    }
+                }
+                return ok ? repeats.ToArray() : Array.Empty<int>();
+            }
+            return Array.Empty<int>();
+        }
+
+        /// <summary>
+        /// Refine one detected table and yield the resulting tagged tables
+        /// (<c>_refine_grid_tables</c>).
+        /// </summary>
+        internal static IEnumerable<Table> RefineGridTables(
+            Page page,
+            Table tab,
+            List<Dictionary<string, object>> chars,
+            TextPage textpage)
+        {
+            var grid = CellsToGrid(tab.Cells);
+            var working = RefineGridStructure(page, grid, tableBbox: tab.bbox);
+            var (modelGrid, headerRows, bodyStart) = ModelGrid(page, working);
+            int[] cuts;
+            if (modelGrid == null)
+            {
+                bodyStart = 1;
+                cuts = Array.Empty<int>();
+            }
+            else
+                cuts = RepeatedLeadingHeaderCuts(PlacementsTextGrid(modelGrid), headerRows);
+
+            var segments = new List<List<List<(float x0, float y0, float x1, float y1)?>>>();
+            if (cuts.Length > 0)
+            {
+                var boundaries = new List<int> { 0 };
+                boundaries.AddRange(cuts);
+                boundaries.Add(working.Count);
+                for (int i = 0; i < boundaries.Count - 1; i++)
+                    segments.Add(working.GetRange(boundaries[i], boundaries[i + 1] - boundaries[i]));
+            }
+            else
+                segments.Add(working);
+
+            bool wasSplit = segments.Count > 1;
+            foreach (var segment in segments)
+            {
+                int start = wasSplit ? BodyStartRow(page, segment) : bodyStart;
+                var refined = RefineGridRows(page, segment, headerRowCount: start);
+                var flat = GridToCells(refined);
+                if (flat.Count == 0 && wasSplit)
+                    continue;
+                var newTab = flat.Count > 0
+                    ? new Table(page, flat, chars, textpage, bbox: wasSplit ? null : tab._bbox)
+                    : tab;
+                var (placements, region) = BuildPlacements(page, refined, start);
+                newTab.Placements = placements;
+                newTab.HeaderRows = region.TopHeaderRows;
+                newTab.SectionRows = region.SectionHeaderRows;
+                yield return newTab;
+            }
         }
 
         // --- geometry / drawings helpers ---------------------------------------------

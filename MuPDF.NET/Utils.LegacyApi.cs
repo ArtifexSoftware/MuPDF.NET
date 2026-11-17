@@ -250,7 +250,7 @@ namespace MuPDF.NET
         /// <summary>Assign unique <c>/NM</c> to an annotation (legacy <c>AddAnnotId</c>).</summary>
         public static void AddAnnotId(mupdf.PdfAnnot annot, string stem)
         {
-            var page = annot.pdf_annot_page();
+            using var page = annot.pdf_annot_page();
             var annotObj = annot.pdf_annot_obj();
             var names = GetAnnotIdList(page);
             int i = 0;
@@ -491,7 +491,7 @@ namespace MuPDF.NET
             }
         }
 
-        // ─── Legacy snake_case aliases ───────────────────────────────────
+        // ─── Legacy internal aliases ───────────────────────────────────
 
         internal static Rect infinite_rect() => INFINITE_RECT();
         internal static IRect infinite_irect() => INFINITE_IRECT();

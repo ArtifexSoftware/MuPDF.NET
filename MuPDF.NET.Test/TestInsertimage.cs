@@ -9,8 +9,8 @@ using Xunit;
 
 namespace MuPDF.NET.Test
 {
-    /// <summary>
-    /// </summary>
+
+
     /// <remarks>
     /// Inputs: <c>TestDocuments/TestInsertimage/</c>; outputs: <c>TestDocuments/_Output/TestInsertimage/</c>.
     /// </remarks>
@@ -20,6 +20,8 @@ namespace MuPDF.NET.Test
         private const string TestClassName = nameof(TestInsertimage);
 
         private static string Doc(string fileName) => _Path.ForTestClass(fileName, TestClassName);
+
+        private static string Resources(string fileName) => _Path.ForTestClass(fileName, "Resources");
 
         private static string Out(string fileName) => _Path.ForOutput(fileName, TestClassName);
 
@@ -114,6 +116,7 @@ namespace MuPDF.NET.Test
             var mask = (byte[])doc.extract_image(5)["image"];
             page = doc.NewPage();
             page.InsertImage(page.Rect, stream: base_, mask: mask);
+            doc.Save(Out("test_3087_1.pdf"));
 
             using var doc2 = new Document(Doc("test_3087.pdf"));
             page = doc2[0];
@@ -122,7 +125,44 @@ namespace MuPDF.NET.Test
             mask = (byte[])doc2.extract_image(6)["image"];
             page = doc2.NewPage();
             page.InsertImage(page.Rect, stream: base_, mask: mask);
-            doc2.Save(Out("test_3087.pdf"));
+            doc2.Save(Out("test_3087_2.pdf"));
+        }
+
+        /// <summary>
+        /// Check for regressions in Page.insert_image's handling of keep, width and
+        /// height args.
+        /// </summary>
+        [Fact]
+        public void test_insert_image_stretch()
+        {
+            // height args.
+            Console.WriteLine();
+            int numFails = 0;
+            foreach (int keep in new[] { 0, 1 })
+            {
+                foreach (int width in new[] { 100, 400, 500 })
+                {
+                    foreach (int height in new[] { width, 150, 300, 450 })
+                    {
+                        using var document = new Document();
+                        var page = document.NewPage(width: 400, height: 300);
+                        using var pixmap = new Pixmap(Colorspace.Rgb, new IRect(0, 0, width, height), 0);
+                        pixmap.SetRect(pixmap.IRect, new float[] { 1f, 0f, 0f });
+                        page.InsertImage(page.Rect, pixmap: pixmap);
+                        string path = Out($"test_insert_image_stretch_{keep}_{width}_{height}.pdf");
+                        string pathExpected = Resources($"test_insert_image_stretch_{keep}_{width}_{height}.png");
+                        using var pagePixmap = page.GetPixmap();
+                        document.Save(path);
+                        // if 0:
+                        // Update expected output.
+                        float rms = _Compare.PixmapsRms(pagePixmap, pathExpected);
+                        if (rms != 0)
+                            numFails += 1;
+                        Console.WriteLine($"test_square_aspect_ratio():. Have created {path}. rms={rms}.");
+                    }
+                }
+            }
+            Assert.True(numFails == 0, $"num_fails={numFails}");
         }
     }
 }

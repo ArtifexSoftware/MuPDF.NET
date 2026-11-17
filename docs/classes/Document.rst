@@ -550,6 +550,11 @@ This class represents a document. It can be constructed from a file or from memo
 
   .. note::
 
+        Documents also support index access, matching PyMuPDF ``doc[n]`` / ``doc[(chapter, pno)]``:
+
+        * ``doc[n]`` is ``doc.LoadPage(n)`` (membership check then load; out of range raises ``IndexOutOfRangeException``).
+        * ``doc[(chapter, pno)]`` loads a chapter page. For PDFs, chapter count is 1, so ``doc[(0, pno)]`` is valid.
+        * Other key types (for example ``doc["0"]``) raise ``InvalidOperationException``: ``Invalid item number``.
 
   .. method:: ReloadPage(Page page)
 
@@ -716,9 +721,9 @@ This class represents a document. It can be constructed from a file or from memo
 
     :arg bool simple: Indicates whether a simple or a detailed TOC is required. If *false*, each item of the list also contains a dictionary with :ref:`linkDest` details for each outline entry.
 
-    :rtype: list
+    :rtype: TocResult
 
-    :returns: a list of lists. Each entry has the form *[lvl, title, page, dest]*. Its entries have the following meanings:
+    :returns: a ``TocResult`` (also usable as ``List<Toc>``). Each entry has the form *[lvl, title, page, dest]*. Pass the result to :meth:`Document.SetToc` to copy bookmarks (PyMuPDF ``set_toc(get_toc(...))``). Fields:
 
       * *lvl* -- hierarchy level (positive *int*). The first entry is always 1. Entries in a row are either **equal**, **increase** by 1, or **decrease** by any number.
       * *title* -- title (*string*)
@@ -976,7 +981,10 @@ This class represents a document. It can be constructed from a file or from memo
     :arg Dictionary<string, bool> value: a dictionary like this one: `{"Marked": false, "UserProperties": false, "Suspects": false}`. This dictionary contains information about the usage of Tagged PDF conventions. For details please see the `PDF specifications <https://opensource.adobe.com/dc-acrobat-sdk-docs/standards/pdfstandards/pdf/PDF32000_2008.pdf>`_.
 
 
-  .. method:: SetToc(List<Toc> tocs, int collapse: 1)
+  .. method:: SetToc(TocResult toc, int collapse: 1)
+              SetToc(IEnumerable<(int level, string title, int page, Dictionary<string, object> link)> toc, int collapse: 1)
+              SetToc(IList<object> toc, int collapse: 1)
+              SetToc(List<Toc> toc, int collapse: 1)
 
     PDF only: Replaces the **complete current outline** tree (table of contents) with the one provided as the argument. After successful execution, the new outline tree can be accessed as usual via :meth:`Document.GetToc` or via :attr:`Document.Outline`. Like with other output-oriented methods, changes become permanent only via :meth:`Save` (incremental save supported). Internally, this method consists of the following two steps. For a demonstration see example below.
 
@@ -984,9 +992,17 @@ This class represents a document. It can be constructed from a file or from memo
 
     - Step 2 creates a new TOC from the entries contained in *toc*.
 
-    :arg List<Toc> toc:
+    The preferred call is the PyMuPDF roundtrip: ``newDoc.SetToc(pdf.GetToc(simple: false))``. That keeps dest dictionaries (zoom, named dest, color, collapse, …).
 
-        A list / tuple with **all bookmark entries** that should form the new table of contents. Output variants of :meth:`GetToc` are acceptable. To completely remove the table of contents specify an empty sequence or None. Each item must be a list with the following format.
+    Overloads:
+
+    * **TocResult** / dest tuple rows — result of :meth:`Document.GetToc`. Dest dicts from ``GetToc(simple: false)`` are kept.
+    * **IList<object>** — Python-style rows ``[level, title, page]`` or ``[level, title, page, dest]``. Empty list or ``null`` removes the TOC.
+    * **List<Toc>** — legacy shim: copies **level, title, and page only** (dest dicts are not written). Prefer ``SetToc(GetToc())`` when dests must be preserved.
+
+    :arg toc:
+
+        **All bookmark entries** that should form the new table of contents. To completely remove the table of contents specify an empty sequence or None. Each item must have the following format.
 
         * [Level, Title, Page [, Dest]] where
 
@@ -1002,6 +1018,13 @@ This class represents a document. It can be constructed from a file or from memo
 
     :rtype: int
     :returns: the number of inserted, resp. deleted items.
+
+    Copy TOC after :meth:`Document.InsertPdf` (TOC is not copied with the pages)::
+
+        using var pdf = new Document("input.pdf");
+        using var newDoc = new Document();
+        newDoc.InsertPdf(pdf);
+        newDoc.SetToc(pdf.GetToc(simple: false));
 
   .. method:: DeleteTocItem(int idx)
 
@@ -1206,7 +1229,7 @@ This class represents a document. It can be constructed from a file or from memo
 
      2. If `fromPage > toPage`, pages will be **copied in reverse order**. If `0 <= fromPage == toPage`, then one page will be copied.
 
-     3. `docsrc` TOC entries **will not be copied**. It is easy however, to recover a table of contents for the resulting document. Look at the examples below and at program `https://github.com/ArtifexSoftware/MuPDF.NET/tree/main/Examples/JoinDoc`_ in the *examples* directory: it can join PDF documents and at the same time piece together respective parts of the tables of contents.
+     3. `docsrc` TOC entries **will not be copied**. Recover them with ``newDoc.SetToc(pdf.GetToc(simple: false))`` (same as PyMuPDF ``set_toc(get_toc(simple=False))``). For joining several files while stitching TOC ranges, see `https://github.com/ArtifexSoftware/MuPDF.NET/tree/main/Examples/JoinDoc`_ in the *examples* directory.
 
 
   .. index::

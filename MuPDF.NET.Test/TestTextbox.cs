@@ -1,4 +1,4 @@
-// Fill a given text in a rectangle on some PDF page using
+﻿// Fill a given text in a rectangle on some PDF page using
 // 1. TextWriter object
 // 2. Basic text output
 // Check text is indeed contained in given rectangle.
@@ -8,7 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using Xunit;
-
+using MuPDF.NET;
 namespace MuPDF.NET.Test
 {
     /// <remarks>
@@ -66,7 +66,6 @@ namespace MuPDF.NET.Test
             (((srgb >> 16) & 255) / 255.0f, ((srgb >> 8) & 255) / 255.0f, (srgb & 255) / 255.0f);
 
         // codespell:ignore-begin
-        // text = """Der Kleine Schwertwal (Pseudorca crassidens), auch bekannt als Unechter oder Schwarzer Schwertwal, ist eine Art der Delfine (Delphinidae) und der einzige rezente Vertreter der Gattung Pseudorca.
         // Er ähnelt dem Orca in Form und Proportionen, ist aber einfarbig schwarz und mit einer Maximallänge von etwa sechs Metern deutlich kleiner.
         // Kleine Schwertwale bilden Schulen von durchschnittlich zehn bis fünfzig Tieren, wobei sie sich auch mit anderen Delfinen vergesellschaften und sich meistens abseits der Küsten aufhalten.
         // Sie sind in allen Ozeanen gemäßigter, subtropischer und tropischer Breiten beheimatet, sind jedoch vor allem in wärmeren Jahreszeiten auch bis in die gemäßigte bis subpolare Zone südlich der Südspitze Südamerikas, vor Nordeuropa und bis vor Kanada anzutreffen."""
@@ -81,15 +80,12 @@ namespace MuPDF.NET.Test
         public void test_textbox1()
         {
             using var doc = new Document();
-            // page = doc.NewPage()
+
             var page = doc.NewPage();
             var rect = new Rect(50, 50, 400, 400);
-            // blue = (0, 0, 1)
             var tw = new TextWriter(page.Rect, color: _Constants.blue);
-            // tw.FillTextbox(
-            //     rect,
-            //     text,
-            // )
+            // rect,
+            // text,
             tw.FillTextbox(
                 rect,
                 text,
@@ -98,7 +94,6 @@ namespace MuPDF.NET.Test
             tw.WriteText(page, morphFix: rect.TopLeft, morphMat: new Matrix(1, 1));
             // check text containment
             Assert.Equal(page.GetText(), page.GetText("text", clip: rect.IRect));
-            // page.WriteText(writers=tw)
             page.WriteText(writers: new[] { tw });
             doc.Save(Out("test_textbox1.pdf"));
         }
@@ -107,20 +102,15 @@ namespace MuPDF.NET.Test
         public void test_textbox2()
         {
             using var doc = new Document();
-            // ocg = doc.AddOcg("ocg1")
             int ocg = doc.AddOcg("ocg1");
-            // page = doc.NewPage()
+
             var page = doc.NewPage();
             var rect = new Rect(50, 50, 400, 400);
             var blueRgb = Utils.GetColor("lightblue");
             float[] blue = { blueRgb.r, blueRgb.g, blueRgb.b };
             _ = Utils.GetColorHSV("red");
-            // page.InsertTextbox(
-            //     rect,
-            //     text,
-            //     color=blue,
-            //     oc=ocg,
-            // )
+            // rect,
+            // text,
             page.InsertTextbox(
                 rect,
                 text,
@@ -137,49 +127,38 @@ namespace MuPDF.NET.Test
         public void test_textbox3()
         {
             using var doc = new Document();
-            // page = doc.NewPage()
+
             var page = doc.NewPage();
-            //var font = new Font("cjk");
             var rect = new Rect(50, 50, 400, 400);
-            // blue = (0, 0, 1)
             var tw = new TextWriter(page.Rect, color: _Constants.blue);
-            // tw.FillTextbox(
-            //     rect,
-            //     text,
-            //     font=font,
-            //     right_to_left=True,
-            // )
+            // tw.fill_textbox(
+            // rect,
+            // text,
             tw.FillTextbox(
                 rect,
                 text,
                 align: Constants.TextAlignLeft,
-                //font: font,
                 fontSize: 12,
                 rightToLeft: true);
             tw.WriteText(page, morphFix: rect.TopLeft, morphMat: new Matrix(1, 1));
             // check text containment
             Assert.Equal(page.GetText(), page.GetText("text", clip: rect.IRect));
-            doc.Save(Out("test_textbox3.pdf"));
-            doc.scrub();
+            doc.Scrub();
             doc.SubsetFonts();
+            doc.Save(Out("test_textbox3.pdf"));
         }
 
         [Fact]
         public void test_textbox4()
         {
             using var doc = new Document();
-            // ocg = doc.AddOcg("ocg1")
             int ocg = doc.AddOcg("ocg1");
-            // page = doc.NewPage()
+
             var page = doc.NewPage();
             var rect = new Rect(50, 50, 400, 600);
-            // blue = (0, 0, 1)
             var tw = new TextWriter(page.Rect, color: _Constants.blue);
-            // tw.FillTextbox(
-            //     rect,
-            //     text,
-            //     right_to_left=True,
-            // )
+            // rect,
+            // text,
             tw.FillTextbox(
                 rect,
                 text,
@@ -201,23 +180,18 @@ namespace MuPDF.NET.Test
             try
             {
                 using var doc = new Document();
-                // page = doc.NewPage()
+
                 var page = doc.NewPage();
                 var r = new Rect(100, 100, 150, 150);
-                // text = "words and words and words and more words..."
                 string text5 = "words and words and words and more words...";
-                // rc = -1
                 int rc = -1;
                 float fontsize = 12;
-                // page.DrawRect(r)
                 page.DrawRect(r);
-                // while rc < 0:
+                // while rc <0:
                 while (rc < 0)
                 {
-                    // rc = page.InsertTextbox(
-                    //     r,
-                    //     text,
-                    // )
+                    // r,
+                    // text,
                     (rc, _) = page.InsertTextbox(
                         r,
                         text5,
@@ -226,10 +200,14 @@ namespace MuPDF.NET.Test
                     fontsize -= 0.5f;
                 }
 
-                // blocks = page.GetText("blocks")
-                var blocks = page.get_text_blocks();
-                var bbox = new Rect(blocks[0].x0, blocks[0].y0, blocks[0].x1, blocks[0].y1);
-                Assert.True(r.Contains(bbox));
+
+                var blocks = (List<TextBlock>)page.GetText("blocks");
+
+                var bbox = new Rect(blocks[0].X0, blocks[0].Y0, blocks[0].X1, blocks[0].Y1);
+                // Need small allowance if layout is imported.
+                Assert.True(
+                    (r + new Rect(-0.01f, -0.01f, 0.01f, 0.01f)).Contains(bbox),
+                    $"bbox={bbox} r={r}");
                 doc.Save(Out("test_textbox5.pdf"));
             }
             finally
@@ -243,29 +221,25 @@ namespace MuPDF.NET.Test
         public void test_2637()
         {
             using var doc = new Document();
-            // page = doc.NewPage()
+
             var page = doc.NewPage();
-            // text = (
-            // )
             string text2637 =
                 "The morning sun painted the sky with hues of orange and pink. " +
                 "Birds chirped harmoniously, greeting the new day. " +
                 "Nature awakened, filling the air with life and promise.";
             var rect = new Rect(50, 50, 500, 280);
             float fontsize = 50;
-            // rc = -1
             int rc = -1;
-            // while rc < 0:  # look for largest font size that makes the text fit
+            // while rc <0: # look for largest font size that makes the text fit
             while (rc < 0)
             {
-                // rc = page.InsertTextbox(rect, text, fontname="hebo", fontsize=fontsize)
                 (rc, _) = page.InsertTextbox(rect, text2637, fontName: "hebo", fontSize: fontsize);
                 fontsize -= 1;
             }
 
             // confirm text won't lap outside rect
-            // blocks = page.GetText("blocks")
-            var blocks = page.get_text_blocks();
+
+            var blocks = page.GetTextBlocks();
             var bbox = new Rect(blocks[0].x0, blocks[0].y0, blocks[0].x1, blocks[0].y1);
             Assert.True(rect.Contains(bbox));
             doc.Save(Out("test_2637.pdf"));
@@ -276,20 +250,14 @@ namespace MuPDF.NET.Test
         {
             // The text is styled and contains a link.
             // Then extract the text again, and
-            // - assert that text was written in the 4 different angles,
-            // - assert that text properties are correct (bold, italic, color),
-            // - assert that the link has been correctly inserted.
             // We try to insert into a rectangle that is too small, setting
-            // scale=False and confirming we have a negative return code.
-            //     return
+            // return
 
             var rect = _Constants.rect;
 
-            // base_text = """Lorem ipsum dolor sit amet, consectetur adipisici elit, sed eiusmod tempor incidunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquid ex ea commodi consequat. Quis aute iure reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint obcaecat cupiditat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."""
             string base_text =
                 "Lorem ipsum dolor sit amet, consectetur adipisici elit, sed eiusmod tempor incidunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquid ex ea commodi consequat. Quis aute iure reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint obcaecat cupiditat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.";
 
-            // text = """Lorem ipsum dolor sit amet, consectetur adipisici elit, sed eiusmod tempor incidunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation <b>ullamco</b> <i>laboris</i> nisi ut aliquid ex ea commodi consequat. Quis aute iure reprehenderit in <span style="color: #0f0;font-weight:bold;">voluptate</span> velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint obcaecat cupiditat non proident, sunt in culpa qui <a href="https://www.artifex.com">officia</a> deserunt mollit anim id est laborum."""
             string html_text =
                 "Lorem ipsum dolor sit amet, consectetur adipisici elit, sed eiusmod tempor incidunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation <b>ullamco</b> <i>laboris</i> nisi ut aliquid ex ea commodi consequat. Quis aute iure reprehenderit in <span style=\"color: #0f0;font-weight:bold;\">voluptate</span> velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint obcaecat cupiditat non proident, sunt in culpa qui <a href=\"https://www.artifex.com\">officia</a> deserunt mollit anim id est laborum.";
 
@@ -297,24 +265,19 @@ namespace MuPDF.NET.Test
 
             foreach (var rot in new[] { 0, 90, 180, 270 })
             {
-                // wdirs = ((1, 0), (0, -1), (-1, 0), (0, 1))  # all writing directions
                 (float, float)[] wdirs = { (1, 0), (0, -1), (-1, 0), (0, 1) };
-                // page = doc.NewPage()
+
                 var page = doc.NewPage();
-                // spare_height, scale = page.InsertHtmlbox(rect, text, rotate=rot, scale_low=1)
                 (float spare_height, float scale) = page.InsertHtmlbox(rect, html_text, css: null, scaleLow: 1, archive: null, rotate: rot);
                 Assert.True(spare_height < 0);
                 Assert.Equal(1, scale);
-                // spare_height, scale = page.InsertHtmlbox(rect, text, rotate=rot, scale_low=0)
                 (spare_height, scale) = page.InsertHtmlbox(rect, html_text, css: null, scaleLow: 0, archive: null, rotate: rot);
-                // page.DrawRect(rect, (1, 0, 0))
                 page.DrawRect(rect, _Constants.red);
                 doc.Save(Out("test_htmlbox1.pdf"));
                 Assert.True(Math.Abs(spare_height - 3.8507) < 0.001);
                 Assert.True(0 < scale && scale < 1);
-                // page = doc.ReloadPage(page)
+
                 page = doc.ReloadPage(page);
-                // link = page.GetLinks()[0]  # extracts the links on the page
                 var link = page.GetLinks()[0];
 
                 Assert.Equal("https://www.artifex.com", link["uri"]);
@@ -323,29 +286,23 @@ namespace MuPDF.NET.Test
                 string pageText = (string)page.GetText(flags: 0);
                 Assert.Equal(base_text, pageText[..^1].Replace("\n", " "));
 
-                // encounters = 0  # counts the words with selected properties
                 int encounters = 0;
                 var dict = (Dictionary<string, object>)page.GetText("dict");
                 foreach (var b in (List<Dictionary<string, object>>)dict["blocks"])
                 {
                     foreach (var l in (List<Dictionary<string, object>>)b["lines"])
                     {
-                        // wdir = l["dir"]  # writing direction
                         var wdirArr = (float[])l["dir"];
                         var wdir = (wdirArr[0], wdirArr[1]);
                         Assert.Equal(wdirs[page.Number], wdir);
                         foreach (var s in (List<Dictionary<string, object>>)l["spans"])
                         {
-                            // stext = s["text"]
                             string stext = (string)s["text"];
                             var color = SRgbToPdf(Convert.ToInt32(s["color"]));
-                            // bold = bool(s["flags"] & 16)
                             bool bold = (Convert.ToUInt32(s["flags"]) & Constants.TextFontBold) != 0;
-                            // italic = bool(s["flags"] & 2)
                             bool italic = (Convert.ToUInt32(s["flags"]) & Constants.TextFontItalic) != 0;
                             if (stext is "ullamco" or "laboris" or "voluptate")
                             {
-                                // encounters += 1
                                 encounters += 1;
                                 if (stext == "ullamco")
                                 {
@@ -383,24 +340,20 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_htmlbox2()
         {
-            //     return
+            // return
 
             using var doc = new Document();
             var rect = _Constants.rect;
-            // page = doc.NewPage()
+
             var page = doc.NewPage();
-            // bottoms = set()
             var bottoms = new HashSet<float>();
             foreach (var rot in new[] { 0, 90, 180, 270 })
             {
-                // spare_height, scale = page.InsertHtmlbox(
-                //     rect, "Hello, World!", scale_low=1, rotate=rot
-                // )
+                // rect, "Hello, World!", scale_low=1, rotate=rot
                 (float spare_height, float scale) = page.InsertHtmlbox(
                     rect, "Hello, World!", css: null, scaleLow: 1, archive: null, rotate: rot);
                 Assert.Equal(1, scale);
                 Assert.True(0 < spare_height && spare_height < rect.Height);
-                // bottoms.add(spare_height)
                 bottoms.Add(spare_height);
             }
             Assert.Single(bottoms);
@@ -410,21 +363,18 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_htmlbox3()
         {
-            //     return
+            // return
 
             var rect = new Rect(100, 250, 300, 350);
-            // text = """<span style="color:red;font-size:20px;">Just some text.</span>"""
             string html = "<span style=\"color:red;font-size:20px;\">Just some text.</span>";
             using var doc = new Document();
-            // page = doc.NewPage()
+
             var page = doc.NewPage();
 
             // insert some text with opacity
-            // page.InsertHtmlbox(rect, text, opacity=0.5)
             page.InsertHtmlbox(rect, html, css: null, scaleLow: 0f, opacity: 0.5f, rotate: 0, oc: 0);
 
             // lowlevel-extract inserted text to access opacity
-            // span = page.GetTextTrace()[0]
             var span = page.GetTextTrace()[0];
             Assert.Equal(0.5, Convert.ToDouble(span["opacity"]));
             doc.Save(Out("test_htmlbox3.pdf"));
@@ -434,12 +384,10 @@ namespace MuPDF.NET.Test
         public void test_3559()
         {
             using var doc = new Document();
-            // page = doc.NewPage()
+
             var page = doc.NewPage();
-            // text_insert="""<body><h3></h3></body>"""
             string text_insert = "<body><h3></h3></body>";
             var rect = _Constants.rect;
-            // page.InsertHtmlbox(rect, text_insert)
             page.InsertHtmlbox(rect, text_insert, css: null, scaleLow: 0f, opacity: 1f, rotate: 0, oc: 0);
             doc.Save(Out("test_3559.pdf"));
         }
@@ -449,9 +397,8 @@ namespace MuPDF.NET.Test
         {
             using var doc = new Document();
             var rect = new Rect(100, 100, 101, 101);
-            // page = doc.NewPage()
+
             var page = doc.NewPage();
-            // spare_height, scale = page.InsertHtmlbox(rect, "Hello, World!", scale_low=0.5)
             (float spare_height, float scale) = page.InsertHtmlbox(rect, "Hello, World!", css: null, scaleLow: 0.5f, archive: null);
             Assert.Equal(-1, spare_height);
             doc.Save(Out("test_3916.pdf"));
@@ -461,13 +408,13 @@ namespace MuPDF.NET.Test
         public void test_4400()
         {
             using var document = new Document();
-            // page = document.NewPage()
+
             var page = document.NewPage();
             var writer = new TextWriter(page.Rect);
-            // text = '111111111'
             string text4400 = "111111111";
             Console.WriteLine("Calling writer.FillTextbox().");
             writer.FillTextbox(rect: new Rect(0, 0, 100, 20), pos: new Point(80, 0), text: text4400, fontSize: 8);
+            writer.WriteText(page);
             document.Save(Out("test_4400.pdf"));
         }
 
@@ -475,7 +422,6 @@ namespace MuPDF.NET.Test
         public void test_4613()
         {
             Console.WriteLine();
-            // text = 3 * 'abcdefghijklmnopqrstuvwxyz\nABCDEFGHIJKLMNOPQRSTUVWXYZ\n'
             string text4613 = string.Concat(
                 Enumerable.Repeat("abcdefghijklmnopqrstuvwxyz\nABCDEFGHIJKLMNOPQRSTUVWXYZ\n", 3));
             using var story = new Story(text4613);
@@ -486,34 +432,25 @@ namespace MuPDF.NET.Test
             Console.WriteLine("test_4613(): ### Testing default operation.");
             using (var doc = new Document())
             {
-                // page = doc.NewPage()
+
                 var page = doc.NewPage();
-                // spare_height, scale = page.InsertHtmlbox(rect, story)
                 (float spare_height, float scale) = page.InsertHtmlbox(rect, story);
                 Console.WriteLine($"test_4613(): spare_height={spare_height} scale={scale}");
                 // The additional down-scaling from the long word widths results in
                 // spare vertical space.
-                // page.DrawRect(rect, (1, 0, 0))
                 page.DrawRect(rect, _Constants.red);
-                // path = "D:\\Artifex\\TestDocuments\\TestTextbox\\test_4613_0_.pdf"
                 string path = Out("test_4613_0.pdf");
                 doc.Save(path);
 
-                // path_pixmap = 'D:\\Artifex\\TestDocuments\\TestTextbox\\test_4613_.png'
                 string path_pixmap = Out("test_4613.png");
-                // path_pixmap_expected = os.path.normpath(f'{__file__}/../../tests/resources/test_4613.png')
+
                 string path_pixmap_expected = Path.GetFullPath(Resource("test_4613.png"));
-                // pixmap = page.GetPixmap(dpi=300)
                 var pixmap = page.GetPixmap(dpi: 300);
-                // pixmap.Save(path_pixmap)
                 pixmap.Save(path_pixmap);
 
-                // pixmap_diff = gentle_compare.pixmaps_diff(path_pixmap_expected, pixmap)
                 using var pixmap_diff = _Compare.PixmapsDiff(path_pixmap_expected, pixmap);
-                // pixmap_diff.Save('D:\\Artifex\\TestDocuments\\TestTextbox\\test_4613-diff_.png')
                 pixmap_diff.Save(Out("test_4613-diff.png"));
 
-                // rms = gentle_compare.pixmaps_rms(pixmap, path_pixmap_expected)
                 float rms = _Compare.PixmapsRms(pixmap, path_pixmap_expected);
                 Console.WriteLine($"rms={rms}");
                 Assert.True(Math.Abs(rms) < 0.22);
@@ -521,7 +458,6 @@ namespace MuPDF.NET.Test
                 Assert.True(Math.Abs(spare_height - 45.7536) < 0.1);
                 Assert.True(Math.Abs(scale - 0.4009) < 0.01);
 
-                // new_text = page.GetText('text', clip=rect)
                 string new_text = (string)page.GetText("text", clip: rect.IRect);
                 Console.WriteLine("test_4613(): new_text:");
                 Console.WriteLine(Indent(new_text, "    "));
@@ -529,20 +465,16 @@ namespace MuPDF.NET.Test
                 doc.Save(Out("test_4613_1.pdf"));
             }
 
-            // Check with _scale_word_width=False - ignore too-wide words.
             Console.WriteLine("test_4613(): ### Testing with _scale_word_width=False.");
             using (var doc = new Document())
             {
-                // page = doc.NewPage()
+
                 var page = doc.NewPage();
-                // spare_height, scale = page.InsertHtmlbox(rect, story, _scale_word_width=False)
                 (float spare_height, float scale) = page.InsertHtmlbox(rect, story, scaleWordWidth: false);
                 Console.WriteLine($"test_4613(): _scale_word_width=False: spare_height={spare_height} scale={scale}");
-                // rect, so we should have spare_height == 0 and only a small amount of
                 // down-scaling.
                 Assert.Equal(0, spare_height);
                 Assert.True(Math.Abs(scale - 0.914) < 0.01);
-                // new_text = page.GetText('text', clip=rect)
                 string new_text = (string)page.GetText("text", clip: rect.IRect);
                 Console.WriteLine("test_4613(): new_text:");
                 Console.WriteLine(Indent(new_text, "    "));
@@ -556,19 +488,16 @@ namespace MuPDF.NET.Test
                     """);
                 if (expectedTruncated.Length > 0 && expectedTruncated[0] == '\n')
                     expectedTruncated = expectedTruncated.Substring(1);
-                //Assert.Equal(expectedTruncated, new_text);
+                // Assert.Equal(expectedTruncated, new_text);
                 doc.Save(Out("test_4613_2.pdf"));
             }
 
-            // Check that we get no fit if scale_low is not low enough.
             Console.WriteLine("test_4613(): ### Testing with scale_low too high to allow a fit.");
             using (var doc = new Document())
             {
-                // page = doc.NewPage()
+
                 var page = doc.NewPage();
-                // scale_low=0.6
                 float scale_low = 0.6f;
-                // spare_height, scale = page.InsertHtmlbox(rect, story, scale_low=scale_low)
                 (float spare_height, float scale) = page.InsertHtmlbox(rect, story, scaleLow: scale_low);
                 Console.WriteLine($"test_4613(): scale_low={scale_low}: spare_height={spare_height} scale={scale}");
                 Assert.Equal(-1, spare_height);

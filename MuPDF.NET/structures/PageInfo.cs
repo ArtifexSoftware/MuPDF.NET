@@ -4,7 +4,7 @@ namespace MuPDF.NET
 {
     /// <summary>
     /// Typed page text dict from <see cref="TextPage.TextPage2Dict"/>; also dictionary-shaped
-    /// for / <c>get_text("rawdict")</c> callers.
+    /// for raw-dict text extraction callers.
     /// </summary>
     public class PageInfo : TextPageDict
     {

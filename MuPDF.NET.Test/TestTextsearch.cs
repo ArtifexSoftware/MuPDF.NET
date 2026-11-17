@@ -1,5 +1,6 @@
 // Search for some text on a PDF page, and compare content of returned hit
 // rectangle with the searched text.
+
 // Text search with 'clip' parameter - clip rectangle contains two occurrences
 // of searched text. Confirm search locations are inside clip.
 using System;
@@ -18,20 +19,23 @@ namespace MuPDF.NET.Test
 
         private static string Doc(string fileName) => _Path.ForTestClass(fileName, TestClassName);
 
-        private static string Out(string fileName) => _Path.ForOutput(fileName, TestClassName);
-
-        /// <summary>Default <see cref="Page.SearchFor"/> flags when none are specified.</summary>
-        private static int TextFlagsSearchDefault =>
-            0
-            | mupdf.mupdf.FZ_STEXT_DEHYPHENATE
+        /// <summary>
+        /// Default search flags when the caller does not pass flags:
+        /// dehyphenate, preserve whitespace, preserve ligatures, mediabox clip.
+        /// <see cref="Page.SearchForRects"/> with <c>flags: 0</c> is not this default.
+        /// </summary>
+        private static int SearchForDefaultFlags() =>
+            mupdf.mupdf.FZ_STEXT_DEHYPHENATE
             | mupdf.mupdf.FZ_STEXT_PRESERVE_WHITESPACE
             | mupdf.mupdf.FZ_STEXT_PRESERVE_LIGATURES
             | mupdf.mupdf.FZ_STEXT_MEDIABOX_CLIP;
 
-        /// <summary>Default text-search flag set.</summary>
-        private static int TextFlagsSearch =>
-            0
-            | mupdf.mupdf.FZ_STEXT_PRESERVE_WHITESPACE
+        /// <summary>
+        /// Search flags without preserve-ligatures.
+        /// <see cref="Constants.TextFlagsSearch"/> currently includes ligatures.
+        /// </summary>
+        private static int TextFlagsSearch() =>
+            mupdf.mupdf.FZ_STEXT_PRESERVE_WHITESPACE
             | mupdf.mupdf.FZ_STEXT_MEDIABOX_CLIP
             | mupdf.mupdf.FZ_STEXT_DEHYPHENATE
             | mupdf.mupdf.FZ_STEXT_USE_CID_FOR_UNKNOWN_UNICODE;
@@ -39,10 +43,13 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_search1()
         {
+
+
             using var doc = new Document(Doc("2.pdf"));
+
             var page = doc[0];
             const string needle = "mupdf";
-            List<Rect> rlist = page.SearchForRects(needle, flags: TextFlagsSearchDefault);
+            List<Rect> rlist = page.SearchForRects(needle, flags: SearchForDefaultFlags());
             Assert.NotEmpty(rlist);
             foreach (Rect rect in rlist)
                 Assert.Contains(needle, page.GetTextbox(rect).ToLowerInvariant());
@@ -51,11 +58,14 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_search2()
         {
+
+
             using var doc = new Document(Doc("github_sample.pdf"));
+
             var page = doc[0];
             const string needle = "the";
             var clip = new Rect(40.5f, 228.31436157226562f, 346.5226135253906f, 239.5338592529297f);
-            List<Rect> rl = page.SearchForRects(needle, clip: new Quad(clip), flags: TextFlagsSearchDefault);
+            List<Rect> rl = page.SearchForRects(needle, clip: clip.Quad, flags: SearchForDefaultFlags());
             Assert.Equal(2, rl.Count);
             foreach (Rect r in rl)
                 Assert.True(clip.Contains(r));
@@ -65,15 +75,19 @@ namespace MuPDF.NET.Test
         public void test_search3()
         {
             // Ensure we find text whether or not it contains ligatures.
+
+
             using var doc = new Document(Doc("text-find-ligatures.pdf"));
+
             var page = doc[0];
             const string needle = "flag";
 
-            List<Rect> hits = page.SearchForRects(needle, flags: TextFlagsSearch);
+            List<Rect> hits = page.SearchForRects(needle, flags: TextFlagsSearch());
             Assert.Equal(2, hits.Count);
 
-            int flagsWithLigatures = TextFlagsSearch | mupdf.mupdf.FZ_STEXT_PRESERVE_LIGATURES;
-            hits = page.SearchForRects(needle, flags: flagsWithLigatures);
+            hits = page.SearchForRects(
+                needle,
+                flags: TextFlagsSearch() | mupdf.mupdf.FZ_STEXT_PRESERVE_LIGATURES);
             Assert.Single(hits);
         }
     }

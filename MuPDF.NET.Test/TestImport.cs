@@ -10,12 +10,6 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_import()
         {
-            if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("PYODIDE_ROOT")))
-            {
-                Console.WriteLine("test_import(): not running on Pyodide - cannot run child processes.");
-                return;
-            }
-
             Assert.NotNull(typeof(Document).Assembly);
             Assert.NotNull(typeof(Document));
             Assert.NotNull(typeof(Page));

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using Xunit;
@@ -16,7 +16,7 @@ namespace MuPDF.NET.Test
         {
             // This test is for a bug in classic 'segfault trying to call clean_contents
             // on certain pdfs with python 3.12', which we are not going to fix.
-            //     return;
+            // return;
             byte[] pdf_file = File.ReadAllBytes(testDocPath);
             using var fitz_document = new Document(pdf_file, fileType: "application/pdf");
 

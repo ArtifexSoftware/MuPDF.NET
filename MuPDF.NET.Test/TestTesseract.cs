@@ -6,6 +6,9 @@ using Xunit;
 
 namespace MuPDF.NET.Test
 {
+    /// <remarks>
+    /// Inputs: <c>TestDocuments/TestTesseract/</c>; outputs: <c>TestDocuments/_Output/TestTesseract/</c>.
+    /// </remarks>
     [Collection("MuPDF.NET native")]
     public class TestTesseract
     {
@@ -15,105 +18,79 @@ namespace MuPDF.NET.Test
 
         private static string Out(string fileName) => _Path.ForOutput(fileName, TestClassName);
 
-        private static void AssertMupdfException(
-            Exception e,
-            string expectedMessage,
-            string? expectedTypeName)
-        {
-            Assert.Equal(expectedMessage, e.Message);
-            if (expectedTypeName == null)
-                return;
-            if (e.GetType().Name == expectedTypeName
-                || e.GetType().FullName?.Contains(expectedTypeName) == true)
-                return;
-            // MuPDF.NET SWIG often surfaces fz errors as ApplicationException with the same message.
-            if (e is ApplicationException)
-                return;
-            Assert.Fail(
-                $"Unexpected exception type: {e.GetType().FullName}, expected {expectedTypeName}");
-        }
-
-        /// <summary>Regression test: tesseract.</summary>
-
+        /// <summary>
+        /// This checks that MuPDF has been built with tesseract support.
+        /// By default we don't supply a valid tessdata directory, and just assert
+        /// that attempting to use Tesseract raises the expected error (which checks
+        /// that MuPDF is built with Tesseract support).
+        /// But if TESSDATA_PREFIX is set in the environment, we assert that
+        /// Page.GetTextPageOcr succeeds.
+        /// </summary>
         [Fact]
         public void test_tesseract()
         {
-            // This checks that MuPDF has been built with tesseract support.
-            // By default we don't supply a valid `tessdata` directory, and just assert
-            // that attempting to use Tesseract raises the expected error (which checks
-            // that MuPDF is built with Tesseract support).
-            // But if TESSDATA_PREFIX is set in the environment, we assert that
-            // FzPage.get_textpage_ocr() succeeds.
+
             string path = Doc("2.pdf");
 
             using var doc = new Document(path);
-            // page = doc[5]
-            var page = doc[5];
-            // tail = 'Tesseract language initialisation failed'
-            const string tail = "Tesseract language initialisation failed";
-            string eExpected;
-            string? eExpectedTypeName;
 
-            // e_expected = f'code=3: {tail}'
-            eExpected = $"code=3: {tail}";
+            var page = doc[5];
+            const string tail = "Tesseract language initialisation failed";
+            string eExpected = $"code=3: {tail}";
+            Type eExpectedType;
             if (RuntimeInformation.OSDescription.Contains("OpenBSD", StringComparison.OrdinalIgnoreCase))
             {
-                eExpectedTypeName = nameof(FzErrorBase);
+                // 2023-12-12: For some reason the SWIG catch code only catches
+                // the exception as FzErrorBase.
+                eExpectedType = typeof(FzErrorBase);
                 Console.WriteLine("OpenBSD workaround - expecting FzErrorBase, not FzErrorLibrary.");
             }
             else
             {
-                eExpectedTypeName = nameof(FzErrorLibrary);
+                eExpectedType = typeof(FzErrorLibrary);
             }
 
-            // tessdata_prefix = os.environ.get('TESSDATA_PREFIX')
-            string? tessdataPrefix = Environment.GetEnvironmentVariable("TESSDATA_PREFIX");
+            string tessdataPrefix = Environment.GetEnvironmentVariable("TESSDATA_PREFIX");
             if (!string.IsNullOrEmpty(tessdataPrefix))
             {
-                // tp = page.get_textpage_ocr(full=True)
-                var tp = page.get_textpage_ocr(full: true);
-                Console.WriteLine("test_tesseract(): page.get_textpage_ocr() succeeded");
+                TextPage tp = page.GetTextPageOcr(full: true);
+                Console.WriteLine(tp.ExtractText());
+                Console.WriteLine("test_tesseract(): page.GetTextPageOcr() succeeded");
             }
             else
             {
-                Exception? caught = null;
                 try
                 {
-                    // tp = page.get_textpage_ocr(full=True, tessdata='/foo/bar')
-                    _ = page.get_textpage_ocr(full: true, tessdata: "/foo/bar");
+                    TextPage tp = page.GetTextPageOcr(full: true, tessdata: "/foo/bar");
+                    Console.WriteLine(tp.ExtractText());
+                    Assert.Fail($"Expected exception {eExpected}");
                 }
                 catch (Exception e)
                 {
-                    caught = e;
+                    string eText = e.Message;
                     Console.WriteLine("Received exception as expected.");
                     Console.WriteLine($"type={e.GetType()}");
-                    Console.WriteLine($"e_text={e.Message}");
+                    Console.WriteLine($"e_text={eText}");
+                    Assert.Equal(eExpected, eText);
+                    Console.WriteLine($"e_expected_type={eExpectedType}");
+                    AssertTesseractExceptionType(e, eExpectedType);
                 }
-
-                if (caught == null)
-                    Assert.Fail($"Expected exception {eExpected}");
-                else
-                    AssertMupdfException(caught, eExpected, eExpectedTypeName);
             }
         }
 
-        /// <summary>Regression test: 3842b.</summary>
-
+        /// <summary>Check Tesseract failure when given a bogus language.</summary>
         [Fact]
         public void test_3842b()
         {
-            // Check Tesseract failure when given a bogus languages.
+            // Note that Tesseract seems to output its own diagnostics.
 
             string path = Doc("test_3842.pdf");
-
             using var document = new Document(path);
-            // page = document[6]
+
             var page = document[6];
             try
             {
-                // partial_tp = page.get_textpage_ocr(flags=0, full=False, language='qwerty')
-                _ = page.get_textpage_ocr(flags: 0, full: false, language: "qwerty");
-                Assert.Fail("Expected exception from bogus OCR language");
+                _ = page.GetTextPageOcr(flags: 0, full: false, language: "qwerty");
             }
             catch (Exception e)
             {
@@ -121,36 +98,38 @@ namespace MuPDF.NET.Test
                 string msg = e.Message;
                 if (msg.Contains("No tessdata specified and Tesseract is not installed"))
                     return;
-                // else: assert 'Tesseract language initialisation failed' in str(e)
                 Assert.Contains("Tesseract language initialisation failed", msg);
             }
         }
-
-        /// <summary>Regression test: 3842.</summary>
 
         [Fact]
         public void test_3842()
         {
             string path = Doc("test_3842.pdf");
-            string pathText = Doc("test_3842_partial.txt");
+            string pathTextExpected;
+            string pathTextExpectedAlternative = null;
+            if (_Version.mupdf_version_tuple_at_least(1, 28, 0))
+            {
+                pathTextExpected = Doc("test_3842_expected_1.28.txt");
+                pathTextExpectedAlternative = Doc("test_3842_expected_1.28_older_tesseract.txt");
+            }
+            else
+            {
+                pathTextExpected = Doc("test_3842_partial.txt");
+            }
 
-            // text_expected = pathlib.Path(path_text).read_text()
-            string textExpected = File.ReadAllText(pathText);
+            string textExpected = NormalizeNewlines(File.ReadAllText(pathTextExpected));
+            string textExpectedAlternative = pathTextExpectedAlternative != null
+                ? NormalizeNewlines(File.ReadAllText(pathTextExpectedAlternative))
+                : null;
 
             using var document = new Document(path);
-            // page = document[6]
+
             var page = document[6];
+            TextPage partialTp;
             try
             {
-                // partial_tp = page.get_textpage_ocr(flags=0, full=False, dpi=300)
-                var partialTp = page.get_textpage_ocr(flags: 0, full: false, dpi: 300);
-                // text = page.GetText(textpage=partial_tp)
-                string text = (string)page.GetText(textpage: partialTp);
-                Console.WriteLine();
-                Console.WriteLine(text);
-                Console.WriteLine($"text:\n{text}");
-                Console.WriteLine($"text_expected:\n{textExpected}");
-                Assert.Contains("Table of Contents", text);
+                partialTp = page.GetTextPageOcr(flags: 0, full: false, dpi: 300);
             }
             catch (Exception e)
             {
@@ -160,9 +139,36 @@ namespace MuPDF.NET.Test
                     return;
                 if (msg.Contains("Tesseract language initialisation failed"))
                     return;
-                // else: assert 0, f'Unexpected exception text: {str(e)=}'
                 Assert.Fail($"Unexpected exception text: {msg}");
+                return;
             }
+
+            string text = NormalizeNewlines((string)page.GetText(textpage: partialTp));
+            File.WriteAllText(Out("test_3842_out"), text);
+            Console.WriteLine();
+            Console.WriteLine(text);
+            Console.WriteLine($"text:\n{text}");
+            Console.WriteLine($"text_expected:\n{textExpected}");
+            if (textExpectedAlternative != null)
+                Console.WriteLine($"text_expected_alternative:\n{textExpectedAlternative}");
+            Assert.True(
+                text == textExpected || text == textExpectedAlternative,
+                "OCR text did not match either 1.28 expected file.");
+        }
+
+        static string NormalizeNewlines(string s) =>
+            (s ?? "").Replace("\r\n", "\n").Replace('\r', '\n');
+
+        /// <summary>
+        /// SWIG often surfaces the same fz error as <see cref="ApplicationException"/>.
+        /// </summary>
+        static void AssertTesseractExceptionType(Exception e, Type expectedType)
+        {
+            if (expectedType.IsInstanceOfType(e) || e.GetType() == expectedType)
+                return;
+            if (e is ApplicationException)
+                return;
+            Assert.Fail($"Unexpected exception type: {e.GetType().FullName}, expected {expectedType.FullName}");
         }
     }
 }

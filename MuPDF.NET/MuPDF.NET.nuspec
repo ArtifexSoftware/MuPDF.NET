@@ -14,80 +14,101 @@
     <dependencies>
       <group targetFramework="netstandard2.0">
         <dependency id="Microsoft.CSharp" version="4.7.0" exclude="Build,Analyzers" />
-        <dependency id="MuPDF.Fonts" version="1.0.4" exclude="Build,Analyzers" />
+        <dependency id="MuPDF.Fonts" version="1.0.5" exclude="Build,Analyzers" />
         <dependency id="MuPDF.NativeAssets" version="$mupdfVersion$" />
         <dependency id="Newtonsoft.Json" version="13.0.4" exclude="Build,Analyzers" />
         <dependency id="SharpZipLib" version="1.4.2" exclude="Build,Analyzers" />
         <dependency id="SkiaSharp" version="3.119.4" exclude="Build,Analyzers" />
         <dependency id="SkiaSharp.NativeAssets.Linux" version="3.119.4" exclude="Build,Analyzers" />
+        <dependency id="Markdig" version="0.38.0" exclude="Build,Analyzers" />
+        <dependency id="Microsoft.ML.OnnxRuntime" version="1.20.1" exclude="Build,Analyzers" />
         <dependency id="System.IO.Compression" version="4.3.0" exclude="Build,Analyzers" />
         <dependency id="System.Text.Json" version="8.0.5" exclude="Build,Analyzers" />
       </group>
       <group targetFramework="net461">
         <dependency id="Microsoft.CSharp" version="4.7.0" exclude="Build,Analyzers" />
-        <dependency id="MuPDF.Fonts" version="1.0.4" exclude="Build,Analyzers" />
+        <dependency id="MuPDF.Fonts" version="1.0.5" exclude="Build,Analyzers" />
         <dependency id="MuPDF.NativeAssets" version="$mupdfVersion$" />
         <dependency id="Newtonsoft.Json" version="13.0.4" exclude="Build,Analyzers" />
         <dependency id="SharpZipLib" version="1.4.2" exclude="Build,Analyzers" />
         <dependency id="SkiaSharp" version="3.119.4" exclude="Build,Analyzers" />
         <dependency id="SkiaSharp.NativeAssets.Linux" version="3.119.4" exclude="Build,Analyzers" />
+        <dependency id="Markdig" version="0.38.0" exclude="Build,Analyzers" />
+        <dependency id="Microsoft.ML.OnnxRuntime" version="1.20.1" exclude="Build,Analyzers" />
         <dependency id="System.Text.Json" version="6.0.10" exclude="Build,Analyzers" />
       </group>
       <group targetFramework="net472">
         <dependency id="Microsoft.CSharp" version="4.7.0" exclude="Build,Analyzers" />
-        <dependency id="MuPDF.Fonts" version="1.0.4" exclude="Build,Analyzers" />
+        <dependency id="MuPDF.Fonts" version="1.0.5" exclude="Build,Analyzers" />
         <dependency id="MuPDF.NativeAssets" version="$mupdfVersion$" />
         <dependency id="Newtonsoft.Json" version="13.0.4" exclude="Build,Analyzers" />
         <dependency id="SharpZipLib" version="1.4.2" exclude="Build,Analyzers" />
         <dependency id="SkiaSharp" version="3.119.4" exclude="Build,Analyzers" />
         <dependency id="SkiaSharp.NativeAssets.Linux" version="3.119.4" exclude="Build,Analyzers" />
+        <dependency id="Markdig" version="0.38.0" exclude="Build,Analyzers" />
+        <dependency id="Microsoft.ML.OnnxRuntime" version="1.20.1" exclude="Build,Analyzers" />
         <dependency id="System.Text.Json" version="8.0.5" exclude="Build,Analyzers" />
       </group>
       <group targetFramework="net48">
         <dependency id="Microsoft.CSharp" version="4.7.0" exclude="Build,Analyzers" />
-        <dependency id="MuPDF.Fonts" version="1.0.4" exclude="Build,Analyzers" />
+        <dependency id="MuPDF.Fonts" version="1.0.5" exclude="Build,Analyzers" />
         <dependency id="MuPDF.NativeAssets" version="$mupdfVersion$" />
         <dependency id="Newtonsoft.Json" version="13.0.4" exclude="Build,Analyzers" />
         <dependency id="SharpZipLib" version="1.4.2" exclude="Build,Analyzers" />
         <dependency id="SkiaSharp" version="3.119.4" exclude="Build,Analyzers" />
         <dependency id="SkiaSharp.NativeAssets.Linux" version="3.119.4" exclude="Build,Analyzers" />
+        <dependency id="Markdig" version="0.38.0" exclude="Build,Analyzers" />
+        <dependency id="Microsoft.ML.OnnxRuntime" version="1.20.1" exclude="Build,Analyzers" />
         <dependency id="System.Text.Json" version="8.0.5" exclude="Build,Analyzers" />
       </group>
       <group targetFramework="net5.0">
         <dependency id="Microsoft.CSharp" version="4.7.0" exclude="Build,Analyzers" />
-        <dependency id="MuPDF.Fonts" version="1.0.4" exclude="Build,Analyzers" />
+        <dependency id="MuPDF.Fonts" version="1.0.5" exclude="Build,Analyzers" />
         <dependency id="MuPDF.NativeAssets" version="$mupdfVersion$" />
         <dependency id="Newtonsoft.Json" version="13.0.4" exclude="Build,Analyzers" />
         <dependency id="SharpZipLib" version="1.4.2" exclude="Build,Analyzers" />
         <dependency id="SkiaSharp" version="3.119.4" exclude="Build,Analyzers" />
         <dependency id="SkiaSharp.NativeAssets.Linux" version="3.119.4" exclude="Build,Analyzers" />
+        <dependency id="Markdig" version="0.38.0" exclude="Build,Analyzers" />
+        <dependency id="Microsoft.ML.OnnxRuntime" version="1.20.1" exclude="Build,Analyzers" />
       </group>
       <group targetFramework="net6.0">
         <dependency id="Microsoft.CSharp" version="4.7.0" exclude="Build,Analyzers" />
-        <dependency id="MuPDF.Fonts" version="1.0.4" exclude="Build,Analyzers" />
+        <dependency id="MuPDF.Fonts" version="1.0.5" exclude="Build,Analyzers" />
         <dependency id="MuPDF.NativeAssets" version="$mupdfVersion$" />
         <dependency id="Newtonsoft.Json" version="13.0.4" exclude="Build,Analyzers" />
         <dependency id="SharpZipLib" version="1.4.2" exclude="Build,Analyzers" />
         <dependency id="SkiaSharp" version="3.119.4" exclude="Build,Analyzers" />
         <dependency id="SkiaSharp.NativeAssets.Linux" version="3.119.4" exclude="Build,Analyzers" />
+        <dependency id="Markdig" version="0.38.0" exclude="Build,Analyzers" />
+        <dependency id="Microsoft.ML.OnnxRuntime" version="1.20.1" exclude="Build,Analyzers" />
       </group>
       <group targetFramework="net7.0">
         <dependency id="Microsoft.CSharp" version="4.7.0" exclude="Build,Analyzers" />
-        <dependency id="MuPDF.Fonts" version="1.0.4" exclude="Build,Analyzers" />
+        <dependency id="MuPDF.Fonts" version="1.0.5" exclude="Build,Analyzers" />
         <dependency id="MuPDF.NativeAssets" version="$mupdfVersion$" />
         <dependency id="Newtonsoft.Json" version="13.0.4" exclude="Build,Analyzers" />
         <dependency id="SharpZipLib" version="1.4.2" exclude="Build,Analyzers" />
         <dependency id="SkiaSharp" version="3.119.4" exclude="Build,Analyzers" />
         <dependency id="SkiaSharp.NativeAssets.Linux" version="3.119.4" exclude="Build,Analyzers" />
+        <dependency id="Markdig" version="0.38.0" exclude="Build,Analyzers" />
+        <dependency id="Microsoft.ML.OnnxRuntime" version="1.20.1" exclude="Build,Analyzers" />
       </group>
       <group targetFramework="net8.0">
         <dependency id="Microsoft.CSharp" version="4.7.0" exclude="Build,Analyzers" />
-        <dependency id="MuPDF.Fonts" version="1.0.4" exclude="Build,Analyzers" />
+        <dependency id="MuPDF.Fonts" version="1.0.5" exclude="Build,Analyzers" />
         <dependency id="MuPDF.NativeAssets" version="$mupdfVersion$" />
         <dependency id="Newtonsoft.Json" version="13.0.4" exclude="Build,Analyzers" />
         <dependency id="SharpZipLib" version="1.4.2" exclude="Build,Analyzers" />
         <dependency id="SkiaSharp" version="3.119.4" exclude="Build,Analyzers" />
         <dependency id="SkiaSharp.NativeAssets.Linux" version="3.119.4" exclude="Build,Analyzers" />
+        <dependency id="Markdig" version="0.38.0" exclude="Build,Analyzers" />
+        <dependency id="Microsoft.ML.OnnxRuntime" version="1.24.3" exclude="Build,Analyzers" />
+        <dependency id="RapidOcrNet" version="2.0.0" exclude="Build,Analyzers" />
+        <dependency id="Azure.AI.OpenAI" version="2.1.0" exclude="Build,Analyzers" />
+        <dependency id="Azure.Search.Documents" version="11.6.0" exclude="Build,Analyzers" />
+        <dependency id="Microsoft.Extensions.AI" version="10.3.0" exclude="Build,Analyzers" />
+        <dependency id="Microsoft.Extensions.AI.OpenAI" version="10.3.0" exclude="Build,Analyzers" />
       </group>
     </dependencies>
   </metadata>
@@ -105,6 +126,13 @@
     <file src="build\net4\MuPDF.NET.targets" target="build\net4\MuPDF.NET.targets" />
     <file src="buildTransitive\MuPDF.NET.props" target="buildTransitive\" />
     <file src="buildTransitive\MuPDF.NET.targets" target="buildTransitive\" />
+    <file src="build\MuPDF.NET.Layout.targets" target="build\MuPDF.NET.Layout.targets" />
+    <file src="build\MuPDF.NET.PDF4LLM.targets" target="build\MuPDF.NET.PDF4LLM.targets" />
+    <file src="PDF4LLM\scripts\requirements-layout.txt" target="build\layout\requirements-layout.txt" />
+    <file src="PDF4LLM\scripts\setup_layout_python.py" target="build\layout\setup_layout_python.py" />
+    <file src="PDF4LLM\scripts\setup_layout_python.ps1" target="build\layout\setup_layout_python.ps1" />
+    <file src="PDF4LLM\scripts\setup_layout_python.sh" target="build\layout\setup_layout_python.sh" />
+    <file src="PDF4LLM\ocr\ocr_decision_model.onnx" target="ocr\ocr_decision_model.onnx" />
     <file src="runtime.json" target="" />
     <!-- Package metadata -->
     <file src="..\LICENSE.md" target="" />

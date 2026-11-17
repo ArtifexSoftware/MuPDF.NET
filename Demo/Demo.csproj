@@ -1,5 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <!-- Demo: MuPDF.NET and MuPDF.NET.PDF4LLM samples under Samples/. -->
+  <!-- Demo: MuPDF.NET and MuPDF.NET.Office samples under Samples/. -->
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -12,11 +12,12 @@
 
   <ItemGroup>
     <ProjectReference Include="..\MuPDF.NET\MuPDF.NET.csproj" />
-    <ProjectReference Include="..\MuPDF.NET.PDF4LLM\MuPDF.NET.PDF4LLM.csproj" />
+    <PackageReference Include="MuPDF.NET.Office" Version="$(ArtifexMuPDFNetOfficeVersion)" />
+    <PackageReference Include="MuPDF.NET.Office.NativeAssets" Version="$(ArtifexMuPDFNetOfficeVersion)" />
     <PackageReference Include="Microsoft.Extensions.AI" Version="10.10.0" />
     <PackageReference Include="OllamaSharp" Version="5.4.30" />
   </ItemGroup>
 
-  <Import Project="..\MuPDF.NET.PDF4LLM\build\MuPDF.NET.PDF4LLM.targets" Condition="Exists('..\MuPDF.NET.PDF4LLM\build\MuPDF.NET.PDF4LLM.targets')" />
+  <Import Project="..\MuPDF.NET\build\MuPDF.NET.Layout.targets" Condition="Exists('..\MuPDF.NET\build\MuPDF.NET.Layout.targets')" />
 
 </Project>

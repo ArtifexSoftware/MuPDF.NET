@@ -103,7 +103,7 @@ namespace MuPDF.NET
         /// Symbology identifier (e.g. <c>"QR"</c>, <c>"CODE128"</c>, <c>"EAN13"</c>). Compared case-insensitively.
         /// </param>
         /// <param name="configFile">
-        /// Optional path to a text configuration file with <c>Property=value</c> or <c>Method()</c> lines
+        /// Optional path to a text configuration file with <c>Property=value</c> or <c>Method</c> lines
         /// applied to the underlying decoder via reflection. Pass <c>null</c> to skip.
         /// </param>
         /// <exception cref="Exception">Thrown when <paramref name="barcodeType"/> is not recognized.</exception>
@@ -145,10 +145,10 @@ namespace MuPDF.NET
             else if (barcodeType == "MAXICODE") _reader = new MaxiCodeReader();
             else if (barcodeType == "MICR")
             {
-                _reader = new MICRReader(); //throw new Exception("MICR is not enabled! Pleae fix!"); //_reader = new MICR();
-                //(reader as MICRReader).RestrictHorizontal = true;
-                //(reader as MICRReader).MinDigitCount = 5; // change from 15 to 10 min digit count (will search for blocks with 7 numbers or more)
-                //(reader as MICRReader).MinRad = 5; // set min radius to 5 so it will read images like CanadianChequeSamplePAR.png
+                _reader = new MICRReader(); // throw new Exception("MICR is not enabled! Pleae fix!"); //_reader = new MICR;
+                // (reader as MICRReader).RestrictHorizontal = true;
+                // (reader as MICRReader).MinDigitCount = 5; // change from 15 to 10 min digit count (will search for blocks with 7 numbers or more)
+                // (reader as MICRReader).MinRad = 5; // set min radius to 5 so it will read images like CanadianChequeSamplePAR.png
 
             }
             else if (barcodeType == "MICROPDF") _reader = new MicroPDFReader();
@@ -178,7 +178,6 @@ namespace MuPDF.NET
             else if (barcodeType == "TRIOPTIC") _reader = new TriOpticLinearReader();
             else throw new Exception("unknown decoder type");
         }
-
 
         /// <summary>Decoded barcode text values from the last successful <see cref="Decode"/> call.</summary>
         private List<string> listFoundBarcodesAsStrings = new List<string>();
@@ -305,12 +304,6 @@ namespace MuPDF.NET
                         if (barcode.Rect.IsEmpty && barcode.Polygon != null)
                         {
                             // Get bounding rectangle from barcode polygon
-                            /*
-							byte[] pointTypes = new byte[5] { (byte) PathPointType.Start, (byte) PathPointType.Line, (byte) PathPointType.Line, (byte) PathPointType.Line, (byte) PathPointType.Line };
-							GraphicsPath path = new GraphicsPath(barcode.Polygon, pointTypes);
-							barcode.Rect = Rectangle.Round(path.GetBounds());
-                            */
-                            // Assuming barcode.Polygon is a PointF[]
                             SKPointI[] polygon = barcode.Polygon;
 
                             var path = new SKPath();
@@ -330,7 +323,6 @@ namespace MuPDF.NET
                             // Get bounds
                             SKRect bounds = path.Bounds;
 
-                            // Set barcode.Rect as a System.Drawing.Rectangle
                             barcode.Rect = new SKRect(bounds.Left, bounds.Top, bounds.Left+bounds.Width, bounds.Top+bounds.Height);
                         }
 
@@ -356,7 +348,7 @@ namespace MuPDF.NET
         /// Applies decoder settings from a line-based configuration file.
         /// </summary>
         /// <param name="reader">Underlying symbology reader instance.</param>
-        /// <param name="configFile">Path to a text file with <c>Name=value</c> or <c>Type.Method()</c> lines.</param>
+        /// <param name="configFile">Path to a text file with <c>Name=value</c> or <c>Type.Method</c> lines.</param>
         private void ApplyConfig(object reader, string configFile)
         {
             StreamReader textReader = File.OpenText(configFile);
@@ -375,7 +367,6 @@ namespace MuPDF.NET
                 if (argument.Length >= 1 && argument.Length <= 2)
                 {
                     // Split by dot assuming we can have a chain,
-                    // e.g. `MidProperty1.MidProperty2.Property` or `MidProperty1.MidProperty2.Method()`
                     string[] propertyChain = argument[0].Split(new[] { '.' }, StringSplitOptions.RemoveEmptyEntries);
                     object @object = reader;
                     Type type = reader.GetType();
@@ -413,7 +404,7 @@ namespace MuPDF.NET
                                     throw new Exception($"Could not set value \"{argument[1]}\" to property \"{argument[0]}\"", exception);
                                 }
                             }
-                            else if (memberName.EndsWith("()", StringComparison.Ordinal)) // .Method()
+                            else if (memberName.EndsWith("()", StringComparison.Ordinal)) // .Method
                             {
                                 string methodName = memberName.Substring(0, memberName.Length - 2);
                                 MethodInfo methodInfo = type.GetMethod(methodName, new Type[0]);

@@ -1,5 +1,5 @@
 using System;
-using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 using Xunit;
@@ -16,21 +16,30 @@ namespace MuPDF.NET.Test
 
         private static string Doc(string fileName) => _Path.ForTestClass(fileName, TestClassName);
 
-        private static void Log(string text) =>
-            Console.WriteLine($"{nameof(TestThreads)}.cs:  ManagedThreadId={Thread.CurrentThread.ManagedThreadId} {text}");
 
-        private static void ThreadFn(Queue queueToThreads, Queue queueFromThreads)
+        private static void Log(string text) =>
+            Console.WriteLine($"TestThreads.cs:  get_native_id={Thread.CurrentThread.ManagedThreadId} {text}");
+
+
+        private static void ThreadFn(
+            BlockingCollection<object> queueToThreads,
+            BlockingCollection<object> queueFromThreads)
         {
+
+
             void Tlog(string text) => Log($"### threadfn(): {text}");
             try
             {
                 var documents = new List<Document>();
+                // while 1:
                 while (true)
                 {
-                    object action = DequeueBlocking(queueToThreads);
-                    if (action is string s && s == "quit")
+                    // Python queue.Queue.get() blocks until an item is available.
+                    object action = queueToThreads.Take();
+                    // if action == 'quit':
+                    if (action is string quit && quit == "quit")
                         break;
-                    if (action is ValueTuple<string, string> openAction && openAction.Item1 == "open")
+                    else if (action is ValueTuple<string, string> openAction && openAction.Item1 == "open")
                     {
                         string path = openAction.Item2;
                         var document = new Document(path);
@@ -38,10 +47,12 @@ namespace MuPDF.NET.Test
                     }
                     else if (action is string gettext && gettext == "gettext")
                     {
+                        // if documents:
                         if (documents.Count > 0)
                         {
                             int documentI = Random.Shared.Next(documents.Count);
                             var document = documents[documentI];
+
                             var page = document[Random.Shared.Next(document.PageCount)];
                             _ = page.GetText();
                         }
@@ -51,32 +62,33 @@ namespace MuPDF.NET.Test
                         if (documents.Count >= 2)
                         {
                             int documentI = Random.Shared.Next(documents.Count);
-                            documents[documentI].Dispose();
+                            documents[documentI].Close();
                             documents.RemoveAt(documentI);
                         }
                     }
                     else
+                    {
                         Assert.Fail($"Unrecognised action={action}.");
+                    }
                 }
 
-                queueFromThreads.Enqueue(Thread.CurrentThread);
+                foreach (var document in documents)
+                    document.Close();
+
+                queueFromThreads.Add(Thread.CurrentThread);
             }
             catch (Exception e)
             {
                 Tlog($"error: {e}");
-                queueFromThreads.Enqueue(e);
+                queueFromThreads.Add(e);
             }
         }
 
         [Fact]
         public void test_threads_stress()
         {
+            // print
             Console.WriteLine();
-            if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("PYODIDE_ROOT")))
-            {
-                Console.WriteLine("test_threads_stress(): not running on Pyodide - cannot create threads.");
-                return;
-            }
 
             string[] paths =
             {
@@ -85,12 +97,16 @@ namespace MuPDF.NET.Test
             };
 
             var threads = new List<Thread>();
-            var queueToThreads = Queue.Synchronized(new Queue());
-            var queueFromThreads = Queue.Synchronized(new Queue());
 
-            void Put(object action) => queueToThreads.Enqueue(action);
+            using var queueToThreads = new BlockingCollection<object>();
+            using var queueFromThreads = new BlockingCollection<object>();
 
-            var stats = new ThreadStressStats();
+
+            void Put(object action) => queueToThreads.Add(action);
+
+            // class Stats: pass
+            var stats = new Stats();
+
 
             void StartThread()
             {
@@ -103,17 +119,19 @@ namespace MuPDF.NET.Test
                 stats.NumThreadsMax = Math.Max(stats.NumThreadsMax, threads.Count);
             }
 
+
             void QuitThread()
             {
                 Put("quit");
-                object stoppedThread = DequeueBlocking(queueFromThreads);
-                if (stoppedThread is Exception ex)
-                    throw new Xunit.Sdk.XunitException($"A thread has failed: {ex}");
-                Assert.IsType<Thread>(stoppedThread);
+                object stoppedThread = queueFromThreads.Take();
+                Assert.True(
+                    stoppedThread is Thread,
+                    $"A thread has failed: {stoppedThread}");
                 var thread = (Thread)stoppedThread;
                 thread.Join();
                 threads.Remove(thread);
             }
+
 
             void OpenDocument()
             {
@@ -124,7 +142,9 @@ namespace MuPDF.NET.Test
 
             for (int i = 0; i < 10; i++)
             {
+                // start_thread
                 StartThread();
+                // open_document
                 OpenDocument();
             }
 
@@ -132,17 +152,26 @@ namespace MuPDF.NET.Test
             for (int i = 0; i < numits; i++)
             {
                 int op = Random.Shared.Next(100);
+                // if op <10:
                 if (op < 10)
+                {
+                    // start_thread
                     StartThread();
+                }
                 else if (op < 15)
                 {
                     if (threads.Count >= 2)
+                        // quit_thread
                         QuitThread();
                 }
                 else if (op < 30)
+                {
+                    // open_document
                     OpenDocument();
+                }
                 else if (op == 40)
                 {
+                    // if threads:
                     if (threads.Count > 0)
                         Put("close");
                 }
@@ -152,37 +181,31 @@ namespace MuPDF.NET.Test
                     stats.NumGettexts++;
                 }
                 else
-                    Assert.Fail($"Unrecognised op={op}.");
+                {
+                    Assert.Fail($"Unrecognised op={op}");
+                }
             }
 
-            Log($"End: threads.Count={threads.Count} stats.NumOpens={stats.NumOpens} stats.NumGettexts={stats.NumGettexts} stats.NumThreadsMax={stats.NumThreadsMax}.");
 
-            for (int i = 0; i < threads.Count; i++)
+            Log("End:");
+
+            Log($"len(threads)={threads.Count} num_opens={stats.NumOpens} num_gettexts={stats.NumGettexts} num_threads_max={stats.NumThreadsMax}.");
+
+            int remaining = threads.Count;
+            for (int i = 0; i < remaining; i++)
+                // quit_thread
                 QuitThread();
 
             // Ignore any warnings, which can occur for some pages in the documents.
+
             _ = Tools.MupdfWarnings();
         }
 
-        private static object DequeueBlocking(Queue queue)
+        private sealed class Stats
         {
-            // Python queue.Queue.get() blocks until an item is available.
-            while (true)
-            {
-                lock (queue.SyncRoot)
-                {
-                    if (queue.Count > 0)
-                        return queue.Dequeue()!;
-                }
-                Thread.Sleep(1);
-            }
-        }
-
-        private sealed class ThreadStressStats
-        {
-            public int NumOpens { get; set; }
-            public int NumGettexts { get; set; }
-            public int NumThreadsMax { get; set; }
+            public int NumOpens;
+            public int NumGettexts;
+            public int NumThreadsMax;
         }
     }
 }

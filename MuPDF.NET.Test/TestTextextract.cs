@@ -1,4 +1,4 @@
-// Extract page text in various formats.
+﻿// Extract page text in various formats.
 // No checks performed - just contribute to code coverage.
 using System;
 using System.Collections.Generic;
@@ -7,7 +7,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using Xunit;
-
+using MuPDF.NET;
 namespace MuPDF.NET.Test
 {
     /// <remarks>
@@ -27,21 +27,24 @@ namespace MuPDF.NET.Test
             return string.Join("\n", text.Replace("\n", "\n").Split('\n').Select(line => prefix + line));
         }
 
-        /// <summary>Cast nested block/line/span lists from <c>get_text</c> dicts (typed lists, not <c>List&lt;object&gt;</c>).</summary>
+        /// <summary>Cast nested block/line/span lists from <see cref="Page.GetText"/> dicts.</summary>
         private static List<Dictionary<string, object>> AsDictList(object value) =>
             (List<Dictionary<string, object>>)value;
 
-        /// <summary><c>get_text</c> dict bboxes are <c>float[]</c> (x0, y0, x1, y1), not <see cref="Rect"/>.</summary>
+        /// <summary><see cref="Page.GetText"/> dict bboxes are <c>float[]</c> (x0, y0, x1, y1), not <see cref="Rect"/>.</summary>
         private static Rect BboxFromDict(object bbox)
         {
             if (bbox is Rect r)
                 return r;
             if (bbox is float[] f && f.Length >= 4)
                 return new Rect(f[0], f[1], f[2], f[3]);
-            if (bbox is float[] d && d.Length >= 4)
+            if (bbox is double[] d && d.Length >= 4)
                 return new Rect((float)d[0], (float)d[1], (float)d[2], (float)d[3]);
             throw new InvalidOperationException($"unexpected bbox type: {bbox?.GetType().FullName}");
         }
+
+        private static List<TextBlock> TextBlocks(Page page) =>
+            (List<TextBlock>)page.GetText("blocks");
 
         private static float RectTupleRms(Rect a, (float x0, float y0, float x1, float y1) b)
         {
@@ -64,32 +67,24 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_extract1()
         {
-            // filename = os.path.join(scriptdir, "resources", "symbol-list.pdf")
+
             using var doc = new Document(Doc("symbol-list.pdf"));
-            // page = doc[0]
+
             var page = doc[0];
-            // text = page.GetText("text")
-            _ = page.GetText("text");
-            // blocks = page.GetText("blocks")
-            _ = page.GetText("blocks");
-            // words = page.GetText("words")
-            _ = page.GetText("words");
-            // d1 = page.GetText("dict")
-            _ = page.GetText("dict");
-            // d2 = page.GetText("json")
-            _ = page.GetText("json");
-            // d3 = page.GetText("rawdict")
-            _ = page.GetText("rawdict");
-            // d3 = page.GetText("rawjson")
-            _ = page.GetText("rawjson");
-            // text = page.GetText("html")
-            _ = page.GetText("html");
-            // text = page.GetText("xhtml")
-            _ = page.GetText("xhtml");
-            // text = page.GetText("xml")
-            _ = page.GetText("xml");
-            _ = Helpers.GetHighlightSelection(page, page.Rect.TopLeft, page.Rect.BottomRight);
-            // ConversionHeader/ConversionTrailer are MuPDF helpers not ported to MuPDF.NET yet.
+            var text = page.GetText("text");
+
+            var blocks = page.GetText("blocks");
+            var words = page.GetText("words");
+            var d1 = page.GetText("dict");
+            var d2 = page.GetText("json");
+            var d3 = page.GetText("rawdict");
+            var rawjson = page.GetText("rawjson");
+            var htm = page.GetText("html");
+            var xhtm = page.GetText("xhtml");
+            var xm = page.GetText("xml");
+            var hs = Helpers.GetHighlightSelection(page, page.Rect.TopLeft, page.Rect.BottomRight);
+            var hxm = Utils.ConversionHeader("xml");
+            var txm = Utils.ConversionTrailer("xml");
         }
 
         [Fact]
@@ -97,10 +92,9 @@ namespace MuPDF.NET.Test
         {
             // Rebased-specific.
             using var document = new Document(Doc("2.pdf"));
-            // page = document[4]
+
             var page = document[4];
 
-            // text = page.GetText('html')
             string text = (string)page.GetText("html");
             string outStext = Out("test_extract4.html");
             File.WriteAllText(outStext, text, Encoding.UTF8);
@@ -139,7 +133,7 @@ namespace MuPDF.NET.Test
                 return t;
             }
 
-            // page = document[4]
+
             page = document[4];
             string text0 = GetTextWithSpaceGuess(0);
             string text1 = GetTextWithSpaceGuess(0.5f);
@@ -210,11 +204,10 @@ namespace MuPDF.NET.Test
         public void test_3027()
         {
             using var doc = new Document(Doc("2.pdf"));
-            // page = doc[0]
+
             var page = doc[0];
-            // textpage = page.GetTextPage()
             var textpage = page.GetTextPage();
-            var dict = (Dictionary<string, object>)Utils.GetText(page, "dict", textpage: textpage);
+            var dict = (Dictionary<string, object>)Utils.GetText(page, option: "dict", textpage: textpage);
             Assert.True(dict.ContainsKey("blocks"));
         }
 
@@ -226,28 +219,21 @@ namespace MuPDF.NET.Test
             // codespell:ignore-begin — expected strings from MuPDF test (NUL bytes as \0 in PDF text).
             string[] textsExpected = [
                     "Assicurazione sulla vita di tipo Unit Linked\nDocumento informativo precontrattuale aggiuntivo\nper i prodotti d\u0000investimento assicurativi\n(DIP aggiuntivo IBIP)\nImpresa: AXA MPS Financial DAC                                                    \nProdotto: Progetto Protetto New - Global Dividends\nContratto Unit linked (Ramo III)\nData di realizzazione: Aprile 2023\nIl presente documento contiene informazioni aggiuntive e complementari rispetto a quelle presenti nel documento \ncontenente le informazioni chiave per i prodotti di investimento assicurativi (KID) per aiutare il potenziale \ncontraente a capire più nel dettaglio le caratteristiche del prodotto, gli obblighi contrattuali e la situazione \npatrimoniale dell\u0000impresa.\nIl Contraente deve prendere visione delle condizioni d\u0000assicurazione prima della sottoscrizione del Contratto.\nAXA MPS Financial DAC, Wolfe Tone House, Wolfe Tone Street, Dublin, DO1 HP90, Irlanda; Tel: 00353-1-6439100; \nsito internet: www.axa-mpsfinancial.ie; e-mail: supporto@axa-mpsfinancial.ie;\nAXA MPS Financial DAC, società del Gruppo Assicurativo AXA Italia, iscritta nell\u0000Albo delle Imprese di assicurazione \ncon il numero II.00234. \nLa Compagnia mette a disposizione dei clienti i seguenti recapiti per richiedere eventuali informazioni sia in merito alla \nCompagnia sia in relazione al contratto proposto: Tel: 00353-1-6439100; sito internet:  www.axa-mpsfinancial.ie; \ne-mail: supporto@axa-mpsfinancial.ie;\nAXA MPS Financial DAC è un\u0000impresa di assicurazione di diritto Irlandese, Sede legale 33 Sir John Rogerson's Quay, \nDublino D02 XK09 Irlanda. L\u0000Impresa di Assicurazione è stata autorizzata all\u0000esercizio dell\u0000attività assicurativa con \nprovvedimento n. C33602 emesso dalla Central Bank of Ireland (l\u0000Autorità di vigilanza irlandese) in data 14/05/1999 \ned è iscritta in Irlanda presso il Companies Registration Office (registered nr. 293822). \nLa Compagnia opera in Italia esclusivamente in regime di libera prestazione di servizi ai sensi dell\u0000art. 24 del D. Lgs. \n07/09/2005, n. 209 e può investire in attivi non consentiti dalla normativa italiana in materia di assicurazione sulla \nvita, ma in conformità con la normativa irlandese di riferimento in quanto soggetta al controllo della Central Bank of \nIreland.\nCon riferimento all\u0000ultimo bilancio d\u0000esercizio (esercizio 2021) redatto ai sensi dei principi contabili vigenti, il patrimonio \nnetto di AXA MPS Financial DAC ammonta a 139,6 milioni di euro di cui 635 mila euro di capitale sociale interamente \nversato e 138,9 milioni di euro di riserve patrimoniali compreso il risultato di esercizio.\nAl 31 dicembre 2021 il Requisito patrimoniale di solvibilità è pari a 90 milioni di euro (Solvency Capital Requirement, \nSCR). Sulla base delle valutazioni effettuate della Compagnia coerentemente con gli esistenti dettami regolamentari, il \nRequisito patrimoniale minimo al 31 dicembre 2021 ammonta a 40 milioni di euro (Minimum Capital Requirement, \nMCR).\nL'indice di solvibilità di AXA MPS Financial DAC, ovvero l'indice che rappresenta il rapporto tra l'ammontare del margine \ndi solvibilità disponibile e l'ammontare del margine di solvibilità richiesto dalla normativa vigente, e relativo all'ultimo \nbilancio approvato, è pari al   304% (solvency ratio). L'importo dei fondi propri ammissibili a copertura dei requisiti \npatrimoniali è pari a 276 milioni di euro (Eligible Own Funds, EOF).\nPer informazioni patrimoniali sulla società è possibile consultare il sito: www.axa-mpsfinancial.ie/chi-siamo\nSi rinvia alla relazione sulla solvibilità e sulla condizione finanziaria dell\u0000impresa (SFCR) disponibile sul sito internet \ndella Compagnia al seguente link www.axa-mpsfinancial.ie/comunicazioni   \nAl contratto si applica la legge italiana\nDIP aggiuntivo IBIP - Progetto Protetto New - Global Dividends -   Pag. 1 di 9\n",
-            "Quali sono le prestazioni?\nIl contratto prevede le seguenti prestazioni:\na)Prestazioni in caso di vita dell'assicurato\nPrestazione in caso di Riscatto Totale e parziale\nA condizione che siano trascorsi almeno 30 giorni dalla Data di Decorrenza (conclusione del Contratto) e fino all\u0000ultimo \nGiorno Lavorativo della terzultima settimana precedente la data di scadenza, il Contraente può riscuotere, interamente \no parzialmente, il Valore di Riscatto. In caso di Riscatto totale, la liquidazione del Valore di Riscatto pone fine al \nContratto con effetto dalla data di ricezione della richiesta.\nIl Contraente ha inoltre la facoltà di esercitare parzialmente il diritto di Riscatto, nella misura minima di 500,00 euro, \nda esercitarsi con le stesse modalità previste per il Riscatto totale. In questo caso, il Contratto rimane in vigore per \nl\u0000ammontare residuo, a condizione che il Controvalore delle Quote residue del Contratto non sia inferiore a 1.000,00 \neuro.\nb) Prestazione a Scadenza\nAlla data di scadenza, sempre che l\u0000Assicurato sia in vita, l\u0000Impresa di Assicurazione corrisponderà agli aventi diritto un \nammontare risultante dal Controvalore delle Quote collegate al Contratto alla scadenza, calcolato come prodotto tra il \nValore Unitario della Quota (rilevato in corrispondenza della data di scadenza) e il numero delle Quote attribuite al \nContratto alla medesima data.\nc) Prestazione in corso di Contratto\nPurché l\u0000assicurato sia in vita, nel corso della durata del Contratto, il Fondo Interno mira alla corresponsione di due \nPrestazioni Periodiche. Le prestazioni saranno pari all\u0000ammontare risultante dalla moltiplicazione tra il numero di Quote \nassegnate al Contratto il primo giorno Lavorativo della settimana successiva alla Data di Riferimento e 2,50% del \nValore Unitario della Quota registrato alla Data di istituzione del Fondo Interno.\nLe prestazioni verranno liquidate entro trenta giorni dalle Date di Riferimento.\nData di Riferimento\n 1° Prestazione Periodica\n24/04/2024\n 2° Prestazione Periodica\n23/04/2025\nLa corresponsione delle Prestazioni Periodiche non è collegata alla performance positiva o ai ricavi incassati dal Fondo \nInterno, pertanto, la corresponsione potrebbe comportare una riduzione del Controvalore delle Quote senza comportare \nalcuna riduzione del numero di Quote assegnate al Contratto.\nd) Prestazione assicurativa principale in caso di decesso dell'Assicurato\nIn caso di decesso dell\u0000Assicurato nel corso della durata contrattuale, è previsto il pagamento ai Beneficiari di un \nimporto pari al Controvalore delle Quote attribuite al Contratto, calcolato come prodotto tra il Valore Unitario della \nQuota rilevato alla Data di Valorizzazione della settimana successiva alla data in cui la notifica di decesso \ndell\u0000Assicurato perviene all\u0000Impresa di Assicurazione e il numero delle Quote attribuite al Contratto alla medesima data, \nmaggiorato di una percentuale pari allo 0,1%.\nQualora il capitale così determinato fosse inferiore al Premio pagato, sarà liquidato un ulteriore importo pari alla \ndifferenza tra il Premio pagato, al netto della parte di Premio riferita a eventuali Riscatti parziali e l\u0000importo caso morte \ncome sopra determinato. Tale importo non potrà essere in ogni caso superiore al 5% del Premio pagato.\nOpzioni contrattuali\nIl Contratto non prevede opzioni contrattuali.\nFondi Assicurativi\nLe prestazioni di cui sopra sono collegate, in base all\u0000allocazione del premio come descritto alla sezione \x01Quando e \ncome devo pagare?\x02, al valore delle quote del Fondo Interno denominato PP27 Global Dividends.\nil Fondo interno mira al raggiungimento di un Obiettivo di Protezione del Valore Unitario di Quota, tramite il \nconseguimento di un Valore Unitario di Quota a scadenza almeno pari al 100% del valore di quota registrato alla Data \ndi istituzione dal Fondo Interno.\nIl regolamento di gestione del Fondo Interno è disponibile sul sito dell\u0000Impresa di Assicurazione \nwww.axa-mpsfinancial.ie dove puo essere acquisito su supporto duraturo.\nDIP aggiuntivo IBIP - Progetto Protetto New - Global Dividends -   Pag. 2 di 9\n",
+            "Quali sono le prestazioni?\nIl contratto prevede le seguenti prestazioni:\na)Prestazioni in caso di vita dell'assicurato\nPrestazione in caso di Riscatto Totale e parziale\nA condizione che siano trascorsi almeno 30 giorni dalla Data di Decorrenza (conclusione del Contratto) e fino all\u0000ultimo \nGiorno Lavorativo della terzultima settimana precedente la data di scadenza, il Contraente può riscuotere, interamente \no parzialmente, il Valore di Riscatto. In caso di Riscatto totale, la liquidazione del Valore di Riscatto pone fine al \nContratto con effetto dalla data di ricezione della richiesta.\nIl Contraente ha inoltre la facoltà di esercitare parzialmente il diritto di Riscatto, nella misura minima di 500,00 euro, \nda esercitarsi con le stesse modalità previste per il Riscatto totale. In questo caso, il Contratto rimane in vigore per \nl\u0000ammontare residuo, a condizione che il Controvalore delle Quote residue del Contratto non sia inferiore a 1.000,00 \neuro.\nb) Prestazione a Scadenza\nAlla data di scadenza, sempre che l\u0000Assicurato sia in vita, l\u0000Impresa di Assicurazione corrisponderà agli aventi diritto un \nammontare risultante dal Controvalore delle Quote collegate al Contratto alla scadenza, calcolato come prodotto tra il \nValore Unitario della Quota (rilevato in corrispondenza della data di scadenza) e il numero delle Quote attribuite al \nContratto alla medesima data.\nc) Prestazione in corso di Contratto\nPurché l\u0000assicurato sia in vita, nel corso della durata del Contratto, il Fondo Interno mira alla corresponsione di due \nPrestazioni Periodiche. Le prestazioni saranno pari all\u0000ammontare risultante dalla moltiplicazione tra il numero di Quote \nassegnate al Contratto il primo giorno Lavorativo della settimana successiva alla Data di Riferimento e 2,50% del \nValore Unitario della Quota registrato alla Data di istituzione del Fondo Interno.\nLe prestazioni verranno liquidate entro trenta giorni dalle Date di Riferimento.\nData di Riferimento\n 1° Prestazione Periodica\n24/04/2024\n 2° Prestazione Periodica\n23/04/2025\nLa corresponsione delle Prestazioni Periodiche non è collegata alla performance positiva o ai ricavi incassati dal Fondo \nInterno, pertanto, la corresponsione potrebbe comportare una riduzione del Controvalore delle Quote senza comportare \nalcuna riduzione del numero di Quote assegnate al Contratto.\nd) Prestazione assicurativa principale in caso di decesso dell'Assicurato\nIn caso di decesso dell\u0000Assicurato nel corso della durata contrattuale, è previsto il pagamento ai Beneficiari di un \nimporto pari al Controvalore delle Quote attribuite al Contratto, calcolato come prodotto tra il Valore Unitario della \nQuota rilevato alla Data di Valorizzazione della settimana successiva alla data in cui la notifica di decesso \ndell\u0000Assicurato perviene all\u0000Impresa di Assicurazione e il numero delle Quote attribuite al Contratto alla medesima data, \nmaggiorato di una percentuale pari allo 0,1%.\nQualora il capitale così determinato fosse inferiore al Premio pagato, sarà liquidato un ulteriore importo pari alla \ndifferenza tra il Premio pagato, al netto della parte di Premio riferita a eventuali Riscatti parziali e l\u0000importo caso morte \ncome sopra determinato. Tale importo non potrà essere in ogni caso superiore al 5% del Premio pagato.\nOpzioni contrattuali\nIl Contratto non prevede opzioni contrattuali.\nFondi Assicurativi\nLe prestazioni di cui sopra sono collegate, in base all\u0000allocazione del premio come descritto alla sezione \u0001Quando e \ncome devo pagare?\x02, al valore delle quote del Fondo Interno denominato PP27 Global Dividends.\nil Fondo interno mira al raggiungimento di un Obiettivo di Protezione del Valore Unitario di Quota, tramite il \nconseguimento di un Valore Unitario di Quota a scadenza almeno pari al 100% del valore di quota registrato alla Data \ndi istituzione dal Fondo Interno.\nIl regolamento di gestione del Fondo Interno è disponibile sul sito dell\u0000Impresa di Assicurazione \nwww.axa-mpsfinancial.ie dove puo essere acquisito su supporto duraturo.\nDIP aggiuntivo IBIP - Progetto Protetto New - Global Dividends -   Pag. 2 di 9\n",
             "Che cosa NON è assicurato\nRischi esclusi\nIl rischio di decesso dell\u0000Assicurato è coperto qualunque sia la causa, senza limiti territoriali e senza \ntenere conto dei cambiamenti di professione dell\u0000Assicurato, ad eccezione dei seguenti casi:\n\x03 il decesso, entro i primi sette anni dalla data di decorrenza del Contratto, dovuto alla sindrome da \nimmunodeficienza acquisita (AIDS) o ad altra patologia ad essa associata;\n\x03 dolo del Contraente o del Beneficiario;\n\x03 partecipazione attiva dell\u0000Assicurato a delitti dolosi;\n\x03 partecipazione dell\u0000Assicurato a fatti di guerra, salvo che non derivi da obblighi verso lo Stato \nItaliano: in questo caso la garanzia può essere prestata su richiesta del Contraente, alle condizioni \nstabilite dal competente Ministero;\n\x03 incidente di volo, se l\u0000Assicurato viaggia a bordo di un aeromobile non autorizzato al volo o con \npilota non titolare di brevetto idoneo e, in ogni caso, se viaggia in qualità di membro \ndell\u0000equipaggio;\n\x03 suicidio, se avviene nei primi due anni dalla Data di Decorrenza del Contratto\nCi sono limiti di copertura?\nNon vi sono ulteriori informazioni rispetto al contenuto del KID.\nChe obblighi ho? Quali obblighi ha l\u0000Impresa?\nCosa fare in caso \ndi evento?\nDenuncia\nCon riferimento alla liquidazione delle prestazioni dedotte in Contratto, il Contraente o, se del caso, \nil Beneficiario e il Referente Terzo, sono tenuti a recarsi presso la sede dell\u0000intermediario presso il \nquale il Contratto è stato sottoscritto ovvero a inviare preventivamente, a mezzo di lettera \nraccomandata con avviso di ricevimento al seguente recapito:\n\x03 AXA MPS Financial DAC\n\x03 Wolfe Tone House, Wolfe Tone Street,\n\x03 Dublin, DO1 HP90 - Ireland\n\x03 Numero Verde: 800.231.187\n\x03 email: supporto@axa-mpsfinancial.ie\ni documenti di seguito elencati per ciascuna prestazione, al fine di consentire all\u0000Impresa di \nAssicurazione di verificare l\u0000effettiva esistenza dell\u0000obbligo di pagamento.\nin caso di Riscatto totale, il Contraente deve inviare all\u0000Impresa di Assicurazione:\n\x04 la richiesta di Riscatto totale firmata dal Contraente, indicando il conto corrente su cui il \npagamento deve essere effettuato. Nel caso il conto corrente sia intestato a persona diversa dal \nContraente o dai beneficiari o sia cointestato, il Contraente deve fornire anche I documenti del \ncointestatario e specificare la relazione con il terzo il cui conto viene indicato.\n\x04 copia di un valido documento di identità del Contraente o di un documento attestante i poteri di \nlegale rappresentante, nel caso in cui il Contraente sia una persona giuridica;\nin caso di Riscatto parziale, il Contraente deve inviare all\u0000Impresa di Assicurazione:\n\x04 la richiesta di Riscatto parziale firmata dal Contraente, contenente l\u0000indicazione dei Fondi \nInterni/OICR che intende riscattare e il relativo ammontare non ché l\u0000indicazione del conto corrente \nbancario sul quale effettuare il pagamento;\n\x04 copia di un valido documento di identità del Contraente, o di un documento attestante i poteri di \nlegale rappresentante, nel caso in cui il Contraente sia una persona giuridica.\nIn caso di richiesta di Riscatto totale o parziale non corredata dalla sopra elencata documentazione, \nl\u0000Impresa di Assicurazione effettuerà il disinvestimento delle Quote collegate al Contratto alla data \ndi ricezione della relativa richiesta. L\u0000Impresa di Assicurazione provvederà tuttavia alla liquidazione \ndelle somme unicamente al momento di ricezione della documentazione mancante, prive degli \neventuali interessi che dovessero maturare;\nIn caso di decesso dell\u0000Assicurato, il Beneficiario/i o il Referente Terzo deve inviare all\u0000Impresa di \nAssicurazione:\nDIP aggiuntivo IBIP - Progetto Protetto New - Global Dividends -   Pag. 3 di 9\n",
-            "\x04 la richiesta di pagamento sottoscritta da tutti i Beneficiari, con l\u0000indicazione del conto corrente \nbancario sul quale effettuare il pagamento; Nel caso il conto corrente sia intestato a persona \ndiversa dal Contraente o dai beneficiari o sia cointestato, il Contraente deve fornire anche I \ndocumenti del cointestatario e specificare la relazione con il terzo il cui conto viene indicato.\n\x04 copia di un valido documento d\u0000identità dei Beneficiari o di un documento attestante i poteri di \nlegale rappresentante, nel caso in cui il Beneficiario sia una persona giuridica;\n\x04 il certificato di morte dell\u0000Assicurato;\n\x04 la relazione medica sulle cause del decesso;\n\x04 copia autenticata del testamento accompagnato da dichiarazione sostitutiva di atto di notorietà \ncon l\u0000indicazione (i) della circostanza che il testamento è l\u0000ultimo da considerarsi valido e non è \nstato impugnato e (ii) degli eredi testamentari, le relative età e capacità\ndi agire;\n\x04 in assenza di testamento, atto notorio (o dichiarazione sostitutiva di atto di notorietà) attestante \nche il decesso è avvenuto senza lasciare testamento e che non vi sono altri soggetti cui la legge \nriconosce diritti o quote di eredità;\n\x04 decreto del Giudice Tutelare nel caso di Beneficiari di minore età, con l\u0000indicazione della persona \ndesignata alla riscossione;\n\x04 copia del Questionario KYC.\nPrescrizione: Alla data di redazione del presente documento, i diritti dei beneficiari dei contratti di \nassicurazione sulla vita si prescrivono nel termine di dieci anni dal giorno in cui si è verificato il fatto \nsu cui il diritto si fonda. Decorso tale termine e senza che la Compagnia abbia ricevuto alcuna \ncomunicazione e/o disposizione, gli importi derivanti dal contratto saranno devoluti al Fondo \ncostitutivo presso il Ministero dell\u0000Economia e delle Finanze \x01depositi dormienti\x02.\nErogazione della prestazione\nL\u0000Impresa di Assicurazione esegue il pagamento entro trenta giorni dal ricevimento della \ndocumentazione completa all\u0000indirizzo sopra indicato.\n \nLe dichiarazioni del Contraente, e dell\u0000Assicurato se diverso dal Contraente, devono essere esatte e \nveritiere. In caso di dichiarazioni inesatte o reticenti relative a circostanze tali che l\u0000Impresa di \nAssicurazione non avrebbe dato il suo consenso, non lo avrebbe dato alle medesime condizioni se \navesse conosciuto il vero stato delle cose, l\u0000Impresa di Assicurazione ha diritto a:\na) in caso di dolo o colpa grave:\n\x04 impugnare il Contratto dichiarando al Contraente di voler esercitare tale diritto entro tre mesi dal \ngiorno in cui ha conosciuto l\u0000inesattezza della dichiarazione o le reticenze;\n\x04 trattenere il Premio relativo al periodo di assicurazione in corso al momento dell\u0000impugnazione e, \nin ogni caso, il Premio corrispondente al primo anno;\n\x04 restituire, in caso di decesso dell\u0000Assicurato, solo il Controvalore delle Quote acquisite al \nmomento del decesso, se l\u0000evento si verifica prima che sia decorso il termine dianzi indicato per \nl\u0000impugnazione;\nb) ove non sussista dolo o colpa grave:\n\x04 recedere dal Contratto, mediante dichiarazione da farsi al Contraente entro tre mesi dal giorno in \ncui ha conosciuto l\u0000inesattezza della dichiarazione o le reticenze;\n\x04 se il decesso si verifica prima che l\u0000inesattezza della dichiarazione o la reticenza sia conosciuta \ndall\u0000Impresa di Assicurazione, o prima che l\u0000Impresa abbia dichiarato di recedere dal Contratto, di \nridurre la somma dovuta in proporzione alla differenza tra il Premio convenuto e quello che sarebbe \nstato applicato se si fosse conosciuto il vero stato delle cose.\nIl Contraente è tenuto a inoltrare per iscritto alla Compagnia (posta ordinaria e mail) eventuali \ncomunicazioni inerenti:\n-modifiche dell\u0000indirizzo presso il quale intende ricevere le comunicazioni relative al contratto;\n-variazione della residenza Europea nel corso della durata del contratto, presso altro Paese \nmembro della Unione Europea;\n-variazione degli estremi di conto corrente bancario.\nIn tal caso è necessario inoltrare la richiesta attraverso l\u0000invio del modulo del mandato, compilato e \nsottoscritto dal contraente, reperibile nella sezione \x01comunicazioni\x02 sul sito internet della \ncompagnia all\u0000indirizzo www.axa-mpsfinancial.ie\nFATCA (Foreign Account Tax Compliance Act) e CRS (Common Standard Reporting)\nLa normativa denominata rispettivamente FATCA (Foreign Account Tax Compliance Act - \nIntergovernmental Agreement sottoscritto tra Italia e Stati Uniti in data 10 gennaio 2014 e Legge n. \n95 del 18 giugno 2015) e CRS (Common Reporting Standard - Decreto Ministeriale del 28 \ndicembre 2015) impone agli operatori commerciali, al fine di contrastare la frode fiscale e \nl\u0000evasione fiscale transfrontaliera, di eseguire la puntuale identificazione della propria clientela al \nfine di determinarne l\u0000effettivo status di contribuente estero.\nDichiarazioni \ninesatte o \nreticenti\nDIP aggiuntivo IBIP - Progetto Protetto New - Global Dividends -   Pag. 4 di 9\n",
-            "I dati anagrafici e patrimoniali dei Contraenti identificati come fiscalmente residenti negli USA e/o \nin uno o più Paesi aderenti al CRS, dovranno essere trasmessi all\u0000autorità fiscale locale, tramite \nl\u0000Agenzia delle Entrate.\nL\u0000identificazione avviene in fase di stipula del contratto e deve essere ripetuta in caso di \ncambiamento delle condizioni originarie durante tutta la sua durata, mediante l\u0000acquisizione di \nautocertificazione rilasciata dai Contraenti. Ogni contraente è tenuto a comunicare \ntempestivamente eventuali variazioni rispetto a quanto dichiarato o rilevato in fase di sottoscrizione \ndel contratto di assicurazione. La Società si riserva inoltre di verificare i dati raccolti e di richiedere \nulteriori informazioni. In caso di autocertificazione che risulti compilata parzialmente o in maniera \nerrata, nonché in caso di mancata/non corretta comunicazione dei propri dati anagrafici, la società \nqualora abbia rilevato indizi di americanità e/o residenze fiscali estere nelle informazioni in suo \npossesso, assocerà al cliente la condizione di contribuente estero, provvedendo alla comunicazione \ndovuta.\nAntiriciclaggio\nIl Contraente è tenuto a fornire alla Compagnia tutte le informazioni necessarie al fine \ndell\u0000assolvimento dell\u0000adeguata verifica ai fini antiriciclaggio. Qualora la Compagnia, in ragione \ndella mancata collaborazione del Contraente, non sia in grado di portare a compimento l\u0000adeguata \nverifica, la stessa non potrà concludere il Contratto o dovrà porre fine allo stesso. In tali ipotesi le \nsomme dovute al Contraente dovranno essere allo stesso versate mediante bonifico a valere un \nconto corrente intestato al Contraente stesso. In tali ipotesi le disponibilità finanziarie \neventualmente già acquisite dalla Compagnia dovranno essere restituite al Contraente liquidando il \nrelativo importo tramite bonifico bancario su un conto corrente bancario indicato dal Contraente e \nallo stesso intestato.\nIn nessun caso l'Impresa di Assicurazione sarà tenuta a fornire alcuna copertura assicurativa, \nsoddisfare richieste di risarcimento o garantire alcuna indennità in virtù del presente contratto, \nqualora tale copertura, pagamento o indennità possa esporla a divieti, sanzioni economiche o \nrestrizioni ai sensi di Risoluzioni delle Nazioni Unite o sanzioni economiche o commerciali, leggi o \nnorme dell\u0000Unione Europea, del Regno Unito o degli Stati Uniti d\u0000America, ove applicabili in Italia.\nQuando e come devo pagare?\nPremio\nIl Contratto prevede il pagamento di un Premio Unico il cui ammontare minimo è pari a 2.500,00 \neuro, incrementabile di importo pari o in multiplo di 50,00 euro, da corrispondersi in un\u0000unica \nsoluzione prima della conclusione del Contratto.\nNon è prevista la possibilità di effettuare versamenti aggiuntivi successivi.\nIl versamento del Premio Unico può essere effettuato mediante addebito su conto corrente \nbancario, indicato nel Modulo di Proposta, previa autorizzazione del titolare del conto corrente.\nIl pagamento dei Premio Unico può essere eseguito mediante addebito su conto corrente bancario, \nprevia autorizzazione, intestato al Contraente oppure tramite bonifico bancario sul conto corrente \ndell\u0000Impresa di Assicurazione.\nRimborso\nIl rimborso del Premio Versato è previsto nel caso in cui il Contraente decida di revocare la proposta \nfinché il contratto non è concluso.\nSconti\nAl verificarsi di condizioni particolari ed eccezionali che potrebbero riguardare \x03 a titolo \nesemplificativo ma non esaustivo \x03 il Contraente e la relativa situazione assicurativo/finanziaria, \nl\u0000ammontare del Premio pagato e gli investimenti selezionati dal Contraente, l\u0000Impresa di \nAssicurazione si riserva la facoltà di applicare sconti sugli oneri previsti dal contratto, concordando \ntale agevolazione con il Contraente.\nQuando comincia la copertura e quando finisce?\nDurata\nIl Contratto ha una durata massima pari a 5 anni 11 mesi e 27 giorni, sino alla data di scadenza \n(11/04/2029, la \x01data di scadenza\x02).\nSospensione\nNon sono possibili delle sospensioni della copertura assicurativa\nDIP aggiuntivo IBIP - Progetto Protetto New - Global Dividends -   Pag. 5 di 9\n",
+            "\x04 la richiesta di pagamento sottoscritta da tutti i Beneficiari, con l\u0000indicazione del conto corrente \nbancario sul quale effettuare il pagamento; Nel caso il conto corrente sia intestato a persona \ndiversa dal Contraente o dai beneficiari o sia cointestato, il Contraente deve fornire anche I \ndocumenti del cointestatario e specificare la relazione con il terzo il cui conto viene indicato.\n\x04 copia di un valido documento d\u0000identità dei Beneficiari o di un documento attestante i poteri di \nlegale rappresentante, nel caso in cui il Beneficiario sia una persona giuridica;\n\x04 il certificato di morte dell\u0000Assicurato;\n\x04 la relazione medica sulle cause del decesso;\n\x04 copia autenticata del testamento accompagnato da dichiarazione sostitutiva di atto di notorietà \ncon l\u0000indicazione (i) della circostanza che il testamento è l\u0000ultimo da considerarsi valido e non è \nstato impugnato e (ii) degli eredi testamentari, le relative età e capacità\ndi agire;\n\x04 in assenza di testamento, atto notorio (o dichiarazione sostitutiva di atto di notorietà) attestante \nche il decesso è avvenuto senza lasciare testamento e che non vi sono altri soggetti cui la legge \nriconosce diritti o quote di eredità;\n\x04 decreto del Giudice Tutelare nel caso di Beneficiari di minore età, con l\u0000indicazione della persona \ndesignata alla riscossione;\n\x04 copia del Questionario KYC.\nPrescrizione: Alla data di redazione del presente documento, i diritti dei beneficiari dei contratti di \nassicurazione sulla vita si prescrivono nel termine di dieci anni dal giorno in cui si è verificato il fatto \nsu cui il diritto si fonda. Decorso tale termine e senza che la Compagnia abbia ricevuto alcuna \ncomunicazione e/o disposizione, gli importi derivanti dal contratto saranno devoluti al Fondo \ncostitutivo presso il Ministero dell\u0000Economia e delle Finanze \u0001depositi dormienti\x02.\nErogazione della prestazione\nL\u0000Impresa di Assicurazione esegue il pagamento entro trenta giorni dal ricevimento della \ndocumentazione completa all\u0000indirizzo sopra indicato.\n \nLe dichiarazioni del Contraente, e dell\u0000Assicurato se diverso dal Contraente, devono essere esatte e \nveritiere. In caso di dichiarazioni inesatte o reticenti relative a circostanze tali che l\u0000Impresa di \nAssicurazione non avrebbe dato il suo consenso, non lo avrebbe dato alle medesime condizioni se \navesse conosciuto il vero stato delle cose, l\u0000Impresa di Assicurazione ha diritto a:\na) in caso di dolo o colpa grave:\n\x04 impugnare il Contratto dichiarando al Contraente di voler esercitare tale diritto entro tre mesi dal \ngiorno in cui ha conosciuto l\u0000inesattezza della dichiarazione o le reticenze;\n\x04 trattenere il Premio relativo al periodo di assicurazione in corso al momento dell\u0000impugnazione e, \nin ogni caso, il Premio corrispondente al primo anno;\n\x04 restituire, in caso di decesso dell\u0000Assicurato, solo il Controvalore delle Quote acquisite al \nmomento del decesso, se l\u0000evento si verifica prima che sia decorso il termine dianzi indicato per \nl\u0000impugnazione;\nb) ove non sussista dolo o colpa grave:\n\x04 recedere dal Contratto, mediante dichiarazione da farsi al Contraente entro tre mesi dal giorno in \ncui ha conosciuto l\u0000inesattezza della dichiarazione o le reticenze;\n\x04 se il decesso si verifica prima che l\u0000inesattezza della dichiarazione o la reticenza sia conosciuta \ndall\u0000Impresa di Assicurazione, o prima che l\u0000Impresa abbia dichiarato di recedere dal Contratto, di \nridurre la somma dovuta in proporzione alla differenza tra il Premio convenuto e quello che sarebbe \nstato applicato se si fosse conosciuto il vero stato delle cose.\nIl Contraente è tenuto a inoltrare per iscritto alla Compagnia (posta ordinaria e mail) eventuali \ncomunicazioni inerenti:\n-modifiche dell\u0000indirizzo presso il quale intende ricevere le comunicazioni relative al contratto;\n-variazione della residenza Europea nel corso della durata del contratto, presso altro Paese \nmembro della Unione Europea;\n-variazione degli estremi di conto corrente bancario.\nIn tal caso è necessario inoltrare la richiesta attraverso l\u0000invio del modulo del mandato, compilato e \nsottoscritto dal contraente, reperibile nella sezione \u0001comunicazioni\x02 sul sito internet della \ncompagnia all\u0000indirizzo www.axa-mpsfinancial.ie\nFATCA (Foreign Account Tax Compliance Act) e CRS (Common Standard Reporting)\nLa normativa denominata rispettivamente FATCA (Foreign Account Tax Compliance Act - \nIntergovernmental Agreement sottoscritto tra Italia e Stati Uniti in data 10 gennaio 2014 e Legge n. \n95 del 18 giugno 2015) e CRS (Common Reporting Standard - Decreto Ministeriale del 28 \ndicembre 2015) impone agli operatori commerciali, al fine di contrastare la frode fiscale e \nl\u0000evasione fiscale transfrontaliera, di eseguire la puntuale identificazione della propria clientela al \nfine di determinarne l\u0000effettivo status di contribuente estero.\nDichiarazioni \ninesatte o \nreticenti\nDIP aggiuntivo IBIP - Progetto Protetto New - Global Dividends -   Pag. 4 di 9\n",
+            "I dati anagrafici e patrimoniali dei Contraenti identificati come fiscalmente residenti negli USA e/o \nin uno o più Paesi aderenti al CRS, dovranno essere trasmessi all\u0000autorità fiscale locale, tramite \nl\u0000Agenzia delle Entrate.\nL\u0000identificazione avviene in fase di stipula del contratto e deve essere ripetuta in caso di \ncambiamento delle condizioni originarie durante tutta la sua durata, mediante l\u0000acquisizione di \nautocertificazione rilasciata dai Contraenti. Ogni contraente è tenuto a comunicare \ntempestivamente eventuali variazioni rispetto a quanto dichiarato o rilevato in fase di sottoscrizione \ndel contratto di assicurazione. La Società si riserva inoltre di verificare i dati raccolti e di richiedere \nulteriori informazioni. In caso di autocertificazione che risulti compilata parzialmente o in maniera \nerrata, nonché in caso di mancata/non corretta comunicazione dei propri dati anagrafici, la società \nqualora abbia rilevato indizi di americanità e/o residenze fiscali estere nelle informazioni in suo \npossesso, assocerà al cliente la condizione di contribuente estero, provvedendo alla comunicazione \ndovuta.\nAntiriciclaggio\nIl Contraente è tenuto a fornire alla Compagnia tutte le informazioni necessarie al fine \ndell\u0000assolvimento dell\u0000adeguata verifica ai fini antiriciclaggio. Qualora la Compagnia, in ragione \ndella mancata collaborazione del Contraente, non sia in grado di portare a compimento l\u0000adeguata \nverifica, la stessa non potrà concludere il Contratto o dovrà porre fine allo stesso. In tali ipotesi le \nsomme dovute al Contraente dovranno essere allo stesso versate mediante bonifico a valere un \nconto corrente intestato al Contraente stesso. In tali ipotesi le disponibilità finanziarie \neventualmente già acquisite dalla Compagnia dovranno essere restituite al Contraente liquidando il \nrelativo importo tramite bonifico bancario su un conto corrente bancario indicato dal Contraente e \nallo stesso intestato.\nIn nessun caso l'Impresa di Assicurazione sarà tenuta a fornire alcuna copertura assicurativa, \nsoddisfare richieste di risarcimento o garantire alcuna indennità in virtù del presente contratto, \nqualora tale copertura, pagamento o indennità possa esporla a divieti, sanzioni economiche o \nrestrizioni ai sensi di Risoluzioni delle Nazioni Unite o sanzioni economiche o commerciali, leggi o \nnorme dell\u0000Unione Europea, del Regno Unito o degli Stati Uniti d\u0000America, ove applicabili in Italia.\nQuando e come devo pagare?\nPremio\nIl Contratto prevede il pagamento di un Premio Unico il cui ammontare minimo è pari a 2.500,00 \neuro, incrementabile di importo pari o in multiplo di 50,00 euro, da corrispondersi in un\u0000unica \nsoluzione prima della conclusione del Contratto.\nNon è prevista la possibilità di effettuare versamenti aggiuntivi successivi.\nIl versamento del Premio Unico può essere effettuato mediante addebito su conto corrente \nbancario, indicato nel Modulo di Proposta, previa autorizzazione del titolare del conto corrente.\nIl pagamento dei Premio Unico può essere eseguito mediante addebito su conto corrente bancario, \nprevia autorizzazione, intestato al Contraente oppure tramite bonifico bancario sul conto corrente \ndell\u0000Impresa di Assicurazione.\nRimborso\nIl rimborso del Premio Versato è previsto nel caso in cui il Contraente decida di revocare la proposta \nfinché il contratto non è concluso.\nSconti\nAl verificarsi di condizioni particolari ed eccezionali che potrebbero riguardare \x03 a titolo \nesemplificativo ma non esaustivo \x03 il Contraente e la relativa situazione assicurativo/finanziaria, \nl\u0000ammontare del Premio pagato e gli investimenti selezionati dal Contraente, l\u0000Impresa di \nAssicurazione si riserva la facoltà di applicare sconti sugli oneri previsti dal contratto, concordando \ntale agevolazione con il Contraente.\nQuando comincia la copertura e quando finisce?\nDurata\nIl Contratto ha una durata massima pari a 5 anni 11 mesi e 27 giorni, sino alla data di scadenza \n(11/04/2029, la \u0001data di scadenza\x02).\nSospensione\nNon sono possibili delle sospensioni della copertura assicurativa\nDIP aggiuntivo IBIP - Progetto Protetto New - Global Dividends -   Pag. 5 di 9\n",
             "Come posso revocare la proposta, recedere dal contratto o risolvere il contratto? \nRevoca\nLa Proposta di assicurazione può essere revocata fino alle ore 24:00 del giorno in cui il Contratto è \nconcluso. In tal caso, l\u0000Impresa di Assicurazione restituirà al Contraente il Premio pagato entro \ntrenta giorni dal ricevimento della comunicazione di Revoca.\nRecesso\nIl Contraente può recedere dal Contratto entro trenta giorni dalla sua conclusione. Il Recesso dovrà \nessere comunicato all\u0000Impresa di Assicurazione mediante lettera raccomandata con avviso di \nricevimento.\nL\u0000Impresa di Assicurazione, entro trenta giorni dal ricevimento della comunicazione relativa al \nRecesso, rimborserà al Contraente il Controvalore delle Quote attribuite al Contratto alla data di \nricevimento della richiesta di recesso incrementato dai caricamenti, ove previsti, e dedotte \neventuali agevolazioni.\nRisoluzione\nLa risoluzione del contratto è prevista tramite la richiesta di riscatto totale esercitabile in qualsiasi \nmomento della durata contrattuale\nSono previsti riscatti o riduzioni? Si\n no\nValori di\nriscatto e\nriduzione\nA condizione che siano trascorsi almeno 30 giorni dalla Data di Decorrenza (conclusione del \nContratto) e fino all\u0000ultimo Giorno Lavorativo della terzultima settimana precedente la data di \nscadenza, il Contraente può riscuotere, interamente o parzialmente, il Valore di Riscatto. In caso di \nRiscatto totale, la liquidazione del Valore di Riscatto pone fine al Contratto con effetto dalla data di \nricezione della richiesta.\nL\u0000importo che sarà corrisposto al Contraente in caso di Riscatto sarà pari al Controvalore delle \nQuote del Fondo Interno attribuite al Contratto alla data di Riscatto, al netto dei costi di Riscatto.\nIn caso di Riscatto, ai fini del calcolo del Valore Unitario della Quota, si farà riferimento alla Data di \nValorizzazione della settimana successiva alla data in cui la comunicazione di Riscatto del \nContraente perviene all\u0000Impresa di Assicurazione, corredata di tutta la documentazione, al netto dei \ncosti di Riscatto, salvo il verificarsi di Eventi di Turbativa.\nIl Contraente assume il rischio connesso all\u0000andamento negativo del valore delle Quote e, pertanto, \nesiste la possibilità di ricevere un ammontare inferiore all\u0000investimento finanziario.\nIn caso di Riscatto del Contratto (totale o parziale), l\u0000Impresa di Assicurazione non offre alcuna \ngaranzia finanziaria di rendimento minimo e pertanto il Contraente sopporta il rischio di ottenere un \nValore Unitario di Quota inferiore al 100% del Valore Unitario di Quota del Fondo Interno registrato \nalla Data di Istituzione in considerazione dei rischi connessi alla fluttuazione del valore di mercato \ndegli attivi in cui investe, direttamente o indirettamente, il Fondo Interno.\nRichiesta di\ninformazioni\nPer eventuali richieste di informazioni sul valore di riscatto, il Contraente può rivolgersi alla \nCompagnia AXA MPS Financial DAC \x03 Wolfe Tone House, Wolfe Tone Street, Dublin, DO1 HP90 \x03 \nIreland, Numero Verde 800.231.187, e-mail: supporto@axa-mpsfinancial.ie\nA chi è rivolto questo prodotto?\nL\u0000investitore al dettaglio a cui è destinato il prodotto varia in funzione dell\u0000opzione di investimento sottostante e \nillustrata nel relativo KID.\nIl prodotto è indirizzato a Contraenti persone fisiche e persone giuridiche a condizione che il Contraente (persona fisica) \ne l\u0000Assicurato, al momento della sottoscrizione stessa, abbiano un\u0000età compresa tra i 18 anni e i 85 anni.\nQuali costi devo sostenere?\nPer l\u0000informativa dettagliata sui costi fare riferimento alle indicazioni del KID.\nIn aggiunta rispetto alle informazioni del KID , indicare i seguenti costi a carico del contraente.\nSpese di emissione:\nIl Contratto prevede una spesa fissa di emissione pari a 25 Euro.\nLa deduzione di tale importo avverrà contestualmente alla deduzione del premio.\nDIP aggiuntivo IBIP - Progetto Protetto New - Global Dividends -   Pag. 6 di 9\n",
             "L\u0000obiettivo di protezione è da considerarsi al netto delle spese di emissione.\nCosti per riscatto\nIl Riscatto (totale e parziale) prevede un costo che varia in funzione della data di richiesta e secondo le percentuali di \nseguito indicate:\n1°Anno 5,00%; 2°Anno 3,50%; 3°Anno 2,00%; dal quarto anno in poi 0%;\nCosti di intermediazione\nla quota parte massima percepita dall\u0000intermediario con riferimento all\u0000intero flusso commissionale relativo al prodotto \nè pari al 35,17%.\nQuali sono i rischi e qual è il potenziale rendimento?\nSia con riferimento alla prestazione in caso di vita dell\u0000assicurato, sia con riferimento al capitale caso morte riferito ai \nFondi Assicurativi Interni, la Compagnia non presta alcuna garanzia di rendimento minimo o di conservazione del \ncapitale. Pertanto il controvalore della prestazione della Compagnia potrebbe essere inferiore all\u0000importo dei premi \nversati, in considerazione dei rischi connessi alla fluttuazione del valore di mercato degli attivi in cui investe, \ndirettamente o indirettamente il Fondo Interno.\nCOME POSSO PRESENTARE I RECLAMI E RISOLVERE LE CONTROVERSIE?\nAll\u0000IVASS\nNel caso in cui il reclamo presentato all\u0000impesa assicuratrice abbia esito insoddisfacente o risposta \ntardiva, è possibile rivolgersi all\u0000IVASS, Via del Quirinale, 21 - 00187 Roma, fax 06.42133206, Info \nsu: www.ivass.it.\nEventuali reclami potranno inoltre essere indirizzati all\u0000Autorità Irlandese competente al seguente \nindirizzo:\nFinancial Services Ombudsman 3rd Floor, Lincoln House, Lincoln Place, Dublin 2, D02 VH29 \x03 \nIreland\nPRIMA DI RICORRERE ALL\u0000AUTORITÀ GIUDIZIARIA è possibile, in alcuni casi necessario, \navvalersi di sistemi alternativi di risoluzione delle controversie, quali:\nMediazione\nInterpellando un Organismo di Mediazione tra quelli presenti nell'elenco del Ministero della \nGiustizia, consultabile sul sito www.giustizia.it (Legge 9/8/2013, n.98)\nNegoziazione \nassistita\nTramite richiesta del proprio avvocato all\u0000impresa\nAltri Sistemi \nalternative di \nrisoluzione delle \ncontroversie\nEventuali reclami relativi ad un contratto o servizio assicurativo nei confronti dell'Impresa di \nassicurazione o dell'Intermediario assicurativo con cui si entra in contatto, nonché qualsiasi \nrichiesta di informazioni, devono essere preliminarmente presentati per iscritto (posta, email) ad \nAXA MPS Financial DAC - Ufficio Reclami secondo seguenti modalità:\nEmail: reclami@axa-mpsfinancial.ie\nPosta: AXA MPS Financial DAC - Ufficio Reclami\nWolfe Tone House, Wolfe Tone Street,\nDublin DO1 HP90 - Ireland\nNumero Verde 800.231.187\navendo cura di indicare:\n-nome, cognome, indirizzo completo e recapito telefonico del reclamante;\n-numero della polizza e nominativo del contraente;\n-breve ed esaustiva descrizione del motivo di lamentela;\n-ogni altra indicazione e documento utile per descrivere le circostanze.\nSarà cura della Compagnia fornire risposta entro 45 giorni dalla data di ricevimento del reclamo, \ncome previsto dalla normativa vigente.\nNel caso di mancato o parziale accoglimento del reclamo, nella risposta verrà fornita una chiara \nspiegazione della posizione assunta dalla Compagnia in relazione al reclamo stesso ovvero della \nsua mancata risposta.\nQualora il reclamante non abbia ricevuto risposta oppure ritenga la stessa non soddisfacente, \nprima di rivolgersi all'Autorità Giudiziaria, può scrivere all'IVASS (Via del Quirinale, 21 - 00187 \nRoma; fax 06.42.133.745 o 06.42.133.353, ivass@pec.ivass.it) fornendo copia del reclamo già \nDIP aggiuntivo IBIP - Progetto Protetto New - Global Dividends -   Pag. 7 di 9\n",
             "inoltrato all'impresa ed il relativo riscontro anche utilizzando il modello presente nel sito dell'IVASS \nalla sezione per il Consumatore - come presentare un reclamo.\nEventuali reclami potranno inoltre essere indirizzati all'Autorità Irlandese competente al seguente \nindirizzo:\nFinancial Services Ombudsman\n3rd Floor, Lincoln House,\nLincoln Place, Dublin 2, D02 VH29 Ireland\nIl reclamante può ricorrere ai sistemi alternativi per la risoluzione delle controversie previsti a livello \nnormativo o convenzionale, quali:\n\x04 Mediazione: (Decreto Legislativo n.28/2010 e ss.mm.) puo' essere avviata presentando istanza \nad un Organismo di Mediazione tra quelle presenti nell'elenco del Ministero della Giustizia, \nconsultabile sul sito www.giustizia.it. La legge ne prevede l'obbligatorieta' nel caso in cui si intenda \nesercitare in giudizio i propri diritti in materia di contratti assicurativi o finanziari e di risarcimento \nda responsabilita'  medica e sanitaria, costituendo condizione di procedibilita' della domanda.\n\x04 Negoziazione Assistita: (Legge n.162/2014) tramite richiesta del proprio Avvocato all'Impresa. E' \nun accordo mediante il quale le parti convengono di cooperare in buona fede e con lealta' per \nrisolvere in via amichevole la controversia tramite l'assistenza di avvocati. Fine del procedimento e' \nla composizione bonaria della lite, con la sottoscrizione delle parti - assistite dai rispettivi difensori - \ndi un accordo detto convenzione di negoziazione. Viene prevista la sua obbligatorieta' nel caso in \ncui si intenda esercitare in giudizio i propri diritti per ogni controversia in materia di risarcimento del \ndanno da circolazione di veicoli e natanti, ovverosia e' condizione di procedibilita' per l'eventuale \ngiudizio civile. Invece e' facoltativa per ogni altra controversia in materia di risarcimenti o di contratti \nassicurativi o finanziari.\nIn caso di controversia relativa alla determinazione dei danni si puo' ricorrere alla perizia \ncontrattuale prevista dalle Condizioni di Assicurazione per la risoluzione di tale tipologia di \ncontroversie. L'istanza di attivazione della perizia contrattuale dovra' essere indirizzata alla \nCompagnia all' indirizzo\nAXA MPS Financial DAC \nWolfe Tone House, Wolfe Tone Street\nDublin DO1 HP90  - Ireland\nPer maggiori informazioni si rimanda a quanto presente nell'area Reclami del sito \nwww.axa-mpsfinancial.ie. \nPer la risoluzione delle liti transfrontaliere è possibile presentare reclamo all'IVASS o direttamente \nal sistema estero http://ec.europa.eu/internal_market/fin-net/members_en.htm competente \nchiedendo l'attivazione della procedura FIN-NET.\nEventuali reclami relativi la mancata osservanza da parte della Compagnia, degli intermediari e dei \nperiti assicurativi, delle disposizioni del Codice delle assicurazioni, delle relative norme di \nattuazione nonché delle norme sulla commercializzazione a distanza dei prodotti assicurativi \npossono essere presentati direttamente all'IVASS, secondo le modalità sopra indicate.\nSi ricorda che resta salva la facoltà di adire l'autorità giudiziaria.\nREGIME FISCALE\nTrattamento \nfiscale applicabile \nal contratto\nLe seguenti informazioni sintetizzano alcuni aspetti del regime fiscale applicabile al Contratto, ai \nsensi della legislazione tributaria italiana e della prassi vigente alla data di pubblicazione del \npresente documento, fermo restando che le stesse rimangono soggette a possibili cambiamenti che \npotrebbero avere altresì effetti retroattivi. Quanto segue non intende rappresentare un\u0000analisi \nesauriente di tutte le conseguenze fiscali del Contratto. I Contraenti sono tenuti a consultare i loro \nconsulenti in merito al regime fiscale proprio del Contratto.\nTasse e imposte\nLe imposte e tasse presenti e future applicabili per legge al Contratto sono a carico del Contraente \no dei Beneficiari e aventi diritto e non è prevista la corresponsione al Contraente di alcuna somma \naggiuntiva volta a compensare eventuali riduzioni dei pagamenti relativi al Contratto.\nTassazione delle somme corrisposte a soggetti non esercenti attività d\u0000impresa\n1. In caso di decesso dell\u0000Assicurato\nLe somme corrisposte dall\u0000Impresa di Assicurazione in caso di decesso dell\u0000Assicurato non sono \nsoggette a tassazione IRPEF in capo al percettore e sono esenti dall\u0000imposta sulle successioni. Si \nricorda tuttavia che, per effetto della legge 23 dicembre 2014 n. 190 (c.d.\x02Legge di Stabilità\x02), i \nDIP aggiuntivo IBIP - Progetto Protetto New - Global Dividends -   Pag. 8 di 9\n",
             "capitali percepiti in caso di morte, a decorrere dal 1 gennaio 2015, in dipendenza di contratti di \nassicurazione sulla vita, a copertura del rischio demografico, sono esenti dall\u0000imposta sul reddito \ndelle persone fisiche.\n2. In caso di Riscatto totale o di Riscatto parziale.\nLe somme corrisposte dall\x05Impresa di Assicurazione in caso di Riscatto totale sono soggette ad \nun\u0000imposta sostitutiva dell\u0000imposta sui redditi nella misura prevista di volta in volta dalla legge. Tale \nimposta, al momento della redazione del presente documento, è pari al 26% sulla differenza \n(plusvalenza) tra il capitale maturato e l\u0000ammontare dei premi versati (al netto di eventuali riscatti \nparziali), con l\u0000eccezione dei proventi riferibili ai titoli di stato italiani ed equiparati (Paesi facenti \nparte della white list), per i quali l\u0000imposta è pari al 12,5%.\nIn caso di Riscatto parziale, ai fini del computo del reddito di capitale da assoggettare alla predetta \nimposta sostitutiva, l\u0000ammontare dei premi va rettificato in funzione del rapporto tra il capitale \nerogato ed il valore economico della polizza alla data del Riscatto parziale.\n3. In caso di Recesso\nLe somme corrisposte in caso di Recesso sono soggette all\u0000imposta sostitutiva delle imposte sui \nredditi nella misura e con gli stessi criteri indicati per il Riscatto totale del Contratto.\nTassazione delle somme corrisposte a soggetti esercenti attività d\u0000impresa\nLe somme corrisposte a soggetti che esercitano l\u0000attività d\u0000impresa non costituiscono redditi di \ncapitale, bensì redditi d\u0000impresa. Su tali somme l\u0000Impresa non applica l\u0000imposta sostitutiva di cui \nall\u0000art. 26-ter del D.P.R. 29 settembre 1973, n. 600.\nSe le somme sono corrisposte a persone fisiche o enti non commerciali in relazione a contratti \nstipulati nell\u0000ambito dell\u0000attività commerciale, l\u0000Impresa non applica l\u0000imposta sostitutiva, qualora gli \ninteressati presentino una dichiarazione in merito alla sussistenza di tale requisito.\nL\u0000IMPRESA HA L\u0000OBBLIGO DI TRASMETTERTI, ENTRO IL 31 MAGGIO DI OGNI ANNO, IL DOCUMENTO \nUNICO DI RENDICONTAZIONE ANNUALE DELLA TUA POSIZIONE ASSICURATIVA\nPER QUESTO CONTRATTO L\u0000IMPRESA NON DISPONE DI UN\u0000AREA INTERNET DISPOSITIVA RISERVATA \nAL CONTRAENTE (c.d. HOME INSURANCE), PERTANTO DOPO LA SOTTOSCRIZIONE  NON POTRAI \nGESTIRE TELEMATICAMENTE IL CONTRATTO MEDESIMO.\nDIP aggiuntivo IBIP - Progetto Protetto New - Global Dividends -   Pag. 9 di 9\n",
             ];
             // codespell:ignore-end
-            /*
-            if (textsExpected.Any(t => t == null))
-            {
-                Console.WriteLine("Skipping test_3186: full texts_expected not embedded (pages 2–9).");
-                return;
-            }
-            */
             using var fitzDoc = new Document(path);
             var texts = new List<string>();
             foreach (var page in fitzDoc)
                 texts.Add((string)page.GetText());
-            Assert.Equal(textsExpected[0], texts[0]);
+            Assert.Equal(textsExpected, texts);
         }
 
         [Fact]
@@ -278,7 +264,7 @@ namespace MuPDF.NET.Test
 
         private static byte[][] LoadTest3197ExpectedUtf8()
         {
-            // From test_textextract.py text_utf8_expected (2 pages).
+            // Expected UTF-8 for the two pages of this fixture.
             return new[]
             {
                 Encoding.UTF8.GetBytes(
@@ -291,52 +277,51 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_document_text()
         {
+            // Covers the single-thread path: Page.GetText on every page.
             string path = Doc("mupdf_explored.pdf");
 
-            static long Llen(IReadOnlyList<object> texts)
+            static long Llen(IReadOnlyList<string> texts)
             {
                 long l = 0;
                 foreach (var text in texts)
-                {
-                    if (text is string s)
-                        l += s.Length;
-                }
+                    l += text?.Length ?? 0;
                 return l;
             }
 
             Console.WriteLine();
-            using var document = new Document(path);
-            var texts0 = new List<object>();
-            foreach (var page in document)
-                texts0.Add(page.GetText("text"));
+            var texts0 = new List<string>();
+            using (var document = new Document(path))
+            {
+                foreach (var page in document)
+                    texts0.Add((string)page.GetText("text"));
+            }
+            Console.WriteLine($"single: llen={Llen(texts0)}");
 
-            float t0 = 0; // timing omitted in port
-            Console.WriteLine($"single: t0={t0} llen={Llen(texts0)}");
-
-            var texts1 = new List<object>();
-            foreach (var page in document)
-                texts1.Add(page.GetText("text"));
-            Assert.Equal(texts0.Count, texts1.Count);
-            for (int i = 0; i < texts0.Count; i++)
-                Assert.Equal(texts0[i], texts1[i]);
+            var texts1 = new List<string>();
+            using (var document = new Document(path))
+            {
+                foreach (var page in document)
+                    texts1.Add((string)page.GetText("text"));
+            }
+            Assert.Equal(texts0, texts1);
         }
 
         [Fact]
         public void test_4524()
         {
             Console.WriteLine();
-            using var document = new Document(Doc("mupdf_explored.pdf"));
-            var textsSingle = new List<object>();
-            foreach (int pno in new[] { 1, 3, 5 })
+            string path = Doc("mupdf_explored.pdf");
+            var textsSingle = new List<string>();
+            using (var document = new Document(path))
             {
-                if (pno < document.PageCount)
-                    textsSingle.Add(document[pno].GetText("text"));
+                foreach (int pno in new[] { 1, 3, 5 })
+                    textsSingle.Add((string)document[pno].GetText("text"));
             }
-            var textsMp = new List<object>();
-            foreach (int pno in new[] { 1, 3, 5 })
+            var textsMp = new List<string>();
+            using (var document = new Document(path))
             {
-                if (pno < document.PageCount)
-                    textsMp.Add(document[pno].GetText("text"));
+                foreach (int pno in new[] { 1, 3, 5 })
+                    textsMp.Add((string)document[pno].GetText("text"));
             }
             Console.WriteLine($"len(texts_single)={textsSingle.Count}");
             Console.WriteLine($"len(texts_mp)={textsMp.Count}");
@@ -347,6 +332,7 @@ namespace MuPDF.NET.Test
         public void test_3594()
         {
             Console.WriteLine();
+            Tools.ResetMupdfWarnings();
             using var d = new Document(Doc("test_3594.pdf"));
             foreach (var p in d)
             {
@@ -363,10 +349,10 @@ namespace MuPDF.NET.Test
                 }
             }
             string wt = Tools.MupdfWarnings();
-            var ver = _Version.mupdf_version_tuple();
-            if (ver.major < 1 || (ver.major == 1 && ver.minor < 26)
-                || (ver.major == 1 && ver.minor == 26 && ver.patch < 8))
-                Assert.True(string.IsNullOrEmpty(wt));
+            if (!_Version.mupdf_version_tuple_at_least(1, 28, 0))
+                Assert.Equal(
+                    "Actualtext with no position. Text may be lost or mispositioned.\n... repeated 2 times...",
+                    wt);
             else
                 Assert.Equal(
                     "ActualText with no position. Text may be lost or mispositioned.\n... repeated 2 times...",
@@ -376,16 +362,19 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_3687()
         {
-            foreach (string name in new[] { "test_3687.epub", "test_3687-3.epub" })
+            // Opening both first matches: the epub-3.0 warning is queued
+            // before the first mupdf_warnings read.
+            using var path1 = new Document(Doc("test_3687.epub"));
+            using var path2 = new Document(Doc("test_3687-3.epub"));
+            foreach (var path in new[] { path1, path2 })
             {
-                string path = Doc(name);
                 Console.WriteLine($"Looking at path={path}.");
-                using var document = new Document(path);
+                using var document = new Document(path.Name);
                 string text = (string)document[0].GetText("text");
                 Console.WriteLine($"text={text}");
                 string wt = Tools.MupdfWarnings();
                 Console.WriteLine($"wt={wt}");
-                //Assert.Equal("unknown epub version: 3.0", wt);
+                Assert.Equal("unknown epub version: 3.0", wt);
             }
         }
 
@@ -436,27 +425,24 @@ namespace MuPDF.NET.Test
             }
 
             string wt = Tools.MupdfWarnings();
-            var ver = _Version.mupdf_version_tuple();
-            if (ver.major > 1 || (ver.major == 1 && ver.minor >= 27 && ver.patch >= 1))
+            if (_Version.mupdf_version_tuple_at_least(1, 27, 1))
                 Assert.Equal("", wt);
-            else if (ver.major == 1 && ver.minor == 27)
+            else
             {
                 string expected =
                     "format error: No common ancestor in structure tree\nstructure tree broken, assume tree is missing";
                 expected = string.Join("\n", Enumerable.Repeat(expected, 56));
                 Assert.Equal(expected, wt);
             }
-            else if (ver.major == 1 && ver.minor == 26 && ver.patch >= 8)
-                Assert.Contains("Actualtext with no position", wt);
         }
 
         [Fact]
         public void test_3650()
         {
             using var doc = new Document(Doc("test_3650.pdf"));
-            var blocks = doc[0].get_text_blocks();
-            var t = blocks.Select(block => block.text).ToList();
-            Console.WriteLine($"t={string.Join(", ", t.Select(x => x.Length.ToString()))}");
+            var blocks = TextBlocks(doc[0]);
+            var t = blocks.Select(block => block.Text).ToList();
+            Console.WriteLine($"t={string.Join(", ", t.Select(x => $"'{x}'"))}");
             Assert.Equal(
                 new List<string>
                 {
@@ -471,10 +457,13 @@ namespace MuPDF.NET.Test
         {
             using var document = new Document(Doc("test_4026.pdf"));
             var page = document[4];
-            var blocks = page.get_text_blocks();
+            var blocks = TextBlocks(page);
             for (int i = 0; i < blocks.Count; i++)
-                Console.WriteLine($"block {i}: {blocks[i]}");
-            Assert.Equal(8, blocks.Count);
+                Console.WriteLine($"block {i}: {blocks[i].Text}");
+            if (_Version.mupdf_version_tuple_at_least(1, 28, 0))
+                Assert.Equal(8, blocks.Count);
+            else
+                Assert.Equal(5, blocks.Count);
         }
 
         [Fact]
@@ -551,7 +540,12 @@ namespace MuPDF.NET.Test
                         int sCtr = 0;
                         foreach (var s in AsDictList(l["spans"]))
                         {
-                            int color = 0;
+                            if (!s.TryGetValue("color", out var colorObj) || colorObj == null)
+                            {
+                                sCtr++;
+                                continue;
+                            }
+                            int color = Convert.ToInt32(colorObj);
                             if (!seen.Contains(color))
                             {
                                 seen.Add(color);
@@ -659,13 +653,10 @@ namespace MuPDF.NET.Test
                 }
                 var pixmap = page.GetPixmap();
                 pixmap.Save(Out("test_4182.png"));
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
                     foreach (var l in linelist)
-                    {
                         Console.WriteLine(l);
-                    }
-
                 }
                 string pathExpected = Doc("test_4182_expected.png");
                 using var pixmapDiff = _Compare.PixmapsDiff(pathExpected, pixmap);
@@ -682,9 +673,10 @@ namespace MuPDF.NET.Test
             string path = Doc("test_4179.pdf");
 
             int aa = mupdf.mupdf.fz_aa_level();
-            bool oldSkipQuad = Helpers.SkipQuadCorrections;
+            bool oldSkipQuad = Tools.UnsetQuadCorrections();
             Tools.SetAaLevel(0);
-            Helpers.SkipQuadCorrections = true;
+            Tools.UnsetQuadCorrections(true);
+            Assert.True(Helpers.SkipQuadCorrections);
             try
             {
                 using var document = new Document(path);
@@ -752,7 +744,7 @@ namespace MuPDF.NET.Test
             finally
             {
                 Tools.SetAaLevel(aa);
-                Helpers.SkipQuadCorrections = oldSkipQuad;
+                Tools.UnsetQuadCorrections(oldSkipQuad);
             }
         }
 
@@ -917,24 +909,28 @@ namespace MuPDF.NET.Test
         {
             string text;
             string path = Doc("test_4546.pdf");
+            // Flush native last-warning so this page's ActualText messages are not
+            // coalesced into a previous test (MuPDF fz_warn matches ctx->warn.message).
+            Tools.ResetMupdfWarnings();
             using (var document = new Document(path))
-                text = (string)document[0].GetText();
+                text = ((string)document[0].GetText())[..200];
 
             const string expectedMupdf1270 =
                 "JOB No.: \n \nS/O No. 托运单号码   \nSINORICH TRANSPORT LIMITED \nSHIPPING ORDER \n托运单 \n 市场部: \n88570009 \n88577019 \n88572702 \n 操作部: \n88570008 \n88570004 \n 文件部: \n88570003\n \nNotify Party(complete name and address, ";
 
-            var ver = _Version.mupdf_version_tuple();
             string wt = Tools.MupdfWarnings();
             Console.WriteLine($"version={Tools.MupdfVersion()}");
             Console.WriteLine($"text is:\n{Indent(text, "    ")}");
 
-            if (ver.major > 1 || (ver.major == 1 && ver.minor >= 26 && ver.patch >= 8))
-            {
-                Assert.Equal(expectedMupdf1270, text.Substring(0, Math.Min(expectedMupdf1270.Length, text.Length)));
-                Assert.Contains("Actualtext with no position", wt);
-            }
-            else if (ver.major == 1 && ver.minor >= 26)
-                Assert.False(string.IsNullOrEmpty(wt));
+            Assert.Equal(expectedMupdf1270, text);
+            if (_Version.mupdf_version_tuple_at_least(1, 28, 0))
+                Assert.Equal(
+                    "ActualText with no position. Text may be lost or mispositioned.\n... repeated 120 times...",
+                    wt);
+            else
+                Assert.Equal(
+                    "Actualtext with no position. Text may be lost or mispositioned.\n... repeated 120 times...",
+                    wt);
         }
 
         [Fact]
@@ -947,7 +943,7 @@ namespace MuPDF.NET.Test
             var ver = _Version.mupdf_version_tuple();
             Console.WriteLine($"mupdf_version_tuple=({ver.major}, {ver.minor}, {ver.patch})");
 
-            int flags = Constants.TextFlagsDict | mupdf.mupdf.FZ_STEXT_COLLECT_STYLES;
+            int flags = Constants.TextFlagsRawDict | mupdf.mupdf.FZ_STEXT_COLLECT_STYLES;
             using (var document = new Document(path))
             {
                 var page = document[0];
@@ -985,34 +981,36 @@ namespace MuPDF.NET.Test
             Assert.NotNull(span0);
             int charFlags0 = Convert.ToInt32(span0["char_flags"]);
             int strikeout = charFlags0 & mupdf.mupdf.FZ_STEXT_STRIKEOUT;
+            Console.WriteLine($"span flags=0x{Convert.ToInt32(span0["flags"]):X}");
+            Console.WriteLine($"span char_flags=0x{charFlags0:X}");
+            Console.WriteLine($"text0={text0}");
             Console.WriteLine($"strikeout={strikeout}");
+            Assert.NotEqual(0, strikeout);
+            Assert.Equal("the right to request the state to review and, if appropriate,", text0);
+        }
 
-            if (ver.major > 1 || (ver.major == 1 && ver.minor >= 26 && ver.patch >= 3))
+        [Fact]
+        public void test_4994()
+        {
+            Console.WriteLine();
+            var ver = _Version.mupdf_version_tuple();
+            Console.WriteLine($"mupdf_version_tuple=({ver.major}, {ver.minor}, {ver.patch}).");
+            string path = Doc("test_4994.pdf");
+            using var document = new Document(path);
+            foreach (var page in document)
             {
-                Assert.NotEqual(0, strikeout);
-                Assert.Equal("the right to request the state to review and, if appropriate,", text0);
-            }
-            else if (ver.major == 1 && ver.minor == 26 && ver.patch >= 2)
-            {
-                Assert.NotEqual(0, strikeout);
-                Assert.Equal("the right to request the state to review ", text0);
-            }
-            else if (ver.major == 1 && ver.minor == 27 && ver.patch >= 2)
-            {
-                Assert.NotEqual(0, strikeout);
-                Assert.Equal("the right to request the state to review and, if appropriate,", text0);
-            }
-            else if (ver.major == 1 && ver.minor == 28 && ver.patch >= 0)
-            {
-                Assert.NotEqual(0, strikeout);
-                Assert.Equal("the right to request the state to review and, if appropriate,", text0);
-            }
-            else
-            {
-                Assert.Equal(0, strikeout);
-                Assert.Equal(
-                    "notice the right to request the state to review and, if appropriate,",
-                    text0);
+                string text = (string)page.GetText();
+                Console.WriteLine($"test_4994(): page.GetText()={text}");
+                Console.WriteLine($"test_4994(): flags=TextFlagsText|TEXT_DEHYPHENATE={page.GetText(flags: Constants.TextFlagsText | mupdf.mupdf.FZ_STEXT_DEHYPHENATE)}");
+                Console.WriteLine($"test_4994(): flags=TEXT_DEHYPHENATE={page.GetText(flags: mupdf.mupdf.FZ_STEXT_DEHYPHENATE)}");
+                int searchFlags =
+                    mupdf.mupdf.FZ_STEXT_DEHYPHENATE
+                    | mupdf.mupdf.FZ_STEXT_PRESERVE_WHITESPACE
+                    | mupdf.mupdf.FZ_STEXT_PRESERVE_LIGATURES
+                    | mupdf.mupdf.FZ_STEXT_MEDIABOX_CLIP;
+                var searchResults = page.SearchForRects("climate", flags: searchFlags);
+                Console.WriteLine($"test_4994(): search_results count={searchResults.Count}");
+                Assert.Equal(2, searchResults.Count);
             }
         }
     }

@@ -1,11 +1,14 @@
-using System;
+﻿using System;
+using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
+using System.Text;
 using Xunit;
 
 namespace MuPDF.NET.Test
 {
-    /// <summary>
-    /// </summary>
+
+
     /// <remarks>
     /// Inputs: <c>TestDocuments/TestPageLinks/</c>; outputs: <c>TestDocuments/_Output/TestPageLinks/</c>.
     /// </remarks>
@@ -23,12 +26,10 @@ namespace MuPDF.NET.Test
         {
             using var doc = new Document(Doc("2.pdf"));
 
-            // page = doc[-1]
+
             var page = doc[doc.PageCount - 1];
 
-            // link_generator = page.links()
             var linkGenerator = page.links();
-            // links = list(link_generator)
             var links = linkGenerator.ToList();
             Assert.Equal(7, links.Count);
         }

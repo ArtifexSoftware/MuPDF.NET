@@ -21,6 +21,7 @@ namespace MuPDF.NET
         public string Filter { get; set; }
 
         // font struct
+
         /// <summary>
         /// the image, font and form object number
         /// </summary>
@@ -43,7 +44,7 @@ namespace MuPDF.NET
 
         public Rect Bbox { get; set; } = null;
 
-        // MuPDF get_images() tuple aliases (legacy tests / ports).
+        // Image-info tuple aliases for legacy tests.
         public int xref => Xref;
         public string smask => Smask.ToString();
         public int width => (int)Width;

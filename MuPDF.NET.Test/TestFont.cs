@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Xunit;
-
+using MuPDF.NET;
 namespace MuPDF.NET.Test
 {
     /// <summary>
@@ -19,7 +19,7 @@ namespace MuPDF.NET.Test
         private const string TestClassName = nameof(TestFont);
 
         // Mirrors pyg_fz_install_load_system_font_funcs_args: the SWIG
-        // director must stay alive after fz_install_load_system_font_funcs2().
+        // director must stay alive after fz_install_load_system_font_funcs2.
         static SystemFontFontTrace _installedSystemFontTrace;
 
         private static string Doc(string fileName) => _Path.ForTestClass(fileName, TestClassName);
@@ -38,23 +38,27 @@ namespace MuPDF.NET.Test
             Assert.Equal("Helvetica", font.Name);
             float tl = font.TextLength(text, fontSize: 20);
             float[] cl = font.CharLengths(text, fontSize: 20);
+            Console.WriteLine($"tl={tl}");
+            Console.WriteLine($"cl=[{string.Join(", ", cl)}]");
             Assert.Equal(text.Length, cl.Length);
             Assert.True(Math.Abs(cl.Sum() - tl) < Epsilon);
             for (int i = 0; i < cl.Length; i++)
-            {
                 Assert.True(_Tools.IsClose(cl[i], font.GlyphAdvance(text[i]) * 20));
-            }
 
             byte[] buffer = font.Buffer;
             Assert.NotNull(buffer);
             using var font2 = new Font(fontBuffer: buffer);
             List<int> codepoints1 = font.ValidCodepoints();
             List<int> codepoints2 = font2.ValidCodepoints();
+            Console.WriteLine($"len(codepoints1)={codepoints1.Count}");
+            Console.WriteLine($"len(codepoints2)={codepoints2.Count}");
             Assert.Equal(codepoints1, codepoints2);
 
             Rect bbox1 = font.BBox;
             var fzBbox = mupdf.mupdf.fz_font_bbox(font.NativeFont);
             var bbox2 = new Rect(fzBbox.x0, fzBbox.y0, fzBbox.x1, fzBbox.y1);
+            Console.WriteLine($"bbox1={bbox1}");
+            Console.WriteLine($"bbox2={bbox2}");
             Assert.Equal(bbox1, bbox2);
         }
 
@@ -89,18 +93,18 @@ namespace MuPDF.NET.Test
         [Fact]
         public void test_load_system_font()
         {
-            // trace = list()
-            var trace = new SystemFontFontTrace();
-            trace.EnableVirtualCallbacks();
-            trace.fz_install_load_system_font_funcs2();
-            _installedSystemFontTrace = trace;
-            // f = pyfz_load_system_font("some-font-name", 0, 0, 0)
+            var trace = new List<object>();
+            var args = new SystemFontFontTrace(trace);
+            args.EnableVirtualCallbacks();
+            args.fz_install_load_system_font_funcs2();
+            _installedSystemFontTrace = args;
+
             var f = mupdf.mupdf.fz_load_system_font("some-font-name", 0, 0, 0);
-            Assert.Equal(
-                new List<(string, int, int, int)> { ("some-font-name", 0, 0, 0) },
-                trace.FontTrace);
-            Console.WriteLine($"test_load_system_font(): f.m_internal={f.m_internal}");
-            f.Dispose();
+            Assert.True(
+                trace.Count == 1 && Equals(trace[0], ("some-font-name", 0, 0, 0)),
+                $"Incorrect trace=[{string.Join(", ", trace)}].");
+            Console.WriteLine($"test_load_system_font(): f.m_internal={(object)f?.m_internal ?? "None"}");
+            f?.Dispose();
         }
 
         /// <summary>Regression test: fontname.</summary>
@@ -155,7 +159,10 @@ namespace MuPDF.NET.Test
         public void test_mupdf_subset_fonts2()
         {
             using var doc = new Document(Doc("2.pdf"));
-            doc.SubsetFonts();
+            int n = doc.PageCount;
+            var pageList = Enumerable.Range(0, n / 2).Select(i => i * 2).ToList();
+            Console.WriteLine($"pages=[{string.Join(", ", pageList)}].");
+            mupdf.mupdf.pdf_subset_fonts2(Helpers.AsPdfDocument(doc), new mupdf.vectori(pageList));
             doc.Save(Out("test_mupdf_subset_fonts2.pdf"));
         }
 
@@ -173,7 +180,7 @@ namespace MuPDF.NET.Test
                     "BCDGEE+Calibri-Light",
                     "BCDHEE+Calibri-Light",
                 };
-                var fontNames = new List<string>(); // font_names = list()
+                var fontNames = new List<string>(); // font_names = list
                 using (var document = new Document(Doc("test_3677.pdf")))
                 {
                     foreach (Page page in document) // for page in document:
@@ -183,7 +190,7 @@ namespace MuPDF.NET.Test
                         {
                             if (Convert.ToInt32(block["type"]) == 0) // if block['type'] == 0:
                             {
-                                if (block.ContainsKey("lines")) // if 'lines' in block.keys():
+                                if (block.ContainsKey("lines")) // if 'lines' in block.keys:
                                 {
                                     foreach (var line in (List<Dictionary<string, object>>)block["lines"]) // for line in block['lines']:
                                     {
@@ -234,31 +241,25 @@ namespace MuPDF.NET.Test
             }
         }
 
-        /// <summary>smoke.</summary>
+        /// <summary>Word clip rectangles must still recover the same word text.</summary>
         [Fact]
         public void test_3780()
         {
-            using var document = new Document(Doc("test_3780.pdf"));
-            int pageI = 0;
-            foreach (Page page in document)
+            using var doc = new Document(Doc("test_3780.pdf"));
+            var page = doc[0];
+            var words = (List<WordBlock>)page.GetText("words");
+            for (int i = 0; i < words.Count; i++)
             {
-                foreach (var itm in page.GetFonts())
-                {
-                    var (_, _, _, buff) = document.ExtractFont(itm.xref);
-                    if (buff == null || buff.Length == 0)
-                        continue;
-                    using var font = new Font(fontBuffer: buff);
-                    _ = font.Name;
-                    _ = font.Ascender;
-                    _ = font.Descender;
-                }
-                if (pageI == 0)
-                    _ = page.GetText("dict");
-                pageI++;
+                var w = words[i];
+                var clip = new Rect(w.X0, w.Y0, w.X1, w.Y1);
+                var xwords = (List<WordBlock>)page.GetText("words", clip);
+                Console.WriteLine($"[{string.Join(", ", xwords.Select(xw => $"({xw.X0}, {xw.Y0}, {xw.X1}, {xw.Y1}, '{xw.Text}', {xw.BlockNum}, {xw.LineNum}, {xw.WordNum})"))}]");
+                Assert.True(xwords.Count > 0 && xwords[0].Text == w.Text,
+                    $"wrong bbox {i} ({w.X0}, {w.Y0}, {w.X1}, {w.Y1}), word '{w.Text}'");
             }
         }
 
-        /// <summary>same as <c>tests/test_font.py::test_3887</c>.</summary>
+        /// <summary>EzSave round-trip of a document with subset fonts.</summary>
         [Fact]
         public void test_3887()
         {
@@ -277,13 +278,11 @@ namespace MuPDF.NET.Test
                 {
                     Page page = document[0];
                     var rawdict = (Dictionary<string, object>)page.GetText("rawdict", flags: 0);
-                    // chars = [c for b in page.GetText("rawdict",flags=0)["blocks"] for l in b["lines"] for s in l["spans"] for c in s["chars"]]
                     var chars = ((List<Dictionary<string, object>>)rawdict["blocks"])
                         .SelectMany(b => (List<Dictionary<string, object>>)b["lines"])
                         .SelectMany(l => (List<Dictionary<string, object>>)l["spans"])
                         .SelectMany(s => (List<Dictionary<string, object>>)s["chars"])
                         .ToList();
-                    // output = [c["c"] for c in chars]
                     var output = chars.Select(c => (string)c["c"]).ToList();
                     Assert.Equal(new HashSet<char>(text), new HashSet<char>(string.Concat(output)));
 
@@ -454,14 +453,15 @@ namespace MuPDF.NET.Test
             exam.Save(pathOut, garbage: 4, deflate: 1, clean: 1);
         }
 
-        /// <summary>Records <c>fz_install_load_system_font_funcs</c> callback invocations for <see cref="test_load_system_font"/>.</summary>
+        /// <summary>
+        /// C# analog of <c>fz_install_load_system_font_funcs(font_f, f_cjk, f_fallback)</c>.
+        /// The SWIG director must stay alive after <c>fz_install_load_system_font_funcs2</c>.
+        /// </summary>
         private sealed class SystemFontFontTrace : mupdf.FzInstallLoadSystemFontFuncsArgs2
         {
-            public List<(string name, int bold, int italic, int needsExactMetrics)> FontTrace { get; } = new();
+            private readonly List<object> _trace;
 
-            public List<(string name, int ordering, int serif)> CjkTrace { get; } = new();
-
-            public List<(int script, int language, int serif, int bold, int italic)> FallbackTrace { get; } = new();
+            public SystemFontFontTrace(List<object> trace) => _trace = trace;
 
             public void EnableVirtualCallbacks()
             {
@@ -477,15 +477,17 @@ namespace MuPDF.NET.Test
                 int italic,
                 int needs_exact_metrics)
             {
-                // trace.append((name, bold, italic, needs_exact_metrics))
-                FontTrace.Add((name, bold, italic, needs_exact_metrics));
+                _trace.Add((name, bold, italic, needs_exact_metrics));
+                Console.WriteLine(
+                    $"test_load_system_font():font_f(): Looking for font: name={name} bold={bold} italic={italic} needs_exact_metrics={needs_exact_metrics}.");
                 return null;
             }
 
             public override mupdf.fz_font f_cjk(mupdf.fz_context arg_0, string name, int ordering, int serif)
             {
-                // trace.append((name, ordering, serif))
-                CjkTrace.Add((name, ordering, serif));
+                _trace.Add((name, ordering, serif));
+                Console.WriteLine(
+                    $"test_load_system_font():f_cjk(): Looking for font: name={name} ordering={ordering} serif={serif}.");
                 return null;
             }
 
@@ -497,8 +499,9 @@ namespace MuPDF.NET.Test
                 int bold,
                 int italic)
             {
-                // trace.append((script, language, serif, bold, italic))
-                FallbackTrace.Add((script, language, serif, bold, italic));
+                _trace.Add((script, language, serif, bold, italic));
+                Console.WriteLine(
+                    $"test_load_system_font():f_fallback(): looking for font: script={script} language={language} serif={serif} bold={bold} italic={italic}.");
                 return null;
             }
         }

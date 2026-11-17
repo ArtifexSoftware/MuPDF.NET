@@ -1,42 +1,22 @@
 ## About
 
-**MuPDF.NET.PDF4LLM** provides LLM/RAG helpers for [MuPDF.NET](https://www.nuget.org/packages/MuPDF.NET): PDF-to-Markdown conversion, layout parsing, and document structure analysis. It is designed for use with RAG (Retrieval-Augmented Generation) pipelines and integration with LLMs.
+**Deprecated.** **MuPDF.NET.PDF4LLM** will be removed. 2.1 is an empty type-forward stub for [MuPDF.NET](https://www.nuget.org/packages/MuPDF.NET) **4.1**, matching PyPI [pymupdf4llm 2.1](https://pypi.org/project/pymupdf4llm/).
 
-**Documentation:** [docs.pdf4llm.com](https://docs.pdf4llm.com/) · [.NET installation](https://docs.pdf4llm.com/dotnet/getting-started/installation)
+**Do not add this package to new projects.** PDF-to-Markdown, layout JSON, and plain-text extract live on `Document.ToMarkdown` / `ToJson` / `ToText` in `MuPDF.NET.dll`. Office/HWP: [MuPDF.NET.Office](https://www.nuget.org/packages/MuPDF.NET.Office) **2.1.0**. Existing `PackageReference Include="MuPDF.NET.PDF4LLM"` lines still compile until this package is removed.
 
-This package extends MuPDF.NET with:
+**Documentation:** [docs.pdf4llm.com](https://docs.pdf4llm.com/) · [MuPDF.NET README](https://github.com/ArtifexSoftware/MuPDF.NET)
 
-- **PDF-to-Markdown** — Convert PDF pages to Markdown with layout awareness (tables, headers, images)
-- **Layout parsing** — Extract document structure (pages, boxes, tables, images) as JSON or structured objects
-- **LlamaIndex integration** — `PDFMarkdownReader` for compatibility with LlamaIndex document loading
-- **OCR support** — Optional OCR for scanned or image-heavy pages
-- **Form fields** — Extract key/value pairs from interactive PDF forms
-
-Install with `dotnet add package MuPDF.NET.PDF4LLM`. MuPDF.NET is installed automatically as a dependency.
+```bash
+dotnet add package MuPDF.NET
+```
 
 For Office/HWP documents (DOC/DOCX, XLS/XLSX, PPT/PPTX, HWP/HWPX), also install
-[MuPDF.NET.Office](https://www.nuget.org/packages/MuPDF.NET.Office), call `MuPDFOffice.Unlock(...)`,
-then pass those paths to `MuPDF4LLM.ToMarkdown` / `MuPDF4LLM.ToJson` / `MuPDF4LLM.ToText`.
+[MuPDF.NET.Office](https://www.nuget.org/packages/MuPDF.NET.Office) **2.1.0**, call `MuPDFOffice.Unlock(...)`,
+then `new Document(path).ToMarkdown()`.
 
-## PyMuPDF Layout (optional)
+## PyMuPDF Layout
 
-AI-based page layout uses the Python package [pymupdf-layout](https://pypi.org/project/pymupdf-layout/) via an external worker. Install it once per machine:
-
-```bash
-dotnet msbuild -t:MuPDFNetPDF4LLMSetupLayoutPython
-```
-
-This creates a per-user Python venv (Windows: `%LOCALAPPDATA%\MuPDF.NET.PDF4LLM\.venv-layout`, Linux/macOS: `~/.local/share/mupdf4llm.net/.venv-layout`) and installs pinned `pymupdf` / `pymupdf-layout` wheels. MuPDF.NET.PDF4LLM discovers that venv automatically.
-
-On Debian/Ubuntu, install system packages first:
-
-```bash
-sudo apt install python3-venv python3-pip
-```
-
-Alternatively, install `pymupdf-layout` into any Python 3.10+ environment and set `MuPDF4LLM_NET_PYTHON` to that interpreter. If layout is unavailable, MuPDF.NET.PDF4LLM falls back to classic text extraction.
-
-Project-local venv: run `python path/to/setup_layout_python.py --venv .mupdf4llm-net-venv` in your project directory (also auto-discovered).
+Layout setup is on the **MuPDF.NET** package. See [MuPDF.NET README — Layout analysis](https://github.com/ArtifexSoftware/MuPDF.NET#layout-analysis-optional) (`dotnet msbuild -t:MuPDFNetSetupLayoutPython`).
 
 ## License and Copyright
 

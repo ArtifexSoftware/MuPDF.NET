@@ -26,11 +26,22 @@ namespace MuPDF.NET.Test
         {
             // In CHANGELOG.md, first item must match ArtifexMuPDFNetVersion.
             var (_, versionNet) = ReadVersionsProps();
-            string path = Path.Combine(SolutionRoot, "MuPDF.NET\\CHANGELOG.md");
+            string path = Path.Combine(SolutionRoot, "MuPDF.NET", "CHANGELOG.md");
             string text = File.ReadAllText(path).Replace("\r\n", "\n");
             var m = Regex.Match(text, @"\n### \[([0-9.]+)\] - [0-9]{4}-[0-9]{2}-[0-9]{2}\n");
             Assert.True(m.Success, $"Cannot parse {path}.");
             Assert.Equal(versionNet, m.Groups[1].Value);
+        }
+
+        [Fact]
+        public void test_release_changelog_mupdf_version()
+        {
+            var (mupdf, _) = ReadVersionsProps();
+            string path = Path.Combine(SolutionRoot, "MuPDF.NET", "CHANGELOG.md");
+            string text = File.ReadAllText(path).Replace("\r\n", "\n");
+            var m = Regex.Match(text, @"\n### \[[0-9.]+\] - [0-9]{4}-[0-9]{2}-[0-9]{2}\n(?<body>[\s\S]*?)(?=\n### |\z)");
+            Assert.True(m.Success, $"Cannot parse first CHANGELOG section in {path}.");
+            Assert.Contains(mupdf, m.Groups["body"].Value);
         }
     }
 }

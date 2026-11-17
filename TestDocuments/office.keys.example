@@ -1,0 +1,7 @@
+# Copy this file to office.keys (gitignored) and fill in local keys.
+# Do not commit office.keys. Do not put keys in source, tests, or nupkgs.
+#
+# Demo volume-license reads the Activity= line.
+# Override with MUPDF_OFFICE_KEY or: dotnet run -- volume-license --key YOUR-VOLUME-KEY
+
+Activity=

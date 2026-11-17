@@ -5,7 +5,7 @@ using mupdf;
 namespace MuPDF.NET
 {
     /// <summary>
-    /// HTML/XML DOM node for <see cref="Story"/> content .
+    /// HTML/XML DOM node for <see cref="Story"/> content.
     /// </summary>
     /// <remarks>
     /// <para>Obtain the document body via <see cref="Story.Body"/> rather than constructing a root node yourself.</para>
@@ -22,7 +22,7 @@ namespace MuPDF.NET
             xml?.m_internal != null;
 
         /// <summary>
-        /// Wrap a DOM node returned by MuPDF without taking ownership ( on tree nodes).
+        /// Wrap a DOM node returned by MuPDF without taking ownership (on tree nodes).
         /// </summary>
         internal static Xml? FromDomNode(FzXml? ret)
         {
@@ -34,11 +34,11 @@ namespace MuPDF.NET
             return new Xml(new FzXml(h, false));
         }
 
-        /// <summary>Wrap an existing <see cref="FzXml"/> handle ( when rhs is FzXml).</summary>
+        /// <summary>Wrap an existing <see cref="FzXml"/> handle (when rhs is FzXml).</summary>
         public Xml(FzXml rhs) =>
             This = rhs ?? throw new ArgumentNullException(nameof(rhs));
 
-        /// <summary>Parse HTML5 from a string ( when rhs is str).</summary>
+        /// <summary>Parse HTML5 from a string (when rhs is str).</summary>
         public Xml(string rhs)
         {
             var buff = Helpers.BufferFromBytes(System.Text.Encoding.UTF8.GetBytes(rhs ?? ""));
@@ -99,7 +99,7 @@ namespace MuPDF.NET
         public Xml? BodyTag() => FromDomNode(This.fz_dom_body());
 
         /// <summary>
-        /// Find the first descendant matching tag/attribute .
+        /// Find the first descendant matching tag/attribute.
         /// </summary>
         /// <param name="tag">Element tag, or <c>null</c> for any tag.</param>
         /// <param name="att">Attribute name, or <c>null</c>.</param>
@@ -514,7 +514,7 @@ namespace MuPDF.NET
         public Xml SetWordSpacing(string spacing) => AppendStyledSpan($"word-spacing: {spacing}");
 
         /// <summary>
-        /// Apply multiple presentation properties on this node in one call .
+        /// Apply multiple presentation properties on this node in one call.
         /// </summary>
         /// <remarks>Unlike individual <c>Set*</c> methods, styles are merged onto this node's <c>style</c> attribute.</remarks>
         public Xml SetProperties(

@@ -9,7 +9,7 @@
     <RunAnalyzers>false</RunAnalyzers>
     <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
     <PackageId>MuPDF.Fonts</PackageId>
-    <Version>1.0.4</Version>
+    <Version>1.0.5</Version>
     <Authors>Artifex Software Inc.</Authors>
     <Description>MuPDF.Fonts - font buffers for MuPDF.NET from pymupdf-fonts.</Description>
     <PackageTags>mupdf;pymupdf;fonts</PackageTags>
@@ -24,7 +24,15 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="SharpCompress" Version="*" />
+    <!-- Exact pin. Version="*" packed as unlisted accidental SharpCompress 1.0.0 (#261). -->
+    <PackageReference Include="SharpCompress" Version="[0.50.7]" />
+  </ItemGroup>
+
+  <!-- SharpCompress 0.50.7 / CodePages 8.0.0 compile against System.Memory 4.0.2.0+,
+       but their netstandard2.0 nuspec still pulls 4.5.5 (4.0.1.2) → MSB3277 on netfx. -->
+  <ItemGroup Condition="'$(TargetFramework)' != 'net8.0'">
+    <PackageReference Include="System.Memory" Version="4.6.3" />
+    <PackageReference Include="System.Buffers" Version="4.6.1" />
   </ItemGroup>
 
 </Project>

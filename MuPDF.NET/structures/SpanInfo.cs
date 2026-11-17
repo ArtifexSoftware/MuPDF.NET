@@ -4,6 +4,7 @@ namespace MuPDF.NET
 {
     public class SpanInfo
     {
+
         /// <summary>
         /// direction of the span
         /// </summary>
@@ -59,9 +60,9 @@ namespace MuPDF.NET
         public float Opacity { get; set; }
 
         /// <summary>
-        /// line width
+        /// Stroke width for stroked text; <see langword="null"/> for fill text (extra <c>linewidth</c>).
         /// </summary>
-        public float LineWidth { get; set; }
+        public float? LineWidth { get; set; }
 
         public float SpaceWidth { get; set; }
 

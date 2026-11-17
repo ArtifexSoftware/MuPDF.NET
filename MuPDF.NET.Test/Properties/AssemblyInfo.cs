@@ -3,5 +3,5 @@ using Xunit;
 // Native MuPDF interop is not reliably thread-safe under parallel xUnit collections (random AVs).
 [assembly: CollectionBehavior(DisableTestParallelization = true)]
 
-// MuPDF tests/conftest.py: clear mupdf_warnings() before each test.
+// Clear stored MuPDF warnings before each test.
 [assembly: MuPDF.NET.Test.ResetMupdfWarnings]

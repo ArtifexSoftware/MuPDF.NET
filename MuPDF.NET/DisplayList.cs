@@ -125,8 +125,9 @@ namespace MuPDF.NET
 
         /// <summary>
         /// Mediabox of this display list (equals the page rectangle when built via
-        /// <see cref="Page.GetDisplayList"/>).
         /// </summary>
+        /// <see cref="Page.GetDisplayList"/>).
+
         public Rect Rect => Helpers.RectFromFz(mupdf.mupdf.fz_bound_display_list(NativeDisplayList));
 
         /// <summary>

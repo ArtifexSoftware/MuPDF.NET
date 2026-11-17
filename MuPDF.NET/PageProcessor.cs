@@ -11,7 +11,7 @@ namespace MuPDF.NET
     /// </summary>
     /// <remarks>
     /// <para>
-    /// <c>src/_apply_pages.py</c>. Public API uses .NET <see cref="ApplyPages"/> overloads with
+    /// Public API uses .NET <see cref="ApplyPages"/> overloads with
     /// <c>ParallelRunner.For</c> instead of Python <c>multiprocessing</c> / <c>os.fork()</c>.
     /// </para>
     /// <para>
@@ -23,11 +23,13 @@ namespace MuPDF.NET
     /// </remarks>
     public static class PageProcessor
     {
+
         /// <summary>
         /// Returns a list of results from <paramref name="pageFunction"/>, one per selected page, in page order.
-        /// Applies pages sequentially (<c>method='single'</c>; ). Here uses
-        /// <see cref="ParallelRunner.For"/> on the supplied open document).
+        /// Applies pages sequentially (<c>method='single'</c>;). Here uses
         /// </summary>
+        /// <see cref="ParallelRunner.For"/> on the supplied open document).
+
         /// <typeparam name="T">Result type produced for each page.</typeparam>
         /// <param name="doc">Open document whose pages are processed.</param>
         /// <param name="pageFunction">
@@ -62,11 +64,12 @@ namespace MuPDF.NET
 
         /// <summary>
         /// Returns a list of results from <paramref name="pageFunction"/> using parallel workers that each open
-        /// the file at <paramref name="filename"/> ( with <c>method='mp'</c> /
-        /// <c>'fork'</c> — one <see cref="Document"/> per worker in <c>_apply_pages._worker_fn</c>).
+        /// the file at <paramref name="filename"/> (with <c>method='mp'</c>
         /// </summary>
+        /// <c>'fork'</c> — one <see cref="Document"/> per worker in <c>_apply_pages._worker_fn</c>).
+
         /// <typeparam name="T">Result type produced for each page.</typeparam>
-        /// <param name="filename">Path of the document file ( argument).</param>
+        /// <param name="filename">Path of the document file (argument).</param>
         /// <param name="pageFunction">Called for each page; must be thread-safe.</param>
         /// <param name="start">First page number (0-based, inclusive).</param>
         /// <param name="stop">Last page number (exclusive).</param>
@@ -113,7 +116,7 @@ namespace MuPDF.NET
 
         /// <summary>
         /// Applies <paramref name="pageAction"/> to each selected page of an open document (no return list).
-        /// Skips pages when the callback returns <c>null</c> .
+        /// Skips pages when the callback returns <c>null</c>.
         /// </summary>
         /// <param name="doc">Open document whose pages are processed.</param>
         /// <param name="pageAction">Called for each page. Must be thread-safe; avoid mutating <paramref name="doc"/>.</param>

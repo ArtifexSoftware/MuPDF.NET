@@ -6,7 +6,7 @@ using System.Globalization;
 namespace MuPDF.NET
 {
     /// <summary>
-    /// Row-major 3×3 affine transform used for PDF/image coordinate mapping .
+    /// Row-major 3×3 affine transform used for PDF/image coordinate mapping.
     /// </summary>
     /// <remarks>
     /// <para>Only six values <c>[a, b, c, d, e, f]</c> are used; they map points as in the Adobe PDF
@@ -14,7 +14,7 @@ namespace MuPDF.NET
     /// equivalent to updating those six numbers directly.</para>
     /// <para>Legacy API reference:
     /// <see href="https://mupdfnet.readthedocs.io/en/latest/classes/Matrix.html"/>.</para>
-    /// <para>Constructors: <see cref="Matrix()"/> (zeros),
+    /// <para>Constructors: <see cref="Matrix"/> (zeros),
     /// <see cref="Matrix(float,float)"/> (zoom),
     /// <see cref="Matrix(float,float,float)"/> (zoom with third arg <c>0</c>, or shear with <c>1</c>),
     /// <see cref="Matrix(float,float,float,float,float,float)"/>,
@@ -23,7 +23,7 @@ namespace MuPDF.NET
     /// six-element sequence, or <see cref="Matrix(Rect)"/> (page mediabox transform).</para>
     /// <para>For a non-transforming matrix constant, use <see cref="IdentityMatrix"/> or
     /// <see cref="Identity"/>; for a modifiable identity, use <c>new Matrix(1, 1)</c> or
-    /// <c>new Matrix(new IdentityMatrix())</c>.</para>
+    /// <c>new Matrix(new IdentityMatrix)</c>.</para>
     /// </remarks>
     public class Matrix : IEnumerable<float>, IEquatable<Matrix>
     {
@@ -76,8 +76,9 @@ namespace MuPDF.NET
 
         /// <summary>
         /// Creates a counter-clockwise rotation matrix for positive <paramref name="angleDegrees"/>
-        /// .
         /// </summary>
+
+
         public Matrix(float angleDegrees) => Assign(RotationMatrix(angleDegrees));
 
         /// <summary>
@@ -178,7 +179,7 @@ namespace MuPDF.NET
             }
         }
 
-        /// <summary>Euclidean norm of the six-element vector ( / <c>__abs__</c>).</summary>
+        /// <summary>Euclidean norm of the six-element vector (/ <c>norm</c>).</summary>
         public float Norm =>
             (float)Math.Sqrt(A * A + B * B + C * C + D * D + E * E + F * F);
 
@@ -198,7 +199,7 @@ namespace MuPDF.NET
             || (Math.Abs(A) < Constants.Epsilon && Math.Abs(D) < Constants.Epsilon);
 
         /// <summary>
-        /// Replaces this matrix with <paramref name="one"/> × <paramref name="two"/> .
+        /// Replaces this matrix with <paramref name="one"/> × <paramref name="two"/>.
         /// </summary>
         /// <remarks>Multiplication is not commutative; order matters.</remarks>
         public virtual Matrix ConcatInto(Matrix one, Matrix two)
@@ -211,7 +212,7 @@ namespace MuPDF.NET
         }
 
         /// <summary>
-        /// Returns <paramref name="one"/> × <paramref name="two"/> as a new matrix .
+        /// Returns <paramref name="one"/> × <paramref name="two"/> as a new matrix.
         /// </summary>
         public static Matrix Concat(Matrix one, Matrix two) => ConcatCore(one, two);
 
@@ -512,7 +513,7 @@ namespace MuPDF.NET
     }
 
     /// <summary>
-    /// Immutable identity matrix <c>[1, 0, 0, 1, 0, 0]</c> ( / <c>Identity</c>).
+    /// Immutable identity matrix <c>[1, 0, 0, 1, 0, 0]</c> (/ <c>Identity</c>).
     /// </summary>
     /// <remarks>
     /// <para>Performs no transform. Component setters and mutating methods are disabled; values always
@@ -520,7 +521,7 @@ namespace MuPDF.NET
     /// <para>Legacy reference:
     /// <see href="https://mupdfnet.readthedocs.io/en/latest/classes/IdentityMatrix.html"/>.</para>
     /// <para>For a mutable identity, use <c>new Matrix(1, 1)</c>, <c>new Matrix(1, 0, 0, 1, 0, 0)</c>,
-    /// <c>new Matrix(0)</c>, or <c>new Matrix(new IdentityMatrix())</c>.</para>
+    /// <c>new Matrix(0)</c>, or <c>new Matrix(new IdentityMatrix)</c>.</para>
     /// </remarks>
     public sealed class IdentityMatrix : Matrix
     {
