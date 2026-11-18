@@ -1,0 +1,85 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <MuPDFNetPDF4LLMLayoutToolsDir Condition="Exists('$(MSBuildThisFileDirectory)layout\setup_layout_python.py')">$(MSBuildThisFileDirectory)layout\</MuPDFNetPDF4LLMLayoutToolsDir>
+    <MuPDFNetPDF4LLMLayoutToolsDir Condition="'$(MuPDFNetPDF4LLMLayoutToolsDir)' == '' and Exists('$(MSBuildThisFileDirectory)..\PDF4LLM\scripts\setup_layout_python.py')">$(MSBuildThisFileDirectory)..\PDF4LLM\scripts\</MuPDFNetPDF4LLMLayoutToolsDir>
+    <MuPDFNetPDF4LLMLayoutToolsDir Condition="'$(MuPDFNetPDF4LLMLayoutToolsDir)' == '' and Exists('$(MSBuildThisFileDirectory)..\..\MuPDF.NET\PDF4LLM\scripts\setup_layout_python.py')">$(MSBuildThisFileDirectory)..\..\MuPDF.NET\PDF4LLM\scripts\</MuPDFNetPDF4LLMLayoutToolsDir>
+    <MuPDFNetPDF4LLMOcrModelPath Condition="Exists('$(MSBuildThisFileDirectory)..\PDF4LLM\ocr\ocr_decision_model.onnx')">$(MSBuildThisFileDirectory)..\PDF4LLM\ocr\ocr_decision_model.onnx</MuPDFNetPDF4LLMOcrModelPath>
+    <MuPDFNetPDF4LLMOcrModelPath Condition="'$(MuPDFNetPDF4LLMOcrModelPath)' == '' and Exists('$(MSBuildThisFileDirectory)..\..\MuPDF.NET\PDF4LLM\ocr\ocr_decision_model.onnx')">$(MSBuildThisFileDirectory)..\..\MuPDF.NET\PDF4LLM\ocr\ocr_decision_model.onnx</MuPDFNetPDF4LLMOcrModelPath>
+    <MuPDFNetPDF4LLMOcrModelPath Condition="'$(MuPDFNetPDF4LLMOcrModelPath)' == '' and Exists('$(MSBuildThisFileDirectory)..\ocr\ocr_decision_model.onnx')">$(MSBuildThisFileDirectory)..\ocr\ocr_decision_model.onnx</MuPDFNetPDF4LLMOcrModelPath>
+    <MuPDFNetPDF4LLMOcrModelPath Condition="'$(MuPDFNetPDF4LLMOcrModelPath)' == '' and Exists('$(MSBuildThisFileDirectory)ocr\ocr_decision_model.onnx')">$(MSBuildThisFileDirectory)ocr\ocr_decision_model.onnx</MuPDFNetPDF4LLMOcrModelPath>
+  </PropertyGroup>
+
+  <!-- Ship OCR decision model next to the app output directory. -->
+  <ItemGroup Condition="'$(MuPDFNetPDF4LLMOcrModelPath)' != ''">
+    <None Include="$(MuPDFNetPDF4LLMOcrModelPath)"
+              Link="ocr\ocr_decision_model.onnx"
+              CopyToOutputDirectory="PreserveNewest"
+              Visible="false" />
+  </ItemGroup>
+
+  <!-- RapidOCR PP-OCRv5 models (.NET 8+): copy next to app output for test hosts and consumers. -->
+  <PropertyGroup Condition="'$(TargetFrameworkIdentifier)' == '.NETCoreApp'">
+    <_MuPDFNetPDF4LLMNetCoreVersion>$([MSBuild]::GetTargetFrameworkVersion('$(TargetFramework)'))</_MuPDFNetPDF4LLMNetCoreVersion>
+    <_MuPDFNetPDF4LLMSupportsRapidOcr>$([MSBuild]::VersionGreaterThanOrEquals($(_MuPDFNetPDF4LLMNetCoreVersion), 8.0))</_MuPDFNetPDF4LLMSupportsRapidOcr>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(TargetFrameworkIdentifier)' != '.NETCoreApp'">
+    <_MuPDFNetPDF4LLMSupportsRapidOcr>false</_MuPDFNetPDF4LLMSupportsRapidOcr>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(_MuPDFNetPDF4LLMSupportsRapidOcr)' == 'true'">
+    <_MuPDFNetPDF4LLMRapidOcrModelsSource Condition="'$(PkgRapidOcrNet)' != ''">$(PkgRapidOcrNet)\models\v5</_MuPDFNetPDF4LLMRapidOcrModelsSource>
+    <_MuPDFNetPDF4LLMRapidOcrModelsSource Condition="'$(_MuPDFNetPDF4LLMRapidOcrModelsSource)' == '' and '$(NuGetPackageRoot)' != ''">$(NuGetPackageRoot)rapidocrnet\2.0.0\models\v5</_MuPDFNetPDF4LLMRapidOcrModelsSource>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(_MuPDFNetPDF4LLMSupportsRapidOcr)' == 'true' and Exists('$(_MuPDFNetPDF4LLMRapidOcrModelsSource)\ch_PP-OCRv5_mobile_det.onnx')">
+    <None Include="$(_MuPDFNetPDF4LLMRapidOcrModelsSource)\*.*"
+          Link="models\v5\%(Filename)%(Extension)"
+          CopyToOutputDirectory="PreserveNewest"
+          Visible="false" />
+  </ItemGroup>
+
+  <!--
+    Resolve scripts at target time from this file (MuPDF.NET nupkg).
+    A leftover MuPDF.NET.PDF4LLM 1.28.x package can overwrite
+    MuPDFNetPDF4LLMLayoutToolsDir at import time.
+  -->
+  <Target Name="MuPDFNetResolveLayoutToolsDir">
+    <PropertyGroup>
+      <_MuPDFNetLayoutToolsDir Condition="Exists('$(MSBuildThisFileDirectory)layout\setup_layout_python.py')">$(MSBuildThisFileDirectory)layout\</_MuPDFNetLayoutToolsDir>
+      <_MuPDFNetLayoutToolsDir Condition="'$(_MuPDFNetLayoutToolsDir)' == ''">$(MuPDFNetPDF4LLMLayoutToolsDir)</_MuPDFNetLayoutToolsDir>
+    </PropertyGroup>
+    <Warning Condition="'$(_MuPDFNetLayoutToolsDir)' != '' and $([System.String]::Copy('$(_MuPDFNetLayoutToolsDir)').ToLowerInvariant().Contains('mupdf.net.pdf4llm'))"
+             Text="Ignoring layout scripts from MuPDF.NET.PDF4LLM; using MuPDF.NET instead. Remove PackageReference Include=&quot;MuPDF.NET.PDF4LLM&quot; — that package is deprecated." />
+  </Target>
+
+  <!-- Opt-in: dotnet msbuild -t:MuPDFNetSetupLayoutPython -->
+  <Target Name="MuPDFNetSetupLayoutPython" DependsOnTargets="MuPDFNetResolveLayoutToolsDir">
+    <Error Condition="!Exists('$(_MuPDFNetLayoutToolsDir)setup_layout_python.py')"
+           Text="MuPDF.NET layout setup scripts are missing from the NuGet package ($(_MuPDFNetLayoutToolsDir))." />
+    <Exec Condition="'$(OS)' == 'Windows_NT'"
+          Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(_MuPDFNetLayoutToolsDir)setup_layout_python.ps1&quot;"
+          StandardOutputImportance="High"
+          StandardErrorImportance="High" />
+    <!-- Invoke Python directly on Unix — avoids CRLF issues in packed .sh from Windows builds. -->
+    <Exec Condition="'$(OS)' != 'Windows_NT'"
+          Command="python3 &quot;$(_MuPDFNetLayoutToolsDir)setup_layout_python.py&quot;"
+          StandardOutputImportance="High"
+          StandardErrorImportance="High" />
+  </Target>
+
+  <!-- Opt-in: dotnet msbuild -t:MuPDFNetVerifyLayoutPython -->
+  <Target Name="MuPDFNetVerifyLayoutPython" DependsOnTargets="MuPDFNetResolveLayoutToolsDir">
+    <Error Condition="!Exists('$(_MuPDFNetLayoutToolsDir)setup_layout_python.py')"
+           Text="MuPDF.NET layout setup scripts are missing from the NuGet package ($(_MuPDFNetLayoutToolsDir))." />
+    <Exec Condition="'$(OS)' == 'Windows_NT'"
+          Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(_MuPDFNetLayoutToolsDir)setup_layout_python.ps1&quot; --verify-only"
+          StandardOutputImportance="High"
+          StandardErrorImportance="High" />
+    <Exec Condition="'$(OS)' != 'Windows_NT'"
+          Command="python3 &quot;$(_MuPDFNetLayoutToolsDir)setup_layout_python.py&quot; --verify-only"
+          StandardOutputImportance="High"
+          StandardErrorImportance="High" />
+  </Target>
+
+  <!-- Deprecated alias targets for the MuPDF.NET.PDF4LLM package (will be removed with that package). -->
+  <Target Name="MuPDFNetPDF4LLMSetupLayoutPython" DependsOnTargets="MuPDFNetSetupLayoutPython" />
+  <Target Name="MuPDFNetPDF4LLMVerifyLayoutPython" DependsOnTargets="MuPDFNetVerifyLayoutPython" />
+</Project>
