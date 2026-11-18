@@ -4,7 +4,7 @@
 
 Convert documents to Markdown, JSON, plain text, or chunks for LLM and RAG pipelines (`Document.ToMarkdown`, `ToJson`, `ToText`, `ToChunks`). `Utils.LoadAiAsync` indexes PDFs and `Utils.MarkdownToPdf` writes Markdown to PDF.
 
-**Layout (optional):** from your project directory, `dotnet msbuild -t:MuPDFNetSetupLayoutPython` (Python 3.11+ on `PATH`). That creates a per-user venv (`%LOCALAPPDATA%\MuPDF.NET\.venv-layout` on Windows, `~/.local/share/mupdf.net/.venv-layout` on Linux/macOS) and installs pymupdf **2.1**. Check with `dotnet msbuild -t:MuPDFNetVerifyLayoutPython`. Or set `MUPDF_NET_PYTHON` to any Python that already has pymupdf 2.1. Without layout, extract falls back to classic text. Full steps: [MuPDF.NET README — Layout analysis](https://github.com/ArtifexSoftware/MuPDF.NET#layout-analysis-optional).
+**Layout (recommended/optional):** `dotnet msbuild -t:MuPDFNetSetupLayoutPython` (Python 3.11+ on `PATH`) creates a per-user venv and pip-installs **PyMuPDF** `pymupdf==2.1` (the worker; layout is `pymupdf.layout` in that package) plus the empty stub `pymupdf-layout==2.1`. That is PyMuPDF in your solution, with [its own license](https://pymupdf.io); skip setup and use classic extract if you do not want that. Check with `dotnet msbuild -t:MuPDFNetVerifyLayoutPython`. Full steps: [MuPDF.NET README — Layout analysis](https://github.com/ArtifexSoftware/MuPDF.NET#layout-analysis-optional).
 
 Office/HWP is the separate commercial package [MuPDF.NET.Office](https://mupdf.com/mupdf-dotnet/office) **2.1.0** ([NuGet](https://www.nuget.org/packages/MuPDF.NET.Office)). [MuPDF.NET.PDF4LLM](https://www.nuget.org/packages/MuPDF.NET.PDF4LLM) is **deprecated** and will be removed; do not add it to new projects.
 

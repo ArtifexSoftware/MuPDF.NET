@@ -96,7 +96,16 @@ Requires **Python 3.11+** on `PATH`. From any project that references MuPDF.NET:
 dotnet msbuild -t:MuPDFNetSetupLayoutPython
 ```
 
-That creates a per-user virtual environment and installs `pymupdf==2.1`. MuPDF.NET finds it automatically.
+That creates a per-user virtual environment and pip-installs **both** of these from PyPI:
+
+| Package | Role |
+|---------|------|
+| `pymupdf==2.1` | The worker. Layout is `pymupdf.layout` **inside this package**. |
+| `pymupdf-layout==2.1` | Empty stub so older `pymupdf-layout` pins still install. It is not a second layout engine. |
+
+MuPDF.NET finds that venv automatically.
+
+Using the worker means **PyMuPDF is part of your solution**, not only MuPDF.NET. PyMuPDF has its own [license](https://pymupdf.io) (Artifex Community License and commercial terms). A MuPDF.NET license does not by itself cover shipping or running PyMuPDF. If you do not want that, skip this setup target and keep classic extraction (`Utils.UseLayout(false)`). For commercial use of the worker, [contact Artifex](https://artifex.com/contact/mupdf-net).
 
 | OS | Location |
 |----|----------|
@@ -456,5 +465,7 @@ MuPDF.NET is available under two licences:
 
 - **[Artifex Community License](./LICENSE.md)** — free for non-commercial use (personal, educational, open-source projects)
 - **Commercial licence** — required for any commercial use; [contact Artifex](https://artifex.com/contact/mupdf-net)
+
+The optional layout worker installs and runs [PyMuPDF](https://pymupdf.io) (`pymupdf` 2.1). That product is licensed separately; see [Layout analysis](#layout-analysis-optional).
 
 > **Commercial use** includes any use that directly or indirectly generates revenue — internal business tooling, SaaS, and enterprise workflows. See [LICENSE.md](./LICENSE.md).
