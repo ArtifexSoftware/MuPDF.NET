@@ -34,7 +34,9 @@ With Layout enabled discover superior results when converting documents to Markd
 
 ## Office Files 
 
-See the separate commercial package [MuPDF.NET.Office](https://mupdf.com/mupdf-dotnet/office) **2.1.0** ([NuGet](https://www.nuget.org/packages/MuPDF.NET.Office)) for Office (DOC/DOCX, XLS/XLSX, PPT/PPTX) and HWP/HWPX file support. 
+See the separate commercial package [MuPDF.NET.Office](https://mupdf.com/mupdf-dotnet/office) **2.1.0** ([NuGet](https://www.nuget.org/packages/MuPDF.NET.Office)) for Office (DOC/DOCX, XLS/XLSX, PPT/PPTX) and HWP/HWPX file support.
+
+Try a [free 60 day Office trial](https://mupdf.com/mupdf-dotnet/office/try).
 
 
 
