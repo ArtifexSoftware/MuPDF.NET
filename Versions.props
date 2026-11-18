@@ -8,7 +8,7 @@
     <ArtifexMuPDFVersion>1.28.6</ArtifexMuPDFVersion>
 	
     <!-- MuPDF.NET NuGet package. -->
-    <ArtifexMuPDFNetVersion>4.1.0</ArtifexMuPDFNetVersion>
+    <ArtifexMuPDFNetVersion>4.1.1</ArtifexMuPDFNetVersion>
 	
     <!-- Deprecated: MuPDF.NET.PDF4LLM NuGet (empty type-forward stub; will be removed). Sources live in MuPDF.NET/PDF4LLM. -->
     <ArtifexMuPDFNetPDF4LLMVersion>2.1.0</ArtifexMuPDFNetPDF4LLMVersion>
