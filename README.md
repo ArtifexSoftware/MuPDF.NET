@@ -5,7 +5,7 @@
 [![Discord](https://img.shields.io/discord/770681584617652264?color=6A7EC2&logo=discord&logoColor=ffffff)](https://pymupdf.io/discord/artifex/)
 [![Forum](https://img.shields.io/badge/Forum-ff6600?logo=python&logoColor=ffffff)](https://forum.mupdf.com/c/general/4)
 
-**MuPDF.NET** is a C# library for reading, writing, rendering, and editing PDF, XPS, EPUB, and other document formats. It is a port of [PyMuPDF](https://pymupdf.readthedocs.io) to .NET, built on the [MuPDF](https://mupdf.com) engine, with idiomatic APIs for C#, F#, and Visual Basic.
+**MuPDF.NET** is a C# library for reading, writing, rendering, and editing PDF, XPS, EPUB, and other document formats. It is a port of [PyMuPDF](https://pymupdf.io) to .NET, built on the [MuPDF](https://mupdf.com) engine, with idiomatic APIs for C#, F#, and Visual Basic.
 
 ```bash
 dotnet add package MuPDF.NET
@@ -13,7 +13,7 @@ dotnet add package MuPDF.NET
 
 Runnable samples (one project per feature) are in **[MuPDF.NET.Examples](https://github.com/ArtifexSoftware/MuPDF.NET.Examples)**.
 
-> **Markdown / JSON for LLM and RAG** is in this package: `Document.ToMarkdown`, `ToJson`, `ToText`, `ToChunks`, and `Utils.LoadAiAsync`. Optional layout: [Layout analysis](#layout-analysis-optional). Office and HWP files: [MuPDF.NET.Office](https://www.nuget.org/packages/MuPDF.NET.Office). Do **not** add `MuPDF.NET.PDF4LLM` — that package is deprecated.
+> **Markdown / JSON for LLM and RAG** is in this package: `Document.ToMarkdown`, `ToJson`, `ToText`, `ToChunks`, and `Utils.LoadAiAsync`. Optional layout: [Layout analysis](#layout-analysis-optional). Office and HWP files: [MuPDF.NET.Office](https://mupdf.com/mupdf-dotnet/office). Do **not** add `MuPDF.NET.PDF4LLM` — that package is deprecated.
 
 ---
 
@@ -40,7 +40,7 @@ Runnable samples (one project per feature) are in **[MuPDF.NET.Examples](https:/
 - **Fast** — built on MuPDF, with no mandatory GPU dependency
 - **Accurate** — text extraction with font, colour, and position metadata
 - **Versatile** — read, write, annotate, redact, merge, split, convert, and render
-- **Multi-language** — C#, F#, and Visual Basic; the API mirrors [PyMuPDF](https://pymupdf.readthedocs.io) so Python experience transfers directly
+- **Multi-language** — C#, F#, and Visual Basic; the API mirrors [PyMuPDF](https://pymupdf.io) so Python experience transfers directly
 - **Barcodes** — read and generate QR, Code 128, Data Matrix, PDF417, and more
 - **LLM-ready** — Markdown / JSON / text extract in this package; optional RAG helpers on .NET 8
 
@@ -52,7 +52,7 @@ Runnable samples (one project per feature) are in **[MuPDF.NET.Examples](https:/
 |---|---|
 | .NET | 8.0 or later (also .NET Standard 2.0 and .NET Framework 4.6.1+) |
 | Visual Studio | 2019 or 2022 (Windows) |
-| OS | Windows, Linux |
+| OS | Windows, Linux, macOS |
 
 Linux CLI install steps: [Getting Started](https://mupdfnet.readthedocs.io/en/latest/getting-started/index.html).
 
@@ -76,7 +76,7 @@ using MuPDF.NET;
 
 The package includes the native MuPDF binaries. No separate download is required.
 
-**Office / HWP** (DOC/DOCX, XLS/XLSX, PPT/PPTX, HWP/HWPX) is a separate commercial package:
+**Office / HWP** (DOC/DOCX, XLS/XLSX, PPT/PPTX, HWP/HWPX) is a separate commercial package ([product page](https://mupdf.com/mupdf-dotnet/office)):
 
 ```bash
 dotnet add package MuPDF.NET.Office
@@ -96,7 +96,16 @@ Requires **Python 3.11+** on `PATH`. From any project that references MuPDF.NET:
 dotnet msbuild -t:MuPDFNetSetupLayoutPython
 ```
 
-That creates a per-user virtual environment and installs `pymupdf==2.1`. MuPDF.NET finds it automatically.
+That creates a per-user virtual environment and pip-installs **both** of these from PyPI:
+
+| Package | Role |
+|---------|------|
+| `pymupdf==2.1` | The worker. Layout is `pymupdf.layout` **inside this package**. |
+| `pymupdf-layout==2.1` | Empty stub so older `pymupdf-layout` pins still install. It is not a second layout engine. |
+
+MuPDF.NET finds that venv automatically.
+
+Using the worker means **PyMuPDF is part of your solution**, not only MuPDF.NET. PyMuPDF has its own [license](https://pymupdf.io) (Artifex Community License and commercial terms). A MuPDF.NET license does not by itself cover shipping or running PyMuPDF. If you do not want that, skip this setup target and keep classic extraction (`Utils.UseLayout(false)`). For commercial use of the worker, [contact Artifex](https://artifex.com/contact/mupdf-net).
 
 | OS | Location |
 |----|----------|
@@ -193,7 +202,7 @@ doc.Close();
 | **Images** | Extract, insert, replace, and recompress (`RewriteImages`) |
 | **Barcodes** | Scan and generate QR, Code 128, Data Matrix, PDF417 |
 | **LLM / RAG** | `ToMarkdown` / `ToJson` / `ToText` / `ToChunks`; `Utils.LoadAiAsync`; layout when the worker is installed |
-| **Office / HWP** | [MuPDF.NET.Office](https://www.nuget.org/packages/MuPDF.NET.Office); unlock, then use `Document` as usual |
+| **Office / HWP** | [MuPDF.NET.Office](https://mupdf.com/mupdf-dotnet/office); unlock, then use `Document` as usual |
 
 ---
 
@@ -332,7 +341,7 @@ dotnet run --project MuPDF.NET/01-OpenSave
 | `MuPDF.NET/` | Open/save, pages, render, text, annotations, forms, images, tables, barcodes, encrypt, Markdown / JSON / text, OCR, RAG |
 | `MuPDF.NET.Office/` | Unlock, open DOCX/HWPX, export PDF / Markdown / JSON |
 
-- Layout samples (`33-ToJsonLayout`, `34-ToText`): Python 3.11+, then `dotnet msbuild -t:MuPDFNetSetupLayoutPython`.
+- Layout samples (`33-ToJsonLayout`, `34-ToText`, `35-ToChunks`): Python 3.11+, then `dotnet msbuild -t:MuPDFNetSetupLayoutPython`.
 - Office samples: set `MUPDF_OFFICE_KEY` for a full unlock; without a key they open the first 3 pages only.
 
 Batch-run with `run-all.cmd` / `run-all.ps1` / `run-all.sh`. See the [Examples README](https://github.com/ArtifexSoftware/MuPDF.NET.Examples#readme) for the full project list.
@@ -378,10 +387,10 @@ Typical workflow: open → get a page → operate → save → close.
 | `doc.SetMetadata(dict)` | Title, author, and other metadata |
 | `doc.Encrypt(...)` | Password and permissions |
 | `doc.RewriteImages(...)` | Downsample or recompress images |
-| `doc.ToMarkdown(...)` | Convert to Markdown |
-| `doc.ToJson(...)` | Layout structure as JSON |
-| `doc.ToText(...)` | Convert to plain text |
-| `doc.ToChunks(...)` | Retrieval-ready chunks |
+| `doc.ToMarkdown(...)` | Convert to Markdown (classic path, or layout when the worker is installed) |
+| `doc.ToJson(...)` | Layout structure as JSON (layout worker) |
+| `doc.ToText(...)` | Convert to plain text (layout worker) |
+| `doc.ToChunks(...)` | Retrieval-ready chunks (layout worker) |
 | `doc.GetKeyValues(...)` | Form field names and values |
 | `doc.Close()` | Release resources |
 
@@ -394,7 +403,7 @@ Typical workflow: open → get a page → operate → save → close.
 | `Utils.LoadAiAsync(...)` | **net8.0** — chunk, embed, and index PDFs for RAG |
 | `Utils.MarkdownToPdf(...)` | Markdown file → PDF |
 | `Utils.GetKeyValues(...)` | Form fields from a `Document` or path |
-| `new PDFMarkdownReader()` | LlamaIndex-compatible page loader |
+| `Utils.LlamaMarkdownReader()` | LlamaIndex-compatible page loader |
 
 ### `Page`
 
@@ -438,6 +447,8 @@ Linux: see [Getting Started](https://mupdfnet.readthedocs.io/en/latest/getting-s
 
 | Resource | URL |
 |---|---|
+| Product page | https://mupdf.com/mupdf-dotnet |
+| Office / HWP | https://mupdf.com/mupdf-dotnet/office |
 | API reference | https://mupdfnet.readthedocs.io |
 | Getting started | https://mupdfnet.readthedocs.io/en/latest/getting-started/index.html |
 | Cookbook | https://mupdfnet.readthedocs.io/en/latest/the-basics/index.html |
@@ -448,11 +459,13 @@ Linux: see [Getting Started](https://mupdfnet.readthedocs.io/en/latest/getting-s
 
 ## License
 
-MuPDF.NET, [PyMuPDF](https://pymupdf.readthedocs.io), and [MuPDF](https://mupdf.com) are developed by [Artifex Software, Inc.](https://artifex.com)
+MuPDF.NET, [PyMuPDF](https://pymupdf.io), and [MuPDF](https://mupdf.com) are developed by [Artifex Software, Inc.](https://artifex.com)
 
 MuPDF.NET is available under two licences:
 
 - **[Artifex Community License](./LICENSE.md)** — free for non-commercial use (personal, educational, open-source projects)
 - **Commercial licence** — required for any commercial use; [contact Artifex](https://artifex.com/contact/mupdf-net)
+
+The optional layout worker installs and runs [PyMuPDF](https://pymupdf.io) (`pymupdf` 2.1). That product is licensed separately; see [Layout analysis](#layout-analysis-optional).
 
 > **Commercial use** includes any use that directly or indirectly generates revenue — internal business tooling, SaaS, and enterprise workflows. See [LICENSE.md](./LICENSE.md).

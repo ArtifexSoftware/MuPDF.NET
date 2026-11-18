@@ -37,7 +37,7 @@ Input PDFs and images live in `TestDocuments/Demo/` (and `TestDocuments/Demo/Llm
 
 ## Volume license
 
-`volume-license` is opt-in. It unlocks MuPDF.NET.Office and opens two empty documents. The usage count is posted when the process exits. Set `MUPDF_OFFICE_KEY` or pass `--key`. A key file named `TestDocuments/office.keys` with an `Activity=` line is also used. The key must be product 2 or 7 and have the volume-license flag. This sample turns on `MUPDF_NET_OFFICE_ACTIVITY_VERBOSE`.
+`volume-license` is opt-in. It unlocks MuPDF.NET.Office and opens two empty documents. The usage count is posted when the process exits. Set `MUPDF_OFFICE_KEY` or pass `--key`. You can also copy `TestDocuments/office.keys.example` to `TestDocuments/office.keys` (gitignored) and fill in the `Activity=` line. This sample turns on `MUPDF_NET_OFFICE_ACTIVITY_VERBOSE`.
 
 ```powershell
 dotnet run -- volume-license

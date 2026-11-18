@@ -1,0 +1,5 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!-- Deprecated import name from the MuPDF.NET.PDF4LLM nupkg. Canonical: MuPDF.NET.Layout.targets. -->
+  <Import Project="MuPDF.NET.Layout.targets"
+          Condition="Exists('MuPDF.NET.Layout.targets')" />
+</Project>

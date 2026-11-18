@@ -1,0 +1,58 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!--
+    Shared host / RID detection for MuPDF.NativeAssets.* packages.
+    Override MuPDFNativeAssetsRuntimeId or set RuntimeIdentifier explicitly to skip inference.
+
+    Note: PROCESSOR_ARCHITECTURE is a Windows env var and is typically unset on Linux/macOS.
+    Prefer RuntimeInformation.OSArchitecture, HOSTTYPE, and NETCoreSdkPortableRuntimeIdentifier.
+  -->
+  <PropertyGroup>
+    <!-- Explicit RuntimeIdentifier (e.g. publish -r) wins. -->
+    <MuPDFNativeAssetsRuntimeId Condition="'$(MuPDFNativeAssetsRuntimeId)' == '' and '$(RuntimeIdentifier)' != ''">$(RuntimeIdentifier)</MuPDFNativeAssetsRuntimeId>
+
+    <!-- .NET SDK portable host RID when available (often set later; also refreshed in targets). -->
+    <MuPDFNativeAssetsRuntimeId Condition="'$(MuPDFNativeAssetsRuntimeId)' == '' and '$(NETCoreSdkPortableRuntimeIdentifier)' != ''">$(NETCoreSdkPortableRuntimeIdentifier)</MuPDFNativeAssetsRuntimeId>
+
+    <!-- Host architecture: works under `dotnet` MSBuild on Linux/macOS/Windows. -->
+    <_MuPDFHostArch>$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture)</_MuPDFHostArch>
+    <!-- Linux shells often export HOSTTYPE=aarch64 / x86_64; Windows uses PROCESSOR_ARCHITECTURE. -->
+    <_MuPDFHostType Condition="'$(HOSTTYPE)' != ''">$(HOSTTYPE)</_MuPDFHostType>
+    <_MuPDFHostType Condition="'$(_MuPDFHostType)' == ''">$(PROCESSOR_ARCHITECTURE)</_MuPDFHostType>
+    <_MuPDFHostTypeLower>$([System.String]::Copy('$(_MuPDFHostType)').ToLowerInvariant())</_MuPDFHostTypeLower>
+  </PropertyGroup>
+
+  <!-- Windows -->
+  <PropertyGroup Condition="'$(MuPDFNativeAssetsRuntimeId)' == '' and $([MSBuild]::IsOSPlatform('Windows'))">
+    <MuPDFNativeAssetsRuntimeId Condition="'$(PlatformTarget)' == 'x86' or ('$(PlatformTarget)' == 'AnyCPU' and '$(Prefer32Bit)' == 'true')">win-x86</MuPDFNativeAssetsRuntimeId>
+    <MuPDFNativeAssetsRuntimeId Condition="'$(MuPDFNativeAssetsRuntimeId)' == '' and ('$(_MuPDFHostArch)' == 'Arm64' or '$(PlatformTarget)' == 'ARM64' or '$(Platform)' == 'ARM64' or '$(_MuPDFHostTypeLower)' == 'arm64' or '$(_MuPDFHostTypeLower)' == 'aarch64')">win-arm64</MuPDFNativeAssetsRuntimeId>
+    <MuPDFNativeAssetsRuntimeId Condition="'$(MuPDFNativeAssetsRuntimeId)' == ''">win-x64</MuPDFNativeAssetsRuntimeId>
+  </PropertyGroup>
+
+  <!-- macOS -->
+  <PropertyGroup Condition="'$(MuPDFNativeAssetsRuntimeId)' == '' and $([MSBuild]::IsOSPlatform('OSX'))">
+    <MuPDFNativeAssetsRuntimeId Condition="'$(_MuPDFHostArch)' == 'Arm64' or '$(_MuPDFHostTypeLower)' == 'arm64' or '$(_MuPDFHostTypeLower)' == 'aarch64'">osx-arm64</MuPDFNativeAssetsRuntimeId>
+    <MuPDFNativeAssetsRuntimeId Condition="'$(MuPDFNativeAssetsRuntimeId)' == ''">osx-x64</MuPDFNativeAssetsRuntimeId>
+  </PropertyGroup>
+
+  <!-- Linux -->
+  <PropertyGroup Condition="'$(MuPDFNativeAssetsRuntimeId)' == '' and $([MSBuild]::IsOSPlatform('Linux'))">
+    <MuPDFNativeAssetsRuntimeId Condition="'$(_MuPDFHostArch)' == 'Arm64' or '$(_MuPDFHostTypeLower)' == 'arm64' or '$(_MuPDFHostTypeLower)' == 'aarch64'">linux-arm64</MuPDFNativeAssetsRuntimeId>
+    <MuPDFNativeAssetsRuntimeId Condition="'$(MuPDFNativeAssetsRuntimeId)' == '' and ('$(_MuPDFHostArch)' == 'Arm' or '$(_MuPDFHostTypeLower)' == 'arm' or '$(_MuPDFHostTypeLower)' == 'armv7l' or '$(_MuPDFHostTypeLower)' == 'armv6l')">linux-arm</MuPDFNativeAssetsRuntimeId>
+    <MuPDFNativeAssetsRuntimeId Condition="'$(MuPDFNativeAssetsRuntimeId)' == ''">linux-x64</MuPDFNativeAssetsRuntimeId>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <MuPDFNativeAssetsPackageId Condition="'$(MuPDFNativeAssetsPackageId)' == '' and '$(MuPDFNativeAssetsRuntimeId)' == 'win-x86'">MuPDF.NativeAssets.Windows.x86</MuPDFNativeAssetsPackageId>
+    <MuPDFNativeAssetsPackageId Condition="'$(MuPDFNativeAssetsPackageId)' == '' and '$(MuPDFNativeAssetsRuntimeId)' == 'win-x64'">MuPDF.NativeAssets.Windows.x64</MuPDFNativeAssetsPackageId>
+    <MuPDFNativeAssetsPackageId Condition="'$(MuPDFNativeAssetsPackageId)' == '' and '$(MuPDFNativeAssetsRuntimeId)' == 'win-arm64'">MuPDF.NativeAssets.Windows.arm64</MuPDFNativeAssetsPackageId>
+    <MuPDFNativeAssetsPackageId Condition="'$(MuPDFNativeAssetsPackageId)' == '' and '$(MuPDFNativeAssetsRuntimeId)' == 'linux-x64'">MuPDF.NativeAssets.Linux.x64</MuPDFNativeAssetsPackageId>
+    <MuPDFNativeAssetsPackageId Condition="'$(MuPDFNativeAssetsPackageId)' == '' and '$(MuPDFNativeAssetsRuntimeId)' == 'linux-arm'">MuPDF.NativeAssets.Linux.arm</MuPDFNativeAssetsPackageId>
+    <MuPDFNativeAssetsPackageId Condition="'$(MuPDFNativeAssetsPackageId)' == '' and '$(MuPDFNativeAssetsRuntimeId)' == 'linux-arm64'">MuPDF.NativeAssets.Linux.arm64</MuPDFNativeAssetsPackageId>
+    <MuPDFNativeAssetsPackageId Condition="'$(MuPDFNativeAssetsPackageId)' == '' and '$(MuPDFNativeAssetsRuntimeId)' == 'osx-x64'">MuPDF.NativeAssets.macOS.x64</MuPDFNativeAssetsPackageId>
+    <MuPDFNativeAssetsPackageId Condition="'$(MuPDFNativeAssetsPackageId)' == '' and '$(MuPDFNativeAssetsRuntimeId)' == 'osx-arm64'">MuPDF.NativeAssets.macOS.arm64</MuPDFNativeAssetsPackageId>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(MuPDFNativeAssetsPackageId)' != ''">
+    <MuPDFNativeAssetsPackageFolder>$(NuGetPackageRoot)$([System.String]::Copy('$(MuPDFNativeAssetsPackageId)').ToLowerInvariant())\</MuPDFNativeAssetsPackageFolder>
+  </PropertyGroup>
+</Project>
