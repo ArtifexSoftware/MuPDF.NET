@@ -79,7 +79,7 @@
 
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:20px;">
         <div>
-            <button class="cta orange" onclick="window.location='https://docs.pdf4llm.com'">Try PDF4LLM.NET</button>
+            <button class="cta orange" onclick="window.location='https://mupdf.com/mupdf-dotnet/office/try'">Try MuPDF.NET Office</button>
             <div class="discordLink" style="display:flex;align-items:center;margin-top: 5px;">
                 <a href="https://discord.gg/DQ8GBG6V4g" id="findOnDiscord" target=_blank>Find <b>#mupdf_net</b> on <b>Discord</b></a>
                 <a href="https://discord.gg/DQ8GBG6V4g" target=_blank>
