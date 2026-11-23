@@ -4,7 +4,7 @@
 06-StoryHtmlBox
 ==============================
 
-Lay out HTML into a page rectangle using Story / ``InsertHtmlBox``.
+Lay out HTML into a page rectangle using :ref:`Story` / :meth:`Page.InsertHtmlBox`.
 
 GitHub: `06-StoryHtmlBox <https://github.com/ArtifexSoftware/MuPDF.NET.Examples/tree/main/MuPDF.NET/06-StoryHtmlBox>`_ in `MuPDF.NET.Examples <https://github.com/ArtifexSoftware/MuPDF.NET.Examples>`_.
 
@@ -19,7 +19,7 @@ The method creates an empty PDF, opens a default page, and inserts HTML into ``R
         const string html = """
         <html><body style="font-family:sans-serif;font-size:14pt;color:#111;">
         <h1>MuPDF.NET</h1>
-        <p>Story / <b>InsertHtmlbox</b> example for customer samples.</p>
+        <p>Story / <b>Page.InsertHtmlBox</b> example for customer samples.</p>
         <ul>
         <li>Headings and paragraphs</li>
         <li>Bold inline markup</li>
