@@ -56,6 +56,7 @@ This class represents a document. It can be constructed from a file or from memo
 :meth:`Document.GetPageXObjects`                PDF only: list of XObjects referenced by a page
 :meth:`Document.GetSigFlags`                    PDF only: determine signature state
 :meth:`Document.GetToc`                         Extract the table of contents
+:meth:`Document.GetKeyValues`                   PDF only: extract form field names and values
 :meth:`Document.GetXmlMetadata`                 PDF only: read the XML metadata
 :meth:`Document.DeleteXmlMetadata`              PDF only: remove XML metadata
 :meth:`Document.HasAnnots`                      PDF only: check if PDF contains any annots
@@ -107,7 +108,7 @@ This class represents a document. It can be constructed from a file or from memo
 :meth:`Document.SearchPageFor`                  Search for a string on a page
 :meth:`Document.Select`                         PDF only: select a subset of pages
 :meth:`Document.SetLayerUIConfig`               PDF only: set OCG visibility temporarily
-:meth:`Document.SetLayer`                       PDF only: mass changing OCG states
+:meth:`Document.SetLayer`                        PDF only: mass changing OCG states
 :meth:`Document.SetMarkInfo`                    PDF only: set the MarkInfo values
 :meth:`Document.SetMetadata`                    PDF only: set the metadata
 :meth:`Document.SetOC`                          PDF only: attach OCG/OCMD to image / form xobject
@@ -120,6 +121,10 @@ This class represents a document. It can be constructed from a file or from memo
 :meth:`Document.SetXmlMetaData`                 PDF only: create or update document XML metadata
 :meth:`Document.SubsetFonts`                    PDF only: create font subsets
 :meth:`Document.SwitchLayer`                    PDF only: activate OC configuration
+:meth:`Document.ToChunks`                       Split document into chunks for RAG (layout mode)
+:meth:`Document.ToJson`                         Convert document to layout JSON (layout mode)
+:meth:`Document.ToMarkdown`                     Convert document to Markdown
+:meth:`Document.ToText`                         Convert document to plain text (layout mode)
 :meth:`Document.Write`                          Write document
 :meth:`Document.CopyXref`                       PDF only: copy a PDF dictionary to another `xref`
 :meth:`Document.GetKeyXref`                     PDF only: get the value of a dictionary key
@@ -892,6 +897,159 @@ This class represents a document. It can be constructed from a file or from memo
     :rtype: `string`
 
   .. index::
+     pair: ToMarkdown; Document
+     pair: ToJson; Document
+     pair: ToText; Document
+     pair: ToChunks; Document
+     pair: GetKeyValues; Document
+
+  .. note::
+
+     The methods :meth:`ToMarkdown`, :meth:`ToJson`, :meth:`ToText` and :meth:`ToChunks` are convenience wrappers around the equivalent `MuPDF4LLM` methods, for preparing document content for LLM and RAG workflows. Several of them depend on the **layout pipeline**, which must be switched on first with `MuPDF4LLM.SetUseLayout(true)` (or `MuPDF4LLM.UseLayout = true`). Parameters marked *(layout mode)* only take effect when the layout pipeline is active.
+
+  .. method:: ToMarkdown(bool header: true, bool footer: true, List<int> pages: null, bool writeImages: false, bool embedImages: false, string imagePath: "", string imageFormat: "png", string filename: "", bool forceText: true, bool pageChunks: false, bool pageSeparators: false, int dpi: 150, int ocrDpi: 150, float pageWidth: 612, float? pageHeight: null, bool ignoreCode: false, bool showProgress: false, bool useOcr: true, string ocrLanguage: "eng", bool forceOcr: false, OcrPageFunction ocrFunction: null, string tableOutput: "markdown", float? edgeThreshold: null)
+
+    Converts the document to Markdown. Text, headings, lists, tables, code blocks and (optionally) images are rendered as Markdown. Works with and without the layout pipeline.
+
+    :arg bool header: *(layout mode)* include page-header regions in the output.
+    :arg bool footer: *(layout mode)* include page-footer regions in the output.
+    :arg List<int> pages: 0-based page numbers to process. `null` processes all pages.
+    :arg bool writeImages: write images to files in ``imagePath`` and insert Markdown image references.
+    :arg bool embedImages: embed images in the Markdown as base64 data. Cannot be combined with ``writeImages``.
+    :arg string imagePath: folder for image files written when ``writeImages`` is `true`.
+    :arg string imageFormat: image file format, for example `"png"` or `"jpg"`.
+    :arg string filename: base file name for written images. Defaults to :attr:`Document.Name`.
+    :arg bool forceText: also extract text that sits on top of image regions.
+    :arg bool pageChunks: return a JSON string with one entry per page (text plus metadata) instead of a single Markdown string.
+    :arg bool pageSeparators: insert separator lines between pages (useful for debugging).
+    :arg int dpi: resolution of extracted images.
+    :arg int ocrDpi: *(layout mode)* resolution at which pages are rendered for OCR.
+    :arg float pageWidth: *(legacy mode)* page width used to lay out reflowable documents such as e-books.
+    :arg float? pageHeight: *(legacy mode)* page height for reflowable documents. `null` means one page of unlimited height.
+    :arg bool ignoreCode: do not format monospaced text as code blocks.
+    :arg bool showProgress: print a progress indicator while converting.
+    :arg bool useOcr: *(layout mode)* run OCR on pages where it is likely to help.
+    :arg string ocrLanguage: *(layout mode)* Tesseract language code(s), for example `"eng"` or `"eng+deu"`.
+    :arg bool forceOcr: *(layout mode)* OCR every page, whatever the heuristics decide.
+    :arg OcrPageFunction ocrFunction: *(layout mode)* custom OCR callback with signature `void(Page page, int ocrDpi, string ocrLanguage, bool keepOcrText)`. `null` uses the built-in OCR engine.
+    :arg string tableOutput: `"markdown"` (default) or `"html"` table rendering. Any other value raises `ArgumentException`.
+    :arg float? edgeThreshold: *(layout mode)* optional edge threshold passed to the layout analysis.
+
+    :rtype: `string`
+    :returns: the Markdown text, or a JSON string of page chunks when *pageChunks* is `true`.
+
+    .. code-block:: cs
+
+        Document doc = new Document("input.pdf");
+        string md = doc.ToMarkdown(pages: new List<int> { 0, 1 });
+        File.WriteAllText("output.md", md);
+
+  .. method:: ToJson(int imageDpi: 150, string imageFormat: "png", string imagePath: "", List<int> pages: null, int ocrDpi: 150, bool writeImages: false, bool embedImages: false, bool showProgress: false, bool forceText: true, bool useOcr: true, string ocrLanguage: "eng", bool forceOcr: false, OcrPageFunction ocrFunction: null, string tableOutput: "markdown", float? edgeThreshold: null)
+
+    Converts the document to a JSON representation of its layout: every page with its classified layout boxes (text, titles, tables, pictures, headers, footers and so on), their bounding boxes and content.
+
+    **Requires the layout pipeline.** Raises `NotSupportedException` if `MuPDF4LLM.UseLayout` is `false`.
+
+    :arg int imageDpi: resolution of extracted images.
+    :arg string imageFormat: image file format, for example `"png"`.
+    :arg string imagePath: folder for image files written when `writeImages` is `true`.
+    :arg List<int> pages: 0-based page numbers to process. `null` processes all pages.
+    :arg int ocrDpi: resolution at which pages are rendered for OCR.
+    :arg bool writeImages: write images to files during parsing.
+    :arg bool embedImages: embed images in the JSON as base64 data.
+    :arg bool showProgress: print a progress indicator while converting.
+    :arg bool forceText: also extract text that sits on top of image regions.
+    :arg bool useOcr: run OCR on pages where it is likely to help.
+    :arg string ocrLanguage: Tesseract language code(s), for example `"eng"` or `"eng+deu"`.
+    :arg bool forceOcr: OCR every page, whatever the heuristics decide.
+    :arg OcrPageFunction ocrFunction: custom OCR callback. `null` uses the built-in OCR engine.
+    :arg string tableOutput: `"markdown"` (default) or `"html"` table rendering.
+    :arg float? edgeThreshold: optional edge threshold passed to the layout analysis.
+
+    :rtype: `string`
+    :returns: the document layout as a JSON string.
+
+  .. method:: ToText(string filename: "", bool header: true, bool footer: true, List<int> pages: null, bool ignoreCode: false, bool showProgress: false, bool forceText: true, int ocrDpi: 150, bool useOcr: true, string ocrLanguage: "eng", string tableFormat: "grid", bool pageChunks: false, int tableMaxWidth: 100, int tableMinColWidth: 10, bool forceOcr: false, OcrPageFunction ocrFunction: null, float? edgeThreshold: null)
+
+    Converts the document to plain text in reading order, with tables drawn as text tables.
+
+    **Requires the layout pipeline.** Raises `NotSupportedException` if `MuPDF4LLM.UseLayout` is `false`.
+
+    :arg string filename: file name stored in the metadata of the result.
+    :arg bool header: include page-header regions in the output.
+    :arg bool footer: include page-footer regions in the output.
+    :arg List<int> pages: 0-based page numbers to process. `null` processes all pages.
+    :arg bool ignoreCode: do not apply special formatting to monospaced (code) text.
+    :arg bool showProgress: print a progress indicator while converting.
+    :arg bool forceText: also extract text that sits on top of image regions.
+    :arg int ocrDpi: resolution at which pages are rendered for OCR.
+    :arg bool useOcr: run OCR on pages where it is likely to help.
+    :arg string ocrLanguage: Tesseract language code(s), for example `"eng"` or `"eng+deu"`.
+    :arg string tableFormat: style of the text tables, for example `"grid"`.
+    :arg bool pageChunks: return a JSON string with one entry per page instead of a single text string.
+    :arg int tableMaxWidth: maximum width of a text table, in characters.
+    :arg int tableMinColWidth: minimum width of a table column, in characters.
+    :arg bool forceOcr: OCR every page, whatever the heuristics decide.
+    :arg OcrPageFunction ocrFunction: custom OCR callback. `null` uses the built-in OCR engine.
+    :arg float? edgeThreshold: optional edge threshold passed to the layout analysis.
+
+    :rtype: `string`
+    :returns: the plain text, or a JSON string of page chunks when *pageChunks* is `true`.
+
+  .. method:: ToChunks(int maxTokens: 400, int minTokens: 120, float breakpointThreshold: 0.5f, bool mergeSmallChunks: true, string tableMode: "preserve", bool respectSectionStarts: true, string headerFooterMode: "exclude", string sentenceSplitter: "default", object tokenizer: null, Dictionary<string, float> weights: null, List<int> pages: null, string tableOutput: "markdown", bool extractImages: false, int dpi: 150, float? edgeThreshold: null, bool forceText: true, bool useOcr: true, bool forceOcr: false, OcrPageFunction ocrFunction: null)
+
+    Splits the document into retrieval-ready chunks for RAG pipelines. The document is broken into sentences, and chunk boundaries are placed where the layout suggests a natural break (new heading, table, page, large gap and so on), within the given token limits.
+
+    **Requires the layout pipeline.** Raises `NotSupportedException` if `MuPDF4LLM.UseLayout` is `false`.
+
+    :arg int maxTokens: maximum tokens per chunk. Must be positive.
+    :arg int minTokens: target minimum tokens per chunk. Must not be negative.
+    :arg float breakpointThreshold: boundary score (0 to 1) above which a new chunk may start. Lower values give more, smaller chunks.
+    :arg bool mergeSmallChunks: merge chunks smaller than *minTokens* into a neighbour.
+    :arg string tableMode: `"preserve"` (default) keeps tables in the surrounding text flow; `"isolate"` puts each table in its own chunk.
+    :arg bool respectSectionStarts: always start a new chunk at a section heading.
+    :arg string headerFooterMode: `"exclude"` (default) drops page headers and footers, `"include"` keeps them, and `"auto"` drops only headers and footers that repeat across pages.
+    :arg string sentenceSplitter: `"default"` or `"multilingual"`.
+    :arg object tokenizer: a `Func<string, int>` that returns the token count of a string. `null` (or any other type) estimates tokens as characters / 4.
+    :arg Dictionary<string,float> weights: overrides for the boundary-scoring weights. Keys are `w_box`, `w_class`, `w_page`, `w_gap`, `w_hgap`, `w_font`, `w_head`, `w_foot`, `w_list`, `w_table` and `w_caption`.
+    :arg List<int> pages: 0-based page numbers to process. `null` processes all pages.
+    :arg string tableOutput: `"markdown"` (default) or `"html"` table rendering.
+    :arg bool extractImages: include the image bytes of figures in the result (see :attr:`ChunkedDocument.Figures`).
+    :arg int dpi: resolution of extracted images.
+    :arg float? edgeThreshold: optional edge threshold passed to the layout analysis.
+    :arg bool forceText: also extract text that sits on top of image regions.
+    :arg bool useOcr: run OCR on pages where it is likely to help.
+    :arg bool forceOcr: OCR every page, whatever the heuristics decide.
+    :arg OcrPageFunction ocrFunction: custom OCR callback. `null` uses the built-in OCR engine.
+
+    Invalid values for *tableMode*, *headerFooterMode*, *sentenceSplitter*, *tableOutput*, *maxTokens* or *minTokens* raise `ArgumentException`.
+
+    :rtype: :ref:`ChunkedDocument`
+    :returns: a read-only list of :class:`ChunkedDocument.Chunk` objects. Each chunk has an ``Id``, its ``Text`` and ``Metadata`` (pages, bounding boxes, section path, token count and so on). The result also offers :attr:`ChunkedDocument.Tables`, :attr:`ChunkedDocument.Figures` and :attr:`ChunkedDocument.Sections` views of the document.
+
+    .. code-block:: cs
+
+        MuPDF4LLM.SetUseLayout(true);
+        Document doc = new Document("input.pdf");
+        ChunkedDocument chunks = doc.ToChunks(maxTokens: 300);
+        foreach (Chunk chunk in chunks)
+            Console.WriteLine($"{chunk.Id}: {chunk.Text}");
+
+  .. method:: GetKeyValues(bool includeXrefs: false)
+
+    PDF only: Extracts the form fields of the document and their current values. Push buttons are skipped. Returns an empty dictionary if the document is not a PDF, is closed, or has no form fields.
+
+    :arg bool includeXrefs: also return the :data:`xref` of each field, for example to use with :meth:`Page.LoadWidget`.
+
+    :rtype: `Dictionary<string, Dictionary<string, object>>`
+    :returns: a dictionary keyed by fully qualified field name (for example `"address.city"`). Each value is a dictionary with these keys:
+
+        * `"field_value"`: the field value, `""` if not set.
+        * `"pages"`: `List<int>` of 0-based page numbers on which the field appears.
+        * `"terminal"`: `true` if the field has no named child fields.
+        * `"xref"`: only if *includeXrefs* is `true`. The field's :data:`xref`, or a `List<int>` if several fields share the same name.
+
+  .. index::
      pair: fontSize; Document.SetLayout
      pair: rect; Document.SetLayout
      pair: width; Document.SetLayout
@@ -1460,7 +1618,7 @@ This class represents a document. It can be constructed from a file or from memo
     :arg string desc: the new description.
 
     :rtype: int
-    :returns: `xref` of the file object. Automatically, its `/ModDate` PDF key will be updated with the current date-time.
+    :returns: :data:`xref` of the file object. Automatically, its `/ModDate` PDF key will be updated with the current date-time.
 
   .. method:: GetXrefLength()
 

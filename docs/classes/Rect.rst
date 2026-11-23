@@ -54,7 +54,7 @@ The following remarks are also valid for :ref:`IRect` objects:
 ============================= =======================================================
 **Methods / Attributes**      **Short Description**
 ============================= =======================================================
-:meth:`Rect.Contains`         Checks containment of point_likes and rect_likes
+:meth:`Rect.Contains`         Checks containment of :data:`point_like` and :data:`rect_like` objects
 :meth:`Rect.GetArea`          Calculate rectangle area
 :meth:`Rect.IncludePoint`     Enlarge rectangle to also contain a point
 :meth:`Rect.IncludeRect`      Enlarge rectangle to also contain another one

@@ -1387,7 +1387,7 @@ Working with Barcodes
 Reading Barcodes
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-To read barcodes from a page define the area you wish to check for and use the `ReadBarcodes` method as follows:
+To read barcodes from a page define the area you wish to check for and use the :meth:`Page.ReadBarcodes` method as follows:
 
 .. code-block:: cs
 
@@ -1419,7 +1419,7 @@ To read barcodes from a page define the area you wish to check for and use the `
 Writing Barcodes
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-To write barcodes you can either add them directly to pages with :meth:`Page.WriteBarcode` or create images directly with :ref:`Utils.WriteBarcode() <Utils_WriteBarcode>`.
+To write barcodes you can either add them directly to pages with :meth:`Page.WriteBarcode` or create images directly with :meth:`Utils.WriteBarcode`.
 
 
 **Example #1: adding a barcode to a page**
@@ -1459,13 +1459,13 @@ To write barcodes you can either add them directly to pages with :meth:`Page.Wri
 
     See :ref:`BarcodeFormat <Barcode_BarcodeFormat>` for available barcodes.
 
-    See :ref:`Page.ReadBarcodes <Page_ReadBarcodes>`.
+    See :meth:`Page.ReadBarcodes`.
 
-    See :ref:`Page.WriteBarcode <Page_WriteBarcode>`.
+    See :meth:`Page.WriteBarcode`.
 
     See :ref:`Utils.ReadBarcodes <Utils_ReadBarcodes>`.
 
-    See :ref:`Utils.WriteBarcodes <Utils_WriteBarcode>`.
+    See :ref:`Utils.WriteBarcode <Utils_WriteBarcode>`.
 
 
 Using Image Filters
