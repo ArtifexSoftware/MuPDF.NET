@@ -1,0 +1,10 @@
+widgetCount=9
+country	ComboBox	France
+email	Text	ada@example.com
+fullName	Text	Ada Lovelace
+language	ListBox	C#
+plan	RadioButton	Off
+plan	RadioButton	Pro
+plan	RadioButton	Off
+subscribe	CheckBox	Yes
+terms	CheckBox	Off

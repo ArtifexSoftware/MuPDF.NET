@@ -1,0 +1,14 @@
+English: Hello from MuPDF.NET unicode.pdf
+Deutsch: Grüße aus der Straße
+Français: Voici un texte accentué — être, naïve, été
+Español: España, niño, corazón
+Русский: Привет, мир
+Ελληνικά: Γειά σου κόσμε
+Tiếng Việt: Xin chào thế giới
+中文: 你好世界
+日本語: こんにちは
+ﻡﻝﺍﻉﻝﺍﺏ ﺍﺏﺡﺭﻡ :ﺓﻱﺏﺭﻉﻝﺍ
+םלוע םולש :תירבע
+ไทย: สวัสดีชาวโลก
+हिन्दी: नमस्ते दुनिया
+
