@@ -1,4 +1,4 @@
-.. include:: header.rst
+.. include:: ../header.rst
 
 ============
 Utils
@@ -84,6 +84,10 @@ Yet others are handy, general-purpose utilities.
 ==================================== ==============================================================
 
 
+**Class API**
+
+.. class:: Utils
+
    .. method:: PaperSize
 
       Convenience function to return width and height of a known paper format code. These values are given in pixels for the standard resolution 72 pixels = 1 inch.
@@ -97,7 +101,6 @@ Yet others are handy, general-purpose utilities.
       :rtype: Tuple
       :returns: *(width, height)* of the paper format. For an unknown format *(-1, -1)* is returned. Examples: *PaperSize("A4")* returns *(595, 842)* and *PaperSize("letter-l")* delivers *(792, 612)*.
 
------
 
    .. method:: PaperRect
 
@@ -108,7 +111,7 @@ Yet others are handy, general-purpose utilities.
       :rtype: :ref:`Rect`
       :returns: *Rect(0, 0, width, height)* with *width, height = Utils.PaperSize(size)*.
 
------
+
 
    .. method:: sRGB2Pdf(int srgb)
 
@@ -118,7 +121,7 @@ Yet others are handy, general-purpose utilities.
 
       :returns: a tuple (red, green, blue) with float items in interval *0 <= item <= 1* representing the same color. Example `sRGB2Pdf(0xff0000) = (1, 0, 0)` (red).
 
------
+
 
    .. method:: sRGB2Rgb(int srgb)
 
@@ -128,7 +131,7 @@ Yet others are handy, general-purpose utilities.
 
       :returns: a tuple (red, green, blue) with integer items in `range(256)` representing the same color. Example `sRGB2Pdf(0xff0000) = (255, 0, 0)` (red).
 
------
+
 
    .. method:: GlyphName2Unicode(string name)
 
@@ -139,7 +142,7 @@ Yet others are handy, general-purpose utilities.
       :rtype: `int`
       :returns: the unicode. Invalid *name* entries return `0xfffd (65533)`.
 
------
+
 
    .. method:: Unicode2GlyphName(int ch)
 
@@ -150,7 +153,7 @@ Yet others are handy, general-purpose utilities.
       :rtype: `string`
       :returns: the glyph name. E.g. `Utils.Unicode2GlyphName(Convert.Int32("Ä"))` returns `'Adieresis'`.
 
------
+
 
    .. method:: PlanishLine(Point p1, Point p2)
 
@@ -165,13 +168,13 @@ Yet others are handy, general-purpose utilities.
          .. image:: images/img-planish.png
             :scale: 40
 
------
+
 
    .. attribute:: PaperSizes
 
       A dictionary of pre-defines paper formats. Used as basis for :meth:`PaperSize`.
 
------
+
 
    .. attribute:: TESSDATA_PREFIX
 
@@ -181,7 +184,7 @@ Yet others are handy, general-purpose utilities.
 
       .. note:: This variable is now checked before OCR functions are tried. This prevents verbose messages from MuPDF.
 
------
+
 
    .. method:: GetPdfNow()
 
@@ -190,7 +193,7 @@ Yet others are handy, general-purpose utilities.
       :rtype: `string`
       :returns: current local PDF timestamp.
 
------
+
 
    .. method:: GetTextLength(string text, string fontName: "helv", float fontSize: 11, int encoding: 0)
 
@@ -209,7 +212,7 @@ Yet others are handy, general-purpose utilities.
 
       .. warning:: If you use this function to determine the required rectangle width for the (:ref:`Page` or :ref:`Shape`) *InsertTextbox* methods, be aware that they calculate on a **by-character level**.
 
------
+
 
    .. method:: GetPdfString(string text)
 
@@ -220,7 +223,6 @@ Yet others are handy, general-purpose utilities.
       :rtype: `string`
       :returns: PDF-compatible string enclosed in either *()* or *<>*.
 
------
 
    .. method:: GetImageProfile(byte[] stream)
 
@@ -252,7 +254,6 @@ Yet others are handy, general-purpose utilities.
             * Images as returned by the image blocks of :meth:`Page.GetText` using "dict" or "rawdict" options are also supported.
 
 
------
 
    .. method:: ConversionHeader(string i: "text", string filename: "UNKNOWN")
 
@@ -264,7 +265,6 @@ Yet others are handy, general-purpose utilities.
 
       :rtype: `string`
 
------
 
    .. method:: ConversionTrailer(string i)
 
@@ -274,7 +274,6 @@ Yet others are handy, general-purpose utilities.
 
       :rtype: `string`
 
------
 
    .. method:: RecoverQuad((float, float) lineDir, Span span)
 
@@ -284,7 +283,6 @@ Yet others are handy, general-purpose utilities.
       :arg Span span: the span.
       :returns: the :ref:`Quad` of the span, usable for text marker annotations ('Highlight', etc.).
 
------
 
    .. method:: RecoverCharQuad((float, float) lineDir, Span span, Char char)
 
@@ -295,7 +293,6 @@ Yet others are handy, general-purpose utilities.
       :arg Char char: the character.
       :returns: the :ref:`Quad` of the character, usable for text marker annotations ('Highlight', etc.).
 
------
 
    .. method:: RecoverSpanQuad((float, float) lineDir, Span span, Char[] chars: None)
 
@@ -306,7 +303,6 @@ Yet others are handy, general-purpose utilities.
       :arg Char[] chars: the characters to consider. If given, the selected extraction option must be "rawdict".
       :returns: the :ref:`Quad` of the selected characters, usable for text marker annotations ('Highlight', etc.).
 
------
 
    .. method:: RecoverLineQuad(Line line, List<Span> spans: None)
 
@@ -316,7 +312,6 @@ Yet others are handy, general-purpose utilities.
       :arg Span[] spans: a sub-list of `line.Spans`. If omitted, the full line quad will be returned.
       :returns: the :ref:`Quad` of the selected line spans, usable for text marker annotations ('Highlight', etc.).
 
------
 
    .. attr:: TESSDATA_PREFIX
 
@@ -326,7 +321,6 @@ Yet others are handy, general-purpose utilities.
 
          The folder name can be used as parameter `tessdata` in methods :meth:`Page.GetTextPageOcr`, :meth:`Pixmap.SavePdfOCR` and :meth:`Pixmap.PdfOCR2Bytes`.
 
------
 
    .. method:: INFINITE_QUAD()
 
@@ -336,7 +330,6 @@ Yet others are handy, general-purpose utilities.
 
       Return the (unique) infinite rectangle `Rect(-2147483648.0, -2147483648.0, 2147483520.0, 2147483520.0)`, resp. the :ref:`IRect` and :ref:`Quad` counterparts. It is the largest possible rectangle: all valid rectangles are contained in it.
 
------
 
    .. method:: EMPTY_QUAD()
 
@@ -346,7 +339,6 @@ Yet others are handy, general-purpose utilities.
 
       Return the "standard" empty and invalid rectangle `Rect(2147483520.0, 2147483520.0, -2147483648.0, -2147483648.0)` resp. quad. Its top-left and bottom-right point values are reversed compared to the infinite rectangle. It will e.g. be used to indicate empty bboxes in `page.get_text("dict")` dictionaries. There are however infinitely many empty or invalid rectangles.
 
------
 
    .. method:: CalcImageMatrix(int width, int height, Rect tr, float rotate, bool keep)
 
@@ -360,7 +352,7 @@ Yet others are handy, general-purpose utilities.
       
       :returns: `Matrix`
 
------
+
 
    .. method:: ColorCount(FzPixmap pm, dynamic clip)
 
@@ -371,7 +363,7 @@ Yet others are handy, general-purpose utilities.
 
       :returns: return count of each color.
 
------
+
 
    .. method:: ConstructLabel(string style, string prefix, int pno)
 
@@ -384,26 +376,26 @@ Yet others are handy, general-purpose utilities.
       :rtype: `string`
       :returns: styled label
 
------
+
 
    .. method:: DecodeRawUnicodeEscape(FzBuffer s)
    .. method:: DecodeRawUnicodeEscape(string s)
 
       Decode raw unicode
 
------
+
 
    .. method:: DoLinks(Document doc1, Document doc2, int fromPage: -1, int toPage: -1, int startAt: -1)
 
       Insert links contained in copied page range into destination PDF.
 
------
+
 
    .. method:: EnsureIdentity(Document pdf)
 
       Store ID in PDF trailer
 
------
+
 
    .. method:: ExpandFontName(string fontname)
 
@@ -411,7 +403,7 @@ Yet others are handy, general-purpose utilities.
 
       :returns: expand font name. For example, if `fontname` starts with `co` or `Co`, returns `Cour`
 
------
+
 
    .. method:: GetId()
 
@@ -420,7 +412,7 @@ Yet others are handy, general-purpose utilities.
       :rtype: `int`
       :returns: unique number
 
------
+
 
    .. method:: GetAllContents(Page page)
 
@@ -430,7 +422,7 @@ Yet others are handy, general-purpose utilities.
 
       :rtype: `byte[]`
 
------
+
 
    .. method:: GetAnnotByName(Page page, string name)
 
@@ -442,7 +434,7 @@ Yet others are handy, general-purpose utilities.
       :rtype: `PdfAnnot`
       :returns: PdfAnnot object that has the name.
 
------
+
 
    .. method:: GetArea(Rect rect, string unit: "px")
 
@@ -454,7 +446,7 @@ Yet others are handy, general-purpose utilities.
       :rtype: `float`
       :returns: area of rectangle
 
------
+
 
    .. method:: GetBorderStyle(string style)
 
@@ -463,7 +455,6 @@ Yet others are handy, general-purpose utilities.
       :arg string style: border type in format of style. style can be one of 'B', 'D', 'I', 'U', 'S' or lowercases.
       :returns: return int from border pdfobj.
 
------
 
    .. method:: GetColors(string name)
 
@@ -473,7 +464,6 @@ Yet others are handy, general-purpose utilities.
       :rtype: float[]
       :returns: return float array equal to color name. If invalid color name, return (1, 1, 1) - `white`.
 
------
 
    .. method:: GetColorHSV(string name)
 
@@ -481,13 +471,11 @@ Yet others are handy, general-purpose utilities.
 
       :returns: a triple (degree, percent, percent). If not found (-1, -1, -1) is returned.
 
------
 
    .. method:: GetColorInfoList()
 
       Return Tuples containing of color name, red, green, blue color values.
 
------
 
    .. method:: GetDestString(int xref, int dDict)
    .. method:: GetDestString(int xref, float dDict)
@@ -502,13 +490,11 @@ Yet others are handy, general-purpose utilities.
 
       :returns: string of PDF action
 
------
 
    .. method:: GetFieldTypeText(int wtype)
 
       Return field type string from int type.
 
------
 
    .. method:: GetFontProperties(Document doc, int xref)
 
@@ -520,19 +506,16 @@ Yet others are handy, general-purpose utilities.
       :rtype: Tuple(string, string, string, float, float)
       :returns: properties of the font.
 
------
 
    .. method:: GetGlyphText()
 
       Adobe Glyph List function
 
------
 
    .. method:: GetImageExtension(int type)
 
       Return extension for MuPDF image type.
 
------
    
    .. method:: GetLinkText(Page page, LinkInfo link)
 
@@ -540,7 +523,6 @@ Yet others are handy, general-purpose utilities.
 
       :returns: annot string.
 
------
 
    .. method:: GetTextWithLayout(Page page, Rect clip: null, int flags: 0, int tolerance: 5)
 
@@ -554,7 +536,6 @@ Yet others are handy, general-purpose utilities.
       :rtype: string
       :return: a string containing the text with layout applied.
 
------
 
    .. method:: GetTables(Page page, Rect clip: null,  string strategy: null, string vertical_strategy: "lines", string horizontal_strategy: "lines", List<Line> add_lines: null, List<Edge> vertical_lines: null, List<Edge> horizontal_lines: null, float snap_tolerance: TableFlags.TABLE_DEFAULT_SNAP_TOLERANCE, float snap_x_tolerance: 0.0f, float snap_y_tolerance: 0.0f, float join_tolerance: TableFlags.TABLE_DEFAULT_JOIN_TOLERANCE, float join_x_tolerance: 0.0f, float join_y_tolerance: 0.0f, float edge_min_length: 3.0f, float min_words_vertical: TableFlags.TABLE_DEFAULT_MIN_WORDS_VERTICAL, float min_words_horizontal: TableFlags.TABLE_DEFAULT_MIN_WORDS_HORIZONTAL, float intersection_tolerance: 3.0f, float intersection_x_tolerance: 0.0f, float intersection_y_tolerance: 0.0f, float text_tolerance: 3.0f, float text_x_tolerance: 3.0f, float text_y_tolerance: 3.0f)
 
@@ -593,7 +574,6 @@ Yet others are handy, general-purpose utilities.
       :rtype: List
       :return: a list of `Table`
 
------
 
    .. method:: GetWidgetProperties(Annot annot, Widget widget)
 
@@ -601,7 +581,6 @@ Yet others are handy, general-purpose utilities.
       
       :returns: Widget object.
 
------
 
    .. method:: InsertContents(Page page, byte[] newCont, int overlay: 1)
 
@@ -614,19 +593,16 @@ Yet others are handy, general-purpose utilities.
 
       :returns: xref of the content.
 
------
 
    .. method:: Integer2Letter(int i)
 
       Return letter sequence string for integer i.
 
------
 
    .. method:: Integer2Roman(int i)
 
       Return roman numeral for integer i.
 
------
 
    .. method:: MeasureString(string text, string fontFile, string fontName, float fontSize: 11.0f, int encoding: 0)
 
@@ -638,19 +614,19 @@ Yet others are handy, general-purpose utilities.
       :arg float fontSize: font size. default is 11.0f.
       :arg int encoding: encoding type.
 
------
+
 
    .. method:: MergeRange(Document docDes, Document docSrc, int spage, int epage, int apage, int rotate, bool links, bool annots, int showProgress, GraftMap graftmap)
 
       Copy a range of pages (spage, epage) from a source PDF to a specified location (apage) of the target PDF. If spage > epage, the sequence of source pages is reversed.
       
------
+
 
    .. method:: NormalizeRotation(int rotate)
 
       Return normalized /Rotate value:one of 0, 90, 180, 270.
 
------
+
 
    .. method:: RuleDict((int, string) item)
 
@@ -661,11 +637,7 @@ Yet others are handy, general-purpose utilities.
 
 
 
-
-
------
-
-.. _Utils_ReadBarcodes:
+   .. _Utils_ReadBarcodes:
 
    .. method:: ReadBarcodes(Page page, Rect clip = null, bool decodeEmbeddedOnly = false, BarcodeFormat type = BarcodeFormat.ALL, bool tryHarder = true, bool tryInverted = false, bool pureBarcode = false, bool multi = true, bool autoRotate = true)
 
@@ -685,7 +657,6 @@ Yet others are handy, general-purpose utilities.
       :returns: a list of :doc:`../classes/Barcode` objects.
 
 
------
 
    .. method:: ReadBarcodes(string imageFile, Rect clip = null, BarcodeFormat type = BarcodeFormat.ALL, bool tryHarder = true, bool tryInverted = false, bool pureBarcode = false, bool multi = true, bool autoRotate = true)
 
@@ -705,9 +676,8 @@ Yet others are handy, general-purpose utilities.
       :returns: a list of :doc:`../classes/Barcode` objects.
 
 
------
 
-.. _Utils_WriteBarcode:
+   .. _Utils_WriteBarcode:
 
    .. method:: WriteBarcode(Page page, Rect clip, string text, BarcodeFormat type, string characterSet = null, bool disableEci = false, bool forceFitToRect = false, bool pureBarcode = false, int marginLeft = 0, int marginTop = 0, int marginRight = 0, int marginBottom = 0, int narrowBarWidth = 0)
 
@@ -730,9 +700,6 @@ Yet others are handy, general-purpose utilities.
       :arg int narrowBarWidth: The width of the narrow bar in pixels.
 
 
------
-
-
 
    .. method:: WriteBarcode(string imageFile, string text, BarcodeFormat type, int width = 300, int height = 300, string characterSet = null, bool disableEci = false, bool forceFitToRect = false, bool pureBarcode = false, int marginLeft = 0, int marginTop = 0, int marginRight = 0, int marginBottom = 0, int narrowBarWidth = 0)
 
@@ -753,7 +720,6 @@ Yet others are handy, general-purpose utilities.
       :arg int marginBottom: Specifies margin bottom in pixels.
       :arg int narrowBarWidth: The width of the narrow bar in pixels.
 
------
 
 
    .. method:: GetBarcodePixmap(string text, BarcodeFormat type, int width = 0, string characterSet = null, bool disableEci = false, bool pureBarcode = false, int marginLeft = 0, int marginTop = 0, int marginRight = 0, int marginBottom = 0, int narrowBarWidth = 0)
@@ -779,8 +745,6 @@ Yet others are handy, general-purpose utilities.
 
 
 
------
-
    .. method:: ReplaceBytes(byte[] src, byte[] search, byte[] replace, int limit=1)
 
       Replaces bytes in a source buffer against the supplied search and the replacement parameters.
@@ -791,6 +755,5 @@ Yet others are handy, general-purpose utilities.
       :arg int limit: The number of matches to make, defaults to 1.
 
 
------
 
-.. include:: footer.rst
+.. include:: ../footer.rst

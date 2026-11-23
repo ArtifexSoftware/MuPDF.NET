@@ -320,7 +320,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
       .. image:: ../images/img-redact.*
 
 
-      .. method:: ApplyRedactions(int images: PDF_REDACT_IMAGE_PIXELS|2, int graphics: PDF_REDACT_LINE_ART_IF_TOUCHED|2, int text: PDF_REDACT_TEXT_REMOVE|0)
+   .. method:: ApplyRedactions(int images: PDF_REDACT_IMAGE_PIXELS|2, int graphics: PDF_REDACT_LINE_ART_IF_TOUCHED|2, int text: PDF_REDACT_TEXT_REMOVE|0)
 
       **PDF only**: Remove all **content** contained in any redaction rectangle on the page.
 
@@ -1645,9 +1645,6 @@ In a nutshell, this is what you can do with MuPDF.NET:
       :rtype: :ref:`Shape`
       :returns: a new :ref:`Shape` to use for compound drawings. See description there.
 
-
-.. _Page_ReadBarcodes:
-
    .. method:: ReadBarcodes(Rect clip = null, bool decodeEmbeddedOnly = false, BarcodeFormat type = BarcodeFormat.ALL, bool tryHarder = true, bool tryInverted = false, bool pureBarcode = false, bool multi = true, bool autoRotate = true))
 
       Retrieves any barcode information contained within the supplied rectangle.
@@ -1664,10 +1661,6 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
       :rtype: `List<Barcode>`
       :returns: a list of :doc:`Barcode` objects.
-
-
-.. _Page_WriteBarcode:
-
 
    .. method:: WriteBarcode(Rect clip, string text, BarcodeFormat barcodeFormat, string characterSet = null, bool disableEci = false, bool forceFitToRect = false, bool pureBarcode = false, int marginLeft = 0, int marginTop = 0, int marginRight = 0, int marginBottom = 0, int narrowBarWidth = 0)
 
@@ -1880,7 +1873,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
       The page's PDF :data:`xref`. Zero if not a PDF.
 
-      :type: :ref:`Rect`
+      :type: int
    
    .. attribute:: IsWrapped
 
