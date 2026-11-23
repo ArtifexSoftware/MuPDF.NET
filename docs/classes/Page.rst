@@ -1645,7 +1645,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
       :rtype: :ref:`Shape`
       :returns: a new :ref:`Shape` to use for compound drawings. See description there.
 
-   .. method:: ReadBarcodes(Rect clip = null, bool decodeEmbeddedOnly = false, BarcodeFormat type = BarcodeFormat.ALL, bool tryHarder = true, bool tryInverted = false, bool pureBarcode = false, bool multi = true, bool autoRotate = true))
+   .. method:: ReadBarcodes(Rect clip = null, bool decodeEmbeddedOnly = false, BarcodeFormat type = BarcodeFormat.ALL, bool tryHarder = true, bool tryInverted = false, bool pureBarcode = false, bool multi = true, bool autoRotate = true)
 
       Retrieves any barcode information contained within the supplied rectangle.
 
