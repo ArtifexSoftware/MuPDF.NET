@@ -35,12 +35,13 @@ Developer documentation to help you get started
 
 .. toctree::
     :caption: User Guide
-    :maxdepth: 2
+    :maxdepth: 1
 
     getting-started/index.rst
     the-basics/index.rst
     compressing-files.rst
     office/index.rst
+    examples/index.rst
 
 
 .. toctree::

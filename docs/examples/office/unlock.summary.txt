@@ -1,0 +1,2 @@
+fontDirCountMin1=true
+unlocked=true

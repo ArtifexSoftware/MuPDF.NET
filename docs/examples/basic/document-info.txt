@@ -1,0 +1,396 @@
+doc.IsEncrypted = True
+doc.NeedsPass = True
+doc.PageCount = 10
+doc.IsPdf = True
+doc.IsReflowable = False
+doc.IsDirty = False
+doc.IsFormPdf = True
+doc.IsRepaired = False
+doc.IsFastWebaccess = False
+doc.IsClosed = False
+doc.CanSaveIncrementally() = True
+doc.JournalIsEnabled = False
+doc.ChapterCount = 1
+doc.ChapterPageCount(0) = 10
+doc.VersionCount = 1
+doc.XrefLength = 71
+doc.PdfCatalog = 1
+doc.Language = en
+doc.PageLayout = TwoColumnLeft
+doc.PageMode = UseAttachments
+doc.NeedAppearances = True
+doc.GetSigFlags() = -1
+doc.Permissions = -4
+Constants.PDF_PERM_PRINT = True
+Constants.PDF_PERM_MODIFY = True
+Constants.PDF_PERM_COPY = True
+Constants.PDF_PERM_ANNOTATE = True
+Constants.PDF_PERM_FORM = True
+Constants.PDF_PERM_ACCESSIBILITY = True
+Constants.PDF_PERM_ASSEMBLE = True
+Constants.PDF_PERM_PRINT_HQ = True
+doc.FormFonts = 1 item(s)
+  Helv
+doc.EmbeddedFileCount = 1
+doc.GetEmbeddedFileNames(): notes.txt
+doc.HasAnnots() = True
+doc.HasLinks() = True
+doc.MarkInfo.Count = 3
+doc.MarkInfo["Marked"] = True
+doc.MarkInfo["UserProperties"] = False
+doc.MarkInfo["Suspects"] = False
+doc.Metadata.Count = 11
+doc.Metadata["format"] = PDF 1.7
+doc.Metadata["title"] = MuPDF.NET 01-Basic fixture
+doc.Metadata["author"] = Artifex Software
+doc.Metadata["subject"] = 10-page sample covering Document and Page reads
+doc.Metadata["keywords"] = MuPDF.NET, 01-Basic, examples
+doc.Metadata["creator"] = Test/create_basic_pdf.py
+doc.Metadata["producer"] = PyMuPDF
+doc.Metadata["creationDate"] = 
+doc.Metadata["modDate"] = 
+doc.Metadata["trapped"] = 
+doc.Metadata["encryption"] = Standard V5 R6 256-bit AES
+doc.XrefXmlMetadata = 54
+doc.GetXmlMetadata() = <?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?>
+<x:xmpmeta xmlns:x="adobe:ns:meta/">
+  <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+    <rdf:Description rdf:about=""
+        xmlns:dc="http://purl.org/dc/elements/1.1/"
+        xmlns:pdf="http://ns.adobe.com/pdf/1.3/"
+        xmlns:xmp="http://ns.adobe.com/xap/1.0/">
+      <dc:title><rdf:Alt><rdf:li xml:lang="x-default">MuPDF.NET 01-Basic fixture</rdf:li></rdf:Alt></dc:title>
+      <dc:creator><rdf:Seq><rdf:li>Artifex Software</rdf:li></rdf:Seq></dc:creator>
+      <pdf:Producer>PyMuPDF</pdf:Producer>
+      <xmp:CreatorTool>Test/create_basic_pdf.py</xmp:CreatorTool>
+    </rdf:Description>
+  </rdf:RDF>
+</x:xmpmeta>
+<?xpacket end="w"?>
+doc.GetPageLabels().Count = 3
+  startpage = 0
+  prefix = Cover-
+  firstpagenum = 1
+  style = D
+  startpage = 1
+  prefix = A-
+  firstpagenum = 1
+  style = D
+  startpage = 5
+  prefix = B-
+  firstpagenum = 1
+  style = D
+doc.GetToc().Count = 12
+  level=1 title=Cover page=1
+  level=1 title=Chapter A page=2
+  level=2 title=A.1 Overview page=2
+  level=2 title=A.2 Setup page=3
+  level=2 title=A.3 Details page=4
+  level=2 title=A.4 Notes page=5
+  level=1 title=Chapter B page=6
+  level=2 title=B.1 Examples page=6
+  level=2 title=B.2 Images page=7
+  level=2 title=B.3 Forms page=8
+  level=2 title=B.4 Layers page=9
+  level=2 title=B.5 Appendix page=10
+doc.ResolveNames().Count = 4
+  Cover
+    page = 0
+    to = (72, 770)
+    zoom = 0
+  ChapterA
+    page = 1
+    to = (72, 770)
+    zoom = 0
+  ChapterB
+    page = 5
+    to = (72, 770)
+    zoom = 0
+  Appendix
+    page = 9
+    to = (72, 770)
+    zoom = 0
+doc.GetOcgs().Count = 2
+  xref=3
+    name = Header
+    intent = System.Collections.Generic.List`1[System.String]
+    on = True
+    usage = Artwork
+  xref=4
+    name = Watermark
+    intent = System.Collections.Generic.List`1[System.String]
+    on = True
+    usage = Artwork
+doc.GetLayers().Count = 1
+  number = 0
+  name = Default
+  creator = MuPDF.NET.Examples
+doc.LayerUiConfigs().Count = 2
+  number = 0
+  text = Header
+  depth = 0
+  type = checkbox
+  on = True
+  locked = False
+  number = 1
+  text = Watermark
+  depth = 0
+  type = checkbox
+  on = True
+  locked = False
+doc.PdfTrailer() = <<
+  /Size 71
+  /Info 53 0 R
+  /Root 1 0 R
+  /ID [ <C2A2C283C3846973C29126C3804EC380> <B71696BCED205A4F8DB40CC87D45F597> ]
+  /Encrypt <<
+    /Filter /Standard
+    /R 6
+    /V 5
+    /Length 256
+    /P -4
+    /EncryptMetadata true
+    /StmF /StdCF
+    /StrF /StdCF
+    /CF <<
+      /StdCF <<
+        /AuthEvent /DocOpen
+        /CFM /AESV3
+        /Length 32
+      >>
+    >>
+    /O <4979B138F96B690FE0994924B5406D441848E6810FF92ABC80060614EC770A1F957759E67C19A5B297DDA8F66A653266>
+    /U <CBC111ECC360D2386CAC0D448D81C06E51C4D574BF36CFC75B6E09E4C9CC5FEDF314E98EA58D0B8FB7FDAA8062C327D7>
+    /OE <3539688776EF6E2CC46E8663C754635ED02C25520B589CF293EEE19FC763E1AA>
+    /UE <C42C02188D32E5F68F1E2DDBEC83D0B7695D23A66E0A8FF0A76AEBAFE2DE0F09>
+    /Perms <88BC1E691B1944A2D7BB948E18DFC0ED>
+  >>
+>>
+doc[0].GetLabel() = Cover-1
+doc[0].Xref = 6
+doc[0].Rotation = 0
+doc[0].Width = 595
+doc[0].Height = 842
+doc[0].Rect = Rect(0, 0, 595, 842)
+doc[0].MediaBox = Rect(0, 0, 595, 842)
+doc[0].CropBox = Rect(0, 0, 595, 842)
+doc[0].BleedBox = Rect(0, 0, 595, 842)
+doc[0].TrimBox = Rect(0, 0, 595, 842)
+doc[0].ArtBox = Rect(0, 0, 595, 842)
+doc.GetPageFonts(0).Count = 3
+  xref=7 ext=n/a type=Type1 baseName=Helvetica name=helv encoding=WinAnsiEncoding
+  xref=9 ext=n/a type=Type1 baseName=Helvetica-Bold name=hebo encoding=WinAnsiEncoding
+  xref=11 ext=n/a type=Type1 baseName=Times-Roman name=tiro encoding=WinAnsiEncoding
+doc.GetPageImages(0).Count = 1
+  xref=14 name=fzImg0 width=600 height=600 bpc=8 cs=ICCBased
+doc.GetPageXobjects(0).Count = 1
+  xref = 14
+  name = fzImg0
+  subtype = Image
+doc.GetPageAnnotXrefs(0).Count = 5
+  xref=21 type=Text id=fitz-A0
+  xref=22 type=Popup id=
+  xref=24 type=Highlight id=fitz-A1
+  xref=51 type=Link id=fitz-L0
+  xref=52 type=Link id=fitz-L1
+doc[1].GetLabel() = A-1
+doc[1].Xref = 26
+doc[1].Rotation = 0
+doc[1].Width = 595
+doc[1].Height = 842
+doc[1].Rect = Rect(0, 0, 595, 842)
+doc[1].MediaBox = Rect(0, 0, 595, 842)
+doc[1].CropBox = Rect(0, 0, 595, 842)
+doc[1].BleedBox = Rect(0, 0, 595, 842)
+doc[1].TrimBox = Rect(0, 0, 595, 842)
+doc[1].ArtBox = Rect(0, 0, 595, 842)
+doc.GetPageFonts(1).Count = 3
+  xref=7 ext=n/a type=Type1 baseName=Helvetica name=helv encoding=WinAnsiEncoding
+  xref=9 ext=n/a type=Type1 baseName=Helvetica-Bold name=hebo encoding=WinAnsiEncoding
+  xref=11 ext=n/a type=Type1 baseName=Times-Roman name=tiro encoding=WinAnsiEncoding
+doc.GetPageImages(1).Count = 1
+  xref=14 name=fzImg0 width=600 height=600 bpc=8 cs=ICCBased
+doc.GetPageXobjects(1).Count = 1
+  xref = 14
+  name = fzImg0
+  subtype = Image
+doc.GetPageAnnotXrefs(1).Count = 1
+  xref=28 type=Widget id=fitz-W0
+doc[2].GetLabel() = A-2
+doc[2].Xref = 31
+doc[2].Rotation = 0
+doc[2].Width = 595
+doc[2].Height = 842
+doc[2].Rect = Rect(0, 0, 595, 842)
+doc[2].MediaBox = Rect(0, 0, 595, 842)
+doc[2].CropBox = Rect(0, 0, 595, 842)
+doc[2].BleedBox = Rect(0, 0, 595, 842)
+doc[2].TrimBox = Rect(0, 0, 595, 842)
+doc[2].ArtBox = Rect(0, 0, 595, 842)
+doc.GetPageFonts(2).Count = 3
+  xref=7 ext=n/a type=Type1 baseName=Helvetica name=helv encoding=WinAnsiEncoding
+  xref=9 ext=n/a type=Type1 baseName=Helvetica-Bold name=hebo encoding=WinAnsiEncoding
+  xref=11 ext=n/a type=Type1 baseName=Times-Roman name=tiro encoding=WinAnsiEncoding
+doc.GetPageImages(2).Count = 1
+  xref=14 name=fzImg0 width=600 height=600 bpc=8 cs=ICCBased
+doc.GetPageXobjects(2).Count = 1
+  xref = 14
+  name = fzImg0
+  subtype = Image
+doc.GetPageAnnotXrefs(2).Count = 0
+doc[3].GetLabel() = A-3
+doc[3].Xref = 33
+doc[3].Rotation = 0
+doc[3].Width = 595
+doc[3].Height = 842
+doc[3].Rect = Rect(0, 0, 595, 842)
+doc[3].MediaBox = Rect(0, 0, 595, 842)
+doc[3].CropBox = Rect(0, 0, 595, 842)
+doc[3].BleedBox = Rect(0, 0, 595, 842)
+doc[3].TrimBox = Rect(0, 0, 595, 842)
+doc[3].ArtBox = Rect(0, 0, 595, 842)
+doc.GetPageFonts(3).Count = 3
+  xref=7 ext=n/a type=Type1 baseName=Helvetica name=helv encoding=WinAnsiEncoding
+  xref=9 ext=n/a type=Type1 baseName=Helvetica-Bold name=hebo encoding=WinAnsiEncoding
+  xref=11 ext=n/a type=Type1 baseName=Times-Roman name=tiro encoding=WinAnsiEncoding
+doc.GetPageImages(3).Count = 1
+  xref=14 name=fzImg0 width=600 height=600 bpc=8 cs=ICCBased
+doc.GetPageXobjects(3).Count = 1
+  xref = 14
+  name = fzImg0
+  subtype = Image
+doc.GetPageAnnotXrefs(3).Count = 0
+doc[4].GetLabel() = A-4
+doc[4].Xref = 35
+doc[4].Rotation = 0
+doc[4].Width = 595
+doc[4].Height = 842
+doc[4].Rect = Rect(0, 0, 595, 842)
+doc[4].MediaBox = Rect(0, 0, 595, 842)
+doc[4].CropBox = Rect(0, 0, 595, 842)
+doc[4].BleedBox = Rect(0, 0, 595, 842)
+doc[4].TrimBox = Rect(0, 0, 595, 842)
+doc[4].ArtBox = Rect(0, 0, 595, 842)
+doc.GetPageFonts(4).Count = 3
+  xref=7 ext=n/a type=Type1 baseName=Helvetica name=helv encoding=WinAnsiEncoding
+  xref=9 ext=n/a type=Type1 baseName=Helvetica-Bold name=hebo encoding=WinAnsiEncoding
+  xref=11 ext=n/a type=Type1 baseName=Times-Roman name=tiro encoding=WinAnsiEncoding
+doc.GetPageImages(4).Count = 1
+  xref=14 name=fzImg0 width=600 height=600 bpc=8 cs=ICCBased
+doc.GetPageXobjects(4).Count = 1
+  xref = 14
+  name = fzImg0
+  subtype = Image
+doc.GetPageAnnotXrefs(4).Count = 0
+doc[5].GetLabel() = B-1
+doc[5].Xref = 37
+doc[5].Rotation = 0
+doc[5].Width = 595
+doc[5].Height = 842
+doc[5].Rect = Rect(0, 0, 595, 842)
+doc[5].MediaBox = Rect(0, 0, 595, 842)
+doc[5].CropBox = Rect(0, 0, 595, 842)
+doc[5].BleedBox = Rect(0, 0, 595, 842)
+doc[5].TrimBox = Rect(0, 0, 595, 842)
+doc[5].ArtBox = Rect(0, 0, 595, 842)
+doc.GetPageFonts(5).Count = 3
+  xref=7 ext=n/a type=Type1 baseName=Helvetica name=helv encoding=WinAnsiEncoding
+  xref=9 ext=n/a type=Type1 baseName=Helvetica-Bold name=hebo encoding=WinAnsiEncoding
+  xref=11 ext=n/a type=Type1 baseName=Times-Roman name=tiro encoding=WinAnsiEncoding
+doc.GetPageImages(5).Count = 1
+  xref=14 name=fzImg0 width=600 height=600 bpc=8 cs=ICCBased
+doc.GetPageXobjects(5).Count = 1
+  xref = 14
+  name = fzImg0
+  subtype = Image
+doc.GetPageAnnotXrefs(5).Count = 0
+doc[6].GetLabel() = B-2
+doc[6].Xref = 39
+doc[6].Rotation = 0
+doc[6].Width = 595
+doc[6].Height = 842
+doc[6].Rect = Rect(0, 0, 595, 842)
+doc[6].MediaBox = Rect(0, 0, 595, 842)
+doc[6].CropBox = Rect(0, 0, 595, 842)
+doc[6].BleedBox = Rect(0, 0, 595, 842)
+doc[6].TrimBox = Rect(0, 0, 595, 842)
+doc[6].ArtBox = Rect(0, 0, 595, 842)
+doc.GetPageFonts(6).Count = 3
+  xref=7 ext=n/a type=Type1 baseName=Helvetica name=helv encoding=WinAnsiEncoding
+  xref=9 ext=n/a type=Type1 baseName=Helvetica-Bold name=hebo encoding=WinAnsiEncoding
+  xref=11 ext=n/a type=Type1 baseName=Times-Roman name=tiro encoding=WinAnsiEncoding
+doc.GetPageImages(6).Count = 1
+  xref=14 name=fzImg0 width=600 height=600 bpc=8 cs=ICCBased
+doc.GetPageXobjects(6).Count = 1
+  xref = 14
+  name = fzImg0
+  subtype = Image
+doc.GetPageAnnotXrefs(6).Count = 2
+  xref=41 type=Square id=fitz-A0
+  xref=43 type=Circle id=fitz-A1
+doc[7].GetLabel() = B-3
+doc[7].Xref = 45
+doc[7].Rotation = 0
+doc[7].Width = 595
+doc[7].Height = 842
+doc[7].Rect = Rect(0, 0, 595, 842)
+doc[7].MediaBox = Rect(0, 0, 595, 842)
+doc[7].CropBox = Rect(0, 0, 595, 842)
+doc[7].BleedBox = Rect(0, 0, 595, 842)
+doc[7].TrimBox = Rect(0, 0, 595, 842)
+doc[7].ArtBox = Rect(0, 0, 595, 842)
+doc.GetPageFonts(7).Count = 3
+  xref=7 ext=n/a type=Type1 baseName=Helvetica name=helv encoding=WinAnsiEncoding
+  xref=9 ext=n/a type=Type1 baseName=Helvetica-Bold name=hebo encoding=WinAnsiEncoding
+  xref=11 ext=n/a type=Type1 baseName=Times-Roman name=tiro encoding=WinAnsiEncoding
+doc.GetPageImages(7).Count = 1
+  xref=14 name=fzImg0 width=600 height=600 bpc=8 cs=ICCBased
+doc.GetPageXobjects(7).Count = 1
+  xref = 14
+  name = fzImg0
+  subtype = Image
+doc.GetPageAnnotXrefs(7).Count = 0
+doc[8].GetLabel() = B-4
+doc[8].Xref = 47
+doc[8].Rotation = 0
+doc[8].Width = 595
+doc[8].Height = 842
+doc[8].Rect = Rect(0, 0, 595, 842)
+doc[8].MediaBox = Rect(0, 0, 595, 842)
+doc[8].CropBox = Rect(0, 0, 595, 842)
+doc[8].BleedBox = Rect(0, 0, 595, 842)
+doc[8].TrimBox = Rect(0, 0, 595, 842)
+doc[8].ArtBox = Rect(0, 0, 595, 842)
+doc.GetPageFonts(8).Count = 3
+  xref=7 ext=n/a type=Type1 baseName=Helvetica name=helv encoding=WinAnsiEncoding
+  xref=9 ext=n/a type=Type1 baseName=Helvetica-Bold name=hebo encoding=WinAnsiEncoding
+  xref=11 ext=n/a type=Type1 baseName=Times-Roman name=tiro encoding=WinAnsiEncoding
+doc.GetPageImages(8).Count = 1
+  xref=14 name=fzImg0 width=600 height=600 bpc=8 cs=ICCBased
+doc.GetPageXobjects(8).Count = 1
+  xref = 14
+  name = fzImg0
+  subtype = Image
+doc.GetPageAnnotXrefs(8).Count = 0
+doc[9].GetLabel() = B-5
+doc[9].Xref = 49
+doc[9].Rotation = 90
+doc[9].Width = 770
+doc[9].Height = 523
+doc[9].Rect = Rect(0, 0, 770, 523)
+doc[9].MediaBox = Rect(0, 0, 595, 842)
+doc[9].CropBox = Rect(36, 36, 559, 806)
+doc[9].BleedBox = Rect(24, 24, 571, 818)
+doc[9].TrimBox = Rect(42, 42, 553, 800)
+doc[9].ArtBox = Rect(72, 72, 523, 770)
+doc.GetPageFonts(9).Count = 3
+  xref=7 ext=n/a type=Type1 baseName=Helvetica name=helv encoding=WinAnsiEncoding
+  xref=9 ext=n/a type=Type1 baseName=Helvetica-Bold name=hebo encoding=WinAnsiEncoding
+  xref=11 ext=n/a type=Type1 baseName=Times-Roman name=tiro encoding=WinAnsiEncoding
+doc.GetPageImages(9).Count = 1
+  xref=14 name=fzImg0 width=600 height=600 bpc=8 cs=ICCBased
+doc.GetPageXobjects(9).Count = 1
+  xref = 14
+  name = fzImg0
+  subtype = Image
+doc.GetPageAnnotXrefs(9).Count = 0
