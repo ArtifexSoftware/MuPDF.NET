@@ -905,7 +905,7 @@ This class represents a document. It can be constructed from a file or from memo
 
   .. note::
 
-     The methods :meth:`ToMarkdown`, :meth:`ToJson`, :meth:`ToText` and :meth:`ToChunks` are convenience wrappers around the equivalent `MuPDF4LLM` methods, for preparing document content for LLM and RAG workflows. Several of them depend on the **layout pipeline**, which must be switched on first with `MuPDF4LLM.SetUseLayout(true)` (or `MuPDF4LLM.UseLayout = true`). Parameters marked *(layout mode)* only take effect when the layout pipeline is active.
+     The methods :meth:`ToMarkdown`, :meth:`ToJson`, :meth:`ToText` and :meth:`ToChunks` prepare document content for LLM and RAG workflows. Several of them depend on the **layout pipeline**, which must be switched on first with :meth:`Utils.UseLayout` (`true`). Parameters marked *(layout mode)* only take effect when the layout pipeline is active.
 
   .. method:: ToMarkdown(bool header: true, bool footer: true, List<int> pages: null, bool writeImages: false, bool embedImages: false, string imagePath: "", string imageFormat: "png", string filename: "", bool forceText: true, bool pageChunks: false, bool pageSeparators: false, int dpi: 150, int ocrDpi: 150, float pageWidth: 612, float? pageHeight: null, bool ignoreCode: false, bool showProgress: false, bool useOcr: true, string ocrLanguage: "eng", bool forceOcr: false, OcrPageFunction ocrFunction: null, string tableOutput: "markdown", float? edgeThreshold: null)
 
@@ -948,7 +948,7 @@ This class represents a document. It can be constructed from a file or from memo
 
     Converts the document to a JSON representation of its layout: every page with its classified layout boxes (text, titles, tables, pictures, headers, footers and so on), their bounding boxes and content.
 
-    **Requires the layout pipeline.** Raises `NotSupportedException` if `MuPDF4LLM.UseLayout` is `false`.
+    **Requires the layout pipeline.** Raises `NotSupportedException` if :attr:`Utils.LayoutEnabled` is `false`.
 
     :arg int imageDpi: resolution of extracted images.
     :arg string imageFormat: image file format, for example `"png"`.
@@ -973,7 +973,7 @@ This class represents a document. It can be constructed from a file or from memo
 
     Converts the document to plain text in reading order, with tables drawn as text tables.
 
-    **Requires the layout pipeline.** Raises `NotSupportedException` if `MuPDF4LLM.UseLayout` is `false`.
+    **Requires the layout pipeline.** Raises `NotSupportedException` if :attr:`Utils.LayoutEnabled` is `false`.
 
     :arg string filename: file name stored in the metadata of the result.
     :arg bool header: include page-header regions in the output.
@@ -1000,7 +1000,7 @@ This class represents a document. It can be constructed from a file or from memo
 
     Splits the document into retrieval-ready chunks for RAG pipelines. The document is broken into sentences, and chunk boundaries are placed where the layout suggests a natural break (new heading, table, page, large gap and so on), within the given token limits.
 
-    **Requires the layout pipeline.** Raises `NotSupportedException` if `MuPDF4LLM.UseLayout` is `false`.
+    **Requires the layout pipeline.** Raises `NotSupportedException` if :attr:`Utils.LayoutEnabled` is `false`.
 
     :arg int maxTokens: maximum tokens per chunk. Must be positive.
     :arg int minTokens: target minimum tokens per chunk. Must not be negative.
@@ -1029,8 +1029,8 @@ This class represents a document. It can be constructed from a file or from memo
 
     .. code-block:: cs
 
-        MuPDF4LLM.SetUseLayout(true);
-        Document doc = new Document("input.pdf");
+        Utils.UseLayout(true);
+        Document doc = Document.Open("input.pdf");
         ChunkedDocument chunks = doc.ToChunks(maxTokens: 300);
         foreach (Chunk chunk in chunks)
             Console.WriteLine($"{chunk.Id}: {chunk.Text}");
@@ -1460,7 +1460,7 @@ This class represents a document. It can be constructed from a file or from memo
 
     **Format 2:** Two page numbers as positional parameters. Handled like Format 1.
 
-    **Format 3:** One positional integer parameter. Equivalent to :meth:`Page.DeletePage`.
+    **Format 3:** One positional integer parameter. Equivalent to :meth:`Document.DeletePage`.
 
     **Format 4:** One positional parameter of type *list*, *tuple* or *range()* of page numbers. The items of this sequence may be in any order and may contain duplicates.
 
@@ -1847,7 +1847,7 @@ This class represents a document. It can be constructed from a file or from memo
 
     Use this method immediately before saving the document.
 
-    The greatest benefit can be achieved when creating new PDFs using large fonts like is typical for Asian scripts. When using the :ref:`Story` class or method :meth:`Page.InsertHtmlbox`, multiple fonts may automatically be included -- without the programmer becoming aware of it.
+    The greatest benefit can be achieved when creating new PDFs using large fonts like is typical for Asian scripts. When using the :ref:`Story` class or method :meth:`Page.InsertHtmlBox`, multiple fonts may automatically be included -- without the programmer becoming aware of it.
     
     In all these cases, the set of actually used unicodes mostly is very small compared to the number of glyphs available in the used fonts. Using this method can easily reduce the embedded font binaries by two orders of magnitude -- from several megabytes down to a low two-digit kilobyte amount.
 
@@ -1979,7 +1979,7 @@ This class represents a document. It can be constructed from a file or from memo
 
   .. attribute:: IsReflowable
 
-    *true* if document has a variable page layout (like e-books or HTML). In this case you can set the desired page dimensions during document creation (open) or via method :meth:`Layout`.
+    *true* if document has a variable page layout (like e-books or HTML). In this case you can set the desired page dimensions during document creation (open) or via method :meth:`Document.SetLayout`.
 
     :type: bool
 
@@ -2087,7 +2087,7 @@ This class represents a document. It can be constructed from a file or from memo
 
     :type: List<string>
 
-.. NOTE:: For methods that change the structure of a PDF (:meth:`InsertPdf`, :meth:`Select`, :meth:`CopyPage`, :meth:`DeletePage` and others), be aware that objects or properties in your program may have been invalidated or orphaned. Examples are :ref:`Page` objects and their children (links, annotations, widgets), variables holding old page counts, tables of content and the like. Remember to keep such variables up to date or delete orphaned objects. Also refer to :ref:`ReferenialIntegrity`.
+.. NOTE:: For methods that change the structure of a PDF (:meth:`Document.InsertPdf`, :meth:`Document.Select`, :meth:`Document.CopyPage`, :meth:`Document.DeletePage` and others), be aware that objects or properties in your program may have been invalidated or orphaned. Examples are :ref:`Page` objects and their children (links, annotations, widgets), variables holding old page counts, tables of content and the like. Remember to keep such variables up to date or delete orphaned objects. Also refer to :ref:`ReferenialIntegrity`.
 
 
 Output structures
@@ -2210,7 +2210,7 @@ Other Examples
 
 .. [#f4] These parameters cause separate handling of stream categories: use it together with `expand` to restrict decompression to streams other than images / fontfiles.
 
-.. [#f5] Examples for "Form XObjects" are created by :meth:`Page.ShowPDFPage`.
+.. [#f5] Examples for "Form XObjects" are created by :meth:`Page.ShowPdfPage`.
 
 .. [#f6] For a *false* the **complete document** must be scanned. Both methods **do not load pages,** but only scan object definitions. This makes them at least 10 times faster than application-level loops (where total response time roughly equals the time for loading all pages). For the :ref:`AdobeManual` (756 pages) and the Pandas documentation (over 3070 pages) -- both have no annotations -- the method needs about 11 ms for the answer *false*. So response times will probably become significant only well beyond this order of magnitude.
 

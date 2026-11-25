@@ -953,7 +953,7 @@ To add a blank page, do the following:
         Page page = doc.NewPage(width: w, height: h);
 
 
-    The convenience function :meth:`PaperSize` knows over 40 industry standard paper formats to choose from. To see them, inspect dictionary :attr:`paperSizes`. Pass the desired dictionary key to :meth:`PageSize` to retrieve the paper dimensions. Upper and lower case is supported. If you append "-L" to the format name, the landscape version is returned.
+    The convenience function :meth:`Utils.PaperSize` knows over 40 industry standard paper formats to choose from. To see them, inspect dictionary :attr:`Utils.PaperSizes`. Pass the desired dictionary key to :meth:`Utils.PaperSize` to retrieve the paper dimensions. Upper and lower case is supported. If you append "-L" to the format name, the landscape version is returned.
 
     Here is a 3-liner that creates a |PDF|: with one empty page. Its file size is 460 bytes:
 
@@ -1132,7 +1132,7 @@ Example:
 
     **API reference**
 
-    - :meth:`Page.CropboxPosition`
+    - :attr:`Page.CropBoxPosition`
     - :meth:`Page.ShowPdfPage`
 
 --------------------------

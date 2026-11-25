@@ -11,77 +11,84 @@ Some functions provide detail access to PDF structures. Others are stripped-down
 Yet others are handy, general-purpose utilities.
 
 
-==================================== ==============================================================
-**Function**                         **Short Description**
-==================================== ==============================================================
-:meth:`ConversionHeader`             Return header string for *get_text* methods
-:meth:`sRGB2rgb`                     Convenience function returning a color (red, green, blue) for a given *sRGB* color integer
-:meth:`ConversionTrailer`            Return trailer string for *get_text* methods
-:meth:`EMPTY_IRECT`                  Return the (standard) empty / invalid rectangle
-:meth:`EMPTY_QUAD`                   Return the (standard) empty / invalid quad
-:meth:`EMPTY_RECT`                   Return the (standard) empty / invalid rectangle
-:meth:`INFINITE_IRECT`               Return the (only existing) infinite rectangle
-:meth:`INFINITE_QUAD`                Return the (only existing) infinite quad
-:meth:`INFINITE_RECT`                Return the (only existing) infinite rectangle
-:meth:`GetPdfNow`                    Return the current timestamp in PDF format
-:meth:`GetPdfString`                 Return PDF-compatible string
-:meth:`GetTextLength`                Return string length for a given font & :data:`fontsize`
-:meth:`GlyphName2Unicode`            Return unicode from a glyph name
-:meth:`GetImageProfile`              Return a dictionary of basic image properties
-:meth:`INFINITE_RECT`                Return the (only existing) infinite rectangle
-:meth:`PaperRect`                    Return rectangle for a known paper format
-:meth:`PaperSize`                    Return width, height for a known paper format
-:meth:`PaperSizes`                   Dictionary of pre-defined paper formats
-:meth:`PlanishLine`                  Matrix to map a line to the x-axis
-:meth:`RecoverCharQuad`              Compute the quad of a char ("rawdict")
-:meth:`RecoverLineQuad`              Compute the quad of a subset of line spans
-:meth:`RecoverQuad`                  Compute the quad of a span ("dict", "rawdict")
-:meth:`RecoverSpanQuad`              Compute the quad of a subset of span characters
-:meth:`Unicode2GlyphName`            Return glyph name from a unicode
-:meth:`MakeAnnotDA`                  Passing color, fontname, fontsize into the annotation
-:meth:`AddAnnotId`                   Add a unique /NM key to an annotation or widget
-:meth:`AddOcObject`                  Add OC object reference to a dictionary
-:meth:`ColorCount`                   Return count of each color
-:meth:`BinFromBuffer`                Turn FzBuffer into a byte[]
-:meth:`BufferFromBytes`              Make FzBuffer from a byte[] object
-:meth:`CalcImageMatrix`              Compute image insertion matrix
-:meth:`CompressBuffer`               Compress FzBuffer into a new buffer
-:meth:`GetPdfString`                 Make a PDF-compatible string
-:meth:`ConstructLabel`               Construct a label based on style, prefix and page number
-:meth:`DecodeRawUnicodeEscape`       Decode raw unicode
-:meth:`DoLinks`                      Insert links contained in copied page range into destination PDF
-:meth:`EnsureIdentity`               Store ID in PDF trailer
-:meth:`ExpandFontName`               Make /DA string of annotation
-:meth:`GetId`                        Count numbers and return unique id on one process
-:meth:`GetAllContents`               All /Contents streams concatenated to one bytes object
-:meth:`GetAnnotByName`               Retrieve annotation by name (/NM key)
-:meth:`GetArea`                      Calculate area of rectangle
-:meth:`GetBorderStyle`               Return `int` meaning PdfObj "border style" from string type
-:meth:`GetColors`                    Retrieve the red, green, blue triple of a color name
-:meth:`GetColorHSV`                  Retrieve the hue, saturation, value triple of a color name
-:meth:`GetColorInfoList`             Returns Tuples containing color name, red, green, blue color values
-:meth:`GetDestString`                Calculate the PDF action string
-:meth:`GetFieldTypeText`             Returns field type string from `int` type
-:meth:`GetFontProperties`            Returns properties of the font having xref in PDF
-:meth:`GetGlyphText`                 Adobe Glyph List function
-:meth:`GetImageExtension`            Return extension for MuPDF image type
-:meth:`GetLinkText`                  Define skeletons for `/Annots` object texts
-:meth:`GetTextWithLayout`            Retrieves the text content of a page that retains layout.
-:meth:`GetTables`                    Return the tables detected from a `Page` instance
-:meth:`GetWidgetProperties`          Populate a Widget object with the values from a PDF form field
-:meth:`InsertContents`               Insert a buffer as a new separate `/Contents` object of a page
-:meth:`Integer2Letter`               Return letter sequence string for integer `i`
-:meth:`Integer2Roman`                Return roman numeral for integer `i`
-:meth:`MeasureString`                Calculate the width of the text
-:meth:`MergeRange`                   Copy a range of pages (spage, epage) from a source PDF to a specified location (apage) of the target PDF
-:meth:`NormalizeRotation`            Return normalized /Rotate value:one of 0, 90, 180, 270
-:meth:`RuleDict`                     Make a Label from a PDF page label rule
-:meth:`ReadBarcodes`                 Reads bardcodes from a `Page` instance
-:meth:`WriteBarcode`                 Writes a barcode to an image file
-:meth:`GetBarcodePixmap`             Creates a barcode as a `Pixmap` object.
-:meth:`ReplaceBytes`                 Replaces bytes from a source buffer
-:attr:`TESSDATA_PREFIX`              A copy of `os.environ["TESSDATA_PREFIX"]`
-==================================== ==============================================================
+======================================================= ==============================================================
+**Function**                                            **Short Description**
+======================================================= ==============================================================
+:meth:`Utils.ConversionHeader`                          Return header string for *get_text* methods
+:meth:`Utils.sRGB2Rgb`                                  Convenience function returning a color (red, green, blue) for a given *sRGB* color integer
+:meth:`Utils.ConversionTrailer`                         Return trailer string for *get_text* methods
+:meth:`Utils.EMPTY_IRECT`                               Return the (standard) empty / invalid rectangle
+:meth:`Utils.EMPTY_QUAD`                                Return the (standard) empty / invalid quad
+:meth:`Utils.EMPTY_RECT`                                Return the (standard) empty / invalid rectangle
+:meth:`Utils.INFINITE_IRECT`                            Return the (only existing) infinite rectangle
+:meth:`Utils.INFINITE_QUAD`                             Return the (only existing) infinite quad
+:meth:`Utils.INFINITE_RECT`                             Return the (only existing) infinite rectangle
+:meth:`Utils.GetPdfNow`                                 Return the current timestamp in PDF format
+:meth:`Utils.GetPdfString`                              Return PDF-compatible string
+:meth:`Utils.GetTextLength`                             Return string length for a given font & :data:`fontsize`
+:meth:`Utils.GlyphName2Unicode`                         Return unicode from a glyph name
+:meth:`Utils.GetImageProfile`                           Return a dictionary of basic image properties
+:meth:`Utils.PaperRect`                                 Return rectangle for a known paper format
+:meth:`Utils.PaperSize`                                 Return width, height for a known paper format
+:attr:`Utils.PaperSizes`                                Dictionary of pre-defined paper formats
+:meth:`Utils.PlanishLine`                               Matrix to map a line to the x-axis
+:meth:`Utils.RecoverCharQuad`                           Compute the quad of a char ("rawdict")
+:meth:`Utils.RecoverLineQuad`                           Compute the quad of a subset of line spans
+:meth:`Utils.RecoverQuad`                               Compute the quad of a span ("dict", "rawdict")
+:meth:`Utils.RecoverSpanQuad`                           Compute the quad of a subset of span characters
+:meth:`Utils.Unicode2GlyphName`                         Return glyph name from a unicode
+:meth:`Utils.MakeAnnotDA`                               Passing color, fontname, fontsize into the annotation
+:meth:`Utils.AddAnnotId`                                Add a unique /NM key to an annotation or widget
+:meth:`Utils.AddOcObject`                               Add OC object reference to a dictionary
+:meth:`Utils.ColorCount`                                Return count of each color
+:meth:`Utils.BinFromBuffer`                             Turn FzBuffer into a byte[]
+:meth:`Utils.BufferFromBytes`                           Make FzBuffer from a byte[] object
+:meth:`Utils.CalcImageMatrix`                           Compute image insertion matrix
+:meth:`Utils.CompressBuffer`                            Compress FzBuffer into a new buffer
+:meth:`Utils.ConstructLabel`                            Construct a label based on style, prefix and page number
+:meth:`Utils.DecodeRawUnicodeEscape` Decode raw unicode 
+:meth:`Utils.DoLinks`                                   Insert links contained in copied page range into destination PDF
+:meth:`Utils.EnsureIdentity`                            Store ID in PDF trailer
+:meth:`Utils.ExpandFontName`                            Make /DA string of annotation
+:meth:`Utils.GetId`                                     Count numbers and return unique id on one process
+:meth:`Utils.GetAllContents`                            All /Contents streams concatenated to one bytes object
+:meth:`Utils.GetAnnotByName`                            Retrieve annotation by name (/NM key)
+:meth:`Utils.GetArea`                                   Calculate area of rectangle
+:meth:`Utils.GetBorderStyle`                            Return `int` meaning PdfObj "border style" from string type
+:meth:`Utils.GetColors`                                 Retrieve the red, green, blue triple of a color name
+:meth:`Utils.GetColorHSV`                               Retrieve the hue, saturation, value triple of a color name
+:meth:`Utils.GetColorInfoList`                          Returns Tuples containing color name, red, green, blue color values
+:meth:`Utils.GetDestString`                             Calculate the PDF action string
+:meth:`Utils.GetFieldTypeText`                          Returns field type string from `int` type
+:meth:`Utils.GetFontProperties`                         Returns properties of the font having xref in PDF
+:meth:`Utils.GetGlyphText`                              Adobe Glyph List function
+:meth:`Utils.GetImageExtension`                         Return extension for MuPDF image type
+:meth:`Utils.GetLinkText`                               Define skeletons for `/Annots` object texts
+:meth:`Utils.GetTextWithLayout`                         Retrieves the text content of a page that retains layout.
+:meth:`Utils.GetTables`                                 Return the tables detected from a `Page` instance
+:meth:`Utils.GetWidgetProperties`                       Populate a Widget object with the values from a PDF form field
+:meth:`Utils.InsertContents`                            Insert a buffer as a new separate `/Contents` object of a page
+:meth:`Utils.Integer2Letter`                            Return letter sequence string for integer `i`
+:meth:`Utils.Integer2Roman`                             Return roman numeral for integer `i`
+:meth:`Utils.MeasureString`                             Calculate the width of the text
+:meth:`Utils.MergeRange`                                Copy a range of pages (spage, epage) from a source PDF to a specified location (apage) of the target PDF
+:meth:`Utils.NormalizeRotation`                         Return normalized /Rotate value:one of 0, 90, 180, 270
+:meth:`Utils.RuleDict`                                  Make a Label from a PDF page label rule
+:meth:`Utils.ReadBarcodes`                              Reads barcodes from a `Page` instance
+:meth:`Utils.WriteBarcode`                              Writes a barcode to an image file
+:meth:`Utils.GetBarcodePixmap`                          Creates a barcode as a `Pixmap` object.
+:meth:`Utils.ReplaceBytes`                              Replaces bytes from a source buffer
+:meth:`Utils.UseLayout`                                 Enable or disable the layout analysis pipeline
+:attr:`Utils.LayoutAvailable`                           Whether a layout provider is currently registered
+:attr:`Utils.LayoutEnabled`                             Whether the layout analysis pipeline is enabled
+:attr:`Utils.RapidOcrAvailable`                         Whether RapidOCR initialized successfully
+:meth:`Utils.LlamaMarkdownReader`                       LlamaIndex-compatible PDF markdown reader
+:meth:`Utils.GetKeyValues`                              Extract form fields and their values
+:meth:`Utils.MarkdownToPdf`                             Render a Markdown file to PDF
+:meth:`Utils.LoadAiAsync`                               Load, chunk, embed, and index PDFs for AI/RAG
+:meth:`Utils.CreateDevelopmentAiOptions`                In-memory AI pipeline options for samples 
+:attr:`Utils.TESSDATA_PREFIX`                           Tesseract language-data folder, from the environment
+======================================================= ==============================================================
 
 
 **Class API**
@@ -754,6 +761,92 @@ Yet others are handy, general-purpose utilities.
       :arg byte[] replace: The bytes buffer to replace with.
       :arg int limit: The number of matches to make, defaults to 1.
 
+
+   .. method:: UseLayout(bool yes)
+
+      Enable or disable the layout analysis pipeline used by :meth:`Document.ToMarkdown`, :meth:`Document.ToJson`, :meth:`Document.ToText` and :meth:`Document.ToChunks`.
+
+      :arg bool yes: `true` turns the pipeline on and registers a layout provider when one is available. `false` turns it off.
+
+      Prefer this over setting layout flags directly. Several conversion methods require the pipeline to be on.
+
+
+   .. attribute:: LayoutEnabled
+
+      Whether the layout analysis pipeline is currently enabled.
+
+      :type: bool
+
+
+   .. attribute:: LayoutAvailable
+
+      Whether a layout provider is currently registered (the layout worker could be started).
+
+      :type: bool
+
+
+   .. attribute:: RapidOcrAvailable
+
+      `true` when RapidOCR initialized successfully on this runtime.
+
+      :type: bool
+
+
+   .. method:: LlamaMarkdownReader(Func<Dictionary<string, object>, Dictionary<string, object>> metaFilter: null)
+
+      Returns a :class:`PDFMarkdownReader` for LlamaIndex-style page documents.
+
+      :arg metaFilter: optional callback that transforms per-page metadata before documents are returned.
+
+
+   .. method:: GetKeyValues(Document doc, bool includeXrefs: false)
+
+      Extract form fields and their current values from a PDF. Push buttons are skipped.
+
+      There is also an overload `GetKeyValues(string path, bool includeXrefs: false)` that opens the file, reads the fields, and closes it.
+
+      :arg Document doc: an open document.
+      :arg bool includeXrefs: also return the :data:`xref` of each field.
+
+      :rtype: `Dictionary<string, Dictionary<string, object>>`
+      :returns: the same structure as :meth:`Document.GetKeyValues`.
+
+
+   .. method:: MarkdownToPdf(string mdPath, string userCss: null, Rect pageRect: default, float[] margins: null, Archive archive: null, string outputPath: null)
+
+      Render a Markdown file to a PDF using :ref:`Story`.
+
+      :arg string mdPath: path to the Markdown file.
+      :arg string userCss: optional CSS applied to the Story.
+      :arg Rect pageRect: page size. Default uses the Story default page.
+      :arg float[] margins: optional page margins.
+      :arg Archive archive: optional archive for fonts and images.
+      :arg string outputPath: if set, the PDF is also written to this path.
+
+      :rtype: :class:`Document`
+      :returns: the generated PDF as an open document.
+
+
+   .. method:: LoadAiAsync(IEnumerable<string> pdfPaths, MicrosoftAIConnectorOptions options: null, CancellationToken cancellationToken: default)
+
+      Load, chunk, embed, and index PDFs for AI / RAG workflows.
+
+      :arg pdfPaths: PDF file paths to index.
+      :arg options: pipeline options. Use :meth:`CreateDevelopmentAiOptions` for samples that need no cloud keys.
+      :arg cancellationToken: optional cancellation.
+
+      :rtype: :class:`AiDocumentCollection`
+      :returns: a collection on which you can call :meth:`AiDocumentCollection.AskAsync`, :meth:`AiDocumentCollection.SummarizeAsync` and :meth:`AiDocumentCollection.SearchAsync`.
+
+
+   .. method:: CreateDevelopmentAiOptions(IChatClient chatClient: null, int embeddingDimensions: 128)
+
+      In-memory AI pipeline options for tests and samples (hash embeddings, no cloud keys).
+
+      :arg chatClient: optional chat client. Samples can pass a local `IChatClient`.
+      :arg int embeddingDimensions: embedding size for the development hasher.
+
+      :returns: options suitable for :meth:`LoadAiAsync`.
 
 
 .. include:: ../footer.rst

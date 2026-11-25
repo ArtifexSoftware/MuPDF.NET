@@ -289,7 +289,56 @@ There is a parent-child relationship between an annotation and its page. If the 
 
       :rtype: bool
 
-      .. note:: Using this method inside a :meth:`Page.GetAnnots` loop is **not recommended!** This is because most annotation updates require the owning page to be reloaded -- which cannot be done inside this loop. Please use the example coding pattern given in the documentation of this generator.
+      .. note:: Using this method inside a :meth:`Page.Annots` loop is **not recommended!** This is because most annotation updates require the owning page to be reloaded -- which cannot be done inside this loop. Please use the example coding pattern given in the documentation of this generator.
+
+
+   .. method:: GetText()
+
+      Extract the annotation's text.
+
+      :rtype: string
+
+   .. method:: GetTextbox(Rect rect, int flags: 0)
+
+      Extract annotation text that lies in *rect*.
+
+      :arg Rect rect: area to extract.
+      :arg int flags: text extraction flags.
+
+      :rtype: string
+
+   .. method:: GetTextPage(int flags: 0, IRect clip: null)
+
+      Make a :ref:`TextPage` from the annotation appearance.
+
+      :arg int flags: text extraction flags.
+      :arg IRect clip: optional clip rectangle.
+
+      :rtype: :ref:`TextPage`
+
+   .. attribute:: ApnBbox
+
+      Annotation appearance bbox, or an infinite rectangle if there is no appearance stream.
+
+      :type: :ref:`Rect`
+
+   .. attribute:: ApnMatrix
+
+      Annotation appearance matrix.
+
+      :type: :ref:`Matrix`
+
+   .. method:: SetApnBbox(Rect bbox)
+
+      Set the annotation appearance bbox. Legacy spelling of `SetApnBBox`.
+
+      :arg Rect bbox: the new appearance rectangle.
+
+   .. method:: SetApnMatrix(Matrix matrix)
+
+      Set the annotation appearance matrix.
+
+      :arg Matrix matrix: the new appearance matrix.
 
 
    .. attribute:: FileInfo

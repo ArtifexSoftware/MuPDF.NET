@@ -10,6 +10,7 @@ Classes
    :maxdepth: 2
 
    Annot.rst
+   AiDocumentCollection.rst
    Archive.rst
    Barcode.rst
    ChunkedDocument.rst
@@ -27,6 +28,7 @@ Classes
    Matrix.rst
    Outline.rst
    Page.rst
+   PDFMarkdownReader.rst
    Pixmap.rst
    Point.rst
    Quad.rst

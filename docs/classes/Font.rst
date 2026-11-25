@@ -30,7 +30,7 @@ A Font object also contains useful general information, like the font bbox, the 
 :attr:`Font.Flags`                       Collection of font properties
 :attr:`Font.GlyphCount`                  Number of supported glyphs
 :attr:`Font.Name`                        Name of font
-:attr:`Font.IsWriteable`                 Font usable with :ref:`TextWriter`
+:attr:`Font.IsWritable`                  Font usable with :ref:`TextWriter`
 ======================================== ============================================
 
 
@@ -288,7 +288,7 @@ A Font object also contains useful general information, like the font bbox, the 
 
       :rtype: float
 
-   .. attribute:: IsWriteable
+   .. attribute:: IsWritable
 
       Indicates whether this font can be used with :ref:`TextWriter`.
 

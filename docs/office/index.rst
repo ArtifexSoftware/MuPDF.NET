@@ -204,7 +204,7 @@ API
     :arg string? fontPath: identify specific font directories.
     :arg bool? fontPathAuto: whether to append system font directories.
 
-    :returns: key flags as int. 0 if no key (restricted, 3 pages). `MuPDFOffice.KeyFlagVolumeLicense` (1) = volume license. `MuPDFOffice.KeyFlagDisableSo` (2) = SmartOffice disabled. The return can be ignored. Invalid keys throw exceptions.
+    :returns: key flags as int. 0 if no key (restricted, 3 pages). :attr:`MuPDFOffice.KeyFlagVolumeLicense` (1) = volume license. :attr:`MuPDFOffice.KeyFlagDisableSo` (2) = SmartOffice disabled. The return can be ignored. Invalid keys throw exceptions.
 
     Grants access to the full functionality of |MuPDF.NET Office|. For a free trial key please visit: `https://mupdf.com/mupdf-dotnet/office/try/ <https://mupdf.com/mupdf-dotnet/office/try/?utm_source=rtd-mupdfnet&utm_medium=rtd&utm_content=cta-button-mupdfnet-pro-page&utm_campaign=docs>`_.
 
@@ -253,6 +253,27 @@ API
     Retrieves the list of font paths currently recognized by |MuPDF.NET Office|.
 
     :returns: an array ``IReadOnlyList<string>`` representing the font paths.
+
+
+.. attribute:: MuPDFOffice.IsUnlocked
+
+    `true` after a successful :meth:`MuPDFOffice.Unlock` (trial, licensed, or restricted mode).
+
+    :type: bool
+
+
+.. attribute:: MuPDFOffice.KeyFlagVolumeLicense
+
+    Unlock return flag value `1`: volume license.
+
+    :type: int
+
+
+.. attribute:: MuPDFOffice.KeyFlagDisableSo
+
+    Unlock return flag value `2`: SmartOffice disabled.
+
+    :type: int
 
 
 .. important::

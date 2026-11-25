@@ -45,6 +45,7 @@ Have a look at the :ref:`FAQ` section to see some pixmap usage "at work".
 :meth:`Pixmap.TintWith`          Tint the pixmap
 :meth:`Pixmap.ToBytes`           Return a memory area in a variety of formats
 :meth:`Pixmap.Warp`              Return a pixmap made from a quad inside
+:meth:`Pixmap.ApplyImageFilters` Apply an :class:`ImageFilterPipeline` and return a new pixmap
 :meth:`Pixmap.Dispose`           Disposes of the pixmap
 :attr:`Pixmap.Alpha`             Transparency indicator
 :attr:`Pixmap.ColorSpace`        Pixmap's :ref:`Colorspace`
@@ -272,7 +273,7 @@ Have a look at the :ref:`FAQ` section to see some pixmap usage "at work".
 
       If copying from :data:`CS_GRAY` to :data:`CS_RGB`, the source gray-shade value will be put into each of the three rgb component bytes. If the other way round, *(r + g + b) / 3* will be taken as the gray-shade value of the target.
 
-      Between *irect* and the target pixmap's rectangle, an "intersection" is calculated at first. This takes into account the rectangle coordinates and the current attribute values :attr:`Pixmap.x` and :attr:`Pixmap.y` (which you are free to modify for this purpose via :meth:`Pixmap.set_origin`). Then the corresponding data of this intersection are copied. If the intersection is empty, nothing will happen.
+      Between *irect* and the target pixmap's rectangle, an "intersection" is calculated at first. This takes into account the rectangle coordinates and the current attribute values :attr:`Pixmap.x` and :attr:`Pixmap.y` (which you are free to modify for this purpose via :meth:`Pixmap.SetOrigin`). Then the corresponding data of this intersection are copied. If the intersection is empty, nothing will happen.
 
       :arg source: source pixmap.
       :type source: :ref:`Pixmap`
@@ -387,6 +388,16 @@ Have a look at the :ref:`FAQ` section to see some pixmap usage "at work".
       :arg Rect, Tuple clip: A rectangle inside :attr:`Pixmap.Rect`. If provided, only those pixels are considered. This allows inspecting sub-rectangles of a given pixmap directly -- instead of building sub-pixmaps.
       :rtype: Tuple(float, byte[])
       :returns: A Tuple `(ratio, pixel)` where `0 < ratio <= 1` and *pixel* is the pixel value of the color. Use this to decide if the image is "almost" unicolor: a response `(0.95, b"\x00\x00\x00")` means that 95% of all pixels are black.
+
+   .. method:: ApplyImageFilters(Pixmap pixmap, ImageFilterPipeline pipeline)
+
+      Apply an :class:`ImageFilterPipeline` to a pixmap and return a new pixmap.
+
+      :arg Pixmap pixmap: the source pixmap.
+      :arg ImageFilterPipeline pipeline: filters to apply, for example :meth:`ImageFilterPipeline.AddMedian`.
+
+      :rtype: :class:`Pixmap`
+      :returns: the filtered pixmap. The source pixmap may be consumed / disposed -- do not use it afterward.
 
    .. method:: Dispose()
 

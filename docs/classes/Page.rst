@@ -61,7 +61,8 @@ In a nutshell, this is what you can do with MuPDF.NET:
 :meth:`Page.AddWidget`             PDF only: add a PDF Form field
 :meth:`Page.GetAnnotNames`         PDF only: a list of annotation (and widget) names
 :meth:`Page.GetAnnotXrefs`         PDF only: a list of annotation (and widget) xrefs
-:meth:`Page.GetAnnots`             Return a generator over the annots on the page
+:meth:`Page.Annots`                Return the annotations on the page
+:meth:`Page.GetAnnots`             Legacy name for :meth:`Page.Annots`
 :meth:`Page.ApplyRedactions`       PDF only: process the redactions of the page
 :meth:`Page.GetBound`              Rectangle of the page
 :meth:`Page.GetBboxlog`            List of rectangles that envelop text, drawing or image objects
@@ -530,11 +531,20 @@ In a nutshell, this is what you can do with MuPDF.NET:
       :returns: an entry of :meth:`Page.GetLinks()` for each iteration.
 
 
+   .. method:: Annots(params AnnotationType[] types)
+
+      Return the page's annotations. With no arguments, all annotations are returned. Pass one or more :data:`AnnotationType` values to down-select.
+
+      :arg AnnotationType types: optional annotation types to include.
+
+      :rtype: IEnumerable<Annot>
+      :returns: an :ref:`Annot` for each iteration.
+
    .. method:: GetAnnots(List<PdfAnnotType> types: null)
 
-      Return a generator over the page's annotations.
+      Legacy name for :meth:`Page.Annots`.
 
-      :arg List<PdfAnnotType> types: a sequence of integers to down-select to one or more annotation types. Default is all annotations. Example: `types=(PDF_ANNOT_FREETEXT, PDF_ANNOT_TEXT)` will only return 'FreeText' and 'Text' annotations.
+      :arg List<PdfAnnotType> types: a sequence of integers to down-select to one or more annotation types. Default is all annotations.
 
       :rtype: IEnumerable
       :returns: an :ref:`Annot` for each iteration.
@@ -553,7 +563,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
          The item sequence represents the **sequence in which these commands are executed** to build the page's appearance. Therefore, if an item's bbox intersects or contains that of a previous item, then the previous item may be (partially) covered / hidden.
 
-         So this list can be used to detect such situations. An item's index in this list equals the value of a `"SeqNo"` in dictionaries as returned by :meth:`Page.GetDrawings` and :meth:`Page.GetTexttrace`.
+         So this list can be used to detect such situations. An item's index in this list equals the value of a `"SeqNo"` in dictionaries as returned by :meth:`Page.GetDrawings` and :meth:`Page.GetTextTrace`.
 
    .. method:: GetContents()
 
@@ -1390,7 +1400,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
         type           "group"
         ============== ============================================================================
 
-      .. note:: The method is based on the output of :meth:`Page.GetCDrawings` -- which is much faster, but requires somewhat more attention processing its output.
+      .. note:: The method is based on the output of :meth:`Page.GetDrawings` -- which is much faster, but requires somewhat more attention processing its output.
 
    .. method:: GetFonts(bool full: false)
 

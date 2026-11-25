@@ -48,7 +48,7 @@ The following remarks are also valid for :ref:`IRect` objects:
    borders, corners  are parts of the rectangle          right and bottom corners and edges **are outside**
    ================= =================================== ==================================================
 
-* There are new top level functions defining infinite and standard empty rectangles and quads, see :meth:`INFINITE_RECT` and friends.
+* There are new top level functions defining infinite and standard empty rectangles and quads, see :meth:`Utils.INFINITE_RECT` and friends.
 
 
 ============================= =======================================================
