@@ -307,7 +307,7 @@ API
 
 .. raw:: html
 
-   <button id="findOutAboutMuPDFNETOffice" class="cta orange" onclick="window.location='https://mupdf.com/office/try/?utm_source=rtd-mupdfnet&utm_medium=rtd&utm_content=cta-button-mupdfnet-office-page&utm_campaign=docs'">Ready to try MuPDF.NET Office?</button>
+   <button id="findOutAboutMuPDFNETOffice" class="cta orange" onclick="window.location='https://mupdf.com/mupdf-dotnet/office/try/?utm_source=rtd-mupdfnet&utm_medium=rtd&utm_content=cta-button-mupdfnet-office-page&utm_campaign=docs'">Ready to try MuPDF.NET Office?</button>
 
 
 
