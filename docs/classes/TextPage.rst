@@ -316,7 +316,7 @@ C               the character (unicode)
 
 This image shows the relationship between a character's bbox and its quad: |textpagechar|
 
-.. |textpagechar| image:: images/img-textpage-char.*
+.. |textpagechar| image:: ../images/img-textpage-char.png
    :align: top
    :scale: 66
 

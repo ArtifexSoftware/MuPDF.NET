@@ -82,7 +82,8 @@ This class represents a document. It can be constructed from a file or from memo
 :meth:`Document.LoadPage`                       Load a page
 :meth:`Document.MakeBookmark`                   Create a page pointer in reflowable documents
 :meth:`Document.MovePage`                       PDF only: move a page to different location in doc
-:meth:`Document.NeedAppearances`                PDF only: get/set /NeedAppearances property
+:attr:`Document.NeedAppearances`                PDF only: /NeedAppearances value
+:meth:`Document.SetNeedAppearances`             PDF only: set /NeedAppearances
 :meth:`Document.NewPage`                        PDF only: insert a new empty page
 :meth:`Document.NextLocation`                   Return (chapter, pno) of following page
 :meth:`Document.PageCropBox`                    PDF only: the unrotated page rectangle
@@ -149,7 +150,7 @@ This class represents a document. It can be constructed from a file or from memo
 :attr:`Document.IsDirty`                        PDF only: has document been changed yet?
 :attr:`Document.IsEncrypted`                    Document (still) encrypted?
 :attr:`Document.IsFastWebaccess`                Is PDF linearized?
-:attr:`Document.IsFormPDF`                      Is this a Form PDF?
+:attr:`Document.IsFormPdf`                      Is this a Form PDF? (also IsFormPDF)
 :attr:`Document.IsPdf`                          Is this a PDF? (also IsPDF)
 :attr:`Document.IsReflowable`                   Is this a reflowable document?
 :attr:`Document.IsRepaired`                     PDF only: has this PDF been repaired during open?
@@ -1206,7 +1207,7 @@ This class represents a document. It can be constructed from a file or from memo
 
           - **Page** (int) is the target page number **(attention: 1-based)**. Must be in valid range if positive. Set it to -1 if there is no target, or the target is external.
 
-          - **Dest** (optional) is a dictionary or a number. If a number, it will be interpreted as the desired height (in points) this entry should point to on the page. Use a dictionary (like the one given as output by `GetToc(false)`) for a detailed control of the bookmark's properties, see :meth:`Document.GetToc` for a description.
+          - **Dest** (optional) is a dictionary or a number. If a number, it will be interpreted as the desired height (in points) this entry should point to on the page. Use a dictionary (like the one given as output by :meth:`Document.GetToc` with ``simple: false``) for a detailed control of the bookmark's properties, see :meth:`Document.GetToc` for a description.
 
     :arg int collapse: controls the hierarchy level beyond which outline entries should initially show up collapsed. The default 1 will hence only display level 1, higher levels must be unfolded using the PDF viewer. To unfold everything, specify either a large integer or 0.
 
@@ -1551,16 +1552,19 @@ This class represents a document. It can be constructed from a file or from memo
     :arg int to: the page number in front of which to insert the moved page. The default moves **after** the last page.
 
 
-  .. method:: NeedAppearances(int value: 0)
+  .. attribute:: NeedAppearances
 
-    PDF only: Get or set the */NeedAppearances* property of Form PDFs. Quote: *"(Optional) A flag specifying whether to construct appearance streams and appearance dictionaries for all widget annotations in the document ... Default value: false."* This may help controlling the behavior of some readers / viewers.
+    PDF only: The */NeedAppearances* property of Form PDFs. Quote: *"(Optional) A flag specifying whether to construct appearance streams and appearance dictionaries for all widget annotations in the document ... Default value: false."* This may help controlling the behavior of some readers / viewers.
 
-    :arg bool value: set the property to this value. If omitted or `null`, inquire the current value.
+    *false* if this is not a Form PDF, the property is missing, or the flag is off.
 
-    :rtype: bool
-    :returns:
-       * None: not a Form PDF, or property not defined.
-       * true / false: the value of the property (either just set or existing for inquiries). Has no effect if no Form PDF.
+    :type: bool
+
+  .. method:: SetNeedAppearances(bool value)
+
+    PDF only: Set the */NeedAppearances* property of Form PDFs. Has no effect if no Form PDF.
+
+    :arg bool value: the new flag value.
 
   .. method:: GetSigFlags()
 
@@ -2007,13 +2011,12 @@ This class represents a document. It can be constructed from a file or from memo
 
     :type: bool
 
-  .. attribute:: IsFormPDF
+  .. attribute:: IsFormPdf
+                 IsFormPDF
 
-    *false* if this is not a PDF or has no form fields, otherwise the number of root form fields (fields with no ancestors).
+    ``IsFormPdf`` is *true* if this is a PDF with form fields, else *false*.
 
-    Returns the total number of (root) form fields.
-
-    :type: int
+    ``IsFormPDF`` is the legacy integer form: *-1* if not a PDF, otherwise the number of root form fields (0 if none).
 
   .. attribute:: IsReflowable
 

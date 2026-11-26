@@ -173,7 +173,7 @@ Yet others are handy, general-purpose utilities.
       :rtype: :ref:`Matrix`
       :returns: a matrix which combines a rotation and a translation
 
-         .. image:: images/img-planish.png
+         .. image:: ../images/img-planish.png
             :scale: 40
 
 
@@ -260,7 +260,7 @@ Yet others are handy, general-purpose utilities.
 
          .. note::
 
-            * For some "exotic" images (FAX encodings, RAW formats and the like), this method will not work. You can however still work with such images in MupDF.NET, e.g. by using :meth:`Document.ExtractImage` or create pixmaps via `Pixmap(doc, xref)`. These methods will automatically convert exotic images to the PNG format before returning results.
+            * For some "exotic" images (FAX encodings, RAW formats and the like), this method will not work. You can however still work with such images in MuPDF.NET, e.g. by using :meth:`Document.ExtractImage` or create pixmaps with ``new Pixmap(doc, xref)``. These methods will automatically convert exotic images to the PNG format before returning results.
             * You can also get the properties of images embedded in a PDF, via their :data:`xref`. In this case make sure to extract the raw stream: :meth:`Utils.GetImageProfile` on :meth:`Document.GetXrefStreamRaw` of that xref.
             * Images as returned by the image blocks of :meth:`Page.GetText` using "dict" or "rawdict" options are also supported.
 
@@ -426,7 +426,7 @@ Yet others are handy, general-purpose utilities.
 
       Construct a label based on style, prefix and page number.
 
-      :arg string style: type of style for label. That includes `D`, `r`, `R`, `a`, `A`.
+      :arg string style: type of style for label. That includes ``D``, ``r``, ``R``, ``a``, ``A``.
       :arg string prefix: added prefix to label
       :arg int pno: translate `pno` to letter according to the style
 
@@ -858,10 +858,9 @@ Yet others are handy, general-purpose utilities.
 
 
    .. method:: GetKeyValues(Document doc, bool includeXrefs: false)
+              GetKeyValues(string path, bool includeXrefs: false)
 
-      Extract form fields and their current values from a PDF. Push buttons are skipped.
-
-      There is also an overload `GetKeyValues(string path, bool includeXrefs: false)` that opens the file, reads the fields, and closes it.
+      Extract form fields and their current values from a PDF. Push buttons are skipped. The path overload opens the file, reads the fields, and closes it.
 
       :arg Document doc: an open document.
       :arg bool includeXrefs: also return the :data:`xref` of each field.

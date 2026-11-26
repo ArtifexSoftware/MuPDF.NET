@@ -37,7 +37,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
    Reloading the page is generally recommended -- although not strictly required in all cases. However, some annotation and widget types have extended features in MuPDF.NET compared to MuPDF. More of these extensions may also be added in the future.
 
-   Releoading the page ensures all your changes have been fully applied to PDF structures, so you can safely create Pixmaps or successfully iterate over annotations, links and form fields.
+   Reloading the page ensures all your changes have been fully applied to PDF structures, so you can safely create Pixmaps or successfully iterate over annotations, links and form fields.
 
 ================================== =======================================================
 **Method / Attribute**             **Short Description**
@@ -745,7 +745,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
       pair: fillOpacity; InsertText
       pair: oc; InsertText
 
-   .. method:: InsertText( Point point, dynamic text, string fontName, string fontFile, float fontSize: 11, float lineHeight: 0, int setSimple: 0, int encoding: 0, float[] color = null, float[] fill = null, float borderWidth = 0.05f, int renderMode = 0, int rotate = 0, Morph morph = null, bool overlay = true, float strokeOpacity: 1, float fillOpacity: 1, int oc: 0)
+   .. method:: InsertText(Point point, string text, float fontSize: 11, string fontName: "helv", float[] color: null, float rotate: 0, int renderMode: 0, float borderWidth: 0.05f, float? lineHeight: null, string fontFile: null, int setSimple: 0, int encoding: 0, float[] fill: null, float? miterLimit: 1, Point morphFix: null, Matrix morphMat: null, Morph morph: null, bool overlay: true, float strokeOpacity: 1, float fillOpacity: 1, int oc: 0)
 
       PDF only: Insert text starting at :data:`Point` *point*. See :meth:`Shape.InsertText`.
 
@@ -768,7 +768,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
       pair: fillOpacity; InsertTextbox
       pair: oc; InsertTextbox
 
-   .. method:: InsertTextbox(Rect rect, dynamic buffer, string fontName, string fontFile, float fontSize: 11, int idx: 0, float[] color: null, float[] fill: null, int renderMode: 0, float borderWidth: 0.05f, int encoding: TEXT_ENCODING_LATIN, int expandTabs: 1, int align: TEXT_ALIGN_LEFT, int rotate: 0, Morph morph: null, float strokeOpacity: 1, float fillOpacity: 1, int oc: 0, bool overlay: true)
+   .. method:: InsertTextbox(Rect rect, string buffer, int align: 0, float borderWidth: 0.05f, float[] color: null, int encoding: 0, float expandTabs: 1, float fillOpacity: 1, float[] fill: null, string fontFile: null, string fontName: "helv", float fontSize: 11, float? lineHeight: null, float? miterLimit: 1, Point morphFix: null, Matrix morphMat: null, int oc: 0, bool overlay: true, int renderMode: 0, int rotate: 0, int setSimple: 0, float strokeOpacity: 1)
 
       PDF only: Insert text into the specified :data:`Rect` *rect*. See :meth:`Shape.InsertTextbox`.
 
@@ -851,7 +851,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
       pair: fillOpacity; DrawLine
       pair: oc; DrawLine
 
-   .. method:: DrawLine(Point p1, Point p2, float[] color: 0, float[] fill: null, float width: 1, string dashes: null, float lineCap: 0, int lineJoin: 0, bool overlay: true, Morph morph: null, float strokeOpacity: 1, float fillOpacity: 1, int oc: 0)
+   .. method:: DrawLine(Point p1, Point p2, float[] color: null, string dashes: null, float width: 1, int lineCap: 0, int lineJoin: 0, bool overlay: true, Point morphOrigin: null, Matrix morphMatrix: null, float strokeOpacity: 1, float fillOpacity: 1, int oc: 0)
 
       PDF only: Draw a line from *p1* to *p2* (:data:`Point` \s). See :meth:`Shape.DrawLine`.
 
@@ -871,7 +871,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
       pair: fillOpacity; DrawZigzag
       pair: oc; DrawZigzag
 
-   .. method:: DrawZigzag(Point p1, Point p2, float breadth: 2, float[] color: 0, float[] fill: null, int width: 1, string dashes: null, int lineCap: 0, int lineJoin: 0, bool overlay: true, Morph morph: null, float strokeOpacity: 1, float fillOpacity: 1, int oc: 0)
+   .. method:: DrawZigzag(Point p1, Point p2, float breadth: 2, float[] color: null, string dashes: null, float width: 1, int lineCap: 0, int lineJoin: 0, bool overlay: true, Point morphOrigin: null, Matrix morphMatrix: null, float strokeOpacity: 1, float fillOpacity: 1, int oc: 0)
 
       PDF only: Draw a zigzag line from *p1* to *p2* (:data:`Point` \s). See :meth:`Shape.DrawZigzag`.
 
@@ -891,7 +891,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
       pair: fillOpacity; DrawSquiggle
       pair: oc; DrawSquiggle
 
-   .. method:: DrawSquiggle(Point p1, Point p2, float breadth: 2, float[] color: 0, float width: 1, string dashes: null, int lineCap: 0, int lineJoin: 0, bool overlay: true, Morph morph: null, float strokeOpacity: 1, float fillOpacity: 1, int oc: 0)
+   .. method:: DrawSquiggle(Point p1, Point p2, float breadth: 2, float[] color: null, string dashes: null, float width: 1, int lineCap: 0, int lineJoin: 0, bool overlay: true, Point morphOrigin: null, Matrix morphMatrix: null, float strokeOpacity: 1, float fillOpacity: 1, int oc: 0)
 
       PDF only: Draw a squiggly (wavy, undulated) line from *p1* to *p2* (:data:`Point` \s). See :meth:`Shape.DrawSquiggle`.
 
@@ -910,7 +910,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
       pair: fillOpacity; DrawCircle
       pair: oc; DrawCircle
 
-   .. method:: DrawCircle(Point center, float radius, float[] color: null, float[] fill: null, float width: 1, string dashes: null, int lineCap: 0, int lineJoin: 0, bool overlay: true, Morph morph: null, float strokeOpacity: 1, float fillOpacity: 1, int oc: 0)
+   .. method:: DrawCircle(Point center, float radius, float[] color: null, float[] fill: null, string dashes: null, float width: 1, int lineCap: 0, int lineJoin: 0, bool overlay: true, Point morphOrigin: null, Matrix morphMatrix: null, float strokeOpacity: 1, float fillOpacity: 1, int oc: 0)
 
       PDF only: Draw a circle around *center* (:data:`Point`) with a radius of *radius*. See :meth:`Shape.DrawCircle`.
 
@@ -929,7 +929,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
       pair: fillOpacity; DrawOval
       pair: oc; DrawOval
 
-   .. method:: DrawOval(Rect rect, float[] color: null, float[] fill: null, float width: 1, string dashes: null, int lineCap: 0, float lineJoin: 0, bool overlay: true, Morph morph: null, float strokeOpacity: 1, float fillOpacity: 1, int oc: 0)
+   .. method:: DrawOval(Rect rect, float[] color: null, float[] fill: null, string dashes: null, float width: 1, int lineCap: 0, int lineJoin: 0, bool overlay: true, Point morphOrigin: null, Matrix morphMatrix: null, float strokeOpacity: 1, float fillOpacity: 1, int oc: 0)
 
       PDF only: Draw an oval (ellipse) within the given :data:`Rect` or :data:`Quad`. See :meth:`Shape.DrawOval`.
 
@@ -950,7 +950,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
       pair: fillOpacity; DrawSector
       pair: oc; DrawSector
 
-   .. method:: DrawSector(Point center, Point point, int beta, float[] color: null, float[] fill: null, float width: 1, string dashes: null, int lineCap: 0, int lineJoin: 0, bool fullSector: true, bool overlay: true, bool closePath: false, Morph morph: null, float strokeOpacity: 1, float fillOpacity: 1, int oc: 0)
+   .. method:: DrawSector(Point center, Point point, float beta, float[] color: null, float[] fill: null, string dashes: null, bool fullSector: true, Point morphOrigin: null, Matrix morphMatrix: null, float width: 1, bool closePath: false, int lineCap: 0, int lineJoin: 0, bool overlay: true, float strokeOpacity: 1, float fillOpacity: 1, int oc: 0)
 
       PDF only: Draw a circular sector, optionally connecting the arc to the circle's center (like a piece of pie). See :meth:`Shape.DrawSector`.
 
@@ -994,7 +994,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
       pair: oc; DrawBezier
       pair: closePath; DrawCurve
 
-   .. method:: DrawBezier(Point p1, Point p2, Point p3, Point p4, float[] color: 0, float[] fill: 0, float width: 1, string dashes: null, float lineCap: 0, float lineJoin: 0, bool overlay: true, bool closePath: false, Morph morph: null, float strokeOpacity: 1, float fillOpacity: 1, int oc: 0)
+   .. method:: DrawBezier(Point p1, Point p2, Point p3, Point p4, float[] color: null, float[] fill: null, string dashes: null, float width: 1, Point morphOrigin: null, Matrix morphMatrix: null, bool closePath: false, int lineCap: 0, int lineJoin: 0, bool overlay: true, float strokeOpacity: 1, float fillOpacity: 1, int oc: 0)
 
       PDF only: Draw a cubic Bézier curve from *p1* to *p4* with the control points *p2* and *p3* (all are :data:`Point` \s). See :meth:`Shape.DrawBezier`.
 
@@ -1015,9 +1015,9 @@ In a nutshell, this is what you can do with MuPDF.NET:
       pair: oc; DrawCurve
       pair: closePath; DrawCurve
 
-   .. method:: DrawCurve(Point p1, Point p2, Point p3, float[] color: null, float[] fill: null, float width: 1, string dashes: null, int lineCap: 0, int lineJoin: 0, bool overlay: true, bool closePath: false, Morph morph: null, float strokeOpacity: 1, float fillOpacity: 1, int oc: 0)
+   .. method:: DrawCurve(Point p1, Point p2, Point p3, float[] color: null, float[] fill: null, string dashes: null, float width: 1, int lineCap: 0, int lineJoin: 0, bool overlay: true, Point morphOrigin: null, Matrix morphMatrix: null, float strokeOpacity: 1, float fillOpacity: 1, int oc: 0)
 
-      PDF only: This is a special case of *DrawBezier()*. See :meth:`Shape.DrawCurve`.
+      PDF only: This is a special case of :meth:`Page.DrawBezier`. See :meth:`Shape.DrawCurve`.
 
 
    .. index::
@@ -1036,7 +1036,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
       pair: radius; DrawRect
       pair: oc; DrawRect
 
-   .. method:: DrawRect(Rect rect, float[] color: null, float[] fill: null, float width: 1, string dashes: null, int lineCap: 0, int lineJoin: 0, bool overlay: true, Morph morph: null, float strokeOpacity: 1, float fillOpacity: 1, float radius: 0, int oc: 0)
+   .. method:: DrawRect(Rect rect, float[] color: null, float[] fill: null, string dashes: null, float width: 1, int lineCap: 0, int lineJoin: 0, Point morphOrigin: null, Matrix morphMatrix: null, bool overlay: true, float strokeOpacity: 1, float fillOpacity: 1, int oc: 0, object radius: null)
 
       PDF only: Draw a rectangle. See :meth:`Shape.DrawRect`.
 
@@ -1055,7 +1055,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
       pair: fillOpacity; DrawQuad
       pair: oc; DrawQuad
 
-   .. method:: DrawQuad(Quad quad, float[] color: null, float[] fill: null, float width: 1, string dashes: null, float lineCap: 0, float lineJoin: 0, bool overlay: true, Morph morph: null, float strokeOpacity: 1, float fillOpacity: 1, int oc: 0)
+   .. method:: DrawQuad(Quad quad, float[] color: null, float[] fill: null, string dashes: null, float width: 1, int lineCap: 0, int lineJoin: 0, Point morphOrigin: null, Matrix morphMatrix: null, bool overlay: true, float strokeOpacity: 1, float fillOpacity: 1, int oc: 0)
 
       PDF only: Draw a quadrilateral. See :meth:`Shape.DrawQuad`.
 
@@ -1294,7 +1294,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
       :arg Rect rect: Rect.
       :arg textpage: a :ref:`TextPage` to use. If omitted, a new, temporary textpage will be created.
 
-      :returns: a string with interspersed linebreaks where necessary. It is based on dedicated code. A tyical use is checking the result of :meth:`Page.SearchFor`:
+      :returns: a string with interspersed linebreaks where necessary. It is based on dedicated code. A typical use is checking the result of :meth:`Page.SearchFor`:
 
         List<Quad> rl = page.SearchFor("currency:");
         page.GetTextbox(rl[0].Rect);
@@ -1587,7 +1587,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
    .. method:: GetAnnotXrefs()
 
-      PDF only: return a list of the :data`xref` numbers of annotations, widgets and links -- technically of all entries found in the page's */Annots*  array.
+      PDF only: return a list of the :data:`xref` numbers of annotations, widgets and links -- technically of all entries found in the page's */Annots*  array.
 
       :rtype: list of AnnotXref
       :returns: a list of items *(xref, type)* where type is the annotation type. Use the type to tell apart links, fields and annotations, see :ref:`AnnotationTypes`.
