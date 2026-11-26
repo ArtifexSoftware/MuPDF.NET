@@ -54,7 +54,7 @@ Have a look at the :ref:`FAQ` section to see some pixmap usage "at work".
 :attr:`Pixmap.IsUniColor`        Check if only one color occurs
 :attr:`Pixmap.IRect`             :ref:`IRect` of the pixmap
 :attr:`Pixmap.N`                 Bytes per pixel
-:attr:`Pixmap.SAMPLES_MV`        `memoryview` of pixel area
+:attr:`Pixmap.SAMPLES_MV`        ``Memory<byte>`` of pixel area
 :attr:`Pixmap.SamplesPtr`        Pointer to pixel area
 :attr:`Pixmap.SAMPLES`           `bytes` copy of pixel area
 :attr:`Pixmap.Size`              Pixmap's total length
@@ -92,15 +92,12 @@ Have a look at the :ref:`FAQ` section to see some pixmap usage "at work".
       :arg source: the source pixmap.
       :type source: *Pixmap*
 
-   .. method:: Pixmap(self, Pixmap source, Pixmap mask)
+   .. method:: Pixmap(Pixmap colorPixmap, Pixmap maskPixmap)
 
-      **Copy and add image mask:** Copy *source* pixmap, add an alpha channel with transparency data from a mask pixmap.
+      **Copy and add image mask:** Copy *colorPixmap*, add an alpha channel with transparency data from *maskPixmap*.
 
-      :arg source: pixmap without alpha channel.
-      :type source: :ref:`Pixmap`
-
-      :arg mask: a mask pixmap. Must be a graysale pixmap.
-      :type mask: :ref:`Pixmap`
+      :arg Pixmap colorPixmap: pixmap without alpha channel.
+      :arg Pixmap maskPixmap: a mask pixmap. Must be a grayscale pixmap.
 
    .. method:: Pixmap(Pixmap source, float width, float height, Rect clip: null)
 
@@ -210,22 +207,22 @@ Have a look at the :ref:`FAQ` section to see some pixmap usage "at work".
 
       Return the value of the pixel at location (x, y) (column, line).
 
-      :arg int x: the column number of the pixel. Must be in `range(pix.Width)`.
-      :arg int y: the line number of the pixel, Must be in `range(pix.Height)`.
+      :arg int x: the column number of the pixel. Must be in ``0 .. pix.Width - 1``.
+      :arg int y: the line number of the pixel. Must be in ``0 .. pix.Height - 1``.
 
       :rtype: list
-      :returns: a list of color values and, potentially the alpha value. Its length and content depend on the pixmap's colorspace and the presence of an alpha. For RGBA pixmaps the result would e.g. be *[r, g, b, a]*. All items are integers in `range(256)`.
+      :returns: a list of color values and, potentially the alpha value. Its length and content depend on the pixmap's colorspace and the presence of an alpha. For RGBA pixmaps the result would e.g. be *[r, g, b, a]*. All items are integers from 0 through 255.
 
    .. method:: SetPixel(int x, int y, float[] color)
 
-      :arg int x: the column number of the pixel. Must be in `range(pix.Width)`.
-      :arg int y: the line number of the pixel. Must be in `range(pix.Height)`.
-      :arg float[] color: the desired pixel value given as a sequence of integers in `range(256)`. The length of the sequence must equal :attr:`Pixmap.N`, which includes any alpha byte.
+      :arg int x: the column number of the pixel. Must be in ``0 .. pix.Width - 1``.
+      :arg int y: the line number of the pixel. Must be in ``0 .. pix.Height - 1``.
+      :arg float[] color: the desired pixel value given as a sequence of integers from 0 through 255. The length of the sequence must equal :attr:`Pixmap.N`, which includes any alpha byte.
 
    .. method:: SetRect(IRect bbox, byte[] color)
 
       :arg IRect irect: the rectangle to be filled with the value. The actual area is the intersection of this parameter and :attr:`Pixmap.IRect`. For an empty intersection (or an invalid parameter), no change will happen.
-      :arg byte[] color: the desired value, given as a sequence of integers in `range(256)`. The length of the sequence must equal :attr:`Pixmap.N`, which includes any alpha byte.
+      :arg byte[] color: the desired value, given as a sequence of integers from 0 through 255. The length of the sequence must equal :attr:`Pixmap.N`, which includes any alpha byte.
 
       :rtype: bool
       :returns: *false* if the rectangle was invalid or had an empty intersection with :attr:`Pixmap.IRect`, else *true*.
@@ -257,7 +254,7 @@ Have a look at the :ref:`FAQ` section to see some pixmap usage "at work".
 
       :arg byte[] alphavalues: the new alpha values. If provided, its length must be at least *width * height*. If omitted (`null`), all alpha values are set to 255 (no transparency).
       :arg bool premultiply: Whether to premultiply color components with the alpha value.
-      :arg list,tuple opaque: ignore the alpha value and set this color to fully transparent. A sequence of integers in `range(256)` with a length of :attr:`Pixmap.N`. Default is *null*. For example, a typical choice for RGB would be `opaque=(255, 255, 255)` (white).
+      :arg list,tuple opaque: ignore the alpha value and set this color to fully transparent. A sequence of integers from 0 through 255 with a length of :attr:`Pixmap.N`. Default is *null*. For example, a typical choice for RGB would be ``opaque: new[] { 255, 255, 255 }`` (white).
       :arg list,tuple matte: preblending background color.
 
 
@@ -385,7 +382,7 @@ Have a look at the :ref:`FAQ` section to see some pixmap usage "at work".
 
       Return the most frequently used color and its relative frequency.
 
-      :arg Rect, Tuple clip: A rectangle inside :attr:`Pixmap.Rect`. If provided, only those pixels are considered. This allows inspecting sub-rectangles of a given pixmap directly -- instead of building sub-pixmaps.
+      :arg Rect, Tuple clip: A rectangle inside :attr:`Pixmap.IRect`. If provided, only those pixels are considered. This allows inspecting sub-rectangles of a given pixmap directly -- instead of building sub-pixmaps.
       :rtype: Tuple(float, byte[])
       :returns: A Tuple `(ratio, pixel)` where `0 < ratio <= 1` and *pixel* is the pixel value of the color. Use this to decide if the image is "almost" unicolor: a response `(0.95, b"\x00\x00\x00")` means that 95% of all pixels are black.
 
@@ -452,22 +449,23 @@ Have a look at the :ref:`FAQ` section to see some pixmap usage "at work".
 
       :type: :ref:`IRect`
 
+   .. attribute:: Samples
    .. attribute:: SAMPLES
 
       The color and (if :attr:`Pixmap.Alpha` is true) transparency values for all pixels. It is an area of `width * height * n` bytes. Each n bytes define one pixel. Each successive n bytes yield another pixel in scanline order. Subsequent scanlines follow each other with no padding. E.g. for an RGBA colorspace this means, *samples* is a sequence of bytes like *..., R, G, B, A, ...*, and the four byte values R, G, B, A define one pixel.
 
 
       .. note::
-         * The underlying data is typically a **large** memory area, from which a `bytes` copy is made for this attribute ... each time you access it: for example an RGB-rendered letter page has a samples size of almost 1.4 MB. So consider assigning a new variable to it or use the `memoryview` version :attr:`Pixmap.SAMPLES_MV`.
-         * Any changes to the underlying data are available only after accessing this attribute again. This is different from using the memoryview version.
+         * The underlying data is typically a **large** memory area, from which a ``byte[]`` copy is made for this attribute ... each time you access it: for example an RGB-rendered letter page has a samples size of almost 1.4 MB. So consider assigning a new variable to it or use the ``Memory<byte>`` version :attr:`Pixmap.SAMPLES_MV`.
+         * Any changes to the underlying data are available only after accessing this attribute again. This is different from using the ``Memory<byte>`` version.
 
       :type: bytes
 
    .. attribute:: SAMPLES_MV
 
-      `Memory<byte>` format. It is built pointing to the memory in the pixmap -- not from a copy of it. So its creation speed is independent from the pixmap size, and any changes to pixels will be available immediately.
+      ``Memory<byte>`` format. It is built pointing to the memory in the pixmap -- not from a copy of it. So its creation speed is independent from the pixmap size, and any changes to pixels will be available immediately.
       
-      We also have `len(pix.SAMPLES) == len(pix.SAMPLES_MV)`.
+      We also have ``pix.Samples.Length == pix.SAMPLES_MV.Length``.
 
       :type: Memory<byte>
 

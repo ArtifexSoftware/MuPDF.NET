@@ -234,7 +234,7 @@ For the MuPDF.NET programmer, some combination (using C# 's `|` operator, or sim
 
 .. py:data:: TEXT_CID_FOR_UNKNOWN_UNICODE
 
-    128 -- If set, use raw character codes instead of U+FFFD. This is the default for **text extraction** in MuPDF.NET. If you **want to detect** when encoding information is missing or uncertain, toggle this flag and scan for the presence of U+FFFD (= `chr(0xfffd)`) code points in the resulting text.
+    128 -- If set, use raw character codes instead of U+FFFD. This is the default for **text extraction** in MuPDF.NET. If you **want to detect** when encoding information is missing or uncertain, toggle this flag and scan for the presence of U+FFFD (``(char)0xfffd``) code points in the resulting text.
 
 
 The following constants represent the default combinations of the above for text extraction and searching:

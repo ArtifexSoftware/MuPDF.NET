@@ -122,7 +122,8 @@ In a nutshell, this is what you can do with MuPDF.NET:
 :meth:`Page.Recolor`               PDF only: recolor page
 :meth:`Page.ReadContents`          PDF only: get complete, concatenated /Contents source
 :meth:`Page.Run`                   Run a page through a device
-:meth:`Page.SearchFor`             Search for a string
+:meth:`Page.SearchFor`             Search for a string, returning quads
+:meth:`Page.SearchForRects`        Search for a string, returning rectangles
 :meth:`Page.SetCropBox`            PDF only: modify the `/Cropbox` (visible page)
 :meth:`Page.SetArtBox`             PDF only: modify `/ArtBox`
 :meth:`Page.SetBleedBox`           PDF only: modify `/BleedBox`
@@ -430,7 +431,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
       :arg bool sanitize: if true, synchronization between resources and their actual use in the contents object is snychronized. For example, if a font is not actually used for any text of the page, then it will be deleted from the `/Resources/Font` object.
 
-      .. warning:: This is a complex function which may generate large amounts of new data and render old data unused. It is **not recommended** using it together with the **incremental save** option. Also note that the resulting singleton new */Contents* object is **uncompressed**. So you should save to a **new file** using options *"deflate=True, garbage=3"*.
+      .. warning:: This is a complex function which may generate large amounts of new data and render old data unused. It is **not recommended** using it together with the **incremental save** option. Also note that the resulting singleton new */Contents* object is **uncompressed**. So you should save to a **new file** using options ``deflate: true, garbage: 3``.
    
    .. method:: AddStampAnnot(Rect rect, object stamp: null)
 
@@ -579,11 +580,11 @@ In a nutshell, this is what you can do with MuPDF.NET:
       :rtype: :ref:`DisplayList`
       :returns: the display list of the page.
 
-   .. method:: GetTables(Rect clip: null,  string strategy: null, string vertical_strategy: "lines", string horizontal_strategy: "lines", List<Line> add_lines: null, List<Edge> vertical_lines: null, List<Edge> horizontal_lines: null, float snap_tolerance: TableFlags.TABLE_DEFAULT_SNAP_TOLERANCE, float snap_x_tolerance: 0.0f, float snap_y_tolerance: 0.0f, float join_tolerance: TableFlags.TABLE_DEFAULT_JOIN_TOLERANCE, float join_x_tolerance: 0.0f, float join_y_tolerance: 0.0f, float edge_min_length: 3.0f, float min_words_vertical: TableFlags.TABLE_DEFAULT_MIN_WORDS_VERTICAL, float min_words_horizontal: TableFlags.TABLE_DEFAULT_MIN_WORDS_HORIZONTAL, float intersection_tolerance: 3.0f, float intersection_x_tolerance: 0.0f, float intersection_y_tolerance: 0.0f, float text_tolerance: 3.0f, float text_x_tolerance: 3.0f, float text_y_tolerance: 3.0f)
+   .. method:: GetTables(Rect clip: null, string vertical_strategy: "lines", string horizontal_strategy: "lines", List<Edge> vertical_lines: null, List<Edge> horizontal_lines: null, float snap_tolerance: TableFlags.TABLE_DEFAULT_SNAP_TOLERANCE, float snap_x_tolerance: 0.0f, float snap_y_tolerance: 0.0f, float join_tolerance: TableFlags.TABLE_DEFAULT_JOIN_TOLERANCE, float join_x_tolerance: 0.0f, float join_y_tolerance: 0.0f, float edge_min_length: 3.0f, float min_words_vertical: TableFlags.TABLE_DEFAULT_MIN_WORDS_VERTICAL, float min_words_horizontal: TableFlags.TABLE_DEFAULT_MIN_WORDS_HORIZONTAL, float intersection_tolerance: 3.0f, float intersection_x_tolerance: 0.0f, float intersection_y_tolerance: 0.0f, float text_tolerance: 3.0f, float text_x_tolerance: 3.0f, float text_y_tolerance: 3.0f, string strategy: null, List<Line> add_lines: null, bool use_layout: true, bool union: false, bool refine: false)
 
       Find tables on the page and return a list with related information. Typically, the default values of the many parameters will be sufficient. Adjustments should ever only be needed in corner case situations.
 
-      :arg Rect clip: specify a region to consider within the page rectangle and ignore the rest. Default `null` is the full page.
+      :arg Rect clip: specify a region to consider within the page rectangle and ignore the rest. Default ``null`` is the full page.
 
       :arg str strategy: Request a **table detection** strategy. Valid values are "lines", "lines_strict" and "text".
 
@@ -591,37 +592,45 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
          Strategy **"lines_strict"** ignores borderless rectangle vector graphics. Sometimes single text pieces have background colors which may lead to false columns or lines. This strategy ignores them and can thus increase detection precision.
 
-         If **"text"** is specified, text positions are used to generate "virtual" column and / or row boundaries. Use `min_words_*` to request the number of words for considering their coordinates.
+         If **"text"** is specified, text positions are used to generate "virtual" column and / or row boundaries. Use ``min_words_vertical`` / ``min_words_horizontal`` to request the number of words for considering their coordinates.
 
-         Use parameters `vertical_strategy` and `horizontal_strategy` **instead** for a more fine-grained treatment of the dimensions.
+         Use parameters ``vertical_strategy`` and ``horizontal_strategy`` **instead** for a more fine-grained treatment of the dimensions.
 
-      :arg List<Line> add_lines: Specify a list of "lines" (i.e. pairs of `Line` objects) as **additional**, "virtual" vector graphics. These lines may help with table and / or cell detection and will not otherwise influence the detection strategy. Especially, in contrast to parameters `horizontal_lines` and `vertical_lines`, they will not prevent detecting rows or columns in other ways. These lines will be treated exactly like "real" vector graphics in terms of joining, snapping, intersectiing, minimum length and containment in the `clip` rectangle. Similarly, lines not parallel to any of the coordinate axes will be ignored.
+      :arg string vertical_strategy: vertical grid detection strategy. Same values as ``strategy``. Default ``"lines"``.
+      :arg string horizontal_strategy: horizontal grid detection strategy. Same values as ``strategy``. Default ``"lines"``.
+      :arg List<Edge> vertical_lines: explicit vertical edges when the strategy is ``"explicit"``.
+      :arg List<Edge> horizontal_lines: explicit horizontal edges when the strategy is ``"explicit"``.
+      :arg List<Line> add_lines: additional ``Line`` objects considered during detection.
 
-      :arg float snap_tolerance: Any two horizontal lines whose y-values differ by no more than this value will be **snapped** into one. Accordingly for vertical lines. Default is 3. Separate values can be specified instead for the dimensions, using `snap_x_tolerance` and `snap_y_tolerance`.
+      :arg float snap_tolerance: Any two horizontal lines whose y-values differ by no more than this value will be **snapped** into one. Accordingly for vertical lines. Default is 3. Separate values can be specified instead for the dimensions, using ``snap_x_tolerance`` and ``snap_y_tolerance``.
 
-      :arg float join_tolerance: Any two lines will be **joined** to one if the end and the start points differ by no more than this value (in points). Default is 3. Instead of this value, separate values can be specified for the dimensions using `join_x_tolerance` and `join_y_tolerance`.
+      :arg float join_tolerance: Any two lines will be **joined** to one if the end and the start points differ by no more than this value (in points). Default is 3. Instead of this value, separate values can be specified for the dimensions using ``join_x_tolerance`` and ``join_y_tolerance``.
 
       :arg float edge_min_length: Ignore a line if its length does not exceed this value (points). Default is 3.
 
-      :arg int min_words_vertical: relevant for vertical strategy option "text": at least this many words must coincide to establish a **virtual column** boundary.
+      :arg float min_words_vertical: relevant for vertical strategy option "text": at least this many words must coincide to establish a **virtual column** boundary.
 
-      :arg int min_words_horizontal: relevant for horizontal strategy option "text": at least this many words must coincide to establish a **virtual row** boundary.
+      :arg float min_words_horizontal: relevant for horizontal strategy option "text": at least this many words must coincide to establish a **virtual row** boundary.
 
-      :arg float intersection_tolerance: When combining lines into cell borders, orthogonal lines must be within this value (points) to be considered intersecting. Default is 3. Instead of this value, separate values can be specified for the dimensions using `intersection_x_tolerance` and `intersection_y_tolerance`.
+      :arg float intersection_tolerance: When combining lines into cell borders, orthogonal lines must be within this value (points) to be considered intersecting. Default is 3. Instead of this value, separate values can be specified for the dimensions using ``intersection_x_tolerance`` and ``intersection_y_tolerance``.
 
-      :arg float text_tolerance: Characters will be combined into words only if their distance is no larger than this value (points). Default is 3. Instead of this value, separate values can be specified for the dimensions using `text_x_tolerance` and `text_y_tolerance`.
+      :arg float text_tolerance: Characters will be combined into words only if their distance is no larger than this value (points). Default is 3. Instead of this value, separate values can be specified for the dimensions using ``text_x_tolerance`` and ``text_y_tolerance``.
+
+      :arg bool use_layout: when ``true``, use the layout pipeline for table detection. Default ``true``.
+      :arg bool union: when ``true``, fuse layout tables with line-based tables.
+      :arg bool refine: when ``true``, attach span placements to detected tables.
 
       :rtype: List
-      :return: a list of `Table`
+      :return: a list of ``Table``
    
-   .. method:: GetTextBlocks(Rect clip: null, int flags: 0, TextPage textPage: null, bool sort: false)
+   .. method:: GetTextBlocks(Rect clip: null, int flags: null, TextPage textpage: null, bool sort: false)
 
       Deprecated wrapper for :meth:`TextPage.ExtractBlocks`.  Use :meth:`Page.GetText` with the "blocks" option instead.
 
       :rtype: List
       :return: a list of `TextBlock`
 
-   .. method:: GetTextWords(Rect clip: null, int flags: 0, TextPage textPage: null, bool sort: false, char[] delimiters: null)
+   .. method:: GetTextWords(Rect clip: null, int flags: null, TextPage textpage: null, bool sort: false, string delimiters: null, float tolerance: 3)
 
       Deprecated wrapper for :meth:`TextPage.ExtractWords`. Use :meth:`Page.GetText` with the "words" option instead.
 
@@ -1123,7 +1132,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
          4.
            The image may be inserted uncompressed, e.g. if a `Pixmap` is used
            or if the image has an alpha channel. Therefore, consider using
-           `deflate=true` when saving the file. In addition, there are ways to
+           ``deflate: true`` when saving the file. In addition, there are ways to
            control the image size -- even if transparency comes into play. Have
            a look at :ref:`RecipesImages_O`.
 
@@ -1132,8 +1141,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
            may be much better than what you need for your display. Consider
            **decreasing the image size** before insertion -- e.g. by using
            the pixmap option and then shrinking it or scaling it down (see
-           :ref:`Pixmap` chapter). The PIL method `Image.thumbnail()` can
-           also be used for that purpose. The file size savings can be very
+           :ref:`Pixmap` chapter). The file size savings can be very
            significant.
 
          6.
@@ -1255,8 +1263,8 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
       :returns: a string with interspersed linebreaks where necessary. It is based on dedicated code. A tyical use is checking the result of :meth:`Page.SearchFor`:
 
-        List<Rect> rl = page.SearchFor("currency:");
-        page.GetTextbox(rl[0]);
+        List<Quad> rl = page.SearchFor("currency:");
+        page.GetTextbox(rl[0].Rect);
 
 
    .. index::
@@ -1425,7 +1433,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
       :arg bool xrefs: **PDF only.** Try to find the :data:`xref` for each image. Implies `hashes=true`. Adds the `"xref"` key to the dictionary. If not found, the value is 0, which means, the image is either "inline" or otherwise undetectable. Please note that this option has an extended response time, because the MD5 hashcode will be computed at least two times for each image with an xref.
 
       :rtype: list of ImageInfo
-      :returns: A list of ImageInfo. This includes information for **exactly those** images, that are shown on the page -- including *"inline images"*. In contrast to images included in :meth:`Page.GetText`, image **binary content** is not loaded, which drastically reduces memory usage. The dictionary layout is similar to that of image blocks in `page.GetText("dict")`.
+      :returns: A list of ImageInfo. This includes information for **exactly those** images, that are shown on the page -- including *"inline images"*. In contrast to images included in :meth:`Page.GetText`, image **binary content** is not loaded, which drastically reduces memory usage. The dictionary layout is similar to that of image blocks in :meth:`Page.GetText` with option ``"dict"``.
 
          =============== ===============================================================
          **Key**             **Value**
@@ -1704,33 +1712,40 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
    .. index::
       pair: flags; SearchFor
-      pair: quads; SearchFor
+      pair: maxHits; SearchFor
       pair: clip; SearchFor
       pair: textpage; SearchFor
 
-   .. method:: SearchFor(string needle, Rect clip: null, bool quads: false, int flags: TEXT_DEHYPHENATE | TEXT_PRESERVE_WHITESPACE | TEXT_PRESERVE_LIGATURES | TEXT_MEDIABOX_CLIP, TextPage textpage: None)
+   .. method:: SearchFor(string needle, Quad clip: null, int maxHits: 16, int flags: 0, TextPage textpage: null)
 
-      Search for *needle* on a page. Wrapper for :meth:`TextPage.Search`.
+      Search for *needle* on a page. Wrapper for :meth:`TextPage.Search`. Returns :ref:`Quad` hits. Use ``Page.SearchForRects`` for :ref:`Rect` hits.
 
       :arg string needle: Text to search for. May contain spaces. Upper / lower case is ignored, but only works for ASCII characters: For example, "COMPÉTENCES" will not be found if needle is "compétences" -- "compÉtences" however will. Similar is true for German umlauts and the like.
-      :arg Rect clip: only search within this area.
-      :arg bool quads: Return object type :ref:`Quad` instead of :ref:`Rect`.
-      :arg int flags: Control the data extracted by the underlying :ref:`TextPage`. By default, ligatures and white spaces are kept, and hyphenation [#f8]_ is detected.
-      :arg textpage: use a previously created :ref:`TextPage`. This reduces execution time **significantly.** If specified, the 'flags' and 'clip' arguments are ignored. If omitted, a temporary textpage will be created.
+      :arg Quad clip: only search within this area.
+      :arg int maxHits: maximum number of hits to return. Default 16.
+      :arg int flags: Control the data extracted by the underlying :ref:`TextPage`. Default 0.
+      :arg TextPage textpage: use a previously created :ref:`TextPage`. This reduces execution time **significantly.** If specified, the 'flags' and 'clip' arguments are ignored. If omitted, a temporary textpage will be created.
 
-      :rtype: list
+      :rtype: List<Quad>
 
       :returns:
 
-        A list of :ref:`Rect` or  :ref:`Quad` objects, each of which  -- **normally!** -- surrounds one occurrence of *needle*. **However:** if parts of *needle* occur on more than one line, then a separate item is generated for each these parts. So, if `needle = "search string"`, two rectangles may be generated.
+        A list of :ref:`Quad` objects, each of which  -- **normally!** -- surrounds one occurrence of *needle*. **However:** if parts of *needle* occur on more than one line, then a separate item is generated for each these parts. So, if `needle = "search string"`, two quads may be generated.
 
 
       .. note:: The method supports multi-line text marker annotations: you can use the full returned list as **one single** parameter for creating the annotation.
 
       .. caution::
 
-         * There is a tricky aspect: the search logic regards **contiguous multiple occurrences** of *needle* as one: assuming *needle* is "abc", and the page contains "abc" and "abcabc", then only **two** rectangles will be returned, one for "abc", and a second one for "abcabc".
-         * You can always use :meth:`Page.GetTextbox` to check what text actually is being surrounded by each rectangle.
+         * There is a tricky aspect: the search logic regards **contiguous multiple occurrences** of *needle* as one: assuming *needle* is "abc", and the page contains "abc" and "abcabc", then only **two** quads will be returned, one for "abc", and a second one for "abcabc".
+         * You can always use :meth:`Page.GetTextbox` to check what text actually is being surrounded by each hit.
+
+
+   .. method:: SearchForRects(string needle, Quad clip: null, int maxHits: 16, int flags: 0, TextPage textpage: null)
+
+      Same search as :meth:`Page.SearchFor`, returning :ref:`Rect` hits.
+
+      :rtype: List<Rect>
 
 
    .. method:: SetMediaBox(r)

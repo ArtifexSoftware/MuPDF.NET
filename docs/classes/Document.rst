@@ -235,7 +235,7 @@ This class represents a document. It can be constructed from a file or from memo
         doc = new Document()
         doc = new Document("")
 
-    .. note:: Raster images with a wrong (but supported) file extension **are no problem**. MuPDF will determine the correct image type when file **content** is actually accessed and will process it without complaint. So `new Document("file.jpg")` will work even for a PNG image.
+    .. note:: Raster images with a wrong (but supported) file extension **are no problem**. MuPDF will determine the correct image type when file **content** is actually accessed and will process it without complaint. So ``Document.Open("file.jpg")`` will work even for a PNG image.
 
 
   .. method:: GetOC(int xref)
@@ -690,20 +690,13 @@ This class represents a document. It can be constructed from a file or from memo
 
   .. method:: GetPages(int start, int stop, int step)
 
-    A generator for a range of pages. Parameters have the same meaning as in the built-in function *range()*. Intended for expressions of the form *"for page in doc.pages(start, stop, step): ..."*.
+    Returns the pages from *start* (inclusive) to *stop* (exclusive) stepping by *step*, as ``List<Page>``. All three arguments are required. For optional start / stop / step, use ``Document.Pages(int? start = null, int? stop = null, int? step = null)``.
 
-    :arg int start: start iteration with this page number. Default is zero, allowed values are `-∞ < start < PageCount`. While this is negative, :attr:`PageCount` is added **before** starting the iteration.
-    :arg int stop: stop iteration at this page number. Default is :attr:`PageCount`, possible are `-∞ < stop <= PageCount`. Larger values are **silently replaced** by the default. Negative values will cyclically emit the pages in reversed order.
-    :arg int step: stepping value. Defaults are 1 if start < stop and -1 if start > stop. Zero is not allowed.
+    :arg int start: first page number (0-based, inclusive).
+    :arg int stop: page number at which to stop (exclusive).
+    :arg int step: stepping value. Must not be zero.
 
-    :returns: a generator iterator over the document's pages. Some examples:
-
-        * "doc.GetPages()" emits all pages.
-        * "doc.GetPages(4, 9, 2)" emits pages 4, 6, 8.
-        * "doc.GetPages(0, None, 2)" emits all pages with even numbers.
-        * "doc.GetPages(-2)" emits the last two pages.
-        * "doc.GetPages(-1, -1)" emits all pages in reversed order.
-        * "doc.GetPages(-1, -10)" always emits 10 pages in reversed order, starting with the last page -- **repeatedly** if the document has less than 10 pages. So for a 4-page document the following page numbers are emitted: 3, 2, 1, 0, 3, 2, 1, 0, 3, 2, 1, 0, 3.
+    :returns: ``List<Page>``. Example: ``doc.GetPages(4, 9, 2)`` returns pages 4, 6, 8.
 
   .. index::
      pair: fromPage; Document.Convert2Pdf
@@ -738,7 +731,7 @@ This class represents a document. It can be constructed from a file or from memo
 
     :rtype: TocResult
 
-    :returns: a ``TocResult`` (also usable as ``List<Toc>``). Each entry has the form *[lvl, title, page, dest]*. Pass the result to :meth:`Document.SetToc` to copy bookmarks (PyMuPDF ``set_toc(get_toc(...))``). Fields:
+    :returns: a ``TocResult`` (also usable as ``List<Toc>``). Each entry has the form *[lvl, title, page, dest]*. Pass the result to :meth:`Document.SetToc` to copy bookmarks (``doc.SetToc(src.GetToc())``). Fields:
 
       * *lvl* -- hierarchy level (positive *int*). The first entry is always 1. Entries in a row are either **equal**, **increase** by 1, or **decrease** by any number.
       * *title* -- title (*string*)
@@ -1035,7 +1028,7 @@ This class represents a document. It can be constructed from a file or from memo
     Invalid values for *tableMode*, *headerFooterMode*, *sentenceSplitter*, *tableOutput*, *maxTokens* or *minTokens* raise `ArgumentException`.
 
     :rtype: :ref:`ChunkedDocument`
-    :returns: a read-only list of :class:`ChunkedDocument.Chunk` objects. Each chunk has an ``Id``, its ``Text`` and ``Metadata`` (pages, bounding boxes, section path, token count and so on). The result also offers :attr:`ChunkedDocument.Tables`, :attr:`ChunkedDocument.Figures` and :attr:`ChunkedDocument.Sections` views of the document.
+    :returns: a read-only list of :ref:`Chunk <ChunkedDocument_Chunk>` objects. Each chunk has an ``Id``, its ``Text`` and ``Metadata`` (pages, bounding boxes, section path, token count and so on). The result also offers :attr:`ChunkedDocument.Tables`, :attr:`ChunkedDocument.Figures` and :attr:`ChunkedDocument.Sections` views of the document.
 
     .. code-block:: cs
 
@@ -1067,7 +1060,7 @@ This class represents a document. It can be constructed from a file or from memo
 
   .. method:: SetLayout(Rect rect: null, float width: 0, float height: 0, int fontSize: 11)
     
-    Re-paginate ("reflow") the document based on the given page dimension and fontSize. This only affects some document types like e-books and HTML. Ignored if not supported. Supported documents have *true* in property :attr:`is_reflowable`.
+    Re-paginate ("reflow") the document based on the given page dimension and fontSize. This only affects some document types like e-books and HTML. Ignored if not supported. Supported documents have *true* in property :attr:`Document.IsReflowable`.
 
     :arg Rect rect: desired page size. Must be finite, not empty and start at point (0, 0).
     :arg float width: use it together with *height* as alternative to *rect*.
@@ -1081,11 +1074,11 @@ This class represents a document. It can be constructed from a file or from memo
     :arg string language: the language locale you want to set.
 
 
-  .. method:: Select(List<int> list)
+  .. method:: Select(int[] pages)
 
-    PDF only: Keeps only those pages of the document whose numbers occur in the list. Empty sequences or elements outside `range(doc.PageCount)` will cause a *ValueError*. For more details see remarks at the bottom or this chapter.
+    PDF only: Keeps only those pages of the document whose numbers occur in the list. Empty sequences or elements outside ``0 .. doc.PageCount - 1`` will cause an exception. For more details see remarks at the bottom or this chapter. An overload ``Select(List<int> pages)`` also exists.
 
-    :arg List<int> s: The sequence (see :ref:`SequenceTypes`) of page numbers (zero-based) to be included. Pages not in the sequence will be deleted (from memory) and become unavailable until the document is reopened. **Page numbers can occur multiple times and in any order:** the resulting document will reflect the sequence exactly as specified.
+    :arg int[] pages: The page numbers (zero-based) to be included. Pages not in the sequence will be deleted (from memory) and become unavailable until the document is reopened. **Page numbers can occur multiple times and in any order:** the resulting document will reflect the sequence exactly as specified.
 
     .. note::
 
@@ -1160,7 +1153,7 @@ This class represents a document. It can be constructed from a file or from memo
 
     - Step 2 creates a new TOC from the entries contained in *toc*.
 
-    The preferred call is the PyMuPDF roundtrip: ``newDoc.SetToc(pdf.GetToc(simple: false))``. That keeps dest dictionaries (zoom, named dest, color, collapse, …).
+    The preferred call is ``newDoc.SetToc(pdf.GetToc(simple: false))``. That keeps dest dictionaries (zoom, named dest, color, collapse, …).
 
     Overloads:
 
@@ -1285,7 +1278,7 @@ This class represents a document. It can be constructed from a file or from memo
     :arg int deflateImages: Deflate (compress) uncompressed image streams [#f4]_.
     :arg int deflateFonts: Deflate (compress) uncompressed fontFile streams [#f4]_.
  
-    :arg int incremental: Only save changes to the PDF. Excludes "garbage" and "linear". Can only be used if *outfile* is a string or a `pathlib.Path` and equal to :attr:`Document.Name`. Cannot be used for files that are decrypted or repaired and also in some other cases. To be sure, check :meth:`Document.CanSaveIncrementally`. If this is false, saving to a new file is required.
+    :arg int incremental: Only save changes to the PDF. Excludes "garbage" and "linear". Can only be used if *outfile* is a string path equal to :attr:`Document.Name`. Cannot be used for files that are decrypted or repaired and also in some other cases. To be sure, check :meth:`Document.CanSaveIncrementally`. If this is false, saving to a new file is required.
 
     :arg int ascii: convert binary data to ASCII.
 
@@ -1388,7 +1381,7 @@ This class represents a document. It can be constructed from a file or from memo
 
     :arg bool links: Choose whether (internal and external) links should be included in the copy. Default is `true`. *Named* links (:data:`LINK_NAMED`) and internal links to outside the copied page range are **always excluded**. 
     :arg bool annots: Choose whether annotations should be included in the copy. Form **fields can never be copied** -- see below.
-    :arg int showProgress: Specify an interval size greater zero to see progress messages on `sys.stdout`. After each interval, a message like `Inserted 30 of 47 pages.` will be printed.
+    :arg int showProgress: Specify an interval size greater zero to see progress messages on the console. After each interval, a message like ``Inserted 30 of 47 pages.`` will be printed.
     :arg int final: Controls whether the list of already copied objects should be **dropped** after this method, default *true*. Set it to 0 except for the last one of multiple insertions from the same source PDF. This saves target file size and speeds up execution considerably.
 
   .. note::
@@ -1397,7 +1390,7 @@ This class represents a document. It can be constructed from a file or from memo
 
      2. If `fromPage > toPage`, pages will be **copied in reverse order**. If `0 <= fromPage == toPage`, then one page will be copied.
 
-     3. `docsrc` TOC entries **will not be copied**. Recover them with ``newDoc.SetToc(pdf.GetToc(simple: false))`` (same as PyMuPDF ``set_toc(get_toc(simple=False))``). For joining several files while stitching TOC ranges, see `https://github.com/ArtifexSoftware/MuPDF.NET/tree/main/Examples/JoinDoc`_ in the *examples* directory.
+     3. `docsrc` TOC entries **will not be copied**. Recover them with ``newDoc.SetToc(pdf.GetToc(simple: false))``. For joining several files while stitching TOC ranges, see the JoinDoc example in the *examples* directory.
 
 
   .. index::
@@ -1443,16 +1436,20 @@ This class represents a document. It can be constructed from a file or from memo
      pair: fontFile; Document.InsertPage
      pair: color; Document.InsertPage
 
-  .. method:: InsertPage(int pno, string text, string fontName, string fontFile, float fontSize: 11, float width: 595, float height: 842, float[] color: null)
+  .. method:: InsertPage(int pno: -1, string text: null, float fontSize: 11, float width: 595, float height: 842, string fontName: "helv", float[] color: null)
 
-    PDF only: Insert a new page and insert some text. Convenience function which combines :meth:`Document.NewPage` and (parts of) :meth:`Page.InsertText`.
+    PDF only: Insert a new page and optionally insert some text. Convenience function which combines :meth:`Document.NewPage` and (parts of) :meth:`Page.InsertText`.
 
-    :arg int pno: page number (0-based) **in front of which** to insert. Must be in `range(-1, doc.PageCount + 1)`. Special values -1 and `doc.PageCount` insert **after** the last page.
+    :arg int pno: page number (0-based) **in front of which** to insert. Must be in ``-1 .. doc.PageCount``. Special values -1 and ``doc.PageCount`` insert **after** the last page.
+    :arg string text: text to insert at (72, 72). Omit or ``null`` to insert an empty page.
+    :arg float fontSize: font size. Default 11.
+    :arg float width: page width. Default 595.
+    :arg float height: page height. Default 842.
+    :arg string fontName: font name. Default ``"helv"``.
+    :arg float[] color: text color.
 
-    For the other parameters, please consult the aforementioned methods.
-
-    :rtype: int
-    :returns: the result of :meth:`Page.InsertText` (number of successfully inserted lines).
+    :rtype: Page
+    :returns: the new page.
 
   .. method:: DeletePage(int pno: -1)
 
@@ -1472,7 +1469,7 @@ This class represents a document. It can be constructed from a file or from memo
 
     **Format 3:** One positional integer parameter. Equivalent to :meth:`Document.DeletePage`.
 
-    **Format 4:** One positional parameter of type *list*, *tuple* or *range()* of page numbers. The items of this sequence may be in any order and may contain duplicates.
+    **Format 4:** One positional parameter of type *list* of page numbers. The items of this sequence may be in any order and may contain duplicates.
 
     .. note::
 
@@ -1499,7 +1496,7 @@ This class represents a document. It can be constructed from a file or from memo
 
     :arg int to: the page number in front of which to copy. The default inserts **after** the last page.
 
-    .. note:: Only a new **reference** to the page object will be created -- not a new page object, all copied pages will have identical attribute values, including the :attr:`Page.xref`. This implies that any changes to one of these copies will appear on all of them.
+    .. note:: Only a new **reference** to the page object will be created -- not a new page object, all copied pages will have identical attribute values, including the :attr:`Page.Xref`. This implies that any changes to one of these copies will appear on all of them.
 
   .. method:: CopyFullPage(int pno, int to=-1)
 
@@ -1550,15 +1547,15 @@ This class represents a document. It can be constructed from a file or from memo
      pair: ufilename; Document.AddEmbfile
      pair: desc; Document.AddEmbfile
 
-  .. method:: AddEmbfile(string name, byte[] buffer, string filename: null, string ufilename: null, string desc: null)
+  .. method:: AddEmbfile(string name, byte[] buffer, string filename: null, string uFileName: null, string desc: null)
 
     PDF only: Embed a new file. All string parameters except the name may be unicode (in previous versions, only ASCII worked correctly). File contents will be compressed (where beneficial).
 
     :arg string name: entry identifier, **must not already exist**.
-    :arg byte[]: file contents.
+    :arg byte[] buffer: file contents.
 
     :arg string filename: optional filename. Documentation only, will be set to *name* if `null`.
-    :arg string ufilename: optional unicode filename. Documentation only, will be set to *filename* if `null`.
+    :arg string uFileName: optional unicode filename. Documentation only, will be set to *filename* if `null`.
     :arg string desc: optional description. Documentation only, will be set to *name* if `null`.
 
     :rtype: int
@@ -1571,9 +1568,9 @@ This class represents a document. It can be constructed from a file or from memo
 
   .. method:: GetEmbfile(int item)
 
-    PDF only: Retrieve the content of embedded file by its entry number or name. If the document is not a PDF, or entry cannot be found, an exception is raised.
+    PDF only: Retrieve the content of an embedded file by its entry number. If the document is not a PDF, or entry cannot be found, an exception is raised.
 
-    :arg int item: index or name of entry. An integer must be in `range(GetEmbfileCount())`.
+    :arg int item: 0-based index of the entry. Must be in ``0 .. GetEmbfileCount() - 1``.
 
     :rtype: byte[]
 
@@ -1585,11 +1582,11 @@ This class represents a document. It can be constructed from a file or from memo
 
     .. warning:: When specifying an entry name, this function will only **delete the first item** with that name. Be aware that PDFs not created with MuPDF.NET may contain duplicate names. So you may want to take appropriate precautions.
 
-  .. method:: GetEmbfileInfo(dynamic item)
+  .. method:: GetEmbfileInfo(object item)
 
     PDF only: Retrieve information of an embedded file given by its number or by its name.
 
-    :arg int/string item: index or name of entry. An integer must be in `Enumerable.Range(GetEmbfileCount())`.
+    :arg object item: index (``int``) or name (``string``) of the entry. An integer must be in ``0 .. GetEmbfileCount() - 1``.
 
     :rtype: EmbfileInfo
     :returns: `EmbfileInfo` with the following keys:
@@ -1616,15 +1613,15 @@ This class represents a document. It can be constructed from a file or from memo
      pair: ufilename; Document.GetEmbfileUpd
      pair: desc; Document.GetEmbfileUpd
 
-  .. method:: GetEmbfileUpd(dynamic item, byte[] buffer: null, string filename: null, string ufilename: null, string desc: null)
+  .. method:: GetEmbfileUpd(object item, byte[] buffer: null, string filename: null, string uFileName: null, string desc: null)
 
     PDF only: Change an embedded file given its entry number or name. All parameters are optional. Letting them default leads to a no-operation.
 
-    :arg int/string item: index or name of entry. An integer must be in `Enumerable.Range(GetEmbfileCount())`.
+    :arg object item: index (``int``) or name (``string``) of the entry. An integer must be in ``0 .. GetEmbfileCount() - 1``.
     :arg byte[] buffer: the new file content.
 
     :arg string filename: the new filename.
-    :arg string ufilename: the new unicode filename.
+    :arg string uFileName: the new unicode filename.
     :arg string desc: the new description.
 
     :rtype: int
@@ -1777,7 +1774,7 @@ This class represents a document. It can be constructed from a file or from memo
 
     PDF Only: Extract data and meta information of an image stored in the document. The output can directly be used to be stored as an image file, as input for PIL, :ref:`Pixmap` creation, etc. This method avoids using pixmaps wherever possible to present the image in its original format (e.g. as JPEG).
 
-    :arg int xref: :data:`xref` of an image object. If this is not in `range(1, doc.GetXrefLength())`, or the object is no image or other errors occur, `null` is returned and no exception is raised.
+    :arg int xref: :data:`xref` of an image object. If this is not in ``1 .. doc.GetXrefLength() - 1``, or the object is no image or other errors occur, `null` is returned and no exception is raised.
 
     :rtype: ImageInfo
     :returns: a dictionary with the following keys

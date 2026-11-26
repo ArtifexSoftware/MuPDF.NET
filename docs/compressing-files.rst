@@ -17,7 +17,7 @@ By using the `mupdf_explored <https://mupdf.readthedocs.io/en/1.28.2/cookbook/mu
 The original file is 1.8 MB in size. Let's see what happens when we save it with various optional parameters defined.
 
 
-`useObjstms`
+``useObjstms``
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 This boolean option packs object definitions into compressible streams. 
@@ -37,11 +37,11 @@ This boolean option packs object definitions into compressible streams.
 
     doc.Close();
 
-The result is a file size of 1.5 MB. However, we can achieve a better result by using the `deflate` parameter to compress the uncompressed streams.
+The result is a file size of 1.5 MB. However, we can achieve a better result by using the ``deflate`` parameter to compress the uncompressed streams.
 
 
 
-`deflate`
+``deflate``
 ~~~~~~~~~~~~~~~~~~~~
 
 By setting this option we can compress uncompressed streams.
@@ -61,7 +61,7 @@ Available options are:
      - Use `Brotli compression <https://en.wikipedia.org/wiki/Brotli>`_ (slowest, smallest output, but experimental and unsupported in many tools and viewers) [1]_ 
 
 
-Used in combination with `useObjstms` to pack object definitions into compressible streams we can achieve even better results.
+Used in combination with ``useObjstms`` to pack object definitions into compressible streams we can achieve even better results.
 
 Flate
 """""""""""""""
@@ -112,10 +112,10 @@ The result is a file size of 863 KB.
 Brotli is expected to **yield meaningful differences** on text- and vector-heavy documents, and close to
 **none** on scanned or photo-heavy ones.
 
-`compression_effort`
+``compressionEffort``
 '''''''''''''''''''''
 
-When using Brotli (`deflate:2`) by setting a further parameter `compressionEffort` we can control how hard MuPDF works when compressing stream data. It trades CPU time for file size and *never changes what the document looks like*.
+When using Brotli (``deflate: 2``) by setting a further parameter ``compressionEffort`` we can control how hard MuPDF works when compressing stream data. It trades CPU time for file size and *never changes what the document looks like*.
 
 .. code-block:: cs
 
@@ -134,7 +134,7 @@ When using Brotli (`deflate:2`) by setting a further parameter `compressionEffor
 The result now is a file size of 834 KB.
 
 
-`compressionEffort`: What it does and does not affect
+``compressionEffort``: What it does and does not affect
 '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 Artifex published effort guidance in `Brotli is Here! <https://artifex.com/blog/brotli-is-here>`_
@@ -148,28 +148,28 @@ That guidance is written in the context of Brotli compression, so treat the exac
 numbers as indicative.
 
 
-`compressionEffort` tunes the compressor applied to stream objects as the file is
-written. It does not decide *whether* streams are compressed using Brotli — that is `deflate:2`
-— and it does not repack object definitions — that is `useObjstms:true`. Ensures that you have correctly set those two parameters before you start tuning `compressionEffort`.
+``compressionEffort`` tunes the compressor applied to stream objects as the file is
+written. It does not decide *whether* streams are compressed using Brotli — that is ``deflate: 2``
+— and it does not repack object definitions — that is ``useObjstms: true``. Ensures that you have correctly set those two parameters before you start tuning ``compressionEffort``.
 
 It has an effect on:
 
 - content streams (text and vector graphics),
 - font programs and other uncompressed binary streams,
-- object streams produced by `useObjstms:true`.
+- object streams produced by ``useObjstms: true``.
 
 It has little or no effect on:
 
 - images already stored in a compressed format (JPEG, JPEG2000, JBIG2). Re-running
   a general-purpose compressor over them buys nothing. Use
   :meth:`Document.RewriteImages()` for those.
-- documents whose bulk is unreferenced objects. Use `garbage:3` or `garbage:4`.
+- documents whose bulk is unreferenced objects. Use ``garbage: 3`` or ``garbage: 4``.
 
 
-`garbage`
+``garbage``
 ~~~~~~~~~~~~~~~~~~~~
 
-Documents with unreferenced objects can be reduced in size by setting the `garbage` parameter to `3` or `4`. This will de-duplicate and drop unreferenced objects.
+Documents with unreferenced objects can be reduced in size by setting the ``garbage`` parameter to ``3`` or ``4``. This will de-duplicate and drop unreferenced objects.
 
 .. list-table::
    :header-rows: 1
@@ -188,7 +188,7 @@ Documents with unreferenced objects can be reduced in size by setting the `garba
      - in addition to 3, check :data:`stream` objects for duplication. This may be slow because such data are typically large.
 
 
-How much is saved here depends on the document, and how much "garbage" it may contain. For example, if we set `garbage:4` we only save a few KB:
+How much is saved here depends on the document, and how much "garbage" it may contain. For example, if we set ``garbage: 4`` we only save a few KB:
 
 
 .. code-block:: cs
@@ -222,19 +222,19 @@ Results Summary
    * - Original file
      - 1.8 MB
      -
-   * - `use_objstms:true`
+   * - ``useObjstms: true``
      - 1.5 MB
      -
-   * - `use_objstms:true`, `deflate:1`
+   * - ``useObjstms: true``, ``deflate: 1``
      - 903 KB
      -
-   * - `use_objstms:true`, `deflate:2`
+   * - ``useObjstms: true``, ``deflate: 2``
      - 863 KB
      - Warning: Brotli is experimental and unsupported in many tools and viewers [1]_ 
-   * - `use_objstms:true`, `deflate:2`, `compressionEffort:100`
+   * - ``useObjstms: true``, ``deflate: 2``, ``compressionEffort: 100``
      - 834 KB
      - Warning: Brotli is experimental and unsupported in many tools and viewers [1]_ 
-   * - `use_objstms:true`, `deflate:2`, `compressionEffort:100`, `garbage:4`
+   * - ``useObjstms: true``, ``deflate: 2``, ``compressionEffort: 100``, ``garbage: 4``
      - 831 KB
      - Warning: Brotli is experimental and unsupported in many tools and viewers [1]_ 
 

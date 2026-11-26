@@ -110,7 +110,7 @@ A Font object also contains useful general information, like the font bbox, the 
 
       Check whether the unicode *chr* exists in the font or (option) some fallback font. May be used to check whether any "TOFU" symbols will appear on output.
 
-      :arg int chr: the unicode of the character (i.e. *ord()*).
+      :arg int chr: the unicode of the character (i.e. ``(int)'Ä'``).
       :arg string language: the language -- currently unused.
       :arg int script: the UCDN script number.
       :arg bool fallback: Perform an extended search in fallback fonts or restrict to current font (default).
@@ -120,14 +120,14 @@ A Font object also contains useful general information, like the font bbox, the 
 
       Return an array of unicodes supported by this font.
 
-      :returns: an *array.array* [#f2]_ of length at most :attr:`Font.GlyphCount`. I.e. *chr()* of every item in this array has a glyph in the font without using fallbacks. This is an example display of the supported glyphs:
+      :returns: a ``List<int>`` of length at most :attr:`Font.GlyphCount`. I.e. ``Convert.ToChar`` of every item in this list has a glyph in the font without using fallbacks. This is an example display of the supported glyphs:
 
       .. code-block:: cs
 
-         Font font =  new Font("math")
-         List<int> vuc = font.GetValidCodePoints()
-         foreach(int i in vuc)
-            print($"%04X %s (%s)" % (i, chr(i), font.Unicode2GlyphName(i)))
+         Font font =  new Font("math");
+         List<int> vuc = font.GetValidCodePoints();
+         foreach (int i in vuc)
+            Console.WriteLine($"{i:X4} {Convert.ToChar(i)} ({font.Unicode2GlyphName(i)})");
          0000
          000D   (CR)
          0020   (space)
@@ -162,7 +162,7 @@ A Font object also contains useful general information, like the font bbox, the 
 
       Calculate the "width" of the character's glyph (visual representation).
 
-      :arg int chr: the unicode number of the character. Use *ord()*, not the character itself. Again, this should normally work even if a character is not supported by that font, because fallback fonts will be checked where necessary.
+      :arg int chr: the unicode number of the character. Use ``(int)'Ä'``, not the character itself. Again, this should normally work even if a character is not supported by that font, because fallback fonts will be checked where necessary.
       :arg int wmode: write mode, 0 = horizontal, 1 = vertical.
 
       The other parameters are not in use currently.
@@ -171,7 +171,7 @@ A Font object also contains useful general information, like the font bbox, the 
 
    .. method:: GlyphName2Unicode(string name)
 
-      Return the unicode value for a given glyph name. Use it in conjunction with `chr()` if you want to output e.g. a certain symbol.
+      Return the unicode value for a given glyph name. Use it in conjunction with ``Convert.ToChar`` if you want to output e.g. a certain symbol.
 
       :arg string name: The name of the glyph.
 

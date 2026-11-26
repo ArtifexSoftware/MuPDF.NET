@@ -124,9 +124,9 @@ Yet others are handy, general-purpose utilities.
 
       Convenience function returning a PDF color triple (red, green, blue) for a given sRGB color integer as it occurs in :meth:`Page.GetText` dictionaries "dict" and "rawdict".
 
-      :arg int srgb: an integer of format RRGGBB, where each color component is an integer in range(255).
+      :arg int srgb: an integer of format RRGGBB, where each color component is an integer from 0 through 255.
 
-      :returns: a tuple (red, green, blue) with float items in interval *0 <= item <= 1* representing the same color. Example `sRGB2Pdf(0xff0000) = (1, 0, 0)` (red).
+      :returns: a tuple (red, green, blue) with float items in interval *0 <= item <= 1* representing the same color. Example ``sRGB2Pdf(0xff0000)`` is ``(1, 0, 0)`` (red).
 
 
 
@@ -134,9 +134,9 @@ Yet others are handy, general-purpose utilities.
 
       Convenience function returning a color (red, green, blue) for a given *sRGB* color integer.
 
-      :arg int srgb: an integer of format RRGGBB, where each color component is an integer in range(255).
+      :arg int srgb: an integer of format RRGGBB, where each color component is an integer from 0 through 255.
 
-      :returns: a tuple (red, green, blue) with integer items in `range(256)` representing the same color. Example `sRGB2Pdf(0xff0000) = (255, 0, 0)` (red).
+      :returns: a tuple (red, green, blue) with integer items from 0 through 255 representing the same color. Example ``sRGB2Rgb(0xff0000)`` is ``(255, 0, 0)`` (red).
 
 
 
@@ -155,10 +155,10 @@ Yet others are handy, general-purpose utilities.
 
       Return the glyph name of a unicode number, based on the **Adobe Glyph List**.
 
-      :arg int ch: the unicode given by e.g. `ord("ß")`. The function is based on the `Adobe Glyph List <https://github.com/adobe-type-tools/agl-aglfn/blob/master/glyphlist.txt>`_.
+      :arg int ch: the unicode given by e.g. ``(int)'ß'``. The function is based on the `Adobe Glyph List <https://github.com/adobe-type-tools/agl-aglfn/blob/master/glyphlist.txt>`_.
 
       :rtype: `string`
-      :returns: the glyph name. E.g. `Utils.Unicode2GlyphName(Convert.Int32("Ä"))` returns `'Adieresis'`.
+      :returns: the glyph name. E.g. :meth:`Utils.Unicode2GlyphName` with ``(int)'Ä'`` returns ``"Adieresis"``.
 
 
 
@@ -185,9 +185,11 @@ Yet others are handy, general-purpose utilities.
 
    .. attribute:: TESSDATA_PREFIX
 
-      Copy of `os.environ["TESSDATA_PREFIX"]` for convenient checking whether there is integrated Tesseract OCR support.
+      Copy of ``Environment.GetEnvironmentVariable("TESSDATA_PREFIX")`` for convenient checking whether there is integrated Tesseract OCR support.
 
-      If this attribute is `None`, Tesseract-OCR is either not installed, or the environment variable is not set to point to Tesseract's language support folder.
+      If this attribute is ``null``, Tesseract-OCR is either not installed, or the environment variable is not set to point to Tesseract's language support folder. When it is ``null`` but Tesseract is installed, the ``tessdata`` folder may still be locatable; otherwise OCR methods have no language data.
+
+      The folder name can be used as parameter ``tessdata`` in methods :meth:`Page.GetTextPageOcr`, :meth:`Pixmap.SavePdfOCR` and :meth:`Pixmap.PdfOCR2Bytes`.
 
       .. note:: This variable is now checked before OCR functions are tried. This prevents verbose messages from MuPDF.
 
@@ -257,7 +259,7 @@ Yet others are handy, general-purpose utilities.
          .. note::
 
             * For some "exotic" images (FAX encodings, RAW formats and the like), this method will not work. You can however still work with such images in MupDF.NET, e.g. by using :meth:`Document.ExtractImage` or create pixmaps via `Pixmap(doc, xref)`. These methods will automatically convert exotic images to the PNG format before returning results.
-            * You can also get the properties of images embedded in a PDF, via their :data:`xref`. In this case make sure to extract the raw stream: `Utils.GetImageProfile(doc.GetXrefStreamRaw(xref))`.
+            * You can also get the properties of images embedded in a PDF, via their :data:`xref`. In this case make sure to extract the raw stream: :meth:`Utils.GetImageProfile` on :meth:`Document.GetXrefStreamRaw` of that xref.
             * Images as returned by the image blocks of :meth:`Page.GetText` using "dict" or "rawdict" options are also supported.
 
 
@@ -318,15 +320,6 @@ Yet others are handy, general-purpose utilities.
       :arg Line line: the line.
       :arg Span[] spans: a sub-list of `line.Spans`. If omitted, the full line quad will be returned.
       :returns: the :ref:`Quad` of the selected line spans, usable for text marker annotations ('Highlight', etc.).
-
-
-   .. attr:: TESSDATA_PREFIX
-
-      Return the name of Tesseract's language support folder. Use this function if the environment variable `TESSDATA_PREFIX` has not been set.
-
-      :returns: `os.getenv("TESSDATA_PREFIX")` if not `None`. Otherwise, if Tesseract-OCR is installed, locate the name of `tessdata`. If no installation is found, return `false`.
-
-         The folder name can be used as parameter `tessdata` in methods :meth:`Page.GetTextPageOcr`, :meth:`Pixmap.SavePdfOCR` and :meth:`Pixmap.PdfOCR2Bytes`.
 
 
    .. method:: INFINITE_QUAD()
@@ -596,13 +589,13 @@ Yet others are handy, general-purpose utilities.
       :return: a string containing the text with layout applied.
 
 
-   .. method:: GetTables(Page page, Rect clip: null,  string strategy: null, string vertical_strategy: "lines", string horizontal_strategy: "lines", List<Line> add_lines: null, List<Edge> vertical_lines: null, List<Edge> horizontal_lines: null, float snap_tolerance: TableFlags.TABLE_DEFAULT_SNAP_TOLERANCE, float snap_x_tolerance: 0.0f, float snap_y_tolerance: 0.0f, float join_tolerance: TableFlags.TABLE_DEFAULT_JOIN_TOLERANCE, float join_x_tolerance: 0.0f, float join_y_tolerance: 0.0f, float edge_min_length: 3.0f, float min_words_vertical: TableFlags.TABLE_DEFAULT_MIN_WORDS_VERTICAL, float min_words_horizontal: TableFlags.TABLE_DEFAULT_MIN_WORDS_HORIZONTAL, float intersection_tolerance: 3.0f, float intersection_x_tolerance: 0.0f, float intersection_y_tolerance: 0.0f, float text_tolerance: 3.0f, float text_x_tolerance: 3.0f, float text_y_tolerance: 3.0f)
+   .. method:: GetTables(Page page, Rect clip: null, string vertical_strategy: "lines", string horizontal_strategy: "lines", List<Edge> vertical_lines: null, List<Edge> horizontal_lines: null, float snap_tolerance: TableFlags.TABLE_DEFAULT_SNAP_TOLERANCE, float snap_x_tolerance: 0.0f, float snap_y_tolerance: 0.0f, float join_tolerance: TableFlags.TABLE_DEFAULT_JOIN_TOLERANCE, float join_x_tolerance: 0.0f, float join_y_tolerance: 0.0f, float edge_min_length: 3.0f, float min_words_vertical: TableFlags.TABLE_DEFAULT_MIN_WORDS_VERTICAL, float min_words_horizontal: TableFlags.TABLE_DEFAULT_MIN_WORDS_HORIZONTAL, float intersection_tolerance: 3.0f, float intersection_x_tolerance: 0.0f, float intersection_y_tolerance: 0.0f, float text_tolerance: 3.0f, float text_x_tolerance: 3.0f, float text_y_tolerance: 3.0f, string strategy: null, List<Line> add_lines: null, bool use_layout: true, bool union: false, bool refine: false)
 
       Find tables on the page and return a list with related information. Typically, the default values of the many parameters will be sufficient. Adjustments should ever only be needed in corner case situations.
 
       :arg Page page: The page instance to use for table detection.
 
-      :arg Rect clip: specify a region to consider within the page rectangle and ignore the rest. Default `null` is the full page.
+      :arg Rect clip: specify a region to consider within the page rectangle and ignore the rest. Default ``null`` is the full page.
 
       :arg str strategy: Request a **table detection** strategy. Valid values are "lines", "lines_strict" and "text".
 
@@ -610,28 +603,36 @@ Yet others are handy, general-purpose utilities.
 
          Strategy **"lines_strict"** ignores borderless rectangle vector graphics. Sometimes single text pieces have background colors which may lead to false columns or lines. This strategy ignores them and can thus increase detection precision.
 
-         If **"text"** is specified, text positions are used to generate "virtual" column and / or row boundaries. Use `min_words_*` to request the number of words for considering their coordinates.
+         If **"text"** is specified, text positions are used to generate "virtual" column and / or row boundaries. Use ``min_words_vertical`` / ``min_words_horizontal`` to request the number of words for considering their coordinates.
 
-         Use parameters `vertical_strategy` and `horizontal_strategy` **instead** for a more fine-grained treatment of the dimensions.
+         Use parameters ``vertical_strategy`` and ``horizontal_strategy`` **instead** for a more fine-grained treatment of the dimensions.
 
-      :arg List<Line> add_lines: Specify a list of "lines" (i.e. pairs of `Line` objects) as **additional**, "virtual" vector graphics. These lines may help with table and / or cell detection and will not otherwise influence the detection strategy. Especially, in contrast to parameters `horizontal_lines` and `vertical_lines`, they will not prevent detecting rows or columns in other ways. These lines will be treated exactly like "real" vector graphics in terms of joining, snapping, intersectiing, minimum length and containment in the `clip` rectangle. Similarly, lines not parallel to any of the coordinate axes will be ignored.
+      :arg string vertical_strategy: vertical grid detection strategy. Same values as ``strategy``. Default ``"lines"``.
+      :arg string horizontal_strategy: horizontal grid detection strategy. Same values as ``strategy``. Default ``"lines"``.
+      :arg List<Edge> vertical_lines: explicit vertical edges when the strategy is ``"explicit"``.
+      :arg List<Edge> horizontal_lines: explicit horizontal edges when the strategy is ``"explicit"``.
+      :arg List<Line> add_lines: additional ``Line`` objects considered during detection.
 
-      :arg float snap_tolerance: Any two horizontal lines whose y-values differ by no more than this value will be **snapped** into one. Accordingly for vertical lines. Default is 3. Separate values can be specified instead for the dimensions, using `snap_x_tolerance` and `snap_y_tolerance`.
+      :arg float snap_tolerance: Any two horizontal lines whose y-values differ by no more than this value will be **snapped** into one. Accordingly for vertical lines. Default is 3. Separate values can be specified instead for the dimensions, using ``snap_x_tolerance`` and ``snap_y_tolerance``.
 
-      :arg float join_tolerance: Any two lines will be **joined** to one if the end and the start points differ by no more than this value (in points). Default is 3. Instead of this value, separate values can be specified for the dimensions using `join_x_tolerance` and `join_y_tolerance`.
+      :arg float join_tolerance: Any two lines will be **joined** to one if the end and the start points differ by no more than this value (in points). Default is 3. Instead of this value, separate values can be specified for the dimensions using ``join_x_tolerance`` and ``join_y_tolerance``.
 
       :arg float edge_min_length: Ignore a line if its length does not exceed this value (points). Default is 3.
 
-      :arg int min_words_vertical: relevant for vertical strategy option "text": at least this many words must coincide to establish a **virtual column** boundary.
+      :arg float min_words_vertical: relevant for vertical strategy option "text": at least this many words must coincide to establish a **virtual column** boundary.
 
-      :arg int min_words_horizontal: relevant for horizontal strategy option "text": at least this many words must coincide to establish a **virtual row** boundary.
+      :arg float min_words_horizontal: relevant for horizontal strategy option "text": at least this many words must coincide to establish a **virtual row** boundary.
 
-      :arg float intersection_tolerance: When combining lines into cell borders, orthogonal lines must be within this value (points) to be considered intersecting. Default is 3. Instead of this value, separate values can be specified for the dimensions using `intersection_x_tolerance` and `intersection_y_tolerance`.
+      :arg float intersection_tolerance: When combining lines into cell borders, orthogonal lines must be within this value (points) to be considered intersecting. Default is 3. Instead of this value, separate values can be specified for the dimensions using ``intersection_x_tolerance`` and ``intersection_y_tolerance``.
 
-      :arg float text_tolerance: Characters will be combined into words only if their distance is no larger than this value (points). Default is 3. Instead of this value, separate values can be specified for the dimensions using `text_x_tolerance` and `text_y_tolerance`.
+      :arg float text_tolerance: Characters will be combined into words only if their distance is no larger than this value (points). Default is 3. Instead of this value, separate values can be specified for the dimensions using ``text_x_tolerance`` and ``text_y_tolerance``.
+
+      :arg bool use_layout: when ``true``, use the layout pipeline for table detection. Default ``true``.
+      :arg bool union: when ``true``, fuse layout tables with line-based tables.
+      :arg bool refine: when ``true``, attach span placements to detected tables.
 
       :rtype: List
-      :return: a list of `Table`
+      :return: a list of ``Table``
 
 
    .. method:: GetWidgetProperties(Annot annot, Widget widget)
