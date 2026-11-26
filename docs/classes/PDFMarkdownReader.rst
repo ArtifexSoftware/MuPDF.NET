@@ -6,7 +6,7 @@
 PDFMarkdownReader
 =======================
 
-A LlamaIndex-compatible reader. Create one with :meth:`Utils.LlamaMarkdownReader`, then call :meth:`LoadData` to get one :class:`LlamaIndexDocument` per page.
+A LlamaIndex-compatible reader. Create one with :meth:`Utils.LlamaMarkdownReader`, then call :meth:`PDFMarkdownReader.LoadData` to get one :class:`LlamaIndexDocument` per page.
 
 
 ================================================ =======================================================
@@ -37,7 +37,7 @@ A LlamaIndex-compatible reader. Create one with :meth:`Utils.LlamaMarkdownReader
      :arg Dictionary<string, object> loadKwargs: optional arguments forwarded to the Markdown extractor.
 
      :rtype: List<LlamaIndexDocument>
-     :returns: one document per page. :attr:`LlamaIndexDocument.Text` is that page's Markdown. :attr:`LlamaIndexDocument.ExtraInfo` includes `page` (1-based), `total_pages`, `file_path`, and PDF metadata.
+     :returns: one document per page. :attr:`LlamaIndexDocument.Text` is that page's Markdown. :attr:`LlamaIndexDocument.ExtraInfo` includes ``page`` (1-based), ``total_pages``, ``file_path``, and PDF metadata.
 
 
 .. class:: LlamaIndexDocument
@@ -50,7 +50,7 @@ A LlamaIndex-compatible reader. Create one with :meth:`Utils.LlamaMarkdownReader
 
   .. attribute:: ExtraInfo
 
-     Page metadata (`page`, `total_pages`, `file_path`, and PDF metadata).
+     Page metadata (``page``, ``total_pages``, ``file_path``, and PDF metadata).
 
      :type: Dictionary<string, object>
 

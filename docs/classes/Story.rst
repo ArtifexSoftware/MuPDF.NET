@@ -19,8 +19,8 @@ Story
 :attr:`Story.Body`                          The story's underlying :htmlTag:`Body`
 :meth:`Story.Write`                         Places and draws Story to a DocumentWriter
 :meth:`Story.WriteStabilized`               Iterative layout of html content to a DocumentWriter
-:meth:`Story.WriteWithLinks`                Like `Write()` but also creates PDF links
-:meth:`Story.WriteStabilizedWithLinks`      Like `WriteStabilized()` but also creates PDF links
+:meth:`Story.WriteWithLinks`                Like :meth:`Story.Write` but also creates PDF links
+:meth:`Story.WriteStabilizedWithLinks`      Like :meth:`Story.WriteStabilized` but also creates PDF links
 :meth:`Story.Fit`                           Finds optimal rect that contains the story `this`
 :meth:`Story.FitScale`                      
 :meth:`Story.FitHeight`
@@ -54,9 +54,9 @@ Story
         the story is ready to be laid out and to be fed to a series of devices
         (typically devices provided by a :ref:`DocumentWriter` to produce new pages).
       * The next step is to place the story and write it out.
-        This can either be done directly, by looping around calling `Place()` and `Draw()`,
+        This can either be done directly, by looping around calling :meth:`Story.Place` and :meth:`Story.Draw`,
         or alternatively,
-        the looping can handled for you using the `Write()` or `WriteStabilized()` methods.
+        the looping can handled for you using the :meth:`Story.Write` or :meth:`Story.WriteStabilized` methods.
         Which method you choose is largely a matter of taste.
         
         * To work in the first of these styles, the following loop should be used:
@@ -82,13 +82,13 @@ Story
              This can conveniently be used for automatic generation of a Table of Contents,
              an index of images or the like.
           5. Next, draw that rectangle out to the device with the `Draw()` method.
-          6. If the most recent call to `Place()` indicated that all the story data had fitted,
+          6. If the most recent call to :meth:`Story.Place` indicated that all the story data had fitted,
              stop now.
           7. Otherwise, we can loop back.
              If there are more rectangles to be placed on the current device (page),
              we jump back to step 3 - if not, we jump back to step 1 to get a new device.
         * Alternatively, in the case where you are using a :ref:`DocumentWriter`,
-          the `Write()` or `WriteStabilized()` methods can be used.
+          the :meth:`Story.Write` or :meth:`Story.WriteStabilized` methods can be used.
           These handle all the looping for you,
           in exchange for being provided with callbacks that control the behaviour
           (notably a callback that enumerates the rectangles/pages to use).
@@ -217,30 +217,30 @@ Story
        
    .. method:: WriteWithLinks(RectFunction rectfn, Action<Position> positionFn: null, Action<int, Rect, DeviceWrapper, bool> pageFn: null)
 
-        Similar to `Write()` except that we don't have a `writer` arg
+        Similar to :meth:`Story.Write` except that we don't have a `writer` arg
         and we return a PDF `Document` in which links have been created
         for each internal html link.
 
    .. staticmethod:: WriteStabilizedWithLinks(ContentFunction contentfn, RectFunction rectfn, string userCss: null, int em=12, Action<Position> positionFn: null, Action<int, Rect, DeviceWrapper, bool> pageFn=null, Archive archive=null, bool addHeaderIds: true)
 
-        Similar to `WriteStabilized()` except that we don't have a `writer`
+        Similar to :meth:`Story.WriteStabilized` except that we don't have a `writer`
         arg and instead return a PDF `Document` in which links have been
         created for each internal html link.
     
    .. class:: Story.FitResult
     
-        The result from a `Story.Fit*()` method.
+        The result from :meth:`Story.Fit`, :meth:`Story.FitScale`, :meth:`Story.FitHeight`, or :meth:`Story.FitWidth`.
         
         Members:
         
         `BigEnough`:
             `true` if the fit succeeded.
         `Filled`:
-            From the last call to `Story.Place()`.
+            From the last call to :meth:`Story.Place`.
         `More`:
             `false` if the fit succeeded.
         `NumCalls`:
-            Number of calls made to `self.Place()`.
+            Number of calls made to :meth:`Story.Place`.
         `Parameter`:
             The successful parameter value, or the largest failing value.
         `Rect`:
@@ -252,15 +252,15 @@ Story
         
         Returns a `Story.FitResult` instance.
             
-        On success, the last call to `self.Place()` will have been with the
-        returned rectangle, so `self.Draw()` can be used directly.
+        On success, the last call to :meth:`Story.Place` will have been with the
+        returned rectangle, so :meth:`Story.Draw` can be used directly.
         
         :arg fn:
             A callable taking a floating point `parameter` and returning a
             `Rect()`. If the rect is empty, we assume the story will
-            not fit and do not call `self.Place()`.
+            not fit and do not call :meth:`Story.Place`.
 
-            Must guarantee that `self.Place()` behaves monotonically when
+            Must guarantee that :meth:`Story.Place` behaves monotonically when
             given rect `fn(parameter`) as `parameter` increases. This
             usually means that both width and height increase or stay
             unchanged as `parameter` increases.
@@ -392,6 +392,6 @@ The parameter passed to the `recorder` function is an object with the following 
 
 * `elpos.RectNum` (int) -- count of rectangles filled by the story so far.
 
-* `elpos.PageNum` (int) -- page number; only present when using `Story.Write*()` functions.
+* `elpos.PageNum` (int) -- page number; only present when using :meth:`Story.Write`, :meth:`Story.WriteStabilized`, :meth:`Story.WriteWithLinks`, or :meth:`Story.WriteStabilizedWithLinks`.
 
 .. include:: ../footer.rst

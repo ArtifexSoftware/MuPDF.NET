@@ -779,9 +779,9 @@ What happens if I delete a page referred to by bookmarks or hyperlinks?
 
     **Taking it further**
 
-    The page index is zero-based, so to delete page 10 of a document you would do the following `doc.DeletePage(9)`.
+    The page index is zero-based, so to delete page 10 of a document you would do the following :meth:`Document.DeletePage` with ``pno: 9``.
 
-    Similarly, `doc.DeletePages(from: 9, to: 14)` will delete pages 10 - 15 inclusive.
+    Similarly, :meth:`Document.DeletePages` with ``from: 9, to: 14`` will delete pages 10 - 15 inclusive.
 
 
     **API reference**
@@ -876,7 +876,7 @@ To select pages, do the following:
 
     Now let's prepare a PDF for double-sided printing (on a printer not directly supporting this):
 
-    The number of pages is given by `len(doc)` (equal to `doc.PageCount`).
+    The number of pages is given by :attr:`Document.PageCount`.
 
     This snippet creates the respective sub documents which can then be used to print the document:
 
@@ -1203,7 +1203,7 @@ The following snippet creates a new |PDF| and encrypts it with separate user and
 
     **Decrypting** will automatically happen on save as before when no encryption parameters are provided.
 
-    To **keep the encryption method** of a PDF save it using `encryption=PdfCrypt.PDF_ENCRYPT_KEEP`. If `doc.CanSaveIncrementally() == true`, an incremental save is also possible.
+    To **keep the encryption method** of a PDF, pass ``encryption: PdfCrypt.PDF_ENCRYPT_KEEP`` to :meth:`Document.Save`. If :meth:`Document.CanSaveIncrementally` is true, an incremental save is also possible.
 
     To **change the encryption method** specify the full range of options above (`encryption`, `owner_pw`, `user_pw`, `permissions`). An incremental save is **not possible** in this case.
 

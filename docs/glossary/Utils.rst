@@ -14,9 +14,9 @@ Yet others are handy, general-purpose utilities.
 ======================================================= ==============================================================
 **Function**                                            **Short Description**
 ======================================================= ==============================================================
-:meth:`Utils.ConversionHeader`                          Return header string for *get_text* methods
+:meth:`Utils.ConversionHeader`                          Return header string for GetText methods
 :meth:`Utils.sRGB2Rgb`                                  Convenience function returning a color (red, green, blue) for a given *sRGB* color integer
-:meth:`Utils.ConversionTrailer`                         Return trailer string for *get_text* methods
+:meth:`Utils.ConversionTrailer`                         Return trailer string for GetText methods
 :meth:`Utils.EMPTY_IRECT`                               Return the (standard) empty / invalid rectangle
 :meth:`Utils.EMPTY_QUAD`                                Return the (standard) empty / invalid quad
 :meth:`Utils.EMPTY_RECT`                                Return the (standard) empty / invalid rectangle
@@ -215,7 +215,7 @@ Yet others are handy, general-purpose utilities.
 
       .. note:: This function will only do the calculation -- it won't insert font nor text.
 
-      .. note:: The :ref:`Font` class offers a similar method, :meth:`Font.text_length`, which supports Base-14 fonts and any font with a character map (CMap, Type 0 fonts).
+      .. note:: The :ref:`Font` class offers a similar method, :meth:`Font.TextLength`, which supports Base-14 fonts and any font with a character map (CMap, Type 0 fonts).
 
       .. warning:: If you use this function to determine the required rectangle width for the (:ref:`Page` or :ref:`Shape`) *InsertTextbox* methods, be aware that they calculate on a **by-character level**.
 
@@ -344,7 +344,7 @@ Yet others are handy, general-purpose utilities.
 
    .. method:: EMPTY_IRECT()
 
-      Return the "standard" empty and invalid rectangle `Rect(2147483520.0, 2147483520.0, -2147483648.0, -2147483648.0)` resp. quad. Its top-left and bottom-right point values are reversed compared to the infinite rectangle. It will e.g. be used to indicate empty bboxes in `page.get_text("dict")` dictionaries. There are however infinitely many empty or invalid rectangles.
+      Return the "standard" empty and invalid rectangle `Rect(2147483520.0, 2147483520.0, -2147483648.0, -2147483648.0)` resp. quad. Its top-left and bottom-right point values are reversed compared to the infinite rectangle. It will e.g. be used to indicate empty bboxes in :meth:`Page.GetText` ``"dict"`` dictionaries. There are however infinitely many empty or invalid rectangles.
 
 
    .. method:: CalcImageMatrix(int width, int height, Rect tr, float rotate, bool keep)
@@ -359,6 +359,58 @@ Yet others are handy, general-purpose utilities.
       
       :returns: `Matrix`
 
+
+
+   .. method:: MakeAnnotDA(PdfAnnot annot, int nCol, float[] col, string fontName, float fontSize)
+
+      Write the annotation default appearance (``/DA``) from color, font name, and font size.
+
+      :arg PdfAnnot annot: the annotation.
+      :arg int nCol: number of color components (0, 1, 3, or 4).
+      :arg float[] col: the color values.
+      :arg string fontName: font name used in the ``/DA`` string.
+      :arg float fontSize: font size used in the ``/DA`` string.
+
+
+   .. method:: AddAnnotId(PdfAnnot annot, string stem)
+
+      Add a unique ``/NM`` key to an annotation or widget.
+
+      :arg PdfAnnot annot: the annotation.
+      :arg string stem: prefix for the generated name.
+
+
+   .. method:: AddOcObject(PdfDocument pdf, PdfObj reference, int xref)
+
+      Add an optional-content object reference to a dictionary.
+
+      :arg PdfDocument pdf: the PDF document.
+      :arg PdfObj reference: the dictionary to update.
+      :arg int xref: xref of the OCG / OCMD.
+
+
+   .. method:: BinFromBuffer(FzBuffer buffer)
+
+      Copy an ``FzBuffer`` into a ``byte[]``.
+
+      :arg FzBuffer buffer: source buffer.
+      :rtype: ``byte[]``
+
+
+   .. method:: BufferFromBytes(byte[] data)
+
+      Make an ``FzBuffer`` from a ``byte[]``.
+
+      :arg byte[] data: source bytes.
+      :rtype: ``FzBuffer``
+
+
+   .. method:: CompressBuffer(FzBuffer inbuffer)
+
+      Compress an ``FzBuffer`` into a new buffer.
+
+      :arg FzBuffer inbuffer: source buffer.
+      :rtype: ``FzBuffer``
 
 
    .. method:: ColorCount(FzPixmap pm, dynamic clip)

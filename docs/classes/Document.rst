@@ -250,7 +250,7 @@ This class represents a document. It can be constructed from a file or from memo
 
     If `xref` represents an image or form XObject, set or remove the cross reference number `oc` of an optional contents object.
 
-    :arg int xref: the :data:`xref` of an image or form xobject [#f5]_. Valid such cross reference numbers are returned by :meth:`Document.GetPageImages`, resp. :meth:`Document.GetPageXobjects`. For invalid numbers, an exception is raised.
+    :arg int xref: the :data:`xref` of an image or form xobject [#f5]_. Valid such cross reference numbers are returned by :meth:`Document.GetPageImages`, resp. :meth:`Document.GetPageXObjects`. For invalid numbers, an exception is raised.
     :arg int ocxref: the :data:`xref` number of an :data:`OCG` / :data:`OCMD`. If not zero, an invalid reference raises an exception. If zero, any OC reference is removed.
 
 
@@ -537,6 +537,16 @@ This class represents a document. It can be constructed from a file or from memo
     :rtype: int
 
 
+  .. method:: GetLocationFromPageNumber(int pno)
+  .. method:: LocationFromPageNumber(int pno)
+
+    Convert a 0-based page number to ``(chapter, page)``.
+
+    :arg int pno: page number, 0-based.
+
+    :rtype: ``(int chapter, int page)``
+
+
 
 
 
@@ -806,7 +816,7 @@ This class represents a document. It can be constructed from a file or from memo
       - "(...)" for ASCII-only text. Reserved PDF characters must be backslash-escaped and non-ASCII characters must be provided as 3-digit backslash-escaped octals -- including leading zeros. Example: 12 = 0x0C must be encoded as `\014`.
       - "<...>" for hex-encoded text. Every character must be represented by two hex-digits (lower or upper case).
 
-      - If in doubt, we **strongly recommend** to use :meth:`GetPdfStr`! This function automatically generates the right brackets, escapes, and overall format.
+      - If in doubt, we **strongly recommend** to use :meth:`Utils.GetPdfString`! This function automatically generates the right brackets, escapes, and overall format.
 
   .. method:: GetPagePixmap(int pno, Matrix matrix: IdentityMatrix, int dpi: 0, string colorSpace: null, Rect clip: null, bool alpha: false, bool annots: true)
 
@@ -857,7 +867,7 @@ This class represents a document. It can be constructed from a file or from memo
           * **Name** (*string*) is the symbolic name by which the image is referenced
           * **Filter** (*string*) is the decode filter of the image (:ref:`AdobeManual`, pp. 22).
 
-    .. note:: In general, this is not the list of images that are **actually displayed**. This method only parses several PDF objects to collect references to embedded images. It does not analyse the page's :data:`contents`, where all the actual image display commands are defined. To get this information, please use :meth:`Page.get_image_info`. Also have a look at the discussion in section :ref:`textpagedict`.
+    .. note:: In general, this is not the list of images that are **actually displayed**. This method only parses several PDF objects to collect references to embedded images. It does not analyse the page's :data:`contents`, where all the actual image display commands are defined. To get this information, please use :meth:`Page.GetImageInfo`. Also have a look at the discussion in section :ref:`textpagedict`.
 
 
   .. method:: GetPageFonts(int pno, bool full: false)
@@ -1275,7 +1285,7 @@ This class represents a document. It can be constructed from a file or from memo
     :arg int deflateImages: Deflate (compress) uncompressed image streams [#f4]_.
     :arg int deflateFonts: Deflate (compress) uncompressed fontFile streams [#f4]_.
  
-    :arg int incremental: Only save changes to the PDF. Excludes "garbage" and "linear". Can only be used if *outfile* is a string or a `pathlib.Path` and equal to :attr:`Document.name`. Cannot be used for files that are decrypted or repaired and also in some other cases. To be sure, check :meth:`Document.CanSaveIncrementally`. If this is false, saving to a new file is required.
+    :arg int incremental: Only save changes to the PDF. Excludes "garbage" and "linear". Can only be used if *outfile* is a string or a `pathlib.Path` and equal to :attr:`Document.Name`. Cannot be used for files that are decrypted or repaired and also in some other cases. To be sure, check :meth:`Document.CanSaveIncrementally`. If this is false, saving to a new file is required.
 
     :arg int ascii: convert binary data to ASCII.
 
@@ -1319,7 +1329,7 @@ This class represents a document. It can be constructed from a file or from memo
       **File size reduction**
 
       1. Use the save options like `garbage: 3|4, deflate: true, useObjstms: true|1`. Do not touch the default values `expand: false|0, clean: false|0, incremental: false|0`.
-      This is a "lossless" file size reduction. There is a convenience version of this method with these values set by default, :meth:`Document.ez_save` -- please see below. 
+      This is a "lossless" file size reduction. There is a convenience version of this method with these values set by default, :meth:`Document.EzSave` -- please see below. 
 
       1. "Lossy" file size reduction in essence must give up something with respect to images, like (a) remove all images (b) replace images by their grayscale versions (c) reduce image resolutions.
 
@@ -1340,7 +1350,7 @@ This class represents a document. It can be constructed from a file or from memo
 
   .. method:: ToBytes(int garbage: 0, int clean: 0, int deflate: 0, int deflateImages: 0, int deflateFonts: 0, int ascii: 0, int expand: 0, int linear: 0, int pretty: 0, int noNewId: 0, int encryption: PDF_ENCRYPT_NONE, int permissions: -1, string ownerPW: null, string userPW: null, int useObjstms: 0)
 
-    PDF only: Writes the **current content of the document** to a bytes object instead of to a file. Obviously, you should be wary about memory requirements. The meanings of the parameters exactly equal those in :meth:`save`.
+    PDF only: Writes the **current content of the document** to a bytes object instead of to a file. Obviously, you should be wary about memory requirements. The meanings of the parameters exactly equal those in :meth:`Document.Save`.
 
     :rtype: byte[]
     :returns: a bytes object containing the complete document.
@@ -2057,7 +2067,7 @@ This class represents a document. It can be constructed from a file or from memo
 
     :type: Dictionary<string, string>
 
-  .. Attribute:: Name
+  .. attribute:: Name
 
     Contains the *filename* or *filetype* value with which *Document* was created.
 

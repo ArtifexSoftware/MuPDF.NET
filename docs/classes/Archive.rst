@@ -49,7 +49,7 @@ Archives are currently only used by :ref:`Story` objects to specify where to loo
 
       * Otherwise this parameter is optional. It can be used to simulate a folder name or a mount point, under which this sub-archive's elements can be found. For example this specification `Archive((data, "name"), "path")` means that `data` will be found using the element name `"path/name"`. Similar is true for other sub-archives: to retrieve members of a ZIP sub-archive, their names must be prefixed with `"path/"`. The main purpose of this parameter probably is to differentiate between duplicate names.
 
-      .. note:: If duplicate entry names exist in the archive, always the last entry with that name will be found / retrieved. During archive creation, or appending more data to an archive (see :meth:`Archive.add`) no check for duplicates will be made. Use the `path` parameter to prevent this from happening.
+      .. note:: If duplicate entry names exist in the archive, always the last entry with that name will be found / retrieved. During archive creation, or appending more data to an archive (see :meth:`Archive.Add`) no check for duplicates will be made. Use the `path` parameter to prevent this from happening.
 
    .. method:: Add(string content, string path)
    .. method:: Add(ZipArchive content, string path)

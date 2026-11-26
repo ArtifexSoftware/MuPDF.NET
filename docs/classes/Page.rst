@@ -316,7 +316,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
       :arg bool crossOut: add two diagonal lines to the annotation rectangle.
 
       :rtype: :ref:`Annot`
-      :returns: the created annotation. Its standard appearance looks like a red rectangle (no fill color), optionally showing two diagonal lines. Colors, line width, dashing, opacity and blend mode can now be set and applied via :meth:`Annot.update` like with other annotations.
+      :returns: the created annotation. Its standard appearance looks like a red rectangle (no fill color), optionally showing two diagonal lines. Colors, line width, dashing, opacity and blend mode can now be set and applied via :meth:`Annot.Update` like with other annotations.
 
       .. image:: ../images/img-redact.*
 
@@ -1209,16 +1209,16 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
       Retrieves the content of a page in a variety of formats. This is a wrapper for multiple :ref:`TextPage` methods by choosing the output option `opt` as follows:
 
-      * "text" -- :meth:`TextPage.extractTEXT`, default
-      * "blocks" -- :meth:`TextPage.extractBLOCKS`
-      * "words" -- :meth:`TextPage.extractWORDS`
-      * "html" -- :meth:`TextPage.extractHTML`
-      * "xhtml" -- :meth:`TextPage.extractXHTML`
-      * "xml" -- :meth:`TextPage.extractXML`
-      * "dict" -- :meth:`TextPage.extractDICT`
-      * "json" -- :meth:`TextPage.extractJSON`
-      * "rawdict" -- :meth:`TextPage.extractRAWDICT`
-      * "rawjson" -- :meth:`TextPage.extractRAWJSON`
+      * "text" -- :meth:`TextPage.ExtractText`, default
+      * "blocks" -- :meth:`TextPage.ExtractBlocks`
+      * "words" -- :meth:`TextPage.ExtractWords`
+      * "html" -- :meth:`TextPage.ExtractHtml`
+      * "xhtml" -- :meth:`TextPage.ExtractXHtml`
+      * "xml" -- :meth:`TextPage.ExtractXML`
+      * "dict" -- :meth:`TextPage.ExtractDict`
+      * "json" -- :meth:`TextPage.ExtractJSON`
+      * "rawdict" -- :meth:`TextPage.ExtractRAWDict`
+      * "rawjson" -- :meth:`TextPage.ExtractRawJSON`
 
       :arg str opt: A string indicating the requested format, one of the above. A mixture of upper and lower case is supported.
 
@@ -1328,7 +1328,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
       Width          Stroke line width. (see :ref:`Shape`).
       ============== ============================================================================
 
-      Key `"opacity"` has been replaced by the new keys `"fillOpacity"` and `"strokeOpacity"`. This is now compatible with the corresponding parameters of :meth:`Shape.finish`.
+      Key `"opacity"` has been replaced by the new keys `"fillOpacity"` and `"strokeOpacity"`. This is now compatible with the corresponding parameters of :meth:`Shape.Finish`.
 
 
       For paths other than groups or clips, key `"type"` takes one of the following values:
@@ -1748,9 +1748,9 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
       PDF only: change the visible part of the page.
 
-      :arg Rect r: the new visible area of the page. Note that this **must** be specified in **unrotated coordinates**, not empty, nor infinite and be completely contained in the :attr:`Page.mediabox`.
+      :arg Rect r: the new visible area of the page. Note that this **must** be specified in **unrotated coordinates**, not empty, nor infinite and be completely contained in the :attr:`Page.MediaBox`.
 
-      After execution **(if the page is not rotated)**, :attr:`Page.rect` will equal this rectangle, but be shifted to the top-left position (0, 0) if necessary.
+      After execution **(if the page is not rotated)**, :attr:`Page.Rect` will equal this rectangle, but be shifted to the top-left position (0, 0) if necessary.
 
       
    .. method:: SetArtBox(Rect r)
@@ -1819,7 +1819,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
       :type: :ref:`Rect`
 
-      .. note:: For most PDF documents and for **all other document types**, `page.Rect == page.CropBox == page.MediaBox` is true. However, for some PDFs the visible page is a true subset of :data:`mediabox`. Also, if the page is rotated, its `Page.rect` may not equal `Page.CropBox`. In these cases the above attributes help to correctly locate page elements.
+      .. note:: For most PDF documents and for **all other document types**, :attr:`Page.Rect`, :attr:`Page.CropBox` and :attr:`Page.MediaBox` are equal. However, for some PDFs the visible page is a true subset of :data:`mediabox`. Also, if the page is rotated, :attr:`Page.Rect` may not equal :attr:`Page.CropBox`. In these cases the above attributes help to correctly locate page elements.
 
    .. attribute:: TransformationMatrix
 

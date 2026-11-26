@@ -273,7 +273,7 @@ Have a look at the :ref:`FAQ` section to see some pixmap usage "at work".
 
       If copying from :data:`CS_GRAY` to :data:`CS_RGB`, the source gray-shade value will be put into each of the three rgb component bytes. If the other way round, *(r + g + b) / 3* will be taken as the gray-shade value of the target.
 
-      Between *irect* and the target pixmap's rectangle, an "intersection" is calculated at first. This takes into account the rectangle coordinates and the current attribute values :attr:`Pixmap.x` and :attr:`Pixmap.y` (which you are free to modify for this purpose via :meth:`Pixmap.SetOrigin`). Then the corresponding data of this intersection are copied. If the intersection is empty, nothing will happen.
+      Between *irect* and the target pixmap's rectangle, an "intersection" is calculated at first. This takes into account the rectangle coordinates and the current attribute values :attr:`Pixmap.X` and :attr:`Pixmap.Y` (which you are free to modify for this purpose via :meth:`Pixmap.SetOrigin`). Then the corresponding data of this intersection are copied. If the intersection is empty, nothing will happen.
 
       :arg source: source pixmap.
       :type source: :ref:`Pixmap`
@@ -424,7 +424,7 @@ Have a look at the :ref:`FAQ` section to see some pixmap usage "at work".
 
    .. attribute:: Stride
 
-      Contains the length of one row of image data in :attr:`Pixmap.samples`. This is primarily used for calculation purposes. The following expressions are true:
+      Contains the length of one row of image data in :attr:`Pixmap.SAMPLES`. This is primarily used for calculation purposes. The following expressions are true:
 
       * `len(samples) == height * stride`
       * `width * n == stride`

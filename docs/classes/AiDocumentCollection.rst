@@ -8,7 +8,7 @@ AiDocumentCollection
 
 The result of :meth:`Utils.LoadAiAsync`: PDFs that have been chunked, embedded, and indexed for AI / RAG.
 
-Use :meth:`AskAsync` to answer a question from retrieved excerpts, :meth:`SummarizeAsync` to summarize one source file, and :meth:`SearchAsync` to rank chunks without calling a chat model.
+Use :meth:`AiDocumentCollection.AskAsync` to answer a question from retrieved excerpts, :meth:`AiDocumentCollection.SummarizeAsync` to summarize one source file, and :meth:`AiDocumentCollection.SearchAsync` to rank chunks without calling a chat model.
 
 
 ================================================ =======================================================

@@ -25,7 +25,7 @@ There is a parent-child relationship between an annotation and its page. If the 
 :meth:`Annot.GetText`              Extract annotation text
 :meth:`Annot.GetTextbox`           Extract annotation text
 :meth:`Annot.GetTextPage`          Extract text page 
-:meth:`Annot.SetApnBbox`           Set annotation appearance bbox
+:meth:`Annot.SetApnBBox`           Set annotation appearance bbox
 :meth:`Annot.SetApnMatrix`         Set annotation appearance matrix
 :meth:`Annot.SetBorder`            Set annotation's border properties
 :meth:`Annot.SetBlendMode`         Set annotation's blend mode
@@ -328,9 +328,10 @@ There is a parent-child relationship between an annotation and its page. If the 
 
       :type: :ref:`Matrix`
 
+   .. method:: SetApnBBox(Rect bbox)
    .. method:: SetApnBbox(Rect bbox)
 
-      Set the annotation appearance bbox. Legacy spelling of `SetApnBBox`.
+      Set the annotation appearance bbox.
 
       :arg Rect bbox: the new appearance rectangle.
 

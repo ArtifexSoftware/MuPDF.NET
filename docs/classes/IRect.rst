@@ -88,7 +88,7 @@ IRect
 
    .. method:: ToRect(rect)
 
-      Compute the matrix which transforms this rectangle to a given one. See :meth:`MuPDFRect.ToRect`.
+      Compute the matrix which transforms this rectangle to a given one. See :meth:`Rect.ToRect`.
 
       :arg Rect rect: the target rectangle. Must not be empty or infinite.
       
