@@ -248,11 +248,36 @@ API
     :returns: string of the JSON representation or `null` if `outputPath` is specified.
 
 
+.. method:: MuPDFOffice.Export(string inputPath, string? outputPath = null, string? suffix = null) -> object | null
+
+    Convert an Office document to JSON, Markdown or PDF. :meth:`MuPDFOffice.ToJson`, :meth:`MuPDFOffice.ToMarkdown` and :meth:`MuPDFOffice.ToPdf` call this method.
+
+    :arg string inputPath: the input file path (doc, docx, ppt, pptx, xls, xlsx, hwp, hwpx, and related types).
+    :arg string? outputPath: the path to the output file. If `null`, *suffix* must be set and the method returns the converted content.
+    :arg string? suffix: `".json"`, `".md"` or `".pdf"`. If `null`, the suffix of *outputPath* is used.
+
+    :returns: Markdown/JSON as ``string``, or PDF as ``byte[]``, when *outputPath* is `null`. Returns `null` when *outputPath* is set. :meth:`MuPDFOffice.Unlock` must have been called first.
+
+
 .. method:: MuPDFOffice.GetFontPath() -> IReadOnlyList<string>
 
     Retrieves the list of font paths currently recognized by |MuPDF.NET Office|.
 
     :returns: an array ``IReadOnlyList<string>`` representing the font paths.
+
+
+.. attribute:: MuPDFOffice.Version
+
+    Package version string.
+
+    :type: string
+
+
+.. attribute:: MuPDFOffice.LastFlags
+
+    Flags from the last successful :meth:`MuPDFOffice.Unlock`, or 0 for restricted mode.
+
+    :type: int
 
 
 .. attribute:: MuPDFOffice.IsUnlocked

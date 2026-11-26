@@ -85,6 +85,7 @@ Yet others are handy, general-purpose utilities.
 :meth:`Utils.LlamaMarkdownReader`                       LlamaIndex-compatible PDF markdown reader
 :meth:`Utils.GetKeyValues`                              Extract form fields and their values
 :meth:`Utils.MarkdownToPdf`                             Render a Markdown file to PDF
+:meth:`Utils.ToMarkdown`                                Convert a document or path to Markdown
 :meth:`Utils.LoadAiAsync`                               Load, chunk, embed, and index PDFs for AI/RAG
 :meth:`Utils.CreateDevelopmentAiOptions`                In-memory AI pipeline options for samples 
 :attr:`Utils.TESSDATA_PREFIX`                           Tesseract language-data folder, from the environment
@@ -863,6 +864,41 @@ Yet others are handy, general-purpose utilities.
 
       :rtype: `Dictionary<string, Dictionary<string, object>>`
       :returns: the same structure as :meth:`Document.GetKeyValues`.
+
+
+   .. method:: ToMarkdown(Document doc, bool header: true, bool footer: true, List<int> pages: null, bool writeImages: false, bool embedImages: false, string imagePath: "", string imageFormat: "png", string filename: "", bool forceText: true, bool pageChunks: false, bool pageSeparators: false, int dpi: 150, int ocrDpi: 150, float pageWidth: 612, float? pageHeight: null, bool ignoreCode: false, bool showProgress: false, bool useOcr: true, string ocrLanguage: "eng", bool forceOcr: false, OcrPageFunction ocrFunction: null, string tableOutput: "markdown", float? edgeThreshold: null)
+              ToMarkdown(string path, bool header: true, bool footer: true, List<int> pages: null, bool writeImages: false, bool embedImages: false, string imagePath: "", string imageFormat: "png", string filename: "", bool forceText: true, bool pageChunks: false, bool pageSeparators: false, int dpi: 150, int ocrDpi: 150, float pageWidth: 612, float? pageHeight: null, bool ignoreCode: false, bool showProgress: false, bool useOcr: true, string ocrLanguage: "eng", bool forceOcr: false, OcrPageFunction ocrFunction: null, string tableOutput: "markdown", float? edgeThreshold: null)
+
+      Convert a document, or a supported file path, to Markdown. Same options as :meth:`Document.ToMarkdown`.
+
+      :arg Document doc: an open document.
+      :arg string path: path of a supported document. The file is opened, converted, and closed.
+      :arg bool header: *(layout mode)* include page-header regions in the output.
+      :arg bool footer: *(layout mode)* include page-footer regions in the output.
+      :arg List<int> pages: 0-based page numbers to process. `null` processes all pages.
+      :arg bool writeImages: write images to files in ``imagePath`` and insert Markdown image references.
+      :arg bool embedImages: embed images in the Markdown as base64 data. Cannot be combined with ``writeImages``.
+      :arg string imagePath: folder for image files written when ``writeImages`` is `true`.
+      :arg string imageFormat: image file format, for example `"png"` or `"jpg"`.
+      :arg string filename: base file name for written images.
+      :arg bool forceText: also extract text that sits on top of image regions.
+      :arg bool pageChunks: return a JSON string with one entry per page instead of a single Markdown string.
+      :arg bool pageSeparators: insert separator lines between pages.
+      :arg int dpi: resolution of extracted images.
+      :arg int ocrDpi: *(layout mode)* resolution at which pages are rendered for OCR.
+      :arg float pageWidth: *(legacy mode)* page width used to lay out reflowable documents.
+      :arg float? pageHeight: *(legacy mode)* page height for reflowable documents.
+      :arg bool ignoreCode: do not format monospaced text as code blocks.
+      :arg bool showProgress: print a progress indicator while converting.
+      :arg bool useOcr: *(layout mode)* run OCR on pages where it is likely to help.
+      :arg string ocrLanguage: *(layout mode)* Tesseract language code(s).
+      :arg bool forceOcr: *(layout mode)* OCR every page.
+      :arg OcrPageFunction ocrFunction: *(layout mode)* custom OCR callback. `null` uses the built-in OCR engine.
+      :arg string tableOutput: `"markdown"` (default) or `"html"` table rendering.
+      :arg float? edgeThreshold: *(layout mode)* optional edge threshold passed to the layout analysis.
+
+      :rtype: `string`
+      :returns: the Markdown text, or a JSON string of page chunks when *pageChunks* is `true`.
 
 
    .. method:: MarkdownToPdf(string mdPath, string userCss: null, Rect pageRect: default, float[] margins: null, Archive archive: null, string outputPath: null)

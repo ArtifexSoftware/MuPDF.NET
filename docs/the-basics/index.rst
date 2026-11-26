@@ -720,7 +720,7 @@ To embed a file to a document, do the following:
     byte[] embedded_data = embedded_doc.Write(); // get the document byte data as a buffer
 
     // embed with the file name and the data
-    doc.AddEmbfile("my-embedded_file.pdf", embedded_data);
+    doc.AddEmbeddedFile("my-embedded_file.pdf", embedded_data);
 
     doc.Save("document-with-embed.pdf"); // save the document
 
@@ -728,12 +728,12 @@ To embed a file to a document, do the following:
 
     **Taking it further**
 
-    As with :ref:`attaching files<The_Basics_Attaching_Files>`, when adding the file with :meth:`Document.AddEmbfile` note that the first parameter for the `filename` should include the actual file extension.
+    As with :ref:`attaching files<The_Basics_Attaching_Files>`, when adding the file with :meth:`Document.AddEmbeddedFile` note that the first parameter for the `filename` should include the actual file extension.
 
     **API reference**
 
     - :meth:`Document.Write`
-    - :meth:`Document.AddEmbfile`
+    - :meth:`Document.AddEmbeddedFile`
 
 
 ----------

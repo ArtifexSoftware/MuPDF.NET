@@ -31,7 +31,7 @@ Have a look at the :ref:`FAQ` section to see some pixmap usage "at work".
 :meth:`Pixmap.ColorTopUsage`     Determine share of most used color
 :meth:`Pixmap.Copy`              Copy parts of another pixmap
 :meth:`Pixmap.GammaWith`         Apply a gamma factor to the pixmap
-:meth:`Pixmap.InvertIrect`       Invert the pixels of a given area
+:meth:`Pixmap.InvertIRect`       Invert the pixels of a given area
 :meth:`Pixmap.SavePdfOCR`        Save the pixmap as an OCRed 1-page PDF
 :meth:`Pixmap.PdfOCR2Bytes`      Save the pixmap as an OCRed 1-page PDF
 :meth:`Pixmap.GetPixel`          Return the value of a pixel
@@ -50,7 +50,7 @@ Have a look at the :ref:`FAQ` section to see some pixmap usage "at work".
 :attr:`Pixmap.Alpha`             Transparency indicator
 :attr:`Pixmap.ColorSpace`        Pixmap's :ref:`Colorspace`
 :attr:`Pixmap.Digest`            MD5 hashcode of the pixmap
-:attr:`Pixmap.IsMonoChrome`      Check if only black and white occur
+:attr:`Pixmap.IsMonochrome`      Check if only black and white occur
 :attr:`Pixmap.IsUniColor`        Check if only one color occurs
 :attr:`Pixmap.IRect`             :ref:`IRect` of the pixmap
 :attr:`Pixmap.N`                 Bytes per pixel
@@ -258,7 +258,7 @@ Have a look at the :ref:`FAQ` section to see some pixmap usage "at work".
       :arg list,tuple matte: preblending background color.
 
 
-   .. method:: InvertIrect(IRect bbox: null)
+   .. method:: InvertIRect(IRect bbox: null)
 
       Invert the color of all pixels in :ref:`IRect` *irect*. Will have no effect if colorspace is *null*.
 
@@ -429,7 +429,7 @@ Have a look at the :ref:`FAQ` section to see some pixmap usage "at work".
       :type: int
 
 
-   .. attribute:: IsMonoChrome
+   .. attribute:: IsMonochrome
 
       Is `true` for a gray pixmap which only has the colors black and white.
 
@@ -569,7 +569,7 @@ psd        gray, rgb, cmyk yes       .psd           Adobe Photoshop Document
 
 .. rubric:: Footnotes
 
-.. [#f1] If you need a **vector image** from the SVG, you must first convert it to a PDF. Try :meth:`Document.Convert2Pdf`.
+.. [#f1] If you need a **vector image** from the SVG, you must first convert it to a PDF. Try :meth:`Document.ConvertToPdf`.
 
 .. [#f2] To also set the alpha property, add an additional step to this method by dropping or adding an alpha channel to the result.
 

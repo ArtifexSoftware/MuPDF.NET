@@ -68,6 +68,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
 :meth:`Page.GetBboxlog`            List of rectangles that envelop text, drawing or image objects
 :meth:`Page.GetContents`           PDF only: return a list of content :data:`xref` numbers
 :meth:`Page.GetDisplayList`        Create the page's display list
+:meth:`Page.FindTables`            Detect tables and return a :class:`TableFinder`
 :meth:`Page.GetTables`             Extract the page's tables as a list
 :meth:`Page.GetTextBlocks`         Extract text blocks as a list
 :meth:`Page.GetTextWords`          Extract text words as a list
@@ -155,6 +156,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
 :attr:`Page.TransformationMatrix`  PDF only: translate between PDF and MuPDF space
 :attr:`Page.Xref`                  PDF only: page :data:`xref`
 :attr:`Page.IsWrapped`             PDF only: check whether contents wrapping is present
+:attr:`Page.TableSettings`         Default settings for :meth:`Page.FindTables`
 ================================== =======================================================
 
 **Class API**
@@ -580,6 +582,31 @@ In a nutshell, this is what you can do with MuPDF.NET:
       :rtype: :ref:`DisplayList`
       :returns: the display list of the page.
 
+   .. method:: FindTables(TableSettings settings: null, IList paths: null, IList addLines: null, IList<Rect> addBoxes: null, bool useLayout: true, bool union: false, bool refine: false)
+
+      Find tables on the page and return a :class:`TableFinder`. Typically, the default :class:`TableSettings` is sufficient. Adjustments should ever only be needed in corner case situations.
+
+      :arg TableSettings settings: table-finder settings. ``null`` uses defaults (``VerticalStrategy`` / ``HorizontalStrategy`` ``"lines"``). See :class:`TableSettings`.
+      :arg IList paths: optional vector graphics (``IList<Dictionary<string, object>>``) in the format returned by :meth:`Page.GetDrawings`. When this is provided, the method does not extract vector graphics itself.
+      :arg IList addLines: extra vector lines (``IList<(Point p1, Point p2)>``) considered during detection.
+      :arg IList<Rect> addBoxes: extra vector boxes considered during detection.
+      :arg bool useLayout: when ``true``, use the layout pipeline for table detection. Default ``true``.
+      :arg bool union: when ``true``, fuse layout tables with line-based tables.
+      :arg bool refine: when ``true``, attach span placements to detected tables.
+
+      :rtype: :class:`TableFinder`
+      :return: a :class:`TableFinder`. Use :attr:`TableFinder.Tables` or the indexer to get each :class:`Table`.
+
+      .. code-block:: cs
+
+         TableFinder finder = page.FindTables();
+         foreach (Table table in finder.Tables)
+         {
+             Console.WriteLine(table.ToMarkdown());
+         }
+
+      The page also has :attr:`Page.TableSettings` for the default settings used when *settings* is ``null``.
+
    .. method:: GetTables(Rect clip: null, string vertical_strategy: "lines", string horizontal_strategy: "lines", List<Edge> vertical_lines: null, List<Edge> horizontal_lines: null, float snap_tolerance: TableFlags.TABLE_DEFAULT_SNAP_TOLERANCE, float snap_x_tolerance: 0.0f, float snap_y_tolerance: 0.0f, float join_tolerance: TableFlags.TABLE_DEFAULT_JOIN_TOLERANCE, float join_x_tolerance: 0.0f, float join_y_tolerance: 0.0f, float edge_min_length: 3.0f, float min_words_vertical: TableFlags.TABLE_DEFAULT_MIN_WORDS_VERTICAL, float min_words_horizontal: TableFlags.TABLE_DEFAULT_MIN_WORDS_HORIZONTAL, float intersection_tolerance: 3.0f, float intersection_x_tolerance: 0.0f, float intersection_y_tolerance: 0.0f, float text_tolerance: 3.0f, float text_x_tolerance: 3.0f, float text_y_tolerance: 3.0f, string strategy: null, List<Line> add_lines: null, bool use_layout: true, bool union: false, bool refine: false)
 
       Find tables on the page and return a list with related information. Typically, the default values of the many parameters will be sufficient. Adjustments should ever only be needed in corner case situations.
@@ -621,7 +648,9 @@ In a nutshell, this is what you can do with MuPDF.NET:
       :arg bool refine: when ``true``, attach span placements to detected tables.
 
       :rtype: List
-      :return: a list of ``Table``
+      :return: a list of :class:`Table`
+
+      For the PascalCase settings object API, use :meth:`Page.FindTables` with :class:`TableSettings`.
    
    .. method:: GetTextBlocks(Rect clip: null, int flags: null, TextPage textpage: null, bool sort: false)
 
@@ -1095,7 +1124,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
         Positive values rotate anti-clockwise.
         If you need a rotation by an arbitrary angle,
         consider converting the image to a PDF
-        (:meth:`Document.Convert2Pdf`)
+        (:meth:`Document.ConvertToPdf`)
         first and then use :meth:`Page.ShowPdfPage` instead.
       :arg byte[] stream:
         image in memory (all formats supported by MuPDF -- see :ref:`ImageFiles`).
@@ -1147,7 +1176,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
          6.
            Another efficient way to display the same image on multiple
            pages is another method: :meth:`ShowPdfPage`. Consult
-           :meth:`Document.Convert2Pdf` for how to obtain intermediary PDFs
+           :meth:`Document.ConvertToPdf` for how to obtain intermediary PDFs
            usable for that method.
 
    
@@ -1458,7 +1487,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
    .. method:: GetXObjects()
 
-      PDF only: Return a list of Form XObjects referenced by the page. Wrapper for :meth:`Document.GetPageXObjects`.
+      PDF only: Return a list of Form XObjects referenced by the page. Wrapper for :meth:`Document.GetPageXobjects` / :meth:`GetPageXObjects <Document.GetPageXobjects>`.
 
 
    .. index::
@@ -1900,6 +1929,12 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
       :type: int
    
+   .. attribute:: TableSettings
+
+      Default :class:`TableSettings` used by :meth:`Page.FindTables` when *settings* is ``null``.
+
+      :type: :class:`TableSettings`
+
    .. attribute:: IsWrapped
 
       Check whether contents wrapping is present

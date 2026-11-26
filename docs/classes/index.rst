@@ -35,6 +35,9 @@ Classes
    Rect.rst
    Shape.rst
    Story.rst
+   Table.rst
+   TableFinder.rst
+   TableSettings.rst
    TextPage.rst
    TextWriter.rst
    .. tools.rst
