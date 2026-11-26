@@ -234,15 +234,16 @@ Yet others are handy, general-purpose utilities.
       :returns: PDF-compatible string enclosed in either *()* or *<>*.
 
 
-   .. method:: GetImageProfile(byte[] stream)
+   .. method:: GetImageProfile(byte[] image, int keepImage: 0)
 
       Show important properties of an image provided as a memory area. Its main purpose is to avoid using other libraries just to determine them.
 
-      :arg byte[] stream: either an image in memory or an **opened** file. An image in memory may be any of the formats `bytes`.
+      :arg byte[] image: image bytes in memory (any format MuPDF can decode).
+      :arg int keepImage: when non-zero, include the native image handle in the result. Default 0.
 
       :rtype: `ImageInfo`
       :returns:
-         No exception is ever raised. In case of an error, `None` is returned. Otherwise, there are the following items::
+         No exception is ever raised. In case of an error, ``null`` is returned. Otherwise, there are the following items::
 
          There is the following relation to **Exif** information encoded in `orientation`, and correspondingly in the `transform` matrix-like (quoted from MuPDF documentation, *ccw* = counter-clockwise):
 
@@ -289,7 +290,7 @@ Yet others are handy, general-purpose utilities.
 
       Compute the quadrilateral of a text span extracted via options "dict" or "rawdict" of :meth:`Page.GetText`.
 
-      :arg (float, float) lineDir: `line["dir"]` of the owning line.  Use `None` for a span from :meth:`Page.GetTextTrace`.
+      :arg (float, float) lineDir: ``(cos, sin)`` direction of the owning line.
       :arg Span span: the span.
       :returns: the :ref:`Quad` of the span, usable for text marker annotations ('Highlight', etc.).
 
@@ -298,7 +299,7 @@ Yet others are handy, general-purpose utilities.
 
       Compute the quadrilateral of a text character extracted via option "rawdict" of :meth:`Page.GetText`.
 
-      :arg (float, float) lineDir: `line["dir"]` of the owning line. Use `None` for a span from :meth:`Page.GetTextTrace`.
+      :arg (float, float) lineDir: ``(cos, sin)`` direction of the owning line.
       :arg Span span: the span.
       :arg Char char: the character.
       :returns: the :ref:`Quad` of the character, usable for text marker annotations ('Highlight', etc.).

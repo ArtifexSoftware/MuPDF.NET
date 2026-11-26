@@ -1047,7 +1047,7 @@ This class represents a document. It can be constructed from a file or from memo
     :arg string headerFooterMode: `"exclude"` (default) drops page headers and footers, `"include"` keeps them, and `"auto"` drops only headers and footers that repeat across pages.
     :arg string sentenceSplitter: `"default"` or `"multilingual"`.
     :arg object tokenizer: a `Func<string, int>` that returns the token count of a string. `null` (or any other type) estimates tokens as characters / 4.
-    :arg Dictionary<string,float> weights: overrides for the boundary-scoring weights. Keys are `w_box`, `w_class`, `w_page`, `w_gap`, `w_hgap`, `w_font`, `w_head`, `w_foot`, `w_list`, `w_table` and `w_caption`.
+    :arg Dictionary<string,float> weights: overrides for the boundary-scoring weights. Keys are ``w_box``, ``w_class``, ``w_page``, ``w_gap``, ``w_hgap``, ``w_font``, ``w_head``, ``w_foot``, ``w_list``, ``w_table`` and ``w_caption``.
     :arg List<int> pages: 0-based page numbers to process. `null` processes all pages.
     :arg string tableOutput: `"markdown"` (default) or `"html"` table rendering.
     :arg bool extractImages: include the image bytes of figures in the result (see :attr:`ChunkedDocument.Figures`).
@@ -1196,7 +1196,7 @@ This class represents a document. It can be constructed from a file or from memo
 
     :arg toc:
 
-        **All bookmark entries** that should form the new table of contents. To completely remove the table of contents specify an empty sequence or None. Each item must have the following format.
+        **All bookmark entries** that should form the new table of contents. To completely remove the table of contents specify an empty sequence or ``null``. Each item must have the following format.
 
         * [Level, Title, Page [, Dest]] where
 
@@ -1208,7 +1208,7 @@ This class represents a document. It can be constructed from a file or from memo
 
           - **Dest** (optional) is a dictionary or a number. If a number, it will be interpreted as the desired height (in points) this entry should point to on the page. Use a dictionary (like the one given as output by `GetToc(false)`) for a detailed control of the bookmark's properties, see :meth:`Document.GetToc` for a description.
 
-    :arg int collapse: controls the hierarchy level beyond which outline entries should initially show up collapsed. The default 1 will hence only display level 1, higher levels must be unfolded using the PDF viewer. To unfold everything, specify either a large integer, 0 or None.
+    :arg int collapse: controls the hierarchy level beyond which outline entries should initially show up collapsed. The default 1 will hence only display level 1, higher levels must be unfolded using the PDF viewer. To unfold everything, specify either a large integer or 0.
 
     :rtype: int
     :returns: the number of inserted, resp. deleted items.
@@ -1229,18 +1229,18 @@ This class represents a document. It can be constructed from a file or from memo
     :arg int idx: the index of the item in list :meth:`Document.GetToc`.
 
 
-  .. method:: SetTocItem(int idx, Link dest, int kind: 0, int pno: 0, string uri: null, string title: null, Point to: null, string filename: null, float zoom: 0)
+  .. method:: SetTocItem(int idx, Dictionary<string, object> destDict: null, int? kind: null, int? pno: null, string uri: null, string title: null, Point to: null, string filename: null, float zoom: 0)
 
     PDF only: Changes the TOC item identified by its index. Change the item **title**, **destination**, **appearance** (color, bold, italic) or collapsing sub-items -- or to remove the item altogether.
 
     Use this method if you need specific changes for selected entries only and want to avoid replacing the complete TOC. This is beneficial especially when dealing with large table of contents.
 
     :arg int idx: the index of the entry in the list created by :meth:`Document.GetToc`.
-    :arg Link dest: the new destination. A dictionary like the last entry of an item in `doc.GetToc(false)`. Using this as a template is recommended. When given, **all other parameters are ignored** -- except title.
-    :arg int kind: the link kind, see :ref:`LinkDest Kinds`. If :data:`LINK_NONE`, then all remaining parameter will be ignored, and the TOC item will be removed -- same as :meth:`Document.DeleteTocItem`. If None, then only the title is modified and the remaining parameters are ignored. All other values will lead to making a new destination dictionary using the subsequent arguments.
-    :arg int pno: the 1-based page number, i.e. a value 1 <= pno <= doc.PageCount. Required for LINK_GOTO.
+    :arg destDict: the new destination. A dictionary like the last entry of an item in ``doc.GetToc(simple: false)``. Using this as a template is recommended. When given, **all other parameters are ignored** -- except title.
+    :arg int? kind: the link kind, see :ref:`LinkDest Kinds`. If :data:`LINK_NONE`, then all remaining parameter will be ignored, and the TOC item will be removed -- same as :meth:`Document.DeleteTocItem`. If ``null``, then only the title is modified and the remaining parameters are ignored. All other values will lead to making a new destination dictionary using the subsequent arguments.
+    :arg int? pno: the 1-based page number, i.e. a value 1 <= pno <= doc.PageCount. Required for LINK_GOTO.
     :arg string uri: the URL text. Required for LINK_URI.
-    :arg string title: the desired new title. None if no change.
+    :arg string title: the desired new title. ``null`` if no change.
     :arg Point to: (optional) points to a coordinate on the target page. Relevant for LINK_GOTO. If omitted, a point near the page's top is chosen.
     :arg string filename: required for LINK_GOTOR and LINK_LAUNCH.
     :arg float zoom: use this zoom factor when showing the target page.
@@ -2035,7 +2035,7 @@ This class represents a document. It can be constructed from a file or from memo
 
   .. attribute:: MarkInfo
 
-    A `Dictionary<string, bool>` indicating the `/MarkInfo` value. If not specified, the empty dictionary is returned. If not a PDF, `None` is returned.
+    A `Dictionary<string, bool>` indicating the `/MarkInfo` value. If not specified or not a PDF, the empty dictionary is returned.
 
     :type: Dictionary
 

@@ -36,18 +36,20 @@ MuPDF no longer treats widgets as a subset of general annotations. Consequently,
 
        Return the value of the "ON" state of check boxes and radio buttons. For check boxes this is always the value "Yes". For radio buttons, this is the value to select / activate the button.
 
-       :returns: the value that sets the button to "selected". For non-checkbox, non-radiobutton fields, always `None` is returned. For check boxes the return is `true`. For radio buttons this is the value "Male" in the following example:
+       :returns: the string that sets the button to "selected". For non-checkbox, non-radiobutton fields, ``null`` is returned. For check boxes the return is typically ``"Yes"``. For radio buttons this is the on-state name, for example ``"Male"``:
 
-         >>> Console.WriteLine(field., field.ButtonStates())
-         Gender Second person {'down': ['Male', 'Off'], 'normal': ['Male', 'Off']}
-         >>> Console.WriteLine(field.OnState())
-         Male
+      .. code-block:: cs
 
-        So for check boxes and radio buttons, the recommended method to set them to "selected", or to check the state is the following:
-        
-         >>> field.FieldValue = field.OnState()
-         >>> field.FieldValue == field.OnState()
-         true
+         Console.WriteLine(field.OnState());
+         // Male
+
+      So for check boxes and radio buttons, the recommended method to set them to "selected", or to check the state is the following:
+
+      .. code-block:: cs
+
+         field.FieldValue = field.OnState();
+         Console.WriteLine(field.FieldValue == field.OnState());
+         // true
 
 
     .. method:: Update
@@ -228,7 +230,7 @@ MuPDF.NET supports the creation and update of many, but not all widget types.
 * check box (`PDF_WIDGET_TYPE_CHECKBOX`)
 * combo box (`PDF_WIDGET_TYPE_COMBOBOX`)
 * list box (`PDF_WIDGET_TYPE_LISTBOX`)
-* radio button (`PDF_WIDGET_TYPE_RADIOBUTTON`): MuPDF.NET does not currently support the **creation** of groups of (interconnected) radio buttons, where setting one automatically unsets the other buttons in the group. The widget object also does not reflect the presence of a button group. However: consistently selecting (or unselecting) a radio button is supported. This includes correctly setting the value maintained in the owning button group. Selecting a radio button may be done by either assigning `true` or `field.OnState()` to the field value. **De-selecting** the button should be done assigning `false`.
+* radio button (`PDF_WIDGET_TYPE_RADIOBUTTON`): MuPDF.NET does not currently support the **creation** of groups of (interconnected) radio buttons, where setting one automatically unsets the other buttons in the group. The widget object also does not reflect the presence of a button group. However: consistently selecting (or unselecting) a radio button is supported. This includes correctly setting the value maintained in the owning button group. Selecting a radio button may be done by either assigning ``true`` or :meth:`Widget.OnState` to the field value. **De-selecting** the button should be done assigning `false`.
 * signature (`PDF_WIDGET_TYPE_SIGNATURE`) **read only**.
 
 .. rubric:: Footnotes

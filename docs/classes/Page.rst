@@ -825,10 +825,10 @@ In a nutshell, this is what you can do with MuPDF.NET:
       :arg float opacity: set the fill and stroke opacity of the content. Only values `0 <= opacity < 1` are considered.
       :arg bool overlay: put the text in front of other content. Please refer to :meth:`Page.ShowPdfPage` for details.
 
-      :returns: A tuple of floats `(spare_height, scale)`.
+      :returns: A tuple of floats ``(spare_height, scale)``.
 
-         - `spare_height`: -1 if content did not fit, else >= 0. It is the height of the unused (still available) rectangle stripe. Positive only if scale = 1 (no down-scaling happened).
-         - `scale`: down-scaling factor, 0 < scale <= 1.
+         - ``spare_height``: -1 if content did not fit, else >= 0. It is the height of the unused (still available) rectangle stripe. Positive only if scale = 1 (no down-scaling happened).
+         - ``scale``: down-scaling factor, 0 < scale <= 1.
 
          Please refer to examples in this section of the recipes: :ref:`RecipesText_I_c`.
 
@@ -963,14 +963,15 @@ In a nutshell, this is what you can do with MuPDF.NET:
       pair: fill; DrawPolyline
       pair: lineCap; DrawPolyline
       pair: lineJoin; DrawPolyline
-      pair: morph; DrawPolyline
+      pair: morphOrigin; DrawPolyline
+      pair: morphMatrix; DrawPolyline
       pair: overlay; DrawPolyline
       pair: width; DrawPolyline
       pair: strokeOpacity; DrawPolyline
       pair: fillOpacity; DrawPolyline
       pair: oc; DrawPolyline
 
-   .. method:: DrawPolyline(Point[] points, float[] color=(0,), float[] fill=null, float width=1, string dashes=null, int lineCap=0, int lineJoin=0, bool overlay=true, bool closePath=false, Morph morph=null, float strokeOpacity=1, float fillOpacity=1, int oc=0)
+   .. method:: DrawPolyline(Point[] points, float[] color: null, float[] fill: null, string dashes: null, float width: 1, Point morphOrigin: null, Matrix morphMatrix: null, int lineCap: 0, int lineJoin: 0, bool overlay: true, bool closePath: false, float strokeOpacity: 1, float fillOpacity: 1, int oc: 0)
 
       PDF only: Draw several connected lines defined by a sequence of :data:`Point` \s. See :meth:`Shape.DrawPolyline`.
 
@@ -1264,7 +1265,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
         Values "words" and "blocks" are also accepted.
 
-      :arg Rect clip: restrict extracted text to this rectangle. If None, the full page is taken. Has **no effect** for options "html", "xhtml" and "xml".
+      :arg Rect clip: restrict extracted text to this rectangle. If ``null``, the full page is taken. Has **no effect** for options "html", "xhtml" and "xml".
 
       :arg int flags: indicator bits to control whether to include images or how text should be handled with respect to white spaces and :data:`ligatures`. See :ref:`TextPreserve` for available indicators and :ref:`text_extraction_flags` for default settings. 
 

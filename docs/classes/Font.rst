@@ -237,14 +237,15 @@ A Font object also contains useful general information, like the font bbox, the 
 
       :rtype: List<float>
 
-      :returns: the lengths in points of the characters of a string when stored in the PDF. It works like :meth:`Font.TextLength` broken down to single characters. This is a high speed method, used e.g. in :meth:`TextWriter.FillTextbox`. The following is true (allowing rounding errors): `font.TextLength(text) == sum(font.GetCharLengths(text))`.
+      :returns: the lengths in points of the characters of a string when stored in the PDF. It works like :meth:`Font.TextLength` broken down to single characters. This is a high speed method, used e.g. in :meth:`TextWriter.FillTextbox`. The following is true (allowing rounding errors): ``font.TextLength(text) == font.GetCharLengths(text).Sum()``.
+
+      .. code-block:: cs
 
          Font font = new Font("helv", "../helv.ttf");
          string text = "MuPDF.NET";
-         font.TextLength(text);
-         Utils.GetTextLength(text, fontName="helv");
-         Math.Sum(font.GetCharLengths(text));
-         Console.WriteLine(font.GetCharLengths(text));
+         Console.WriteLine(font.TextLength(text));
+         Console.WriteLine(Utils.GetTextLength(text, fontName: "helv"));
+         Console.WriteLine(font.GetCharLengths(text).Sum());
 
    .. attribute:: Buffer
 

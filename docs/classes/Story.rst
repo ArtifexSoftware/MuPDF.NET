@@ -151,13 +151,13 @@ Story
    .. method:: Write(DocumentWriter writer, RectFunction rectfn, Action<Position> positionfn: null, Action<int, Rect, DeviceWrapper, bool> pagefn: null)
 
         Places and draws Story to a `DocumentWriter`. Avoids the need for
-        calling code to implement a loop that calls `Story.Place()` and
-        `Story.Draw()` etc, at the expense of having to provide at least the
-        `rectfn()` callback.
+        calling code to implement a loop that calls :meth:`Story.Place` and
+        :meth:`Story.Draw` etc, at the expense of having to provide at least the
+        ``rectfn`` callback.
        
         :arg writer: a `DocumentWriter` or null.
-        :arg rectfn: a callable taking `(rectN: int, filled: Rect)` and
-            returning `(mediabox, rect, ctm)`:
+        :arg rectfn: a callable taking ``(rectN: int, filled: Rect)`` and
+            returning ``(mediabox, rect, ctm)``:
             
             * mediabox: null or rect for new page.
             * rect: The next rect into which content should be placed.
@@ -180,13 +180,13 @@ Story
         For example this allows one to add a table of contents section
         while ensuring that page numbers are patched up until stable.
 
-        Repeatedly creates a new `Story` from `(contentfn(),
-        userCss, em, archive)` and lays it out with internal call
-        to `Story.Write()`; uses a null writer and extracts the list
+        Repeatedly creates a new `Story` from ``contentfn()``, ``userCss``,
+        ``em``, and ``archive`` and lays it out with an internal call
+        to :meth:`Story.Write`; uses a null writer and extracts the list
         of `ElementPosition`'s which is passed to the next call of
-        `contentfn()`.
+        ``contentfn``.
 
-        When the html from `contentfn()` becomes unchanged, we do a
+        When the html from ``contentfn`` becomes unchanged, we do a
         final iteration using `writer`.
 
         :arg writer:
@@ -197,8 +197,8 @@ Story
             can depend on the list of positions, for example with a
             table of contents near the start.
         :arg rectfn:
-            A callable taking `(int rectN, Rect filled)` and
-            returning `(Rect mediabox, Rect rect, Matrix ctm)`:
+            A callable taking ``(int rectN, Rect filled)`` and
+            returning ``(Rect mediabox, Rect rect, Matrix ctm)``:
 
             * mediabox: null or rect for new page.
             * rect: The next rect into which content should be placed.

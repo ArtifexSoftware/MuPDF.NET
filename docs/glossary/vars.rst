@@ -280,7 +280,7 @@ The following constants represent the default combinations of the above for text
 
 Link Destination Kinds
 -----------------------
-Possible values of :attr:`linkDest.kind` (link destination kind).
+Possible values of ``LinkDest.Kind`` (link destination kind).
 
 .. py:data:: LINK_NONE
 
