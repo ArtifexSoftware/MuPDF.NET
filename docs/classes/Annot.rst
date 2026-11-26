@@ -186,7 +186,7 @@ There is a parent-child relationship between an annotation and its page. If the 
 
       Set the annotation's blend mode. See :ref:`AdobeManual`, page 324 for explanations. The blend mode can also be set in :meth:`Annot.Update`.
 
-      :arg string blendmode: set the blend mode. Use :meth:`Annot.Update` to reflect this in the visual appearance. For predefined values see :ref:`BlendModes`. Use `PDF_BM_Normal` to **remove** a blend mode.
+      :arg string blendmode: set the blend mode. Use :meth:`Annot.Update` to reflect this in the visual appearance. For predefined values see :ref:`BlendModes`. Use :data:`PDF_BM_Normal` to **remove** a blend mode.
 
 
    .. method:: SetName(string name)
@@ -547,8 +547,8 @@ Output Structures
 
 .. _AnnotInfo:
 
-AnnotInfo Structure
-~~~~~~~~~~~~~~~~~~~
+:class:`AnnotInfo` Structure
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 =============== ====================================================================
 **Key**         **Value**

@@ -123,7 +123,7 @@ Story
 
       Write the content part prepared by :meth:`Story.Place` to the page.
 
-      :arg dev: the ``DeviceWrapper`` created by ``dev = writer.BeginPage(Rect mediabox)``. The device knows how to call all MuPDF functions needed to write the content.
+      :arg dev: the :class:`DeviceWrapper` created by ``dev = writer.BeginPage(Rect mediabox)``. The device knows how to call all MuPDF functions needed to write the content.
       :arg Matrix matrix: a matrix for transforming content when writing to the page. An example may be writing rotated text. The default means no transformation (i.e. the :ref:`Identity` matrix).
 
    .. method:: ElementPositions(Action<Position> function, Position arg: null)
@@ -133,7 +133,7 @@ Story
 
       `Story` will pass position information to `function`. This information can for example be used to generate a Table of Contents.
 
-      :arg function: an ``Action<Position>`` that receives a :class:`Position`, or the second overload ``Action<StoryElementPositionInfo>``.
+      :arg function: an ``Action<Position>`` that receives a :class:`Position`, or the second overload ``Action<StoryElementPositionInfo>`` that receives a :class:`StoryElementPositionInfo`.
       :arg Position arg: an optional :class:`Position` whose fields (for example :attr:`Position.PageNum`) are copied onto each record passed to ``function``.
       :arg Dictionary<string, object> args: optional extra fields merged onto each record for the second overload. Keys must be valid C# identifiers. The complete set of information is explained below.
 

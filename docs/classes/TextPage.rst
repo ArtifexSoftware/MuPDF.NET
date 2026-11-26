@@ -55,7 +55,7 @@ For a description of what this class is all about, see Appendix 2.
 
       This is a high-speed method with just enough information to output plain text in desired reading sequence.
 
-      :rtype: list of TextBlock
+      :rtype: list of :class:`TextBlock`
 
    .. method:: ExtractWords(char[] delimiters: null)
 
@@ -67,7 +67,7 @@ For a description of what this class is all about, see Appendix 2.
 
       This is a high-speed method which e.g. allows extracting text from within given areas or recovering the text reading sequence.
 
-      :rtype: list of WordBlock
+      :rtype: list of :class:`WordBlock`
 
    .. method:: ExtractHtml
 

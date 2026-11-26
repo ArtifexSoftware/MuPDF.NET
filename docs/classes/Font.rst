@@ -233,7 +233,7 @@ A Font object also contains useful general information, like the font bbox, the 
 
       :arg string text: a text string, UTF-8 encoded.
 
-      :arg float fontSize: the :data:`FontSize`.
+      :arg float fontSize: the :data:`FontSize` in points.
 
       :rtype: List<float>
 

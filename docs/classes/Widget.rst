@@ -26,10 +26,12 @@ MuPDF no longer treats widgets as a subset of general annotations. Consequently,
 
        This method helps finding out the possible values of :attr:`FieldValue` in these cases.
 
-       :returns: a dictionary with the names of 'On' and 'Off' for the *normal* and the *pressed-down* appearance of button widgets. The following example shows that the "selected" value is "Male":
+       :returns: ``Dictionary<string, List<string>>`` with keys ``"normal"`` and ``"down"`` for the *normal* and the *pressed-down* appearance of button widgets. The following example shows that the "selected" value is "Male":
 
-         Console.WriteLine(field.FieldName, field.ButtonStates())
-         Gender Second person {'down': ['Male', 'Off'], 'normal': ['Male', 'Off']}
+      .. code-block:: cs
+
+         Console.WriteLine($"{field.FieldName} {field.ButtonStates()}");
+         // Gender, down: Male, Off; normal: Male, Off
 
 
     .. method:: OnState

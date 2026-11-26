@@ -190,7 +190,7 @@ This class represents a document. It can be constructed from a file or from memo
 
   .. method:: Document(string fileName: null, byte[] stream: null, string fileType: null, Rect rect: null, float width: 0, float height: 0, float fontSize: 11, Archive archive = null)
 
-    Creates a *Document* object.
+    Creates a *Document* object. Prefer :meth:`Document.Open` to open a file; ``new Document(...)`` is the same constructor (the heading **Document.Document()** is that constructor name).
 
     * With default parameters, a **new empty PDF** document will be created.
     * If *stream* is given, then the document is created from memory and, if not a PDF, either *fileName* or *fileType* must indicate its type.
@@ -432,7 +432,7 @@ This class represents a document. It can be constructed from a file or from memo
 
         * Only reports items contained in the currently selected layer configuration.
 
-        * The meaning of the `LayerConfigUI` keys is as follows:
+        * The meaning of the :class:`LayerConfigUI` keys is as follows:
            - *Depth:* item's nesting level in the `/Order` array
            - *IsLocked:* true if cannot be changed via user interfaces
            - *Number:* running sequence number
@@ -486,23 +486,27 @@ This class represents a document. It can be constructed from a file or from memo
 
      PDF only: Extract the list of page label definitions. Typically used for modifications before feeding it into :meth:`Document.SetPageLabels`.
 
-     :returns: a list of Label as defined in :meth:`Document.SetPageLabels`.
+     :returns: ``List<Dictionary<string, object>>`` with keys ``startpage``, ``prefix``, ``style``, and ``firstpagenum``. The :meth:`Document.SetPageLabels` overload that takes :class:`Label` uses the same fields as :attr:`Label.StartPage`, :attr:`Label.Prefix`, :attr:`Label.Style`, and :attr:`Label.FirstPageNum`.
 
-  .. method:: SetPageLabels(string labels)
+  .. method:: SetPageLabels(List<Dictionary<string, object>> labels)
+              SetPageLabels(List<Label> labels)
 
      PDF only: Add or update the page label definitions of the PDF.
 
-     :arg List<Label> labels: a list of `Label`. Each dictionary defines a label building rule and a 0-based "start" page number. That start page is the first for which the label definition is valid. Each dictionary has up to 4 items and looks like `{'startpage': int, 'prefix': str, 'style': str, 'firstpagenum': int}` and has the following items.
+     :arg labels: either ``List<Dictionary<string, object>>`` or ``List<Label>``. Each item is one numbering rule and a 0-based start page. Dictionary keys are ``startpage``, ``prefix``, ``style``, and ``firstpagenum``. :class:`Label` uses :attr:`Label.StartPage`, :attr:`Label.Prefix`, :attr:`Label.Style`, and :attr:`Label.FirstPageNum`.
 
-        - `StartPage`: (int) the first page number (0-based) to apply the label rule. This key **must be present**. The rule is applied to all subsequent pages until either end of document or superseded by the rule with the next larger page number.
-        - `Prefix`: (string) an arbitrary string to start the label with, e.g. "A-". Default is "".
-        - `Style`: (string) the numbering style. Available are "D" (decimal), "r"/"R" (Roman numbers, lower / upper case), and "a"/"A" (lower / upper case alphabetical numbering: "a" through "z", then "aa" through "zz", etc.). Default is "". If "", no numbering will take place and the pages in that range will receive the same label consisting of the `prefix` value. If prefix is also omitted, then the label will be "".
-        - `FirstPageNum`: (int) start numbering with this value. Default is 1, smaller values are ignored.
+        - ``startpage`` / :attr:`Label.StartPage`: (int) the first page number (0-based) to apply the label rule. This **must be present**. The rule is applied to all subsequent pages until either end of document or superseded by the rule with the next larger page number.
+        - ``prefix`` / :attr:`Label.Prefix`: (string) an arbitrary string to start the label with, e.g. ``"A-"``. Default is ``""``.
+        - ``style`` / :attr:`Label.Style`: (string) the numbering style. Available are ``"D"`` (decimal), ``"r"``/``"R"`` (Roman numbers, lower / upper case), and ``"a"``/``"A"`` (lower / upper case alphabetical numbering: "a" through "z", then "aa" through "zz", etc.). Default is ``""``. If ``""``, no numbering will take place and the pages in that range will receive the same label consisting of the prefix value. If prefix is also omitted, then the label will be ``""``.
+        - ``firstpagenum`` / :attr:`Label.FirstPageNum`: (int) start numbering with this value. Default is 1, smaller values are ignored.
 
      For example::
 
-      [{'StartPage': 6, 'Prefix': 'A-', 'Style': 'D', 'FirstPageNum': 10},
-       {'StartPage': 10, 'Prefix': '', 'Style': 'D', 'FirstPageNum': 1}]
+        doc.SetPageLabels(new List<Label>
+        {
+            new Label { StartPage = 6, Prefix = "A-", Style = "D", FirstPageNum = 10 },
+            new Label { StartPage = 10, Prefix = "", Style = "D", FirstPageNum = 1 },
+        });
 
      will generate the labels "A-10", "A-11", "A-12", "A-13", "1", "2", "3", ... for pages 6, 7 and so on until end of document. Pages 0 through 5 will have the label "".
 
@@ -1816,8 +1820,8 @@ This class represents a document. It can be constructed from a file or from memo
 
     :arg int xref: :data:`xref` of an image object. If this is not in ``1 .. doc.GetXrefLength() - 1``, or the object is no image or other errors occur, ``null`` is returned and no exception is raised.
 
-    :rtype: ImageInfo
-    :returns: an ``ImageInfo`` with the following properties
+    :rtype: :class:`ImageInfo`
+    :returns: an :class:`ImageInfo` with the following properties
 
       * *Ext* (*string*) image type (e.g. *"jpeg"*), usable as image file extension
       * *Smask* (*int*) :data:`xref` number of a stencil (/SMask) image or zero
@@ -1850,26 +1854,29 @@ This class represents a document. It can be constructed from a file or from memo
           Console.WriteLine(img.Image.Length); // 371177
 
 
-  .. method:: Document.ExtractFont(int xref, int infoOnly: 0, string named: null)
+  .. method:: Document.ExtractFont(int xref)
+              Document.ExtractFont(int xref, int infoOnly: 0, string named: null)
 
     PDF Only: Return an embedded font file's data and appropriate file extension. This can be used to store the font as an external file. The method does not throw exceptions (other than via checking for PDF and valid :data:`xref`).
 
     :arg int xref: PDF object number of the font to extract.
-    :arg bool infoOnly: only return font information, not the buffer. To be used for information-only purposes, avoids allocation of large buffer areas.
-    :arg bool named: If true, a dictionary with the following keys is returned: 'name' (font base name), 'ext' (font file extension), 'type' (font type), 'content' (font file content).
+    :arg int infoOnly: when non-zero (three-argument form), return font information with an empty ``Content`` buffer.
+    :arg string named: unused in the three-argument form; kept for the ``FontInfo`` overload.
 
-    :rtype: FontInfo
-    :returns: a tuple `(basename, ext, type, content)`, where *ext* is a 3-byte suggested file extension (*string*), *basename* is the font's name (*string*), *type* is the font's type (e.g. "Type1") and *content* is a bytes object containing the font file's content (or *b""*). For possible extension values and their meaning see :ref:`FontExtensions`. Return details on error:
+    :rtype: (string, string, string, byte[])
+    :returns: ``(name, ext, type, content)``. *ext* is a suggested file extension, *name* is the font's name, *type* is the font's type (e.g. ``"Type1"``), and *content* is the font file bytes (or an empty array). The three-argument form returns a ``FontInfo`` with the same fields. For possible extension values see :ref:`FontExtensions`. Return details on error:
 
-          * `("", "", "", b"")` -- invalid `xref` or `xref` is not a (valid) font object.
-          * `(basename, "n/a", "Type1", b"")` -- *basename* is not embedded and thus cannot be extracted. This is the case for e.g. the :ref:`Base-14 fonts <inbuilt_fonts>` and Type 3 fonts.
+          * empty ``name``, ``ext``, ``type``, and empty ``content`` -- invalid ``xref`` or ``xref`` is not a (valid) font object.
+          * ``ext`` is ``"n/a"`` -- the font is not embedded and thus cannot be extracted. This is the case for e.g. the :ref:`Base-14 fonts <inbuilt_fonts>` and Type 3 fonts.
 
 
-    .. warning:: The basename is returned unchanged from the PDF. So it may contain characters (such as blanks) which may disqualify it as a filename for your operating system. Take appropriate action.
+    .. warning:: The name is returned unchanged from the PDF. So it may contain characters (such as blanks) which may disqualify it as a filename for your operating system. Take appropriate action.
 
     .. note::
-       * The returned *basename* in general is **not** the original file name, but it probably has some similarity.
-       * If parameter `named == true`, a dictionary with the following keys is returned: `{'name': 'T1', 'ext': 'n/a', 'type': 'Type3', 'content': b''}`.
+       * The returned *name* in general is **not** the original file name, but it probably has some similarity.
+       * Example::
+
+            var (name, ext, type, content) = doc.ExtractFont(xref);
 
 
   .. method:: XrefXmlMetaData()

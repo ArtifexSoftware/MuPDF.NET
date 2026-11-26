@@ -165,7 +165,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
    .. method:: GetBound()
 
-      Determine the rectangle of the page. Same as property :attr:`Page.Rect`. For PDF documents this **usually** also coincides with :data:`Mediabox` and :data:`CropBox`, but not always. For example, if the page is rotated, then this is reflected by this method -- the :attr:`Page.CropBox` however will not change.
+      Determine the rectangle of the page. Same as property :attr:`Page.Rect`. For PDF documents this **usually** also coincides with :attr:`Page.MediaBox` and :attr:`Page.CropBox`, but not always. For example, if the page is rotated, then this is reflected by this method -- the :attr:`Page.CropBox` however will not change.
 
       :rtype: :ref:`Rect`
 
@@ -528,7 +528,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
       Retrieves **all** links of a page.
 
       :rtype: List
-      :returns: A list of `LinkInfo`. For a description of the dictionary entries, see :ref:`link_dict_description`. Always use this or the :meth:`Page.GetLinks` method if you intend to make changes to the links of a page.
+      :returns: A list of :class:`LinkInfo`. For a description of the dictionary entries, see :ref:`link_dict_description`. Always use this or the :meth:`Page.GetLinks` method if you intend to make changes to the links of a page.
 
    .. method:: GetLinks()
 
@@ -663,14 +663,14 @@ In a nutshell, this is what you can do with MuPDF.NET:
       Deprecated wrapper for :meth:`TextPage.ExtractBlocks`.  Use :meth:`Page.GetText` with the "blocks" option instead.
 
       :rtype: List
-      :return: a list of `TextBlock`
+      :return: a list of :class:`TextBlock`
 
    .. method:: GetTextWords(Rect clip: null, int flags: null, TextPage textpage: null, bool sort: false, string delimiters: null, float tolerance: 3)
 
       Deprecated wrapper for :meth:`TextPage.ExtractWords`. Use :meth:`Page.GetText` with the "words" option instead.
 
       :rtype: List
-      :return: a list of `WordBlock`
+      :return: a list of :class:`WordBlock`
 
    .. method:: GetTextWithLayout(Rect clip: null, int flags: 0, int tolerance: 5)
 
@@ -685,10 +685,10 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
    .. method:: GetTextTrace()
 
-      Return low-level text information of the page. The method is available for **all** document types. The result is a list of SpanInfo.
+      Return low-level text information of the page. The method is available for **all** document types. The result is a list of :class:`SpanInfo`.
 
       :rtype: List
-      :return: a list of `SpanInfo`
+      :return: a list of :class:`SpanInfo`
 
    .. method:: ReadContents()
 
@@ -1470,8 +1470,8 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
       :arg bool xrefs: **PDF only.** Try to find the :data:`xref` for each image. Implies `hashes=true`. Adds the `"xref"` key to the dictionary. If not found, the value is 0, which means, the image is either "inline" or otherwise undetectable. Please note that this option has an extended response time, because the MD5 hashcode will be computed at least two times for each image with an xref.
 
-      :rtype: list of ImageInfo
-      :returns: A list of ImageInfo. This includes information for **exactly those** images, that are shown on the page -- including *"inline images"*. In contrast to images included in :meth:`Page.GetText`, image **binary content** is not loaded, which drastically reduces memory usage. The dictionary layout is similar to that of image blocks in :meth:`Page.GetText` with option ``"dict"``.
+      :rtype: list of :class:`ImageInfo`
+      :returns: A list of :class:`ImageInfo`. This includes information for **exactly those** images, that are shown on the page -- including *"inline images"*. In contrast to images included in :meth:`Page.GetText`, image **binary content** is not loaded, which drastically reduces memory usage. The dictionary layout is similar to that of image blocks in :meth:`Page.GetText` with option ``"dict"``.
 
          =============== ===============================================================
          **Key**             **Value**
@@ -1846,7 +1846,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
       The page's `/CropBox` for a PDF. Always the **unrotated** page rectangle is returned. For a non-PDF this will always equal the page rectangle.
 
-      .. note:: In PDF, the relationship between `/MediaBox`, `/CropBox` and page rectangle may sometimes be confusing, please do lookup the glossary for :data:`MediaBox`.
+      .. note:: In PDF, the relationship between `/MediaBox`, `/CropBox` and page rectangle may sometimes be confusing, please do lookup :attr:`Page.MediaBox`.
 
       :type: :ref:`Rect`
 
@@ -2003,9 +2003,9 @@ Indirect *LINK_GOTOR* destinations can in general of course not be checked for v
 4. Execute :meth:`Page.InsertLink`.
 
 
-Homologous Methods of :ref:`Document` and :ref:`Page`
+Homologous Methods of Document and Page
 --------------------------------------------------------
-This is an overview of homologous methods on the :ref:`Document` and on the :ref:`Page` level.
+This is an overview of homologous methods on the :class:`Document` and on the :class:`Page` level.
 
 ========================================= =======================
 **Document Level**                        **Page Level**
@@ -2052,8 +2052,8 @@ Box             rectangle coordinates, :ref:`Rect`
 LayerName       optional. layer name, *string*
 =============== ===================================
 
-LinkInfo Structure
-~~~~~~~~~~~~~~~~~~
+:class:`LinkInfo` Structure
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ========= ====================================================================================================
 **Key**         **Value**

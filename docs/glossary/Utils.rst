@@ -54,7 +54,7 @@ Yet others are handy, general-purpose utilities.
 :meth:`Utils.GetAllContents`                            All /Contents streams concatenated to one bytes object
 :meth:`Utils.GetAnnotByName`                            Retrieve annotation by name (/NM key)
 :meth:`Utils.GetArea`                                   Calculate area of rectangle
-:meth:`Utils.GetBorderStyle`                            Return `int` meaning PdfObj "border style" from string type
+:meth:`Utils.GetBorderStyle`                            Return `int` meaning ``PdfObj`` "border style" from string type
 :meth:`Utils.GetColors`                                 Retrieve the red, green, blue triple of a color name
 :meth:`Utils.GetColorHSV`                               Retrieve the hue, saturation, value triple of a color name
 :meth:`Utils.GetColorInfoList`                          Returns Tuples containing color name, red, green, blue color values
@@ -241,7 +241,7 @@ Yet others are handy, general-purpose utilities.
       :arg byte[] image: image bytes in memory (any format MuPDF can decode).
       :arg int keepImage: when non-zero, include the native image handle in the result. Default 0.
 
-      :rtype: `ImageInfo`
+      :rtype: :class:`ImageInfo`
       :returns:
          No exception is ever raised. In case of an error, ``null`` is returned. Otherwise, there are the following items::
 
@@ -363,7 +363,7 @@ Yet others are handy, general-purpose utilities.
 
       Write the annotation default appearance (``/DA``) from color, font name, and font size.
 
-      :arg PdfAnnot annot: the annotation.
+      :arg annot: the native ``PdfAnnot``.
       :arg int nCol: number of color components (0, 1, 3, or 4).
       :arg float[] col: the color values.
       :arg string fontName: font name used in the ``/DA`` string.
@@ -374,7 +374,7 @@ Yet others are handy, general-purpose utilities.
 
       Add a unique ``/NM`` key to an annotation or widget.
 
-      :arg PdfAnnot annot: the annotation.
+      :arg annot: the native ``PdfAnnot``.
       :arg string stem: prefix for the generated name.
 
 
@@ -382,9 +382,9 @@ Yet others are handy, general-purpose utilities.
 
       Add an optional-content object reference to a dictionary.
 
-      :arg PdfDocument pdf: the PDF document.
-      :arg PdfObj reference: the dictionary to update.
-      :arg int xref: xref of the OCG / OCMD.
+      :arg pdf: the native ``PdfDocument``.
+      :arg reference: the ``PdfObj`` dictionary to update.
+      :arg int xref: xref of the :data:`OCG` / :data:`OCMD`.
 
 
    .. method:: BinFromBuffer(FzBuffer buffer)
@@ -488,8 +488,8 @@ Yet others are handy, general-purpose utilities.
       :arg Page page: Page object containing annotations.
       :arg string name: annotation name. Looping annotations in page, that find the annotation which has name as `ID`.
 
-      :rtype: `PdfAnnot`
-      :returns: PdfAnnot object that has the name.
+      :rtype: ``PdfAnnot``
+      :returns: native ``PdfAnnot`` that has the name.
 
 
 
@@ -507,7 +507,7 @@ Yet others are handy, general-purpose utilities.
 
    .. method:: GetBorderStyle(string style)
 
-      Return int meaning `PdfObj` "border style" from string type.
+      Return int meaning ``PdfObj`` "border style" from string type.
 
       :arg string style: border type in format of style. style can be one of 'B', 'D', 'I', 'U', 'S' or lowercases.
       :returns: return int from border pdfobj.
@@ -543,7 +543,7 @@ Yet others are handy, general-purpose utilities.
       :arg int xref: the :data:`xref` of the link pdfobj.
       :arg int dDict: one parameter of coordinate positioned in PDF
       :arg float dDict: one parameter of coordinate positioned in PDF
-      :arg LinkInfo dDict: link info contains 'Kind', 'From', 'To', 'Page', 'Xref', ...
+      :arg dDict: a :class:`LinkInfo` with Kind, From, To, Page, Xref, ...
 
       :returns: string of PDF action
 
@@ -576,7 +576,7 @@ Yet others are handy, general-purpose utilities.
    
    .. method:: GetLinkText(Page page, LinkInfo link)
 
-      Define skeletons for /Annots object texts
+      Define skeletons for /Annots object texts. *link* is a :class:`LinkInfo`.
 
       :returns: annot string.
 
@@ -698,7 +698,7 @@ Yet others are handy, general-purpose utilities.
       Make a Label from a PDF page label rule.
 
       :arg Tuple(int, string) item: a tuple (pno, rule) with the start page number and the rule string like <</S/D...>>.
-      :returns: a label struct :data:`Label`
+      :returns: ``Dictionary<string, object>`` with keys ``startpage``, ``prefix``, ``style``, ``firstpagenum``. See :class:`Label` for the object form.
 
 
 
@@ -935,7 +935,7 @@ Yet others are handy, general-purpose utilities.
 
       In-memory AI pipeline options for tests and samples (hash embeddings, no cloud keys).
 
-      :arg chatClient: optional chat client. Samples can pass a local `IChatClient`.
+      :arg chatClient: optional chat client. Samples can pass a local ``IChatClient``.
       :arg int embeddingDimensions: embedding size for the development hasher.
 
       :returns: options suitable for :meth:`LoadAiAsync`.

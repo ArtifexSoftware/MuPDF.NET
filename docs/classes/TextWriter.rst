@@ -140,12 +140,12 @@ Using this object entails three steps:
       :arg float[] color: override the value of the TextWriter for this output.
       :arg float opacity: override the value of the TextWriter for this output.
       :arg int overlay: put in foreground (default) or background.
-      :arg Morph morph: modify the text appearance by applying a ``Morph`` (fixpoint plus matrix). Mutually exclusive with ``matrix`` / ``morphFix`` / ``morphMat``.
+      :arg Morph morph: modify the text appearance by applying a :class:`Morph` (fixpoint plus matrix). Mutually exclusive with ``matrix`` / ``morphFix`` / ``morphMat``.
       :arg Matrix matrix: a direct transform, mutually exclusive with ``morph``.
       :arg int renderMode: The PDF `Tr` operator value. Values: 0 (default), 1, 2, 3 (invisible).
       :arg int oc: the :data:`Xref` of an :data:`OCG` or :data:`OCMD`.
-      :arg Point morphFix: morph fixpoint when not using ``Morph``.
-      :arg Matrix morphMat: morph matrix when not using ``Morph``.
+      :arg Point morphFix: morph fixpoint when not using :class:`Morph`.
+      :arg Matrix morphMat: morph matrix when not using :class:`Morph`.
 
          .. image:: ../images/img-rendermode.*
 

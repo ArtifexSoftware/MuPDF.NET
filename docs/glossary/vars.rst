@@ -58,6 +58,18 @@ Constants
 
     :type: Tuple
 
+.. py:data:: Xref
+
+    PDF object number (cross-reference). Same as :data:`xref`.
+
+    :type: int
+
+.. py:data:: FontSize
+
+    Font size in points.
+
+    :type: float
+
 .. _PermissionCodes:
 
 Document Permissions
@@ -88,6 +100,14 @@ PDF_OC_ON              Set an OCG to ON temporarily
 PDF_OC_TOGGLE          Toggle OCG status temporarily
 PDF_OC_OFF             Set an OCG to OFF temporarily
 ====================== =======================================================================
+
+.. py:data:: OCG
+
+    Optional Content Group. See :meth:`Document.AddOcg`.
+
+.. py:data:: OCMD
+
+    Optional Content Membership Dictionary. See :meth:`Document.SetOcmd`.
 
 .. _EncryptionMethods:
 
@@ -521,24 +541,26 @@ Field flags (*field_flags*)
 PDF Standard Blend Modes
 ----------------------------
 
-For an explanation see :ref:`AdobeManual`, page 324::
+For an explanation see :ref:`AdobeManual`, page 324.
 
-    PDF_BM_Color "Color"
-    PDF_BM_ColorBurn "ColorBurn"
-    PDF_BM_ColorDodge "ColorDodge"
-    PDF_BM_Darken "Darken"
-    PDF_BM_Difference "Difference"
-    PDF_BM_Exclusion "Exclusion"
-    PDF_BM_HardLight "HardLight"
-    PDF_BM_Hue "Hue"
-    PDF_BM_Lighten "Lighten"
-    PDF_BM_Luminosity "Luminosity"
-    PDF_BM_Multiply "Multiply"
-    PDF_BM_Normal "Normal"
-    PDF_BM_Overlay "Overlay"
-    PDF_BM_Saturation "Saturation"
-    PDF_BM_Screen "Screen"
-    PDF_BM_SoftLight "Softlight"
+.. py:data:: PDF_BM_Color
+             PDF_BM_ColorBurn
+             PDF_BM_ColorDodge
+             PDF_BM_Darken
+             PDF_BM_Difference
+             PDF_BM_Exclusion
+             PDF_BM_HardLight
+             PDF_BM_Hue
+             PDF_BM_Lighten
+             PDF_BM_Luminosity
+             PDF_BM_Multiply
+             PDF_BM_Normal
+             PDF_BM_Overlay
+             PDF_BM_Saturation
+             PDF_BM_Screen
+             PDF_BM_SoftLight
+
+    Standard PDF blend mode names. ``PDF_BM_Normal`` is ``"Normal"`` and removes a blend mode.
 
 
 .. _StampIcons:
