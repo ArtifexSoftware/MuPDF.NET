@@ -129,6 +129,6 @@ There is a parent-child relationship between a link and its page. If the page ob
 
       The link destination details object.
 
-      :type: :ref:`LinkDest`
+      :type: :ref:`LinkDest <linkDest Kinds>`
 
 .. include:: ../footer.rst

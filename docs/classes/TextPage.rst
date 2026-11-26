@@ -71,7 +71,7 @@ For a description of what this class is all about, see Appendix 2.
 
    .. method:: ExtractHtml
 
-      Textpage content as a string in HTML format. This version contains complete formatting and positioning information. Images are included (encoded as base64 strings). You need an HTML package to interpret the output. Your internet browser should be able to adequately display this information, but see :ref:`HTMLQuality`.
+      Textpage content as a string in HTML format. This version contains complete formatting and positioning information. Images are included (encoded as base64 strings). You need an HTML package to interpret the output. Your internet browser should be able to adequately display this information.
 
       :rtype: str
 
@@ -222,7 +222,7 @@ Possible values of the "ext" key are "bmp", "gif", "jpeg", "jpx" (JPEG 2000), "j
 
    2. :ref:`TextPage` and corresponding method :meth:`Page.GetText` are **available for all document types**. Only for PDF documents, methods :meth:`Document.GetPageImages` / :meth:`Page.GetImages` offer some overlapping functionality as far as image lists are concerned. But both lists **may or may not** contain the same items. Any differences are most probably caused by one of the following:
 
-   3. The image's "transformation matrix" is defined as the matrix, for which the expression `bbox / transform == Rect(0, 0, 1, 1)` is true, lookup details here: :ref:`ImageTransformation`.
+   3. The image's "transformation matrix" is defined as the matrix, for which the expression `bbox / transform == Rect(0, 0, 1, 1)` is true.
 
 
 **Text Block:**

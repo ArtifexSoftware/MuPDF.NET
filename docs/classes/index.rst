@@ -31,6 +31,7 @@ Classes
    PDFMarkdownReader.rst
    Pixmap.rst
    Point.rst
+   Position.rst
    Quad.rst
    Rect.rst
    Shape.rst

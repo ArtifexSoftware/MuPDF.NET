@@ -113,7 +113,7 @@ Several draw methods can be executed in a row and each one of them will contribu
 
       Draw several connected lines between points contained in the sequence *points*. This can be used for creating arbitrary polygons by setting the last item equal to the first one.
 
-      :arg Point[] points: a sequence of :data:`Point` objects. Its length must at least be 2 (in which case it is equivalent to *DrawLine()*).
+      :arg Point[] points: a sequence of :data:`Point` objects. Its length must at least be 2 (in which case it is equivalent to :meth:`Shape.DrawLine`).
 
       :rtype: :ref:`Point`
       :returns: *points[-1]* -- the last point in the argument sequence.
@@ -165,7 +165,7 @@ Several draw methods can be executed in a row and each one of them will contribu
 
    .. method:: DrawCurve(Point p1, Point p2, Point p3)
 
-      A special case of *DrawBezier()*: Draw a cubic Bezier curve from *p1* to *p3*. On each of the two lines `p1 -> p2` and `p3 -> p2` one control point is generated. Both control points will therefore be on the same side of the line `p1 -> p3`. This guaranties that the curve's curvature does not change its sign. If the lines to p2 intersect with an angle of 90 degrees, then the resulting curve is a quarter ellipse (resp. quarter circle, if of same length).
+      A special case of :meth:`Shape.DrawBezier`: Draw a cubic Bezier curve from *p1* to *p3*. On each of the two lines ``p1 -> p2`` and ``p3 -> p2`` one control point is generated. Both control points will therefore be on the same side of the line ``p1 -> p3``. This guarantees that the curve's curvature does not change its sign. If the lines to *p2* intersect with an angle of 90 degrees, then the resulting curve is a quarter ellipse (resp. quarter circle, if of same length).
 
       All arguments are :data:`Point`.
 
@@ -226,22 +226,26 @@ Several draw methods can be executed in a row and each one of them will contribu
       pair: fill; Finish
       pair: lineCap; Finish
       pair: lineJoin; Finish
-      pair: morph; Finish
+      pair: morphFix; Finish
+      pair: morphMat; Finish
+      pair: blendMode; Finish
       pair: width; Finish
       pair: strokeOpacity; Finish
       pair: fillOpacity; Finish
       pair: oc; Finish
 
 
-   .. method:: Finish(float width: 1, float[] color: null, float fill: null, int lineCap: 0, int lineJoin: 0, string dashes: null, bool closePath: true, bool evenOdd: false, Morph morph: null, float strokeOpacity: 1, float fillOpacity: 1, int oc: 0)
+   .. method:: Finish(float[] color: null, float[] fill: null, float width: 1, int lineCap: 0, int lineJoin: 0, string dashes: null, bool closePath: true, bool evenOdd: false, float strokeOpacity: 1, float fillOpacity: 1, string blendMode: null, int oc: 0, Point morphFix: null, Matrix morphMat: null)
 
-      Finish a set of *draw*()* methods by applying :ref:`CommonParams` to all of them.
+      Finish a set of Draw methods by applying :ref:`CommonParams` to all of them.
       
       It has **no effect on** :meth:`Shape.InsertText` and :meth:`Shape.InsertTextbox`.
 
-      The method also supports **morphing the compound drawing** using :ref:`Point` *P* and :ref:`Matrix` *M*.
+      The method also supports **morphing the compound drawing** using :ref:`Point` *morphFix* and :ref:`Matrix` *morphMat*.
 
-      :arg Morph morph: morph the text or the compound drawing around some arbitrary :ref:`Point` *P* by applying :ref:`Matrix` *matrix* to it. This implies that *P* is a **fixed point** of this operation: it will not change its position. Default is no morphing (*null*). The matrix can contain any values in its first 4 components, *matrix.e == matrix.f == 0* must be true, however. This means that any combination of scaling, shearing, rotating, flipping, etc. is possible, but translations are not.
+      :arg Point morphFix: fixed point for morphing. Together with *morphMat*, morph the compound drawing around this point. Default is no morphing (*null*).
+      :arg Matrix morphMat: morph matrix applied around *morphFix*. The matrix can contain any values in its first 4 components, *matrix.e == matrix.f == 0* must be true. This means that any combination of scaling, shearing, rotating, flipping, etc. is possible, but translations are not.
+      :arg string blendMode: optional PDF blend mode name. Default is *null*.
 
       :arg float strokeOpacity: set transparency for stroke colors. Value < 0 or > 1 will be ignored. Default is 1 (intransparent).
       :arg float fillOpacity: set transparency for fill colors. Default is 1 (intransparent).
@@ -269,14 +273,15 @@ Several draw methods can be executed in a row and each one of them will contribu
       pair: fontName; InsertText
       pair: fontSize; InsertText
       pair: lineHeight; InsertText
-      pair: morph; InsertText
+      pair: morphFix; InsertText
+      pair: morphMat; InsertText
       pair: renderMode; InsertText
       pair: rotate; InsertText
       pair: strokeOpacity; InsertText
       pair: fillOpacity; InsertText
       pair: oc; InsertText
 
-   .. method:: InsertText(Point point, string text, string fontName, string fontFile, float fontSize: 11, bool setSample: false, int encoding: TEXT_ENCODING_LATIN, float[] color: null, float lineHeight: 0, float[] fill: null, int renderMode: 0, float borderWidth: 0.05f, int rotate: 0, Morph morph=null, float strokeOpacity: 1, float fillOpacity: 1, int oc: 0)
+   .. method:: InsertText(Point point, string buffer, float fontSize: 11, float? lineHeight: null, string fontName: "helv", string fontFile: null, int setSimple: 0, int encoding: 0, float[] color: null, float[] fill: null, int renderMode: 0, float borderWidth: 0.05f, float? miterLimit: 1f, int rotate: 0, Point morphFix: null, Matrix morphMat: null, float strokeOpacity: 1, float fillOpacity: 1, int oc: 0)
 
       Insert text lines start at *point*.
 
@@ -285,7 +290,7 @@ Several draw methods can be executed in a row and each one of them will contribu
          .. image:: ../images/img-inserttext.*
             :scale: 33
 
-      :arg str/sequence text: the text to be inserted. May be specified as either a string type or as a sequence type. For sequences, or strings containing line breaks *\n*, several lines will be inserted. No care will be taken if lines are too wide, but the number of inserted lines will be limited by "vertical" space on the page (in the sense of reading direction as established by the *rotate* parameter). Any rest of *text* is discarded -- the return code however contains the number of inserted lines.
+      :arg str/sequence buffer: the text to be inserted. May be specified as either a string type or as a sequence type. For sequences, or strings containing line breaks *\n*, several lines will be inserted. No care will be taken if lines are too wide, but the number of inserted lines will be limited by "vertical" space on the page (in the sense of reading direction as established by the *rotate* parameter). Any rest of *buffer* is discarded -- the return code however contains the number of inserted lines.
 
       :arg float lineHeight: a factor to override the line height calculated from font properties. If not `null`, a line height of `fontSize * lineHeight` will be used.
       :arg float strokeOpacity: set transparency for stroke colors (the **border line** of a character). Only  `0 <= value <= 1` will be considered. Default is 1 (intransparent).
@@ -311,12 +316,13 @@ Several draw methods can be executed in a row and each one of them will contribu
       pair: fontName; InsertTextbox
       pair: fontSize; InsertTextbox
       pair: lineHeight; InsertTextbox
-      pair: morph; InsertTextbox
+      pair: morphFix; InsertTextbox
+      pair: morphMat; InsertTextbox
       pair: renderMode; InsertTextbox
       pair: rotate; InsertTextbox
       pair: oc; InsertTextbox
 
-   .. method:: InsertTextbox(Rect rect, string buffer, string fontName, string fontFile, float fontSize: 11, bool setSimple: false, int encoding: TEXT_ENCODING_LATIN, float[] color: null, float[] fill: null, int renderMode: 0, float borderWidth: 0.05, int expandTabs: 1, int align: TEXT_ALIGN_LEFT, int rotate: 0, float lineHeight: 0, Morph morph: null, float strokeOpacity: 1, float fillOpacity: 1, int oc: 0)
+   .. method:: InsertTextbox(Rect rect, string buffer, int align: 0, float borderWidth: 0.05f, float[] color: null, int encoding: 0, float expandTabs: 1, float fillOpacity: 1, float[] fill: null, string fontFile: null, string fontName: "helv", float fontSize: 11, float? lineHeight: null, float? miterLimit: 1, Point morphFix: null, Matrix morphMat: null, int oc: 0, int renderMode: 0, int rotate: 0, int setSimple: 0, float strokeOpacity: 1)
 
       PDF only: Insert text into the specified rectangle. The text will be split into lines and words and then filled into the available space, starting from one of the four rectangle corners, which depends on `rotate`. Line feeds and multiple space will be respected.
 
@@ -324,7 +330,7 @@ Several draw methods can be executed in a row and each one of them will contribu
 
       :arg string/sequence buffer: the text to be inserted. Must be specified as a string or a sequence of strings. Line breaks are respected also when occurring in a sequence entry.
 
-      :arg int align: align each text line. Default is 0 (left). Centered, right and justified are the other supported options, see :ref:`TextAlign`. Please note that the effect of parameter value *TEXT_ALIGN_JUSTIFY* is only achievable with "simple" (single-byte) fonts (including the :ref:`Base-14-Fonts`).
+      :arg int align: align each text line. Default is 0 (left). Centered, right and justified are the other supported options, see :ref:`TextAlign`. Please note that the effect of parameter value *TEXT_ALIGN_JUSTIFY* is only achievable with "simple" (single-byte) fonts (including the :ref:`Base-14 fonts <inbuilt_fonts>`).
 
       :arg float lineHeight: a factor to override the line height calculated from font properties. If not `null`, a line height of `fontSize * lineHeight` will be used.
 
@@ -427,7 +433,7 @@ Several draw methods can be executed in a row and each one of them will contribu
 
    .. attribute:: LastPoint
 
-      For reference only: the current point of the drawing path. It is *null* at *Shape* creation and after each *Finish()* and *Commit()*.
+      For reference only: the current point of the drawing path. It is *null* at *Shape* creation and after each :meth:`Shape.Finish` and :meth:`Shape.Commit`.
 
       :type: :ref:`Point`
 
@@ -540,7 +546,7 @@ Common Parameters
 
   Stroke and fill colors can be specified as tuples or list of of floats from 0 to 1. These sequences must have a length of 1 (GRAY), 3 (RGB) or 4 (CMYK). For GRAY colorspace, a single float instead of the unwieldy *(float,)* or *[float]* is also accepted. Accept (default) or use `null` to not use the parameter.
 
-  To simplify color specification, method *GetColor()* in *Utils* may be used to get predefined RGB color triples by name. It accepts a string as the name of the color and returns the corresponding triple. The method knows over 540 color names -- see section :ref:`ColorDatabase`.
+  To simplify color specification, :meth:`Utils.GetColors` may be used to get predefined RGB color triples by name. It accepts a string as the name of the color and returns the corresponding triple. The method knows over 540 color names.
 
   Please note that the term *color* usually means "stroke" color when used in conjunction with fill color.
 
@@ -561,7 +567,7 @@ Common Parameters
 
   Both values are floats in range [0, 1]. Negative values or values > 1 will ignored (in most cases). Both set the transparency such that a value 0.5 corresponds to 50% transparency, 0 means invisible and 1 means intransparent. For e.g. a rectangle the stroke opacity applies to its border and fill opacity to its interior.
 
-  For text insertions (:meth:`Shape.InsertText` and :meth:`Shape.InsertTextbox`), use *fill_opacity* for the text. At first sight this seems surprising, but it becomes obvious when you look further down to *render_mode*: *fill_opacity* applies to the yellow and *stroke_opacity* applies to the blue color.
+  For text insertions (:meth:`Shape.InsertText` and :meth:`Shape.InsertTextbox`), use *fillOpacity* for the text. At first sight this seems surprising, but it becomes obvious when you look further down to *renderMode*: *fillOpacity* applies to the yellow and *strokeOpacity* applies to the blue color.
 
 ----
 
@@ -580,7 +586,7 @@ Common Parameters
   * For render mode 2, the glyphs are filled and stroked, using both color parameters and the specified border width. You can use this value to simulate **bold text** without using another font: choose the same value for *fill* and *color* and an appropriate value for *borderWidth*.
   * For render mode 3, the glyphs are neither stroked nor filled: the text becomes invisible.
 
-  The following examples use border_width=0.3, together with a fontSize of 15. Stroke color is blue and fill color is some yellow.
+  The following examples use ``borderWidth=0.3``, together with a fontSize of 15. Stroke color is blue and fill color is some yellow.
 
   .. image:: ../images/img-rendermode.*
 
@@ -592,11 +598,11 @@ Common Parameters
 
 ----
 
-**Morph** (*Morph*)
+**MorphFix / MorphMat** (*Point* / *Matrix*)
 
-  Causes "morphing" of either a shape, created by the *Draw()* methods, or the text inserted by page methods *InsertTextbox()* / *InsertText()*. If not *null*, it must be a pair *(P, M)*, where *P* is a :ref:`Point` and *M* is a :ref:`Matrix`. The matrix can be anything except translations, i.e. *matrix.e == matrix.f == 0* must be true. The point is used as a fixed point for the matrix operation. For example, if *matrix* is a rotation or scaling, then *point* is its center. Similarly, if *matrix* is a left-right or up-down flip, then the mirroring axis will be the vertical, respectively horizontal line going through *point*, etc.
+  Causes "morphing" of either a shape, created by Draw methods such as :meth:`Shape.DrawLine` and :meth:`Shape.DrawRect`, or the text inserted by :meth:`Shape.InsertTextbox` / :meth:`Shape.InsertText`. Pass *morphFix* (:ref:`Point`) and *morphMat* (:ref:`Matrix`). The matrix can be anything except translations, i.e. *matrix.e == matrix.f == 0* must be true. The point is used as a fixed point for the matrix operation. For example, if *matrix* is a rotation or scaling, then *point* is its center. Similarly, if *matrix* is a left-right or up-down flip, then the mirroring axis will be the vertical, respectively horizontal line going through *point*, etc.
 
-  .. note:: Several methods contain checks whether the to be inserted items will actually fit into the page (like :meth:`Shape.InsertText`, or :meth:`Shape.DrawRect`). For the result of a morphing operation there is however no such guaranty: this is entirely the programmer's responsibility.
+  .. note:: Several methods contain checks whether the to be inserted items will actually fit into the page (like :meth:`Shape.InsertText`, or :meth:`Shape.DrawRect`). For the result of a morphing operation there is however no such guarantee: this is entirely the programmer's responsibility.
 
 ----
 

@@ -14,7 +14,7 @@ Point
 ============================ ============================================
 :meth:`Point.DistanceTo`     Calculate distance to point or rect
 :meth:`Point.Transform`      Transform point with a matrix
-:attr:`Point.Abs`            Same as unit, but positive coordinates
+:attr:`Point.AbsUnit`        Same as :attr:`Point.Unit`, but positive coordinates
 :attr:`Point.Unit`           Point coordinates divided by *abs(point)*
 :attr:`Point.X`              The X-coordinate
 :attr:`Point.Y`              The Y-coordinate
@@ -74,9 +74,9 @@ Point
 
       :type: :ref:`Point`
 
-   .. attribute:: Abs
+   .. attribute:: AbsUnit
 
-      Same as :attr:`unit` above, replacing the coordinates with their absolute values.
+      Same as :attr:`Point.Unit` above, replacing the coordinates with their absolute values.
 
       :type: :ref:`Point`
 

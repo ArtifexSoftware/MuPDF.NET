@@ -13,7 +13,7 @@ There is a parent-child relationship between a document and its pages. If the do
 
 Several page methods have a :ref:`Document` counterpart for convenience. At the end of this chapter you will find a synopsis.
 
-.. note:: Many times in this chapter we are using the term **coordinate**. It is of high importance to have at least a basic understanding of what that is and that you feel comfortable with the section :ref:`Coordinates`.
+.. note:: Many times in this chapter we are using the term **coordinate**. It is of high importance to have at least a basic understanding of the page coordinate system.
 
 Modifying Pages
 ---------------
@@ -218,7 +218,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
         The name may be abbreviated to the first two characters, like "Co" for "Cour".
         Lower case is also accepted.
         Bold or italic variants of the fonts are **not accepted**.
-        A user-contributed script provides a circumvention for this restriction -- see section *Using Buttons and JavaScript* in chapter :ref:`FAQ`.
+        A user-contributed script provides a circumvention for this restriction -- see section *Using Buttons and JavaScript*.
         The actual font to use is now determined on a by-character level, and all required fonts (or sub-fonts) are automatically included.
         Therefore, you should rarely ever need to care about this parameter and let it default (except you insist on a serifed font for your non-CJK text parts).
         
@@ -294,15 +294,17 @@ In a nutshell, this is what you can do with MuPDF.NET:
    Redactions
    ~~~~~~~~~~~
 
-   .. method:: AddRedactAnnot(Quad quad, string text, string fontName, int fontSize: 11, int align: TEXT_ALIGN_LEFT, float[] fill: (1, 1, 1), float[] textColor: (0, 0, 0), bool crossOut: true)
+   .. method:: AddRedactAnnot(Quad quad, string text: null, string fontName: null, float fontSize: 11, int align: 0, float[] fillColor: null, float[] textColor: null, bool crossOut: true)
+               AddRedactAnnot(Rect rect, string text: null, string fontName: null, float fontSize: 11, int align: 0, float[] fillColor: null, float[] textColor: null, bool crossOut: true)
       
       **PDF only**: Add a redaction annotation. A redaction annotation identifies content to be removed from the document. Adding such an annotation is the first of two steps. It makes visible what will be removed in the subsequent step, :meth:`Page.ApplyRedactions`.
 
-      :arg Quad quad: specifies the (rectangular) area to be removed which is always equal to the annotation rectangle. This may be a :data:`Rect` or :data:`Quad` object. If a quad is specified, then the enveloping rectangle is taken.
+      :arg Quad quad: specifies the area to be removed. The annotation rectangle is the enveloping rectangle of this quad.
+      :arg Rect rect: specifies the rectangular area to be removed. This overload forwards to the :data:`Quad` form.
 
       :arg string text: text to be placed in the rectangle after applying the redaction (and thus removing old content).
 
-      :arg string fontName: the font to use when *text* is given, otherwise ignored. The same rules apply as for :meth:`Page.InsertTextbox` -- which is the method :meth:`Page.ApplyRedactions` internally invokes. The replacement text will be **vertically centered**, if this is one of the CJK or :ref:`Base-14-Fonts`.
+      :arg string fontName: the font to use when *text* is given, otherwise ignored. The same rules apply as for :meth:`Page.InsertTextbox` -- which is the method :meth:`Page.ApplyRedactions` internally invokes. The replacement text will be **vertically centered**, if this is one of the CJK or :ref:`Base-14 fonts <inbuilt_fonts>`.
 
          .. note::
 
@@ -310,11 +312,11 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
 
       :arg float fontSize: the :data:`fontSize` to use for the replacing text. If the text is too large to fit, several insertion attempts will be made, gradually reducing the :data:`fontSize` to no less than 4. If then the text will still not fit, no text insertion will take place at all.
-      :arg int align: the horizontal alignment for the replacing text. See :meth:`InsertTextbox` for available values. The vertical alignment is (approximately) centered if a PDF built-in font is used (CJK or :ref:`Base-14-Fonts`).
+      :arg int align: the horizontal alignment for the replacing text. See :meth:`InsertTextbox` for available values. The vertical alignment is (approximately) centered if a PDF built-in font is used (CJK or :ref:`Base-14 fonts <inbuilt_fonts>`).
 
-      :arg float[] fill: the fill color of the rectangle **after applying** the redaction. The default is *white = (1, 1, 1)*, which is also taken if *null* is specified. To suppress a fill color altogether, specify *false*. In this cases the rectangle remains transparent.
+      :arg float[] fillColor: the fill color of the rectangle **after applying** the redaction. The default is *null*. When replacement text is given, *null* is treated as *white = (1, 1, 1)*.
 
-      :arg float[] textColor: the color of the replacing text. Default is *black = (0, 0, 0)*.
+      :arg float[] textColor: the color of the replacing text. Default is *null* (treated as *black = (0, 0, 0)* when replacement text is given).
 
       :arg bool crossOut: add two diagonal lines to the annotation rectangle.
 
@@ -355,7 +357,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
            - Be wary if the replacement is longer than the original -- this may lead to an awkward appearance, line breaks or no new text at all.
 
-           - For a number of reasons, the new text may not exactly be positioned on the same line like the old one -- especially true if the replacement font was not one of CJK or :ref:`Base-14-Fonts`.
+           - For a number of reasons, the new text may not exactly be positioned on the same line like the old one -- especially true if the replacement font was not one of CJK or :ref:`Base-14 fonts <inbuilt_fonts>`.
 
 
       ---------
@@ -395,7 +397,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
       .. note::
         Obviously, text marker annotations need to know what is the top, the bottom, the left, and the right side of the area(s) to be marked. If the arguments are quads, this information is given by the sequence of the quad points. In contrast, a rectangle delivers much less information -- this is illustrated by the fact, that 4! = 24 different quads can be constructed with the four corners of a rectangle.
 
-        Therefore, we **strongly recommend** to use the `quads` option for text searches, to ensure correct annotations. A similar consideration applies to marking **text spans** extracted with the "dict" / "rawdict" options of :meth:`Page.GetText`. For more details on how to compute quadrilaterals in this case, see section "How to Mark Non-horizontal Text" of :ref:`FAQ`.
+        Therefore, we **strongly recommend** to use the `quads` option for text searches, to ensure correct annotations. A similar consideration applies to marking **text spans** extracted with the "dict" / "rawdict" options of :meth:`Page.GetText`.
 
       :arg Rect, Quad, List<Quad>:
         the location(s) -- rectangle(s) or quad(s) -- to be marked.
@@ -698,8 +700,8 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
       Run a page through a device.
 
-      :arg dev: Device, obtained from one of the :ref:`Device` constructors.
-      :type dev: :ref:`Device`
+      :arg dev: ``FzDevice`` used to interpret the page.
+      :type dev: ``FzDevice``
 
       :arg transform: Transformation to apply to the page. Set it to :ref:`Identity` if no transformation is desired.
       :type transform: :ref:`Matrix`
@@ -708,7 +710,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
       Return a generator over the page's form fields.
 
-      :arg int[] types: a sequence of integers to down-select to one or more widget types. Default is all form fields. Example: `types=(PDF_WIDGET_TYPE_TEXT,)` will only return 'Text' fields.
+      :arg int[] types: a sequence of integers to down-select to one or more widget types. Default is all form fields. Example: ``types: new[] { Constants.PDF_WIDGET_TYPE_TEXT }`` will only return 'Text' fields. See :ref:`WidgetTypes`.
 
       :rtype: IEnumerable<Widget>
       :returns: a :ref:`Widget` for each iteration.
@@ -830,7 +832,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
          - ``spare_height``: -1 if content did not fit, else >= 0. It is the height of the unused (still available) rectangle stripe. Positive only if scale = 1 (no down-scaling happened).
          - ``scale``: down-scaling factor, 0 < scale <= 1.
 
-         Please refer to examples in this section of the recipes: :ref:`RecipesText_I_c`.
+         Please refer to :ref:`The_Basics_Adding_Text`.
 
       
 
@@ -1065,12 +1067,13 @@ In a nutshell, this is what you can do with MuPDF.NET:
       pair: fontFile; InsertFont
       pair: fontName; InsertFont
       pair: setSimple; InsertFont
+      pair: wmode; InsertFont
 
-   .. method:: InsertFont(string fontName, string fontFile, byte[] fontBuffer: null, bool setSimple: false, int encoding: TEXT_ENCODING_LATIN)
+   .. method:: InsertFont(string fontName: "helv", string fontFile: null, byte[] fontBuffer: null, bool setSimple: false, int wmode: 0, int encoding: 0)
 
-      PDF only: Add a new font to be used by text output methods and return its :data:`xref`. If not already present in the file, the font definition will be added. Supported are the built-in :data:`Base14_Fonts` and the CJK fonts via **"reserved"** fontnames. Fonts can also be provided as a file path or a memory area containing the image of a font file.
+      PDF only: Add a new font to be used by text output methods and return its :data:`xref`. If not already present in the file, the font definition will be added. Supported are the built-in :ref:`Base-14 fonts <inbuilt_fonts>` and the CJK fonts via **"reserved"** fontnames. Fonts can also be provided as a file path or a memory area containing the image of a font file.
 
-      :arg string fontName: The name by which this font shall be referenced when outputting text on this page. In general, you have a "free" choice here (but consult the :ref:`AdobeManual`, page 16, section 7.3.5 for a formal description of building legal PDF names). However, if it matches one of the :data:`Base14_Fonts` or one of the CJK fonts, *fontFile* and *fontBuffer* **are ignored**.
+      :arg string fontName: The name by which this font shall be referenced when outputting text on this page. In general, you have a "free" choice here (but consult the :ref:`AdobeManual`, page 16, section 7.3.5 for a formal description of building legal PDF names). However, if it matches one of the :ref:`Base-14 fonts <inbuilt_fonts>` or one of the CJK fonts, *fontFile* and *fontBuffer* **are ignored**.
 
         In other words, you cannot insert a font via *fontFile* / *fontBuffer* and also give it a reserved *fontName*.
 
@@ -1082,7 +1085,9 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
       :arg int setSimple: applicable for *fontFile* / *fontBuffer* cases only: enforce treatment as a "simple" font, i.e. one that only uses character codes up to 255.
 
-      :arg int encoding: applicable for the "Helvetica", "Courier" and "Times" sets of :data:`Base14_Fonts` only. Select one of the available encodings Latin (0), Cyrillic (2) or Greek (1). Only use the default (0 = Latin) for "Symbol" and "ZapfDingBats".
+      :arg int wmode: writing mode. 0 = horizontal (default), 1 = vertical.
+
+      :arg int encoding: applicable for the "Helvetica", "Courier" and "Times" sets of :ref:`Base-14 fonts <inbuilt_fonts>` only. Select one of the available encodings Latin (0, ``Constants.TextEncodingLatin``), Greek (1), or Cyrillic (2). Only use the default (0 = Latin) for "Symbol" and "ZapfDingBats".
 
       :rytpe: int
       :returns: the :data:`xref` of the installed font.
@@ -1137,7 +1142,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
         maintain the aspect ratio of the image.
       :arg int alpha: deprecated and ignored.
       :arg string overlay: ``"true"`` draws in the page foreground; any other
-        value draws in the background. See :ref:`CommonParms`.
+        value draws in the background. See :ref:`CommonParams`.
 
       :type pixmap: :ref:`Pixmap`
       
@@ -1167,7 +1172,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
            or if the image has an alpha channel. Therefore, consider using
            ``deflate: true`` when saving the file. In addition, there are ways to
            control the image size -- even if transparency comes into play. Have
-           a look at :ref:`RecipesImages_O`.
+           a look at :ref:`The_Basics_Images`.
 
          5.
            The image is stored in the PDF at its original quality level. This
@@ -1267,7 +1272,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
 
       :arg Rect clip: restrict extracted text to this rectangle. If ``null``, the full page is taken. Has **no effect** for options "html", "xhtml" and "xml".
 
-      :arg int flags: indicator bits to control whether to include images or how text should be handled with respect to white spaces and :data:`ligatures`. See :ref:`TextPreserve` for available indicators and :ref:`text_extraction_flags` for default settings. 
+      :arg int flags: indicator bits to control whether to include images or how text should be handled with respect to white spaces and :data:`ligatures`. See :ref:`TextPreserve` for available indicators. 
 
       :arg TextPage textpage: use a previously created :ref:`TextPage`. This reduces execution time **very significantly:** by more than 50% and up to 95%, depending on the extraction option. If specified, the 'flags' and 'clip' arguments are ignored, because they are textpage-only properties. If omitted, a new, temporary textpage will be created. 
 
@@ -1529,7 +1534,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
       .. note::
 
          1. Be aware that :meth:`Page.GetImages` may contain "dead" entries i.e. images, which the page **does not display**. This is no error, but intended by the PDF creator. No exception will be raised in this case, but an infinite rectangle is returned. You can avoid this from happening by executing :meth:`Page.CleanContents` before this method.
-         2. The image's "transformation matrix" is defined as the matrix, for which the expression `bbox / transform == Rect(0, 0, 1, 1)` is true, lookup details here: :ref:`ImageTransformation`.
+         2. The image's "transformation matrix" is defined as the matrix, for which the expression `bbox / transform == Rect(0, 0, 1, 1)` is true.
 
 
    .. index::
@@ -1995,7 +2000,7 @@ Indirect *LINK_GOTOR* destinations can in general of course not be checked for v
 
 3. Create a dictionary `d = {"kind": LINK_GOTO, "page": pno, "from": bbox, "to": point}`.
 
-4. Execute `page.InsertLink(d)`.
+4. Execute :meth:`Page.InsertLink`.
 
 
 Homologous Methods of :ref:`Document` and :ref:`Page`
@@ -2033,6 +2038,8 @@ Box Structure
 Rect            boundary box, :ref:`Rect`
 Matrix          respective transformation matricx, :ref:`Matrix`
 =============== ================================================
+
+.. _BoxLog:
 
 BoxLog Structure
 ~~~~~~~~~~~~~~~~

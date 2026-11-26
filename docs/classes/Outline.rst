@@ -89,6 +89,6 @@ Outline
 
       The link destination details object.
 
-      :type: :ref:`linkDest`
+      :type: :ref:`LinkDest <linkDest Kinds>`
 
 .. include:: ../footer.rst

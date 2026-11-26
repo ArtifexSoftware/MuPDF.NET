@@ -21,7 +21,7 @@ There exist several ways to create a pixmap. Except the first one, all of them a
 
 .. note:: A number of image formats is supported as input for points 3. and 4. above. See section :ref:`ImageFiles`.
 
-Have a look at the :ref:`FAQ` section to see some pixmap usage "at work".
+Have a look at the examples to see some pixmap usage "at work".
 
 ================================ ===================================================
 **Method / Attribute**           **Short Description**
@@ -137,7 +137,7 @@ Have a look at the :ref:`FAQ` section to see some pixmap usage "at work".
 
    .. method:: Pixmap(ColorSpace colorspace, float width, float height, byte[] samples, bool alpha)
 
-      **From plain pixels:** Create a pixmap from *samples*. Each pixel must be represented by a number of bytes as controlled by the *colorspace* and *alpha* parameters. The origin of the resulting pixmap is *(0, 0)*. This method is useful when raw image data are provided by some other program -- see :ref:`FAQ`.
+      **From plain pixels:** Create a pixmap from *samples*. Each pixel must be represented by a number of bytes as controlled by the *colorspace* and *alpha* parameters. The origin of the resulting pixmap is *(0, 0)*. This method is useful when raw image data are provided by some other program.
 
       :arg colorspace: ColorSpace of image.
       :type colorspace: :ref:`ColorSpace`

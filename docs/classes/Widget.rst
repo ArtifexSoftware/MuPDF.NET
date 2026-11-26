@@ -225,13 +225,13 @@ Supported Widget Types
 -----------------------
 MuPDF.NET supports the creation and update of many, but not all widget types.
 
-* text (`PDF_WIDGET_TYPE_TEXT`)
-* push button (`PDF_WIDGET_TYPE_BUTTON`)
-* check box (`PDF_WIDGET_TYPE_CHECKBOX`)
-* combo box (`PDF_WIDGET_TYPE_COMBOBOX`)
-* list box (`PDF_WIDGET_TYPE_LISTBOX`)
-* radio button (`PDF_WIDGET_TYPE_RADIOBUTTON`): MuPDF.NET does not currently support the **creation** of groups of (interconnected) radio buttons, where setting one automatically unsets the other buttons in the group. The widget object also does not reflect the presence of a button group. However: consistently selecting (or unselecting) a radio button is supported. This includes correctly setting the value maintained in the owning button group. Selecting a radio button may be done by either assigning ``true`` or :meth:`Widget.OnState` to the field value. **De-selecting** the button should be done assigning `false`.
-* signature (`PDF_WIDGET_TYPE_SIGNATURE`) **read only**.
+* text (:ref:`PDF_WIDGET_TYPE_TEXT <WidgetTypes>`)
+* push button (:ref:`PDF_WIDGET_TYPE_BUTTON <WidgetTypes>`)
+* check box (:ref:`PDF_WIDGET_TYPE_CHECKBOX <WidgetTypes>`)
+* combo box (:ref:`PDF_WIDGET_TYPE_COMBOBOX <WidgetTypes>`)
+* list box (:ref:`PDF_WIDGET_TYPE_LISTBOX <WidgetTypes>`)
+* radio button (:ref:`PDF_WIDGET_TYPE_RADIOBUTTON <WidgetTypes>`): MuPDF.NET does not currently support the **creation** of groups of (interconnected) radio buttons, where setting one automatically unsets the other buttons in the group. The widget object also does not reflect the presence of a button group. However: consistently selecting (or unselecting) a radio button is supported. This includes correctly setting the value maintained in the owning button group. Selecting a radio button may be done by either assigning ``true`` or :meth:`Widget.OnState` to the field value. **De-selecting** the button should be done assigning `false`.
+* signature (:ref:`PDF_WIDGET_TYPE_SIGNATURE <WidgetTypes>`) **read only**.
 
 .. rubric:: Footnotes
 

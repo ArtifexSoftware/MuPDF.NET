@@ -46,8 +46,8 @@ A display list is populated with objects from a page, usually by executing :meth
 
       You will most probably instead use one of the specialized run methods below -- :meth:`GetPixmap` or :meth:`GetTextPage`.
 
-      :arg device: Device
-      :type device: :ref:`Device`
+      :arg device: ``DeviceWrapper``
+      :type device: ``DeviceWrapper``
 
       :arg matrix: Transformation matrix to apply to the display list contents.
       :type Matrix: :ref:`Matrix`

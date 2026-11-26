@@ -120,7 +120,7 @@ pfa  Postscript for ASCII font (various subtypes)
 cff  Type1C font (compressed font equivalent to Type1)
 cid  character identifier font (postscript format)
 otf  OpenType font
-n/a  not extractable, e.g. :ref:`Base-14-Fonts`, Type 3 fonts and others
+n/a  not extractable, e.g. :ref:`Base-14 fonts <inbuilt_fonts>`, Type 3 fonts and others
 ==== ============================================================================
 
 
@@ -276,6 +276,7 @@ The following constants represent the default combinations of the above for text
     `TEXT_PRESERVE_LIGATURES | TEXT_PRESERVE_WHITESPACE | TEXT_MEDIABOX_CLIP | TEXT_DEHYPHENATE`
 
 
+.. _LinkDest:
 .. _linkDest Kinds:
 
 Link Destination Kinds

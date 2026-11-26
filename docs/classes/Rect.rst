@@ -152,7 +152,7 @@ The following remarks are also valid for :ref:`IRect` objects:
 
    .. method:: Contains(float x)
 
-      Checks whether *x* is contained in the rectangle. It may be an *IRect*, *Rect*, *Point* or number. If *x* is an empty rectangle, this is always true. If the rectangle is empty this is always *false* for all non-empty rectangles and for all points. `x in rect` and `rect.Contains(x)` are equivalent.
+      Checks whether *x* is contained in the rectangle. It may be an *IRect*, *Rect*, *Point* or number. If *x* is an empty rectangle, this is always true. If the rectangle is empty this is always *false* for all non-empty rectangles and for all points. `x in rect` and :meth:`Rect.Contains` are equivalent.
 
       :arg x: the object to check.
       :type x: :data:`Rect` or :data:`Point`.
@@ -175,7 +175,7 @@ The following remarks are also valid for :ref:`IRect` objects:
 
       :arg Rect rect: the target rectangle. Must not be empty or infinite.
       :rtype: :ref:`Matrix`
-      :returns: a matrix `mat` such that `self * mat = rect`. Can for example be used to transform between the page and the pixmap coordinates. See an example use here :ref:`RecipesImages_P`.
+      :returns: a matrix `mat` such that `self * mat = rect`. Can for example be used to transform between the page and the pixmap coordinates.
 
    .. method:: Morph(Point fixpoint, Matrix matrix)
 

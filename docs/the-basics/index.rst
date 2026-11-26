@@ -103,7 +103,7 @@ To extract all the text from a |PDF| file, do the following:
 
     wstream.Close();
 
-Of course it is not just |PDF| which can have text extracted - all the :ref:`supported document file formats <About_Feature_Matrix>` such as :title:`MOBI`, :title:`EPUB`, :title:`TXT` can have their text extracted.
+Of course it is not just |PDF| which can have text extracted - all the :ref:`supported document file formats <Supported_File_Types>` such as :title:`MOBI`, :title:`EPUB`, :title:`TXT` can have their text extracted.
 
 .. note::
 
@@ -452,7 +452,7 @@ For example, to make all ``h1`` headers red (The single ``#`` symbol in Markdown
 
 .. note::
 
-    The `support for CSS <https://pymupdf.readthedocs.io/en/latest/app3.html#css-support>`_ is currently limited.
+    The CSS support of :meth:`Document.ApplyCss` is currently limited.
 
 
 Using CSS Custom Element Selectors
@@ -890,9 +890,6 @@ To select pages, do the following:
         doc.Save("odd.pdf")
 
 
-    For more information also have a look at this Wiki `article <https://github.com/pymupdf/PyMuPDF/wiki/Rearranging-Pages-of-a-PDF>`_.
-
-
     The following example will reverse the order of all pages (**extremely fast:** sub-second time for the 756 pages of the :ref:`AdobeManual`):
 
     .. code-block:: cs
@@ -967,7 +964,7 @@ To add a blank page, do the following:
     **API reference**
 
     - :meth:`Document.NewPage`
-    - :ref:`PaperSize`
+    - :meth:`Utils.PaperSize`
 
 
 ----------
@@ -1340,7 +1337,7 @@ Another example could be redacting an area of a page, but not to redact any line
     rect = new Rect(0,0,200,200);
 
     // Add a redacction annotation which will have a red fill color
-    page.AddRedactAnnot(rect, fill: new float[]{1,0,0});
+    page.AddRedactAnnot(rect, fillColor: new float[]{1,0,0});
 
     // Apply the redactions to the current page, but ignore vector graphics
     page.ApplyRedactions(graphics: 0);
