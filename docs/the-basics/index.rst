@@ -72,7 +72,7 @@ To open a file, do the following:
 
     using MuPDF.NET;
 
-    Document doc = new Document("a.pdf"); // open a document
+    Document doc = Document.Open("a.pdf"); // open a document
 
 
 
@@ -90,7 +90,7 @@ To extract all the text from a |PDF| file, do the following:
 
     using MuPDF.NET;
 
-    Document doc = new Document("example.pdf");
+    Document doc = Document.Open("example.pdf");
     FileStream wstream = File.OpenWrite("1.txt");
 
     for (int i = 0; i < doc.PageCount; i ++)
@@ -139,7 +139,7 @@ To extract all the images from a |PDF| file, do the following:
 
     using MuPDF.NET;
 
-    Document doc = new Document("test.pdf"); // open a document
+    Document doc = Document.Open("test.pdf"); // open a document
 
     for (int i = 0; i < doc.PageCount; i++)
     {
@@ -180,7 +180,7 @@ To extract all the vector graphics from a document page, do the following:
 
 .. code-block:: cs
 
-    Document doc = new Document("some.file");
+    Document doc = Document.Open("some.file");
     Page page = doc[0];
     List<PathInfo> paths = page.GetDrawings();
 
@@ -212,8 +212,8 @@ To merge |PDF| files, do the following:
 
     using MuPDF.NET;
 
-    Document doc_a = new Document("a.pdf"); // open the 1st document
-    Document doc_b = new Document("b.pdf"); // open the 2nd document
+    Document doc_a = Document.Open("a.pdf"); // open the 1st document
+    Document doc_b = Document.Open("b.pdf"); // open the 2nd document
 
     doc_a.InsertPdf(doc_b); // merge the docs
     doc_a.Save("a+b.pdf"); // save the merged document with a new filename
@@ -228,8 +228,8 @@ With :meth:`Document.InsertFile` you can invoke the method to merge :ref:`suppor
 
     using MuPDF.NET;
 
-    Document doc_a = new Document("a.pdf"); // open the 1st document
-    Document doc_b = new Document("b.svg"); // open the 2nd document
+    Document doc_a = Document.Open("a.pdf"); // open the 1st document
+    Document doc_b = Document.Open("b.svg"); // open the 2nd document
 
     doc_a.InsertFile(doc_b); // merge the docs
     doc_a.Save("a+b.pdf"); // save the merged document with a new filename
@@ -262,7 +262,7 @@ To add a watermark to a |PDF| file, do the following:
 
     using MuPDF.NET;
 
-    Document doc = new Document("document.pdf"); // open a document
+    Document doc = Document.Open("document.pdf"); // open a document
 
     for (int page_index; page_index < doc.PageCount; page_index ++) // iterate over pdf pages
     {
@@ -327,7 +327,7 @@ To add an image to a |PDF| file, for example a logo, do the following:
 
     using MuPDF.NET;
 
-    Document doc = new Document("document.pdf"); // open a document
+    Document doc = Document.Open("document.pdf"); // open a document
 
     for (int page_index; page_index < doc.PageCount; page_index ++) // iterate over pdf pages
     {
@@ -369,7 +369,7 @@ It is then possible to save these images as files, for example this would save a
 
     using MuPDF.NET;
 
-    Document doc = new Document("document.pdf"); // open a document
+    Document doc = Document.Open("document.pdf"); // open a document
 
     for (int page_index; page_index < doc.PageCount; page_index ++) // iterate over pdf pages
     {
@@ -562,7 +562,7 @@ Essentially the process is:
 
     using MuPDF.NET;
 
-    Document doc = new Document("pdf-with-vector-drawings-on-page-one.pdf");
+    Document doc = Document.Open("pdf-with-vector-drawings-on-page-one.pdf");
     Page page = doc[0];
     List<PathInfo> paths = page.GetDrawings();
 
@@ -621,7 +621,7 @@ To add a rotation to a page, do the following:
 
     using MuPDF.NET;
 
-    Document doc = new Document("test.pdf"); // open document
+    Document doc = Document.Open("test.pdf"); // open document
     Page page = doc[0]; // get the 1st page of the document
     page.SetRotation(90); // rotate the page
     doc.Save("rotated-page-1.pdf");
@@ -646,7 +646,7 @@ To crop a page to a defined :ref:`Rect<Rect>`, do the following:
 
     using MuPDF.NET;
 
-    Document doc = new Document("test.pdf"); // open document
+    Document doc = Document.Open("test.pdf"); // open document
     Page page = doc[0]; // get the 1st page of the document
     page.SetCropBox(new Rect(100, 100, 400, 400)); // set a cropbox for the page
     doc.Save("cropped-page-1.pdf");
@@ -672,8 +672,8 @@ To attach another file to a page, do the following:
 
     using MuPDF.NET;
 
-    Document doc = new Document("test.pdf") // open main document
-    Document attachment = new Document("my-attachment.pdf"); // open document you want to attach
+    Document doc = Document.Open("test.pdf") // open main document
+    Document attachment = Document.Open("my-attachment.pdf"); // open document you want to attach
 
     Page page = doc[0]; // get the 1st page of the document
     Point point = new Point(100, 100); // create the point where you want to add the attachment
@@ -714,8 +714,8 @@ To embed a file to a document, do the following:
 
     using MuPDF.NET;
 
-    Document doc = new Document("test.pdf") // open main document
-    Document embedded_doc = new Document("my-embed.pdf") // open document you want to embed
+    Document doc = Document.Open("test.pdf") // open main document
+    Document embedded_doc = Document.Open("my-embed.pdf") // open document you want to embed
 
     byte[] embedded_data = embedded_doc.Write(); // get the document byte data as a buffer
 
@@ -751,7 +751,7 @@ To delete a page from a document, do the following:
 
     using MuPDF.NET;
 
-    Document doc = new Document("test.pdf"); // open a document
+    Document doc = Document.Open("test.pdf"); // open a document
     doc.DeletePage(0); // delete the 1st page of the document
     doc.Save("test-deleted-page-one.pdf"); // save the document
 
@@ -763,8 +763,8 @@ To delete a multiple pages from a document, do the following:
 
     using MuPDF.NET;
 
-    Document doc = new Document("test.pdf"); // open a document
-    doc.DeletePages(from: 9, to: 14); // delete a page range from the document
+    Document doc = Document.Open("test.pdf"); // open a document
+    doc.DeletePages(fromPage: 9, toPage: 14); // delete a page range from the document
     doc.Save("test-deleted-pages.pdf"); // save the document
 
 
@@ -781,7 +781,7 @@ What happens if I delete a page referred to by bookmarks or hyperlinks?
 
     The page index is zero-based, so to delete page 10 of a document you would do the following :meth:`Document.DeletePage` with ``pno: 9``.
 
-    Similarly, :meth:`Document.DeletePages` with ``from: 9, to: 14`` will delete pages 10 - 15 inclusive.
+    Similarly, :meth:`Document.DeletePages` with ``fromPage: 9, toPage: 14`` will delete pages 10 - 15 inclusive.
 
 
     **API reference**
@@ -803,7 +803,7 @@ To change the sequence of pages, i.e. re-arrange pages, do the following:
 
     using MuPDF.NET;
 
-    Document doc = new Document("test.pdf"); // open a document
+    Document doc = Document.Open("test.pdf"); // open a document
     doc.MovePage(1, 0); // move the 2nd page of the document to the start of the document
     doc.Save("test-page-moved.pdf"); // save the document
 
@@ -831,7 +831,7 @@ To copy pages, do the following:
 
     using MuPDF.NET;
 
-    Document doc = new Document("test.pdf"); // open a document
+    Document doc = Document.Open("test.pdf"); // open a document
     doc.CopyPage(0); // copy the 1st page and puts it at the end of the document
     doc.save("test-page-copied.pdf"); // save the document
 
@@ -856,7 +856,7 @@ To select pages, do the following:
 
     using MuPDF.NET;
 
-    Document doc = new Document("test.pdf"); // open a document
+    Document doc = Document.Open("test.pdf"); // open a document
     doc.Select(new List<int>([0, 1])); // select the 1st & 2nd page of the document
     doc.Save("just-page-one-and-two.pdf"); // save the document
 
@@ -884,8 +884,8 @@ To select pages, do the following:
 
         doc.Select(p_even) // only the even pages left over
         doc.Save("even.pdf") // save the "even" PDF
-        doc.close() // recycle the file
-        doc = new Document(doc.name) // re-open
+        doc.Close(); // recycle the file
+        doc = Document.Open(doc.Name); // re-open
         doc.Select(p_odd) // and do the same with the odd pages
         doc.Save("odd.pdf")
 
@@ -934,7 +934,7 @@ To add a blank page, do the following:
 
     using MuPDF.NET;
 
-    Document doc = new Document(...) // some new or existing PDF document
+    Document doc = new Document(); // some new or existing PDF document
     Page page = doc.NewPage(-1, // insertion point: end of document
                         width: 595, // page dimension: A4 portrait
                         height: 842)
@@ -978,21 +978,20 @@ To add a blank page, do the following:
 Inserting Pages with Text Content
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Using the :meth:`Document.InsertPage` method also inserts a new page and accepts the same `width` and `height` parameters. But it lets you also insert arbitrary text into the new page and returns the number of inserted lines.
+Using the :meth:`Document.InsertPage` method also inserts a new page and accepts the same `width` and `height` parameters. It can also insert text on the new page and returns the created :ref:`Page`.
 
 .. code-block:: cs
 
     using MuPDF.NET;
 
-    Document doc = new Document(...)  // some new or existing PDF document
-    int n = doc.InsertPage(-1, // default insertion point
+    Document doc = new Document();  // some new or existing PDF document
+    Page page = doc.InsertPage(-1, // default insertion point
                         text: "The quick brown fox jumped over the lazy dog",
-                        fontsize: 11,
+                        fontSize: 11,
                         width: 595,
                         height: 842,
-                        fontname: "Helvetica", // default font
-                        fontfile: None, // any font file name
-                        color: new float[]{0, 0, 0}) // text color (RGB)
+                        fontName: "helv", // default font
+                        color: new float[]{0, 0, 0}); // text color (RGB)
 
 
 
@@ -1001,7 +1000,7 @@ Using the :meth:`Document.InsertPage` method also inserts a new page and accepts
 
     **Taking it further**
 
-    The text parameter can be a (sequence of) string (assuming UTF-8 encoding). Insertion will start at :ref:`Point` (50, 72), which is one inch below top of page and 50 points from the left. The number of inserted text lines is returned.
+    The text parameter is a string (UTF-8). Insertion starts at :ref:`Point` (72, 72). The method returns the new :ref:`Page`.
 
     **API reference**
 
@@ -1028,7 +1027,7 @@ Example #1 - Split document by each page
 
     using MuPDF.NET;
 
-    Document src = new Document("test.pdf"); // open a document
+    Document src = Document.Open("test.pdf"); // open a document
 
     for (int i = 0; i < src.PageCount; i ++) // for each page in input
     {
@@ -1047,7 +1046,7 @@ Example #2 - Split document pages by bookmark
 
     using MuPDF.NET;
 
-    Document src = new Document("test.pdf"); // open a document
+    Document src = Document.Open("test.pdf"); // open a document
     var toc = src.GetToc();
 
     foreach (var item in toc)
@@ -1085,7 +1084,7 @@ This deals with joining |PDF| pages to form a new |PDF| with pages each combinin
 
     using MuPDF.NET;
 
-    Document src = new Document("example.pdf");
+    Document src = Document.Open("example.pdf");
     Document doc = new Document();  // empty output PDF
     (int width, int height) = Utils.PaperSize("a4");
     Rect r = new Rect(0, 0, width, height);
@@ -1185,10 +1184,10 @@ The following snippet creates a new |PDF| and encrypts it with separate user and
     page.InsertText((50, 72), text); // insert the data
     doc.Save(
         "secret.pdf",
-        encryption=encrypt_meth, // set the encryption method
-        owner_pw=owner_pass, // set the owner password
-        user_pw=user_pass, // set the user password
-        permissions=perm, // set permissions
+        encryption: encrypt_meth, // set the encryption method
+        ownerPW: owner_pass, // set the owner password
+        userPW: user_pass, // set the user password
+        permissions: perm // set permissions
     );
 
 
@@ -1205,7 +1204,7 @@ The following snippet creates a new |PDF| and encrypts it with separate user and
 
     To **keep the encryption method** of a PDF, pass ``encryption: PdfCrypt.PDF_ENCRYPT_KEEP`` to :meth:`Document.Save`. If :meth:`Document.CanSaveIncrementally` is true, an incremental save is also possible.
 
-    To **change the encryption method** specify the full range of options above (`encryption`, `owner_pw`, `user_pw`, `permissions`). An incremental save is **not possible** in this case.
+    To **change the encryption method** specify the full range of options above (`encryption`, `ownerPW`, `userPW`, `permissions`). An incremental save is **not possible** in this case.
 
     **API reference**
 
@@ -1231,11 +1230,13 @@ Links can be extracted from a :ref:`Page` to return :ref:`Link` objects.
     for (int i = 0; i < doc.PageCount; i ++) // iterate the document pages
     { 
         Page page = doc[i];
-        link = page.FirstLink;  // a `Link` object or `None`
+        Link link = page.FirstLink;  // a Link object, or null
 
-        while(link != null) // iterate over the links on page
+        while (link != null) // iterate over the links on page
+        {
             // do something with the link, then:
-            link = link.Next // get next link, last one has `None` in its `next`
+            link = link.Next; // last link has null Next
+        }
     }
 
 
@@ -1300,7 +1301,7 @@ For example if we wanted to redact all instances of the name "Jane Doe" from a d
 
     using MuPDF.NET;
 
-    Document doc = new Document("test.pdf"); // open a document
+    Document doc = Document.Open("test.pdf"); // open a document
 
     // Iterate over each page of the document
     for (int i = 0; i < doc.PageCount; i ++)
@@ -1330,7 +1331,7 @@ Another example could be redacting an area of a page, but not to redact any line
 
     using MuPDF.NET;
 
-    Document doc = new Document("test.pdf"); // open a document
+    Document doc = Document.Open("test.pdf"); // open a document
 
     // Get the first page
     Page page = doc[0];
@@ -1393,7 +1394,7 @@ To read barcodes from a page define the area you wish to check for and use the :
 
     using MuPDF.NET;
 
-    Document doc = new Document("document_with_barcodes.pdf"); // open a document
+    Document doc = Document.Open("document_with_barcodes.pdf"); // open a document
 
     // Get the first page
     Page page = doc[0];
@@ -1428,7 +1429,7 @@ To write barcodes you can either add them directly to pages with :meth:`Page.Wri
 
     using MuPDF.NET;
 
-    Document doc = new Document("document_with_barcodes.pdf"); // open a document
+    Document doc = Document.Open("document_with_barcodes.pdf"); // open a document
 
     // Get the first page
     Page page = doc[0];
@@ -1480,7 +1481,7 @@ The following example shows how to apply a gamma correction and scaling filter t
     using MuPDF.NET;
 
     string testFilePath = Path.GetFullPath(@"E:\Ocr.pdf");
-    Document doc = new Document(testFilePath);
+    Document doc = Document.Open(testFilePath);
     Page page = doc[0];
 
     // build the pipeline

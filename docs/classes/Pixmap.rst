@@ -248,14 +248,14 @@ Have a look at the :ref:`FAQ` section to see some pixmap usage "at work".
       :arg int yres: resolution in y direction.
 
 
-   .. method:: SetAlpha(dynamic alphavalues: null, int premultiply: 1, dyanmic opaque: null, dynamic matte: null)
+   .. method:: SetAlpha(byte[] alphaValues: null, int premultiply: 1, int[] opaque: null, int[] matte: null)
 
       Change the alpha values. The pixmap must have an alpha channel.
 
-      :arg byte[] alphavalues: the new alpha values. If provided, its length must be at least *width * height*. If omitted (`null`), all alpha values are set to 255 (no transparency).
-      :arg bool premultiply: Whether to premultiply color components with the alpha value.
-      :arg list,tuple opaque: ignore the alpha value and set this color to fully transparent. A sequence of integers from 0 through 255 with a length of :attr:`Pixmap.N`. Default is *null*. For example, a typical choice for RGB would be ``opaque: new[] { 255, 255, 255 }`` (white).
-      :arg list,tuple matte: preblending background color.
+      :arg byte[] alphaValues: the new alpha values. If provided, its length must be at least *width * height*. If omitted (`null`), all alpha values are set to 255 (no transparency).
+      :arg int premultiply: Whether to premultiply color components with the alpha value.
+      :arg int[] opaque: ignore the alpha value and set this color to fully transparent. Integers from 0 through 255 with a length of :attr:`Pixmap.N`. Default is *null*. For example, a typical choice for RGB would be ``opaque: new[] { 255, 255, 255 }`` (white).
+      :arg int[] matte: preblending background color.
 
 
    .. method:: InvertIRect(IRect bbox: null)

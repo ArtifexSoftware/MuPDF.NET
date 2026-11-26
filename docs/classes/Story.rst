@@ -169,10 +169,10 @@ Story
             Typically called multiple times as we generate elements that
             are headings or have an id.
         :arg pagefn:
-            null, or a callable taking `Action<int, Rect, DeviceWrapper, bool>`;
+            ``Action<int, Rect, DeviceWrapper, bool>`` or ``null``;
             called at start (`after=0`) and end (`after=1`) of each page.
 
-   .. staticmethod:: WriteStabilized(DocumentWriter writer, ContentFunction contentfn, RectFunction rectfn, string userCss: null, int em: 12, Action<Position> positionfn: null, Action<int, Rect, DeviceWrapper, bool> pagefn: null, Archive archive: null, bool addHeaderIds: true)
+   .. staticmethod:: WriteStabilized(DocumentWriter writer, ContentFunction contentfn, RectFunction rectfn, string userCss: null, float em: 12, Action<Position> positionfn: null, Action<int, Rect, DeviceWrapper, bool> pagefn: null, Archive archive: null, bool addHeaderIds: true)
    
         Static method that does iterative layout of html content to a
         `DocumentWriter`.
@@ -204,24 +204,22 @@ Story
             * rect: The next rect into which content should be placed.
             * ctm: A `Matrix`.
         :arg pagefn:
-            null, or a callable taking `(int pageN, Rect medibox,
-            DeviceWrapper dev, bool after)`; called at start (`after=0`) and end
-            (`after=1`) of each page.
+            ``Action<int, Rect, DeviceWrapper, bool>`` or ``null``;
+            called at start (`after=0`) and end (`after=1`) of each page.
         :arg archive:
         :arg addHeaderIds:
             If true, we add unique ids to all header tags that
             don't already have an id. This can help automatic
             generation of tables of contents.
-        Returns:
-            null.
+        :rtype: void
        
-   .. method:: WriteWithLinks(RectFunction rectfn, Action<Position> positionFn: null, Action<int, Rect, DeviceWrapper, bool> pageFn: null)
+   .. method:: WriteWithLinks(RectFunction rectfn, Action<Position> positionfn: null, Action<int, Rect, DeviceWrapper, bool> pagefn: null)
 
         Similar to :meth:`Story.Write` except that we don't have a `writer` arg
         and we return a PDF `Document` in which links have been created
         for each internal html link.
 
-   .. staticmethod:: WriteStabilizedWithLinks(ContentFunction contentfn, RectFunction rectfn, string userCss: null, int em=12, Action<Position> positionFn: null, Action<int, Rect, DeviceWrapper, bool> pageFn=null, Archive archive=null, bool addHeaderIds: true)
+   .. staticmethod:: WriteStabilizedWithLinks(ContentFunction contentfn, RectFunction rectfn, string userCss: null, float em: 12, Action<Position> positionfn: null, Action<int, Rect, DeviceWrapper, bool> pagefn: null, Archive archive: null, bool addHeaderIds: true)
 
         Similar to :meth:`Story.WriteStabilized` except that we don't have a `writer`
         arg and instead return a PDF `Document` in which links have been

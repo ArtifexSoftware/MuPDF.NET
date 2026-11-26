@@ -374,13 +374,17 @@ In a nutshell, this is what you can do with MuPDF.NET:
       .. image:: ../images/img-polyline.*
          :scale: 70
 
-   .. method:: AddUnderlineAnnot(dynamic quads: null, Point start: null, Pint stop: null, Rect clip: null)
+   .. method:: AddUnderlineAnnot(Quad[] quads: null, Point start: null, Point stop: null, IRect clip: null)
+               AddUnderlineAnnot(Rect rect)
 
-   .. method:: AddStrikeoutAnnot(dynamic quads: null, Point start: null, Point stop: null, Rect clip: null)
+   .. method:: AddStrikeoutAnnot(Quad[] quads: null, Point start: null, Point stop: null, IRect clip: null)
+               AddStrikeoutAnnot(Rect rect)
 
-   .. method:: AddSquigglyAnnot(dynamic quads: null, Point start: null, Point stop: null, Rect clip: null)
+   .. method:: AddSquigglyAnnot(Quad[] quads: null, Point start: null, Point stop: null, IRect clip: null)
+               AddSquigglyAnnot(Rect rect)
 
-   .. method:: AddHighlightAnnot(dynamic quads: null, Point start: null, Point stop: null, Rect clip: null)
+   .. method:: AddHighlightAnnot(Quad[] quads: null, Point start: null, Point stop: null, IRect clip: null)
+               AddHighlightAnnot(Rect rect)
 
       PDF only: These annotations are normally used for **marking text** which has previously been somehow located (for example via :meth:`Page.SearchFor`). But this is not required: you are free to "mark" just anything.
 
@@ -1095,30 +1099,22 @@ In a nutshell, this is what you can do with MuPDF.NET:
       pair: oc; InsertImage
       pair: xref; InsertImage
 
-   .. method:: InsertImage(rect, *, alpha=-1, filename=None, height=0, keepProportion=true, mask=None, oc=0, overlay=true, pixmap=None, rotate=0, stream=None, width=0, xref=0)
+   .. method:: InsertImage(Rect rect, string filename: null, byte[] stream: null, Pixmap pixmap: null, byte[] mask: null, int rotate: 0, int xref: 0, int oc: 0, bool keepProportion: true, int alpha: -1, string overlay: "true")
 
       PDF only: Put an image inside the given rectangle. The image may already
       exist in the PDF or be taken from a pixmap, a file, or a memory area.
 
       :arg Rect rect: where to put the image. Must be finite and not empty.
-      :arg int alpha: deprecated and ignored.
-      :arg string fileName:
+      :arg string filename:
         name of an image file (all formats supported by MuPDF -- see
         :ref:`ImageFiles`).
-      :arg int height:
-      :arg bool keepProportion:
-        maintain the aspect ratio of the image.
+      :arg byte[] stream:
+        image in memory (all formats supported by MuPDF -- see :ref:`ImageFiles`).
+      :arg pixmap: a pixmap containing the image.
       :arg byte[] mask:
         image in memory -- to be used as image mask (alpha values) for the base
         image. When specified, the base image must be provided as a filename or
         a stream -- and must not be an image that already has a mask.
-      :arg int oc:
-        (:data:`xref`) make image visibility dependent on this :data:`OCG`
-        or :data:`OCMD`. Ignored after the first of multiple insertions. The
-        property is stored with the generated PDF image object and therefore
-        controls the image's visibility throughout the PDF.
-      :arg overlay: see :ref:`CommonParms`.
-      :arg pixmap: a pixmap containing the image.
       :arg int rotate: rotate the image.
         Must be an integer multiple of 90 degrees.
         Positive values rotate anti-clockwise.
@@ -1126,14 +1122,21 @@ In a nutshell, this is what you can do with MuPDF.NET:
         consider converting the image to a PDF
         (:meth:`Document.ConvertToPdf`)
         first and then use :meth:`Page.ShowPdfPage` instead.
-      :arg byte[] stream:
-        image in memory (all formats supported by MuPDF -- see :ref:`ImageFiles`).
-      :arg int width:
       :arg int xref:
         the :data:`xref` of an image already present in the PDF. If given,
         parameters `filename`, `pixmap`, `stream`, `alpha` and `mask` are
         ignored. The page will simply receive a reference to the existing
         image.
+      :arg int oc:
+        (:data:`xref`) make image visibility dependent on this :data:`OCG`
+        or :data:`OCMD`. Ignored after the first of multiple insertions. The
+        property is stored with the generated PDF image object and therefore
+        controls the image's visibility throughout the PDF.
+      :arg bool keepProportion:
+        maintain the aspect ratio of the image.
+      :arg int alpha: deprecated and ignored.
+      :arg string overlay: ``"true"`` draws in the page foreground; any other
+        value draws in the background. See :ref:`CommonParms`.
 
       :type pixmap: :ref:`Pixmap`
       
@@ -1675,7 +1678,7 @@ In a nutshell, this is what you can do with MuPDF.NET:
          // lower half page
          Rect r2 = r1 + new Rect(0, page.rect.height/2, 0, page.rect.height/2)
 
-         Document src = new Document("MuPDF.pdf")  // show page 0 of this
+         Document src = Document.Open("MuPDF.pdf");  // show page 0 of this
 
          page.ShowPdfPage(r1, src, 0, rotate=90)
          page.ShowPdfPage(r2, src, 0, rotate=-90)

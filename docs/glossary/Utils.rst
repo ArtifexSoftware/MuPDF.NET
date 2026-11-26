@@ -304,22 +304,25 @@ Yet others are handy, general-purpose utilities.
       :returns: the :ref:`Quad` of the character, usable for text marker annotations ('Highlight', etc.).
 
 
-   .. method:: RecoverSpanQuad((float, float) lineDir, Span span, Char[] chars: None)
+   .. method:: RecoverSpanQuad((float cos, float sin) lineDir, Dictionary<string, object> span, List<Dictionary<string, object>> chars: null, bool smallGlyphHeights: false)
 
       Compute the quadrilateral of a subset of characters of a span extracted via option "rawdict" of :meth:`Page.GetText`.
 
-      :arg (float, float) lineDir: `line["dir"]` of the owning line. Use `None` for a span from :meth:`Page.GetTextTrace`.
-      :arg Span span: the span.
-      :arg Char[] chars: the characters to consider. If given, the selected extraction option must be "rawdict".
+      :arg lineDir: ``(float cos, float sin)``, from ``line["dir"]`` of the owning line.
+      :arg Dictionary<string, object> span: the span dictionary.
+      :arg List<Dictionary<string, object>> chars: the characters to consider. ``null`` returns the full span quad. If given, the selected extraction option must be "rawdict".
+      :arg bool smallGlyphHeights: use font size only as glyph height.
       :returns: the :ref:`Quad` of the selected characters, usable for text marker annotations ('Highlight', etc.).
 
 
-   .. method:: RecoverLineQuad(Line line, List<Span> spans: None)
+   .. method:: RecoverLineQuad(Line line, List<Span> spans: null, bool smallGlyphHeights: false)
+               RecoverLineQuad(Dictionary<string, object> line, List<Dictionary<string, object>> spans: null, bool smallGlyphHeights: false)
 
       Compute the quadrilateral of a subset of spans of a text line extracted via options "dict" or "rawdict" of :meth:`Page.GetText`.
 
-      :arg Line line: the line.
-      :arg Span[] spans: a sub-list of `line.Spans`. If omitted, the full line quad will be returned.
+      :arg Line line: the line, or a ``Dictionary<string, object>`` line from text extraction.
+      :arg List<Span> spans: a sub-list of ``line.Spans``. ``null`` returns the full line quad.
+      :arg bool smallGlyphHeights: use font size only as glyph height.
       :returns: the :ref:`Quad` of the selected line spans, usable for text marker annotations ('Highlight', etc.).
 
 

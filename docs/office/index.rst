@@ -127,7 +127,7 @@ Use the :meth:`MuPDFOffice.ToPdf()` method to convert an **Office** document to 
     using MuPDF.NET.Office;
     MuPDFOffice.Unlock(my_key);
 
-    MuPDFOffice.ToPdf("input.docx", outputPath: "output.pdf")
+    MuPDFOffice.ToPdf("input.docx", outputPath: "output.pdf");
     
 
 If you require a byte representation of the PDF data, you can use the :meth:`MuPDFOffice.ToPdf` without specifying an output file, e.g.:

@@ -976,7 +976,7 @@ This class represents a document. It can be constructed from a file or from memo
 
     .. code-block:: cs
 
-        Document doc = new Document("input.pdf");
+        Document doc = Document.Open("input.pdf");
         string md = doc.ToMarkdown(pages: new List<int> { 0, 1 });
         File.WriteAllText("output.md", md);
 
@@ -1126,7 +1126,7 @@ This class represents a document. It can be constructed from a file or from memo
 
     PDF only: Sets or updates the metadata of the document as specified in *m*, a dictionary.
 
-    :arg Dictionary<string, string> m: A dictionary with the same keys as *metadata* (see below). All keys are optional. A PDF's format and encryption method cannot be set or changed and will be ignored. If any value should not contain data, do not specify its key or set the value to `None`. If you use an empty dictionary all metadata information will be cleared to the string *"none"*. If you want to selectively change only some values, modify a copy of *doc.metadata* and use it as the argument. Arbitrary unicode values are possible if specified as UTF-8-encoded.
+    :arg Dictionary<string, string> m: A dictionary with the same keys as *Metadata* (see below). All keys are optional. A PDF's format and encryption method cannot be set or changed and will be ignored. If any value should not contain data, do not specify its key or set the value to ``null``. If you use an empty dictionary all metadata information will be cleared to the string *"none"*. If you want to selectively change only some values, modify a copy of ``doc.Metadata`` and use it as the argument. Arbitrary unicode values are possible if specified as UTF-8-encoded.
 
     Empty values or "none" are not written, but completely omitted.
 
@@ -1215,7 +1215,7 @@ This class represents a document. It can be constructed from a file or from memo
 
     Copy TOC after :meth:`Document.InsertPdf` (TOC is not copied with the pages)::
 
-        using var pdf = new Document("input.pdf");
+        using var pdf = Document.Open("input.pdf");
         using var newDoc = new Document();
         newDoc.InsertPdf(pdf);
         newDoc.SetToc(pdf.GetToc(simple: false));
@@ -1423,7 +1423,7 @@ This class represents a document. It can be constructed from a file or from memo
 
      2. If `fromPage > toPage`, pages will be **copied in reverse order**. If `0 <= fromPage == toPage`, then one page will be copied.
 
-     3. `docsrc` TOC entries **will not be copied**. Recover them with ``newDoc.SetToc(pdf.GetToc(simple: false))``. For joining several files while stitching TOC ranges, see the JoinDoc example in the *examples* directory.
+     3. `docsrc` TOC entries **will not be copied**. Recover them with ``newDoc.SetToc(pdf.GetToc(simple: false))``.
 
 
   .. index::
@@ -1466,7 +1466,6 @@ This class represents a document. It can be constructed from a file or from memo
      pair: width; Document.InsertPage
      pair: height; Document.InsertPage
      pair: fontName; Document.InsertPage
-     pair: fontFile; Document.InsertPage
      pair: color; Document.InsertPage
 
   .. method:: InsertPage(int pno: -1, string text: null, float fontSize: 11, float width: 595, float height: 842, string fontName: "helv", float[] color: null)
@@ -1490,31 +1489,28 @@ This class represents a document. It can be constructed from a file or from memo
 
     :arg int pno: the page to be deleted. Negative number count backwards from the end of the document (like with indices). Default is the last page.
 
-  .. method:: DeletePages(*args, **kwds)
+  .. method:: DeletePages(params int[] pages)
+              DeletePages(int fromPage, int toPage)
 
     PDF only: Delete multiple pages given as 0-based numbers.
 
-    **Format 1:** Use keywords. Represents the old format. A contiguous range of pages is removed.
-      * "fromPage": first page to delete. Zero if omitted.
-      * "toPage": last page to delete. Last page in document if omitted. Must not be less then "from_page".
+    :arg int[] pages: page numbers to delete. Any order is allowed.
+    :arg int fromPage: first page of a contiguous range (inclusive).
+    :arg int toPage: last page of a contiguous range (inclusive). If ``fromPage > toPage``, the range is swapped.
 
-    **Format 2:** Two page numbers as positional parameters. Handled like Format 1.
-
-    **Format 3:** One positional integer parameter. Equivalent to :meth:`Document.DeletePage`.
-
-    **Format 4:** One positional parameter of type *list* of page numbers. The items of this sequence may be in any order and may contain duplicates.
+    A call with two integers, such as ``doc.DeletePages(500, 519)``, uses the range overload. Pass three or more integers, or an ``int[]``, to delete that exact set of pages.
 
     .. note::
 
-      In an effort to maintain a valid PDF structure, this method and :meth:`DeletePage` will also deactivate items in the table of contents which point to deleted pages. "Deactivation" here means, that the bookmark will point to nowhere and the title will be shown grayed-out by supporting PDF viewers. The overall TOC structure is left intact.
+      In an effort to maintain a valid PDF structure, this method and :meth:`DeletePage` will also deactivate items in the table of contents which point to deleted pages. "Deactivation" here means that the bookmark will point to nowhere and the title will be shown grayed-out by supporting PDF viewers. The overall TOC structure is left intact.
 
       It will also remove any **links on remaining pages** which point to a deleted one. This action may have an extended response time for documents with many pages.
 
       Following examples will all delete pages 500 through 519:
 
-      * `doc.DeletePage(500, 519)`
-      * `doc.DeletePage(fromPage: 500, toPage: 519)`
-      * `doc.DeletePage(new List<int>(){ 500, 501, 502, ... , 519})`
+      * ``doc.DeletePages(500, 519)``
+      * ``doc.DeletePages(fromPage: 500, toPage: 519)``
+      * ``doc.DeletePages(Enumerable.Range(500, 20).ToArray())``
 
       For the :ref:`AdobeManual` the above takes about 0.6 seconds, because the remaining 1290 pages must be cleaned from invalid links.
 
@@ -1683,7 +1679,7 @@ This class represents a document. It can be constructed from a file or from memo
 
   .. method:: Close()
 
-    Release objects and space allocations associated with the document. If created from a file, also closes *filename* (releasing control to the OS). Explicitly closing a document is equivalent to deleting it, `del doc`, or assigning it to something else like `doc = None`.
+    Release objects and space allocations associated with the document. If created from a file, also closes *filename* (releasing control to the OS). Prefer a ``using`` statement so the document is disposed automatically, or call this method when you are finished. Do not use the object after :meth:`Close`.
 
   .. method:: GetXrefObject(int xref, int compressed: 0, int ascii: 0)
 
@@ -1808,44 +1804,42 @@ This class represents a document. It can be constructed from a file or from memo
 
   .. method:: Document.ExtractImage(int xref)
 
-    PDF Only: Extract data and meta information of an image stored in the document. The output can directly be used to be stored as an image file, as input for PIL, :ref:`Pixmap` creation, etc. This method avoids using pixmaps wherever possible to present the image in its original format (e.g. as JPEG).
+    PDF Only: Extract data and meta information of an image stored in the document. The output can be stored as an image file or used to create a :ref:`Pixmap`. This method avoids using pixmaps wherever possible to present the image in its original format (e.g. as JPEG).
 
-    :arg int xref: :data:`xref` of an image object. If this is not in ``1 .. doc.GetXrefLength() - 1``, or the object is no image or other errors occur, `null` is returned and no exception is raised.
+    :arg int xref: :data:`xref` of an image object. If this is not in ``1 .. doc.GetXrefLength() - 1``, or the object is no image or other errors occur, ``null`` is returned and no exception is raised.
 
     :rtype: ImageInfo
-    :returns: a dictionary with the following keys
+    :returns: an ``ImageInfo`` with the following properties
 
-      * *Ext* (*string*) image type (e.g. *'jpeg'*), usable as image file extension
+      * *Ext* (*string*) image type (e.g. *"jpeg"*), usable as image file extension
       * *Smask* (*int*) :data:`xref` number of a stencil (/SMask) image or zero
-      * *Width* (*int*) image width
-      * *Height* (*int*) image height
-      * *ColorSpace* (*int*) the image's *colorspace.n* number.
-      * *CsNamee* (*string*) the image's *colorspace.name*.
-      * *Xres* (*int*) resolution in x direction. Please also see :data:`resolution`.
-      * *Yres* (*int*) resolution in y direction. Please also see :data:`resolution`.
+      * *Width* (*float*) image width
+      * *Height* (*float*) image height
+      * *ColorSpace* (*int*) the image's colorspace component count
+      * *CsName* (*string*) the image's colorspace name
+      * *Bpc* (*int*) bits per component
+      * *Xres* (*float*) resolution in x direction. Please also see :data:`resolution`.
+      * *Yres* (*float*) resolution in y direction. Please also see :data:`resolution`.
       * *Image* (*byte[]*) image data, usable as image file content
 
     .. code-block:: cs
 
-      ImageInfo d = doc.ExtractImage(1373)
-      Console.WriteLine(d)
-      {'ext': 'png', 'smask': 2934, 'width': 5, 'height': 629, 'colorspace': 3, 'xres': 96,
-      'yres': 96, 'cs-name': 'DeviceRGB',
-      'image': b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x05\ ...'}
+      ImageInfo d = doc.ExtractImage(1373);
+      Console.WriteLine(d.Ext);
+      Console.WriteLine(d.Width);
+      Console.WriteLine(d.Height);
+      Console.WriteLine(d.CsName);
+      Console.WriteLine(d.Image.Length);
 
-    .. note:: There is a functional overlap with *pix = new Pixmap(doc, xref)*, followed by a *pix.ToBytes()*. Main differences are that extract_image, **(1)** does not always deliver PNG image formats, **(2)** is **very** much faster with non-PNG images, **(3)** usually results in much less disk storage for extracted images, **(4)** returns `None` in error cases (generates no exception). Look at the following example images within the same PDF.
+    .. note:: There is a functional overlap with ``pix = new Pixmap(doc, xref)``, followed by ``pix.ToBytes()``. Main differences are that :meth:`Document.ExtractImage`, **(1)** does not always deliver PNG image formats, **(2)** is **very** much faster with non-PNG images, **(3)** usually results in much less disk storage for extracted images, **(4)** returns ``null`` in error cases (generates no exception). Look at the following example images within the same PDF.
 
        * `xref` 1186 is a JPEG -- :meth:`Document.ExtractImage` is **many times faster** and produces a **much smaller** output (2.48 MB vs. 0.35 MB)::
 
-          In [27]: %timeit pix =  new Pixmap(doc, 1186);pix.ToBytes()
-          341 ms ± 2.86 ms per loop (mean ± std. dev. of 7 runs, 1 loop each)
-          In [28]: len(pix.ToBytes())
-          Out[28]: 2599433
-
-          In [29]: %timeit img = doc.extract_image(1186)
-          15.7 µs ± 116 ns per loop (mean ± std. dev. of 7 runs, 100000 loops each)
-          In [30]: len(img["image"])
-          Out[30]: 371177
+          Pixmap pix = new Pixmap(doc, 1186);
+          byte[] png = pix.ToBytes();
+          ImageInfo img = doc.ExtractImage(1186);
+          Console.WriteLine(png.Length);       // 2599433
+          Console.WriteLine(img.Image.Length); // 371177
 
 
   .. method:: Document.ExtractFont(int xref, int infoOnly: 0, string named: null)

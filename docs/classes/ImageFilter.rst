@@ -49,7 +49,7 @@ The `ImageFilter` class provides methods to work with image filters applied a PD
         :param minAngle: Minimum angle in degrees required to apply correction. Default is 0.4 degrees.
         :type minAngle: double
         :raises ArgumentNullException: Thrown when image is null.
-        :return: None (modifies image in place via ref parameter)
+        :rtype: void
 
     .. method:: ApplyDilation(ref SKBitmap image)
 
@@ -59,7 +59,7 @@ The `ImageFilter` class provides methods to work with image filters applied a PD
         :param image: The image to process. Will be replaced with the processed image.
         :type image: SKBitmap
         :raises ArgumentNullException: Thrown when image is null.
-        :return: None (modifies image in place via ref parameter)
+        :rtype: void
 
     .. method:: RemoveLines(ref SKBitmap image, bool vertical)
 
@@ -71,7 +71,7 @@ The `ImageFilter` class provides methods to work with image filters applied a PD
         :param vertical: True to remove vertical lines, false to remove horizontal lines.
         :type vertical: bool
         :raises ArgumentNullException: Thrown when image is null.
-        :return: None (modifies image in place via ref parameter)
+        :rtype: void
 
     .. method:: RemoveVerticalLines(ref SKBitmap image)
 
@@ -80,7 +80,7 @@ The `ImageFilter` class provides methods to work with image filters applied a PD
         :param image: The image to process. Will be replaced with the processed image.
         :type image: SKBitmap
         :raises ArgumentNullException: Thrown when image is null.
-        :return: None (modifies image in place via ref parameter)
+        :rtype: void
 
     .. method:: RemoveHorizontalLines(ref SKBitmap image)
 
@@ -89,7 +89,7 @@ The `ImageFilter` class provides methods to work with image filters applied a PD
         :param image: The image to process. Will be replaced with the processed image.
         :type image: SKBitmap
         :raises ArgumentNullException: Thrown when image is null.
-        :return: None (modifies image in place via ref parameter)
+        :rtype: void
 
     .. method:: CollectLines(ref SKBitmap image)
 
@@ -113,7 +113,7 @@ The `ImageFilter` class provides methods to work with image filters applied a PD
         :param vertical: List to populate with vertical line segments. Will be created if null.
         :type vertical: List<LineRemover.Segment>
         :raises ArgumentNullException: Thrown when image is null.
-        :return: None (modifies horizontal and vertical lists in place via ref parameters)
+        :rtype: void
 
 
     .. method:: ApplyMedian(ref SKBitmap image, int kernelSize = 3)
@@ -127,7 +127,7 @@ The `ImageFilter` class provides methods to work with image filters applied a PD
         :type kernelSize: int
         :raises ArgumentNullException: Thrown when image is null.
         :raises ArgumentOutOfRangeException: Thrown when kernelSize is not positive.
-        :return: None (modifies image in place via ref parameter)
+        :rtype: void
 
         .. note::
             If kernelSize is even, it will be automatically incremented by 1 to make it odd.
@@ -143,7 +143,7 @@ The `ImageFilter` class provides methods to work with image filters applied a PD
         :type gamma: double
         :raises ArgumentNullException: Thrown when image is null.
         :raises ArgumentOutOfRangeException: Thrown when gamma is not greater than zero.
-        :return: None (modifies image in place via ref parameter)
+        :rtype: void
 
     .. method:: AdjustContrast(ref SKBitmap image, int contrastLevel)
 
@@ -169,7 +169,7 @@ The `ImageFilter` class provides methods to work with image filters applied a PD
         :type blurZoneSize: int
         :raises ArgumentNullException: Thrown when image is null.
         :raises ArgumentOutOfRangeException: Thrown when blurZoneSize is less than 1.
-        :return: None (modifies image in place via ref parameter)
+        :rtype: void
 
     .. method:: ToGrayscale(ref SKBitmap image)
 
@@ -178,7 +178,7 @@ The `ImageFilter` class provides methods to work with image filters applied a PD
         :param image: The image to process. Will be replaced with the grayscale image.
         :type image: SKBitmap
         :raises ArgumentNullException: Thrown when image is null.
-        :return: None (modifies image in place via ref parameter)
+        :rtype: void
 
     .. method:: ApplyInvert(ref SKBitmap image)
 
@@ -187,7 +187,7 @@ The `ImageFilter` class provides methods to work with image filters applied a PD
         :param image: The image to process. Will be replaced with the inverted image.
         :type image: SKBitmap
         :raises ArgumentNullException: Thrown when image is null.
-        :return: None (modifies image in place via ref parameter)
+        :rtype: void
 
 
 
@@ -241,7 +241,7 @@ The `ImageFilter` class provides methods to work with image filters applied a PD
         :type filters: IEnumerable<PreprocessingFilter>
         :raises ArgumentNullException: Thrown when image is null.
         :raises NotSupportedException: Thrown when an unsupported filter type is encountered.
-        :return: None (modifies image in place via ref parameter)
+        :rtype: void
 
         .. note::
             Null filters within the collection are automatically skipped during processing.
@@ -273,7 +273,7 @@ The `ImageFilter` class provides methods to work with image filters applied a PD
         :type colorType: SKColorType
         :param alphaType: The required alpha type. If null, the original alpha type is preserved.
         :type alphaType: SKAlphaType?
-        :return: None (modifies bitmap in place via ref parameter if conversion is needed)
+        :rtype: void
 
         .. note::
             If the bitmap already has the specified color type and alpha type, no conversion is performed.

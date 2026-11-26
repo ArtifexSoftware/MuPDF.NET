@@ -266,3 +266,51 @@ pdf_break_level = 2
 
 pdf_verbosity = 0
 pdf_invariant = True
+
+
+def setup(app):
+    """Keep commas inside C# generics (Dictionary<string, string>, Action<int, Rect, ...>)
+    as part of one parameter instead of splitting the heading into fake parameters.
+    """
+    from docutils import nodes
+    import sphinx.domains.python._annotations as pyann
+    import sphinx.domains.python._object as pyobj
+
+    placeholder = "\uE000"
+    orig = pyann._pseudo_parse_arglist
+
+    def protect_inner_commas(arglist):
+        out = []
+        paren = angle = bracket = 0
+        for ch in arglist:
+            if ch == "(":
+                paren += 1
+            elif ch == ")":
+                paren = max(0, paren - 1)
+            elif ch == "<":
+                angle += 1
+            elif ch == ">":
+                angle = max(0, angle - 1)
+            elif ch == "[":
+                bracket += 1
+            elif ch == "]":
+                bracket = max(0, bracket - 1)
+            if ch == "," and (paren or angle or bracket):
+                out.append(placeholder)
+            else:
+                out.append(ch)
+        return "".join(out)
+
+    def restore_commas(node):
+        for text in node.findall(nodes.Text):
+            value = text.astext()
+            if placeholder in value:
+                text.parent.replace(text, nodes.Text(value.replace(placeholder, ",")))
+
+    def parse_arglist(signode, arglist, **kwargs):
+        orig(signode, protect_inner_commas(arglist), **kwargs)
+        restore_commas(signode)
+
+    pyann._pseudo_parse_arglist = parse_arglist
+    pyobj._pseudo_parse_arglist = parse_arglist
+    return {"parallel_read_safe": True, "parallel_write_safe": True}
